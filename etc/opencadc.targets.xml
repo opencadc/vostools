@@ -1,0 +1,69 @@
+<!--
+    Basic targets for building the source code.
+    -->
+
+<project>
+
+	<!-- init the build directory -->
+	<target name="init">
+		<mkdir dir="${build}" />
+
+		<!-- subdirs for install targets -->
+		<mkdir dir="${build}/doc" />
+		<mkdir dir="${build}/lib" />
+		<mkdir dir="${build}/resources" />
+
+		<!-- subdirs used to build -->
+		<mkdir dir="${build}/class" />
+		<mkdir dir="${build}/tmp" />
+	</target>
+
+	<!-- echo the build classpath -->
+	<target name="classpath">
+	        <echo message="${jars}" />
+	</target>
+
+	<!-- compile java source code -->
+	<target name="compile" depends="init">
+		<echo message="java.source.version: ${java.source.version}" />
+		<echo message="java.target.version: ${java.target.version}" />
+		<javac destdir="${build}/class" 
+			classpath="${jars}"
+			source="${java.source.version}"
+			target="${java.target.version}"
+			optimize="off" 
+			debug="on" 
+			deprecation="on">
+				<src path="src" />
+		</javac>
+	</target>
+	<target name="javadoc_check">
+                <condition property="docs.uptodate">
+                        <or>
+                                <not><available file="src/ca" type="dir" /></not>
+                                <uptodate targetfile="${build}/doc/index.html">
+                                        <srcfiles dir="." includes="build.xml,src/**/**.java" />
+                                </uptodate>
+                        </or>
+                </condition>
+        </target>
+	
+	<!-- generate HTML documentation -->
+	<target name="doc" depends="init,javadoc_check" unless="docs.uptodate">
+		<javadoc source="${java.source.version}"
+			destdir="${build}/doc"
+			classpath="${jars}" >
+			<packageset dir="src" />
+		</javadoc>
+	</target>
+	
+	<target name="clean" >
+		<delete verbose="false" includeEmptyDirs="true">
+			<fileset dir=".">
+				<include name="build/**" />
+				<exclude name="build" />
+			</fileset>
+		</delete>
+	</target>
+
+</project>

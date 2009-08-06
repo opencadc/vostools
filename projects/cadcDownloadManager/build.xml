@@ -1,0 +1,135 @@
+<!--
+
+    Copyright (C) 2009				Copyright (C) 2009
+    National Research Council		Conseil national de recherches
+    Ottawa, Canada, K1A 0R6			Ottawa, Canada, K1A 0R6
+    All rights reserved				Tous droits reserves
+    					
+    NRC disclaims any warranties,	Le CNRC denie toute garantie
+    expressed, implied, or statu-	enoncee, implicite ou legale,
+    tory, of any kind with respect	de quelque nature que se soit,
+    to the software, including		concernant le logiciel, y com-
+    without limitation any war-		pris sans restriction toute
+    ranty of merchantability or		garantie de valeur marchande
+    fitness for a particular pur-	ou de pertinence pour un usage
+    pose.  NRC shall not be liable	particulier.  Le CNRC ne
+    in any event for any damages,	pourra en aucun cas etre tenu
+    whether direct or indirect,		responsable de tout dommage,
+    special or general, consequen-	direct ou indirect, particul-
+    tial or incidental, arising		ier ou general, accessoire ou
+    from the use of the software.	fortuit, resultant de l'utili-
+    								sation du logiciel.
+    
+
+    This file is part of cadcDownloadManager.
+    
+    CadcDownloadManager is free software: you can redistribute it and/or modify
+    it under the terms of the GNU Affero General Public License as published by
+    the Free Software Foundation, either version 3 of the License, or
+    (at your option) any later version.
+    
+    CadcDownloadManager is distributed in the hope that it will be useful,
+    but WITHOUT ANY WARRANTY; without even the implied warranty of
+    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+    GNU Affero General Public License for more details.
+    
+    You should have received a copy of the GNU Affero General Public License
+    along with cadcDownloadManager.  If not, see <http://www.gnu.org/licenses/>.	
+    
+-->
+
+<!DOCTYPE project>
+<project default="build" basedir=".">
+    <property environment="env" />
+
+    <!-- site-specific build properties or overrides of values in opencadc.properties -->
+    <property file="${env.CADC_PREFIX}/etc/local.properties" />
+
+    <!-- site-specific targets, e.g. install, cannot duplicate those in opencadc.targets.xml -->
+    <import file="${env.CADC_PREFIX}/etc/local.targets.xml" optional="true" />
+
+    <!-- default properties and targets -->
+    <property file="${env.CADC_PREFIX}/etc/opencadc.properties" />
+    <import file="${env.CADC_PREFIX}/etc/opencadc.targets.xml"/>
+
+    <!-- developer convenience: place for extra targets and properties -->
+    <import file="extras.xml" optional="true" />
+
+<property name="project" value="cadcDownloadManager" />
+
+<property name="jars" value="${lib}/cadcUtil.jar:${ext.lib}/servlet-api.jar" />
+
+<target name="build" depends="client,servlet,api,resources" />
+
+<target name="client" depends="compile">
+	<jar jarfile="${build}/lib/${project}Client.jar"
+		basedir="${build}/class" 
+		update="no">
+                <include name="**/client/**" />
+                <include name="**/DownloadUtil**" />
+                <include name="ca/onfire/**" />
+    </jar>
+</target>
+
+<target name="servlet" depends="compile">
+    <jar jarfile="${build}/lib/${project}Server.jar"
+		basedir="${build}/class" 
+		update="no">
+            <include name="ca/nrc/cadc/dlm/DownloadUtil**" />
+            <include name="ca/nrc/cadc/dlm/server/**" />
+    </jar>
+    
+</target>
+
+<!-- a jar to contain the extension API -->
+<target name="api" depends="compile">
+    <jar jarfile="${build}/lib/${project}API.jar"
+		basedir="${build}/class" 
+		update="no">
+            <include name="ca/nrc/cadc/dlm/client/event/**" />
+    </jar>
+</target>
+
+<target name="resources" depends="init">
+    <copy todir="${build}/resources/${project}">
+        <fileset dir="src/jsp">
+            <include name="**.jsp" />
+        </fileset>
+    </copy>
+</target>
+
+<!-- 
+optional/example target to build a vanilla warfile 
+note: client jars are not signed
+-->
+<target name="warfile" depends="build">
+    <war warfile="${build}/webapps/downloadManager.war" webxml="src/xml/web.xml" update="no">
+
+        <fileset dir="${build}/resources/${project}/">
+            <include name="**.jsp" />	
+        </fileset>
+        <fileset dir="${build}/lib">
+            <include name="${project}Client.jar" />
+        </fileset>
+        <fileset dir="${lib}">
+            <include name="cadcUtil.jar" />
+        </fileset>
+
+        <lib dir="${build}/lib">
+            <include name="cadcDownloadManagerServer.jar" />
+        </lib>
+        <lib dir="${lib}">
+            <include name="cadcUtil.jar" />
+        </lib>
+        
+        <lib dir="${ext.lib}">
+            <include name="jstl.jar" />
+            <include name="standard.jar" />
+        </lib>
+        <webinf dir="${ext.lib}/tld">
+            <include name="c.tld" />
+        </webinf>
+    </war>
+</target>
+
+</project>

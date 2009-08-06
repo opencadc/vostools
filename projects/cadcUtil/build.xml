@@ -1,0 +1,31 @@
+<!DOCTYPE project>
+<project default="build" basedir=".">
+    <property environment="env"/>
+    
+    <!-- site-specific build properties or overrides of values in opencadc.properties -->
+    <property file="${env.CADC_PREFIX}/etc/local.properties" />
+    
+    <!-- site-specific targets, e.g. install, cannot duplicate those in opencadc.targets.xml -->
+    <import file="${env.CADC_PREFIX}/etc/local.targets.xml" optional="true" />
+
+    <!-- default properties and targets -->
+    <property file="${env.CADC_PREFIX}/etc/opencadc.properties" />
+    <import file="${env.CADC_PREFIX}/etc/opencadc.targets.xml"/>
+    
+    <!-- developer convenience: place for extra targets and properties -->
+    <import file="extras.xml" optional="true" />
+
+<property name="project" value="cadcUtil" />
+
+<property name="jars" value="" />
+
+<target name="build" depends="compile">
+    <jar jarfile="${build}/lib/${project}.jar"
+		basedir="${build}/class" 
+		update="no">
+            <include name="ca/nrc/cadc/net/**" />
+            <include name="ca/nrc/cadc/thread/**" />
+    </jar>
+</target>
+
+</project>
