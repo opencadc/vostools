@@ -41,6 +41,7 @@
 package ca.nrc.cadc.dlm;
 
 import ca.nrc.cadc.net.MultiSchemeHandler;
+import ca.nrc.cadc.net.SchemeHandler;
 import java.net.MalformedURLException;
 import java.net.URI;
 import java.net.URISyntaxException;
@@ -56,7 +57,7 @@ import java.util.List;
  */
 public class DownloadUtil
 {
-    public static MultiSchemeHandler schemeHandler;
+    private static MultiSchemeHandler schemeHandler;
     
     private DownloadUtil() { }
     
@@ -76,6 +77,42 @@ public class DownloadUtil
         public Throwable error;
     }
 
+    public static synchronized MultiSchemeHandler getSchemeHandler()
+    {
+        if (schemeHandler == null)
+        {        
+            schemeHandler = new MultiSchemeHandler();
+            // TODO: read class name(s) from somewhere
+            String[] uris = new String[] 
+            {
+                "ad:ca.nrc.cadc.ad.AdSchemeHandler",
+                "plane:ca.nrc.cadc.caom.util.PlaneSchemeHandler"
+            };
+
+            for (int i=0; i<uris.length; i++)
+            {
+                try
+                {
+                    System.out.println("[CoreUI] configuring: " + uris[i]);
+                    URI u = new URI(uris[i]);
+                    String scheme = u.getScheme();
+                    String cname = u.getSchemeSpecificPart();
+                    System.out.println("[CoreUI] loading: " + cname);
+                    Class c = Class.forName(cname);
+                    System.out.println("[CoreUI] instantiating: " + c);
+                    SchemeHandler handler = (SchemeHandler) c.newInstance();
+                    System.out.println("[CoreUI] adding: " + scheme + "," + handler);
+                    schemeHandler.addSchemeHandler(scheme, handler);
+                    System.out.println("[CoreUI] success: " + scheme + " is supported");
+                }
+                catch(Throwable oops)
+                {
+                    System.out.println("[CoreUI] failed to create SchemeHandler: " + uris[i] + ", " + oops);
+                }
+            }
+        }
+        return schemeHandler;
+    }
     
     /**
      * Parse a comma-separated list of URIs into a single list of unique URIs and
@@ -130,7 +167,7 @@ public class DownloadUtil
             {
                 try
                 {
-                    List<URL> urls = schemeHandler.toURL(pu.uri);
+                    List<URL> urls = getSchemeHandler().toURL(pu.uri);
                     Iterator<URL> j = urls.iterator();
                     while ( j.hasNext() )
                     {

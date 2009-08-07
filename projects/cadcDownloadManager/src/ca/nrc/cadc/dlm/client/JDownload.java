@@ -66,7 +66,7 @@ import javax.swing.border.LineBorder;
  */
 public class JDownload extends JPanel implements DownloadListener, ProgressListener, Runnable
 {
-    private boolean debug = false;
+    private boolean debug = true;
     private boolean showBorder = false;
     
     private static Color COMPLETED_COLOR = Color.BLACK;

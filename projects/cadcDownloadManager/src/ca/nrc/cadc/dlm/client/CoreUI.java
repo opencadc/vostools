@@ -42,8 +42,6 @@ package ca.nrc.cadc.dlm.client;
 
 import ca.nrc.cadc.dlm.DownloadUtil;
 import ca.nrc.cadc.dlm.client.event.DownloadListener;
-import ca.nrc.cadc.net.SchemeHandler;
-import ca.nrc.cadc.net.MultiSchemeHandler;
 import ca.onfire.ak.AbstractApplication;
 import ca.onfire.ak.ApplicationConfig;
 import ca.nrc.cadc.thread.ConditionVar;
@@ -52,7 +50,6 @@ import java.awt.Color;
 import java.awt.Graphics;
 import java.io.File;
 import java.io.IOException;
-import java.net.URI;
 import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
@@ -85,7 +82,6 @@ public class CoreUI extends AbstractApplication implements ChangeListener
     {
         super(new BorderLayout()); 
         this.downloads = new ArrayList();
-        DownloadUtil.schemeHandler = initSchemeHandler();
         this.downloadListener = initDownloadLister();
         
         this.uiInitCond = new ConditionVar();
@@ -296,38 +292,6 @@ public class CoreUI extends AbstractApplication implements ChangeListener
         return null;
     }
     
-    private static MultiSchemeHandler initSchemeHandler()
-    {
-        MultiSchemeHandler uc = new MultiSchemeHandler();
-        // TODO: read class name(s) from a config file
-        String[] uris = new String[] 
-        {
-            "ad:ca.nrc.cadc.ad.AdSchemeHandler",
-            "plane:ca.nrc.cadc.caom.util.PlaneSchemeHandler"
-        };
-        
-        for (int i=0; i<uris.length; i++)
-        {
-            try
-            {
-                System.out.println("[CoreUI] configuring: " + uris[i]);
-                URI u = new URI(uris[i]);
-                String scheme = u.getScheme();
-                String cname = u.getSchemeSpecificPart();
-                System.out.println("[CoreUI] loading: " + cname);
-                Class c = Class.forName(cname);
-                System.out.println("[CoreUI] instantiating: " + c);
-                SchemeHandler handler = (SchemeHandler) c.newInstance();
-                System.out.println("[CoreUI] adding: " + scheme + "," + handler);
-                uc.addSchemeHandler(scheme, handler);
-                System.out.println("[CoreUI] success: " + scheme + " is supported");
-            }
-            catch(Throwable oops)
-            {
-                System.out.println("[CoreUI] failed to create SchemeHandler: " + uris[i] + ", " + oops);
-            }
-        }
-        return uc;
-    }
+    
     
 }

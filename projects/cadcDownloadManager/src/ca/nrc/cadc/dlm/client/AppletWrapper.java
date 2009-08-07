@@ -55,12 +55,17 @@ import java.io.IOException;
  */
 public class AppletWrapper extends JApplet
 {
+    private static String SERVER_NAME = "ca.nrc.cadc.net.serverName";
     private CoreUI ui;
 	
     public void init()
     {
         try
-        {        
+        {   
+            // temporary hack to set a system property in applet mode
+            String serverName = fixNull(getParameter(SERVER_NAME));
+            System.setProperty(SERVER_NAME, serverName);
+            
             String uriStr = fixNull(getParameter("uris"));
             String fragment = fixNull(getParameter("fragment"));
             String[] uris = uriStr.split(",");

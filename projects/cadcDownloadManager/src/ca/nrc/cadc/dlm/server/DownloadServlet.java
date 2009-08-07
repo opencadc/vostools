@@ -41,6 +41,7 @@
 package ca.nrc.cadc.dlm.server;
 
 import ca.nrc.cadc.dlm.DownloadUtil;
+import ca.nrc.cadc.net.NetUtil;
 import java.io.IOException;
 import java.util.Date;
 import javax.servlet.RequestDispatcher;
@@ -98,7 +99,6 @@ public class DownloadServlet extends HttpServlet
     {
         // TODO: pick a logging system and configure it properly
         log = new HackLogger(DownloadServlet.class);
-        log.dbg = true;
     }
     
     /**
@@ -183,6 +183,12 @@ public class DownloadServlet extends HttpServlet
         // codebase for applet and webstart deployments
         String codebase = ServerUtil.getCodebase(request);
         request.setAttribute("codebase", codebase);
+        log.debug("codebase attribute: " + codebase);
+        
+        // origin serverName for applet and jnlp deployment
+        String  serverName = NetUtil.getServerName(DownloadServlet.class);
+        request.setAttribute("serverName", serverName);
+        log.debug("serverName attribute: " + serverName);
 
         RequestDispatcher disp = request.getRequestDispatcher(target);
         disp.forward(request, response);

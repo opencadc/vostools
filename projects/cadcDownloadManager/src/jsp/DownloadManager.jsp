@@ -49,6 +49,7 @@
     String uris = (String) request.getAttribute("uris");
     String fragment = (String) request.getAttribute("fragment");
     String codebase = (String) request.getAttribute("codebase");
+    String serverName = (String) request.getAttribute("serverName");
 %>
 
 <jnlp spec="1.0+" codebase="<%= codebase %>"> 
@@ -67,8 +68,9 @@
     <resources> 
         <j2se version="1.4+" initial-heap-size="64m" max-heap-size="128m" 
             href="http://java.sun.com/products/autodl/j2se"/> 
-        <jar href="cadcDownloadManagerClient.jar"/> 
-        <jar href="cadcDownloadManager.jar" />
+        <jar href="cadcUtil.jar"/> 
+        <jar href="cadcDownloadManagerClient.jar"/>
+        <property name="ca.nrc.cadc.net.serverName" value="<%= serverName %>" />
     </resources> 
 
     <application-desc main-class="ca.nrc.cadc.dlm.client.Main">

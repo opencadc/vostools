@@ -45,17 +45,18 @@
 <%
     String uris = (String) request.getAttribute("uris");
     String fragment = (String) request.getAttribute("fragment");
+    String serverName = (String) request.getAttribute("serverName");
 %>
 
 <applet name="DownloadManager"
         code="ca.nrc.cadc.dlm.client.AppletWrapper"
         codebase="/downloadManager" 
-        archive="cadcDownloadManagerClient.jar,cadcDownloadManager.jar"
+        archive="cadcDownloadManagerClient.jar,cadcUtil.jar"
         width="600" height="600">
     
     <param name="uris" value="<%= uris %>" />
     <param name="fragment" value="<%= fragment %>" />
-
+    <param name="ca.nrc.cadc.net.serverName" value="<%= serverName %>" />
 </applet>
 
     
