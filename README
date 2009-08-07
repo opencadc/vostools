@@ -86,9 +86,6 @@ Use ant to build the cadcUtil project.
 Copy build/lib/cadcUtil.jar from that project to $CADC_PREFIX/lib/.
 
 
-Copy all other required jar files (eg. servlet-api.jar) to $CADC_PREFIX/lib/.
-
-
 Then, build the other project(s) of your choice using their respective
 build.xml files.  Remember to add any missing jar files to your
 ext.lib directory.
