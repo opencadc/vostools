@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<uws:jobs xmlns:uws="http://www.ivoa.net/xml/UWS/v1.0rc3"
+          xmlns:xlink="http://www.w3.org/1999/xlink"
+          xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
+  <uws:jobref id="88" xlink:href="http://glenelgin/asynch/88"
+              xlink:type="resource">
+    <uws:phase>EXECUTING</uws:phase>
+  </uws:jobref>
+
+  <uws:jobref id="888" xlink:href="http://glenelgin/asynch/888"
+              xlink:type="resource">
+    <uws:phase>QUEUED</uws:phase>
+  </uws:jobref>
+
+  <uws:jobref id="8888" xlink:href="http://glenelgin/asynch/8888"
+              xlink:type="resource">
+    <uws:phase>COMPLETED</uws:phase>
+  </uws:jobref>
+</uws:jobs>

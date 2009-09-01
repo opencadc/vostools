@@ -1,0 +1,41 @@
+<project default="build" basedir=".">
+
+  <property name="RELEASE" value="0" />
+  <property name="version" value="${RELEASE}.0w" />
+
+  <!-- Generic properties -->
+  <property environment="env"/>
+  <property file="local.build.properties" />
+  <property file="${env.A}/compilers/setup.ant.java.properties" />
+  <import file="${env.A}/compilers/setup.ant.java.targets.xml"/>
+
+  <!--*+
+  ************************************************************************
+  ****  C A N A D I A N   A S T R O N O M Y   D A T A   C E N T R E  *****
+  *-->
+
+  <!-- project-specific properties -->
+  <property name="project" value="cadcUWS" />
+  <!-- end of project properties -->
+
+  <!--
+    Libraries are duplicated (i.e. once in the path and once in the
+    WAR inclusion, so make variables out of them.
+  -->
+  <property name="restlet.home" value="${ext.lib}" />
+  <!-- property name="lib.ext.spring" value="${restlet.home}/org.restlet.ext.spring.jar" / -->
+  <property name="lib.org.restlet" value="${restlet.home}/org.restlet.jar" />
+  <property name="lib.restlet.ext.servlet" value="${restlet.home}/org.restlet.ext.servlet.jar" />
+  <property name="lib.restlet.ext.xml" value="${restlet.home}/org.restlet.ext.xml.jar" />
+
+
+  <!-- JAR files to be included in classpath for compilation -->
+  <!-- property name="cadc" value="${env.OPT_L}/jsky.jar"/ -->
+
+  <property name="ext" value="${ext.lib}/log4j.jar:${lib.org.restlet}:${lib.restlet.ext.xml}:${lib.restlet.ext.servlet}" />
+
+  <property name="jars" value="${ext}" />
+
+  <target name="build" depends="simpleJar" />
+
+</project>

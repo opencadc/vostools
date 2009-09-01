@@ -1,0 +1,24 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<uws:job xmlns:uws="http://www.ivoa.net/xml/UWS/v1.0rc3"
+         xmlns:xlink="http://www.w3.org/1999/xlink"
+         xmlns:xs="http://www.w3.org/2001/XMLSchema"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
+  <uws:jobId>88</uws:jobId>
+  <uws:ownerId>NULL</uws:ownerId>
+  <uws:phase>EXECUTING</uws:phase>
+  <uws:quote>1977-11-25T08:30:00</uws:quote>
+  <uws:startTime>1977-11-25T00:10:00</uws:startTime>
+  <uws:endTime>1977-11-25T03:21:00</uws:endTime>
+  <uws:executionDuration>11460</uws:executionDuration>
+  <uws:destruction>1977-11-25T09:00:00</uws:destruction>
+  <uws:results>
+    <uws:result id="correctedImage"
+                xlink:href="http://glenelgin/asynch/88/result/image">
+      <uws:phase>COMPLETED</uws:phase>
+    </uws:result>
+    <uws:result id="correctedSpectra"
+                xlink:href="http://glenelgin/asynch/88/result/spectra">
+      <uws:phase>COMPLETED</uws:phase>
+    </uws:result>
+  </uws:results>
+</uws:job>
