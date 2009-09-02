@@ -101,7 +101,7 @@ public class JobAsynchResource extends BaseJobResource
             if (phase.equals("RUN"))
             {
                 job.setExecutionPhase(ExecutionPhase.QUEUED);
-                getJobExecutorService().execute(job);
+                executeJob();
             }
             else if (phase.equals("ABORT"))
             {
@@ -133,6 +133,18 @@ public class JobAsynchResource extends BaseJobResource
         getResponse().setStatus(Status.REDIRECTION_SEE_OTHER);
         getResponse().setLocationRef(getContextPath() + "/async/"
                                      + job.getJobId());
+    }
+
+    /**
+     * Execute the current Job.  This method will set a new Job Runner with
+     * every execution to make it ThreadSafe.
+     */
+    protected void executeJob()
+    {
+        final JobExecutor je = getJobExecutorService();
+
+        je.setJobRunner(createJobRunner());
+        je.execute(getJob());
     }
 
     /**
@@ -471,6 +483,57 @@ public class JobAsynchResource extends BaseJobResource
                          + executorClass, e);
             throw new InvalidServiceException("Cannot create Executor Service "
                                               + "instance >> " + executorClass,
+                                              e);
+        }
+    }
+
+    /**
+     * Obtain a new instance of the Job Runner interface as defined in the
+     * Context
+     *
+     * @return  The JobRunner instance.
+     */
+    @SuppressWarnings("unchecked")
+    protected JobRunner createJobRunner()
+    {
+        if (!StringUtil.hasText(
+                getContext().getParameters().getFirstValue(
+                        UWS_RUNNER)))
+        {
+            throw new InvalidServiceException(
+                    "The JobRunner is mandatory!\n\n Please set the "
+                    + UWS_RUNNER + "context-param in the web.xml, "
+                    + "or insert it into the Context manually.");
+        }
+
+        final String jobRunnerClass = getContext().getParameters().
+                getFirstValue(UWS_RUNNER);
+
+        try
+        {
+            return (JobRunner) Class.forName(jobRunnerClass).
+                    newInstance();
+        }
+        catch (ClassNotFoundException e)
+        {
+            LOGGER.error("No such JobRunner >> " + jobRunnerClass, e);
+            throw new InvalidServiceException("No such JobRunner >> "
+                                              + jobRunnerClass, e);
+        }
+        catch (IllegalAccessException e)
+        {
+            LOGGER.error("Class or Constructor is inaccessible for "
+                         + "JobRunner >> " + jobRunnerClass, e);
+            throw new InvalidServiceException("Class or Constructor is "
+                                              + "inaccessible for JobRunner "
+                                              + ">> " + jobRunnerClass, e);
+        }
+        catch (InstantiationException e)
+        {
+            LOGGER.error("Cannot create JobRunner instance >> "
+                         + jobRunnerClass, e);
+            throw new InvalidServiceException("Cannot create JobRunner "
+                                              + "instance >> " + jobRunnerClass,
                                               e);
         }
     }

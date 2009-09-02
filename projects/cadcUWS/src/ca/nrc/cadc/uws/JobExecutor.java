@@ -54,4 +54,11 @@ public interface JobExecutor
      * @param job       The Job to execute.  No nulls area permitted.
      */
     void execute(final Job job);
+
+    /**
+     * Set the Job Runner to use.
+     *
+     * @param jobRunner     The JobRunner instance.
+     */
+    void setJobRunner(final JobRunner jobRunner);
 }
