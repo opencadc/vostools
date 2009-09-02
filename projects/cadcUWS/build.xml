@@ -1,41 +1,72 @@
+<!--
+
+    Copyright (C) 2009				Copyright (C) 2009
+    National Research Council		Conseil national de recherches
+    Ottawa, Canada, K1A 0R6			Ottawa, Canada, K1A 0R6
+    All rights reserved				Tous droits reserves
+    					
+    NRC disclaims any warranties,	Le CNRC denie toute garantie
+    expressed, implied, or statu-	enoncee, implicite ou legale,
+    tory, of any kind with respect	de quelque nature que se soit,
+    to the software, including		concernant le logiciel, y com-
+    without limitation any war-		pris sans restriction toute
+    ranty of merchantability or		garantie de valeur marchande
+    fitness for a particular pur-	ou de pertinence pour un usage
+    pose.  NRC shall not be liable	particulier.  Le CNRC ne
+    in any event for any damages,	pourra en aucun cas etre tenu
+    whether direct or indirect,		responsable de tout dommage,
+    special or general, consequen-	direct ou indirect, particul-
+    tial or incidental, arising		ier ou general, accessoire ou
+    from the use of the software.	fortuit, resultant de l'utili-
+    								sation du logiciel.
+    
+    
+    This file is part of OPEN_CADC_PROJECT_NAME.
+    
+    OPEN_CADC_PROJECT_NAME is free software: you can redistribute it and/or modify
+    it under the terms of the GNU Affero General Public License as published by
+    the Free Software Foundation, either version 3 of the License, or
+    (at your option) any later version.
+    
+    OPEN_CADC_PROJECT_NAME is distributed in the hope that it will be useful,
+    but WITHOUT ANY WARRANTY; without even the implied warranty of
+    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+    GNU Affero General Public License for more details.
+    
+    You should have received a copy of the GNU Affero General Public License
+    along with OPEN_CADC_PROJECT_NAME.  If not, see <http://www.gnu.org/licenses/>.	
+    
+-->		
 <project default="build" basedir=".">
-
-  <property name="RELEASE" value="0" />
-  <property name="version" value="${RELEASE}.0w" />
-
-  <!-- Generic properties -->
   <property environment="env"/>
-  <property file="local.build.properties" />
-  <property file="${env.A}/compilers/setup.ant.java.properties" />
-  <import file="${env.A}/compilers/setup.ant.java.targets.xml"/>
 
-  <!--*+
-  ************************************************************************
-  ****  C A N A D I A N   A S T R O N O M Y   D A T A   C E N T R E  *****
-  *-->
+    <!-- site-specific build properties or overrides of values in opencadc.properties -->
+    <property file="${env.CADC_PREFIX}/etc/local.properties" />
 
-  <!-- project-specific properties -->
-  <property name="project" value="cadcUWS" />
-  <!-- end of project properties -->
+    <!-- site-specific targets, e.g. install, cannot duplicate those in opencadc.targets.xml -->
+    <import file="${env.CADC_PREFIX}/etc/local.targets.xml" optional="true" />
 
-  <!--
-    Libraries are duplicated (i.e. once in the path and once in the
-    WAR inclusion, so make variables out of them.
-  -->
-  <property name="restlet.home" value="${ext.lib}" />
-  <!-- property name="lib.ext.spring" value="${restlet.home}/org.restlet.ext.spring.jar" / -->
-  <property name="lib.org.restlet" value="${restlet.home}/org.restlet.jar" />
-  <property name="lib.restlet.ext.servlet" value="${restlet.home}/org.restlet.ext.servlet.jar" />
-  <property name="lib.restlet.ext.xml" value="${restlet.home}/org.restlet.ext.xml.jar" />
+    <!-- default properties and targets -->
+    <property file="${env.CADC_PREFIX}/etc/opencadc.properties" />
+    <import file="${env.CADC_PREFIX}/etc/opencadc.targets.xml"/>
+
+    <!-- developer convenience: place for extra targets and properties -->
+    <import file="extras.xml" optional="true" />
+
+<property name="project" value="cadcUWS" />
+
+<property name="cadc" value="${lib}/cadcUtil.jar" />
+<property name="ext" value="${ext.lib}/log4j.jar:${ext.lib}/org.restlet.jar:${ext.lib}/org.restlet.ext.xml.jar:${ext.lib}/org.restlet.ext.servlet.jar" />
+
+<property name="jars" value="${cadc}:${ext}" />
 
 
-  <!-- JAR files to be included in classpath for compilation -->
-  <!-- property name="cadc" value="${env.OPT_L}/jsky.jar"/ -->
-
-  <property name="ext" value="${ext.lib}/log4j.jar:${lib.org.restlet}:${lib.restlet.ext.xml}:${lib.restlet.ext.servlet}" />
-
-  <property name="jars" value="${ext}" />
-
-  <target name="build" depends="simpleJar" />
+<target name="build" depends="compile">
+	<jar jarfile="${build}/lib/${project}.jar"
+		basedir="${build}/class"
+		update="no">
+		<include name="ca/nrc/cadc/**" />
+	</jar>
+</target>
 
 </project>
