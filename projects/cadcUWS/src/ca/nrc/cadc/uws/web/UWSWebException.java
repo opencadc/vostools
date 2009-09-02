@@ -24,20 +24,19 @@
  *
  *
  * @author jenkinsd
- * Jul 14, 2009 - 10:53:56 AM
+ * Jul 14, 2009 - 10:37:29 AM
  *
  *
  *
  ****  C A N A D I A N   A S T R O N O M Y   D A T A   C E N T R E  *****
  ************************************************************************
  */
-package ca.nrc.cadc.uws.web.exceptions;
-
+package ca.nrc.cadc.uws.web;
 
 /**
- * Exception thrown for undisplayable Representations.
+ * Base Resource.
  */
-public class WebRepresentationException extends UWSWebException
+public abstract class UWSWebException extends RuntimeException
 {
     /**
      * Constructs a new runtime exception with the specified detail message.
@@ -47,7 +46,7 @@ public class WebRepresentationException extends UWSWebException
      * @param message the detail message. The detail message is saved for
      *                later retrieval by the {@link #getMessage()} method.
      */
-    public WebRepresentationException(String message)
+    protected UWSWebException(String message)
     {
         super(message);
     }
@@ -66,7 +65,7 @@ public class WebRepresentationException extends UWSWebException
      *                unknown.)
      * @since 1.4
      */
-    public WebRepresentationException(String message, Throwable cause)
+    protected UWSWebException(String message, Throwable cause)
     {
         super(message, cause);
     }
