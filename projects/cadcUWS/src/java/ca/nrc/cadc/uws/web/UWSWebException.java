@@ -38,35 +38,45 @@
  *
  ******************************************************************************/
 
-package ca.nrc.cadc.uws;
+package ca.nrc.cadc.uws.web;
 
-import ca.nrc.cadc.uws.Job;
+import ca.nrc.cadc.uws.UWSException;
 
-import java.util.Collection;
 
-public interface JobPersistence
+/**
+ * Base Resource.
+ */
+public abstract class UWSWebException extends UWSException
 {
     /**
-     * Obtain a Job from the persistence layer.
+     * Constructs a new runtime exception with the specified detail message.
+     * The cause is not initialized, and may subsequently be initialized by a
+     * call to {@link #initCause}.
      *
-     * @param jobID     The job identifier.
-     * @return          Job instance, or null if none found.
+     * @param message the detail message. The detail message is saved for
+     *                later retrieval by the {@link #getMessage()} method.
      */
-    Job getJob(final long jobID);
+    protected UWSWebException(String message)
+    {
+        super(message);
+    }
 
     /**
-     * Obtain a listing of Job instances.
+     * Constructs a new runtime exception with the specified detail message and
+     * cause.  <p>Note that the detail message associated with
+     * <code>cause</code> is <i>not</i> automatically incorporated in
+     * this runtime exception's detail message.
      *
-     * @return  Collection of Job instances, or empty Collection.  Never null.
+     * @param message the detail message (which is saved for later retrieval
+     *                by the {@link #getMessage()} method).
+     * @param cause   the cause (which is saved for later retrieval by the
+     *                {@link #getCause()} method).  (A <tt>null</tt> value is
+     *                permitted, and indicates that the cause is nonexistent or
+     *                unknown.)
+     * @since 1.4
      */
-    Collection<Job> getJobs();
-
-    /**
-     * Persist the given Job.
-     *
-     * @param job       Job to persist.
-     * @return          The persisted Job, complete with a surrogate key, if
-     *                  necessary.
-     */
-    Job persist(final Job job);
+    protected UWSWebException(String message, Throwable cause)
+    {
+        super(message, cause);
+    }
 }
