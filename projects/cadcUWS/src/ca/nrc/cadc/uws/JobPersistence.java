@@ -33,10 +33,12 @@
  */
 package ca.nrc.cadc.uws;
 
-import ca.nrc.cadc.uws.Job;
-
 import java.util.Collection;
 
+/**
+ * Service interface for job persistence. The implementation class name used 
+ * must be configured as a context-param with key <code>ca.nrc.cadc.uws.JobPersistence</code>.
+ */
 public interface JobPersistence
 {
     /**

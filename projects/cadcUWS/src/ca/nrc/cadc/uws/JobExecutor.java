@@ -36,7 +36,8 @@ package ca.nrc.cadc.uws;
 
 
 /**
- * Service for executable jobs.
+ * Service interface to control job execution. The implementation class name used
+  * must be configured as a context-param with key <code>ca.nrc.cadc.uws.JobExecutor</code>.
  */
 public interface JobExecutor
 {

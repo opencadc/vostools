@@ -39,8 +39,9 @@ import java.util.Collection;
 
 
 /**
- * Service to interact with the Persistence layer for Jobs, and to encompass
- * Business Logic relating to them.
+ * Service interface to manage jobs. The JobManager enforces service limits on job attributes
+ * and uses the configured JobPersistence. The implementation class name used
+ * must be configured as a context-param with key <code>ca.nrc.cadc.uws.JobManager</code>.
  */
 public interface JobManager
 {

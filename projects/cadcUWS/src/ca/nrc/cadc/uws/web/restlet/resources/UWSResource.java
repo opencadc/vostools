@@ -45,9 +45,10 @@ import ca.nrc.cadc.uws.web.validators.FormValidator;
  */
 public abstract class UWSResource extends ServerResource
 {
-    protected final static String UWS_EXECUTOR_SERVICE = "ca.nrc.cadc.executor";
-    protected final static String UWS_JOB_SERVICE = "ca.nrc.cadc.jobservice";
-    protected final static String UWS_PERSISTENCE = "ca.nrc.cadc.persistence";
+    protected final static String UWS_EXECUTOR_SERVICE = "ca.nrc.cadc.uws.JobExecutor";
+    protected final static String UWS_JOB_SERVICE = "ca.nrc.cadc.uws.JobManager";
+    protected final static String UWS_PERSISTENCE = "ca.nrc.cadc.uws.JobPersistence";
+    protected final static String UWS_RUNNER = "ca.nrc.cadc.uws.JobRunner";
 
     protected final static String XML_NAMESPACE_PREFIX = "uws";
     protected final static String XML_NAMESPACE_URI = 

@@ -35,7 +35,10 @@ package ca.nrc.cadc.uws;
 
 
 /**
- * Runner interface that will handle the execution of a Job.
+ * Runner interface that will handle the execution of a Job: service MUST implement
+ * this interface to execute the job. The implementation class contains the code to actually
+ * execute the job as defined by the service. The implementation class name used
+  * must be configured as a context-param with key <code>ca.nrc.cadc.uws.JobRunner</code>.
  */
 public interface JobRunner extends Runnable
 {
