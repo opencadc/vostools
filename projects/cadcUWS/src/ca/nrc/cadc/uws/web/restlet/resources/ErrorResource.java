@@ -52,7 +52,7 @@ import java.io.IOException;
 import ca.nrc.cadc.uws.web.WebRepresentationException;
 import ca.nrc.cadc.uws.JobAttribute;
 import ca.nrc.cadc.uws.Job;
-import ca.nrc.cadc.uws.Error;
+import ca.nrc.cadc.uws.ErrorSummary;
 
 
 public class ErrorResource extends BaseJobResource
@@ -104,7 +104,7 @@ public class ErrorResource extends BaseJobResource
     protected void buildXML(final Document document)
     {
         final Job job = getJob();
-        final Error error = job.getError();
+        final ErrorSummary errorSummary = job.getError();
 
         // <uws:errorSummary>
         final Element errorSummaryElement =
@@ -113,7 +113,7 @@ public class ErrorResource extends BaseJobResource
                                                  getAttributeName());
         errorSummaryElement.setPrefix(XML_NAMESPACE_PREFIX);
 
-        if (error != null)
+        if (errorSummary != null)
         {
             final Element errorSummaryMessageElement =
                     document.createElementNS(XML_NAMESPACE_URI,
@@ -121,7 +121,7 @@ public class ErrorResource extends BaseJobResource
                                                      getAttributeName());
             errorSummaryMessageElement.setPrefix(XML_NAMESPACE_PREFIX);
             errorSummaryMessageElement.setTextContent(
-                    error.getSummaryMessage());
+                    errorSummary.getSummaryMessage());
 
             final Element errorSummaryDetailLinkElement =
                     document.createElementNS(XML_NAMESPACE_URI,
@@ -129,7 +129,7 @@ public class ErrorResource extends BaseJobResource
                                                      getAttributeName());
             errorSummaryDetailLinkElement.setPrefix(XML_NAMESPACE_PREFIX);
             errorSummaryDetailLinkElement.setAttribute("xlink:href",
-                                                       error.getDocumentURI().
+                                                       errorSummary.getDocumentURI().
                                                                toString());
 
             errorSummaryElement.appendChild(errorSummaryMessageElement);

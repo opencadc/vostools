@@ -50,13 +50,26 @@ import java.net.URI;
  * there is an error running a job a summary of the error should be given using
  * the optional errorSummary element of the JobSummary type.
  */
-public class Error
+public class ErrorSummary
 {
     private String summaryMessage;
     private URI documentURI;
 
 
-    public Error(final String summaryMessage, final URI documentURI)
+    /**
+     * Public no-arg constructor.
+     */
+    public ErrorSummary()
+    {
+    }
+
+    /**
+     * Complete constructor.
+     *
+     * @param summaryMessage        The summary of the error.
+     * @param documentURI           The URI to the actual Document.
+     */
+    public ErrorSummary(final String summaryMessage, final URI documentURI)
     {
         this.summaryMessage = summaryMessage;
         this.documentURI = documentURI;

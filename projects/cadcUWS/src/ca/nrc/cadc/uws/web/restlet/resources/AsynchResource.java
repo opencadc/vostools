@@ -62,7 +62,7 @@ import java.net.URI;
 import java.net.URISyntaxException;
 
 import ca.nrc.cadc.uws.*;
-import ca.nrc.cadc.uws.Error;
+import ca.nrc.cadc.uws.ErrorSummary;
 import ca.nrc.cadc.uws.util.DateUtil;
 import ca.nrc.cadc.uws.util.StringUtil;
 import ca.nrc.cadc.uws.web.validators.FormValidator;
@@ -147,12 +147,12 @@ public class AsynchResource extends UWSResource
             final String errorDocumentURI = form.getFirstValue(
                     JobAttribute.ERROR_SUMMARY_DETAIL_LINK.getAttributeName().
                             toUpperCase());
-            final Error error = new Error(errorMessage,
+            final ErrorSummary errorSummary = new ErrorSummary(errorMessage,
                                           new URI(errorDocumentURI));            
 
             job = new Job(null, ExecutionPhase.valueOf(phase.toUpperCase()),
                           Long.parseLong(duration), destructionDate, quoteDate,
-                          startDate, null, error, owner, runID, null, null);
+                          startDate, null, errorSummary, owner, runID, null, null);
         }
         catch (ParseException e)
         {

@@ -58,7 +58,7 @@ public class Job
     private Date quote;
     private Date startTime;
     private Date endTime;    
-    private Error error;
+    private ErrorSummary errorSummary;
     private String owner;
     private String runId;
     private List<Result> resultsList;
@@ -76,7 +76,7 @@ public class Job
      * @param quote                 The quoted date of completion.
      * @param startTime             The start date of execution.
      * @param endTime               The end date of execution.
-     * @param error                 The error, if any.
+     * @param errorSummary                 The error, if any.
      * @param owner                 The Owner of this Job.
      * @param runId                 The specific running ID.
      * @param resultsList           The List of Results.
@@ -85,7 +85,7 @@ public class Job
     public Job(final Long jobId, final ExecutionPhase executionPhase,
                final long executionDuration, final Date destructionTime,
                final Date quote, final Date startTime, final Date endTime,
-               final Error error, final String owner,
+               final ErrorSummary errorSummary, final String owner,
                final String runId, final List<Result> resultsList,
                final List<Parameter> parameterList)
     {
@@ -96,7 +96,7 @@ public class Job
         this.quote = quote;
         this.startTime = startTime;
         this.endTime = endTime;
-        this.error = error;
+        this.errorSummary = errorSummary;
         this.owner = owner;
         this.runId = runId;
         this.resultsList = resultsList;
@@ -245,14 +245,14 @@ public class Job
      *
      * @return String human readable message.
      */
-    public Error getError()
+    public ErrorSummary getError()
     {
-        return error;
+        return errorSummary;
     }
 
-    public void setError(final Error error)
+    public void setError(final ErrorSummary errorSummary)
     {
-        this.error = error;
+        this.errorSummary = errorSummary;
     }
 
     /**
