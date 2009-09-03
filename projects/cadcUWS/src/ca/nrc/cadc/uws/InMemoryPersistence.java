@@ -142,7 +142,7 @@ public class InMemoryPersistence implements JobPersistence
                                                job.getQuote(),
                                                job.getStartTime(),
                                                job.getEndTime(),
-                                               job.getError(),
+                                               job.getErrorSummary(),
                                                job.getOwner(), job.getRunId(),
                                                job.getResultsList(),
                                                job.getParameterList());

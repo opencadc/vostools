@@ -85,7 +85,7 @@ public class AsynchResourceTestCase extends TestCase
 
         mockJob = createMock(Job.class);
         expect(mockJob.getJobId()).andReturn(88l).anyTimes();
-//        expect(mockJob.getError()).andReturn("ERROR_MESSAGE").anyTimes();
+//        expect(mockJob.getErrorSummary()).andReturn("ERROR_MESSAGE").anyTimes();
         expect(mockJob.getExecutionPhase()).
                 andReturn(ExecutionPhase.EXECUTING).anyTimes();
         expect(mockJob.getExecutionDuration()).andReturn(88l).anyTimes();
@@ -223,7 +223,7 @@ public class AsynchResourceTestCase extends TestCase
                                                  getAttributeName());
         errorSummaryDetailLinkElement.setAttributeNS("xlink", "href",
                                                      "LINK");
-//        errorSummaryDetailLinkElement.setNodeValue(mockJob.getError());
+//        errorSummaryDetailLinkElement.setNodeValue(mockJob.getErrorSummary());
 
         errorSummaryElement.appendChild(errorSummaryMessageElement);
         errorSummaryElement.appendChild(errorSummaryDetailLinkElement);

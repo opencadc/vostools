@@ -41,16 +41,12 @@
 package ca.nrc.cadc.uws.web.restlet.resources;
 
 import org.restlet.representation.Representation;
-import org.restlet.ext.xml.DomRepresentation;
-import org.restlet.data.MediaType;
+import org.restlet.representation.EmptyRepresentation;
+import org.restlet.Client;
+import org.restlet.data.Protocol;
+import org.restlet.data.Response;
 import org.apache.log4j.Logger;
-import org.w3c.dom.Document;
-import org.w3c.dom.Element;
 
-import java.io.IOException;
-
-import ca.nrc.cadc.uws.web.WebRepresentationException;
-import ca.nrc.cadc.uws.JobAttribute;
 import ca.nrc.cadc.uws.Job;
 import ca.nrc.cadc.uws.ErrorSummary;
 
@@ -67,75 +63,33 @@ public class ErrorResource extends BaseJobResource
      */
     protected Representation getRepresentation()
     {
-        return toXML();
-    }
-
-    /**
-     * Obtain the XML Representation of this Request.
-     *
-     * @return      The XML Representation, fully populated.
-     */
-    public Representation toXML()
-    {
-        try
-        {
-            final DomRepresentation rep =
-                    new DomRepresentation(MediaType.TEXT_XML);
-            buildXML(rep.getDocument());
-
-            rep.getDocument().normalizeDocument();
-
-            return rep;
-        }
-        catch (final IOException e)
-        {
-            LOGGER.error("Unable to create XML Document.");
-            throw new WebRepresentationException(
-                    "Unable to create XML Document.", e);
-        }
-    }
-
-    /**
-     * Assemble the XML for this Resource's Representation into the given
-     * Document.
-     *
-     * @param document The Document to build up.
-     */
-    protected void buildXML(final Document document)
-    {
+        final Representation representation;
         final Job job = getJob();
-        final ErrorSummary errorSummary = job.getError();
+        final ErrorSummary errorSummary = job.getErrorSummary();
 
-        // <uws:errorSummary>
-        final Element errorSummaryElement =
-                document.createElementNS(XML_NAMESPACE_URI,
-                                         JobAttribute.ERROR_SUMMARY.
-                                                 getAttributeName());
-        errorSummaryElement.setPrefix(XML_NAMESPACE_PREFIX);
-
-        if (errorSummary != null)
+        if (errorSummary == null)
         {
-            final Element errorSummaryMessageElement =
-                    document.createElementNS(XML_NAMESPACE_URI,
-                                             JobAttribute.ERROR_SUMMARY_MESSAGE.
-                                                     getAttributeName());
-            errorSummaryMessageElement.setPrefix(XML_NAMESPACE_PREFIX);
-            errorSummaryMessageElement.setTextContent(
-                    errorSummary.getSummaryMessage());
-
-            final Element errorSummaryDetailLinkElement =
-                    document.createElementNS(XML_NAMESPACE_URI,
-                                             JobAttribute.ERROR_SUMMARY_DETAIL_LINK.
-                                                     getAttributeName());
-            errorSummaryDetailLinkElement.setPrefix(XML_NAMESPACE_PREFIX);
-            errorSummaryDetailLinkElement.setAttribute("xlink:href",
-                                                       errorSummary.getDocumentURI().
-                                                               toString());
-
-            errorSummaryElement.appendChild(errorSummaryMessageElement);
-            errorSummaryElement.appendChild(errorSummaryDetailLinkElement);
+            representation = new EmptyRepresentation();
+        }
+        else
+        {
+            representation = getRemoteError();
         }
 
-        document.appendChild(errorSummaryElement);
+        return representation;
+    }
+
+    /**
+     * Hit the Error's URI to get the detailed Error.
+     *
+     * @return  Representation of the Error.
+     */
+    protected Representation getRemoteError()
+    {
+        final Client client = new Client(getContext(), Protocol.ALL);
+        final Response response =
+                client.get(getJob().getErrorSummary().getDocumentURI().toString());
+
+        return response.getEntity();
     }
 }

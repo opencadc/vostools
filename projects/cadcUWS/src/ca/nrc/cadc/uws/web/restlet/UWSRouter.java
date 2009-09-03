@@ -43,10 +43,7 @@ package ca.nrc.cadc.uws.web.restlet;
 import org.restlet.routing.Router;
 import org.restlet.Context;
 import org.apache.log4j.Logger;
-import ca.nrc.cadc.uws.web.restlet.resources.AsynchResource;
-import ca.nrc.cadc.uws.web.restlet.resources.JobAsynchResource;
-import ca.nrc.cadc.uws.web.restlet.resources.ResultListResource;
-import ca.nrc.cadc.uws.web.restlet.resources.ParameterListResource;
+import ca.nrc.cadc.uws.web.restlet.resources.*;
 import ca.nrc.cadc.uws.util.StringUtil;
 import ca.nrc.cadc.uws.InvalidResourceException;
 
@@ -76,7 +73,7 @@ public class UWSRouter extends Router
         attach("/async/{jobID}/executionDuration",
                JobAsynchResource.class);
         attach("/async/{jobID}/destruction", JobAsynchResource.class);
-        attach("/async/{jobID}/error", JobAsynchResource.class);
+        attach("/async/{jobID}/error", ErrorResource.class);
         attach("/async/{jobID}/quote", JobAsynchResource.class);
         attach("/async/{jobID}/results", ResultListResource.class);
         attach("/async/{jobID}/parameters", ParameterListResource.class);

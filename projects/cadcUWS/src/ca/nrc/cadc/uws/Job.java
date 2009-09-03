@@ -245,12 +245,12 @@ public class Job
      *
      * @return String human readable message.
      */
-    public ErrorSummary getError()
+    public ErrorSummary getErrorSummary()
     {
         return errorSummary;
     }
 
-    public void setError(final ErrorSummary errorSummary)
+    public void setErrorSummary(final ErrorSummary errorSummary)
     {
         this.errorSummary = errorSummary;
     }

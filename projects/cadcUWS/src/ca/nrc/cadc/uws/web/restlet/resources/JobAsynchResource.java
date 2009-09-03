@@ -305,16 +305,28 @@ public class JobAsynchResource extends BaseJobResource
                                   DateUtil.ISO8601_DATE_FORMAT));
         jobElement.appendChild(quoteElement);
 
-        // <uws:error>
+        // <uws:errorSummary>
+        final ErrorSummary errorSummary = job.getErrorSummary();
         final Element errorSummaryElement =
-                getRemoteElement(JobAttribute.ERROR_SUMMARY);
+                document.createElementNS(XML_NAMESPACE_URI,
+                                         JobAttribute.ERROR_SUMMARY.
+                                                 getAttributeName());
+        errorSummaryElement.setPrefix(XML_NAMESPACE_PREFIX);
 
-        if (errorSummaryElement != null)
+        if (errorSummary != null)
         {
-            final Node importedErrorSummaryList =
-                    document.importNode(errorSummaryElement, true);
-            jobElement.appendChild(importedErrorSummaryList);
+            final Element errorSummaryMessageElement =
+                    document.createElementNS(XML_NAMESPACE_URI,
+                                             JobAttribute.ERROR_SUMMARY_MESSAGE.
+                                                     getAttributeName());
+            errorSummaryMessageElement.setPrefix(XML_NAMESPACE_PREFIX);
+            errorSummaryMessageElement.setTextContent(
+                    errorSummary.getSummaryMessage());
+
+            errorSummaryElement.appendChild(errorSummaryMessageElement);
         }
+
+        jobElement.appendChild(errorSummaryElement);
         
         // <uws:owner>
         final Element ownerNameElement =
