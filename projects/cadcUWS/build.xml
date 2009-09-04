@@ -56,7 +56,7 @@
 <property name="project" value="cadcUWS" />
 
 <property name="cadc" value="${lib}/cadcUtil.jar" />
-<property name="ext" value="${ext.lib}/log4j.jar:${ext.lib}/org.restlet.jar:${ext.lib}/org.restlet.ext.xml.jar:${ext.lib}/org.restlet.ext.servlet.jar" />
+<property name="ext" value="${ext.lib}/log4j.jar:${ext.lib}/org.restlet.jar:${ext.lib}/org.restlet.ext.xml.jar" />
 
 <property name="jars" value="${cadc}:${ext}" />
 
