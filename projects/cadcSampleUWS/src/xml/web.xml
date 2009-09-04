@@ -44,12 +44,7 @@
 
 <web-app>
     
-    <servlet>
-        <servlet-name>async</servlet-name>
-        <servlet-class>org.restlet.ext.servlet.ServerServlet</servlet-class>
-        <load-on-startup>1</load-on-startup>
-    </servlet>
-     <context-param>
+    <context-param>
         <param-name>org.restlet.application</param-name>
         <param-value>ca.nrc.cadc.uws.web.restlet.UWSApplication</param-value>
     </context-param>
@@ -73,6 +68,12 @@
         <param-name>ca.nrc.cadc.uws.JobRunner</param-name>
         <param-value>ca.nrc.cadc.uws.sample.HelloWorld</param-value>
     </context-param>
+
+    <servlet>
+        <servlet-name>async</servlet-name>
+        <servlet-class>org.restlet.ext.servlet.ServerServlet</servlet-class>
+        <load-on-startup>1</load-on-startup>
+    </servlet>    
 
     <!-- the UWS job list endpoint -->
 	<servlet-mapping>

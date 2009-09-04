@@ -63,7 +63,7 @@
     <property name="lib.uws"      value="${lib}/cadcUWS.jar" />
 
 
-    <property name="jars" value="${lib}/cadcUtil.jar:${lib}/cadcUWS.jar:${ext.lib}/log4j.jar" />
+    <property name="jars" value="${lib.cadcUtil}:${lib.uws}:${ext.lib}/log4j.jar" />
 
     <target name="build" depends="cadcSampleUWS,webapp" />
 
@@ -82,10 +82,12 @@
                     <include name="org.restlet.ext.xml.jar" />
                     <include name="org.restlet.jar" />
                 </lib>
-                <lib dir="${lib}">
+                <lib file="${lib.uws}" />
+                <lib file="${lib.cadcUtil}" />
+                <!-- lib dir="${lib}">
                     <include name="cadcUtil.jar" />
                     <include name="cadcUWS.jar" />
-                </lib>
+                </lib -->
                 <lib dir="${build}/tmp">
                     <include name="cadcSampleUWS.jar" />
                 </lib>
