@@ -45,17 +45,19 @@ package ca.nrc.cadc.uws.sample;
 import java.net.URI;
 import java.net.URL;
 import java.util.ArrayList;
+import java.util.Iterator;
 import java.util.List;
 
+import org.apache.log4j.Logger;
+
 import ca.nrc.cadc.net.NetUtil;
+import ca.nrc.cadc.util.LoggerUtil;
 import ca.nrc.cadc.uws.Job;
 import ca.nrc.cadc.uws.ErrorSummary;
 import ca.nrc.cadc.uws.JobRunner;
 import ca.nrc.cadc.uws.Parameter;
 import ca.nrc.cadc.uws.Result;
 
-import java.util.Iterator;
-import org.apache.log4j.Logger;
 
 /**
  * Basic Job Runner class. The sample job takes two params:</p>
@@ -73,7 +75,31 @@ public class HelloWorld implements JobRunner
 	
 	private Job job;
 
-    public HelloWorld() { }
+    public HelloWorld()
+    {
+        try
+        {
+            //  Set up log4j.  For now hard-code the debug level.
+        	//  Eventually it would be nice to be able to change
+        	//  it while the program is running.
+            //
+            //  It should also be possible to use PropertyUtil in
+        	//  a static block to get the log level from a Java -D
+        	//  property set by tomcatEnv.
+            //
+            final String thisJavaPkg = HelloWorld.class.getPackage().getName();
+            final String logLevel    = "debug";
+            final String [] args     = { "-"+logLevel };
+            final String logFileBaseName = LoggerUtil.getTimestampLogName( "cadcSampleUWS" );
+			LoggerUtil.initialize( new String[] { thisJavaPkg, "ca.nrc.cadc.ad" }, args, logFileBaseName );
+	        log.info( "Initialized logging to level="+logLevel+" for package: "+thisJavaPkg );
+        }
+        catch ( Exception e )
+        {
+            e.printStackTrace();
+            return;
+        }
+    }
 
     /**
      * Set the Job that this Runner is currently responsible for.
@@ -115,12 +141,16 @@ public class HelloWorld implements JobRunner
         try
         {
             String server = NetUtil.getServerName( this.getClass() );
+            log.debug( "server="+server );
 
             // parse params
             List<Parameter> params = job.getParameterList();
             if (params == null)
             {
-                // TODO: handle a real failure and return
+				log.error("Missing param list");
+				ErrorSummary error = new ErrorSummary("ERROR: No param list found in job", new URI("http://"+server+"/cadcSampleUWS/error.txt") );
+				job.setErrorSummary(error);
+				return;
             }
             Parameter passP = null;
             Parameter runforP = null;
@@ -142,6 +172,7 @@ public class HelloWorld implements JobRunner
                 try 
                 { 
                     pass = Boolean.parseBoolean(passP.getValue()); 
+                    log.debug( "pass="+pass );
                 }
                 catch(Throwable oops)
                 {
@@ -161,7 +192,10 @@ public class HelloWorld implements JobRunner
                 }
             if (runfor < 0)
             {
-                // TODO: handle real failure and return
+				log.debug( "Negative run time: "+runfor );
+            	ErrorSummary error = new ErrorSummary("ERROR: RUNFOR param < 0", new URI("http://"+server+"/cadcSampleUWS/error.txt") );
+				job.setErrorSummary(error);
+				return;
             }
 
             log.debug("sleeping for " + runfor + " seconds");
@@ -173,11 +207,13 @@ public class HelloWorld implements JobRunner
                 ArrayList<Result> resultList = new ArrayList<Result>();
                 resultList.add( result );
                 job.setResultsList( resultList );
+                log.debug( "Having slept and being told to pass, invoke persistence here..." );
                 // TODO: invoke JobPersistence somehow
                 return;
             }
             else
 			{
+                log.debug( "Having slept and being told to fail, construct error" );
 				ErrorSummary error = new ErrorSummary("error from PASS=false", new URI("http://"+server+"/cadcSampleUWS/error.txt") );
 				job.setErrorSummary(error);
 				return;

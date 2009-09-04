@@ -21,20 +21,20 @@
     								sation du logiciel.
     
     
-    This file is part of OPEN_CADC_PROJECT_NAME.
+    This file is part of cadcSampleUWS.
     
-    OPEN_CADC_PROJECT_NAME is free software: you can redistribute it and/or modify
+    CadcSampleUWS is free software: you can redistribute it and/or modify
     it under the terms of the GNU Affero General Public License as published by
     the Free Software Foundation, either version 3 of the License, or
     (at your option) any later version.
     
-    OPEN_CADC_PROJECT_NAME is distributed in the hope that it will be useful,
+    CadcSampleUWS is distributed in the hope that it will be useful,
     but WITHOUT ANY WARRANTY; without even the implied warranty of
     MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
     GNU Affero General Public License for more details.
     
     You should have received a copy of the GNU Affero General Public License
-    along with OPEN_CADC_PROJECT_NAME.  If not, see <http://www.gnu.org/licenses/>.	
+    along with cadcSampleUWS.  If not, see <http://www.gnu.org/licenses/>.	
     
 -->		
 <!DOCTYPE project>
@@ -60,10 +60,11 @@
     <!-- JAR files to be included in classpath and war file -->
     <property name="ext.log4j"    value="${ext.lib}/log4j.jar" />
     <property name="lib.cadcUtil" value="${lib}/cadcUtil.jar" />
+    <property name="lib.javaUtil" value="${lib}/javaUtil.jar" />
     <property name="lib.uws"      value="${lib}/cadcUWS.jar" />
 
 
-    <property name="jars" value="${lib.cadcUtil}:${lib.uws}:${ext.lib}/log4j.jar" />
+    <property name="jars" value="${lib.javaUtil}:${lib.cadcUtil}:${lib.uws}:${ext.lib}/log4j.jar" />
 
     <target name="build" depends="cadcSampleUWS,webapp" />
 
@@ -93,9 +94,6 @@
                 </lib>
                 <fileset dir="src/text">
                     <include name="**/*.txt" />
-                </fileset>
-                <fileset dir="config">
-                    <include name="**/*.properties" />
                 </fileset>
             </war>
     </target>
