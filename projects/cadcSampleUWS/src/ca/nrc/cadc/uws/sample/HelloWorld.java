@@ -42,16 +42,14 @@
 package ca.nrc.cadc.uws.sample;
 
 
-import java.net.MalformedURLException;
 import java.net.URI;
-import java.net.URISyntaxException;
 import java.net.URL;
 import java.util.ArrayList;
 import java.util.List;
 
 import ca.nrc.cadc.net.NetUtil;
 import ca.nrc.cadc.uws.Job;
-import ca.nrc.cadc.uws.JobError;
+import ca.nrc.cadc.uws.ErrorSummary;
 import ca.nrc.cadc.uws.JobRunner;
 import ca.nrc.cadc.uws.Parameter;
 import ca.nrc.cadc.uws.Result;
@@ -180,15 +178,15 @@ public class HelloWorld implements JobRunner
             }
             else
 			{
-				JobError error = new JobError("error from PASS=false", new URI("http://"+server+"/cadcSampleUWS/error.txt") );
-				job.setError(error);
+				ErrorSummary error = new ErrorSummary("error from PASS=false", new URI("http://"+server+"/cadcSampleUWS/error.txt") );
+				job.setErrorSummary(error);
 				return;
 			}
 		}
         catch (Throwable t)
         {
-			JobError error = new JobError(t.getMessage(), null );
-			job.setError( error );
+			ErrorSummary error = new ErrorSummary(t.getMessage(), null );
+			job.setErrorSummary( error );
 			return;
 		}
     }
