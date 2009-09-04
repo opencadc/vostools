@@ -1,0 +1,101 @@
+<!--
+
+    Copyright (C) 2009				Copyright (C) 2009
+    National Research Council		Conseil national de recherches
+    Ottawa, Canada, K1A 0R6			Ottawa, Canada, K1A 0R6
+    All rights reserved				Tous droits reserves
+    					
+    NRC disclaims any warranties,	Le CNRC denie toute garantie
+    expressed, implied, or statu-	enoncee, implicite ou legale,
+    tory, of any kind with respect	de quelque nature que se soit,
+    to the software, including		concernant le logiciel, y com-
+    without limitation any war-		pris sans restriction toute
+    ranty of merchantability or		garantie de valeur marchande
+    fitness for a particular pur-	ou de pertinence pour un usage
+    pose.  NRC shall not be liable	particulier.  Le CNRC ne
+    in any event for any damages,	pourra en aucun cas etre tenu
+    whether direct or indirect,		responsable de tout dommage,
+    special or general, consequen-	direct ou indirect, particul-
+    tial or incidental, arising		ier ou general, accessoire ou
+    from the use of the software.	fortuit, resultant de l'utili-
+    								sation du logiciel.
+    
+    
+    This file is part of OPEN_CADC_PROJECT_NAME.
+    
+    OPEN_CADC_PROJECT_NAME is free software: you can redistribute it and/or modify
+    it under the terms of the GNU Affero General Public License as published by
+    the Free Software Foundation, either version 3 of the License, or
+    (at your option) any later version.
+    
+    OPEN_CADC_PROJECT_NAME is distributed in the hope that it will be useful,
+    but WITHOUT ANY WARRANTY; without even the implied warranty of
+    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+    GNU Affero General Public License for more details.
+    
+    You should have received a copy of the GNU Affero General Public License
+    along with OPEN_CADC_PROJECT_NAME.  If not, see <http://www.gnu.org/licenses/>.	
+    
+-->		
+<!DOCTYPE project>
+<project default="build" basedir=".">
+
+<property environment="env"/>
+
+    <!-- site-specific build properties or overrides of values in opencadc.properties -->
+    <property file="${env.CADC_PREFIX}/etc/local.properties" />
+
+    <!-- site-specific targets, e.g. install, cannot duplicate those in opencadc.targets.xml -->
+    <import file="${env.CADC_PREFIX}/etc/local.targets.xml" optional="true" />
+
+    <!-- default properties and targets -->
+    <property file="${env.CADC_PREFIX}/etc/opencadc.properties" />
+    <import file="${env.CADC_PREFIX}/etc/opencadc.targets.xml"/>
+
+    <!-- developer convenience: place for extra targets and properties -->
+    <import file="extras.xml" optional="true" />
+    
+    <property name="project" value="cadcSampleUWS" />
+
+    <!-- JAR files to be included in classpath and war file -->
+    <property name="ext.log4j"    value="${ext.lib}/log4j.jar" />
+    <property name="lib.cadcUtil" value="${lib}/cadcUtil.jar" />
+    <property name="lib.uws"      value="${lib}/cadcUWS.jar" />
+
+
+    <property name="jars" value="${lib}/cadcUtil.jar:${lib}/cadcUWS.jar:${ext.lib}/log4j.jar" />
+
+    <target name="build" depends="cadcSampleUWS,webapp" />
+
+    <target name="cadcSampleUWS" depends="compile">
+            <jar jarfile="${build}/tmp/cadcSampleUWS.jar"
+                    basedir="${build}/class" update="no">
+                    <exclude name="test/**" />
+            </jar>
+    </target>
+
+    <target name="webapp" depends="cadcSampleUWS">
+            <war warfile="${build}/webapps/cadcSampleUWS.war" webxml="src/xml/web.xml" update="no">
+                <lib dir="${ext.lib}">
+                    <include name="log4j.jar" />
+                    <include name="org.restlet.ext.servlet.jar" />
+                    <include name="org.restlet.ext.xml.jar" />
+                    <include name="org.restlet.jar" />
+                </lib>
+                <lib dir="${lib}">
+                    <include name="cadcUtil.jar" />
+                    <include name="cadcUWS.jar" />
+                </lib>
+                <lib dir="${build}/tmp">
+                    <include name="cadcSampleUWS.jar" />
+                </lib>
+                <fileset dir="src/text">
+                    <include name="**/*.txt" />
+                </fileset>
+                <fileset dir="config">
+                    <include name="**/*.properties" />
+                </fileset>
+            </war>
+    </target>
+
+</project>
