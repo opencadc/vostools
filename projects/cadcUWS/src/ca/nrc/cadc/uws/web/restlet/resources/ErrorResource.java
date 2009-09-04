@@ -45,9 +45,13 @@ import org.restlet.representation.EmptyRepresentation;
 import org.restlet.Client;
 import org.restlet.data.Protocol;
 import org.restlet.data.Response;
+import org.apache.log4j.Logger;
 
 import ca.nrc.cadc.uws.Job;
 import ca.nrc.cadc.uws.ErrorSummary;
+import ca.nrc.cadc.uws.web.WebRepresentationException;
+
+import java.net.MalformedURLException;
 
 
 /**
@@ -55,6 +59,8 @@ import ca.nrc.cadc.uws.ErrorSummary;
  */
 public class ErrorResource extends BaseJobResource
 {
+    private static final Logger LOGGER = Logger.getLogger(ErrorResource.class);
+
     /**
      * Obtain the appropriate representation for the request.
      *
@@ -86,11 +92,20 @@ public class ErrorResource extends BaseJobResource
     protected Representation getRemoteError()
     {
         final Client client = new Client(getContext(), Protocol.ALL);
-        final Response response =
-                client.get(getHostPart() + "/"
-                           + getJob().getErrorSummary().getDocumentURI().
-                        toString());
 
-        return response.getEntity();
+        try
+        {
+            final Response response =
+                    client.get(getJob().getErrorSummary().getDocumentURI().
+                            toURL().toString());
+
+            return response.getEntity();
+        }
+        catch (MalformedURLException e)
+        {
+            LOGGER.error("Unable to create URL for Error document.", e);
+            throw new WebRepresentationException(
+                    "Unable to create URL for Error document.", e);
+        }
     }
 }

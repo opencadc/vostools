@@ -42,8 +42,11 @@ package ca.nrc.cadc.uws.web.restlet.resources;
 
 import org.restlet.resource.ServerResource;
 import org.restlet.data.Reference;
+import org.apache.log4j.Logger;
 import ca.nrc.cadc.uws.JobManager;
-import ca.nrc.cadc.uws.BasicJobManager;
+import ca.nrc.cadc.uws.InvalidServiceException;
+import ca.nrc.cadc.uws.JobPersistence;
+import ca.nrc.cadc.uws.util.StringUtil;
 import ca.nrc.cadc.uws.web.validators.FormValidator;
 
 
@@ -52,6 +55,8 @@ import ca.nrc.cadc.uws.web.validators.FormValidator;
  */
 public abstract class UWSResource extends ServerResource
 {
+    private static final Logger LOGGER = Logger.getLogger(UWSResource.class);
+
     protected final static String UWS_EXECUTOR_SERVICE =
             "ca.nrc.cadc.uws.JobExecutor";
     protected final static String UWS_JOB_SERVICE =
@@ -135,7 +140,7 @@ public abstract class UWSResource extends ServerResource
     {
         if (jobManager == null)
         {
-            setJobService(new BasicJobManager());
+            setJobService(createJobManager());
         }
 
         return jobManager;
@@ -154,5 +159,74 @@ public abstract class UWSResource extends ServerResource
     public void setFormValidator(final FormValidator formValidator)
     {
         this.formValidator = formValidator;
+    }
+
+    /**
+     * Obtain a new instance of the Job Manager interface as defined in the
+     * Context.
+     *
+     * @return  The JobManager instance.
+     */
+    @SuppressWarnings("unchecked")
+    protected JobManager createJobManager()
+    {
+        final JobManager jobManager =
+                (JobManager) createBean(UWS_JOB_SERVICE, true);
+        jobManager.setJobPersistence(createJobPersistence());
+
+        return jobManager;
+    }
+
+    /**
+     * Obtain a new instance of the Job Manager interface as defined in the
+     * Context.
+     *
+     * @return  The JobManager instance.
+     */
+    @SuppressWarnings("unchecked")
+    protected JobPersistence createJobPersistence()
+    {
+        return (JobPersistence) createBean(UWS_PERSISTENCE, true);
+    }
+
+    protected Object createBean(final String contextBeanName,
+                                final boolean mandatory)
+    {
+        if (mandatory && !StringUtil.hasText(
+                getContext().getParameters().getFirstValue(contextBeanName)))
+        {
+            throw new InvalidServiceException(
+                    "This bean is mandatory!\n\n Please set the "
+                    + contextBeanName + "context-param in the web.xml, "
+                    + "or insert it into the Context manually.");
+        }
+
+        final String clazz = getContext().getParameters().
+                getFirstValue(contextBeanName);
+
+        try
+        {
+            return Class.forName(clazz).newInstance();
+        }
+        catch (ClassNotFoundException e)
+        {
+            LOGGER.error("No such bean >> " + clazz, e);
+            throw new InvalidServiceException("No such bean >> " + clazz, e);
+        }
+        catch (IllegalAccessException e)
+        {
+            LOGGER.error("Class or Constructor is inaccessible for "
+                         + "bean  >> " + clazz, e);
+            throw new InvalidServiceException("Class or Constructor is "
+                                              + "inaccessible for bean "
+                                              + ">> " + clazz, e);
+        }
+        catch (InstantiationException e)
+        {
+            LOGGER.error("Cannot create bean instance >> "
+                         + clazz, e);
+            throw new InvalidServiceException("Cannot create bean instance >> "
+                                              + clazz, e);
+        }
     }
 }

@@ -40,9 +40,6 @@
 
 package ca.nrc.cadc.uws;
 
-import ca.nrc.cadc.uws.JobPersistence;
-import ca.nrc.cadc.uws.InMemoryPersistence;
-
 import java.util.Collection;
 
 
@@ -61,7 +58,7 @@ public class BasicJobManager implements JobManager
      */
     public Collection<Job> getJobs()
     {
-        return getJobORM().getJobs();
+        return getJobPersistence().getJobs();
     }
 
     /**
@@ -72,7 +69,7 @@ public class BasicJobManager implements JobManager
      */
     public Job getJob(final long jobID)
     {
-        return getJobORM().getJob(jobID);
+        return getJobPersistence().getJob(jobID);
     }
 
     /**
@@ -84,21 +81,21 @@ public class BasicJobManager implements JobManager
      */
     public Job persist(final Job job)
     {
-        return getJobORM().persist(job);
+        return getJobPersistence().persist(job);
     }
 
 
-    public JobPersistence getJobORM()
+    public JobPersistence getJobPersistence()
     {
         if (jobPersistence == null)
         {
-            setJobORM(new InMemoryPersistence());
+            setJobPersistence(new InMemoryPersistence());
         }
         
         return jobPersistence;
     }
 
-    public void setJobORM(final JobPersistence jobPersistence)
+    public void setJobPersistence(final JobPersistence jobPersistence)
     {
         this.jobPersistence = jobPersistence;
     }

@@ -147,8 +147,22 @@ public class AsynchResource extends UWSResource
             final String errorDocumentURI = form.getFirstValue(
                     JobAttribute.ERROR_SUMMARY_DETAIL_LINK.getAttributeName().
                             toUpperCase());
-            final ErrorSummary errorSummary = new ErrorSummary(errorMessage,
-                                          new URI(errorDocumentURI));            
+
+            final ErrorSummary errorSummary;
+
+            if (!StringUtil.hasText(errorMessage)
+                && !StringUtil.hasText(errorDocumentURI))
+            {
+                errorSummary =
+                        new ErrorSummary(errorMessage,
+                                         StringUtil.hasText(errorDocumentURI)
+                                         ? new URI(errorDocumentURI)
+                                         : null);
+            }
+            else
+            {
+                errorSummary = null;
+            }
 
             job = new Job(null, ExecutionPhase.valueOf(phase.toUpperCase()),
                           Long.parseLong(duration), destructionDate, quoteDate,

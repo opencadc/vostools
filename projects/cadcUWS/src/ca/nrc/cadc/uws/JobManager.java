@@ -75,4 +75,11 @@ public interface JobManager
      *                  unique identifier.
      */
     Job persist(final Job job);
+
+    /**
+     * Set the current Job Persister.
+     *
+     * @param jobPersistence        JobPersistence instance.
+     */
+    void setJobPersistence(final JobPersistence jobPersistence);
 }

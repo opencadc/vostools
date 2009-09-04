@@ -69,7 +69,7 @@ import ca.nrc.cadc.uws.util.StringUtil;
  */
 public class JobAsynchResource extends BaseJobResource
 {
-    final Logger LOGGER = Logger.getLogger(AsynchResource.class);
+    private static final Logger LOGGER = Logger.getLogger(AsynchResource.class);
 
     protected JobExecutor jobExecutor;
 
