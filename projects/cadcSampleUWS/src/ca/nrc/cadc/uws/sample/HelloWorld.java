@@ -51,7 +51,6 @@ import java.util.List;
 import org.apache.log4j.Logger;
 
 import ca.nrc.cadc.net.NetUtil;
-import ca.nrc.cadc.util.LoggerUtil;
 import ca.nrc.cadc.uws.Job;
 import ca.nrc.cadc.uws.ErrorSummary;
 import ca.nrc.cadc.uws.JobRunner;
@@ -90,8 +89,8 @@ public class HelloWorld implements JobRunner
             final String thisJavaPkg = HelloWorld.class.getPackage().getName();
             final String logLevel    = "debug";
             final String [] args     = { "-"+logLevel };
-            final String logFileBaseName = LoggerUtil.getTimestampLogName( "cadcSampleUWS" );
-			LoggerUtil.initialize( new String[] { thisJavaPkg, "ca.nrc.cadc.ad" }, args, logFileBaseName );
+            //final String logFileBaseName = LoggerUtil.getTimestampLogName( "cadcSampleUWS" );
+			//LoggerUtil.initialize( new String[] { thisJavaPkg, "ca.nrc.cadc.ad" }, args, logFileBaseName );
 	        log.info( "Initialized logging to level="+logLevel+" for package: "+thisJavaPkg );
         }
         catch ( Exception e )

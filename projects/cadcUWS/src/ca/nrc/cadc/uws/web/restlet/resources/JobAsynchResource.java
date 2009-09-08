@@ -59,8 +59,9 @@ import ca.nrc.cadc.uws.*;
 import ca.nrc.cadc.uws.InvalidResourceException;
 import ca.nrc.cadc.uws.InvalidServiceException;
 import ca.nrc.cadc.uws.JobExecutor;
-import ca.nrc.cadc.uws.util.DateUtil;
+import ca.nrc.cadc.date.DateUtil;
 import ca.nrc.cadc.uws.util.StringUtil;
+import java.text.DateFormat;
 
 
 /**
@@ -167,6 +168,7 @@ public class JobAsynchResource extends BaseJobResource
         }
         else
         {
+            DateFormat df = DateUtil.getDateFormat(DateUtil.IVOA_DATE_FORMAT, DateUtil.UTC);
             final String text;
             final JobAttribute jobAttribute;
 
@@ -188,14 +190,12 @@ public class JobAsynchResource extends BaseJobResource
             }
             else if (pathInfo.endsWith("destruction"))
             {
-                text = DateUtil.toString(job.getDestructionTime(),
-                                         DateUtil.ISO8601_DATE_FORMAT);
+                text = df.format(job.getDestructionTime());
                 jobAttribute = JobAttribute.DESTRUCTION_TIME;
             }
             else if (pathInfo.endsWith("quote"))
             {
-                text = DateUtil.toString(job.getQuote(),
-                                         DateUtil.ISO8601_DATE_FORMAT);
+                text = df.format(job.getQuote());
                 jobAttribute = JobAttribute.QUOTE;
             }
             else if (pathInfo.endsWith("owner"))
@@ -284,6 +284,8 @@ public class JobAsynchResource extends BaseJobResource
      */
     protected void buildXML(final Document document) throws IOException
     {
+        DateFormat df = DateUtil.getDateFormat(DateUtil.IVOA_DATE_FORMAT, DateUtil.UTC);
+        
         final Job job = getJob();
         final Element jobElement =
                 document.createElementNS(XML_NAMESPACE_URI,
@@ -334,8 +336,7 @@ public class JobAsynchResource extends BaseJobResource
                                                  getAttributeName());
         destructionTimeElement.setPrefix(XML_NAMESPACE_PREFIX);
         destructionTimeElement.setTextContent(
-                DateUtil.toString(job.getDestructionTime(),
-                                  DateUtil.ISO8601_DATE_FORMAT));
+                df.format(job.getDestructionTime()) );
         jobElement.appendChild(destructionTimeElement);
 
         // <uws:quote>
@@ -345,8 +346,7 @@ public class JobAsynchResource extends BaseJobResource
                                                  getAttributeName());
         quoteElement.setPrefix(XML_NAMESPACE_PREFIX);
         quoteElement.setTextContent(
-                DateUtil.toString(job.getQuote(),
-                                  DateUtil.ISO8601_DATE_FORMAT));
+                df.format(job.getQuote()) );
         jobElement.appendChild(quoteElement);
 
         // <uws:errorSummary>

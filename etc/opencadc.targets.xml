@@ -12,6 +12,7 @@
 		<mkdir dir="${build}/doc" />
 		<mkdir dir="${build}/lib" />
 		<mkdir dir="${build}/resources" />
+		<mkdir dir="${build}/webapps" />
 
 		<!-- subdirs used to build -->
 		<mkdir dir="${build}/class" />

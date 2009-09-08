@@ -23,8 +23,7 @@
     <jar jarfile="${build}/lib/${project}.jar"
 		basedir="${build}/class" 
 		update="no">
-            <include name="ca/nrc/cadc/net/**" />
-            <include name="ca/nrc/cadc/thread/**" />
+            <include name="ca/nrc/cadc/**" />
     </jar>
 </target>
 

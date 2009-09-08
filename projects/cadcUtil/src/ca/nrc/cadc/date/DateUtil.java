@@ -38,12 +38,15 @@
  *
  ******************************************************************************/
 
-package ca.nrc.cadc.uws.util;
+package ca.nrc.cadc.date;
 
 import java.text.DateFormat;
 import java.text.ParseException;
 import java.text.SimpleDateFormat;
-import java.util.*;
+import java.util.Calendar;
+import java.util.Date;
+import java.util.HashMap;
+import java.util.TimeZone;
 
 /**
  * Date conversion utility.
@@ -57,18 +60,18 @@ public class DateUtil
 {
     public static String ISO_DATE_FORMAT = "yyyy-MM-dd HH:mm:ss.SSS";
     public static String ISO_DATE_FORMAT_TZ = "yyyy-MM-dd HH:mm:ss.SSSZ";
-    public static String ISO8601_DATE_FORMAT = "yyyy-MM-dd'T'HH:mm:ss.SSSZ";
-
+    
+    public static String IVOA_DATE_FORMAT = "yyyy-MM-dd'T'HH:mm:ss.SSS";
 
     public static TimeZone UTC = TimeZone.getTimeZone("UTC");
+    
     public static TimeZone LOCAL = TimeZone.getDefault();
 
     /**
-     * A pre-configured ISO_DATE_FORMAT/LOCAL time zone formatter.
+     * A pre-configured IVOA formatter (ISO8601+UTC).
      *
      */
-    public static DateFormat isoDateFormat =
-            new SimpleDateFormat(ISO_DATE_FORMAT);
+    public static DateFormat ivoaDateFormat = getDateFormat(IVOA_DATE_FORMAT, UTC);
 
     private static HashMap<String, DateFormat> formats =
             new HashMap<String, DateFormat>();
@@ -143,49 +146,6 @@ public class DateUtil
             throws ParseException
     {
         return toDate(s, null, null);
-    }
-
-    /**
-     * Parse all the given formats in order and return the first one that can
-     * be processed into a Date.  This is intended to be a little sloppy.
-     *
-     * @param source        The date string source.
-     * @param formats       The array of formats desired.
-     *
-     * @return              Date instance.
-     * @throws java.text.ParseException       If the given formats or source is null or
-     *                              unreadable, or if none of the formats can
-     *                              be used.
-     */
-    public static Date toDate(final String source, final String[] formats)
-            throws ParseException
-    {
-        if (!StringUtil.hasText(source) || (formats == null))
-        {
-            throw new ParseException(
-                    "No usable formats or source date is null", -1);
-        }
-
-        for (final String format : formats)
-        {
-            if (!StringUtil.hasLength(format))
-            {
-                continue;
-            }
-
-            try
-            {
-                return toDate(source.trim(), format);
-            }
-            catch (ParseException e)
-            {
-                // We're just ignoring it as we just want the first one to
-                // match!
-            }
-        }
-
-        throw new ParseException("No usable formats found in >> "
-                                 + Arrays.toString(formats), -1);
     }
 
     /**

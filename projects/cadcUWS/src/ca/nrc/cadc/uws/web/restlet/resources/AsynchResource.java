@@ -40,6 +40,7 @@
 
 package ca.nrc.cadc.uws.web.restlet.resources;
 
+import ca.nrc.cadc.date.DateUtil;
 import org.w3c.dom.Document;
 import org.w3c.dom.Element;
 import org.restlet.resource.Get;
@@ -63,11 +64,11 @@ import java.net.URISyntaxException;
 
 import ca.nrc.cadc.uws.*;
 import ca.nrc.cadc.uws.ErrorSummary;
-import ca.nrc.cadc.uws.util.DateUtil;
 import ca.nrc.cadc.uws.util.StringUtil;
 import ca.nrc.cadc.uws.web.validators.FormValidator;
 import ca.nrc.cadc.uws.web.restlet.validators.JobFormValidatorImpl;
 import ca.nrc.cadc.uws.web.WebRepresentationException;
+import java.text.DateFormat;
 
 
 /**
@@ -116,16 +117,16 @@ public class AsynchResource extends UWSResource
 
         try
         {
+            DateFormat df = DateUtil.getDateFormat(DateUtil.IVOA_DATE_FORMAT, DateUtil.UTC);
+            
             final String destruction = form.getFirstValue(
                     JobAttribute.DESTRUCTION_TIME.getAttributeName().
                             toUpperCase());
-            final Date destructionDate =
-                    DateUtil.toDate(destruction, DateUtil.ISO8601_DATE_FORMAT);
+            final Date destructionDate = df.parse(destruction);
 
             final String quote = form.getFirstValue(
                     JobAttribute.QUOTE.getAttributeName().toUpperCase());
-            final Date quoteDate = DateUtil.toDate(quote,
-                                                   DateUtil.ISO8601_DATE_FORMAT);
+            final Date quoteDate = df.parse(quote);
 
             final String start = form.getFirstValue(
                     JobAttribute.START_TIME.getAttributeName().toUpperCase());
@@ -133,8 +134,7 @@ public class AsynchResource extends UWSResource
 
             if (StringUtil.hasText(start))
             {
-                startDate = DateUtil.toDate(start,
-                                            DateUtil.ISO8601_DATE_FORMAT);
+                startDate = df.parse(start);
             }
             else
             {

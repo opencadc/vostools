@@ -48,8 +48,9 @@ import java.text.ParseException;
 
 import ca.nrc.cadc.uws.web.validators.FormValidator;
 import ca.nrc.cadc.uws.JobAttribute;
-import ca.nrc.cadc.uws.util.DateUtil;
+import ca.nrc.cadc.date.DateUtil;
 import ca.nrc.cadc.uws.util.StringUtil;
+import java.text.DateFormat;
 
 
 /**
@@ -103,7 +104,7 @@ public class JobFormValidatorImpl implements FormValidator
         {
             errors.put(JobAttribute.DESTRUCTION_TIME.getAttributeName().toUpperCase(),
                        "Destruction Time is a mandatory date in the format "
-                       + DateUtil.ISO8601_DATE_FORMAT);
+                       + DateUtil.IVOA_DATE_FORMAT);
         }
 
         final String quote = getForm().getFirstValue(
@@ -113,7 +114,7 @@ public class JobFormValidatorImpl implements FormValidator
         {
             errors.put(JobAttribute.QUOTE.getAttributeName().toUpperCase(),
                        "Quote Time is a mandatory date in the format "
-                       + DateUtil.ISO8601_DATE_FORMAT);
+                       + DateUtil.IVOA_DATE_FORMAT);
         }
 
         return errors;
@@ -123,13 +124,13 @@ public class JobFormValidatorImpl implements FormValidator
     {
         try
         {
-            DateUtil.toDate(dateString, DateUtil.ISO8601_DATE_FORMAT);
+            DateFormat df = DateUtil.getDateFormat(DateUtil.IVOA_DATE_FORMAT, DateUtil.UTC);
+            df.parse(dateString);
         }
         catch (ParseException e)
         {
             return false;
         }
-
         return true;
     }
 
