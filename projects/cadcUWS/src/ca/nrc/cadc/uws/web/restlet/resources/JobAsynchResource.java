@@ -42,7 +42,6 @@ package ca.nrc.cadc.uws.web.restlet.resources;
 
 import org.restlet.resource.Post;
 import org.restlet.representation.Representation;
-import org.restlet.representation.StringRepresentation;
 import org.restlet.ext.xml.DomRepresentation;
 import org.restlet.data.*;
 import org.restlet.Client;
@@ -169,33 +168,40 @@ public class JobAsynchResource extends BaseJobResource
         else
         {
             final String text;
+            final JobAttribute jobAttribute;
 
             if (pathInfo.endsWith("execute"))
             {
                 getJobExecutorService().execute(job);
                 text = Long.toString(job.getJobId());
+                jobAttribute = JobAttribute.JOB_ID;
             }
             else if (pathInfo.endsWith("phase"))
             {
                 text = job.getExecutionPhase().name();
+                jobAttribute = JobAttribute.EXECUTION_PHASE;
             }
             else if (pathInfo.endsWith("executionDuration"))
             {
                 text = Long.toString(job.getExecutionDuration());
+                jobAttribute = JobAttribute.EXECUTION_DURATION;
             }
             else if (pathInfo.endsWith("destruction"))
             {
                 text = DateUtil.toString(job.getDestructionTime(),
                                          DateUtil.ISO8601_DATE_FORMAT);
+                jobAttribute = JobAttribute.DESTRUCTION_TIME;
             }
             else if (pathInfo.endsWith("quote"))
             {
                 text = DateUtil.toString(job.getQuote(),
                                          DateUtil.ISO8601_DATE_FORMAT);
+                jobAttribute = JobAttribute.QUOTE;
             }
             else if (pathInfo.endsWith("owner"))
             {
                 text = job.getOwner();
+                jobAttribute = JobAttribute.OWNER_ID;
             }
             else
             {
@@ -203,7 +209,7 @@ public class JobAsynchResource extends BaseJobResource
                                                    + pathInfo);
             }
 
-            return new StringRepresentation(text);
+            return toXML(jobAttribute, text);
         }
     }
 
@@ -218,7 +224,10 @@ public class JobAsynchResource extends BaseJobResource
         {
             final DomRepresentation rep =
                     new DomRepresentation(MediaType.TEXT_XML);
-            buildXML(rep.getDocument());
+            final Document document = rep.getDocument();
+            buildXML(document);
+
+            document.normalizeDocument();
 
             return rep;
         }
@@ -229,6 +238,41 @@ public class JobAsynchResource extends BaseJobResource
                     "Unable to create XML Document.", e);
         }
     }
+
+    /**
+     * Obtain the XML Representation of a particular Attribute of a Job.
+     *
+     * @param jobAttribute      The Attribute to represent.
+     * @param textContent       The text content for the Attribute.
+     * @return                  The XML Representation.
+     */
+    protected Representation toXML(final JobAttribute jobAttribute,
+                                   final String textContent)
+    {
+        try
+        {
+            final DomRepresentation rep =
+                    new DomRepresentation(MediaType.TEXT_XML);
+            final Document document = rep.getDocument();
+            final Element elem =
+                    document.createElementNS(XML_NAMESPACE_URI,
+                                             jobAttribute.getAttributeName());
+            elem.setPrefix(XML_NAMESPACE_PREFIX);
+            elem.setTextContent(textContent);
+
+            document.appendChild(elem);
+            document.normalizeDocument();
+
+            return rep;
+        }
+        catch (IOException e)
+        {
+            LOGGER.error("Unable to create representation.", e);
+            throw new InvalidResourceException(
+                    "Unable to create XML Document.", e);
+        }
+    }
+
 
     /**
      * Assemble the XML for this Resource's Representation into the given
