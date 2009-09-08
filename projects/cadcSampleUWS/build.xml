@@ -60,10 +60,10 @@
     <!-- JAR files to be included in classpath and war file -->
     <property name="ext.log4j"    value="${ext.lib}/log4j.jar" />
     <property name="lib.cadcUtil" value="${lib}/cadcUtil.jar" />
-    <property name="lib.uws"      value="${lib}/cadcUWS.jar" />
+    <property name="lib.cadcUWS"      value="${lib}/cadcUWS.jar" />
 
 
-    <property name="jars" value="${lib.javaUtil}:${lib.cadcUtil}:${lib.uws}:${ext.lib}/log4j.jar" />
+    <property name="jars" value="${lib.cadcUtil}:${lib.cadcUWS}:${ext.lib}/log4j.jar" />
 
     <target name="build" depends="cadcSampleUWS,webapp" />
 
@@ -82,13 +82,9 @@
                     <include name="org.restlet.ext.xml.jar" />
                     <include name="org.restlet.jar" />
                 </lib>
-                <lib dir="${lib}">
-                    <include name="cadcUtil.jar" />
-                    <include name="cadcUWS.jar" />
-                </lib>
-		<lib dir="${build}/tmp">
-		    <include name="cadcSampleUWS.jar" />
-		</lib>
+                <lib file="${lib.cadcUtil}" />
+                <lib file="${lib.cadcUWS}" />
+                <lib file="${build}/tmp/cadcSampleUWS.jar" />
                 <fileset dir="src/text">
                     <include name="**/*.txt" />
                 </fileset>
