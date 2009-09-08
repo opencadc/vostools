@@ -86,6 +86,9 @@
                     <include name="cadcUtil.jar" />
                     <include name="cadcUWS.jar" />
                 </lib>
+		<lib dir="${build}/tmp">
+		    <include name="cadcSampleUWS.jar" />
+		</lib>
                 <fileset dir="src/text">
                     <include name="**/*.txt" />
                 </fileset>
