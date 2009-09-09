@@ -48,8 +48,10 @@ import java.text.ParseException;
 
 import ca.nrc.cadc.uws.web.validators.FormValidator;
 import ca.nrc.cadc.uws.JobAttribute;
-import ca.nrc.cadc.date.DateUtil;
+import ca.nrc.cadc.uws.ExecutionPhase;
 import ca.nrc.cadc.uws.util.StringUtil;
+import ca.nrc.cadc.date.DateUtil;
+
 import java.text.DateFormat;
 
 
@@ -83,39 +85,53 @@ public class JobFormValidatorImpl implements FormValidator
         final Map<String, String> errors = new HashMap<String, String>();
         final Map<String, String> valuesMap = getForm().getValuesMap();
 
-        if (!valuesMap.containsKey(
+        // Check for a valid Exection Phase.
+        if (valuesMap.containsKey(
                 JobAttribute.EXECUTION_PHASE.getAttributeName().toUpperCase()))
         {
-            errors.put(JobAttribute.EXECUTION_PHASE.getAttributeName().toUpperCase(),
-                       "Execution Phase is mandatory.");
+            try
+            {
+                ExecutionPhase.valueOf(
+                        valuesMap.get(JobAttribute.EXECUTION_PHASE.
+                                getAttributeName().toUpperCase()).
+                                toUpperCase());
+            }
+            catch (final IllegalArgumentException e)
+            {
+                errors.put(JobAttribute.EXECUTION_PHASE.
+                        getAttributeName().toUpperCase(),
+                           "Execution Phase is mandatory.");
+            }
         }
+//
+//        if (!valuesMap.containsKey(JobAttribute.EXECUTION_DURATION.
+//                getAttributeName().toUpperCase()))
+//        {
+//            errors.put(JobAttribute.EXECUTION_DURATION.
+//                    getAttributeName().toUpperCase(),
+//                       "Execution Duration is mandatory.");
+//        }
 
-        if (!valuesMap.containsKey(
-                JobAttribute.EXECUTION_DURATION.getAttributeName().toUpperCase()))
-        {
-            errors.put(JobAttribute.EXECUTION_DURATION.getAttributeName().toUpperCase(),
-                       "Execution Duration is mandatory.");
-        }
-
-        final String destruction = getForm().getFirstValue(
+        final String destruction = valuesMap.get(
                 JobAttribute.DESTRUCTION_TIME.getAttributeName().toUpperCase());
 
-        if (!StringUtil.hasText(destruction) || !isValidDate(destruction))
+        if (StringUtil.hasText(destruction) && !isValidDate(destruction))
         {
-            errors.put(JobAttribute.DESTRUCTION_TIME.getAttributeName().toUpperCase(),
+            errors.put(JobAttribute.DESTRUCTION_TIME.
+                    getAttributeName().toUpperCase(),
                        "Destruction Time is a mandatory date in the format "
                        + DateUtil.IVOA_DATE_FORMAT);
         }
 
-        final String quote = getForm().getFirstValue(
-                JobAttribute.QUOTE.getAttributeName().toUpperCase());
-
-        if (!StringUtil.hasText(quote) || !isValidDate(quote))
-        {
-            errors.put(JobAttribute.QUOTE.getAttributeName().toUpperCase(),
-                       "Quote Time is a mandatory date in the format "
-                       + DateUtil.IVOA_DATE_FORMAT);
-        }
+//        final String quote = getForm().getFirstValue(
+//                JobAttribute.QUOTE.getAttributeName().toUpperCase());
+//
+//        if (!StringUtil.hasText(quote) || !isValidDate(quote))
+//        {
+//            errors.put(JobAttribute.QUOTE.getAttributeName().toUpperCase(),
+//                       "Quote Time is a mandatory date in the format "
+//                       + DateUtil.ISO8601_DATE_FORMAT);
+//        }
 
         return errors;
     }

@@ -40,10 +40,6 @@
 
 package ca.nrc.cadc.uws;
 
-import ca.nrc.cadc.uws.Job;
-import ca.nrc.cadc.uws.ExecutionPhase;
-import ca.nrc.cadc.uws.Parameter;
-import ca.nrc.cadc.uws.JobPersistence;
 
 import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.ConcurrentHashMap;
@@ -55,40 +51,11 @@ import java.util.*;
  */
 public class InMemoryPersistence implements JobPersistence
 {
+    // The Database.
     private final static ConcurrentMap<Long, Job> JOBS =
             new ConcurrentHashMap<Long, Job>();
 
-    static
-    {
-        final List<Parameter> params = new ArrayList<Parameter>();
-        final Calendar quote = Calendar.getInstance();
-        final Calendar startTime = Calendar.getInstance();
-        final Calendar endTime = Calendar.getInstance();
-        final Calendar destructionTime = Calendar.getInstance();
-
-        params.add(new Parameter("PARAM1", "PARAM1_VAL"));
-        params.add(new Parameter("PARAM2", "PARAM2_VAL"));
-
-        quote.set(1977, Calendar.NOVEMBER, 25, 8, 30, 0);
-        startTime.set(1977, Calendar.NOVEMBER, 25, 0, 10, 0);
-        endTime.set(1977, Calendar.NOVEMBER, 25, 3, 21, 0);
-        destructionTime.set(1977, Calendar.NOVEMBER, 25, 9, 0, 0);
-
-        JOBS.put(88l, new Job(88l, ExecutionPhase.EXECUTING, 88l,
-                              destructionTime.getTime(), quote.getTime(),
-                              startTime.getTime(), endTime.getTime(), null,
-                              null, "RUN88", null, null));
-        JOBS.put(888l, new Job(888l, ExecutionPhase.EXECUTING, 888l,
-                               destructionTime.getTime(), quote.getTime(),
-                               startTime.getTime(), endTime.getTime(), null,
-                               null, "RUN888", null, params));
-        JOBS.put(8888l, new Job(8888l, ExecutionPhase.EXECUTING, 8888l,
-                                destructionTime.getTime(), quote.getTime(),
-                                startTime.getTime(), endTime.getTime(), null,
-                                null, "RUN8888", null, null));        
-    }
-
-
+    
     /**
      * Default constructor.
      */
@@ -132,6 +99,10 @@ public class InMemoryPersistence implements JobPersistence
             persistentJob.setExecutionPhase(job.getExecutionPhase());
             persistentJob.setDestructionTime(job.getDestructionTime());
             persistentJob.setExecutionDuration(job.getExecutionDuration());
+            persistentJob.setErrorSummary(job.getErrorSummary());
+            persistentJob.setAny(job.getAny());
+            persistentJob.setParameterList(job.getParameterList());
+            persistentJob.setResultsList(job.getResultsList());
         }
         else
         {

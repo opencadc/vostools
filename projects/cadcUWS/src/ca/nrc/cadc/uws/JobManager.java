@@ -40,7 +40,6 @@
 
 package ca.nrc.cadc.uws;
 
-import ca.nrc.cadc.uws.Job;
 
 import java.util.Collection;
 
@@ -49,6 +48,9 @@ import java.util.Collection;
  * Service interface to manage jobs. The JobManager enforces service limits on job attributes
  * and uses the configured JobPersistence. The implementation class name used
  * must be configured as a context-param with key <code>ca.nrc.cadc.uws.JobManager</code>.
+ *
+ * It will also be the responsibility of the Job Manager to insert default
+ * values, where necessary, during Job persistence.
  */
 public interface JobManager
 {
@@ -75,6 +77,14 @@ public interface JobManager
      *                  unique identifier.
      */
     Job persist(final Job job);
+
+    /**
+     * Insert default values to those fields that require a value, but haven't
+     * been given one.
+     *
+     * @param job       The job to insert values for.
+     */
+    void insertDefaultValues(final Job job);
 
     /**
      * Set the current Job Persister.

@@ -41,6 +41,8 @@
 package ca.nrc.cadc.uws;
 
 import java.util.Collection;
+import java.util.Calendar;
+import java.util.Date;
 
 
 /**
@@ -81,17 +83,65 @@ public class BasicJobManager implements JobManager
      */
     public Job persist(final Job job)
     {
+        insertDefaultValues(job);
         return getJobPersistence().persist(job);
+    }
+
+    /**
+     * Insert default values to those fields that require a value, but haven't
+     * been given one.
+     *
+     * @param job The job to insert values for.
+     */
+    public void insertDefaultValues(final Job job)
+    {
+        if (job.getExecutionPhase() == null)
+        {
+            job.setExecutionPhase(ExecutionPhase.PENDING);
+        }
+
+        if (job.getExecutionDuration() == 0)
+        {
+            job.setExecutionDuration(600l);
+        }
+
+        // Default twenty-four hours.
+        if (job.getDestructionTime() == null)
+        {
+            final Calendar cal = Calendar.getInstance();
+            cal.setTime(new Date());
+            cal.add(Calendar.HOUR, 24);
+
+            job.setDestructionTime(cal.getTime());
+        }
+
+        if (job.getQuote() == null)
+        {
+            final Calendar cal = Calendar.getInstance();
+            cal.setTime(new Date());
+            cal.add(Calendar.HOUR, 20);
+
+            job.setQuote(cal.getTime());
+        }
+
+        if (job.getStartTime() == null)
+        {
+            job.setStartTime(new Date());
+        }
+
+        if (job.getEndTime() == null)
+        {
+            final Calendar cal = Calendar.getInstance();
+            cal.setTime(new Date());
+            cal.add(Calendar.HOUR, 20);
+
+            job.setEndTime(cal.getTime());
+        }
     }
 
 
     public JobPersistence getJobPersistence()
     {
-        if (jobPersistence == null)
-        {
-            setJobPersistence(new InMemoryPersistence());
-        }
-        
         return jobPersistence;
     }
 

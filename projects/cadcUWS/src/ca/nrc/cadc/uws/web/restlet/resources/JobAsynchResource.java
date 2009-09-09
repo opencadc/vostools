@@ -54,6 +54,7 @@ import java.io.IOException;
 import java.util.Map;
 import java.lang.reflect.Constructor;
 import java.lang.reflect.InvocationTargetException;
+import java.text.ParseException;
 
 import ca.nrc.cadc.uws.*;
 import ca.nrc.cadc.uws.InvalidResourceException;
@@ -117,10 +118,23 @@ public class JobAsynchResource extends BaseJobResource
         }
         else if (pathInfo.endsWith("destruction"))
         {
-            job.setExecutionDuration(
-                    Long.parseLong(form.getFirstValue(
-                            JobAttribute.EXECUTION_DURATION.
-                                    getAttributeName().toUpperCase())));
+            final String destructionDateString =
+                    form.getFirstValue(JobAttribute.DESTRUCTION_TIME.
+                            getAttributeName().toUpperCase());
+            try
+            {
+                job.setDestructionTime(
+                        DateUtil.toDate(destructionDateString,
+                                        DateUtil.IVOA_DATE_FORMAT));
+            }
+            catch (ParseException e)
+            {
+                LOGGER.error("Could not create Date from given String '"
+                             + destructionDateString + "'.  Please ensure the "
+                             + "format conforms to the ISO 8601 Format ('"
+                             + DateUtil.IVOA_DATE_FORMAT + "'.");
+            }
+
         }
         else
         {

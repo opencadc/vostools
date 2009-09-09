@@ -216,6 +216,31 @@ public class Job
         return quote;
     }
 
+    public void setQuote(final Date quote)
+    {
+        this.quote = quote;
+    }
+
+    public void setStartTime(final Date startTime)
+    {
+        this.startTime = startTime;
+    }
+
+    public void setEndTime(final Date endTime)
+    {
+        this.endTime = endTime;
+    }
+
+    public void setOwner(final String owner)
+    {
+        this.owner = owner;
+    }
+
+    public void setRunId(final String runId)
+    {
+        this.runId = runId;
+    }
+
     /**
      * Obtain the instant at which the job started execution.
      *

@@ -99,34 +99,68 @@ public class AsynchResource extends UWSResource
         final Job job;
         final String phase = form.getFirstValue(
                 JobAttribute.EXECUTION_PHASE.getAttributeName().toUpperCase());
+        final ExecutionPhase executionPhase;
+
+        if (StringUtil.hasText(phase))
+        {
+            executionPhase = ExecutionPhase.valueOf(phase.toUpperCase());
+        }
+        else
+        {
+            executionPhase = null;
+        }
+
         final String duration = form.getFirstValue(
                 JobAttribute.EXECUTION_DURATION.getAttributeName().
                         toUpperCase());
+        final long durationTime;
+
+        if (StringUtil.hasText(duration))
+        {
+            durationTime = Long.parseLong(duration);
+        }
+        else
+        {
+            durationTime = 0l;
+        }
+
         final String owner = form.getFirstValue(
                 JobAttribute.OWNER_ID.getAttributeName().toUpperCase());
         final String runID = form.getFirstValue(
                 JobAttribute.RUN_ID.getAttributeName().toUpperCase());
-//        final String[] parameters =
-//                form.getValuesArray(JobAttribute.PARAMETERS.getAttributeName().
-//                                            toUpperCase());
-//
-//        for (final String param : parameters)
-//        {
-//
-//        }        
 
         try
         {
-            DateFormat df = DateUtil.getDateFormat(DateUtil.IVOA_DATE_FORMAT, DateUtil.UTC);
+            final DateFormat df =
+                    DateUtil.getDateFormat(DateUtil.IVOA_DATE_FORMAT,
+                                           DateUtil.UTC);
             
             final String destruction = form.getFirstValue(
                     JobAttribute.DESTRUCTION_TIME.getAttributeName().
                             toUpperCase());
-            final Date destructionDate = df.parse(destruction);
+            final Date destructionDate;
+
+            if (StringUtil.hasText(destruction))
+            {
+                destructionDate = df.parse(destruction);
+            }
+            else
+            {
+                destructionDate = null;
+            }
 
             final String quote = form.getFirstValue(
                     JobAttribute.QUOTE.getAttributeName().toUpperCase());
-            final Date quoteDate = df.parse(quote);
+            final Date quoteDate;
+
+            if (StringUtil.hasText(quote))
+            {
+                quoteDate = df.parse(quote);
+            }
+            else
+            {
+                quoteDate = null;
+            }
 
             final String start = form.getFirstValue(
                     JobAttribute.START_TIME.getAttributeName().toUpperCase());
@@ -164,9 +198,19 @@ public class AsynchResource extends UWSResource
                 errorSummary = null;
             }
 
-            job = new Job(null, ExecutionPhase.valueOf(phase.toUpperCase()),
-                          Long.parseLong(duration), destructionDate, quoteDate,
-                          startDate, null, errorSummary, owner, runID, null, null);
+            job = new Job(null, executionPhase, durationTime, destructionDate,
+                          quoteDate, startDate, null, errorSummary, owner,
+                          runID, null, null);
+
+//        final String[] parameters =
+//                form.getValuesArray(JobAttribute.PARAMETERS.getAttributeName().
+//                                            toUpperCase());
+//
+//        for (final String param : parameters)
+//        {
+//            job.addParameter();
+//        }
+
         }
         catch (ParseException e)
         {
