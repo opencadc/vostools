@@ -47,52 +47,23 @@ package ca.nrc.cadc.uws;
  */
 public class ThreadExecutor implements JobExecutor
 {
-    public static final String PROP_POOL_SIZE =
-            "ca.nrc.cadc.executor.pool.size";
-    public static final int DEFAULT_POOL_SIZE = 5;
-
-
-    private JobRunner jobRunner;
-
-
     /**
-     * Hidden no-arg constructor for JavaBean tools like Reflection.
+     * The standard no-arg constructor.
      */
-    ThreadExecutor()
-    {
-        
-    }
+    public ThreadExecutor() { }
 
     /**
      * Constructor for this Service.
      *
      * @param jobRunner The Job Runner to execute jobs.
      */
-    public ThreadExecutor(final JobRunner jobRunner)
+    public void execute(final JobRunner jobRunner)
     {
-        setJobRunner(jobRunner);
-    }
-
-
-    /**
-     * Execute the given Job.
-     *
-     * @param job The Job to execute.  No nulls area permitted.
-     */
-    public void execute(final Job job)
-    {
-        new Thread(getJobRunner()).start();
-    }
-
-
-
-    public JobRunner getJobRunner()
-    {
-        return jobRunner;
-    }
-
-    public void setJobRunner(final JobRunner jobRunner)
-    {
-        this.jobRunner = jobRunner;
+        if (jobRunner == null)
+            throw new IllegalArgumentException("BUG: JobRunner cannot be null");
+        // fire and forget thread
+        Thread t = new Thread(jobRunner);
+        t.setDaemon(true); // so the thread will not block application shutdown
+        t.start();
     }
 }

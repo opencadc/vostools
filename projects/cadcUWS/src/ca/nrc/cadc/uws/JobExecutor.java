@@ -45,20 +45,15 @@ package ca.nrc.cadc.uws;
 /**
  * Service interface to control job execution. The implementation class name used
   * must be configured as a context-param with key <code>ca.nrc.cadc.uws.JobExecutor</code>.
+ * 
+ * JobExecutor implementations are always instantiated via their no-arg constructor.
  */
 public interface JobExecutor
 {
     /**
-     * Execute the given Job.
+     * Execute a job by calling the run() method on the JobRunner.
      *
      * @param job       The Job to execute.  No nulls area permitted.
      */
-    void execute(final Job job);
-
-    /**
-     * Set the Job Runner to use.
-     *
-     * @param jobRunner     The JobRunner instance.
-     */
-    void setJobRunner(final JobRunner jobRunner);
+    void execute(final JobRunner jobRunner);
 }

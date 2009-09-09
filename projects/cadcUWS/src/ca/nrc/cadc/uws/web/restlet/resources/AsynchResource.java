@@ -224,7 +224,7 @@ public class AsynchResource extends UWSResource
                                                  e);
         }
 
-        final Job persistedJob = getJobService().persist(job);
+        final Job persistedJob = getJobManager().persist(job);
         getResponse().setStatus(Status.REDIRECTION_SEE_OTHER);
         getResponse().setLocationRef(getContextPath() + "/async/"
                                      + persistedJob.getJobId());
@@ -347,6 +347,6 @@ public class AsynchResource extends UWSResource
      */
     protected List<Job> getJobs()
     {
-        return new ArrayList<Job>(getJobService().getJobs());
+        return new ArrayList<Job>(getJobManager().getJobs());
     }
 }

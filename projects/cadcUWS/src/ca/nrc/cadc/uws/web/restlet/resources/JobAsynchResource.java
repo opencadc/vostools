@@ -56,7 +56,6 @@ import java.lang.reflect.Constructor;
 import java.lang.reflect.InvocationTargetException;
 import java.text.ParseException;
 
-import ca.nrc.cadc.uws.*;
 import ca.nrc.cadc.uws.InvalidResourceException;
 import ca.nrc.cadc.uws.InvalidServiceException;
 import ca.nrc.cadc.uws.JobExecutor;
@@ -142,7 +141,7 @@ public class JobAsynchResource extends BaseJobResource
                                                + pathInfo);
         }
 
-        getJobService().persist(job);
+        getJobManager().persist(job);
 
         getResponse().setStatus(Status.REDIRECTION_SEE_OTHER);
         getResponse().setLocationRef(getContextPath() + "/async/"

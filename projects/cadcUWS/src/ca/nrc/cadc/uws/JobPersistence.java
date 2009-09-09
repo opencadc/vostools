@@ -45,6 +45,8 @@ import java.util.Collection;
 /**
  * Service interface for job persistence. The implementation class name used 
  * must be configured as a context-param with key <code>ca.nrc.cadc.uws.JobPersistence</code>.
+ * 
+ * JobPersistence implementations are always instantiated via their no-arg constructor.
  */
 public interface JobPersistence
 {

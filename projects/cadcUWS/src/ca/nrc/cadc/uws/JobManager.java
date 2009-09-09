@@ -50,7 +50,8 @@ import java.util.Collection;
  * must be configured as a context-param with key <code>ca.nrc.cadc.uws.JobManager</code>.
  *
  * It will also be the responsibility of the Job Manager to insert default
- * values, where necessary, during Job persistence.
+ * values, where necessary, during Job persistence. JobManager implementations are always
+ * instantiated via their no-arg constructor.
  */
 public interface JobManager
 {

@@ -46,6 +46,8 @@ package ca.nrc.cadc.uws;
  * this interface to execute the job. The implementation class contains the code to actually
  * execute the job as defined by the service. The implementation class name used
   * must be configured as a context-param with key <code>ca.nrc.cadc.uws.JobRunner</code>.
+ * 
+ * JobRunner implementations are always instantiated via their no-arg constructor.
  */
 public interface JobRunner extends Runnable
 {
@@ -55,4 +57,12 @@ public interface JobRunner extends Runnable
      * @param job       The Job to run.
      */
     void setJob(final Job job);
+    
+    /**
+     * Set the current JobPersistence instance. The job runner must persist changes to 
+     * the job state and should do so whenever the job state changes.
+     *
+     * @param jobPersistence        JobPersistence instance.
+     */
+    void setJobPersistence(final JobPersistence jobPersistence);
 }

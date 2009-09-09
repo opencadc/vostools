@@ -57,7 +57,7 @@ public abstract class BaseJobResource extends UWSResource
      */
     protected Job getJob()
     {
-        return getJobService().getJob(getJobID());
+        return getJobManager().getJob(getJobID());
     }
 
     /**

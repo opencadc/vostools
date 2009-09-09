@@ -136,17 +136,17 @@ public abstract class UWSResource extends ServerResource
      * Obtain this Resource's Job Service.
      * @return  JobService instance, or null if none set.
      */
-    protected JobManager getJobService()
+    protected JobManager getJobManager()
     {
         if (jobManager == null)
         {
-            setJobService(createJobManager());
+            setJobManager(createJobManager());
         }
 
         return jobManager;
     }
 
-    protected void setJobService(final JobManager jobManager)
+    protected void setJobManager(final JobManager jobManager)
     {
         this.jobManager = jobManager;
     }
