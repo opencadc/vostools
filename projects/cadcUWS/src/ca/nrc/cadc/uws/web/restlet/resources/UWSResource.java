@@ -53,6 +53,8 @@ import ca.nrc.cadc.uws.util.BeanUtil;
 import ca.nrc.cadc.uws.web.validators.FormValidator;
 import ca.nrc.cadc.uws.web.WebRepresentationException;
 
+import javax.xml.transform.Transformer;
+import javax.xml.transform.OutputKeys;
 import java.io.IOException;
 
 
@@ -91,10 +93,37 @@ public abstract class UWSResource extends ServerResource
         try
         {
             final DomRepresentation rep =
-                    new DomRepresentation(MediaType.TEXT_XML);
-            buildXML(rep.getDocument());
+                    new DomRepresentation(MediaType.TEXT_XML)
+                    {
+                        /**
+                         * Creates a new JAXP Transformer object that will be
+                         * used to serialize this DOM. This method may be
+                         * overridden in order to set custom properties on the
+                         * Transformer.
+                         *
+                         * @return The transformer to be used for serialization.
+                         */
+                        @Override
+                        protected Transformer createTransformer()
+                                throws IOException
+                        {
+                            final Transformer transformer =
+                                    super.createTransformer();
+                            
+                            transformer.setOutputProperty(OutputKeys.INDENT,
+                                                          "yes");
+                            transformer.setOutputProperty(
+                                    "{http://xml.apache.org/xslt}indent-amount",
+                                    "2");
 
-            rep.getDocument().normalizeDocument();
+                            return transformer;
+                        }
+                    };
+            
+            final Document document = rep.getDocument();
+            
+            buildXML(document);
+            document.normalizeDocument();
 
             return rep;
         }
