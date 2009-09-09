@@ -52,6 +52,7 @@ public class ThreadExecutor implements JobExecutor
      */
     public ThreadExecutor() { }
 
+    
     /**
      * Constructor for this Service.
      *
@@ -60,9 +61,12 @@ public class ThreadExecutor implements JobExecutor
     public void execute(final JobRunner jobRunner)
     {
         if (jobRunner == null)
+        {
             throw new IllegalArgumentException("BUG: JobRunner cannot be null");
-        // fire and forget thread
-        Thread t = new Thread(jobRunner);
+        }
+        
+        // Fire and forget thread
+        final Thread t = new Thread(jobRunner);
         t.setDaemon(true); // so the thread will not block application shutdown
         t.start();
     }

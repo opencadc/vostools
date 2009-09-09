@@ -43,7 +43,13 @@ package ca.nrc.cadc.uws.web.restlet;
 import org.restlet.Application;
 import org.restlet.Restlet;
 import org.restlet.Context;
+import org.restlet.routing.Router;
 import org.restlet.data.MediaType;
+import ca.nrc.cadc.uws.util.BeanUtil;
+import ca.nrc.cadc.uws.util.StringUtil;
+import ca.nrc.cadc.uws.InvalidServiceException;
+import ca.nrc.cadc.uws.JobManager;
+import ca.nrc.cadc.uws.JobPersistence;
 
 
 /**
@@ -52,22 +58,42 @@ import org.restlet.data.MediaType;
 public class UWSApplication extends Application
 {
     /**
+     * Constructor. Note this constructor is convenient because you don't have
+     * to provide a context like for {@link #Application(org.restlet.Context)}.
+     * Therefore the context will initially be null. It's only when you attach
+     * the application to a virtual host via one of its attach*() methods that
+     * a proper context will be set.
+     */
+    public UWSApplication()
+    {
+        init();
+    }
+
+    /**
      * Constructor.
      *
      * @param context The context to use based on parent component context. This
      *                context should be created using the
-     *                {@link org.restlet.Context#createChildContext()} method to ensure a proper
-     *                isolation with the other applications.
+     *                {@link org.restlet.Context#createChildContext()} method to
+     *                ensure a proper isolation with the other applications.
      */
     public UWSApplication(final Context context)
     {
         super(context);
+        init();
+    }
 
+
+    /**
+     * Method to initialize this Application.
+     */
+    private void init()
+    {
         setStatusService(new UWSStatusService(true));
 
         // Make XML the preferred choice.
         getMetadataService().addExtension(MediaType.TEXT_XML.getName(),
-                                          MediaType.TEXT_XML, true);
+                                          MediaType.TEXT_XML, true);        
     }
 
     /**
@@ -76,11 +102,59 @@ public class UWSApplication extends Application
      * application Restlet. The default implementation returns null by default.
      * This method is intended to be overridden by subclasses.
      *
+     * This method will also setup singleton Service objects in the Context.
+     *
      * @return The root Restlet.
      */
     @Override
     public Restlet createRoot()
     {
-        return new UWSRouter(getContext());
+        final Router router = new UWSRouter(getContext());
+
+        getContext().getAttributes().put(
+                BeanUtil.UWS_EXECUTOR_SERVICE,
+                createBean(BeanUtil.UWS_EXECUTOR_SERVICE, true));
+
+        final JobManager jobManager =
+                (JobManager) createBean(BeanUtil.UWS_JOB_MANAGER_SERVICE,
+                                        true);
+        final JobPersistence jobPersistence =
+                (JobPersistence) createBean(BeanUtil.UWS_PERSISTENCE, true);
+
+        jobManager.setJobPersistence(jobPersistence);
+
+        getContext().getAttributes().put(BeanUtil.UWS_JOB_MANAGER_SERVICE,
+                                         jobManager);
+
+        getContext().getAttributes().put(BeanUtil.UWS_PERSISTENCE,
+                                         jobPersistence);        
+
+        return router;
+    }
+
+    /**
+     * Create the object needed.
+     *
+     * @param contextBeanName       The Bean name in the context.
+     * @param mandatory             Whether this bean is Mandatory.
+     * @return                      The Object instantiated.
+     */
+    protected Object createBean(final String contextBeanName,
+                                final boolean mandatory)
+    {
+        if (mandatory && !StringUtil.hasText(
+                getContext().getParameters().getFirstValue(contextBeanName)))
+        {
+            throw new InvalidServiceException(
+                    "This bean is mandatory!\n\n Please set the "
+                    + contextBeanName + "context-param in the web.xml, "
+                    + "or insert it into the Context manually.");
+        }
+
+        final String clazz = getContext().getParameters().
+                getFirstValue(contextBeanName);
+        final BeanUtil beanUtil = new BeanUtil(clazz);
+
+        return beanUtil.createBean();
     }
 }

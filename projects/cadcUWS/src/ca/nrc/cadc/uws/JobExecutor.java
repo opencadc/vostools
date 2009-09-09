@@ -53,7 +53,8 @@ public interface JobExecutor
     /**
      * Execute a job by calling the run() method on the JobRunner.
      *
-     * @param job       The Job to execute.  No nulls area permitted.
+     * @param jobRunner    The JobRunner with the Job to execute.
+     *                     No nulls area permitted.
      */
     void execute(final JobRunner jobRunner);
 }

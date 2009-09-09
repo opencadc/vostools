@@ -43,15 +43,18 @@ package ca.nrc.cadc.uws.web.restlet.resources;
 import org.restlet.representation.Representation;
 import org.restlet.representation.EmptyRepresentation;
 import org.restlet.Client;
+import org.restlet.resource.Get;
 import org.restlet.data.Protocol;
 import org.restlet.data.Response;
 import org.apache.log4j.Logger;
+import org.w3c.dom.Document;
 
 import ca.nrc.cadc.uws.Job;
 import ca.nrc.cadc.uws.ErrorSummary;
 import ca.nrc.cadc.uws.web.WebRepresentationException;
 
 import java.net.MalformedURLException;
+import java.io.IOException;
 
 
 /**
@@ -66,6 +69,7 @@ public class ErrorResource extends BaseJobResource
      *
      * @return Representation instance.
      */
+    @Get()
     protected Representation getRepresentation()
     {
         final Representation representation;
@@ -82,6 +86,19 @@ public class ErrorResource extends BaseJobResource
         }
 
         return representation;
+    }
+
+    /**
+     * Assemble the XML for this Resource's Representation into the given
+     * Document.
+     *
+     * @param document The Document to build up.
+     * @throws java.io.IOException If something went wrong or the XML cannot be
+     *                             built.
+     */
+    protected void buildXML(final Document document) throws IOException
+    {
+        // Do Nothing.
     }
 
     /**

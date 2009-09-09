@@ -37,46 +37,75 @@
  *  along with cadcUWS.  If not, see <http://www.gnu.org/licenses/>.
  *
  ******************************************************************************/
+package ca.nrc.cadc.uws.util;
 
-package ca.nrc.cadc.uws.web.restlet.resources;
-
-import org.w3c.dom.Document;
-import org.w3c.dom.Element;
-
-import ca.nrc.cadc.uws.JobAttribute;
-import ca.nrc.cadc.uws.Parameter;
+import ca.nrc.cadc.uws.InvalidServiceException;
+import org.apache.log4j.Logger;
 
 
-/**
- * Resource to handle the Parameter List.
- */
-public class ParameterListResource extends BaseJobResource
+public class BeanUtil
 {
+    private static final Logger LOGGER = Logger.getLogger(BeanUtil.class);
+    
+    public final static String UWS_EXECUTOR_SERVICE =
+            "ca.nrc.cadc.uws.JobExecutor";
+    public final static String UWS_JOB_MANAGER_SERVICE =
+            "ca.nrc.cadc.uws.JobManager";
+    public final static String UWS_PERSISTENCE =
+            "ca.nrc.cadc.uws.JobPersistence";
+    public final static String UWS_RUNNER = "ca.nrc.cadc.uws.JobRunner";
+
+    
+    private String className;
+
+
     /**
-     * Assemble the appropriate XML and build the given Document.
+     * Constructor for this Bean Util.
      *
-     * @param document      The Document to build.
+     * @param className     The name of the Class to create.
      */
-    protected void buildXML(final Document document)
+    public BeanUtil(final String className)
     {
-        final Element parametersListElement =
-                document.createElementNS(XML_NAMESPACE_URI,
-                                         JobAttribute.PARAMETERS.
-                                                 getAttributeName());
-        parametersListElement.setPrefix(XML_NAMESPACE_PREFIX);
+        this.className = className;
+    }
 
-        for (final Parameter parameter : getJob().getParameterList())
+
+    /**
+     * Create the actual Object associated with this BeanUtil's class.
+     * @return      The Object instantiated.
+     */
+    public Object createBean()
+    {
+        try
         {
-            final Element parameterElement =
-                    document.createElementNS(XML_NAMESPACE_URI,
-                                             JobAttribute.PARAMETER.
-                                                     getAttributeName());
-            parameterElement.setPrefix(XML_NAMESPACE_PREFIX);
-            parameterElement.setAttribute("id", parameter.getName());
-            parameterElement.setTextContent(parameter.getValue());
-            parametersListElement.appendChild(parameterElement);
+            return Class.forName(getClassName()).newInstance();
         }
+        catch (ClassNotFoundException e)
+        {
+            LOGGER.error("No such bean >> " + getClassName(), e);
+            throw new InvalidServiceException("No such bean >> "
+                                              + getClassName(), e);
+        }
+        catch (IllegalAccessException e)
+        {
+            LOGGER.error("Class or Constructor is inaccessible for "
+                         + "bean  >> " + getClassName(), e);
+            throw new InvalidServiceException("Class or Constructor is "
+                                              + "inaccessible for bean "
+                                              + ">> " + getClassName(), e);
+        }
+        catch (InstantiationException e)
+        {
+            LOGGER.error("Cannot create bean instance >> "
+                         + getClassName(), e);
+            throw new InvalidServiceException("Cannot create bean instance >> "
+                                              + getClassName(), e);
+        }
+    }
 
-        document.appendChild(parametersListElement);       
+
+    public String getClassName()
+    {
+        return className;
     }
 }

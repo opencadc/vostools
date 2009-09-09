@@ -43,12 +43,9 @@ package ca.nrc.cadc.uws.web.restlet.resources;
 import ca.nrc.cadc.date.DateUtil;
 import org.w3c.dom.Document;
 import org.w3c.dom.Element;
-import org.restlet.resource.Get;
 import org.restlet.resource.Post;
 import org.restlet.representation.Representation;
 import org.restlet.representation.StringRepresentation;
-import org.restlet.ext.xml.DomRepresentation;
-import org.restlet.data.MediaType;
 import org.restlet.data.Form;
 import org.restlet.data.Status;
 import org.apache.log4j.Logger;
@@ -250,7 +247,6 @@ public class AsynchResource extends UWSResource
     protected void generateErrorRepresentation(final Map<String, String> errors)
     {
         final StringBuilder errorMessage = new StringBuilder(128);
-        getResponse().setStatus(Status.CLIENT_ERROR_BAD_REQUEST);
 
         errorMessage.append("Errors found during Job Creation: \n");
 
@@ -262,34 +258,9 @@ public class AsynchResource extends UWSResource
             errorMessage.append(error.getValue());
         }
 
+        getResponse().setStatus(Status.CLIENT_ERROR_BAD_REQUEST);
         getResponse().setEntity(
                 new StringRepresentation(errorMessage.toString()));
-    }
-
-    /**
-     * Obtain the XML Representation of this Request.
-     *
-     * @return      The XML Representation, fully populated.
-     */
-    @Get("xml")
-    public Representation toXML()
-    {
-        try
-        {
-            final DomRepresentation rep =
-                    new DomRepresentation(MediaType.TEXT_XML);
-            buildXML(rep.getDocument());
-
-            rep.getDocument().normalizeDocument();
-
-            return rep;
-        }
-        catch (final IOException e)
-        {
-            LOGGER.error("Unable to create XML Document.");
-            throw new WebRepresentationException(
-                    "Unable to create XML Document.", e);
-        }
     }
     
     /**

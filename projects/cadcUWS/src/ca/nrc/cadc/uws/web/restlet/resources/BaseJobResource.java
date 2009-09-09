@@ -41,8 +41,6 @@
 package ca.nrc.cadc.uws.web.restlet.resources;
 
 import ca.nrc.cadc.uws.Job;
-import org.restlet.resource.Get;
-import org.restlet.representation.Representation;
 
 
 /**
@@ -60,23 +58,6 @@ public abstract class BaseJobResource extends UWSResource
         return getJobManager().getJob(getJobID());
     }
 
-    /**
-     * Obtain the XML Representation of this Request.
-     *
-     * @return      The XML Representation, fully populated.
-     */
-    @Get()
-    public Representation represent()
-    {
-        return getRepresentation();
-    }
-
-    /**
-     * Obtain the appropriate representation for the request.
-     *
-     * @return      Representation instance.
-     */
-    protected abstract Representation getRepresentation();
 
     /**
      * Obtain the current Job ID.
@@ -86,10 +67,5 @@ public abstract class BaseJobResource extends UWSResource
     protected long getJobID()
     {
         return Long.parseLong(getRequestAttribute("jobID"));
-    }
-
-    protected String getRequestAttribute(final String attributeName)
-    {
-        return (String) getRequestAttributes().get(attributeName);
     }
 }

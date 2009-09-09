@@ -64,5 +64,5 @@ public interface JobRunner extends Runnable
      *
      * @param jobPersistence        JobPersistence instance.
      */
-    void setJobPersistence(final JobPersistence jobPersistence);
+//    void setJobPersistence(final JobPersistence jobPersistence);
 }

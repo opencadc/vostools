@@ -51,16 +51,13 @@ import org.w3c.dom.Element;
 import org.w3c.dom.Node;
 
 import java.io.IOException;
-import java.util.Map;
-import java.lang.reflect.Constructor;
-import java.lang.reflect.InvocationTargetException;
 import java.text.ParseException;
 
-import ca.nrc.cadc.uws.InvalidResourceException;
-import ca.nrc.cadc.uws.InvalidServiceException;
-import ca.nrc.cadc.uws.JobExecutor;
+import ca.nrc.cadc.uws.*;
 import ca.nrc.cadc.date.DateUtil;
 import ca.nrc.cadc.uws.util.StringUtil;
+import ca.nrc.cadc.uws.util.BeanUtil;
+
 import java.text.DateFormat;
 
 
@@ -70,8 +67,6 @@ import java.text.DateFormat;
 public class JobAsynchResource extends BaseJobResource
 {
     private static final Logger LOGGER = Logger.getLogger(AsynchResource.class);
-
-    protected JobExecutor jobExecutor;
 
 
     /**
@@ -155,9 +150,10 @@ public class JobAsynchResource extends BaseJobResource
     protected void executeJob()
     {
         final JobExecutor je = getJobExecutorService();
+        final JobRunner jobRunner = createJobRunner();
 
-        je.setJobRunner(createJobRunner());
-        je.execute(getJob());
+        jobRunner.setJob(getJob());
+        je.execute(jobRunner);
     }
 
     /**
@@ -187,7 +183,7 @@ public class JobAsynchResource extends BaseJobResource
 
             if (pathInfo.endsWith("execute"))
             {
-                getJobExecutorService().execute(job);
+                executeJob();
                 text = Long.toString(job.getJobId());
                 jobAttribute = JobAttribute.JOB_ID;
             }
@@ -223,32 +219,6 @@ public class JobAsynchResource extends BaseJobResource
             }
 
             return toXML(jobAttribute, text);
-        }
-    }
-
-    /**
-     * Obtain the XML representation of this job.
-     * 
-     * @return  XML Representation.
-     */
-    protected Representation toXML()
-    {
-        try
-        {
-            final DomRepresentation rep =
-                    new DomRepresentation(MediaType.TEXT_XML);
-            final Document document = rep.getDocument();
-            buildXML(document);
-
-            document.normalizeDocument();
-
-            return rep;
-        }
-        catch (IOException e)
-        {
-            LOGGER.error("Unable to create representation.", e);
-            throw new InvalidResourceException(
-                    "Unable to create XML Document.", e);
         }
     }
 
@@ -461,100 +431,9 @@ public class JobAsynchResource extends BaseJobResource
 
     protected JobExecutor getJobExecutorService()
     {
-        if (jobExecutor == null)
-        {
-            setJobExecutorService(createJobExecutorService());
-        }
-
-        return jobExecutor;
+        return (JobExecutor) getContextAttribute(BeanUtil.UWS_EXECUTOR_SERVICE);
     }
 
-    public void setJobExecutorService(
-            final JobExecutor jobExecutor)
-    {
-        this.jobExecutor = jobExecutor;
-    }
-
-    /**
-     * Pull a new instance of the JobExecutorService implementation.
-     *
-     * @return  A JobExecutorService instance.
-     */
-    @SuppressWarnings("unchecked")
-    protected JobExecutor createJobExecutorService()
-    {
-        if (!StringUtil.hasText(
-                getContext().getParameters().getFirstValue(
-                        UWS_EXECUTOR_SERVICE)))
-        {
-            throw new InvalidServiceException(
-                    "Executor Service is mandatory!\n\n Please set the "
-                    + UWS_EXECUTOR_SERVICE + "context-param in the web.xml, "
-                    + "or insert it into the Context manually.");
-        }
-        
-        final String executorClass = getContext().getParameters().
-                getFirstValue(UWS_EXECUTOR_SERVICE);
-
-        try
-        {
-            final Class<JobExecutor> clazz =
-                    (Class<JobExecutor>) Class.forName(executorClass);
-            final Constructor<JobExecutor>[] cons =
-                    (Constructor<JobExecutor>[]) clazz.getConstructors();
-
-            for (final Constructor<JobExecutor> con : cons)
-            {
-                final Class[] paramTypes = con.getParameterTypes();
-
-                if ((paramTypes.length == 1)
-                    && (paramTypes[0].equals(Map.class)))
-                {
-                    return (JobExecutor) Class.forName(executorClass).
-                            getConstructor(Map.class).newInstance(
-                            getContext().getParameters().getValuesMap());
-                }
-            }
-
-            return (JobExecutor) Class.forName(executorClass).
-                    newInstance();
-        }
-        catch (InvocationTargetException e)
-        {
-            LOGGER.error("Constructor threw exception >> " + executorClass, e);
-            throw new InvalidServiceException("Constructor threw exception >> "
-                                              + executorClass, e);
-        }
-        catch (NoSuchMethodException e)
-        {
-            LOGGER.error("No such Constructor for >> " + executorClass, e);
-            throw new InvalidServiceException("No such Constructor for >> "
-                                              + executorClass, e);
-        }
-        catch (ClassNotFoundException e)
-        {
-            LOGGER.error("No such Executor Service >> " + executorClass, e);
-            throw new InvalidServiceException("No such Executor Service >> "
-                                              + executorClass, e);
-        }
-        catch (IllegalAccessException e)
-        {
-            LOGGER.error("Class or Constructor is inaccessible for "
-                         + "Executor Service >> " + executorClass, e);
-            throw new InvalidServiceException("Class or Constructor is "
-                                              + "inaccessible for Executor "
-                                              + "Service >> " + executorClass,
-                                              e);
-        }
-        catch (InstantiationException e)
-        {
-            LOGGER.error("Cannot create Executor Service instance >> "
-                         + executorClass, e);
-            throw new InvalidServiceException("Cannot create Executor Service "
-                                              + "instance >> " + executorClass,
-                                              e);
-        }
-    }
 
     /**
      * Obtain a new instance of the Job Runner interface as defined in the
@@ -567,43 +446,18 @@ public class JobAsynchResource extends BaseJobResource
     {
         if (!StringUtil.hasText(
                 getContext().getParameters().getFirstValue(
-                        UWS_RUNNER)))
+                        BeanUtil.UWS_RUNNER)))
         {
             throw new InvalidServiceException(
                     "The JobRunner is mandatory!\n\n Please set the "
-                    + UWS_RUNNER + "context-param in the web.xml, "
+                    + BeanUtil.UWS_RUNNER + "context-param in the web.xml, "
                     + "or insert it into the Context manually.");
         }
 
-        final String jobRunnerClass = getContext().getParameters().
-                getFirstValue(UWS_RUNNER);
+        final String jobRunnerClassName =
+                getContext().getParameters().getFirstValue(BeanUtil.UWS_RUNNER);
+        final BeanUtil beanUtil = new BeanUtil(jobRunnerClassName);
 
-        try
-        {
-            return (JobRunner) Class.forName(jobRunnerClass).
-                    newInstance();
-        }
-        catch (ClassNotFoundException e)
-        {
-            LOGGER.error("No such JobRunner >> " + jobRunnerClass, e);
-            throw new InvalidServiceException("No such JobRunner >> "
-                                              + jobRunnerClass, e);
-        }
-        catch (IllegalAccessException e)
-        {
-            LOGGER.error("Class or Constructor is inaccessible for "
-                         + "JobRunner >> " + jobRunnerClass, e);
-            throw new InvalidServiceException("Class or Constructor is "
-                                              + "inaccessible for JobRunner "
-                                              + ">> " + jobRunnerClass, e);
-        }
-        catch (InstantiationException e)
-        {
-            LOGGER.error("Cannot create JobRunner instance >> "
-                         + jobRunnerClass, e);
-            throw new InvalidServiceException("Cannot create JobRunner "
-                                              + "instance >> " + jobRunnerClass,
-                                              e);
-        }
+        return (JobRunner) beanUtil.createBean();
     }
 }

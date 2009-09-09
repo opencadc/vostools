@@ -42,16 +42,9 @@ package ca.nrc.cadc.uws.web.restlet.resources;
 
 import org.w3c.dom.Document;
 import org.w3c.dom.Element;
-import org.restlet.representation.Representation;
-import org.restlet.ext.xml.DomRepresentation;
-import org.restlet.data.MediaType;
-import org.apache.log4j.Logger;
-
-import java.io.IOException;
 
 import ca.nrc.cadc.uws.JobAttribute;
 import ca.nrc.cadc.uws.Result;
-import ca.nrc.cadc.uws.web.WebRepresentationException;
 
 
 /**
@@ -59,45 +52,6 @@ import ca.nrc.cadc.uws.web.WebRepresentationException;
  */
 public class ResultListResource extends BaseJobResource
 {
-    public static final Logger LOGGER =
-            Logger.getLogger(ResultListResource.class);
-
-
-    /**
-     * Obtain the appropriate representation for the request.
-     *
-     * @return Representation instance.
-     */
-    protected Representation getRepresentation()
-    {
-        return toXML();
-    }
-
-    /**
-     * Obtain the XML Representation of this Request.
-     *
-     * @return      The XML Representation, fully populated.
-     */
-    public Representation toXML()
-    {
-        try
-        {
-            final DomRepresentation rep =
-                    new DomRepresentation(MediaType.TEXT_XML);
-            buildXML(rep.getDocument());
-
-            rep.getDocument().normalizeDocument();
-
-            return rep;
-        }
-        catch (final IOException e)
-        {
-            LOGGER.error("Unable to create XML Document.");
-            throw new WebRepresentationException(
-                    "Unable to create XML Document.", e);
-        }
-    }
-
     /**
      * Assemble the XML for this Resource's Representation into the given
      * Document.
