@@ -181,7 +181,9 @@ public class JobAsynchResource extends BaseJobResource
         }
         else
         {
-            DateFormat df = DateUtil.getDateFormat(DateUtil.IVOA_DATE_FORMAT, DateUtil.UTC);
+            final DateFormat df =
+                    DateUtil.getDateFormat(DateUtil.IVOA_DATE_FORMAT,
+                                           DateUtil.UTC);
             final String text;
             final JobAttribute jobAttribute;
 
@@ -297,7 +299,8 @@ public class JobAsynchResource extends BaseJobResource
      */
     protected void buildXML(final Document document) throws IOException
     {
-        DateFormat df = DateUtil.getDateFormat(DateUtil.IVOA_DATE_FORMAT, DateUtil.UTC);
+        final DateFormat df = DateUtil.getDateFormat(DateUtil.IVOA_DATE_FORMAT,
+                                                     DateUtil.UTC);
         
         final Job job = getJob();
         final Element jobElement =

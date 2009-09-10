@@ -65,6 +65,8 @@ public class ResultListResource extends BaseJobResource
                                          JobAttribute.RESULTS.
                                                  getAttributeName());
         resultsListElement.setPrefix(XML_NAMESPACE_PREFIX);
+        resultsListElement.setAttribute("xmlns:xlink",
+                                        "http://www.w3.org/1999/xlink");
 
         for (final Result result : getJob().getResultsList())
         {
