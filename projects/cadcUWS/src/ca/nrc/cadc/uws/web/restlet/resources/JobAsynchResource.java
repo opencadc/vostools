@@ -134,8 +134,10 @@ public class JobAsynchResource extends BaseJobResource
         }
         else
         {
-            throw new InvalidResourceException("No such Resource for POST > "
-                                               + pathInfo);
+            // Default is we're POSTing Parameters to the Job.
+            final Client client = new Client(getContext(), Protocol.HTTP);
+            client.post(getRequest().getResourceRef().getBaseRef()
+                        + "/parameters", form.getWebRepresentation());
         }
 
         getJobManager().persist(job);
@@ -453,7 +455,11 @@ public class JobAsynchResource extends BaseJobResource
         final Response response = client.get(elementURI.toString());
         final DomRepresentation domRep =
                 new DomRepresentation(response.getEntity());
-        return domRep.getDocument().getDocumentElement();
+        final Document document = domRep.getDocument();
+
+        document.normalizeDocument();
+
+        return document.getDocumentElement();
     }
 
 

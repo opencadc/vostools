@@ -42,9 +42,16 @@ package ca.nrc.cadc.uws.web.restlet.resources;
 
 import org.w3c.dom.Document;
 import org.w3c.dom.Element;
+import org.restlet.resource.Post;
+import org.restlet.representation.Representation;
+import org.restlet.data.Form;
+import org.restlet.data.Status;
 
 import ca.nrc.cadc.uws.JobAttribute;
 import ca.nrc.cadc.uws.Parameter;
+import ca.nrc.cadc.uws.Job;
+
+import java.util.Map;
 
 
 /**
@@ -52,6 +59,30 @@ import ca.nrc.cadc.uws.Parameter;
  */
 public class ParameterListResource extends BaseJobResource
 {
+    /**
+     * POST Parameter data to this Job.
+     *
+     * @param entity    The Representation Entity.
+     */
+    @Post
+    public void accept(final Representation entity)
+    {
+        final Form form = new Form(entity);
+        final Map<String, String> valuesMap = form.getValuesMap();
+        final Job job = getJob();
+
+        for (final Map.Entry<String, String> entry : valuesMap.entrySet())
+        {
+            job.addParameter(new Parameter(entry.getKey(), entry.getValue()));
+        }
+
+        final Job persistedJob = getJobManager().persist(job);
+        
+        getResponse().setStatus(Status.REDIRECTION_SEE_OTHER);
+        getResponse().setLocationRef(getContextPath() + "/async/"
+                                     + persistedJob.getJobId());        
+    }
+
     /**
      * Assemble the appropriate XML and build the given Document.
      *

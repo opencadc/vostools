@@ -51,10 +51,7 @@ import org.restlet.data.Status;
 import org.apache.log4j.Logger;
 
 import java.io.IOException;
-import java.util.List;
-import java.util.ArrayList;
-import java.util.Date;
-import java.util.Map;
+import java.util.*;
 import java.text.ParseException;
 import java.net.URI;
 import java.net.URISyntaxException;
@@ -86,6 +83,8 @@ public class AsynchResource extends UWSResource
     {
         final Form form = new Form(entity);
         final Map<String, String> errors = validate(form);
+        final Map<String, String> valuesMap =
+                new HashMap<String, String>(form.getValuesMap());
         
         if (!errors.isEmpty())
         {
@@ -199,15 +198,18 @@ public class AsynchResource extends UWSResource
                           quoteDate, startDate, null, errorSummary, owner,
                           runID, null, null);
 
-//        final String[] parameters =
-//                form.getValuesArray(JobAttribute.PARAMETERS.getAttributeName().
-//                                            toUpperCase());
-//
-//        for (final String param : parameters)
-//        {
-//            job.addParameter();
-//        }
+            // Clear out those Request parameters that are pre-defined.
+            for (final JobAttribute jobAttribute : JobAttribute.values())
+            {
+                valuesMap.remove(jobAttribute.getAttributeName().toUpperCase());    
+            }
 
+            // The remaining values are Parameters to the Job.
+            for (final Map.Entry<String, String> entry : valuesMap.entrySet())
+            {
+                job.addParameter(new Parameter(entry.getKey(),
+                                               entry.getValue()));
+            }
         }
         catch (ParseException e)
         {
