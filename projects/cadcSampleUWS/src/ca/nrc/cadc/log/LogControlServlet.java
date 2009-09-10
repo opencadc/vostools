@@ -1,6 +1,4 @@
-<?xml version="1.0" encoding="UTF-8"?>
-
-<!--
+/*
 ************************************************************************
 *******************  CANADIAN ASTRONOMY DATA CENTRE  *******************
 **************  CENTRE CANADIEN DE DONNÉES ASTRONOMIQUES  **************
@@ -67,68 +65,112 @@
 *  $Revision: 4 $
 *
 ************************************************************************
--->
+*/
+
+
+package ca.nrc.cadc.log;
+
+
+import javax.servlet.ServletConfig;
+import javax.servlet.ServletException;
+import javax.servlet.http.HttpServlet;
+
+import org.apache.log4j.BasicConfigurator;
+import org.apache.log4j.ConsoleAppender;
+import org.apache.log4j.Level;
+import org.apache.log4j.Logger;
+import org.apache.log4j.PatternLayout;
+
+
+/**
+ *  Sets up log4j for whichever webapp contains this
+ *  servlet.
+ *   
+ *  To make sure the logging level gets set before any
+ *  logging gets done, set load-on-startup to a smaller
+ *  whole number than is used for any other servlet
+ *  in this webapp.  This assumes Tomcat 5.5 or later.
+ *  
+ *  For now get the level from a web.xml init-param.
+ *  Eventually it would be nice to be able to change
+ *  it while the program is running.
+ *
+ *  It should also be possible to use PropertyUtil in
+ *  a static block to get the log level from a Java -D
+ *  property set by tomcatEnv or from the WEB-INF/classes
+ *  directory.
+ *  
+ *  The log level controls the logging level of those
+ *  packages listed in an init-param.
+ *  
+ *  By default, log4j assigns the root logger to leve.DEBUG.
+ */
+public class LogControlServlet extends HttpServlet
+{
+	private static final long serialVersionUID = 200909091014L;
+
+	private static final Logger logger = Logger.getLogger( LogControlServlet.class );;
+
+	private static final Level DEFAULT_LEVEL = Level.DEBUG;
+	
+	private static final String LONG_FORMAT = "%d{ABSOLUTE} [%t] %-5p %c{1} %x - %m\n";
+	
+	private static final String LOG_LEVEL_PARAM = "logLevel";
+	private static final String PACKAGES_PARAM  = "logLevelPackages";
+
+	private static Level level = null;
+	
+    /**
+     *  Initialize the logging.  This method should only get
+     *  executed once and, if properly configured, it should
+     *  be the first method to be executed.
+     */
+	public void init( final ServletConfig config ) throws ServletException
+    {
+    	super.init( config );
+
+		//  Log all classes at this level except where a
+    	//  different level is specified in the web.xml file.
+    	Logger.getRootLogger().setLevel( Level.INFO );
+
+    	//  Determine the desired logging level.
+    	String levelVal = config.getInitParameter( LOG_LEVEL_PARAM );
+    	if ( levelVal == null )
+    		level = DEFAULT_LEVEL;
+    	else if ( levelVal.equalsIgnoreCase(Level.TRACE.toString()) )
+    		level = Level.TRACE;
+    	else if ( levelVal.equalsIgnoreCase(Level.DEBUG.toString()) )
+    		level = Level.DEBUG;
+    	else if ( levelVal.equalsIgnoreCase(Level.INFO.toString()) )
+    		level = Level.INFO;
+    	else if ( levelVal.equalsIgnoreCase(Level.WARN.toString()) )
+    		level = Level.WARN;
+    	else if ( levelVal.equalsIgnoreCase(Level.ERROR.toString()) )
+    		level = Level.ERROR;
+    	else if ( levelVal.equalsIgnoreCase(Level.FATAL.toString()) )
+    		level = Level.FATAL;
+    	else
+    		level = DEFAULT_LEVEL;
+    	
+    	//  Set the specified packages to that level.
+    	String packageParamValues = config.getInitParameter( PACKAGES_PARAM );
+    	String[] packageNames = packageParamValues.split( "\\s" ); // whitespace
+    	if ( packageNames != null )
+    	{
+    		for ( int i=0; i<packageNames.length; i++ )
+    		{
+        		String pkg = packageNames[i].trim();
+        		if ( pkg.length() > 0 )
+        		{
+        			Logger.getLogger( pkg ).setLevel( level );
+        		}
+    		}
+    	}
+
+    	ConsoleAppender appender = new ConsoleAppender( new PatternLayout(LONG_FORMAT) );
+		BasicConfigurator.configure( appender );
 		
-<!DOCTYPE project>
-<project default="build" basedir=".">
-
-<property environment="env"/>
-
-    <!-- site-specific build properties or overrides of values in opencadc.properties -->
-    <property file="${env.CADC_PREFIX}/etc/local.properties" />
-
-    <!-- site-specific targets, e.g. install, cannot duplicate those in opencadc.targets.xml -->
-    <import file="${env.CADC_PREFIX}/etc/local.targets.xml" optional="true" />
-
-    <!-- default properties and targets -->
-    <property file="${env.CADC_PREFIX}/etc/opencadc.properties" />
-    <import file="${env.CADC_PREFIX}/etc/opencadc.targets.xml"/>
-
-    <!-- developer convenience: place for extra targets and properties -->
-    <import file="extras.xml" optional="true" />
+		logger.info( "Logging initialized at level="+level );
+    }
     
-    <property name="project" value="cadcSampleUWS" />
-
-    <!-- JAR files to be included in classpath and war file -->
-    <property name="ext.log4j"       value="${ext.lib}/log4j.jar" />
-    <property name="ext.servlet-api" value="${ext.lib}/servlet-api.jar" />
-    <property name="lib.cadcUtil"    value="${lib}/cadcUtil.jar" />
-    <property name="lib.cadcUWS"     value="${lib}/cadcUWS.jar" />
-
-    <property name="jars" value="${ext.log4j}:${ext.servlet-api}:${lib.cadcUtil}:${lib.cadcUWS}" />
-
-    <target name="build" depends="cadcSampleUWS,webapp" />
-
-    <target name="cadcSampleUWS" depends="compile">
-            <jar jarfile="${build}/tmp/cadcSampleUWS.jar"
-                    basedir="${build}/class" update="no">
-                    <exclude name="test/**" />
-            </jar>
-    </target>
-
-    <target name="webapp" depends="cadcSampleUWS">
-            <war warfile="${build}/webapps/cadcSampleUWS.war" webxml="src/xml/web.xml" update="no">
-                <lib dir="${ext.lib}">
-                    <include name="jstl.jar" />
-                    <include name="log4j.jar" />
-                    <include name="standard.jar" />
-                    <include name="org.restlet.ext.servlet.jar" />
-                    <include name="org.restlet.ext.xml.jar" />
-                    <include name="org.restlet.jar" />
-                </lib>
-                <lib file="${lib.cadcUtil}" />
-                <lib file="${lib.cadcUWS}" />
-                <lib file="${build}/tmp/cadcSampleUWS.jar" />
-                <fileset dir="src/text">
-                    <include name="**/*.txt" />
-                </fileset>
-                <fileset dir="src/jsp">
-                    <include name="**/*.jsp" />
-                </fileset>
-                <webinf dir="${ext.lib}/tld">
-                    <include name="c.tld" />
-                </webinf>
-            </war>
-    </target>
-
-</project>
+}
