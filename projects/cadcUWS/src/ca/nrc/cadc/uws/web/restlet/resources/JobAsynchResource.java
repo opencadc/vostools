@@ -58,8 +58,6 @@ import ca.nrc.cadc.date.DateUtil;
 import ca.nrc.cadc.uws.util.StringUtil;
 import ca.nrc.cadc.uws.util.BeanUtil;
 
-import javax.xml.transform.Transformer;
-import javax.xml.transform.OutputKeys;
 import java.text.DateFormat;
 
 
@@ -105,7 +103,7 @@ public class JobAsynchResource extends BaseJobResource
                 job.setExecutionPhase(ExecutionPhase.ABORTED);
             }
         }
-        else if (pathInfo.endsWith("executionDuration"))
+        else if (pathInfo.endsWith("executionduration"))
         {
             job.setExecutionDuration(
                     Long.parseLong(form.getFirstValue(
@@ -161,131 +159,65 @@ public class JobAsynchResource extends BaseJobResource
     }
 
     /**
-     * Obtain the appropriate representation for the request.
+     * Obtain the XML Representation of a particular Attribute of a Job.
      *
-     * @return Representation instance.
+     * @param document      The Document to build up.
+     * @param pathInfo      Information on the current Path.
      */
-    protected Representation getRepresentation()
+    protected void buildAttributeXML(final Document document,
+                                     final String pathInfo)
     {
         final Job job = getJob();
-        String pathInfo = getRequest().getResourceRef().getPath().trim();
+        final DateFormat df =
+                DateUtil.getDateFormat(DateUtil.IVOA_DATE_FORMAT,
+                                       DateUtil.UTC);
+        final String text;
+        final JobAttribute jobAttribute;
 
-        if (pathInfo.endsWith("/"))
+        if (pathInfo.endsWith("execute"))
         {
-            pathInfo = pathInfo.substring(0, pathInfo.length() - 1);
+            executeJob();
+            text = Long.toString(job.getJobId());
+            jobAttribute = JobAttribute.JOB_ID;
         }
-
-        if (pathInfo.endsWith(Long.toString(job.getJobId())))
+        else if (pathInfo.endsWith("phase"))
         {
-            return toXML();
+            text = job.getExecutionPhase().name();
+            jobAttribute = JobAttribute.EXECUTION_PHASE;
+        }
+        else if (pathInfo.endsWith("executionduration"))
+        {
+            text = Long.toString(job.getExecutionDuration());
+            jobAttribute = JobAttribute.EXECUTION_DURATION;
+        }
+        else if (pathInfo.endsWith("destruction"))
+        {
+            text = df.format(job.getDestructionTime());
+            jobAttribute = JobAttribute.DESTRUCTION_TIME;
+        }
+        else if (pathInfo.endsWith("quote"))
+        {
+            text = df.format(job.getQuote());
+            jobAttribute = JobAttribute.QUOTE;
+        }
+        else if (pathInfo.endsWith("owner"))
+        {
+            text = job.getOwner();
+            jobAttribute = JobAttribute.OWNER_ID;
         }
         else
         {
-            final DateFormat df =
-                    DateUtil.getDateFormat(DateUtil.IVOA_DATE_FORMAT,
-                                           DateUtil.UTC);
-            final String text;
-            final JobAttribute jobAttribute;
-
-            if (pathInfo.endsWith("execute"))
-            {
-                executeJob();
-                text = Long.toString(job.getJobId());
-                jobAttribute = JobAttribute.JOB_ID;
-            }
-            else if (pathInfo.endsWith("phase"))
-            {
-                text = job.getExecutionPhase().name();
-                jobAttribute = JobAttribute.EXECUTION_PHASE;
-            }
-            else if (pathInfo.endsWith("executionDuration"))
-            {
-                text = Long.toString(job.getExecutionDuration());
-                jobAttribute = JobAttribute.EXECUTION_DURATION;
-            }
-            else if (pathInfo.endsWith("destruction"))
-            {
-                text = df.format(job.getDestructionTime());
-                jobAttribute = JobAttribute.DESTRUCTION_TIME;
-            }
-            else if (pathInfo.endsWith("quote"))
-            {
-                text = df.format(job.getQuote());
-                jobAttribute = JobAttribute.QUOTE;
-            }
-            else if (pathInfo.endsWith("owner"))
-            {
-                text = job.getOwner();
-                jobAttribute = JobAttribute.OWNER_ID;
-            }
-            else
-            {
-                throw new InvalidResourceException("No such Resource > "
-                                                   + pathInfo);
-            }
-
-            return toXML(jobAttribute, text);
+            throw new InvalidResourceException("No such Resource > "
+                                               + pathInfo);
         }
-    }
 
-    /**
-     * Obtain the XML Representation of a particular Attribute of a Job.
-     *
-     * @param jobAttribute      The Attribute to represent.
-     * @param textContent       The text content for the Attribute.
-     * @return                  The XML Representation.
-     */
-    protected Representation toXML(final JobAttribute jobAttribute,
-                                   final String textContent)
-    {
-        try
-        {
-            final DomRepresentation rep =
-                    new DomRepresentation(MediaType.TEXT_XML)
-                    {
-                        /**
-                         * Creates a new JAXP Transformer object that will be
-                         * used to serialize this DOM. This method may be
-                         * overridden in order to set custom properties on the
-                         * Transformer.
-                         *
-                         * @return The transformer to be used for serialization.
-                         */
-                        @Override
-                        protected Transformer createTransformer()
-                                throws IOException
-                        {
-                            final Transformer transformer =
-                                    super.createTransformer();
+        final Element elem =
+                document.createElementNS(XML_NAMESPACE_URI,
+                                         jobAttribute.getAttributeName());
+        elem.setPrefix(XML_NAMESPACE_PREFIX);
+        elem.setTextContent(text);
 
-                            transformer.setOutputProperty(OutputKeys.INDENT,
-                                                          "yes");
-                            transformer.setOutputProperty(
-                                    "{http://xml.apache.org/xslt}indent-amount",
-                                    "2");
-
-                            return transformer;
-                        }
-                    };
-            
-            final Document document = rep.getDocument();
-            final Element elem =
-                    document.createElementNS(XML_NAMESPACE_URI,
-                                             jobAttribute.getAttributeName());
-            elem.setPrefix(XML_NAMESPACE_PREFIX);
-            elem.setTextContent(textContent);
-
-            document.appendChild(elem);
-            document.normalizeDocument();
-
-            return rep;
-        }
-        catch (IOException e)
-        {
-            LOGGER.error("Unable to create representation.", e);
-            throw new InvalidResourceException(
-                    "Unable to create XML Document.", e);
-        }
+        document.appendChild(elem);
     }
 
 
@@ -299,9 +231,35 @@ public class JobAsynchResource extends BaseJobResource
      */
     protected void buildXML(final Document document) throws IOException
     {
+        final Job job = getJob();
+        String pathInfo = getRequest().getResourceRef().getPath().trim();
+
+        if (pathInfo.endsWith("/"))
+        {
+            pathInfo = pathInfo.substring(0, pathInfo.length() - 1);
+        }
+
+        if (!pathInfo.endsWith(Long.toString(job.getJobId())))
+        {
+            buildAttributeXML(document, pathInfo);
+        }
+        else
+        {
+            buildJobXML(document);
+        }
+    }
+
+    /**
+     * Build the XML for the entire Job.
+     * 
+     * @param document The Document to build up.
+     * @throws java.io.IOException If something went wrong or the XML cannot be
+     *                             built.
+     */
+    protected void buildJobXML(final Document document) throws IOException
+    {
         final DateFormat df = DateUtil.getDateFormat(DateUtil.IVOA_DATE_FORMAT,
                                                      DateUtil.UTC);
-        
         final Job job = getJob();
         final Element jobElement =
                 document.createElementNS(XML_NAMESPACE_URI,
