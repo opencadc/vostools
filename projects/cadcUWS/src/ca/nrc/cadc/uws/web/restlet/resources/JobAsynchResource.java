@@ -143,8 +143,8 @@ public class JobAsynchResource extends BaseJobResource
         getJobManager().persist(job);
 
         getResponse().setStatus(Status.REDIRECTION_SEE_OTHER);
-        getResponse().setLocationRef(getHostPart() + "/" + getContextPath()
-                                     + "/async/" + job.getJobId());
+        getResponse().setLocationRef(getHostPart() + "/async/"
+                                     + job.getJobId());
     }
 
     /**

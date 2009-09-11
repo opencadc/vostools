@@ -225,8 +225,8 @@ public class AsynchResource extends UWSResource
 
         final Job persistedJob = getJobManager().persist(job);
         getResponse().setStatus(Status.REDIRECTION_SEE_OTHER);
-        getResponse().setLocationRef(getHostPart() + "/" + getContextPath()
-                                     + "/async/" + persistedJob.getJobId());
+        getResponse().setLocationRef(getHostPart() + "/async/"
+                                     + persistedJob.getJobId());
     }
 
     /**
