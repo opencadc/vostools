@@ -326,6 +326,27 @@ public class JobAsynchResource extends BaseJobResource
         jobIdElement.setTextContent(Long.toString(job.getJobId()));
         jobElement.appendChild(jobIdElement);
 
+        // <uws:runId>
+        final Element runIdElement =
+                document.createElementNS(XML_NAMESPACE_URI,
+                                         JobAttribute.RUN_ID.
+                                                 getAttributeName());
+        runIdElement.setPrefix(XML_NAMESPACE_PREFIX);
+        runIdElement.setTextContent(job.getRunId());
+        jobElement.appendChild(runIdElement);
+
+        // <uws:ownerId>
+        final Element ownerNameElement =
+                document.createElementNS(XML_NAMESPACE_URI,
+                                         JobAttribute.OWNER_ID.
+                                                 getAttributeName());
+        ownerNameElement.setPrefix(XML_NAMESPACE_PREFIX);
+        if (job.getOwner() == null)
+            ownerNameElement.setAttribute("xsi:nil", "true");
+        else
+            ownerNameElement.setTextContent(job.getOwner());
+        jobElement.appendChild(ownerNameElement);
+
         // <uws:phase>
         final Element executionPhaseElement =
                 document.createElementNS(XML_NAMESPACE_URI,
@@ -334,6 +355,42 @@ public class JobAsynchResource extends BaseJobResource
         executionPhaseElement.setPrefix(XML_NAMESPACE_PREFIX);
         executionPhaseElement.setTextContent(job.getExecutionPhase().name());
         jobElement.appendChild(executionPhaseElement);
+
+        // <uws:quote>
+        final Element quoteElement =
+                document.createElementNS(XML_NAMESPACE_URI,
+                                         JobAttribute.QUOTE.
+                                                 getAttributeName());
+        quoteElement.setPrefix(XML_NAMESPACE_PREFIX);
+        quoteElement.setTextContent(
+                df.format(job.getQuote()) );
+        jobElement.appendChild(quoteElement);
+
+        // <uws:startTime>
+        final Element startTimeElement =
+                document.createElementNS(XML_NAMESPACE_URI,
+                                         JobAttribute.START_TIME.
+                                                getAttributeName());
+        startTimeElement.setPrefix(XML_NAMESPACE_PREFIX);
+        if (job.getStartTime() == null)
+            startTimeElement.setAttribute("xsi:nil", "true");
+        else
+            startTimeElement.setTextContent(
+                    df.format(job.getStartTime()) );
+        jobElement.appendChild(startTimeElement);
+
+        // <uws:endTime>
+         final Element endTimeElement =
+                document.createElementNS(XML_NAMESPACE_URI,
+                                         JobAttribute.END_TIME.
+                                                getAttributeName());
+        endTimeElement.setPrefix(XML_NAMESPACE_PREFIX);
+        if (job.getEndTime() == null)
+            endTimeElement.setAttribute("xsi:nil", "true");
+        else
+            endTimeElement.setTextContent(
+                    df.format(job.getEndTime()) );
+        jobElement.appendChild(endTimeElement);       
 
         // <uws:executionDuration>
         final Element executionDurationElement =
@@ -355,15 +412,27 @@ public class JobAsynchResource extends BaseJobResource
                 df.format(job.getDestructionTime()) );
         jobElement.appendChild(destructionTimeElement);
 
-        // <uws:quote>
-        final Element quoteElement =
-                document.createElementNS(XML_NAMESPACE_URI,
-                                         JobAttribute.QUOTE.
-                                                 getAttributeName());
-        quoteElement.setPrefix(XML_NAMESPACE_PREFIX);
-        quoteElement.setTextContent(
-                df.format(job.getQuote()) );
-        jobElement.appendChild(quoteElement);
+        // <uws:parameters>
+        final Element parameterListElement =
+                getRemoteElement(JobAttribute.PARAMETERS);
+
+        if (parameterListElement != null)
+        {
+            final Node importedParameterList =
+                    document.importNode(parameterListElement, true);
+            jobElement.appendChild(importedParameterList);
+        }
+
+        // <uws:results>
+        final Element resultListElement =
+                getRemoteElement(JobAttribute.RESULTS);
+
+        if (resultListElement != null)
+        {
+            final Node importedResultList =
+                    document.importNode(resultListElement, true);
+            jobElement.appendChild(importedResultList);
+        }
 
         // <uws:errorSummary>
         final ErrorSummary errorSummary = job.getErrorSummary();
@@ -387,48 +456,7 @@ public class JobAsynchResource extends BaseJobResource
         }
 
         jobElement.appendChild(errorSummaryElement);
-        
-        // <uws:owner>
-        final Element ownerNameElement =
-                document.createElementNS(XML_NAMESPACE_URI,
-                                         JobAttribute.OWNER_ID.
-                                                 getAttributeName());
-        ownerNameElement.setPrefix(XML_NAMESPACE_PREFIX);
-        ownerNameElement.setAttribute("xsi:nil", "true");
-        ownerNameElement.setTextContent(job.getOwner());
-        jobElement.appendChild(ownerNameElement);
-
-        // <uws:runId>
-        final Element runIdElement =
-                document.createElementNS(XML_NAMESPACE_URI,
-                                         JobAttribute.RUN_ID.
-                                                 getAttributeName());
-        runIdElement.setPrefix(XML_NAMESPACE_PREFIX);
-        runIdElement.setTextContent(job.getRunId());
-        jobElement.appendChild(runIdElement);
-
-        // <uws:results>
-        final Element resultListElement =
-                getRemoteElement(JobAttribute.RESULTS);
-
-        if (resultListElement != null)
-        {
-            final Node importedResultList =
-                    document.importNode(resultListElement, true);
-            jobElement.appendChild(importedResultList);
-        }
-
-        // <uws:parameters>
-        final Element parameterListElement =
-                getRemoteElement(JobAttribute.PARAMETERS);
-
-        if (parameterListElement != null)
-        {
-            final Node importedParameterList =
-                    document.importNode(parameterListElement, true);
-            jobElement.appendChild(importedParameterList);
-        }
-    }
+     }
 
     /**
      * Obtain the XML List element for the given Attribute.
