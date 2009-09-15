@@ -117,8 +117,8 @@ public abstract class UWSResource extends ServerResource
      *
      * @return      The XML Representation, fully populated.
      */
-    @Get("xml")
-    public Representation toXML()
+    @Get()
+    public Representation represent()
     {
         try
         {

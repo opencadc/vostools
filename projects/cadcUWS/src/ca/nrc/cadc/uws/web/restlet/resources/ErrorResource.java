@@ -84,6 +84,7 @@ import ca.nrc.cadc.uws.ErrorSummary;
 import ca.nrc.cadc.uws.web.WebRepresentationException;
 
 import java.net.MalformedURLException;
+import java.net.URL;
 import java.io.IOException;
 
 
@@ -94,13 +95,15 @@ public class ErrorResource extends BaseJobResource
 {
     private static final Logger LOGGER = Logger.getLogger(ErrorResource.class);
 
+    
     /**
-     * Obtain the appropriate representation for the request.
+     * Obtain the XML Representation of this Request.
      *
-     * @return Representation instance.
+     * @return The XML Representation, fully populated.
      */
-    @Get()
-    protected Representation getRepresentation()
+    @Get
+    @Override
+    public Representation represent()
     {
         final Representation representation;
         final Job job = getJob();
@@ -115,7 +118,7 @@ public class ErrorResource extends BaseJobResource
             representation = getRemoteError();
         }
 
-        return representation;
+        return representation;        
     }
 
     /**
@@ -138,13 +141,15 @@ public class ErrorResource extends BaseJobResource
      */
     protected Representation getRemoteError()
     {
-        final Client client = new Client(getContext(), Protocol.ALL);
-
         try
         {
-            final Response response =
-                    client.get(getJob().getErrorSummary().getDocumentURI().
-                            toURL().toString());
+            final URL url =
+                    getJob().getErrorSummary().getDocumentURI().toURL();
+            final Client client =
+                    new Client(getContext(),
+                               Protocol.valueOf(url.getProtocol().
+                                       toUpperCase()));
+            final Response response = client.get(url.toString());
 
             return response.getEntity();
         }
