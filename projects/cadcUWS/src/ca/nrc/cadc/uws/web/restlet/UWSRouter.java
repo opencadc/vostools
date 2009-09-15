@@ -85,8 +85,10 @@ public class UWSRouter extends Router
 {
     private final static Logger LOGGER = Logger.getLogger(UWSRouter.class);
 
-    protected final static String UWS_ANY_RESOURCE = "ca.nrc.cadc.uws.any.resourceClass";
-    protected final static String UWS_ANY_NAME = "ca.nrc.cadc.uws.any.resourceName";
+    protected final static String UWS_ANY_RESOURCE =
+            "ca.nrc.cadc.uws.any.resourceClass";
+    protected final static String UWS_ANY_NAME =
+            "ca.nrc.cadc.uws.any.resourceName";
     
     /**
      * Constructor.
@@ -98,10 +100,9 @@ public class UWSRouter extends Router
         super(context);
 
         attachDefault(AsynchResource.class);
-//        attach("", AsynchResource.class);
         attach("/{jobID}", JobAsynchResource.class);
         attach("/{jobID}/phase", JobAsynchResource.class);
-        attach("/{jobID}/executionDuration",
+        attach("/{jobID}/executionduration",
                JobAsynchResource.class);
         attach("/{jobID}/destruction", JobAsynchResource.class);
         attach("/{jobID}/error", ErrorResource.class);
