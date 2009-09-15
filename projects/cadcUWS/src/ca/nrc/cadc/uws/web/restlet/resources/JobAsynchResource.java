@@ -440,7 +440,18 @@ public class JobAsynchResource extends BaseJobResource
             errorSummaryMessageElement.setTextContent(
                     errorSummary.getSummaryMessage());
 
+            final Element errorDocumentURIElement =
+                    document.createElementNS(XML_NAMESPACE_URI,
+                                             JobAttribute.ERROR_SUMMARY_DETAIL_LINK.
+                                                     getAttributeName());
+            errorDocumentURIElement.setPrefix(XML_NAMESPACE_PREFIX);
+            errorDocumentURIElement.setTextContent(
+                    errorSummary.getDocumentURI() == null
+                    ? ""
+                    : errorSummary.getDocumentURI().toString());
+
             errorSummaryElement.appendChild(errorSummaryMessageElement);
+            errorSummaryElement.appendChild(errorDocumentURIElement);
         }
 
         jobElement.appendChild(errorSummaryElement);
