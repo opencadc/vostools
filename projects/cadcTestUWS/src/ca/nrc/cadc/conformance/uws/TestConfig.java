@@ -303,7 +303,7 @@ public class TestConfig extends TestCase
                                String baseUrl, String schemaUrl, String propertiesFilename)
         throws IOException, SAXException
     {
-        return createJob(conversation, response, null, baseUrl, schemaUrl);
+        return createJob(conversation, response, null, baseUrl, schemaUrl, propertiesFilename);
     }
 
     protected String createJob(WebConversation conversation, WebResponse response, Map parameters, 
