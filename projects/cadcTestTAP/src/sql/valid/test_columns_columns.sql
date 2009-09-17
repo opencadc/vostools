@@ -1,0 +1,1 @@
+select table_name, column_name, description, utype, ucd, unit, datatype, size, primary, indexed, std from tap_schema.columns

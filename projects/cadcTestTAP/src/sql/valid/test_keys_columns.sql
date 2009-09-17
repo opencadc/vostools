@@ -1,0 +1,1 @@
+select key_id, from_table, target_table, utype, description from tap_schema.keys
