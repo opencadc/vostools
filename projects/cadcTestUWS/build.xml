@@ -86,10 +86,12 @@
 <property name="project" value="cadcTestUWS" />
 
 <property name="cadc" value="${lib}/cadcUtil.jar" />
-<property name="ext" value="${ext.lib}/log4j.jar:${ext.dev}/junit.jar:${ext.dev}/httpunit.jar:/usr/cadc/external/java/lib.install/httpunit-1.7/jars/js-1.6R5.jar:/usr/cadc/external/java/lib.install/httpunit-1.7/jars/nekohtml-0.9.5.jar:${ext.lib}/xerces.jar" />
+<property name="ext" value="${ext.lib}/log4j.jar:${ext.dev}/junit.jar:${ext.dev}/httpunit.jar" />
+<property name="runtime" value="/usr/cadc/external/java/lib.install/httpunit-1.7/jars/js-1.6R5.jar:/usr/cadc/external/java/lib.install/httpunit-1.7/jars/nekohtml-0.9.5.jar:${ext.lib}/xerces.jar" />
 
 <property name="jars" value="${cadc}:${ext}" />
 
+<property name="runtimeJars" value="${jars}:${runtime}" />
 
 <target name="build" depends="compile">
     <jar jarfile="${build}/lib/${project}.jar"
@@ -103,7 +105,7 @@
     <junit printsummary="yes" haltonfailure="yes" fork="yes">
         <classpath>
             <pathelement path="build/class"/>
-            <pathelement path="${jars}"/>
+            <pathelement path="${runtimeJars}"/>
         </classpath>
         <test name="ca.nrc.cadc.conformance.uws.UWSTestSuite"/>
         <formatter type="plain" usefile="false"/>
