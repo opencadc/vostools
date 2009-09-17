@@ -86,8 +86,8 @@
 <property name="project" value="cadcTestUWS" />
 
 <property name="cadc" value="${lib}/cadcUtil.jar" />
-<property name="ext" value="${ext.lib}/log4j.jar:${ext.dev}/junit.jar:${ext.dev}/httpunit.jar" />
-<property name="runtime" value="/usr/cadc/external/java/lib.install/httpunit-1.7/jars/js-1.6R5.jar:/usr/cadc/external/java/lib.install/httpunit-1.7/jars/nekohtml-0.9.5.jar:${ext.lib}/xerces.jar" />
+<property name="ext" value="${ext.lib}/log4j.jar:${ext.lib}/junit.jar:${ext.lib}/httpunit.jar" />
+<property name="runtime" value="${ext.lib}/xerces.jar:${ext.lib}/js.jar:${ext.lib}/nekohtml.jar" />
 
 <property name="jars" value="${cadc}:${ext}" />
 
