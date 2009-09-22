@@ -8,7 +8,7 @@
 *  National Research Council            Conseil national de recherches
 *  Ottawa, Canada, K1A 0R6              Ottawa, Canada, K1A 0R6
 *  All rights reserved                  Tous droits réservés
-*                                       
+*
 *  NRC disclaims any warranties,        Le CNRC dénie toute garantie
 *  expressed, implied, or               énoncée, implicite ou légale,
 *  statutory, of any kind with          de quelque nature que ce
@@ -31,10 +31,10 @@
 *  software without specific prior      de ce logiciel sans autorisation
 *  written permission.                  préalable et particulière
 *                                       par écrit.
-*                                       
+*
 *  This file is part of the             Ce fichier fait partie du projet
 *  OpenCADC project.                    OpenCADC.
-*                                       
+*
 *  OpenCADC is free software:           OpenCADC est un logiciel libre ;
 *  you can redistribute it and/or       vous pouvez le redistribuer ou le
 *  modify it under the terms of         modifier suivant les termes de
@@ -44,7 +44,7 @@
 *  either version 3 of the              : soit la version 3 de cette
 *  License, or (at your option)         licence, soit (à votre gré)
 *  any later version.                   toute version ultérieure.
-*                                       
+*
 *  OpenCADC is distributed in the       OpenCADC est distribué
 *  hope that it will be useful,         dans l’espoir qu’il vous
 *  but WITHOUT ANY WARRANTY;            sera utile, mais SANS AUCUNE
@@ -54,7 +54,7 @@
 *  PURPOSE.  See the GNU Affero         PARTICULIER. Consultez la Licence
 *  General Public License for           Générale Publique GNU Affero
 *  more details.                        pour plus de détails.
-*                                       
+*
 *  You should have received             Vous devriez avoir reçu une
 *  a copy of the GNU Affero             copie de la Licence Générale
 *  General Public License along         Publique GNU Affero avec
@@ -67,109 +67,93 @@
 ************************************************************************
 */
 
-
 package ca.nrc.cadc.uws.web.restlet.resources;
 
-import ca.nrc.cadc.uws.Job;
-import ca.nrc.cadc.uws.JobRunner;
-import ca.nrc.cadc.uws.InvalidServiceException;
-import ca.nrc.cadc.uws.JobAttribute;
-import ca.nrc.cadc.uws.util.StringUtil;
-import ca.nrc.cadc.uws.util.BeanUtil;
-import org.w3c.dom.Element;
 import org.w3c.dom.Document;
-import org.restlet.Client;
-import org.restlet.ext.xml.DomRepresentation;
-import org.restlet.data.Protocol;
-import org.restlet.data.Response;
+import org.restlet.representation.Representation;
+import org.restlet.representation.EmptyRepresentation;
+import org.restlet.resource.Get;
+import org.apache.log4j.Logger;
 
 import java.io.IOException;
+import java.util.List;
+import java.net.URL;
+import java.net.MalformedURLException;
+
+import ca.nrc.cadc.uws.*;
+import ca.nrc.cadc.uws.web.WebRepresentationException;
 
 
 /**
- * Base Job Resource to obtain Jobs.
+ * Synchronous Job submission, and result retrieval.  This Resource will submit
+ * a job upon a GET, then return either the Result of the Job submission, or
+ * an error if it did not complete properly. 
  */
-public abstract class BaseJobResource extends UWSResource
+public class JobSyncSubmissionResource extends BaseJobResource
 {
-    /**
-     * Obtain the current Job in the context of this Request.
-     *
-     * @return      This Request's Job.
-     */
-    protected Job getJob()
-    {
-        return getJobManager().getJob(getJobID());
-    }
-
+    private static final Logger LOGGER =
+            Logger.getLogger(JobSyncSubmissionResource.class);
 
     /**
-     * Obtain the current Job ID.
+     * Obtain the XML Representation of this Request.
      *
-     * @return  long Job ID
+     * @return The XML Representation, fully populated.
      */
-    protected long getJobID()
+    @Override
+    @Get()
+    public Representation represent()
     {
-        return Long.parseLong(getRequestAttribute("jobID"));
-    }
+        executeJob();
+        final Job job = getJob();
+        final List<Result> results = job.getResultsList();
+        final URL redirectURL;
 
-    /**
-     * Obtain a new instance of the Job Runner interface as defined in the
-     * Context
-     *
-     * @return  The JobRunner instance.
-     */
-    @SuppressWarnings("unchecked")
-    protected JobRunner createJobRunner()
-    {
-        if (!StringUtil.hasText(
-                getContext().getParameters().getFirstValue(
-                        BeanUtil.UWS_RUNNER)))
+        try
         {
-            throw new InvalidServiceException(
-                    "The JobRunner is mandatory!\n\n Please set the "
-                    + BeanUtil.UWS_RUNNER + "context-param in the web.xml, "
-                    + "or insert it into the Context manually.");
+            if (results.isEmpty())
+            {
+                final ErrorSummary errorSummary = job.getErrorSummary();
+                redirectURL = errorSummary.getDocumentURI().toURL();
+            }
+            else
+            {
+                final Result result = results.get(0);
+                redirectURL = result.getURL();
+            }
+        }
+        catch (MalformedURLException e)
+        {
+            LOGGER.error("Unable to create URL for Error document.", e);
+            throw new WebRepresentationException(
+                    "Unable to create URL for Error document.", e);
         }
 
-        final String jobRunnerClassName =
-                getContext().getParameters().getFirstValue(BeanUtil.UWS_RUNNER);
-        final BeanUtil beanUtil = new BeanUtil(jobRunnerClassName);
-
-        return (JobRunner) beanUtil.createBean();
+        redirectSeeOther(redirectURL.toString());
+        return new EmptyRepresentation();
     }
 
     /**
-     * Obtain the XML List element for the given Attribute.
+     * Assemble the XML for this Resource's Representation into the given
+     * Document.
      *
-     * Remember, the Element returned here belongs to the Document from the
-     * Response of the call to get the List.  This means that the client of
-     * this method call will need to import the Element, via the
-     * Document#importNode method, or an exception will occur.
-     *
-     * @param jobAttribute      The Attribute to obtain XML for.
-     * @return                  The Element, or null if none found.
-     * @throws java.io.IOException      If the Document could not be formed from the
-     *                          Representation.
+     * @param document The Document to build up.
+     * @throws java.io.IOException If something went wrong or the XML cannot be
+     *                             built.
      */
-    protected Element getRemoteElement(final JobAttribute jobAttribute)
-            throws IOException
+    protected void buildXML(final Document document) throws IOException
     {
-        final StringBuilder elementURI = new StringBuilder(128);
-        final Client client = new Client(getContext(), Protocol.HTTP);
+        // Do Nothing.
+    }
 
-        elementURI.append(getHostPart());
-        elementURI.append("/async/");
-        elementURI.append(getJobID());
-        elementURI.append("/");
-        elementURI.append(jobAttribute.getAttributeName());
+    /**
+     * Execute the current Job.  This method will set a new Job Runner with
+     * every execution to make it ThreadSafe.
+     */
+    protected void executeJob()
+    {
+        final JobRunner jobRunner = createJobRunner();
 
-        final Response response = client.get(elementURI.toString());
-        final DomRepresentation domRep =
-                new DomRepresentation(response.getEntity());
-        final Document document = domRep.getDocument();
-
-        document.normalizeDocument();
-
-        return document.getDocumentElement();
-    }    
+        jobRunner.setJob(getJob());
+        jobRunner.run();
+    }
 }

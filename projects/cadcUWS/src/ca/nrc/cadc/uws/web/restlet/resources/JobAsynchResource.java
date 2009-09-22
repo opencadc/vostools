@@ -72,7 +72,6 @@ package ca.nrc.cadc.uws.web.restlet.resources;
 
 import org.restlet.resource.Post;
 import org.restlet.representation.Representation;
-import org.restlet.ext.xml.DomRepresentation;
 import org.restlet.data.*;
 import org.restlet.Client;
 import org.apache.log4j.Logger;
@@ -85,7 +84,6 @@ import java.text.ParseException;
 
 import ca.nrc.cadc.uws.*;
 import ca.nrc.cadc.date.DateUtil;
-import ca.nrc.cadc.uws.util.StringUtil;
 import ca.nrc.cadc.uws.util.BeanUtil;
 
 import java.text.DateFormat;
@@ -169,10 +167,7 @@ public class JobAsynchResource extends BaseJobResource
         }
 
         getJobManager().persist(job);
-
-        getResponse().setStatus(Status.REDIRECTION_SEE_OTHER);
-        getResponse().setLocationRef(getHostPart() + "/async/"
-                                     + job.getJobId());
+        redirectSeeOther(getHostPart() + "/async/" + job.getJobId());
     }
 
     /**
@@ -455,73 +450,10 @@ public class JobAsynchResource extends BaseJobResource
         }
 
         jobElement.appendChild(errorSummaryElement);
-     }
-
-    /**
-     * Obtain the XML List element for the given Attribute.
-     *
-     * Remember, the Element returned here belongs to the Document from the
-     * Response of the call to get the List.  This means that the client of
-     * this method call will need to import the Element, via the
-     * Document#importNode method, or an exception will occur. 
-     *
-     * @param jobAttribute      The Attribute to obtain XML for.
-     * @return                  The Element, or null if none found.
-     * @throws IOException      If the Document could not be formed from the
-     *                          Representation.
-     */
-    private Element getRemoteElement(final JobAttribute jobAttribute)
-            throws IOException
-    {
-        final StringBuilder elementURI = new StringBuilder(128);
-        final Client client = new Client(getContext(), Protocol.HTTP);
-
-        elementURI.append(getHostPart());
-        elementURI.append("/async/");
-        elementURI.append(getJobID());
-        elementURI.append("/");
-        elementURI.append(jobAttribute.getAttributeName());
-
-        final Response response = client.get(elementURI.toString());
-        final DomRepresentation domRep =
-                new DomRepresentation(response.getEntity());
-        final Document document = domRep.getDocument();
-
-        document.normalizeDocument();
-
-        return document.getDocumentElement();
     }
-
 
     protected JobExecutor getJobExecutorService()
     {
         return (JobExecutor) getContextAttribute(BeanUtil.UWS_EXECUTOR_SERVICE);
-    }
-
-
-    /**
-     * Obtain a new instance of the Job Runner interface as defined in the
-     * Context
-     *
-     * @return  The JobRunner instance.
-     */
-    @SuppressWarnings("unchecked")
-    protected JobRunner createJobRunner()
-    {
-        if (!StringUtil.hasText(
-                getContext().getParameters().getFirstValue(
-                        BeanUtil.UWS_RUNNER)))
-        {
-            throw new InvalidServiceException(
-                    "The JobRunner is mandatory!\n\n Please set the "
-                    + BeanUtil.UWS_RUNNER + "context-param in the web.xml, "
-                    + "or insert it into the Context manually.");
-        }
-
-        final String jobRunnerClassName =
-                getContext().getParameters().getFirstValue(BeanUtil.UWS_RUNNER);
-        final BeanUtil beanUtil = new BeanUtil(jobRunnerClassName);
-
-        return (JobRunner) beanUtil.createBean();
     }
 }

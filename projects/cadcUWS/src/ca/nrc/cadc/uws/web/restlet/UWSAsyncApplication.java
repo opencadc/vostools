@@ -70,76 +70,80 @@
 
 package ca.nrc.cadc.uws.web.restlet;
 
-import org.restlet.routing.Router;
+import org.restlet.Restlet;
 import org.restlet.Context;
-import org.apache.log4j.Logger;
-import ca.nrc.cadc.uws.web.restlet.resources.*;
-import ca.nrc.cadc.uws.util.StringUtil;
-import ca.nrc.cadc.uws.InvalidResourceException;
+import org.restlet.routing.Router;
+import ca.nrc.cadc.uws.util.BeanUtil;
+import ca.nrc.cadc.uws.JobManager;
+import ca.nrc.cadc.uws.JobPersistence;
 
 
 /**
- * Default and only Router to map URLs to Resources.
+ * The UWS Restlet Application to handle Asynchronous calls.
  */
-public class UWSRouter extends Router
+public class UWSAsyncApplication extends AbstractUWSApplication
 {
-    private final static Logger LOGGER = Logger.getLogger(UWSRouter.class);
+    /**
+     * Constructor. Note this constructor is convenient because you don't have
+     * to provide a context like for {@link #Application(org.restlet.Context)}.
+     * Therefore the context will initially be null. It's only when you attach
+     * the application to a virtual host via one of its attach*() methods that
+     * a proper context will be set.
+     */
+    public UWSAsyncApplication()
+    {
+        init();
+    }
 
-    protected final static String UWS_ANY_RESOURCE =
-            "ca.nrc.cadc.uws.any.resourceClass";
-    protected final static String UWS_ANY_NAME =
-            "ca.nrc.cadc.uws.any.resourceName";
-    
     /**
      * Constructor.
      *
-     * @param context The context.
+     * @param context The context to use based on parent component context. This
+     *                context should be created using the
+     *                {@link org.restlet.Context#createChildContext()} method to
+     *                ensure a proper isolation with the other applications.
      */
-    public UWSRouter(final Context context)
+    public UWSAsyncApplication(final Context context)
     {
         super(context);
+        init();
+    }
 
-        attachDefault(AsynchResource.class);
-        attach("/{jobID}", JobAsynchResource.class);
-        attach("/{jobID}/phase", JobAsynchResource.class);
-        attach("/{jobID}/executionduration",
-               JobAsynchResource.class);
-        attach("/{jobID}/destruction", JobAsynchResource.class);
-        attach("/{jobID}/error", ErrorResource.class);
-        attach("/{jobID}/quote", JobAsynchResource.class);
-        attach("/{jobID}/results", ResultListResource.class);
-        attach("/{jobID}/parameters", ParameterListResource.class);
-        attach("/{jobID}/owner", JobAsynchResource.class);
-        attach("/{jobID}/execute", JobAsynchResource.class);
 
-        if (StringUtil.hasText(
-                context.getParameters().getFirstValue(UWS_ANY_NAME)))
-        {
-            final String anyClassName =
-                    context.getParameters().getFirstValue(UWS_ANY_RESOURCE);
+    /**
+     * Creates a root Restlet that will receive all incoming calls. In general,
+     * instances of Router, Filter or Handler classes will be used as initial
+     * application Restlet. The default implementation returns null by default.
+     * This method is intended to be overridden by subclasses.
+     *
+     * This method will also setup singleton Service objects in the Context.
+     * This gets done here so as to ensure the Context is properly initialized.
+     *
+     * @return The root Restlet.
+     */
+    @Override
+    public Restlet createRoot()
+    {
+        final Router router = new UWSAsyncRouter(getContext());
 
-            if (!StringUtil.hasText(anyClassName))
-            {
-                throw new InvalidResourceException(
-                        "The 'ANY' Server Resource is mandatory if the "
-                        + UWS_ANY_NAME + " property is set.  Please set the "
-                        + UWS_ANY_RESOURCE + " context-param in the web.xml "
-                        + "to a ServerResource instance in the classpath, "
-                        + "or set it in the Context programatically.");
-            }
+        getContext().getAttributes().put(
+                BeanUtil.UWS_EXECUTOR_SERVICE,
+                createBean(BeanUtil.UWS_EXECUTOR_SERVICE, true));
 
-            try
-            {
-                attach("/{jobID}/"
-                       + context.getParameters().getFirstValue(UWS_ANY_NAME),
-                       Class.forName(anyClassName));
-            }
-            catch (ClassNotFoundException e)
-            {
-                LOGGER.error("No such class! >> " + anyClassName, e);
-                throw new InvalidResourceException("No such class! >> "
-                                                   + anyClassName, e);
-            }
-        }
+        final JobManager jobManager =
+                (JobManager) createBean(BeanUtil.UWS_JOB_MANAGER_SERVICE,
+                                        true);
+        final JobPersistence jobPersistence =
+                (JobPersistence) createBean(BeanUtil.UWS_PERSISTENCE, true);
+
+        jobManager.setJobPersistence(jobPersistence);
+
+        getContext().getAttributes().put(BeanUtil.UWS_JOB_MANAGER_SERVICE,
+                                         jobManager);
+
+        getContext().getAttributes().put(BeanUtil.UWS_PERSISTENCE,
+                                         jobPersistence);        
+
+        return router;
     }
 }

@@ -77,7 +77,7 @@ import org.w3c.dom.Element;
 import org.custommonkey.xmlunit.XMLUnit;
 import org.custommonkey.xmlunit.Diff;
 import ca.nrc.cadc.uws.*;
-import ca.nrc.cadc.uws.util.DateUtil;
+import ca.nrc.cadc.date.DateUtil;
 
 import java.util.*;
 

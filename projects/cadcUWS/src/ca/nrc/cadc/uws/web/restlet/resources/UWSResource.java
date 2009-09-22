@@ -74,7 +74,10 @@ import org.restlet.resource.ServerResource;
 import org.restlet.resource.Get;
 import org.restlet.data.Reference;
 import org.restlet.data.MediaType;
+import org.restlet.data.Status;
+import org.restlet.data.Form;
 import org.restlet.representation.Representation;
+import org.restlet.representation.StringRepresentation;
 import org.restlet.ext.xml.DomRepresentation;
 import org.apache.log4j.Logger;
 import org.w3c.dom.Document;
@@ -82,10 +85,12 @@ import ca.nrc.cadc.uws.JobManager;
 import ca.nrc.cadc.uws.util.BeanUtil;
 import ca.nrc.cadc.uws.web.validators.FormValidator;
 import ca.nrc.cadc.uws.web.WebRepresentationException;
+import ca.nrc.cadc.uws.web.restlet.validators.JobFormValidatorImpl;
 
 import javax.xml.transform.Transformer;
 import javax.xml.transform.OutputKeys;
 import java.io.IOException;
+import java.util.Map;
 
 
 /**
@@ -117,7 +122,7 @@ public abstract class UWSResource extends ServerResource
      *
      * @return      The XML Representation, fully populated.
      */
-    @Get()
+    @Get
     public Representation represent()
     {
         try
@@ -163,6 +168,42 @@ public abstract class UWSResource extends ServerResource
             throw new WebRepresentationException(
                     "Unable to create XML Document.", e);
         }
+    }
+
+    /**
+     * Generate the error Representation.
+     *
+     * @param errors        Errors in the form.
+     */
+    protected void generateErrorRepresentation(final Map<String, String> errors)
+    {
+        final StringBuilder errorMessage = new StringBuilder(128);
+
+        errorMessage.append("Errors found during Job Creation: \n");
+
+        for (final Map.Entry<String, String> error : errors.entrySet())
+        {
+            errorMessage.append("\n");
+            errorMessage.append(error.getKey());
+            errorMessage.append(": ");
+            errorMessage.append(error.getValue());
+        }
+
+        getResponse().setStatus(Status.CLIENT_ERROR_BAD_REQUEST);
+        getResponse().setEntity(
+                new StringRepresentation(errorMessage.toString()));
+    }
+
+    /**
+     * Validate the POST data.
+     *
+     * @param form        The form data to validate.
+     * @return  True if the Form is fine for creation, False otherwise.
+     */
+    protected Map<String, String> validate(final Form form)
+    {
+        final FormValidator validator = new JobFormValidatorImpl(form);
+        return validator.validate();
     }
 
     /**

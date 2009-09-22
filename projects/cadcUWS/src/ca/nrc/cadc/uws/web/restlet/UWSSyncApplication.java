@@ -68,108 +68,78 @@
 */
 
 
-package ca.nrc.cadc.uws.web.restlet.resources;
+package ca.nrc.cadc.uws.web.restlet;
 
-import ca.nrc.cadc.uws.Job;
-import ca.nrc.cadc.uws.JobRunner;
-import ca.nrc.cadc.uws.InvalidServiceException;
-import ca.nrc.cadc.uws.JobAttribute;
-import ca.nrc.cadc.uws.util.StringUtil;
+import org.restlet.Restlet;
+import org.restlet.Context;
+import org.restlet.routing.Router;
+import ca.nrc.cadc.uws.JobManager;
+import ca.nrc.cadc.uws.JobPersistence;
 import ca.nrc.cadc.uws.util.BeanUtil;
-import org.w3c.dom.Element;
-import org.w3c.dom.Document;
-import org.restlet.Client;
-import org.restlet.ext.xml.DomRepresentation;
-import org.restlet.data.Protocol;
-import org.restlet.data.Response;
-
-import java.io.IOException;
 
 
 /**
- * Base Job Resource to obtain Jobs.
+ * The UWS Restlet Application to handle Asynchronous calls.
  */
-public abstract class BaseJobResource extends UWSResource
+public class UWSSyncApplication extends AbstractUWSApplication
 {
     /**
-     * Obtain the current Job in the context of this Request.
-     *
-     * @return      This Request's Job.
+     * Constructor. Note this constructor is convenient because you don't have
+     * to provide a context like for {@link #Application(org.restlet.Context)}.
+     * Therefore the context will initially be null. It's only when you attach
+     * the application to a virtual host via one of its attach*() methods that
+     * a proper context will be set.
      */
-    protected Job getJob()
+    public UWSSyncApplication()
     {
-        return getJobManager().getJob(getJobID());
+        init();
+    }
+
+    /**
+     * Constructor.
+     *
+     * @param context The context to use based on parent component context. This
+     *                context should be created using the
+     *                {@link org.restlet.Context#createChildContext()} method to
+     *                ensure a proper isolation with the other applications.
+     */
+    public UWSSyncApplication(final Context context)
+    {
+        super(context);
+        init();
     }
 
 
     /**
-     * Obtain the current Job ID.
+     * Creates a root Restlet that will receive all incoming calls. In general,
+     * instances of Router, Filter or Handler classes will be used as initial
+     * application Restlet. The default implementation returns null by default.
+     * This method is intended to be overridden by subclasses.
      *
-     * @return  long Job ID
+     * This method will also setup singleton Service objects in the Context.
+     * This gets done here so as to ensure the Context is properly initialized.
+     *
+     * @return The root Restlet.
      */
-    protected long getJobID()
+    @Override
+    public Restlet createRoot()
     {
-        return Long.parseLong(getRequestAttribute("jobID"));
+        final Router router = new UWSSyncRouter(getContext());
+
+        final JobManager jobManager =
+                (JobManager) createBean(BeanUtil.UWS_JOB_MANAGER_SERVICE,
+                                        true);
+        final JobPersistence jobPersistence =
+                (JobPersistence) createBean(BeanUtil.UWS_PERSISTENCE, true);
+
+        jobManager.setJobPersistence(jobPersistence);
+
+        getContext().getAttributes().put(BeanUtil.UWS_JOB_MANAGER_SERVICE,
+                                         jobManager);
+
+        getContext().getAttributes().put(BeanUtil.UWS_PERSISTENCE,
+                                         jobPersistence);
+
+        return router;
     }
-
-    /**
-     * Obtain a new instance of the Job Runner interface as defined in the
-     * Context
-     *
-     * @return  The JobRunner instance.
-     */
-    @SuppressWarnings("unchecked")
-    protected JobRunner createJobRunner()
-    {
-        if (!StringUtil.hasText(
-                getContext().getParameters().getFirstValue(
-                        BeanUtil.UWS_RUNNER)))
-        {
-            throw new InvalidServiceException(
-                    "The JobRunner is mandatory!\n\n Please set the "
-                    + BeanUtil.UWS_RUNNER + "context-param in the web.xml, "
-                    + "or insert it into the Context manually.");
-        }
-
-        final String jobRunnerClassName =
-                getContext().getParameters().getFirstValue(BeanUtil.UWS_RUNNER);
-        final BeanUtil beanUtil = new BeanUtil(jobRunnerClassName);
-
-        return (JobRunner) beanUtil.createBean();
-    }
-
-    /**
-     * Obtain the XML List element for the given Attribute.
-     *
-     * Remember, the Element returned here belongs to the Document from the
-     * Response of the call to get the List.  This means that the client of
-     * this method call will need to import the Element, via the
-     * Document#importNode method, or an exception will occur.
-     *
-     * @param jobAttribute      The Attribute to obtain XML for.
-     * @return                  The Element, or null if none found.
-     * @throws java.io.IOException      If the Document could not be formed from the
-     *                          Representation.
-     */
-    protected Element getRemoteElement(final JobAttribute jobAttribute)
-            throws IOException
-    {
-        final StringBuilder elementURI = new StringBuilder(128);
-        final Client client = new Client(getContext(), Protocol.HTTP);
-
-        elementURI.append(getHostPart());
-        elementURI.append("/async/");
-        elementURI.append(getJobID());
-        elementURI.append("/");
-        elementURI.append(jobAttribute.getAttributeName());
-
-        final Response response = client.get(elementURI.toString());
-        final DomRepresentation domRep =
-                new DomRepresentation(response.getEntity());
-        final Document document = domRep.getDocument();
-
-        document.normalizeDocument();
-
-        return document.getDocumentElement();
-    }    
 }

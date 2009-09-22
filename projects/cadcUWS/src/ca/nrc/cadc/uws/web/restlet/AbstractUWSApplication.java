@@ -8,7 +8,7 @@
 *  National Research Council            Conseil national de recherches
 *  Ottawa, Canada, K1A 0R6              Ottawa, Canada, K1A 0R6
 *  All rights reserved                  Tous droits réservés
-*                                       
+*
 *  NRC disclaims any warranties,        Le CNRC dénie toute garantie
 *  expressed, implied, or               énoncée, implicite ou légale,
 *  statutory, of any kind with          de quelque nature que ce
@@ -31,10 +31,10 @@
 *  software without specific prior      de ce logiciel sans autorisation
 *  written permission.                  préalable et particulière
 *                                       par écrit.
-*                                       
+*
 *  This file is part of the             Ce fichier fait partie du projet
 *  OpenCADC project.                    OpenCADC.
-*                                       
+*
 *  OpenCADC is free software:           OpenCADC est un logiciel libre ;
 *  you can redistribute it and/or       vous pouvez le redistribuer ou le
 *  modify it under the terms of         modifier suivant les termes de
@@ -44,7 +44,7 @@
 *  either version 3 of the              : soit la version 3 de cette
 *  License, or (at your option)         licence, soit (à votre gré)
 *  any later version.                   toute version ultérieure.
-*                                       
+*
 *  OpenCADC is distributed in the       OpenCADC est distribué
 *  hope that it will be useful,         dans l’espoir qu’il vous
 *  but WITHOUT ANY WARRANTY;            sera utile, mais SANS AUCUNE
@@ -54,7 +54,7 @@
 *  PURPOSE.  See the GNU Affero         PARTICULIER. Consultez la Licence
 *  General Public License for           Générale Publique GNU Affero
 *  more details.                        pour plus de détails.
-*                                       
+*
 *  You should have received             Vous devriez avoir reçu une
 *  a copy of the GNU Affero             copie de la Licence Générale
 *  General Public License along         Publique GNU Affero avec
@@ -67,109 +67,81 @@
 ************************************************************************
 */
 
+package ca.nrc.cadc.uws.web.restlet;
 
-package ca.nrc.cadc.uws.web.restlet.resources;
-
-import ca.nrc.cadc.uws.Job;
-import ca.nrc.cadc.uws.JobRunner;
-import ca.nrc.cadc.uws.InvalidServiceException;
-import ca.nrc.cadc.uws.JobAttribute;
+import org.restlet.Application;
+import org.restlet.Context;
+import org.restlet.data.MediaType;
 import ca.nrc.cadc.uws.util.StringUtil;
 import ca.nrc.cadc.uws.util.BeanUtil;
-import org.w3c.dom.Element;
-import org.w3c.dom.Document;
-import org.restlet.Client;
-import org.restlet.ext.xml.DomRepresentation;
-import org.restlet.data.Protocol;
-import org.restlet.data.Response;
-
-import java.io.IOException;
+import ca.nrc.cadc.uws.InvalidServiceException;
 
 
 /**
- * Base Job Resource to obtain Jobs.
+ * Abstract class for all UWS Applications.
  */
-public abstract class BaseJobResource extends UWSResource
+public abstract class AbstractUWSApplication extends Application
 {
     /**
-     * Obtain the current Job in the context of this Request.
-     *
-     * @return      This Request's Job.
+     * Constructor. Note this constructor is convenient because you don't have
+     * to provide a context like for {@link #Application(org.restlet.Context)}. Therefore
+     * the context will initially be null. It's only when you attach the
+     * application to a virtual host via one of its attach*() methods that a
+     * proper context will be set.
      */
-    protected Job getJob()
+    protected AbstractUWSApplication()
     {
-        return getJobManager().getJob(getJobID());
-    }
-
-
-    /**
-     * Obtain the current Job ID.
-     *
-     * @return  long Job ID
-     */
-    protected long getJobID()
-    {
-        return Long.parseLong(getRequestAttribute("jobID"));
     }
 
     /**
-     * Obtain a new instance of the Job Runner interface as defined in the
-     * Context
+     * Constructor.
      *
-     * @return  The JobRunner instance.
+     * @param context The context to use based on parent component context. This
+     *                context should be created using the
+     *                {@link org.restlet.Context#createChildContext()} method to ensure a proper
+     *                isolation with the other applications.
      */
-    @SuppressWarnings("unchecked")
-    protected JobRunner createJobRunner()
+    protected AbstractUWSApplication(final Context context)
     {
-        if (!StringUtil.hasText(
-                getContext().getParameters().getFirstValue(
-                        BeanUtil.UWS_RUNNER)))
+        super(context);
+    }
+    
+
+    /**
+     * Method to initialize this Application.
+     */
+    protected void init()
+    {
+        setStatusService(new UWSStatusService(true));
+
+        // Make XML the preferred choice.
+        getMetadataService().addExtension(MediaType.TEXT_XML.getName(),
+                                          MediaType.TEXT_XML, true);
+    }
+
+    /**
+     * Create the object needed.
+     *
+     * @param contextBeanName       The Bean name in the context.
+     * @param mandatory             Whether this bean is Mandatory.
+     * @return                      The Object instantiated.
+     */
+    protected Object createBean(final String contextBeanName,
+                                final boolean mandatory)
+    {
+        if (mandatory && !StringUtil.hasText(
+                getContext().getParameters().getFirstValue(contextBeanName)))
         {
             throw new InvalidServiceException(
-                    "The JobRunner is mandatory!\n\n Please set the "
-                    + BeanUtil.UWS_RUNNER + "context-param in the web.xml, "
+                    "This bean is mandatory!\n\n Please set the "
+                    + contextBeanName + "context-param in the web.xml, "
                     + "or insert it into the Context manually.");
         }
 
-        final String jobRunnerClassName =
-                getContext().getParameters().getFirstValue(BeanUtil.UWS_RUNNER);
-        final BeanUtil beanUtil = new BeanUtil(jobRunnerClassName);
+        final String clazz = getContext().getParameters().
+                getFirstValue(contextBeanName);
+        final BeanUtil beanUtil = new BeanUtil(clazz);
 
-        return (JobRunner) beanUtil.createBean();
-    }
-
-    /**
-     * Obtain the XML List element for the given Attribute.
-     *
-     * Remember, the Element returned here belongs to the Document from the
-     * Response of the call to get the List.  This means that the client of
-     * this method call will need to import the Element, via the
-     * Document#importNode method, or an exception will occur.
-     *
-     * @param jobAttribute      The Attribute to obtain XML for.
-     * @return                  The Element, or null if none found.
-     * @throws java.io.IOException      If the Document could not be formed from the
-     *                          Representation.
-     */
-    protected Element getRemoteElement(final JobAttribute jobAttribute)
-            throws IOException
-    {
-        final StringBuilder elementURI = new StringBuilder(128);
-        final Client client = new Client(getContext(), Protocol.HTTP);
-
-        elementURI.append(getHostPart());
-        elementURI.append("/async/");
-        elementURI.append(getJobID());
-        elementURI.append("/");
-        elementURI.append(jobAttribute.getAttributeName());
-
-        final Response response = client.get(elementURI.toString());
-        final DomRepresentation domRep =
-                new DomRepresentation(response.getEntity());
-        final Document document = domRep.getDocument();
-
-        document.normalizeDocument();
-
-        return document.getDocumentElement();
+        return beanUtil.createBean();
     }    
 }

@@ -67,32 +67,24 @@
 ************************************************************************
 */
 
-
 package ca.nrc.cadc.uws.web.restlet.resources;
 
-import ca.nrc.cadc.date.DateUtil;
+
 import org.w3c.dom.Document;
 import org.w3c.dom.Element;
 import org.restlet.resource.Post;
 import org.restlet.representation.Representation;
-import org.restlet.representation.StringRepresentation;
 import org.restlet.data.Form;
-import org.restlet.data.Status;
 import org.apache.log4j.Logger;
 
 import java.io.IOException;
 import java.util.*;
 import java.text.ParseException;
-import java.net.URI;
 import java.net.URISyntaxException;
 
 import ca.nrc.cadc.uws.*;
-import ca.nrc.cadc.uws.ErrorSummary;
-import ca.nrc.cadc.uws.util.StringUtil;
-import ca.nrc.cadc.uws.web.validators.FormValidator;
-import ca.nrc.cadc.uws.web.restlet.validators.JobFormValidatorImpl;
+import ca.nrc.cadc.uws.web.restlet.JobAssembler;
 import ca.nrc.cadc.uws.web.WebRepresentationException;
-import java.text.DateFormat;
 
 
 /**
@@ -113,8 +105,6 @@ public class AsynchResource extends UWSResource
     {
         final Form form = new Form(entity);
         final Map<String, String> errors = validate(form);
-        final Map<String, String> valuesMap =
-                new HashMap<String, String>(form.getValuesMap());
         
         if (!errors.isEmpty())
         {
@@ -123,123 +113,11 @@ public class AsynchResource extends UWSResource
         }
 
         final Job job;
-        final String phase = form.getFirstValue(
-                JobAttribute.EXECUTION_PHASE.getAttributeName().toUpperCase());
-        final ExecutionPhase executionPhase;
-
-        if (StringUtil.hasText(phase))
-        {
-            executionPhase = ExecutionPhase.valueOf(phase.toUpperCase());
-        }
-        else
-        {
-            executionPhase = null;
-        }
-
-        final String duration = form.getFirstValue(
-                JobAttribute.EXECUTION_DURATION.getAttributeName().
-                        toUpperCase());
-        final long durationTime;
-
-        if (StringUtil.hasText(duration))
-        {
-            durationTime = Long.parseLong(duration);
-        }
-        else
-        {
-            durationTime = 0l;
-        }
-
-        final String owner = form.getFirstValue(
-                JobAttribute.OWNER_ID.getAttributeName().toUpperCase());
-        final String runID = form.getFirstValue(
-                JobAttribute.RUN_ID.getAttributeName().toUpperCase());
 
         try
         {
-            final DateFormat df =
-                    DateUtil.getDateFormat(DateUtil.IVOA_DATE_FORMAT,
-                                           DateUtil.UTC);
-            
-            final String destruction = form.getFirstValue(
-                    JobAttribute.DESTRUCTION_TIME.getAttributeName().
-                            toUpperCase());
-            final Date destructionDate;
-
-            if (StringUtil.hasText(destruction))
-            {
-                destructionDate = df.parse(destruction);
-            }
-            else
-            {
-                destructionDate = null;
-            }
-
-            final String quote = form.getFirstValue(
-                    JobAttribute.QUOTE.getAttributeName().toUpperCase());
-            final Date quoteDate;
-
-            if (StringUtil.hasText(quote))
-            {
-                quoteDate = df.parse(quote);
-            }
-            else
-            {
-                quoteDate = null;
-            }
-
-            final String start = form.getFirstValue(
-                    JobAttribute.START_TIME.getAttributeName().toUpperCase());
-            final Date startDate;
-
-            if (StringUtil.hasText(start))
-            {
-                startDate = df.parse(start);
-            }
-            else
-            {
-                startDate = null;
-            }
-
-            final String errorMessage = form.getFirstValue(
-                    JobAttribute.ERROR_SUMMARY_MESSAGE.getAttributeName().
-                            toUpperCase());
-            final String errorDocumentURI = form.getFirstValue(
-                    JobAttribute.ERROR_SUMMARY_DETAIL_LINK.getAttributeName().
-                            toUpperCase());
-
-            final ErrorSummary errorSummary;
-
-            if (!StringUtil.hasText(errorMessage)
-                && !StringUtil.hasText(errorDocumentURI))
-            {
-                errorSummary =
-                        new ErrorSummary(errorMessage,
-                                         StringUtil.hasText(errorDocumentURI)
-                                         ? new URI(errorDocumentURI)
-                                         : null);
-            }
-            else
-            {
-                errorSummary = null;
-            }
-
-            job = new Job(null, executionPhase, durationTime, destructionDate,
-                          quoteDate, startDate, null, errorSummary, owner,
-                          runID, null, null);
-
-            // Clear out those Request parameters that are pre-defined.
-            for (final JobAttribute jobAttribute : JobAttribute.values())
-            {
-                valuesMap.remove(jobAttribute.getAttributeName().toUpperCase());    
-            }
-
-            // The remaining values are Parameters to the Job.
-            for (final Map.Entry<String, String> entry : valuesMap.entrySet())
-            {
-                job.addParameter(new Parameter(entry.getKey(),
-                                               entry.getValue()));
-            }
+            final JobAssembler jobAssembler = new JobAssembler(form);
+            job = jobAssembler.assemble();
         }
         catch (ParseException e)
         {
@@ -254,45 +132,7 @@ public class AsynchResource extends UWSResource
         }
 
         final Job persistedJob = getJobManager().persist(job);
-        getResponse().setStatus(Status.REDIRECTION_SEE_OTHER);
-        getResponse().setLocationRef(getHostPart() + "/async/"
-                                     + persistedJob.getJobId());
-    }
-
-    /**
-     * Validate the POST data.
-     *
-     * @param form        The form data to validate.
-     * @return  True if the Form is fine for creation, False otherwise.
-     */
-    protected Map<String, String> validate(final Form form)
-    {
-        final FormValidator validator = new JobFormValidatorImpl(form);
-        return validator.validate();
-    }
-
-    /**
-     * Generate the error Representation.
-     *
-     * @param errors        Errors in the form.
-     */
-    protected void generateErrorRepresentation(final Map<String, String> errors)
-    {
-        final StringBuilder errorMessage = new StringBuilder(128);
-
-        errorMessage.append("Errors found during Job Creation: \n");
-
-        for (final Map.Entry<String, String> error : errors.entrySet())
-        {
-            errorMessage.append("\n");
-            errorMessage.append(error.getKey());
-            errorMessage.append(": ");
-            errorMessage.append(error.getValue());
-        }
-
-        getResponse().setStatus(Status.CLIENT_ERROR_BAD_REQUEST);
-        getResponse().setEntity(
-                new StringRepresentation(errorMessage.toString()));
+        redirectSeeOther(getHostPart() + "/async/" + persistedJob.getJobId());
     }
     
     /**

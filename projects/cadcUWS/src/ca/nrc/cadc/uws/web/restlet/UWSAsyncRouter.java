@@ -68,108 +68,79 @@
 */
 
 
-package ca.nrc.cadc.uws.web.restlet.resources;
+package ca.nrc.cadc.uws.web.restlet;
 
-import ca.nrc.cadc.uws.Job;
-import ca.nrc.cadc.uws.JobRunner;
-import ca.nrc.cadc.uws.InvalidServiceException;
-import ca.nrc.cadc.uws.JobAttribute;
+import org.restlet.routing.Router;
+import org.restlet.Context;
+import org.apache.log4j.Logger;
+import ca.nrc.cadc.uws.web.restlet.resources.*;
 import ca.nrc.cadc.uws.util.StringUtil;
-import ca.nrc.cadc.uws.util.BeanUtil;
-import org.w3c.dom.Element;
-import org.w3c.dom.Document;
-import org.restlet.Client;
-import org.restlet.ext.xml.DomRepresentation;
-import org.restlet.data.Protocol;
-import org.restlet.data.Response;
-
-import java.io.IOException;
+import ca.nrc.cadc.uws.InvalidResourceException;
 
 
 /**
- * Base Job Resource to obtain Jobs.
+ * Default and only Router to map URLs to Resources.
  */
-public abstract class BaseJobResource extends UWSResource
+public class UWSAsyncRouter extends Router
 {
-    /**
-     * Obtain the current Job in the context of this Request.
-     *
-     * @return      This Request's Job.
-     */
-    protected Job getJob()
-    {
-        return getJobManager().getJob(getJobID());
-    }
+    private final static Logger LOGGER = Logger.getLogger(UWSAsyncRouter.class);
 
-
+    protected final static String UWS_ANY_RESOURCE =
+            "ca.nrc.cadc.uws.any.resourceClass";
+    protected final static String UWS_ANY_NAME =
+            "ca.nrc.cadc.uws.any.resourceName";
+    
     /**
-     * Obtain the current Job ID.
+     * Constructor.
      *
-     * @return  long Job ID
+     * @param context The context.
      */
-    protected long getJobID()
+    public UWSAsyncRouter(final Context context)
     {
-        return Long.parseLong(getRequestAttribute("jobID"));
-    }
+        super(context);
 
-    /**
-     * Obtain a new instance of the Job Runner interface as defined in the
-     * Context
-     *
-     * @return  The JobRunner instance.
-     */
-    @SuppressWarnings("unchecked")
-    protected JobRunner createJobRunner()
-    {
-        if (!StringUtil.hasText(
-                getContext().getParameters().getFirstValue(
-                        BeanUtil.UWS_RUNNER)))
+        // Asynchronous Resources.
+        attachDefault(AsynchResource.class);
+        attach("/{jobID}", JobAsynchResource.class);
+        attach("/{jobID}/phase", JobAsynchResource.class);
+        attach("/{jobID}/executionduration",
+               JobAsynchResource.class);
+        attach("/{jobID}/destruction", JobAsynchResource.class);
+        attach("/{jobID}/error", ErrorResource.class);
+        attach("/{jobID}/quote", JobAsynchResource.class);
+        attach("/{jobID}/results", ResultListResource.class);
+        attach("/{jobID}/parameters", ParameterListResource.class);
+        attach("/{jobID}/owner", JobAsynchResource.class);
+        attach("/{jobID}/execute", JobAsynchResource.class);
+
+        if (StringUtil.hasText(
+                context.getParameters().getFirstValue(UWS_ANY_NAME)))
         {
-            throw new InvalidServiceException(
-                    "The JobRunner is mandatory!\n\n Please set the "
-                    + BeanUtil.UWS_RUNNER + "context-param in the web.xml, "
-                    + "or insert it into the Context manually.");
+            final String anyClassName =
+                    context.getParameters().getFirstValue(UWS_ANY_RESOURCE);
+
+            if (!StringUtil.hasText(anyClassName))
+            {
+                throw new InvalidResourceException(
+                        "The 'ANY' Server Resource is mandatory if the "
+                        + UWS_ANY_NAME + " property is set.  Please set the "
+                        + UWS_ANY_RESOURCE + " context-param in the web.xml "
+                        + "to a ServerResource instance in the classpath, "
+                        + "or set it in the Context programatically.");
+            }
+
+            try
+            {
+                attach("/{jobID}/"
+                       + context.getParameters().getFirstValue(UWS_ANY_NAME),
+                       Class.forName(anyClassName));
+            }
+            catch (ClassNotFoundException e)
+            {
+                LOGGER.error("No such class! >> " + anyClassName, e);
+                throw new InvalidResourceException("No such class! >> "
+                                                   + anyClassName, e);
+            }
         }
-
-        final String jobRunnerClassName =
-                getContext().getParameters().getFirstValue(BeanUtil.UWS_RUNNER);
-        final BeanUtil beanUtil = new BeanUtil(jobRunnerClassName);
-
-        return (JobRunner) beanUtil.createBean();
     }
-
-    /**
-     * Obtain the XML List element for the given Attribute.
-     *
-     * Remember, the Element returned here belongs to the Document from the
-     * Response of the call to get the List.  This means that the client of
-     * this method call will need to import the Element, via the
-     * Document#importNode method, or an exception will occur.
-     *
-     * @param jobAttribute      The Attribute to obtain XML for.
-     * @return                  The Element, or null if none found.
-     * @throws java.io.IOException      If the Document could not be formed from the
-     *                          Representation.
-     */
-    protected Element getRemoteElement(final JobAttribute jobAttribute)
-            throws IOException
-    {
-        final StringBuilder elementURI = new StringBuilder(128);
-        final Client client = new Client(getContext(), Protocol.HTTP);
-
-        elementURI.append(getHostPart());
-        elementURI.append("/async/");
-        elementURI.append(getJobID());
-        elementURI.append("/");
-        elementURI.append(jobAttribute.getAttributeName());
-
-        final Response response = client.get(elementURI.toString());
-        final DomRepresentation domRep =
-                new DomRepresentation(response.getEntity());
-        final Document document = domRep.getDocument();
-
-        document.normalizeDocument();
-
-        return document.getDocumentElement();
-    }    
 }

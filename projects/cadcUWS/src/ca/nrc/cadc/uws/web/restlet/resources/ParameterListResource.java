@@ -75,7 +75,6 @@ import org.w3c.dom.Element;
 import org.restlet.resource.Post;
 import org.restlet.representation.Representation;
 import org.restlet.data.Form;
-import org.restlet.data.Status;
 
 import ca.nrc.cadc.uws.JobAttribute;
 import ca.nrc.cadc.uws.Parameter;
@@ -107,10 +106,7 @@ public class ParameterListResource extends BaseJobResource
         }
 
         final Job persistedJob = getJobManager().persist(job);
-        
-        getResponse().setStatus(Status.REDIRECTION_SEE_OTHER);
-        getResponse().setLocationRef(getHostPart() + "/async/"
-                                     + persistedJob.getJobId());        
+        redirectSeeOther(getHostPart() + "/async/" + persistedJob.getJobId());        
     }
 
     /**
