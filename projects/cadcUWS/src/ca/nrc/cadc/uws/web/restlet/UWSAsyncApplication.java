@@ -111,10 +111,10 @@ public class UWSAsyncApplication extends AbstractUWSApplication
 
 
     /**
-     * Creates a root Restlet that will receive all incoming calls. In general,
-     * instances of Router, Filter or Handler classes will be used as initial
-     * application Restlet. The default implementation returns null by default.
-     * This method is intended to be overridden by subclasses.
+     * Creates an inbound root Restlet that will receive all incoming calls. In
+     * general, instances of Router, Filter or Handler classes will be used as
+     * initial application Restlet. The default implementation returns null by
+     * default.  This method is intended to be overridden by subclasses.
      *
      * This method will also setup singleton Service objects in the Context.
      * This gets done here so as to ensure the Context is properly initialized.
@@ -122,7 +122,7 @@ public class UWSAsyncApplication extends AbstractUWSApplication
      * @return The root Restlet.
      */
     @Override
-    public Restlet createRoot()
+    public Restlet createInboundRoot()
     {
         final Router router = new UWSAsyncRouter(getContext());
 

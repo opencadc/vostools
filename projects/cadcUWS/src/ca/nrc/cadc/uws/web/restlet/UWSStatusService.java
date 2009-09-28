@@ -72,8 +72,8 @@ package ca.nrc.cadc.uws.web.restlet;
 
 import org.restlet.service.StatusService;
 import org.restlet.data.Status;
-import org.restlet.data.Request;
-import org.restlet.data.Response;
+import org.restlet.Request;
+import org.restlet.Response;
 import org.apache.log4j.Logger;
 
 

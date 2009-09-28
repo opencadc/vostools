@@ -81,7 +81,7 @@ import org.w3c.dom.Document;
 import org.restlet.Client;
 import org.restlet.ext.xml.DomRepresentation;
 import org.restlet.data.Protocol;
-import org.restlet.data.Response;
+import org.restlet.Response;
 
 import java.io.IOException;
 

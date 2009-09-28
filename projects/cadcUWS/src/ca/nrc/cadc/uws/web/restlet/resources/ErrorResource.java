@@ -75,7 +75,7 @@ import org.restlet.representation.EmptyRepresentation;
 import org.restlet.Client;
 import org.restlet.resource.Get;
 import org.restlet.data.Protocol;
-import org.restlet.data.Response;
+import org.restlet.Response;
 import org.apache.log4j.Logger;
 import org.w3c.dom.Document;
 
