@@ -122,7 +122,7 @@ String bodyFooter = skin + "bodyFooter";
             <tbody>
                 <tr>
                     <td valign="top"><input type="submit" name="method" value="<%= ServerUtil.APPLET %>" /></td>
-                    <td valign="top">The Java DownloadManager Applet is embedded in a web page in this browser window.</td>
+                    <td valign="top">The Java DownloadManager Applet is embedded in a web page in this browser window.  <span style="color:red;">WARNING: There currently exists a bug while running the Java Applet in Firefox 3.0.x and 3.5.x on Mac OS X only.  Please use either of the other two options if this is your environment, or use Safari 4.x instead.</span></td>
                 </tr>
                 <tr><td><br/></td></tr>
                 <tr>
