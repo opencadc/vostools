@@ -87,14 +87,12 @@
 
 <property name="project" value="cadcTAP" />
 
-<property name="cadc" value="${lib}/cadcUtil.jar:${lib}/cadcUWS.jar:${lib}/cvoObservation.jar" />
+<property name="cadc" value="${lib}/cadcUtil.jar:${lib}/cadcUWS.jar" />
 
 <property name="jsqlparser" value="${ext.lib}/jsqlparser.jar" />
-<property name="junit" value="${ext.lib}/junit.jar" />
 <property name="log4j" value="${ext.lib}/log4j.jar" />
-<property name="postgresql-jdbc" value="${ext.lib}/postgresql-jdbc.jar" />
 <property name="spring" value="${ext.lib}/spring.jar" />
-<property name="extlib" value="${jsqlparser}:${junit}:${log4j}:${postgresql-jdbc}:${spring}" />
+<property name="extlib" value="${jsqlparser}:${log4j}:${spring}" />
 
 <property name="jars" value="${cadc}:${extlib}" />
 
