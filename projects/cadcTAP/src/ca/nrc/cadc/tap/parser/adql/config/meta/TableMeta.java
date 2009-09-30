@@ -70,7 +70,8 @@
 
 package ca.nrc.cadc.tap.parser.adql.config.meta;
 
-import java.util.*;
+import java.util.ArrayList;
+import java.util.List;
 
 import net.sf.jsqlparser.schema.Column;
 import net.sf.jsqlparser.schema.Table;

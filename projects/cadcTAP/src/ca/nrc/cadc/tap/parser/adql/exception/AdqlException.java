@@ -70,7 +70,6 @@
 
 package ca.nrc.cadc.tap.parser.adql.exception;
 
-import org.springframework.aop.ThrowsAdvice;
 
 public class AdqlException extends Exception {
 

@@ -68,40 +68,78 @@
 */
 
 
+/*
+ * To change this template, choose Tools | Templates
+ * and open the template in the editor.
+ */
 
-package ca.nrc.cadc.tap.parser.adql.converter;
+package ca.nrc.cadc.tap.parser.adql.impl.postgresql.sql;
 
-import net.sf.jsqlparser.statement.select.PlainSelect;
-import net.sf.jsqlparser.statement.select.SelectVisitor;
-import net.sf.jsqlparser.statement.select.Union;
-
-import org.apache.log4j.Logger;
-
-import ca.nrc.cadc.tap.parser.adql.AdqlManager;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.List;
 
 /**
- * A SelectVisitor that converts <code>Top N</code> into server-specific
- * form.
- * 
- * Postgresql uses "LIMIT" other than "TOP".
- * 
- * all TOP need to be converted into LIMIT.
- * 
+ *
  * @author pdowler
  * @author Sailor Zhang
  */
-public abstract class TopConverter implements SelectVisitor {
-    protected static Logger log = Logger.getLogger(TopConverter.class);
+public class Constants 
+{
+    // ADQL region functions
+    public static String CONTAINS   = "CONTAINS";
+    public static String INTERSECTS = "INTERSECTS";
+    public static String POINT      = "POINT";
+    public static String CIRCLE     = "CIRCLE";
+    public static String POLYGON    = "POLYGON";
+    public static String REGION     = "REGION";
+    public static String AREA       = "AREA";
+    public static String CENTROID   = "CENTROID";
+    public static String COORDSYS   = "COORDSYS";
+    public static String CVAL1      = "CVAL1";
+    public static String CVAL2      = "CVAL2";
+    
+    public static List<String> REGION_SCALAR_FUNCTIONS; // functions that extract scalars from regions
+    public static List<String> REGION_PREDICATES; // functions that compare regions
+    public static List<String> REGION_GEOM_FUNCTIONS; // functions that create/return regions
 
-    public void init(AdqlManager manager) {
-		// Need nothing. 
-	}
+    public static List<String> REGION_FUNCTIONS;
+    
+    public static List<String> MATH_FUNCTIONS;
+    
+    public static List<String> AGGREGATE_FUNCTIONS;
 
-	@Override
-	public abstract void visit(PlainSelect plainSelect);
-
-	@Override
-	public void visit(Union union) {
-		// TODO Auto-generated method stub
-	}
+    static
+    {
+        REGION_PREDICATES = Arrays.asList(new String[]
+            {
+                CONTAINS, INTERSECTS
+            });
+        REGION_GEOM_FUNCTIONS = Arrays.asList(new String[]
+            {
+                POINT, CIRCLE, POLYGON, CENTROID, REGION, 
+            });
+        REGION_SCALAR_FUNCTIONS = Arrays.asList(new String[]
+            {
+                AREA, COORDSYS, CVAL1, CVAL2
+            });
+        
+        REGION_FUNCTIONS = new ArrayList<String>();
+        REGION_FUNCTIONS.addAll(REGION_PREDICATES);
+        REGION_FUNCTIONS.addAll(REGION_GEOM_FUNCTIONS);
+        REGION_FUNCTIONS.addAll(REGION_SCALAR_FUNCTIONS);
+        
+        MATH_FUNCTIONS = Arrays.asList(new String[]
+        {
+            "ACOS", "ASIN", "ATAN", "ATAN2", "COS", "SIN", "TAN",
+            "ABS", "CEILING", "DEGREES", "EXP", "FLOOR", 
+            "LOG", "LOG10", "MOD", "PI", "POWER", "RADIANS",
+            "SQRT", "RAND", "ROUND", "TRUNCATE"
+        });
+        
+        AGGREGATE_FUNCTIONS = Arrays.asList(new String[]
+        {
+            "COUNT", "MIN", "MAX"
+        });
+    }
 }

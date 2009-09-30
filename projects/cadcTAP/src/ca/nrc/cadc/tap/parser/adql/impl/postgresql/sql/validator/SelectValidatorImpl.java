@@ -71,7 +71,7 @@
 /**
  * 
  */
-package ca.nrc.cadc.tap.parser.adql.impl.postgresql.pgsphere.validator;
+package ca.nrc.cadc.tap.parser.adql.impl.postgresql.sql.validator;
 
 import java.util.Iterator;
 import java.util.List;
@@ -232,10 +232,13 @@ public class SelectValidatorImpl extends SelectValidator {
 	}
 
 	/**
-	 * Visit a sub-select that is refererred to as a table (in the FROM clause). The implementation logs the visit at debug mode and
-	 * visits the body of the sub-select (itself) using one of the above SelectVisitor methods.
+	 * In the WHERE or HAVING part, 
+	 * a sub-select may use columns of the parent select.  These scenarios are taken care of here.
 	 * 
-	 * @param t
+	 * In the FROM part,
+	 * a sub-select should not access the parent select.  It is not included here.
+	 * 
+	 * @param subSelect
 	 */
 	public void visit(SubSelect subSelect) {
 		log.debug("visit(SubSelect): " + subSelect);
@@ -247,28 +250,33 @@ public class SelectValidatorImpl extends SelectValidator {
 			handleSubSelect(subSelect, PlainSelectType.WHERE_SUB_SELECT);
 			break;
 		default:
-			addException(new AdqlValidateException("Sub-select is not supported."));
+			addException(new AdqlValidateException("Sub-select is not supported:" + subSelect));
 		}
 	}
 
 	/**
 	 * Visit the occurance of all-columns in a select list. For example, this method is called when the <code>*</code> in a query
-	 * like <code>SELECT * FROM ...</code> is visited. The implementation simply logs the visit at debug mode.
+	 * like <code>SELECT * FROM ...</code> is visited.
 	 * 
-	 * @param a
+	 * If there are more than one FROM table, an asteric is not allowed.
+	 * 
+	 * All-columns should not come together with other select item.
+	 * 
+	 * @param allColumns
 	 */
-	public void visit(AllColumns a) {
-		log.debug("visit(AllColumns): " + a);
+	public void visit(AllColumns allColumns) {
+		log.debug("visit(AllColumns): " + allColumns);
 		if (this.plainSelect.getSelectItems().size() > 1)
-			addException(new AdqlValidateException(a.toString() + " cannot be placed when other select item exists."));
+			addException(new AdqlValidateException(allColumns.toString() + " cannot be placed when other select item exists."));
 		if (AdqlUtil.extractSelectFromTables(this.plainSelect).size() > 1)
-			addException(new AdqlValidateException(a.toString() + " is ambigious when there are more that one select-from tables."));
+			addException(new AdqlValidateException(allColumns.toString()
+					+ " is ambigious when there are more that one select-from tables."));
 	}
 
 	/**
 	 * Validate that an all-table-columns selectItem uses a valid table name.
 	 * 
-	 * @param AllTableColumns
+	 * @param allTableColumns
 	 */
 	public void visit(AllTableColumns atc) {
 		log.debug("visit(AllTableColumns): " + atc);

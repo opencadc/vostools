@@ -70,16 +70,12 @@
 package ca.nrc.cadc.tap.parser.adql.validator;
 
 import net.sf.jsqlparser.schema.Column;
-import net.sf.jsqlparser.statement.select.ColumnIndex;
 import net.sf.jsqlparser.statement.select.ColumnReferenceVisitor;
-import net.sf.jsqlparser.statement.select.SelectVisitor;
 
 import org.apache.log4j.Logger;
 
 import ca.nrc.cadc.tap.parser.adql.AdqlManager;
-import ca.nrc.cadc.tap.parser.adql.config.AdqlConfig;
 import ca.nrc.cadc.tap.parser.adql.exception.AdqlValidateException;
-import ca.nrc.cadc.tap.parser.adql.validator.SelectValidator.PlainSelectType;
 
 /**
  * 

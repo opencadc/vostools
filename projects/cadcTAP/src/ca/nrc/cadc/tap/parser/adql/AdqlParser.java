@@ -79,7 +79,8 @@ import net.sf.jsqlparser.statement.Statement;
 import ca.nrc.cadc.tap.parser.adql.converter.Converter;
 import ca.nrc.cadc.tap.parser.adql.exception.AdqlException;
 import ca.nrc.cadc.tap.parser.adql.formatter.Formatter;
-import ca.nrc.cadc.tap.parser.adql.validator.*;
+import ca.nrc.cadc.tap.parser.adql.validator.SelectValidator;
+import ca.nrc.cadc.tap.parser.adql.validator.Validator;
 
 public class AdqlParser {
 	private AdqlManager manager;

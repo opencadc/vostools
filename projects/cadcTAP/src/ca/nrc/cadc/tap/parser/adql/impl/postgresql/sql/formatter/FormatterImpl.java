@@ -68,40 +68,35 @@
 */
 
 
+/**
+ * 
+ */
+package ca.nrc.cadc.tap.parser.adql.impl.postgresql.sql.formatter;
 
-package ca.nrc.cadc.tap.parser.adql.converter;
-
+import net.sf.jsqlparser.statement.Statement;
 import net.sf.jsqlparser.statement.select.PlainSelect;
-import net.sf.jsqlparser.statement.select.SelectVisitor;
-import net.sf.jsqlparser.statement.select.Union;
-
-import org.apache.log4j.Logger;
-
-import ca.nrc.cadc.tap.parser.adql.AdqlManager;
+import net.sf.jsqlparser.statement.select.Select;
+import net.sf.jsqlparser.statement.select.SelectBody;
+import ca.nrc.cadc.tap.parser.adql.formatter.Formatter;
 
 /**
- * A SelectVisitor that converts <code>Top N</code> into server-specific
- * form.
- * 
- * Postgresql uses "LIMIT" other than "TOP".
- * 
- * all TOP need to be converted into LIMIT.
- * 
- * @author pdowler
- * @author Sailor Zhang
+ * @author zhangsa
+ *
  */
-public abstract class TopConverter implements SelectVisitor {
-    protected static Logger log = Logger.getLogger(TopConverter.class);
-
-    public void init(AdqlManager manager) {
-		// Need nothing. 
+public class FormatterImpl extends Formatter {
+	
+	public FormatterImpl() {
+		this.defaultFormatter = new DefaultFormatterImpl();
 	}
 
-	@Override
-	public abstract void visit(PlainSelect plainSelect);
-
-	@Override
-	public void visit(Union union) {
-		// TODO Auto-generated method stub
+	public String format(Statement sqlStatement) {
+		if (sqlStatement instanceof Select) {
+			SelectBody selectBody = ((Select) sqlStatement).getSelectBody();
+			if (selectBody instanceof PlainSelect) {
+				return this.defaultFormatter.format((PlainSelect)selectBody);				
+			}
+		}
+		return null;
 	}
+
 }

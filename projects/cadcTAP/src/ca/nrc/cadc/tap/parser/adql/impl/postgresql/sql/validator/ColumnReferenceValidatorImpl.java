@@ -67,7 +67,7 @@
  ************************************************************************
  */
 
-package ca.nrc.cadc.tap.parser.adql.impl.postgresql.pgsphere.validator;
+package ca.nrc.cadc.tap.parser.adql.impl.postgresql.sql.validator;
 
 import net.sf.jsqlparser.schema.Column;
 import net.sf.jsqlparser.statement.select.ColumnIndex;

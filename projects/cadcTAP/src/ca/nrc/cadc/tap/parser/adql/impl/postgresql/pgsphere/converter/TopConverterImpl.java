@@ -71,7 +71,9 @@
 
 package ca.nrc.cadc.tap.parser.adql.impl.postgresql.pgsphere.converter;
 
-import net.sf.jsqlparser.statement.select.*;
+import net.sf.jsqlparser.statement.select.Limit;
+import net.sf.jsqlparser.statement.select.PlainSelect;
+import net.sf.jsqlparser.statement.select.Top;
 import ca.nrc.cadc.tap.parser.adql.converter.TopConverter;
 
 /**

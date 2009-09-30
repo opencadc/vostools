@@ -97,10 +97,8 @@
  */
 package ca.nrc.cadc.tap.parser.adql.impl.postgresql.pgsphere.converter;
 
-import ca.nrc.cadc.tap.parser.adql.converter.AllColumnsConverter;
 import net.sf.jsqlparser.statement.select.PlainSelect;
-
-import org.apache.log4j.Logger;
+import ca.nrc.cadc.tap.parser.adql.converter.AllColumnsConverter;
 
 /**
  * A SelectVisitor that traverses the query to find and modify AllColumns

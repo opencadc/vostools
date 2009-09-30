@@ -69,15 +69,12 @@
 
 
 
-package ca.nrc.cadc.tap.parser.adql.converter;
+package ca.nrc.cadc.tap.parser.adql.impl.postgresql.sql.converter;
 
+import net.sf.jsqlparser.statement.select.Limit;
 import net.sf.jsqlparser.statement.select.PlainSelect;
-import net.sf.jsqlparser.statement.select.SelectVisitor;
-import net.sf.jsqlparser.statement.select.Union;
-
-import org.apache.log4j.Logger;
-
-import ca.nrc.cadc.tap.parser.adql.AdqlManager;
+import net.sf.jsqlparser.statement.select.Top;
+import ca.nrc.cadc.tap.parser.adql.converter.TopConverter;
 
 /**
  * A SelectVisitor that converts <code>Top N</code> into server-specific
@@ -87,21 +84,25 @@ import ca.nrc.cadc.tap.parser.adql.AdqlManager;
  * 
  * all TOP need to be converted into LIMIT.
  * 
- * @author pdowler
  * @author Sailor Zhang
  */
-public abstract class TopConverter implements SelectVisitor {
-    protected static Logger log = Logger.getLogger(TopConverter.class);
-
-    public void init(AdqlManager manager) {
-		// Need nothing. 
-	}
-
-	@Override
-	public abstract void visit(PlainSelect plainSelect);
-
-	@Override
-	public void visit(Union union) {
-		// TODO Auto-generated method stub
-	}
+public class TopConverterImpl extends TopConverter
+{
+    public void visit(PlainSelect ps) {
+        log.debug("visit(PlainSelect): " + ps);
+    	Top top = ps.getTop();
+    	if (top != null) {
+    		long rowCount = top.getRowCount();
+    		Limit limit = ps.getLimit();
+    		if (limit != null) {
+    			limit.setRowCount(rowCount);
+    		} else {
+    			limit = new Limit();
+    			limit.setRowCount(rowCount);
+    			ps.setLimit(limit);
+    		}
+			ps.setTop(null);
+    	}
+        log.debug("visit(PlainSelect) complete: " + ps);
+    }
 }

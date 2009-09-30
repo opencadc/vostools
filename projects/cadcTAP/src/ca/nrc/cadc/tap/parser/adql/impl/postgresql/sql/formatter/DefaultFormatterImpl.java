@@ -68,40 +68,27 @@
 */
 
 
-
-package ca.nrc.cadc.tap.parser.adql.converter;
+/**
+ * 
+ */
+package ca.nrc.cadc.tap.parser.adql.impl.postgresql.sql.formatter;
 
 import net.sf.jsqlparser.statement.select.PlainSelect;
-import net.sf.jsqlparser.statement.select.SelectVisitor;
-import net.sf.jsqlparser.statement.select.Union;
+import ca.nrc.cadc.tap.parser.adql.formatter.DefaultFormatter;
 
-import org.apache.log4j.Logger;
-
-import ca.nrc.cadc.tap.parser.adql.AdqlManager;
-
+ 
 /**
- * A SelectVisitor that converts <code>Top N</code> into server-specific
- * form.
- * 
- * Postgresql uses "LIMIT" other than "TOP".
- * 
- * all TOP need to be converted into LIMIT.
- * 
- * @author pdowler
- * @author Sailor Zhang
+ * @author zhangsa
+ *
  */
-public abstract class TopConverter implements SelectVisitor {
-    protected static Logger log = Logger.getLogger(TopConverter.class);
-
-    public void init(AdqlManager manager) {
-		// Need nothing. 
-	}
+public class DefaultFormatterImpl extends DefaultFormatter {
+	public static final String TAB = "\t";
 
 	@Override
-	public abstract void visit(PlainSelect plainSelect);
-
-	@Override
-	public void visit(Union union) {
-		// TODO Auto-generated method stub
+	public String format(PlainSelect plainSelect) {
+		log.debug("format(plainSelect)" + plainSelect.toString());
+		return plainSelect.toString();
 	}
+
+	 
 }

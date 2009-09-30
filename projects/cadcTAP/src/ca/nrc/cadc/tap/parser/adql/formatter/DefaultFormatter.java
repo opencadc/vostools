@@ -70,14 +70,12 @@
 
 package ca.nrc.cadc.tap.parser.adql.formatter;
 
+import net.sf.jsqlparser.statement.select.PlainSelect;
+
 import org.apache.log4j.Logger;
 
 import ca.nrc.cadc.tap.parser.adql.AdqlManager;
 import ca.nrc.cadc.tap.parser.adql.config.AdqlConfig;
-import ca.nrc.cadc.tap.parser.adql.converter.AllColumnsConverter;
-import net.sf.jsqlparser.statement.select.PlainSelect;
-import net.sf.jsqlparser.statement.select.SelectVisitor;
-import net.sf.jsqlparser.statement.select.Union;
 
 public abstract class DefaultFormatter {
     protected static Logger log = Logger.getLogger(DefaultFormatter.class);

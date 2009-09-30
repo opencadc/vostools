@@ -73,8 +73,6 @@
  */
 package ca.nrc.cadc.tap.parser.adql.impl.postgresql.pgsphere.validator;
 
-import ca.nrc.cadc.tap.parser.adql.AdqlManager;
-import ca.nrc.cadc.tap.parser.adql.config.AdqlConfig;
 import ca.nrc.cadc.tap.parser.adql.validator.ColumnReferenceValidator;
 import ca.nrc.cadc.tap.parser.adql.validator.ExpressionValidator;
 import ca.nrc.cadc.tap.parser.adql.validator.SelectValidator;

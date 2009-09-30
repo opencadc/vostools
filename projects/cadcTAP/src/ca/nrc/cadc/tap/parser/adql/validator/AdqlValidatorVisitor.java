@@ -70,11 +70,7 @@
 
 package ca.nrc.cadc.tap.parser.adql.validator;
 
-import java.util.ArrayList;
-import java.util.List;
-
 import net.sf.jsqlparser.statement.select.PlainSelect;
-
 import ca.nrc.cadc.tap.parser.adql.AdqlManager;
 import ca.nrc.cadc.tap.parser.adql.config.AdqlConfig;
 import ca.nrc.cadc.tap.parser.adql.exception.AdqlException;

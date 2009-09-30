@@ -71,14 +71,9 @@
 package ca.nrc.cadc.tap.parser.adql.impl.postgresql.pgsphere;
 
 import ca.nrc.cadc.tap.parser.adql.AdqlManager;
-import ca.nrc.cadc.tap.parser.adql.config.AdqlConfig;
-import ca.nrc.cadc.tap.parser.adql.converter.Converter;
 import ca.nrc.cadc.tap.parser.adql.impl.postgresql.pgsphere.converter.ConverterImpl;
 import ca.nrc.cadc.tap.parser.adql.impl.postgresql.pgsphere.formatter.FormatterImpl;
 import ca.nrc.cadc.tap.parser.adql.impl.postgresql.pgsphere.validator.ValidatorImpl;
-import ca.nrc.cadc.tap.parser.adql.validator.ColumnReferenceValidator;
-import ca.nrc.cadc.tap.parser.adql.validator.ExpressionValidator;
-import ca.nrc.cadc.tap.parser.adql.validator.SelectValidator;
 
 public class AdqlManagerImpl extends AdqlManager {
 	

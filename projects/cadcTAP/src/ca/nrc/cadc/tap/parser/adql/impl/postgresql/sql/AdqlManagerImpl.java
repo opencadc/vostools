@@ -68,40 +68,20 @@
 */
 
 
-
-package ca.nrc.cadc.tap.parser.adql.converter;
-
-import net.sf.jsqlparser.statement.select.PlainSelect;
-import net.sf.jsqlparser.statement.select.SelectVisitor;
-import net.sf.jsqlparser.statement.select.Union;
-
-import org.apache.log4j.Logger;
+package ca.nrc.cadc.tap.parser.adql.impl.postgresql.sql;
 
 import ca.nrc.cadc.tap.parser.adql.AdqlManager;
+import ca.nrc.cadc.tap.parser.adql.impl.postgresql.pgsphere.converter.ConverterImpl;
+import ca.nrc.cadc.tap.parser.adql.impl.postgresql.pgsphere.formatter.FormatterImpl;
+import ca.nrc.cadc.tap.parser.adql.impl.postgresql.pgsphere.validator.ValidatorImpl;
 
-/**
- * A SelectVisitor that converts <code>Top N</code> into server-specific
- * form.
- * 
- * Postgresql uses "LIMIT" other than "TOP".
- * 
- * all TOP need to be converted into LIMIT.
- * 
- * @author pdowler
- * @author Sailor Zhang
- */
-public abstract class TopConverter implements SelectVisitor {
-    protected static Logger log = Logger.getLogger(TopConverter.class);
-
-    public void init(AdqlManager manager) {
-		// Need nothing. 
-	}
-
-	@Override
-	public abstract void visit(PlainSelect plainSelect);
-
-	@Override
-	public void visit(Union union) {
-		// TODO Auto-generated method stub
+public class AdqlManagerImpl extends AdqlManager {
+	
+	public AdqlManagerImpl() {
+		this.config = new AdqlConfigImpl();
+		this.validator = new ValidatorImpl();
+		this.converter = new ConverterImpl();
+		this.formatter = new FormatterImpl();
+		init();
 	}
 }

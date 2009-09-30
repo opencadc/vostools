@@ -74,18 +74,11 @@
 package ca.nrc.cadc.tap.parser.adql.formatter;
 
 import net.sf.jsqlparser.statement.Statement;
-import net.sf.jsqlparser.statement.select.PlainSelect;
-import net.sf.jsqlparser.statement.select.SelectVisitor;
-import net.sf.jsqlparser.statement.select.Union;
 
 import org.apache.log4j.Logger;
 
 import ca.nrc.cadc.tap.parser.adql.AdqlManager;
 import ca.nrc.cadc.tap.parser.adql.config.AdqlConfig;
-import ca.nrc.cadc.tap.parser.adql.converter.AllColumnsConverter;
-import ca.nrc.cadc.tap.parser.adql.converter.Converter;
-import ca.nrc.cadc.tap.parser.adql.converter.RegionConverter;
-import ca.nrc.cadc.tap.parser.adql.converter.TopConverter;
 
 /**
  * @author zhangsa

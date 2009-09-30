@@ -97,9 +97,6 @@
  */
 package ca.nrc.cadc.tap.parser.adql.converter;
 
-import ca.nrc.cadc.tap.parser.adql.AdqlManager;
-import ca.nrc.cadc.tap.parser.adql.config.AdqlConfig;
-
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -114,6 +111,9 @@ import net.sf.jsqlparser.statement.select.SelectVisitor;
 import net.sf.jsqlparser.statement.select.Union;
 
 import org.apache.log4j.Logger;
+
+import ca.nrc.cadc.tap.parser.adql.AdqlManager;
+import ca.nrc.cadc.tap.parser.adql.config.AdqlConfig;
 
 /**
  * A SelectVisitor that traverses the query to find and modify AllColumns

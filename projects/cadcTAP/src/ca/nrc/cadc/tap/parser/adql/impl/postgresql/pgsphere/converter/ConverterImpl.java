@@ -72,8 +72,6 @@
 package ca.nrc.cadc.tap.parser.adql.impl.postgresql.pgsphere.converter;
 
 import ca.nrc.cadc.tap.parser.adql.converter.Converter;
-import net.sf.jsqlparser.statement.select.PlainSelect;
-import org.apache.log4j.Logger;
 
 /**
  * A SelectVisitor that traverses the query to find and modify ADQL 

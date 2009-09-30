@@ -71,7 +71,7 @@
 /**
  * 
  */
-package ca.nrc.cadc.tap.parser.adql.impl.postgresql.pgsphere;
+package ca.nrc.cadc.tap.parser.adql.impl.postgresql.sql;
 
 import ca.nrc.cadc.tap.parser.adql.config.AdqlConfig;
 import ca.nrc.cadc.tap.parser.adql.config.meta.ColumnMeta;

@@ -75,9 +75,6 @@ import org.apache.log4j.Logger;
 import ca.nrc.cadc.tap.parser.adql.config.AdqlConfig;
 import ca.nrc.cadc.tap.parser.adql.converter.Converter;
 import ca.nrc.cadc.tap.parser.adql.formatter.Formatter;
-import ca.nrc.cadc.tap.parser.adql.validator.ColumnReferenceValidator;
-import ca.nrc.cadc.tap.parser.adql.validator.ExpressionValidator;
-import ca.nrc.cadc.tap.parser.adql.validator.SelectValidator;
 import ca.nrc.cadc.tap.parser.adql.validator.Validator;
 
 public class AdqlManager {

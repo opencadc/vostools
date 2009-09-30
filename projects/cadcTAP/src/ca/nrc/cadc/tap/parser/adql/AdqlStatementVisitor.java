@@ -70,9 +70,6 @@
 
 package ca.nrc.cadc.tap.parser.adql;
 
-import org.apache.log4j.Logger;
-
-import ca.nrc.cadc.tap.parser.adql.validator.SelectValidator;
 import net.sf.jsqlparser.statement.StatementVisitor;
 import net.sf.jsqlparser.statement.create.table.CreateTable;
 import net.sf.jsqlparser.statement.delete.Delete;
@@ -83,6 +80,8 @@ import net.sf.jsqlparser.statement.select.Select;
 import net.sf.jsqlparser.statement.select.SelectVisitor;
 import net.sf.jsqlparser.statement.truncate.Truncate;
 import net.sf.jsqlparser.statement.update.Update;
+
+import org.apache.log4j.Logger;
 
 public class AdqlStatementVisitor implements StatementVisitor {
     private static Logger log = Logger.getLogger(AdqlStatementVisitor.class);

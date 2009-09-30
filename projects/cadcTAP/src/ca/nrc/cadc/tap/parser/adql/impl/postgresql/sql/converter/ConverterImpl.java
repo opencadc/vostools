@@ -69,39 +69,21 @@
 
 
 
-package ca.nrc.cadc.tap.parser.adql.converter;
+package ca.nrc.cadc.tap.parser.adql.impl.postgresql.sql.converter;
 
-import net.sf.jsqlparser.statement.select.PlainSelect;
-import net.sf.jsqlparser.statement.select.SelectVisitor;
-import net.sf.jsqlparser.statement.select.Union;
-
-import org.apache.log4j.Logger;
-
-import ca.nrc.cadc.tap.parser.adql.AdqlManager;
+import ca.nrc.cadc.tap.parser.adql.converter.Converter;
 
 /**
- * A SelectVisitor that converts <code>Top N</code> into server-specific
- * form.
+ * A SelectVisitor that traverses the query to find and modify ADQL 
+ * region constructs.
  * 
- * Postgresql uses "LIMIT" other than "TOP".
- * 
- * all TOP need to be converted into LIMIT.
- * 
- * @author pdowler
- * @author Sailor Zhang
+ * @author pdowler, Sailor Zhang
  */
-public abstract class TopConverter implements SelectVisitor {
-    protected static Logger log = Logger.getLogger(TopConverter.class);
-
-    public void init(AdqlManager manager) {
-		// Need nothing. 
-	}
-
-	@Override
-	public abstract void visit(PlainSelect plainSelect);
-
-	@Override
-	public void visit(Union union) {
-		// TODO Auto-generated method stub
-	}
+public class ConverterImpl extends Converter
+{
+    public ConverterImpl() {
+        topConverter = new TopConverterImpl();
+        regionConverter = new RegionConverterImpl();
+        allColumnsConverter = new AllColumnsConverterImpl();
+    }
 }

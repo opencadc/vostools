@@ -68,7 +68,7 @@
 */
 
 
-package ca.nrc.cadc.tap.parser.adql.impl.postgresql.pgsphere.validator;
+package ca.nrc.cadc.tap.parser.adql.impl.postgresql.sql.validator;
 
 import java.util.Iterator;
 import java.util.List;

@@ -78,12 +78,12 @@ import net.sf.jsqlparser.schema.Table;
 import net.sf.jsqlparser.statement.select.FromItem;
 import net.sf.jsqlparser.statement.select.Join;
 import net.sf.jsqlparser.statement.select.PlainSelect;
-import net.sf.jsqlparser.statement.select.SelectExpressionItem;
 import net.sf.jsqlparser.statement.select.SelectItem;
 import net.sf.jsqlparser.statement.select.SubSelect;
-
 import ca.nrc.cadc.tap.parser.adql.AdqlUtil;
-import ca.nrc.cadc.tap.parser.adql.config.meta.*;
+import ca.nrc.cadc.tap.parser.adql.config.meta.ColumnMeta;
+import ca.nrc.cadc.tap.parser.adql.config.meta.FunctionMeta;
+import ca.nrc.cadc.tap.parser.adql.config.meta.TableMeta;
 import ca.nrc.cadc.tap.parser.adql.exception.AdqlValidateException;
 import ca.nrc.cadc.tap.parser.adql.validator.PlainSelectInfo;
 
