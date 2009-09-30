@@ -71,16 +71,36 @@ package ca.nrc.cadc.tap.schema;
 
 import java.util.List;
 
+/**
+ * Class to represent a TAP_SCHEMA.schemas table.
+ *
+ */
 public class Schema
 {
+    // The Schema name.
     public String schemaName;
+
+    // Describes the schema.
     public String description;
+
+    // The utype of the schema.
     public String utype;
 
+    // List of tables belonging to this schema.
     public List<Table> tables;
 
+    /**
+     * Default no-arg constructor.
+     */
     public Schema() {}
 
+    /**
+     * Construct a Schema using the specified parameters.
+     *
+     * @param schemaName The Schema name.
+     * @param description Describes the schema.
+     * @param utype The utype of the schema.
+     */
     public Schema(String schemaName, 
                   String description,
                   String utype)

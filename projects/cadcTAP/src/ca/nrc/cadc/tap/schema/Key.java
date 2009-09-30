@@ -71,16 +71,36 @@ package ca.nrc.cadc.tap.schema;
 
 import java.util.List;
 
+/**
+ * Class to represent a TAP_SCHEMA.keys table.
+ *
+ */
 public class Key
 {
+    // Unique key to join to TAP_SCHEMA.key_columns.
     public String keyId;
+
+    // The table with the foreign key.
     public String fromTable;
+
+    // The table with the primary key.
     public String targetTable;
 
+    // List of KeyColumns belonging to this Key.
     public List<KeyColumn> keyColumns;
 
+    /**
+     * Default no-arg constructor.
+     */
     public Key() {}
 
+    /**
+     * Construct a Key using the specified parameters.
+     *
+     * @param keyId Unique key to join to TAP_SCHEMA.key_columns.
+     * @param fromTable The table with the foreign key.
+     * @param targetTable The table with the primary key.
+     */
     public Key(String keyId,
                String fromTable,
                String targetTable)

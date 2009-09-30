@@ -68,20 +68,53 @@
 */
 
 package ca.nrc.cadc.tap.schema;
-
+/**
+ * Class to represent a TAP_SCHEMA.columns table.
+ *
+ */
 public class Column
 {
+    // The table this column belongs to.
     public String tableName;
+
+    // The column name.
     public String columnName;
+
+    // Describes the column.
     public String description;
+
+    // The utype of the column.
     public String utype;
+
+    // The UCD of column.
     public String ucd;
+
+    // The unit used for column values.
     public String unit;
+
+    // The ADQL datatype of column.
     public String datatype;
+
+    //
     public int size;
 
+    /**
+     * Default no-arg constructor.
+     */
     public Column() {}
 
+    /**
+     * Construct a Column using the specified parameters.
+     *
+     * @param tableName The table this column belongs to.
+     * @param columnName The column name.
+     * @param description Describes the column.
+     * @param utype The utype of the column.
+     * @param ucd The UCD of column.
+     * @param unit The unit used for column values.
+     * @param datatype The ADQL datatype of column.
+     * @param size
+     */
     public Column(String tableName,
                   String columnName,
                   String description,

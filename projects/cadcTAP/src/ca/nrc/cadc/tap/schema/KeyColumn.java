@@ -69,14 +69,33 @@
 
 package ca.nrc.cadc.tap.schema;
 
+/**
+ * Class to represent a TAP_SCHEMA.key_columns table.
+ *
+ */
 public class KeyColumn
 {
+    // Key to join to TAP_SCHEMA.keys.
     public String keyId;
+
+    // Column in the from_table.
     public String fromColumn;
+
+    // Column in the target_table.
     public String targetColumn;
 
+    /**
+     * Default no-arg constructor.
+     */
     public KeyColumn() {}
 
+    /**
+     * Construct a KeyColumn using the specified parameters.
+     *
+     * @param keyId Key to join to TAP_SCHEMA.keys.
+     * @param fromColumn Column in the from_table.
+     * @param targetColumn Column in the target_table.
+     */
     public KeyColumn(String keyId,
                      String fromColumn,
                      String targetColumn)

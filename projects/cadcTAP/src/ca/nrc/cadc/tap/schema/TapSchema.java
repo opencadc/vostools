@@ -71,13 +71,29 @@ package ca.nrc.cadc.tap.schema;
 
 import java.util.List;
 
+/**
+ * Class to represent a TAP_SCHEMA.
+ *
+ */
 public class TapSchema
 {
+    // List of Schemas belonging to this TAP_SCHEMA.
     public List<Schema> schemas;
+
+    // List of Keys belonging to this TAP_SCHEMA.
     public List<Key> keys;
 
+    /**
+     * Default no-arg constructor.
+     */
     public TapSchema() {}
 
+    /**
+     * Construct a KeyColumn using the specified parameters.
+     *
+     * @param schemas List of Schemas belonging to this TAP_SCHEMA.
+     * @param keys List of Keys belonging to this TAP_SCHEMA.
+     */
     public TapSchema(List<Schema> schemas,
                      List<Key> keys)
     {
