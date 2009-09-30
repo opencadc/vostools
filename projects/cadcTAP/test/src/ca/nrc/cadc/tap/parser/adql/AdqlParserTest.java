@@ -89,7 +89,8 @@ import ca.nrc.cadc.tap.parser.adql.impl.postgresql.pgsphere.AdqlManagerImpl;
 import ca.nrc.cadc.util.LoggerUtil;
 
 /**
- * @author zhangsa
+ * 
+ * @author Sailor Zhang
  *
  */
 public class AdqlParserTest {
