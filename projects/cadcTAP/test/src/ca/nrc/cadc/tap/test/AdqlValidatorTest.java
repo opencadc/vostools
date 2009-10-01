@@ -67,13 +67,121 @@
 ************************************************************************
 */
 
-package ca.nrc.cadc.tap;
+package ca.nrc.cadc.tap.test;
 
+import java.util.ArrayList;
 import java.util.List;
 
+import junit.framework.TestCase;
+
+import ca.nrc.cadc.tap.AdqlValidator;
 import ca.nrc.cadc.uws.Parameter;
 
-public interface TapQuery
+public class AdqlValidatorTest extends TestCase
 {
-    public String getSQL( List<Parameter> paramList );
+	AdqlValidator validator = new AdqlValidator();
+	
+	public void testNullParamList() {
+		try {
+			validator.validate(null);
+			assertTrue( false );
+		}
+		catch ( IllegalStateException ise ) {
+			assertTrue( true );
+		}
+	}
+
+	public void testEmptyParamList() {
+		try {
+			validator.validate( new ArrayList<Parameter>() );
+			assertTrue( false );
+		}
+		catch ( IllegalStateException ise ) {
+			assertTrue( true );
+		}
+	}
+	
+	public void testLangAdqlMissingQuery() {
+		try {
+			List<Parameter> paramList = new ArrayList<Parameter>();
+			paramList.add( new Parameter( "REQUEST", "doQuery" ) );
+			paramList.add( new Parameter( "LANG",    "ADQL" ) );
+			paramList.add( new Parameter( "query",   "Sensible query" ) );
+			validator.validate( paramList );
+			assertTrue( true );
+		}
+		catch ( IllegalStateException ise ) {
+			assertTrue( ise.getMessage(), false );
+		}
+	}
+	
+	public void testLangAdqlCaseInsensQuery() {
+		try {
+			List<Parameter> paramList = new ArrayList<Parameter>();
+			paramList.add( new Parameter( "REQUEST", "doQuery" ) );
+			paramList.add( new Parameter( "LANG",    "ADQL" ) );
+			validator.validate( paramList );
+			assertTrue( false );
+		}
+		catch ( IllegalStateException ise ) {
+			assertTrue( true );
+		}
+	}
+	
+	public void testLangAdqlValue() {
+		try {
+			List<Parameter> paramList = new ArrayList<Parameter>();
+			paramList.add( new Parameter( "REQUEST", "doQuery" ) );
+			paramList.add( new Parameter( "LANG",    "ADQL" ) );
+			paramList.add( new Parameter( "QUERY",   "Sensible query" ) );
+			validator.validate( paramList );
+			assertTrue( true );
+		}
+		catch ( IllegalStateException ise ) {
+			assertTrue( ise.getMessage(),false );
+		}
+	}
+
+	public void testQueryNullValue() {
+		try {
+			List<Parameter> paramList = new ArrayList<Parameter>();
+			paramList.add( new Parameter( "REQUEST", "doQuery" ) );
+			paramList.add( new Parameter( "LANG",    "ADQL" ) );
+			paramList.add( new Parameter( "QUERY",   null ) );
+			validator.validate( paramList );
+			assertTrue( false );
+		}
+		catch ( IllegalStateException ise ) {
+			assertTrue( true );
+		}
+	}
+	
+	public void testQueryEmptyValue() {
+		try {
+			List<Parameter> paramList = new ArrayList<Parameter>();
+			paramList.add( new Parameter( "REQUEST", "doQuery" ) );
+			paramList.add( new Parameter( "LANG",    "ADQL" ) );
+			paramList.add( new Parameter( "QUERY",   "" ) );
+			validator.validate( paramList );
+			assertTrue( false );
+		}
+		catch ( IllegalStateException ise ) {
+			assertTrue( true );
+		}
+	}
+	
+	public void testQueryWithValue() {
+		try {
+			List<Parameter> paramList = new ArrayList<Parameter>();
+			paramList.add( new Parameter( "REQUEST", "doQuery" ) );
+			paramList.add( new Parameter( "LANG",    "ADQL" ) );
+			paramList.add( new Parameter( "QUERY",   "Sensible query" ) );
+			validator.validate( paramList );
+			assertTrue( true );
+		}
+		catch ( IllegalStateException ise ) {
+			assertTrue( ise.getMessage(), false );
+		}
+	}
+
 }

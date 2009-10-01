@@ -69,11 +69,16 @@
 
 package ca.nrc.cadc.tap;
 
-import java.util.List;
+import java.io.IOException;
+import java.io.OutputStream;
+import java.sql.ResultSet;
 
-import ca.nrc.cadc.uws.Parameter;
-
-public interface TapQuery
+public class AsciiTableWriter implements TableWriter
 {
-    public String getSQL( List<Parameter> paramList );
+	public void write( ResultSet rs, OutputStream out )
+		throws IOException
+	{
+		// TODO Auto-generated method stub
+	}
+
 }

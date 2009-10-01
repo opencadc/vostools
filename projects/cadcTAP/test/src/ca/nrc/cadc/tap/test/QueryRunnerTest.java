@@ -67,13 +67,105 @@
 ************************************************************************
 */
 
-package ca.nrc.cadc.tap;
+package ca.nrc.cadc.tap.test;
 
+import java.util.ArrayList;
+import java.util.Date;
 import java.util.List;
 
-import ca.nrc.cadc.uws.Parameter;
+import org.apache.log4j.BasicConfigurator;
+import org.apache.log4j.ConsoleAppender;
+import org.apache.log4j.Level;
+import org.apache.log4j.Logger;
+import org.apache.log4j.PatternLayout;
 
-public interface TapQuery
+import ca.nrc.cadc.tap.QueryRunner;
+import ca.nrc.cadc.uws.ErrorSummary;
+import ca.nrc.cadc.uws.ExecutionPhase;
+import ca.nrc.cadc.uws.Job;
+import ca.nrc.cadc.uws.Parameter;
+import ca.nrc.cadc.uws.Result;
+import junit.framework.TestCase;
+
+public class QueryRunnerTest extends TestCase
 {
-    public String getSQL( List<Parameter> paramList );
+	private static final Level  DEFAULT_LEVEL = Level.DEBUG;
+	private static final String LONG_FORMAT   = "%d{ABSOLUTE} [%t] %-5p %c{1} %x - %m\n";
+
+	private static Logger logger;
+ 
+	static {
+    	ConsoleAppender appender = new ConsoleAppender( new PatternLayout(LONG_FORMAT) );
+		BasicConfigurator.configure( appender );
+		logger = Logger.getLogger(QueryRunnerTest.class);
+		logger.info( "Logging initialized at level="+DEFAULT_LEVEL );
+	}
+
+	private QueryRunner runner = new QueryRunner();
+	
+	//  Most of the parameter validation testing
+	//  is done in the Validator test classes.
+	
+	public void testException() {
+
+		List<Parameter> paramList = new ArrayList<Parameter>();
+		paramList.add( new Parameter( "REQUEST", "doQuery" ) );
+		paramList.add( new Parameter( "VERSION", "1.0" ) );
+		paramList.add( new Parameter( "LANG",    "ADQL" ) );
+		paramList.add( new Parameter( "QUERY",   "Sensible query" ) );
+		paramList.add( new Parameter( "FORMAT",  "votable" ) );
+		paramList.add( new Parameter( "MAXREC",  "10" ) );
+		paramList.add( new Parameter( "MTIME",   "2009-09-30T12:34:56.789" ) );
+		paramList.add( new Parameter( "RUNID",   "100" ) );
+		paramList.add( new Parameter( "UPLOAD",  "table_a,http://host_a/path" ) );
+		
+		Job job = new Job( new Long(100),
+				           ExecutionPhase.PENDING,
+                           10L,
+                           new Date(),
+                           new Date(),
+                           new Date(),
+                           new Date(),
+                           new ErrorSummary(),
+                           "Owner",
+                           "Run100",
+                           new ArrayList<Result>(),
+                           paramList );
+		
+		runner.setJob( job );
+		runner.run();
+		
+		assertEquals( "No way to generate SQL from job param list yet",
+				      job.getErrorSummary().getSummaryMessage() );
+		
+		assertEquals( "ERROR", job.getExecutionPhase().toString() );
+	}
+	
+	public void testNoException() {
+
+		List<Parameter> paramList = new ArrayList<Parameter>();
+		paramList.add( new Parameter( "REQUEST", "getCapabilities" ) );
+		
+		Job job = new Job( new Long(100),
+				           ExecutionPhase.PENDING,
+                           10L,
+                           new Date(),
+                           new Date(),
+                           new Date(),
+                           new Date(),
+                           new ErrorSummary(),
+                           "Owner",
+                           "Run100",
+                           new ArrayList<Result>(),
+                           paramList );
+		
+		runner.setJob( job );
+		runner.run();
+
+		assertNull( job.getErrorSummary().getSummaryMessage() );
+		
+		assertEquals( "ERROR", job.getExecutionPhase().toString() ); // for now
+		//assertEquals( "COMPLETED", job.getExecutionPhase().toString() );
+	}
+	
 }

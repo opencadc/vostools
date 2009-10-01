@@ -69,11 +69,12 @@
 
 package ca.nrc.cadc.tap;
 
-import java.util.List;
+import java.util.HashMap;
 
-import ca.nrc.cadc.uws.Parameter;
-
-public interface TapQuery
+public class TableCreator
 {
-    public String getSQL( List<Parameter> paramList );
+    public HashMap getTableMap()
+    {
+    	return new HashMap();
+    }
 }

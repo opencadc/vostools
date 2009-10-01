@@ -69,11 +69,104 @@
 
 package ca.nrc.cadc.tap;
 
+import java.util.HashMap;
 import java.util.List;
 
+import org.apache.log4j.Logger;
+
+import ca.nrc.cadc.uws.ErrorSummary;
+import ca.nrc.cadc.uws.ExecutionPhase;
+import ca.nrc.cadc.uws.Job;
+import ca.nrc.cadc.uws.JobRunner;
 import ca.nrc.cadc.uws.Parameter;
 
-public interface TapQuery
+public class QueryRunner implements JobRunner
 {
-    public String getSQL( List<Parameter> paramList );
+	private static final Logger logger = Logger.getLogger(QueryRunner.class);
+	
+	private static final HashMap<String,String> langValidators = new HashMap<String,String>();
+	private static final HashMap<String,String> langQueries    = new HashMap<String,String>();
+	
+	static
+	{
+		langValidators.put( Validator.ADQL, "ca.nrc.cadc.tap.AdqlValidator" );
+		langQueries.put(    Validator.ADQL, "ca.nrc.cadc.tap.AdqlQuery"     );
+	}
+	
+	private Job job;
+
+    public QueryRunner()
+    {
+        try
+        {
+        	logger.debug( "Initializing" );
+        }
+        catch ( Exception e )
+        {
+            e.printStackTrace();
+            return;
+        }
+    }
+
+    public void setJob( Job job )
+    {
+        this.job = job;
+    }
+
+    public void run()
+    {
+        logger.debug("START");
+
+        try
+        {
+        	doit();
+        }
+        finally
+        {
+            logger.debug("DONE");
+        }
+    }
+    
+    private void doit()
+    {
+        try
+        {
+            job.setExecutionPhase( ExecutionPhase.EXECUTING );
+            
+            TapValidator tapValidator = new TapValidator();
+            List<Parameter> paramList = job.getParameterList();
+            tapValidator.validate( paramList );
+
+            if ( tapValidator.requestIsQuery() )
+        	{
+            	String lang = tapValidator.getLang();
+            	
+                Validator langValidator = (Validator) Class.forName( langValidators.get(lang) ).newInstance();
+                TapQuery  tapQuery      = (TapQuery)  Class.forName( langQueries.get(lang) ).newInstance();
+            	
+            	langValidator.validate( paramList );
+            	
+            	String sql = tapQuery.getSQL(paramList);
+            	
+            	//  Run the sql here
+        	}
+            
+            throw new UnsupportedOperationException(); // for now
+        	
+            //job.setExecutionPhase( ExecutionPhase.COMPLETED );
+		}
+        catch (Throwable t)
+        {
+			ErrorSummary error = new ErrorSummary(t.getMessage(), null );
+			job.setErrorSummary( error );
+            job.setExecutionPhase( ExecutionPhase.ERROR );
+		}
+		return;
+    }
+
+    public Job getJob()
+    {
+        return job;
+    }
+
 }

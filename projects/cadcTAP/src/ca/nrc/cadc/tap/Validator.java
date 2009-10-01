@@ -73,7 +73,43 @@ import java.util.List;
 
 import ca.nrc.cadc.uws.Parameter;
 
-public interface TapQuery
+public abstract class Validator
 {
-    public String getSQL( List<Parameter> paramList );
+	protected static enum TapParams
+	{
+		REQUEST,
+		VERSION,
+		LANG,
+		QUERY,
+		POS,	// PQL
+		SIZE,	// PQL
+		REGION,	// PQL
+		BAND,	// PQL
+		TIME,	// PQL
+		SELECT,	// PQL
+		FROM,	// PQL
+		WHERE, 	// PQL
+		FORMAT,
+		MAXREC,
+		MTIME,
+		RUNID,
+		UPLOAD
+	}
+	
+	public static final String ADQL = "ADQL";
+	public static final String SQL  = "SQL";
+	public static final String PQL  = "PQL";
+
+	public abstract void validate( List<Parameter> paramList );
+	
+	protected boolean listContains( List<Parameter> paramList, String paramName )
+	{
+		for ( Parameter param : paramList )
+		{
+			if ( param.getName().equalsIgnoreCase(paramName) )
+				return true;
+		}
+		return false;
+	}
+
 }

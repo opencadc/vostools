@@ -71,9 +71,17 @@ package ca.nrc.cadc.tap;
 
 import java.util.List;
 
+import ca.nrc.cadc.tap.parser.adql.AdqlManager;
+import ca.nrc.cadc.tap.parser.adql.AdqlParser;
 import ca.nrc.cadc.uws.Parameter;
 
-public interface TapQuery
+public class AdqlQuery implements TapQuery
 {
-    public String getSQL( List<Parameter> paramList );
+	@Override
+	public String getSQL( List<Parameter> paramList )
+	{
+		AdqlParser parser = new AdqlParser( new AdqlManager() );
+		throw new UnsupportedOperationException( "No way to generate SQL from job param list yet" );
+	}
+
 }

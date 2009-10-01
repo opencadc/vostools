@@ -73,7 +73,32 @@ import java.util.List;
 
 import ca.nrc.cadc.uws.Parameter;
 
-public interface TapQuery
+public class AdqlValidator extends Validator
 {
-    public String getSQL( List<Parameter> paramList );
+	public void validate( List<Parameter> paramList )
+	{
+		if ( paramList == null )
+			//  TODO:  Is this what we want?
+			throw new IllegalStateException( "Missing ADQL parameter list" );
+		
+		if ( paramList.size() == 0 )
+			//  TODO:  Is this what we want?
+			throw new IllegalStateException( "Empty ADQL parameter list" );
+		
+	    if ( !listContains( paramList, TapParams.QUERY.toString() ) )
+			throw new IllegalStateException( "Missing QUERY param" );
+
+		for ( Parameter param : paramList )
+		{
+            if ( param.getName().equalsIgnoreCase( TapParams.QUERY.toString() ) )
+			{
+				String value = param.getValue();
+				if ( value == null)
+					throw new IllegalStateException( "Missing QUERY value" );
+				if ( value.trim().length() == 0 )
+					throw new IllegalStateException( "Empty QUERY value" );
+			}
+		}
+	}
+	
 }
