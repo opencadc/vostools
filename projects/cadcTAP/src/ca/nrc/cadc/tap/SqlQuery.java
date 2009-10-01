@@ -71,6 +71,10 @@ package ca.nrc.cadc.tap;
 
 import java.util.List;
 
+import ca.nrc.cadc.tap.parser.adql.AdqlManager;
+import ca.nrc.cadc.tap.parser.adql.AdqlParser;
+import ca.nrc.cadc.tap.parser.adql.exception.AdqlException;
+import ca.nrc.cadc.tap.parser.adql.exception.AdqlValidateException;
 import ca.nrc.cadc.uws.Parameter;
 
 /**
@@ -78,10 +82,35 @@ import ca.nrc.cadc.uws.Parameter;
  */
 public class SqlQuery implements TapQuery
 {
+	AdqlParser adqlParser ;
+	
+	public SqlQuery() {
+		AdqlManager manager = new ca.nrc.cadc.tap.parser.adql.impl.postgresql.sql.AdqlManagerImpl();
+		this.adqlParser = new AdqlParser(manager);
+	}
+	
 	@Override
 	public String getSQL( List<Parameter> paramList )
 	{
-		throw new UnsupportedOperationException( "No way to generate SQL from job param list yet" );
+		String rtn = null;
+		boolean found = false;
+		String queryParamName = "QUERY" ;
+		String queryParamValue;
+		for (Parameter parameter : paramList) {
+			if (queryParamName.equals(parameter.getName())) {
+				found = true;
+				queryParamValue = parameter.getValue();
+				try {
+					rtn = this.adqlParser.parse(queryParamValue);
+					break;
+				} catch (AdqlException ex) {
+					throw new UnsupportedOperationException(ex);
+				}
+			}
+		}
+		if (!found)
+			throw new UnsupportedOperationException( "No way to generate SQL from job param list yet" );
+		return rtn;
 	}
 
 }
