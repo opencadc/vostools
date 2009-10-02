@@ -79,8 +79,6 @@ import ca.nrc.cadc.uws.Parameter;
 
 public class TapValidator extends Validator
 {
-	private boolean requestIsQuery = false;
-	
 	private String lang;
 	
 	public void validate( List<Parameter> paramList )
@@ -106,17 +104,10 @@ public class TapValidator extends Validator
 					throw new IllegalStateException( "Missing REQUEST value" );
 				if ( value.trim().length() == 0 )
 					throw new IllegalStateException( "Empty REQUEST value" );
-				if ( !value.equals( "doQuery" ) &&
-					 !value.equals( "getCapabilities" ) &&
-					 !value.equals( "getAvailability" ) &&
-					 !value.equals( "getTableMetadata" ) )
+				if ( !value.equals( "doQuery" ) )
 					throw new IllegalStateException( "Unknown REQUEST value: "+value );
-				if ( value.equals("doQuery") )
-				{
-					requestIsQuery = true;
-				    if ( !listContains( paramList, TapParams.LANG.toString() ) )
-						throw new IllegalStateException( "REQUEST=doQuery not acompanied by LANG param" );
-				}
+			    if ( !listContains( paramList, TapParams.LANG.toString() ) )
+					throw new IllegalStateException( "REQUEST=doQuery not acompanied by LANG param" );
 			}
 			else if ( name.equalsIgnoreCase(TapParams.VERSION.toString() ) )
 			{
@@ -135,7 +126,7 @@ public class TapValidator extends Validator
 					throw new IllegalStateException( "Missing LANG value" );
 				if ( value==null || value.trim().length()==0 )
 					throw new IllegalStateException( "Empty LANG value" );
-				if ( !value.startsWith("ADQL") )
+				if ( !value.startsWith(ADQL) && !value.startsWith(SQL) )
 					throw new IllegalStateException( "Unsupported LANG value: "+value );
 				lang = value;
 			}
@@ -197,7 +188,7 @@ public class TapValidator extends Validator
 				}
 				//  TODO: 
 				//  The MTIME  parameter cannot  be used with queries that select from multiple tables.
-				//  If MTIME  is used in a such a query the service must  reject the request and return an error document.
+				//  If MTIME  is used in a such a query the service must reject the request and return an error document.
 			}
 			else if ( name.equalsIgnoreCase(TapParams.RUNID.toString() ) )
 			{
@@ -266,15 +257,7 @@ public class TapValidator extends Validator
 			{
 				throw new IllegalStateException( "UNKNOWN parameter: "+name );
 			}
-			
-			TableWriter voTableWriter = new AsciiTableWriter();
-			TableCreator tableCreator = new TableCreator();
-		}
-	}
-	
-	public boolean requestIsQuery()
-	{
-		return requestIsQuery;
+		} // end-for
 	}
 
 	public String getLang()

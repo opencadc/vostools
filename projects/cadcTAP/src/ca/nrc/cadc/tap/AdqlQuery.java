@@ -84,7 +84,7 @@ public class AdqlQuery implements TapQuery
 	public String getSQL( List<Parameter> paramList )
 	{
 		AdqlParser parser = new AdqlParser( new AdqlManager() );
-		throw new UnsupportedOperationException( "No way to generate SQL from job param list yet" );
+		throw new UnsupportedOperationException( "No way to generate SQL from job param list yet." );
 	}
 
 }

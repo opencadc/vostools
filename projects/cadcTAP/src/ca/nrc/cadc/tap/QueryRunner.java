@@ -69,6 +69,11 @@
 
 package ca.nrc.cadc.tap;
 
+import java.io.File;
+import java.io.FileOutputStream;
+import java.io.IOException;
+import java.net.URI;
+import java.net.URL;
 import java.util.HashMap;
 import java.util.List;
 
@@ -90,7 +95,9 @@ public class QueryRunner implements JobRunner
 	static
 	{
 		langValidators.put( Validator.ADQL, "ca.nrc.cadc.tap.AdqlValidator" );
+		langValidators.put( Validator.SQL,  "ca.nrc.cadc.tap.SqlValidator"  );
 		langQueries.put(    Validator.ADQL, "ca.nrc.cadc.tap.AdqlQuery"     );
+		langQueries.put(    Validator.SQL,  "ca.nrc.cadc.tap.SqlQuery"      );
 	}
 	
 	private Job job;
@@ -129,35 +136,68 @@ public class QueryRunner implements JobRunner
     
     private void doit()
     {
-        try
+        FileStore fs = null;
+    	try
         {
             job.setExecutionPhase( ExecutionPhase.EXECUTING );
             
             TapValidator tapValidator = new TapValidator();
             List<Parameter> paramList = job.getParameterList();
             tapValidator.validate( paramList );
-
-            if ( tapValidator.requestIsQuery() )
-        	{
-            	String lang = tapValidator.getLang();
-            	
-                Validator langValidator = (Validator) Class.forName( langValidators.get(lang) ).newInstance();
-                TapQuery  tapQuery      = (TapQuery)  Class.forName( langQueries.get(lang) ).newInstance();
-            	
-            	langValidator.validate( paramList );
-            	
-            	String sql = tapQuery.getSQL(paramList);
-            	
-            	//  Run the sql here
-        	}
             
-            throw new UnsupportedOperationException(); // for now
+            //  The only way to get this far is with REQUEST=doQuery and LANG=ADQL or LANG=SQL.
+
+        	String lang = tapValidator.getLang();
+        	
+            Validator langValidator = (Validator) Class.forName( langValidators.get(lang) ).newInstance();
+            TapQuery  tapQuery      = (TapQuery)  Class.forName( langQueries.get(lang) ).newInstance();
+        	
+        	langValidator.validate( paramList );
+        	
+        	String sql = tapQuery.getSQL( paramList );
+        	
+        	//  Run the sql here.
+            
+            String fileStoreClassName = System.getProperty( "ca.nrc.cadc.tap.QueryRunner.fileStoreClassName" );
+            fs = (FileStore) Class.forName( fileStoreClassName ).newInstance();
+            URL fsURL = fs.put( null );
+
+            throw new UnsupportedOperationException( "Getting here would normally mean success."); // for now
         	
             //job.setExecutionPhase( ExecutionPhase.COMPLETED );
 		}
-        catch (Throwable t)
+        catch ( Throwable t )
         {
-			ErrorSummary error = new ErrorSummary(t.getMessage(), null );
+        	String errorMessage = null;
+        	URI    errorURI     = null;
+        	
+        	try
+        	{
+        		errorMessage = t.getMessage();
+        		logger.debug( "Error message: "+errorMessage );
+        		
+        		String tmpDir        = System.getProperty( "java.io.tmpdir" );
+            	String separator     = System.getProperty( "file.separator" );
+            	String errorFileName = System.getProperty( "ca.nrc.cadc.tap.QueryRunner.errorFileName" );
+            	String errorFullPath = tmpDir+separator+errorFileName;
+           		logger.debug( "Full path name of error file: "+errorFullPath );
+           		
+           		File errorFile = new File( errorFullPath );
+           		errorURI = errorFile.toURI();
+           		logger.debug( "URI of error file: "+errorURI.toString() );
+           		
+           		FileOutputStream errorOutput = new FileOutputStream( errorFile );
+           		TapTableWriter errorWriter = new TapTableWriter();
+           		errorWriter.write( t, errorOutput );
+           		errorOutput.close();
+           		logger.debug( "Error written to file." );
+        	}
+        	catch ( IOException ioe )
+        	{
+        		logger.error( "Failed to write error to file: "+ioe.getMessage() );
+        	}
+        	
+			ErrorSummary error = new ErrorSummary( errorMessage, errorURI );
 			job.setErrorSummary( error );
             job.setExecutionPhase( ExecutionPhase.ERROR );
 		}

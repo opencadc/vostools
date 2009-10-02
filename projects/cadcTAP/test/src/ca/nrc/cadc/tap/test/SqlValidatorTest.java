@@ -67,49 +67,52 @@
 ************************************************************************
 */
 
-package ca.nrc.cadc.tap;
+package ca.nrc.cadc.tap.test;
 
+import java.util.ArrayList;
 import java.util.List;
 
-import ca.nrc.cadc.tap.parser.adql.AdqlManager;
-import ca.nrc.cadc.tap.parser.adql.AdqlParser;
-import ca.nrc.cadc.tap.parser.adql.exception.AdqlException;
+import junit.framework.TestCase;
+
+import ca.nrc.cadc.tap.SqlValidator;
 import ca.nrc.cadc.uws.Parameter;
 
-/**
- * TapQuery implementation for LANG=SQL.
- */
-public class SqlQuery implements TapQuery
+public class SqlValidatorTest extends TestCase
 {
-	AdqlParser adqlParser ;
+	SqlValidator validator = new SqlValidator();
 	
-	public SqlQuery() {
-		AdqlManager manager = new ca.nrc.cadc.tap.parser.adql.impl.postgresql.sql.AdqlManagerImpl();
-		this.adqlParser = new AdqlParser(manager);
+	public void testNullParamList() {
+		try {
+			validator.validate(null);
+			assertTrue( false );
+		}
+		catch ( UnsupportedOperationException use ) {
+			assertTrue( true );
+		}
+	}
+
+	public void testEmptyParamList() {
+		try {
+			validator.validate( new ArrayList<Parameter>() );
+			assertTrue( false );
+		}
+		catch ( UnsupportedOperationException use ) {
+			assertTrue( true );
+		}
 	}
 	
-	@Override
-	public String getSQL( List<Parameter> paramList )
-	{
-		String rtn = null;
-		boolean found = false;
-		String queryParamName = "QUERY" ;
-		String queryParamValue;
-		for (Parameter parameter : paramList) {
-			if (queryParamName.equals(parameter.getName())) {
-				found = true;
-				queryParamValue = parameter.getValue();
-				try {
-					rtn = this.adqlParser.parse(queryParamValue);
-					break;
-				} catch (AdqlException ex) {
-					throw new UnsupportedOperationException(ex);
-				}
-			}
+	public void testLangAdqlMissingQuery() {
+		try {
+			List<Parameter> paramList = new ArrayList<Parameter>();
+			paramList.add( new Parameter( "REQUEST", "doQuery" ) );
+			paramList.add( new Parameter( "LANG",    "SQL" ) );
+			paramList.add( new Parameter( "query",   "Sensible query" ) );
+			validator.validate( paramList );
+			assertTrue( false );
 		}
-		if (!found)
-			throw new UnsupportedOperationException( "No way to generate SQL from job param list yet" );
-		return rtn;
+		catch ( UnsupportedOperationException use ) {
+			assertTrue( true );
+		}
 	}
 
 }

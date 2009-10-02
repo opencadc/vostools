@@ -106,7 +106,38 @@ public class QueryRunnerTest extends TestCase
 	//  Most of the parameter validation testing
 	//  is done in the Validator test classes.
 	
-	public void testException() {
+	public void testInvalidParams() {
+
+		List<Parameter> paramList = new ArrayList<Parameter>();
+		paramList.add( new Parameter( "REQUEST", "getCapabilities" ) );
+
+		
+		Job job = new Job( new Long(100),
+				           ExecutionPhase.PENDING,
+                           10L,
+                           new Date(),
+                           new Date(),
+                           new Date(),
+                           new Date(),
+                           new ErrorSummary(),
+                           "Owner",
+                           "Run100",
+                           new ArrayList<Result>(),
+                           paramList );
+		
+		runner.setJob( job );
+		runner.run();
+		
+		assertEquals( "Unknown REQUEST value: getCapabilities",
+				      job.getErrorSummary().getSummaryMessage() );
+		
+		assertEquals( "file:/tmp/QueryRunnerError.xml",
+				      job.getErrorSummary().getDocumentURI().toString() );
+		
+		assertEquals( "ERROR", job.getExecutionPhase().toString() );
+	}
+	
+	public void testValidParams() {
 
 		List<Parameter> paramList = new ArrayList<Parameter>();
 		paramList.add( new Parameter( "REQUEST", "doQuery" ) );
@@ -119,7 +150,7 @@ public class QueryRunnerTest extends TestCase
 		paramList.add( new Parameter( "RUNID",   "100" ) );
 		paramList.add( new Parameter( "UPLOAD",  "table_a,http://host_a/path" ) );
 		
-		Job job = new Job( new Long(100),
+		Job job = new Job( new Long(200),
 				           ExecutionPhase.PENDING,
                            10L,
                            new Date(),
@@ -128,42 +159,19 @@ public class QueryRunnerTest extends TestCase
                            new Date(),
                            new ErrorSummary(),
                            "Owner",
-                           "Run100",
-                           new ArrayList<Result>(),
-                           paramList );
-		
-		runner.setJob( job );
-		runner.run();
-		
-		assertEquals( "No way to generate SQL from job param list yet",
-				      job.getErrorSummary().getSummaryMessage() );
-		
-		assertEquals( "ERROR", job.getExecutionPhase().toString() );
-	}
-	
-	public void testNoException() {
-
-		List<Parameter> paramList = new ArrayList<Parameter>();
-		paramList.add( new Parameter( "REQUEST", "getCapabilities" ) );
-		
-		Job job = new Job( new Long(100),
-				           ExecutionPhase.PENDING,
-                           10L,
-                           new Date(),
-                           new Date(),
-                           new Date(),
-                           new Date(),
-                           new ErrorSummary(),
-                           "Owner",
-                           "Run100",
+                           "Run200",
                            new ArrayList<Result>(),
                            paramList );
 		
 		runner.setJob( job );
 		runner.run();
 
-		assertNull( job.getErrorSummary().getSummaryMessage() );
-		
+		assertEquals( "No way to generate SQL from job param list yet.",
+			          job.getErrorSummary().getSummaryMessage() );
+
+		assertEquals( "file:/tmp/QueryRunnerError.xml",
+				      job.getErrorSummary().getDocumentURI().toString() );
+
 		assertEquals( "ERROR", job.getExecutionPhase().toString() ); // for now
 		//assertEquals( "COMPLETED", job.getExecutionPhase().toString() );
 	}

@@ -83,7 +83,7 @@ public class AdqlValidatorTest extends TestCase
 	
 	public void testNullParamList() {
 		try {
-			validator.validate(null);
+			validator.validate( null );
 			assertTrue( false );
 		}
 		catch ( IllegalStateException ise ) {

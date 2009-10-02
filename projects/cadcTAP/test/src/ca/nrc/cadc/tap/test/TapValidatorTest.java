@@ -330,10 +330,10 @@ public class TapValidatorTest extends TestCase
 			List<Parameter> paramList = new ArrayList<Parameter>();
 			paramList.add( new Parameter( "REQUEST", "getCapabilities" ) );
 			validator.validate( paramList );
-			assertTrue( true );
+			assertTrue( false );
 		}
 		catch ( IllegalStateException ise ) {
-			assertTrue( ise.getMessage(), false );
+			assertTrue( true );
 		}
 	}
 	
@@ -342,10 +342,10 @@ public class TapValidatorTest extends TestCase
 			List<Parameter> paramList = new ArrayList<Parameter>();
 			paramList.add( new Parameter( "REQUEST", "getAvailability" ) );
 			validator.validate( paramList );
-			assertTrue( true );
+			assertTrue( false );
 		}
 		catch ( IllegalStateException ise ) {
-			assertTrue( ise.getMessage(), false );
+			assertTrue( true );
 		}
 	}
 	
@@ -354,10 +354,10 @@ public class TapValidatorTest extends TestCase
 			List<Parameter> paramList = new ArrayList<Parameter>();
 			paramList.add( new Parameter( "REQUEST", "getTableMetadata" ) );
 			validator.validate( paramList );
-			assertTrue( true );
+			assertTrue( false );
 		}
 		catch ( IllegalStateException ise ) {
-			assertTrue( ise.getMessage(), false );
+			assertTrue( true );
 		}
 	}
 
@@ -420,60 +420,6 @@ public class TapValidatorTest extends TestCase
 			assertTrue( true );
 		}
 	}
-	
-	public void testLangMissingFromRequestGetCapabilities() {
-		try {
-			List<Parameter> paramList = new ArrayList<Parameter>();
-			paramList.add( new Parameter( "REQUEST", "getCapabilities" ) );
-			paramList.add( new Parameter( "VERSION", "1.0" ) );
-			paramList.add( new Parameter( "FORMAT",  "votable" ) );
-			paramList.add( new Parameter( "MAXREC",  "10" ) );
-			paramList.add( new Parameter( "MTIME",   "2009-09-30T12:34:56.789" ) );
-			paramList.add( new Parameter( "RUNID",   "100" ) );
-			paramList.add( new Parameter( "UPLOAD",  "table_a,http://host_a/path" ) );
-			validator.validate( paramList );
-			assertTrue( true );
-		}
-		catch ( IllegalStateException ise ) {
-			assertTrue( ise.getMessage(), false );
-		}
-	}
-	
-	public void testLangMissingFromRequestGetAvailability() {
-		try {
-			List<Parameter> paramList = new ArrayList<Parameter>();
-			paramList.add( new Parameter( "REQUEST", "getAvailability" ) );
-			paramList.add( new Parameter( "VERSION", "1.0" ) );
-			paramList.add( new Parameter( "FORMAT",  "votable" ) );
-			paramList.add( new Parameter( "MAXREC",  "10" ) );
-			paramList.add( new Parameter( "MTIME",   "2009-09-30T12:34:56.789" ) );
-			paramList.add( new Parameter( "RUNID",   "100" ) );
-			paramList.add( new Parameter( "UPLOAD",  "table_a,http://host_a/path" ) );
-			validator.validate( paramList );
-			assertTrue( true );
-		}
-		catch ( IllegalStateException ise ) {
-			assertTrue( ise.getMessage(), false );
-		}
-	}
-	
-	public void testLangMissingFromRequestGetTableMetadata() {
-		try {
-			List<Parameter> paramList = new ArrayList<Parameter>();
-			paramList.add( new Parameter( "REQUEST", "getTableMetadata" ) );
-			paramList.add( new Parameter( "VERSION", "1.0" ) );
-			paramList.add( new Parameter( "FORMAT",  "votable" ) );
-			paramList.add( new Parameter( "MAXREC",  "10" ) );
-			paramList.add( new Parameter( "MTIME",   "2009-09-30T12:34:56.789" ) );
-			paramList.add( new Parameter( "RUNID",   "100" ) );
-			paramList.add( new Parameter( "UPLOAD",  "table_a,http://host_a/path" ) );
-			validator.validate( paramList );
-			assertTrue( true );
-		}
-		catch ( IllegalStateException ise ) {
-			assertTrue( ise.getMessage(), false );
-		}
-	}
 
 	public void testLangNullValue() {
 		try {
@@ -507,10 +453,10 @@ public class TapValidatorTest extends TestCase
 			paramList.add( new Parameter( "REQUEST", "doQuery" ) );
 			paramList.add( new Parameter( "LANG",    "SQL" ) );
 			validator.validate( paramList );
-			assertTrue( false );
+			assertTrue( true );
 		}
 		catch ( IllegalStateException ise ) {
-			assertTrue( true );
+			assertTrue( ise.getMessage(), false );
 		}
 	}
 	
@@ -543,7 +489,8 @@ public class TapValidatorTest extends TestCase
 	public void testFormatNullValue() {
 		try {
 			List<Parameter> paramList = new ArrayList<Parameter>();
-			paramList.add( new Parameter( "REQUEST", "getCapabilities" ) );
+			paramList.add( new Parameter( "REQUEST", "doQuery" ) );
+			paramList.add( new Parameter( "LANG",    "SQL" ) );
 			paramList.add( new Parameter( "Format",    null ) );
 			validator.validate( paramList );
 			assertTrue( false );
@@ -556,7 +503,8 @@ public class TapValidatorTest extends TestCase
 	public void testFormatEmptyValue() {
 		try {
 			List<Parameter> paramList = new ArrayList<Parameter>();
-			paramList.add( new Parameter( "REQUEST", "getCapabilities" ) );
+			paramList.add( new Parameter( "REQUEST", "doQuery" ) );
+			paramList.add( new Parameter( "LANG",    "SQL" ) );
 			paramList.add( new Parameter( "Format",    "" ) );
 			validator.validate( paramList );
 			assertTrue( false );
@@ -569,7 +517,8 @@ public class TapValidatorTest extends TestCase
 	public void testFormatUnknownValue() {
 		try {
 			List<Parameter> paramList = new ArrayList<Parameter>();
-			paramList.add( new Parameter( "REQUEST", "getCapabilities" ) );
+			paramList.add( new Parameter( "REQUEST", "doQuery" ) );
+			paramList.add( new Parameter( "LANG",    "SQL" ) );
 			paramList.add( new Parameter( "Format",  "Unknown" ) );
 			validator.validate( paramList );
 			assertTrue( false );
@@ -582,7 +531,8 @@ public class TapValidatorTest extends TestCase
 	public void testFormatVoTableMime1() {
 		try {
 			List<Parameter> paramList = new ArrayList<Parameter>();
-			paramList.add( new Parameter( "REQUEST", "getCapabilities" ) );
+			paramList.add( new Parameter( "REQUEST", "doQuery" ) );
+			paramList.add( new Parameter( "LANG",    "SQL" ) );
 			paramList.add( new Parameter( "Format",  "application/x-votable+xml" ) );
 			validator.validate( paramList );
 			assertTrue( true );
@@ -595,7 +545,8 @@ public class TapValidatorTest extends TestCase
 	public void testFormatVoTableMime2() {
 		try {
 			List<Parameter> paramList = new ArrayList<Parameter>();
-			paramList.add( new Parameter( "REQUEST", "getCapabilities" ) );
+			paramList.add( new Parameter( "REQUEST", "doQuery" ) );
+			paramList.add( new Parameter( "LANG",    "SQL" ) );
 			paramList.add( new Parameter( "Format",  "text/xml" ) );
 			validator.validate( paramList );
 			assertTrue( true );
@@ -608,7 +559,8 @@ public class TapValidatorTest extends TestCase
 	public void testFormatVoTableShort() {
 		try {
 			List<Parameter> paramList = new ArrayList<Parameter>();
-			paramList.add( new Parameter( "REQUEST", "getCapabilities" ) );
+			paramList.add( new Parameter( "REQUEST", "doQuery" ) );
+			paramList.add( new Parameter( "LANG",    "SQL" ) );
 			paramList.add( new Parameter( "Format",  "votable" ) );
 			validator.validate( paramList );
 			assertTrue( true );
@@ -621,7 +573,8 @@ public class TapValidatorTest extends TestCase
 	public void testFormatCsvMime() {
 		try {
 			List<Parameter> paramList = new ArrayList<Parameter>();
-			paramList.add( new Parameter( "REQUEST", "getCapabilities" ) );
+			paramList.add( new Parameter( "REQUEST", "doQuery" ) );
+			paramList.add( new Parameter( "LANG",    "SQL" ) );
 			paramList.add( new Parameter( "Format",  "text/csv" ) );
 			validator.validate( paramList );
 			assertTrue( true );
@@ -634,7 +587,8 @@ public class TapValidatorTest extends TestCase
 	public void testFormatCsvShort() {
 		try {
 			List<Parameter> paramList = new ArrayList<Parameter>();
-			paramList.add( new Parameter( "REQUEST", "getCapabilities" ) );
+			paramList.add( new Parameter( "REQUEST", "doQuery" ) );
+			paramList.add( new Parameter( "LANG",    "SQL" ) );
 			paramList.add( new Parameter( "Format",  "csv" ) );
 			validator.validate( paramList );
 			assertTrue( true );
@@ -647,7 +601,8 @@ public class TapValidatorTest extends TestCase
 	public void testFormatTsvMime() {
 		try {
 			List<Parameter> paramList = new ArrayList<Parameter>();
-			paramList.add( new Parameter( "REQUEST", "getCapabilities" ) );
+			paramList.add( new Parameter( "REQUEST", "doQuery" ) );
+			paramList.add( new Parameter( "LANG",    "SQL" ) );
 			paramList.add( new Parameter( "Format",  "text/tab-separated-values" ) );
 			validator.validate( paramList );
 			assertTrue( true );
@@ -660,7 +615,8 @@ public class TapValidatorTest extends TestCase
 	public void testFormatTsvShort() {
 		try {
 			List<Parameter> paramList = new ArrayList<Parameter>();
-			paramList.add( new Parameter( "REQUEST", "getCapabilities" ) );
+			paramList.add( new Parameter( "REQUEST", "doQuery" ) );
+			paramList.add( new Parameter( "LANG",    "SQL" ) );
 			paramList.add( new Parameter( "Format",  "tsv" ) );
 			validator.validate( paramList );
 			assertTrue( true );
@@ -673,7 +629,8 @@ public class TapValidatorTest extends TestCase
 	public void testFormatFitsMime() {
 		try {
 			List<Parameter> paramList = new ArrayList<Parameter>();
-			paramList.add( new Parameter( "REQUEST", "getCapabilities" ) );
+			paramList.add( new Parameter( "REQUEST", "doQuery" ) );
+			paramList.add( new Parameter( "LANG",    "SQL" ) );
 			paramList.add( new Parameter( "Format",  "application/fits" ) );
 			validator.validate( paramList );
 			assertTrue( true );
@@ -686,7 +643,8 @@ public class TapValidatorTest extends TestCase
 	public void testFormatFitsShort() {
 		try {
 			List<Parameter> paramList = new ArrayList<Parameter>();
-			paramList.add( new Parameter( "REQUEST", "getCapabilities" ) );
+			paramList.add( new Parameter( "REQUEST", "doQuery" ) );
+			paramList.add( new Parameter( "LANG",    "SQL" ) );
 			paramList.add( new Parameter( "Format",  "fits" ) );
 			validator.validate( paramList );
 			assertTrue( true );
@@ -699,7 +657,8 @@ public class TapValidatorTest extends TestCase
 	public void testFormatTextMime() {
 		try {
 			List<Parameter> paramList = new ArrayList<Parameter>();
-			paramList.add( new Parameter( "REQUEST", "getCapabilities" ) );
+			paramList.add( new Parameter( "REQUEST", "doQuery" ) );
+			paramList.add( new Parameter( "LANG",    "SQL" ) );
 			paramList.add( new Parameter( "Format",  "text/plain" ) );
 			validator.validate( paramList );
 			assertTrue( true );
@@ -712,7 +671,8 @@ public class TapValidatorTest extends TestCase
 	public void testFormatTextShort() {
 		try {
 			List<Parameter> paramList = new ArrayList<Parameter>();
-			paramList.add( new Parameter( "REQUEST", "getCapabilities" ) );
+			paramList.add( new Parameter( "REQUEST", "doQuery" ) );
+			paramList.add( new Parameter( "LANG",    "SQL" ) );
 			paramList.add( new Parameter( "Format",  "text" ) );
 			validator.validate( paramList );
 			assertTrue( true );
@@ -725,7 +685,8 @@ public class TapValidatorTest extends TestCase
 	public void testFormatHtmlMime() {
 		try {
 			List<Parameter> paramList = new ArrayList<Parameter>();
-			paramList.add( new Parameter( "REQUEST", "getCapabilities" ) );
+			paramList.add( new Parameter( "REQUEST", "doQuery" ) );
+			paramList.add( new Parameter( "LANG",    "SQL" ) );
 			paramList.add( new Parameter( "Format",  "text/html" ) );
 			validator.validate( paramList );
 			assertTrue( true );
@@ -738,7 +699,8 @@ public class TapValidatorTest extends TestCase
 	public void testFormatHtmlShort() {
 		try {
 			List<Parameter> paramList = new ArrayList<Parameter>();
-			paramList.add( new Parameter( "REQUEST", "getCapabilities" ) );
+			paramList.add( new Parameter( "REQUEST", "doQuery" ) );
+			paramList.add( new Parameter( "LANG",    "SQL" ) );
 			paramList.add( new Parameter( "Format",  "html" ) );
 			validator.validate( paramList );
 			assertTrue( true );
@@ -751,7 +713,8 @@ public class TapValidatorTest extends TestCase
 	public void testMaxrecNullValue() {
 		try {
 			List<Parameter> paramList = new ArrayList<Parameter>();
-			paramList.add( new Parameter( "REQUEST", "getCapabilities" ) );
+			paramList.add( new Parameter( "REQUEST", "doQuery" ) );
+			paramList.add( new Parameter( "LANG",    "SQL" ) );
 			paramList.add( new Parameter( "MAXREC",   null ) );
 			validator.validate( paramList );
 			assertTrue( false );
@@ -764,7 +727,8 @@ public class TapValidatorTest extends TestCase
 	public void testMaxrecEmptyValue() {
 		try {
 			List<Parameter> paramList = new ArrayList<Parameter>();
-			paramList.add( new Parameter( "REQUEST", "getCapabilities" ) );
+			paramList.add( new Parameter( "REQUEST", "doQuery" ) );
+			paramList.add( new Parameter( "LANG",    "SQL" ) );
 			paramList.add( new Parameter( "MAXREC",  "" ) );
 			validator.validate( paramList );
 			assertTrue( false );
@@ -777,7 +741,8 @@ public class TapValidatorTest extends TestCase
 	public void testMaxrecCharValue() {
 		try {
 			List<Parameter> paramList = new ArrayList<Parameter>();
-			paramList.add( new Parameter( "REQUEST", "getCapabilities" ) );
+			paramList.add( new Parameter( "REQUEST", "doQuery" ) );
+			paramList.add( new Parameter( "LANG",    "SQL" ) );
 			paramList.add( new Parameter( "MAXREC",  "Char" ) );
 			validator.validate( paramList );
 			assertTrue( false );
@@ -790,7 +755,8 @@ public class TapValidatorTest extends TestCase
 	public void testMaxrecFloatValue() {
 		try {
 			List<Parameter> paramList = new ArrayList<Parameter>();
-			paramList.add( new Parameter( "REQUEST", "getCapabilities" ) );
+			paramList.add( new Parameter( "REQUEST", "doQuery" ) );
+			paramList.add( new Parameter( "LANG",    "SQL" ) );
 			paramList.add( new Parameter( "MAXREC",  "3.14" ) );
 			validator.validate( paramList );
 			assertTrue( false );
@@ -803,7 +769,8 @@ public class TapValidatorTest extends TestCase
 	public void testMaxrecNegValue() {
 		try {
 			List<Parameter> paramList = new ArrayList<Parameter>();
-			paramList.add( new Parameter( "REQUEST", "getCapabilities" ) );
+			paramList.add( new Parameter( "REQUEST", "doQuery" ) );
+			paramList.add( new Parameter( "LANG",    "SQL" ) );
 			paramList.add( new Parameter( "MAXREC",  "-1" ) );
 			validator.validate( paramList );
 			assertTrue( false );
@@ -816,7 +783,8 @@ public class TapValidatorTest extends TestCase
 	public void testMtimeNullValue() {
 		try {
 			List<Parameter> paramList = new ArrayList<Parameter>();
-			paramList.add( new Parameter( "REQUEST", "getCapabilities" ) );
+			paramList.add( new Parameter( "REQUEST", "doQuery" ) );
+			paramList.add( new Parameter( "LANG",    "SQL" ) );
 			paramList.add( new Parameter( "MTIME",   null ) );
 			validator.validate( paramList );
 			assertTrue( false );
@@ -829,7 +797,8 @@ public class TapValidatorTest extends TestCase
 	public void testMtimeEmptyValue() {
 		try {
 			List<Parameter> paramList = new ArrayList<Parameter>();
-			paramList.add( new Parameter( "REQUEST", "getCapabilities" ) );
+			paramList.add( new Parameter( "REQUEST", "doQuery" ) );
+			paramList.add( new Parameter( "LANG",    "SQL" ) );
 			paramList.add( new Parameter( "MTIME",  "" ) );
 			validator.validate( paramList );
 			assertTrue( false );
@@ -842,7 +811,8 @@ public class TapValidatorTest extends TestCase
 	public void testMtimeUnsupportedFormat() {
 		try {
 			List<Parameter> paramList = new ArrayList<Parameter>();
-			paramList.add( new Parameter( "REQUEST", "getCapabilities" ) );
+			paramList.add( new Parameter( "REQUEST", "doQuery" ) );
+			paramList.add( new Parameter( "LANG",    "SQL" ) );
 			paramList.add( new Parameter( "MTIME",  "2009-09-30 12:34:56.789:" ) );
 			validator.validate( paramList );
 			assertTrue( false );
@@ -855,7 +825,8 @@ public class TapValidatorTest extends TestCase
 	public void testRunidNullValue() {
 		try {
 			List<Parameter> paramList = new ArrayList<Parameter>();
-			paramList.add( new Parameter( "REQUEST", "getCapabilities" ) );
+			paramList.add( new Parameter( "REQUEST", "doQuery" ) );
+			paramList.add( new Parameter( "LANG",    "SQL" ) );
 			paramList.add( new Parameter( "RUNID",   null ) );
 			validator.validate( paramList );
 			assertTrue( false );
@@ -868,7 +839,8 @@ public class TapValidatorTest extends TestCase
 	public void testRunidEmptyValue() {
 		try {
 			List<Parameter> paramList = new ArrayList<Parameter>();
-			paramList.add( new Parameter( "REQUEST", "getCapabilities" ) );
+			paramList.add( new Parameter( "REQUEST", "doQuery" ) );
+			paramList.add( new Parameter( "LANG",    "SQL" ) );
 			paramList.add( new Parameter( "RUNID",  "" ) );
 			validator.validate( paramList );
 			assertTrue( false );
@@ -881,7 +853,8 @@ public class TapValidatorTest extends TestCase
 	public void testUploadNullValue() {
 		try {
 			List<Parameter> paramList = new ArrayList<Parameter>();
-			paramList.add( new Parameter( "REQUEST", "getCapabilities" ) );
+			paramList.add( new Parameter( "REQUEST", "doQuery" ) );
+			paramList.add( new Parameter( "LANG",    "SQL" ) );
 			paramList.add( new Parameter( "UPLOAD",   null ) );
 			validator.validate( paramList );
 			assertTrue( false );
@@ -894,7 +867,8 @@ public class TapValidatorTest extends TestCase
 	public void testUploadEmptyValue() {
 		try {
 			List<Parameter> paramList = new ArrayList<Parameter>();
-			paramList.add( new Parameter( "REQUEST", "getCapabilities" ) );
+			paramList.add( new Parameter( "REQUEST", "doQuery" ) );
+			paramList.add( new Parameter( "LANG",    "SQL" ) );
 			paramList.add( new Parameter( "UPLOAD",  "" ) );
 			validator.validate( paramList );
 			assertTrue( false );
@@ -907,7 +881,8 @@ public class TapValidatorTest extends TestCase
 	public void testUploadUnknownFormat() {
 		try {
 			List<Parameter> paramList = new ArrayList<Parameter>();
-			paramList.add( new Parameter( "REQUEST", "getCapabilities" ) );
+			paramList.add( new Parameter( "REQUEST", "doQuery" ) );
+			paramList.add( new Parameter( "LANG",    "SQL" ) );
 			paramList.add( new Parameter( "UPLOAD",  "abcdef" ) );
 			validator.validate( paramList );
 			assertTrue( false );
@@ -920,7 +895,8 @@ public class TapValidatorTest extends TestCase
 	public void testUploadMissingTable() {
 		try {
 			List<Parameter> paramList = new ArrayList<Parameter>();
-			paramList.add( new Parameter( "REQUEST", "getCapabilities" ) );
+			paramList.add( new Parameter( "REQUEST", "doQuery" ) );
+			paramList.add( new Parameter( "LANG",    "SQL" ) );
 			paramList.add( new Parameter( "UPLOAD",  ",http://host_a/path" ) );
 			validator.validate( paramList );
 			assertTrue( false );
@@ -933,7 +909,8 @@ public class TapValidatorTest extends TestCase
 	public void testUploadMissingURL() {
 		try {
 			List<Parameter> paramList = new ArrayList<Parameter>();
-			paramList.add( new Parameter( "REQUEST", "getCapabilities" ) );
+			paramList.add( new Parameter( "REQUEST", "doQuery" ) );
+			paramList.add( new Parameter( "LANG",    "SQL" ) );
 			paramList.add( new Parameter( "UPLOAD",  "table_a," ) );
 			validator.validate( paramList );
 			assertTrue( false );
@@ -946,7 +923,8 @@ public class TapValidatorTest extends TestCase
 	public void testUploadFaultyURL() {
 		try {
 			List<Parameter> paramList = new ArrayList<Parameter>();
-			paramList.add( new Parameter( "REQUEST", "getCapabilities" ) );
+			paramList.add( new Parameter( "REQUEST", "doQuery" ) );
+			paramList.add( new Parameter( "LANG",    "SQL" ) );
 			paramList.add( new Parameter( "UPLOAD",  "table_a,FaultyURL" ) );
 			validator.validate( paramList );
 			assertTrue( false );
@@ -959,7 +937,8 @@ public class TapValidatorTest extends TestCase
 	public void testUploadMultipleGood() {
 		try {
 			List<Parameter> paramList = new ArrayList<Parameter>();
-			paramList.add( new Parameter( "REQUEST", "getCapabilities" ) );
+			paramList.add( new Parameter( "REQUEST", "doQuery" ) );
+			paramList.add( new Parameter( "LANG",    "SQL" ) );
 			paramList.add( new Parameter( "UPLOAD",  "table_a,http://host_a/path;table_b,http://host_b/path" ) );
 			validator.validate( paramList );
 			assertTrue( true );
@@ -972,7 +951,8 @@ public class TapValidatorTest extends TestCase
 	public void testUploadMissingFirstPair() {
 		try {
 			List<Parameter> paramList = new ArrayList<Parameter>();
-			paramList.add( new Parameter( "REQUEST", "getCapabilities" ) );
+			paramList.add( new Parameter( "REQUEST", "doQuery" ) );
+			paramList.add( new Parameter( "LANG",    "SQL" ) );
 			paramList.add( new Parameter( "UPLOAD",  ";table_b,http://host_b/path" ) );
 			validator.validate( paramList );
 			assertTrue( false );
@@ -985,7 +965,8 @@ public class TapValidatorTest extends TestCase
 	public void testUploadMissingSecondPair() {
 		try {
 			List<Parameter> paramList = new ArrayList<Parameter>();
-			paramList.add( new Parameter( "REQUEST", "getCapabilities" ) );
+			paramList.add( new Parameter( "REQUEST", "doQuery" ) );
+			paramList.add( new Parameter( "LANG",    "SQL" ) );
 			paramList.add( new Parameter( "UPLOAD",  "table_a,http://host_a/path;" ) );
 			validator.validate( paramList );
 			assertTrue( true );

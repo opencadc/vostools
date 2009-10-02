@@ -69,16 +69,15 @@
 
 package ca.nrc.cadc.tap;
 
-import java.io.IOException;
-import java.io.OutputStream;
-import java.sql.ResultSet;
+import java.util.List;
 
-public class AsciiTableWriter implements TableWriter
+import ca.nrc.cadc.uws.Parameter;
+
+public class SqlValidator extends Validator
 {
-	public void write( ResultSet rs, OutputStream out )
-		throws IOException
+	public void validate( List<Parameter> paramList )
 	{
-		// TODO Auto-generated method stub
+		throw new UnsupportedOperationException( "Not validating SQL at this time." );
 	}
-
+	
 }

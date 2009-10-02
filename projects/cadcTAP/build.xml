@@ -92,7 +92,8 @@
 <property name="jsqlparser" value="${ext.lib}/jsqlparser.jar" />
 <property name="log4j" value="${ext.lib}/log4j.jar" />
 <property name="spring" value="${ext.lib}/spring.jar" />
-<property name="extlib" value="${jsqlparser}:${log4j}:${spring}" />
+<property name="stil" value="${ext.lib}/stil.jar" />
+<property name="extlib" value="${jsqlparser}:${log4j}:${spring}:${stil}" />
 
 <property name="jars" value="${cadc}:${extlib}" />
 
