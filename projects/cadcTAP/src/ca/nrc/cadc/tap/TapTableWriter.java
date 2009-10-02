@@ -73,8 +73,13 @@ import java.io.IOException;
 import java.io.OutputStream;
 import java.sql.ResultSet;
 
+import ca.nrc.cadc.uws.ExecutionPhase;
+
 import uk.ac.starlink.table.ColumnInfo;
+import uk.ac.starlink.table.DefaultValueInfo;
+import uk.ac.starlink.table.DescribedValue;
 import uk.ac.starlink.table.RowListStarTable;
+import uk.ac.starlink.table.ValueInfo;
 import uk.ac.starlink.votable.DataFormat;
 import uk.ac.starlink.votable.VOTableWriter;
 
@@ -88,17 +93,17 @@ public class TapTableWriter implements TableWriter
 	public void write( String message, OutputStream output )
 		throws IOException
 	{
-	    // Define table.
+	    //  Define table.
 		ColumnInfo[] columnInfo = new ColumnInfo[1];
 	    columnInfo[0] = new ColumnInfo( "Message", String.class, "Message text" );
 	    RowListStarTable table = new RowListStarTable( columnInfo );
 	    
-	    // Populate table.
+	    //  Populate table.
 	    table.addRow( new Object[] { message } );
 	    
         //  Specify output format as XML, rather than FITS or binary.
         VOTableWriter voWriter = new VOTableWriter( DataFormat.TABLEDATA, true );
-
+        
         //  Write table.
         voWriter.writeStarTable( table, output );
 	}
@@ -106,12 +111,18 @@ public class TapTableWriter implements TableWriter
 	public void write( Throwable thrown, OutputStream output )
 		throws IOException
 	{
-	    // Define table.
+	    //  Define table.
 		ColumnInfo[] columnInfo = new ColumnInfo[1];
 	    columnInfo[0] = new ColumnInfo( "Message", String.class, "Message text" );
 	    RowListStarTable table = new RowListStarTable( columnInfo );
 	    
-	    // Populate table.
+	    //  Since this method is in response to a Throwable,
+	    //  it is safe to assume that this is an error document.
+	    ValueInfo valInfo = new DefaultValueInfo( "QUERY_STATUS");
+	    DescribedValue descVal = new DescribedValue( valInfo, ExecutionPhase.ERROR );
+	    table.setParameter( descVal );
+
+	    //  Populate table.
 	    table.addRow( new Object[] { thrown.getMessage() } );
 	    Throwable cause = thrown.getCause();
 	    while ( cause != null )
