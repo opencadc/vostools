@@ -111,6 +111,8 @@
     Run:
     ant test
     followed by the following four as -Dkey=value pairs
+    while in the directory that contains the
+    sql/invalid/*.sql and sql/valid/*.sql files.
 -->
 <target name="test" depends="cadcTestTAP">
     <junit>
