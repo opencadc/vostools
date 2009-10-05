@@ -96,19 +96,19 @@ public class SqlQuery implements TapQuery
 		String queryParamName = "QUERY" ;
 		String queryParamValue;
 		for (Parameter parameter : paramList) {
-			if (queryParamName.equals(parameter.getName())) {
+			if (queryParamName.equalsIgnoreCase(parameter.getName())) {
 				found = true;
 				queryParamValue = parameter.getValue();
 				try {
 					rtn = this.adqlParser.parse(queryParamValue);
-					break;
 				} catch (AdqlException ex) {
-					throw new UnsupportedOperationException(ex);
+					throw new IllegalArgumentException(ex);
 				}
+				break;
 			}
 		}
 		if (!found)
-			throw new UnsupportedOperationException( "No way to generate SQL from job param list yet" );
+			throw new IllegalArgumentException( "Parameter incorrect. No QUERY found." );
 		return rtn;
 	}
 
