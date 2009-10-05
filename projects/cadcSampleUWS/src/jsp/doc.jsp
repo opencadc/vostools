@@ -93,7 +93,12 @@
 
 <p>
 The cadcSampleUWS project contains the code for a sample implementation of the cadcUWS JobRunner interface.
-The easiest way to create a custom UWS would be to simply copy and modify this one.
+</p>
+
+<h1>How to use</h1>
+
+<p>
+Verify that this webapp has been deployed by browsing this page on the target server.
 </p>
 <p>
 The HelloWorld class either succeeds or fails, depending on the values supplied for the two parameters of its Job object.
@@ -104,7 +109,19 @@ will cause HelloWorld.run() to sleep for the specified number of seconds and ret
 A negative run time will immediately cause the contents of error.txt to be returned as the error.
 A valid run time combined with PASS=false is intended to simulate a run that works fine for a while before failing.
 </p>
+
+<h1>How to customize</h1>
+
 <p>
+The easiest way to create a custom UWS would be to simply copy and modify this one.
+</p>
+<p>
+Replace ca.nrc.cadc.uws.sample.HelloWorld with your own service by changing what the doit()
+method does between when it sets the phase to EXECUTING and when it gets set to COMPLETED or ERROR.
+</p>
+<p>
+The in the build.xml file, the ext.lib property is the directory that collects together any required external JAR files
+such as those for log4j, restlets, and the servlet API.
 The LogControlServlet is used to initialize log4j logging of java packages specified in the web.xml file.
 It works best if it is configured to be the first servlet loaded by Tomcat 5.5 or later.
 </p>

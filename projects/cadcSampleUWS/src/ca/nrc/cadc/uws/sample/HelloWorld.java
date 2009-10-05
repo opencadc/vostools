@@ -212,7 +212,7 @@ public class HelloWorld implements JobRunner
             if (runfor < 0)
             {
 				logger.debug( "Negative run time: "+runfor );
-            	ErrorSummary error = new ErrorSummary("ERROR: RUNFOR param < 0", new URI("http://"+server+"/cadcSampleUWS/error.txt") );
+            	ErrorSummary error = new ErrorSummary("ERROR: RUNFOR param less than 0", new URI("http://"+server+"/cadcSampleUWS/error.txt") );
 				job.setErrorSummary(error);
 	            job.setExecutionPhase( ExecutionPhase.ERROR );
 				return;
