@@ -66,67 +66,45 @@
 *
 ************************************************************************
 -->
-
-<%@ page language="java" %>
-<%@ page import="java.util.*" %>
-<%@ page import="ca.nrc.cadc.preview.*" %>
-
-<%@ taglib uri="WEB-INF/c.tld" prefix="c"%>
-
-<%
-    String skin = "http://localhost/cadc/skin/";
-    String htmlHead = skin + "htmlHead";
-    String bodyHeader = skin + "bodyHeader";
-    String bodyFooter = skin + "bodyFooter";
-%>
-
 <head>
     <title>cadcSampleUWS</title>
-    <c:catch><c:import url="<%= htmlHead %>" /></c:catch>
 </head>
 <body>
-<c:catch><c:import url="<%= bodyHeader %>" /></c:catch>
 
-<div class="main">
+<%
+String sname = request.getServerName();  
+String async = request.getScheme() + "://" + sname + "/cadcSampleUWS/async";
+String sync = request.getScheme() + "://" + sname + "/cadcSampleUWS/sync";
+%>
 
 <h1>cadcSampleUWS Documentation</h1>
 
 <p>
-The cadcSampleUWS project contains the code for a sample implementation of the cadcUWS JobRunner interface.
+This is the sample UWS service from the open-source <a href="http://googlecode.com/p/opencadc/">OpenCADC</a>. This
+application uses several parts of openCADC: cadcUtil, cadcUWS (base application code with support for both async 
+UWS service and sync services following the POST-redirect-GET pattern), and cadcSampleUWS (this app).
 </p>
 
-<h1>How to use</h1>
+<h1>How to use the sample service and explore UWS</h1>
 
 <p>
-Verify that this webapp has been deployed by browsing this page on the target server.
-</p>
-<p>
-The HelloWorld class either succeeds or fails, depending on the values supplied for the two parameters of its Job object.
-The parameter combination:<br>
-&nbsp;&nbsp;<code>RUNFOR=&lt;some non-negative integer number of seconds&gt;</code><br>
-&nbsp;&nbsp;<code>PASS=true</code><br>
-will cause HelloWorld.run() to sleep for the specified number of seconds and return the contents of results.txt as the result.
-A negative run time will immediately cause the contents of error.txt to be returned as the error.
-A valid run time combined with PASS=false is intended to simulate a run that works fine for a while before failing.
+The UWS job list endpoint is located at <code><%= async %></code>. In  addition to UWS job creation and control, this
+service supports two parameters:
 </p>
 
-<h1>How to customize</h1>
+<ul>
+<li>RUNFOR=&lt;time in seconds&gt;: the amount of time the sample job should run (e.g. sleep) for
+<li>PASS=&lt;true | false&gt;: whether the job should succeed or fail after the specified time
+</ul>
 
 <p>
-The easiest way to create a custom UWS would be to simply copy and modify this one.
-</p>
-<p>
-Replace ca.nrc.cadc.uws.sample.HelloWorld with your own service by changing what the doit()
-method does between when it sets the phase to EXECUTING and when it gets set to COMPLETED or ERROR.
-</p>
-<p>
-The in the build.xml file, the ext.lib property is the directory that collects together any required external JAR files
-such as those for log4j, restlets, and the servlet API.
-The LogControlServlet is used to initialize log4j logging of java packages specified in the web.xml file.
-It works best if it is configured to be the first servlet loaded by Tomcat 5.5 or later.
-</p>
+You can create and control the job as docuemnted in the <a href="http://www.ivoa.net/Documents/UWS/">UWS</a>
+specification. In addition to the async UWS access, you can also run the sample job using the same parameters
+in synchronous fashion from the following URL: <code><%= sync %></code>. Note: The sync implementation is 
+currently limited and only supports POST at this.
+time.
+</pre>
 
-<c:catch><c:import url="<%= bodyFooter %>" /></c:catch>
 </body>
 
 </html>
