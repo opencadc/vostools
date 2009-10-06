@@ -411,6 +411,22 @@ public class TapValidatorTest extends TestCase
 			assertTrue( true );
 		}
 	}
+	
+	public void testAdqlWithoutQuery() {
+		try {
+			List<Parameter> paramList = new ArrayList<Parameter>();
+			paramList.add( new Parameter( "REQUEST", "doQuery" ) );
+			paramList.add( new Parameter( "LANG",    "ADQL" ) );
+			validator.validate( paramList );
+			//  LANG=ADQL must be accompanied by a QUERY parameter but
+			//  the TapVlidator should not be checking that because that
+			//  should be done by the AdqlQuery.
+			assertTrue( true );
+		}
+		catch ( IllegalStateException ise ) {
+			assertTrue( ise.getMessage(), false );
+		}
+	}
 
 	public void testQueryNullValue() {
 		try {

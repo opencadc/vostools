@@ -106,11 +106,13 @@ public class QueryRunnerTest extends TestCase
 	//  Most of the parameter validation testing
 	//  is done in the Validator test classes.
 	
-	public void testInvalidParams() {
+	public void testValidParams() {
 
 		List<Parameter> paramList = new ArrayList<Parameter>();
-		paramList.add( new Parameter( "REQUEST", "getCapabilities" ) );
-
+		paramList.add( new Parameter( "REQUEST", "doQuery" ) );
+		paramList.add( new Parameter( "VERSION", "1.0" ) );
+		paramList.add( new Parameter( "LANG",    "ADQL" ) );
+		paramList.add( new Parameter( "QUERY",   "Sensible query" ) );
 		
 		Job job = new Job( new Long(100),
 				           ExecutionPhase.PENDING,
@@ -127,23 +129,22 @@ public class QueryRunnerTest extends TestCase
 		
 		runner.setJob( job );
 		runner.run();
-		
-		assertEquals( "Unknown REQUEST value: getCapabilities",
-				      job.getErrorSummary().getSummaryMessage() );
-		
+
+		assertEquals( "ca.nrc.cadc.tap.parser.adql.exception.AdqlException: Invalid query syntax.",
+			          job.getErrorSummary().getSummaryMessage() );
+
 		assertEquals( "file:/tmp/QueryRunnerError.xml",
 				      job.getErrorSummary().getDocumentURI().toString() );
-		
-		assertEquals( "ERROR", job.getExecutionPhase().toString() );
+
+		assertEquals( "ERROR", job.getExecutionPhase().toString() ); // for now
+		//assertEquals( "COMPLETED", job.getExecutionPhase().toString() );
 	}
 	
-	public void testValidParams() {
+	public void testInvalidParams() {
 
 		List<Parameter> paramList = new ArrayList<Parameter>();
-		paramList.add( new Parameter( "REQUEST", "doQuery" ) );
-		paramList.add( new Parameter( "VERSION", "1.0" ) );
-		paramList.add( new Parameter( "LANG",    "ADQL" ) );
-		paramList.add( new Parameter( "QUERY",   "Sensible query" ) );
+		paramList.add( new Parameter( "REQUEST", "getCapabilities" ) );
+
 		
 		Job job = new Job( new Long(200),
 				           ExecutionPhase.PENDING,
@@ -160,15 +161,46 @@ public class QueryRunnerTest extends TestCase
 		
 		runner.setJob( job );
 		runner.run();
+		
+		assertEquals( "Unknown REQUEST value: getCapabilities",
+				      job.getErrorSummary().getSummaryMessage() );
+		
+		assertEquals( "file:/tmp/QueryRunnerError.xml",
+				      job.getErrorSummary().getDocumentURI().toString() );
+		
+		assertEquals( "ERROR", job.getExecutionPhase().toString() );
+	}
+	
+	public void testAdqlWithoutQueryParams() {
 
-		assertEquals( "No way to generate SQL from job param list yet.",
+		List<Parameter> paramList = new ArrayList<Parameter>();
+		paramList.add( new Parameter( "REQUEST", "doQuery" ) );
+		paramList.add( new Parameter( "VERSION", "1.0" ) );
+		paramList.add( new Parameter( "LANG",    "ADQL" ) );
+		
+		Job job = new Job( new Long(300),
+				           ExecutionPhase.PENDING,
+                           10L,
+                           new Date(),
+                           new Date(),
+                           new Date(),
+                           new Date(),
+                           new ErrorSummary(),
+                           "Owner",
+                           "Run300",
+                           new ArrayList<Result>(),
+                           paramList );
+		
+		runner.setJob( job );
+		runner.run();
+
+		assertEquals( "Parameter incorrect. No QUERY found.",
 			          job.getErrorSummary().getSummaryMessage() );
 
 		assertEquals( "file:/tmp/QueryRunnerError.xml",
 				      job.getErrorSummary().getDocumentURI().toString() );
 
-		assertEquals( "ERROR", job.getExecutionPhase().toString() ); // for now
-		//assertEquals( "COMPLETED", job.getExecutionPhase().toString() );
+		assertEquals( "ERROR", job.getExecutionPhase().toString() );
 	}
 	
 }
