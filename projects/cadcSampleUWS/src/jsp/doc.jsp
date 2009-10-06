@@ -77,18 +77,21 @@ String async = request.getScheme() + "://" + sname + "/cadcSampleUWS/async";
 String sync = request.getScheme() + "://" + sname + "/cadcSampleUWS/sync";
 %>
 
-<h1>cadcSampleUWS Documentation</h1>
+<h1>cadcSampleUWS: A Sample UWS Service </h1>
 
 <p>
-This is the sample UWS service from the open-source <a href="http://googlecode.com/p/opencadc/">OpenCADC</a>. This
-application uses several parts of openCADC: cadcUtil, cadcUWS (base application code with support for both async 
-UWS service and sync services following the POST-redirect-GET pattern), and cadcSampleUWS (this app).
+This is the sample <a href="http://www.ivoa.net/Documents/UWS/">UWS</a> service from the 
+<a href="http://googlecode.com/p/opencadc/">OpenCADC</a> project. This
+application uses several components from OpenCADC: cadcUtil, cadcUWS (base application code with support for both async 
+service and sync services), and cadcSampleUWS (this app).
 </p>
 
 <h1>How to use the sample service and explore UWS</h1>
 
 <p>
-The UWS job list endpoint is located at <code><%= async %></code>. In  addition to UWS job creation and control, this
+The async UWS job list endpoint: <b><%= async %></b>
+</p>
+In  addition to UWS job creation and control, this
 service supports two parameters:
 </p>
 
@@ -98,11 +101,23 @@ service supports two parameters:
 </ul>
 
 <p>
-You can create and control the job as docuemnted in the <a href="http://www.ivoa.net/Documents/UWS/">UWS</a>
-specification. In addition to the async UWS access, you can also run the sample job using the same parameters
-in synchronous fashion from the following URL: <code><%= sync %></code>. Note: The sync implementation is 
-currently limited and only supports POST at this.
-time.
+You can create and control the job as documented in the <a href="http://www.ivoa.net/Documents/UWS/">UWS</a>
+specification.
+</p>
+
+<h1>Now with synchronous job execution mode!</h1>
+
+<p>
+In addition to the async UWS access, you can also run the sample job using the same parameters
+in synchronous mode. 
+</p>
+<p>
+The sync PRG endpoint: <b><%= sync %></b>
+</p>
+<p>
+Note: The sync implementation is currently limited and only supports POST at this time.
+PRG stands for Post-Redirect-Get, a standard web pattern used here by the sync endpoint. It means that
+you POST a request, get redirected to another URL, and then GET the results.
 </pre>
 
 </body>
