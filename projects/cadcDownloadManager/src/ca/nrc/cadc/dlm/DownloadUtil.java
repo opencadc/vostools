@@ -202,8 +202,9 @@ public class DownloadUtil
                     while ( j.hasNext() )
                     {
                         GeneratedURL gu = new GeneratedURL();
-                        gu.str = pu.str;
                         gu.url = j.next();
+                        //gu.str = pu.str;
+                        gu.str = gu.url.toString();
                         ret.add(gu);
                     }
                 }
