@@ -99,7 +99,7 @@ public class BasicJobManager implements JobManager
      * @param jobID Job Identifier.
      * @return Job instance, or null if none found.
      */
-    public Job getJob(final long jobID)
+    public Job getJob(final String jobID)
     {
         return getJobPersistence().getJob(jobID);
     }

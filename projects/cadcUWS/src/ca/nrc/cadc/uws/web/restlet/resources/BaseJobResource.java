@@ -107,9 +107,9 @@ public abstract class BaseJobResource extends UWSResource
      *
      * @return  long Job ID
      */
-    protected long getJobID()
+    protected String getJobID()
     {
-        return Long.parseLong(getRequestAttribute("jobID"));
+        return getRequestAttribute("jobID");
     }
 
     /**

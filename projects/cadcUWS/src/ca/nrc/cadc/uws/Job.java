@@ -81,7 +81,7 @@ import java.util.Collections;
  */
 public class Job
 {
-    private Long jobId;
+    private String jobId;
     private ExecutionPhase executionPhase;
     private long executionDuration;
     private Date destructionTime;
@@ -112,7 +112,7 @@ public class Job
      * @param resultsList           The List of Results.
      * @param parameterList         The List of Parameters.
      */
-    public Job(final Long jobId, final ExecutionPhase executionPhase,
+    public Job(final String jobId, final ExecutionPhase executionPhase,
                final long executionDuration, final Date destructionTime,
                final Date quote, final Date startTime, final Date endTime,
                final ErrorSummary errorSummary, final String owner,
@@ -139,7 +139,7 @@ public class Job
      *
      * @return Long job ID.
      */
-    public Long getJobId()
+    public String getJobId()
     {
         return jobId;
     }

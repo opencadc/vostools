@@ -86,7 +86,7 @@ public interface JobPersistence
      * @param jobID     The job identifier.
      * @return          Job instance, or null if none found.
      */
-    Job getJob(final long jobID);
+    Job getJob(final String jobID);
 
     /**
      * Obtain a listing of Job instances.

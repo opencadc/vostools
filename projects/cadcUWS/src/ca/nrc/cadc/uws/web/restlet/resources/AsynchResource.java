@@ -164,7 +164,7 @@ public class AsynchResource extends UWSResource
                                                      getAttributeName());
             
             jobRefElement.setPrefix(XML_NAMESPACE_PREFIX);
-            jobRefElement.setAttribute("id", Long.toString(job.getJobId()));
+            jobRefElement.setAttribute("id", job.getJobId());
             jobRefElement.setAttribute("xlink:href",
                                        getHostPart() + "/async/"
                                        + job.getJobId());

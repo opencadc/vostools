@@ -98,7 +98,7 @@ public interface JobManager
      * @param jobID     Job Identifier.
      * @return          Job instance, or null if none found.
      */
-    Job getJob(final long jobID);
+    Job getJob(final String jobID);
 
     /**
      * Persist the given Job.

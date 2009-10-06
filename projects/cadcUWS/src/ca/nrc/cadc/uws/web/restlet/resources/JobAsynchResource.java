@@ -202,7 +202,7 @@ public class JobAsynchResource extends BaseJobResource
         if (pathInfo.endsWith("execute"))
         {
             executeJob();
-            text = Long.toString(job.getJobId());
+            text = job.getJobId();
             jobAttribute = JobAttribute.JOB_ID;
         }
         else if (pathInfo.endsWith("phase"))
@@ -264,7 +264,7 @@ public class JobAsynchResource extends BaseJobResource
             pathInfo = pathInfo.substring(0, pathInfo.length() - 1);
         }
 
-        if (!pathInfo.endsWith(Long.toString(job.getJobId())))
+        if (!pathInfo.endsWith(job.getJobId()))
         {
             buildAttributeXML(document, pathInfo);
         }
@@ -306,7 +306,7 @@ public class JobAsynchResource extends BaseJobResource
                                          JobAttribute.JOB_ID.
                                                  getAttributeName());
         jobIdElement.setPrefix(XML_NAMESPACE_PREFIX);
-        jobIdElement.setTextContent(Long.toString(job.getJobId()));
+        jobIdElement.setTextContent(job.getJobId());
         jobElement.appendChild(jobIdElement);
 
         // <uws:runId>

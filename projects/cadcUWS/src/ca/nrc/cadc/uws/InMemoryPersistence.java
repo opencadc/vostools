@@ -71,10 +71,10 @@
 package ca.nrc.cadc.uws;
 
 
+import java.util.Collection;
+import java.util.Random;
 import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.ConcurrentHashMap;
-import java.util.*;
-
 
 /**
  * Default implementation of the Job ORM.  It consists of an in memory Map.
@@ -82,8 +82,8 @@ import java.util.*;
 public class InMemoryPersistence implements JobPersistence
 {
     // The Database.
-    private final static ConcurrentMap<Long, Job> JOBS =
-            new ConcurrentHashMap<Long, Job>();
+    private final ConcurrentMap<String, Job> jobMap =
+            new ConcurrentHashMap<String, Job>();
 
     
     /**
@@ -99,14 +99,14 @@ public class InMemoryPersistence implements JobPersistence
      * @param jobID The job identifier.
      * @return Job instance, or null if none found.
      */
-    public Job getJob(final long jobID)
+    public Job getJob(final String jobID)
     {
-        return getPersistentJobs().get(jobID);
+        return jobMap.get(jobID);
     }
 
     public Collection<Job> getJobs()
     {
-        return getPersistentJobs().values();
+        return jobMap.values();
     }
 
     /**
@@ -119,7 +119,7 @@ public class InMemoryPersistence implements JobPersistence
     public Job persist(final Job job)
     {
         final Job persistentJob;
-        final Long jobID;
+        final String jobID;
 
         if (job.getJobId() != null)
         {
@@ -136,7 +136,7 @@ public class InMemoryPersistence implements JobPersistence
         }
         else
         {
-            jobID = generateNewID();
+            jobID = generateID();
             persistentJob = new Job(jobID, job.getExecutionPhase(),
                                                job.getExecutionDuration(),
                                                job.getDestructionTime(),
@@ -149,35 +149,23 @@ public class InMemoryPersistence implements JobPersistence
                                                job.getParameterList());
         }
 
-        getPersistentJobs().put(jobID, persistentJob);
+        jobMap.put(jobID, persistentJob);
 
         return persistentJob;
     }
 
-    private ConcurrentMap<Long, Job> getPersistentJobs()
+    // generate a random modest-length lower case string
+    private static int ID_LENGTH = 16;
+    private static String ID_CHARS = "abcdefghijklmnopqrstuvwxyz0123456789";
+
+    private static String generateID()
     {
-        return JOBS;
+        Random rnd = new Random(System.currentTimeMillis());
+        char[] c = new char[ID_LENGTH];
+        c[0] = ID_CHARS.charAt(rnd.nextInt(ID_CHARS.length() - 10)); // letters only
+        for (int i=1; i<ID_LENGTH; i++)
+            c[i] = ID_CHARS.charAt(rnd.nextInt(ID_CHARS.length()));
+        return new String(c);
     }
 
-    /**
-     * Generate a new ID.
-     *
-     * @return  Long ID.
-     */
-    private Long generateNewID()
-    {
-        Long upper = 10000l;
-
-        for (final Map.Entry<Long, Job> entry : getPersistentJobs().entrySet())
-        {
-            final Long key = entry.getKey();
-
-            if (key > upper)
-            {
-                upper = entry.getKey();
-            }
-        }
-
-        return upper + 100l;
-    }
 }
