@@ -108,11 +108,6 @@ public class TapValidatorTest extends TestCase
 			paramList.add( new Parameter( "VERSION", "1.0" ) );
 			paramList.add( new Parameter( "LANG",    "ADQL" ) );
 			paramList.add( new Parameter( "QUERY",   "Sensible query" ) );
-			paramList.add( new Parameter( "FORMAT",  "votable" ) );
-			paramList.add( new Parameter( "MAXREC",  "10" ) );
-			paramList.add( new Parameter( "MTIME",   "2009-09-30T12:34:56.789" ) );
-			paramList.add( new Parameter( "RUNID",   "100" ) );
-			paramList.add( new Parameter( "UPLOAD",  "table_a,http://host_a/path" ) );
 			validator.validate( paramList );
 			assertTrue( true );
 		}
@@ -128,11 +123,6 @@ public class TapValidatorTest extends TestCase
 			paramList.add( new Parameter( "version", "1.0" ) );
 			paramList.add( new Parameter( "lang",    "ADQL-1.0" ) );
 			paramList.add( new Parameter( "query",   "Sensible query" ) );
-			paramList.add( new Parameter( "format",  "votable" ) );
-			paramList.add( new Parameter( "maxrec",  "10" ) );
-			paramList.add( new Parameter( "mtime",   "2009-09-30T12:34:56.789" ) );
-			paramList.add( new Parameter( "runid",   "100" ) );
-			paramList.add( new Parameter( "upload",  "table_a,http://host_a/path" ) );
 			validator.validate( paramList );
 			assertTrue( true );
 		}
@@ -147,11 +137,7 @@ public class TapValidatorTest extends TestCase
 			paramList.add( new Parameter( "REQUEST", "DOQUERY" ) );
 			paramList.add( new Parameter( "VERSION", "1.0" ) );
 			paramList.add( new Parameter( "LANG",    "ADQL" ) );
-			paramList.add( new Parameter( "FORMAT",  "votable" ) );
-			paramList.add( new Parameter( "MAXREC",  "10" ) );
-			paramList.add( new Parameter( "MTIME",   "2009-09-30T12:34:56.789" ) );
-			paramList.add( new Parameter( "RUNID",   "100" ) );
-			paramList.add( new Parameter( "UPLOAD",  "table_a,http://host_a/path" ) );
+			paramList.add( new Parameter( "QUERY",   "Sensible query" ) );
 			validator.validate( paramList );
 			assertTrue( false );
 		}
@@ -166,49 +152,7 @@ public class TapValidatorTest extends TestCase
 			paramList.add( new Parameter( "REQUEST", "doQuery" ) );
 			paramList.add( new Parameter( "VERSION", "1.0" ) );
 			paramList.add( new Parameter( "LANG",    "adql" ) );
-			paramList.add( new Parameter( "FORMAT",  "votable" ) );
-			paramList.add( new Parameter( "MAXREC",  "10" ) );
-			paramList.add( new Parameter( "MTIME",   "2009-09-30T12:34:56.789" ) );
-			paramList.add( new Parameter( "RUNID",   "100" ) );
-			paramList.add( new Parameter( "UPLOAD",  "table_a,http://host_a/path" ) );
-			validator.validate( paramList );
-			assertTrue( false );
-		}
-		catch ( IllegalStateException ise ) {
-			assertTrue( true );
-		}
-	}
-
-	public void testCaseSenseFormatValue() {
-		try {
-			List<Parameter> paramList = new ArrayList<Parameter>();
-			paramList.add( new Parameter( "REQUEST", "doQuery" ) );
-			paramList.add( new Parameter( "VERSION", "1.0" ) );
-			paramList.add( new Parameter( "LANG",    "adql" ) );
-			paramList.add( new Parameter( "FORMAT",  "VOTOABLE" ) );
-			paramList.add( new Parameter( "MAXREC",  "10" ) );
-			paramList.add( new Parameter( "MTIME",   "2009-09-30T12:34:56.789" ) );
-			paramList.add( new Parameter( "RUNID",   "100" ) );
-			paramList.add( new Parameter( "UPLOAD",  "table_a,http://host_a/path" ) );
-			validator.validate( paramList );
-			assertTrue( false );
-		}
-		catch ( IllegalStateException ise ) {
-			assertTrue( true );
-		}
-	}
-
-	public void testCaseSenseMtimeValue() {
-		try {
-			List<Parameter> paramList = new ArrayList<Parameter>();
-			paramList.add( new Parameter( "REQUEST", "doQuery" ) );
-			paramList.add( new Parameter( "VERSION", "1.0" ) );
-			paramList.add( new Parameter( "LANG",    "adql" ) );
-			paramList.add( new Parameter( "FORMAT",  "VOTOABLE" ) );
-			paramList.add( new Parameter( "MAXREC",  "10" ) );
-			paramList.add( new Parameter( "MTIME",   "2009-09-30t12:34:56.789" ) );
-			paramList.add( new Parameter( "RUNID",   "100" ) );
-			paramList.add( new Parameter( "UPLOAD",  "table_a,http://host_a/path" ) );
+			paramList.add( new Parameter( "QUERY",   "Sensible query" ) );
 			validator.validate( paramList );
 			assertTrue( false );
 		}
@@ -223,11 +167,7 @@ public class TapValidatorTest extends TestCase
 			paramList.add( new Parameter( "REQUEST", "doQuery" ) );
 			paramList.add( new Parameter( "VERSION", "1.0" ) );
 			paramList.add( new Parameter( "LANG",    "ADQL" ) );
-			paramList.add( new Parameter( "FORMAT",  "votable" ) );
-			paramList.add( new Parameter( "MAXREC",  "10" ) );
-			paramList.add( new Parameter( "MTIME",   "2009-09-30T12:34:56.789" ) );
-			paramList.add( new Parameter( "RUNID",   "100" ) );
-			paramList.add( new Parameter( "UPLOAD",  "table_a,http://host_a/path" ) );
+			paramList.add( new Parameter( "QUERY",   "Sensible query" ) );
 			paramList.add( new Parameter( "Unknown", null ) );
 			validator.validate( paramList );
 			assertTrue( false );
@@ -242,11 +182,7 @@ public class TapValidatorTest extends TestCase
 			List<Parameter> paramList = new ArrayList<Parameter>();
 			paramList.add( new Parameter( "VERSION", "1.0" ) );
 			paramList.add( new Parameter( "LANG",    "ADQL" ) );
-			paramList.add( new Parameter( "FORMAT",  "votable" ) );
-			paramList.add( new Parameter( "MAXREC",  "10" ) );
-			paramList.add( new Parameter( "MTIME",   "2009-09-30T12:34:56.789" ) );
-			paramList.add( new Parameter( "RUNID",   "100" ) );
-			paramList.add( new Parameter( "UPLOAD",  "table_a,http://host_a/path" ) );
+			paramList.add( new Parameter( "QUERY",   "Sensible query" ) );
 			validator.validate( paramList );
 			assertTrue( false );
 		}
@@ -261,11 +197,7 @@ public class TapValidatorTest extends TestCase
 			paramList.add( new Parameter( "REQUEST", null ) );
 			paramList.add( new Parameter( "VERSION", "1.0" ) );
 			paramList.add( new Parameter( "LANG",    "ADQL" ) );
-			paramList.add( new Parameter( "FORMAT",  "votable" ) );
-			paramList.add( new Parameter( "MAXREC",  "10" ) );
-			paramList.add( new Parameter( "MTIME",   "2009-09-30T12:34:56.789" ) );
-			paramList.add( new Parameter( "RUNID",   "100" ) );
-			paramList.add( new Parameter( "UPLOAD",  "table_a,http://host_a/path" ) );
+			paramList.add( new Parameter( "QUERY",   "Sensible query" ) );
 			validator.validate( paramList );
 			assertTrue( false );
 		}
@@ -280,11 +212,7 @@ public class TapValidatorTest extends TestCase
 			paramList.add( new Parameter( "REQUEST", "" ) );
 			paramList.add( new Parameter( "VERSION", "1.0" ) );
 			paramList.add( new Parameter( "LANG",    "ADQL" ) );
-			paramList.add( new Parameter( "FORMAT",  "votable" ) );
-			paramList.add( new Parameter( "MAXREC",  "10" ) );
-			paramList.add( new Parameter( "MTIME",   "2009-09-30T12:34:56.789" ) );
-			paramList.add( new Parameter( "RUNID",   "100" ) );
-			paramList.add( new Parameter( "UPLOAD",  "table_a,http://host_a/path" ) );
+			paramList.add( new Parameter( "QUERY",   "Sensible query" ) );
 			validator.validate( paramList );
 			assertTrue( false );
 		}
@@ -296,14 +224,10 @@ public class TapValidatorTest extends TestCase
 	public void testRequestUnknownValue() {
 		try {
 			List<Parameter> paramList = new ArrayList<Parameter>();
-			paramList.add( new Parameter( "REQUEST", "unKnown" ) );
+			paramList.add( new Parameter( "REQUEST", "Unknown" ) );
 			paramList.add( new Parameter( "VERSION", "1.0" ) );
 			paramList.add( new Parameter( "LANG",    "ADQL" ) );
-			paramList.add( new Parameter( "FORMAT",  "votable" ) );
-			paramList.add( new Parameter( "MAXREC",  "10" ) );
-			paramList.add( new Parameter( "MTIME",   "2009-09-30T12:34:56.789" ) );
-			paramList.add( new Parameter( "RUNID",   "100" ) );
-			paramList.add( new Parameter( "UPLOAD",  "table_a,http://host_a/path" ) );
+			paramList.add( new Parameter( "QUERY",   "Sensible query" ) );
 			validator.validate( paramList );
 			assertTrue( false );
 		}
@@ -316,7 +240,9 @@ public class TapValidatorTest extends TestCase
 		try {
 			List<Parameter> paramList = new ArrayList<Parameter>();
 			paramList.add( new Parameter( "REQUEST", "doQuery" ) );
+			paramList.add( new Parameter( "VERSION", "1.0" ) );
 			paramList.add( new Parameter( "LANG",    "ADQL" ) );
+			paramList.add( new Parameter( "QUERY",   "Sensible query" ) );
 			validator.validate( paramList );
 			assertTrue( true );
 		}
@@ -367,6 +293,7 @@ public class TapValidatorTest extends TestCase
 			paramList.add( new Parameter( "REQUEST", "doQuery" ) );
 			paramList.add( new Parameter( "VERSION", null ) );
 			paramList.add( new Parameter( "LANG",    "ADQL" ) );
+			paramList.add( new Parameter( "QUERY",   "Sensible query" ) );
 			validator.validate( paramList );
 			assertTrue( false );
 		}
@@ -381,6 +308,7 @@ public class TapValidatorTest extends TestCase
 			paramList.add( new Parameter( "REQUEST", "doQuery" ) );
 			paramList.add( new Parameter( "VERSION", "" ) );
 			paramList.add( new Parameter( "LANG",    "ADQL" ) );
+			paramList.add( new Parameter( "QUERY",   "Sensible query" ) );
 			validator.validate( paramList );
 			assertTrue( false );
 		}
@@ -395,6 +323,7 @@ public class TapValidatorTest extends TestCase
 			paramList.add( new Parameter( "REQUEST", "doQuery" ) );
 			paramList.add( new Parameter( "VERSION", "Unsupported" ) );
 			paramList.add( new Parameter( "LANG",    "ADQL" ) );
+			paramList.add( new Parameter( "QUERY",   "Sensible query" ) );
 			validator.validate( paramList );
 			assertTrue( false );
 		}
@@ -407,12 +336,7 @@ public class TapValidatorTest extends TestCase
 		try {
 			List<Parameter> paramList = new ArrayList<Parameter>();
 			paramList.add( new Parameter( "REQUEST", "doQuery" ) );
-			paramList.add( new Parameter( "VERSION", "1.0" ) );
-			paramList.add( new Parameter( "FORMAT",  "votable" ) );
-			paramList.add( new Parameter( "MAXREC",  "10" ) );
-			paramList.add( new Parameter( "MTIME",   "2009-09-30T12:34:56.789" ) );
-			paramList.add( new Parameter( "RUNID",   "100" ) );
-			paramList.add( new Parameter( "UPLOAD",  "table_a,http://host_a/path" ) );
+			paramList.add( new Parameter( "QUERY",   "Sensible query" ) );
 			validator.validate( paramList );
 			assertTrue( false );
 		}
@@ -426,6 +350,7 @@ public class TapValidatorTest extends TestCase
 			List<Parameter> paramList = new ArrayList<Parameter>();
 			paramList.add( new Parameter( "REQUEST", "doQuery" ) );
 			paramList.add( new Parameter( "LANG",    null ) );
+			paramList.add( new Parameter( "QUERY",   "Sensible query" ) );
 			validator.validate( paramList );
 			assertTrue( false );
 		}
@@ -439,6 +364,7 @@ public class TapValidatorTest extends TestCase
 			List<Parameter> paramList = new ArrayList<Parameter>();
 			paramList.add( new Parameter( "REQUEST", "doQuery" ) );
 			paramList.add( new Parameter( "LANG",    "" ) );
+			paramList.add( new Parameter( "QUERY",   "Sensible query" ) );
 			validator.validate( paramList );
 			assertTrue( false );
 		}
@@ -486,12 +412,12 @@ public class TapValidatorTest extends TestCase
 		}
 	}
 
-	public void testFormatNullValue() {
+	public void testQueryNullValue() {
 		try {
 			List<Parameter> paramList = new ArrayList<Parameter>();
 			paramList.add( new Parameter( "REQUEST", "doQuery" ) );
-			paramList.add( new Parameter( "LANG",    "SQL" ) );
-			paramList.add( new Parameter( "Format",    null ) );
+			paramList.add( new Parameter( "LANG",    "ADQL" ) );
+			paramList.add( new Parameter( "QUERY",   null ) );
 			validator.validate( paramList );
 			assertTrue( false );
 		}
@@ -500,479 +426,17 @@ public class TapValidatorTest extends TestCase
 		}
 	}
 	
-	public void testFormatEmptyValue() {
+	public void testQueryEmptyValue() {
 		try {
 			List<Parameter> paramList = new ArrayList<Parameter>();
 			paramList.add( new Parameter( "REQUEST", "doQuery" ) );
-			paramList.add( new Parameter( "LANG",    "SQL" ) );
-			paramList.add( new Parameter( "Format",    "" ) );
+			paramList.add( new Parameter( "LANG",    "ADQL" ) );
+			paramList.add( new Parameter( "QUERY",   "" ) );
 			validator.validate( paramList );
 			assertTrue( false );
 		}
 		catch ( IllegalStateException ise ) {
 			assertTrue( true );
-		}
-	}
-	
-	public void testFormatUnknownValue() {
-		try {
-			List<Parameter> paramList = new ArrayList<Parameter>();
-			paramList.add( new Parameter( "REQUEST", "doQuery" ) );
-			paramList.add( new Parameter( "LANG",    "SQL" ) );
-			paramList.add( new Parameter( "Format",  "Unknown" ) );
-			validator.validate( paramList );
-			assertTrue( false );
-		}
-		catch ( IllegalStateException ise ) {
-			assertTrue( true );
-		}
-	}
-	
-	public void testFormatVoTableMime1() {
-		try {
-			List<Parameter> paramList = new ArrayList<Parameter>();
-			paramList.add( new Parameter( "REQUEST", "doQuery" ) );
-			paramList.add( new Parameter( "LANG",    "SQL" ) );
-			paramList.add( new Parameter( "Format",  "application/x-votable+xml" ) );
-			validator.validate( paramList );
-			assertTrue( true );
-		}
-		catch ( IllegalStateException ise ) {
-			assertTrue( ise.getMessage(), false );
-		}
-	}
-	
-	public void testFormatVoTableMime2() {
-		try {
-			List<Parameter> paramList = new ArrayList<Parameter>();
-			paramList.add( new Parameter( "REQUEST", "doQuery" ) );
-			paramList.add( new Parameter( "LANG",    "SQL" ) );
-			paramList.add( new Parameter( "Format",  "text/xml" ) );
-			validator.validate( paramList );
-			assertTrue( true );
-		}
-		catch ( IllegalStateException ise ) {
-			assertTrue( ise.getMessage(), false );
-		}
-	}
-	
-	public void testFormatVoTableShort() {
-		try {
-			List<Parameter> paramList = new ArrayList<Parameter>();
-			paramList.add( new Parameter( "REQUEST", "doQuery" ) );
-			paramList.add( new Parameter( "LANG",    "SQL" ) );
-			paramList.add( new Parameter( "Format",  "votable" ) );
-			validator.validate( paramList );
-			assertTrue( true );
-		}
-		catch ( IllegalStateException ise ) {
-			assertTrue( ise.getMessage(), false );
-		}
-	}
-	
-	public void testFormatCsvMime() {
-		try {
-			List<Parameter> paramList = new ArrayList<Parameter>();
-			paramList.add( new Parameter( "REQUEST", "doQuery" ) );
-			paramList.add( new Parameter( "LANG",    "SQL" ) );
-			paramList.add( new Parameter( "Format",  "text/csv" ) );
-			validator.validate( paramList );
-			assertTrue( true );
-		}
-		catch ( IllegalStateException ise ) {
-			assertTrue( ise.getMessage(), false );
-		}
-	}
-	
-	public void testFormatCsvShort() {
-		try {
-			List<Parameter> paramList = new ArrayList<Parameter>();
-			paramList.add( new Parameter( "REQUEST", "doQuery" ) );
-			paramList.add( new Parameter( "LANG",    "SQL" ) );
-			paramList.add( new Parameter( "Format",  "csv" ) );
-			validator.validate( paramList );
-			assertTrue( true );
-		}
-		catch ( IllegalStateException ise ) {
-			assertTrue( ise.getMessage(), false );
-		}
-	}
-	
-	public void testFormatTsvMime() {
-		try {
-			List<Parameter> paramList = new ArrayList<Parameter>();
-			paramList.add( new Parameter( "REQUEST", "doQuery" ) );
-			paramList.add( new Parameter( "LANG",    "SQL" ) );
-			paramList.add( new Parameter( "Format",  "text/tab-separated-values" ) );
-			validator.validate( paramList );
-			assertTrue( true );
-		}
-		catch ( IllegalStateException ise ) {
-			assertTrue( ise.getMessage(), false );
-		}
-	}
-	
-	public void testFormatTsvShort() {
-		try {
-			List<Parameter> paramList = new ArrayList<Parameter>();
-			paramList.add( new Parameter( "REQUEST", "doQuery" ) );
-			paramList.add( new Parameter( "LANG",    "SQL" ) );
-			paramList.add( new Parameter( "Format",  "tsv" ) );
-			validator.validate( paramList );
-			assertTrue( true );
-		}
-		catch ( IllegalStateException ise ) {
-			assertTrue( ise.getMessage(), false );
-		}
-	}
-	
-	public void testFormatFitsMime() {
-		try {
-			List<Parameter> paramList = new ArrayList<Parameter>();
-			paramList.add( new Parameter( "REQUEST", "doQuery" ) );
-			paramList.add( new Parameter( "LANG",    "SQL" ) );
-			paramList.add( new Parameter( "Format",  "application/fits" ) );
-			validator.validate( paramList );
-			assertTrue( true );
-		}
-		catch ( IllegalStateException ise ) {
-			assertTrue( ise.getMessage(), false );
-		}
-	}
-	
-	public void testFormatFitsShort() {
-		try {
-			List<Parameter> paramList = new ArrayList<Parameter>();
-			paramList.add( new Parameter( "REQUEST", "doQuery" ) );
-			paramList.add( new Parameter( "LANG",    "SQL" ) );
-			paramList.add( new Parameter( "Format",  "fits" ) );
-			validator.validate( paramList );
-			assertTrue( true );
-		}
-		catch ( IllegalStateException ise ) {
-			assertTrue( ise.getMessage(), false );
-		}
-	}
-	
-	public void testFormatTextMime() {
-		try {
-			List<Parameter> paramList = new ArrayList<Parameter>();
-			paramList.add( new Parameter( "REQUEST", "doQuery" ) );
-			paramList.add( new Parameter( "LANG",    "SQL" ) );
-			paramList.add( new Parameter( "Format",  "text/plain" ) );
-			validator.validate( paramList );
-			assertTrue( true );
-		}
-		catch ( IllegalStateException ise ) {
-			assertTrue( ise.getMessage(), false );
-		}
-	}
-	
-	public void testFormatTextShort() {
-		try {
-			List<Parameter> paramList = new ArrayList<Parameter>();
-			paramList.add( new Parameter( "REQUEST", "doQuery" ) );
-			paramList.add( new Parameter( "LANG",    "SQL" ) );
-			paramList.add( new Parameter( "Format",  "text" ) );
-			validator.validate( paramList );
-			assertTrue( true );
-		}
-		catch ( IllegalStateException ise ) {
-			assertTrue( ise.getMessage(), false );
-		}
-	}
-	
-	public void testFormatHtmlMime() {
-		try {
-			List<Parameter> paramList = new ArrayList<Parameter>();
-			paramList.add( new Parameter( "REQUEST", "doQuery" ) );
-			paramList.add( new Parameter( "LANG",    "SQL" ) );
-			paramList.add( new Parameter( "Format",  "text/html" ) );
-			validator.validate( paramList );
-			assertTrue( true );
-		}
-		catch ( IllegalStateException ise ) {
-			assertTrue( ise.getMessage(), false );
-		}
-	}
-	
-	public void testFormatHtmlShort() {
-		try {
-			List<Parameter> paramList = new ArrayList<Parameter>();
-			paramList.add( new Parameter( "REQUEST", "doQuery" ) );
-			paramList.add( new Parameter( "LANG",    "SQL" ) );
-			paramList.add( new Parameter( "Format",  "html" ) );
-			validator.validate( paramList );
-			assertTrue( true );
-		}
-		catch ( IllegalStateException ise ) {
-			assertTrue( ise.getMessage(), false );
-		}
-	}
-
-	public void testMaxrecNullValue() {
-		try {
-			List<Parameter> paramList = new ArrayList<Parameter>();
-			paramList.add( new Parameter( "REQUEST", "doQuery" ) );
-			paramList.add( new Parameter( "LANG",    "SQL" ) );
-			paramList.add( new Parameter( "MAXREC",   null ) );
-			validator.validate( paramList );
-			assertTrue( false );
-		}
-		catch ( IllegalStateException ise ) {
-			assertTrue( true );
-		}
-	}
-	
-	public void testMaxrecEmptyValue() {
-		try {
-			List<Parameter> paramList = new ArrayList<Parameter>();
-			paramList.add( new Parameter( "REQUEST", "doQuery" ) );
-			paramList.add( new Parameter( "LANG",    "SQL" ) );
-			paramList.add( new Parameter( "MAXREC",  "" ) );
-			validator.validate( paramList );
-			assertTrue( false );
-		}
-		catch ( IllegalStateException ise ) {
-			assertTrue( true );
-		}
-	}
-	
-	public void testMaxrecCharValue() {
-		try {
-			List<Parameter> paramList = new ArrayList<Parameter>();
-			paramList.add( new Parameter( "REQUEST", "doQuery" ) );
-			paramList.add( new Parameter( "LANG",    "SQL" ) );
-			paramList.add( new Parameter( "MAXREC",  "Char" ) );
-			validator.validate( paramList );
-			assertTrue( false );
-		}
-		catch ( IllegalStateException ise ) {
-			assertTrue( true );
-		}
-	}
-	
-	public void testMaxrecFloatValue() {
-		try {
-			List<Parameter> paramList = new ArrayList<Parameter>();
-			paramList.add( new Parameter( "REQUEST", "doQuery" ) );
-			paramList.add( new Parameter( "LANG",    "SQL" ) );
-			paramList.add( new Parameter( "MAXREC",  "3.14" ) );
-			validator.validate( paramList );
-			assertTrue( false );
-		}
-		catch ( IllegalStateException ise ) {
-			assertTrue( true );
-		}
-	}
-	
-	public void testMaxrecNegValue() {
-		try {
-			List<Parameter> paramList = new ArrayList<Parameter>();
-			paramList.add( new Parameter( "REQUEST", "doQuery" ) );
-			paramList.add( new Parameter( "LANG",    "SQL" ) );
-			paramList.add( new Parameter( "MAXREC",  "-1" ) );
-			validator.validate( paramList );
-			assertTrue( false );
-		}
-		catch ( IllegalStateException ise ) {
-			assertTrue( true );
-		}
-	}
-
-	public void testMtimeNullValue() {
-		try {
-			List<Parameter> paramList = new ArrayList<Parameter>();
-			paramList.add( new Parameter( "REQUEST", "doQuery" ) );
-			paramList.add( new Parameter( "LANG",    "SQL" ) );
-			paramList.add( new Parameter( "MTIME",   null ) );
-			validator.validate( paramList );
-			assertTrue( false );
-		}
-		catch ( IllegalStateException ise ) {
-			assertTrue( true );
-		}
-	}
-	
-	public void testMtimeEmptyValue() {
-		try {
-			List<Parameter> paramList = new ArrayList<Parameter>();
-			paramList.add( new Parameter( "REQUEST", "doQuery" ) );
-			paramList.add( new Parameter( "LANG",    "SQL" ) );
-			paramList.add( new Parameter( "MTIME",  "" ) );
-			validator.validate( paramList );
-			assertTrue( false );
-		}
-		catch ( IllegalStateException ise ) {
-			assertTrue( true );
-		}
-	}
-	
-	public void testMtimeUnsupportedFormat() {
-		try {
-			List<Parameter> paramList = new ArrayList<Parameter>();
-			paramList.add( new Parameter( "REQUEST", "doQuery" ) );
-			paramList.add( new Parameter( "LANG",    "SQL" ) );
-			paramList.add( new Parameter( "MTIME",  "2009-09-30 12:34:56.789:" ) );
-			validator.validate( paramList );
-			assertTrue( false );
-		}
-		catch ( IllegalStateException ise ) {
-			assertTrue( true );
-		}
-	}
-
-	public void testRunidNullValue() {
-		try {
-			List<Parameter> paramList = new ArrayList<Parameter>();
-			paramList.add( new Parameter( "REQUEST", "doQuery" ) );
-			paramList.add( new Parameter( "LANG",    "SQL" ) );
-			paramList.add( new Parameter( "RUNID",   null ) );
-			validator.validate( paramList );
-			assertTrue( false );
-		}
-		catch ( IllegalStateException ise ) {
-			assertTrue( true );
-		}
-	}
-	
-	public void testRunidEmptyValue() {
-		try {
-			List<Parameter> paramList = new ArrayList<Parameter>();
-			paramList.add( new Parameter( "REQUEST", "doQuery" ) );
-			paramList.add( new Parameter( "LANG",    "SQL" ) );
-			paramList.add( new Parameter( "RUNID",  "" ) );
-			validator.validate( paramList );
-			assertTrue( false );
-		}
-		catch ( IllegalStateException ise ) {
-			assertTrue( true );
-		}
-	}
-
-	public void testUploadNullValue() {
-		try {
-			List<Parameter> paramList = new ArrayList<Parameter>();
-			paramList.add( new Parameter( "REQUEST", "doQuery" ) );
-			paramList.add( new Parameter( "LANG",    "SQL" ) );
-			paramList.add( new Parameter( "UPLOAD",   null ) );
-			validator.validate( paramList );
-			assertTrue( false );
-		}
-		catch ( IllegalStateException ise ) {
-			assertTrue( true );
-		}
-	}
-	
-	public void testUploadEmptyValue() {
-		try {
-			List<Parameter> paramList = new ArrayList<Parameter>();
-			paramList.add( new Parameter( "REQUEST", "doQuery" ) );
-			paramList.add( new Parameter( "LANG",    "SQL" ) );
-			paramList.add( new Parameter( "UPLOAD",  "" ) );
-			validator.validate( paramList );
-			assertTrue( false );
-		}
-		catch ( IllegalStateException ise ) {
-			assertTrue( true );
-		}
-	}
-	
-	public void testUploadUnknownFormat() {
-		try {
-			List<Parameter> paramList = new ArrayList<Parameter>();
-			paramList.add( new Parameter( "REQUEST", "doQuery" ) );
-			paramList.add( new Parameter( "LANG",    "SQL" ) );
-			paramList.add( new Parameter( "UPLOAD",  "abcdef" ) );
-			validator.validate( paramList );
-			assertTrue( false );
-		}
-		catch ( IllegalStateException ise ) {
-			assertTrue( true );
-		}
-	}
-	
-	public void testUploadMissingTable() {
-		try {
-			List<Parameter> paramList = new ArrayList<Parameter>();
-			paramList.add( new Parameter( "REQUEST", "doQuery" ) );
-			paramList.add( new Parameter( "LANG",    "SQL" ) );
-			paramList.add( new Parameter( "UPLOAD",  ",http://host_a/path" ) );
-			validator.validate( paramList );
-			assertTrue( false );
-		}
-		catch ( IllegalStateException ise ) {
-			assertTrue( true );
-		}
-	}
-	
-	public void testUploadMissingURL() {
-		try {
-			List<Parameter> paramList = new ArrayList<Parameter>();
-			paramList.add( new Parameter( "REQUEST", "doQuery" ) );
-			paramList.add( new Parameter( "LANG",    "SQL" ) );
-			paramList.add( new Parameter( "UPLOAD",  "table_a," ) );
-			validator.validate( paramList );
-			assertTrue( false );
-		}
-		catch ( IllegalStateException ise ) {
-			assertTrue( true );
-		}
-	}
-	
-	public void testUploadFaultyURL() {
-		try {
-			List<Parameter> paramList = new ArrayList<Parameter>();
-			paramList.add( new Parameter( "REQUEST", "doQuery" ) );
-			paramList.add( new Parameter( "LANG",    "SQL" ) );
-			paramList.add( new Parameter( "UPLOAD",  "table_a,FaultyURL" ) );
-			validator.validate( paramList );
-			assertTrue( false );
-		}
-		catch ( IllegalStateException ise ) {
-			assertTrue( true );
-		}
-	}
-	
-	public void testUploadMultipleGood() {
-		try {
-			List<Parameter> paramList = new ArrayList<Parameter>();
-			paramList.add( new Parameter( "REQUEST", "doQuery" ) );
-			paramList.add( new Parameter( "LANG",    "SQL" ) );
-			paramList.add( new Parameter( "UPLOAD",  "table_a,http://host_a/path;table_b,http://host_b/path" ) );
-			validator.validate( paramList );
-			assertTrue( true );
-		}
-		catch ( IllegalStateException ise ) {
-			assertTrue( ise.getMessage(), false );
-		}
-	}
-	
-	public void testUploadMissingFirstPair() {
-		try {
-			List<Parameter> paramList = new ArrayList<Parameter>();
-			paramList.add( new Parameter( "REQUEST", "doQuery" ) );
-			paramList.add( new Parameter( "LANG",    "SQL" ) );
-			paramList.add( new Parameter( "UPLOAD",  ";table_b,http://host_b/path" ) );
-			validator.validate( paramList );
-			assertTrue( false );
-		}
-		catch ( IllegalStateException ise ) {
-			assertTrue( true );
-		}
-	}
-	
-	public void testUploadMissingSecondPair() {
-		try {
-			List<Parameter> paramList = new ArrayList<Parameter>();
-			paramList.add( new Parameter( "REQUEST", "doQuery" ) );
-			paramList.add( new Parameter( "LANG",    "SQL" ) );
-			paramList.add( new Parameter( "UPLOAD",  "table_a,http://host_a/path;" ) );
-			validator.validate( paramList );
-			assertTrue( true );
-		}
-		catch ( IllegalStateException ise ) {
-			assertTrue( ise.getMessage(), false );
 		}
 	}
 

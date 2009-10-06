@@ -144,11 +144,6 @@ public class QueryRunnerTest extends TestCase
 		paramList.add( new Parameter( "VERSION", "1.0" ) );
 		paramList.add( new Parameter( "LANG",    "ADQL" ) );
 		paramList.add( new Parameter( "QUERY",   "Sensible query" ) );
-		paramList.add( new Parameter( "FORMAT",  "votable" ) );
-		paramList.add( new Parameter( "MAXREC",  "10" ) );
-		paramList.add( new Parameter( "MTIME",   "2009-09-30T12:34:56.789" ) );
-		paramList.add( new Parameter( "RUNID",   "100" ) );
-		paramList.add( new Parameter( "UPLOAD",  "table_a,http://host_a/path" ) );
 		
 		Job job = new Job( new Long(200),
 				           ExecutionPhase.PENDING,

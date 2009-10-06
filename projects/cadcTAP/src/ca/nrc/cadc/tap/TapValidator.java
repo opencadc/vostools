@@ -69,8 +69,6 @@
 
 package ca.nrc.cadc.tap;
 
-import java.net.MalformedURLException;
-import java.net.URL;
 import java.text.ParseException;
 import java.util.List;
 
@@ -132,126 +130,11 @@ public class TapValidator extends Validator
 			}
 			else if ( name.equalsIgnoreCase(TapParams.QUERY.toString() ) )
 			{
-				//  Do nothing.
-				//  This parameter is only relevant to ADQL so it is validated
-				//  by the AdqlValidator class.
-			}
-			else if ( name.equalsIgnoreCase(TapParams.FORMAT.toString() ) )
-			{
 				String value = param.getValue();
-				if ( value == null )
-					throw new IllegalStateException( "Missing FORMAT value" );
-				if ( value==null || value.trim().length()==0 )
-					throw new IllegalStateException( "Empty FORMAT value" );
-				if ( ! ( value.equals("application/x-votable+xml") ||
-						 value.equals("text/xml")                  || value.equalsIgnoreCase("votable") ||
-					     value.equals("text/csv")                  || value.equalsIgnoreCase("csv") ||
-					     value.equals("text/tab-separated-values") || value.equalsIgnoreCase("tsv") ||
-						 value.equals("application/fits")          || value.equalsIgnoreCase("fits") ||
-						 value.equals("text/plain")                || value.equalsIgnoreCase("text") ||
-						 value.equals("text/html")                 || value.equalsIgnoreCase("html") ) )
-					throw new IllegalStateException( "Unknown FORMAT value: "+value );
-			}
-			else if ( name.equalsIgnoreCase(TapParams.MAXREC.toString() ) )
-			{
-				String value = param.getValue();
-				if ( value == null )
-					throw new IllegalStateException( "Missing MAXREC value" );
-				if ( value==null || value.trim().length()==0 )
-					throw new IllegalStateException( "Empty MAXREC value" );
-				int maxRec = 0;
-				try
-				{
-					maxRec = Integer.parseInt( value );
-				}
-				catch ( NumberFormatException nfe )
-				{
-					throw new IllegalStateException( "MAXREC value not an integer" );
-				}
-				if ( maxRec < 0 )
-					throw new IllegalStateException( "MAXREC value is negative" );
-			}
-			else if ( name.equalsIgnoreCase(TapParams.MTIME.toString() ) )
-			{
-				String value = param.getValue();
-				if ( value == null )
-					throw new IllegalStateException( "Missing MTIME value" );
-				if ( value==null || value.trim().length()==0 )
-					throw new IllegalStateException( "Empty MTIME value" );
-				try
-				{
-					DateUtil.toDate( value, DateUtil.IVOA_DATE_FORMAT );
-				}
-				catch ( ParseException pe )
-				{
-					throw new IllegalStateException( "MTIME value not in ISO8601 format" );
-				}
-				//  TODO: 
-				//  The MTIME  parameter cannot  be used with queries that select from multiple tables.
-				//  If MTIME  is used in a such a query the service must reject the request and return an error document.
-			}
-			else if ( name.equalsIgnoreCase(TapParams.RUNID.toString() ) )
-			{
-				String value = param.getValue();
-				if ( value == null )
-					throw new IllegalStateException( "Missing RUNID value" );
-				if ( value==null || value.trim().length()==0 )
-					throw new IllegalStateException( "Empty RUNID value" );
-			}
-			else if ( name.equalsIgnoreCase( TapParams.UPLOAD.toString() ) )
-			{
-				String value = param.getValue();
-				if ( value == null )
-					throw new IllegalStateException( "Missing UPLOAD value" );
-				if ( value==null || value.trim().length()==0 )
-					throw new IllegalStateException( "Empty UPLOAD value" );
-				String pairs [] = value.split(";");
-				for ( int i=0; i<pairs.length; i++ )
-				{
-					String tableUrlPair = null;
-					try
-					{
-						tableUrlPair = pairs[i];
-					}
-					catch (IndexOutOfBoundsException iobe )
-					{
-						throw new IllegalStateException( "UPLOAD value missing table-URL pair at position "+i );
-					}
-					if ( tableUrlPair.length() == 0 )
-						throw new IllegalStateException( "UPLOAD value contains empty table-URL pair at position "+i );
-					String tableUrl [] = tableUrlPair.split(",");
-					String table = null;
-					try
-					{
-						table = tableUrl[0];
-					}
-					catch (IndexOutOfBoundsException iobe )
-					{
-						throw new IllegalStateException( "UPLOAD value missing table at position "+i );
-					}
-					if ( table.length() == 0 )
-						throw new IllegalStateException( "UPLOAD value contains empty table at position "+i );
-					String url = null;
-					try
-					{
-						url = tableUrl[1];
-					}
-					catch (IndexOutOfBoundsException iobe )
-					{
-						throw new IllegalStateException( "UPLOAD value missing URL at position "+i );
-					}
-
-					if ( url.length() == 0 )
-						throw new IllegalStateException( "UPLOAD value contains empty URL at position "+i );
-					try
-					{
-						new URL( url );
-					}
-					catch ( MalformedURLException mue )
-					{
-						throw new IllegalStateException( "UPLOAD value contains invalid URL at position "+i );
-					}
-				}
+				if ( value == null)
+					throw new IllegalStateException( "Missing QUERY value" );
+				if ( value.trim().length() == 0 )
+					throw new IllegalStateException( "Empty QUERY value" );
 			}
 			else
 			{

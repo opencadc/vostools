@@ -94,8 +94,8 @@ public class QueryRunner implements JobRunner
 	
 	static
 	{
-		langValidators.put( Validator.ADQL, "ca.nrc.cadc.tap.AdqlValidator" );
-		langValidators.put( Validator.SQL,  "ca.nrc.cadc.tap.SqlValidator"  );
+		langValidators.put( Validator.ADQL, "ca.nrc.cadc.tap.TapValidator" );
+		langValidators.put( Validator.SQL,  "ca.nrc.cadc.tap.TapValidator"  );
 		langQueries.put(    Validator.ADQL, "ca.nrc.cadc.tap.AdqlQuery"     );
 		langQueries.put(    Validator.SQL,  "ca.nrc.cadc.tap.SqlQuery"      );
 	}
@@ -136,8 +136,21 @@ public class QueryRunner implements JobRunner
     
     private void doit()
     {
+        String fileStoreClassName = null;
         FileStore fs = null;
-    	try
+        
+        try
+        {
+            fileStoreClassName = System.getProperty( "ca.nrc.cadc.tap.QueryRunner.fileStoreClassName" );
+            fs = (FileStore) Class.forName( fileStoreClassName ).newInstance();
+        }
+        catch ( Throwable t )
+        {
+        	logger.error( "Failed to instantiate FileStore class: "+fileStoreClassName, t );
+        	return;
+        }
+
+        try
         {
             job.setExecutionPhase( ExecutionPhase.EXECUTING );
             
@@ -158,8 +171,6 @@ public class QueryRunner implements JobRunner
         	
         	//  Run the sql here.
             
-            String fileStoreClassName = System.getProperty( "ca.nrc.cadc.tap.QueryRunner.fileStoreClassName" );
-            fs = (FileStore) Class.forName( fileStoreClassName ).newInstance();
             URL fsURL = fs.put( null );
 
             throw new UnsupportedOperationException( "Getting here would normally mean success."); // for now
