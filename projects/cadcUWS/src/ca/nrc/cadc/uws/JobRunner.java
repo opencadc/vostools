@@ -89,10 +89,9 @@ public interface JobRunner extends Runnable
     void setJob(final Job job);
     
     /**
-     * Set the current JobPersistence instance. The job runner must persist changes to 
-     * the job state and should do so whenever the job state changes.
-     *
-     * @param jobPersistence        JobPersistence instance.
+     * Run the job. This method is invoked by the JobExecutor to run the job. The run()
+     * method is responsible for setting the Job state: phase, start time, end time, and
+     * setting either the ErrorSummary or adding a Result to the result list.
      */
-//    void setJobPersistence(final JobPersistence jobPersistence);
+    void run();
 }
