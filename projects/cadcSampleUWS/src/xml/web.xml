@@ -171,7 +171,7 @@
             <param-name>logLevelPackages</param-name>
             <param-value>
                 ca.nrc.cadc.log
-                ca.nrc.cadc.uws.sample
+                ca.nrc.cadc.uws
             </param-value>
         </init-param>
       <load-on-startup>1</load-on-startup>

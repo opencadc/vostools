@@ -86,6 +86,7 @@ import ca.nrc.cadc.uws.ErrorSummary;
 import ca.nrc.cadc.uws.JobRunner;
 import ca.nrc.cadc.uws.Parameter;
 import ca.nrc.cadc.uws.Result;
+import java.util.Date;
 
 
 /**
@@ -157,6 +158,7 @@ public class HelloWorld implements JobRunner
         try
         {
             job.setExecutionPhase( ExecutionPhase.EXECUTING );
+            job.setStartTime(new Date());
 
             String server = NetUtil.getServerName( this.getClass() );
             logger.debug( "server="+server );
@@ -177,10 +179,9 @@ public class HelloWorld implements JobRunner
             while ( i.hasNext() )
             {
                 Parameter p = i.next();
-                String s = p.getName().toUpperCase();
-                if (s.equals(PASS))
+                if (PASS.equalsIgnoreCase(p.getName()))
                     passP = p;
-                else if ( s.equals(RUNFOR))
+                else if ( RUNFOR.equalsIgnoreCase(p.getName()))
                     runforP = p;
                 else
                     logger.debug("ignoring unexepcted param: " + p);
@@ -223,18 +224,17 @@ public class HelloWorld implements JobRunner
 			
             if (pass)
             {
+                logger.debug( "Having slept and being told to pass, setting result" );
                 Result result = new Result( "RESULT", new URL("http://"+server+"/cadcSampleUWS/result.txt") );
                 ArrayList<Result> resultList = new ArrayList<Result>();
                 resultList.add( result );
                 job.setResultsList( resultList );
-                logger.debug( "Having slept and being told to pass, invoke persistence here..." );
-                // TODO: invoke JobPersistence somehow
 	            job.setExecutionPhase( ExecutionPhase.COMPLETED );
                 return;
             }
             else
 			{
-                logger.debug( "Having slept and being told to fail, construct error" );
+                logger.debug( "Having slept and being told to fail, setting error" );
 				ErrorSummary error = new ErrorSummary("error from PASS=false", new URI("http://"+server+"/cadcSampleUWS/error.txt") );
 				job.setErrorSummary(error);
 	            job.setExecutionPhase( ExecutionPhase.ERROR );
@@ -248,6 +248,10 @@ public class HelloWorld implements JobRunner
             job.setExecutionPhase( ExecutionPhase.ERROR );
 			return;
 		}
+        finally
+        {
+            job.setEndTime(new Date());
+        }
     }
 
     public Job getJob()

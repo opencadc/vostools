@@ -84,20 +84,24 @@
     <!-- developer convenience: place for extra targets and properties -->
     <import file="extras.xml" optional="true" />
 
-<property name="project" value="cadcUWS" />
+    <property name="project" value="cadcUWS" />
 
-<property name="cadc" value="${lib}/cadcUtil.jar" />
-<property name="ext" value="${ext.lib}/log4j.jar:${ext.lib}/org.restlet.jar:${ext.lib}/org.restlet.ext.xml.jar" />
+    <property name="cadc" value="${lib}/cadcUtil.jar" />
+    <property name="ext" value="${ext.lib}/log4j.jar:${ext.lib}/org.restlet.jar:${ext.lib}/org.restlet.ext.xml.jar" />
 
-<property name="jars" value="${cadc}:${ext}" />
+    <property name="jars" value="${cadc}:${ext}" />
 
 
-<target name="build" depends="compile">
-	<jar jarfile="${build}/lib/${project}.jar"
-		basedir="${build}/class"
-		update="no">
-		<include name="ca/nrc/cadc/**" />
-	</jar>
-</target>
+    <target name="build" depends="compile">
+        <jar jarfile="${build}/lib/${project}.jar"
+            basedir="${build}/class"
+            update="no">
+            <include name="ca/nrc/cadc/**" />
+        </jar>
+    </target>
+
+    <target name="test">
+        <echo message="no tests implemented" />
+    </target>
 
 </project>

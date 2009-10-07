@@ -109,9 +109,7 @@
     <target name="webapp" depends="cadcSampleUWS">
             <war warfile="${build}/webapps/cadcSampleUWS.war" webxml="src/xml/web.xml" update="no">
                 <lib dir="${ext.lib}">
-                    <include name="jstl.jar" />
                     <include name="log4j.jar" />
-                    <include name="standard.jar" />
                     <include name="org.restlet.ext.servlet.jar" />
                     <include name="org.restlet.ext.xml.jar" />
                     <include name="org.restlet.jar" />
@@ -125,10 +123,11 @@
                 <fileset dir="src/jsp">
                     <include name="**/*.jsp" />
                 </fileset>
-                <webinf dir="${ext.lib}/tld">
-                    <include name="c.tld" />
-                </webinf>
             </war>
     </target>
 
+     <target name="test">
+        <echo message="no tests implemented" />
+    </target>
+    
 </project>
