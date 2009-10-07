@@ -101,8 +101,7 @@ public abstract class UWSResource extends ServerResource
     private static final Logger LOGGER = Logger.getLogger(UWSResource.class);
 
     protected final static String XML_NAMESPACE_PREFIX = "uws";
-    protected final static String XML_NAMESPACE_URI = 
-            "http://www.ivoa.net/xml/UWS/v1.0rc3";
+    protected final static String XML_NAMESPACE_URI = "http://www.ivoa.net/xml/UWS/v1.0";
 
     protected FormValidator formValidator;
     protected JobManager jobManager;

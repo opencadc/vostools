@@ -286,25 +286,21 @@ public class JobAsynchResource extends BaseJobResource
         final DateFormat df = DateUtil.getDateFormat(DateUtil.IVOA_DATE_FORMAT,
                                                      DateUtil.UTC);
         final Job job = getJob();
-        final Element jobElement =
-                document.createElementNS(XML_NAMESPACE_URI,
-                                         JobAttribute.JOB.
-                                                 getAttributeName());
+        final Element jobElement = 
+                document.createElementNS(XML_NAMESPACE_URI, 
+                                        JobAttribute.JOB.getAttributeName());
         jobElement.setPrefix(XML_NAMESPACE_PREFIX);
 
         jobElement.setAttribute("xmlns:xlink", "http://www.w3.org/1999/xlink");
-        jobElement.setAttribute("xmlns:xs",
-                                "http://www.w3.org/2001/XMLSchema");
-        jobElement.setAttribute("xmlns:xsi",
-                                "http://www.w3.org/2001/XMLSchema-instance");
+        jobElement.setAttribute("xmlns:xs", "http://www.w3.org/2001/XMLSchema");
+        jobElement.setAttribute("xmlns:xsi", "http://www.w3.org/2001/XMLSchema-instance");
 
         document.appendChild(jobElement);
 
         // <uws:jobId>
         final Element jobIdElement =
                 document.createElementNS(XML_NAMESPACE_URI,
-                                         JobAttribute.JOB_ID.
-                                                 getAttributeName());
+                     JobAttribute.JOB_ID.getAttributeName());
         jobIdElement.setPrefix(XML_NAMESPACE_PREFIX);
         jobIdElement.setTextContent(job.getJobId());
         jobElement.appendChild(jobIdElement);
@@ -312,8 +308,7 @@ public class JobAsynchResource extends BaseJobResource
         // <uws:runId>
         final Element runIdElement =
                 document.createElementNS(XML_NAMESPACE_URI,
-                                         JobAttribute.RUN_ID.
-                                                 getAttributeName());
+                     JobAttribute.RUN_ID.getAttributeName());
         runIdElement.setPrefix(XML_NAMESPACE_PREFIX);
         runIdElement.setTextContent(job.getRunId());
         jobElement.appendChild(runIdElement);
@@ -321,8 +316,7 @@ public class JobAsynchResource extends BaseJobResource
         // <uws:ownerId>
         final Element ownerNameElement =
                 document.createElementNS(XML_NAMESPACE_URI,
-                                         JobAttribute.OWNER_ID.
-                                                 getAttributeName());
+                     JobAttribute.OWNER_ID.getAttributeName());
         ownerNameElement.setPrefix(XML_NAMESPACE_PREFIX);
         if (job.getOwner() == null)
             ownerNameElement.setAttribute("xsi:nil", "true");
@@ -333,8 +327,7 @@ public class JobAsynchResource extends BaseJobResource
         // <uws:phase>
         final Element executionPhaseElement =
                 document.createElementNS(XML_NAMESPACE_URI,
-                                         JobAttribute.EXECUTION_PHASE.
-                                                 getAttributeName());
+                     JobAttribute.EXECUTION_PHASE.getAttributeName());
         executionPhaseElement.setPrefix(XML_NAMESPACE_PREFIX);
         executionPhaseElement.setTextContent(job.getExecutionPhase().name());
         jobElement.appendChild(executionPhaseElement);
@@ -342,8 +335,7 @@ public class JobAsynchResource extends BaseJobResource
         // <uws:quote>
         final Element quoteElement =
                 document.createElementNS(XML_NAMESPACE_URI,
-                                         JobAttribute.QUOTE.
-                                                 getAttributeName());
+                     JobAttribute.QUOTE.getAttributeName());
         quoteElement.setPrefix(XML_NAMESPACE_PREFIX);
         quoteElement.setTextContent(
                 df.format(job.getQuote()) );
@@ -352,8 +344,7 @@ public class JobAsynchResource extends BaseJobResource
         // <uws:startTime>
         final Element startTimeElement =
                 document.createElementNS(XML_NAMESPACE_URI,
-                                         JobAttribute.START_TIME.
-                                                getAttributeName());
+                     JobAttribute.START_TIME.getAttributeName());
         startTimeElement.setPrefix(XML_NAMESPACE_PREFIX);
         if (job.getStartTime() == null)
             startTimeElement.setAttribute("xsi:nil", "true");
@@ -365,8 +356,7 @@ public class JobAsynchResource extends BaseJobResource
         // <uws:endTime>
          final Element endTimeElement =
                 document.createElementNS(XML_NAMESPACE_URI,
-                                         JobAttribute.END_TIME.
-                                                getAttributeName());
+                     JobAttribute.END_TIME.getAttributeName());
         endTimeElement.setPrefix(XML_NAMESPACE_PREFIX);
         if (job.getEndTime() == null)
             endTimeElement.setAttribute("xsi:nil", "true");
@@ -378,8 +368,7 @@ public class JobAsynchResource extends BaseJobResource
         // <uws:executionDuration>
         final Element executionDurationElement =
                 document.createElementNS(XML_NAMESPACE_URI,
-                                         JobAttribute.EXECUTION_DURATION.
-                                                 getAttributeName());
+                     JobAttribute.EXECUTION_DURATION.getAttributeName());
         executionDurationElement.setPrefix(XML_NAMESPACE_PREFIX);
         executionDurationElement.setTextContent(
                 Long.toString(job.getExecutionDuration()));
@@ -388,8 +377,7 @@ public class JobAsynchResource extends BaseJobResource
         // <uws:destructionTime>
         final Element destructionTimeElement =
                 document.createElementNS(XML_NAMESPACE_URI,
-                                         JobAttribute.DESTRUCTION_TIME.
-                                                 getAttributeName());
+                     JobAttribute.DESTRUCTION_TIME.getAttributeName());
         destructionTimeElement.setPrefix(XML_NAMESPACE_PREFIX);
         destructionTimeElement.setTextContent(
                 df.format(job.getDestructionTime()) );
@@ -421,24 +409,21 @@ public class JobAsynchResource extends BaseJobResource
         final ErrorSummary errorSummary = job.getErrorSummary();
         final Element errorSummaryElement =
                 document.createElementNS(XML_NAMESPACE_URI,
-                                         JobAttribute.ERROR_SUMMARY.
-                                                 getAttributeName());
+                     JobAttribute.ERROR_SUMMARY.getAttributeName());
         errorSummaryElement.setPrefix(XML_NAMESPACE_PREFIX);
 
         if (errorSummary != null)
         {
             final Element errorSummaryMessageElement =
                     document.createElementNS(XML_NAMESPACE_URI,
-                                             JobAttribute.ERROR_SUMMARY_MESSAGE.
-                                                     getAttributeName());
+                         JobAttribute.ERROR_SUMMARY_MESSAGE.getAttributeName());
             errorSummaryMessageElement.setPrefix(XML_NAMESPACE_PREFIX);
             errorSummaryMessageElement.setTextContent(
                     errorSummary.getSummaryMessage());
 
             final Element errorDocumentURIElement =
                     document.createElementNS(XML_NAMESPACE_URI,
-                                             JobAttribute.ERROR_SUMMARY_DETAIL_LINK.
-                                                     getAttributeName());
+                         JobAttribute.ERROR_SUMMARY_DETAIL_LINK.getAttributeName());
             errorDocumentURIElement.setPrefix(XML_NAMESPACE_PREFIX);
             errorDocumentURIElement.setTextContent(
                     errorSummary.getDocumentURI() == null
