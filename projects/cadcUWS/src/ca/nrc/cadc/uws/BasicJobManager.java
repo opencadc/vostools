@@ -81,6 +81,9 @@ import java.util.Date;
 public class BasicJobManager implements JobManager
 {
     private JobPersistence jobPersistence;
+    
+    private int timeLimit = 600; // 10 minutes
+    private int destructionLimit = 24; // hours
 
 
     /**
@@ -132,15 +135,14 @@ public class BasicJobManager implements JobManager
 
         if (job.getExecutionDuration() == 0)
         {
-            job.setExecutionDuration(600l);
+            job.setExecutionDuration(timeLimit);
         }
 
-        // Default twenty-four hours.
         if (job.getDestructionTime() == null)
         {
             final Calendar cal = Calendar.getInstance();
             cal.setTime(new Date());
-            cal.add(Calendar.HOUR, 24);
+            cal.add(Calendar.HOUR, destructionLimit);
 
             job.setDestructionTime(cal.getTime());
         }
@@ -149,23 +151,9 @@ public class BasicJobManager implements JobManager
         {
             final Calendar cal = Calendar.getInstance();
             cal.setTime(new Date());
-            cal.add(Calendar.HOUR, 20);
-
+            cal.add(Calendar.SECOND, timeLimit);
+            // assuming immediate queue and execution
             job.setQuote(cal.getTime());
-        }
-
-        if (job.getStartTime() == null)
-        {
-            job.setStartTime(new Date());
-        }
-
-        if (job.getEndTime() == null)
-        {
-            final Calendar cal = Calendar.getInstance();
-            cal.setTime(new Date());
-            cal.add(Calendar.HOUR, 20);
-
-            job.setEndTime(cal.getTime());
         }
     }
 
