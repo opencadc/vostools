@@ -190,7 +190,7 @@ public class QueryRunner implements JobRunner
         		String tmpDir        = System.getProperty( "java.io.tmpdir" );
             	String separator     = System.getProperty( "file.separator" );
             	String errorFileName = System.getProperty( "ca.nrc.cadc.tap.QueryRunner.errorFileName" );
-            	String errorFullPath = tmpDir+separator+errorFileName;
+            	String errorFullPath = tmpDir+separator+errorFileName+job.getJobId()+".xml";
            		logger.debug( "Full path name of error file: "+errorFullPath );
            		
            		File errorFile = new File( errorFullPath );

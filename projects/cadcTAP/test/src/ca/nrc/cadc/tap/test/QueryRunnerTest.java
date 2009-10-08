@@ -114,7 +114,7 @@ public class QueryRunnerTest extends TestCase
 		paramList.add( new Parameter( "LANG",    "ADQL" ) );
 		paramList.add( new Parameter( "QUERY",   "Sensible query" ) );
 		
-		Job job = new Job( new Long(100),
+		Job job = new Job( "100",
 				           ExecutionPhase.PENDING,
                            10L,
                            new Date(),
@@ -133,7 +133,7 @@ public class QueryRunnerTest extends TestCase
 		assertEquals( "ca.nrc.cadc.tap.parser.adql.exception.AdqlException: Invalid query syntax.",
 			          job.getErrorSummary().getSummaryMessage() );
 
-		assertEquals( "file:/tmp/QueryRunnerError.xml",
+		assertEquals( "file:/tmp/QueryRunnerError100.xml",
 				      job.getErrorSummary().getDocumentURI().toString() );
 
 		assertEquals( "ERROR", job.getExecutionPhase().toString() ); // for now
@@ -146,7 +146,7 @@ public class QueryRunnerTest extends TestCase
 		paramList.add( new Parameter( "REQUEST", "getCapabilities" ) );
 
 		
-		Job job = new Job( new Long(200),
+		Job job = new Job( "200",
 				           ExecutionPhase.PENDING,
                            10L,
                            new Date(),
@@ -165,7 +165,7 @@ public class QueryRunnerTest extends TestCase
 		assertEquals( "Unknown REQUEST value: getCapabilities",
 				      job.getErrorSummary().getSummaryMessage() );
 		
-		assertEquals( "file:/tmp/QueryRunnerError.xml",
+		assertEquals( "file:/tmp/QueryRunnerError200.xml",
 				      job.getErrorSummary().getDocumentURI().toString() );
 		
 		assertEquals( "ERROR", job.getExecutionPhase().toString() );
@@ -178,7 +178,7 @@ public class QueryRunnerTest extends TestCase
 		paramList.add( new Parameter( "VERSION", "1.0" ) );
 		paramList.add( new Parameter( "LANG",    "ADQL" ) );
 		
-		Job job = new Job( new Long(300),
+		Job job = new Job( "300",
 				           ExecutionPhase.PENDING,
                            10L,
                            new Date(),
@@ -197,7 +197,7 @@ public class QueryRunnerTest extends TestCase
 		assertEquals( "Parameter incorrect. No QUERY found.",
 			          job.getErrorSummary().getSummaryMessage() );
 
-		assertEquals( "file:/tmp/QueryRunnerError.xml",
+		assertEquals( "file:/tmp/QueryRunnerError300.xml",
 				      job.getErrorSummary().getDocumentURI().toString() );
 
 		assertEquals( "ERROR", job.getExecutionPhase().toString() );
