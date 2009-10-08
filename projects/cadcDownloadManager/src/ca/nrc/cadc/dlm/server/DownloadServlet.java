@@ -173,7 +173,6 @@ public class DownloadServlet extends HttpServlet
                 String[] uri = request.getParameterValues("uri");
                 if (uri != null)
                 {
-
                     uris = DownloadUtil.flattenURIs(uri);
                     log.debug("found " + uri.length + " uri parameters: " + uris);
                 }

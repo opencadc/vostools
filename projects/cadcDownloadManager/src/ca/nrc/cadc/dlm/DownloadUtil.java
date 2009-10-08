@@ -247,16 +247,21 @@ public class DownloadUtil
      */
     public static String flattenURIs(String[] uris)
     {
-        String ret = "";
+        String ret = null;
         if (uris != null && uris.length > 0)
         {
             StringBuffer sb = new StringBuffer();
             for (int i=0; i<uris.length; i++)
             {
                 if (uris[i] != null)
-                    sb.append(uris[i].trim() + ",");
+                {
+                    String ss = uris[i].trim();
+                    if (ss.length() > 0)
+                        sb.append(ss + ",");
+                }
             }
-            ret = sb.substring(0, sb.length() - 1); // omit trailing comma
+            if (sb.length() > 0)
+                ret = sb.substring(0, sb.length() - 1); // omit trailing comma
         }
         return ret;
     }
