@@ -198,7 +198,7 @@ public class QueryRunner implements JobRunner
            		logger.debug( "URI of error file: "+errorURI.toString() );
            		
            		FileOutputStream errorOutput = new FileOutputStream( errorFile );
-           		TapTableWriter errorWriter = new TapTableWriter();
+           		VOTableWriter errorWriter = new VOTableWriter();
            		errorWriter.write( t, errorOutput );
            		errorOutput.close();
            		logger.debug( "Error written to file." );

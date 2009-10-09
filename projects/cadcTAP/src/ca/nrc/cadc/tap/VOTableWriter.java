@@ -81,10 +81,11 @@ import uk.ac.starlink.table.DescribedValue;
 import uk.ac.starlink.table.RowListStarTable;
 import uk.ac.starlink.table.ValueInfo;
 import uk.ac.starlink.votable.DataFormat;
-import uk.ac.starlink.votable.VOTableWriter;
 
-public class TapTableWriter implements TableWriter
+public class VOTableWriter implements TableWriter
 {
+    public VOTableWriter() { }
+    
 	public void write( ResultSet rs, OutputStream output )
 	{
 		throw new UnsupportedOperationException( "Don't know where to get a result set from yet." );
@@ -102,7 +103,7 @@ public class TapTableWriter implements TableWriter
 	    table.addRow( new Object[] { message } );
 	    
         //  Specify output format as XML, rather than FITS or binary.
-        VOTableWriter voWriter = new VOTableWriter( DataFormat.TABLEDATA, true );
+        uk.ac.starlink.votable.VOTableWriter voWriter = new uk.ac.starlink.votable.VOTableWriter( DataFormat.TABLEDATA, true );
         
         //  Write table.
         voWriter.writeStarTable( table, output );
@@ -133,7 +134,7 @@ public class TapTableWriter implements TableWriter
 	    }
 	    
         //  Specify output format as XML, rather than FITS or binary.
-        VOTableWriter voWriter = new VOTableWriter( DataFormat.TABLEDATA, true );
+        uk.ac.starlink.votable.VOTableWriter voWriter = new uk.ac.starlink.votable.VOTableWriter( DataFormat.TABLEDATA, true );
 
         //  Write table.
         voWriter.writeStarTable( table, output );
