@@ -74,13 +74,13 @@ import ca.nrc.cadc.uws.*;
 import ca.nrc.cadc.uws.util.StringUtil;
 import ca.nrc.cadc.date.DateUtil;
 
+import java.net.MalformedURLException;
 import java.text.DateFormat;
 import java.text.ParseException;
 import java.util.Date;
 import java.util.Map;
 import java.util.HashMap;
-import java.net.URI;
-import java.net.URISyntaxException;
+import java.net.URL;
 
 
 /**
@@ -98,15 +98,15 @@ public class JobAssembler
 
 
     /**
-     * Assemble the Job from this assbembler's Form.
+     * Assemble the Job from this assembler's Form.
      *
      * @return      A new Job instance.
      *
-     * @throws URISyntaxException   If a URI cannot be created from the given
+     * @throws MalformedURLException   If a URL cannot be created from the given
      *                              String.
      * @throws ParseException       If the given Dates cannot be parsed.
      */
-    public Job assemble() throws URISyntaxException, ParseException
+    public Job assemble() throws MalformedURLException, ParseException
     {
         final Job job;
         final Map<String, String> valuesMap =
@@ -190,26 +190,26 @@ public class JobAssembler
         final String errorMessage = getForm().getFirstValue(
                 JobAttribute.ERROR_SUMMARY_MESSAGE.getAttributeName().
                         toUpperCase());
-        final String errorDocumentURI = getForm().getFirstValue(
+        final String errorDocumentURL = getForm().getFirstValue(
                 JobAttribute.ERROR_SUMMARY_DETAIL_LINK.getAttributeName().
                         toUpperCase());
 
         final ErrorSummary errorSummary;
 
         if (!StringUtil.hasText(errorMessage)
-            && !StringUtil.hasText(errorDocumentURI))
+            && !StringUtil.hasText(errorDocumentURL))
         {
             errorSummary =
                     new ErrorSummary(errorMessage,
-                                     StringUtil.hasText(errorDocumentURI)
-                                     ? new URI(errorDocumentURI)
+                                     StringUtil.hasText(errorDocumentURL)
+                                     ? new URL(errorDocumentURL)
                                      : null);
         }
         else
         {
             errorSummary = null;
         }
-
+        
         job = new Job(null, executionPhase, durationTime, destructionDate,
                       quoteDate, startDate, null, errorSummary, owner,
                       runID, null, null);

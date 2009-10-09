@@ -108,24 +108,15 @@ public class JobSyncSubmissionResource extends BaseJobResource
         final List<Result> results = job.getResultsList();
         final URL redirectURL;
 
-        try
+        if (results.isEmpty())
         {
-            if (results.isEmpty())
-            {
-                final ErrorSummary errorSummary = job.getErrorSummary();
-                redirectURL = errorSummary.getDocumentURI().toURL();
-            }
-            else
-            {
-                final Result result = results.get(0);
-                redirectURL = result.getURL();
-            }
+            final ErrorSummary errorSummary = job.getErrorSummary();
+            redirectURL = errorSummary.getDocumentURL();
         }
-        catch (MalformedURLException e)
+        else
         {
-            LOGGER.error("Unable to create URL for Error document.", e);
-            throw new WebRepresentationException(
-                    "Unable to create URL for Error document.", e);
+            final Result result = results.get(0);
+            redirectURL = result.getURL();
         }
 
         redirectSeeOther(redirectURL.toString());

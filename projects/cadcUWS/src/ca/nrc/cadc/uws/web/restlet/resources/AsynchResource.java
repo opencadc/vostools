@@ -85,6 +85,7 @@ import java.net.URISyntaxException;
 import ca.nrc.cadc.uws.*;
 import ca.nrc.cadc.uws.web.restlet.JobAssembler;
 import ca.nrc.cadc.uws.web.WebRepresentationException;
+import java.net.MalformedURLException;
 
 
 /**
@@ -124,11 +125,10 @@ public class AsynchResource extends UWSResource
             LOGGER.error("Unable to create Job! ", e);
             throw new WebRepresentationException("Unable to create Job!", e);
         }
-        catch (URISyntaxException e)
+        catch (MalformedURLException e)
         {
-            LOGGER.error("The Error URI is invalid.", e);
-            throw new WebRepresentationException("The Error URI is invalid.",
-                                                 e);
+            LOGGER.error("The Error URL is invalid.", e);
+            throw new WebRepresentationException("The Error URL is invalid.", e);
         }
 
         final Job persistedJob = getJobManager().persist(job);

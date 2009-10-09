@@ -70,7 +70,7 @@
 
 package ca.nrc.cadc.uws;
 
-import java.net.URI;
+import java.net.URL;
 
 
 /**
@@ -83,7 +83,7 @@ import java.net.URI;
 public class ErrorSummary
 {
     private String summaryMessage;
-    private URI documentURI;
+    private URL documentURL;
 
 
     /**
@@ -99,10 +99,10 @@ public class ErrorSummary
      * @param summaryMessage        The summary of the error.
      * @param documentURI           The URI to the actual Document.
      */
-    public ErrorSummary(final String summaryMessage, final URI documentURI)
+    public ErrorSummary(final String summaryMessage, final URL documentURL)
     {
         this.summaryMessage = summaryMessage;
-        this.documentURI = documentURI;
+        this.documentURL = documentURL;
     }
 
 
@@ -111,8 +111,8 @@ public class ErrorSummary
         return summaryMessage;
     }
 
-    public URI getDocumentURI()
+    public URL getDocumentURL()
     {
-        return documentURI;
+        return documentURL;
     }
 }

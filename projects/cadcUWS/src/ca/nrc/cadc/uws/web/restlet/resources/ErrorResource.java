@@ -141,23 +141,13 @@ public class ErrorResource extends BaseJobResource
      */
     protected Representation getRemoteError()
     {
-        try
-        {
-            final URL url =
-                    getJob().getErrorSummary().getDocumentURI().toURL();
-            final Client client =
-                    new Client(getContext(),
-                               Protocol.valueOf(url.getProtocol().
-                                       toUpperCase()));
-            final Response response = client.get(url.toString());
+        final URL url = getJob().getErrorSummary().getDocumentURL();
+        final Client client =
+                new Client(getContext(),
+                           Protocol.valueOf(url.getProtocol().
+                                   toUpperCase()));
+        final Response response = client.get(url.toString());
 
-            return response.getEntity();
-        }
-        catch (MalformedURLException e)
-        {
-            LOGGER.error("Unable to create URL for Error document.", e);
-            throw new WebRepresentationException(
-                    "Unable to create URL for Error document.", e);
-        }
+        return response.getEntity();
     }
 }
