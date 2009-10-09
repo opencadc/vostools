@@ -84,6 +84,9 @@ import ca.nrc.cadc.uws.ExecutionPhase;
 import ca.nrc.cadc.uws.Job;
 import ca.nrc.cadc.uws.JobRunner;
 import ca.nrc.cadc.uws.Parameter;
+import ca.nrc.cadc.uws.Result;
+import java.io.OutputStream;
+import java.sql.ResultSet;
 
 public class QueryRunner implements JobRunner
 {
@@ -138,6 +141,7 @@ public class QueryRunner implements JobRunner
     {
         String fileStoreClassName = null;
         FileStore fs = null;
+        String tmpDir = System.getProperty( "java.io.tmpdir" );
         
         try
         {
@@ -153,62 +157,65 @@ public class QueryRunner implements JobRunner
         try
         {
             job.setExecutionPhase( ExecutionPhase.EXECUTING );
-            
-            TapValidator tapValidator = new TapValidator();
             List<Parameter> paramList = job.getParameterList();
+            
+            // REQUEST, VERSION
+            TapValidator tapValidator = new TapValidator();
             tapValidator.validate( paramList );
             
-            //  The only way to get this far is with REQUEST=doQuery and LANG=ADQL or LANG=SQL.
-
+            // LANG
         	String lang = tapValidator.getLang();
-        	
             Validator langValidator = (Validator) Class.forName( langValidators.get(lang) ).newInstance();
             TapQuery  tapQuery      = (TapQuery)  Class.forName( langQueries.get(lang) ).newInstance();
-        	
         	langValidator.validate( paramList );
-        	
         	String sql = tapQuery.getSQL( paramList );
-        	
-        	//  Run the sql here.
             
-            URL fsURL = fs.put( null );
+            // TODO: UPLOAD
+            
+            // TODO: MAXREC
+            
+            // FORMAT
+            TableWriter writer = TableWriterFactory.getWriter(paramList);
+            
+            // execute
+            ResultSet rs = execute(sql);
+            
+            // write result
+            File tmp = new File(tmpDir, "result_" + job.getJobId() + "." + writer.getExtension());
+            OutputStream ostream = new FileOutputStream(tmp);
+            writer.write(rs, ostream);
+            ostream.close();
 
-            throw new UnsupportedOperationException( "Getting here would normally mean success."); // for now
-        	
-            //job.setExecutionPhase( ExecutionPhase.COMPLETED );
+            // store result
+            URL url = fs.put(tmp);
+            Result res = new Result(tmp.getName(), url);
+            
+            job.setExecutionPhase( ExecutionPhase.COMPLETED );
 		}
         catch ( Throwable t )
         {
         	String errorMessage = null;
-        	URI    errorURI     = null;
+        	URL errorURL        = null;
         	
         	try
         	{
-        		errorMessage = t.getMessage();
+        		errorMessage = t.getClass().getSimpleName() + ":" + t.getMessage();
         		logger.debug( "Error message: "+errorMessage );
-        		
-        		String tmpDir        = System.getProperty( "java.io.tmpdir" );
-            	String separator     = System.getProperty( "file.separator" );
-            	String errorFileName = System.getProperty( "ca.nrc.cadc.tap.QueryRunner.errorFileName" );
-            	String errorFullPath = tmpDir+separator+errorFileName+job.getJobId()+".xml";
-           		logger.debug( "Full path name of error file: "+errorFullPath );
-           		
-           		File errorFile = new File( errorFullPath );
-           		errorURI = errorFile.toURI();
-           		logger.debug( "URI of error file: "+errorURI.toString() );
-           		
+        		VOTableWriter writer = new VOTableWriter();
+                File errorFile = new File( tmpDir, "error_" + job.getJobId() + "." + writer.getExtension() );
+                logger.debug( "Error file: "+errorFile.getAbsolutePath());
            		FileOutputStream errorOutput = new FileOutputStream( errorFile );
-           		VOTableWriter errorWriter = new VOTableWriter();
-           		errorWriter.write( t, errorOutput );
-           		errorOutput.close();
-           		logger.debug( "Error written to file." );
+           		writer.write(t, errorOutput );
+           		errorOutput.close();          		
+                errorURL = fs.put(errorFile);
+           		logger.debug( "Error URL: " + errorURL);
         	}
         	catch ( IOException ioe )
         	{
         		logger.error( "Failed to write error to file: "+ioe.getMessage() );
         	}
         	
-			ErrorSummary error = new ErrorSummary( errorMessage, errorURI );
+			ErrorSummary error = new ErrorSummary( errorMessage, errorURL );
 			job.setErrorSummary( error );
             job.setExecutionPhase( ExecutionPhase.ERROR );
 		}
@@ -220,4 +227,8 @@ public class QueryRunner implements JobRunner
         return job;
     }
 
+    private ResultSet execute(String sql)
+    {
+        throw new UnsupportedOperationException("query execution");
+    }
 }

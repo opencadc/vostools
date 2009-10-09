@@ -62,7 +62,7 @@
 *  <http://www.gnu.org/licenses/>.      pas le cas, consultez :
 *                                       <http://www.gnu.org/licenses/>.
 *
-*  $Revision: 4 $
+*  $Revision: 0 $
 *
 ************************************************************************
 */
@@ -73,77 +73,33 @@ import java.io.IOException;
 import java.io.OutputStream;
 import java.sql.ResultSet;
 
-import ca.nrc.cadc.uws.ExecutionPhase;
-
-import uk.ac.starlink.table.ColumnInfo;
-import uk.ac.starlink.table.DefaultValueInfo;
-import uk.ac.starlink.table.DescribedValue;
-import uk.ac.starlink.table.RowListStarTable;
-import uk.ac.starlink.table.ValueInfo;
-import uk.ac.starlink.votable.DataFormat;
-
-public class VOTableWriter implements TableWriter
+/**
+ *
+ * @author pdowler
+ */
+public class AsciiTableWriter implements TableWriter
 {
-    public VOTableWriter() { }
+    public static String CSV = "csv";
+    public static String TSV = "tsv";
+    
+    private String format;
+    
+    private AsciiTableWriter() { }
+    
+    public AsciiTableWriter(String format)
+    {
+        if ( !CSV.equals(format) && !TSV.equals(format))
+            throw new IllegalArgumentException("illegal format: " + format);
+        this.format = format;
+    }
 
     public String getExtension()
     {
-        return "xml";
+        return format;
     }
     
-    
-	public void write( ResultSet rs, OutputStream output )
-	{
-		throw new UnsupportedOperationException( "Don't know where to get a result set from yet." );
-	}
-	
-	public void write( String message, OutputStream output )
-		throws IOException
-	{
-	    //  Define table.
-		ColumnInfo[] columnInfo = new ColumnInfo[1];
-	    columnInfo[0] = new ColumnInfo( "Message", String.class, "Message text" );
-	    RowListStarTable table = new RowListStarTable( columnInfo );
-	    
-	    //  Populate table.
-	    table.addRow( new Object[] { message } );
-	    
-        //  Specify output format as XML, rather than FITS or binary.
-        uk.ac.starlink.votable.VOTableWriter voWriter = new uk.ac.starlink.votable.VOTableWriter( DataFormat.TABLEDATA, true );
-        
-        //  Write table.
-        voWriter.writeStarTable( table, output );
-	}
-	
-	public void write( Throwable thrown, OutputStream output )
-		throws IOException
-	{
-	    //  Define table.
-		ColumnInfo[] columnInfo = new ColumnInfo[1];
-	    columnInfo[0] = new ColumnInfo( "Message", String.class, "Message text" );
-	    RowListStarTable table = new RowListStarTable( columnInfo );
-	    
-	    //  Since this method is in response to a Throwable,
-	    //  it is safe to assume that this is an error document.
-	    ValueInfo valInfo = new DefaultValueInfo( "QUERY_STATUS");
-	    DescribedValue descVal = new DescribedValue( valInfo, ExecutionPhase.ERROR );
-	    table.setParameter( descVal );
-
-	    //  Populate table.
-	    table.addRow( new Object[] { thrown.getMessage() } );
-	    Throwable cause = thrown.getCause();
-	    while ( cause != null )
-	    {
-	    	String message = cause.getMessage();
-		    table.addRow( new Object[] { message } );
-		    cause = cause.getCause();
-	    }
-	    
-        //  Specify output format as XML, rather than FITS or binary.
-        uk.ac.starlink.votable.VOTableWriter voWriter = new uk.ac.starlink.votable.VOTableWriter( DataFormat.TABLEDATA, true );
-
-        //  Write table.
-        voWriter.writeStarTable( table, output );
-	}
-
+    public void write(ResultSet rs, OutputStream out) throws IOException
+    {
+        throw new UnsupportedOperationException("Not supported yet.");
+    }
 }

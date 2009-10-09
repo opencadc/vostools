@@ -75,6 +75,13 @@ import java.sql.ResultSet;
 
 public interface TableWriter
 {
+    /**
+     * Get the usual filename extenasion for this format.
+     * 
+     * @return filename extension
+     */
+    public String getExtension();
+    
 	public void write( ResultSet rs, OutputStream out )
 		throws IOException;
 }

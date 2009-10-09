@@ -62,88 +62,81 @@
 *  <http://www.gnu.org/licenses/>.      pas le cas, consultez :
 *                                       <http://www.gnu.org/licenses/>.
 *
-*  $Revision: 4 $
+*  $Revision: 0 $
 *
 ************************************************************************
 */
 
 package ca.nrc.cadc.tap;
 
-import java.io.IOException;
-import java.io.OutputStream;
-import java.sql.ResultSet;
+import ca.nrc.cadc.uws.Parameter;
+import java.util.Iterator;
+import java.util.List;
+import java.util.Map;
+import java.util.TreeMap;
 
-import ca.nrc.cadc.uws.ExecutionPhase;
-
-import uk.ac.starlink.table.ColumnInfo;
-import uk.ac.starlink.table.DefaultValueInfo;
-import uk.ac.starlink.table.DescribedValue;
-import uk.ac.starlink.table.RowListStarTable;
-import uk.ac.starlink.table.ValueInfo;
-import uk.ac.starlink.votable.DataFormat;
-
-public class VOTableWriter implements TableWriter
+/**
+ * Factory that handles the FORMAT parameter and creates a suitable TableWriter.
+ * 
+ * @author pdowler
+ */
+public class TableWriterFactory
 {
-    public VOTableWriter() { }
-
-    public String getExtension()
+    private static String VOTABLE = "votable";
+    private static String CSV = AsciiTableWriter.CSV;
+    private static String TSV = AsciiTableWriter.TSV;
+    
+    public static String FORMAT = "FORMAT";
+    public static String DEFAULT_FORMAT = "votable";
+    
+    
+    
+    private static Map<String,String> knownFormats;
+    
+    static
     {
-        return "xml";
+        knownFormats = new TreeMap<String,String>();
+        knownFormats.put("application/x-votable+xml", VOTABLE);
+        knownFormats.put("text/xml", VOTABLE);
+        knownFormats.put("text/csv", CSV);
+        knownFormats.put("text/tab-separated-values", TSV);
+        //knownFormats.put("application/fits", FITS);
+        //knownFormats.put("text/plain", TEXT);
+        //knownFormats.put("text/html", HTML);
+        knownFormats.put(VOTABLE, VOTABLE);
+        knownFormats.put(CSV, CSV);
+        knownFormats.put(TSV, TSV);
+        //knownFormats.put(FITS, FITS);
+        //knownFormats.put(TEXT, TEXT);
+        //knownFormats.put(HTML, HTML);
     }
     
-    
-	public void write( ResultSet rs, OutputStream output )
-	{
-		throw new UnsupportedOperationException( "Don't know where to get a result set from yet." );
-	}
-	
-	public void write( String message, OutputStream output )
-		throws IOException
-	{
-	    //  Define table.
-		ColumnInfo[] columnInfo = new ColumnInfo[1];
-	    columnInfo[0] = new ColumnInfo( "Message", String.class, "Message text" );
-	    RowListStarTable table = new RowListStarTable( columnInfo );
-	    
-	    //  Populate table.
-	    table.addRow( new Object[] { message } );
-	    
-        //  Specify output format as XML, rather than FITS or binary.
-        uk.ac.starlink.votable.VOTableWriter voWriter = new uk.ac.starlink.votable.VOTableWriter( DataFormat.TABLEDATA, true );
+    public static TableWriter getWriter(List<Parameter> params)
+    {
+        String fmt = null;
+        Iterator<Parameter> i = params.iterator();
+        while ( i.hasNext() )
+        {
+            Parameter p = i.next();
+            if ( FORMAT.equalsIgnoreCase(p.getName()))
+            {
+                fmt = p.getValue().toLowerCase();
+                if ( !knownFormats.containsKey(fmt))
+                    throw new IllegalArgumentException("unsupported FORMAT: " + p.getValue());
+                break;
+            }
+        }
+        if (fmt == null)
+            fmt = DEFAULT_FORMAT;
+        fmt = knownFormats.get(fmt);
         
-        //  Write table.
-        voWriter.writeStarTable( table, output );
-	}
-	
-	public void write( Throwable thrown, OutputStream output )
-		throws IOException
-	{
-	    //  Define table.
-		ColumnInfo[] columnInfo = new ColumnInfo[1];
-	    columnInfo[0] = new ColumnInfo( "Message", String.class, "Message text" );
-	    RowListStarTable table = new RowListStarTable( columnInfo );
-	    
-	    //  Since this method is in response to a Throwable,
-	    //  it is safe to assume that this is an error document.
-	    ValueInfo valInfo = new DefaultValueInfo( "QUERY_STATUS");
-	    DescribedValue descVal = new DescribedValue( valInfo, ExecutionPhase.ERROR );
-	    table.setParameter( descVal );
-
-	    //  Populate table.
-	    table.addRow( new Object[] { thrown.getMessage() } );
-	    Throwable cause = thrown.getCause();
-	    while ( cause != null )
-	    {
-	    	String message = cause.getMessage();
-		    table.addRow( new Object[] { message } );
-		    cause = cause.getCause();
-	    }
-	    
-        //  Specify output format as XML, rather than FITS or binary.
-        uk.ac.starlink.votable.VOTableWriter voWriter = new uk.ac.starlink.votable.VOTableWriter( DataFormat.TABLEDATA, true );
-
-        //  Write table.
-        voWriter.writeStarTable( table, output );
-	}
-
+        if (VOTABLE.equals(fmt))
+            return new VOTableWriter();
+        if (CSV.equals(fmt))
+            return new AsciiTableWriter(CSV);
+        if (TSV.equals(fmt))
+            return new AsciiTableWriter(TSV);
+        
+        throw new RuntimeException("BUG: failed to pick a TableWriter");
+    }
 }
