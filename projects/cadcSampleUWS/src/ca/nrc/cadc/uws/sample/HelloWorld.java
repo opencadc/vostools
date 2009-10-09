@@ -71,7 +71,6 @@
 package ca.nrc.cadc.uws.sample;
 
 
-import java.net.URI;
 import java.net.URL;
 import java.util.ArrayList;
 import java.util.Iterator;
@@ -168,7 +167,8 @@ public class HelloWorld implements JobRunner
             if (params == null)
             {
 				logger.error("Missing param list");
-				ErrorSummary error = new ErrorSummary("ERROR: No param list found in job", new URI("http://"+server+"/cadcSampleUWS/error.txt") );
+				ErrorSummary error = new ErrorSummary("ERROR: No param list found in job", 
+                        new URL("http://"+server+"/cadcSampleUWS/error.txt") );
 				job.setErrorSummary(error);
 	            job.setExecutionPhase( ExecutionPhase.ERROR );
 				return;
@@ -213,7 +213,8 @@ public class HelloWorld implements JobRunner
             if (runfor < 0)
             {
 				logger.debug( "Negative run time: "+runfor );
-            	ErrorSummary error = new ErrorSummary("ERROR: RUNFOR param less than 0", new URI("http://"+server+"/cadcSampleUWS/error.txt") );
+            	ErrorSummary error = new ErrorSummary("ERROR: RUNFOR param less than 0", 
+                        new URL("http://"+server+"/cadcSampleUWS/error.txt") );
 				job.setErrorSummary(error);
 	            job.setExecutionPhase( ExecutionPhase.ERROR );
 				return;
@@ -235,7 +236,7 @@ public class HelloWorld implements JobRunner
             else
 			{
                 logger.debug( "Having slept and being told to fail, setting error" );
-				ErrorSummary error = new ErrorSummary("error from PASS=false", new URI("http://"+server+"/cadcSampleUWS/error.txt") );
+				ErrorSummary error = new ErrorSummary("error from PASS=false", new URL("http://"+server+"/cadcSampleUWS/error.txt") );
 				job.setErrorSummary(error);
 	            job.setExecutionPhase( ExecutionPhase.ERROR );
 				return;
