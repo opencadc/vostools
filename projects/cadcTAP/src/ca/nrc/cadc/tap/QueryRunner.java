@@ -72,7 +72,6 @@ package ca.nrc.cadc.tap;
 import java.io.File;
 import java.io.FileOutputStream;
 import java.io.IOException;
-import java.net.URI;
 import java.net.URL;
 import java.util.HashMap;
 import java.util.List;
@@ -97,10 +96,8 @@ public class QueryRunner implements JobRunner
 	
 	static
 	{
-		langValidators.put( Validator.ADQL, "ca.nrc.cadc.tap.TapValidator" );
-		langValidators.put( Validator.SQL,  "ca.nrc.cadc.tap.TapValidator"  );
-		langQueries.put(    Validator.ADQL, "ca.nrc.cadc.tap.AdqlQuery"     );
-		langQueries.put(    Validator.SQL,  "ca.nrc.cadc.tap.SqlQuery"      );
+		langQueries.put(Validator.ADQL, "ca.nrc.cadc.tap.AdqlQuery");
+		langQueries.put(Validator.SQL, "ca.nrc.cadc.tap.SqlQuery");
 	}
 	
 	private Job job;
@@ -142,7 +139,7 @@ public class QueryRunner implements JobRunner
         String fileStoreClassName = null;
         FileStore fs = null;
         String tmpDir = System.getProperty( "java.io.tmpdir" );
-        
+        job.setExecutionPhase(ExecutionPhase.UNKNOWN);
         try
         {
             fileStoreClassName = System.getProperty( "ca.nrc.cadc.tap.QueryRunner.fileStoreClassName" );
