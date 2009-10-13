@@ -73,6 +73,7 @@ import java.util.List;
 
 import ca.nrc.cadc.tap.parser.adql.AdqlManager;
 import ca.nrc.cadc.tap.parser.adql.AdqlParser;
+import ca.nrc.cadc.tap.parser.adql.TapSelectItem;
 import ca.nrc.cadc.tap.parser.adql.exception.AdqlException;
 import ca.nrc.cadc.uws.Parameter;
 
@@ -110,5 +111,14 @@ public class AdqlQuery implements TapQuery
 		if (!found)
 			throw new IllegalArgumentException( "Parameter incorrect. No QUERY found." );
 		return rtn;
+	}
+
+	/* (non-Javadoc)
+	 * @see ca.nrc.cadc.tap.TapQuery#getSelectList(java.lang.String)
+	 */
+	@Override
+	public List<TapSelectItem> getSelectList(String query) {
+		// TODO Auto-generated method stub
+		return null;
 	}
 }

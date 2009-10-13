@@ -178,7 +178,7 @@ public class SqlParserTest {
 		}
 	}
 
-	@Test
+	//@Test
 	public void testColumnReference() {
 		this.adqlInput = "select top 123 "
 			+ "ctype1, ctype2, ctype2 "
@@ -190,7 +190,7 @@ public class SqlParserTest {
 		doValidate(expectValid);
 	}
 
-	@Test
+	//@Test
 	public void testColumnIndexReference() {
 		boolean expectValid = false;
 		this.adqlInput = "select top 123 "
@@ -200,7 +200,7 @@ public class SqlParserTest {
 			+ " order by 22";
 		doValidate(expectValid);
 	}
-	@Test
+	//@Test
 	public void testNegativeColumnIndexReference() {
 		boolean expectValid = false;
 		this.adqlInput = "select top 123 "
@@ -210,7 +210,7 @@ public class SqlParserTest {
 			+ " order by -2";
 		doValidate(expectValid);
 	}
-	@Test
+	//@Test
 	public void testGoodColumnIndexReference() {
 		boolean expectValid = true;
 		this.adqlInput = "select top 123 "
@@ -220,7 +220,7 @@ public class SqlParserTest {
 			+ " order by 2";
 		doValidate(expectValid);
 	}
-	@Test
+	//@Test
 	public void testGoodAllTableColumnsSubSelect() {
 		boolean expectValid = true;
 		this.adqlInput = "select qq.*"
@@ -228,7 +228,7 @@ public class SqlParserTest {
 			+ " where cd1_1 > 432.1 ";
 		doValidate(expectValid);
 	}
-	@Test
+	//@Test
 	public void testGoodAllTableColumnsSubSelect1() {
 		boolean expectValid = true;
 		this.adqlInput = "select qq.*"
@@ -236,7 +236,7 @@ public class SqlParserTest {
 			+ " where cd1_1 > 432.1 ";
 		doValidate(expectValid);
 	}
-	@Test
+	//@Test
 	public void testGoodAllTableColumnsSubSelect2() {
 		boolean expectValid = false;
 		this.adqlInput = "select qq.*"
@@ -244,7 +244,7 @@ public class SqlParserTest {
 			+ " where cd1_1 > 432.1 ";
 		doValidate(expectValid);
 	}
-	@Test
+	//@Test
 	public void testGoodAllTableColumnsSubSelect4() {
 		boolean expectValid = false;
 		this.adqlInput = "select qq.*"
@@ -252,7 +252,7 @@ public class SqlParserTest {
 			+ " where cd1_1 > 432.1 ";
 		doValidate(expectValid);
 	}
-	@Test
+	//@Test
 	public void testGoodFromSubSelect() {
 		boolean expectValid = true;
 		this.adqlInput = "select top 23 "
@@ -263,25 +263,25 @@ public class SqlParserTest {
 			+ " order by 2";
 		doValidate(expectValid);
 	}
-	@Test
+	//@Test
 	public void testAmbiguousTable() {
 		boolean expectValid = false;
 		this.adqlInput = "select project, shape from plane" ;
 		doValidate(expectValid);
 	}
-	@Test
+	//@Test
 	public void testInvalidTable() {
 		boolean expectValid = false;
 		this.adqlInput = "select project, shape from spectral" ;
 		doValidate(expectValid);
 	}
-	@Test
+	//@Test
 	public void testValidTable() {
 		boolean expectValid = true;
 		this.adqlInput = "select filter_lo, s.filter_hi from spectral s" ;
 		doValidate(expectValid);
 	}
-	@Test
+	//@Test
 	public void testJoins() {
 		boolean expectValid = false;
 		this.adqlInput = "select aa.aaa, bb.bbb, cc.ccc from tablea aa, tableb bb, tablec cc where aa.a = bb.c and bb.a=cc.d" ;
@@ -290,7 +290,7 @@ public class SqlParserTest {
 					" tableb bb join (select ccc from tablec) using (ddd) where aa.a = bb.c and bb.a=cc.d" ;
 		doValidate(expectValid);
 	}
-	@Test
+	//@Test
 	public void testAmbiguousTableName() {
 		boolean expectValid = false;
 		this.adqlInput = "select s.*"
@@ -298,7 +298,7 @@ public class SqlParserTest {
 			+ " where s.obsID = plane.obsID";
 		doValidate(expectValid);
 	}
-	@Test
+	//@Test
 	public void testAmbiguousTableName2() {
 		boolean expectValid = true;
 		this.adqlInput = "select s.*"
@@ -306,7 +306,7 @@ public class SqlParserTest {
 			+ " where s.obsID = plane.obsID";
 		doValidate(expectValid);
 	}
-	@Test
+	//@Test
 	public void testAmbiguousWhereColumn() {
 		boolean expectValid = false;
 		this.adqlInput = "select s.*"
@@ -314,7 +314,7 @@ public class SqlParserTest {
 			+ " where obsID = 333";
 		doValidate(expectValid);
 	}
-	@Test
+	//@Test
 	public void testAmbiguousWhereColumn2() {
 		boolean expectValid = true;
 		this.adqlInput = "select s.*"
@@ -322,7 +322,7 @@ public class SqlParserTest {
 			+ " where project = 333";
 		doValidate(expectValid);
 	}
-	@Test
+	//@Test
 	public void testGoodWhereSubSelect() {
 		boolean expectValid = true;
 		this.adqlInput = "select "
@@ -335,7 +335,7 @@ public class SqlParserTest {
 			+ " order by 2";
 		doValidate(expectValid);
 	}
-	@Test
+	//@Test
 	public void testBadWhereSubSelect() {
 		boolean expectValid = false;
 		this.adqlInput = "select "
@@ -348,7 +348,7 @@ public class SqlParserTest {
 			+ " order by 2";
 		doValidate(expectValid);
 	}
-	@Test
+	//@Test
 	public void testBadHaving() {
 		// having without group_by
 		boolean expectValid = false;
@@ -360,7 +360,7 @@ public class SqlParserTest {
 			+ " order by 2";
 		doValidate(expectValid);
 	}
-	@Test
+	//@Test
 	public void testGoodGroupBy() {
 		boolean expectValid = true;
 		this.adqlInput = "select "
@@ -373,7 +373,7 @@ public class SqlParserTest {
 			+ " order by 2";
 		doValidate(expectValid);
 	}
-	@Test
+	//@Test
 	public void testGoodOrderBy() {
 		boolean expectValid = true;
 		this.adqlInput = "select "
@@ -386,7 +386,7 @@ public class SqlParserTest {
 			+ " order by ctype2";
 		doValidate(expectValid);
 	}
-	@Test
+	//@Test
 	public void testBadGroupBy() {
 		boolean expectValid = false;
 		this.adqlInput = "select "
@@ -400,7 +400,7 @@ public class SqlParserTest {
 		doValidate(expectValid);
 	}
 
-	@Test
+	//@Test
 	public void testAllTableColumns() {
 		boolean expectValid = false;
 		this.adqlInput = "select top 123 "
@@ -409,12 +409,25 @@ public class SqlParserTest {
 			+ " where cd1_1 > 432.1";
 		doValidate(expectValid);
 	}
-	@Test
+	//@Test
 	public void testAllColumns() {
 		boolean expectValid = false;
 		this.adqlInput = "select top 123 "
 			+ "*, aa.*, shape, observation.temporal.*, observation.spatial.*, BADctype1, BADTABLE.ctype2, BADSCHEMA.BADTABLE.BADctype2 "
 			+ " from observation.plane pp join observation.spatial as ss using (obsID) "
+			+ " where cd1_1 > 432.1";
+		doValidate(expectValid);
+	}
+	@Test
+	public void testGetTapSelectItems() {
+		boolean expectValid = true;
+		this.adqlInput = "select top 123 "
+			+ " pp.*, "
+			+ " spatial.*, "
+			+ " tt.exptime as et"
+			+ " from observation.plane as pp,"
+			+ "    spatial, "
+			+ "    (select exptime from temporal) as tt "
 			+ " where cd1_1 > 432.1";
 		doValidate(expectValid);
 	}

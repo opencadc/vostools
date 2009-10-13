@@ -101,7 +101,7 @@ public abstract class ColumnReferenceValidator extends AdqlValidatorVisitor impl
 	 * @throws AdqlValidateException
 	 */
 	public void validateColumn(Column c) throws AdqlValidateException {
-		int count = this.selectValidator.getPlainSelectInfo().countMatches(c);
+		int count = this.selectValidator.getPlainSelectInfo().countFromColumnsMatches(c);
 		if (count == 0) {
 			// column not found at the current level of select-from.
 			throw new AdqlValidateException("Column:" + c + " is not valid.");

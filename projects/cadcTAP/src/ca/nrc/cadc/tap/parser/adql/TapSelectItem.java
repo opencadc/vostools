@@ -67,111 +67,57 @@
 ************************************************************************
 */
 
+package ca.nrc.cadc.tap.parser.adql;
 
-package ca.nrc.cadc.tap.parser.adql.validator;
-
-import java.util.ArrayList;
-import java.util.List;
-
-import net.sf.jsqlparser.schema.Column;
+import ca.nrc.cadc.tap.parser.adql.validator.FromColumn;
+import ca.nrc.cadc.tap.schema.Column;
+import net.sf.jsqlparser.expression.Expression;
 import net.sf.jsqlparser.schema.Table;
-import net.sf.jsqlparser.statement.select.PlainSelect;
 import net.sf.jsqlparser.statement.select.SelectExpressionItem;
 import net.sf.jsqlparser.statement.select.SelectItem;
-import net.sf.jsqlparser.statement.select.SubSelect;
-import ca.nrc.cadc.tap.parser.adql.TapSelectItem;
-import ca.nrc.cadc.tap.parser.adql.config.AdqlConfig;
-import ca.nrc.cadc.tap.parser.adql.config.meta.ColumnMeta;
-import ca.nrc.cadc.tap.parser.adql.config.meta.TableMeta;
-import ca.nrc.cadc.tap.parser.adql.exception.AdqlValidateException;
 
 /**
- * Stores information of a plain select:
- * 
- * <li> a complete list of all columns, including normal columns, columns in sub-select, and generated columns.
- * 
  * @author zhangsa
  *
  */
-public class PlainSelectInfo {
+public class TapSelectItem {
+	private String _tableName;
+	private String _columnName;
+	private String _alias;
 
-	protected List<FromColumn> _fromColumns = new ArrayList<FromColumn>();
-	protected List<TapSelectItem> _tapSelectItems = new ArrayList<TapSelectItem>();
-
-	public int countFromColumnsMatches(Column c1) {
-		int count = 0;
-		for (FromColumn fromColumn : this._fromColumns) {
-			if (fromColumn.matches(c1))
-				count++;
-		}
-		return count;
+	public TapSelectItem(String tableName, String columnName, String alias) {
+		super();
+		_tableName = tableName;
+		_columnName = columnName;
+		_alias = alias;
 	}
 	
-	public FromColumn findFirstFromColumnMatch(Column c1) {
-		FromColumn rtn = null;
-		for (FromColumn fromColumn : this._fromColumns) {
-			if (fromColumn.matches(c1)) {
-				rtn = fromColumn;
-				break;
-			}
-		}
-		return rtn;
+	public TapSelectItem(FromColumn fromColumn) {
+		_alias = fromColumn.getColumnAlias();
+		_columnName = fromColumn.getColumnName();
+		_tableName = fromColumn.getTableQualifiedName();
 	}
 	
-	public void addFromTable(Table table, AdqlConfig config) throws AdqlValidateException {
-		TableMeta tableMeta = config.findTableMeta(table);
-		if (tableMeta == null)
-			throw new AdqlValidateException(table.getWholeTableName() + " is invalid.");
-		FromColumn fromColumn;
-		String tableAlias = table.getAlias();
-		String schemaName = tableMeta.getSchemaName();
-		String tableName = tableMeta.getTableName();
-		String columnName;
-		String columnAlias = null;
-		for (ColumnMeta cm : tableMeta.getColumnMetas()) {
-			columnName = cm.getName();
-			fromColumn = new FromColumn(tableAlias, schemaName, tableName, columnName, columnAlias);
-			this._fromColumns.add(fromColumn);
-		}
+	public String getTableName() {
+		return _tableName;
 	}
-
-	public void addFromSubSelect(SubSelect subSelect, AdqlConfig config) throws AdqlValidateException {
-		FromColumn fromColumn;
-		String tableAlias = subSelect.getAlias();
-		String schemaName = null;
-		String tableName = null;
-		String columnName = null;
-		String columnAlias = null;
-
-		if (subSelect.getSelectBody() instanceof PlainSelect) {
-			PlainSelect plainSelect = (PlainSelect) subSelect.getSelectBody();
-			for (SelectItem selectItem : (List<SelectItem>) plainSelect.getSelectItems()) {
-				columnName = null;
-				columnAlias = null;
-				if (selectItem instanceof SelectExpressionItem) {
-					SelectExpressionItem sei = (SelectExpressionItem) selectItem;
-					columnAlias = sei.getAlias();
-					if (sei.getExpression() instanceof Column) {
-						columnName = ((Column) sei.getExpression()).getColumnName();
-					}
-				} else {
-					throw new AdqlValidateException("Invalid SubSelect");
-				}
-				fromColumn = new FromColumn(tableAlias, schemaName, tableName, columnName, columnAlias);
-				this._fromColumns.add(fromColumn);
-			}
-		}
+	public void setTableName(String tableName) {
+		_tableName = tableName;
 	}
-
-	public List<TapSelectItem> getTapSelectItems() {
-		return _tapSelectItems;
+	public String getColumnName() {
+		return _columnName;
 	}
-
-	public List<FromColumn> getFromColumns() {
-		return _fromColumns;
+	public void setColumnName(String columnName) {
+		_columnName = columnName;
 	}
-	
-	public void addTapSelectItem(TapSelectItem tapSelectItem) {
-		_tapSelectItems.add(tapSelectItem);
+	public String getAlias() {
+		return _alias;
+	}
+	public void setAlias(String alias) {
+		_alias = alias;
+	}
+	@Override
+	public String toString() {
+		return "\r\n\tSelectItem [_alias=" + _alias + ", _columnName=" + _columnName + ", _tableName=" + _tableName + "]";
 	}
 }

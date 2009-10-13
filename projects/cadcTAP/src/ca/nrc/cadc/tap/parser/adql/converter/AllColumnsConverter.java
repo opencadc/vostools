@@ -135,16 +135,16 @@ public abstract class AllColumnsConverter implements SelectVisitor
 
     /**
      * Replace * and schema.* with SelectItem
-     * @param ps PlainSelect
+     * @param plainSelect PlainSelect
      */
-    public void visit(PlainSelect ps)
+    public void visit(PlainSelect plainSelect)
     {
-        log.debug("visit(PlainSelect): " + ps);
+        log.debug("visit(PlainSelect): " + plainSelect);
 
-        List<SelectItem> selectItems = ps.getSelectItems();
+        List<SelectItem> selectItems = plainSelect.getSelectItems();
         if (selectItems != null ) {
         	if (selectItems.size() == 1 && selectItems.get(0) instanceof AllColumns) {
-        		convertAllColumns(ps);
+        		convertAllColumns(plainSelect);
         	} else {
         		List<AllTableColumns> atcs = new ArrayList<AllTableColumns>();  
         		for (SelectItem selectItem : selectItems) {
@@ -153,7 +153,7 @@ public abstract class AllColumnsConverter implements SelectVisitor
                     }            
         		}
         		if (atcs.size() > 0 ) {
-        			convertAllTableColumns(ps, atcs);
+        			convertAllTableColumns(plainSelect, atcs);
         		}
         	}
         }	

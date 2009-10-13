@@ -86,11 +86,11 @@ import net.sf.jsqlparser.schema.Table;
  */
 public class FromColumn {
 
-	private String tableAlias_;
-	private String schemaName_;
-	private String tableName_;
-	private String columnName_;
-	private String columnAlias_;
+	private String _tableAlias;
+	private String _schemaName;
+	private String _tableName;
+	private String _columnName;
+	private String _columnAlias;
 
 	public boolean matches(Column c1) {
 		String c1Name = c1.getColumnName();
@@ -98,14 +98,14 @@ public class FromColumn {
 			return false;
 		
 		boolean rtn = false;
-		if (c1Name.equals(columnAlias_) || c1Name.equals(columnName_)) {
+		if (c1Name.equals(_columnAlias) || c1Name.equals(_columnName)) {
 			Table t1 = c1.getTable();
 			if (t1 != null && t1.getName() != null && !t1.getName().equals("")) {
 				String t1Name = t1.getName();
 				String s1Name = t1.getSchemaName();
-				if (t1Name.equals(tableAlias_) || t1Name.equals(tableName_)) {
+				if (t1Name.equals(_tableAlias) || t1Name.equals(_tableName)) {
 					if (s1Name != null && !s1Name.equals("")) {
-						if (s1Name.equals(schemaName_))
+						if (s1Name.equals(_schemaName))
 							rtn = true;
 					} else
 						rtn = true;
@@ -118,19 +118,19 @@ public class FromColumn {
 	
 	@Override
 	public String toString() {
-		return "FromColumn [columnAlias=" + columnAlias_ + ", columnName=" + columnName_ + ", schemaName=" + schemaName_
-				+ ", tableAlias=" + tableAlias_ + ", tableName=" + tableName_ + "]\r\n";
+		return "FromColumn [columnAlias=" + _columnAlias + ", columnName=" + _columnName + ", schemaName=" + _schemaName
+				+ ", tableAlias=" + _tableAlias + ", tableName=" + _tableName + "]\r\n";
 	}
 
 	@Override
 	public int hashCode() {
 		final int prime = 31;
 		int result = 1;
-		result = prime * result + ((columnAlias_ == null) ? 0 : columnAlias_.hashCode());
-		result = prime * result + ((columnName_ == null) ? 0 : columnName_.hashCode());
-		result = prime * result + ((schemaName_ == null) ? 0 : schemaName_.hashCode());
-		result = prime * result + ((tableAlias_ == null) ? 0 : tableAlias_.hashCode());
-		result = prime * result + ((tableName_ == null) ? 0 : tableName_.hashCode());
+		result = prime * result + ((_columnAlias == null) ? 0 : _columnAlias.hashCode());
+		result = prime * result + ((_columnName == null) ? 0 : _columnName.hashCode());
+		result = prime * result + ((_schemaName == null) ? 0 : _schemaName.hashCode());
+		result = prime * result + ((_tableAlias == null) ? 0 : _tableAlias.hashCode());
+		result = prime * result + ((_tableName == null) ? 0 : _tableName.hashCode());
 		return result;
 	}
 
@@ -143,81 +143,92 @@ public class FromColumn {
 		if (getClass() != obj.getClass())
 			return false;
 		FromColumn other = (FromColumn) obj;
-		if (columnAlias_ == null) {
-			if (other.columnAlias_ != null)
+		if (_columnAlias == null) {
+			if (other._columnAlias != null)
 				return false;
-		} else if (!columnAlias_.equals(other.columnAlias_))
+		} else if (!_columnAlias.equals(other._columnAlias))
 			return false;
-		if (columnName_ == null) {
-			if (other.columnName_ != null)
+		if (_columnName == null) {
+			if (other._columnName != null)
 				return false;
-		} else if (!columnName_.equals(other.columnName_))
+		} else if (!_columnName.equals(other._columnName))
 			return false;
-		if (schemaName_ == null) {
-			if (other.schemaName_ != null)
+		if (_schemaName == null) {
+			if (other._schemaName != null)
 				return false;
-		} else if (!schemaName_.equals(other.schemaName_))
+		} else if (!_schemaName.equals(other._schemaName))
 			return false;
-		if (tableAlias_ == null) {
-			if (other.tableAlias_ != null)
+		if (_tableAlias == null) {
+			if (other._tableAlias != null)
 				return false;
-		} else if (!tableAlias_.equals(other.tableAlias_))
+		} else if (!_tableAlias.equals(other._tableAlias))
 			return false;
-		if (tableName_ == null) {
-			if (other.tableName_ != null)
+		if (_tableName == null) {
+			if (other._tableName != null)
 				return false;
-		} else if (!tableName_.equals(other.tableName_))
+		} else if (!_tableName.equals(other._tableName))
 			return false;
 		return true;
 	}
 
 	public final String getTableAlias() {
-		return tableAlias_;
+		return _tableAlias;
 	}
 
 	public final void setTableAlias(String tableAlias) {
-		this.tableAlias_ = tableAlias;
+		this._tableAlias = tableAlias;
 	}
 
 	public final String getSchemaName() {
-		return schemaName_;
+		return _schemaName;
 	}
 
 	public final void setSchemaName(String schemaName) {
-		this.schemaName_ = schemaName;
+		this._schemaName = schemaName;
 	}
 
 	public final String getTableName() {
-		return tableName_;
+		return _tableName;
 	}
 
 	public final void setTableName(String tableName) {
-		this.tableName_ = tableName;
+		this._tableName = tableName;
 	}
 
 	public final String getColumnName() {
-		return columnName_;
+		return _columnName;
 	}
 
 	public final void setColumnName(String columnName) {
-		this.columnName_ = columnName;
+		this._columnName = columnName;
 	}
 
 	public final String getColumnAlias() {
-		return columnAlias_;
+		return _columnAlias;
 	}
 
 	public final void setColumnAlias(String columnAlias) {
-		this.columnAlias_ = columnAlias;
+		this._columnAlias = columnAlias;
 	}
 
 	public FromColumn(String tableAlias, String schemaName, String tableName, String columnName, String columnAlias) {
 		super();
-		this.tableAlias_ = tableAlias;
-		this.schemaName_ = schemaName;
-		this.tableName_ = tableName;
-		this.columnName_ = columnName;
-		this.columnAlias_ = columnAlias;
+		this._tableAlias = tableAlias;
+		this._schemaName = schemaName;
+		this._tableName = tableName;
+		this._columnName = columnName;
+		this._columnAlias = columnAlias;
+	}
+
+	/**
+	 * @return
+	 */
+	public String getTableQualifiedName() {
+		StringBuffer sb = new StringBuffer();
+		if (_schemaName != null)
+			sb.append(_schemaName).append(".");
+		sb.append(_tableName);
+		return sb.toString();
 	}
 
 }

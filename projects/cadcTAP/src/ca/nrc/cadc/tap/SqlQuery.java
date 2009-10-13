@@ -73,6 +73,7 @@ import java.util.List;
 
 import ca.nrc.cadc.tap.parser.adql.AdqlManager;
 import ca.nrc.cadc.tap.parser.adql.AdqlParser;
+import ca.nrc.cadc.tap.parser.adql.TapSelectItem;
 import ca.nrc.cadc.tap.parser.adql.exception.AdqlException;
 import ca.nrc.cadc.uws.Parameter;
 
@@ -92,24 +93,36 @@ public class SqlQuery implements TapQuery
 	public String getSQL( List<Parameter> paramList )
 	{
 		String rtn = null;
-		boolean found = false;
-		String queryParamName = "QUERY" ;
-		String queryParamValue;
-		for (Parameter parameter : paramList) {
-			if (queryParamName.equalsIgnoreCase(parameter.getName())) {
-				found = true;
-				queryParamValue = parameter.getValue();
-				try {
-					rtn = this.adqlParser.parse(queryParamValue);
-				} catch (AdqlException ex) {
-					throw new IllegalArgumentException(ex);
-				}
-				break;
+		String queryString = TapQueryUtil.findQueryString(paramList);
+		if (queryString != null) {
+			try {
+				rtn = this.adqlParser.parse(queryString);
+			} catch (AdqlException ex) {
+				throw new IllegalArgumentException(ex);
 			}
-		}
-		if (!found)
+		} else {
 			throw new IllegalArgumentException( "Parameter incorrect. No QUERY found." );
+		}
 		return rtn;
+	}
+
+	/* (non-Javadoc)
+	 * @see ca.nrc.cadc.tap.TapQuery#getSelectList(java.lang.String)
+	 */
+	@Override
+	public List<TapSelectItem> getSelectList(String queryString) {
+		List<TapSelectItem> tapSelectItems = null;
+		if (queryString != null) {
+			try {
+				this.adqlParser.validate(queryString);
+				tapSelectItems = this.adqlParser.getTapSelectItems();
+			} catch (AdqlException ex) {
+				throw new IllegalArgumentException(ex);
+			}
+		} else {
+			throw new IllegalArgumentException( "Parameter incorrect. No QUERY found." );
+		}
+		return tapSelectItems;
 	}
 
 }

@@ -71,9 +71,12 @@ package ca.nrc.cadc.tap;
 
 import java.util.List;
 
+import ca.nrc.cadc.tap.parser.adql.TapSelectItem;
 import ca.nrc.cadc.uws.Parameter;
 
 public interface TapQuery
 {
     public String getSQL( List<Parameter> paramList );
+    
+    public List<TapSelectItem> getSelectList(String query);
 }

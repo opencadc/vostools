@@ -72,6 +72,9 @@
 package ca.nrc.cadc.tap.parser.adql;
 
 import java.io.StringReader;
+import java.util.List;
+
+import org.apache.log4j.Logger;
 
 import net.sf.jsqlparser.JSQLParserException;
 import net.sf.jsqlparser.parser.CCJSqlParserManager;
@@ -79,14 +82,18 @@ import net.sf.jsqlparser.statement.Statement;
 import ca.nrc.cadc.tap.parser.adql.converter.Converter;
 import ca.nrc.cadc.tap.parser.adql.exception.AdqlException;
 import ca.nrc.cadc.tap.parser.adql.formatter.Formatter;
+import ca.nrc.cadc.tap.parser.adql.validator.PlainSelectInfo;
 import ca.nrc.cadc.tap.parser.adql.validator.SelectValidator;
 import ca.nrc.cadc.tap.parser.adql.validator.Validator;
 
 public class AdqlParser {
-	private AdqlManager manager;
+   private static Logger log = Logger.getLogger(AdqlParser.class);
+
+   private AdqlManager _manager;
+	private List<TapSelectItem> _tapSelectItems = null;
 	
 	public AdqlParser(AdqlManager manager) {
-		this.manager = manager;
+		this._manager = manager;
 	}
 	
 	public String parse(String adqlQueryStr) throws AdqlException {
@@ -103,7 +110,7 @@ public class AdqlParser {
 		CCJSqlParserManager sqlParser = new CCJSqlParserManager();
 		try {
 			statement = sqlParser.parse(sr);
-			Validator validator = manager.getValidator();
+			Validator validator = _manager.getValidator();
 			SelectValidator selectValidator =  validator.getSelectValidator();
 			AdqlStatementVisitor statementVisitor = new AdqlStatementVisitor(selectValidator);
 			statement.accept(statementVisitor);
@@ -120,7 +127,12 @@ public class AdqlParser {
 					sb.append(ex.getMessage()).append(cr);
 				}
 				throw new AdqlException(sb.toString());
+			} else {
+				PlainSelectInfo plainSelectInfo = selectValidator.getPlainSelectInfo();
+				_tapSelectItems = plainSelectInfo.getTapSelectItems();
+				log.debug(_tapSelectItems);
 			}
+			
 		} catch (JSQLParserException pe) {
 			throw new AdqlException("Invalid query syntax.", pe);
 		}
@@ -128,7 +140,7 @@ public class AdqlParser {
 	}
 
 	public Statement convert(Statement adqlStatement) throws AdqlException {
-		Converter converter = manager.getConverter();
+		Converter converter = _manager.getConverter();
 		AdqlStatementVisitor statementVisitor = new AdqlStatementVisitor(converter);
 		adqlStatement.accept(statementVisitor);
 		return adqlStatement;
@@ -136,8 +148,20 @@ public class AdqlParser {
 	
 	public String format(Statement sqlStatement) throws AdqlException {
 		String sqlStr = null;
-		Formatter formatter = manager.getFormatter();
+		Formatter formatter = _manager.getFormatter();
 		sqlStr = formatter.format(sqlStatement);
 		return sqlStr;
 	}
+	
+	/**
+	 * This method can only be called after the validate() is done.
+	 * 
+	 * @param queryStr
+	 * @return
+	 * @throws AdqlException
+	 */
+   public List<TapSelectItem> getTapSelectItems() throws AdqlException {
+		return _tapSelectItems;
+   }
+	
 }

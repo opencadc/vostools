@@ -67,111 +67,29 @@
 ************************************************************************
 */
 
+package ca.nrc.cadc.tap;
 
-package ca.nrc.cadc.tap.parser.adql.validator;
-
-import java.util.ArrayList;
 import java.util.List;
 
-import net.sf.jsqlparser.schema.Column;
-import net.sf.jsqlparser.schema.Table;
-import net.sf.jsqlparser.statement.select.PlainSelect;
-import net.sf.jsqlparser.statement.select.SelectExpressionItem;
-import net.sf.jsqlparser.statement.select.SelectItem;
-import net.sf.jsqlparser.statement.select.SubSelect;
-import ca.nrc.cadc.tap.parser.adql.TapSelectItem;
-import ca.nrc.cadc.tap.parser.adql.config.AdqlConfig;
-import ca.nrc.cadc.tap.parser.adql.config.meta.ColumnMeta;
-import ca.nrc.cadc.tap.parser.adql.config.meta.TableMeta;
-import ca.nrc.cadc.tap.parser.adql.exception.AdqlValidateException;
+import ca.nrc.cadc.uws.Parameter;
 
 /**
- * Stores information of a plain select:
- * 
- * <li> a complete list of all columns, including normal columns, columns in sub-select, and generated columns.
- * 
  * @author zhangsa
  *
  */
-public class PlainSelectInfo {
-
-	protected List<FromColumn> _fromColumns = new ArrayList<FromColumn>();
-	protected List<TapSelectItem> _tapSelectItems = new ArrayList<TapSelectItem>();
-
-	public int countFromColumnsMatches(Column c1) {
-		int count = 0;
-		for (FromColumn fromColumn : this._fromColumns) {
-			if (fromColumn.matches(c1))
-				count++;
-		}
-		return count;
-	}
+public class TapQueryUtil {
 	
-	public FromColumn findFirstFromColumnMatch(Column c1) {
-		FromColumn rtn = null;
-		for (FromColumn fromColumn : this._fromColumns) {
-			if (fromColumn.matches(c1)) {
-				rtn = fromColumn;
+	public static String findQueryString( List<Parameter> paramList ) {
+		String queryString = null;
+		boolean found = false;
+		String queryParamName = "QUERY" ;
+		for (Parameter parameter : paramList) {
+			if (queryParamName.equalsIgnoreCase(parameter.getName())) {
+				found = true;
+				queryString = parameter.getValue();
 				break;
 			}
 		}
-		return rtn;
-	}
-	
-	public void addFromTable(Table table, AdqlConfig config) throws AdqlValidateException {
-		TableMeta tableMeta = config.findTableMeta(table);
-		if (tableMeta == null)
-			throw new AdqlValidateException(table.getWholeTableName() + " is invalid.");
-		FromColumn fromColumn;
-		String tableAlias = table.getAlias();
-		String schemaName = tableMeta.getSchemaName();
-		String tableName = tableMeta.getTableName();
-		String columnName;
-		String columnAlias = null;
-		for (ColumnMeta cm : tableMeta.getColumnMetas()) {
-			columnName = cm.getName();
-			fromColumn = new FromColumn(tableAlias, schemaName, tableName, columnName, columnAlias);
-			this._fromColumns.add(fromColumn);
-		}
-	}
-
-	public void addFromSubSelect(SubSelect subSelect, AdqlConfig config) throws AdqlValidateException {
-		FromColumn fromColumn;
-		String tableAlias = subSelect.getAlias();
-		String schemaName = null;
-		String tableName = null;
-		String columnName = null;
-		String columnAlias = null;
-
-		if (subSelect.getSelectBody() instanceof PlainSelect) {
-			PlainSelect plainSelect = (PlainSelect) subSelect.getSelectBody();
-			for (SelectItem selectItem : (List<SelectItem>) plainSelect.getSelectItems()) {
-				columnName = null;
-				columnAlias = null;
-				if (selectItem instanceof SelectExpressionItem) {
-					SelectExpressionItem sei = (SelectExpressionItem) selectItem;
-					columnAlias = sei.getAlias();
-					if (sei.getExpression() instanceof Column) {
-						columnName = ((Column) sei.getExpression()).getColumnName();
-					}
-				} else {
-					throw new AdqlValidateException("Invalid SubSelect");
-				}
-				fromColumn = new FromColumn(tableAlias, schemaName, tableName, columnName, columnAlias);
-				this._fromColumns.add(fromColumn);
-			}
-		}
-	}
-
-	public List<TapSelectItem> getTapSelectItems() {
-		return _tapSelectItems;
-	}
-
-	public List<FromColumn> getFromColumns() {
-		return _fromColumns;
-	}
-	
-	public void addTapSelectItem(TapSelectItem tapSelectItem) {
-		_tapSelectItems.add(tapSelectItem);
+		return queryString;
 	}
 }

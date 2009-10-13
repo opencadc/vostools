@@ -94,7 +94,7 @@ public abstract class ExpressionValidator extends AdqlValidatorVisitor implement
 	}
 
 	public void validateColumn(Column c) throws AdqlValidateException {
-		int count = this.selectValidator.getPlainSelectInfo().countMatches(c);
+		int count = this.selectValidator.getPlainSelectInfo().countFromColumnsMatches(c);
 		if (count == 0) {
 			// column not found at the current level of select-from.
 			// check upper level recursively

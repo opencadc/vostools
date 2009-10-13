@@ -67,111 +67,119 @@
 ************************************************************************
 */
 
+package ca.nrc.cadc.tap.parser.adql;
 
-package ca.nrc.cadc.tap.parser.adql.validator;
-
-import java.util.ArrayList;
-import java.util.List;
-
+import ca.nrc.cadc.tap.parser.adql.validator.FromColumn;
+import ca.nrc.cadc.tap.parser.adql.validator.PlainSelectInfo;
+import net.sf.jsqlparser.expression.Expression;
 import net.sf.jsqlparser.schema.Column;
 import net.sf.jsqlparser.schema.Table;
-import net.sf.jsqlparser.statement.select.PlainSelect;
+import net.sf.jsqlparser.statement.select.AllColumns;
+import net.sf.jsqlparser.statement.select.AllTableColumns;
 import net.sf.jsqlparser.statement.select.SelectExpressionItem;
-import net.sf.jsqlparser.statement.select.SelectItem;
-import net.sf.jsqlparser.statement.select.SubSelect;
-import ca.nrc.cadc.tap.parser.adql.TapSelectItem;
-import ca.nrc.cadc.tap.parser.adql.config.AdqlConfig;
-import ca.nrc.cadc.tap.parser.adql.config.meta.ColumnMeta;
-import ca.nrc.cadc.tap.parser.adql.config.meta.TableMeta;
-import ca.nrc.cadc.tap.parser.adql.exception.AdqlValidateException;
+import net.sf.jsqlparser.statement.select.SelectItemVisitor;
 
 /**
- * Stores information of a plain select:
- * 
- * <li> a complete list of all columns, including normal columns, columns in sub-select, and generated columns.
- * 
  * @author zhangsa
  *
  */
-public class PlainSelectInfo {
-
-	protected List<FromColumn> _fromColumns = new ArrayList<FromColumn>();
-	protected List<TapSelectItem> _tapSelectItems = new ArrayList<TapSelectItem>();
-
-	public int countFromColumnsMatches(Column c1) {
-		int count = 0;
-		for (FromColumn fromColumn : this._fromColumns) {
-			if (fromColumn.matches(c1))
-				count++;
-		}
-		return count;
-	}
+public class TapSelectItemAppender implements SelectItemVisitor {
+	PlainSelectInfo _plainSelectInfo;
 	
-	public FromColumn findFirstFromColumnMatch(Column c1) {
-		FromColumn rtn = null;
-		for (FromColumn fromColumn : this._fromColumns) {
-			if (fromColumn.matches(c1)) {
-				rtn = fromColumn;
-				break;
+	public TapSelectItemAppender(PlainSelectInfo psi) {
+		_plainSelectInfo = psi;
+	}
+
+	/* (non-Javadoc)
+	 * @see net.sf.jsqlparser.statement.select.SelectItemVisitor#visit(net.sf.jsqlparser.statement.select.AllColumns)
+	 */
+	@Override
+	public void visit(AllColumns allColumns) {
+		TapSelectItem tapSelectItem = null;
+		for (FromColumn fromColumn : _plainSelectInfo.getFromColumns()) {
+			tapSelectItem = new TapSelectItem(fromColumn);
+			_plainSelectInfo.addTapSelectItem(tapSelectItem);
+		}
+	}
+
+	/* (non-Javadoc)
+	 * @see net.sf.jsqlparser.statement.select.SelectItemVisitor#visit(net.sf.jsqlparser.statement.select.AllTableColumns)
+	 */
+	@Override
+	public void visit(AllTableColumns allTableColumns) {
+		TapSelectItem tapSelectItem = null;
+		
+		Table table = allTableColumns.getTable();
+		String tableName = table.getName();
+		String schemaName = table.getSchemaName();
+
+		for (FromColumn fromColumn : _plainSelectInfo.getFromColumns()) {
+			boolean toAdd = false;
+			if (schemaName != null && !schemaName.equals("")) {
+				// schema name presented in the allTableColumns. e.g. schemaA.tableA.*
+				toAdd = tableName.equalsIgnoreCase(fromColumn.getTableName());
+			} else {
+				// No schema name presented in the allTableColumns. e.g. tableA.*, aliasA.*
+				toAdd = tableName.equalsIgnoreCase(fromColumn.getTableAlias()) 
+						|| tableName.equalsIgnoreCase(fromColumn.getTableName()) ;
+			}
+			
+			if (toAdd) {
+				tapSelectItem = new TapSelectItem(fromColumn);
+				_plainSelectInfo.addTapSelectItem(tapSelectItem);
 			}
 		}
-		return rtn;
-	}
-	
-	public void addFromTable(Table table, AdqlConfig config) throws AdqlValidateException {
-		TableMeta tableMeta = config.findTableMeta(table);
-		if (tableMeta == null)
-			throw new AdqlValidateException(table.getWholeTableName() + " is invalid.");
-		FromColumn fromColumn;
-		String tableAlias = table.getAlias();
-		String schemaName = tableMeta.getSchemaName();
-		String tableName = tableMeta.getTableName();
-		String columnName;
-		String columnAlias = null;
-		for (ColumnMeta cm : tableMeta.getColumnMetas()) {
-			columnName = cm.getName();
-			fromColumn = new FromColumn(tableAlias, schemaName, tableName, columnName, columnAlias);
-			this._fromColumns.add(fromColumn);
-		}
 	}
 
-	public void addFromSubSelect(SubSelect subSelect, AdqlConfig config) throws AdqlValidateException {
-		FromColumn fromColumn;
-		String tableAlias = subSelect.getAlias();
-		String schemaName = null;
-		String tableName = null;
+	/* (non-Javadoc)
+	 * @see net.sf.jsqlparser.statement.select.SelectItemVisitor#visit(net.sf.jsqlparser.statement.select.SelectExpressionItem)
+	 */
+	@Override
+	public void visit(SelectExpressionItem selectExpressionItem) {
+		TapSelectItem tapSelectItem = null;
+
+		String alias = selectExpressionItem.getAlias();
 		String columnName = null;
-		String columnAlias = null;
+		String tableName = null;
+		Expression expression = selectExpressionItem.getExpression();
+		if (expression instanceof Column) {
+			Column column = (Column) expression;
+			columnName = column.getColumnName();
+			Table table = column.getTable();
+			String schemaName = table.getSchemaName();
 
-		if (subSelect.getSelectBody() instanceof PlainSelect) {
-			PlainSelect plainSelect = (PlainSelect) subSelect.getSelectBody();
-			for (SelectItem selectItem : (List<SelectItem>) plainSelect.getSelectItems()) {
-				columnName = null;
-				columnAlias = null;
-				if (selectItem instanceof SelectExpressionItem) {
-					SelectExpressionItem sei = (SelectExpressionItem) selectItem;
-					columnAlias = sei.getAlias();
-					if (sei.getExpression() instanceof Column) {
-						columnName = ((Column) sei.getExpression()).getColumnName();
+			if (schemaName != null && !schemaName.equals("")) {
+				// schema name presented in the column expression. e.g. schemaA.tableA.columnA
+				tableName = schemaName + "." + table.getName();
+				tapSelectItem = new TapSelectItem(tableName, columnName, alias);
+			} else {
+				// No schema name presented in the column expression. e.g. tableA.columnA, aliasA.columnA, columnB
+				tableName = table.getName();
+				if (tableName != null) {
+					// table name or alias presented. e.g. tableA.columnA, aliasA.columnA
+					for (FromColumn fromColumn : _plainSelectInfo.getFromColumns()) {
+						if (tableName.equalsIgnoreCase(fromColumn.getTableAlias())
+								|| tableName.equalsIgnoreCase(fromColumn.getTableName())) {
+							tapSelectItem = new TapSelectItem(fromColumn);
+							tapSelectItem.setAlias(alias);
+							break;
+						}
 					}
-				} else {
-					throw new AdqlValidateException("Invalid SubSelect");
+				} else { 
+					// only column name is presented. e.g. columnB, columnAliasC (refer to column alias in subselect)
+					for (FromColumn fromColumn : _plainSelectInfo.getFromColumns()) {
+						if (columnName.equalsIgnoreCase(fromColumn.getColumnAlias())
+								|| columnName.equalsIgnoreCase(fromColumn.getColumnName())) {
+							tapSelectItem = new TapSelectItem(fromColumn);
+							tapSelectItem.setAlias(alias);
+							break;
+						}
+					}
+					
 				}
-				fromColumn = new FromColumn(tableAlias, schemaName, tableName, columnName, columnAlias);
-				this._fromColumns.add(fromColumn);
 			}
 		}
+		_plainSelectInfo.addTapSelectItem(tapSelectItem);
 	}
 
-	public List<TapSelectItem> getTapSelectItems() {
-		return _tapSelectItems;
-	}
-
-	public List<FromColumn> getFromColumns() {
-		return _fromColumns;
-	}
-	
-	public void addTapSelectItem(TapSelectItem tapSelectItem) {
-		_tapSelectItems.add(tapSelectItem);
-	}
 }

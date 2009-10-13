@@ -176,7 +176,7 @@ public abstract class SelectValidator extends AdqlValidatorVisitor implements Se
 	}
 
 	protected void initialAnalysis(PlainSelect plainSelect) throws AdqlValidateException {
-		this.config.populatePlainSelectInfo(this.plainSelectInfo, plainSelect);
+		this.config.populatePlainSelectInfo(this, plainSelect);
 	}
 
 	/*
