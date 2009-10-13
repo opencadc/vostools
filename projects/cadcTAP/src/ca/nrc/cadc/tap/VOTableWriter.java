@@ -97,24 +97,6 @@ public class VOTableWriter implements TableWriter
 		throw new UnsupportedOperationException( "Don't know where to get a result set from yet." );
 	}
 	
-	public void write( String message, OutputStream output )
-		throws IOException
-	{
-	    //  Define table.
-		ColumnInfo[] columnInfo = new ColumnInfo[1];
-	    columnInfo[0] = new ColumnInfo( "Message", String.class, "Message text" );
-	    RowListStarTable table = new RowListStarTable( columnInfo );
-	    
-	    //  Populate table.
-	    table.addRow( new Object[] { message } );
-	    
-        //  Specify output format as XML, rather than FITS or binary.
-        uk.ac.starlink.votable.VOTableWriter voWriter = new uk.ac.starlink.votable.VOTableWriter( DataFormat.TABLEDATA, true );
-        
-        //  Write table.
-        voWriter.writeStarTable( table, output );
-	}
-	
 	public void write( Throwable thrown, OutputStream output )
 		throws IOException
 	{
