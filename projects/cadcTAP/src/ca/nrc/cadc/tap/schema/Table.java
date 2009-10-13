@@ -69,6 +69,7 @@
 
 package ca.nrc.cadc.tap.schema;
 
+import java.util.ArrayList;
 import java.util.List;
 
 /**
@@ -77,19 +78,29 @@ import java.util.List;
  */
 public class Table
 {
-    // The schema this table belongs to.
+    /**
+     * The schema this Table belongs to.
+     */
     public String schemaName;
 
-    // The fully qualified table name.
+    /**
+     * The fully qualified Table name.
+     */
     public String tableName;
 
-    // Describes the table.
+    /**
+     * Describes the Table.
+     */
     public String description;
 
-    // The utype of the table.
+    /**
+     * The utype of the Table.
+     */
     public String utype;
 
-    // List of columns belonging to this table.
+    /**
+     * List of columns belonging to this Table.
+     */
     public List<Column> columns;
 
     /**
@@ -100,11 +111,10 @@ public class Table
     /**
      * Construct a Schema using the specified parameters.
      *
-     * @param schemaName The schema this table belongs to.
-     * @param tableName The fully qualified table name.
-     * @param description Describes the table.
-     * @param utype The utype of the table.
-
+     * @param schemaName The schema this Table belongs to.
+     * @param tableName The fully qualified Table name.
+     * @param description Describes the Table.
+     * @param utype The utype of the Table.
      */
     public Table(String schemaName,
                  String tableName,
@@ -116,5 +126,26 @@ public class Table
         this.description = description;
         this.utype = utype;
     }
-    
+
+    /**
+     * @return String representation of the Table.
+     */
+    public String toString()
+    {
+        StringBuilder sb = new StringBuilder();
+        sb.append("Table[");
+        sb.append(schemaName).append(",");
+        sb.append(tableName).append(",");
+        sb.append(description).append(",");
+        sb.append(utype).append(",");
+        sb.append("columns[");
+        if (columns != null)
+        {
+            for (Column column : columns)
+                sb.append(column);
+        }
+        sb.append("]]");
+        return sb.toString();
+    }
+
 }

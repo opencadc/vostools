@@ -100,5 +100,20 @@ public class TapSchema
         this.schemas = schemas;
         this.keys = keys;
     }
-    
+
+    /**
+     * @return String representation of the TapSchema.
+     */
+    public String toString()
+    {
+        StringBuilder sb = new StringBuilder();
+        sb.append("TapSchema[\r\n");
+        for (Schema schema : schemas)
+            sb.append("\t").append(schema.toString()).append("\r\n");
+        for (Key key : keys)
+            sb.append("\t").append(key.toString()).append("\r\n");
+        sb.append("]");
+        return sb.toString();
+    }
+
 }

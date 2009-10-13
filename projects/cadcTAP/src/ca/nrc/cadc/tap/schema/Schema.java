@@ -69,6 +69,7 @@
 
 package ca.nrc.cadc.tap.schema;
 
+import java.util.ArrayList;
 import java.util.List;
 
 /**
@@ -77,16 +78,24 @@ import java.util.List;
  */
 public class Schema
 {
-    // The Schema name.
+    /**
+     * The Schema name.
+     */
     public String schemaName;
 
-    // Describes the schema.
+    /**
+     * Describes the Schema.
+     */
     public String description;
 
-    // The utype of the schema.
+    /**
+     * The utype of the Schema.
+     */
     public String utype;
 
-    // List of tables belonging to this schema.
+    /**
+     * List of tables belonging to this Schema.
+     */
     public List<Table> tables;
 
     /**
@@ -98,16 +107,36 @@ public class Schema
      * Construct a Schema using the specified parameters.
      *
      * @param schemaName The Schema name.
-     * @param description Describes the schema.
-     * @param utype The utype of the schema.
+     * @param description Describes the Schema.
+     * @param utype The utype of the Schema.
      */
-    public Schema(String schemaName, 
+    public Schema(String schemaName,
                   String description,
                   String utype)
     {
         this.schemaName = schemaName;
         this.description = description;
         this.utype = utype;
+    }
+
+    /**
+     * @return String representation of the Schema.
+     */
+    public String toString()
+    {
+        StringBuilder sb = new StringBuilder();
+        sb.append("Schema[");
+        sb.append(schemaName).append(",");
+        sb.append(description).append(",");
+        sb.append(utype).append(",");
+        sb.append("tables[");
+        if (tables != null)
+        {
+            for (Table table : tables)
+                sb.append(table);
+        }
+        sb.append("]]");
+        return sb.toString();
     }
     
 }

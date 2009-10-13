@@ -69,6 +69,7 @@
 
 package ca.nrc.cadc.tap.schema;
 
+import java.util.ArrayList;
 import java.util.List;
 
 /**
@@ -77,16 +78,24 @@ import java.util.List;
  */
 public class Key
 {
-    // Unique key to join to TAP_SCHEMA.key_columns.
+    /**
+     * Unique key to join to TAP_SCHEMA.key_columns.
+     */
     public String keyId;
 
-    // The table with the foreign key.
+    /**
+     * The table with the foreign key.
+     */
     public String fromTable;
 
-    // The table with the primary key.
+    /**
+     * The table with the primary key.
+     */
     public String targetTable;
 
-    // List of KeyColumns belonging to this Key.
+    /**
+     * List of KeyColumns belonging to this Key.
+     */
     public List<KeyColumn> keyColumns;
 
     /**
@@ -109,5 +118,25 @@ public class Key
         this.fromTable = fromTable;
         this.targetTable = targetTable;
     }
-    
+
+    /**
+     * @return String representation of the Key.
+     */
+    public String toString()
+    {
+        StringBuilder sb = new StringBuilder();
+        sb.append("Key[");
+        sb.append(keyId).append(",");
+        sb.append(fromTable).append(",");
+        sb.append(targetTable).append(",");
+        sb.append("keyColumns[");
+        if (keyColumns != null)
+        {
+            for (KeyColumn keyColumn : keyColumns)
+                sb.append(keyColumn);
+        }
+        sb.append("]]");
+        return sb.toString();
+    }
+
 }

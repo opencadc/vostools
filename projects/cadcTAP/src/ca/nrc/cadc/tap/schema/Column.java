@@ -74,28 +74,44 @@ package ca.nrc.cadc.tap.schema;
  */
 public class Column
 {
-    // The table this column belongs to.
+    /**
+     * The table this column belongs to.
+     */
     public String tableName;
 
-    // The column name.
+    /**
+     * The Column name.
+     */
     public String columnName;
 
-    // Describes the column.
+    /**
+     * Describes the Column.
+     */
     public String description;
 
-    // The utype of the column.
+    /**
+     * The utype of the Column.
+     */
     public String utype;
 
-    // The UCD of column.
+    /**
+     * The UCD of Column.
+     */
     public String ucd;
 
-    // The unit used for column values.
+    /**
+     * The unit used for Column values.
+     */
     public String unit;
 
-    // The ADQL datatype of column.
+    /**
+     * The ADQL datatype of Column.
+     */
     public String datatype;
 
-    //
+    /**
+     * The Column datatype size (Column width).
+     */
     public int size;
 
     /**
@@ -106,14 +122,14 @@ public class Column
     /**
      * Construct a Column using the specified parameters.
      *
-     * @param tableName The table this column belongs to.
-     * @param columnName The column name.
-     * @param description Describes the column.
-     * @param utype The utype of the column.
-     * @param ucd The UCD of column.
-     * @param unit The unit used for column values.
-     * @param datatype The ADQL datatype of column.
-     * @param size
+     * @param tableName The table this Column belongs to.
+     * @param columnName The Column name.
+     * @param description Describes the Column.
+     * @param utype The utype of the Column.
+     * @param ucd The UCD of Column.
+     * @param unit The unit used for Column values.
+     * @param datatype The ADQL datatype of Column.
+     * @param size The Column datatype size (Column width).
      */
     public Column(String tableName,
                   String columnName,
@@ -133,5 +149,24 @@ public class Column
         this.datatype = datatype;
         this.size = size;
     }
-    
+
+    /**
+     * @return String representation of the Column.
+     */
+    public String toString()
+    {
+        StringBuilder sb = new StringBuilder();
+        sb.append("Column[");
+        sb.append(tableName).append(",");
+        sb.append(columnName).append(",");
+        sb.append(description).append(",");
+        sb.append(utype).append(",");
+        sb.append(ucd).append(",");
+        sb.append(unit).append(",");
+        sb.append(datatype).append(",");
+        sb.append(size);
+        sb.append("]");
+        return sb.toString();
+    }
+
 }

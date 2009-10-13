@@ -75,13 +75,19 @@ package ca.nrc.cadc.tap.schema;
  */
 public class KeyColumn
 {
-    // Key to join to TAP_SCHEMA.keys.
+    /**
+     * Key to join to TAP_SCHEMA.keys.
+     */
     public String keyId;
 
-    // Column in the from_table.
+    /**
+     * Column in the from_table.
+     */
     public String fromColumn;
 
-    // Column in the target_table.
+    /**
+     * Column in the target_table.
+     */
     public String targetColumn;
 
     /**
@@ -104,5 +110,19 @@ public class KeyColumn
         this.fromColumn = fromColumn;
         this.targetColumn = targetColumn;
     }
-    
+
+    /**
+     * @return String representation of the KeyColumn.
+     */
+    public String toString()
+    {
+        StringBuilder sb = new StringBuilder();
+        sb.append("KeyColumn[");
+        sb.append(keyId).append(",");
+        sb.append(fromColumn).append(",");
+        sb.append(targetColumn);
+        sb.append("]");
+        return sb.toString();
+    }
+
 }
