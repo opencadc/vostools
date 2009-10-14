@@ -425,8 +425,8 @@ public class JobAsynchResource extends BaseJobResource
                     document.createElementNS(XML_NAMESPACE_URI,
                          JobAttribute.ERROR_SUMMARY_DETAIL_LINK.getAttributeName());
             errorDocumentURIElement.setPrefix(XML_NAMESPACE_PREFIX);
-            errorDocumentURIElement.setTextContent(
-                    errorSummary.getDocumentURL() == null
+            errorDocumentURIElement.setAttribute(
+                    "xlink:href", errorSummary.getDocumentURL() == null
                     ? ""
                     : errorSummary.getDocumentURL().toString());
 
