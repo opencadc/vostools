@@ -77,18 +77,14 @@ public class UWSTestSuite
     public static Test suite()
     {
         TestSuite suite = new TestSuite();
-
         suite.addTestSuite(JobsTest.class);
         suite.addTestSuite(JobIdTest.class);
         suite.addTestSuite(ExecutionDurationTest.class);
         suite.addTestSuite(DestructionTest.class);
         suite.addTestSuite(QuoteTest.class);
         suite.addTestSuite(ParametersTest.class);
-
+        suite.addTestSuite(SchemaTest.class);
 //        suite.addTestSuite(PhaseTest.class);
-//        suite.addTestSuite(ResultsTest.class);
-//        suite.addTestSuite(ErrorTest.class);
-
         return suite;
     }
 

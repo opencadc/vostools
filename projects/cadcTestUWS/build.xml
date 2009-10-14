@@ -86,7 +86,7 @@
 <property name="project" value="cadcTestUWS" />
 
 <property name="cadc" value="${lib}/cadcUtil.jar" />
-<property name="ext" value="${ext.lib}/log4j.jar:${ext.lib}/junit.jar:${ext.lib}/httpunit.jar" />
+<property name="ext" value="${ext.lib}/log4j.jar:${ext.lib}/junit.jar:${ext.lib}/httpunit.jar:/home/cadc/jburke/opt/xmlunit-1.2/lib/xmlunit-1.2.jar" />
 <property name="runtime" value="${ext.lib}/xerces.jar:${ext.lib}/js.jar:${ext.lib}/nekohtml.jar" />
 
 <property name="jars" value="${cadc}:${ext}" />
@@ -102,6 +102,12 @@
 </target>
 
 <target name="test" depends="compile">
+    <copy file="src/resources/log4j.properties" todir="build/class"/>
+    <copy todir="build/resources">
+        <fileset dir="src/resources">
+            <exclude name="log4j.properties"/>
+        </fileset>
+    </copy>
     <junit printsummary="yes" haltonfailure="yes" fork="yes">
     	<classpath>
             <pathelement path="build/class"/>

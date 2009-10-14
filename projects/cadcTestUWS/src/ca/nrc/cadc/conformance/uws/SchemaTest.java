@@ -69,40 +69,35 @@
 
 package ca.nrc.cadc.conformance.uws;
 
-import com.meterware.httpunit.GetMethodWebRequest;
-import com.meterware.httpunit.WebConversation;
-import com.meterware.httpunit.WebRequest;
-import com.meterware.httpunit.WebResponse;
 import java.io.File;
 import java.io.FileReader;
+import java.net.URL;
 import java.util.Properties;
+import org.custommonkey.xmlunit.Diff;
+import org.custommonkey.xmlunit.XMLUnit;
 import org.w3c.dom.Document;
 import org.w3c.dom.Element;
-import org.w3c.dom.NodeList;
+import org.xml.sax.InputSource;
 
-public class JobsTest extends TestConfig
+public class SchemaTest extends TestConfig
 {
-    private static final String CLASS_NAME = "JobsTest";
+    private static final String CLASS_NAME = "SchemaTest";
 
     private File[] propertiesFiles;
 
-    public JobsTest(String testName)
+    public SchemaTest(String testName)
     {
         super(testName);
 
         propertiesFiles = getPropertiesFiles(CLASS_NAME);
     }
 
-    /*
-     * This test should only be run after the Servlet container for the UWS service
-     * has been restarted. It expects that the UWS service has no Jobs.
-     */
-    public void testEmptyJobs()
+    public void testSchema()
         throws Exception
     {
         if (propertiesFiles == null)
             fail("missing properties file for " + CLASS_NAME);
-        
+
         // For each properties file.
         for (int i = 0; i < propertiesFiles.length; i++)
         {
@@ -117,42 +112,39 @@ public class JobsTest extends TestConfig
             FileReader reader = new FileReader(propertiesFile);
             properties.load(reader);
 
-            // Base URL to the UWS service.
-            String baseUrl = properties.getProperty("ca.nrc.cadc.conformance.uws.baseUrl");
-            log.debug(propertiesFilename + " ca.nrc.cadc.conformance.uws.baseUrl: " + baseUrl);
-            assertNotNull("ca.nrc.cadc.conformance.uws.baseUrl property is not set in properties file " + propertiesFilename, baseUrl);
-
             // URL to the UWS schema used for validation.
             String schemaUrl = properties.getProperty("ca.nrc.cadc.conformance.uws.schemaUrl");
             log.debug(propertiesFilename + " ca.nrc.cadc.conformance.uws.schemaUrl: " + schemaUrl);
             assertNotNull("ca.nrc.cadc.conformance.uws.schemaUrl property is not set in properties file " + propertiesFilename, schemaUrl);
 
-            // Request the UWS service.
-            log.debug("**************************************************");
-            log.debug("HTTP GET: " + baseUrl);
-            WebRequest getRequest = new GetMethodWebRequest(baseUrl);
-            WebConversation conversation = new WebConversation();
-            WebResponse response = conversation.getResponse(getRequest);
-            assertNotNull(propertiesFilename + " GET response to " + baseUrl + " is null", response);
+            // Create DOM document from XML.
+            Document document = buildDocument(new InputSource(schemaUrl));
+            assertNotNull(propertiesFilename + " unable to build a DOM document from " + schemaUrl, document);
 
-            log.debug(getResponseHeaders(response));
-
-            log.debug("response code: " + response.getResponseCode());
-            assertEquals(propertiesFilename + " non-200 GET response code to " + baseUrl, 200, response.getResponseCode());
-
-            log.debug("Content-Type: " + response.getContentType());
-            assertEquals(propertiesFilename + " GET response Content-Type header to " + baseUrl + " is incorrect", ACCEPT_XML, response.getContentType());
-
-            // Validate the XML against the schema.
-            log.debug("XML:\r\n" + response.getText());
-            Document document = buildDocument(schemaUrl, response.getText());
-
+            // Get the root element of the document.
             Element root = document.getDocumentElement();
-            assertNotNull(propertiesFilename + " XML returned from GET of " + baseUrl + " missing uws:jobs element", root);
+            assertNotNull(propertiesFilename + " XML from " + schemaUrl + " missing root element", root);
 
-//            NodeList list = root.getElementsByTagName("uws:jobref");
-//            assertEquals(propertiesFilename + " XML returned from GET of " + baseUrl + " contained uws:jobref elements", 0, list.getLength());
+            // Look for the targetNamespace attribute of the schema.
+            String targetNamespace = root.getAttribute("targetNamespace");
+            log.debug("targetNamespace: " + targetNamespace);
+
+            // Test can not proceed if the schema hasn't specified a targetNamespace.
+            if (targetNamespace == null)
+            {
+                log.debug("Aborting test because the targetNamespace was not specified in the UWS Schema.");
+                return;
+            }
+
+            // Build a document of the XSD referenced in the schema.
+            Document doc = buildDocument(new InputSource(targetNamespace));
+            assertNotNull(propertiesFilename + " unable to build a DOM document from " + targetNamespace, doc);
+
+            // Compare the two documents and get a diff.
+            Diff diff = XMLUnit.compareXML(document, doc);
+            assertTrue(propertiesFilename + " the UWS Schema and the UWS targetNamespace Schema are not similar: " + diff.toString(), diff.similar());
+            assertTrue(propertiesFilename + " the UWS Schema and the UWS targetNamespace Schema are not identical: " + diff.toString(), diff.identical());
         }
     }
-    
+
 }
