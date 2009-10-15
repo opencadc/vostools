@@ -169,4 +169,69 @@ public class Column
         return sb.toString();
     }
 
+	public final String getTableName() {
+		return tableName;
+	}
+
+	public final void setTableName(String tableName) {
+		this.tableName = tableName;
+	}
+
+	public final String getColumnName() {
+		return columnName;
+	}
+
+	public final void setColumnName(String columnName) {
+		this.columnName = columnName;
+	}
+
+	public final String getDescription() {
+		return description;
+	}
+
+	public final void setDescription(String description) {
+		this.description = description;
+	}
+
+	public final String getUtype() {
+		return utype;
+	}
+
+	public final void setUtype(String utype) {
+		this.utype = utype;
+	}
+
+	public final String getUcd() {
+		return ucd;
+	}
+
+	public final void setUcd(String ucd) {
+		this.ucd = ucd;
+	}
+
+	public final String getUnit() {
+		return unit;
+	}
+
+	public final void setUnit(String unit) {
+		this.unit = unit;
+	}
+
+	public final String getDatatype() {
+		return datatype;
+	}
+
+	public final void setDatatype(String datatype) {
+		this.datatype = datatype;
+	}
+
+	public final int getSize() {
+		return size;
+	}
+
+	public final void setSize(int size) {
+		this.size = size;
+	}
+
+    
 }

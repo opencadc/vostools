@@ -116,4 +116,20 @@ public class TapSchema
         return sb.toString();
     }
 
+	public final List<Schema> getSchemas() {
+		return schemas;
+	}
+
+	public final void setSchemas(List<Schema> schemas) {
+		this.schemas = schemas;
+	}
+
+	public final List<Key> getKeys() {
+		return keys;
+	}
+
+	public final void setKeys(List<Key> keys) {
+		this.keys = keys;
+	}
+
 }

@@ -72,6 +72,8 @@ package ca.nrc.cadc.tap.parser.adql.config;
 import java.util.ArrayList;
 import java.util.List;
 
+import org.apache.log4j.Logger;
+
 import net.sf.jsqlparser.schema.Column;
 import net.sf.jsqlparser.schema.Table;
 import net.sf.jsqlparser.statement.select.AllColumns;
@@ -91,8 +93,11 @@ import ca.nrc.cadc.tap.parser.adql.exception.AdqlValidateException;
 import ca.nrc.cadc.tap.parser.adql.validator.PlainSelectInfo;
 import ca.nrc.cadc.tap.parser.adql.validator.SelectValidator;
 import ca.nrc.cadc.tap.parser.adql.validator.SelectValidator.PlainSelectType;
+import ca.nrc.cadc.tap.schema.TapSchemaTest;
 
 public abstract class AdqlConfig {
+	protected Logger log = Logger.getLogger(AdqlConfig.class);
+	
 	protected String configName = "Default";
 	protected List<FunctionMeta> functionMetas;
 	protected List<TableMeta> tableMetas;

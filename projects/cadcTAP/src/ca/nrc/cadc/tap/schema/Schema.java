@@ -138,5 +138,37 @@ public class Schema
         sb.append("]]");
         return sb.toString();
     }
+
+	public final String getSchemaName() {
+		return schemaName;
+	}
+
+	public final void setSchemaName(String schemaName) {
+		this.schemaName = schemaName;
+	}
+
+	public final String getDescription() {
+		return description;
+	}
+
+	public final void setDescription(String description) {
+		this.description = description;
+	}
+
+	public final String getUtype() {
+		return utype;
+	}
+
+	public final void setUtype(String utype) {
+		this.utype = utype;
+	}
+
+	public final List<Table> getTables() {
+		return tables;
+	}
+
+	public final void setTables(List<Table> tables) {
+		this.tables = tables;
+	}
     
 }
