@@ -86,13 +86,10 @@ import org.junit.Before;
 import org.junit.BeforeClass;
 import org.junit.Test;
 
-import ca.nrc.cadc.tap.parser.adql.AdqlManager;
-import ca.nrc.cadc.tap.parser.adql.AdqlParser;
 import ca.nrc.cadc.tap.parser.adql.config.meta.TableMeta;
 import ca.nrc.cadc.tap.parser.adql.exception.AdqlException;
 import ca.nrc.cadc.tap.parser.adql.impl.postgresql.sql.AdqlManagerImpl;
 import ca.nrc.cadc.util.LoggerUtil;
-import org.postgresql.Driver;
 /**
  * 
  * @author Sailor Zhang
