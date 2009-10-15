@@ -75,6 +75,8 @@ import org.apache.log4j.Level;
 import org.apache.log4j.Logger;
 import org.springframework.jdbc.datasource.SingleConnectionDataSource;
 
+import ca.nrc.cadc.util.LoggerUtil;
+
 public class TapSchemaTest extends TestCase
 {
     private static final String JDBC_URL = "jdbc:postgresql://cvodb0/cvodb";
@@ -93,7 +95,7 @@ public class TapSchemaTest extends TestCase
         log = Logger.getLogger(TapSchemaTest.class);
 
         // default log level is debug.
-        log.setLevel((Level)Level.INFO);
+        log.setLevel((Level)Level.DEBUG);
     }
 
     public TapSchemaTest(String testName)
@@ -106,6 +108,7 @@ public class TapSchemaTest extends TestCase
     protected void setUp()
         throws Exception
     {
+       LoggerUtil.initialize(new String[] { "test", "ca.nrc.cadc" }, new String[] { "-d" });
         Class.forName("org.postgresql.Driver");
         DataSource ds = new SingleConnectionDataSource(JDBC_URL, USERNAME, PASSWORD, SUPPRESS_CLOSE);
         TapSchemaDAO dao = new TapSchemaDAO(ds);
@@ -185,6 +188,7 @@ public class TapSchemaTest extends TestCase
             {
                 for (Table table : schema.tables)
                 {
+                    log.debug("Table:" + table.toString());
                     log.debug("Table.tableName:" + table.tableName);
                     log.debug("Asserting Table.columns is not null.");
                     assertNotNull("List of Table columns must not be null", table.columns);
