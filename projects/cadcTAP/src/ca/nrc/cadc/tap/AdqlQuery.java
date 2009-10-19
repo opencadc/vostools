@@ -75,6 +75,7 @@ import ca.nrc.cadc.tap.parser.adql.AdqlManager;
 import ca.nrc.cadc.tap.parser.adql.AdqlParser;
 import ca.nrc.cadc.tap.parser.adql.TapSelectItem;
 import ca.nrc.cadc.tap.parser.adql.exception.AdqlException;
+import ca.nrc.cadc.tap.schema.TapSchema;
 import ca.nrc.cadc.uws.Parameter;
 
 /**
@@ -82,43 +83,61 @@ import ca.nrc.cadc.uws.Parameter;
  */
 public class AdqlQuery implements TapQuery
 {
-	AdqlParser adqlParser ;
-	
+    private AdqlParser adqlParser;
+    private TapSchema tapSchema;
+    private List<Parameter> paramList;
+    private String queryString;
+    private boolean validated = false;
+    
 	public AdqlQuery() {
 		AdqlManager manager = new ca.nrc.cadc.tap.parser.adql.impl.postgresql.pgsphere.AdqlManagerImpl();
 		this.adqlParser = new AdqlParser(manager);
 	}
 	
-	@Override
-	public String getSQL( List<Parameter> paramList )
+    public void setTapSchema(TapSchema tapSchema) 
+    {
+        this.tapSchema = tapSchema;
+    }
+    
+    public void setParameterList( List<Parameter> paramList )
+    {
+        this.queryString = TapUtil.findParameterValue("QUERY", paramList);
+        if (queryString == null)
+            throw new IllegalArgumentException( "parameter not found: QUERY" );
+    }
+    
+	public String getSQL()
 	{
-		String rtn = null;
-		boolean found = false;
-		String queryParamName = "QUERY" ;
-		String queryParamValue;
-		for (Parameter parameter : paramList) {
-			if (queryParamName.equalsIgnoreCase(parameter.getName())) {
-				found = true;
-				queryParamValue = parameter.getValue();
-				try {
-					rtn = this.adqlParser.parse(queryParamValue);
-				} catch (AdqlException ex) {
-					throw new IllegalArgumentException(ex);
-				}
-				break;
-			}
+		if (queryString == null)
+            throw new IllegalStateException();
+                
+		try 
+        {
+            String ret = this.adqlParser.parse(queryString);
+            validated = true;
+            return ret;
+        } 
+        catch (AdqlException ex) 
+        {
+            throw new IllegalArgumentException("failed to parse QUERY", ex);
 		}
-		if (!found)
-			throw new IllegalArgumentException( "Parameter incorrect. No QUERY found." );
-		return rtn;
 	}
 
-	/* (non-Javadoc)
-	 * @see ca.nrc.cadc.tap.TapQuery#getSelectList(java.lang.String)
-	 */
-	@Override
-	public List<TapSelectItem> getSelectList(String query) {
-		// TODO Auto-generated method stub
-		return null;
+	public List<TapSelectItem> getSelectList() 
+    {
+        if (queryString == null)
+            throw new IllegalStateException();
+        
+		try 
+        {
+            if (!validated)
+                this.adqlParser.validate(queryString);
+            validated = true;
+            return this.adqlParser.getTapSelectItems();
+		} 
+        catch (AdqlException ex) 
+        {
+            throw new IllegalArgumentException(ex);
+		}
 	}
 }

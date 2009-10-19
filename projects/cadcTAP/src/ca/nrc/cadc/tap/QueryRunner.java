@@ -69,6 +69,8 @@
 
 package ca.nrc.cadc.tap;
 
+import ca.nrc.cadc.tap.parser.adql.TapSelectItem;
+import ca.nrc.cadc.tap.schema.TapSchema;
 import java.io.File;
 import java.io.FileOutputStream;
 import java.io.IOException;
@@ -91,7 +93,6 @@ public class QueryRunner implements JobRunner
 {
 	private static final Logger logger = Logger.getLogger(QueryRunner.class);
 	
-	private static final HashMap<String,String> langValidators = new HashMap<String,String>();
 	private static final HashMap<String,String> langQueries    = new HashMap<String,String>();
 	
 	static
@@ -160,12 +161,16 @@ public class QueryRunner implements JobRunner
             TapValidator tapValidator = new TapValidator();
             tapValidator.validate( paramList );
             
+            // extract TapSchema
+            TapSchema tapSchema = null;
+            
             // LANG
         	String lang = tapValidator.getLang();
-            Validator langValidator = (Validator) Class.forName( langValidators.get(lang) ).newInstance();
             TapQuery  tapQuery      = (TapQuery)  Class.forName( langQueries.get(lang) ).newInstance();
-        	langValidator.validate( paramList );
-        	String sql = tapQuery.getSQL( paramList );
+            tapQuery.setTapSchema(tapSchema);
+            tapQuery.setParameterList(paramList);
+        	String sql = tapQuery.getSQL();
+            List<TapSelectItem> selectList = tapQuery.getSelectList();
             
             // TODO: UPLOAD
             

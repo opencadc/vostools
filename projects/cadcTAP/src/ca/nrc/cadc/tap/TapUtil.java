@@ -77,19 +77,16 @@ import ca.nrc.cadc.uws.Parameter;
  * @author zhangsa
  *
  */
-public class TapQueryUtil {
-	
-	public static String findQueryString( List<Parameter> paramList ) {
-		String queryString = null;
-		boolean found = false;
-		String queryParamName = "QUERY" ;
-		for (Parameter parameter : paramList) {
-			if (queryParamName.equalsIgnoreCase(parameter.getName())) {
-				found = true;
-				queryString = parameter.getValue();
-				break;
-			}
-		}
-		return queryString;
-	}
+public class TapUtil 
+{
+    public static String findParameterValue(String name,  List<Parameter> paramList) 
+    {
+        String ret = null;
+        for (Parameter parameter : paramList) 
+        {
+            if (name.equalsIgnoreCase(parameter.getName())) 
+                return parameter.getValue();
+        }
+        return null;
+    }
 }

@@ -72,11 +72,22 @@ package ca.nrc.cadc.tap;
 import java.util.List;
 
 import ca.nrc.cadc.tap.parser.adql.TapSelectItem;
+import ca.nrc.cadc.tap.schema.TapSchema;
 import ca.nrc.cadc.uws.Parameter;
 
 public interface TapQuery
 {
-    public String getSQL( List<Parameter> paramList );
+    public void setTapSchema(TapSchema ts);
     
-    public List<TapSelectItem> getSelectList(String query);
+    /**
+     * Set the parameter list. Calling this methiod clears all previous
+     * parsing state.
+     * 
+     * @param params
+     */
+    public void setParameterList(List<Parameter> params);
+    
+    public String getSQL();
+    
+    public List<TapSelectItem> getSelectList();
 }

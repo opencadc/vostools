@@ -113,19 +113,7 @@ public class TableWriterFactory
     
     public static TableWriter getWriter(List<Parameter> params)
     {
-        String fmt = null;
-        Iterator<Parameter> i = params.iterator();
-        while ( i.hasNext() )
-        {
-            Parameter p = i.next();
-            if ( FORMAT.equalsIgnoreCase(p.getName()))
-            {
-                fmt = p.getValue().toLowerCase();
-                if ( !knownFormats.containsKey(fmt))
-                    throw new IllegalArgumentException("unsupported FORMAT: " + p.getValue());
-                break;
-            }
-        }
+        String fmt = TapUtil.findParameterValue(FORMAT, params);
         if (fmt == null)
             fmt = DEFAULT_FORMAT;
         fmt = knownFormats.get(fmt);

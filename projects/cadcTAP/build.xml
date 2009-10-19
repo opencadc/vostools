@@ -97,9 +97,7 @@
 
 <property name="jars" value="${cadc}:${extlib}" />
 
-<target name="build" depends="${project}" />
-
-<target name="${project}" depends="compile">
+<target name="build" depends="compile">
 	<jar jarfile="${build}/lib/${project}.jar"
 		basedir="${build}/class" 
 		update="no">
