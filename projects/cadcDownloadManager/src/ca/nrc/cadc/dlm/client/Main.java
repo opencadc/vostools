@@ -67,14 +67,9 @@
 ************************************************************************
 */
 
-
-// Created on 20-Jul-2005
-
 package ca.nrc.cadc.dlm.client;
 
 import ca.onfire.ak.ApplicationFrame;
-import java.util.Arrays;
-import java.util.List;
 
 /**
  * TODO
@@ -93,9 +88,12 @@ public class Main
             String uriStr = fixNull(am.getValue("uris"));
             String fragment = fixNull(am.getValue("fragment"));
             
-            String[] uris = uriStr.split(",");
             CoreUI ui = new CoreUI();
-            ui.add(uris, fragment);
+            if (uriStr != null)
+            {
+                String[] uris = uriStr.split(",");
+                ui.add(uris, fragment);
+            }
             
             ApplicationFrame frame  = new ApplicationFrame(Constants.name, ui);
             frame.getContentPane().add(ui);
@@ -111,7 +109,7 @@ public class Main
     // convert string 'null' and empty string to a null, trim() and return
     private static String fixNull(String s)
     {
-        if ( "null".equals(s) )
+        if (s == null || "null".equals(s) )
             return null;
         s = s.trim();
         if (s.length() == 0)
