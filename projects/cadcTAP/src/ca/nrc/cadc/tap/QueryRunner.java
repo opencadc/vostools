@@ -71,6 +71,7 @@ package ca.nrc.cadc.tap;
 
 import ca.nrc.cadc.tap.parser.adql.TapSelectItem;
 import ca.nrc.cadc.tap.schema.TapSchema;
+import ca.nrc.cadc.tap.schema.TapSchemaDAO;
 import java.io.File;
 import java.io.FileOutputStream;
 import java.io.IOException;
@@ -88,6 +89,9 @@ import ca.nrc.cadc.uws.Parameter;
 import ca.nrc.cadc.uws.Result;
 import java.io.OutputStream;
 import java.sql.ResultSet;
+import javax.naming.Context;
+import javax.naming.InitialContext;
+import javax.sql.DataSource;
 
 public class QueryRunner implements JobRunner
 {
@@ -95,10 +99,18 @@ public class QueryRunner implements JobRunner
 	
 	private static final HashMap<String,String> langQueries    = new HashMap<String,String>();
 	
+    
+    private static String dataSourceName;
+    private static String fileStoreClassName;
+    
 	static
 	{
 		langQueries.put(Validator.ADQL, "ca.nrc.cadc.tap.AdqlQuery");
 		langQueries.put(Validator.SQL, "ca.nrc.cadc.tap.SqlQuery");
+        
+        // TODO: these need to be easily configurable
+        dataSourceName = "jdbc/pg";
+        fileStoreClassName = System.getProperty( "ca.nrc.cadc.tap.QueryRunner.fileStoreClassName" );
 	}
 	
 	private Job job;
@@ -137,13 +149,13 @@ public class QueryRunner implements JobRunner
     
     private void doit()
     {
-        String fileStoreClassName = null;
         FileStore fs = null;
         String tmpDir = System.getProperty( "java.io.tmpdir" );
         job.setExecutionPhase(ExecutionPhase.UNKNOWN);
         try
         {
-            fileStoreClassName = System.getProperty( "ca.nrc.cadc.tap.QueryRunner.fileStoreClassName" );
+            if (fileStoreClassName == null)
+                logger.error("System property ca.nrc.cadc.tap.QueryRunner.fileStoreClassName was not set");
             fs = (FileStore) Class.forName( fileStoreClassName ).newInstance();
         }
         catch ( Throwable t )
@@ -155,14 +167,22 @@ public class QueryRunner implements JobRunner
         try
         {
             job.setExecutionPhase( ExecutionPhase.EXECUTING );
+            
+            // start processing the job
             List<Parameter> paramList = job.getParameterList();
             
             // REQUEST, VERSION
             TapValidator tapValidator = new TapValidator();
             tapValidator.validate( paramList );
             
+            // find DataSource via JNDI lookup
+            Context initContext = new InitialContext();
+            Context envContext = (Context) initContext.lookup("java:/comp/env");
+            DataSource dataSource = (DataSource) envContext.lookup(dataSourceName);
+            
             // extract TapSchema
-            TapSchema tapSchema = null;
+            TapSchemaDAO dao = new TapSchemaDAO(dataSource);
+            TapSchema tapSchema = dao.get();
             
             // LANG
         	String lang = tapValidator.getLang();
@@ -178,9 +198,11 @@ public class QueryRunner implements JobRunner
             
             // FORMAT
             TableWriter writer = TableWriterFactory.getWriter(paramList);
+            writer.setTapSchema(tapSchema);
+            writer.setSelectList(selectList);
             
             // execute
-            ResultSet rs = execute(sql);
+            ResultSet rs = execute(sql, dataSource);
             
             // write result
             File tmp = new File(tmpDir, "result_" + job.getJobId() + "." + writer.getExtension());
@@ -229,7 +251,7 @@ public class QueryRunner implements JobRunner
         return job;
     }
 
-    private ResultSet execute(String sql)
+    private ResultSet execute(String sql, DataSource ds)
     {
         throw new UnsupportedOperationException("query execution");
     }
