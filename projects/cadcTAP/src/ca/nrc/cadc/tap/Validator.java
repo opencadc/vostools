@@ -101,15 +101,4 @@ public abstract class Validator
 	public static final String PQL  = "PQL";
 
 	public abstract void validate( List<Parameter> paramList );
-	
-	protected boolean listContains( List<Parameter> paramList, String paramName )
-	{
-		for ( Parameter param : paramList )
-		{
-			if ( param.getName().equalsIgnoreCase(paramName) )
-				return true;
-		}
-		return false;
-	}
-
 }

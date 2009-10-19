@@ -87,7 +87,7 @@ public class TapValidator extends Validator
 			//  TODO:  Is this what we want?
 			throw new IllegalStateException( "Empty TAP parameter list" );
 		
-	    if ( !listContains( paramList, TapParams.REQUEST.toString() ) )
+	    if ( TapUtil.findParameterValue(TapParams.REQUEST.toString(),paramList) == null )
 			throw new IllegalStateException( "Missing REQUEST param" );
 		
 		for ( Parameter param : paramList )
@@ -102,7 +102,7 @@ public class TapValidator extends Validator
 					throw new IllegalStateException( "Empty REQUEST value" );
 				if ( !value.equals( "doQuery" ) )
 					throw new IllegalStateException( "Unknown REQUEST value: "+value );
-			    if ( !listContains( paramList, TapParams.LANG.toString() ) )
+			    if ( TapUtil.findParameterValue(TapParams.LANG.toString(),paramList) == null )
 					throw new IllegalStateException( "REQUEST=doQuery not acompanied by LANG param" );
 			}
 			else if ( name.equalsIgnoreCase(TapParams.VERSION.toString() ) )
