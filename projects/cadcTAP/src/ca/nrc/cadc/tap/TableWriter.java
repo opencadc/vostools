@@ -69,9 +69,12 @@
 
 package ca.nrc.cadc.tap;
 
+import ca.nrc.cadc.tap.parser.adql.TapSelectItem;
+import ca.nrc.cadc.tap.schema.TapSchema;
 import java.io.IOException;
 import java.io.OutputStream;
 import java.sql.ResultSet;
+import java.util.List;
 
 public interface TableWriter
 {
@@ -81,6 +84,21 @@ public interface TableWriter
      * @return filename extension
      */
     public String getExtension();
+    
+    /**
+     * The ordered selected items from the query.
+     * 
+     * @param items
+     */
+    public void setSelectList(List<TapSelectItem> items);
+    
+    /**
+     * The TapSchema for the target database.
+     * 
+     * @param schema
+     */
+    public void setTapSchema(TapSchema schema);
+    
     
 	public void write( ResultSet rs, OutputStream out )
 		throws IOException;
