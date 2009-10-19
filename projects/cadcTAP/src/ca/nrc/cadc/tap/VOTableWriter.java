@@ -69,21 +69,20 @@
 
 package ca.nrc.cadc.tap;
 
-import ca.nrc.cadc.tap.parser.adql.TapSelectItem;
-import ca.nrc.cadc.tap.schema.TapSchema;
 import java.io.IOException;
 import java.io.OutputStream;
 import java.sql.ResultSet;
-
-import ca.nrc.cadc.uws.ExecutionPhase;
-
 import java.util.List;
+
 import uk.ac.starlink.table.ColumnInfo;
 import uk.ac.starlink.table.DefaultValueInfo;
 import uk.ac.starlink.table.DescribedValue;
 import uk.ac.starlink.table.RowListStarTable;
 import uk.ac.starlink.table.ValueInfo;
 import uk.ac.starlink.votable.DataFormat;
+import ca.nrc.cadc.tap.parser.adql.TapSelectItem;
+import ca.nrc.cadc.tap.schema.TapSchema;
+import ca.nrc.cadc.uws.ExecutionPhase;
 
 public class VOTableWriter implements TableWriter
 {

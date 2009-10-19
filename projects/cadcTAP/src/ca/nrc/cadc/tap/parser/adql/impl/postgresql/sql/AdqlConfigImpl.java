@@ -76,12 +76,10 @@ import java.util.MissingResourceException;
 
 import javax.sql.DataSource;
 
-import org.apache.log4j.Logger;
 import org.springframework.jdbc.datasource.SingleConnectionDataSource;
 
 import ca.nrc.cadc.tap.parser.adql.config.AdqlConfig;
 import ca.nrc.cadc.tap.parser.adql.config.meta.ColumnMeta;
-import ca.nrc.cadc.tap.parser.adql.config.meta.FunctionMeta;
 import ca.nrc.cadc.tap.parser.adql.config.meta.TableMeta;
 import ca.nrc.cadc.tap.schema.Column;
 import ca.nrc.cadc.tap.schema.Schema;
@@ -93,65 +91,75 @@ import ca.nrc.cadc.tap.schema.TapSchemaDAO;
  * @author zhangsa
  * 
  */
-public class AdqlConfigImpl extends AdqlConfig {
-	private static final String JDBC_DRIVER = "org.postgresql.Driver"; 
-   private static final String JDBC_URL = "jdbc:postgresql://cvodb0/cvodb";
-   private static final String USERNAME = "cadcuser51";
-   private static final String PASSWORD = "MhU7nuvP5/67A:31:30";
-   private static final boolean SUPPRESS_CLOSE = false;
+public class AdqlConfigImpl extends AdqlConfig
+{
+    private static final String JDBC_DRIVER = "org.postgresql.Driver";
+    private static final String JDBC_URL = "jdbc:postgresql://cvodb0/cvodb";
+    private static final String USERNAME = "cadcuser51";
+    private static final String PASSWORD = "MhU7nuvP5/67A:31:30";
+    private static final boolean SUPPRESS_CLOSE = false;
 
-   private static final String TAP_SCHEMA_NAME = "TAP_SCHEMA";
+    private static final String TAP_SCHEMA_NAME = "TAP_SCHEMA";
 
-   private TapSchema _tapSchema;
+    private TapSchema _tapSchema;
 
-	public AdqlConfigImpl() {
-		super();
-		
-      try {
-			Class.forName(JDBC_DRIVER);
-		} catch (ClassNotFoundException e) {
-			String msg = "JDBC Driver not found.";
-			log.error(msg, e);
-			throw new MissingResourceException(msg, JDBC_DRIVER, null);
-		}
-      DataSource ds = new SingleConnectionDataSource(JDBC_URL, USERNAME, PASSWORD, SUPPRESS_CLOSE);
-      TapSchemaDAO dao = new TapSchemaDAO(ds);
-      _tapSchema = dao.get();
+    public AdqlConfigImpl()
+    {
+        super();
 
-		configName = "CADC PostgreSQL SQL";
-		initFunctionMeta();
-		initTableMeta();
+        try
+        {
+            Class.forName(JDBC_DRIVER);
+        } catch (ClassNotFoundException e)
+        {
+            String msg = "JDBC Driver not found.";
+            log.error(msg, e);
+            throw new MissingResourceException(msg, JDBC_DRIVER, null);
+        }
+        DataSource ds = new SingleConnectionDataSource(JDBC_URL, USERNAME, PASSWORD, SUPPRESS_CLOSE);
+        TapSchemaDAO dao = new TapSchemaDAO(ds);
+        _tapSchema = dao.get();
 
-		allowJoins = true; // Allow multiple tables in FROM clause (including JOIN). Default: true.
-		allowUnion = true; // Allow UNION. Default: true.
-		allowGroupBy = true; // Allow GROUP BY. Default: true.
-		allowOrderBy = true; // Allow ORDER BY. Default: true.
-		allowLimit = false; // Allow LIMIT. Default: false (not an ADQL construct)
-		allowTop = true; // Allow TOP. Default: true.
-		allowDistinct = true; // Allow DISTINCT. Default: true.
-		allowInto = false; // Allow SELECT INTO. Default: false (not an ADQL construct)
-		// caseSensitive = false; // Whether column, table, and schema names are case sensitive. -sz 2009-09-10
+        configName = "CADC PostgreSQL SQL";
+        initFunctionMeta();
+        initTableMeta();
 
-	}
+        allowJoins = true; // Allow multiple tables in FROM clause (including JOIN). Default: true.
+        allowUnion = true; // Allow UNION. Default: true.
+        allowGroupBy = true; // Allow GROUP BY. Default: true.
+        allowOrderBy = true; // Allow ORDER BY. Default: true.
+        allowLimit = false; // Allow LIMIT. Default: false (not an ADQL construct)
+        allowTop = true; // Allow TOP. Default: true.
+        allowDistinct = true; // Allow DISTINCT. Default: true.
+        allowInto = false; // Allow SELECT INTO. Default: false (not an ADQL construct)
+        // caseSensitive = false; // Whether column, table, and schema names are case sensitive. -sz 2009-09-10
 
-	private void initFunctionMeta() {
-		// functions not available for standard SQL parser.
-	}
+    }
 
-	private void initTableMeta() {
-		TableMeta tableMeta;
+    private void initFunctionMeta()
+    {
+        // functions not available for standard SQL parser.
+    }
 
-		for (Schema schema : _tapSchema.getSchemas()) {
-          if (schema.getSchemaName().equals(TAP_SCHEMA_NAME)) {
-              for (Table table : schema.getTables()) {
-                  tableMeta = new TableMeta(table.getSchemaName(), table.getSimpleTableName());
-                  for (Column column : table.getColumns()) {
-               		tableMeta.addColumnMeta(new ColumnMeta(column.getColumnName(), column.getDatatype(),
-               				column.getUcd(), column.getUnit()));
-                  }
-            		tableMetas.add(tableMeta);
-              }
-          }
-      }
-	}
+    private void initTableMeta()
+    {
+        TableMeta tableMeta;
+
+        for (Schema schema : _tapSchema.getSchemas())
+        {
+            if (schema.getSchemaName().equals(TAP_SCHEMA_NAME))
+            {
+                for (Table table : schema.getTables())
+                {
+                    tableMeta = new TableMeta(table.getSchemaName(), table.getSimpleTableName());
+                    for (Column column : table.getColumns())
+                    {
+                        tableMeta.addColumnMeta(new ColumnMeta(column.getColumnName(), column.getDatatype(), column.getUcd(),
+                                column.getUnit()));
+                    }
+                    tableMetas.add(tableMeta);
+                }
+            }
+        }
+    }
 }

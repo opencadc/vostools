@@ -76,5 +76,6 @@ package ca.nrc.cadc.tap.parser.adql.impl.postgresql.pgsphere.validator;
  * @author zhangsa
  * 
  */
-public class SelectValidatorImpl extends ca.nrc.cadc.tap.parser.adql.impl.postgresql.sql.validator.SelectValidatorImpl {
+public class SelectValidatorImpl extends ca.nrc.cadc.tap.parser.adql.impl.postgresql.sql.validator.SelectValidatorImpl
+{
 }

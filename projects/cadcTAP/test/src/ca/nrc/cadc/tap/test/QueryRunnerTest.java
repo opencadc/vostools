@@ -134,7 +134,7 @@ public class QueryRunnerTest extends TestCase
 			          job.getErrorSummary().getSummaryMessage() );
 
 		assertEquals( "file:/tmp/QueryRunnerError100.xml",
-				      job.getErrorSummary().getDocumentURI().toString() );
+				      job.getErrorSummary().getDocumentURL().toString() );
 
 		assertEquals( "ERROR", job.getExecutionPhase().toString() ); // for now
 		//assertEquals( "COMPLETED", job.getExecutionPhase().toString() );
@@ -166,7 +166,7 @@ public class QueryRunnerTest extends TestCase
 				      job.getErrorSummary().getSummaryMessage() );
 		
 		assertEquals( "file:/tmp/QueryRunnerError200.xml",
-				      job.getErrorSummary().getDocumentURI().toString() );
+				      job.getErrorSummary().getDocumentURL().toString() );
 		
 		assertEquals( "ERROR", job.getExecutionPhase().toString() );
 	}
@@ -198,7 +198,7 @@ public class QueryRunnerTest extends TestCase
 			          job.getErrorSummary().getSummaryMessage() );
 
 		assertEquals( "file:/tmp/QueryRunnerError300.xml",
-				      job.getErrorSummary().getDocumentURI().toString() );
+				      job.getErrorSummary().getDocumentURL().toString() );
 
 		assertEquals( "ERROR", job.getExecutionPhase().toString() );
 	}

@@ -82,33 +82,39 @@ import ca.nrc.cadc.tap.parser.adql.exception.AdqlValidateException;
  * @author pdowler
  * @author Sailor Zhang
  */
-public abstract class ColumnReferenceValidator extends AdqlValidatorVisitor implements ColumnReferenceVisitor {
-	protected static Logger log = Logger.getLogger(ColumnReferenceValidator.class);
+public abstract class ColumnReferenceValidator extends AdqlValidatorVisitor implements ColumnReferenceVisitor
+{
+    protected static Logger log = Logger.getLogger(ColumnReferenceValidator.class);
 
-	protected SelectValidator selectValidator;
+    protected SelectValidator selectValidator;
 
-	public void init(AdqlManager manager, SelectValidator selectValidator) {
-		super.init(manager);
-		this.selectValidator = selectValidator;
-	}
+    public void init(AdqlManager manager, SelectValidator selectValidator)
+    {
+        super.init(manager);
+        this.selectValidator = selectValidator;
+    }
 
-	/**
-	 * Validate a column in a column reference of ORDER BY or GROUP BY.
-	 * 
-	 * Does not check parent query, if any.
-	 * 
-	 * @param c
-	 * @throws AdqlValidateException
-	 */
-	public void validateColumn(Column c) throws AdqlValidateException {
-		int count = this.selectValidator.getPlainSelectInfo().countFromColumnsMatches(c);
-		if (count == 0) {
-			// column not found at the current level of select-from.
-			throw new AdqlValidateException("Column:" + c + " is not valid.");
-		} else if (count == 1) {
-			return;
-		} else { // count >= 2
-			throw new AdqlValidateException("Column:" + c + " is ambiguous.");
-		}
-	}
+    /**
+     * Validate a column in a column reference of ORDER BY or GROUP BY.
+     * 
+     * Does not check parent query, if any.
+     * 
+     * @param c
+     * @throws AdqlValidateException
+     */
+    public void validateColumn(Column c) throws AdqlValidateException
+    {
+        int count = this.selectValidator.getPlainSelectInfo().countFromColumnsMatches(c);
+        if (count == 0)
+        {
+            // column not found at the current level of select-from.
+            throw new AdqlValidateException("Column:" + c + " is not valid.");
+        } else if (count == 1)
+        {
+            return;
+        } else
+        { // count >= 2
+            throw new AdqlValidateException("Column:" + c + " is ambiguous.");
+        }
+    }
 }

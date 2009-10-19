@@ -69,10 +69,11 @@
 
 package ca.nrc.cadc.tap.parser.adql.impl.postgresql.pgsphere.validator;
 
-
 /**
  * 
  * @author pdowler, Sailor Zhang
  */
-public class ColumnReferenceValidatorImpl extends ca.nrc.cadc.tap.parser.adql.impl.postgresql.sql.validator.ColumnReferenceValidatorImpl {
+public class ColumnReferenceValidatorImpl extends
+        ca.nrc.cadc.tap.parser.adql.impl.postgresql.sql.validator.ColumnReferenceValidatorImpl
+{
 }

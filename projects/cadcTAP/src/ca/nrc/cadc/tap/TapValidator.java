@@ -69,10 +69,8 @@
 
 package ca.nrc.cadc.tap;
 
-import java.text.ParseException;
 import java.util.List;
 
-import ca.nrc.cadc.date.DateUtil;
 import ca.nrc.cadc.uws.Parameter;
 
 public class TapValidator extends Validator

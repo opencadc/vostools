@@ -69,128 +69,143 @@
 
 package ca.nrc.cadc.tap.schema;
 
-import java.util.ArrayList;
 import java.util.List;
 
 /**
  * Class to represent a TAP_SCHEMA.tables table.
  * 
  */
-public class Table {
-	/**
-	 * The schema this Table belongs to.
-	 */
-	public String schemaName;
+public class Table
+{
+    /**
+     * The schema this Table belongs to.
+     */
+    public String schemaName;
 
-	/**
-	 * The fully qualified Table name.
-	 */
-	public String tableName;
+    /**
+     * The fully qualified Table name.
+     */
+    public String tableName;
 
-	/**
-	 * Describes the Table.
-	 */
-	public String description;
+    /**
+     * Describes the Table.
+     */
+    public String description;
 
-	/**
-	 * The utype of the Table.
-	 */
-	public String utype;
+    /**
+     * The utype of the Table.
+     */
+    public String utype;
 
-	/**
-	 * List of columns belonging to this Table.
-	 */
-	public List<Column> columns;
+    /**
+     * List of columns belonging to this Table.
+     */
+    public List<Column> columns;
 
-	/**
-	 * Default no-arg constructor.
-	 */
-	public Table() {
-	}
+    /**
+     * Default no-arg constructor.
+     */
+    public Table()
+    {
+    }
 
-	/**
-	 * Construct a Schema using the specified parameters.
-	 * 
-	 * @param schemaName
-	 *           The schema this Table belongs to.
-	 * @param tableName
-	 *           The fully qualified Table name.
-	 * @param description
-	 *           Describes the Table.
-	 * @param utype
-	 *           The utype of the Table.
-	 */
-	public Table(String schemaName, String tableName, String description, String utype) {
-		this.schemaName = schemaName;
-		this.tableName = tableName;
-		this.description = description;
-		this.utype = utype;
-	}
+    /**
+     * Construct a Schema using the specified parameters.
+     * 
+     * @param schemaName
+     *            The schema this Table belongs to.
+     * @param tableName
+     *            The fully qualified Table name.
+     * @param description
+     *            Describes the Table.
+     * @param utype
+     *            The utype of the Table.
+     */
+    public Table(String schemaName, String tableName, String description, String utype)
+    {
+        this.schemaName = schemaName;
+        this.tableName = tableName;
+        this.description = description;
+        this.utype = utype;
+    }
 
-	/**
-	 * @return String representation of the Table.
-	 */
-	public String toString() {
-		StringBuilder sb = new StringBuilder();
-		sb.append("Table[");
-		sb.append(schemaName).append(",");
-		sb.append(tableName).append(",");
-		sb.append(description).append(",");
-		sb.append(utype).append(",");
-		sb.append("columns[");
-		if (columns != null) {
-			for (Column column : columns)
-				sb.append(column);
-		}
-		sb.append("]]");
-		return sb.toString();
-	}
+    /**
+     * @return String representation of the Table.
+     */
+    public String toString()
+    {
+        StringBuilder sb = new StringBuilder();
+        sb.append("Table[");
+        sb.append(schemaName).append(",");
+        sb.append(tableName).append(",");
+        sb.append(description).append(",");
+        sb.append(utype).append(",");
+        sb.append("columns[");
+        if (columns != null)
+        {
+            for (Column column : columns)
+                sb.append(column);
+        }
+        sb.append("]]");
+        return sb.toString();
+    }
 
-	public String getSimpleTableName() {
-		String simpleName = tableName;
-		if (tableName.startsWith(schemaName + "."))
-			simpleName = tableName.substring(tableName.indexOf(".")+1);
-		return simpleName;
-	}
-	
-	public final String getSchemaName() {
-		return schemaName;
-	}
+    public String getSimpleTableName()
+    {
+        String simpleName = tableName;
+        if (tableName.startsWith(schemaName + "."))
+            simpleName = tableName.substring(tableName.indexOf(".") + 1);
+        return simpleName;
+    }
 
-	public final void setSchemaName(String schemaName) {
-		this.schemaName = schemaName;
-	}
+    public final String getSchemaName()
+    {
+        return schemaName;
+    }
 
-	public final String getTableName() {
-		return tableName;
-	}
+    public final void setSchemaName(String schemaName)
+    {
+        this.schemaName = schemaName;
+    }
 
-	public final void setTableName(String tableName) {
-		this.tableName = tableName;
-	}
+    public final String getTableName()
+    {
+        return tableName;
+    }
 
-	public final String getDescription() {
-		return description;
-	}
+    public final void setTableName(String tableName)
+    {
+        this.tableName = tableName;
+    }
 
-	public final void setDescription(String description) {
-		this.description = description;
-	}
+    public final String getDescription()
+    {
+        return description;
+    }
 
-	public final String getUtype() {
-		return utype;
-	}
+    public final void setDescription(String description)
+    {
+        this.description = description;
+    }
 
-	public final void setUtype(String utype) {
-		this.utype = utype;
-	}
+    public final String getUtype()
+    {
+        return utype;
+    }
 
-	public final List<Column> getColumns() {
-		return columns;
-	}
+    public final void setUtype(String utype)
+    {
+        this.utype = utype;
+    }
 
-	public final void setColumns(List<Column> columns) {
-		this.columns = columns;
-	}
+    public final List<Column> getColumns()
+    {
+        return columns;
+    }
+
+    public final void setColumns(List<Column> columns)
+    {
+        this.columns = columns;
+    }
 
 }

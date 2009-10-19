@@ -79,29 +79,34 @@ import ca.nrc.cadc.tap.parser.adql.validator.ColumnReferenceValidator;
  * 
  * @author pdowler
  */
-public class ColumnReferenceValidatorImpl extends ColumnReferenceValidator {
-	/**
-	 * Visit a column reference in a GROUP BY or ORDER BY.
-	 * 
-	 * @param c
-	 */
-	public void visit(Column c) {
-		log.debug("visit(Column): " + AdqlUtil.detailOf(c));
-		try {
-			this.validateColumn(c);
-		} catch (AdqlValidateException ex) {
-			addException(ex);
-		}
-	}
+public class ColumnReferenceValidatorImpl extends ColumnReferenceValidator
+{
+    /**
+     * Visit a column reference in a GROUP BY or ORDER BY.
+     * 
+     * @param c
+     */
+    public void visit(Column c)
+    {
+        log.debug("visit(Column): " + AdqlUtil.detailOf(c));
+        try
+        {
+            this.validateColumn(c);
+        } catch (AdqlValidateException ex)
+        {
+            addException(ex);
+        }
+    }
 
-	/**
-	 * Visit a column reference in a GROUP BY or ORDER BY. The implementation simply logs the visit at debug mode.
-	 * 
-	 * @param i
-	 */
-	public void visit(ColumnIndex i) {
-		log.debug("visit(ColumnIndex): " + i);
-		if (i.getIndex() > this.plainSelect.getSelectItems().size())
-			addException(new AdqlValidateException(i + ": index out of boundary."));
-	}
+    /**
+     * Visit a column reference in a GROUP BY or ORDER BY. The implementation simply logs the visit at debug mode.
+     * 
+     * @param i
+     */
+    public void visit(ColumnIndex i)
+    {
+        log.debug("visit(ColumnIndex): " + i);
+        if (i.getIndex() > this.plainSelect.getSelectItems().size())
+            addException(new AdqlValidateException(i + ": index out of boundary."));
+    }
 }

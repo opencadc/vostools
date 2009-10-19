@@ -69,29 +69,30 @@
 
 package ca.nrc.cadc.tap;
 
-import ca.nrc.cadc.tap.parser.adql.TapSelectItem;
-import ca.nrc.cadc.tap.schema.TapSchema;
-import ca.nrc.cadc.tap.schema.TapSchemaDAO;
 import java.io.File;
 import java.io.FileOutputStream;
 import java.io.IOException;
+import java.io.OutputStream;
 import java.net.URL;
+import java.sql.ResultSet;
 import java.util.HashMap;
 import java.util.List;
 
+import javax.naming.Context;
+import javax.naming.InitialContext;
+import javax.sql.DataSource;
+
 import org.apache.log4j.Logger;
 
+import ca.nrc.cadc.tap.parser.adql.TapSelectItem;
+import ca.nrc.cadc.tap.schema.TapSchema;
+import ca.nrc.cadc.tap.schema.TapSchemaDAO;
 import ca.nrc.cadc.uws.ErrorSummary;
 import ca.nrc.cadc.uws.ExecutionPhase;
 import ca.nrc.cadc.uws.Job;
 import ca.nrc.cadc.uws.JobRunner;
 import ca.nrc.cadc.uws.Parameter;
 import ca.nrc.cadc.uws.Result;
-import java.io.OutputStream;
-import java.sql.ResultSet;
-import javax.naming.Context;
-import javax.naming.InitialContext;
-import javax.sql.DataSource;
 
 public class QueryRunner implements JobRunner
 {

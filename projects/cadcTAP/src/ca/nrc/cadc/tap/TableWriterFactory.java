@@ -69,11 +69,11 @@
 
 package ca.nrc.cadc.tap;
 
-import ca.nrc.cadc.uws.Parameter;
-import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.TreeMap;
+
+import ca.nrc.cadc.uws.Parameter;
 
 /**
  * Factory that handles the FORMAT parameter and creates a suitable TableWriter.

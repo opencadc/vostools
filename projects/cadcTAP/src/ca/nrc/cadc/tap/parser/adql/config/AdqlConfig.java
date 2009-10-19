@@ -92,346 +92,406 @@ import ca.nrc.cadc.tap.parser.adql.validator.PlainSelectInfo;
 import ca.nrc.cadc.tap.parser.adql.validator.SelectValidator;
 import ca.nrc.cadc.tap.parser.adql.validator.SelectValidator.PlainSelectType;
 
-public abstract class AdqlConfig {
-	protected Logger log = Logger.getLogger(AdqlConfig.class);
-	
-	protected String configName = "Default";
-	protected List<FunctionMeta> functionMetas;
-	protected List<TableMeta> tableMetas;
+public abstract class AdqlConfig
+{
+    protected Logger log = Logger.getLogger(AdqlConfig.class);
 
-	protected boolean allowJoins; // Allow multiple tables in FROM clause
-	// (including JOIN). Default: true.
-	protected boolean allowUnion; // Allow UNION. Default: true.
-	protected boolean allowGroupBy; // Allow GROUP BY. Default: true.
-	protected boolean allowOrderBy; // Allow ORDER BY. Default: true.
-	protected boolean allowLimit; // Allow LIMIT. Default: false (not an ADQL
-	// construct)
-	protected boolean allowTop; // Allow TOP. Default: true.
-	protected boolean allowDistinct; // Allow DISTINCT. Default: true.
-	protected boolean allowInto; // Allow SELECT INTO. Default: false (not an
+    protected String configName = "Default";
+    protected List<FunctionMeta> functionMetas;
+    protected List<TableMeta> tableMetas;
 
-	// ADQL construct)
+    protected boolean allowJoins; // Allow multiple tables in FROM clause
+    // (including JOIN). Default: true.
+    protected boolean allowUnion; // Allow UNION. Default: true.
+    protected boolean allowGroupBy; // Allow GROUP BY. Default: true.
+    protected boolean allowOrderBy; // Allow ORDER BY. Default: true.
+    protected boolean allowLimit; // Allow LIMIT. Default: false (not an ADQL
+    // construct)
+    protected boolean allowTop; // Allow TOP. Default: true.
+    protected boolean allowDistinct; // Allow DISTINCT. Default: true.
+    protected boolean allowInto; // Allow SELECT INTO. Default: false (not an
 
-	// protected boolean caseSensitive; // Whether column, table, and schema
-	// names are case sensitive. -sz 2009-09-10
+    // ADQL construct)
 
-	public TableMeta findTableMeta(Table table) {
-		TableMeta rtn = null;
-		String schemaName = table.getSchemaName();
-		String tableName = table.getName();
-		for (TableMeta tm : this.tableMetas) {
-			if (schemaName == null) {
-				if (tm.getTableName().equals(tableName)) {
-					rtn = tm;
-					break;
-				}
-			} else {
-				if (tm.getSchemaName().equals(schemaName) && tm.getTableName().equals(tableName)) {
-					rtn = tm;
-					break;
-				}
-			}
-		}
-		return rtn;
-	}
+    // protected boolean caseSensitive; // Whether column, table, and schema
+    // names are case sensitive. -sz 2009-09-10
 
-	// Return a list of SelectExpressionItem's that contains the MeatORM columns
-	// for the specified table.
-	public List<SelectItem> getAllSelectItemsForTable(Table table) {
-		TableMeta tableMeta = this.findTableMeta(table);
-		List<SelectItem> selectItems = tableMeta.getAllColumnAsSelectItems(table);
-		return selectItems;
-	}
+    public TableMeta findTableMeta(Table table)
+    {
+        TableMeta rtn = null;
+        String schemaName = table.getSchemaName();
+        String tableName = table.getName();
+        for (TableMeta tm : this.tableMetas)
+        {
+            if (schemaName == null)
+            {
+                if (tm.getTableName().equals(tableName))
+                {
+                    rtn = tm;
+                    break;
+                }
+            } else
+            {
+                if (tm.getSchemaName().equals(schemaName) && tm.getTableName().equals(tableName))
+                {
+                    rtn = tm;
+                    break;
+                }
+            }
+        }
+        return rtn;
+    }
 
-	/**
-	 * Check whether a column is in a table. Prefix such as schema and table name are used in checking.
-	 * 
-	 * @param column
-	 * @param table
-	 * @return
-	 */
-	public boolean isColumnInTable(Column column, Table table) {
-		/*
-		 * scenarios:
-		 * 
-		 * column: schemaName.tableName.columnName tableName.columnName alias.columnName columnName
-		 * 
-		 * table: s.t t
-		 */
+    // Return a list of SelectExpressionItem's that contains the MeatORM columns
+    // for the specified table.
+    public List<SelectItem> getAllSelectItemsForTable(Table table)
+    {
+        TableMeta tableMeta = this.findTableMeta(table);
+        List<SelectItem> selectItems = tableMeta.getAllColumnAsSelectItems(table);
+        return selectItems;
+    }
 
-		boolean rtn = false;
-		boolean proceed = false;
+    /**
+     * Check whether a column is in a table. Prefix such as schema and table name are used in checking.
+     * 
+     * @param column
+     * @param table
+     * @return
+     */
+    public boolean isColumnInTable(Column column, Table table)
+    {
+        /*
+         * scenarios:
+         * 
+         * column: schemaName.tableName.columnName tableName.columnName alias.columnName columnName
+         * 
+         * table: s.t t
+         */
 
-		String s1, t1, s0, t0, a0;
+        boolean rtn = false;
+        boolean proceed = false;
 
-		t1 = column.getTable().getName();
-		t0 = table.getName();
-		if (t1 == null) {
-			proceed = true;
-		} else {
-			s1 = column.getTable().getSchemaName();
-			s0 = table.getSchemaName();
-			a0 = table.getAlias();
+        String s1, t1, s0, t0, a0;
 
-			if (s1 != null) {
-				if (s1.equals(s0) && t1.equals(t0))
-					proceed = true;
-			} else {
-				if (t1.equals(t0) || t1.equals(a0))
-					proceed = true;
-			}
-		}
+        t1 = column.getTable().getName();
+        t0 = table.getName();
+        if (t1 == null)
+        {
+            proceed = true;
+        } else
+        {
+            s1 = column.getTable().getSchemaName();
+            s0 = table.getSchemaName();
+            a0 = table.getAlias();
 
-		if (proceed) {
-			String columnName = column.getColumnName();
-			TableMeta tableMeta = findTableMeta(table);
-			for (ColumnMeta columnMeta : tableMeta.getColumnMetas()) {
-				if (columnMeta.getName().equals(columnName)) {
-					rtn = true;
-					break;
-				}
-			}
-		}
-		return rtn;
-	}
+            if (s1 != null)
+            {
+                if (s1.equals(s0) && t1.equals(t0))
+                    proceed = true;
+            } else
+            {
+                if (t1.equals(t0) || t1.equals(a0))
+                    proceed = true;
+            }
+        }
 
-	/**
-	 * Determine whether a column is valid, i.e. exists in the tables of fromItem/Joins
-	 * 
-	 * Does not check against sub-select in the from part
-	 * 
-	 * Currently not used by anybody.
-	 * 
-	 * @param column
-	 * @param ps
-	 * @return
-	 */
-	public boolean isColumnValid(Column column, PlainSelect ps) {
-		boolean rtn = false;
-		List<Table> tables = AdqlUtil.extractSelectFromTables(ps);
-		if (tables != null) {
-			for (Table table : tables) {
-				if (isColumnInTable(column, table)) {
-					rtn = true;
-					break;
-				}
-			}
-		}
-		return rtn;
-	}
+        if (proceed)
+        {
+            String columnName = column.getColumnName();
+            TableMeta tableMeta = findTableMeta(table);
+            for (ColumnMeta columnMeta : tableMeta.getColumnMetas())
+            {
+                if (columnMeta.getName().equals(columnName))
+                {
+                    rtn = true;
+                    break;
+                }
+            }
+        }
+        return rtn;
+    }
 
-	/**
-	 * Populate and Update contents of plainSelectInfo
-	 * 
-	 * @param plainSelectInfo
-	 * @param plainSelect
-	 * @throws AdqlValidateException
-	 */
-	public void populatePlainSelectInfo(SelectValidator selectValidator, PlainSelect plainSelect) throws AdqlValidateException {
-		PlainSelectInfo plainSelectInfo = selectValidator.getPlainSelectInfo();
-		PlainSelectType type = selectValidator.getPlainSelectType();
+    /**
+     * Determine whether a column is valid, i.e. exists in the tables of fromItem/Joins
+     * 
+     * Does not check against sub-select in the from part
+     * 
+     * Currently not used by anybody.
+     * 
+     * @param column
+     * @param ps
+     * @return
+     */
+    public boolean isColumnValid(Column column, PlainSelect ps)
+    {
+        boolean rtn = false;
+        List<Table> tables = AdqlUtil.extractSelectFromTables(ps);
+        if (tables != null)
+        {
+            for (Table table : tables)
+            {
+                if (isColumnInTable(column, table))
+                {
+                    rtn = true;
+                    break;
+                }
+            }
+        }
+        return rtn;
+    }
 
-		if (plainSelectInfo == null)
-			plainSelectInfo = new PlainSelectInfo();
-		FromItem fromItem;
-		fromItem = plainSelect.getFromItem();
-		if (fromItem instanceof Table)
-			plainSelectInfo.addFromTable((Table) fromItem, this);
-		else if (fromItem instanceof SubSelect)
-			plainSelectInfo.addFromSubSelect((SubSelect) fromItem, this);
+    /**
+     * Populate and Update contents of plainSelectInfo
+     * 
+     * @param plainSelectInfo
+     * @param plainSelect
+     * @throws AdqlValidateException
+     */
+    public void populatePlainSelectInfo(SelectValidator selectValidator, PlainSelect plainSelect) throws AdqlValidateException
+    {
+        PlainSelectInfo plainSelectInfo = selectValidator.getPlainSelectInfo();
+        PlainSelectType type = selectValidator.getPlainSelectType();
 
-		List<Join> joins = plainSelect.getJoins();
-		if (joins != null) {
-			for (Join join : joins) {
-				fromItem = join.getRightItem();
-				if (fromItem instanceof Table)
-					plainSelectInfo.addFromTable((Table) fromItem, this);
-				else if (fromItem instanceof SubSelect)
-					plainSelectInfo.addFromSubSelect((SubSelect) fromItem, this);
-			}
-		}
+        if (plainSelectInfo == null)
+            plainSelectInfo = new PlainSelectInfo();
+        FromItem fromItem;
+        fromItem = plainSelect.getFromItem();
+        if (fromItem instanceof Table)
+            plainSelectInfo.addFromTable((Table) fromItem, this);
+        else if (fromItem instanceof SubSelect)
+            plainSelectInfo.addFromSubSelect((SubSelect) fromItem, this);
 
-		//TODO:sz populate tapSelectItems
-		
-		// Only populate tapSelectItems if the plainSelect is at ROOT level.
-		if (type == PlainSelectType.ROOT_SELECT) {
-			TapSelectItemAppender tapSelectItemAppender = new TapSelectItemAppender(plainSelectInfo);
-			List<SelectItem> selectItems = plainSelect.getSelectItems();
-			for (SelectItem selectItem : selectItems) {
-				selectItem.accept(tapSelectItemAppender);
-			}
-		}
-		return;
-	}
+        List<Join> joins = plainSelect.getJoins();
+        if (joins != null)
+        {
+            for (Join join : joins)
+            {
+                fromItem = join.getRightItem();
+                if (fromItem instanceof Table)
+                    plainSelectInfo.addFromTable((Table) fromItem, this);
+                else if (fromItem instanceof SubSelect)
+                    plainSelectInfo.addFromSubSelect((SubSelect) fromItem, this);
+            }
+        }
 
-	/**
-	 * Determine whether a column is ambiguous. Does not check against sub-select in the from part.
-	 * 
-	 * Not used by anybody.
-	 * 
-	 * @param column
-	 * @param ps
-	 * @return
-	 */
-	public boolean isColumnAmbiguous(Column column, PlainSelect ps) {
-		boolean rtn = true;
-		if (column.getTable().getSchemaName() != null) // full qualified name
-			// presented
-			rtn = false;
-		else if (column.getTable().getName() != null) { // TABLE.COLUMN is used.
-			String tableName = column.getTable().getName();
-			int count = 0;
+        // TODO:sz populate tapSelectItems
 
-			List<Table> fromTables = AdqlUtil.extractSelectFromTables(ps);
-			if (fromTables != null) {
-				for (Table fromTable : fromTables) {
-					if (fromTable.getName().equals(tableName) && isColumnInTable(column, fromTable))
-						count++;
-				}
-			}
-			rtn = (count > 1);
-		} else { // No schema or table name is used as prefix
-			int count = 0;
+        // Only populate tapSelectItems if the plainSelect is at ROOT level.
+        if (type == PlainSelectType.ROOT_SELECT)
+        {
+            TapSelectItemAppender tapSelectItemAppender = new TapSelectItemAppender(plainSelectInfo);
+            List<SelectItem> selectItems = plainSelect.getSelectItems();
+            for (SelectItem selectItem : selectItems)
+            {
+                selectItem.accept(tapSelectItemAppender);
+            }
+        }
+        return;
+    }
 
-			List<Table> fromTables = AdqlUtil.extractSelectFromTables(ps);
-			if (fromTables != null) {
-				for (Table fromTable : fromTables) {
-					if (isColumnInTable(column, fromTable))
-						count++;
-				}
-			}
-			rtn = (count > 1);
-		}
-		return rtn;
-	}
+    /**
+     * Determine whether a column is ambiguous. Does not check against sub-select in the from part.
+     * 
+     * Not used by anybody.
+     * 
+     * @param column
+     * @param ps
+     * @return
+     */
+    public boolean isColumnAmbiguous(Column column, PlainSelect ps)
+    {
+        boolean rtn = true;
+        if (column.getTable().getSchemaName() != null) // full qualified name
+            // presented
+            rtn = false;
+        else if (column.getTable().getName() != null)
+        { // TABLE.COLUMN is used.
+            String tableName = column.getTable().getName();
+            int count = 0;
 
-	/**
-	 * If the same table name is used in two schemas, The invoker should always use full qualified name i.e. schemaName.tableName
-	 * 
-	 * @param table
-	 * @return
-	 */
-	public boolean isTableAmbiguous(Table table) {
-		boolean rtn = false;
-		String schemaName = table.getSchemaName();
-		String tableName = table.getName();
-		boolean found = false;
-		if (schemaName == null) {
-			for (TableMeta tm : this.tableMetas) {
-				if (tm.getTableName().equals(tableName)) {
-					if (!found)
-						found = true;
-					else { // already found, duplicated table name
-						rtn = true;
-						break;
-					}
-				}
-			}
-		} else
-			rtn = false;
-		return rtn;
-	}
+            List<Table> fromTables = AdqlUtil.extractSelectFromTables(ps);
+            if (fromTables != null)
+            {
+                for (Table fromTable : fromTables)
+                {
+                    if (fromTable.getName().equals(tableName) && isColumnInTable(column, fromTable))
+                        count++;
+                }
+            }
+            rtn = (count > 1);
+        } else
+        { // No schema or table name is used as prefix
+            int count = 0;
 
-	/**
-	 * Check whether table is in the List of TableMeta.
-	 * 
-	 * @param t
-	 * @return
-	 */
-	public boolean isTableValid(Table table) {
-		boolean rtn = false;
-		String schemaName = table.getSchemaName();
-		String tableName = table.getName();
-		for (TableMeta tm : this.tableMetas) {
-			if (tm.getTableName().equals(tableName)) {
-				if (schemaName == null || schemaName.equals(tm.getSchemaName())) {
-					rtn = true;
-					break;
-				}
-			}
-		}
-		return rtn;
-	}
+            List<Table> fromTables = AdqlUtil.extractSelectFromTables(ps);
+            if (fromTables != null)
+            {
+                for (Table fromTable : fromTables)
+                {
+                    if (isColumnInTable(column, fromTable))
+                        count++;
+                }
+            }
+            rtn = (count > 1);
+        }
+        return rtn;
+    }
 
-	/**
-	 * Constructor
-	 */
-	public AdqlConfig() {
-		this.functionMetas = new ArrayList<FunctionMeta>();
-		this.tableMetas = new ArrayList<TableMeta>();
-	}
+    /**
+     * If the same table name is used in two schemas, The invoker should always use full qualified name i.e. schemaName.tableName
+     * 
+     * @param table
+     * @return
+     */
+    public boolean isTableAmbiguous(Table table)
+    {
+        boolean rtn = false;
+        String schemaName = table.getSchemaName();
+        String tableName = table.getName();
+        boolean found = false;
+        if (schemaName == null)
+        {
+            for (TableMeta tm : this.tableMetas)
+            {
+                if (tm.getTableName().equals(tableName))
+                {
+                    if (!found)
+                        found = true;
+                    else
+                    { // already found, duplicated table name
+                        rtn = true;
+                        break;
+                    }
+                }
+            }
+        } else
+            rtn = false;
+        return rtn;
+    }
 
-	// Getters and Setters -------------------------------
+    /**
+     * Check whether table is in the List of TableMeta.
+     * 
+     * @param t
+     * @return
+     */
+    public boolean isTableValid(Table table)
+    {
+        boolean rtn = false;
+        String schemaName = table.getSchemaName();
+        String tableName = table.getName();
+        for (TableMeta tm : this.tableMetas)
+        {
+            if (tm.getTableName().equals(tableName))
+            {
+                if (schemaName == null || schemaName.equals(tm.getSchemaName()))
+                {
+                    rtn = true;
+                    break;
+                }
+            }
+        }
+        return rtn;
+    }
 
-	public final List<FunctionMeta> getFunctionMetas() {
-		return functionMetas;
-	}
+    /**
+     * Constructor
+     */
+    public AdqlConfig()
+    {
+        this.functionMetas = new ArrayList<FunctionMeta>();
+        this.tableMetas = new ArrayList<TableMeta>();
+    }
 
-	public final List<TableMeta> getTableMetas() {
-		return tableMetas;
-	}
+    // Getters and Setters -------------------------------
 
-	public final boolean isAllowJoins() {
-		return allowJoins;
-	}
+    public final List<FunctionMeta> getFunctionMetas()
+    {
+        return functionMetas;
+    }
 
-	public final void setAllowJoins(boolean allowJoins) {
-		this.allowJoins = allowJoins;
-	}
+    public final List<TableMeta> getTableMetas()
+    {
+        return tableMetas;
+    }
 
-	public final boolean isAllowUnion() {
-		return allowUnion;
-	}
+    public final boolean isAllowJoins()
+    {
+        return allowJoins;
+    }
 
-	public final void setAllowUnion(boolean allowUnion) {
-		this.allowUnion = allowUnion;
-	}
+    public final void setAllowJoins(boolean allowJoins)
+    {
+        this.allowJoins = allowJoins;
+    }
 
-	public final boolean isAllowGroupBy() {
-		return allowGroupBy;
-	}
+    public final boolean isAllowUnion()
+    {
+        return allowUnion;
+    }
 
-	public final void setAllowGroupBy(boolean allowGroupBy) {
-		this.allowGroupBy = allowGroupBy;
-	}
+    public final void setAllowUnion(boolean allowUnion)
+    {
+        this.allowUnion = allowUnion;
+    }
 
-	public final boolean isAllowOrderBy() {
-		return allowOrderBy;
-	}
+    public final boolean isAllowGroupBy()
+    {
+        return allowGroupBy;
+    }
 
-	public final void setAllowOrderBy(boolean allowOrderBy) {
-		this.allowOrderBy = allowOrderBy;
-	}
+    public final void setAllowGroupBy(boolean allowGroupBy)
+    {
+        this.allowGroupBy = allowGroupBy;
+    }
 
-	public final boolean isAllowLimit() {
-		return allowLimit;
-	}
+    public final boolean isAllowOrderBy()
+    {
+        return allowOrderBy;
+    }
 
-	public final void setAllowLimit(boolean allowLimit) {
-		this.allowLimit = allowLimit;
-	}
+    public final void setAllowOrderBy(boolean allowOrderBy)
+    {
+        this.allowOrderBy = allowOrderBy;
+    }
 
-	public final boolean isAllowTop() {
-		return allowTop;
-	}
+    public final boolean isAllowLimit()
+    {
+        return allowLimit;
+    }
 
-	public final void setAllowTop(boolean allowTop) {
-		this.allowTop = allowTop;
-	}
+    public final void setAllowLimit(boolean allowLimit)
+    {
+        this.allowLimit = allowLimit;
+    }
 
-	public final boolean isAllowDistinct() {
-		return allowDistinct;
-	}
+    public final boolean isAllowTop()
+    {
+        return allowTop;
+    }
 
-	public final void setAllowDistinct(boolean allowDistinct) {
-		this.allowDistinct = allowDistinct;
-	}
+    public final void setAllowTop(boolean allowTop)
+    {
+        this.allowTop = allowTop;
+    }
 
-	public final boolean isAllowInto() {
-		return allowInto;
-	}
+    public final boolean isAllowDistinct()
+    {
+        return allowDistinct;
+    }
 
-	public final void setAllowInto(boolean allowInto) {
-		this.allowInto = allowInto;
-	}
+    public final void setAllowDistinct(boolean allowDistinct)
+    {
+        this.allowDistinct = allowDistinct;
+    }
+
+    public final boolean isAllowInto()
+    {
+        return allowInto;
+    }
+
+    public final void setAllowInto(boolean allowInto)
+    {
+        this.allowInto = allowInto;
+    }
 }

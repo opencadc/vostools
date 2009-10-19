@@ -69,12 +69,13 @@
 
 package ca.nrc.cadc.tap;
 
-import ca.nrc.cadc.tap.parser.adql.TapSelectItem;
-import ca.nrc.cadc.tap.schema.TapSchema;
 import java.io.IOException;
 import java.io.OutputStream;
 import java.sql.ResultSet;
 import java.util.List;
+
+import ca.nrc.cadc.tap.parser.adql.TapSelectItem;
+import ca.nrc.cadc.tap.schema.TapSchema;
 
 public interface TableWriter
 {
