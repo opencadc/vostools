@@ -95,27 +95,17 @@
 
 	<property name="jars" value="${ext.log4j}:${ext.servlet-api}" />
 
-	<target name="build" depends="cadcLog,webapp" />
+	<target name="build" depends="cadcLog" />
 
 	<target name="cadcLog" depends="compile">
-		<jar jarfile="${build}/tmp/cadcLog.jar" basedir="${build}/class" update="no">
+		<jar jarfile="${build}/lib/cadcLog.jar" basedir="${build}/class" update="no">
 			<exclude name="test/**" />
 		</jar>
-	</target>
-
-	<target name="webapp" depends="cadcLog">
-		<war warfile="${build}/webapps/cadcLog.war" webxml="src/xml/web.xml" update="no">
-			<lib dir="${ext.lib}">
-				<include name="log4j.jar" />
-			</lib>
-			<lib file="${build}/tmp/cadcLog.jar" />
-		</war>
 	</target>
 
 	<!-- JAR files needed to run the test suite -->
 
 	<!-- Directory used to deploy the WAR file -->
-	<property name="deployDir" value="/data/test/webapps" />
 
 	<!-- compile the test classes -->
 
