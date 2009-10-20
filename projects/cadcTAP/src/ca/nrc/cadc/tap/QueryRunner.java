@@ -74,7 +74,10 @@ import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.OutputStream;
 import java.net.URL;
+import java.sql.Connection;
+import java.sql.PreparedStatement;
 import java.sql.ResultSet;
+import java.sql.SQLException;
 import java.util.HashMap;
 import java.util.List;
 
@@ -202,18 +205,41 @@ public class QueryRunner implements JobRunner
             writer.setTapSchema(tapSchema);
             writer.setSelectList(selectList);
             
-            // execute
-            ResultSet rs = execute(sql, dataSource);
-            
-            // write result
-            File tmp = new File(tmpDir, "result_" + job.getJobId() + "." + writer.getExtension());
-            OutputStream ostream = new FileOutputStream(tmp);
-            writer.write(rs, ostream);
-            ostream.close();
+            Connection connection = null;
+            PreparedStatement pstmt = null;
+            ResultSet rs = null;
+            File tmpFile = null;
+            try
+            {
+                connection = dataSource.getConnection();
+
+                // execute
+                pstmt = connection.prepareStatement(sql);
+                rs = pstmt.executeQuery();
+
+                // write result
+                tmpFile = new File(tmpDir, "result_" + job.getJobId() + "." + writer.getExtension());
+                OutputStream ostream = new FileOutputStream(tmpFile);
+                writer.write(rs, ostream);
+                ostream.close();
+
+                rs.close();
+                pstmt.close();
+            } 
+            catch (SQLException ex)
+            {
+                logger.error("SQL Execution error.", ex);
+                throw ex;
+            } 
+            finally
+            {
+                if (connection != null)
+                    connection.close();
+            }
 
             // store result
-            URL url = fs.put(tmp);
-            Result res = new Result(tmp.getName(), url);
+            URL url = fs.put(tmpFile);
+            Result res = new Result(tmpFile.getName(), url);
             
             job.setExecutionPhase( ExecutionPhase.COMPLETED );
 		}
@@ -250,10 +276,5 @@ public class QueryRunner implements JobRunner
     public Job getJob()
     {
         return job;
-    }
-
-    private ResultSet execute(String sql, DataSource ds)
-    {
-        throw new UnsupportedOperationException("query execution");
     }
 }
