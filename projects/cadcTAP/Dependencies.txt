@@ -1,0 +1,12 @@
+JAR files required for the OpenCADC cadcTAP project
+===================================================
+
+Name in build.xml    Versioned Name                  Project URL
+-----------------    --------------                  -----------
+log4j.jar            log4j-1.2.15                    http://logging.apache.org
+jsqlparser.jar       jsqlparser-0.6.2.a              http://jsqlparser.sourceforge.net
+spring.jar           spring-framework-2.5.6.SEC01    http://www.springsource.org
+stil.jar             stil-2.8                        http://www.star.bris.ac.uk/~mbt/stil
+javacsv.jar          javacsv-2.0                     http://www.csvreader.com/java_csv.php
+cadcUtil.jar                                         http://code.google.com/p/opencadc    
+cadcUWS.jar                                          http://code.google.com/p/opencadc

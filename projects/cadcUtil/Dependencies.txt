@@ -1,0 +1,6 @@
+JAR files required for the OpenCADC cadcUtil project
+====================================================
+
+Name in build.xml    Versioned Name          Project URL
+-----------------    --------------------    -----------
+servlet-api.jar      apache-tomcat-5.5.20    http://tomcat.apache.org
