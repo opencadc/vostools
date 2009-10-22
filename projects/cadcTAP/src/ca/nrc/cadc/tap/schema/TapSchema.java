@@ -69,6 +69,8 @@
 
 package ca.nrc.cadc.tap.schema;
 
+import java.io.PrintWriter;
+import java.io.StringWriter;
 import java.util.List;
 
 /**
@@ -86,17 +88,13 @@ public class TapSchema
     /**
      * Default no-arg constructor.
      */
-    public TapSchema()
-    {
-    }
+    public TapSchema() {}
 
     /**
      * Construct a KeyColumn using the specified parameters.
      * 
-     * @param schemas
-     *            List of Schemas belonging to this TAP_SCHEMA.
-     * @param keys
-     *            List of Keys belonging to this TAP_SCHEMA.
+     * @param schemas List of Schemas belonging to this TAP_SCHEMA.
+     * @param keys List of Keys belonging to this TAP_SCHEMA.
      */
     public TapSchema(List<Schema> schemas, List<Key> keys)
     {
@@ -105,20 +103,9 @@ public class TapSchema
     }
 
     /**
-     * @return String representation of the TapSchema.
+     * Setters and getters.
+     * 
      */
-    public String toString()
-    {
-        StringBuilder sb = new StringBuilder();
-        sb.append("TapSchema[\r\n");
-        for (Schema schema : schemas)
-            sb.append("\t").append(schema.toString()).append("\r\n");
-        for (Key key : keys)
-            sb.append("\t").append(key.toString()).append("\r\n");
-        sb.append("]");
-        return sb.toString();
-    }
-
     public final List<Schema> getSchemas()
     {
         return schemas;
@@ -137,6 +124,28 @@ public class TapSchema
     public final void setKeys(List<Key> keys)
     {
         this.keys = keys;
+    }
+
+    /**
+     * @return String representation of the TapSchema.
+     */
+    public String toString()
+    {
+        StringWriter sw = new StringWriter();
+        PrintWriter pw = new PrintWriter(sw);
+        pw.println("TapSchema[");
+        for (Schema schema : schemas)
+        {
+            pw.print("\t");
+            pw.println(schema.toString());
+        }
+        for (Key key : keys)
+        {
+            pw.print("\t");
+            pw.println(key.toString());
+        }
+        pw.print("]");
+        return sw.toString();
     }
 
 }

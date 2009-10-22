@@ -105,21 +105,15 @@ public class Table
     /**
      * Default no-arg constructor.
      */
-    public Table()
-    {
-    }
+    public Table() {}
 
     /**
      * Construct a Schema using the specified parameters.
-     * 
-     * @param schemaName
-     *            The schema this Table belongs to.
-     * @param tableName
-     *            The fully qualified Table name.
-     * @param description
-     *            Describes the Table.
-     * @param utype
-     *            The utype of the Table.
+     *
+     * @param schemaName The schema this Table belongs to.
+     * @param tableName The fully qualified Table name.
+     * @param description Describes the Table.
+     * @param utype The utype of the Table.
      */
     public Table(String schemaName, String tableName, String description, String utype)
     {
@@ -130,34 +124,22 @@ public class Table
     }
 
     /**
-     * @return String representation of the Table.
+     * Removes the schema, if it exists, from the table name.
+     * 
+     * @return Unqualified table name.
      */
-    public String toString()
-    {
-        StringBuilder sb = new StringBuilder();
-        sb.append("Table[");
-        sb.append(schemaName).append(",");
-        sb.append(tableName).append(",");
-        sb.append(description).append(",");
-        sb.append(utype).append(",");
-        sb.append("columns[");
-        if (columns != null)
-        {
-            for (Column column : columns)
-                sb.append(column);
-        }
-        sb.append("]]");
-        return sb.toString();
-    }
-
     public String getSimpleTableName()
     {
         String simpleName = tableName;
         if (tableName.startsWith(schemaName + "."))
-            simpleName = tableName.substring(tableName.indexOf(".") + 1);
+            simpleName = tableName.substring(tableName.indexOf(".")+1);
         return simpleName;
     }
 
+    /**
+     * Setters and getters.
+     *
+     */
     public final String getSchemaName()
     {
         return schemaName;
@@ -206,6 +188,26 @@ public class Table
     public final void setColumns(List<Column> columns)
     {
         this.columns = columns;
+    }
+
+    /**
+     * @return String representation of the Table.
+     */
+    public String toString()
+    {
+        StringBuilder sb = new StringBuilder();
+        sb.append("Table[");
+        sb.append(schemaName == null ? "" : schemaName).append(",");
+        sb.append(tableName).append(",");
+        sb.append(description == null ? "" : description).append(",");
+        sb.append(utype == null ? "" : utype).append(",");
+        sb.append("columns[");
+        if (columns != null) {
+            for (Column column : columns)
+                sb.append(column);
+        }
+        sb.append("]]");
+        return sb.toString();
     }
 
 }

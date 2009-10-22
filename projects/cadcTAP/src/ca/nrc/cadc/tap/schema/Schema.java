@@ -107,12 +107,9 @@ public class Schema
     /**
      * Construct a Schema using the specified parameters.
      * 
-     * @param schemaName
-     *            The Schema name.
-     * @param description
-     *            Describes the Schema.
-     * @param utype
-     *            The utype of the Schema.
+     * @param schemaName The Schema name.
+     * @param description Describes the Schema.
+     * @param utype The utype of the Schema.
      */
     public Schema(String schemaName, String description, String utype)
     {
@@ -122,25 +119,9 @@ public class Schema
     }
 
     /**
-     * @return String representation of the Schema.
+     * Setters and getters.
+     * 
      */
-    public String toString()
-    {
-        StringBuilder sb = new StringBuilder();
-        sb.append("Schema[");
-        sb.append(schemaName).append(",");
-        sb.append(description).append(",");
-        sb.append(utype).append(",");
-        sb.append("tables[");
-        if (tables != null)
-        {
-            for (Table table : tables)
-                sb.append(table);
-        }
-        sb.append("]]");
-        return sb.toString();
-    }
-
     public final String getSchemaName()
     {
         return schemaName;
@@ -181,4 +162,25 @@ public class Schema
         this.tables = tables;
     }
 
+    /**
+     * @return String representation of the Schema.
+     */
+    public String toString()
+    {
+        StringBuilder sb = new StringBuilder();
+        sb.append("Schema[");
+        sb.append(schemaName).append(",");
+        sb.append(description == null ? "" : description).append(",");
+        sb.append(utype == null ? "" : utype).append(",");
+        sb.append("tables[");
+        if (tables != null)
+        {
+            for (Table table : tables)
+                sb.append(table);
+        }
+        sb.append("]]");
+        return sb.toString();
+    }
+
+    
 }

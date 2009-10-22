@@ -76,44 +76,44 @@ package ca.nrc.cadc.tap.schema;
 public class Column
 {
     /**
-     * The table this column belongs to.
+     * The table this column belongs to (not null).
      */
     public String tableName;
 
     /**
-     * The Column name.
+     * The Column name (not null).
      */
     public String columnName;
 
     /**
-     * Describes the Column.
+     * Describes the Column (can be null).
      */
     public String description;
 
     /**
-     * The utype of the Column.
+     * The utype of the Column (can be null).
      */
     public String utype;
 
     /**
-     * The UCD of Column.
+     * The UCD of Column (can be null).
      */
     public String ucd;
 
     /**
-     * The unit used for Column values.
+     * The unit used for Column values (can be null).
      */
     public String unit;
 
     /**
-     * The ADQL datatype of Column.
+     * The ADQL datatype of Column (not null).
      */
     public String datatype;
 
     /**
-     * The Column datatype size (Column width).
+     * The Column datatype size (Column width) (not null).
      */
-    public int size;
+    public Integer size;
 
     /**
      * Default no-arg constructor.
@@ -125,25 +125,23 @@ public class Column
     /**
      * Construct a Column using the specified parameters.
      * 
-     * @param tableName
-     *            The table this Column belongs to.
-     * @param columnName
-     *            The Column name.
-     * @param description
-     *            Describes the Column.
-     * @param utype
-     *            The utype of the Column.
-     * @param ucd
-     *            The UCD of Column.
-     * @param unit
-     *            The unit used for Column values.
-     * @param datatype
-     *            The ADQL datatype of Column.
-     * @param size
-     *            The Column datatype size (Column width).
+     * @param tableName The table this Column belongs to.
+     * @param columnName The Column name.
+     * @param description Describes the Column.
+     * @param utype The utype of the Column.
+     * @param ucd The UCD of Column.
+     * @param unit The unit used for Column values.
+     * @param datatype The ADQL datatype of Column.
+     * @param size The Column datatype size (Column width).
      */
-    public Column(String tableName, String columnName, String description, String utype, String ucd, String unit, String datatype,
-            int size)
+    public Column(String tableName,
+                  String columnName,
+                  String description,
+                  String utype,
+                  String ucd,
+                  String unit,
+                  String datatype,
+                  Integer size)
     {
         this.tableName = tableName;
         this.columnName = columnName;
@@ -156,24 +154,9 @@ public class Column
     }
 
     /**
-     * @return String representation of the Column.
+     * Setters and getters.
+     *
      */
-    public String toString()
-    {
-        StringBuilder sb = new StringBuilder();
-        sb.append("Column[");
-        sb.append(tableName).append(",");
-        sb.append(columnName).append(",");
-        sb.append(description).append(",");
-        sb.append(utype).append(",");
-        sb.append(ucd).append(",");
-        sb.append(unit).append(",");
-        sb.append(datatype).append(",");
-        sb.append(size);
-        sb.append("]");
-        return sb.toString();
-    }
-
     public final String getTableName()
     {
         return tableName;
@@ -244,14 +227,32 @@ public class Column
         this.datatype = datatype;
     }
 
-    public final int getSize()
+    public final Integer getSize()
     {
         return size;
     }
 
-    public final void setSize(int size)
+    public final void setSize(Integer size)
     {
         this.size = size;
     }
 
+    /**
+     * @return String representation of the Column.
+     */
+    public String toString()
+    {
+        StringBuilder sb = new StringBuilder();
+        sb.append("Column[");
+        sb.append(tableName).append(",");
+        sb.append(columnName).append(",");
+        sb.append(description == null ? "" : description).append(",");
+        sb.append(utype == null ? "" : utype).append(",");
+        sb.append(ucd == null ? "" : ucd).append(",");
+        sb.append(unit == null ? "" : unit).append(",");
+        sb.append(datatype).append(",");
+        sb.append(size == null ? "" : size);
+        sb.append("]");
+        return sb.toString();
+    }
 }
