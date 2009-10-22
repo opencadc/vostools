@@ -235,7 +235,8 @@ public class VOTableWriter implements TableWriter
                             field.setAttribute("unit", column.unit);
                         if (column.datatype != null)
                             field.setAttribute("datatype", column.datatype);
-                        field.setAttribute("width", String.valueOf(column.size));
+                        if (column.size != null)
+                            field.setAttribute("width", String.valueOf(column.size));
                         if (column.description != null)
                         {
                             Element description = new Element("DESCRIPTION");
