@@ -69,23 +69,51 @@
 
 package ca.nrc.cadc.tap;
 
+import ca.nrc.cadc.tap.parser.adql.TapSelectItem;
+import ca.nrc.cadc.tap.schema.Column;
+import ca.nrc.cadc.tap.schema.Schema;
+import ca.nrc.cadc.tap.schema.Table;
+import ca.nrc.cadc.tap.schema.TapSchema;
+import ca.nrc.cadc.tap.votable.TableDataElement;
+import ca.nrc.cadc.tap.votable.TableDataXMLOutputter;
 import java.io.IOException;
 import java.io.OutputStream;
 import java.sql.ResultSet;
 import java.util.List;
-
-import uk.ac.starlink.table.ColumnInfo;
-import uk.ac.starlink.table.DefaultValueInfo;
-import uk.ac.starlink.table.DescribedValue;
-import uk.ac.starlink.table.RowListStarTable;
-import uk.ac.starlink.table.ValueInfo;
-import uk.ac.starlink.votable.DataFormat;
+import javax.xml.parsers.DocumentBuilder;
+import javax.xml.parsers.DocumentBuilderFactory;
+import javax.xml.parsers.ParserConfigurationException;
+import javax.xml.transform.OutputKeys;
+import javax.xml.transform.Transformer;
+import javax.xml.transform.TransformerConfigurationException;
+import javax.xml.transform.TransformerException;
+import javax.xml.transform.TransformerFactory;
+import javax.xml.transform.dom.DOMSource;
+import javax.xml.transform.stream.StreamResult;
+import org.jdom.Document;
+import org.jdom.Element;
+import org.jdom.Namespace;
+import org.jdom.output.Format;
+import org.jdom.output.XMLOutputter;
 import ca.nrc.cadc.tap.parser.adql.TapSelectItem;
 import ca.nrc.cadc.tap.schema.TapSchema;
 import ca.nrc.cadc.uws.ExecutionPhase;
 
 public class VOTableWriter implements TableWriter
 {
+    public static final String XML_DECLARATION = "<?xml version=\"1.0\"?>";
+    public static final String VOTABLE_VERSION  = "1.2";
+    public static final String XSI_NS = "xmlns:xsi";
+    public static final String XSI_NS_URI = "http://www.w3.org/2001/XMLSchema-instance";
+    public static final String XSI_NO_NS_LOCATION = "xsi:noNamespaceSchemaLocation";
+    public static final String XSI_NO_NS_LOCATION_URI = "http://www.ivoa.net/xml/VOTable/v1.2";
+    public static final String STC_NS = "xmlns:stc";
+    public static final String STC_NS_URI = "http://www.ivoa.net/xml/STC/v1.30";
+
+    protected TapSchema tapSchema;
+
+    protected List<TapSelectItem> selectList;
+
     public VOTableWriter() { }
 
     public String getExtension()
@@ -95,48 +123,148 @@ public class VOTableWriter implements TableWriter
 
     public void setSelectList(List<TapSelectItem> items)
     {
-        throw new UnsupportedOperationException("Not supported yet.");
+        this.selectList = items;
     }
 
     public void setTapSchema(TapSchema schema)
     {
-        throw new UnsupportedOperationException("Not supported yet.");
+        this.tapSchema = schema;
     }
     
-	public void write( ResultSet rs, OutputStream output )
-	{
-		throw new UnsupportedOperationException( "Don't know where to get a result set from yet." );
-	}
+    public void write(ResultSet resultSet, OutputStream output)
+        throws IOException
+    {
+        if (selectList == null)
+            throw new IllegalStateException("SelectList must be set using setSelectList(), it cannot be null.");
+        if (tapSchema == null)
+            throw new IllegalStateException("TapSchema must be set using setTapSchema(), it cannnot be null.");
+
+        // Create the jdom document.
+        Document document = new Document();
+
+        // Root VOTABLE element.
+        Element votable = new Element("VOTABLE");
+        votable.setAttribute("version", VOTABLE_VERSION);
+        votable.setNamespace(Namespace.getNamespace(XSI_NS_URI));
+//        votable.addNamespaceDeclaration(Namespace.getNamespace(XSI_NO_NS_LOCATION_URI));
+        votable.addNamespaceDeclaration(Namespace.getNamespace("stc", STC_NS_URI));
+        document.addContent(votable);
+
+        // Create the RESOURCE element and add to the VOTABLE element.
+        Element resource = new Element("RESOURCE");
+        votable.addContent(resource);
+
+        // Create the TABLE element and add to the RESOURCE element.
+        Element table = new Element("TABLE");
+        resource.addContent(table);
+
+        // Add the metadata elements.
+        for (TapSelectItem selectItem : selectList)
+            table.addContent(getMetaDataElement(selectItem));
+
+        // Create the DATA element and add to the TABLE element.
+        Element data = new Element("DATA");
+        table.addContent(data);
+
+        // Create the TABLEDATA element and add the to DATA element.
+        Element tableData = new TableDataElement(resultSet);
+        data.addContent(tableData);
+
+        // Write out the VOTABLE.
+        XMLOutputter outputter = new TableDataXMLOutputter();
+        outputter.setFormat(Format.getPrettyFormat());
+        outputter.output(document, output);
+    }
 	
-	public void write( Throwable thrown, OutputStream output )
-		throws IOException
-	{
-	    //  Define table.
-		ColumnInfo[] columnInfo = new ColumnInfo[1];
-	    columnInfo[0] = new ColumnInfo( "Message", String.class, "Message text" );
-	    RowListStarTable table = new RowListStarTable( columnInfo );
-	    
-	    //  Since this method is in response to a Throwable,
-	    //  it is safe to assume that this is an error document.
-	    ValueInfo valInfo = new DefaultValueInfo( "QUERY_STATUS");
-	    DescribedValue descVal = new DescribedValue( valInfo, ExecutionPhase.ERROR );
-	    table.setParameter( descVal );
+    public void write( Throwable thrown, OutputStream output )
+        throws IOException
+    {
+         // Create the jdom document.
+        Document document = new Document();
 
-	    //  Populate table.
-	    table.addRow( new Object[] { thrown.getMessage() } );
-	    Throwable cause = thrown.getCause();
-	    while ( cause != null )
-	    {
-	    	String message = cause.getMessage();
-		    table.addRow( new Object[] { message } );
-		    cause = cause.getCause();
-	    }
-	    
-        //  Specify output format as XML, rather than FITS or binary.
-        uk.ac.starlink.votable.VOTableWriter voWriter = new uk.ac.starlink.votable.VOTableWriter( DataFormat.TABLEDATA, true );
+        // Root VOTABLE element.
+        Element votable = new Element("VOTABLE");
+        votable.setAttribute("version", VOTABLE_VERSION);
+        votable.setNamespace(Namespace.getNamespace(XSI_NS_URI));
+//        votable.addNamespaceDeclaration(Namespace.getNamespace(XSI_NO_NS_LOCATION_URI));
+        votable.addNamespaceDeclaration(Namespace.getNamespace("stc", STC_NS_URI));
+        document.addContent(votable);
 
-        //  Write table.
-        voWriter.writeStarTable( table, output );
-	}
+        // Create the RESOURCE element and add to the VOTABLE element.
+        Element resource = new Element("RESOURCE");
+        votable.addContent(resource);
+
+        // Create the INFO element and add to the RESOURCE element.
+        Element info = new Element("INFO");
+        info.setAttribute("name", "QUERY_STATUS");
+        info.setAttribute("value", "ERROR");
+        resource.addContent(info);
+
+        // Create the DESCRIPTION element and add to the INFO element.
+        Element description = new Element("DESCRIPTION");
+        description.setText(getThrownExceptions(thrown));
+        info.addContent(description);
+
+        // Write out the VOTABLE.
+        XMLOutputter outputter = new XMLOutputter();
+        outputter.setFormat(Format.getPrettyFormat());
+        outputter.output(document, output);
+    }
+
+    private Element getMetaDataElement(TapSelectItem selectItem)
+    {
+        Element field = new Element("FIELD");
+
+        // TODO: assumes first schema is the one we want.
+        Schema schema = tapSchema.schemas.get(0);
+        for (Table table : schema.tables)
+        {
+            if (table.tableName.equals(selectItem.getTableName()))
+            {
+                for (Column column: table.columns)
+                {
+                    if (column.columnName.equals(selectItem.getColumnName()))
+                    {
+                        if (column.columnName != null)
+                            field.setAttribute("name", column.columnName);
+                        if (column.utype != null)
+                            field.setAttribute("utype", column.utype);
+                        if (column.ucd != null)
+                            field.setAttribute("ucd", column.ucd);
+                        if (column.unit != null)
+                            field.setAttribute("unit", column.unit);
+                        if (column.datatype != null)
+                            field.setAttribute("datatype", column.datatype);
+                        field.setAttribute("width", String.valueOf(column.size));
+                        if (column.description != null)
+                        {
+                            Element description = new Element("DESCRIPTION");
+                            description.setText(column.description);
+                            field.addContent(description);
+                        }
+                        break;
+                    }
+                }
+            }
+        }
+        return field;
+    }
+
+    private String getThrownExceptions(Throwable thrown)
+    {
+        StringBuilder sb = new StringBuilder();
+        sb.append(thrown.getClass().getSimpleName());
+        sb.append(": ");
+        sb.append(thrown.getMessage() == null ? "" : thrown.getMessage());
+        while (thrown.getCause() != null)
+        {
+            thrown = thrown.getCause();
+            sb.append(" ");
+            sb.append(thrown.getClass().getSimpleName());
+            sb.append(": ");
+            sb.append(thrown.getMessage() == null ? "" : thrown.getMessage());
+        }
+        return sb.toString();
+    }
 
 }
