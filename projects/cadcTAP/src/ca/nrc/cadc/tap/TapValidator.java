@@ -83,10 +83,8 @@ public class TapValidator extends Validator
 			throw new IllegalStateException( "Missing TAP parameter list" );
 		
         String request = TapUtil.findParameterValue( TapParams.REQUEST.toString(), paramList );
-        if ( request == null)
+        if ( request==null || request.trim().length()==0)
             throw new IllegalStateException( "Missing REQUEST value" );
-        if ( request.trim().length() == 0 )
-            throw new IllegalStateException( "Empty REQUEST value" );
         if ( !request.equals( "doQuery" ) )
             throw new IllegalStateException( "Unknown REQUEST value: "+request );
         if ( TapUtil.findParameterValue(TapParams.LANG.toString(),paramList) == null )
