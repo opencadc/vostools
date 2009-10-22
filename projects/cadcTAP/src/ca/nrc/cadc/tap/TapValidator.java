@@ -87,58 +87,23 @@ public class TapValidator extends Validator
 			//  TODO:  Is this what we want?
 			throw new IllegalStateException( "Empty TAP parameter list" );
 		
-	    if ( TapUtil.findParameterValue(TapParams.REQUEST.toString(),paramList) == null )
-			throw new IllegalStateException( "Missing REQUEST param" );
-		
-		for ( Parameter param : paramList )
-		{
-			String name = param.getName();
-			if ( name.equalsIgnoreCase( TapParams.REQUEST.toString() ) )
-			{
-				String value = param.getValue();
-				if ( value == null)
-					throw new IllegalStateException( "Missing REQUEST value" );
-				if ( value.trim().length() == 0 )
-					throw new IllegalStateException( "Empty REQUEST value" );
-				if ( !value.equals( "doQuery" ) )
-					throw new IllegalStateException( "Unknown REQUEST value: "+value );
-			    if ( TapUtil.findParameterValue(TapParams.LANG.toString(),paramList) == null )
-					throw new IllegalStateException( "REQUEST=doQuery not acompanied by LANG param" );
-			}
-			else if ( name.equalsIgnoreCase(TapParams.VERSION.toString() ) )
-			{
-				String value = param.getValue();
-				if ( value == null )
-					throw new IllegalStateException( "Missing VERSION value" );
-				if ( value==null || value.trim().length()==0 )
-					throw new IllegalStateException( "Empty VERSION value" );
-				if ( !value.equals("1.0") )
-					throw new IllegalStateException( "Unsupported TAP version: "+value );
-			}
-			else if ( name.equalsIgnoreCase(TapParams.LANG.toString() ) )
-			{
-				String value = param.getValue();
-				if ( value == null )
-					throw new IllegalStateException( "Missing LANG value" );
-				if ( value==null || value.trim().length()==0 )
-					throw new IllegalStateException( "Empty LANG value" );
-				if ( !value.startsWith(ADQL) && !value.startsWith(SQL) )
-					throw new IllegalStateException( "Unsupported LANG value: "+value );
-				lang = value;
-			}
-			else if ( name.equalsIgnoreCase(TapParams.QUERY.toString() ) )
-			{
-				String value = param.getValue();
-				if ( value == null)
-					throw new IllegalStateException( "Missing QUERY value" );
-				if ( value.trim().length() == 0 )
-					throw new IllegalStateException( "Empty QUERY value" );
-			}
-			else
-			{
-				throw new IllegalStateException( "UNKNOWN parameter: "+name );
-			}
-		} // end-for
+        String request = TapUtil.findParameterValue( TapParams.REQUEST.toString(), paramList );
+        if ( request == null)
+            throw new IllegalStateException( "Missing REQUEST value" );
+        if ( request.trim().length() == 0 )
+            throw new IllegalStateException( "Empty REQUEST value" );
+        if ( !request.equals( "doQuery" ) )
+            throw new IllegalStateException( "Unknown REQUEST value: "+request );
+        if ( TapUtil.findParameterValue(TapParams.LANG.toString(),paramList) == null )
+            throw new IllegalStateException( "REQUEST=doQuery not acompanied by LANG param" );
+
+        String version = TapUtil.findParameterValue( TapParams.VERSION.toString(), paramList );
+        if ( version == null)
+            throw new IllegalStateException( "Missing VERSION value" );
+        if ( version.trim().length() == 0 )
+            throw new IllegalStateException( "Empty VERSION value" );
+        if ( !version.equals("1.0") )
+            throw new IllegalStateException( "Unsupported TAP version: "+version );
 	}
 
 	public String getLang()
