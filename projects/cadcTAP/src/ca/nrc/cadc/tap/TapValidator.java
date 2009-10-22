@@ -79,13 +79,8 @@ public class TapValidator extends Validator
 	
 	public void validate( List<Parameter> paramList )
 	{
-		if ( paramList == null )
-			//  TODO:  Is this what we want?
+		if ( paramList==null || paramList.size()==0)
 			throw new IllegalStateException( "Missing TAP parameter list" );
-		
-		if ( paramList.size() == 0 )
-			//  TODO:  Is this what we want?
-			throw new IllegalStateException( "Empty TAP parameter list" );
 		
         String request = TapUtil.findParameterValue( TapParams.REQUEST.toString(), paramList );
         if ( request == null)
@@ -98,11 +93,7 @@ public class TapValidator extends Validator
             throw new IllegalStateException( "REQUEST=doQuery not acompanied by LANG param" );
 
         String version = TapUtil.findParameterValue( TapParams.VERSION.toString(), paramList );
-        if ( version == null)
-            throw new IllegalStateException( "Missing VERSION value" );
-        if ( version.trim().length() == 0 )
-            throw new IllegalStateException( "Empty VERSION value" );
-        if ( !version.equals("1.0") )
+        if ( version!=null && !version.equals("1.0") )
             throw new IllegalStateException( "Unsupported TAP version: "+version );
 	}
 
