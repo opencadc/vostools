@@ -1,4 +1,4 @@
-<!--
+/*
 ************************************************************************
 *******************  CANADIAN ASTRONOMY DATA CENTRE  *******************
 **************  CENTRE CANADIEN DE DONNÉES ASTRONOMIQUES  **************
@@ -65,85 +65,104 @@
 *  $Revision: 4 $
 *
 ************************************************************************
--->
+*/
 
+package ca.nrc.cadc.tap.test;
 
-<!DOCTYPE project>
-<project default="build" basedir=".">
-    <property environment="env" />
+import static org.junit.Assert.*;
 
-    <!-- site-specific build properties or overrides of values in opencadc.properties -->
-    <property file="${env.CADC_PREFIX}/etc/local.properties" />
+import org.junit.After;
+import org.junit.AfterClass;
+import org.junit.Before;
+import org.junit.BeforeClass;
+import org.junit.Test;
 
-    <!-- site-specific targets, e.g. install, cannot duplicate those in opencadc.targets.xml -->
-    <import file="${env.CADC_PREFIX}/etc/local.targets.xml" optional="true" />
+import ca.nrc.cadc.tap.TapProperties;
+import ca.nrc.cadc.tap.parser.adql.impl.postgresql.pgsphere.PgspherePropertiesFactory;
+import ca.nrc.cadc.tap.parser.adql.impl.postgresql.sql.SqlPropertiesFactory;
+import ca.nrc.cadc.util.LoggerUtil;
 
-    <!-- default properties and targets -->
-    <property file="${env.CADC_PREFIX}/etc/opencadc.properties" />
-    <import file="${env.CADC_PREFIX}/etc/opencadc.targets.xml"/>
+/**
+ * @author zhangsa
+ *
+ */
+public class TestProperties
+{
+    private TapProperties sqlProp = null;
+    private TapProperties sqlProp2 = null;
+    private TapProperties pgProp = null;
 
-    <!-- developer convenience: place for extra targets and properties -->
-    <import file="extras.xml" optional="true" />
+    /**
+     * @throws java.lang.Exception
+     */
+    @BeforeClass
+    public static void setUpBeforeClass() throws Exception
+    {
+    }
 
-    <property name="project" value="cadcTAP" />
+    /**
+     * @throws java.lang.Exception
+     */
+    @AfterClass
+    public static void tearDownAfterClass() throws Exception
+    {
+    }
 
-    <property name="cadc" value="${lib}/cadcUtil.jar:${lib}/cadcUWS.jar" />
+    /**
+     * @throws java.lang.Exception
+     */
+    @Before
+    public void setUp() throws Exception
+    {
+        LoggerUtil.initialize(new String[] { "test", "ca.nrc.cadc" }, new String[] { "-d" });
+        sqlProp = SqlPropertiesFactory.getInstance();
+        pgProp = PgspherePropertiesFactory.getInstance();
+        sqlProp2 = SqlPropertiesFactory.getInstance();
+    }
 
-    <property name="jsqlparser" value="${ext.lib}/jsqlparser.jar" />
-    <property name="log4j" value="${ext.lib}/log4j.jar" />
-    <property name="spring" value="${ext.lib}/spring.jar" />
-    <property name="jdom" value="${ext.lib}/jdom.jar" />
-    <property name="javacsv" value="${ext.lib}/javacsv.jar" />
-    <property name="extlib" value="${jsqlparser}:${log4j}:${spring}:${jdom}:${javacsv}" />
+    /**
+     * @throws java.lang.Exception
+     */
+    @After
+    public void tearDown() throws Exception
+    {
+    }
 
-    <property name="jars" value="${cadc}:${extlib}" />
+    /**
+     * Test method for {@link ca.nrc.cadc.tap.parser.adql.impl.postgresql.sql.SqlPropertiesFactory#getInstance()}.
+     */
+    @Test
+    public void testGetInstance()
+    {
+        assertNotNull(sqlProp);
+    }
+    @Test
+    public void testSingleton()
+    {
+        assertEquals(sqlProp, sqlProp2);
+    }
+    @Test
+    public void testDup()
+    {
+        assertNotSame(sqlProp, pgProp);
+    }
 
-    <target name="build" depends="compile">
-	    <jar jarfile="${build}/lib/${project}.jar"
-		    basedir="${build}/class" 
-		    update="no">
-        </jar>
-    </target>
+    /**
+     * Test method for {@link ca.nrc.cadc.tap.TapProperties#getProperty(java.lang.String)}.
+     */
+    @Test
+    public void testGetProperty1()
+    {
+        String v1 = sqlProp.getProperty("KEY1");
+        System.out.println(v1);
+        assertEquals(v1,"Value1");
+    }
+    @Test
+    public void testGetProperty2()
+    {
+        String v1 = pgProp.getProperty("KEY1");
+        System.out.println(v1);
+        assertEquals(v1,"Value1a");
+    }
 
-    <!-- JAR files needed to run the test suite -->
-    <property name="build.cadcTAP" value="${build}/lib/${project}.jar" />
-    <property name="ext.junit" value="${ext.lib}/junit.jar" />
-    <property name="ext.postgres" value="${ext.lib}/postgresql-jdbc.jar" />
-    <property name="ext.commonsLog" value="${ext.lib}/commons-logging.jar" />
-    <property name="lib.javaUtil" value="${lib}/javaUtil.jar" />
-    <property name="testingJars" value="${build.cadcTAP}:${ext.junit}:${lib.javaUtil}:${ext.postgres}:${ext.commonsLog}" />
-
-    <!-- compile the test classes -->
-    <target name="compile-test" depends="compile">
-        <javac destdir="${build}/class"
-               source="${java.source.version}"
-               target="${java.target.version}"
-               classpath="${jars}:${testingJars}" >
-            <src path="test/src"/>
-        </javac>
-    </target>
-
-    <!-- Run the test suite -->
-    <target name="test" depends="compile-test">
-        
-        <!-- Run the junit test suite -->
-        <echo message="Running tests..." />
-        <junit printsummary="yes" haltonfailure="yes" fork="yes">
-            <classpath>
-                <pathelement path="src"/>
-                <pathelement path="build/class"/>
-                <pathelement path="${jars}:${testingJars}"/>
-            </classpath>
-            <!--
-            <test name="ca.nrc.cadc.tap.test.TapValidatorTest"/>
-		    <test name="ca.nrc.cadc.tap.schema.TapSchemaTest"/>
-            -->
-		    <test name="ca.nrc.cadc.tap.test.TestProperties"/>
-            <formatter type="plain" usefile="false"/>
-        </junit>
-
-    </target>
-
-<import file="build.extras" optional="true" />
-
-</project>
+}
