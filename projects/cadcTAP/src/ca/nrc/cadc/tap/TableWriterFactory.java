@@ -74,6 +74,7 @@ import java.util.Map;
 import java.util.TreeMap;
 
 import ca.nrc.cadc.uws.Parameter;
+import org.apache.log4j.Logger;
 
 /**
  * Factory that handles the FORMAT parameter and creates a suitable TableWriter.
@@ -82,12 +83,13 @@ import ca.nrc.cadc.uws.Parameter;
  */
 public class TableWriterFactory
 {
+    private static Logger log = Logger.getLogger(TableWriterFactory.class);
+    
     private static String VOTABLE = "votable";
-    private static String CSV = AsciiTableWriter.CSV;
-    private static String TSV = AsciiTableWriter.TSV;
+    private static String CSV = "csv";
+    private static String TSV = "tsv";
     
     public static String FORMAT = "FORMAT";
-    public static String DEFAULT_FORMAT = "votable";
     
     
     
@@ -115,8 +117,10 @@ public class TableWriterFactory
     {
         String fmt = TapUtil.findParameterValue(FORMAT, params);
         if (fmt == null)
-            fmt = DEFAULT_FORMAT;
+            fmt = VOTABLE;
+        fmt = fmt.toLowerCase(); // keys in the knownFormats map are lower case
         fmt = knownFormats.get(fmt);
+        log.debug("getWriter: fmt = " + fmt);
         
         if (VOTABLE.equals(fmt))
             return new VOTableWriter();

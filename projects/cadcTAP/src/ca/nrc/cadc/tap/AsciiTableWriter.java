@@ -81,6 +81,7 @@ import ca.nrc.cadc.tap.parser.adql.TapSelectItem;
 import ca.nrc.cadc.tap.schema.TapSchema;
 
 import com.csvreader.CsvWriter;
+import org.apache.log4j.Logger;
 
 /**
  * 
@@ -89,6 +90,8 @@ import com.csvreader.CsvWriter;
  */
 public class AsciiTableWriter implements TableWriter
 {
+    private static Logger log = Logger.getLogger(AsciiTableWriter.class);
+    
     public static final String US_ASCII = "US-ASCII";
     public static final String CSV = "csv";
     public static final String TSV = "tsv";
@@ -123,23 +126,27 @@ public class AsciiTableWriter implements TableWriter
 
     public void setSelectList(List<TapSelectItem> items)
     {
-        throw new UnsupportedOperationException("Not supported yet.");
+        //no-op since we do not use it
     }
 
     public void setTapSchema(TapSchema schema)
     {
-        throw new UnsupportedOperationException("Not supported yet.");
+        //no-op since we do not use it
     }
 
     public void write(ResultSet rs, OutputStream out) throws IOException
     {
+        log.debug("writing ResultSet, format: " + format);
+        int numRows = 0;
+        int numColumns = 0;
+        boolean ok = false;
         CsvWriter writer = new CsvWriter(out, this.delimeter, Charset.forName(US_ASCII));
         try
         {
             ResultSetMetaData rsmd = rs.getMetaData();
-            int numberOfColumns = rsmd.getColumnCount();
-            boolean b = rsmd.isSearchable(1);
-            for (int i = 1; i <= numberOfColumns; i++)
+            numColumns = rsmd.getColumnCount();
+            //boolean b = rsmd.isSearchable(1);
+            for (int i = 1; i <= numColumns; i++)
             {
                 writer.write(rsmd.getColumnLabel(i));
             }
@@ -147,16 +154,26 @@ public class AsciiTableWriter implements TableWriter
 
             while (rs.next())
             {
-                for (int i = 1; i <= numberOfColumns; i++)
+                for (int i = 1; i <= numColumns; i++)
                 {
                     writer.write(rs.getString(i));
 
                 }
                 writer.endRecord();
+                numRows++;
             }
+            log.debug("wrote format: " + format 
+                    + " columns: " + numColumns+  " rows: " + numRows
+                    + " [OK]");
+            ok = true;
+            writer.flush();
             rs.close();
-        } catch (SQLException ex)
+        } 
+        catch (SQLException ex)
         {
+            log.debug("wrote format: " + format 
+                    + " columns:" + numColumns+  " rows: " + numRows
+                    + " [FAILED]");
             throw new IOException(ex);
         }
     }

@@ -96,6 +96,7 @@ import ca.nrc.cadc.uws.Job;
 import ca.nrc.cadc.uws.JobRunner;
 import ca.nrc.cadc.uws.Parameter;
 import ca.nrc.cadc.uws.Result;
+import java.util.ArrayList;
 
 public class QueryRunner implements JobRunner
 {
@@ -215,20 +216,24 @@ public class QueryRunner implements JobRunner
             File tmpFile = null;
             try
             {
+                logger.debug("executing query...");
                 connection = dataSource.getConnection();
-
-                // execute
                 pstmt = connection.prepareStatement(sql);
                 rs = pstmt.executeQuery();
 
                 // write result
                 tmpFile = new File(tmpDir, "result_" + job.getJobId() + "." + writer.getExtension());
+                logger.debug("writing ResultSet to " + tmpFile);
                 OutputStream ostream = new FileOutputStream(tmpFile);
                 writer.write(rs, ostream);
-                ostream.close();
-
-                rs.close();
-                pstmt.close();
+                
+                try { ostream.close(); }
+                catch(Throwable ignore) { }
+                try { rs.close(); }
+                catch(Throwable ignore) { }
+                try { pstmt.close(); }
+                catch(Throwable ignore) { }
+                logger.debug("executing query... [OK]");
             } 
             catch (SQLException ex)
             {
@@ -244,6 +249,9 @@ public class QueryRunner implements JobRunner
             // store result
             URL url = fs.put(tmpFile);
             Result res = new Result(tmpFile.getName(), url);
+            List<Result> results = new ArrayList<Result>();
+            results.add(res);
+            job.setResultsList(results);
             
             job.setExecutionPhase( ExecutionPhase.COMPLETED );
 		}
