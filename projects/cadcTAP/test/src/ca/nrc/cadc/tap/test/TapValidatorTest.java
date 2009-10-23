@@ -464,4 +464,18 @@ public class TapValidatorTest extends TestCase
 		}
 	}
 
+    public void testUploadParam() {
+        try {
+            List<Parameter> paramList = new ArrayList<Parameter>();
+            paramList.add( new Parameter( "REQUEST", "doQuery" ) );
+            paramList.add( new Parameter( "LANG",    "ADQL" ) );
+            paramList.add( new Parameter( "UPLOAD",  "mytable;tableURI" ) );
+            validator.validate( paramList );
+            assertTrue( false );
+        }
+        catch ( UnsupportedOperationException use ) {
+            assertTrue( use.getMessage(), true );
+        }
+    }
+
 }

@@ -95,6 +95,10 @@ public class TapValidator extends Validator
         String version = TapUtil.findParameterValue( TapParams.VERSION.toString(), paramList );
         if ( version!=null && version.length()!=0 && !version.equals("1.0") )
             throw new IllegalStateException( "Unsupported TAP version: "+version );
+
+        String upload = TapUtil.findParameterValue( TapParams.UPLOAD.toString(), paramList );
+        if ( upload != null )
+            throw new UnsupportedOperationException( "UPLOAD parameter not supported at this time");
 	}
 
 	public String getLang()
