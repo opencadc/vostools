@@ -190,7 +190,11 @@ public class QueryRunner implements JobRunner
             
             // LANG
         	String lang = tapValidator.getLang();
-            TapQuery  tapQuery      = (TapQuery)  Class.forName( langQueries.get(lang) ).newInstance();
+            String cname = langQueries.get(lang);
+            if (cname == null)
+                throw new UnsupportedOperationException("unknown LANG: " + lang);
+            Class c = Class.forName(cname);
+            TapQuery tapQuery = (TapQuery) c.newInstance();
             tapQuery.setTapSchema(tapSchema);
             tapQuery.setParameterList(paramList);
         	String sql = tapQuery.getSQL();
@@ -245,6 +249,8 @@ public class QueryRunner implements JobRunner
 		}
         catch ( Throwable t )
         {
+            t.printStackTrace();
+            
         	String errorMessage = null;
         	URL errorURL        = null;
         	
