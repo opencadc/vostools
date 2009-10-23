@@ -85,85 +85,60 @@
     <!-- developer convenience: place for extra targets and properties -->
     <import file="extras.xml" optional="true" />
 
-<property name="project" value="cadcTAP" />
+    <property name="project" value="cadcTAP" />
 
-<property name="cadc" value="${lib}/cadcUtil.jar:${lib}/cadcUWS.jar" />
+    <property name="cadc" value="${lib}/cadcUtil.jar:${lib}/cadcUWS.jar" />
 
-<property name="jdom" value="${ext.lib}/jdom.jar" />
-<property name="jsqlparser" value="${ext.lib}/jsqlparser.jar" />
-<property name="javacsv" value="${ext.lib}/javacsv.jar" />
-<property name="log4j" value="${ext.lib}/log4j.jar" />
-<property name="spring" value="${ext.lib}/spring.jar" />
-<property name="stil" value="${ext.lib}/stil.jar" />
-<property name="extlib" value="${jdom}:${jsqlparser}:${log4j}:${spring}:${stil}:${javacsv}" />
+    <property name="jsqlparser" value="${ext.lib}/jsqlparser.jar" />
+    <property name="log4j" value="${ext.lib}/log4j.jar" />
+    <property name="spring" value="${ext.lib}/spring.jar" />
+    <property name="stil" value="${ext.lib}/stil.jar" />
+    <property name="javacsv" value="${ext.lib}/javacsv.jar" />
+    <property name="extlib" value="${jsqlparser}:${log4j}:${spring}:${stil}:${javacsv}" />
 
-<property name="jars" value="${cadc}:${extlib}" />
+    <property name="jars" value="${cadc}:${extlib}" />
 
+    <target name="build" depends="compile">
+	    <jar jarfile="${build}/lib/${project}.jar"
+		    basedir="${build}/class" 
+		    update="no">
+        </jar>
+    </target>
 
-<property name="lib.cadcUtil"    value="${lib}/cadcUtil.jar" />
-<property name="lib.javaUtil"    value="${lib}/javaUtil.jar" />
-<property name="dev.junit" value="${ext.dev}/junit.jar" />
+    <!-- JAR files needed to run the test suite -->
+    <property name="build.cadcTAP" value="${build}/lib/${project}.jar" />
+    <property name="ext.junit" value="${ext.lib}/junit.jar" />
+    <property name="ext.postgres" value="${ext.lib}/postgresql-jdbc.jar" />
+    <property name="ext.commonsLog" value="${ext.lib}/commons-logging.jar" />
+    <property name="lib.javaUtil" value="${lib}/javaUtil.jar" />
+    <property name="testingJars" value="${build.cadcTAP}:${ext.junit}:${lib.javaUtil}:${ext.postgres}:${ext.commonsLog}" />
 
-<property name="testingJars" value="${jars}:${dev.junit}:${lib.cadcUtil}:${lib.javaUtil}" />
+    <!-- compile the test classes -->
+    <target name="compile-test" depends="compile">
+        <javac destdir="${build}/class"
+               source="${java.source.version}"
+               target="${java.target.version}"
+               classpath="${jars}:${testingJars}" >
+            <src path="test/src"/>
+        </javac>
+    </target>
 
-<target name="build" depends="compile">
-	<jar jarfile="${build}/lib/${project}.jar"
-		basedir="${build}/class" 
-		update="no">
-    </jar>
-</target>
+    <!-- Run the test suite -->
+    <target name="test" depends="compile-test">
+        
+        <!-- Run the junit test suite -->
+        <echo message="Running tests..." />
+        <junit printsummary="yes" haltonfailure="yes" fork="yes">
+            <classpath>
+                <pathelement path="build/class"/>
+                <pathelement path="${jars}:${testingJars}"/>
+            </classpath>
+            <test name="ca.nrc.cadc.tap.test.TapValidatorTest"/>
+            <test name="ca.nrc.cadc.tap.schema.TapSchemaTest"/>
+            <formatter type="plain" usefile="false"/>
+        </junit>
 
-<target name="build-test" depends="compile-test">
-	<jar jarfile="${build}/lib/${project}.jar"
-		basedir="${build}/class" 
-		update="no">
-    </jar>
-</target>
-
-<!-- compile the test classes -->
-<target name="compile-test" depends="compile">
-    <javac destdir="${build}/class"
-           source="${java.source.version}"
-           target="${java.target.version}"
-           classpath="${testingJars}" >
-        <src path="test/src"/>
-    </javac>
-</target>
-
-
-<target name="test" depends="build-test">
-    <junit printsummary="yes" haltonfailure="yes" fork="yes">
-        <sysproperty key="jdbcDriver" value="${jdbcDriver}" />
-        <sysproperty key="dbURL"      value="${dbURL}"      />
-        <sysproperty key="dbUser"     value="${dbUser}"     />
-        <sysproperty key="dbPass"     value="${dbPass}"     />
-        <classpath>
-            <pathelement path="${testingJars}"/>
-            <pathelement location="${build}/class"/>
-            <pathelement location="${ext.lib}/postgresql-jdbc.jar"/>
-            <pathelement location="${ext.lib}/commons-logging.jar"/>
-            <!--
-	        <pathelement location="${build}/lib/cadcTestTAP.jar"/>
-	        -->
-        </classpath>
-        <formatter type="brief" usefile="false" />
-		<test name="ca.nrc.cadc.tap.parser.adql.AdqlParserTest" />
-		<test name="ca.nrc.cadc.tap.parser.adql.SqlParserTest" />
-		<test name="ca.nrc.cadc.tap.parser.adql.DbSchemaViewer" />
-		<test name="ca.nrc.cadc.tap.test.TestFileStore" />
-		<test name="ca.nrc.cadc.tap.test.TapValidatorTest" />
-		<test name="ca.nrc.cadc.tap.schema.TapSchemaTest" />
-    	<!--
-    	If there get to be too many test classes to list as individual tests,
-    	this is another way to do it but the output is busier.
-        <batchtest>
-            <fileset dir="src">
-                <include name="**/*Test.java"/>
-            </fileset>
-        </batchtest>
-      	-->
-    </junit>
-</target>
+    </target>
 
 <import file="build.extras" optional="true" />
 

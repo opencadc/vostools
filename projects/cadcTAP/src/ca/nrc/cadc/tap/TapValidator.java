@@ -87,11 +87,13 @@ public class TapValidator extends Validator
             throw new IllegalStateException( "Missing REQUEST value" );
         if ( !request.equals( "doQuery" ) )
             throw new IllegalStateException( "Unknown REQUEST value: "+request );
-        if ( TapUtil.findParameterValue(TapParams.LANG.toString(),paramList) == null )
+        
+        lang = TapUtil.findParameterValue( TapParams.LANG.toString(), paramList );
+        if ( lang==null || lang.length()==0 )
             throw new IllegalStateException( "REQUEST=doQuery not acompanied by LANG param" );
 
         String version = TapUtil.findParameterValue( TapParams.VERSION.toString(), paramList );
-        if ( version!=null && !version.equals("1.0") )
+        if ( version!=null && version.length()!=0 && !version.equals("1.0") )
             throw new IllegalStateException( "Unsupported TAP version: "+version );
 	}
 
