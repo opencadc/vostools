@@ -1,0 +1,6 @@
+JAR files required for the OpenCADC cadcTestTAP project
+=======================================================
+
+Name in build.xml      Versioned Name             Project URL
+-----------------      --------------             -----------
+    
