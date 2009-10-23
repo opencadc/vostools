@@ -70,6 +70,7 @@
 
 <!DOCTYPE project>
 <project default="build" basedir=".">
+	
     <property environment="env" />
 
     <!-- site-specific build properties or overrides of values in opencadc.properties -->
@@ -85,60 +86,30 @@
     <!-- developer convenience: place for extra targets and properties -->
     <import file="extras.xml" optional="true" />
 
-<property name="project" value="cadcTestTAP" />
+    <property name="project" value="cadcTestTAP" />
 
-<property name="jars" value="${lib}/cadcUtil.jar:${ext.lib}/postgresql-jdbc.jar:${ext.lib}/junit.jar" />
+    <property name="jars" value="${lib}/cadcUtil.jar:${ext.lib}/postgresql-jdbc.jar:${ext.lib}/junit.jar" />
 
-<target name="build" depends="cadcTestTAP,resources" />
+    <target name="build" depends="cadcTestTAP,resources" />
 
-<target name="cadcTestTAP" depends="compile">
-	<jar jarfile="${build}/lib/${project}.jar"
-		basedir="${build}/class" 
-		update="no">
-    </jar>
-</target>
+    <target name="cadcTestTAP" depends="compile">
+	    <jar jarfile="${build}/lib/${project}.jar"
+		    basedir="${build}/class" 
+		    update="no">
+        </jar>
+    </target>
 
-<target name="resources">
-    <mkdir dir="${build}/resources/${project}/sql/valid"/>
-    <copy todir="${build}/resources/${project}/sql/valid">
-        <fileset dir="src/sql/valid">
-            <include name="**.sql" />
-        </fileset>
-    </copy>
-</target>
-
-<!--
-    Run:
-    ant test
-    followed by the following four as -Dkey=value pairs
-    while in the directory that contains the
-    sql/invalid/*.sql and sql/valid/*.sql files.
--->
-<target name="test" depends="cadcTestTAP">
-    <junit>
-        <sysproperty key="jdbcDriver" value="${jdbcDriver}" />
-        <sysproperty key="dbURL"      value="${dbURL}"      />
-        <sysproperty key="dbUser"     value="${dbUser}"     />
-        <sysproperty key="dbPass"     value="${dbPass}"     />
-        <classpath>
-            <pathelement location="${lib}/cadcUtil.jar"/>
-            <pathelement location="${ext.lib}/postgresql-jdbc.jar"/>
-            <pathelement location="${ext.lib}/junit.jar"/>
-            <pathelement location="${build}/lib/cadcTestTAP.jar"/>
-        </classpath>
-        <formatter type="brief" usefile="false" />
-    	<test name="ca.nrc.cadc.conformance.tap.ColumnTest" />
-    	<test name="ca.nrc.cadc.conformance.tap.TableTest" />
-    	<!--
-    	If there get to be too many test classes to list as individual tests,
-    	this is another way to do it but the output is busier.
-        <batchtest>
-            <fileset dir="src">
-                <include name="**/*Test.java"/>
+    <target name="resources">
+        <mkdir dir="${build}/resources/${project}/sql/valid"/>
+        <copy todir="${build}/resources/${project}/sql/valid">
+            <fileset dir="src/sql/valid">
+                <include name="**.sql" />
             </fileset>
-        </batchtest>
-      	-->
-    </junit>
-</target>
+        </copy>
+    </target>
 
+    <target name="test">
+        <echo message="no tests implemented" />
+    </target>
+	
 </project>
