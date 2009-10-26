@@ -70,27 +70,15 @@
 package ca.nrc.cadc.tap.writer;
 
 import ca.nrc.cadc.tap.TableWriter;
-import ca.nrc.cadc.tap.parser.adql.TapSelectItem;
 import ca.nrc.cadc.tap.schema.Column;
 import ca.nrc.cadc.tap.schema.Schema;
 import ca.nrc.cadc.tap.schema.Table;
-import ca.nrc.cadc.tap.schema.TapSchema;
 import ca.nrc.cadc.tap.votable.TableDataElement;
 import ca.nrc.cadc.tap.votable.TableDataXMLOutputter;
 import java.io.IOException;
 import java.io.OutputStream;
 import java.sql.ResultSet;
 import java.util.List;
-import javax.xml.parsers.DocumentBuilder;
-import javax.xml.parsers.DocumentBuilderFactory;
-import javax.xml.parsers.ParserConfigurationException;
-import javax.xml.transform.OutputKeys;
-import javax.xml.transform.Transformer;
-import javax.xml.transform.TransformerConfigurationException;
-import javax.xml.transform.TransformerException;
-import javax.xml.transform.TransformerFactory;
-import javax.xml.transform.dom.DOMSource;
-import javax.xml.transform.stream.StreamResult;
 import org.jdom.Document;
 import org.jdom.Element;
 import org.jdom.Namespace;
@@ -98,16 +86,12 @@ import org.jdom.output.Format;
 import org.jdom.output.XMLOutputter;
 import ca.nrc.cadc.tap.parser.adql.TapSelectItem;
 import ca.nrc.cadc.tap.schema.TapSchema;
-import ca.nrc.cadc.uws.ExecutionPhase;
 
 public class VOTableWriter implements TableWriter
 {
-    public static final String XML_DECLARATION = "<?xml version=\"1.0\"?>";
     public static final String VOTABLE_VERSION  = "1.2";
-    public static final String XSI_NS = "xmlns:xsi";
     public static final String XSI_NS_URI = "http://www.w3.org/2001/XMLSchema-instance";
-    public static final String XSI_NO_NS_LOCATION = "xsi:noNamespaceSchemaLocation";
-    public static final String XSI_NO_NS_LOCATION_URI = "http://www.ivoa.net/xml/VOTable/v1.2";
+    public static final String VOTABLE_NS_URI = "http://www.ivoa.net/xml/VOTable/v1.2";
     public static final String STC_NS = "xmlns:stc";
     public static final String STC_NS_URI = "http://www.ivoa.net/xml/STC/v1.30";
 
@@ -140,16 +124,8 @@ public class VOTableWriter implements TableWriter
         if (tapSchema == null)
             throw new IllegalStateException("TapSchema cannot be null, set using setTapSchema()");
 
-        // Create the jdom document.
-        Document document = new Document();
-
-        // Root VOTABLE element.
-        Element votable = new Element("VOTABLE");
-        votable.setAttribute("version", VOTABLE_VERSION);
-        votable.setNamespace(Namespace.getNamespace(XSI_NS_URI));
-//        votable.addNamespaceDeclaration(Namespace.getNamespace(XSI_NO_NS_LOCATION_URI));
-        votable.addNamespaceDeclaration(Namespace.getNamespace("stc", STC_NS_URI));
-        document.addContent(votable);
+        Document document = createDocument();
+        Element votable = document.getRootElement();
 
         // Create the RESOURCE element and add to the VOTABLE element.
         Element resource = new Element("RESOURCE");
@@ -180,17 +156,9 @@ public class VOTableWriter implements TableWriter
     public void write( Throwable thrown, OutputStream output )
         throws IOException
     {
-         // Create the jdom document.
-        Document document = new Document();
-
-        // Root VOTABLE element.
-        Element votable = new Element("VOTABLE");
-        votable.setAttribute("version", VOTABLE_VERSION);
-        votable.setNamespace(Namespace.getNamespace(XSI_NS_URI));
-//        votable.addNamespaceDeclaration(Namespace.getNamespace(XSI_NO_NS_LOCATION_URI));
-        votable.addNamespaceDeclaration(Namespace.getNamespace("stc", STC_NS_URI));
-        document.addContent(votable);
-
+        Document document = createDocument();
+        Element votable = document.getRootElement();
+        
         // Create the RESOURCE element and add to the VOTABLE element.
         Element resource = new Element("RESOURCE");
         votable.addContent(resource);
@@ -210,6 +178,21 @@ public class VOTableWriter implements TableWriter
         XMLOutputter outputter = new XMLOutputter();
         outputter.setFormat(Format.getPrettyFormat());
         outputter.output(document, output);
+    }
+    
+    private Document createDocument()
+    {
+        // the root VOTABLE element
+        Namespace vot = Namespace.getNamespace("vot", VOTABLE_NS_URI);
+        Namespace xsi = Namespace.getNamespace("xsi", XSI_NS_URI);
+        Element votable = new Element("VOTABLE", vot);
+        votable.setAttribute("version", VOTABLE_VERSION);
+        votable.addNamespaceDeclaration(xsi);
+        
+        Document document = new Document();
+        document.addContent(votable);
+        
+        return document;
     }
 
     // Build a FIELD Element for the column specified by the TapSelectItem.
