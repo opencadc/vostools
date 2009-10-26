@@ -86,25 +86,49 @@ import org.springframework.jdbc.core.RowMapper;
 public class TapSchemaDAO
 {
     // SQL to select all rows from TAP_SCHEMA.schemas.
-    private static final String SELECT_SCHEMAS = "select " + "schema_name, description, utype " + "from " + "tap_schema.schemas "
-            + "order by schema_name";
+    private static final String SELECT_SCHEMAS =
+            "select " +
+                "schema_name, description, utype " +
+            "from " +
+                "tap_schema.schemas " +
+            "order by " +
+                "schema_name";
 
     // SQL to select all rows from TAP_SCHEMA.tables.
-    private static final String SELECT_TABLES = "select " + "schema_name, table_name, description, utype " + "from "
-            + "tap_schema.tables " + "order by schema_name";
+    private static final String SELECT_TABLES = 
+            "select " +
+                "schema_name, table_name, description, utype " +
+            "from " +
+                "tap_schema.tables " +
+            "order by " +
+                "schema_name";
 
     // SQL to select all rows from TAP_SCHEMA.colums.
-    private static final String SELECT_COLUMNS = "select "
-            + "table_name, column_name, description, utype, ucd, unit, datatype, size " + "from " + "tap_schema.columns "
-            + "order by table_name";
+    private static final String SELECT_COLUMNS = 
+            "select " +
+                "table_name, column_name, description, utype, ucd, unit, datatype, size " +
+            "from " +
+                "tap_schema.columns " +
+            "order by " +
+                "table_name";
 
     // SQL to select all rows from TAP_SCHEMA.keys.
-    private static final String SELECT_KEYS = "select " + "key_id, from_table, target_table " + "from " + "tap_schema.keys "
-            + "order by key_id";
+    private static final String SELECT_KEYS =
+            "select " +
+                "key_id, from_table, target_table " +
+            "from " +
+                "tap_schema.keys " +
+            "order by " +
+                "key_id";
 
     // SQL to select all rows from TAP_SCHEMA.key_columns.
-    private static final String SELECT_KEY_COLUMNS = "select " + "key_id, from_column, target_column " + "from "
-            + "tap_schema.key_columns " + "order by key_id";
+    private static final String SELECT_KEY_COLUMNS = 
+            "select " +
+                "key_id, from_column, target_column " +
+            "from " +
+                "tap_schema.key_columns " +
+            "order by " +
+                "key_id";
 
     // Database connection.
     private JdbcTemplate jdbc;
@@ -112,8 +136,7 @@ public class TapSchemaDAO
     /**
      * Construct a new TapSchemaDAO using the specified DataSource.
      * 
-     * @param dataSource
-     *            TAP_SCHEMA DataSource.
+     * @param dataSource TAP_SCHEMA DataSource.
      */
     public TapSchemaDAO(DataSource dataSource)
     {
@@ -159,10 +182,8 @@ public class TapSchemaDAO
     /**
      * Creates Lists of Tables with a common Schema name, then adds the Lists to the Schemas.
      * 
-     * @param schemas
-     *            List of Schemas.
-     * @param tables
-     *            List of Tables.
+     * @param schemas List of Schemas.
+     * @param tables List of Tables.
      */
     private void addTablesToSchemas(List<Schema> schemas, List<Table> tables)
     {
@@ -184,10 +205,8 @@ public class TapSchemaDAO
     /**
      * Creates Lists of Columns with a common Table name, then adds the Lists to the Tables.
      * 
-     * @param tables
-     *            List of Tables.
-     * @param columns
-     *            List of Columns.
+     * @param tables List of Tables.
+     * @param columns List of Columns.
      */
     private void addColumnsToTables(List<Table> tables, List<Column> columns)
     {
@@ -209,10 +228,8 @@ public class TapSchemaDAO
     /**
      * Creates Lists of KeyColumns with a common Key keyID, then adds the Lists to the Keys.
      * 
-     * @param keys
-     *            List of Keys.
-     * @param keyColumns
-     *            List of KeyColumns.
+     * @param keys List of Keys.
+     * @param keyColumns List of KeyColumns.
      */
     private void addKeyColumnsToKeys(List<Key> keys, List<KeyColumn> keyColumns)
     {
@@ -271,7 +288,7 @@ public class TapSchemaDAO
         {
             Column column = new Column();
             column.tableName = rs.getString("table_name");
-            column.columnName = rs.getString("column_name");
+            column.columnName = rs.getString("column_name");            
             column.description = rs.getString("description");
             column.utype = rs.getString("utype");
             column.ucd = rs.getString("ucd");

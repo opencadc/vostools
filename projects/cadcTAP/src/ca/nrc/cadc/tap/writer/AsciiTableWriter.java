@@ -8,7 +8,7 @@
  *  National Research Council            Conseil national de recherches
  *  Ottawa, Canada, K1A 0R6              Ottawa, Canada, K1A 0R6
  *  All rights reserved                  Tous droits réservés
- *                                       
+ *
  *  NRC disclaims any warranties,        Le CNRC dénie toute garantie
  *  expressed, implied, or               énoncée, implicite ou légale,
  *  statutory, of any kind with          de quelque nature que ce
@@ -31,10 +31,10 @@
  *  software without specific prior      de ce logiciel sans autorisation
  *  written permission.                  préalable et particulière
  *                                       par écrit.
- *                                       
+ *
  *  This file is part of the             Ce fichier fait partie du projet
  *  OpenCADC project.                    OpenCADC.
- *                                       
+ *
  *  OpenCADC is free software:           OpenCADC est un logiciel libre ;
  *  you can redistribute it and/or       vous pouvez le redistribuer ou le
  *  modify it under the terms of         modifier suivant les termes de
@@ -44,7 +44,7 @@
  *  either version 3 of the              : soit la version 3 de cette
  *  License, or (at your option)         licence, soit (à votre gré)
  *  any later version.                   toute version ultérieure.
- *                                       
+ *
  *  OpenCADC is distributed in the       OpenCADC est distribué
  *  hope that it will be useful,         dans l’espoir qu’il vous
  *  but WITHOUT ANY WARRANTY;            sera utile, mais SANS AUCUNE
@@ -54,7 +54,7 @@
  *  PURPOSE.  See the GNU Affero         PARTICULIER. Consultez la Licence
  *  General Public License for           Générale Publique GNU Affero
  *  more details.                        pour plus de détails.
- *                                       
+ *
  *  You should have received             Vous devriez avoir reçu une
  *  a copy of the GNU Affero             copie de la Licence Générale
  *  General Public License along         Publique GNU Affero avec
@@ -67,8 +67,9 @@
  ************************************************************************
  */
 
-package ca.nrc.cadc.tap;
+package ca.nrc.cadc.tap.writer;
 
+import ca.nrc.cadc.tap.TableWriter;
 import java.io.IOException;
 import java.io.OutputStream;
 import java.nio.charset.Charset;
@@ -84,14 +85,14 @@ import com.csvreader.CsvWriter;
 import org.apache.log4j.Logger;
 
 /**
- * 
+ *
  * @author pdowler
  * @author Sailor Zhang
  */
 public class AsciiTableWriter implements TableWriter
 {
     private static Logger log = Logger.getLogger(AsciiTableWriter.class);
-    
+
     public static final String US_ASCII = "US-ASCII";
     public static final String CSV = "csv";
     public static final String TSV = "tsv";
@@ -162,16 +163,16 @@ public class AsciiTableWriter implements TableWriter
                 writer.endRecord();
                 numRows++;
             }
-            log.debug("wrote format: " + format 
+            log.debug("wrote format: " + format
                     + " columns: " + numColumns+  " rows: " + numRows
                     + " [OK]");
             ok = true;
             writer.flush();
             rs.close();
-        } 
+        }
         catch (SQLException ex)
         {
-            log.debug("wrote format: " + format 
+            log.debug("wrote format: " + format
                     + " columns:" + numColumns+  " rows: " + numRows
                     + " [FAILED]");
             throw new IOException(ex);
