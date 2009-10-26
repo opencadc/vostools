@@ -69,6 +69,7 @@
 
 package ca.nrc.cadc.tap;
 
+import ca.nrc.cadc.tap.writer.VOTableWriter;
 import java.io.File;
 import java.io.FileOutputStream;
 import java.io.IOException;

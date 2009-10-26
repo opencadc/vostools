@@ -69,6 +69,8 @@
 
 package ca.nrc.cadc.tap;
 
+import ca.nrc.cadc.tap.writer.VOTableWriter;
+import ca.nrc.cadc.tap.writer.AsciiTableWriter;
 import java.util.List;
 import java.util.Map;
 import java.util.TreeMap;
