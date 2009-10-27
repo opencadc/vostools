@@ -5,7 +5,7 @@
 
 package ca.nrc.cadc.tap.test;
 
-import ca.nrc.cadc.tap.VOTableWriter;
+import ca.nrc.cadc.tap.writer.VOTableWriter;
 import ca.nrc.cadc.tap.parser.adql.TapSelectItem;
 import ca.nrc.cadc.tap.schema.TapSchema;
 import ca.nrc.cadc.tap.schema.TapSchemaDAO;

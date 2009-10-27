@@ -69,7 +69,11 @@
 
 package ca.nrc.cadc.tap;
 
+import java.util.ArrayList;
+import java.util.Iterator;
 import java.util.List;
+
+import org.apache.log4j.Logger;
 
 import ca.nrc.cadc.uws.Parameter;
 
@@ -82,23 +86,27 @@ public class TapValidator extends Validator
 		if ( paramList==null || paramList.size()==0)
 			throw new IllegalStateException( "Missing TAP parameter list" );
 		
-        String request = TapUtil.findParameterValue( TapParams.REQUEST.toString(), paramList );
+        //  REQUEST
+		String request = TapUtil.findParameterValue( TapParams.REQUEST.toString(), paramList );
         if ( request==null || request.trim().length()==0)
             throw new IllegalStateException( "Missing REQUEST value" );
         if ( !request.equals( "doQuery" ) )
             throw new IllegalStateException( "Unknown REQUEST value: "+request );
         
+        //  LANG
         lang = TapUtil.findParameterValue( TapParams.LANG.toString(), paramList );
         if ( lang==null || lang.length()==0 )
             throw new IllegalStateException( "REQUEST=doQuery not acompanied by LANG param" );
 
+        //  VERSION
         String version = TapUtil.findParameterValue( TapParams.VERSION.toString(), paramList );
         if ( version!=null && version.length()!=0 && !version.equals("1.0") )
             throw new IllegalStateException( "Unsupported TAP version: "+version );
 
-        String upload = TapUtil.findParameterValue( TapParams.UPLOAD.toString(), paramList );
-        if ( upload != null )
-            throw new UnsupportedOperationException( "UPLOAD parameter not supported at this time");
+        //  Temporary.
+        //  Comment out for unit testing.
+        //if ( allUploadParams != null )
+        //    throw new IllegalStateException( "UPLOAD parameter not supported at this time" );
 	}
 
 	public String getLang()

@@ -69,8 +69,10 @@
 
 package ca.nrc.cadc.tap;
 
+import java.util.ArrayList;
 import java.util.List;
 
+import ca.nrc.cadc.tap.Validator.TapParams;
 import ca.nrc.cadc.uws.Parameter;
 
 /**
@@ -81,12 +83,36 @@ public class TapUtil
 {
     public static String findParameterValue(String name,  List<Parameter> paramList) 
     {
-        String ret = null;
         for (Parameter parameter : paramList) 
         {
             if (name.equalsIgnoreCase(parameter.getName())) 
                 return parameter.getValue();
         }
         return null;
+    }
+
+    public static List<String> findParameterValues(String name, List<Parameter> paramList) 
+    {
+        List<String> namedParamList = new ArrayList<String>();
+        
+        for (Parameter parameter : paramList) 
+        {
+            if (name.equalsIgnoreCase(parameter.getName())) 
+            {
+                String namedParamStr = parameter.getValue();
+                if ( namedParamStr==null || namedParamStr.length()==0)
+                    throw new IllegalStateException( "Missing "+name+" values" );
+                else
+                {
+                    String [] namedParams = namedParamStr.split(";");
+                    for ( String param : namedParams )
+                        namedParamList.add(param);
+                }    
+            }
+        }
+        if ( namedParamList.size() > 0 )
+            return namedParamList;
+        else
+            return null;
     }
 }

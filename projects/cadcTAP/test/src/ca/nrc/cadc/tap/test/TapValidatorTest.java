@@ -79,7 +79,7 @@ import ca.nrc.cadc.uws.Parameter;
 
 public class TapValidatorTest extends TestCase
 {
-	TapValidator validator = new TapValidator();
+	TapValidator  validator = new TapValidator();
 	
 	public void testNullParamList() {
 		try {
@@ -463,19 +463,5 @@ public class TapValidatorTest extends TestCase
 			assertTrue( false );
 		}
 	}
-
-    public void testUploadParam() {
-        try {
-            List<Parameter> paramList = new ArrayList<Parameter>();
-            paramList.add( new Parameter( "REQUEST", "doQuery" ) );
-            paramList.add( new Parameter( "LANG",    "ADQL" ) );
-            paramList.add( new Parameter( "UPLOAD",  "mytable;tableURI" ) );
-            validator.validate( paramList );
-            assertTrue( false );
-        }
-        catch ( UnsupportedOperationException use ) {
-            assertTrue( use.getMessage(), true );
-        }
-    }
 
 }

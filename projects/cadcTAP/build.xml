@@ -134,8 +134,9 @@
                 <pathelement path="build/class"/>
                 <pathelement path="${jars}:${testingJars}"/>
             </classpath>
-            <!--
             <test name="ca.nrc.cadc.tap.test.TapValidatorTest"/>
+            <test name="ca.nrc.cadc.tap.test.UploadManagerTest"/>
+            <!--
 		    <test name="ca.nrc.cadc.tap.schema.TapSchemaTest"/>
             -->
 		    <test name="ca.nrc.cadc.tap.test.TestProperties"/>

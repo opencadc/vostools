@@ -81,6 +81,7 @@ import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 import javax.naming.Context;
 import javax.naming.InitialContext;
@@ -89,6 +90,7 @@ import javax.sql.DataSource;
 import org.apache.log4j.Logger;
 
 import ca.nrc.cadc.tap.parser.adql.TapSelectItem;
+import ca.nrc.cadc.tap.schema.Table;
 import ca.nrc.cadc.tap.schema.TapSchema;
 import ca.nrc.cadc.tap.schema.TapSchemaDAO;
 import ca.nrc.cadc.uws.ErrorSummary;
@@ -202,7 +204,9 @@ public class QueryRunner implements JobRunner
         	String sql = tapQuery.getSQL();
             List<TapSelectItem> selectList = tapQuery.getSelectList();
             
-            // TODO: UPLOAD
+            // UPLOAD
+            UploadManager uploadManager = new UploadManager();
+            Map<String,Table> tables = uploadManager.upload( paramList, job.getJobId() );
             
             // TODO: MAXREC
             
