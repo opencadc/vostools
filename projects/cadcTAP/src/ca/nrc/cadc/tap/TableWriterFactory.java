@@ -91,7 +91,7 @@ public class TableWriterFactory
     private static String CSV = "csv";
     private static String TSV = "tsv";
     
-    public static String FORMAT = "FORMAT";
+    private static String FORMAT = "FORMAT";
     
     
     
@@ -117,10 +117,10 @@ public class TableWriterFactory
     
     public static TableWriter getWriter(List<Parameter> params)
     {
-        String fmt = TapUtil.findParameterValue(FORMAT, params);
-        if (fmt == null)
-            fmt = VOTABLE;
-        fmt = fmt.toLowerCase(); // keys in the knownFormats map are lower case
+        String rfmt = TapUtil.findParameterValue(FORMAT, params);
+        if (rfmt == null)
+            rfmt = VOTABLE;
+        String fmt = rfmt.toLowerCase(); // keys in the knownFormats map are lower case
         fmt = knownFormats.get(fmt);
         log.debug("getWriter: fmt = " + fmt);
         
@@ -131,6 +131,6 @@ public class TableWriterFactory
         if (TSV.equals(fmt))
             return new AsciiTableWriter(TSV);
         
-        throw new RuntimeException("BUG: failed to pick a TableWriter");
+        throw new UnsupportedOperationException("unknown format: " + rfmt);
     }
 }
