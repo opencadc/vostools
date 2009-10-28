@@ -67,67 +67,113 @@
 ************************************************************************
 */
 
-package ca.nrc.cadc.tap.votable;
+package ca.nrc.cadc.tap.writer.votable;
 
+import ca.nrc.cadc.tap.schema.TapSchema;
+import ca.nrc.cadc.tap.writer.formatter.Formatter;
 import java.sql.ResultSet;
-import java.util.AbstractList;
+import java.sql.SQLException;
 import java.util.Iterator;
+import java.util.List;
+import java.util.NoSuchElementException;
+import org.jdom.Element;
 
 /**
- * Class that wraps a List around a ResultSet.
+ * Class that iterates through a ResultSet. The Iterator returns a JDOM Element
+ * containing a HTML table row representation of the ResultSet.
  */
-public class ResultSetList extends AbstractList
+public class ResultSetIterator implements Iterator
 {
-    // ResultSet the List is wrapping.
+    // TapSchema metadata.
+    private TapSchema tapSchema;
+
+    // ResultSet for iteration.
     private ResultSet resultSet;
+
+    // List of Formatter's in selectList order.
+    private List<Formatter> formatters;
 
     /**
      * Constructor.
-     * 
-     * @param ResultSet to wrap.
+     *
+     * @param resultSet
      */
-    public ResultSetList(ResultSet resultSet)
+    public ResultSetIterator(TapSchema tapSchema, ResultSet resultSet, List<Formatter> formatters)
     {
-        super();
+        this.tapSchema = tapSchema;
         this.resultSet = resultSet;
+        this.formatters = formatters;
     }
 
     /**
-     * Returns a ResultSetIterator which can iterate through
-     * the ResultSet.
      *
-     * @return a ResultSetIterator
+     * @return true if the iteration has more elements.
      */
-    @Override
-    public Iterator iterator()
+    public boolean hasNext()
     {
-        return new ResultSetIterator(resultSet);
+        try
+        {
+            return !resultSet.isLast();
+        }
+        catch (SQLException e)
+        {
+            throw new RuntimeException(e.getMessage());
+        }
     }
 
     /**
-     * Random access to the ResultSet which the List is wrapping
-     * is not supported, can only move forward through the ResultSet,
-     * therefore throws an UnsupportedOperationException.
+     * Gets the next row in the ResultSet, and builds a JDOM Element
+     * containing a single HTML table row, with table data elements for
+     * each column in the row.
      * 
-     * @param index
-     * @throws UnsupportedOperationException
+     * @return the next element in the iteration.
+     * @throws NoSuchElementException iteration has no more elements.
      */
-    @Override
-    public Object get(int index)
+    public Object next()
+        throws NoSuchElementException
     {
-        throw new UnsupportedOperationException("get method not supported");
+        try
+        {
+            // Get the next row.
+            boolean valid = resultSet.next();
+
+            // If no more rows in the ResultSet throw a NoSuchElementException.
+            if (!valid)
+                throw new NoSuchElementException("No more rows in the ResultSet");
+
+            // Create the TR element.
+            Element tableRow = new Element("TR");
+
+            // Loop through the ResultSet adding the table data elements.
+            for (int columnIndex = 1; columnIndex <= resultSet.getMetaData().getColumnCount(); columnIndex++)
+            {
+                Element tableData = new Element("TD");
+                Object value = resultSet.getObject(columnIndex);
+                Formatter formatter = formatters.get(columnIndex - 1);
+                tableData.setText(formatter.format(value));
+                tableRow.addContent(tableData);
+            }
+            return tableRow;
+        }
+        catch (SQLException e)
+        {
+            throw new RuntimeException(e.getMessage());
+        }
     }
 
     /**
-     * Can't find the size of the ResultSet which the List is wrapping
-     * without making multiple queries, therefore throws an UnsupportedOperationException.
-     *
-     * @throws UnsupportedOperationException
+     * Removes from the ResultSet the last element returned by the iterator.
      */
-    @Override
-    public int size()
+    public void remove()
     {
-        throw new UnsupportedOperationException("size method not supported");
+        try
+        {
+            resultSet.deleteRow();
+        }
+        catch (SQLException e)
+        {
+            throw new RuntimeException(e.getMessage());
+        }
     }
 
 }

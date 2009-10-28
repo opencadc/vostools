@@ -67,147 +67,51 @@
  ************************************************************************
  */
 
-package ca.nrc.cadc.tap.schema;
+package ca.nrc.cadc.tap.writer.formatter;
 
+import ca.nrc.cadc.tap.parser.adql.TapSelectItem;
+import ca.nrc.cadc.tap.schema.Column;
+import ca.nrc.cadc.tap.schema.Schema;
+import ca.nrc.cadc.tap.schema.Table;
+import ca.nrc.cadc.tap.schema.TapSchema;
+import java.util.ArrayList;
 import java.util.List;
 
 /**
- * Class to represent a TAP_SCHEMA.tables table.
- * 
+ *
  */
-public class Table
+public class FormatterFactory
 {
-    /**
-     * The schema this Table belongs to.
-     */
-    public String schemaName;
-
-    /**
-     * The fully qualified Table name.
-     */
-    public String tableName;
-
-    /**
-     * Describes the Table.
-     */
-    public String description;
-
-    /**
-     * The utype of the Table.
-     */
-    public String utype;
-
-    /**
-     * List of columns belonging to this Table.
-     */
-    public List<Column> columns;
-
-    /**
-     * Default no-arg constructor.
-     */
-    public Table() {}
-
-    /**
-     * Construct a Table using the specified parameters.
-     *
-     * @param schemaName The schema this Table belongs to.
-     * @param tableName The fully qualified Table name.
-     * @param description Describes the Table.
-     * @param utype The utype of the Table.
-     */
-    public Table(String schemaName, String tableName, String description, String utype)
+    public static List<Formatter> getFormatters(TapSchema tapSchema, List<TapSelectItem> selectList)
     {
-        this.schemaName = schemaName;
-        this.tableName = tableName;
-        this.description = description;
-        this.utype = utype;
+        List<Formatter> formatters = new ArrayList<Formatter>();
+        for (TapSelectItem selectItem : selectList)
+            formatters.add(getFormatter(tapSchema, selectItem));
+        return formatters;
     }
 
-    /**
-     * Removes the schema, if it exists, from the table name.
-     * 
-     * @return Unqualified table name.
-     */
-    public String getSimpleTableName()
+    public static Formatter getFormatter(TapSchema tapSchema, TapSelectItem selectItem)
     {
-        String simpleName = tableName;
-        if (tableName.startsWith(schemaName + "."))
-            simpleName = tableName.substring(tableName.indexOf(".")+1);
-        return simpleName;
-    }
-
-    /**
-     * Setters and getters.
-     *
-     */
-    public final String getSchemaName()
-    {
-        return schemaName;
-    }
-
-    public final void setSchemaName(String schemaName)
-    {
-        this.schemaName = schemaName;
-    }
-
-    public final String getTableName()
-    {
-        return tableName;
-    }
-
-    public final void setTableName(String tableName)
-    {
-        this.tableName = tableName;
-    }
-
-    public final String getDescription()
-    {
-        return description;
-    }
-
-    public final void setDescription(String description)
-    {
-        this.description = description;
-    }
-
-    public final String getUtype()
-    {
-        return utype;
-    }
-
-    public final void setUtype(String utype)
-    {
-        this.utype = utype;
-    }
-
-    public final List<Column> getColumns()
-    {
-        return columns;
-    }
-
-    public final void setColumns(List<Column> columns)
-    {
-        this.columns = columns;
-    }
-
-    /**
-     * @return String representation of the Table.
-     */
-    public String toString()
-    {
-        StringBuilder sb = new StringBuilder();
-        sb.append("Table[");
-        sb.append(schemaName == null ? "" : schemaName).append(",");
-        sb.append(tableName).append(",");
-        sb.append(description == null ? "" : description).append(",");
-        sb.append(utype == null ? "" : utype).append(",");
-        sb.append("columns[");
-        if (columns != null) {
-            for (Column column : columns)
-                sb.append(column);
+        // Find the class name of the formatter for this colummn.
+        for (Schema schema : tapSchema.schemas)
+        {
+            for (Table table : schema.tables)
+            {
+                if (table.tableName.equals(selectItem.getTableName()))
+                {
+                    for (Column column : table.columns)
+                    {
+                        if (column.columnName.equals(selectItem.getColumnName()))
+                        {
+                            return new DefaultFormatter();
+                        }
+                    }
+                }
+            }
         }
-        sb.append("]]");
-        return sb.toString();
+
+        // Custom formatter not found, return the default Formatter.
+        return new DefaultFormatter();
     }
 
 }

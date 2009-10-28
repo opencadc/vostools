@@ -67,125 +67,78 @@
 ************************************************************************
 */
 
-package ca.nrc.cadc.tap.votable;
+package ca.nrc.cadc.tap.writer.votable;
 
-import java.io.IOException;
-import java.io.Writer;
+import ca.nrc.cadc.tap.schema.TapSchema;
+import ca.nrc.cadc.tap.writer.formatter.Formatter;
+import java.sql.ResultSet;
+import java.util.AbstractList;
 import java.util.Iterator;
 import java.util.List;
-import org.jdom.Comment;
-import org.jdom.DocType;
-import org.jdom.Document;
-import org.jdom.Element;
-import org.jdom.ProcessingInstruction;
-import org.jdom.output.XMLOutputter;
 
 /**
- * Class that extends a JDOM XMLOutputter and output a custom TABLEDATA element.
- *
+ * Class that wraps a List around a ResultSet.
  */
-public class TableDataXMLOutputter extends XMLOutputter
+public class ResultSetList extends AbstractList
 {
-    // XML declaration.
-    private static final String XML_DECLARATION = "<?xml version=\"1.0\" encoding=\"UTF-8\"?>";
+    // TapSchema
+    TapSchema tapSchema;
 
-    // Line separator.
-    private static final String NEW_LINE = System.getProperty("line.separator");
+    // ResultSet the List is wrapping.
+    private ResultSet resultSet;
 
-    // Opening TABLEDATA tag.
-    private static final String TABLEDATA_TAG_OPEN = "<TABLEDATA>";
-
-    // Closing TABLEDATA tag.
-    private static final String TABLEDATA_TAG_CLOSE = "</TABLEDATA>";
+    // List of Formatter's in selectList order.
+    private List<Formatter> formatters;
 
     /**
-     * Default Constructor.
+     * Constructor.
+     * 
+     * @param ResultSet to wrap.
      */
-    public TableDataXMLOutputter()
+    public ResultSetList(TapSchema tapSchema, ResultSet resultSet, List<Formatter> formatters)
     {
         super();
+        this.tapSchema = tapSchema;
+        this.resultSet = resultSet;
+        this.formatters = formatters;
     }
 
     /**
-     * Writes the Document. First writes the XML Declartion, then
-     * iterates through the document content calling the appropriate
-     * print method for the content type.
+     * Returns a ResultSetIterator which can iterate through
+     * the ResultSet.
      *
-     * Method is overridden to avoid the parent methods use of the
-     * size method for a List, which the ResultSetList implementation
-     * does not support.
-     *
-     * @param document to write
-     * @param out writer.
-     * @throws IOException
+     * @return a ResultSetIterator
      */
     @Override
-    public void output(Document document, Writer out)
-        throws IOException
+    public Iterator iterator()
     {
-        out.write(XML_DECLARATION);
-        out.write(NEW_LINE);
-        List content = document.getContent();
-        for (Iterator iterator = content.iterator(); iterator.hasNext(); )
-        {
-            Object object = iterator.next();
-            if (object instanceof Element)
-            {
-                printElement(out, (Element) object, 0, new MyNamespaceStack());
-            }
-            else if (object instanceof Comment)
-            {
-                printComment(out, (Comment) object);
-            }
-            else if (object instanceof ProcessingInstruction)
-            {
-                printProcessingInstruction(out, (ProcessingInstruction) object);
-            }
-            else if (object instanceof DocType)
-            {
-                printDocType(out, document.getDocType());
-            }
-        }
-        out.flush();
+        return new ResultSetIterator(tapSchema, resultSet, formatters);
     }
 
     /**
-     * Prints a JDOM Element. If the element is a TableDataElement, prints out the
-     * TABLEDATA tag, then iterates through element's content calling the parent
-     * method. If the element is not a TableDataElement, calls the parent method.
-     *
-     * @param out writer
-     * @param element element to write
-     * @param level
-     * @param namespaces
-     * @throws IOException
+     * Random access to the ResultSet which the List is wrapping
+     * is not supported, can only move forward through the ResultSet,
+     * therefore throws an UnsupportedOperationException.
+     * 
+     * @param index
+     * @throws UnsupportedOperationException
      */
     @Override
-    protected void printElement(Writer out, Element element, int level, XMLOutputter.NamespaceStack namespaces)
-        throws IOException
+    public Object get(int index)
     {
-        if (element instanceof TableDataElement)
-        {
-            out.write(TABLEDATA_TAG_OPEN);
-            out.write(NEW_LINE);
-            List content = element.getContent();
-            for (Iterator iterator = content.iterator(); iterator.hasNext(); )
-            {
-                super.printElement(out, (Element) iterator.next(), level, namespaces);
-                out.write(NEW_LINE);
-            }
-            out.write(TABLEDATA_TAG_CLOSE);
-            out.write(NEW_LINE);
-        }
-        else
-        {
-            super.printElement(out, element, level, namespaces);
-        }
+        throw new UnsupportedOperationException("get method not supported");
     }
 
-    protected class MyNamespaceStack extends NamespaceStack
+    /**
+     * Can't find the size of the ResultSet which the List is wrapping
+     * without making multiple queries, therefore throws an UnsupportedOperationException.
+     *
+     * @throws UnsupportedOperationException
+     */
+    @Override
+    public int size()
     {
-        MyNamespaceStack() {}
+        throw new UnsupportedOperationException("size method not supported");
     }
 
 }

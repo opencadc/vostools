@@ -67,147 +67,143 @@
  ************************************************************************
  */
 
-package ca.nrc.cadc.tap.schema;
+package ca.nrc.cadc.tap.writer.votable;
 
-import java.util.List;
+import ca.nrc.cadc.tap.schema.Column;
+import org.jdom.Element;
 
-/**
- * Class to represent a TAP_SCHEMA.tables table.
- * 
- */
-public class Table
+public class FieldElement extends Element
 {
     /**
-     * The schema this Table belongs to.
-     */
-    public String schemaName;
-
-    /**
-     * The fully qualified Table name.
-     */
-    public String tableName;
-
-    /**
-     * Describes the Table.
-     */
-    public String description;
-
-    /**
-     * The utype of the Table.
-     */
-    public String utype;
-
-    /**
-     * List of columns belonging to this Table.
-     */
-    public List<Column> columns;
-
-    /**
-     * Default no-arg constructor.
-     */
-    public Table() {}
-
-    /**
-     * Construct a Table using the specified parameters.
+     * Builds a FIELD Element from a Column.
      *
-     * @param schemaName The schema this Table belongs to.
-     * @param tableName The fully qualified Table name.
-     * @param description Describes the Table.
-     * @param utype The utype of the Table.
+     * @param column 
      */
-    public Table(String schemaName, String tableName, String description, String utype)
+    public FieldElement(Column column)
     {
-        this.schemaName = schemaName;
-        this.tableName = tableName;
-        this.description = description;
-        this.utype = utype;
-    }
+        super("FIELD");
+        setFieldAttribute("name", column.columnName);
+        setFieldAttribute("utype", column.utype);
+        setFieldAttribute("ucd", column.ucd);
+        setFieldAttribute("unit", column.unit);
+        setFieldAttribute("xtype", column.datatype);
+        setDescription(column.description);
+        setDatatypeAndWidth(column.datatype, column.size);
+     }
 
-    /**
-     * Removes the schema, if it exists, from the table name.
-     * 
-     * @return Unqualified table name.
-     */
-    public String getSimpleTableName()
+    // Set a String or Integer FIELD attribute.
+    private void setFieldAttribute(String name, Object value)
     {
-        String simpleName = tableName;
-        if (tableName.startsWith(schemaName + "."))
-            simpleName = tableName.substring(tableName.indexOf(".")+1);
-        return simpleName;
-    }
-
-    /**
-     * Setters and getters.
-     *
-     */
-    public final String getSchemaName()
-    {
-        return schemaName;
-    }
-
-    public final void setSchemaName(String schemaName)
-    {
-        this.schemaName = schemaName;
-    }
-
-    public final String getTableName()
-    {
-        return tableName;
-    }
-
-    public final void setTableName(String tableName)
-    {
-        this.tableName = tableName;
-    }
-
-    public final String getDescription()
-    {
-        return description;
-    }
-
-    public final void setDescription(String description)
-    {
-        this.description = description;
-    }
-
-    public final String getUtype()
-    {
-        return utype;
-    }
-
-    public final void setUtype(String utype)
-    {
-        this.utype = utype;
-    }
-
-    public final List<Column> getColumns()
-    {
-        return columns;
-    }
-
-    public final void setColumns(List<Column> columns)
-    {
-        this.columns = columns;
-    }
-
-    /**
-     * @return String representation of the Table.
-     */
-    public String toString()
-    {
-        StringBuilder sb = new StringBuilder();
-        sb.append("Table[");
-        sb.append(schemaName == null ? "" : schemaName).append(",");
-        sb.append(tableName).append(",");
-        sb.append(description == null ? "" : description).append(",");
-        sb.append(utype == null ? "" : utype).append(",");
-        sb.append("columns[");
-        if (columns != null) {
-            for (Column column : columns)
-                sb.append(column);
+        if (value != null)
+        {
+            if (value instanceof String)
+                setAttribute(name, (String) value);
+            else if (value instanceof Integer)
+                setAttribute(name, String.valueOf((Integer) value));
         }
-        sb.append("]]");
-        return sb.toString();
+    }
+
+    // Add a DESCRIPTION Element to the FIELD.
+    private void setDescription(String description)
+    {
+        if (description != null)
+        {
+            Element element = new Element("DESCRIPTION");
+            element.setText(description);
+            addContent(element);
+        }
+    }
+
+    // Set the datatype and Width attributes.
+    private void setDatatypeAndWidth(String datatype, Integer size)
+    {
+        if (datatype == null)
+            return;
+
+        String width = size == null ? null : String.valueOf(size);
+
+        if (datatype.equals("adql:SMALLINT"))
+        {
+            setAttribute("datatype", "short");
+        }
+        else if (datatype.equals("adql:INTEGER"))
+        {
+            setAttribute("datatype", "int");
+        }
+        else if (datatype.equals("adql:BIGINT"))
+        {
+            setAttribute("datatype", "long");
+        }
+        else if (datatype.equals("adql:REAL"))
+        {
+            setAttribute("datatype", "float");
+        }
+        else if (datatype.equals("adql:DOUBLE"))
+        {
+            setAttribute("datatype", "double");
+        }
+        else if (datatype.equals("adql:VARBINARY"))
+        {
+            setAttribute("datatype", "unsignedByte");
+            if (width != null)
+                setAttribute("width", width + "*");
+        }
+        else if (datatype.equals("adql:CHAR"))
+        {
+            setAttribute("datatype", "char");
+            if (width != null)
+                setAttribute("width", width);
+        }
+        else if (datatype.equals("adql:VARCHAR"))
+        {
+            setAttribute("datatype", "char");
+            if (width != null)
+                setAttribute("width", width + "*");
+        }
+        else if (datatype.equals("adql:BINARY"))
+        {
+            setAttribute("datatype", "unsignedByte");
+            if (width != null)
+                setAttribute("width", width);
+        }
+        else if (datatype.equals("adql:BLOB"))
+        {
+            setAttribute("datatype", "unsignedByte");
+            if (width != null)
+                setAttribute("width", width);
+        }
+        else if (datatype.equals("adql:CLOB"))
+        {
+            setAttribute("datatype", "char");
+            if (width != null)
+                setAttribute("width", width);
+        }
+        else if (datatype.equals("adql:TIMESTAMP"))
+        {
+            setAttribute("datatype", "char");
+            if (width != null)
+                setAttribute("width", width);
+        }
+        else if (datatype.equals("adql:POINT"))
+        {
+            setAttribute("datatype", "char");
+            if (width != null)
+                setAttribute("width", width);
+        }
+        else if (datatype.equals("adql:CIRCLE"))
+        {
+
+        }
+        else if (datatype.equals("adql:POLYGON"))
+        {
+
+        }
+        else if (datatype.equals("adql:REGION"))
+        {
+            setAttribute("datatype", "char");
+            if (width != null)
+                setAttribute("width", width);
+        }
     }
 
 }

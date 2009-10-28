@@ -73,8 +73,8 @@ import ca.nrc.cadc.tap.TableWriter;
 import ca.nrc.cadc.tap.schema.Column;
 import ca.nrc.cadc.tap.schema.Schema;
 import ca.nrc.cadc.tap.schema.Table;
-import ca.nrc.cadc.tap.votable.TableDataElement;
-import ca.nrc.cadc.tap.votable.TableDataXMLOutputter;
+import ca.nrc.cadc.tap.writer.votable.TableDataElement;
+import ca.nrc.cadc.tap.writer.votable.TableDataXMLOutputter;
 import java.io.IOException;
 import java.io.OutputStream;
 import java.sql.ResultSet;
@@ -86,6 +86,9 @@ import org.jdom.output.Format;
 import org.jdom.output.XMLOutputter;
 import ca.nrc.cadc.tap.parser.adql.TapSelectItem;
 import ca.nrc.cadc.tap.schema.TapSchema;
+import ca.nrc.cadc.tap.writer.votable.FieldElement;
+import ca.nrc.cadc.tap.writer.formatter.Formatter;
+import ca.nrc.cadc.tap.writer.formatter.FormatterFactory;
 
 public class VOTableWriter implements TableWriter
 {
@@ -124,6 +127,8 @@ public class VOTableWriter implements TableWriter
         if (tapSchema == null)
             throw new IllegalStateException("TapSchema cannot be null, set using setTapSchema()");
 
+        List<Formatter> formatters = FormatterFactory.getFormatters(tapSchema, selectList);
+
         Document document = createDocument();
         Element votable = document.getRootElement();
 
@@ -144,11 +149,11 @@ public class VOTableWriter implements TableWriter
         table.addContent(data);
 
         // Create the TABLEDATA element and add the to DATA element.
-        Element tableData = new TableDataElement(resultSet);
+        Element tableData = new TableDataElement(tapSchema, resultSet, formatters);
         data.addContent(tableData);
 
         // Write out the VOTABLE.
-        XMLOutputter outputter = new TableDataXMLOutputter();
+        XMLOutputter outputter = new TableDataXMLOutputter(tapSchema);
         outputter.setFormat(Format.getPrettyFormat());
         outputter.output(document, output);
     }
@@ -198,42 +203,24 @@ public class VOTableWriter implements TableWriter
     // Build a FIELD Element for the column specified by the TapSelectItem.
     private Element getMetaDataElement(TapSelectItem selectItem)
     {
-        Element field = new Element("FIELD");
-
-        // TODO: assumes first schema is the one we want.
-        Schema schema = tapSchema.schemas.get(0);
-        for (Table table : schema.tables)
+        for (Schema schema : tapSchema.schemas)
         {
-            if (table.tableName.equals(selectItem.getTableName()))
+            for (Table table : schema.tables)
             {
-                for (Column column: table.columns)
+                if (table.tableName.equals(selectItem.getTableName()))
                 {
-                    if (column.columnName.equals(selectItem.getColumnName()))
+                    for (Column column: table.columns)
                     {
-                        if (column.columnName != null)
-                            field.setAttribute("name", column.columnName);
-                        if (column.utype != null)
-                            field.setAttribute("utype", column.utype);
-                        if (column.ucd != null)
-                            field.setAttribute("ucd", column.ucd);
-                        if (column.unit != null)
-                            field.setAttribute("unit", column.unit);
-                        if (column.datatype != null)
-                            field.setAttribute("datatype", column.datatype);
-                        if (column.size != null)
-                            field.setAttribute("width", String.valueOf(column.size));
-                        if (column.description != null)
+                        if (column.columnName.equals(selectItem.getColumnName()))
                         {
-                            Element description = new Element("DESCRIPTION");
-                            description.setText(column.description);
-                            field.addContent(description);
+                            return new FieldElement(column);
                         }
-                        break;
                     }
                 }
             }
         }
-        return field;
+        //TODO: throw exception or build generic or error field???
+        return new Element("FIELD");
     }
 
     // Build a String containing the nested Exception messages.

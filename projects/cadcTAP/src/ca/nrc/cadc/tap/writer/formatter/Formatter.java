@@ -10,5 +10,5 @@ package ca.nrc.cadc.tap.writer.formatter;
  */
 public interface Formatter
 {
-    String format(Object value);
+    String format(Object object);
 }

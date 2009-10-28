@@ -67,42 +67,131 @@
 ************************************************************************
 */
 
-package ca.nrc.cadc.tap.votable;
+package ca.nrc.cadc.tap.writer.votable;
 
-import java.sql.ResultSet;
+import ca.nrc.cadc.tap.schema.TapSchema;
+import ca.nrc.cadc.tap.writer.formatter.Formatter;
+import java.io.IOException;
+import java.io.Writer;
+import java.util.Iterator;
 import java.util.List;
+import org.jdom.Comment;
+import org.jdom.DocType;
+import org.jdom.Document;
 import org.jdom.Element;
+import org.jdom.ProcessingInstruction;
+import org.jdom.output.XMLOutputter;
 
 /**
- * Wrapper around a JDOM Element that builds a TABLEDATA Element
- * from a ResultSet.
+ * Class that extends a JDOM XMLOutputter and output a custom TABLEDATA element.
+ *
  */
-public class TableDataElement extends Element
+public class TableDataXMLOutputter extends XMLOutputter
 {
-    // ResultSet used to populate the TABLEDATA element.
-    private ResultSet resultSet;
+    // XML declaration.
+    private static final String XML_DECLARATION = "<?xml version=\"1.0\" encoding=\"UTF-8\"?>";
+
+    // Line separator.
+    private static final String NEW_LINE = System.getProperty("line.separator");
+
+    // Opening TABLEDATA tag.
+    private static final String TABLEDATA_TAG_OPEN = "<TABLEDATA>";
+
+    // Closing TABLEDATA tag.
+    private static final String TABLEDATA_TAG_CLOSE = "</TABLEDATA>";
+
+    // TapSchema
+    TapSchema tapSchema;
 
     /**
-     * Constructor.
-     *
-     * @param resultSet
+     * Default Constructor.
      */
-    public TableDataElement(ResultSet resultSet)
+    public TableDataXMLOutputter(TapSchema tapSchema)
     {
-        super("TABLEDATA");
-        this.resultSet = resultSet;
+        super();
+        this.tapSchema = tapSchema;
     }
 
     /**
-     * Returns a ResultSetList, which wraps a List
-     * around a ResultSet.
-     * @return a ResultSetList
+     * Writes the Document. First writes the XML Declartion, then
+     * iterates through the document content calling the appropriate
+     * print method for the content type.
+     *
+     * Method is overridden to avoid the parent method's use of the
+     * size method for a List, which the ResultSetList implementation
+     * does not support.
+     *
+     * @param document to write
+     * @param out writer.
+     * @throws IOException
      */
     @Override
-    public List getContent()
+    public void output(Document document, Writer out)
+        throws IOException
     {
-        List list = new ResultSetList(resultSet);
-        return list;
+        out.write(XML_DECLARATION);
+        out.write(NEW_LINE);
+        List content = document.getContent();
+        for (Iterator iterator = content.iterator(); iterator.hasNext(); )
+        {
+            Object object = iterator.next();
+            if (object instanceof Element)
+            {
+                printElement(out, (Element) object, 0, new MyNamespaceStack());
+            }
+            else if (object instanceof Comment)
+            {
+                printComment(out, (Comment) object);
+            }
+            else if (object instanceof ProcessingInstruction)
+            {
+                printProcessingInstruction(out, (ProcessingInstruction) object);
+            }
+            else if (object instanceof DocType)
+            {
+                printDocType(out, document.getDocType());
+            }
+        }
+        out.flush();
+    }
+
+    /**
+     * Prints a JDOM Element. If the element is a TableDataElement, prints out the
+     * TABLEDATA tag, then iterates through element's content calling the parent
+     * method. If the element is not a TableDataElement, calls the parent method.
+     *
+     * @param out writer
+     * @param element element to write
+     * @param level
+     * @param namespaces
+     * @throws IOException
+     */
+    @Override
+    protected void printElement(Writer out, Element element, int level, XMLOutputter.NamespaceStack namespaces)
+        throws IOException
+    {
+        if (element instanceof TableDataElement)
+        {
+            out.write(TABLEDATA_TAG_OPEN);
+            out.write(NEW_LINE);
+            List content = element.getContent();
+            for (Iterator iterator = content.iterator(); iterator.hasNext(); )
+            {
+                super.printElement(out, (Element) iterator.next(), level, namespaces);
+                out.write(NEW_LINE);
+            }
+            out.write(TABLEDATA_TAG_CLOSE);
+            out.write(NEW_LINE);
+        }
+        else
+        {
+            super.printElement(out, element, level, namespaces);
+        }
+    }
+
+    protected class MyNamespaceStack extends NamespaceStack
+    {
+        MyNamespaceStack() {}
     }
 
 }
