@@ -4,6 +4,36 @@
 -- note: this makes use of the multiple insert support in PostgreSQL and
 -- may not be portable
 
+-- delete key columns for keys from tables in the TAP_SCHEMA schema
+delete from TAP_SCHEMA.key_columns where
+key_id in (select key_id from TAP_SCHEMA.keys where 
+    from_table in (select table_name from TAP_SCHEMA.tables where schema_name = 'TAP_SCHEMA')
+    or
+    target_table in (select table_name from TAP_SCHEMA.tables where schema_name = 'TAP_SCHEMA')
+)
+;
+
+-- delete keys from tables in the TAP_SCHEMA schema
+delete from TAP_SCHEMA.keys where 
+from_table in (select table_name from TAP_SCHEMA.tables where schema_name = 'TAP_SCHEMA')
+or
+target_table in (select table_name from TAP_SCHEMA.tables where schema_name = 'TAP_SCHEMA')
+;
+
+-- delete columns from tables in the TAP_SCHEMA schema
+delete from TAP_SCHEMA.columns where table_name in 
+(select table_name from TAP_SCHEMA.tables where schema_name = 'TAP_SCHEMA')
+;
+
+-- delete tables in the caom schema
+delete from TAP_SCHEMA.tables where schema_name = 'TAP_SCHEMA'
+;
+
+-- delete the caom schema
+delete from TAP_SCHEMA.schemas where schema_name = 'TAP_SCHEMA'
+;
+
+
 insert into TAP_SCHEMA.schemas (schema_name,description,utype) values
 ( 'TAP_SCHEMA', 'a special schema to describe a TAP tableset', NULL )
 ;
