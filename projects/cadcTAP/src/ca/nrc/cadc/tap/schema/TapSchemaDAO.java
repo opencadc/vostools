@@ -76,6 +76,7 @@ import java.util.List;
 
 import javax.sql.DataSource;
 
+import org.apache.log4j.Logger;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.jdbc.core.RowMapper;
 
@@ -85,50 +86,32 @@ import org.springframework.jdbc.core.RowMapper;
  */
 public class TapSchemaDAO
 {
+    private static Logger log = Logger.getLogger(TapSchemaDAO.class);
+    
     // SQL to select all rows from TAP_SCHEMA.schemas.
     private static final String SELECT_SCHEMAS =
-            "select " +
-                "schema_name, description, utype " +
-            "from " +
-                "tap_schema.schemas " +
-            "order by " +
-                "schema_name";
+            "select schema_name, description, utype " +
+            "from tap_schema.schemas";
 
     // SQL to select all rows from TAP_SCHEMA.tables.
     private static final String SELECT_TABLES = 
-            "select " +
-                "schema_name, table_name, description, utype " +
-            "from " +
-                "tap_schema.tables " +
-            "order by " +
-                "schema_name";
+            "select schema_name, table_name, description, utype " +
+            " from tap_schema.tables";
 
     // SQL to select all rows from TAP_SCHEMA.colums.
     private static final String SELECT_COLUMNS = 
-            "select " +
-                "table_name, column_name, description, utype, ucd, unit, datatype, size " +
-            "from " +
-                "tap_schema.columns " +
-            "order by " +
-                "table_name";
+            "select table_name, column_name, description, utype, ucd, unit, datatype, size " +
+            "from tap_schema.columns ";
 
     // SQL to select all rows from TAP_SCHEMA.keys.
     private static final String SELECT_KEYS =
-            "select " +
-                "key_id, from_table, target_table " +
-            "from " +
-                "tap_schema.keys " +
-            "order by " +
-                "key_id";
+            "select key_id, from_table, target_table " +
+            "from tap_schema.keys ";
 
     // SQL to select all rows from TAP_SCHEMA.key_columns.
     private static final String SELECT_KEY_COLUMNS = 
-            "select " +
-                "key_id, from_column, target_column " +
-            "from " +
-                "tap_schema.key_columns " +
-            "order by " +
-                "key_id";
+            "select key_id, from_column, target_column " +
+            "from tap_schema.key_columns ";
 
     // Database connection.
     private JdbcTemplate jdbc;
@@ -176,6 +159,9 @@ public class TapSchemaDAO
         // Add the KeyColumns to the Keys.
         addKeyColumnsToKeys(tapSchema.keys, keyColumns);
 
+        for (Schema s : tapSchema.schemas)
+            log.debug("schema " + s.schemaName + " has " + s.tables.size() + " tables");
+        
         return tapSchema;
     }
 
@@ -259,6 +245,7 @@ public class TapSchemaDAO
             schema.schemaName = rs.getString("schema_name");
             schema.description = rs.getString("description");
             schema.utype = rs.getString("utype");
+            log.debug("found: " + schema);
             return schema;
         }
     }
@@ -275,6 +262,7 @@ public class TapSchemaDAO
             table.tableName = rs.getString("table_name");
             table.description = rs.getString("description");
             table.utype = rs.getString("utype");
+            log.debug("found: " + table);
             return table;
         }
     }
@@ -295,6 +283,7 @@ public class TapSchemaDAO
             column.unit = rs.getString("unit");
             column.datatype = rs.getString("datatype");
             column.size = Integer.valueOf(rs.getInt("size"));
+            log.debug("found: " + column);
             return column;
         }
     }
@@ -310,6 +299,7 @@ public class TapSchemaDAO
             key.keyId = rs.getString("key_id");
             key.fromTable = rs.getString("from_table");
             key.targetTable = rs.getString("target_table");
+            log.debug("found: " + key);
             return key;
         }
     }
@@ -325,6 +315,7 @@ public class TapSchemaDAO
             keyColumn.keyId = rs.getString("key_id");
             keyColumn.fromColumn = rs.getString("from_column");
             keyColumn.targetColumn = rs.getString("target_column");
+            log.debug("found: " + keyColumn);
             return keyColumn;
         }
     }
