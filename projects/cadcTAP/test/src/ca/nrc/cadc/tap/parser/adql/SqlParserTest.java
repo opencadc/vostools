@@ -418,7 +418,7 @@ public class SqlParserTest {
 			+ " where cd1_1 > 432.1";
 		doValidate(expectValid);
 	}
-	@Test
+	//@Test
 	public void testGetTapSelectItems() {
 		boolean expectValid = true;
 		this.adqlInput = "select top 123 "
@@ -430,5 +430,11 @@ public class SqlParserTest {
 			+ "    (select exptime from temporal) as tt "
 			+ " where cd1_1 > 432.1";
 		doValidate(expectValid);
+	}
+	@Test
+	public void testFunction() {
+        boolean expectValid = true;
+        this.adqlInput = "select long(32,44), lat(444,99) from TAP_SCHEMA.AllDataTypes ";
+        doValidate(expectValid);
 	}
 }

@@ -271,17 +271,8 @@ public class ExpressionValidatorImpl extends ExpressionValidator
     public void visit(Function f)
     {
         log.debug("visit(Function): " + f);
-        String name = f.getName();
-        List<FunctionMeta> functionMetas = config.getFunctionMetas();
-        FunctionMeta functionMeta = new FunctionMeta(name);
-        if (functionMetas.contains(functionMeta))
-        {
-            if (f.getParameters() != null)
-                f.getParameters().accept(this);
-        } else
-        {
-            addException(new AdqlValidateException(name + " is not a supported function."));
-        }
+        if (f.getParameters() != null)
+            f.getParameters().accept(this);
         return;
     }
 
