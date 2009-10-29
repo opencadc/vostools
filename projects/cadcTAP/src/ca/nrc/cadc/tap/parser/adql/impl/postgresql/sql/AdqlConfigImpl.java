@@ -103,22 +103,13 @@ public class AdqlConfigImpl extends AdqlConfig
 
     private TapSchema _tapSchema;
 
-    public AdqlConfigImpl()
+    public AdqlConfigImpl(TapSchema tapSchema)
     {
         super();
-
-        try
-        {
-            Class.forName(JDBC_DRIVER);
-        } catch (ClassNotFoundException e)
-        {
-            String msg = "JDBC Driver not found.";
-            log.error(msg, e);
-            throw new MissingResourceException(msg, JDBC_DRIVER, null);
-        }
-        DataSource ds = new SingleConnectionDataSource(JDBC_URL, USERNAME, PASSWORD, SUPPRESS_CLOSE);
-        TapSchemaDAO dao = new TapSchemaDAO(ds);
-        _tapSchema = dao.get();
+        if (tapSchema != null)
+            _tapSchema = tapSchema;
+        else
+            loadDefaultTapSchema();
 
         configName = "CADC PostgreSQL SQL";
         initFunctionMeta();
@@ -135,6 +126,22 @@ public class AdqlConfigImpl extends AdqlConfig
         // caseSensitive = false; // Whether column, table, and schema names are case sensitive. -sz 2009-09-10
 
     }
+    
+    private void loadDefaultTapSchema()
+    {
+        try
+        {
+            Class.forName(JDBC_DRIVER);
+        } catch (ClassNotFoundException e)
+        {
+            String msg = "JDBC Driver not found.";
+            log.error(msg, e);
+            throw new MissingResourceException(msg, JDBC_DRIVER, null);
+        }
+        DataSource ds = new SingleConnectionDataSource(JDBC_URL, USERNAME, PASSWORD, SUPPRESS_CLOSE);
+        TapSchemaDAO dao = new TapSchemaDAO(ds);
+        _tapSchema = dao.get();
+    }
 
     private void initFunctionMeta()
     {
@@ -147,18 +154,15 @@ public class AdqlConfigImpl extends AdqlConfig
 
         for (Schema schema : _tapSchema.getSchemas())
         {
-            if (schema.getSchemaName().equals(TAP_SCHEMA_NAME))
+            for (Table table : schema.getTables())
             {
-                for (Table table : schema.getTables())
+                tableMeta = new TableMeta(table.getSchemaName(), table.getSimpleTableName());
+                for (Column column : table.getColumns())
                 {
-                    tableMeta = new TableMeta(table.getSchemaName(), table.getSimpleTableName());
-                    for (Column column : table.getColumns())
-                    {
-                        tableMeta.addColumnMeta(new ColumnMeta(column.getColumnName(), column.getDatatype(), column.getUcd(),
-                                column.getUnit()));
-                    }
-                    tableMetas.add(tableMeta);
+                    tableMeta.addColumnMeta(new ColumnMeta(column.getColumnName(), column.getDatatype(), column.getUcd(),
+                            column.getUnit()));
                 }
+                tableMetas.add(tableMeta);
             }
         }
     }
