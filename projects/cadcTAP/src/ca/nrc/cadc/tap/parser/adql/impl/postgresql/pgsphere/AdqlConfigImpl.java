@@ -76,6 +76,7 @@ import ca.nrc.cadc.tap.parser.adql.config.AdqlConfig;
 import ca.nrc.cadc.tap.parser.adql.config.meta.ColumnMeta;
 import ca.nrc.cadc.tap.parser.adql.config.meta.FunctionMeta;
 import ca.nrc.cadc.tap.parser.adql.config.meta.TableMeta;
+import ca.nrc.cadc.tap.schema.TapSchema;
 
 /**
  * @author zhangsa
@@ -84,7 +85,7 @@ import ca.nrc.cadc.tap.parser.adql.config.meta.TableMeta;
 public class AdqlConfigImpl extends AdqlConfig
 {
 
-    public AdqlConfigImpl()
+    public AdqlConfigImpl(TapSchema tapSchema)
     {
         super();
         configName = "CADC PostgreSQL pgSphere 1.1";
@@ -105,7 +106,7 @@ public class AdqlConfigImpl extends AdqlConfig
 
     private void initFunctionMeta()
     {
-        functionMetas.add(new FunctionMeta(Constants.AREA));
+        functionMetas.add(new FunctionMeta(Constants.BOX));
         // functions.add(new FunctionMeta(Constants.CENTROID));
         functionMetas.add(new FunctionMeta(Constants.CIRCLE));
         functionMetas.add(new FunctionMeta(Constants.CONTAINS));
