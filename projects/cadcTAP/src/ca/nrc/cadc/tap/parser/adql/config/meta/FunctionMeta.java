@@ -117,4 +117,10 @@ public class FunctionMeta
         return true;
     }
 
+    @Override
+    public String toString()
+    {
+        return "F:" + name ;
+    }
+
 }
