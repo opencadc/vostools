@@ -88,6 +88,7 @@ public class Constants
     // ADQL region functions
     public static String CONTAINS = "CONTAINS";
     public static String INTERSECTS = "INTERSECTS";
+    public static String BOX = "BOX";
     public static String POINT = "POINT";
     public static String CIRCLE = "CIRCLE";
     public static String POLYGON = "POLYGON";
@@ -111,7 +112,7 @@ public class Constants
     static
     {
         REGION_PREDICATES = Arrays.asList(new String[] { CONTAINS, INTERSECTS });
-        REGION_GEOM_FUNCTIONS = Arrays.asList(new String[] { POINT, CIRCLE, POLYGON, CENTROID, REGION, });
+        REGION_GEOM_FUNCTIONS = Arrays.asList(new String[] { BOX, POINT, CIRCLE, POLYGON, CENTROID, REGION, });
         REGION_SCALAR_FUNCTIONS = Arrays.asList(new String[] { AREA, COORDSYS, CVAL1, CVAL2 });
 
         REGION_FUNCTIONS = new ArrayList<String>();
