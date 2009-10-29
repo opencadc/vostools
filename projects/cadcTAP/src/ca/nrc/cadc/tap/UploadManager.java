@@ -95,8 +95,8 @@ public class UploadManager {
     public static final String SCHEMA = "TAP_SCHEMA";
     public static final String UPLOAD = TapParams.UPLOAD.toString();
     
-    private Map<String,Table>          columnDefs = new HashMap<String,Table>();
-    private Map<String,List<String[]>> rowVals    = new HashMap<String,List<String[]>>();
+    private Map<String,Table>          metadata = new HashMap<String,Table>();
+    private Map<String,List<String[]>> dataVals = new HashMap<String,List<String[]>>();
     
     public Map<String,Table> upload( List<Parameter> paramList, String jobID ) throws IOException, JDOMException {
         
@@ -113,7 +113,7 @@ public class UploadManager {
             while ( uploadParamsIt.hasNext() ) {
                 String shortName = uploadParamsIt.next();
                 String tableName = SCHEMA+"."+shortName+"_"+jobID;
-                URI tableURI  = uploadParamPairs.get(shortName);
+                URI    tableURI  = uploadParamPairs.get(shortName);
 
                 SAXBuilder sb      = new SAXBuilder("org.apache.xerces.parsers.SAXParser", false);
                 URL        url     = tableURI.toURL();
@@ -121,13 +121,13 @@ public class UploadManager {
                 Element    voTable = doc.getRootElement();
                 
                 //  TODO: Why does getChild return null here?
-                Element resource = voTable.getChild("RESOURCE");
+                //  Element resource = voTable.getChild("RESOURCE");
                 
-                columnDefs.put( shortName, new Table()     );
-                rowVals.put(    shortName, new ArrayList() );
+                metadata.put( shortName, new Table()     );
+                dataVals.put( shortName, new ArrayList() );
                 
-                findColumnDefs( shortName, tableName, voTable );
-                findRowVals(    shortName, tableName, voTable );
+                readMetadata( shortName, tableName, voTable );
+                readDataVals( shortName, tableName, voTable );
             }
         }
         catch ( MalformedURLException mue ) {
@@ -136,12 +136,12 @@ public class UploadManager {
 
         //  Create (in the database) the tables named in the parameter
         //  list and described in the URI-referenced XML files.
-        Iterator<String> tableNamesIt = columnDefs.keySet().iterator();
+        Iterator<String> tableNamesIt = metadata.keySet().iterator();
         try {
             while ( tableNamesIt.hasNext() ) {
                 String tableName = tableNamesIt.next();
                 String sql = "create table "+tableName+" ( ";
-                List<Column> columns = columnDefs.get(tableName).getColumns();
+                List<Column> columns = metadata.get(tableName).getColumns();
                 for ( int i=0; i<columns.size(); i++ ) {
                     Column col = columns.get(i);
                     sql += col.columnName+" ";
@@ -160,12 +160,12 @@ public class UploadManager {
         //  Populate the newly created database tables with
         //  values from the URI-referenced XML files.
         /*
-        tableNamesIt = columnDefs.keySet().iterator();
+        tableNamesIt = metadata.keySet().iterator();
         try {
             while ( tableNamesIt.hasNext() ) {
                 String tableName = tableNamesIt.next();
                 String sqlFront = "insert into "+tableName+" ( ";
-                List<Column> columns = columnDefs.get(tableName).getColumns();
+                List<Column> columns = metadata.get(tableName).getColumns();
                 for ( int i=0; i<columns.size(); i++ ) {
                     Column col = columns.get(i);
                     sql += col.columnName;
@@ -210,9 +210,9 @@ public class UploadManager {
         */
 
         if ( true )
-            throw new UnsupportedOperationException( UPLOAD+" parameter not supported at this time" );
+            throw new UnsupportedOperationException( UPLOAD+" parameter not supported" );
         
-        return columnDefs;
+        return metadata;
     }
     
     /*  Extract the UPLOAD parameters from the full parameter list.
@@ -231,7 +231,7 @@ public class UploadManager {
                         throw new IllegalStateException( "Name-value pair missing from UPLOAD parameter list: "+paramList );
                     String [] pair = pairStr.split(",");
                     String tableName  = null;
-                    String tableURI   = null;
+                    URI    tableURI   = null;
                     try {
                         tableName = pair[0];
                     }
@@ -239,27 +239,23 @@ public class UploadManager {
                         throw new IllegalStateException( "Table name missing from UPLOAD parameter: "+pairStr );
                     }
                     try {
-                        tableURI = pair[1];
+                        tableURI = new URI(pair[1]);
                     }
                     catch ( IndexOutOfBoundsException iobe ) {
                         throw new IllegalStateException( "URI missing from UPLOAD parameter: "+pairStr );
+                    }
+                    catch ( URISyntaxException use ) {
+                        throw new IllegalStateException( "UPLOAD parameter has invalid URI: "+tableURI );
                     }
                     if ( tableName==null || tableName.trim().length()==0 )
                         throw new IllegalStateException( "Table name missing from UPLOAD parameter: "+pairStr );
                     if ( tableName.startsWith(" ") || tableName.contains("  ") || tableName.endsWith(" ") )
                         throw new IllegalStateException( "Table tableName from UPLOAD parameter has invalid blanks: "+tableName );
-                    if ( tableURI==null || tableURI.trim().length()==0 )
-                        throw new IllegalStateException( "URI missing from UPLOAD parameter: "+pairStr );
-                    if ( !tableURI.startsWith("http:") )
+                    if ( !tableURI.getScheme().equals("http") )
                         throw new IllegalStateException( "Table URI has unsupported protocol in UPLOAD parameter: "+tableURI );
-                    if ( tableNameIsDuplicate(tableName,uniqueTableParams) )
+                    if ( uniqueTableParams.containsKey(tableName) )
                         throw new IllegalStateException( "Duplicate table name in UPLOAD parameter: "+paramList );
-                    try {
-                        uniqueTableParams.put( tableName, new URI(tableURI) );
-                    }
-                    catch ( URISyntaxException use ) {
-                        throw new IllegalStateException( "UPLOAD parameter has invalid URI: "+tableURI );
-                    }
+                    uniqueTableParams.put( tableName, tableURI );
                 } // end-for each upload param name-uri pair
             }
         } // end-if UPLOAD param found
@@ -270,16 +266,7 @@ public class UploadManager {
             return null;
     }
     
-    
-    private boolean tableNameIsDuplicate( String tableName, Map<String,URI> uniqueTableParams )
-    {
-        if ( uniqueTableParams.containsKey(tableName) )
-            return true;
-        else
-            return false;
-    }
-    
-    private void findColumnDefs( String shortName, String tableName, Element el ) {
+    private void readMetadata( String shortName, String tableName, Element el ) {
         List<Element> els = el.getChildren();
         if ( els.size() < 1 )
             return;
@@ -297,17 +284,17 @@ public class UploadManager {
                 //  In the absence of a width, set the size arbitrarily until an official example is available.
                 col.size = ( sizeAttr==null ) ? new Integer(32) : Integer.valueOf(sizeAttr);
                 //
-                Table table = columnDefs.get(shortName);
+                Table table = metadata.get(shortName);
                 if ( table.columns == null )
                     table.columns = new ArrayList<Column>();
                 table.columns.add(col);
             }
             else
-                findColumnDefs( shortName, tableName, inner );
+                readMetadata( shortName, tableName, inner );
         }
     }
     
-    private void findRowVals( String shortName, String tableName, Element el ) {
+    private void readDataVals( String shortName, String tableName, Element el ) {
         List<Element> els = el.getChildren();
         if ( els.size() < 1 )
             return;
@@ -316,14 +303,14 @@ public class UploadManager {
             Element inner = elsIt.next();
             if ( inner.getName().equals("TR") ) {
                 List<Element> colVals = inner.getChildren();
-                int numCols = columnDefs.get(shortName).columns.size();
+                int numCols = metadata.get(shortName).columns.size();
                 String [] row = new String[numCols];
                 for ( int i=0; i<numCols; i++ )
                     row[i] = colVals.get(i).getValue();
-                rowVals.get(shortName).add(row);
+                dataVals.get(shortName).add(row);
             }
             else
-                findRowVals( shortName, tableName, inner );
+                readDataVals( shortName, tableName, inner );
         }
     }
     

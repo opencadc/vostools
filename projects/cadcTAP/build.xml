@@ -128,6 +128,11 @@
     <target name="test" depends="compile-test">
         
         <!-- Run the junit test suite -->
+        <!--
+             The UploadManager tests require sample VO Table XML files to be available as:
+                  http://localhost/voTableExample1.xml
+                  http://localhost/voTableExample2.xml
+        -->
         <echo message="Running tests..." />
         <junit printsummary="yes" haltonfailure="yes" fork="yes">
             <classpath>

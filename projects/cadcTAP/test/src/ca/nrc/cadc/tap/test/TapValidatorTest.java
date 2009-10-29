@@ -107,7 +107,6 @@ public class TapValidatorTest extends TestCase
 			paramList.add( new Parameter( "REQUEST", "doQuery" ) );
 			paramList.add( new Parameter( "VERSION", "1.0" ) );
 			paramList.add( new Parameter( "LANG",    "ADQL" ) );
-			paramList.add( new Parameter( "QUERY",   "Sensible query" ) );
             paramList.add( new Parameter( "UPLOAD",  "mytable,http://localhost/voTableExample1.xml" ) );
 			validator.validate( paramList );
 			assertTrue( true );
@@ -123,7 +122,6 @@ public class TapValidatorTest extends TestCase
 			paramList.add( new Parameter( "request", "doQuery" ) );
 			paramList.add( new Parameter( "version", "1.0" ) );
 			paramList.add( new Parameter( "lang",    "ADQL-1.0" ) );
-			paramList.add( new Parameter( "query",   "Sensible query" ) );
 			validator.validate( paramList );
 			assertTrue( true );
 		}
@@ -138,7 +136,6 @@ public class TapValidatorTest extends TestCase
 			paramList.add( new Parameter( "REQUEST", "DOQUERY" ) );
 			paramList.add( new Parameter( "VERSION", "1.0" ) );
 			paramList.add( new Parameter( "LANG",    "ADQL" ) );
-			paramList.add( new Parameter( "QUERY",   "Sensible query" ) );
 			validator.validate( paramList );
 			assertTrue( false );
 		}
@@ -152,7 +149,6 @@ public class TapValidatorTest extends TestCase
 			List<Parameter> paramList = new ArrayList<Parameter>();
 			paramList.add( new Parameter( "VERSION", "1.0" ) );
 			paramList.add( new Parameter( "LANG",    "ADQL" ) );
-			paramList.add( new Parameter( "QUERY",   "Sensible query" ) );
 			validator.validate( paramList );
 			assertTrue( false );
 		}
@@ -167,7 +163,6 @@ public class TapValidatorTest extends TestCase
 			paramList.add( new Parameter( "REQUEST", null ) );
 			paramList.add( new Parameter( "VERSION", "1.0" ) );
 			paramList.add( new Parameter( "LANG",    "ADQL" ) );
-			paramList.add( new Parameter( "QUERY",   "Sensible query" ) );
 			validator.validate( paramList );
 			assertTrue( false );
 		}
@@ -182,7 +177,6 @@ public class TapValidatorTest extends TestCase
 			paramList.add( new Parameter( "REQUEST", "" ) );
 			paramList.add( new Parameter( "VERSION", "1.0" ) );
 			paramList.add( new Parameter( "LANG",    "ADQL" ) );
-			paramList.add( new Parameter( "QUERY",   "Sensible query" ) );
 			validator.validate( paramList );
 			assertTrue( false );
 		}
@@ -197,68 +191,6 @@ public class TapValidatorTest extends TestCase
 			paramList.add( new Parameter( "REQUEST", "Unknown" ) );
 			paramList.add( new Parameter( "VERSION", "1.0" ) );
 			paramList.add( new Parameter( "LANG",    "ADQL" ) );
-			paramList.add( new Parameter( "QUERY",   "Sensible query" ) );
-			validator.validate( paramList );
-			assertTrue( false );
-		}
-		catch ( IllegalStateException ise ) {
-			assertTrue( true );
-		}
-	}
-	
-	public void testRequestDoQuery() {
-		try {
-			List<Parameter> paramList = new ArrayList<Parameter>();
-			paramList.add( new Parameter( "REQUEST", "doQuery" ) );
-			paramList.add( new Parameter( "VERSION", "1.0" ) );
-			paramList.add( new Parameter( "LANG",    "ADQL" ) );
-			paramList.add( new Parameter( "QUERY",   "Sensible query" ) );
-			validator.validate( paramList );
-            assertEquals( "ADQL", validator.getLang() );
-			assertTrue( true );
-		}
-		catch ( IllegalStateException ise ) {
-			assertTrue( ise.getMessage(), false );
-		}
-	}
-	
-	public void testRequestGetCapabilities() {
-		try {
-			List<Parameter> paramList = new ArrayList<Parameter>();
-			paramList.add( new Parameter( "REQUEST", "getCapabilities" ) );
-            paramList.add( new Parameter( "VERSION", "1.0" ) );
-            paramList.add( new Parameter( "LANG",    "ADQL" ) );
-            paramList.add( new Parameter( "QUERY",   "Sensible query" ) );
-			validator.validate( paramList );
-			assertTrue( false );
-		}
-		catch ( IllegalStateException ise ) {
-			assertTrue( true );
-		}
-	}
-	
-	public void testRequestGetAvailability() {
-		try {
-			List<Parameter> paramList = new ArrayList<Parameter>();
-			paramList.add( new Parameter( "REQUEST", "getAvailability" ) );
-            paramList.add( new Parameter( "VERSION", "1.0" ) );
-            paramList.add( new Parameter( "LANG",    "ADQL" ) );
-            paramList.add( new Parameter( "QUERY",   "Sensible query" ) );
-			validator.validate( paramList );
-			assertTrue( false );
-		}
-		catch ( IllegalStateException ise ) {
-			assertTrue( true );
-		}
-	}
-	
-	public void testRequestGetTableMetadata() {
-		try {
-			List<Parameter> paramList = new ArrayList<Parameter>();
-			paramList.add( new Parameter( "REQUEST", "getTableMetadata" ) );
-            paramList.add( new Parameter( "VERSION", "1.0" ) );
-	        paramList.add( new Parameter( "LANG",    "ADQL" ) );
-	        paramList.add( new Parameter( "QUERY",   "Sensible query" ) );
 			validator.validate( paramList );
 			assertTrue( false );
 		}
@@ -272,7 +204,6 @@ public class TapValidatorTest extends TestCase
             List<Parameter> paramList = new ArrayList<Parameter>();
             paramList.add( new Parameter( "REQUEST", "doQuery" ) );
             paramList.add( new Parameter( "LANG",    "ADQL" ) );
-            paramList.add( new Parameter( "QUERY",   "Sensible query" ) );
             validator.validate( paramList );
             assertTrue( true );
         }
@@ -287,7 +218,6 @@ public class TapValidatorTest extends TestCase
 			paramList.add( new Parameter( "REQUEST", "doQuery" ) );
 			paramList.add( new Parameter( "VERSION", null ) );
 			paramList.add( new Parameter( "LANG",    "ADQL" ) );
-			paramList.add( new Parameter( "QUERY",   "Sensible query" ) );
 			validator.validate( paramList );
 			assertTrue( true );
 		}
@@ -302,7 +232,6 @@ public class TapValidatorTest extends TestCase
             paramList.add( new Parameter( "REQUEST", "doQuery" ) );
             paramList.add( new Parameter( "VERSION", "" ) );
             paramList.add( new Parameter( "LANG",    "ADQL" ) );
-            paramList.add( new Parameter( "QUERY",   "Sensible query" ) );
             validator.validate( paramList );
             assertTrue( true );
 		}
@@ -317,7 +246,6 @@ public class TapValidatorTest extends TestCase
 			paramList.add( new Parameter( "REQUEST", "doQuery" ) );
 			paramList.add( new Parameter( "VERSION", "Unsupported" ) );
 			paramList.add( new Parameter( "LANG",    "ADQL" ) );
-			paramList.add( new Parameter( "QUERY",   "Sensible query" ) );
 			validator.validate( paramList );
 			assertTrue( false );
 		}
@@ -331,7 +259,6 @@ public class TapValidatorTest extends TestCase
 			List<Parameter> paramList = new ArrayList<Parameter>();
 			paramList.add( new Parameter( "REQUEST", "doQuery" ) );
             paramList.add( new Parameter( "VERSION", "1.0" ) );
-			paramList.add( new Parameter( "QUERY",   "Sensible query" ) );
 			validator.validate( paramList );
 			assertTrue( false );
 		}
@@ -346,7 +273,6 @@ public class TapValidatorTest extends TestCase
 			paramList.add( new Parameter( "REQUEST", "doQuery" ) );
             paramList.add( new Parameter( "VERSION", "1.0" ) );
 			paramList.add( new Parameter( "LANG",    null ) );
-			paramList.add( new Parameter( "QUERY",   "Sensible query" ) );
 			validator.validate( paramList );
 			assertTrue( false );
 		}
@@ -361,7 +287,6 @@ public class TapValidatorTest extends TestCase
 			paramList.add( new Parameter( "REQUEST", "doQuery" ) );
             paramList.add( new Parameter( "VERSION", "1.0" ) );
 			paramList.add( new Parameter( "LANG",    "" ) );
-			paramList.add( new Parameter( "QUERY",   "Sensible query" ) );
 			validator.validate( paramList );
 			assertTrue( false );
 		}
@@ -369,6 +294,20 @@ public class TapValidatorTest extends TestCase
 			assertTrue( true );
 		}
 	}
+    
+    public void testLangAdqlValue() {
+        try {
+            List<Parameter> paramList = new ArrayList<Parameter>();
+            paramList.add( new Parameter( "REQUEST", "doQuery" ) );
+            paramList.add( new Parameter( "LANG",    "ADQL" ) );
+            validator.validate( paramList );
+            assertEquals( "ADQL", validator.getLang() );
+            assertTrue( true );
+        }
+        catch ( IllegalStateException ise ) {
+            assertTrue( ise.getMessage(), false );
+        }
+    }
 	
 	public void testLangSqlValue() {
 		try {
@@ -376,7 +315,6 @@ public class TapValidatorTest extends TestCase
 			paramList.add( new Parameter( "REQUEST", "doQuery" ) );
             paramList.add( new Parameter( "VERSION", "1.0" ) );
 			paramList.add( new Parameter( "LANG",    "SQL" ) );
-            paramList.add( new Parameter( "QUERY",   "Sensible query" ) );
 			validator.validate( paramList );
             assertEquals( "SQL", validator.getLang() );
 			assertTrue( true );
@@ -385,7 +323,7 @@ public class TapValidatorTest extends TestCase
 			assertTrue( ise.getMessage(), false );
 		}
 	}
-	
+
 	public void testLangPqlValue() {
 		try {
 			List<Parameter> paramList = new ArrayList<Parameter>();
@@ -407,57 +345,6 @@ public class TapValidatorTest extends TestCase
 			paramList.add( new Parameter( "LANG",    "Unknown" ) );
 			validator.validate( paramList );
             assertEquals( "Unknown", validator.getLang() );
-			assertTrue( true );
-		}
-		catch ( IllegalStateException ise ) {
-			assertTrue( false );
-		}
-	}
-	
-	public void testAdqlWithoutQuery() {
-		try {
-			List<Parameter> paramList = new ArrayList<Parameter>();
-			paramList.add( new Parameter( "REQUEST", "doQuery" ) );
-            paramList.add( new Parameter( "VERSION", "1.0" ) );
-			paramList.add( new Parameter( "LANG",    "ADQL" ) );
-			validator.validate( paramList );
-			//  LANG=ADQL must be accompanied by a QUERY parameter but
-			//  the TapVlidator should not be checking that because that
-			//  should be done by the AdqlQuery.
-			assertTrue( true );
-		}
-		catch ( IllegalStateException ise ) {
-			assertTrue( ise.getMessage(), false );
-		}
-	}
-
-	public void testQueryNullValue() {
-		try {
-			List<Parameter> paramList = new ArrayList<Parameter>();
-			paramList.add( new Parameter( "REQUEST", "doQuery" ) );
-			paramList.add( new Parameter( "LANG",    "ADQL" ) );
-			paramList.add( new Parameter( "QUERY",   null ) );
-			validator.validate( paramList );
-            //  LANG=ADQL must be accompanied by a QUERY parameter but
-            //  the TapVlidator should not be checking that because that
-            //  should be done by the AdqlQuery.
-			assertTrue( true );
-		}
-		catch ( IllegalStateException ise ) {
-			assertTrue( false );
-		}
-	}
-	
-	public void testQueryEmptyValue() {
-		try {
-			List<Parameter> paramList = new ArrayList<Parameter>();
-			paramList.add( new Parameter( "REQUEST", "doQuery" ) );
-			paramList.add( new Parameter( "LANG",    "ADQL" ) );
-			paramList.add( new Parameter( "QUERY",   "" ) );
-			validator.validate( paramList );
-            //  LANG=ADQL must be accompanied by a QUERY parameter but
-            //  the TapVlidator should not be checking that because that
-            //  should be done by the AdqlQuery.
 			assertTrue( true );
 		}
 		catch ( IllegalStateException ise ) {

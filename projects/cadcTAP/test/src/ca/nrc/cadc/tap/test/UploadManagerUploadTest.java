@@ -115,5 +115,23 @@ public class UploadManagerUploadTest extends TestCase
             assertTrue( t.getMessage(), false );
         }
     }
+    
+    public void testMissingFile() {
+        try {
+            List<Parameter> paramList = new ArrayList<Parameter>();
+            paramList.add( new Parameter( "REQUEST", "doQuery" ) );
+            paramList.add( new Parameter( "LANG",    "ADQL" ) );
+            paramList.add( new Parameter( "UPLOAD",  "a,http://localhost/voTableExample1.xml" ) );
+            paramList.add( new Parameter( "UPLOAD",  "b,http://localhost/missingExample2.xml" ) );
+            manager.upload( paramList, "0" );
+            assertTrue( false );
+        }
+        catch ( UnsupportedOperationException uoe ) {
+            assertTrue( false );
+        }
+        catch ( Throwable t ) {
+            assertTrue( t.getMessage(), true );
+        }
+    }
 
 }
