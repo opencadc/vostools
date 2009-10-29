@@ -90,13 +90,13 @@ public class SqlQuery implements TapQuery
 	
 	public SqlQuery() 
     {
-        AdqlManager manager = new ca.nrc.cadc.tap.parser.adql.impl.postgresql.sql.AdqlManagerImpl();
-        this.adqlParser = new AdqlParser(manager);
 	}
 	
     public void setTapSchema(TapSchema tapSchema) 
     {
         this.tapSchema = tapSchema;
+        AdqlManager manager = new ca.nrc.cadc.tap.parser.adql.impl.postgresql.sql.AdqlManagerImpl(tapSchema);
+        this.adqlParser = new AdqlParser(manager);
     }
     
     public void setParameterList( List<Parameter> paramList )
