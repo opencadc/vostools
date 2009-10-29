@@ -108,6 +108,7 @@ public class TapValidatorTest extends TestCase
 			paramList.add( new Parameter( "VERSION", "1.0" ) );
 			paramList.add( new Parameter( "LANG",    "ADQL" ) );
 			paramList.add( new Parameter( "QUERY",   "Sensible query" ) );
+            paramList.add( new Parameter( "UPLOAD",  "mytable,http://localhost/voTableExample1.xml" ) );
 			validator.validate( paramList );
 			assertTrue( true );
 		}

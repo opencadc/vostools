@@ -77,7 +77,7 @@ import junit.framework.TestCase;
 import ca.nrc.cadc.tap.UploadManager;
 import ca.nrc.cadc.uws.Parameter;
 
-public class UploadManagerTest extends TestCase
+public class UploadManagerParamTest extends TestCase
 {
 	UploadManager manager = new UploadManager();
 	
@@ -86,7 +86,7 @@ public class UploadManagerTest extends TestCase
             List<Parameter> paramList = new ArrayList<Parameter>();
             paramList.add( new Parameter( "REQUEST", "doQuery" ) );
             paramList.add( new Parameter( "LANG",    "ADQL" ) );
-            paramList.add( new Parameter( "UPLOAD",  "mytable,http://localhost/table.xml" ) );
+            paramList.add( new Parameter( "UPLOAD",  "mytable,http://localhost/voTableExample1.xml" ) );
             manager.upload( paramList, "0" );
             assertTrue( false );
         }
@@ -103,7 +103,7 @@ public class UploadManagerTest extends TestCase
             List<Parameter> paramList = new ArrayList<Parameter>();
             paramList.add( new Parameter( "REQUEST", "doQuery" ) );
             paramList.add( new Parameter( "LANG",    "ADQL" ) );
-            paramList.add( new Parameter( "UPLOAD",  "a,http://localhost/table1.xml;b,http://localhost/table2.xml" ) );
+            paramList.add( new Parameter( "UPLOAD",  "a,http://localhost/voTableExample1.xml;b,http://localhost/voTableExample2.xml" ) );
             manager.upload( paramList, "0" );
             assertTrue( false );
         }
@@ -120,8 +120,8 @@ public class UploadManagerTest extends TestCase
             List<Parameter> paramList = new ArrayList<Parameter>();
             paramList.add( new Parameter( "REQUEST", "doQuery" ) );
             paramList.add( new Parameter( "LANG",    "ADQL" ) );
-            paramList.add( new Parameter( "UPLOAD",  "a,http://localhost/table1.xml" ) );
-            paramList.add( new Parameter( "UPLOAD",  "b,http://localhost/table2.xml" ) );
+            paramList.add( new Parameter( "UPLOAD",  "a,http://localhost/voTableExample1.xml" ) );
+            paramList.add( new Parameter( "UPLOAD",  "b,http://localhost/voTableExample2.xml" ) );
             manager.upload( paramList, "0" );
             assertTrue( false );
         }
@@ -152,7 +152,7 @@ public class UploadManagerTest extends TestCase
             List<Parameter> paramList = new ArrayList<Parameter>();
             paramList.add( new Parameter( "REQUEST", "doQuery" ) );
             paramList.add( new Parameter( "LANG",    "ADQL" ) );
-            paramList.add( new Parameter( "UPLOAD",  "mytablehttp://localhost/table.xml" ) );
+            paramList.add( new Parameter( "UPLOAD",  "mytablehttp://localhost/voTableExample1.xml" ) );
             manager.upload( paramList, "0" );
             assertTrue( false );
         }
@@ -166,7 +166,7 @@ public class UploadManagerTest extends TestCase
             List<Parameter> paramList = new ArrayList<Parameter>();
             paramList.add( new Parameter( "REQUEST", "doQuery" ) );
             paramList.add( new Parameter( "LANG",    "ADQL" ) );
-            paramList.add( new Parameter( "UPLOAD",  ",http://localhost/table.xml" ) );
+            paramList.add( new Parameter( "UPLOAD",  ",http://localhost/voTableExample1.xml" ) );
             manager.upload( paramList, "0" );
             assertTrue( false );
         }
@@ -194,7 +194,7 @@ public class UploadManagerTest extends TestCase
             List<Parameter> paramList = new ArrayList<Parameter>();
             paramList.add( new Parameter( "REQUEST", "doQuery" ) );
             paramList.add( new Parameter( "LANG",    "ADQL" ) );
-            paramList.add( new Parameter( "UPLOAD",  " mytable,http://localhost/table.xml" ) );
+            paramList.add( new Parameter( "UPLOAD",  " mytable,http://localhost/voTableExample1.xml" ) );
             manager.upload( paramList, "0" );
             assertTrue( false );
         }
@@ -208,7 +208,7 @@ public class UploadManagerTest extends TestCase
             List<Parameter> paramList = new ArrayList<Parameter>();
             paramList.add( new Parameter( "REQUEST", "doQuery" ) );
             paramList.add( new Parameter( "LANG",    "ADQL" ) );
-            paramList.add( new Parameter( "UPLOAD",  "my  table,http://localhost/table.xml" ) );
+            paramList.add( new Parameter( "UPLOAD",  "my  table,http://localhost/voTableExample1.xml" ) );
             manager.upload( paramList, "0" );
             assertTrue( false );
         }
@@ -222,7 +222,7 @@ public class UploadManagerTest extends TestCase
             List<Parameter> paramList = new ArrayList<Parameter>();
             paramList.add( new Parameter( "REQUEST", "doQuery" ) );
             paramList.add( new Parameter( "LANG",    "ADQL" ) );
-            paramList.add( new Parameter( "UPLOAD",  "mytable ,http://localhost/table.xml" ) );
+            paramList.add( new Parameter( "UPLOAD",  "mytable ,http://localhost/voTableExample1.xml" ) );
             manager.upload( paramList, "0" );
             assertTrue( false );
         }
@@ -236,7 +236,7 @@ public class UploadManagerTest extends TestCase
             List<Parameter> paramList = new ArrayList<Parameter>();
             paramList.add( new Parameter( "REQUEST", "doQuery" ) );
             paramList.add( new Parameter( "LANG",    "ADQL" ) );
-            paramList.add( new Parameter( "UPLOAD",  "mytable,param://localhost/table.xml" ) );
+            paramList.add( new Parameter( "UPLOAD",  "mytable,param://localhost/voTableExample1.xml" ) );
             manager.upload( paramList, "0" );
             assertTrue( false );
         }
@@ -250,7 +250,7 @@ public class UploadManagerTest extends TestCase
             List<Parameter> paramList = new ArrayList<Parameter>();
             paramList.add( new Parameter( "REQUEST", "doQuery" ) );
             paramList.add( new Parameter( "LANG",    "ADQL" ) );
-            paramList.add( new Parameter( "UPLOAD",  "a,http://localhost/table1.xml;a,http://localhost/table2.xml" ) );
+            paramList.add( new Parameter( "UPLOAD",  "a,http://localhost/voTableExample1.xml;a,http://localhost/voTableExample2.xml" ) );
             manager.upload( paramList, "0" );
             assertTrue( false );
         }
@@ -264,8 +264,8 @@ public class UploadManagerTest extends TestCase
             List<Parameter> paramList = new ArrayList<Parameter>();
             paramList.add( new Parameter( "REQUEST", "doQuery" ) );
             paramList.add( new Parameter( "LANG",    "ADQL" ) );
-            paramList.add( new Parameter( "UPLOAD",  "a,http://localhost/table1.xml" ) );
-            paramList.add( new Parameter( "UPLOAD",  "a,http://localhost/table2.xml" ) );
+            paramList.add( new Parameter( "UPLOAD",  "a,http://localhost/voTableExample1.xml" ) );
+            paramList.add( new Parameter( "UPLOAD",  "a,http://localhost/voTableExample2.xml" ) );
             manager.upload( paramList, "0" );
             assertTrue( false );
         }

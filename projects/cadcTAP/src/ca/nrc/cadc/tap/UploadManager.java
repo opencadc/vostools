@@ -71,6 +71,8 @@ package ca.nrc.cadc.tap;
 
 import java.io.IOException;
 import java.net.MalformedURLException;
+import java.net.URI;
+import java.net.URISyntaxException;
 import java.net.URL;
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -84,22 +86,115 @@ import org.jdom.JDOMException;
 import org.jdom.input.SAXBuilder;
 
 import ca.nrc.cadc.tap.Validator.TapParams;
+import ca.nrc.cadc.tap.schema.Column;
 import ca.nrc.cadc.tap.schema.Table;
 import ca.nrc.cadc.uws.Parameter;
 
 public class UploadManager {
     
+    public static final String SCHEMA = "TAP_SCHEMA";
     public static final String UPLOAD = TapParams.UPLOAD.toString();
     
-    public Map<String,Table> upload( List<Parameter> paramList, String jobID ) throws MalformedURLException, IOException, JDOMException {
+    private Map<String,Table>          columnDefs = new HashMap<String,Table>();
+    private Map<String,List<String[]>> rowVals    = new HashMap<String,List<String[]>>();
+    
+    public Map<String,Table> upload( List<Parameter> paramList, String jobID ) throws IOException, JDOMException {
         
-        HashMap<String,Table> tables = new HashMap<String,Table>();
-        // <TAP_UPLOAD.theirName, table>
+        //  Extract and validate the UPLOAD parameters
+        //  from the full parameter list.
+        Map<String,URI> uploadParamPairs = getUploadParams( paramList );
+        if ( uploadParamPairs == null )
+            return null;
+        
+        //  Read (into memory) the column names and values
+        //  of tables named by the UPLOAD parameter(s).
+        Iterator<String> uploadParamsIt = uploadParamPairs.keySet().iterator(); 
+        try {
+            while ( uploadParamsIt.hasNext() ) {
+                String shortName = uploadParamsIt.next();
+                String tableName = SCHEMA+"."+shortName+"_"+jobID;
+                URI tableURI  = uploadParamPairs.get(shortName);
 
-        List<String> uploadParamPairs = getUploadParams( paramList );
+                SAXBuilder sb      = new SAXBuilder("org.apache.xerces.parsers.SAXParser", false);
+                URL        url     = tableURI.toURL();
+                Document   doc     = sb.build(url);
+                Element    voTable = doc.getRootElement();
+                
+                //  TODO: Why does getChild return null here?
+                Element resource = voTable.getChild("RESOURCE");
+                
+                columnDefs.put( shortName, new Table()     );
+                rowVals.put(    shortName, new ArrayList() );
+                
+                findColumnDefs( shortName, tableName, voTable );
+                findRowVals(    shortName, tableName, voTable );
+            }
+        }
+        catch ( MalformedURLException mue ) {
+            throw ( new IllegalStateException( mue.getMessage() ) );
+        }
+
+        //  Create (in the database) the tables named in the parameter
+        //  list and described in the URI-referenced XML files.
+        Iterator<String> tableNamesIt = columnDefs.keySet().iterator();
+        try {
+            while ( tableNamesIt.hasNext() ) {
+                String tableName = tableNamesIt.next();
+                String sql = "create table "+tableName+" ( ";
+                List<Column> columns = columnDefs.get(tableName).getColumns();
+                for ( int i=0; i<columns.size(); i++ ) {
+                    Column col = columns.get(i);
+                    sql += col.columnName+" ";
+                    sql += localDbType(col.datatype,col.size.toString());
+                    if ( i+1<columns.size() )
+                        sql += ", ";
+                }
+                sql += " )";
+                //System.out.println( "SQL: "+sql );
+            }
+        }
+        catch ( Exception sqle ) {
+            throw ( new IllegalStateException( sqle.getMessage() ) );
+        }
         
-        if ( true )
-            throw new UnsupportedOperationException( UPLOAD+" parameter not supported at this time" );
+        //  Populate the newly created database tables with
+        //  values from the URI-referenced XML files.
+        /*
+        tableNamesIt = columnDefs.keySet().iterator();
+        try {
+            while ( tableNamesIt.hasNext() ) {
+                String tableName = tableNamesIt.next();
+                String sqlFront = "insert into "+tableName+" ( ";
+                List<Column> columns = columnDefs.get(tableName).getColumns();
+                for ( int i=0; i<columns.size(); i++ ) {
+                    Column col = columns.get(i);
+                    sql += col.columnName;
+                    if ( i+1<columns.size() )
+                        sql += ", ";
+                }
+                sqlFront += " ) values ( ";
+                String sqlBack = "";
+                for ( int i=0; i<rowVals.size(); i++ ) {
+                    for ( int j=0; i<columns.size(); i++ ) {
+                        String value = rowVals.get(tableName).get(i)[j];
+                    }
+                    String value = rowVals.get(tableName).
+                    Column col = columns.get(i);
+                    sql += col.columnName+" ";
+                    sql += localDbType(col.datatype,col.size.toString());
+                    if ( i+1<columns.size() )
+                        sql += ", ";
+                }
+                sql += " )";
+                
+                System.out.println( "SQL: "+sql );
+            }
+        }
+        catch ( Exception sqle ) {
+            throw ( new IllegalStateException( sqle.getMessage() ) );
+        }
+        */
+        
         /*
         for ( Parameter param : uploadParams ) {
             // 1. validate
@@ -113,18 +208,19 @@ public class UploadManager {
             // 4. create table metadata from tap schema (see votable doc)
         }
         */
+
+        if ( true )
+            throw new UnsupportedOperationException( UPLOAD+" parameter not supported at this time" );
         
-        // Do stuff here.
-        
-        return tables;
+        return columnDefs;
     }
     
     /*  Extract the UPLOAD parameters from the full parameter list.
      */
-    private List<String> getUploadParams(List<Parameter> paramList) {
+    private Map<String,URI> getUploadParams(List<Parameter> paramList) {
 
         List<String> uploadParamPairs  = TapUtil.findParameterValues( UPLOAD, paramList );
-        List<String> uniqueTableParams = new ArrayList<String>();
+        Map<String,URI> uniqueTableParams = new HashMap<String,URI>();
 
         if ( uploadParamPairs != null ) {
             if ( uploadParamPairs.size() == 0 )
@@ -135,7 +231,7 @@ public class UploadManager {
                         throw new IllegalStateException( "Name-value pair missing from UPLOAD parameter list: "+paramList );
                     String [] pair = pairStr.split(",");
                     String tableName  = null;
-                    String tableURI = null;
+                    String tableURI   = null;
                     try {
                         tableName = pair[0];
                     }
@@ -156,51 +252,106 @@ public class UploadManager {
                         throw new IllegalStateException( "URI missing from UPLOAD parameter: "+pairStr );
                     if ( !tableURI.startsWith("http:") )
                         throw new IllegalStateException( "Table URI has unsupported protocol in UPLOAD parameter: "+tableURI );
-                    if ( tableNameIsDuplicate(pairStr,uniqueTableParams) )
+                    if ( tableNameIsDuplicate(tableName,uniqueTableParams) )
                         throw new IllegalStateException( "Duplicate table name in UPLOAD parameter: "+paramList );
-                    uniqueTableParams.add(pairStr);
+                    try {
+                        uniqueTableParams.put( tableName, new URI(tableURI) );
+                    }
+                    catch ( URISyntaxException use ) {
+                        throw new IllegalStateException( "UPLOAD parameter has invalid URI: "+tableURI );
+                    }
                 } // end-for each upload param name-uri pair
             }
         } // end-if UPLOAD param found
 
-        return uploadParamPairs;
+        return uniqueTableParams;
     }
     
     
-    private boolean tableNameIsDuplicate( String newPairStr,
-                                          List<String> uniqueTableParams )
+    private boolean tableNameIsDuplicate( String tableName, Map<String,URI> uniqueTableParams )
     {
-        String newTableName = newPairStr.split(",")[0];
-        
-        Iterator<String> uploadIt = uniqueTableParams.iterator();
-        while ( uploadIt.hasNext() )
-        {
-            String oldTableName = uploadIt.next().split(",")[0];
-            if ( oldTableName.equals(newTableName) )
-                return true;
-        }
-        
+        if ( uniqueTableParams.containsKey(tableName) )
+            return true;
+
         return false;
     }
-
-    /*
-    private static Table readVOTable( URL url ) throws IOException, JDOMException {
-        
-        SAXBuilder sb = new SAXBuilder("org.apache.xerces.parsers.SAXParser", false);
-        
-        Document doc = sb.build(url);
-
-        Element votable = doc.getRootElement();
-        System.out.println(votable + "\n  is in " + votable.getNamespace());
-        List els = votable.getChildren();
-        Iterator i = els.iterator();
-        while ( i.hasNext() )
-        {
-            Element e = (Element) i.next();
-            System.out.println(e + "\n  is in " + e.getNamespace());
+    
+    private void findColumnDefs( String shortName, String tableName, Element el ) {
+        List<Element> els = el.getChildren();
+        if ( els.size() < 1 )
+            return;
+        Iterator<Element> elsIt = els.iterator();
+        while ( elsIt.hasNext() ) {
+            Element inner = elsIt.next();
+            Column col = new Column();
+            col.tableName = tableName;
+            if ( inner.getName().equals("FIELD") ) {
+                col.columnName = inner.getAttributeValue("name");
+                col.datatype   = inner.getAttributeValue("datatype");
+                //
+                String sizeAttr = inner.getAttributeValue("width");
+                //col.size       = Integer.valueOf(inner.getAttributeValue("width"));
+                //  In the absence of a width, set the size arbitrarily until an official example is available.
+                col.size = ( sizeAttr==null ) ? new Integer(32) : Integer.valueOf(sizeAttr);
+                //
+                Table table = columnDefs.get(shortName);
+                if ( table.columns == null )
+                    table.columns = new ArrayList<Column>();
+                table.columns.add(col);
+            }
+            else
+                findColumnDefs( shortName, tableName, inner );
         }
-        
-        return null;
     }
-    */
+    
+    private void findRowVals( String shortName, String tableName, Element el ) {
+        List<Element> els = el.getChildren();
+        if ( els.size() < 1 )
+            return;
+        Iterator<Element> elsIt = els.iterator();
+        while ( elsIt.hasNext() ) {
+            Element inner = elsIt.next();
+            if ( inner.getName().equals("TR") ) {
+                List<Element> colVals = inner.getChildren();
+                int numCols = columnDefs.get(shortName).columns.size();
+                String [] row = new String[numCols];
+                for ( int i=0; i<numCols; i++ )
+                    row[i] = colVals.get(i).getValue();
+                rowVals.get(shortName).add(row);
+            }
+            else
+                findRowVals( shortName, tableName, inner );
+        }
+    }
+    
+    private String localDbType( String voType, String width ) {
+        
+        final String CHAR  = "char";
+        final String INT   = "int";
+        final String FLOAT = "float";
+        
+        final String VARCHAR = "varchar";
+        final String INTEGER = "integer";
+        final String REAL    = "real";
+        
+        String localType = "";
+        
+        if ( voType.equalsIgnoreCase(CHAR) ) {
+            localType += VARCHAR;
+            if ( width!=null ) {
+                localType += "("+width+")";
+            }
+        }
+        else if ( voType.equalsIgnoreCase(INT) ) {
+            localType += INTEGER;
+        }
+        else if ( voType.equalsIgnoreCase(FLOAT) ) {
+            localType += REAL;
+        }
+        else
+            throw new IllegalStateException( "Invalid data type: "+voType );
+        
+        return localType;
+    }
+
 }

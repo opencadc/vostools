@@ -91,6 +91,13 @@ public class TapUtil
         return null;
     }
 
+    /**
+     * From the supplied full parameter list, return a list of only those
+     * semicolon-separated values that correspond to the named parameter.
+     * @param name
+     * @param paramList
+     * @return
+     */
     public static List<String> findParameterValues(String name, List<Parameter> paramList) 
     {
         List<String> namedParamList = new ArrayList<String>();

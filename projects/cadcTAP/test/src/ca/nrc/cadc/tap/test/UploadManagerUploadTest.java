@@ -1,4 +1,4 @@
-<!--
+/*
 ************************************************************************
 *******************  CANADIAN ASTRONOMY DATA CENTRE  *******************
 **************  CENTRE CANADIEN DE DONNÉES ASTRONOMIQUES  **************
@@ -65,88 +65,55 @@
 *  $Revision: 4 $
 *
 ************************************************************************
--->
+*/
 
+package ca.nrc.cadc.tap.test;
 
-<!DOCTYPE project>
-<project default="build" basedir=".">
-    <property environment="env" />
+import java.util.ArrayList;
+import java.util.List;
 
-    <!-- site-specific build properties or overrides of values in opencadc.properties -->
-    <property file="${env.CADC_PREFIX}/etc/local.properties" />
+import junit.framework.TestCase;
 
-    <!-- site-specific targets, e.g. install, cannot duplicate those in opencadc.targets.xml -->
-    <import file="${env.CADC_PREFIX}/etc/local.targets.xml" optional="true" />
+import ca.nrc.cadc.tap.UploadManager;
+import ca.nrc.cadc.uws.Parameter;
 
-    <!-- default properties and targets -->
-    <property file="${env.CADC_PREFIX}/etc/opencadc.properties" />
-    <import file="${env.CADC_PREFIX}/etc/opencadc.targets.xml"/>
+public class UploadManagerUploadTest extends TestCase
+{
+	UploadManager manager = new UploadManager();
+	
+	public void testUploadSingleParamPair() {
+        try {
+            List<Parameter> paramList = new ArrayList<Parameter>();
+            paramList.add( new Parameter( "REQUEST", "doQuery" ) );
+            paramList.add( new Parameter( "LANG",    "ADQL" ) );
+            paramList.add( new Parameter( "UPLOAD",  "mytable,http://localhost/voTableExample1.xml" ) );
+            manager.upload( paramList, "0" );
+            assertTrue( false );
+        }
+        catch ( UnsupportedOperationException uoe ) {
+            assertTrue( true );
+        }
+        catch ( Throwable t ) {
+            assertTrue( t.getMessage(), false );
+        }
+    }
+    
+    public void testUploadMultipleParamPair() {
+        try {
+            List<Parameter> paramList = new ArrayList<Parameter>();
+            paramList.add( new Parameter( "REQUEST", "doQuery" ) );
+            paramList.add( new Parameter( "LANG",    "ADQL" ) );
+            paramList.add( new Parameter( "UPLOAD",  "a,http://localhost/voTableExample1.xml" ) );
+            paramList.add( new Parameter( "UPLOAD",  "b,http://localhost/voTableExample2.xml" ) );
+            manager.upload( paramList, "0" );
+            assertTrue( false );
+        }
+        catch ( UnsupportedOperationException uoe ) {
+            assertTrue( true );
+        }
+        catch ( Throwable t ) {
+            assertTrue( t.getMessage(), false );
+        }
+    }
 
-    <!-- developer convenience: place for extra targets and properties -->
-    <import file="extras.xml" optional="true" />
-
-    <property name="project" value="cadcTAP" />
-
-    <property name="cadc" value="${lib}/cadcUtil.jar:${lib}/cadcUWS.jar" />
-
-    <property name="jsqlparser" value="${ext.lib}/jsqlparser.jar" />
-    <property name="log4j" value="${ext.lib}/log4j.jar" />
-    <property name="spring" value="${ext.lib}/spring.jar" />
-    <property name="jdom" value="${ext.lib}/jdom.jar" />
-    <property name="javacsv" value="${ext.lib}/javacsv.jar" />
-    <property name="extlib" value="${jsqlparser}:${log4j}:${spring}:${jdom}:${javacsv}" />
-
-    <property name="jars" value="${cadc}:${extlib}" />
-
-    <target name="build" depends="compile">
-	    <jar jarfile="${build}/lib/${project}.jar"
-		    basedir="${build}/class" 
-		    update="no">
-        </jar>
-    </target>
-
-    <!-- JAR files needed to run the test suite -->
-    <property name="build.cadcTAP" value="${build}/lib/${project}.jar" />
-    <property name="ext.junit" value="${ext.lib}/junit.jar" />
-    <property name="ext.postgres" value="${ext.lib}/postgresql-jdbc.jar" />
-    <property name="ext.xerces" value="${ext.lib}/xerces.jar" />
-    <property name="ext.commonsLog" value="${ext.lib}/commons-logging.jar" />
-    <property name="lib.javaUtil" value="${lib}/javaUtil.jar" />
-    <property name="testingJars" value="${build.cadcTAP}:${ext.junit}:${lib.javaUtil}:${ext.xerces}:${ext.postgres}:${ext.commonsLog}" />
-
-    <!-- compile the test classes -->
-    <target name="compile-test" depends="compile">
-        <javac destdir="${build}/class"
-               source="${java.source.version}"
-               target="${java.target.version}"
-               classpath="${jars}:${testingJars}" >
-            <src path="test/src"/>
-        </javac>
-    </target>
-
-    <!-- Run the test suite -->
-    <target name="test" depends="compile-test">
-        
-        <!-- Run the junit test suite -->
-        <echo message="Running tests..." />
-        <junit printsummary="yes" haltonfailure="yes" fork="yes">
-            <classpath>
-                <pathelement path="src"/>
-                <pathelement path="build/class"/>
-                <pathelement path="${jars}:${testingJars}"/>
-            </classpath>
-            <test name="ca.nrc.cadc.tap.test.TapValidatorTest"/>
-            <test name="ca.nrc.cadc.tap.test.UploadManagerParamTest"/>
-            <test name="ca.nrc.cadc.tap.test.UploadManagerUploadTest"/>
-            <!--
-		    <test name="ca.nrc.cadc.tap.schema.TapSchemaTest"/>
-            -->
-		    <test name="ca.nrc.cadc.tap.test.TestProperties"/>
-            <formatter type="plain" usefile="false"/>
-        </junit>
-
-    </target>
-
-<import file="build.extras" optional="true" />
-
-</project>
+}
