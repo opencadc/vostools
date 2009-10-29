@@ -121,7 +121,7 @@ public class DbSchemaViewer {
 	@Before
 	public void setUp() throws Exception {
 		LoggerUtil.initialize(new String[] { "test", "ca.nrc.cadc" }, new String[] { "-d" });
-		_manager = new AdqlManagerImpl();
+		_manager = new AdqlManagerImpl(null);
 		this._adqlParser = new AdqlParser(_manager);
 	}
 
