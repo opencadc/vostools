@@ -80,6 +80,19 @@ import ca.nrc.cadc.uws.Parameter;
 public class UploadManagerParamTest extends TestCase
 {
 	UploadManager manager = new UploadManager();
+    
+    public void testNoUploadParam() {
+        try {
+            List<Parameter> paramList = new ArrayList<Parameter>();
+            paramList.add( new Parameter( "REQUEST", "doQuery" ) );
+            paramList.add( new Parameter( "LANG",    "ADQL" ) );
+            manager.upload( paramList, "0" );
+            assertTrue( true );
+        }
+        catch ( Throwable t ) {
+            assertTrue( t.getMessage(), false );
+        }
+    }
 	
 	public void testUploadSingleParamPair() {
         try {

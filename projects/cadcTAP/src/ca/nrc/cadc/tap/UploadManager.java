@@ -264,7 +264,10 @@ public class UploadManager {
             }
         } // end-if UPLOAD param found
 
-        return uniqueTableParams;
+        if ( uniqueTableParams.size() > 0 )
+            return uniqueTableParams;
+        else
+            return null;
     }
     
     
@@ -272,8 +275,8 @@ public class UploadManager {
     {
         if ( uniqueTableParams.containsKey(tableName) )
             return true;
-
-        return false;
+        else
+            return false;
     }
     
     private void findColumnDefs( String shortName, String tableName, Element el ) {
