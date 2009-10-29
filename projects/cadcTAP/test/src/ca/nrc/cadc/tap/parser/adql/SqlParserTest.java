@@ -124,7 +124,7 @@ public class SqlParserTest {
 
 		this.adqlInput = "select top 123 shape, observation.spatial.*, BADctype1, BADTABLE.ctype2, BADSCHEMA.BADTABLE.BADctype2 from observation.plane join observation.spatial using (obsID) where cd1_1 > 432.1";
 
-		AdqlManager manager = new ca.nrc.cadc.tap.parser.adql.impl.postgresql.sql.AdqlManagerImpl();
+		AdqlManager manager = new ca.nrc.cadc.tap.parser.adql.impl.postgresql.sql.AdqlManagerImpl(null);
 		this.adqlParser = new AdqlParser(manager);
 	}
 
