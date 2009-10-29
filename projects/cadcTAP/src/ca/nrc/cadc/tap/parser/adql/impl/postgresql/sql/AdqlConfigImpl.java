@@ -129,6 +129,7 @@ public class AdqlConfigImpl extends AdqlConfig
     
     private void loadDefaultTapSchema()
     {
+        log.debug("loadDefaultTapSchema");
         try
         {
             Class.forName(JDBC_DRIVER);
