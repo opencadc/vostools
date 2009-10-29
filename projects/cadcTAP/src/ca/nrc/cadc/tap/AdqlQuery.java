@@ -90,13 +90,13 @@ public class AdqlQuery implements TapQuery
     private boolean validated = false;
     
 	public AdqlQuery() {
-		AdqlManager manager = new ca.nrc.cadc.tap.parser.adql.impl.postgresql.pgsphere.AdqlManagerImpl();
-		this.adqlParser = new AdqlParser(manager);
 	}
 	
     public void setTapSchema(TapSchema tapSchema) 
     {
         this.tapSchema = tapSchema;
+        AdqlManager manager = new ca.nrc.cadc.tap.parser.adql.impl.postgresql.pgsphere.AdqlManagerImpl(tapSchema);
+        this.adqlParser = new AdqlParser(manager);
     }
     
     public void setParameterList( List<Parameter> paramList )
