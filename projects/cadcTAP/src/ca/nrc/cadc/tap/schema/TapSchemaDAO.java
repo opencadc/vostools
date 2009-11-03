@@ -282,7 +282,7 @@ public class TapSchemaDAO
             column.ucd = rs.getString("ucd");
             column.unit = rs.getString("unit");
             column.datatype = rs.getString("datatype");
-            column.size = Integer.valueOf(rs.getInt("size"));
+            column.size = rs.getObject("size") == null ? null : Integer.valueOf(rs.getInt("size"));
             log.debug("found: " + column);
             return column;
         }

@@ -78,6 +78,7 @@ public class FieldElement extends Element
     /**
      * Builds a FIELD Element from a Column.
      *
+     * @param selectItem
      * @param column 
      */
     public FieldElement(TapSelectItem selectItem, Column column)

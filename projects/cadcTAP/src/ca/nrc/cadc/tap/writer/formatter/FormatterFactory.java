@@ -113,7 +113,7 @@ public class FormatterFactory
                                 return new UTCTimestampFormatter();
                             else if (datatype.equals("adql:VARBINARY"))
                                 return new ByteArrayFormatter();
-                            else if (datatype.equals("pg:int[]"))
+                            else if (datatype.equals("int[]"))
                                 return new IntArrayFormatter();
                             return new DefaultFormatter();
                         }

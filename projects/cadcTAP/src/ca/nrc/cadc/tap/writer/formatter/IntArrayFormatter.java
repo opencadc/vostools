@@ -69,12 +69,26 @@
 
 package ca.nrc.cadc.tap.writer.formatter;
 
+import java.sql.SQLException;
+
 public class IntArrayFormatter implements Formatter
 {
     public String format(Object object)
     {
         if (object == null)
             return "";
+        if (object instanceof java.sql.Array)
+        {
+            try
+            {
+                java.sql.Array array = (java.sql.Array) object;
+                object = (int[]) array.getArray();
+            }
+            catch (SQLException e)
+            {
+                throw new IllegalArgumentException("Error accessing array data for " + object.getClass().getCanonicalName(), e);
+            }
+        }
         if (!(object instanceof int[]))
             throw new IllegalArgumentException("Expecting int[], " + object.getClass().getCanonicalName() + " not supported.");
 

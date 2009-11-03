@@ -71,6 +71,7 @@ package ca.nrc.cadc.tap.writer.votable;
 
 import ca.nrc.cadc.tap.schema.TapSchema;
 import ca.nrc.cadc.tap.writer.formatter.Formatter;
+import ca.nrc.cadc.tap.writer.formatter.ResultSetFormatter;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.util.Iterator;
@@ -148,9 +149,11 @@ public class ResultSetIterator implements Iterator
             for (int columnIndex = 1; columnIndex <= resultSet.getMetaData().getColumnCount(); columnIndex++)
             {
                 Formatter formatter = formatters.get(columnIndex - 1);
-                Object value = resultSet.getObject(columnIndex);
-                Element tableData = new Element("TD");                
-                tableData.setText(formatter.format(value));
+                Element tableData = new Element("TD");
+                if (formatter instanceof ResultSetFormatter)
+                    tableData.setText(((ResultSetFormatter) formatter).format(resultSet, columnIndex));
+                else
+                    tableData.setText(formatter.format(resultSet.getObject(columnIndex)));
                 tableRow.addContent(tableData);
             }
             return tableRow;
