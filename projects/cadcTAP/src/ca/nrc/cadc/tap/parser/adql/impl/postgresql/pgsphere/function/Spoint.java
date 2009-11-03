@@ -67,120 +67,59 @@
  ************************************************************************
  */
 
-/**
- * 
- */
-package ca.nrc.cadc.tap.parser.adql.impl.postgresql.pgsphere;
+package ca.nrc.cadc.tap.parser.adql.impl.postgresql.pgsphere.function;
 
-import java.util.MissingResourceException;
+import java.util.ArrayList;
+import java.util.List;
 
-import javax.sql.DataSource;
+import ca.nrc.cadc.tap.parser.adql.impl.postgresql.pgsphere.converter.ConverterUtil;
 
-import org.springframework.jdbc.datasource.SingleConnectionDataSource;
-
-import ca.nrc.cadc.tap.parser.adql.config.AdqlConfig;
-import ca.nrc.cadc.tap.parser.adql.config.meta.ColumnMeta;
-import ca.nrc.cadc.tap.parser.adql.config.meta.FunctionMeta;
-import ca.nrc.cadc.tap.parser.adql.config.meta.TableMeta;
-import ca.nrc.cadc.tap.schema.Column;
-import ca.nrc.cadc.tap.schema.Schema;
-import ca.nrc.cadc.tap.schema.Table;
-import ca.nrc.cadc.tap.schema.TapSchema;
-import ca.nrc.cadc.tap.schema.TapSchemaDAO;
+import net.sf.jsqlparser.expression.Expression;
+import net.sf.jsqlparser.expression.Function;
+import net.sf.jsqlparser.expression.operators.relational.ExpressionList;
 
 /**
  * @author zhangsa
  * 
  */
-public class AdqlConfigImpl extends AdqlConfig
+public class Spoint extends PgsFunction
 {
-    private static final String JDBC_DRIVER = "org.postgresql.Driver";
-    private static final String JDBC_URL = "jdbc:postgresql://cvodb0/cvodb";
-    private static final String USERNAME = "cadcuser51";
-    private static final String PASSWORD = "MhU7nuvP5/67A:31:30";
-    private static final boolean SUPPRESS_CLOSE = false;
+    private Expression _longitude;
+    private Expression _latitude;
 
-    private TapSchema _tapSchema;
-
-    public AdqlConfigImpl(TapSchema tapSchema)
+    public Spoint(Function adqlFunction)
     {
-        super();
-        if (tapSchema != null)
-            _tapSchema = tapSchema;
-        else
-            loadDefaultTapSchema();
-
-        configName = "CADC PostgreSQL pgSphere 1.1";
-        initFunctionMeta();
-        initTableMeta();
-
-        allowJoins = true; // Allow multiple tables in FROM clause (including JOIN). Default: true.
-        allowUnion = true; // Allow UNION. Default: true.
-        allowGroupBy = true; // Allow GROUP BY. Default: true.
-        allowOrderBy = true; // Allow ORDER BY. Default: true.
-        allowLimit = false; // Allow LIMIT. Default: false (not an ADQL construct)
-        allowTop = true; // Allow TOP. Default: true.
-        allowDistinct = true; // Allow DISTINCT. Default: true.
-        allowInto = false; // Allow SELECT INTO. Default: false (not an ADQL construct)
-        // caseSensitive = false; // Whether column, table, and schema names are case sensitive. -sz 2009-09-10
-
+        super(adqlFunction);
+        convertParameters();
     }
 
-    private void loadDefaultTapSchema()
+    public Spoint(Expression longitude, Expression latitude)
     {
-        log.debug("loadDefaultTapSchema");
-        try
-        {
-            Class.forName(JDBC_DRIVER);
-        } catch (ClassNotFoundException e)
-        {
-            String msg = "JDBC Driver not found.";
-            log.error(msg, e);
-            throw new MissingResourceException(msg, JDBC_DRIVER, null);
-        }
-        DataSource ds = new SingleConnectionDataSource(JDBC_URL, USERNAME, PASSWORD, SUPPRESS_CLOSE);
-        TapSchemaDAO dao = new TapSchemaDAO(ds);
-        _tapSchema = dao.get();
+        _longitude = longitude;
+        _latitude = latitude;
     }
 
-    private void initFunctionMeta()
+    protected void convertParameters()
     {
-        functionMetas.add(new FunctionMeta(Constants.BOX));
-        functionMetas.add(new FunctionMeta(Constants.CENTROID));
-        functionMetas.add(new FunctionMeta(Constants.CIRCLE));
-        functionMetas.add(new FunctionMeta(Constants.CONTAINS));
-        functionMetas.add(new FunctionMeta(Constants.COORDSYS));
-        functionMetas.add(new FunctionMeta(Constants.COORD1));
-        functionMetas.add(new FunctionMeta(Constants.COORD2));
-        functionMetas.add(new FunctionMeta(Constants.INTERSECTS));
-        functionMetas.add(new FunctionMeta(Constants.POINT));
-        functionMetas.add(new FunctionMeta(Constants.POLYGON));
-        functionMetas.add(new FunctionMeta(Constants.REGION));
+        List<Expression> params = this.getParameters().getExpressions();
+        _longitude = params.get(1);
+        _latitude = params.get(2);
 
-        for (int i = 0; i < Constants.AGGREGATE_FUNCTIONS.size(); i++)
-            functionMetas.add(new FunctionMeta((String) Constants.AGGREGATE_FUNCTIONS.get(i)));
-
-        for (int i = 0; i < Constants.MATH_FUNCTIONS.size(); i++)
-            functionMetas.add(new FunctionMeta((String) Constants.MATH_FUNCTIONS.get(i)));
+        List<Expression> pgsParams = new ArrayList<Expression>(2);
+        pgsParams.add(_longitude);
+        pgsParams.add(_latitude);
+        ExpressionList pgsParamExprList = new ExpressionList(pgsParams);
+        setParameters(pgsParamExprList);
     }
 
-    private void initTableMeta()
+    @Override
+    public String toString()
     {
-        TableMeta tableMeta;
-
-        for (Schema schema : _tapSchema.getSchemas())
-        {
-            for (Table table : schema.getTables())
-            {
-                tableMeta = new TableMeta(table.getSchemaName(), table.getSimpleTableName());
-                for (Column column : table.getColumns())
-                {
-                    tableMeta.addColumnMeta(new ColumnMeta(column.getColumnName(), column.getDatatype(), column.getUcd(),
-                            column.getUnit()));
-                }
-                tableMetas.add(tableMeta);
-            }
-        }
+        return "spoint '( " + _longitude + ", " + _latitude + ")'";
     }
 
+    public String valueString()
+    {
+        return "(" + _longitude + ", " + _latitude + ")";
+    }
 }

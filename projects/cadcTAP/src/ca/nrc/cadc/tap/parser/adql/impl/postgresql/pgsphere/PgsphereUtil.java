@@ -67,120 +67,55 @@
  ************************************************************************
  */
 
-/**
- * 
- */
 package ca.nrc.cadc.tap.parser.adql.impl.postgresql.pgsphere;
 
-import java.util.MissingResourceException;
+import java.util.Iterator;
+import java.util.List;
+import java.util.ListIterator;
 
-import javax.sql.DataSource;
-
-import org.springframework.jdbc.datasource.SingleConnectionDataSource;
-
-import ca.nrc.cadc.tap.parser.adql.config.AdqlConfig;
-import ca.nrc.cadc.tap.parser.adql.config.meta.ColumnMeta;
-import ca.nrc.cadc.tap.parser.adql.config.meta.FunctionMeta;
-import ca.nrc.cadc.tap.parser.adql.config.meta.TableMeta;
-import ca.nrc.cadc.tap.schema.Column;
-import ca.nrc.cadc.tap.schema.Schema;
-import ca.nrc.cadc.tap.schema.Table;
-import ca.nrc.cadc.tap.schema.TapSchema;
-import ca.nrc.cadc.tap.schema.TapSchemaDAO;
+import net.sf.jsqlparser.expression.BinaryExpression;
+import net.sf.jsqlparser.expression.DoubleValue;
+import net.sf.jsqlparser.expression.Expression;
+import net.sf.jsqlparser.expression.Function;
+import net.sf.jsqlparser.expression.InverseExpression;
+import net.sf.jsqlparser.expression.LongValue;
+import net.sf.jsqlparser.expression.Parenthesis;
+import net.sf.jsqlparser.expression.StringValue;
+import net.sf.jsqlparser.expression.operators.conditional.AndExpression;
+import net.sf.jsqlparser.expression.operators.conditional.OrExpression;
+import net.sf.jsqlparser.expression.operators.relational.Between;
+import net.sf.jsqlparser.expression.operators.relational.EqualsTo;
+import net.sf.jsqlparser.expression.operators.relational.ExpressionList;
+import net.sf.jsqlparser.expression.operators.relational.InExpression;
+import net.sf.jsqlparser.expression.operators.relational.ItemsList;
+import net.sf.jsqlparser.expression.operators.relational.MinorThan;
+import net.sf.jsqlparser.expression.operators.relational.MinorThanEquals;
+import net.sf.jsqlparser.schema.Column;
+import net.sf.jsqlparser.statement.select.FromItem;
+import net.sf.jsqlparser.statement.select.Join;
+import net.sf.jsqlparser.statement.select.PlainSelect;
+import net.sf.jsqlparser.statement.select.SelectExpressionItem;
+import net.sf.jsqlparser.statement.select.SubJoin;
+import net.sf.jsqlparser.statement.select.SubSelect;
+import ca.nrc.cadc.tap.parser.adql.converter.RegionConverter;
+import ca.nrc.cadc.tap.parser.adql.impl.postgresql.pgsphere.Constants;
 
 /**
  * @author zhangsa
  * 
  */
-public class AdqlConfigImpl extends AdqlConfig
+public class PgsphereUtil
 {
-    private static final String JDBC_DRIVER = "org.postgresql.Driver";
-    private static final String JDBC_URL = "jdbc:postgresql://cvodb0/cvodb";
-    private static final String USERNAME = "cadcuser51";
-    private static final String PASSWORD = "MhU7nuvP5/67A:31:30";
-    private static final boolean SUPPRESS_CLOSE = false;
 
-    private TapSchema _tapSchema;
-
-    public AdqlConfigImpl(TapSchema tapSchema)
+    public static boolean isAdqlRegion(Function function)
     {
-        super();
-        if (tapSchema != null)
-            _tapSchema = tapSchema;
-        else
-            loadDefaultTapSchema();
-
-        configName = "CADC PostgreSQL pgSphere 1.1";
-        initFunctionMeta();
-        initTableMeta();
-
-        allowJoins = true; // Allow multiple tables in FROM clause (including JOIN). Default: true.
-        allowUnion = true; // Allow UNION. Default: true.
-        allowGroupBy = true; // Allow GROUP BY. Default: true.
-        allowOrderBy = true; // Allow ORDER BY. Default: true.
-        allowLimit = false; // Allow LIMIT. Default: false (not an ADQL construct)
-        allowTop = true; // Allow TOP. Default: true.
-        allowDistinct = true; // Allow DISTINCT. Default: true.
-        allowInto = false; // Allow SELECT INTO. Default: false (not an ADQL construct)
-        // caseSensitive = false; // Whether column, table, and schema names are case sensitive. -sz 2009-09-10
-
+        return belongTo(function, Constants.REGION_FUNCTIONS);
     }
 
-    private void loadDefaultTapSchema()
+    public static boolean belongTo(Function function, List<String> fnameList)
     {
-        log.debug("loadDefaultTapSchema");
-        try
-        {
-            Class.forName(JDBC_DRIVER);
-        } catch (ClassNotFoundException e)
-        {
-            String msg = "JDBC Driver not found.";
-            log.error(msg, e);
-            throw new MissingResourceException(msg, JDBC_DRIVER, null);
-        }
-        DataSource ds = new SingleConnectionDataSource(JDBC_URL, USERNAME, PASSWORD, SUPPRESS_CLOSE);
-        TapSchemaDAO dao = new TapSchemaDAO(ds);
-        _tapSchema = dao.get();
+        boolean rtn = false;
+        rtn = fnameList.contains(function.getName().toUpperCase());
+        return rtn;
     }
-
-    private void initFunctionMeta()
-    {
-        functionMetas.add(new FunctionMeta(Constants.BOX));
-        functionMetas.add(new FunctionMeta(Constants.CENTROID));
-        functionMetas.add(new FunctionMeta(Constants.CIRCLE));
-        functionMetas.add(new FunctionMeta(Constants.CONTAINS));
-        functionMetas.add(new FunctionMeta(Constants.COORDSYS));
-        functionMetas.add(new FunctionMeta(Constants.COORD1));
-        functionMetas.add(new FunctionMeta(Constants.COORD2));
-        functionMetas.add(new FunctionMeta(Constants.INTERSECTS));
-        functionMetas.add(new FunctionMeta(Constants.POINT));
-        functionMetas.add(new FunctionMeta(Constants.POLYGON));
-        functionMetas.add(new FunctionMeta(Constants.REGION));
-
-        for (int i = 0; i < Constants.AGGREGATE_FUNCTIONS.size(); i++)
-            functionMetas.add(new FunctionMeta((String) Constants.AGGREGATE_FUNCTIONS.get(i)));
-
-        for (int i = 0; i < Constants.MATH_FUNCTIONS.size(); i++)
-            functionMetas.add(new FunctionMeta((String) Constants.MATH_FUNCTIONS.get(i)));
-    }
-
-    private void initTableMeta()
-    {
-        TableMeta tableMeta;
-
-        for (Schema schema : _tapSchema.getSchemas())
-        {
-            for (Table table : schema.getTables())
-            {
-                tableMeta = new TableMeta(table.getSchemaName(), table.getSimpleTableName());
-                for (Column column : table.getColumns())
-                {
-                    tableMeta.addColumnMeta(new ColumnMeta(column.getColumnName(), column.getDatatype(), column.getUcd(),
-                            column.getUnit()));
-                }
-                tableMetas.add(tableMeta);
-            }
-        }
-    }
-
 }
