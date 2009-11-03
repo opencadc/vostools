@@ -108,7 +108,8 @@ public class QueryRunner implements JobRunner
 	private static final HashMap<String,String> langQueries    = new HashMap<String,String>();
 	
     
-    private static String dataSourceName;
+    private static String queryDataSourceName;
+    private static String uploadDataSourceName;
     private static String fileStoreClassName;
     
 	static
@@ -116,8 +117,10 @@ public class QueryRunner implements JobRunner
 		langQueries.put(Validator.ADQL, "ca.nrc.cadc.tap.AdqlQuery");
 		langQueries.put(Validator.SQL, "ca.nrc.cadc.tap.SqlQuery");
         
-        // TODO: these need to be easily configurable
-        dataSourceName = "jdbc/pg";
+        queryDataSourceName = "jdbc/tapuser";
+        uploadDataSourceName = "jdbc/tapuploadadm";
+
+        // TODO: configurable
         fileStoreClassName = System.getProperty( "ca.nrc.cadc.tap.QueryRunner.fileStoreClassName" );
 	}
 	
@@ -186,10 +189,14 @@ public class QueryRunner implements JobRunner
             // find DataSource via JNDI lookup
             Context initContext = new InitialContext();
             Context envContext = (Context) initContext.lookup("java:/comp/env");
-            DataSource dataSource = (DataSource) envContext.lookup(dataSourceName);
+            DataSource queryDataSource = (DataSource) envContext.lookup(queryDataSourceName);
+            DataSource uploadDataSource = (DataSource) envContext.lookup(uploadDataSourceName);
+            
+            if (queryDataSource == null) // application server config issue
+                throw new RuntimeException("failed to find the query DataSource");
             
             // extract TapSchema
-            TapSchemaDAO dao = new TapSchemaDAO(dataSource);
+            TapSchemaDAO dao = new TapSchemaDAO(queryDataSource);
             TapSchema tapSchema = dao.get();
             
             // LANG
@@ -205,7 +212,7 @@ public class QueryRunner implements JobRunner
             List<TapSelectItem> selectList = tapQuery.getSelectList();
             
             // UPLOAD
-            UploadManager uploadManager = new UploadManager();
+            UploadManager uploadManager = new UploadManager(uploadDataSource);
             Map<String,Table> tables = uploadManager.upload( paramList, job.getJobId() );
             
             // TODO: MAXREC
@@ -222,7 +229,7 @@ public class QueryRunner implements JobRunner
             try
             {
                 logger.debug("executing query...");
-                connection = dataSource.getConnection();
+                connection = queryDataSource.getConnection();
                 pstmt = connection.prepareStatement(sql);
                 rs = pstmt.executeQuery();
 

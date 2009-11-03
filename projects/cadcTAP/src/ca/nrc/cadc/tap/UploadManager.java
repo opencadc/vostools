@@ -85,18 +85,25 @@ import org.jdom.Element;
 import org.jdom.JDOMException;
 import org.jdom.input.SAXBuilder;
 
-import ca.nrc.cadc.tap.Validator.TapParams;
 import ca.nrc.cadc.tap.schema.Column;
 import ca.nrc.cadc.tap.schema.Table;
 import ca.nrc.cadc.uws.Parameter;
+import javax.sql.DataSource;
 
 public class UploadManager {
     
     public static final String SCHEMA = "TAP_SCHEMA";
-    public static final String UPLOAD = TapParams.UPLOAD.toString();
+    public static final String UPLOAD = "UPLOAD";
     
     private Map<String,Table>          metadata = new HashMap<String,Table>();
     private Map<String,List<String[]>> dataVals = new HashMap<String,List<String[]>>();
+    
+    private DataSource dataSource;
+    
+    public UploadManager(DataSource dataSource)
+    {
+        this.dataSource = dataSource;
+    }
     
     public Map<String,Table> upload( List<Parameter> paramList, String jobID ) throws IOException, JDOMException {
         
@@ -105,6 +112,9 @@ public class UploadManager {
         Map<String,URI> uploadParamPairs = getUploadParams( paramList );
         if ( uploadParamPairs == null )
             return null;
+        
+        if (dataSource == null)
+            throw new UnsupportedOperationException(UPLOAD + ": not suported, cause: null DataSource");
         
         //  Read (into memory) the column names and values
         //  of tables named by the UPLOAD parameter(s).

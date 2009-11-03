@@ -72,7 +72,6 @@ package ca.nrc.cadc.tap;
 import java.util.ArrayList;
 import java.util.List;
 
-import ca.nrc.cadc.tap.Validator.TapParams;
 import ca.nrc.cadc.uws.Parameter;
 
 /**
