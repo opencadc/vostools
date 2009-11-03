@@ -100,6 +100,7 @@ import ca.nrc.cadc.uws.JobRunner;
 import ca.nrc.cadc.uws.Parameter;
 import ca.nrc.cadc.uws.Result;
 import java.util.ArrayList;
+import javax.naming.NameNotFoundException;
 
 public class QueryRunner implements JobRunner
 {
@@ -190,7 +191,16 @@ public class QueryRunner implements JobRunner
             Context initContext = new InitialContext();
             Context envContext = (Context) initContext.lookup("java:/comp/env");
             DataSource queryDataSource = (DataSource) envContext.lookup(queryDataSourceName);
-            DataSource uploadDataSource = (DataSource) envContext.lookup(uploadDataSourceName);
+            // this one is optional, so take care
+            DataSource uploadDataSource = null;
+            try 
+            {
+                uploadDataSource = (DataSource) envContext.lookup(uploadDataSourceName);
+            }
+            catch(NameNotFoundException nex)
+            {
+                logger.warn(nex.toString());
+            }
             
             if (queryDataSource == null) // application server config issue
                 throw new RuntimeException("failed to find the query DataSource");
