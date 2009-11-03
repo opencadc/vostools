@@ -213,7 +213,7 @@ public class VOTableWriter implements TableWriter
                     {
                         if (column.columnName.equals(selectItem.getColumnName()))
                         {
-                            return new FieldElement(column);
+                            return new FieldElement(selectItem, column);
                         }
                     }
                 }

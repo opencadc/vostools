@@ -69,61 +69,17 @@
 
 package ca.nrc.cadc.tap.writer.formatter;
 
-import ca.nrc.cadc.tap.parser.adql.TapSelectItem;
-import ca.nrc.cadc.tap.schema.Column;
-import ca.nrc.cadc.tap.schema.Schema;
-import ca.nrc.cadc.tap.schema.Table;
-import ca.nrc.cadc.tap.schema.TapSchema;
-import java.util.ArrayList;
-import java.util.List;
-
-/**
- *
- */
-public class FormatterFactory
+public class ByteArrayFormatter implements Formatter
 {
-    public static List<Formatter> getFormatters(TapSchema tapSchema, List<TapSelectItem> selectList)
+    public String format(Object object)
     {
-        List<Formatter> formatters = new ArrayList<Formatter>();
-        for (TapSelectItem selectItem : selectList)
-            formatters.add(getFormatter(tapSchema, selectItem));
-        return formatters;
+        if (object == null)
+            return "";
+        byte[] bytes = (byte[]) object;
+        if (!(object instanceof byte[]))
+            throw new IllegalArgumentException("Expecting byte[], " + object.getClass().getCanonicalName() + " not supported.");
+
+        return object.toString();
     }
-
-    public static Formatter getFormatter(TapSchema tapSchema, TapSelectItem selectItem)
-    {
-        // Find the class name of the formatter for this colummn.
-        for (Schema schema : tapSchema.schemas)
-        {
-            for (Table table : schema.tables)
-            {
-                if (table.tableName.equals(selectItem.getTableName()))
-                {
-                    for (Column column : table.columns)
-                    {
-                        if (column.columnName.equals(selectItem.getColumnName()))
-                        {
-                            String datatype = column.datatype;
-                            if (datatype.equals("adql:INTEGER") ||
-                                datatype.equals("adql:BIGINT")  ||
-                                datatype.equals("adql:DOUBLE")  ||
-                                datatype.equals("adql:VARCHAR"))
-                                return new DefaultFormatter();
-                            else if (datatype.equals("adql:TIMESTAMP"))
-                                return new UTCTimestampFormatter();
-                            else if (datatype.equals("adql:VARBINARY"))
-                                return new ByteArrayFormatter();
-                            else if (datatype.equals("pg:int[]"))
-                                return new IntArrayFormatter();
-                            return new DefaultFormatter();
-                        }
-                    }
-                }
-            }
-        }
-
-        // Custom formatter not found, return the default Formatter.
-        return new DefaultFormatter();
-    }
-
+    
 }

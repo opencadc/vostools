@@ -67,113 +67,16 @@
 ************************************************************************
 */
 
-package ca.nrc.cadc.tap.writer.votable;
+package ca.nrc.cadc.tap.writer.formatter;
 
-import ca.nrc.cadc.tap.schema.TapSchema;
-import ca.nrc.cadc.tap.writer.formatter.Formatter;
 import java.sql.ResultSet;
 import java.sql.SQLException;
-import java.util.Iterator;
-import java.util.List;
-import java.util.NoSuchElementException;
-import org.jdom.Element;
 
 /**
- * Class that iterates through a ResultSet. The Iterator returns a JDOM Element
- * containing a HTML table row representation of the ResultSet.
+ *
  */
-public class ResultSetIterator implements Iterator
+public interface ResultSetFormatter extends Formatter
 {
-    // TapSchema metadata.
-    private TapSchema tapSchema;
-
-    // ResultSet for iteration.
-    private ResultSet resultSet;
-
-    // List of Formatter's in selectList order.
-    private List<Formatter> formatters;
-
-    /**
-     * Constructor.
-     *
-     * @param resultSet
-     */
-    public ResultSetIterator(TapSchema tapSchema, ResultSet resultSet, List<Formatter> formatters)
-    {
-        this.tapSchema = tapSchema;
-        this.resultSet = resultSet;
-        this.formatters = formatters;
-    }
-
-    /**
-     *
-     * @return true if the iteration has more elements.
-     */
-    public boolean hasNext()
-    {
-        try
-        {
-            return !resultSet.isLast();
-        }
-        catch (SQLException e)
-        {
-            throw new RuntimeException(e.getMessage());
-        }
-    }
-
-    /**
-     * Gets the next row in the ResultSet, and builds a JDOM Element
-     * containing a single HTML table row, with table data elements for
-     * each column in the row.
-     * 
-     * @return the next element in the iteration.
-     * @throws NoSuchElementException iteration has no more elements.
-     */
-    public Object next()
-        throws NoSuchElementException
-    {
-        try
-        {
-            // Get the next row.
-            boolean valid = resultSet.next();
-
-            // If no more rows in the ResultSet throw a NoSuchElementException.
-            if (!valid)
-                throw new NoSuchElementException("No more rows in the ResultSet");
-
-            // Create the TR element.
-            Element tableRow = new Element("TR");
-
-            // Loop through the ResultSet adding the table data elements.
-            for (int columnIndex = 1; columnIndex <= resultSet.getMetaData().getColumnCount(); columnIndex++)
-            {
-                Formatter formatter = formatters.get(columnIndex - 1);
-                Object value = resultSet.getObject(columnIndex);
-                Element tableData = new Element("TD");                
-                tableData.setText(formatter.format(value));
-                tableRow.addContent(tableData);
-            }
-            return tableRow;
-        }
-        catch (SQLException e)
-        {
-            throw new RuntimeException(e.getMessage());
-        }
-    }
-
-    /**
-     * Removes from the ResultSet the last element returned by the iterator.
-     */
-    public void remove()
-    {
-        try
-        {
-            resultSet.deleteRow();
-        }
-        catch (SQLException e)
-        {
-            throw new RuntimeException(e.getMessage());
-        }
-    }
-
+    public String format(ResultSet resultSet, int columnIndex)
+        throws SQLException;
 }

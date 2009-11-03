@@ -69,61 +69,41 @@
 
 package ca.nrc.cadc.tap.writer.formatter;
 
-import ca.nrc.cadc.tap.parser.adql.TapSelectItem;
-import ca.nrc.cadc.tap.schema.Column;
-import ca.nrc.cadc.tap.schema.Schema;
-import ca.nrc.cadc.tap.schema.Table;
-import ca.nrc.cadc.tap.schema.TapSchema;
-import java.util.ArrayList;
-import java.util.List;
+import ca.nrc.cadc.date.DateUtil;
+import java.sql.ResultSet;
+import java.sql.SQLException;
+import java.sql.Timestamp;
+import java.util.Calendar;
+import java.util.Date;
+import java.util.TimeZone;
 
-/**
- *
- */
-public class FormatterFactory
+public class LocalTimestampFormatter implements ResultSetFormatter
 {
-    public static List<Formatter> getFormatters(TapSchema tapSchema, List<TapSelectItem> selectList)
+    private String timezone = "PST";
+
+    public String format(ResultSet resultSet, int columnIndex)
+        throws SQLException
     {
-        List<Formatter> formatters = new ArrayList<Formatter>();
-        for (TapSelectItem selectItem : selectList)
-            formatters.add(getFormatter(tapSchema, selectItem));
-        return formatters;
+        Timestamp object = resultSet.getTimestamp(columnIndex, Calendar.getInstance(TimeZone.getTimeZone(timezone)));
+        return format(object);
     }
 
-    public static Formatter getFormatter(TapSchema tapSchema, TapSelectItem selectItem)
+    public String format(Object object)
     {
-        // Find the class name of the formatter for this colummn.
-        for (Schema schema : tapSchema.schemas)
-        {
-            for (Table table : schema.tables)
-            {
-                if (table.tableName.equals(selectItem.getTableName()))
-                {
-                    for (Column column : table.columns)
-                    {
-                        if (column.columnName.equals(selectItem.getColumnName()))
-                        {
-                            String datatype = column.datatype;
-                            if (datatype.equals("adql:INTEGER") ||
-                                datatype.equals("adql:BIGINT")  ||
-                                datatype.equals("adql:DOUBLE")  ||
-                                datatype.equals("adql:VARCHAR"))
-                                return new DefaultFormatter();
-                            else if (datatype.equals("adql:TIMESTAMP"))
-                                return new UTCTimestampFormatter();
-                            else if (datatype.equals("adql:VARBINARY"))
-                                return new ByteArrayFormatter();
-                            else if (datatype.equals("pg:int[]"))
-                                return new IntArrayFormatter();
-                            return new DefaultFormatter();
-                        }
-                    }
-                }
-            }
-        }
+        if (object == null)
+            return "";
+        Date date = null;
+        if (object instanceof Date)
+            date = (Date) object;
+        if (object instanceof java.sql.Date)
+            date = DateUtil.toDate(object);
+        if (object instanceof java.sql.Timestamp)
+            date = DateUtil.toDate(object);
 
-        // Custom formatter not found, return the default Formatter.
-        return new DefaultFormatter();
+        if (date != null)
+            return DateUtil.toString(date, DateUtil.ISO_DATE_FORMAT, TimeZone.getTimeZone(timezone));
+        else
+            throw new UnsupportedOperationException("formatting " + object.getClass().getName() + " " + object);
     }
 
 }

@@ -69,6 +69,7 @@
 
 package ca.nrc.cadc.tap.writer.votable;
 
+import ca.nrc.cadc.tap.parser.adql.TapSelectItem;
 import ca.nrc.cadc.tap.schema.Column;
 import org.jdom.Element;
 
@@ -79,10 +80,10 @@ public class FieldElement extends Element
      *
      * @param column 
      */
-    public FieldElement(Column column)
+    public FieldElement(TapSelectItem selectItem, Column column)
     {
         super("FIELD");
-        setFieldAttribute("name", column.columnName);
+        setFieldName(selectItem.getAlias(), column.columnName);
         setFieldAttribute("utype", column.utype);
         setFieldAttribute("ucd", column.ucd);
         setFieldAttribute("unit", column.unit);
@@ -90,6 +91,15 @@ public class FieldElement extends Element
         setDescription(column.description);
         setDatatypeAndWidth(column.datatype, column.size);
      }
+
+    // Set the name using the alias first, then the column name.
+    private void setFieldName(String alias, String name)
+    {
+        if (alias != null)
+            setAttribute("name", alias);
+        else if (name != null)
+            setAttribute("name", name);
+    }
 
     // Set a String or Integer FIELD attribute.
     private void setFieldAttribute(String name, Object value)
@@ -145,50 +155,42 @@ public class FieldElement extends Element
         else if (datatype.equals("adql:VARBINARY"))
         {
             setAttribute("datatype", "unsignedByte");
-            if (width != null)
-                setAttribute("width", width + "*");
+            setAttribute("width", width == null ? "*" : width + "*");
         }
         else if (datatype.equals("adql:CHAR"))
         {
             setAttribute("datatype", "char");
-            if (width != null)
-                setAttribute("width", width);
+            setAttribute("width", width == null ? "*" : width);
         }
         else if (datatype.equals("adql:VARCHAR"))
         {
             setAttribute("datatype", "char");
-            if (width != null)
-                setAttribute("width", width + "*");
+            setAttribute("width", width == null ? "*" : width + "*");
         }
         else if (datatype.equals("adql:BINARY"))
         {
             setAttribute("datatype", "unsignedByte");
-            if (width != null)
-                setAttribute("width", width);
+            setAttribute("width", width == null ? "*" : width);
         }
         else if (datatype.equals("adql:BLOB"))
         {
             setAttribute("datatype", "unsignedByte");
-            if (width != null)
-                setAttribute("width", width);
+            setAttribute("width", width == null ? "*" : width);
         }
         else if (datatype.equals("adql:CLOB"))
         {
             setAttribute("datatype", "char");
-            if (width != null)
-                setAttribute("width", width);
+            setAttribute("width", width == null ? "*" : width);
         }
         else if (datatype.equals("adql:TIMESTAMP"))
         {
             setAttribute("datatype", "char");
-            if (width != null)
-                setAttribute("width", width);
+            setAttribute("width", width == null ? "*" : width + "*");
         }
         else if (datatype.equals("adql:POINT"))
         {
             setAttribute("datatype", "char");
-            if (width != null)
-                setAttribute("width", width);
+            setAttribute("width", "*");
         }
         else if (datatype.equals("adql:CIRCLE"))
         {
@@ -201,8 +203,7 @@ public class FieldElement extends Element
         else if (datatype.equals("adql:REGION"))
         {
             setAttribute("datatype", "char");
-            if (width != null)
-                setAttribute("width", width);
+            setAttribute("width", "*");
         }
     }
 
