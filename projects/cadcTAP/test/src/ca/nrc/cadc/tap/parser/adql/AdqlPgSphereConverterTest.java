@@ -237,7 +237,7 @@ public class AdqlPgSphereConverterTest {
             + " where INTERSECTS(POINT('ICRS GEOCENTER', 25.0, -19.5), POLYGON('ICRS GEOCENTER', 12, 44.0, -7.6, 19.5, 43, 64))  = 1";
         doConvert(expectValid);
     }
-    //@Test
+    @Test
     public void testWhereIntersectsNot() {
         boolean expectValid = true;
         this.adqlInput = "select * from TAP_SCHEMA.AllDataTypes"

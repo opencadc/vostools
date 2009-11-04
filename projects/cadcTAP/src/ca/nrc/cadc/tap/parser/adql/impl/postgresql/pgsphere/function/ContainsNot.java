@@ -69,12 +69,7 @@
 
 package ca.nrc.cadc.tap.parser.adql.impl.postgresql.pgsphere.function;
 
-import java.util.ArrayList;
-import java.util.List;
-
-import net.sf.jsqlparser.expression.Expression;
 import net.sf.jsqlparser.expression.Function;
-import net.sf.jsqlparser.expression.operators.relational.ExpressionList;
 
 /**
  * Function determine whether the left object is contained by the right
@@ -89,7 +84,7 @@ public class ContainsNot extends PgsBinaryFunction
         super(adqlFunction);
         _operator = "!@";
     }
-    
+
     public ContainsNot(Contains contains)
     {
         _operator = "!@";

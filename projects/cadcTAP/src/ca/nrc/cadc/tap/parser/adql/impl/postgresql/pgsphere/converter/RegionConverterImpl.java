@@ -98,9 +98,9 @@ import net.sf.jsqlparser.statement.select.PlainSelect;
 import net.sf.jsqlparser.statement.select.SelectExpressionItem;
 import net.sf.jsqlparser.statement.select.SubJoin;
 import net.sf.jsqlparser.statement.select.SubSelect;
+import ca.nrc.cadc.tap.parser.adql.AdqlUtil;
+import ca.nrc.cadc.tap.parser.adql.config.Constants;
 import ca.nrc.cadc.tap.parser.adql.converter.RegionConverter;
-import ca.nrc.cadc.tap.parser.adql.impl.postgresql.pgsphere.Constants;
-import ca.nrc.cadc.tap.parser.adql.impl.postgresql.pgsphere.PgsphereUtil;
 import ca.nrc.cadc.tap.parser.adql.impl.postgresql.pgsphere.function.Spoint;
 
 /**
@@ -450,7 +450,7 @@ public class RegionConverterImpl extends RegionConverter
     private Expression checkFunction(Function function)
     {
         Expression rtn = null;
-        if (PgsphereUtil.isAdqlRegion(function))
+        if (AdqlUtil.isAdqlGeometricalFunction(function))
             rtn = checkRegionFunction(function);
         return rtn;
     }

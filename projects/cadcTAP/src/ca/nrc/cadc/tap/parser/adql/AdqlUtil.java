@@ -75,6 +75,9 @@ package ca.nrc.cadc.tap.parser.adql;
 import java.util.ArrayList;
 import java.util.List;
 
+import ca.nrc.cadc.tap.parser.adql.config.Constants;
+
+import net.sf.jsqlparser.expression.Function;
 import net.sf.jsqlparser.schema.Column;
 import net.sf.jsqlparser.schema.Table;
 import net.sf.jsqlparser.statement.select.FromItem;
@@ -212,5 +215,17 @@ public class AdqlUtil
             }
         }
         return rtn;
+    }
+
+    public static boolean belongTo(Function function, List<String> fnameList)
+    {
+        boolean rtn = false;
+        rtn = fnameList.contains(function.getName().toUpperCase());
+        return rtn;
+    }
+
+    public static boolean isAdqlGeometricalFunction(Function function)
+    {
+        return belongTo(function, Constants.REGION_FUNCTIONS);
     }
 }

@@ -1,4 +1,4 @@
-<!--
+/*
 ************************************************************************
 *******************  CANADIAN ASTRONOMY DATA CENTRE  *******************
 **************  CENTRE CANADIEN DE DONNÉES ASTRONOMIQUES  **************
@@ -65,97 +65,137 @@
 *  $Revision: 4 $
 *
 ************************************************************************
--->
+*/
 
+/**
+ * 
+ */
+package ca.nrc.cadc.tap.parser.adql;
 
-<!DOCTYPE project>
-<project default="build" basedir=".">
-    <property environment="env" />
+import static org.junit.Assert.fail;
+import net.sf.jsqlparser.statement.Statement;
 
-    <!-- site-specific build properties or overrides of values in opencadc.properties -->
-    <property file="${env.CADC_PREFIX}/etc/local.properties" />
+import org.junit.After;
+import org.junit.AfterClass;
+import org.junit.Before;
+import org.junit.BeforeClass;
+import org.junit.Test;
 
-    <!-- site-specific targets, e.g. install, cannot duplicate those in opencadc.targets.xml -->
-    <import file="${env.CADC_PREFIX}/etc/local.targets.xml" optional="true" />
+import ca.nrc.cadc.tap.parser.adql.exception.AdqlException;
+import ca.nrc.cadc.tap.parser.adql.impl.postgresql.pgsphere.AdqlManagerImpl;
+import ca.nrc.cadc.util.LoggerUtil;
 
-    <!-- default properties and targets -->
-    <property file="${env.CADC_PREFIX}/etc/opencadc.properties" />
-    <import file="${env.CADC_PREFIX}/etc/opencadc.targets.xml"/>
+/**
+ * 
+ * @author Sailor Zhang
+ *
+ */
+public class AdqlFunctionTest
+{
+    private AdqlParser adqlParser;
+    public String adqlInput;
+    public String sqlOutput;
 
-    <!-- developer convenience: place for extra targets and properties -->
-    <import file="extras.xml" optional="true" />
+    /**
+     * @throws java.lang.Exception
+     */
+    @BeforeClass
+    public static void setUpBeforeClass() throws Exception
+    {
+    }
 
-    <property name="project" value="cadcTAP" />
+    /**
+     * @throws java.lang.Exception
+     */
+    @AfterClass
+    public static void tearDownAfterClass() throws Exception
+    {
+    }
 
-    <property name="cadc" value="${lib}/cadcUtil.jar:${lib}/cadcUWS.jar" />
+    /**
+     * @throws java.lang.Exception
+     */
+    @Before
+    public void setUp() throws Exception
+    {
+        LoggerUtil.initialize(new String[] { "test", "ca.nrc.cadc" }, new String[] { "-d" });
+        AdqlManager manager = new AdqlManagerImpl(null);
+        this.adqlParser = new AdqlParser(manager);
+    }
 
-    <property name="jsqlparser" value="${ext.lib}/jsqlparser.jar" />
-    <property name="log4j" value="${ext.lib}/log4j.jar" />
-    <property name="spring" value="${ext.lib}/spring.jar" />
-    <property name="jdom" value="${ext.lib}/jdom.jar" />
-    <property name="javacsv" value="${ext.lib}/javacsv.jar" />
-    <property name="extlib" value="${jsqlparser}:${log4j}:${spring}:${jdom}:${javacsv}" />
+    /**
+     * @throws java.lang.Exception
+     */
+    @After
+    public void tearDown() throws Exception
+    {
+    }
 
-    <property name="jars" value="${cadc}:${extlib}" />
+    private void doValidate(boolean expectValid)
+    {
+        Statement s = null;
+        boolean exceptionHappens = false;
+        try
+        {
+            s = adqlParser.validate(adqlInput);
+        } catch (AdqlException ae)
+        {
+            exceptionHappens = true;
+            ae.printStackTrace(System.out);
+            if (expectValid)
+                fail(ae.toString());
+            else
+                assert (true);
+        }
+        System.out.println(s);
+        if (expectValid)
+        {
+            if (exceptionHappens)
+                assert (false);
+            else
+                assert (true);
+        } else
+        {
+            if (exceptionHappens)
+                assert (true);
+            else
+                assert (false);
+        }
+    }
 
-    <target name="build" depends="compile">
-	    <jar jarfile="${build}/lib/${project}.jar"
-		    basedir="${build}/class" 
-		    update="no">
-        </jar>
-    </target>
+    private void doConvert(boolean expectValid)
+    {
+        Statement s = null;
+        try
+        {
+            s = adqlParser.validate(adqlInput);
+            System.out.println(s.toString());
+            s = adqlParser.convert(s);
+            System.out.println(s.toString());
+        } catch (AdqlException ae)
+        {
+            ae.printStackTrace(System.out);
+            fail(ae.toString());
+        }
+    }
 
-    <!-- JAR files needed to run the test suite -->
-    <property name="build.cadcTAP" value="${build}/lib/${project}.jar" />
-    <property name="ext.junit" value="${ext.lib}/junit.jar" />
-    <property name="ext.postgres" value="${ext.lib}/postgresql-jdbc.jar" />
-    <property name="ext.xerces" value="${ext.lib}/xerces.jar" />
-    <property name="ext.commonsLog" value="${ext.lib}/commons-logging.jar" />
-    <property name="lib.javaUtil" value="${lib}/javaUtil.jar" />
-    <property name="testingJars" value="${build.cadcTAP}:${ext.junit}:${lib.javaUtil}:${ext.xerces}:${ext.postgres}:${ext.commonsLog}" />
+    //@Test
+    public void testAllGood()
+    {
+        boolean expectValid = true;
+        this.adqlInput = "select COORDSYS(a.t_box), COORD1(a.t_spoint), COORD2(a.t_spoint) from TAP_SCHEMA.AllDataTypes a"
+                + " where 0 = CONTAINS(POINT('ICRS GEOCENTER', 25.0, -19.5), POLYGON('ICRS GEOCENTER', 12, 44.0, 7.6, -19.5, a.t_long, a.t_double)) "
+                + "    and INTERSECTS(a.t_scircle, CIRCLE('ICRS GEOCENTER', 44.0, -7.6, 19.5))=1 ";
+        doValidate(expectValid);
+    }
 
-    <!-- compile the test classes -->
-    <target name="compile-test" depends="compile">
-        <javac destdir="${build}/class"
-               source="${java.source.version}"
-               target="${java.target.version}"
-               classpath="${jars}:${testingJars}" >
-            <src path="test/src"/>
-        </javac>
-    </target>
-
-    <!-- Run the test suite -->
-    <target name="test" depends="compile-test">
-        
-        <!-- Run the junit test suite -->
-        <!--
-             The UploadManager tests require sample VO Table XML files to be available as:
-                  http://localhost/voTableExample1.xml
-                  http://localhost/voTableExample2.xml
-        -->
-        <echo message="Running tests..." />
-        <junit printsummary="yes" haltonfailure="yes" fork="yes">
-            <classpath>
-                <pathelement path="src"/>
-                <pathelement path="build/class"/>
-                <pathelement path="${jars}:${testingJars}"/>
-            </classpath>
-            <!--
-            <test name="ca.nrc.cadc.tap.test.TapValidatorTest"/>
-            <test name="ca.nrc.cadc.tap.test.UploadManagerParamTest"/>
-            <test name="ca.nrc.cadc.tap.test.UploadManagerUploadTest"/>
-		    <test name="ca.nrc.cadc.tap.schema.TapSchemaTest"/>
-		    <test name="ca.nrc.cadc.tap.test.TestProperties"/>
-            <test name="ca.nrc.cadc.tap.parser.adql.AdqlParserTest"/>
-            <test name="ca.nrc.cadc.tap.parser.adql.SqlParserTest"/>
-            <test name="ca.nrc.cadc.tap.parser.adql.AdqlPgSphereConverterTest"/>
-            -->
-            <test name="ca.nrc.cadc.tap.parser.adql.AdqlFunctionTest"/>
-            <formatter type="plain" usefile="false"/>
-        </junit>
-
-    </target>
-
-<import file="build.extras" optional="true" />
-
-</project>
+    @Test
+    public void testAllBad()
+    {
+        boolean expectValid = false;
+        this.adqlInput = "select COORDSYS(a.t_box, 'bad string value'), COORD1(a.t_spoint, 99.9), COORD2(a.t_spoint, 99.9) from TAP_SCHEMA.AllDataTypes a"
+                + " where 0 = CONTAINS(POINT('ICRS GEOCENTER', 3600.0, -900.0), POLYGON('ICRS GEOCENTER', 12, 44.0, 7.6, -19.5, a.t_long, a.t_double, a.t_long)) "
+                + "    and INTERSECTS(a.t_scircle, CIRCLE('ICRS GEOCENTER', 44.0, -7.6, 19.5, 99.9))=1 ";
+        doValidate(expectValid);
+    }
+}

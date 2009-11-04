@@ -83,8 +83,8 @@ import net.sf.jsqlparser.expression.operators.relational.ExpressionList;
 
 import org.apache.log4j.Logger;
 
-import ca.nrc.cadc.tap.parser.adql.impl.postgresql.pgsphere.Constants;
-import ca.nrc.cadc.tap.parser.adql.impl.postgresql.pgsphere.PgsphereUtil;
+import ca.nrc.cadc.tap.parser.adql.AdqlUtil;
+import ca.nrc.cadc.tap.parser.adql.config.Constants;
 import ca.nrc.cadc.tap.parser.adql.impl.postgresql.pgsphere.function.Center;
 import ca.nrc.cadc.tap.parser.adql.impl.postgresql.pgsphere.function.Contains;
 import ca.nrc.cadc.tap.parser.adql.impl.postgresql.pgsphere.function.ContainsNot;
@@ -126,9 +126,8 @@ public class ConverterUtil
     {
         Expression pgsExpr = adqlFunction;
         log.debug("convertToPgsphere(Function): " + adqlFunction);
-        adqlFunction.getParameters();
 
-        if (PgsphereUtil.isAdqlRegion(adqlFunction))
+        if (AdqlUtil.isAdqlGeometricalFunction(adqlFunction))
         {
             String fname = adqlFunction.getName().toUpperCase();
 

@@ -67,41 +67,64 @@
  ************************************************************************
  */
 
+/*
+ * To change this template, choose Tools | Templates
+ * and open the template in the editor.
+ */
+
+package ca.nrc.cadc.tap.parser.adql.config;
+
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.List;
+
 /**
  * 
+ * @author pdowler
+ * @author Sailor Zhang
  */
-package ca.nrc.cadc.tap.parser.adql.impl.postgresql.pgsphere.validator;
-
-import ca.nrc.cadc.tap.parser.adql.validator.AdqlFunctionValidator;
-import ca.nrc.cadc.tap.parser.adql.validator.ColumnReferenceValidator;
-import ca.nrc.cadc.tap.parser.adql.validator.ExpressionValidator;
-import ca.nrc.cadc.tap.parser.adql.validator.SelectValidator;
-import ca.nrc.cadc.tap.parser.adql.validator.Validator;
-
-/**
- * @author zhangsa
- * 
- */
-public class ValidatorImpl extends Validator
+public class Constants
 {
+    public static String ICRS = "ICRS GEOCENTER";
+    
+    // ADQL region functions
+    public static String CONTAINS = "CONTAINS";
+    public static String INTERSECTS = "INTERSECTS";
+    public static String BOX = "BOX";
+    public static String POINT = "POINT";
+    public static String CIRCLE = "CIRCLE";
+    public static String POLYGON = "POLYGON";
+    public static String REGION = "REGION";
+    public static String AREA = "AREA";
+    public static String CENTROID = "CENTROID";
+    public static String COORDSYS = "COORDSYS";
+    public static String COORD1 = "COORD1";
+    public static String COORD2 = "COORD2";
 
-    @Override
-    public ColumnReferenceValidator newColumnReferenceValidator()
+    public static List<String> REGION_SCALAR_FUNCTIONS; // functions that extract scalars from regions
+    public static List<String> REGION_PREDICATES; // functions that compare regions
+    public static List<String> REGION_GEOM_FUNCTIONS; // functions that create/return regions
+
+    public static List<String> REGION_FUNCTIONS;
+
+    public static List<String> MATH_FUNCTIONS;
+
+    public static List<String> AGGREGATE_FUNCTIONS;
+
+    static
     {
-        return new ColumnReferenceValidatorImpl();
-    }
+        REGION_PREDICATES = Arrays.asList(new String[] { CONTAINS, INTERSECTS });
+        REGION_GEOM_FUNCTIONS = Arrays.asList(new String[] { BOX, POINT, CIRCLE, POLYGON, CENTROID, REGION });
+        REGION_SCALAR_FUNCTIONS = Arrays.asList(new String[] { AREA, COORDSYS, COORD1, COORD2 });
 
-    @Override
-    public ExpressionValidator newExpressionValidator()
-    {
-        //return new ExpressionValidatorImpl();
-        return new AdqlFunctionValidator();
-    }
+        REGION_FUNCTIONS = new ArrayList<String>();
+        REGION_FUNCTIONS.addAll(REGION_PREDICATES);
+        REGION_FUNCTIONS.addAll(REGION_GEOM_FUNCTIONS);
+        REGION_FUNCTIONS.addAll(REGION_SCALAR_FUNCTIONS);
 
-    @Override
-    public SelectValidator newSelectValidator()
-    {
-        return new SelectValidatorImpl();
-    }
+        MATH_FUNCTIONS = Arrays.asList(new String[] { "ACOS", "ASIN", "ATAN", "ATAN2", "COS", "SIN", "TAN", "ABS", "CEILING",
+                "DEGREES", "EXP", "FLOOR", "LOG", "LOG10", "MOD", "PI", "POWER", "RADIANS", "SQRT", "RAND", "ROUND", "TRUNCATE" });
 
+        AGGREGATE_FUNCTIONS = Arrays.asList(new String[] { "COUNT", "MIN", "MAX" });
+    }
 }

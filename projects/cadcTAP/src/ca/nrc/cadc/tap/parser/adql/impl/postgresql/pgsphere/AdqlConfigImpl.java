@@ -79,6 +79,7 @@ import javax.sql.DataSource;
 import org.springframework.jdbc.datasource.SingleConnectionDataSource;
 
 import ca.nrc.cadc.tap.parser.adql.config.AdqlConfig;
+import ca.nrc.cadc.tap.parser.adql.config.Constants;
 import ca.nrc.cadc.tap.parser.adql.config.meta.ColumnMeta;
 import ca.nrc.cadc.tap.parser.adql.config.meta.FunctionMeta;
 import ca.nrc.cadc.tap.parser.adql.config.meta.TableMeta;

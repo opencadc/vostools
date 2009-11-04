@@ -76,6 +76,7 @@ import java.util.List;
 
 import javax.sql.DataSource;
 
+import org.apache.log4j.Level;
 import org.apache.log4j.Logger;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.jdbc.core.RowMapper;
@@ -87,6 +88,9 @@ import org.springframework.jdbc.core.RowMapper;
 public class TapSchemaDAO
 {
     private static Logger log = Logger.getLogger(TapSchemaDAO.class);
+    static {
+        log.setLevel(Level.ERROR);
+    }
     
     // SQL to select all rows from TAP_SCHEMA.schemas.
     private static final String SELECT_SCHEMAS =
