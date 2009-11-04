@@ -80,7 +80,6 @@ import org.apache.log4j.Logger;
 
 import ca.nrc.cadc.tap.parser.adql.converter.Converter;
 import ca.nrc.cadc.tap.parser.adql.exception.AdqlException;
-import ca.nrc.cadc.tap.parser.adql.formatter.Formatter;
 import ca.nrc.cadc.tap.parser.adql.validator.PlainSelectInfo;
 import ca.nrc.cadc.tap.parser.adql.validator.SelectValidator;
 import ca.nrc.cadc.tap.parser.adql.validator.Validator;
@@ -101,8 +100,7 @@ public class AdqlParser
     {
         Statement validatedStatement = validate(adqlQueryStr);
         Statement sqlStatement = convert(validatedStatement);
-        String sqlStr = format(sqlStatement);
-        return sqlStr;
+        return sqlStatement.toString();
     }
 
     public Statement validate(String adqlQueryStr) throws AdqlException
@@ -153,14 +151,6 @@ public class AdqlParser
         AdqlStatementVisitor statementVisitor = new AdqlStatementVisitor(converter);
         adqlStatement.accept(statementVisitor);
         return adqlStatement;
-    }
-
-    public String format(Statement sqlStatement) throws AdqlException
-    {
-        String sqlStr = null;
-        Formatter formatter = _manager.getFormatter();
-        sqlStr = formatter.format(sqlStatement);
-        return sqlStr;
     }
 
     /**

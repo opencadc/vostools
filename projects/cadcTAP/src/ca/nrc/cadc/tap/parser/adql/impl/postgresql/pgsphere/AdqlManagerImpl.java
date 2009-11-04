@@ -71,9 +71,7 @@ package ca.nrc.cadc.tap.parser.adql.impl.postgresql.pgsphere;
 
 import ca.nrc.cadc.tap.parser.adql.AdqlManager;
 import ca.nrc.cadc.tap.parser.adql.impl.postgresql.pgsphere.converter.ConverterImpl;
-import ca.nrc.cadc.tap.parser.adql.impl.postgresql.pgsphere.formatter.FormatterImpl;
 import ca.nrc.cadc.tap.parser.adql.impl.postgresql.pgsphere.validator.ValidatorImpl;
-import ca.nrc.cadc.tap.parser.adql.impl.postgresql.pgsphere.AdqlConfigImpl;
 import ca.nrc.cadc.tap.schema.TapSchema;
 
 public class AdqlManagerImpl extends AdqlManager
@@ -83,7 +81,6 @@ public class AdqlManagerImpl extends AdqlManager
         this.config = new AdqlConfigImpl(tapSchema);
         this.validator = new ValidatorImpl();
         this.converter = new ConverterImpl();
-        this.formatter = new FormatterImpl();
         init();
     }
 }

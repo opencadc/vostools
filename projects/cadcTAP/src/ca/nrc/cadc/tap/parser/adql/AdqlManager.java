@@ -73,7 +73,6 @@ import org.apache.log4j.Logger;
 
 import ca.nrc.cadc.tap.parser.adql.config.AdqlConfig;
 import ca.nrc.cadc.tap.parser.adql.converter.Converter;
-import ca.nrc.cadc.tap.parser.adql.formatter.Formatter;
 import ca.nrc.cadc.tap.parser.adql.validator.Validator;
 
 public class AdqlManager
@@ -83,13 +82,11 @@ public class AdqlManager
     protected AdqlConfig config;
     protected Converter converter;
     protected Validator validator;
-    protected Formatter formatter;
 
     protected void init()
     {
         this.validator.init(this);
         this.converter.init(this);
-        this.formatter.init(this);
     }
 
     public final AdqlConfig getConfig()
@@ -121,15 +118,4 @@ public class AdqlManager
     {
         this.validator = validator;
     }
-
-    public final Formatter getFormatter()
-    {
-        return formatter;
-    }
-
-    public final void setFormatter(Formatter formatter)
-    {
-        this.formatter = formatter;
-    }
-
 }
