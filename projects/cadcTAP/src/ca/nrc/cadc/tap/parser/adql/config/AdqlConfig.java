@@ -274,7 +274,7 @@ public abstract class AdqlConfig
             }
         }
 
-        // TODO:sz populate tapSelectItems
+        // populate tapSelectItems
 
         // Only populate tapSelectItems if the plainSelect is at ROOT level.
         if (type == PlainSelectType.ROOT_SELECT)

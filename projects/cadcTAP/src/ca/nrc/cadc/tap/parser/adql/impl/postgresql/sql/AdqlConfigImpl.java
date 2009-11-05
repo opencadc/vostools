@@ -78,6 +78,7 @@ import javax.sql.DataSource;
 
 import org.springframework.jdbc.datasource.SingleConnectionDataSource;
 
+import ca.nrc.cadc.tap.TapProperties;
 import ca.nrc.cadc.tap.parser.adql.config.AdqlConfig;
 import ca.nrc.cadc.tap.parser.adql.config.meta.ColumnMeta;
 import ca.nrc.cadc.tap.parser.adql.config.meta.TableMeta;
@@ -93,11 +94,6 @@ import ca.nrc.cadc.tap.schema.TapSchemaDAO;
  */
 public class AdqlConfigImpl extends AdqlConfig
 {
-    private static final String JDBC_DRIVER = "";
-    private static final String JDBC_URL = "";
-    private static final String USERNAME = "";
-    private static final String PASSWORD = "";
-    private static final boolean SUPPRESS_CLOSE = false;
 
     private TapSchema _tapSchema;
 
@@ -124,22 +120,36 @@ public class AdqlConfigImpl extends AdqlConfig
         // caseSensitive = false; // Whether column, table, and schema names are case sensitive. -sz 2009-09-10
 
     }
-    
+
     private void loadDefaultTapSchema()
     {
-        log.debug("loadDefaultTapSchema");
         try
         {
-            Class.forName(JDBC_DRIVER);
-        } catch (ClassNotFoundException e)
+            TapProperties properties = SqlPropertiesFactory.getInstance();
+
+            String JDBC_DRIVER = properties.getProperty("JDBC_DRIVER");
+            String JDBC_URL = properties.getProperty("JDBC_URL");
+            String USERNAME = properties.getProperty("USERNAME");
+            String PASSWORD = properties.getProperty("PASSWORD");
+            boolean SUPPRESS_CLOSE = properties.getPropertyBooloean("SUPPRESS_CLOSE");
+
+            log.debug("loadDefaultTapSchema");
+            try
+            {
+                Class.forName(JDBC_DRIVER);
+            } catch (ClassNotFoundException e)
+            {
+                String msg = "JDBC Driver not found.";
+                log.error(msg, e);
+                throw new MissingResourceException(msg, JDBC_DRIVER, null);
+            }
+            DataSource ds = new SingleConnectionDataSource(JDBC_URL, USERNAME, PASSWORD, SUPPRESS_CLOSE);
+            TapSchemaDAO dao = new TapSchemaDAO(ds);
+            _tapSchema = dao.get();
+        } catch (Exception ex)
         {
-            String msg = "JDBC Driver not found.";
-            log.error(msg, e);
-            throw new MissingResourceException(msg, JDBC_DRIVER, null);
+            log.error(ex);
         }
-        DataSource ds = new SingleConnectionDataSource(JDBC_URL, USERNAME, PASSWORD, SUPPRESS_CLOSE);
-        TapSchemaDAO dao = new TapSchemaDAO(ds);
-        _tapSchema = dao.get();
     }
 
     private void initFunctionMeta()
@@ -158,8 +168,8 @@ public class AdqlConfigImpl extends AdqlConfig
                 tableMeta = new TableMeta(table.getSchemaName(), table.getSimpleTableName());
                 for (Column column : table.getColumns())
                 {
-                    tableMeta.addColumnMeta(new ColumnMeta(column.getColumnName(), column.getDatatype(), column.getUcd(),
-                            column.getUnit()));
+                    tableMeta.addColumnMeta(new ColumnMeta(column.getColumnName(), column.getDatatype(), column.getUcd(), column
+                            .getUnit()));
                 }
                 tableMetas.add(tableMeta);
             }

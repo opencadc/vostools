@@ -175,7 +175,8 @@ public class TapSelectItemAppender implements SelectItemVisitor
                 tapSelectItem = new TapSelectItem(tableName, columnName, alias);
             } else
             {
-                // No schema name presented in the column expression. e.g. tableA.columnA, aliasA.columnA, columnB
+                // No schema name presented in the column expression. 
+                // e.g. tableA.columnA, aliasA.columnA, columnB
                 tableName = table.getName();
                 if (tableName != null)
                 {
