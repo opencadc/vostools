@@ -70,6 +70,7 @@
 package ca.nrc.cadc.tap.parser.adql;
 
 import net.sf.jsqlparser.expression.Expression;
+import net.sf.jsqlparser.expression.Function;
 import net.sf.jsqlparser.schema.Column;
 import net.sf.jsqlparser.schema.Table;
 import net.sf.jsqlparser.statement.select.AllColumns;
@@ -152,11 +153,13 @@ public class TapSelectItemAppender implements SelectItemVisitor
     @Override
     public void visit(SelectExpressionItem selectExpressionItem)
     {
-        TapSelectItem tapSelectItem = null;
 
         String alias = selectExpressionItem.getAlias();
         String columnName = null;
         String tableName = null;
+
+        TapSelectItem tapSelectItem = null;
+
         Expression expression = selectExpressionItem.getExpression();
         if (expression instanceof Column)
         {
@@ -204,6 +207,14 @@ public class TapSelectItemAppender implements SelectItemVisitor
                 }
             }
         }
+        else
+        {
+            if (alias != null && !alias.equals(""))
+                tapSelectItem = new TapSelectItem(alias);
+            else
+                tapSelectItem = new TapSelectItem(expression.toString());
+        }
+            
         _plainSelectInfo.addTapSelectItem(tapSelectItem);
     }
 

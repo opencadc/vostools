@@ -81,9 +81,13 @@ public class TapSelectItem
     private String _columnName;
     private String _alias;
 
+    public TapSelectItem(String alias)
+    {
+        _alias = alias;
+    }
+
     public TapSelectItem(String tableName, String columnName, String alias)
     {
-        super();
         _tableName = tableName;
         _columnName = columnName;
         _alias = alias;
