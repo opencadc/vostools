@@ -209,6 +209,10 @@ public class QueryRunner implements JobRunner
             TapSchemaDAO dao = new TapSchemaDAO(queryDataSource);
             TapSchema tapSchema = dao.get();
             
+            // UPLOAD
+            UploadManager uploadManager = new UploadManager(uploadDataSource);
+            Map<String,Table> tables = uploadManager.upload( paramList, job.getJobId() );
+            
             // LANG
         	String lang = tapValidator.getLang();
             String cname = langQueries.get(lang);
@@ -217,13 +221,12 @@ public class QueryRunner implements JobRunner
             Class c = Class.forName(cname);
             TapQuery tapQuery = (TapQuery) c.newInstance();
             tapQuery.setTapSchema(tapSchema);
+            tapQuery.setExtraTables(tables);
             tapQuery.setParameterList(paramList);
         	String sql = tapQuery.getSQL();
             List<TapSelectItem> selectList = tapQuery.getSelectList();
             
-            // UPLOAD
-            UploadManager uploadManager = new UploadManager(uploadDataSource);
-            Map<String,Table> tables = uploadManager.upload( paramList, job.getJobId() );
+            
             
             // TODO: MAXREC
             

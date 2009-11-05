@@ -72,12 +72,16 @@ package ca.nrc.cadc.tap;
 import java.util.List;
 
 import ca.nrc.cadc.tap.parser.adql.TapSelectItem;
+import ca.nrc.cadc.tap.schema.Table;
 import ca.nrc.cadc.tap.schema.TapSchema;
 import ca.nrc.cadc.uws.Parameter;
+import java.util.Map;
 
 public interface TapQuery
 {
     public void setTapSchema(TapSchema ts);
+    
+    public void setExtraTables(Map<String,Table> extraTables);
     
     /**
      * Set the parameter list. Calling this methiod clears all previous

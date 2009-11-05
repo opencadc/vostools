@@ -75,8 +75,10 @@ import ca.nrc.cadc.tap.parser.adql.AdqlManager;
 import ca.nrc.cadc.tap.parser.adql.AdqlParser;
 import ca.nrc.cadc.tap.parser.adql.TapSelectItem;
 import ca.nrc.cadc.tap.parser.adql.exception.AdqlException;
+import ca.nrc.cadc.tap.schema.Table;
 import ca.nrc.cadc.tap.schema.TapSchema;
 import ca.nrc.cadc.uws.Parameter;
+import java.util.Map;
 
 /**
  * TapQuery implementation for LANG=SQL.
@@ -97,6 +99,11 @@ public class SqlQuery implements TapQuery
         this.tapSchema = tapSchema;
         AdqlManager manager = new ca.nrc.cadc.tap.parser.adql.impl.postgresql.sql.AdqlManagerImpl(this.tapSchema);
         this.adqlParser = new AdqlParser(manager);
+    }
+    
+    public void setExtraTables(Map<String, Table> extraTables)
+    {
+        throw new UnsupportedOperationException("Not supported yet.");
     }
     
     public void setParameterList( List<Parameter> paramList )
