@@ -76,17 +76,23 @@ import ca.nrc.cadc.tap.schema.Table;
 import ca.nrc.cadc.tap.schema.TapSchema;
 import java.util.ArrayList;
 import java.util.List;
+import org.apache.log4j.Logger;
 
 /**
  *
  */
 public class FormatterFactory
 {
+    private static Logger log = Logger.getLogger(FormatterFactory.class);
+    
     public static List<Formatter> getFormatters(TapSchema tapSchema, List<TapSelectItem> selectList)
     {
         List<Formatter> formatters = new ArrayList<Formatter>();
         for (TapSelectItem selectItem : selectList)
-            formatters.add(getFormatter(tapSchema, selectItem));
+            if (selectItem != null)
+                formatters.add(getFormatter(tapSchema, selectItem));
+            else
+                log.warn("found null selectItem in List<TapSelectItem>");
         return formatters;
     }
 
@@ -97,6 +103,7 @@ public class FormatterFactory
         {
             for (Table table : schema.tables)
             {
+                log.debug("selectItem: " + selectItem);
                 if (table.tableName.equals(selectItem.getTableName()))
                 {
                     for (Column column : table.columns)

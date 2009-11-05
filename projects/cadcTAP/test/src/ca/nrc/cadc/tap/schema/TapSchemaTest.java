@@ -79,9 +79,9 @@ import ca.nrc.cadc.util.LoggerUtil;
 
 public class TapSchemaTest extends TestCase
 {
-    private static final String JDBC_URL = "jdbc:postgresql://cvodb0/cvodb";
-    private static final String USERNAME = "cadcuser51";
-    private static final String PASSWORD = "MhU7nuvP5/67A:31:30";
+    private static final String JDBC_URL = "";
+    private static final String USERNAME = "";
+    private static final String PASSWORD = "";
     private static final boolean SUPPRESS_CLOSE = false;
 
     private static final String TAP_SCHEMA_NAME = "TAP_SCHEMA";
