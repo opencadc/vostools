@@ -118,7 +118,7 @@ public class UploadManagerParamTest extends UploadTestCase {
         }
         finally {
             try {
-                Statement  stmt = conn.createStatement();
+                Statement stmt = conn.createStatement();
                 stmt.execute("drop table tap_upload.mytable_0");
             }
             catch (SQLException e) {
@@ -146,7 +146,7 @@ public class UploadManagerParamTest extends UploadTestCase {
         }
         finally {
             try {
-                Statement  stmt = conn.createStatement();
+                Statement stmt = conn.createStatement();
                 stmt.execute("drop table tap_upload.a_0");
                 stmt.execute("drop table tap_upload.b_0");
             }
@@ -177,7 +177,7 @@ public class UploadManagerParamTest extends UploadTestCase {
         }
         finally {
             try {
-                Statement  stmt = conn.createStatement();
+                Statement stmt = conn.createStatement();
                 stmt.execute("drop table tap_upload.c_0");
                 stmt.execute("drop table tap_upload.d_0");
             }

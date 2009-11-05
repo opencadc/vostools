@@ -202,7 +202,7 @@ public class UploadManager {
                 sql += " )";
                 Statement  stmt = conn.createStatement();
                 log.debug( "About to execute DDL: "+sql );
-                stmt.execute(sql);
+                stmt.executeUpdate(sql);
             }
         }
         catch ( Exception sqle ) {
@@ -238,7 +238,8 @@ public class UploadManager {
                     sql += " )";
                     Statement stmt = conn.createStatement();
                     log.debug( "About to execute DML: "+sql );
-                    stmt.execute(sql);
+                    int n = stmt.executeUpdate(sql);
+                    log.debug( n+" record(s) inserted" );
                 }
             }
         }
