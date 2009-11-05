@@ -69,6 +69,11 @@
 
 package ca.nrc.cadc.tap.parser.adql.impl.postgresql.pgsphere.converter;
 
+import net.sf.jsqlparser.statement.select.Limit;
+import net.sf.jsqlparser.statement.select.PlainSelect;
+import net.sf.jsqlparser.statement.select.Top;
+import ca.nrc.cadc.tap.parser.adql.converter.TopConverter;
+
 
 /**
  * A SelectVisitor that converts <code>Top N</code> into server-specific form.
@@ -79,6 +84,27 @@ package ca.nrc.cadc.tap.parser.adql.impl.postgresql.pgsphere.converter;
  * 
  * @author Sailor Zhang
  */
-public class TopConverterImpl extends ca.nrc.cadc.tap.parser.adql.impl.postgresql.sql.converter.TopConverterImpl
+public class TopConverterImpl extends TopConverter
 {
+    public void visit(PlainSelect ps)
+    {
+        log.debug("visit(PlainSelect): " + ps);
+        Top top = ps.getTop();
+        if (top != null)
+        {
+            long rowCount = top.getRowCount();
+            Limit limit = ps.getLimit();
+            if (limit != null)
+            {
+                limit.setRowCount(rowCount);
+            } else
+            {
+                limit = new Limit();
+                limit.setRowCount(rowCount);
+                ps.setLimit(limit);
+            }
+            ps.setTop(null);
+        }
+        log.debug("visit(PlainSelect) complete: " + ps);
+    }
 }

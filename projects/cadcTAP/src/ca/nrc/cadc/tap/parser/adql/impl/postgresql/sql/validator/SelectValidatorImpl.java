@@ -341,7 +341,6 @@ public class SelectValidatorImpl extends SelectValidator
     protected void handleLimit(Limit limit)
     {
         log.debug("handleLimit: " + limit);
-        addException(new AdqlValidateException("LIMIT"));
     }
 
     /**

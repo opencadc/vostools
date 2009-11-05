@@ -147,10 +147,10 @@
 		    <test name="ca.nrc.cadc.tap.schema.TapSchemaTest"/>
 		    <test name="ca.nrc.cadc.tap.test.TestProperties"/>
             <test name="ca.nrc.cadc.tap.parser.adql.AdqlParserTest"/>
-            <test name="ca.nrc.cadc.tap.parser.adql.SqlParserTest"/>
             <test name="ca.nrc.cadc.tap.parser.adql.AdqlPgSphereConverterTest"/>
-            -->
             <test name="ca.nrc.cadc.tap.parser.adql.AdqlFunctionTest"/>
+            -->
+            <test name="ca.nrc.cadc.tap.parser.adql.SqlParserTest"/>
             <formatter type="plain" usefile="false"/>
         </junit>
 

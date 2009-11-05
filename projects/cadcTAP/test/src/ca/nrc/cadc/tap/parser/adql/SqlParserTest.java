@@ -166,6 +166,7 @@ public class SqlParserTest {
 			System.out.println(s.toString());
 			s = adqlParser.convert(s);
 			System.out.println(s.toString());
+			System.out.println(adqlParser.getTapSelectItems());
 		} catch (AdqlException ae) {
 			ae.printStackTrace(System.out);
 			fail(ae.toString());
@@ -425,10 +426,32 @@ public class SqlParserTest {
 			+ " where cd1_1 > 432.1";
 		doValidate(expectValid);
 	}
-	@Test
+	//@Test
 	public void testFunction() {
         boolean expectValid = true;
         this.adqlInput = "select long(32,44), lat(444,99) from TAP_SCHEMA.AllDataTypes ";
         doValidate(expectValid);
 	}
+	@Test
+	public void testDefect091104() {
+        boolean expectValid = true;
+
+        this.adqlInput = " select top 1 position_bounds_center as COORDS, "
+            + " long(position_bounds_center) as RA, "
+            + " lat(position_bounds_center) as DEC "
+            + " from caom.Plane ";
+
+        doConvert(expectValid);
+	}
+    @Test
+    public void testDefect091104b() {
+        boolean expectValid = true;
+
+        this.adqlInput = " select position_bounds_center as COORDS, "
+            + " long(position_bounds_center), "
+            + " lat(position_bounds_center) as DEC "
+            + " from caom.Plane limit 1";
+
+        doConvert(expectValid);
+    }
 }

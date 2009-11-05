@@ -69,9 +69,7 @@
 
 package ca.nrc.cadc.tap.parser.adql.impl.postgresql.sql.converter;
 
-import net.sf.jsqlparser.statement.select.Limit;
 import net.sf.jsqlparser.statement.select.PlainSelect;
-import net.sf.jsqlparser.statement.select.Top;
 import ca.nrc.cadc.tap.parser.adql.converter.TopConverter;
 
 /**
@@ -88,22 +86,5 @@ public class TopConverterImpl extends TopConverter
     public void visit(PlainSelect ps)
     {
         log.debug("visit(PlainSelect): " + ps);
-        Top top = ps.getTop();
-        if (top != null)
-        {
-            long rowCount = top.getRowCount();
-            Limit limit = ps.getLimit();
-            if (limit != null)
-            {
-                limit.setRowCount(rowCount);
-            } else
-            {
-                limit = new Limit();
-                limit.setRowCount(rowCount);
-                ps.setLimit(limit);
-            }
-            ps.setTop(null);
-        }
-        log.debug("visit(PlainSelect) complete: " + ps);
     }
 }

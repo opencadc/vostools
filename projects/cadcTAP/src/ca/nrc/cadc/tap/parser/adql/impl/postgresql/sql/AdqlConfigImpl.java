@@ -119,10 +119,10 @@ public class AdqlConfigImpl extends AdqlConfig
         allowUnion = true; // Allow UNION. Default: true.
         allowGroupBy = true; // Allow GROUP BY. Default: true.
         allowOrderBy = true; // Allow ORDER BY. Default: true.
-        allowLimit = false; // Allow LIMIT. Default: false (not an ADQL construct)
+        allowLimit = true; // Allow LIMIT. Default: false (not an ADQL construct)
         allowTop = true; // Allow TOP. Default: true.
         allowDistinct = true; // Allow DISTINCT. Default: true.
-        allowInto = false; // Allow SELECT INTO. Default: false (not an ADQL construct)
+        allowInto = true; // Allow SELECT INTO. Default: false (not an ADQL construct)
         // caseSensitive = false; // Whether column, table, and schema names are case sensitive. -sz 2009-09-10
 
     }

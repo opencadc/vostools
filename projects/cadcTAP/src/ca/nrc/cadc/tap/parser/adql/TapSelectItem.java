@@ -129,6 +129,6 @@ public class TapSelectItem
     @Override
     public String toString()
     {
-        return "\r\n\tSelectItem [_alias=" + _alias + ", _columnName=" + _columnName + ", _tableName=" + _tableName + "]";
+        return "\r\n\tTapSelectItem [_alias=" + _alias + ", _columnName=" + _columnName + ", _tableName=" + _tableName + "]";
     }
 }
