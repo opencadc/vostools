@@ -69,63 +69,46 @@
 
 package ca.nrc.cadc.tap.writer.formatter;
 
-import ca.nrc.cadc.tap.parser.adql.TapSelectItem;
-import ca.nrc.cadc.tap.schema.Column;
-import ca.nrc.cadc.tap.schema.Schema;
-import ca.nrc.cadc.tap.schema.Table;
-import ca.nrc.cadc.tap.schema.TapSchema;
+import ca.nrc.cadc.stc.Position;
+import java.sql.ResultSet;
+import java.sql.SQLException;
 import java.util.ArrayList;
-import java.util.List;
 
-/**
- *
- */
-public class FormatterFactory
+public class SPointFormatter implements ResultSetFormatter
 {
-    public static List<Formatter> getFormatters(TapSchema tapSchema, List<TapSelectItem> selectList)
+    public String format(ResultSet resultSet, int columnIndex)
+        throws SQLException
     {
-        List<Formatter> formatters = new ArrayList<Formatter>();
-        for (TapSelectItem selectItem : selectList)
-            formatters.add(getFormatter(tapSchema, selectItem));
-        return formatters;
+        String object = resultSet.getString(columnIndex);
+        return format(object);
     }
 
-    public static Formatter getFormatter(TapSchema tapSchema, TapSelectItem selectItem)
+    public String format(Object object)
     {
-        // Find the class name of the formatter for this colummn.
-        for (Schema schema : tapSchema.schemas)
-        {
-            for (Table table : schema.tables)
-            {
-                if (table.tableName.equals(selectItem.getTableName()))
-                {
-                    for (Column column : table.columns)
-                    {
-                        if (column.columnName.equals(selectItem.getColumnName()))
-                        {
-                            String datatype = column.datatype;
-                            if (datatype.equals("adql:INTEGER") ||
-                                datatype.equals("adql:BIGINT")  ||
-                                datatype.equals("adql:DOUBLE")  ||
-                                datatype.equals("adql:VARCHAR"))
-                                return new DefaultFormatter();
-                            else if (datatype.equals("adql:POINT"))
-                                return new SPointFormatter();
-                            else if (datatype.equals("adql:TIMESTAMP"))
-                                return new UTCTimestampFormatter();
-                            else if (datatype.equals("adql:VARBINARY"))
-                                return new ByteArrayFormatter();
-                            else if (datatype.equals("int[]"))
-                                return new IntArrayFormatter();
-                            return new DefaultFormatter();
-                        }
-                    }
-                }
-            }
-        }
+        if (object == null)
+            return "";
+        String s = (String) object;
 
-        // Custom formatter not found, return the default Formatter.
-        return new DefaultFormatter();
+        // TODO: single regex to parse coordinates
+        int open = s.indexOf("(");
+        int close = s.indexOf(")");
+        s = s.substring(open + 1, close);
+        String[] points = s.split(",");
+        Double x = Double.valueOf(points[0]);
+        Double y = Double.valueOf(points[1]);
+
+        // convert to radians
+        x = x * (180/Math.PI);
+        y = y * (180/Math.PI);
+
+        // Create STC Position.
+        Position position = new Position();
+        position.frame = "ICRS";
+        position.pos = new ArrayList();
+        position.pos.add(x);
+        position.pos.add(y);
+
+        return position.toSTCString();
     }
-
+    
 }
