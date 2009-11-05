@@ -74,39 +74,76 @@ import java.net.MalformedURLException;
 import java.net.URI;
 import java.net.URISyntaxException;
 import java.net.URL;
+import java.sql.Connection;
+import java.sql.SQLException;
+import java.sql.Statement;
+import java.text.ParseException;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 
+import javax.sql.DataSource;
+
+import org.apache.log4j.Logger;
 import org.jdom.Document;
 import org.jdom.Element;
 import org.jdom.JDOMException;
 import org.jdom.input.SAXBuilder;
 
+import ca.nrc.cadc.date.DateUtil;
 import ca.nrc.cadc.tap.schema.Column;
 import ca.nrc.cadc.tap.schema.Table;
 import ca.nrc.cadc.uws.Parameter;
-import javax.sql.DataSource;
 
 public class UploadManager {
     
-    public static final String SCHEMA = "TAP_SCHEMA";
+    private static final Logger log = Logger.getLogger( UploadManager.class );
+
+    private static final String BOOL   = "boolean";
+    private static final String SHORT  = "short";
+    private static final String INT    = "int";
+    private static final String LONG   = "long";
+    private static final String FLOAT  = "float";
+    private static final String DOUBLE = "double";
+    private static final String CHAR   = "char";
+    private static final String UBYTE  = "unsignedByte";
+
+    private static final String BLOB      = "adql:BLOB";
+    private static final String CLOB      = "adql:CLOB";
+    private static final String TIMESTAMP = "adql:TIMESTAMP";
+    private static final String POINT     = "adql:POINT";
+    private static final String REGION    = "adql:REGION";
+    
+    public static final String SCHEMA = "TAP_UPLOAD";
     public static final String UPLOAD = "UPLOAD";
     
-    private Map<String,Table>          metadata = new HashMap<String,Table>();
-    private Map<String,List<String[]>> dataVals = new HashMap<String,List<String[]>>();
+    private Map<String,Table>          metadata;
+    private Map<String,List<String[]>> dataRows;
     
     private DataSource dataSource;
+    private Connection conn;
     
-    public UploadManager(DataSource dataSource)
-    {
+    public UploadManager(DataSource dataSource) {
+        
         this.dataSource = dataSource;
+        
+        try {
+            conn = dataSource.getConnection();
+        }
+        catch (SQLException e) {
+            throw new IllegalStateException( "Failed to get connection from data source" );
+        }
     }
     
     public Map<String,Table> upload( List<Parameter> paramList, String jobID ) throws IOException, JDOMException {
-        
+
+        log.debug( "Started table upload for jobID: "+jobID );
+
+        metadata = new HashMap<String,Table>();
+        dataRows = new HashMap<String,List<String[]>>();
+
         //  Extract and validate the UPLOAD parameters
         //  from the full parameter list.
         Map<String,URI> uploadParamPairs = getUploadParams( paramList );
@@ -114,7 +151,7 @@ public class UploadManager {
             return null;
         
         if (dataSource == null)
-            throw new UnsupportedOperationException(UPLOAD + ": not suported, cause: null DataSource");
+            throw new UnsupportedOperationException(UPLOAD+" parameter not suported, cause: null DataSource");
         
         //  Read (into memory) the column names and values
         //  of tables named by the UPLOAD parameter(s).
@@ -122,22 +159,22 @@ public class UploadManager {
         try {
             while ( uploadParamsIt.hasNext() ) {
                 String shortName = uploadParamsIt.next();
-                String tableName = SCHEMA+"."+shortName+"_"+jobID;
+                String baseName  = ( shortName.toLowerCase().startsWith(SCHEMA.toLowerCase()+".") ) ? shortName : SCHEMA+"."+shortName;
+                String tableName = baseName+"_"+jobID;
                 URI    tableURI  = uploadParamPairs.get(shortName);
-
+                
                 SAXBuilder sb      = new SAXBuilder("org.apache.xerces.parsers.SAXParser", false);
                 URL        url     = tableURI.toURL();
                 Document   doc     = sb.build(url);
                 Element    voTable = doc.getRootElement();
                 
-                //  TODO: Why does getChild return null here?
-                //  Element resource = voTable.getChild("RESOURCE");
+                metadata.put( baseName, new Table() );
+                dataRows.put( baseName, new ArrayList<String[]>() );
                 
-                metadata.put( shortName, new Table()     );
-                dataVals.put( shortName, new ArrayList() );
+                metadata.get( baseName ).tableName = tableName;
                 
-                readMetadata( shortName, tableName, voTable );
-                readDataVals( shortName, tableName, voTable );
+                readMetadata( baseName, tableName, voTable );
+                readDataRows( baseName, tableName, voTable );
             }
         }
         catch ( MalformedURLException mue ) {
@@ -146,21 +183,24 @@ public class UploadManager {
 
         //  Create (in the database) the tables named in the parameter
         //  list and described in the URI-referenced XML files.
-        Iterator<String> tableNamesIt = metadata.keySet().iterator();
+        Iterator<String> baseNamesIt = metadata.keySet().iterator();
         try {
-            while ( tableNamesIt.hasNext() ) {
-                String tableName = tableNamesIt.next();
+            while ( baseNamesIt.hasNext() ) {
+                String baseName = baseNamesIt.next();
+                String tableName = metadata.get(baseName).getTableName();
                 String sql = "create table "+tableName+" ( ";
-                List<Column> columns = metadata.get(tableName).getColumns();
+                List<Column> columns = metadata.get(baseName).getColumns();
                 for ( int i=0; i<columns.size(); i++ ) {
                     Column col = columns.get(i);
                     sql += col.columnName+" ";
-                    sql += localDbType(col.datatype,col.size.toString());
+                    sql += localDbType(col);
                     if ( i+1<columns.size() )
                         sql += ", ";
                 }
                 sql += " )";
-                //System.out.println( "SQL: "+sql );
+                Statement  stmt = conn.createStatement();
+                log.debug( "About to execute DDL: "+sql );
+                stmt.execute(sql);
             }
         }
         catch ( Exception sqle ) {
@@ -169,59 +209,46 @@ public class UploadManager {
         
         //  Populate the newly created database tables with
         //  values from the URI-referenced XML files.
-        /*
-        tableNamesIt = metadata.keySet().iterator();
+        baseNamesIt = metadata.keySet().iterator();
         try {
-            while ( tableNamesIt.hasNext() ) {
-                String tableName = tableNamesIt.next();
-                String sqlFront = "insert into "+tableName+" ( ";
-                List<Column> columns = metadata.get(tableName).getColumns();
-                for ( int i=0; i<columns.size(); i++ ) {
-                    Column col = columns.get(i);
-                    sql += col.columnName;
-                    if ( i+1<columns.size() )
-                        sql += ", ";
-                }
-                sqlFront += " ) values ( ";
-                String sqlBack = "";
-                for ( int i=0; i<rowVals.size(); i++ ) {
-                    for ( int j=0; i<columns.size(); i++ ) {
-                        String value = rowVals.get(tableName).get(i)[j];
+            while ( baseNamesIt.hasNext() ) {
+                String baseName = baseNamesIt.next();
+                String tableName = metadata.get(baseName).getTableName();
+                List<String[]> tableRows = dataRows.get(baseName);
+                for ( int i=0; i<tableRows.size(); i++ ) {
+                    String sql = "insert into "+tableName+" ( ";
+                    List<Column> columns = metadata.get(baseName).getColumns();
+                    for ( int j=0; j<columns.size(); j++ ) {
+                        Column col = columns.get(j);
+                        sql += col.columnName;
+                        if ( j+1<columns.size() )
+                            sql += ", ";
                     }
-                    String value = rowVals.get(tableName).
-                    Column col = columns.get(i);
-                    sql += col.columnName+" ";
-                    sql += localDbType(col.datatype,col.size.toString());
-                    if ( i+1<columns.size() )
-                        sql += ", ";
+                    sql += " ) values ( ";
+                    String [] dataCols = tableRows.get(i);
+                    int numDataCols = dataCols.length;
+                    for ( int j=0; j<numDataCols; j++ ) {
+                        String value = dataCols[j];
+                        sql += formatValue( value, columns.get(j).datatype );
+                        if ( j+1 < numDataCols )
+                            sql += ", ";
+                    }
+                    sql += " )";
+                    Statement stmt = conn.createStatement();
+                    log.debug( "About to execute DML: "+sql );
+                    stmt.execute(sql);
                 }
-                sql += " )";
-                
-                System.out.println( "SQL: "+sql );
             }
         }
         catch ( Exception sqle ) {
             throw ( new IllegalStateException( sqle.getMessage() ) );
         }
-        */
         
-        /*
-        for ( Parameter param : uploadParams ) {
-            // 1. validate
-            
-            // 2. open stream and read with JDOM parser, not stil
-            String tableName = "TAP_UPLOAD."+param.getName()+"_"+jobID;
-            //tables.put( tableName, readVOTable( new URL(param.getValue()) ) );
-            
-            // 3. create TAP_UPLOAD.theirName_jobID table in db
-            
-            // 4. create table metadata from tap schema (see votable doc)
-        }
-        */
-
-        if ( true )
+        if ( false )  //  Toggle this as required until UPLOAD is here to stay
             throw new UnsupportedOperationException( UPLOAD+" parameter not supported" );
-        
+
+        log.debug( "Finished loading "+metadata.size()+" table(s) for jobID: "+jobID );
+
         return metadata;
     }
     
@@ -237,6 +264,7 @@ public class UploadManager {
                 throw new IllegalStateException( "Missing UPLOAD values" );
             else {
                 for ( String pairStr : uploadParamPairs ) {
+                    log.debug( "UPLOAD parameter name,value pair: "+pairStr );
                     if ( pairStr==null || pairStr.trim().length()==0 )
                         throw new IllegalStateException( "Name-value pair missing from UPLOAD parameter list: "+paramList );
                     String [] pair = pairStr.split(",");
@@ -263,6 +291,8 @@ public class UploadManager {
                         throw new IllegalStateException( "Table tableName from UPLOAD parameter has invalid blanks: "+tableName );
                     if ( !tableURI.getScheme().equals("http") )
                         throw new IllegalStateException( "Table URI has unsupported protocol in UPLOAD parameter: "+tableURI );
+                    if ( !tableURI.getHost().equals("localhost") )
+                        throw new IllegalStateException( "Table URI points to an unsupported host: "+tableURI.getHost() );
                     if ( uniqueTableParams.containsKey(tableName) )
                         throw new IllegalStateException( "Duplicate table name in UPLOAD parameter: "+paramList );
                     uniqueTableParams.put( tableName, tableURI );
@@ -276,7 +306,7 @@ public class UploadManager {
             return null;
     }
     
-    private void readMetadata( String shortName, String tableName, Element el ) {
+    private void readMetadata( String baseName, String tableName, Element el ) {       
         List<Element> els = el.getChildren();
         if ( els.size() < 1 )
             return;
@@ -287,24 +317,32 @@ public class UploadManager {
             col.tableName = tableName;
             if ( inner.getName().equals("FIELD") ) {
                 col.columnName = inner.getAttributeValue("name");
-                col.datatype   = inner.getAttributeValue("datatype");
-                //
+                String xtype = inner.getAttributeValue("xtype");
+                if ( xtype == null )
+                    col.datatype = inner.getAttributeValue("datatype");
+                else
+                    col.datatype = xtype;
                 String sizeAttr = inner.getAttributeValue("width");
-                //col.size       = Integer.valueOf(inner.getAttributeValue("width"));
-                //  In the absence of a width, set the size arbitrarily until an official example is available.
-                col.size = ( sizeAttr==null ) ? new Integer(32) : Integer.valueOf(sizeAttr);
-                //
-                Table table = metadata.get(shortName);
+                if ( sizeAttr==null || sizeAttr.length()==0 )
+                    col.size = 1;
+                else if ( sizeAttr.equals("*") )
+                    col.size = 512;
+                else if ( sizeAttr.endsWith("*") )
+                    col.size = Integer.parseInt( sizeAttr.substring( 0, sizeAttr.lastIndexOf("*") ) );
+                else
+                    col.size = Integer.parseInt(sizeAttr);
+                Table table = metadata.get(baseName);
                 if ( table.columns == null )
                     table.columns = new ArrayList<Column>();
                 table.columns.add(col);
+                log.debug( "Finished reading column metadata: "+col.toString() );
             }
             else
-                readMetadata( shortName, tableName, inner );
+                readMetadata( baseName, tableName, inner );
         }
     }
     
-    private void readDataVals( String shortName, String tableName, Element el ) {
+    private void readDataRows( String baseName, String tableName, Element el ) {
         List<Element> els = el.getChildren();
         if ( els.size() < 1 )
             return;
@@ -313,45 +351,93 @@ public class UploadManager {
             Element inner = elsIt.next();
             if ( inner.getName().equals("TR") ) {
                 List<Element> colVals = inner.getChildren();
-                int numCols = metadata.get(shortName).columns.size();
+                int numCols = metadata.get(baseName).columns.size();
                 String [] row = new String[numCols];
-                for ( int i=0; i<numCols; i++ )
-                    row[i] = colVals.get(i).getValue();
-                dataVals.get(shortName).add(row);
+                for ( int i=0; i<numCols; i++ ) {
+                    String value = colVals.get(i).getValue();
+                    if ( metadata.get(baseName).columns.get(i).datatype.equals(TIMESTAMP) )
+                        try {
+                            row[i] = DateUtil.toString( DateUtil.toDate(value,DateUtil.IVOA_DATE_FORMAT), DateUtil.IVOA_DATE_FORMAT);
+                        }
+                        catch ( ParseException pe ) {
+                            throw new IllegalStateException( "UPLOAD parameter value for table: "+baseName+
+                                                             " is in an invalid datetime format: "+value );
+                        }
+                    else
+                        row[i] = value;
+                    log.debug( "Finished reading value: "+row[i] );
+                }
+                dataRows.get(baseName).add(row);
+                log.debug( "Finished reading row of data" );
             }
             else
-                readDataVals( shortName, tableName, inner );
+                readDataRows( baseName, tableName, inner );
         }
     }
     
-    private String localDbType( String voType, String width ) {
+    private String localDbType( Column col ) {
         
-        final String CHAR  = "char";
-        final String INT   = "int";
-        final String FLOAT = "float";
+        HashMap<String,String> typeMap  = new HashMap<String,String>();
         
-        final String VARCHAR = "varchar";
-        final String INTEGER = "integer";
-        final String REAL    = "real";
+        typeMap.put( BOOL,    BOOL );
+        typeMap.put( SHORT,  "smallint" );
+        typeMap.put( INT,    "integer" );
+        typeMap.put( LONG,   "bigint" );
+        typeMap.put( FLOAT,  "real" );
+        typeMap.put( DOUBLE, "double precision" );
+        //
+        typeMap.put( CHAR,       CHAR );
+        typeMap.put( UBYTE,     "byta" );
+        typeMap.put( BLOB,      "TODO: unknown" );
+        typeMap.put( CLOB,      "TODO: unknown" );
+        typeMap.put( TIMESTAMP, "timestamp" );
+        typeMap.put( POINT,     "spoint" );
+        typeMap.put( REGION,    "spoly" );
         
-        String localType = "";
+        String  type  = col.datatype;
+        Integer width = col.size;
         
-        if ( voType.equalsIgnoreCase(CHAR) ) {
-            localType += VARCHAR;
-            if ( width!=null ) {
-                localType += "("+width+")";
+        if ( width == 1 )
+            return typeMap.get(type);
+
+        if ( type.equals(SHORT)  ||
+             type.equals(INT)    ||
+             type.equals(LONG)   ||
+             type.equals(FLOAT)  ||
+             type.equals(DOUBLE) ) {
+            //  Numeric type with size > 1
+            return "bytea";
+        }
+
+        if ( type.equals(CHAR) )
+            return "varchar("+width+")";
+
+        throw new IllegalStateException( "Could not determine local DB datatype for: datatype="+type+", width="+width );
+    }
+    
+    private String formatValue( String value, String datatype ) {
+        if ( datatype.equals(CHAR) )
+            return "'"+escapeTicks(value)+"'";
+        else if ( datatype.equals(TIMESTAMP) )
+            return "'"+value+"'";
+        else
+            return value;
+    }
+    
+    private String escapeTicks( String value ) {
+        if ( value.contains("'") ) {
+            String [] allParts = value.split("'");
+            StringBuffer escapedValue = new StringBuffer();
+            for ( int partNum=0; partNum<allParts.length; partNum++ ) {
+                String part = allParts[partNum];
+                escapedValue.append(part);
+                if ( partNum+1 < allParts.length )
+                    escapedValue.append("\"'\"");
             }
-        }
-        else if ( voType.equalsIgnoreCase(INT) ) {
-            localType += INTEGER;
-        }
-        else if ( voType.equalsIgnoreCase(FLOAT) ) {
-            localType += REAL;
+            return escapedValue.toString();
         }
         else
-            throw new IllegalStateException( "Invalid data type: "+voType );
-        
-        return localType;
+            return value;
     }
 
 }

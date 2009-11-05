@@ -72,14 +72,23 @@ package ca.nrc.cadc.tap.test;
 import java.util.ArrayList;
 import java.util.List;
 
+import org.apache.log4j.BasicConfigurator;
+import org.apache.log4j.Logger;
+
 import junit.framework.TestCase;
 
 import ca.nrc.cadc.tap.TapValidator;
 import ca.nrc.cadc.uws.Parameter;
 
-public class TapValidatorTest extends TestCase
-{
-	TapValidator  validator = new TapValidator();
+public class TapValidatorTest extends TestCase {
+    
+    static {
+        BasicConfigurator.configure();
+    }
+
+    private static final Logger log = Logger.getLogger( TapValidatorTest.class );
+
+	TapValidator validator = new TapValidator();
 	
 	public void testNullParamList() {
 		try {
@@ -89,6 +98,7 @@ public class TapValidatorTest extends TestCase
 		catch ( IllegalStateException ise ) {
 			assertTrue( true );
 		}
+        log.debug( "*****  Finished test method: testNullParamList()  *****" );
 	}
 
 	public void testEmptyParamList() {
@@ -99,6 +109,7 @@ public class TapValidatorTest extends TestCase
 		catch ( IllegalStateException ise ) {
 			assertTrue( true );
 		}
+        log.debug( "*****  Finished test method: testEmptyParamList()  *****" );
 	}
 
 	public void testAllKnownParams() {
@@ -114,6 +125,7 @@ public class TapValidatorTest extends TestCase
 		catch ( IllegalStateException ise ) {
 			assertTrue( ise.getMessage(), false );
 		}
+        log.debug( "*****  Finished test method: testAllKnownParams()  *****" );
 	}
 
 	public void testCaseInsenseParamNames() {
@@ -128,6 +140,7 @@ public class TapValidatorTest extends TestCase
 		catch ( IllegalStateException ise ) {
 			assertTrue( ise.getMessage(), false );
 		}
+        log.debug( "*****  Finished test method: testCaseInsenseParamNames()  *****" );
 	}
 
 	public void testCaseSenseRequestValue() {
@@ -142,6 +155,7 @@ public class TapValidatorTest extends TestCase
 		catch ( IllegalStateException ise ) {
 			assertTrue( true );
 		}
+        log.debug( "*****  Finished test method: testCaseSenseRequestValue()  *****" );
 	}
 	
 	public void testRequestMissing() {
@@ -155,6 +169,7 @@ public class TapValidatorTest extends TestCase
 		catch ( IllegalStateException ise ) {
 			assertTrue( true );
 		}
+        log.debug( "*****  Finished test method: testRequestMissing()  *****" );
 	}
 
 	public void testRequestNullValue() {
@@ -169,6 +184,7 @@ public class TapValidatorTest extends TestCase
 		catch ( IllegalStateException ise ) {
 			assertTrue( true );
 		}
+        log.debug( "*****  Finished test method: testRequestNullValue()  *****" );
 	}
 	
 	public void testRequestEmptyValue() {
@@ -183,6 +199,7 @@ public class TapValidatorTest extends TestCase
 		catch ( IllegalStateException ise ) {
 			assertTrue( true );
 		}
+        log.debug( "*****  Finished test method: testRequestEmptyValue()  *****" );
 	}
 	
 	public void testRequestUnknownValue() {
@@ -197,6 +214,7 @@ public class TapValidatorTest extends TestCase
 		catch ( IllegalStateException ise ) {
 			assertTrue( true );
 		}
+        log.debug( "*****  Finished test method: testRequestUnknownValue()  *****" );
 	}
     
     public void testVersionMissingFromRequest() {
@@ -210,6 +228,7 @@ public class TapValidatorTest extends TestCase
         catch ( IllegalStateException ise ) {
             assertTrue( false );
         }
+        log.debug( "*****  Finished test method: testVersionMissingFromRequest()  *****" );
     }
 
 	public void testVersionNullValue() {
@@ -224,6 +243,7 @@ public class TapValidatorTest extends TestCase
 		catch ( IllegalStateException ise ) {
 			assertTrue( false );
 		}
+        log.debug( "*****  Finished test method: testVersionNullValue()  *****" );
 	}
 	
 	public void testVersionEmptyValue() {
@@ -238,6 +258,7 @@ public class TapValidatorTest extends TestCase
 		catch ( IllegalStateException ise ) {
 			assertTrue( false );
 		}
+        log.debug( "*****  Finished test method: testVersionEmptyValue()  *****" );
 	}
 	
 	public void testVersionUnsupportedValue() {
@@ -252,6 +273,7 @@ public class TapValidatorTest extends TestCase
 		catch ( IllegalStateException ise ) {
 			assertTrue( true );
 		}
+        log.debug( "*****  Finished test method: testVersionUnsupportedValue()  *****" );
 	}
 	
 	public void testLangMissingFromRequestDoQuery() {
@@ -265,6 +287,7 @@ public class TapValidatorTest extends TestCase
 		catch ( IllegalStateException ise ) {
 			assertTrue( true );
 		}
+        log.debug( "*****  Finished test method: testLangMissingFromRequestDoQuery()  *****" );
 	}
 
 	public void testLangNullValue() {
@@ -279,6 +302,7 @@ public class TapValidatorTest extends TestCase
 		catch ( IllegalStateException ise ) {
 			assertTrue( true );
 		}
+        log.debug( "*****  Finished test method: testLangNullValue()  *****" );
 	}
 	
 	public void testLangEmptyValue() {
@@ -293,6 +317,7 @@ public class TapValidatorTest extends TestCase
 		catch ( IllegalStateException ise ) {
 			assertTrue( true );
 		}
+        log.debug( "*****  Finished test method: testLangEmptyValue()  *****" );
 	}
     
     public void testLangAdqlValue() {
@@ -307,6 +332,7 @@ public class TapValidatorTest extends TestCase
         catch ( IllegalStateException ise ) {
             assertTrue( ise.getMessage(), false );
         }
+        log.debug( "*****  Finished test method: testLangAdqlValue()  *****" );
     }
 	
 	public void testLangSqlValue() {
@@ -322,6 +348,7 @@ public class TapValidatorTest extends TestCase
 		catch ( IllegalStateException ise ) {
 			assertTrue( ise.getMessage(), false );
 		}
+        log.debug( "*****  Finished test method: testLangSqlValue()  *****" );
 	}
 
 	public void testLangPqlValue() {
@@ -336,6 +363,7 @@ public class TapValidatorTest extends TestCase
 		catch ( IllegalStateException ise ) {
 			assertTrue( false );
 		}
+        log.debug( "*****  Finished test method: testLangPqlValue()  *****" );
 	}
 	
 	public void testLangUnknownValue() {
@@ -350,6 +378,7 @@ public class TapValidatorTest extends TestCase
 		catch ( IllegalStateException ise ) {
 			assertTrue( false );
 		}
+        log.debug( "*****  Finished test method: testLangUnknownValue()  *****" );
 	}
 
 }

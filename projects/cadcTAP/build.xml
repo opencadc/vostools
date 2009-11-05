@@ -129,9 +129,7 @@
         
         <!-- Run the junit test suite -->
         <!--
-             The UploadManager tests require sample VO Table XML files to be available as:
-                  http://localhost/voTableExample1.xml
-                  http://localhost/voTableExample2.xml
+             Tests requiring database credentials are not included in this target.
         -->
         <echo message="Running tests..." />
         <junit printsummary="yes" haltonfailure="yes" fork="yes">
@@ -140,16 +138,14 @@
                 <pathelement path="build/class"/>
                 <pathelement path="${jars}:${testingJars}"/>
             </classpath>
-            <!--
             <test name="ca.nrc.cadc.tap.test.TapValidatorTest"/>
-            <test name="ca.nrc.cadc.tap.test.UploadManagerParamTest"/>
-            <test name="ca.nrc.cadc.tap.test.UploadManagerUploadTest"/>
 		    <test name="ca.nrc.cadc.tap.schema.TapSchemaTest"/>
 		    <test name="ca.nrc.cadc.tap.test.TestProperties"/>
+        	<!--
             <test name="ca.nrc.cadc.tap.parser.adql.AdqlParserTest"/>
             <test name="ca.nrc.cadc.tap.parser.adql.AdqlPgSphereConverterTest"/>
-            <test name="ca.nrc.cadc.tap.parser.adql.AdqlFunctionTest"/>
             -->
+            <test name="ca.nrc.cadc.tap.parser.adql.AdqlFunctionTest"/>
             <test name="ca.nrc.cadc.tap.parser.adql.SqlParserTest"/>
             <formatter type="plain" usefile="false"/>
         </junit>

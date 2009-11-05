@@ -69,26 +69,32 @@
 
 package ca.nrc.cadc.tap.test;
 
+import java.sql.SQLException;
+import java.sql.Statement;
 import java.util.ArrayList;
 import java.util.List;
 
-import junit.framework.TestCase;
+import org.apache.log4j.Logger;
 
-import ca.nrc.cadc.tap.UploadManager;
 import ca.nrc.cadc.uws.Parameter;
 
-public class UploadManagerUploadTest extends TestCase
-{
-	UploadManager manager = new UploadManager();
-	
+public class UploadManagerUploadTest extends UploadTestCase {
+    
+    //  Example files 1 and 2 are much more intersting but their use is
+    //  commented out in favour of examples 3 and 4 until we have more
+    //  examples that are both interesting and correct.
+    
+    private static final Logger log = Logger.getLogger( UploadManagerUploadTest.class );
+
 	public void testUploadSingleParamPair() {
         try {
             List<Parameter> paramList = new ArrayList<Parameter>();
             paramList.add( new Parameter( "REQUEST", "doQuery" ) );
             paramList.add( new Parameter( "LANG",    "ADQL" ) );
-            paramList.add( new Parameter( "UPLOAD",  "mytable,http://localhost/voTableExample1.xml" ) );
+//            paramList.add( new Parameter( "UPLOAD",  "mytable,http://localhost/voTableExample1.xml" ) );
+            paramList.add( new Parameter( "UPLOAD",  "mytable,http://localhost/voTableExample3.xml" ) );
             manager.upload( paramList, "0" );
-            assertTrue( false );
+            assertTrue( true );  //  Toggle this as required until UPLOAD is here to stay
         }
         catch ( UnsupportedOperationException uoe ) {
             assertTrue( true );
@@ -96,17 +102,57 @@ public class UploadManagerUploadTest extends TestCase
         catch ( Throwable t ) {
             assertTrue( t.getMessage(), false );
         }
+        finally {
+            try {
+                Statement  stmt = conn.createStatement();
+                stmt.execute("drop table tap_upload.mytable_0");
+            }
+            catch (SQLException e) {
+                assertTrue( e.getMessage(), false );
+            }
+        }
+        log.debug( "*****  Finished test method: testUploadSingleParamPair()  *****" );
     }
-    
+	
+    public void testUploadSchemaInTableName() {
+        try {
+            List<Parameter> paramList = new ArrayList<Parameter>();
+            paramList.add( new Parameter( "REQUEST", "doQuery" ) );
+            paramList.add( new Parameter( "LANG",    "ADQL" ) );
+//            paramList.add( new Parameter( "UPLOAD",  "TAP_upload.mytable,http://localhost/voTableExample1.xml" ) );
+            paramList.add( new Parameter( "UPLOAD",  "TAP_upload.mytable,http://localhost/voTableExample3.xml" ) );
+            manager.upload( paramList, "0" );
+            assertTrue( true );  //  Toggle this as required until UPLOAD is here to stay
+        }
+        catch ( UnsupportedOperationException uoe ) {
+            assertTrue( true );
+        }
+        catch ( Throwable t ) {
+            assertTrue( t.getMessage(), false );
+        }
+        finally {
+            try {
+                Statement  stmt = conn.createStatement();
+                stmt.execute("drop table tap_upload.mytable_0");
+            }
+            catch (SQLException e) {
+                assertTrue( e.getMessage(), false );
+            }
+        }
+        log.debug( "*****  Finished test method: testUploadSchemaInTableName()  *****" );
+    }
+
     public void testUploadMultipleParamPair() {
         try {
             List<Parameter> paramList = new ArrayList<Parameter>();
             paramList.add( new Parameter( "REQUEST", "doQuery" ) );
             paramList.add( new Parameter( "LANG",    "ADQL" ) );
-            paramList.add( new Parameter( "UPLOAD",  "a,http://localhost/voTableExample1.xml" ) );
-            paramList.add( new Parameter( "UPLOAD",  "b,http://localhost/voTableExample2.xml" ) );
+//            paramList.add( new Parameter( "UPLOAD",  "a,http://localhost/voTableExample1.xml" ) );
+//            paramList.add( new Parameter( "UPLOAD",  "b,http://localhost/voTableExample2.xml" ) );
+            paramList.add( new Parameter( "UPLOAD",  "a,http://localhost/voTableExample3.xml" ) );
+            paramList.add( new Parameter( "UPLOAD",  "b,http://localhost/voTableExample4.xml" ) );
             manager.upload( paramList, "0" );
-            assertTrue( false );
+            assertTrue( true );  //  Toggle this as required until UPLOAD is here to stay
         }
         catch ( UnsupportedOperationException uoe ) {
             assertTrue( true );
@@ -114,6 +160,17 @@ public class UploadManagerUploadTest extends TestCase
         catch ( Throwable t ) {
             assertTrue( t.getMessage(), false );
         }
+        finally {
+            try {
+                Statement  stmt = conn.createStatement();
+                stmt.execute("drop table tap_upload.a_0");
+                stmt.execute("drop table tap_upload.b_0");
+            }
+            catch (SQLException e) {
+                assertTrue( e.getMessage(), false );
+            }
+        }
+        log.debug( "*****  Finished test method: testUploadMultipleParamPair()  *****" );
     }
     
     public void testMissingFile() {
@@ -121,8 +178,10 @@ public class UploadManagerUploadTest extends TestCase
             List<Parameter> paramList = new ArrayList<Parameter>();
             paramList.add( new Parameter( "REQUEST", "doQuery" ) );
             paramList.add( new Parameter( "LANG",    "ADQL" ) );
-            paramList.add( new Parameter( "UPLOAD",  "a,http://localhost/voTableExample1.xml" ) );
-            paramList.add( new Parameter( "UPLOAD",  "b,http://localhost/missingExample2.xml" ) );
+//            paramList.add( new Parameter( "UPLOAD",  "c,http://localhost/voTableExample1.xml" ) );
+//            paramList.add( new Parameter( "UPLOAD",  "d,http://localhost/missingExample2.xml" ) );
+            paramList.add( new Parameter( "UPLOAD",  "c,http://localhost/voTableExample3.xml" ) );
+            paramList.add( new Parameter( "UPLOAD",  "d,http://localhost/missingExample4.xml" ) );
             manager.upload( paramList, "0" );
             assertTrue( false );
         }
@@ -132,6 +191,44 @@ public class UploadManagerUploadTest extends TestCase
         catch ( Throwable t ) {
             assertTrue( t.getMessage(), true );
         }
+        finally {
+            try {
+                Statement  stmt = conn.createStatement();
+                stmt.execute("drop table tap_upload.c_0");
+                stmt.execute("drop table tap_upload.d_0");
+            }
+            catch (SQLException e) {
+                assertTrue( e.getMessage(), true );
+            }
+        }
+        log.debug( "*****  Finished test method: testMissingFile()  *****" );
+    }
+    
+    public void testUploadTwoColumns() {
+        try {
+            List<Parameter> paramList = new ArrayList<Parameter>();
+            paramList.add( new Parameter( "REQUEST", "doQuery" ) );
+            paramList.add( new Parameter( "LANG",    "ADQL" ) );
+            paramList.add( new Parameter( "UPLOAD",  "mytable,http://localhost/voTableExample3.xml" ) );
+            manager.upload( paramList, "0" );
+            assertTrue( true );  //  Toggle this as required until UPLOAD is here to stay
+        }
+        catch ( UnsupportedOperationException uoe ) {
+            assertTrue( true );
+        }
+        catch ( Throwable t ) {
+            assertTrue( t.getMessage(), false );
+        }
+        finally {
+            try {
+                Statement  stmt = conn.createStatement();
+                stmt.execute("drop table tap_upload.mytable_0");
+            }
+            catch (SQLException e) {
+                assertTrue( e.getMessage(), false );
+            }
+        }
+        log.debug( "*****  Finished test method: testUploadTwoColumns()  *****" );
     }
 
 }

@@ -75,27 +75,6 @@ import ca.nrc.cadc.uws.Parameter;
 
 public abstract class Validator
 {
-	protected static enum TapParams
-	{
-		REQUEST,
-		VERSION,
-		LANG,
-		QUERY,
-		POS,	// PQL
-		SIZE,	// PQL
-		REGION,	// PQL
-		BAND,	// PQL
-		TIME,	// PQL
-		SELECT,	// PQL
-		FROM,	// PQL
-		WHERE, 	// PQL
-		FORMAT,
-		MAXREC,
-		MTIME,
-		RUNID,
-		UPLOAD
-	}
-	
 	public static final String ADQL = "ADQL";
 	public static final String SQL  = "SQL";
 	public static final String PQL  = "PQL";
