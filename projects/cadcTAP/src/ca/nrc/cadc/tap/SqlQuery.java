@@ -103,6 +103,8 @@ public class SqlQuery implements TapQuery
     
     public void setExtraTables(Map<String, Table> extraTables)
     {
+        if (extraTables == null || extraTables.size() == 0)
+            return;
         throw new UnsupportedOperationException("Not supported yet.");
     }
     

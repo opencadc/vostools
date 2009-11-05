@@ -219,8 +219,10 @@ public class VOTableWriter implements TableWriter
                 }
             }
         }
-        //TODO: throw exception or build generic or error field???
-        return new Element("FIELD");
+        // select item did not match a column, must be a function call or expression
+        Element e = new Element("FIELD");
+        e.setAttribute("name", selectItem.getAlias());
+        return e;
     }
 
     // Build a String containing the nested Exception messages.

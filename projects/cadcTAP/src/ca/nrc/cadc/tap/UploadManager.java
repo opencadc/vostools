@@ -125,16 +125,9 @@ public class UploadManager {
     private DataSource dataSource;
     private Connection conn;
     
-    public UploadManager(DataSource dataSource) {
-        
+    public UploadManager(DataSource dataSource) 
+    {
         this.dataSource = dataSource;
-        
-        try {
-            conn = dataSource.getConnection();
-        }
-        catch (SQLException e) {
-            throw new IllegalStateException( "Failed to get connection from data source" );
-        }
     }
     
     public Map<String,Table> upload( List<Parameter> paramList, String jobID ) throws IOException, JDOMException {
@@ -147,11 +140,20 @@ public class UploadManager {
         //  Extract and validate the UPLOAD parameters
         //  from the full parameter list.
         Map<String,URI> uploadParamPairs = getUploadParams( paramList );
-        if ( uploadParamPairs == null )
+        if ( uploadParamPairs == null || uploadParamPairs.size() == 0)
             return null;
         
         if (dataSource == null)
             throw new UnsupportedOperationException(UPLOAD+" parameter not suported, cause: null DataSource");
+        
+        try 
+        {
+            this.conn = dataSource.getConnection();
+        }
+        catch (SQLException e) 
+        {
+            throw new IllegalStateException( "Failed to get connection from data source" );
+        }
         
         //  Read (into memory) the column names and values
         //  of tables named by the UPLOAD parameter(s).
