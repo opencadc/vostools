@@ -94,12 +94,6 @@ public class TableDataXMLOutputter extends XMLOutputter
     // Line separator.
     private static final String NEW_LINE = System.getProperty("line.separator");
 
-    // Opening TABLEDATA tag.
-    private static final String TABLEDATA_TAG_OPEN = "<TABLEDATA>";
-
-    // Closing TABLEDATA tag.
-    private static final String TABLEDATA_TAG_CLOSE = "</TABLEDATA>";
-
     // TapSchema
     TapSchema tapSchema;
 
@@ -172,16 +166,10 @@ public class TableDataXMLOutputter extends XMLOutputter
     {
         if (element instanceof TableDataElement)
         {
-            out.write(TABLEDATA_TAG_OPEN);
-            out.write(NEW_LINE);
-            List content = element.getContent();
-            for (Iterator iterator = content.iterator(); iterator.hasNext(); )
-            {
-                super.printElement(out, (Element) iterator.next(), level, namespaces);
-                out.write(NEW_LINE);
-            }
-            out.write(TABLEDATA_TAG_CLOSE);
-            out.write(NEW_LINE);
+            Element tableData = new Element("TABLEDATA");
+            for (Iterator it = element.getContent().iterator(); it.hasNext(); )
+                tableData.addContent((Element) it.next());
+            super.printElement(out, tableData, level, namespaces);
         }
         else
         {
