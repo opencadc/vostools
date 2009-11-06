@@ -129,7 +129,7 @@ public class ColumnMeta
             {
                 return false;
             }
-        } else if (!datatype.equals(other.datatype))
+        } else if (!datatype.equalsIgnoreCase(other.datatype))
         {
             return false;
         }
@@ -139,7 +139,7 @@ public class ColumnMeta
             {
                 return false;
             }
-        } else if (!name.equals(other.name))
+        } else if (!name.equalsIgnoreCase(other.name))
         {
             return false;
         }
@@ -149,7 +149,7 @@ public class ColumnMeta
             {
                 return false;
             }
-        } else if (!ucd.equals(other.ucd))
+        } else if (!ucd.equalsIgnoreCase(other.ucd))
         {
             return false;
         }
@@ -159,7 +159,7 @@ public class ColumnMeta
             {
                 return false;
             }
-        } else if (!unit.equals(other.unit))
+        } else if (!unit.equalsIgnoreCase(other.unit))
         {
             return false;
         }

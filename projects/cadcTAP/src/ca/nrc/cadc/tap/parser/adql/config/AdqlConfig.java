@@ -130,14 +130,14 @@ public abstract class AdqlConfig
         {
             if (schemaName == null)
             {
-                if (tm.getTableName().equals(tableName))
+                if (tm.getTableName().equalsIgnoreCase(tableName))
                 {
                     rtn = tm;
                     break;
                 }
             } else
             {
-                if (tm.getSchemaName().equals(schemaName) && tm.getTableName().equals(tableName))
+                if (tm.getSchemaName().equalsIgnoreCase(schemaName) && tm.getTableName().equalsIgnoreCase(tableName))
                 {
                     rtn = tm;
                     break;
@@ -191,11 +191,11 @@ public abstract class AdqlConfig
 
             if (s1 != null)
             {
-                if (s1.equals(s0) && t1.equals(t0))
+                if (s1.equalsIgnoreCase(s0) && t1.equalsIgnoreCase(t0))
                     proceed = true;
             } else
             {
-                if (t1.equals(t0) || t1.equals(a0))
+                if (t1.equalsIgnoreCase(t0) || t1.equalsIgnoreCase(a0))
                     proceed = true;
             }
         }
@@ -206,7 +206,7 @@ public abstract class AdqlConfig
             TableMeta tableMeta = findTableMeta(table);
             for (ColumnMeta columnMeta : tableMeta.getColumnMetas())
             {
-                if (columnMeta.getName().equals(columnName))
+                if (columnMeta.getName().equalsIgnoreCase(columnName))
                 {
                     rtn = true;
                     break;
@@ -319,7 +319,7 @@ public abstract class AdqlConfig
             {
                 for (Table fromTable : fromTables)
                 {
-                    if (fromTable.getName().equals(tableName) && isColumnInTable(column, fromTable))
+                    if (fromTable.getName().equalsIgnoreCase(tableName) && isColumnInTable(column, fromTable))
                         count++;
                 }
             }
@@ -358,7 +358,7 @@ public abstract class AdqlConfig
         {
             for (TableMeta tm : this.tableMetas)
             {
-                if (tm.getTableName().equals(tableName))
+                if (tm.getTableName().equalsIgnoreCase(tableName))
                 {
                     if (!found)
                         found = true;
@@ -387,9 +387,9 @@ public abstract class AdqlConfig
         String tableName = table.getName();
         for (TableMeta tm : this.tableMetas)
         {
-            if (tm.getTableName().equals(tableName))
+            if (tm.getTableName().equalsIgnoreCase(tableName))
             {
-                if (schemaName == null || schemaName.equals(tm.getSchemaName()))
+                if (schemaName == null || schemaName.equalsIgnoreCase(tm.getSchemaName()))
                 {
                     rtn = true;
                     break;

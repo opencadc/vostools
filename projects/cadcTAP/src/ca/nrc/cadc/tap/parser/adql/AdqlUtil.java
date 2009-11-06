@@ -166,7 +166,7 @@ public class AdqlUtil
             if (schemaName != null)
             {
                 // it's not using an alias. The table name is actual name
-                if (schemaName.equals(fromSchemaName) && tableName.equals(fromTableName))
+                if (schemaName.equalsIgnoreCase(fromSchemaName) && tableName.equalsIgnoreCase(fromTableName))
                 {
                     rtn = true;
                     break;
@@ -174,7 +174,7 @@ public class AdqlUtil
             } else
             {
                 // No schema name used; the table name could be an actual name, or an alias.
-                if (tableName.equals(fromTableName) || tableName.equals(fromAlias))
+                if (tableName.equalsIgnoreCase(fromTableName) || tableName.equalsIgnoreCase(fromAlias))
                 {
                     rtn = true;
                     break;

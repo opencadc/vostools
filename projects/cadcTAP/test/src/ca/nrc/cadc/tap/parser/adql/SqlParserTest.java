@@ -454,4 +454,23 @@ public class SqlParserTest {
 
         doConvert(expectValid);
     }
+    @Test
+    public void testCaseSensitive1() {
+        boolean expectValid = true;
+
+        this.adqlInput = " select POSITION_BOUNDS_CENTER as COORDS, "
+            + " long(position_bounds_center), "
+            + " lat(position_bounds_center) as DEC "
+            + " from CAOM.Plane limit 1";
+
+        doValidate(expectValid);
+    }
+
+    @Test
+    public void testCaseSensitive2() {
+        boolean expectValid = true;
+        this.adqlInput = "select * from tap_schema.tables";
+        doValidate(expectValid);
+    }
+    
 }

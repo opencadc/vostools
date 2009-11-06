@@ -406,7 +406,7 @@ public class RegionConverterImpl extends RegionConverter
             {
                 predStr = "NOT ";
             }
-            if (Constants.CONTAINS.equals(fname))
+            if (Constants.CONTAINS.equalsIgnoreCase(fname))
             {
                 // single argument
                 List expr = func.getParameters().getExpressions();
@@ -419,7 +419,7 @@ public class RegionConverterImpl extends RegionConverter
 
                 log.debug("converting CONTAINS(" + ex1 + "," + ex2 + ") = " + constant + " -> " + ret);
                 return ret;
-            } else if (Constants.INTERSECTS.equals(fname))
+            } else if (Constants.INTERSECTS.equalsIgnoreCase(fname))
             {
                 // single argument
                 List expr = func.getParameters().getExpressions();

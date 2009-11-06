@@ -99,18 +99,18 @@ public class FromColumn
             return false;
 
         boolean rtn = false;
-        if (c1Name.equals(_columnAlias) || c1Name.equals(_columnName))
+        if (c1Name.equalsIgnoreCase(_columnAlias) || c1Name.equalsIgnoreCase(_columnName))
         {
             Table t1 = c1.getTable();
             if (t1 != null && t1.getName() != null && !t1.getName().equals(""))
             {
                 String t1Name = t1.getName();
                 String s1Name = t1.getSchemaName();
-                if (t1Name.equals(_tableAlias) || t1Name.equals(_tableName))
+                if (t1Name.equalsIgnoreCase(_tableAlias) || t1Name.equalsIgnoreCase(_tableName))
                 {
                     if (s1Name != null && !s1Name.equals(""))
                     {
-                        if (s1Name.equals(_schemaName))
+                        if (s1Name.equalsIgnoreCase(_schemaName))
                             rtn = true;
                     } else
                         rtn = true;
@@ -155,31 +155,31 @@ public class FromColumn
         {
             if (other._columnAlias != null)
                 return false;
-        } else if (!_columnAlias.equals(other._columnAlias))
+        } else if (!_columnAlias.equalsIgnoreCase(other._columnAlias))
             return false;
         if (_columnName == null)
         {
             if (other._columnName != null)
                 return false;
-        } else if (!_columnName.equals(other._columnName))
+        } else if (!_columnName.equalsIgnoreCase(other._columnName))
             return false;
         if (_schemaName == null)
         {
             if (other._schemaName != null)
                 return false;
-        } else if (!_schemaName.equals(other._schemaName))
+        } else if (!_schemaName.equalsIgnoreCase(other._schemaName))
             return false;
         if (_tableAlias == null)
         {
             if (other._tableAlias != null)
                 return false;
-        } else if (!_tableAlias.equals(other._tableAlias))
+        } else if (!_tableAlias.equalsIgnoreCase(other._tableAlias))
             return false;
         if (_tableName == null)
         {
             if (other._tableName != null)
                 return false;
-        } else if (!_tableName.equals(other._tableName))
+        } else if (!_tableName.equalsIgnoreCase(other._tableName))
             return false;
         return true;
     }

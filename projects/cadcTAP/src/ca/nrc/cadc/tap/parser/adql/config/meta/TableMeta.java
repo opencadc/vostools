@@ -179,13 +179,13 @@ public class TableMeta
         {
             if (other.schemaName != null)
                 return false;
-        } else if (!schemaName.equals(other.schemaName))
+        } else if (!schemaName.equalsIgnoreCase(other.schemaName))
             return false;
         if (tableName == null)
         {
             if (other.tableName != null)
                 return false;
-        } else if (!tableName.equals(other.tableName))
+        } else if (!tableName.equalsIgnoreCase(other.tableName))
             return false;
         return true;
     }
