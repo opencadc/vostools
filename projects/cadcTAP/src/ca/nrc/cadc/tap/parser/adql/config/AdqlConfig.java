@@ -155,6 +155,35 @@ public abstract class AdqlConfig
     
     }
 
+    public boolean hasExtraTableMap()
+    {
+        return (_extraTablesMap != null && _extraTablesMap.size() > 0);
+    }
+    
+    public boolean isExtraTable(Table table)
+    {
+        boolean rtn = false;
+        String tableName = table.getName();
+        String schemaName = table.getSchemaName();
+        rtn = _extraTablesMap.containsKey(tableName)
+            || _extraTablesMap.containsKey(schemaName + "." + tableName);
+        return rtn;
+    }
+    
+    public ca.nrc.cadc.tap.schema.Table findInternalTableByExtraTable(Table table)
+    {
+        ca.nrc.cadc.tap.schema.Table rtn = null;
+        String tableName = table.getName();
+        String schemaName = table.getSchemaName();
+        String key = null;
+        if (_extraTablesMap.containsKey(tableName))
+            key = tableName;
+        else if (_extraTablesMap.containsKey(schemaName + "." + tableName))
+            key = schemaName + "." + tableName;
+        rtn = (ca.nrc.cadc.tap.schema.Table) _extraTablesMap.get(key);
+        return rtn;
+    }
+
     public TableMeta findTableMeta(Table table)
     {
         TableMeta rtn = null;

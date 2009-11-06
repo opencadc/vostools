@@ -78,6 +78,7 @@ import net.sf.jsqlparser.statement.Statement;
 
 import org.apache.log4j.Logger;
 
+import ca.nrc.cadc.tap.parser.adql.config.AdqlConfig;
 import ca.nrc.cadc.tap.parser.adql.converter.Converter;
 import ca.nrc.cadc.tap.parser.adql.exception.AdqlException;
 import ca.nrc.cadc.tap.parser.adql.validator.PlainSelectInfo;
@@ -112,10 +113,23 @@ public class AdqlParser
         try
         {
             statement = sqlParser.parse(sr);
+            
+            AdqlStatementVisitor statementVisitor = null;
+            
+            // If ExtraTables (e.g. Uploaded tables) exist, make conversion
+            AdqlConfig config = _manager.getConfig();
+            if (config.hasExtraTableMap())
+            {
+                ExtraTableConverter extraTableConverter = new ExtraTableConverter(config);
+                statementVisitor = new AdqlStatementVisitor(extraTableConverter);
+                statement.accept(statementVisitor);
+            }
+            
             Validator validator = _manager.getValidator();
             SelectValidator selectValidator = validator.getSelectValidator();
-            AdqlStatementVisitor statementVisitor = new AdqlStatementVisitor(selectValidator);
+            statementVisitor = new AdqlStatementVisitor(selectValidator);
             statement.accept(statementVisitor);
+            
             if (validator.hasException())
             {
                 int num = validator.getExceptions().size();
