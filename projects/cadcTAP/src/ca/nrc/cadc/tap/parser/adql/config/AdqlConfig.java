@@ -92,6 +92,7 @@ import ca.nrc.cadc.tap.parser.adql.exception.AdqlValidateException;
 import ca.nrc.cadc.tap.parser.adql.validator.PlainSelectInfo;
 import ca.nrc.cadc.tap.parser.adql.validator.SelectValidator;
 import ca.nrc.cadc.tap.parser.adql.validator.SelectValidator.PlainSelectType;
+import ca.nrc.cadc.tap.schema.Schema;
 import ca.nrc.cadc.tap.schema.TapSchema;
 
 public abstract class AdqlConfig
@@ -120,6 +121,39 @@ public abstract class AdqlConfig
 
     // protected boolean caseSensitive; // Whether column, table, and schema
     // names are case sensitive. -sz 2009-09-10
+
+    protected void initTableMeta()
+    {
+        TableMeta tableMeta;
+
+        for (ca.nrc.cadc.tap.schema.Schema schema : _tapSchema.getSchemas())
+        {
+            for (ca.nrc.cadc.tap.schema.Table table : schema.getTables())
+            {
+                tableMeta = new TableMeta(table.getSchemaName(), table.getSimpleTableName());
+                for (ca.nrc.cadc.tap.schema.Column column : table.getColumns())
+                {
+                    tableMeta.addColumnMeta(new ColumnMeta(column.getColumnName(), column.getDatatype(), column.getUcd(), column
+                            .getUnit()));
+                }
+                tableMetas.add(tableMeta);
+            }
+        }
+        if (_extraTablesMap != null && _extraTablesMap.size() > 0 )
+        {
+            for (ca.nrc.cadc.tap.schema.Table table : _extraTablesMap.values())
+            {
+                tableMeta = new TableMeta(table.getSchemaName(), table.getSimpleTableName());
+                for (ca.nrc.cadc.tap.schema.Column column : table.getColumns())
+                {
+                    tableMeta.addColumnMeta(new ColumnMeta(column.getColumnName(), column.getDatatype(), column.getUcd(), column
+                            .getUnit()));
+                }
+                tableMetas.add(tableMeta);
+            }
+        }
+    
+    }
 
     public TableMeta findTableMeta(Table table)
     {

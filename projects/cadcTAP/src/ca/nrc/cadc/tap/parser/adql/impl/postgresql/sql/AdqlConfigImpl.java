@@ -157,22 +157,4 @@ public class AdqlConfigImpl extends AdqlConfig
         // functions not available for standard SQL parser.
     }
 
-    private void initTableMeta()
-    {
-        TableMeta tableMeta;
-
-        for (Schema schema : _tapSchema.getSchemas())
-        {
-            for (Table table : schema.getTables())
-            {
-                tableMeta = new TableMeta(table.getSchemaName(), table.getSimpleTableName());
-                for (Column column : table.getColumns())
-                {
-                    tableMeta.addColumnMeta(new ColumnMeta(column.getColumnName(), column.getDatatype(), column.getUcd(), column
-                            .getUnit()));
-                }
-                tableMetas.add(tableMeta);
-            }
-        }
-    }
 }
