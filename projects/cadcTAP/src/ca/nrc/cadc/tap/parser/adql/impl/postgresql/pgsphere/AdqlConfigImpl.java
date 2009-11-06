@@ -97,7 +97,6 @@ import ca.nrc.cadc.tap.schema.TapSchemaDAO;
  */
 public class AdqlConfigImpl extends AdqlConfig
 {
-    private TapSchema _tapSchema;
 
     public AdqlConfigImpl(TapSchema tapSchema)
     {
