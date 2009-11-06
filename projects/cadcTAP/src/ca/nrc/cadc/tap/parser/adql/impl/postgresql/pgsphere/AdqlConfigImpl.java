@@ -72,6 +72,7 @@
  */
 package ca.nrc.cadc.tap.parser.adql.impl.postgresql.pgsphere;
 
+import java.util.Map;
 import java.util.MissingResourceException;
 
 import javax.sql.DataSource;
@@ -98,13 +99,15 @@ import ca.nrc.cadc.tap.schema.TapSchemaDAO;
 public class AdqlConfigImpl extends AdqlConfig
 {
 
-    public AdqlConfigImpl(TapSchema tapSchema)
+    public AdqlConfigImpl(TapSchema tapSchema,
+            Map<String, ca.nrc.cadc.tap.schema.Table> extraTablesMap)
     {
         super();
         if (tapSchema != null)
             _tapSchema = tapSchema;
         else
             loadDefaultTapSchema();
+        _extraTablesMap = extraTablesMap;
 
         configName = "CADC PostgreSQL pgSphere 1.1";
         initFunctionMeta();

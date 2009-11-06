@@ -222,6 +222,7 @@ public class QueryRunner implements JobRunner
             TapQuery tapQuery = (TapQuery) c.newInstance();
             tapQuery.setTapSchema(tapSchema);
             tapQuery.setExtraTables(tables);
+            tapQuery.initAdqlParser();
             tapQuery.setParameterList(paramList);
         	String sql = tapQuery.getSQL();
             List<TapSelectItem> selectList = tapQuery.getSelectList();

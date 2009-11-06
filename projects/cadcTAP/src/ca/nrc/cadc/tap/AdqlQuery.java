@@ -87,6 +87,7 @@ public class AdqlQuery implements TapQuery
 {
     private AdqlParser adqlParser;
     private TapSchema tapSchema;
+    private Map<String, Table> extraTables;
     private List<Parameter> paramList;
     private String queryString;
     private boolean validated = false;
@@ -97,15 +98,18 @@ public class AdqlQuery implements TapQuery
     public void setTapSchema(TapSchema tapSchema) 
     {
         this.tapSchema = tapSchema;
-        AdqlManager manager = new ca.nrc.cadc.tap.parser.adql.impl.postgresql.pgsphere.AdqlManagerImpl(this.tapSchema);
-        this.adqlParser = new AdqlParser(manager);
     }
 
     public void setExtraTables(Map<String, Table> extraTables)
     {
-        if (extraTables == null || extraTables.size() == 0)
-            return;
-        throw new UnsupportedOperationException("Not supported yet.");
+        this.extraTables = extraTables;
+    }
+
+    public void initAdqlParser()
+    {
+        AdqlManager manager = 
+            new ca.nrc.cadc.tap.parser.adql.impl.postgresql.pgsphere.AdqlManagerImpl(this.tapSchema, this.extraTables);
+        this.adqlParser = new AdqlParser(manager);
     }
     
     public void setParameterList( List<Parameter> paramList )

@@ -119,7 +119,7 @@ public class AdqlFunctionTest
     public void setUp() throws Exception
     {
         LoggerUtil.initialize(new String[] { "test", "ca.nrc.cadc" }, new String[] { "-d" });
-        AdqlManager manager = new AdqlManagerImpl(null);
+        AdqlManager manager = new AdqlManagerImpl(null, null);
         this.adqlParser = new AdqlParser(manager);
     }
 

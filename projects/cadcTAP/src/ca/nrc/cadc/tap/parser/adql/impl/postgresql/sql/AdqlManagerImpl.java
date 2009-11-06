@@ -69,6 +69,8 @@
 
 package ca.nrc.cadc.tap.parser.adql.impl.postgresql.sql;
 
+import java.util.Map;
+
 import ca.nrc.cadc.tap.parser.adql.AdqlManager;
 import ca.nrc.cadc.tap.parser.adql.impl.postgresql.sql.converter.ConverterImpl;
 import ca.nrc.cadc.tap.parser.adql.impl.postgresql.sql.validator.ValidatorImpl;
@@ -77,9 +79,9 @@ import ca.nrc.cadc.tap.schema.TapSchema;
 public class AdqlManagerImpl extends AdqlManager
 {
 
-    public AdqlManagerImpl(TapSchema tapSchema)
+    public AdqlManagerImpl(TapSchema tapSchema, Map<String, ca.nrc.cadc.tap.schema.Table> extraTablesMap)
     {
-        this.config = new AdqlConfigImpl(tapSchema);
+        this.config = new AdqlConfigImpl(tapSchema, extraTablesMap);
         this.validator = new ValidatorImpl();
         this.converter = new ConverterImpl();
         init();

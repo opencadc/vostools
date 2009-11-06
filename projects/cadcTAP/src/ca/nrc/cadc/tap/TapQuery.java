@@ -83,6 +83,8 @@ public interface TapQuery
     
     public void setExtraTables(Map<String,Table> extraTables);
     
+    public void initAdqlParser();
+    
     /**
      * Set the parameter list. Calling this methiod clears all previous
      * parsing state.

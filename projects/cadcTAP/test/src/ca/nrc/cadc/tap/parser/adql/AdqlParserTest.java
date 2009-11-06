@@ -122,7 +122,7 @@ public class AdqlParserTest {
 
 		this.adqlInput = "select top 123 shape, observation.spatial.*, BADctype1, BADTABLE.ctype2, BADSCHEMA.BADTABLE.BADctype2 from observation.plane join observation.spatial using (obsID) where cd1_1 > 432.1";
 
-		AdqlManager manager = new AdqlManagerImpl(null);
+		AdqlManager manager = new AdqlManagerImpl(null, null);
 		this.adqlParser = new AdqlParser(manager);
 	}
 

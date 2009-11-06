@@ -99,7 +99,7 @@ public abstract class AdqlConfig
     protected Logger log = Logger.getLogger(AdqlConfig.class);
 
     protected TapSchema _tapSchema;
-    protected Map<String, ca.nrc.cadc.tap.schema.Table> _extraTables;
+    protected Map<String, ca.nrc.cadc.tap.schema.Table> _extraTablesMap;
 
     protected String configName = "Default";
     protected List<FunctionMeta> functionMetas;

@@ -118,7 +118,7 @@ public class SqlParserTest {
 	@Before
 	public void setUp() throws Exception {
         LoggerUtil.initialize(new String[] { "test", "ca.nrc.cadc" }, new String[] { "-d" });
-		AdqlManager manager = new ca.nrc.cadc.tap.parser.adql.impl.postgresql.sql.AdqlManagerImpl(null);
+		AdqlManager manager = new ca.nrc.cadc.tap.parser.adql.impl.postgresql.sql.AdqlManagerImpl(null, null);
 		this.adqlParser = new AdqlParser(manager);
 	}
 
