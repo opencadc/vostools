@@ -122,7 +122,7 @@ public class QueryRunner implements JobRunner
         uploadDataSourceName = "jdbc/tapuploadadm";
 
         // TODO: configurable
-        fileStoreClassName = System.getProperty( "ca.nrc.cadc.tap.QueryRunner.fileStoreClassName" );
+        fileStoreClassName = "ca.nrc.cadc.tap.AdFileStore";
 	}
 	
 	private Job job;
