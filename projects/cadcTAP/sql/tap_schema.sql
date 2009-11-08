@@ -5,11 +5,8 @@
 
 -- sizes for fields are rather arbitrary and generous
 
--- tablespace specification is included and probably has to be removed
--- if you do not use this in your RDBMS; talk to your DBA :)
-
 -- tested with: PostgreSQL 8.x
--- tested Sybase 15.x with tablespace removed
+-- tested Sybase 15.x
 
 create table TAP_SCHEMA.schemas
 (
@@ -19,7 +16,6 @@ create table TAP_SCHEMA.schemas
 	
 	primary key (schema_name)
 )
-tablespace tap_data
 ;
 
 
@@ -33,7 +29,6 @@ create table TAP_SCHEMA.tables
 	primary key (table_name),
 	foreign key (schema_name) references TAP_SCHEMA.schemas (schema_name)
 )
-tablespace tap_data
 ;
 
 create table TAP_SCHEMA.columns
@@ -53,7 +48,6 @@ create table TAP_SCHEMA.columns
 	primary key (table_name,column_name),
 	foreign key (table_name) references TAP_SCHEMA.tables (table_name)
 )
-tablespace tap_data
 ;
 
 
@@ -69,7 +63,6 @@ create table TAP_SCHEMA.keys
 	foreign key (from_table) references TAP_SCHEMA.tables (table_name),
 	foreign key (target_table) references TAP_SCHEMA.tables (table_name)
 )
-tablespace tap_data
 ;
 
 create table TAP_SCHEMA.key_columns
@@ -80,7 +73,6 @@ create table TAP_SCHEMA.key_columns
 	
 	foreign key (key_id) references TAP_SCHEMA.keys (key_id)
 )
-tablespace tap_data
 ;
 
 
