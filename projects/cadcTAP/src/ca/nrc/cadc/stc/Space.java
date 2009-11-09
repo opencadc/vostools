@@ -83,17 +83,17 @@ public abstract class Space
     protected String currentWord;
     protected Scanner words;
 
-    public static List frames;
-    public static List refposs;
-    public static List flavors;
-    public static List units;
+    public static List<String> frames;
+    public static List<String> refposs;
+    public static List<String> flavors;
+    public static List<String> units;
     static
     {
         // default log level is debug.
         log = Logger.getLogger(Space.class);
         log.setLevel((Level)Level.DEBUG);
 
-        frames = new ArrayList();
+        frames = new ArrayList<String>();
         frames.add("ICRS");
         frames.add("FK5");
         frames.add("FK4");
@@ -107,7 +107,7 @@ public abstract class Space
         frames.add("GEO_D");
         frames.add("UNKNOWNFrame");
 
-        refposs = new ArrayList();
+        refposs = new ArrayList<String>();
         refposs.add("GEOCENTER");
         refposs.add("BARYCENTER");
         refposs.add("HELIOCENTER");
@@ -125,7 +125,7 @@ public abstract class Space
         refposs.add("PLUTO");
         refposs.add("UNKNOWNRefPos");
 
-        flavors = new ArrayList();
+        flavors = new ArrayList<String>();
         flavors.add("SPHER2");
         flavors.add("UNITSPHER");
         flavors.add("CART1");
@@ -133,7 +133,7 @@ public abstract class Space
         flavors.add("CART3");
         flavors.add("SPHER3");
 
-        units = new ArrayList();
+        units = new ArrayList<String>();
         units.add("deg");
         units.add("arcmin");
         units.add("arcsec");
