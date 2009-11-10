@@ -71,18 +71,24 @@ package ca.nrc.cadc.tap.test;
 
 import java.sql.Connection;
 import java.sql.SQLException;
+import java.util.MissingResourceException;
 
 import javax.sql.DataSource;
 
 import junit.framework.TestCase;
 
 import org.apache.log4j.BasicConfigurator;
+import org.apache.log4j.Logger;
 import org.springframework.jdbc.datasource.SingleConnectionDataSource;
 
+import ca.nrc.cadc.tap.TapProperties;
 import ca.nrc.cadc.tap.UploadManager;
+import ca.nrc.cadc.tap.parser.adql.impl.postgresql.sql.SqlPropertiesFactory;
 
 public abstract class UploadTestCase extends TestCase {
     
+    private static final Logger log = Logger.getLogger( UploadTestCase.class );
+
     protected static UploadManager manager;
     protected static Connection    conn;
     
@@ -95,19 +101,9 @@ public abstract class UploadTestCase extends TestCase {
         super();
 
         if ( manager == null ) {
-            try {
-                Class.forName(System.getProperty("ca.nrc.cadc.tap.dbDriver"));
-            }
-            catch (ClassNotFoundException e)
-            {
-                System.err.println("Failed to load JDBC driver");
-                return;
-            }
             
-            DataSource ds = new SingleConnectionDataSource( System.getProperty("ca.nrc.cadc.tap.dbURL"),
-                                                            System.getProperty("ca.nrc.cadc.tap.dbUsername"),
-                                                            System.getProperty("ca.nrc.cadc.tap.dbPassword"),
-                                                            false );
+            DataSource ds = getDataSource();
+
             manager = new UploadManager(ds);
             
             try {
@@ -117,6 +113,42 @@ public abstract class UploadTestCase extends TestCase {
                 assertTrue( e.getMessage(), false );
             }
         }
+    }
+    
+    /* Read database credentials from properties file 
+     * found in a directory on the classpath.
+     */
+    private DataSource getDataSource() {
+
+        try {
+            TapProperties properties = new TapProperties("postgresql_upload.properties");
+
+            final String  JDBC_DRIVER    = properties.getProperty("JDBC_DRIVER");
+            final String  JDBC_URL       = properties.getProperty("JDBC_URL");
+            final String  USERNAME       = properties.getProperty("USERNAME");
+            final String  PASSWORD       = properties.getProperty("PASSWORD");
+            final boolean SUPPRESS_CLOSE = properties.getPropertyBooloean("SUPPRESS_CLOSE");
+
+            try {
+                Class.forName(JDBC_DRIVER);
+            }
+            catch (ClassNotFoundException e) {
+                String msg = "JDBC Driver not found: "+JDBC_DRIVER;
+                log.error(msg, e);
+                throw new MissingResourceException(msg, JDBC_DRIVER, null);
+            }
+            
+            DataSource ds = new SingleConnectionDataSource( JDBC_URL,
+                                                            USERNAME,
+                                                            PASSWORD,
+                                                            SUPPRESS_CLOSE );
+            return ds;
+        }
+        catch (Exception ex) {
+            log.error(ex);
+        }
+        
+        return null;
     }
 
 }
