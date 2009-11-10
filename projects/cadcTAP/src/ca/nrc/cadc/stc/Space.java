@@ -69,6 +69,8 @@
 
 package ca.nrc.cadc.stc;
 
+import java.text.DecimalFormat;
+import java.text.NumberFormat;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Scanner;
@@ -79,10 +81,30 @@ public abstract class Space
 {
     private static Logger log;
 
+    // Default values.
+    private static final String DEFAULT_FRAME = "UNKNOWNFrame";
+    private static final String DEFAULT_REFPOS = "UNKNOWNRefPos";
+    private static final String DEFAULT_FLAVOR = "SPHER2";
+    private static final String DEFAULT_UNIT = "deg";
+    private static final String DEFAULT_UNIT_GEO = "deg deg m";
+    private static final String DEFAULT_UNIT_CART = "m";
+
+    // Dimensionality of the frame.
+    protected int dimensions;
+
+    // Words to process in the phrase?
     protected boolean endOfWords;
+
+    // The current word from the scanner.
     protected String currentWord;
+
+    // The tokenized phrase.
     protected Scanner words;
 
+    // Formatter for Double values.
+    protected static DecimalFormat doubleFormat;
+
+    // Lists containing allowed values.
     public static List<String> frames;
     public static List<String> refposs;
     public static List<String> flavors;
@@ -93,6 +115,12 @@ public abstract class Space
         log = Logger.getLogger(Space.class);
         log.setLevel((Level)Level.DEBUG);
 
+        // TODO: what is the format, should it even be used?
+        doubleFormat = new DecimalFormat("####.########");
+        doubleFormat.setDecimalSeparatorAlwaysShown(true);
+        doubleFormat.setMinimumFractionDigits(1);
+
+        // Allowed values for frame.
         frames = new ArrayList<String>();
         frames.add("ICRS");
         frames.add("FK5");
@@ -107,6 +135,7 @@ public abstract class Space
         frames.add("GEO_D");
         frames.add("UNKNOWNFrame");
 
+        // Allowed values for refpos.
         refposs = new ArrayList<String>();
         refposs.add("GEOCENTER");
         refposs.add("BARYCENTER");
@@ -125,14 +154,16 @@ public abstract class Space
         refposs.add("PLUTO");
         refposs.add("UNKNOWNRefPos");
 
+        // Allowed values for flavor.
         flavors = new ArrayList<String>();
-        flavors.add("SPHER2");
         flavors.add("UNITSPHER");
+        flavors.add("SPHER2");
+        flavors.add("SPHER3");
         flavors.add("CART1");
         flavors.add("CART2");
         flavors.add("CART3");
-        flavors.add("SPHER3");
 
+        // Allowed values for unit.
         units = new ArrayList<String>();
         units.add("deg");
         units.add("arcmin");
@@ -146,7 +177,10 @@ public abstract class Space
         units.add("Mpc");
     }
 
-    public String stcs;
+    /**
+     * STC-S phrase elements.
+     */
+    public String phrase;
     public String space;
     public Double fill;
     public String frame;
@@ -160,28 +194,40 @@ public abstract class Space
     public List<Double> pixsiz;
     public Velocity velocity;
 
+    /**
+     *
+     * @param space
+     */
     public Space(String space)
     {
         this.space = space;
     }
 
-    public Space(String space, String stcs)
+    public Space(String space, String phrase)
+        throws StcsParsingException
     {
-        if (stcs == null || stcs.length() == 0)
+        if (phrase == null || phrase.length() == 0)
             return;
         this.space = space;
-        this.stcs = stcs;
-        
+        this.phrase = phrase;
+
         endOfWords = false;
         currentWord = null;
-        words = new Scanner(stcs);
+        words = new Scanner(phrase);
         words.useDelimiter("\\s");
+
+        // TODO: assign default values?
+//        dimensions = 2;
+//        frame = DEFAULT_FRAME;
+//        refpos = DEFAULT_REFPOS;
+//        flavor = DEFAULT_FLAVOR;
 
         valiateSpace(space);
         getFillfactor();
         getFrame();
         getRefpos();
         getFlavor();
+        getDimensionality();
         getPos();
         getPosition();
         getUnit();
@@ -189,22 +235,30 @@ public abstract class Space
         getResolution();
         getSize();
         getPixSize();
+        getVelocity();
     }
 
     public abstract String toSTCString();
 
-    protected abstract void getPos();
+    protected abstract void getPos() throws StcsParsingException;
 
     protected void valiateSpace(String space)
+        throws StcsParsingException
     {
         if (words.hasNext(space))
             words.next();
         else
-            throw new IllegalArgumentException("Invalid space " + words.next());
+        {
+            if (words.hasNext())
+                throw new StcsParsingException("Invalid space value, found " + words.next() + ", expecting " + space);
+            else
+                throw new StcsParsingException("Unexpected end to STC-S phrase, missing space value");
+        }
         log.debug("space: " + space);
     }
 
     protected void getFillfactor()
+        throws StcsParsingException
     {
         if (words.hasNext("fillfactor"))
         {
@@ -212,23 +266,34 @@ public abstract class Space
             if (words.hasNextDouble())
                 fill = words.nextDouble();
             else
-                throw new IllegalArgumentException("Unexpected end to STC-S string, missing fillfactor value");
+            {
+                if (words.hasNext())
+                    throw new StcsParsingException("Invalid fillfactor value, expecting double, found " + words.next());
+                else
+                    throw new StcsParsingException("Unexpected end to STC-S phrase, missing fillfactor value");
+            }
         }
         log.debug("fillfactor: " + fill);
     }
 
     protected void getFrame()
+        throws StcsParsingException
     {
         if (words.hasNext())
         {
             frame = words.next();
             if (!frames.contains(frame))
-                throw new IllegalArgumentException("Invalid frame " + frame);
+                throw new StcsParsingException("Invalid frame element " + frame);
+        }
+        else
+        {
+            throw new StcsParsingException("Unexpected end to STC-S phrase, missing frame element");
         }
         log.debug("frame: " + frame);
     }
 
     protected void getRefpos()
+        throws StcsParsingException
     {
         if (words.hasNext())
         {
@@ -241,40 +306,55 @@ public abstract class Space
         }
         else
         {
-            throw new IllegalArgumentException("Unexpected end to STC-S string reached before pos assigned");
+            throw new StcsParsingException("Unexpected end to STC-S phrase before pos element");
         }
         log.debug("refpos: " + refpos);
     }
 
     protected void getFlavor()
+        throws StcsParsingException
     {
         if (currentWord == null)
         {
             if (words.hasNext())
                 currentWord = words.next();
             else
-                throw new IllegalArgumentException("Unexpected end to STC-S string reached before pos assigned");
+                throw new StcsParsingException("Unexpected end to STC-S phrase before pos element");
         }
         if (flavors.contains(currentWord))
         {
             flavor = currentWord;
             currentWord = null;
         }
+        else
+        {
+            throw new StcsParsingException("Invalid refpos or flavor element " + currentWord);
+        }
         log.debug("flavor: " + flavor);
     }
 
-    protected void getPosition()
+    protected void getDimensionality()
     {
-        position = getDoubleListForWord("Position");
+        if (flavor.equals("CART1"))
+            dimensions = 1;
+        if (flavor.equals("CART2") || flavor.equals("SPHER2"))
+            dimensions = 2;
+        if (flavor.equals("CART3") || flavor.equals("SPHER3") || flavor.equals("UNITSPHER"))
+            dimensions = 3;
+        log.debug("dimensions: " + dimensions);
+    }
+
+    protected void getPosition()
+        throws StcsParsingException
+    {
+        position = getListForElement("Position");
     }
 
     protected void getUnit()
+        throws StcsParsingException
     {
         if (endOfWords)
-        {
-            unit = null;
             return;
-        }
         if (currentWord == null)
         {
             if (words.hasNext())
@@ -282,7 +362,7 @@ public abstract class Space
             else
                 endOfWords = true;
         }
-        if (currentWord.equals("unit"))
+        if (!endOfWords && currentWord.equals("unit"))
         {
             if (words.hasNext())
             {
@@ -292,36 +372,56 @@ public abstract class Space
                     unit = currentWord;
                     currentWord = null;
                 }
+                else
+                {
+                    throw new StcsParsingException("Invalid unit value " + currentWord);
+                }
+            }
+            else
+            {
+                throw new StcsParsingException("Unexpected end to STC-S phrase, missing unit value");
             }
         }
         log.debug("unit: " + unit);
     }
 
     protected void getError()
+        throws StcsParsingException
     {
-        error = getDoubleListForWord("Error");
+        error = getListForElement("Error");
     }
 
     protected void getResolution()
+        throws StcsParsingException
     {
-        resln = getDoubleListForWord("Resolution");
+        resln = getListForElement("Resolution");
     }
 
     protected void getSize()
+        throws StcsParsingException
     {
-        size = getDoubleListForWord("Size");
+        size = getListForElement("Size");
     }
 
     protected void getPixSize()
+        throws StcsParsingException
     {
-        pixsiz = getDoubleListForWord("PixSize");
+        pixsiz = getListForElement("PixSize");
     }
 
-    private List<Double> getDoubleListForWord(String word)
+    protected void getVelocity()
+        throws StcsParsingException
+    {
+        if (!endOfWords && words.hasNext())
+            velocity = new Velocity(words);
+    }
+
+    private List<Double> getListForElement(String word)
+        throws StcsParsingException
     {
         if (endOfWords)
             return null;
-        List<Double> value = null;
+        List<Double> values = null;
         if (currentWord == null)
         {
             if (words.hasNext())
@@ -329,28 +429,27 @@ public abstract class Space
             else
                 endOfWords = true;
         }
-        if (currentWord.equals(word))
+        if (!endOfWords && currentWord.equals(word))
         {
+            if (!words.hasNextDouble())
+                throw new StcsParsingException(word + " element has no values");
             while (words.hasNextDouble())
             {
-                if (value == null)
-                    value = new ArrayList<Double>();
-                value.add(words.nextDouble());
+                if (values == null)
+                    values = new ArrayList<Double>();
+                values.add(words.nextDouble());
             }
-            if (value.size() == 0)
-                throw new IllegalArgumentException(word + " parameter has no values");
             currentWord = null;
         }
-
-        log.debug(word + ": " + value);
-        return value;
+        log.debug(word + ": " + values);
+        return values;
     }
 
-    protected String getListValues(List<Double> list)
+    protected String doubleListToString(List<Double> list)
     {
         StringBuilder sb = new StringBuilder();
         for (Double d : list)
-            sb.append(d).append(" ");
+            sb.append(doubleFormat.format(d)).append(" ");
         return sb.toString();
     }
 }

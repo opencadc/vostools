@@ -91,9 +91,10 @@ public class Position extends Space
         super("Position");
     }
 
-    public Position(String stcs)
+    public Position(String phrase)
+        throws StcsParsingException
     {
-        super("Position", stcs);
+        super("Position", phrase);
     }
 
     public String toSTCString()
@@ -106,23 +107,24 @@ public class Position extends Space
         if (flavor != null)
             sb.append(flavor).append(" ");
         if (pos != null)
-            sb.append(getListValues(pos));
+            sb.append(doubleListToString(pos));
         if (unit != null)
-            sb.append("Unit ").append(unit).append(" ");
+            sb.append("unit ").append(unit).append(" ");
         if (error != null)
-            sb.append(getListValues(error));
+            sb.append("Error ").append(doubleListToString(error));
         if (resln != null)
-            sb.append(getListValues(resln));
+            sb.append("Resolution ").append(doubleListToString(resln));
         if (size != null)
-            sb.append(getListValues(size));
+            sb.append("Size ").append(doubleListToString(size));
         if (pixsiz != null)
-            sb.append(getListValues(pixsiz));
+            sb.append("PixSize ").append(doubleListToString(pixsiz));
         if (velocity != null)
             sb.append(velocity.toSTCString());
         return sb.toString();
     }
 
     protected void getPos()
+        throws StcsParsingException
     {
         // current word as a Double.
         Double value = null;
@@ -130,26 +132,36 @@ public class Position extends Space
         {
             if (words.hasNextDouble())
                 value = words.nextDouble();
+            else if (words.hasNext())
+                throw new StcsParsingException("Invalid pos element " + words.next());
             else
-                throw new IllegalArgumentException("pos has no values");
+                throw new StcsParsingException("Unexpected end to STC-S phrase before pos element");
         }
         else
         {
-            value = Double.valueOf(currentWord);
+            try
+            {
+                value = Double.valueOf(currentWord);
+            }
+            catch (NumberFormatException e)
+            {
+                throw new StcsParsingException("Invalid pos value " + currentWord, e);
+            }
         }
 
         // Create new List and add first value.
         pos = new ArrayList<Double>();
         pos.add(value);
 
-        // Loop through the next x Doubles and add to list.
+        // Loop through the next x values and add to list.
         while (words.hasNextDouble())
             pos.add(words.nextDouble());
 
-        // Should only be 1,2, or 3 pos Doubles.
-        if (pos.size() == 0 || pos.size() > 3)
-            throw new IllegalArgumentException("Invalid number of pos values " + pos.size());
+        // Should only be 1,2, or 3 pos values.
+        if (pos.size() != dimensions)
+            throw new StcsParsingException("Invalid number of pos values " + pos.size());
 
+        currentWord = null;
         log.debug("pos: " + pos);
     }
     

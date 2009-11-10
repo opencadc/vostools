@@ -69,110 +69,16 @@
 
 package ca.nrc.cadc.stc;
 
-import java.util.ArrayList;
-import java.util.List;
-import org.apache.log4j.Level;
-import org.apache.log4j.Logger;
-
-public class Circle extends Space
+public class StcsParsingException extends Exception
 {
-    private static Logger log = Logger.getLogger(Circle.class);
-    static
+    public StcsParsingException(String message)
     {
-        // default log level is debug.
-        log = Logger.getLogger(Circle.class);
-        log.setLevel((Level)Level.DEBUG);
+        super(message);
     }
 
-    public List<Double> pos;
-    public Double radius;
-
-    public Circle(String phrase)
-        throws StcsParsingException
+    public StcsParsingException(String message, Throwable cause)
     {
-        super("Circle", phrase);
-    }
-
-    public String toSTCString()
-    {
-        StringBuilder sb = new StringBuilder();
-        sb.append(space).append(" ");
-        if (fill != null)
-            sb.append("fillfactor ").append(fill).append(" ");
-        sb.append(frame).append(" ");
-        if (refpos != null)
-            sb.append(refpos).append(" ");
-        if (flavor != null)
-            sb.append(flavor).append(" ");
-        if (pos != null)
-            sb.append(doubleListToString(pos));
-        if (radius != null)
-            sb.append(radius).append(" ");
-        if (position != null)
-            sb.append("Position ").append(doubleListToString(position));
-        if (unit != null)
-            sb.append("unit ").append(unit).append(" ");
-        if (error != null)
-            sb.append("Error ").append(doubleListToString(error));
-        if (resln != null)
-            sb.append("Resolution ").append(doubleListToString(resln));
-        if (size != null)
-            sb.append("Size ").append(doubleListToString(size));
-        if (pixsiz != null)
-            sb.append("PixSize ").append(doubleListToString(pixsiz));
-        if (velocity != null)
-            sb.append(velocity.toSTCString());
-        return sb.toString();
-    }
-
-    protected void getPos()
-        throws StcsParsingException
-    {
-        // current word as a Double.
-        Double value = null;
-        if (currentWord == null)
-        {
-            if (words.hasNextDouble())
-                value = words.nextDouble();
-            else if (words.hasNext())
-                throw new StcsParsingException("Invalid pos element " + words.next());
-            else
-                throw new StcsParsingException("Unexpected end to STC-S phrase before pos element");
-        }
-        else
-        {
-            try
-            {
-                value = Double.valueOf(currentWord);
-            }
-            catch (NumberFormatException e)
-            {
-                throw new StcsParsingException("Invalid pos value " + currentWord, e);
-            }
-        }
-
-        // Create new List and add the first value.
-        pos = new ArrayList<Double>();
-        pos.add(value);
-
-        // Loop through the next x values and add to list,
-        // last Double is the radius.
-        while (words.hasNextDouble())
-        {
-            value = words.nextDouble();
-            if (words.hasNextDouble())
-                pos.add(value);
-            else
-                radius = value;
-        }
-
-        // Should only be 1, 2, or 3 pos values.
-        if (pos.size() != dimensions)
-            throw new StcsParsingException("Invalid number of pos values " + pos.size());
-
-        currentWord = null;
-        log.debug("pos: " + pos);
-        log.debug("radius: " + radius);
+        super(message, cause);
     }
     
 }

@@ -69,7 +69,107 @@
 
 package ca.nrc.cadc.stc;
 
-public class Box //extends Space
+import java.util.ArrayList;
+import java.util.List;
+import org.apache.log4j.Level;
+import org.apache.log4j.Logger;
+
+public class Box extends Space
 {
+    private static Logger log = Logger.getLogger(Box.class);
+    static
+    {
+        // default log level is debug.
+        log = Logger.getLogger(Box.class);
+        log.setLevel((Level)Level.DEBUG);
+    }
+
+    public List<Double> pos;
+    public List<Double> bsize;
+
+    public Box(String phrase)
+        throws StcsParsingException
+    {
+        super("Box", phrase);
+    }
+
+    public String toSTCString()
+    {
+        StringBuilder sb = new StringBuilder();
+        sb.append(space).append(" ");
+        if (fill != null)
+            sb.append("fillfactor ").append(fill).append(" ");
+        sb.append(frame).append(" ");
+        if (refpos != null)
+            sb.append(refpos).append(" ");
+        if (flavor != null)
+            sb.append(flavor).append(" ");
+        if (pos != null)
+            sb.append(doubleListToString(pos));
+        if (bsize != null)
+            sb.append(doubleListToString(bsize));
+        if (position != null)
+            sb.append("Position ").append(doubleListToString(position));
+        if (unit != null)
+            sb.append("unit ").append(unit).append(" ");
+        if (error != null)
+            sb.append("Error ").append(doubleListToString(error));
+        if (resln != null)
+            sb.append("Resolution ").append(doubleListToString(resln));
+        if (size != null)
+            sb.append("Size ").append(doubleListToString(size));
+        if (pixsiz != null)
+            sb.append("PixSize ").append(doubleListToString(pixsiz));
+        if (velocity != null)
+            sb.append(velocity.toSTCString());
+        return sb.toString();
+    }
+
+    protected void getPos()
+        throws StcsParsingException
+    {
+        // current word or next word as a Double.
+        Double value = null;
+        if (currentWord == null)
+        {
+            if (words.hasNextDouble())
+                value = words.nextDouble();
+            else if (words.hasNext())
+                throw new StcsParsingException("Invalid pos element " + words.next());
+            else
+                throw new StcsParsingException("Unexpected end to STC-S phrase before pos element");
+        }
+        else
+        {
+            try
+            {
+                value = Double.valueOf(currentWord);
+            }
+            catch (NumberFormatException e)
+            {
+                throw new StcsParsingException("Invalid pos value " + currentWord, e);
+            }
+        }
+
+        // Add all Double values up to the next element.
+        List<Double> values = new ArrayList<Double>();
+        values.add(value);
+        while (words.hasNextDouble())
+            values.add(words.nextDouble());
+        
+        // Should be 2 times dimensions values.
+        if (values.size() / 2 != dimensions)
+            throw new StcsParsingException("Invalid number of pos or bsize values");
+        
+        pos = new ArrayList<Double>(dimensions);
+        pos.addAll(values.subList(0, dimensions));
+
+        bsize = new ArrayList<Double>(dimensions);
+        bsize.addAll(values.subList(dimensions, values.size()));
+
+        currentWord = null;
+        log.debug("pos: " + pos);
+        log.debug("bsize: " + bsize);
+    }
 
 }
