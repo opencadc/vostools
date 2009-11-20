@@ -151,14 +151,25 @@
     <!-- Run the test suite -->
     <target name="test" depends="compile-test">
         <echo message="Running test" />
+
+        <!-- Delete old WAR file -->
+        <echo message="Deleting old WAR file ${deployDir}/${project}.war" />
+        <delete file="${deployDir}/${project}.war"/>
+
+        <!-- Delete old delployed directory -->
+        <echo message="Deleting old deployment directory ${deployDir}/${project}/" />
+        <delete dir="${deployDir}/${project}" includeEmptyDirs="true"/>
         
-        <!-- Copy WAR file to /data/test/webapps -->
-        <copy file="${build}/webapps/cadcSampleUWS.war" todir="${deployDir}"/>
+        <!-- Copy new WAR file to /data/test/webapps -->
+        <echo message="Copying new WAR file to deployment directory..." />
+        <copy file="${build}/webapps/${project}.war" todir="${deployDir}"/>
 
         <!-- Copy log4j properties file to build/class -->
+        <echo message="Copying log4j.properties to build/class..." />
         <copy file="test/src/resources/log4j.properties" todir="build/class"/>
 
         <!-- Copy properties files from test/src/resources to build/resources -->
+        <echo message="Copying resource to build/resources..." />
         <copy todir="build/resources">
             <fileset dir="test/src/resources">
                 <exclude name="log4j.properties"/>
@@ -168,12 +179,8 @@
         <!-- wait for Tomcat to unpack the WAR file -->
         <echo message="Waiting for Tomcat to unpack the WAR file..." />
         <waitfor>
-            <available file="${deployDir}/cadcSampleUWS/WEB-INF/web.xml"/>
+            <available file="${deployDir}/${project}/WEB-INF/web.xml"/>
         </waitfor>
-
-        <!-- Now wait 30 seconds for the war file to deploy -->
-        <echo message="Pausing for 30 seconds while the WAR file is deployed..." />
-        <sleep seconds="10"/>
         
         <!-- Run the junit test suite -->
         <echo message="Running test suite..." />
@@ -182,7 +189,9 @@
                 <pathelement path="build/class"/>
                 <pathelement path="${jars}:${testingJars}"/>
             </classpath>
-            <test name="ca.nrc.cadc.uws.sample.SampleTestSuite"/>
+            <sysproperty key="service.url" value="http://localhost/cadcSampleUWS/async"/>
+            <sysproperty key="properties.directory" value="build/resources"/>
+            <test name="ca.nrc.cadc.conformance.uws.UWSTestSuite"/>
             <formatter type="plain" usefile="false"/>
         </junit>
 
