@@ -70,27 +70,29 @@
 package ca.nrc.cadc.conformance.uws;
 
 import com.meterware.httpunit.GetMethodWebRequest;
+import com.meterware.httpunit.HeadMethodWebRequest;
 import com.meterware.httpunit.PostMethodWebRequest;
 import com.meterware.httpunit.WebConversation;
 import com.meterware.httpunit.WebRequest;
 import com.meterware.httpunit.WebResponse;
-import java.io.File;
 import java.io.IOException;
+import java.io.InputStream;
 import java.io.StringReader;
-import java.net.InetAddress;
 import java.net.URL;
-import java.net.UnknownHostException;
 import java.util.Iterator;
 import java.util.Map;
 import java.util.Set;
 import javax.xml.XMLConstants;
 import javax.xml.parsers.DocumentBuilder;
 import javax.xml.parsers.DocumentBuilderFactory;
+import javax.xml.parsers.ParserConfigurationException;
+import javax.xml.transform.Source;
 import javax.xml.transform.sax.SAXSource;
+import javax.xml.transform.stream.StreamSource;
 import javax.xml.validation.Schema;
 import javax.xml.validation.SchemaFactory;
 import javax.xml.validation.Validator;
-import junit.framework.TestCase;
+import org.apache.log4j.Level;
 import org.apache.log4j.Logger;
 import org.w3c.dom.Document;
 import org.w3c.dom.Element;
@@ -101,156 +103,118 @@ import org.xml.sax.SAXException;
 import org.xml.sax.SAXParseException;
 import org.xml.sax.XMLReader;
 import org.xml.sax.helpers.XMLReaderFactory;
+import static org.junit.Assert.*;
 
-public class TestConfig extends TestCase
+public class TestConfig
 {
-    private static final String PROPERTIES_DIRECTORY = "build/resources";
+    private static Logger log = Logger.getLogger(TestConfig.class);
 
-    public static final String ACCEPT_XML = "text/xml";
+    private static final String SERVICE_SCHEMA_RESOURCE = "UWS-1.0.xsd";
 
-    public static final String[] PHASES =
+    private static Validator validator;
+    private static DocumentBuilder parser;
+
+    protected static String serviceUrl;
+    protected static String serviceSchema;
+
+    public TestConfig()
     {
-        "PENDING", "QUEUED", "EXECUTING", "COMPLETED", "ERROR", "ABORTED"
-    };
+        // DEBUG is default.
+        log.setLevel((Level)Level.INFO);
+        
+        // Base URL of the service to be tested.
+        serviceUrl = System.getProperty("service.url");
+        if (serviceUrl == null)
+            throw new RuntimeException("service.url System property not set");
+        log.debug("serviceUrl: " + serviceUrl);
 
-    protected static Logger log;
+        // Error handler for SAX parsing errors.
+        ErrorHandler errorHandler = new MyErrorHandler();
 
-    protected static String hostName;
+        // Factory used to create a schema.
+        SchemaFactory schemaFactory = SchemaFactory.newInstance(XMLConstants.W3C_XML_SCHEMA_NS_URI);
+        schemaFactory.setErrorHandler(errorHandler);
 
-    static
-    {
-        log = Logger.getLogger(TestConfig.class);
+        // Load the schema file from the jar.
+        InputStream inputStream = TestConfig.class.getClassLoader().getResourceAsStream(SERVICE_SCHEMA_RESOURCE);
+        if (inputStream == null)
+            throw new RuntimeException("Unable to load " + SERVICE_SCHEMA_RESOURCE + " from the jar.");
+        try
+        {
+            serviceSchema = Util.inputStreamToString(inputStream);
+            inputStream.close();
+        }
+        catch (IOException e)
+        {
+            throw new RuntimeException("Error reading " + SERVICE_SCHEMA_RESOURCE, e);
+        }
 
-        // default log level is debug.
-//        log.setLevel((Level)Level.INFO);
-
-        hostName = getHostName();
-        log.debug("hostName: " + hostName);
+        // Create a schema validator.
+        Source source = new StreamSource(new StringReader(serviceSchema));
+        Schema schema = null;
+        try
+        {
+            schema = schemaFactory.newSchema(source);
+        }
+        catch (SAXException e)
+        {
+            throw new RuntimeException("SAX error parsing schema", e);
+        }
+        validator = schema.newValidator();
+        validator.setErrorHandler(errorHandler);
+        
+        // Create a XML parser.
+        DocumentBuilderFactory factory = DocumentBuilderFactory.newInstance();
+        //factory.setValidating(true);
+        //factory.setNamespaceAware(true);
+        //factory.setSchema(schema);
+        try
+        {
+            parser = factory.newDocumentBuilder();
+        }
+        catch (ParserConfigurationException e)
+        {
+            throw new RuntimeException("Error creating XML parser", e);
+        }
     }
 
-    public TestConfig(String testName)
+    protected Document xmlToDocument(String xml)
     {
-        super(testName);
+        return sourceToDocument(new InputSource(new StringReader(xml)));
     }
 
-    protected static String getHostName()
+    protected Document urlToDocument(String url)
+    {
+        return sourceToDocument(new InputSource(url));
+    }
+
+    protected Document sourceToDocument(InputSource source)
     {
         try
         {
-            return InetAddress.getLocalHost().getHostName();
-        }
-        catch (UnknownHostException e)
-        {
-            throw new RuntimeException("Unable to determine hostname for localhost: " + e.getMessage());
-        }
-    }
-
-    protected File[] getPropertiesFiles(String className)
-    {
-        File propertiesDir = new File(PROPERTIES_DIRECTORY);
-        log.debug("properties files directory: " + propertiesDir.getAbsolutePath());
-        if (!propertiesDir.canRead())
-        {
-            log.error("");
-            return null;
-        }
-        PropertiesFilenameFilter filter = new PropertiesFilenameFilter(className);
-        File[] files = propertiesDir.listFiles(filter);
-        if (files.length == 0)
-        {
-            log.error("");
-            return null;
-        }
-        return files;
-    }
-
-    protected String getResponseHeaders(WebResponse response)
-    {
-        StringBuilder sb = new StringBuilder();
-        sb.append("Response headers:");
-        sb.append("\r\n");
-        String[] headers = response.getHeaderFieldNames();
-        for (int i = 0; i < headers.length; i++)
-        {
-            sb.append("\t");
-            sb.append(headers[i]);
-            sb.append("=");
-            sb.append(response.getHeaderField(headers[i]));
-            sb.append("\r\n");
-        }
-        return sb.toString();
-    }
-
-    protected String getRequestParameters(WebRequest request)
-    {
-        StringBuilder sb = new StringBuilder();
-        sb.append("Request parameters:");
-        sb.append("\r\n");
-        String[] headers = request.getRequestParameterNames();
-        for (int i = 0; i < headers.length; i++)
-        {
-            sb.append("\t");
-            sb.append(headers[i]);
-            sb.append("=");
-            sb.append(request.getParameter(headers[i]));
-            sb.append("\r\n");
-        }
-        return sb.toString();
-    }
-
-    protected boolean validatePhase(String value)
-    {
-        for (int i = 0; i < PHASES.length; i++)
-        {
-            if (PHASES[i].equals(value))
-                return true;
-        }
-        return false;
-    }
-
-    protected Document buildDocument(String xml)
-    {
-        return buildDocument(new InputSource(new StringReader(xml)));
-    }
-
-    protected Document buildDocument(InputSource inputSource)
-    {
-        try
-        {
-            DocumentBuilderFactory factory = DocumentBuilderFactory.newInstance();
-            DocumentBuilder parser = factory.newDocumentBuilder();
-            Document document = parser.parse(inputSource);
+            Document document = parser.parse(source);
             assertNotNull("XML parsing failed, document is null", document);
             return document;
         }
         catch (Exception e) {
             log.debug("XML parsing error: " + e.getMessage());
             fail("XML parsing error: " + e.getMessage());
-
         }
         return null;
     }
 
-    protected Document buildDocument(String schemaUrl, String xml)
+    protected Document buildDocument(String xml, boolean validate)
     {
-        ErrorHandler errorHandler = new MyErrorHandler();
-        SchemaFactory sf = SchemaFactory.newInstance(XMLConstants.W3C_XML_SCHEMA_NS_URI);
-        sf.setErrorHandler(errorHandler);
         try
         {
-            XMLReader reader = XMLReaderFactory.createXMLReader();
-            SAXSource saxSource = new SAXSource(reader, new InputSource(new StringReader(xml)));
+            if (validate)
+            {
+                XMLReader reader = XMLReaderFactory.createXMLReader();
+                InputSource source = new InputSource(new StringReader(xml));
+                SAXSource saxSource = new SAXSource(reader, source);
+                validator.validate(saxSource);
+            }
 
-            Schema schema = sf.newSchema(new URL(schemaUrl));
-            Validator validator = schema.newValidator();
-            validator.setErrorHandler(errorHandler);
-            validator.validate(saxSource);
-
-            DocumentBuilderFactory factory = DocumentBuilderFactory.newInstance();
-//            factory.setValidating(true);
-//            factory.setNamespaceAware(true);
-//            factory.setSchema(schema);
-            DocumentBuilder parser = factory.newDocumentBuilder();
             Document document = parser.parse(new InputSource(new StringReader(xml)));
             assertNotNull("XML parsing failed, document is null", document);
             return document;
@@ -261,7 +225,7 @@ public class TestConfig extends TestCase
         }
         return null;
     }
-
+    
     class MyErrorHandler implements ErrorHandler
     {
         public void warning(SAXParseException e) throws SAXException
@@ -289,50 +253,48 @@ public class TestConfig extends TestCase
         }
     }
 
-    protected String createJob(WebConversation conversation, WebResponse response, 
-                               String baseUrl, String schemaUrl, String propertiesFilename)
+    protected String createJob(WebConversation conversation)
         throws IOException, SAXException
     {
-        return createJob(conversation, response, null, baseUrl, schemaUrl, propertiesFilename);
+        return createJob(conversation, null);
     }
 
-    protected String createJob(WebConversation conversation, WebResponse response, Map parameters, 
-                               String baseUrl, String schemaUrl, String propertiesFilename)
+    protected String createJob(WebConversation conversation, Map<String, String> parameters)
         throws IOException, SAXException
     {
         String jobId = null;
         log.debug("**************************************************");
-        log.debug("HTTP POST: " + baseUrl);
+        log.debug("HTTP POST: " + serviceUrl);
 
         // Create a new Job with default values.
-        WebRequest postRequest = new PostMethodWebRequest(baseUrl);
+        WebRequest postRequest = new PostMethodWebRequest(serviceUrl);
 
         // Add parameters if available.
         if (parameters != null)
         {
-            Set keys = parameters.keySet();
-            for (Iterator it = keys.iterator(); it.hasNext(); )
+            Set<Map.Entry<String, String>> values = parameters.entrySet();
+            Iterator<Map.Entry<String, String>> iterator = values.iterator();
+            while (iterator.hasNext())
             {
-                String key = (String) it.next();
-                String value = (String) parameters.get(key);
-                postRequest.setParameter(key, value);
+                Map.Entry<String, String> entry = iterator.next();
+                postRequest.setParameter(entry.getKey(), entry.getValue());
             }
         }
 
-        log.debug(getRequestParameters(postRequest));
+        log.debug(Util.getRequestParameters(postRequest));
 
-        response = conversation.getResponse(postRequest);
-        assertNotNull(propertiesFilename + " POST response to " + baseUrl + " is null", response);
+        WebResponse response = conversation.getResponse(postRequest);
+        assertNotNull("POST response to " + serviceUrl + " is null", response);
 
-        log.debug(getResponseHeaders(response));
+        log.debug(Util.getResponseHeaders(response));
 
-        log.debug("response code: " + response.getResponseCode());
-        assertEquals(propertiesFilename + " POST response code to " + baseUrl + " should be 303", 303, response.getResponseCode());
+        log.debug("Response code: " + response.getResponseCode());
+        assertEquals("POST response code to " + serviceUrl + " should be 303", 303, response.getResponseCode());
 
         // Get the redirect.
         String location = response.getHeaderField("Location");
         log.debug("Location: " + location);
-        assertNotNull(propertiesFilename + " POST response to " + baseUrl + " location header not set", location);
+        assertNotNull("POST response to " + serviceUrl + " location header not set", location);
 
         // Parse the jobId from the redirect URL.
         URL locationUrl = new URL(location);
@@ -346,112 +308,162 @@ public class TestConfig extends TestCase
 //        assertEquals(propertiesFilename + " POST response to " + baseUrl + " location header incorrect", baseUrl + "/" + jobId, location);
 
         // Follow the redirect.
-        log.debug("**************************************************");
-        log.debug("HTTP GET: " + location);
-        WebRequest getRequest = new GetMethodWebRequest(location);
-        response = conversation.getResponse(getRequest);
-        assertNotNull(propertiesFilename + " GET response to " + location + " is null", response);
-
-        log.debug(getResponseHeaders(response));
-
-        log.debug("response code: " + response.getResponseCode());
-        assertEquals(propertiesFilename + " non-200 GET response code to " + location, 200, response.getResponseCode());
-
-        log.debug("Content-Type: " + response.getContentType());
-        assertEquals(propertiesFilename + " GET response Content-Type header to " + location + " is incorrect", ACCEPT_XML, response.getContentType());
+        response = get(conversation, location);
 
         // Validate the XML against the schema and get a DOM Document.
         log.debug("XML:\r\n" + response.getText());
-        Document document = buildDocument(schemaUrl, response.getText());
+        Document document = buildDocument(response.getText(), true);
 
         Element root = document.getDocumentElement();
-        assertNotNull(propertiesFilename + " XML returned from GET of " + location + " missing root element", root);
+        assertNotNull("XML returned from GET of " + location + " missing root element", root);
 
         // Job should have exactly one Execution Phase.
         NodeList list = root.getElementsByTagName("uws:phase");
-        assertEquals(propertiesFilename + " XML returned from GET of " + location + " missing uws:phase element", 1, list.getLength());
+        assertEquals("XML returned from GET of " + location + " missing uws:phase element", 1, list.getLength());
 
         // Job should have exactly one Execution Duration.
         list = root.getElementsByTagName("uws:executionDuration");
-        assertEquals(propertiesFilename + " XML returned from GET of " + location + " missing uws:executionDuration element", 1, list.getLength());
+        assertEquals("XML returned from GET of " + location + " missing uws:executionDuration element", 1, list.getLength());
 
         // Job should have exactly one Deletion Time.
         list = root.getElementsByTagName("uws:destruction");
-        assertEquals(propertiesFilename + " XML returned from GET of " + location + " missing uws:destruction element", 1, list.getLength());
+        assertEquals("XML returned from GET of " + location + " missing uws:destruction element", 1, list.getLength());
 
         // Job should have exactly one Quote.
         list = root.getElementsByTagName("uws:quote");
-        assertEquals(propertiesFilename + " XML returned from GET of " + location + " missing uws:quote element", 1, list.getLength());
+        assertEquals("XML returned from GET of " + location + " missing uws:quote element", 1, list.getLength());
 
         // Job should have exactly one Results List.
         list = root.getElementsByTagName("uws:results");
-        assertEquals(propertiesFilename + " XML returned from GET of " + location + " missing uws:results element", 1, list.getLength());
+        assertEquals("XML returned from GET of " + location + " missing uws:results element", 1, list.getLength());
 
         // Job should have zero or one Error.
         list = root.getElementsByTagName("uws:error");
-        assertTrue(propertiesFilename + " XML returned from GET of " + location + " invalid number of uws:error elements", list.getLength() == 0 || list.getLength() == 1);
+        assertTrue("XML returned from GET of " + location + " invalid number of uws:error elements", list.getLength() == 0 || list.getLength() == 1);
 
         return jobId;
+    }
+
+    protected WebResponse head(WebConversation conversation, String resourceUrl)
+        throws IOException, SAXException
+    {
+        log.debug("**************************************************");
+        log.debug("HTTP HEAD: " + resourceUrl);
+        WebRequest getRequest = new HeadMethodWebRequest(resourceUrl);
+        conversation.clearContents();
+        WebResponse response = conversation.getResponse(getRequest);
+        assertNotNull("HEAD response to " + resourceUrl + " is null", response);
+
+        log.debug(Util.getResponseHeaders(response));
+
+        log.debug("Response code: " + response.getResponseCode());
+        assertEquals("Non-200 GET response code to " + resourceUrl, 200, response.getResponseCode());
+
+        return response;
+    }
+
+    protected WebResponse get(WebConversation conversation, String resourceUrl)
+        throws IOException, SAXException
+    {
+        log.debug("**************************************************");
+        log.debug("HTTP GET: " + resourceUrl);
+        WebRequest getRequest = new GetMethodWebRequest(resourceUrl);
+        conversation.clearContents();
+        WebResponse response = conversation.getResponse(getRequest);
+        assertNotNull("GET response to " + resourceUrl + " is null", response);
+
+        log.debug(Util.getResponseHeaders(response));
+
+        log.debug("Response code: " + response.getResponseCode());
+        assertEquals("Non-200 GET response code to " + resourceUrl, 200, response.getResponseCode());
+
+        log.debug("Content-Type: " + response.getContentType());
+//        assertEquals("GET response Content-Type header to " + resourceUrl + " is incorrect", "text/xml", response.getContentType());
+
+        return response;
+    }
+
+    protected WebResponse post(WebConversation conversation, WebRequest request)
+        throws IOException, SAXException
+    {
+        // POST request to the phase resource.
+        log.debug("**************************************************");
+        log.debug("HTTP POST: " + request.getURL().toString());
+        log.debug(Util.getRequestParameters(request));
+
+        conversation.clearContents();
+        WebResponse response = conversation.getResponse(request);
+        assertNotNull("POST response to " + request.getURL().toString() + " is null", response);
+
+        log.debug(Util.getResponseHeaders(response));
+
+        log.debug("Response code: " + response.getResponseCode());
+        assertEquals("POST response code to " + request.getURL().toString() + " should be 303", 303, response.getResponseCode());
+
+        // Get the redirect.
+        String location = response.getHeaderField("Location");
+        log.debug("Location: " + location);
+        assertNotNull("POST response to " + request.getURL().toString() + " location header not set", location);
+//      assertEquals(POST response to " + resourceUrl + " location header incorrect", baseUrl + "/" + jobId, location);
+
+        return response;
     }
 
     /*
      * Default Job deletion uses an HTTP POST request.
      */
-    protected void deleteJob(WebConversation conversation, WebResponse response, String jobId, String propertiesFile)
+    protected WebResponse deleteJob(WebConversation conversation, String jobId)
     {
         log.debug("Job deletion resource not available");
-//        deleteJobWithPostRequest(conversation, response, jobId, propertiesFile);
+        return null;
     }
 
     /*
      * Delete a job using an HTTP POST request.
      */
-    protected void deleteJobWithPostRequest(WebConversation conversation, WebResponse response, String baseUrl, 
-                                            String schemaUrl, String jobId, String propertiesFilename)
+    protected WebResponse deleteJobWithPostRequest(WebConversation conversation, String jobId)
         throws IOException, SAXException
     {
-        String resourceUrl = baseUrl + "/" + jobId;
+        String resourceUrl = serviceUrl + "/" + jobId;
         log.debug("**************************************************");
         log.debug("HTTP POST: " + resourceUrl);
-        WebRequest postRequest = new PostMethodWebRequest(baseUrl + "/" + jobId);
+        WebRequest postRequest = new PostMethodWebRequest(serviceUrl + "/" + jobId);
         postRequest.setParameter("ACTION", "DELETE");
-        deleteJob(conversation, response, postRequest, schemaUrl, resourceUrl, propertiesFilename);
+        return deleteJob(conversation, postRequest, resourceUrl);
     }
 
     /*
      * Delete a Job using a HTTP DELETE request.
      */
-    protected void deleteJobWithDeleteRequest(WebConversation conversation, WebResponse response, String baseUrl, 
-                                              String schemaUrl, String jobId, String propertiesFilename)
+    protected WebResponse deleteJobWithDeleteRequest(WebConversation conversation, String jobId)
         throws IOException, SAXException
     {
-        String resourceUrl = baseUrl + "/" + jobId;
+        String resourceUrl = serviceUrl + "/" + jobId;
         log.debug("**************************************************");
         log.debug("HTTP DELETE: " + resourceUrl);
-        WebRequest deleteRequest = new DeleteMethodWebRequest(baseUrl + "/" + jobId);
-        deleteJob(conversation, response, deleteRequest, schemaUrl, resourceUrl, propertiesFilename);
+        WebRequest deleteRequest = new DeleteMethodWebRequest(serviceUrl + "/" + jobId);
+        return deleteJob(conversation, deleteRequest, resourceUrl);
     }
 
-    private void deleteJob(WebConversation conversation, WebResponse response, WebRequest request, 
-                           String schemaUrl, String resourceUrl, String propertiesFilename)
+    private WebResponse deleteJob(WebConversation conversation, WebRequest request, String resourceUrl)
         throws IOException, SAXException
     {
-        log.debug(getRequestParameters(request));
+        log.debug(Util.getRequestParameters(request));
 
         conversation.clearContents();
-        response = conversation.getResponse(request);
-        assertNotNull(propertiesFilename + " response to is null", response);
+        WebResponse response = conversation.getResponse(request);
+        assertNotNull("Response to request is null", response);
 
-        log.debug(getResponseHeaders(response));
+        log.debug(Util.getResponseHeaders(response));
 
         log.debug("response code: " + response.getResponseCode());
-        assertEquals(propertiesFilename + " response code should be 303", 303, response.getResponseCode());
+        assertEquals("Response code should be 303", 303, response.getResponseCode());
 
         // Get the redirect.
         String location = response.getHeaderField("Location");
         log.debug("Location: " + location);
-        assertNotNull(propertiesFilename + " response location header not set", location);
-        assertEquals(propertiesFilename + " response to location header incorrect", resourceUrl, location);
+        assertNotNull("Response location header not set", location);
+        assertEquals("Response to location header incorrect", resourceUrl, location);
 
         // Follow the redirect.
         log.debug("**************************************************");
@@ -459,19 +471,21 @@ public class TestConfig extends TestCase
         WebRequest getRequest = new GetMethodWebRequest(location);
         conversation.clearContents();
         response = conversation.getResponse(getRequest);
-        assertNotNull(propertiesFilename + " GET response to " + location + " is null", response);
+        assertNotNull("GET response to " + location + " is null", response);
 
-        log.debug(getResponseHeaders(response));
+        log.debug(Util.getResponseHeaders(response));
 
         log.debug("response code: " + response.getResponseCode());
-        assertEquals(propertiesFilename + " non-200 GET response code to " + location, 200, response.getResponseCode());
+        assertEquals("Non-200 GET response code to " + location, 200, response.getResponseCode());
 
         log.debug("Content-Type: " + response.getContentType());
-        assertEquals(propertiesFilename + " GET response Content-Type header to " + location + " is incorrect", ACCEPT_XML, response.getContentType());
+        assertEquals("GET response Content-Type header to " + location + " is incorrect", "text/xml", response.getContentType());
 
         // Validate the XML against the schema.
         log.debug("XML:\r\n" + response.getText());
-        buildDocument(schemaUrl, response.getText());
+        buildDocument(response.getText(), true);
+
+        return response;
     }
     
 }

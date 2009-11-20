@@ -69,90 +69,50 @@
 
 package ca.nrc.cadc.conformance.uws;
 
-import com.meterware.httpunit.GetMethodWebRequest;
 import com.meterware.httpunit.WebConversation;
-import com.meterware.httpunit.WebRequest;
 import com.meterware.httpunit.WebResponse;
-import java.io.File;
-import java.io.FileReader;
-import java.util.Properties;
+import org.apache.log4j.Level;
+import org.apache.log4j.Logger;
+import org.junit.Test;
 import org.w3c.dom.Document;
 import org.w3c.dom.Element;
-import org.w3c.dom.NodeList;
+import static org.junit.Assert.*;
 
 public class JobsTest extends TestConfig
 {
-    private static final String CLASS_NAME = "JobsTest";
+    private static Logger log = Logger.getLogger(JobsTest.class);
 
-    private File[] propertiesFiles;
-
-    public JobsTest(String testName)
+    public JobsTest()
     {
-        super(testName);
+        super();
 
-        propertiesFiles = getPropertiesFiles(CLASS_NAME);
+        // DEBUG is default.
+        log.setLevel((Level)Level.INFO);
     }
 
     /*
      * This test should only be run after the Servlet container for the UWS service
      * has been restarted. It expects that the UWS service has no Jobs.
      */
+    @Test
     public void testEmptyJobs()
         throws Exception
     {
-        if (propertiesFiles == null)
-            fail("missing properties file for " + CLASS_NAME);
-        
-        // For each properties file.
-        for (int i = 0; i < propertiesFiles.length; i++)
-        {
-            File propertiesFile = propertiesFiles[i];
-            String propertiesFilename = propertiesFile.getName();
-            log.debug("**************************************************");
-            log.debug("processing properties file: " + propertiesFilename);
-            log.debug("**************************************************");
+        // Request the UWS service.
+        WebConversation conversation = new WebConversation();
+        WebResponse response = get(conversation, serviceUrl);
 
-            // Load the properties file.
-            Properties properties = new Properties();
-            FileReader reader = new FileReader(propertiesFile);
-            properties.load(reader);
+        // Validate the XML against the schema.
+        log.debug("XML:\r\n" + response.getText());
+        Document document = buildDocument(response.getText(), true);
 
-            // Base URL to the UWS service.
-            String baseUrl = properties.getProperty("ca.nrc.cadc.conformance.uws.baseUrl");
-            log.debug(propertiesFilename + " ca.nrc.cadc.conformance.uws.baseUrl: " + baseUrl);
-            assertNotNull("ca.nrc.cadc.conformance.uws.baseUrl property is not set in properties file " + propertiesFilename, baseUrl);
+        Element root = document.getDocumentElement();
+        assertNotNull("XML returned from GET of " + serviceUrl + " missing uws:jobs element", root);
 
-            // URL to the UWS schema used for validation.
-            String schemaUrl = properties.getProperty("ca.nrc.cadc.conformance.uws.schemaUrl");
-            log.debug(propertiesFilename + " ca.nrc.cadc.conformance.uws.schemaUrl: " + schemaUrl);
-            assertNotNull("ca.nrc.cadc.conformance.uws.schemaUrl property is not set in properties file " + propertiesFilename, schemaUrl);
+//        NodeList list = root.getElementsByTagName("uws:jobref");
+//        assertEquals(propertiesFilename + " XML returned from GET of " + baseUrl + " contained uws:jobref elements", 0, list.getLength());
 
-            // Request the UWS service.
-            log.debug("**************************************************");
-            log.debug("HTTP GET: " + baseUrl);
-            WebRequest getRequest = new GetMethodWebRequest(baseUrl);
-            WebConversation conversation = new WebConversation();
-            WebResponse response = conversation.getResponse(getRequest);
-            assertNotNull(propertiesFilename + " GET response to " + baseUrl + " is null", response);
-
-            log.debug(getResponseHeaders(response));
-
-            log.debug("response code: " + response.getResponseCode());
-            assertEquals(propertiesFilename + " non-200 GET response code to " + baseUrl, 200, response.getResponseCode());
-
-            log.debug("Content-Type: " + response.getContentType());
-            assertEquals(propertiesFilename + " GET response Content-Type header to " + baseUrl + " is incorrect", ACCEPT_XML, response.getContentType());
-
-            // Validate the XML against the schema.
-            log.debug("XML:\r\n" + response.getText());
-            Document document = buildDocument(schemaUrl, response.getText());
-
-            Element root = document.getDocumentElement();
-            assertNotNull(propertiesFilename + " XML returned from GET of " + baseUrl + " missing uws:jobs element", root);
-
-//            NodeList list = root.getElementsByTagName("uws:jobref");
-//            assertEquals(propertiesFilename + " XML returned from GET of " + baseUrl + " contained uws:jobref elements", 0, list.getLength());
-        }
+        log.info("JobsTest.testEmptyJobs completed.");
     }
     
 }

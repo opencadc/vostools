@@ -69,21 +69,45 @@
 
 package ca.nrc.cadc.conformance.uws;
 
-import org.junit.runner.RunWith;
-import org.junit.runners.Suite;
+import java.io.File;
+import java.io.FileReader;
+import java.io.IOException;
+import java.io.Reader;
+import java.util.ArrayList;
+import java.util.Enumeration;
+import java.util.HashMap;
+import java.util.Iterator;
+import java.util.List;
+import java.util.Map;
+import java.util.Properties;
 
-@RunWith(Suite.class)
-@Suite.SuiteClasses
-({
-    JobsTest.class,
-    JobIdTest.class,
-    ExecutionDurationTest.class,
-    DestructionTest.class,
-    QuoteTest.class,
-    ParametersTest.class,
-    ErrorTest.class,
-    ResultsTest.class,
-    SchemaTest.class
-})
+public class TestPropertiesList
+{
+    public List<TestProperties> propertiesList;
 
-public class UWSTestSuite {}
+    public TestPropertiesList(String propertiesDirectory, String className)
+        throws IOException
+    {
+        propertiesList = new ArrayList<TestProperties>();
+        File[] files = getPropertiesFiles(propertiesDirectory, className);
+        for (int i = 0; i < files.length; i++)
+        {
+            File file = files[i];
+            TestProperties properties = new TestProperties();
+            FileReader reader = new FileReader(file);
+            properties.load(reader, file.getName());
+            propertiesList.add(properties);
+        }
+    }
+
+    protected File[] getPropertiesFiles(String propertiesDirectory, String className)
+        throws IOException
+    {
+        File directory = new File(propertiesDirectory);
+        if (!directory.canRead())
+            throw new IOException("Error reading " + propertiesDirectory);
+        PropertiesFilenameFilter filter = new PropertiesFilenameFilter(className);
+        return directory.listFiles(filter);
+    }
+
+}

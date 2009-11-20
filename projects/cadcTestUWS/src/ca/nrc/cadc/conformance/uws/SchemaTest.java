@@ -69,82 +69,60 @@
 
 package ca.nrc.cadc.conformance.uws;
 
-import java.io.File;
-import java.io.FileReader;
-import java.net.URL;
-import java.util.Properties;
+import org.apache.log4j.Level;
+import org.apache.log4j.Logger;
 import org.custommonkey.xmlunit.Diff;
 import org.custommonkey.xmlunit.XMLUnit;
+import org.junit.Test;
 import org.w3c.dom.Document;
 import org.w3c.dom.Element;
-import org.xml.sax.InputSource;
+import static org.junit.Assert.*;
 
 public class SchemaTest extends TestConfig
 {
-    private static final String CLASS_NAME = "SchemaTest";
+    private static Logger log = Logger.getLogger(SchemaTest.class);
 
-    private File[] propertiesFiles;
-
-    public SchemaTest(String testName)
+    public SchemaTest()
     {
-        super(testName);
+        super();
 
-        propertiesFiles = getPropertiesFiles(CLASS_NAME);
+        // DEBUG is default.
+        log.setLevel((Level)Level.INFO);
     }
 
+    @Test
     public void testSchema()
         throws Exception
     {
-        if (propertiesFiles == null)
-            fail("missing properties file for " + CLASS_NAME);
+        // Create DOM document from XML.
+        Document document = xmlToDocument(serviceSchema);
+        assertNotNull("Unable to build a DOM document from the schema", document);
 
-        // For each properties file.
-        for (int i = 0; i < propertiesFiles.length; i++)
+        // Get the root element of the document.
+        Element root = document.getDocumentElement();
+        assertNotNull("XML from schema missing root element", root);
+
+        // Look for the targetNamespace attribute of the schema.
+        String targetNamespace = root.getAttribute("targetNamespace");
+        log.debug("targetNamespace: " + targetNamespace);
+
+        // Test can not proceed if the schema hasn't specified a targetNamespace.
+        if (targetNamespace == null)
         {
-            File propertiesFile = propertiesFiles[i];
-            String propertiesFilename = propertiesFile.getName();
-            log.debug("**************************************************");
-            log.debug("processing properties file: " + propertiesFilename);
-            log.debug("**************************************************");
-
-            // Load the properties file.
-            Properties properties = new Properties();
-            FileReader reader = new FileReader(propertiesFile);
-            properties.load(reader);
-
-            // URL to the UWS schema used for validation.
-            String schemaUrl = properties.getProperty("ca.nrc.cadc.conformance.uws.schemaUrl");
-            log.debug(propertiesFilename + " ca.nrc.cadc.conformance.uws.schemaUrl: " + schemaUrl);
-            assertNotNull("ca.nrc.cadc.conformance.uws.schemaUrl property is not set in properties file " + propertiesFilename, schemaUrl);
-
-            // Create DOM document from XML.
-            Document document = buildDocument(new InputSource(schemaUrl));
-            assertNotNull(propertiesFilename + " unable to build a DOM document from " + schemaUrl, document);
-
-            // Get the root element of the document.
-            Element root = document.getDocumentElement();
-            assertNotNull(propertiesFilename + " XML from " + schemaUrl + " missing root element", root);
-
-            // Look for the targetNamespace attribute of the schema.
-            String targetNamespace = root.getAttribute("targetNamespace");
-            log.debug("targetNamespace: " + targetNamespace);
-
-            // Test can not proceed if the schema hasn't specified a targetNamespace.
-            if (targetNamespace == null)
-            {
-                log.debug("Aborting test because the targetNamespace was not specified in the UWS Schema.");
-                return;
-            }
-
-            // Build a document of the XSD referenced in the schema.
-            Document doc = buildDocument(new InputSource(targetNamespace));
-            assertNotNull(propertiesFilename + " unable to build a DOM document from " + targetNamespace, doc);
-
-            // Compare the two documents and get a diff.
-            Diff diff = XMLUnit.compareXML(document, doc);
-            assertTrue(propertiesFilename + " the UWS Schema and the UWS targetNamespace Schema are not similar: " + diff.toString(), diff.similar());
-            assertTrue(propertiesFilename + " the UWS Schema and the UWS targetNamespace Schema are not identical: " + diff.toString(), diff.identical());
+            log.debug("Aborting test because the targetNamespace was not specified in the UWS Schema.");
+            return;
         }
+
+        // Build a document of the XSD referenced in the schema.
+        Document doc = urlToDocument(targetNamespace);
+        assertNotNull("Unable to build a DOM document from " + targetNamespace, doc);
+
+        // Compare the two documents and get a diff.
+        Diff diff = XMLUnit.compareXML(document, doc);
+        assertTrue("The UWS Schema and the UWS targetNamespace Schema are not similar: " + diff.toString(), diff.similar());
+        assertTrue("The UWS Schema and the UWS targetNamespace Schema are not identical: " + diff.toString(), diff.identical());
+
+        log.info("SchemaTest.testSchema completed.");
     }
 
 }

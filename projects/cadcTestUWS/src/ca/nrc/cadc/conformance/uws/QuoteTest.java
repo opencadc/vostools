@@ -70,108 +70,69 @@
 package ca.nrc.cadc.conformance.uws;
 
 import ca.nrc.cadc.date.DateUtil;
-import com.meterware.httpunit.GetMethodWebRequest;
 import com.meterware.httpunit.WebConversation;
-import com.meterware.httpunit.WebRequest;
 import com.meterware.httpunit.WebResponse;
-import java.io.File;
-import java.io.FileReader;
 import java.util.Calendar;
 import java.util.Date;
-import java.util.Properties;
+import org.apache.log4j.Level;
+import org.apache.log4j.Logger;
+import org.junit.Test;
 import org.w3c.dom.Document;
 import org.w3c.dom.Element;
+import static org.junit.Assert.*;
 
 public class QuoteTest extends TestConfig
 {
-    private static final String CLASS_NAME = "QuoteTest";
-
-    private File[] propertiesFiles;
+    private static Logger log = Logger.getLogger(QuoteTest.class);
 
     private Date testStartDate;
 
-    public QuoteTest(String testName)
+    public QuoteTest()
     {
-        super(testName);
+        super();
 
-        propertiesFiles = getPropertiesFiles(CLASS_NAME);
-
+        // DEBUG is default.
+        log.setLevel((Level)Level.INFO);
+        
         Calendar cal = Calendar.getInstance();
         cal.setTimeZone(DateUtil.UTC);
         testStartDate = cal.getTime();
         log.debug("testStartDate: " + testStartDate);
     }
 
+    @Test
     public void testQuote()
         throws Exception
     {
-        if (propertiesFiles == null)
-            fail("missing properties file for " + CLASS_NAME);
+        // Create a new Job.
+        WebConversation conversation = new WebConversation();
+        String jobId = createJob(conversation);
 
-        // For each properties file.
-        for (int i = 0; i < propertiesFiles.length; i++)
-        {
-            File propertiesFile = propertiesFiles[i];
-            String propertiesFilename = propertiesFile.getName();
-            log.debug("**************************************************");
-            log.debug("processing properties file: " + propertiesFilename);
-            log.debug("**************************************************");
+        // Get the quote resource.
+        String resourceUrl = serviceUrl + "/" + jobId + "/quote";
+        WebResponse response = get(conversation, resourceUrl);
 
-            // Load the properties file.
-            Properties properties = new Properties();
-            FileReader reader = new FileReader(propertiesFile);
-            properties.load(reader);
+        // Create DOM document from XML.
+        log.debug("XML:\r\n" + response.getText());
+        Document document = buildDocument(response.getText(), false);
 
-            // Base URL to the UWS service.
-            String baseUrl = properties.getProperty("ca.nrc.cadc.conformance.uws.baseUrl");
-            log.debug(propertiesFilename + " ca.nrc.cadc.conformance.uws.baseUrl: " + baseUrl);
-            assertNotNull("ca.nrc.cadc.conformance.uws.baseUrl property is not set in properties file " + propertiesFilename, baseUrl);
+        // Get the document root.
+        Element root = document.getDocumentElement();
+        assertNotNull("XML returned from GET of " + resourceUrl + " missing uws:quote element", root);
 
-            // URL to the UWS schema used for validation.
-            String schemaUrl = properties.getProperty("ca.nrc.cadc.conformance.uws.schemaUrl");
-            log.debug(propertiesFilename + " ca.nrc.cadc.conformance.uws.schemaUrl: " + schemaUrl);
-            assertNotNull("ca.nrc.cadc.conformance.uws.schemaUrl property is not set in properties file " + propertiesFilename, schemaUrl);
+        // Get the Quote date.
+        String quote = root.getTextContent();
+        log.debug("uws:quote: " + quote);
+        assertNotNull("XML returned from GET of " + resourceUrl + " missing uws:quote element", quote);
 
-            // Create a new Job.
-            WebConversation conversation = new WebConversation();
-            WebResponse response = null;
-            String jobId = createJob(conversation, response, baseUrl, schemaUrl, propertiesFilename);
-            
-            // Get the quote resource.
-            String resourceUrl = baseUrl + "/" + jobId + "/quote";
-            log.debug("**************************************************");
-            log.debug("HTTP GET: " + resourceUrl);
-            WebRequest getRequest = new GetMethodWebRequest(resourceUrl);
-            conversation.clearContents();
-            response = conversation.getResponse(getRequest);
-            assertNotNull(propertiesFilename + " GET response to " + resourceUrl + " is null", response);
+        // Check Quote is after testStartDate.
+        Date quoteDate = DateUtil.toDate(quote, DateUtil.IVOA_DATE_FORMAT);
+        assertTrue("Quote date must be after startTime date", quoteDate.after(testStartDate));
 
-            log.debug(getResponseHeaders(response));
+        // Delete the job.
+        deleteJob(conversation, jobId);
 
-            log.debug("response code: " + response.getResponseCode());
-            assertEquals(propertiesFilename + " non-200 GET response code to " + resourceUrl, 200, response.getResponseCode());
-
-            log.debug("Content-Type: " + response.getContentType());
-            assertEquals(propertiesFilename + " GET response Content-Type header to " + resourceUrl + " is incorrect", ACCEPT_XML, response.getContentType());
-
-            // Create DOM document from XML.
-            log.debug("XML:\r\n" + response.getText());
-            Document document = buildDocument(response.getText());
-
-            Element root = document.getDocumentElement();
-            assertNotNull(propertiesFilename + " XML returned from GET of " + resourceUrl + " missing uws:quote element", root);
-
-            // Get the Quote date.
-            String quote = root.getTextContent();
-            log.debug("uws:quote: " + quote);
-            assertNotNull(propertiesFilename + " XML returned from GET of " + resourceUrl + " missing uws:quote element", quote);
-
-            // Check Quote is after testStartDate.
-            Date quoteDate = DateUtil.toDate(quote, DateUtil.IVOA_DATE_FORMAT);
-            assertTrue("Quote date must be after startTime date", quoteDate.after(testStartDate));
-
-            deleteJob(conversation, response, jobId, propertiesFilename);
-        }
+        log.info("QuoteTest.testQuote completed.");
     }
     
 }

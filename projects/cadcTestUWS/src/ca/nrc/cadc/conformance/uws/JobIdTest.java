@@ -69,98 +69,62 @@
 
 package ca.nrc.cadc.conformance.uws;
 
-import com.meterware.httpunit.GetMethodWebRequest;
 import com.meterware.httpunit.WebConversation;
-import com.meterware.httpunit.WebRequest;
 import com.meterware.httpunit.WebResponse;
-import java.io.File;
-import java.io.FileReader;
-import java.util.Properties;
+import org.apache.log4j.Level;
+import org.apache.log4j.Logger;
+import org.junit.Test;
 import org.w3c.dom.Document;
 import org.w3c.dom.Element;
 import org.w3c.dom.Node;
 import org.w3c.dom.NodeList;
+import static org.junit.Assert.*;
 
 public class JobIdTest extends TestConfig
 {
-    private static final String CLASS_NAME = "JobIdTest";
+    private static Logger log = Logger.getLogger(JobIdTest.class);
 
-    private File[] propertiesFiles;
-
-    public JobIdTest(String testName)
+    public JobIdTest()
     {
-        super(testName);
-
-        propertiesFiles = getPropertiesFiles(CLASS_NAME);
+        super();
+        
+        // DEBUG is default.
+        log.setLevel((Level)Level.INFO);
     }
 
+    @Test
     public void testJobID()
         throws Exception
     {
-        if (propertiesFiles == null)
-            fail("missing properties file for " + CLASS_NAME);
+        // Create a new Job.
+        WebConversation conversation = new WebConversation();
+        String jobId = createJob(conversation);
 
-        for (int i = 0; i < propertiesFiles.length; i++)
-        {
-            File propertiesFile = propertiesFiles[i];
-            String propertiesFilename = propertiesFile.getName();
-            log.debug("**************************************************");
-            log.debug("processing properties file: " + propertiesFilename);
-            log.debug("**************************************************");
+        // GET request to the jobId resource.
+        String resourceUrl = serviceUrl + "/" + jobId;
+        WebResponse response = get(conversation, resourceUrl);
 
-            // Load the properties file.
-            Properties properties = new Properties();
-            FileReader reader = new FileReader(propertiesFile);
-            properties.load(reader);
+        // Validate the XML against the schema.
+        log.debug("XML:\r\n" + response.getText());
+        Document document = buildDocument(response.getText(), true);
 
-            // Base URL to the UWS service.
-            String baseUrl = properties.getProperty("ca.nrc.cadc.conformance.uws.baseUrl");
-            log.debug(propertiesFilename + " ca.nrc.cadc.conformance.uws.baseUrl: " + baseUrl);
-            assertNotNull("ca.nrc.cadc.conformance.uws.baseUrl property is not set in properties file " + propertiesFilename, baseUrl);
+        // Get the document root.
+        Element root = document.getDocumentElement();
+        assertNotNull("XML returned from GET of " + resourceUrl + " missing root element", root);
 
-            // URL to the UWS schema used for validation.
-            String schemaUrl = properties.getProperty("ca.nrc.cadc.conformance.uws.schemaUrl");
-            log.debug(propertiesFilename + " ca.nrc.cadc.conformance.uws.schemaUrl: " + schemaUrl);
-            assertNotNull("ca.nrc.cadc.conformance.uws.schemaUrl property is not set in properties file " + propertiesFilename, schemaUrl);
+        // List of jobId elements.
+        NodeList list = root.getElementsByTagName("uws:jobId");
+        assertNotNull("XML returned from GET of " + resourceUrl + " missing uws:jobId element", list);
 
-            // Create a new Job.
-            WebConversation conversation = new WebConversation();
-            WebResponse response = null;
-            String jobId = createJob(conversation, response, baseUrl, schemaUrl, propertiesFilename);
+        // Validate the jobId.
+        Node jobIdNode = list.item(0);
+        log.debug("uws:jobId: " + jobIdNode.getTextContent());
+        assertEquals("Incorrect uws:jobId element in XML returned from GET of " + resourceUrl, jobId, jobIdNode.getTextContent());
 
-            // GET request to the jobId resource.
-            String resourceUrl = baseUrl + "/" + jobId;
-            log.debug("**************************************************");
-            log.debug("HTTP GET: " + resourceUrl);
-            WebRequest getRequest = new GetMethodWebRequest(resourceUrl);
-            conversation.clearContents();
-            response = conversation.getResponse(getRequest);
-            assertNotNull(propertiesFilename + " GET response to " + resourceUrl + " is null", response);
+        // Delete the job.
+        deleteJob(conversation, jobId);
 
-            log.debug(getResponseHeaders(response));
-
-            log.debug("response code: " + response.getResponseCode());
-            assertEquals(propertiesFilename + " non-200 GET response code to " + resourceUrl, 200, response.getResponseCode());
-
-            log.debug("Content-Type: " + response.getContentType());
-            assertEquals(propertiesFilename + " GET response Content-Type header to " + resourceUrl + " is incorrect", ACCEPT_XML, response.getContentType());
-
-            // Validate the XML against the schema.
-            log.debug("XML:\r\n" + response.getText());
-            Document document = buildDocument(schemaUrl, response.getText());
-
-            Element root = document.getDocumentElement();
-            assertNotNull(propertiesFilename + " XML returned from GET of " + resourceUrl + " missing root element", root);
-
-            NodeList list = root.getElementsByTagName("uws:jobId");
-            assertNotNull(propertiesFilename + " XML returned from GET of " + resourceUrl + " missing uws:jobId element", list);
-
-            Node jobIdNode = list.item(0);
-            log.debug("uws:jobId: " + jobIdNode.getTextContent());
-            assertEquals(propertiesFilename + " incorrect uws:jobId element in XML returned from GET of " + resourceUrl, jobId, jobIdNode.getTextContent());
-
-            deleteJob(conversation, response, jobId, propertiesFilename);
-        }
+        log.info("JobIdTest.testJobId completed.");
     }
 
 }

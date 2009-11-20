@@ -69,21 +69,98 @@
 
 package ca.nrc.cadc.conformance.uws;
 
-import org.junit.runner.RunWith;
-import org.junit.runners.Suite;
+import com.meterware.httpunit.WebRequest;
+import com.meterware.httpunit.WebResponse;
+import java.io.BufferedReader;
+import java.io.IOException;
+import java.io.InputStream;
+import java.io.InputStreamReader;
+import java.net.InetAddress;
+import java.net.UnknownHostException;
 
-@RunWith(Suite.class)
-@Suite.SuiteClasses
-({
-    JobsTest.class,
-    JobIdTest.class,
-    ExecutionDurationTest.class,
-    DestructionTest.class,
-    QuoteTest.class,
-    ParametersTest.class,
-    ErrorTest.class,
-    ResultsTest.class,
-    SchemaTest.class
-})
+public abstract class Util
+{
+    public static final String[] PHASES =
+    {
+        "PENDING", "QUEUED", "EXECUTING", "COMPLETED", "ERROR", "ABORTED"
+    };
 
-public class UWSTestSuite {}
+    public static boolean validatePhase(String value)
+    {
+        for (int i = 0; i < PHASES.length; i++)
+        {
+            if (PHASES[i].equals(value))
+                return true;
+        }
+        return false;
+    }
+
+    public static String getHostName()
+    {
+        try
+        {
+            return InetAddress.getLocalHost().getHostName();
+        }
+        catch (UnknownHostException e)
+        {
+            throw new RuntimeException("Unable to determine hostname for localhost: " + e.getMessage());
+        }
+    }
+
+    public static String getResponseHeaders(WebResponse response)
+    {
+        StringBuilder sb = new StringBuilder();
+        sb.append("Response headers:");
+        sb.append("\r\n");
+        String[] headers = response.getHeaderFieldNames();
+        for (int i = 0; i < headers.length; i++)
+        {
+            sb.append("\t");
+            sb.append(headers[i]);
+            sb.append("=");
+            sb.append(response.getHeaderField(headers[i]));
+            sb.append("\r\n");
+        }
+        return sb.toString();
+    }
+
+    public static String getRequestParameters(WebRequest request)
+    {
+        StringBuilder sb = new StringBuilder();
+        sb.append("Request parameters:");
+        sb.append("\r\n");
+        String[] headers = request.getRequestParameterNames();
+        for (int i = 0; i < headers.length; i++)
+        {
+            sb.append("\t");
+            sb.append(headers[i]);
+            sb.append("=");
+            sb.append(request.getParameter(headers[i]));
+            sb.append("\r\n");
+        }
+        return sb.toString();
+    }
+
+    public static String inputStreamToString(InputStream inputStream)
+        throws IOException
+    {
+        BufferedReader reader = new BufferedReader(new InputStreamReader(inputStream));
+        StringBuilder sb = new StringBuilder();
+        String line = null;
+        try
+        {
+            while ((line = reader.readLine()) != null)
+                sb.append(line + "\n");
+        }
+        finally
+        {
+            try
+            {
+                inputStream.close();
+            }
+            catch (IOException e) {}
+        }
+        return sb.toString();
+    }
+
+}

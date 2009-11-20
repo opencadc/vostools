@@ -69,21 +69,52 @@
 
 package ca.nrc.cadc.conformance.uws;
 
-import org.junit.runner.RunWith;
-import org.junit.runners.Suite;
+import java.io.IOException;
+import java.io.Reader;
+import java.util.Enumeration;
+import java.util.HashMap;
+import java.util.Iterator;
+import java.util.Map;
+import java.util.Properties;
+import java.util.Set;
 
-@RunWith(Suite.class)
-@Suite.SuiteClasses
-({
-    JobsTest.class,
-    JobIdTest.class,
-    ExecutionDurationTest.class,
-    DestructionTest.class,
-    QuoteTest.class,
-    ParametersTest.class,
-    ErrorTest.class,
-    ResultsTest.class,
-    SchemaTest.class
-})
+public class TestProperties extends Properties
+{
+    public static final String NEW_LINE  = System.getProperty("line.separator");
 
-public class UWSTestSuite {}
+    public String filename;
+    public Map<String, String> parameters;
+
+    public TestProperties()
+    {
+        super();
+    }
+
+    public void load(Reader reader, String propertiesFilename) throws IOException
+    {
+        load(reader);
+        filename = propertiesFilename;
+        parameters = new HashMap<String, String>();
+        Enumeration keys = keys();
+        while (keys.hasMoreElements())
+        {
+            String key = (String) keys.nextElement();
+            String value = getProperty(key);
+            parameters.put(key, value);
+        }
+    }
+
+    public String toString()
+    {
+        StringBuilder sb = new StringBuilder();
+        Set<Map.Entry<String, String>> values = parameters.entrySet();
+        Iterator<Map.Entry<String, String>> iterator = values.iterator();
+        while (iterator.hasNext())
+        {
+            Map.Entry<String, String> entry = iterator.next();
+            sb.append(entry.getKey()).append(" = ").append(entry.getValue()).append(NEW_LINE);
+        }
+        return sb.toString();
+    }
+    
+}

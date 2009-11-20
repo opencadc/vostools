@@ -69,288 +69,158 @@
 
 package ca.nrc.cadc.conformance.uws;
 
-import com.meterware.httpunit.GetMethodWebRequest;
 import com.meterware.httpunit.PostMethodWebRequest;
 import com.meterware.httpunit.WebConversation;
 import com.meterware.httpunit.WebRequest;
 import com.meterware.httpunit.WebResponse;
-import java.io.File;
-import java.io.FileReader;
 import java.util.HashMap;
 import java.util.Map;
-import java.util.Properties;
+import org.apache.log4j.Level;
+import org.apache.log4j.Logger;
+import org.junit.Test;
 import org.w3c.dom.Document;
 import org.w3c.dom.Element;
 import org.w3c.dom.Node;
 import org.w3c.dom.NodeList;
+import static org.junit.Assert.*;
 
 public class PhaseTest extends TestConfig
 {
-    private static final String CLASS_NAME = "PhaseTest";
+    private static Logger log = Logger.getLogger(PhaseTest.class);
 
-    private File[] propertiesFiles;
-
-    public PhaseTest(String testName)
+    public PhaseTest()
     {
-        super(testName);
+        super();
 
-        propertiesFiles = getPropertiesFiles(CLASS_NAME);
+        // DEBUG is default.
+        log.setLevel((Level)Level.INFO);
     }
 
+    @Test
     public void testPhase()
         throws Exception
     {
-        if (propertiesFiles == null)
-            fail("missing properties file for " + CLASS_NAME);
+        // Create a new Job.
+        WebConversation conversation = new WebConversation();
+        String jobId = createJob(conversation);
 
-        // For each properties file.
-        for (int i = 0; i < propertiesFiles.length; i++)
-        {
-            File propertiesFile = propertiesFiles[i];
-            String propertiesFilename = propertiesFile.getName();
-            log.debug("**************************************************");
-            log.debug("processing properties file: " + propertiesFilename);
-            log.debug("**************************************************");
+        // GET request to the phase resource.
+        String resourceUrl = serviceUrl + "/" + jobId + "/phase";
+        WebResponse response = get(conversation, resourceUrl);
 
-            // Load the properties file.
-            Properties properties = new Properties();
-            FileReader reader = new FileReader(propertiesFile);
-            properties.load(reader);
+        // Create DOM document from XML.
+        log.debug("XML:\r\n" + response.getText());
+        Document document = buildDocument(response.getText(), false);
 
-            // Base URL to the UWS service.
-            String baseUrl = properties.getProperty("ca.nrc.cadc.conformance.uws.baseUrl");
-            log.debug(propertiesFilename + " ca.nrc.cadc.conformance.uws.baseUrl: " + baseUrl);
-            assertNotNull("ca.nrc.cadc.conformance.uws.baseUrl property is not set in properties file " + propertiesFilename, baseUrl);
+        // Get the document root.
+        Element root = document.getDocumentElement();
+        assertNotNull("XML returned from GET of " + resourceUrl + " missing root element", root);
 
-            // URL to the UWS schema used for validation.
-            String schemaUrl = properties.getProperty("ca.nrc.cadc.conformance.uws.schemaUrl");
-            log.debug(propertiesFilename + " ca.nrc.cadc.conformance.uws.schemaUrl: " + schemaUrl);
-            assertNotNull("ca.nrc.cadc.conformance.uws.schemaUrl property is not set in properties file " + propertiesFilename, schemaUrl);
+        // phase should be in the PENDING state.
+        log.debug("uws:phase: " + root.getTextContent());
+        assertEquals("Phase element not updated in XML returned from GET of " + resourceUrl, "PENDING", root.getTextContent());
 
-            // Create a new Job.
-            WebConversation conversation = new WebConversation();
-            WebResponse response = null;
-            String jobId = createJob(conversation, response, baseUrl, schemaUrl, propertiesFilename);
+        // Delete the job.
+        response = deleteJob(conversation, jobId);
 
-            // GET request to the phase resource.
-            String resourceUrl = baseUrl + "/" + jobId + "/phase";
-            log.debug("**************************************************");
-            log.debug("HTTP GET: " + resourceUrl);
-            WebRequest getRequest = new GetMethodWebRequest(resourceUrl);
-            conversation.clearContents();
-            response = conversation.getResponse(getRequest);
-            assertNotNull(propertiesFilename + " GET response to " + resourceUrl + " is null", response);
-
-            log.debug(getResponseHeaders(response));
-
-            log.debug("response code: " + response.getResponseCode());
-            assertEquals(propertiesFilename + " non-200 GET response code to " + resourceUrl, 200, response.getResponseCode());
-
-            log.debug("Content-Type: " + response.getContentType());
-            assertEquals(propertiesFilename + " GET response Content-Type header to " + resourceUrl + " is incorrect", ACCEPT_XML, response.getContentType());
-
-            // Create DOM document from XML.
-            log.debug("XML:\r\n" + response.getText());
-            Document document = buildDocument(response.getText());
-
-            Element root = document.getDocumentElement();
-            assertNotNull(propertiesFilename + " XML returned from GET of " + resourceUrl + " missing root element", root);
-
-            // phase should be in the PENDING state.
-            log.debug("uws:phase: " + root.getTextContent());
-            assertEquals(propertiesFilename + " phase element not updated in XML returned from GET of " + resourceUrl, "PENDING", root.getTextContent());
-
-            deleteJob(conversation, response, jobId, propertiesFilename);
-        }
+        log.info("PhaseTest.testPhase completed.");
     }
 
+    @Test
     public void testRunPhase()
         throws Exception
     {
-        if (propertiesFiles == null)
-            fail("missing properties file for " + CLASS_NAME);
+        // Create a new Job.
+        WebConversation conversation = new WebConversation();
+        Map parameters = new HashMap();
+        parameters.put("PASS", "FALSE");
+        parameters.put("RUNFOR", "10");
 
-        // For each properties file.
-        for (int i = 0; i < propertiesFiles.length; i++)
-        {
-            File propertiesFile = propertiesFiles[i];
-            String propertiesFilename = propertiesFile.getName();
-            log.debug("**************************************************");
-            log.debug("processing properties file: " + propertiesFilename);
-            log.debug("**************************************************");
+        // Create a new Job and get the jobId.
+        String jobId = createJob(conversation, parameters);
 
-            // Load the properties file.
-            Properties properties = new Properties();
-            FileReader reader = new FileReader(propertiesFile);
-            properties.load(reader);
+        // POST request to the phase resource.
+        String resourceUrl = serviceUrl + "/" + jobId + "/phase";
+        WebRequest postRequest = new PostMethodWebRequest(resourceUrl);
+        postRequest.setParameter("PHASE", "RUN");
+        WebResponse response = post(conversation, postRequest);
 
-            // Base URL to the UWS service.
-            String baseUrl = properties.getProperty("ca.nrc.cadc.conformance.uws.baseUrl");
-            log.debug(propertiesFilename + " ca.nrc.cadc.conformance.uws.baseUrl: " + baseUrl);
-            assertNotNull("ca.nrc.cadc.conformance.uws.baseUrl property is not set in properties file " + propertiesFilename, baseUrl);
+        // Get the redirect.
+        String location = response.getHeaderField("Location");
+        log.debug("Location: " + location);
+        assertNotNull("POST response to " + resourceUrl + " location header not set", location);
+//          assertEquals("POST response to " + resourceUrl + " location header incorrect", baseUrl + "/" + jobId, location);
 
-            // URL to the UWS schema used for validation.
-            String schemaUrl = properties.getProperty("ca.nrc.cadc.conformance.uws.schemaUrl");
-            log.debug(propertiesFilename + " ca.nrc.cadc.conformance.uws.schemaUrl: " + schemaUrl);
-            assertNotNull("ca.nrc.cadc.conformance.uws.schemaUrl property is not set in properties file " + propertiesFilename, schemaUrl);
+        // Follow the redirect.
+        response = get(conversation, location);
 
-            // Create a new Job.
-            WebConversation conversation = new WebConversation();
-            WebResponse response = null;
-            Map parameters = new HashMap();
-            parameters.put("PASS", "FALSE");
-            parameters.put("RUNFOR", "10");
+        // Validate against the schema and get a DOM Document.
+        log.debug(response.getText());
+        Document document = buildDocument(response.getText(), true);
 
-            // Create a new Job and get the jobId.
-            String jobId = createJob(conversation, response, parameters, baseUrl, schemaUrl, propertiesFilename);
+        // Get the document root.
+        Element root = document.getDocumentElement();
+        assertNotNull("XML returned from GET of " + resourceUrl + " missing root element", root);
 
-            // POST request to the phase resource.
-            String resourceUrl = baseUrl + "/" + jobId + "/phase";
-            log.debug("**************************************************");
-            log.debug("HTTP POST: " + resourceUrl);
-            WebRequest postRequest = new PostMethodWebRequest(resourceUrl);
-            postRequest.setParameter("PHASE", "RUN");
-            log.debug(getRequestParameters(postRequest));
+        // Get the phase element.
+        NodeList list = root.getElementsByTagName("uws:phase");
+        assertEquals("uws:phase element not found in XML returned from GET of " + resourceUrl, 1, list.getLength());
 
-            response = conversation.getResponse(postRequest);
-            assertNotNull(response);
-            assertNotNull(propertiesFilename + " POST response to " + resourceUrl + " is null", response);
+        // Validate the phase.
+        Node phase = list.item(0);
+        log.debug("uws:phase: " + phase.getTextContent());
+        assertEquals("uws:phase should be EXECUTING", "EXECUTING", phase.getTextContent());
 
-            log.debug(getResponseHeaders(response));
+        // Delete the Job.
+        deleteJob(conversation, jobId);
 
-            log.debug("response code: " + response.getResponseCode());
-            assertEquals(propertiesFilename + " POST response code to " + resourceUrl + " should be 303", 303, response.getResponseCode());
-
-            // Get the redirect.
-            String location = response.getHeaderField("Location");
-            log.debug("Location: " + location);
-            assertNotNull(propertiesFilename + " POST response to " + resourceUrl + " location header not set", location);
-//            assertEquals(propertiesFilename + " POST response to " + resourceUrl + " location header incorrect", baseUrl + "/" + jobId, location);
-
-            // Follow the redirect.
-            log.debug("**************************************************");
-            log.debug("HTTP GET: " + location);
-            WebRequest getRequest = new GetMethodWebRequest(location);
-            response = conversation.getResponse(getRequest);
-            assertNotNull(propertiesFilename + " GET response to " + location + " is null", response);
-
-            log.debug(getResponseHeaders(response));
-
-            log.debug("response code: " + response.getResponseCode());
-            assertEquals(propertiesFilename + " non-200 GET response code to " + location, 200, response.getResponseCode());
-
-            log.debug("Content-Type: " + response.getContentType());
-            assertEquals(propertiesFilename + " GET response Content-Type header to " + location + " is incorrect", ACCEPT_XML, response.getContentType());
-
-            // Validate against the schema and get a DOM Document.
-            log.debug(response.getText());
-            Document document = buildDocument(schemaUrl, response.getText());
-
-            // Get the phase.
-            Element root = document.getDocumentElement();
-            assertNotNull(propertiesFilename + " XML returned from GET of " + resourceUrl + " missing root element", root);
-
-            NodeList list = root.getElementsByTagName("uws:phase");
-            assertEquals(propertiesFilename + " uws:phase element not found in XML returned from GET of " + resourceUrl, 1, list.getLength());
-
-            Node phase = list.item(0);
-            log.debug("uws:phase: " + phase.getTextContent());
-            assertEquals("uws:phase should be EXECUTING", "EXECUTING", phase.getTextContent());
-
-            // Delete the Job.
-            deleteJob(conversation, response, jobId, propertiesFilename);
-        }
+        log.info("PhaseTest.testRunPhase completed.");
     }
 
+    @Test
     public void testAbortPhase()
         throws Exception
     {
-        if (propertiesFiles == null)
-            fail("missing properties file for " + CLASS_NAME);
+        // Create a new Job.
+        WebConversation conversation = new WebConversation();
+        String jobId = createJob(conversation);
 
-        // For each properties file.
-        for (int i = 0; i < propertiesFiles.length; i++)
-        {
-            File propertiesFile = propertiesFiles[i];
-            String propertiesFilename = propertiesFile.getName();
-            log.debug("**************************************************");
-            log.debug("processing properties file: " + propertiesFilename);
-            log.debug("**************************************************");
+        // POST request to the phase resource.
+        String resourceUrl = serviceUrl + "/" + jobId + "/phase";
+        WebRequest postRequest = new PostMethodWebRequest(resourceUrl);
+        postRequest.setParameter("PHASE", "ABORT");
+        WebResponse response = post(conversation, postRequest);
 
-            // Load the properties file.
-            Properties properties = new Properties();
-            FileReader reader = new FileReader(propertiesFile);
-            properties.load(reader);
+        // Get the redirect.
+        String location = response.getHeaderField("Location");
+        log.debug("Location: " + location);
+        assertNotNull("POST response to " + resourceUrl + " location header not set", location);
+//      assertEquals("POST response to " + resourceUrl + " location header incorrect", baseUrl + "/" + jobId, location);
 
-            // Base URL to the UWS service.
-            String baseUrl = properties.getProperty("ca.nrc.cadc.conformance.uws.baseUrl");
-            log.debug(propertiesFilename + " ca.nrc.cadc.conformance.uws.baseUrl: " + baseUrl);
-            assertNotNull("ca.nrc.cadc.conformance.uws.baseUrl property is not set in properties file " + propertiesFilename, baseUrl);
+        // Follow the redirect.
+        response = get(conversation, location);
 
-            // URL to the UWS schema used for validation.
-            String schemaUrl = properties.getProperty("ca.nrc.cadc.conformance.uws.schemaUrl");
-            log.debug(propertiesFilename + " ca.nrc.cadc.conformance.uws.schemaUrl: " + schemaUrl);
-            assertNotNull("ca.nrc.cadc.conformance.uws.schemaUrl property is not set in properties file " + propertiesFilename, schemaUrl);
+        // Validate against the schema and get a DOM Document.
+        log.debug("XML:\r\n" + response.getText());
+        Document document = buildDocument(response.getText(), true);
 
-            // Create a new Job.
-            WebConversation conversation = new WebConversation();
-            WebResponse response = null;
-            String jobId = createJob(conversation, response, baseUrl, schemaUrl, propertiesFilename);
+        // Get the document root.
+        Element root = document.getDocumentElement();
+        assertNotNull("XML returned from GET of " + resourceUrl + " missing root element", root);
 
-            // POST request to the phase resource.
-            String resourceUrl = baseUrl + "/" + jobId + "/phase";
-            log.debug("**************************************************");
-            log.debug("HTTP POST: " + resourceUrl);
-            WebRequest postRequest = new PostMethodWebRequest(resourceUrl);
-            postRequest.setParameter("PHASE", "ABORT");
-            log.debug(getRequestParameters(postRequest));
+        // Get the phase.
+        NodeList list = root.getElementsByTagName("uws:phase");
+        assertEquals("uws:phase element not found in XML returned from GET of " + resourceUrl, 1, list.getLength());
 
-            response = conversation.getResponse(postRequest);
-            assertNotNull(response);
-            assertNotNull(propertiesFilename + " POST response to " + resourceUrl + " is null", response);
+        // Valiate the phase.
+        Node phase = list.item(0);
+        log.debug("uws:phase: " + phase.getTextContent());
+        assertEquals("uws:phase should be ABORTED", "ABORTED", phase.getTextContent());
 
-            log.debug("response code: " + response.getResponseCode());
-            assertEquals(propertiesFilename + " POST response code to " + resourceUrl + " should be 303", 303, response.getResponseCode());
+        // Delete the Job.
+        deleteJob(conversation, jobId);
 
-            // Get the redirect.
-            String location = response.getHeaderField("Location");
-            log.debug("Location: " + location);
-            assertNotNull(propertiesFilename + " POST response to " + resourceUrl + " location header not set", location);
-//            assertEquals(propertiesFilename + " POST response to " + resourceUrl + " location header incorrect", baseUrl + "/" + jobId, location);
-
-            // Follow the redirect.
-            log.debug("**************************************************");
-            log.debug("HTTP GET: " + location);
-            WebRequest getRequest = new GetMethodWebRequest(location);
-            response = conversation.getResponse(getRequest);
-            assertNotNull(propertiesFilename + " GET response to " + location + " is null", response);
-
-            log.debug(getResponseHeaders(response));
-
-            log.debug("response code: " + response.getResponseCode());
-            assertEquals(propertiesFilename + " non-200 GET response code to " + location, 200, response.getResponseCode());
-
-            log.debug("Content-Type: " + response.getContentType());
-            assertEquals(propertiesFilename + " GET response Content-Type header to " + location + " is incorrect", ACCEPT_XML, response.getContentType());
-
-            // Validate against the schema and get a DOM Document.
-            log.debug("XML:\r\n" + response.getText());
-            Document document = buildDocument(schemaUrl, response.getText());
-
-            // Get the phase.
-            Element root = document.getDocumentElement();
-            assertNotNull(propertiesFilename + " XML returned from GET of " + resourceUrl + " missing root element", root);
-
-            NodeList list = root.getElementsByTagName("uws:phase");
-            assertEquals(propertiesFilename + " uws:phase element not found in XML returned from GET of " + resourceUrl, 1, list.getLength());
-
-            Node phase = list.item(0);
-            log.debug("uws:phase: " + phase.getTextContent());
-            assertEquals("uws:phase should be ABORTED", "ABORTED", phase.getTextContent());
-
-            // Delete the Job.
-            deleteJob(conversation, response, jobId, propertiesFilename);
-        }
+        log.info("PhaseTest.testAbortPhase completed.");
     }
 
 }

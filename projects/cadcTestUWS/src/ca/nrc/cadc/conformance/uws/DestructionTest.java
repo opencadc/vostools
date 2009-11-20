@@ -70,24 +70,22 @@
 package ca.nrc.cadc.conformance.uws;
 
 import ca.nrc.cadc.date.DateUtil;
-import com.meterware.httpunit.GetMethodWebRequest;
 import com.meterware.httpunit.PostMethodWebRequest;
 import com.meterware.httpunit.WebConversation;
 import com.meterware.httpunit.WebRequest;
 import com.meterware.httpunit.WebResponse;
-import java.io.File;
-import java.io.FileReader;
 import java.util.Calendar;
 import java.util.Date;
-import java.util.Properties;
+import org.apache.log4j.Level;
+import org.apache.log4j.Logger;
+import org.junit.Test;
 import org.w3c.dom.Document;
 import org.w3c.dom.Element;
-import org.w3c.dom.Node;
-import org.w3c.dom.NodeList;
+import static org.junit.Assert.*;
 
 public class DestructionTest extends TestConfig
 {
-    private static final String CLASS_NAME = "DestructionTest";
+    private static Logger log = Logger.getLogger(DestructionTest.class);
 
     // Destruction date passed to UWS service.
     private String destruction;
@@ -95,13 +93,12 @@ public class DestructionTest extends TestConfig
     // Destruction date expected back from UWS (returned as UTC).
     private String destructionUTC;
 
-    private File[] propertiesFiles;
-
-    public DestructionTest(String testName)
+    public DestructionTest()
     {
-        super(testName);
+        super();
 
-        propertiesFiles = getPropertiesFiles(CLASS_NAME);
+        // DEBUG is default.
+        log.setLevel((Level)Level.INFO);
 
         Calendar cal = Calendar.getInstance();
         cal.roll(Calendar.DATE, true);
@@ -113,113 +110,53 @@ public class DestructionTest extends TestConfig
     /**
      * Create a new Job, then update and verify the Destruction date.
      */
+    @Test
     public void testDestruction()
         throws Exception
     {
-        if (propertiesFiles == null)
-            fail("missing properties file for " + CLASS_NAME);
+        // Create a new Job.
+        WebConversation conversation = new WebConversation();
+        String jobId = createJob(conversation);
 
-        // For each properties file.
-        for (int i = 0; i < propertiesFiles.length; i++)
-        {
-            File propertiesFile = propertiesFiles[i];
-            String propertiesFilename = propertiesFile.getName();
-            log.debug("**************************************************");
-            log.debug("processing properties file: " + propertiesFilename);
-            log.debug("**************************************************");
+        // POST request to the destruction resource.
+        String resourceUrl = serviceUrl + "/" + jobId + "/destruction";
+        WebRequest postRequest = new PostMethodWebRequest(resourceUrl);
+        postRequest.setParameter("DESTRUCTION", destruction);
+        postRequest.setHeaderField("Content-Type", "application/x-www-form-urlencoded");
+        WebResponse response = post(conversation, postRequest);
 
-            // Load the properties file.
-            Properties properties = new Properties();
-            FileReader reader = new FileReader(propertiesFile);
-            properties.load(reader);
+        // Get the redirect.
+        String location = response.getHeaderField("Location");
+        log.debug("Location: " + location);
+        assertNotNull("POST response to " + resourceUrl + " location header not set", location);
+//      assertEquals("POST response to " + resourceUrl + " location header incorrect", baseUrl + "/" + jobId, location);
 
-            // Base URL to the UWS service.
-            String baseUrl = properties.getProperty("ca.nrc.cadc.conformance.uws.baseUrl");
-            log.debug(propertiesFilename + " ca.nrc.cadc.conformance.uws.baseUrl: " + baseUrl);
-            assertNotNull("ca.nrc.cadc.conformance.uws.baseUrl property is not set in properties file " + propertiesFilename, baseUrl);
+        // Follow the redirect.
+        response = get(conversation, location);
 
-            // URL to the UWS schema used for validation.
-            String schemaUrl = properties.getProperty("ca.nrc.cadc.conformance.uws.schemaUrl");
-            log.debug(propertiesFilename + " ca.nrc.cadc.conformance.uws.schemaUrl: " + schemaUrl);
-            assertNotNull("ca.nrc.cadc.conformance.uws.schemaUrl property is not set in properties file " + propertiesFilename, schemaUrl);
+        // Validate the XML against the schema.
+        log.debug("XML:\r\n" + response.getText());
+        buildDocument(response.getText(), true);
 
-            // Create a new Job.
-            WebConversation conversation = new WebConversation();
-            WebResponse response = null;
-            String jobId = createJob(conversation, response, baseUrl, schemaUrl, propertiesFilename);
+        // Get the destruction resource for this jobId.
+        response = get(conversation, resourceUrl);
 
-            // POST request to the destruction resource.
-            String resourceUrl = baseUrl + "/" + jobId + "/destruction";
-            log.debug("**************************************************");
-            log.debug("HTTP POST: " + resourceUrl);
-            WebRequest postRequest = new PostMethodWebRequest(resourceUrl);
-            postRequest.setParameter("DESTRUCTION", destruction);
-            postRequest.setHeaderField("Content-Type", "application/x-www-form-urlencoded");
-            log.debug(getRequestParameters(postRequest));
+        // Create DOM document from XML.
+        log.debug("XML:\r\n" + response.getText());
+        Document document = buildDocument(response.getText(), false);
 
-            conversation.clearContents();
-            response = conversation.getResponse(postRequest);
-            assertNotNull(propertiesFilename + " POST response to " + resourceUrl + " is null", response);
+        // Get the root of the document.
+        Element root = document.getDocumentElement();
+        assertNotNull("XML returned from GET of " + resourceUrl + " missing root element", root);
 
-            log.debug(getResponseHeaders(response));
+        // Validate the dstruction time.
+        log.debug("uws:destruction: " + root.getTextContent());
+        assertEquals("Destruction element not updated in XML returned from GET of " + resourceUrl, destructionUTC, root.getTextContent());
 
-            log.debug("response code: " + response.getResponseCode());
-            assertEquals(propertiesFilename + " POST response code to " + resourceUrl + " should be 303", 303, response.getResponseCode());
+        // Delete the job.
+        deleteJob(conversation, jobId);
 
-            // Get the redirect.
-            String location = response.getHeaderField("Location");
-            log.debug("Location: " + location);
-            assertNotNull(propertiesFilename + " POST response to " + resourceUrl + " location header not set", location);
-//            assertEquals(propertiesFilename + " POST response to " + resourceUrl + " location header incorrect", baseUrl + "/" + jobId, location);
-
-            // Follow the redirect.
-            log.debug("**************************************************");
-            log.debug("HTTP GET: " + location);
-            WebRequest getRequest = new GetMethodWebRequest(location);
-            conversation.clearContents();
-            response = conversation.getResponse(getRequest);
-            assertNotNull(propertiesFilename + " GET response to " + location + " is null", response);
-
-            log.debug(getResponseHeaders(response));
-
-            log.debug("response code: " + response.getResponseCode());
-            assertEquals(propertiesFilename + " non-200 GET response code to " + location, 200, response.getResponseCode());
-
-            log.debug("Content-Type: " + response.getContentType());
-            assertEquals(propertiesFilename + " GET response Content-Type header to " + location + " is incorrect", ACCEPT_XML, response.getContentType());
-
-            // Validate the XML against the schema.
-            log.debug("XML:\r\n" + response.getText());
-            buildDocument(schemaUrl, response.getText());
-
-            // Get the destruction resource for this jobId.
-            log.debug("**************************************************");
-            log.debug("HTTP GET: " + resourceUrl);
-            getRequest = new GetMethodWebRequest(resourceUrl);
-            conversation.clearContents();
-            response = conversation.getResponse(getRequest);
-            assertNotNull(propertiesFilename + " GET response to " + resourceUrl + " is null", response);
-
-            log.debug(getResponseHeaders(response));
-
-            log.debug("response code: " + response.getResponseCode());
-            assertEquals(propertiesFilename + " non-200 GET response code to " + resourceUrl, 200, response.getResponseCode());
-
-            log.debug("Content-Type: " + response.getContentType());
-            assertEquals(propertiesFilename + " GET response Content-Type header to " + resourceUrl + " is incorrect", ACCEPT_XML, response.getContentType());
-
-            // Create DOM document from XML.
-            log.debug("XML:\r\n" + response.getText());
-            Document document = buildDocument(response.getText());
-
-            Element root = document.getDocumentElement();
-            assertNotNull(propertiesFilename + " XML returned from GET of " + resourceUrl + " missing root element", root);
-
-            log.debug("uws:destruction: " + root.getTextContent());
-            assertEquals(propertiesFilename + " destruction element not updated in XML returned from GET of " + resourceUrl, destructionUTC, root.getTextContent());
-
-            deleteJob(conversation, response, jobId, propertiesFilename);
-        }
+        log.info("DestructionTest.testDestruction completed.");
     }
 
 }
