@@ -85,7 +85,7 @@ import java.util.Map;
  */
 public class AdqlQuery implements TapQuery
 {
-    private AdqlParser adqlParser;
+    private AdqlParser parser;
     private TapSchema tapSchema;
     private Map<String, Table> extraTables;
     private List<Parameter> paramList;
@@ -98,18 +98,20 @@ public class AdqlQuery implements TapQuery
     public void setTapSchema(TapSchema tapSchema) 
     {
         this.tapSchema = tapSchema;
+        parser = null;
     }
 
     public void setExtraTables(Map<String, Table> extraTables)
     {
         this.extraTables = extraTables;
+        parser = null;
     }
 
-    public void initAdqlParser()
+    private void initParser()
     {
         AdqlManager manager = 
             new ca.nrc.cadc.tap.parser.adql.impl.postgresql.pgsphere.AdqlManagerImpl(this.tapSchema, this.extraTables);
-        this.adqlParser = new AdqlParser(manager);
+        this.parser = new AdqlParser(manager);
     }
     
     public void setParameterList( List<Parameter> paramList )
@@ -117,16 +119,20 @@ public class AdqlQuery implements TapQuery
         this.queryString = TapUtil.findParameterValue("QUERY", paramList);
         if (queryString == null)
             throw new IllegalArgumentException( "parameter not found: QUERY" );
+        parser = null;
     }
     
 	public String getSQL()
 	{
+        if (parser == null)
+            initParser();
+        
 		if (queryString == null)
             throw new IllegalStateException();
                 
 		try 
         {
-            String ret = this.adqlParser.parse(queryString);
+            String ret = this.parser.parse(queryString);
             validated = true;
             return ret;
         } 
@@ -138,15 +144,18 @@ public class AdqlQuery implements TapQuery
 
 	public List<TapSelectItem> getSelectList() 
     {
+        if (parser == null)
+            initParser();
+        
         if (queryString == null)
             throw new IllegalStateException();
         
 		try 
         {
             if (!validated)
-                this.adqlParser.validate(queryString);
+                this.parser.validate(queryString);
             validated = true;
-            return this.adqlParser.getTapSelectItems();
+            return this.parser.getTapSelectItems();
 		} 
         catch (AdqlException ex) 
         {

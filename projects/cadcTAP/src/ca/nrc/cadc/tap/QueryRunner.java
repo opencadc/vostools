@@ -109,20 +109,19 @@ public class QueryRunner implements JobRunner
 	private static final HashMap<String,String> langQueries    = new HashMap<String,String>();
 	
     
-    private static String queryDataSourceName;
-    private static String uploadDataSourceName;
-    private static String fileStoreClassName;
+    private static String queryDataSourceName = "jdbc/tapuser";
+    private static String uploadDataSourceName = "jdbc/tapuploadadm";
+    
+    // names of plugin classes that must be provided by service implementation
+    private static String fileStoreClassName = "ca.nrc.cadc.tap.impl.FileStoreImpl";
+    private static String uploadManagerClassName = "ca.nrc.cadc.tap.impl.UploadManagerImpl";
+    private static String sqlParserClassName = "ca.nrc.cadc.tap.impl.SqlQueryImpl";
+    private static String adqlParserClassName = "ca.nrc.cadc.tap.impl.AdqlQueryImpl";
     
 	static
 	{
-		langQueries.put(Validator.ADQL, "ca.nrc.cadc.tap.AdqlQuery");
-		langQueries.put(Validator.SQL, "ca.nrc.cadc.tap.SqlQuery");
-        
-        queryDataSourceName = "jdbc/tapuser";
-        uploadDataSourceName = "jdbc/tapuploadadm";
-
-        // TODO: configurable
-        fileStoreClassName = "ca.nrc.cadc.tap.AdFileStore";
+		langQueries.put(Validator.ADQL, adqlParserClassName);
+		langQueries.put(Validator.SQL, sqlParserClassName);
 	}
 	
 	private Job job;
@@ -162,7 +161,6 @@ public class QueryRunner implements JobRunner
     private void doit()
     {
         FileStore fs = null;
-        String tmpDir = System.getProperty( "java.io.tmpdir" );
         job.setExecutionPhase(ExecutionPhase.UNKNOWN);
         try
         {
@@ -210,7 +208,9 @@ public class QueryRunner implements JobRunner
             TapSchema tapSchema = dao.get();
             
             // UPLOAD
-            UploadManager uploadManager = new UploadManager(uploadDataSource);
+            Class umc =  Class.forName(uploadManagerClassName);
+            UploadManager uploadManager = (UploadManager) umc.newInstance();
+            uploadManager.setDataSource(uploadDataSource);
             Map<String,Table> tables = uploadManager.upload( paramList, job.getJobId() );
             
             // LANG
@@ -218,16 +218,13 @@ public class QueryRunner implements JobRunner
             String cname = langQueries.get(lang);
             if (cname == null)
                 throw new UnsupportedOperationException("unknown LANG: " + lang);
-            Class c = Class.forName(cname);
-            TapQuery tapQuery = (TapQuery) c.newInstance();
+            Class tqc = Class.forName(cname);
+            TapQuery tapQuery = (TapQuery) tqc.newInstance();
             tapQuery.setTapSchema(tapSchema);
             tapQuery.setExtraTables(tables);
-            tapQuery.initAdqlParser();
             tapQuery.setParameterList(paramList);
         	String sql = tapQuery.getSQL();
             List<TapSelectItem> selectList = tapQuery.getSelectList();
-            
-            
             
             // TODO: MAXREC
             
@@ -248,7 +245,7 @@ public class QueryRunner implements JobRunner
                 rs = pstmt.executeQuery();
 
                 // write result
-                tmpFile = new File(tmpDir, "result_" + job.getJobId() + "." + writer.getExtension());
+                tmpFile = new File(fs.getStorageDir(), "result_" + job.getJobId() + "." + writer.getExtension());
                 logger.debug("writing ResultSet to " + tmpFile);
                 OutputStream ostream = new FileOutputStream(tmpFile);
                 writer.write(rs, ostream);
@@ -293,7 +290,7 @@ public class QueryRunner implements JobRunner
         		errorMessage = t.getClass().getSimpleName() + ":" + t.getMessage();
         		logger.debug( "Error message: "+errorMessage );
         		VOTableWriter writer = new VOTableWriter();
-                File errorFile = new File( tmpDir, "error_" + job.getJobId() + "." + writer.getExtension() );
+                File errorFile = new File(fs.getStorageDir(), "error_" + job.getJobId() + "." + writer.getExtension());
                 logger.debug( "Error file: "+errorFile.getAbsolutePath());
            		FileOutputStream errorOutput = new FileOutputStream( errorFile );
            		writer.write(t, errorOutput );

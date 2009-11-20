@@ -69,19 +69,34 @@
 
 package ca.nrc.cadc.tap;
 
-import java.io.File;
-import java.net.URL;
+import ca.nrc.cadc.tap.schema.Table;
+import ca.nrc.cadc.uws.Parameter;
+import java.util.List;
+import java.util.Map;
+import javax.sql.DataSource;
 
-public interface FileStore
+/**
+ * Implementation of UploadManager that detects UPLOAD parameters and throws an
+ * UnsupportedOperationException.
+ * 
+ * @author pdowler
+ */
+public class UploadNotSupported implements UploadManager
 {
+    public void setDataSource(DataSource dataSource) { }
+
     /**
-     * @return the directory to use for (temporary) result files.
+     * Check for the presence of UPLOAD parameter(s) in the paramList.
+     * @param paramList
+     * @param jobID
+     * @return null
+     * @throws UnsupportedOperationException if paramList contains an upload
      */
-    public File getStorageDir();
-    
-    /**
-     * @param file the result/error file
-     * @return an absolute URL to the specified file
-     */
-	public URL put( File file );
+    public Map<String, Table> upload(List<Parameter> paramList, String jobID) 
+    {
+        List<String> uploads  = TapUtil.findParameterValues(UPLOAD, paramList );
+        if (uploads == null || uploads.size() == 0)
+            return null;
+        throw new UnsupportedOperationException("UPLOAD parameter not supproted by this service");
+    }
 }

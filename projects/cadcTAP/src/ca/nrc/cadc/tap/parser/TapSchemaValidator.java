@@ -62,26 +62,29 @@
 *  <http://www.gnu.org/licenses/>.      pas le cas, consultez :
 *                                       <http://www.gnu.org/licenses/>.
 *
-*  $Revision: 4 $
+*  $Revision: 1 $
 *
 ************************************************************************
 */
 
-package ca.nrc.cadc.tap;
+package ca.nrc.cadc.tap.parser;
 
-import java.io.File;
-import java.net.URL;
+import ca.nrc.cadc.tap.schema.TapSchema;
 
-public interface FileStore
+import org.apache.log4j.Logger;
+
+/**
+ * This class visits a query and makes sure only tables and columns described 
+ * in TapSchema are used.
+ * 
+ * @author pdowler
+ */
+public class TapSchemaValidator 
 {
-    /**
-     * @return the directory to use for (temporary) result files.
-     */
-    public File getStorageDir();
+    private static Logger log = Logger.getLogger(TapSchemaValidator.class);
     
-    /**
-     * @param file the result/error file
-     * @return an absolute URL to the specified file
-     */
-	public URL put( File file );
+    private TapSchema tapSchema;
+    
+    public TapSchemaValidator() { }
+    
 }

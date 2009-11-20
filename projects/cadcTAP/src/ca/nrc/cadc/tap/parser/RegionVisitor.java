@@ -62,26 +62,123 @@
 *  <http://www.gnu.org/licenses/>.      pas le cas, consultez :
 *                                       <http://www.gnu.org/licenses/>.
 *
-*  $Revision: 4 $
+*  $Revision: 1 $
 *
 ************************************************************************
 */
 
-package ca.nrc.cadc.tap;
+package ca.nrc.cadc.tap.parser;
 
-import java.io.File;
-import java.net.URL;
+import net.sf.jsqlparser.expression.Expression;
+import org.apache.log4j.Logger;
 
-public interface FileStore
+/**
+ * This visitor finds all occurances of ADQL geometry constructs. The default
+ * implementation of the protected <code>handle</code> methods throw an
+ * UnsupportedOperationException.
+ * 
+ * @author pdowler
+ */
+public class RegionVisitor 
 {
-    /**
-     * @return the directory to use for (temporary) result files.
-     */
-    public File getStorageDir();
+    private static Logger log = Logger.getLogger(RegionVisitor.class);
+    
+    public RegionVisitor() { }
     
     /**
-     * @param file the result/error file
-     * @return an absolute URL to the specified file
+     * This method is called when a CONTAINS is found outside of a predicate.
+     * This could occurr if the query had CONTAINS(...) in the select list or as
+     * part of an arithmetic expression or aggregate function (since CONTAINS 
+     * returns a numeric value). 
+     * 
+     * @param ex the CONTAINS expression
      */
-	public URL put( File file );
+    protected void handleContains(Expression ex)
+    {
+        throw new UnsupportedOperationException("CONTAINS not supported");
+    }
+    
+    /**
+     * This method is called when CONTAINS is one of the arguments in a predicate.
+     * 
+     * @param ex the predicate with a CONTAINS argument
+     */
+    protected void handleContainsPredicate(Expression ex)
+    {
+        throw new UnsupportedOperationException("CONTAINS not supported");
+    }
+    
+    /**
+     * This method is called when a INTERSECTS is found outside of a predicate.
+     * This could occurr if the query had INTERSECTS(...) in the select list or as
+     * part of an arithmetic expression or aggregate function (since INTERSECTS 
+     * returns a numeric value). 
+     * 
+     * @param ex the CONTAINS expression
+     */
+    protected void handleIntersects(Expression ex)
+    {
+        throw new UnsupportedOperationException("INTERSECTS not supported");
+    }
+    
+    /**
+     * This method is called when INTERSECTS is one of the arguments in a predicate.
+     * 
+     * @param ex the predicate with a INTERSECTS argument
+     */
+    protected void handleIntersectsPredicate(Expression ex)
+    {
+        throw new UnsupportedOperationException("INTERSECTS not supported");
+    }
+    
+    /**
+     * This method is called when a POINT geometry value is found.
+     * 
+     * @param ex the POINT expression
+     */
+    protected void handlePoint(Expression ex)
+    {
+        throw new UnsupportedOperationException("POINT not supported");
+    }
+    
+    /**
+     * This method is called when a CIRCLE geometry value is found.
+     * 
+     * @param ex the CIRCLE expression
+     */
+    protected void handleCircle(Expression ex)
+    {
+        throw new UnsupportedOperationException("CIRCLE not supported");
+    }
+    
+    /**
+     * This method is called when a BOX geometry value is found.
+     * 
+     * @param ex the BOX expression
+     */
+    protected void handleBox(Expression ex)
+    {
+        throw new UnsupportedOperationException("BOX not supported");
+    }
+    
+    /**
+     * This method is called when a POLYGON geometry value is found.
+     * 
+     * @param ex the POLYGON expression
+     */
+    protected void handlePolygon(Expression ex)
+    {
+        throw new UnsupportedOperationException("POLYGON not supported");
+    }
+    
+    /**
+     * This method is called when a REGION geometry value is found.
+     * 
+     * @param ex the REGION expression
+     */
+    protected void handleRegion(Expression ex)
+    {
+        throw new UnsupportedOperationException("REGION not supported");
+    }
+
 }

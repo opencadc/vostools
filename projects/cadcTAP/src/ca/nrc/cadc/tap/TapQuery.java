@@ -79,21 +79,36 @@ import java.util.Map;
 
 public interface TapQuery
 {
+    /**
+     * Caller provides the complete TapSchema content.
+     * 
+     * @param ts
+     */
     public void setTapSchema(TapSchema ts);
     
+    /**
+     * Caller provides the original table names and metadata for temporary tables not
+     * described in TapSchema.
+     * 
+     * @param extraTables
+     */
     public void setExtraTables(Map<String,Table> extraTables);
     
-    public void initAdqlParser();
-    
     /**
-     * Set the parameter list. Calling this methiod clears all previous
+     * Set the parameter list. Calling this method clears all previous
      * parsing state.
      * 
      * @param params
      */
     public void setParameterList(List<Parameter> params);
     
+    /**
+     * @return the SQL query to execute
+     */
     public String getSQL();
     
+    /**
+     * @return the metadata for columns in the result set
+     */
     public List<TapSelectItem> getSelectList();
 }
