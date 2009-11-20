@@ -70,178 +70,46 @@
 package ca.nrc.cadc.tap.parser;
 
 import net.sf.jsqlparser.expression.Expression;
-import net.sf.jsqlparser.expression.ExpressionVisitor;
-import net.sf.jsqlparser.expression.Function;
 import org.apache.log4j.Logger;
 
 /**
- * This visitor finds all occurances of ADQL geometry constructs. The default
+ * This visitor finds all occurances of timestamps. The default
  * implementations of the protected <code>handle</code> methods throw an
  * UnsupportedOperationException so this visitor can be used as-is to detect
- * the presence of ADQL geometry constructs in the query.
+ * the presence of timestamps in the query.
+ * </p><p>
+ * Subclasses can override the <code>handle</code> methods to manipulate timestamp 
+ * values or usage in the query. Possible uses:
+ * </p>
+ * <ul>
+ * <li>validate the format of the timestamp value
+ * <li>convert the timestamp format to an internal format supported by the DB
+ * <li>convert the timestamp value to the internally used timezone or offset
+ * </ul>
  * 
  * @author pdowler
  */
-public class RegionVisitor //implements ExpressionVisitor
+public class TimestampVisitor // implements ExpressionVisitor
 {
-    private static Logger log = Logger.getLogger(RegionVisitor.class);
+    private static Logger log = Logger.getLogger(TimestampVisitor.class);
     
-    public RegionVisitor() { }
-
-    // TODO 1: extend a standard ExpressionVisitor and override visit(Function)
-    
-    // TODO 2: to support handleContainsPredicate and handleIntersectsPredicate
-    // we need to override at least visit(Equals) and maybe other legal but
-    // annoying possibilities
-    
-    public void visit(Function arg0)
-    {
-        throw new UnsupportedOperationException("Not implemented");
-    }
+    public TimestampVisitor() { }
     
     /**
-     * This method is called when a CONTAINS is found outside of a predicate.
+     * This method is called when a timestamp expression is found.
      * This could occurr if the query had CONTAINS(...) in the select list or as
      * part of an arithmetic expression or aggregate function (since CONTAINS 
      * returns a numeric value). 
      * 
      * @param ex the CONTAINS expression
      */
-    protected void handleContains(Expression ex)
+    protected void handleTimestamp(Expression ex)
     {
-        throw new UnsupportedOperationException("CONTAINS not supported");
+        throw new UnsupportedOperationException("timestamp not supported");
     }
     
-    /**
-     * This method is called when CONTAINS is one of the arguments in a predicate.
-     * 
-     * @param ex the predicate with a CONTAINS argument
-     */
-    protected void handleContainsPredicate(Expression ex)
+    protected void handleTimestampPredicate(Expression ex)
     {
-        throw new UnsupportedOperationException("CONTAINS not supported");
-    }
-    
-    /**
-     * This method is called when a INTERSECTS is found outside of a predicate.
-     * This could occurr if the query had INTERSECTS(...) in the select list or as
-     * part of an arithmetic expression or aggregate function (since INTERSECTS 
-     * returns a numeric value). 
-     * 
-     * @param ex the CONTAINS expression
-     */
-    protected void handleIntersects(Expression ex)
-    {
-        throw new UnsupportedOperationException("INTERSECTS not supported");
-    }
-    
-    /**
-     * This method is called when INTERSECTS is one of the arguments in a predicate.
-     * 
-     * @param ex the predicate with a INTERSECTS argument
-     */
-    protected void handleIntersectsPredicate(Expression ex)
-    {
-        throw new UnsupportedOperationException("INTERSECTS not supported");
-    }
-    
-    /**
-     * This method is called when a POINT geometry value is found.
-     * 
-     * @param ex the POINT expression
-     */
-    protected void handlePoint(Expression ex)
-    {
-        throw new UnsupportedOperationException("POINT not supported");
-    }
-    
-    /**
-     * This method is called when a CIRCLE geometry value is found.
-     * 
-     * @param ex the CIRCLE expression
-     */
-    protected void handleCircle(Expression ex)
-    {
-        throw new UnsupportedOperationException("CIRCLE not supported");
-    }
-    
-    /**
-     * This method is called when a BOX geometry value is found.
-     * 
-     * @param ex the BOX expression
-     */
-    protected void handleBox(Expression ex)
-    {
-        throw new UnsupportedOperationException("BOX not supported");
-    }
-    
-    /**
-     * This method is called when a POLYGON geometry value is found.
-     * 
-     * @param ex the POLYGON expression
-     */
-    protected void handlePolygon(Expression ex)
-    {
-        throw new UnsupportedOperationException("POLYGON not supported");
-    }
-    
-    /**
-     * This method is called when a REGION geometry value is found.
-     * 
-     * @param ex the REGION expression
-     */
-    protected void handleRegion(Expression ex)
-    {
-        throw new UnsupportedOperationException("REGION not supported");
-    }
-    
-    /**
-     * This method is called when the CENTROID function is found.
-     * 
-     * @param ex the CENTROID expression
-     */
-    protected void handleCentroid(Expression ex)
-    {
-        throw new UnsupportedOperationException("CENTROID not supported");
-    }
-    
-    /**
-     * This method is called when AREA function is found.
-     * 
-     * @param ex the AREA expression
-     */
-    protected void handleArea(Expression ex)
-    {
-        throw new UnsupportedOperationException("AREA not supported");
-    }
-    
-    /**
-     * This method is called when COORD1 function is found.
-     * 
-     * @param ex the COORD1 expression
-     */
-    protected void handleCoord1(Expression ex)
-    {
-        throw new UnsupportedOperationException("COORD1 not supported");
-    }
-    
-    /**
-     * This method is called when COORD2 function is found.
-     * 
-     * @param ex the COORD2 expression
-     */
-    protected void handleCoord2(Expression ex)
-    {
-        throw new UnsupportedOperationException("COORD2 not supported");
-    }
-    
-    /**
-     * This method is called when COORDSYS function is found.
-     * 
-     * @param ex the COORDSYS expression
-     */
-    protected void handleCoordSys(Expression ex)
-    {
-        throw new UnsupportedOperationException("COORDSYS not supported");
+        throw new UnsupportedOperationException("timestamp not supported");
     }
 }
