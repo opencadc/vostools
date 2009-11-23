@@ -97,6 +97,6 @@ public class UploadNotSupported implements UploadManager
         List<String> uploads  = TapUtil.findParameterValues(UPLOAD, paramList );
         if (uploads == null || uploads.size() == 0)
             return null;
-        throw new UnsupportedOperationException("UPLOAD parameter not supproted by this service");
+        throw new UnsupportedOperationException("UPLOAD parameter not supported by this service");
     }
 }
