@@ -71,30 +71,26 @@ package ca.nrc.cadc.tap.parser;
 
 import ca.nrc.cadc.tap.schema.Table;
 import ca.nrc.cadc.tap.schema.TapSchema;
-
 import java.util.Map;
 import org.apache.log4j.Logger;
 
 /**
- * This class visits a query and makes sure only tables and columns described 
- * in TapSchema are used.
- * 
+ *
  * @author pdowler
  */
-public class TapSchemaValidator // extends ??
+public class SelectListExtractor // extends ??
 {
-    protected static Logger log = Logger.getLogger(TapSchemaValidator.class);
+    protected static Logger log = Logger.getLogger(SelectListExtractor.class);
     
     protected TapSchema tapSchema;
     protected Map<String,Table> extraTables;
     
-    private TapSchemaValidator() { }
+    private SelectListExtractor() { }
     
-    public TapSchemaValidator(TapSchema tapSchema, Map<String,Table> extraTables) 
+    public SelectListExtractor(TapSchema tapSchema, Map<String,Table> extraTables) 
     { 
         super();
         this.tapSchema = tapSchema;
         this.extraTables = extraTables;
     }
-    
 }
