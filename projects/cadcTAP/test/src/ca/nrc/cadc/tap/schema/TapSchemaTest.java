@@ -131,10 +131,10 @@ public class TapSchemaTest extends TestCase
         assertNotNull("TapSchema is null", tapSchema);
 
         log.debug("Asserting TapSchmea.schemas is not null.");
-        assertNotNull("TapSchema.schemas is null", tapSchema.schemas);
+        assertNotNull("TapSchema.schemas is null", tapSchema.schemaDescs);
 
         log.debug("Asserting TapSchmea.keys is not null.");
-        assertNotNull("TapSchema.keys is null", tapSchema.keys);
+        assertNotNull("TapSchema.keys is null", tapSchema.keyDescs);
     }
 
     /**
@@ -143,7 +143,7 @@ public class TapSchemaTest extends TestCase
     public void testSchemas()
     { 
         int count = 0;
-        for (Schema schema : tapSchema.schemas)
+        for (SchemaDesc schema : tapSchema.schemaDescs)
         {
             log.debug("Schema.schemaName: " + schema.schemaName);
             if (schema.schemaName.equals(TAP_SCHEMA_NAME))
@@ -158,15 +158,15 @@ public class TapSchemaTest extends TestCase
      */
     public void testTables()
     {
-        for (Schema schema : tapSchema.schemas)
+        for (SchemaDesc schema : tapSchema.schemaDescs)
         {
             log.debug("Schema.schemaName: " + schema.schemaName);
             if (schema.schemaName.equals(TAP_SCHEMA_NAME))
             {
                 log.debug("Schema.schemaName: " + schema.schemaName);
                 log.debug("Asserting Schema.tables is not null.");
-                assertNotNull("List of Schema tables must not be null", schema.tables);
-                for (Table table : schema.tables)
+                assertNotNull("List of Schema tables must not be null", schema.tableDescs);
+                for (TableDesc table : schema.tableDescs)
                 {
                     log.debug("Table.schemaName:" + table.schemaName);
                     log.debug("Asserting Table schema name equals Schema name.");
@@ -181,18 +181,18 @@ public class TapSchemaTest extends TestCase
      */
     public void testTableColumns()
     {
-        for (Schema schema : tapSchema.schemas)
+        for (SchemaDesc schema : tapSchema.schemaDescs)
         {
             log.debug("Schema.schemaName: " + schema.schemaName);
             if (schema.schemaName.equals(TAP_SCHEMA_NAME))
             {
-                for (Table table : schema.tables)
+                for (TableDesc table : schema.tableDescs)
                 {
                     log.debug("Table:" + table.toString());
                     log.debug("Table.tableName:" + table.tableName);
                     log.debug("Asserting Table.columns is not null.");
-                    assertNotNull("List of Table columns must not be null", table.columns);
-                    for (Column column : table.columns)
+                    assertNotNull("List of Table columns must not be null", table.columnDescs);
+                    for (ColumnDesc column : table.columnDescs)
                     {
                         log.debug("Column.tableName:" + column.tableName);
                         log.debug("Asserting Column table name equals Table name.");

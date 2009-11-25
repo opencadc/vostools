@@ -253,7 +253,7 @@ public class ExtraTableConverter implements SelectVisitor, SelectItemVisitor, Fr
         //DOJOB
         if (_config.isExtraTable(table))
         {
-            ca.nrc.cadc.tap.schema.Table internalTable = _config.findInternalTableByExtraTable(table);
+            ca.nrc.cadc.tap.schema.TableDesc internalTable = _config.findInternalTableByExtraTable(table);
             if (internalTable != null)
             {
                 table.setName(internalTable.getSimpleTableName());

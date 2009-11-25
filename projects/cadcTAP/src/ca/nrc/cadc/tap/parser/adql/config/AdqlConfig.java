@@ -92,7 +92,7 @@ import ca.nrc.cadc.tap.parser.adql.exception.AdqlValidateException;
 import ca.nrc.cadc.tap.parser.adql.validator.PlainSelectInfo;
 import ca.nrc.cadc.tap.parser.adql.validator.SelectValidator;
 import ca.nrc.cadc.tap.parser.adql.validator.SelectValidator.PlainSelectType;
-import ca.nrc.cadc.tap.schema.Schema;
+import ca.nrc.cadc.tap.schema.SchemaDesc;
 import ca.nrc.cadc.tap.schema.TapSchema;
 
 public abstract class AdqlConfig
@@ -100,7 +100,7 @@ public abstract class AdqlConfig
     protected Logger log = Logger.getLogger(AdqlConfig.class);
 
     protected TapSchema _tapSchema;
-    protected Map<String, ca.nrc.cadc.tap.schema.Table> _extraTablesMap;
+    protected Map<String, ca.nrc.cadc.tap.schema.TableDesc> _extraTablesMap;
 
     protected String configName = "Default";
     protected List<FunctionMeta> functionMetas;
@@ -126,12 +126,12 @@ public abstract class AdqlConfig
     {
         TableMeta tableMeta;
 
-        for (ca.nrc.cadc.tap.schema.Schema schema : _tapSchema.getSchemas())
+        for (ca.nrc.cadc.tap.schema.SchemaDesc schema : _tapSchema.getSchemaDescs())
         {
-            for (ca.nrc.cadc.tap.schema.Table table : schema.getTables())
+            for (ca.nrc.cadc.tap.schema.TableDesc table : schema.getTableDescs())
             {
                 tableMeta = new TableMeta(table.getSchemaName(), table.getSimpleTableName());
-                for (ca.nrc.cadc.tap.schema.Column column : table.getColumns())
+                for (ca.nrc.cadc.tap.schema.ColumnDesc column : table.getColumnDescs())
                 {
                     tableMeta.addColumnMeta(new ColumnMeta(column.getColumnName(), column.getDatatype(), column.getUcd(), column
                             .getUnit()));
@@ -141,10 +141,10 @@ public abstract class AdqlConfig
         }
         if (_extraTablesMap != null && _extraTablesMap.size() > 0 )
         {
-            for (ca.nrc.cadc.tap.schema.Table table : _extraTablesMap.values())
+            for (ca.nrc.cadc.tap.schema.TableDesc table : _extraTablesMap.values())
             {
                 tableMeta = new TableMeta(table.getSchemaName(), table.getSimpleTableName());
-                for (ca.nrc.cadc.tap.schema.Column column : table.getColumns())
+                for (ca.nrc.cadc.tap.schema.ColumnDesc column : table.getColumnDescs())
                 {
                     tableMeta.addColumnMeta(new ColumnMeta(column.getColumnName(), column.getDatatype(), column.getUcd(), column
                             .getUnit()));
@@ -170,9 +170,9 @@ public abstract class AdqlConfig
         return rtn;
     }
     
-    public ca.nrc.cadc.tap.schema.Table findInternalTableByExtraTable(Table table)
+    public ca.nrc.cadc.tap.schema.TableDesc findInternalTableByExtraTable(Table table)
     {
-        ca.nrc.cadc.tap.schema.Table rtn = null;
+        ca.nrc.cadc.tap.schema.TableDesc rtn = null;
         String tableName = table.getName();
         String schemaName = table.getSchemaName();
         String key = null;
@@ -180,7 +180,7 @@ public abstract class AdqlConfig
             key = tableName;
         else if (_extraTablesMap.containsKey(schemaName + "." + tableName))
             key = schemaName + "." + tableName;
-        rtn = (ca.nrc.cadc.tap.schema.Table) _extraTablesMap.get(key);
+        rtn = (ca.nrc.cadc.tap.schema.TableDesc) _extraTablesMap.get(key);
         return rtn;
     }
 

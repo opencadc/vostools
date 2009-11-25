@@ -69,7 +69,7 @@
 
 package ca.nrc.cadc.tap;
 
-import ca.nrc.cadc.tap.schema.Table;
+import ca.nrc.cadc.tap.schema.TableDesc;
 import java.util.List;
 
 import ca.nrc.cadc.tap.parser.adql.AdqlManager;
@@ -87,7 +87,7 @@ public class AdqlQuery implements TapQuery
 {
     private AdqlParser parser;
     private TapSchema tapSchema;
-    private Map<String, Table> extraTables;
+    private Map<String, TableDesc> extraTables;
     private List<Parameter> paramList;
     private String queryString;
     private boolean validated = false;
@@ -101,7 +101,7 @@ public class AdqlQuery implements TapQuery
         parser = null;
     }
 
-    public void setExtraTables(Map<String, Table> extraTables)
+    public void setExtraTables(Map<String, TableDesc> extraTables)
     {
         this.extraTables = extraTables;
         parser = null;

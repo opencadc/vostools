@@ -69,7 +69,7 @@
 
 package ca.nrc.cadc.tap.parser;
 
-import ca.nrc.cadc.tap.schema.Table;
+import ca.nrc.cadc.tap.schema.TableDesc;
 import ca.nrc.cadc.tap.schema.TapSchema;
 import java.util.Map;
 import org.apache.log4j.Logger;
@@ -83,11 +83,11 @@ public class SelectListExtractor // extends ??
     protected static Logger log = Logger.getLogger(SelectListExtractor.class);
     
     protected TapSchema tapSchema;
-    protected Map<String,Table> extraTables;
+    protected Map<String,TableDesc> extraTables;
     
     private SelectListExtractor() { }
     
-    public SelectListExtractor(TapSchema tapSchema, Map<String,Table> extraTables) 
+    public SelectListExtractor(TapSchema tapSchema, Map<String,TableDesc> extraTables) 
     { 
         super();
         this.tapSchema = tapSchema;

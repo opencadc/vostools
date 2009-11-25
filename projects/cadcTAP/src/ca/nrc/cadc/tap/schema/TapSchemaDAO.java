@@ -140,31 +140,31 @@ public class TapSchemaDAO
         TapSchema tapSchema = new TapSchema();
 
         // List of TAP_SCHEMA.schemas
-        tapSchema.schemas = jdbc.query(SELECT_SCHEMAS, new SchemaMapper());
+        tapSchema.schemaDescs = jdbc.query(SELECT_SCHEMAS, new SchemaMapper());
 
         // List of TAP_SCHEMA.tables
-        List<Table> tables = jdbc.query(SELECT_TABLES, new TableMapper());
+        List<TableDesc> tableDescs = jdbc.query(SELECT_TABLES, new TableMapper());
 
         // Add the Tables to the Schemas.
-        addTablesToSchemas(tapSchema.schemas, tables);
+        addTablesToSchemas(tapSchema.schemaDescs, tableDescs);
 
         // List of TAP_SCHEMA.columns
-        List<Column> columns = jdbc.query(SELECT_COLUMNS, new ColumnMapper());
+        List<ColumnDesc> columnDescs = jdbc.query(SELECT_COLUMNS, new ColumnMapper());
 
         // Add the Columns to the Tables.
-        addColumnsToTables(tables, columns);
+        addColumnsToTables(tableDescs, columnDescs);
 
         // List of TAP_SCHEMA.keys
-        tapSchema.keys = jdbc.query(SELECT_KEYS, new KeyMapper());
+        tapSchema.keyDescs = jdbc.query(SELECT_KEYS, new KeyMapper());
 
         // List of TAP_SCHEMA.key_columns
-        List<KeyColumn> keyColumns = jdbc.query(SELECT_KEY_COLUMNS, new KeyColumnMapper());
+        List<KeyColumnDesc> keyColumnDescs = jdbc.query(SELECT_KEY_COLUMNS, new KeyColumnMapper());
 
         // Add the KeyColumns to the Keys.
-        addKeyColumnsToKeys(tapSchema.keys, keyColumns);
+        addKeyColumnsToKeys(tapSchema.keyDescs, keyColumnDescs);
 
-        for (Schema s : tapSchema.schemas)
-            log.debug("schema " + s.schemaName + " has " + s.tables.size() + " tables");
+        for (SchemaDesc s : tapSchema.schemaDescs)
+            log.debug("schema " + s.schemaName + " has " + s.tableDescs.size() + " tables");
         
         return tapSchema;
     }
@@ -172,20 +172,20 @@ public class TapSchemaDAO
     /**
      * Creates Lists of Tables with a common Schema name, then adds the Lists to the Schemas.
      * 
-     * @param schemas List of Schemas.
-     * @param tables List of Tables.
+     * @param schemaDescs List of Schemas.
+     * @param tableDescs List of Tables.
      */
-    private void addTablesToSchemas(List<Schema> schemas, List<Table> tables)
+    private void addTablesToSchemas(List<SchemaDesc> schemaDescs, List<TableDesc> tableDescs)
     {
-        for (Table table : tables)
+        for (TableDesc tableDesc : tableDescs)
         {
-            for (Schema schema : schemas)
+            for (SchemaDesc schemaDesc : schemaDescs)
             {
-                if (table.schemaName.equals(schema.schemaName))
+                if (tableDesc.schemaName.equals(schemaDesc.schemaName))
                 {
-                    if (schema.tables == null)
-                        schema.tables = new ArrayList();
-                    schema.tables.add(table);
+                    if (schemaDesc.tableDescs == null)
+                        schemaDesc.tableDescs = new ArrayList();
+                    schemaDesc.tableDescs.add(tableDesc);
                     break;
                 }
             }
@@ -195,20 +195,20 @@ public class TapSchemaDAO
     /**
      * Creates Lists of Columns with a common Table name, then adds the Lists to the Tables.
      * 
-     * @param tables List of Tables.
-     * @param columns List of Columns.
+     * @param tableDescs List of Tables.
+     * @param columnDescs List of Columns.
      */
-    private void addColumnsToTables(List<Table> tables, List<Column> columns)
+    private void addColumnsToTables(List<TableDesc> tableDescs, List<ColumnDesc> columnDescs)
     {
-        for (Column column : columns)
+        for (ColumnDesc col : columnDescs)
         {
-            for (Table table : tables)
+            for (TableDesc tableDesc : tableDescs)
             {
-                if (column.tableName.equals(table.tableName))
+                if (col.tableName.equals(tableDesc.tableName))
                 {
-                    if (table.columns == null)
-                        table.columns = new ArrayList();
-                    table.columns.add(column);
+                    if (tableDesc.columnDescs == null)
+                        tableDesc.columnDescs = new ArrayList();
+                    tableDesc.columnDescs.add(col);
                     break;
                 }
             }
@@ -218,20 +218,20 @@ public class TapSchemaDAO
     /**
      * Creates Lists of KeyColumns with a common Key keyID, then adds the Lists to the Keys.
      * 
-     * @param keys List of Keys.
-     * @param keyColumns List of KeyColumns.
+     * @param keyDescs List of Keys.
+     * @param keyColumnDescs List of KeyColumns.
      */
-    private void addKeyColumnsToKeys(List<Key> keys, List<KeyColumn> keyColumns)
+    private void addKeyColumnsToKeys(List<KeyDesc> keyDescs, List<KeyColumnDesc> keyColumnDescs)
     {
-        for (KeyColumn keyColumn : keyColumns)
+        for (KeyColumnDesc keyColumnDesc : keyColumnDescs)
         {
-            for (Key key : keys)
+            for (KeyDesc keyDesc : keyDescs)
             {
-                if (keyColumn.keyId.equals(key.keyId))
+                if (keyColumnDesc.keyId.equals(keyDesc.keyId))
                 {
-                    if (key.keyColumns == null)
-                        key.keyColumns = new ArrayList();
-                    key.keyColumns.add(keyColumn);
+                    if (keyDesc.keyColumnDescs == null)
+                        keyDesc.keyColumnDescs = new ArrayList();
+                    keyDesc.keyColumnDescs.add(keyColumnDesc);
                     break;
                 }
             }
@@ -245,12 +245,12 @@ public class TapSchemaDAO
     {
         public Object mapRow(ResultSet rs, int rowNum) throws SQLException
         {
-            Schema schema = new Schema();
-            schema.schemaName = rs.getString("schema_name");
-            schema.description = rs.getString("description");
-            schema.utype = rs.getString("utype");
-            log.debug("found: " + schema);
-            return schema;
+            SchemaDesc schemaDesc = new SchemaDesc();
+            schemaDesc.schemaName = rs.getString("schema_name");
+            schemaDesc.description = rs.getString("description");
+            schemaDesc.utype = rs.getString("utype");
+            log.debug("found: " + schemaDesc);
+            return schemaDesc;
         }
     }
 
@@ -261,13 +261,13 @@ public class TapSchemaDAO
     {
         public Object mapRow(ResultSet rs, int rowNum) throws SQLException
         {
-            Table table = new Table();
-            table.schemaName = rs.getString("schema_name");
-            table.tableName = rs.getString("table_name");
-            table.description = rs.getString("description");
-            table.utype = rs.getString("utype");
-            log.debug("found: " + table);
-            return table;
+            TableDesc tableDesc = new TableDesc();
+            tableDesc.schemaName = rs.getString("schema_name");
+            tableDesc.tableName = rs.getString("table_name");
+            tableDesc.description = rs.getString("description");
+            tableDesc.utype = rs.getString("utype");
+            log.debug("found: " + tableDesc);
+            return tableDesc;
         }
     }
 
@@ -278,17 +278,17 @@ public class TapSchemaDAO
     {
         public Object mapRow(ResultSet rs, int rowNum) throws SQLException
         {
-            Column column = new Column();
-            column.tableName = rs.getString("table_name");
-            column.columnName = rs.getString("column_name");            
-            column.description = rs.getString("description");
-            column.utype = rs.getString("utype");
-            column.ucd = rs.getString("ucd");
-            column.unit = rs.getString("unit");
-            column.datatype = rs.getString("datatype");
-            column.size = rs.getObject("size") == null ? null : Integer.valueOf(rs.getInt("size"));
-            log.debug("found: " + column);
-            return column;
+            ColumnDesc col = new ColumnDesc();
+            col.tableName = rs.getString("table_name");
+            col.columnName = rs.getString("column_name");            
+            col.description = rs.getString("description");
+            col.utype = rs.getString("utype");
+            col.ucd = rs.getString("ucd");
+            col.unit = rs.getString("unit");
+            col.datatype = rs.getString("datatype");
+            col.size = rs.getObject("size") == null ? null : Integer.valueOf(rs.getInt("size"));
+            log.debug("found: " + col);
+            return col;
         }
     }
 
@@ -299,12 +299,12 @@ public class TapSchemaDAO
     {
         public Object mapRow(ResultSet rs, int rowNum) throws SQLException
         {
-            Key key = new Key();
-            key.keyId = rs.getString("key_id");
-            key.fromTable = rs.getString("from_table");
-            key.targetTable = rs.getString("target_table");
-            log.debug("found: " + key);
-            return key;
+            KeyDesc keyDesc = new KeyDesc();
+            keyDesc.keyId = rs.getString("key_id");
+            keyDesc.fromTable = rs.getString("from_table");
+            keyDesc.targetTable = rs.getString("target_table");
+            log.debug("found: " + keyDesc);
+            return keyDesc;
         }
     }
 
@@ -315,12 +315,12 @@ public class TapSchemaDAO
     {
         public Object mapRow(ResultSet rs, int rowNum) throws SQLException
         {
-            KeyColumn keyColumn = new KeyColumn();
-            keyColumn.keyId = rs.getString("key_id");
-            keyColumn.fromColumn = rs.getString("from_column");
-            keyColumn.targetColumn = rs.getString("target_column");
-            log.debug("found: " + keyColumn);
-            return keyColumn;
+            KeyColumnDesc keyColumnDesc = new KeyColumnDesc();
+            keyColumnDesc.keyId = rs.getString("key_id");
+            keyColumnDesc.fromColumn = rs.getString("from_column");
+            keyColumnDesc.targetColumn = rs.getString("target_column");
+            log.debug("found: " + keyColumnDesc);
+            return keyColumnDesc;
         }
     }
 

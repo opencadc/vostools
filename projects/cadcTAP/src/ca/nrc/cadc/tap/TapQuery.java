@@ -72,7 +72,7 @@ package ca.nrc.cadc.tap;
 import java.util.List;
 
 import ca.nrc.cadc.tap.parser.adql.TapSelectItem;
-import ca.nrc.cadc.tap.schema.Table;
+import ca.nrc.cadc.tap.schema.TableDesc;
 import ca.nrc.cadc.tap.schema.TapSchema;
 import ca.nrc.cadc.uws.Parameter;
 import java.util.Map;
@@ -92,7 +92,7 @@ public interface TapQuery
      * 
      * @param extraTables
      */
-    public void setExtraTables(Map<String,Table> extraTables);
+    public void setExtraTables(Map<String,TableDesc> extraTables);
     
     /**
      * Set the parameter list. Calling this method clears all previous

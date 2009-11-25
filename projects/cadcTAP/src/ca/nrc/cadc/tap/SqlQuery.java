@@ -75,7 +75,7 @@ import ca.nrc.cadc.tap.parser.adql.AdqlManager;
 import ca.nrc.cadc.tap.parser.adql.AdqlParser;
 import ca.nrc.cadc.tap.parser.adql.TapSelectItem;
 import ca.nrc.cadc.tap.parser.adql.exception.AdqlException;
-import ca.nrc.cadc.tap.schema.Table;
+import ca.nrc.cadc.tap.schema.TableDesc;
 import ca.nrc.cadc.tap.schema.TapSchema;
 import ca.nrc.cadc.uws.Parameter;
 import java.util.Map;
@@ -87,7 +87,7 @@ public class SqlQuery implements TapQuery
 {
 	private AdqlParser parser;
     private TapSchema tapSchema;
-    private Map<String, Table> extraTables;
+    private Map<String, TableDesc> extraTables;
     private String queryString;
     private boolean validated = false;
 	
@@ -106,7 +106,7 @@ public class SqlQuery implements TapQuery
         parser = null;
     }
     
-    public void setExtraTables(Map<String, Table> extraTables)
+    public void setExtraTables(Map<String, TableDesc> extraTables)
     {
         this.extraTables = extraTables;
         parser = null;

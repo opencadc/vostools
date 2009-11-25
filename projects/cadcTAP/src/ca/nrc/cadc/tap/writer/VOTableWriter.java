@@ -70,9 +70,9 @@
 package ca.nrc.cadc.tap.writer;
 
 import ca.nrc.cadc.tap.TableWriter;
-import ca.nrc.cadc.tap.schema.Column;
-import ca.nrc.cadc.tap.schema.Schema;
-import ca.nrc.cadc.tap.schema.Table;
+import ca.nrc.cadc.tap.schema.ColumnDesc;
+import ca.nrc.cadc.tap.schema.SchemaDesc;
+import ca.nrc.cadc.tap.schema.TableDesc;
 import ca.nrc.cadc.tap.writer.votable.TableDataElement;
 import ca.nrc.cadc.tap.writer.votable.TableDataXMLOutputter;
 import java.io.IOException;
@@ -203,17 +203,17 @@ public class VOTableWriter implements TableWriter
     // Build a FIELD Element for the column specified by the TapSelectItem.
     private Element getMetaDataElement(TapSelectItem selectItem)
     {
-        for (Schema schema : tapSchema.schemas)
+        for (SchemaDesc schemaDesc : tapSchema.schemaDescs)
         {
-            for (Table table : schema.tables)
+            for (TableDesc tableDesc : schemaDesc.tableDescs)
             {
-                if (table.tableName.equals(selectItem.getTableName()))
+                if (tableDesc.tableName.equals(selectItem.getTableName()))
                 {
-                    for (Column column: table.columns)
+                    for (ColumnDesc columnDesc: tableDesc.columnDescs)
                     {
-                        if (column.columnName.equals(selectItem.getColumnName()))
+                        if (columnDesc.columnName.equals(selectItem.getColumnName()))
                         {
-                            return new FieldElement(selectItem, column);
+                            return new FieldElement(selectItem, columnDesc);
                         }
                     }
                 }

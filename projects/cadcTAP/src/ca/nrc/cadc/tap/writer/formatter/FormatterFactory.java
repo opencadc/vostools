@@ -70,9 +70,9 @@
 package ca.nrc.cadc.tap.writer.formatter;
 
 import ca.nrc.cadc.tap.parser.adql.TapSelectItem;
-import ca.nrc.cadc.tap.schema.Column;
-import ca.nrc.cadc.tap.schema.Schema;
-import ca.nrc.cadc.tap.schema.Table;
+import ca.nrc.cadc.tap.schema.ColumnDesc;
+import ca.nrc.cadc.tap.schema.SchemaDesc;
+import ca.nrc.cadc.tap.schema.TableDesc;
 import ca.nrc.cadc.tap.schema.TapSchema;
 import java.util.ArrayList;
 import java.util.List;
@@ -99,18 +99,18 @@ public class FormatterFactory
     public static Formatter getFormatter(TapSchema tapSchema, TapSelectItem selectItem)
     {
         // Find the class name of the formatter for this colummn.
-        for (Schema schema : tapSchema.schemas)
+        for (SchemaDesc schemaDesc : tapSchema.schemaDescs)
         {
-            for (Table table : schema.tables)
+            for (TableDesc tableDesc : schemaDesc.tableDescs)
             {
                 log.debug("selectItem: " + selectItem);
-                if (table.tableName.equals(selectItem.getTableName()))
+                if (tableDesc.tableName.equals(selectItem.getTableName()))
                 {
-                    for (Column column : table.columns)
+                    for (ColumnDesc columnDesc : tableDesc.columnDescs)
                     {
-                        if (column.columnName.equals(selectItem.getColumnName()))
+                        if (columnDesc.columnName.equals(selectItem.getColumnName()))
                         {
-                            String datatype = column.datatype;
+                            String datatype = columnDesc.datatype;
                             if (datatype.equals("adql:INTEGER") ||
                                 datatype.equals("adql:BIGINT")  ||
                                 datatype.equals("adql:DOUBLE")  ||

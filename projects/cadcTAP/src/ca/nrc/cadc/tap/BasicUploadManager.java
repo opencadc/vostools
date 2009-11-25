@@ -93,8 +93,8 @@ import org.jdom.JDOMException;
 import org.jdom.input.SAXBuilder;
 
 import ca.nrc.cadc.date.DateUtil;
-import ca.nrc.cadc.tap.schema.Column;
-import ca.nrc.cadc.tap.schema.Table;
+import ca.nrc.cadc.tap.schema.ColumnDesc;
+import ca.nrc.cadc.tap.schema.TableDesc;
 import ca.nrc.cadc.uws.Parameter;
 
 /**
@@ -126,7 +126,7 @@ public class BasicUploadManager implements UploadManager
      */
     public static final String SCHEMA = "TAP_UPLOAD";
     
-    private Map<String,Table>          metadata;
+    private Map<String,TableDesc>          metadata;
     private Map<String,List<String[]>> dataRows;
     
     protected DataSource dataSource;
@@ -139,7 +139,7 @@ public class BasicUploadManager implements UploadManager
         this.dataSource = dataSource;
     }
     
-    public Map<String,Table> upload( List<Parameter> paramList, String jobID )
+    public Map<String,TableDesc> upload( List<Parameter> paramList, String jobID )
     {
         log.debug("START upload: "+jobID);
         try
@@ -160,10 +160,10 @@ public class BasicUploadManager implements UploadManager
         }
     }
     
-    private Map<String,Table> doit( List<Parameter> paramList, String jobID )
+    private Map<String,TableDesc> doit( List<Parameter> paramList, String jobID )
         throws IOException, JDOMException
     {
-        metadata = new HashMap<String,Table>();
+        metadata = new HashMap<String,TableDesc>();
         dataRows = new HashMap<String,List<String[]>>();
 
         //  Extract and validate the UPLOAD parameters
@@ -199,7 +199,7 @@ public class BasicUploadManager implements UploadManager
                 Document   doc     = sb.build(url);
                 Element    voTable = doc.getRootElement();
                 
-                metadata.put( baseName, new Table() );
+                metadata.put( baseName, new TableDesc() );
                 dataRows.put( baseName, new ArrayList<String[]>() );
                 
                 metadata.get( baseName ).tableName = tableName;
@@ -220,12 +220,12 @@ public class BasicUploadManager implements UploadManager
                 String baseName = baseNamesIt.next();
                 String tableName = metadata.get(baseName).getTableName();
                 String sql = "create table "+tableName+" ( ";
-                List<Column> columns = metadata.get(baseName).getColumns();
-                for ( int i=0; i<columns.size(); i++ ) {
-                    Column col = columns.get(i);
+                List<ColumnDesc> columnDescs = metadata.get(baseName).getColumnDescs();
+                for ( int i=0; i<columnDescs.size(); i++ ) {
+                    ColumnDesc col = columnDescs.get(i);
                     sql += col.columnName+" ";
                     sql += localDbType(col);
-                    if ( i+1<columns.size() )
+                    if ( i+1<columnDescs.size() )
                         sql += ", ";
                 }
                 sql += " )";
@@ -248,11 +248,11 @@ public class BasicUploadManager implements UploadManager
                 List<String[]> tableRows = dataRows.get(baseName);
                 for ( int i=0; i<tableRows.size(); i++ ) {
                     String sql = "insert into "+tableName+" ( ";
-                    List<Column> columns = metadata.get(baseName).getColumns();
-                    for ( int j=0; j<columns.size(); j++ ) {
-                        Column col = columns.get(j);
+                    List<ColumnDesc> columnDescs = metadata.get(baseName).getColumnDescs();
+                    for ( int j=0; j<columnDescs.size(); j++ ) {
+                        ColumnDesc col = columnDescs.get(j);
                         sql += col.columnName;
-                        if ( j+1<columns.size() )
+                        if ( j+1<columnDescs.size() )
                             sql += ", ";
                     }
                     sql += " ) values ( ";
@@ -260,7 +260,7 @@ public class BasicUploadManager implements UploadManager
                     int numDataCols = dataCols.length;
                     for ( int j=0; j<numDataCols; j++ ) {
                         String value = dataCols[j];
-                        sql += formatValue( value, columns.get(j).datatype );
+                        sql += formatValue( value, columnDescs.get(j).datatype );
                         if ( j+1 < numDataCols )
                             sql += ", ";
                     }
@@ -346,7 +346,7 @@ public class BasicUploadManager implements UploadManager
         Iterator<Element> elsIt = els.iterator();
         while ( elsIt.hasNext() ) {
             Element inner = elsIt.next();
-            Column col = new Column();
+            ColumnDesc col = new ColumnDesc();
             col.tableName = tableName;
             if ( inner.getName().equals("FIELD") ) {
                 col.columnName = inner.getAttributeValue("name");
@@ -364,10 +364,10 @@ public class BasicUploadManager implements UploadManager
                     col.size = Integer.parseInt( sizeAttr.substring( 0, sizeAttr.lastIndexOf("*") ) );
                 else
                     col.size = Integer.parseInt(sizeAttr);
-                Table table = metadata.get(baseName);
-                if ( table.columns == null )
-                    table.columns = new ArrayList<Column>();
-                table.columns.add(col);
+                TableDesc tableDesc = metadata.get(baseName);
+                if ( tableDesc.columnDescs == null )
+                    tableDesc.columnDescs = new ArrayList<ColumnDesc>();
+                tableDesc.columnDescs.add(col);
                 log.debug( "Finished reading column metadata: "+col.toString() );
             }
             else
@@ -384,11 +384,11 @@ public class BasicUploadManager implements UploadManager
             Element inner = elsIt.next();
             if ( inner.getName().equals("TR") ) {
                 List<Element> colVals = inner.getChildren();
-                int numCols = metadata.get(baseName).columns.size();
+                int numCols = metadata.get(baseName).columnDescs.size();
                 String [] row = new String[numCols];
                 for ( int i=0; i<numCols; i++ ) {
                     String value = colVals.get(i).getValue();
-                    if ( metadata.get(baseName).columns.get(i).datatype.equals(TIMESTAMP) )
+                    if ( metadata.get(baseName).columnDescs.get(i).datatype.equals(TIMESTAMP) )
                         try {
                             row[i] = DateUtil.toString( DateUtil.toDate(value,DateUtil.IVOA_DATE_FORMAT), DateUtil.IVOA_DATE_FORMAT);
                         }
@@ -408,7 +408,7 @@ public class BasicUploadManager implements UploadManager
         }
     }
     
-    private String localDbType( Column col ) {
+    private String localDbType( ColumnDesc col ) {
         
         HashMap<String,String> typeMap  = new HashMap<String,String>();
         

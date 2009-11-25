@@ -80,10 +80,10 @@ import java.util.List;
 public class TapSchema
 {
     // List of Schemas belonging to this TAP_SCHEMA.
-    public List<Schema> schemas;
+    public List<SchemaDesc> schemaDescs;
 
     // List of Keys belonging to this TAP_SCHEMA.
-    public List<Key> keys;
+    public List<KeyDesc> keyDescs;
 
     /**
      * Default no-arg constructor.
@@ -93,37 +93,37 @@ public class TapSchema
     /**
      * Construct a KeyColumn using the specified parameters.
      * 
-     * @param schemas List of Schemas belonging to this TAP_SCHEMA.
-     * @param keys List of Keys belonging to this TAP_SCHEMA.
+     * @param schemaDescs List of Schemas belonging to this TAP_SCHEMA.
+     * @param keyDescs List of Keys belonging to this TAP_SCHEMA.
      */
-    public TapSchema(List<Schema> schemas, List<Key> keys)
+    public TapSchema(List<SchemaDesc> schemaDescs, List<KeyDesc> keyDescs)
     {
-        this.schemas = schemas;
-        this.keys = keys;
+        this.schemaDescs = schemaDescs;
+        this.keyDescs = keyDescs;
     }
 
     /**
      * Setters and getters.
      * 
      */
-    public final List<Schema> getSchemas()
+    public final List<SchemaDesc> getSchemaDescs()
     {
-        return schemas;
+        return schemaDescs;
     }
 
-    public final void setSchemas(List<Schema> schemas)
+    public final void setSchemaDescs(List<SchemaDesc> schemaDescs)
     {
-        this.schemas = schemas;
+        this.schemaDescs = schemaDescs;
     }
 
-    public final List<Key> getKeys()
+    public final List<KeyDesc> getKeyDescs()
     {
-        return keys;
+        return keyDescs;
     }
 
-    public final void setKeys(List<Key> keys)
+    public final void setKeyDescs(List<KeyDesc> keyDescs)
     {
-        this.keys = keys;
+        this.keyDescs = keyDescs;
     }
 
     /**
@@ -134,15 +134,15 @@ public class TapSchema
         StringWriter sw = new StringWriter();
         PrintWriter pw = new PrintWriter(sw);
         pw.println("TapSchema[");
-        for (Schema schema : schemas)
+        for (SchemaDesc schemaDesc : schemaDescs)
         {
             pw.print("\t");
-            pw.println(schema.toString());
+            pw.println(schemaDesc.toString());
         }
-        for (Key key : keys)
+        for (KeyDesc keyDesc : keyDescs)
         {
             pw.print("\t");
-            pw.println(key.toString());
+            pw.println(keyDesc.toString());
         }
         pw.print("]");
         return sw.toString();

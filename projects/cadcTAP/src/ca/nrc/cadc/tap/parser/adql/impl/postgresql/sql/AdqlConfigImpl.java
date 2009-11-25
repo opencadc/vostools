@@ -83,9 +83,9 @@ import ca.nrc.cadc.tap.TapProperties;
 import ca.nrc.cadc.tap.parser.adql.config.AdqlConfig;
 import ca.nrc.cadc.tap.parser.adql.config.meta.ColumnMeta;
 import ca.nrc.cadc.tap.parser.adql.config.meta.TableMeta;
-import ca.nrc.cadc.tap.schema.Column;
-import ca.nrc.cadc.tap.schema.Schema;
-import ca.nrc.cadc.tap.schema.Table;
+import ca.nrc.cadc.tap.schema.ColumnDesc;
+import ca.nrc.cadc.tap.schema.SchemaDesc;
+import ca.nrc.cadc.tap.schema.TableDesc;
 import ca.nrc.cadc.tap.schema.TapSchema;
 import ca.nrc.cadc.tap.schema.TapSchemaDAO;
 
@@ -96,7 +96,7 @@ import ca.nrc.cadc.tap.schema.TapSchemaDAO;
 public class AdqlConfigImpl extends AdqlConfig
 {
     public AdqlConfigImpl(TapSchema tapSchema,
-            Map<String, ca.nrc.cadc.tap.schema.Table> extraTablesMap)
+            Map<String, ca.nrc.cadc.tap.schema.TableDesc> extraTablesMap)
     {
         super();
         if (tapSchema != null)

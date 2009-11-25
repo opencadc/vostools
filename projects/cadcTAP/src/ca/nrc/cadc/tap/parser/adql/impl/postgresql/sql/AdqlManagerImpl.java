@@ -79,7 +79,7 @@ import ca.nrc.cadc.tap.schema.TapSchema;
 public class AdqlManagerImpl extends AdqlManager
 {
 
-    public AdqlManagerImpl(TapSchema tapSchema, Map<String, ca.nrc.cadc.tap.schema.Table> extraTablesMap)
+    public AdqlManagerImpl(TapSchema tapSchema, Map<String, ca.nrc.cadc.tap.schema.TableDesc> extraTablesMap)
     {
         this.config = new AdqlConfigImpl(tapSchema, extraTablesMap);
         this.validator = new ValidatorImpl();

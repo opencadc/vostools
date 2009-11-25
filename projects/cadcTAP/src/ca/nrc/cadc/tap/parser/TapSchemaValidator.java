@@ -69,7 +69,7 @@
 
 package ca.nrc.cadc.tap.parser;
 
-import ca.nrc.cadc.tap.schema.Table;
+import ca.nrc.cadc.tap.schema.TableDesc;
 import ca.nrc.cadc.tap.schema.TapSchema;
 
 import java.util.Map;
@@ -86,11 +86,11 @@ public class TapSchemaValidator // extends ??
     protected static Logger log = Logger.getLogger(TapSchemaValidator.class);
     
     protected TapSchema tapSchema;
-    protected Map<String,Table> extraTables;
+    protected Map<String,TableDesc> extraTables;
     
     private TapSchemaValidator() { }
     
-    public TapSchemaValidator(TapSchema tapSchema, Map<String,Table> extraTables) 
+    public TapSchemaValidator(TapSchema tapSchema, Map<String,TableDesc> extraTables) 
     { 
         super();
         this.tapSchema = tapSchema;

@@ -70,7 +70,7 @@
 package ca.nrc.cadc.tap.writer.votable;
 
 import ca.nrc.cadc.tap.parser.adql.TapSelectItem;
-import ca.nrc.cadc.tap.schema.Column;
+import ca.nrc.cadc.tap.schema.ColumnDesc;
 import org.jdom.Element;
 
 public class FieldElement extends Element
@@ -79,18 +79,18 @@ public class FieldElement extends Element
      * Builds a FIELD Element from a Column.
      *
      * @param selectItem
-     * @param column 
+     * @param columnDesc 
      */
-    public FieldElement(TapSelectItem selectItem, Column column)
+    public FieldElement(TapSelectItem selectItem, ColumnDesc columnDesc)
     {
         super("FIELD");
-        setFieldName(selectItem.getAlias(), column.columnName);
-        setFieldAttribute("utype", column.utype);
-        setFieldAttribute("ucd", column.ucd);
-        setFieldAttribute("unit", column.unit);
-        setFieldAttribute("xtype", column.datatype);
-        setDescription(column.description);
-        setDatatypeAndWidth(column.datatype, column.size);
+        setFieldName(selectItem.getAlias(), columnDesc.columnName);
+        setFieldAttribute("utype", columnDesc.utype);
+        setFieldAttribute("ucd", columnDesc.ucd);
+        setFieldAttribute("unit", columnDesc.unit);
+        setFieldAttribute("xtype", columnDesc.datatype);
+        setDescription(columnDesc.description);
+        setDatatypeAndWidth(columnDesc.datatype, columnDesc.size);
      }
 
     // Set the name using the alias first, then the column name.

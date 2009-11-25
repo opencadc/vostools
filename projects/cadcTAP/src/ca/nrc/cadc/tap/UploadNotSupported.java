@@ -69,7 +69,7 @@
 
 package ca.nrc.cadc.tap;
 
-import ca.nrc.cadc.tap.schema.Table;
+import ca.nrc.cadc.tap.schema.TableDesc;
 import ca.nrc.cadc.uws.Parameter;
 import java.util.List;
 import java.util.Map;
@@ -92,7 +92,7 @@ public class UploadNotSupported implements UploadManager
      * @return null
      * @throws UnsupportedOperationException if paramList contains an upload
      */
-    public Map<String, Table> upload(List<Parameter> paramList, String jobID) 
+    public Map<String, TableDesc> upload(List<Parameter> paramList, String jobID) 
     {
         List<String> uploads  = TapUtil.findParameterValues(UPLOAD, paramList );
         if (uploads == null || uploads.size() == 0)

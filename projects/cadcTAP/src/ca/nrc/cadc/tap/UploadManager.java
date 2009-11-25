@@ -69,7 +69,7 @@
 
 package ca.nrc.cadc.tap;
 
-import ca.nrc.cadc.tap.schema.Table;
+import ca.nrc.cadc.tap.schema.TableDesc;
 import ca.nrc.cadc.uws.Parameter;
 import java.util.List;
 import java.util.Map;
@@ -103,5 +103,5 @@ public interface UploadManager
      * @param jobID the UWS jobID
      * @return map of user-specified table name:uploaded table metadata
      */
-    public Map<String, Table> upload(List<Parameter> paramList, String jobID);
+    public Map<String, TableDesc> upload(List<Parameter> paramList, String jobID);
 }

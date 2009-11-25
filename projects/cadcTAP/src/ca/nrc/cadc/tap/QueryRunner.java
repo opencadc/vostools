@@ -90,7 +90,7 @@ import javax.sql.DataSource;
 import org.apache.log4j.Logger;
 
 import ca.nrc.cadc.tap.parser.adql.TapSelectItem;
-import ca.nrc.cadc.tap.schema.Table;
+import ca.nrc.cadc.tap.schema.TableDesc;
 import ca.nrc.cadc.tap.schema.TapSchema;
 import ca.nrc.cadc.tap.schema.TapSchemaDAO;
 import ca.nrc.cadc.uws.ErrorSummary;
@@ -211,7 +211,7 @@ public class QueryRunner implements JobRunner
             Class umc =  Class.forName(uploadManagerClassName);
             UploadManager uploadManager = (UploadManager) umc.newInstance();
             uploadManager.setDataSource(uploadDataSource);
-            Map<String,Table> tables = uploadManager.upload( paramList, job.getJobId() );
+            Map<String,TableDesc> tableDescs = uploadManager.upload( paramList, job.getJobId() );
             
             // LANG
         	String lang = tapValidator.getLang();
@@ -221,7 +221,7 @@ public class QueryRunner implements JobRunner
             Class tqc = Class.forName(cname);
             TapQuery tapQuery = (TapQuery) tqc.newInstance();
             tapQuery.setTapSchema(tapSchema);
-            tapQuery.setExtraTables(tables);
+            tapQuery.setExtraTables(tableDescs);
             tapQuery.setParameterList(paramList);
         	String sql = tapQuery.getSQL();
             List<TapSelectItem> selectList = tapQuery.getSelectList();
