@@ -120,8 +120,8 @@ public class QueryRunner implements JobRunner
     
 	static
 	{
-		langQueries.put(Validator.ADQL, adqlParserClassName);
-		langQueries.put(Validator.SQL, sqlParserClassName);
+		langQueries.put("ADQL", adqlParserClassName);
+		langQueries.put("SQL", sqlParserClassName);
 	}
 	
 	private Job job;

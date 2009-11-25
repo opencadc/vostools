@@ -73,7 +73,7 @@ import java.util.List;
 
 import ca.nrc.cadc.uws.Parameter;
 
-public class TapValidator extends Validator
+public class TapValidator
 {
 	private String lang;
 	
@@ -87,7 +87,7 @@ public class TapValidator extends Validator
         if ( request==null || request.trim().length()==0)
             throw new IllegalStateException( "Missing REQUEST value" );
         if ( !request.equals( "doQuery" ) )
-            throw new IllegalStateException( "Unknown REQUEST value: "+request );
+            throw new IllegalArgumentException( "Unknown REQUEST value: "+request );
         
         //  LANG
         lang = TapUtil.findParameterValue( "LANG", paramList );
@@ -97,7 +97,7 @@ public class TapValidator extends Validator
         //  VERSION
         String version = TapUtil.findParameterValue( "VERSION", paramList );
         if ( version!=null && version.length()!=0 && !version.equals("1.0") )
-            throw new IllegalStateException( "Unsupported TAP version: "+version );
+            throw new IllegalArgumentException( "Unsupported TAP version: "+version );
 	}
 
 	public String getLang()
