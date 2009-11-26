@@ -130,10 +130,11 @@
 
     <!-- JAR files needed to run the test suite -->
     <property name="lib.cadcTestUWS" value="${lib}/cadcTestUWS.jar" />
+    <property name="lib.jdom" value="${ext.lib}/jdom.jar" />
     <property name="dev.junit" value="${ext.dev}/junit.jar" />
     <property name="dev.httpunit" value="${ext.dev}/httpunit.jar:${ext.lib}/xerces.jar:${ext.lib}/js.jar:${ext.lib}/nekohtml.jar" />
     <property name="dev.xmlunit" value="${ext.lib}/xmlunit.jar" />
-    <property name="testingJars" value="${lib.cadcTestUWS}:${dev.junit}:${dev.httpunit}:${dev.xmlunit}" />
+    <property name="testingJars" value="${lib.cadcTestUWS}:${lib.jdom}:${dev.junit}:${dev.httpunit}:${dev.xmlunit}" />
 
     <!-- Directory used to deploy the WAR file -->
     <property name="deployDir" value="/data/test/webapps" />
