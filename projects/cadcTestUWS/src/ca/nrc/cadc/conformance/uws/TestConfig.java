@@ -75,44 +75,36 @@ import com.meterware.httpunit.PostMethodWebRequest;
 import com.meterware.httpunit.WebConversation;
 import com.meterware.httpunit.WebRequest;
 import com.meterware.httpunit.WebResponse;
+import java.io.BufferedReader;
 import java.io.IOException;
-import java.io.InputStream;
+import java.io.InputStreamReader;
+import java.io.Reader;
 import java.io.StringReader;
+import java.net.MalformedURLException;
 import java.net.URL;
 import java.util.Iterator;
+import java.util.List;
 import java.util.Map;
 import java.util.Set;
-import javax.xml.XMLConstants;
-import javax.xml.parsers.DocumentBuilder;
-import javax.xml.parsers.DocumentBuilderFactory;
-import javax.xml.parsers.ParserConfigurationException;
-import javax.xml.transform.Source;
-import javax.xml.transform.sax.SAXSource;
-import javax.xml.transform.stream.StreamSource;
-import javax.xml.validation.Schema;
-import javax.xml.validation.SchemaFactory;
-import javax.xml.validation.Validator;
 import org.apache.log4j.Level;
 import org.apache.log4j.Logger;
-import org.w3c.dom.Document;
-import org.w3c.dom.Element;
-import org.w3c.dom.NodeList;
-import org.xml.sax.ErrorHandler;
-import org.xml.sax.InputSource;
+import org.jdom.Document;
+import org.jdom.Element;
+import org.jdom.JDOMException;
+import org.jdom.Namespace;
+import org.jdom.input.SAXBuilder;
 import org.xml.sax.SAXException;
-import org.xml.sax.SAXParseException;
-import org.xml.sax.XMLReader;
-import org.xml.sax.helpers.XMLReaderFactory;
 import static org.junit.Assert.*;
 
 public class TestConfig
 {
     private static Logger log = Logger.getLogger(TestConfig.class);
 
-    private static final String SERVICE_SCHEMA_RESOURCE = "UWS-1.0.xsd";
+    private static final String UWS_SCHEMA_RESOURCE = "UWS-1.0.xsd";
+    private static final String PARSER = "org.apache.xerces.parsers.SAXParser";
 
-    private static Validator validator;
-    private static DocumentBuilder parser;
+    private static SAXBuilder parser;
+    private static SAXBuilder validatingParser;
 
     protected static String serviceUrl;
     protected static String serviceSchema;
@@ -128,139 +120,51 @@ public class TestConfig
             throw new RuntimeException("service.url System property not set");
         log.debug("serviceUrl: " + serviceUrl);
 
-        // Error handler for SAX parsing errors.
-        ErrorHandler errorHandler = new MyErrorHandler();
+        URL url = TestConfig.class.getClassLoader().getResource(UWS_SCHEMA_RESOURCE);
+        serviceSchema = url.toString();
+        log.debug("serviceSchema: " + serviceSchema);
 
-        // Factory used to create a schema.
-        SchemaFactory schemaFactory = SchemaFactory.newInstance(XMLConstants.W3C_XML_SCHEMA_NS_URI);
-        schemaFactory.setErrorHandler(errorHandler);
+        parser = new SAXBuilder(PARSER, false);
+        parser.setProperty("http://apache.org/xml/properties/schema/external-schemaLocation",
+                           "http://www.ivoa.net/xml/UWS/v1.0 " + serviceSchema);
 
-        // Load the schema file from the jar.
-        InputStream inputStream = TestConfig.class.getClassLoader().getResourceAsStream(SERVICE_SCHEMA_RESOURCE);
-        if (inputStream == null)
-            throw new RuntimeException("Unable to load " + SERVICE_SCHEMA_RESOURCE + " from the jar.");
-        try
-        {
-            serviceSchema = Util.inputStreamToString(inputStream);
-            inputStream.close();
-        }
-        catch (IOException e)
-        {
-            throw new RuntimeException("Error reading " + SERVICE_SCHEMA_RESOURCE, e);
-        }
-
-        // Create a schema validator.
-        Source source = new StreamSource(new StringReader(serviceSchema));
-        Schema schema = null;
-        try
-        {
-            schema = schemaFactory.newSchema(source);
-        }
-        catch (SAXException e)
-        {
-            throw new RuntimeException("SAX error parsing schema", e);
-        }
-        validator = schema.newValidator();
-        validator.setErrorHandler(errorHandler);
-        
-        // Create a XML parser.
-        DocumentBuilderFactory factory = DocumentBuilderFactory.newInstance();
-        //factory.setValidating(true);
-        //factory.setNamespaceAware(true);
-        //factory.setSchema(schema);
-        try
-        {
-            parser = factory.newDocumentBuilder();
-        }
-        catch (ParserConfigurationException e)
-        {
-            throw new RuntimeException("Error creating XML parser", e);
-        }
-    }
-
-    protected Document xmlToDocument(String xml)
-    {
-        return sourceToDocument(new InputSource(new StringReader(xml)));
-    }
-
-    protected Document urlToDocument(String url)
-    {
-        return sourceToDocument(new InputSource(url));
-    }
-
-    protected Document sourceToDocument(InputSource source)
-    {
-        try
-        {
-            Document document = parser.parse(source);
-            assertNotNull("XML parsing failed, document is null", document);
-            return document;
-        }
-        catch (Exception e) {
-            log.debug("XML parsing error: " + e.getMessage());
-            fail("XML parsing error: " + e.getMessage());
-        }
-        return null;
+        validatingParser = new SAXBuilder(PARSER, true);
+        validatingParser.setFeature("http://xml.org/sax/features/validation", true);
+        validatingParser.setFeature("http://apache.org/xml/features/validation/schema", true);
+        validatingParser.setFeature("http://apache.org/xml/features/validation/schema-full-checking", true);
+        validatingParser.setProperty("http://apache.org/xml/properties/schema/external-schemaLocation",
+                                     "http://www.ivoa.net/xml/UWS/v1.0 " + serviceSchema);
     }
 
     protected Document buildDocument(String xml, boolean validate)
+        throws IOException, JDOMException
     {
-        try
-        {
-            if (validate)
-            {
-                XMLReader reader = XMLReaderFactory.createXMLReader();
-                InputSource source = new InputSource(new StringReader(xml));
-                SAXSource saxSource = new SAXSource(reader, source);
-                validator.validate(saxSource);
-            }
+        if (validate)
+            return validatingParser.build(new StringReader(xml));
+        else
+            return parser.build(new StringReader(xml));
+     }
 
-            Document document = parser.parse(new InputSource(new StringReader(xml)));
-            assertNotNull("XML parsing failed, document is null", document);
-            return document;
-        }
-        catch (Exception e) {
-            log.debug("XML parsing error: " + e.getMessage());
-            fail("XML parsing error: " + e.getMessage());
-        }
-        return null;
-    }
-    
-    class MyErrorHandler implements ErrorHandler
+    protected String urlToString(String urlString)
+        throws MalformedURLException, IOException
     {
-        public void warning(SAXParseException e) throws SAXException
-        {
-            show("Warning", e);
-            throw (e);
-        }
-
-        public void error(SAXParseException e) throws SAXException
-        {
-            show("Error", e);
-            throw (e);
-        }
-
-        public void fatalError(SAXParseException e) throws SAXException {
-            show("Fatal Error", e);
-            throw (e);
-        }
-
-        private void show(String type, SAXParseException e)
-        {
-            log.debug(type + ": " + e.getMessage());
-            log.debug("Line " + e.getLineNumber() + " Column " + e.getColumnNumber());
-            log.debug("System ID: " + e.getSystemId());
-        }
+        URL url = new URL(urlString);
+        BufferedReader reader = new BufferedReader(new InputStreamReader(url.openStream()));
+        StringBuilder sb = new StringBuilder();
+        String line;
+        while ((line = reader.readLine()) != null)
+            sb.append(line);
+        return sb.toString();
     }
 
     protected String createJob(WebConversation conversation)
-        throws IOException, SAXException
+        throws IOException, SAXException, JDOMException
     {
         return createJob(conversation, null);
     }
 
     protected String createJob(WebConversation conversation, Map<String, String> parameters)
-        throws IOException, SAXException
+        throws IOException, SAXException, JDOMException
     {
         String jobId = null;
         log.debug("**************************************************");
@@ -314,32 +218,33 @@ public class TestConfig
         log.debug("XML:\r\n" + response.getText());
         Document document = buildDocument(response.getText(), true);
 
-        Element root = document.getDocumentElement();
+        Element root = document.getRootElement();
         assertNotNull("XML returned from GET of " + location + " missing root element", root);
+        Namespace namespace = root.getNamespace();
 
         // Job should have exactly one Execution Phase.
-        NodeList list = root.getElementsByTagName("uws:phase");
-        assertEquals("XML returned from GET of " + location + " missing uws:phase element", 1, list.getLength());
+        List list = root.getChildren("phase", namespace);
+        assertEquals("XML returned from GET of " + location + " missing uws:phase element", 1, list.size());
 
         // Job should have exactly one Execution Duration.
-        list = root.getElementsByTagName("uws:executionDuration");
-        assertEquals("XML returned from GET of " + location + " missing uws:executionDuration element", 1, list.getLength());
+        list = root.getChildren("executionDuration", namespace);
+        assertEquals("XML returned from GET of " + location + " missing uws:executionDuration element", 1, list.size());
 
         // Job should have exactly one Deletion Time.
-        list = root.getElementsByTagName("uws:destruction");
-        assertEquals("XML returned from GET of " + location + " missing uws:destruction element", 1, list.getLength());
+        list = root.getChildren("destruction", namespace);
+        assertEquals("XML returned from GET of " + location + " missing uws:destruction element", 1, list.size());
 
         // Job should have exactly one Quote.
-        list = root.getElementsByTagName("uws:quote");
-        assertEquals("XML returned from GET of " + location + " missing uws:quote element", 1, list.getLength());
+        list = root.getChildren("quote", namespace);
+        assertEquals("XML returned from GET of " + location + " missing uws:quote element", 1, list.size());
 
         // Job should have exactly one Results List.
-        list = root.getElementsByTagName("uws:results");
-        assertEquals("XML returned from GET of " + location + " missing uws:results element", 1, list.getLength());
+        list = root.getChildren("results", namespace);
+        assertEquals("XML returned from GET of " + location + " missing uws:results element", 1, list.size());
 
         // Job should have zero or one Error.
-        list = root.getElementsByTagName("uws:error");
-        assertTrue("XML returned from GET of " + location + " invalid number of uws:error elements", list.getLength() == 0 || list.getLength() == 1);
+        list = root.getChildren("error", namespace);
+        assertTrue("XML returned from GET of " + location + " invalid number of uws:error elements", list.size() == 0 || list.size() == 1);
 
         return jobId;
     }
@@ -422,7 +327,7 @@ public class TestConfig
      * Delete a job using an HTTP POST request.
      */
     protected WebResponse deleteJobWithPostRequest(WebConversation conversation, String jobId)
-        throws IOException, SAXException
+        throws IOException, SAXException, JDOMException
     {
         String resourceUrl = serviceUrl + "/" + jobId;
         log.debug("**************************************************");
@@ -436,7 +341,7 @@ public class TestConfig
      * Delete a Job using a HTTP DELETE request.
      */
     protected WebResponse deleteJobWithDeleteRequest(WebConversation conversation, String jobId)
-        throws IOException, SAXException
+        throws IOException, SAXException, JDOMException
     {
         String resourceUrl = serviceUrl + "/" + jobId;
         log.debug("**************************************************");
@@ -446,7 +351,7 @@ public class TestConfig
     }
 
     private WebResponse deleteJob(WebConversation conversation, WebRequest request, String resourceUrl)
-        throws IOException, SAXException
+        throws IOException, SAXException, JDOMException
     {
         log.debug(Util.getRequestParameters(request));
 

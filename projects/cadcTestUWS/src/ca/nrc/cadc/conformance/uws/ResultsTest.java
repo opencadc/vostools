@@ -74,12 +74,15 @@ import com.meterware.httpunit.WebConversation;
 import com.meterware.httpunit.WebRequest;
 import com.meterware.httpunit.WebResponse;
 import java.io.IOException;
+import java.util.Iterator;
+import java.util.List;
 import org.apache.log4j.Level;
 import org.apache.log4j.Logger;
+import org.jdom.Attribute;
+import org.jdom.Document;
+import org.jdom.Element;
+import org.jdom.Namespace;
 import org.junit.Test;
-import org.w3c.dom.Document;
-import org.w3c.dom.Element;
-import org.w3c.dom.NodeList;
 import static org.junit.Assert.*;
 
 public class ResultsTest extends TestConfig
@@ -147,7 +150,8 @@ public class ResultsTest extends TestConfig
 
             // Loop until the phase is either COMPLETED, ERROR or ABORTED.
             Element root = null;
-            NodeList list = null;
+            List list = null;
+            Namespace namespace = null;
             boolean done = false;
             while (!done)
             {
@@ -162,14 +166,14 @@ public class ResultsTest extends TestConfig
                 Document document = buildDocument(response.getText(), false);
 
                 // Root element of the document.
-                root = document.getDocumentElement();
+                root = document.getRootElement();
                 assertNotNull(properties.filename + " no XML returned from GET of " + resourceUrl, root);
 
                 // Get the phase element.
-                list = root.getElementsByTagName("uws:phase");
-                assertEquals(properties.filename + " phase element should only have a single element in XML returned from GET of " + resourceUrl, 1, list.getLength());
-                Element phase = (Element) list.item(0);
-                String phaseText = phase.getTextContent();
+                list = root.getChildren("phase", namespace);
+                assertEquals(properties.filename + " phase element should only have a single element in XML returned from GET of " + resourceUrl, 1, list.size());
+                Element phase = (Element) list.get(0);
+                String phaseText = phase.getText();
 
                 // COMPLETED phase, continue with test.
                 if (phaseText.equals("COMPLETED"))
@@ -184,10 +188,11 @@ public class ResultsTest extends TestConfig
                     continue;
             }
 
-            list = root.getElementsByTagName("uws:results");
-            assertEquals(properties.filename + " uws:results element should only have a single element in XML returned from GET of " + resourceUrl, 1, list.getLength());
+            list = root.getChildren("results", namespace);
+            assertEquals(properties.filename + " uws:results element should only have a single element in XML returned from GET of " + resourceUrl, 1, list.size());
 
-            list = root.getElementsByTagName("uws:result");
+            Element results = (Element) list.get(0);
+            list = results.getChildren("result", namespace);
             validateResults(conversation, response, properties, list);
 
             deleteJob(conversation, jobId);
@@ -196,15 +201,27 @@ public class ResultsTest extends TestConfig
         }
     }
 
-    protected void validateResults(WebConversation conversation, WebResponse response, TestProperties properties, NodeList list)
+    protected void validateResults(WebConversation conversation, WebResponse response, TestProperties properties, List list)
         throws Exception
     {
-        for (int i = 0; i < list.getLength(); i++)
+        // Check for the error detail url.
+        boolean found = false;
+        for (Iterator it = list.iterator(); it.hasNext(); )
         {
-            // Get the result url.
-            Element element = (Element) list.item(i);
-            head(conversation, element.getAttribute("xlink:href"));
+            Element element = (Element) it.next();
+            List attributes = element.getAttributes();
+            for (Iterator itt = attributes.iterator(); itt.hasNext(); )
+            {
+                Attribute attribute = (Attribute) itt.next();
+                if (attribute.getNamespacePrefix().equals("xlink") &&
+                    attribute.getName().equals("href"))
+                {
+                    head(conversation, attribute.getValue());
+                    found = true;
+                }
+            }
         }
+        assertTrue("Missing attribute xlink:href", found);
     }
 
 }

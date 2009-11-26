@@ -75,9 +75,9 @@ import com.meterware.httpunit.WebRequest;
 import com.meterware.httpunit.WebResponse;
 import org.apache.log4j.Level;
 import org.apache.log4j.Logger;
+import org.jdom.Document;
+import org.jdom.Element;
 import org.junit.Test;
-import org.w3c.dom.Document;
-import org.w3c.dom.Element;
 import static org.junit.Assert.*;
 
 public class ExecutionDurationTest extends TestConfig
@@ -133,12 +133,12 @@ public class ExecutionDurationTest extends TestConfig
         Document document = buildDocument(response.getText(), false);
 
         // Get the root of the document.
-        Element root = document.getDocumentElement();
+        Element root = document.getRootElement();
         assertNotNull("XML returned from GET of " + resourceUrl + " missing uws:executionduration element", root);
 
         // Validate the executionduration.
-        log.debug("uws:executionduration: " + root.getTextContent());
-        assertEquals("Executionduration element not updated in XML returned from GET of " + resourceUrl, EXECUTIONDURATION, root.getTextContent());
+        log.debug("uws:executionduration: " + root.getText());
+        assertEquals("Executionduration element not updated in XML returned from GET of " + resourceUrl, EXECUTIONDURATION, root.getText());
 
         // Delete the job.
         deleteJob(conversation, jobId);

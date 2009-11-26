@@ -74,12 +74,15 @@ import com.meterware.httpunit.WebConversation;
 import com.meterware.httpunit.WebRequest;
 import com.meterware.httpunit.WebResponse;
 import java.io.IOException;
+import java.util.Iterator;
+import java.util.List;
 import org.apache.log4j.Level;
 import org.apache.log4j.Logger;
+import org.jdom.Attribute;
+import org.jdom.Document;
+import org.jdom.Element;
+import org.jdom.Namespace;
 import org.junit.Test;
-import org.w3c.dom.Document;
-import org.w3c.dom.Element;
-import org.w3c.dom.NodeList;
 import static org.junit.Assert.*;
 
 public class ErrorTest extends TestConfig
@@ -151,7 +154,8 @@ public class ErrorTest extends TestConfig
 
             // Loop until the phase is either COMPLETED, ERROR or ABORTED.
             Element root = null;
-            NodeList list = null;
+            List list = null;
+            Namespace namespace = null;
             boolean done = false;
             while (!done)
             {
@@ -166,14 +170,15 @@ public class ErrorTest extends TestConfig
                 Document document = buildDocument(response.getText(), false);
 
                 // Root element of the document.
-                root = document.getDocumentElement();
+                root = document.getRootElement();
                 assertNotNull(properties.filename + " no XML returned from GET of " + resourceUrl, root);
+                namespace = root.getNamespace();
 
                 // Get the error element.
-                list = root.getElementsByTagName("uws:phase");
-                assertEquals(properties.filename + " phase element should only have a single element in XML returned from GET of " + resourceUrl, 1, list.getLength());
-                Element phase = (Element) list.item(0);
-                String phaseText = phase.getTextContent();
+                list = root.getChildren("phase", namespace);
+                assertEquals(properties.filename + " phase element should only have a single element in XML returned from GET of " + resourceUrl, 1, list.size());
+                Element phase = (Element) list.get(0);
+                String phaseText = phase.getText();
 
                 // ERROR phase, continue with test.
                 if (phaseText.equals("ERROR"))
@@ -188,15 +193,16 @@ public class ErrorTest extends TestConfig
                     continue;
             }
 
-            list = root.getElementsByTagName("uws:errorSummary");
-            assertEquals(properties.filename + " errorSummary element should only have a single element in XML returned from GET of " + resourceUrl, 1, list.getLength());
+            list = root.getChildren("errorSummary", namespace);
+            assertEquals(properties.filename + " errorSummary element should only have a single element in XML returned from GET of " + resourceUrl, 1, list.size());
 
-            list = root.getElementsByTagName("uws:message");
-            assertEquals(properties.filename + " errorSummary message element should only have a single element in XML returned from GET of " + resourceUrl, 1, list.getLength());
+            Element errorSummary = (Element) list.get(0);
+            list = errorSummary.getChildren("message", namespace);
+            assertEquals(properties.filename + " errorSummary message element should only have a single element in XML returned from GET of " + resourceUrl, 1, list.size());
             validateErrorMessage(conversation, response, list);
 
-            list = root.getElementsByTagName("uws:detail");
-            assertEquals(properties.filename + " errorSummary detail element should only have a single element in XML returned from GET of " + resourceUrl, 1, list.getLength());
+            list = errorSummary.getChildren("detail", namespace);
+            assertEquals(properties.filename + " errorSummary detail element should only have a single element in XML returned from GET of " + resourceUrl, 1, list.size());
             validateErrorDetail(conversation, response, list);
 
             deleteJob(conversation, jobId);
@@ -205,17 +211,32 @@ public class ErrorTest extends TestConfig
         }
     }
 
-    protected void validateErrorMessage(WebConversation conversation, WebResponse response, NodeList list)
+    protected void validateErrorMessage(WebConversation conversation, WebResponse response, List list)
         throws Exception
     {
     }
 
-    protected void validateErrorDetail(WebConversation conversation, WebResponse response, NodeList list)
+    protected void validateErrorDetail(WebConversation conversation, WebResponse response, List list)
         throws Exception
     {
-        // Get the error detail url.
-        Element element = (Element) list.item(0);
-        head(conversation, element.getAttribute("xlink:href"));
+        // Check for the error detail url.
+        boolean found = false;
+        for (Iterator it = list.iterator(); it.hasNext(); )
+        {
+            Element element = (Element) it.next();
+            List attributes = element.getAttributes();
+            for (Iterator itt = attributes.iterator(); itt.hasNext(); )
+            {
+                Attribute attribute = (Attribute) itt.next();
+                if (attribute.getNamespacePrefix().equals("xlink") &&
+                    attribute.getName().equals("href"))
+                {
+                    head(conversation, attribute.getValue());
+                    found = true;
+                }
+            }
+        }
+        assertTrue("Missing attribute xlink:href", found);
     }
 
 }

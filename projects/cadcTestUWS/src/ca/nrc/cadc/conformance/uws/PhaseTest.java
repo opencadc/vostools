@@ -74,14 +74,14 @@ import com.meterware.httpunit.WebConversation;
 import com.meterware.httpunit.WebRequest;
 import com.meterware.httpunit.WebResponse;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import org.apache.log4j.Level;
 import org.apache.log4j.Logger;
+import org.jdom.Document;
+import org.jdom.Element;
+import org.jdom.Namespace;
 import org.junit.Test;
-import org.w3c.dom.Document;
-import org.w3c.dom.Element;
-import org.w3c.dom.Node;
-import org.w3c.dom.NodeList;
 import static org.junit.Assert.*;
 
 public class PhaseTest extends TestConfig
@@ -113,12 +113,12 @@ public class PhaseTest extends TestConfig
         Document document = buildDocument(response.getText(), false);
 
         // Get the document root.
-        Element root = document.getDocumentElement();
+        Element root = document.getRootElement();
         assertNotNull("XML returned from GET of " + resourceUrl + " missing root element", root);
 
         // phase should be in the PENDING state.
-        log.debug("uws:phase: " + root.getTextContent());
-        assertEquals("Phase element not updated in XML returned from GET of " + resourceUrl, "PENDING", root.getTextContent());
+        log.debug("phase: " + root.getText());
+        assertEquals("Phase element not updated in XML returned from GET of " + resourceUrl, "PENDING", root.getText());
 
         // Delete the job.
         response = deleteJob(conversation, jobId);
@@ -159,17 +159,19 @@ public class PhaseTest extends TestConfig
         Document document = buildDocument(response.getText(), true);
 
         // Get the document root.
-        Element root = document.getDocumentElement();
+        Element root = document.getRootElement();
         assertNotNull("XML returned from GET of " + resourceUrl + " missing root element", root);
+        Namespace namespace = root.getNamespace();
+        log.debug("Namespace: " + namespace);
 
         // Get the phase element.
-        NodeList list = root.getElementsByTagName("uws:phase");
-        assertEquals("uws:phase element not found in XML returned from GET of " + resourceUrl, 1, list.getLength());
+        List list = root.getChildren("phase", namespace);
+        assertEquals("uws:phase element not found in XML returned from GET of " + resourceUrl, 1, list.size());
 
         // Validate the phase.
-        Node phase = list.item(0);
-        log.debug("uws:phase: " + phase.getTextContent());
-        assertEquals("uws:phase should be EXECUTING", "EXECUTING", phase.getTextContent());
+        Element phase = (Element) list.get(0);
+        log.debug("uws:phase: " + phase.getText());
+        assertEquals("uws:phase should be EXECUTING", "EXECUTING", phase.getText());
 
         // Delete the Job.
         deleteJob(conversation, jobId);
@@ -205,17 +207,19 @@ public class PhaseTest extends TestConfig
         Document document = buildDocument(response.getText(), true);
 
         // Get the document root.
-        Element root = document.getDocumentElement();
+        Element root = document.getRootElement();
         assertNotNull("XML returned from GET of " + resourceUrl + " missing root element", root);
+        Namespace namespace = root.getNamespace();
+        log.debug("Namespace: " + namespace);
 
         // Get the phase.
-        NodeList list = root.getElementsByTagName("uws:phase");
-        assertEquals("uws:phase element not found in XML returned from GET of " + resourceUrl, 1, list.getLength());
+        List list = root.getChildren("phase", namespace);
+        assertEquals("uws:phase element not found in XML returned from GET of " + resourceUrl, 1, list.size());
 
         // Valiate the phase.
-        Node phase = list.item(0);
-        log.debug("uws:phase: " + phase.getTextContent());
-        assertEquals("uws:phase should be ABORTED", "ABORTED", phase.getTextContent());
+        Element phase = (Element) list.get(0);
+        log.debug("uws:phase: " + phase.getText());
+        assertEquals("uws:phase should be ABORTED", "ABORTED", phase.getText());
 
         // Delete the Job.
         deleteJob(conversation, jobId);

@@ -69,13 +69,19 @@
 
 package ca.nrc.cadc.conformance.uws;
 
+import java.io.BufferedReader;
+import java.io.IOException;
+import java.io.InputStreamReader;
+import java.net.MalformedURLException;
+import java.net.URL;
 import org.apache.log4j.Level;
 import org.apache.log4j.Logger;
 import org.custommonkey.xmlunit.Diff;
 import org.custommonkey.xmlunit.XMLUnit;
+import org.jdom.Attribute;
+import org.jdom.Document;
+import org.jdom.Element;
 import org.junit.Test;
-import org.w3c.dom.Document;
-import org.w3c.dom.Element;
 import static org.junit.Assert.*;
 
 public class SchemaTest extends TestConfig
@@ -95,15 +101,17 @@ public class SchemaTest extends TestConfig
         throws Exception
     {
         // Create DOM document from XML.
-        Document document = xmlToDocument(serviceSchema);
+        String schema = urlToString(serviceSchema);
+        Document document = buildDocument(schema, false);
         assertNotNull("Unable to build a DOM document from the schema", document);
+        log.debug("document xml: " + document.toString());
 
         // Get the root element of the document.
-        Element root = document.getDocumentElement();
+        Element root = document.getRootElement();
         assertNotNull("XML from schema missing root element", root);
 
         // Look for the targetNamespace attribute of the schema.
-        String targetNamespace = root.getAttribute("targetNamespace");
+        Attribute targetNamespace = root.getAttribute("targetNamespace");
         log.debug("targetNamespace: " + targetNamespace);
 
         // Test can not proceed if the schema hasn't specified a targetNamespace.
@@ -114,11 +122,12 @@ public class SchemaTest extends TestConfig
         }
 
         // Build a document of the XSD referenced in the schema.
-        Document doc = urlToDocument(targetNamespace);
+        String target = urlToString(targetNamespace.getValue());
+        Document doc = buildDocument(target, false);
         assertNotNull("Unable to build a DOM document from " + targetNamespace, doc);
 
         // Compare the two documents and get a diff.
-        Diff diff = XMLUnit.compareXML(document, doc);
+        Diff diff = XMLUnit.compareXML(schema, target);
         assertTrue("The UWS Schema and the UWS targetNamespace Schema are not similar: " + diff.toString(), diff.similar());
         assertTrue("The UWS Schema and the UWS targetNamespace Schema are not identical: " + diff.toString(), diff.identical());
 

@@ -71,13 +71,13 @@ package ca.nrc.cadc.conformance.uws;
 
 import com.meterware.httpunit.WebConversation;
 import com.meterware.httpunit.WebResponse;
+import java.util.List;
 import org.apache.log4j.Level;
 import org.apache.log4j.Logger;
+import org.jdom.Document;
+import org.jdom.Element;
+import org.jdom.Namespace;
 import org.junit.Test;
-import org.w3c.dom.Document;
-import org.w3c.dom.Element;
-import org.w3c.dom.Node;
-import org.w3c.dom.NodeList;
 import static org.junit.Assert.*;
 
 public class JobIdTest extends TestConfig
@@ -109,17 +109,19 @@ public class JobIdTest extends TestConfig
         Document document = buildDocument(response.getText(), true);
 
         // Get the document root.
-        Element root = document.getDocumentElement();
+        Element root = document.getRootElement();
         assertNotNull("XML returned from GET of " + resourceUrl + " missing root element", root);
+        Namespace namespace = root.getNamespace();
+        log.debug("namespace: " + namespace);
 
         // List of jobId elements.
-        NodeList list = root.getElementsByTagName("uws:jobId");
+        List list = root.getChildren("jobId", namespace);
         assertNotNull("XML returned from GET of " + resourceUrl + " missing uws:jobId element", list);
 
         // Validate the jobId.
-        Node jobIdNode = list.item(0);
-        log.debug("uws:jobId: " + jobIdNode.getTextContent());
-        assertEquals("Incorrect uws:jobId element in XML returned from GET of " + resourceUrl, jobId, jobIdNode.getTextContent());
+        Element element = (Element) list.get(0);
+        log.debug("uws:jobId: " + element.getText());
+        assertEquals("Incorrect uws:jobId element in XML returned from GET of " + resourceUrl, jobId, element.getText());
 
         // Delete the job.
         deleteJob(conversation, jobId);

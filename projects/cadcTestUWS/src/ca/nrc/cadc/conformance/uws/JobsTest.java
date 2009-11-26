@@ -73,9 +73,9 @@ import com.meterware.httpunit.WebConversation;
 import com.meterware.httpunit.WebResponse;
 import org.apache.log4j.Level;
 import org.apache.log4j.Logger;
+import org.jdom.Document;
+import org.jdom.Element;
 import org.junit.Test;
-import org.w3c.dom.Document;
-import org.w3c.dom.Element;
 import static org.junit.Assert.*;
 
 public class JobsTest extends TestConfig
@@ -106,7 +106,7 @@ public class JobsTest extends TestConfig
         log.debug("XML:\r\n" + response.getText());
         Document document = buildDocument(response.getText(), true);
 
-        Element root = document.getDocumentElement();
+        Element root = document.getRootElement();
         assertNotNull("XML returned from GET of " + serviceUrl + " missing uws:jobs element", root);
 
 //        NodeList list = root.getElementsByTagName("uws:jobref");

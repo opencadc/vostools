@@ -73,13 +73,15 @@ import com.meterware.httpunit.PostMethodWebRequest;
 import com.meterware.httpunit.WebConversation;
 import com.meterware.httpunit.WebRequest;
 import com.meterware.httpunit.WebResponse;
+import java.util.Iterator;
+import java.util.List;
 import org.apache.log4j.Level;
 import org.apache.log4j.Logger;
+import org.jdom.Attribute;
+import org.jdom.Document;
+import org.jdom.Element;
+import org.jdom.Namespace;
 import org.junit.Test;
-import org.w3c.dom.Document;
-import org.w3c.dom.Element;
-import org.w3c.dom.Node;
-import org.w3c.dom.NodeList;
 import static org.junit.Assert.*;
 
 public class ParametersTest extends TestConfig
@@ -125,7 +127,7 @@ public class ParametersTest extends TestConfig
         log.debug("XML:\r\n" + response.getText());
         buildDocument(response.getText(), true);
 
-        // Get the destruction resouce for this jobId.
+        // Get the parameters resouce for this jobId.
         response = get(conversation, resourceUrl);
 
         // Create DOM document from XML.
@@ -133,25 +135,27 @@ public class ParametersTest extends TestConfig
         Document document = buildDocument(response.getText(), false);
 
         // Get the document root.
-        Element root = document.getDocumentElement();
-        assertNotNull("XML returned from GET of " + resourceUrl + " missing uws:parameters element", root);
+        Element root = document.getRootElement();
+        assertNotNull("XML returned from GET of " + resourceUrl + " missing parameters element", root);
+        Namespace namespace = root.getNamespace();
+        log.debug("namespace: " + namespace);
 
         // Validate the parameters.
         boolean found = false;
-        NodeList parameter = root.getElementsByTagName("uws:parameter");
-        for (int j = 0; j < parameter.getLength(); j++)
+        List parameters = root.getChildren("parameter", namespace);
+        for (Iterator it = parameters.iterator(); it.hasNext(); )
         {
-            Node child = parameter.item(j);
-            if (child.getNodeType() == child.ELEMENT_NODE && child.hasAttributes())
+            Element parameter = (Element) it.next();
+            Attribute attribute = parameter.getAttribute("id");
+            if (attribute == null)
+                continue;
+            if (attribute.getValue().equals(PARAMETER_NAME) &&
+                parameter.getText().equals(PARAMETER_VALUE))
             {
-                if (child.getAttributes().getNamedItem("id").getNodeValue().equals(PARAMETER_NAME) &&
-                    child.getFirstChild().getNodeValue().equals(PARAMETER_VALUE))
-                {
-                    found = true;
-                }
+                found = true;
             }
         }
-        assertTrue("uws:parameter " + PARAMETER_NAME + "=" + PARAMETER_VALUE + " not found", found);
+        assertTrue("parameter " + PARAMETER_NAME + "=" + PARAMETER_VALUE + " not found", found);
 
         // Delete the job.
         deleteJob(conversation, jobId);

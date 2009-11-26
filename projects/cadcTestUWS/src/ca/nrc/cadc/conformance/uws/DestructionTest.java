@@ -78,9 +78,9 @@ import java.util.Calendar;
 import java.util.Date;
 import org.apache.log4j.Level;
 import org.apache.log4j.Logger;
+import org.jdom.Document;
+import org.jdom.Element;
 import org.junit.Test;
-import org.w3c.dom.Document;
-import org.w3c.dom.Element;
 import static org.junit.Assert.*;
 
 public class DestructionTest extends TestConfig
@@ -146,12 +146,12 @@ public class DestructionTest extends TestConfig
         Document document = buildDocument(response.getText(), false);
 
         // Get the root of the document.
-        Element root = document.getDocumentElement();
+        Element root = document.getRootElement();
         assertNotNull("XML returned from GET of " + resourceUrl + " missing root element", root);
 
         // Validate the dstruction time.
-        log.debug("uws:destruction: " + root.getTextContent());
-        assertEquals("Destruction element not updated in XML returned from GET of " + resourceUrl, destructionUTC, root.getTextContent());
+        log.debug("uws:destruction: " + root.getText());
+        assertEquals("Destruction element not updated in XML returned from GET of " + resourceUrl, destructionUTC, root.getText());
 
         // Delete the job.
         deleteJob(conversation, jobId);

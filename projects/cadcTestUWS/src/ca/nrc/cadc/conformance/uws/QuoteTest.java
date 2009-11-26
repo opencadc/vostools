@@ -76,9 +76,9 @@ import java.util.Calendar;
 import java.util.Date;
 import org.apache.log4j.Level;
 import org.apache.log4j.Logger;
+import org.jdom.Document;
+import org.jdom.Element;
 import org.junit.Test;
-import org.w3c.dom.Document;
-import org.w3c.dom.Element;
 import static org.junit.Assert.*;
 
 public class QuoteTest extends TestConfig
@@ -117,11 +117,11 @@ public class QuoteTest extends TestConfig
         Document document = buildDocument(response.getText(), false);
 
         // Get the document root.
-        Element root = document.getDocumentElement();
+        Element root = document.getRootElement();
         assertNotNull("XML returned from GET of " + resourceUrl + " missing uws:quote element", root);
 
         // Get the Quote date.
-        String quote = root.getTextContent();
+        String quote = root.getText();
         log.debug("uws:quote: " + quote);
         assertNotNull("XML returned from GET of " + resourceUrl + " missing uws:quote element", quote);
 
