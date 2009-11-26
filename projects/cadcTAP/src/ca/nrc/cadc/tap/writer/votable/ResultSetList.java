@@ -75,32 +75,33 @@ import java.sql.ResultSet;
 import java.util.AbstractList;
 import java.util.Iterator;
 import java.util.List;
+import org.jdom.Namespace;
 
 /**
  * Class that wraps a List around a ResultSet.
  */
 public class ResultSetList extends AbstractList
 {
-    // TapSchema
-    TapSchema tapSchema;
-
     // ResultSet the List is wrapping.
     private ResultSet resultSet;
 
     // List of Formatter's in selectList order.
     private List<Formatter> formatters;
 
+    // Namespace for the element.
+    private Namespace namespace;
+
     /**
      * Constructor.
      * 
      * @param ResultSet to wrap.
      */
-    public ResultSetList(TapSchema tapSchema, ResultSet resultSet, List<Formatter> formatters)
+    public ResultSetList(ResultSet resultSet, List<Formatter> formatters, Namespace namespace)
     {
         super();
-        this.tapSchema = tapSchema;
         this.resultSet = resultSet;
         this.formatters = formatters;
+        this.namespace = namespace;
     }
 
     /**
@@ -112,7 +113,7 @@ public class ResultSetList extends AbstractList
     @Override
     public Iterator iterator()
     {
-        return new ResultSetIterator(tapSchema, resultSet, formatters);
+        return new ResultSetIterator(resultSet, formatters, namespace);
     }
 
     /**

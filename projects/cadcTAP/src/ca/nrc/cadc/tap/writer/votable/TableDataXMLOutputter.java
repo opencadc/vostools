@@ -70,7 +70,6 @@
 package ca.nrc.cadc.tap.writer.votable;
 
 import ca.nrc.cadc.tap.schema.TapSchema;
-import ca.nrc.cadc.tap.writer.formatter.Formatter;
 import java.io.IOException;
 import java.io.Writer;
 import java.util.Iterator;
@@ -166,10 +165,21 @@ public class TableDataXMLOutputter extends XMLOutputter
     {
         if (element instanceof TableDataElement)
         {
-            Element tableData = new Element("TABLEDATA");
-            for (Iterator it = element.getContent().iterator(); it.hasNext(); )
-                tableData.addContent((Element) it.next());
-            super.printElement(out, tableData, level, namespaces);
+            out.write("<");
+            out.write(element.getQualifiedName());
+            out.write(">");
+            out.write(NEW_LINE);
+            List content = element.getContent();
+            for (Iterator iterator = content.iterator(); iterator.hasNext(); )
+            {
+                out.write(getIndentLevel(level + 1));
+                super.printElement(out, (Element) iterator.next(), level + 1, namespaces);
+                out.write(NEW_LINE);
+            }
+            out.write(getIndentLevel(level));
+            out.write("</");
+            out.write(element.getQualifiedName());
+            out.write(">");
         }
         else
         {
@@ -180,6 +190,17 @@ public class TableDataXMLOutputter extends XMLOutputter
     protected class MyNamespaceStack extends NamespaceStack
     {
         MyNamespaceStack() {}
+    }
+
+    private String getIndentLevel(int level)
+    {
+        if (getFormat().getIndent() == null || getFormat().getIndent().equals(""))
+            return "";
+
+        StringBuilder sb = new StringBuilder();
+        for (int i = 0; i < level; i++)
+            sb.append(getFormat().getIndent());
+        return sb.toString();
     }
 
 }

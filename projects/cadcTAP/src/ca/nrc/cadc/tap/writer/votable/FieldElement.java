@@ -72,6 +72,7 @@ package ca.nrc.cadc.tap.writer.votable;
 import ca.nrc.cadc.tap.parser.adql.TapSelectItem;
 import ca.nrc.cadc.tap.schema.ColumnDesc;
 import org.jdom.Element;
+import org.jdom.Namespace;
 
 public class FieldElement extends Element
 {
@@ -81,15 +82,15 @@ public class FieldElement extends Element
      * @param selectItem
      * @param columnDesc 
      */
-    public FieldElement(TapSelectItem selectItem, ColumnDesc columnDesc)
+    public FieldElement(TapSelectItem selectItem, ColumnDesc columnDesc, Namespace namespace)
     {
-        super("FIELD");
+        super("FIELD", namespace);
         setFieldName(selectItem.getAlias(), columnDesc.columnName);
         setFieldAttribute("utype", columnDesc.utype);
         setFieldAttribute("ucd", columnDesc.ucd);
         setFieldAttribute("unit", columnDesc.unit);
         setFieldAttribute("xtype", columnDesc.datatype);
-        setDescription(columnDesc.description);
+        setDescription(columnDesc.description, namespace);
         setDatatypeAndWidth(columnDesc.datatype, columnDesc.size);
      }
 
@@ -115,11 +116,11 @@ public class FieldElement extends Element
     }
 
     // Add a DESCRIPTION Element to the FIELD.
-    private void setDescription(String description)
+    private void setDescription(String description, Namespace namespace)
     {
         if (description != null)
         {
-            Element element = new Element("DESCRIPTION");
+            Element element = new Element("DESCRIPTION", namespace);
             element.setText(description);
             addContent(element);
         }
@@ -131,7 +132,7 @@ public class FieldElement extends Element
         if (datatype == null)
             return;
 
-        String width = size == null ? null : String.valueOf(size);
+        String length = size == null ? null : String.valueOf(size);
 
         if (datatype.equals("adql:SMALLINT"))
         {
@@ -156,55 +157,64 @@ public class FieldElement extends Element
         else if (datatype.equals("adql:VARBINARY"))
         {
             setAttribute("datatype", "unsignedByte");
-            setAttribute("width", width == null ? "*" : width + "*");
+            setAttribute("arraysize", length == null ? "*" : length + "*");
         }
         else if (datatype.equals("adql:CHAR"))
         {
             setAttribute("datatype", "char");
-            setAttribute("width", width == null ? "*" : width);
+            setAttribute("arraysize", length == null ? "*" : length + "*");
         }
         else if (datatype.equals("adql:VARCHAR"))
         {
             setAttribute("datatype", "char");
-            setAttribute("width", width == null ? "*" : width + "*");
+            setAttribute("arraysize", length == null ? "*" : length + "*");
         }
         else if (datatype.equals("adql:BINARY"))
         {
             setAttribute("datatype", "unsignedByte");
-            setAttribute("width", width == null ? "*" : width);
+            setAttribute("arraysize", length == null ? "*" : length);
         }
         else if (datatype.equals("adql:BLOB"))
         {
             setAttribute("datatype", "unsignedByte");
-            setAttribute("width", width == null ? "*" : width);
+            setAttribute("arraysize", length == null ? "*" : length);
         }
         else if (datatype.equals("adql:CLOB"))
         {
             setAttribute("datatype", "char");
-            setAttribute("width", width == null ? "*" : width);
+            setAttribute("arraysize", length == null ? "*" : length);
         }
         else if (datatype.equals("adql:TIMESTAMP"))
         {
             setAttribute("datatype", "char");
-            setAttribute("width", width == null ? "*" : width + "*");
+            setAttribute("arraysize", length == null ? "*" : length + "*");
         }
         else if (datatype.equals("adql:POINT"))
         {
             setAttribute("datatype", "char");
-            setAttribute("width", "*");
+            setAttribute("arraysize", "*");
         }
         else if (datatype.equals("adql:CIRCLE"))
         {
-
+            setAttribute("datatype", "char");
         }
         else if (datatype.equals("adql:POLYGON"))
         {
-
+            setAttribute("datatype", "char");
         }
         else if (datatype.equals("adql:REGION"))
         {
             setAttribute("datatype", "char");
-            setAttribute("width", "*");
+            setAttribute("arraysize", "*");
+        }
+        else if (datatype.equals("int[]"))
+        {
+            setAttribute("datatype", "int");
+            setAttribute("arraysize", length == null ? "*" : length);
+        }
+        else if (datatype.equals("pg:box"))
+        {
+            setAttribute("datatype", "char");
         }
     }
 

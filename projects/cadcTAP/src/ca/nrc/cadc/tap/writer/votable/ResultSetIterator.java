@@ -69,7 +69,6 @@
 
 package ca.nrc.cadc.tap.writer.votable;
 
-import ca.nrc.cadc.tap.schema.TapSchema;
 import ca.nrc.cadc.tap.writer.formatter.Formatter;
 import ca.nrc.cadc.tap.writer.formatter.ResultSetFormatter;
 import java.sql.ResultSet;
@@ -78,6 +77,7 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.NoSuchElementException;
 import org.jdom.Element;
+import org.jdom.Namespace;
 
 /**
  * Class that iterates through a ResultSet. The Iterator returns a JDOM Element
@@ -85,25 +85,25 @@ import org.jdom.Element;
  */
 public class ResultSetIterator implements Iterator
 {
-    // TapSchema metadata.
-    private TapSchema tapSchema;
-
     // ResultSet for iteration.
     private ResultSet resultSet;
 
     // List of Formatter's in selectList order.
     private List<Formatter> formatters;
 
+    // Namespace of the element.
+    private Namespace namespace;
+
     /**
      * Constructor.
      *
      * @param resultSet
      */
-    public ResultSetIterator(TapSchema tapSchema, ResultSet resultSet, List<Formatter> formatters)
+    public ResultSetIterator(ResultSet resultSet, List<Formatter> formatters, Namespace namespace)
     {
-        this.tapSchema = tapSchema;
         this.resultSet = resultSet;
         this.formatters = formatters;
+        this.namespace = namespace;
     }
 
     /**
@@ -143,13 +143,13 @@ public class ResultSetIterator implements Iterator
                 throw new NoSuchElementException("No more rows in the ResultSet");
 
             // Create the TR element.
-            Element tableRow = new Element("TR");
+            Element tableRow = new Element("TR", namespace);
 
             // Loop through the ResultSet adding the table data elements.
             for (int columnIndex = 1; columnIndex <= resultSet.getMetaData().getColumnCount(); columnIndex++)
             {
                 Formatter formatter = formatters.get(columnIndex - 1);
-                Element tableData = new Element("TD");
+                Element tableData = new Element("TD", namespace);
                 if (formatter instanceof ResultSetFormatter)
                     tableData.setText(((ResultSetFormatter) formatter).format(resultSet, columnIndex));
                 else

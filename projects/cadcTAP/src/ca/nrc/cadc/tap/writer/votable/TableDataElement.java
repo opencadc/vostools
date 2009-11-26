@@ -69,11 +69,11 @@
 
 package ca.nrc.cadc.tap.writer.votable;
 
-import ca.nrc.cadc.tap.schema.TapSchema;
 import ca.nrc.cadc.tap.writer.formatter.Formatter;
 import java.sql.ResultSet;
 import java.util.List;
 import org.jdom.Element;
+import org.jdom.Namespace;
 
 /**
  * Wrapper around a JDOM Element that builds a TABLEDATA Element
@@ -81,9 +81,6 @@ import org.jdom.Element;
  */
 public class TableDataElement extends Element
 {
-    // TapSchema metadata.
-    TapSchema tapSchema;
-
     // ResultSet used to populate the TABLEDATA element.
     private ResultSet resultSet;
 
@@ -95,12 +92,12 @@ public class TableDataElement extends Element
      *
      * @param resultSet
      */
-    public TableDataElement(TapSchema tapSchema, ResultSet resultSet, List<Formatter> formatters)
+    public TableDataElement(ResultSet resultSet, List<Formatter> formatters, Namespace namespace)
     {
-        super("TABLEDATA");
-        this.tapSchema = tapSchema;
+        super("TABLEDATA", namespace);
         this.resultSet = resultSet;
         this.formatters = formatters;
+        this.namespace = namespace;
     }
 
     /**
@@ -111,7 +108,7 @@ public class TableDataElement extends Element
     @Override
     public List getContent()
     {
-        List list = new ResultSetList(tapSchema, resultSet, formatters);
+        List list = new ResultSetList(resultSet, formatters, namespace);
         return list;
     }
 

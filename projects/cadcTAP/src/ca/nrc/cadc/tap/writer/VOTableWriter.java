@@ -95,7 +95,6 @@ public class VOTableWriter implements TableWriter
     public static final String VOTABLE_VERSION  = "1.2";
     public static final String XSI_NS_URI = "http://www.w3.org/2001/XMLSchema-instance";
     public static final String VOTABLE_NS_URI = "http://www.ivoa.net/xml/VOTable/v1.2";
-    public static final String STC_NS = "xmlns:stc";
     public static final String STC_NS_URI = "http://www.ivoa.net/xml/STC/v1.30";
 
     protected TapSchema tapSchema;
@@ -130,26 +129,28 @@ public class VOTableWriter implements TableWriter
         List<Formatter> formatters = FormatterFactory.getFormatters(tapSchema, selectList);
 
         Document document = createDocument();
-        Element votable = document.getRootElement();
+        Element root = document.getRootElement();
+        Namespace namespace = root.getNamespace();
 
         // Create the RESOURCE element and add to the VOTABLE element.
-        Element resource = new Element("RESOURCE");
-        votable.addContent(resource);
+        Element resource = new Element("RESOURCE", namespace);
+        root.addContent(resource);
+
 
         // Create the TABLE element and add to the RESOURCE element.
-        Element table = new Element("TABLE");
+        Element table = new Element("TABLE", namespace);
         resource.addContent(table);
 
         // Add the metadata elements.
         for (TapSelectItem selectItem : selectList)
-            table.addContent(getMetaDataElement(selectItem));
+            table.addContent(getMetaDataElement(selectItem, namespace));
 
         // Create the DATA element and add to the TABLE element.
-        Element data = new Element("DATA");
+        Element data = new Element("DATA", namespace);
         table.addContent(data);
 
         // Create the TABLEDATA element and add the to DATA element.
-        Element tableData = new TableDataElement(tapSchema, resultSet, formatters);
+        Element tableData = new TableDataElement(resultSet, formatters, namespace);
         data.addContent(tableData);
 
         // Write out the VOTABLE.
@@ -162,22 +163,19 @@ public class VOTableWriter implements TableWriter
         throws IOException
     {
         Document document = createDocument();
-        Element votable = document.getRootElement();
+        Element root = document.getRootElement();
+        Namespace namespace = root.getNamespace();
         
         // Create the RESOURCE element and add to the VOTABLE element.
-        Element resource = new Element("RESOURCE");
-        votable.addContent(resource);
+        Element resource = new Element("RESOURCE", namespace);
+        root.addContent(resource);
 
         // Create the INFO element and add to the RESOURCE element.
-        Element info = new Element("INFO");
+        Element info = new Element("INFO", namespace);
         info.setAttribute("name", "QUERY_STATUS");
         info.setAttribute("value", "ERROR");
+        info.setText(getThrownExceptions(thrown));
         resource.addContent(info);
-
-        // Create the DESCRIPTION element and add to the INFO element.
-        Element description = new Element("DESCRIPTION");
-        description.setText(getThrownExceptions(thrown));
-        info.addContent(description);
 
         // Write out the VOTABLE.
         XMLOutputter outputter = new XMLOutputter();
@@ -201,7 +199,7 @@ public class VOTableWriter implements TableWriter
     }
 
     // Build a FIELD Element for the column specified by the TapSelectItem.
-    private Element getMetaDataElement(TapSelectItem selectItem)
+    private Element getMetaDataElement(TapSelectItem selectItem, Namespace namespace)
     {
         for (SchemaDesc schemaDesc : tapSchema.schemaDescs)
         {
@@ -213,14 +211,14 @@ public class VOTableWriter implements TableWriter
                     {
                         if (columnDesc.columnName.equals(selectItem.getColumnName()))
                         {
-                            return new FieldElement(selectItem, columnDesc);
+                            return new FieldElement(selectItem, columnDesc, namespace);
                         }
                     }
                 }
             }
         }
         // select item did not match a column, must be a function call or expression
-        Element e = new Element("FIELD");
+        Element e = new Element("FIELD", namespace);
         e.setAttribute("name", selectItem.getAlias());
         return e;
     }
