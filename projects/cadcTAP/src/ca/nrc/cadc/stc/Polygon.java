@@ -86,6 +86,11 @@ public class Polygon extends Space
 
     public List<Double> pos;
 
+    public Polygon()
+    {
+        super("Polygon");
+    }
+
     public Polygon(String phrase)
         throws StcsParsingException
     {
