@@ -118,6 +118,8 @@ public class FormatterFactory
                                 return new DefaultFormatter();
                             else if (datatype.equals("adql:POINT"))
                                 return new SPointFormatter();
+                            else if (datatype.equals("adql:POLYGON"))
+                                return new SPolyFormatter();
                             else if (datatype.equals("adql:TIMESTAMP"))
                                 return new UTCTimestampFormatter();
                             else if (datatype.equals("adql:VARBINARY"))

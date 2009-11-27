@@ -69,13 +69,14 @@
 
 package ca.nrc.cadc.tap.writer.formatter;
 
-import ca.nrc.cadc.stc.Position;
+import ca.nrc.cadc.stc.Polygon;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.util.ArrayList;
 
-public class SPointFormatter implements ResultSetFormatter
+public class SPolyFormatter implements ResultSetFormatter
 {
+
     public String format(ResultSet resultSet, int columnIndex)
         throws SQLException
     {
@@ -89,34 +90,53 @@ public class SPointFormatter implements ResultSetFormatter
             return "";
         String s = (String) object;
 
+        // Get the string inside the enclosing brackets.
+        int open = s.indexOf("{");
+        int close = s.indexOf("}");
+        if (open == -1 || close == -1)
+            throw new IllegalArgumentException("Missing opening or closing brackets " + s);
+
         // Get the string inside the enclosing parentheses.
-        int open = s.indexOf("(");
-        int close = s.indexOf(")");
+        s = s.substring(open + 1, close);
+        open = s.indexOf("(");
+        close = s.lastIndexOf(")");
         if (open == -1 || close == -1)
             throw new IllegalArgumentException("Missing opening or closing parentheses " + s);
 
-        // Should be 2 values separated by a comma.
+        // Each set of vertices is '),(' separated.
         s = s.substring(open + 1, close);
-        String[] points = s.split(",");
-        if (points.length != 2)
-            throw new IllegalArgumentException("SPoint must have only 2 values " + s);
+        String[] vertices = s.split("\\){1}?\\s*,\\s*{1}\\({1}?");
 
-        // Coordinates.
-        Double x = Double.valueOf(points[0]);
-        Double y = Double.valueOf(points[1]);
+        // Check minimum vertices to make a polygon.
+        if (vertices.length < 3)
+            throw new IllegalArgumentException("Minimum 3 vertices required to form a Polygon " + s);
 
-        // convert to radians
-        x = x * (180/Math.PI);
-        y = y * (180/Math.PI);
+        // Create STC Polygon.
+        Polygon polygon = new Polygon();
+        polygon.frame = "ICRS";
+        polygon.pos = new ArrayList();
 
-        // Create STC Position.
-        Position position = new Position();
-        position.frame = "ICRS";
-        position.pos = new ArrayList();
-        position.pos.add(x);
-        position.pos.add(y);
+        // Loop through each set of vertices.
+        for (int i = 0; i < vertices.length; i++)
+        {
+            // Each vertex is 2 values separated by a comma.
+            String vertex = vertices[i];
+            String[] values = vertex.split(",");
+            if (values.length != 2)
+                throw new IllegalArgumentException("Each set of vertices must have only 2 values " + vertex);
 
-        return position.toSTCString();
+            // Coordinates.
+            Double x = Double.valueOf(values[0]);
+            Double y = Double.valueOf(values[1]);
+
+            // convert to radians and add to Polygon.
+            x = x * (180/Math.PI);
+            y = y * (180/Math.PI);
+            polygon.pos.add(x);
+            polygon.pos.add(y);
+        }
+
+        return polygon.toSTCString();
     }
-    
+
 }
