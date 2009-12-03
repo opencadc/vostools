@@ -88,11 +88,13 @@ public class FormatterFactory
     public static List<Formatter> getFormatters(TapSchema tapSchema, List<TapSelectItem> selectList)
     {
         List<Formatter> formatters = new ArrayList<Formatter>();
+        log.debug("selectList.size() = " + selectList.size());
         for (TapSelectItem selectItem : selectList)
+        {
+            log.debug("found: " + selectItem);
             if (selectItem != null)
                 formatters.add(getFormatter(tapSchema, selectItem));
-            else
-                log.warn("found null selectItem in List<TapSelectItem>");
+        }
         return formatters;
     }
 
@@ -103,7 +105,6 @@ public class FormatterFactory
         {
             for (TableDesc tableDesc : schemaDesc.tableDescs)
             {
-                log.debug("selectItem: " + selectItem);
                 if (tableDesc.tableName.equals(selectItem.getTableName()))
                 {
                     for (ColumnDesc columnDesc : tableDesc.columnDescs)

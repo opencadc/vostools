@@ -219,7 +219,10 @@ public class VOTableWriter implements TableWriter
         }
         // select item did not match a column, must be a function call or expression
         Element e = new Element("FIELD", namespace);
-        e.setAttribute("name", selectItem.getAlias());
+        String name = selectItem.getAlias();
+        if (name == null)
+            name = selectItem.getColumnName();
+        e.setAttribute("name", name);
         return e;
     }
 
