@@ -78,6 +78,7 @@ import ca.nrc.cadc.tap.parser.ParserUtil;
 import ca.nrc.cadc.tap.parser.adql.TapSelectItem;
 import ca.nrc.cadc.tap.parser.extractor.SelectListExtractor;
 import ca.nrc.cadc.tap.parser.extractor.SelectListExtractorNavigator;
+import ca.nrc.cadc.tap.parser.navigator.ExpressionNavigator;
 import ca.nrc.cadc.tap.parser.navigator.FromItemNavigator;
 import ca.nrc.cadc.tap.parser.navigator.ReferenceNavigator;
 import ca.nrc.cadc.tap.parser.navigator.SelectNavigator;
@@ -115,6 +116,12 @@ public class SqlQuery implements TapQuery
             throw new IllegalArgumentException("parameter not found: QUERY");
     }
 
+    /*
+     * Most basic validation is applied. e.g. no sub-select supported in the SELECT items and FROM 
+     * 
+     * (non-Javadoc)
+     * @see ca.nrc.cadc.tap.TapQuery#getSQL()
+     */
     public String getSQL()
     {
         if (queryString == null)
@@ -122,9 +129,15 @@ public class SqlQuery implements TapQuery
 
         String rtn = null;
 
+        ExpressionNavigator en = new ExpressionNavigator();
+        ReferenceNavigator rn = new ReferenceNavigator();
+        FromItemNavigator fn = new FromItemNavigator();
+        SelectNavigator sn = new SelectNavigator(en, rn, fn);
+
         try
         {
             Statement statement = ParserUtil.receiveQuery(queryString);
+            ParserUtil.parseStatement(statement, sn);
             rtn = statement.toString();
         } catch (JSQLParserException e)
         {
