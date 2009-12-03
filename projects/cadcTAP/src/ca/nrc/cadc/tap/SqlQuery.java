@@ -70,93 +70,92 @@
 package ca.nrc.cadc.tap;
 
 import java.util.List;
+import java.util.Map;
 
-import ca.nrc.cadc.tap.parser.adql.AdqlManager;
-import ca.nrc.cadc.tap.parser.adql.AdqlParser;
+import net.sf.jsqlparser.JSQLParserException;
+import net.sf.jsqlparser.statement.Statement;
+import ca.nrc.cadc.tap.parser.ParserUtil;
 import ca.nrc.cadc.tap.parser.adql.TapSelectItem;
-import ca.nrc.cadc.tap.parser.adql.exception.AdqlException;
+import ca.nrc.cadc.tap.parser.extractor.SelectListExtractor;
+import ca.nrc.cadc.tap.parser.extractor.SelectListExtractorNavigator;
+import ca.nrc.cadc.tap.parser.navigator.FromItemNavigator;
+import ca.nrc.cadc.tap.parser.navigator.ReferenceNavigator;
+import ca.nrc.cadc.tap.parser.navigator.SelectNavigator;
 import ca.nrc.cadc.tap.schema.TableDesc;
 import ca.nrc.cadc.tap.schema.TapSchema;
 import ca.nrc.cadc.uws.Parameter;
-import java.util.Map;
 
 /**
  * TapQuery implementation for LANG=SQL.
  */
 public class SqlQuery implements TapQuery
 {
-	private AdqlParser parser;
-    private TapSchema tapSchema;
-    private Map<String, TableDesc> extraTables;
+    private TapSchema _tapSchema;
+    private Map<String, TableDesc> _extraTables;
     private String queryString;
-    private boolean validated = false;
-	
-	public SqlQuery() { }
-	
-    private void initParser()
+
+    public SqlQuery()
     {
-        AdqlManager manager = 
-            new ca.nrc.cadc.tap.parser.adql.impl.postgresql.sql.AdqlManagerImpl(this.tapSchema, this.extraTables);
-        this.parser = new AdqlParser(manager);
-    }
-    
-    public void setTapSchema(TapSchema tapSchema) 
-    {
-        this.tapSchema = tapSchema;
-        parser = null;
-    }
-    
-    public void setExtraTables(Map<String, TableDesc> extraTables)
-    {
-        this.extraTables = extraTables;
-        parser = null;
     }
 
-    public void setParameterList( List<Parameter> paramList )
+    public void setTapSchema(TapSchema tapSchema)
+    {
+        this._tapSchema = tapSchema;
+    }
+
+    public void setExtraTables(Map<String, TableDesc> extraTables)
+    {
+        this._extraTables = extraTables;
+    }
+
+    public void setParameterList(List<Parameter> paramList)
     {
         this.queryString = TapUtil.findParameterValue("QUERY", paramList);
         if (queryString == null)
-            throw new IllegalArgumentException( "parameter not found: QUERY" );
-        parser = null;
+            throw new IllegalArgumentException("parameter not found: QUERY");
     }
-    
-	public String getSQL()
-	{
-        if (parser == null)
-            initParser();
-        
-		if (queryString == null)
-            throw new IllegalStateException();
-                
-		try 
-        {
-            String ret = this.parser.parse(queryString);
-            validated = true;
-            return ret;
-        } 
-        catch (AdqlException ex) 
-        {
-            throw new IllegalArgumentException("failed to parse QUERY", ex);
-		}
-	}
 
-	public List<TapSelectItem> getSelectList() 
+    public String getSQL()
     {
-        if (parser == null)
-            initParser();
         if (queryString == null)
             throw new IllegalStateException();
-        
-		try 
+
+        String rtn = null;
+
+        try
         {
-            if (!validated)
-                this.parser.validate(queryString);
-            validated = true;
-            return this.parser.getTapSelectItems();
-		} 
-        catch (AdqlException ex) 
+            Statement statement = ParserUtil.receiveQuery(queryString);
+            rtn = statement.toString();
+        } catch (JSQLParserException e)
         {
-            throw new IllegalArgumentException(ex);
-		}
-	}
+            e.printStackTrace();
+            throw new IllegalArgumentException(e);
+        }
+        return rtn;
+    }
+
+    public List<TapSelectItem> getSelectList()
+    {
+        if (queryString == null)
+            throw new IllegalStateException();
+
+        List<TapSelectItem> rtn = null;
+
+        SelectListExtractor en = new SelectListExtractor(_tapSchema, _extraTables);
+        ReferenceNavigator rn = null;
+        FromItemNavigator fn = null;
+        SelectNavigator sn = new SelectListExtractorNavigator(en, rn, fn);
+
+        try
+        {
+            Statement statement = ParserUtil.receiveQuery(queryString);
+            ParserUtil.parseStatement(statement, sn);
+            rtn = en.getTapSelectItemList();
+        } catch (JSQLParserException e)
+        {
+            e.printStackTrace();
+            throw new IllegalArgumentException(e);
+        }
+        return rtn;
+    }
 }
