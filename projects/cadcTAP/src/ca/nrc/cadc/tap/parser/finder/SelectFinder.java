@@ -198,32 +198,6 @@ public class SelectFinder extends SelectNavigator
         log.debug("visit(PlainSelect) done");
     }
 
-    private void NavigateJoins()
-    {
-        PlainSelect ps = this._plainSelect;
-        List<Join> joins = ps.getJoins();
-        if (joins != null)
-        {
-            for (Join join : joins)
-            {
-                FromItem fromItem = join.getRightItem();
-                if (fromItem instanceof Table)
-                {
-                    Table rightTable = (Table) join.getRightItem();
-                    rightTable.accept(this._fromItemNavigator);
-
-                    if (join.getOnExpression() != null)
-                        join.getOnExpression().accept(this._expressionNavigator);
-
-                    List<Column> columns = join.getUsingColumns();
-                    if (columns != null)
-                        for (Column column : columns)
-                            column.accept(this._expressionNavigator);
-                } else if (fromItem instanceof SubSelect)
-                    throw new UnsupportedOperationException("sub-select not supported in FROM clause.");
-            }
-        }
-    }
 
     /*
      * Setters and Getters -------------------------------------------------

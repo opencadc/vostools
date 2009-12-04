@@ -226,7 +226,7 @@ public class SelectNavigator implements SelectVisitor, Cloneable
         log.debug("visit(PlainSelect) done");
     }
 
-    private void NavigateJoins()
+    protected void NavigateJoins()
     {
         PlainSelect ps = this._plainSelect;
         List<Join> joins = ps.getJoins();
