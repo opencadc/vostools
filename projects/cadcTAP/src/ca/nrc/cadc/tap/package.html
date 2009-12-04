@@ -1,0 +1,79 @@
+<!-- 
+    Document   : package.html
+    Created on : 23-Nov-2009, 9:39:14 AM
+    Author     : pdowler
+-->
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<html>
+  <head>
+    <title></title>
+    <meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+  </head>
+  <body>
+  
+  <h1>The extensible CADC TAP library</h1>
+  
+  <p>
+      This <code>ca.nrc.cadc.tap.impl</code> package is reserved for implementation classes 
+      that extend base classes provided in the <code>ca.nrc.cadc.tap</code> package. 
+      The <code>QueryRunner</code> class loads classes with specific names in this package 
+      and the deploying web application must provide the classes described below. This is the only
+      mechanism by which the behaviour of the <code>QueryRunner</code> class is configurable at this time.
+  </p>
+  
+  <h2>ca.nrc.cadc.impl.FileStoreImpl</h2>
+  <p>
+      The deployment must provide this class and it must implement the <code>ca.nrc.cadc.tap.FileStore</code>
+      interface. This class is repsonsible for managing temporary resutl files and determining an absolute
+      URL to the result that the client can access.
+  </p>
+  <p>
+      No default implementation is provided.
+  </p>
+  
+  <h2>ca.nrc.cadc.tap.impl.UploadManagerImpl</h2>
+  <p>
+      The deployment must provide this class and it must implement the <code>ca.nrc.cadc.tap.UploadManager</code>
+      interface. This class is repsonsible for managing table uploads using the UPLOAD parameter.
+  </p>
+  <p>
+      Two implementations are provided:
+  </p>
+  <ul>
+      <li>ca.nrc.cadc.tap.UploadNotSupported: causes job to fail (nicely) if any UPLOAD parameters are found</li>
+      <li>ca.nrc.cadc.tap.BasicUploadManager: processes UPLOAD, creates standard SQL-ish tables, and standard SQL-values</li>
+  </ul>
+  
+  <h2>ca.nrc.cadc.tap.impl.AdqlQueryImpl</h2>
+  <p>
+      The deployment must provide this class and it must implement the <code>ca.nrc.cadc.tap.TapQuery</code>
+      interface if LANG=ADQL is supported. If this class is not found, the service will function but LANG=ADQL requests
+      will return an error saying that value is not supported.
+  </p>
+  <p>
+      One implementation is provided but it needs customisation: <code>ca.nrc.cadc.tap.AdqlQuery</code>
+  </p>
+  
+  <h2>ca.nrc.cadc.tap.impl.SqlQueryImpl</h2>
+  <p>
+      The deployment must provide this class and it must implement the <code>ca.nrc.cadc.tap.TapQuery</code>
+      interface if LANG=SQL is supported. If this class is not found, the service will function but LANG=SQL requests
+      will return an error saying that value is not supported.
+  </p>
+  <p>
+      One implementation is provided and can be used as-is: <code>ca.nrc.cadc.tap.SqlQuery</code>. This 
+      implementation performs the following: 
+  </p>
+  <ul>
+      <li>SQL syntax parsing</li>
+      <li>complete navigation of the query to find unsupported constructs (sub-queries in select or from clause and
+      correlated subqueries in the where clause are not currently supported)</li>
+      <li>convert wildcard (*) in select to a fixed list of columns from the TapSchema</li>
+      <li>check that each table and column referred to in the query is present in the TapSchema</li>
+      <li>extract the select list metadata for use in writing result(s)</li>
+  </ul>
+  
+  <h2>TODO: add more extension hooks as needed</h2>
+  
+  </body>
+</html>
