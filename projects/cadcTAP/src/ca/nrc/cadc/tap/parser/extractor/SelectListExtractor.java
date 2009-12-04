@@ -164,7 +164,7 @@ public class SelectListExtractor extends ExpressionNavigator
         log.debug("visit(selectExpressionItem)" + selectExpressionItem);
         String alias = selectExpressionItem.getAlias();
         String columnName = null;
-        String tableName = null;
+        String schemaAndTableName = null;
 
         TapSelectItem tapSelectItem = null;
 
@@ -181,8 +181,8 @@ public class SelectListExtractor extends ExpressionNavigator
                 if (schemaName != null && !schemaName.equals(""))
                 {
                     // schema name presented in the column expression. e.g. schemaA.tableA.columnA
-                    tableName = schemaName + "." + table.getName();
-                    tapSelectItem = new TapSelectItem(tableName, columnName, alias);
+                    schemaAndTableName = schemaName + "." + table.getName();
+                    tapSelectItem = new TapSelectItem(schemaAndTableName, columnName, alias);
                 } else
                 {
                     // No schema name presented in the column expression. 
@@ -196,7 +196,10 @@ public class SelectListExtractor extends ExpressionNavigator
                         {
                             column.setTable(fromTable);
                             if (TapSchemaUtil.isVaidColumn(_tapSchema, column))
-                                tapSelectItem = new TapSelectItem(fromTable.getName(), columnName, alias); // all valid
+                            {
+                                schemaAndTableName = fromTable.getSchemaName() + "." + fromTable.getName();
+                                tapSelectItem = new TapSelectItem(schemaAndTableName, columnName, alias); // all valid
+                            }
                             else
                                 throw new TapParserException("Column [ " + columnName + " ] does not exist.");
                         } else
@@ -207,7 +210,10 @@ public class SelectListExtractor extends ExpressionNavigator
                         // as sub-select is not supported, does not consider columnAliasC (refer to column alias in subselect)
                         table = TapSchemaUtil.findTableForColumnName(_tapSchema, _selectNavigator.getPlainSelect(), columnName);
                         if (table != null)
-                            tapSelectItem = new TapSelectItem(table.getName(), columnName, alias);
+                        {
+                            schemaAndTableName = table.getSchemaName() + "." + table.getName();
+                            tapSelectItem = new TapSelectItem(schemaAndTableName, columnName, alias);
+                        }
                         else
                             throw new TapParserException("Column [ " + columnName + " ] does not exist.");
                     }
