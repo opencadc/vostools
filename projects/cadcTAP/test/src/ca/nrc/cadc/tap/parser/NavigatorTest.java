@@ -436,7 +436,7 @@ public class NavigatorTest {
         _query = "select long(32,44), lat(444,99) from TAP_SCHEMA.AllDataTypes ";
         doNavigate(expectValid);
 	}
-    @Test
+    //@Test
     public void testCaseSensitive1() {
         boolean expectValid = true;
 
@@ -447,4 +447,18 @@ public class NavigatorTest {
 
         doNavigate(expectValid);
     }
+    @Test
+    public void testSubselect() {
+        boolean expectValid = true;
+
+        _query = "select  t_string, aa.t_bytes, bb.* from tap_schema.alldatatypes as aa, tap_schema.tables as bb " +
+        " where aa.t_string = bb.utype " +
+        " and aa.t_string in (select utype from bb) " +
+        " and bb.t_int in (select xxx from yyyy) " +
+        " and pppp = qqqq";
+
+        doNavigate(expectValid);
+    }
+
+
 }

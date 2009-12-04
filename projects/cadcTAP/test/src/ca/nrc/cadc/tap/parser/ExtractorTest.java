@@ -201,7 +201,7 @@ public class ExtractorTest
     {
         _query = "select  t_string, aa.t_bytes, bb.* from tap_schema.alldatatypes as aa, tap_schema.tables as bb " +
                 " where aa.t_string = bb.utype " +
-                " and aa.t_string in (select utype from bb)";
+                "and aa.t_string in (select utype from bb)";
         doExtract();
     }
 }
