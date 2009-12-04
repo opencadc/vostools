@@ -89,9 +89,12 @@ import ca.nrc.cadc.tap.schema.TapSchema;
 import ca.nrc.cadc.tap.writer.votable.FieldElement;
 import ca.nrc.cadc.tap.writer.formatter.Formatter;
 import ca.nrc.cadc.tap.writer.formatter.FormatterFactory;
+import org.apache.log4j.Logger;
 
 public class VOTableWriter implements TableWriter
 {
+    private static Logger log = Logger.getLogger(VOTableWriter.class);
+    
     public static final String VOTABLE_VERSION  = "1.2";
     public static final String XSI_NS_URI = "http://www.w3.org/2001/XMLSchema-instance";
     public static final String VOTABLE_NS_URI = "http://www.ivoa.net/xml/VOTable/v1.2";
@@ -127,7 +130,10 @@ public class VOTableWriter implements TableWriter
             throw new IllegalStateException("TapSchema cannot be null, set using setTapSchema()");
 
         List<Formatter> formatters = FormatterFactory.getFormatters(tapSchema, selectList);
-
+        
+        try { log.debug("resultSet column count: " + resultSet.getMetaData().getColumnCount()); }
+        catch(Exception oops) { log.error("failed to check resultset column count", oops); }
+        
         Document document = createDocument();
         Element root = document.getRootElement();
         Namespace namespace = root.getNamespace();

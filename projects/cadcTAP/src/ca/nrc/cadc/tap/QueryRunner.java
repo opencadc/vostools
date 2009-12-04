@@ -239,7 +239,7 @@ public class QueryRunner implements JobRunner
             File tmpFile = null;
             try
             {
-                logger.debug("executing query...");
+                logger.debug("executing query: " + sql);
                 connection = queryDataSource.getConnection();
                 pstmt = connection.prepareStatement(sql);
                 rs = pstmt.executeQuery();
