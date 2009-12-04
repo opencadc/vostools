@@ -103,10 +103,10 @@ public class TapSchemaUtil
     {
         List<TapSelectItem> tsiList = new ArrayList<TapSelectItem>();
         TapSelectItem tsi = null;
-        String tableName = tableDesc.getSimpleTableName();
+        String schemaAndTableName = tableDesc.getTableName(); // getTableName() returns "schemaName.tableName"
         for (ColumnDesc cd : tableDesc.getColumnDescs())
         {
-            tsi = new TapSelectItem(tableName, cd.getColumnName(), null);
+            tsi = new TapSelectItem(schemaAndTableName, cd.getColumnName(), null);
             tsiList.add(tsi);
         }
         return tsiList;
