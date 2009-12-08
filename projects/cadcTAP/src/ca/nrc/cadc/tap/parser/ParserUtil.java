@@ -81,6 +81,8 @@ import net.sf.jsqlparser.statement.Statement;
 import net.sf.jsqlparser.statement.select.FromItem;
 import net.sf.jsqlparser.statement.select.Join;
 import net.sf.jsqlparser.statement.select.PlainSelect;
+import net.sf.jsqlparser.statement.select.SelectExpressionItem;
+import net.sf.jsqlparser.statement.select.SelectItem;
 import net.sf.jsqlparser.statement.select.SubSelect;
 import ca.nrc.cadc.tap.parser.adql.AdqlStatementVisitor;
 import ca.nrc.cadc.tap.parser.adql.ExtraTableConverter;
@@ -155,5 +157,38 @@ public class ParserUtil
             }
         }
         return rtn;
+    }
+
+    /**
+     * @param plainSelect
+     * @param columnNameOrAlias
+     * @return
+     */
+    public static SelectItem findSelectItemByAlias(PlainSelect plainSelect, String columnNameOrAlias)
+    {
+        SelectItem rtn = null;
+        List<SelectItem> siList = plainSelect.getSelectItems(); 
+        for (SelectItem si : siList)
+        {
+            if (si instanceof SelectExpressionItem)
+            {
+                SelectExpressionItem sei = (SelectExpressionItem) si;
+                if (columnNameOrAlias.equalsIgnoreCase(sei.getAlias()))
+                {
+                    rtn = sei;
+                    break;
+                }
+            }
+        }
+        return rtn;
+    }
+
+    /**
+     * @param plainSelect
+     * @return
+     */
+    public static int countSelectItems(PlainSelect plainSelect)
+    {
+        return plainSelect.getSelectItems().size();
     }
 }
