@@ -72,15 +72,15 @@ package ca.nrc.cadc.tap.schema;
 import java.util.ArrayList;
 import java.util.List;
 
-import org.apache.log4j.Logger;
-
 import net.sf.jsqlparser.schema.Column;
 import net.sf.jsqlparser.schema.Table;
 import net.sf.jsqlparser.statement.select.PlainSelect;
+
+import org.apache.log4j.Logger;
+
 import ca.nrc.cadc.tap.parser.ParserUtil;
 import ca.nrc.cadc.tap.parser.adql.TapSelectItem;
 import ca.nrc.cadc.tap.parser.exception.TapParserException;
-import ca.nrc.cadc.tap.parser.navigator.SelectNavigator;
 
 /**
  * @author zhangsa
@@ -138,7 +138,7 @@ public class TapSchemaUtil
      * @param column
      * @return
      */
-    public static boolean isVaidColumn(TapSchema tapSchema, Column column)
+    public static boolean isValidColumn(TapSchema tapSchema, Column column)
     {
         boolean rtn = false;
         String cname = column.getColumnName();
@@ -161,7 +161,7 @@ public class TapSchemaUtil
      * @return
      * @throws TapParserException 
      */
-    public static Table findTableForColumnName(TapSchema tapSchema, PlainSelect plainSelect, String columnName) throws TapParserException
+    public static Table findTableForColumnName(TapSchema tapSchema, PlainSelect plainSelect, String columnName)
     {
         TableDesc rtnTd = null;
         int matchCount = 0;
@@ -171,7 +171,7 @@ public class TapSchemaUtil
         {
             td = findTableDesc(tapSchema, fromTable);
             if (td == null)
-                throw new TapParserException("Table [" + fromTable + "] does not exist.");
+                throw new IllegalArgumentException("Table [" + fromTable + "] does not exist.");
             if (isValidColumnName(td, columnName)) 
             {
                 matchCount++;
@@ -180,9 +180,9 @@ public class TapSchemaUtil
             }
         }
         if (matchCount == 0)
-            throw new TapParserException("Column [" + columnName + "] does not exist.");
+            throw new IllegalArgumentException("Column [" + columnName + "] does not exist.");
         else if (matchCount > 1)
-            throw new TapParserException("Column [" + columnName + "] is ambiguous.");
+            throw new IllegalArgumentException("Column [" + columnName + "] is ambiguous.");
         
         Table rtn = getTable(rtnTd);
         return rtn;
@@ -218,5 +218,56 @@ public class TapSchemaUtil
         if (rtnTd != null)
             rtn = new Table(rtnTd.getSchemaName(), rtnTd.getSimpleTableName());
         return rtn;
+    }
+
+    /**
+     * Validate a column which is not an alias of selectItem
+     * Form of column could be possibly:
+     * 
+     * table.columnName, tableAilas.columnName, or schema.table.ColumnName
+     * 
+     * @param tapSchema
+     * @param plainSelect
+     * @param column
+     */
+    public static void validateColumnNonAlias(TapSchema tapSchema, PlainSelect plainSelect, Column column)
+    {
+        // columnName, table.columnName, tableAilas.columnName, or schema.table.ColumnName
+
+        Table table = column.getTable();
+        if (table == null || table.getName() == null || table.getName().equals("") )
+        {
+            // form: columnName
+            String columnName = column.getColumnName();
+            Table fromTable = TapSchemaUtil.findTableForColumnName(tapSchema, plainSelect, columnName);
+            if (fromTable == null)
+                throw new IllegalArgumentException("Column: [" + columnName + "] does not exist.");
+        } else 
+        {
+            // table.columnName, tableAilas.columnName, or schema.table.ColumnName
+            String schemaName = table.getSchemaName();
+            if (schemaName == null || schemaName.equals(""))
+            {
+                // table.columnName, tableAilas.columnName
+                String tableNameOrAlias = table.getName();
+                Table fromTable = ParserUtil.findFromTable(plainSelect, tableNameOrAlias);
+                if (fromTable == null)
+                    throw new IllegalArgumentException("Table: [" + tableNameOrAlias + "] does not exist.");
+                else
+                {
+                    TableDesc fromTableDesc = TapSchemaUtil.findTableDesc(tapSchema, fromTable);
+                    String columnName = column.getColumnName();
+                    if (!TapSchemaUtil.isValidColumnName(fromTableDesc, columnName))
+                        throw new IllegalArgumentException("Column: [" + columnName + "] does not exist.");
+                }
+            } else
+            {
+                // schema.table.ColumnName
+                TableDesc fromTableDesc = TapSchemaUtil.findTableDesc(tapSchema, table);
+                String columnName = column.getColumnName();
+                if (!TapSchemaUtil.isValidColumnName(fromTableDesc, columnName))
+                    throw new IllegalArgumentException("Column: [" + columnName + "] does not exist.");
+            }
+        }
     }
 }
