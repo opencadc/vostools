@@ -118,26 +118,10 @@ public class SelectFinder extends SelectNavigator
 {
     protected static Logger log = Logger.getLogger(SelectFinder.class);
 
-    public SelectFinder clone()
-    {
-        SelectFinder rtn = null;
-        try
-        {
-            rtn = this.getClass().newInstance();
-        } catch (InstantiationException e)
-        {
-            e.printStackTrace();
-        } catch (IllegalAccessException e)
-        {
-            e.printStackTrace();
-        }
-        return rtn;
-    }
-    
     public void visit(PlainSelect plainSelect)
     {
         log.debug("visit(PlainSelect) " + plainSelect);
-        _plainSelect = plainSelect;
+        enterPlainSelect(plainSelect);
 
         this._visitingPart = VisitingPart.FROM;
         FromItem fromItem = _plainSelect.getFromItem();
@@ -196,6 +180,7 @@ public class SelectFinder extends SelectNavigator
             handleTop(_plainSelect.getTop());
 
         log.debug("visit(PlainSelect) done");
+        leavePlainSelect();
     }
 
 

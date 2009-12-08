@@ -155,7 +155,7 @@ public class ExpressionFinder extends ExpressionNavigator
     public void visit(Function function)
     {
         log.debug("visit(function)" + function);
-
+        function.getParameters().accept(this);
     }
 
     /* (non-Javadoc)
