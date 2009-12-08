@@ -67,11 +67,11 @@
  ************************************************************************
  */
 
-package ca.nrc.cadc.tap.parser.validator;
+package ca.nrc.cadc.tap.parser.navigator;
 
 import java.util.ArrayList;
 import java.util.Iterator;
-import java.util.List;
+import java.util.*;
 
 import javax.management.RuntimeErrorException;
 
@@ -101,8 +101,6 @@ import ca.nrc.cadc.tap.parser.adql.validator.PlainSelectInfo;
 import ca.nrc.cadc.tap.parser.adql.validator.SelectValidator;
 import ca.nrc.cadc.tap.parser.adql.validator.SelectValidator.PlainSelectType;
 import ca.nrc.cadc.tap.parser.adql.validator.SelectValidator.VisitingPart;
-import ca.nrc.cadc.tap.parser.navigator.SelectNavigator;
-import ca.nrc.cadc.tap.schema.TapSchema;
 
 /**
  * Basic SelectVisitor implementation. This class implements FromItemVisitor to handle references to tables and subselects in a
@@ -112,17 +110,35 @@ import ca.nrc.cadc.tap.schema.TapSchema;
  * @author pdowler, Sailor Zhang
  */
 // Prototype: AdqlSelectVisitorProto
-public class ValidatorNavigator extends SelectNavigator
+public class SelectNavigator implements SelectVisitor
 {
-    protected static Logger log = Logger.getLogger(ValidatorNavigator.class);
+    protected static Logger log = Logger.getLogger(SelectNavigator.class);
 
-    protected TapSchema _tapSchema;
+    public enum PlainSelectType {
+        ROOT_SELECT, FROM_SUB_SELECT, WHERE_SUB_SELECT, HAVING_SUB_SELECT
+    }
 
-    public ValidatorNavigator() {}
+    public enum VisitingPart {
+        SELECT_ITEM, FROM, WHERE, HAVING, ORDER_BY, GROUP_BY
+    }
     
-    public ValidatorNavigator(TapSchema tapSchema, ExpressionValidator en, ReferenceValidator rn, FromItemValidator fn)
+    protected PlainSelectType _plainSelectType;
+    protected VisitingPart _visitingPart;
+
+    protected boolean toStop = false;
+    protected PlainSelect _plainSelect;
+    protected Stack<PlainSelect> _psStack = new Stack<PlainSelect>();
+    protected Stack<VisitingPart> _visitingPartStack = new Stack<VisitingPart>();
+
+    // Other navigators controlled by SelectNavigator
+    protected ExpressionNavigator _expressionNavigator;
+    protected ReferenceNavigator _referenceNavigator;
+    protected FromItemNavigator _fromItemNavigator;
+
+    public SelectNavigator() {}
+    
+    public SelectNavigator(ExpressionNavigator en, ReferenceNavigator rn, FromItemNavigator fn)
     {
-        _tapSchema = tapSchema;
         _expressionNavigator = en;
         _referenceNavigator = rn;
         _fromItemNavigator = fn;
@@ -132,6 +148,25 @@ public class ValidatorNavigator extends SelectNavigator
         if (fn != null) fn.setSelectNavigator(this);
     }
     
+    protected void enterPlainSelect(PlainSelect plainSelect)
+    {
+        if (_visitingPart != null)
+            _visitingPartStack.push(_visitingPart);
+        _plainSelect = plainSelect;
+        _psStack.push(_plainSelect);
+        
+    }
+
+    protected void leavePlainSelect()
+    {
+        if (!_visitingPartStack.empty())
+            _visitingPart = _visitingPartStack.pop();
+
+        _psStack.pop();
+        if (!_psStack.empty())
+            _plainSelect = _psStack.peek();
+    }
+
     public void visit(PlainSelect plainSelect)
     {
         log.debug("visit(PlainSelect) " + plainSelect);
@@ -143,7 +178,13 @@ public class ValidatorNavigator extends SelectNavigator
             fromItem.accept(_fromItemNavigator);
         else if (fromItem instanceof SubSelect)
             throw new UnsupportedOperationException("sub-select not supported in FROM clause.");
+
+        if (isToStop())
+            return;
+
         NavigateJoins();
+        if (isToStop())
+            return;
 
         this._visitingPart = VisitingPart.SELECT_ITEM;
         List<SelectItem> selectItems = _plainSelect.getSelectItems();
@@ -188,16 +229,159 @@ public class ValidatorNavigator extends SelectNavigator
             handleTop(_plainSelect.getTop());
 
         log.debug("visit(PlainSelect) done");
+        
         leavePlainSelect();
     }
 
-    public TapSchema getTapSchema()
+    protected void NavigateJoins()
     {
-        return _tapSchema;
+        PlainSelect ps = this._plainSelect;
+        List<Join> joins = ps.getJoins();
+        if (joins != null)
+        {
+            for (Join join : joins)
+            {
+                FromItem fromItem = join.getRightItem();
+                if (fromItem instanceof Table)
+                {
+                    Table rightTable = (Table) join.getRightItem();
+                    rightTable.accept(this._fromItemNavigator);
+
+                    if (join.getOnExpression() != null)
+                        join.getOnExpression().accept(this._expressionNavigator);
+
+                    List<Column> columns = join.getUsingColumns();
+                    if (columns != null)
+                        for (Column column : columns)
+                            column.accept(this._expressionNavigator);
+                } else if (fromItem instanceof SubSelect)
+                    throw new UnsupportedOperationException("sub-select not supported in FROM clause.");
+            }
+        }
     }
 
-    public void setTapSchema(TapSchema tapSchema)
+    /*
+     * Setters and Getters -------------------------------------------------
+     */
+
+    public final PlainSelectType getPlainSelectType()
     {
-        _tapSchema = tapSchema;
+        return _plainSelectType;
     }
+
+    public final void setPlainSelectType(PlainSelectType type)
+    {
+        this._plainSelectType = type;
+    }
+
+    public final VisitingPart getVisitingPart()
+    {
+        return _visitingPart;
+    }
+
+    public final void setVisitingPart(VisitingPart visitingPart)
+    {
+        this._visitingPart = visitingPart;
+    }
+
+    public boolean isToStop()
+    {
+        return toStop;
+    }
+
+    public void setToStop(boolean toStop)
+    {
+        this.toStop = toStop;
+    }
+
+    /**
+     * Handle use of the TOP construct. The implementation logs.
+     */
+    protected void handleTop(Top top)
+    {
+        log.debug("handleTop: " + top);
+    }
+
+    /**
+     * Handle use of the LIMIT construct. The implementation logs.
+     */
+    protected void handleLimit(Limit limit)
+    {
+        log.debug("handleLimit: " + limit);
+    }
+
+    /**
+     * Handle use of the DISTINCT construct. The implementation logs and visits explicit expressions (itself) in the optional
+     * ON(...) since they are not part of the select list.
+     */
+    protected void handleDistinct(Distinct distinct)
+    {
+        log.debug("handleDistinct: " + distinct);
+        List<SelectItem> onSelectItems = distinct.getOnSelectItems(); 
+        if ( onSelectItems != null)
+            for (SelectItem si : onSelectItems) {
+                if (si != null)
+                    si.accept(_expressionNavigator);
+            }
+    }
+
+    /**
+     * Handle use of SELECT INTO. The implementation logs and throws an Exception.
+     */
+    protected void handleInto(Table dest)
+    {
+        log.debug("handleInto: " + dest);
+        throw new UnsupportedOperationException("SELECT INTO is not supported.");
+    }
+
+    public PlainSelect getPlainSelect()
+    {
+        return _plainSelect;
+    }
+
+    public void setPlainSelect(PlainSelect plainSelect)
+    {
+        _plainSelect = plainSelect;
+    }
+
+    public ExpressionNavigator getExpressionNavigator()
+    {
+        return _expressionNavigator;
+    }
+
+    public void setExpressionNavigator(ExpressionNavigator expressionNavigator)
+    {
+        _expressionNavigator = expressionNavigator;
+    }
+
+    public ReferenceNavigator getReferenceNavigator()
+    {
+        return _referenceNavigator;
+    }
+
+    public void setReferenceNavigator(ReferenceNavigator referenceNavigator)
+    {
+        _referenceNavigator = referenceNavigator;
+    }
+
+    public FromItemNavigator getFromItemNavigator()
+    {
+        return _fromItemNavigator;
+    }
+
+    public void setFromItemNavigator(FromItemNavigator fromItemNavigator)
+    {
+        _fromItemNavigator = fromItemNavigator;
+    }
+
+    /* (non-Javadoc)
+     * @see net.sf.jsqlparser.statement.select.SelectVisitor#visit(net.sf.jsqlparser.statement.select.Union)
+     */
+    @Override
+    public void visit(Union union)
+    {
+        log.debug("visit(union) " + union); 
+        throw new UnsupportedOperationException("UNION is not supported.");
+    }
+
 }

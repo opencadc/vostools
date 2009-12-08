@@ -67,14 +67,12 @@
 ************************************************************************
 */
 
-package ca.nrc.cadc.tap.parser.validator;
+
+package ca.nrc.cadc.tap.parser.navigator;
 
 import org.apache.log4j.Logger;
 
-import ca.nrc.cadc.tap.parser.navigator.FromItemNavigator;
 import ca.nrc.cadc.tap.parser.navigator.SelectNavigator.VisitingPart;
-import ca.nrc.cadc.tap.schema.TableDesc;
-import ca.nrc.cadc.tap.schema.TapSchemaUtil;
 
 import net.sf.jsqlparser.schema.Table;
 import net.sf.jsqlparser.statement.select.FromItemVisitor;
@@ -85,25 +83,55 @@ import net.sf.jsqlparser.statement.select.SubSelect;
  * @author zhangsa
  *
  */
-public class FromItemValidator extends FromItemNavigator
+public class FromItemNavigator extends SubNavigator implements FromItemVisitor
 {
-    protected static Logger log = Logger.getLogger(FromItemValidator.class);
+    protected static Logger log = Logger.getLogger(FromItemNavigator.class);
 
-    public FromItemValidator()
+    public FromItemNavigator clone()
     {
+        FromItemNavigator rtn = (FromItemNavigator) super.clone();
+        return rtn;
+    }
+
+    public FromItemNavigator()
+    {
+        // TODO Auto-generated constructor stub
     }
 
     /* (non-Javadoc)
      * @see net.sf.jsqlparser.statement.select.FromItemVisitor#visit(net.sf.jsqlparser.schema.Table)
      */
     @Override
-    public void visit(Table table)
+    public void visit(Table tableName)
     {
-        log.debug("visit(table) " + table);
-        // all table should be in TapSchema
-        ValidatorNavigator vn = (ValidatorNavigator) _selectNavigator;
-        TableDesc td = TapSchemaUtil.findTableDesc(vn.getTapSchema(), table);
-        if (td == null)
-            throw new IllegalArgumentException("Table [ " + table + " ] is not found in TapSchema");
+        log.debug("visit(table) " + tableName);
+
     }
+
+    /* (non-Javadoc)
+     * @see net.sf.jsqlparser.statement.select.FromItemVisitor#visit(net.sf.jsqlparser.statement.select.SubSelect)
+     */
+    @Override
+    public void visit(SubSelect subSelect)
+    {
+        log.debug("visit(subSelect) " + subSelect);
+        VisitingPart visiting = _selectNavigator.getVisitingPart();
+        if (visiting.equals(VisitingPart.FROM))
+            throw new UnsupportedOperationException("sub-select not supported in FROM clause.");
+        else if (visiting.equals(VisitingPart.SELECT_ITEM))
+            throw new UnsupportedOperationException("sub-select not supported in SELECT ITEM.");
+        else
+            subSelect.getSelectBody().accept(_selectNavigator);
+    }
+
+    /* (non-Javadoc)
+     * @see net.sf.jsqlparser.statement.select.FromItemVisitor#visit(net.sf.jsqlparser.statement.select.SubJoin)
+     */
+    @Override
+    public void visit(SubJoin subjoin)
+    {
+        log.debug("visit(subjoin) " + subjoin);
+
+    }
+
 }

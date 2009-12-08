@@ -67,14 +67,12 @@
 ************************************************************************
 */
 
-package ca.nrc.cadc.tap.parser.validator;
+package ca.nrc.cadc.tap.parser.navigator;
 
 import java.util.Iterator;
 
 import org.apache.log4j.Logger;
 
-import ca.nrc.cadc.tap.parser.ParserUtil;
-import ca.nrc.cadc.tap.parser.navigator.ExpressionNavigator;
 import ca.nrc.cadc.tap.parser.navigator.SelectNavigator.VisitingPart;
 
 import net.sf.jsqlparser.expression.AllComparisonExpression;
@@ -114,7 +112,6 @@ import net.sf.jsqlparser.expression.operators.relational.MinorThan;
 import net.sf.jsqlparser.expression.operators.relational.MinorThanEquals;
 import net.sf.jsqlparser.expression.operators.relational.NotEqualsTo;
 import net.sf.jsqlparser.schema.Column;
-import net.sf.jsqlparser.schema.Table;
 import net.sf.jsqlparser.statement.select.AllColumns;
 import net.sf.jsqlparser.statement.select.AllTableColumns;
 import net.sf.jsqlparser.statement.select.SelectExpressionItem;
@@ -125,11 +122,17 @@ import net.sf.jsqlparser.statement.select.SubSelect;
  * @author zhangsa
  *
  */
-public class ExpressionValidator extends ExpressionNavigator
+public class ExpressionNavigator extends SubNavigator implements ExpressionVisitor, ItemsListVisitor, SelectItemVisitor
 {
-    protected static Logger log = Logger.getLogger(ExpressionValidator.class);
- 
-    public ExpressionValidator()
+    protected static Logger log = Logger.getLogger(ExpressionNavigator.class);
+
+    public ExpressionNavigator clone()
+    {
+        ExpressionNavigator rtn = (ExpressionNavigator) super.clone();
+        return rtn;
+    }
+
+    public ExpressionNavigator()
     {
         // TODO Auto-generated constructor stub
     }
@@ -538,12 +541,7 @@ public class ExpressionValidator extends ExpressionNavigator
     public void visit(AllTableColumns allTableColumns)
     {
         log.debug("visit(allTableColumns)" + allTableColumns);
-        String tableNameOrAlias = allTableColumns.getTable().getName();
-        Table table = ParserUtil.findFromTable(_selectNavigator.getPlainSelect(), tableNameOrAlias);
-        if (table != null)
-            this._selectNavigator.getFromItemNavigator().visit(table);
-        else
-            throw new IllegalArgumentException(allTableColumns + " cannot be found in the FROM part of query.");
+        this._selectNavigator.getFromItemNavigator().visit(allTableColumns.getTable());
     }
 
     /* (non-Javadoc)

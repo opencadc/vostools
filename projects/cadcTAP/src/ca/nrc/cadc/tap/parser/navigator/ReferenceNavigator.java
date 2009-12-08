@@ -67,32 +67,28 @@
 ************************************************************************
 */
 
-package ca.nrc.cadc.tap.parser.validator;
-
-import net.sf.jsqlparser.schema.Column;
-import net.sf.jsqlparser.schema.Table;
-import net.sf.jsqlparser.statement.select.ColumnIndex;
-import net.sf.jsqlparser.statement.select.OrderByElement;
-import net.sf.jsqlparser.statement.select.PlainSelect;
-import net.sf.jsqlparser.statement.select.SelectItem;
+package ca.nrc.cadc.tap.parser.navigator;
 
 import org.apache.log4j.Logger;
 
-import ca.nrc.cadc.tap.parser.ParserUtil;
-import ca.nrc.cadc.tap.parser.navigator.ReferenceNavigator;
-import ca.nrc.cadc.tap.parser.navigator.SelectNavigator.VisitingPart;
-import ca.nrc.cadc.tap.schema.TapSchema;
-import ca.nrc.cadc.tap.schema.TapSchemaUtil;
+import net.sf.jsqlparser.schema.Column;
+import net.sf.jsqlparser.statement.select.*;
 
 /**
  * @author zhangsa
  *
  */
-public class ReferenceValidator extends ReferenceNavigator
+public class ReferenceNavigator extends SubNavigator implements ColumnReferenceVisitor, OrderByVisitor
 {
-    protected static Logger log = Logger.getLogger(ReferenceValidator.class);
+    protected static Logger log = Logger.getLogger(ReferenceNavigator.class);
 
-    public ReferenceValidator()
+    public ReferenceNavigator clone()
+    {
+        ReferenceNavigator rtn = (ReferenceNavigator) super.clone();
+        return rtn;
+    }
+
+    public ReferenceNavigator()
     {
         // TODO Auto-generated constructor stub
     }
@@ -104,9 +100,6 @@ public class ReferenceValidator extends ReferenceNavigator
     public void visit(ColumnIndex columnIndex)
     {
         log.debug("visit(columnIndex)" + columnIndex);
-        int ci = columnIndex.getIndex();
-        if ( ci > ParserUtil.countSelectItems(_selectNavigator.getPlainSelect()))
-            throw new IllegalArgumentException("ColumnIndex " + columnIndex + " is out of scope.");
     }
 
     /* (non-Javadoc)
@@ -116,39 +109,6 @@ public class ReferenceValidator extends ReferenceNavigator
     public void visit(Column column)
     {
         log.debug("visit(column)" + column);
-        // The column may be referred by alias, by columnName, by table.columnName, tableAilas.columnName, or by schema.table.ColumnName
-        
-        TapSchema tapSchema = ((ValidatorNavigator) _selectNavigator).getTapSchema();
-        PlainSelect plainSelect = _selectNavigator.getPlainSelect();
-        log.debug("plainSelect is:" + plainSelect);
-        VisitingPart visiting = _selectNavigator.getVisitingPart(); 
-        log.debug("visiting is:" + visiting);
-        if (visiting.equals(VisitingPart.SELECT_ITEM) 
-                || visiting.equals(VisitingPart.FROM)
-                || visiting.equals(VisitingPart.GROUP_BY))
-        {
-            // cannot be by alias
-            // possible forms: columnName, table.columnName, tableAilas.columnName, or schema.table.ColumnName
-            TapSchemaUtil.validateColumnNonAlias(tapSchema, plainSelect, column);
-        } else // visiting WHERE, HAVING, ORDER BY
-        {
-            // can be by alias
-            // Possible form as:
-            // alias, columnName, table.columnName, tableAilas.columnName, or schema.table.ColumnName
-            boolean isAlias = false;
-            Table table = column.getTable();
-            if (table == null || table.getName() == null || table.getName().equals("") )
-            {
-                // form: alias, or columnName
-                String columnNameOrAlias = column.getColumnName();
-                SelectItem selectItem = ParserUtil.findSelectItemByAlias(plainSelect, columnNameOrAlias);
-                if (selectItem != null) // it's an alias, found selectItem
-                    isAlias = true; // ok
-            }
-            
-            if (!isAlias)
-                TapSchemaUtil.validateColumnNonAlias(tapSchema, plainSelect, column);
-        }
     }
 
     /* (non-Javadoc)
@@ -158,7 +118,6 @@ public class ReferenceValidator extends ReferenceNavigator
     public void visit(OrderByElement orderBy)
     {
         log.debug("visit(orderByElement)" + orderBy);
-        orderBy.getColumnReference().accept(this);
     }
 
 }
