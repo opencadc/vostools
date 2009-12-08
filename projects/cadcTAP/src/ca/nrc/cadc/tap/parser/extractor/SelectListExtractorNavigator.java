@@ -115,7 +115,7 @@ public class SelectListExtractorNavigator extends SelectNavigator
     public void visit(PlainSelect plainSelect)
     {
         log.debug("visit(PlainSelect) " + plainSelect);
-        _plainSelect = plainSelect;
+        enterPlainSelect(plainSelect);
 
         this._visitingPart = VisitingPart.SELECT_ITEM;
         List<SelectItem> selectItems = _plainSelect.getSelectItems();
@@ -124,5 +124,6 @@ public class SelectListExtractorNavigator extends SelectNavigator
                 s.accept(this._expressionNavigator);
 
         log.debug("visit(PlainSelect) done");
+        leavePlainSelect();
     }
 }

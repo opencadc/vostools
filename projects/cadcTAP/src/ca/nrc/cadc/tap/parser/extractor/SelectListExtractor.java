@@ -195,7 +195,7 @@ public class SelectListExtractor extends ExpressionNavigator
                         if (fromTable != null)
                         {
                             column.setTable(fromTable);
-                            if (TapSchemaUtil.isVaidColumn(_tapSchema, column))
+                            if (TapSchemaUtil.isValidColumn(_tapSchema, column))
                             {
                                 schemaAndTableName = fromTable.getSchemaName() + "." + fromTable.getName();
                                 tapSelectItem = new TapSelectItem(schemaAndTableName, columnName, alias); // all valid
