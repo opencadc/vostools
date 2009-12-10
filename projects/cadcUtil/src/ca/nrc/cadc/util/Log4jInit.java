@@ -1,4 +1,4 @@
-<!--
+/*
 ************************************************************************
 *******************  CANADIAN ASTRONOMY DATA CENTRE  *******************
 **************  CENTRE CANADIEN DE DONNÉES ASTRONOMIQUES  **************
@@ -8,7 +8,7 @@
 *  National Research Council            Conseil national de recherches
 *  Ottawa, Canada, K1A 0R6              Ottawa, Canada, K1A 0R6
 *  All rights reserved                  Tous droits réservés
-*                                       
+*
 *  NRC disclaims any warranties,        Le CNRC dénie toute garantie
 *  expressed, implied, or               énoncée, implicite ou légale,
 *  statutory, of any kind with          de quelque nature que ce
@@ -31,10 +31,10 @@
 *  software without specific prior      de ce logiciel sans autorisation
 *  written permission.                  préalable et particulière
 *                                       par écrit.
-*                                       
+*
 *  This file is part of the             Ce fichier fait partie du projet
 *  OpenCADC project.                    OpenCADC.
-*                                       
+*
 *  OpenCADC is free software:           OpenCADC est un logiciel libre ;
 *  you can redistribute it and/or       vous pouvez le redistribuer ou le
 *  modify it under the terms of         modifier suivant les termes de
@@ -44,7 +44,7 @@
 *  either version 3 of the              : soit la version 3 de cette
 *  License, or (at your option)         licence, soit (à votre gré)
 *  any later version.                   toute version ultérieure.
-*                                       
+*
 *  OpenCADC is distributed in the       OpenCADC est distribué
 *  hope that it will be useful,         dans l’espoir qu’il vous
 *  but WITHOUT ANY WARRANTY;            sera utile, mais SANS AUCUNE
@@ -54,7 +54,7 @@
 *  PURPOSE.  See the GNU Affero         PARTICULIER. Consultez la Licence
 *  General Public License for           Générale Publique GNU Affero
 *  more details.                        pour plus de détails.
-*                                       
+*
 *  You should have received             Vous devriez avoir reçu une
 *  a copy of the GNU Affero             copie de la Licence Générale
 *  General Public License along         Publique GNU Affero avec
@@ -65,39 +65,75 @@
 *  $Revision: 4 $
 *
 ************************************************************************
--->
+*/
 
+package ca.nrc.cadc.util;
 
-<!DOCTYPE project>
-<project default="build" basedir=".">
-    <property environment="env"/>
-    
-    <!-- site-specific build properties or overrides of values in opencadc.properties -->
-    <property file="${env.CADC_PREFIX}/etc/local.properties" />
-    
-    <!-- site-specific targets, e.g. install, cannot duplicate those in opencadc.targets.xml -->
-    <import file="${env.CADC_PREFIX}/etc/local.targets.xml" optional="true" />
+import org.apache.log4j.BasicConfigurator;
+import org.apache.log4j.ConsoleAppender;
+import org.apache.log4j.Level;
+import org.apache.log4j.Logger;
+import org.apache.log4j.PatternLayout;
+import org.apache.log4j.varia.LevelRangeFilter;
 
-    <!-- default properties and targets -->
-    <property file="${env.CADC_PREFIX}/etc/opencadc.properties" />
-    <import file="${env.CADC_PREFIX}/etc/opencadc.targets.xml"/>
-    
-    <!-- developer convenience: place for extra targets and properties -->
-    <import file="extras.xml" optional="true" />
+/**
+ * Initialize log4j for the specified package and level.
+ *
+ */
+public class Log4jInit
+{
+    // true after calling initialize
+    private static boolean initialized = false;
 
-<property name="project" value="cadcUtil" />
+    // SHORT_FORMAT applies to DEBUG and INFO logging levels
+    private static final String SHORT_FORMAT = "%r [%t] %-5p %c{1} %x - %m\n";
 
-<property name="jars" value="${ext.lib}/servlet-api.jar:${ext.lib}/log4j.jar" />
+    // LONG_FORMAT applies to WARN, ERROR and FATAL logging levels
+    private static final String LONG_FORMAT = "%d{ABSOLUTE} [%t] %-5p %c{1} %x - %m\n";
 
-<target name="build" depends="compile">
-    <jar jarfile="${build}/lib/${project}.jar"
-		basedir="${build}/class" 
-		update="no">
-            <include name="ca/nrc/cadc/**" />
-    </jar>
-</target>
+    /**
+     * Initializes logging to the console.
+     * 
+     * @param pkg the name of package or ancestors of package or classes. Can't be null.
+     * @param level the logging level.
+     */
+    public static void setLevel(String pkg, Level level)
+    {
+        synchronized (Log4jInit.class)
+        {
+            if (!initialized)
+            {
+                // set the overall logging level to ERROR
+                Logger.getRootLogger().setLevel(Level.ERROR);
 
-<target name="test">
-	<echo message="no tests implemented" />
-</target>
-</project>
+                // create an appender for WARN, ERROR and FATAL with LONG_FORMAT
+                // message prefix
+                ConsoleAppender consoleApp =
+                    new ConsoleAppender(new PatternLayout(LONG_FORMAT));
+                LevelRangeFilter errorFilter = new LevelRangeFilter();
+                errorFilter.setLevelMax(Level.FATAL);
+                errorFilter.setLevelMin(Level.WARN);
+                errorFilter.setAcceptOnMatch(true);
+                consoleApp.clearFilters();
+                consoleApp.addFilter(errorFilter);
+                BasicConfigurator.configure(consoleApp);
+
+                // create a second appender for DEBUG and INFO with SHORT_FORMAT
+                // message prefix
+                consoleApp = new ConsoleAppender(new PatternLayout(SHORT_FORMAT));
+                LevelRangeFilter infoFilter = new LevelRangeFilter();
+                infoFilter.setLevelMax(Level.INFO);
+                infoFilter.setLevelMin(Level.DEBUG);
+                infoFilter.setAcceptOnMatch(true);
+                consoleApp.clearFilters();
+                consoleApp.addFilter(infoFilter);
+                BasicConfigurator.configure(consoleApp);
+            }
+
+            // set specified package and level
+            Logger.getLogger(pkg).setLevel(level);
+            initialized = true;
+        }
+    }
+
+}
