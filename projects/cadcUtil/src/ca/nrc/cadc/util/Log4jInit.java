@@ -77,7 +77,8 @@ import org.apache.log4j.PatternLayout;
 import org.apache.log4j.varia.LevelRangeFilter;
 
 /**
- * Initialize log4j for the specified package and level.
+ * Initialize log4j for the specified package and level. Logging is only
+ * to the console.
  *
  */
 public class Log4jInit
