@@ -68,9 +68,19 @@
  */
 
 package ca.nrc.cadc.tap.writer.formatter;
-
+/**
+ * Formats a byte[] into a String.
+ *
+ */
 public class ByteArrayFormatter implements Formatter
 {
+    /**
+     * Takes a byte[] and returns the default String representation.
+     *
+     * @param object to format
+     * @return String representation of the Object.
+     * @throws IllegalArgumentException if the object is not a byte[].
+     */
     public String format(Object object)
     {
         if (object == null)

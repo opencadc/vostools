@@ -73,10 +73,11 @@ import java.sql.ResultSet;
 import java.sql.SQLException;
 
 /**
- *
+ * Interface for a Formatter that is passed a ResultSet and a
+ * column index to the data in the ResultSet.
  */
 public interface ResultSetFormatter extends Formatter
 {
-    public String format(ResultSet resultSet, int columnIndex)
+    String format(ResultSet resultSet, int columnIndex)
         throws SQLException;
 }

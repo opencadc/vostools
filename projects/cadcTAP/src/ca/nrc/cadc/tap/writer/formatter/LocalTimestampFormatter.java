@@ -77,10 +77,24 @@ import java.util.Calendar;
 import java.util.Date;
 import java.util.TimeZone;
 
+/**
+ * Formats a Date or Timestamp into a String.
+ * 
+ */
 public class LocalTimestampFormatter implements ResultSetFormatter
 {
     private String timezone = "PST";
 
+    /**
+     *
+     * Takes a ResultSet and column index of the Date or Timestamp
+     * and returns a String in ISO8601 date format.
+     * 
+     * @param resultSet containing the Date or Timestamp column.
+     * @param columnIndex index of the column in the ResultSet.
+     * @return String representation of the Date or Timestamp.
+     * @throws SQLException if there is an error accessing the ResultSet.
+     */
     public String format(ResultSet resultSet, int columnIndex)
         throws SQLException
     {
@@ -88,6 +102,15 @@ public class LocalTimestampFormatter implements ResultSetFormatter
         return format(object);
     }
 
+    /**
+     * Takes an Date or Timestamp and returns a String representation
+     * in ISO8601 date format.
+     *
+     * @param object to format.
+     * @return String representation of the object.
+     * @throws  UnsupportedOperationException if a Date cannot be contructed
+     *          from the object.
+     */
     public String format(Object object)
     {
         if (object == null)

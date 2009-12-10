@@ -76,22 +76,18 @@ import ca.nrc.cadc.tap.schema.TableDesc;
 import ca.nrc.cadc.tap.schema.TapSchema;
 import java.util.ArrayList;
 import java.util.List;
-import org.apache.log4j.Logger;
 
 /**
+ * Returns a Formatter for a given data type.
  *
  */
 public class FormatterFactory
 {
-    private static Logger log = Logger.getLogger(FormatterFactory.class);
-    
     public static List<Formatter> getFormatters(TapSchema tapSchema, List<TapSelectItem> selectList)
     {
         List<Formatter> formatters = new ArrayList<Formatter>();
-        log.debug("selectList.size() = " + selectList.size());
         for (TapSelectItem selectItem : selectList)
         {
-            log.debug("found: " + selectItem);
             if (selectItem != null)
                 formatters.add(getFormatter(tapSchema, selectItem));
         }
@@ -112,10 +108,10 @@ public class FormatterFactory
                         if (columnDesc.columnName.equals(selectItem.getColumnName()))
                         {
                             String datatype = columnDesc.datatype;
-                            if (datatype.equals("adql:INTEGER") ||
-                                datatype.equals("adql:BIGINT")  ||
-                                datatype.equals("adql:DOUBLE")  ||
-                                datatype.equals("adql:VARCHAR"))
+                            if (datatype.equals("adql:INTEGER")
+                                || datatype.equals("adql:BIGINT")
+                                || datatype.equals("adql:DOUBLE")
+                                || datatype.equals("adql:VARCHAR"))
                                 return new DefaultFormatter();
                             else if (datatype.equals("adql:POINT"))
                                 return new SPointFormatter();

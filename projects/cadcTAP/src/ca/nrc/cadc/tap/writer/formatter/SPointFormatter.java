@@ -69,13 +69,27 @@
 
 package ca.nrc.cadc.tap.writer.formatter;
 
+import ca.nrc.cadc.stc.Frame;
 import ca.nrc.cadc.stc.Position;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.util.ArrayList;
 
+/**
+ * Formats a PGSphere spoint as a String.
+ *
+ */
 public class SPointFormatter implements ResultSetFormatter
 {
+    /**
+     * Takes a ResultSet and column index of the spoint
+     * and returns a STC-S Position String.
+     *
+     * @param resultSet containing the spoint column.
+     * @param columnIndex index of the column in the ResultSet.
+     * @return STC-S Position String of the spoint.
+     * @throws SQLException if there is an error accessing the ResultSet.
+     */
     public String format(ResultSet resultSet, int columnIndex)
         throws SQLException
     {
@@ -83,10 +97,21 @@ public class SPointFormatter implements ResultSetFormatter
         return format(object);
     }
 
+    /**
+     * Takes a String representation of the spoint
+     * and returns a STC-S Position String.
+     *
+     * @param object to format.
+     * @return STC-S Position String of the spoint.
+     * @throws IllegalArgumentException if the object is not a String, or if
+     *         the String cannot be parsed.
+     */
     public String format(Object object)
     {
         if (object == null)
             return "";
+        if (!(object instanceof String))
+            throw new IllegalArgumentException("Expected String, was " + object.getClass().getName());
         String s = (String) object;
 
         // Get the string inside the enclosing parentheses.
@@ -111,12 +136,12 @@ public class SPointFormatter implements ResultSetFormatter
 
         // Create STC Position.
         Position position = new Position();
-        position.frame = "ICRS";
+        position.frame = Frame.ICRS;
         position.pos = new ArrayList();
         position.pos.add(x);
         position.pos.add(y);
 
-        return position.toSTCString();
+        return position.format(position);
     }
     
 }

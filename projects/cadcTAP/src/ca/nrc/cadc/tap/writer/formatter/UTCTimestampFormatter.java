@@ -76,8 +76,21 @@ import java.sql.Timestamp;
 import java.util.Calendar;
 import java.util.Date;
 
+/**
+ * Formats a Date or Timestamp in UTC into a String.
+ * 
+ */
 public class UTCTimestampFormatter implements ResultSetFormatter
 {
+    /**
+     * Takes a ResultSet and column index of the Date or Timestamp
+     * and returns a String in UTC ISO8601 date format.
+     *
+     * @param resultSet containing the Date or Timestamp column.
+     * @param columnIndex index of the column in the ResultSet.
+     * @return String representation of the Date or Timestamp.
+     * @throws SQLException if there is an error accessing the ResultSet.
+     */
     public String format(ResultSet resultSet, int columnIndex)
         throws SQLException
     {
@@ -85,6 +98,15 @@ public class UTCTimestampFormatter implements ResultSetFormatter
         return format(object);
     }
 
+    /**
+     * Takes an Date or Timestamp and returns a String representation
+     * in UTC ISO8601 date format.
+     * 
+     * @param object to format.
+     * @return String representation of the object.
+     * @throws  UnsupportedOperationException if a Date cannot be contructed
+     *          from the object.
+     */
     public String format(Object object)
     {
         if (object == null)

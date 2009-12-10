@@ -71,8 +71,20 @@ package ca.nrc.cadc.tap.writer.formatter;
 
 import java.sql.SQLException;
 
+/**
+ * Formats a int[] into a String.
+ *
+ */
 public class IntArrayFormatter implements Formatter
 {
+    /**
+     * Takes an int[] contained in a java.sql.Array and returns
+     * the default String representation.
+     *
+     * @param object to format.
+     * @return String represenetation of the int[].
+     * @throws IllegalArgumentException if the object is not an int[];
+     */
     public String format(Object object)
     {
         if (object == null)

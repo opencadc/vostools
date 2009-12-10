@@ -69,14 +69,27 @@
 
 package ca.nrc.cadc.tap.writer.formatter;
 
+import ca.nrc.cadc.stc.Frame;
 import ca.nrc.cadc.stc.Polygon;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.util.ArrayList;
 
+/**
+ * Formats a PGSphere spolygon as a String.
+ *
+ */
 public class SPolyFormatter implements ResultSetFormatter
 {
-
+    /**
+     * Takes a ResultSet and column index of the spoly
+     * and returns a STC-S Polygon String.
+     *
+     * @param resultSet containing the spoint column.
+     * @param columnIndex index of the column in the ResultSet.
+     * @return STC-S Polygon String of the spoly.
+     * @throws SQLException if there is an error accessing the ResultSet.
+     */
     public String format(ResultSet resultSet, int columnIndex)
         throws SQLException
     {
@@ -84,10 +97,21 @@ public class SPolyFormatter implements ResultSetFormatter
         return format(object);
     }
 
+    /**
+     * Takes a String representation of the spoly
+     * and returns a STC-S Polygon String.
+     *
+     * @param object to format.
+     * @return STC-S Polygon String of the spoly.
+     * @throws IllegalArgumentException if the object is not a String, or if
+     *         the String cannot be parsed.
+     */
     public String format(Object object)
     {
         if (object == null)
             return "";
+        if (!(object instanceof String))
+            throw new IllegalArgumentException("Expected String, was " + object.getClass().getName());
         String s = (String) object;
 
         // Get the string inside the enclosing brackets.
@@ -111,10 +135,10 @@ public class SPolyFormatter implements ResultSetFormatter
         if (vertices.length < 3)
             throw new IllegalArgumentException("Minimum 3 vertices required to form a Polygon " + s);
 
-        // Create STC Polygon.
+        // Create STC Polygon and set some defaults.
         Polygon polygon = new Polygon();
-        polygon.frame = "ICRS";
-        polygon.pos = new ArrayList();
+        polygon.frame = Frame.ICRS;
+        polygon.pos = new ArrayList<Double>();
 
         // Loop through each set of vertices.
         for (int i = 0; i < vertices.length; i++)
@@ -136,7 +160,7 @@ public class SPolyFormatter implements ResultSetFormatter
             polygon.pos.add(y);
         }
 
-        return polygon.toSTCString();
+        return polygon.format(polygon);
     }
 
 }
