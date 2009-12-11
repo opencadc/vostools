@@ -86,6 +86,7 @@ import org.junit.BeforeClass;
 import org.junit.Test;
 
 import ca.nrc.cadc.tap.parser.adql.TapSelectItem;
+import ca.nrc.cadc.tap.parser.converter.basic.AllColumnConverterNavigator;
 import ca.nrc.cadc.tap.parser.extractor.SelectListExtractor;
 import ca.nrc.cadc.tap.parser.extractor.SelectListExtractorNavigator;
 import ca.nrc.cadc.tap.parser.navigator.ExpressionNavigator;
@@ -100,14 +101,11 @@ import ca.nrc.cadc.util.LoggerUtil;
  * @author Sailor Zhang
  *
  */
-public class ExtractorTest
+public class AllColumnConverterTest
 {
     public String _query;
 
-    SelectListExtractor _en;
-    ReferenceNavigator _rn;
-    FromItemNavigator _fn;
-    SelectNavigator _sn;
+    AllColumnConverterNavigator _sn;
 
     static TapSchema TAP_SCHEMA;
 
@@ -136,10 +134,7 @@ public class ExtractorTest
     public void setUp() throws Exception
     {
 
-        _en = new SelectListExtractor(TAP_SCHEMA, null);
-        _rn = null;
-        _fn = null;
-        _sn = new SelectListExtractorNavigator(_en, _rn, _fn);
+        _sn = new AllColumnConverterNavigator(TAP_SCHEMA);
     }
 
     /**
@@ -157,8 +152,6 @@ public class ExtractorTest
         {
             s = ParserUtil.receiveQuery(_query);
             ParserUtil.parseStatement(s, _sn);
-            List<TapSelectItem> tsiList = _en.getTapSelectItemList();
-            System.out.println(tsiList.toString());
         } catch (Exception ae)
         {
             ae.printStackTrace(System.out);
@@ -167,31 +160,31 @@ public class ExtractorTest
         System.out.println(s);
     }
 
-    //@Test
+    @Test
     public void testBasic()
     {
         _query = " select * from tap_schema.alldatatypes";
         doit();
     }
 
-    //@Test
+    @Test
     public void testAlias()
     {
         _query = " select aa.* from tap_schema.alldatatypes as aa";
         doit();
     }
 
-    //@Test
+    @Test
     public void testSelectItem()
     {
-        _query = "select  t_string as xx, aa.t_bytes as yy from tap_schema.alldatatypes as aa";
+        _query = "select  tap_schema.alldatatypes.*, t_string as xx, aa.t_bytes as yy from tap_schema.alldatatypes as aa";
         doit();
     }
 
-    //@Test
+    @Test
     public void testJoin()
     {
-        _query = "select  t_string, aa.t_bytes, bb.* from tap_schema.alldatatypes as aa, tap_schema.tables as bb " +
+        _query = "select  t_string, aa.t_bytes, * from tap_schema.alldatatypes as aa, tap_schema.tables as bb " +
         		" where aa.t_string = bb.utype";
         doit();
     }
@@ -199,7 +192,7 @@ public class ExtractorTest
     @Test
     public void testSubselect()
     {
-        _query = "select  t_string, aa.t_bytes, bb.* from tap_schema.alldatatypes as aa, tap_schema.tables as bb " +
+        _query = "select  t_string, aa.t_bytes, * from tap_schema.alldatatypes as aa, tap_schema.tables as bb " +
                 " where aa.t_string = bb.utype " +
                 "and aa.t_string in (select utype from bb)";
         doit();

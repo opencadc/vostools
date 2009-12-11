@@ -75,6 +75,8 @@ import java.util.List;
 import net.sf.jsqlparser.schema.Column;
 import net.sf.jsqlparser.schema.Table;
 import net.sf.jsqlparser.statement.select.PlainSelect;
+import net.sf.jsqlparser.statement.select.SelectExpressionItem;
+import net.sf.jsqlparser.statement.select.SelectItem;
 
 import org.apache.log4j.Logger;
 
@@ -269,5 +271,42 @@ public class TapSchemaUtil
                     throw new IllegalArgumentException("Column: [" + columnName + "] does not exist.");
             }
         }
+    }
+
+    /**
+     * @param tapSchema
+     * @param table
+     * @return
+     */
+    public static List<SelectItem> getSelectItemList(TapSchema tapSchema, Table table)
+    {
+        List<SelectItem> seiList = new ArrayList<SelectItem>();
+        
+        TableDesc td = findTableDesc(tapSchema, table);
+        for (ColumnDesc cd : td.getColumnDescs())
+        {
+            SelectItem sei = TapSchemaUtil.newSelectExpressionItem(table, cd.getColumnName());
+            seiList.add(sei);
+        }
+        return seiList;
+    }
+
+    /**
+     * @param table
+     * @param columnName
+     * @return
+     */
+    private static SelectExpressionItem newSelectExpressionItem(Table table, String columnName)
+    {
+        Table siTable;
+        String alias = table.getAlias();
+        if (alias != null && !alias.isEmpty())
+            siTable = new Table(null, alias);
+        else
+            siTable = table;
+        Column column = new Column(siTable, columnName);
+        SelectExpressionItem sei = new SelectExpressionItem();
+        sei.setExpression(column);
+        return sei;
     }
 }

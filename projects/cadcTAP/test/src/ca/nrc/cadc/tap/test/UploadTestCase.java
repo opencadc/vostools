@@ -104,7 +104,7 @@ public abstract class UploadTestCase extends TestCase {
             
             DataSource ds = getDataSource();
 
-            manager = new UploadManager(ds);
+            //FIXME//SZ// manager = new UploadManager(ds);
             
             try {
                 conn = ds.getConnection();

@@ -72,10 +72,13 @@ package ca.nrc.cadc.tap;
 import java.util.List;
 
 import ca.nrc.cadc.tap.parser.adql.TapSelectItem;
+import ca.nrc.cadc.tap.parser.validator.ValidatorNavigator;
 import ca.nrc.cadc.tap.schema.TableDesc;
 import ca.nrc.cadc.tap.schema.TapSchema;
 import ca.nrc.cadc.uws.Parameter;
 import java.util.Map;
+
+import org.apache.log4j.Logger;
 
 public interface TapQuery
 {

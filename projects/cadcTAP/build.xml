@@ -138,8 +138,11 @@
                 <pathelement path="build/class"/>
                 <pathelement path="${jars}:${testingJars}"/>
             </classpath>
-            <test name="ca.nrc.cadc.tap.parser.ValidatorTest"/>
+            <test name="ca.nrc.cadc.tap.parser.AdqlQueryTest"/>
         	<!--
+            <test name="ca.nrc.cadc.tap.parser.AllColumnConverterTest"/>
+            <test name="ca.nrc.cadc.tap.parser.TopConverterTest"/>
+            <test name="ca.nrc.cadc.tap.parser.ValidatorTest"/>
             <test name="ca.nrc.cadc.tap.parser.NavigatorTest"/>
             <test name="ca.nrc.cadc.tap.parser.ExtractorTest"/>
             <test name="ca.nrc.cadc.tap.parser.adql.SqlParserTest"/>

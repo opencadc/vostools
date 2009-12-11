@@ -85,6 +85,8 @@ import org.junit.Before;
 import org.junit.BeforeClass;
 import org.junit.Test;
 
+import ca.nrc.cadc.tap.AdqlQuery;
+import ca.nrc.cadc.tap.TapQuery;
 import ca.nrc.cadc.tap.parser.adql.TapSelectItem;
 import ca.nrc.cadc.tap.parser.extractor.SelectListExtractor;
 import ca.nrc.cadc.tap.parser.extractor.SelectListExtractorNavigator;
@@ -94,13 +96,14 @@ import ca.nrc.cadc.tap.parser.navigator.ReferenceNavigator;
 import ca.nrc.cadc.tap.parser.navigator.SelectNavigator;
 import ca.nrc.cadc.tap.schema.TapSchema;
 import ca.nrc.cadc.util.LoggerUtil;
+import ca.nrc.cadc.uws.Parameter;
 
 /**
  * 
  * @author Sailor Zhang
  *
  */
-public class ExtractorTest
+public class AdqlQueryTest
 {
     public String _query;
 
@@ -135,11 +138,6 @@ public class ExtractorTest
     @Before
     public void setUp() throws Exception
     {
-
-        _en = new SelectListExtractor(TAP_SCHEMA, null);
-        _rn = null;
-        _fn = null;
-        _sn = new SelectListExtractorNavigator(_en, _rn, _fn);
     }
 
     /**
@@ -152,19 +150,19 @@ public class ExtractorTest
 
     private void doit()
     {
-        Statement s = null;
-        try
-        {
-            s = ParserUtil.receiveQuery(_query);
-            ParserUtil.parseStatement(s, _sn);
-            List<TapSelectItem> tsiList = _en.getTapSelectItemList();
-            System.out.println(tsiList.toString());
-        } catch (Exception ae)
-        {
-            ae.printStackTrace(System.out);
-            fail(ae.toString());
-        }
-        System.out.println(s);
+        Parameter para;
+        para = new Parameter("QUERY", _query);
+        List<Parameter> paramList = new ArrayList<Parameter>();
+        paramList.add(para);
+        
+        TapQuery tapQuery = new AdqlQuery();
+        tapQuery.setTapSchema(TAP_SCHEMA);
+        tapQuery.setExtraTables(null);
+        tapQuery.setParameterList(paramList);
+        String sql = tapQuery.getSQL();
+        List<TapSelectItem> selectList = tapQuery.getSelectList();
+        System.out.println(sql);
+        System.out.println(selectList);
     }
 
     //@Test
@@ -196,12 +194,20 @@ public class ExtractorTest
         doit();
     }
 
+    //@Test
+    public void testSubselectBad()
+    {
+        _query = "select  t_string, aa.t_bytes, bb.* from tap_schema.alldatatypes as aa, tap_schema.tables as bb " +
+                " where aa.t_string = bb.utype " +
+                "and aa.t_string in (select utype from bb)";
+        doit();
+    }
     @Test
     public void testSubselect()
     {
         _query = "select  t_string, aa.t_bytes, bb.* from tap_schema.alldatatypes as aa, tap_schema.tables as bb " +
                 " where aa.t_string = bb.utype " +
-                "and aa.t_string in (select utype from bb)";
+                "and aa.t_string in (select t_string from tap_schema.alldatatypes)";
         doit();
     }
 }

@@ -12,4 +12,14 @@ public class TestFileStore implements FileStore {
         throw new UnsupportedOperationException( "No file store implemented at this time." );
 	}
 
+    /* (non-Javadoc)
+     * @see ca.nrc.cadc.tap.FileStore#getStorageDir()
+     */
+    @Override
+    public File getStorageDir()
+    {
+        // TODO Auto-generated method stub
+        return null;
+    }
+
 }

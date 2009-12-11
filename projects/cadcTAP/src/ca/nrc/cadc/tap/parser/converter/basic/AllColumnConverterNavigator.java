@@ -67,7 +67,7 @@
  ************************************************************************
  */
 
-package ca.nrc.cadc.tap.parser.validator;
+package ca.nrc.cadc.tap.parser.converter.basic;
 
 import java.util.ArrayList;
 import java.util.Iterator;
@@ -77,6 +77,8 @@ import javax.management.RuntimeErrorException;
 
 import net.sf.jsqlparser.schema.Column;
 import net.sf.jsqlparser.schema.Table;
+import net.sf.jsqlparser.statement.select.AllColumns;
+import net.sf.jsqlparser.statement.select.AllTableColumns;
 import net.sf.jsqlparser.statement.select.ColumnReference;
 import net.sf.jsqlparser.statement.select.Distinct;
 import net.sf.jsqlparser.statement.select.FromItem;
@@ -94,6 +96,7 @@ import net.sf.jsqlparser.statement.select.Union;
 
 import org.apache.log4j.Logger;
 
+import ca.nrc.cadc.tap.parser.ParserUtil;
 import ca.nrc.cadc.tap.parser.adql.AdqlManager;
 import ca.nrc.cadc.tap.parser.adql.exception.AdqlValidateException;
 import ca.nrc.cadc.tap.parser.adql.validator.AdqlValidatorVisitor;
@@ -101,94 +104,62 @@ import ca.nrc.cadc.tap.parser.adql.validator.PlainSelectInfo;
 import ca.nrc.cadc.tap.parser.adql.validator.SelectValidator;
 import ca.nrc.cadc.tap.parser.adql.validator.SelectValidator.PlainSelectType;
 import ca.nrc.cadc.tap.parser.adql.validator.SelectValidator.VisitingPart;
-import ca.nrc.cadc.tap.parser.navigator.ExpressionNavigator;
 import ca.nrc.cadc.tap.parser.navigator.FromItemNavigator;
 import ca.nrc.cadc.tap.parser.navigator.ReferenceNavigator;
 import ca.nrc.cadc.tap.parser.navigator.SelectNavigator;
 import ca.nrc.cadc.tap.schema.TapSchema;
+import ca.nrc.cadc.tap.schema.TapSchemaUtil;
 
 /**
- * Basic SelectVisitor implementation. This class implements FromItemVisitor to handle references to tables and subselects in a
- * simple fashion. It implements SelectItemVisitor in order to process the expressions in the select list itself.
- * 
- * 
  * @author pdowler, Sailor Zhang
  */
-// Prototype: AdqlSelectVisitorProto
-public class ValidatorNavigator extends SelectNavigator
+public class AllColumnConverterNavigator extends SelectNavigator
 {
-    protected static Logger log = Logger.getLogger(ValidatorNavigator.class);
+    protected static Logger log = Logger.getLogger(AllColumnConverterNavigator.class);
 
     protected TapSchema _tapSchema;
 
-    public ValidatorNavigator() {}
+    public AllColumnConverterNavigator() {}
     
-    public ValidatorNavigator(TapSchema tapSchema, ExpressionNavigator en, ReferenceNavigator rn, FromItemNavigator fn)
+    public AllColumnConverterNavigator(TapSchema tapSchema)
     {
         _tapSchema = tapSchema;
-        _expressionNavigator = en;
-        _referenceNavigator = rn;
-        _fromItemNavigator = fn;
-        
-        if (en != null) en.setSelectNavigator(this);
-        if (rn != null) rn.setSelectNavigator(this);
-        if (fn != null) fn.setSelectNavigator(this);
     }
     
+    /**
+     * Only convert top level plainSelect.
+     * 
+     */
     public void visit(PlainSelect plainSelect)
     {
         log.debug("visit(PlainSelect) " + plainSelect);
         enterPlainSelect(plainSelect);
 
-        this._visitingPart = VisitingPart.FROM;
-        FromItem fromItem = _plainSelect.getFromItem();
-        if (fromItem instanceof Table)
-            fromItem.accept(_fromItemNavigator);
-        else if (fromItem instanceof SubSelect)
-            throw new UnsupportedOperationException("sub-select not supported in FROM clause.");
-        NavigateJoins();
-
-        this._visitingPart = VisitingPart.SELECT_ITEM;
-        List<SelectItem> selectItems = _plainSelect.getSelectItems();
-        if (selectItems != null)
-            for (SelectItem s : selectItems)
-                s.accept(this._expressionNavigator);
-
-        this._visitingPart = VisitingPart.WHERE;
-        if (_plainSelect.getWhere() != null)
-            _plainSelect.getWhere().accept(_expressionNavigator);
-
-        this._visitingPart = VisitingPart.GROUP_BY;
-        List<ColumnReference> crs = _plainSelect.getGroupByColumnReferences();
-        if (crs != null)
-            for (ColumnReference cr : crs)
-                cr.accept(_referenceNavigator);
-
-        this._visitingPart = VisitingPart.ORDER_BY;
-        List<OrderByElement> obes = _plainSelect.getOrderByElements();
-        if (obes != null)
+        List<SelectItem> oldSelectItemList = plainSelect.getSelectItems();
+        List<SelectItem> newSelectItemList = new ArrayList<SelectItem>();
+        
+        for (SelectItem si : oldSelectItemList)
         {
-            for (OrderByElement obe : obes)
+            if ( si instanceof AllColumns)
             {
-                ColumnReference cr = obe.getColumnReference();
-                if (cr != null)
-                    cr.accept(_referenceNavigator);
+                List<Table> fromTableList = ParserUtil.getFromTableList(plainSelect);
+                for (Table table : fromTableList)
+                {
+                    List<SelectItem> columnSelectItemList = TapSchemaUtil.getSelectItemList(_tapSchema, table);
+                    newSelectItemList.addAll(columnSelectItemList);
+                }
+            } else if ( si instanceof AllTableColumns)
+            {
+                String tableNameOrAlias = ((AllTableColumns)si).getTable().getName();
+                Table table = ParserUtil.findFromTable(plainSelect, tableNameOrAlias);
+                List<SelectItem> columnSelectItemList = TapSchemaUtil.getSelectItemList(_tapSchema, table);
+                newSelectItemList.addAll(columnSelectItemList);
+            } else 
+            {
+                newSelectItemList.add(si);
             }
         }
-
-        this._visitingPart = VisitingPart.HAVING;
-        if (_plainSelect.getHaving() != null)
-            _plainSelect.getHaving().accept(_expressionNavigator);
-
-        // other SELECT options
-        if (_plainSelect.getLimit() != null)
-            handleLimit(_plainSelect.getLimit());
-        if (_plainSelect.getDistinct() != null)
-            handleDistinct(_plainSelect.getDistinct());
-        if (_plainSelect.getInto() != null)
-            handleInto(_plainSelect.getInto());
-        if (_plainSelect.getTop() != null)
-            handleTop(_plainSelect.getTop());
+        plainSelect.setSelectItems(newSelectItemList);
 
         log.debug("visit(PlainSelect) done");
         leavePlainSelect();

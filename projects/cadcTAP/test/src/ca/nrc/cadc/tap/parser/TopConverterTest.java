@@ -86,6 +86,7 @@ import org.junit.BeforeClass;
 import org.junit.Test;
 
 import ca.nrc.cadc.tap.parser.adql.TapSelectItem;
+import ca.nrc.cadc.tap.parser.converter.basic.TopConverterNavigator;
 import ca.nrc.cadc.tap.parser.extractor.SelectListExtractor;
 import ca.nrc.cadc.tap.parser.extractor.SelectListExtractorNavigator;
 import ca.nrc.cadc.tap.parser.navigator.ExpressionNavigator;
@@ -100,7 +101,7 @@ import ca.nrc.cadc.util.LoggerUtil;
  * @author Sailor Zhang
  *
  */
-public class ExtractorTest
+public class TopConverterTest
 {
     public String _query;
 
@@ -136,10 +137,7 @@ public class ExtractorTest
     public void setUp() throws Exception
     {
 
-        _en = new SelectListExtractor(TAP_SCHEMA, null);
-        _rn = null;
-        _fn = null;
-        _sn = new SelectListExtractorNavigator(_en, _rn, _fn);
+        _sn = new TopConverterNavigator();
     }
 
     /**
@@ -157,8 +155,6 @@ public class ExtractorTest
         {
             s = ParserUtil.receiveQuery(_query);
             ParserUtil.parseStatement(s, _sn);
-            List<TapSelectItem> tsiList = _en.getTapSelectItemList();
-            System.out.println(tsiList.toString());
         } catch (Exception ae)
         {
             ae.printStackTrace(System.out);
@@ -167,32 +163,19 @@ public class ExtractorTest
         System.out.println(s);
     }
 
-    //@Test
-    public void testBasic()
+    @Test
+    public void testTop()
     {
-        _query = " select * from tap_schema.alldatatypes";
+        _query = "select  top 1234 t_string as xx, aa.t_bytes as yy from tap_schema.alldatatypes as aa";
         doit();
     }
 
-    //@Test
-    public void testAlias()
-    {
-        _query = " select aa.* from tap_schema.alldatatypes as aa";
-        doit();
-    }
-
-    //@Test
-    public void testSelectItem()
-    {
-        _query = "select  t_string as xx, aa.t_bytes as yy from tap_schema.alldatatypes as aa";
-        doit();
-    }
-
-    //@Test
+    
+    @Test
     public void testJoin()
     {
-        _query = "select  t_string, aa.t_bytes, bb.* from tap_schema.alldatatypes as aa, tap_schema.tables as bb " +
-        		" where aa.t_string = bb.utype";
+        _query = "select top 1234 t_string, aa.t_bytes, bb.* from tap_schema.alldatatypes as aa, tap_schema.tables as bb " +
+        		" where aa.t_string = bb.utype limit 2345";
         doit();
     }
 
@@ -201,7 +184,7 @@ public class ExtractorTest
     {
         _query = "select  t_string, aa.t_bytes, bb.* from tap_schema.alldatatypes as aa, tap_schema.tables as bb " +
                 " where aa.t_string = bb.utype " +
-                "and aa.t_string in (select utype from bb)";
+                "and aa.t_string in (select utype from bb) limit 3456";
         doit();
     }
 }

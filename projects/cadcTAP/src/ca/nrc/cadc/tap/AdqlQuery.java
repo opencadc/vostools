@@ -70,96 +70,146 @@
 package ca.nrc.cadc.tap;
 
 import ca.nrc.cadc.tap.schema.TableDesc;
+
+import java.util.ArrayList;
 import java.util.List;
 
+import ca.nrc.cadc.tap.parser.ParserUtil;
 import ca.nrc.cadc.tap.parser.adql.AdqlManager;
 import ca.nrc.cadc.tap.parser.adql.AdqlParser;
 import ca.nrc.cadc.tap.parser.adql.TapSelectItem;
 import ca.nrc.cadc.tap.parser.adql.exception.AdqlException;
+import ca.nrc.cadc.tap.parser.converter.basic.AllColumnConverterNavigator;
+import ca.nrc.cadc.tap.parser.extractor.SelectListExtractor;
+import ca.nrc.cadc.tap.parser.extractor.SelectListExtractorNavigator;
+import ca.nrc.cadc.tap.parser.navigator.ExpressionNavigator;
+import ca.nrc.cadc.tap.parser.navigator.FromItemNavigator;
+import ca.nrc.cadc.tap.parser.navigator.ReferenceNavigator;
+import ca.nrc.cadc.tap.parser.navigator.SelectNavigator;
+import ca.nrc.cadc.tap.parser.validator.ExpressionValidator;
+import ca.nrc.cadc.tap.parser.validator.FromItemValidator;
+import ca.nrc.cadc.tap.parser.validator.ReferenceValidator;
+import ca.nrc.cadc.tap.parser.validator.ValidatorNavigator;
 import ca.nrc.cadc.tap.schema.TapSchema;
 import ca.nrc.cadc.uws.Parameter;
 import java.util.Map;
+
+import org.apache.log4j.Logger;
+
+import net.sf.jsqlparser.JSQLParserException;
+import net.sf.jsqlparser.statement.Statement;
 
 /**
  * TapQuery implementation for LANG=ADQL.
  */
 public class AdqlQuery implements TapQuery
 {
-    private AdqlParser parser;
-    private TapSchema tapSchema;
-    private Map<String, TableDesc> extraTables;
-    private List<Parameter> paramList;
-    private String queryString;
-    private boolean validated = false;
+    protected static Logger log = Logger.getLogger(AdqlQuery.class);
+
+    protected TapSchema _tapSchema;
+    protected Map<String, TableDesc> _extraTables;
+    protected List<Parameter> _paramList;
+    protected String _queryString;
+
+    protected Statement _statement;
+    protected List<TapSelectItem> _tapSelectItemList;
+    protected List<SelectNavigator> _navigatorList = new ArrayList<SelectNavigator>();
+
+    protected transient boolean navigated = false;
     
-	public AdqlQuery() {
+    public AdqlQuery() {
 	}
 	
-    public void setTapSchema(TapSchema tapSchema) 
+	protected void init()
+	{
+        ExpressionNavigator en;
+        ReferenceNavigator rn;
+        FromItemNavigator fn;
+        SelectNavigator sn;
+
+//         en = new ExpressionNavigator();
+//         rn = new ReferenceNavigator();
+//         fn = new FromItemNavigator();
+//         sn = new SelectNavigator(en, rn, fn);
+//        _navigatorList.add(sn);
+
+        en = new ExpressionValidator();
+        rn = new ReferenceValidator();
+        fn = new FromItemValidator();
+        sn = new ValidatorNavigator(_tapSchema, en, rn, fn);
+        _navigatorList.add(sn);
+
+        sn = new AllColumnConverterNavigator(_tapSchema);
+        _navigatorList.add(sn);
+
+         en = new SelectListExtractor(_tapSchema, _extraTables);
+         rn = null;
+         fn = null;
+         sn = new SelectListExtractorNavigator(en, rn, fn);
+         _navigatorList.add(sn);
+	}
+	
+	protected void receiveQuery()
+	{
+        try
+        {
+            _statement = ParserUtil.receiveQuery(_queryString);
+        } catch (JSQLParserException e)
+        {
+            e.printStackTrace();
+            throw new IllegalArgumentException(e);
+        }
+	}
+	
+    protected void doNavigate()
     {
-        this.tapSchema = tapSchema;
-        parser = null;
+        for (SelectNavigator sn : _navigatorList)
+        {
+            log.debug("Navigated by: " + sn.getClass().getName());
+            
+            ParserUtil.parseStatement(_statement, sn);
+            
+            if (sn instanceof SelectListExtractorNavigator)
+            {
+                SelectListExtractor slen = (SelectListExtractor) sn.getExpressionNavigator();
+                _tapSelectItemList = slen.getTapSelectItemList();
+            }
+        }
+        navigated = true; 
+    }
+
+	public void setTapSchema(TapSchema tapSchema) 
+    {
+        this._tapSchema = tapSchema;
     }
 
     public void setExtraTables(Map<String, TableDesc> extraTables)
     {
-        this.extraTables = extraTables;
-        parser = null;
+        this._extraTables = extraTables;
     }
 
-    private void initParser()
-    {
-        AdqlManager manager = 
-            new ca.nrc.cadc.tap.parser.adql.impl.postgresql.pgsphere.AdqlManagerImpl(this.tapSchema, this.extraTables);
-        this.parser = new AdqlParser(manager);
-    }
-    
     public void setParameterList( List<Parameter> paramList )
     {
-        this.queryString = TapUtil.findParameterValue("QUERY", paramList);
-        if (queryString == null)
+        this._queryString = TapUtil.findParameterValue("QUERY", paramList);
+        if (_queryString == null)
             throw new IllegalArgumentException( "parameter not found: QUERY" );
-        parser = null;
     }
     
 	public String getSQL()
 	{
-        if (parser == null)
-            initParser();
-        
-		if (queryString == null)
-            throw new IllegalStateException();
-                
-		try 
-        {
-            String ret = this.parser.parse(queryString);
-            validated = true;
-            return ret;
-        } 
-        catch (AdqlException ex) 
-        {
-            throw new IllegalArgumentException("failed to parse QUERY", ex);
-		}
+		if (_queryString == null) throw new IllegalStateException();
+		
+		receiveQuery();
+		init();
+		doNavigate();
+		return _statement.toString();
 	}
 
 	public List<TapSelectItem> getSelectList() 
     {
-        if (parser == null)
-            initParser();
-        
-        if (queryString == null)
+        if (_queryString == null || !navigated)
             throw new IllegalStateException();
         
-		try 
-        {
-            if (!validated)
-                this.parser.validate(queryString);
-            validated = true;
-            return this.parser.getTapSelectItems();
-		} 
-        catch (AdqlException ex) 
-        {
-            throw new IllegalArgumentException(ex);
-		}
+        return _tapSelectItemList;
 	}
 }

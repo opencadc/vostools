@@ -116,16 +116,21 @@ public class ParserUtil
     }
 
     /**
+     * Aliases are also extracted.
+     *  
      * @param ps
      * @return
      */
     public static List<Table> getFromTableList(PlainSelect ps)
     {
         List<Table> fromTableList = new ArrayList<Table>();
+        String alias = null;
         
         FromItem fromItem = ps.getFromItem();
         if (fromItem instanceof Table)
+        {
             fromTableList.add((Table) fromItem);
+        }
 
         List<Join> joins = ps.getJoins();
         if (joins != null)
