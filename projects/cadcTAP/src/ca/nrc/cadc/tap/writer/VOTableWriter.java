@@ -86,19 +86,25 @@ import org.jdom.output.Format;
 import org.jdom.output.XMLOutputter;
 import ca.nrc.cadc.tap.parser.adql.TapSelectItem;
 import ca.nrc.cadc.tap.schema.TapSchema;
+import ca.nrc.cadc.tap.writer.formatter.DefaultFormatterFactory;
 import ca.nrc.cadc.tap.writer.votable.FieldElement;
 import ca.nrc.cadc.tap.writer.formatter.Formatter;
 import ca.nrc.cadc.tap.writer.formatter.FormatterFactory;
 import org.apache.log4j.Logger;
 
+/**
+ * Writes a ResultSet or Throwable in VOTABLE format
+ * to an OutputStream.
+ * 
+ */
 public class VOTableWriter implements TableWriter
 {
-    private static Logger log = Logger.getLogger(VOTableWriter.class);
-    
     public static final String VOTABLE_VERSION  = "1.2";
     public static final String XSI_NS_URI = "http://www.w3.org/2001/XMLSchema-instance";
     public static final String VOTABLE_NS_URI = "http://www.ivoa.net/xml/VOTable/v1.2";
     public static final String STC_NS_URI = "http://www.ivoa.net/xml/STC/v1.30";
+
+    private static Logger log = Logger.getLogger(VOTableWriter.class);
 
     protected TapSchema tapSchema;
 
@@ -129,7 +135,8 @@ public class VOTableWriter implements TableWriter
         if (tapSchema == null)
             throw new IllegalStateException("TapSchema cannot be null, set using setTapSchema()");
 
-        List<Formatter> formatters = FormatterFactory.getFormatters(tapSchema, selectList);
+        FormatterFactory factory = DefaultFormatterFactory.getFormatterFactory();
+        List<Formatter> formatters = factory.getFormatters(tapSchema, selectList);
         
         try { log.debug("resultSet column count: " + resultSet.getMetaData().getColumnCount()); }
         catch(Exception oops) { log.error("failed to check resultset column count", oops); }
@@ -164,8 +171,8 @@ public class VOTableWriter implements TableWriter
         outputter.setFormat(Format.getPrettyFormat());
         outputter.output(document, output);
     }
-	
-    public void write( Throwable thrown, OutputStream output )
+
+    public void write(Throwable thrown, OutputStream output)
         throws IOException
     {
         Document document = createDocument();
@@ -213,7 +220,7 @@ public class VOTableWriter implements TableWriter
             {
                 if (tableDesc.tableName.equals(selectItem.getTableName()))
                 {
-                    for (ColumnDesc columnDesc: tableDesc.columnDescs)
+                    for (ColumnDesc columnDesc : tableDesc.columnDescs)
                     {
                         if (columnDesc.columnName.equals(selectItem.getColumnName()))
                         {
@@ -238,14 +245,20 @@ public class VOTableWriter implements TableWriter
         StringBuilder sb = new StringBuilder();
         sb.append(thrown.getClass().getSimpleName());
         sb.append(": ");
-        sb.append(thrown.getMessage() == null ? "" : thrown.getMessage());
+        if (thrown.getMessage() == null)
+            sb.append("");
+        else
+            sb.append(thrown.getMessage());
         while (thrown.getCause() != null)
         {
             thrown = thrown.getCause();
             sb.append(" ");
             sb.append(thrown.getClass().getSimpleName());
             sb.append(": ");
-            sb.append(thrown.getMessage() == null ? "" : thrown.getMessage());
+            if (thrown.getMessage() == null)
+                sb.append("");
+            else
+                sb.append(thrown.getMessage());
         }
         return sb.toString();
     }

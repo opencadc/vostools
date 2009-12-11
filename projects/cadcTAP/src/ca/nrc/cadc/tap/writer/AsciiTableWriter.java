@@ -81,6 +81,9 @@ import java.util.List;
 import ca.nrc.cadc.tap.parser.adql.TapSelectItem;
 import ca.nrc.cadc.tap.schema.TapSchema;
 
+import ca.nrc.cadc.tap.writer.formatter.DefaultFormatterFactory;
+import ca.nrc.cadc.tap.writer.formatter.Formatter;
+import ca.nrc.cadc.tap.writer.formatter.FormatterFactory;
 import com.csvreader.CsvWriter;
 import org.apache.log4j.Logger;
 
@@ -98,6 +101,10 @@ public class AsciiTableWriter implements TableWriter
     public static final String TSV = "tsv";
     public static final char CSV_DELI = ',';
     public static final char TSV_DELI = '\t';
+
+    protected TapSchema tapSchema;
+
+    protected List<TapSelectItem> selectList;
 
     private String format;
     private char delimeter;
@@ -127,16 +134,24 @@ public class AsciiTableWriter implements TableWriter
 
     public void setSelectList(List<TapSelectItem> items)
     {
-        //no-op since we do not use it
+        this.selectList = items;
     }
 
     public void setTapSchema(TapSchema schema)
     {
-        //no-op since we do not use it
+        this.tapSchema = schema;
     }
 
     public void write(ResultSet rs, OutputStream out) throws IOException
     {
+        if (selectList == null)
+            throw new IllegalStateException("SelectList cannot be null, set using setSelectList()");
+        if (tapSchema == null)
+            throw new IllegalStateException("TapSchema cannot be null, set using setTapSchema()");
+
+        FormatterFactory factory = DefaultFormatterFactory.getFormatterFactory();
+        List<Formatter> formatters = factory.getFormatters(tapSchema, selectList);
+
         log.debug("writing ResultSet, format: " + format);
         int numRows = 0;
         int numColumns = 0;
@@ -157,7 +172,8 @@ public class AsciiTableWriter implements TableWriter
             {
                 for (int i = 1; i <= numColumns; i++)
                 {
-                    writer.write(rs.getString(i));
+                    Formatter formatter = formatters.get(i - 1);
+                    writer.write(formatter.format(rs.getString(i)));
 
                 }
                 writer.endRecord();
