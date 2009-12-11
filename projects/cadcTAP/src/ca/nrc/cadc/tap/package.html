@@ -24,7 +24,7 @@
   <h2>ca.nrc.cadc.impl.FileStoreImpl</h2>
   <p>
       The deployment must provide this class and it must implement the <code>ca.nrc.cadc.tap.FileStore</code>
-      interface. This class is repsonsible for managing temporary resutl files and determining an absolute
+      interface. This class is responsible for managing temporary result files and determining an absolute
       URL to the result that the client can access.
   </p>
   <p>
@@ -34,7 +34,7 @@
   <h2>ca.nrc.cadc.tap.impl.UploadManagerImpl</h2>
   <p>
       The deployment must provide this class and it must implement the <code>ca.nrc.cadc.tap.UploadManager</code>
-      interface. This class is repsonsible for managing table uploads using the UPLOAD parameter.
+      interface. This class is responsible for managing table uploads using the UPLOAD parameter.
   </p>
   <p>
       Two implementations are provided:
@@ -74,6 +74,18 @@
   </ul>
   
   <h2>TODO: add more extension hooks as needed</h2>
-  
+
+  <h2>ca.nrc.cadc.tap.impl.FormatterFactoryImpl</h2>
+  <p>
+      The deployment must provide this class and it must implement the <code>ca.nrc.cadc.tap.writer.formatter.Formatter</code>
+      interface. This class is responsible for providing formatters that format the query results.
+  </p>
+  <p>
+      One implementation is provided: <code>ca.nrc.cadc.tap.writer.formatter.DefaultFormatterFactory</code>
+      that supports ADQL types: INTEGER, BIGINT, DOUBLE, VARCHAR, TIMESTAMP, VARBINARY, POINT, and REGION,
+      and int arrays. The getSPointFormatter and getRegionFormatter methods that provide formatters for
+      adql:REGION and adql:REGION datatypes will throw an UnsupportOperationExcetion unless overridden.
+  </p>
+
   </body>
 </html>
