@@ -71,67 +71,37 @@ package ca.nrc.cadc.tap.writer.formatter;
 
 import ca.nrc.cadc.tap.parser.adql.TapSelectItem;
 import ca.nrc.cadc.tap.schema.ColumnDesc;
-import ca.nrc.cadc.tap.schema.SchemaDesc;
-import ca.nrc.cadc.tap.schema.TableDesc;
 import ca.nrc.cadc.tap.schema.TapSchema;
-import java.util.ArrayList;
 import java.util.List;
 
 /**
- * Returns a Formatter for a given data type.
+ * FormatterFactory interface.
  *
  */
-public class FormatterFactory
+public interface FormatterFactory
 {
-    public static List<Formatter> getFormatters(TapSchema tapSchema, List<TapSelectItem> selectList)
-    {
-        List<Formatter> formatters = new ArrayList<Formatter>();
-        for (TapSelectItem selectItem : selectList)
-        {
-            if (selectItem != null)
-                formatters.add(getFormatter(tapSchema, selectItem));
-        }
-        return formatters;
-    }
+    List<Formatter> getFormatters(TapSchema tapSchema, List<TapSelectItem> selectList);
 
-    public static Formatter getFormatter(TapSchema tapSchema, TapSelectItem selectItem)
-    {
-        // Find the class name of the formatter for this colummn.
-        for (SchemaDesc schemaDesc : tapSchema.schemaDescs)
-        {
-            for (TableDesc tableDesc : schemaDesc.tableDescs)
-            {
-                if (tableDesc.tableName.equals(selectItem.getTableName()))
-                {
-                    for (ColumnDesc columnDesc : tableDesc.columnDescs)
-                    {
-                        if (columnDesc.columnName.equals(selectItem.getColumnName()))
-                        {
-                            String datatype = columnDesc.datatype;
-                            if (datatype.equals("adql:INTEGER")
-                                || datatype.equals("adql:BIGINT")
-                                || datatype.equals("adql:DOUBLE")
-                                || datatype.equals("adql:VARCHAR"))
-                                return new DefaultFormatter();
-                            else if (datatype.equals("adql:POINT"))
-                                return new SPointFormatter();
-                            else if (datatype.equals("adql:POLYGON"))
-                                return new SPolyFormatter();
-                            else if (datatype.equals("adql:TIMESTAMP"))
-                                return new UTCTimestampFormatter();
-                            else if (datatype.equals("adql:VARBINARY"))
-                                return new ByteArrayFormatter();
-                            else if (datatype.equals("int[]"))
-                                return new IntArrayFormatter();
-                            return new DefaultFormatter();
-                        }
-                    }
-                }
-            }
-        }
+    Formatter getFormatter(TapSchema tapSchema, TapSelectItem selectItem);
 
-        // Custom formatter not found, return the default Formatter.
-        return new DefaultFormatter();
-    }
+    Formatter getIntegerFormatter(ColumnDesc columnDesc);
 
+    Formatter getDoubleFormatter(ColumnDesc columnDesc);
+
+    Formatter getLongFormatter(ColumnDesc columnDesc);
+
+    Formatter getStringFormatter(ColumnDesc columnDesc);
+
+    Formatter getByteArrayFormatter(ColumnDesc columnDesc);
+
+    Formatter getIntArrayFormatter(ColumnDesc columnDesc);
+
+    Formatter getLocalTimestampFormatter(ColumnDesc columnDesc);
+
+    Formatter getUTCTimestampFormatter(ColumnDesc columnDesc);
+
+    Formatter getSPointFormatter(ColumnDesc columnDesc);
+
+    Formatter getRegionFormatter(ColumnDesc columnDesc);
+    
 }
