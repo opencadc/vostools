@@ -104,7 +104,7 @@ import ca.nrc.cadc.uws.Parameter;
  * @author Sailor Zhang
  *
  */
-public class AdqlQueryTest
+public class AdqlQueryImplTest
 {
     public String _query;
 
@@ -156,7 +156,7 @@ public class AdqlQueryTest
         List<Parameter> paramList = new ArrayList<Parameter>();
         paramList.add(para);
         
-        TapQuery tapQuery = new AdqlQuery();
+        TapQuery tapQuery = new AdqlQueryImpl();
         tapQuery.setTapSchema(TAP_SCHEMA);
         tapQuery.setExtraTables(null);
         tapQuery.setParameterList(paramList);
@@ -206,7 +206,7 @@ public class AdqlQueryTest
     @Test
     public void testSubselect()
     {
-        _query = "select t_string, aa.t_bytes, bb.* from tap_schema.alldatatypes as aa, tap_schema.tables as bb " +
+        _query = "select top 1234 t_string, aa.t_bytes, bb.* from tap_schema.alldatatypes as aa, tap_schema.tables as bb " +
                 " where aa.t_string = bb.utype " +
                 "and aa.t_string in (select t_string from tap_schema.alldatatypes)";
         doit();
