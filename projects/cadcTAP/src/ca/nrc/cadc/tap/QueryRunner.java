@@ -271,7 +271,7 @@ public class QueryRunner implements JobRunner
 
             // store result
             URL url = fs.put(tmpFile);
-            Result res = new Result(tmpFile.getName(), url);
+            Result res = new Result("result", url);
             List<Result> results = new ArrayList<Result>();
             results.add(res);
             job.setResultsList(results);

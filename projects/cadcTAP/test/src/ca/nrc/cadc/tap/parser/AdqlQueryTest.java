@@ -67,144 +67,147 @@
 ************************************************************************
 */
 
-package ca.nrc.cadc.tap;
+/**
+ * 
+ */
+package ca.nrc.cadc.tap.parser;
 
+import static org.junit.Assert.fail;
+
+import java.util.ArrayList;
 import java.util.List;
-import java.util.Map;
 
-import net.sf.jsqlparser.JSQLParserException;
 import net.sf.jsqlparser.statement.Statement;
-import ca.nrc.cadc.tap.parser.ParserUtil;
-import ca.nrc.cadc.tap.parser.TapSchemaValidator;
+
+import org.junit.After;
+import org.junit.AfterClass;
+import org.junit.Before;
+import org.junit.BeforeClass;
+import org.junit.Test;
+
+import ca.nrc.cadc.tap.AdqlQuery;
+import ca.nrc.cadc.tap.TapQuery;
 import ca.nrc.cadc.tap.parser.TapSelectItem;
-import ca.nrc.cadc.tap.parser.converter.AllColumnConverter;
-import ca.nrc.cadc.tap.parser.extractor.SelectListExpressionExtractor;
 import ca.nrc.cadc.tap.parser.extractor.SelectListExtractor;
+import ca.nrc.cadc.tap.parser.extractor.SelectListExtractorNavigator;
 import ca.nrc.cadc.tap.parser.navigator.ExpressionNavigator;
 import ca.nrc.cadc.tap.parser.navigator.FromItemNavigator;
 import ca.nrc.cadc.tap.parser.navigator.ReferenceNavigator;
 import ca.nrc.cadc.tap.parser.navigator.SelectNavigator;
-import ca.nrc.cadc.tap.parser.schema.TapSchemaColumnValidator;
-import ca.nrc.cadc.tap.parser.schema.TapSchemaTableValidator;
-import ca.nrc.cadc.tap.schema.TableDesc;
 import ca.nrc.cadc.tap.schema.TapSchema;
+import ca.nrc.cadc.util.LoggerUtil;
 import ca.nrc.cadc.uws.Parameter;
-import java.util.ArrayList;
-import org.apache.log4j.Logger;
 
 /**
- * TapQuery implementation for LANG=SQL.
+ * 
+ * @author Sailor Zhang
+ *
  */
-public class SqlQuery implements TapQuery
+public class AdqlQueryTest
 {
-    protected static Logger log = Logger.getLogger(SqlQuery.class);
-    
-    protected TapSchema _tapSchema;
-    protected Map<String, TableDesc> _extraTables;
-    protected List<Parameter> _paramList;
-    protected String _queryString;
+    public String _query;
 
-    protected Statement _statement;
-    protected List<TapSelectItem> _tapSelectItemList;
-    protected List<SelectNavigator> _navigatorList = new ArrayList<SelectNavigator>();
+    SelectListExtractor _en;
+    ReferenceNavigator _rn;
+    FromItemNavigator _fn;
+    SelectNavigator _sn;
 
-    protected transient boolean navigated = false;
-    
-    public SqlQuery() { }
-	
+    static TapSchema TAP_SCHEMA;
+
     /**
-     * Set up the List<SelectNavigator>. Subclasses should override this method to
-     * add extra navigators that check or modify the parsed query statement. This
-     * implementation creates: TapSchemaValidator, AllColumnConverter.
+     * @throws java.lang.Exception
      */
-	protected void init()
-	{
-        ExpressionNavigator en;
-        ReferenceNavigator rn;
-        FromItemNavigator fn;
-        SelectNavigator sn;
-
-        en = new ExpressionNavigator();
-        rn = new TapSchemaColumnValidator();
-        fn = new TapSchemaTableValidator();
-        sn = new TapSchemaValidator(en, rn, fn, _tapSchema);
-        _navigatorList.add(sn);
-
-        sn = new AllColumnConverter(_tapSchema);
-        _navigatorList.add(sn);
-
-        en = new SelectListExpressionExtractor(_tapSchema, _extraTables);
-        rn = null;
-        fn = null;
-        sn = new SelectListExtractor(en, rn, fn);
-        _navigatorList.add(sn);
-	}
-	
-    protected void doNavigate()
+    @BeforeClass
+    public static void setUpBeforeClass() throws Exception
     {
-        if (navigated) // idempotent
-            return;
-        
-        init(); 
-        
-        // parse for syntax
-        try
-        {
-            _statement = ParserUtil.receiveQuery(_queryString);
-        } catch (JSQLParserException e)
-        {
-            e.printStackTrace();
-            throw new IllegalArgumentException(e);
-        }
-        
-        // run all the navigators
-        for (SelectNavigator sn : _navigatorList)
-        {
-            log.debug("Navigated by: " + sn.getClass().getName());
-            
-            ParserUtil.parseStatement(_statement, sn);
-            
-            if (sn instanceof SelectListExtractor)
-            {
-                SelectListExpressionExtractor slen = (SelectListExpressionExtractor) sn.getExpressionNavigator();
-                _tapSelectItemList = slen.getTapSelectItemList();
-            }
-        }
-        navigated = true; 
+        LoggerUtil.initialize(new String[] { "test", "ca.nrc.cadc" }, new String[] { "-d" });
+        TAP_SCHEMA = TestUtil.loadDefaultTapSchema();
     }
 
-	public void setTapSchema(TapSchema tapSchema) 
+    /**
+     * @throws java.lang.Exception
+     */
+    @AfterClass
+    public static void tearDownAfterClass() throws Exception
     {
-        this._tapSchema = tapSchema;
     }
 
-    public void setExtraTables(Map<String, TableDesc> extraTables)
+    /**
+     * @throws java.lang.Exception
+     */
+    @Before
+    public void setUp() throws Exception
     {
-        this._extraTables = extraTables;
     }
 
-    public void setParameterList( List<Parameter> paramList )
+    /**
+     * @throws java.lang.Exception
+     */
+    @After
+    public void tearDown() throws Exception
     {
-        this._queryString = TapUtil.findParameterValue("QUERY", paramList);
-        if (_queryString == null)
-            throw new IllegalArgumentException( "parameter not found: QUERY" );
     }
-    
-	public String getSQL()
-	{
-		if (_queryString == null) 
-            throw new IllegalStateException();
-		
-		doNavigate();
-		return _statement.toString();
-	}
 
-	public List<TapSelectItem> getSelectList() 
+    private void doit()
     {
-        if (_queryString == null)
-            throw new IllegalStateException();
+        Parameter para;
+        para = new Parameter("QUERY", _query);
+        List<Parameter> paramList = new ArrayList<Parameter>();
+        paramList.add(para);
         
-        doNavigate();;
-        return _tapSelectItemList;
-	}
+        TapQuery tapQuery = new AdqlQuery();
+        tapQuery.setTapSchema(TAP_SCHEMA);
+        tapQuery.setExtraTables(null);
+        tapQuery.setParameterList(paramList);
+        String sql = tapQuery.getSQL();
+        List<TapSelectItem> selectList = tapQuery.getSelectList();
+        System.out.println(sql);
+        System.out.println(selectList);
+    }
+
+    //@Test
+    public void testBasic()
+    {
+        _query = " select * from tap_schema.alldatatypes";
+        doit();
+    }
+
+    //@Test
+    public void testAlias()
+    {
+        _query = " select aa.* from tap_schema.alldatatypes as aa";
+        doit();
+    }
+
+    //@Test
+    public void testSelectItem()
+    {
+        _query = "select  t_string as xx, aa.t_bytes as yy from tap_schema.alldatatypes as aa";
+        doit();
+    }
+
+    //@Test
+    public void testJoin()
+    {
+        _query = "select  t_string, aa.t_bytes, bb.* from tap_schema.alldatatypes as aa, tap_schema.tables as bb " +
+        		" where aa.t_string = bb.utype";
+        doit();
+    }
+
+    //@Test
+    public void testSubselectBad()
+    {
+        _query = "select  t_string, aa.t_bytes, bb.* from tap_schema.alldatatypes as aa, tap_schema.tables as bb " +
+                " where aa.t_string = bb.utype " +
+                "and aa.t_string in (select utype from bb)";
+        doit();
+    }
+    @Test
+    public void testSubselect()
+    {
+        _query = "select t_string, aa.t_bytes, bb.* from tap_schema.alldatatypes as aa, tap_schema.tables as bb " +
+                " where aa.t_string = bb.utype " +
+                "and aa.t_string in (select t_string from tap_schema.alldatatypes)";
+        doit();
+    }
 }

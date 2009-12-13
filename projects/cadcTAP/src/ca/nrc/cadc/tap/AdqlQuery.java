@@ -78,8 +78,8 @@ import ca.nrc.cadc.tap.parser.ParserUtil;
 import ca.nrc.cadc.tap.parser.TapSchemaValidator;
 import ca.nrc.cadc.tap.parser.TapSelectItem;
 import ca.nrc.cadc.tap.parser.converter.AllColumnConverter;
+import ca.nrc.cadc.tap.parser.extractor.SelectListExpressionExtractor;
 import ca.nrc.cadc.tap.parser.extractor.SelectListExtractor;
-import ca.nrc.cadc.tap.parser.extractor.SelectListExtractorNavigator;
 import ca.nrc.cadc.tap.parser.navigator.ExpressionNavigator;
 import ca.nrc.cadc.tap.parser.navigator.FromItemNavigator;
 import ca.nrc.cadc.tap.parser.navigator.ReferenceNavigator;
@@ -113,7 +113,7 @@ public class AdqlQuery implements TapQuery
 
     protected transient boolean navigated = false;
     
-    public AdqlQuery() { init(); }
+    public AdqlQuery() { }
 	
     /**
      * Set up the List<SelectNavigator>. Subclasses should override this method to
@@ -136,10 +136,10 @@ public class AdqlQuery implements TapQuery
         sn = new AllColumnConverter(_tapSchema);
         _navigatorList.add(sn);
 
-        en = new SelectListExtractor(_tapSchema, _extraTables);
+        en = new SelectListExpressionExtractor(_tapSchema, _extraTables);
         rn = null;
         fn = null;
-        sn = new SelectListExtractorNavigator(en, rn, fn);
+        sn = new SelectListExtractor(en, rn, fn);
         _navigatorList.add(sn);
 	}
 	
@@ -147,6 +147,8 @@ public class AdqlQuery implements TapQuery
     {
         if (navigated) // idempotent
             return;
+        
+        init(); 
         
         // parse for syntax
         try
@@ -165,9 +167,9 @@ public class AdqlQuery implements TapQuery
             
             ParserUtil.parseStatement(_statement, sn);
             
-            if (sn instanceof SelectListExtractorNavigator)
+            if (sn instanceof SelectListExtractor)
             {
-                SelectListExtractor slen = (SelectListExtractor) sn.getExpressionNavigator();
+                SelectListExpressionExtractor slen = (SelectListExpressionExtractor) sn.getExpressionNavigator();
                 _tapSelectItemList = slen.getTapSelectItemList();
             }
         }
