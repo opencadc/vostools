@@ -96,9 +96,7 @@ public interface FormatterFactory
 
     Formatter getIntArrayFormatter(ColumnDesc columnDesc);
 
-    Formatter getLocalTimestampFormatter(ColumnDesc columnDesc);
-
-    Formatter getUTCTimestampFormatter(ColumnDesc columnDesc);
+    Formatter getTimestampFormatter(ColumnDesc columnDesc);
 
     Formatter getSPointFormatter(ColumnDesc columnDesc);
 

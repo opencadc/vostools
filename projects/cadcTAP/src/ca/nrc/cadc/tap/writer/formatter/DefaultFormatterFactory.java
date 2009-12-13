@@ -84,20 +84,29 @@ import org.apache.log4j.Logger;
  */
 public class DefaultFormatterFactory implements FormatterFactory
 {
-    private static final String CLASS_NAME = "ca.nrc.cadc.tap.writer.formatter.DefaultFormatterFactory";
+    private static final String IMPL_CLASS = "ca.nrc.cadc.tap.impl.FormatterFactoryImpl";
     private static final Logger LOG = Logger.getLogger(DefaultFormatterFactory.class);
 
     public DefaultFormatterFactory() { }
 
+    /**
+     * Create a FormatterFactory. This method loads and instantiates a class named
+     * <code>ca.nrc.cadc.tap.impl.FormatterFactoryImpl</code> that must be provided
+     * at runtime (by the application). The simplest way ot provide that class is to
+     * extend this one.
+     *
+     * @return a FormatterFactory implementation
+     * @throws RuntimeException if the implementation class cannot be created
+     */  
     public static FormatterFactory getFormatterFactory()
     {
         try
         {
-            return (FormatterFactory) Class.forName(CLASS_NAME).newInstance();
+            return (FormatterFactory) Class.forName(IMPL_CLASS).newInstance();
         }
         catch (Exception e)
         {
-            LOG.error("Failed to instantiate FormatterFactory class " + CLASS_NAME, e);
+            LOG.error("Failed to instantiate FormatterFactory class " + IMPL_CLASS, e);
             throw new RuntimeException(e);
         }
     }
@@ -140,7 +149,7 @@ public class DefaultFormatterFactory implements FormatterFactory
                             else if (datatype.equals("adql:REGION"))
                                 return getRegionFormatter(columnDesc);
                             else if (datatype.equals("adql:TIMESTAMP"))
-                                return getUTCTimestampFormatter(columnDesc);
+                                return getTimestampFormatter(columnDesc);
                             else if (datatype.equals("adql:VARBINARY"))
                                 return getByteArrayFormatter(columnDesc);
                             else if (datatype.equals("int[]"))
@@ -186,12 +195,7 @@ public class DefaultFormatterFactory implements FormatterFactory
         return new IntArrayFormatter();
     }
 
-    public Formatter getLocalTimestampFormatter(ColumnDesc columnDesc)
-    {
-        return new LocalTimestampFormatter();
-    }
-
-    public Formatter getUTCTimestampFormatter(ColumnDesc columnDesc)
+    public Formatter getTimestampFormatter(ColumnDesc columnDesc)
     {
         return new UTCTimestampFormatter();
     }
