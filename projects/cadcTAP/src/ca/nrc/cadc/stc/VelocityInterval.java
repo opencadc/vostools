@@ -69,112 +69,20 @@
 
 package ca.nrc.cadc.stc;
 
-import java.util.ArrayList;
 import java.util.List;
 
 /**
- * Class to represent a STC-S Circle.
+ * Class to represent a STC-S VelocityInterval.
  *
  */
-public class Circle extends SpatialSubphrase implements Space
+public class VelocityInterval
 {
-    public static final String NAME = "Circle";
-    public List<Double> pos;
-    public Double radius;
+    public static final String NAME = "VelocityInterval";
+    
+    public Double fill;
+    public List<Double> lolimit;
+    public List<Double> hilimit;
 
-    public Circle()
-    {
-        super(NAME);
-    }
-
-    public String format(Space space)
-    {
-        if (!(space instanceof Circle))
-            throw new IllegalArgumentException("Expected Circle, was " + space.getClass().getName());
-        Circle circle = (Circle) space;
-        StringBuilder sb = new StringBuilder();
-        sb.append(NAME).append(" ");
-        if (circle.fill != null)
-            sb.append("fillfactor ").append(circle.fill).append(" ");
-        sb.append(circle.frame).append(" ");
-        if (circle.refpos != null)
-            sb.append(circle.refpos).append(" ");
-        if (circle.flavor != null)
-            sb.append(circle.flavor).append(" ");
-        if (circle.pos != null)
-            sb.append(listToString(circle.pos));
-        if (circle.radius != null)
-            sb.append(circle.radius).append(" ");
-        if (circle.position != null)
-            sb.append("Position ").append(listToString(circle.position));
-        if (circle.unit != null)
-            sb.append("unit ").append(circle.unit).append(" ");
-        if (circle.error != null)
-            sb.append("Error ").append(listToString(circle.error));
-        if (circle.resln != null)
-            sb.append("Resolution ").append(listToString(circle.resln));
-        if (circle.size != null)
-            sb.append("Size ").append(listToString(circle.size));
-        if (circle.pixsiz != null)
-            sb.append("PixSize ").append(listToString(circle.pixsiz));
-        if (circle.velocity != null)
-            sb.append(STC.format(circle.velocity));
-        return sb.toString().trim();
-    }
-
-    public Space parse(String phrase)
-        throws StcsParsingException
-    {
-        init(phrase);
-        return this;
-    }
-
-    protected void getPos()
-        throws StcsParsingException
-    {
-        // current word as a Double.
-        Double value = null;
-        if (currentWord == null)
-        {
-            if (words.hasNextDouble())
-                value = words.nextDouble();
-            else if (words.hasNext())
-                throw new StcsParsingException("Invalid pos element " + words.next());
-            else
-                throw new StcsParsingException("Unexpected end to STC-S phrase before pos element");
-        }
-        else
-        {
-            try
-            {
-                value = Double.valueOf(currentWord);
-            }
-            catch (NumberFormatException e)
-            {
-                throw new StcsParsingException("Invalid pos value " + currentWord, e);
-            }
-        }
-
-        // Create new List and add the first value.
-        pos = new ArrayList<Double>();
-        pos.add(value);
-
-        // Loop through the next x values and add to list,
-        // last Double is the radius.
-        while (words.hasNextDouble())
-        {
-            value = words.nextDouble();
-            if (words.hasNextDouble())
-                pos.add(value);
-            else
-                radius = value;
-        }
-
-        // Should only be 1, 2, or 3 pos values.
-        if (pos.size() != dimensions)
-            throw new StcsParsingException("Invalid number of pos values " + pos.size());
-
-        currentWord = null;
-    }
+    public VelocityInterval() { }
 
 }

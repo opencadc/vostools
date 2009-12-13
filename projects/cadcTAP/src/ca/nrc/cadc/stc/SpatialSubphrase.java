@@ -69,136 +69,197 @@
 
 package ca.nrc.cadc.stc;
 
+import java.text.DecimalFormat;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Scanner;
 
 /**
- * Class to represent a STC-S Velocity.
+ * Base class for a STC-S Space.
  *
  */
-public class Velocity implements Space
+public abstract class SpatialSubphrase
 {
-    public static final String NAME = "Velocity";
-    private static final String DEFAULT_UNIT = "m/s";
+    // Default values.
+    protected static final String DEFAULT_FRAME = Frame.UNKNOWNFRAME;
+    protected static final String DEFAULT_REFPOS = ReferencePosition.UNKNOWNREFPOS;
+    protected static final String DEFAULT_FLAVOR = Flavor.SPHER2;
+    protected static final String DEFAULT_UNIT = SpatialUnit.DEG;
 
-    public List<VelocityInterval> intervals;
-    public Double vel;
+    // Formatter for Double values.
+    protected static DecimalFormat doubleFormat;
+
+    static
+    {
+        // TODO what is the format, should it even be used?
+        doubleFormat = new DecimalFormat("####.########");
+        doubleFormat.setDecimalSeparatorAlwaysShown(true);
+        doubleFormat.setMinimumFractionDigits(1);
+    }
+
+    /**
+     * STC-S phrase elements.
+     */
+    public String phrase;
+    public String space;
+    public Double fill;
+    public String frame;
+    public String refpos;
+    public String flavor;
+    public List<Double> position;
     public String unit;
     public List<Double> error;
     public List<Double> resln;
+    public List<Double> size;
     public List<Double> pixsiz;
-    
+    public Velocity velocity;
+
+    // Dimensionality of the frame.
+    protected int dimensions;
+
+    // Words to process in the phrase?
     protected boolean endOfWords;
+
+    // The current word from the scanner.
     protected String currentWord;
 
-    private Scanner words;
+    // The tokenized phrase.
+    protected Scanner words;
 
-    public Velocity() { }
-
-    public String format(Space space)
+    /**
+     *
+     * @param space
+     */
+    public SpatialSubphrase(String space)
     {
-        if (!(space instanceof Velocity))
-            throw new IllegalArgumentException("Expected Velocity, was " + space.getClass().getName());
-        Velocity velocity = (Velocity) space;
-        StringBuilder sb = new StringBuilder();
-        for (VelocityInterval interval : velocity.intervals)
-        {
-            sb.append(VelocityInterval.NAME).append(" ");
-            if (interval.fill != null)
-                sb.append("fillfactor ").append(interval.fill).append(" ");
-            for (Double loLimit : interval.lolimit)
-                sb.append(loLimit).append(" ");
-            for (Double hiLimit : interval.hilimit)
-                sb.append(hiLimit).append(" ");
-        }
-        if (velocity.vel != null)
-            sb.append("Velocity ").append(velocity.vel).append(" ");
-        if (velocity.unit != null)
-            sb.append("unit ").append(velocity.unit).append(" ");
-        if (velocity.error != null)
-            sb.append("Error ").append(doubleListToString(velocity.error));
-        if (velocity.resln != null)
-            sb.append("Resolution ").append(doubleListToString(velocity.resln));
-        if (velocity.pixsiz != null)
-            sb.append("PixSize ").append(doubleListToString(velocity.pixsiz));
-        return sb.toString().trim();
+        this.space = space;
+        this.frame = DEFAULT_FRAME;
     }
 
-    public Space parse(String phrase)
+    public void init(String phrase)
         throws StcsParsingException
     {
-        words = new Scanner(phrase);
-        words.useDelimiter("\\s+");
+        if (phrase == null || phrase.length() == 0)
+            return;
+        this.phrase = phrase.trim();
+
         endOfWords = false;
         currentWord = null;
+        words = new Scanner(phrase);
+        words.useDelimiter("\\s+");
 
-        getVelocityIntervals();
-        getVelocity();
+        valiateSpace(space);
+        getFillfactor();
+        getFrame();
+        getRefpos();
+        getFlavor();
+        getDimensionality();
+        getPos();
+        getPosition();
         getUnit();
         getError();
         getResolution();
+        getSize();
         getPixSize();
-        return this;
+        getVelocity();
     }
 
-    protected void getVelocityIntervals()
+    protected abstract void getPos()
+        throws StcsParsingException;
+
+    protected void valiateSpace(String space)
         throws StcsParsingException
     {
-        while (words.hasNext("VelocityInterval"))
-        {
-            VelocityInterval interval = new VelocityInterval();
+        if (words.hasNext(space))
             words.next();
-
-            if (words.hasNext("fillfactor"))
-            {
-                words.next();
-                if (words.hasNextDouble())
-                    interval.fill = words.nextDouble();
-                else
-                    throw new StcsParsingException("fillfactor value missing in VelocityInterval");
-            }
-            List<Double> limits = new ArrayList<Double>();
-            while (words.hasNextDouble())
-                limits.add(words.nextDouble());
-            if (limits.size() % 2 != 0)
-                throw new StcsParsingException("Unmatched lolimit hilimit pair value");
-            int split = limits.size()/2;
-            interval.lolimit = new ArrayList<Double>();
-            interval.lolimit.addAll(limits.subList(0, split));
-            interval.hilimit = new ArrayList<Double>();
-            interval.hilimit.addAll(limits.subList(split, limits.size()));
-
-            if (intervals == null)
-                intervals = new ArrayList<VelocityInterval>();
-            intervals.add(interval);
+        else
+        {
+            if (words.hasNext())
+                throw new StcsParsingException("Invalid space value, found " + words.next() + ", expecting " + space);
+            else
+                throw new StcsParsingException("Unexpected end to STC-S phrase, missing space value");
         }
     }
 
-    protected void getVelocity()
+    protected void getFillfactor()
         throws StcsParsingException
     {
-       if (endOfWords)
-            return;
+        if (words.hasNext("fillfactor"))
+        {
+            words.next();
+            if (words.hasNextDouble())
+                fill = words.nextDouble();
+            else
+            {
+                if (words.hasNext())
+                    throw new StcsParsingException("Invalid fillfactor value, expecting double, found " + words.next());
+                else
+                    throw new StcsParsingException("Unexpected end to STC-S phrase, missing fillfactor value");
+            }
+        }
+    }
+
+    protected void getFrame()
+        throws StcsParsingException
+    {
+        if (words.hasNext())
+        {
+            frame = words.next();
+            if (!Frame.FRAMES.contains(frame))
+                throw new StcsParsingException("Invalid frame element " + frame);
+        }
+        else
+        {
+            throw new StcsParsingException("Unexpected end to STC-S phrase, missing frame element");
+        }
+    }
+
+    protected void getRefpos()
+        throws StcsParsingException
+    {
+        if (words.hasNext())
+        {
+            currentWord = words.next();
+            if (ReferencePosition.REFERENCE_POSITIONS.contains(currentWord))
+            {
+                refpos = currentWord;
+                currentWord = null;
+            }
+        }
+    }
+
+    protected void getFlavor()
+        throws StcsParsingException
+    {
         if (currentWord == null)
         {
             if (words.hasNext())
                 currentWord = words.next();
-            else
-                endOfWords = true;
         }
-        if (!endOfWords && currentWord.equals("Velocity"))
+        if (Flavor.FLAVORS.contains(currentWord))
         {
-            if (words.hasNextDouble())
-            {
-                vel = words.nextDouble();
-                currentWord = null;
-            }
-            else
-            {
-                throw new StcsParsingException("Unexpected end to STC-S phrase, missing Velocity value");
-            }
+            flavor = currentWord;
+            currentWord = null;
         }
+    }
+
+    protected void getDimensionality()
+    {
+        String f = flavor;
+        if (f == null)
+            f = DEFAULT_FLAVOR;
+        if (f.equals(Flavor.CART1))
+            dimensions = 1;
+        if (f.equals(Flavor.CART2) || f.equals(Flavor.SPHER2))
+            dimensions = 2;
+        if (f.equals(Flavor.CART3) || f.equals(Flavor.SPHER3) || f.equals(Flavor.UNITSPHER))
+            dimensions = 3;
+    }
+
+    protected void getPosition()
+        throws StcsParsingException
+    {
+        position = getListForElement("Position");
     }
 
     protected void getUnit()
@@ -218,8 +279,7 @@ public class Velocity implements Space
             if (words.hasNext())
             {
                 currentWord = words.next();
-                if (currentWord.endsWith(DEFAULT_UNIT)
-                    || SpatialUnit.UNITS.contains(currentWord))
+                if (SpatialUnit.UNITS.contains(currentWord))
                 {
                     unit = currentWord;
                     currentWord = null;
@@ -248,10 +308,35 @@ public class Velocity implements Space
         resln = getListForElement("Resolution");
     }
 
+    protected void getSize()
+        throws StcsParsingException
+    {
+        size = getListForElement("Size");
+    }
+
     protected void getPixSize()
         throws StcsParsingException
     {
         pixsiz = getListForElement("PixSize");
+    }
+
+    protected void getVelocity()
+        throws StcsParsingException
+    {
+        if (endOfWords)
+            return;
+        String subPhrase = words.nextLine();
+        if (currentWord != null)
+            subPhrase = currentWord + " " + subPhrase;
+        velocity = (Velocity) STC.parse(subPhrase);
+    }
+
+    protected String listToString(List<Double> list)
+    {
+        StringBuilder sb = new StringBuilder();
+        for (Double d : list)
+            sb.append(doubleFormat.format(d)).append(" ");
+        return sb.toString();
     }
 
     private List<Double> getListForElement(String word)
@@ -278,16 +363,10 @@ public class Velocity implements Space
                 values.add(words.nextDouble());
             }
             currentWord = null;
+            if (!words.hasNext())
+                endOfWords = true;
         }
         return values;
-    }
-
-    protected String doubleListToString(List<Double> list)
-    {
-        StringBuilder sb = new StringBuilder();
-        for (Double d : list)
-            sb.append(d).append(" ");
-        return sb.toString();
     }
 
 }

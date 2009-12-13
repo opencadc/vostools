@@ -71,58 +71,62 @@ package ca.nrc.cadc.stc;
 
 import java.util.ArrayList;
 import java.util.List;
-import org.apache.log4j.Level;
-import org.apache.log4j.Logger;
 
-public class Box extends Space
+/**
+ * Class to represent a STC-S Box.
+ * 
+ */
+public class Box extends SpatialSubphrase implements Space
 {
-    private static Logger log = Logger.getLogger(Box.class);
-    static
-    {
-        // default log level is debug.
-        log = Logger.getLogger(Box.class);
-        log.setLevel((Level)Level.DEBUG);
-    }
-
+    public static final String NAME = "Box";
     public List<Double> pos;
     public List<Double> bsize;
 
-    public Box(String phrase)
-        throws StcsParsingException
+    public Box()
     {
-        super("Box", phrase);
+        super(NAME);
+    }
+    
+    public String format(Space space)
+    {
+        if (!(space instanceof Box))
+            throw new IllegalArgumentException("Expected Box, was " + space.getClass().getName());
+        Box box = (Box) space;
+        StringBuilder sb = new StringBuilder();
+        sb.append(NAME).append(" ");
+        if (box.fill != null)
+            sb.append("fillfactor ").append(box.fill).append(" ");
+        sb.append(box.frame).append(" ");
+        if (box.refpos != null)
+            sb.append(box.refpos).append(" ");
+        if (box.flavor != null)
+            sb.append(box.flavor).append(" ");
+        if (box.pos != null)
+            sb.append(listToString(box.pos));
+        if (box.bsize != null)
+            sb.append(listToString(box.bsize));
+        if (box.position != null)
+            sb.append("Position ").append(listToString(box.position));
+        if (box.unit != null)
+            sb.append("unit ").append(box.unit).append(" ");
+        if (box.error != null)
+            sb.append("Error ").append(listToString(box.error));
+        if (box.resln != null)
+            sb.append("Resolution ").append(listToString(box.resln));
+        if (box.size != null)
+            sb.append("Size ").append(listToString(box.size));
+        if (box.pixsiz != null)
+            sb.append("PixSize ").append(listToString(box.pixsiz));
+        if (box.velocity != null)
+            sb.append(STC.format(box.velocity));
+        return sb.toString().trim();
     }
 
-    public String toSTCString()
+    public Space parse(String phrase)
+        throws StcsParsingException
     {
-        StringBuilder sb = new StringBuilder();
-        sb.append(space).append(" ");
-        if (fill != null)
-            sb.append("fillfactor ").append(fill).append(" ");
-        sb.append(frame).append(" ");
-        if (refpos != null)
-            sb.append(refpos).append(" ");
-        if (flavor != null)
-            sb.append(flavor).append(" ");
-        if (pos != null)
-            sb.append(doubleListToString(pos));
-        if (bsize != null)
-            sb.append(doubleListToString(bsize));
-        if (position != null)
-            sb.append("Position ").append(doubleListToString(position));
-        if (unit != null)
-            sb.append("unit ").append(unit).append(" ");
-        if (error != null)
-            sb.append("Error ").append(doubleListToString(error));
-        if (resln != null)
-            sb.append("Resolution ").append(doubleListToString(resln));
-        if (size != null)
-            sb.append("Size ").append(doubleListToString(size));
-        if (pixsiz != null)
-            sb.append("PixSize ").append(doubleListToString(pixsiz));
-        if (velocity != null)
-            sb.append(velocity.toSTCString());
-        return sb.toString();
+        init(phrase);
+        return this;
     }
 
     protected void getPos()
@@ -168,8 +172,6 @@ public class Box extends Space
         bsize.addAll(values.subList(dimensions, values.size()));
 
         currentWord = null;
-        log.debug("pos: " + pos);
-        log.debug("bsize: " + bsize);
     }
 
 }

@@ -70,111 +70,100 @@
 package ca.nrc.cadc.stc;
 
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 
 /**
- * Class to represent a STC-S Circle.
+ * Class to represent a STC-S Union operator.
  *
  */
-public class Circle extends SpatialSubphrase implements Space
+public class Union implements Space
 {
-    public static final String NAME = "Circle";
-    public List<Double> pos;
-    public Double radius;
-
-    public Circle()
+    public static final String NAME = "Union";
+    public static final String[] SPACES = new String[]
     {
-        super(NAME);
-    }
+        "Box", "Circle", "Polygon", "Position", "Union"
+    };
 
+    public List<Space> spaces;
+
+    public Union() { }
+    
     public String format(Space space)
     {
-        if (!(space instanceof Circle))
-            throw new IllegalArgumentException("Expected Circle, was " + space.getClass().getName());
-        Circle circle = (Circle) space;
+        if (!(space instanceof Union))
+            throw new IllegalArgumentException("Expected Union, was " + space.getClass().getName());
         StringBuilder sb = new StringBuilder();
-        sb.append(NAME).append(" ");
-        if (circle.fill != null)
-            sb.append("fillfactor ").append(circle.fill).append(" ");
-        sb.append(circle.frame).append(" ");
-        if (circle.refpos != null)
-            sb.append(circle.refpos).append(" ");
-        if (circle.flavor != null)
-            sb.append(circle.flavor).append(" ");
-        if (circle.pos != null)
-            sb.append(listToString(circle.pos));
-        if (circle.radius != null)
-            sb.append(circle.radius).append(" ");
-        if (circle.position != null)
-            sb.append("Position ").append(listToString(circle.position));
-        if (circle.unit != null)
-            sb.append("unit ").append(circle.unit).append(" ");
-        if (circle.error != null)
-            sb.append("Error ").append(listToString(circle.error));
-        if (circle.resln != null)
-            sb.append("Resolution ").append(listToString(circle.resln));
-        if (circle.size != null)
-            sb.append("Size ").append(listToString(circle.size));
-        if (circle.pixsiz != null)
-            sb.append("PixSize ").append(listToString(circle.pixsiz));
-        if (circle.velocity != null)
-            sb.append(STC.format(circle.velocity));
+        sb.append(NAME);
+        sb.append(" ( ");
+        for (Space s : spaces)
+            sb.append(STC.format(s)).append(" ");
+        sb.append(")");
         return sb.toString().trim();
     }
 
     public Space parse(String phrase)
         throws StcsParsingException
     {
-        init(phrase);
+        // Phrase must start with Union.
+        phrase = phrase.trim();
+        if (!phrase.startsWith(NAME))
+            throw new StcsParsingException("Phrase must start with Union: " + phrase);
+
+        // Get the string within the opening and closing parentheses.
+        int open = phrase.indexOf("(");
+        int close = phrase.lastIndexOf(")");
+        if (open == -1 || close == -1)
+            throw new StcsParsingException("Union arguments must be enclosed in parentheses: " + phrase);
+        String union = phrase.substring(open + 1, close).trim();
+
+        int index = 0;
+        String subPhrase = getNextSpace(union, index);
+        while (subPhrase != null)
+        {   
+            if (spaces == null)
+                spaces = new ArrayList<Space>();
+            spaces.add(STC.parse(subPhrase));
+            index = index + subPhrase.length();
+            subPhrase = getNextSpace(union, index);
+        }
         return this;
     }
 
-    protected void getPos()
-        throws StcsParsingException
+    private String getNextSpace(String phrase, int index)
     {
-        // current word as a Double.
-        Double value = null;
-        if (currentWord == null)
+        // Search the phrase for a Space.
+        int[] indexes = new int[SPACES.length];
+        for (int i = 0; i < indexes.length; i++)
+            indexes[i] = phrase.indexOf(SPACES[i], index);
+
+        // Sort in descending order.
+        Arrays.sort(indexes);
+
+        // Assign start the first positive index.
+        // Assign end the second positive index.
+        int start = -1;
+        int end = -1;
+        for (int i = 0; i < indexes.length; i++)
         {
-            if (words.hasNextDouble())
-                value = words.nextDouble();
-            else if (words.hasNext())
-                throw new StcsParsingException("Invalid pos element " + words.next());
-            else
-                throw new StcsParsingException("Unexpected end to STC-S phrase before pos element");
-        }
-        else
-        {
-            try
+            if (indexes[i] == -1)
+                continue;
+            if (start == -1)
             {
-                value = Double.valueOf(currentWord);
+                start = indexes[i];
+                continue;
             }
-            catch (NumberFormatException e)
+            if (end == -1)
             {
-                throw new StcsParsingException("Invalid pos value " + currentWord, e);
+                end = indexes[i];
+                break;
             }
         }
-
-        // Create new List and add the first value.
-        pos = new ArrayList<Double>();
-        pos.add(value);
-
-        // Loop through the next x values and add to list,
-        // last Double is the radius.
-        while (words.hasNextDouble())
-        {
-            value = words.nextDouble();
-            if (words.hasNextDouble())
-                pos.add(value);
-            else
-                radius = value;
-        }
-
-        // Should only be 1, 2, or 3 pos values.
-        if (pos.size() != dimensions)
-            throw new StcsParsingException("Invalid number of pos values " + pos.size());
-
-        currentWord = null;
+        if (start != -1 && end == -1)
+            return phrase.substring(start);
+        else if (start != -1 && end != -1)
+            return phrase.substring(start, end);
+        return null;
     }
 
 }

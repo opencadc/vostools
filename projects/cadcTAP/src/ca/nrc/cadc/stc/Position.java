@@ -74,53 +74,54 @@ import java.util.List;
 import org.apache.log4j.Level;
 import org.apache.log4j.Logger;
 
-public class Position extends Space
+/**
+ * Class to represent a STC-S Position.
+ * 
+ */
+public class Position extends SpatialSubphrase implements Space
 {
-    private static Logger log = Logger.getLogger(Position.class);
-    static
-    {
-        // default log level is debug.
-        log = Logger.getLogger(Position.class);
-        log.setLevel((Level)Level.DEBUG);
-    }
-
+    public static final String NAME = "Position";
     public List<Double> pos;
 
     public Position()
     {
-        super("Position");
+        super(NAME);
     }
 
-    public Position(String phrase)
+    public String format(Space space)
+    {
+        if (!(space instanceof Position))
+            throw new IllegalArgumentException("Expected Position, was " + space.getClass().getName());
+        Position p = (Position) space;
+        StringBuilder sb = new StringBuilder();
+        sb.append(NAME).append(" ");
+        sb.append(p.frame).append(" ");
+        if (p.refpos != null)
+            sb.append(p.refpos).append(" ");
+        if (p.flavor != null)
+            sb.append(p.flavor).append(" ");
+        if (p.pos != null)
+            sb.append(listToString(p.pos));
+        if (p.unit != null)
+            sb.append("unit ").append(p.unit).append(" ");
+        if (p.error != null)
+            sb.append("Error ").append(listToString(p.error));
+        if (p.resln != null)
+            sb.append("Resolution ").append(listToString(p.resln));
+        if (p.size != null)
+            sb.append("Size ").append(listToString(p.size));
+        if (p.pixsiz != null)
+            sb.append("PixSize ").append(listToString(p.pixsiz));
+        if (p.velocity != null)
+            sb.append(STC.format(p.velocity));
+        return sb.toString().trim();
+    }
+
+    public Space parse(String phrase)
         throws StcsParsingException
     {
-        super("Position", phrase);
-    }
-
-    public String toSTCString()
-    {
-        StringBuilder sb = new StringBuilder();
-        sb.append(space).append(" ");
-        sb.append(frame).append(" ");
-        if (refpos != null)
-            sb.append(refpos).append(" ");
-        if (flavor != null)
-            sb.append(flavor).append(" ");
-        if (pos != null)
-            sb.append(doubleListToString(pos));
-        if (unit != null)
-            sb.append("unit ").append(unit).append(" ");
-        if (error != null)
-            sb.append("Error ").append(doubleListToString(error));
-        if (resln != null)
-            sb.append("Resolution ").append(doubleListToString(resln));
-        if (size != null)
-            sb.append("Size ").append(doubleListToString(size));
-        if (pixsiz != null)
-            sb.append("PixSize ").append(doubleListToString(pixsiz));
-        if (velocity != null)
-            sb.append(velocity.toSTCString());
-        return sb.toString();
+        init(phrase);
+        return this;
     }
 
     protected void getPos()
@@ -132,10 +133,6 @@ public class Position extends Space
         {
             if (words.hasNextDouble())
                 value = words.nextDouble();
-            else if (words.hasNext())
-                throw new StcsParsingException("Invalid pos element " + words.next());
-            else
-                throw new StcsParsingException("Unexpected end to STC-S phrase before pos element");
         }
         else
         {
@@ -143,12 +140,13 @@ public class Position extends Space
             {
                 value = Double.valueOf(currentWord);
             }
-            catch (NumberFormatException e)
-            {
-                throw new StcsParsingException("Invalid pos value " + currentWord, e);
-            }
+            catch (NumberFormatException ignore) {}
         }
 
+        // Double value not found? return.
+        if (value == null)
+            return;
+        
         // Create new List and add first value.
         pos = new ArrayList<Double>();
         pos.add(value);
@@ -162,7 +160,6 @@ public class Position extends Space
             throw new StcsParsingException("Invalid number of pos values " + pos.size());
 
         currentWord = null;
-        log.debug("pos: " + pos);
     }
-    
+
 }
