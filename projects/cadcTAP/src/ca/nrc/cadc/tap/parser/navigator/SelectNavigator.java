@@ -69,24 +69,18 @@
 
 package ca.nrc.cadc.tap.parser.navigator;
 
-import java.util.ArrayList;
-import java.util.Iterator;
-import java.util.*;
-
-import javax.management.RuntimeErrorException;
-
+import java.util.List;
+import java.util.Stack;
 import net.sf.jsqlparser.schema.Column;
 import net.sf.jsqlparser.schema.Table;
 import net.sf.jsqlparser.statement.select.ColumnReference;
 import net.sf.jsqlparser.statement.select.Distinct;
 import net.sf.jsqlparser.statement.select.FromItem;
-import net.sf.jsqlparser.statement.select.FromItemVisitor;
 import net.sf.jsqlparser.statement.select.Join;
 import net.sf.jsqlparser.statement.select.Limit;
 import net.sf.jsqlparser.statement.select.OrderByElement;
 import net.sf.jsqlparser.statement.select.PlainSelect;
 import net.sf.jsqlparser.statement.select.SelectItem;
-import net.sf.jsqlparser.statement.select.SelectItemVisitor;
 import net.sf.jsqlparser.statement.select.SelectVisitor;
 import net.sf.jsqlparser.statement.select.SubSelect;
 import net.sf.jsqlparser.statement.select.Top;
@@ -94,13 +88,6 @@ import net.sf.jsqlparser.statement.select.Union;
 
 import org.apache.log4j.Logger;
 
-import ca.nrc.cadc.tap.parser.adql.AdqlManager;
-import ca.nrc.cadc.tap.parser.adql.exception.AdqlValidateException;
-import ca.nrc.cadc.tap.parser.adql.validator.AdqlValidatorVisitor;
-import ca.nrc.cadc.tap.parser.adql.validator.PlainSelectInfo;
-import ca.nrc.cadc.tap.parser.adql.validator.SelectValidator;
-import ca.nrc.cadc.tap.parser.adql.validator.SelectValidator.PlainSelectType;
-import ca.nrc.cadc.tap.parser.adql.validator.SelectValidator.VisitingPart;
 
 /**
  * Basic SelectVisitor implementation. This class implements FromItemVisitor to handle references to tables and subselects in a
@@ -135,7 +122,7 @@ public class SelectNavigator implements SelectVisitor
     protected ReferenceNavigator _referenceNavigator;
     protected FromItemNavigator _fromItemNavigator;
 
-    public SelectNavigator() {}
+    protected SelectNavigator() {}
     
     public SelectNavigator(ExpressionNavigator en, ReferenceNavigator rn, FromItemNavigator fn)
     {

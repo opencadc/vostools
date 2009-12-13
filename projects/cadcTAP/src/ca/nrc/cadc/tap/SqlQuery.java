@@ -75,8 +75,8 @@ import java.util.Map;
 import net.sf.jsqlparser.JSQLParserException;
 import net.sf.jsqlparser.statement.Statement;
 import ca.nrc.cadc.tap.parser.ParserUtil;
-import ca.nrc.cadc.tap.parser.adql.TapSelectItem;
-import ca.nrc.cadc.tap.parser.converter.basic.AllColumnConverterNavigator;
+import ca.nrc.cadc.tap.parser.TapSelectItem;
+import ca.nrc.cadc.tap.parser.converter.AllColumnConverter;
 import ca.nrc.cadc.tap.parser.extractor.SelectListExtractor;
 import ca.nrc.cadc.tap.parser.extractor.SelectListExtractorNavigator;
 import ca.nrc.cadc.tap.parser.navigator.ExpressionNavigator;
@@ -135,7 +135,7 @@ public class SqlQuery implements TapQuery
         FromItemNavigator fn = new FromItemNavigator();
         SelectNavigator sn = new SelectNavigator(en, rn, fn);
 
-        SelectNavigator sn2 = new AllColumnConverterNavigator(_tapSchema);
+        SelectNavigator sn2 = new AllColumnConverter(_tapSchema);
 
         try
         {
@@ -158,7 +158,7 @@ public class SqlQuery implements TapQuery
 
         List<TapSelectItem> rtn = null;
 
-        SelectNavigator sn2 = new AllColumnConverterNavigator(_tapSchema);
+        SelectNavigator sn2 = new AllColumnConverter(_tapSchema);
 
         SelectListExtractor en = new SelectListExtractor(_tapSchema, _extraTables);
         ReferenceNavigator rn = null;

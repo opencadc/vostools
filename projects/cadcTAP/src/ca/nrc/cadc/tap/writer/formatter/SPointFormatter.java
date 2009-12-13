@@ -69,8 +69,8 @@
 
 package ca.nrc.cadc.tap.writer.formatter;
 
-import ca.nrc.cadc.stc.Frame;
 import ca.nrc.cadc.stc.Position;
+import ca.nrc.cadc.stc.STC;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.util.ArrayList;
@@ -136,12 +136,12 @@ public class SPointFormatter implements ResultSetFormatter
 
         // Create STC Position.
         Position position = new Position();
-        position.frame = Frame.ICRS;
+        position.frame = "ICRS";
         position.pos = new ArrayList();
         position.pos.add(x);
         position.pos.add(y);
 
-        return position.format(position);
+        return STC.format(position);
     }
     
 }

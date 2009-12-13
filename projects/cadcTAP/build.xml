@@ -111,8 +111,7 @@
     <property name="ext.postgres" value="${ext.lib}/postgresql-jdbc.jar" />
     <property name="ext.xerces" value="${ext.lib}/xerces.jar" />
     <property name="ext.commonsLog" value="${ext.lib}/commons-logging.jar" />
-    <property name="lib.javaUtil" value="${lib}/javaUtil.jar" />
-    <property name="testingJars" value="${build.cadcTAP}:${ext.junit}:${lib.javaUtil}:${ext.xerces}:${ext.postgres}:${ext.commonsLog}" />
+    <property name="testingJars" value="${build.cadcTAP}:${ext.junit}:${ext.xerces}:${ext.postgres}:${ext.commonsLog}" />
 
     <!-- compile the test classes -->
     <target name="compile-test" depends="compile">
@@ -138,14 +137,18 @@
                 <pathelement path="build/class"/>
                 <pathelement path="${jars}:${testingJars}"/>
             </classpath>
-            <test name="ca.nrc.cadc.tap.parser.AdqlQueryImplTest"/>
-        	<!--
-            <test name="ca.nrc.cadc.tap.parser.AdqlQueryTest"/>
-            <test name="ca.nrc.cadc.tap.parser.AllColumnConverterTest"/>
-            <test name="ca.nrc.cadc.tap.parser.TopConverterTest"/>
+
             <test name="ca.nrc.cadc.tap.parser.ValidatorTest"/>
             <test name="ca.nrc.cadc.tap.parser.NavigatorTest"/>
             <test name="ca.nrc.cadc.tap.parser.ExtractorTest"/>
+            
+	    <test name="ca.nrc.cadc.tap.parser.AllColumnConverterTest"/>
+	    <test name="ca.nrc.cadc.tap.parser.TopConverterTest"/>
+	    
+	    <test name="ca.nrc.cadc.tap.parser.SqlQueryTest" />
+	    <test name="ca.nrc.cadc.tap.parser.AdqlQueryTest" />
+
+	    <!--
             <test name="ca.nrc.cadc.tap.parser.adql.SqlParserTest"/>
             <test name="ca.nrc.cadc.tap.test.TapValidatorTest"/>
             <test name="ca.nrc.cadc.tap.test.UploadManagerParamTest"/>

@@ -69,8 +69,8 @@
 
 package ca.nrc.cadc.tap.writer.formatter;
 
-import ca.nrc.cadc.stc.Frame;
 import ca.nrc.cadc.stc.Polygon;
+import ca.nrc.cadc.stc.STC;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.util.ArrayList;
@@ -137,7 +137,7 @@ public class SPolyFormatter implements ResultSetFormatter
 
         // Create STC Polygon and set some defaults.
         Polygon polygon = new Polygon();
-        polygon.frame = Frame.ICRS;
+        polygon.frame = "ICRS";
         polygon.pos = new ArrayList<Double>();
 
         // Loop through each set of vertices.
@@ -160,7 +160,7 @@ public class SPolyFormatter implements ResultSetFormatter
             polygon.pos.add(y);
         }
 
-        return polygon.format(polygon);
+        return STC.format(polygon);
     }
 
 }

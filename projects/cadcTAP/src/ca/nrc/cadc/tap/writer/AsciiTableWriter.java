@@ -78,7 +78,7 @@ import java.sql.ResultSetMetaData;
 import java.sql.SQLException;
 import java.util.List;
 
-import ca.nrc.cadc.tap.parser.adql.TapSelectItem;
+import ca.nrc.cadc.tap.parser.TapSelectItem;
 import ca.nrc.cadc.tap.schema.TapSchema;
 
 import ca.nrc.cadc.tap.writer.formatter.DefaultFormatterFactory;

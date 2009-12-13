@@ -81,12 +81,12 @@ import net.sf.jsqlparser.statement.select.AllTableColumns;
 import net.sf.jsqlparser.statement.select.PlainSelect;
 import net.sf.jsqlparser.statement.select.SelectExpressionItem;
 import ca.nrc.cadc.tap.parser.ParserUtil;
-import ca.nrc.cadc.tap.parser.adql.TapSelectItem;
+import ca.nrc.cadc.tap.parser.TapSelectItem;
 import ca.nrc.cadc.tap.parser.exception.TapParserException;
 import ca.nrc.cadc.tap.parser.navigator.ExpressionNavigator;
 import ca.nrc.cadc.tap.schema.TableDesc;
 import ca.nrc.cadc.tap.schema.TapSchema;
-import ca.nrc.cadc.tap.schema.TapSchemaUtil;
+import ca.nrc.cadc.tap.parser.schema.TapSchemaUtil;
 
 /**
  * re-engineered version on 2009-12-01

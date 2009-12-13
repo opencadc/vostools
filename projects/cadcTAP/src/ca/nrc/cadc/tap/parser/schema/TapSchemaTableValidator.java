@@ -67,32 +67,35 @@
 ************************************************************************
 */
 
-package ca.nrc.cadc.tap.parser.validator;
+package ca.nrc.cadc.tap.parser.schema;
 
 import org.apache.log4j.Logger;
 
 import ca.nrc.cadc.tap.parser.navigator.FromItemNavigator;
-import ca.nrc.cadc.tap.parser.navigator.SelectNavigator.VisitingPart;
 import ca.nrc.cadc.tap.schema.TableDesc;
-import ca.nrc.cadc.tap.schema.TapSchemaUtil;
 
+import ca.nrc.cadc.tap.schema.TapSchema;
 import net.sf.jsqlparser.schema.Table;
-import net.sf.jsqlparser.statement.select.FromItemVisitor;
-import net.sf.jsqlparser.statement.select.SubJoin;
-import net.sf.jsqlparser.statement.select.SubSelect;
 
 /**
  * @author zhangsa
  *
  */
-public class FromItemValidator extends FromItemNavigator
+public class TapSchemaTableValidator extends FromItemNavigator
 {
-    protected static Logger log = Logger.getLogger(FromItemValidator.class);
+    protected static Logger log = Logger.getLogger(TapSchemaTableValidator.class);
 
-    public FromItemValidator()
+    protected TapSchema tapSchema;
+    
+    public TapSchemaTableValidator()
     {
     }
 
+    public void setTapSchema(TapSchema tapSchema)
+    {
+        this.tapSchema = tapSchema;
+    }
+    
     /* (non-Javadoc)
      * @see net.sf.jsqlparser.statement.select.FromItemVisitor#visit(net.sf.jsqlparser.schema.Table)
      */
@@ -101,8 +104,7 @@ public class FromItemValidator extends FromItemNavigator
     {
         log.debug("visit(table) " + table);
         // all table should be in TapSchema
-        ValidatorNavigator vn = (ValidatorNavigator) _selectNavigator;
-        TableDesc td = TapSchemaUtil.findTableDesc(vn.getTapSchema(), table);
+        TableDesc td = TapSchemaUtil.findTableDesc(tapSchema, table);
         if (td == null)
             throw new IllegalArgumentException("Table [ " + table + " ] is not found in TapSchema");
     }

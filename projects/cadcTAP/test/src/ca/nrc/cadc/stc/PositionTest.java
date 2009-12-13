@@ -5,9 +5,14 @@
 
 package ca.nrc.cadc.stc;
 
-import java.util.Scanner;
+import ca.nrc.cadc.util.Log4jInit;
+import java.util.ArrayList;
+import org.apache.log4j.Level;
+import org.apache.log4j.Logger;
 import org.junit.After;
+import org.junit.AfterClass;
 import org.junit.Before;
+import org.junit.BeforeClass;
 import org.junit.Test;
 import static org.junit.Assert.*;
 
@@ -25,13 +30,18 @@ public class PositionTest
     public static final String PIXSIZE = "PixSize 0.00005 0.00005 0.00015 0.00015";
     public static final String VELOCITY = "VelocityInterval fillfactor 1.0 1.0 2.0 3.0 4.0";
 
-    public Position position;
-    public String phrase;
+    public static String phrase;
+
+    private static Logger LOG = Logger.getLogger(PositionTest.class);
+    static
+    {
+        Log4jInit.setLevel("ca", Level.INFO);
+    }
 
     public PositionTest() {}
 
-    @Before
-    public void setUp() throws Exception
+    @BeforeClass
+    public static void setUpClass() throws Exception
     {
         StringBuilder sb = new StringBuilder();
         sb.append(SPACE).append(" ");
@@ -44,97 +54,89 @@ public class PositionTest
         sb.append(RESOLUTION).append(" ");
         sb.append(SIZE).append(" ");
         sb.append(PIXSIZE).append(" ");
-        sb.append(VELOCITY).append(" ");
+        sb.append(VELOCITY);
         phrase = sb.toString();
-        position = new Position(phrase);
+    }
+
+    @AfterClass
+    public static void tearDownClass() throws Exception {
+    }
+
+    @Before
+    public void setUp() {
     }
 
     @After
-    public void tearDown()
-    {
+    public void tearDown() {
     }
 
     @Test
-    public void testFrame() throws Exception
+    public void testFormat() throws Exception
     {
-        assertEquals("ICRS", position.frame);
+        LOG.debug("parse");
+
+        Position position = new Position();
+        position.fill = 1.0D;
+        position.frame = FRAME;
+        position.refpos = REFPOS;
+        position.flavor = FLAVOR;
+        position.pos = new ArrayList<Double>();
+        position.pos.add(148.9);
+        position.pos.add(69.1);
+        position.unit = "deg";
+        position.error = new ArrayList<Double>();
+        position.error.add(0.1);
+        position.error.add(0.2);
+        position.error.add(0.3);
+        position.error.add(0.4);
+        position.resln = new ArrayList<Double>();
+        position.resln.add(0.0001);
+        position.resln.add(0.0001);
+        position.resln.add(0.0003);
+        position.resln.add(0.0003);
+        position.size = new ArrayList<Double>();
+        position.size.add(0.5);
+        position.size.add(0.5);
+        position.size.add(0.67);
+        position.size.add(0.67);
+        position.pixsiz = new ArrayList<Double>();
+        position.pixsiz.add(0.00005);
+        position.pixsiz.add(0.00005);
+        position.pixsiz.add(0.00015);
+        position.pixsiz.add(0.00015);
+
+        position.velocity = new Velocity();
+        position.velocity.intervals = new ArrayList<VelocityInterval>();
+
+        VelocityInterval interval = new VelocityInterval();
+        interval.fill = 1.0;
+        interval.lolimit = new ArrayList<Double>();
+        interval.lolimit.add(1.0);
+        interval.lolimit.add(2.0);
+        interval.hilimit = new ArrayList<Double>();
+        interval.hilimit.add(3.0);
+        interval.hilimit.add(4.0);
+
+        position.velocity.intervals.add(interval);
+
+        String actual = STC.format(position);
+        LOG.debug("expected: " + phrase);
+        LOG.debug("  actual: " + actual);
+        assertEquals(phrase, actual);
+        LOG.info("testFormat passed");
     }
 
     @Test
-    public void testRefPos() throws Exception
+    public void testParse() throws Exception
     {
-        assertEquals("BARYCENTER", position.refpos);
-    }
+        LOG.debug("parse");
 
-    @Test
-    public void testFlavor() throws Exception
-    {
-        assertEquals("SPHER2", position.flavor);
-    }
-
-    @Test
-    public void testPos() throws Exception
-    {
-        assertEquals(new Double(148.9), position.pos.get(0));
-        assertEquals(new Double(69.1), position.pos.get(1));
-    }
-
-    @Test
-    public void testUnit() throws Exception
-    {
-        assertEquals("deg", position.unit);
-    }
-
-    @Test
-    public void testError() throws Exception
-    {
-        assertEquals(new Double(0.1), position.error.get(0));
-        assertEquals(new Double(0.2), position.error.get(1));
-        assertEquals(new Double(0.3), position.error.get(2));
-        assertEquals(new Double(0.4), position.error.get(3));
-    }
-
-    @Test
-    public void testResolution() throws Exception
-    {
-        assertEquals(new Double(0.0001), position.resln.get(0));
-        assertEquals(new Double(0.0001), position.resln.get(1));
-        assertEquals(new Double(0.0003), position.resln.get(2));
-        assertEquals(new Double(0.0003), position.resln.get(3));
-    }
-
-    @Test
-    public void testSize() throws Exception
-    {
-        assertEquals(new Double(0.5), position.size.get(0));
-        assertEquals(new Double(0.5), position.size.get(1));
-        assertEquals(new Double(0.67), position.size.get(2));
-        assertEquals(new Double(0.67), position.size.get(3));
-    }
-
-    @Test
-    public void testPixSize() throws Exception
-    {
-        assertEquals(new Double(0.00005), position.pixsiz.get(0));
-        assertEquals(new Double(0.00005), position.pixsiz.get(1));
-        assertEquals(new Double(0.00015), position.pixsiz.get(2));
-        assertEquals(new Double(0.00015), position.pixsiz.get(3));
-    }
-
-    @Test
-    public void testVelocity() throws Exception
-    {
-        assertEquals(new Double(1.0), position.velocity.intervals.get(0).fill);
-        assertEquals(new Double(1.0), position.velocity.intervals.get(0).lolimit.get(0));
-        assertEquals(new Double(2.0), position.velocity.intervals.get(0).lolimit.get(1));
-        assertEquals(new Double(3.0), position.velocity.intervals.get(0).hilimit.get(0));
-        assertEquals(new Double(4.0), position.velocity.intervals.get(0).hilimit.get(1));
-    }
-
-    @Test
-    public void testToSTCString() throws Exception
-    {
-        assertEquals(phrase, position.toSTCString());
+        Space space = STC.parse(phrase);
+        String actual = STC.format(space);
+        LOG.debug("expected: " + phrase);
+        LOG.debug("  actual: " + actual);
+        assertEquals(phrase, actual);
+        LOG.info("testParse passed");
     }
 
 }

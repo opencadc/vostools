@@ -75,21 +75,17 @@ import java.util.ArrayList;
 import java.util.List;
 
 import ca.nrc.cadc.tap.parser.ParserUtil;
-import ca.nrc.cadc.tap.parser.adql.AdqlManager;
-import ca.nrc.cadc.tap.parser.adql.AdqlParser;
-import ca.nrc.cadc.tap.parser.adql.TapSelectItem;
-import ca.nrc.cadc.tap.parser.adql.exception.AdqlException;
-import ca.nrc.cadc.tap.parser.converter.basic.AllColumnConverterNavigator;
+import ca.nrc.cadc.tap.parser.TapSchemaValidator;
+import ca.nrc.cadc.tap.parser.TapSelectItem;
+import ca.nrc.cadc.tap.parser.converter.AllColumnConverter;
 import ca.nrc.cadc.tap.parser.extractor.SelectListExtractor;
 import ca.nrc.cadc.tap.parser.extractor.SelectListExtractorNavigator;
 import ca.nrc.cadc.tap.parser.navigator.ExpressionNavigator;
 import ca.nrc.cadc.tap.parser.navigator.FromItemNavigator;
 import ca.nrc.cadc.tap.parser.navigator.ReferenceNavigator;
 import ca.nrc.cadc.tap.parser.navigator.SelectNavigator;
-import ca.nrc.cadc.tap.parser.validator.ExpressionValidator;
-import ca.nrc.cadc.tap.parser.validator.FromItemValidator;
-import ca.nrc.cadc.tap.parser.validator.ReferenceValidator;
-import ca.nrc.cadc.tap.parser.validator.ValidatorNavigator;
+import ca.nrc.cadc.tap.parser.schema.TapSchemaColumnValidator;
+import ca.nrc.cadc.tap.parser.schema.TapSchemaTableValidator;
 import ca.nrc.cadc.tap.schema.TapSchema;
 import ca.nrc.cadc.uws.Parameter;
 import java.util.Map;
@@ -117,9 +113,13 @@ public class AdqlQuery implements TapQuery
 
     protected transient boolean navigated = false;
     
-    public AdqlQuery() {
-	}
+    public AdqlQuery() { init(); }
 	
+    /**
+     * Set up the List<SelectNavigator>. Subclasses should override this method to
+     * add extra navigators that check or modify the parsed query statement. This
+     * implementation creates: TapSchemaValidator, AllColumnConverter.
+     */
 	protected void init()
 	{
         ExpressionNavigator en;
@@ -127,30 +127,28 @@ public class AdqlQuery implements TapQuery
         FromItemNavigator fn;
         SelectNavigator sn;
 
-//         en = new ExpressionNavigator();
-//         rn = new ReferenceNavigator();
-//         fn = new FromItemNavigator();
-//         sn = new SelectNavigator(en, rn, fn);
-//        _navigatorList.add(sn);
-
-        en = new ExpressionValidator();
-        rn = new ReferenceValidator();
-        fn = new FromItemValidator();
-        sn = new ValidatorNavigator(_tapSchema, en, rn, fn);
+        en = new ExpressionNavigator();
+        rn = new TapSchemaColumnValidator();
+        fn = new TapSchemaTableValidator();
+        sn = new TapSchemaValidator(en, rn, fn, _tapSchema);
         _navigatorList.add(sn);
 
-        sn = new AllColumnConverterNavigator(_tapSchema);
+        sn = new AllColumnConverter(_tapSchema);
         _navigatorList.add(sn);
 
-         en = new SelectListExtractor(_tapSchema, _extraTables);
-         rn = null;
-         fn = null;
-         sn = new SelectListExtractorNavigator(en, rn, fn);
-         _navigatorList.add(sn);
+        en = new SelectListExtractor(_tapSchema, _extraTables);
+        rn = null;
+        fn = null;
+        sn = new SelectListExtractorNavigator(en, rn, fn);
+        _navigatorList.add(sn);
 	}
 	
-	protected void receiveQuery()
-	{
+    protected void doNavigate()
+    {
+        if (navigated) // idempotent
+            return;
+        
+        // parse for syntax
         try
         {
             _statement = ParserUtil.receiveQuery(_queryString);
@@ -159,10 +157,8 @@ public class AdqlQuery implements TapQuery
             e.printStackTrace();
             throw new IllegalArgumentException(e);
         }
-	}
-	
-    protected void doNavigate()
-    {
+        
+        // run all the navigators
         for (SelectNavigator sn : _navigatorList)
         {
             log.debug("Navigated by: " + sn.getClass().getName());
@@ -197,19 +193,19 @@ public class AdqlQuery implements TapQuery
     
 	public String getSQL()
 	{
-		if (_queryString == null) throw new IllegalStateException();
+		if (_queryString == null) 
+            throw new IllegalStateException();
 		
-		receiveQuery();
-		init();
 		doNavigate();
 		return _statement.toString();
 	}
 
 	public List<TapSelectItem> getSelectList() 
     {
-        if (_queryString == null || !navigated)
+        if (_queryString == null)
             throw new IllegalStateException();
         
+        doNavigate();;
         return _tapSelectItemList;
 	}
 }

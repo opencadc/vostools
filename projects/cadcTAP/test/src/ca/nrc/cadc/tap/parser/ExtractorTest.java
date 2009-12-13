@@ -85,7 +85,7 @@ import org.junit.Before;
 import org.junit.BeforeClass;
 import org.junit.Test;
 
-import ca.nrc.cadc.tap.parser.adql.TapSelectItem;
+import ca.nrc.cadc.tap.parser.TapSelectItem;
 import ca.nrc.cadc.tap.parser.extractor.SelectListExtractor;
 import ca.nrc.cadc.tap.parser.extractor.SelectListExtractorNavigator;
 import ca.nrc.cadc.tap.parser.navigator.ExpressionNavigator;

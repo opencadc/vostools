@@ -5,8 +5,14 @@
 
 package ca.nrc.cadc.stc;
 
+import ca.nrc.cadc.util.Log4jInit;
+import java.util.ArrayList;
+import org.apache.log4j.Level;
+import org.apache.log4j.Logger;
 import org.junit.After;
+import org.junit.AfterClass;
 import org.junit.Before;
+import org.junit.BeforeClass;
 import org.junit.Test;
 import static org.junit.Assert.*;
 
@@ -27,13 +33,18 @@ public class CircleTest
     public static final String PIXSIZE = "PixSize 0.00005 0.00005 0.00015 0.00015";
     public static final String VELOCITY = "VelocityInterval fillfactor 1.0 1.0 2.0 3.0 4.0";
 
-    public Circle circle;
-    public String phrase;
+    public static String phrase;
+
+    private static final Logger LOG = Logger.getLogger(CircleTest.class);
+    static
+    {
+        Log4jInit.setLevel("ca", Level.INFO);
+    }
 
     public CircleTest() {}
 
-    @Before
-    public void setUp() throws Exception
+    @BeforeClass
+    public static void setUpClass() throws Exception
     {
         StringBuilder sb = new StringBuilder();
         sb.append(SPACE).append(" ");
@@ -49,116 +60,93 @@ public class CircleTest
         sb.append(RESOLUTION).append(" ");
         sb.append(SIZE).append(" ");
         sb.append(PIXSIZE).append(" ");
-        sb.append(VELOCITY).append(" ");
+        sb.append(VELOCITY);
         phrase = sb.toString();
-        circle = new Circle(phrase);
+    }
+
+    @AfterClass
+    public static void tearDownClass() throws Exception {
+    }
+
+    @Before
+    public void setUp() {
     }
 
     @After
-    public void tearDown()
-    {
+    public void tearDown() {
     }
 
     @Test
-    public void testFillfactor() throws Exception
+    public void testFormat() throws Exception
     {
-        assertEquals(new Double(1.0), circle.fill);
+        LOG.debug("parse");
+
+        Circle circle = new Circle();
+        circle.fill = 1.0D;
+        circle.frame = FRAME;
+        circle.refpos = REFPOS;
+        circle.flavor = FLAVOR;
+        circle.pos = new ArrayList<Double>();
+        circle.pos.add(148.9);
+        circle.pos.add(69.1);
+        circle.radius = 2.0;
+        circle.position = new ArrayList<Double>();
+        circle.position.add(0.1);
+        circle.position.add(0.2);
+        circle.unit = "deg";
+        circle.error = new ArrayList<Double>();
+        circle.error.add(0.1);
+        circle.error.add(0.2);
+        circle.error.add(0.3);
+        circle.error.add(0.4);
+        circle.resln = new ArrayList<Double>();
+        circle.resln.add(0.0001);
+        circle.resln.add(0.0001);
+        circle.resln.add(0.0003);
+        circle.resln.add(0.0003);
+        circle.size = new ArrayList<Double>();
+        circle.size.add(0.5);
+        circle.size.add(0.5);
+        circle.size.add(0.67);
+        circle.size.add(0.67);
+        circle.pixsiz = new ArrayList<Double>();
+        circle.pixsiz.add(0.00005);
+        circle.pixsiz.add(0.00005);
+        circle.pixsiz.add(0.00015);
+        circle.pixsiz.add(0.00015);
+
+        circle.velocity = new Velocity();
+        circle.velocity.intervals = new ArrayList<VelocityInterval>();
+
+        VelocityInterval interval = new VelocityInterval();
+        interval.fill = 1.0;
+        interval.lolimit = new ArrayList<Double>();
+        interval.lolimit.add(1.0);
+        interval.lolimit.add(2.0);
+        interval.hilimit = new ArrayList<Double>();
+        interval.hilimit.add(3.0);
+        interval.hilimit.add(4.0);
+
+        circle.velocity.intervals.add(interval);
+
+        String actual = STC.format(circle);
+        LOG.debug("expected: " + phrase);
+        LOG.debug("  actual: " + actual);
+        assertEquals(phrase, actual);
+        LOG.info("testFormat passed");
     }
 
     @Test
-    public void testFrame() throws Exception
+    public void testParse() throws Exception
     {
-        assertEquals("ICRS", circle.frame);
-    }
+        LOG.debug("parse");
 
-    @Test
-    public void testRefPos() throws Exception
-    {
-        assertEquals("BARYCENTER", circle.refpos);
-    }
-
-    @Test
-    public void testFlavor() throws Exception
-    {
-        assertEquals("SPHER2", circle.flavor);
-    }
-
-    @Test
-    public void testPos() throws Exception
-    {
-        assertEquals(new Double(148.9), circle.pos.get(0));
-        assertEquals(new Double(69.1), circle.pos.get(1));
-    }
-
-    @Test
-    public void testRadius() throws Exception
-    {
-        assertEquals(new Double(2.0), circle.radius);
-    }
-
-    @Test
-    public void testPosition() throws Exception
-    {
-        assertEquals(new Double(0.1), circle.position.get(0));
-        assertEquals(new Double(0.2), circle.position.get(1));
-    }
-
-    @Test
-    public void testUnit() throws Exception
-    {
-        assertEquals("deg", circle.unit);
-    }
-
-    @Test
-    public void testError() throws Exception
-    {
-        assertEquals(new Double(0.1), circle.error.get(0));
-        assertEquals(new Double(0.2), circle.error.get(1));
-        assertEquals(new Double(0.3), circle.error.get(2));
-        assertEquals(new Double(0.4), circle.error.get(3));
-    }
-
-    @Test
-    public void testResolution() throws Exception
-    {
-        assertEquals(new Double(0.0001), circle.resln.get(0));
-        assertEquals(new Double(0.0001), circle.resln.get(1));
-        assertEquals(new Double(0.0003), circle.resln.get(2));
-        assertEquals(new Double(0.0003), circle.resln.get(3));
-    }
-
-    @Test
-    public void testSize() throws Exception
-    {
-        assertEquals(new Double(0.5), circle.size.get(0));
-        assertEquals(new Double(0.5), circle.size.get(1));
-        assertEquals(new Double(0.67), circle.size.get(2));
-        assertEquals(new Double(0.67), circle.size.get(3));
-    }
-
-    @Test
-    public void testPixSize() throws Exception
-    {
-        assertEquals(new Double(0.00005), circle.pixsiz.get(0));
-        assertEquals(new Double(0.00005), circle.pixsiz.get(1));
-        assertEquals(new Double(0.00015), circle.pixsiz.get(2));
-        assertEquals(new Double(0.00015), circle.pixsiz.get(3));
-    }
-
-    @Test
-    public void testVelocity() throws Exception
-    {
-        assertEquals(new Double(1.0), circle.velocity.intervals.get(0).fill);
-        assertEquals(new Double(1.0), circle.velocity.intervals.get(0).lolimit.get(0));
-        assertEquals(new Double(2.0), circle.velocity.intervals.get(0).lolimit.get(1));
-        assertEquals(new Double(3.0), circle.velocity.intervals.get(0).hilimit.get(0));
-        assertEquals(new Double(4.0), circle.velocity.intervals.get(0).hilimit.get(1));
-    }
-
-    @Test
-    public void testToSTCString() throws Exception
-    {
-        assertEquals(phrase, circle.toSTCString());
+        Space space = STC.parse(phrase);
+        String actual = STC.format(space);
+        LOG.debug("expected: " + phrase);
+        LOG.debug("  actual: " + actual);
+        assertEquals(phrase, actual);
+        LOG.info("testParse passed");
     }
 
 }

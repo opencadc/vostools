@@ -67,111 +67,54 @@
  ************************************************************************
  */
 
-package ca.nrc.cadc.tap.parser.converter.basic;
+package ca.nrc.cadc.tap.parser.converter;
 
-import java.util.ArrayList;
-import java.util.Iterator;
-import java.util.List;
 
-import javax.management.RuntimeErrorException;
 
-import net.sf.jsqlparser.schema.Column;
-import net.sf.jsqlparser.schema.Table;
-import net.sf.jsqlparser.statement.select.AllColumns;
-import net.sf.jsqlparser.statement.select.AllTableColumns;
-import net.sf.jsqlparser.statement.select.ColumnReference;
-import net.sf.jsqlparser.statement.select.Distinct;
-import net.sf.jsqlparser.statement.select.FromItem;
-import net.sf.jsqlparser.statement.select.FromItemVisitor;
-import net.sf.jsqlparser.statement.select.Join;
 import net.sf.jsqlparser.statement.select.Limit;
-import net.sf.jsqlparser.statement.select.OrderByElement;
 import net.sf.jsqlparser.statement.select.PlainSelect;
-import net.sf.jsqlparser.statement.select.SelectItem;
-import net.sf.jsqlparser.statement.select.SelectItemVisitor;
-import net.sf.jsqlparser.statement.select.SelectVisitor;
-import net.sf.jsqlparser.statement.select.SubSelect;
 import net.sf.jsqlparser.statement.select.Top;
-import net.sf.jsqlparser.statement.select.Union;
 
 import org.apache.log4j.Logger;
 
-import ca.nrc.cadc.tap.parser.ParserUtil;
-import ca.nrc.cadc.tap.parser.adql.AdqlManager;
-import ca.nrc.cadc.tap.parser.adql.exception.AdqlValidateException;
-import ca.nrc.cadc.tap.parser.adql.validator.AdqlValidatorVisitor;
-import ca.nrc.cadc.tap.parser.adql.validator.PlainSelectInfo;
-import ca.nrc.cadc.tap.parser.adql.validator.SelectValidator;
-import ca.nrc.cadc.tap.parser.adql.validator.SelectValidator.PlainSelectType;
-import ca.nrc.cadc.tap.parser.adql.validator.SelectValidator.VisitingPart;
-import ca.nrc.cadc.tap.parser.navigator.FromItemNavigator;
-import ca.nrc.cadc.tap.parser.navigator.ReferenceNavigator;
 import ca.nrc.cadc.tap.parser.navigator.SelectNavigator;
-import ca.nrc.cadc.tap.schema.TapSchema;
-import ca.nrc.cadc.tap.schema.TapSchemaUtil;
 
 /**
+ * Only convert top level plainSelect.
+ * 
+ * SELECT TOP 1234 ... WHERE ... -> SELECT ... WHERE ... LIMIT 1234
+ * 
  * @author pdowler, Sailor Zhang
  */
-public class AllColumnConverterNavigator extends SelectNavigator
+public class TopConverter extends SelectNavigator
 {
-    protected static Logger log = Logger.getLogger(AllColumnConverterNavigator.class);
+    protected static Logger log = Logger.getLogger(TopConverter.class);
 
-    protected TapSchema _tapSchema;
+    public TopConverter() { }
 
-    public AllColumnConverterNavigator() {}
-    
-    public AllColumnConverterNavigator(TapSchema tapSchema)
-    {
-        _tapSchema = tapSchema;
-    }
-    
-    /**
-     * Only convert top level plainSelect.
-     * 
-     */
     public void visit(PlainSelect plainSelect)
     {
         log.debug("visit(PlainSelect) " + plainSelect);
         enterPlainSelect(plainSelect);
 
-        List<SelectItem> oldSelectItemList = plainSelect.getSelectItems();
-        List<SelectItem> newSelectItemList = new ArrayList<SelectItem>();
-        
-        for (SelectItem si : oldSelectItemList)
+        Top top = plainSelect.getTop();
+        if (top != null)
         {
-            if ( si instanceof AllColumns)
+            long rowCount = top.getRowCount();
+            Limit limit = plainSelect.getLimit();
+            if (limit != null)
             {
-                List<Table> fromTableList = ParserUtil.getFromTableList(plainSelect);
-                for (Table table : fromTableList)
-                {
-                    List<SelectItem> columnSelectItemList = TapSchemaUtil.getSelectItemList(_tapSchema, table);
-                    newSelectItemList.addAll(columnSelectItemList);
-                }
-            } else if ( si instanceof AllTableColumns)
+                limit.setRowCount(rowCount);
+            } else
             {
-                String tableNameOrAlias = ((AllTableColumns)si).getTable().getName();
-                Table table = ParserUtil.findFromTable(plainSelect, tableNameOrAlias);
-                List<SelectItem> columnSelectItemList = TapSchemaUtil.getSelectItemList(_tapSchema, table);
-                newSelectItemList.addAll(columnSelectItemList);
-            } else 
-            {
-                newSelectItemList.add(si);
+                limit = new Limit();
+                limit.setRowCount(rowCount);
+                plainSelect.setLimit(limit);
             }
+            plainSelect.setTop(null);
         }
-        plainSelect.setSelectItems(newSelectItemList);
 
         log.debug("visit(PlainSelect) done");
         leavePlainSelect();
-    }
-
-    public TapSchema getTapSchema()
-    {
-        return _tapSchema;
-    }
-
-    public void setTapSchema(TapSchema tapSchema)
-    {
-        _tapSchema = tapSchema;
     }
 }

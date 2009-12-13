@@ -67,87 +67,72 @@
  ************************************************************************
  */
 
-package ca.nrc.cadc.tap.parser.converter.basic;
+package ca.nrc.cadc.tap.parser;
 
-import java.util.ArrayList;
-import java.util.Iterator;
-import java.util.List;
-
-import javax.management.RuntimeErrorException;
-
-import net.sf.jsqlparser.schema.Column;
-import net.sf.jsqlparser.schema.Table;
-import net.sf.jsqlparser.statement.select.AllColumns;
-import net.sf.jsqlparser.statement.select.AllTableColumns;
-import net.sf.jsqlparser.statement.select.ColumnReference;
-import net.sf.jsqlparser.statement.select.Distinct;
-import net.sf.jsqlparser.statement.select.FromItem;
-import net.sf.jsqlparser.statement.select.FromItemVisitor;
-import net.sf.jsqlparser.statement.select.Join;
-import net.sf.jsqlparser.statement.select.Limit;
-import net.sf.jsqlparser.statement.select.OrderByElement;
-import net.sf.jsqlparser.statement.select.PlainSelect;
-import net.sf.jsqlparser.statement.select.SelectItem;
-import net.sf.jsqlparser.statement.select.SelectItemVisitor;
-import net.sf.jsqlparser.statement.select.SelectVisitor;
-import net.sf.jsqlparser.statement.select.SubSelect;
-import net.sf.jsqlparser.statement.select.Top;
-import net.sf.jsqlparser.statement.select.Union;
-
-import org.apache.log4j.Logger;
-
-import ca.nrc.cadc.tap.parser.ParserUtil;
-import ca.nrc.cadc.tap.parser.adql.AdqlManager;
-import ca.nrc.cadc.tap.parser.adql.exception.AdqlValidateException;
-import ca.nrc.cadc.tap.parser.adql.validator.AdqlValidatorVisitor;
-import ca.nrc.cadc.tap.parser.adql.validator.PlainSelectInfo;
-import ca.nrc.cadc.tap.parser.adql.validator.SelectValidator;
-import ca.nrc.cadc.tap.parser.adql.validator.SelectValidator.PlainSelectType;
-import ca.nrc.cadc.tap.parser.adql.validator.SelectValidator.VisitingPart;
-import ca.nrc.cadc.tap.parser.navigator.FromItemNavigator;
-import ca.nrc.cadc.tap.parser.navigator.ReferenceNavigator;
-import ca.nrc.cadc.tap.parser.navigator.SelectNavigator;
-import ca.nrc.cadc.tap.schema.TapSchema;
-import ca.nrc.cadc.tap.schema.TapSchemaUtil;
+import ca.nrc.cadc.tap.parser.adql.validator.FromColumn;
 
 /**
- * Only convert top level plainSelect.
+ * @author zhangsa
  * 
- * SELECT TOP 1234 ... WHERE ... -> SELECT ... WHERE ... LIMIT 1234
- * 
- * @author pdowler, Sailor Zhang
  */
-public class TopConverterNavigator extends SelectNavigator
+public class TapSelectItem
 {
-    protected static Logger log = Logger.getLogger(TopConverterNavigator.class);
+    private String _tableName;
+    private String _columnName;
+    private String _alias;
 
-    public TopConverterNavigator()
+    public TapSelectItem(String alias)
     {
+        _alias = alias;
     }
 
-    public void visit(PlainSelect plainSelect)
+    public TapSelectItem(String tableName, String columnName, String alias)
     {
-        log.debug("visit(PlainSelect) " + plainSelect);
-        enterPlainSelect(plainSelect);
+        _tableName = tableName;
+        _columnName = columnName;
+        _alias = alias;
+    }
 
-        Top top = plainSelect.getTop();
-        if (top != null)
-        {
-            long rowCount = top.getRowCount();
-            Limit limit = plainSelect.getLimit();
-            if (limit != null)
-            {
-                limit.setRowCount(rowCount);
-            } else
-            {
-                limit = new Limit();
-                limit.setRowCount(rowCount);
-                plainSelect.setLimit(limit);
-            }
-            plainSelect.setTop(null);
-        }
+    public TapSelectItem(FromColumn fromColumn)
+    {
+        _alias = fromColumn.getColumnAlias();
+        _columnName = fromColumn.getColumnName();
+        _tableName = fromColumn.getTableQualifiedName();
+    }
 
-        log.debug("visit(PlainSelect) done");
-        leavePlainSelect();
+    public String getTableName()
+    {
+        return _tableName;
+    }
+
+    public void setTableName(String tableName)
+    {
+        _tableName = tableName;
+    }
+
+    public String getColumnName()
+    {
+        return _columnName;
+    }
+
+    public void setColumnName(String columnName)
+    {
+        _columnName = columnName;
+    }
+
+    public String getAlias()
+    {
+        return _alias;
+    }
+
+    public void setAlias(String alias)
+    {
+        _alias = alias;
+    }
+
+    @Override
+    public String toString()
+    {
+        return "\r\n\tTapSelectItem [_alias=" + _alias + ", _columnName=" + _columnName + ", _tableName=" + _tableName + "]";
     }
 }

@@ -69,7 +69,7 @@
 
 package ca.nrc.cadc.tap.writer.votable;
 
-import ca.nrc.cadc.tap.parser.adql.TapSelectItem;
+import ca.nrc.cadc.tap.parser.TapSelectItem;
 import ca.nrc.cadc.tap.schema.ColumnDesc;
 import org.jdom.Element;
 import org.jdom.Namespace;

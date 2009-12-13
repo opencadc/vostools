@@ -69,6 +69,7 @@
 
 package ca.nrc.cadc.tap.parser.adql;
 
+import ca.nrc.cadc.tap.parser.TapSelectItem;
 import java.io.StringReader;
 import java.util.List;
 

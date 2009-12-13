@@ -75,7 +75,6 @@ import java.util.List;
 
 import net.sf.jsqlparser.JSQLParserException;
 import net.sf.jsqlparser.parser.CCJSqlParserManager;
-import net.sf.jsqlparser.schema.Column;
 import net.sf.jsqlparser.schema.Table;
 import net.sf.jsqlparser.statement.Statement;
 import net.sf.jsqlparser.statement.select.FromItem;
@@ -83,14 +82,6 @@ import net.sf.jsqlparser.statement.select.Join;
 import net.sf.jsqlparser.statement.select.PlainSelect;
 import net.sf.jsqlparser.statement.select.SelectExpressionItem;
 import net.sf.jsqlparser.statement.select.SelectItem;
-import net.sf.jsqlparser.statement.select.SubSelect;
-import ca.nrc.cadc.tap.parser.adql.AdqlStatementVisitor;
-import ca.nrc.cadc.tap.parser.adql.ExtraTableConverter;
-import ca.nrc.cadc.tap.parser.adql.config.AdqlConfig;
-import ca.nrc.cadc.tap.parser.adql.exception.AdqlException;
-import ca.nrc.cadc.tap.parser.adql.validator.PlainSelectInfo;
-import ca.nrc.cadc.tap.parser.adql.validator.SelectValidator;
-import ca.nrc.cadc.tap.parser.adql.validator.Validator;
 import ca.nrc.cadc.tap.parser.navigator.SelectNavigator;
 
 /**

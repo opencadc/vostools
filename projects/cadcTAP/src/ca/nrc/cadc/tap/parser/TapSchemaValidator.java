@@ -69,6 +69,11 @@
 
 package ca.nrc.cadc.tap.parser;
 
+import ca.nrc.cadc.tap.parser.navigator.ExpressionNavigator;
+import ca.nrc.cadc.tap.parser.navigator.FromItemNavigator;
+import ca.nrc.cadc.tap.parser.navigator.ReferenceNavigator;
+import ca.nrc.cadc.tap.parser.navigator.SelectNavigator;
+import ca.nrc.cadc.tap.parser.schema.TapSchemaColumnValidator;
 import ca.nrc.cadc.tap.schema.TableDesc;
 import ca.nrc.cadc.tap.schema.TapSchema;
 
@@ -81,7 +86,7 @@ import org.apache.log4j.Logger;
  * 
  * @author pdowler
  */
-public class TapSchemaValidator // extends ??
+public class TapSchemaValidator extends SelectNavigator
 {
     protected static Logger log = Logger.getLogger(TapSchemaValidator.class);
     
@@ -90,11 +95,18 @@ public class TapSchemaValidator // extends ??
     
     private TapSchemaValidator() { }
     
-    public TapSchemaValidator(TapSchema tapSchema, Map<String,TableDesc> extraTables) 
+    public TapSchemaValidator(ExpressionNavigator en, ReferenceNavigator rn, FromItemNavigator fn, TapSchema tapSchema)
     { 
-        super();
+        super(en, rn, fn);
+        if (rn instanceof TapSchemaColumnValidator)
+        {
+            TapSchemaColumnValidator tsrv = (TapSchemaColumnValidator) rn;
+            tsrv.setTapSchema(tapSchema);
+        }
+        else
+            throw new ClassCastException(this.getClass().getSimpleName() 
+                    + " requires a " + TapSchemaColumnValidator.class.getName());
+        
         this.tapSchema = tapSchema;
-        this.extraTables = extraTables;
     }
-    
 }

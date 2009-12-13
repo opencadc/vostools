@@ -62,33 +62,59 @@
 *  <http://www.gnu.org/licenses/>.      pas le cas, consultez :
 *                                       <http://www.gnu.org/licenses/>.
 *
-*  $Revision: 4 $
+*  $Revision: 1 $
 *
 ************************************************************************
 */
 
-package ca.nrc.cadc.tap.server;
+package ca.nrc.cadc.tap.parser;
 
-import ca.nrc.cadc.tap.AdqlQuery;
-import ca.nrc.cadc.tap.parser.converter.basic.TopConverterNavigator;
-import ca.nrc.cadc.tap.parser.navigator.SelectNavigator;
+import net.sf.jsqlparser.expression.Expression;
+import org.apache.log4j.Logger;
 
 /**
- * @author zhangsa
- *
+ * This visitor finds all occurances of timestamps. The default
+ * implementations of the protected <code>handle</code> methods throw an
+ * UnsupportedOperationException so this visitor can be used as-is to detect
+ * the presence of timestamps in the query.
+ * </p><p>
+ * Subclasses can override the <code>handle</code> methods to manipulate timestamp 
+ * values or usage in the query. Possible uses:
+ * </p>
+ * <ul>
+ * <li>validate the format of the timestamp value
+ * <li>convert the timestamp format to an internal format supported by the DB
+ * <li>convert the timestamp value to the internally used timezone or offset
+ * </ul>
+ * 
+ * @author pdowler
  */
-public class AdqlQueryImpl extends AdqlQuery
+public class TimestampFinder
 {
-    @Override
-    protected void init()
+    private static Logger log = Logger.getLogger(TimestampFinder.class);
+    
+    public TimestampFinder() { }
+    
+    /**
+     * This method is called when a timestamp expression is found.
+     * 
+     * @param ex the CONTAINS expression
+     */
+    protected void handleTimestamp(Expression ex)
     {
-        super.init();
-
-        SelectNavigator sn;
-
-        sn = new TopConverterNavigator();
-        _navigatorList.add(sn);
-
+        throw new UnsupportedOperationException("timestamp not supported");
     }
-
+    
+    /**
+     * This method is called when a timestamp is one of the arguments in a predicate.
+     * A predicate is a timestamp predicate if one of the arguments is a column with
+     * datatype adql:TIMESTAMP in the TapSchema.
+     * 
+     * 
+     * @param ex the predicate with a CONTAINS argument
+     */
+    protected void handleTimestampPredicate(Expression ex)
+    {
+        throw new UnsupportedOperationException("timestamp not supported");
+    }
 }

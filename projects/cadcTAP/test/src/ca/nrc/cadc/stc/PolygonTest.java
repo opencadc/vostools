@@ -5,9 +5,14 @@
 
 package ca.nrc.cadc.stc;
 
-import java.util.Scanner;
+import ca.nrc.cadc.util.Log4jInit;
+import java.util.ArrayList;
+import org.apache.log4j.Level;
+import org.apache.log4j.Logger;
 import org.junit.After;
+import org.junit.AfterClass;
 import org.junit.Before;
+import org.junit.BeforeClass;
 import org.junit.Test;
 import static org.junit.Assert.*;
 
@@ -27,13 +32,18 @@ public class PolygonTest
     public static final String PIXSIZE = "PixSize 0.00005 0.00005 0.00015 0.00015";
     public static final String VELOCITY = "VelocityInterval fillfactor 1.0 1.0 2.0 3.0 4.0";
 
-    public Polygon polygon;
-    public String phrase;
+    public static String phrase;
+
+    private static final Logger LOG = Logger.getLogger(PolygonTest.class);
+    static
+    {
+        Log4jInit.setLevel("ca", Level.INFO);
+    }
 
     public PolygonTest() {}
 
-    @Before
-    public void setUp() throws Exception
+    @BeforeClass
+    public static void setUpClass() throws Exception
     {
         StringBuilder sb = new StringBuilder();
         sb.append(SPACE).append(" ");
@@ -48,112 +58,94 @@ public class PolygonTest
         sb.append(RESOLUTION).append(" ");
         sb.append(SIZE).append(" ");
         sb.append(PIXSIZE).append(" ");
-        sb.append(VELOCITY).append(" ");
+        sb.append(VELOCITY);
         phrase = sb.toString();
-        polygon = new Polygon(phrase);
+    }
+
+    @AfterClass
+    public static void tearDownClass() throws Exception {
+    }
+
+    @Before
+    public void setUp() {
     }
 
     @After
-    public void tearDown()
-    {
+    public void tearDown() {
     }
 
     @Test
-    public void testFillfactor() throws Exception
+    public void testFormat() throws Exception
     {
-        assertEquals(new Double(1.0), polygon.fill);
+        LOG.debug("parse");
+
+        Polygon polygon = new Polygon();
+        polygon.fill = 1.0D;
+        polygon.frame = FRAME;
+        polygon.refpos = REFPOS;
+        polygon.flavor = FLAVOR;
+        polygon.pos = new ArrayList<Double>();
+        polygon.pos.add(148.9);
+        polygon.pos.add(69.1);
+        polygon.pos.add(76.4);
+        polygon.pos.add(22.8);
+        polygon.position = new ArrayList<Double>();
+        polygon.position.add(0.1);
+        polygon.position.add(0.2);
+        polygon.unit = "deg";
+        polygon.error = new ArrayList<Double>();
+        polygon.error.add(0.1);
+        polygon.error.add(0.2);
+        polygon.error.add(0.3);
+        polygon.error.add(0.4);
+        polygon.resln = new ArrayList<Double>();
+        polygon.resln.add(0.0001);
+        polygon.resln.add(0.0001);
+        polygon.resln.add(0.0003);
+        polygon.resln.add(0.0003);
+        polygon.size = new ArrayList<Double>();
+        polygon.size.add(0.5);
+        polygon.size.add(0.5);
+        polygon.size.add(0.67);
+        polygon.size.add(0.67);
+        polygon.pixsiz = new ArrayList<Double>();
+        polygon.pixsiz.add(0.00005);
+        polygon.pixsiz.add(0.00005);
+        polygon.pixsiz.add(0.00015);
+        polygon.pixsiz.add(0.00015);
+
+        polygon.velocity = new Velocity();
+        polygon.velocity.intervals = new ArrayList<VelocityInterval>();
+
+        VelocityInterval interval = new VelocityInterval();
+        interval.fill = 1.0;
+        interval.lolimit = new ArrayList<Double>();
+        interval.lolimit.add(1.0);
+        interval.lolimit.add(2.0);
+        interval.hilimit = new ArrayList<Double>();
+        interval.hilimit.add(3.0);
+        interval.hilimit.add(4.0);
+
+        polygon.velocity.intervals.add(interval);
+
+        String actual = STC.format(polygon);
+        LOG.debug("expected: " + phrase);
+        LOG.debug("  actual: " + actual);
+        assertEquals(phrase, actual);
+        LOG.info("testFormat passed");
     }
 
     @Test
-    public void testFrame() throws Exception
+    public void testParse() throws Exception
     {
-        assertEquals("ICRS", polygon.frame);
-    }
+        LOG.debug("parse");
 
-    @Test
-    public void testRefPos() throws Exception
-    {
-        assertEquals("BARYCENTER", polygon.refpos);
-    }
-
-    @Test
-    public void testFlavor() throws Exception
-    {
-        assertEquals("SPHER2", polygon.flavor);
-    }
-
-    @Test
-    public void testPos() throws Exception
-    {
-        assertEquals(new Double(148.9), polygon.pos.get(0));
-        assertEquals(new Double(69.1), polygon.pos.get(1));
-        assertEquals(new Double(76.4), polygon.pos.get(2));
-        assertEquals(new Double(22.8), polygon.pos.get(3));
-    }
-
-    @Test
-    public void testPosition() throws Exception
-    {
-        assertEquals(new Double(0.1), polygon.position.get(0));
-        assertEquals(new Double(0.2), polygon.position.get(1));
-    }
-
-    @Test
-    public void testUnit() throws Exception
-    {
-        assertEquals("deg", polygon.unit);
-    }
-
-    @Test
-    public void testError() throws Exception
-    {
-        assertEquals(new Double(0.1), polygon.error.get(0));
-        assertEquals(new Double(0.2), polygon.error.get(1));
-        assertEquals(new Double(0.3), polygon.error.get(2));
-        assertEquals(new Double(0.4), polygon.error.get(3));
-    }
-
-    @Test
-    public void testResolution() throws Exception
-    {
-        assertEquals(new Double(0.0001), polygon.resln.get(0));
-        assertEquals(new Double(0.0001), polygon.resln.get(1));
-        assertEquals(new Double(0.0003), polygon.resln.get(2));
-        assertEquals(new Double(0.0003), polygon.resln.get(3));
-    }
-
-    @Test
-    public void testSize() throws Exception
-    {
-        assertEquals(new Double(0.5), polygon.size.get(0));
-        assertEquals(new Double(0.5), polygon.size.get(1));
-        assertEquals(new Double(0.67), polygon.size.get(2));
-        assertEquals(new Double(0.67), polygon.size.get(3));
-    }
-
-    @Test
-    public void testPixSize() throws Exception
-    {
-        assertEquals(new Double(0.00005), polygon.pixsiz.get(0));
-        assertEquals(new Double(0.00005), polygon.pixsiz.get(1));
-        assertEquals(new Double(0.00015), polygon.pixsiz.get(2));
-        assertEquals(new Double(0.00015), polygon.pixsiz.get(3));
-    }
-
-    @Test
-    public void testVelocity() throws Exception
-    {
-        assertEquals(new Double(1.0), polygon.velocity.intervals.get(0).fill);
-        assertEquals(new Double(1.0), polygon.velocity.intervals.get(0).lolimit.get(0));
-        assertEquals(new Double(2.0), polygon.velocity.intervals.get(0).lolimit.get(1));
-        assertEquals(new Double(3.0), polygon.velocity.intervals.get(0).hilimit.get(0));
-        assertEquals(new Double(4.0), polygon.velocity.intervals.get(0).hilimit.get(1));
-    }
-
-    @Test
-    public void testToSTCString() throws Exception
-    {
-        assertEquals(phrase, polygon.toSTCString());
+        Space space = STC.parse(phrase);
+        String actual = STC.format(space);
+        LOG.debug("expected: " + phrase);
+        LOG.debug("  actual: " + actual);
+        assertEquals(phrase, actual);
+        LOG.info("testParse passed");
     }
 
 }

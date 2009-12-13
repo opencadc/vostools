@@ -67,7 +67,7 @@
 ************************************************************************
 */
 
-package ca.nrc.cadc.tap.schema;
+package ca.nrc.cadc.tap.parser.schema;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -81,8 +81,12 @@ import net.sf.jsqlparser.statement.select.SelectItem;
 import org.apache.log4j.Logger;
 
 import ca.nrc.cadc.tap.parser.ParserUtil;
-import ca.nrc.cadc.tap.parser.adql.TapSelectItem;
+import ca.nrc.cadc.tap.parser.TapSelectItem;
 import ca.nrc.cadc.tap.parser.exception.TapParserException;
+import ca.nrc.cadc.tap.schema.ColumnDesc;
+import ca.nrc.cadc.tap.schema.SchemaDesc;
+import ca.nrc.cadc.tap.schema.TableDesc;
+import ca.nrc.cadc.tap.schema.TapSchema;
 
 /**
  * @author zhangsa

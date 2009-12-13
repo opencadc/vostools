@@ -84,7 +84,7 @@ import net.sf.jsqlparser.statement.select.SubSelect;
 import org.apache.log4j.Logger;
 
 import ca.nrc.cadc.tap.parser.adql.AdqlUtil;
-import ca.nrc.cadc.tap.parser.adql.TapSelectItemAppender;
+import ca.nrc.cadc.tap.parser.TapSelectItemAppender;
 import ca.nrc.cadc.tap.parser.adql.config.meta.ColumnMeta;
 import ca.nrc.cadc.tap.parser.adql.config.meta.FunctionMeta;
 import ca.nrc.cadc.tap.parser.adql.config.meta.TableMeta;
@@ -92,7 +92,6 @@ import ca.nrc.cadc.tap.parser.adql.exception.AdqlValidateException;
 import ca.nrc.cadc.tap.parser.adql.validator.PlainSelectInfo;
 import ca.nrc.cadc.tap.parser.adql.validator.SelectValidator;
 import ca.nrc.cadc.tap.parser.adql.validator.SelectValidator.PlainSelectType;
-import ca.nrc.cadc.tap.schema.SchemaDesc;
 import ca.nrc.cadc.tap.schema.TapSchema;
 
 public abstract class AdqlConfig

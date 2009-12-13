@@ -84,7 +84,7 @@ import org.jdom.Element;
 import org.jdom.Namespace;
 import org.jdom.output.Format;
 import org.jdom.output.XMLOutputter;
-import ca.nrc.cadc.tap.parser.adql.TapSelectItem;
+import ca.nrc.cadc.tap.parser.TapSelectItem;
 import ca.nrc.cadc.tap.schema.TapSchema;
 import ca.nrc.cadc.tap.writer.formatter.DefaultFormatterFactory;
 import ca.nrc.cadc.tap.writer.votable.FieldElement;

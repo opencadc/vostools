@@ -85,19 +85,17 @@ import org.junit.Before;
 import org.junit.BeforeClass;
 import org.junit.Test;
 
-import ca.nrc.cadc.tap.parser.adql.TapSelectItem;
+import ca.nrc.cadc.tap.parser.TapSelectItem;
 import ca.nrc.cadc.tap.parser.extractor.SelectListExtractor;
 import ca.nrc.cadc.tap.parser.extractor.SelectListExtractorNavigator;
 import ca.nrc.cadc.tap.parser.navigator.ExpressionNavigator;
 import ca.nrc.cadc.tap.parser.navigator.FromItemNavigator;
 import ca.nrc.cadc.tap.parser.navigator.ReferenceNavigator;
 import ca.nrc.cadc.tap.parser.navigator.SelectNavigator;
-import ca.nrc.cadc.tap.parser.validator.ExpressionValidator;
-import ca.nrc.cadc.tap.parser.validator.FromItemValidator;
-import ca.nrc.cadc.tap.parser.validator.ReferenceValidator;
-import ca.nrc.cadc.tap.parser.validator.ValidatorNavigator;
+import ca.nrc.cadc.tap.parser.schema.TapSchemaTableValidator;
+import ca.nrc.cadc.tap.parser.schema.TapSchemaColumnValidator;
+import ca.nrc.cadc.tap.parser.TapSchemaValidator;
 import ca.nrc.cadc.tap.schema.TapSchema;
-import ca.nrc.cadc.util.LoggerUtil;
 
 /**
  * 
@@ -108,10 +106,10 @@ public class ValidatorTest
 {
     public String _query;
 
-    ExpressionValidator _en;
-    ReferenceValidator _rn;
-    FromItemValidator _fn;
-    ValidatorNavigator _sn;
+    ExpressionNavigator _en;
+    ReferenceNavigator _rn;
+    FromItemNavigator _fn;
+    SelectNavigator _sn;
 
     static TapSchema TAP_SCHEMA;
 
@@ -121,7 +119,6 @@ public class ValidatorTest
     @BeforeClass
     public static void setUpBeforeClass() throws Exception
     {
-        LoggerUtil.initialize(new String[] { "test", "ca.nrc.cadc" }, new String[] { "-d" });
         TAP_SCHEMA = TestUtil.loadDefaultTapSchema();
     }
 
@@ -139,10 +136,10 @@ public class ValidatorTest
     @Before
     public void setUp() throws Exception
     {
-        _en = new ExpressionValidator();
-        _rn = new ReferenceValidator();
-        _fn = new FromItemValidator();
-        _sn = new ValidatorNavigator(TAP_SCHEMA, _en, _rn, _fn);
+        _en = new ExpressionNavigator();
+        _rn = new TapSchemaColumnValidator();
+        _fn = new TapSchemaTableValidator();
+        _sn = new TapSchemaValidator(_en, _rn, _fn, TAP_SCHEMA);
     }
 
     /**

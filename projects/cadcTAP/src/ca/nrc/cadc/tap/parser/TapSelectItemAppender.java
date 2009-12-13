@@ -67,10 +67,9 @@
  ************************************************************************
  */
 
-package ca.nrc.cadc.tap.parser.adql;
+package ca.nrc.cadc.tap.parser;
 
 import net.sf.jsqlparser.expression.Expression;
-import net.sf.jsqlparser.expression.Function;
 import net.sf.jsqlparser.schema.Column;
 import net.sf.jsqlparser.schema.Table;
 import net.sf.jsqlparser.statement.select.AllColumns;
