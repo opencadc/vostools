@@ -74,6 +74,7 @@ import ca.nrc.cadc.tap.parser.navigator.FromItemNavigator;
 import ca.nrc.cadc.tap.parser.navigator.ReferenceNavigator;
 import ca.nrc.cadc.tap.parser.navigator.SelectNavigator;
 import ca.nrc.cadc.tap.parser.schema.TapSchemaColumnValidator;
+import ca.nrc.cadc.tap.parser.schema.TapSchemaTableValidator;
 import ca.nrc.cadc.tap.schema.TableDesc;
 import ca.nrc.cadc.tap.schema.TapSchema;
 
@@ -98,15 +99,27 @@ public class TapSchemaValidator extends SelectNavigator
     public TapSchemaValidator(ExpressionNavigator en, ReferenceNavigator rn, FromItemNavigator fn, TapSchema tapSchema)
     { 
         super(en, rn, fn);
+        this.tapSchema = tapSchema;
+
+        // fail early if mis-configured
         if (rn instanceof TapSchemaColumnValidator)
         {
-            TapSchemaColumnValidator tsrv = (TapSchemaColumnValidator) rn;
-            tsrv.setTapSchema(tapSchema);
+            TapSchemaColumnValidator v = (TapSchemaColumnValidator) rn;
+            v.setTapSchema(tapSchema);
         }
         else
             throw new ClassCastException(this.getClass().getSimpleName() 
-                    + " requires a " + TapSchemaColumnValidator.class.getName());
+                    + " requires a " + TapSchemaColumnValidator.class.getName()
+                    +", found a " + rn.getClass().getName());
         
-        this.tapSchema = tapSchema;
+        if (fn instanceof TapSchemaTableValidator)
+        {
+            TapSchemaTableValidator v = (TapSchemaTableValidator) fn;
+            v.setTapSchema(tapSchema);
+        }
+        else
+            throw new ClassCastException(this.getClass().getSimpleName() 
+                    + " requires a " + TapSchemaTableValidator.class.getName()
+                    +", found a " + fn.getClass().getName());
     }
 }
