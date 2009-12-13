@@ -73,8 +73,6 @@ import java.util.Iterator;
 
 import org.apache.log4j.Logger;
 
-import ca.nrc.cadc.tap.parser.navigator.SelectNavigator.VisitingPart;
-
 import net.sf.jsqlparser.expression.AllComparisonExpression;
 import net.sf.jsqlparser.expression.AnyComparisonExpression;
 import net.sf.jsqlparser.expression.CaseExpression;

@@ -72,7 +72,10 @@ package ca.nrc.cadc.tap.parser.navigator;
 import org.apache.log4j.Logger;
 
 import net.sf.jsqlparser.schema.Column;
-import net.sf.jsqlparser.statement.select.*;
+import net.sf.jsqlparser.statement.select.ColumnIndex;
+import net.sf.jsqlparser.statement.select.ColumnReferenceVisitor;
+import net.sf.jsqlparser.statement.select.OrderByElement;
+import net.sf.jsqlparser.statement.select.OrderByVisitor;
 
 /**
  * @author zhangsa
