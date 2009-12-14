@@ -71,6 +71,7 @@ package ca.nrc.cadc.tap.parser.schema;
 
 import org.apache.log4j.Logger;
 
+import ca.nrc.cadc.tap.parser.ParserUtil;
 import ca.nrc.cadc.tap.parser.navigator.FromItemNavigator;
 import ca.nrc.cadc.tap.schema.TableDesc;
 
@@ -103,8 +104,10 @@ public class TapSchemaTableValidator extends FromItemNavigator
     public void visit(Table table)
     {
         log.debug("visit(table) " + table);
+        String tableNameOrAlias = table.getName();
+        Table qTable = ParserUtil.findFromTable(_selectNavigator.getPlainSelect(), tableNameOrAlias);
         // all table should be in TapSchema
-        TableDesc td = TapSchemaUtil.findTableDesc(tapSchema, table);
+        TableDesc td = TapSchemaUtil.findTableDesc(tapSchema, qTable);
         if (td == null)
             throw new IllegalArgumentException("Table [ " + table + " ] is not found in TapSchema");
     }

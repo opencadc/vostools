@@ -72,12 +72,8 @@
  */
 package ca.nrc.cadc.tap.parser;
 
-import static org.junit.Assert.fail;
-
 import java.util.ArrayList;
 import java.util.List;
-
-import net.sf.jsqlparser.statement.Statement;
 
 import org.junit.After;
 import org.junit.AfterClass;
@@ -87,16 +83,14 @@ import org.junit.Test;
 
 import ca.nrc.cadc.tap.AdqlQuery;
 import ca.nrc.cadc.tap.TapQuery;
-import ca.nrc.cadc.tap.parser.TapSelectItem;
 import ca.nrc.cadc.tap.parser.extractor.SelectListExtractor;
-import ca.nrc.cadc.tap.parser.extractor.SelectListExtractorNavigator;
-import ca.nrc.cadc.tap.parser.navigator.ExpressionNavigator;
 import ca.nrc.cadc.tap.parser.navigator.FromItemNavigator;
 import ca.nrc.cadc.tap.parser.navigator.ReferenceNavigator;
 import ca.nrc.cadc.tap.parser.navigator.SelectNavigator;
 import ca.nrc.cadc.tap.schema.TapSchema;
-import ca.nrc.cadc.util.LoggerUtil;
+import ca.nrc.cadc.util.Log4jInit;
 import ca.nrc.cadc.uws.Parameter;
+
 
 /**
  * 
@@ -120,7 +114,7 @@ public class AdqlQueryTest
     @BeforeClass
     public static void setUpBeforeClass() throws Exception
     {
-        LoggerUtil.initialize(new String[] { "test", "ca.nrc.cadc" }, new String[] { "-d" });
+        Log4jInit.setLevel("ca.nrc.cadc", org.apache.log4j.Level.DEBUG);
         TAP_SCHEMA = TestUtil.loadDefaultTapSchema();
     }
 
@@ -186,7 +180,7 @@ public class AdqlQueryTest
         doit();
     }
 
-    //@Test
+    @Test
     public void testJoin()
     {
         _query = "select  t_string, aa.t_bytes, bb.* from tap_schema.alldatatypes as aa, tap_schema.tables as bb " +
@@ -202,7 +196,7 @@ public class AdqlQueryTest
                 "and aa.t_string in (select utype from bb)";
         doit();
     }
-    @Test
+    //@Test
     public void testSubselect()
     {
         _query = "select t_string, aa.t_bytes, bb.* from tap_schema.alldatatypes as aa, tap_schema.tables as bb " +

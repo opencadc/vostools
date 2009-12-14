@@ -70,12 +70,14 @@
 package ca.nrc.cadc.tap.schema;
 
 import javax.sql.DataSource;
+
 import junit.framework.TestCase;
+
 import org.apache.log4j.Level;
 import org.apache.log4j.Logger;
 import org.springframework.jdbc.datasource.SingleConnectionDataSource;
 
-import ca.nrc.cadc.util.LoggerUtil;
+import ca.nrc.cadc.util.Log4jInit;
 
 public class TapSchemaTest extends TestCase
 {
@@ -108,7 +110,7 @@ public class TapSchemaTest extends TestCase
     protected void setUp()
         throws Exception
     {
-       LoggerUtil.initialize(new String[] { "test", "ca.nrc.cadc" }, new String[] { "-d" });
+        Log4jInit.setLevel("ca.nrc.cadc", org.apache.log4j.Level.DEBUG);
         Class.forName("org.postgresql.Driver");
         DataSource ds = new SingleConnectionDataSource(JDBC_URL, USERNAME, PASSWORD, SUPPRESS_CLOSE);
         TapSchemaDAO dao = new TapSchemaDAO(ds);

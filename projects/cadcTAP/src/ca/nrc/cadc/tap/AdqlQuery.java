@@ -94,6 +94,8 @@ import org.apache.log4j.Logger;
 
 import net.sf.jsqlparser.JSQLParserException;
 import net.sf.jsqlparser.statement.Statement;
+import net.sf.jsqlparser.statement.select.PlainSelect;
+import net.sf.jsqlparser.statement.select.Select;
 
 /**
  * TapQuery implementation for LANG=ADQL.

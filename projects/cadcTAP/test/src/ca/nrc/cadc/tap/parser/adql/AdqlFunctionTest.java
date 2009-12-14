@@ -83,7 +83,7 @@ import org.junit.Test;
 
 import ca.nrc.cadc.tap.parser.adql.exception.AdqlException;
 import ca.nrc.cadc.tap.parser.adql.impl.postgresql.pgsphere.AdqlManagerImpl;
-import ca.nrc.cadc.util.LoggerUtil;
+import ca.nrc.cadc.util.Log4jInit;
 
 /**
  * 
@@ -118,7 +118,7 @@ public class AdqlFunctionTest
     @Before
     public void setUp() throws Exception
     {
-        LoggerUtil.initialize(new String[] { "test", "ca.nrc.cadc" }, new String[] { "-d" });
+        Log4jInit.setLevel("ca.nrc.cadc", org.apache.log4j.Level.DEBUG);
         AdqlManager manager = new AdqlManagerImpl(null, null);
         this.adqlParser = new AdqlParser(manager);
     }

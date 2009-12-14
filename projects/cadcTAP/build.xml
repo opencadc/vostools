@@ -138,25 +138,20 @@
                 <pathelement path="${jars}:${testingJars}"/>
             </classpath>
 
+			<test name="ca.nrc.cadc.tap.parser.AllColumnConverterTest"/>
+
+
+	    <!--
+			<test name="ca.nrc.cadc.tap.parser.AdqlQueryTest" />
             <test name="ca.nrc.cadc.tap.parser.ValidatorTest"/>
             <test name="ca.nrc.cadc.tap.parser.NavigatorTest"/>
             <test name="ca.nrc.cadc.tap.parser.ExtractorTest"/>
+			<test name="ca.nrc.cadc.tap.parser.AllColumnConverterTest"/>
             
-	    <test name="ca.nrc.cadc.tap.parser.AllColumnConverterTest"/>
-	    <test name="ca.nrc.cadc.tap.parser.TopConverterTest"/>
-	    
-	    <test name="ca.nrc.cadc.tap.parser.SqlQueryTest" />
-	    <test name="ca.nrc.cadc.tap.parser.AdqlQueryTest" />
+			<test name="ca.nrc.cadc.tap.parser.TopConverterTest"/>
+			
+			<test name="ca.nrc.cadc.tap.parser.SqlQueryTest" />
 
-	    <!--
-            <test name="ca.nrc.cadc.tap.parser.adql.SqlParserTest"/>
-            <test name="ca.nrc.cadc.tap.test.TapValidatorTest"/>
-            <test name="ca.nrc.cadc.tap.test.UploadManagerParamTest"/>
-            <test name="ca.nrc.cadc.tap.test.UploadManagerUploadTest"/>
-            <test name="ca.nrc.cadc.tap.schema.TapSchemaTest"/>
-            <test name="ca.nrc.cadc.tap.test.TestProperties"/>
-            <test name="ca.nrc.cadc.tap.parser.adql.AdqlParserTest"/>
-            <test name="ca.nrc.cadc.tap.parser.adql.AdqlPgSphereConverterTest"/>
             -->
             <formatter type="plain" usefile="false"/>
         </junit>

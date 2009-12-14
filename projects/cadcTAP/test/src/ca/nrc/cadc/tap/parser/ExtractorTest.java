@@ -74,7 +74,6 @@ package ca.nrc.cadc.tap.parser;
 
 import static org.junit.Assert.fail;
 
-import java.util.ArrayList;
 import java.util.List;
 
 import net.sf.jsqlparser.statement.Statement;
@@ -85,15 +84,13 @@ import org.junit.Before;
 import org.junit.BeforeClass;
 import org.junit.Test;
 
-import ca.nrc.cadc.tap.parser.TapSelectItem;
+import ca.nrc.cadc.tap.parser.extractor.SelectListExpressionExtractor;
 import ca.nrc.cadc.tap.parser.extractor.SelectListExtractor;
-import ca.nrc.cadc.tap.parser.extractor.SelectListExtractorNavigator;
-import ca.nrc.cadc.tap.parser.navigator.ExpressionNavigator;
 import ca.nrc.cadc.tap.parser.navigator.FromItemNavigator;
 import ca.nrc.cadc.tap.parser.navigator.ReferenceNavigator;
 import ca.nrc.cadc.tap.parser.navigator.SelectNavigator;
 import ca.nrc.cadc.tap.schema.TapSchema;
-import ca.nrc.cadc.util.LoggerUtil;
+import ca.nrc.cadc.util.Log4jInit;
 
 /**
  * 
@@ -104,7 +101,7 @@ public class ExtractorTest
 {
     public String _query;
 
-    SelectListExtractor _en;
+    SelectListExpressionExtractor _en;
     ReferenceNavigator _rn;
     FromItemNavigator _fn;
     SelectNavigator _sn;
@@ -117,7 +114,7 @@ public class ExtractorTest
     @BeforeClass
     public static void setUpBeforeClass() throws Exception
     {
-        LoggerUtil.initialize(new String[] { "test", "ca.nrc.cadc" }, new String[] { "-d" });
+        Log4jInit.setLevel("ca.nrc.cadc", org.apache.log4j.Level.DEBUG);
         TAP_SCHEMA = TestUtil.loadDefaultTapSchema();
     }
 
@@ -136,10 +133,10 @@ public class ExtractorTest
     public void setUp() throws Exception
     {
 
-        _en = new SelectListExtractor(TAP_SCHEMA, null);
+        _en = new SelectListExpressionExtractor(TAP_SCHEMA, null);
         _rn = null;
         _fn = null;
-        _sn = new SelectListExtractorNavigator(_en, _rn, _fn);
+        _sn = new SelectListExtractor(_en, _rn, _fn);
     }
 
     /**

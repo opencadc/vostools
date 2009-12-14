@@ -69,7 +69,9 @@
 
 package ca.nrc.cadc.tap.test;
 
-import static org.junit.Assert.*;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertNotNull;
+import static org.junit.Assert.assertNotSame;
 
 import org.junit.After;
 import org.junit.AfterClass;
@@ -80,7 +82,7 @@ import org.junit.Test;
 import ca.nrc.cadc.tap.TapProperties;
 import ca.nrc.cadc.tap.parser.adql.impl.postgresql.pgsphere.PgspherePropertiesFactory;
 import ca.nrc.cadc.tap.parser.adql.impl.postgresql.sql.SqlPropertiesFactory;
-import ca.nrc.cadc.util.LoggerUtil;
+import ca.nrc.cadc.util.Log4jInit;
 
 /**
  * @author zhangsa
@@ -114,7 +116,7 @@ public class TestProperties
     @Before
     public void setUp() throws Exception
     {
-        LoggerUtil.initialize(new String[] { "test", "ca.nrc.cadc" }, new String[] { "-d" });
+        Log4jInit.setLevel("ca.nrc.cadc", org.apache.log4j.Level.DEBUG);
         sqlProp = SqlPropertiesFactory.getInstance();
         pgProp = PgspherePropertiesFactory.getInstance();
         sqlProp2 = SqlPropertiesFactory.getInstance();

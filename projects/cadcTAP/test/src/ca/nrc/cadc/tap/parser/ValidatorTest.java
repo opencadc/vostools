@@ -73,10 +73,6 @@
 package ca.nrc.cadc.tap.parser;
 
 import static org.junit.Assert.fail;
-
-import java.util.ArrayList;
-import java.util.List;
-
 import net.sf.jsqlparser.statement.Statement;
 
 import org.junit.After;
@@ -85,16 +81,12 @@ import org.junit.Before;
 import org.junit.BeforeClass;
 import org.junit.Test;
 
-import ca.nrc.cadc.tap.parser.TapSelectItem;
-import ca.nrc.cadc.tap.parser.extractor.SelectListExtractor;
-import ca.nrc.cadc.tap.parser.extractor.SelectListExtractorNavigator;
 import ca.nrc.cadc.tap.parser.navigator.ExpressionNavigator;
 import ca.nrc.cadc.tap.parser.navigator.FromItemNavigator;
 import ca.nrc.cadc.tap.parser.navigator.ReferenceNavigator;
 import ca.nrc.cadc.tap.parser.navigator.SelectNavigator;
-import ca.nrc.cadc.tap.parser.schema.TapSchemaTableValidator;
 import ca.nrc.cadc.tap.parser.schema.TapSchemaColumnValidator;
-import ca.nrc.cadc.tap.parser.TapSchemaValidator;
+import ca.nrc.cadc.tap.parser.schema.TapSchemaTableValidator;
 import ca.nrc.cadc.tap.schema.TapSchema;
 
 /**

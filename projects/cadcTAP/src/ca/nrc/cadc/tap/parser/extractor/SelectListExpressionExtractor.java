@@ -173,9 +173,11 @@ public class SelectListExpressionExtractor extends ExpressionNavigator
             Expression expression = selectExpressionItem.getExpression();
             if (expression instanceof Column)
             {
-                Column column = (Column) expression;
-                columnName = column.getColumnName();
-                Table table = column.getTable();
+                Column column0 = (Column) expression;
+                Column column2 = new Column(column0.getTable(), column0.getColumnName());
+
+                columnName = column2.getColumnName();
+                Table table = column2.getTable();
                 String schemaName = table.getSchemaName();
 
                 if (schemaName != null && !schemaName.equals(""))
@@ -194,8 +196,8 @@ public class SelectListExpressionExtractor extends ExpressionNavigator
                         Table fromTable = ParserUtil.findFromTable(_selectNavigator.getPlainSelect(), tableNameOrAlias);
                         if (fromTable != null)
                         {
-                            column.setTable(fromTable);
-                            if (TapSchemaUtil.isValidColumn(_tapSchema, column))
+                            column2.setTable(fromTable);
+                            if (TapSchemaUtil.isValidColumn(_tapSchema, column2))
                             {
                                 schemaAndTableName = fromTable.getSchemaName() + "." + fromTable.getName();
                                 tapSelectItem = new TapSelectItem(schemaAndTableName, columnName, alias); // all valid
