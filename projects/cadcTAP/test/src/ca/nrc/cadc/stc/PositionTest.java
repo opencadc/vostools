@@ -32,7 +32,7 @@ public class PositionTest
 
     public static String phrase;
 
-    private static Logger LOG = Logger.getLogger(PositionTest.class);
+    private static final Logger LOG = Logger.getLogger(PositionTest.class);
     static
     {
         Log4jInit.setLevel("ca", Level.INFO);
