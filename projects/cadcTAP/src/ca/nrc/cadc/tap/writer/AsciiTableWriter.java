@@ -84,6 +84,7 @@ import ca.nrc.cadc.tap.schema.TapSchema;
 import ca.nrc.cadc.tap.writer.formatter.DefaultFormatterFactory;
 import ca.nrc.cadc.tap.writer.formatter.Formatter;
 import ca.nrc.cadc.tap.writer.formatter.FormatterFactory;
+import ca.nrc.cadc.tap.writer.formatter.ResultSetFormatter;
 import com.csvreader.CsvWriter;
 import org.apache.log4j.Logger;
 
@@ -94,16 +95,15 @@ import org.apache.log4j.Logger;
  */
 public class AsciiTableWriter implements TableWriter
 {
-    private static Logger log = Logger.getLogger(AsciiTableWriter.class);
-
     public static final String US_ASCII = "US-ASCII";
     public static final String CSV = "csv";
     public static final String TSV = "tsv";
     public static final char CSV_DELI = ',';
     public static final char TSV_DELI = '\t';
 
-    protected TapSchema tapSchema;
+    private static final Logger LOG = Logger.getLogger(AsciiTableWriter.class);
 
+    protected TapSchema tapSchema;
     protected List<TapSelectItem> selectList;
 
     private String format;
@@ -152,7 +152,7 @@ public class AsciiTableWriter implements TableWriter
         FormatterFactory factory = DefaultFormatterFactory.getFormatterFactory();
         List<Formatter> formatters = factory.getFormatters(tapSchema, selectList);
 
-        log.debug("writing ResultSet, format: " + format);
+        LOG.debug("writing ResultSet, format: " + format);
         int numRows = 0;
         int numColumns = 0;
         boolean ok = false;
@@ -173,13 +173,15 @@ public class AsciiTableWriter implements TableWriter
                 for (int i = 1; i <= numColumns; i++)
                 {
                     Formatter formatter = formatters.get(i - 1);
-                    writer.write(formatter.format(rs.getString(i)));
-
+                    if (formatter instanceof ResultSetFormatter)
+                        writer.write(((ResultSetFormatter) formatter).format(rs, i));
+                    else
+                        writer.write(formatter.format(rs.getObject(i)));
                 }
                 writer.endRecord();
                 numRows++;
             }
-            log.debug("wrote format: " + format
+            LOG.debug("wrote format: " + format
                     + " columns: " + numColumns+  " rows: " + numRows
                     + " [OK]");
             ok = true;
@@ -188,7 +190,7 @@ public class AsciiTableWriter implements TableWriter
         }
         catch (SQLException ex)
         {
-            log.debug("wrote format: " + format
+            LOG.debug("wrote format: " + format
                     + " columns:" + numColumns+  " rows: " + numRows
                     + " [FAILED]");
             throw new IOException(ex);
