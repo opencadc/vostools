@@ -114,8 +114,7 @@ public class AsynchResourceTestCase extends TestCase
         parameters = new ArrayList<Parameter>();
 
         mockJob = createMock(Job.class);
-        expect(mockJob.getJobId()).andReturn(88l).anyTimes();
-//        expect(mockJob.getErrorSummary()).andReturn("ERROR_MESSAGE").anyTimes();
+        expect(mockJob.getJobId()).andReturn("88l").anyTimes();
         expect(mockJob.getExecutionPhase()).
                 andReturn(ExecutionPhase.EXECUTING).anyTimes();
         expect(mockJob.getExecutionDuration()).andReturn(88l).anyTimes();
@@ -196,7 +195,7 @@ public class AsynchResourceTestCase extends TestCase
                 document.createElementNS(XML_NAMESPACE_PREFIX,
                                          JobAttribute.JOB_ID.
                                                  getAttributeName());
-        jobIdElement.setNodeValue(Long.toString(mockJob.getJobId()));
+        jobIdElement.setNodeValue(mockJob.getJobId());
         jobElement.appendChild(jobIdElement);
 
         // <uws:phase>

@@ -107,6 +107,7 @@ public class JobAsynchResource extends BaseJobResource
     {
         final Job job = getJob();
         final Form form = new Form(entity);
+        String redirectURLAppendage = "";
         
         String pathInfo = getRequest().getResourceRef().getPath().trim();
 
@@ -124,7 +125,26 @@ public class JobAsynchResource extends BaseJobResource
             if (phase.equals("RUN"))
             {
                 job.setExecutionPhase(ExecutionPhase.QUEUED);
-                executeJob();
+
+                try
+                {
+                    executeJob(job);
+                }
+                catch (JobAlreadySubmittedException e)
+                {
+                    LOGGER.error("Job already submitted or running.", e);
+
+                    if (getJob().getExecutionPhase().equals(
+                            ExecutionPhase.ERROR))
+                    {
+                        redirectURLAppendage = "/error";
+                    }
+                    else
+                    {
+                        redirectURLAppendage = "/results";
+                    }
+                }
+
             }
             else if (phase.equals("ABORT"))
             {
@@ -167,19 +187,38 @@ public class JobAsynchResource extends BaseJobResource
         }
 
         getJobManager().persist(job);
-        redirectSeeOther(getHostPart() + "/async/" + job.getJobId());
+        redirectSeeOther(getHostPart() + "/async/" + job.getJobId()
+                         + redirectURLAppendage);
     }
 
     /**
      * Execute the current Job.  This method will set a new Job Runner with
      * every execution to make it ThreadSafe.
+     *
+     * @param job   The job to execute.
+     * @throws JobAlreadySubmittedException  If this job is already being run.
      */
-    protected void executeJob()
+    protected void executeJob(final Job job)
+            throws JobAlreadySubmittedException
     {
+        final Job currentJob = getJob();
+        final ExecutionPhase currentJobExecPhase =
+                currentJob.getExecutionPhase();
+
+        if (currentJobExecPhase.equals(ExecutionPhase.PENDING)
+            || currentJobExecPhase.equals(ExecutionPhase.QUEUED)
+            || currentJobExecPhase.equals(ExecutionPhase.EXECUTING))
+        {
+            throw new JobAlreadySubmittedException("Job ["
+                                                   + currentJob.getJobId()
+                                                   + "] has already been " +
+                                                   "submitted.");
+        }
+
         final JobExecutor je = getJobExecutorService();
         final JobRunner jobRunner = createJobRunner();
 
-        jobRunner.setJob(getJob());
+        jobRunner.setJob(job);
         je.execute(jobRunner);
     }
 
@@ -201,7 +240,27 @@ public class JobAsynchResource extends BaseJobResource
 
         if (pathInfo.endsWith("execute"))
         {
-            executeJob();
+            try
+            {
+                executeJob(job);
+            }
+            catch (JobAlreadySubmittedException e)
+            {
+                LOGGER.error("Job already running or submitted.", e);
+
+                if (getJob().getExecutionPhase().equals(
+                        ExecutionPhase.ERROR))
+                {
+                    redirectSeeOther(getHostPart() + "/async/"
+                                     + job.getJobId() + "/error");
+                }
+                else
+                {
+                    redirectSeeOther(getHostPart() + "/async/"
+                                     + job.getJobId() + "/results");
+                }
+            }
+
             text = job.getJobId();
             jobAttribute = JobAttribute.JOB_ID;
         }
