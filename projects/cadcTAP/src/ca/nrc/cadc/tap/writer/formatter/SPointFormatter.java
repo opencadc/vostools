@@ -108,8 +108,13 @@ public class SPointFormatter implements ResultSetFormatter
      */
     public String format(Object object)
     {
-        if (object == null)
-            return "";
+        return STC.format(getPosition(object));
+    }
+
+    public Position getPosition(Object object)
+    {
+         if (object == null)
+            return null;
         if (!(object instanceof String))
             throw new IllegalArgumentException("Expected String, was " + object.getClass().getName());
         String s = (String) object;
@@ -141,7 +146,7 @@ public class SPointFormatter implements ResultSetFormatter
         position.pos.add(x);
         position.pos.add(y);
 
-        return STC.format(position);
+        return position;
     }
     
 }

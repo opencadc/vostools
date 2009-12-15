@@ -83,8 +83,6 @@ import java.util.TimeZone;
  */
 public class LocalTimestampFormatter implements ResultSetFormatter
 {
-    private String timezone = "PST";
-
     /**
      *
      * Takes a ResultSet and column index of the Date or Timestamp
@@ -98,7 +96,7 @@ public class LocalTimestampFormatter implements ResultSetFormatter
     public String format(ResultSet resultSet, int columnIndex)
         throws SQLException
     {
-        Timestamp object = resultSet.getTimestamp(columnIndex, Calendar.getInstance(TimeZone.getTimeZone(timezone)));
+        Timestamp object = resultSet.getTimestamp(columnIndex, Calendar.getInstance(DateUtil.LOCAL));
         return format(object);
     }
 
@@ -124,7 +122,7 @@ public class LocalTimestampFormatter implements ResultSetFormatter
             date = DateUtil.toDate(object);
 
         if (date != null)
-            return DateUtil.toString(date, DateUtil.ISO_DATE_FORMAT, TimeZone.getTimeZone(timezone));
+            return DateUtil.toString(date, DateUtil.ISO_DATE_FORMAT, DateUtil.LOCAL);
         else
             throw new UnsupportedOperationException("formatting " + object.getClass().getName() + " " + object);
     }

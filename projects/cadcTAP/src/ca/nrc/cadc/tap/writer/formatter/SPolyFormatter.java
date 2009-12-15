@@ -108,8 +108,13 @@ public class SPolyFormatter implements ResultSetFormatter
      */
     public String format(Object object)
     {
+        return STC.format(getPolygon(object));
+    }
+
+    public Polygon getPolygon(Object object)
+    {
         if (object == null)
-            return "";
+            return null;
         if (!(object instanceof String))
             throw new IllegalArgumentException("Expected String, was " + object.getClass().getName());
         String s = (String) object;
@@ -160,7 +165,7 @@ public class SPolyFormatter implements ResultSetFormatter
             polygon.pos.add(y);
         }
 
-        return STC.format(polygon);
+        return polygon;
     }
 
 }

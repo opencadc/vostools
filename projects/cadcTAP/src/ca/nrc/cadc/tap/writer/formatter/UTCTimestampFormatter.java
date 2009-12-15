@@ -109,6 +109,7 @@ public class UTCTimestampFormatter implements ResultSetFormatter
      */
     public String format(Object object)
     {
+        System.out.println("object instance of: " + object.getClass().getName());
         if (object == null)
             return "";
         Date date = null;
