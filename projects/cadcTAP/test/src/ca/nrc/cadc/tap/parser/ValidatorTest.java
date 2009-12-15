@@ -88,6 +88,7 @@ import ca.nrc.cadc.tap.parser.navigator.SelectNavigator;
 import ca.nrc.cadc.tap.parser.schema.TapSchemaColumnValidator;
 import ca.nrc.cadc.tap.parser.schema.TapSchemaTableValidator;
 import ca.nrc.cadc.tap.schema.TapSchema;
+import ca.nrc.cadc.util.Log4jInit;
 
 /**
  * 
@@ -111,6 +112,7 @@ public class ValidatorTest
     @BeforeClass
     public static void setUpBeforeClass() throws Exception
     {
+        Log4jInit.setLevel("ca.nrc.cadc", org.apache.log4j.Level.DEBUG);
         TAP_SCHEMA = TestUtil.loadDefaultTapSchema();
     }
 

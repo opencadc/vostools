@@ -72,6 +72,8 @@
  */
 package ca.nrc.cadc.tap.parser;
 
+import java.util.ArrayList;
+import java.util.List;
 import java.util.MissingResourceException;
 
 import javax.sql.DataSource;
@@ -79,6 +81,9 @@ import javax.sql.DataSource;
 import org.springframework.jdbc.datasource.SingleConnectionDataSource;
 
 import ca.nrc.cadc.tap.TapProperties;
+import ca.nrc.cadc.tap.schema.ColumnDesc;
+import ca.nrc.cadc.tap.schema.SchemaDesc;
+import ca.nrc.cadc.tap.schema.TableDesc;
 import ca.nrc.cadc.tap.schema.TapSchema;
 import ca.nrc.cadc.tap.schema.TapSchemaDAO;
 
@@ -105,6 +110,90 @@ public class TestUtil
     }
 
     public static TapSchema loadDefaultTapSchema()
+    {
+        return mockTapSchema();
+    }
+
+    public static TapSchema mockTapSchema()
+    {
+        String schemaName = "tap_schema";
+        SchemaDesc sd = new SchemaDesc(schemaName, "description", "utype");
+        List<SchemaDesc> sdList = new ArrayList<SchemaDesc>();
+        sdList.add(sd);
+
+        List<TableDesc> tdList;
+        tdList = new ArrayList<TableDesc>();
+        sd.setTableDescs(tdList);
+
+        ColumnDesc cd;
+        String tn; // table name
+        List<ColumnDesc> cdList;
+        TableDesc td;
+
+        tn = "alldatatypes";
+        td = new TableDesc(schemaName, tn, "description", "utype");
+        tdList.add(td);
+        cdList = new ArrayList<ColumnDesc>();
+        td.setColumnDescs(cdList);
+        cd = new ColumnDesc(); cdList.add(cd); cd.setTableName(tn); cd.setColumnName("t_integer");
+        cd = new ColumnDesc(); cdList.add(cd); cd.setTableName(tn); cd.setColumnName("t_long");
+        cd = new ColumnDesc(); cdList.add(cd); cd.setTableName(tn); cd.setColumnName("t_double");
+        cd = new ColumnDesc(); cdList.add(cd); cd.setTableName(tn); cd.setColumnName("t_string");
+        cd = new ColumnDesc(); cdList.add(cd); cd.setTableName(tn); cd.setColumnName("t_bytes");
+        cd = new ColumnDesc(); cdList.add(cd); cd.setTableName(tn); cd.setColumnName("t_date");
+        cd = new ColumnDesc(); cdList.add(cd); cd.setTableName(tn); cd.setColumnName("t_enc_location");
+        cd = new ColumnDesc(); cdList.add(cd); cd.setTableName(tn); cd.setColumnName("t_enc_polygon");
+        cd = new ColumnDesc(); cdList.add(cd); cd.setTableName(tn); cd.setColumnName("t_enc_list_subinterval");
+        cd = new ColumnDesc(); cdList.add(cd); cd.setTableName(tn); cd.setColumnName("t_enc_list_sample");
+        cd = new ColumnDesc(); cdList.add(cd); cd.setTableName(tn); cd.setColumnName("t_array_int");
+        cd = new ColumnDesc(); cdList.add(cd); cd.setTableName(tn); cd.setColumnName("t_spoint");
+        cd = new ColumnDesc(); cdList.add(cd); cd.setTableName(tn); cd.setColumnName("t_scircle");
+        cd = new ColumnDesc(); cdList.add(cd); cd.setTableName(tn); cd.setColumnName("t_spoly");
+        cd = new ColumnDesc(); cdList.add(cd); cd.setTableName(tn); cd.setColumnName("t_box");
+
+        tn = "tables";
+        td = new TableDesc(schemaName, tn, "description", "utype");
+        tdList.add(td);
+        cdList = new ArrayList<ColumnDesc>();
+        td.setColumnDescs(cdList);
+        cd = new ColumnDesc(); cdList.add(cd); cd.setTableName(tn); cd.setColumnName("schema_name");
+        cd = new ColumnDesc(); cdList.add(cd); cd.setTableName(tn); cd.setColumnName("table_name");
+        cd = new ColumnDesc(); cdList.add(cd); cd.setTableName(tn); cd.setColumnName("utype");
+        cd = new ColumnDesc(); cdList.add(cd); cd.setTableName(tn); cd.setColumnName("description");
+        
+        tn = "columns";
+        td = new TableDesc(schemaName, tn, "description", "utype");
+        tdList.add(td);
+        cdList = new ArrayList<ColumnDesc>();
+        td.setColumnDescs(cdList);
+        cd = new ColumnDesc(); cdList.add(cd); cd.setTableName(tn); cd.setColumnName("table_name");
+        cd = new ColumnDesc(); cdList.add(cd); cd.setTableName(tn); cd.setColumnName("column_name");
+        cd = new ColumnDesc(); cdList.add(cd); cd.setTableName(tn); cd.setColumnName("utype");
+        cd = new ColumnDesc(); cdList.add(cd); cd.setTableName(tn); cd.setColumnName("ucd");
+        cd = new ColumnDesc(); cdList.add(cd); cd.setTableName(tn); cd.setColumnName("unit");
+        cd = new ColumnDesc(); cdList.add(cd); cd.setTableName(tn); cd.setColumnName("description");
+        cd = new ColumnDesc(); cdList.add(cd); cd.setTableName(tn); cd.setColumnName("datatype");
+        cd = new ColumnDesc(); cdList.add(cd); cd.setTableName(tn); cd.setColumnName("size");
+        cd = new ColumnDesc(); cdList.add(cd); cd.setTableName(tn); cd.setColumnName("principal");
+        cd = new ColumnDesc(); cdList.add(cd); cd.setTableName(tn); cd.setColumnName("indexed");
+        cd = new ColumnDesc(); cdList.add(cd); cd.setTableName(tn); cd.setColumnName("std");
+
+        tn = "keys";
+        td = new TableDesc(schemaName, tn, "description", "utype");
+        tdList.add(td);
+        cdList = new ArrayList<ColumnDesc>();
+        td.setColumnDescs(cdList);
+        cd = new ColumnDesc(); cdList.add(cd); cd.setTableName(tn); cd.setColumnName("key_id");
+        cd = new ColumnDesc(); cdList.add(cd); cd.setTableName(tn); cd.setColumnName("from_table");
+        cd = new ColumnDesc(); cdList.add(cd); cd.setTableName(tn); cd.setColumnName("target_table");
+        cd = new ColumnDesc(); cdList.add(cd); cd.setTableName(tn); cd.setColumnName("utype");
+        cd = new ColumnDesc(); cdList.add(cd); cd.setTableName(tn); cd.setColumnName("description");
+
+        TapSchema ts = new TapSchema(sdList, null);
+        return ts;
+    }
+
+    public static TapSchema loadTapSchemaFromDb()
     {
         TapSchema rtn = null;
         try
