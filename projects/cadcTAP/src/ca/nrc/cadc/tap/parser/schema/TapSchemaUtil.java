@@ -140,6 +140,8 @@ public class TapSchemaUtil
     }
 
     /**
+     * Check whether a column exists in a tapSchema
+     * 
      * @param tapSchema
      * @param column
      * @return
@@ -195,6 +197,8 @@ public class TapSchemaUtil
     }
 
     /**
+     * Check whether a simple columnName exists in tableDesc
+     *  
      * @param td
      * @param columnName
      * @return

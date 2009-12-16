@@ -67,147 +67,84 @@
 ************************************************************************
 */
 
-package ca.nrc.cadc.tap.parser;
+package ca.nrc.cadc.tap.parser.schema;
 
-import java.io.StringReader;
-import java.util.ArrayList;
-import java.util.List;
-
-import net.sf.jsqlparser.JSQLParserException;
 import net.sf.jsqlparser.expression.Expression;
-import net.sf.jsqlparser.parser.CCJSqlParserManager;
 import net.sf.jsqlparser.schema.Column;
 import net.sf.jsqlparser.schema.Table;
-import net.sf.jsqlparser.statement.Statement;
-import net.sf.jsqlparser.statement.select.FromItem;
-import net.sf.jsqlparser.statement.select.Join;
 import net.sf.jsqlparser.statement.select.PlainSelect;
 import net.sf.jsqlparser.statement.select.SelectExpressionItem;
 import net.sf.jsqlparser.statement.select.SelectItem;
-import ca.nrc.cadc.tap.parser.navigator.SelectNavigator;
+import ca.nrc.cadc.tap.parser.ParserUtil;
+import ca.nrc.cadc.tap.parser.navigator.SelectNavigator.VisitingPart;
+import ca.nrc.cadc.tap.schema.ColumnDesc;
 
 /**
  * @author zhangsa
  *
  */
-public class ParserUtil
+public class BlobClobValidator extends TapSchemaColumnValidator
 {
-    public static void parseStatement(Statement statement, SelectNavigator sn)
-    {
-        StatementNavigator statementNavigator = new StatementNavigator(sn);
-        statement.accept(statementNavigator);
-        return;
-    }
+    public static String BLOB = "BLOB";
+    public static String CLOB = "CLOB";
     
-    public static Statement receiveQuery(String query) throws JSQLParserException
-    {
-        Statement statement = null;
-        StringReader sr = new StringReader(query);
-        CCJSqlParserManager sqlParser = new CCJSqlParserManager();
-        statement = sqlParser.parse(sr);
-        return statement;
-    }
-
-    /**
-     * Aliases are also extracted.
-     *  
-     * @param ps
-     * @return
-     */
-    public static List<Table> getFromTableList(PlainSelect ps)
-    {
-        List<Table> fromTableList = new ArrayList<Table>();
-        String alias = null;
-        
-        FromItem fromItem = ps.getFromItem();
-        if (fromItem instanceof Table)
-        {
-            fromTableList.add((Table) fromItem);
-        }
-
-        List<Join> joins = ps.getJoins();
-        if (joins != null)
-        {
-            for (Join join : joins)
-            {
-                fromItem = join.getRightItem();
-                if (fromItem instanceof Table)
-                {
-                    Table rightTable = (Table) join.getRightItem();
-                    fromTableList.add(rightTable);
-                }
-            }
-        }
-        return fromTableList;
-    }
-    
-    public static Table findFromTable(PlainSelect ps, String tableNameOrAlias)
-    {
-        Table rtn = null;
-        List<Table> fromTableList = getFromTableList(ps);
-        for (Table table : fromTableList)
-        {
-            if (tableNameOrAlias.equalsIgnoreCase(table.getAlias()) 
-                    || tableNameOrAlias.equalsIgnoreCase(table.getName()) )
-            {
-                rtn = table;
-                break;
-            }
-        }
-        return rtn;
-    }
-
-    /**
-     * @param plainSelect
-     * @param columnNameOrAlias
-     * @return
-     */
-    public static SelectItem findSelectItemByAlias(PlainSelect plainSelect, String columnNameOrAlias)
-    {
-        SelectItem rtn = null;
-        List<SelectItem> siList = plainSelect.getSelectItems(); 
-        for (SelectItem si : siList)
-        {
-            if (si instanceof SelectExpressionItem)
-            {
-                SelectExpressionItem sei = (SelectExpressionItem) si;
-                if (columnNameOrAlias.equalsIgnoreCase(sei.getAlias()))
-                {
-                    rtn = sei;
-                    break;
-                }
-            }
-        }
-        return rtn;
-    }
-
-    /**
-     * @param plainSelect
-     * @return
-     */
-    public static int countSelectItems(PlainSelect plainSelect)
-    {
-        return plainSelect.getSelectItems().size();
-    }
-
-    /**
-     * Find the column in select item which matches alias.
-     * return null if not found, or if not column type.
+    /*
+     * Column cannot be BLOB/CLOB type if it's not in the SELECT ITEM part of query.
      * 
-     * @param plainSelect 
-     * @param alias
-     * @return
+     * Possible form of parameter "column" can be:
+     * 
+     * alias, columnName, table.columnName, tableAilas.columnName, or schema.table.ColumnName
+     * 
+     * alias: trace back to selectItem, if it's a column, trace to columnDesc
+     * columnName:
+     * 
+     * 
      */
-    public static Column findSelectItemColumn(PlainSelect plainSelect, String alias)
+    @Override
+    public void visit(Column column)
     {
-        Column rtn = null;
-        SelectItem si = findSelectItemByAlias(plainSelect, alias);
-        if (si != null || si instanceof SelectExpressionItem)
+        log.debug("visit(column)" + column);
+        
+        PlainSelect plainSelect = _selectNavigator.getPlainSelect();
+        VisitingPart visiting = _selectNavigator.getVisitingPart(); 
+        
+        if (!visiting.equals(VisitingPart.SELECT_ITEM))
         {
-            Expression ex = ((SelectExpressionItem) si).getExpression();
-            if (ex instanceof Column)
-                rtn = (Column) ex;
+            // can be by alias
+            // Possible form as:
+            // alias, columnName, table.columnName, tableAilas.columnName, or schema.table.ColumnName
+            boolean isAlias = false;
+            
+            ColumnDesc columnDesc = null;
+            
+            Table table = column.getTable();
+            if (table == null || table.getName() == null || table.getName().equals("") )
+            {
+                // form: alias, or columnName
+                String columnNameOrAlias = column.getColumnName();
+                SelectItem si = ParserUtil.findSelectItemByAlias(plainSelect, columnNameOrAlias);
+                    
+                if (si != null || si instanceof SelectExpressionItem)
+                {
+                    isAlias = true; // ok
+                    Expression ex = ((SelectExpressionItem) si).getExpression();
+  //TODO:sz//                  if (ex instanceof Column)
+//                        columnDesc = TapSchemaUtil.findColumnDesc(tapSchema, plainSelect, (Column) ex);
+                }
+            }
+            
+//TODO:sz            if (!isAlias)
+//                columnDesc = TapSchemaUtil.findColumnDesc(tapSchema, plainSelect, column);
+            
+            if (columnDesc != null)
+            {
+                String dataType = columnDesc.getDatatype();
+                if (BLOB.equalsIgnoreCase(dataType))
+                    throw new IllegalArgumentException("The column [" + column + "] of BLOB type cannot be used in place other than select item.");
+                else if (CLOB.equalsIgnoreCase(dataType))
+                    throw new IllegalArgumentException("The column [" + column + "] of CLOB type cannot be used in place other than select item.");
+            }
         }
-        return rtn;
     }
+
 }

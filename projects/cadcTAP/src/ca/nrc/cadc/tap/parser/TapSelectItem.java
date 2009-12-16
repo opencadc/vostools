@@ -69,7 +69,6 @@
 
 package ca.nrc.cadc.tap.parser;
 
-import ca.nrc.cadc.tap.parser.adql.validator.FromColumn;
 
 /**
  * @author zhangsa
@@ -91,13 +90,6 @@ public class TapSelectItem
         _tableName = tableName;
         _columnName = columnName;
         _alias = alias;
-    }
-
-    public TapSelectItem(FromColumn fromColumn)
-    {
-        _alias = fromColumn.getColumnAlias();
-        _columnName = fromColumn.getColumnName();
-        _tableName = fromColumn.getTableQualifiedName();
     }
 
     public String getTableName()
