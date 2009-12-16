@@ -67,95 +67,41 @@
  ************************************************************************
  */
 
-/**
- * 
- */
-package ca.nrc.cadc.tap.parser.adql.impl.postgresql.sql;
-
-import java.util.Map;
-import java.util.MissingResourceException;
-
-import javax.sql.DataSource;
-
-import org.springframework.jdbc.datasource.SingleConnectionDataSource;
+package ca.nrc.cadc.tap.test;
 
 import ca.nrc.cadc.tap.TapProperties;
-import ca.nrc.cadc.tap.parser.adql.config.AdqlConfig;
-import ca.nrc.cadc.tap.parser.adql.config.meta.ColumnMeta;
-import ca.nrc.cadc.tap.parser.adql.config.meta.TableMeta;
-import ca.nrc.cadc.tap.schema.ColumnDesc;
-import ca.nrc.cadc.tap.schema.SchemaDesc;
-import ca.nrc.cadc.tap.schema.TableDesc;
-import ca.nrc.cadc.tap.schema.TapSchema;
-import ca.nrc.cadc.tap.schema.TapSchemaDAO;
-import ca.nrc.cadc.tap.test.SqlPropertiesFactory;
 
 /**
  * @author zhangsa
  * 
  */
-public class AdqlConfigImpl extends AdqlConfig
+public class SqlPropertiesFactory
 {
-    public AdqlConfigImpl(TapSchema tapSchema,
-            Map<String, ca.nrc.cadc.tap.schema.TableDesc> extraTablesMap)
+    private static String PROPERTY_FILE = "postgresql_sql.properties";
+    private static TapProperties static_instance;
+    private static Exception static_exception;
+
+    public static void reload()
     {
-        super();
-        if (tapSchema != null)
-            _tapSchema = tapSchema;
-        else
-            loadDefaultTapSchema();
-        _extraTablesMap = extraTablesMap;
-
-        configName = "CADC PostgreSQL SQL";
-        initFunctionMeta();
-        initTableMeta();
-
-        allowJoins = true; // Allow multiple tables in FROM clause (including JOIN). Default: true.
-        allowUnion = true; // Allow UNION. Default: true.
-        allowGroupBy = true; // Allow GROUP BY. Default: true.
-        allowOrderBy = true; // Allow ORDER BY. Default: true.
-        allowLimit = true; // Allow LIMIT. Default: false (not an ADQL construct)
-        allowTop = true; // Allow TOP. Default: true.
-        allowDistinct = true; // Allow DISTINCT. Default: true.
-        allowInto = true; // Allow SELECT INTO. Default: false (not an ADQL construct)
-        // caseSensitive = false; // Whether column, table, and schema names are case sensitive. -sz 2009-09-10
-
+        static_instance = null;
     }
 
-    private void loadDefaultTapSchema()
+    public static TapProperties getInstance() throws Exception
     {
-        try
+        if (static_exception != null)
+            throw static_exception;
+        if (static_instance == null)
         {
-            TapProperties properties = SqlPropertiesFactory.getInstance();
-
-            String JDBC_DRIVER = properties.getProperty("JDBC_DRIVER");
-            String JDBC_URL = properties.getProperty("JDBC_URL");
-            String USERNAME = properties.getProperty("USERNAME");
-            String PASSWORD = properties.getProperty("PASSWORD");
-            boolean SUPPRESS_CLOSE = properties.getPropertyBooloean("SUPPRESS_CLOSE");
-
-            log.debug("loadDefaultTapSchema");
             try
             {
-                Class.forName(JDBC_DRIVER);
-            } catch (ClassNotFoundException e)
+                static_instance = new TapProperties(PROPERTY_FILE);
+            } catch (Exception e)
             {
-                String msg = "JDBC Driver not found.";
-                log.error(msg, e);
-                throw new MissingResourceException(msg, JDBC_DRIVER, null);
+                static_exception = e;
+                throw e;
             }
-            DataSource ds = new SingleConnectionDataSource(JDBC_URL, USERNAME, PASSWORD, SUPPRESS_CLOSE);
-            TapSchemaDAO dao = new TapSchemaDAO(ds);
-            _tapSchema = dao.get();
-        } catch (Exception ex)
-        {
-            log.error(ex);
         }
-    }
-
-    private void initFunctionMeta()
-    {
-        // functions not available for standard SQL parser.
+        return static_instance;
     }
 
 }

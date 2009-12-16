@@ -80,8 +80,6 @@ import org.junit.BeforeClass;
 import org.junit.Test;
 
 import ca.nrc.cadc.tap.TapProperties;
-import ca.nrc.cadc.tap.parser.adql.impl.postgresql.pgsphere.PgspherePropertiesFactory;
-import ca.nrc.cadc.tap.parser.adql.impl.postgresql.sql.SqlPropertiesFactory;
 import ca.nrc.cadc.util.Log4jInit;
 
 /**
@@ -131,7 +129,7 @@ public class TestProperties
     }
 
     /**
-     * Test method for {@link ca.nrc.cadc.tap.parser.adql.impl.postgresql.sql.SqlPropertiesFactory#getInstance()}.
+     * Test method for {@link ca.nrc.cadc.tap.test.SqlPropertiesFactory#getInstance()}.
      */
     @Test
     public void testGetInstance()

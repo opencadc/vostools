@@ -83,7 +83,6 @@ import org.springframework.jdbc.datasource.SingleConnectionDataSource;
 
 import ca.nrc.cadc.tap.TapProperties;
 import ca.nrc.cadc.tap.UploadManager;
-import ca.nrc.cadc.tap.parser.adql.impl.postgresql.sql.SqlPropertiesFactory;
 
 public abstract class UploadTestCase extends TestCase {
     
