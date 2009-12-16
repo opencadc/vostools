@@ -69,7 +69,9 @@
 
 package ca.nrc.cadc.tap.parser;
 
+import ca.nrc.cadc.tap.parser.navigator.SelectNavigator;
 import net.sf.jsqlparser.expression.Expression;
+import net.sf.jsqlparser.statement.select.PlainSelect;
 import org.apache.log4j.Logger;
 
 /**
@@ -80,12 +82,30 @@ import org.apache.log4j.Logger;
  * 
  * @author pdowler
  */
-public class RegionFinder
+public class RegionFinder extends SelectNavigator
 {
     private static Logger log = Logger.getLogger(RegionFinder.class);
     
-    public RegionFinder() { }
-
+    public RegionFinder() 
+    { 
+    
+    }
+    
+    public void visit(PlainSelect ps)
+    {
+        // get navigation code from RegionConverterImpl and call handleXXX()
+    }
+    
+     /**
+     * This method is called when CONTAINS is one of the arguments in a predicate.
+     * 
+     * @param ex the predicate with a CONTAINS argument
+     */
+    protected Expression handleRegionPredicate(Expression ex)
+    {
+        throw new UnsupportedOperationException("CONTAINS predicate not supported");
+    }
+    
     /**
      * This method is called when a CONTAINS is found outside of a predicate.
      * This could occurr if the query had CONTAINS(...) in the select list or as
@@ -94,20 +114,11 @@ public class RegionFinder
      * 
      * @param ex the CONTAINS expression
      */
-    protected void handleContains(Expression ex)
+    protected Expression handleContains(Expression ex)
     {
         throw new UnsupportedOperationException("CONTAINS not supported");
     }
-    
-    /**
-     * This method is called when CONTAINS is one of the arguments in a predicate.
-     * 
-     * @param ex the predicate with a CONTAINS argument
-     */
-    protected void handleContainsPredicate(Expression ex)
-    {
-        throw new UnsupportedOperationException("CONTAINS not supported");
-    }
+   
     
     /**
      * This method is called when a INTERSECTS is found outside of a predicate.
@@ -117,17 +128,7 @@ public class RegionFinder
      * 
      * @param ex the CONTAINS expression
      */
-    protected void handleIntersects(Expression ex)
-    {
-        throw new UnsupportedOperationException("INTERSECTS not supported");
-    }
-    
-    /**
-     * This method is called when INTERSECTS is one of the arguments in a predicate.
-     * 
-     * @param ex the predicate with a INTERSECTS argument
-     */
-    protected void handleIntersectsPredicate(Expression ex)
+    protected Expression handleIntersects(Expression ex)
     {
         throw new UnsupportedOperationException("INTERSECTS not supported");
     }
@@ -137,7 +138,7 @@ public class RegionFinder
      * 
      * @param ex the POINT expression
      */
-    protected void handlePoint(Expression ex)
+    protected Expression handlePoint(Expression ex)
     {
         throw new UnsupportedOperationException("POINT not supported");
     }
@@ -147,7 +148,7 @@ public class RegionFinder
      * 
      * @param ex the CIRCLE expression
      */
-    protected void handleCircle(Expression ex)
+    protected Expression handleCircle(Expression ex)
     {
         throw new UnsupportedOperationException("CIRCLE not supported");
     }
@@ -157,7 +158,7 @@ public class RegionFinder
      * 
      * @param ex the BOX expression
      */
-    protected void handleBox(Expression ex)
+    protected Expression handleBox(Expression ex)
     {
         throw new UnsupportedOperationException("BOX not supported");
     }
@@ -167,7 +168,7 @@ public class RegionFinder
      * 
      * @param ex the POLYGON expression
      */
-    protected void handlePolygon(Expression ex)
+    protected Expression handlePolygon(Expression ex)
     {
         throw new UnsupportedOperationException("POLYGON not supported");
     }
@@ -177,7 +178,7 @@ public class RegionFinder
      * 
      * @param ex the REGION expression
      */
-    protected void handleRegion(Expression ex)
+    protected Expression handleRegion(Expression ex)
     {
         throw new UnsupportedOperationException("REGION not supported");
     }
@@ -187,7 +188,7 @@ public class RegionFinder
      * 
      * @param ex the CENTROID expression
      */
-    protected void handleCentroid(Expression ex)
+    protected Expression handleCentroid(Expression ex)
     {
         throw new UnsupportedOperationException("CENTROID not supported");
     }
@@ -197,7 +198,7 @@ public class RegionFinder
      * 
      * @param ex the AREA expression
      */
-    protected void handleArea(Expression ex)
+    protected Expression handleArea(Expression ex)
     {
         throw new UnsupportedOperationException("AREA not supported");
     }
@@ -207,7 +208,7 @@ public class RegionFinder
      * 
      * @param ex the COORD1 expression
      */
-    protected void handleCoord1(Expression ex)
+    protected Expression handleCoord1(Expression ex)
     {
         throw new UnsupportedOperationException("COORD1 not supported");
     }
@@ -217,7 +218,7 @@ public class RegionFinder
      * 
      * @param ex the COORD2 expression
      */
-    protected void handleCoord2(Expression ex)
+    protected Expression handleCoord2(Expression ex)
     {
         throw new UnsupportedOperationException("COORD2 not supported");
     }
@@ -227,7 +228,7 @@ public class RegionFinder
      * 
      * @param ex the COORDSYS expression
      */
-    protected void handleCoordSys(Expression ex)
+    protected Expression handleCoordSys(Expression ex)
     {
         throw new UnsupportedOperationException("COORDSYS not supported");
     }

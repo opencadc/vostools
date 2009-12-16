@@ -110,6 +110,7 @@ public class TapSchemaColumnValidator extends ReferenceNavigator
     public void visit(ColumnIndex columnIndex)
     {
         log.debug("visit(columnIndex)" + columnIndex);
+        // TODO: this is non-tapschema validation, move to someplace else?
         int ci = columnIndex.getIndex();
         if ( ci > ParserUtil.countSelectItems(_selectNavigator.getPlainSelect()))
             throw new IllegalArgumentException("ColumnIndex " + columnIndex + " is out of scope.");
@@ -155,15 +156,4 @@ public class TapSchemaColumnValidator extends ReferenceNavigator
                 TapSchemaUtil.validateColumnNonAlias(tapSchema, plainSelect, column);
         }
     }
-
-    /* (non-Javadoc)
-     * @see net.sf.jsqlparser.statement.select.OrderByVisitor#visit(net.sf.jsqlparser.statement.select.OrderByElement)
-     */
-    @Override
-    public void visit(OrderByElement orderBy)
-    {
-        log.debug("visit(orderByElement)" + orderBy);
-        orderBy.getColumnReference().accept(this);
-    }
-
 }

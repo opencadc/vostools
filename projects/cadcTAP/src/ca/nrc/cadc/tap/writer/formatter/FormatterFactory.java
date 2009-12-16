@@ -98,7 +98,7 @@ public interface FormatterFactory
 
     Formatter getTimestampFormatter(ColumnDesc columnDesc);
 
-    Formatter getSPointFormatter(ColumnDesc columnDesc);
+    Formatter getPointFormatter(ColumnDesc columnDesc);
 
     Formatter getRegionFormatter(ColumnDesc columnDesc);
     

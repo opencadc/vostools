@@ -121,6 +121,7 @@ public class ReferenceNavigator extends SubNavigator implements ColumnReferenceV
     public void visit(OrderByElement orderBy)
     {
         log.debug("visit(orderByElement)" + orderBy);
+        orderBy.getColumnReference().accept(this);
     }
 
 }

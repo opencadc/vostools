@@ -92,7 +92,7 @@ public class DefaultFormatterFactory implements FormatterFactory
     /**
      * Create a FormatterFactory. This method loads and instantiates a class named
      * <code>ca.nrc.cadc.tap.impl.FormatterFactoryImpl</code> that must be provided
-     * at runtime (by the application). The simplest way ot provide that class is to
+     * at runtime (by the application). The simplest way to provide that class is to
      * extend this one.
      *
      * @return a FormatterFactory implementation
@@ -122,6 +122,16 @@ public class DefaultFormatterFactory implements FormatterFactory
         return formatters;
     }
 
+    /**
+     * Finds a ColumnDesc in the TapSchema that matches the argument selectItem and returns the
+     * right Formatter. This method  finds the ColumnDesc and then calls getFormatter(ColumnDesc).
+     * If the selectItem cannot be found in the TapSchema (eg it is a function or operator expression),
+     * a DefaultFormatter is returned.
+     * 
+     * @param tapSchema
+     * @param selectItem
+     * @return a Formatter for the selectItem
+     */
     public Formatter getFormatter(TapSchema tapSchema, TapSelectItem selectItem)
     {
         // Find the class name of the formatter for this colummn.
@@ -135,26 +145,7 @@ public class DefaultFormatterFactory implements FormatterFactory
                     {
                         if (columnDesc.columnName.equals(selectItem.getColumnName()))
                         {
-                            String datatype = columnDesc.datatype;
-                            if (datatype.equals("adql:INTEGER"))
-                                return getIntegerFormatter(columnDesc);
-                            if (datatype.equals("adql:BIGINT"))
-                                return getLongFormatter(columnDesc);
-                            if (datatype.equals("adql:DOUBLE"))
-                                return getDoubleFormatter(columnDesc);
-                            if (datatype.equals("adql:VARCHAR"))
-                                return getStringFormatter(columnDesc);
-                            else if (datatype.equals("adql:POINT"))
-                                return getSPointFormatter(columnDesc);
-                            else if (datatype.equals("adql:REGION"))
-                                return getRegionFormatter(columnDesc);
-                            else if (datatype.equals("adql:TIMESTAMP"))
-                                return getTimestampFormatter(columnDesc);
-                            else if (datatype.equals("adql:VARBINARY"))
-                                return getByteArrayFormatter(columnDesc);
-                            else if (datatype.equals("int[]"))
-                                return getIntArrayFormatter(columnDesc);
-                            return new DefaultFormatter();
+                            return getFormatter(columnDesc);
                         }
                     }
                 }
@@ -164,50 +155,130 @@ public class DefaultFormatterFactory implements FormatterFactory
         // Custom formatter not found, return the default Formatter.
         return new DefaultFormatter();
     }
+    
+    /**
+     * Create a formatter for the specified column. The default implementation simply checks the 
+     * datatype in the argument ColumnDesc and then calls the appropriate (public) get<type>Formatter
+     * method. Subclasses should override this method if they need to support additional datatypes
+     * (as specified in the TapSchema: tap_schema.columns.datatype).
+     * 
+     * @param desc
+     * @return
+     */
+    protected Formatter getFormatter(ColumnDesc desc)
+    {
+        String datatype = desc.datatype;
+        if (datatype.equalsIgnoreCase("adql:INTEGER"))
+            return getIntegerFormatter(desc);
+        
+        if (datatype.equalsIgnoreCase("adql:BIGINT"))
+            return getLongFormatter(desc);
+        
+        if (datatype.equalsIgnoreCase("adql:DOUBLE"))
+            return getDoubleFormatter(desc);
+        
+        if (datatype.equalsIgnoreCase("adql:VARCHAR"))
+            return getStringFormatter(desc);
+        
+        if (datatype.equalsIgnoreCase("adql:TIMESTAMP"))
+            return getTimestampFormatter(desc);
+        
+        if (datatype.equalsIgnoreCase("adql:VARBINARY") || datatype.equalsIgnoreCase("byte[]"))
+            return getByteArrayFormatter(desc);
+        
+        if (datatype.equalsIgnoreCase("int[]"))
+            return getIntArrayFormatter(desc);
+        
+        if (datatype.equalsIgnoreCase("adql:POINT"))
+            return getPointFormatter(desc);
+        
+        if (datatype.equalsIgnoreCase("adql:REGION"))
+            return getRegionFormatter(desc);
+        
+        return new DefaultFormatter();
+    }
 
+    /**
+     * @param columnDesc
+     * @return a DefaultFormatter
+     */
     public Formatter getIntegerFormatter(ColumnDesc columnDesc)
     {
         return new DefaultFormatter();
     }
 
+    /**
+     * @param columnDesc
+     * @return a DefaultFormatter
+     */
     public Formatter getDoubleFormatter(ColumnDesc columnDesc)
     {
         return new DefaultFormatter();
     }
 
+    /**
+     * @param columnDesc
+     * @return a DefaultFormatter
+     */
     public Formatter getLongFormatter(ColumnDesc columnDesc)
     {
         return new DefaultFormatter();
     }
 
+    /**
+     * @param columnDesc
+     * @return a DefaultFormatter
+     */
     public Formatter getStringFormatter(ColumnDesc columnDesc)
     {
         return new DefaultFormatter();
     }
 
+    /**
+     * @param columnDesc
+     * @return a ByteArrayFormatter
+     */
     public Formatter getByteArrayFormatter(ColumnDesc columnDesc)
     {
         return new ByteArrayFormatter();
     }
 
+    /**
+     * @param columnDesc
+     * @return an IntArrayFormatter
+     */
     public Formatter getIntArrayFormatter(ColumnDesc columnDesc)
     {
         return new IntArrayFormatter();
     }
 
+    /**
+     * @param columnDesc
+     * @return a UTCTimestampFormatter
+     */
     public Formatter getTimestampFormatter(ColumnDesc columnDesc)
     {
         return new UTCTimestampFormatter();
     }
 
-    public Formatter getSPointFormatter(ColumnDesc columnDesc)
+    /**
+     * @param columnDesc
+     * @return a DefaultFormatter
+     * @throws UnsupportedOperationException
+     */
+    public Formatter getPointFormatter(ColumnDesc columnDesc)
     {
-        throw new UnsupportedOperationException();
+        throw new UnsupportedOperationException("no formatter for column " + columnDesc.columnName);
     }
 
+    /**
+     * @param columnDesc
+     * @return a DefaultFormatter
+     * @throws UnsupportedOperationException
+     */
     public Formatter getRegionFormatter(ColumnDesc columnDesc)
     {
-        throw new UnsupportedOperationException();
+        throw new UnsupportedOperationException("no formatter for column " + columnDesc.columnName);
     }
     
 }

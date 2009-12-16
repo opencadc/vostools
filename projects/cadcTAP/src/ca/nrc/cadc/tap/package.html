@@ -73,19 +73,28 @@
       <li>extract the select list metadata for use in writing result(s)</li>
   </ul>
   
-  <h2>TODO: add more extension hooks as needed</h2>
+  
 
   <h2>ca.nrc.cadc.tap.impl.FormatterFactoryImpl</h2>
   <p>
-      The deployment must provide this class and it must implement the <code>ca.nrc.cadc.tap.writer.formatter.Formatter</code>
-      interface. This class is responsible for providing formatters that format the query results.
+      The deployment must provide this class and it must implement the 
+      <code>ca.nrc.cadc.tap.writer.formatter.FormatterFactory</code> interface. This class is 
+      responsible for providing formatters that format the query results.
   </p>
   <p>
       One implementation is provided: <code>ca.nrc.cadc.tap.writer.formatter.DefaultFormatterFactory</code>
-      that supports ADQL types: INTEGER, BIGINT, DOUBLE, VARCHAR, TIMESTAMP, VARBINARY, POINT, and REGION,
-      and int arrays. The getSPointFormatter and getRegionFormatter methods that provide formatters for
-      adql:REGION and adql:REGION datatypes will throw an UnsupportOperationExcetion unless overridden.
+      that returns Formatters to support the following types: INTEGER, BIGINT, DOUBLE, VARCHAR, TIMESTAMP, VARBINARY, 
+      POINT, and REGION, and int arrays. The getPointFormatter and getRegionFormatter methods that provide formatters for
+      adql:POINT and adql:REGION datatypes will throw an UnsupportOperationExcetion unless overridden.
+  </p>
+  <p>
+      The <code>ca.nrc.cadc.tap.writer.formatter</code> provides formatters that can be used or extended, some of which 
+      may be database-specific. For example, the <code>ca.nrc.cadc.tap.writer.formatter.SPointFormatter</code> and
+      <code>ca.nrc.cadc.tap.writer.formatter.SPolyFormatter</code> are designed for use with PostgreSQL and the pgSphere 
+      extension.
   </p>
 
+  <h2>TODO: add more extension hooks as needed</h2>
+  
   </body>
 </html>

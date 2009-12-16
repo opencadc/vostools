@@ -75,10 +75,8 @@ import ca.nrc.cadc.tap.parser.navigator.ReferenceNavigator;
 import ca.nrc.cadc.tap.parser.navigator.SelectNavigator;
 import ca.nrc.cadc.tap.parser.schema.TapSchemaColumnValidator;
 import ca.nrc.cadc.tap.parser.schema.TapSchemaTableValidator;
-import ca.nrc.cadc.tap.schema.TableDesc;
 import ca.nrc.cadc.tap.schema.TapSchema;
 
-import java.util.Map;
 import org.apache.log4j.Logger;
 
 /**
@@ -91,18 +89,14 @@ public class TapSchemaValidator extends SelectNavigator
 {
     protected static Logger log = Logger.getLogger(TapSchemaValidator.class);
     
-    protected TapSchema tapSchema;
-    protected Map<String,TableDesc> extraTables;
-    
     private TapSchemaValidator() { }
     
     public TapSchemaValidator(ExpressionNavigator en, ReferenceNavigator rn, FromItemNavigator fn, TapSchema tapSchema)
     { 
         super(en, rn, fn);
-        this.tapSchema = tapSchema;
 
         // fail early if mis-configured
-        if (rn instanceof TapSchemaColumnValidator)
+        if (TapSchemaColumnValidator.class.isAssignableFrom(rn.getClass()))
         {
             TapSchemaColumnValidator v = (TapSchemaColumnValidator) rn;
             v.setTapSchema(tapSchema);
@@ -112,7 +106,7 @@ public class TapSchemaValidator extends SelectNavigator
                     + " requires a " + TapSchemaColumnValidator.class.getName()
                     +", found a " + rn.getClass().getName());
         
-        if (fn instanceof TapSchemaTableValidator)
+        if (TapSchemaTableValidator.class.isAssignableFrom(fn.getClass()))
         {
             TapSchemaTableValidator v = (TapSchemaTableValidator) fn;
             v.setTapSchema(tapSchema);
