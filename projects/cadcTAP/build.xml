@@ -140,15 +140,10 @@
             </classpath>
 
 
-            <test name="ca.nrc.cadc.tap.parser.ValidatorTest"/>
-			<test name="ca.nrc.cadc.tap.parser.AdqlQueryTest" />
-            <test name="ca.nrc.cadc.tap.parser.NavigatorTest"/>
-            <test name="ca.nrc.cadc.tap.parser.ExtractorTest"/>
-			<test name="ca.nrc.cadc.tap.parser.AllColumnConverterTest"/>
-			<test name="ca.nrc.cadc.tap.parser.TopConverterTest"/>
-			<test name="ca.nrc.cadc.tap.parser.SqlQueryTest" />
+            <test name="ca.nrc.cadc.tap.parser.BlobClobValidatorTest"/>
 
 	    <!--
+            <test name="ca.nrc.cadc.tap.parser.BlobClobValidatorTest"/>
             <test name="ca.nrc.cadc.tap.parser.ValidatorTest"/>
 			<test name="ca.nrc.cadc.tap.parser.AdqlQueryTest" />
             <test name="ca.nrc.cadc.tap.parser.NavigatorTest"/>
@@ -159,7 +154,6 @@
 			
 			<test name="ca.nrc.cadc.tap.parser.SqlQueryTest" />
 
-            -->
             <test name="ca.nrc.cadc.tap.writer.AsciiTableWriterTest"/>
             <test name="ca.nrc.cadc.tap.writer.VOTableWriterTest"/>
 
@@ -178,6 +172,7 @@
             <test name="ca.nrc.cadc.tap.writer.formatter.UTCTimestampFormatterTest"/>
             <test name="ca.nrc.cadc.tap.writer.formatter.SPointFormatterTest"/>
             <test name="ca.nrc.cadc.tap.writer.formatter.SPolyFormatterTest"/>
+            -->
             <formatter type="plain" usefile="false"/>
         </junit>
 
