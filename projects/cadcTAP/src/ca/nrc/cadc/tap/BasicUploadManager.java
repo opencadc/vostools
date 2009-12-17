@@ -99,6 +99,10 @@ import ca.nrc.cadc.uws.Parameter;
 
 /**
  * Implements the upload of VOTable files into a database.
+ * </p><p>
+ * <b>WARNING: This class is not complete and tested and is not safe for use until 
+ * this warning has been removed.</b>
+ * 
  * @author pdowler
  */
 public class BasicUploadManager implements UploadManager 
