@@ -69,13 +69,16 @@
 
 package ca.nrc.cadc.tap;
 
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 
 import net.sf.jsqlparser.JSQLParserException;
 import net.sf.jsqlparser.statement.Statement;
+
+import org.apache.log4j.Logger;
+
 import ca.nrc.cadc.tap.parser.ParserUtil;
-import ca.nrc.cadc.tap.parser.TapSchemaValidator;
 import ca.nrc.cadc.tap.parser.TapSelectItem;
 import ca.nrc.cadc.tap.parser.converter.AllColumnConverter;
 import ca.nrc.cadc.tap.parser.extractor.SelectListExpressionExtractor;
@@ -89,8 +92,6 @@ import ca.nrc.cadc.tap.parser.schema.TapSchemaTableValidator;
 import ca.nrc.cadc.tap.schema.TableDesc;
 import ca.nrc.cadc.tap.schema.TapSchema;
 import ca.nrc.cadc.uws.Parameter;
-import java.util.ArrayList;
-import org.apache.log4j.Logger;
 
 /**
  * TapQuery implementation for LANG=SQL.
