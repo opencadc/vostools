@@ -78,16 +78,22 @@ import net.sf.jsqlparser.statement.select.SelectItem;
 import ca.nrc.cadc.tap.parser.ParserUtil;
 import ca.nrc.cadc.tap.parser.navigator.SelectNavigator.VisitingPart;
 import ca.nrc.cadc.tap.schema.ColumnDesc;
+import ca.nrc.cadc.tap.schema.TapSchema;
 
 /**
  * @author zhangsa
  *
  */
-public class BlobClobValidator extends TapSchemaColumnValidator
+public class BlobClobColumnValidator extends TapSchemaColumnValidator
 {
     public static String BLOB = "BLOB";
     public static String CLOB = "CLOB";
-    
+
+    public BlobClobColumnValidator(TapSchema ts)
+    {
+        super(ts);
+    }
+
     /*
      * Column cannot be BLOB/CLOB type if it's not in the SELECT ITEM part of query.
      * 
@@ -103,46 +109,48 @@ public class BlobClobValidator extends TapSchemaColumnValidator
     @Override
     public void visit(Column column)
     {
-        log.debug("visit(column)" + column);
-        
+        super.visit(column); // Perform default standard validation
+
         PlainSelect plainSelect = _selectNavigator.getPlainSelect();
-        VisitingPart visiting = _selectNavigator.getVisitingPart(); 
-        
+        VisitingPart visiting = _selectNavigator.getVisitingPart();
+
         if (!visiting.equals(VisitingPart.SELECT_ITEM))
         {
             // can be by alias
             // Possible form as:
             // alias, columnName, table.columnName, tableAilas.columnName, or schema.table.ColumnName
             boolean isAlias = false;
-            
+
             ColumnDesc columnDesc = null;
-            
+
             Table table = column.getTable();
-            if (table == null || table.getName() == null || table.getName().equals("") )
+            if (table == null || table.getName() == null || table.getName().equals(""))
             {
                 // form: alias, or columnName
                 String columnNameOrAlias = column.getColumnName();
                 SelectItem si = ParserUtil.findSelectItemByAlias(plainSelect, columnNameOrAlias);
-                    
+
                 if (si != null || si instanceof SelectExpressionItem)
                 {
                     isAlias = true; // ok
                     Expression ex = ((SelectExpressionItem) si).getExpression();
-  //TODO:sz//                  if (ex instanceof Column)
-//                        columnDesc = TapSchemaUtil.findColumnDesc(tapSchema, plainSelect, (Column) ex);
+                    if (ex instanceof Column)
+                        columnDesc = TapSchemaUtil.findColumnDesc(_tapSchema, plainSelect, (Column) ex);
                 }
             }
-            
-//TODO:sz            if (!isAlias)
-//                columnDesc = TapSchemaUtil.findColumnDesc(tapSchema, plainSelect, column);
-            
+
+            if (!isAlias)
+                columnDesc = TapSchemaUtil.findColumnDesc(_tapSchema, plainSelect, column);
+
             if (columnDesc != null)
             {
                 String dataType = columnDesc.getDatatype();
                 if (BLOB.equalsIgnoreCase(dataType))
-                    throw new IllegalArgumentException("The column [" + column + "] of BLOB type cannot be used in place other than select item.");
+                    throw new IllegalArgumentException("The column [" + column
+                            + "] of BLOB type cannot be used in place other than select item.");
                 else if (CLOB.equalsIgnoreCase(dataType))
-                    throw new IllegalArgumentException("The column [" + column + "] of CLOB type cannot be used in place other than select item.");
+                    throw new IllegalArgumentException("The column [" + column
+                            + "] of CLOB type cannot be used in place other than select item.");
             }
         }
     }

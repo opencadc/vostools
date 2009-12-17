@@ -84,6 +84,7 @@ import ca.nrc.cadc.tap.parser.navigator.ExpressionNavigator;
 import ca.nrc.cadc.tap.parser.navigator.FromItemNavigator;
 import ca.nrc.cadc.tap.parser.navigator.ReferenceNavigator;
 import ca.nrc.cadc.tap.parser.navigator.SelectNavigator;
+import ca.nrc.cadc.tap.parser.schema.BlobClobColumnValidator;
 import ca.nrc.cadc.tap.parser.schema.TapSchemaColumnValidator;
 import ca.nrc.cadc.tap.parser.schema.TapSchemaTableValidator;
 import ca.nrc.cadc.tap.schema.TapSchema;
@@ -129,10 +130,11 @@ public class AdqlQuery implements TapQuery
         FromItemNavigator fn;
         SelectNavigator sn;
 
+        // Blob,Clob plus Default Validator
         en = new ExpressionNavigator();
-        rn = new TapSchemaColumnValidator();
-        fn = new TapSchemaTableValidator();
-        sn = new TapSchemaValidator(en, rn, fn, _tapSchema);
+        rn = new BlobClobColumnValidator(_tapSchema);
+        fn = new TapSchemaTableValidator(_tapSchema);
+        sn = new SelectNavigator(en, rn, fn);
         _navigatorList.add(sn);
 
         sn = new AllColumnConverter(_tapSchema);

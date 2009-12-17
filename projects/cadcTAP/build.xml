@@ -141,9 +141,9 @@
 
 
 
+            <test name="ca.nrc.cadc.tap.parser.BlobClobValidatorTest"/>
 
 	    <!--
-            <test name="ca.nrc.cadc.tap.parser.BlobClobValidatorTest"/>
             <test name="ca.nrc.cadc.tap.parser.ValidatorTest"/>
 			<test name="ca.nrc.cadc.tap.parser.AdqlQueryTest" />
             <test name="ca.nrc.cadc.tap.parser.NavigatorTest"/>

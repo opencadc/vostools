@@ -89,7 +89,7 @@ public class TapSchemaValidator extends SelectNavigator
 {
     protected static Logger log = Logger.getLogger(TapSchemaValidator.class);
     
-    private TapSchemaValidator() { }
+    public TapSchemaValidator() { }
     
     public TapSchemaValidator(ExpressionNavigator en, ReferenceNavigator rn, FromItemNavigator fn, TapSchema tapSchema)
     { 

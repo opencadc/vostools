@@ -125,9 +125,9 @@ public class SqlQuery implements TapQuery
         SelectNavigator sn;
 
         en = new ExpressionNavigator();
-        rn = new TapSchemaColumnValidator();
-        fn = new TapSchemaTableValidator();
-        sn = new TapSchemaValidator(en, rn, fn, _tapSchema);
+        rn = new TapSchemaColumnValidator(_tapSchema);
+        fn = new TapSchemaTableValidator(_tapSchema);
+        sn = new SelectNavigator(en, rn, fn);
         _navigatorList.add(sn);
 
         sn = new AllColumnConverter(_tapSchema);

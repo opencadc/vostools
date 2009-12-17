@@ -67,97 +67,137 @@
 ************************************************************************
 */
 
-package ca.nrc.cadc.tap.parser.schema;
+/**
+ * 
+ */
+package ca.nrc.cadc.tap.parser;
 
-import net.sf.jsqlparser.schema.Column;
-import net.sf.jsqlparser.schema.Table;
-import net.sf.jsqlparser.statement.select.ColumnIndex;
-import net.sf.jsqlparser.statement.select.OrderByElement;
-import net.sf.jsqlparser.statement.select.PlainSelect;
-import net.sf.jsqlparser.statement.select.SelectItem;
+import java.util.ArrayList;
+import java.util.List;
 
-import org.apache.log4j.Logger;
+import org.junit.After;
+import org.junit.AfterClass;
+import org.junit.Before;
+import org.junit.BeforeClass;
+import org.junit.Test;
 
-import ca.nrc.cadc.tap.parser.ParserUtil;
+import ca.nrc.cadc.tap.AdqlQuery;
+import ca.nrc.cadc.tap.TapQuery;
+import ca.nrc.cadc.tap.parser.extractor.SelectListExtractor;
+import ca.nrc.cadc.tap.parser.navigator.FromItemNavigator;
 import ca.nrc.cadc.tap.parser.navigator.ReferenceNavigator;
-import ca.nrc.cadc.tap.parser.navigator.SelectNavigator.VisitingPart;
+import ca.nrc.cadc.tap.parser.navigator.SelectNavigator;
 import ca.nrc.cadc.tap.schema.TapSchema;
+import ca.nrc.cadc.util.Log4jInit;
+import ca.nrc.cadc.uws.Parameter;
+
 
 /**
- * @author zhangsa
+ * 
+ * @author Sailor Zhang
  *
  */
-public class TapSchemaColumnValidator extends ReferenceNavigator
+public class BlobClobValidatorTest
 {
-    protected static Logger log = Logger.getLogger(TapSchemaColumnValidator.class);
+    public String _query;
 
-    protected TapSchema _tapSchema;
-    
-    public TapSchemaColumnValidator()
-    {
-    }
-    
-    public TapSchemaColumnValidator(TapSchema ts)
-    {
-        this._tapSchema = ts;
-    }
+    SelectListExtractor _en;
+    ReferenceNavigator _rn;
+    FromItemNavigator _fn;
+    SelectNavigator _sn;
 
-    public void setTapSchema(TapSchema tapSchema)
-    {
-        this._tapSchema = tapSchema;
-    }
-    
-    /* (non-Javadoc)
-     * @see net.sf.jsqlparser.statement.select.ColumnReferenceVisitor#visit(net.sf.jsqlparser.statement.select.ColumnIndex)
+    static TapSchema TAP_SCHEMA;
+
+    /**
+     * @throws java.lang.Exception
      */
-    @Override
-    public void visit(ColumnIndex columnIndex)
+    @BeforeClass
+    public static void setUpBeforeClass() throws Exception
     {
-        log.debug("visit(columnIndex)" + columnIndex);
-        // TODO: this is non-tapschema validation, move to someplace else?
-        int ci = columnIndex.getIndex();
-        if ( ci > ParserUtil.countSelectItems(_selectNavigator.getPlainSelect()))
-            throw new IllegalArgumentException("ColumnIndex " + columnIndex + " is out of scope.");
+        Log4jInit.setLevel("ca.nrc.cadc", org.apache.log4j.Level.DEBUG);
+        TAP_SCHEMA = TestUtil.loadDefaultTapSchema();
     }
 
-    /* (non-Javadoc)
-     * @see net.sf.jsqlparser.statement.select.ColumnReferenceVisitor#visit(net.sf.jsqlparser.schema.Column)
+    /**
+     * @throws java.lang.Exception
      */
-    @Override
-    public void visit(Column column)
+    @AfterClass
+    public static void tearDownAfterClass() throws Exception
     {
-        log.debug("visit(column)" + column);
-        // The column may be referred by alias, by columnName, by table.columnName, tableAilas.columnName, or by schema.table.ColumnName
+    }
+
+    /**
+     * @throws java.lang.Exception
+     */
+    @Before
+    public void setUp() throws Exception
+    {
+    }
+
+    /**
+     * @throws java.lang.Exception
+     */
+    @After
+    public void tearDown() throws Exception
+    {
+    }
+
+    private void doit()
+    {
+        Parameter para;
+        para = new Parameter("QUERY", _query);
+        List<Parameter> paramList = new ArrayList<Parameter>();
+        paramList.add(para);
         
-        PlainSelect plainSelect = _selectNavigator.getPlainSelect();
-        log.debug("plainSelect is:" + plainSelect);
-        VisitingPart visiting = _selectNavigator.getVisitingPart(); 
-        log.debug("visiting is:" + visiting);
-        if (visiting.equals(VisitingPart.SELECT_ITEM) 
-                || visiting.equals(VisitingPart.FROM)
-                || visiting.equals(VisitingPart.GROUP_BY))
-        {
-            // cannot be by alias
-            // possible forms: columnName, table.columnName, tableAilas.columnName, or schema.table.ColumnName
-            TapSchemaUtil.validateColumnNonAlias(_tapSchema, plainSelect, column);
-        } else // visiting WHERE, HAVING, ORDER BY
-        {
-            // can be by alias
-            // Possible form as:
-            // alias, columnName, table.columnName, tableAilas.columnName, or schema.table.ColumnName
-            boolean isAlias = false;
-            Table table = column.getTable();
-            if (table == null || table.getName() == null || table.getName().equals("") )
-            {
-                // form: alias, or columnName
-                String columnNameOrAlias = column.getColumnName();
-                SelectItem selectItem = ParserUtil.findSelectItemByAlias(plainSelect, columnNameOrAlias);
-                if (selectItem != null) // it's an alias, found selectItem
-                    isAlias = true; // ok
-            }
-            
-            if (!isAlias)
-                TapSchemaUtil.validateColumnNonAlias(_tapSchema, plainSelect, column);
-        }
+        TapQuery tapQuery = new AdqlQuery();
+        tapQuery.setTapSchema(TAP_SCHEMA);
+        tapQuery.setExtraTables(null);
+        tapQuery.setParameterList(paramList);
+        String sql = tapQuery.getSQL();
+        List<TapSelectItem> selectList = tapQuery.getSelectList();
+        System.out.println(sql);
+        System.out.println(selectList);
+    }
+
+    @Test
+    public void testGood()
+    {
+        _query = " select t_spoly, t_scircle from tap_schema.alldatatypes where t_integer = 12";
+        doit();
+    }
+
+    @Test
+    public void testWhere1()
+    {
+        _query = " select t_integer, t_spoly, t_scircle from tap_schema.alldatatypes where t_spoly = 12";
+        doit();
+    }
+
+    @Test
+    public void testWhere2()
+    {
+        _query = " select t_integer, t_spoly, t_scircle from tap_schema.alldatatypes where t_scircle = 12";
+        doit();
+    }
+
+    @Test
+    public void testHaving()
+    {
+        _query = " select t_integer, t_spoly, t_scircle from tap_schema.alldatatypes group by t_integer having t_scircle = 12";
+        doit();
+    }
+
+    @Test
+    public void testOrderBy()
+    {
+        _query = " select t_integer, t_spoly, t_scircle from tap_schema.alldatatypes order by t_scircle";
+        doit();
+    }
+
+    @Test
+    public void testGroupBy()
+    {
+        _query = " select t_integer, t_spoly, t_scircle from tap_schema.alldatatypes group by t_scircle";
+        doit();
     }
 }

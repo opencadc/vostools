@@ -131,9 +131,9 @@ public class ValidatorTest
     public void setUp() throws Exception
     {
         _en = new ExpressionNavigator();
-        _rn = new TapSchemaColumnValidator();
-        _fn = new TapSchemaTableValidator();
-        _sn = new TapSchemaValidator(_en, _rn, _fn, TAP_SCHEMA);
+        _rn = new TapSchemaColumnValidator(TAP_SCHEMA);
+        _fn = new TapSchemaTableValidator(TAP_SCHEMA);
+        _sn = new SelectNavigator(_en, _rn, _fn);
     }
 
     /**

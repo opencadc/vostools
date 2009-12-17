@@ -142,8 +142,8 @@ public class TestUtil
         cd = new ColumnDesc(); cdList.add(cd); cd.setTableName(tn); cd.setColumnName("t_enc_list_sample");
         cd = new ColumnDesc(); cdList.add(cd); cd.setTableName(tn); cd.setColumnName("t_array_int");
         cd = new ColumnDesc(); cdList.add(cd); cd.setTableName(tn); cd.setColumnName("t_spoint");
-        cd = new ColumnDesc(); cdList.add(cd); cd.setTableName(tn); cd.setColumnName("t_scircle");
-        cd = new ColumnDesc(); cdList.add(cd); cd.setTableName(tn); cd.setColumnName("t_spoly");
+        cd = new ColumnDesc(); cdList.add(cd); cd.setTableName(tn); cd.setColumnName("t_scircle");cd.setDatatype("clob");
+        cd = new ColumnDesc(); cdList.add(cd); cd.setTableName(tn); cd.setColumnName("t_spoly");cd.setDatatype("blob");
         cd = new ColumnDesc(); cdList.add(cd); cd.setTableName(tn); cd.setColumnName("t_box");
 
         tn = "tables";

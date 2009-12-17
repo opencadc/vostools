@@ -92,6 +92,11 @@ public class TapSchemaTableValidator extends FromItemNavigator
     {
     }
 
+    public TapSchemaTableValidator(TapSchema ts)
+    {
+        this.tapSchema = ts;
+    }
+
     public void setTapSchema(TapSchema tapSchema)
     {
         this.tapSchema = tapSchema;
