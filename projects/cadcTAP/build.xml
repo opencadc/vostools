@@ -145,14 +145,8 @@
             <test name="ca.nrc.cadc.tap.parser.NavigatorTest"/>
             <test name="ca.nrc.cadc.tap.parser.ExtractorTest"/>
 			<test name="ca.nrc.cadc.tap.parser.AllColumnConverterTest"/>
-<<<<<<< .mine
-            
 			<test name="ca.nrc.cadc.tap.parser.TopConverterTest"/>
-			
 			<test name="ca.nrc.cadc.tap.parser.SqlQueryTest" />
-=======
-            
->>>>>>> .r298
 
 	    <!--
             <test name="ca.nrc.cadc.tap.parser.ValidatorTest"/>
