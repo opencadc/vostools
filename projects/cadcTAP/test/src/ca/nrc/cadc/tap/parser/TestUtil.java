@@ -74,18 +74,11 @@ package ca.nrc.cadc.tap.parser;
 
 import java.util.ArrayList;
 import java.util.List;
-import java.util.MissingResourceException;
 
-import javax.sql.DataSource;
-
-import org.springframework.jdbc.datasource.SingleConnectionDataSource;
-
-import ca.nrc.cadc.tap.TapProperties;
 import ca.nrc.cadc.tap.schema.ColumnDesc;
 import ca.nrc.cadc.tap.schema.SchemaDesc;
 import ca.nrc.cadc.tap.schema.TableDesc;
 import ca.nrc.cadc.tap.schema.TapSchema;
-import ca.nrc.cadc.tap.schema.TapSchemaDAO;
 
 /**
  * 
@@ -96,6 +89,7 @@ public class TestUtil
 {
     private static String PROPERTY_FILE = "postgresql_sql.properties";
 
+    /*
     public static TapProperties getPropertiesInstance() throws Exception
     {
         TapProperties prop;
@@ -108,7 +102,8 @@ public class TestUtil
         }
         return prop;
     }
-
+    */
+    
     public static TapSchema loadDefaultTapSchema()
     {
         return mockTapSchema();
@@ -193,6 +188,7 @@ public class TestUtil
         return ts;
     }
 
+    /*
     public static TapSchema loadTapSchemaFromDb()
     {
         TapSchema rtn = null;
@@ -223,4 +219,5 @@ public class TestUtil
         }
         return rtn;
     }
+    */
 }
