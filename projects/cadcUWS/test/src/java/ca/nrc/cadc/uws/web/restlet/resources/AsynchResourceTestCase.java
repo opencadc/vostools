@@ -76,10 +76,18 @@ import org.w3c.dom.Document;
 import org.w3c.dom.Element;
 import org.custommonkey.xmlunit.XMLUnit;
 import org.custommonkey.xmlunit.Diff;
-import ca.nrc.cadc.uws.*;
 import ca.nrc.cadc.date.DateUtil;
+import ca.nrc.cadc.uws.ExecutionPhase;
+import ca.nrc.cadc.uws.Job;
+import ca.nrc.cadc.uws.JobAttribute;
+import ca.nrc.cadc.uws.Parameter;
+import ca.nrc.cadc.uws.Result;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Calendar;
+import java.util.Date;
+import java.util.List;
 
-import java.util.*;
 
 
 /**
