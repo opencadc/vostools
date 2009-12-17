@@ -140,7 +140,7 @@
             </classpath>
 
 
-            <test name="ca.nrc.cadc.tap.parser.BlobClobValidatorTest"/>
+
 
 	    <!--
             <test name="ca.nrc.cadc.tap.parser.BlobClobValidatorTest"/>
