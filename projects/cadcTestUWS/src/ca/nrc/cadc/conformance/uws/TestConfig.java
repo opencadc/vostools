@@ -106,6 +106,7 @@ public class TestConfig
     private static SAXBuilder parser;
     private static SAXBuilder validatingParser;
 
+    protected static final int REQUEST_TIMEOUT = 30;
     protected static String serviceUrl;
     protected static String serviceSchema;
 

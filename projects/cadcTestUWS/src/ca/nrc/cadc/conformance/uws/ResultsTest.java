@@ -153,6 +153,7 @@ public class ResultsTest extends TestConfig
             List list = null;
             Namespace namespace = null;
             boolean done = false;
+            Long start = System.currentTimeMillis();
             while (!done)
             {
                 // Wait for 1 second.
@@ -174,6 +175,10 @@ public class ResultsTest extends TestConfig
                 assertEquals(properties.filename + " phase element should only have a single element in XML returned from GET of " + resourceUrl, 1, list.size());
                 Element phase = (Element) list.get(0);
                 String phaseText = phase.getText();
+
+                // Check if request timeout exceeded.
+                if ((System.currentTimeMillis() - start) > (REQUEST_TIMEOUT * 1000))
+                    fail(properties.filename + " request timeout exceeded in GET of " + resourceUrl);
 
                 // COMPLETED phase, continue with test.
                 if (phaseText.equals("COMPLETED"))
