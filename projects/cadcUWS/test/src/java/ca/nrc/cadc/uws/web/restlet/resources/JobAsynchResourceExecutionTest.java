@@ -137,22 +137,13 @@ public class JobAsynchResourceExecutionTest
         final List<Parameter> parameters = new ArrayList<Parameter>();
 
         final Job testJob =
-                new Job("88l", ExecutionPhase.PENDING, 88l, cal.getTime(),
+                new Job("88l", ExecutionPhase.QUEUED, 88l, cal.getTime(),
                         quoteCal.getTime(), cal.getTime(), cal.getTime(), null,
                         "USER", "RUN_ID", results, parameters);
 
         mockJobRunner.setJob(testJob);
         replay(mockJobRunner);
 
-        try
-        {
-            testSubject.executeJob(testJob);
-            fail("Cannot submit same job twice for execution in quick " +
-                 "succession.");
-        }
-        catch (JobAlreadySubmittedException e)
-        {
-            // Good!
-        }
+        testSubject.executeJob();
     }
 }

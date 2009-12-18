@@ -13,7 +13,7 @@
       time to execution duration
    -->
 <xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema"
-   targetNamespace="http://www.ivoa.net/xml/UWS/v1.0rc3" xmlns:uws="http://www.ivoa.net/xml/UWS/v1.0rc3"
+   targetNamespace="http://www.ivoa.net/xml/UWS/v1.0" xmlns:uws="http://www.ivoa.net/xml/UWS/v1.0"
    xmlns:xlink="http://www.w3.org/1999/xlink" elementFormDefault="qualified"
    attributeFormDefault="unqualified"
 >
@@ -189,7 +189,8 @@
             minOccurs="0"
          >
                 <xs:annotation>
-                   <xs:documentation>The parameters to the job (where appropriate)can also be retrieved at /(jobs)/(jobid)/parameters</xs:documentation>
+                   <xs:documentation>The parameters to the job (where appropriate)
+can also be retrieved at /(jobs)/(jobid)/parameters</xs:documentation>
                 </xs:annotation>
          </xs:element>
          <xs:element ref="uws:results">

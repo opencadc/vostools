@@ -72,16 +72,15 @@ package ca.nrc.cadc.uws.web.restlet.resources;
 import org.w3c.dom.Document;
 import org.restlet.representation.Representation;
 import org.restlet.representation.EmptyRepresentation;
+import org.restlet.representation.StringRepresentation;
 import org.restlet.resource.Get;
+import org.restlet.data.MediaType;
 import org.apache.log4j.Logger;
 
 import java.io.IOException;
 import java.util.List;
-import java.net.URL;
-import java.net.MalformedURLException;
 
 import ca.nrc.cadc.uws.*;
-import ca.nrc.cadc.uws.web.WebRepresentationException;
 
 
 /**
@@ -93,6 +92,9 @@ public class JobSyncSubmissionResource extends BaseJobResource
 {
     private static final Logger LOGGER =
             Logger.getLogger(JobSyncSubmissionResource.class);
+    protected static final long POLLING_TIME_INTERVAL_MILLIS = 1000l;
+    protected static final long MAX_POLLING_TIME_MILLIS = 180000l;
+
 
     /**
      * Obtain the XML Representation of this Request.
@@ -104,23 +106,31 @@ public class JobSyncSubmissionResource extends BaseJobResource
     public Representation represent()
     {
         executeJob();
+        final Representation representation;
         final Job job = getJob();
         final List<Result> results = job.getResultsList();
-        final URL redirectURL;
 
-        if (results.isEmpty())
+        if (results.isEmpty() && (job.getErrorSummary() == null)
+            && (job.getErrorSummary().getDocumentURL() == null))
+        {
+            representation =
+                    new StringRepresentation("Job %s is still running.",
+                                             MediaType.TEXT_PLAIN);
+        }
+        else if (results.isEmpty())
         {
             final ErrorSummary errorSummary = job.getErrorSummary();
-            redirectURL = errorSummary.getDocumentURL();
+            redirectSeeOther(errorSummary.getDocumentURL().toString());
+            representation = new EmptyRepresentation();
         }
         else
         {
             final Result result = results.get(0);
-            redirectURL = result.getURL();
+            redirectSeeOther(result.getURL().toString());
+            representation = new EmptyRepresentation();
         }
 
-        redirectSeeOther(redirectURL.toString());
-        return new EmptyRepresentation();
+        return representation;
     }
 
     /**
@@ -142,9 +152,81 @@ public class JobSyncSubmissionResource extends BaseJobResource
      */
     protected void executeJob()
     {
-        final JobRunner jobRunner = createJobRunner();
+        if (jobIsActive())
+        {
+            pollRunningJob();
+        }
+        else
+        {
+            prepareJob();
 
-        jobRunner.setJob(getJob());
-        jobRunner.run();
+            final JobRunner jobRunner = createJobRunner();
+
+            jobRunner.setJob(getJob());
+            jobRunner.run();
+        }
+    }
+
+    /**
+     * Prepare the current job for execution.
+     */
+    protected void prepareJob()
+    {
+        final Job job = getJob();
+
+        job.setExecutionPhase(ExecutionPhase.QUEUED);
+        getJobManager().persist(job);
+    }
+
+    /**
+     * Poll the current job.
+     */
+    protected void pollRunningJob()
+    {
+        pollRunningJob(MAX_POLLING_TIME_MILLIS);
+    }
+
+    /**
+     * Poll the current job and wait for it to complete within the given amount
+     * of time.
+     *
+     * @param maxWait       Maximum time to poll for in milliseconds.
+     */
+    protected void pollRunningJob(final long maxWait)
+    {
+        long waitTime = maxWait;
+
+        while (jobIsActive() && (waitTime > 0l))
+        {
+            try
+            {
+                LOGGER.debug(String.format("Waiting %d seconds...",
+                                           (POLLING_TIME_INTERVAL_MILLIS
+                                            * 1000l)));
+                Thread.sleep(POLLING_TIME_INTERVAL_MILLIS);
+            }
+            catch (InterruptedException e)
+            {
+                LOGGER.error("Unable to poll running job.", e);
+            }
+            finally
+            {
+                waitTime = waitTime - POLLING_TIME_INTERVAL_MILLIS;
+            }
+        }
+
+        LOGGER.info("Done polling.");
+    }
+
+    /**
+     * Obtain whether this job is active.
+     *
+     * @return  True if active, false otherwise.
+     */
+    protected boolean jobIsActive()
+    {
+        final Job job = getJob();
+        return (job.getExecutionPhase().equals(ExecutionPhase.QUEUED))
+               || (job.getExecutionPhase().equals(ExecutionPhase.EXECUTING));
     }
 }
