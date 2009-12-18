@@ -167,6 +167,7 @@
             
             <test name="ca.nrc.cadc.tap.writer.formatter.ByteArrayFormatterTest"/>
             <test name="ca.nrc.cadc.tap.writer.formatter.DefaultFormatterTest"/>
+            <test name="ca.nrc.cadc.tap.writer.formatter.DoubleArrayFormatterTest"/>
             <test name="ca.nrc.cadc.tap.writer.formatter.IntArrayFormatterTest"/>
             <test name="ca.nrc.cadc.tap.writer.formatter.LocalTimestampFormatterTest"/>
             <test name="ca.nrc.cadc.tap.writer.formatter.UTCTimestampFormatterTest"/>
