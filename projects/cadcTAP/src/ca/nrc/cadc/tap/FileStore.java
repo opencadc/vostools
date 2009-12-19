@@ -72,6 +72,11 @@ package ca.nrc.cadc.tap;
 import java.io.File;
 import java.net.URL;
 
+/**
+ * Interface to temporary storage of result or error files.
+ * 
+ * @author pdowler
+ */
 public interface FileStore
 {
     /**

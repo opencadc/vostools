@@ -77,6 +77,13 @@ import ca.nrc.cadc.tap.schema.TapSchema;
 import ca.nrc.cadc.uws.Parameter;
 import java.util.Map;
 
+/**
+ * Interface for classes that handle parameters for a single value of LANG and 
+ * generate the SQL to be executed. TODO: allow deployet to define new LANG values
+ * and implementation classes to go with them (currently hard-coded in QueryRunner).
+ * 
+ * @author pdowler
+ */
 public interface TapQuery
 {
     /**

@@ -77,6 +77,12 @@ import java.util.List;
 import ca.nrc.cadc.tap.parser.TapSelectItem;
 import ca.nrc.cadc.tap.schema.TapSchema;
 
+/**
+ * Interface for classes that write tables in specific formats.
+ * 
+ * @see TableWriterFactory
+ * @author pdowler
+ */
 public interface TableWriter
 {
     /**

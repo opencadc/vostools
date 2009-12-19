@@ -80,6 +80,8 @@ import org.apache.log4j.Logger;
 
 /**
  * Factory that handles the FORMAT parameter and creates a suitable TableWriter.
+ * TODO: change to non-static methods so sub-classes can define and enable alternate
+ * formats.
  * 
  * @author pdowler
  */
