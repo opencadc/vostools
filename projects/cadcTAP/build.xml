@@ -140,18 +140,17 @@
             </classpath>
 
 
-
-            <test name="ca.nrc.cadc.tap.parser.BlobClobValidatorTest"/>
-
+            <test name="ca.nrc.cadc.tap.parser.PgsRegionConverterTest"/>
 	    <!--
+            <test name="ca.nrc.cadc.tap.parser.PgsRegionConverterTest"/>
+            <test name="ca.nrc.cadc.tap.parser.RegionFinderTest"/>
+            <test name="ca.nrc.cadc.tap.parser.BlobClobValidatorTest"/>
             <test name="ca.nrc.cadc.tap.parser.ValidatorTest"/>
 			<test name="ca.nrc.cadc.tap.parser.AdqlQueryTest" />
             <test name="ca.nrc.cadc.tap.parser.NavigatorTest"/>
             <test name="ca.nrc.cadc.tap.parser.ExtractorTest"/>
 			<test name="ca.nrc.cadc.tap.parser.AllColumnConverterTest"/>
-            
 			<test name="ca.nrc.cadc.tap.parser.TopConverterTest"/>
-			
 			<test name="ca.nrc.cadc.tap.parser.SqlQueryTest" />
 
             <test name="ca.nrc.cadc.tap.writer.AsciiTableWriterTest"/>
