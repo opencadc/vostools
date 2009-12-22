@@ -69,10 +69,22 @@
 
 package ca.nrc.cadc.tap.parser;
 
-import ca.nrc.cadc.tap.parser.navigator.SelectNavigator;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.ListIterator;
+
+import net.sf.jsqlparser.expression.BinaryExpression;
 import net.sf.jsqlparser.expression.Expression;
+import net.sf.jsqlparser.expression.Function;
+import net.sf.jsqlparser.expression.InverseExpression;
+import net.sf.jsqlparser.expression.Parenthesis;
+import net.sf.jsqlparser.expression.operators.relational.ExpressionList;
 import net.sf.jsqlparser.statement.select.PlainSelect;
+import net.sf.jsqlparser.statement.select.SelectExpressionItem;
+
 import org.apache.log4j.Logger;
+
+import ca.nrc.cadc.tap.parser.navigator.SelectNavigator;
 
 /**
  * This visitor finds all occurances of ADQL geometry constructs. The default
@@ -85,27 +97,202 @@ import org.apache.log4j.Logger;
 public class RegionFinder extends SelectNavigator
 {
     private static Logger log = Logger.getLogger(RegionFinder.class);
-    
-    public RegionFinder() 
-    { 
-    
-    }
-    
-    public void visit(PlainSelect ps)
+
+    public static String ICRS = "ICRS GEOCENTER";
+
+    // ADQL region functions
+    public static String CONTAINS = "CONTAINS";
+    public static String INTERSECTS = "INTERSECTS";
+    public static String BOX = "BOX";
+    public static String POINT = "POINT";
+    public static String CIRCLE = "CIRCLE";
+    public static String POLYGON = "POLYGON";
+    public static String REGION = "REGION";
+    public static String AREA = "AREA";
+    public static String CENTROID = "CENTROID";
+    public static String COORDSYS = "COORDSYS";
+    public static String COORD1 = "COORD1";
+    public static String COORD2 = "COORD2";
+
+    public RegionFinder()
     {
-        // get navigation code from RegionConverterImpl and call handleXXX()
+
     }
-    
-     /**
-     * This method is called when CONTAINS is one of the arguments in a predicate.
-     * 
-     * @param ex the predicate with a CONTAINS argument
+
+    public void visit(PlainSelect plainSelect)
+    {
+        log.debug("visit(PlainSelect): " + plainSelect);
+
+        // Visiting select items
+        ListIterator i = plainSelect.getSelectItems().listIterator();
+        while (i.hasNext())
+        {
+            Object obj = i.next();
+            if (obj instanceof SelectExpressionItem)
+            {
+                SelectExpressionItem s = (SelectExpressionItem) obj;
+                Expression ex = s.getExpression();
+                Expression implExpression = convertToImplementation(ex);
+                s.setExpression(implExpression);
+            }
+        }
+
+        // FROM ITEM and JOIN are not visited.
+
+        if (plainSelect.getWhere() != null)
+        {
+            Expression e = plainSelect.getWhere();
+            Expression implExpression = convertToImplementation(e);
+            log.debug("PlainSelect/WHERE: replacing " + e + " with " + implExpression);
+            plainSelect.setWhere(implExpression);
+        }
+
+        if (plainSelect.getHaving() != null)
+        {
+            Expression e = plainSelect.getHaving();
+            Expression implExpression = convertToImplementation(e);
+            log.debug("PlainSelect/HAVING: replacing " + e + " with " + implExpression);
+            plainSelect.setHaving(implExpression);
+        }
+
+        log.debug("visit(PlainSelect) done");
+    }
+
+    /**
+     * @param ex
+     * @return
      */
-    protected Expression handleRegionPredicate(Expression ex)
+    public Expression convertToImplementation(Expression adqlExpr)
     {
-        throw new UnsupportedOperationException("CONTAINS predicate not supported");
+        log.debug("convertToImplementation(Expression): " + adqlExpr);
+
+        Expression implExpr = adqlExpr;
+
+        if (adqlExpr instanceof Function)
+        {
+            Function adqlFunction = (Function) adqlExpr;
+            
+            // Convert parameters of the function first.
+            ExpressionList adqlExprList = adqlFunction.getParameters();
+            ExpressionList implExprList = convertToImplementation(adqlExprList);
+            adqlFunction.setParameters(implExprList); // method in Function
+
+            implExpr = convertToImplementation(adqlFunction);
+        } else if (adqlExpr instanceof BinaryExpression)
+        {
+            BinaryExpression expr1 = (BinaryExpression) adqlExpr;
+            Expression left = expr1.getLeftExpression();
+            Expression right = expr1.getRightExpression();
+
+            Expression left2 = convertToImplementation(left);
+            Expression right2 = convertToImplementation(right);
+
+            expr1.setLeftExpression(left2);
+            expr1.setRightExpression(right2);
+            implExpr = expr1;
+
+            implExpr = handleRegionPredicate((BinaryExpression) implExpr);
+        } else if (adqlExpr instanceof InverseExpression)
+        {
+            InverseExpression expr1 = (InverseExpression) adqlExpr;
+            Expression child = expr1.getExpression();
+            Expression child2 = convertToImplementation(child);
+            expr1.setExpression(child2);
+            implExpr = expr1;
+        } else if (adqlExpr instanceof Parenthesis)
+        {
+            Parenthesis expr1 = (Parenthesis) adqlExpr;
+            Expression child = expr1.getExpression();
+            Expression child2 = convertToImplementation(child);
+            expr1.setExpression(child2);
+            implExpr = expr1;
+        }
+        return implExpr;
     }
-    
+
+    public ExpressionList convertToImplementation(ExpressionList adqlExprList)
+    {
+        List<Expression> adqlExprs = adqlExprList.getExpressions();
+        List<Expression> implExprs = new ArrayList<Expression>();
+        Expression e1 = null;
+        Expression e2 = null;
+
+        for (int i = 0; i < adqlExprs.size(); i++)
+        {
+            e1 = adqlExprs.get(i);
+            e2 = convertToImplementation(e1);
+            implExprs.add(e2);
+        }
+        return new ExpressionList(implExprs);
+    }
+
+    public Expression convertToImplementation(Function adqlFunction)
+    {
+        log.debug("convertToImplementation(Function): " + adqlFunction);
+
+        Expression implExpr = adqlFunction;
+        String fname = adqlFunction.getName().toUpperCase();
+
+        if (AREA.equalsIgnoreCase(fname))
+        {
+            implExpr = handleArea(adqlFunction);
+        } else if (BOX.equalsIgnoreCase(fname))
+        {
+            implExpr = handleBox(adqlFunction);
+        } else if (CENTROID.equalsIgnoreCase(fname))
+        {
+            implExpr = handleCentroid(adqlFunction);
+        } else if (CIRCLE.equalsIgnoreCase(fname))
+        {
+            implExpr = handleCircle(adqlFunction);
+        } else if (CONTAINS.equalsIgnoreCase(fname))
+        {
+            implExpr = handleContains(adqlFunction);
+        } else if (COORD1.equalsIgnoreCase(fname))
+        {
+            implExpr = handleCoord1(adqlFunction);
+        } else if (COORD2.equalsIgnoreCase(fname))
+        {
+            implExpr = handleCoord2(adqlFunction);
+        } else if (COORDSYS.equalsIgnoreCase(fname))
+        {
+            implExpr = handleCoordSys(adqlFunction);
+        } else if (INTERSECTS.equalsIgnoreCase(fname))
+        {
+            implExpr = handleIntersects(adqlFunction);
+        } else if (POINT.equalsIgnoreCase(fname))
+        {
+            implExpr = handlePoint(adqlFunction);
+        } else if (POLYGON.equalsIgnoreCase(fname))
+        {
+            implExpr = handlePolygon(adqlFunction);
+        } else if (REGION.equalsIgnoreCase(fname))
+        {
+            implExpr = handleRegion(adqlFunction);
+        }
+        return implExpr;
+    }
+
+    /**
+    * This method is called when a REGION PREDICATE function is one of the arguments in a binary expression, 
+    * and after the direct function convertion.
+    * 
+    * Supported functions: CINTAINS, INTERSECTS
+    * 
+    * Examples:
+    * 
+     * CONTAINS() = 0 
+     * CONTAINS() = 1 
+     * 1 = CONTAINS() 
+     * 0 = CONTAINS()
+     * 
+    * @param biExpr the binary expression which one side is a converted region function
+    */
+    protected Expression handleRegionPredicate(BinaryExpression biExpr)
+    {
+        throw new UnsupportedOperationException("Region predicate not supported");
+    }
+
     /**
      * This method is called when a CONTAINS is found outside of a predicate.
      * This could occurr if the query had CONTAINS(...) in the select list or as
@@ -114,12 +301,11 @@ public class RegionFinder extends SelectNavigator
      * 
      * @param ex the CONTAINS expression
      */
-    protected Expression handleContains(Expression ex)
+    protected Expression handleContains(Function adqlFunction)
     {
         throw new UnsupportedOperationException("CONTAINS not supported");
     }
-   
-    
+
     /**
      * This method is called when a INTERSECTS is found outside of a predicate.
      * This could occurr if the query had INTERSECTS(...) in the select list or as
@@ -128,107 +314,107 @@ public class RegionFinder extends SelectNavigator
      * 
      * @param ex the CONTAINS expression
      */
-    protected Expression handleIntersects(Expression ex)
+    protected Expression handleIntersects(Function adqlFunction)
     {
         throw new UnsupportedOperationException("INTERSECTS not supported");
     }
-    
+
     /**
      * This method is called when a POINT geometry value is found.
      * 
      * @param ex the POINT expression
      */
-    protected Expression handlePoint(Expression ex)
+    protected Expression handlePoint(Function adqlFunction)
     {
         throw new UnsupportedOperationException("POINT not supported");
     }
-    
+
     /**
      * This method is called when a CIRCLE geometry value is found.
      * 
      * @param ex the CIRCLE expression
      */
-    protected Expression handleCircle(Expression ex)
+    protected Expression handleCircle(Function adqlFunction)
     {
         throw new UnsupportedOperationException("CIRCLE not supported");
     }
-    
+
     /**
      * This method is called when a BOX geometry value is found.
      * 
      * @param ex the BOX expression
      */
-    protected Expression handleBox(Expression ex)
+    protected Expression handleBox(Function adqlFunction)
     {
         throw new UnsupportedOperationException("BOX not supported");
     }
-    
+
     /**
      * This method is called when a POLYGON geometry value is found.
      * 
      * @param ex the POLYGON expression
      */
-    protected Expression handlePolygon(Expression ex)
+    protected Expression handlePolygon(Function adqlFunction)
     {
         throw new UnsupportedOperationException("POLYGON not supported");
     }
-    
+
     /**
      * This method is called when a REGION geometry value is found.
      * 
      * @param ex the REGION expression
      */
-    protected Expression handleRegion(Expression ex)
+    protected Expression handleRegion(Function adqlFunction)
     {
         throw new UnsupportedOperationException("REGION not supported");
     }
-    
+
     /**
      * This method is called when the CENTROID function is found.
      * 
      * @param ex the CENTROID expression
      */
-    protected Expression handleCentroid(Expression ex)
+    protected Expression handleCentroid(Function adqlFunction)
     {
         throw new UnsupportedOperationException("CENTROID not supported");
     }
-    
+
     /**
      * This method is called when AREA function is found.
      * 
      * @param ex the AREA expression
      */
-    protected Expression handleArea(Expression ex)
+    protected Expression handleArea(Function adqlFunction)
     {
         throw new UnsupportedOperationException("AREA not supported");
     }
-    
+
     /**
      * This method is called when COORD1 function is found.
      * 
      * @param ex the COORD1 expression
      */
-    protected Expression handleCoord1(Expression ex)
+    protected Expression handleCoord1(Function adqlFunction)
     {
         throw new UnsupportedOperationException("COORD1 not supported");
     }
-    
+
     /**
      * This method is called when COORD2 function is found.
      * 
      * @param ex the COORD2 expression
      */
-    protected Expression handleCoord2(Expression ex)
+    protected Expression handleCoord2(Function adqlFunction)
     {
         throw new UnsupportedOperationException("COORD2 not supported");
     }
-    
+
     /**
      * This method is called when COORDSYS function is found.
      * 
      * @param ex the COORDSYS expression
      */
-    protected Expression handleCoordSys(Expression ex)
+    protected Expression handleCoordSys(Function adqlFunction)
     {
         throw new UnsupportedOperationException("COORDSYS not supported");
     }

@@ -75,6 +75,7 @@ import java.util.List;
 
 import net.sf.jsqlparser.JSQLParserException;
 import net.sf.jsqlparser.expression.Expression;
+import net.sf.jsqlparser.expression.LongValue;
 import net.sf.jsqlparser.parser.CCJSqlParserManager;
 import net.sf.jsqlparser.schema.Column;
 import net.sf.jsqlparser.schema.Table;
@@ -207,6 +208,17 @@ public class ParserUtil
             Expression ex = ((SelectExpressionItem) si).getExpression();
             if (ex instanceof Column)
                 rtn = (Column) ex;
+        }
+        return rtn;
+    }
+
+    public static boolean isBinaryValue(Expression expr)
+    {
+        boolean rtn = false;
+        if (expr instanceof LongValue)
+        {
+            long l = ((LongValue) expr).getValue();
+            rtn = ((l == 0) || (l == 1));
         }
         return rtn;
     }

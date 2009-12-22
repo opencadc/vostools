@@ -79,6 +79,7 @@ import net.sf.jsqlparser.statement.Statement;
 import org.apache.log4j.Logger;
 
 import ca.nrc.cadc.tap.parser.ParserUtil;
+import ca.nrc.cadc.tap.parser.RegionFinder;
 import ca.nrc.cadc.tap.parser.TapSelectItem;
 import ca.nrc.cadc.tap.parser.converter.AllColumnConverter;
 import ca.nrc.cadc.tap.parser.extractor.SelectListExpressionExtractor;
@@ -87,6 +88,7 @@ import ca.nrc.cadc.tap.parser.navigator.ExpressionNavigator;
 import ca.nrc.cadc.tap.parser.navigator.FromItemNavigator;
 import ca.nrc.cadc.tap.parser.navigator.ReferenceNavigator;
 import ca.nrc.cadc.tap.parser.navigator.SelectNavigator;
+import ca.nrc.cadc.tap.parser.region.pgsphere.PgsphereRegionConverter;
 import ca.nrc.cadc.tap.parser.schema.BlobClobColumnValidator;
 import ca.nrc.cadc.tap.parser.schema.TapSchemaTableValidator;
 import ca.nrc.cadc.tap.schema.TableDesc;
@@ -133,6 +135,9 @@ public class AdqlQuery implements TapQuery
         _navigatorList.add(sn);
 
         sn = new AllColumnConverter(_tapSchema);
+        _navigatorList.add(sn);
+
+        sn = new PgsphereRegionConverter();
         _navigatorList.add(sn);
 
         en = new SelectListExpressionExtractor(_tapSchema, _extraTables);

@@ -71,6 +71,7 @@ package ca.nrc.cadc.tap.parser.navigator;
 
 import java.util.List;
 import java.util.Stack;
+
 import net.sf.jsqlparser.schema.Column;
 import net.sf.jsqlparser.schema.Table;
 import net.sf.jsqlparser.statement.select.ColumnReference;
@@ -154,6 +155,7 @@ public class SelectNavigator implements SelectVisitor
             _plainSelect = _psStack.peek();
     }
 
+    @SuppressWarnings("unchecked")
     public void visit(PlainSelect plainSelect)
     {
         log.debug("visit(PlainSelect) " + plainSelect);
@@ -220,6 +222,7 @@ public class SelectNavigator implements SelectVisitor
         leavePlainSelect();
     }
 
+    @SuppressWarnings("unchecked")
     protected void NavigateJoins()
     {
         PlainSelect ps = this._plainSelect;
@@ -301,6 +304,7 @@ public class SelectNavigator implements SelectVisitor
      * Handle use of the DISTINCT construct. The implementation logs and visits explicit expressions (itself) in the optional
      * ON(...) since they are not part of the select list.
      */
+    @SuppressWarnings("unchecked")
     protected void handleDistinct(Distinct distinct)
     {
         log.debug("handleDistinct: " + distinct);
