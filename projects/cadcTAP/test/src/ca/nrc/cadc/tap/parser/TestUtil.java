@@ -134,16 +134,16 @@ public class TestUtil
         cd = new ColumnDesc(); cdList.add(cd); cd.setTableName(tn); cd.setColumnName("t_long");
         cd = new ColumnDesc(); cdList.add(cd); cd.setTableName(tn); cd.setColumnName("t_double");
         cd = new ColumnDesc(); cdList.add(cd); cd.setTableName(tn); cd.setColumnName("t_string");
-        cd = new ColumnDesc(); cdList.add(cd); cd.setTableName(tn); cd.setColumnName("t_bytes");
+        cd = new ColumnDesc(); cdList.add(cd); cd.setTableName(tn); cd.setColumnName("t_bytes");cd.setDatatype("clob");
         cd = new ColumnDesc(); cdList.add(cd); cd.setTableName(tn); cd.setColumnName("t_date");
         cd = new ColumnDesc(); cdList.add(cd); cd.setTableName(tn); cd.setColumnName("t_enc_location");
         cd = new ColumnDesc(); cdList.add(cd); cd.setTableName(tn); cd.setColumnName("t_enc_polygon");
         cd = new ColumnDesc(); cdList.add(cd); cd.setTableName(tn); cd.setColumnName("t_enc_list_subinterval");
         cd = new ColumnDesc(); cdList.add(cd); cd.setTableName(tn); cd.setColumnName("t_enc_list_sample");
-        cd = new ColumnDesc(); cdList.add(cd); cd.setTableName(tn); cd.setColumnName("t_array_int");
+        cd = new ColumnDesc(); cdList.add(cd); cd.setTableName(tn); cd.setColumnName("t_array_int");cd.setDatatype("blob");
         cd = new ColumnDesc(); cdList.add(cd); cd.setTableName(tn); cd.setColumnName("t_spoint");
-        cd = new ColumnDesc(); cdList.add(cd); cd.setTableName(tn); cd.setColumnName("t_scircle");cd.setDatatype("clob");
-        cd = new ColumnDesc(); cdList.add(cd); cd.setTableName(tn); cd.setColumnName("t_spoly");cd.setDatatype("blob");
+        cd = new ColumnDesc(); cdList.add(cd); cd.setTableName(tn); cd.setColumnName("t_scircle");
+        cd = new ColumnDesc(); cdList.add(cd); cd.setTableName(tn); cd.setColumnName("t_spoly");
         cd = new ColumnDesc(); cdList.add(cd); cd.setTableName(tn); cd.setColumnName("t_box");
 
         tn = "tables";
