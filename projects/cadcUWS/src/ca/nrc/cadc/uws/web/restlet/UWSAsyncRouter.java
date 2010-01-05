@@ -109,7 +109,7 @@ public class UWSAsyncRouter extends Router
         attach("/{jobID}/error", ErrorResource.class);
         attach("/{jobID}/quote", JobAsynchResource.class);
         attach("/{jobID}/results", ResultListResource.class);
-        attach("/{jobID}/result/{resultID}", ResultListResource.class);
+        attach("/{jobID}/result/{resultID}", ResultResource.class);
         attach("/{jobID}/parameters", ParameterListResource.class);
         attach("/{jobID}/owner", JobAsynchResource.class);
         attach("/{jobID}/execute", JobAsynchResource.class);
