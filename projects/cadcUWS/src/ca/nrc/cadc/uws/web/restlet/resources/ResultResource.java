@@ -55,8 +55,8 @@ public class ResultResource extends BaseJobResource
      *
      * @return The XML Representation, fully populated.
      */
+    @Get
     @Override
-    @Get()
     public Representation represent()
     {
         final Representation representation;
