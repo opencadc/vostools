@@ -70,12 +70,14 @@
 
 package ca.nrc.cadc.uws.web.restlet.resources;
 
-import junit.framework.TestCase;
-import static org.easymock.EasyMock.*;
+import static junit.framework.TestCase.*;
 import org.w3c.dom.Document;
 import org.w3c.dom.Element;
 import org.custommonkey.xmlunit.XMLUnit;
 import org.custommonkey.xmlunit.Diff;
+import org.junit.Before;
+import org.junit.After;
+import org.junit.Test;
 import ca.nrc.cadc.date.DateUtil;
 import ca.nrc.cadc.uws.ExecutionPhase;
 import ca.nrc.cadc.uws.Job;
@@ -93,7 +95,7 @@ import java.util.List;
 /**
  * TestCase for the Asynchronous Resource.
  */
-public class AsynchResourceTestCase extends TestCase
+public class AsynchResourceTestCase
 {
     protected final String XML_NAMESPACE_PREFIX = "uws";
 
@@ -102,7 +104,7 @@ public class AsynchResourceTestCase extends TestCase
     protected AsynchResource asynchResource;
     protected Document documentToBuild;
     protected Document expectedDocument;
-    protected Job mockJob;
+    protected Job job;
     protected List<Result> results;
     protected List<Parameter> parameters;
 
@@ -111,8 +113,8 @@ public class AsynchResourceTestCase extends TestCase
      * Sets up the fixture, for example, open a network connection.
      * This method is called before a test is executed.
      */
-    @Override
-    protected void setUp() throws Exception
+    @Before
+    public void setUp()
     {
         final Calendar cal = Calendar.getInstance();
         cal.set(1997, Calendar.NOVEMBER, 25, 3, 21, 0);
@@ -121,24 +123,16 @@ public class AsynchResourceTestCase extends TestCase
         results = new ArrayList<Result>();
         parameters = new ArrayList<Parameter>();
 
-        mockJob = createMock(Job.class);
-        expect(mockJob.getJobId()).andReturn("88l").anyTimes();
-        expect(mockJob.getExecutionPhase()).
-                andReturn(ExecutionPhase.EXECUTING).anyTimes();
-        expect(mockJob.getExecutionDuration()).andReturn(88l).anyTimes();
-        expect(mockJob.getDestructionTime()).andReturn(cal.getTime()).
-                anyTimes();
-        expect(mockJob.getOwner()).andReturn("USER").anyTimes();
-        expect(mockJob.getRunId()).andReturn("RUNID").anyTimes();
-        
-        cal.set(1977, Calendar.NOVEMBER, 25, 8, 30, 0);
-        expect(mockJob.getQuote()).andReturn(cal.getTime()).anyTimes();
-        
-        expect(mockJob.getResultsList()).andReturn(results).anyTimes();
-        expect(mockJob.getParameterList()).andReturn(parameters).
-                anyTimes();
+        final Calendar quoteCal = Calendar.getInstance();
+        quoteCal.set(1977, Calendar.NOVEMBER, 25, 8, 30, 0);
+        quoteCal.set(Calendar.MILLISECOND, 0);
 
-        replay(mockJob);
+        final List<Result> results = new ArrayList<Result>();
+        final List<Parameter> parameters = new ArrayList<Parameter>();
+
+        job = new Job("88l", ExecutionPhase.QUEUED, 88l, cal.getTime(),
+                        quoteCal.getTime(), cal.getTime(), cal.getTime(), null,
+                        "USER", "RUN_ID", results, parameters);
 
         asynchResource = new AsynchResource()
         {
@@ -150,7 +144,22 @@ public class AsynchResourceTestCase extends TestCase
             @Override
             protected List<Job> getJobs()
             {
-                return new ArrayList<Job>(Arrays.asList(mockJob));
+                return new ArrayList<Job>(Arrays.asList(job));
+            }
+
+            /**
+             * Build the host portion of any outgoing URL that will be intended for a
+             * local call.  This is useful when building XML and wanting to call upon
+             * a local Resource to build a portion of it.
+             * <p/>
+             * An example would look like: http://myhost/context
+             *
+             * @return String Host part of a URI.
+             */
+            @Override
+            protected String getHostPart()
+            {
+                return "http://myhost/mycontext";
             }
         };
 
@@ -163,15 +172,16 @@ public class AsynchResourceTestCase extends TestCase
      * Tears down the fixture, for example, close a network connection.
      * This method is called after a test is executed.
      */
-    @Override
-    protected void tearDown() throws Exception
+    @After
+    public void tearDown()
     {
         asynchResource = null;
         documentToBuild = null;
     }
 
 
-    public void testBuildXML() throws Exception
+    @Test
+    public void buildXML() throws Exception
     {
         asynchResource.buildXML(documentToBuild);
 
@@ -203,7 +213,7 @@ public class AsynchResourceTestCase extends TestCase
                 document.createElementNS(XML_NAMESPACE_PREFIX,
                                          JobAttribute.JOB_ID.
                                                  getAttributeName());
-        jobIdElement.setNodeValue(mockJob.getJobId());
+        jobIdElement.setNodeValue(job.getJobId());
         jobElement.appendChild(jobIdElement);
 
         // <uws:phase>
@@ -212,7 +222,7 @@ public class AsynchResourceTestCase extends TestCase
                                          JobAttribute.EXECUTION_PHASE.
                                                  getAttributeName());
         executionPhaseElement.setNodeValue(
-                mockJob.getExecutionPhase().name().toLowerCase());
+                job.getExecutionPhase().name().toLowerCase());
         jobElement.appendChild(executionPhaseElement);
 
         // <uws:executionDuration>
@@ -221,7 +231,7 @@ public class AsynchResourceTestCase extends TestCase
                                          JobAttribute.EXECUTION_DURATION.
                                                  getAttributeName());
         executionDurationElement.setNodeValue(
-                Long.toString(mockJob.getExecutionDuration()));
+                Long.toString(job.getExecutionDuration()));
         jobElement.appendChild(executionDurationElement);
 
         // <uws:destructionTime>
@@ -230,7 +240,7 @@ public class AsynchResourceTestCase extends TestCase
                                          JobAttribute.DESTRUCTION_TIME.
                                                  getAttributeName());
         destructionTimeElement.setNodeValue(
-                DateUtil.toString(mockJob.getDestructionTime(),
+                DateUtil.toString(job.getDestructionTime(),
                                   "yyyy-MM-dd'T'HH:mm:ss.SSSZ"));
         jobElement.appendChild(destructionTimeElement);
 
@@ -239,7 +249,7 @@ public class AsynchResourceTestCase extends TestCase
                 document.createElementNS(XML_NAMESPACE_PREFIX,
                                          JobAttribute.QUOTE.
                                                  getAttributeName());
-        quoteElement.setNodeValue(DateUtil.toString(mockJob.getQuote(),
+        quoteElement.setNodeValue(DateUtil.toString(job.getQuote(),
                                   "yyyy-MM-dd'T'HH:mm:ss.SSSZ"));
         jobElement.appendChild(quoteElement);
 
@@ -260,7 +270,7 @@ public class AsynchResourceTestCase extends TestCase
                                                  getAttributeName());
         errorSummaryDetailLinkElement.setAttributeNS("xlink", "href",
                                                      "LINK");
-//        errorSummaryDetailLinkElement.setNodeValue(mockJob.getErrorSummary());
+//        errorSummaryDetailLinkElement.setNodeValue(job.getErrorSummary());
 
         errorSummaryElement.appendChild(errorSummaryMessageElement);
         errorSummaryElement.appendChild(errorSummaryDetailLinkElement);
@@ -272,7 +282,7 @@ public class AsynchResourceTestCase extends TestCase
                                          JobAttribute.OWNER_ID.
                                                  getAttributeName());
         ownerNameElement.setAttributeNS("xsi", "nil", "true");
-        ownerNameElement.setNodeValue(mockJob.getOwner());
+        ownerNameElement.setNodeValue(job.getOwner());
         jobElement.appendChild(ownerNameElement);
 
         // <uws:runId>
@@ -280,7 +290,7 @@ public class AsynchResourceTestCase extends TestCase
                 document.createElementNS(XML_NAMESPACE_PREFIX,
                                          JobAttribute.RUN_ID.
                                                  getAttributeName());
-        runIdElement.setNodeValue(mockJob.getRunId());
+        runIdElement.setNodeValue(job.getRunId());
         jobElement.appendChild(runIdElement);
 
         // <uws:results>
@@ -289,7 +299,7 @@ public class AsynchResourceTestCase extends TestCase
                                          JobAttribute.RESULTS.
                                                  getAttributeName());
 
-        for (final Result result : mockJob.getResultsList())
+        for (final Result result : job.getResultsList())
         {
             final Element resultElement =
                     document.createElementNS(XML_NAMESPACE_PREFIX,
@@ -309,7 +319,7 @@ public class AsynchResourceTestCase extends TestCase
                                          JobAttribute.PARAMETERS.
                                                  getAttributeName());
 
-        for (final Parameter parameter : mockJob.getParameterList())
+        for (final Parameter parameter : job.getParameterList())
         {
             final Element parameterElement =
                     document.createElementNS(XML_NAMESPACE_PREFIX,
