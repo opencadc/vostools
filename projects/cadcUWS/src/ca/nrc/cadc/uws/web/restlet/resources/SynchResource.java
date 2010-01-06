@@ -103,8 +103,8 @@ public class SynchResource extends UWSResource
      *
      * @return The XML Representation, fully populated.
      */
+    @Get
     @Override
-    @Get()
     public Representation represent()
     {
         getResponse().setStatus(Status.CLIENT_ERROR_METHOD_NOT_ALLOWED);

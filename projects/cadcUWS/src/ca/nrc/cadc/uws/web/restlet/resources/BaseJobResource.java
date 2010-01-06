@@ -70,10 +70,7 @@
 
 package ca.nrc.cadc.uws.web.restlet.resources;
 
-import ca.nrc.cadc.uws.Job;
-import ca.nrc.cadc.uws.JobRunner;
-import ca.nrc.cadc.uws.InvalidServiceException;
-import ca.nrc.cadc.uws.JobAttribute;
+import ca.nrc.cadc.uws.*;
 import ca.nrc.cadc.uws.util.StringUtil;
 import ca.nrc.cadc.uws.util.BeanUtil;
 import org.w3c.dom.Element;
@@ -110,6 +107,28 @@ public abstract class BaseJobResource extends UWSResource
     protected String getJobID()
     {
         return getRequestAttribute("jobID");
+    }
+
+    /**
+     * Obtain whether this job is active.
+     *
+     * @return  True if active, false otherwise.
+     */
+    protected boolean jobIsActive()
+    {
+        final Job job = getJob();
+        return (job.getExecutionPhase().equals(ExecutionPhase.QUEUED))
+               || (job.getExecutionPhase().equals(ExecutionPhase.EXECUTING));
+    }
+
+    /**
+     * Obtain whether this job has successfully completed execution.
+     *
+     * @return  True if COMPLETE, false otherwise.
+     */
+    protected boolean jobIsComplete()
+    {
+        return getJob().getExecutionPhase().equals(ExecutionPhase.COMPLETED);
     }
 
     /**

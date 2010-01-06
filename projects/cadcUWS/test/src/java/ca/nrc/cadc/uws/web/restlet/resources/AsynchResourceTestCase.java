@@ -186,11 +186,11 @@ public class AsynchResourceTestCase extends TestCase
                                          JobAttribute.JOB.
                                                  getAttributeName());
         jobElement.setAttributeNS("xsi", "schemaLocation",
-                                  "http://www.ivoa.net/xml/UWS/v1.0rc3 UWS.xsd");
+                                  "http://www.ivoa.net/xml/UWS/v1.0 UWS.xsd");
         jobElement.setAttributeNS("xlmns", "xml",
                                   "http://www.w3.org/XML/1998/namespace");
         jobElement.setAttributeNS("xlmns", "uws",
-                                  "http://www.ivoa.net/xml/UWS/v1.0rc3");
+                                  "http://www.ivoa.net/xml/UWS/v1.0");
         jobElement.setAttributeNS("xlmns", "xlink",
                                   "http://www.w3.org/1999/xlink");
         jobElement.setAttributeNS("xlmns", "xsi",

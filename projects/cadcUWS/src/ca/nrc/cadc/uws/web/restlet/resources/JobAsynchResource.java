@@ -123,7 +123,6 @@ public class JobAsynchResource extends BaseJobResource
 
             if (phase.equals("RUN"))
             {
-                job.setExecutionPhase(ExecutionPhase.QUEUED);
                 executeJob();
             }
             else if (phase.equals("ABORT"))
@@ -176,11 +175,16 @@ public class JobAsynchResource extends BaseJobResource
      */
     protected void executeJob()
     {
-        final JobExecutor je = getJobExecutorService();
-        final JobRunner jobRunner = createJobRunner();
+        if (!jobIsActive() && !jobIsComplete())
+        {
+            final Job job = getJob();
+            final JobExecutor je = getJobExecutorService();
+            final JobRunner jobRunner = createJobRunner();
 
-        jobRunner.setJob(getJob());
-        je.execute(jobRunner);
+            job.setExecutionPhase(ExecutionPhase.QUEUED);
+            jobRunner.setJob(job);
+            je.execute(jobRunner);
+        }
     }
 
     /**

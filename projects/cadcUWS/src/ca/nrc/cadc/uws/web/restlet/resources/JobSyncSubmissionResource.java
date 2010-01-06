@@ -101,8 +101,8 @@ public class JobSyncSubmissionResource extends BaseJobResource
      *
      * @return The XML Representation, fully populated.
      */
+    @Get
     @Override
-    @Get()
     public Representation represent()
     {
         executeJob();
@@ -156,7 +156,7 @@ public class JobSyncSubmissionResource extends BaseJobResource
         {
             pollRunningJob();
         }
-        else
+        else if (!jobIsComplete())
         {
             prepareJob();
 
@@ -216,17 +216,5 @@ public class JobSyncSubmissionResource extends BaseJobResource
         }
 
         LOGGER.info("Done polling.");
-    }
-
-    /**
-     * Obtain whether this job is active.
-     *
-     * @return  True if active, false otherwise.
-     */
-    protected boolean jobIsActive()
-    {
-        final Job job = getJob();
-        return (job.getExecutionPhase().equals(ExecutionPhase.QUEUED))
-               || (job.getExecutionPhase().equals(ExecutionPhase.EXECUTING));
-    }
+    }    
 }

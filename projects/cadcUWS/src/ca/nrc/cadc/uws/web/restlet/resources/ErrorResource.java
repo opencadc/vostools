@@ -109,7 +109,8 @@ public class ErrorResource extends BaseJobResource
         final Job job = getJob();
         final ErrorSummary errorSummary = job.getErrorSummary();
 
-        if (errorSummary == null)
+        if ((errorSummary == null)
+            || (errorSummary.getDocumentURL() == null))
         {
             representation = new EmptyRepresentation();
         }
