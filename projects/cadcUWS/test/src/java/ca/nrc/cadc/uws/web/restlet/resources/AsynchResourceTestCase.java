@@ -78,18 +78,14 @@ import org.custommonkey.xmlunit.Diff;
 import org.junit.Before;
 import org.junit.After;
 import org.junit.Test;
-import ca.nrc.cadc.date.DateUtil;
-import ca.nrc.cadc.uws.ExecutionPhase;
-import ca.nrc.cadc.uws.Job;
-import ca.nrc.cadc.uws.JobAttribute;
-import ca.nrc.cadc.uws.Parameter;
-import ca.nrc.cadc.uws.Result;
+import ca.nrc.cadc.uws.*;
+
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Calendar;
 import java.util.Date;
 import java.util.List;
-
+import java.net.URL;
 
 
 /**
@@ -98,7 +94,8 @@ import java.util.List;
 public class AsynchResourceTestCase
 {
     protected final String XML_NAMESPACE_PREFIX = "uws";
-
+    protected final String XML_NAMESPACE_URI = "http://www.ivoa.net/xml/UWS/v1.0";
+    protected final String HOST_PART = "http://myhost/mycontext";
 
     protected Date destructionTime;
     protected AsynchResource asynchResource;
@@ -112,9 +109,11 @@ public class AsynchResourceTestCase
     /**
      * Sets up the fixture, for example, open a network connection.
      * This method is called before a test is executed.
+     *
+     * @throws Exception for anything that goes wrong.
      */
     @Before
-    public void setUp()
+    public void setUp() throws Exception
     {
         final Calendar cal = Calendar.getInstance();
         cal.set(1997, Calendar.NOVEMBER, 25, 3, 21, 0);
@@ -129,10 +128,12 @@ public class AsynchResourceTestCase
 
         final List<Result> results = new ArrayList<Result>();
         final List<Parameter> parameters = new ArrayList<Parameter>();
+        final ErrorSummary errorSummary =
+                new ErrorSummary("SUMMARY", new URL("http://www.nrc.ca"));
 
         job = new Job("88l", ExecutionPhase.QUEUED, 88l, cal.getTime(),
-                        quoteCal.getTime(), cal.getTime(), cal.getTime(), null,
-                        "USER", "RUN_ID", results, parameters);
+                        quoteCal.getTime(), cal.getTime(), cal.getTime(), 
+                        errorSummary, "USER", "RUN_ID", results, parameters);
 
         asynchResource = new AsynchResource()
         {
@@ -159,7 +160,7 @@ public class AsynchResourceTestCase
             @Override
             protected String getHostPart()
             {
-                return "http://myhost/mycontext";
+                return HOST_PART;
             }
         };
 
@@ -185,152 +186,47 @@ public class AsynchResourceTestCase
     {
         asynchResource.buildXML(documentToBuild);
 
+        documentToBuild.normalizeDocument();
+        
         final Diff diff = new Diff(expectedDocument, documentToBuild);
-        assertTrue("Good document.", diff.identical());
+        assertTrue("Good document.", diff.similar());
     }
 
     protected void buildTestXML(final Document document)
     {
-        final Element jobElement =
-                document.createElementNS(XML_NAMESPACE_PREFIX,
-                                         JobAttribute.JOB.
+        final Element jobsElement =
+                document.createElementNS(XML_NAMESPACE_URI,
+                                         JobAttribute.JOBS.getAttributeName());
+
+        jobsElement.setAttribute("xmlns:xlink",
+                                 "http://www.w3.org/1999/xlink");
+        jobsElement.setAttribute("xmlns:xsi",
+                                 "http://www.w3.org/2001/XMLSchema-instance");
+
+        jobsElement.setPrefix(XML_NAMESPACE_PREFIX);
+
+        final Element jobRefElement =
+                document.createElementNS(XML_NAMESPACE_URI,
+                                         JobAttribute.JOB_REF.
                                                  getAttributeName());
-        jobElement.setAttributeNS("xsi", "schemaLocation",
-                                  "http://www.ivoa.net/xml/UWS/v1.0 UWS.xsd");
-        jobElement.setAttributeNS("xlmns", "xml",
-                                  "http://www.w3.org/XML/1998/namespace");
-        jobElement.setAttributeNS("xlmns", "uws",
-                                  "http://www.ivoa.net/xml/UWS/v1.0");
-        jobElement.setAttributeNS("xlmns", "xlink",
-                                  "http://www.w3.org/1999/xlink");
-        jobElement.setAttributeNS("xlmns", "xsi",
-                                  "http://www.w3.org/2001/XMLSchema-instance");
 
-        document.appendChild(jobElement);
+        jobRefElement.setPrefix(XML_NAMESPACE_PREFIX);
+        jobRefElement.setAttribute("id", job.getJobId());
+        jobRefElement.setAttribute("xlink:href",
+                                   HOST_PART + "/async/"
+                                   + job.getJobId());
 
-        // <uws:jobId>
-        final Element jobIdElement =
-                document.createElementNS(XML_NAMESPACE_PREFIX,
-                                         JobAttribute.JOB_ID.
-                                                 getAttributeName());
-        jobIdElement.setNodeValue(job.getJobId());
-        jobElement.appendChild(jobIdElement);
-
-        // <uws:phase>
-        final Element executionPhaseElement =
-                document.createElementNS(XML_NAMESPACE_PREFIX,
+        final Element jobRefPhaseElement =
+                document.createElementNS(XML_NAMESPACE_URI,
                                          JobAttribute.EXECUTION_PHASE.
                                                  getAttributeName());
-        executionPhaseElement.setNodeValue(
-                job.getExecutionPhase().name().toLowerCase());
-        jobElement.appendChild(executionPhaseElement);
+        jobRefPhaseElement.setPrefix(XML_NAMESPACE_PREFIX);
+        jobRefPhaseElement.setTextContent(job.getExecutionPhase().name());
 
-        // <uws:executionDuration>
-        final Element executionDurationElement =
-                document.createElementNS(XML_NAMESPACE_PREFIX,
-                                         JobAttribute.EXECUTION_DURATION.
-                                                 getAttributeName());
-        executionDurationElement.setNodeValue(
-                Long.toString(job.getExecutionDuration()));
-        jobElement.appendChild(executionDurationElement);
-
-        // <uws:destructionTime>
-        final Element destructionTimeElement =
-                document.createElementNS(XML_NAMESPACE_PREFIX,
-                                         JobAttribute.DESTRUCTION_TIME.
-                                                 getAttributeName());
-        destructionTimeElement.setNodeValue(
-                DateUtil.toString(job.getDestructionTime(),
-                                  "yyyy-MM-dd'T'HH:mm:ss.SSSZ"));
-        jobElement.appendChild(destructionTimeElement);
-
-        // <uws:quote>
-        final Element quoteElement =
-                document.createElementNS(XML_NAMESPACE_PREFIX,
-                                         JobAttribute.QUOTE.
-                                                 getAttributeName());
-        quoteElement.setNodeValue(DateUtil.toString(job.getQuote(),
-                                  "yyyy-MM-dd'T'HH:mm:ss.SSSZ"));
-        jobElement.appendChild(quoteElement);
-
-        // <uws:errorSummary>
-        final Element errorSummaryElement =
-                document.createElementNS(XML_NAMESPACE_PREFIX,
-                                         JobAttribute.ERROR_SUMMARY.
-                                                 getAttributeName());
-        final Element errorSummaryMessageElement =
-                document.createElementNS(XML_NAMESPACE_PREFIX,
-                                         JobAttribute.ERROR_SUMMARY.
-                                                 getAttributeName());
-        errorSummaryMessageElement.setNodeValue("SUMMARY");
-
-        final Element errorSummaryDetailLinkElement =
-                document.createElementNS(XML_NAMESPACE_PREFIX,
-                                         JobAttribute.ERROR_SUMMARY.
-                                                 getAttributeName());
-        errorSummaryDetailLinkElement.setAttributeNS("xlink", "href",
-                                                     "LINK");
-//        errorSummaryDetailLinkElement.setNodeValue(job.getErrorSummary());
-
-        errorSummaryElement.appendChild(errorSummaryMessageElement);
-        errorSummaryElement.appendChild(errorSummaryDetailLinkElement);
-        jobElement.appendChild(errorSummaryElement);
-
-        // <uws:owner>
-        final Element ownerNameElement =
-                document.createElementNS(XML_NAMESPACE_PREFIX,
-                                         JobAttribute.OWNER_ID.
-                                                 getAttributeName());
-        ownerNameElement.setAttributeNS("xsi", "nil", "true");
-        ownerNameElement.setNodeValue(job.getOwner());
-        jobElement.appendChild(ownerNameElement);
-
-        // <uws:runId>
-        final Element runIdElement =
-                document.createElementNS(XML_NAMESPACE_PREFIX,
-                                         JobAttribute.RUN_ID.
-                                                 getAttributeName());
-        runIdElement.setNodeValue(job.getRunId());
-        jobElement.appendChild(runIdElement);
-
-        // <uws:results>
-        final Element resultsListElement =
-                document.createElementNS(XML_NAMESPACE_PREFIX,
-                                         JobAttribute.RESULTS.
-                                                 getAttributeName());
-
-        for (final Result result : job.getResultsList())
-        {
-            final Element resultElement =
-                    document.createElementNS(XML_NAMESPACE_PREFIX,
-                                             JobAttribute.RESULT.
-                                                     getAttributeName());
-            resultElement.setAttribute("id", result.getName());
-            resultElement.setAttributeNS("xlink", "href",
-                                         result.getURL().toExternalForm());
-            resultsListElement.appendChild(resultElement);
-        }
-
-        jobElement.appendChild(resultsListElement);
-
-        // <uws:parameters>
-        final Element parametersListElement =
-                document.createElementNS(XML_NAMESPACE_PREFIX,
-                                         JobAttribute.PARAMETERS.
-                                                 getAttributeName());
-
-        for (final Parameter parameter : job.getParameterList())
-        {
-            final Element parameterElement =
-                    document.createElementNS(XML_NAMESPACE_PREFIX,
-                                             JobAttribute.PARAMETER.
-                                                     getAttributeName());
-            parameterElement.setAttribute("id", parameter.getName());
-            parameterElement.setNodeValue(parameter.getValue());
-            parametersListElement.appendChild(parameterElement);
-        }
-
-        jobElement.appendChild(parametersListElement);
+        jobRefElement.appendChild(jobRefPhaseElement);
+        jobsElement.appendChild(jobRefElement);
+        
+        document.appendChild(jobsElement);
 
         document.normalizeDocument();
     }
