@@ -122,6 +122,15 @@ public class JobSyncSubmissionResourceTest
             {
                 return mockJobRunner;
             }
+
+            /**
+             * Poll the current job.
+             */
+            @Override
+            protected void pollRunningJob()
+            {
+                super.pollRunningJob(10l * 1000l);
+            }
         };
     }
 
@@ -169,8 +178,8 @@ public class JobSyncSubmissionResourceTest
                      job.getExecutionPhase(), ExecutionPhase.QUEUED);
         final long currTime = System.currentTimeMillis();
         testSubject.executeJob();
-        assertTrue("Should be at least three minutes later...",
+        assertTrue("Should be at least ten seconds later...",
                    (System.currentTimeMillis() - currTime)
-                   >= (3l * 60l * 1000l));
+                   >= (10l * 1000l));
     }
 }
