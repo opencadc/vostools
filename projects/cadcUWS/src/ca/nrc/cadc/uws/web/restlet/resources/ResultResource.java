@@ -36,13 +36,8 @@ package ca.nrc.cadc.uws.web.restlet.resources;
 import org.w3c.dom.Document;
 import org.restlet.resource.Get;
 import org.restlet.representation.Representation;
-import org.restlet.representation.EmptyRepresentation;
-import org.restlet.Client;
-import org.restlet.Response;
-import org.restlet.data.Protocol;
 
 import java.io.IOException;
-import java.net.URL;
 
 import ca.nrc.cadc.uws.Job;
 import ca.nrc.cadc.uws.Result;
@@ -53,24 +48,17 @@ public class ResultResource extends BaseJobResource
     /**
      * Obtain the XML Representation of this Request.
      *
-     * @return The XML Representation, fully populated.
      */
     @Get
     @Override
     public Representation represent()
     {
-        final Representation representation;
-
-        if (getResult() == null)
+        if (getResult() != null)
         {
-            representation = new EmptyRepresentation();
-        }
-        else
-        {
-            representation = getRemoteResult();
+            redirectSeeOther(getResult().getURL().toExternalForm());        
         }
 
-        return representation;
+        return null;
     }
 
     /**
@@ -114,21 +102,5 @@ public class ResultResource extends BaseJobResource
         }
 
         return null;
-    }
-
-    /**
-     * Obtain the remote Result.
-     *
-     * @return  Representation of the remote Result.
-     */
-    protected Representation getRemoteResult()
-    {
-        final URL url = getResult().getURL();
-        final Client client =
-                new Client(getContext(),
-                           Protocol.valueOf(url.getProtocol().toUpperCase()));
-        final Response response = client.get(url.toString());
-
-        return response.getEntity();
     }
 }

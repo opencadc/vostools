@@ -71,20 +71,11 @@
 package ca.nrc.cadc.uws.web.restlet.resources;
 
 import org.restlet.representation.Representation;
-import org.restlet.representation.EmptyRepresentation;
-import org.restlet.Client;
 import org.restlet.resource.Get;
-import org.restlet.data.Protocol;
-import org.restlet.Response;
-import org.apache.log4j.Logger;
 import org.w3c.dom.Document;
 
-import ca.nrc.cadc.uws.Job;
 import ca.nrc.cadc.uws.ErrorSummary;
-import ca.nrc.cadc.uws.web.WebRepresentationException;
 
-import java.net.MalformedURLException;
-import java.net.URL;
 import java.io.IOException;
 
 
@@ -93,9 +84,6 @@ import java.io.IOException;
  */
 public class ErrorResource extends BaseJobResource
 {
-    private static final Logger LOGGER = Logger.getLogger(ErrorResource.class);
-
-    
     /**
      * Obtain the XML Representation of this Request.
      *
@@ -105,21 +93,15 @@ public class ErrorResource extends BaseJobResource
     @Override
     public Representation represent()
     {
-        final Representation representation;
-        final Job job = getJob();
-        final ErrorSummary errorSummary = job.getErrorSummary();
+        final ErrorSummary errorSummary = getJob().getErrorSummary();
 
-        if ((errorSummary == null)
-            || (errorSummary.getDocumentURL() == null))
+        if ((errorSummary != null)
+            && (errorSummary.getDocumentURL() != null))
         {
-            representation = new EmptyRepresentation();
-        }
-        else
-        {
-            representation = getRemoteError();
+            redirectSeeOther(errorSummary.getDocumentURL().toExternalForm());
         }
 
-        return representation;        
+        return null;
     }
 
     /**
@@ -133,22 +115,5 @@ public class ErrorResource extends BaseJobResource
     protected void buildXML(final Document document) throws IOException
     {
         // Do Nothing.
-    }
-
-    /**
-     * Hit the Error's URI to get the detailed Error.
-     *
-     * @return  Representation of the Error.
-     */
-    protected Representation getRemoteError()
-    {
-        final URL url = getJob().getErrorSummary().getDocumentURL();
-        final Client client =
-                new Client(getContext(),
-                           Protocol.valueOf(url.getProtocol().
-                                   toUpperCase()));
-        final Response response = client.get(url.toString());
-
-        return response.getEntity();
     }
 }
