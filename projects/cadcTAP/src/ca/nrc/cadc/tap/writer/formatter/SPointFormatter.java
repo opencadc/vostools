@@ -69,11 +69,11 @@
 
 package ca.nrc.cadc.tap.writer.formatter;
 
+import ca.nrc.cadc.stc.CoordPair;
 import ca.nrc.cadc.stc.Position;
 import ca.nrc.cadc.stc.STC;
 import java.sql.ResultSet;
 import java.sql.SQLException;
-import java.util.ArrayList;
 
 /**
  * Formats a PGSphere spoint as a String.
@@ -142,9 +142,9 @@ public class SPointFormatter implements ResultSetFormatter
         // Create STC Position.
         Position position = new Position();
         position.frame = "ICRS";
-        position.pos = new ArrayList();
-        position.pos.add(x);
-        position.pos.add(y);
+        position.coordPair = new CoordPair();
+        position.coordPair.coord1 = x;
+        position.coordPair.coord2 = y;
 
         return position;
     }

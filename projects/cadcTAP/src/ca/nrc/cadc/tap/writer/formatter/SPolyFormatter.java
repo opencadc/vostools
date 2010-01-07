@@ -69,6 +69,7 @@
 
 package ca.nrc.cadc.tap.writer.formatter;
 
+import ca.nrc.cadc.stc.CoordPair;
 import ca.nrc.cadc.stc.Polygon;
 import ca.nrc.cadc.stc.STC;
 import java.sql.ResultSet;
@@ -143,7 +144,7 @@ public class SPolyFormatter implements ResultSetFormatter
         // Create STC Polygon and set some defaults.
         Polygon polygon = new Polygon();
         polygon.frame = "ICRS";
-        polygon.pos = new ArrayList<Double>();
+        polygon.coordPairs = new ArrayList<CoordPair>();
 
         // Loop through each set of vertices.
         for (int i = 0; i < vertices.length; i++)
@@ -161,8 +162,7 @@ public class SPolyFormatter implements ResultSetFormatter
             // convert to radians and add to Polygon.
             x = x * (180/Math.PI);
             y = y * (180/Math.PI);
-            polygon.pos.add(x);
-            polygon.pos.add(y);
+            polygon.coordPairs.add(new CoordPair(x, y));
         }
 
         return polygon;
