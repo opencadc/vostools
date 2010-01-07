@@ -138,10 +138,7 @@
                 <pathelement path="build/class"/>
                 <pathelement path="${jars}:${testingJars}"/>
             </classpath>
-
-
             <test name="ca.nrc.cadc.tap.parser.PgsRegionConverterTest"/>
-	    <!--
             <test name="ca.nrc.cadc.tap.parser.PgsRegionConverterTest"/>
             <test name="ca.nrc.cadc.tap.parser.RegionFinderTest"/>
             <test name="ca.nrc.cadc.tap.parser.BlobClobValidatorTest"/>
@@ -151,19 +148,18 @@
             <test name="ca.nrc.cadc.tap.parser.ExtractorTest"/>
 			<test name="ca.nrc.cadc.tap.parser.AllColumnConverterTest"/>
 			<test name="ca.nrc.cadc.tap.parser.TopConverterTest"/>
+            <!--
 			<test name="ca.nrc.cadc.tap.parser.SqlQueryTest" />
-
-            <test name="ca.nrc.cadc.tap.writer.AsciiTableWriterTest"/>
-            <test name="ca.nrc.cadc.tap.writer.VOTableWriterTest"/>
-
+            -->
             <test name="ca.nrc.cadc.stc.BoxTest"/>
             <test name="ca.nrc.cadc.stc.CircleTest"/>
             <test name="ca.nrc.cadc.stc.PolygonTest"/>
             <test name="ca.nrc.cadc.stc.PositionTest"/>
-            <test name="ca.nrc.cadc.stc.VelocityTest"/>
             <test name="ca.nrc.cadc.stc.NotTest"/>
             <test name="ca.nrc.cadc.stc.UnionTest"/>
-            
+            <test name="ca.nrc.cadc.stc.IntersectionTest"/>
+            <test name="ca.nrc.cadc.tap.writer.AsciiTableWriterTest"/>
+            <test name="ca.nrc.cadc.tap.writer.VOTableWriterTest"/>
             <test name="ca.nrc.cadc.tap.writer.formatter.ByteArrayFormatterTest"/>
             <test name="ca.nrc.cadc.tap.writer.formatter.DefaultFormatterTest"/>
             <test name="ca.nrc.cadc.tap.writer.formatter.DoubleArrayFormatterTest"/>
@@ -172,7 +168,6 @@
             <test name="ca.nrc.cadc.tap.writer.formatter.UTCTimestampFormatterTest"/>
             <test name="ca.nrc.cadc.tap.writer.formatter.SPointFormatterTest"/>
             <test name="ca.nrc.cadc.tap.writer.formatter.SPolyFormatterTest"/>
-            -->
             <formatter type="plain" usefile="false"/>
         </junit>
 
