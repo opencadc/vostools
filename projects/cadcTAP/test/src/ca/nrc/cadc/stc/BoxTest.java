@@ -70,7 +70,6 @@
 package ca.nrc.cadc.stc;
 
 import ca.nrc.cadc.util.Log4jInit;
-import java.util.ArrayList;
 import org.apache.log4j.Level;
 import org.apache.log4j.Logger;
 import org.junit.After;
@@ -82,21 +81,14 @@ import static org.junit.Assert.*;
 
 public class BoxTest
 {
-    public static final String SPACE = "Box";
-    public static final String FILLFACTOR = "fillfactor 1.0";
+    public static final String SPACE = "BOX";
     public static final String FRAME = "ICRS";
     public static final String REFPOS = "BARYCENTER";
-    public static final String FLAVOR = "SPHER2";
-    public static final String POS = "148.9 69.1";
-    public static final String BSIZE = "2.0 3.0";
-    public static final String POSITION = "Position 0.1 0.2";
-    public static final String UNIT = "unit deg";
-    public static final String ERROR = "Error 0.1 0.2 0.3 0.4";
-    public static final String RESOLUTION = "Resolution 0.0001 0.0001 0.0003 0.0003";
-    public static final String SIZE = "Size 0.5 0.5 0.67 0.67";
-    public static final String PIXSIZE = "PixSize 0.00005 0.00005 0.00015 0.00015";
-    public static final String VELOCITY = "VelocityInterval fillfactor 1.0 1.0 2.0 3.0 4.0";
-
+    public static final String FLAVOR = "SPHERICAL2";
+    public static final String COORDPAIR = "1.0 2.0";
+    public static final String WIDTH = "3.0";
+    public static final String HEIGHT = "4.0";
+    
     public static String phrase;
 
     private static final Logger LOG = Logger.getLogger(BoxTest.class);
@@ -113,19 +105,12 @@ public class BoxTest
     {
         StringBuilder sb = new StringBuilder();
         sb.append(SPACE).append(" ");
-        sb.append(FILLFACTOR).append(" ");
         sb.append(FRAME).append(" ");
         sb.append(REFPOS).append(" ");
         sb.append(FLAVOR).append(" ");
-        sb.append(POS).append(" ");
-        sb.append(BSIZE).append(" ");
-        sb.append(POSITION).append(" ");
-        sb.append(UNIT).append(" ");
-        sb.append(ERROR).append(" ");
-        sb.append(RESOLUTION).append(" ");
-        sb.append(SIZE).append(" ");
-        sb.append(PIXSIZE).append(" ");
-        sb.append(VELOCITY);
+        sb.append(COORDPAIR).append(" ");
+        sb.append(WIDTH).append(" ");
+        sb.append(HEIGHT);
         phrase = sb.toString();
     }
 
@@ -147,54 +132,12 @@ public class BoxTest
         LOG.debug("parse");
 
         Box box = new Box();
-        box.fill = 1.0D;
         box.frame = FRAME;
         box.refpos = REFPOS;
         box.flavor = FLAVOR;
-        box.pos = new ArrayList<Double>();
-        box.pos.add(148.9);
-        box.pos.add(69.1);
-        box.bsize = new ArrayList<Double>();
-        box.bsize.add(2.0);
-        box.bsize.add(3.0);
-        box.position = new ArrayList<Double>();
-        box.position.add(0.1);
-        box.position.add(0.2);
-        box.unit = "deg";
-        box.error = new ArrayList<Double>();
-        box.error.add(0.1);
-        box.error.add(0.2);
-        box.error.add(0.3);
-        box.error.add(0.4);
-        box.resln = new ArrayList<Double>();
-        box.resln.add(0.0001);
-        box.resln.add(0.0001);
-        box.resln.add(0.0003);
-        box.resln.add(0.0003);
-        box.size = new ArrayList<Double>();
-        box.size.add(0.5);
-        box.size.add(0.5);
-        box.size.add(0.67);
-        box.size.add(0.67);
-        box.pixsiz = new ArrayList<Double>();
-        box.pixsiz.add(0.00005);
-        box.pixsiz.add(0.00005);
-        box.pixsiz.add(0.00015);
-        box.pixsiz.add(0.00015);
-
-        box.velocity = new Velocity();
-        box.velocity.intervals = new ArrayList<VelocityInterval>();
-
-        VelocityInterval interval = new VelocityInterval();
-        interval.fill = 1.0;
-        interval.lolimit = new ArrayList<Double>();
-        interval.lolimit.add(1.0);
-        interval.lolimit.add(2.0);
-        interval.hilimit = new ArrayList<Double>();
-        interval.hilimit.add(3.0);
-        interval.hilimit.add(4.0);
-
-        box.velocity.intervals.add(interval);
+        box.coordPair = new CoordPair(1D, 2D);
+        box.width = 3D;
+        box.height = 4D;
 
         String actual = STC.format(box);
         LOG.debug("expected: " + phrase);
@@ -208,7 +151,7 @@ public class BoxTest
     {
         LOG.debug("parse");
         
-        Space space = STC.parse(phrase);
+        Region space = STC.parse(phrase);
         String actual = STC.format(space);
         LOG.debug("expected: " + phrase);
         LOG.debug("  actual: " + actual);

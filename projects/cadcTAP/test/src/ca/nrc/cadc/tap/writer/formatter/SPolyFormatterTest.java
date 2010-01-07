@@ -92,8 +92,8 @@ public class SPolyFormatterTest
     {
         Log4jInit.setLevel("ca", Level.INFO);
     }
-    private static final String SPOLYGON = " {(0.0349065850398866 , 0.0349065850398866),(0.0349065850398866 , 0.0698131700797732),(0.0523598775598299 , 0.0523598775598299)}";
-    private static final String STCS_POLYGON = "Polygon ICRS 2.0 2.0 2.0 4.0 3.0 3.0";
+    private static final String SPOLYGON = " {(0.0349065850398866, 0.0349065850398866),(0.0349065850398866, 0.0698131700797732),(0.0523598775598299, 0.0523598775598299)}";
+    private static final String STCS_POLYGON = "POLYGON ICRS 2.0000000000000004 2.0000000000000004 2.0000000000000004 4.000000000000001 3.0000000000000004 3.0000000000000004";
 
     public SPolyFormatterTest() { }
 
@@ -138,14 +138,14 @@ public class SPolyFormatterTest
         Object object = SPOLYGON;
         SPolyFormatter instance = new SPolyFormatter();
         Polygon polygon = instance.getPolygon(object);
-        assertEquals("Polygon", Polygon.NAME);
+        assertEquals("POLYGON", Polygon.NAME);
         assertEquals("ICRS", polygon.frame);
-        assertEquals(new Double(2.0000000000000004), polygon.pos.get(0));
-        assertEquals(new Double(2.0000000000000004), polygon.pos.get(1));
-        assertEquals(new Double(2.0000000000000004), polygon.pos.get(2));
-        assertEquals(new Double(4.000000000000001), polygon.pos.get(3));
-        assertEquals(new Double(3.0000000000000004), polygon.pos.get(4));
-        assertEquals(new Double(3.0000000000000004), polygon.pos.get(5));
+        assertEquals(new Double(2.0000000000000004), polygon.coordPairs.get(0).coord1);
+        assertEquals(new Double(2.0000000000000004), polygon.coordPairs.get(0).coord2);
+        assertEquals(new Double(2.0000000000000004), polygon.coordPairs.get(1).coord1);
+        assertEquals(new Double(4.000000000000001), polygon.coordPairs.get(1).coord2);
+        assertEquals(new Double(3.0000000000000004), polygon.coordPairs.get(2).coord1);
+        assertEquals(new Double(3.0000000000000004), polygon.coordPairs.get(2).coord2);
         LOG.info("testGetPolygon passed");
     }
 

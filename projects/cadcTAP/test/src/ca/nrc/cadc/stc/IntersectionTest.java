@@ -20,7 +20,7 @@ import static org.junit.Assert.*;
  *
  * @author jeff
  */
-public class UnionTest
+public class IntersectionTest
 {
     public static String phrase;
     public static Box box;
@@ -28,20 +28,20 @@ public class UnionTest
     public static Polygon polygon;
     public static Position position;
 
-    private static final Logger LOG = Logger.getLogger(UnionTest.class);
+    private static final Logger LOG = Logger.getLogger(IntersectionTest.class);
     static
     {
         Log4jInit.setLevel("ca", Level.INFO);
     }
 
-    public UnionTest() {
+    public IntersectionTest() {
     }
 
     @BeforeClass
     public static void setUpClass() throws Exception
     {
-        phrase = "UNION ICRS ( BOX 1.0 2.0 3.0 4.0 CIRCLE 1.0 2.0 3.0 POLYGON 1.0 2.0 3.0 4.0 5.0 6.0 7.0 8.0 POSITION 1.0 2.0 )";
-        
+        phrase = "INTERSECTION ICRS ( BOX 1.0 2.0 3.0 4.0 CIRCLE 1.0 2.0 3.0 POLYGON 1.0 2.0 3.0 4.0 5.0 6.0 7.0 8.0 POSITION 1.0 2.0 )";
+
         box = new Box();
         box.coordPair = new CoordPair(1D, 2D);
         box.width = 3D;
@@ -80,15 +80,15 @@ public class UnionTest
     {
         LOG.debug("format");
 
-        Union union = new Union();
-        union.frame = "ICRS";
-        union.regions = new ArrayList<Region>();
-        union.regions.add(box);
-        union.regions.add(circle);
-        union.regions.add(polygon);
-        union.regions.add(position);
+        Intersection intersection = new Intersection();
+        intersection.frame = "ICRS";
+        intersection.regions = new ArrayList<Region>();
+        intersection.regions.add(box);
+        intersection.regions.add(circle);
+        intersection.regions.add(polygon);
+        intersection.regions.add(position);
 
-        String actual = STC.format(union);
+        String actual = STC.format(intersection);
         LOG.debug("expected: " + phrase);
         LOG.debug("  actual: " + actual);
         assertEquals(phrase, actual);

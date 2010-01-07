@@ -92,7 +92,7 @@ public class SPointFormatterTest
         Log4jInit.setLevel("ca", Level.INFO);
     }
     private static final String SPOINT = "(0.174532925199433 , 0.174532925199433)";
-    private static final String STCS_POSITION = "Position ICRS 10.0 10.0";
+    private static final String STCS_POSITION = "POSITION ICRS 10.000000000000004 10.000000000000004";
 
     public SPointFormatterTest() { }
 
@@ -137,10 +137,10 @@ public class SPointFormatterTest
         Object object = SPOINT;
         SPointFormatter instance = new SPointFormatter();
         Position position = instance.getPosition(object);
-        assertEquals("Position", Position.NAME);
+        assertEquals("POSITION", Position.NAME);
         assertEquals("ICRS", position.frame);
-        assertEquals(new Double(10.000000000000004), position.pos.get(0));
-        assertEquals(new Double(10.000000000000004), position.pos.get(1));
+        assertEquals(new Double(10.000000000000004), position.coordPair.coord1);
+        assertEquals(new Double(10.000000000000004), position.coordPair.coord2);
         LOG.info("testGetPosition passed");
     }
 
