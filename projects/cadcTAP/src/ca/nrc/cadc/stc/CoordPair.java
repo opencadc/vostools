@@ -69,40 +69,29 @@
 
 package ca.nrc.cadc.stc;
 
-import java.util.ArrayList;
-import java.util.List;
-
 /**
- * Allowed values for Unit in a STC-S Space sub-phrase.
+ *
  * 
  */
-public final class SpatialUnit
+public class CoordPair
 {
-    public static final String DEG = "deg";
-    public static final String ARCMINUTE = "arcmin";
-    public static final String ARCSECOND = "arcsec";
-    public static final String METER = "m";
-    public static final String MILLIMETER = "mm";
-    public static final String KILOMETER = "km";
-    public static final String ASTRONOMICAL_UNIT = "AU";
-    public static final String PARSEC = "pc";
-    public static final String KILOPARSEC = "kpc";
-    public static final String MEGAPARSEC = "Mpc";
+    public Double coord1;
+    public Double coord2;
 
-    public static final List UNITS;
-    static
+    public CoordPair() {}
+
+    public CoordPair(final Double coord1, final Double coord2)
     {
-        // Allowed values.
-        UNITS = new ArrayList<String>();
-        UNITS.add(DEG);
-        UNITS.add(ARCMINUTE);
-        UNITS.add(ARCSECOND);
-        UNITS.add(METER);
-        UNITS.add(MILLIMETER);
-        UNITS.add(KILOMETER);
-        UNITS.add(ASTRONOMICAL_UNIT);
-        UNITS.add(PARSEC);
-        UNITS.add(KILOPARSEC);
-        UNITS.add(MEGAPARSEC);
+        this.coord1 = coord1;
+        this.coord2 = coord2;
+    }
+
+    public String toString()
+    {
+        StringBuilder sb = new StringBuilder();
+        sb.append(coord1);
+        sb.append(" ");
+        sb.append(coord2);
+        return sb.toString();
     }
 }

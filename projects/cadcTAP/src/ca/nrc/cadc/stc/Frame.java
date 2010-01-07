@@ -78,35 +78,23 @@ import java.util.List;
  */
 public final class Frame
 {
-    public static final String ICRS = "ICRS";
-    public static final String FK5 = "FK5";
-    public static final String FK4 = "FK4";
-    public static final String J2000 = "J2000";
-    public static final String B1950 = "B1950";
     public static final String ECLIPTIC = "ECLIPTIC";
+    public static final String FK4 = "FK4";
+    public static final String FK5 = "FK5";
     public static final String GALACTIC = "GALACTIC";
-    public static final String GALACTIC_II = "GALACTIC_II";
-    public static final String SUPER_GALACTIC = "SUPER_GALACTIC";
-    public static final String GEO_C = "GEO_C";
-    public static final String GEO_D = "GEO_D";
-    public static final String UNKNOWNFRAME = "UNKNOWNFrame";
-
+    public static final String ICRS = "ICRS";
+    public static final String UNKNOWNFRAME = "UNKNOWNFRAME";
+    
     public static final List FRAMES;
     static
     {
         // Allowed values.
         FRAMES = new ArrayList<String>();
-        FRAMES.add(ICRS);
-        FRAMES.add(FK5);
-        FRAMES.add(FK4);
-        FRAMES.add(J2000);
-        FRAMES.add(B1950);
         FRAMES.add(ECLIPTIC);
+        FRAMES.add(FK4);
+        FRAMES.add(FK5);
         FRAMES.add(GALACTIC);
-        FRAMES.add(GALACTIC_II);
-        FRAMES.add(SUPER_GALACTIC);
-        FRAMES.add(GEO_C);
-        FRAMES.add(GEO_D);
+        FRAMES.add(ICRS);
         FRAMES.add(UNKNOWNFRAME);
     }
 

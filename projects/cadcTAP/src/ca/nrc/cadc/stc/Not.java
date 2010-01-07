@@ -73,32 +73,34 @@ package ca.nrc.cadc.stc;
  * Class to represent a STC-S Not operator.
  *
  */
-public class Not implements Space
+public class Not  extends SpatialSubphrase implements Region
 {
-    public static final String NAME = "Not";
-    public Space space;
+    public static final String NAME = "NOT";
+    public Region regions;
 
-    public Not() { }
+    public Not() {}
 
-    public String format(Space space)
+    public String format(Region region)
     {
-        Not not = (Not) space;
+        Not not = (Not) region;
         StringBuilder sb = new StringBuilder();
         sb.append(NAME);
         sb.append(" ( ");
-        sb.append(STC.format(not.space));
+        sb.append(STC.format(not.regions));
         sb.append(" )");
-        return sb.toString().trim();
+        return sb.toString();
     }
 
-    public Space parse(String phrase)
+    public Region parse(String phrase)
         throws StcsParsingException
     {
-        // Phrase must start with Not.
-        phrase = phrase.trim();
-        if (!phrase.startsWith(NAME))
-            throw new StcsParsingException("Phrase must start with Not: " + phrase);
+        init(phrase);
+        return this;
+    }
 
+    protected void getCoordinates()
+        throws StcsParsingException
+    {
         // Get the string within the opening and closing parentheses.
         int open = phrase.indexOf("(");
         int close = phrase.lastIndexOf(")");
@@ -106,9 +108,7 @@ public class Not implements Space
             throw new StcsParsingException("Not arguments must be enclosed in parentheses: " + phrase);
         String not = phrase.substring(open + 1, close);
 
-        // Get the Space for this operator.
-        space = STC.parse(not);
-        return this;
+        // Get the Region for this operator.
+        regions = STC.parse(not);
     }
-
 }

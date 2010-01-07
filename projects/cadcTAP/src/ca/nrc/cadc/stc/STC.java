@@ -70,59 +70,59 @@
 package ca.nrc.cadc.stc;
 
 /**
- * Factory methods to create a Space from a STC-S phrase,
- * and to build a STC-S phrase from a Space.
+ * Factory methods to create a Region from a STC-S phrase,
+ * and to build a STC-S phrase from a Region.
  *
  */
 public class STC
 {
-    public static Space parse(String phrase)
+    public static Region parse(String phrase)
         throws StcsParsingException
     {
         if (phrase == null)
             return null;
-        phrase = phrase.trim();
+        phrase = phrase.trim().toUpperCase();
         if (phrase.length() == 0)
             return null;
         if (phrase.startsWith(Box.NAME))
-        {   Space box = new Box();
+        {   Region box = new Box();
             return box.parse(phrase);
         }
         else if (phrase.startsWith(Circle.NAME))
         {
-            Space circle = new Circle();
+            Region circle = new Circle();
             return circle.parse(phrase);
         }
         else if (phrase.startsWith(Not.NAME))
         {
-            Space not = new Not();
+            Region not = new Not();
             return not.parse(phrase);
         }
         else if (phrase.startsWith(Polygon.NAME))
         {
-            Space polygon = new Polygon();
+            Region polygon = new Polygon();
             return polygon.parse(phrase);
         }
         else if (phrase.startsWith(Position.NAME))
         {
-            Space position = new Position();
+            Region position = new Position();
             return position.parse(phrase);
         }
         else if (phrase.startsWith(Union.NAME))
         {
-            Space union = new Union();
+            Region union = new Union();
             return union.parse(phrase);
         }
-        else if (phrase.startsWith(Velocity.NAME))
+        else if (phrase.startsWith(Intersection.NAME))
         {
-            Space velocity = new Velocity();
-            return velocity.parse(phrase);
+            Region intersection = new Intersection();
+            return intersection.parse(phrase);
         }
         else
             throw new UnsupportedOperationException("Unsupported phrase " + phrase);
     }
 
-    public static String format(Space space)
+    public static String format(Region space)
     {
         return space.format(space);
     }

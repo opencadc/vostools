@@ -69,62 +69,43 @@
 
 package ca.nrc.cadc.stc;
 
-import java.util.ArrayList;
-import java.util.List;
-import org.apache.log4j.Level;
-import org.apache.log4j.Logger;
-
 /**
  * Class to represent a STC-S Position.
  * 
  */
-public class Position extends SpatialSubphrase implements Space
+public class Position extends SpatialSubphrase implements Region
 {
-    public static final String NAME = "Position";
-    public List<Double> pos;
+    public static final String NAME = "POSITION";
+    public CoordPair coordPair;
 
-    public Position()
-    {
-        super(NAME);
-    }
+    public Position() {}
 
-    public String format(Space space)
+    public String format(Region region)
     {
-        if (!(space instanceof Position))
-            throw new IllegalArgumentException("Expected Position, was " + space.getClass().getName());
-        Position p = (Position) space;
+        if (!(region instanceof Position))
+            throw new IllegalArgumentException("Expected Position, was " + region.getClass().getName());
+        Position position = (Position) region;
         StringBuilder sb = new StringBuilder();
         sb.append(NAME).append(" ");
-        sb.append(p.frame).append(" ");
-        if (p.refpos != null)
-            sb.append(p.refpos).append(" ");
-        if (p.flavor != null)
-            sb.append(p.flavor).append(" ");
-        if (p.pos != null)
-            sb.append(listToString(p.pos));
-        if (p.unit != null)
-            sb.append("unit ").append(p.unit).append(" ");
-        if (p.error != null)
-            sb.append("Error ").append(listToString(p.error));
-        if (p.resln != null)
-            sb.append("Resolution ").append(listToString(p.resln));
-        if (p.size != null)
-            sb.append("Size ").append(listToString(p.size));
-        if (p.pixsiz != null)
-            sb.append("PixSize ").append(listToString(p.pixsiz));
-        if (p.velocity != null)
-            sb.append(STC.format(p.velocity));
+        if (position.frame != null)
+            sb.append(position.frame).append(" ");
+        if (position.refpos != null)
+            sb.append(position.refpos).append(" ");
+        if (position.flavor != null)
+            sb.append(position.flavor).append(" ");
+        if (position.coordPair != null)
+            sb.append(position.coordPair);
         return sb.toString().trim();
     }
 
-    public Space parse(String phrase)
+    public Region parse(String phrase)
         throws StcsParsingException
     {
         init(phrase);
         return this;
     }
 
-    protected void getPos()
+    protected void getCoordinates()
         throws StcsParsingException
     {
         // current word as a Double.
@@ -145,19 +126,15 @@ public class Position extends SpatialSubphrase implements Space
 
         // Double value not found? return.
         if (value == null)
-            return;
-        
-        // Create new List and add first value.
-        pos = new ArrayList<Double>();
-        pos.add(value);
+            throw new StcsParsingException("coordpair values not found");
 
-        // Loop through the next x values and add to list.
-        while (words.hasNextDouble())
-            pos.add(words.nextDouble());
-
-        // Should only be 1,2, or 3 pos values.
-        if (pos.size() != dimensions)
-            throw new StcsParsingException("Invalid number of pos values " + pos.size());
+        // coordpair values.
+        coordPair = new CoordPair();
+        coordPair.coord1 = value;
+        if (words.hasNextDouble())
+            coordPair.coord2 = words.nextDouble();
+        if (coordPair.coord1 == null || coordPair.coord2 == null)
+            throw new StcsParsingException("coordpair values not found");
 
         currentWord = null;
     }

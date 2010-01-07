@@ -77,39 +77,44 @@ import java.util.List;
  * Class to represent a STC-S Union operator.
  *
  */
-public class Union implements Space
+public class Union extends SpatialSubphrase implements Region
 {
-    public static final String NAME = "Union";
-    public static final String[] SPACES = new String[]
-    {
-        "Box", "Circle", "Polygon", "Position", "Union"
-    };
+    public static final String NAME = "UNION";
 
-    public List<Space> spaces;
+    public List<Region> regions;
 
-    public Union() { }
+    public Union() {}
     
-    public String format(Space space)
+    public String format(Region region)
     {
-        if (!(space instanceof Union))
-            throw new IllegalArgumentException("Expected Union, was " + space.getClass().getName());
+        if (!(region instanceof Union))
+            throw new IllegalArgumentException("Expected Union, was " + region.getClass().getName());
+        Union union = (Union) region;
         StringBuilder sb = new StringBuilder();
-        sb.append(NAME);
-        sb.append(" ( ");
-        for (Space s : spaces)
-            sb.append(STC.format(s)).append(" ");
+        sb.append(NAME).append(" ");
+        if (union.frame != null)
+            sb.append(union.frame).append(" ");
+        if (union.refpos != null)
+            sb.append(union.refpos).append(" ");
+        if (union.flavor != null)
+            sb.append(union.flavor).append(" ");
+        sb.append("( ");
+        for (Region r : union.regions)
+            sb.append(STC.format(r)).append(" ");
         sb.append(")");
-        return sb.toString().trim();
+        return sb.toString();
     }
 
-    public Space parse(String phrase)
+    public Region parse(String phrase)
         throws StcsParsingException
     {
-        // Phrase must start with Union.
-        phrase = phrase.trim();
-        if (!phrase.startsWith(NAME))
-            throw new StcsParsingException("Phrase must start with Union: " + phrase);
+        init(phrase);
+        return this;
+    }
 
+    protected void getCoordinates()
+        throws StcsParsingException
+    {
         // Get the string within the opening and closing parentheses.
         int open = phrase.indexOf("(");
         int close = phrase.lastIndexOf(")");
@@ -118,24 +123,27 @@ public class Union implements Space
         String union = phrase.substring(open + 1, close).trim();
 
         int index = 0;
-        String subPhrase = getNextSpace(union, index);
+        String subPhrase = getNextRegion(union, index);
         while (subPhrase != null)
-        {   
-            if (spaces == null)
-                spaces = new ArrayList<Space>();
-            spaces.add(STC.parse(subPhrase));
+        {
+            if (regions == null)
+                regions = new ArrayList<Region>();
+            regions.add(STC.parse(subPhrase));
             index = index + subPhrase.length();
-            subPhrase = getNextSpace(union, index);
+            subPhrase = getNextRegion(union, index);
         }
-        return this;
+
+        // Must be two or more regions in a Union.
+        if (regions.size() < 2)
+            throw new StcsParsingException("Union must : " + phrase);
     }
 
-    private String getNextSpace(String phrase, int index)
+    private String getNextRegion(String phrase, int index)
     {
-        // Search the phrase for a Space.
-        int[] indexes = new int[SPACES.length];
+        // Search the phrase for a Region.
+        int[] indexes = new int[REGIONS.length];
         for (int i = 0; i < indexes.length; i++)
-            indexes[i] = phrase.indexOf(SPACES[i], index);
+            indexes[i] = phrase.indexOf(REGIONS[i], index);
 
         // Sort in descending order.
         Arrays.sort(indexes);

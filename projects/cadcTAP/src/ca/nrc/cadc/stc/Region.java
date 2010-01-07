@@ -69,20 +69,15 @@
 
 package ca.nrc.cadc.stc;
 
-import java.util.List;
-
 /**
- * Class to represent a STC-S VelocityInterval.
- *
+ * Interface for a STC-S Region.
+ * 
  */
-public class VelocityInterval
+public interface Region
 {
-    public static final String NAME = "VelocityInterval";
-    
-    public Double fill;
-    public List<Double> lolimit;
-    public List<Double> hilimit;
+    String format(Region region);
 
-    public VelocityInterval() { }
+    Region parse(String phrase)
+        throws StcsParsingException;
 
 }

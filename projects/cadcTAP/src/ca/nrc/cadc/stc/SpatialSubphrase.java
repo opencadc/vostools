@@ -83,15 +83,20 @@ public abstract class SpatialSubphrase
     // Default values.
     protected static final String DEFAULT_FRAME = Frame.UNKNOWNFRAME;
     protected static final String DEFAULT_REFPOS = ReferencePosition.UNKNOWNREFPOS;
-    protected static final String DEFAULT_FLAVOR = Flavor.SPHER2;
-    protected static final String DEFAULT_UNIT = SpatialUnit.DEG;
+    protected static final String DEFAULT_FLAVOR = Flavor.SPHERICAL2;
+
+    // Possible regions.
+    protected static final String[] REGIONS = new String[]
+    {
+        "BOX", "CIRCLE", "POLYGON", "POSITION", "UNION", "NOT", "INTERSECTION"
+    };
 
     // Formatter for Double values.
     protected static DecimalFormat doubleFormat;
 
     static
     {
-        // TODO what is the format, should it even be used?
+        // TODO should support SN
         doubleFormat = new DecimalFormat("####.########");
         doubleFormat.setDecimalSeparatorAlwaysShown(true);
         doubleFormat.setMinimumFractionDigits(1);
@@ -101,20 +106,13 @@ public abstract class SpatialSubphrase
      * STC-S phrase elements.
      */
     public String phrase;
-    public String space;
-    public Double fill;
+    public String region;
+
     public String frame;
     public String refpos;
     public String flavor;
-    public List<Double> position;
-    public String unit;
-    public List<Double> error;
-    public List<Double> resln;
-    public List<Double> size;
-    public List<Double> pixsiz;
-    public Velocity velocity;
 
-    // Dimensionality of the frame.
+    // Dimensionality of the region.
     protected int dimensions;
 
     // Words to process in the phrase?
@@ -126,15 +124,7 @@ public abstract class SpatialSubphrase
     // The tokenized phrase.
     protected Scanner words;
 
-    /**
-     *
-     * @param space
-     */
-    public SpatialSubphrase(String space)
-    {
-        this.space = space;
-        this.frame = DEFAULT_FRAME;
-    }
+    public SpatialSubphrase() {}
 
     public void init(String phrase)
         throws StcsParsingException
@@ -148,83 +138,69 @@ public abstract class SpatialSubphrase
         words = new Scanner(phrase);
         words.useDelimiter("\\s+");
 
-        valiateSpace(space);
-        getFillfactor();
+        getRegion();
         getFrame();
         getRefpos();
         getFlavor();
         getDimensionality();
-        getPos();
-        getPosition();
-        getUnit();
-        getError();
-        getResolution();
-        getSize();
-        getPixSize();
-        getVelocity();
+        getCoordinates();
     }
 
-    protected abstract void getPos()
+    protected abstract void getCoordinates()
         throws StcsParsingException;
 
-    protected void valiateSpace(String space)
+    protected void getRegion()
         throws StcsParsingException
     {
-        if (words.hasNext(space))
-            words.next();
-        else
+        if (currentWord == null)
         {
             if (words.hasNext())
-                throw new StcsParsingException("Invalid space value, found " + words.next() + ", expecting " + space);
+                currentWord = words.next();
             else
-                throw new StcsParsingException("Unexpected end to STC-S phrase, missing space value");
+                throw new StcsParsingException("Unexpected end to STC-S phrase " + phrase);
         }
-    }
-
-    protected void getFillfactor()
-        throws StcsParsingException
-    {
-        if (words.hasNext("fillfactor"))
+        if (arrayContains(REGIONS, currentWord.toUpperCase()))
         {
-            words.next();
-            if (words.hasNextDouble())
-                fill = words.nextDouble();
-            else
-            {
-                if (words.hasNext())
-                    throw new StcsParsingException("Invalid fillfactor value, expecting double, found " + words.next());
-                else
-                    throw new StcsParsingException("Unexpected end to STC-S phrase, missing fillfactor value");
-            }
+            region = currentWord;
+            currentWord = null;
+        }
+        else
+        {
+            throw new StcsParsingException("Invalid region value " + currentWord);
         }
     }
 
     protected void getFrame()
         throws StcsParsingException
     {
-        if (words.hasNext())
+        if (currentWord == null)
         {
-            frame = words.next();
-            if (!Frame.FRAMES.contains(frame))
-                throw new StcsParsingException("Invalid frame element " + frame);
+            if (words.hasNext())
+                currentWord = words.next();
+            else
+                throw new StcsParsingException("Unexpected end to STC-S phrase " + phrase);
         }
-        else
+        if (Frame.FRAMES.contains(currentWord.toUpperCase()))
         {
-            throw new StcsParsingException("Unexpected end to STC-S phrase, missing frame element");
+            frame = currentWord;
+            currentWord = null;
         }
     }
 
     protected void getRefpos()
         throws StcsParsingException
     {
-        if (words.hasNext())
+        if (currentWord == null)
         {
-            currentWord = words.next();
-            if (ReferencePosition.REFERENCE_POSITIONS.contains(currentWord))
-            {
-                refpos = currentWord;
-                currentWord = null;
-            }
+            if (words.hasNext())
+                currentWord = words.next();
+            else
+                throw new StcsParsingException("Unexpected end to STC-S phrase " + phrase);
+        }
+        if (ReferencePosition.REFERENCE_POSITIONS.contains(currentWord.toUpperCase()))
+        {
+            refpos = currentWord;
+            currentWord = null;
         }
     }
 
@@ -235,138 +211,36 @@ public abstract class SpatialSubphrase
         {
             if (words.hasNext())
                 currentWord = words.next();
+            else
+                throw new StcsParsingException("Unexpected end to STC-S phrase " + phrase);
         }
-        if (Flavor.FLAVORS.contains(currentWord))
+        if (Flavor.FLAVORS.contains(currentWord.toUpperCase()))
         {
             flavor = currentWord;
             currentWord = null;
         }
     }
 
+    
     protected void getDimensionality()
     {
         String f = flavor;
         if (f == null)
             f = DEFAULT_FLAVOR;
-        if (f.equals(Flavor.CART1))
-            dimensions = 1;
-        if (f.equals(Flavor.CART2) || f.equals(Flavor.SPHER2))
+        if (f.equalsIgnoreCase(Flavor.CARTESIAN2) || f.equalsIgnoreCase(Flavor.SPHERICAL2))
             dimensions = 2;
-        if (f.equals(Flavor.CART3) || f.equals(Flavor.SPHER3) || f.equals(Flavor.UNITSPHER))
+        if (f.equalsIgnoreCase(Flavor.CARTESIAN3))
             dimensions = 3;
     }
 
-    protected void getPosition()
-        throws StcsParsingException
+    private boolean arrayContains(String[] array, String value)
     {
-        position = getListForElement("Position");
-    }
-
-    protected void getUnit()
-        throws StcsParsingException
-    {
-        if (endOfWords)
-            return;
-        if (currentWord == null)
+        for (int i = 0; i < array.length; i++)
         {
-            if (words.hasNext())
-                currentWord = words.next();
-            else
-                endOfWords = true;
+            if (array[i].equals(value))
+                return true;
         }
-        if (!endOfWords && currentWord.equals("unit"))
-        {
-            if (words.hasNext())
-            {
-                currentWord = words.next();
-                if (SpatialUnit.UNITS.contains(currentWord))
-                {
-                    unit = currentWord;
-                    currentWord = null;
-                }
-                else
-                {
-                    throw new StcsParsingException("Invalid unit value " + currentWord);
-                }
-            }
-            else
-            {
-                throw new StcsParsingException("Unexpected end to STC-S phrase, missing unit value");
-            }
-        }
-    }
-
-    protected void getError()
-        throws StcsParsingException
-    {
-        error = getListForElement("Error");
-    }
-
-    protected void getResolution()
-        throws StcsParsingException
-    {
-        resln = getListForElement("Resolution");
-    }
-
-    protected void getSize()
-        throws StcsParsingException
-    {
-        size = getListForElement("Size");
-    }
-
-    protected void getPixSize()
-        throws StcsParsingException
-    {
-        pixsiz = getListForElement("PixSize");
-    }
-
-    protected void getVelocity()
-        throws StcsParsingException
-    {
-        if (endOfWords)
-            return;
-        String subPhrase = words.nextLine();
-        if (currentWord != null)
-            subPhrase = currentWord + " " + subPhrase;
-        velocity = (Velocity) STC.parse(subPhrase);
-    }
-
-    protected String listToString(List<Double> list)
-    {
-        StringBuilder sb = new StringBuilder();
-        for (Double d : list)
-            sb.append(doubleFormat.format(d)).append(" ");
-        return sb.toString();
-    }
-
-    private List<Double> getListForElement(String word)
-        throws StcsParsingException
-    {
-        if (endOfWords)
-            return null;
-        List<Double> values = null;
-        if (currentWord == null)
-        {
-            if (words.hasNext())
-                currentWord = words.next();
-            else
-                endOfWords = true;
-        }
-        if (!endOfWords && currentWord.equals(word))
-        {
-            if (!words.hasNextDouble())
-                throw new StcsParsingException(word + " element has no values");
-            while (words.hasNextDouble())
-            {
-                if (values == null)
-                    values = new ArrayList<Double>();
-                values.add(words.nextDouble());
-            }
-            currentWord = null;
-            if (!words.hasNext())
-                endOfWords = true;
-        }
-        return values;
+        return false;
     }
 
 }

@@ -69,15 +69,105 @@
 
 package ca.nrc.cadc.stc;
 
-/**
- * Interface for a STC-S Space.
- * 
- */
-public interface Space
-{
-    String format(Space space);
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.List;
 
-    Space parse(String phrase)
-        throws StcsParsingException;
+/**
+ * Class to represent a STC-S Intersection operator.
+ *
+ */
+public class Intersection extends SpatialSubphrase implements Region
+{
+    public static final String NAME = "INTERSECTION";
+
+    public List<Region> regions;
+
+    public Intersection() {}
+
+    public String format(Region region)
+    {
+        if (!(region instanceof Intersection))
+            throw new IllegalArgumentException("Expected Intersection, was " + region.getClass().getName());
+        Intersection intersection = (Intersection) region;
+        StringBuilder sb = new StringBuilder();
+        sb.append(NAME).append(" ");
+        if (intersection.frame != null)
+            sb.append(intersection.frame).append(" ");
+        if (intersection.refpos != null)
+            sb.append(intersection.refpos).append(" ");
+        if (intersection.flavor != null)
+            sb.append(intersection.flavor).append(" ");
+        sb.append("( ");
+        for (Region r : intersection.regions)
+            sb.append(STC.format(r)).append(" ");
+        sb.append(")");
+        return sb.toString();
+    }
+
+    public Region parse(String phrase)
+        throws StcsParsingException
+    {
+        init(phrase);
+        return this;
+    }
+
+    protected void getCoordinates()
+        throws StcsParsingException
+    {
+        // Get the string within the opening and closing parentheses.
+        int open = phrase.indexOf("(");
+        int close = phrase.lastIndexOf(")");
+        if (open == -1 || close == -1)
+            throw new StcsParsingException("Intersection arguments must be enclosed in parentheses: " + phrase);
+        String union = phrase.substring(open + 1, close).trim();
+
+        int index = 0;
+        String subPhrase = getNextRegion(union, index);
+        while (subPhrase != null)
+        {
+            if (regions == null)
+                regions = new ArrayList<Region>();
+            regions.add(STC.parse(subPhrase));
+            index = index + subPhrase.length();
+            subPhrase = getNextRegion(union, index);
+        }
+    }
+
+    private String getNextRegion(String phrase, int index)
+    {
+        // Search the phrase for a Region.
+        int[] indexes = new int[REGIONS.length];
+        for (int i = 0; i < indexes.length; i++)
+            indexes[i] = phrase.indexOf(REGIONS[i], index);
+
+        // Sort in descending order.
+        Arrays.sort(indexes);
+
+        // Assign start the first positive index.
+        // Assign end the second positive index.
+        int start = -1;
+        int end = -1;
+        for (int i = 0; i < indexes.length; i++)
+        {
+            if (indexes[i] == -1)
+                continue;
+            if (start == -1)
+            {
+                start = indexes[i];
+                continue;
+            }
+            if (end == -1)
+            {
+                end = indexes[i];
+                break;
+            }
+        }
+        if (start != -1 && end == -1)
+            return phrase.substring(start);
+        else if (start != -1 && end != -1)
+            return phrase.substring(start, end);
+        return null;
+    }
 
 }

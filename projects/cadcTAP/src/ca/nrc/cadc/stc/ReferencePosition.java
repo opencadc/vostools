@@ -78,43 +78,25 @@ import java.util.List;
  */
 public final class ReferencePosition
 {
-    public static final String GEOCENTER = "GEOCENTER";
     public static final String BARYCENTER = "BARYCENTER";
+    public static final String GEOCENTER = "GEOCENTER";
     public static final String HELIOCENTER = "HELIOCENTER";
+    public static final String LSR = "LSR";
     public static final String TOPOCENTER = "TOPOCENTER";
-    public static final String GALACTIC_CENTER = "GALACTIC_CENTER";
-    public static final String EMBARYCENTER = "EMBARYCENTER";
-    public static final String MOON = "MOON";
-    public static final String MERCURY = "MERCURY";
-    public static final String VENUS = "VENUS";
-    public static final String MARS = "MARS";
-    public static final String JUPITER = "JUPITER";
-    public static final String SATURN = "SATURN";
-    public static final String URANUS = "URANUS";
-    public static final String NEPTUNE = "NEPTUNE";
-    public static final String PLUTO = "PLUTO";
-    public static final String UNKNOWNREFPOS = "UNKNOWNRefPos";
-
+    public static final String RELOCATABLE = "RELOCATABLE";
+    public static final String UNKNOWNREFPOS = "UNKNOWNREFPOS";
+    
     public static final List REFERENCE_POSITIONS;
     static
     {
         // Allowed values.
         REFERENCE_POSITIONS = new ArrayList<String>();
-        REFERENCE_POSITIONS.add(GEOCENTER);
         REFERENCE_POSITIONS.add(BARYCENTER);
+        REFERENCE_POSITIONS.add(GEOCENTER);
         REFERENCE_POSITIONS.add(HELIOCENTER);
+        REFERENCE_POSITIONS.add(LSR);
         REFERENCE_POSITIONS.add(TOPOCENTER);
-        REFERENCE_POSITIONS.add(GALACTIC_CENTER);
-        REFERENCE_POSITIONS.add(EMBARYCENTER);
-        REFERENCE_POSITIONS.add(MOON);
-        REFERENCE_POSITIONS.add(MERCURY);
-        REFERENCE_POSITIONS.add(VENUS);
-        REFERENCE_POSITIONS.add(MARS);
-        REFERENCE_POSITIONS.add(JUPITER);
-        REFERENCE_POSITIONS.add(SATURN);
-        REFERENCE_POSITIONS.add(URANUS);
-        REFERENCE_POSITIONS.add(NEPTUNE);
-        REFERENCE_POSITIONS.add(PLUTO);
+        REFERENCE_POSITIONS.add(RELOCATABLE);
         REFERENCE_POSITIONS.add(UNKNOWNREFPOS);
     }
 }

@@ -78,24 +78,25 @@ import java.util.List;
  */
 public final class Flavor
 {
-    public static final String UNITSPHER = "UNITSPHER";
-    public static final String SPHER2 = "SPHER2";
-    public static final String SPHER3 = "SPHER3";
-    public static final String CART1 = "CART1";
-    public static final String CART2 = "CART2";
-    public static final String CART3 = "CART3";
+    public static final String CARTESIAN2 = "CARTESIAN2";
+    public static final String CARTESIAN3 = "CARTESIAN3";
+    public static final String SPHERICAL2 = "SPHERICAL2";
+
+//    public static final String UNITSPHER = "UNITSPHER";
+//    public static final String SPHER2 = "SPHER2";
+//    public static final String SPHER3 = "SPHER3";
+//    public static final String CART1 = "CART1";
+//    public static final String CART2 = "CART2";
+//    public static final String CART3 = "CART3";
     
     public static final List FLAVORS;
     static
     {
         // Allowed values.
         FLAVORS = new ArrayList<String>();
-        FLAVORS.add(UNITSPHER);
-        FLAVORS.add(SPHER2);
-        FLAVORS.add(SPHER3);
-        FLAVORS.add(CART1);
-        FLAVORS.add(CART2);
-        FLAVORS.add(CART3);
+        FLAVORS.add(CARTESIAN2);
+        FLAVORS.add(CARTESIAN3);
+        FLAVORS.add(SPHERICAL2);
     }
 
 }

@@ -69,67 +69,46 @@
 
 package ca.nrc.cadc.stc;
 
-import java.util.ArrayList;
-import java.util.List;
-
 /**
  * Class to represent a STC-S Circle.
  *
  */
-public class Circle extends SpatialSubphrase implements Space
+public class Circle extends SpatialSubphrase implements Region
 {
-    public static final String NAME = "Circle";
-    public List<Double> pos;
+    public static final String NAME = "CIRCLE";
+    public CoordPair coordPair;
     public Double radius;
 
-    public Circle()
-    {
-        super(NAME);
-    }
+    public Circle() {}
 
-    public String format(Space space)
+    public String format(Region space)
     {
         if (!(space instanceof Circle))
             throw new IllegalArgumentException("Expected Circle, was " + space.getClass().getName());
         Circle circle = (Circle) space;
         StringBuilder sb = new StringBuilder();
         sb.append(NAME).append(" ");
-        if (circle.fill != null)
-            sb.append("fillfactor ").append(circle.fill).append(" ");
-        sb.append(circle.frame).append(" ");
+        if (circle.frame != null)
+            sb.append(circle.frame).append(" ");
         if (circle.refpos != null)
             sb.append(circle.refpos).append(" ");
         if (circle.flavor != null)
             sb.append(circle.flavor).append(" ");
-        if (circle.pos != null)
-            sb.append(listToString(circle.pos));
+        if (circle.coordPair != null)
+            sb.append(circle.coordPair).append(" ");;
         if (circle.radius != null)
-            sb.append(circle.radius).append(" ");
-        if (circle.position != null)
-            sb.append("Position ").append(listToString(circle.position));
-        if (circle.unit != null)
-            sb.append("unit ").append(circle.unit).append(" ");
-        if (circle.error != null)
-            sb.append("Error ").append(listToString(circle.error));
-        if (circle.resln != null)
-            sb.append("Resolution ").append(listToString(circle.resln));
-        if (circle.size != null)
-            sb.append("Size ").append(listToString(circle.size));
-        if (circle.pixsiz != null)
-            sb.append("PixSize ").append(listToString(circle.pixsiz));
-        if (circle.velocity != null)
-            sb.append(STC.format(circle.velocity));
+            sb.append(circle.radius);
         return sb.toString().trim();
     }
 
-    public Space parse(String phrase)
+    public Region parse(String phrase)
         throws StcsParsingException
     {
         init(phrase);
         return this;
     }
 
-    protected void getPos()
+    protected void getCoordinates()
         throws StcsParsingException
     {
         // current word as a Double.
@@ -139,9 +118,9 @@ public class Circle extends SpatialSubphrase implements Space
             if (words.hasNextDouble())
                 value = words.nextDouble();
             else if (words.hasNext())
-                throw new StcsParsingException("Invalid pos element " + words.next());
+                throw new StcsParsingException("Invalid coordpair element " + words.next());
             else
-                throw new StcsParsingException("Unexpected end to STC-S phrase before pos element");
+                throw new StcsParsingException("Unexpected end to STC-S phrase before coordpair element");
         }
         else
         {
@@ -151,28 +130,27 @@ public class Circle extends SpatialSubphrase implements Space
             }
             catch (NumberFormatException e)
             {
-                throw new StcsParsingException("Invalid pos value " + currentWord, e);
+                throw new StcsParsingException("Invalid coordpair value " + currentWord, e);
             }
         }
 
-        // Create new List and add the first value.
-        pos = new ArrayList<Double>();
-        pos.add(value);
+        // Double value not found?
+        if (value == null)
+            throw new StcsParsingException("coordpair values not found");
 
-        // Loop through the next x values and add to list,
-        // last Double is the radius.
-        while (words.hasNextDouble())
-        {
-            value = words.nextDouble();
-            if (words.hasNextDouble())
-                pos.add(value);
-            else
-                radius = value;
-        }
+        // coordpair values.
+        coordPair = new CoordPair();
+        coordPair.coord1 = value;
+        if (words.hasNextDouble())
+            coordPair.coord2 = words.nextDouble();
+        if (coordPair.coord1 == null || coordPair.coord2 == null)
+            throw new StcsParsingException("coordpair values not found");
 
-        // Should only be 1, 2, or 3 pos values.
-        if (pos.size() != dimensions)
-            throw new StcsParsingException("Invalid number of pos values " + pos.size());
+        // width
+        if (words.hasNextDouble())
+            radius = words.nextDouble();
+        if (radius == null)
+            throw new StcsParsingException("width value not found");
 
         currentWord = null;
     }
