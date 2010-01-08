@@ -69,6 +69,8 @@
 
 package ca.nrc.cadc.tap.parser.region.pgsphere.function;
 
+import ca.nrc.cadc.tap.parser.region.PredicateFunction;
+import net.sf.jsqlparser.expression.Expression;
 import net.sf.jsqlparser.expression.Function;
 
 /**
@@ -77,11 +79,29 @@ import net.sf.jsqlparser.expression.Function;
  * @author zhangsa
  * 
  */
-public class Intersects extends PgsBinaryFunction
+public class Intersects extends PgsBinaryFunction implements PredicateFunction
 {
     public Intersects(Function adqlFunction)
     {
         super(adqlFunction);
         _operator = "&&";
+    }
+
+    public Intersects(IntersectsNot intersectsNot)
+    {
+        _operator = "&&";
+        setParameters(intersectsNot.getParameters());
+        _adqlFunction = intersectsNot.getAdqlFunction();
+        _left = intersectsNot.getLeft();
+        _right = intersectsNot.getRight();
+    }
+
+    /* (non-Javadoc)
+     * @see ca.nrc.cadc.tap.parser.region.PredicateFunction#negate()
+     */
+    @Override
+    public Expression negate()
+    {
+        return new IntersectsNot(this);
     }
 }

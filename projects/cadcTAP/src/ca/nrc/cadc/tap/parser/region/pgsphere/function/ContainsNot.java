@@ -69,6 +69,8 @@
 
 package ca.nrc.cadc.tap.parser.region.pgsphere.function;
 
+import ca.nrc.cadc.tap.parser.region.PredicateFunction;
+import net.sf.jsqlparser.expression.Expression;
 import net.sf.jsqlparser.expression.Function;
 
 /**
@@ -77,7 +79,7 @@ import net.sf.jsqlparser.expression.Function;
  * @author zhangsa
  * 
  */
-public class ContainsNot extends PgsBinaryFunction
+public class ContainsNot extends PgsBinaryFunction implements PredicateFunction
 {
     public ContainsNot(Function adqlFunction)
     {
@@ -92,5 +94,14 @@ public class ContainsNot extends PgsBinaryFunction
         _adqlFunction = contains.getAdqlFunction();
         _left = contains.getLeft();
         _right = contains.getRight();
+    }
+
+    /* (non-Javadoc)
+     * @see ca.nrc.cadc.tap.parser.region.PredicateFunction#negate()
+     */
+    @Override
+    public Expression negate()
+    {
+        return new ContainsNot(this);
     }
 }

@@ -79,6 +79,7 @@ import org.apache.log4j.Logger;
 
 import ca.nrc.cadc.tap.parser.ParserUtil;
 import ca.nrc.cadc.tap.parser.RegionFinder;
+import ca.nrc.cadc.tap.parser.region.PredicateFunction;
 import ca.nrc.cadc.tap.parser.region.pgsphere.function.Center;
 import ca.nrc.cadc.tap.parser.region.pgsphere.function.Contains;
 import ca.nrc.cadc.tap.parser.region.pgsphere.function.ContainsNot;
@@ -131,24 +132,24 @@ public class PgsphereRegionConverter extends RegionFinder
 
         boolean proceed = false;
         long value = 0;
-        Expression expr = null;
+        PredicateFunction predicateFunc = null;
         if ((binaryExpression instanceof EqualsTo))
         {
-            if (PgsphereRegionConverter.isPredicate(left) && ParserUtil.isBinaryValue(right))
+            if (isPredicate(left) && ParserUtil.isBinaryValue(right))
             {
                 proceed = true;
                 value = ((LongValue) right).getValue();
-                expr = left;
-            } else if (ParserUtil.isBinaryValue(left) && PgsphereRegionConverter.isPredicate(right))
+                predicateFunc = (PredicateFunction) left;
+            } else if (ParserUtil.isBinaryValue(left) && isPredicate(right))
             {
                 proceed = true;
                 value = ((LongValue) left).getValue();
-                expr = right;
+                predicateFunc = (PredicateFunction) right;
             }
         }
 
         if (proceed)
-            rtn = (value == 1) ? expr : PgsphereRegionConverter.negate(expr);
+            rtn = (Expression) ((value == 1) ? predicateFunc : predicateFunc.negate());
         return rtn;
     }
 
@@ -257,18 +258,8 @@ public class PgsphereRegionConverter extends RegionFinder
         return pgsFunc;
     }
 
-    private static boolean isPredicate(Expression expr)
+    protected boolean isPredicate(Expression expr)
     {
-        return (expr instanceof Contains || expr instanceof Intersects);
-    }
-
-    private static Expression negate(Expression expr)
-    {
-        Expression rtn = null;
-        if (expr instanceof Contains)
-            rtn = new ContainsNot((Contains) expr);
-        else if (expr instanceof Intersects)
-            rtn = new IntersectsNot((Intersects) expr);
-        return rtn;
+        return (expr instanceof PredicateFunction);
     }
 }
