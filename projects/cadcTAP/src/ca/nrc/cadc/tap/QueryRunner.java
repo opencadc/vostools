@@ -190,8 +190,6 @@ public class QueryRunner implements JobRunner
         job.setExecutionPhase(ExecutionPhase.UNKNOWN);
         try
         {
-            if (fileStoreClassName == null)
-                logger.error("System property ca.nrc.cadc.tap.QueryRunner.fileStoreClassName was not set");
             fs = (FileStore) Class.forName( fileStoreClassName ).newInstance();
         }
         catch ( Throwable t )
@@ -306,13 +304,13 @@ public class QueryRunner implements JobRunner
 		}
         catch ( Throwable t )
         {
-            t.printStackTrace();
-            
+            //t.printStackTrace();
         	String errorMessage = null;
         	URL errorURL        = null;
-        	
+            job.setErrorSummary(null);
         	try
         	{
+                logger.error("query failed", t);
         		errorMessage = t.getClass().getSimpleName() + ":" + t.getMessage();
         		logger.debug( "Error message: "+errorMessage );
         		VOTableWriter writer = new VOTableWriter();
@@ -323,15 +321,16 @@ public class QueryRunner implements JobRunner
            		errorOutput.close();          		
                 errorURL = fs.put(errorFile);
            		logger.debug( "Error URL: " + errorURL);
+                job.setErrorSummary(new ErrorSummary(errorMessage, errorURL));
         	}
-        	catch ( IOException ioe )
-        	{
-        		logger.error( "Failed to write error to file: "+ioe.getMessage() );
-        	}
-        	
-			ErrorSummary error = new ErrorSummary( errorMessage, errorURL );
-			job.setErrorSummary( error );
-            job.setExecutionPhase( ExecutionPhase.ERROR );
+            catch(Throwable t2)
+            {
+                logger.error( "failed to persist error", t2);
+            }
+        	finally
+            {
+                job.setExecutionPhase( ExecutionPhase.ERROR );
+            }
 		}
 		return;
     }
