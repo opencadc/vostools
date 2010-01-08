@@ -2,7 +2,7 @@
  ************************************************************************
  ****  C A N A D I A N   A S T R O N O M Y   D A T A   C E N T R E  *****
  *
- * (c) 2009.                            (c) 2009.
+ * (c) 2010.                         (c) 2010.
  * National Research Council            Conseil national de recherches
  * Ottawa, Canada, K1A 0R6              Ottawa, Canada, K1A 0R6
  * All rights reserved                  Tous droits reserves
@@ -24,63 +24,48 @@
  *
  *
  * @author jenkinsd
- * Dec 15, 2009 - 11:41:45 AM
+ * Jan 8, 2010 - 11:40:58 AM
  *
- * 
- * 
+ *
+ *
  ****  C A N A D I A N   A S T R O N O M Y   D A T A   C E N T R E  *****
  ************************************************************************
  */
-package ca.nrc.cadc.uws.web.restlet.resources;
+package ca.nrc.cadc.uws.web;
 
-import static junit.framework.TestCase.*;
-import org.junit.Before;
-import org.junit.After;
-import org.junit.Test;
-import org.restlet.representation.Representation;
-import org.restlet.representation.StringRepresentation;
-import org.restlet.data.MediaType;
-import ca.nrc.cadc.uws.Result;
+import ca.nrc.cadc.uws.UWSException;
 
-import java.net.URL;
-
-
-public class ResultResourceTest
+public class InvalidActionException extends UWSException
 {
-    protected Result result;
-    protected ResultResource testSubject;
-
-    @Before
-    public void setup() throws Exception
+    /**
+     * Constructs a new runtime exception with the specified detail message and
+     * cause.  <p>Note that the detail message associated with
+     * <code>cause</code> is <i>not</i> automatically incorporated in
+     * this runtime exception's detail message.
+     *
+     * @param message the detail message (which is saved for later retrieval
+     *                by the {@link #getMessage()} method).
+     * @param cause   the cause (which is saved for later retrieval by the
+     *                {@link #getCause()} method).  (A <tt>null</tt> value is
+     *                permitted, and indicates that the cause is nonexistent or
+     *                unknown.)
+     * @since 1.4
+     */
+    public InvalidActionException(String message, Throwable cause)
     {
-        result = new Result("TEST_RESULT", new URL("http://www.mysite.ca"));
-        testSubject = new ResultResource()
-        {
-            /**
-             * Obtain the current requested Result.
-             *
-             * @return Result instance, or null if none found.
-             */
-            @Override
-            protected Result getResult()
-            {
-                return result;
-            }
-        };
+        super(message, cause);
     }
 
-    @After
-    public void tearDown()
+    /**
+     * Constructs a new runtime exception with the specified detail message.
+     * The cause is not initialized, and may subsequently be initialized by a
+     * call to {@link #initCause}.
+     *
+     * @param message the detail message. The detail message is saved for
+     *                later retrieval by the {@link #getMessage()} method.
+     */
+    public InvalidActionException(String message)
     {
-        testSubject = null;
-    }
-
-
-    @Test
-    public void represent() throws Exception
-    {
-        final Representation representation = testSubject.represent();
-
-        assertNull("Null representation.", representation);
+        super(message);
     }
 }

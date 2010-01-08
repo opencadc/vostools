@@ -78,6 +78,7 @@ import org.w3c.dom.Document;
 import org.restlet.Client;
 import org.restlet.ext.xml.DomRepresentation;
 import org.restlet.data.Protocol;
+import org.restlet.data.Form;
 import org.restlet.Response;
 
 import java.io.IOException;
@@ -141,6 +142,24 @@ public abstract class BaseJobResource extends UWSResource
     }
 
     /**
+     * Obtain whether this Job can still have POSTs made to it to modify it.
+     *
+     * @return  True if it can be modified, False otherwise.
+     */
+    protected boolean jobModificationAllowed()
+    {
+        final Job job = getJob();
+        final Form form = getRequest().getEntityAsForm();
+        final String phase =
+                form.getFirstValue(JobAttribute.EXECUTION_PHASE.
+                        getAttributeName().toUpperCase());
+
+        return job.getExecutionPhase().equals(ExecutionPhase.PENDING)
+               || (getPathInfo().endsWith("phase")
+                   && StringUtil.hasLength(phase) && phase.equals("ABORT"));
+    }
+
+    /**
      * Obtain a new instance of the Job Runner interface as defined in the
      * Context
      *
@@ -199,5 +218,5 @@ public abstract class BaseJobResource extends UWSResource
         document.normalizeDocument();
 
         return document.getDocumentElement();
-    }    
+    }
 }

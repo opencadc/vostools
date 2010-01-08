@@ -76,6 +76,7 @@ import org.restlet.Request;
 import org.restlet.Response;
 import org.apache.log4j.Logger;
 import ca.nrc.cadc.uws.InvalidResourceException;
+import ca.nrc.cadc.uws.web.InvalidActionException;
 
 
 /**
@@ -123,6 +124,11 @@ public class UWSStatusService extends StatusService
                 throwable.getCause() instanceof InvalidResourceException)
         {
             return Status.CLIENT_ERROR_NOT_FOUND;
+        }
+        else if (throwable instanceof InvalidActionException ||
+                throwable.getCause() instanceof InvalidActionException)
+        {
+            return Status.CLIENT_ERROR_METHOD_NOT_ALLOWED;
         }
         else
         {

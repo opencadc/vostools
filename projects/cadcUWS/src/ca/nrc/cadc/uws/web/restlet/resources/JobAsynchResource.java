@@ -83,6 +83,7 @@ import java.io.IOException;
 import java.text.ParseException;
 
 import ca.nrc.cadc.uws.*;
+import ca.nrc.cadc.uws.web.InvalidActionException;
 import ca.nrc.cadc.date.DateUtil;
 import ca.nrc.cadc.uws.util.BeanUtil;
 
@@ -106,13 +107,13 @@ public class JobAsynchResource extends BaseJobResource
     public void accept(final Representation entity)
     {
         final Job job = getJob();
-        final Form form = new Form(entity);
-        
-        String pathInfo = getRequest().getResourceRef().getPath().trim();
+        final Form form = getRequest().getEntityAsForm();
+        final String pathInfo = getPathInfo();
 
-        if (pathInfo.endsWith("/"))
+        if (!jobModificationAllowed())
         {
-            pathInfo = pathInfo.substring(0, pathInfo.length() - 1);
+            throw new InvalidActionException(
+                    "No POSTs allowed to this Job unless it is to ABORT it.");
         }
 
         if (pathInfo.endsWith("phase"))
@@ -261,12 +262,7 @@ public class JobAsynchResource extends BaseJobResource
     protected void buildXML(final Document document) throws IOException
     {
         final Job job = getJob();
-        String pathInfo = getRequest().getResourceRef().getPath().trim();
-
-        if (pathInfo.endsWith("/"))
-        {
-            pathInfo = pathInfo.substring(0, pathInfo.length() - 1);
-        }
+        final String pathInfo = getPathInfo();
 
         if (!pathInfo.endsWith(job.getJobId()))
         {

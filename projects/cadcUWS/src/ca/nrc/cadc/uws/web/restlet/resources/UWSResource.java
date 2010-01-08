@@ -245,6 +245,25 @@ public abstract class UWSResource extends ServerResource
     }
 
     /**
+     * Obtain the String pathInfo.
+     * http://www.mysite.com/mycontext/my/path
+     * Will return 'path' (without quotes). 
+     *
+     * @return  String path info.
+     */
+    protected String getPathInfo()
+    {
+        String pathInfo = getRequest().getResourceRef().getPath().trim();
+
+        if (pathInfo.endsWith("/"))
+        {
+            pathInfo = pathInfo.substring(0, pathInfo.length() - 1);
+        }
+
+        return pathInfo;
+    }
+
+    /**
      * Obtain the equivalent of the Servlet Context Path.  This is usually
      * the context of the current web application, or the part of the URL
      * that comes after the host:port.

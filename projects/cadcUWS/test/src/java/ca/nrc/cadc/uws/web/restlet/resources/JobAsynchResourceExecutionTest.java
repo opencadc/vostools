@@ -39,6 +39,9 @@ import static org.easymock.EasyMock.*;
 import org.junit.Before;
 import org.junit.After;
 import org.junit.Test;
+import org.restlet.Request;
+import org.restlet.data.Reference;
+import org.restlet.representation.EmptyRepresentation;
 import ca.nrc.cadc.uws.*;
 
 import java.util.Calendar;
@@ -56,60 +59,12 @@ public class JobAsynchResourceExecutionTest
     @Before
     public void setup()
     {
-        final Calendar cal = Calendar.getInstance();
-        cal.set(1997, Calendar.NOVEMBER, 25, 3, 21, 0);
-        cal.set(Calendar.MILLISECOND, 0);
-
-        final Calendar quoteCal = Calendar.getInstance();
-        quoteCal.set(1977, Calendar.NOVEMBER, 25, 8, 30, 0);
-        quoteCal.set(Calendar.MILLISECOND, 0);
-
-        final List<Result> results = new ArrayList<Result>();
-        final List<Parameter> parameters = new ArrayList<Parameter>();
-        
-        final Job testJobAlreadyRunning =
-                new Job("88l", ExecutionPhase.QUEUED, 88l, cal.getTime(),
-                        quoteCal.getTime(), cal.getTime(), cal.getTime(), null,
-                        "USER", "RUN_ID", results, parameters);
-
         mockJobRunner = createMock(JobRunner.class);
 
         mockJobExecutor = createMock(JobExecutor.class);
         mockJobExecutor.execute(mockJobRunner);
         mockJobExecutor.execute(mockJobRunner);
         replay(mockJobExecutor);
-
-        testSubject = new JobAsynchResource()
-        {
-            /**
-             * Obtain a new instance of the Job Runner interface as defined in the
-             * Context
-             *
-             * @return The JobRunner instance.
-             */
-            @Override
-            protected JobRunner createJobRunner()
-            {
-                return mockJobRunner;
-            }
-
-            @Override
-            protected JobExecutor getJobExecutorService()
-            {
-                return mockJobExecutor;
-            }
-
-            /**
-             * Obtain the current Job in the context of this Request.
-             *
-             * @return This Request's Job.
-             */
-            @Override
-            protected Job getJob()
-            {
-                return testJobAlreadyRunning;
-            }
-        };
     }
 
     @After
@@ -141,9 +96,114 @@ public class JobAsynchResourceExecutionTest
                         quoteCal.getTime(), cal.getTime(), cal.getTime(), null,
                         "USER", "RUN_ID", results, parameters);
 
+        testSubject = new JobAsynchResource()
+        {
+            /**
+             * Obtain a new instance of the Job Runner interface as defined in the
+             * Context
+             *
+             * @return The JobRunner instance.
+             */
+            @Override
+            protected JobRunner createJobRunner()
+            {
+                return mockJobRunner;
+            }
+
+            @Override
+            protected JobExecutor getJobExecutorService()
+            {
+                return mockJobExecutor;
+            }
+
+            /**
+             * Obtain the current Job in the context of this Request.
+             *
+             * @return This Request's Job.
+             */
+            @Override
+            protected Job getJob()
+            {
+                return testJob;
+            }
+        };        
+
         mockJobRunner.setJob(testJob);
         replay(mockJobRunner);
 
         testSubject.executeJob();
+    }
+
+    @Test
+    public void accept() throws Exception
+    {
+        final Calendar cal = Calendar.getInstance();
+        cal.set(1997, Calendar.NOVEMBER, 25, 3, 21, 0);
+        cal.set(Calendar.MILLISECOND, 0);
+
+        final Calendar quoteCal = Calendar.getInstance();
+        quoteCal.set(1977, Calendar.NOVEMBER, 25, 8, 30, 0);
+        quoteCal.set(Calendar.MILLISECOND, 0);
+
+        final List<Result> results = new ArrayList<Result>();
+        final List<Parameter> parameters = new ArrayList<Parameter>();
+
+        final Job testJob =
+                new Job("88l", ExecutionPhase.QUEUED, 88l, cal.getTime(),
+                        quoteCal.getTime(), cal.getTime(), cal.getTime(), null,
+                        "USER", "RUN_ID", results, parameters);
+
+        testSubject = new JobAsynchResource()
+        {
+            /**
+             * Obtain a new instance of the Job Runner interface as defined in the
+             * Context
+             *
+             * @return The JobRunner instance.
+             */
+            @Override
+            protected JobRunner createJobRunner()
+            {
+                return mockJobRunner;
+            }
+
+            @Override
+            protected JobExecutor getJobExecutorService()
+            {
+                return mockJobExecutor;
+            }
+
+            @Override
+            public Request getRequest()
+            {
+                final Request request = new Request();
+                request.setResourceRef(
+                        new Reference("http://www.mysite.ca/reference"));
+                request.setEntity(null);
+
+                return request;
+            }
+
+            /**
+             * Obtain the current Job in the context of this Request.
+             *
+             * @return This Request's Job.
+             */
+            @Override
+            protected Job getJob()
+            {
+                return testJob;
+            }
+        };        
+
+        try
+        {
+            testSubject.accept(null);
+            fail("Not allowed to POST to already running job.");
+        }
+        catch (final Throwable t)
+        {
+            // GOOD!
+        }
     }
 }
