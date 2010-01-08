@@ -112,8 +112,15 @@ public class JobAsynchResource extends BaseJobResource
 
         if (!jobModificationAllowed())
         {
-            throw new InvalidActionException(
-                    "No POSTs allowed to this Job unless it is to ABORT it.");
+            String message =
+                    "No further modifications are allowed for this Job";
+
+            if (jobIsActive())
+            {
+                message += " unless it is to abort it";
+            }
+
+            throw new InvalidActionException(message + ".");
         }
 
         if (pathInfo.endsWith("phase"))
@@ -128,6 +135,13 @@ public class JobAsynchResource extends BaseJobResource
             }
             else if (phase.equals("ABORT"))
             {
+                if (!jobIsActive() && !jobIsPending())
+                {
+                    throw new InvalidActionException(
+                            "Job cannot be ABORTed as it is not active nor "
+                            + "pending execution.");
+                }
+
                 job.setExecutionPhase(ExecutionPhase.ABORTED);
             }
         }
@@ -176,9 +190,10 @@ public class JobAsynchResource extends BaseJobResource
      */
     protected void executeJob()
     {
-        if (!jobIsActive() && !jobIsComplete())
+        final Job job = getJob();
+
+        if (jobIsPending())
         {
-            final Job job = getJob();
             final JobExecutor je = getJobExecutorService();
             final JobRunner jobRunner = createJobRunner();
 

@@ -127,8 +127,10 @@ public abstract class BaseJobResource extends UWSResource
     protected boolean jobIsActive()
     {
         final Job job = getJob();
-        return (job.getExecutionPhase().equals(ExecutionPhase.QUEUED))
-               || (job.getExecutionPhase().equals(ExecutionPhase.EXECUTING));
+        final ExecutionPhase executionPhase = job.getExecutionPhase();
+
+        return (executionPhase.equals(ExecutionPhase.QUEUED))
+               || (executionPhase.equals(ExecutionPhase.EXECUTING));
     }
 
     /**
@@ -136,9 +138,23 @@ public abstract class BaseJobResource extends UWSResource
      *
      * @return  True if COMPLETE, false otherwise.
      */
-    protected boolean jobIsComplete()
+    protected boolean jobHasRun()
     {
-        return getJob().getExecutionPhase().equals(ExecutionPhase.COMPLETED);
+        final Job job = getJob();
+        final ExecutionPhase executionPhase = job.getExecutionPhase();
+
+        return executionPhase.equals(ExecutionPhase.COMPLETED)
+               || executionPhase.equals(ExecutionPhase.ERROR);
+    }
+
+    /**
+     * Obtain whether this Job is awaiting execution.
+     *
+     * @return      True if job is waiting, False otherwise.
+     */
+    protected boolean jobIsPending()
+    {
+        return getJob().getExecutionPhase().equals(ExecutionPhase.PENDING); 
     }
 
     /**
@@ -148,15 +164,14 @@ public abstract class BaseJobResource extends UWSResource
      */
     protected boolean jobModificationAllowed()
     {
-        final Job job = getJob();
         final Form form = getRequest().getEntityAsForm();
         final String phase =
                 form.getFirstValue(JobAttribute.EXECUTION_PHASE.
                         getAttributeName().toUpperCase());
 
-        return job.getExecutionPhase().equals(ExecutionPhase.PENDING)
-               || (getPathInfo().endsWith("phase")
-                   && StringUtil.hasLength(phase) && phase.equals("ABORT"));
+        return jobIsPending() || ((getPathInfo().endsWith("phase")
+                                   && StringUtil.hasLength(phase)
+                                   && phase.equals("ABORT")));
     }
 
     /**

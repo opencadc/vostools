@@ -81,6 +81,7 @@ import java.io.IOException;
 import java.util.List;
 
 import ca.nrc.cadc.uws.*;
+import ca.nrc.cadc.uws.web.InvalidActionException;
 
 
 /**
@@ -156,7 +157,7 @@ public class JobSyncSubmissionResource extends BaseJobResource
         {
             pollRunningJob();
         }
-        else if (!jobIsComplete())
+        else if (jobIsPending())
         {
             prepareJob();
 
