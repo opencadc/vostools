@@ -80,12 +80,12 @@ public class TapValidator
 	public void validate( List<Parameter> paramList )
 	{
 		if ( paramList==null || paramList.size()==0)
-			throw new IllegalStateException( "Missing TAP parameter list" );
+			throw new IllegalStateException("Missing required parameter: REQUEST");
 		
         //  REQUEST
 		String request = TapUtil.findParameterValue( "REQUEST", paramList );
         if ( request==null || request.trim().length()==0)
-            throw new IllegalStateException( "Missing REQUEST value" );
+            throw new IllegalStateException("Missing required parameter: REQUEST");
         if ( !request.equals( "doQuery" ) )
             throw new IllegalArgumentException( "Unknown REQUEST value: "+request );
         
