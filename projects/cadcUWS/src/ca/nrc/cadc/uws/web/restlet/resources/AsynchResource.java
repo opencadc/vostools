@@ -80,7 +80,6 @@ import org.apache.log4j.Logger;
 import java.io.IOException;
 import java.util.*;
 import java.text.ParseException;
-import java.net.URISyntaxException;
 
 import ca.nrc.cadc.uws.*;
 import ca.nrc.cadc.uws.web.restlet.JobAssembler;
@@ -128,7 +127,8 @@ public class AsynchResource extends UWSResource
         catch (MalformedURLException e)
         {
             LOGGER.error("The Error URL is invalid.", e);
-            throw new WebRepresentationException("The Error URL is invalid.", e);
+            throw new WebRepresentationException("The Error URL is invalid.",
+                                                 e);
         }
 
         final Job persistedJob = getJobManager().persist(job);

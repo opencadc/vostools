@@ -41,6 +41,7 @@ import java.io.IOException;
 
 import ca.nrc.cadc.uws.Job;
 import ca.nrc.cadc.uws.Result;
+import ca.nrc.cadc.uws.InvalidResourceException;
 
 
 public class ResultResource extends BaseJobResource
@@ -55,7 +56,7 @@ public class ResultResource extends BaseJobResource
     {
         if (getResult() != null)
         {
-            redirectSeeOther(getResult().getURL().toExternalForm());        
+            redirectSeeOther(getResult().getURL().toExternalForm());
         }
 
         return null;
@@ -101,6 +102,7 @@ public class ResultResource extends BaseJobResource
             }
         }
 
-        return null;
+        throw new InvalidResourceException("No such Result " + getResultID()
+                                           + " for Job " + job.getJobId());
     }
 }

@@ -80,7 +80,6 @@ import org.apache.log4j.Logger;
 import java.io.IOException;
 import java.util.Map;
 import java.text.ParseException;
-import java.net.URISyntaxException;
 
 import ca.nrc.cadc.uws.Job;
 import ca.nrc.cadc.uws.web.restlet.JobAssembler;

@@ -95,7 +95,16 @@ public abstract class BaseJobResource extends UWSResource
      */
     protected Job getJob()
     {
-        return getJobManager().getJob(getJobID());
+        final Job job = getJobManager().getJob(getJobID());
+
+        if (job == null)
+        {
+            throw new InvalidResourceException("No such Job " + getJobID());
+        }
+        else
+        {
+            return job;
+        }
     }
 
 

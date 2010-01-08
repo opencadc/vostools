@@ -72,6 +72,7 @@ package ca.nrc.cadc.uws.web.restlet.resources;
 
 import org.restlet.resource.ServerResource;
 import org.restlet.resource.Get;
+import org.restlet.resource.ResourceException;
 import org.restlet.data.Reference;
 import org.restlet.data.MediaType;
 import org.restlet.data.Status;
@@ -163,10 +164,15 @@ public abstract class UWSResource extends ServerResource
         }
         catch (final IOException e)
         {
+            setExisting(false);
             LOGGER.error("Unable to create XML Document.");
             throw new WebRepresentationException(
                     "Unable to create XML Document.", e);
         }
+//        catch (final Exception e)
+//        {
+//            throw new ResourceException(Status.CLIENT_ERROR_NOT_FOUND);
+//        }
     }
 
     /**

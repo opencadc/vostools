@@ -75,6 +75,7 @@ import org.restlet.data.Status;
 import org.restlet.Request;
 import org.restlet.Response;
 import org.apache.log4j.Logger;
+import ca.nrc.cadc.uws.InvalidResourceException;
 
 
 /**
@@ -116,7 +117,16 @@ public class UWSStatusService extends StatusService
     public Status getStatus(final Throwable throwable, final Request request,
                             final Response response)
     {
-        LOGGER.error("Unhandled exception or error intercepted", throwable);        
-        return super.getStatus(throwable, request, response);
+        LOGGER.error("Unhandled exception or error intercepted", throwable);
+
+        if (throwable instanceof InvalidResourceException ||
+                throwable.getCause() instanceof InvalidResourceException)
+        {
+            return Status.CLIENT_ERROR_NOT_FOUND;
+        }
+        else
+        {
+            return super.getStatus(throwable, request, response);
+        }
     }
 }

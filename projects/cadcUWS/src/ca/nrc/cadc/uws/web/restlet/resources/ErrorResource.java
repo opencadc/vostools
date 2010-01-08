@@ -75,6 +75,7 @@ import org.restlet.resource.Get;
 import org.w3c.dom.Document;
 
 import ca.nrc.cadc.uws.ErrorSummary;
+import ca.nrc.cadc.uws.InvalidResourceException;
 
 import java.io.IOException;
 
@@ -99,9 +100,13 @@ public class ErrorResource extends BaseJobResource
             && (errorSummary.getDocumentURL() != null))
         {
             redirectSeeOther(errorSummary.getDocumentURL().toExternalForm());
+            return null;
         }
-
-        return null;
+        else
+        {
+            throw new InvalidResourceException("No such Error for Job "
+                                               + getJobID());
+        }
     }
 
     /**

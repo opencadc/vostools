@@ -91,7 +91,8 @@ public class UWSSyncRouter extends Router
         super(context);
 
         // Synchronous Resources.
-        attachDefault(SynchResource.class);
+//        attachDefault(SynchResource.class);
+        attach("", SynchResource.class);
         attach("/{jobID}/result", JobSyncSubmissionResource.class);
     }
 }

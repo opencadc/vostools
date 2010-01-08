@@ -100,7 +100,8 @@ public class UWSAsyncRouter extends Router
         super(context);
 
         // Asynchronous Resources.
-        attachDefault(AsynchResource.class);
+//        attachDefault(AsynchResource.class);
+        attach("", AsynchResource.class);
         attach("/{jobID}", JobAsynchResource.class);
         attach("/{jobID}/phase", JobAsynchResource.class);
         attach("/{jobID}/executionduration",
