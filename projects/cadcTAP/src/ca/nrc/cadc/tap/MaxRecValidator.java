@@ -67,78 +67,28 @@
 ************************************************************************
 */
 
-package ca.nrc.cadc.tap.writer.votable;
+package ca.nrc.cadc.tap;
 
-import ca.nrc.cadc.tap.writer.formatter.Formatter;
-import java.sql.ResultSet;
-import java.util.AbstractList;
-import java.util.Iterator;
+import ca.nrc.cadc.uws.Parameter;
 import java.util.List;
-import org.jdom.Namespace;
 
-/**
- * Class that wraps a List around a ResultSet.
- */
-public class ResultSetList extends AbstractList
+public class MaxRecValidator
 {
-    // ResultSet the List is wrapping.
-    private ResultSet resultSet;
 
-    // List of Formatter's in selectList order.
-    private List<Formatter> formatters;
-
-    // Namespace for the element.
-    private Namespace namespace;
-
-    /**
-     * Constructor.
-     * 
-     * @param ResultSet to wrap.
-     */
-    public ResultSetList(ResultSet resultSet, List<Formatter> formatters, Namespace namespace)
+    public int validate(List<Parameter> paramList)
     {
-        super();
-        this.resultSet = resultSet;
-        this.formatters = formatters;
-        this.namespace = namespace;
-    }
+        String value = TapUtil.findParameterValue("MAXREC", paramList);
+        if (value == null || value.trim().length() == 0)
+            return -1;
 
-    /**
-     * Returns a ResultSetIterator which can iterate through
-     * the ResultSet.
-     *
-     * @return a ResultSetIterator
-     */
-    @Override
-    public Iterator iterator()
-    {
-        return new ResultSetIterator(resultSet, formatters, namespace);
+        try
+        {
+            return Integer.parseInt(value);
+        }
+        catch (NumberFormatException nfe)
+        {
+            throw new IllegalArgumentException("Invalid MAXREC parameter: " + value);
+        }
     }
-
-    /**
-     * Random access to the ResultSet which the List is wrapping
-     * is not supported, can only move forward through the ResultSet,
-     * therefore throws an UnsupportedOperationException.
-     * 
-     * @param index
-     * @throws UnsupportedOperationException
-     */
-    @Override
-    public Object get(int index)
-    {
-        throw new UnsupportedOperationException("get method not supported");
-    }
-
-    /**
-     * Can't find the size of the ResultSet which the List is wrapping
-     * without making multiple queries, therefore throws an UnsupportedOperationException.
-     *
-     * @throws UnsupportedOperationException
-     */
-    @Override
-    public int size()
-    {
-        throw new UnsupportedOperationException("size method not supported");
-    }
-
+    
 }

@@ -216,6 +216,15 @@ public class FieldElement extends Element
         {
             setAttribute("datatype", "char");
         }
+        else if (datatype.equals("int"))
+        {
+            setAttribute("datatype", "int");
+        }
+        else if (datatype.equals("double[]"))
+        {
+            setAttribute("datatype", "double");
+        }
+
     }
 
 }

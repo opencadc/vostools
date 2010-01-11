@@ -250,12 +250,15 @@ public class QueryRunner implements JobRunner
         	String sql = tapQuery.getSQL();
             List<TapSelectItem> selectList = tapQuery.getSelectList();
             
-            // TODO: MAXREC
+            // MAXREC
+            MaxRecValidator maxRecValidator = new MaxRecValidator();
+            int maxRows = maxRecValidator.validate(paramList);
             
             // FORMAT
             TableWriter writer = TableWriterFactory.getWriter(paramList);
             writer.setTapSchema(tapSchema);
             writer.setSelectList(selectList);
+            writer.setMaxRowCount(maxRows);
             
             Connection connection = null;
             PreparedStatement pstmt = null;

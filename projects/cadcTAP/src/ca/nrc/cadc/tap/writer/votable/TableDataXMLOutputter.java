@@ -74,6 +74,7 @@ import java.io.IOException;
 import java.io.Writer;
 import java.util.Iterator;
 import java.util.List;
+import org.apache.log4j.Logger;
 import org.jdom.Comment;
 import org.jdom.DocType;
 import org.jdom.Document;
@@ -87,22 +88,32 @@ import org.jdom.output.XMLOutputter;
  */
 public class TableDataXMLOutputter extends XMLOutputter
 {
+    private static Logger log = Logger.getLogger(TableDataXMLOutputter.class);
+
     // XML declaration.
     private static final String XML_DECLARATION = "<?xml version=\"1.0\" encoding=\"UTF-8\"?>";
 
     // Line separator.
     private static final String NEW_LINE = System.getProperty("line.separator");
 
+    // Number of TableData rows written;
+    private int rowCount;
+
     // TapSchema
-    TapSchema tapSchema;
+    protected TapSchema tapSchema;
+
+    // Max number of rows to write.
+    protected int maxRows;
 
     /**
      * Default Constructor.
      */
-    public TableDataXMLOutputter(TapSchema tapSchema)
+    public TableDataXMLOutputter(TapSchema tapSchema, int maxRows)
     {
         super();
         this.tapSchema = tapSchema;
+        this.maxRows = maxRows;
+        this.rowCount = 0;
     }
 
     /**
@@ -125,7 +136,7 @@ public class TableDataXMLOutputter extends XMLOutputter
         out.write(XML_DECLARATION);
         out.write(NEW_LINE);
         List content = document.getContent();
-        for (Iterator iterator = content.iterator(); iterator.hasNext(); )
+        for (Iterator iterator = content.iterator(); iterator.hasNext();)
         {
             Object object = iterator.next();
             if (object instanceof Element)
@@ -163,15 +174,30 @@ public class TableDataXMLOutputter extends XMLOutputter
     protected void printElement(Writer out, Element element, int level, XMLOutputter.NamespaceStack namespaces)
         throws IOException
     {
-        if (element instanceof TableDataElement)
+        if (element.getName().equalsIgnoreCase("TABLE"))
+        {
+            super.printElement(out, element, level, namespaces);
+            if (rowCount > maxRows)
+            {
+                out.write(NEW_LINE);
+                out.write(getIndentLevel(level));
+                out.write("<");
+                out.write(element.getNamespacePrefix());
+                out.write(":INFO name=\"QUERY_STATUS\" value=\"OVERFLOW\"/>");
+            }
+        }
+        else if (element instanceof TableDataElement)
         {
             out.write("<");
             out.write(element.getQualifiedName());
             out.write(">");
             out.write(NEW_LINE);
             List content = element.getContent();
-            for (Iterator iterator = content.iterator(); iterator.hasNext(); )
+            for (Iterator iterator = content.iterator(); iterator.hasNext();)
             {
+                rowCount++;
+                if (rowCount > maxRows)
+                    break;
                 out.write(getIndentLevel(level + 1));
                 super.printElement(out, (Element) iterator.next(), level + 1, namespaces);
                 out.write(NEW_LINE);

@@ -110,6 +110,8 @@ public class VOTableWriter implements TableWriter
 
     protected List<TapSelectItem> selectList;
 
+    protected int maxRows;
+
     public VOTableWriter() { }
 
     public String getExtension()
@@ -126,7 +128,12 @@ public class VOTableWriter implements TableWriter
     {
         this.tapSchema = schema;
     }
-    
+
+    public void setMaxRowCount(int count)
+    {
+        this.maxRows = count;
+    }
+
     public void write(ResultSet resultSet, OutputStream output)
         throws IOException
     {
@@ -167,7 +174,7 @@ public class VOTableWriter implements TableWriter
         data.addContent(tableData);
 
         // Write out the VOTABLE.
-        XMLOutputter outputter = new TableDataXMLOutputter(tapSchema);
+        XMLOutputter outputter = new TableDataXMLOutputter(tapSchema, maxRows);
         outputter.setFormat(Format.getPrettyFormat());
         outputter.output(document, output);
     }

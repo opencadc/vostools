@@ -90,23 +90,37 @@ public interface TableWriter
      * 
      * @return filename extension
      */
-    public String getExtension();
+    String getExtension();
     
     /**
      * The ordered selected items from the query.
      * 
      * @param items
      */
-    public void setSelectList(List<TapSelectItem> items);
+    void setSelectList(List<TapSelectItem> items);
     
     /**
      * The TapSchema for the target database.
      * 
      * @param schema
      */
-    public void setTapSchema(TapSchema schema);
+    void setTapSchema(TapSchema schema);
     
-    
-	public void write( ResultSet rs, OutputStream out )
-		throws IOException;
+
+    /**
+     * Write ResultSet to the OutputStream.
+     *
+     * @param rs
+     * @param out
+     * @throws IOException
+     */
+    void write(ResultSet rs, OutputStream out)
+        throws IOException;
+
+    /**
+     * Limit number of table rows.
+     *
+     * @param count
+     */
+    void setMaxRowCount(int count);
 }

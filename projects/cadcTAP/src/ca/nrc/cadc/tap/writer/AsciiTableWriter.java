@@ -105,6 +105,7 @@ public class AsciiTableWriter implements TableWriter
 
     protected TapSchema tapSchema;
     protected List<TapSelectItem> selectList;
+    protected int maxRows;
 
     private String format;
     private char delimeter;
@@ -142,6 +143,11 @@ public class AsciiTableWriter implements TableWriter
         this.tapSchema = schema;
     }
 
+    public void setMaxRowCount(int count)
+    {
+        this.maxRows = count;
+    }
+
     public void write(ResultSet rs, OutputStream out) throws IOException
     {
         if (selectList == null)
@@ -170,6 +176,10 @@ public class AsciiTableWriter implements TableWriter
 
             while (rs.next())
             {
+                // If maxRows = 0, only output the column labels.
+                if (numRows >= maxRows)
+                    break;
+
                 for (int i = 1; i <= numColumns; i++)
                 {
                     Formatter formatter = formatters.get(i - 1);
