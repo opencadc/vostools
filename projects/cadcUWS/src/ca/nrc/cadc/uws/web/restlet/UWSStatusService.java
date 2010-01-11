@@ -72,6 +72,7 @@ package ca.nrc.cadc.uws.web.restlet;
 
 import org.restlet.service.StatusService;
 import org.restlet.data.Status;
+import org.restlet.data.MediaType;
 import org.restlet.Request;
 import org.restlet.Response;
 import org.apache.log4j.Logger;
@@ -119,6 +120,11 @@ public class UWSStatusService extends StatusService
                             final Response response)
     {
         LOGGER.error("Unhandled exception or error intercepted", throwable);
+        response.setEntity("Unable to complete your request.  <<< "
+                           + (throwable.getCause() == null
+                              ? throwable : throwable.getCause()).getMessage()
+                           + " >>>\n",
+                           MediaType.TEXT_PLAIN);
 
         if (throwable instanceof InvalidResourceException ||
                 throwable.getCause() instanceof InvalidResourceException)
