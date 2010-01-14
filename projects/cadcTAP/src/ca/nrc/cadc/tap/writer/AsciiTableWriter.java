@@ -79,6 +79,9 @@ import java.sql.SQLException;
 import java.util.List;
 
 import ca.nrc.cadc.tap.parser.TapSelectItem;
+import ca.nrc.cadc.tap.schema.ColumnDesc;
+import ca.nrc.cadc.tap.schema.SchemaDesc;
+import ca.nrc.cadc.tap.schema.TableDesc;
 import ca.nrc.cadc.tap.schema.TapSchema;
 
 import ca.nrc.cadc.tap.writer.formatter.DefaultFormatterFactory;
@@ -112,6 +115,7 @@ public class AsciiTableWriter implements TableWriter
 
     private AsciiTableWriter()
     {
+        maxRows = Integer.MAX_VALUE;
     }
 
     public AsciiTableWriter(String format)
@@ -161,19 +165,15 @@ public class AsciiTableWriter implements TableWriter
         LOG.debug("writing ResultSet, format: " + format);
         int numRows = 0;
         int numColumns = 0;
-        boolean ok = false;
         CsvWriter writer = new CsvWriter(out, this.delimeter, Charset.forName(US_ASCII));
         try
         {
-            ResultSetMetaData rsmd = rs.getMetaData();
-            numColumns = rsmd.getColumnCount();
-            //boolean b = rsmd.isSearchable(1);
-            for (int i = 1; i <= numColumns; i++)
-            {
-                writer.write(rsmd.getColumnLabel(i));
-            }
+            // Add the metadata elements.
+            for (TapSelectItem selectItem : selectList)
+                writer.write(getColumnName(selectItem));
             writer.endRecord();
 
+            numColumns = rs.getMetaData().getColumnCount();
             while (rs.next())
             {
                 // If maxRows = 0, only output the column labels.
@@ -194,7 +194,6 @@ public class AsciiTableWriter implements TableWriter
             LOG.debug("wrote format: " + format
                     + " columns: " + numColumns+  " rows: " + numRows
                     + " [OK]");
-            ok = true;
             writer.flush();
             rs.close();
         }
@@ -205,6 +204,36 @@ public class AsciiTableWriter implements TableWriter
                     + " [FAILED]");
             throw new IOException(ex);
         }
+    }
+
+    // Get the column name for the column specified by the TapSelectItem.
+    private String getColumnName(TapSelectItem selectItem)
+    {
+        for (SchemaDesc schemaDesc : tapSchema.schemaDescs)
+        {
+            for (TableDesc tableDesc : schemaDesc.tableDescs)
+            {
+                if (tableDesc.tableName.equals(selectItem.getTableName()))
+                {
+                    for (ColumnDesc columnDesc : tableDesc.columnDescs)
+                    {
+                        if (columnDesc.columnName.equals(selectItem.getColumnName()))
+                        {
+                            if (selectItem.getAlias() != null)
+                                return selectItem.getAlias();
+                            else if (selectItem.getColumnName() != null)
+                                return selectItem.getColumnName();
+                        }
+                    }
+                }
+            }
+        }
+
+        // select item did not match a column, must be a function call or expression
+        String name = selectItem.getAlias();
+        if (name == null)
+            name = selectItem.getColumnName();
+        return name;
     }
 
 }
