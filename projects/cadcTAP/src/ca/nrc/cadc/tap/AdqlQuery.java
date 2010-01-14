@@ -79,7 +79,6 @@ import net.sf.jsqlparser.statement.Statement;
 import org.apache.log4j.Logger;
 
 import ca.nrc.cadc.tap.parser.ParserUtil;
-import ca.nrc.cadc.tap.parser.RegionFinder;
 import ca.nrc.cadc.tap.parser.TapSelectItem;
 import ca.nrc.cadc.tap.parser.converter.AllColumnConverter;
 import ca.nrc.cadc.tap.parser.extractor.SelectListExpressionExtractor;
@@ -94,6 +93,10 @@ import ca.nrc.cadc.tap.parser.schema.TapSchemaTableValidator;
 import ca.nrc.cadc.tap.schema.TableDesc;
 import ca.nrc.cadc.tap.schema.TapSchema;
 import ca.nrc.cadc.uws.Parameter;
+import net.sf.jsqlparser.statement.select.PlainSelect;
+import net.sf.jsqlparser.statement.select.Select;
+import net.sf.jsqlparser.statement.select.SelectBody;
+import net.sf.jsqlparser.statement.select.Top;
 
 /**
  * TapQuery implementation for LANG=ADQL.
@@ -106,6 +109,7 @@ public class AdqlQuery implements TapQuery
     protected Map<String, TableDesc> _extraTables;
     protected List<Parameter> _paramList;
     protected String _queryString;
+    protected int _maxRows;
 
     protected Statement _statement;
     protected List<TapSelectItem> _tapSelectItemList;
@@ -113,7 +117,10 @@ public class AdqlQuery implements TapQuery
 
     protected transient boolean navigated = false;
     
-    public AdqlQuery() { }
+    public AdqlQuery()
+    {
+        _maxRows = Integer.MAX_VALUE;
+    }
 	
     /**
      * Set up the List<SelectNavigator>. Subclasses should override this method to
@@ -163,7 +170,34 @@ public class AdqlQuery implements TapQuery
             e.printStackTrace();
             throw new IllegalArgumentException(e);
         }
-        
+
+        // if maxRows has been set, update top
+        if (_maxRows != Integer.MAX_VALUE && _statement instanceof Select)
+        {
+            Select select = (Select) _statement;
+            SelectBody selectBody = select.getSelectBody();
+            if (selectBody instanceof PlainSelect)
+            {
+                PlainSelect plainSelect = (PlainSelect) selectBody;
+                Top top = plainSelect.getTop();
+                if (top == null)
+                {
+                    top = new Top();
+                    top.setRowCount(new Long(_maxRows + 1));
+                    log.debug("added TOP " + (_maxRows + 1));
+                }
+                else
+                {
+                    if (_maxRows < top.getRowCount())
+                    {
+                        log.debug("updated TOP " + top.getRowCount() + " to TOP " + (_maxRows + 1));
+                        top.setRowCount(_maxRows + 1);
+                    }
+                }
+                plainSelect.setTop(top);
+            }
+        }
+
         // run all the navigators
         for (SelectNavigator sn : _navigatorList)
         {
@@ -195,6 +229,11 @@ public class AdqlQuery implements TapQuery
         this._queryString = TapUtil.findParameterValue("QUERY", paramList);
         if (_queryString == null)
             throw new IllegalArgumentException( "parameter not found: QUERY" );
+    }
+
+    public void setMaxRowCount(int count)
+    {
+        this._maxRows = count;
     }
     
 	public String getSQL()

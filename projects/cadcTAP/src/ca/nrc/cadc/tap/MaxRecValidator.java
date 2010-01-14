@@ -79,11 +79,14 @@ public class MaxRecValidator
     {
         String value = TapUtil.findParameterValue("MAXREC", paramList);
         if (value == null || value.trim().length() == 0)
-            return -1;
+            return Integer.MAX_VALUE;
 
         try
         {
-            return Integer.parseInt(value);
+            int maxRec = Integer.parseInt(value);
+            if (maxRec < 0)
+                throw new IllegalArgumentException("Invalid MAXREC parameter: " + value);
+            return maxRec;
         }
         catch (NumberFormatException nfe)
         {

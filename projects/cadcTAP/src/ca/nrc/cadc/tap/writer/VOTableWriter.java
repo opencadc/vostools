@@ -112,7 +112,10 @@ public class VOTableWriter implements TableWriter
 
     protected int maxRows;
 
-    public VOTableWriter() { }
+    public VOTableWriter()
+    {
+        maxRows = Integer.MAX_VALUE;
+    }
 
     public String getExtension()
     {
@@ -132,6 +135,7 @@ public class VOTableWriter implements TableWriter
     public void setMaxRowCount(int count)
     {
         this.maxRows = count;
+        log.debug("maxRows: " + maxRows);
     }
 
     public void write(ResultSet resultSet, OutputStream output)
@@ -155,7 +159,6 @@ public class VOTableWriter implements TableWriter
         // Create the RESOURCE element and add to the VOTABLE element.
         Element resource = new Element("RESOURCE", namespace);
         root.addContent(resource);
-
 
         // Create the TABLE element and add to the RESOURCE element.
         Element table = new Element("TABLE", namespace);

@@ -104,6 +104,7 @@ public class SqlQuery implements TapQuery
     protected Map<String, TableDesc> _extraTables;
     protected List<Parameter> _paramList;
     protected String _queryString;
+    protected int _maxRows;
 
     protected Statement _statement;
     protected List<TapSelectItem> _tapSelectItemList;
@@ -111,7 +112,10 @@ public class SqlQuery implements TapQuery
 
     protected transient boolean navigated = false;
     
-    public SqlQuery() { }
+    public SqlQuery()
+    {
+        _maxRows = Integer.MAX_VALUE;
+    }
 	
     /**
      * Set up the List<SelectNavigator>. Subclasses should override this method to
@@ -189,6 +193,14 @@ public class SqlQuery implements TapQuery
         this._queryString = TapUtil.findParameterValue("QUERY", paramList);
         if (_queryString == null)
             throw new IllegalArgumentException( "parameter not found: QUERY" );
+    }
+
+    /**
+     * Not currently implemented for SQL queries.
+     */
+    public void setMaxRowCount(int count)
+    {
+        this._maxRows = count;
     }
     
 	public String getSQL()

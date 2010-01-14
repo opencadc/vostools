@@ -118,4 +118,12 @@ public interface TapQuery
      * @return the metadata for columns in the result set
      */
     public List<TapSelectItem> getSelectList();
+
+    /**
+     * Limit number of table rows.
+     *
+     * @param count
+     */
+    void setMaxRowCount(int count);
+
 }

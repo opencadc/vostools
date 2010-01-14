@@ -236,7 +236,11 @@ public class QueryRunner implements JobRunner
             UploadManager uploadManager = (UploadManager) umc.newInstance();
             uploadManager.setDataSource(uploadDataSource);
             Map<String,TableDesc> tableDescs = uploadManager.upload( paramList, job.getJobId() );
-            
+
+            // MAXREC
+            MaxRecValidator maxRecValidator = new MaxRecValidator();
+            int maxRows = maxRecValidator.validate(paramList);
+
             // LANG
         	String lang = tapValidator.getLang();
             String cname = langQueries.get(lang);
@@ -247,12 +251,9 @@ public class QueryRunner implements JobRunner
             tapQuery.setTapSchema(tapSchema);
             tapQuery.setExtraTables(tableDescs);
             tapQuery.setParameterList(paramList);
+            tapQuery.setMaxRowCount(maxRows);
         	String sql = tapQuery.getSQL();
             List<TapSelectItem> selectList = tapQuery.getSelectList();
-            
-            // MAXREC
-            MaxRecValidator maxRecValidator = new MaxRecValidator();
-            int maxRows = maxRecValidator.validate(paramList);
             
             // FORMAT
             TableWriter writer = TableWriterFactory.getWriter(paramList);
