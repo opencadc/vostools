@@ -77,5 +77,6 @@ import net.sf.jsqlparser.expression.Expression;
  */
 public interface PredicateFunction
 {
+    
     public Expression negate();
 }

@@ -139,6 +139,7 @@
                 <pathelement path="${jars}:${testingJars}"/>
             </classpath>
             <test name="ca.nrc.cadc.tap.parser.PgsRegionConverterTest"/>
+            <!--
             <test name="ca.nrc.cadc.tap.parser.PgsRegionConverterTest"/>
             <test name="ca.nrc.cadc.tap.parser.RegionFinderTest"/>
             <test name="ca.nrc.cadc.tap.parser.BlobClobValidatorTest"/>
@@ -148,9 +149,7 @@
             <test name="ca.nrc.cadc.tap.parser.ExtractorTest"/>
 			<test name="ca.nrc.cadc.tap.parser.AllColumnConverterTest"/>
 			<test name="ca.nrc.cadc.tap.parser.TopConverterTest"/>
-            <!--
 			<test name="ca.nrc.cadc.tap.parser.SqlQueryTest" />
-            -->
             <test name="ca.nrc.cadc.stc.BoxTest"/>
             <test name="ca.nrc.cadc.stc.CircleTest"/>
             <test name="ca.nrc.cadc.stc.PolygonTest"/>
@@ -168,6 +167,7 @@
             <test name="ca.nrc.cadc.tap.writer.formatter.UTCTimestampFormatterTest"/>
             <test name="ca.nrc.cadc.tap.writer.formatter.SPointFormatterTest"/>
             <test name="ca.nrc.cadc.tap.writer.formatter.SPolyFormatterTest"/>
+            -->
             <formatter type="plain" usefile="false"/>
         </junit>
 
