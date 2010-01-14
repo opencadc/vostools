@@ -153,34 +153,35 @@ public class AdqlQueryTest
         tapQuery.setTapSchema(TAP_SCHEMA);
         tapQuery.setExtraTables(null);
         tapQuery.setParameterList(paramList);
+        tapQuery.setMaxRowCount(10);
         String sql = tapQuery.getSQL();
         List<TapSelectItem> selectList = tapQuery.getSelectList();
-        System.out.println(sql);
-        System.out.println(selectList);
+        System.out.println("SQL: " + sql);
+        System.out.println("selectList: " + selectList);
     }
 
-    //@Test
+//    @Test
     public void testBasic()
     {
         _query = " select * from tap_schema.alldatatypes";
         doit();
     }
 
-    //@Test
+//    @Test
     public void testAlias()
     {
         _query = " select aa.* from tap_schema.alldatatypes as aa";
         doit();
     }
 
-    //@Test
+//    @Test
     public void testSelectItem()
     {
         _query = "select  t_string as xx, aa.t_bytes as yy from tap_schema.alldatatypes as aa";
         doit();
     }
 
-    @Test
+//    @Test
     public void testJoin()
     {
         _query = "select  t_string, aa.t_bytes, bb.* from tap_schema.alldatatypes as aa, tap_schema.tables as bb " +
@@ -188,7 +189,7 @@ public class AdqlQueryTest
         doit();
     }
 
-    //@Test
+//    @Test
     public void testSubselectBad()
     {
         _query = "select  t_string, aa.t_bytes, bb.* from tap_schema.alldatatypes as aa, tap_schema.tables as bb " +
@@ -196,7 +197,7 @@ public class AdqlQueryTest
                 "and aa.t_string in (select utype from bb)";
         doit();
     }
-    //@Test
+//    @Test
     public void testSubselect()
     {
         _query = "select t_string, aa.t_bytes, bb.* from tap_schema.alldatatypes as aa, tap_schema.tables as bb " +
@@ -204,4 +205,12 @@ public class AdqlQueryTest
                 "and aa.t_string in (select t_string from tap_schema.alldatatypes)";
         doit();
     }
+
+    @Test
+    public void testTopSelect()
+    {
+        _query = "select top 25 * from tap_schema.columns";
+        doit();
+    }
+
 }
