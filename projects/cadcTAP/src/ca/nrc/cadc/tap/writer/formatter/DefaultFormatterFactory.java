@@ -194,6 +194,9 @@ public class DefaultFormatterFactory implements FormatterFactory
         
         if (datatype.equalsIgnoreCase("adql:REGION"))
             return getRegionFormatter(desc);
+
+        if (datatype.equalsIgnoreCase("adql:CLOB"))
+            return getClobFormatter(desc);
         
         return new DefaultFormatter();
     }
@@ -280,5 +283,15 @@ public class DefaultFormatterFactory implements FormatterFactory
     {
         throw new UnsupportedOperationException("no formatter for column " + columnDesc.columnName);
     }
-    
+
+    /**
+     * @param columnDesc
+     * @return a DefaultFormatter
+     * @throws UnsupportedOperationException
+     */
+    public Formatter getClobFormatter(ColumnDesc columnDesc)
+    {
+        throw new UnsupportedOperationException("no formatter for column " + columnDesc.columnName);
+    }
+
 }
