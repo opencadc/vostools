@@ -87,10 +87,10 @@ import ca.nrc.cadc.tap.parser.extractor.SelectListExtractor;
 import ca.nrc.cadc.tap.parser.navigator.FromItemNavigator;
 import ca.nrc.cadc.tap.parser.navigator.ReferenceNavigator;
 import ca.nrc.cadc.tap.parser.navigator.SelectNavigator;
+import ca.nrc.cadc.tap.parser.region.pgsphere.PgsphereRegionConverter;
 import ca.nrc.cadc.tap.schema.TapSchema;
 import ca.nrc.cadc.util.Log4jInit;
 import ca.nrc.cadc.uws.Parameter;
-
 
 /**
  * 
@@ -148,8 +148,8 @@ public class PgsRegionConverterTest
         para = new Parameter("QUERY", _query);
         List<Parameter> paramList = new ArrayList<Parameter>();
         paramList.add(para);
-        
-        TapQuery tapQuery = new AdqlQuery();
+
+        TapQuery tapQuery = new AdqlPgsRegionQuery(); // inner class in this file
         tapQuery.setTapSchema(TAP_SCHEMA);
         tapQuery.setExtraTables(null);
         tapQuery.setParameterList(paramList);
@@ -163,16 +163,24 @@ public class PgsRegionConverterTest
     public void testAll()
     {
         _query = "select COORDSYS(a.t_box), COORD1(a.t_spoint), COORD2(a.t_spoint) from TAP_SCHEMA.AllDataTypes a"
-            + " where 0 = CONTAINS(POINT('ICRS GEOCENTER', 25.0, -19.5), POLYGON('ICRS GEOCENTER', 12, 44.0, 7.6, -19.5, a.t_long, a.t_double)) "
-            + "    and INTERSECTS(a.t_scircle, CIRCLE('ICRS GEOCENTER', 44.0, -7.6, 19.5))=1 ";
+                + " where 0 = CONTAINS(POINT('ICRS GEOCENTER', 25.0, -19.5), POLYGON('ICRS GEOCENTER', 12, 44.0, 7.6, -19.5, a.t_long, a.t_double)) "
+                + "    and INTERSECTS(a.t_scircle, CIRCLE('ICRS GEOCENTER', 44.0, -7.6, 19.5))=1 ";
         doit();
     }
 
     @Test
     public void testNone()
     {
-        _query = "select a.t_box, a.t_spoint, a.t_spoint from TAP_SCHEMA.AllDataTypes a"
-            + " where a.t_long = 1";
+        _query = "select a.t_box, a.t_spoint, a.t_spoint from TAP_SCHEMA.AllDataTypes a" + " where a.t_long = 1";
         doit();
+    }
+}
+
+class AdqlPgsRegionQuery extends AdqlQuery
+{
+    protected void init()
+    {
+        super.init();
+        _navigatorList.add(new PgsphereRegionConverter());
     }
 }
