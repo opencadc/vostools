@@ -144,9 +144,6 @@ public class AdqlQuery implements TapQuery
         sn = new AllColumnConverter(_tapSchema);
         _navigatorList.add(sn);
 
-//        sn = new PgsphereRegionConverter();
-//        _navigatorList.add(sn);
-
         en = new SelectListExpressionExtractor(_tapSchema, _extraTables);
         rn = null;
         fn = null;

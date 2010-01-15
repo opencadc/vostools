@@ -152,7 +152,8 @@ public class ExpressionNavigator extends SubNavigator implements ExpressionVisit
     public void visit(Function function)
     {
         log.debug("visit(function)" + function);
-        function.getParameters().accept(this);
+        if (function.getParameters() != null)
+            function.getParameters().accept(this);
     }
 
     /* (non-Javadoc)
