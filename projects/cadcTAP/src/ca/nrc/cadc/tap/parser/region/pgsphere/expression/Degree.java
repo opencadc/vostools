@@ -67,87 +67,24 @@
 ************************************************************************
 */
 
-package ca.nrc.cadc.tap.parser.region.pgsphere.function;
+package ca.nrc.cadc.tap.parser.region.pgsphere.expression;
 
-import java.util.ArrayList;
-import java.util.List;
-
-import ca.nrc.cadc.tap.parser.region.pgsphere.expression.DegreeDouble;
-import ca.nrc.cadc.tap.parser.region.pgsphere.expression.DegreeLong;
-import net.sf.jsqlparser.expression.*;
-import net.sf.jsqlparser.expression.operators.relational.*;
+import net.sf.jsqlparser.expression.Expression;
+import net.sf.jsqlparser.expression.ExpressionVisitor;
 
 /**
  * @author zhangsa
  *
  */
-public abstract class PgsFunction extends Function
+public abstract class Degree implements Expression
 {
-    protected Function _adqlFunction;
-
-    public PgsFunction()
-    {
-    }
-
-    public PgsFunction(Function adqlFunction)
-    {
-        _adqlFunction = adqlFunction;
-        // at the point this object is created,
-        // parameters have already been converted to implemented version.
-        ExpressionList adqlExprList = adqlFunction.getParameters();
-        ExpressionList pgsExprList = toDegreeExpressionList(adqlExprList);
-        setParameters(pgsExprList); // method in Function
-        
-    }
-    
-    /**
-     * @param adqlExprList
-     * @return
+    /* (non-Javadoc)
+     * @see net.sf.jsqlparser.expression.Expression#accept(net.sf.jsqlparser.expression.ExpressionVisitor)
      */
-    public ExpressionList toDegreeExpressionList(ExpressionList adqlExprList)
-    {
-        Expression e1 = null;
-        Expression e2 = null;
-        List<Expression> adqlParams = adqlExprList.getExpressions();
-        int size = adqlParams.size();
-        List<Expression> pgsParams = new ArrayList<Expression>(size);
-        for (int i = 0; i < size; i++)
-        {
-            e1 = adqlParams.get(i);
-            e2 = toDegreeExpression(e1);
-            pgsParams.add(e2);
-        }
-        
-        ExpressionList pgsExprList = new ExpressionList(pgsParams);
-        // TODO...
-        return pgsExprList;
-    }
-
-    public Expression toDegreeExpression(Expression expr)
-    {
-        Expression rtn = null;
-        if (expr instanceof LongValue)
-            rtn = new DegreeLong((LongValue)expr);
-        else if (expr instanceof DoubleValue)
-            rtn = new DegreeDouble((DoubleValue)expr);
-        else
-            rtn = expr;
-        return rtn;
-    }
-
-    protected abstract void convertParameters();
-
     @Override
-    public abstract String toString();
-
-    public Function getAdqlFunction()
+    public void accept(ExpressionVisitor expressionVisitor)
     {
-        return _adqlFunction;
-    }
-
-    public void setAdqlFunction(Function adqlFunction)
-    {
-        _adqlFunction = adqlFunction;
+        //Do nothing
     }
 
 }
