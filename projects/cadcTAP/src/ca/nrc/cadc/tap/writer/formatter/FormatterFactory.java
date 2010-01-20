@@ -96,6 +96,8 @@ public interface FormatterFactory
 
     Formatter getIntArrayFormatter(ColumnDesc columnDesc);
 
+    Formatter getDoubleArrayFormatter(ColumnDesc columnDesc);
+
     Formatter getTimestampFormatter(ColumnDesc columnDesc);
 
     Formatter getPointFormatter(ColumnDesc columnDesc);

@@ -1,0 +1,107 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://www.netbeans.org/ns/project/1">
+    <type>org.netbeans.modules.ant.freeform</type>
+    <configuration>
+        <general-data xmlns="http://www.netbeans.org/ns/freeform-project/1">
+            <name>cadcTAP</name>
+        </general-data>
+        <general-data xmlns="http://www.netbeans.org/ns/freeform-project/2">
+            <!-- Do not use Project Properties customizer when editing this file manually. -->
+            <name>cadcTAP</name>
+            <properties/>
+            <folders>
+                <source-folder>
+                    <label>cadcTAP</label>
+                    <location>.</location>
+                    <encoding>UTF-8</encoding>
+                </source-folder>
+                <source-folder>
+                    <label>src</label>
+                    <type>java</type>
+                    <location>src</location>
+                    <encoding>UTF-8</encoding>
+                </source-folder>
+                <source-folder>
+                    <label>sql</label>
+                    <type>java</type>
+                    <location>sql</location>
+                    <encoding>UTF-8</encoding>
+                </source-folder>
+                <source-folder>
+                    <label>test/src</label>
+                    <type>java</type>
+                    <location>test/src</location>
+                    <encoding>UTF-8</encoding>
+                </source-folder>
+            </folders>
+            <ide-actions>
+                <action name="build">
+                    <target>build</target>
+                </action>
+                <action name="clean">
+                    <target>clean</target>
+                </action>
+                <action name="javadoc">
+                    <target>doc</target>
+                </action>
+                <action name="rebuild">
+                    <target>clean</target>
+                    <target>build</target>
+                </action>
+                <action name="run">
+                    <target>runlib</target>
+                </action>
+            </ide-actions>
+            <export>
+                <type>folder</type>
+                <location>build/class</location>
+                <build-target>build</build-target>
+            </export>
+            <view>
+                <items>
+                    <source-folder style="packages">
+                        <label>src</label>
+                        <location>src</location>
+                    </source-folder>
+                    <source-folder style="packages">
+                        <label>sql</label>
+                        <location>sql</location>
+                    </source-folder>
+                    <source-folder style="packages">
+                        <label>test/src</label>
+                        <location>test/src</location>
+                    </source-folder>
+                    <source-file>
+                        <location>build.xml</location>
+                    </source-file>
+                </items>
+                <context-menu>
+                    <ide-action name="build"/>
+                    <ide-action name="rebuild"/>
+                    <ide-action name="clean"/>
+                    <ide-action name="javadoc"/>
+                    <ide-action name="run"/>
+                </context-menu>
+            </view>
+            <subprojects/>
+        </general-data>
+        <java-data xmlns="http://www.netbeans.org/ns/freeform-project-java/2">
+            <compilation-unit>
+                <package-root>src</package-root>
+                <classpath mode="compile">/home/cadc/pdowler/work/lib/cadcUtil.jar:/home/cadc/pdowler/work/lib/cadcUWS.jar:/usr/cadc/external/java/lib/jsqlparser.jar:/usr/cadc/external/java/lib/spring.jar:/usr/cadc/external/java/lib/javacsv.jar:/usr/cadc/external/java/lib/log4j.jar:/usr/cadc/external/java/lib/jdom.jar:/usr/cadc/external/java/dev/junit.jar</classpath>
+                <built-to>build/class</built-to>
+                <source-level>1.5</source-level>
+            </compilation-unit>
+            <compilation-unit>
+                <package-root>sql</package-root>
+                <source-level>1.5</source-level>
+            </compilation-unit>
+            <compilation-unit>
+                <package-root>test/src</package-root>
+                <unit-tests/>
+                <classpath mode="compile">build/class:/home/cadc/pdowler/work/lib/cadcUtil.jar:/home/cadc/pdowler/work/lib/cadcUWS.jar:/usr/cadc/external/java/lib/jdom.jar:/usr/cadc/external/java/lib/jsqlparser.jar:/usr/cadc/external/java/dev/junit.jar:/usr/cadc/external/java/lib/log4j.jar</classpath>
+                <source-level>1.5</source-level>
+            </compilation-unit>
+        </java-data>
+    </configuration>
+</project>

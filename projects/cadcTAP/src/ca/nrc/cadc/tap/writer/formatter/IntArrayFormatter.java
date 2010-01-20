@@ -89,12 +89,13 @@ public class IntArrayFormatter implements Formatter
     {
         if (object == null)
             return "";
+
         if (object instanceof java.sql.Array)
         {
             try
             {
                 java.sql.Array array = (java.sql.Array) object;
-                object = (int[]) array.getArray();
+                object = array.getArray();
             }
             catch (SQLException e)
             {
@@ -104,7 +105,17 @@ public class IntArrayFormatter implements Formatter
         if (!(object instanceof int[]))
             throw new IllegalArgumentException("Expecting int[], " + object.getClass().getCanonicalName() + " not supported.");
 
-        return object.toString();
+        return toString((int[]) object);
     }
 
+    private String toString(int[] iarray)
+    {
+        StringBuffer sb = new StringBuffer();
+        for (int i : iarray)
+        {
+            sb.append(Integer.toString(i));
+            sb.append(",");
+        }
+        return sb.substring(0, sb.length() - 1); // trim trailing comma
+    }
 }

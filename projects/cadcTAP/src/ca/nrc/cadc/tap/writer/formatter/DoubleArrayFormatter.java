@@ -94,17 +94,27 @@ public class DoubleArrayFormatter implements Formatter
             try
             {
                 java.sql.Array array = (java.sql.Array) object;
-                object = (double[]) array.getArray();
+                object = array.getArray();
             }
             catch (SQLException e)
             {
                 throw new IllegalArgumentException("Error accessing array data for " + object.getClass().getCanonicalName(), e);
             }
         }
-        if (!(object instanceof int[]))
+        if (!(object instanceof double[]))
             throw new IllegalArgumentException("Expecting double[], " + object.getClass().getCanonicalName() + " not supported.");
 
-        return object.toString();
+        return toString((double[]) object);
     }
 
+    private String toString(double[] arr)
+    {
+        StringBuffer sb = new StringBuffer();
+        for (double d : arr)
+        {
+            sb.append(Double.toString(d));
+            sb.append(",");
+        }
+        return sb.substring(0, sb.length() - 1); // trim trailing comma
+    }
 }

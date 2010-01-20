@@ -85,11 +85,21 @@ public class ByteArrayFormatter implements Formatter
     {
         if (object == null)
             return "";
-        byte[] bytes = (byte[]) object;
+
         if (!(object instanceof byte[]))
             throw new IllegalArgumentException("Expecting byte[], " + object.getClass().getCanonicalName() + " not supported.");
 
-        return object.toString();
+        return toString((byte[]) object);
     }
-    
+
+    private String toString(byte[] arr)
+    {
+        StringBuffer sb = new StringBuffer();
+        for (byte b : arr)
+        {
+            sb.append(Byte.toString(b));
+            sb.append(",");
+        }
+        return sb.substring(0, sb.length() - 1); // trim trailing comma
+    }
 }

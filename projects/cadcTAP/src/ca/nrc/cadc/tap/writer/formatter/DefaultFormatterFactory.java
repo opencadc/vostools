@@ -188,6 +188,9 @@ public class DefaultFormatterFactory implements FormatterFactory
         
         if (datatype.equalsIgnoreCase("int[]"))
             return getIntArrayFormatter(desc);
+
+        if (datatype.equalsIgnoreCase("double[]"))
+            return getDoubleArrayFormatter(desc);
         
         if (datatype.equalsIgnoreCase("adql:POINT"))
             return getPointFormatter(desc);
@@ -257,6 +260,16 @@ public class DefaultFormatterFactory implements FormatterFactory
 
     /**
      * @param columnDesc
+     * @return an IntArrayFormatter
+     */
+    public Formatter getDoubleArrayFormatter(ColumnDesc columnDesc)
+    {
+        return new DoubleArrayFormatter();
+    }
+
+
+    /**
+     * @param columnDesc
      * @return a UTCTimestampFormatter
      */
     public Formatter getTimestampFormatter(ColumnDesc columnDesc)
@@ -291,7 +304,7 @@ public class DefaultFormatterFactory implements FormatterFactory
      */
     public Formatter getClobFormatter(ColumnDesc columnDesc)
     {
-        throw new UnsupportedOperationException("no formatter for column " + columnDesc.columnName);
+        return new DefaultFormatter();
     }
 
 }
