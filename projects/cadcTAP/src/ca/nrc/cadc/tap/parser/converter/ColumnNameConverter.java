@@ -69,42 +69,46 @@
 
 package ca.nrc.cadc.tap.parser.converter;
 
-import java.util.HashMap;
 import java.util.Map;
 
 import net.sf.jsqlparser.schema.Column;
-import net.sf.jsqlparser.schema.Table;
-import net.sf.jsqlparser.statement.select.ColumnIndex;
-import net.sf.jsqlparser.statement.select.OrderByElement;
-import net.sf.jsqlparser.statement.select.PlainSelect;
-import net.sf.jsqlparser.statement.select.SelectItem;
 
 import org.apache.log4j.Logger;
 
-import ca.nrc.cadc.tap.parser.ParserUtil;
 import ca.nrc.cadc.tap.parser.navigator.ReferenceNavigator;
 import ca.nrc.cadc.tap.parser.navigator.SelectNavigator.VisitingPart;
-import ca.nrc.cadc.tap.schema.TapSchema;
+import java.util.Comparator;
+import java.util.TreeMap;
 
 /**
- * @author zhangsa
+ * Simple class to map columns name(s) used in the query to column name(s) used
+ * in the database.
  *
+ * @author zhangsa
  */
 public class ColumnNameConverter extends ReferenceNavigator
 {
     protected static Logger log = Logger.getLogger(ColumnNameConverter.class);
 
-    public static Map<String, String> COLUMN_NAME_MAP;
+    public Map<String, String> map;
     
-    static {
-        COLUMN_NAME_MAP = new HashMap<String, String>();
-        
-        // @_@ the key must be in lower cases
-        COLUMN_NAME_MAP.put("position_bounds", "position_encoded");
-    }
-    
-    public ColumnNameConverter()
+    public ColumnNameConverter(boolean ignoreCase)
     {
+        if (ignoreCase)
+            this.map = new TreeMap<String,String>(new IgnoreCaseComparator());
+        else
+            this.map = new TreeMap<String,String>();
+    }
+
+    /**
+     * Add new entries to the column name map.
+     * 
+     * @param originalName a column name that should be replaced
+     * @param newName the value that originalName should be replaced with
+     */
+    public void put(String originalName, String newName)
+    {
+        map.put(originalName, newName);
     }
     
     /* (non-Javadoc)
@@ -115,31 +119,25 @@ public class ColumnNameConverter extends ReferenceNavigator
     {
         log.debug("visit(column)" + column);
         VisitingPart visiting = _selectNavigator.getVisitingPart(); 
-        if (visiting.equals(VisitingPart.SELECT_ITEM)) 
+        String columnName = column.getColumnName();
+        String newName = map.get(columnName);
+        if (newName != null)
+            column.setColumnName(newName);
+    }
+
+    private class IgnoreCaseComparator implements Comparator<String>
+    {
+        public int compare(String lhs, String rhs)
         {
-            String columnName = column.getColumnName();
-            if (isInMap(columnName))
-            {
-                String newName = convertName(columnName);
-                column.setColumnName(newName);
-            }
+            if (lhs == null && rhs == null)
+                return 0;
+            // null is less than non-null
+            if (lhs == null)
+                return -1;
+            if (rhs == null)
+                return 1;
+            return lhs.toLowerCase().compareTo(rhs.toLowerCase());
         }
-    }
 
-    /**
-     * @param columnName
-     * @return
-     */
-    private String convertName(String columnName)
-    {
-        return COLUMN_NAME_MAP.get(columnName);
-    }
-
-    private boolean isInMap(String columnName) 
-    {
-        boolean rtn = false;
-        String lcName = columnName.toLowerCase();
-        rtn = COLUMN_NAME_MAP.containsKey(lcName);
-        return rtn;
     }
 }

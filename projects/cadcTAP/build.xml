@@ -124,13 +124,8 @@
     </target>
 
     <!-- Run the test suite -->
-    <target name="test" depends="compile-test">
+    <target name="test" depends="compile,compile-test">
         
-        <!-- Run the junit test suite -->
-        <!--
-             Tests requiring database credentials are not included in this target.
-        -->
-        <echo message="Running tests..." />
         <copy file="test/src/resources/VOTable-1.2.xsd" todir="build/class"/>
         <junit printsummary="yes" haltonfailure="yes" fork="yes">
             <classpath>
@@ -138,18 +133,18 @@
                 <pathelement path="build/class"/>
                 <pathelement path="${jars}:${testingJars}"/>
             </classpath>
+            <test name="ca.nrc.cadc.tap.parser.ColumnNameConverterTest"/>
             <test name="ca.nrc.cadc.tap.parser.PgsRegionConverterTest"/>
-            <!--
             <test name="ca.nrc.cadc.tap.parser.PgsRegionConverterTest"/>
             <test name="ca.nrc.cadc.tap.parser.RegionFinderTest"/>
             <test name="ca.nrc.cadc.tap.parser.BlobClobValidatorTest"/>
             <test name="ca.nrc.cadc.tap.parser.ValidatorTest"/>
-			<test name="ca.nrc.cadc.tap.parser.AdqlQueryTest" />
+	    <test name="ca.nrc.cadc.tap.parser.AdqlQueryTest" />
             <test name="ca.nrc.cadc.tap.parser.NavigatorTest"/>
             <test name="ca.nrc.cadc.tap.parser.ExtractorTest"/>
-			<test name="ca.nrc.cadc.tap.parser.AllColumnConverterTest"/>
-			<test name="ca.nrc.cadc.tap.parser.TopConverterTest"/>
-			<test name="ca.nrc.cadc.tap.parser.SqlQueryTest" />
+            <test name="ca.nrc.cadc.tap.parser.AllColumnConverterTest"/>
+	    <test name="ca.nrc.cadc.tap.parser.TopConverterTest"/>
+	    <test name="ca.nrc.cadc.tap.parser.SqlQueryTest" />
             <test name="ca.nrc.cadc.stc.BoxTest"/>
             <test name="ca.nrc.cadc.stc.CircleTest"/>
             <test name="ca.nrc.cadc.stc.PolygonTest"/>
@@ -167,12 +162,9 @@
             <test name="ca.nrc.cadc.tap.writer.formatter.UTCTimestampFormatterTest"/>
             <test name="ca.nrc.cadc.tap.writer.formatter.SPointFormatterTest"/>
             <test name="ca.nrc.cadc.tap.writer.formatter.SPolyFormatterTest"/>
-            -->
             <formatter type="plain" usefile="false"/>
         </junit>
 
     </target>
-
-<import file="build.extras" optional="true" />
 
 </project>
