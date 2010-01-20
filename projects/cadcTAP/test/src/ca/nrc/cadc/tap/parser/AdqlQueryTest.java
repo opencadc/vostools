@@ -72,6 +72,8 @@
  */
 package ca.nrc.cadc.tap.parser;
 
+import static org.junit.Assert.assertEquals;
+
 import java.util.ArrayList;
 import java.util.List;
 
@@ -100,6 +102,7 @@ import ca.nrc.cadc.uws.Parameter;
 public class AdqlQueryTest
 {
     public String _query;
+    public String _expected = "";
 
     SelectListExtractor _en;
     ReferenceNavigator _rn;
@@ -114,7 +117,7 @@ public class AdqlQueryTest
     @BeforeClass
     public static void setUpBeforeClass() throws Exception
     {
-        Log4jInit.setLevel("ca.nrc.cadc", org.apache.log4j.Level.DEBUG);
+        Log4jInit.setLevel("ca.nrc.cadc", org.apache.log4j.Level.WARN);
         TAP_SCHEMA = TestUtil.loadDefaultTapSchema();
     }
 
@@ -156,8 +159,10 @@ public class AdqlQueryTest
         tapQuery.setMaxRowCount(10);
         String sql = tapQuery.getSQL();
         List<TapSelectItem> selectList = tapQuery.getSelectList();
-        System.out.println("SQL: " + sql);
-        System.out.println("selectList: " + selectList);
+        System.out.println("QUERY: \r\n" + _query);
+        System.out.println("SQL: \r\n" + sql);
+        System.out.println("selectList: \r\n" + selectList);
+        assertEquals(_expected.toLowerCase(), sql.toLowerCase());
     }
 
 //    @Test
@@ -174,9 +179,10 @@ public class AdqlQueryTest
         doit();
     }
 
-//    @Test
+    @Test
     public void testSelectItem()
     {
+        _expected = "SELECT TOP 11 t_string AS xx, aa.t_bytes AS yy FROM tap_schema.alldatatypes AS aa";
         _query = "select  t_string as xx, aa.t_bytes as yy from tap_schema.alldatatypes as aa";
         doit();
     }
@@ -206,7 +212,7 @@ public class AdqlQueryTest
         doit();
     }
 
-    @Test
+    //@Test
     public void testTopSelect()
     {
         _query = "select top 25 * from tap_schema.columns";

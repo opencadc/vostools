@@ -75,11 +75,15 @@ package ca.nrc.cadc.tap.parser;
 import java.util.ArrayList;
 import java.util.List;
 
+import static org.junit.Assert.*;
+import junit.framework.Assert;
+
 import org.junit.After;
 import org.junit.AfterClass;
 import org.junit.Before;
 import org.junit.BeforeClass;
 import org.junit.Test;
+import org.junit.internal.runners.statements.Fail;
 
 import ca.nrc.cadc.tap.AdqlQuery;
 import ca.nrc.cadc.tap.TapQuery;
@@ -100,6 +104,9 @@ import ca.nrc.cadc.uws.Parameter;
 public class PgsRegionConverterTest
 {
     public String _query;
+    public String _expected = "";
+    
+    
 
     SelectListExtractor _en;
     ReferenceNavigator _rn;
@@ -114,7 +121,7 @@ public class PgsRegionConverterTest
     @BeforeClass
     public static void setUpBeforeClass() throws Exception
     {
-        Log4jInit.setLevel("ca.nrc.cadc", org.apache.log4j.Level.DEBUG);
+        Log4jInit.setLevel("ca.nrc.cadc", org.apache.log4j.Level.WARN);
         TAP_SCHEMA = TestUtil.loadDefaultTapSchema();
     }
 
@@ -155,23 +162,37 @@ public class PgsRegionConverterTest
         tapQuery.setParameterList(paramList);
         String sql = tapQuery.getSQL();
         List<TapSelectItem> selectList = tapQuery.getSelectList();
+        System.out.println(_query);
+        System.out.println(_expected);
         System.out.println(sql);
-        System.out.println(selectList);
+        assertEquals(_expected.toLowerCase(), sql.toLowerCase());
     }
 
-    @Test
+    //@Test
     public void testAll()
     {
         _query = "select COORDSYS(a.t_box), COORD1(a.t_spoint), COORD2(a.t_spoint) from TAP_SCHEMA.AllDataTypes a"
                 + " where 0 = CONTAINS(POINT('ICRS GEOCENTER', 25.0, -19.5), POLYGON('ICRS GEOCENTER', 12, 44.0, 7.6, -19.5, a.t_long, a.t_double)) "
                 + "    and INTERSECTS(a.t_scircle, CIRCLE('ICRS GEOCENTER', 44.0, -7.6, 19.5))=1 ";
+        _expected = "SELECT 'ICRS GEOCENTER', long(a.t_spoint), lat(a.t_spoint) FROM TAP_SCHEMA.AllDataTypes AS a WHERE spoint '( 25.0d, -19.5d)' !@ spoly '{(12d, 44.0d), (7.6d, -19.5d), (a.t_long, a.t_double) }' AND a.t_scircle && scircle '< (44.0d, -7.6d), 19.5d>'"; 
+            
+        doit();
+    }
+
+    //@Test
+    public void testNone()
+    {
+        _query = "select a.t_box, a.t_spoint, a.t_spoint from TAP_SCHEMA.AllDataTypes a" + " where a.t_long = 1";
+        _expected = "select a.t_box, a.t_spoint, a.t_spoint from tap_schema.alldatatypes as a where a.t_long = 1";
         doit();
     }
 
     @Test
-    public void testNone()
+    public void testJoin()
     {
-        _query = "select a.t_box, a.t_spoint, a.t_spoint from TAP_SCHEMA.AllDataTypes a" + " where a.t_long = 1";
+        
+        _query = "select a.t_box, b.t_spoint from tap_schema.alldatatypes as a join tap_schema.alldatatypes as b on (INTERSECTS(a.t_scircle, b.t_box)=1)";
+        _expected = "select a.t_box, b.t_spoint from tap_schema.alldatatypes as a join tap_schema.alldatatypes as b on (a.t_scircle && b.t_box)";
         doit();
     }
 }

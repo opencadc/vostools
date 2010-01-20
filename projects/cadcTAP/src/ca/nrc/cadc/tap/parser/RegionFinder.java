@@ -79,8 +79,13 @@ import net.sf.jsqlparser.expression.Function;
 import net.sf.jsqlparser.expression.InverseExpression;
 import net.sf.jsqlparser.expression.Parenthesis;
 import net.sf.jsqlparser.expression.operators.relational.ExpressionList;
+import net.sf.jsqlparser.schema.Column;
+import net.sf.jsqlparser.schema.Table;
+import net.sf.jsqlparser.statement.select.FromItem;
+import net.sf.jsqlparser.statement.select.Join;
 import net.sf.jsqlparser.statement.select.PlainSelect;
 import net.sf.jsqlparser.statement.select.SelectExpressionItem;
+import net.sf.jsqlparser.statement.select.SubSelect;
 
 import org.apache.log4j.Logger;
 
@@ -136,8 +141,18 @@ public class RegionFinder extends SelectNavigator
                 s.setExpression(implExpression);
             }
         }
-
-        // FROM ITEM and JOIN are not visited.
+        
+        List<Join> joins = plainSelect.getJoins();
+        if (joins != null)
+        {
+            for (Join join : joins)
+            {
+                Expression e = join.getOnExpression();
+                Expression implExpression = convertToImplementation(e);
+                log.debug("PlainSelect/JOIN: replacing " + e + " with " + implExpression);
+                join.setOnExpression(implExpression);
+            }
+        }
 
         if (plainSelect.getWhere() != null)
         {
