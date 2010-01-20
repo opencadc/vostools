@@ -48,6 +48,8 @@ import java.util.Calendar;
 import java.util.ArrayList;
 import java.util.List;
 
+import javax.security.auth.Subject;
+
 
 public class JobAsynchResourceExecutionTest
 {
@@ -62,8 +64,8 @@ public class JobAsynchResourceExecutionTest
         mockJobRunner = createMock(JobRunner.class);
 
         mockJobExecutor = createMock(JobExecutor.class);
-        mockJobExecutor.execute(mockJobRunner);
-        mockJobExecutor.execute(mockJobRunner);
+        mockJobExecutor.execute(mockJobRunner, null);
+        mockJobExecutor.execute(mockJobRunner, null);
         replay(mockJobExecutor);
     }
 
@@ -90,11 +92,13 @@ public class JobAsynchResourceExecutionTest
 
         final List<Result> results = new ArrayList<Result>();
         final List<Parameter> parameters = new ArrayList<Parameter>();
+        
+        final Subject subject = new Subject();
 
         final Job testJob =
                 new Job("88l", ExecutionPhase.QUEUED, 88l, cal.getTime(),
                         quoteCal.getTime(), cal.getTime(), cal.getTime(), null,
-                        "USER", "RUN_ID", results, parameters);
+                        "USER", "RUN_ID", results, parameters, subject);
 
         testSubject = new JobAsynchResource()
         {
@@ -147,11 +151,13 @@ public class JobAsynchResourceExecutionTest
 
         final List<Result> results = new ArrayList<Result>();
         final List<Parameter> parameters = new ArrayList<Parameter>();
+        
+        final Subject subject = new Subject();
 
         final Job testJob =
                 new Job("88l", ExecutionPhase.QUEUED, 88l, cal.getTime(),
                         quoteCal.getTime(), cal.getTime(), cal.getTime(), null,
-                        "USER", "RUN_ID", results, parameters);
+                        "USER", "RUN_ID", results, parameters, subject);
 
         testSubject = new JobAsynchResource()
         {

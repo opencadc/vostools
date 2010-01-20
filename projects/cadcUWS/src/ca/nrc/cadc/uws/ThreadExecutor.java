@@ -70,6 +70,8 @@
 
 package ca.nrc.cadc.uws;
 
+import javax.security.auth.Subject;
+
 
 
 /**
@@ -88,16 +90,33 @@ public class ThreadExecutor implements JobExecutor
      *
      * @param jobRunner The Job Runner to execute jobs.
      */
-    public void execute(final JobRunner jobRunner)
+    public void execute(final JobRunner jobRunner, final Subject subject)
     {
         if (jobRunner == null)
         {
             throw new IllegalArgumentException("BUG: JobRunner cannot be null");
         }
         
-        // Fire and forget thread
-        final Thread t = new Thread(jobRunner);
+        Thread t = null;
+        
+        if (subject == null)
+        {
+        	t = new Thread(jobRunner);
+        }
+        else
+        {
+        	t = new Thread(
+        		new Runnable()
+        		{
+	        		public void run()
+	        		{
+	        			Subject.doAs(subject, new PrivilegedActionJobRunner(jobRunner));
+	        		}
+        		});
+        }
+        
         t.setDaemon(true); // so the thread will not block application shutdown
         t.start();
+
     }
 }

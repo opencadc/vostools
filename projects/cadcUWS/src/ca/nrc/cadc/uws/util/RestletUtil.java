@@ -67,132 +67,63 @@
 ************************************************************************
 */
 
-package ca.nrc.cadc.uws.web.restlet.resources;
+package ca.nrc.cadc.uws.util;
 
+import java.security.Principal;
+import java.security.cert.X509Certificate;
+import java.util.Collection;
+import java.util.HashSet;
+import java.util.Map;
+import java.util.Set;
 
-import org.w3c.dom.Document;
-import org.w3c.dom.Element;
-import org.restlet.resource.Post;
-import org.restlet.representation.Representation;
-import org.restlet.data.Form;
-import org.apache.log4j.Logger;
+import org.restlet.Request;
 
-import java.io.IOException;
-import java.util.*;
-import java.text.ParseException;
-
-import ca.nrc.cadc.uws.*;
-import ca.nrc.cadc.uws.web.restlet.JobAssembler;
-import ca.nrc.cadc.uws.web.WebRepresentationException;
-import java.net.MalformedURLException;
-
-import javax.security.auth.Subject;
+import ca.nrc.cadc.auth.HttpPrincipal;
 
 
 /**
- * Resource to handle Asynchronous calls.
+ * A utility class for Restlet-specific tasks.
  */
-public class AsynchResource extends UWSResource
-{
-    private final static Logger LOGGER = Logger.getLogger(UWSResource.class);
-
-
-    /**
-     * Accept POST requests.
-     *
-     * @param entity    The POST Request body.
-     */
-    @Post
-    public void accept(final Representation entity)
-    {
-        final Form form = new Form(entity);
-        final Map<String, String> errors = validate(form);
-        final Subject subject = getSubject();
-        
-        if (!errors.isEmpty())
+public class RestletUtil {
+	
+	private static final String CERTIFICATE_REQUEST_ATTRIBUTE_NAME = "org.restlet.https.clientCertificates";
+	
+	/**
+	 * Using the restlet request object, get all the basic authentication and
+	 * certification authentication principals.
+	 * @param request The restlet request object.
+	 * @return A set of principals found in the restlet request.
+	 */
+	@SuppressWarnings("unchecked")
+	public static Set<Principal> getPrincipals(Request request) {
+		
+		Set<Principal> principals = new HashSet<Principal>();
+		
+		// look for basic authentication
+		if (request.getChallengeResponse() != null &&
+			StringUtil.hasLength(request.getChallengeResponse().getIdentifier()))
         {
-            generateErrorRepresentation(errors);
-            return;
+			principals.add(new HttpPrincipal(request.getChallengeResponse().getIdentifier()));
         }
+		
+		// look for X509 certificates
+		Map<String, Object> requestAttributes = request.getAttributes();
+		if (requestAttributes.containsKey(CERTIFICATE_REQUEST_ATTRIBUTE_NAME))
+		{
+			final Collection<X509Certificate> clientCertificates =
+	            (Collection<X509Certificate>)requestAttributes.get(CERTIFICATE_REQUEST_ATTRIBUTE_NAME);
+			
+		    if ((clientCertificates != null) && (!clientCertificates.isEmpty()))
+		    {
+		        for (final X509Certificate cert : clientCertificates)
+		        {
+		            principals.add(cert.getSubjectX500Principal());
+		        }
+		    }
+		}
+	    
+	    return principals;
+	    
+	}
 
-        final Job job;
-
-        try
-        {
-            final JobAssembler jobAssembler = new JobAssembler(form, subject);
-            job = jobAssembler.assemble();
-        }
-        catch (ParseException e)
-        {
-            LOGGER.error("Unable to create Job! ", e);
-            throw new WebRepresentationException("Unable to create Job!", e);
-        }
-        catch (MalformedURLException e)
-        {
-            LOGGER.error("The Error URL is invalid.", e);
-            throw new WebRepresentationException("The Error URL is invalid.",
-                                                 e);
-        }
-
-        final Job persistedJob = getJobManager().persist(job);
-        redirectSeeOther(getHostPart() + "/async/" + persistedJob.getJobId());
-    }
-    
-    /**
-     * Assemble the XML for this Resource's Representation into the given
-     * Document.
-     *
-     * @param document The Document to build up.
-     * @throws java.io.IOException If something went wrong or the XML cannot be
-     *                             built.
-     */
-    protected void buildXML(final Document document) throws IOException
-    {
-        final Element jobsElement =
-                document.createElementNS(XML_NAMESPACE_URI,
-                                         JobAttribute.JOBS.getAttributeName());
-
-        jobsElement.setAttribute("xmlns:xlink",
-                                 "http://www.w3.org/1999/xlink");
-        jobsElement.setAttribute("xmlns:xsi",
-                                 "http://www.w3.org/2001/XMLSchema-instance");
-
-        jobsElement.setPrefix(XML_NAMESPACE_PREFIX);
-
-        for (final Job job : getJobs())
-        {
-            final Element jobRefElement =
-                    document.createElementNS(XML_NAMESPACE_URI,
-                                             JobAttribute.JOB_REF.
-                                                     getAttributeName());
-            
-            jobRefElement.setPrefix(XML_NAMESPACE_PREFIX);
-            jobRefElement.setAttribute("id", job.getJobId());
-            jobRefElement.setAttribute("xlink:href",
-                                       getHostPart() + "/async/"
-                                       + job.getJobId());
-            
-            final Element jobRefPhaseElement =
-                    document.createElementNS(XML_NAMESPACE_URI,
-                                             JobAttribute.EXECUTION_PHASE.
-                                                     getAttributeName());
-            jobRefPhaseElement.setPrefix(XML_NAMESPACE_PREFIX);
-            jobRefPhaseElement.setTextContent(job.getExecutionPhase().name());
-
-            jobRefElement.appendChild(jobRefPhaseElement);
-            jobsElement.appendChild(jobRefElement);
-        }
-
-        document.appendChild(jobsElement);
-    }
-
-    /**
-     * Obtain all of the Jobs available to list to the client.
-     *
-     * @return      List of Job objects.
-     */
-    protected List<Job> getJobs()
-    {
-        return new ArrayList<Job>(getJobManager().getJobs());
-    }
 }

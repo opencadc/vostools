@@ -87,6 +87,8 @@ import java.util.Date;
 import java.util.List;
 import java.net.URL;
 
+import javax.security.auth.Subject;
+
 
 /**
  * TestCase for the Asynchronous Resource.
@@ -130,10 +132,12 @@ public class AsynchResourceTestCase
         final List<Parameter> parameters = new ArrayList<Parameter>();
         final ErrorSummary errorSummary =
                 new ErrorSummary("SUMMARY", new URL("http://www.nrc.ca"));
+        
+        final Subject subject = new Subject();
 
         job = new Job("88l", ExecutionPhase.QUEUED, 88l, cal.getTime(),
                         quoteCal.getTime(), cal.getTime(), cal.getTime(), 
-                        errorSummary, "USER", "RUN_ID", results, parameters);
+                        errorSummary, "USER", "RUN_ID", results, parameters, subject);
 
         asynchResource = new AsynchResource()
         {

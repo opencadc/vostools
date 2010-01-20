@@ -72,7 +72,6 @@ package ca.nrc.cadc.uws.web.restlet.resources;
 
 import org.restlet.resource.ServerResource;
 import org.restlet.resource.Get;
-import org.restlet.resource.ResourceException;
 import org.restlet.data.Reference;
 import org.restlet.data.MediaType;
 import org.restlet.data.Status;
@@ -82,16 +81,22 @@ import org.restlet.representation.StringRepresentation;
 import org.restlet.ext.xml.DomRepresentation;
 import org.apache.log4j.Logger;
 import org.w3c.dom.Document;
+
 import ca.nrc.cadc.uws.JobManager;
 import ca.nrc.cadc.uws.util.BeanUtil;
+import ca.nrc.cadc.uws.util.RestletUtil;
 import ca.nrc.cadc.uws.web.validators.FormValidator;
 import ca.nrc.cadc.uws.web.WebRepresentationException;
 import ca.nrc.cadc.uws.web.restlet.validators.JobFormValidatorImpl;
 
+import javax.security.auth.Subject;
 import javax.xml.transform.Transformer;
 import javax.xml.transform.OutputKeys;
 import java.io.IOException;
+import java.security.Principal;
+import java.util.HashSet;
 import java.util.Map;
+import java.util.Set;
 
 
 /**
@@ -289,6 +294,25 @@ public abstract class UWSResource extends ServerResource
         }
 
         return pathPrepend;
+    }
+    
+    /**
+     * Get a read-only subject object containing the principals found
+     * in the HttpServletRequest.
+     * 
+     * @return the Subject with available Principals, or null if no
+     * Principals were found.
+     */
+    protected Subject getSubject()
+    {
+    	Set<Principal> principals = RestletUtil.getPrincipals(getRequest());
+    	
+    	if (principals != null && principals.size() > 0) {
+    		Set<Object> emptyCredentials = new HashSet<Object>();
+    		return new Subject(true, principals, emptyCredentials, emptyCredentials);
+    	} else {
+    		return null;
+    	}
     }
 
     /**

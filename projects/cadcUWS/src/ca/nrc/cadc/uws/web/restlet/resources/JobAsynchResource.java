@@ -199,7 +199,7 @@ public class JobAsynchResource extends BaseJobResource
 
             job.setExecutionPhase(ExecutionPhase.QUEUED);
             jobRunner.setJob(job);
-            je.execute(jobRunner);
+            je.execute(jobRunner, job.getSubject());
         }
     }
 

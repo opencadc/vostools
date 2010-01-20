@@ -75,6 +75,8 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Collections;
 
+import javax.security.auth.Subject;
+
 
 /**
  * Default implementation of a Job.
@@ -93,6 +95,7 @@ public class Job
     private String runId;
     private List<Result> resultsList;
     private List<Parameter> parameterList;
+    private Subject subject;
     private Object any;
 
 
@@ -111,13 +114,14 @@ public class Job
      * @param runId                 The specific running ID.
      * @param resultsList           The List of Results.
      * @param parameterList         The List of Parameters.
+     * @param subject				The Subject containing security pricipals.
      */
     public Job(final String jobId, final ExecutionPhase executionPhase,
                final long executionDuration, final Date destructionTime,
                final Date quote, final Date startTime, final Date endTime,
                final ErrorSummary errorSummary, final String owner,
                final String runId, final List<Result> resultsList,
-               final List<Parameter> parameterList)
+               final List<Parameter> parameterList, final Subject subject)
     {
         this.jobId = jobId;
         this.executionPhase = executionPhase;
@@ -131,6 +135,7 @@ public class Job
         this.runId = runId;
         this.resultsList = resultsList;
         this.parameterList = parameterList;
+        this.subject = subject;
     }
 
 
@@ -422,6 +427,15 @@ public class Job
         {
             getParameterList().add(parameter);
         }
+    }
+    
+    /**
+     * Get the subject object under which this job should execute.
+     * @return The job's subject object.
+     */
+    public Subject getSubject()
+    {
+    	return subject;
     }
 
     /**

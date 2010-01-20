@@ -82,6 +82,8 @@ import java.util.Map;
 import java.util.HashMap;
 import java.net.URL;
 
+import javax.security.auth.Subject;
+
 
 /**
  * Simple class to assemble items from a Request into a job.
@@ -89,11 +91,12 @@ import java.net.URL;
 public class JobAssembler
 {
     private Form form;
+    private Subject subject;
 
-
-    public JobAssembler(final Form form)
+    public JobAssembler(final Form form, final Subject subject)
     {
         this.form = form;
+        this.subject = subject;
     }
 
 
@@ -212,7 +215,7 @@ public class JobAssembler
         
         job = new Job(null, executionPhase, durationTime, destructionDate,
                       quoteDate, startDate, null, errorSummary, owner,
-                      runID, null, null);
+                      runID, null, null, subject);
 
         // Clear out those Request parameters that are pre-defined.
         for (final JobAttribute jobAttribute : JobAttribute.values())

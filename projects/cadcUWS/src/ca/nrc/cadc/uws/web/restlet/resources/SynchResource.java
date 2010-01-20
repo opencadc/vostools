@@ -86,6 +86,8 @@ import ca.nrc.cadc.uws.web.restlet.JobAssembler;
 import ca.nrc.cadc.uws.web.WebRepresentationException;
 import java.net.MalformedURLException;
 
+import javax.security.auth.Subject;
+
 
 /**
  * Resource to handle Synchronous calls.
@@ -119,6 +121,7 @@ public class SynchResource extends UWSResource
     public void accept(final Representation entity)
     {
         final Form form = new Form(entity);
+        final Subject subject = getSubject();
         final Map<String, String> errors = validate(form);
 
         if (!errors.isEmpty())
@@ -126,12 +129,12 @@ public class SynchResource extends UWSResource
             generateErrorRepresentation(errors);
             return;
         }
-
+        
         final Job job;
 
         try
         {
-            final JobAssembler jobAssembler = new JobAssembler(form);
+            final JobAssembler jobAssembler = new JobAssembler(form, subject);
             job = jobAssembler.assemble();
         }
         catch (ParseException e)

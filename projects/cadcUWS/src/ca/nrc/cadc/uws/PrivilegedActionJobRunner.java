@@ -67,106 +67,36 @@
 ************************************************************************
 */
 
-
 package ca.nrc.cadc.uws;
 
+import java.security.PrivilegedAction;
 
-import java.util.Collection;
-import java.util.Random;
-import java.util.concurrent.ConcurrentMap;
-import java.util.concurrent.ConcurrentHashMap;
+
 
 /**
- * Default implementation of the Job ORM.  It consists of an in memory Map.
+ * A wrapper class for starting job runners as privileged actions.
  */
-public class InMemoryPersistence implements JobPersistence
+public class PrivilegedActionJobRunner implements PrivilegedAction<Object>
 {
-    // The Database.
-    private final ConcurrentMap<String, Job> jobMap =
-            new ConcurrentHashMap<String, Job>();
+	
+	private JobRunner jobRunner;
+	
+	/**
+	 * Constructor that takes the target job runner as an argument
+	 * @param jobRunner The jobRunner to start
+	 */
+	public PrivilegedActionJobRunner(JobRunner jobRunner)
+	{
+		this.jobRunner = jobRunner;
+	}
 
-    
-    /**
-     * Default constructor.
-     */
-    public InMemoryPersistence()
-    {
-    }
-
-    /**
-     * Obtain a Job from the persistence layer.
-     *
-     * @param jobID The job identifier.
-     * @return Job instance, or null if none found.
-     */
-    public Job getJob(final String jobID)
-    {
-        return jobMap.get(jobID);
-    }
-
-    public Collection<Job> getJobs()
-    {
-        return jobMap.values();
-    }
-
-    /**
-     * Persist the given Job.
-     *
-     * @param job Job to persist.
-     * @return The persisted Job, complete with a surrogate key, if
-     *         necessary.
-     */
-    public Job persist(final Job job)
-    {
-        final Job persistentJob;
-        final String jobID;
-
-        if (job.getJobId() != null)
-        {
-            jobID = job.getJobId();
-            persistentJob = getJob(jobID);
-
-            persistentJob.setExecutionPhase(job.getExecutionPhase());
-            persistentJob.setDestructionTime(job.getDestructionTime());
-            persistentJob.setExecutionDuration(job.getExecutionDuration());
-            persistentJob.setErrorSummary(job.getErrorSummary());
-            persistentJob.setAny(job.getAny());
-            persistentJob.setParameterList(job.getParameterList());
-            persistentJob.setResultsList(job.getResultsList());
-        }
-        else
-        {
-            jobID = generateID();
-            persistentJob = new Job(jobID, job.getExecutionPhase(),
-                                               job.getExecutionDuration(),
-                                               job.getDestructionTime(),
-                                               job.getQuote(),
-                                               job.getStartTime(),
-                                               job.getEndTime(),
-                                               job.getErrorSummary(),
-                                               job.getOwner(), job.getRunId(),
-                                               job.getResultsList(),
-                                               job.getParameterList(),
-                                               job.getSubject());
-        }
-
-        jobMap.put(jobID, persistentJob);
-
-        return persistentJob;
-    }
-
-    // generate a random modest-length lower case string
-    private static int ID_LENGTH = 16;
-    private static String ID_CHARS = "abcdefghijklmnopqrstuvwxyz0123456789";
-
-    private static String generateID()
-    {
-        Random rnd = new Random(System.currentTimeMillis());
-        char[] c = new char[ID_LENGTH];
-        c[0] = ID_CHARS.charAt(rnd.nextInt(ID_CHARS.length() - 10)); // letters only
-        for (int i=1; i<ID_LENGTH; i++)
-            c[i] = ID_CHARS.charAt(rnd.nextInt(ID_CHARS.length()));
-        return new String(c);
-    }
-
+	/**
+	 * Execute the job runner in this thread and return null.
+	 */
+	public Object run()
+	{
+		jobRunner.run();
+		return null;
+	}
+	
 }

@@ -70,6 +70,8 @@
 
 package ca.nrc.cadc.uws;
 
+import javax.security.auth.Subject;
+
 
 
 /**
@@ -86,5 +88,5 @@ public interface JobExecutor
      * @param jobRunner    The JobRunner with the Job to execute.
      *                     No nulls area permitted.
      */
-    void execute(final JobRunner jobRunner);
+    void execute(final JobRunner jobRunner, final Subject subject);
 }

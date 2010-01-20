@@ -45,6 +45,8 @@ import java.util.Calendar;
 import java.util.List;
 import java.util.ArrayList;
 
+import javax.security.auth.Subject;
+
 
 /**
  * Test the Synchronous Job Resource.
@@ -72,10 +74,12 @@ public class JobSyncSubmissionResourceTest
 
         final List<Result> results = new ArrayList<Result>();
         final List<Parameter> parameters = new ArrayList<Parameter>();
+        
+        final Subject subject = new Subject();
 
         job = new Job(JOB_ID, ExecutionPhase.PENDING, 88l, cal.getTime(),
                       quoteCal.getTime(), cal.getTime(), cal.getTime(), null,
-                      "USER", "RUN_ID", results, parameters);
+                      "USER", "RUN_ID", results, parameters, subject);
 
         mockJobManager = createMock(JobManager.class);
         expect(mockJobManager.getJob(JOB_ID)).andReturn(job).anyTimes();

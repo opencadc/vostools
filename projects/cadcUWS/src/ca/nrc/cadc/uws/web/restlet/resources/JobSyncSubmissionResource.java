@@ -80,6 +80,8 @@ import org.apache.log4j.Logger;
 import java.io.IOException;
 import java.util.List;
 
+import javax.security.auth.Subject;
+
 import ca.nrc.cadc.uws.*;
 import ca.nrc.cadc.uws.web.InvalidActionException;
 
@@ -162,9 +164,18 @@ public class JobSyncSubmissionResource extends BaseJobResource
             prepareJob();
 
             final JobRunner jobRunner = createJobRunner();
+            Job job = getJob();
+            jobRunner.setJob(job);
+            
+            if (job.getSubject() == null)
+            {
+            	jobRunner.run();
+            }
+            else
+            {
+            	Subject.doAs(job.getSubject(), new PrivilegedActionJobRunner(jobRunner));
+            }
 
-            jobRunner.setJob(getJob());
-            jobRunner.run();
         }
     }
 
