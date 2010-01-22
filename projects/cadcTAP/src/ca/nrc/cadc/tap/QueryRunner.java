@@ -311,7 +311,7 @@ public class QueryRunner implements JobRunner
             //t.printStackTrace();
         	String errorMessage = null;
         	URL errorURL        = null;
-            job.setErrorSummary(null);
+            job.setErrorSummary(new ErrorSummary());
         	try
         	{
                 logger.error("query failed", t);
