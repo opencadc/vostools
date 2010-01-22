@@ -69,6 +69,7 @@
 
 package ca.nrc.cadc.conformance.uws;
 
+import ca.nrc.cadc.util.Log4jInit;
 import com.meterware.httpunit.GetMethodWebRequest;
 import com.meterware.httpunit.HeadMethodWebRequest;
 import com.meterware.httpunit.PostMethodWebRequest;
@@ -78,10 +79,10 @@ import com.meterware.httpunit.WebResponse;
 import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStreamReader;
-import java.io.Reader;
 import java.io.StringReader;
 import java.net.MalformedURLException;
 import java.net.URL;
+import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
@@ -96,10 +97,24 @@ import org.jdom.input.SAXBuilder;
 import org.xml.sax.SAXException;
 import static org.junit.Assert.*;
 
-public class TestConfig
+public abstract class AbstractUWSTest
 {
-    private static Logger log = Logger.getLogger(TestConfig.class);
+    private static Logger log = Logger.getLogger(AbstractUWSTest.class);
+    {
+        Log4jInit.setLevel("ca", Level.INFO);
+    }
 
+    protected static final String[] LOGGING_STRING = new String[]
+    {
+        "ALL", "DEBUG", "ERROR", "FATAL",
+        "INFO", "OFF", "TRACE", "WARN"
+    };
+    protected static final Level[] LOGGING_LEVEL = new Level[]
+    {
+        Level.ALL, Level.DEBUG, Level.ERROR, Level.FATAL, 
+        Level.INFO, Level.OFF, Level.TRACE, Level.WARN
+    };
+    
     private static final String UWS_SCHEMA_RESOURCE = "UWS-1.0.xsd";
     private static final String PARSER = "org.apache.xerces.parsers.SAXParser";
 
@@ -109,11 +124,12 @@ public class TestConfig
     protected static final int REQUEST_TIMEOUT = 30;
     protected static String serviceUrl;
     protected static String serviceSchema;
+    protected static Level level;
 
-    public TestConfig()
+    public AbstractUWSTest()
     {
-        // DEBUG is default.
-        log.setLevel((Level)Level.INFO);
+        // Set the logging level.
+        setLoggingLevel(log);
         
         // Base URL of the service to be tested.
         serviceUrl = System.getProperty("service.url");
@@ -121,7 +137,7 @@ public class TestConfig
             throw new RuntimeException("service.url System property not set");
         log.debug("serviceUrl: " + serviceUrl);
 
-        URL url = TestConfig.class.getClassLoader().getResource(UWS_SCHEMA_RESOURCE);
+        URL url = AbstractUWSTest.class.getClassLoader().getResource(UWS_SCHEMA_RESOURCE);
         serviceSchema = url.toString();
         log.debug("serviceSchema: " + serviceSchema);
 
@@ -135,6 +151,28 @@ public class TestConfig
         validatingParser.setFeature("http://apache.org/xml/features/validation/schema-full-checking", true);
         validatingParser.setProperty("http://apache.org/xml/properties/schema/external-schemaLocation",
                                      "http://www.ivoa.net/xml/UWS/v1.0 " + serviceSchema);
+    }
+
+    protected void setLoggingLevel(Logger logger)
+    {
+        if (level == null)
+        {
+            String logLevel = System.getProperty("logging.level");
+            if (logLevel != null)
+            {
+                for (int i = 0; i < LOGGING_STRING.length; i++)
+                {
+                    if (logLevel.equalsIgnoreCase(LOGGING_STRING[i]))
+                    {
+                        level = LOGGING_LEVEL[i];
+                        break;
+                    }
+                }
+            }
+            if (level == null)
+                level = Level.INFO;
+        }
+        logger.setLevel(level);
     }
 
     protected Document buildDocument(String xml, boolean validate)

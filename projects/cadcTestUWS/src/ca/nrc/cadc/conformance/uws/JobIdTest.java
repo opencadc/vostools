@@ -80,53 +80,58 @@ import org.jdom.Namespace;
 import org.junit.Test;
 import static org.junit.Assert.*;
 
-public class JobIdTest extends TestConfig
+public class JobIdTest extends AbstractUWSTest
 {
     private static Logger log = Logger.getLogger(JobIdTest.class);
 
     public JobIdTest()
     {
         super();
-        
-        // DEBUG is default.
-        log.setLevel((Level)Level.INFO);
+        setLoggingLevel(log);
     }
 
     @Test
     public void testJobID()
-        throws Exception
     {
-        // Create a new Job.
-        WebConversation conversation = new WebConversation();
-        String jobId = createJob(conversation);
+        try
+        {
+            // Create a new Job.
+            WebConversation conversation = new WebConversation();
+            String jobId = createJob(conversation);
 
-        // GET request to the jobId resource.
-        String resourceUrl = serviceUrl + "/" + jobId;
-        WebResponse response = get(conversation, resourceUrl);
+            // GET request to the jobId resource.
+            String resourceUrl = serviceUrl + "/" + jobId;
+            WebResponse response = get(conversation, resourceUrl);
 
-        // Validate the XML against the schema.
-        log.debug("XML:\r\n" + response.getText());
-        Document document = buildDocument(response.getText(), true);
+            // Validate the XML against the schema.
+            log.debug("XML:\r\n" + response.getText());
+            Document document = buildDocument(response.getText(), true);
 
-        // Get the document root.
-        Element root = document.getRootElement();
-        assertNotNull("XML returned from GET of " + resourceUrl + " missing root element", root);
-        Namespace namespace = root.getNamespace();
-        log.debug("namespace: " + namespace);
+            // Get the document root.
+            Element root = document.getRootElement();
+            assertNotNull("XML returned from GET of " + resourceUrl + " missing root element", root);
+            Namespace namespace = root.getNamespace();
+            log.debug("namespace: " + namespace);
 
-        // List of jobId elements.
-        List list = root.getChildren("jobId", namespace);
-        assertNotNull("XML returned from GET of " + resourceUrl + " missing uws:jobId element", list);
+            // List of jobId elements.
+            List list = root.getChildren("jobId", namespace);
+            assertNotNull("XML returned from GET of " + resourceUrl + " missing uws:jobId element", list);
 
-        // Validate the jobId.
-        Element element = (Element) list.get(0);
-        log.debug("uws:jobId: " + element.getText());
-        assertEquals("Incorrect uws:jobId element in XML returned from GET of " + resourceUrl, jobId, element.getText());
+            // Validate the jobId.
+            Element element = (Element) list.get(0);
+            log.debug("uws:jobId: " + element.getText());
+            assertEquals("Incorrect uws:jobId element in XML returned from GET of " + resourceUrl, jobId, element.getText());
 
-        // Delete the job.
-        deleteJob(conversation, jobId);
+            // Delete the job.
+            deleteJob(conversation, jobId);
 
-        log.info("JobIdTest.testJobId completed.");
+            log.info("JobIdTest.testJobId completed.");
+        }
+        catch (Throwable t)
+        {
+            log.error(t);
+            fail(t.getMessage());
+        }
     }
 
 }

@@ -78,16 +78,14 @@ import org.jdom.Element;
 import org.junit.Test;
 import static org.junit.Assert.*;
 
-public class JobsTest extends TestConfig
+public class JobsTest extends AbstractUWSTest
 {
     private static Logger log = Logger.getLogger(JobsTest.class);
 
     public JobsTest()
     {
         super();
-
-        // DEBUG is default.
-        log.setLevel((Level)Level.INFO);
+        setLoggingLevel(log);
     }
 
     /*
@@ -98,21 +96,29 @@ public class JobsTest extends TestConfig
     public void testEmptyJobs()
         throws Exception
     {
-        // Request the UWS service.
-        WebConversation conversation = new WebConversation();
-        WebResponse response = get(conversation, serviceUrl);
+        try
+        {
+            // Request the UWS service.
+            WebConversation conversation = new WebConversation();
+            WebResponse response = get(conversation, serviceUrl);
 
-        // Validate the XML against the schema.
-        log.debug("XML:\r\n" + response.getText());
-        Document document = buildDocument(response.getText(), true);
+            // Validate the XML against the schema.
+            log.debug("XML:\r\n" + response.getText());
+            Document document = buildDocument(response.getText(), true);
 
-        Element root = document.getRootElement();
-        assertNotNull("XML returned from GET of " + serviceUrl + " missing uws:jobs element", root);
+            Element root = document.getRootElement();
+            assertNotNull("XML returned from GET of " + serviceUrl + " missing uws:jobs element", root);
 
-//        NodeList list = root.getElementsByTagName("uws:jobref");
-//        assertEquals(propertiesFilename + " XML returned from GET of " + baseUrl + " contained uws:jobref elements", 0, list.getLength());
+            //NodeList list = root.getElementsByTagName("uws:jobref");
+            //assertEquals(propertiesFilename + " XML returned from GET of " + baseUrl + " contained uws:jobref elements", 0, list.getLength());
 
-        log.info("JobsTest.testEmptyJobs completed.");
+            log.info("JobsTest.testEmptyJobs completed.");
+        }
+        catch (Throwable t)
+        {
+            log.error(t);
+            fail(t.getMessage());
+        }
     }
     
 }

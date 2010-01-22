@@ -84,7 +84,7 @@ import org.jdom.Namespace;
 import org.junit.Test;
 import static org.junit.Assert.*;
 
-public class ParametersTest extends TestConfig
+public class ParametersTest extends AbstractUWSTest
 {
     private static Logger log = Logger.getLogger(ParametersTest.class);
 
@@ -94,73 +94,78 @@ public class ParametersTest extends TestConfig
     public ParametersTest()
     {
         super();
-
-        // DEBUG is default.
-        log.setLevel((Level)Level.INFO);
+        setLoggingLevel(log);
     }
 
     @Test
     public void testParameters()
-        throws Exception
     {
-        // Create a new Job.
-        WebConversation conversation = new WebConversation();
-        String jobId = createJob(conversation);
-
-        // POST request to the parameters resource.
-        String resourceUrl = serviceUrl + "/" + jobId + "/parameters";
-        WebRequest postRequest = new PostMethodWebRequest(resourceUrl);
-        postRequest.setParameter(PARAMETER_NAME, PARAMETER_VALUE);
-        postRequest.setHeaderField("Content-Type", "application/x-www-form-urlencoded");
-        WebResponse response = post(conversation, postRequest);
-
-        // Get the redirect.
-        String location = response.getHeaderField("Location");
-        log.debug("Location: " + location);
-        assertNotNull("POST response to " + resourceUrl + " location header not set", location);
-//      assertEquals("POST response to " + resourceUrl + " location header incorrect", baseUrl + "/" + jobId, location);
-
-        // Follow the redirect.
-        response = get(conversation, location);
-
-        // Validate the XML against the schema.
-        log.debug("XML:\r\n" + response.getText());
-        buildDocument(response.getText(), true);
-
-        // Get the parameters resouce for this jobId.
-        response = get(conversation, resourceUrl);
-
-        // Create DOM document from XML.
-        log.debug("XML:\r\n" + response.getText());
-        Document document = buildDocument(response.getText(), false);
-
-        // Get the document root.
-        Element root = document.getRootElement();
-        assertNotNull("XML returned from GET of " + resourceUrl + " missing parameters element", root);
-        Namespace namespace = root.getNamespace();
-        log.debug("namespace: " + namespace);
-
-        // Validate the parameters.
-        boolean found = false;
-        List parameters = root.getChildren("parameter", namespace);
-        for (Iterator it = parameters.iterator(); it.hasNext(); )
+        try
         {
-            Element parameter = (Element) it.next();
-            Attribute attribute = parameter.getAttribute("id");
-            if (attribute == null)
-                continue;
-            if (attribute.getValue().equals(PARAMETER_NAME) &&
-                parameter.getText().equals(PARAMETER_VALUE))
+            // Create a new Job.
+            WebConversation conversation = new WebConversation();
+            String jobId = createJob(conversation);
+
+            // POST request to the parameters resource.
+            String resourceUrl = serviceUrl + "/" + jobId + "/parameters";
+            WebRequest postRequest = new PostMethodWebRequest(resourceUrl);
+            postRequest.setParameter(PARAMETER_NAME, PARAMETER_VALUE);
+            postRequest.setHeaderField("Content-Type", "application/x-www-form-urlencoded");
+            WebResponse response = post(conversation, postRequest);
+
+            // Get the redirect.
+            String location = response.getHeaderField("Location");
+            log.debug("Location: " + location);
+            assertNotNull("POST response to " + resourceUrl + " location header not set", location);
+    //      assertEquals("POST response to " + resourceUrl + " location header incorrect", baseUrl + "/" + jobId, location);
+
+            // Follow the redirect.
+            response = get(conversation, location);
+
+            // Validate the XML against the schema.
+            log.debug("XML:\r\n" + response.getText());
+            buildDocument(response.getText(), true);
+
+            // Get the parameters resouce for this jobId.
+            response = get(conversation, resourceUrl);
+
+            // Create DOM document from XML.
+            log.debug("XML:\r\n" + response.getText());
+            Document document = buildDocument(response.getText(), false);
+
+            // Get the document root.
+            Element root = document.getRootElement();
+            assertNotNull("XML returned from GET of " + resourceUrl + " missing parameters element", root);
+            Namespace namespace = root.getNamespace();
+            log.debug("namespace: " + namespace);
+
+            // Validate the parameters.
+            boolean found = false;
+            List parameters = root.getChildren("parameter", namespace);
+            for (Iterator it = parameters.iterator(); it.hasNext(); )
             {
-                found = true;
+                Element parameter = (Element) it.next();
+                Attribute attribute = parameter.getAttribute("id");
+                if (attribute == null)
+                    continue;
+                if (attribute.getValue().equals(PARAMETER_NAME) &&
+                    parameter.getText().equals(PARAMETER_VALUE))
+                {
+                    found = true;
+                }
             }
+            assertTrue("parameter " + PARAMETER_NAME + "=" + PARAMETER_VALUE + " not found", found);
+
+            // Delete the job.
+            deleteJob(conversation, jobId);
+
+            log.info("ParametersTest.testParameters completed.");
         }
-        assertTrue("parameter " + PARAMETER_NAME + "=" + PARAMETER_VALUE + " not found", found);
-
-        // Delete the job.
-        deleteJob(conversation, jobId);
-
-        log.info("ParametersTest.testParameters completed.");
+        catch (Throwable t)
+        {
+            log.error(t);
+            fail(t.getMessage());
+        }
     }
 
 }

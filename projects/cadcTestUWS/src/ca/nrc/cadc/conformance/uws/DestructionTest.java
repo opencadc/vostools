@@ -83,7 +83,7 @@ import org.jdom.Element;
 import org.junit.Test;
 import static org.junit.Assert.*;
 
-public class DestructionTest extends TestConfig
+public class DestructionTest extends AbstractUWSTest
 {
     private static Logger log = Logger.getLogger(DestructionTest.class);
 
@@ -96,10 +96,7 @@ public class DestructionTest extends TestConfig
     public DestructionTest()
     {
         super();
-
-        // DEBUG is default.
-        log.setLevel((Level)Level.INFO);
-
+        setLoggingLevel(log);
         Calendar cal = Calendar.getInstance();
         cal.roll(Calendar.DATE, true);
         Date date = cal.getTime();
@@ -112,51 +109,58 @@ public class DestructionTest extends TestConfig
      */
     @Test
     public void testDestruction()
-        throws Exception
     {
-        // Create a new Job.
-        WebConversation conversation = new WebConversation();
-        String jobId = createJob(conversation);
+        try
+        {
+            // Create a new Job.
+            WebConversation conversation = new WebConversation();
+            String jobId = createJob(conversation);
 
-        // POST request to the destruction resource.
-        String resourceUrl = serviceUrl + "/" + jobId + "/destruction";
-        WebRequest postRequest = new PostMethodWebRequest(resourceUrl);
-        postRequest.setParameter("DESTRUCTION", destruction);
-        postRequest.setHeaderField("Content-Type", "application/x-www-form-urlencoded");
-        WebResponse response = post(conversation, postRequest);
+            // POST request to the destruction resource.
+            String resourceUrl = serviceUrl + "/" + jobId + "/destruction";
+            WebRequest postRequest = new PostMethodWebRequest(resourceUrl);
+            postRequest.setParameter("DESTRUCTION", destruction);
+            postRequest.setHeaderField("Content-Type", "application/x-www-form-urlencoded");
+            WebResponse response = post(conversation, postRequest);
 
-        // Get the redirect.
-        String location = response.getHeaderField("Location");
-        log.debug("Location: " + location);
-        assertNotNull("POST response to " + resourceUrl + " location header not set", location);
-//      assertEquals("POST response to " + resourceUrl + " location header incorrect", baseUrl + "/" + jobId, location);
+            // Get the redirect.
+            String location = response.getHeaderField("Location");
+            log.debug("Location: " + location);
+            assertNotNull("POST response to " + resourceUrl + " location header not set", location);
+    //      assertEquals("POST response to " + resourceUrl + " location header incorrect", baseUrl + "/" + jobId, location);
 
-        // Follow the redirect.
-        response = get(conversation, location);
+            // Follow the redirect.
+            response = get(conversation, location);
 
-        // Validate the XML against the schema.
-        log.debug("XML:\r\n" + response.getText());
-        buildDocument(response.getText(), true);
+            // Validate the XML against the schema.
+            log.debug("XML:\r\n" + response.getText());
+            buildDocument(response.getText(), true);
 
-        // Get the destruction resource for this jobId.
-        response = get(conversation, resourceUrl);
+            // Get the destruction resource for this jobId.
+            response = get(conversation, resourceUrl);
 
-        // Create DOM document from XML.
-        log.debug("XML:\r\n" + response.getText());
-        Document document = buildDocument(response.getText(), false);
+            // Create DOM document from XML.
+            log.debug("XML:\r\n" + response.getText());
+            Document document = buildDocument(response.getText(), false);
 
-        // Get the root of the document.
-        Element root = document.getRootElement();
-        assertNotNull("XML returned from GET of " + resourceUrl + " missing root element", root);
+            // Get the root of the document.
+            Element root = document.getRootElement();
+            assertNotNull("XML returned from GET of " + resourceUrl + " missing root element", root);
 
-        // Validate the dstruction time.
-        log.debug("uws:destruction: " + root.getText());
-        assertEquals("Destruction element not updated in XML returned from GET of " + resourceUrl, destructionUTC, root.getText());
+            // Validate the dstruction time.
+            log.debug("uws:destruction: " + root.getText());
+            assertEquals("Destruction element not updated in XML returned from GET of " + resourceUrl, destructionUTC, root.getText());
 
-        // Delete the job.
-        deleteJob(conversation, jobId);
+            // Delete the job.
+            deleteJob(conversation, jobId);
 
-        log.info("DestructionTest.testDestruction completed.");
+            log.info("DestructionTest.testDestruction completed.");
+        }
+        catch(Throwable t)
+        {
+            log.error(t);
+            fail(t.getMessage());
+        }
     }
 
 }

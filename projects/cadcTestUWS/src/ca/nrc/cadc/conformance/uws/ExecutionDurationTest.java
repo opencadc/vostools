@@ -80,7 +80,7 @@ import org.jdom.Element;
 import org.junit.Test;
 import static org.junit.Assert.*;
 
-public class ExecutionDurationTest extends TestConfig
+public class ExecutionDurationTest extends AbstractUWSTest
 {
     private static Logger log = Logger.getLogger(ExecutionDurationTest.class);
 
@@ -89,9 +89,7 @@ public class ExecutionDurationTest extends TestConfig
     public ExecutionDurationTest()
     {
         super();
-
-        // DEBUG is default.
-        log.setLevel((Level)Level.INFO);
+        setLoggingLevel(log);
     }
 
     /*
@@ -99,51 +97,58 @@ public class ExecutionDurationTest extends TestConfig
      */
     @Test
     public void testExecutionDuration()
-        throws Exception
     {
-        // Create a new Job.
-        WebConversation conversation = new WebConversation();
-        String jobId = createJob(conversation);
+        try
+        {
+            // Create a new Job.
+            WebConversation conversation = new WebConversation();
+            String jobId = createJob(conversation);
 
-        // POST request to the destruction resource.
-        String resourceUrl = serviceUrl + "/" + jobId + "/executionduration";
-        WebRequest postRequest = new PostMethodWebRequest(resourceUrl);
-        postRequest.setParameter("EXECUTIONDURATION", EXECUTIONDURATION);
-        postRequest.setHeaderField("Content-Type", "application/x-www-form-urlencoded");
-        WebResponse response = post(conversation, postRequest);
+            // POST request to the destruction resource.
+            String resourceUrl = serviceUrl + "/" + jobId + "/executionduration";
+            WebRequest postRequest = new PostMethodWebRequest(resourceUrl);
+            postRequest.setParameter("EXECUTIONDURATION", EXECUTIONDURATION);
+            postRequest.setHeaderField("Content-Type", "application/x-www-form-urlencoded");
+            WebResponse response = post(conversation, postRequest);
 
-        // Get the redirect.
-        String location = response.getHeaderField("Location");
-        log.debug("Location: " + location);
-        assertNotNull("POST response to " + resourceUrl + " location header not set", location);
-//      assertEquals("POST response to " + resourceUrl + " location header incorrect", baseUrl + "/" + jobId, location);
+            // Get the redirect.
+            String location = response.getHeaderField("Location");
+            log.debug("Location: " + location);
+            assertNotNull("POST response to " + resourceUrl + " location header not set", location);
+    //      assertEquals("POST response to " + resourceUrl + " location header incorrect", baseUrl + "/" + jobId, location);
 
-        // Follow the redirect.
-        response = get(conversation, location);
+            // Follow the redirect.
+            response = get(conversation, location);
 
-        // Validate the XML against the schema.
-        log.debug("XML:\r\n" + response.getText());
-        buildDocument(response.getText(), true);
+            // Validate the XML against the schema.
+            log.debug("XML:\r\n" + response.getText());
+            buildDocument(response.getText(), true);
 
-        // Get the executionduration resouce for this jobId.
-        response = get(conversation, resourceUrl);
+            // Get the executionduration resouce for this jobId.
+            response = get(conversation, resourceUrl);
 
-        // Create DOM document from XML.
-        log.debug("XML:\r\n" + response.getText());
-        Document document = buildDocument(response.getText(), false);
+            // Create DOM document from XML.
+            log.debug("XML:\r\n" + response.getText());
+            Document document = buildDocument(response.getText(), false);
 
-        // Get the root of the document.
-        Element root = document.getRootElement();
-        assertNotNull("XML returned from GET of " + resourceUrl + " missing uws:executionduration element", root);
+            // Get the root of the document.
+            Element root = document.getRootElement();
+            assertNotNull("XML returned from GET of " + resourceUrl + " missing uws:executionduration element", root);
 
-        // Validate the executionduration.
-        log.debug("uws:executionduration: " + root.getText());
-        assertEquals("Executionduration element not updated in XML returned from GET of " + resourceUrl, EXECUTIONDURATION, root.getText());
+            // Validate the executionduration.
+            log.debug("uws:executionduration: " + root.getText());
+            assertEquals("Executionduration element not updated in XML returned from GET of " + resourceUrl, EXECUTIONDURATION, root.getText());
 
-        // Delete the job.
-        deleteJob(conversation, jobId);
+            // Delete the job.
+            deleteJob(conversation, jobId);
 
-        log.info("ExecutionDurationTest.testExecutionDuration completed.");
+            log.info("ExecutionDurationTest.testExecutionDuration completed.");
+        }
+        catch (Throwable t)
+        {
+            log.error(t);
+            fail(t.getMessage());
+        }
     }
 
 }

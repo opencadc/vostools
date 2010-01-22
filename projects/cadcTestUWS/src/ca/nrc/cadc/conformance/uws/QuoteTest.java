@@ -81,7 +81,7 @@ import org.jdom.Element;
 import org.junit.Test;
 import static org.junit.Assert.*;
 
-public class QuoteTest extends TestConfig
+public class QuoteTest extends AbstractUWSTest
 {
     private static Logger log = Logger.getLogger(QuoteTest.class);
 
@@ -90,10 +90,7 @@ public class QuoteTest extends TestConfig
     public QuoteTest()
     {
         super();
-
-        // DEBUG is default.
-        log.setLevel((Level)Level.INFO);
-        
+        setLoggingLevel(log);
         Calendar cal = Calendar.getInstance();
         cal.setTimeZone(DateUtil.UTC);
         testStartDate = cal.getTime();
@@ -102,37 +99,44 @@ public class QuoteTest extends TestConfig
 
     @Test
     public void testQuote()
-        throws Exception
     {
-        // Create a new Job.
-        WebConversation conversation = new WebConversation();
-        String jobId = createJob(conversation);
+        try
+        {
+            // Create a new Job.
+            WebConversation conversation = new WebConversation();
+            String jobId = createJob(conversation);
 
-        // Get the quote resource.
-        String resourceUrl = serviceUrl + "/" + jobId + "/quote";
-        WebResponse response = get(conversation, resourceUrl);
+            // Get the quote resource.
+            String resourceUrl = serviceUrl + "/" + jobId + "/quote";
+            WebResponse response = get(conversation, resourceUrl);
 
-        // Create DOM document from XML.
-        log.debug("XML:\r\n" + response.getText());
-        Document document = buildDocument(response.getText(), false);
+            // Create DOM document from XML.
+            log.debug("XML:\r\n" + response.getText());
+            Document document = buildDocument(response.getText(), false);
 
-        // Get the document root.
-        Element root = document.getRootElement();
-        assertNotNull("XML returned from GET of " + resourceUrl + " missing uws:quote element", root);
+            // Get the document root.
+            Element root = document.getRootElement();
+            assertNotNull("XML returned from GET of " + resourceUrl + " missing uws:quote element", root);
 
-        // Get the Quote date.
-        String quote = root.getText();
-        log.debug("uws:quote: " + quote);
-        assertNotNull("XML returned from GET of " + resourceUrl + " missing uws:quote element", quote);
+            // Get the Quote date.
+            String quote = root.getText();
+            log.debug("uws:quote: " + quote);
+            assertNotNull("XML returned from GET of " + resourceUrl + " missing uws:quote element", quote);
 
-        // Check Quote is after testStartDate.
-        Date quoteDate = DateUtil.toDate(quote, DateUtil.IVOA_DATE_FORMAT);
-        assertTrue("Quote date must be after startTime date", quoteDate.after(testStartDate));
+            // Check Quote is after testStartDate.
+            Date quoteDate = DateUtil.toDate(quote, DateUtil.IVOA_DATE_FORMAT);
+            assertTrue("Quote date must be after startTime date", quoteDate.after(testStartDate));
 
-        // Delete the job.
-        deleteJob(conversation, jobId);
+            // Delete the job.
+            deleteJob(conversation, jobId);
 
-        log.info("QuoteTest.testQuote completed.");
+            log.info("QuoteTest.testQuote completed.");
+        }
+        catch (Throwable t)
+        {
+            log.error(t);
+            fail(t.getMessage());
+        }
     }
     
 }

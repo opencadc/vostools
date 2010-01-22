@@ -76,35 +76,44 @@ import com.meterware.httpunit.WebResponse;
 import java.io.IOException;
 import java.util.Iterator;
 import java.util.List;
-import org.apache.log4j.Level;
 import org.apache.log4j.Logger;
 import org.jdom.Attribute;
 import org.jdom.Document;
 import org.jdom.Element;
 import org.jdom.Namespace;
+import org.junit.BeforeClass;
 import org.junit.Test;
 import static org.junit.Assert.*;
 
-public class ErrorTest extends TestConfig
+public class ErrorTest extends AbstractUWSTest
 {
     private static Logger log = Logger.getLogger(ErrorTest.class);
 
     private static final String CLASS_NAME = "ErrorTest";
 
-    protected TestPropertiesList testPropertiesList;
+    protected static TestPropertiesList testPropertiesList;
 
     public ErrorTest()
-        throws IOException
     {
         super();
+        setLoggingLevel(log);
+    }
 
-        // DEBUG is default.
-        log.setLevel((Level)Level.INFO);
-        
+    @BeforeClass
+    public static void beforeClass()
+    {
         String propertiesDirectory = System.getProperty("properties.directory");
         if (propertiesDirectory == null)
-            throw new RuntimeException("properties.directory System property not set");
-        testPropertiesList = new TestPropertiesList(propertiesDirectory, CLASS_NAME);
+            fail("properties.directory System property not set");
+        try
+        {
+            testPropertiesList = new TestPropertiesList(propertiesDirectory, CLASS_NAME);
+        }
+        catch (IOException e)
+        {
+            log.error(e);
+            fail(e.getMessage());
+        }
     }
 
     /*
@@ -113,101 +122,108 @@ public class ErrorTest extends TestConfig
      */
     @Test
     public void testError()
-        throws Exception
     {
-        if (testPropertiesList.propertiesList.size() == 0)
-            fail("missing properties file for " + CLASS_NAME);
-
-        // For each properties file.
-        for (TestProperties properties : testPropertiesList.propertiesList)
+        try
         {
-            log.debug("**************************************************");
-            log.debug("processing properties file: " + properties.filename);
-            log.debug(properties);
-            log.debug("**************************************************");
+            if (testPropertiesList.propertiesList.size() == 0)
+                fail("missing properties file for " + CLASS_NAME);
 
-            // Create a new Job.
-            WebConversation conversation = new WebConversation();
-            String jobId = createJob(conversation, properties.parameters);
-
-            // POST request to the phase resource.
-            String resourceUrl = serviceUrl + "/" + jobId + "/phase";
-            WebRequest postRequest = new PostMethodWebRequest(resourceUrl);
-            postRequest.setParameter("PHASE", "RUN");
-            WebResponse response = post(conversation, postRequest);
-
-            // Get the redirect.
-            String location = response.getHeaderField("Location");
-            log.debug("Location: " + location);
-            assertNotNull(properties.filename + " POST response to " + resourceUrl + " location header not set", location);
-//            assertEquals(propertiesFilename + " POST response to " + resourceUrl + " location header incorrect", baseUrl + "/" + jobId, location);
-
-            // Follow the redirect.
-            response = get(conversation, location);
-
-            // Validate the XML against the schema.
-            log.debug("XML:\r\n" + response.getText());
-            buildDocument(response.getText(), true);
-
-            // Job resource for this jobId.
-            resourceUrl = serviceUrl + "/" + jobId;
-
-            // Loop until the phase is either COMPLETED, ERROR or ABORTED.
-            Element root = null;
-            List list = null;
-            Namespace namespace = null;
-            boolean done = false;
-            while (!done)
+            // For each properties file.
+            for (TestProperties properties : testPropertiesList.propertiesList)
             {
-                // Wait for 1 second.
-                Thread.sleep(1000);
+                log.debug("**************************************************");
+                log.debug("processing properties file: " + properties.filename);
+                log.debug(properties);
+                log.debug("**************************************************");
 
-                // GET the resource.
-                response = get(conversation, resourceUrl);
+                // Create a new Job.
+                WebConversation conversation = new WebConversation();
+                String jobId = createJob(conversation, properties.parameters);
 
-                // Create DOM document from XML.
+                // POST request to the phase resource.
+                String resourceUrl = serviceUrl + "/" + jobId + "/phase";
+                WebRequest postRequest = new PostMethodWebRequest(resourceUrl);
+                postRequest.setParameter("PHASE", "RUN");
+                WebResponse response = post(conversation, postRequest);
+
+                // Get the redirect.
+                String location = response.getHeaderField("Location");
+                log.debug("Location: " + location);
+                assertNotNull(properties.filename + " POST response to " + resourceUrl + " location header not set", location);
+    //            assertEquals(propertiesFilename + " POST response to " + resourceUrl + " location header incorrect", baseUrl + "/" + jobId, location);
+
+                // Follow the redirect.
+                response = get(conversation, location);
+
+                // Validate the XML against the schema.
                 log.debug("XML:\r\n" + response.getText());
-                Document document = buildDocument(response.getText(), false);
+                buildDocument(response.getText(), true);
 
-                // Root element of the document.
-                root = document.getRootElement();
-                assertNotNull(properties.filename + " no XML returned from GET of " + resourceUrl, root);
-                namespace = root.getNamespace();
+                // Job resource for this jobId.
+                resourceUrl = serviceUrl + "/" + jobId;
 
-                // Get the error element.
-                list = root.getChildren("phase", namespace);
-                assertEquals(properties.filename + " phase element should only have a single element in XML returned from GET of " + resourceUrl, 1, list.size());
-                Element phase = (Element) list.get(0);
-                String phaseText = phase.getText();
+                // Loop until the phase is either COMPLETED, ERROR or ABORTED.
+                Element root = null;
+                List list = null;
+                Namespace namespace = null;
+                boolean done = false;
+                while (!done)
+                {
+                    // Wait for 1 second.
+                    Thread.sleep(1000);
 
-                // ERROR phase, continue with test.
-                if (phaseText.equals("ERROR"))
-                    break;
+                    // GET the resource.
+                    response = get(conversation, resourceUrl);
 
-                // Fail if phase is COMPLETED or ABORTED.
-                else if (phaseText.equals("COMPLETED") || phaseText.equals("ABORTED"))
-                    fail(properties.filename + " phase should be ERROR, not " + phaseText + ", in XML returned from GET of " + resourceUrl);
+                    // Create DOM document from XML.
+                    log.debug("XML:\r\n" + response.getText());
+                    Document document = buildDocument(response.getText(), false);
 
-                // Check phase, if still PENDING or QUEUED after x seconds, fail.
-                else if (phaseText.equals("PENDING") || phaseText.equals("QUEUED") || phaseText.equals("EXECUTING"))
-                    continue;
+                    // Root element of the document.
+                    root = document.getRootElement();
+                    assertNotNull(properties.filename + " no XML returned from GET of " + resourceUrl, root);
+                    namespace = root.getNamespace();
+
+                    // Get the error element.
+                    list = root.getChildren("phase", namespace);
+                    assertEquals(properties.filename + " phase element should only have a single element in XML returned from GET of " + resourceUrl, 1, list.size());
+                    Element phase = (Element) list.get(0);
+                    String phaseText = phase.getText();
+
+                    // ERROR phase, continue with test.
+                    if (phaseText.equals("ERROR"))
+                        break;
+
+                    // Fail if phase is COMPLETED or ABORTED.
+                    else if (phaseText.equals("COMPLETED") || phaseText.equals("ABORTED"))
+                        fail(properties.filename + " phase should be ERROR, not " + phaseText + ", in XML returned from GET of " + resourceUrl);
+
+                    // Check phase, if still PENDING or QUEUED after x seconds, fail.
+                    else if (phaseText.equals("PENDING") || phaseText.equals("QUEUED") || phaseText.equals("EXECUTING"))
+                        continue;
+                }
+
+                list = root.getChildren("errorSummary", namespace);
+                assertEquals(properties.filename + " errorSummary element should only have a single element in XML returned from GET of " + resourceUrl, 1, list.size());
+
+                Element errorSummary = (Element) list.get(0);
+                list = errorSummary.getChildren("message", namespace);
+                assertEquals(properties.filename + " errorSummary message element should only have a single element in XML returned from GET of " + resourceUrl, 1, list.size());
+                validateErrorMessage(conversation, response, list);
+
+                list = errorSummary.getChildren("detail", namespace);
+                assertEquals(properties.filename + " errorSummary detail element should only have a single element in XML returned from GET of " + resourceUrl, 1, list.size());
+                validateErrorDetail(conversation, response, list);
+
+                deleteJob(conversation, jobId);
+
+                log.info("ErrorTest.testError completed.");
             }
-
-            list = root.getChildren("errorSummary", namespace);
-            assertEquals(properties.filename + " errorSummary element should only have a single element in XML returned from GET of " + resourceUrl, 1, list.size());
-
-            Element errorSummary = (Element) list.get(0);
-            list = errorSummary.getChildren("message", namespace);
-            assertEquals(properties.filename + " errorSummary message element should only have a single element in XML returned from GET of " + resourceUrl, 1, list.size());
-            validateErrorMessage(conversation, response, list);
-
-            list = errorSummary.getChildren("detail", namespace);
-            assertEquals(properties.filename + " errorSummary detail element should only have a single element in XML returned from GET of " + resourceUrl, 1, list.size());
-            validateErrorDetail(conversation, response, list);
-
-            deleteJob(conversation, jobId);
-
-            log.info("ErrorTest.testError completed.");
+        }
+        catch (Throwable t)
+        {
+            log.error(t);
+            fail(t.getMessage());
         }
     }
 

@@ -84,147 +84,166 @@ import org.jdom.Namespace;
 import org.junit.Test;
 import static org.junit.Assert.*;
 
-public class PhaseTest extends TestConfig
+public class PhaseTest extends AbstractUWSTest
 {
     private static Logger log = Logger.getLogger(PhaseTest.class);
 
     public PhaseTest()
     {
         super();
-
-        // DEBUG is default.
-        log.setLevel((Level)Level.INFO);
+        setLoggingLevel(log);
     }
 
     @Test
     public void testPhase()
-        throws Exception
     {
-        // Create a new Job.
-        WebConversation conversation = new WebConversation();
-        String jobId = createJob(conversation);
+        try
+        {
+            // Create a new Job.
+            WebConversation conversation = new WebConversation();
+            String jobId = createJob(conversation);
 
-        // GET request to the phase resource.
-        String resourceUrl = serviceUrl + "/" + jobId + "/phase";
-        WebResponse response = get(conversation, resourceUrl);
+            // GET request to the phase resource.
+            String resourceUrl = serviceUrl + "/" + jobId + "/phase";
+            WebResponse response = get(conversation, resourceUrl);
 
-        // Create DOM document from XML.
-        log.debug("XML:\r\n" + response.getText());
-        Document document = buildDocument(response.getText(), false);
+            // Create DOM document from XML.
+            log.debug("XML:\r\n" + response.getText());
+            Document document = buildDocument(response.getText(), false);
 
-        // Get the document root.
-        Element root = document.getRootElement();
-        assertNotNull("XML returned from GET of " + resourceUrl + " missing root element", root);
+            // Get the document root.
+            Element root = document.getRootElement();
+            assertNotNull("XML returned from GET of " + resourceUrl + " missing root element", root);
 
-        // phase should be in the PENDING state.
-        log.debug("phase: " + root.getText());
-        assertEquals("Phase element not updated in XML returned from GET of " + resourceUrl, "PENDING", root.getText());
+            // phase should be in the PENDING state.
+            log.debug("phase: " + root.getText());
+            assertEquals("Phase element not updated in XML returned from GET of " + resourceUrl, "PENDING", root.getText());
 
-        // Delete the job.
-        response = deleteJob(conversation, jobId);
+            // Delete the job.
+            response = deleteJob(conversation, jobId);
 
-        log.info("PhaseTest.testPhase completed.");
+            log.info("PhaseTest.testPhase completed.");
+        }
+        catch (Throwable t)
+        {
+            log.error(t);
+            fail(t.getMessage());
+        }
     }
 
     @Test
     public void testRunPhase()
-        throws Exception
     {
-        // Create a new Job.
-        WebConversation conversation = new WebConversation();
-        Map parameters = new HashMap();
-        parameters.put("PASS", "FALSE");
-        parameters.put("RUNFOR", "10");
+        try
+        {
+            // Create a new Job.
+            WebConversation conversation = new WebConversation();
+            Map parameters = new HashMap();
+            parameters.put("PASS", "FALSE");
+            parameters.put("RUNFOR", "10");
 
-        // Create a new Job and get the jobId.
-        String jobId = createJob(conversation, parameters);
+            // Create a new Job and get the jobId.
+            String jobId = createJob(conversation, parameters);
 
-        // POST request to the phase resource.
-        String resourceUrl = serviceUrl + "/" + jobId + "/phase";
-        WebRequest postRequest = new PostMethodWebRequest(resourceUrl);
-        postRequest.setParameter("PHASE", "RUN");
-        WebResponse response = post(conversation, postRequest);
+            // POST request to the phase resource.
+            String resourceUrl = serviceUrl + "/" + jobId + "/phase";
+            WebRequest postRequest = new PostMethodWebRequest(resourceUrl);
+            postRequest.setParameter("PHASE", "RUN");
+            WebResponse response = post(conversation, postRequest);
 
-        // Get the redirect.
-        String location = response.getHeaderField("Location");
-        log.debug("Location: " + location);
-        assertNotNull("POST response to " + resourceUrl + " location header not set", location);
-//          assertEquals("POST response to " + resourceUrl + " location header incorrect", baseUrl + "/" + jobId, location);
+            // Get the redirect.
+            String location = response.getHeaderField("Location");
+            log.debug("Location: " + location);
+            assertNotNull("POST response to " + resourceUrl + " location header not set", location);
+    //          assertEquals("POST response to " + resourceUrl + " location header incorrect", baseUrl + "/" + jobId, location);
 
-        // Follow the redirect.
-        response = get(conversation, location);
+            // Follow the redirect.
+            response = get(conversation, location);
 
-        // Validate against the schema and get a DOM Document.
-        log.debug(response.getText());
-        Document document = buildDocument(response.getText(), true);
+            // Validate against the schema and get a DOM Document.
+            log.debug(response.getText());
+            Document document = buildDocument(response.getText(), true);
 
-        // Get the document root.
-        Element root = document.getRootElement();
-        assertNotNull("XML returned from GET of " + resourceUrl + " missing root element", root);
-        Namespace namespace = root.getNamespace();
-        log.debug("Namespace: " + namespace);
+            // Get the document root.
+            Element root = document.getRootElement();
+            assertNotNull("XML returned from GET of " + resourceUrl + " missing root element", root);
+            Namespace namespace = root.getNamespace();
+            log.debug("Namespace: " + namespace);
 
-        // Get the phase element.
-        List list = root.getChildren("phase", namespace);
-        assertEquals("uws:phase element not found in XML returned from GET of " + resourceUrl, 1, list.size());
+            // Get the phase element.
+            List list = root.getChildren("phase", namespace);
+            assertEquals("uws:phase element not found in XML returned from GET of " + resourceUrl, 1, list.size());
 
-        // Validate the phase.
-        Element phase = (Element) list.get(0);
-        log.debug("uws:phase: " + phase.getText());
-        assertEquals("uws:phase should be EXECUTING", "EXECUTING", phase.getText());
+            // Validate the phase.
+            Element phase = (Element) list.get(0);
+            log.debug("uws:phase: " + phase.getText());
+            assertEquals("uws:phase should be EXECUTING", "EXECUTING", phase.getText());
 
-        // Delete the Job.
-        deleteJob(conversation, jobId);
+            // Delete the Job.
+            deleteJob(conversation, jobId);
 
-        log.info("PhaseTest.testRunPhase completed.");
+            log.info("PhaseTest.testRunPhase completed.");
+        }
+        catch (Throwable t)
+        {
+            log.error(t);
+            fail(t.getMessage());
+        }
     }
 
     @Test
     public void testAbortPhase()
-        throws Exception
     {
-        // Create a new Job.
-        WebConversation conversation = new WebConversation();
-        String jobId = createJob(conversation);
+        try
+        {
+            // Create a new Job.
+            WebConversation conversation = new WebConversation();
+            String jobId = createJob(conversation);
 
-        // POST request to the phase resource.
-        String resourceUrl = serviceUrl + "/" + jobId + "/phase";
-        WebRequest postRequest = new PostMethodWebRequest(resourceUrl);
-        postRequest.setParameter("PHASE", "ABORT");
-        WebResponse response = post(conversation, postRequest);
+            // POST request to the phase resource.
+            String resourceUrl = serviceUrl + "/" + jobId + "/phase";
+            WebRequest postRequest = new PostMethodWebRequest(resourceUrl);
+            postRequest.setParameter("PHASE", "ABORT");
+            WebResponse response = post(conversation, postRequest);
 
-        // Get the redirect.
-        String location = response.getHeaderField("Location");
-        log.debug("Location: " + location);
-        assertNotNull("POST response to " + resourceUrl + " location header not set", location);
-//      assertEquals("POST response to " + resourceUrl + " location header incorrect", baseUrl + "/" + jobId, location);
+            // Get the redirect.
+            String location = response.getHeaderField("Location");
+            log.debug("Location: " + location);
+            assertNotNull("POST response to " + resourceUrl + " location header not set", location);
+    //      assertEquals("POST response to " + resourceUrl + " location header incorrect", baseUrl + "/" + jobId, location);
 
-        // Follow the redirect.
-        response = get(conversation, location);
+            // Follow the redirect.
+            response = get(conversation, location);
 
-        // Validate against the schema and get a DOM Document.
-        log.debug("XML:\r\n" + response.getText());
-        Document document = buildDocument(response.getText(), true);
+            // Validate against the schema and get a DOM Document.
+            log.debug("XML:\r\n" + response.getText());
+            Document document = buildDocument(response.getText(), true);
 
-        // Get the document root.
-        Element root = document.getRootElement();
-        assertNotNull("XML returned from GET of " + resourceUrl + " missing root element", root);
-        Namespace namespace = root.getNamespace();
-        log.debug("Namespace: " + namespace);
+            // Get the document root.
+            Element root = document.getRootElement();
+            assertNotNull("XML returned from GET of " + resourceUrl + " missing root element", root);
+            Namespace namespace = root.getNamespace();
+            log.debug("Namespace: " + namespace);
 
-        // Get the phase.
-        List list = root.getChildren("phase", namespace);
-        assertEquals("uws:phase element not found in XML returned from GET of " + resourceUrl, 1, list.size());
+            // Get the phase.
+            List list = root.getChildren("phase", namespace);
+            assertEquals("uws:phase element not found in XML returned from GET of " + resourceUrl, 1, list.size());
 
-        // Valiate the phase.
-        Element phase = (Element) list.get(0);
-        log.debug("uws:phase: " + phase.getText());
-        assertEquals("uws:phase should be ABORTED", "ABORTED", phase.getText());
+            // Valiate the phase.
+            Element phase = (Element) list.get(0);
+            log.debug("uws:phase: " + phase.getText());
+            assertEquals("uws:phase should be ABORTED", "ABORTED", phase.getText());
 
-        // Delete the Job.
-        deleteJob(conversation, jobId);
+            // Delete the Job.
+            deleteJob(conversation, jobId);
 
-        log.info("PhaseTest.testAbortPhase completed.");
+            log.info("PhaseTest.testAbortPhase completed.");
+        }
+        catch (Throwable t)
+        {
+            log.error(t);
+            fail(t.getMessage());
+        }
     }
 
 }
