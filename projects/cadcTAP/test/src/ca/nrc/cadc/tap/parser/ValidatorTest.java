@@ -72,11 +72,11 @@
  */
 package ca.nrc.cadc.tap.parser;
 
-import static org.junit.Assert.fail;
 import net.sf.jsqlparser.statement.Statement;
 
 import org.junit.After;
 import org.junit.AfterClass;
+import org.junit.Assert;
 import org.junit.Before;
 import org.junit.BeforeClass;
 import org.junit.Test;
@@ -112,7 +112,7 @@ public class ValidatorTest
     @BeforeClass
     public static void setUpBeforeClass() throws Exception
     {
-        Log4jInit.setLevel("ca.nrc.cadc", org.apache.log4j.Level.DEBUG);
+        Log4jInit.setLevel("ca.nrc.cadc", org.apache.log4j.Level.INFO);
         TAP_SCHEMA = TestUtil.loadDefaultTapSchema();
     }
 
@@ -152,58 +152,44 @@ public class ValidatorTest
             ParserUtil.parseStatement(s, _sn);
         } catch (Exception ae) {
             exceptionHappens = true;
-            ae.printStackTrace(System.out);
-            if (expectValid)
-                fail(ae.toString());
-            else
-                assert(true);
+            System.out.println(ae.toString());
         }
         System.out.println(s);
-        if (expectValid) {
-            if (exceptionHappens)
-                assert(false);
-            else
-                assert(true);
-        } else {
-            if (exceptionHappens)
-                assert(true);
-            else
-                assert(false);
-        }
+        Assert.assertTrue(expectValid != exceptionHappens);
     }
 
-    //@Test
+    @Test
     public void testAllTableColumnsBad() {
         boolean expectValid = false;
         _query = "select a.*, tap_schema.tables.* from tap_schema.alldatatypes , tap_schema.tables t where t_string = utype";
         doit(expectValid);
     }
 
-    //@Test
+    @Test
     public void testAllTableColumns() {
         boolean expectValid = true;
         _query = "select a.*, tap_schema.tables.* from tap_schema.alldatatypes a, tap_schema.tables t where t_string = utype";
         doit(expectValid);
     }
-    //@Test
+    @Test
     public void testAllTableColumns2() {
         boolean expectValid = true;
         _query = "select alldatatypes.*, tap_schema.tables.* from tap_schema.alldatatypes a, tap_schema.tables t where t_string = utype";
         doit(expectValid);
     }
-    //@Test
+    @Test
     public void testColumnBad() {
         boolean expectValid = false;
         _query = "select t_box, badCol from tap_schema.alldatatypes a, tap_schema.tables t where a.t_string = t.table_name";
         doit(expectValid);
     }
-    //@Test
+    @Test
     public void testFromTableBad() {
         boolean expectValid = false;
         _query = "select t_box, t.*, bad.* from tap_schema.alldatatypes a, tap_schema.tables t, badTable tad where a.t_string = t.table_name";
         doit(expectValid);
     }
-    //@Test
+    @Test
     public void testSubSelect() {
         boolean expectValid = true;
         _query = "select utype, t.description, t_long, alldatatypes.t_double " +
@@ -213,7 +199,7 @@ public class ValidatorTest
         		" order by t_long desc";
         doit(expectValid);
     }
-    //@Test
+    @Test
     public void testSubSelectAndWhereColumnBad() {
         boolean expectValid = false;
         _query = "select utype, t.description " +
@@ -223,7 +209,7 @@ public class ValidatorTest
                 " order by t_long desc";
         doit(expectValid);
     }
-    //@Test
+    @Test
     public void testSubSelectAndWhereColumn() {
         boolean expectValid = true;
         _query = "select utype, t.description " +
@@ -247,7 +233,7 @@ public class ValidatorTest
         		"                         (select key_id from tap_schema.keys where target_table = 'hello'))";
         doit(expectValid);
     }
-    //@Test
+    @Test
     public void testFunction() {
         boolean expectValid = true;
         _query = "select substring(utype, 2, 4), t.description " +
@@ -257,7 +243,7 @@ public class ValidatorTest
                 " order by schema_name desc";
         doit(expectValid);
     }
-    //@Test
+    @Test
     public void testFunctionBad() {
         boolean expectValid = false;
         _query = "select substring(utypeBad, 2, 4), t.description " +

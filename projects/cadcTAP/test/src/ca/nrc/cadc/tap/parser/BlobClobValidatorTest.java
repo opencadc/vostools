@@ -77,20 +77,16 @@ import java.util.List;
 
 import org.junit.After;
 import org.junit.AfterClass;
+import org.junit.Assert;
 import org.junit.Before;
 import org.junit.BeforeClass;
 import org.junit.Test;
 
 import ca.nrc.cadc.tap.AdqlQuery;
 import ca.nrc.cadc.tap.TapQuery;
-import ca.nrc.cadc.tap.parser.extractor.SelectListExtractor;
-import ca.nrc.cadc.tap.parser.navigator.FromItemNavigator;
-import ca.nrc.cadc.tap.parser.navigator.ReferenceNavigator;
-import ca.nrc.cadc.tap.parser.navigator.SelectNavigator;
 import ca.nrc.cadc.tap.schema.TapSchema;
 import ca.nrc.cadc.util.Log4jInit;
 import ca.nrc.cadc.uws.Parameter;
-
 
 /**
  * 
@@ -101,11 +97,6 @@ public class BlobClobValidatorTest
 {
     public String _query;
 
-    SelectListExtractor _en;
-    ReferenceNavigator _rn;
-    FromItemNavigator _fn;
-    SelectNavigator _sn;
-
     static TapSchema TAP_SCHEMA;
 
     /**
@@ -114,7 +105,7 @@ public class BlobClobValidatorTest
     @BeforeClass
     public static void setUpBeforeClass() throws Exception
     {
-        Log4jInit.setLevel("ca.nrc.cadc", org.apache.log4j.Level.DEBUG);
+        Log4jInit.setLevel("ca.nrc.cadc", org.apache.log4j.Level.INFO);
         TAP_SCHEMA = TestUtil.loadDefaultTapSchema();
     }
 
@@ -142,62 +133,44 @@ public class BlobClobValidatorTest
     {
     }
 
-    private void doit()
-    {
-        Parameter para;
-        para = new Parameter("QUERY", _query);
-        List<Parameter> paramList = new ArrayList<Parameter>();
-        paramList.add(para);
-        
-        TapQuery tapQuery = new AdqlQuery();
-        tapQuery.setTapSchema(TAP_SCHEMA);
-        tapQuery.setExtraTables(null);
-        tapQuery.setParameterList(paramList);
-        String sql = tapQuery.getSQL();
-        List<TapSelectItem> selectList = tapQuery.getSelectList();
-        System.out.println(sql);
-        System.out.println(selectList);
+    private void doit(boolean expectValid) {
+        System.out.println(_query);
+        boolean exceptionHappens = false;
+        try {
+            Parameter para;
+            para = new Parameter("QUERY", _query);
+            List<Parameter> paramList = new ArrayList<Parameter>();
+            paramList.add(para);
+            
+            TapQuery tapQuery = new AdqlQuery();
+            tapQuery.setTapSchema(TAP_SCHEMA);
+            tapQuery.setExtraTables(null);
+            tapQuery.setParameterList(paramList);
+        } catch (Exception ae) {
+            exceptionHappens = true;
+            System.out.println(ae.toString());
+        }
+        Assert.assertTrue(expectValid != exceptionHappens);
     }
 
     @Test
-    public void testGood()
-    {
-        _query = " select t_spoly, t_scircle from tap_schema.alldatatypes where t_integer = 12";
-        doit();
+    public void testGood() {
+        boolean expectValid = true;
+        _query = "select t_bytes, t_array_int from tap_schema.alldatatypes where t_string = 'abc'";
+        doit(expectValid);
     }
 
     @Test
-    public void testWhere1()
-    {
-        _query = " select t_integer, t_spoly, t_scircle from tap_schema.alldatatypes where t_spoly = 12";
-        doit();
+    public void testBad() {
+        boolean expectValid = false;
+        _query = "select t_bytes, t_array_int from tap_schema.alldatatypes where t_bytes = 'abc'";
+        doit(expectValid);
     }
 
     @Test
-    public void testWhere2()
-    {
-        _query = " select t_integer, t_spoly, t_scircle from tap_schema.alldatatypes where t_scircle = 12";
-        doit();
-    }
-
-    @Test
-    public void testHaving()
-    {
-        _query = " select t_integer, t_spoly, t_scircle from tap_schema.alldatatypes group by t_integer having t_scircle = 12";
-        doit();
-    }
-
-    @Test
-    public void testOrderBy()
-    {
-        _query = " select t_integer, t_spoly, t_scircle from tap_schema.alldatatypes order by t_scircle";
-        doit();
-    }
-
-    @Test
-    public void testGroupBy()
-    {
-        _query = " select t_integer, t_spoly, t_scircle from tap_schema.alldatatypes group by t_scircle";
-        doit();
+    public void testBad2() {
+        boolean expectValid = false;
+        _query = "select t_bytes, t_array_int from tap_schema.alldatatypes where t_array_int = 'abc'";
+        doit(expectValid);
     }
 }

@@ -87,9 +87,8 @@ import ca.nrc.cadc.tap.schema.TapSchema;
  */
 public class TestUtil
 {
-    private static String PROPERTY_FILE = "postgresql_sql.properties";
-
     /*
+    private static String PROPERTY_FILE = "postgresql_sql.properties";
     public static TapProperties getPropertiesInstance() throws Exception
     {
         TapProperties prop;
@@ -143,7 +142,7 @@ public class TestUtil
         cd = new ColumnDesc(); cdList.add(cd); cd.setTableName(tn); cd.setColumnName("t_array_int");cd.setDatatype("blob");
         cd = new ColumnDesc(); cdList.add(cd); cd.setTableName(tn); cd.setColumnName("t_spoint");
         cd = new ColumnDesc(); cdList.add(cd); cd.setTableName(tn); cd.setColumnName("t_scircle");
-        cd = new ColumnDesc(); cdList.add(cd); cd.setTableName(tn); cd.setColumnName("t_spoly");
+        cd = new ColumnDesc(); cdList.add(cd); cd.setTableName(tn); cd.setColumnName("t_spoly");cd.setDatatype("blob");
         cd = new ColumnDesc(); cdList.add(cd); cd.setTableName(tn); cd.setColumnName("t_box");
 
         tn = "tables";

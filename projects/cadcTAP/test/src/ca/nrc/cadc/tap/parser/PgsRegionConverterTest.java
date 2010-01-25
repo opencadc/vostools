@@ -72,18 +72,16 @@
  */
 package ca.nrc.cadc.tap.parser;
 
+import static org.junit.Assert.assertEquals;
+
 import java.util.ArrayList;
 import java.util.List;
-
-import static org.junit.Assert.*;
-import junit.framework.Assert;
 
 import org.junit.After;
 import org.junit.AfterClass;
 import org.junit.Before;
 import org.junit.BeforeClass;
 import org.junit.Test;
-import org.junit.internal.runners.statements.Fail;
 
 import ca.nrc.cadc.tap.AdqlQuery;
 import ca.nrc.cadc.tap.TapQuery;
@@ -161,7 +159,6 @@ public class PgsRegionConverterTest
         tapQuery.setExtraTables(null);
         tapQuery.setParameterList(paramList);
         String sql = tapQuery.getSQL();
-        List<TapSelectItem> selectList = tapQuery.getSelectList();
         System.out.println(_query);
         System.out.println(_expected);
         System.out.println(sql);

@@ -73,11 +73,11 @@
  */
 package ca.nrc.cadc.tap.parser;
 
-import static org.junit.Assert.fail;
 import net.sf.jsqlparser.statement.Statement;
 
 import org.junit.After;
 import org.junit.AfterClass;
+import org.junit.Assert;
 import org.junit.Before;
 import org.junit.BeforeClass;
 import org.junit.Test;
@@ -120,7 +120,7 @@ public class NavigatorTest {
 	 */
 	@Before
 	public void setUp() throws Exception {
-        Log4jInit.setLevel("ca.nrc.cadc", org.apache.log4j.Level.DEBUG);
+        Log4jInit.setLevel("ca.nrc.cadc", org.apache.log4j.Level.INFO);
         
         _en = new ExpressionNavigator();
         _rn = new ReferenceNavigator();
@@ -143,25 +143,11 @@ public class NavigatorTest {
 		    s = ParserUtil.receiveQuery(_query);
 		    ParserUtil.parseStatement(s, _sn);
 		} catch (Exception ae) {
-			exceptionHappens = true;
-			ae.printStackTrace(System.out);
-			if (expectValid)
-				fail(ae.toString());
-			else
-				assert(true);
+            exceptionHappens = true;
+            System.out.println(ae.toString());
 		}
 		System.out.println(s);
-		if (expectValid) {
-			if (exceptionHappens)
-				assert(false);
-			else
-				assert(true);
-		} else {
-			if (exceptionHappens)
-				assert(true);
-			else
-				assert(false);
-		}
+        Assert.assertTrue(expectValid != exceptionHappens);
 	}
 
 	//@Test
@@ -398,9 +384,8 @@ public class NavigatorTest {
 	}
 	@Test
 	public void testAllColumns() {
-		boolean expectValid = false;
-		_query = "select top 123 "
-			+ "*, aa.*, shape, observation.temporal.*, observation.spatial.*, BADctype1, BADTABLE.ctype2, BADSCHEMA.BADTABLE.BADctype2 "
+		boolean expectValid = true;
+		_query = "select top 123 * "
 			+ " from observation.plane pp join observation.spatial as ss using (obsID) "
 			+ " where cd1_1 > 432.1";
 		doNavigate(expectValid);

@@ -154,6 +154,11 @@ public class TopConverterTest
             fail(ae.toString());
         }
         System.out.println(s);
+        String sql = s.toString().toLowerCase();
+        if (sql.indexOf("top") >= 0)
+            fail("TOP is not converted.");
+        if (sql.indexOf("limit") < 0)
+            fail("LIMIT is missing from result.");
     }
 
     @Test

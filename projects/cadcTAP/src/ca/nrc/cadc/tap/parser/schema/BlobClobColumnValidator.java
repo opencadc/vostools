@@ -116,6 +116,7 @@ public class BlobClobColumnValidator extends TapSchemaColumnValidator
 
         if (!visiting.equals(VisitingPart.SELECT_ITEM))
         {
+            log.debug("validating column:" + column);
             // can be by alias
             // Possible form as:
             // alias, columnName, table.columnName, tableAilas.columnName, or schema.table.ColumnName

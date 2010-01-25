@@ -74,6 +74,7 @@ package ca.nrc.cadc.tap.parser;
 
 import static org.junit.Assert.fail;
 
+import java.util.ArrayList;
 import java.util.List;
 
 import net.sf.jsqlparser.statement.Statement;
@@ -100,6 +101,7 @@ import ca.nrc.cadc.util.Log4jInit;
 public class ExtractorTest
 {
     public String _query;
+    public List<TapSelectItem> _expected;
 
     SelectListExpressionExtractor _en;
     ReferenceNavigator _rn;
@@ -114,7 +116,7 @@ public class ExtractorTest
     @BeforeClass
     public static void setUpBeforeClass() throws Exception
     {
-        Log4jInit.setLevel("ca.nrc.cadc", org.apache.log4j.Level.DEBUG);
+        Log4jInit.setLevel("ca.nrc.cadc", org.apache.log4j.Level.INFO);
         TAP_SCHEMA = TestUtil.loadDefaultTapSchema();
     }
 
@@ -149,56 +151,41 @@ public class ExtractorTest
 
     private void doit()
     {
+        System.out.println(_query);
         Statement s = null;
         try
         {
             s = ParserUtil.receiveQuery(_query);
             ParserUtil.parseStatement(s, _sn);
+            System.out.println(s);
             List<TapSelectItem> tsiList = _en.getTapSelectItemList();
             System.out.println(tsiList.toString());
+            org.junit.Assert.assertEquals(_expected, tsiList);
         } catch (Exception ae)
         {
             ae.printStackTrace(System.out);
             fail(ae.toString());
         }
-        System.out.println(s);
-    }
-
-    //@Test
-    public void testBasic()
-    {
-        _query = " select * from tap_schema.alldatatypes";
-        doit();
-    }
-
-    //@Test
-    public void testAlias()
-    {
-        _query = " select aa.* from tap_schema.alldatatypes as aa";
-        doit();
-    }
-
-    //@Test
-    public void testSelectItem()
-    {
-        _query = "select  t_string as xx, aa.t_bytes as yy from tap_schema.alldatatypes as aa";
-        doit();
-    }
-
-    //@Test
-    public void testJoin()
-    {
-        _query = "select  t_string, aa.t_bytes, bb.* from tap_schema.alldatatypes as aa, tap_schema.tables as bb " +
-        		" where aa.t_string = bb.utype";
-        doit();
     }
 
     @Test
-    public void testSubselect()
+    public void testAll()
     {
-        _query = "select  t_string, aa.t_bytes, bb.* from tap_schema.alldatatypes as aa, tap_schema.tables as bb " +
-                " where aa.t_string = bb.utype " +
-                "and aa.t_string in (select utype from bb)";
+        _query = "select t.table_name as tn, keys.from_table from tap_schema.tables t, tap_schema.keys where t.utype=keys.utype";
+
+        TapSelectItem tsi;
+        List<TapSelectItem> tsiList = new ArrayList<TapSelectItem>();
+        tsi = new TapSelectItem("tap_schema.tables","table_name","tn");
+        tsiList.add(tsi);
+        tsi = new TapSelectItem("tap_schema.keys","from_table",null);
+        tsiList.add(tsi);
+        _expected = tsiList;
+        
+        /*
+        [junit]     TapSelectItem [_alias=tn, _columnName=table_name, _tableName=tap_schema.tables], 
+        [junit]     TapSelectItem [_alias=null, _columnName=from_table, _tableName=tap_schema.keys]]
+        */
+        
         doit();
     }
 }

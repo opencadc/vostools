@@ -72,6 +72,7 @@
  */
 package ca.nrc.cadc.tap.parser;
 
+import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.fail;
 import net.sf.jsqlparser.statement.Statement;
 
@@ -86,6 +87,7 @@ import ca.nrc.cadc.tap.schema.TapSchema;
 import ca.nrc.cadc.util.Log4jInit;
 
 /**
+ * Test all column converter.
  * 
  * @author Sailor Zhang
  *
@@ -93,6 +95,7 @@ import ca.nrc.cadc.util.Log4jInit;
 public class AllColumnConverterTest
 {
     public String _query;
+    public String _expected = "";
 
     AllColumnConverter _sn;
 
@@ -104,7 +107,7 @@ public class AllColumnConverterTest
     @BeforeClass
     public static void setUpBeforeClass() throws Exception
     {
-        Log4jInit.setLevel("ca.nrc.cadc", org.apache.log4j.Level.DEBUG);
+        Log4jInit.setLevel("ca.nrc.cadc", org.apache.log4j.Level.INFO);
         TAP_SCHEMA = TestUtil.loadDefaultTapSchema();
     }
 
@@ -146,44 +149,35 @@ public class AllColumnConverterTest
             ae.printStackTrace(System.out);
             fail(ae.toString());
         }
-        System.out.println(s);
+        String sql = s.toString();
+        System.out.println(_query);
+        System.out.println(_expected);
+        System.out.println(sql);
+        assertEquals(_expected.toLowerCase(), sql.toLowerCase());
     }
 
     @Test
     public void testBasic()
     {
-        _query = " select * from tap_schema.alldatatypes";
+        _query = " select * from tap_schema.tables";
+        _expected = "select tap_schema.tables.schema_name, tap_schema.tables.table_name, tap_schema.tables.utype, tap_schema.tables.description from tap_schema.tables";
         doit();
     }
 
     @Test
     public void testAlias()
     {
-        _query = " select aa.* from tap_schema.alldatatypes as aa";
-        doit();
-    }
-
-    @Test
-    public void testSelectItem()
-    {
-        _query = "select  tap_schema.alldatatypes.*, t_string as xx, aa.t_bytes as yy from tap_schema.alldatatypes as aa";
+        _query = " select aa.* from tap_schema.tables as aa";
+        _expected = "select aa.schema_name, aa.table_name, aa.utype, aa.description from tap_schema.tables as aa";
         doit();
     }
 
     @Test
     public void testJoin()
     {
-        _query = "select  t_string, aa.t_bytes, * from tap_schema.alldatatypes as aa, tap_schema.tables as bb " +
-        		" where aa.t_string = bb.utype";
-        doit();
-    }
-
-    @Test
-    public void testSubselect()
-    {
-        _query = "select  t_string, aa.t_bytes, * from tap_schema.alldatatypes as aa, tap_schema.tables as bb " +
-                " where aa.t_string = bb.utype " +
-                "and aa.t_string in (select utype from bb)";
+        _query = "select * from tap_schema.keys as aa, tap_schema.tables as bb " +
+        		" where aa.key_id = bb.utype";
+        _expected = "select aa.key_id, aa.from_table, aa.target_table, aa.utype, aa.description, bb.schema_name, bb.table_name, bb.utype, bb.description from tap_schema.keys as aa , tap_schema.tables as bb where aa.key_id = bb.utype";
         doit();
     }
 }

@@ -190,7 +190,7 @@ public class AdqlQueryTest
 //    @Test
     public void testJoin()
     {
-        _query = "select  t_string, aa.t_bytes, bb.* from tap_schema.alldatatypes as aa, tap_schema.tables as bb " +
+        _query = "select  t_string, aa.t_bytes, bb.utype from tap_schema.alldatatypes as aa, tap_schema.tables as bb " +
         		" where aa.t_string = bb.utype";
         doit();
     }

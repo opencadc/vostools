@@ -127,4 +127,46 @@ public class TapSelectItem
     {
         return "\r\n\tTapSelectItem [_alias=" + _alias + ", _columnName=" + _columnName + ", _tableName=" + _tableName + "]";
     }
+
+    @Override
+    public int hashCode()
+    {
+        final int prime = 31;
+        int result = 1;
+        result = prime * result + ((_alias == null) ? 0 : _alias.hashCode());
+        result = prime * result + ((_columnName == null) ? 0 : _columnName.hashCode());
+        result = prime * result + ((_tableName == null) ? 0 : _tableName.hashCode());
+        return result;
+    }
+
+    @Override
+    public boolean equals(Object obj)
+    {
+        if (this == obj)
+            return true;
+        if (obj == null)
+            return false;
+        if (getClass() != obj.getClass())
+            return false;
+        TapSelectItem other = (TapSelectItem) obj;
+        if (_alias == null)
+        {
+            if (other._alias != null)
+                return false;
+        } else if (!_alias.equals(other._alias))
+            return false;
+        if (_columnName == null)
+        {
+            if (other._columnName != null)
+                return false;
+        } else if (!_columnName.equals(other._columnName))
+            return false;
+        if (_tableName == null)
+        {
+            if (other._tableName != null)
+                return false;
+        } else if (!_tableName.equals(other._tableName))
+            return false;
+        return true;
+    }
 }
