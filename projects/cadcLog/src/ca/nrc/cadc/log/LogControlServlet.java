@@ -71,9 +71,17 @@
 package ca.nrc.cadc.log;
 
 
+import java.io.IOException;
+import java.io.PrintWriter;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.StringTokenizer;
+
 import javax.servlet.ServletConfig;
 import javax.servlet.ServletException;
 import javax.servlet.http.HttpServlet;
+import javax.servlet.http.HttpServletRequest;
+import javax.servlet.http.HttpServletResponse;
 
 import org.apache.log4j.BasicConfigurator;
 import org.apache.log4j.ConsoleAppender;
@@ -119,6 +127,7 @@ public class LogControlServlet extends HttpServlet
 	private static final String PACKAGES_PARAM  = "logLevelPackages";
 
 	private static Level level = null;
+	private static String[] packageNames;
 	
     /**
      *  Initialize the logging.  This method should only get
@@ -152,25 +161,51 @@ public class LogControlServlet extends HttpServlet
     	else
     		level = DEFAULT_LEVEL;
     	
-    	//  Set the specified packages to that level.
+    	// Get the list of configured packages and
+    	// set the log level on each.
     	String packageParamValues = config.getInitParameter( PACKAGES_PARAM );
-    	String[] packageNames = packageParamValues.split( "\\s" ); // whitespace
-    	if ( packageNames != null )
-    	{
-    		for ( int i=0; i<packageNames.length; i++ )
+    	StringTokenizer stringTokenizer = new StringTokenizer(packageParamValues, " \n\t\r", false);
+    	List<String> tokens = new ArrayList<String>();
+    	String nextToken = null;
+    	while (stringTokenizer.hasMoreTokens()) {
+    		nextToken = stringTokenizer.nextToken();
+    		if ( nextToken.length() > 0 )
     		{
-        		String pkg = packageNames[i].trim();
-        		if ( pkg.length() > 0 )
-        		{
-        			Logger.getLogger( pkg ).setLevel( level );
-        		}
+    			Logger.getLogger( nextToken ).setLevel( level );
+    			tokens.add( nextToken );
     		}
+    		
+    		
     	}
+    	packageNames = tokens.toArray(new String[0]);
 
     	ConsoleAppender appender = new ConsoleAppender( new PatternLayout(LONG_FORMAT) );
 		BasicConfigurator.configure( appender );
 		
 		logger.info( "Logging initialized at level="+level );
     }
+	
+	/**
+	 * In response to an HTTP GET, return the current logging level and the list
+	 * of packages for which logging is enabled.
+	 */
+	public void doGet(HttpServletRequest request, HttpServletResponse response)
+	throws ServletException, IOException
+	{
+        StringBuffer content = new StringBuffer();
+        content.append("Logging level " + level + " set on " + packageNames.length + " packages:\n");
+        for ( int i=0; i<packageNames.length; i++ )
+        {
+        	content.append(packageNames[i] + "\n");
+        }
+        
+        response.setContentType("text/plain");
+        response.setContentLength(content.length());
+     
+        PrintWriter printWriter = response.getWriter();
+        printWriter.write(content.toString());
+        printWriter.close();
+	}
+	
     
 }
