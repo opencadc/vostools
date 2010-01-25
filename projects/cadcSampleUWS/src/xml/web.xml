@@ -187,6 +187,11 @@
  		<servlet-name>SyncServlet</servlet-name>
  		<url-pattern>/sync/*</url-pattern>
 	</servlet-mapping>
+	
+	<servlet-mapping>
+		<servlet-name>logControl</servlet-name>
+		<url-pattern>/loggingConfig</url-pattern>
+	</servlet-mapping>
 
 	<servlet-mapping>
  		<servlet-name>doc</servlet-name>
