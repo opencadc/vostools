@@ -99,19 +99,30 @@ import org.apache.log4j.Logger;
  */
 public class VOTableWriter implements TableWriter
 {
+    // VOTable Version number.
     public static final String VOTABLE_VERSION  = "1.2";
+
+    // Uri to the XML schema.
     public static final String XSI_NS_URI = "http://www.w3.org/2001/XMLSchema-instance";
+
+    // Uri to the VOTable schema.
     public static final String VOTABLE_NS_URI = "http://www.ivoa.net/xml/VOTable/v1.2";
+
+    // Uri to the STC schema.
     public static final String STC_NS_URI = "http://www.ivoa.net/xml/STC/v1.30";
 
     private static Logger log = Logger.getLogger(VOTableWriter.class);
 
+    // TapSchema containing table metadata.
     protected TapSchema tapSchema;
 
+    // List of column names used in the select statement.
     protected List<TapSelectItem> selectList;
 
+    // Maximum number of rows to write.
     protected int maxRows;
 
+    //
     public VOTableWriter()
     {
         maxRows = Integer.MAX_VALUE;
@@ -182,6 +193,12 @@ public class VOTableWriter implements TableWriter
         outputter.output(document, output);
     }
 
+    /**
+     *
+     * @param thrown
+     * @param output
+     * @throws IOException
+     */
     public void write(Throwable thrown, OutputStream output)
         throws IOException
     {

@@ -72,9 +72,29 @@ package ca.nrc.cadc.tap;
 import ca.nrc.cadc.uws.Parameter;
 import java.util.List;
 
+/**
+ * This class checks for a TAP parameter named MAXREC, and returns a validated
+ * or default value.
+ * 
+ * @author jburke
+ */
 public class MaxRecValidator
 {
-
+    /**
+     * Checks the parameter List for a parameter named MAXREC.
+     * <p>
+     * If the MAXREC parameter is found, attempts to parse and return the value
+     * of MAXREC as an int. If the parsing fails, or if the value of MAXREC is
+     * negative, an IllegalArgumentException is thrown.
+     * <p>
+     * If the MAXREC parameter is not found in the List of paramters,
+     * the default value of {@link Integer.MAX_VALUE} is returned.
+     * <p>
+     *
+     *
+     * @param paramList List of TAP parameters.
+     * @return int value of MAXREC.
+     */
     public int validate(List<Parameter> paramList)
     {
         String value = TapUtil.findParameterValue("MAXREC", paramList);

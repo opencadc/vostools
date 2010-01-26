@@ -92,43 +92,70 @@ import com.csvreader.CsvWriter;
 import org.apache.log4j.Logger;
 
 /**
- *
+ * Writes a ResultSet or Throwable as ASCII text to an OutputStream.
+ * 
  * @author pdowler
  * @author Sailor Zhang
  */
 public class AsciiTableWriter implements TableWriter
 {
+    // ASCII character set.
     public static final String US_ASCII = "US-ASCII";
+
+    // Comma delimited format.
     public static final String CSV = "csv";
+
+    // Tab delimited format.
     public static final String TSV = "tsv";
+
+    // CSV format delimiter.
     public static final char CSV_DELI = ',';
+
+    // TSV format delimiter.
     public static final char TSV_DELI = '\t';
 
     private static final Logger LOG = Logger.getLogger(AsciiTableWriter.class);
 
+    // TapSchema containing table metadata.
     protected TapSchema tapSchema;
+
+    // List of column names used in the select statement.
     protected List<TapSelectItem> selectList;
+
+    // Maximum number of rows to write.
     protected int maxRows;
 
     private String format;
     private char delimeter;
 
-    private AsciiTableWriter()
-    {
-        maxRows = Integer.MAX_VALUE;
-    }
+    private AsciiTableWriter() { }
 
+    /**
+     * Create a new AsciiTableWriter using the specified format.
+     * <p>
+     * Allowed formats are:
+     * <li>{@link AsciiTableWriter.CSV} - comma delimited.
+     * <li>{@link AsciiTableWriter.TSV} - tab delmitited.
+     * <p>
+     *
+     * @param format output format.
+     * @throws IllegalArgumentException if the format is not one of the allowed
+     * values.
+     */
     public AsciiTableWriter(String format)
     {
+        maxRows = Integer.MAX_VALUE;
         if (CSV.equalsIgnoreCase(format))
         {
             this.format = CSV;
             this.delimeter = CSV_DELI;
-        } else if (TSV.equalsIgnoreCase(format))
+        }
+        else if (TSV.equalsIgnoreCase(format))
         {
             this.format = TSV;
             this.delimeter = TSV_DELI;
-        } else
+        }
+        else
             throw new IllegalArgumentException("illegal format: " + format);
     }
 

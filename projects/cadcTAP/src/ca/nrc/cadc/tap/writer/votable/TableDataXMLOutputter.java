@@ -83,7 +83,7 @@ import org.jdom.ProcessingInstruction;
 import org.jdom.output.XMLOutputter;
 
 /**
- * Class that extends a JDOM XMLOutputter and output a custom TABLEDATA element.
+ * Extends JDOM XMLOutputter and outputs a custom TABLEDATA element.
  *
  */
 public class TableDataXMLOutputter extends XMLOutputter
