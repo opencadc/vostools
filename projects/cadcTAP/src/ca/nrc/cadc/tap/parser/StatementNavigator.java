@@ -82,6 +82,12 @@ import net.sf.jsqlparser.statement.update.Update;
 
 import org.apache.log4j.Logger;
 
+/**
+ * A wrapper class to hold the select visitor.
+ * 
+ * @author zhangsa
+ *
+ */
 class StatementNavigator implements StatementVisitor
 {
     private static Logger log = Logger.getLogger(StatementNavigator.class);

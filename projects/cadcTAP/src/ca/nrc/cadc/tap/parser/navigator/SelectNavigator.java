@@ -91,8 +91,8 @@ import org.apache.log4j.Logger;
 
 
 /**
- * Basic SelectVisitor implementation. This class implements FromItemVisitor to handle references to tables and subselects in a
- * simple fashion. It implements SelectItemVisitor in order to process the expressions in the select list itself.
+ * Basic SelectVisitor implementation. 
+ * It holds three other navigators: ExpressionNavigator, ReferenceNavigator, and FromItemNavigator. 
  * 
  * 
  * @author pdowler, Sailor Zhang

@@ -117,6 +117,10 @@ import net.sf.jsqlparser.statement.select.SelectItemVisitor;
 import net.sf.jsqlparser.statement.select.SubSelect;
 
 /**
+ * This is a super class for expression navigation.  
+ * It implements 3 visitors:  ExpressionVisitor, ItemsListVisitor, and SelectItemVisitor.
+ * 
+ * 
  * @author zhangsa
  *
  */

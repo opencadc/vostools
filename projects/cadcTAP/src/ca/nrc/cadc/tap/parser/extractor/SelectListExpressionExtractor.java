@@ -89,7 +89,7 @@ import ca.nrc.cadc.tap.schema.TapSchema;
 import ca.nrc.cadc.tap.parser.schema.TapSchemaUtil;
 
 /**
- * re-engineered version on 2009-12-01
+ * Extract a list of TapSelectItem from query.
  * 
  * @author zhangsa
  *

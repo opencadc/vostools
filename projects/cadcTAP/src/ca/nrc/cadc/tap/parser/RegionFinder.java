@@ -79,13 +79,9 @@ import net.sf.jsqlparser.expression.Function;
 import net.sf.jsqlparser.expression.InverseExpression;
 import net.sf.jsqlparser.expression.Parenthesis;
 import net.sf.jsqlparser.expression.operators.relational.ExpressionList;
-import net.sf.jsqlparser.schema.Column;
-import net.sf.jsqlparser.schema.Table;
-import net.sf.jsqlparser.statement.select.FromItem;
 import net.sf.jsqlparser.statement.select.Join;
 import net.sf.jsqlparser.statement.select.PlainSelect;
 import net.sf.jsqlparser.statement.select.SelectExpressionItem;
-import net.sf.jsqlparser.statement.select.SubSelect;
 
 import org.apache.log4j.Logger;
 
@@ -121,9 +117,15 @@ public class RegionFinder extends SelectNavigator
 
     public RegionFinder()
     {
-
     }
 
+    /**
+     * Overwrite method in super class SelectNavigator.  
+     * It navigates all parts of the select statement,
+     * trying to locate all occurance of region functions.
+     * 
+     */
+    @SuppressWarnings("unchecked")
     public void visit(PlainSelect plainSelect)
     {
         log.debug("visit(PlainSelect): " + plainSelect);
@@ -174,8 +176,11 @@ public class RegionFinder extends SelectNavigator
     }
 
     /**
-     * @param ex
-     * @return
+     * Convert an expression and all parameters of it, 
+     * using provided implementation in the sub-class.
+     * 
+     * @param Expression
+     * @return Expression converted by implementation 
      */
     public Expression convertToImplementation(Expression adqlExpr)
     {
@@ -225,6 +230,14 @@ public class RegionFinder extends SelectNavigator
         return implExpr;
     }
 
+    /**
+     * Convert a list of expressions and all parameters of them 
+     * using provided implementation in the sub-class.
+     * 
+     * @param Expression List
+     * @return converted expression list
+     */
+    @SuppressWarnings("unchecked")
     public ExpressionList convertToImplementation(ExpressionList adqlExprList)
     {
         List<Expression> adqlExprs = adqlExprList.getExpressions();
@@ -241,6 +254,13 @@ public class RegionFinder extends SelectNavigator
         return new ExpressionList(implExprs);
     }
 
+    /**
+     * If the function is an ADQL Function,
+     * convert it using implementation in sub-class.
+     * 
+     * @param adqlFunction
+     * @return converted expression
+     */
     public Expression convertToImplementation(Function adqlFunction)
     {
         log.debug("convertToImplementation(Function): " + adqlFunction);

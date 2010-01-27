@@ -80,6 +80,8 @@ import net.sf.jsqlparser.statement.select.SubJoin;
 import net.sf.jsqlparser.statement.select.SubSelect;
 
 /**
+ * This super class basically visits Tables in a select statement.
+ * 
  * @author zhangsa
  *
  */

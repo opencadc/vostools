@@ -73,6 +73,12 @@ import net.sf.jsqlparser.expression.DoubleValue;
 import net.sf.jsqlparser.expression.LongValue;
 
 /**
+ * Represents the Degree expression of PgSphere, 
+ * which value is of double type, usually with decimal point.
+ * e.g. 45.54389d (45.54389 degree) 
+ * 
+ * If it's without decimal point, then it should be of DegreeLong type.
+ *
  * @author zhangsa
  *
  */

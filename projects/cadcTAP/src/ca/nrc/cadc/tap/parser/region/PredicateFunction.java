@@ -72,11 +72,20 @@ package ca.nrc.cadc.tap.parser.region;
 import net.sf.jsqlparser.expression.Expression;
 
 /**
+ * Used for the checking of predicate function. 
+ *   
+ * 
  * @author zhangsa
  *
  */
 public interface PredicateFunction
 {
-    
+    /**
+     * Example of negate:
+     * CONTAINS vs NOT CONTAINS;
+     * INTERSECTS vs NOT INTERSECTS.
+     * 
+     * @return Negated function
+     */
     public Expression negate();
 }

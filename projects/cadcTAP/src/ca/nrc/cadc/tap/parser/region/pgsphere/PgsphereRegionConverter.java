@@ -258,6 +258,12 @@ public class PgsphereRegionConverter extends RegionFinder
         return pgsFunc;
     }
 
+    /**
+     * Check whether the parameter is a predicate function.
+     * 
+     * @param expr
+     * @return
+     */
     protected boolean isPredicate(Expression expr)
     {
         return (expr instanceof PredicateFunction);

@@ -72,6 +72,12 @@ package ca.nrc.cadc.tap.parser.region.pgsphere.expression;
 import net.sf.jsqlparser.expression.LongValue;
 
 /**
+ * Represents the Degree expression of PgSphere, 
+ * which value is of long integer type.
+ * e.g. 90d (90 degree)
+ * 
+ * If it's not an integer, it must be of DegreeDouble type.
+ *  
  * @author zhangsa
  *
  */

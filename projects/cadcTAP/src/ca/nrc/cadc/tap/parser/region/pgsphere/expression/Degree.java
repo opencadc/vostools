@@ -73,6 +73,8 @@ import net.sf.jsqlparser.expression.Expression;
 import net.sf.jsqlparser.expression.ExpressionVisitor;
 
 /**
+ * Represents the Degree expression of PgSphere.
+ * 
  * @author zhangsa
  *
  */

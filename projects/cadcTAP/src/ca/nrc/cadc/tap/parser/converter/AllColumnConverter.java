@@ -87,6 +87,9 @@ import ca.nrc.cadc.tap.schema.TapSchema;
 import ca.nrc.cadc.tap.parser.schema.TapSchemaUtil;
 
 /**
+ * Convert "all column" (*) into list of column names.
+ * It only works on the top level of a select statement.
+ * 
  * @author pdowler, Sailor Zhang
  */
 public class AllColumnConverter extends SelectNavigator
@@ -95,8 +98,6 @@ public class AllColumnConverter extends SelectNavigator
 
     protected TapSchema _tapSchema;
 
-    private AllColumnConverter() {}
-    
     public AllColumnConverter(TapSchema tapSchema)
     {
         _tapSchema = tapSchema;
@@ -106,6 +107,7 @@ public class AllColumnConverter extends SelectNavigator
      * Only convert top level plainSelect.
      * 
      */
+    @SuppressWarnings("unchecked")
     public void visit(PlainSelect plainSelect)
     {
         log.debug("visit(PlainSelect) " + plainSelect);

@@ -70,6 +70,8 @@
 package ca.nrc.cadc.tap.parser.navigator;
 
 /**
+ * this super class extracts some common features used by its sub-classes.
+ * 
  * @author zhangsa
  *
  */

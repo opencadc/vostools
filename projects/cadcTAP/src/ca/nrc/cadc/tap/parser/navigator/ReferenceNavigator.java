@@ -78,6 +78,9 @@ import net.sf.jsqlparser.statement.select.OrderByElement;
 import net.sf.jsqlparser.statement.select.OrderByVisitor;
 
 /**
+ * This super class is the ultimate point of visiting Column.
+ * Any sub-class handling Column should extend this class.
+ * 
  * @author zhangsa
  *
  */

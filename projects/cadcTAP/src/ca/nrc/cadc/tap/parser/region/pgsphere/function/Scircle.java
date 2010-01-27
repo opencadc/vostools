@@ -77,6 +77,9 @@ import net.sf.jsqlparser.expression.Function;
 import net.sf.jsqlparser.expression.operators.relational.ExpressionList;
 
 /**
+ * the PgSphere implementation of ADQL function
+ * CIRCLE
+ * 
  * @author zhangsa
  * 
  */

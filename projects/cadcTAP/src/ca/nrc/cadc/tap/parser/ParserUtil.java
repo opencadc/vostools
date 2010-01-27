@@ -88,11 +88,20 @@ import net.sf.jsqlparser.statement.select.SelectItem;
 import ca.nrc.cadc.tap.parser.navigator.SelectNavigator;
 
 /**
+ * Utility class for the use of Tap Parser
+ * 
  * @author zhangsa
+ *
  *
  */
 public class ParserUtil
 {
+    /**
+     * parse a Statement using given SelectNavigator
+     * 
+     * @param statement
+     * @param sn
+     */
     public static void parseStatement(Statement statement, SelectNavigator sn)
     {
         StatementNavigator statementNavigator = new StatementNavigator(sn);
@@ -100,6 +109,13 @@ public class ParserUtil
         return;
     }
     
+    /**
+     * Parse a SQL/ADQL string using JSqlParser, return the result Statement
+     * 
+     * @param query
+     * @return Statement
+     * @throws JSQLParserException
+     */
     public static Statement receiveQuery(String query) throws JSQLParserException
     {
         Statement statement = null;
@@ -110,15 +126,15 @@ public class ParserUtil
     }
 
     /**
-     * Aliases are also extracted.
+     * Extract a list of Table from the FROM part of query
      *  
      * @param ps
      * @return
      */
+    @SuppressWarnings("unchecked")
     public static List<Table> getFromTableList(PlainSelect ps)
     {
         List<Table> fromTableList = new ArrayList<Table>();
-        String alias = null;
         
         FromItem fromItem = ps.getFromItem();
         if (fromItem instanceof Table)
@@ -142,6 +158,13 @@ public class ParserUtil
         return fromTableList;
     }
     
+    /**
+     * Find "from Table" by table name or alias.
+     * 
+     * @param plainSelect
+     * @param tableNameOrAlias
+     * @return Table object
+     */
     public static Table findFromTable(PlainSelect ps, String tableNameOrAlias)
     {
         Table rtn = null;
@@ -159,10 +182,13 @@ public class ParserUtil
     }
 
     /**
+     * find SelectItem by column name or alias
+     * 
      * @param plainSelect
      * @param columnNameOrAlias
-     * @return
+     * @return SelectItem object
      */
+    @SuppressWarnings("unchecked")
     public static SelectItem findSelectItemByAlias(PlainSelect plainSelect, String columnNameOrAlias)
     {
         SelectItem rtn = null;
@@ -183,8 +209,10 @@ public class ParserUtil
     }
 
     /**
+     * count number of SelectItems in a plainSelect
+     * 
      * @param plainSelect
-     * @return
+     * @return int
      */
     public static int countSelectItems(PlainSelect plainSelect)
     {
@@ -197,7 +225,7 @@ public class ParserUtil
      * 
      * @param plainSelect 
      * @param alias
-     * @return
+     * @return Column
      */
     public static Column findSelectItemColumn(PlainSelect plainSelect, String alias)
     {
@@ -212,6 +240,12 @@ public class ParserUtil
         return rtn;
     }
 
+    /**
+     * Determine whether Expression parameter is a binary value (0 or 1).
+     * 
+     * @param Expression
+     * @return true if parameter is 0/1, false for others.
+     */
     public static boolean isBinaryValue(Expression expr)
     {
         boolean rtn = false;

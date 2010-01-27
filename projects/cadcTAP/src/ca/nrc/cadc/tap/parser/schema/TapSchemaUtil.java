@@ -89,6 +89,8 @@ import ca.nrc.cadc.tap.schema.TableDesc;
 import ca.nrc.cadc.tap.schema.TapSchema;
 
 /**
+ * Utility class related to TAP Schema
+ * 
  * @author zhangsa
  *
  */
@@ -96,6 +98,14 @@ public class TapSchemaUtil
 {
     protected static Logger log = Logger.getLogger(TapSchemaUtil.class);
 
+    /**
+     * For a given Table, find it in TAP Schema, and returns a list of TapSelectItem of that Table
+     * 
+     * @param tapSchema
+     * @param table
+     * @return
+     * @throws TapParserException
+     */
     public static List<TapSelectItem> getTapSelectItemList(TapSchema tapSchema, Table table) throws TapParserException
     {
         TableDesc tableDesc = findTableDesc(tapSchema, table);
@@ -105,6 +115,12 @@ public class TapSchemaUtil
             throw new TapParserException("Table: [" + table + "] does not exist.");
     }
 
+    /**
+     * Return the TapSelectItem List of a given tableDesc
+     * 
+     * @param tableDesc
+     * @return
+     */
     public static List<TapSelectItem> getTapSelectItemList(TableDesc tableDesc)
     {
         List<TapSelectItem> tsiList = new ArrayList<TapSelectItem>();
@@ -118,6 +134,13 @@ public class TapSchemaUtil
         return tsiList;
     }
 
+    /**
+     * Find TableDesc in TAP Schema for a given Table
+     * 
+     * @param tapSchema
+     * @param table
+     * @return
+     */
     public static TableDesc findTableDesc(TapSchema tapSchema, Table table)
     {
         TableDesc rtn = null;
@@ -164,6 +187,8 @@ public class TapSchemaUtil
     }
 
     /**
+     * For a columnName and a plainSelect, find the Table from TAP Schema
+     * 
      * @param tapSchema
      * @param plainSelect
      * @param columnName
@@ -219,6 +244,8 @@ public class TapSchemaUtil
     }
 
     /**
+     * get Table object of a TableDesc
+     * 
      * @param rtnTd
      * @return
      */
@@ -283,6 +310,8 @@ public class TapSchemaUtil
     }
 
     /**
+     * Return a list of SelectItem for a Table in a TAP schema.
+     * 
      * @param tapSchema
      * @param table
      * @return
@@ -301,6 +330,8 @@ public class TapSchemaUtil
     }
 
     /**
+     * Return a SelectExpressionItem for a given Table and columnName
+     * 
      * @param table
      * @param columnName
      * @return
@@ -320,6 +351,8 @@ public class TapSchemaUtil
     }
 
     /**
+     * Find ColumnDesc from TAP Schema for given Column and plainSelect
+     * 
      * @param tapSchema
      * @param plainSelect
      * @param column
@@ -342,6 +375,8 @@ public class TapSchemaUtil
     }
 
     /**
+     * For a  given Column in a plainSelect, find the Table object from TAP Schema
+     * 
      * @param tapSchema
      * @param plainSelect
      * @param column
@@ -378,6 +413,8 @@ public class TapSchemaUtil
     }
 
     /**
+     * find ColumnDesc for given TableDesc and columnName.
+     * 
      * @param td
      * @param columnName
      * @return

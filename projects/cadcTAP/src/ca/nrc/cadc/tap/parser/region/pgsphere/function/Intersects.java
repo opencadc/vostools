@@ -74,7 +74,8 @@ import net.sf.jsqlparser.expression.Expression;
 import net.sf.jsqlparser.expression.Function;
 
 /**
- * Function determine whether the left object is contained by the right
+ * the PgSphere implementation of ADQL function
+ * INTERSECTS.
  * 
  * @author zhangsa
  * 

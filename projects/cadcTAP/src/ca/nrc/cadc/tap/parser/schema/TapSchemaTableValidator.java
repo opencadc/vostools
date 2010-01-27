@@ -79,6 +79,8 @@ import ca.nrc.cadc.tap.schema.TapSchema;
 import net.sf.jsqlparser.schema.Table;
 
 /**
+ * Validate Tables.
+ * 
  * @author zhangsa
  *
  */

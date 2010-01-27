@@ -69,16 +69,15 @@
 
 package ca.nrc.cadc.tap.parser.converter;
 
+import java.util.Comparator;
 import java.util.Map;
+import java.util.TreeMap;
 
 import net.sf.jsqlparser.schema.Column;
 
 import org.apache.log4j.Logger;
 
 import ca.nrc.cadc.tap.parser.navigator.ReferenceNavigator;
-import ca.nrc.cadc.tap.parser.navigator.SelectNavigator.VisitingPart;
-import java.util.Comparator;
-import java.util.TreeMap;
 
 /**
  * Simple class to map columns name(s) used in the query to column name(s) used
@@ -118,7 +117,7 @@ public class ColumnNameConverter extends ReferenceNavigator
     public void visit(Column column)
     {
         log.debug("visit(column)" + column);
-        VisitingPart visiting = _selectNavigator.getVisitingPart(); 
+        //VisitingPart visiting = _selectNavigator.getVisitingPart(); 
         String columnName = column.getColumnName();
         String newName = map.get(columnName);
         if (newName != null)

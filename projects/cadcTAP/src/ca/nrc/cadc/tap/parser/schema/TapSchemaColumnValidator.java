@@ -84,6 +84,8 @@ import ca.nrc.cadc.tap.parser.navigator.SelectNavigator.VisitingPart;
 import ca.nrc.cadc.tap.schema.TapSchema;
 
 /**
+ * Validate Column and ColumnIndex.
+ * 
  * @author zhangsa
  *
  */

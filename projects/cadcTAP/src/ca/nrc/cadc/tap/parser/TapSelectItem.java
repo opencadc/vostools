@@ -71,6 +71,8 @@ package ca.nrc.cadc.tap.parser;
 
 
 /**
+ * TAP Select Item, contains table name, column name and select item alias for the interests of TAP.
+ * 
  * @author zhangsa
  * 
  */

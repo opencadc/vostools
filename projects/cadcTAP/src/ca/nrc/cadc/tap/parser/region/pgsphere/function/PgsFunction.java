@@ -78,6 +78,8 @@ import net.sf.jsqlparser.expression.*;
 import net.sf.jsqlparser.expression.operators.relational.*;
 
 /**
+ * super class of all PgSphere function implemention.
+ * 
  * @author zhangsa
  *
  */

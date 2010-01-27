@@ -75,7 +75,7 @@ import net.sf.jsqlparser.expression.Expression;
 import net.sf.jsqlparser.expression.Function;
 
 /**
- * Function determine whether the left object is contained by the right
+ * super class of all PgSphere binary function implemention.
  * 
  * @author zhangsa
  * 
