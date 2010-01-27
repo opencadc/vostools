@@ -93,12 +93,9 @@ import ca.nrc.cadc.tap.parser.region.pgsphere.function.Spoint;
 import ca.nrc.cadc.tap.parser.region.pgsphere.function.Spoly;
 
 /**
- * This visitor finds all occurances of ADQL geometry constructs. The default
- * implementations of the protected <code>handle</code> methods throw an
- * UnsupportedOperationException so this visitor can be used as-is to detect
- * the presence of ADQL geometry constructs in the query.
+ * Convert ADQL functions into PgSphere implementation.
  * 
- * @author pdowler
+ * @author pdowler, zhangsa
  */
 public class PgsphereRegionConverter extends RegionFinder
 {

@@ -93,6 +93,7 @@ import ca.nrc.cadc.uws.Parameter;
 
 
 /**
+ * general test of ADQL function finder
  * 
  * @author Sailor Zhang
  *

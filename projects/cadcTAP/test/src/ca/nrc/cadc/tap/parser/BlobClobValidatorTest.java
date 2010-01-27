@@ -89,6 +89,7 @@ import ca.nrc.cadc.util.Log4jInit;
 import ca.nrc.cadc.uws.Parameter;
 
 /**
+ * test whether BLOB/CLOB type appears only in the select item part of query
  * 
  * @author Sailor Zhang
  *

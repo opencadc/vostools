@@ -75,11 +75,16 @@ import java.util.List;
 import ca.nrc.cadc.uws.Parameter;
 
 /**
+ * Utility class related to TAP
+ * 
  * @author zhangsa
  *
  */
 public class TapUtil 
 {
+    /*
+     * Find String value from the Parameter List by its name
+     */
     public static String findParameterValue(String name,  List<Parameter> paramList) 
     {
         for (Parameter parameter : paramList) 
@@ -93,6 +98,7 @@ public class TapUtil
     /**
      * From the supplied full parameter list, return a list of only those
      * semicolon-separated values that correspond to the named parameter.
+     * 
      * @param name
      * @param paramList
      * @return

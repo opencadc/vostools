@@ -94,6 +94,7 @@ import ca.nrc.cadc.tap.schema.TapSchema;
 import ca.nrc.cadc.util.Log4jInit;
 
 /**
+ * test the extraction of select list
  * 
  * @author Sailor Zhang
  *

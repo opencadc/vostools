@@ -91,6 +91,7 @@ import ca.nrc.cadc.tap.schema.TapSchema;
 import ca.nrc.cadc.util.Log4jInit;
 
 /**
+ * test query validator
  * 
  * @author Sailor Zhang
  *

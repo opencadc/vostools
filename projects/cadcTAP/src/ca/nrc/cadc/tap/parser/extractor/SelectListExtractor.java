@@ -80,8 +80,7 @@ import ca.nrc.cadc.tap.parser.navigator.ReferenceNavigator;
 import ca.nrc.cadc.tap.parser.navigator.SelectNavigator;
 
 /**
- * Basic SelectVisitor implementation. This class implements FromItemVisitor to handle references to tables and subselects in a
- * simple fashion. It implements SelectItemVisitor in order to process the expressions in the select list itself.
+ * Basic SelectVisitor implementation. It's used for extracting SelectList
  * 
  * 
  * @author pdowler, Sailor Zhang

@@ -90,6 +90,7 @@ import ca.nrc.cadc.tap.schema.TapSchema;
 import ca.nrc.cadc.util.Log4jInit;
 
 /**
+ * test the convertion from TOP to LIMIT
  * 
  * @author Sailor Zhang
  *

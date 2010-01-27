@@ -19,6 +19,7 @@ import org.junit.Test;
 import static org.junit.Assert.*;
 
 /**
+ * Convert column name in the query to actual column name in tables
  *
  * @author pdowler
  */

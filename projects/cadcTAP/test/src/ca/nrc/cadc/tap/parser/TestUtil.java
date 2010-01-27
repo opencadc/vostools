@@ -81,6 +81,7 @@ import ca.nrc.cadc.tap.schema.TableDesc;
 import ca.nrc.cadc.tap.schema.TapSchema;
 
 /**
+ * Utility class solely for the purpose of testing.
  * 
  * @author Sailor Zhang
  *
@@ -103,11 +104,18 @@ public class TestUtil
     }
     */
     
+    /**
+     * load a TAP Schema for test purpose.
+     * 
+     */
     public static TapSchema loadDefaultTapSchema()
     {
         return mockTapSchema();
     }
 
+    /**
+     * @return a mocked TAP schema
+     */
     public static TapSchema mockTapSchema()
     {
         String schemaName = "tap_schema";

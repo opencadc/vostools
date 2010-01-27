@@ -95,6 +95,7 @@ import ca.nrc.cadc.uws.Parameter;
 
 
 /**
+ * A general test of ADQL query.
  * 
  * @author Sailor Zhang
  *

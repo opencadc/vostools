@@ -89,7 +89,8 @@ import ca.nrc.cadc.tap.parser.navigator.SelectNavigator;
 import ca.nrc.cadc.util.Log4jInit;
 
 /**
- * 
+ * general test of navigator
+ *  
  * @author Sailor Zhang
  *
  */

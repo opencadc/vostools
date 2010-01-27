@@ -95,7 +95,7 @@ import ca.nrc.cadc.util.Log4jInit;
 import ca.nrc.cadc.uws.Parameter;
 
 /**
- * 
+ * test convertion of ADQL function to pgsphere implementation 
  * @author Sailor Zhang
  *
  */

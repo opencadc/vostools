@@ -70,6 +70,8 @@
 package ca.nrc.cadc.tap.parser.exception;
 
 /**
+ * Exception specifically for TAP Parser
+ * 
  * @author zhangsa
  *
  */

@@ -83,14 +83,6 @@ import ca.nrc.cadc.tap.schema.TapSchema;
 /*
  * Column cannot be BLOB/CLOB type if it's not in the SELECT ITEM part of query.
  * 
- * Possible form of parameter "column" can be:
- * 
- * alias, columnName, table.columnName, tableAilas.columnName, or schema.table.ColumnName
- * 
- * alias: trace back to selectItem, if it's a column, trace to columnDesc
- * columnName:
- * 
- * 
  */
 public class BlobClobColumnValidator extends TapSchemaColumnValidator
 {
