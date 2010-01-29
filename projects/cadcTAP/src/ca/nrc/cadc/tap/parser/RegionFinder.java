@@ -86,6 +86,7 @@ import net.sf.jsqlparser.statement.select.SelectExpressionItem;
 import org.apache.log4j.Logger;
 
 import ca.nrc.cadc.tap.parser.navigator.SelectNavigator;
+import ca.nrc.cadc.tap.parser.navigator.SelectNavigator.VisitingPart;
 
 /**
  * This visitor finds all occurances of ADQL geometry constructs. The default
@@ -129,8 +130,10 @@ public class RegionFinder extends SelectNavigator
     public void visit(PlainSelect plainSelect)
     {
         log.debug("visit(PlainSelect): " + plainSelect);
+        super.enterPlainSelect(plainSelect);
 
         // Visiting select items
+        this._visitingPart = VisitingPart.SELECT_ITEM;
         ListIterator i = plainSelect.getSelectItems().listIterator();
         while (i.hasNext())
         {
@@ -144,6 +147,7 @@ public class RegionFinder extends SelectNavigator
             }
         }
         
+        this._visitingPart = VisitingPart.FROM;
         List<Join> joins = plainSelect.getJoins();
         if (joins != null)
         {
@@ -156,6 +160,7 @@ public class RegionFinder extends SelectNavigator
             }
         }
 
+        this._visitingPart = VisitingPart.WHERE;
         if (plainSelect.getWhere() != null)
         {
             Expression e = plainSelect.getWhere();
@@ -164,6 +169,7 @@ public class RegionFinder extends SelectNavigator
             plainSelect.setWhere(implExpression);
         }
 
+        this._visitingPart = VisitingPart.HAVING;
         if (plainSelect.getHaving() != null)
         {
             Expression e = plainSelect.getHaving();
@@ -173,6 +179,7 @@ public class RegionFinder extends SelectNavigator
         }
 
         log.debug("visit(PlainSelect) done");
+        super.leavePlainSelect();
     }
 
     /**
