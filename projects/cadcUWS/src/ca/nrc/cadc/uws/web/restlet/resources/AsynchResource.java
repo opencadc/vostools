@@ -121,6 +121,7 @@ public class AsynchResource extends UWSResource
         {
             final JobAssembler jobAssembler = new JobAssembler(form, subject);
             job = jobAssembler.assemble();
+            job.setRequestPath(getRequestPath());
         }
         catch (ParseException e)
         {
@@ -135,7 +136,7 @@ public class AsynchResource extends UWSResource
         }
 
         final Job persistedJob = getJobManager().persist(job);
-        redirectSeeOther(getHostPart() + "/async/" + persistedJob.getJobId());
+        redirectSeeOther(getHostPart() + getRequestPath() + "/" + persistedJob.getJobId());
     }
     
     /**
@@ -168,9 +169,8 @@ public class AsynchResource extends UWSResource
             
             jobRefElement.setPrefix(XML_NAMESPACE_PREFIX);
             jobRefElement.setAttribute("id", job.getJobId());
-            jobRefElement.setAttribute("xlink:href",
-                                       getHostPart() + "/async/"
-                                       + job.getJobId());
+            jobRefElement.setAttribute("xlink:href", getHostPart()
+                                       + job.getRequestPath() + "/" + job.getJobId());
             
             final Element jobRefPhaseElement =
                     document.createElementNS(XML_NAMESPACE_URI,

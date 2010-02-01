@@ -87,6 +87,7 @@ import ca.nrc.cadc.uws.web.WebRepresentationException;
 import java.net.MalformedURLException;
 
 import javax.security.auth.Subject;
+import org.restlet.data.Reference;
 
 
 /**
@@ -129,13 +130,14 @@ public class SynchResource extends UWSResource
             generateErrorRepresentation(errors);
             return;
         }
-        
+
         final Job job;
 
         try
         {
             final JobAssembler jobAssembler = new JobAssembler(form, subject);
             job = jobAssembler.assemble();
+            job.setRequestPath(getRequestPath());
         }
         catch (ParseException e)
         {
@@ -149,8 +151,8 @@ public class SynchResource extends UWSResource
         }
 
         final Job persistedJob = getJobManager().persist(job);
-        redirectSeeOther(getHostPart() + "/sync/" + persistedJob.getJobId()
-                         + "/result");
+        redirectSeeOther(getHostPart() + getRequestPath() + "/"
+                         + persistedJob.getJobId() + "/result");
     }
 
     /**
@@ -165,4 +167,17 @@ public class SynchResource extends UWSResource
     {
         // Do nothing.
     }
+
+    protected String getHostPart()
+    {
+        final StringBuilder elementURI = new StringBuilder(128);
+        final Reference ref = getRequest().getResourceRef();
+
+        elementURI.append(ref.getSchemeProtocol().getSchemeName());
+        elementURI.append("://");
+        elementURI.append(ref.getHostDomain());
+
+        return elementURI.toString();
+    }
+
 }

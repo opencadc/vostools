@@ -133,6 +133,7 @@ public class InMemoryPersistence implements JobPersistence
             persistentJob.setAny(job.getAny());
             persistentJob.setParameterList(job.getParameterList());
             persistentJob.setResultsList(job.getResultsList());
+            persistentJob.setRequestPath(job.getRequestPath());
         }
         else
         {
@@ -148,6 +149,7 @@ public class InMemoryPersistence implements JobPersistence
                                                job.getResultsList(),
                                                job.getParameterList(),
                                                job.getSubject());
+            persistentJob.setRequestPath(job.getRequestPath());
         }
 
         jobMap.put(jobID, persistentJob);

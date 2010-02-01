@@ -220,7 +220,8 @@ public abstract class BaseJobResource extends UWSResource
         final Client client = new Client(getContext(), Protocol.HTTP);
 
         elementURI.append(getHostPart());
-        elementURI.append("/async/");
+        elementURI.append(getJob().getRequestPath());
+        elementURI.append("/");
         elementURI.append(getJobID());
         elementURI.append("/");
         elementURI.append(jobAttribute.getAttributeName());

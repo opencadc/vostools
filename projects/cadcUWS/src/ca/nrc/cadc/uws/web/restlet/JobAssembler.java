@@ -212,7 +212,7 @@ public class JobAssembler
         {
             errorSummary = null;
         }
-        
+
         job = new Job(null, executionPhase, durationTime, destructionDate,
                       quoteDate, startDate, null, errorSummary, owner,
                       runID, null, null, subject);

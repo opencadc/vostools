@@ -97,6 +97,7 @@ public class Job
     private List<Parameter> parameterList;
     private Subject subject;
     private Object any;
+    private String requestPath;
 
 
     /**
@@ -109,12 +110,12 @@ public class Job
      * @param quote                 The quoted date of completion.
      * @param startTime             The start date of execution.
      * @param endTime               The end date of execution.
-     * @param errorSummary                 The error, if any.
+     * @param errorSummary          The error, if any.
      * @param owner                 The Owner of this Job.
      * @param runId                 The specific running ID.
      * @param resultsList           The List of Results.
      * @param parameterList         The List of Parameters.
-     * @param subject				The Subject containing security pricipals.
+     * @param subject               The Subject containing security principals.
      */
     public Job(final String jobId, final ExecutionPhase executionPhase,
                final long executionDuration, final Date destructionTime,
@@ -136,6 +137,7 @@ public class Job
         this.resultsList = resultsList;
         this.parameterList = parameterList;
         this.subject = subject;
+        this.requestPath = null;
     }
 
 
@@ -436,6 +438,26 @@ public class Job
     public Subject getSubject()
     {
     	return subject;
+    }
+
+    /**
+     * Path of the Request that created the Job.
+     * 
+     * @return The Request Path.
+     */
+    public String getRequestPath()
+    {
+        return requestPath;
+    }
+
+    /**
+     * Path of the Request that created the Job.
+     *
+     * @param The Request Path.
+     */
+    public void setRequestPath(final String path)
+    {
+        this.requestPath = path;
     }
 
     /**

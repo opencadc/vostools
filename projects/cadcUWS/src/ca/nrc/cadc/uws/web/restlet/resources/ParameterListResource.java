@@ -106,7 +106,7 @@ public class ParameterListResource extends BaseJobResource
         }
 
         final Job persistedJob = getJobManager().persist(job);
-        redirectSeeOther(getHostPart() + "/async/" + persistedJob.getJobId());        
+        redirectSeeOther(getHostPart() + job.getRequestPath() + "/" + persistedJob.getJobId());
     }
 
     /**

@@ -244,7 +244,7 @@ public abstract class UWSResource extends ServerResource
         elementURI.append(ref.getSchemeProtocol().getSchemeName());
         elementURI.append("://");
         elementURI.append(ref.getHostDomain());
-        elementURI.append(getContextPath());
+//        elementURI.append(getContextPath());
 
         return elementURI.toString();
     }
@@ -295,7 +295,22 @@ public abstract class UWSResource extends ServerResource
 
         return pathPrepend;
     }
-    
+
+    /**
+     * Return the original path from the Request.
+     *
+     * @return String Request Path.
+     */
+    protected String getRequestPath()
+    {
+        String path = getRequest().getOriginalRef().getPath();
+        if (path.endsWith("/"))
+        {
+            path = path.substring(0, path.length() - 1);
+        }
+        return path;
+    }
+
     /**
      * Get a read-only subject object containing the principals found
      * in the HttpServletRequest.

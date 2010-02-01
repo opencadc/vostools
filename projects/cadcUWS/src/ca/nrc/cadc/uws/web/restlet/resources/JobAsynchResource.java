@@ -176,12 +176,12 @@ public class JobAsynchResource extends BaseJobResource
         {
             // Default is we're POSTing Parameters to the Job.
             final Client client = new Client(getContext(), Protocol.HTTP);
-            client.post(getHostPart() + "/async/" + job.getJobId()
+            client.post(getHostPart() + job.getRequestPath() + "/" + job.getJobId()
                         + "/parameters", form.getWebRepresentation());
         }
 
         getJobManager().persist(job);
-        redirectSeeOther(getHostPart() + "/async/" + job.getJobId());
+        redirectSeeOther(getHostPart() + job.getRequestPath() + "/" + job.getJobId());
     }
 
     /**
