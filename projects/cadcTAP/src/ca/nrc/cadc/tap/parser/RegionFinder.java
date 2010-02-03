@@ -78,6 +78,7 @@ import net.sf.jsqlparser.expression.Expression;
 import net.sf.jsqlparser.expression.Function;
 import net.sf.jsqlparser.expression.InverseExpression;
 import net.sf.jsqlparser.expression.Parenthesis;
+import net.sf.jsqlparser.expression.StringValue;
 import net.sf.jsqlparser.expression.operators.relational.ExpressionList;
 import net.sf.jsqlparser.statement.select.Join;
 import net.sf.jsqlparser.statement.select.PlainSelect;
@@ -280,12 +281,14 @@ public class RegionFinder extends SelectNavigator
             implExpr = handleArea(adqlFunction);
         } else if (BOX.equalsIgnoreCase(fname))
         {
+            validateCoordSys(adqlFunction);
             implExpr = handleBox(adqlFunction);
         } else if (CENTROID.equalsIgnoreCase(fname))
         {
             implExpr = handleCentroid(adqlFunction);
         } else if (CIRCLE.equalsIgnoreCase(fname))
         {
+            validateCoordSys(adqlFunction);
             implExpr = handleCircle(adqlFunction);
         } else if (CONTAINS.equalsIgnoreCase(fname))
         {
@@ -304,9 +307,11 @@ public class RegionFinder extends SelectNavigator
             implExpr = handleIntersects(adqlFunction);
         } else if (POINT.equalsIgnoreCase(fname))
         {
+            validateCoordSys(adqlFunction);
             implExpr = handlePoint(adqlFunction);
         } else if (POLYGON.equalsIgnoreCase(fname))
         {
+            validateCoordSys(adqlFunction);
             implExpr = handlePolygon(adqlFunction);
         } else if (REGION.equalsIgnoreCase(fname))
         {
@@ -315,6 +320,21 @@ public class RegionFinder extends SelectNavigator
         return implExpr;
     }
 
+    void validateCoordSys(Function adqlFunction)
+    {
+        boolean valid = false;
+        List<Expression> params = adqlFunction.getParameters().getExpressions();
+        Expression firstPara = params.get(0);
+        if (firstPara instanceof StringValue)
+        {
+            StringValue sv = (StringValue) firstPara;
+            if (RegionFinder.ICRS.equalsIgnoreCase(sv.getValue()))
+                valid = true;
+        }
+        
+        if (!valid)
+            throw new UnsupportedOperationException(firstPara.toString() + " is not a supported coordinate system.");
+    }
     /**
     * This method is called when a REGION PREDICATE function is one of the arguments in a binary expression, 
     * and after the direct function convertion.
