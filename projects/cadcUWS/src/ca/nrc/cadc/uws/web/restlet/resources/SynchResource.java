@@ -114,10 +114,11 @@ public class SynchResource extends UWSResource
     }
 
     /**
-     * Accept POST requests.
+     * Accept GET and POST requests.
      *
-     * @param entity    The POST Request body.
+     * @param entity    The Request body.
      */
+    @Get
     @Post
     public void accept(final Representation entity)
     {
