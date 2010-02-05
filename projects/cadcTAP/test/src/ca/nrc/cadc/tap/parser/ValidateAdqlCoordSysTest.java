@@ -167,11 +167,11 @@ public class ValidateAdqlCoordSysTest
     @Test
     public void testCircle2() {
         boolean expectValid = false;
-        _query = "select CIRCLE('ICRS GEOCENTER V2', 1,2,3) from tap_schema.alldatatypes";
+        _query = "select CIRCLE('GEOCENTER', 1,2,3) from tap_schema.alldatatypes";
         doit(expectValid);
     }
 
-    //@Test// Box is not supported yet
+    @Test
     public void testBox() {
         boolean expectValid = true;
         _query = "select BOX('ICRS GEOCENTER', 1,2,3,4) from tap_schema.alldatatypes";
@@ -181,7 +181,7 @@ public class ValidateAdqlCoordSysTest
     @Test
     public void testBox2() {
         boolean expectValid = false;
-        _query = "select BOX('ICRS GEOCENTER V2', 1,2,3,4) from tap_schema.alldatatypes";
+        _query = "select BOX('GEOCENTER', 1,2,3,4) from tap_schema.alldatatypes";
         doit(expectValid);
     }
 
@@ -194,20 +194,35 @@ public class ValidateAdqlCoordSysTest
     @Test
     public void testPoint2() {
         boolean expectValid = false;
-        _query = "select POINT('ICRS GEOCENTER V2', 3,4) from tap_schema.alldatatypes";
+        _query = "select POINT('V2', 3,4) from tap_schema.alldatatypes";
         doit(expectValid);
     }
     
-    //@Test// Polygon is not supported yet
+    @Test 
     public void testPolygon() {
-        boolean expectValid = false;
+        boolean expectValid = true;
         _query = "select POLYGON('ICRS GEOCENTER', 1,2,3,4,5,6) from tap_schema.alldatatypes";
         doit(expectValid);
     }
+
     @Test
     public void testPolygon2() {
         boolean expectValid = false;
-        _query = "select POLYGON('ICRS GEOCENTER V2', 1,2,3,4,5,6) from tap_schema.alldatatypes";
+        _query = "select POLYGON('TOPO', 1,2,3,4,5,6) from tap_schema.alldatatypes";
+        doit(expectValid);
+    }
+
+    @Test
+    public void testNull() {
+        boolean expectValid = true;
+        _query = "select POLYGON(null, 1,2,3,4,5,6) from tap_schema.alldatatypes";
+        doit(expectValid);
+    }
+
+    @Test
+    public void testEmpty() {
+        boolean expectValid = true;
+        _query = "select POLYGON('', 1,2,3,4,5,6) from tap_schema.alldatatypes";
         doit(expectValid);
     }
 }

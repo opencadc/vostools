@@ -77,6 +77,7 @@ import net.sf.jsqlparser.expression.BinaryExpression;
 import net.sf.jsqlparser.expression.Expression;
 import net.sf.jsqlparser.expression.Function;
 import net.sf.jsqlparser.expression.InverseExpression;
+import net.sf.jsqlparser.expression.NullValue;
 import net.sf.jsqlparser.expression.Parenthesis;
 import net.sf.jsqlparser.expression.StringValue;
 import net.sf.jsqlparser.expression.operators.relational.ExpressionList;
@@ -102,6 +103,7 @@ public class RegionFinder extends SelectNavigator
     private static Logger log = Logger.getLogger(RegionFinder.class);
 
     public static String ICRS = "ICRS GEOCENTER";
+    public static String ICRS_PREFIX = "ICRS";
 
     // ADQL region functions
     public static String CONTAINS = "CONTAINS";
@@ -320,21 +322,30 @@ public class RegionFinder extends SelectNavigator
         return implExpr;
     }
 
+    /**
+     * CoordSys is valid if: null, empty, or start with "ICRS"
+     * 
+     * @param adqlFunction
+     */
+    @SuppressWarnings("unchecked")
     void validateCoordSys(Function adqlFunction)
     {
         boolean valid = false;
         List<Expression> params = adqlFunction.getParameters().getExpressions();
         Expression firstPara = params.get(0);
-        if (firstPara instanceof StringValue)
+        if (firstPara instanceof NullValue)
+            valid = true;
+        else if (firstPara instanceof StringValue)
         {
             StringValue sv = (StringValue) firstPara;
-            if (RegionFinder.ICRS.equalsIgnoreCase(sv.getValue()))
+            if (sv == null || sv.getValue().equals("") || sv.getValue().startsWith(RegionFinder.ICRS_PREFIX) )
                 valid = true;
         }
         
         if (!valid)
             throw new UnsupportedOperationException(firstPara.toString() + " is not a supported coordinate system.");
     }
+    
     /**
     * This method is called when a REGION PREDICATE function is one of the arguments in a binary expression, 
     * and after the direct function convertion.
