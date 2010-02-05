@@ -278,10 +278,10 @@ public class ParserUtil
             int size = adqlParams.size();
             if (size != 5)
                 throw new StcsParsingException("Not recognized as a valid BOX function: " + adqlFunction);
-            Double ra = parseToDouble(adqlParams.get(1));
-            Double dec = parseToDouble(adqlParams.get(2));
-            Double width  = parseToDouble(adqlParams.get(3));
-            Double height = parseToDouble(adqlParams.get(4));
+            double ra = parseToDouble(adqlParams.get(1));
+            double dec = parseToDouble(adqlParams.get(2));
+            double width  = parseToDouble(adqlParams.get(3));
+            double height = parseToDouble(adqlParams.get(4));
             box = new Box(RegionFinder.ICRS, ra, dec, width, height);
         }
         else
@@ -296,9 +296,9 @@ public class ParserUtil
      * @return
      * @throws StcsParsingException
      */
-    public static Double parseToDouble(Expression param) throws StcsParsingException
+    public static double parseToDouble(Expression param) throws StcsParsingException
     {
-        Double rtn = null;
+        double rtn;
         if (param instanceof DoubleValue || param instanceof LongValue)
         {
             String sv = param.toString();
