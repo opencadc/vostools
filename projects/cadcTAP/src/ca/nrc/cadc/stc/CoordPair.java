@@ -94,4 +94,24 @@ public class CoordPair
         sb.append(coord2);
         return sb.toString();
     }
+
+    public Double getCoord1()
+    {
+        return coord1;
+    }
+
+    public void setCoord1(Double coord1)
+    {
+        this.coord1 = coord1;
+    }
+
+    public Double getCoord2()
+    {
+        return coord2;
+    }
+
+    public void setCoord2(Double coord2)
+    {
+        this.coord2 = coord2;
+    }
 }

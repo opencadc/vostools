@@ -67,54 +67,35 @@
 ************************************************************************
 */
 
-package ca.nrc.cadc.tap.parser.region.pgsphere.expression;
+package ca.nrc.cadc.stc;
 
 import net.sf.jsqlparser.expression.DoubleValue;
+import net.sf.jsqlparser.expression.Expression;
 import net.sf.jsqlparser.expression.LongValue;
 
 /**
- * Represents the Degree expression of PgSphere, 
- * which value is of double type, usually with decimal point.
- * e.g. 45.54389d (45.54389 degree) 
- * 
- * If it's without decimal point, then it should be of DegreeLong type.
- *
  * @author zhangsa
  *
  */
-public class DegreeDouble extends Degree
+public class StcUtil
 {
-    private DoubleValue _value;
-    
-    public DegreeDouble(DoubleValue value)
-    {
-        setValue(value);
-    }
-
-    public DegreeDouble(double value)
-    {
-        _value = new DoubleValue(String.valueOf(value));
-    }
-
-    public String toString()
-    {
-        return getValue().toString() + "d";
-    }
-
     /**
-     * @param value the value to set
+     * Parse a jSql Expression as Double object
+     * 
+     * @param param
+     * @return
+     * @throws StcsParsingException
      */
-    public void setValue(DoubleValue value)
+    public static Double parseToDouble(Expression param) throws StcsParsingException
     {
-        _value = value;
+        Double rtn = null;
+        if (param instanceof DoubleValue || param instanceof LongValue)
+        {
+            String sv = param.toString();
+            rtn = Double.parseDouble(sv);
+        }
+        else
+            throw new StcsParsingException("Cannot be parsed as double value: " + param);
+        return rtn;
     }
-
-    /**
-     * @return the value
-     */
-    public DoubleValue getValue()
-    {
-        return _value;
-    }
-
 }

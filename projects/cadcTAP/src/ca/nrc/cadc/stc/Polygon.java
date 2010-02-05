@@ -84,6 +84,32 @@ public class Polygon extends SpatialSubphrase implements Region
     public List<CoordPair> coordPairs;
 
     public Polygon() {}
+    
+    /**
+     * Create from a Box object
+     * 
+     * @param box
+     */
+    public Polygon(Box box)
+    {
+        double ra  = box.getCoordPair().getCoord1().doubleValue();
+        double dec = box.getCoordPair().getCoord2().doubleValue();
+        double halfWidth = box.getWidth().doubleValue() / 2;
+        double halfHeight = box.getHeight().doubleValue() / 2;
+        
+        CoordPair corner;
+        List<CoordPair> corners = new ArrayList<CoordPair>(4);
+        corner = new CoordPair(ra - halfWidth, dec - halfHeight);
+        corners.add(corner);
+        corner = new CoordPair(ra - halfWidth, dec + halfHeight);
+        corners.add(corner);
+        corner = new CoordPair(ra + halfWidth, dec + halfHeight);
+        corners.add(corner);
+        corner = new CoordPair(ra + halfWidth, dec - halfHeight);
+        corners.add(corner);
+        
+        this.coordPairs = corners;
+    }
 
     public String format(Region space)
     {
@@ -171,6 +197,16 @@ public class Polygon extends SpatialSubphrase implements Region
             throw new StcsParsingException("Invalid number of coordpair values " + coordPairs.size());
 
         currentWord = null;
+    }
+
+    public List<CoordPair> getCoordPairs()
+    {
+        return coordPairs;
+    }
+
+    public void setCoordPairs(List<CoordPair> coordPairs)
+    {
+        this.coordPairs = coordPairs;
     }
 
 }

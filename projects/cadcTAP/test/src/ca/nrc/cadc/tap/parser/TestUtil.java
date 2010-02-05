@@ -227,4 +227,22 @@ public class TestUtil
         return rtn;
     }
     */
+
+    public static String getCallingMethod() {
+        return trace(Thread.currentThread().getStackTrace(), 2);
+    }
+ 
+    public static String getCallingMethod(int level) {
+        return trace(Thread.currentThread().getStackTrace(), 2 + level);
+    }
+ 
+    private static String trace(StackTraceElement e[], int level) {
+        String rtn=null;
+        if(e != null && e.length >= level) {
+            StackTraceElement s = e[level];
+            if(s != null) 
+                rtn = s.getMethodName();
+        }
+        return rtn;
+    }
 }

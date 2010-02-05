@@ -72,8 +72,14 @@ package ca.nrc.cadc.tap.parser.region.pgsphere.function;
 import java.util.ArrayList;
 import java.util.List;
 
+import ca.nrc.cadc.stc.CoordPair;
+import ca.nrc.cadc.stc.Polygon;
+import ca.nrc.cadc.tap.parser.RegionFinder;
+import ca.nrc.cadc.tap.parser.region.pgsphere.expression.DegreeDouble;
+
 import net.sf.jsqlparser.expression.Expression;
 import net.sf.jsqlparser.expression.Function;
+import net.sf.jsqlparser.expression.StringValue;
 import net.sf.jsqlparser.expression.operators.relational.ExpressionList;
 
 /**
@@ -88,6 +94,28 @@ public class Spoly extends PgsFunction
     public Spoly(Function adqlFunction)
     {
         super(adqlFunction);
+        convertParameters();
+    }
+    
+    /**
+     * create from STC Polygon object
+     * 
+     * @param polygon
+     */
+    public Spoly(Polygon polygon)
+    {
+        double ra, dec;
+        List<Expression> expressions = new ArrayList<Expression>();
+        expressions.add(new StringValue(RegionFinder.ICRS));
+        for (CoordPair cp : polygon.getCoordPairs())
+        {
+            ra = cp.getCoord1().doubleValue();
+            dec = cp.getCoord2().doubleValue();
+            expressions.add(new DegreeDouble(ra));
+            expressions.add(new DegreeDouble(dec));
+        }
+        ExpressionList el = new ExpressionList(expressions);
+        this.setParameters(el);
         convertParameters();
     }
 

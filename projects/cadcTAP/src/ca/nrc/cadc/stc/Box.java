@@ -69,9 +69,18 @@
 
 package ca.nrc.cadc.stc;
 
+import java.util.List;
+
+import ca.nrc.cadc.tap.parser.RegionFinder;
+import net.sf.jsqlparser.expression.DoubleValue;
+import net.sf.jsqlparser.expression.Expression;
+import net.sf.jsqlparser.expression.Function;
+import net.sf.jsqlparser.expression.LongValue;
+
 /**
  * Class to represent a STC-S Box.
  * 
+ * @author jeff, zhangsa
  */
 public class Box extends SpatialSubphrase implements Region
 {
@@ -81,6 +90,29 @@ public class Box extends SpatialSubphrase implements Region
     public Double height;
 
     public Box() {}
+    
+    /**
+     * Construct from a ADQL BOX function
+     * 
+     * @param adqlFunction, as: BOX('ICRS GEOCENTER', 10, 20, 30, 40)
+     */
+    public Box(Function adqlFunction) throws StcsParsingException 
+    {
+        if (RegionFinder.BOX.equalsIgnoreCase(adqlFunction.getName()))
+        {
+            List<Expression> adqlParams = adqlFunction.getParameters().getExpressions();
+            int size = adqlParams.size();
+            if (size != 5)
+                throw new StcsParsingException("Not recognized as a valid BOX function: " + adqlFunction);
+            Double ra = StcUtil.parseToDouble(adqlParams.get(1));
+            Double dec = StcUtil.parseToDouble(adqlParams.get(2));
+            this.coordPair = new CoordPair(ra, dec);
+            this.width  = StcUtil.parseToDouble(adqlParams.get(3));
+            this.height = StcUtil.parseToDouble(adqlParams.get(4));
+        }
+        else
+            throw new StcsParsingException("Not recognized as a BOX function: " + adqlFunction);
+    }
     
     public String format(Region space)
     {
@@ -162,6 +194,36 @@ public class Box extends SpatialSubphrase implements Region
             throw new StcsParsingException("height value not found");
 
         currentWord = null;
+    }
+
+    public CoordPair getCoordPair()
+    {
+        return coordPair;
+    }
+
+    public void setCoordPair(CoordPair coordPair)
+    {
+        this.coordPair = coordPair;
+    }
+
+    public Double getWidth()
+    {
+        return width;
+    }
+
+    public void setWidth(Double width)
+    {
+        this.width = width;
+    }
+
+    public Double getHeight()
+    {
+        return height;
+    }
+
+    public void setHeight(Double height)
+    {
+        this.height = height;
     }
 
 }

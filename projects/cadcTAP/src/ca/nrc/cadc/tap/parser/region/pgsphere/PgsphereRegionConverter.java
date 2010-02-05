@@ -77,6 +77,9 @@ import net.sf.jsqlparser.expression.operators.relational.EqualsTo;
 
 import org.apache.log4j.Logger;
 
+import ca.nrc.cadc.stc.Box;
+import ca.nrc.cadc.stc.Polygon;
+import ca.nrc.cadc.stc.StcsParsingException;
 import ca.nrc.cadc.tap.parser.ParserUtil;
 import ca.nrc.cadc.tap.parser.RegionFinder;
 import ca.nrc.cadc.tap.parser.region.PredicateFunction;
@@ -264,5 +267,25 @@ public class PgsphereRegionConverter extends RegionFinder
     protected boolean isPredicate(Expression expr)
     {
         return (expr instanceof PredicateFunction);
+    }
+
+    /**
+     * Convert ADQL BOX to PGS spoly.
+     * 
+     * Only handle BOX() with constant parameters.
+     * 
+     */
+    @Override
+    protected Expression handleBox(Function adqlFunction)
+    {
+        Spoly pgsFunc = null;
+        try {
+            Box box = new Box(adqlFunction);
+            Polygon polygon = new Polygon(box);
+            pgsFunc = new Spoly(polygon);
+        } catch (StcsParsingException ex) {
+            throw new IllegalArgumentException(ex);
+        }
+        return pgsFunc;
     }
 }

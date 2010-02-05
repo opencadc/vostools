@@ -165,7 +165,7 @@ public class PgsRegionConverterTest
         assertEquals(_expected.toLowerCase(), sql.toLowerCase());
     }
 
-    //@Test
+    @Test
     public void testAll()
     {
         _query = "select COORDSYS(a.t_box), COORD1(a.t_spoint), COORD2(a.t_spoint) from TAP_SCHEMA.AllDataTypes a"
@@ -176,7 +176,7 @@ public class PgsRegionConverterTest
         doit();
     }
 
-    //@Test
+    @Test
     public void testNone()
     {
         _query = "select a.t_box, a.t_spoint, a.t_spoint from TAP_SCHEMA.AllDataTypes a" + " where a.t_long = 1";
@@ -190,6 +190,16 @@ public class PgsRegionConverterTest
         
         _query = "select a.t_box, b.t_spoint from tap_schema.alldatatypes as a join tap_schema.alldatatypes as b on (INTERSECTS(a.t_scircle, b.t_box)=1)";
         _expected = "select a.t_box, b.t_spoint from tap_schema.alldatatypes as a join tap_schema.alldatatypes as b on (a.t_scircle && b.t_box)";
+        doit();
+    }
+
+    @Test
+    public void testBox()
+    {
+        _query = "select BOX('ICRS GEOCENTER', 11,22,10,20) from TAP_SCHEMA.AllDataTypes a"
+                + " where INTERSECTS(a.t_scircle, BOX('ICRS GEOCENTER', 44,33,20,10))=1 ";
+        _expected = "select spoly '{(6.0d, 12.0d), (6.0d, 32.0d), (16.0d, 32.0d), (16.0d, 12.0d) }' from tap_schema.alldatatypes as a where a.t_scircle && spoly '{(34.0d, 28.0d), (34.0d, 38.0d), (54.0d, 38.0d), (54.0d, 28.0d) }'"; 
+            
         doit();
     }
 }
