@@ -72,10 +72,7 @@ package ca.nrc.cadc.uws.web.restlet.resources;
 
 import org.restlet.resource.ServerResource;
 import org.restlet.resource.Get;
-import org.restlet.data.Reference;
-import org.restlet.data.MediaType;
-import org.restlet.data.Status;
-import org.restlet.data.Form;
+import org.restlet.data.*;
 import org.restlet.representation.Representation;
 import org.restlet.representation.StringRepresentation;
 import org.restlet.ext.xml.DomRepresentation;
@@ -267,6 +264,28 @@ public abstract class UWSResource extends ServerResource
 
         return pathInfo;
     }
+
+    /**
+     * Obtain the Form object, checking for a GETted Query Form first, then to
+     * the POSTed Form.
+     *
+     * @return      A Form object.
+     */
+    protected Form getForm()
+    {
+        final Form form;
+
+        if (getMethod().equals(Method.GET))
+        {
+            form = getQuery();
+        }
+        else
+        {
+            form = getRequest().getEntityAsForm();
+        }
+
+        return form;
+    }    
 
     /**
      * Obtain the equivalent of the Servlet Context Path.  This is usually

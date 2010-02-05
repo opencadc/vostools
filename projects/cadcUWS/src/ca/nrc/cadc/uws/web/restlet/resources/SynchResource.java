@@ -74,7 +74,6 @@ import org.restlet.resource.Post;
 import org.restlet.resource.Get;
 import org.restlet.representation.Representation;
 import org.restlet.data.Form;
-import org.restlet.data.Status;
 import org.apache.log4j.Logger;
 
 import java.io.IOException;
@@ -109,8 +108,8 @@ public class SynchResource extends UWSResource
     @Override
     public Representation represent()
     {
-        getResponse().setStatus(Status.CLIENT_ERROR_METHOD_NOT_ALLOWED);
-        return getResponse().getEntity();
+        process();
+        return null;
     }
 
     /**
@@ -122,7 +121,12 @@ public class SynchResource extends UWSResource
     @Post
     public void accept(final Representation entity)
     {
-        final Form form = new Form(entity);
+        process();
+    }
+
+    protected void process()
+    {
+        final Form form = getForm();
         final Subject subject = getSubject();
         final Map<String, String> errors = validate(form);
 
