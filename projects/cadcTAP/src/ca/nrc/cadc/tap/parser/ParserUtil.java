@@ -264,10 +264,11 @@ public class ParserUtil
     }
 
     /**
-     * Construct from a ADQL BOX function
+     * Convert  ADQL BOX function to STC Box 
      * 
      * @param adqlFunction, as: BOX('ICRS GEOCENTER', 10, 20, 30, 40)
      */
+    @SuppressWarnings("unchecked")
     public static Box convertToStcBox(Function adqlFunction) throws StcsParsingException 
     {
         Box box = null;
