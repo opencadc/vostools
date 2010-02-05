@@ -74,7 +74,9 @@ import java.util.ArrayList;
 import java.util.List;
 
 import net.sf.jsqlparser.JSQLParserException;
+import net.sf.jsqlparser.expression.DoubleValue;
 import net.sf.jsqlparser.expression.Expression;
+import net.sf.jsqlparser.expression.Function;
 import net.sf.jsqlparser.expression.LongValue;
 import net.sf.jsqlparser.parser.CCJSqlParserManager;
 import net.sf.jsqlparser.schema.Column;
@@ -85,6 +87,10 @@ import net.sf.jsqlparser.statement.select.Join;
 import net.sf.jsqlparser.statement.select.PlainSelect;
 import net.sf.jsqlparser.statement.select.SelectExpressionItem;
 import net.sf.jsqlparser.statement.select.SelectItem;
+import ca.nrc.cadc.stc.Box;
+import ca.nrc.cadc.stc.CoordPair;
+import ca.nrc.cadc.stc.StcUtil;
+import ca.nrc.cadc.stc.StcsParsingException;
 import ca.nrc.cadc.tap.parser.navigator.SelectNavigator;
 
 /**
@@ -256,4 +262,50 @@ public class ParserUtil
         }
         return rtn;
     }
+
+    /**
+     * Construct from a ADQL BOX function
+     * 
+     * @param adqlFunction, as: BOX('ICRS GEOCENTER', 10, 20, 30, 40)
+     */
+    public static Box convertToStcBox(Function adqlFunction) throws StcsParsingException 
+    {
+        Box box = null;
+        if (RegionFinder.BOX.equalsIgnoreCase(adqlFunction.getName()))
+        {
+            List<Expression> adqlParams = adqlFunction.getParameters().getExpressions();
+            int size = adqlParams.size();
+            if (size != 5)
+                throw new StcsParsingException("Not recognized as a valid BOX function: " + adqlFunction);
+            Double ra = parseToDouble(adqlParams.get(1));
+            Double dec = parseToDouble(adqlParams.get(2));
+            Double width  = parseToDouble(adqlParams.get(3));
+            Double height = parseToDouble(adqlParams.get(4));
+            box = new Box(RegionFinder.ICRS, ra, dec, width, height);
+        }
+        else
+            throw new StcsParsingException("Not recognized as a BOX function: " + adqlFunction);
+        return box;
+    }
+
+    /**
+     * Parse a jSql Expression as Double object
+     * 
+     * @param param
+     * @return
+     * @throws StcsParsingException
+     */
+    public static Double parseToDouble(Expression param) throws StcsParsingException
+    {
+        Double rtn = null;
+        if (param instanceof DoubleValue || param instanceof LongValue)
+        {
+            String sv = param.toString();
+            rtn = Double.parseDouble(sv);
+        }
+        else
+            throw new StcsParsingException("Cannot be parsed as double value: " + param);
+        return rtn;
+    }
+
 }

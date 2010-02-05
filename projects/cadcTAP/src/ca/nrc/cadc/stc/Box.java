@@ -69,13 +69,6 @@
 
 package ca.nrc.cadc.stc;
 
-import java.util.List;
-
-import ca.nrc.cadc.tap.parser.RegionFinder;
-import net.sf.jsqlparser.expression.DoubleValue;
-import net.sf.jsqlparser.expression.Expression;
-import net.sf.jsqlparser.expression.Function;
-import net.sf.jsqlparser.expression.LongValue;
 
 /**
  * Class to represent a STC-S Box.
@@ -91,27 +84,11 @@ public class Box extends SpatialSubphrase implements Region
 
     public Box() {}
     
-    /**
-     * Construct from a ADQL BOX function
-     * 
-     * @param adqlFunction, as: BOX('ICRS GEOCENTER', 10, 20, 30, 40)
-     */
-    public Box(Function adqlFunction) throws StcsParsingException 
+    public Box(String coordsys, double x, double y, double w, double h)
     {
-        if (RegionFinder.BOX.equalsIgnoreCase(adqlFunction.getName()))
-        {
-            List<Expression> adqlParams = adqlFunction.getParameters().getExpressions();
-            int size = adqlParams.size();
-            if (size != 5)
-                throw new StcsParsingException("Not recognized as a valid BOX function: " + adqlFunction);
-            Double ra = StcUtil.parseToDouble(adqlParams.get(1));
-            Double dec = StcUtil.parseToDouble(adqlParams.get(2));
-            this.coordPair = new CoordPair(ra, dec);
-            this.width  = StcUtil.parseToDouble(adqlParams.get(3));
-            this.height = StcUtil.parseToDouble(adqlParams.get(4));
-        }
-        else
-            throw new StcsParsingException("Not recognized as a BOX function: " + adqlFunction);
+        this.coordPair = new CoordPair(x, y);
+        this.width = w;
+        this.height = h;
     }
     
     public String format(Region space)

@@ -280,7 +280,7 @@ public class PgsphereRegionConverter extends RegionFinder
     {
         Spoly pgsFunc = null;
         try {
-            Box box = new Box(adqlFunction);
+            Box box = ParserUtil.convertToStcBox(adqlFunction);
             Polygon polygon = new Polygon(box);
             pgsFunc = new Spoly(polygon);
         } catch (StcsParsingException ex) {
