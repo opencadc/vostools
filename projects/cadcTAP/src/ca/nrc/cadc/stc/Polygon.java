@@ -90,20 +90,20 @@ public class Polygon extends SpatialSubphrase implements Region
      */
     public Polygon(Box box)
     {
-        double ra  = box.getCoordPair().getCoord1().doubleValue();
-        double dec = box.getCoordPair().getCoord2().doubleValue();
-        double halfWidth = box.getWidth().doubleValue() / 2;
-        double halfHeight = box.getHeight().doubleValue() / 2;
+        double x  = box.getCoordPair().getCoord1().doubleValue();
+        double y = box.getCoordPair().getCoord2().doubleValue();
+        double hw = box.getWidth().doubleValue() / 2.0;
+        double hh = box.getHeight().doubleValue() / 2.0;
         
         CoordPair corner;
         List<CoordPair> corners = new ArrayList<CoordPair>(4);
-        corner = new CoordPair(ra - halfWidth, dec - halfHeight);
+        corner = new CoordPair(x - hw/Math.cos(Math.toRadians(y)), y - hh);
         corners.add(corner);
-        corner = new CoordPair(ra - halfWidth, dec + halfHeight);
+        corner = new CoordPair(x - hw/Math.cos(Math.toRadians(y)), y + hh);
         corners.add(corner);
-        corner = new CoordPair(ra + halfWidth, dec + halfHeight);
+        corner = new CoordPair(x + hw/Math.cos(Math.toRadians(y)), y + hh);
         corners.add(corner);
-        corner = new CoordPair(ra + halfWidth, dec - halfHeight);
+        corner = new CoordPair(x + hw/Math.cos(Math.toRadians(y)), y - hh);
         corners.add(corner);
         
         this.coordPairs = corners;
