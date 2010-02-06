@@ -84,8 +84,9 @@ public class Box extends SpatialSubphrase implements Region
 
     public Box() {}
     
-    public Box(String coordsys, double x, double y, double w, double h)
+    public Box(String frame, String refpos, String flavor, double x, double y, double w, double h)
     {
+        super(frame, refpos, flavor);
         this.coordPair = new CoordPair(x, y);
         this.width = w;
         this.height = h;

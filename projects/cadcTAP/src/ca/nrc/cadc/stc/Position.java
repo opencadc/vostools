@@ -80,6 +80,12 @@ public class Position extends SpatialSubphrase implements Region
 
     public Position() {}
 
+    public Position(String frame, String refpos, String flavor, double x, double y)
+    {
+        super(frame, refpos, flavor);
+        this.coordPair = new CoordPair(x, y);
+    }
+
     public String format(Region region)
     {
         if (!(region instanceof Position))

@@ -81,9 +81,9 @@ import java.util.Scanner;
 public abstract class SpatialSubphrase
 {
     // Default values.
-    protected static final String DEFAULT_FRAME = Frame.UNKNOWNFRAME;
-    protected static final String DEFAULT_REFPOS = ReferencePosition.UNKNOWNREFPOS;
-    protected static final String DEFAULT_FLAVOR = Flavor.SPHERICAL2;
+    public static final String DEFAULT_FRAME = Frame.UNKNOWNFRAME;
+    public static final String DEFAULT_REFPOS = ReferencePosition.UNKNOWNREFPOS;
+    public static final String DEFAULT_FLAVOR = Flavor.SPHERICAL2;
 
     // Possible regions.
     protected static final String[] REGIONS = new String[]
@@ -124,7 +124,39 @@ public abstract class SpatialSubphrase
     // The tokenized phrase.
     protected Scanner words;
 
-    public SpatialSubphrase() {}
+    protected SpatialSubphrase() 
+    {
+        this.frame = DEFAULT_FRAME;
+        this.refpos = DEFAULT_REFPOS;
+        this.flavor = DEFAULT_FLAVOR;
+    }
+
+    protected SpatialSubphrase(String frame, String refpos, String flavor)
+    {
+        this();
+        if (frame != null)
+        {
+            if (Frame.FRAMES.contains(frame.toUpperCase()))
+                this.frame = frame;
+            else
+                throw new IllegalArgumentException("illegal frame: " + frame);
+        }
+        if (refpos != null)
+        {
+            if (ReferencePosition.REFERENCE_POSITIONS.contains(refpos.toUpperCase()))
+                this.refpos = refpos;
+            else
+                throw new IllegalArgumentException("illegal reference position: " + refpos);
+        }
+        if (flavor != null)
+        {
+            if (Flavor.FLAVORS.contains(flavor.toUpperCase()))
+                this.flavor = flavor;
+            else
+                throw new IllegalArgumentException("illegal coordinate flavor: " + flavor);
+        }
+
+    }
 
     public void init(String phrase)
         throws StcsParsingException

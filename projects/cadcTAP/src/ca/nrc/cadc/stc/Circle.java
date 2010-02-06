@@ -81,6 +81,13 @@ public class Circle extends SpatialSubphrase implements Region
 
     public Circle() {}
 
+    public Circle(String frame, String refpos, String flavor, double x, double y, double r)
+    {
+        super(frame, refpos, flavor);
+        this.coordPair = new CoordPair(x, y);
+        this.radius = r;
+    }
+
     public String format(Region space)
     {
         if (!(space instanceof Circle))

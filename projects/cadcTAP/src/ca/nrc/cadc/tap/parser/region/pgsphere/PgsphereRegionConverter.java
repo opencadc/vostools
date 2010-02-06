@@ -79,16 +79,13 @@ import org.apache.log4j.Logger;
 
 import ca.nrc.cadc.stc.Box;
 import ca.nrc.cadc.stc.Polygon;
-import ca.nrc.cadc.stc.StcsParsingException;
 import ca.nrc.cadc.tap.parser.ParserUtil;
 import ca.nrc.cadc.tap.parser.RegionFinder;
 import ca.nrc.cadc.tap.parser.region.PredicateFunction;
 import ca.nrc.cadc.tap.parser.region.pgsphere.function.Center;
 import ca.nrc.cadc.tap.parser.region.pgsphere.function.Contains;
-import ca.nrc.cadc.tap.parser.region.pgsphere.function.ContainsNot;
 import ca.nrc.cadc.tap.parser.region.pgsphere.function.Coordsys;
 import ca.nrc.cadc.tap.parser.region.pgsphere.function.Intersects;
-import ca.nrc.cadc.tap.parser.region.pgsphere.function.IntersectsNot;
 import ca.nrc.cadc.tap.parser.region.pgsphere.function.Lat;
 import ca.nrc.cadc.tap.parser.region.pgsphere.function.Longitude;
 import ca.nrc.cadc.tap.parser.region.pgsphere.function.Scircle;
@@ -279,13 +276,9 @@ public class PgsphereRegionConverter extends RegionFinder
     protected Expression handleBox(Function adqlFunction)
     {
         Spoly pgsFunc = null;
-        try {
-            Box box = ParserUtil.convertToStcBox(adqlFunction);
-            Polygon polygon = new Polygon(box);
-            pgsFunc = new Spoly(polygon);
-        } catch (StcsParsingException ex) {
-            throw new IllegalArgumentException(ex);
-        }
+        Box box = ParserUtil.convertToStcBox(adqlFunction);
+        Polygon polygon = new Polygon(box);
+        pgsFunc = new Spoly(polygon);
         return pgsFunc;
     }
 }
