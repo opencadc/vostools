@@ -94,6 +94,10 @@ public class ResultSetIterator implements Iterator
     // Namespace of the element.
     private Namespace namespace;
 
+    // Indicates if the ResultSet has another element
+    // past the current position in the ResultSet.
+    private boolean hasNext;
+
     /**
      * Constructor.
      *
@@ -104,6 +108,15 @@ public class ResultSetIterator implements Iterator
         this.resultSet = resultSet;
         this.formatters = formatters;
         this.namespace = namespace;
+        try
+        {
+            this.hasNext = resultSet.next();
+        }
+        catch(SQLException e)
+        {
+            hasNext = false;
+            throw new RuntimeException(e.getMessage());
+        }
     }
 
     /**
@@ -112,14 +125,7 @@ public class ResultSetIterator implements Iterator
      */
     public boolean hasNext()
     {
-        try
-        {
-            return !resultSet.isLast();
-        }
-        catch (SQLException e)
-        {
-            throw new RuntimeException(e.getMessage());
-        }
+        return hasNext;
     }
 
     /**
@@ -135,11 +141,8 @@ public class ResultSetIterator implements Iterator
     {
         try
         {
-            // Get the next row.
-            boolean valid = resultSet.next();
-
             // If no more rows in the ResultSet throw a NoSuchElementException.
-            if (!valid)
+            if (!hasNext)
                 throw new NoSuchElementException("No more rows in the ResultSet");
 
             // Create the TR element.
@@ -156,10 +159,14 @@ public class ResultSetIterator implements Iterator
                     tableData.setText(formatter.format(resultSet.getObject(columnIndex)));
                 tableRow.addContent(tableData);
             }
+            // Get the next row.
+            hasNext = resultSet.next();
+
             return tableRow;
         }
         catch (SQLException e)
         {
+            hasNext = false;
             throw new RuntimeException(e.getMessage());
         }
     }
