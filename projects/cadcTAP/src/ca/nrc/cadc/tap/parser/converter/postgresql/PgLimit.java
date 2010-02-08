@@ -67,129 +67,86 @@
 ************************************************************************
 */
 
-/**
- * 
- */
-package ca.nrc.cadc.tap.parser;
+package ca.nrc.cadc.tap.parser.converter.postgresql;
 
-import static org.junit.Assert.fail;
-import net.sf.jsqlparser.statement.Statement;
-
-import org.junit.After;
-import org.junit.AfterClass;
-import org.junit.Before;
-import org.junit.BeforeClass;
-import org.junit.Test;
-
-import ca.nrc.cadc.tap.parser.converter.TopConverter;
-import ca.nrc.cadc.tap.parser.extractor.SelectListExtractor;
-import ca.nrc.cadc.tap.parser.navigator.FromItemNavigator;
-import ca.nrc.cadc.tap.parser.navigator.ReferenceNavigator;
-import ca.nrc.cadc.tap.parser.navigator.SelectNavigator;
-import ca.nrc.cadc.tap.schema.TapSchema;
-import ca.nrc.cadc.util.Log4jInit;
+import net.sf.jsqlparser.statement.select.Limit;
 
 /**
- * test the convertion from TOP to LIMIT
+ * This version of LIMIT allows LIMIT 0, which effect is to output an empty resultset.
  * 
- * @author Sailor Zhang
+ * @author zhangsa
  *
  */
-public class TopConverterTest
+public class PgLimit extends Limit
 {
-    public String _query;
+    private long offset;
+    private long rowCount ;
+    private boolean rowCountJdbcParameter = false;
+    private boolean offsetJdbcParameter = false;
+    private boolean limitAll;
 
-    SelectListExtractor _en;
-    ReferenceNavigator _rn;
-    FromItemNavigator _fn;
-    SelectNavigator _sn;
-
-    static TapSchema TAP_SCHEMA;
-
-    /**
-     * @throws java.lang.Exception
-     */
-    @BeforeClass
-    public static void setUpBeforeClass() throws Exception
+    public PgLimit(Limit limit)
     {
-        Log4jInit.setLevel("ca.nrc.cadc", org.apache.log4j.Level.DEBUG);
-        TAP_SCHEMA = TestUtil.loadDefaultTapSchema();
-    }
-
-    /**
-     * @throws java.lang.Exception
-     */
-    @AfterClass
-    public static void tearDownAfterClass() throws Exception
-    {
-    }
-
-    /**
-     * @throws java.lang.Exception
-     */
-    @Before
-    public void setUp() throws Exception
-    {
-
-        _sn = new TopConverter();
-    }
-
-    /**
-     * @throws java.lang.Exception
-     */
-    @After
-    public void tearDown() throws Exception
-    {
-    }
-
-    private void doit()
-    {
-        Statement s = null;
-        try
-        {
-            s = ParserUtil.receiveQuery(_query);
-            ParserUtil.parseStatement(s, _sn);
-        } catch (Exception ae)
-        {
-            ae.printStackTrace(System.out);
-            fail(ae.toString());
-        }
-        System.out.println(s);
-        String sql = s.toString().toLowerCase();
-        if (sql.indexOf("top") >= 0)
-            fail("TOP is not converted.");
-        if (sql.indexOf("limit") < 0)
-            fail("LIMIT is missing from result.");
-    }
-
-    @Test
-    public void testTop()
-    {
-        _query = "select  top 1234 t_string as xx, aa.t_bytes as yy from tap_schema.alldatatypes as aa";
-        doit();
-    }
-
-    @Test
-    public void testTop0()
-    {
-        _query = "select  top 0 t_string as xx, aa.t_bytes as yy from tap_schema.alldatatypes as aa";
-        doit();
+        this.offset = limit.getOffset();
+        this.rowCount = limit.getRowCount();
+        this.rowCountJdbcParameter = limit.isRowCountJdbcParameter();
+        this.offsetJdbcParameter = limit.isOffsetJdbcParameter();
+        this.limitAll = limit.isLimitAll();
     }
     
-    @Test
-    public void testJoin()
-    {
-        _query = "select top 1234 t_string, aa.t_bytes, bb.* from tap_schema.alldatatypes as aa, tap_schema.tables as bb " +
-        		" where aa.t_string = bb.utype limit 2345";
-        doit();
+    public String toString() {
+        String retVal = "";
+        if (rowCount >= 0 || rowCountJdbcParameter ) {
+            retVal += " LIMIT "+(rowCountJdbcParameter?"?":rowCount+"");
+        }
+        if (offset > 0 || offsetJdbcParameter) {
+            retVal += " OFFSET "+(offsetJdbcParameter?"?":offset+"");
+        }
+        return retVal;
     }
 
-    @Test
-    public void testSubselect()
-    {
-        _query = "select  t_string, aa.t_bytes, bb.* from tap_schema.alldatatypes as aa, tap_schema.tables as bb " +
-                " where aa.t_string = bb.utype " +
-                "and aa.t_string in (select utype from bb) limit 3456";
-        doit();
+    public long getOffset() {
+        return offset;
     }
+
+    public long getRowCount() {
+        return rowCount;
+    }
+
+    public void setOffset(long l) {
+        offset = l;
+    }
+
+    public void setRowCount(long l) {
+        rowCount = l;
+    }
+
+    public boolean isOffsetJdbcParameter() {
+        return offsetJdbcParameter;
+    }
+
+    public boolean isRowCountJdbcParameter() {
+        return rowCountJdbcParameter;
+    }
+
+    public void setOffsetJdbcParameter(boolean b) {
+        offsetJdbcParameter = b;
+    }
+
+    public void setRowCountJdbcParameter(boolean b) {
+        rowCountJdbcParameter = b;
+    }
+
+
+    /**
+     * @return true if the limit is "LIMIT ALL [OFFSET ...])
+     */
+    public boolean isLimitAll() {
+        return limitAll;
+    }
+
+    public void setLimitAll(boolean b) {
+        limitAll = b;
+    }
+
 }

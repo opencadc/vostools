@@ -77,6 +77,7 @@ import net.sf.jsqlparser.statement.select.Top;
 
 import org.apache.log4j.Logger;
 
+import ca.nrc.cadc.tap.parser.converter.postgresql.PgLimit;
 import ca.nrc.cadc.tap.parser.navigator.SelectNavigator;
 
 /**
@@ -115,6 +116,9 @@ public class TopConverter extends SelectNavigator
                 plainSelect.setLimit(limit);
             }
             plainSelect.setTop(null);
+            
+            if (rowCount == 0)
+                plainSelect.setLimit(new PgLimit(limit));
         }
 
         log.debug("visit(PlainSelect) done");
