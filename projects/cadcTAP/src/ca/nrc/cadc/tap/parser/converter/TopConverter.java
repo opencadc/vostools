@@ -101,11 +101,14 @@ public class TopConverter extends SelectNavigator
         if (top != null)
         {
             long rowCount = top.getRowCount();
+            log.debug("TOP: " + rowCount);
             Limit limit = plainSelect.getLimit();
+            log.debug("LIMIT: " + limit);
             if (limit != null)
             {
                 limit.setRowCount(rowCount);
-            } else
+            }
+            else
             {
                 limit = new Limit();
                 limit.setRowCount(rowCount);
