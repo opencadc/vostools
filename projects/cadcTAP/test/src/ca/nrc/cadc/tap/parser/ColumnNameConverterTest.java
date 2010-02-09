@@ -29,7 +29,7 @@ public class ColumnNameConverterTest
 
     static
     {
-        Log4jInit.setLevel("ca.nrc.cadc.tap.parser", org.apache.log4j.Level.DEBUG);
+        Log4jInit.setLevel("ca.nrc.cadc.tap.parser", org.apache.log4j.Level.INFO);
     }
 
     public ColumnNameConverterTest() { }

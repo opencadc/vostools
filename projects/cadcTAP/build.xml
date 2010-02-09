@@ -133,6 +133,7 @@
                 <pathelement path="build/class"/>
                 <pathelement path="${jars}:${testingJars}"/>
             </classpath>
+            <test name="ca.nrc.cadc.tap.parser.TableNameConverterTest"/>
             <test name="ca.nrc.cadc.tap.parser.ColumnNameConverterTest"/>
             <test name="ca.nrc.cadc.tap.parser.PgsRegionConverterTest"/>
             <test name="ca.nrc.cadc.tap.parser.PgsRegionConverterTest"/>
