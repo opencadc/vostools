@@ -72,8 +72,15 @@ package ca.nrc.cadc.tap.parser.region.pgsphere.function;
 import java.util.ArrayList;
 import java.util.List;
 
+import ca.nrc.cadc.stc.Circle;
+import ca.nrc.cadc.stc.CoordPair;
+import ca.nrc.cadc.stc.Position;
+import ca.nrc.cadc.tap.parser.RegionFinder;
+import ca.nrc.cadc.tap.parser.region.pgsphere.expression.DegreeDouble;
+
 import net.sf.jsqlparser.expression.Expression;
 import net.sf.jsqlparser.expression.Function;
+import net.sf.jsqlparser.expression.StringValue;
 import net.sf.jsqlparser.expression.operators.relational.ExpressionList;
 
 /**
@@ -99,6 +106,22 @@ public class Spoint extends PgsFunction
         _longitude = longitude;
         _latitude = latitude;
     }
+
+    public Spoint(Position position)
+    {
+        double ra, dec;
+        List<Expression> expressions = new ArrayList<Expression>();
+        expressions.add(new StringValue(RegionFinder.ICRS));
+        CoordPair cp = position.getCoordPair();
+        ra = cp.getCoord1().doubleValue();
+        dec = cp.getCoord2().doubleValue();
+        expressions.add(new DegreeDouble(ra));
+        expressions.add(new DegreeDouble(dec));
+        ExpressionList el = new ExpressionList(expressions);
+        this.setParameters(el);
+        convertParameters();
+    }
+
 
     @SuppressWarnings("unchecked")
     protected void convertParameters()

@@ -69,6 +69,8 @@
 
 package ca.nrc.cadc.tap.parser.schema;
 
+import org.apache.log4j.Logger;
+
 import net.sf.jsqlparser.expression.Expression;
 import net.sf.jsqlparser.schema.Column;
 import net.sf.jsqlparser.schema.Table;
@@ -86,6 +88,8 @@ import ca.nrc.cadc.tap.schema.TapSchema;
  */
 public class BlobClobColumnValidator extends TapSchemaColumnValidator
 {
+    protected static Logger log = Logger.getLogger(BlobClobColumnValidator.class);
+
     public static String BLOB = "BLOB";
     public static String CLOB = "CLOB";
 

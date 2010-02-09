@@ -86,7 +86,7 @@ public abstract class SpatialSubphrase
     public static final String DEFAULT_FLAVOR = Flavor.SPHERICAL2;
 
     // Possible regions.
-    protected static final String[] REGIONS = new String[]
+    public static final String[] REGIONS = new String[]
     {
         "BOX", "CIRCLE", "POLYGON", "POSITION", "UNION", "NOT", "INTERSECTION"
     };
@@ -191,7 +191,7 @@ public abstract class SpatialSubphrase
             else
                 throw new StcsParsingException("Unexpected end to STC-S phrase " + phrase);
         }
-        if (arrayContains(REGIONS, currentWord.toUpperCase()))
+        if (STC.arrayContains(REGIONS, currentWord.toUpperCase()))
         {
             region = currentWord;
             currentWord = null;
@@ -264,15 +264,4 @@ public abstract class SpatialSubphrase
         if (f.equalsIgnoreCase(Flavor.CARTESIAN3))
             dimensions = 3;
     }
-
-    private boolean arrayContains(String[] array, String value)
-    {
-        for (int i = 0; i < array.length; i++)
-        {
-            if (array[i].equals(value))
-                return true;
-        }
-        return false;
-    }
-
 }

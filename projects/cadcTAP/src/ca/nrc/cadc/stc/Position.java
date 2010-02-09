@@ -145,4 +145,14 @@ public class Position extends SpatialSubphrase implements Region
         currentWord = null;
     }
 
+    public CoordPair getCoordPair()
+    {
+        return coordPair;
+    }
+
+    public void setCoordPair(CoordPair coordPair)
+    {
+        this.coordPair = coordPair;
+    }
+
 }

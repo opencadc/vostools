@@ -126,5 +126,15 @@ public class STC
     {
         return space.format(space);
     }
+
+    public static boolean arrayContains(String[] array, String value)
+    {
+        for (int i = 0; i < array.length; i++)
+        {
+            if (array[i].equals(value))
+                return true;
+        }
+        return false;
+    }
     
 }

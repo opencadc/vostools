@@ -79,6 +79,7 @@ import java.util.List;
 
 import org.junit.After;
 import org.junit.AfterClass;
+import org.junit.Assert;
 import org.junit.Before;
 import org.junit.BeforeClass;
 import org.junit.Test;
@@ -103,6 +104,7 @@ public class PgsRegionConverterTest
 {
     public String _query;
     public String _expected = "";
+    public String _sql;
     
     
 
@@ -119,7 +121,7 @@ public class PgsRegionConverterTest
     @BeforeClass
     public static void setUpBeforeClass() throws Exception
     {
-        Log4jInit.setLevel("ca.nrc.cadc", org.apache.log4j.Level.WARN);
+        Log4jInit.setLevel("ca.nrc.cadc", org.apache.log4j.Level.INFO);
         TAP_SCHEMA = TestUtil.loadDefaultTapSchema();
     }
 
@@ -158,11 +160,38 @@ public class PgsRegionConverterTest
         tapQuery.setTapSchema(TAP_SCHEMA);
         tapQuery.setExtraTables(null);
         tapQuery.setParameterList(paramList);
-        String sql = tapQuery.getSQL();
+        _sql = tapQuery.getSQL();
+        System.out.println("\n--- input query:");
         System.out.println(_query);
+        System.out.println("--- expected result:");
         System.out.println(_expected);
-        System.out.println(sql);
-        assertEquals(_expected.toLowerCase(), sql.toLowerCase());
+        System.out.println("--- converted result:");
+        System.out.println(_sql);
+        assertEquals(_expected.toLowerCase(), _sql.toLowerCase());
+    }
+    private void run()
+    {
+        Parameter para;
+        para = new Parameter("QUERY", _query);
+        List<Parameter> paramList = new ArrayList<Parameter>();
+        paramList.add(para);
+
+        TapQuery tapQuery = new AdqlPgsRegionQuery(); // inner class in this file
+        tapQuery.setTapSchema(TAP_SCHEMA);
+        tapQuery.setExtraTables(null);
+        tapQuery.setParameterList(paramList);
+
+        _sql = tapQuery.getSQL();
+        System.out.println("\n--- input query:");
+        System.out.println(_query);
+        System.out.println("--- converted result:");
+        System.out.println(_sql);
+        
+    }
+
+    private void assertContain()
+    {
+        Assert.assertTrue(_sql.toLowerCase().indexOf(_expected.toLowerCase()) > 0);
     }
 
     @Test
@@ -198,9 +227,45 @@ public class PgsRegionConverterTest
     {
         _query = "select BOX('ICRS GEOCENTER', 11,22,10,20) from TAP_SCHEMA.AllDataTypes a"
                 + " where INTERSECTS(a.t_scircle, BOX('ICRS GEOCENTER', 44,33,20,10))=1 ";
-        _expected = "select spoly '{(6.0d, 12.0d), (6.0d, 32.0d), (16.0d, 32.0d), (16.0d, 12.0d) }' from tap_schema.alldatatypes as a where a.t_scircle && spoly '{(34.0d, 28.0d), (34.0d, 38.0d), (54.0d, 38.0d), (54.0d, 28.0d) }'"; 
-            
-        doit();
+        run();
+        _expected = "spoly";
+        Assert.assertTrue(_sql.toLowerCase().indexOf(_expected.toLowerCase()) > 0);
+    }
+    
+    @Test
+    public void testRegionBox()
+    {
+        _query = "select REGION('BOX ICRS GEOCENTER 11 22 10 20') from TAP_SCHEMA.AllDataTypes";
+        run();
+        _expected = "spoly '{(5.607326286612083d, 12.0d), (5.607326286612083d, 32.0d), (16.392673713387918d, 32.0d), (16.392673713387918d, 12.0d";
+        Assert.assertTrue(_sql.toLowerCase().indexOf(_expected.toLowerCase()) > 0);
+    }
+
+    @Test
+    public void testRegionPolygon()
+    {
+        _query = "select REGION('POLYGON ICRS GEOCENTER 1 2 3 4 5 6 7 8') from TAP_SCHEMA.AllDataTypes";
+        run();
+        _expected = "spoly";
+        Assert.assertTrue(_sql.toLowerCase().indexOf(_expected.toLowerCase()) > 0);
+    }
+
+    @Test
+    public void testRegionCircle()
+    {
+        _query = "select REGION('CIRCLE ICRS GEOCENTER 11 22 0.5') from TAP_SCHEMA.AllDataTypes";
+        run();
+        _expected = "scircle";
+        Assert.assertTrue(_sql.toLowerCase().indexOf(_expected.toLowerCase()) > 0);
+    }
+
+    @Test
+    public void testRegionPosition()
+    {
+        _query = "select REGION('POSITION GALACTIC 11 22') from TAP_SCHEMA.AllDataTypes";
+        run();
+        _expected = "spoint";
+        Assert.assertTrue(_sql.toLowerCase().indexOf(_expected.toLowerCase()) > 0);
     }
 }
 

@@ -162,4 +162,24 @@ public class Circle extends SpatialSubphrase implements Region
         currentWord = null;
     }
 
+    public CoordPair getCoordPair()
+    {
+        return coordPair;
+    }
+
+    public void setCoordPair(CoordPair coordPair)
+    {
+        this.coordPair = coordPair;
+    }
+
+    public Double getRadius()
+    {
+        return radius;
+    }
+
+    public void setRadius(Double radius)
+    {
+        this.radius = radius;
+    }
+
 }

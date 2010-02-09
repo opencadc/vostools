@@ -145,7 +145,6 @@
             <test name="ca.nrc.cadc.tap.parser.ExtractorTest"/>
             <test name="ca.nrc.cadc.tap.parser.AllColumnConverterTest"/>
 	    <test name="ca.nrc.cadc.tap.parser.TopConverterTest"/>
-	    <test name="ca.nrc.cadc.tap.parser.SqlQueryTest" />
             <test name="ca.nrc.cadc.stc.BoxTest"/>
             <test name="ca.nrc.cadc.stc.CircleTest"/>
             <test name="ca.nrc.cadc.stc.PolygonTest"/>

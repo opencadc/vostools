@@ -147,6 +147,7 @@ public class BlobClobValidatorTest
             tapQuery.setTapSchema(TAP_SCHEMA);
             tapQuery.setExtraTables(null);
             tapQuery.setParameterList(paramList);
+            String sql = tapQuery.getSQL();
         } catch (Exception ae) {
             exceptionHappens = true;
             System.out.println(ae.toString());

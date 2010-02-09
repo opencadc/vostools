@@ -69,16 +69,24 @@
 
 package ca.nrc.cadc.tap.parser.region.pgsphere;
 
+import java.util.List;
+
 import net.sf.jsqlparser.expression.BinaryExpression;
 import net.sf.jsqlparser.expression.Expression;
 import net.sf.jsqlparser.expression.Function;
 import net.sf.jsqlparser.expression.LongValue;
+import net.sf.jsqlparser.expression.StringValue;
 import net.sf.jsqlparser.expression.operators.relational.EqualsTo;
 
 import org.apache.log4j.Logger;
 
 import ca.nrc.cadc.stc.Box;
+import ca.nrc.cadc.stc.Circle;
 import ca.nrc.cadc.stc.Polygon;
+import ca.nrc.cadc.stc.Position;
+import ca.nrc.cadc.stc.STC;
+import ca.nrc.cadc.stc.SpatialSubphrase;
+import ca.nrc.cadc.stc.StcsParsingException;
 import ca.nrc.cadc.tap.parser.ParserUtil;
 import ca.nrc.cadc.tap.parser.RegionFinder;
 import ca.nrc.cadc.tap.parser.region.PredicateFunction;
@@ -88,6 +96,7 @@ import ca.nrc.cadc.tap.parser.region.pgsphere.function.Coordsys;
 import ca.nrc.cadc.tap.parser.region.pgsphere.function.Intersects;
 import ca.nrc.cadc.tap.parser.region.pgsphere.function.Lat;
 import ca.nrc.cadc.tap.parser.region.pgsphere.function.Longitude;
+import ca.nrc.cadc.tap.parser.region.pgsphere.function.PgsFunction;
 import ca.nrc.cadc.tap.parser.region.pgsphere.function.Scircle;
 import ca.nrc.cadc.tap.parser.region.pgsphere.function.Spoint;
 import ca.nrc.cadc.tap.parser.region.pgsphere.function.Spoly;
@@ -279,6 +288,73 @@ public class PgsphereRegionConverter extends RegionFinder
         Box box = ParserUtil.convertToStcBox(adqlFunction);
         Polygon polygon = new Polygon(box);
         pgsFunc = new Spoly(polygon);
+        return pgsFunc;
+    }
+
+    @Override
+    protected Expression handleRegion(Function adqlFunction)
+    {
+        PgsFunction pgsFunc = null;
+        List<Expression> params = adqlFunction.getParameters().getExpressions();
+        StringValue strV = (StringValue) params.get(0);
+        String regionParamStr = strV.getValue();
+        String tokens[] = regionParamStr.split(" ");
+        String fname = tokens[0].toUpperCase();
+        
+        //BOX", "CIRCLE", "POLYGON", "POSITION", "UNION", "NOT", "INTERSECTION"
+        
+        if (Box.NAME.equalsIgnoreCase(fname))
+        {
+            Box box = new Box();
+            try
+            {
+                box.parse(regionParamStr);
+            } catch (StcsParsingException e)
+            {
+                throw new IllegalArgumentException(e);
+            }
+            Polygon polygon = new Polygon(box);
+            pgsFunc = new Spoly(polygon);
+        }
+        else if (Polygon.NAME.equalsIgnoreCase(fname))
+        {
+            Polygon polygon = new Polygon();
+            try
+            {
+                polygon.parse(regionParamStr);
+            } catch (StcsParsingException e)
+            {
+                throw new IllegalArgumentException(e);
+            }
+            pgsFunc = new Spoly(polygon);
+        }
+        else if (Circle.NAME.equalsIgnoreCase(fname))
+        {
+            Circle circle = new Circle();
+            try
+            {
+                circle.parse(regionParamStr);
+            } catch (StcsParsingException e)
+            {
+                throw new IllegalArgumentException(e);
+            }
+            pgsFunc = new Scircle(circle);
+        }
+        else if (Position.NAME.equalsIgnoreCase(fname))
+        {
+            Position position = new Position();
+            try
+            {
+                position.parse(regionParamStr);
+            } catch (StcsParsingException e)
+            {
+                throw new IllegalArgumentException(e);
+            }
+            pgsFunc = new Spoint(position);
+        }
+        else
+            return super.handleRegion(adqlFunction);
+         
         return pgsFunc;
     }
 }
