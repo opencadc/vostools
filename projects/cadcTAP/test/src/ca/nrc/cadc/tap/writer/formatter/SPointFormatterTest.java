@@ -86,7 +86,7 @@ import static org.junit.Assert.*;
  */
 public class SPointFormatterTest
 {
-    private static final Logger LOG = Logger.getLogger(SPointFormatterTest.class);
+    private static final Logger log = Logger.getLogger(SPointFormatterTest.class);
     static
     {
         Log4jInit.setLevel("ca", Level.INFO);
@@ -96,35 +96,19 @@ public class SPointFormatterTest
 
     public SPointFormatterTest() { }
 
-    @BeforeClass
-    public static void setUpClass() throws Exception
-    {
-    }
-
-    @AfterClass
-    public static void tearDownClass() throws Exception
-    {
-    }
-
-    @Before
-    public void setUp() { }
-
-    @After
-    public void tearDown() { }
-
     /**
      * Test of format method, of class SPointFormatter.
      */
     @Test
-    public void testFormat_Object()
+    public void testFormat()
     {
-        LOG.debug("testFormat");
-        Object object = SPOINT;
-        SPointFormatter instance = new SPointFormatter();
+        log.debug("testFormat");
+
+        SPointFormatter formatter = new SPointFormatter();
         String expResult = STCS_POSITION;
-        String result = instance.format(object);
+        String result = formatter.format(SPOINT);
         assertEquals(expResult, result);
-        LOG.info("testFormat passed");
+        log.info("testFormat passed");
     }
 
     /**
@@ -133,15 +117,15 @@ public class SPointFormatterTest
     @Test
     public void testGetPosition()
     {
-        LOG.debug("testGetPosition");
-        Object object = SPOINT;
-        SPointFormatter instance = new SPointFormatter();
-        Position position = instance.getPosition(object);
+        log.debug("testGetPosition");
+
+        SPointFormatter formatter = new SPointFormatter();
+        Position position = formatter.getPosition(SPOINT);
         assertEquals("POSITION", Position.NAME);
-        assertEquals("ICRS", position.frame);
-        assertEquals(new Double(10.000000000000004), position.coordPair.coord1);
-        assertEquals(new Double(10.000000000000004), position.coordPair.coord2);
-        LOG.info("testGetPosition passed");
+        assertEquals("ICRS", position.getFrame());
+        assertEquals("", 10.0, position.getCoordPair().getX(), 0.1);
+        assertEquals("", 10.0, position.getCoordPair().getY(), 0.1);
+        log.info("testGetPosition passed");
     }
 
 }

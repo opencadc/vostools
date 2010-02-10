@@ -181,9 +181,9 @@ public class ParserUtilTest
         {
             Function f = createFunction(frame, refpos, flavor, 3.0, 3.0, 1.0, 1.0);
             Box b = ParserUtil.convertToStcBox(f);
-            Assert.assertEquals(b.frame, frame);
-            Assert.assertEquals(b.refpos, SpatialSubphrase.DEFAULT_REFPOS);
-            Assert.assertEquals(b.flavor, SpatialSubphrase.DEFAULT_FLAVOR);
+            Assert.assertEquals(b.getFrame(), frame);
+            Assert.assertEquals(b.getRefPos(), SpatialSubphrase.DEFAULT_REFPOS);
+            Assert.assertEquals(b.getFlavor(), SpatialSubphrase.DEFAULT_FLAVOR);
         }
         catch(Throwable t)
         {
@@ -200,9 +200,9 @@ public class ParserUtilTest
         {
             Function f = createFunction(frame, refpos, flavor, 3.0, 3.0, 1.0, 1.0);
             Box b = ParserUtil.convertToStcBox(f);
-            Assert.assertEquals(b.frame.toUpperCase(), frame.toUpperCase());
-            Assert.assertEquals(b.refpos.toUpperCase(), refpos.toUpperCase());
-            Assert.assertEquals(b.flavor, SpatialSubphrase.DEFAULT_FLAVOR);
+            Assert.assertEquals(b.getFrame().toUpperCase(), frame.toUpperCase());
+            Assert.assertEquals(b.getRefPos().toUpperCase(), refpos.toUpperCase());
+            Assert.assertEquals(b.getFlavor(), SpatialSubphrase.DEFAULT_FLAVOR);
         }
         catch(Throwable t)
         {
@@ -219,9 +219,9 @@ public class ParserUtilTest
         {
             Function f = createFunction(frame, refpos, flavor, 3.0, 3.0, 1.0, 1.0);
             Box b = ParserUtil.convertToStcBox(f);
-            Assert.assertEquals(b.frame.toUpperCase(), frame.toUpperCase());
-            Assert.assertEquals(b.refpos.toUpperCase(), refpos.toUpperCase());
-            Assert.assertEquals(b.flavor.toUpperCase(), flavor.toUpperCase());
+            Assert.assertEquals(b.getFrame().toUpperCase(), frame.toUpperCase());
+            Assert.assertEquals(b.getRefPos().toUpperCase(), refpos.toUpperCase());
+            Assert.assertEquals(b.getFlavor().toUpperCase(), flavor.toUpperCase());
         }
         catch(Throwable t)
         {

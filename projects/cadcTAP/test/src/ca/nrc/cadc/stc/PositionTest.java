@@ -18,15 +18,7 @@ import static org.junit.Assert.*;
 
 public class PositionTest
 {
-    public static final String SPACE = "POSITION";
-    public static final String FRAME = "ICRS";
-    public static final String REFPOS = "BARYCENTER";
-    public static final String FLAVOR = "SPHERICAL2";
-    public static final String COORDPAIR = "1.0 2.0";
-
-    public static String phrase;
-
-    private static final Logger LOG = Logger.getLogger(PositionTest.class);
+    private static final Logger log = Logger.getLogger(PositionTest.class);
     static
     {
         Log4jInit.setLevel("ca", Level.INFO);
@@ -34,59 +26,91 @@ public class PositionTest
 
     public PositionTest() {}
 
-    @BeforeClass
-    public static void setUpClass() throws Exception
-    {
-        StringBuilder sb = new StringBuilder();
-        sb.append(SPACE).append(" ");
-        sb.append(FRAME).append(" ");
-        sb.append(REFPOS).append(" ");
-        sb.append(FLAVOR).append(" ");
-        sb.append(COORDPAIR);
-        phrase = sb.toString();
-    }
-
-    @AfterClass
-    public static void tearDownClass() throws Exception {
-    }
-
-    @Before
-    public void setUp() {
-    }
-
-    @After
-    public void tearDown() {
-    }
-
     @Test
     public void testFormat() throws Exception
     {
-        LOG.debug("parse");
+        log.debug("testFormat");
 
-        Position position = new Position();
-        position.frame = FRAME;
-        position.refpos = REFPOS;
-        position.flavor = FLAVOR;
-        position.coordPair = new CoordPair(1D, 2D);
+        String phrase = "POSITION ICRS BARYCENTER SPHERICAL2 1.0 2.0";
+        Position position = new Position("ICRS", "BARYCENTER", "SPHERICAL2", 1.0, 2.0);
 
         String actual = STC.format(position);
-        LOG.debug("expected: " + phrase);
-        LOG.debug("  actual: " + actual);
+        log.debug("expected: " + phrase);
+        log.debug("  actual: " + actual);
         assertEquals(phrase, actual);
-        LOG.info("testFormat passed");
+        log.info("testFormat passed");
+    }
+
+    @Test
+    public void testFormatLowerCase() throws Exception
+    {
+        log.debug("testFormatLowerCase");
+
+        String phrase = "POSITION icrs barycenter spherical2 1.0 2.0";
+        Position position = new Position("icrs", "barycenter", "spherical2", 1.0, 2.0);
+
+        String actual = STC.format(position);
+        log.debug("expected: " + phrase);
+        log.debug("  actual: " + actual);
+        assertEquals(phrase, actual);
+        log.info("testFormatLowerCase passed");
+    }
+
+    @Test
+    public void testFormatMixedCase() throws Exception
+    {
+        log.debug("testFormatMixedCase");
+
+        String phrase = "POSITION Icrs BaryCenter Spherical2 1.0 2.0";
+        Position position = new Position("Icrs", "BaryCenter", "Spherical2", 1.0, 2.0);
+
+        String actual = STC.format(position);
+        log.debug("expected: " + phrase);
+        log.debug("  actual: " + actual);
+        assertEquals(phrase, actual);
+        log.info("testFormatMixedCase passed");
     }
 
     @Test
     public void testParse() throws Exception
     {
-        LOG.debug("parse");
+        log.debug("parse");
 
+        String phrase = "POSITION ICRS BARYCENTER SPHERICAL2 1.0 2.0";
         Region space = STC.parse(phrase);
         String actual = STC.format(space);
-        LOG.debug("expected: " + phrase);
-        LOG.debug("  actual: " + actual);
+        log.debug("expected: " + phrase);
+        log.debug("  actual: " + actual);
         assertEquals(phrase, actual);
-        LOG.info("testParse passed");
+        log.info("testParse passed");
+    }
+
+    @Test
+    public void testParseLowerCase() throws Exception
+    {
+        log.debug("testParseLowerCase");
+
+        String phrase = "position icrs barycenter spherical2 1.0 2.0";
+        Region space = STC.parse(phrase);
+        String actual = STC.format(space);
+        log.debug("expected: " + phrase);
+        log.debug("  actual: " + actual);
+        assertEquals(phrase, actual);
+        log.info("testParseLowerCase passed");
+    }
+
+    @Test
+    public void testParseMixedCase() throws Exception
+    {
+        log.debug("testParseMixedCase");
+
+        String phrase = "Position Icrs BaryCenter Spherical2 1.0 2.0";
+        Region space = STC.parse(phrase);
+        String actual = STC.format(space);
+        log.debug("expected: " + phrase);
+        log.debug("  actual: " + actual);
+        assertEquals(phrase, actual);
+        log.info("testParseMixedCase passed");
     }
 
 }

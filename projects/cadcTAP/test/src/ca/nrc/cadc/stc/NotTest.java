@@ -17,21 +17,11 @@ import static org.junit.Assert.*;
 
 /**
  *
- * @author jeff
+ * @author jburke
  */
 public class NotTest
 {
-    public static final String SPACE = "CIRCLE";
-    public static final String FRAME = "ICRS";
-    public static final String REFPOS = "BARYCENTER";
-    public static final String FLAVOR = "SPHERICAL2";
-    public static final String COORDPAIR = "1.0 2.0";
-    public static final String RADIUS = "3.0";
-
-    public static Circle circle;
-    public static String phrase;
-
-    private static final Logger LOG = Logger.getLogger(NotTest.class);
+    private static final Logger log = Logger.getLogger(NotTest.class);
     static
     {
         Log4jInit.setLevel("ca", Level.INFO);
@@ -39,49 +29,97 @@ public class NotTest
 
     public NotTest() {}
 
-    @BeforeClass
-    public static void setUpClass() throws Exception
-    {
-        phrase = "NOT ( CIRCLE ICRS 1.0 2.0 3.0 )";
-
-        circle = new Circle();
-        circle.frame = "ICRS";
-        circle.coordPair = new CoordPair(1D, 2D);
-        circle.radius = 3D;
-    }
-
-    @Before
-    public void setUp() throws Exception {
-    }
-
-    @After
-    public void tearDown() {
-    }
-
     @Test
     public void testFormat()
     {
-        Not not = new Not();
-        not.regions = circle;
+        log.debug("testFormat");
 
-        LOG.debug("format");
-        LOG.debug("expected: " + phrase);
+        String phrase = "NOT ( CIRCLE ICRS 1.0 2.0 3.0 )";
+        Region circle = new Circle("ICRS", 1.0, 2.0, 3.0);
+        Not not = new Not(circle);
+
+        log.debug("expected: " + phrase);
         String actual = STC.format(not);
-        LOG.debug("  actual: " + actual);
+        log.debug("  actual: " + actual);
         assertEquals(phrase, actual);
-        LOG.info("testFormat passed");
+        log.info("testFormat passed");
+    }
+
+    @Test
+    public void testFormatLowerCase()
+    {
+        log.debug("testFormatLowerCase");
+
+        String phrase = "NOT ( CIRCLE icrs 1.0 2.0 3.0 )";
+        Region circle = new Circle("icrs", 1.0, 2.0, 3.0);
+        Not not = new Not(circle);
+
+        log.debug("expected: " + phrase);
+        String actual = STC.format(not);
+        log.debug("  actual: " + actual);
+        assertEquals(phrase, actual);
+        log.info("testFormatLowerCase passed");
+    }
+
+    @Test
+    public void testFormatMixedCase()
+    {
+        log.debug("testFormatMixedCase");
+
+        String phrase = "NOT ( CIRCLE Icrs 1.0 2.0 3.0 )";
+        Region circle = new Circle("Icrs", 1.0, 2.0, 3.0);
+        Not not = new Not(circle);
+
+        log.debug("expected: " + phrase);
+        String actual = STC.format(not);
+        log.debug("  actual: " + actual);
+        assertEquals(phrase, actual);
+        log.info("testFormatMixedCase passed");
     }
 
     @Test
     public void testParse() throws Exception
     {
-        LOG.debug("parse");
-        LOG.debug("expected: " + phrase);
+        log.debug("testParse");
+
+        String phrase = "NOT ( CIRCLE ICRS 1.0 2.0 3.0 )";
+
+        log.debug("expected: " + phrase);
         Not not = (Not) STC.parse(phrase);
         String actual = STC.format(not);
-        LOG.debug("  actual: " + actual);
+        log.debug("  actual: " + actual);
         assertEquals(phrase, actual);
-        LOG.info("testParse passed");
+        log.info("testParse passed");
+    }
+
+    @Test
+    public void testParseLowerCase() throws Exception
+    {
+        log.debug("testParseLowerCase");
+
+        String phrase = "not ( circle icrs 1.0 2.0 3.0 )";
+
+        log.debug("expected: " + phrase);
+        Not not = (Not) STC.parse(phrase);
+        String actual = STC.format(not);
+        log.debug("  actual: " + actual);
+        assertEquals(phrase, actual);
+        log.info("testParseLowerCase passed");
+    }
+
+    @Test
+    public void testParseMixedCase() throws Exception
+    {
+        log.debug("testParseMixedCase");
+
+        String phrase = "Not ( Circle Icrs 1.0 2.0 3.0 )";
+
+        log.debug("expected: " + phrase);
+        Not not = (Not) STC.parse(phrase);
+        String actual = STC.format(not);
+        log.debug("  actual: " + actual);
+        assertEquals(phrase, actual);
+        log.info("testParseMixedCase passed");
     }
 
 }

@@ -69,15 +69,12 @@
 
 package ca.nrc.cadc.tap.writer.formatter;
 
+import ca.nrc.cadc.stc.CoordPair;
 import ca.nrc.cadc.stc.Polygon;
 import ca.nrc.cadc.util.Log4jInit;
-import java.sql.ResultSet;
+import java.util.List;
 import org.apache.log4j.Level;
 import org.apache.log4j.Logger;
-import org.junit.After;
-import org.junit.AfterClass;
-import org.junit.Before;
-import org.junit.BeforeClass;
 import org.junit.Test;
 import static org.junit.Assert.*;
 
@@ -87,7 +84,7 @@ import static org.junit.Assert.*;
  */
 public class SPolyFormatterTest
 {
-    private static final Logger LOG = Logger.getLogger(SPointFormatterTest.class);
+    private static final Logger log = Logger.getLogger(SPointFormatterTest.class);
     static
     {
         Log4jInit.setLevel("ca", Level.INFO);
@@ -97,35 +94,19 @@ public class SPolyFormatterTest
 
     public SPolyFormatterTest() { }
 
-    @BeforeClass
-    public static void setUpClass() throws Exception
-    {
-    }
-
-    @AfterClass
-    public static void tearDownClass() throws Exception
-    {
-    }
-
-    @Before
-    public void setUp() { }
-
-    @After
-    public void tearDown() { }
-
     /**
      * Test of format method, of class SPolyFormatter.
      */
     @Test
-    public void testFormat_Object()
+    public void testFormat()
     {
-        LOG.debug("testFormat");
-        Object object = SPOLYGON;
-        SPolyFormatter instance = new SPolyFormatter();
+        log.debug("testFormat");
+
+        SPolyFormatter formatter = new SPolyFormatter();
         String expResult = STCS_POLYGON;
-        String result = instance.format(object);
+        String result = formatter.format(SPOLYGON);
         assertEquals(expResult, result);
-        LOG.info("testFormat passed");
+        log.info("testFormat passed");
     }
 
     /**
@@ -134,19 +115,21 @@ public class SPolyFormatterTest
     @Test
     public void testGetPosition()
     {
-        LOG.debug("testGetPolygon");
-        Object object = SPOLYGON;
+        log.debug("testGetPolygon");
+
         SPolyFormatter instance = new SPolyFormatter();
-        Polygon polygon = instance.getPolygon(object);
+        Polygon polygon = instance.getPolygon(SPOLYGON);
         assertEquals("POLYGON", Polygon.NAME);
-        assertEquals("ICRS", polygon.frame);
-        assertEquals(new Double(2.0000000000000004), polygon.coordPairs.get(0).coord1);
-        assertEquals(new Double(2.0000000000000004), polygon.coordPairs.get(0).coord2);
-        assertEquals(new Double(2.0000000000000004), polygon.coordPairs.get(1).coord1);
-        assertEquals(new Double(4.000000000000001), polygon.coordPairs.get(1).coord2);
-        assertEquals(new Double(3.0000000000000004), polygon.coordPairs.get(2).coord1);
-        assertEquals(new Double(3.0000000000000004), polygon.coordPairs.get(2).coord2);
-        LOG.info("testGetPolygon passed");
+        assertEquals("ICRS", polygon.getFrame());
+        List<CoordPair> coordPairs = polygon.getCoordPairs();
+
+        assertEquals("", 2.0, coordPairs.get(0).getX(), 0.1);
+        assertEquals("", 2.0, coordPairs.get(0).getY(), 0.1);
+        assertEquals("", 2.0, coordPairs.get(1).getX(), 0.1);
+        assertEquals("", 4.0, coordPairs.get(1).getY(), 0.1);
+        assertEquals("", 3.0, coordPairs.get(2).getX(), 0.1);
+        assertEquals("", 3.0, coordPairs.get(2).getY(), 0.1);
+        log.info("testGetPolygon passed");
     }
 
 }
