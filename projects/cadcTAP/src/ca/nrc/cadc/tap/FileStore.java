@@ -69,8 +69,10 @@
 
 package ca.nrc.cadc.tap;
 
+import ca.nrc.cadc.uws.Parameter;
 import java.io.File;
 import java.net.URL;
+import java.util.List;
 
 /**
  * Interface to temporary storage of result or error files.
@@ -79,6 +81,14 @@ import java.net.URL;
  */
 public interface FileStore
 {
+    /**
+     * The complete list of job parameters. This is here to allow implementations to
+     * provide custom extensions such as client control of the output.
+     * 
+     * @param params
+     */
+    public void setParameterList(List<Parameter> params);
+
     /**
      * @return the directory to use for (temporary) result files.
      */

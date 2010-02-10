@@ -204,6 +204,8 @@ public class QueryRunner implements JobRunner
             
             // start processing the job
             List<Parameter> paramList = job.getParameterList();
+
+            fs.setParameterList(paramList);
             
             // REQUEST, VERSION
             TapValidator tapValidator = new TapValidator();
