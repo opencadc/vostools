@@ -180,15 +180,15 @@ public class AdqlQuery implements TapQuery
                 if (top == null)
                 {
                     top = new Top();
-                    top.setRowCount(new Long(_maxRows + 1));
-                    log.debug("added TOP " + (_maxRows + 1));
+                    top.setRowCount(new Long(_maxRows));
+                    log.debug("added TOP " + _maxRows);
                 }
                 else
                 {
                     if (_maxRows < top.getRowCount())
                     {
-                        log.debug("updated TOP " + top.getRowCount() + " to TOP " + (_maxRows + 1));
-                        top.setRowCount(_maxRows + 1);
+                        log.debug("updated TOP " + top.getRowCount() + " to TOP " + _maxRows);
+                        top.setRowCount(_maxRows);
                     }
                 }
                 plainSelect.setTop(top);

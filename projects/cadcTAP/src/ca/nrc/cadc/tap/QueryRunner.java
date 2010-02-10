@@ -251,7 +251,7 @@ public class QueryRunner implements JobRunner
             tapQuery.setTapSchema(tapSchema);
             tapQuery.setExtraTables(tableDescs);
             tapQuery.setParameterList(paramList);
-            tapQuery.setMaxRowCount(maxRows);
+            tapQuery.setMaxRowCount(maxRows + 1); // +1 so the TableWriter check overflow
         	String sql = tapQuery.getSQL();
             List<TapSelectItem> selectList = tapQuery.getSelectList();
             
