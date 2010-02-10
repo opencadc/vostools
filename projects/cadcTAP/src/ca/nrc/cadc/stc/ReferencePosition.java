@@ -69,34 +69,23 @@
 
 package ca.nrc.cadc.stc;
 
-import java.util.ArrayList;
-import java.util.List;
-
 /**
  * Allowed values for ReferencePosition in a STC-S Space sub-phrase.
  *
  */
-public final class ReferencePosition
+public enum ReferencePosition
 {
-    public static final String BARYCENTER = "BARYCENTER";
-    public static final String GEOCENTER = "GEOCENTER";
-    public static final String HELIOCENTER = "HELIOCENTER";
-    public static final String LSR = "LSR";
-    public static final String TOPOCENTER = "TOPOCENTER";
-    public static final String RELOCATABLE = "RELOCATABLE";
-    public static final String UNKNOWNREFPOS = "UNKNOWNREFPOS";
-    
-    public static final List REFERENCE_POSITIONS;
-    static
+    BARYCENTER, GEOCENTER, HELIOCENTER, LSR, TOPOCENTER, RELOCATABLE, UNKNOWNREFPOS;
+
+    public static boolean contains(final String value)
     {
-        // Allowed values.
-        REFERENCE_POSITIONS = new ArrayList<String>();
-        REFERENCE_POSITIONS.add(BARYCENTER);
-        REFERENCE_POSITIONS.add(GEOCENTER);
-        REFERENCE_POSITIONS.add(HELIOCENTER);
-        REFERENCE_POSITIONS.add(LSR);
-        REFERENCE_POSITIONS.add(TOPOCENTER);
-        REFERENCE_POSITIONS.add(RELOCATABLE);
-        REFERENCE_POSITIONS.add(UNKNOWNREFPOS);
+        ReferencePosition[] values = ReferencePosition.values();
+        for (int i = 0; i < values.length; i++)
+        {
+            if (values[i].name().equals(value))
+                return true;
+        }
+        return false;
     }
+
 }

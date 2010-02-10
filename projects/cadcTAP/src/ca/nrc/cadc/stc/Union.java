@@ -81,17 +81,32 @@ public class Union extends SpatialSubphrase implements Region
 {
     public static final String NAME = "UNION";
 
-    public List<Region> regions;
+    private List<Region> regions;
 
-    public Union() {}
-    
-    public String format(Region region)
+    Union() { }
+
+    public Union(String coordsys, List<Region> regions)
     {
-        if (!(region instanceof Union))
-            throw new IllegalArgumentException("Expected Union, was " + region.getClass().getName());
-        Union union = (Union) region;
+        super(coordsys);
+        this.regions = regions;
+    }
+
+    public Union(String frame, String refpos, String flavor, List<Region> regions)
+    {
+        super(frame, refpos, flavor);
+        this.regions = regions;
+    }
+    
+    public String format(Region space)
+    {
+        if (!(space instanceof Union))
+            throw new IllegalArgumentException("Expected Union, was " + space.getClass().getName());
+        Union union = (Union) space;
         StringBuilder sb = new StringBuilder();
-        sb.append(NAME).append(" ");
+        if (union.region == null)
+            sb.append(NAME).append(" ");
+        else
+            sb.append(union.region).append(" ");
         if (union.frame != null)
             sb.append(union.frame).append(" ");
         if (union.refpos != null)
@@ -112,7 +127,16 @@ public class Union extends SpatialSubphrase implements Region
         return this;
     }
 
-    protected void getCoordinates()
+    /**
+     * 
+     * @return
+     */
+    public List<Region> getRegions()
+    {
+        return regions;
+    }
+
+    protected void parseCoordinates()
         throws StcsParsingException
     {
         // Get the string within the opening and closing parentheses.
@@ -135,15 +159,19 @@ public class Union extends SpatialSubphrase implements Region
 
         // Must be two or more regions in a Union.
         if (regions.size() < 2)
-            throw new StcsParsingException("Union must : " + phrase);
+            throw new StcsParsingException("Union must contain 2 or more regions : " + phrase);
     }
 
     private String getNextRegion(String phrase, int index)
     {
+        // Uppercase phrase.
+        String upperPhrase = phrase.toUpperCase();
+
         // Search the phrase for a Region.
-        int[] indexes = new int[REGIONS.length];
+        Regions[] values = Regions.values();
+        int[] indexes = new int[values.length];
         for (int i = 0; i < indexes.length; i++)
-            indexes[i] = phrase.indexOf(REGIONS[i], index);
+            indexes[i] = upperPhrase.indexOf(values[i].name(), index);
 
         // Sort in descending order.
         Arrays.sort(indexes);

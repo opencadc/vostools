@@ -112,9 +112,9 @@ public class Scircle extends PgsFunction
         List<Expression> expressions = new ArrayList<Expression>();
         expressions.add(new StringValue(RegionFinder.ICRS));
         CoordPair cp = circle.getCoordPair();
-        ra = cp.getCoord1().doubleValue();
-        dec = cp.getCoord2().doubleValue();
-        radius = circle.getRadius().doubleValue();
+        ra = cp.getX();
+        dec = cp.getY();
+        radius = circle.getRadius();
         expressions.add(new DegreeDouble(ra));
         expressions.add(new DegreeDouble(dec));
         expressions.add(new DegreeDouble(radius));

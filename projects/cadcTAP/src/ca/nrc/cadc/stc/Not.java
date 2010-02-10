@@ -73,18 +73,29 @@ package ca.nrc.cadc.stc;
  * Class to represent a STC-S Not operator.
  *
  */
-public class Not  extends SpatialSubphrase implements Region
+public class Not extends SpatialSubphrase implements Region
 {
     public static final String NAME = "NOT";
-    public Region regions;
+    private Region regions;
 
-    public Not() {}
+    Not() { }
 
-    public String format(Region region)
+    public Not(Region region)
     {
-        Not not = (Not) region;
+        super(null);
+        this.regions = region;
+    }
+
+    public String format(Region space)
+    {
+        if (!(space instanceof Not))
+            throw new IllegalArgumentException("Expected Not, was " + space.getClass().getName());
+        Not not = (Not) space;
         StringBuilder sb = new StringBuilder();
-        sb.append(NAME);
+        if (not.region == null)
+            sb.append(NAME);
+        else
+            sb.append(not.region);
         sb.append(" ( ");
         sb.append(STC.format(not.regions));
         sb.append(" )");
@@ -98,7 +109,16 @@ public class Not  extends SpatialSubphrase implements Region
         return this;
     }
 
-    protected void getCoordinates()
+    /**
+     * 
+     * @return
+     */
+    public Region getRegion()
+    {
+        return regions;
+    }
+
+    protected void parseCoordinates()
         throws StcsParsingException
     {
         // Get the string within the opening and closing parentheses.

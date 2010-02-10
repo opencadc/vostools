@@ -109,8 +109,8 @@ public class Spoly extends PgsFunction
         expressions.add(new StringValue(RegionFinder.ICRS));
         for (CoordPair cp : polygon.getCoordPairs())
         {
-            ra = cp.getCoord1().doubleValue();
-            dec = cp.getCoord2().doubleValue();
+            ra = cp.getX();
+            dec = cp.getY();
             expressions.add(new DegreeDouble(ra));
             expressions.add(new DegreeDouble(dec));
         }

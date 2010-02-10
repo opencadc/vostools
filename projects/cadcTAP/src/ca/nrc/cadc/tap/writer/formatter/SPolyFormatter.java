@@ -75,6 +75,7 @@ import ca.nrc.cadc.stc.STC;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.util.ArrayList;
+import java.util.List;
 
 /**
  * Formats a PGSphere spolygon as a String.
@@ -142,9 +143,7 @@ public class SPolyFormatter implements ResultSetFormatter
             throw new IllegalArgumentException("Minimum 3 vertices required to form a Polygon " + s);
 
         // Create STC Polygon and set some defaults.
-        Polygon polygon = new Polygon();
-        polygon.frame = "ICRS";
-        polygon.coordPairs = new ArrayList<CoordPair>();
+        List<CoordPair> coordPairs = new ArrayList<CoordPair>();
 
         // Loop through each set of vertices.
         for (int i = 0; i < vertices.length; i++)
@@ -162,10 +161,9 @@ public class SPolyFormatter implements ResultSetFormatter
             // convert to radians and add to Polygon.
             x = x * (180/Math.PI);
             y = y * (180/Math.PI);
-            polygon.coordPairs.add(new CoordPair(x, y));
+            coordPairs.add(new CoordPair(x, y));
         }
-
-        return polygon;
+        return new Polygon("ICRS", null, null, coordPairs);
     }
 
 }

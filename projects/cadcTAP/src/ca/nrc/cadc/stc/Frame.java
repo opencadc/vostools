@@ -69,33 +69,24 @@
 
 package ca.nrc.cadc.stc;
 
-import java.util.ArrayList;
-import java.util.List;
-
 /**
  * Allowed values for Frame in a STC-S Space sub-phrase.
  *
  */
-public final class Frame
+public enum Frame
 {
-    public static final String ECLIPTIC = "ECLIPTIC";
-    public static final String FK4 = "FK4";
-    public static final String FK5 = "FK5";
-    public static final String GALACTIC = "GALACTIC";
-    public static final String ICRS = "ICRS";
-    public static final String UNKNOWNFRAME = "UNKNOWNFRAME";
-    
-    public static final List FRAMES;
-    static
+    ECLIPTIC, FK4, FK5, GALACTIC, ICRS, UNKNOWNFRAME;
+
+    public static boolean contains(final String value)
     {
-        // Allowed values.
-        FRAMES = new ArrayList<String>();
-        FRAMES.add(ECLIPTIC);
-        FRAMES.add(FK4);
-        FRAMES.add(FK5);
-        FRAMES.add(GALACTIC);
-        FRAMES.add(ICRS);
-        FRAMES.add(UNKNOWNFRAME);
+        Frame[] values = Frame.values();
+        for (int i = 0; i < values.length; i++)
+        {
+            if (values[i].name().equals(value))
+                return true;
+        }
+        return false;
     }
 
 }
+

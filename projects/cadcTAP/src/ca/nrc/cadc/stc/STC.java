@@ -79,47 +79,55 @@ public class STC
     public static Region parse(String phrase)
         throws StcsParsingException
     {
-        if (phrase == null)
+        if (phrase == null || phrase.trim().length() == 0)
             return null;
-        phrase = phrase.trim().toUpperCase();
-        if (phrase.length() == 0)
-            return null;
-        if (phrase.startsWith(Box.NAME))
+
+        // Find index of first whitespace in phrase.
+        phrase = phrase.trim();
+        int index = phrase.indexOf(" ");
+        
+        // Parse out the first word which should be the region.
+        String region;
+        if (index == -1)
+            region = phrase.toUpperCase();
+        else
+            region = phrase.substring(0, index).toUpperCase();
+
+        if (region.equals(Box.NAME))
         {   Region box = new Box();
             return box.parse(phrase);
         }
-        else if (phrase.startsWith(Circle.NAME))
+        if (region.equals(Circle.NAME))
         {
             Region circle = new Circle();
             return circle.parse(phrase);
         }
-        else if (phrase.startsWith(Not.NAME))
+        if (region.equals(Not.NAME))
         {
             Region not = new Not();
             return not.parse(phrase);
         }
-        else if (phrase.startsWith(Polygon.NAME))
+        if (region.equals(Polygon.NAME))
         {
             Region polygon = new Polygon();
             return polygon.parse(phrase);
         }
-        else if (phrase.startsWith(Position.NAME))
+        if (region.equals(Position.NAME))
         {
             Region position = new Position();
             return position.parse(phrase);
         }
-        else if (phrase.startsWith(Union.NAME))
+        if (region.equals(Union.NAME))
         {
             Region union = new Union();
             return union.parse(phrase);
         }
-        else if (phrase.startsWith(Intersection.NAME))
+        if (region.equals(Intersection.NAME))
         {
             Region intersection = new Intersection();
             return intersection.parse(phrase);
         }
-        else
-            throw new UnsupportedOperationException("Unsupported phrase " + phrase);
+        throw new UnsupportedOperationException("Unsupported phrase " + phrase);
     }
 
     public static String format(Region space)

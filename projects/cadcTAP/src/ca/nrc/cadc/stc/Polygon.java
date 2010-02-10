@@ -79,21 +79,33 @@ import java.util.List;
 public class Polygon extends SpatialSubphrase implements Region
 {
     public static final String NAME = "POLYGON";
-    public List<CoordPair> coordPairs;
+    private List<CoordPair> coordPairs;
 
-    public Polygon() {}
-    
+    Polygon() { }
+
+    public Polygon(String coordsys, List<CoordPair> coordPairs)
+    {
+        super(coordsys);
+        this.coordPairs = coordPairs;
+    }
+
+    public Polygon(String frame, String refpos, String flavor, List<CoordPair> coordPairs)
+    {
+        super(frame, refpos, flavor);
+        this.coordPairs = coordPairs;
+    }
+
     /**
-     * Create from a Box object
+     * Create from a Box object.
      * 
      * @param box
      */
     public Polygon(Box box)
     {
-        double x  = box.getCoordPair().getCoord1().doubleValue();
-        double y = box.getCoordPair().getCoord2().doubleValue();
-        double hw = box.getWidth().doubleValue() / 2.0;
-        double hh = box.getHeight().doubleValue() / 2.0;
+        double x  = box.getCoordPair().getX();
+        double y = box.getCoordPair().getY();
+        double hw = box.getWidth() / 2.0;
+        double hh = box.getHeight() / 2.0;
         
         CoordPair corner;
         List<CoordPair> corners = new ArrayList<CoordPair>(4);
@@ -115,7 +127,10 @@ public class Polygon extends SpatialSubphrase implements Region
             throw new IllegalArgumentException("Expected Polygon, was " + space.getClass().getName());
         Polygon polygon = (Polygon) space;
         StringBuilder sb = new StringBuilder();
-        sb.append(NAME).append(" ");
+        if (polygon.region == null)
+            sb.append(NAME).append(" ");
+        else
+            sb.append(polygon.region).append(" ");
         if (polygon.frame != null)
             sb.append(polygon.frame).append(" ");
         if (polygon.refpos != null)
@@ -137,7 +152,16 @@ public class Polygon extends SpatialSubphrase implements Region
         return this;
     }
 
-    protected void getCoordinates()
+    /**
+     *
+     * @return
+     */
+    public List<CoordPair> getCoordPairs()
+    {
+        return coordPairs;
+    }
+
+    protected void parseCoordinates()
         throws StcsParsingException
     {
         // current word or next word as a Double.
@@ -146,6 +170,10 @@ public class Polygon extends SpatialSubphrase implements Region
         {
             if (words.hasNextDouble())
                 value = words.nextDouble();
+            else if (words.hasNext())
+                throw new StcsParsingException("Invalid coordpair element " + words.next());
+            else
+                throw new StcsParsingException("Unexpected end to STC-S phrase before coordpair element");
         }
         else
         {
@@ -153,41 +181,27 @@ public class Polygon extends SpatialSubphrase implements Region
             {
                 value = Double.valueOf(currentWord);
             }
-            catch (NumberFormatException ignore) {}
+            catch (NumberFormatException e)
+            {
+                throw new StcsParsingException("Invalid coordpair value " + currentWord, e);
+            }
         }
-
-        // Double value not found?
-        if (value == null)
-            throw new StcsParsingException("coordpair values not found");
 
         // Get the first coordpair.
         coordPairs = new ArrayList<CoordPair>();
-        CoordPair coordPair = new CoordPair();
-        coordPair.coord1 = value;
         if (words.hasNextDouble())
-        {
-            coordPair.coord2 = words.nextDouble();
-            coordPairs.add(coordPair);
-        }
+            coordPairs.add(new CoordPair(value, words.nextDouble()));
         else
-        {
             throw new StcsParsingException("coordpair values not found");
-        }
 
         // Get the rest of the coordpairs.
         while (words.hasNextDouble())
         {   
-            coordPair = new CoordPair();
-            coordPair.coord1 = words.nextDouble();
+            value = words.nextDouble();
             if (words.hasNextDouble())
-            {
-                coordPair.coord2 = words.nextDouble();
-                coordPairs.add(coordPair);
-            }
+                coordPairs.add(new CoordPair(value, words.nextDouble()));
             else
-            {
                 throw new StcsParsingException("coordpair values not found");
-            }
         }
 
         // Should be a even multiple of dimensions values.
@@ -195,16 +209,6 @@ public class Polygon extends SpatialSubphrase implements Region
             throw new StcsParsingException("Invalid number of coordpair values " + coordPairs.size());
 
         currentWord = null;
-    }
-
-    public List<CoordPair> getCoordPairs()
-    {
-        return coordPairs;
-    }
-
-    public void setCoordPairs(List<CoordPair> coordPairs)
-    {
-        this.coordPairs = coordPairs;
     }
 
 }

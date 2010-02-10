@@ -69,7 +69,6 @@
 
 package ca.nrc.cadc.tap.writer.formatter;
 
-import ca.nrc.cadc.stc.CoordPair;
 import ca.nrc.cadc.stc.Position;
 import ca.nrc.cadc.stc.STC;
 import java.sql.ResultSet;
@@ -140,11 +139,7 @@ public class SPointFormatter implements ResultSetFormatter
         y = y * (180/Math.PI);
 
         // Create STC Position.
-        Position position = new Position();
-        position.frame = "ICRS";
-        position.coordPair = new CoordPair();
-        position.coordPair.coord1 = x;
-        position.coordPair.coord2 = y;
+        Position position = new Position("ICRS", null, null, x, y);
 
         return position;
     }

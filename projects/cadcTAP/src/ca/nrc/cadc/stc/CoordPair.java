@@ -71,47 +71,49 @@ package ca.nrc.cadc.stc;
 
 /**
  *
- * 
+ * @author jburke
  */
 public class CoordPair
 {
-    public Double coord1;
-    public Double coord2;
+    private double x;
+    private double y;
 
-    public CoordPair() {}
-
-    public CoordPair(final Double coord1, final Double coord2)
+    public CoordPair(final double x, final double y)
     {
-        this.coord1 = coord1;
-        this.coord2 = coord2;
+        this.x = x;
+        this.y = y;
     }
 
+    /**
+     *
+     * @return
+     */
+    @Override
     public String toString()
     {
         StringBuilder sb = new StringBuilder();
-        sb.append(coord1);
+        sb.append(x);
         sb.append(" ");
-        sb.append(coord2);
+        sb.append(y);
         return sb.toString();
     }
 
-    public Double getCoord1()
+    /**
+     *
+     * @return
+     */
+    public double getX()
     {
-        return coord1;
+        return x;
     }
 
-    public void setCoord1(Double coord1)
+    /**
+     * 
+     * @return
+     */
+    public double getY()
     {
-        this.coord1 = coord1;
+        return y;
     }
 
-    public Double getCoord2()
-    {
-        return coord2;
-    }
-
-    public void setCoord2(Double coord2)
-    {
-        this.coord2 = coord2;
-    }
 }

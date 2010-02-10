@@ -81,15 +81,9 @@ import java.util.Scanner;
 public abstract class SpatialSubphrase
 {
     // Default values.
-    public static final String DEFAULT_FRAME = Frame.UNKNOWNFRAME;
-    public static final String DEFAULT_REFPOS = ReferencePosition.UNKNOWNREFPOS;
-    public static final String DEFAULT_FLAVOR = Flavor.SPHERICAL2;
-
-    // Possible regions.
-    public static final String[] REGIONS = new String[]
-    {
-        "BOX", "CIRCLE", "POLYGON", "POSITION", "UNION", "NOT", "INTERSECTION"
-    };
+    public static final String DEFAULT_FRAME = Frame.UNKNOWNFRAME.name();
+    public static final String DEFAULT_REFPOS = ReferencePosition.UNKNOWNREFPOS.name();
+    public static final String DEFAULT_FLAVOR = Flavor.SPHERICAL2.name();
 
     // Formatter for Double values.
     protected static DecimalFormat doubleFormat;
@@ -105,12 +99,12 @@ public abstract class SpatialSubphrase
     /**
      * STC-S phrase elements.
      */
-    public String phrase;
-    public String region;
+    protected String phrase;
+    protected String region;
 
-    public String frame;
-    public String refpos;
-    public String flavor;
+    protected String frame;
+    protected String refpos;
+    protected String flavor;
 
     // Dimensionality of the region.
     protected int dimensions;
@@ -124,40 +118,97 @@ public abstract class SpatialSubphrase
     // The tokenized phrase.
     protected Scanner words;
 
-    protected SpatialSubphrase() 
+    protected SpatialSubphrase() { }
+
+    protected SpatialSubphrase(String coordsys)
     {
-        this.frame = DEFAULT_FRAME;
-        this.refpos = DEFAULT_REFPOS;
-        this.flavor = DEFAULT_FLAVOR;
+        
+        // Initialize to null.
+        frame = null;
+        refpos = null;
+        flavor = null;
+
+        // If coordsys is null or empty string.
+        if (coordsys == null || coordsys.trim().length() == 0)
+            return;
+
+        // Split coordsys on whitespace.
+        String[] tokens = coordsys.split("\\s+");
+
+        // First token could be Frame, Reference Position, or Flavor.
+        if (tokens.length >= 1)
+        {
+            String token = tokens[0].toUpperCase();
+            if (Frame.contains(token))
+                frame = tokens[0];
+            else if (ReferencePosition.contains(token))
+                this.refpos = tokens[0];
+            else if (Flavor.contains(token))
+                flavor = tokens[0];
+            else
+                throw new IllegalArgumentException("illegal coordsys value: " + tokens[0]);
+        }
+
+        // Second token can only be Reference Position or Flavor.
+        if (tokens.length >= 2)
+        {
+            String token = tokens[1].toUpperCase();
+            if (ReferencePosition.contains(token))
+                refpos = tokens[1];
+            else if (Flavor.contains(token))
+                flavor = tokens[1];
+            else
+                throw new IllegalArgumentException("illegal coordsys value: " + tokens[1]);
+        }
+
+        // Third token must be Reference Position.
+        if (tokens.length == 3)
+        {
+            if (Flavor.contains(tokens[2].toUpperCase()))
+                flavor = tokens[2];
+            else
+                throw new IllegalArgumentException("illegal coordsys value: " + tokens[2]);
+        }        
     }
 
     protected SpatialSubphrase(String frame, String refpos, String flavor)
     {
-        this();
-        if (frame != null)
+        if (frame == null || frame.trim().length() == 0)
+            this.frame = null;
+        else
         {
-            if (Frame.FRAMES.contains(frame.toUpperCase()))
+            if (Frame.contains(frame.toUpperCase()))
                 this.frame = frame;
             else
                 throw new IllegalArgumentException("illegal frame: " + frame);
         }
-        if (refpos != null)
+        
+        if (refpos == null || refpos.trim().length() == 0)
+            this.refpos = null;
+        else
         {
-            if (ReferencePosition.REFERENCE_POSITIONS.contains(refpos.toUpperCase()))
+            if (ReferencePosition.contains(refpos.toUpperCase()))
                 this.refpos = refpos;
             else
                 throw new IllegalArgumentException("illegal reference position: " + refpos);
         }
-        if (flavor != null)
+
+        if (flavor == null || flavor.trim().length() == 0)
+            this.flavor = null;
+        else
         {
-            if (Flavor.FLAVORS.contains(flavor.toUpperCase()))
+            if (Flavor.contains(flavor.toUpperCase()))
                 this.flavor = flavor;
             else
                 throw new IllegalArgumentException("illegal coordinate flavor: " + flavor);
         }
-
     }
 
+    /**
+     * 
+     * @param phrase
+     * @throws StcsParsingException
+     */
     public void init(String phrase)
         throws StcsParsingException
     {
@@ -167,21 +218,54 @@ public abstract class SpatialSubphrase
 
         endOfWords = false;
         currentWord = null;
-        words = new Scanner(phrase);
+        words = new Scanner(this.phrase);
         words.useDelimiter("\\s+");
 
-        getRegion();
-        getFrame();
-        getRefpos();
-        getFlavor();
-        getDimensionality();
-        getCoordinates();
+        parseRegion();
+        parseFrame();
+        parseRefpos();
+        parseFlavor();
+        parseDimensionality();
+        parseCoordinates();
     }
 
-    protected abstract void getCoordinates()
+    /**
+     *
+     * @return
+     */
+    public String getFrame()
+    {
+		if (frame == null)
+			return DEFAULT_FRAME;
+        return frame;
+    }
+
+    /**
+     *
+     * @return
+     */
+    public String getRefPos()
+    {
+		if (refpos == null)
+			return DEFAULT_REFPOS;
+        return refpos;
+    }
+
+    /**
+     *
+     * @return
+     */
+    public String getFlavor()
+    {
+		if (flavor == null)
+			return DEFAULT_FLAVOR;
+        return flavor;
+    }
+
+    protected abstract void parseCoordinates()
         throws StcsParsingException;
 
-    protected void getRegion()
+    protected void parseRegion()
         throws StcsParsingException
     {
         if (currentWord == null)
@@ -191,7 +275,7 @@ public abstract class SpatialSubphrase
             else
                 throw new StcsParsingException("Unexpected end to STC-S phrase " + phrase);
         }
-        if (STC.arrayContains(REGIONS, currentWord.toUpperCase()))
+        if (Regions.contains(currentWord.toUpperCase()))
         {
             region = currentWord;
             currentWord = null;
@@ -202,7 +286,7 @@ public abstract class SpatialSubphrase
         }
     }
 
-    protected void getFrame()
+    protected void parseFrame()
         throws StcsParsingException
     {
         if (currentWord == null)
@@ -212,14 +296,14 @@ public abstract class SpatialSubphrase
             else
                 throw new StcsParsingException("Unexpected end to STC-S phrase " + phrase);
         }
-        if (Frame.FRAMES.contains(currentWord.toUpperCase()))
+        if (Frame.contains(currentWord.toUpperCase()))
         {
             frame = currentWord;
             currentWord = null;
         }
     }
 
-    protected void getRefpos()
+    protected void parseRefpos()
         throws StcsParsingException
     {
         if (currentWord == null)
@@ -229,14 +313,14 @@ public abstract class SpatialSubphrase
             else
                 throw new StcsParsingException("Unexpected end to STC-S phrase " + phrase);
         }
-        if (ReferencePosition.REFERENCE_POSITIONS.contains(currentWord.toUpperCase()))
+        if (ReferencePosition.contains(currentWord.toUpperCase()))
         {
             refpos = currentWord;
             currentWord = null;
         }
     }
 
-    protected void getFlavor()
+    protected void parseFlavor()
         throws StcsParsingException
     {
         if (currentWord == null)
@@ -246,7 +330,7 @@ public abstract class SpatialSubphrase
             else
                 throw new StcsParsingException("Unexpected end to STC-S phrase " + phrase);
         }
-        if (Flavor.FLAVORS.contains(currentWord.toUpperCase()))
+        if (Flavor.contains(currentWord.toUpperCase()))
         {
             flavor = currentWord;
             currentWord = null;
@@ -254,14 +338,15 @@ public abstract class SpatialSubphrase
     }
 
     
-    protected void getDimensionality()
+    protected void parseDimensionality()
     {
         String f = flavor;
         if (f == null)
             f = DEFAULT_FLAVOR;
-        if (f.equalsIgnoreCase(Flavor.CARTESIAN2) || f.equalsIgnoreCase(Flavor.SPHERICAL2))
+        if (f.equalsIgnoreCase(Flavor.CARTESIAN2.name()) || f.equalsIgnoreCase(Flavor.SPHERICAL2.name()))
             dimensions = 2;
-        if (f.equalsIgnoreCase(Flavor.CARTESIAN3))
+        if (f.equalsIgnoreCase(Flavor.CARTESIAN3.name()))
             dimensions = 3;
     }
+
 }

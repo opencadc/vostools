@@ -81,17 +81,32 @@ public class Intersection extends SpatialSubphrase implements Region
 {
     public static final String NAME = "INTERSECTION";
 
-    public List<Region> regions;
+    private List<Region> regions;
 
-    public Intersection() {}
+    Intersection() { }
 
-    public String format(Region region)
+    public Intersection(String coordsys, List<Region> regions)
     {
-        if (!(region instanceof Intersection))
-            throw new IllegalArgumentException("Expected Intersection, was " + region.getClass().getName());
-        Intersection intersection = (Intersection) region;
+        super(coordsys);
+        this.regions = regions;
+    }
+
+    public Intersection(String frame, String refpos, String flavor, List<Region> regions)
+    {
+        super(frame, refpos, flavor);
+        this.regions = regions;
+    }
+
+    public String format(Region space)
+    {
+        if (!(space instanceof Intersection))
+            throw new IllegalArgumentException("Expected Intersection, was " + space.getClass().getName());
+        Intersection intersection = (Intersection) space;
         StringBuilder sb = new StringBuilder();
-        sb.append(NAME).append(" ");
+        if (intersection.region == null)
+            sb.append(NAME).append(" ");
+        else
+            sb.append(intersection.region).append(" ");
         if (intersection.frame != null)
             sb.append(intersection.frame).append(" ");
         if (intersection.refpos != null)
@@ -112,7 +127,16 @@ public class Intersection extends SpatialSubphrase implements Region
         return this;
     }
 
-    protected void getCoordinates()
+    /**
+     * 
+     * @return
+     */
+    public List<Region> getRegions()
+    {
+        return regions;
+    }
+    
+    protected void parseCoordinates()
         throws StcsParsingException
     {
         // Get the string within the opening and closing parentheses.
@@ -136,10 +160,14 @@ public class Intersection extends SpatialSubphrase implements Region
 
     private String getNextRegion(String phrase, int index)
     {
+        // Uppercase phrase.
+        String upperPhrase = phrase.toUpperCase();
+
         // Search the phrase for a Region.
-        int[] indexes = new int[REGIONS.length];
+        Regions[] values = Regions.values();
+        int[] indexes = new int[values.length];
         for (int i = 0; i < indexes.length; i++)
-            indexes[i] = phrase.indexOf(REGIONS[i], index);
+            indexes[i] = upperPhrase.indexOf(values[i].name(), index);
 
         // Sort in descending order.
         Arrays.sort(indexes);

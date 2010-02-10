@@ -69,34 +69,23 @@
 
 package ca.nrc.cadc.stc;
 
-import java.util.ArrayList;
-import java.util.List;
-
 /**
  * Allowed values for Flavor in a STC-S Space sub-phrase.
  *
  */
-public final class Flavor
+public enum Flavor
 {
-    public static final String CARTESIAN2 = "CARTESIAN2";
-    public static final String CARTESIAN3 = "CARTESIAN3";
-    public static final String SPHERICAL2 = "SPHERICAL2";
+    CARTESIAN2, CARTESIAN3, SPHERICAL2;
 
-//    public static final String UNITSPHER = "UNITSPHER";
-//    public static final String SPHER2 = "SPHER2";
-//    public static final String SPHER3 = "SPHER3";
-//    public static final String CART1 = "CART1";
-//    public static final String CART2 = "CART2";
-//    public static final String CART3 = "CART3";
-    
-    public static final List FLAVORS;
-    static
+    public static boolean contains(final String value)
     {
-        // Allowed values.
-        FLAVORS = new ArrayList<String>();
-        FLAVORS.add(CARTESIAN2);
-        FLAVORS.add(CARTESIAN3);
-        FLAVORS.add(SPHERICAL2);
+        Flavor[] values = Flavor.values();
+        for (int i = 0; i < values.length; i++)
+        {
+            if (values[i].name().equals(value))
+                return true;
+        }
+        return false;
     }
-
+    
 }

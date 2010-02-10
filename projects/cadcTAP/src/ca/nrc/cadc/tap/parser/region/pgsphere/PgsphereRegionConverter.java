@@ -84,8 +84,8 @@ import ca.nrc.cadc.stc.Box;
 import ca.nrc.cadc.stc.Circle;
 import ca.nrc.cadc.stc.Polygon;
 import ca.nrc.cadc.stc.Position;
+import ca.nrc.cadc.stc.Region;
 import ca.nrc.cadc.stc.STC;
-import ca.nrc.cadc.stc.SpatialSubphrase;
 import ca.nrc.cadc.stc.StcsParsingException;
 import ca.nrc.cadc.tap.parser.ParserUtil;
 import ca.nrc.cadc.tap.parser.RegionFinder;
@@ -305,10 +305,10 @@ public class PgsphereRegionConverter extends RegionFinder
         
         if (Box.NAME.equalsIgnoreCase(fname))
         {
-            Box box = new Box();
+            Box box;
             try
             {
-                box.parse(regionParamStr);
+                box = (Box) STC.parse(regionParamStr);
             } catch (StcsParsingException e)
             {
                 throw new IllegalArgumentException(e);
@@ -318,10 +318,10 @@ public class PgsphereRegionConverter extends RegionFinder
         }
         else if (Polygon.NAME.equalsIgnoreCase(fname))
         {
-            Polygon polygon = new Polygon();
+            Polygon polygon;
             try
             {
-                polygon.parse(regionParamStr);
+                polygon = (Polygon) STC.parse(regionParamStr);
             } catch (StcsParsingException e)
             {
                 throw new IllegalArgumentException(e);
@@ -330,10 +330,10 @@ public class PgsphereRegionConverter extends RegionFinder
         }
         else if (Circle.NAME.equalsIgnoreCase(fname))
         {
-            Circle circle = new Circle();
+            Circle circle;
             try
             {
-                circle.parse(regionParamStr);
+                circle = (Circle) STC.parse(regionParamStr);
             } catch (StcsParsingException e)
             {
                 throw new IllegalArgumentException(e);
@@ -342,10 +342,10 @@ public class PgsphereRegionConverter extends RegionFinder
         }
         else if (Position.NAME.equalsIgnoreCase(fname))
         {
-            Position position = new Position();
+            Position position;
             try
             {
-                position.parse(regionParamStr);
+                position = (Position) STC.parse(regionParamStr);
             } catch (StcsParsingException e)
             {
                 throw new IllegalArgumentException(e);

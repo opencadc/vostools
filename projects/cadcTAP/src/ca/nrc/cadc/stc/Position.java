@@ -76,9 +76,15 @@ package ca.nrc.cadc.stc;
 public class Position extends SpatialSubphrase implements Region
 {
     public static final String NAME = "POSITION";
-    public CoordPair coordPair;
+    private CoordPair coordPair;
 
-    public Position() {}
+    Position() { }
+    
+    public Position(String coordsys, double x, double y)
+    {
+        super(coordsys);
+        this.coordPair = new CoordPair(x, y);
+    }
 
     public Position(String frame, String refpos, String flavor, double x, double y)
     {
@@ -92,15 +98,17 @@ public class Position extends SpatialSubphrase implements Region
             throw new IllegalArgumentException("Expected Position, was " + region.getClass().getName());
         Position position = (Position) region;
         StringBuilder sb = new StringBuilder();
-        sb.append(NAME).append(" ");
+        if (position.region == null)
+            sb.append(NAME).append(" ");
+        else
+            sb.append(position.region).append(" ");
         if (position.frame != null)
             sb.append(position.frame).append(" ");
         if (position.refpos != null)
             sb.append(position.refpos).append(" ");
         if (position.flavor != null)
             sb.append(position.flavor).append(" ");
-        if (position.coordPair != null)
-            sb.append(position.coordPair);
+        sb.append(position.coordPair);
         return sb.toString().trim();
     }
 
@@ -111,7 +119,16 @@ public class Position extends SpatialSubphrase implements Region
         return this;
     }
 
-    protected void getCoordinates()
+    /**
+     * 
+     * @return
+     */
+    public CoordPair getCoordPair()
+    {
+        return coordPair;
+    }
+
+    protected void parseCoordinates()
         throws StcsParsingException
     {
         // current word as a Double.
@@ -120,6 +137,10 @@ public class Position extends SpatialSubphrase implements Region
         {
             if (words.hasNextDouble())
                 value = words.nextDouble();
+            else if (words.hasNext())
+                throw new StcsParsingException("Invalid coordpair element " + words.next());
+            else
+                throw new StcsParsingException("Unexpected end to STC-S phrase before coordpair element");
         }
         else
         {
@@ -127,32 +148,19 @@ public class Position extends SpatialSubphrase implements Region
             {
                 value = Double.valueOf(currentWord);
             }
-            catch (NumberFormatException ignore) {}
+            catch (NumberFormatException e)
+            {
+                throw new StcsParsingException("Invalid coordpair value " + currentWord, e);
+            }
         }
 
-        // Double value not found? return.
-        if (value == null)
-            throw new StcsParsingException("coordpair values not found");
-
         // coordpair values.
-        coordPair = new CoordPair();
-        coordPair.coord1 = value;
         if (words.hasNextDouble())
-            coordPair.coord2 = words.nextDouble();
-        if (coordPair.coord1 == null || coordPair.coord2 == null)
+            coordPair = new CoordPair(value, words.nextDouble());
+        else
             throw new StcsParsingException("coordpair values not found");
 
         currentWord = null;
-    }
-
-    public CoordPair getCoordPair()
-    {
-        return coordPair;
-    }
-
-    public void setCoordPair(CoordPair coordPair)
-    {
-        this.coordPair = coordPair;
     }
 
 }

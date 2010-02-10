@@ -76,10 +76,17 @@ package ca.nrc.cadc.stc;
 public class Circle extends SpatialSubphrase implements Region
 {
     public static final String NAME = "CIRCLE";
-    public CoordPair coordPair;
-    public Double radius;
+    private CoordPair coordPair;
+    private double radius;
 
-    public Circle() {}
+    Circle() { }
+    
+    public Circle(String coordsys, double x, double y, double r)
+    {
+        super(coordsys);
+        this.coordPair = new CoordPair(x, y);
+        this.radius = r;
+    }
 
     public Circle(String frame, String refpos, String flavor, double x, double y, double r)
     {
@@ -94,17 +101,18 @@ public class Circle extends SpatialSubphrase implements Region
             throw new IllegalArgumentException("Expected Circle, was " + space.getClass().getName());
         Circle circle = (Circle) space;
         StringBuilder sb = new StringBuilder();
-        sb.append(NAME).append(" ");
+        if (circle.region == null)
+            sb.append(NAME).append(" ");
+        else
+            sb.append(circle.region).append(" ");
         if (circle.frame != null)
             sb.append(circle.frame).append(" ");
         if (circle.refpos != null)
             sb.append(circle.refpos).append(" ");
         if (circle.flavor != null)
             sb.append(circle.flavor).append(" ");
-        if (circle.coordPair != null)
-            sb.append(circle.coordPair).append(" ");;
-        if (circle.radius != null)
-            sb.append(circle.radius);
+        sb.append(circle.coordPair).append(" ");;
+        sb.append(circle.radius);
         return sb.toString().trim();
     }
 
@@ -115,7 +123,25 @@ public class Circle extends SpatialSubphrase implements Region
         return this;
     }
 
-    protected void getCoordinates()
+    /**
+     * 
+     * @return
+     */
+    public CoordPair getCoordPair()
+    {
+        return coordPair;
+    }
+
+    /**
+     * 
+     * @return
+     */
+    public double getRadius()
+    {
+        return radius;
+    }
+    
+    protected void parseCoordinates()
         throws StcsParsingException
     {
         // current word as a Double.
@@ -141,45 +167,19 @@ public class Circle extends SpatialSubphrase implements Region
             }
         }
 
-        // Double value not found?
-        if (value == null)
-            throw new StcsParsingException("coordpair values not found");
-
         // coordpair values.
-        coordPair = new CoordPair();
-        coordPair.coord1 = value;
         if (words.hasNextDouble())
-            coordPair.coord2 = words.nextDouble();
-        if (coordPair.coord1 == null || coordPair.coord2 == null)
+            coordPair = new CoordPair(value, words.nextDouble());
+        else
             throw new StcsParsingException("coordpair values not found");
 
         // width
         if (words.hasNextDouble())
             radius = words.nextDouble();
-        if (radius == null)
+        else
             throw new StcsParsingException("width value not found");
 
         currentWord = null;
-    }
-
-    public CoordPair getCoordPair()
-    {
-        return coordPair;
-    }
-
-    public void setCoordPair(CoordPair coordPair)
-    {
-        this.coordPair = coordPair;
-    }
-
-    public Double getRadius()
-    {
-        return radius;
-    }
-
-    public void setRadius(Double radius)
-    {
-        this.radius = radius;
     }
 
 }

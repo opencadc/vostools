@@ -113,8 +113,8 @@ public class Spoint extends PgsFunction
         List<Expression> expressions = new ArrayList<Expression>();
         expressions.add(new StringValue(RegionFinder.ICRS));
         CoordPair cp = position.getCoordPair();
-        ra = cp.getCoord1().doubleValue();
-        dec = cp.getCoord2().doubleValue();
+        ra = cp.getX();
+        dec = cp.getY();
         expressions.add(new DegreeDouble(ra));
         expressions.add(new DegreeDouble(dec));
         ExpressionList el = new ExpressionList(expressions);
