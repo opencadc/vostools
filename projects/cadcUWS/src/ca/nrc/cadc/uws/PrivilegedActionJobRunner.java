@@ -71,10 +71,10 @@ package ca.nrc.cadc.uws;
 
 import java.security.PrivilegedAction;
 
-
-
 /**
- * A wrapper class for starting job runners as privileged actions.
+ * A wrapper class for starting job runners as privileged actions. Like the
+ * TimeTrackingRunnable wrapper, this class sets the Job startTime, runs the job,
+ * and then sets the endTime.
  */
 public class PrivilegedActionJobRunner implements PrivilegedAction<Object>
 {

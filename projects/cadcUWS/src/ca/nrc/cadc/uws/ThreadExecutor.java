@@ -98,10 +98,10 @@ public class ThreadExecutor implements JobExecutor
         }
         
         Thread t = null;
-        
+
         if (subject == null)
         {
-        	t = new Thread(jobRunner);
+        	t = new Thread(new TimeTrackingRunnable(jobRunner));
         }
         else
         {
@@ -117,6 +117,5 @@ public class ThreadExecutor implements JobExecutor
         
         t.setDaemon(true); // so the thread will not block application shutdown
         t.start();
-
     }
 }

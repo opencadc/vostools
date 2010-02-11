@@ -86,7 +86,8 @@ public interface JobExecutor
      * Execute a job by calling the run() method on the JobRunner. If the subject
      * argument is not null, the job is exected using PrivilegedActionJobRunner
      * and the Subject.doAs() method. This puts the Subject into the current
-     * AccessControlContext for use by any code within the JobRunner.
+     * AccessControlContext for use by any code within the JobRunner. The JobExecutor
+     * is responsible for setting the startTime and endTime attributes of the job.
      *
      * @param jobRunner    The JobRunner with the Job to execute.
      *                     No nulls area permitted.
