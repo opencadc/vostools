@@ -34,6 +34,12 @@
 
 package ca.nrc.cadc.uws.web.restlet.resources;
 
+import ca.nrc.cadc.uws.ExecutionPhase;
+import ca.nrc.cadc.uws.Job;
+import ca.nrc.cadc.uws.JobExecutor;
+import ca.nrc.cadc.uws.JobRunner;
+import ca.nrc.cadc.uws.Parameter;
+import ca.nrc.cadc.uws.Result;
 import static junit.framework.TestCase.*;
 import static org.easymock.EasyMock.*;
 import org.junit.Before;
@@ -41,8 +47,6 @@ import org.junit.After;
 import org.junit.Test;
 import org.restlet.Request;
 import org.restlet.data.Reference;
-import org.restlet.representation.EmptyRepresentation;
-import ca.nrc.cadc.uws.*;
 
 import java.util.Calendar;
 import java.util.ArrayList;
@@ -93,12 +97,10 @@ public class JobAsynchResourceExecutionTest
         final List<Result> results = new ArrayList<Result>();
         final List<Parameter> parameters = new ArrayList<Parameter>();
         
-        final Subject subject = new Subject();
-
         final Job testJob =
                 new Job("88l", ExecutionPhase.QUEUED, 88l, cal.getTime(),
                         quoteCal.getTime(), cal.getTime(), cal.getTime(), null,
-                        "USER", "RUN_ID", results, parameters, subject);
+                        null, "RUN_ID", results, parameters, null);
 
         testSubject = new JobAsynchResource()
         {
@@ -157,7 +159,7 @@ public class JobAsynchResourceExecutionTest
         final Job testJob =
                 new Job("88l", ExecutionPhase.QUEUED, 88l, cal.getTime(),
                         quoteCal.getTime(), cal.getTime(), cal.getTime(), null,
-                        "USER", "RUN_ID", results, parameters, subject);
+                        null, "RUN_ID", results, parameters, null);
 
         testSubject = new JobAsynchResource()
         {

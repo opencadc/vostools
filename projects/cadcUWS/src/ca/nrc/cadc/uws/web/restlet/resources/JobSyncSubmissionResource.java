@@ -167,13 +167,13 @@ public class JobSyncSubmissionResource extends BaseJobResource
             Job job = getJob();
             jobRunner.setJob(job);
             
-            if (job.getSubject() == null)
+            if (job.getOwner() == null)
             {
             	jobRunner.run();
             }
             else
             {
-            	Subject.doAs(job.getSubject(), new PrivilegedActionJobRunner(jobRunner));
+            	Subject.doAs(job.getOwner(), new PrivilegedActionJobRunner(jobRunner));
             }
 
         }

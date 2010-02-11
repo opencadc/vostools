@@ -133,11 +133,9 @@ public class AsynchResourceTestCase
         final ErrorSummary errorSummary =
                 new ErrorSummary("SUMMARY", new URL("http://www.nrc.ca"));
         
-        final Subject subject = new Subject();
-
         job = new Job("88l", ExecutionPhase.QUEUED, 88l, cal.getTime(),
                         quoteCal.getTime(), cal.getTime(), cal.getTime(), 
-                        errorSummary, "USER", "RUN_ID", results, parameters, subject);
+                        errorSummary, null, "RUN_ID", results, parameters, null);
         job.setRequestPath("/async");
         asynchResource = new AsynchResource()
         {

@@ -124,7 +124,7 @@ public class InMemoryPersistence implements JobPersistence
         if (job.getJobId() != null)
         {
             jobID = job.getJobId();
-            persistentJob = getJob(jobID);
+            persistentJob = jobMap.get(jobID);
 
             persistentJob.setExecutionPhase(job.getExecutionPhase());
             persistentJob.setDestructionTime(job.getDestructionTime());
@@ -148,8 +148,7 @@ public class InMemoryPersistence implements JobPersistence
                                                job.getOwner(), job.getRunId(),
                                                job.getResultsList(),
                                                job.getParameterList(),
-                                               job.getSubject());
-            persistentJob.setRequestPath(job.getRequestPath());
+                                               job.getRequestPath());
         }
 
         jobMap.put(jobID, persistentJob);

@@ -70,6 +70,11 @@
 package ca.nrc.cadc.uws.web.restlet.resources;
 
 
+import ca.nrc.cadc.uws.Job;
+import ca.nrc.cadc.uws.JobAttribute;
+import ca.nrc.cadc.uws.web.restlet.JobAssembler;
+import ca.nrc.cadc.uws.web.WebRepresentationException;
+
 import org.w3c.dom.Document;
 import org.w3c.dom.Element;
 import org.restlet.resource.Post;
@@ -78,14 +83,11 @@ import org.restlet.data.Form;
 import org.apache.log4j.Logger;
 
 import java.io.IOException;
-import java.util.*;
 import java.text.ParseException;
-
-import ca.nrc.cadc.uws.*;
-import ca.nrc.cadc.uws.web.restlet.JobAssembler;
-import ca.nrc.cadc.uws.web.WebRepresentationException;
 import java.net.MalformedURLException;
-
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Map;
 import javax.security.auth.Subject;
 
 

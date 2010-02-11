@@ -83,10 +83,14 @@ import javax.security.auth.Subject;
 public interface JobExecutor
 {
     /**
-     * Execute a job by calling the run() method on the JobRunner.
+     * Execute a job by calling the run() method on the JobRunner. If the subject
+     * argument is not null, the job is exected using PrivilegedActionJobRunner
+     * and the Subject.doAs() method. This puts the Subject into the current
+     * AccessControlContext for use by any code within the JobRunner.
      *
      * @param jobRunner    The JobRunner with the Job to execute.
      *                     No nulls area permitted.
+     * @param subject       The Subject used to run this job
      */
     void execute(final JobRunner jobRunner, final Subject subject);
 }

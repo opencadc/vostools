@@ -72,7 +72,6 @@ package ca.nrc.cadc.uws.web.restlet.resources;
 
 import org.restlet.resource.Post;
 import org.restlet.representation.Representation;
-import org.restlet.data.*;
 import org.restlet.Client;
 import org.apache.log4j.Logger;
 import org.w3c.dom.Document;
@@ -82,12 +81,23 @@ import org.w3c.dom.Node;
 import java.io.IOException;
 import java.text.ParseException;
 
-import ca.nrc.cadc.uws.*;
 import ca.nrc.cadc.uws.web.InvalidActionException;
 import ca.nrc.cadc.date.DateUtil;
+import ca.nrc.cadc.uws.ErrorSummary;
+import ca.nrc.cadc.uws.ExecutionPhase;
+import ca.nrc.cadc.uws.InvalidResourceException;
+import ca.nrc.cadc.uws.Job;
+import ca.nrc.cadc.uws.JobAttribute;
+import ca.nrc.cadc.uws.JobExecutor;
+import ca.nrc.cadc.uws.JobRunner;
 import ca.nrc.cadc.uws.util.BeanUtil;
+import java.security.Principal;
 
 import java.text.DateFormat;
+import java.util.Set;
+import javax.security.auth.Subject;
+import org.restlet.data.Form;
+import org.restlet.data.Protocol;
 
 
 /**
@@ -199,7 +209,7 @@ public class JobAsynchResource extends BaseJobResource
 
             job.setExecutionPhase(ExecutionPhase.QUEUED);
             jobRunner.setJob(job);
-            je.execute(jobRunner, job.getSubject());
+            je.execute(jobRunner, job.getOwner());
         }
     }
 
@@ -216,7 +226,7 @@ public class JobAsynchResource extends BaseJobResource
         final DateFormat df =
                 DateUtil.getDateFormat(DateUtil.IVOA_DATE_FORMAT,
                                        DateUtil.UTC);
-        final String text;
+        String text;
         final JobAttribute jobAttribute;
 
         if (pathInfo.endsWith("execute"))
@@ -247,7 +257,7 @@ public class JobAsynchResource extends BaseJobResource
         }
         else if (pathInfo.endsWith("owner"))
         {
-            text = job.getOwner();
+            text = format(job.getOwner());
             jobAttribute = JobAttribute.OWNER_ID;
         }
         else
@@ -336,7 +346,7 @@ public class JobAsynchResource extends BaseJobResource
         if (job.getOwner() == null)
             ownerNameElement.setAttribute("xsi:nil", "true");
         else
-            ownerNameElement.setTextContent(job.getOwner());
+            ownerNameElement.setTextContent(format(job.getOwner()));
         jobElement.appendChild(ownerNameElement);
 
         // <uws:phase>
@@ -455,5 +465,19 @@ public class JobAsynchResource extends BaseJobResource
     protected JobExecutor getJobExecutorService()
     {
         return (JobExecutor) getContextAttribute(BeanUtil.UWS_EXECUTOR_SERVICE);
+    }
+
+    private String format(Subject s)
+    {
+        if (s != null)
+        {
+            Set<Principal> principals = s.getPrincipals();
+            if (principals.size() > 0)
+            {
+                Principal p = principals.iterator().next();
+                return p.getName();
+            }
+        }
+        return "";
     }
 }

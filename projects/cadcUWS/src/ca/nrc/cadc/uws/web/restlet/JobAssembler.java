@@ -70,9 +70,12 @@
 package ca.nrc.cadc.uws.web.restlet;
 
 import org.restlet.data.Form;
-import ca.nrc.cadc.uws.*;
 import ca.nrc.cadc.uws.util.StringUtil;
 import ca.nrc.cadc.date.DateUtil;
+import ca.nrc.cadc.uws.ExecutionPhase;
+import ca.nrc.cadc.uws.Job;
+import ca.nrc.cadc.uws.JobAttribute;
+import ca.nrc.cadc.uws.Parameter;
 
 import java.net.MalformedURLException;
 import java.text.DateFormat;
@@ -80,7 +83,6 @@ import java.text.ParseException;
 import java.util.Date;
 import java.util.Map;
 import java.util.HashMap;
-import java.net.URL;
 
 import javax.security.auth.Subject;
 
@@ -141,8 +143,6 @@ public class JobAssembler
             durationTime = 0l;
         }
 
-        final String owner = getForm().getFirstValue(
-                JobAttribute.OWNER_ID.getAttributeName().toUpperCase());
         final String runID = getForm().getFirstValue(
                 JobAttribute.RUN_ID.getAttributeName().toUpperCase());
 
@@ -177,45 +177,9 @@ public class JobAssembler
             quoteDate = null;
         }
 
-        final String start = getForm().getFirstValue(
-                JobAttribute.START_TIME.getAttributeName().toUpperCase());
-        final Date startDate;
-
-        if (StringUtil.hasText(start))
-        {
-            startDate = df.parse(start);
-        }
-        else
-        {
-            startDate = null;
-        }
-
-        final String errorMessage = getForm().getFirstValue(
-                JobAttribute.ERROR_SUMMARY_MESSAGE.getAttributeName().
-                        toUpperCase());
-        final String errorDocumentURL = getForm().getFirstValue(
-                JobAttribute.ERROR_SUMMARY_DETAIL_LINK.getAttributeName().
-                        toUpperCase());
-
-        final ErrorSummary errorSummary;
-
-        if (!StringUtil.hasText(errorMessage)
-            && !StringUtil.hasText(errorDocumentURL))
-        {
-            errorSummary =
-                    new ErrorSummary(errorMessage,
-                                     StringUtil.hasText(errorDocumentURL)
-                                     ? new URL(errorDocumentURL)
-                                     : null);
-        }
-        else
-        {
-            errorSummary = null;
-        }
-
         job = new Job(null, executionPhase, durationTime, destructionDate,
-                      quoteDate, startDate, null, errorSummary, owner,
-                      runID, null, null, subject);
+                      quoteDate, null, null, null, subject,
+                      runID, null, null, null);
 
         // Clear out those Request parameters that are pre-defined.
         for (final JobAttribute jobAttribute : JobAttribute.values())

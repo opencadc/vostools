@@ -91,14 +91,15 @@ public class Job
     private Date startTime;
     private Date endTime;    
     private ErrorSummary errorSummary;
-    private String owner;
+    private Subject owner;
     private String runId;
     private List<Result> resultsList;
     private List<Parameter> parameterList;
-    private Subject subject;
     private Object any;
     private String requestPath;
 
+
+    private Job() { }
 
     /**
      * Constructor.
@@ -115,14 +116,15 @@ public class Job
      * @param runId                 The specific running ID.
      * @param resultsList           The List of Results.
      * @param parameterList         The List of Parameters.
-     * @param subject               The Subject containing security principals.
+     * @param requestPath           The http request path.
      */
     public Job(final String jobId, final ExecutionPhase executionPhase,
                final long executionDuration, final Date destructionTime,
                final Date quote, final Date startTime, final Date endTime,
-               final ErrorSummary errorSummary, final String owner,
+               final ErrorSummary errorSummary, final Subject owner,
                final String runId, final List<Result> resultsList,
-               final List<Parameter> parameterList, final Subject subject)
+               final List<Parameter> parameterList,
+               final String requestPath)
     {
         this.jobId = jobId;
         this.executionPhase = executionPhase;
@@ -136,10 +138,8 @@ public class Job
         this.runId = runId;
         this.resultsList = resultsList;
         this.parameterList = parameterList;
-        this.subject = subject;
-        this.requestPath = null;
+        this.requestPath = requestPath;
     }
-
 
     /**
      * Obtain the unique Job ID.
@@ -268,7 +268,7 @@ public class Job
         this.endTime = endTime;
     }
 
-    public void setOwner(final String owner)
+    public void setOwner(final Subject owner)
     {
         this.owner = owner;
     }
@@ -325,7 +325,7 @@ public class Job
      *
      * @return String Owner Name.
      */
-    public String getOwner()
+    public Subject getOwner()
     {
         return owner;
     }
@@ -429,15 +429,6 @@ public class Job
         {
             getParameterList().add(parameter);
         }
-    }
-    
-    /**
-     * Get the subject object under which this job should execute.
-     * @return The job's subject object.
-     */
-    public Subject getSubject()
-    {
-    	return subject;
     }
 
     /**
