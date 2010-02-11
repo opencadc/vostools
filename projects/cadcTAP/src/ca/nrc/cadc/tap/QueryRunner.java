@@ -72,7 +72,6 @@ package ca.nrc.cadc.tap;
 import ca.nrc.cadc.tap.writer.VOTableWriter;
 import java.io.File;
 import java.io.FileOutputStream;
-import java.io.IOException;
 import java.io.OutputStream;
 import java.net.URL;
 import java.sql.Connection;
@@ -170,6 +169,11 @@ public class QueryRunner implements JobRunner
         this.job = job;
     }
 
+    public Job getJob()
+    {
+        return job;
+    }
+    
     public void run()
     {
         logger.debug("START");
@@ -341,8 +345,5 @@ public class QueryRunner implements JobRunner
 		return;
     }
 
-    public Job getJob()
-    {
-        return job;
-    }
+    
 }
