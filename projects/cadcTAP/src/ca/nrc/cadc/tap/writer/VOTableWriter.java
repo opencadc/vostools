@@ -159,9 +159,10 @@ public class VOTableWriter implements TableWriter
 
         FormatterFactory factory = DefaultFormatterFactory.getFormatterFactory();
         List<Formatter> formatters = factory.getFormatters(tapSchema, selectList);
-        
-        try { log.debug("resultSet column count: " + resultSet.getMetaData().getColumnCount()); }
-        catch(Exception oops) { log.error("failed to check resultset column count", oops); }
+
+        if (resultSet != null)
+            try { log.debug("resultSet column count: " + resultSet.getMetaData().getColumnCount()); }
+            catch(Exception oops) { log.error("failed to check resultset column count", oops); }
         
         Document document = createDocument();
         Element root = document.getRootElement();

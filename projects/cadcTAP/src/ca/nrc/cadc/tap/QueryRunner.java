@@ -257,7 +257,10 @@ public class QueryRunner implements JobRunner
             tapQuery.setTapSchema(tapSchema);
             tapQuery.setExtraTables(tableDescs);
             tapQuery.setParameterList(paramList);
-            tapQuery.setMaxRowCount(maxRows + 1); // +1 so the TableWriter check overflow
+            if (maxRows == 0)
+                tapQuery.setMaxRowCount(maxRows);
+            else if (maxRows < Integer.MAX_VALUE)
+                tapQuery.setMaxRowCount(maxRows + 1); // +1 so the TableWriter check overflow
         	String sql = tapQuery.getSQL();
             List<TapSelectItem> selectList = tapQuery.getSelectList();
             
@@ -265,7 +268,8 @@ public class QueryRunner implements JobRunner
             TableWriter writer = TableWriterFactory.getWriter(paramList);
             writer.setTapSchema(tapSchema);
             writer.setSelectList(selectList);
-            writer.setMaxRowCount(maxRows);
+            if (maxRows > 0 && maxRows < Integer.MAX_VALUE)
+                writer.setMaxRowCount(maxRows);
             
             Connection connection = null;
             PreparedStatement pstmt = null;
@@ -273,10 +277,13 @@ public class QueryRunner implements JobRunner
             File tmpFile = null;
             try
             {
-                logger.debug("executing query: " + sql);
-                connection = queryDataSource.getConnection();
-                pstmt = connection.prepareStatement(sql);
-                rs = pstmt.executeQuery();
+                if (maxRows > 0)
+                {
+                    logger.debug("executing query: " + sql);
+                    connection = queryDataSource.getConnection();
+                    pstmt = connection.prepareStatement(sql);
+                    rs = pstmt.executeQuery();
+                }
 
                 // write result
                 tmpFile = new File(fs.getStorageDir(), "result_" + job.getJobId() + "." + writer.getExtension());
@@ -286,10 +293,7 @@ public class QueryRunner implements JobRunner
                 
                 try { ostream.close(); }
                 catch(Throwable ignore) { }
-                try { rs.close(); }
-                catch(Throwable ignore) { }
-                try { pstmt.close(); }
-                catch(Throwable ignore) { }
+                
                 logger.debug("executing query... [OK]");
             } 
             catch (SQLException ex)
@@ -300,7 +304,14 @@ public class QueryRunner implements JobRunner
             finally
             {
                 if (connection != null)
-                    connection.close();
+                {
+                    try { rs.close(); }
+                    catch(Throwable ignore) { }
+                    try { pstmt.close(); }
+                    catch(Throwable ignore) { }
+                    try { connection.close(); }
+                    catch(Throwable ignore) { }
+                }
             }
 
             // store result

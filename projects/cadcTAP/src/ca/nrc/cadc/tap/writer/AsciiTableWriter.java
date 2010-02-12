@@ -200,29 +200,30 @@ public class AsciiTableWriter implements TableWriter
                 writer.write(getColumnName(selectItem));
             writer.endRecord();
 
-            numColumns = rs.getMetaData().getColumnCount();
-            while (rs.next())
+            if (rs != null)
             {
-                // If maxRows = 0, only output the column labels.
-                if (numRows >= maxRows)
-                    break;
-
-                for (int i = 1; i <= numColumns; i++)
+                numColumns = rs.getMetaData().getColumnCount();
+                while (rs.next())
                 {
-                    Formatter formatter = formatters.get(i - 1);
-                    if (formatter instanceof ResultSetFormatter)
-                        writer.write(((ResultSetFormatter) formatter).format(rs, i));
-                    else
-                        writer.write(formatter.format(rs.getObject(i)));
+                    if (numRows >= maxRows)
+                        break;
+
+                    for (int i = 1; i <= numColumns; i++)
+                    {
+                        Formatter formatter = formatters.get(i - 1);
+                        if (formatter instanceof ResultSetFormatter)
+                            writer.write(((ResultSetFormatter) formatter).format(rs, i));
+                        else
+                            writer.write(formatter.format(rs.getObject(i)));
+                    }
+                    writer.endRecord();
+                    numRows++;
                 }
-                writer.endRecord();
-                numRows++;
             }
             LOG.debug("wrote format: " + format
                     + " columns: " + numColumns+  " rows: " + numRows
                     + " [OK]");
             writer.flush();
-            rs.close();
         }
         catch (SQLException ex)
         {

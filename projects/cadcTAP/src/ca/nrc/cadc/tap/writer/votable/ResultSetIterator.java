@@ -108,6 +108,11 @@ public class ResultSetIterator implements Iterator
         this.resultSet = resultSet;
         this.formatters = formatters;
         this.namespace = namespace;
+        if (resultSet == null)
+        {
+            this.hasNext = false;
+            return;
+        }
         try
         {
             this.hasNext = resultSet.next();
@@ -172,18 +177,11 @@ public class ResultSetIterator implements Iterator
     }
 
     /**
-     * Removes from the ResultSet the last element returned by the iterator.
+     * @throws UnsupportedOperationException
      */
     public void remove()
     {
-        try
-        {
-            resultSet.deleteRow();
-        }
-        catch (SQLException e)
-        {
-            throw new RuntimeException(e.getMessage());
-        }
+        throw new UnsupportedOperationException();
     }
 
 }
