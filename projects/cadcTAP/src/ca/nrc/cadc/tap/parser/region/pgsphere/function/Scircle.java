@@ -140,12 +140,12 @@ public class Scircle extends PgsFunction
     @Override
     public String toString()
     {
-        return "scircle '< " + _point.valueString() + ", " + _radius + ">'";
+        return "scircle '<" + _point.valueString() + "," + _radius + ">'";
     }
     
     public String valueString()
     {
-        return "< " + _point.valueString() + ", " + _radius + ">";
+        return "<" + _point.valueString() + "," + _radius + ">";
     }
 
 }

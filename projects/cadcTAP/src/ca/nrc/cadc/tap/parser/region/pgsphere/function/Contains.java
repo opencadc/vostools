@@ -105,6 +105,4 @@ public class Contains extends PgsBinaryFunction implements PredicateFunction
     {
         return new ContainsNot(this);
     }
-
-    
 }

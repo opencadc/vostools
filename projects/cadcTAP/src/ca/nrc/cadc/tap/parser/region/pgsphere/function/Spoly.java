@@ -157,11 +157,11 @@ public class Spoly extends PgsFunction
         for (Expression param : params)
         {
             sb.append(deli);
-            deli = ", ";
+            deli = ",";
             Spoint spoint = (Spoint) param;
             sb.append(spoint.valueString());
         }
-        sb.append(" }");
+        sb.append("}");
         return sb.toString();
     }
 

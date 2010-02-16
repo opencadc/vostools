@@ -86,14 +86,11 @@ import org.junit.Test;
 
 import ca.nrc.cadc.tap.AdqlQuery;
 import ca.nrc.cadc.tap.TapQuery;
-import ca.nrc.cadc.tap.parser.extractor.SelectListExtractor;
-import ca.nrc.cadc.tap.parser.navigator.FromItemNavigator;
-import ca.nrc.cadc.tap.parser.navigator.ReferenceNavigator;
-import ca.nrc.cadc.tap.parser.navigator.SelectNavigator;
 import ca.nrc.cadc.tap.parser.region.pgsphere.PgsphereRegionConverter;
-import ca.nrc.cadc.tap.schema.TapSchema;
 import ca.nrc.cadc.util.Log4jInit;
 import ca.nrc.cadc.uws.Parameter;
+import org.apache.log4j.Level;
+import org.apache.log4j.Logger;
 
 /**
  * test convertion of ADQL function to pgsphere implementation 
@@ -102,18 +99,10 @@ import ca.nrc.cadc.uws.Parameter;
  */
 public class PgsRegionConverterTest
 {
+    private static Logger log = Logger.getLogger(PgsRegionConverterTest.class);
+
     public String _query;
     public String _expected = "";
-    public String _sql;
-    
-    
-
-    SelectListExtractor _en;
-    ReferenceNavigator _rn;
-    FromItemNavigator _fn;
-    SelectNavigator _sn;
-
-    static TapSchema TAP_SCHEMA;
 
     /**
      * @throws java.lang.Exception
@@ -121,8 +110,7 @@ public class PgsRegionConverterTest
     @BeforeClass
     public static void setUpBeforeClass() throws Exception
     {
-        Log4jInit.setLevel("ca.nrc.cadc", org.apache.log4j.Level.INFO);
-        TAP_SCHEMA = TestUtil.loadDefaultTapSchema();
+        Log4jInit.setLevel("ca.nrc.cadc", Level.INFO);
     }
 
     /**
@@ -149,123 +137,288 @@ public class PgsRegionConverterTest
     {
     }
 
-    private void doit()
+    private void doit() { doit(true); }
+    
+    private void doit(boolean eq)
     {
-        Parameter para;
-        para = new Parameter("QUERY", _query);
-        List<Parameter> paramList = new ArrayList<Parameter>();
-        paramList.add(para);
+        try
+        {
+            Parameter para;
+            para = new Parameter("QUERY", _query);
+            List<Parameter> paramList = new ArrayList<Parameter>();
+            paramList.add(para);
+            log.info("input query: " + _query);
 
-        TapQuery tapQuery = new AdqlPgsRegionQuery(); // inner class in this file
-        tapQuery.setTapSchema(TAP_SCHEMA);
-        tapQuery.setExtraTables(null);
-        tapQuery.setParameterList(paramList);
-        _sql = tapQuery.getSQL();
-        System.out.println("\n--- input query:");
-        System.out.println(_query);
-        System.out.println("--- expected result:");
-        System.out.println(_expected);
-        System.out.println("--- converted result:");
-        System.out.println(_sql);
-        assertEquals(_expected.toLowerCase(), _sql.toLowerCase());
-    }
-    private void run()
-    {
-        Parameter para;
-        para = new Parameter("QUERY", _query);
-        List<Parameter> paramList = new ArrayList<Parameter>();
-        paramList.add(para);
-
-        TapQuery tapQuery = new AdqlPgsRegionQuery(); // inner class in this file
-        tapQuery.setTapSchema(TAP_SCHEMA);
-        tapQuery.setExtraTables(null);
-        tapQuery.setParameterList(paramList);
-
-        _sql = tapQuery.getSQL();
-        System.out.println("\n--- input query:");
-        System.out.println(_query);
-        System.out.println("--- converted result:");
-        System.out.println(_sql);
-        
-    }
-
-    private void assertContain()
-    {
-        Assert.assertTrue(_sql.toLowerCase().indexOf(_expected.toLowerCase()) > 0);
-    }
-
-    @Test
-    public void testAll()
-    {
-        _query = "select COORDSYS(a.t_box), COORD1(a.t_spoint), COORD2(a.t_spoint) from TAP_SCHEMA.AllDataTypes a"
-                + " where 0 = CONTAINS(POINT('ICRS GEOCENTER', 25.0, -19.5), POLYGON('ICRS GEOCENTER', 12, 44.0, 7.6, -19.5, a.t_long, a.t_double)) "
-                + "    and INTERSECTS(a.t_scircle, CIRCLE('ICRS GEOCENTER', 44.0, -7.6, 19.5))=1 ";
-        _expected = "SELECT 'ICRS GEOCENTER', long(a.t_spoint), lat(a.t_spoint) FROM TAP_SCHEMA.AllDataTypes AS a WHERE spoint '( 25.0d, -19.5d)' !@ spoly '{(12d, 44.0d), (7.6d, -19.5d), (a.t_long, a.t_double) }' AND a.t_scircle && scircle '< (44.0d, -7.6d), 19.5d>'"; 
+            TapQuery tapQuery = new AdqlPgsRegionQuery(); // inner class in this file
+            tapQuery.setParameterList(paramList);
+            String sql = tapQuery.getSQL();
+            log.info("actual: " + sql);
+            log.info("expected: " + _expected);
             
-        doit();
+            if (eq) // sql equals expected
+                assertEquals(_expected.toLowerCase(), sql.toLowerCase());
+            else // contains expected
+                Assert.assertTrue(sql.toLowerCase().indexOf(_expected.toLowerCase()) > 0);
+        }
+        catch(Throwable t)
+        {
+            t.printStackTrace();
+            Assert.fail("unexpected exception: " + t);
+        }
     }
 
-    @Test
+     @Test
     public void testNone()
     {
-        _query = "select a.t_box, a.t_spoint, a.t_spoint from TAP_SCHEMA.AllDataTypes a" + " where a.t_long = 1";
-        _expected = "select a.t_box, a.t_spoint, a.t_spoint from tap_schema.alldatatypes as a where a.t_long = 1";
+        _query = "select a, b, c from someSchema.someTable where a = b and c is not null";
+        _expected = _query;
+        doit();
+    }
+     
+    @Test
+    public void testFunctionCoordsys()
+    {
+        _query = "select COORDSYS(a.t_spoint) from TAP_SCHEMA.AllDataTypes";
+        _expected = "SELECT 'ICRS GEOCENTER' FROM TAP_SCHEMA.AllDataTypes";
         doit();
     }
 
     @Test
-    public void testJoin()
+    public void testFunctionCoord1()
+    {
+        _query = "select COORD1(a.t_spoint) from TAP_SCHEMA.AllDataTypes";
+        _expected = "SELECT long(a.t_spoint) FROM TAP_SCHEMA.AllDataTypes";
+        doit();
+    }
+
+    @Test
+    public void testFunctionCoord2()
+    {
+        _query = "select COORD2(a.t_spoint) from TAP_SCHEMA.AllDataTypes";
+        _expected = "SELECT lat(a.t_spoint) FROM TAP_SCHEMA.AllDataTypes";
+        doit();
+    }
+
+    @Test
+    public void testIntersectsColumn()
+    {
+        _query = "select * from someTable where INTERSECTS(some_col, other_col) = 1";
+        _expected = "select * from someTable where some_col && other_col";
+        doit();
+    }
+
+    @Test
+    public void testNotIntersectsColumn()
+    {
+        _query = "select * from someTable where INTERSECTS(some_col, other_col) = 0";
+        _expected = "select * from someTable where some_col !&& other_col";
+        doit();
+    }
+
+    @Test
+    public void testIntersectsValue()
+    {
+        _query = "select * from someTable where INTERSECTS(some_col, CIRCLE('',1,2,3)) = 1";
+        _expected = "select * from someTable where some_col && scircle '<(1d,2d),3d>'";
+        doit();
+    }
+
+    @Test
+    public void testNotIntersectsValue()
+    {
+        _query = "select * from someTable where INTERSECTS(some_col, CIRCLE('',1,2,3)) = 0";
+        _expected = "select * from someTable where some_col !&& scircle '<(1d,2d),3d>'";
+        doit();
+
+        _query = "select * from someTable where NOT (INTERSECTS(some_col, CIRCLE('',1,2,3)) = 1)";
+        _expected = "select * from someTable where not (some_col && scircle '<(1d,2d),3d>')";
+        doit();
+    }
+
+    @Test
+    public void testIntersectsRegion()
+    {
+        _query = "select * from someTable where INTERSECTS(some_col, REGION('CIRCLE 1.0 1.0 2.0')) = 1";
+        _expected = "select * from someTable where some_col && scircle '<(1.0d,1.0d),2.0d>'";
+        doit();
+    }
+
+    @Test
+    public void testNotIntersectsRegion()
+    {
+        _query = "select * from someTable where INTERSECTS(some_col, REGION('CIRCLE 1.0 1.0 2.0')) = 0";
+        _expected = "select * from someTable where some_col !&& scircle '<(1.0d,1.0d),2.0d>'";
+        doit();
+    }
+
+    @Test
+    public void testIntersectsRegionPos()
+    {
+        // spoint has special handling in a predicate
+        _query = "select * from someTable where INTERSECTS(some_col, REGION('POSITION 1.0 2.0')) = 1";
+        _expected = "select * from someTable where some_col && cast(spoint '(1.0d,2.0d)' as scircle)";
+        doit();
+    }
+
+    @Test
+    public void testNotIntersectsRegionPos()
+    {
+        // spoint has special handling in a predicate
+        _query = "select * from someTable where INTERSECTS(some_col, REGION('POSITION 1.0 2.0')) = 0";
+        _expected = "select * from someTable where some_col !&& cast(spoint '(1.0d,2.0d)' as scircle)";
+        doit();
+    }
+
+    @Test
+    public void testIntersectsPoint()
+    {
+        // spoint has special handling in a predicate
+        _query = "select * from someTable where INTERSECTS(POINT('',1,2), other_col) = 1";
+        _expected = "select * from someTable where cast(spoint '(1d,2d)' as scircle) && other_col";
+        doit();
+    }
+
+    @Test
+    public void testNotIntersectsPoint()
+    {
+        // spoint has special handling in a predicate
+        _query = "select * from someTable where INTERSECTS(POINT('',1,2), other_col) = 0";
+        _expected = "select * from someTable where cast(spoint '(1d,2d)' as scircle) !&& other_col";
+        doit();
+    }
+
+
+    @Test
+    public void testContainsColumn()
+    {
+
+        _query = "select * from someTable where CONTAINS(some_col, other_col) = 1";
+        _expected = "select * from someTable where some_col @ other_col";
+        doit();
+    }
+
+    @Test
+    public void testNotContainsColumn()
+    {
+
+        _query = "select * from someTable where CONTAINS(some_col, other_col) = 0";
+        _expected = "select * from someTable where some_col !@ other_col";
+        doit();
+    }
+
+     @Test
+    public void testContainsValue()
+    {
+
+        _query = "select * from someTable where CONTAINS(CIRCLE('',1,2,3), other_col) = 1";
+        _expected = "select * from someTable where scircle '<(1d,2d),3d>' @ other_col";
+        doit();
+    }
+
+     @Test
+    public void testNotContainsValue()
+    {
+
+        _query = "select * from someTable where CONTAINS(CIRCLE('',1,2,3), other_col) = 0";
+        _expected = "select * from someTable where scircle '<(1d,2d),3d>' !@ other_col";
+        doit();
+
+        _query = "select * from someTable where NOT (CONTAINS(CIRCLE('',1,2,3), other_col) = 0)";
+        _expected = "select * from someTable where not (scircle '<(1d,2d),3d>' !@ other_col)";
+        doit();
+    }
+
+    @Test
+    public void testContainsPoint()
+    {
+        // spoint has special handling in a predicate
+        _query = "select * from someTable where CONTAINS(POINT('',1,2), other_col) = 1";
+        _expected = "select * from someTable where cast(spoint '(1d,2d)' as scircle) @ other_col";
+        doit();
+        _query = "select * from someTable where CONTAINS(other_col, POINT('',1,2)) = 1";
+        _expected = "select * from someTable where other_col @ cast(spoint '(1d,2d)' as scircle)";
+        doit();
+    }
+
+    @Test
+    public void testNotContainsPoint()
+    {
+        // spoint has special handling in a predicate
+        _query = "select * from someTable where CONTAINS(POINT('',1,2), other_col) = 0";
+        _expected = "select * from someTable where cast(spoint '(1d,2d)' as scircle) !@ other_col";
+        doit();
+    }
+
+    @Test
+    public void testJoinAliasIntersects()
     {
         
-        _query = "select a.t_box, b.t_spoint from tap_schema.alldatatypes as a join tap_schema.alldatatypes as b on (INTERSECTS(a.t_scircle, b.t_box)=1)";
-        _expected = "select a.t_box, b.t_spoint from tap_schema.alldatatypes as a join tap_schema.alldatatypes as b on (a.t_scircle && b.t_box)";
+        _query = "select * from someTable as t1 join otherTable as t2 on INTERSECTS(t1.someCol, t2.otherCol) = 1";
+        _expected = "select * from someTable as t1 join otherTable as t2 on t1.someCol && t2.otherCol";
         doit();
+    }
+
+    @Test
+    public void testPoint()
+    {
+        _query = "select POINT('ICRS GEOCENTER', 1, 2) from someTable";
+        _expected = "spoint";
+        doit(false);
+    }
+    @Test
+    public void testCircle()
+    {
+        _query = "select CIRCLE('ICRS GEOCENTER', 10, 10, 1) from someTable";
+        _expected = "scircle";
+        doit(false);
     }
 
     @Test
     public void testBox()
     {
-        _query = "select BOX('ICRS GEOCENTER', 11,22,10,20) from TAP_SCHEMA.AllDataTypes a"
-                + " where INTERSECTS(a.t_scircle, BOX('ICRS GEOCENTER', 44,33,20,10))=1 ";
-        run();
+        _query = "select BOX('ICRS GEOCENTER', 10, 20, 1, 2) from someTable";
         _expected = "spoly";
-        Assert.assertTrue(_sql.toLowerCase().indexOf(_expected.toLowerCase()) > 0);
+        doit(false);
     }
-    
+
+    @Test
+    public void testPolygon()
+    {
+        _query = "select POLYGON('ICRS GEOCENTER', 2,2,3,3,1,4) from someTable";
+        _expected = "spoly";
+        doit(false);
+    }
+
     @Test
     public void testRegionBox()
     {
-        _query = "select REGION('BOX ICRS GEOCENTER 11 22 10 20') from TAP_SCHEMA.AllDataTypes";
-        run();
-        _expected = "spoly '{(5.607326286612083d, 12.0d), (5.607326286612083d, 32.0d), (16.392673713387918d, 32.0d), (16.392673713387918d, 12.0d";
-        Assert.assertTrue(_sql.toLowerCase().indexOf(_expected.toLowerCase()) > 0);
+        _query = "select REGION('BOX ICRS GEOCENTER 11 22 10 20') from someTable";
+        _expected = "spoly";
+        doit(false);
     }
 
     @Test
     public void testRegionPolygon()
     {
-        _query = "select REGION('POLYGON ICRS GEOCENTER 1 2 3 4 5 6 7 8') from TAP_SCHEMA.AllDataTypes";
-        run();
+        _query = "select REGION('POLYGON ICRS GEOCENTER 1 2 3 4 5 6 7 8') from someTable";
         _expected = "spoly";
-        Assert.assertTrue(_sql.toLowerCase().indexOf(_expected.toLowerCase()) > 0);
+        doit(false);
     }
 
     @Test
     public void testRegionCircle()
     {
-        _query = "select REGION('CIRCLE ICRS GEOCENTER 11 22 0.5') from TAP_SCHEMA.AllDataTypes";
-        run();
+        _query = "select REGION('CIRCLE ICRS GEOCENTER 11 22 0.5') from someTable";
         _expected = "scircle";
-        Assert.assertTrue(_sql.toLowerCase().indexOf(_expected.toLowerCase()) > 0);
+        doit(false);
     }
 
     @Test
     public void testRegionPosition()
     {
-        _query = "select REGION('POSITION GALACTIC 11 22') from TAP_SCHEMA.AllDataTypes";
-        run();
+        _query = "select REGION('POSITION GALACTIC 11 22') from someTable";
         _expected = "spoint";
-        Assert.assertTrue(_sql.toLowerCase().indexOf(_expected.toLowerCase()) > 0);
+        doit(false);
     }
 }
 
@@ -273,7 +426,7 @@ class AdqlPgsRegionQuery extends AdqlQuery
 {
     protected void init()
     {
-        super.init();
+        //super.init();
         _navigatorList.add(new PgsphereRegionConverter());
     }
 }

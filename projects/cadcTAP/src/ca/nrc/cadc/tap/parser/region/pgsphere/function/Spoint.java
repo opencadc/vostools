@@ -95,6 +95,8 @@ public class Spoint extends PgsFunction
     private Expression _longitude;
     private Expression _latitude;
 
+    private boolean isOperand;
+
     public Spoint(Function adqlFunction)
     {
         super(adqlFunction);
@@ -137,14 +139,22 @@ public class Spoint extends PgsFunction
         setParameters(pgsParamExprList);
     }
 
+    public void setIsOperand(boolean isOp)
+    {
+        this.isOperand = isOp;
+    }
+    
     @Override
     public String toString()
     {
-        return "spoint '( " + _longitude + ", " + _latitude + ")'";
+        String ret = "spoint '(" + _longitude + "," + _latitude + ")'";
+        if (isOperand)
+            ret = "cast(" + ret + " as scircle)";
+        return ret;
     }
 
     public String valueString()
     {
-        return "(" + _longitude + ", " + _latitude + ")";
+        return "(" + _longitude + "," + _latitude + ")";
     }
 }

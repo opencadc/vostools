@@ -101,6 +101,10 @@ public class PgsBinaryFunction extends PgsFunction
         List<Expression> params = this.getParameters().getExpressions();
         _left =  params.get(0);
         _right = params.get(1);
+        if (_left instanceof Spoint)
+           ((Spoint)_left).setIsOperand(true);
+        if (_right instanceof Spoint)
+            ((Spoint)_right).setIsOperand(true);
     }
 
     @Override
