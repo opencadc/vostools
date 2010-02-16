@@ -133,6 +133,7 @@
                 <pathelement path="build/class"/>
                 <pathelement path="${jars}:${testingJars}"/>
             </classpath>
+            <test name="ca.nrc.cadc.tap.parser.AdqlQueryTest" />
             <test name="ca.nrc.cadc.tap.parser.TableNameConverterTest"/>
             <test name="ca.nrc.cadc.tap.parser.ColumnNameConverterTest"/>
             <test name="ca.nrc.cadc.tap.parser.PgsRegionConverterTest"/>
@@ -140,7 +141,6 @@
             <test name="ca.nrc.cadc.tap.parser.RegionFinderTest"/>
             <test name="ca.nrc.cadc.tap.parser.BlobClobValidatorTest"/>
             <test name="ca.nrc.cadc.tap.parser.ValidatorTest"/>
-	    <test name="ca.nrc.cadc.tap.parser.AdqlQueryTest" />
             <test name="ca.nrc.cadc.tap.parser.NavigatorTest"/>
             <test name="ca.nrc.cadc.tap.parser.ExtractorTest"/>
             <test name="ca.nrc.cadc.tap.parser.AllColumnConverterTest"/>

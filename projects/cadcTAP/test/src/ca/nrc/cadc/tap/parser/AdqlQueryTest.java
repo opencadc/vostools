@@ -92,16 +92,19 @@ import ca.nrc.cadc.tap.parser.navigator.SelectNavigator;
 import ca.nrc.cadc.tap.schema.TapSchema;
 import ca.nrc.cadc.util.Log4jInit;
 import ca.nrc.cadc.uws.Parameter;
+import org.apache.log4j.Logger;
 
 
 /**
- * A general test of ADQL query.
+ * A general test of AdqlQuery with no optional stuff enabled.
  * 
  * @author Sailor Zhang
  *
  */
 public class AdqlQueryTest
 {
+    private static Logger log = Logger.getLogger(AdqlQueryTest.class);
+
     public String _query;
     public String _expected = "";
 
@@ -118,7 +121,7 @@ public class AdqlQueryTest
     @BeforeClass
     public static void setUpBeforeClass() throws Exception
     {
-        Log4jInit.setLevel("ca.nrc.cadc", org.apache.log4j.Level.WARN);
+        Log4jInit.setLevel("ca.nrc.cadc", org.apache.log4j.Level.INFO);
         TAP_SCHEMA = TestUtil.loadDefaultTapSchema();
     }
 
@@ -155,57 +158,55 @@ public class AdqlQueryTest
         
         TapQuery tapQuery = new AdqlQuery();
         tapQuery.setTapSchema(TAP_SCHEMA);
-        tapQuery.setExtraTables(null);
         tapQuery.setParameterList(paramList);
-        tapQuery.setMaxRowCount(10);
         String sql = tapQuery.getSQL();
         List<TapSelectItem> selectList = tapQuery.getSelectList();
-        System.out.println("QUERY: \r\n" + _query);
-        System.out.println("SQL: \r\n" + sql);
-        System.out.println("selectList: \r\n" + selectList);
-        assertEquals(_expected.toLowerCase(), sql.toLowerCase());
+        log.debug("QUERY: \r\n" + _query);
+        log.debug("SQL: \r\n" + sql);
+        assertEquals(_expected.toLowerCase().trim(), sql.toLowerCase().trim());
     }
 
-//    @Test
+    @Test
     public void testBasic()
     {
-        _query = " select * from tap_schema.alldatatypes";
-        doit();
-    }
-
-//    @Test
-    public void testAlias()
-    {
-        _query = " select aa.* from tap_schema.alldatatypes as aa";
+        _query = "select t_integer from tap_schema.alldatatypes";
+        _expected = "select t_integer from tap_schema.alldatatypes";
         doit();
     }
 
     @Test
-    public void testSelectItem()
+    public void testTableAlias()
     {
-        _expected = "SELECT TOP 11 t_string AS xx, aa.t_bytes AS yy FROM tap_schema.alldatatypes AS aa";
-        _query = "select  t_string as xx, aa.t_bytes as yy from tap_schema.alldatatypes as aa";
+        _query = "select aa.t_integer from tap_schema.alldatatypes as aa";
+        _expected = "select aa.t_integer from tap_schema.alldatatypes as aa";
         doit();
     }
 
-//    @Test
+    @Test
+    public void testColumnAlias()
+    {
+        _expected = "SELECT t_string AS xx, t_bytes AS yy FROM tap_schema.alldatatypes";
+        _query = "select  t_string as xx, t_bytes as yy from tap_schema.alldatatypes";
+        doit();
+    }
+
+    //@Test
     public void testJoin()
     {
-        _query = "select  t_string, aa.t_bytes, bb.utype from tap_schema.alldatatypes as aa, tap_schema.tables as bb " +
-        		" where aa.t_string = bb.utype";
+        // TODO
         doit();
     }
 
-//    @Test
-    public void testSubselectBad()
+    //@Test
+    public void testCorrelatedSubselect()
     {
         _query = "select  t_string, aa.t_bytes, bb.* from tap_schema.alldatatypes as aa, tap_schema.tables as bb " +
                 " where aa.t_string = bb.utype " +
                 "and aa.t_string in (select utype from bb)";
         doit();
     }
-//    @Test
-    public void testSubselect()
+    //@Test
+    public void testUncorrelatedSubselect()
     {
         _query = "select t_string, aa.t_bytes, bb.* from tap_schema.alldatatypes as aa, tap_schema.tables as bb " +
                 " where aa.t_string = bb.utype " +
@@ -213,10 +214,11 @@ public class AdqlQueryTest
         doit();
     }
 
-    //@Test
+    @Test
     public void testTopSelect()
     {
-        _query = "select top 25 * from tap_schema.columns";
+        _query = "select top 25 t_integer from tap_schema.alldatatypes";
+        _expected = "select top 25 t_integer from tap_schema.alldatatypes";
         doit();
     }
 
