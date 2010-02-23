@@ -21,6 +21,29 @@
 *  damages, whether direct or           être tenu responsable de tout
 *  indirect, special or general,        dommage, direct ou indirect,
 *  consequential or incidental,         particulier ou général,
+*  arising from the use of the          a/*
+************************************************************************
+*******************  CANADIAN ASTRONOMY DATA CENTRE  *******************
+**************  CENTRE CANADIEN DE DONNÉES ASTRONOMIQUES  **************
+*
+*  (c) 2009.                            (c) 2009.
+*  Government of Canada                 Gouvernement du Canada
+*  National Research Council            Conseil national de recherches
+*  Ottawa, Canada, K1A 0R6              Ottawa, Canada, K1A 0R6
+*  All rights reserved                  Tous droits réservés
+*                                       
+*  NRC disclaims any warranties,        Le CNRC dénie toute garantie
+*  expressed, implied, or               énoncée, implicite ou légale,
+*  statutory, of any kind with          de quelque nature que ce
+*  respect to the software,             soit, concernant le logiciel,
+*  including without limitation         y compris sans restriction
+*  any warranty of merchantability      toute garantie de valeur
+*  or fitness for a particular          marchande ou de pertinence
+*  purpose. NRC shall not be            pour un usage particulier.
+*  liable in any event for any          Le CNRC ne pourra en aucun cas
+*  damages, whether direct or           être tenu responsable de tout
+*  indirect, special or general,        dommage, direct ou indirect,
+*  consequential or incidental,         particulier ou général,
 *  arising from the use of the          accessoire ou fortuit, résultant
 *  software.  Neither the name          de l'utilisation du logiciel. Ni
 *  of the National Research             le nom du Conseil National de
@@ -69,89 +92,82 @@
 
 package ca.nrc.cadc.dlm.client;
 
-import java.awt.Component;
+import java.util.ArrayList;
+import java.util.List;
 
-import ca.nrc.cadc.thread.ConditionVar;
-import ca.onfire.ak.Application;
-import ca.onfire.ak.ApplicationFrame;
+import javax.swing.JSpinner;
+import javax.swing.SpinnerModel;
+import javax.swing.SpinnerNumberModel;
+import javax.swing.event.ChangeEvent;
+import javax.swing.event.ChangeListener;
 
 /**
- * TODO
+ * Defines the behaviour of the thread control from a JSpinner widget.
+ * 
+ * @author majorb
  *
- * @version $Version$
- * @author pdowler
  */
-public class Main
+public class SpinnerThreadControl extends JSpinner implements ThreadControl, ChangeListener
 {
-    public static void main(String[] args)
+    
+    private static final long serialVersionUID = 7257282177640803129L;
+    
+    List<ThreadControlListener> listeners = new ArrayList<ThreadControlListener>();
+    
+    SpinnerThreadControl(int initialThreadCount, int maxThreadCount)
     {
-        try
+        super();
+        SpinnerModel sm = new SpinnerNumberModel(new Integer(initialThreadCount), new Integer(1), new Integer(maxThreadCount), new Integer(1));
+        this.setModel(sm);
+        sm.addChangeListener(this);
+        listeners = new ArrayList<ThreadControlListener>();
+        
+    }
+    
+    
+    public void setValue(Integer value)
+    {
+        super.setValue(value);
+    }
+    
+    public Integer getValue()
+    {
+        return (Integer)super.getValue();
+    }
+    
+    
+    public void addListener(ThreadControlListener listener)
+    {
+        if (!listeners.contains(listener))
         {
-            ArgumentMap am = new ArgumentMap(args);
-            
-            String uriStr = fixNull(am.getValue("uris"));
-            String fragment = fixNull(am.getValue("fragment"));
-            String headless = fixNull(am.getValue("headless"));
-            String threads = fixNull(am.getValue("threads"));
-            
-            try 
-            { 
-                if (headless != null && new Boolean(headless))
-                    headless = "true";
-                else
-                    headless = null;
-            }
-            catch(Exception notSet) { headless = null; }
-            
-            UserInterface ui = null;
-            ConditionVar downloadCompleteCond = new ConditionVar();
-            
-            if (headless == null)
-            {
-                ui = new GraphicUI();
-            } else
-            {
-                downloadCompleteCond.set(false);
-                ui = new ConsoleUI(threads, downloadCompleteCond);
-            }
-            
-            if (uriStr != null)
-            {
-                String[] uris = uriStr.split(",");
-                ui.add(uris, fragment);
-            }
-            
-            if (headless == null)
-            {
-                ApplicationFrame frame  = new ApplicationFrame(Constants.name, (Application)ui);
-                frame.getContentPane().add((Component)ui);
-                frame.setVisible(true);
-            }
-            
-            ui.start();
-            
-            // if running headless, don't exit
-            // until the downloads have been completed.
-            if (headless != null)
-            {
-                downloadCompleteCond.waitForTrue();
-            }
-                
-        }
-        catch(Throwable oops) 
-        {
-            oops.printStackTrace();
+            listeners.add(listener);
         }
     }
     
-    // convert string 'null' and empty string to a null, trim() and return
-    private static String fixNull(String s)
+    public void removeListener(ThreadControlListener listener)
     {
-        if (s == null || "null".equals(s) )
-            return null;
-        s = s.trim();
-        if (s.length() == 0)
-            return null;
-        return s;
+        if (listeners.contains(listener))
+        {
+            listeners.remove(listener);
+        }
     }
+    
+    public void start()
+    {
+        this.setEnabled(true);
+    }
+    
+    public void stop()
+    {
+        this.setEnabled(false);
+    }
+    
+    public void stateChanged(ChangeEvent e)
+    {
+        for (int i=0; i<listeners.size(); i++)
+        {
+            listeners.get(i).threadValueChanged(getValue());
+        }
+    }
+
 }

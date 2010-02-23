@@ -70,41 +70,35 @@
 
 package ca.nrc.cadc.dlm.client;
 
-import ca.nrc.cadc.dlm.client.event.DownloadListener;
-import ca.nrc.cadc.dlm.client.event.DownloadEvent;
-import ca.nrc.cadc.thread.Queue;
-import ca.nrc.cadc.thread.QueueUpdater;
-
 import java.awt.BorderLayout;
+import java.awt.Color;
+import java.awt.Component;
 import java.awt.Dimension;
+import java.awt.event.ActionEvent;
+import java.io.File;
+import java.net.Authenticator;
+import java.util.ArrayList;
+import java.util.List;
+
+import javax.swing.AbstractAction;
+import javax.swing.Action;
+import javax.swing.BorderFactory;
+import javax.swing.Box;
 import javax.swing.BoxLayout;
+import javax.swing.JButton;
 import javax.swing.JFileChooser;
+import javax.swing.JFormattedTextField;
 import javax.swing.JLabel;
 import javax.swing.JOptionPane;
 import javax.swing.JPanel;
 import javax.swing.JProgressBar;
 import javax.swing.JScrollPane;
 import javax.swing.JSpinner;
-import javax.swing.SpinnerModel;
-import javax.swing.SpinnerNumberModel;
-import javax.swing.event.ChangeEvent;
+import javax.swing.SwingUtilities;
 import javax.swing.event.ChangeListener;
 
-import java.awt.Color;
-import java.awt.Component;
-import java.awt.event.ActionEvent;
-import java.io.File;
-import java.net.Authenticator;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.ListIterator;
-import javax.swing.AbstractAction;
-import javax.swing.Action;
-import javax.swing.BorderFactory;
-import javax.swing.Box;
-import javax.swing.JButton;
-import javax.swing.JFormattedTextField;
-import javax.swing.SwingUtilities;
+import ca.nrc.cadc.dlm.client.event.DownloadEvent;
+import ca.nrc.cadc.dlm.client.event.DownloadListener;
 
 /**
  * Manage download of multiple files simultaneously.
@@ -115,11 +109,10 @@ import javax.swing.SwingUtilities;
  */
 public class JDownloadManager extends JPanel implements DownloadListener
 {
+    
     private static boolean testing = false;
     private boolean debug = false;
     
-    private static final int MAX_THREAD_COUNT = 11;
-    private static final int DEFAULT_THREAD_COUNT = 1;
     private static String COMPLETED = " Completed: ";
     private static String CANCELLED = " Cancelled: ";
     private static String FAILED = " Failed: ";
@@ -130,11 +123,6 @@ public class JDownloadManager extends JPanel implements DownloadListener
     private JPanel tc;
     private Box status;
     private Box downloads;
-    private JSpinner threadControl;
-    private ThreadPool pool;
-    
-    private List changeListeners;
-    private List downloadListeners;
     
     // status/controls
     private Component clearButton;
@@ -149,18 +137,24 @@ public class JDownloadManager extends JPanel implements DownloadListener
     private int numCancelled = 0;
     private int numFailed = 0;
 
-    private File initialDir;
-    private File destDir;
     private FileOverwriteDecider fod;
-
-
-    public JDownloadManager() { this(DEFAULT_THREAD_COUNT, null); }
+    
+    private List downloadListeners;
+    private DownloadManager downloadManager;
+    
+    private File initialDir;
+    
+    public JDownloadManager() { this(DownloadManager.DEFAULT_THREAD_COUNT, null); }
     
     public JDownloadManager(int initialThreadCount) { this(initialThreadCount, null); }
     
     public JDownloadManager(int initialThreadCount, File initialDir)
     {
         super(new BorderLayout());
+        
+        SpinnerThreadControl threadControl = new SpinnerThreadControl(new Integer(initialThreadCount), DownloadManager.MAX_THREAD_COUNT);
+        downloadManager = new DownloadManager(threadControl, initialThreadCount, initialDir);
+        downloadManager.addDownloadListener(this);
 
         // configure custom authentication
         Authenticator.setDefault(new HttpAuthenticator(this));
@@ -174,16 +168,9 @@ public class JDownloadManager extends JPanel implements DownloadListener
         JPanel extraSpace = new JPanel();
         extraSpace.setBackground(Color.WHITE);
         scrollable.add(extraSpace, BorderLayout.CENTER); // take up all extra space
-
-        if (initialThreadCount < 1)
-            initialThreadCount = 1;
-        if (initialThreadCount > MAX_THREAD_COUNT)
-            initialThreadCount = MAX_THREAD_COUNT;
         
-        this.tc = new JPanel();
-        this.threadControl = new JSpinner();
-        SpinnerModel sm = new SpinnerNumberModel(new Integer(initialThreadCount), new Integer(1), new Integer(MAX_THREAD_COUNT), new Integer(1));
-        threadControl.setModel(sm);
+        this.tc = new JPanel();        
+        
         JFormattedTextField tf = ((JSpinner.DefaultEditor)threadControl.getEditor()).getTextField();
         tf.setEditable(false);
         tc.add(new JLabel("max simultaneous downloads:"));
@@ -303,133 +290,29 @@ public class JDownloadManager extends JPanel implements DownloadListener
 
     public int getThreadCount() 
     {
-        return ((Integer)threadControl.getValue()).intValue(); 
+        return downloadManager.getThreadCount();
     }
     
     public void setThreadCount(int tc) 
     {
-        threadControl.setValue(new Integer(tc));
+        downloadManager.setThreadCount(tc);
     }
-    
        
     public void setInitialDir(File initialDir) { this.initialDir = initialDir; }
+    
+    public File getInitialDir() { return initialDir; }
 
-    public void setDestinationDir(File destDir) { this.destDir = destDir; }
+    public void setDestinationDir(File destDir) {
+        downloadManager.setDestinationDir(destDir);
+    }
 
-    public File getDestinationDir() { return destDir; } 
-    
-    public void choseDestinationDir(Component parent)
-    {
-        try
-        {
-            msg("initialDir: " + initialDir);
-            MyFileChooser chooser = new MyFileChooser(initialDir);
-            
-            int returnVal = chooser.showDialog(parent, "Select");
-            if (returnVal == JFileChooser.APPROVE_OPTION)
-            {
-                destDir = chooser.getSelectedFile();
-                String estr = null;
-                if (!destDir.isDirectory()) // in case the user types something in
-                    estr = "'" + destDir.getAbsolutePath() + "' is not a directory";
-                else if (!destDir.canWrite())
-                    estr = "'" + destDir.getAbsolutePath() + "' is not writable";
-                if (estr != null)
-                {
-                    JOptionPane.showMessageDialog(parent, estr, "Error", JOptionPane.ERROR_MESSAGE);
-                    destDir = null;
-                    choseDestinationDir(parent); // recursive
-                }
-                else
-                {
-                    fireChangeEvent();
-                }
-            }
-        }
-        catch(RuntimeException rex)
-        {
-            rex.printStackTrace();
-        }
-        msg("destDir: " + destDir);
+    public File getDestinationDir() { 
+        return downloadManager.getDestinationDir();
     }
     
-    public void start()
+    public void addChangeListener(ChangeListener listener)
     {
-        
-        if (pool == null)
-        {
-            msg("creating ThreadPool");
-            this.pool = new ThreadPool();
-            threadControl.getModel().addChangeListener(pool);
-        }
-        
-        if ( SwingUtilities.isEventDispatchThread() )
-        {
-            msg("invoking doStart() directly");
-            threadControl.setEnabled(true);
-        }
-        else
-            try
-            {
-                msg("invoking doStart() via invokeAndWait");
-                SwingUtilities.invokeAndWait(new Runnable() 
-                { 
-                    public void run() {threadControl.setEnabled(true); } 
-                });
-            }
-            catch(Throwable ignore) { }
-    }
-    
-    /**
-     * Terminate all downloads and release resources.
-     */
-    public void stop()
-    {
-        if (pool != null)
-        {    
-            pool.terminate();
-            pool = null;
-        }
-        if ( SwingUtilities.isEventDispatchThread() )
-            threadControl.setEnabled(false);
-        else
-            try
-            {
-                SwingUtilities.invokeAndWait(new Runnable() 
-                { 
-                    public void run() { threadControl.setEnabled(false); } 
-                });
-            }
-            catch(Throwable ignore) { }
-    }
-    
-    /**
-     * Register for change events. This class fires events when configuration items 
-     * (thread pool size, destination directory) are changed/set by the user.
-     * 
-     * @param cl the listener
-     */
-    public void addChangeListener(ChangeListener cl)
-    {
-        if (changeListeners == null)
-            this.changeListeners = new ArrayList();
-        changeListeners.add(cl);
-    }
-    
-    public void removeChangeListener(ChangeListener cl)
-    {
-        if (changeListeners == null)
-            return;
-        changeListeners.remove(cl);
-    }
-    
-    private void fireChangeEvent()
-    {
-        if (changeListeners == null)
-            return;
-        ChangeEvent e = new ChangeEvent(this);
-        for (int i = 0; i < changeListeners.size(); i++)
-            ((ChangeListener) changeListeners.get(i)).stateChanged(e);
+        downloadManager.addChangeListener(listener);
     }
     
     /**
@@ -469,6 +352,7 @@ public class JDownloadManager extends JPanel implements DownloadListener
                 else
                     SwingUtilities.invokeLater(new UpdateUI(e));
         }
+        
         // rebroadcast event to other listeners
         if (downloadListeners == null || downloadListeners.size() == 0)
             return;
@@ -478,12 +362,89 @@ public class JDownloadManager extends JPanel implements DownloadListener
             dl.downloadEvent(e);
         }
     }
-
+    
     public String getEventHeader()
     {
         return null;
     }
     
+    public void choseDestinationDir(Component parent)
+    {
+        try
+        {
+            msg("initialDir: " + getInitialDir());
+            MyFileChooser chooser = new MyFileChooser(getInitialDir());
+            
+            int returnVal = chooser.showDialog(parent, "Select");
+            if (returnVal == JFileChooser.APPROVE_OPTION)
+            {
+                downloadManager.setDestinationDir(chooser.getSelectedFile());
+                String estr = null;
+                if (!downloadManager.getDestinationDir().isDirectory()) // in case the user types something in
+                    estr = "'" + downloadManager.getDestinationDir().getAbsolutePath() + "' is not a directory";
+                else if (!downloadManager.getDestinationDir().canWrite())
+                    estr = "'" + downloadManager.getDestinationDir().getAbsolutePath() + "' is not writable";
+                if (estr != null)
+                {
+                    JOptionPane.showMessageDialog(parent, estr, "Error", JOptionPane.ERROR_MESSAGE);
+                    downloadManager.setDestinationDir(null);
+                    choseDestinationDir(parent); // recursive
+                }
+                else
+                {
+                    downloadManager.fireChangeEvent();
+                }
+            }
+        }
+        catch(RuntimeException rex)
+        {
+            rex.printStackTrace();
+        }
+        msg("destDir: " + downloadManager.getDestinationDir());
+    }
+    
+    public void start()
+    {
+        
+        downloadManager.start();
+        
+        if ( SwingUtilities.isEventDispatchThread() )
+        {
+            msg("invoking doStart() directly");
+            downloadManager.startThreadControl();
+        }
+        else
+            try
+            {
+                msg("invoking doStart() via invokeAndWait");
+                SwingUtilities.invokeAndWait(new Runnable() 
+                { 
+                    public void run() {downloadManager.startThreadControl(); } 
+                });
+            }
+            catch(Throwable ignore) { }
+    }
+    
+    /**
+     * Terminate all downloads and release resources.
+     */
+    public void stop()
+    {
+
+        downloadManager.stop();
+
+        if ( SwingUtilities.isEventDispatchThread() )
+            downloadManager.stopThreadControl();
+        else
+            try
+            {
+                SwingUtilities.invokeAndWait(new Runnable() 
+                { 
+                    public void run() { downloadManager.stopThreadControl(); } 
+                });
+            }
+            catch(Throwable ignore) { }
+    }
     
     private class UpdateUI implements Runnable
     {
@@ -543,12 +504,11 @@ public class JDownloadManager extends JPanel implements DownloadListener
     // implementation to be invoked in the UI event thread
     private void doAddDownload(Download dl)
     {
-        if (destDir == null)
+        if (downloadManager.getDestinationDir() == null)
             return; // user cancelled dest dir selection dialog, nothing to do
-        dl.destDir = destDir;
+        dl.destDir = downloadManager.getDestinationDir();
 
         dl.setDebug(debug);
-        dl.setDownloadListener(this);
         dl.setFileOverwriteDecider(fod);
 
         msg("adding " + dl + " to queue");
@@ -558,197 +518,9 @@ public class JDownloadManager extends JPanel implements DownloadListener
         downloads.add(jdl);
         validateTree();
         repaint();
-        pool.add(dl);
+        downloadManager.addDownload(dl);
         numTotal++;
         updateStatus();
     }
-    
-    private String workerBasename = "JDownloadManager.WorkerThread: ";
 
-    private class ThreadPool implements ChangeListener
-    {
-        private Queue tasks;
-        private ArrayList threads;
-        private int numWorkers;
-
-        public ThreadPool()
-        {
-            this.tasks = new Queue();
-            this.threads = new ArrayList(MAX_THREAD_COUNT);
-            stateChanged(null); // init threads
-        }
-        void msg(String s)
-        {
-            if (debug) System.out.println("[ThreadPool] " + s);
-        }
-        
-        public void add(Download task)
-        {
-            msg("queueing: " + task);
-            tasks.push(task);
-        }
-
-        public void terminate()
-        {
-            msg("ThreadPool.terminate()");
-            
-            // terminate thread pool members
-            numWorkers = 0;
-            synchronized(threads) // vs sync block in WorkerThread.run() that calls threads.remove(this) after an interrupt
-            {
-                for (int i=0; i<threads.size(); i++)
-                {
-                    msg("ThreadPool.terminate() interrupting WorkerThread " + i);
-                    WorkerThread wt = (WorkerThread) threads.get(i);
-                    synchronized(wt)
-                    {
-                        msg("ThreadPool.terminate(): interrupting " + wt.getName());
-                        wt.interrupt();
-                    }
-                }
-            }
-
-            // pop remaining tasks from queue and cancel them
-            msg("ThreadPool.terminate() flushing queue");
-            tasks.update(new QueueFlush());
-            msg("ThreadPool.terminate() DONE");
-        }
-        
-        public void stateChanged(ChangeEvent e)
-        {
-            msg("ThreadPool: stateChanged("+e+")");
-            this.numWorkers = ((Integer) threadControl.getValue()).intValue();
-            if (numWorkers < 1)
-            {
-                threadControl.setValue(new Integer(1));
-                return;
-            }
-            if (numWorkers > MAX_THREAD_COUNT)
-            {
-                threadControl.setValue(new Integer(MAX_THREAD_COUNT));
-                return;
-            }
-                
-            msg("current thread count: " + threads.size() + " new size: " + numWorkers);
-            if (threads.size() == numWorkers)
-                return;
-            
-            synchronized(threads)
-            {
-                while (threads.size() < numWorkers)
-                {
-                    msg("adding worker thread");
-                    WorkerThread t = new WorkerThread();
-                    t.setPriority(Thread.MIN_PRIORITY); // mainly IO blocked anyway, so keep the UI thread happy
-                    threads.add(t);
-                    t.start();
-                }
-            }
-            
-            if (numWorkers == 11)
-            {
-                // TODO: play a little guitar riff?
-            }
-            
-            // it is possible that the state didn't actually change in cases where 
-            // we enforced the min or max values above, but this should be harmless
-            fireChangeEvent();
-        }
-
-        // this updater runs through the queue, removes Downloads, and terminates them
-        private class QueueFlush implements QueueUpdater
-        {
-            // this method has exclusive access to the queue contents, so we do not
-            // have to worry about a WorkerThread taking something with pop()
-            public boolean update(List list)
-            {
-                int count = 0;
-                ListIterator i = list.listIterator();
-                while ( i.hasNext() )
-                {
-                    Download dl = (Download) i.next();
-                    msg("ThreadPool: terminating queued download");
-                    dl.terminate();
-                    i.remove();
-                    count++;
-                }
-                return (count > 0);
-            }
-        }
-    
-        private class WorkerThread extends Thread
-        {
-            Download currentTask;
-            
-            WorkerThread()
-            {
-                super();
-                setDaemon(true);
-                setName(workerBasename);
-            }
-
-            // threads keep running as long as they are in the threads list
-            public void run()
-            {
-                msg(workerBasename + "START");
-                boolean cont = true;
-                while (cont)
-                {
-                    try
-                    {
-                        Object tmp = tasks.pop(); // block here
-                        synchronized(this) 
-                        {
-                            currentTask = (Download) tmp;
-                        }
-                        synchronized(threads) 
-                        {
-                            cont = threads.contains(this); 
-                        }
-                        if (cont)
-                        {
-                            msg(workerBasename + "still part of pool");
-                            // set thread name so thread dumps are intelligible
-                            setName(workerBasename + currentTask);
-                            currentTask.run();
-                        }
-                        else
-                        {
-                            msg(workerBasename + "no longer part of pool");
-                            synchronized(this) // vs sync block in terminate()
-                            {
-                                // make sure to clear interrupt flag from an interrupt() in stateChanged()
-                                // in case it comes after pop() and before threads.contains()
-                                interrupted();
-                                // we should quit, so put task back
-                                msg(workerBasename + "OOPS (put it back): " + tmp);
-                                tasks.push(tmp);
-                                currentTask = null;
-                            }
-                        }
-                    }
-                    catch (InterruptedException ignore)
-                    {
-                        // pop() was interrupted, let finally and while condition decide if we
-                        // should loop or return
-                    }
-                    finally
-                    {
-                        setName(workerBasename);
-                        synchronized(this) { currentTask = null; }
-                        synchronized(threads)
-                        {
-                            if (threads.size() > numWorkers)
-                            {
-                                msg(workerBasename + "numWorkers=" + numWorkers + " threads.size() = " + threads.size());
-                                threads.remove(this);
-                            }
-                            cont = threads.contains(this);
-                        }
-                    }
-                }
-                msg(workerBasename + "DONE");
-            }
-        }
-    }
 }

@@ -69,89 +69,22 @@
 
 package ca.nrc.cadc.dlm.client;
 
-import java.awt.Component;
-
-import ca.nrc.cadc.thread.ConditionVar;
-import ca.onfire.ak.Application;
-import ca.onfire.ak.ApplicationFrame;
-
 /**
- * TODO
+ * An interface for UI behaviour.
+ * 
+ * @author majorb
  *
- * @version $Version$
- * @author pdowler
  */
-public class Main
+public interface UserInterface
 {
-    public static void main(String[] args)
-    {
-        try
-        {
-            ArgumentMap am = new ArgumentMap(args);
-            
-            String uriStr = fixNull(am.getValue("uris"));
-            String fragment = fixNull(am.getValue("fragment"));
-            String headless = fixNull(am.getValue("headless"));
-            String threads = fixNull(am.getValue("threads"));
-            
-            try 
-            { 
-                if (headless != null && new Boolean(headless))
-                    headless = "true";
-                else
-                    headless = null;
-            }
-            catch(Exception notSet) { headless = null; }
-            
-            UserInterface ui = null;
-            ConditionVar downloadCompleteCond = new ConditionVar();
-            
-            if (headless == null)
-            {
-                ui = new GraphicUI();
-            } else
-            {
-                downloadCompleteCond.set(false);
-                ui = new ConsoleUI(threads, downloadCompleteCond);
-            }
-            
-            if (uriStr != null)
-            {
-                String[] uris = uriStr.split(",");
-                ui.add(uris, fragment);
-            }
-            
-            if (headless == null)
-            {
-                ApplicationFrame frame  = new ApplicationFrame(Constants.name, (Application)ui);
-                frame.getContentPane().add((Component)ui);
-                frame.setVisible(true);
-            }
-            
-            ui.start();
-            
-            // if running headless, don't exit
-            // until the downloads have been completed.
-            if (headless != null)
-            {
-                downloadCompleteCond.waitForTrue();
-            }
-                
-        }
-        catch(Throwable oops) 
-        {
-            oops.printStackTrace();
-        }
-    }
     
-    // convert string 'null' and empty string to a null, trim() and return
-    private static String fixNull(String s)
-    {
-        if (s == null || "null".equals(s) )
-            return null;
-        s = s.trim();
-        if (s.length() == 0)
-            return null;
-        return s;
-    }
+    String configSection = "downloads";
+    String threadCountConfigKey = "downloadManager.threadCount";
+    String downloadDirConfigKey = "downloadManager.downloadDir";
+    String debugKey = "downloadManager.debug";
+    
+    void add(String[] urs, String fragment);
+    
+    void start();
+
 }

@@ -70,8 +70,6 @@
 
 package ca.nrc.cadc.dlm;
 
-import ca.nrc.cadc.net.MultiSchemeHandler;
-import ca.nrc.cadc.net.SchemeHandler;
 import java.net.MalformedURLException;
 import java.net.URI;
 import java.net.URISyntaxException;
@@ -79,6 +77,9 @@ import java.net.URL;
 import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
+
+import ca.nrc.cadc.net.MultiSchemeHandler;
+import ca.nrc.cadc.net.SchemeHandler;
 
 /**
  * Miscellanneous methods for use in JSP pages.
@@ -123,21 +124,21 @@ public class DownloadUtil
             {
                 try
                 {
-                    System.out.println("[CoreUI] configuring: " + uris[i]);
+                    System.out.println("[DownloadUtil] configuring: " + uris[i]);
                     URI u = new URI(uris[i]);
                     String scheme = u.getScheme();
                     String cname = u.getSchemeSpecificPart();
-                    System.out.println("[CoreUI] loading: " + cname);
+                    System.out.println("[DownloadUtil] loading: " + cname);
                     Class c = Class.forName(cname);
-                    System.out.println("[CoreUI] instantiating: " + c);
+                    System.out.println("[DownloadUtil] instantiating: " + c);
                     SchemeHandler handler = (SchemeHandler) c.newInstance();
-                    System.out.println("[CoreUI] adding: " + scheme + "," + handler);
+                    System.out.println("[DownloadUtil] adding: " + scheme + "," + handler);
                     schemeHandler.addSchemeHandler(scheme, handler);
-                    System.out.println("[CoreUI] success: " + scheme + " is supported");
+                    System.out.println("[DownloadUtil] success: " + scheme + " is supported");
                 }
                 catch(Throwable oops)
                 {
-                    System.out.println("[CoreUI] failed to create SchemeHandler: " + uris[i] + ", " + oops);
+                    System.out.println("[DownloadUtil] failed to create SchemeHandler: " + uris[i] + ", " + oops);
                 }
             }
         }

@@ -85,7 +85,7 @@ import java.io.IOException;
 public class AppletWrapper extends JApplet
 {
     private static String SERVER_NAME = "ca.nrc.cadc.net.serverName";
-    private CoreUI ui;
+    private GraphicUI ui;
 	
     public void init()
     {
@@ -99,7 +99,7 @@ public class AppletWrapper extends JApplet
             String fragment = fixNull(getParameter("fragment"));
             String[] uris = uriStr.split(",");
             
-            this.ui = new CoreUI();
+            this.ui = new GraphicUI();
             ui.add(uris, fragment);
             
             BrowserApplet f = new BrowserApplet(Constants.name, ui, this);

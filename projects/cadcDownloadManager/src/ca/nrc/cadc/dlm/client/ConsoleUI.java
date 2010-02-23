@@ -69,66 +69,121 @@
 
 package ca.nrc.cadc.dlm.client;
 
-import ca.nrc.cadc.dlm.DownloadUtil;
-import ca.nrc.cadc.dlm.client.event.DownloadListener;
-import ca.onfire.ak.AbstractApplication;
-import ca.onfire.ak.ApplicationConfig;
-import ca.nrc.cadc.thread.ConditionVar;
-import java.awt.BorderLayout;
-import java.awt.Color;
-import java.awt.Graphics;
 import java.io.File;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
-import javax.swing.BorderFactory;
-import javax.swing.SwingUtilities;
-import javax.swing.event.ChangeEvent;
-import javax.swing.event.ChangeListener;
+
+import ca.nrc.cadc.dlm.DownloadUtil;
+import ca.nrc.cadc.dlm.client.event.DownloadEvent;
+import ca.nrc.cadc.dlm.client.event.DownloadListener;
+import ca.nrc.cadc.thread.ConditionVar;
+import ca.onfire.ak.ApplicationConfig;
 
 /**
- * TODO.
+ * The interface for system console output display.
+ * 
+ * @author majorb
  *
- * @author pdowler
  */
-public class CoreUI extends AbstractApplication implements ChangeListener
+public class ConsoleUI implements UserInterface, DownloadListener
 {
-    private static String configSection = "downloads";
-    private static String threadCountConfigKey = "downloadManager.threadCount";
-    private static String downloadDirConfigKey = "downloadManager.downloadDir";
-    private static String debugKey = "downloadManager.debug";
-
-    private JDownloadManager downloadManager;
-    private DownloadListener downloadListener;
     
-    private ConditionVar uiInitCond;
-    private ConditionVar engineInitCond;
-    private List downloads;
     private boolean debug;
+    private DownloadManager downloadManager;
+    private List<Download> downloads;
+    private ConditionVar engineInitCond;
+    private ConditionVar downloadsCompeleteCond;
+    private Integer activeDownloadRequests;
     
-    public CoreUI() 
+    public ConsoleUI(String threads, ConditionVar downloadsCompleteCond)
     {
-        super(new BorderLayout()); 
-        this.downloads = new ArrayList();
-        this.downloadListener = initDownloadLister();
+        this.downloads = new ArrayList<Download>();
+        this.downloadsCompeleteCond = downloadsCompleteCond;
         
-        this.uiInitCond = new ConditionVar();
-        uiInitCond.set(false);
+        int initialThreads = -1;
+        try
+        {
+            initialThreads = Integer.parseInt(threads);
+            if (initialThreads < 1 || initialThreads > DownloadManager.MAX_THREAD_COUNT)
+                initialThreads = -1;
+        } catch (Exception e)
+        {
+            initialThreads = -1;
+        }
+        
+        ApplicationConfig conf = new ApplicationConfig(ConsoleUI.class, Constants.name);
+        
+        if (initialThreads == -1)
+        {
+            try 
+            { 
+                conf.setSection(configSection, true);
+                String value = conf.getValue(threadCountConfigKey);
+                if (value != null)
+                    initialThreads = Integer.parseInt(value);
+            }
+            catch(Exception notConfiguredYet) { }
+        } else
+        {
+            try
+            {
+                conf.putValue(threadCountConfigKey, new Integer(initialThreads).toString());
+            } catch (IOException ioe)
+            {
+                msg("updating configuration... failed: " + ioe.getMessage());
+            }
+        }
+        
+        File downloadDir = null;
+        try 
+        { 
+            conf.setSection(configSection, true);
+            String s = conf.getValue(downloadDirConfigKey);
+            downloadDir = new File(s);
+            if ( !downloadDir.exists() || !downloadDir.isDirectory() || !downloadDir.canWrite())
+                downloadDir = null;
+        }
+        catch(Exception notConfiguredYet) {
+            downloadDir = null;
+        }
+        
+        if (downloadDir == null)
+        {
+            String currentDir = System.getProperty("user.dir");
+            downloadDir = new File(currentDir);
+            if ( !downloadDir.exists() || !downloadDir.isDirectory() || !downloadDir.canWrite())
+                throw new RuntimeException("Cannot write to directory " + currentDir);
+        }
+        
+        this.debug = false;
+        try 
+        { 
+            conf.setSection(configSection, true);
+            String s = conf.getValue(debugKey);
+            if (s != null)
+                debug = new Boolean(s).booleanValue();
+        }
+        catch(Exception notConfiguredYet) { }
+        
+        ThreadControl threadControl = new StaticThreadControl(initialThreads);
+        this.downloadManager = new DownloadManager(threadControl, initialThreads, downloadDir);
+        downloadManager.setDebug(debug);
+        
         this.engineInitCond = new ConditionVar();
         engineInitCond.set(false);
-    }
-    
-    public void setDownloadListener(DownloadListener dl)
-    {
-        this.downloadListener = dl;
+        
+        // start the download initialization process
+        new Thread(new DelayedInit()).start();
+        
     }
     
     private void msg(String s)
     {
         if (debug) System.out.println("[CoreUI] " + s);
     }
-    
+
     public void add(String[] strs, String fragment)
     {
         List<DownloadUtil.ParsedURI> uris = DownloadUtil.parseURIs(strs, fragment);
@@ -167,84 +222,14 @@ public class CoreUI extends AbstractApplication implements ChangeListener
         System.err.println(msg);
     }
     
-    public boolean quit()
-    {
-        boolean ret = getConfirmation("OK to quit?");
-        if (ret)
-            downloadManager.stop();
-        return ret;
-    }
-    
     public void start()
     {
         if (downloadManager != null)
-            downloadManager.start();
-        engineInitCond.setNotifyAll();
-    }
-    
-    // terminate threads
-    public void stop()
-    {
-        if (downloadManager != null)
-            downloadManager.stop();
-        engineInitCond.set(false);
-    }
-    
-    protected void makeUI()
-    {
-        // try to restore previous settings
-        int initialThreads = -1;
-        ApplicationConfig conf = getApplicationContainer().getConfig();
-        try 
-        { 
-            conf.setSection(configSection, true);
-            String value = conf.getValue(threadCountConfigKey);
-            if (value != null)
-                initialThreads = Integer.parseInt(value);
-        }
-        catch(Exception notConfiguredYet) { }
-        File downloadDir = null;
-        try 
-        { 
-            conf.setSection(configSection, true);
-            String s = conf.getValue(downloadDirConfigKey);
-            downloadDir = new File(s);
-            if ( !downloadDir.exists() || !downloadDir.isDirectory() || !downloadDir.canWrite())
-                downloadDir = null;
-        }
-        catch(Exception notConfiguredYet) { }
-
-        this.debug = false;
-        try 
-        { 
-            conf.setSection(configSection, true);
-            String s = conf.getValue(debugKey);
-            if (s != null)
-                debug = new Boolean(s).booleanValue();
-        }
-        catch(Exception notConfiguredYet) { }
-        
-        this.downloadManager = new JDownloadManager(initialThreads, downloadDir);
-        downloadManager.setDebug(debug);
-        downloadManager.addChangeListener(this);
-        downloadManager.addDownloadListener(downloadListener);
-
-        this.add(downloadManager, BorderLayout.CENTER);
-        this.setBorder(BorderFactory.createEmptyBorder(4, 4, 4, 4));
-        
-        Util.recursiveSetBackground(this, Color.WHITE);
-        
-        // fire off a thread to complete init once the app is displayed on screen
-        new Thread(new DelayedInit()).start();
-    }
-    
-    public void paint(Graphics g)
-    {
-        super.paint(g);
-        if (uiInitCond != null)
         {
-            uiInitCond.setNotifyAll();
+            downloadManager.addDownloadListener(this);
+            downloadManager.start();
         }
+        engineInitCond.setNotifyAll();
     }
     
     private class DelayedInit implements Runnable
@@ -253,20 +238,12 @@ public class CoreUI extends AbstractApplication implements ChangeListener
         {
             try
             {
-                uiInitCond.waitForTrue();
-                SwingUtilities.invokeAndWait(new Runnable()
-                {
-                    public void run()
-                    {
-                        downloadManager.choseDestinationDir(CoreUI.this);
-                    }
-                });
-                
                 engineInitCond.waitForTrue();
                 synchronized (downloads)
                 {
+                    activeDownloadRequests = downloads.size();
                     for (int i=0; i<downloads.size(); i++)
-                        downloadManager.add((Download) downloads.get(i));
+                        downloadManager.addDownload((Download) downloads.get(i));
                     downloads.clear();
                 }
             }
@@ -276,51 +253,30 @@ public class CoreUI extends AbstractApplication implements ChangeListener
             }
         }
     }
-    
-    // react to JDownloadManager state-changed events
-    public void stateChanged(ChangeEvent e)
-    {
-        ApplicationConfig conf = getApplicationContainer().getConfig();
 
-        int threadCount = downloadManager.getThreadCount();
-        File destDir = downloadManager.getDestinationDir();
-
-        try 
-        {
-            msg("updating configuration...");
-            conf.setSection(configSection, true);
-            conf.putValue(threadCountConfigKey, Integer.toString(threadCount)); 
-            if (destDir != null)
-                conf.putValue(downloadDirConfigKey, destDir.getAbsolutePath()); 
-            msg("updating configuration... done");
-        }
-        catch(IOException ioex) 
-        {
-            msg("updating configuration... failed: " + ioex.getMessage());
-        }
-    }
-    
-    private static DownloadListener initDownloadLister()
+    @Override
+    public void downloadEvent(DownloadEvent e)
     {
-        // TODO: read a class name from a config file and try to instantiate it 
-        String cname = "ca.nrc.cadc.logserver.HttpDownloadLogger";
+        msg("Download Event: " + e);
+        if (e.isFinalState())
+        {
+            synchronized (downloads)
+            {
+                activeDownloadRequests--;
+            }
+        }
+        if (activeDownloadRequests == 0)
+        {
+            msg("All downloads in a final state, exiting.");
+            downloadsCompeleteCond.setNotifyAll();
+        }
         
-        try
-        {
-            System.out.println("[CoreUI] loading: " + cname);
-            Class c = Class.forName(cname);
-            System.out.println("[CoreUI] instantiating: " + c);
-            DownloadListener dl = (DownloadListener) c.newInstance();
-            System.out.println("[CoreUI] success: " + dl);
-            return dl;
-        }
-        catch(Throwable oops)
-        {
-            System.out.println("[CoreUI] failed to create DownloadListener: " + cname + ", " + oops);
-        }
+    }
+
+    @Override
+    public String getEventHeader()
+    {
         return null;
     }
-    
-    
     
 }

@@ -89,15 +89,27 @@
 
 <property name="jars" value="${lib}/cadcUtil.jar:${ext.lib}/servlet-api.jar" />
 
-<target name="build" depends="client,servlet,api,resources" />
+<target name="build" depends="client,standaloneClient,servlet,api,resources" />
 
 <target name="client" depends="compile">
-	<jar jarfile="${build}/lib/${project}Client.jar"
-		basedir="${build}/class" 
+    <jar jarfile="${build}/lib/${project}Client.jar"
+        basedir="${build}/class"
+        update="no">
+                <include name="**/client/**" />
+                <include name="**/DownloadUtil**" />
+                <include name="ca/onfire/**" />
+    </jar>
+</target>
+
+<target name="standaloneClient" depends="compile">
+	<jar jarfile="${build}/lib/${project}StandaloneClient.jar"
+		basedir="${build}/class"
+		manifest="${basedir}/src/metainf/dlmClient.mf"
 		update="no">
                 <include name="**/client/**" />
                 <include name="**/DownloadUtil**" />
                 <include name="ca/onfire/**" />
+                <zipfileset src="${lib}/cadcUtil.jar" />
     </jar>
 </target>
 

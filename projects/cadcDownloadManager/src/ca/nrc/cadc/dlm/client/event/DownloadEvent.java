@@ -183,6 +183,17 @@ public class DownloadEvent extends EventObject
     
     public int getStartingPosition() { return startingPos; }
     
+    public boolean isFinalState()
+    {
+        if (state == COMPLETED ||
+            state == CANCELLED ||
+            state == FAILED)
+        {
+            return true;
+        }
+        return false;
+    }
+    
     public String toString() 
     {
         return "DownloadEvent[url=" + url + ", file=" + file + ",state=" + state + "(" + states[state] + "), error=" + error + "]";
