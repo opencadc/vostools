@@ -89,7 +89,7 @@
 
 <property name="jars" value="${lib}/cadcUtil.jar:${ext.lib}/servlet-api.jar" />
 
-<target name="build" depends="client,standaloneClient,servlet,api,resources" />
+<target name="build" depends="client,servlet,api,resources" />
 
 <target name="client" depends="compile">
     <jar jarfile="${build}/lib/${project}Client.jar"
