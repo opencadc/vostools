@@ -101,18 +101,6 @@
     </jar>
 </target>
 
-<target name="standaloneClient" depends="compile">
-	<jar jarfile="${build}/lib/${project}StandaloneClient.jar"
-		basedir="${build}/class"
-		manifest="${basedir}/src/metainf/dlmClient.mf"
-		update="no">
-                <include name="**/client/**" />
-                <include name="**/DownloadUtil**" />
-                <include name="ca/onfire/**" />
-                <zipfileset src="${lib}/cadcUtil.jar" />
-    </jar>
-</target>
-
 <target name="servlet" depends="compile">
     <jar jarfile="${build}/lib/${project}Server.jar"
 		basedir="${build}/class" 
