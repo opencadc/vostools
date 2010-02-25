@@ -110,6 +110,13 @@ public interface JobManager
     Job persist(final Job job);
 
     /**
+     * Delete the specified job.
+     * 
+     * @param jobID
+     */
+    void delete(String jobID);
+
+    /**
      * Insert default values to those fields that require a value, but haven't
      * been given one.
      *

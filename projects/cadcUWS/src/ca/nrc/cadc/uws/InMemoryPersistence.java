@@ -104,6 +104,16 @@ public class InMemoryPersistence implements JobPersistence
         return jobMap.get(jobID);
     }
 
+    /**
+     * Delete the specified job.
+     *
+     * @param jobID
+     */
+    public void delete(String jobID)
+    {
+        jobMap.remove(jobID);
+    }
+
     public Collection<Job> getJobs()
     {
         return jobMap.values();

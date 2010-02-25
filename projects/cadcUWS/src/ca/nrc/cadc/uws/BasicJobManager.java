@@ -108,6 +108,17 @@ public class BasicJobManager implements JobManager
     }
 
     /**
+     * Delete the specified job.
+     *
+     * @param jobID
+     */
+    public void delete(String jobID)
+    {
+        getJobPersistence().delete(jobID);
+    }
+
+
+    /**
      * Persist the given Job.
      *
      * @param job The Job to persist.

@@ -89,6 +89,13 @@ public interface JobPersistence
     Job getJob(final String jobID);
 
     /**
+     * Delete the specified job.
+     *
+     * @param jobID
+     */
+    void delete(String jobID);
+
+    /**
      * Obtain a listing of Job instances.
      *
      * @return  Collection of Job instances, or empty Collection.  Never null.
