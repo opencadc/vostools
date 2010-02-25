@@ -78,6 +78,8 @@ import org.restlet.Response;
 import org.apache.log4j.Logger;
 import ca.nrc.cadc.uws.InvalidResourceException;
 import ca.nrc.cadc.uws.web.InvalidActionException;
+import java.security.AccessControlException;
+import org.restlet.resource.ResourceException;
 
 
 /**
@@ -119,11 +121,11 @@ public class UWSStatusService extends StatusService
     public Status getStatus(final Throwable throwable, final Request request,
                             final Response response)
     {
-        LOGGER.error("Unhandled exception or error intercepted", throwable);
-        response.setEntity("Unable to complete your request.  <<< "
+        
+        response.setEntity("Unable to complete your request: "
                            + (throwable.getCause() == null
                               ? throwable : throwable.getCause()).getMessage()
-                           + " >>>\n",
+                           + "\n",
                            MediaType.TEXT_PLAIN);
 
         if (throwable instanceof InvalidResourceException ||
@@ -136,8 +138,13 @@ public class UWSStatusService extends StatusService
         {
             return Status.CLIENT_ERROR_METHOD_NOT_ALLOWED;
         }
+        else if (throwable instanceof AccessControlException)
+        {
+            return new Status(Status.CLIENT_ERROR_FORBIDDEN, throwable.getMessage());
+        }
         else
         {
+            LOGGER.error("Unhandled exception or error intercepted", throwable);
             return super.getStatus(throwable, request, response);
         }
     }
