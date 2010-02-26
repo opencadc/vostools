@@ -117,7 +117,7 @@ public class JobAsynchResource extends BaseJobResource
     public void accept(final Representation entity)
     {
         final Job job = getJob();
-        final Form form = getRequest().getEntityAsForm();
+        Form form = getForm();
         final String pathInfo = getPathInfo();
 
         if (!jobModificationAllowed())

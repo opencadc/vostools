@@ -72,7 +72,6 @@ package ca.nrc.cadc.uws.web.restlet.resources;
 
 import org.restlet.resource.ServerResource;
 import org.restlet.resource.Get;
-import org.restlet.data.*;
 import org.restlet.representation.Representation;
 import org.restlet.representation.StringRepresentation;
 import org.restlet.ext.xml.DomRepresentation;
@@ -94,6 +93,11 @@ import java.security.Principal;
 import java.util.HashSet;
 import java.util.Map;
 import java.util.Set;
+import org.restlet.data.Form;
+import org.restlet.data.MediaType;
+import org.restlet.data.Method;
+import org.restlet.data.Reference;
+import org.restlet.data.Status;
 
 
 /**
@@ -107,6 +111,7 @@ public abstract class UWSResource extends ServerResource
     protected final static String XML_NAMESPACE_URI = "http://www.ivoa.net/xml/UWS/v1.0";
 
     protected FormValidator formValidator;
+    protected Form form;
     protected JobManager jobManager;
 
 
@@ -273,15 +278,17 @@ public abstract class UWSResource extends ServerResource
      */
     protected Form getForm()
     {
-        final Form form;
-
-        if (getMethod().equals(Method.GET))
+        // lazy init and cache the form for re-use
+        if (form == null)
         {
-            form = getQuery();
-        }
-        else
-        {
-            form = getRequest().getEntityAsForm();
+            if (getMethod().equals(Method.GET))
+            {
+                form = getQuery();
+            }
+            else
+            {
+                form = new Form(getRequest().getEntity());
+            }
         }
 
         return form;

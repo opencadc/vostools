@@ -164,7 +164,7 @@ public abstract class BaseJobResource extends UWSResource
      */
     protected boolean jobModificationAllowed()
     {
-        final Form form = getRequest().getEntityAsForm();
+        Form form = getForm();
         final String phase =
                 form.getFirstValue(JobAttribute.EXECUTION_PHASE.
                         getAttributeName().toUpperCase());
