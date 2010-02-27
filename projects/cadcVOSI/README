@@ -1,0 +1,52 @@
+
+This library provides a servlet that generates a VOSI capabilties document from some minimal
+config in the web.xml file. To use it (e.g. for TAP) just include the jar in your webapp and
+add something like this to your web.xml file:
+
+    <servlet>
+        <servlet-name>CapServlet</servlet-name>
+        <servlet-class>ca.nrc.cadc.vosi.CapabilitiesServlet</servlet-class>
+
+	<!-- this capability is the main one, hence the value has a second part
+	     to set role="std" -->
+        <init-param>
+            <description>
+            </description>
+            <param-name>/</param-name>
+            <param-value>ivo://ivoa.net/std/TAP std</param-value>
+        </init-param>
+
+	<!-- the self-describing VOSI capabilities: resource name here matches the
+	     servlet-mapping below -->
+        <init-param>
+            <description>
+            </description>
+            <param-name>/capabilities</param-name>
+            <param-value>ivo://ivoa.net/std/VOSI#capabilities</param-value>
+        </init-param>
+
+        <!-- uncomment these if they are implemented -->
+	<!--
+        <init-param>
+            <description>
+            </description>
+            <param-name>/availability</param-name>
+            <param-value>ivo://ivoa.net/std/VOSI#availability</param-value>
+        </init-param>
+        
+	<!--
+	<init-param>
+            <description>
+            </description>
+            <param-name>/tables</param-name>
+            <param-value>ivo://ivoa.net/std/VOSI#tables</param-value>
+        </init-param>
+        -->
+    </servlet>
+
+    <!-- the resource name here defined by the service spec, eg TAP says it is /capabilities -->
+    <servlet-mapping>
+        <servlet-name>CapServlet</servlet-name>
+        <url-pattern>/capabilities</url-pattern>
+    </servlet-mapping>
+
