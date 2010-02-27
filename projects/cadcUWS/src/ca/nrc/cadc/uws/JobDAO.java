@@ -122,12 +122,14 @@ public abstract class JobDAO implements JobPersistence
     private DefaultTransactionDefinition defaultTransactionDef = new DefaultTransactionDefinition();
     private TransactionStatus transactionStatus;
 
+    protected JobDAO() { }
+
     /**
-     * Construct a new JobDAO using the specified DataSource.
+     * Initialise the JobDAO using the specified DataSource.
      *
      * @param dataSource JobDAO DataSource.
      */
-    public JobDAO(DataSource dataSource)
+    public void setDataSource(DataSource dataSource)
     {
         this.jdbc = new JdbcTemplate(dataSource);
         this.transactionManager = new DataSourceTransactionManager(dataSource);
@@ -227,7 +229,7 @@ public abstract class JobDAO implements JobPersistence
      */
     public Collection<Job> getJobs()
     {
-        throw new AccessControlException("Job listing not allowed");
+        throw new UnsupportedOperationException("Job listing not implemented");
     }
 
     /**
