@@ -90,6 +90,7 @@ import ca.nrc.cadc.tap.writer.formatter.DefaultFormatterFactory;
 import ca.nrc.cadc.tap.writer.votable.FieldElement;
 import ca.nrc.cadc.tap.writer.formatter.Formatter;
 import ca.nrc.cadc.tap.writer.formatter.FormatterFactory;
+import ca.nrc.cadc.uws.Parameter;
 import org.apache.log4j.Logger;
 
 /**
@@ -119,6 +120,8 @@ public class VOTableWriter implements TableWriter
     // List of column names used in the select statement.
     protected List<TapSelectItem> selectList;
 
+    protected List<Parameter> params;
+    
     // Maximum number of rows to write.
     protected int maxRows;
 
@@ -126,6 +129,11 @@ public class VOTableWriter implements TableWriter
     public VOTableWriter()
     {
         maxRows = Integer.MAX_VALUE;
+    }
+
+    public void setParameterList(List<Parameter> params)
+    {
+        this.params = params;
     }
 
     public String getExtension()

@@ -70,6 +70,7 @@
 package ca.nrc.cadc.tap.writer;
 
 import ca.nrc.cadc.tap.TableWriter;
+import ca.nrc.cadc.uws.Parameter;
 import java.io.IOException;
 import java.io.OutputStream;
 import java.nio.charset.Charset;
@@ -122,6 +123,8 @@ public class AsciiTableWriter implements TableWriter
     // List of column names used in the select statement.
     protected List<TapSelectItem> selectList;
 
+    protected List<Parameter> params;
+
     // Maximum number of rows to write.
     protected int maxRows;
 
@@ -158,6 +161,12 @@ public class AsciiTableWriter implements TableWriter
         else
             throw new IllegalArgumentException("illegal format: " + format);
     }
+
+    public void setParameterList(List<Parameter> params)
+    {
+        this.params = params;
+    }
+
 
     public String getExtension()
     {

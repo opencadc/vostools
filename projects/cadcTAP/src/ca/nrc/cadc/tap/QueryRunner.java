@@ -95,6 +95,7 @@ import ca.nrc.cadc.tap.schema.TapSchemaDAO;
 import ca.nrc.cadc.uws.ErrorSummary;
 import ca.nrc.cadc.uws.ExecutionPhase;
 import ca.nrc.cadc.uws.Job;
+import ca.nrc.cadc.uws.JobManager;
 import ca.nrc.cadc.uws.JobRunner;
 import ca.nrc.cadc.uws.Parameter;
 import ca.nrc.cadc.uws.Result;
@@ -150,19 +151,9 @@ public class QueryRunner implements JobRunner
 	}
 	
 	private Job job;
+    private JobManager manager;
 
-    public QueryRunner()
-    {
-        try
-        {
-        	logger.debug( "Initializing" );
-        }
-        catch ( Exception e )
-        {
-            e.printStackTrace();
-            return;
-        }
-    }
+    public QueryRunner() { }
 
     public void setJob( Job job )
     {
@@ -172,6 +163,11 @@ public class QueryRunner implements JobRunner
     public Job getJob()
     {
         return job;
+    }
+
+    public void setJobManager(JobManager jm)
+    {
+        this.manager = jm;
     }
     
     public void run()
@@ -190,8 +186,12 @@ public class QueryRunner implements JobRunner
     
     private void doit()
     {
-        FileStore fs = null;
+        logger.debug("setting/persisting ExecutionPhase = " + ExecutionPhase.UNKNOWN);
         job.setExecutionPhase(ExecutionPhase.UNKNOWN);
+        this.job = manager.persist(job);
+
+        logger.debug("loading " + fileStoreClassName);
+        FileStore fs = null;
         try
         {
             fs = (FileStore) Class.forName( fileStoreClassName ).newInstance();
@@ -204,18 +204,20 @@ public class QueryRunner implements JobRunner
 
         try
         {
+            logger.debug("setting/persisting ExecutionPhase = " + ExecutionPhase.EXECUTING);
             job.setExecutionPhase( ExecutionPhase.EXECUTING );
+            this.job = manager.persist(job);
             
             // start processing the job
             List<Parameter> paramList = job.getParameterList();
 
             fs.setParameterList(paramList);
-            
-            // REQUEST, VERSION
+
+            logger.debug("invoking TapValiator for REQUEST and VERSION...");
             TapValidator tapValidator = new TapValidator();
             tapValidator.validate( paramList );
             
-            // find DataSource via JNDI lookup
+            logger.debug("find DataSource via JNDI lookup...");
             Context initContext = new InitialContext();
             Context envContext = (Context) initContext.lookup("java:/comp/env");
             DataSource queryDataSource = (DataSource) envContext.lookup(queryDataSourceName);
@@ -233,25 +235,27 @@ public class QueryRunner implements JobRunner
             if (queryDataSource == null) // application server config issue
                 throw new RuntimeException("failed to find the query DataSource");
             
-            // extract TapSchema
+            logger.debug("reading TapSchema...");
             TapSchemaDAO dao = new TapSchemaDAO(queryDataSource);
             TapSchema tapSchema = dao.get();
             
-            // UPLOAD
+            logger.debug("loading " + uploadManagerClassName);
             Class umc =  Class.forName(uploadManagerClassName);
             UploadManager uploadManager = (UploadManager) umc.newInstance();
             uploadManager.setDataSource(uploadDataSource);
-            Map<String,TableDesc> tableDescs = uploadManager.upload( paramList, job.getJobId() );
+            logger.debug("invoking UploadManager for UPLOAD...");
+            Map<String,TableDesc> tableDescs = uploadManager.upload( paramList, job.getID() );
 
-            // MAXREC
+            logger.debug("invoking MaxRecValidator...");
             MaxRecValidator maxRecValidator = new MaxRecValidator();
             int maxRows = maxRecValidator.validate(paramList);
 
-            // LANG
+            logger.debug("invoking TapValidator to get LANG...");
         	String lang = tapValidator.getLang();
             String cname = langQueries.get(lang);
             if (cname == null)
                 throw new UnsupportedOperationException("unknown LANG: " + lang);
+            logger.debug("loading TapQuery " + cname);
             Class tqc = Class.forName(cname);
             TapQuery tapQuery = (TapQuery) tqc.newInstance();
             tapQuery.setTapSchema(tapSchema);
@@ -261,10 +265,11 @@ public class QueryRunner implements JobRunner
                 tapQuery.setMaxRowCount(maxRows);
             else if (maxRows < Integer.MAX_VALUE)
                 tapQuery.setMaxRowCount(maxRows + 1); // +1 so the TableWriter check overflow
+            logger.debug("invoking TapQuery...");
         	String sql = tapQuery.getSQL();
             List<TapSelectItem> selectList = tapQuery.getSelectList();
             
-            // FORMAT
+            logger.debug("invoking TableWriterFactory for FORMAT...");
             TableWriter writer = TableWriterFactory.getWriter(paramList);
             writer.setTapSchema(tapSchema);
             writer.setSelectList(selectList);
@@ -279,14 +284,14 @@ public class QueryRunner implements JobRunner
             {
                 if (maxRows > 0)
                 {
-                    logger.debug("executing query: " + sql);
+                    logger.debug("getting database connection...");
                     connection = queryDataSource.getConnection();
+                    logger.debug("executing query: " + sql);
                     pstmt = connection.prepareStatement(sql);
                     rs = pstmt.executeQuery();
                 }
 
-                // write result
-                tmpFile = new File(fs.getStorageDir(), "result_" + job.getJobId() + "." + writer.getExtension());
+                tmpFile = new File(fs.getStorageDir(), "result_" + job.getID() + "." + writer.getExtension());
                 logger.debug("writing ResultSet to " + tmpFile);
                 OutputStream ostream = new FileOutputStream(tmpFile);
                 writer.write(rs, ostream);
@@ -314,13 +319,14 @@ public class QueryRunner implements JobRunner
                 }
             }
 
-            // store result
+            logger.debug("stroing results with FileStore...");
             URL url = fs.put(tmpFile);
             Result res = new Result("result", url);
             List<Result> results = new ArrayList<Result>();
             results.add(res);
             job.setResultsList(results);
-            
+
+            logger.debug("setting ExecutionPhase = " + ExecutionPhase.COMPLETED);
             job.setExecutionPhase( ExecutionPhase.COMPLETED );
 		}
         catch ( Throwable t )
@@ -335,7 +341,7 @@ public class QueryRunner implements JobRunner
         		errorMessage = t.getClass().getSimpleName() + ":" + t.getMessage();
         		logger.debug( "Error message: "+errorMessage );
         		VOTableWriter writer = new VOTableWriter();
-                File errorFile = new File(fs.getStorageDir(), "error_" + job.getJobId() + "." + writer.getExtension());
+                File errorFile = new File(fs.getStorageDir(), "error_" + job.getID() + "." + writer.getExtension());
                 logger.debug( "Error file: "+errorFile.getAbsolutePath());
            		FileOutputStream errorOutput = new FileOutputStream( errorFile );
            		writer.write(t, errorOutput );
@@ -350,11 +356,14 @@ public class QueryRunner implements JobRunner
             }
         	finally
             {
+                logger.debug("setting ExecutionPhase = " + ExecutionPhase.ERROR);
                 job.setExecutionPhase( ExecutionPhase.ERROR );
             }
 		}
-		return;
+        finally
+        {
+            logger.debug("persisting Job...");
+            this.job = manager.persist(job);
+        }
     }
-
-    
 }

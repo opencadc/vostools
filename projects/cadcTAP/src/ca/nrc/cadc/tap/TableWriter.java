@@ -76,6 +76,7 @@ import java.util.List;
 
 import ca.nrc.cadc.tap.parser.TapSelectItem;
 import ca.nrc.cadc.tap.schema.TapSchema;
+import ca.nrc.cadc.uws.Parameter;
 
 /**
  * Interface for classes that write tables in specific formats.
@@ -85,6 +86,14 @@ import ca.nrc.cadc.tap.schema.TapSchema;
  */
 public interface TableWriter
 {
+    /**
+     * The complete list of job parameters. This is here to allow implementations to
+     * provide custom extensions such as client control of the output.
+     *
+     * @param params
+     */
+    public void setParameterList(List<Parameter> params);
+    
     /**
      * Get the usual filename extenasion for this format.
      * 
