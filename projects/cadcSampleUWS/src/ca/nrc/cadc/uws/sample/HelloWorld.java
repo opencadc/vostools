@@ -71,6 +71,7 @@
 package ca.nrc.cadc.uws.sample;
 
 
+import ca.nrc.cadc.uws.JobManager;
 import java.net.URL;
 import java.util.ArrayList;
 import java.util.Iterator;
@@ -101,7 +102,8 @@ public class HelloWorld implements JobRunner
 	
 	public static String PASS   = "PASS";
     public static String RUNFOR = "RUNFOR";
-	
+
+    private JobManager manager;
 	private Job job;
 
     public HelloWorld()
@@ -117,27 +119,21 @@ public class HelloWorld implements JobRunner
         }
     }
 
-    /**
-     * Set the Job that this Runner is currently responsible for.
-     *
-     * @param job The Job to run.
-     */
     public void setJob( final Job job )
     {
         this.job = job;
     }
 
-    /**
-     * When an object implementing interface <code>Runnable</code> is used
-     * to create a thread, starting the thread causes the object's
-     * <code>run</code> method to be called in that separately executing
-     * thread.
-     * <p/>
-     * The general contract of the method <code>run</code> is that it may
-     * take any action whatsoever.
-     *
-     * @see Thread#run()
-     */
+    public Job getJob()
+    {
+        return job;
+    }
+
+    public void setJobManager(JobManager jm)
+    {
+        this.manager = jm;
+    }
+
     public void run()
     {
         logger.debug("START");
@@ -157,7 +153,7 @@ public class HelloWorld implements JobRunner
         try
         {
             job.setExecutionPhase( ExecutionPhase.EXECUTING );
-            job.setStartTime(new Date());
+            this.job = manager.persist(job);
 
             String server = NetUtil.getServerName( this.getClass() );
             logger.debug( "server="+server );
@@ -247,17 +243,12 @@ public class HelloWorld implements JobRunner
 			ErrorSummary error = new ErrorSummary(t.getMessage(), null );
 			job.setErrorSummary( error );
             job.setExecutionPhase( ExecutionPhase.ERROR );
+            
 			return;
 		}
         finally
         {
-            job.setEndTime(new Date());
+            this.job = manager.persist(job);
         }
     }
-
-    public Job getJob()
-    {
-        return job;
-    }
-    
 }
