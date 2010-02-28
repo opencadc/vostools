@@ -34,6 +34,7 @@
 
 package ca.nrc.cadc.uws.web.restlet.resources;
 
+import ca.nrc.cadc.util.Log4jInit;
 import ca.nrc.cadc.uws.ExecutionPhase;
 import ca.nrc.cadc.uws.Job;
 import ca.nrc.cadc.uws.JobExecutor;
@@ -53,14 +54,22 @@ import java.util.ArrayList;
 import java.util.List;
 
 import javax.security.auth.Subject;
+import org.apache.log4j.Logger;
 
 
 public class JobAsynchResourceExecutionTest
 {
+    Logger log = Logger.getLogger(JobAsynchResourceExecutionTest.class);
+    
     protected JobRunner mockJobRunner;
     protected JobExecutor mockJobExecutor;
     protected JobAsynchResource testSubject;
+    private Job testJob;
 
+    static
+    {
+        Log4jInit.setLevel("ca.nrc.cadc", org.apache.log4j.Level.DEBUG);
+    }
 
     @Before
     public void setup()
@@ -97,19 +106,13 @@ public class JobAsynchResourceExecutionTest
         final List<Result> results = new ArrayList<Result>();
         final List<Parameter> parameters = new ArrayList<Parameter>();
         
-        final Job testJob =
+        testJob =
                 new Job("88l", ExecutionPhase.QUEUED, 88l, cal.getTime(),
                         quoteCal.getTime(), cal.getTime(), cal.getTime(), null,
                         null, "RUN_ID", results, parameters, null);
 
         testSubject = new JobAsynchResource()
         {
-            /**
-             * Obtain a new instance of the Job Runner interface as defined in the
-             * Context
-             *
-             * @return The JobRunner instance.
-             */
             @Override
             protected JobRunner createJobRunner()
             {
@@ -122,22 +125,21 @@ public class JobAsynchResourceExecutionTest
                 return mockJobExecutor;
             }
 
-            /**
-             * Obtain the current Job in the context of this Request.
-             *
-             * @return This Request's Job.
-             */
             @Override
-            protected Job getJob()
+            protected void doInit()
             {
-                return testJob;
+                job = JobAsynchResourceExecutionTest.this.testJob;
             }
         };        
-
+        testSubject.doInit();
+        
+        log.debug("executeJob: " + testJob);
         mockJobRunner.setJob(testJob);
         replay(mockJobRunner);
 
+        log.debug("executeJob: " + testJob);
         testSubject.executeJob();
+        log.debug("executeJob: " + testJob);
     }
 
     @Test
@@ -156,13 +158,19 @@ public class JobAsynchResourceExecutionTest
         
         final Subject subject = new Subject();
 
-        final Job testJob =
+        testJob =
                 new Job("88l", ExecutionPhase.QUEUED, 88l, cal.getTime(),
                         quoteCal.getTime(), cal.getTime(), cal.getTime(), null,
                         null, "RUN_ID", results, parameters, null);
 
         testSubject = new JobAsynchResource()
         {
+            @Override
+            protected void doInit()
+            {
+                job = JobAsynchResourceExecutionTest.this.testJob;
+            }
+            
             /**
              * Obtain a new instance of the Job Runner interface as defined in the
              * Context
@@ -191,21 +199,11 @@ public class JobAsynchResourceExecutionTest
 
                 return request;
             }
-
-            /**
-             * Obtain the current Job in the context of this Request.
-             *
-             * @return This Request's Job.
-             */
-            @Override
-            protected Job getJob()
-            {
-                return testJob;
-            }
         };        
 
         try
         {
+            testSubject.doInit();
             testSubject.accept(null);
             fail("Not allowed to POST to already running job.");
         }

@@ -137,8 +137,8 @@ public class AsynchResource extends UWSResource
                                                  e);
         }
 
-        final Job persistedJob = getJobManager().persist(job);
-        redirectSeeOther(getHostPart() + getRequestPath() + "/" + persistedJob.getJobId());
+        Job persistedJob = getJobManager().persist(job);
+        redirectSeeOther(getHostPart() + getRequestPath() + "/" + persistedJob.getID());
     }
     
     /**
@@ -170,9 +170,9 @@ public class AsynchResource extends UWSResource
                                                      getAttributeName());
             
             jobRefElement.setPrefix(XML_NAMESPACE_PREFIX);
-            jobRefElement.setAttribute("id", job.getJobId());
+            jobRefElement.setAttribute("id", job.getID());
             jobRefElement.setAttribute("xlink:href", getHostPart()
-                                       + job.getRequestPath() + "/" + job.getJobId());
+                                       + job.getRequestPath() + "/" + job.getID());
             
             final Element jobRefPhaseElement =
                     document.createElementNS(XML_NAMESPACE_URI,

@@ -76,7 +76,6 @@ import java.net.MalformedURLException;
 import java.net.URL;
 import java.net.URLDecoder;
 import java.net.URLEncoder;
-import java.security.AccessControlException;
 import java.security.Principal;
 import java.sql.ResultSet;
 import java.sql.SQLException;
@@ -99,6 +98,13 @@ import org.springframework.transaction.TransactionStatus;
 import org.springframework.transaction.support.DefaultTransactionDefinition;
 
 /**
+ * JobPersistence c lass that stores the jobs in a RDBMS. This is an abstract class;
+ * users of this class must implement the abstract methods to return the names of tables
+ * where the job is to be stored. The subclass must also call setDataSource before any
+ * persistence methods are called.
+ * </p><p>
+ * Users must create at least 3 tables (possibly multiple parameter tables) with the
+ * following columns. TODO: List the requied columns for each table.
  *
  * @author jburke
  */
@@ -138,7 +144,7 @@ public abstract class JobDAO implements JobPersistence
     /**
      * Start a transaction to the data source.
      */
-    public void startTransaction()
+    protected void startTransaction()
     {
         if (transactionStatus != null)
             throw new IllegalStateException("transaction already in progress");
@@ -150,7 +156,7 @@ public abstract class JobDAO implements JobPersistence
     /**
      * Commit the transaction to the data source.
      */
-    public void commitTransaction()
+    protected void commitTransaction()
     {
         if (transactionStatus == null)
             throw new IllegalStateException("no transaction in progress");
@@ -163,7 +169,7 @@ public abstract class JobDAO implements JobPersistence
     /**
      * Rollback the transaction to the data source.
      */
-    public void rollbackTransaction()
+    protected void rollbackTransaction()
     {
         if (transactionStatus == null)
             throw new IllegalStateException("no transaction in progress");
@@ -189,7 +195,7 @@ public abstract class JobDAO implements JobPersistence
         }
         catch (DataAccessException e)
         {
-            log.debug(e);
+            log.error(e);
             return null;
         }
 
@@ -206,7 +212,7 @@ public abstract class JobDAO implements JobPersistence
         // List of Results for this jobID.
         job.setResultsList(jdbc.query(getSelectResultSQL(jobId), new ResultMapper()));
 
-        log.info("getJob jobId = " + jobId);
+        log.debug("getJob jobId = " + jobId);
         return job;
     }
 
@@ -219,7 +225,7 @@ public abstract class JobDAO implements JobPersistence
     {
         // Delete the Job by setting the deletedByUser field to true.
         jdbc.update(getUpdateJobDeletedSQL(jobId));
-        log.info("delete jobId = " + jobId);
+        log.debug("delete jobId = " + jobId);
     }
 
     /**
@@ -249,18 +255,18 @@ public abstract class JobDAO implements JobPersistence
 
             // If Job exists, i.e. has a jobID, then delete the current Job
             // and any Parameter's and Result's for the Job.
-            jobId = job.getJobId();
+            jobId = job.getID();
             if (jobId != null)
             {
                 // Delete all the Parameter's for the Job.
                 for (String table : getParameterTables())
-                    jdbc.update(getDeleteParameterSQL(job.getJobId(), table));
+                    jdbc.update(getDeleteParameterSQL(job.getID(), table));
 
                 // Delete all the Result's for the Job.
-                jdbc.update(getDeleteResultSQL(job.getJobId()));
+                jdbc.update(getDeleteResultSQL(job.getID()));
 
                 // Delete the Job.
-                jdbc.update(getDeleteJobSQL(job.getJobId()));
+                jdbc.update(getDeleteJobSQL(job.getID()));
             }
 
             // Insert new Job, catching any possible errors due to constraint violations.
@@ -293,11 +299,11 @@ public abstract class JobDAO implements JobPersistence
 
                     // Add the Job Parameter's.
                     for (Parameter parameter : job.getParameterList())
-                        jdbc.update(getInsertParameterSQL(newJob.getJobId(), parameter));
+                        jdbc.update(getInsertParameterSQL(newJob.getID(), parameter));
 
                     // Add the Job Result's.
                     for (Result result : job.getResultsList())
-                        jdbc.update(getInsertResultSQL(newJob.getJobId(), result));
+                        jdbc.update(getInsertResultSQL(newJob.getID(), result));
 
                     done = true;
                 }
@@ -314,16 +320,15 @@ public abstract class JobDAO implements JobPersistence
 
             // Commit the transaction.
             commitTransaction();
-            log.info("persist jobId = " + jobId);
+            log.debug("persist jobId = " + jobId);
 
             // Return the new Job.
             return newJob;
         }
         catch (Throwable t)
         {
-            log.error(t);
             rollbackTransaction();
-            log.info("persist rollback jobId = " + jobId);
+            log.error("persist rollback jobId = " + jobId, t);
             return null;
         }
     }
@@ -382,7 +387,7 @@ public abstract class JobDAO implements JobPersistence
         sb.append("runId,");
         sb.append("requestPath");
         sb.append(") values ('");
-        sb.append(job.getJobId());
+        sb.append(job.getID());
         sb.append("','");
         sb.append(job.getExecutionPhase().name());
         sb.append("',");
@@ -490,7 +495,7 @@ public abstract class JobDAO implements JobPersistence
         else
         {
             sb.append("'");
-            sb.append(encode(job.getRequestPath()));
+            sb.append(job.getRequestPath());
             sb.append("'");
         }
         sb.append(")");

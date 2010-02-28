@@ -83,7 +83,7 @@ import javax.security.auth.Subject;
  */
 public class Job
 {
-    private String jobId;
+    private String jobID;
     private ExecutionPhase executionPhase;
     private long executionDuration;
     private Date destructionTime;
@@ -104,7 +104,7 @@ public class Job
     /**
      * Constructor.
      *
-     * @param jobId                 The unique Job ID.
+     * @param jobID                 The unique Job ID.
      * @param executionPhase        The Execution Phase.
      * @param executionDuration     The Duration in clock seconds.
      * @param destructionTime       The date and time of destruction.
@@ -118,7 +118,7 @@ public class Job
      * @param parameterList         The List of Parameters.
      * @param requestPath           The http request path.
      */
-    public Job(final String jobId, final ExecutionPhase executionPhase,
+    public Job(final String jobID, final ExecutionPhase executionPhase,
                final long executionDuration, final Date destructionTime,
                final Date quote, final Date startTime, final Date endTime,
                final ErrorSummary errorSummary, final Subject owner,
@@ -126,7 +126,7 @@ public class Job
                final List<Parameter> parameterList,
                final String requestPath)
     {
-        this.jobId = jobId;
+        this.jobID = jobID;
         this.executionPhase = executionPhase;
         this.executionDuration = executionDuration;
         this.destructionTime = destructionTime;
@@ -141,14 +141,20 @@ public class Job
         this.requestPath = requestPath;
     }
 
+    @Override
+    public String toString()
+    {
+        return "Job[" + jobID + "," + executionPhase + "]";
+    }
+
     /**
      * Obtain the unique Job ID.
      *
      * @return Long job ID.
      */
-    public String getJobId()
+    public String getID()
     {
-        return jobId;
+        return jobID;
     }
 
     /**
@@ -444,7 +450,7 @@ public class Job
     /**
      * Path of the Request that created the Job.
      *
-     * @param The Request Path.
+     * @param path The Request Path.
      */
     public void setRequestPath(final String path)
     {

@@ -69,6 +69,13 @@
 
 package ca.nrc.cadc.uws.web.restlet.resources;
 
+import ca.nrc.cadc.uws.ErrorSummary;
+import ca.nrc.cadc.uws.ExecutionPhase;
+import ca.nrc.cadc.uws.Job;
+import ca.nrc.cadc.uws.JobRunner;
+import ca.nrc.cadc.uws.PrivilegedActionJobRunner;
+import ca.nrc.cadc.uws.Result;
+import ca.nrc.cadc.uws.TimeTrackingRunnable;
 import org.w3c.dom.Document;
 import org.restlet.representation.Representation;
 import org.restlet.representation.EmptyRepresentation;
@@ -82,8 +89,6 @@ import java.util.List;
 
 import javax.security.auth.Subject;
 
-import ca.nrc.cadc.uws.*;
-import ca.nrc.cadc.uws.web.InvalidActionException;
 
 
 /**
@@ -110,7 +115,6 @@ public class JobSyncSubmissionResource extends BaseJobResource
     {
         executeJob();
         final Representation representation;
-        final Job job = getJob();
         final List<Result> results = job.getResultsList();
 
         if (results.isEmpty() && (job.getErrorSummary() == null)
@@ -161,33 +165,24 @@ public class JobSyncSubmissionResource extends BaseJobResource
         }
         else if (jobIsPending())
         {
-            prepareJob();
-
             final JobRunner jobRunner = createJobRunner();
-            Job job = getJob();
             jobRunner.setJob(job);
+            jobRunner.setJobManager(getJobManager());
+
+            job.setExecutionPhase(ExecutionPhase.QUEUED);
+            this.job = getJobManager().persist(job);
             
             if (job.getOwner() == null)
             {
-            	jobRunner.run();
+                Runnable r = new TimeTrackingRunnable(getJobManager(), jobRunner);
+                r.run();
             }
             else
             {
-            	Subject.doAs(job.getOwner(), new PrivilegedActionJobRunner(jobRunner));
+            	Subject.doAs(job.getOwner(), new PrivilegedActionJobRunner(getJobManager(), jobRunner));
             }
 
         }
-    }
-
-    /**
-     * Prepare the current job for execution.
-     */
-    protected void prepareJob()
-    {
-        final Job job = getJob();
-
-        job.setExecutionPhase(ExecutionPhase.QUEUED);
-        getJobManager().persist(job);
     }
 
     /**

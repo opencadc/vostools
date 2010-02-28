@@ -73,7 +73,6 @@ import org.w3c.dom.Document;
 import org.restlet.resource.Post;
 import org.restlet.resource.Get;
 import org.restlet.representation.Representation;
-import org.restlet.data.Form;
 import org.apache.log4j.Logger;
 
 import java.io.IOException;
@@ -83,14 +82,19 @@ import java.text.ParseException;
 import ca.nrc.cadc.uws.Job;
 import ca.nrc.cadc.uws.web.restlet.JobAssembler;
 import ca.nrc.cadc.uws.web.WebRepresentationException;
+import ca.nrc.cadc.uws.web.restlet.UWSSyncRouter;
 import java.net.MalformedURLException;
 
 import javax.security.auth.Subject;
+import org.restlet.data.Form;
+import org.restlet.data.Method;
 import org.restlet.data.Reference;
 
 
 /**
- * Resource to handle Synchronous calls.
+ * Synchronous Job list resource. This class accepts GET and POST and immediately
+ * creates a job. It redirects the caller to the JobSyncSubmissionResource to
+ * execute the job.
  */
 public class SynchResource extends UWSResource
 {
@@ -126,7 +130,12 @@ public class SynchResource extends UWSResource
 
     protected void process()
     {
-        final Form form = getForm();
+        Form form;
+        if (getMethod().equals(Method.GET))
+            form = getQuery();
+        else
+            form = new Form(getRequest().getEntity());
+
         final Subject subject = getSubject();
         final Map<String, String> errors = validate(form);
 
@@ -155,9 +164,8 @@ public class SynchResource extends UWSResource
             throw new WebRepresentationException("Unable to create Job!", e);
         }
 
-        final Job persistedJob = getJobManager().persist(job);
-        redirectSeeOther(getHostPart() + getRequestPath() + "/"
-                         + persistedJob.getJobId() + "/result");
+        Job persistedJob = getJobManager().persist(job);
+        redirectSeeOther(getHostPart() + getRequestPath() + "/" + persistedJob.getID() + "/" + UWSSyncRouter.SYNC_RESOURCE);
     }
 
     /**

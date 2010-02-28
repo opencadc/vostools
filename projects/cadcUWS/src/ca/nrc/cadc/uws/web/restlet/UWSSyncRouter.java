@@ -81,6 +81,8 @@ import ca.nrc.cadc.uws.web.restlet.resources.JobSyncSubmissionResource;
  */
 public class UWSSyncRouter extends Router
 {
+    public static String SYNC_RESOURCE = "result";
+
     /**
      * Constructor.
      *
@@ -89,10 +91,7 @@ public class UWSSyncRouter extends Router
     public UWSSyncRouter(final Context context)
     {
         super(context);
-
-        // Synchronous Resources.
-//        attachDefault(SynchResource.class);
         attach("", SynchResource.class);
-        attach("/{jobID}/result", JobSyncSubmissionResource.class);
+        attach("/{jobID}/" + SYNC_RESOURCE, JobSyncSubmissionResource.class);
     }
 }

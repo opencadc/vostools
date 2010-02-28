@@ -70,6 +70,7 @@
 
 package ca.nrc.cadc.uws.web.restlet.resources;
 
+import ca.nrc.cadc.uws.Job;
 import org.w3c.dom.Document;
 import org.w3c.dom.Element;
 import org.restlet.resource.Post;
@@ -78,7 +79,6 @@ import org.restlet.data.Form;
 
 import ca.nrc.cadc.uws.JobAttribute;
 import ca.nrc.cadc.uws.Parameter;
-import ca.nrc.cadc.uws.Job;
 
 import java.util.Map;
 
@@ -98,15 +98,14 @@ public class ParameterListResource extends BaseJobResource
     {
         final Form form = new Form(entity);
         final Map<String, String> valuesMap = form.getValuesMap();
-        final Job job = getJob();
 
         for (final Map.Entry<String, String> entry : valuesMap.entrySet())
         {
             job.addParameter(new Parameter(entry.getKey(), entry.getValue()));
         }
 
-        final Job persistedJob = getJobManager().persist(job);
-        redirectSeeOther(getHostPart() + job.getRequestPath() + "/" + persistedJob.getJobId());
+        this.job = getJobManager().persist(job);
+        redirectSeeOther(getHostPart() + job.getRequestPath() + "/" + job.getID());
     }
 
     /**
@@ -116,16 +115,24 @@ public class ParameterListResource extends BaseJobResource
      */
     protected void buildXML(final Document document)
     {
+        Element parametersListElement = getElement(document, job);
+        document.appendChild(parametersListElement);       
+    }
+
+    // create the parameters list element for the specified job
+    // this is used above and re-used by JobAsynchResource
+    static Element getElement(Document doc, Job job)
+    {
         final Element parametersListElement =
-                document.createElementNS(XML_NAMESPACE_URI,
+                doc.createElementNS(XML_NAMESPACE_URI,
                                          JobAttribute.PARAMETERS.
                                                  getAttributeName());
         parametersListElement.setPrefix(XML_NAMESPACE_PREFIX);
 
-        for (final Parameter parameter : getJob().getParameterList())
+        for (final Parameter parameter : job.getParameterList())
         {
             final Element parameterElement =
-                    document.createElementNS(XML_NAMESPACE_URI,
+                    doc.createElementNS(XML_NAMESPACE_URI,
                                              JobAttribute.PARAMETER.
                                                      getAttributeName());
             parameterElement.setPrefix(XML_NAMESPACE_PREFIX);
@@ -134,6 +141,6 @@ public class ParameterListResource extends BaseJobResource
             parametersListElement.appendChild(parameterElement);
         }
 
-        document.appendChild(parametersListElement);       
+        return parametersListElement;
     }
 }

@@ -94,6 +94,13 @@ public interface JobRunner extends Runnable
      * @param job       The Job to run.
      */
     void setJob(final Job job);
+
+    /**
+     * Set reference to the JobManager so that the runner can persist changes to the job.
+     *
+     * @param jm
+     */
+    void setJobManager(JobManager jm);
     
     /**
      * Run the job. This method is invoked by the JobExecutor to run the job. The run()

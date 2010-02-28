@@ -72,11 +72,9 @@ package ca.nrc.cadc.uws.web.restlet.resources;
 
 import org.restlet.resource.Post;
 import org.restlet.representation.Representation;
-import org.restlet.Client;
 import org.apache.log4j.Logger;
 import org.w3c.dom.Document;
 import org.w3c.dom.Element;
-import org.w3c.dom.Node;
 
 import java.io.IOException;
 import java.text.ParseException;
@@ -86,18 +84,18 @@ import ca.nrc.cadc.date.DateUtil;
 import ca.nrc.cadc.uws.ErrorSummary;
 import ca.nrc.cadc.uws.ExecutionPhase;
 import ca.nrc.cadc.uws.InvalidResourceException;
-import ca.nrc.cadc.uws.Job;
 import ca.nrc.cadc.uws.JobAttribute;
 import ca.nrc.cadc.uws.JobExecutor;
 import ca.nrc.cadc.uws.JobRunner;
+import ca.nrc.cadc.uws.Parameter;
 import ca.nrc.cadc.uws.util.BeanUtil;
 import java.security.Principal;
 
 import java.text.DateFormat;
+import java.util.Map;
 import java.util.Set;
 import javax.security.auth.Subject;
 import org.restlet.data.Form;
-import org.restlet.data.Protocol;
 
 
 /**
@@ -107,7 +105,6 @@ public class JobAsynchResource extends BaseJobResource
 {
     private static final Logger LOGGER = Logger.getLogger(AsynchResource.class);
 
-
     /**
      * Accept POST requests.
      *
@@ -116,11 +113,10 @@ public class JobAsynchResource extends BaseJobResource
     @Post
     public void accept(final Representation entity)
     {
-        final Job job = getJob();
-        Form form = getForm();
         final String pathInfo = getPathInfo();
+        Form form = new Form(entity);
 
-        if (!jobModificationAllowed())
+        if (!jobModificationAllowed(form))
         {
             String message =
                     "No further modifications are allowed for this Job";
@@ -185,13 +181,26 @@ public class JobAsynchResource extends BaseJobResource
         else
         {
             // Default is we're POSTing Parameters to the Job.
-            final Client client = new Client(getContext(), Protocol.HTTP);
-            client.post(getHostPart() + job.getRequestPath() + "/" + job.getJobId()
-                        + "/parameters", form.getWebRepresentation());
+            //final Client client = new Client(getContext(), Protocol.HTTP);
+            //client.post(getHostPart() + job.getRequestPath() + "/" + job.getJobId()
+            //            + "/parameters", form.getWebRepresentation());
+            Map<String,String> params = form.getValuesMap();
+            // Clear out those Request parameters that are pre-defined.
+            for (final JobAttribute jobAttribute : JobAttribute.values())
+            {
+                params.remove(jobAttribute.getAttributeName().toUpperCase());
+            }
+
+            // The remaining values are new Parameters to the Job.
+            for (final Map.Entry<String, String> entry : params.entrySet())
+            {
+                job.addParameter(new Parameter(entry.getKey(),
+                                               entry.getValue()));
+            }
         }
 
-        getJobManager().persist(job);
-        redirectSeeOther(getHostPart() + job.getRequestPath() + "/" + job.getJobId());
+        this.job = getJobManager().persist(job);
+        redirectSeeOther(getHostPart() + job.getRequestPath() + "/" + job.getID());
     }
 
     /**
@@ -200,15 +209,16 @@ public class JobAsynchResource extends BaseJobResource
      */
     protected void executeJob()
     {
-        final Job job = getJob();
-
         if (jobIsPending())
         {
             final JobExecutor je = getJobExecutorService();
             final JobRunner jobRunner = createJobRunner();
+            jobRunner.setJobManager(getJobManager());
+            jobRunner.setJob(job);
 
             job.setExecutionPhase(ExecutionPhase.QUEUED);
-            jobRunner.setJob(job);
+            this.job = getJobManager().persist(job);
+            
             je.execute(jobRunner, job.getOwner());
         }
     }
@@ -222,20 +232,20 @@ public class JobAsynchResource extends BaseJobResource
     protected void buildAttributeXML(final Document document,
                                      final String pathInfo)
     {
-        final Job job = getJob();
         final DateFormat df =
                 DateUtil.getDateFormat(DateUtil.IVOA_DATE_FORMAT,
                                        DateUtil.UTC);
         String text;
         final JobAttribute jobAttribute;
 
-        if (pathInfo.endsWith("execute"))
-        {
-            executeJob();
-            text = job.getJobId();
-            jobAttribute = JobAttribute.JOB_ID;
-        }
-        else if (pathInfo.endsWith("phase"))
+        //if (pathInfo.endsWith("execute")) // what is this??
+        //{
+        //    executeJob();
+        //    text = job.getID();
+        //    jobAttribute = JobAttribute.JOB_ID;
+        //}
+        //else
+        if (pathInfo.endsWith("phase"))
         {
             text = job.getExecutionPhase().name();
             jobAttribute = JobAttribute.EXECUTION_PHASE;
@@ -286,10 +296,9 @@ public class JobAsynchResource extends BaseJobResource
      */
     protected void buildXML(final Document document) throws IOException
     {
-        final Job job = getJob();
         final String pathInfo = getPathInfo();
 
-        if (!pathInfo.endsWith(job.getJobId()))
+        if (!pathInfo.endsWith(job.getID()))
         {
             buildAttributeXML(document, pathInfo);
         }
@@ -310,7 +319,6 @@ public class JobAsynchResource extends BaseJobResource
     {
         final DateFormat df = DateUtil.getDateFormat(DateUtil.IVOA_DATE_FORMAT,
                                                      DateUtil.UTC);
-        final Job job = getJob();
         final Element jobElement = 
                 document.createElementNS(XML_NAMESPACE_URI, 
                                         JobAttribute.JOB.getAttributeName());
@@ -327,7 +335,7 @@ public class JobAsynchResource extends BaseJobResource
                 document.createElementNS(XML_NAMESPACE_URI,
                      JobAttribute.JOB_ID.getAttributeName());
         jobIdElement.setPrefix(XML_NAMESPACE_PREFIX);
-        jobIdElement.setTextContent(job.getJobId());
+        jobIdElement.setTextContent(job.getID());
         jobElement.appendChild(jobIdElement);
 
         // <uws:runId>
@@ -409,26 +417,27 @@ public class JobAsynchResource extends BaseJobResource
         jobElement.appendChild(destructionTimeElement);
 
         // <uws:parameters>
-        final Element parameterListElement =
-                getRemoteElement(JobAttribute.PARAMETERS);
-
-        if (parameterListElement != null)
-        {
-            final Node importedParameterList =
-                    document.importNode(parameterListElement, true);
-            jobElement.appendChild(importedParameterList);
-        }
+        //final Element parameterListElement = getRemoteElement(JobAttribute.PARAMETERS);
+        //if (parameterListElement != null)
+        //{
+        //    final Node importedParameterList =
+        //            document.importNode(parameterListElement, true);
+        //    jobElement.appendChild(importedParameterList);
+        //}
+        Element parameterListElement = ParameterListResource.getElement(document, job);
+        jobElement.appendChild(parameterListElement);
+        
 
         // <uws:results>
-        final Element resultListElement =
-                getRemoteElement(JobAttribute.RESULTS);
-
-        if (resultListElement != null)
-        {
-            final Node importedResultList =
-                    document.importNode(resultListElement, true);
-            jobElement.appendChild(importedResultList);
-        }
+        //final Element resultListElement = getRemoteElement(JobAttribute.RESULTS);
+        //if (resultListElement != null)
+        //{
+        //    final Node importedResultList =
+        //            document.importNode(resultListElement, true);
+        //    jobElement.appendChild(importedResultList);
+        //}
+        Element resultListElement = ResultListResource.getElement(document, job);
+        jobElement.appendChild(resultListElement);
 
         // <uws:errorSummary>
         final ErrorSummary errorSummary = job.getErrorSummary();

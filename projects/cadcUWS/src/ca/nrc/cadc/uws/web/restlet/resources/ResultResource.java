@@ -92,8 +92,6 @@ public class ResultResource extends BaseJobResource
      */
     protected Result getResult()
     {
-        final Job job = getJob();
-
         for (final Result result : job.getResultsList())
         {
             if (result.getName().equals(getResultID()))
@@ -103,6 +101,6 @@ public class ResultResource extends BaseJobResource
         }
 
         throw new InvalidResourceException("No such Result " + getResultID()
-                                           + " for Job " + job.getJobId());
+                                           + " for Job " + job.getID());
     }
 }

@@ -70,7 +70,12 @@
 
 package ca.nrc.cadc.uws.web.restlet.resources;
 
-import ca.nrc.cadc.uws.*;
+import ca.nrc.cadc.uws.ExecutionPhase;
+import ca.nrc.cadc.uws.InvalidResourceException;
+import ca.nrc.cadc.uws.InvalidServiceException;
+import ca.nrc.cadc.uws.Job;
+import ca.nrc.cadc.uws.JobAttribute;
+import ca.nrc.cadc.uws.JobRunner;
 import ca.nrc.cadc.uws.util.StringUtil;
 import ca.nrc.cadc.uws.util.BeanUtil;
 import org.w3c.dom.Element;
@@ -78,10 +83,11 @@ import org.w3c.dom.Document;
 import org.restlet.Client;
 import org.restlet.ext.xml.DomRepresentation;
 import org.restlet.data.Protocol;
-import org.restlet.data.Form;
 import org.restlet.Response;
 
 import java.io.IOException;
+import org.apache.log4j.Logger;
+import org.restlet.data.Form;
 
 
 /**
@@ -89,34 +95,19 @@ import java.io.IOException;
  */
 public abstract class BaseJobResource extends UWSResource
 {
-    /**
-     * Obtain the current Job in the context of this Request.
-     *
-     * @return      This Request's Job.
-     */
-    protected Job getJob()
-    {
-        final Job job = getJobManager().getJob(getJobID());
+    private static final Logger LOGGER = Logger.getLogger(UWSResource.class);
+    
+    protected Job job;
 
+    @Override
+    protected void doInit()
+    {
+        super.doInit();
+        String jobID = (String) getRequest().getAttributes().get("jobID");
+        this.job = getJobManager().getJob(jobID);
         if (job == null)
-        {
-            throw new InvalidResourceException("No such Job " + getJobID());
-        }
-        else
-        {
-            return job;
-        }
-    }
-
-
-    /**
-     * Obtain the current Job ID.
-     *
-     * @return  long Job ID
-     */
-    protected String getJobID()
-    {
-        return getRequestAttribute("jobID");
+            throw new InvalidResourceException("No such Job: " + jobID);
+        LOGGER.debug("doInit: found job " + jobID);
     }
 
     /**
@@ -126,9 +117,7 @@ public abstract class BaseJobResource extends UWSResource
      */
     protected boolean jobIsActive()
     {
-        final Job job = getJob();
         final ExecutionPhase executionPhase = job.getExecutionPhase();
-
         return (executionPhase.equals(ExecutionPhase.QUEUED))
                || (executionPhase.equals(ExecutionPhase.EXECUTING));
     }
@@ -140,9 +129,7 @@ public abstract class BaseJobResource extends UWSResource
      */
     protected boolean jobHasRun()
     {
-        final Job job = getJob();
         final ExecutionPhase executionPhase = job.getExecutionPhase();
-
         return executionPhase.equals(ExecutionPhase.COMPLETED)
                || executionPhase.equals(ExecutionPhase.ERROR);
     }
@@ -154,17 +141,18 @@ public abstract class BaseJobResource extends UWSResource
      */
     protected boolean jobIsPending()
     {
-        return getJob().getExecutionPhase().equals(ExecutionPhase.PENDING); 
+        final ExecutionPhase executionPhase = job.getExecutionPhase();
+        return executionPhase.equals(ExecutionPhase.PENDING);
     }
 
     /**
      * Obtain whether this Job can still have POSTs made to it to modify it.
      *
+     * @param form
      * @return  True if it can be modified, False otherwise.
      */
-    protected boolean jobModificationAllowed()
+    protected boolean jobModificationAllowed(Form form)
     {
-        Form form = getForm();
         final String phase =
                 form.getFirstValue(JobAttribute.EXECUTION_PHASE.
                         getAttributeName().toUpperCase());
@@ -220,9 +208,9 @@ public abstract class BaseJobResource extends UWSResource
         final Client client = new Client(getContext(), Protocol.HTTP);
 
         elementURI.append(getHostPart());
-        elementURI.append(getJob().getRequestPath());
+        elementURI.append(job.getRequestPath());
         elementURI.append("/");
-        elementURI.append(getJobID());
+        elementURI.append(job.getID());
         elementURI.append("/");
         elementURI.append(jobAttribute.getAttributeName());
 

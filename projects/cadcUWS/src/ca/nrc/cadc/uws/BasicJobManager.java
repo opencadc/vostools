@@ -81,9 +81,16 @@ import java.util.Date;
 public class BasicJobManager implements JobManager
 {
     private JobPersistence jobPersistence;
-    
-    private int timeLimit = 600; // 10 minutes
-    private int destructionLimit = 24; // hours
+
+    /**
+     * Maximum execution time in seconds.
+     */
+    protected int timeLimit = 600; // 10 minutes
+
+    /**
+     * Number of hours a job will be stored before being destroyed.
+     */
+    protected int destructionLimit = 24; // hours
 
 
     /**

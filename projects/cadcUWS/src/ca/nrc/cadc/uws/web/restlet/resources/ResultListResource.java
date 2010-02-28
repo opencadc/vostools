@@ -70,6 +70,7 @@
 
 package ca.nrc.cadc.uws.web.restlet.resources;
 
+import ca.nrc.cadc.uws.Job;
 import org.w3c.dom.Document;
 import org.w3c.dom.Element;
 
@@ -90,6 +91,13 @@ public class ResultListResource extends BaseJobResource
      */
     protected void buildXML(final Document document)
     {
+        Element resultsListElement = getElement(document, job);
+        document.appendChild(resultsListElement);
+    }
+
+    // used above and re-used from JobAsynchResource
+    static Element getElement(Document document, Job job)
+    {
         final Element resultsListElement =
                 document.createElementNS(XML_NAMESPACE_URI,
                                          JobAttribute.RESULTS.
@@ -98,7 +106,7 @@ public class ResultListResource extends BaseJobResource
         resultsListElement.setAttribute("xmlns:xlink",
                                         "http://www.w3.org/1999/xlink");
 
-        for (final Result result : getJob().getResultsList())
+        for (final Result result : job.getResultsList())
         {
             final Element resultElement =
                     document.createElementNS(XML_NAMESPACE_URI,
@@ -111,6 +119,6 @@ public class ResultListResource extends BaseJobResource
             resultsListElement.appendChild(resultElement);
         }
 
-        document.appendChild(resultsListElement);
+        return resultsListElement;
     }
 }

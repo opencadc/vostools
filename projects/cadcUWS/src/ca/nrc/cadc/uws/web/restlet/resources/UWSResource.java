@@ -111,16 +111,19 @@ public abstract class UWSResource extends ServerResource
     protected final static String XML_NAMESPACE_URI = "http://www.ivoa.net/xml/UWS/v1.0";
 
     protected FormValidator formValidator;
-    protected Form form;
-    protected JobManager jobManager;
-
 
     /**
      * Constructor.
      */
     protected UWSResource()
     {
+        LOGGER.debug("CONSTRUCTOR: " + this.getClass().getName());
+    }
 
+    @Override
+    protected void doInit()
+    {
+        super.doInit();
     }
 
 
@@ -271,30 +274,6 @@ public abstract class UWSResource extends ServerResource
     }
 
     /**
-     * Obtain the Form object, checking for a GETted Query Form first, then to
-     * the POSTed Form.
-     *
-     * @return      A Form object.
-     */
-    protected Form getForm()
-    {
-        // lazy init and cache the form for re-use
-        if (form == null)
-        {
-            if (getMethod().equals(Method.GET))
-            {
-                form = getQuery();
-            }
-            else
-            {
-                form = new Form(getRequest().getEntity());
-            }
-        }
-
-        return form;
-    }    
-
-    /**
      * Obtain the equivalent of the Servlet Context Path.  This is usually
      * the context of the current web application, or the part of the URL
      * that comes after the host:port.
@@ -375,11 +354,6 @@ public abstract class UWSResource extends ServerResource
     {
         return (String) getRequestAttributes().get(attributeName);
     }    
-
-    protected void setJobManager(final JobManager jobManager)
-    {
-        this.jobManager = jobManager;
-    }
 
     public FormValidator getFormValidator()
     {

@@ -131,9 +131,9 @@ public class InMemoryPersistence implements JobPersistence
         final Job persistentJob;
         final String jobID;
 
-        if (job.getJobId() != null)
+        if (job.getID() != null)
         {
-            jobID = job.getJobId();
+            jobID = job.getID();
             persistentJob = jobMap.get(jobID);
 
             persistentJob.setExecutionPhase(job.getExecutionPhase());

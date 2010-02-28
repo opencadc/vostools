@@ -83,6 +83,13 @@ import javax.security.auth.Subject;
 public interface JobExecutor
 {
     /**
+     * Set reference to the JobManager so that the executor can persist changes to the job.
+     * 
+     * @param jm
+     */
+    void setJobManager(JobManager jm);
+
+    /**
      * Execute a job by calling the run() method on the JobRunner. If the subject
      * argument is not null, the job is exected using PrivilegedActionJobRunner
      * and the Subject.doAs() method. This puts the Subject into the current

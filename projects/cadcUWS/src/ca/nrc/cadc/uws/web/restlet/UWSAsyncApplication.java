@@ -70,9 +70,9 @@
 
 package ca.nrc.cadc.uws.web.restlet;
 
+import ca.nrc.cadc.uws.JobExecutor;
 import org.restlet.Restlet;
 import org.restlet.Context;
-import org.restlet.routing.Router;
 import ca.nrc.cadc.uws.util.BeanUtil;
 import ca.nrc.cadc.uws.JobManager;
 import ca.nrc.cadc.uws.JobPersistence;
@@ -111,39 +111,27 @@ public class UWSAsyncApplication extends AbstractUWSApplication
 
 
     /**
-     * Creates an inbound root Restlet that will receive all incoming calls. In
-     * general, instances of Router, Filter or Handler classes will be used as
-     * initial application Restlet. The default implementation returns null by
-     * default.  This method is intended to be overridden by subclasses.
-     *
-     * This method will also setup singleton Service objects in the Context.
-     * This gets done here so as to ensure the Context is properly initialized.
+     * Creates an inbound root Restlet that will receive all incoming calls. This
+     * method create a UWSSyncRouter and instantiates a JobExecutor, JobManager,
+     * and JobPersistence and adds them to the context.
      *
      * @return The root Restlet.
      */
     @Override
     public Restlet createInboundRoot()
     {
-        final Router router = new UWSAsyncRouter(getContext());
+        Context ctx = getContext();
 
-        getContext().getAttributes().put(
-                BeanUtil.UWS_EXECUTOR_SERVICE,
-                createBean(BeanUtil.UWS_EXECUTOR_SERVICE, true));
+        JobExecutor je = (JobExecutor) createBean(BeanUtil.UWS_EXECUTOR_SERVICE, true);
+        
+        JobPersistence jp = (JobPersistence) createBean(BeanUtil.UWS_PERSISTENCE, true);
+        JobManager jm = (JobManager) createBean(BeanUtil.UWS_JOB_MANAGER_SERVICE, true);
+        jm.setJobPersistence(jp);
+        je.setJobManager(jm);
+        
+        ctx.getAttributes().put(BeanUtil.UWS_EXECUTOR_SERVICE, je);
+        ctx.getAttributes().put(BeanUtil.UWS_JOB_MANAGER_SERVICE, jm);
 
-        final JobManager jobManager =
-                (JobManager) createBean(BeanUtil.UWS_JOB_MANAGER_SERVICE,
-                                        true);
-        final JobPersistence jobPersistence =
-                (JobPersistence) createBean(BeanUtil.UWS_PERSISTENCE, true);
-
-        jobManager.setJobPersistence(jobPersistence);
-
-        getContext().getAttributes().put(BeanUtil.UWS_JOB_MANAGER_SERVICE,
-                                         jobManager);
-
-        getContext().getAttributes().put(BeanUtil.UWS_PERSISTENCE,
-                                         jobPersistence);        
-
-        return router;
+        return new UWSAsyncRouter(ctx);
     }
 }

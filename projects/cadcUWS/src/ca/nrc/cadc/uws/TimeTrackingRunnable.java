@@ -79,19 +79,25 @@ import java.util.Date;
  */
 public class TimeTrackingRunnable implements Runnable
 {
+    private JobManager manager;
     private JobRunner runnable;
 
-    public TimeTrackingRunnable(JobRunner runnable)
+    public TimeTrackingRunnable(JobManager manager, JobRunner runnable)
     {
+        this.manager = manager;
         this.runnable = runnable;
     }
 
     public void run()
     {
         Job j = runnable.getJob();
-        j.setStartTime(new Date());
-        runnable.run();
-        j.setEndTime(new Date());
 
+        j.setStartTime(new Date());
+        j = manager.persist(j);
+
+        runnable.run();
+
+        j.setEndTime(new Date());
+        j = manager.persist(j);
     }
 }

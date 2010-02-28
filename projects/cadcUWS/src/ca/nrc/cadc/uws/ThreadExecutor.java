@@ -79,11 +79,17 @@ import javax.security.auth.Subject;
  */
 public class ThreadExecutor implements JobExecutor
 {
+    private JobManager jobManager;
+    
     /**
      * The standard no-arg constructor.
      */
     public ThreadExecutor() { }
 
+    public void setJobManager(JobManager jm)
+    {
+        this.jobManager = jm;
+    }
     
     /**
      * Constructor for this Service.
@@ -101,7 +107,7 @@ public class ThreadExecutor implements JobExecutor
 
         if (subject == null)
         {
-        	t = new Thread(new TimeTrackingRunnable(jobRunner));
+        	t = new Thread(new TimeTrackingRunnable(jobManager, jobRunner));
         }
         else
         {
@@ -110,7 +116,7 @@ public class ThreadExecutor implements JobExecutor
         		{
 	        		public void run()
 	        		{
-	        			Subject.doAs(subject, new PrivilegedActionJobRunner(jobRunner));
+	        			Subject.doAs(subject, new PrivilegedActionJobRunner(jobManager, jobRunner));
 	        		}
         		});
         }

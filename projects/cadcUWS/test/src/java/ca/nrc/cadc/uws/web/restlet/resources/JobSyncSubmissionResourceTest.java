@@ -33,20 +33,21 @@
  */
 package ca.nrc.cadc.uws.web.restlet.resources;
 
+import ca.nrc.cadc.uws.ExecutionPhase;
+import ca.nrc.cadc.uws.Job;
+import ca.nrc.cadc.uws.JobManager;
+import ca.nrc.cadc.uws.JobRunner;
+import ca.nrc.cadc.uws.Parameter;
+import ca.nrc.cadc.uws.Result;
 import static junit.framework.TestCase.*;
 import static org.easymock.EasyMock.*;
 import org.junit.Before;
 import org.junit.After;
 import org.junit.Test;
 
-import ca.nrc.cadc.uws.*;
-
 import java.util.Calendar;
 import java.util.List;
 import java.util.ArrayList;
-
-import javax.security.auth.Subject;
-
 
 /**
  * Test the Synchronous Job Resource.
@@ -58,7 +59,7 @@ public class JobSyncSubmissionResourceTest
     protected JobRunner mockJobRunner;
 
     private final String JOB_ID = "AT88MPH";
-    private Job job;
+    private Job testJob;
 
 
     @Before
@@ -75,22 +76,28 @@ public class JobSyncSubmissionResourceTest
         final List<Result> results = new ArrayList<Result>();
         final List<Parameter> parameters = new ArrayList<Parameter>();
         
-        job = new Job(JOB_ID, ExecutionPhase.PENDING, 88l, cal.getTime(),
+        testJob = new Job(JOB_ID, ExecutionPhase.PENDING, 88l, cal.getTime(),
                       quoteCal.getTime(), cal.getTime(), cal.getTime(), null,
                       null, "RUN_ID", results, parameters, null);
 
         mockJobManager = createMock(JobManager.class);
-        expect(mockJobManager.getJob(JOB_ID)).andReturn(job).anyTimes();
-        expect(mockJobManager.persist(job)).andReturn(job).anyTimes();
+        expect(mockJobManager.getJob(JOB_ID)).andReturn(testJob).anyTimes();
+        expect(mockJobManager.persist(testJob)).andReturn(testJob).anyTimes();
         replay(mockJobManager);
 
         mockJobRunner = createMock(JobRunner.class);
-        mockJobRunner.setJob(job);
+        mockJobRunner.setJob(testJob);
         mockJobRunner.run();
         replay(mockJobRunner);
 
         testSubject = new JobSyncSubmissionResource()
         {
+            @Override
+            protected void doInit()
+            {
+                this.job = JobSyncSubmissionResourceTest.this.testJob;
+            }
+            
             /**
              * Obtain this Resource's Job Service.
              *
@@ -100,17 +107,6 @@ public class JobSyncSubmissionResourceTest
             protected JobManager getJobManager()
             {
                 return mockJobManager;
-            }
-
-            /**
-             * Obtain the current Job ID.
-             *
-             * @return long Job ID
-             */
-            @Override
-            protected String getJobID()
-            {
-                return JOB_ID;
             }
 
             /**
@@ -134,6 +130,7 @@ public class JobSyncSubmissionResourceTest
                 super.pollRunningJob(10l * 1000l);
             }
         };
+        testSubject.doInit();
     }
 
     @After
@@ -142,42 +139,31 @@ public class JobSyncSubmissionResourceTest
         testSubject = null;
     }
 
-
-    @Test
-    public void prepareJob()
-    {
-        assertEquals("Job Execution Phase should be PENDING.",
-                     job.getExecutionPhase(), ExecutionPhase.PENDING);
-        testSubject.prepareJob();
-        assertEquals("Job Execution Phase should be QUEUED.",
-                     job.getExecutionPhase(), ExecutionPhase.QUEUED);        
-    }
-
     @Test
     public void executeJob()
     {
-        assertNotNull("Job available", job);
+        assertNotNull("Job available", testJob);
         assertEquals("Job Execution Phase should be PENDING.",
-                     job.getExecutionPhase(), ExecutionPhase.PENDING);        
+                     testJob.getExecutionPhase(), ExecutionPhase.PENDING);
         testSubject.executeJob();
         assertEquals("Job Execution Phase should be QUEUED.",
-                     job.getExecutionPhase(), ExecutionPhase.QUEUED);
+                     testJob.getExecutionPhase(), ExecutionPhase.QUEUED);
     }
 
     @Test
     public void pollRunningJob()
     {
-        assertNotNull("Job available", job);
+        assertNotNull("Job available", testJob);
         testSubject.pollRunningJob(10000l);
     }
 
     @Test
     public void executeJobWhileJobRunning()
     {
-        assertNotNull("Job available", job);
-        job.setExecutionPhase(ExecutionPhase.QUEUED);
+        assertNotNull("Job available", testJob);
+        testJob.setExecutionPhase(ExecutionPhase.QUEUED);
         assertEquals("Job Execution Phase should be QUEUED.",
-                     job.getExecutionPhase(), ExecutionPhase.QUEUED);
+                     testJob.getExecutionPhase(), ExecutionPhase.QUEUED);
         final long currTime = System.currentTimeMillis();
         testSubject.executeJob();
         assertTrue("Should be at least ten seconds later...",

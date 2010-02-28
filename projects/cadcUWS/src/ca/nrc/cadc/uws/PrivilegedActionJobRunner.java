@@ -70,6 +70,7 @@
 package ca.nrc.cadc.uws;
 
 import java.security.PrivilegedAction;
+import java.util.Date;
 
 /**
  * A wrapper class for starting job runners as privileged actions. Like the
@@ -78,24 +79,37 @@ import java.security.PrivilegedAction;
  */
 public class PrivilegedActionJobRunner implements PrivilegedAction<Object>
 {
-	
-	private JobRunner jobRunner;
+	private JobManager manager;
+	private JobRunner runnable;
 	
 	/**
-	 * Constructor that takes the target job runner as an argument
-	 * @param jobRunner The jobRunner to start
+	 * @param manager
+     * @param runnable
 	 */
-	public PrivilegedActionJobRunner(JobRunner jobRunner)
+	public PrivilegedActionJobRunner(JobManager manager, JobRunner runnable)
 	{
-		this.jobRunner = jobRunner;
-	}
+        this.manager = manager;
+		this.runnable = runnable;
+    }
 
 	/**
 	 * Execute the job runner in this thread and return null.
 	 */
 	public Object run()
 	{
-		jobRunner.run();
+        Job j = runnable.getJob();
+
+        j.setStartTime(new Date());
+        j = manager.persist(j);
+
+        runnable.setJob(j);
+        runnable.run();
+        j = runnable.getJob();
+        
+        j.setEndTime(new Date());
+        j = manager.persist(j);
+
+		runnable.run();
 		return null;
 	}
 	

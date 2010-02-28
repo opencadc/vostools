@@ -213,10 +213,10 @@ public class AsynchResourceTestCase
                                                  getAttributeName());
 
         jobRefElement.setPrefix(XML_NAMESPACE_PREFIX);
-        jobRefElement.setAttribute("id", job.getJobId());
+        jobRefElement.setAttribute("id", job.getID());
         jobRefElement.setAttribute("xlink:href",
                                    HOST_PART + "/async/"
-                                   + job.getJobId());
+                                   + job.getID());
 
         final Element jobRefPhaseElement =
                 document.createElementNS(XML_NAMESPACE_URI,

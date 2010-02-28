@@ -94,7 +94,7 @@ public class ErrorResource extends BaseJobResource
     @Override
     public Representation represent()
     {
-        final ErrorSummary errorSummary = getJob().getErrorSummary();
+        final ErrorSummary errorSummary = job.getErrorSummary();
 
         if ((errorSummary != null)
             && (errorSummary.getDocumentURL() != null))
@@ -105,7 +105,7 @@ public class ErrorResource extends BaseJobResource
         else
         {
             throw new InvalidResourceException("No such Error for Job "
-                                               + getJobID());
+                                               + job.getID());
         }
     }
 

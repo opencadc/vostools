@@ -109,13 +109,13 @@ public class UWSAsyncRouter extends Router
         attach("/{jobID}/phase", JobAsynchResource.class);
         attach("/{jobID}/executionduration", JobAsynchResource.class);
         attach("/{jobID}/destruction", JobAsynchResource.class);
-        attach("/{jobID}/error", ErrorResource.class);
         attach("/{jobID}/quote", JobAsynchResource.class);
+        attach("/{jobID}/owner", JobAsynchResource.class);
+
+        attach("/{jobID}/parameters", ParameterListResource.class);
+        attach("/{jobID}/error", ErrorResource.class);
         attach("/{jobID}/results", ResultListResource.class);
         attach("/{jobID}/results/{resultID}", ResultResource.class);
-        attach("/{jobID}/parameters", ParameterListResource.class);
-        attach("/{jobID}/owner", JobAsynchResource.class);
-        //attach("/{jobID}/execute", JobAsynchResource.class);
 
         if (StringUtil.hasText(
                 context.getParameters().getFirstValue(UWS_ANY_NAME)))
