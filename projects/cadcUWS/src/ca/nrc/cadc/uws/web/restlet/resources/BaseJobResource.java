@@ -187,40 +187,4 @@ public abstract class BaseJobResource extends UWSResource
 
         return (JobRunner) beanUtil.createBean();
     }
-
-    /**
-     * Obtain the XML List element for the given Attribute.
-     *
-     * Remember, the Element returned here belongs to the Document from the
-     * Response of the call to get the List.  This means that the client of
-     * this method call will need to import the Element, via the
-     * Document#importNode method, or an exception will occur.
-     *
-     * @param jobAttribute      The Attribute to obtain XML for.
-     * @return                  The Element, or null if none found.
-     * @throws java.io.IOException      If the Document could not be formed from the
-     *                          Representation.
-     */
-    protected Element getRemoteElement(final JobAttribute jobAttribute)
-            throws IOException
-    {
-        final StringBuilder elementURI = new StringBuilder(128);
-        final Client client = new Client(getContext(), Protocol.HTTP);
-
-        elementURI.append(getHostPart());
-        elementURI.append(job.getRequestPath());
-        elementURI.append("/");
-        elementURI.append(job.getID());
-        elementURI.append("/");
-        elementURI.append(jobAttribute.getAttributeName());
-
-        final Response response = client.get(elementURI.toString());
-        final DomRepresentation domRep =
-                new DomRepresentation(response.getEntity());
-        final Document document = domRep.getDocument();
-
-        document.normalizeDocument();
-
-        return document.getDocumentElement();
-    }
 }

@@ -87,6 +87,9 @@ public class JobSyncSubmissionResourceTest
 
         mockJobRunner = createMock(JobRunner.class);
         mockJobRunner.setJob(testJob);
+        mockJobRunner.setJobManager(mockJobManager);
+        expect(mockJobRunner.getJob()).andReturn(testJob).anyTimes();
+
         mockJobRunner.run();
         replay(mockJobRunner);
 

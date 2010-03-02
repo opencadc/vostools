@@ -91,13 +91,19 @@ public class TimeTrackingRunnable implements Runnable
     public void run()
     {
         Job j = runnable.getJob();
+        String jobID = j.getID();
 
         j.setStartTime(new Date());
         j = manager.persist(j);
 
         runnable.run();
 
-        j.setEndTime(new Date());
-        j = manager.persist(j);
+        // must get current job state from persistence layer
+        j = manager.getJob(jobID);
+        if (j.getEndTime() == null)
+        {
+            j.setEndTime(new Date());
+            j = manager.persist(j);
+        }
     }
 }

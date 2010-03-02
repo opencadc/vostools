@@ -88,7 +88,6 @@ import java.util.List;
 import java.util.Random;
 import javax.security.auth.Subject;
 import javax.sql.DataSource;
-import org.apache.log4j.Level;
 import org.apache.log4j.Logger;
 import org.springframework.dao.DataAccessException;
 import org.springframework.jdbc.core.JdbcTemplate;
@@ -117,18 +116,18 @@ public abstract class JobDAO implements JobPersistence
     // Number of time to attempt to insert a Job.
     private static final int MAX_INSERT_ATTEMPTS = 2;
     private static Logger log = Logger.getLogger(JobDAO.class);
-    static
-    {
-        log.setLevel(Level.INFO);
-    }
-        
+
     // Database connection.
     private JdbcTemplate jdbc;
     private DataSourceTransactionManager transactionManager;
-    private DefaultTransactionDefinition defaultTransactionDef = new DefaultTransactionDefinition();
+    private DefaultTransactionDefinition defaultTransactionDef;
     private TransactionStatus transactionStatus;
 
-    protected JobDAO() { }
+    protected JobDAO() 
+    {
+        this.defaultTransactionDef = new DefaultTransactionDefinition();
+        defaultTransactionDef.setIsolationLevel(DefaultTransactionDefinition.ISOLATION_READ_COMMITTED);
+    }
 
     /**
      * Initialise the JobDAO using the specified DataSource.
@@ -191,26 +190,27 @@ public abstract class JobDAO implements JobPersistence
         Job job;
         try
         {
-            job = (Job) jdbc.queryForObject(getSelectJobSQL(jobId), new JobMapper());
-        }
-        catch (DataAccessException e)
-        {
-            log.error(e);
-            return null;
-        }
+            synchronized(this)
+            {
+                job = (Job) jdbc.queryForObject(getSelectJobSQL(jobId), new JobMapper());
+                // List of Parameters for this jobID.
+                List<Parameter> parameterList = null;
+                for (String table : getParameterTables())
+                {
+                    if (parameterList == null)
+                        parameterList = new ArrayList<Parameter>();
+                    parameterList.addAll(jdbc.query(getSelectParameterSQL(jobId, table), new ParameterMapper()));
+                }
+                job.setParameterList(parameterList);
 
-        // List of Parameters for this jobID.
-        List<Parameter> parameterList = null;
-        for (String table : getParameterTables())
-        {
-            if (parameterList == null)
-                parameterList = new ArrayList<Parameter>();
-            parameterList.addAll(jdbc.query(getSelectParameterSQL(jobId, table), new ParameterMapper()));
+                // List of Results for this jobID.
+                job.setResultsList(jdbc.query(getSelectResultSQL(jobId), new ResultMapper()));
+            }
         }
-        job.setParameterList(parameterList);
-
-        // List of Results for this jobID.
-        job.setResultsList(jdbc.query(getSelectResultSQL(jobId), new ResultMapper()));
+       finally
+       {
+           
+       }
 
         log.debug("getJob jobId = " + jobId);
         return job;
@@ -221,11 +221,14 @@ public abstract class JobDAO implements JobPersistence
      *
      * @param jobID
      */
-    public void delete(String jobId)
+    public void delete(String jobID)
     {
         // Delete the Job by setting the deletedByUser field to true.
-        jdbc.update(getUpdateJobDeletedSQL(jobId));
-        log.debug("delete jobId = " + jobId);
+        synchronized(this)
+        {
+            jdbc.update(getUpdateJobDeletedSQL(jobID));
+        }
+        log.debug("delete jobId = " + jobID);
     }
 
     /**
@@ -247,89 +250,79 @@ public abstract class JobDAO implements JobPersistence
      */
     public Job persist(final Job job)
     {
-        String jobId = null;
-        try
+        Job ret = null;
+        String jobID = job.getID();
+        synchronized(this)
         {
-            // Start the transaction.
-            startTransaction();
-
-            // If Job exists, i.e. has a jobID, then delete the current Job
-            // and any Parameter's and Result's for the Job.
-            jobId = job.getID();
-            if (jobId != null)
+            try
             {
-                // Delete all the Parameter's for the Job.
-                for (String table : getParameterTables())
-                    jdbc.update(getDeleteParameterSQL(job.getID(), table));
 
-                // Delete all the Result's for the Job.
-                jdbc.update(getDeleteResultSQL(job.getID()));
+                // Start the transaction.
+                startTransaction();
 
-                // Delete the Job.
-                jdbc.update(getDeleteJobSQL(job.getID()));
+                // If Job exists, i.e. has a jobID, then delete the current Job
+                // and any Parameter's and Result's for the Job.
+                if (job.getID() != null)
+                {
+                    // Delete all the Parameter's for the Job.
+                    for (String table : getParameterTables())
+                        jdbc.update(getDeleteParameterSQL(job.getID(), table));
+
+                    // Delete all the Result's for the Job.
+                    jdbc.update(getDeleteResultSQL(job.getID()));
+
+                    // Delete the Job.
+                    jdbc.update(getDeleteJobSQL(job.getID()));
+                }
+
+                // Insert Job, catching any possible errors due to constraint violations.
+                int attempts = 0;
+                boolean done = false;
+                while (!done)
+                {
+                    try
+                    {
+                        // Create new Job to persist.
+                        if (job.getID() == null)
+                            ret = new Job(generateID(), job);
+                        else
+                            ret = job;
+                        jobID = job.getID();
+                        
+                        // Add a new Job.
+                        jdbc.update(getInsertJobSQL(ret));
+
+                        // Add the Job Parameter's.
+                        for (Parameter parameter : job.getParameterList())
+                            jdbc.update(getInsertParameterSQL(ret.getID(), parameter));
+
+                        // Add the Job Result's.
+                        for (Result result : job.getResultsList())
+                            jdbc.update(getInsertResultSQL(ret.getID(), result));
+
+                        done = true;
+                    }
+                    catch (DataAccessException e)
+                    {
+                        log.error(e);
+                        attempts++;
+                        if (attempts == MAX_INSERT_ATTEMPTS)
+                            throw new JobPersistenceException(e.getMessage());
+                    }
+                }
+
+                // Commit the transaction.
+                commitTransaction();
+                log.debug("persist jobID = " + ret.getID());
+
+                return ret;
             }
-
-            // Insert new Job, catching any possible errors due to constraint violations.
-            Job newJob = null;
-            int attempts = 0;
-            boolean done = false;
-            while (!done)
+            catch (Throwable t)
             {
-                try
-                {
-                    // Create new Job to persist.
-                    if (jobId == null)
-                        jobId = generateID();
-                    newJob = new Job(jobId,
-                                     job.getExecutionPhase(),
-                                     job.getExecutionDuration(),
-                                     job.getDestructionTime(),
-                                     job.getQuote(),
-                                     job.getStartTime(),
-                                     job.getEndTime(),
-                                     job.getErrorSummary(),
-                                     job.getOwner(),
-                                     job.getRunId(),
-                                     job.getResultsList(),
-                                     job.getParameterList(),
-                                     job.getRequestPath());
-
-                    // Add a new Job.
-                    jdbc.update(getInsertJobSQL(newJob));
-
-                    // Add the Job Parameter's.
-                    for (Parameter parameter : job.getParameterList())
-                        jdbc.update(getInsertParameterSQL(newJob.getID(), parameter));
-
-                    // Add the Job Result's.
-                    for (Result result : job.getResultsList())
-                        jdbc.update(getInsertResultSQL(newJob.getID(), result));
-
-                    done = true;
-                }
-                catch (DataAccessException e)
-                {
-                    log.error(e);
-                    jobId = null;
-                    newJob = null;
-                    attempts++;
-                    if (attempts == MAX_INSERT_ATTEMPTS)
-                        throw new JobPersistenceException(e.getMessage());
-                }
+                rollbackTransaction();
+                log.error("persist rollback jobID = " + job.getID(), t);
+                return null;
             }
-
-            // Commit the transaction.
-            commitTransaction();
-            log.debug("persist jobId = " + jobId);
-
-            // Return the new Job.
-            return newJob;
-        }
-        catch (Throwable t)
-        {
-            rollbackTransaction();
-            log.error("persist rollback jobId = " + jobId, t);
-            return null;
         }
     }
 

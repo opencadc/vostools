@@ -98,18 +98,21 @@ public class PrivilegedActionJobRunner implements PrivilegedAction<Object>
 	public Object run()
 	{
         Job j = runnable.getJob();
+        String jobID = j.getID();
 
         j.setStartTime(new Date());
         j = manager.persist(j);
 
         runnable.setJob(j);
         runnable.run();
-        j = runnable.getJob();
-        
-        j.setEndTime(new Date());
-        j = manager.persist(j);
 
-		runnable.run();
+        // must get current job state from persistence layer
+        j = manager.getJob(jobID);
+        if (j.getEndTime() == null)
+        {
+            j.setEndTime(new Date());
+            j = manager.persist(j);
+        }
 		return null;
 	}
 	

@@ -101,7 +101,10 @@ public class InMemoryPersistence implements JobPersistence
      */
     public Job getJob(final String jobID)
     {
-        return jobMap.get(jobID);
+        synchronized(jobMap)
+        {
+            return jobMap.get(jobID);
+        }
     }
 
     /**
@@ -111,12 +114,18 @@ public class InMemoryPersistence implements JobPersistence
      */
     public void delete(String jobID)
     {
-        jobMap.remove(jobID);
+        synchronized(jobMap)
+        {
+            jobMap.remove(jobID);
+        }
     }
 
     public Collection<Job> getJobs()
     {
-        return jobMap.values();
+        synchronized(jobMap)
+        {
+            return jobMap.values();
+        }
     }
 
     /**
@@ -128,42 +137,24 @@ public class InMemoryPersistence implements JobPersistence
      */
     public Job persist(final Job job)
     {
-        final Job persistentJob;
-        final String jobID;
-
-        if (job.getID() != null)
+        Job ret;
+        synchronized(jobMap)
         {
-            jobID = job.getID();
-            persistentJob = jobMap.get(jobID);
 
-            persistentJob.setExecutionPhase(job.getExecutionPhase());
-            persistentJob.setDestructionTime(job.getDestructionTime());
-            persistentJob.setExecutionDuration(job.getExecutionDuration());
-            persistentJob.setErrorSummary(job.getErrorSummary());
-            persistentJob.setAny(job.getAny());
-            persistentJob.setParameterList(job.getParameterList());
-            persistentJob.setResultsList(job.getResultsList());
-            persistentJob.setRequestPath(job.getRequestPath());
+            if (job.getID() == null)
+            {
+                // create and add new job to map
+                ret = new Job(generateID(), job);
+                jobMap.put(ret.getID(), ret);
+            }
+            else
+            {
+                // modify existing job
+                ret = jobMap.get(job.getID());
+                ret.setAll(job);
+            }
         }
-        else
-        {
-            jobID = generateID();
-            persistentJob = new Job(jobID, job.getExecutionPhase(),
-                                               job.getExecutionDuration(),
-                                               job.getDestructionTime(),
-                                               job.getQuote(),
-                                               job.getStartTime(),
-                                               job.getEndTime(),
-                                               job.getErrorSummary(),
-                                               job.getOwner(), job.getRunId(),
-                                               job.getResultsList(),
-                                               job.getParameterList(),
-                                               job.getRequestPath());
-        }
-
-        jobMap.put(jobID, persistentJob);
-
-        return persistentJob;
+        return ret;
     }
 
     // generate a random modest-length lower case string

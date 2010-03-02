@@ -92,6 +92,7 @@ import ca.nrc.cadc.uws.util.BeanUtil;
 import java.security.Principal;
 
 import java.text.DateFormat;
+import java.util.Date;
 import java.util.Map;
 import java.util.Set;
 import javax.security.auth.Subject;
@@ -104,6 +105,13 @@ import org.restlet.data.Form;
 public class JobAsynchResource extends BaseJobResource
 {
     private static final Logger LOGGER = Logger.getLogger(AsynchResource.class);
+    private DateFormat dateFormat;
+
+    public JobAsynchResource()
+    {
+        super();
+        this.dateFormat = DateUtil.getDateFormat(DateUtil.IVOA_DATE_FORMAT, DateUtil.UTC);
+    }
 
     /**
      * Accept POST requests.
@@ -118,72 +126,74 @@ public class JobAsynchResource extends BaseJobResource
 
         if (!jobModificationAllowed(form))
         {
-            String message =
-                    "No further modifications are allowed for this Job";
-
+            String message = "No further modifications are allowed for this Job";
             if (jobIsActive())
             {
                 message += " unless it is to abort it";
             }
-
-            throw new InvalidActionException(message + ".");
+            throw new InvalidActionException(message);
         }
+
+        JobRunner jobRunner = null;
+
+        final String phase = form.getFirstValue(
+                JobAttribute.EXECUTION_PHASE.getAttributeName().toUpperCase());
 
         if (pathInfo.endsWith("phase"))
         {
-            final String phase =
-                    form.getFirstValue(JobAttribute.EXECUTION_PHASE.
-                            getAttributeName().toUpperCase());
-
             if (phase.equals("RUN"))
             {
-                executeJob();
+                if (jobIsPending())
+                {
+                    jobRunner = createJobRunner();
+                    jobRunner.setJobManager(getJobManager());
+                    jobRunner.setJob(job);
+                    job.setExecutionPhase(ExecutionPhase.QUEUED);
+                }
             }
             else if (phase.equals("ABORT"))
             {
-                if (!jobIsActive() && !jobIsPending())
-                {
-                    throw new InvalidActionException(
-                            "Job cannot be ABORTed as it is not active nor "
-                            + "pending execution.");
-                }
-
-                job.setExecutionPhase(ExecutionPhase.ABORTED);
+                if (!jobHasRun())
+                    job.setExecutionPhase(ExecutionPhase.ABORTED);
             }
+            else
+                throw new InvalidActionException("unexpected value for PHASE: " + phase);
         }
-        else if (pathInfo.endsWith("executionduration"))
+        else  if (pathInfo.endsWith("executionduration"))
         {
-            job.setExecutionDuration(
-                    Long.parseLong(form.getFirstValue(
-                            JobAttribute.EXECUTION_DURATION.
-                                    getAttributeName().toUpperCase())));
+            String str = form.getFirstValue(JobAttribute.EXECUTION_DURATION.getAttributeName().toUpperCase());
+            try
+            {
+                Long val = Long.parseLong(str);
+                job.setExecutionDuration(val);
+            }
+            catch(NumberFormatException nex)
+            {
+                throw new InvalidActionException("failed to parse "
+                        + JobAttribute.EXECUTION_DURATION.getAttributeName() + ": "
+                        + str + " (expected a long integer)");
+            }
+                    
         }
         else if (pathInfo.endsWith("destruction"))
         {
-            final String destructionDateString =
+            final String str =
                     form.getFirstValue(JobAttribute.DESTRUCTION_TIME.
                             getAttributeName().toUpperCase());
             try
             {
-                job.setDestructionTime(
-                        DateUtil.toDate(destructionDateString,
-                                        DateUtil.IVOA_DATE_FORMAT));
+                Date val = dateFormat.parse(str);
+                job.setDestructionTime(val);
             }
             catch (ParseException e)
             {
-                LOGGER.error("Could not create Date from given String '"
-                             + destructionDateString + "'.  Please ensure the "
-                             + "format conforms to the ISO 8601 Format ('"
-                             + DateUtil.IVOA_DATE_FORMAT + "'.");
+                throw new InvalidActionException("failed to parse "
+                        + JobAttribute.DESTRUCTION_TIME.getAttributeName() + ": "
+                        + str + " (expected format " + DateUtil.IVOA_DATE_FORMAT + ")");
             }
-
         }
         else
         {
-            // Default is we're POSTing Parameters to the Job.
-            //final Client client = new Client(getContext(), Protocol.HTTP);
-            //client.post(getHostPart() + job.getRequestPath() + "/" + job.getJobId()
-            //            + "/parameters", form.getWebRepresentation());
             Map<String,String> params = form.getValuesMap();
             // Clear out those Request parameters that are pre-defined.
             for (final JobAttribute jobAttribute : JobAttribute.values())
@@ -200,27 +210,11 @@ public class JobAsynchResource extends BaseJobResource
         }
 
         this.job = getJobManager().persist(job);
+
+        if (jobRunner != null)
+            getJobExecutorService().execute(jobRunner, job.getOwner());
+
         redirectSeeOther(getHostPart() + job.getRequestPath() + "/" + job.getID());
-    }
-
-    /**
-     * Execute the current Job.  This method will set a new Job Runner with
-     * every execution to make it ThreadSafe.
-     */
-    protected void executeJob()
-    {
-        if (jobIsPending())
-        {
-            final JobExecutor je = getJobExecutorService();
-            final JobRunner jobRunner = createJobRunner();
-            jobRunner.setJobManager(getJobManager());
-            jobRunner.setJob(job);
-
-            job.setExecutionPhase(ExecutionPhase.QUEUED);
-            this.job = getJobManager().persist(job);
-            
-            je.execute(jobRunner, job.getOwner());
-        }
     }
 
     /**
@@ -232,9 +226,6 @@ public class JobAsynchResource extends BaseJobResource
     protected void buildAttributeXML(final Document document,
                                      final String pathInfo)
     {
-        final DateFormat df =
-                DateUtil.getDateFormat(DateUtil.IVOA_DATE_FORMAT,
-                                       DateUtil.UTC);
         String text;
         final JobAttribute jobAttribute;
 
@@ -257,12 +248,12 @@ public class JobAsynchResource extends BaseJobResource
         }
         else if (pathInfo.endsWith("destruction"))
         {
-            text = df.format(job.getDestructionTime());
+            text = dateFormat.format(job.getDestructionTime());
             jobAttribute = JobAttribute.DESTRUCTION_TIME;
         }
         else if (pathInfo.endsWith("quote"))
         {
-            text = df.format(job.getQuote());
+            text = dateFormat.format(job.getQuote());
             jobAttribute = JobAttribute.QUOTE;
         }
         else if (pathInfo.endsWith("owner"))
@@ -317,8 +308,6 @@ public class JobAsynchResource extends BaseJobResource
      */
     protected void buildJobXML(final Document document) throws IOException
     {
-        final DateFormat df = DateUtil.getDateFormat(DateUtil.IVOA_DATE_FORMAT,
-                                                     DateUtil.UTC);
         final Element jobElement = 
                 document.createElementNS(XML_NAMESPACE_URI, 
                                         JobAttribute.JOB.getAttributeName());
@@ -370,8 +359,7 @@ public class JobAsynchResource extends BaseJobResource
                 document.createElementNS(XML_NAMESPACE_URI,
                      JobAttribute.QUOTE.getAttributeName());
         quoteElement.setPrefix(XML_NAMESPACE_PREFIX);
-        quoteElement.setTextContent(
-                df.format(job.getQuote()) );
+        quoteElement.setTextContent( dateFormat.format(job.getQuote()) );
         jobElement.appendChild(quoteElement);
 
         // <uws:startTime>
@@ -382,8 +370,7 @@ public class JobAsynchResource extends BaseJobResource
         if (job.getStartTime() == null)
             startTimeElement.setAttribute("xsi:nil", "true");
         else
-            startTimeElement.setTextContent(
-                    df.format(job.getStartTime()) );
+            startTimeElement.setTextContent( dateFormat.format(job.getStartTime()) );
         jobElement.appendChild(startTimeElement);
 
         // <uws:endTime>
@@ -394,8 +381,7 @@ public class JobAsynchResource extends BaseJobResource
         if (job.getEndTime() == null)
             endTimeElement.setAttribute("xsi:nil", "true");
         else
-            endTimeElement.setTextContent(
-                    df.format(job.getEndTime()) );
+            endTimeElement.setTextContent( dateFormat.format(job.getEndTime()) );
         jobElement.appendChild(endTimeElement);       
 
         // <uws:executionDuration>
@@ -412,30 +398,15 @@ public class JobAsynchResource extends BaseJobResource
                 document.createElementNS(XML_NAMESPACE_URI,
                      JobAttribute.DESTRUCTION_TIME.getAttributeName());
         destructionTimeElement.setPrefix(XML_NAMESPACE_PREFIX);
-        destructionTimeElement.setTextContent(
-                df.format(job.getDestructionTime()) );
+        destructionTimeElement.setTextContent( dateFormat.format(job.getDestructionTime()) );
         jobElement.appendChild(destructionTimeElement);
 
         // <uws:parameters>
-        //final Element parameterListElement = getRemoteElement(JobAttribute.PARAMETERS);
-        //if (parameterListElement != null)
-        //{
-        //    final Node importedParameterList =
-        //            document.importNode(parameterListElement, true);
-        //    jobElement.appendChild(importedParameterList);
-        //}
         Element parameterListElement = ParameterListResource.getElement(document, job);
         jobElement.appendChild(parameterListElement);
         
 
         // <uws:results>
-        //final Element resultListElement = getRemoteElement(JobAttribute.RESULTS);
-        //if (resultListElement != null)
-        //{
-        //    final Node importedResultList =
-        //            document.importNode(resultListElement, true);
-        //    jobElement.appendChild(importedResultList);
-        //}
         Element resultListElement = ResultListResource.getElement(document, job);
         jobElement.appendChild(resultListElement);
 

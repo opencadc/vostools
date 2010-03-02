@@ -99,7 +99,20 @@ public class Job
     private String requestPath;
 
 
-    private Job() { }
+    public Job() { }
+
+    /**
+     * Copy constructor. Create a new job with the specified ID and content copied
+     * from the sepcified job.
+     * 
+     * @param jobID
+     * @param job
+     */
+    public Job(String jobID, Job job)
+    {
+        this.jobID = jobID;
+        setAll(job);
+    }
 
     /**
      * Constructor.
@@ -141,10 +154,37 @@ public class Job
         this.requestPath = requestPath;
     }
 
+    /**
+     * Set all fields except ID from the specified job.
+     * 
+     * @param job
+     */
+    public void setAll(Job job)
+    {
+        setExecutionPhase(job.getExecutionPhase());
+        setExecutionDuration(job.getExecutionDuration());
+        setDestructionTime(job.getDestructionTime());
+        setQuote(job.getQuote());
+        setStartTime(job.getStartTime());
+        setEndTime(job.getEndTime());
+        setErrorSummary(job.getErrorSummary());
+        setOwner(job.getOwner());
+        setRunId(job.getRunId());
+        setResultsList(job.getResultsList());
+        setParameterList(job.getParameterList());
+        setOwner(job.getOwner());
+        setRequestPath(job.getRequestPath());
+    }
+
     @Override
     public String toString()
     {
         return "Job[" + jobID + "," + executionPhase + "]";
+    }
+
+    public void setID(String jobID)
+    {
+        this.jobID = jobID;
     }
 
     /**

@@ -138,7 +138,8 @@ public class JobAsynchResourceExecutionTest
         replay(mockJobRunner);
 
         log.debug("executeJob: " + testJob);
-        testSubject.executeJob();
+        //testSubject.executeJob();
+        // TODO: method removed from JobAsynchResource, what does this test actually prove?
         log.debug("executeJob: " + testJob);
     }
 
