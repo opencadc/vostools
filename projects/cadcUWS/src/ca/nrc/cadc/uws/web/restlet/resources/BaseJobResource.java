@@ -78,14 +78,7 @@ import ca.nrc.cadc.uws.JobAttribute;
 import ca.nrc.cadc.uws.JobRunner;
 import ca.nrc.cadc.uws.util.StringUtil;
 import ca.nrc.cadc.uws.util.BeanUtil;
-import org.w3c.dom.Element;
-import org.w3c.dom.Document;
-import org.restlet.Client;
-import org.restlet.ext.xml.DomRepresentation;
-import org.restlet.data.Protocol;
-import org.restlet.Response;
 
-import java.io.IOException;
 import org.apache.log4j.Logger;
 import org.restlet.data.Form;
 

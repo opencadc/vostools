@@ -69,9 +69,9 @@
 
 package ca.nrc.cadc.uws.web.restlet.resources;
 
+import ca.nrc.cadc.thread.ConditionVar;
 import ca.nrc.cadc.uws.ErrorSummary;
 import ca.nrc.cadc.uws.ExecutionPhase;
-import ca.nrc.cadc.uws.Job;
 import ca.nrc.cadc.uws.JobRunner;
 import ca.nrc.cadc.uws.PrivilegedActionJobRunner;
 import ca.nrc.cadc.uws.Result;
@@ -103,7 +103,6 @@ public class JobSyncSubmissionResource extends BaseJobResource
     protected static final long POLLING_TIME_INTERVAL_MILLIS = 1000l;
     protected static final long MAX_POLLING_TIME_MILLIS = 180000l;
 
-
     /**
      * Obtain the XML Representation of this Request.
      *
@@ -113,29 +112,28 @@ public class JobSyncSubmissionResource extends BaseJobResource
     @Override
     public Representation represent()
     {
-        executeJob();
+        if (jobIsPending())
+            executeJob();
+        else if (jobIsActive())
+            pollRunningJob();
+
         final Representation representation;
         final List<Result> results = job.getResultsList();
-
-        if (results.isEmpty() && (job.getErrorSummary() == null)
-            && (job.getErrorSummary().getDocumentURL() == null))
+        final ErrorSummary error = job.getErrorSummary();
+        if ( results != null && results.size() > 0)
         {
-            representation =
-                    new StringRepresentation("Job %s is still running.",
-                                             MediaType.TEXT_PLAIN);
+            final Result result = results.get(0);
+            redirectSeeOther(result.getURL().toString());
+            representation = new EmptyRepresentation();
         }
-        else if (results.isEmpty())
+        else if ( error != null )
         {
             final ErrorSummary errorSummary = job.getErrorSummary();
             redirectSeeOther(errorSummary.getDocumentURL().toString());
             representation = new EmptyRepresentation();
         }
         else
-        {
-            final Result result = results.get(0);
-            redirectSeeOther(result.getURL().toString());
-            representation = new EmptyRepresentation();
-        }
+            throw new IllegalStateException("Job finished but did not provide results or error: " + job.getID());
 
         return representation;
     }
@@ -202,26 +200,25 @@ public class JobSyncSubmissionResource extends BaseJobResource
     protected void pollRunningJob(final long maxWait)
     {
         long waitTime = maxWait;
-
-        while (jobIsActive() && (waitTime > 0l))
+        try
         {
-            try
+            LOGGER.debug("pollRunningJob: START");
+            while (jobIsActive() && (waitTime > 0l))
             {
-                LOGGER.debug(String.format("Waiting %d seconds...",
-                                           (POLLING_TIME_INTERVAL_MILLIS
-                                            * 1000l)));
+                LOGGER.debug("pollRunningJob: sleeping for " + POLLING_TIME_INTERVAL_MILLIS);
                 Thread.sleep(POLLING_TIME_INTERVAL_MILLIS);
-            }
-            catch (InterruptedException e)
-            {
-                LOGGER.error("Unable to poll running job.", e);
-            }
-            finally
-            {
+                this.job = getJobManager().getJob(job.getID());
                 waitTime = waitTime - POLLING_TIME_INTERVAL_MILLIS;
             }
+            LOGGER.debug("pollRunningJob: DONE");
         }
-
-        LOGGER.info("Done polling.");
+        catch(InterruptedException iex)
+        {
+            LOGGER.warn("pollRunningJob: interrupted");
+        }
+        catch(Throwable t)
+        {
+            LOGGER.error("pollRunningJob: FAILED", t);
+        }
     }    
 }
