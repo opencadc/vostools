@@ -149,7 +149,8 @@ public class QueryRunner implements JobRunner
 		langQueries.put("ADQL", adqlParserClassName);
 		langQueries.put("SQL", sqlParserClassName);
 	}
-	
+
+    private String jobID;
 	private Job job;
     private JobManager manager;
 
@@ -158,6 +159,7 @@ public class QueryRunner implements JobRunner
     public void setJob( Job job )
     {
         this.job = job;
+        this.jobID = job.getID();
     }
 
     public Job getJob()
@@ -186,6 +188,15 @@ public class QueryRunner implements JobRunner
     
     private void doit()
     {
+        logger.debug("START");
+        // check job state, TODO: optimise this
+        this.job = manager.getJob(jobID);
+        if (job == null || job.getExecutionPhase().equals(ExecutionPhase.ABORTED))
+        {
+            logger.debug("job aborted");
+            return;
+        }
+        
         logger.debug("setting/persisting ExecutionPhase = " + ExecutionPhase.UNKNOWN);
         job.setExecutionPhase(ExecutionPhase.UNKNOWN);
         this.job = manager.persist(job);
@@ -235,6 +246,14 @@ public class QueryRunner implements JobRunner
             if (queryDataSource == null) // application server config issue
                 throw new RuntimeException("failed to find the query DataSource");
             
+            // check job state, TODO: optimise this
+            this.job = manager.getJob(jobID);
+            if (job == null || job.getExecutionPhase().equals(ExecutionPhase.ABORTED))
+            {
+                logger.debug("job aborted");
+                return;
+            }
+
             logger.debug("reading TapSchema...");
             TapSchemaDAO dao = new TapSchemaDAO(queryDataSource);
             TapSchema tapSchema = dao.get();
@@ -291,6 +310,8 @@ public class QueryRunner implements JobRunner
                     rs = pstmt.executeQuery();
                 }
 
+                // TODO: if checking for abort was fast, check it here and save writing and storing
+
                 tmpFile = new File(fs.getStorageDir(), "result_" + job.getID() + "." + writer.getExtension());
                 logger.debug("writing ResultSet to " + tmpFile);
                 OutputStream ostream = new FileOutputStream(tmpFile);
@@ -319,15 +340,24 @@ public class QueryRunner implements JobRunner
                 }
             }
 
-            logger.debug("stroing results with FileStore...");
+            logger.debug("storing results with FileStore...");
             URL url = fs.put(tmpFile);
             Result res = new Result("result", url);
             List<Result> results = new ArrayList<Result>();
             results.add(res);
-            job.setResultsList(results);
 
+            // check job state, TODO: optimise this
+            this.job = manager.getJob(jobID);
+            if (job == null || job.getExecutionPhase().equals(ExecutionPhase.ABORTED))
+            {
+                logger.debug("job aborted");
+                return;
+            }
+            
             logger.debug("setting ExecutionPhase = " + ExecutionPhase.COMPLETED);
+            job.setResultsList(results);
             job.setExecutionPhase( ExecutionPhase.COMPLETED );
+            this.job = manager.persist(job);
 		}
         catch ( Throwable t )
         {
@@ -356,14 +386,21 @@ public class QueryRunner implements JobRunner
             }
         	finally
             {
+                // check job state, TODO: optimise this
+                this.job = manager.getJob(jobID);
+                if (job == null || job.getExecutionPhase().equals(ExecutionPhase.ABORTED))
+                {
+                    logger.debug("job aborted");
+                    return;
+                }
                 logger.debug("setting ExecutionPhase = " + ExecutionPhase.ERROR);
                 job.setExecutionPhase( ExecutionPhase.ERROR );
+                this.job = manager.persist(job);
             }
 		}
         finally
         {
-            logger.debug("persisting Job...");
-            this.job = manager.persist(job);
+            
         }
     }
 }
