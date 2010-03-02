@@ -92,7 +92,7 @@ public class Job
     private Date endTime;    
     private ErrorSummary errorSummary;
     private Subject owner;
-    private String runId;
+    private String runID;
     private List<Result> resultsList;
     private List<Parameter> parameterList;
     private Object any;
@@ -135,7 +135,7 @@ public class Job
                final long executionDuration, final Date destructionTime,
                final Date quote, final Date startTime, final Date endTime,
                final ErrorSummary errorSummary, final Subject owner,
-               final String runId, final List<Result> resultsList,
+               final String runID, final List<Result> resultsList,
                final List<Parameter> parameterList,
                final String requestPath)
     {
@@ -148,7 +148,7 @@ public class Job
         this.endTime = endTime;
         this.errorSummary = errorSummary;
         this.owner = owner;
-        this.runId = runId;
+        this.runID = runID;
         this.resultsList = resultsList;
         this.parameterList = parameterList;
         this.requestPath = requestPath;
@@ -169,7 +169,7 @@ public class Job
         setEndTime(job.getEndTime());
         setErrorSummary(job.getErrorSummary());
         setOwner(job.getOwner());
-        setRunId(job.getRunId());
+        setRunID(job.getRunID());
         setResultsList(job.getResultsList());
         setParameterList(job.getParameterList());
         setOwner(job.getOwner());
@@ -319,9 +319,9 @@ public class Job
         this.owner = owner;
     }
 
-    public void setRunId(final String runId)
+    public void setRunID(final String runID)
     {
-        this.runId = runId;
+        this.runID = runID;
     }
 
     /**
@@ -390,9 +390,9 @@ public class Job
      *
      * @return String run ID.
      */
-    public String getRunId()
+    public String getRunID()
     {
-        return runId;
+        return runID;
     }
 
     /**

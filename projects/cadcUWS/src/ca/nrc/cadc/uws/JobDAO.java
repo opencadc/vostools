@@ -181,10 +181,10 @@ public abstract class JobDAO implements JobPersistence
     /**
      * Obtain a Job from the persistence layer.
      *
-     * @param jobId     The job identifier.
+     * @param jobID     The job identifier.
      * @return          Job instance, or null if none found.
      */
-    public Job getJob(final String jobId)
+    public Job getJob(final String jobID)
     {
         // Job for this jobID.
         Job job;
@@ -192,19 +192,19 @@ public abstract class JobDAO implements JobPersistence
         {
             synchronized(this)
             {
-                job = (Job) jdbc.queryForObject(getSelectJobSQL(jobId), new JobMapper());
+                job = (Job) jdbc.queryForObject(getSelectJobSQL(jobID), new JobMapper());
                 // List of Parameters for this jobID.
                 List<Parameter> parameterList = null;
                 for (String table : getParameterTables())
                 {
                     if (parameterList == null)
                         parameterList = new ArrayList<Parameter>();
-                    parameterList.addAll(jdbc.query(getSelectParameterSQL(jobId, table), new ParameterMapper()));
+                    parameterList.addAll(jdbc.query(getSelectParameterSQL(jobID, table), new ParameterMapper()));
                 }
                 job.setParameterList(parameterList);
 
                 // List of Results for this jobID.
-                job.setResultsList(jdbc.query(getSelectResultSQL(jobId), new ResultMapper()));
+                job.setResultsList(jdbc.query(getSelectResultSQL(jobID), new ResultMapper()));
             }
         }
        finally
@@ -212,7 +212,7 @@ public abstract class JobDAO implements JobPersistence
            
        }
 
-        log.debug("getJob jobId = " + jobId);
+        log.debug("getJob jobID = " + jobID);
         return job;
     }
 
@@ -228,7 +228,7 @@ public abstract class JobDAO implements JobPersistence
         {
             jdbc.update(getUpdateJobDeletedSQL(jobID));
         }
-        log.debug("delete jobId = " + jobID);
+        log.debug("delete jobID = " + jobID);
     }
 
     /**
@@ -367,7 +367,7 @@ public abstract class JobDAO implements JobPersistence
         sb.append("insert into ");
         sb.append(getJobTable());
         sb.append(" (");
-        sb.append("jobId,");
+        sb.append("jobID,");
         sb.append("executionPhase,");
         sb.append("executionDuration,");
         sb.append("destructionTime,");
@@ -377,7 +377,7 @@ public abstract class JobDAO implements JobPersistence
         sb.append("error_summaryMessage,");
         sb.append("error_documentURL,");
         sb.append("owner,");
-        sb.append("runId,");
+        sb.append("runID,");
         sb.append("requestPath");
         sb.append(") values ('");
         sb.append(job.getID());
@@ -474,12 +474,12 @@ public abstract class JobDAO implements JobPersistence
             }
         }
         sb.append(",");
-        if (job.getRunId() == null)
+        if (job.getRunID() == null)
             sb.append("NULL");
         else
         {
             sb.append("'");
-            sb.append(encode(job.getRunId()));
+            sb.append(encode(job.getRunID()));
             sb.append("'");
         }
         sb.append(",");
@@ -497,19 +497,19 @@ public abstract class JobDAO implements JobPersistence
 
     /**
      * Returns the SQL to persist the specified Parameter in the Job specified
-     * by the jobId.
+     * by the jobID.
      *
-     * @param jobId of Job for the Parameter.
+     * @param jobID of Job for the Parameter.
      * @param parameter to persist.
      * @return SQL to persist the Parameter in the Job.
      */
-    protected String getInsertParameterSQL(final String jobId, final Parameter parameter)
+    protected String getInsertParameterSQL(final String jobID, final Parameter parameter)
     {
         StringBuilder sb = new StringBuilder();
         sb.append("insert into ");
         sb.append(getParameterTable(parameter.getName()));
-        sb.append(" (jobId, name, value) values ('");
-        sb.append(jobId);
+        sb.append(" (jobID, name, value) values ('");
+        sb.append(jobID);
         sb.append("','");
         sb.append(encode(parameter.getName()));
         sb.append("','");
@@ -520,19 +520,19 @@ public abstract class JobDAO implements JobPersistence
 
     /**
      * Returns the SQL to persist the specified Result in the Job specified
-     * by the jobId.
+     * by the jobID.
      *
-     * @param jobId of the Job for the Result.
+     * @param jobID of the Job for the Result.
      * @param result to persist.
      * @return SQL to persist the Result in the Job.
      */
-    protected String getInsertResultSQL(final String jobId, final Result result)
+    protected String getInsertResultSQL(final String jobID, final Result result)
     {
         StringBuilder sb = new StringBuilder();
         sb.append("insert into ");
         sb.append(getResultTable());
-        sb.append(" (jobId, name, url) values ('");
-        sb.append(jobId);
+        sb.append(" (jobID, name, url) values ('");
+        sb.append(jobID);
         sb.append("','");
         sb.append(encode(result.getName()));
         sb.append("','");
@@ -542,109 +542,109 @@ public abstract class JobDAO implements JobPersistence
     }
 
     /**
-     * Returns the SQL to select the Job with the specified jobId.
+     * Returns the SQL to select the Job with the specified jobID.
      *
-     * @param jobId of the Job.
+     * @param jobID of the Job.
      * @return SQL to select the Job.
      */
-    protected String getSelectJobSQL(final String jobId)
+    protected String getSelectJobSQL(final String jobID)
     {
         StringBuilder sb = new StringBuilder();
         sb.append("select * from ");
         sb.append(getJobTable());
-        sb.append(" where deletedByUser = 0 and jobId = '");
-        sb.append(jobId);
+        sb.append(" where deletedByUser = 0 and jobID = '");
+        sb.append(jobID);
         sb.append("'");
         return sb.toString();
     }
 
     /**
      * Returns the SQL to select all the Parameters in the specified
-     * Parameter table that have the specified jobId.
+     * Parameter table that have the specified jobID.
      *
-     * @param jobId of the Job.
+     * @param jobID of the Job.
      * @param table name of the Parameter table.
-     * @return SQL to select Parameters for the jobId.
+     * @return SQL to select Parameters for the jobID.
      */
-    protected String getSelectParameterSQL(final String jobId, final String table)
+    protected String getSelectParameterSQL(final String jobID, final String table)
     {
         List<String> tables = getParameterTables();
         StringBuilder sb = new StringBuilder();
         sb.append("select * from ");
         sb.append(table);
-        sb.append(" where jobId = '");
-        sb.append(jobId);
+        sb.append(" where jobID = '");
+        sb.append(jobID);
         sb.append("'");
         return sb.toString();
     }
 
     /**
-     * Returns the SQL to select all the Results with the specified jobId.
+     * Returns the SQL to select all the Results with the specified jobID.
      *
-     * @param jobId of the Job.
-     * @return SQL to select the Results for the jobId.
+     * @param jobID of the Job.
+     * @return SQL to select the Results for the jobID.
      */
-    protected String getSelectResultSQL(final String jobId)
+    protected String getSelectResultSQL(final String jobID)
     {
         StringBuilder sb = new StringBuilder();
         sb.append("select * from ");
         sb.append(getResultTable());
-        sb.append(" where jobId = '");
-        sb.append(jobId);
+        sb.append(" where jobID = '");
+        sb.append(jobID);
         sb.append("'");
         return sb.toString();
     }
 
     /**
      * Returns the SQL to delete the Job in the Jobs table
-     * with the specified jobId.
+     * with the specified jobID.
      *
-     * @param jobId of the Job.
-     * @return SQL to delete the Job for this jobId.
+     * @param jobID of the Job.
+     * @return SQL to delete the Job for this jobID.
      */
-    protected String getDeleteJobSQL(final String jobId)
+    protected String getDeleteJobSQL(final String jobID)
     {
         StringBuilder sb = new StringBuilder();
         sb.append("delete from ");
         sb.append(getJobTable());
-        sb.append(" where jobId = '");
-        sb.append(jobId);
+        sb.append(" where jobID = '");
+        sb.append(jobID);
         sb.append("'");
         return sb.toString();
     }
 
     /**
      * Returns SQL to delete all Parameters in the given Parameter table
-     * with the specifed jobId.
+     * with the specifed jobID.
      *
-     * @param jobId of the Job.
+     * @param jobID of the Job.
      * @param table name of the Parameter table.
-     * @return SQL to delete the Parameters for this jobId.
+     * @return SQL to delete the Parameters for this jobID.
      */
-    protected String getDeleteParameterSQL(final String jobId, final String table)
+    protected String getDeleteParameterSQL(final String jobID, final String table)
     {
         StringBuilder sb = new StringBuilder();
         sb.append("delete from ");
         sb.append(table);
-        sb.append(" where jobId = '");
-        sb.append(jobId);
+        sb.append(" where jobID = '");
+        sb.append(jobID);
         sb.append("'");
         return sb.toString();
     }
 
     /**
-     * Returns the SQL to delte all Results with the specified jobId.
+     * Returns the SQL to delte all Results with the specified jobID.
      *
-     * @param jobId of the Job.
-     * @return SQL to delete the Results for this jobId.
+     * @param jobID of the Job.
+     * @return SQL to delete the Results for this jobID.
      */
-    protected String getDeleteResultSQL(final String jobId)
+    protected String getDeleteResultSQL(final String jobID)
     {
         StringBuilder sb = new StringBuilder();
         sb.append("delete from ");
         sb.append(getResultTable());
-        sb.append(" where jobId = '");
-        sb.append(jobId);
+        sb.append(" where jobID = '");
+        sb.append(jobID);
         sb.append("'");
         return sb.toString();
     }
@@ -652,17 +652,17 @@ public abstract class JobDAO implements JobPersistence
     /**
      * Returns the SQL to mark a Job as deleted. The deletedByUser field is set
      * from the default value of 0, to 1, to indicate the Job is deleted.
-     * @param jobId of the Job.
+     * @param jobID of the Job.
      * @return SQL to mark the Job as deleted.
      */
-    protected String getUpdateJobDeletedSQL(final String jobId)
+    protected String getUpdateJobDeletedSQL(final String jobID)
     {
         StringBuilder sb = new StringBuilder();
         sb.append("update ");
         sb.append(getJobTable());
         sb.append(" set deletedByUser = 1 ");
-        sb.append(" where jobId = '");
-        sb.append(jobId);
+        sb.append(" where jobID = '");
+        sb.append(jobID);
         sb.append("'");
         return sb.toString();
     }
@@ -772,8 +772,8 @@ public abstract class JobDAO implements JobPersistence
     {
         public Object mapRow(ResultSet rs, int rowNum) throws SQLException
         {
-            // jobId
-            String jobId = rs.getString("jobId");
+            // jobID
+            String jobID = rs.getString("jobID");
 
             // executionPhase
             ExecutionPhase executionPhase = ExecutionPhase.valueOf(rs.getString("executionPhase").toUpperCase());
@@ -819,7 +819,7 @@ public abstract class JobDAO implements JobPersistence
             String requestPath = decode(rs.getString("requestPath"));
 
             // Create the job
-            Job job = new Job(jobId, executionPhase, executionDuration, destructionTime,
+            Job job = new Job(jobID, executionPhase, executionDuration, destructionTime,
                               quote, startTime, endTime, errorSummary, owner, runId,
                               null, null, requestPath);
 

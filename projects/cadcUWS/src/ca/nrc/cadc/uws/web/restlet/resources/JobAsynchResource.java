@@ -332,7 +332,7 @@ public class JobAsynchResource extends BaseJobResource
                 document.createElementNS(XML_NAMESPACE_URI,
                      JobAttribute.RUN_ID.getAttributeName());
         runIdElement.setPrefix(XML_NAMESPACE_PREFIX);
-        runIdElement.setTextContent(job.getRunId());
+        runIdElement.setTextContent(job.getRunID());
         jobElement.appendChild(runIdElement);
 
         // <uws:ownerId>
