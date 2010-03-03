@@ -175,6 +175,12 @@ public class QueryRunner implements JobRunner
     public void run()
     {
         logger.debug("START");
+        List<Long> tList = new ArrayList<Long>();
+        List<String> sList = new ArrayList<String>();
+
+        tList.add(System.currentTimeMillis());
+        sList.add("start");
+
         // check job state, TODO: optimise this
         this.job = manager.getJob(jobID);
         if (job == null || job.getExecutionPhase().equals(ExecutionPhase.ABORTED))
@@ -182,10 +188,8 @@ public class QueryRunner implements JobRunner
             logger.debug("job aborted");
             return;
         }
-        
-        logger.debug("setting/persisting ExecutionPhase = " + ExecutionPhase.UNKNOWN);
-        job.setExecutionPhase(ExecutionPhase.UNKNOWN);
-        this.job = manager.persist(job);
+        tList.add(System.currentTimeMillis());
+        sList.add("check if aborted: ");
 
         logger.debug("loading " + fileStoreClassName);
         FileStore fs = null;
@@ -204,6 +208,9 @@ public class QueryRunner implements JobRunner
             logger.debug("setting/persisting ExecutionPhase = " + ExecutionPhase.EXECUTING);
             job.setExecutionPhase( ExecutionPhase.EXECUTING );
             this.job = manager.persist(job);
+
+            tList.add(System.currentTimeMillis());
+            sList.add("set phase = EXECUTING: ");
             
             // start processing the job
             List<Parameter> paramList = job.getParameterList();
@@ -213,7 +220,10 @@ public class QueryRunner implements JobRunner
             logger.debug("invoking TapValiator for REQUEST and VERSION...");
             TapValidator tapValidator = new TapValidator();
             tapValidator.validate( paramList );
-            
+
+            tList.add(System.currentTimeMillis());
+            sList.add("initialisation: ");
+
             logger.debug("find DataSource via JNDI lookup...");
             Context initContext = new InitialContext();
             Context envContext = (Context) initContext.lookup("java:/comp/env");
@@ -231,7 +241,10 @@ public class QueryRunner implements JobRunner
             
             if (queryDataSource == null) // application server config issue
                 throw new RuntimeException("failed to find the query DataSource");
-            
+
+            tList.add(System.currentTimeMillis());
+            sList.add("find DataSources via JNDI: ");
+
             // check job state, TODO: optimise this
             this.job = manager.getJob(jobID);
             if (job == null || job.getExecutionPhase().equals(ExecutionPhase.ABORTED))
@@ -239,10 +252,15 @@ public class QueryRunner implements JobRunner
                 logger.debug("job aborted");
                 return;
             }
+            tList.add(System.currentTimeMillis());
+            sList.add("check if aborted: ");
 
             logger.debug("reading TapSchema...");
             TapSchemaDAO dao = new TapSchemaDAO(queryDataSource);
             TapSchema tapSchema = dao.get();
+
+            tList.add(System.currentTimeMillis());
+            sList.add("read tap_schema: ");
             
             logger.debug("loading " + uploadManagerClassName);
             Class umc =  Class.forName(uploadManagerClassName);
@@ -280,7 +298,10 @@ public class QueryRunner implements JobRunner
             writer.setSelectList(selectList);
             if (maxRows > 0 && maxRows < Integer.MAX_VALUE)
                 writer.setMaxRowCount(maxRows);
-            
+
+            tList.add(System.currentTimeMillis());
+            sList.add("parse/convert query: ");
+
             Connection connection = null;
             PreparedStatement pstmt = null;
             ResultSet rs = null;
@@ -296,6 +317,9 @@ public class QueryRunner implements JobRunner
                     rs = pstmt.executeQuery();
                 }
 
+                tList.add(System.currentTimeMillis());
+                sList.add("execute query and get ResultSet: ");
+                
                 // TODO: if checking for abort was fast, check it here and save writing and storing
 
                 tmpFile = new File(fs.getStorageDir(), "result_" + job.getID() + "." + writer.getExtension());
@@ -305,6 +329,9 @@ public class QueryRunner implements JobRunner
                 
                 try { ostream.close(); }
                 catch(Throwable ignore) { }
+
+                tList.add(System.currentTimeMillis());
+                sList.add("write ResultSet to tmp file: ");
                 
                 logger.debug("executing query... [OK]");
             } 
@@ -328,6 +355,10 @@ public class QueryRunner implements JobRunner
 
             logger.debug("storing results with FileStore...");
             URL url = fs.put(tmpFile);
+
+            tList.add(System.currentTimeMillis());
+            sList.add("store tmp file with FileStore: ");
+
             Result res = new Result("result", url);
             List<Result> results = new ArrayList<Result>();
             results.add(res);
@@ -352,6 +383,9 @@ public class QueryRunner implements JobRunner
         	URL errorURL = null;
         	try
         	{
+                tList.add(System.currentTimeMillis());
+                sList.add("encounter failure: ");
+
                 logger.error("query failed", t);
         		errorMessage = t.getClass().getSimpleName() + ":" + t.getMessage();
         		logger.debug( "Error message: "+errorMessage );
@@ -360,8 +394,16 @@ public class QueryRunner implements JobRunner
                 logger.debug( "Error file: "+errorFile.getAbsolutePath());
            		FileOutputStream errorOutput = new FileOutputStream( errorFile );
            		writer.write(t, errorOutput );
-           		errorOutput.close();          		
+           		errorOutput.close();
+
+                tList.add(System.currentTimeMillis());
+                sList.add("write error to tmp file: ");
+
                 errorURL = fs.put(errorFile);
+
+                tList.add(System.currentTimeMillis());
+                sList.add("store error file with FileStore ");
+
            		logger.debug( "Error URL: " + errorURL);
                 // check job state, TODO: optimise this
                 this.job = manager.getJob(jobID);
@@ -382,6 +424,15 @@ public class QueryRunner implements JobRunner
 		}
         finally
         {
+            tList.add(System.currentTimeMillis());
+            sList.add("set final job state: ");
+
+            for (int i=1; i<tList.size(); i++)
+            {
+                long dt = tList.get(i) - tList.get(i-1);
+                logger.info(job.getID() + " -- " + sList.get(i) + dt + "ms");
+            }
+
             logger.debug("DONE");
         }
     }
