@@ -71,6 +71,8 @@ package ca.nrc.cadc.tap.schema;
 
 import java.util.List;
 
+import org.jdom.Element;
+
 /**
  * Descriptor class to represent a TAP_SCHEMA.schemas table.
  * 
@@ -116,6 +118,24 @@ public class SchemaDesc
         this.schemaName = schemaName;
         this.description = description;
         this.utype = utype;
+    }
+
+
+    public Element toXmlElement()
+    {
+        Element eleSchema = new Element("schema");
+
+        Element ele;
+        ele = new Element("name");
+        ele.setText(this.schemaName);
+        eleSchema.addContent(ele);
+        
+        for (TableDesc td : this.tableDescs)
+        {
+            eleSchema.addContent(td.toXmlElement());
+        }
+
+        return eleSchema;
     }
 
     /**

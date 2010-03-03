@@ -76,6 +76,7 @@ import java.util.ArrayList;
 import java.util.List;
 
 import ca.nrc.cadc.tap.schema.ColumnDesc;
+import ca.nrc.cadc.tap.schema.KeyDesc;
 import ca.nrc.cadc.tap.schema.SchemaDesc;
 import ca.nrc.cadc.tap.schema.TableDesc;
 import ca.nrc.cadc.tap.schema.TapSchema;
@@ -126,7 +127,7 @@ public class TestUtil
         List<TableDesc> tdList;
         tdList = new ArrayList<TableDesc>();
         sd.setTableDescs(tdList);
-
+        
         ColumnDesc cd;
         String tn; // table name
         List<ColumnDesc> cdList;
@@ -141,16 +142,22 @@ public class TestUtil
         cd = new ColumnDesc(); cdList.add(cd); cd.setTableName(tn); cd.setColumnName("t_long");
         cd = new ColumnDesc(); cdList.add(cd); cd.setTableName(tn); cd.setColumnName("t_double");
         cd = new ColumnDesc(); cdList.add(cd); cd.setTableName(tn); cd.setColumnName("t_string");
-        cd = new ColumnDesc(); cdList.add(cd); cd.setTableName(tn); cd.setColumnName("t_bytes");cd.setDatatype("clob");
+        cd.setDatatype("CHAR");
+        cd.setSize(8);
+        cd.setDescription("This is the T String.");
+        cd.setUcd("pos.eq.ra;meta.main");
+        cd.setUnit("KILOMETER");
+        cd.setUtype("stc:AstroCoords.Position2D.Value2.C1");
+        cd = new ColumnDesc(); cdList.add(cd); cd.setTableName(tn); cd.setColumnName("t_bytes");cd.setDatatype("CLOB");
         cd = new ColumnDesc(); cdList.add(cd); cd.setTableName(tn); cd.setColumnName("t_date");
         cd = new ColumnDesc(); cdList.add(cd); cd.setTableName(tn); cd.setColumnName("t_enc_location");
         cd = new ColumnDesc(); cdList.add(cd); cd.setTableName(tn); cd.setColumnName("t_enc_polygon");
         cd = new ColumnDesc(); cdList.add(cd); cd.setTableName(tn); cd.setColumnName("t_enc_list_subinterval");
         cd = new ColumnDesc(); cdList.add(cd); cd.setTableName(tn); cd.setColumnName("t_enc_list_sample");
-        cd = new ColumnDesc(); cdList.add(cd); cd.setTableName(tn); cd.setColumnName("t_array_int");cd.setDatatype("blob");
+        cd = new ColumnDesc(); cdList.add(cd); cd.setTableName(tn); cd.setColumnName("t_array_int");cd.setDatatype("BLOB");
         cd = new ColumnDesc(); cdList.add(cd); cd.setTableName(tn); cd.setColumnName("t_spoint");
         cd = new ColumnDesc(); cdList.add(cd); cd.setTableName(tn); cd.setColumnName("t_scircle");
-        cd = new ColumnDesc(); cdList.add(cd); cd.setTableName(tn); cd.setColumnName("t_spoly");cd.setDatatype("blob");
+        cd = new ColumnDesc(); cdList.add(cd); cd.setTableName(tn); cd.setColumnName("t_spoly");cd.setDatatype("BLOB");
         cd = new ColumnDesc(); cdList.add(cd); cd.setTableName(tn); cd.setColumnName("t_box");
 
         tn = "tables";
@@ -191,7 +198,9 @@ public class TestUtil
         cd = new ColumnDesc(); cdList.add(cd); cd.setTableName(tn); cd.setColumnName("utype");
         cd = new ColumnDesc(); cdList.add(cd); cd.setTableName(tn); cd.setColumnName("description");
 
-        TapSchema ts = new TapSchema(sdList, null);
+        List<KeyDesc> kdList;
+        kdList = new ArrayList<KeyDesc>();
+        TapSchema ts = new TapSchema(sdList, kdList);
         return ts;
     }
 

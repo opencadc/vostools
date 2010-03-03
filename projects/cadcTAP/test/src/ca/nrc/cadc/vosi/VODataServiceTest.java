@@ -69,15 +69,24 @@
 
 package ca.nrc.cadc.vosi;
 
+import ca.nrc.cadc.tap.parser.TestUtil;
+import ca.nrc.cadc.tap.schema.ColumnDesc;
 import ca.nrc.cadc.tap.schema.KeyDesc;
 import ca.nrc.cadc.tap.schema.SchemaDesc;
 import ca.nrc.cadc.tap.schema.TableDesc;
 import ca.nrc.cadc.tap.schema.TapSchema;
 import ca.nrc.cadc.util.Log4jInit;
 import java.util.ArrayList;
+import java.util.List;
+
 import org.apache.log4j.Level;
 import org.apache.log4j.Logger;
 import org.jdom.Document;
+import org.jdom.Element;
+import org.jdom.JDOMException;
+import org.jdom.output.Format;
+import org.jdom.output.XMLOutputter;
+import org.jdom.xpath.XPath;
 
 import org.junit.After;
 import org.junit.AfterClass;
@@ -115,10 +124,41 @@ public class VODataServiceTest
     @After
     public void tearDown() { }
 
+    
     /**
      * Test of getExtension method, of class VOTableWriter.
      */
     @Test
+    public final void testUsingMockSchema()
+    {
+        LOG.debug("testMock");
+        try
+        {
+            TapSchema ts = TestUtil.loadDefaultTapSchema();
+            VODataService vods = new VODataService(ts);
+            Document doc = vods.getDocument();
+            XMLOutputter xop = new XMLOutputter(Format.getPrettyFormat());
+            xop.output(doc, System.out);
+            
+            checkRootElement(doc);
+
+            for (SchemaDesc sd : ts.schemaDescs)
+                checkSchema(doc, sd);
+
+            for (KeyDesc kd : ts.keyDescs)
+                checkKey(doc, kd);
+        }
+        catch(Throwable t)
+        {
+            t.printStackTrace(System.out);
+            Assert.fail(t.toString());
+        }
+    }
+
+    /**
+     * Test of getExtension method, of class VOTableWriter.
+     */
+    //@Test
     public final void testEmpty()
     {
         LOG.debug("testEmpty");
@@ -140,26 +180,50 @@ public class VODataServiceTest
         }
     }
 
+    
     private void checkXSI(Document doc)
     {
 
     }
-    private void checkSchema(Document doc)
+    private void checkSchema(Document doc, SchemaDesc sd) throws JDOMException
     {
+        String schemaName = sd.getSchemaName();
+        
+        XPath xpath = XPath.newInstance("/tableset/schema/name[.='" + schemaName + "']");
+        List rs = xpath.selectNodes(doc);
+        Assert.assertTrue(rs.size()==1);
+        
+        for (TableDesc td : sd.getTableDescs())
+        {
+            xpath = XPath.newInstance("/tableset/schema[name='" + schemaName + "']/table[name='" + td.getTableName() + "']");
+            rs = xpath.selectNodes(doc);
+            Assert.assertTrue(rs.size()==1);
 
+            checkColumns(doc, td);
+        }
     }
-    private void checkRootElement(Document doc)
+    
+    private void checkRootElement(Document doc) throws JDOMException
     {
-
+        XPath xpath = XPath.newInstance("/tableset");
+        List rs = xpath.selectNodes(doc);
+        Assert.assertTrue(rs.size()==1);
     }
-    private void checkSchema(Document doc, SchemaDesc sd)
+    
+    private void checkColumns(Document doc, TableDesc td) throws JDOMException
     {
-
+        XPath xpath;
+        List rs;
+        String schemaName = td.getSchemaName();
+        
+        for (ColumnDesc cd : td.getColumnDescs())
+        {
+            xpath = XPath.newInstance("/tableset/schema[name='" + schemaName + "']/table[name='" + td.getTableName() + "']/column[name='" + cd.getColumnName() + "']");
+            rs = xpath.selectNodes(doc);
+            Assert.assertTrue(rs.size()==1);
+        }
     }
-    private void checkColumns(Document doc, TableDesc td)
-    {
 
-    }
     private void checkKey(Document doc, KeyDesc kd)
     {
 

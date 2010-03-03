@@ -69,6 +69,12 @@
 
 package ca.nrc.cadc.tap.schema;
 
+import org.jdom.Attribute;
+import org.jdom.Element;
+import org.jdom.Namespace;
+
+import ca.nrc.cadc.vosi.VODataService;
+
 /**
  * Descriptor Class to represent a TAP_SCHEMA.columns table.
  * 
@@ -153,6 +159,45 @@ public class ColumnDesc
         this.size = size;
     }
 
+    
+    public Element toXmlElement()
+    {
+        Element eleColumn = new Element("column");
+        
+        addChild(eleColumn, "name", this.columnName);
+        addChild(eleColumn, "description", this.description);
+        addChild(eleColumn, "ucd", this.ucd);
+        addChild(eleColumn, "utype", this.utype);
+        addChild(eleColumn, "unit", this.unit);
+        
+        Element eleDt = addChild(eleColumn, "dataType", this.datatype);
+        if (eleDt != null)
+        {
+            Namespace xsi = Namespace.getNamespace("xsi", VODataService.XSI_NS_URI);
+            Attribute attType = new Attribute("type", "vs:TAP", xsi);
+            eleDt.setAttribute(attType);
+            
+            if (this.size != null && this.size > 0)
+                eleDt.setAttribute("size", this.size.toString());
+        }
+
+        return eleColumn;
+    }
+
+    private Element addChild(Element eleColumn, String chdName, String chdText)
+    {
+        Element ele = null;
+        if (chdText != null && !chdText.equals(""))
+        {
+            ele = new Element(chdName);
+            ele.setText(chdText);
+            eleColumn.addContent(ele);
+        }
+        return ele;
+    }
+
+    
+    
     /**
      * Setters and getters.
      *

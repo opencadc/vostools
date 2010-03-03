@@ -71,7 +71,10 @@ package ca.nrc.cadc.vosi;
 
 import ca.nrc.cadc.tap.schema.TapSchema;
 import org.apache.log4j.Logger;
+import org.jdom.Attribute;
 import org.jdom.Document;
+import org.jdom.Element;
+import org.jdom.Namespace;
 
 /**
  *
@@ -86,11 +89,11 @@ public class VODataService
     // Uri to the VODataService schema.
     public static final String VOTABLE_NS_URI = "http://www.ivoa.net/xml/VODataService/v1.0";
 
-    private TapSchema tapSchema;
+    private TapSchema _tapSchema;
 
     public VODataService(TapSchema tapSchema)
     {
-        this.tapSchema = tapSchema;
+        this._tapSchema = tapSchema;
     }
 
     /**
@@ -98,6 +101,14 @@ public class VODataService
      */
     public Document getDocument()
     {
-        return null;
+        Namespace vs = Namespace.getNamespace("vs", VOTABLE_NS_URI);
+        Namespace xsi = Namespace.getNamespace("xsi", XSI_NS_URI);
+        Element eleTableset = _tapSchema.toXmlElement();
+        eleTableset.addNamespaceDeclaration(xsi);
+        eleTableset.addNamespaceDeclaration(vs);
+
+        Document document = new Document();
+        document.addContent(eleTableset);
+        return document;
     }
 }

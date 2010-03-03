@@ -73,6 +73,8 @@ import java.io.PrintWriter;
 import java.io.StringWriter;
 import java.util.List;
 
+import org.jdom.Element;
+
 /**
  * Class to represent a TAP_SCHEMA.
  * 
@@ -100,6 +102,18 @@ public class TapSchema
     {
         this.schemaDescs = schemaDescs;
         this.keyDescs = keyDescs;
+    }
+
+    public Element toXmlElement()
+    {
+        Element eleTableset = new Element("tableset");
+        
+        for (SchemaDesc sd : this.schemaDescs)
+        {
+            eleTableset.addContent(sd.toXmlElement());
+        }
+
+        return eleTableset;
     }
 
     /**
