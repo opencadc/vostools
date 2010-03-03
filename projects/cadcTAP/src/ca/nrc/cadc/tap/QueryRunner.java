@@ -175,20 +175,6 @@ public class QueryRunner implements JobRunner
     public void run()
     {
         logger.debug("START");
-
-        try
-        {
-        	doit();
-        }
-        finally
-        {
-            logger.debug("DONE");
-        }
-    }
-    
-    private void doit()
-    {
-        logger.debug("START");
         // check job state, TODO: optimise this
         this.job = manager.getJob(jobID);
         if (job == null || job.getExecutionPhase().equals(ExecutionPhase.ABORTED))
@@ -363,8 +349,7 @@ public class QueryRunner implements JobRunner
         {
             //t.printStackTrace();
         	String errorMessage = null;
-        	URL errorURL        = null;
-            job.setErrorSummary(new ErrorSummary());
+        	URL errorURL = null;
         	try
         	{
                 logger.error("query failed", t);
@@ -378,14 +363,6 @@ public class QueryRunner implements JobRunner
            		errorOutput.close();          		
                 errorURL = fs.put(errorFile);
            		logger.debug( "Error URL: " + errorURL);
-                job.setErrorSummary(new ErrorSummary(errorMessage, errorURL));
-        	}
-            catch(Throwable t2)
-            {
-                logger.error( "failed to persist error", t2);
-            }
-        	finally
-            {
                 // check job state, TODO: optimise this
                 this.job = manager.getJob(jobID);
                 if (job == null || job.getExecutionPhase().equals(ExecutionPhase.ABORTED))
@@ -395,12 +372,17 @@ public class QueryRunner implements JobRunner
                 }
                 logger.debug("setting ExecutionPhase = " + ExecutionPhase.ERROR);
                 job.setExecutionPhase( ExecutionPhase.ERROR );
+                job.setErrorSummary(new ErrorSummary(errorMessage, errorURL));
                 this.job = manager.persist(job);
+        	}
+            catch(Throwable t2)
+            {
+                logger.error( "failed to persist error", t2);
             }
 		}
         finally
         {
-            
+            logger.debug("DONE");
         }
     }
 }
