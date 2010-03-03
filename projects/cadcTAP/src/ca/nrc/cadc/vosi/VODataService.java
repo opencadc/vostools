@@ -69,6 +69,9 @@
 
 package ca.nrc.cadc.vosi;
 
+import ca.nrc.cadc.tap.schema.ColumnDesc;
+import ca.nrc.cadc.tap.schema.SchemaDesc;
+import ca.nrc.cadc.tap.schema.TableDesc;
 import ca.nrc.cadc.tap.schema.TapSchema;
 import org.apache.log4j.Logger;
 import org.jdom.Attribute;
@@ -103,7 +106,7 @@ public class VODataService
     {
         Namespace vs = Namespace.getNamespace("vs", VOTABLE_NS_URI);
         Namespace xsi = Namespace.getNamespace("xsi", XSI_NS_URI);
-        Element eleTableset = _tapSchema.toXmlElement();
+        Element eleTableset = toXmlElement(_tapSchema);
         eleTableset.addNamespaceDeclaration(xsi);
         eleTableset.addNamespaceDeclaration(vs);
 
@@ -111,4 +114,98 @@ public class VODataService
         document.addContent(eleTableset);
         return document;
     }
+
+    /**
+     * @param tapSchema
+     * @return
+     */
+    private Element toXmlElement(TapSchema tapSchema)
+    {
+        Element eleTableset = new Element("tableset");
+        for (SchemaDesc sd : tapSchema.getSchemaDescs())
+        {
+            eleTableset.addContent(toXmlElement(sd));
+        }
+        return eleTableset;
+    }
+
+    /**
+     * @param sd
+     * @return
+     */
+    private Element toXmlElement(SchemaDesc sd)
+    {
+        Element eleSchema = new Element("schema");
+        Element ele;
+        ele = new Element("name");
+        ele.setText(sd.getSchemaName());
+        eleSchema.addContent(ele);
+        for (TableDesc td : sd.getTableDescs())
+        {
+            eleSchema.addContent(toXmlElement(td));
+        }
+        return eleSchema;
+    }
+
+    /**
+     * @param td
+     * @return
+     */
+    private Element toXmlElement(TableDesc td)
+    {
+        Element eleTable = new Element("table");
+        eleTable.setAttribute("role", "out");
+
+        Element ele;
+        ele = new Element("name");
+        ele.setText(td.getTableName());
+        eleTable.addContent(ele);
+        
+        for (ColumnDesc cd : td.getColumnDescs())
+        {
+            eleTable.addContent(toXmlElement(cd));
+        }
+
+        return eleTable;
+    }
+
+    /**
+     * @param cd
+     * @return
+     */
+    private Element toXmlElement(ColumnDesc cd)
+    {
+        Element eleColumn = new Element("column");
+        
+        addChild(eleColumn, "name", cd.getColumnName());
+        addChild(eleColumn, "description", cd.getDescription());
+        addChild(eleColumn, "ucd", cd.getUcd());
+        addChild(eleColumn, "utype", cd.getUtype());
+        addChild(eleColumn, "unit", cd.getUnit());
+        
+        Element eleDt = addChild(eleColumn, "dataType", cd.getDatatype());
+        if (eleDt != null)
+        {
+            Namespace xsi = Namespace.getNamespace("xsi", VODataService.XSI_NS_URI);
+            Attribute attType = new Attribute("type", "vs:TAP", xsi);
+            eleDt.setAttribute(attType);
+            
+            if (cd.getSize() != null && cd.getSize() > 0)
+                eleDt.setAttribute("size", cd.getSize().toString());
+        }
+
+        return eleColumn;
+    }
+    private Element addChild(Element eleColumn, String chdName, String chdText)
+    {
+        Element ele = null;
+        if (chdText != null && !chdText.equals(""))
+        {
+            ele = new Element(chdName);
+            ele.setText(chdText);
+            eleColumn.addContent(ele);
+        }
+        return ele;
+    }
+    
 }
