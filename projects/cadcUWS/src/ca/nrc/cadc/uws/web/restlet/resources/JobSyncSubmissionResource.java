@@ -69,7 +69,6 @@
 
 package ca.nrc.cadc.uws.web.restlet.resources;
 
-import ca.nrc.cadc.thread.ConditionVar;
 import ca.nrc.cadc.uws.ErrorSummary;
 import ca.nrc.cadc.uws.ExecutionPhase;
 import ca.nrc.cadc.uws.JobRunner;
@@ -79,9 +78,7 @@ import ca.nrc.cadc.uws.TimeTrackingRunnable;
 import org.w3c.dom.Document;
 import org.restlet.representation.Representation;
 import org.restlet.representation.EmptyRepresentation;
-import org.restlet.representation.StringRepresentation;
 import org.restlet.resource.Get;
-import org.restlet.data.MediaType;
 import org.apache.log4j.Logger;
 
 import java.io.IOException;
@@ -179,7 +176,6 @@ public class JobSyncSubmissionResource extends BaseJobResource
             {
             	Subject.doAs(job.getOwner(), new PrivilegedActionJobRunner(getJobManager(), jobRunner));
             }
-
         }
     }
 
