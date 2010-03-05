@@ -69,6 +69,8 @@
 
 package ca.nrc.cadc.vosi;
 
+import org.jdom.Element;
+
 /**
  * @author zhangsa
  *
@@ -110,6 +112,26 @@ public class Util
         if (idx >= 0 )
             rtn = full.substring(idx + searched.length());
         return rtn;
+    }
+
+    /**
+     * Add a child XML element
+     * 
+     * @param ele0 the parent element 
+     * @param chdName name of the to-be-added element
+     * @param chdText text of the to-be-added element
+     * @return the added new child element
+     */
+    public static Element addChild(Element ele0, String chdName, String chdText)
+    {
+        Element ele = null;
+        if (chdText != null && !chdText.equals(""))
+        {
+            ele = new Element(chdName);
+            ele.setText(chdText);
+            ele0.addContent(ele);
+        }
+        return ele;
     }
 
 }

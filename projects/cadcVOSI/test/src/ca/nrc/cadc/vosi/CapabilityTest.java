@@ -71,12 +71,12 @@ package ca.nrc.cadc.vosi;
 
 import java.util.ArrayList;
 import java.util.List;
-import org.jdom.Document;
-import org.junit.Assert;
 
+import org.jdom.Document;
 import org.jdom.Element;
 import org.junit.After;
 import org.junit.AfterClass;
+import org.junit.Assert;
 import org.junit.Before;
 import org.junit.BeforeClass;
 import org.junit.Test;
@@ -132,6 +132,7 @@ public class CapabilityTest
         compare(cap, ele);
     }
 
+    @SuppressWarnings("unchecked")
     @Test
     public void testCapabilities() throws Exception
     {
