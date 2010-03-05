@@ -114,6 +114,8 @@ public class JobSyncSubmissionResource extends BaseJobResource
         else if (jobIsActive())
             pollRunningJob();
 
+        
+
         final Representation representation;
         final List<Result> results = job.getResultsList();
         final ErrorSummary error = job.getErrorSummary();
@@ -177,6 +179,8 @@ public class JobSyncSubmissionResource extends BaseJobResource
             	Subject.doAs(job.getOwner(), new PrivilegedActionJobRunner(getJobManager(), jobRunner));
             }
         }
+        // get current state
+        this.job = getJobManager().getJob(job.getID());
     }
 
     /**
