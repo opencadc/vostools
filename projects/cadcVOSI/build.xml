@@ -90,11 +90,11 @@
     <property name="project" value="cadcVOSI" />
 
     <!-- JAR files to be included in classpath and war file -->
-    <property name="ext.log4j"       value="${ext.lib}/log4j.jar" />
-    <property name="ext.servlet-api" value="${ext.lib}/servlet-api.jar" />
-    <property name="lib.jdom"        value="${ext.lib}/jdom.jar" />
+    <property name="log4j"       value="${ext.lib}/log4j.jar" />
+    <property name="servlet-api" value="${ext.lib}/servlet-api.jar" />
+    <property name="jdom"        value="${ext.lib}/jdom.jar" />
 
-    <property name="jars" value="${lib.jdom}:${ext.log4j}:${ext.servlet-api}" />
+    <property name="jars" value="${lib}/cadcUtil.jar:${jdom}:${log4j}:${servlet-api}" />
 
     <target name="build" depends="compile">
             <jar jarfile="${build}/lib/cadcVOSI.jar"
