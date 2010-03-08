@@ -104,8 +104,16 @@
     </target>
 
     <!-- JAR files needed to run the test suite -->
-    <property name="dev.junit" value="${ext.dev}/junit.jar" />
-    <property name="testingJars" value="${lib.jdom}:${dev.junit}" />
+    <property name="build.cadcTAP" value="${build}/lib/${project}.jar" />
+    <property name="ext.postgres" value="${ext.lib}/postgresql-jdbc.jar" />
+    <property name="ext.junit" value="${ext.lib}/junit.jar" />
+    <property name="ext.xerces" value="${ext.lib}/xerces.jar" />
+    <property name="ext.jaxen.core" value="/usr/cadc/external/java/lib/jaxen-core.jar"/>
+    <property name="ext.jaxen.jdom" value="/usr/cadc/external/java/lib/jaxen-jdom.jar"/>
+    <property name="ext.saxpath" value="/usr/cadc/external/java/lib/saxpath.jar"/>
+    <property name="ext.commonsLog" value="${ext.lib}/commons-logging.jar" />
+    <property name="testingJars" value="${build.cadcTAP}:${ext.junit}:${ext.xerces}:${ext.jaxen.core}:${ext.jaxen.jdom}:${ext.saxpath}:${ext.postgres}:${ext.commonsLog}" />
+
 
     <!-- Directory used to deploy the WAR file -->
     <property name="deployDir" value="/data/test/webapps" />
@@ -131,6 +139,7 @@
                 <pathelement path="build/class"/>
                 <pathelement path="${jars}:${testingJars}"/>
             </classpath>
+            <test name="ca.nrc.cadc.vosi.AvailabilityTest"/>
             <test name="ca.nrc.cadc.vosi.CapabilityTest"/>
             <formatter type="plain" usefile="false"/>
         </junit>
