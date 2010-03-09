@@ -71,6 +71,7 @@ package ca.nrc.cadc.vosi;
 
 import org.jdom.Document;
 import org.jdom.Element;
+import org.jdom.Namespace;
 
 import ca.nrc.cadc.date.DateUtil;
 
@@ -99,19 +100,26 @@ public class Availability
 
     public Document toXmlDocument()
     {
-        Element eleAvailability = new Element("availability");
-        Util.addChild(eleAvailability, "available", Boolean.toString(_status.isAvailable()));
+        Namespace vosi = Namespace.getNamespace("vosi", VOSI.VOSI_NS_URI);
+        Namespace xsi = Namespace.getNamespace("xsi", VOSI.XSI_NS_URI);
+        Namespace vs = Namespace.getNamespace("vs", VOSI.VS_NS_URI);
+
+        Element eleAvailability = new Element("availability", vosi);
+        eleAvailability.addNamespaceDeclaration(xsi);
+        eleAvailability.addNamespaceDeclaration(vs);
+        
+        Util.addChild(eleAvailability, vosi, "available", Boolean.toString(_status.isAvailable()));
         if (_status.getUpSince() != null)
-            Util.addChild(eleAvailability, "upSince", DateUtil.toString(_status.getUpSince(), DateUtil.IVOA_DATE_FORMAT,
+            Util.addChild(eleAvailability, vosi, "upSince", DateUtil.toString(_status.getUpSince(), DateUtil.IVOA_DATE_FORMAT,
                     DateUtil.UTC));
         if (_status.getDownAt() != null)
-            Util.addChild(eleAvailability, "downAt", DateUtil
+            Util.addChild(eleAvailability, vosi, "downAt", DateUtil
                     .toString(_status.getDownAt(), DateUtil.IVOA_DATE_FORMAT, DateUtil.UTC));
         if (_status.getBackAt() != null)
-            Util.addChild(eleAvailability, "backAt", DateUtil
+            Util.addChild(eleAvailability, vosi, "backAt", DateUtil
                     .toString(_status.getBackAt(), DateUtil.IVOA_DATE_FORMAT, DateUtil.UTC));
         if (_status.getNote() != null)
-            Util.addChild(eleAvailability, "note", _status.getNote());
+            Util.addChild(eleAvailability, vosi, "note", _status.getNote());
 
         Document document = new Document();
         document.addContent(eleAvailability);

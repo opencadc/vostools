@@ -70,6 +70,7 @@
 package ca.nrc.cadc.vosi;
 
 import org.jdom.Element;
+import org.jdom.Namespace;
 
 /**
  * @author zhangsa
@@ -77,7 +78,7 @@ import org.jdom.Element;
  */
 public class Util
 {
-    
+
     /**
      * find the part of a string that is before the first occurance of a sub-string named searched. 
      * 
@@ -91,7 +92,7 @@ public class Util
     {
         String rtn = full;
         int idx = full.indexOf(searched);
-        if (idx >= 0 )
+        if (idx >= 0)
             rtn = full.substring(0, idx);
         return rtn;
     }
@@ -109,7 +110,7 @@ public class Util
     {
         String rtn = null;
         int idx = full.indexOf(searched);
-        if (idx >= 0 )
+        if (idx >= 0)
             rtn = full.substring(idx + searched.length());
         return rtn;
     }
@@ -124,10 +125,18 @@ public class Util
      */
     public static Element addChild(Element ele0, String chdName, String chdText)
     {
+        return addChild(ele0, null, chdName, chdText);
+    }
+
+    public static Element addChild(Element ele0, Namespace ns, String chdName, String chdText)
+    {
         Element ele = null;
         if (chdText != null && !chdText.equals(""))
         {
-            ele = new Element(chdName);
+            if (ns != null)
+                ele = new Element(chdName, ns);
+            else
+                ele = new Element(chdName);
             ele.setText(chdText);
             ele0.addContent(ele);
         }

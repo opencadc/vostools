@@ -69,6 +69,8 @@
 
 package ca.nrc.cadc.vosi;
 
+import java.io.StringWriter;
+import java.io.Writer;
 import java.text.ParseException;
 import java.util.Date;
 
@@ -89,6 +91,8 @@ import ca.nrc.cadc.date.DateUtil;
  */
 public class AvailabilityTest
 {
+    String schemaResource = "VOSI-v1.0.xsd"; // xsd file name
+    String schemaNSKey = "http://www.ivoa.net/xml/VOSI/v1.0";
 
     /**
      * @throws java.lang.Exception
@@ -139,14 +143,18 @@ public class AvailabilityTest
         Availability availability = new Availability(status);
         Document doc = availability.toXmlDocument();
         XMLOutputter xop = new XMLOutputter(Format.getPrettyFormat());
-        xop.output(doc, System.out);
+        Writer stringWriter = new StringWriter();
+        xop.output(doc, stringWriter);
+        String xmlString = stringWriter.toString();
+        System.out.println(xmlString);
+        TestUtil.validateXml(xmlString, schemaNSKey, schemaResource);
 
-        TestUtil.assertXmlNode(doc, "/availability");
-        TestUtil.assertXmlNode(doc, "/availability/available");
-        TestUtil.assertXmlNode(doc, "/availability/upSince");
-        TestUtil.assertXmlNode(doc, "/availability/downAt");
-        TestUtil.assertXmlNode(doc, "/availability/backAt");
-        TestUtil.assertXmlNode(doc, "/availability/note");
+        TestUtil.assertXmlNode(doc, "/vosi:availability");
+        TestUtil.assertXmlNode(doc, "/vosi:availability/vosi:available");
+        TestUtil.assertXmlNode(doc, "/vosi:availability/vosi:upSince");
+        TestUtil.assertXmlNode(doc, "/vosi:availability/vosi:downAt");
+        TestUtil.assertXmlNode(doc, "/vosi:availability/vosi:backAt");
+        TestUtil.assertXmlNode(doc, "/vosi:availability/vosi:note");
 
     }
 
@@ -158,14 +166,17 @@ public class AvailabilityTest
         Availability availability = new Availability(status);
         Document doc = availability.toXmlDocument();
         XMLOutputter xop = new XMLOutputter(Format.getPrettyFormat());
-        xop.output(doc, System.out);
+        Writer stringWriter = new StringWriter();
+        xop.output(doc, stringWriter);
+        String xmlString = stringWriter.toString();
+        System.out.println(xmlString);
 
-        TestUtil.assertXmlNode(doc, "/availability");
-        TestUtil.assertXmlNode(doc, "/availability/available[.='false']");
-        TestUtil.assertNoXmlNode(doc, "/availability/upSince");
-        TestUtil.assertNoXmlNode(doc, "/availability/downAt");
-        TestUtil.assertNoXmlNode(doc, "/availability/backAt");
-        TestUtil.assertNoXmlNode(doc, "/availability/note");
+        TestUtil.assertXmlNode(doc, "/vosi:availability");
+        TestUtil.assertXmlNode(doc, "/vosi:availability/vosi:available[.='false']");
+        TestUtil.assertNoXmlNode(doc, "/vosi:availability/vosi:upSince");
+        TestUtil.assertNoXmlNode(doc, "/vosi:availability/vosi:downAt");
+        TestUtil.assertNoXmlNode(doc, "/vosi:availability/vosi:backAt");
+        TestUtil.assertNoXmlNode(doc, "/vosi:availability/vosi:note");
     }
 
     @Test

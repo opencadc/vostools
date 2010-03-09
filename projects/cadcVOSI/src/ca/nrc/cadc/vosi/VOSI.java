@@ -69,88 +69,20 @@
 
 package ca.nrc.cadc.vosi;
 
-import java.io.IOException;
-import java.io.StringReader;
-import java.net.URL;
-import java.util.List;
-
-import org.jdom.Document;
-import org.jdom.JDOMException;
-import org.jdom.input.SAXBuilder;
-import org.jdom.xpath.XPath;
-import org.junit.Assert;
-
 /**
  * @author zhangsa
  *
  */
-public class TestUtil
+public class VOSI
 {
-    public static final String PARSER = "org.apache.xerces.parsers.SAXParser";
+    // Uri to the XML schema.
+    public static final String XSI_NS_URI = "http://www.w3.org/2001/XMLSchema-instance";
+    // Uri to the VOSI schema.
+    public static final String VOSI_NS_URI = "http://www.ivoa.net/xml/VOSI/v1.0";
+    // Uri to the VS schema.
+    public static final String VS_NS_URI = "http://www.ivoa.net/xml/VODataService/v1.0";
+    // xsi schema location
+    public static final String XSI_LOC = "http://www.ivoa.net/xml/VOSI/v1.0 http://www.ivoa.net/xml/VOSI/v1.0 "
+            + "http://www.ivoa.net/xml/VODataService/v1.0 http://www.ivoa.net/xml/VODataService/v1.0";
 
-    public static Document validateXml(String xml, String schemaNSKey, String schemaResource) throws IOException, JDOMException
-    {
-        /*
-        String schemaResource = "UWS-1.0.xsd"; // xsd file name
-        String schemaNSKey = "http://www.ivoa.net/xml/UWS/v1.0";
-        */
-        URL url = TestUtil.class.getClassLoader().getResource(schemaResource);
-        String serviceSchema = url.toString();
-
-        SAXBuilder schemaValidator;
-        schemaValidator = new SAXBuilder(PARSER, true);
-        schemaValidator.setFeature("http://xml.org/sax/features/validation", true);
-        schemaValidator.setFeature("http://apache.org/xml/features/validation/schema", true);
-        schemaValidator.setFeature("http://apache.org/xml/features/validation/schema-full-checking", true);
-        schemaValidator.setProperty("http://apache.org/xml/properties/schema/external-schemaLocation", schemaNSKey + " "
-                + serviceSchema);
-
-        return schemaValidator.build(new StringReader(xml));
-    }
-
-    /**
-     * assert one and only one node exists
-     * 
-     * @param document
-     * @param xpathString XPath to the node
-     */
-    public static void assertXmlNode(Document document, String xpathString)
-    {
-        Assert.assertTrue(getXmlNodeCount(document, xpathString) == 1);
-    }
-
-    /**
-     * assert no node exists by the xpath
-     * 
-     * @param document
-     * @param xpathString
-     */
-    public static void assertNoXmlNode(Document document, String xpathString)
-    {
-        Assert.assertTrue(getXmlNodeCount(document, xpathString) == 0);
-    }
-
-    /**
-     * count how many nodes are represented by the xpath
-     * 
-     * @param doc
-     * @param xpathStr
-     * @return
-     */
-    @SuppressWarnings("unchecked")
-    public static int getXmlNodeCount(Document doc, String xpathStr)
-    {
-        int rtn = 0;
-        XPath xpath;
-        try
-        {
-            xpath = XPath.newInstance(xpathStr);
-            List rs = xpath.selectNodes(doc);
-            rtn = rs.size();
-        } catch (JDOMException e)
-        {
-            e.printStackTrace();
-        }
-        return rtn;
-    }
 }
