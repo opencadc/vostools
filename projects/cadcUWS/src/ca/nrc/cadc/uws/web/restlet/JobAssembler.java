@@ -82,7 +82,7 @@ import java.text.DateFormat;
 import java.text.ParseException;
 import java.util.Date;
 import java.util.Map;
-import java.util.HashMap;
+import java.util.Set;
 
 import javax.security.auth.Subject;
 
@@ -113,11 +113,9 @@ public class JobAssembler
      */
     public Job assemble() throws MalformedURLException, ParseException
     {
-        final Job job;
-        final Map<String, String> valuesMap =
-                new HashMap<String, String>(getForm().getValuesMap());
         final String phase = getForm().getFirstValue(
-                JobAttribute.EXECUTION_PHASE.getAttributeName().toUpperCase());
+                JobAttribute.EXECUTION_PHASE.getAttributeName(), true);
+
         final ExecutionPhase executionPhase;
 
         if (StringUtil.hasText(phase))
@@ -129,9 +127,8 @@ public class JobAssembler
             executionPhase = null;
         }
 
-        final String duration = getForm().getFirstValue(
-                JobAttribute.EXECUTION_DURATION.getAttributeName().
-                        toUpperCase());
+        final String duration = form.getFirstValue(
+                JobAttribute.EXECUTION_DURATION.getAttributeName(), true);
         final long durationTime;
 
         if (StringUtil.hasText(duration))
@@ -143,16 +140,15 @@ public class JobAssembler
             durationTime = 0l;
         }
 
-        final String runID = getForm().getFirstValue(
-                JobAttribute.RUN_ID.getAttributeName().toUpperCase());
+        final String runID = form.getFirstValue(
+                JobAttribute.RUN_ID.getAttributeName(), true);
 
         final DateFormat df =
                 DateUtil.getDateFormat(DateUtil.IVOA_DATE_FORMAT,
                                        DateUtil.UTC);
 
-        final String destruction = getForm().getFirstValue(
-                JobAttribute.DESTRUCTION_TIME.getAttributeName().
-                        toUpperCase());
+        final String destruction = form.getFirstValue(
+                JobAttribute.DESTRUCTION_TIME.getAttributeName(), true);
         final Date destructionDate;
 
         if (StringUtil.hasText(destruction))
@@ -164,8 +160,8 @@ public class JobAssembler
             destructionDate = null;
         }
 
-        final String quote = getForm().getFirstValue(
-                JobAttribute.QUOTE.getAttributeName().toUpperCase());
+        final String quote = form.getFirstValue(
+                JobAttribute.QUOTE.getAttributeName(), true);
         final Date quoteDate;
 
         if (StringUtil.hasText(quote))
@@ -177,21 +173,30 @@ public class JobAssembler
             quoteDate = null;
         }
 
-        job = new Job(null, executionPhase, durationTime, destructionDate,
+        Job job = new Job(null, executionPhase, durationTime, destructionDate,
                       quoteDate, null, null, null, subject,
                       runID, null, null, null);
 
-        // Clear out those Request parameters that are pre-defined.
-        for (final JobAttribute jobAttribute : JobAttribute.values())
-        {
-            valuesMap.remove(jobAttribute.getAttributeName().toUpperCase());
-        }
+        //final Map<String, String> valuesMap =
+        //        new HashMap<String, String>(form.getValuesMap());
+        
 
-        // The remaining values are Parameters to the Job.
-        for (final Map.Entry<String, String> entry : valuesMap.entrySet())
+        // Clear out those Request parameters that are pre-defined.
+
+        //for (final JobAttribute jobAttribute : JobAttribute.values())
+        //{
+        //    paramNames.remove(jobAttribute.getAttributeName().toUpperCase());
+        //}
+
+        Set<String> paramNames = form.getNames();
+        for (String p : paramNames)
         {
-            job.addParameter(new Parameter(entry.getKey(),
-                                           entry.getValue()));
+            if ( !JobAttribute.isValue(p))
+            {
+                String[] vals = form.getValuesArray(p, true);
+                for (String v : vals)
+                    job.addParameter(new Parameter(p, v));
+            }
         }
 
         return job;

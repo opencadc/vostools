@@ -194,18 +194,15 @@ public class JobAsynchResource extends BaseJobResource
         }
         else
         {
-            Map<String,String> params = form.getValuesMap();
-            // Clear out those Request parameters that are pre-defined.
-            for (final JobAttribute jobAttribute : JobAttribute.values())
+            Set<String> paramNames = form.getNames();
+            for (String p : paramNames)
             {
-                params.remove(jobAttribute.getAttributeName().toUpperCase());
-            }
-
-            // The remaining values are new Parameters to the Job.
-            for (final Map.Entry<String, String> entry : params.entrySet())
-            {
-                job.addParameter(new Parameter(entry.getKey(),
-                                               entry.getValue()));
+                if ( !JobAttribute.isValue(p))
+                {
+                    String[] vals = form.getValuesArray(p, true);
+                    for (String v : vals)
+                        job.addParameter(new Parameter(p, v));
+                }
             }
         }
 

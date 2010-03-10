@@ -113,4 +113,12 @@ public enum JobAttribute
     {
         return attributeName;
     }
+
+    public static boolean isValue(String v)
+    {
+        for (JobAttribute ja : values())
+            if (ja.getAttributeName().equalsIgnoreCase(v))
+                return true;
+        return false;
+    }
 }
