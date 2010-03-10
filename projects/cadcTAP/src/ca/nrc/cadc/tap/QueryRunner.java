@@ -271,7 +271,7 @@ public class QueryRunner implements JobRunner
 
             logger.debug("invoking MaxRecValidator...");
             MaxRecValidator maxRecValidator = new MaxRecValidator();
-            int maxRows = maxRecValidator.validate(paramList);
+            Integer maxRows = maxRecValidator.validate(paramList);
 
             logger.debug("invoking TapValidator to get LANG...");
         	String lang = tapValidator.getLang();
@@ -284,10 +284,13 @@ public class QueryRunner implements JobRunner
             tapQuery.setTapSchema(tapSchema);
             tapQuery.setExtraTables(tableDescs);
             tapQuery.setParameterList(paramList);
-            if (maxRows == 0)
-                tapQuery.setMaxRowCount(maxRows);
-            else if (maxRows < Integer.MAX_VALUE)
-                tapQuery.setMaxRowCount(maxRows + 1); // +1 so the TableWriter check overflow
+            if (maxRows != null)
+            {
+                if (maxRows == 0)
+                    tapQuery.setMaxRowCount(maxRows);
+                else if (maxRows < Integer.MAX_VALUE)
+                    tapQuery.setMaxRowCount(maxRows + 1); // +1 so the TableWriter can check overflow
+            }
             logger.debug("invoking TapQuery...");
         	String sql = tapQuery.getSQL();
             List<TapSelectItem> selectList = tapQuery.getSelectList();
@@ -296,7 +299,7 @@ public class QueryRunner implements JobRunner
             TableWriter writer = TableWriterFactory.getWriter(paramList);
             writer.setTapSchema(tapSchema);
             writer.setSelectList(selectList);
-            if (maxRows > 0 && maxRows < Integer.MAX_VALUE)
+            if (maxRows != null)
                 writer.setMaxRowCount(maxRows);
 
             tList.add(System.currentTimeMillis());
@@ -308,11 +311,11 @@ public class QueryRunner implements JobRunner
             File tmpFile = null;
             try
             {
-                if (maxRows > 0)
+                if (maxRows == null || maxRows.intValue() > 0)
                 {
                     logger.debug("getting database connection...");
                     connection = queryDataSource.getConnection();
-                    logger.debug("executing query: " + sql);
+                    logger.info("executing query: " + sql);
                     pstmt = connection.prepareStatement(sql);
                     rs = pstmt.executeQuery();
                 }

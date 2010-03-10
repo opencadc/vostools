@@ -95,11 +95,11 @@ public class MaxRecValidator
      * @param paramList List of TAP parameters.
      * @return int value of MAXREC.
      */
-    public int validate(List<Parameter> paramList)
+    public Integer validate(List<Parameter> paramList)
     {
         String value = TapUtil.findParameterValue("MAXREC", paramList);
         if (value == null || value.trim().length() == 0)
-            return Integer.MAX_VALUE;
+            return null;
 
         try
         {
@@ -113,5 +113,4 @@ public class MaxRecValidator
             throw new IllegalArgumentException("Invalid MAXREC parameter: " + value);
         }
     }
-    
 }

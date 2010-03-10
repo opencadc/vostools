@@ -196,11 +196,12 @@ public class SqlQuery implements TapQuery
     }
 
     /**
-     * Not currently implemented for SQL queries.
+     * Not currently used for SQL queries.
      */
     public void setMaxRowCount(int count)
     {
-        this._maxRows = count;
+        if (count < _maxRows)
+            this._maxRows = count;
     }
     
 	public String getSQL()
