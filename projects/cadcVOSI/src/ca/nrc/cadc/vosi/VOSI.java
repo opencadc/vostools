@@ -80,7 +80,9 @@ public class VOSI
     // Uri to the VOSI schema.
     public static final String VOSI_NS_URI = "http://www.ivoa.net/xml/VOSI/v1.0";
     // Uri to the VS schema.
-    public static final String VS_NS_URI = "http://www.ivoa.net/xml/VODataService/v1.0";
+    public static final String VS_NS_URI = "http://www.ivoa.net/xml/VODataService/v1.1";
+    // Uri to the VS schema.
+    public static final String VR_NS_URI = "http://www.ivoa.net/xml/VOResource/v1.0";
     // xsi schema location
     public static final String XSI_LOC = "http://www.ivoa.net/xml/VOSI/v1.0 http://www.ivoa.net/xml/VOSI/v1.0 "
             + "http://www.ivoa.net/xml/VODataService/v1.0 http://www.ivoa.net/xml/VODataService/v1.0";

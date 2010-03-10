@@ -114,6 +114,8 @@
     <property name="ext.commonsLog" value="${ext.lib}/commons-logging.jar" />
     <property name="testingJars" value="${build.cadcTAP}:${ext.junit}:${ext.xerces}:${ext.jaxen.core}:${ext.jaxen.jdom}:${ext.saxpath}:${ext.postgres}:${ext.commonsLog}" />
 
+	<property name="resources.dir" value="test/resources/" />    
+
 
     <!-- Directory used to deploy the WAR file -->
     <property name="deployDir" value="/data/test/webapps" />
@@ -123,7 +125,7 @@
         <javac destdir="${build}/class"
                source="${java.source.version}"
                target="${java.target.version}"
-               classpath="${jars}:${testingJars}" >
+               classpath="${jars}:${testingJars}:${resources.dir}" >
             <src path="test/src"/>
         </javac>
     </target>
@@ -137,6 +139,7 @@
         <junit printsummary="yes" haltonfailure="yes" fork="yes">
             <classpath>
                 <pathelement path="build/class"/>
+                <pathelement path="${resources.dir}"/>
                 <pathelement path="${jars}:${testingJars}"/>
             </classpath>
             <test name="ca.nrc.cadc.vosi.AvailabilityTest"/>

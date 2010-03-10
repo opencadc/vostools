@@ -72,7 +72,9 @@ package ca.nrc.cadc.vosi;
 import java.io.IOException;
 import java.io.StringReader;
 import java.net.URL;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 import org.jdom.Document;
 import org.jdom.JDOMException;
@@ -88,24 +90,37 @@ public class TestUtil
 {
     public static final String PARSER = "org.apache.xerces.parsers.SAXParser";
 
-    public static Document validateXml(String xml, String schemaNSKey, String schemaResource) throws IOException, JDOMException
+    public static Document validateXml(String xml, Map<String, String> schemaMap) throws IOException, JDOMException
     {
-        /*
-        String schemaResource = "UWS-1.0.xsd"; // xsd file name
-        String schemaNSKey = "http://www.ivoa.net/xml/UWS/v1.0";
-        */
-        URL url = TestUtil.class.getClassLoader().getResource(schemaResource);
-        String serviceSchema = url.toString();
+        URL url;
+        String schemaResource, serviceSchema;
+        String space = " ";
+        StringBuffer sbSchemaLocations = new StringBuffer();
+
+        for (String schemaNSKey : schemaMap.keySet())
+        {
+            schemaResource = (String) schemaMap.get(schemaNSKey);
+            url = TestUtil.class.getClassLoader().getResource(schemaResource);
+            serviceSchema = url.toString();
+            sbSchemaLocations.append(schemaNSKey).append(space).append(serviceSchema).append(space);
+        }
 
         SAXBuilder schemaValidator;
         schemaValidator = new SAXBuilder(PARSER, true);
         schemaValidator.setFeature("http://xml.org/sax/features/validation", true);
         schemaValidator.setFeature("http://apache.org/xml/features/validation/schema", true);
         schemaValidator.setFeature("http://apache.org/xml/features/validation/schema-full-checking", true);
-        schemaValidator.setProperty("http://apache.org/xml/properties/schema/external-schemaLocation", schemaNSKey + " "
-                + serviceSchema);
+        schemaValidator
+                .setProperty("http://apache.org/xml/properties/schema/external-schemaLocation", sbSchemaLocations.toString());
 
         return schemaValidator.build(new StringReader(xml));
+    }
+
+    public static Document validateXml(String xml, String schemaNSKey, String schemaResource) throws IOException, JDOMException
+    {
+        Map<String, String> map = new HashMap<String, String>();
+        map.put(schemaNSKey, schemaResource);
+        return validateXml(xml, map);
     }
 
     /**

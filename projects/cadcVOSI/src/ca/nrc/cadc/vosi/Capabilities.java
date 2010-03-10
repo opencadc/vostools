@@ -82,12 +82,6 @@ import org.jdom.Namespace;
  */
 public class Capabilities
 {
-    // Uri to the XML schema.
-    public static final String XSI_NS_URI = "http://www.w3.org/2001/XMLSchema-instance";
-    // Uri to the VOSI schema.
-    public static final String VOSI_NS_URI = "http://www.ivoa.net/xml/VOSI/v1.0";
-    // Uri to the VS schema.
-    public static final String VS_NS_URI = "http://www.ivoa.net/xml/VODataService/v1.0";
     // xsi schema location
     public static final String XSI_LOC = "http://www.ivoa.net/xml/VOSI/v1.0 http://www.ivoa.net/xml/VOSI/v1.0 "
             + "http://www.ivoa.net/xml/VODataService/v1.0 http://www.ivoa.net/xml/VODataService/v1.0";
@@ -108,15 +102,17 @@ public class Capabilities
     
     public Document toXmlDocument()
     {
-        Namespace vosi = Namespace.getNamespace("vosi", VOSI_NS_URI);
-        Namespace xsi = Namespace.getNamespace("xsi", XSI_NS_URI);
-        Namespace vs = Namespace.getNamespace("vs", VS_NS_URI);
+        Namespace vosi = Namespace.getNamespace("vosi", VOSI.VOSI_NS_URI);
+        Namespace xsi = Namespace.getNamespace("xsi", VOSI.XSI_NS_URI);
+        Namespace vs = Namespace.getNamespace("vs", VOSI.VS_NS_URI);
+        Namespace vr = Namespace.getNamespace("vr", VOSI.VR_NS_URI);
         Element eleCapabilities = new Element("capabilities", vosi);
         eleCapabilities.addNamespaceDeclaration(xsi);
         eleCapabilities.addNamespaceDeclaration(vs);
+        eleCapabilities.addNamespaceDeclaration(vr);
 
-        Attribute attSchemaLocation = new Attribute("schemaLocation", XSI_LOC, xsi);
-        eleCapabilities.setAttribute(attSchemaLocation);
+        //Attribute attSchemaLocation = new Attribute("schemaLocation", XSI_LOC, xsi);
+        //eleCapabilities.setAttribute(attSchemaLocation);
 
         Document document = new Document();
         document.addContent(eleCapabilities);

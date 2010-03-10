@@ -69,14 +69,18 @@
 
 package ca.nrc.cadc.vosi;
 
+import java.io.StringWriter;
+import java.io.Writer;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 import org.jdom.Document;
-import org.jdom.Element;
+import org.jdom.output.Format;
+import org.jdom.output.XMLOutputter;
 import org.junit.After;
 import org.junit.AfterClass;
-import org.junit.Assert;
 import org.junit.Before;
 import org.junit.BeforeClass;
 import org.junit.Test;
@@ -87,7 +91,17 @@ import org.junit.Test;
  */
 public class CapabilityTest
 {
+    String schemaNSKey1 = "http://www.ivoa.net/xml/VOSI/v1.0";
+    String schemaResource1 = "VOSI-v1.0.xsd"; // xsd file name
 
+    String schemaNSKey2 = "http://www.ivoa.net/xml/VOResource/v1.0";
+    String schemaResource2 = "VR-v1.0.xsd";
+
+    String schemaNSKey3 = "http://www.ivoa.net/xml/VODataService/v1.1";
+    String schemaResource3 = "VS-v1.1.xsd";
+
+    Map<String, String> schemaNSMap;
+    
     /**
      * @throws java.lang.Exception
      */
@@ -110,6 +124,10 @@ public class CapabilityTest
     @Before
     public void setUp() throws Exception
     {
+        schemaNSMap = new HashMap<String, String>();
+        schemaNSMap.put(schemaNSKey1, schemaResource1);
+        schemaNSMap.put(schemaNSKey2, schemaResource2);
+        schemaNSMap.put(schemaNSKey3, schemaResource3);
     }
 
     /**
@@ -120,19 +138,6 @@ public class CapabilityTest
     {
     }
 
-    @Test
-    public void testCapability() throws Exception
-    {
-        Capability cap = new Capability("http://localhost/vosiTest/", "ivo://ivoa.net/std/VOSI#tables", "tables", "std");
-        Element ele = cap.toXmlElement();
-        //XMLOutputter xop = new XMLOutputter(Format.getPrettyFormat());
-        // TODO: direct the XML to System.out via log.debug
-        //xop.output(ele, System.out);
-        // TODO: compare ele content o expectations via Assert
-        compare(cap, ele);
-    }
-
-    @SuppressWarnings("unchecked")
     @Test
     public void testCapabilities() throws Exception
     {
@@ -146,33 +151,23 @@ public class CapabilityTest
         // with a role
         Capability cap3 = new Capability("http://example.com/myApp/", "ivo://ivoa.net/std/Something", "something", "std");
         capList.add(cap3);
-        
+
         Capabilities caps = new Capabilities(capList);
         Document doc = caps.toXmlDocument();
-        Element root = doc.getRootElement();
-        List nodes  = root.getChildren();
 
-        //XMLOutputter xop = new XMLOutputter(Format.getPrettyFormat());
-        // TODO: direct the XML to System.out via log.debug
-        //xop.output(ele, System.out);
-        // TODO: compare ele content o expectations via Assert
-        Assert.assertEquals(root.getName(), "capabilities");
-        Assert.assertEquals(nodes.size(), 3);
-        Element ele;
-        ele = (Element) nodes.get(0);
-        compare(cap1, ele);
-        ele = (Element) nodes.get(1);
-        compare(cap2, ele);
-        ele = (Element) nodes.get(2);
-        compare(cap3, ele);
+        XMLOutputter xop = new XMLOutputter(Format.getPrettyFormat());
+        Writer stringWriter = new StringWriter();
+        xop.output(doc, stringWriter);
+        String xmlString = stringWriter.toString();
+        //System.out.println(xmlString);
 
-        // TODO: factor out and re-use detailed comparison of a Capability vs Element
-    }
+        TestUtil.validateXml(xmlString, schemaNSMap);
 
-    private void compare(Capability c, Element e)
-    {
-        Assert.assertEquals(e.getName(), "capability");
-        // TODO: compare attributes
-        // TODO: compare child nodes and their attributes
+        TestUtil.assertXmlNode(doc, "/vosi:capabilities");
+        TestUtil.assertXmlNode(doc, "/vosi:capabilities/vosi:capability[@standardID='ivo://ivoa.net/std/VOSI#capability']");
+        TestUtil.assertXmlNode(doc, "/vosi:capabilities/vosi:capability[@standardID='ivo://ivoa.net/std/VOSI#availability']");
+        TestUtil.assertXmlNode(doc, "/vosi:capabilities/vosi:capability[@standardID='ivo://ivoa.net/std/Something']");
+        TestUtil.assertXmlNode(doc,
+                "/vosi:capabilities/vosi:capability/interface/accessURL[.='http://example.com/myApp/availability']");
     }
 }

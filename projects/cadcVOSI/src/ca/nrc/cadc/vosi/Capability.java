@@ -102,8 +102,9 @@ public class Capability
     
     public Element toXmlElement()
     {
-        Namespace vosi = Namespace.getNamespace("vosi", Capabilities.VOSI_NS_URI);
-        Namespace xsi = Namespace.getNamespace("xsi", Capabilities.XSI_NS_URI);
+        Namespace vosi = Namespace.getNamespace("vosi", VOSI.VOSI_NS_URI);
+        Namespace vr = Namespace.getNamespace("vr", VOSI.VR_NS_URI);
+        Namespace xsi = Namespace.getNamespace("xsi", VOSI.XSI_NS_URI);
         Element eleCapability = new Element("capability", vosi);
         eleCapability.setAttribute("standardID", _standardID);
         

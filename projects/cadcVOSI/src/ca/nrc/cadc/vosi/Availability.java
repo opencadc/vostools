@@ -101,12 +101,8 @@ public class Availability
     public Document toXmlDocument()
     {
         Namespace vosi = Namespace.getNamespace("vosi", VOSI.VOSI_NS_URI);
-        Namespace xsi = Namespace.getNamespace("xsi", VOSI.XSI_NS_URI);
-        Namespace vs = Namespace.getNamespace("vs", VOSI.VS_NS_URI);
 
         Element eleAvailability = new Element("availability", vosi);
-        eleAvailability.addNamespaceDeclaration(xsi);
-        eleAvailability.addNamespaceDeclaration(vs);
         
         Util.addChild(eleAvailability, vosi, "available", Boolean.toString(_status.isAvailable()));
         if (_status.getUpSince() != null)
