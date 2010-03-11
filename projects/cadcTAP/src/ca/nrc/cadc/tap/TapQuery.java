@@ -127,7 +127,9 @@ public interface TapQuery
     void setMaxRowCount(Integer count);
 
     /**
-     * Get the effective row count limit.
+     * Get the effective row count limit. The QueryRunner class will use this to
+     * limit output to the lesser of this value and the user-specified MAXREC and
+     * will actually write one row less than this along with an overflow indicator.
      * 
      * @return max number of rows the query will return, null means unlimited
      */

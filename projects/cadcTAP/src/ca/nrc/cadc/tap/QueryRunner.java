@@ -285,14 +285,16 @@ public class QueryRunner implements JobRunner
             tapQuery.setExtraTables(tableDescs);
             tapQuery.setParameterList(paramList);
             if (maxRows != null)
-            {
-                if (maxRows == 0)
-                    tapQuery.setMaxRowCount(maxRows);
-                else
-                    tapQuery.setMaxRowCount(maxRows + 1); // +1 so the TableWriter can check overflow
-            }
+                tapQuery.setMaxRowCount(maxRows + 1); // +1 so the TableWriter can detect overflow
+
             // get the actual limit from the query implementation
-            maxRows = tapQuery.getMaxRowCount();
+            Integer tmp = tapQuery.getMaxRowCount();
+            if (tmp != null)
+            {
+                tmp = tmp - 1;
+                if (maxRows == null || tmp < maxRows)
+                    maxRows = tmp;
+            }
             
             logger.debug("invoking TapQuery...");
         	String sql = tapQuery.getSQL();

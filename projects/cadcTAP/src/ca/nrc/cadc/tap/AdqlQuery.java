@@ -226,7 +226,9 @@ public class AdqlQuery implements TapQuery
 
     public void setMaxRowCount(Integer count)
     {
-        if (count < _maxRows)
+        if (_maxRows == null)
+            this._maxRows = count;
+        else if (count != null && count < _maxRows)
             this._maxRows = count;
     }
 
