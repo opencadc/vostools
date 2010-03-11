@@ -288,9 +288,12 @@ public class QueryRunner implements JobRunner
             {
                 if (maxRows == 0)
                     tapQuery.setMaxRowCount(maxRows);
-                else if (maxRows < Integer.MAX_VALUE)
+                else
                     tapQuery.setMaxRowCount(maxRows + 1); // +1 so the TableWriter can check overflow
             }
+            // get the actual limit from the query implementation
+            maxRows = tapQuery.getMaxRowCount();
+            
             logger.debug("invoking TapQuery...");
         	String sql = tapQuery.getSQL();
             List<TapSelectItem> selectList = tapQuery.getSelectList();

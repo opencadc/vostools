@@ -124,6 +124,12 @@ public interface TapQuery
      *
      * @param count
      */
-    void setMaxRowCount(int count);
+    void setMaxRowCount(Integer count);
 
+    /**
+     * Get the effective row count limit.
+     * 
+     * @return max number of rows the query will return, null means unlimited
+     */
+    Integer getMaxRowCount();
 }

@@ -106,7 +106,7 @@ public class MaxRecValidator
             int maxRec = Integer.parseInt(value);
             if (maxRec < 0)
                 throw new IllegalArgumentException("Invalid MAXREC parameter: " + value);
-            return maxRec;
+            return new Integer(maxRec);
         }
         catch (NumberFormatException nfe)
         {
