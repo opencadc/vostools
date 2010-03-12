@@ -69,45 +69,62 @@
 
 package ca.nrc.cadc.vosi;
 
-import ca.nrc.cadc.tap.parser.TestUtil;
+import java.io.StringWriter;
+import java.io.Writer;
+import java.util.ArrayList;
+import java.util.Date;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+
+import org.apache.log4j.Level;
+import org.apache.log4j.Logger;
+import org.jdom.Document;
+import org.jdom.JDOMException;
+import org.jdom.output.Format;
+import org.jdom.output.XMLOutputter;
+import org.jdom.xpath.XPath;
+import org.junit.After;
+import org.junit.AfterClass;
+import org.junit.Assert;
+import org.junit.Before;
+import org.junit.BeforeClass;
+import org.junit.Test;
+
+import ca.nrc.cadc.date.DateUtil;
 import ca.nrc.cadc.tap.schema.ColumnDesc;
 import ca.nrc.cadc.tap.schema.KeyDesc;
 import ca.nrc.cadc.tap.schema.SchemaDesc;
 import ca.nrc.cadc.tap.schema.TableDesc;
 import ca.nrc.cadc.tap.schema.TapSchema;
 import ca.nrc.cadc.util.Log4jInit;
-import java.util.ArrayList;
-import java.util.List;
-
-import org.apache.log4j.Level;
-import org.apache.log4j.Logger;
-import org.jdom.Document;
-import org.jdom.Element;
-import org.jdom.JDOMException;
-import org.jdom.output.Format;
-import org.jdom.output.XMLOutputter;
-import org.jdom.xpath.XPath;
-
-import org.junit.After;
-import org.junit.AfterClass;
-import org.junit.Before;
-import org.junit.BeforeClass;
-import org.junit.Test;
-import org.junit.Assert;
 
 /**
  *
- * @author pdowler
+ * @author pdowler, Sailor Zhang
  */
-public class VODataServiceTest 
+public class VODataServiceTest
 {
-    private static final Logger LOG = Logger.getLogger(VODataServiceTest.class);
+    private static final Logger log = Logger.getLogger(VODataServiceTest.class);
     static
     {
-        Log4jInit.setLevel("ca", Level.DEBUG);
+        Log4jInit.setLevel("ca", Level.WARN);
     }
 
-    public VODataServiceTest() { }
+    String schemaNSKey1 = "http://www.ivoa.net/xml/VOResource/v1.0";
+    String schemaResource1 = "VR-v1.0.xsd";
+
+    String schemaNSKey2 = "http://www.ivoa.net/xml/RegistryInterface/v1.0";
+    String schemaResource2 = "RI-v1.0.xsd";
+
+    String schemaNSKey3 = "http://www.ivoa.net/xml/VODataService/v1.1";
+    String schemaResource3 = "VS-v1.1.xsd";
+
+    Map<String, String> schemaNSMap;
+
+    public VODataServiceTest()
+    {
+    }
 
     @BeforeClass
     public static void setUpClass() throws Exception
@@ -116,39 +133,60 @@ public class VODataServiceTest
     }
 
     @AfterClass
-    public static void tearDownClass() throws Exception { }
+    public static void tearDownClass() throws Exception
+    {
+    }
 
     @Before
-    public void setUp() { }
+    public void setUp()
+    {
+        schemaNSMap = new HashMap<String, String>();
+        schemaNSMap.put(schemaNSKey1, schemaResource1);
+        schemaNSMap.put(schemaNSKey2, schemaResource2);
+        schemaNSMap.put(schemaNSKey3, schemaResource3);
+    }
 
     @After
-    public void tearDown() { }
+    public void tearDown()
+    {
+    }
 
-    
     /**
      * Test of getExtension method, of class VOTableWriter.
      */
     @Test
     public final void testUsingMockSchema()
     {
-        LOG.debug("testMock");
+        log.debug("testMock");
         try
         {
-            TapSchema ts = TestUtil.loadDefaultTapSchema();
+            TapSchema ts = ca.nrc.cadc.tap.parser.TestUtil.loadDefaultTapSchema();
             VODataService vods = new VODataService(ts);
             Document doc = vods.getDocument();
             XMLOutputter xop = new XMLOutputter(Format.getPrettyFormat());
-            xop.output(doc, System.out);
-            
+            Writer stringWriter = new StringWriter();
+            xop.output(doc, stringWriter);
+            String xmlString = stringWriter.toString();
+            log.debug(xmlString);
+
+            TestUtil.validateXml(xmlString, schemaNSMap);
+
+            TestUtil.assertXmlNode(doc, "/tableset");
+            TestUtil.assertXmlNode(doc, "/tableset/schema[name='tap_schema']");
+            TestUtil.assertXmlNode(doc, "/tableset/schema/table[name='alldatatypes']");
+            TestUtil.assertXmlNode(doc,
+                    "/tableset/schema/table[name='alldatatypes']/column[name='t_string']/description");
+            TestUtil.assertXmlNode(doc, "/tableset/schema/table[name='alldatatypes']/column[name='t_string']/unit");
+            TestUtil.assertXmlNode(doc, "/tableset/schema/table[name='alldatatypes']/column[name='t_string']/ucd");
+            TestUtil.assertXmlNode(doc, "/tableset/schema/table[name='alldatatypes']/column[name='t_string']/utype");
+            TestUtil.assertXmlNode(doc, "/tableset/schema/table[name='alldatatypes']/column[name='t_string']/dataType");
+
             checkRootElement(doc);
 
             for (SchemaDesc sd : ts.schemaDescs)
                 checkSchema(doc, sd);
 
-            for (KeyDesc kd : ts.keyDescs)
-                checkKey(doc, kd);
-        }
-        catch(Throwable t)
+        } catch (Throwable t)
         {
             t.printStackTrace(System.out);
             Assert.fail(t.toString());
@@ -158,75 +196,61 @@ public class VODataServiceTest
     /**
      * Test of getExtension method, of class VOTableWriter.
      */
-    //@Test
+    @Test
     public final void testEmpty()
     {
-        LOG.debug("testEmpty");
+        log.debug("testEmpty");
         try
         {
             TapSchema ts = new TapSchema(new ArrayList<SchemaDesc>(), new ArrayList<KeyDesc>());
             VODataService vods = new VODataService(ts);
-            Document doc = vods.getDocument();
-
-            for (SchemaDesc sd : ts.schemaDescs)
-                checkSchema(doc, sd);
-
-            for (KeyDesc kd : ts.keyDescs)
-                checkKey(doc, kd);
-        }
-        catch(Throwable t)
+            vods.getDocument();
+        } catch (Throwable t)
         {
-            Assert.fail(t.toString());
+            if (t instanceof IllegalArgumentException)
+                assert (true); //expected because schema is empty
+            else
+                Assert.fail(t.toString());
         }
     }
 
-    
-    private void checkXSI(Document doc)
-    {
-
-    }
     private void checkSchema(Document doc, SchemaDesc sd) throws JDOMException
     {
         String schemaName = sd.getSchemaName();
-        
+
         XPath xpath = XPath.newInstance("/tableset/schema/name[.='" + schemaName + "']");
-        List rs = xpath.selectNodes(doc);
-        Assert.assertTrue(rs.size()==1);
-        
+        List<?> rs = xpath.selectNodes(doc);
+        Assert.assertTrue(rs.size() == 1);
+
         for (TableDesc td : sd.getTableDescs())
         {
-            xpath = XPath.newInstance("/tableset/schema[name='" + schemaName + "']/table[name='" + td.getTableName() + "']");
+            xpath = XPath.newInstance("/tableset/schema[name='" + schemaName + "']/table[name='" + td.getTableName()
+                    + "']");
             rs = xpath.selectNodes(doc);
-            Assert.assertTrue(rs.size()==1);
-
+            Assert.assertTrue(rs.size() == 1);
             checkColumns(doc, td);
         }
     }
-    
+
     private void checkRootElement(Document doc) throws JDOMException
     {
         XPath xpath = XPath.newInstance("/tableset");
-        List rs = xpath.selectNodes(doc);
-        Assert.assertTrue(rs.size()==1);
+        List<?> rs = xpath.selectNodes(doc);
+        Assert.assertTrue(rs.size() == 1);
     }
-    
+
     private void checkColumns(Document doc, TableDesc td) throws JDOMException
     {
         XPath xpath;
-        List rs;
+        List<?> rs;
         String schemaName = td.getSchemaName();
-        
+
         for (ColumnDesc cd : td.getColumnDescs())
         {
-            xpath = XPath.newInstance("/tableset/schema[name='" + schemaName + "']/table[name='" + td.getTableName() + "']/column[name='" + cd.getColumnName() + "']");
+            xpath = XPath.newInstance("/tableset/schema[name='" + schemaName + "']/table[name='" + td.getTableName()
+                    + "']/column[name='" + cd.getColumnName() + "']");
             rs = xpath.selectNodes(doc);
-            Assert.assertTrue(rs.size()==1);
+            Assert.assertTrue(rs.size() == 1);
         }
     }
-
-    private void checkKey(Document doc, KeyDesc kd)
-    {
-
-    }
-
 }

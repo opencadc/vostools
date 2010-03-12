@@ -69,9 +69,9 @@
 
 package ca.nrc.cadc.vosi;
 
-import ca.nrc.cadc.tap.schema.TapSchema;
-import ca.nrc.cadc.tap.schema.TapSchemaDAO;
 import java.io.IOException;
+import java.util.Date;
+
 import javax.naming.Context;
 import javax.naming.InitialContext;
 import javax.servlet.ServletConfig;
@@ -80,33 +80,37 @@ import javax.servlet.http.HttpServlet;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 import javax.sql.DataSource;
+
 import org.apache.log4j.Logger;
 import org.jdom.Document;
 import org.jdom.output.Format;
 import org.jdom.output.XMLOutputter;
 
+import ca.nrc.cadc.date.DateUtil;
+import ca.nrc.cadc.tap.schema.TapSchema;
+import ca.nrc.cadc.tap.schema.TapSchemaDAO;
+
 /**
  * Simple servlet that reads metadata using <code>ca.nrc.cadc.tap.schema</code>
  * and writes it in XML.
  * 
- * @author pdowler
+ * @author pdowler, Sailor Zhang
  */
 public class TableServlet extends HttpServlet
 {
+    private static final long serialVersionUID = 1L;
     private static Logger log = Logger.getLogger(TableServlet.class);
-
     private static String queryDataSourceName = "jdbc/tapuser";
-    
+
     @Override
-    public void init( final ServletConfig config ) throws ServletException
+    public void init(final ServletConfig config) throws ServletException
     {
-    	super.init( config );
+        super.init(config);
     }
 
     @Override
-    protected void doGet(HttpServletRequest request, HttpServletResponse response)
-        throws ServletException, IOException
-	{
+    protected void doGet(HttpServletRequest request, HttpServletResponse response) throws ServletException, IOException
+    {
         boolean started = false;
         try
         {
@@ -124,16 +128,14 @@ public class TableServlet extends HttpServlet
             XMLOutputter out = new XMLOutputter(Format.getPrettyFormat());
             started = true;
             out.output(doc, response.getOutputStream());
-        }
-        catch(Throwable t)
+        } catch (Throwable t)
         {
             log.error("BUG", t);
             if (!started)
                 response.sendError(HttpServletResponse.SC_SERVICE_UNAVAILABLE, t.getMessage());
-        }
-        finally
+        } finally
         {
 
         }
-	}
+    }
 }

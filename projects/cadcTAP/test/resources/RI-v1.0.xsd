@@ -1,0 +1,49 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<xs:schema targetNamespace="http://www.ivoa.net/xml/RegistryInterface/v1.0" 
+           xmlns:ri="http://www.ivoa.net/xml/RegistryInterface/v1.0"
+           xmlns="http://www.w3.org/2001/XMLSchema" 
+           xmlns:xs="http://www.w3.org/2001/XMLSchema" 
+           xmlns:vr="http://www.ivoa.net/xml/VOResource/v1.0" 
+           elementFormDefault="qualified"
+           version="1.0">
+           
+   <xs:import namespace="http://www.ivoa.net/xml/VOResource/v1.0"
+              schemaLocation="http://www.ivoa.net/xml/VOResource/v1.0"/>     
+     
+   <xs:element name="VOResources">
+      <xs:annotation>
+         <xs:documentation>
+           a container for one or more resource descriptions or
+           identifier references to resources.
+         </xs:documentation>
+         <xs:documentation>
+           This is used to transmit multiple resource descriptions
+           resulting from a query.
+         </xs:documentation>
+      </xs:annotation>
+
+      <xs:complexType>
+         <xs:sequence>
+            <xs:choice>
+               <xs:element ref="ri:Resource"
+                           minOccurs="0" maxOccurs="unbounded"/>
+               <xs:element name="identifier" type="vr:IdentifierURI" 
+                           minOccurs="0" maxOccurs="unbounded"/>
+             </xs:choice>
+         </xs:sequence>
+         <xs:attribute name="from" type="xs:positiveInteger" use="required" />
+         <xs:attribute name="numberReturned" type="xs:positiveInteger" 
+                       use="required" />
+         <xs:attribute name="more" type="xs:boolean"  use="required" />
+      </xs:complexType>
+   </xs:element>
+   
+   <xs:element name="Resource" type="vr:Resource">
+      <xs:annotation>
+         <xs:documentation>
+           a description of a single resource
+         </xs:documentation>
+      </xs:annotation>
+   </xs:element>
+   
+</xs:schema>

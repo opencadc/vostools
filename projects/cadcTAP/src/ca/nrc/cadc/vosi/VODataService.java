@@ -69,28 +69,32 @@
 
 package ca.nrc.cadc.vosi;
 
+import java.util.Date;
+
+import org.jdom.Attribute;
+import org.jdom.Comment;
+import org.jdom.Document;
+import org.jdom.Element;
+import org.jdom.Namespace;
+
+import ca.nrc.cadc.date.DateUtil;
 import ca.nrc.cadc.tap.schema.ColumnDesc;
 import ca.nrc.cadc.tap.schema.SchemaDesc;
 import ca.nrc.cadc.tap.schema.TableDesc;
 import ca.nrc.cadc.tap.schema.TapSchema;
-import org.apache.log4j.Logger;
-import org.jdom.Attribute;
-import org.jdom.Document;
-import org.jdom.Element;
-import org.jdom.Namespace;
 
 /**
  *
  * @author pdowler
  */
-public class VODataService 
+public class VODataService
 {
-    private static Logger log = Logger.getLogger(VODataService.class);
-    // Uri to the XML schema.
-    public static final String XSI_NS_URI = "http://www.w3.org/2001/XMLSchema-instance";
+//    private static Logger log = Logger.getLogger(VODataService.class);
 
-    // Uri to the VODataService schema.
-    public static final String VOTABLE_NS_URI = "http://www.ivoa.net/xml/VODataService/v1.0";
+    public static final String XSI_NS_URI = "http://www.w3.org/2001/XMLSchema-instance";
+    public static final String VS_NS_URI = "http://www.ivoa.net/xml/VODataService/v1.1";
+    public static final String RI_NS_URI = "http://www.ivoa.net/xml/RegistryInterface/v1.0";
+    public static final String VR_NS_URI = "http://www.ivoa.net/xml/VOResource/v1.0";
 
     private TapSchema _tapSchema;
 
@@ -104,11 +108,53 @@ public class VODataService
      */
     public Document getDocument()
     {
-        Namespace vs = Namespace.getNamespace("vs", VOTABLE_NS_URI);
+        Namespace vs = Namespace.getNamespace("vs", VS_NS_URI);
         Namespace xsi = Namespace.getNamespace("xsi", XSI_NS_URI);
+//        Namespace ri = Namespace.getNamespace("ri", RI_NS_URI);
+        Namespace vr = Namespace.getNamespace("vr", VR_NS_URI);
+
+//        Element eleResource = new Element("Resource", ri);
+
+//        eleResource.setAttribute("status", "active");
+//
+//        Date dateUpdated = new Date();
+//        Date dateCreated = this._dateCreated;
+//        eleResource.setAttribute("updated", DateUtil.toString(dateUpdated, DateUtil.IVOA_DATE_FORMAT, DateUtil.UTC));
+//        eleResource.setAttribute("created", DateUtil.toString(dateCreated, DateUtil.IVOA_DATE_FORMAT, DateUtil.UTC));
+//
+//        Attribute attType = new Attribute("type", "vs:CatalogService", xsi);
+//        eleResource.setAttribute(attType);
+//
+//        eleResource.addNamespaceDeclaration(ri);
+//        eleResource.addNamespaceDeclaration(vs);
+//        eleResource.addNamespaceDeclaration(xsi);
+//        eleResource.addNamespaceDeclaration(vr);
+//
+//        addChild(eleResource, "title", " ");
+//        addChild(eleResource, "identifier", this._identifier);
+//
+//        Element eleContact = new Element("contact");
+//        addChild(eleContact, "name", " ");
+//
+//        Element eleCuration = new Element("curation");
+//        addChild(eleCuration, "publisher", " ");
+//        eleCuration.addContent(eleContact);
+//        eleResource.addContent(eleCuration);
+//
+//        Element eleContent = new Element("content");
+//        addChild(eleContent, "subject", " ");
+//        addChild(eleContent, "description", " ");
+//        addChild(eleContent, "referenceURL", " ");
+//        eleResource.addContent(eleContent);
+
         Element eleTableset = toXmlElement(_tapSchema);
-        eleTableset.addNamespaceDeclaration(xsi);
         eleTableset.addNamespaceDeclaration(vs);
+        eleTableset.addNamespaceDeclaration(xsi);
+        eleTableset.addNamespaceDeclaration(vr);
+        
+        Attribute attType = new Attribute("type", "vs:TableSet", xsi);
+        eleTableset.setAttribute(attType);
+        
 
         Document document = new Document();
         document.addContent(eleTableset);
@@ -122,6 +168,10 @@ public class VODataService
     private Element toXmlElement(TapSchema tapSchema)
     {
         Element eleTableset = new Element("tableset");
+        Comment comment = new Comment("This is a temporary solution as of 2010-03-12.");
+        eleTableset.addContent(comment);
+        if (tapSchema.getSchemaDescs().size() ==0)
+            throw new IllegalArgumentException("Error: at least one schema is required.");
         for (SchemaDesc sd : tapSchema.getSchemaDescs())
         {
             eleTableset.addContent(toXmlElement(sd));
@@ -154,13 +204,13 @@ public class VODataService
     private Element toXmlElement(TableDesc td)
     {
         Element eleTable = new Element("table");
-        eleTable.setAttribute("role", "out");
+        eleTable.setAttribute("type", "output");
 
         Element ele;
         ele = new Element("name");
         ele.setText(td.getTableName());
         eleTable.addContent(ele);
-        
+
         for (ColumnDesc cd : td.getColumnDescs())
         {
             eleTable.addContent(toXmlElement(cd));
@@ -176,36 +226,46 @@ public class VODataService
     private Element toXmlElement(ColumnDesc cd)
     {
         Element eleColumn = new Element("column");
-        
+
         addChild(eleColumn, "name", cd.getColumnName());
         addChild(eleColumn, "description", cd.getDescription());
+        addChild(eleColumn, "unit", cd.getUnit());
         addChild(eleColumn, "ucd", cd.getUcd());
         addChild(eleColumn, "utype", cd.getUtype());
-        addChild(eleColumn, "unit", cd.getUnit());
-        
+
         Element eleDt = addChild(eleColumn, "dataType", cd.getDatatype());
         if (eleDt != null)
         {
             Namespace xsi = Namespace.getNamespace("xsi", VODataService.XSI_NS_URI);
             Attribute attType = new Attribute("type", "vs:TAP", xsi);
             eleDt.setAttribute(attType);
-            
+
             if (cd.getSize() != null && cd.getSize() > 0)
                 eleDt.setAttribute("size", cd.getSize().toString());
         }
 
         return eleColumn;
     }
-    private Element addChild(Element eleColumn, String chdName, String chdText)
+
+    private Element addChild(Element eleParent, String chdName, String chdText)
     {
         Element ele = null;
         if (chdText != null && !chdText.equals(""))
         {
             ele = new Element(chdName);
             ele.setText(chdText);
-            eleColumn.addContent(ele);
+            eleParent.addContent(ele);
         }
         return ele;
     }
-    
+
+    public TapSchema getTapSchema()
+    {
+        return _tapSchema;
+    }
+
+    public void setTapSchema(TapSchema tapSchema)
+    {
+        _tapSchema = tapSchema;
+    }
 }

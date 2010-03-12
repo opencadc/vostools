@@ -99,6 +99,8 @@
 
     <property name="jars" value="${cadc}:${extlib}" />
 
+	<property name="resources.dir" value="test/resources/" />    
+
     <target name="build" depends="compile">
 	    <jar jarfile="${build}/lib/${project}.jar"
 		    basedir="${build}/class" 
@@ -134,9 +136,11 @@
         <junit printsummary="yes" haltonfailure="yes" fork="yes">
             <classpath>
                 <pathelement path="src"/>
+                <pathelement path="${resources.dir}"/>
                 <pathelement path="build/class"/>
                 <pathelement path="${jars}:${testingJars}"/>
             </classpath>
+            
             <test name="ca.nrc.cadc.tap.parser.AdqlQueryTest" />
             <test name="ca.nrc.cadc.tap.parser.TableNameConverterTest"/>
             <test name="ca.nrc.cadc.tap.parser.ColumnNameConverterTest"/>
@@ -148,7 +152,7 @@
             <test name="ca.nrc.cadc.tap.parser.NavigatorTest"/>
             <test name="ca.nrc.cadc.tap.parser.ExtractorTest"/>
             <test name="ca.nrc.cadc.tap.parser.AllColumnConverterTest"/>
-	    <test name="ca.nrc.cadc.tap.parser.TopConverterTest"/>
+		    <test name="ca.nrc.cadc.tap.parser.TopConverterTest"/>
             <test name="ca.nrc.cadc.stc.BoxTest"/>
             <test name="ca.nrc.cadc.stc.CircleTest"/>
             <test name="ca.nrc.cadc.stc.PolygonTest"/>
