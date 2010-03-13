@@ -100,18 +100,15 @@ public class Capability
         _role = role;
     }
     
-    public Element toXmlElement()
+    public Element toXmlElement(Namespace xsi, Namespace cap, Namespace vor)
     {
-        Namespace vosi = Namespace.getNamespace("vosi", VOSI.VOSI_NS_URI);
-        Namespace vr = Namespace.getNamespace("vr", VOSI.VR_NS_URI);
-        Namespace xsi = Namespace.getNamespace("xsi", VOSI.XSI_NS_URI);
-        Element eleCapability = new Element("capability", vosi);
+        Element eleCapability = new Element("capability");
         eleCapability.setAttribute("standardID", _standardID);
         
         Element eleInterface = new Element("interface");
         eleCapability.addContent(eleInterface);
 
-        Attribute attType = new Attribute("type", "vs:ParamHTTP", xsi);
+        Attribute attType = new Attribute("type", vor.getPrefix() + ":ParamHTTP", xsi);
         eleInterface.setAttribute(attType);
         if (_role != null)
             eleInterface.setAttribute("role", _role);

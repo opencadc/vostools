@@ -75,6 +75,7 @@ import java.net.URL;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import org.apache.log4j.Logger;
 
 import org.jdom.Document;
 import org.jdom.JDOMException;
@@ -88,20 +89,28 @@ import org.junit.Assert;
  */
 public class TestUtil
 {
+    private static Logger log = Logger.getLogger(TestUtil.class);
+    
     public static final String PARSER = "org.apache.xerces.parsers.SAXParser";
 
     public static Document validateXml(String xml, Map<String, String> schemaMap) throws IOException, JDOMException
     {
+        log.debug("validateXml:\n" + xml);
+        
         URL url;
         String schemaResource, serviceSchema;
         String space = " ";
         StringBuffer sbSchemaLocations = new StringBuffer();
-
+        log.debug("schemaMap.size(): " + schemaMap.size());
+        
         for (String schemaNSKey : schemaMap.keySet())
         {
             schemaResource = (String) schemaMap.get(schemaNSKey);
             url = TestUtil.class.getClassLoader().getResource(schemaResource);
+            if (url == null)
+                throw new RuntimeException("failed to find resource: " + schemaResource);
             serviceSchema = url.toString();
+            log.debug(schemaResource + " -> " + serviceSchema);
             sbSchemaLocations.append(schemaNSKey).append(space).append(serviceSchema).append(space);
         }
 
@@ -110,8 +119,7 @@ public class TestUtil
         schemaValidator.setFeature("http://xml.org/sax/features/validation", true);
         schemaValidator.setFeature("http://apache.org/xml/features/validation/schema", true);
         schemaValidator.setFeature("http://apache.org/xml/features/validation/schema-full-checking", true);
-        schemaValidator
-                .setProperty("http://apache.org/xml/properties/schema/external-schemaLocation", sbSchemaLocations.toString());
+        schemaValidator.setProperty("http://apache.org/xml/properties/schema/external-schemaLocation", sbSchemaLocations.toString());
 
         return schemaValidator.build(new StringReader(xml));
     }

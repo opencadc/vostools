@@ -69,12 +69,15 @@
 
 package ca.nrc.cadc.vosi;
 
+import ca.nrc.cadc.util.Log4jInit;
 import java.io.StringWriter;
 import java.io.Writer;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import org.apache.log4j.Level;
+import org.apache.log4j.Logger;
 
 import org.jdom.Document;
 import org.jdom.output.Format;
@@ -91,14 +94,20 @@ import org.junit.Test;
  */
 public class CapabilityTest
 {
-    String schemaNSKey1 = "http://www.ivoa.net/xml/VOSI/v1.0";
-    String schemaResource1 = "VOSI-v1.0.xsd"; // xsd file name
+    private static Logger log = Logger.getLogger(CapabilityTest.class);
+    static
+    {
+        Log4jInit.setLevel("ca.nrc.cadc.vosi", Level.INFO);
+    }
 
-    String schemaNSKey2 = "http://www.ivoa.net/xml/VOResource/v1.0";
-    String schemaResource2 = "VR-v1.0.xsd";
+    String schemaResource1 = "VOSICapabilities-v1.0.xsd"; // local xsd file name
+    String schemaNSKey1 = VOSI.CAPABILITIES_NS_URI;
 
-    String schemaNSKey3 = "http://www.ivoa.net/xml/VODataService/v1.1";
-    String schemaResource3 = "VS-v1.1.xsd";
+    String schemaNSKey2 = VOSI.VORESOURCE_NS_URI;
+    String schemaResource2 = "VOResource-v1.0.xsd";
+
+    String schemaNSKey3 = VOSI.VODATASERVICE_NS_URI;
+    String schemaResource3 = "VODataService-v1.1.xsd";
 
     Map<String, String> schemaNSMap;
     
@@ -159,15 +168,17 @@ public class CapabilityTest
         Writer stringWriter = new StringWriter();
         xop.output(doc, stringWriter);
         String xmlString = stringWriter.toString();
-        //System.out.println(xmlString);
-
+        
         TestUtil.validateXml(xmlString, schemaNSMap);
 
+        // these xpath tests are somewhat brittle as a change in the prefix in Capabilities.java
+        // would require a change here
+        // TODO: find the prefix by examining the xmlns attributes of the root element
         TestUtil.assertXmlNode(doc, "/vosi:capabilities");
-        TestUtil.assertXmlNode(doc, "/vosi:capabilities/vosi:capability[@standardID='ivo://ivoa.net/std/VOSI#capability']");
-        TestUtil.assertXmlNode(doc, "/vosi:capabilities/vosi:capability[@standardID='ivo://ivoa.net/std/VOSI#availability']");
-        TestUtil.assertXmlNode(doc, "/vosi:capabilities/vosi:capability[@standardID='ivo://ivoa.net/std/Something']");
+        TestUtil.assertXmlNode(doc, "/vosi:capabilities/capability[@standardID='ivo://ivoa.net/std/VOSI#capability']");
+        TestUtil.assertXmlNode(doc, "/vosi:capabilities/capability[@standardID='ivo://ivoa.net/std/VOSI#availability']");
+        TestUtil.assertXmlNode(doc, "/vosi:capabilities/capability[@standardID='ivo://ivoa.net/std/Something']");
         TestUtil.assertXmlNode(doc,
-                "/vosi:capabilities/vosi:capability/interface/accessURL[.='http://example.com/myApp/availability']");
+                "/vosi:capabilities/capability/interface/accessURL[.='http://example.com/myApp/availability']");
     }
 }

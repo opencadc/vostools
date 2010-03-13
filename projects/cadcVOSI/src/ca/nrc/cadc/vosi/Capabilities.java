@@ -71,7 +71,6 @@ package ca.nrc.cadc.vosi;
 
 import java.util.List;
 
-import org.jdom.Attribute;
 import org.jdom.Document;
 import org.jdom.Element;
 import org.jdom.Namespace;
@@ -83,8 +82,8 @@ import org.jdom.Namespace;
 public class Capabilities
 {
     // xsi schema location
-    public static final String XSI_LOC = "http://www.ivoa.net/xml/VOSI/v1.0 http://www.ivoa.net/xml/VOSI/v1.0 "
-            + "http://www.ivoa.net/xml/VODataService/v1.0 http://www.ivoa.net/xml/VODataService/v1.0";
+    //public static final String XSI_LOC = "http://www.ivoa.net/xml/VOSI/v1.0 http://www.ivoa.net/xml/VOSI/v1.0 "
+    //        + "http://www.ivoa.net/xml/VODataService/v1.0 http://www.ivoa.net/xml/VODataService/v1.0";
 
     private List<Capability> _caps;
 
@@ -102,14 +101,14 @@ public class Capabilities
     
     public Document toXmlDocument()
     {
-        Namespace vosi = Namespace.getNamespace("vosi", VOSI.VOSI_NS_URI);
         Namespace xsi = Namespace.getNamespace("xsi", VOSI.XSI_NS_URI);
-        Namespace vs = Namespace.getNamespace("vs", VOSI.VS_NS_URI);
-        Namespace vr = Namespace.getNamespace("vr", VOSI.VR_NS_URI);
-        Element eleCapabilities = new Element("capabilities", vosi);
+        Namespace cap = Namespace.getNamespace("vosi", VOSI.CAPABILITIES_NS_URI);
+        Namespace vod = Namespace.getNamespace("vod", VOSI.VODATASERVICE_NS_URI);
+
+        Element eleCapabilities = new Element("capabilities", cap);
         eleCapabilities.addNamespaceDeclaration(xsi);
-        eleCapabilities.addNamespaceDeclaration(vs);
-        eleCapabilities.addNamespaceDeclaration(vr);
+        eleCapabilities.addNamespaceDeclaration(cap);
+        eleCapabilities.addNamespaceDeclaration(vod);
 
         //Attribute attSchemaLocation = new Attribute("schemaLocation", XSI_LOC, xsi);
         //eleCapabilities.setAttribute(attSchemaLocation);
@@ -119,7 +118,7 @@ public class Capabilities
 
         for (Capability capability : this._caps)
         {
-            eleCapabilities.addContent(capability.toXmlElement());
+            eleCapabilities.addContent(capability.toXmlElement(xsi, cap, vod));
         }
         return document;
     }

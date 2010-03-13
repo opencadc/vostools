@@ -77,12 +77,19 @@ public class VOSI
 {
     // Uri to the XML schema.
     public static final String XSI_NS_URI = "http://www.w3.org/2001/XMLSchema-instance";
+    
     // Uri to the VOSI schema.
-    public static final String VOSI_NS_URI = "http://www.ivoa.net/xml/VOSI/v1.0";
+    public static final String AVAILABILITY_NS_URI = "http://www.ivoa.net/xml/VOSIAvailability/v1.0";
+
+    // Uri to the VOSI schema.
+    public static final String CAPABILITIES_NS_URI = "http://www.ivoa.net/xml/VOSICapabilities/v1.0";
+
     // Uri to the VS schema.
-    public static final String VS_NS_URI = "http://www.ivoa.net/xml/VODataService/v1.1";
+    public static final String VODATASERVICE_NS_URI = "http://www.ivoa.net/xml/VODataService/v1.1";
+
     // Uri to the VS schema.
-    public static final String VR_NS_URI = "http://www.ivoa.net/xml/VOResource/v1.0";
+    public static final String VORESOURCE_NS_URI = "http://www.ivoa.net/xml/VOResource/v1.0";
+
     // xsi schema location
     public static final String XSI_LOC = "http://www.ivoa.net/xml/VOSI/v1.0 http://www.ivoa.net/xml/VOSI/v1.0 "
             + "http://www.ivoa.net/xml/VODataService/v1.0 http://www.ivoa.net/xml/VODataService/v1.0";

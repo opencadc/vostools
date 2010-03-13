@@ -84,6 +84,9 @@ import org.junit.BeforeClass;
 import org.junit.Test;
 
 import ca.nrc.cadc.date.DateUtil;
+import ca.nrc.cadc.util.Log4jInit;
+import org.apache.log4j.Level;
+import org.apache.log4j.Logger;
 
 /**
  * @author zhangsa
@@ -91,8 +94,14 @@ import ca.nrc.cadc.date.DateUtil;
  */
 public class AvailabilityTest
 {
-    String schemaResource = "VOSI-v1.0.xsd"; // xsd file name
-    String schemaNSKey = "http://www.ivoa.net/xml/VOSI/v1.0";
+    private static Logger log = Logger.getLogger(CapabilityTest.class);
+    static
+    {
+        Log4jInit.setLevel("ca.nrc.cadc.vosi", Level.INFO);
+    }
+
+    String schemaResource = "VOSIAvailability-v1.0.xsd"; // local xsd file name
+    String schemaNSKey = VOSI.AVAILABILITY_NS_URI;
 
     /**
      * @throws java.lang.Exception
@@ -136,9 +145,10 @@ public class AvailabilityTest
             Date d2 = DateUtil.toDate("2009-05-12T11:22:33.444", DateUtil.IVOA_DATE_FORMAT); //yyyy-MM-dd'T'HH:mm:ss.SSS
             Date d3 = DateUtil.toDate("2009-06-12T11:22:33.444", DateUtil.IVOA_DATE_FORMAT); //yyyy-MM-dd'T'HH:mm:ss.SSS
             status = new AvailabilityStatus(true, d1, d2, d3, "noteA");
-        } catch (ParseException e)
+        }
+        catch (ParseException e)
         {
-            //do nothing for now.
+            log.error("test code bug", e);
         }
         Availability availability = new Availability(status);
         Document doc = availability.toXmlDocument();
@@ -146,7 +156,7 @@ public class AvailabilityTest
         Writer stringWriter = new StringWriter();
         xop.output(doc, stringWriter);
         String xmlString = stringWriter.toString();
-        System.out.println(xmlString);
+        
         TestUtil.validateXml(xmlString, schemaNSKey, schemaResource);
 
         TestUtil.assertXmlNode(doc, "/vosi:availability");
@@ -169,8 +179,9 @@ public class AvailabilityTest
         Writer stringWriter = new StringWriter();
         xop.output(doc, stringWriter);
         String xmlString = stringWriter.toString();
-        System.out.println(xmlString);
 
+        TestUtil.validateXml(xmlString, schemaNSKey, schemaResource);
+        
         TestUtil.assertXmlNode(doc, "/vosi:availability");
         TestUtil.assertXmlNode(doc, "/vosi:availability/vosi:available[.='false']");
         TestUtil.assertNoXmlNode(doc, "/vosi:availability/vosi:upSince");
@@ -185,7 +196,8 @@ public class AvailabilityTest
         try
         {
             new Availability(null);
-        } catch (IllegalArgumentException e)
+        }
+        catch (IllegalArgumentException e)
         {
             assert (true);
         }

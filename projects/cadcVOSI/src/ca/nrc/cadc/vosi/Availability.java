@@ -100,7 +100,7 @@ public class Availability
 
     public Document toXmlDocument()
     {
-        Namespace vosi = Namespace.getNamespace("vosi", VOSI.VOSI_NS_URI);
+        Namespace vosi = Namespace.getNamespace("vosi", VOSI.AVAILABILITY_NS_URI);
 
         Element eleAvailability = new Element("availability", vosi);
         
