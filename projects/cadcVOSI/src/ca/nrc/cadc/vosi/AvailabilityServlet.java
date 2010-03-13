@@ -6,6 +6,7 @@ import javax.servlet.ServletException;
 import javax.servlet.http.HttpServlet;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
+import org.apache.log4j.Logger;
 
 import org.jdom.Document;
 import org.jdom.output.Format;
@@ -14,24 +15,18 @@ import org.jdom.output.XMLOutputter;
 /**
  * Servlet implementation class CapabilityServlet
  */
-public class AvailabilityServlet extends HttpServlet {
-	private static final long serialVersionUID = 1L;
+public class AvailabilityServlet extends HttpServlet
+{
+	private static Logger log = Logger.getLogger(AvailabilityServlet.class);
+    private static final long serialVersionUID = 201003131300L;
        
-    /**
-     * @see HttpServlet#HttpServlet()
-     */
-    public AvailabilityServlet() {
-        super();
-        // TODO Auto-generated constructor stub
-    }
-
-	/**
-	 * @see HttpServlet#service(HttpServletRequest request, HttpServletResponse response)
-	 */
-	@SuppressWarnings("unchecked")
-    protected void doGet(HttpServletRequest request, HttpServletResponse response) throws ServletException, IOException 
+    @Override
+    protected void doGet(HttpServletRequest request, HttpServletResponse response)
+        throws ServletException, IOException
 	{
-	    try {
+        boolean started = false;
+	    try
+        {
 	        String wsClassName = getInitParameter("ca.nrc.cadc.vosi.WebService");
 	        Class wsClass = Class.forName(wsClassName);
 	        WebService ws = (WebService) wsClass.newInstance();
@@ -40,9 +35,19 @@ public class AvailabilityServlet extends HttpServlet {
 
 	        Document document = availability.toXmlDocument();
 	        XMLOutputter xop = new XMLOutputter(Format.getPrettyFormat());
+            started = true;
+            response.setContentType("text/xml");
 	        xop.output(document, response.getOutputStream());
-	    } catch (Throwable t) {
-	        response.sendError(HttpServletResponse.SC_INTERNAL_SERVER_ERROR, t.getMessage());
-	    }
+	    } 
+        catch (Throwable t)
+        {
+            log.error("BUG", t);
+            if (!started)
+                response.sendError(HttpServletResponse.SC_SERVICE_UNAVAILABLE, t.getMessage());
+        }
+        finally
+        {
+
+        }
 	}
 }
