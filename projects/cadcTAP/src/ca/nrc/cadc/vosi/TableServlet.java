@@ -123,7 +123,7 @@ public class TableServlet extends HttpServlet
             TapSchemaDAO dao = new TapSchemaDAO(queryDataSource);
             TapSchema tapSchema = dao.get();
 
-            VODataService vods = new VODataService(tapSchema);
+            TableSet vods = new TableSet(tapSchema);
             Document doc = vods.getDocument();
             XMLOutputter out = new XMLOutputter(Format.getPrettyFormat());
             started = true;

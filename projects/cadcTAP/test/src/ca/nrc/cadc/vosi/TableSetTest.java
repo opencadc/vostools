@@ -72,7 +72,6 @@ package ca.nrc.cadc.vosi;
 import java.io.StringWriter;
 import java.io.Writer;
 import java.util.ArrayList;
-import java.util.Date;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -91,7 +90,6 @@ import org.junit.Before;
 import org.junit.BeforeClass;
 import org.junit.Test;
 
-import ca.nrc.cadc.date.DateUtil;
 import ca.nrc.cadc.tap.schema.ColumnDesc;
 import ca.nrc.cadc.tap.schema.KeyDesc;
 import ca.nrc.cadc.tap.schema.SchemaDesc;
@@ -103,26 +101,29 @@ import ca.nrc.cadc.util.Log4jInit;
  *
  * @author pdowler, Sailor Zhang
  */
-public class VODataServiceTest
+public class TableSetTest
 {
-    private static final Logger log = Logger.getLogger(VODataServiceTest.class);
+    private static final Logger log = Logger.getLogger(TableSetTest.class);
     static
     {
-        Log4jInit.setLevel("ca", Level.WARN);
+        Log4jInit.setLevel("ca.nrc.cadc.vosi", Level.INFO);
     }
 
-    String schemaNSKey1 = "http://www.ivoa.net/xml/VOResource/v1.0";
-    String schemaResource1 = "VR-v1.0.xsd";
+    String schemaNSKey1 = VOSI.TABLES_NS_URI;
+    String schemaResource1 = "VOSITables-v1.0.xsd";
 
-    String schemaNSKey2 = "http://www.ivoa.net/xml/RegistryInterface/v1.0";
-    String schemaResource2 = "RI-v1.0.xsd";
+    String schemaNSKey2 = VOSI.VODATASERVICE_NS_URI;
+    String schemaResource2 = "VODataService-v1.1.xsd";
 
-    String schemaNSKey3 = "http://www.ivoa.net/xml/VODataService/v1.1";
-    String schemaResource3 = "VS-v1.1.xsd";
+    //String schemaNSKey2 = "http://www.ivoa.net/xml/RegistryInterface/v1.0";
+    //String schemaResource2 = "RI-v1.0.xsd";
+
+    //String schemaNSKey3 = "http://www.ivoa.net/xml/VODataService/v1.1";
+    //String schemaResource3 = "VS-v1.1.xsd";
 
     Map<String, String> schemaNSMap;
 
-    public VODataServiceTest()
+    public TableSetTest()
     {
     }
 
@@ -143,7 +144,6 @@ public class VODataServiceTest
         schemaNSMap = new HashMap<String, String>();
         schemaNSMap.put(schemaNSKey1, schemaResource1);
         schemaNSMap.put(schemaNSKey2, schemaResource2);
-        schemaNSMap.put(schemaNSKey3, schemaResource3);
     }
 
     @After
@@ -161,25 +161,24 @@ public class VODataServiceTest
         try
         {
             TapSchema ts = ca.nrc.cadc.tap.parser.TestUtil.loadDefaultTapSchema();
-            VODataService vods = new VODataService(ts);
-            Document doc = vods.getDocument();
+            TableSet tableSet = new TableSet(ts);
+            Document doc = tableSet.getDocument();
             XMLOutputter xop = new XMLOutputter(Format.getPrettyFormat());
             Writer stringWriter = new StringWriter();
             xop.output(doc, stringWriter);
             String xmlString = stringWriter.toString();
-            log.debug(xmlString);
 
             TestUtil.validateXml(xmlString, schemaNSMap);
 
-            TestUtil.assertXmlNode(doc, "/tableset");
-            TestUtil.assertXmlNode(doc, "/tableset/schema[name='tap_schema']");
-            TestUtil.assertXmlNode(doc, "/tableset/schema/table[name='alldatatypes']");
+            TestUtil.assertXmlNode(doc, "/vosi:tableset");
+            TestUtil.assertXmlNode(doc, "/vosi:tableset/schema[name='tap_schema']");
+            TestUtil.assertXmlNode(doc, "/vosi:tableset/schema/table[name='alldatatypes']");
             TestUtil.assertXmlNode(doc,
-                    "/tableset/schema/table[name='alldatatypes']/column[name='t_string']/description");
-            TestUtil.assertXmlNode(doc, "/tableset/schema/table[name='alldatatypes']/column[name='t_string']/unit");
-            TestUtil.assertXmlNode(doc, "/tableset/schema/table[name='alldatatypes']/column[name='t_string']/ucd");
-            TestUtil.assertXmlNode(doc, "/tableset/schema/table[name='alldatatypes']/column[name='t_string']/utype");
-            TestUtil.assertXmlNode(doc, "/tableset/schema/table[name='alldatatypes']/column[name='t_string']/dataType");
+                    "/vosi:tableset/schema/table[name='alldatatypes']/column[name='t_string']/description");
+            TestUtil.assertXmlNode(doc, "/vosi:tableset/schema/table[name='alldatatypes']/column[name='t_string']/unit");
+            TestUtil.assertXmlNode(doc, "/vosi:tableset/schema/table[name='alldatatypes']/column[name='t_string']/ucd");
+            TestUtil.assertXmlNode(doc, "/vosi:tableset/schema/table[name='alldatatypes']/column[name='t_string']/utype");
+            TestUtil.assertXmlNode(doc, "/vosi:tableset/schema/table[name='alldatatypes']/column[name='t_string']/dataType");
 
             checkRootElement(doc);
 
@@ -203,9 +202,10 @@ public class VODataServiceTest
         try
         {
             TapSchema ts = new TapSchema(new ArrayList<SchemaDesc>(), new ArrayList<KeyDesc>());
-            VODataService vods = new VODataService(ts);
+            TableSet vods = new TableSet(ts);
             vods.getDocument();
-        } catch (Throwable t)
+        }
+        catch (Throwable t)
         {
             if (t instanceof IllegalArgumentException)
                 assert (true); //expected because schema is empty
@@ -218,13 +218,13 @@ public class VODataServiceTest
     {
         String schemaName = sd.getSchemaName();
 
-        XPath xpath = XPath.newInstance("/tableset/schema/name[.='" + schemaName + "']");
+        XPath xpath = XPath.newInstance("/vosi:tableset/schema/name[.='" + schemaName + "']");
         List<?> rs = xpath.selectNodes(doc);
         Assert.assertTrue(rs.size() == 1);
 
         for (TableDesc td : sd.getTableDescs())
         {
-            xpath = XPath.newInstance("/tableset/schema[name='" + schemaName + "']/table[name='" + td.getTableName()
+            xpath = XPath.newInstance("/vosi:tableset/schema[name='" + schemaName + "']/table[name='" + td.getTableName()
                     + "']");
             rs = xpath.selectNodes(doc);
             Assert.assertTrue(rs.size() == 1);
@@ -234,7 +234,7 @@ public class VODataServiceTest
 
     private void checkRootElement(Document doc) throws JDOMException
     {
-        XPath xpath = XPath.newInstance("/tableset");
+        XPath xpath = XPath.newInstance("/vosi:tableset");
         List<?> rs = xpath.selectNodes(doc);
         Assert.assertTrue(rs.size() == 1);
     }
@@ -247,7 +247,7 @@ public class VODataServiceTest
 
         for (ColumnDesc cd : td.getColumnDescs())
         {
-            xpath = XPath.newInstance("/tableset/schema[name='" + schemaName + "']/table[name='" + td.getTableName()
+            xpath = XPath.newInstance("/vosi:tableset/schema[name='" + schemaName + "']/table[name='" + td.getTableName()
                     + "']/column[name='" + cd.getColumnName() + "']");
             rs = xpath.selectNodes(doc);
             Assert.assertTrue(rs.size() == 1);

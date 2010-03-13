@@ -87,7 +87,7 @@
 
     <property name="project" value="cadcTAP" />
 
-    <property name="cadc" value="${lib}/cadcUtil.jar:${lib}/cadcUWS.jar" />
+    <property name="cadc" value="${lib}/cadcUtil.jar:${lib}/cadcUWS.jar:${lib}/cadcVOSI.jar" />
 
     <property name="jsqlparser" value="${ext.lib}/jsqlparser.jar" />
     <property name="log4j" value="${ext.lib}/log4j.jar" />
@@ -152,7 +152,7 @@
             <test name="ca.nrc.cadc.tap.parser.NavigatorTest"/>
             <test name="ca.nrc.cadc.tap.parser.ExtractorTest"/>
             <test name="ca.nrc.cadc.tap.parser.AllColumnConverterTest"/>
-		    <test name="ca.nrc.cadc.tap.parser.TopConverterTest"/>
+	    <test name="ca.nrc.cadc.tap.parser.TopConverterTest"/>
             <test name="ca.nrc.cadc.stc.BoxTest"/>
             <test name="ca.nrc.cadc.stc.CircleTest"/>
             <test name="ca.nrc.cadc.stc.PolygonTest"/>
@@ -171,7 +171,8 @@
             <test name="ca.nrc.cadc.tap.writer.formatter.SPointFormatterTest"/>
             <test name="ca.nrc.cadc.tap.writer.formatter.SPolyFormatterTest"/>
             <test name="ca.nrc.cadc.tap.parser.ParserUtilTest"/>
-            <test name="ca.nrc.cadc.vosi.VODataServiceTest" />
+            <test name="ca.nrc.cadc.vosi.TableSetTest" />
+
             <formatter type="plain" usefile="false"/>
         </junit>
 
