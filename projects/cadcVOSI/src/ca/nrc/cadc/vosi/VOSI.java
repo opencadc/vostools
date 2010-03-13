@@ -84,6 +84,9 @@ public class VOSI
     // Uri to the VOSI schema.
     public static final String CAPABILITIES_NS_URI = "http://www.ivoa.net/xml/VOSICapabilities/v1.0";
 
+    // Uri to the VOSI schema.
+    public static final String TABLES_NS_URI = "http://www.ivoa.net/xml/VOSITables/v1.0";
+
     // Uri to the VS schema.
     public static final String VODATASERVICE_NS_URI = "http://www.ivoa.net/xml/VODataService/v1.1";
 
