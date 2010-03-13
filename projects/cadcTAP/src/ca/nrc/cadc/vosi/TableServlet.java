@@ -70,7 +70,6 @@
 package ca.nrc.cadc.vosi;
 
 import java.io.IOException;
-import java.util.Date;
 
 import javax.naming.Context;
 import javax.naming.InitialContext;
@@ -86,7 +85,6 @@ import org.jdom.Document;
 import org.jdom.output.Format;
 import org.jdom.output.XMLOutputter;
 
-import ca.nrc.cadc.date.DateUtil;
 import ca.nrc.cadc.tap.schema.TapSchema;
 import ca.nrc.cadc.tap.schema.TapSchemaDAO;
 
@@ -98,18 +96,14 @@ import ca.nrc.cadc.tap.schema.TapSchemaDAO;
  */
 public class TableServlet extends HttpServlet
 {
-    private static final long serialVersionUID = 1L;
     private static Logger log = Logger.getLogger(TableServlet.class);
+    private static final long serialVersionUID = 201003131300L;
+    
     private static String queryDataSourceName = "jdbc/tapuser";
 
     @Override
-    public void init(final ServletConfig config) throws ServletException
-    {
-        super.init(config);
-    }
-
-    @Override
-    protected void doGet(HttpServletRequest request, HttpServletResponse response) throws ServletException, IOException
+    protected void doGet(HttpServletRequest request, HttpServletResponse response)
+        throws ServletException, IOException
     {
         boolean started = false;
         try
@@ -127,13 +121,16 @@ public class TableServlet extends HttpServlet
             Document doc = vods.getDocument();
             XMLOutputter out = new XMLOutputter(Format.getPrettyFormat());
             started = true;
+            response.setContentType("text/xml");
             out.output(doc, response.getOutputStream());
-        } catch (Throwable t)
+        }
+        catch (Throwable t)
         {
             log.error("BUG", t);
             if (!started)
                 response.sendError(HttpServletResponse.SC_SERVICE_UNAVAILABLE, t.getMessage());
-        } finally
+        }
+        finally
         {
 
         }
