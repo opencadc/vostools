@@ -15,6 +15,8 @@ import org.jdom.Document;
 import org.jdom.output.Format;
 import org.jdom.output.XMLOutputter;
 
+import ca.nrc.cadc.vosi.util.Util;
+
 /**
  * Servlet implementation class CapabilityServlet
  */

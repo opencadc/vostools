@@ -142,8 +142,11 @@
                 <pathelement path="${resources.dir}"/>
                 <pathelement path="${jars}:${testingJars}"/>
             </classpath>
+            
             <test name="ca.nrc.cadc.vosi.AvailabilityTest"/>
-	    <test name="ca.nrc.cadc.vosi.CapabilityTest"/>
+		    <test name="ca.nrc.cadc.vosi.CapabilityTest"/>
+			<test name="ca.nrc.cadc.vosi.avail.CheckDataSourceTest"/>
+			<test name="ca.nrc.cadc.vosi.avail.CheckWebServiceTest"/>
             <formatter type="plain" usefile="false"/>
         </junit>
 

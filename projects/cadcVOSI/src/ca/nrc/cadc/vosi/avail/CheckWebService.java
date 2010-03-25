@@ -67,78 +67,115 @@
 ************************************************************************
 */
 
-package ca.nrc.cadc.vosi;
+package ca.nrc.cadc.vosi.avail;
 
-import java.util.Date;
+import org.apache.log4j.Logger;
+import org.jdom.Document;
+import org.jdom.Element;
+import org.jdom.xpath.XPath;
 
+import ca.nrc.cadc.vosi.VOSI;
+import ca.nrc.cadc.vosi.util.WebGet;
+import ca.nrc.cadc.vosi.util.XmlUtil;
 
 /**
  * @author zhangsa
  *
  */
-public class AvailabilityStatus
+public class CheckWebService implements Runnable
 {
-    private boolean _available;
-    private Date _upSince;
-    private Date _downAt;
-    private Date _backAt;
-    private String _note;
+    private static Logger log = Logger.getLogger(CheckWebService.class);
 
-    public AvailabilityStatus(boolean available, Date upSince, Date downAt, Date backAt, String note)
-    {
-        super();
-        _available = available;
-        _upSince = upSince;
-        _downAt = downAt;
-        _backAt = backAt;
-        _note = note;
-    }
+    private String _serviceName;
+    private String _url;
 
-    public boolean isAvailable()
+    private final String schemaResource = "VOSIAvailability-v1.0.xsd"; // local xsd file name
+    private final String schemaNSKey = VOSI.AVAILABILITY_NS_URI;
+
+    /**
+     * 
+     * @param serviceName, this is a caller-defined name for the service being checked
+     * @param url, the URL of availability checking, e.g. http://www.sample.com/myservice/availability
+     */
+    public CheckWebService(String serviceName, String url)
     {
-        return _available;
-    }
-    public void setAvailable(boolean available)
-    {
-        _available = available;
-    }
-    public Date getUpSince()
-    {
-        return _upSince;
-    }
-    public void setUpSince(Date upSince)
-    {
-        _upSince = upSince;
-    }
-    public Date getDownAt()
-    {
-        return _downAt;
-    }
-    public void setDownAt(Date downAt)
-    {
-        _downAt = downAt;
-    }
-    public Date getBackAt()
-    {
-        return _backAt;
-    }
-    public void setBackAt(Date backAt)
-    {
-        _backAt = backAt;
-    }
-    public String getNote()
-    {
-        return _note;
-    }
-    public void setNote(String note)
-    {
-        _note = note;
+        _serviceName = serviceName;
+        _url = url;
     }
 
+    void checkReturnedXml(String strXml)
+    {
+        Document doc = null;
+        String xpathStr;
+        XPath xpath;
+        try
+        {
+            doc = XmlUtil.validateXml(strXml, schemaNSKey, schemaResource);
+            //get namespace and/or prefix from Document, then create xpath based on the prefix 
+            String nsp = doc.getRootElement().getNamespacePrefix(); //Namespace Prefix
+            if (nsp != null && nsp.length() > 0)
+                nsp = nsp + ":";
+            else
+                nsp = "";
+            xpathStr = "/" + nsp + "availability/" + nsp + "available";
+            xpath = XPath.newInstance(xpathStr);
+            Element eleAvail = (Element) xpath.selectSingleNode(doc);
+            log.debug(eleAvail);
+            String textAvail = eleAvail.getText();
+            if (textAvail == null)
+                throw new Exception("XML format incorrect.");
+            else if (textAvail.equalsIgnoreCase("false"))
+            {
+                xpathStr = "/" + nsp + "availability/" + nsp + "note";
+                xpath = XPath.newInstance(xpathStr);
+                Element eleNotes = (Element) xpath.selectSingleNode(doc);
+                String textNotes = eleNotes.getText();
+                throw new Exception(textNotes);
+            }
+            System.out.println(eleAvail.toString());
+        } catch (Exception e)
+        {
+            log.info(e);
+            throw new IllegalStateException(e.getMessage());
+        }
+    }
+
+    /* (non-Javadoc)
+     * @see java.lang.Runnable#run()
+     */
     @Override
-    public String toString()
+    public void run()
     {
-        return "AvailabilityStatus [_available=" + _available + ", _backAt=" + _backAt + ", _downAt=" + _downAt + ", _note="
-                + _note + ", _upSince=" + _upSince + "]";
+        String wgReturn = null;
+        try
+        {
+            WebGet webGet = new WebGet(_url);
+            wgReturn = webGet.submit();
+        } catch (Exception e)
+        {
+            log.info(e);
+            throw new IllegalStateException(e.getMessage());
+        }
+        checkReturnedXml(wgReturn);
+    }
+
+    public String getServiceName()
+    {
+        return _serviceName;
+    }
+
+    public void setServiceName(String serviceName)
+    {
+        _serviceName = serviceName;
+    }
+
+    public String getUrl()
+    {
+        return _url;
+    }
+
+    public void setUrl(String url)
+    {
+        _url = url;
     }
 }

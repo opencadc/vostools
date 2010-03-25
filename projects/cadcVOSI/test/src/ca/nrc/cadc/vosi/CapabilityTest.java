@@ -70,6 +70,8 @@
 package ca.nrc.cadc.vosi;
 
 import ca.nrc.cadc.util.Log4jInit;
+import ca.nrc.cadc.vosi.util.XmlUtil;
+
 import java.io.StringWriter;
 import java.io.Writer;
 import java.util.ArrayList;
@@ -169,7 +171,7 @@ public class CapabilityTest
         xop.output(doc, stringWriter);
         String xmlString = stringWriter.toString();
         
-        TestUtil.validateXml(xmlString, schemaNSMap);
+        XmlUtil.validateXml(xmlString, schemaNSMap);
 
         // these xpath tests are somewhat brittle as a change in the prefix in Capabilities.java
         // would require a change here

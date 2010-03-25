@@ -67,78 +67,80 @@
 ************************************************************************
 */
 
-package ca.nrc.cadc.vosi;
+package ca.nrc.cadc.vosi.util;
 
-import java.util.Date;
-
+import org.jdom.Element;
+import org.jdom.Namespace;
 
 /**
  * @author zhangsa
  *
  */
-public class AvailabilityStatus
+public class Util
 {
-    private boolean _available;
-    private Date _upSince;
-    private Date _downAt;
-    private Date _backAt;
-    private String _note;
 
-    public AvailabilityStatus(boolean available, Date upSince, Date downAt, Date backAt, String note)
+    /**
+     * find the part of a string that is before the first occurance of a sub-string named searched. 
+     * 
+     * e.g. getStringPartBefore("abcDEfghDE", "DE") returns "abc"
+     * 
+     * @param full: the input full string
+     * @param searched: the string being searched
+     * @return substring before the first occurance of searched.  If searched is not found, return the original full string.
+     */
+    public static String getStringPartBefore(String full, String searched)
     {
-        super();
-        _available = available;
-        _upSince = upSince;
-        _downAt = downAt;
-        _backAt = backAt;
-        _note = note;
-    }
-
-    public boolean isAvailable()
-    {
-        return _available;
-    }
-    public void setAvailable(boolean available)
-    {
-        _available = available;
-    }
-    public Date getUpSince()
-    {
-        return _upSince;
-    }
-    public void setUpSince(Date upSince)
-    {
-        _upSince = upSince;
-    }
-    public Date getDownAt()
-    {
-        return _downAt;
-    }
-    public void setDownAt(Date downAt)
-    {
-        _downAt = downAt;
-    }
-    public Date getBackAt()
-    {
-        return _backAt;
-    }
-    public void setBackAt(Date backAt)
-    {
-        _backAt = backAt;
-    }
-    public String getNote()
-    {
-        return _note;
-    }
-    public void setNote(String note)
-    {
-        _note = note;
+        String rtn = full;
+        int idx = full.indexOf(searched);
+        if (idx >= 0)
+            rtn = full.substring(0, idx);
+        return rtn;
     }
 
-    @Override
-    public String toString()
+    /**
+     * find the part of a string that is AFTER the first occurance of a sub-string named searched. 
+     * 
+     * e.g. getStringPartBefore("abcDEfghDE", "DE") returns "fghDE"
+     * 
+     * @param full: the input full string
+     * @param searched: the string being searched
+     * @return substring after the first occurance of searched.  If searched is not found, return NULL.
+     */
+    public static String getStringPartAfter(String full, String searched)
     {
-        return "AvailabilityStatus [_available=" + _available + ", _backAt=" + _backAt + ", _downAt=" + _downAt + ", _note="
-                + _note + ", _upSince=" + _upSince + "]";
+        String rtn = null;
+        int idx = full.indexOf(searched);
+        if (idx >= 0)
+            rtn = full.substring(idx + searched.length());
+        return rtn;
     }
+
+    /**
+     * Add a child XML element
+     * 
+     * @param ele0 the parent element 
+     * @param chdName name of the to-be-added element
+     * @param chdText text of the to-be-added element
+     * @return the added new child element
+     */
+    public static Element addChild(Element ele0, String chdName, String chdText)
+    {
+        return addChild(ele0, null, chdName, chdText);
+    }
+
+    public static Element addChild(Element ele0, Namespace ns, String chdName, String chdText)
+    {
+        Element ele = null;
+        if (chdText != null && !chdText.equals(""))
+        {
+            if (ns != null)
+                ele = new Element(chdName, ns);
+            else
+                ele = new Element(chdName);
+            ele.setText(chdText);
+            ele0.addContent(ele);
+        }
+        return ele;
+    }
+
 }

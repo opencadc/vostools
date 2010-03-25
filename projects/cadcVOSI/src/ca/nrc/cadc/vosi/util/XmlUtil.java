@@ -67,78 +67,90 @@
 ************************************************************************
 */
 
-package ca.nrc.cadc.vosi;
+package ca.nrc.cadc.vosi.util;
 
-import java.util.Date;
+import java.io.IOException;
+import java.io.StringReader;
+import java.net.URL;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
 
+import org.apache.log4j.Logger;
+import org.jdom.Document;
+import org.jdom.JDOMException;
+import org.jdom.input.SAXBuilder;
+import org.jdom.xpath.XPath;
+
+import ca.nrc.cadc.vosi.TestUtil;
 
 /**
  * @author zhangsa
  *
  */
-public class AvailabilityStatus
+public class XmlUtil
 {
-    private boolean _available;
-    private Date _upSince;
-    private Date _downAt;
-    private Date _backAt;
-    private String _note;
+    private static Logger log = Logger.getLogger(XmlUtil.class);
 
-    public AvailabilityStatus(boolean available, Date upSince, Date downAt, Date backAt, String note)
+    public static Document validateXml(String xml, Map<String, String> schemaMap) throws IOException, JDOMException
     {
-        super();
-        _available = available;
-        _upSince = upSince;
-        _downAt = downAt;
-        _backAt = backAt;
-        _note = note;
-    }
-
-    public boolean isAvailable()
-    {
-        return _available;
-    }
-    public void setAvailable(boolean available)
-    {
-        _available = available;
-    }
-    public Date getUpSince()
-    {
-        return _upSince;
-    }
-    public void setUpSince(Date upSince)
-    {
-        _upSince = upSince;
-    }
-    public Date getDownAt()
-    {
-        return _downAt;
-    }
-    public void setDownAt(Date downAt)
-    {
-        _downAt = downAt;
-    }
-    public Date getBackAt()
-    {
-        return _backAt;
-    }
-    public void setBackAt(Date backAt)
-    {
-        _backAt = backAt;
-    }
-    public String getNote()
-    {
-        return _note;
-    }
-    public void setNote(String note)
-    {
-        _note = note;
+        log.debug("validateXml:\n" + xml);
+        
+        URL url;
+        String schemaResource, serviceSchema;
+        String space = " ";
+        StringBuffer sbSchemaLocations = new StringBuffer();
+        log.debug("schemaMap.size(): " + schemaMap.size());
+        
+        for (String schemaNSKey : schemaMap.keySet())
+        {
+            schemaResource = (String) schemaMap.get(schemaNSKey);
+            url = TestUtil.class.getClassLoader().getResource(schemaResource);
+            if (url == null)
+                throw new RuntimeException("failed to find resource: " + schemaResource);
+            serviceSchema = url.toString();
+            log.debug(schemaResource + " -> " + serviceSchema);
+            sbSchemaLocations.append(schemaNSKey).append(space).append(serviceSchema).append(space);
+        }
+    
+        SAXBuilder schemaValidator;
+        schemaValidator = new SAXBuilder(TestUtil.PARSER, true);
+        schemaValidator.setFeature("http://xml.org/sax/features/validation", true);
+        schemaValidator.setFeature("http://apache.org/xml/features/validation/schema", true);
+        schemaValidator.setFeature("http://apache.org/xml/features/validation/schema-full-checking", true);
+        schemaValidator.setProperty("http://apache.org/xml/properties/schema/external-schemaLocation", sbSchemaLocations.toString());
+    
+        return schemaValidator.build(new StringReader(xml));
     }
 
-    @Override
-    public String toString()
+    public static Document validateXml(String xml, String schemaNSKey, String schemaResource) throws IOException, JDOMException
     {
-        return "AvailabilityStatus [_available=" + _available + ", _backAt=" + _backAt + ", _downAt=" + _downAt + ", _note="
-                + _note + ", _upSince=" + _upSince + "]";
+        Map<String, String> map = new HashMap<String, String>();
+        map.put(schemaNSKey, schemaResource);
+        return validateXml(xml, map);
     }
+
+    /**
+     * count how many nodes are represented by the xpath
+     * 
+     * @param doc
+     * @param xpathStr
+     * @return
+     */
+    public static int getXmlNodeCount(Document doc, String xpathStr)
+    {
+        int rtn = 0;
+        XPath xpath;
+        try
+        {
+            xpath = XPath.newInstance(xpathStr);
+            List<?> rs = xpath.selectNodes(doc);
+            rtn = rs.size();
+        } catch (JDOMException e)
+        {
+            e.printStackTrace();
+        }
+        return rtn;
+    }
+
 }

@@ -67,78 +67,90 @@
 ************************************************************************
 */
 
-package ca.nrc.cadc.vosi;
+package ca.nrc.cadc.vosi.avail;
 
-import java.util.Date;
+import java.sql.*;
 
+import javax.sql.*;
 
 /**
  * @author zhangsa
  *
  */
-public class AvailabilityStatus
+public class CheckDataSource implements Runnable
 {
-    private boolean _available;
-    private Date _upSince;
-    private Date _downAt;
-    private Date _backAt;
-    private String _note;
+    private DataSource _dataSource;
+    private String _sql;
 
-    public AvailabilityStatus(boolean available, Date upSince, Date downAt, Date backAt, String note)
+    /**
+     * 
+     * @param dataSource, the DataSource to check
+     * @param sql, a SQL query.  
+     * If it's run normally, it means the dataSource is working properly.  
+     * This SQL query is suggested to be something as "SELECT count(*) from ....", which always return 1 row of result.
+     * If the resultSet is not returned, it means something wrong with the DB. 
+     */
+    public CheckDataSource(DataSource dataSource, String sql)
     {
-        super();
-        _available = available;
-        _upSince = upSince;
-        _downAt = downAt;
-        _backAt = backAt;
-        _note = note;
-    }
-
-    public boolean isAvailable()
-    {
-        return _available;
-    }
-    public void setAvailable(boolean available)
-    {
-        _available = available;
-    }
-    public Date getUpSince()
-    {
-        return _upSince;
-    }
-    public void setUpSince(Date upSince)
-    {
-        _upSince = upSince;
-    }
-    public Date getDownAt()
-    {
-        return _downAt;
-    }
-    public void setDownAt(Date downAt)
-    {
-        _downAt = downAt;
-    }
-    public Date getBackAt()
-    {
-        return _backAt;
-    }
-    public void setBackAt(Date backAt)
-    {
-        _backAt = backAt;
-    }
-    public String getNote()
-    {
-        return _note;
-    }
-    public void setNote(String note)
-    {
-        _note = note;
+        _dataSource = dataSource;
+        _sql = sql;
     }
 
+    /* (non-Javadoc)
+     * @see java.lang.Runnable#run()
+     */
     @Override
-    public String toString()
+    public void run()
     {
-        return "AvailabilityStatus [_available=" + _available + ", _backAt=" + _backAt + ", _downAt=" + _downAt + ", _note="
-                + _note + ", _upSince=" + _upSince + "]";
+        Connection conn = null;
+        PreparedStatement pstmt = null;
+        ResultSet rs = null;
+        try
+        {
+            // TODO later.  use Spring to provide more information about exception 2010-03-22
+            conn = _dataSource.getConnection();
+            pstmt = conn.prepareStatement(_sql);
+            rs = pstmt.executeQuery();
+            if (!rs.next()) // result set is empty, nothing returned
+                throw new SQLException("result set is empty");
+        } catch (SQLException e)
+        {
+            throw new IllegalStateException("CheckDataSource failed.");
+        } finally
+        {
+            try
+            {
+                if (rs != null)
+                    rs.close();
+                if (pstmt != null)
+                    pstmt.close();
+                if (conn != null)
+                    conn.close();
+            } catch (SQLException e)
+            {
+                // do nothing
+            }
+
+        }
+    }
+
+    public DataSource getDataSource()
+    {
+        return _dataSource;
+    }
+
+    public void setDataSource(DataSource dataSource)
+    {
+        _dataSource = dataSource;
+    }
+
+    public String getSql()
+    {
+        return _sql;
+    }
+
+    public void setSql(String sql)
+    {
+        _sql = sql;
     }
 }

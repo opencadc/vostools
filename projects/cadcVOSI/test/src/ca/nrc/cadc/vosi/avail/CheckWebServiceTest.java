@@ -67,78 +67,112 @@
 ************************************************************************
 */
 
-package ca.nrc.cadc.vosi;
+package ca.nrc.cadc.vosi.avail;
 
-import java.util.Date;
+import static org.junit.Assert.*;
+import junit.framework.Assert;
 
+import org.apache.log4j.Level;
+import org.apache.log4j.Logger;
+import org.junit.After;
+import org.junit.AfterClass;
+import org.junit.Before;
+import org.junit.BeforeClass;
+import org.junit.Test;
+
+import ca.nrc.cadc.util.Log4jInit;
+import ca.nrc.cadc.vosi.CapabilityTest;
 
 /**
  * @author zhangsa
  *
  */
-public class AvailabilityStatus
+public class CheckWebServiceTest
 {
-    private boolean _available;
-    private Date _upSince;
-    private Date _downAt;
-    private Date _backAt;
-    private String _note;
-
-    public AvailabilityStatus(boolean available, Date upSince, Date downAt, Date backAt, String note)
+    private static Logger log = Logger.getLogger(CheckWebServiceTest.class);
+    static
     {
-        super();
-        _available = available;
-        _upSince = upSince;
-        _downAt = downAt;
-        _backAt = backAt;
-        _note = note;
+        Log4jInit.setLevel("ca.nrc.cadc.vosi", Level.WARN);
     }
 
-    public boolean isAvailable()
+    /**
+     * @throws java.lang.Exception
+     */
+    @BeforeClass
+    public static void setUpBeforeClass() throws Exception
     {
-        return _available;
-    }
-    public void setAvailable(boolean available)
-    {
-        _available = available;
-    }
-    public Date getUpSince()
-    {
-        return _upSince;
-    }
-    public void setUpSince(Date upSince)
-    {
-        _upSince = upSince;
-    }
-    public Date getDownAt()
-    {
-        return _downAt;
-    }
-    public void setDownAt(Date downAt)
-    {
-        _downAt = downAt;
-    }
-    public Date getBackAt()
-    {
-        return _backAt;
-    }
-    public void setBackAt(Date backAt)
-    {
-        _backAt = backAt;
-    }
-    public String getNote()
-    {
-        return _note;
-    }
-    public void setNote(String note)
-    {
-        _note = note;
     }
 
-    @Override
-    public String toString()
+    /**
+     * @throws java.lang.Exception
+     */
+    @AfterClass
+    public static void tearDownAfterClass() throws Exception
     {
-        return "AvailabilityStatus [_available=" + _available + ", _backAt=" + _backAt + ", _downAt=" + _downAt + ", _note="
-                + _note + ", _upSince=" + _upSince + "]";
+    }
+
+    /**
+     * @throws java.lang.Exception
+     */
+    @Before
+    public void setUp() throws Exception
+    {
+    }
+
+    /**
+     * @throws java.lang.Exception
+     */
+    @After
+    public void tearDown() throws Exception
+    {
+    }
+
+    /**
+     * Test method for {@link ca.nrc.cadc.vosi.avail.CheckWebService#checkReturnedXml(java.lang.String)}.
+     */
+    @Test
+    public void testCheckReturnedXml()
+    {
+        String strXml = "<?xml version=\"1.0\" encoding=\"UTF-8\"?><vosi:availability xmlns:vosi=\"http://www.ivoa.net/xml/VOSIAvailability/v1.0\"><vosi:available>true</vosi:available></vosi:availability>";
+        CheckWebService cws = new CheckWebService("testing", "test");
+        cws.checkReturnedXml(strXml);
+    }
+
+    @Test
+    public void testCheckReturnedXmlDiffPrefixGood()
+    {
+        String strXml = "<?xml version=\"1.0\" encoding=\"UTF-8\"?><vos:availability xmlns:vos=\"http://www.ivoa.net/xml/VOSIAvailability/v1.0\"><vos:available>true</vos:available></vos:availability>";
+        CheckWebService cws = new CheckWebService("testing", "test");
+        cws.checkReturnedXml(strXml);
+    }
+
+    @Test
+    public void testCheckReturnedXmlBadNoNamespace()
+    {
+     boolean errorOccurs = false;
+        String strXml = "<?xml version=\"1.0\" encoding=\"UTF-8\"?><vosi:availability><vosi:available>true</vosi:available></vosi:availability>";
+        CheckWebService cws = new CheckWebService("testing", "test");
+        try {
+        cws.checkReturnedXml(strXml);
+        } catch (Throwable t) {
+            errorOccurs = true;
+            log.debug(t.getMessage());
+        }
+        Assert.assertEquals(true, errorOccurs);
+    }
+
+    @Test
+    public void testCheckReturnedXmlNotAvailable()
+    {
+     boolean errorOccurs = false;
+        String strXml = "<?xml version=\"1.0\" encoding=\"UTF-8\"?><vosi:availability xmlns:vosi=\"http://www.ivoa.net/xml/VOSIAvailability/v1.0\"><vosi:available>false</vosi:available><vosi:note>some reasons</vosi:note></vosi:availability>";
+        CheckWebService cws = new CheckWebService("testing", "test");
+        try {
+        cws.checkReturnedXml(strXml);
+        } catch (Throwable t) {
+            errorOccurs = true;
+            log.debug(t.getMessage());
+        }
+        Assert.assertEquals(true, errorOccurs);
     }
 }

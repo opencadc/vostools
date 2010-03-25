@@ -85,6 +85,8 @@ import org.junit.Test;
 
 import ca.nrc.cadc.date.DateUtil;
 import ca.nrc.cadc.util.Log4jInit;
+import ca.nrc.cadc.vosi.util.XmlUtil;
+
 import org.apache.log4j.Level;
 import org.apache.log4j.Logger;
 
@@ -157,7 +159,7 @@ public class AvailabilityTest
         xop.output(doc, stringWriter);
         String xmlString = stringWriter.toString();
         
-        TestUtil.validateXml(xmlString, schemaNSKey, schemaResource);
+        XmlUtil.validateXml(xmlString, schemaNSKey, schemaResource);
 
         TestUtil.assertXmlNode(doc, "/vosi:availability");
         TestUtil.assertXmlNode(doc, "/vosi:availability/vosi:available");
@@ -180,7 +182,7 @@ public class AvailabilityTest
         xop.output(doc, stringWriter);
         String xmlString = stringWriter.toString();
 
-        TestUtil.validateXml(xmlString, schemaNSKey, schemaResource);
+        XmlUtil.validateXml(xmlString, schemaNSKey, schemaResource);
         
         TestUtil.assertXmlNode(doc, "/vosi:availability");
         TestUtil.assertXmlNode(doc, "/vosi:availability/vosi:available[.='false']");

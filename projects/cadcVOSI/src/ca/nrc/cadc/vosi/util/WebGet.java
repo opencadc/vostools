@@ -67,78 +67,75 @@
 ************************************************************************
 */
 
-package ca.nrc.cadc.vosi;
+package ca.nrc.cadc.vosi.util;
 
-import java.util.Date;
-
+import java.io.BufferedReader;
+import java.io.InputStreamReader;
+import java.net.URL;
+import java.net.URLConnection;
 
 /**
  * @author zhangsa
  *
  */
-public class AvailabilityStatus
+public class WebGet
 {
-    private boolean _available;
-    private Date _upSince;
-    private Date _downAt;
-    private Date _backAt;
-    private String _note;
+    private String _urlStr = null;
+    private StringBuffer _postBody = null;
 
-    public AvailabilityStatus(boolean available, Date upSince, Date downAt, Date backAt, String note)
+    public WebGet(String str)
     {
-        super();
-        _available = available;
-        _upSince = upSince;
-        _downAt = downAt;
-        _backAt = backAt;
-        _note = note;
+        this._urlStr = str;
     }
 
-    public boolean isAvailable()
+    public String getPostBody()
     {
-        return _available;
-    }
-    public void setAvailable(boolean available)
-    {
-        _available = available;
-    }
-    public Date getUpSince()
-    {
-        return _upSince;
-    }
-    public void setUpSince(Date upSince)
-    {
-        _upSince = upSince;
-    }
-    public Date getDownAt()
-    {
-        return _downAt;
-    }
-    public void setDownAt(Date downAt)
-    {
-        _downAt = downAt;
-    }
-    public Date getBackAt()
-    {
-        return _backAt;
-    }
-    public void setBackAt(Date backAt)
-    {
-        _backAt = backAt;
-    }
-    public String getNote()
-    {
-        return _note;
-    }
-    public void setNote(String note)
-    {
-        _note = note;
+        return _postBody.toString();
     }
 
-    @Override
-    public String toString()
+    //    public void addParameter(String name, String value)
+    //    {
+    //        if (postBody == null)
+    //        {
+    //            postBody = new StringBuffer();
+    //            postBody.append("?");
+    //        } else
+    //            postBody.append("&");
+    //
+    //        postBody.append(name + "=");
+    //        postBody.append(EncodingUtil.urlEncode(value));
+    //    }
+
+    public String submit()
     {
-        return "AvailabilityStatus [_available=" + _available + ", _backAt=" + _backAt + ", _downAt=" + _downAt + ", _note="
-                + _note + ", _upSince=" + _upSince + "]";
+        String rtn = null;
+        try
+        {
+            String par = (_postBody != null) ? _postBody.toString() : "";
+            URL url = new URL(_urlStr + par);
+            URLConnection urlc = url.openConnection();
+            urlc.setRequestProperty("Content-Type", "application/x-www-form-urlencoded");
+            // urlc.setDoOutput(true);
+            urlc.setDoInput(true);
+            // PrintWriter out = new PrintWriter(urlc.getOutputStream());
+            // out.write(postBody.toString());
+            // out.close() ;
+
+            BufferedReader in = new BufferedReader(new InputStreamReader(urlc.getInputStream()));
+
+            StringBuffer result = new StringBuffer();
+            String inputLine;
+            if ((inputLine = in.readLine()) != null)
+                result.append(inputLine);
+            while ((inputLine = in.readLine()) != null)
+                result.append("\r\n" + inputLine);
+            in.close();
+            rtn = result.toString();
+        } catch (Exception e)
+        {
+            throw new IllegalStateException(e);
+        }
+        return rtn;
     }
+
 }

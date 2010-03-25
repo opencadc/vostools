@@ -67,78 +67,77 @@
 ************************************************************************
 */
 
-package ca.nrc.cadc.vosi;
+package ca.nrc.cadc.vosi.avail;
 
-import java.util.Date;
+import javax.sql.DataSource;
 
+import junit.framework.Assert;
+
+import org.junit.After;
+import org.junit.AfterClass;
+import org.junit.Before;
+import org.junit.BeforeClass;
+import org.junit.Test;
+
+import ca.nrc.cadc.vosi.avail.CheckDataSource;
 
 /**
  * @author zhangsa
  *
  */
-public class AvailabilityStatus
+public class CheckDataSourceTest
 {
-    private boolean _available;
-    private Date _upSince;
-    private Date _downAt;
-    private Date _backAt;
-    private String _note;
+    DataSource _ds = null;
 
-    public AvailabilityStatus(boolean available, Date upSince, Date downAt, Date backAt, String note)
+    /**
+     * @throws java.lang.Exception
+     */
+    @BeforeClass
+    public static void setUpBeforeClass() throws Exception
     {
-        super();
-        _available = available;
-        _upSince = upSince;
-        _downAt = downAt;
-        _backAt = backAt;
-        _note = note;
     }
 
-    public boolean isAvailable()
+    /**
+     * @throws java.lang.Exception
+     */
+    @AfterClass
+    public static void tearDownAfterClass() throws Exception
     {
-        return _available;
-    }
-    public void setAvailable(boolean available)
-    {
-        _available = available;
-    }
-    public Date getUpSince()
-    {
-        return _upSince;
-    }
-    public void setUpSince(Date upSince)
-    {
-        _upSince = upSince;
-    }
-    public Date getDownAt()
-    {
-        return _downAt;
-    }
-    public void setDownAt(Date downAt)
-    {
-        _downAt = downAt;
-    }
-    public Date getBackAt()
-    {
-        return _backAt;
-    }
-    public void setBackAt(Date backAt)
-    {
-        _backAt = backAt;
-    }
-    public String getNote()
-    {
-        return _note;
-    }
-    public void setNote(String note)
-    {
-        _note = note;
     }
 
-    @Override
-    public String toString()
+    /**
+     * @throws java.lang.Exception
+     */
+    @Before
+    public void setUp() throws Exception
     {
-        return "AvailabilityStatus [_available=" + _available + ", _backAt=" + _backAt + ", _downAt=" + _downAt + ", _note="
-                + _note + ", _upSince=" + _upSince + "]";
+        _ds = null;
+    }
+
+    /**
+     * @throws java.lang.Exception
+     */
+    @After
+    public void tearDown() throws Exception
+    {
+    }
+
+    /**
+     * Test when dataSource is null
+     */
+    @Test
+    public void testBad()
+    {
+        boolean exceptionOccured = false;
+        String sql = "select count(*) from tap_schema.alldatatypes";
+        try
+        {            
+            CheckDataSource cds = new CheckDataSource(_ds, sql);
+            cds.run();
+        } catch (Throwable t)
+        {
+            exceptionOccured = true;
+        }
+        Assert.assertEquals(exceptionOccured, true);
     }
 }

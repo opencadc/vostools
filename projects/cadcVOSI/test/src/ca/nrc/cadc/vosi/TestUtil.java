@@ -69,19 +69,11 @@
 
 package ca.nrc.cadc.vosi;
 
-import java.io.IOException;
-import java.io.StringReader;
-import java.net.URL;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
 import org.apache.log4j.Logger;
-
 import org.jdom.Document;
-import org.jdom.JDOMException;
-import org.jdom.input.SAXBuilder;
-import org.jdom.xpath.XPath;
 import org.junit.Assert;
+
+import ca.nrc.cadc.vosi.util.XmlUtil;
 
 /**
  * @author zhangsa
@@ -93,44 +85,6 @@ public class TestUtil
     
     public static final String PARSER = "org.apache.xerces.parsers.SAXParser";
 
-    public static Document validateXml(String xml, Map<String, String> schemaMap) throws IOException, JDOMException
-    {
-        log.debug("validateXml:\n" + xml);
-        
-        URL url;
-        String schemaResource, serviceSchema;
-        String space = " ";
-        StringBuffer sbSchemaLocations = new StringBuffer();
-        log.debug("schemaMap.size(): " + schemaMap.size());
-        
-        for (String schemaNSKey : schemaMap.keySet())
-        {
-            schemaResource = (String) schemaMap.get(schemaNSKey);
-            url = TestUtil.class.getClassLoader().getResource(schemaResource);
-            if (url == null)
-                throw new RuntimeException("failed to find resource: " + schemaResource);
-            serviceSchema = url.toString();
-            log.debug(schemaResource + " -> " + serviceSchema);
-            sbSchemaLocations.append(schemaNSKey).append(space).append(serviceSchema).append(space);
-        }
-
-        SAXBuilder schemaValidator;
-        schemaValidator = new SAXBuilder(PARSER, true);
-        schemaValidator.setFeature("http://xml.org/sax/features/validation", true);
-        schemaValidator.setFeature("http://apache.org/xml/features/validation/schema", true);
-        schemaValidator.setFeature("http://apache.org/xml/features/validation/schema-full-checking", true);
-        schemaValidator.setProperty("http://apache.org/xml/properties/schema/external-schemaLocation", sbSchemaLocations.toString());
-
-        return schemaValidator.build(new StringReader(xml));
-    }
-
-    public static Document validateXml(String xml, String schemaNSKey, String schemaResource) throws IOException, JDOMException
-    {
-        Map<String, String> map = new HashMap<String, String>();
-        map.put(schemaNSKey, schemaResource);
-        return validateXml(xml, map);
-    }
-
     /**
      * assert one and only one node exists
      * 
@@ -139,7 +93,7 @@ public class TestUtil
      */
     public static void assertXmlNode(Document document, String xpathString)
     {
-        Assert.assertTrue(getXmlNodeCount(document, xpathString) == 1);
+        Assert.assertTrue(XmlUtil.getXmlNodeCount(document, xpathString) == 1);
     }
 
     /**
@@ -150,30 +104,6 @@ public class TestUtil
      */
     public static void assertNoXmlNode(Document document, String xpathString)
     {
-        Assert.assertTrue(getXmlNodeCount(document, xpathString) == 0);
-    }
-
-    /**
-     * count how many nodes are represented by the xpath
-     * 
-     * @param doc
-     * @param xpathStr
-     * @return
-     */
-    @SuppressWarnings("unchecked")
-    public static int getXmlNodeCount(Document doc, String xpathStr)
-    {
-        int rtn = 0;
-        XPath xpath;
-        try
-        {
-            xpath = XPath.newInstance(xpathStr);
-            List rs = xpath.selectNodes(doc);
-            rtn = rs.size();
-        } catch (JDOMException e)
-        {
-            e.printStackTrace();
-        }
-        return rtn;
+        Assert.assertTrue(XmlUtil.getXmlNodeCount(document, xpathString) == 0);
     }
 }

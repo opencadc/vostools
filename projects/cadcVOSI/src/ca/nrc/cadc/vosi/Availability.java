@@ -74,6 +74,7 @@ import org.jdom.Element;
 import org.jdom.Namespace;
 
 import ca.nrc.cadc.date.DateUtil;
+import ca.nrc.cadc.vosi.util.Util;
 
 /**
  * @author zhangsa
