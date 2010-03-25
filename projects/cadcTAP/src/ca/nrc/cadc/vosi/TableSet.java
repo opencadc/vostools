@@ -69,8 +69,8 @@
 
 package ca.nrc.cadc.vosi;
 
+import org.apache.log4j.Logger;
 import org.jdom.Attribute;
-import org.jdom.Comment;
 import org.jdom.Document;
 import org.jdom.Element;
 import org.jdom.Namespace;
@@ -79,7 +79,6 @@ import ca.nrc.cadc.tap.schema.ColumnDesc;
 import ca.nrc.cadc.tap.schema.SchemaDesc;
 import ca.nrc.cadc.tap.schema.TableDesc;
 import ca.nrc.cadc.tap.schema.TapSchema;
-import org.apache.log4j.Logger;
 
 /**
  *
@@ -105,7 +104,6 @@ public class TableSet
      */
     public Document getDocument()
     {
-        
 
         Element eleTableset = toXmlElement(_tapSchema);
         eleTableset.addNamespaceDeclaration(xsi);
@@ -125,7 +123,7 @@ public class TableSet
         Element eleTableset = new Element("tableset", vosi);
         //Comment comment = new Comment("This is a temporary solution as of 2010-03-12.");
         //eleTableset.addContent(comment);
-        if (tapSchema.getSchemaDescs().size() ==0)
+        if (tapSchema.getSchemaDescs().size() == 0)
             throw new IllegalArgumentException("Error: at least one schema is required.");
         for (SchemaDesc sd : tapSchema.getSchemaDescs())
         {
@@ -191,7 +189,7 @@ public class TableSet
         Element eleDt = addChild(eleColumn, "dataType", cd.getDatatype());
         if (eleDt != null)
         {
-            Attribute attType = new Attribute("type", vod.getPrefix()+":TAP", xsi);
+            Attribute attType = new Attribute("type", vod.getPrefix() + ":TAP", xsi);
             eleDt.setAttribute(attType);
 
             if (cd.getSize() != null && cd.getSize() > 0)
