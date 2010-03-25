@@ -84,7 +84,7 @@ public class ErrorSummary
 {
     private String summaryMessage;
     private URL documentURL;
-
+    private ErrorType errorType;
 
     /**
      * Public no-arg constructor.
@@ -101,10 +101,22 @@ public class ErrorSummary
      */
     public ErrorSummary(final String summaryMessage, final URL documentURL)
     {
-        this.summaryMessage = summaryMessage;
-        this.documentURL = documentURL;
+        this(summaryMessage, documentURL, ErrorType.FATAL);
     }
 
+    /**
+     * Complete constructor.
+     *
+     * @param summaryMessage        The summary of the error.
+     * @param documentURI           The URI to the actual Document.
+     * @param errorType             The type of the error.
+     */
+    public ErrorSummary(final String summaryMessage, final URL documentURL, final ErrorType errorType)
+    {
+        this.summaryMessage = summaryMessage;
+        this.documentURL = documentURL;
+        this.errorType = errorType;
+    }
 
     public String getSummaryMessage()
     {
@@ -114,5 +126,10 @@ public class ErrorSummary
     public URL getDocumentURL()
     {
         return documentURL;
+    }
+
+    public ErrorType getErrorType()
+    {
+        return errorType;
     }
 }

@@ -114,18 +114,30 @@ public class JobSyncSubmissionResource extends BaseJobResource
         else if (jobIsActive())
             pollRunningJob();
 
-        
-
         final Representation representation;
         final List<Result> results = job.getResultsList();
         final ErrorSummary error = job.getErrorSummary();
-        if ( results != null && results.size() > 0)
+        if (results != null && results.size() > 0)
         {
-            final Result result = results.get(0);
-            redirectSeeOther(result.getURL().toString());
+            // Look for first Result marked as primary (should only be one.)
+            boolean primaryResult = false;
+            for (Result result : results)
+            {
+                if (result.isPrimaryResult())
+                {
+                    primaryResult = true;
+                    redirectSeeOther(result.getURL().toString());
+                    break;
+                }
+            }
+            if (!primaryResult)
+            {
+                final Result result = results.get(0);
+                redirectSeeOther(result.getURL().toString());
+            }
             representation = new EmptyRepresentation();
         }
-        else if ( error != null )
+        else if (error != null)
         {
             final ErrorSummary errorSummary = job.getErrorSummary();
             redirectSeeOther(errorSummary.getDocumentURL().toString());

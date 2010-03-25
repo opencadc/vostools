@@ -95,6 +95,7 @@ public enum JobAttribute
     ERROR_SUMMARY("errorSummary"),
     ERROR_SUMMARY_MESSAGE("message"),
     ERROR_SUMMARY_DETAIL_LINK("detail"),
+    ERROR_SUMMARY_TYPE("type"),
     MESSAGE("message"),
     DETAIL("detail"),
     JOB_INFO("jobInfo");

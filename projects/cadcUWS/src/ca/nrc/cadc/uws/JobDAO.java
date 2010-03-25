@@ -192,26 +192,38 @@ public abstract class JobDAO implements JobPersistence
         {
             synchronized(this)
             {
-                job = (Job) jdbc.queryForObject(getSelectJobSQL(jobID), new JobMapper());
-                // List of Parameters for this jobID.
-                List<Parameter> parameterList = null;
-                for (String table : getParameterTables())
+                List jobs = jdbc.query(getSelectJobSQL(jobID), new JobMapper());
+                if (jobs.isEmpty())
                 {
-                    if (parameterList == null)
-                        parameterList = new ArrayList<Parameter>();
-                    parameterList.addAll(jdbc.query(getSelectParameterSQL(jobID, table), new ParameterMapper()));
+                    job = null;
                 }
-                job.setParameterList(parameterList);
+                else if (jobs.size() == 1)
+                {
+                    job = (Job) jobs.get(0);
 
-                // List of Results for this jobID.
-                job.setResultsList(jdbc.query(getSelectResultSQL(jobID), new ResultMapper()));
+                    // List of Parameters for this jobID.
+                    List<Parameter> parameterList = null;
+                    for (String table : getParameterTables())
+                    {
+                        if (parameterList == null)
+                            parameterList = new ArrayList<Parameter>();
+                        parameterList.addAll(jdbc.query(getSelectParameterSQL(jobID, table), new ParameterMapper()));
+                    }
+                    job.setParameterList(parameterList);
+
+                    // List of Results for this jobID.
+                    job.setResultsList(jdbc.query(getSelectResultSQL(jobID), new ResultMapper()));
+                }
+                else
+                {
+                    throw new IllegalStateException("Multiple jobs with jobID " + jobID);
+                }
             }
         }
-       finally
-       {
-           
-       }
+        finally
+        {
 
+        }
         log.debug("getJob jobID = " + jobID);
         return job;
     }
@@ -512,9 +524,18 @@ public abstract class JobDAO implements JobPersistence
         sb.append(jobID);
         sb.append("','");
         sb.append(encode(parameter.getName()));
-        sb.append("','");
-        sb.append(encode(parameter.getValue()));
-        sb.append("')");
+        sb.append("',");
+        if (parameter.getValue() == null)
+        {
+            sb.append("NULL");
+        }
+        else
+        {
+            sb.append("'");
+            sb.append(encode(parameter.getValue()));
+            sb.append("'");
+        }
+        sb.append(")");
         return sb.toString();
     }
 
@@ -531,13 +552,24 @@ public abstract class JobDAO implements JobPersistence
         StringBuilder sb = new StringBuilder();
         sb.append("insert into ");
         sb.append(getResultTable());
-        sb.append(" (jobID, name, url) values ('");
+        sb.append(" (jobID, name, url, primaryResult) values ('");
         sb.append(jobID);
         sb.append("','");
         sb.append(encode(result.getName()));
-        sb.append("','");
-        sb.append(encode(result.getURL().toString()));
-        sb.append("')");
+        sb.append("',");
+        if (result.getURL() == null)
+        {
+            sb.append("NULL");
+        }
+        else
+        {
+            sb.append("'");
+            sb.append(encode(result.getURL().toString()));
+            sb.append("'");
+        }
+        sb.append(",");
+        sb.append(result.isPrimaryResult() ? "1" : " 0");
+        sb.append(")");
         return sb.toString();
     }
 
@@ -812,15 +844,15 @@ public abstract class JobDAO implements JobPersistence
             // owner
             Subject owner = decodeSubject(rs.getString("owner"));
             
-            // runId
-            String runId = decode(rs.getString("runId"));
+            // runID
+            String runID = decode(rs.getString("runID"));
 
             // request path
             String requestPath = decode(rs.getString("requestPath"));
 
             // Create the job
             Job job = new Job(jobID, executionPhase, executionDuration, destructionTime,
-                              quote, startTime, endTime, errorSummary, owner, runId,
+                              quote, startTime, endTime, errorSummary, owner, runID,
                               null, null, requestPath);
 
             return job;
@@ -854,7 +886,7 @@ public abstract class JobDAO implements JobPersistence
             {
                 url = null;
             }
-            return new Result(decode(rs.getString("name")), url);
+            return new Result(decode(rs.getString("name")), url, rs.getInt("primaryResult") == 0 ? false : true);
         }
     }
     

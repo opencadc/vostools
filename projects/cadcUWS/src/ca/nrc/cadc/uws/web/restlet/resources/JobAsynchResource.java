@@ -414,7 +414,15 @@ public class JobAsynchResource extends BaseJobResource
                      JobAttribute.ERROR_SUMMARY.getAttributeName());
         errorSummaryElement.setPrefix(XML_NAMESPACE_PREFIX);
 
-        if (errorSummary != null)
+        if (errorSummary == null)
+        {
+            final Element errorSummaryMessageElement =
+                    document.createElementNS(XML_NAMESPACE_URI,
+                         JobAttribute.ERROR_SUMMARY_MESSAGE.getAttributeName());
+            errorSummaryMessageElement.setPrefix(XML_NAMESPACE_PREFIX);
+            errorSummaryElement.appendChild(errorSummaryMessageElement);
+        }
+        else
         {
             final Element errorSummaryMessageElement =
                     document.createElementNS(XML_NAMESPACE_URI,
@@ -431,6 +439,8 @@ public class JobAsynchResource extends BaseJobResource
                     "xlink:href", errorSummary.getDocumentURL() == null
                     ? ""
                     : errorSummary.getDocumentURL().toString());
+
+            errorSummaryElement.setAttribute(JobAttribute.ERROR_SUMMARY_TYPE.getAttributeName(), errorSummary.getErrorType().name());
 
             errorSummaryElement.appendChild(errorSummaryMessageElement);
             errorSummaryElement.appendChild(errorDocumentURIElement);
