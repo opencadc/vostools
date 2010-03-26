@@ -82,8 +82,6 @@ import org.jdom.JDOMException;
 import org.jdom.input.SAXBuilder;
 import org.jdom.xpath.XPath;
 
-import ca.nrc.cadc.vosi.TestUtil;
-
 /**
  * @author zhangsa
  *
@@ -91,6 +89,7 @@ import ca.nrc.cadc.vosi.TestUtil;
 public class XmlUtil
 {
     private static Logger log = Logger.getLogger(XmlUtil.class);
+    public static final String PARSER = "org.apache.xerces.parsers.SAXParser";
 
     public static Document validateXml(String xml, Map<String, String> schemaMap) throws IOException, JDOMException
     {
@@ -105,7 +104,7 @@ public class XmlUtil
         for (String schemaNSKey : schemaMap.keySet())
         {
             schemaResource = (String) schemaMap.get(schemaNSKey);
-            url = TestUtil.class.getClassLoader().getResource(schemaResource);
+            url = XmlUtil.class.getClassLoader().getResource(schemaResource);
             if (url == null)
                 throw new RuntimeException("failed to find resource: " + schemaResource);
             serviceSchema = url.toString();
@@ -114,7 +113,7 @@ public class XmlUtil
         }
     
         SAXBuilder schemaValidator;
-        schemaValidator = new SAXBuilder(TestUtil.PARSER, true);
+        schemaValidator = new SAXBuilder(PARSER, true);
         schemaValidator.setFeature("http://xml.org/sax/features/validation", true);
         schemaValidator.setFeature("http://apache.org/xml/features/validation/schema", true);
         schemaValidator.setFeature("http://apache.org/xml/features/validation/schema-full-checking", true);

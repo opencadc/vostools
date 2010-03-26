@@ -83,8 +83,6 @@ public class TestUtil
 {
     private static Logger log = Logger.getLogger(TestUtil.class);
     
-    public static final String PARSER = "org.apache.xerces.parsers.SAXParser";
-
     /**
      * assert one and only one node exists
      * 
