@@ -129,7 +129,7 @@
     <property name="deployDir" value="/data/test/webapps" />
 
     <!-- compile the test classes -->
-    <target name="compile-test" depends="compile">
+    <target name="compile-test" depends="build">
         <javac destdir="${build}/class"
                source="${java.source.version}"
                target="${java.target.version}"

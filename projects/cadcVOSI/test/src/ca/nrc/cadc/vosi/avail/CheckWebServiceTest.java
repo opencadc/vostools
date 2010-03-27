@@ -135,7 +135,14 @@ public class CheckWebServiceTest
     {
         String strXml = "<?xml version=\"1.0\" encoding=\"UTF-8\"?><vosi:availability xmlns:vosi=\"http://www.ivoa.net/xml/VOSIAvailability/v1.0\"><vosi:available>true</vosi:available></vosi:availability>";
         CheckWebService cws = new CheckWebService("test");
-        cws.checkReturnedXml(strXml);
+        try 
+        { 
+            cws.checkReturnedXml(strXml);
+        }
+        catch(Throwable t)
+        {
+            Assert.fail("unexpected: " + t);
+        }
     }
 
     @Test
@@ -143,36 +150,47 @@ public class CheckWebServiceTest
     {
         String strXml = "<?xml version=\"1.0\" encoding=\"UTF-8\"?><vos:availability xmlns:vos=\"http://www.ivoa.net/xml/VOSIAvailability/v1.0\"><vos:available>true</vos:available></vos:availability>";
         CheckWebService cws = new CheckWebService("test");
-        cws.checkReturnedXml(strXml);
+        try
+        {
+            cws.checkReturnedXml(strXml);
+        }
+        catch(Throwable t)
+        {
+            Assert.fail("unexpected: " + t);
+        }
     }
 
     @Test
     public void testCheckReturnedXmlBadNoNamespace()
     {
-     boolean errorOccurs = false;
         String strXml = "<?xml version=\"1.0\" encoding=\"UTF-8\"?><vosi:availability><vosi:available>true</vosi:available></vosi:availability>";
         CheckWebService cws = new CheckWebService("test");
-        try {
-        cws.checkReturnedXml(strXml);
-        } catch (Throwable t) {
-            errorOccurs = true;
-            log.debug(t.getMessage());
+        try
+        {
+            cws.checkReturnedXml(strXml);
+            Assert.fail("expected an exception, got none");
         }
-        Assert.assertEquals(true, errorOccurs);
+        catch(CheckException expected) { }
+        catch(Throwable t)
+        {
+            Assert.fail("unexpected: " + t);
+        }
     }
 
     @Test
     public void testCheckReturnedXmlNotAvailable()
     {
-     boolean errorOccurs = false;
         String strXml = "<?xml version=\"1.0\" encoding=\"UTF-8\"?><vosi:availability xmlns:vosi=\"http://www.ivoa.net/xml/VOSIAvailability/v1.0\"><vosi:available>false</vosi:available><vosi:note>some reasons</vosi:note></vosi:availability>";
         CheckWebService cws = new CheckWebService("test");
-        try {
-        cws.checkReturnedXml(strXml);
-        } catch (Throwable t) {
-            errorOccurs = true;
-            log.debug(t.getMessage());
+        try
+        {
+            cws.checkReturnedXml(strXml);
+            Assert.fail("expected an exception, got none");
         }
-        Assert.assertEquals(true, errorOccurs);
+        catch(CheckException expected) { }
+        catch(Throwable t)
+        {
+            Assert.fail("unexpected: " + t);
+        }
     }
 }
