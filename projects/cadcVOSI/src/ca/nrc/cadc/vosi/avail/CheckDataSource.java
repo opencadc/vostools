@@ -70,6 +70,9 @@
 package ca.nrc.cadc.vosi.avail;
 
 import java.sql.*;
+import javax.naming.Context;
+import javax.naming.InitialContext;
+import javax.naming.NamingException;
 
 import javax.sql.*;
 
@@ -77,80 +80,85 @@ import javax.sql.*;
  * @author zhangsa
  *
  */
-public class CheckDataSource implements Runnable
+public class CheckDataSource implements CheckResource
 {
-    private DataSource _dataSource;
-    private String _sql;
+    private String dataSourceName;
+    private DataSource dataSource;
+    private String testSQL;
 
     /**
+     * Constructor to check a DataSource.
+     * The test query should be something that always executes quickly and
+     * returns a small result set, such as <code>select x from someTable limit 0</code>.
      * 
-     * @param dataSource, the DataSource to check
-     * @param sql, a SQL query.  
-     * If it's run normally, it means the dataSource is working properly.  
-     * This SQL query is suggested to be something as "SELECT count(*) from ....", which always return 1 row of result.
-     * If the resultSet is not returned, it means something wrong with the DB. 
+     * @param dataSource the DataSource to check
+     * @param testSQL test quiery that should work
      */
-    public CheckDataSource(DataSource dataSource, String sql)
+    public CheckDataSource(DataSource dataSource, String testSQL)
     {
-        _dataSource = dataSource;
-        _sql = sql;
+        this.dataSource = dataSource;
+        this.testSQL = testSQL;
     }
 
-    /* (non-Javadoc)
-     * @see java.lang.Runnable#run()
+    /**
+     * Constructor to test a DataSource via JNDI name.
+     *
+     * @param dataSourceName JNDI name of DataSource
+     * @param testSQL test quiery that should work
      */
-    @Override
-    public void run()
+    public CheckDataSource(String dataSourceName, String testSQL)
     {
-        Connection conn = null;
-        PreparedStatement pstmt = null;
+        this.dataSourceName = dataSourceName;
+        this.testSQL = testSQL;
+    }
+
+    @Override
+    public void check()
+        throws CheckException
+    {
+        Connection con = null;
+        Statement st = null;
         ResultSet rs = null;
         try
         {
-            // TODO later.  use Spring to provide more information about exception 2010-03-22
-            conn = _dataSource.getConnection();
-            pstmt = conn.prepareStatement(_sql);
-            rs = pstmt.executeQuery();
-            if (!rs.next()) // result set is empty, nothing returned
-                throw new SQLException("result set is empty");
-        } catch (SQLException e)
-        {
-            throw new IllegalStateException("CheckDataSource failed.");
-        } finally
-        {
-            try
+            if (dataSource == null && dataSourceName != null)
             {
-                if (rs != null)
-                    rs.close();
-                if (pstmt != null)
-                    pstmt.close();
-                if (conn != null)
-                    conn.close();
-            } catch (SQLException e)
-            {
-                // do nothing
+                // JNDI lookup
+                // test job persistence, TODO: create and use JobDAOImpl?
+                Context initContext = new InitialContext();
+                Context envContext = (Context) initContext.lookup("java:/comp/env");
+                this.dataSource = (DataSource) envContext.lookup(dataSourceName);
             }
-
+            con = dataSource.getConnection();
+            st = con.createStatement();
+            rs = st.executeQuery(testSQL);
+            rs.next(); // just check the result set, but don't care if there are any rows
         }
-    }
-
-    public DataSource getDataSource()
-    {
-        return _dataSource;
-    }
-
-    public void setDataSource(DataSource dataSource)
-    {
-        _dataSource = dataSource;
-    }
-
-    public String getSql()
-    {
-        return _sql;
-    }
-
-    public void setSql(String sql)
-    {
-        _sql = sql;
+        catch(NamingException e)
+        {
+            throw new CheckException("failed to find " + dataSourceName + " via JNDI", e);
+        }
+        catch (SQLException e)
+        {
+            throw new CheckException("DataSource is not usable", e);
+        }
+        finally
+        {
+            if (rs != null)
+            {
+                try { rs.close(); }
+                catch(Throwable ignore) { }
+            }
+            if (st != null)
+            {
+                try { st.close(); }
+                catch(Throwable ignore) { }
+            }
+            if (con != null)
+            {
+                try { con.close(); }
+                catch(Throwable ignore) { }
+            }
+        }
     }
 }

@@ -77,12 +77,17 @@ import org.jdom.xpath.XPath;
 import ca.nrc.cadc.vosi.VOSI;
 import ca.nrc.cadc.vosi.util.WebGet;
 import ca.nrc.cadc.vosi.util.XmlUtil;
+import java.io.IOException;
+import java.net.MalformedURLException;
+import org.jdom.JDOMException;
 
 /**
+ * Check the /availability resource of another web service.
+ * 
  * @author zhangsa
  *
  */
-public class CheckWebService implements Runnable
+public class CheckWebService implements CheckResource
 {
     private static Logger log = Logger.getLogger(CheckWebService.class);
 
@@ -92,22 +97,48 @@ public class CheckWebService implements Runnable
     private final String schemaNSKey = VOSI.AVAILABILITY_NS_URI;
 
     /**
-     * @param url, the URL of availability checking, e.g. http://www.sample.com/myservice/availability
+     * @param url the URL of availability checking, e.g. http://www.sample.com/myservice/availability
      */
     public CheckWebService(String url)
     {
         _url = url;
     }
 
+    /* (non-Javadoc)
+     * @see java.lang.Runnable#run()
+     */
+    @Override
+    public void check()
+        throws CheckException
+    {
+        String wgReturn = null;
+        try
+        {
+            WebGet webGet = new WebGet(_url);
+            wgReturn = webGet.submit();
+            checkReturnedXml(wgReturn);
+        }
+        catch (MalformedURLException e)
+        {
+            throw new RuntimeException("test URL is malformed: " + _url, e);
+        }
+        catch(IOException e)
+        {
+            throw new CheckException("service not responding: " + _url, e);
+        }
+    }
+
     void checkReturnedXml(String strXml)
+        throws CheckException
     {
         Document doc = null;
         String xpathStr;
         XPath xpath;
+
         try
         {
             doc = XmlUtil.validateXml(strXml, schemaNSKey, schemaResource);
-            //get namespace and/or prefix from Document, then create xpath based on the prefix 
+            //get namespace and/or prefix from Document, then create xpath based on the prefix
             String nsp = doc.getRootElement().getNamespacePrefix(); //Namespace Prefix
             if (nsp != null && nsp.length() > 0)
                 nsp = nsp + ":";
@@ -118,50 +149,28 @@ public class CheckWebService implements Runnable
             Element eleAvail = (Element) xpath.selectSingleNode(doc);
             log.debug(eleAvail);
             String textAvail = eleAvail.getText();
+
+            // TODO: is this is actually valid? is the content not constrained by the schema?
             if (textAvail == null)
-                throw new Exception("XML format incorrect.");
-            else if (textAvail.equalsIgnoreCase("false"))
+                throw new CheckException(_url + " output is invalid: no content in <available> element", null);
+
+            if ( !textAvail.equalsIgnoreCase("true") )
             {
                 xpathStr = "/" + nsp + "availability/" + nsp + "note";
                 xpath = XPath.newInstance(xpathStr);
                 Element eleNotes = (Element) xpath.selectSingleNode(doc);
                 String textNotes = eleNotes.getText();
-                throw new Exception(textNotes);
+                throw new CheckException("service " + _url + " is not available, reported reason: " + textNotes, null);
             }
-            System.out.println(eleAvail.toString());
-        } catch (Exception e)
-        {
-            log.info(e);
-            throw new IllegalStateException(e.getMessage());
         }
-    }
-
-    /* (non-Javadoc)
-     * @see java.lang.Runnable#run()
-     */
-    @Override
-    public void run()
-    {
-        String wgReturn = null;
-        try
+        catch(IOException e)
         {
-            WebGet webGet = new WebGet(_url);
-            wgReturn = webGet.submit();
-        } catch (Exception e)
-        {
-            log.info(e);
-            throw new IllegalStateException(e.getMessage());
+            // probably an incorrect setup or bug in the checks
+            throw new RuntimeException("failed to test " + _url, e);
         }
-        checkReturnedXml(wgReturn);
-    }
-
-    public String getUrl()
-    {
-        return _url;
-    }
-
-    public void setUrl(String url)
-    {
-        _url = url;
+        catch(JDOMException e)
+        {
+            throw new CheckException(_url + " output is invalid", e);
+        }
     }
 }

@@ -69,6 +69,9 @@
 
 package ca.nrc.cadc.vosi.avail;
 
+import java.io.PrintWriter;
+import java.sql.Connection;
+import java.sql.SQLException;
 import javax.sql.DataSource;
 
 import junit.framework.Assert;
@@ -79,16 +82,12 @@ import org.junit.Before;
 import org.junit.BeforeClass;
 import org.junit.Test;
 
-import ca.nrc.cadc.vosi.avail.CheckDataSource;
-
 /**
  * @author zhangsa
  *
  */
 public class CheckDataSourceTest
 {
-    DataSource _ds = null;
-
     /**
      * @throws java.lang.Exception
      */
@@ -111,7 +110,6 @@ public class CheckDataSourceTest
     @Before
     public void setUp() throws Exception
     {
-        _ds = null;
     }
 
     /**
@@ -126,18 +124,106 @@ public class CheckDataSourceTest
      * Test when dataSource is null
      */
     @Test
-    public void testBad()
+    public void testNullDataSource()
     {
         boolean exceptionOccured = false;
         String sql = "select count(*) from tap_schema.alldatatypes";
         try
-        {            
-            CheckDataSource cds = new CheckDataSource(_ds, sql);
-            cds.run();
-        } catch (Throwable t)
         {
-            exceptionOccured = true;
+            DataSource ds = null;
+            CheckDataSource cds = new CheckDataSource(ds, sql);
+            cds.check();
         }
-        Assert.assertEquals(exceptionOccured, true);
+        catch(NullPointerException expected) { }
+        catch (Throwable t)
+        {
+            Assert.fail("expected a NullPointerException, got a " + t);
+        }
+    }
+    
+    /**
+     * Test when dataSource lookup fails
+     */
+    @Test
+    public void testFailJNDI()
+    {
+        boolean exceptionOccured = false;
+        String sql = "select count(*) from tap_schema.alldatatypes";
+        try
+        {
+            CheckDataSource cds = new CheckDataSource("some/thing", sql);
+            cds.check();
+        }
+        catch(CheckException expected) { }
+        catch (Throwable t)
+        {
+            Assert.fail("expected a CheckException, got a " + t);
+        }
+    }
+
+    /**
+     * Test when dataSource is null
+     */
+    @Test
+    public void testBrokenDataSource()
+    {
+        boolean exceptionOccured = false;
+        String sql = "select count(*) from tap_schema.alldatatypes";
+        try
+        {
+            DataSource ds = new MockDS();
+            CheckDataSource cds = new CheckDataSource(ds, sql);
+            cds.check();
+        }
+        catch(CheckException expected) { }
+        catch (Throwable t)
+        {
+            Assert.fail("expected a CheckException, got a " + t);
+        }
+    }
+
+    private static class MockDS implements DataSource
+    {
+
+        public Connection getConnection() throws SQLException
+        {
+            throw new SQLException("Not supported yet.");
+        }
+
+        public Connection getConnection(String username, String password) throws SQLException
+        {
+            throw new SQLException("Not supported yet.");
+        }
+
+        public PrintWriter getLogWriter() throws SQLException
+        {
+            throw new SQLException("Not supported yet.");
+        }
+
+        public int getLoginTimeout() throws SQLException
+        {
+            throw new SQLException("Not supported yet.");
+        }
+
+        public void setLogWriter(PrintWriter out) throws SQLException
+        {
+            throw new SQLException("Not supported yet.");
+        }
+
+        public void setLoginTimeout(int seconds) throws SQLException
+        {
+            throw new SQLException("Not supported yet.");
+        }
+
+        public boolean isWrapperFor(Class<?> iface) throws SQLException
+        {
+            throw new SQLException("Not supported yet.");
+        }
+
+        public <T> T unwrap(Class<T> iface) throws SQLException
+        {
+            throw new SQLException("Not supported yet.");
+        }
+
     }
 }
