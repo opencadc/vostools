@@ -134,7 +134,7 @@ public class CheckWebServiceTest
     public void testCheckReturnedXml()
     {
         String strXml = "<?xml version=\"1.0\" encoding=\"UTF-8\"?><vosi:availability xmlns:vosi=\"http://www.ivoa.net/xml/VOSIAvailability/v1.0\"><vosi:available>true</vosi:available></vosi:availability>";
-        CheckWebService cws = new CheckWebService("testing", "test");
+        CheckWebService cws = new CheckWebService("test");
         cws.checkReturnedXml(strXml);
     }
 
@@ -142,7 +142,7 @@ public class CheckWebServiceTest
     public void testCheckReturnedXmlDiffPrefixGood()
     {
         String strXml = "<?xml version=\"1.0\" encoding=\"UTF-8\"?><vos:availability xmlns:vos=\"http://www.ivoa.net/xml/VOSIAvailability/v1.0\"><vos:available>true</vos:available></vos:availability>";
-        CheckWebService cws = new CheckWebService("testing", "test");
+        CheckWebService cws = new CheckWebService("test");
         cws.checkReturnedXml(strXml);
     }
 
@@ -151,7 +151,7 @@ public class CheckWebServiceTest
     {
      boolean errorOccurs = false;
         String strXml = "<?xml version=\"1.0\" encoding=\"UTF-8\"?><vosi:availability><vosi:available>true</vosi:available></vosi:availability>";
-        CheckWebService cws = new CheckWebService("testing", "test");
+        CheckWebService cws = new CheckWebService("test");
         try {
         cws.checkReturnedXml(strXml);
         } catch (Throwable t) {
@@ -166,7 +166,7 @@ public class CheckWebServiceTest
     {
      boolean errorOccurs = false;
         String strXml = "<?xml version=\"1.0\" encoding=\"UTF-8\"?><vosi:availability xmlns:vosi=\"http://www.ivoa.net/xml/VOSIAvailability/v1.0\"><vosi:available>false</vosi:available><vosi:note>some reasons</vosi:note></vosi:availability>";
-        CheckWebService cws = new CheckWebService("testing", "test");
+        CheckWebService cws = new CheckWebService("test");
         try {
         cws.checkReturnedXml(strXml);
         } catch (Throwable t) {

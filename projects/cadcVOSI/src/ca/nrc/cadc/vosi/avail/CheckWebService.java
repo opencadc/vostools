@@ -86,20 +86,16 @@ public class CheckWebService implements Runnable
 {
     private static Logger log = Logger.getLogger(CheckWebService.class);
 
-    private String _serviceName;
     private String _url;
 
     private final String schemaResource = "VOSIAvailability-v1.0.xsd"; // local xsd file name
     private final String schemaNSKey = VOSI.AVAILABILITY_NS_URI;
 
     /**
-     * 
-     * @param serviceName, this is a caller-defined name for the service being checked
      * @param url, the URL of availability checking, e.g. http://www.sample.com/myservice/availability
      */
-    public CheckWebService(String serviceName, String url)
+    public CheckWebService(String url)
     {
-        _serviceName = serviceName;
         _url = url;
     }
 
@@ -157,16 +153,6 @@ public class CheckWebService implements Runnable
             throw new IllegalStateException(e.getMessage());
         }
         checkReturnedXml(wgReturn);
-    }
-
-    public String getServiceName()
-    {
-        return _serviceName;
-    }
-
-    public void setServiceName(String serviceName)
-    {
-        _serviceName = serviceName;
     }
 
     public String getUrl()

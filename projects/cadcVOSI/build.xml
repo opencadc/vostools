@@ -93,14 +93,22 @@
     <property name="log4j"       value="${ext.lib}/log4j.jar" />
     <property name="servlet-api" value="${ext.lib}/servlet-api.jar" />
     <property name="jdom"        value="${ext.lib}/jdom.jar" />
-
+    
     <property name="jars" value="${lib}/cadcUtil.jar:${jdom}:${log4j}:${servlet-api}" />
 
-    <target name="build" depends="compile">
+    <target name="build" depends="compile,resources">
             <jar jarfile="${build}/lib/cadcVOSI.jar"
                     basedir="${build}/class" update="no">
                     <exclude name="test/**" />
             </jar>
+    </target>
+
+    <target name="resources">
+        <copy todir="${build}/class">
+            <fileset dir="src/resources">
+		<include name="**.xsd" />
+	    </fileset>
+        </copy>
     </target>
 
     <!-- JAR files needed to run the test suite -->
