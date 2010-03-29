@@ -107,7 +107,10 @@ public class SPointFormatter implements ResultSetFormatter
      */
     public String format(Object object)
     {
-        return STC.format(getPosition(object));
+        Position pos = getPosition(object);
+        if (pos == null)
+            return "";
+        return STC.format(pos);
     }
 
     public Position getPosition(Object object)

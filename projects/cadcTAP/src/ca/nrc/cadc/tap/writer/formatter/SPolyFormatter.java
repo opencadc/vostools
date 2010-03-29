@@ -110,7 +110,10 @@ public class SPolyFormatter implements ResultSetFormatter
      */
     public String format(Object object)
     {
-        return STC.format(getPolygon(object));
+        Polygon pos = getPolygon(object);
+        if (pos == null)
+            return "";
+        return STC.format(pos);
     }
 
     public Polygon getPolygon(Object object)
