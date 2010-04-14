@@ -69,21 +69,20 @@
 
 package ca.nrc.cadc.conformance.uws;
 
+import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.Reader;
-import java.util.Enumeration;
+import java.util.ArrayList;
 import java.util.HashMap;
-import java.util.Iterator;
+import java.util.List;
 import java.util.Map;
-import java.util.Properties;
-import java.util.Set;
 
-public class TestProperties extends Properties
+public class TestProperties
 {
-    public static final String NEW_LINE  = System.getProperty("line.separator");
+    public static final String NEW_LINE = System.getProperty("line.separator");
 
     public String filename;
-    public Map<String, String> parameters;
+    public Map<String, List<String>> parameters;
 
     public TestProperties()
     {
@@ -92,29 +91,62 @@ public class TestProperties extends Properties
 
     public void load(Reader reader, String propertiesFilename) throws IOException
     {
-        load(reader);
-        filename = propertiesFilename;
-        parameters = new HashMap<String, String>();
-        Enumeration keys = keys();
-        while (keys.hasMoreElements())
+        String strLine, key, value;
+        char firstChar;
+        List<String> valueList;
+        int idxColon, lineLength;
+
+        parameters = new HashMap<String, List<String>>();
+
+        BufferedReader br = new BufferedReader(reader);
+        //Read File Line By Line
+        while ((strLine = br.readLine()) != null)
         {
-            String key = (String) keys.nextElement();
-            String value = getProperty(key);
-            parameters.put(key, value);
+            strLine = strLine.trim();
+            lineLength = strLine.length();
+            if (lineLength == 0)
+                continue;
+
+            firstChar = strLine.charAt(0);
+            if (firstChar == '#' || firstChar == '!') //comment line
+                continue;
+
+            idxColon = strLine.indexOf('=');
+            if (idxColon == 0) // "=foo"
+                continue;
+
+            key = strLine.substring(0, idxColon).trim();
+            value = strLine.substring(idxColon + 1).trim();
+
+            valueList = parameters.get(key);
+            if (valueList == null) // the key is not in parameters yet 
+            {
+                valueList = new ArrayList<String>();
+                parameters.put(key, valueList);
+            }
+            valueList.add(value);
         }
+        //Close the buffered reader
+        br.close();
+
+        filename = propertiesFilename;
     }
 
     public String toString()
     {
+        List<String> valueList;
+
         StringBuilder sb = new StringBuilder();
-        Set<Map.Entry<String, String>> values = parameters.entrySet();
-        Iterator<Map.Entry<String, String>> iterator = values.iterator();
-        while (iterator.hasNext())
+        List<String> keyList = new ArrayList<String>(parameters.keySet());
+        for (String key : keyList)
         {
-            Map.Entry<String, String> entry = iterator.next();
-            sb.append(entry.getKey()).append(" = ").append(entry.getValue()).append(NEW_LINE);
+            valueList = parameters.get(key);
+            for (String value : valueList)
+            {
+                sb.append(key).append('=').append(value).append(NEW_LINE);
+            }
         }
         return sb.toString();
     }
-    
+
 }

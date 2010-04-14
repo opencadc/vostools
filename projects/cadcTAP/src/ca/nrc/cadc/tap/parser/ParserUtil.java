@@ -126,6 +126,7 @@ public class ParserUtil
      */
     public static Statement receiveQuery(String query) throws JSQLParserException
     {
+        log.debug(query);
         Statement statement = null;
         StringReader sr = new StringReader(query);
         CCJSqlParserManager sqlParser = new CCJSqlParserManager();

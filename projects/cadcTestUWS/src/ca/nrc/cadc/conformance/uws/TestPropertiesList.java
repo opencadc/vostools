@@ -95,6 +95,7 @@ public class TestPropertiesList
             File file = files[i];
             TestProperties properties = new TestProperties();
             FileReader reader = new FileReader(file);
+            
             properties.load(reader, file.getName());
             propertiesList.add(properties);
         }

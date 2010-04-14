@@ -107,11 +107,12 @@ public class AdqlQuery implements TapQuery
     protected TapSchema _tapSchema;
     protected Map<String, TableDesc> _extraTables;
     protected List<Parameter> _paramList;
+    protected List<String> _queryStringList;
     protected String _queryString;
     protected Integer _maxRows;
 
     protected Statement _statement;
-    protected List<TapSelectItem> _tapSelectItemList;
+    protected List<TapSelectItem> _tapSelectItemList = null;
     protected List<SelectNavigator> _navigatorList = new ArrayList<SelectNavigator>();
 
     protected transient boolean navigated = false;
@@ -192,11 +193,23 @@ public class AdqlQuery implements TapQuery
         }
 
         // run all the navigators
+        navigateStatement(_statement);
+
+        navigated = true; 
+    }
+
+    /**
+     * Run all navigators on a statement
+     * 
+     * @param statement
+     */
+    protected void navigateStatement(Statement statement)
+    {
         for (SelectNavigator sn : _navigatorList)
         {
             log.debug("Navigated by: " + sn.getClass().getName());
             
-            ParserUtil.parseStatement(_statement, sn);
+            ParserUtil.parseStatement(statement, sn);
             
             if (sn instanceof SelectListExtractor)
             {
@@ -204,7 +217,6 @@ public class AdqlQuery implements TapQuery
                 _tapSelectItemList = slen.getTapSelectItemList();
             }
         }
-        navigated = true; 
     }
 
 	public void setTapSchema(TapSchema tapSchema) 
@@ -219,9 +231,13 @@ public class AdqlQuery implements TapQuery
 
     public void setParameterList( List<Parameter> paramList )
     {
-        this._queryString = TapUtil.findParameterValue("QUERY", paramList);
-        if (_queryString == null)
+        this._queryStringList = TapUtil.findParameterValues("QUERY", paramList);
+        // Tested; when no query is provided, the obj is null
+        if (_queryStringList == null)
             throw new IllegalArgumentException( "parameter not found: QUERY" );
+        this._queryString = _queryStringList.get(0);
+        if (_queryString == null)
+            throw new IllegalArgumentException( "QUERY is empty" );
     }
 
     public void setMaxRowCount(Integer count)

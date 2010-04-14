@@ -69,13 +69,10 @@
 
 package ca.nrc.cadc.conformance.uws;
 
-import ca.nrc.cadc.util.Log4jInit;
-import com.meterware.httpunit.GetMethodWebRequest;
-import com.meterware.httpunit.HeadMethodWebRequest;
-import com.meterware.httpunit.PostMethodWebRequest;
-import com.meterware.httpunit.WebConversation;
-import com.meterware.httpunit.WebRequest;
-import com.meterware.httpunit.WebResponse;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertNotNull;
+import static org.junit.Assert.assertTrue;
+
 import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStreamReader;
@@ -83,10 +80,9 @@ import java.io.StringReader;
 import java.net.MalformedURLException;
 import java.net.URL;
 import java.util.ArrayList;
-import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
-import java.util.Set;
+
 import org.apache.log4j.Level;
 import org.apache.log4j.Logger;
 import org.jdom.Document;
@@ -95,26 +91,28 @@ import org.jdom.JDOMException;
 import org.jdom.Namespace;
 import org.jdom.input.SAXBuilder;
 import org.xml.sax.SAXException;
-import static org.junit.Assert.*;
+
+import ca.nrc.cadc.util.Log4jInit;
+
+import com.meterware.httpunit.GetMethodWebRequest;
+import com.meterware.httpunit.HeadMethodWebRequest;
+import com.meterware.httpunit.PostMethodWebRequest;
+import com.meterware.httpunit.WebConversation;
+import com.meterware.httpunit.WebRequest;
+import com.meterware.httpunit.WebResponse;
 
 public abstract class AbstractUWSTest
 {
     private static Logger log = Logger.getLogger(AbstractUWSTest.class);
     {
-        Log4jInit.setLevel("ca", Level.INFO);
+        Log4jInit.setLevel("ca", Level.DEBUG);
     }
 
-    protected static final String[] LOGGING_STRING = new String[]
-    {
-        "ALL", "DEBUG", "ERROR", "FATAL",
-        "INFO", "OFF", "TRACE", "WARN"
-    };
-    protected static final Level[] LOGGING_LEVEL = new Level[]
-    {
-        Level.ALL, Level.DEBUG, Level.ERROR, Level.FATAL, 
-        Level.INFO, Level.OFF, Level.TRACE, Level.WARN
-    };
-    
+    protected static final String[] LOGGING_STRING = new String[] { "ALL", "DEBUG", "ERROR", "FATAL", "INFO", "OFF", "TRACE",
+            "WARN" };
+    protected static final Level[] LOGGING_LEVEL = new Level[] { Level.ALL, Level.DEBUG, Level.ERROR, Level.FATAL, Level.INFO,
+            Level.OFF, Level.TRACE, Level.WARN };
+
     private static final String UWS_SCHEMA_RESOURCE = "UWS-1.0.xsd";
     private static final String PARSER = "org.apache.xerces.parsers.SAXParser";
 
@@ -130,7 +128,7 @@ public abstract class AbstractUWSTest
     {
         // Set the logging level.
         setLoggingLevel(log);
-        
+
         // Base URL of the service to be tested.
         serviceUrl = System.getProperty("service.url");
         if (serviceUrl == null)
@@ -142,15 +140,15 @@ public abstract class AbstractUWSTest
         log.debug("serviceSchema: " + serviceSchema);
 
         parser = new SAXBuilder(PARSER, false);
-        parser.setProperty("http://apache.org/xml/properties/schema/external-schemaLocation",
-                           "http://www.ivoa.net/xml/UWS/v1.0 " + serviceSchema);
+        parser.setProperty("http://apache.org/xml/properties/schema/external-schemaLocation", "http://www.ivoa.net/xml/UWS/v1.0 "
+                + serviceSchema);
 
         validatingParser = new SAXBuilder(PARSER, true);
         validatingParser.setFeature("http://xml.org/sax/features/validation", true);
         validatingParser.setFeature("http://apache.org/xml/features/validation/schema", true);
         validatingParser.setFeature("http://apache.org/xml/features/validation/schema-full-checking", true);
         validatingParser.setProperty("http://apache.org/xml/properties/schema/external-schemaLocation",
-                                     "http://www.ivoa.net/xml/UWS/v1.0 " + serviceSchema);
+                "http://www.ivoa.net/xml/UWS/v1.0 " + serviceSchema);
     }
 
     protected void setLoggingLevel(Logger logger)
@@ -175,17 +173,15 @@ public abstract class AbstractUWSTest
         logger.setLevel(level);
     }
 
-    protected Document buildDocument(String xml, boolean validate)
-        throws IOException, JDOMException
+    protected Document buildDocument(String xml, boolean validate) throws IOException, JDOMException
     {
         if (validate)
             return validatingParser.build(new StringReader(xml));
         else
             return parser.build(new StringReader(xml));
-     }
+    }
 
-    protected String urlToString(String urlString)
-        throws MalformedURLException, IOException
+    protected String urlToString(String urlString) throws MalformedURLException, IOException
     {
         URL url = new URL(urlString);
         BufferedReader reader = new BufferedReader(new InputStreamReader(url.openStream()));
@@ -196,14 +192,12 @@ public abstract class AbstractUWSTest
         return sb.toString();
     }
 
-    protected String createJob(WebConversation conversation)
-        throws IOException, SAXException, JDOMException
+    protected String createJob(WebConversation conversation) throws IOException, SAXException, JDOMException
     {
         return createJob(conversation, null);
     }
 
-    protected String createJob(WebConversation conversation, Map<String, String> parameters)
-        throws IOException, SAXException, JDOMException
+    protected String createJob(WebConversation conversation, Map<String, List<String>> parameters) throws IOException, SAXException, JDOMException
     {
         String jobId = null;
         log.debug("**************************************************");
@@ -215,12 +209,13 @@ public abstract class AbstractUWSTest
         // Add parameters if available.
         if (parameters != null)
         {
-            Set<Map.Entry<String, String>> values = parameters.entrySet();
-            Iterator<Map.Entry<String, String>> iterator = values.iterator();
-            while (iterator.hasNext())
+            List<String> valueList;
+
+            List<String> keyList = new ArrayList<String>(parameters.keySet());
+            for (String key : keyList)
             {
-                Map.Entry<String, String> entry = iterator.next();
-                postRequest.setParameter(entry.getKey(), entry.getValue());
+                valueList = parameters.get(key);
+                postRequest.setParameter(key, valueList.toArray(new String[0]));
             }
         }
 
@@ -248,7 +243,7 @@ public abstract class AbstractUWSTest
         assertNotNull("jobId not found", jobId);
 
         // Check the Location header.
-//        assertEquals(propertiesFilename + " POST response to " + baseUrl + " location header incorrect", baseUrl + "/" + jobId, location);
+        //        assertEquals(propertiesFilename + " POST response to " + baseUrl + " location header incorrect", baseUrl + "/" + jobId, location);
 
         // Follow the redirect.
         response = get(conversation, location);
@@ -283,13 +278,13 @@ public abstract class AbstractUWSTest
 
         // Job should have zero or one Error.
         list = root.getChildren("error", namespace);
-        assertTrue("XML returned from GET of " + location + " invalid number of uws:error elements", list.size() == 0 || list.size() == 1);
+        assertTrue("XML returned from GET of " + location + " invalid number of uws:error elements", list.size() == 0
+                || list.size() == 1);
 
         return jobId;
     }
 
-    protected WebResponse head(WebConversation conversation, String resourceUrl)
-        throws IOException, SAXException
+    protected WebResponse head(WebConversation conversation, String resourceUrl) throws IOException, SAXException
     {
         log.debug("**************************************************");
         log.debug("HTTP HEAD: " + resourceUrl);
@@ -306,8 +301,7 @@ public abstract class AbstractUWSTest
         return response;
     }
 
-    protected WebResponse get(WebConversation conversation, String resourceUrl)
-        throws IOException, SAXException
+    protected WebResponse get(WebConversation conversation, String resourceUrl) throws IOException, SAXException
     {
         log.debug("**************************************************");
         log.debug("HTTP GET: " + resourceUrl);
@@ -322,13 +316,12 @@ public abstract class AbstractUWSTest
         assertEquals("Non-200 GET response code to " + resourceUrl, 200, response.getResponseCode());
 
         log.debug("Content-Type: " + response.getContentType());
-//        assertEquals("GET response Content-Type header to " + resourceUrl + " is incorrect", "text/xml", response.getContentType());
+        //        assertEquals("GET response Content-Type header to " + resourceUrl + " is incorrect", "text/xml", response.getContentType());
 
         return response;
     }
 
-    protected WebResponse post(WebConversation conversation, WebRequest request)
-        throws IOException, SAXException
+    protected WebResponse post(WebConversation conversation, WebRequest request) throws IOException, SAXException
     {
         // POST request to the phase resource.
         log.debug("**************************************************");
@@ -348,7 +341,7 @@ public abstract class AbstractUWSTest
         String location = response.getHeaderField("Location");
         log.debug("Location: " + location);
         assertNotNull("POST response to " + request.getURL().toString() + " location header not set", location);
-//      assertEquals(POST response to " + resourceUrl + " location header incorrect", baseUrl + "/" + jobId, location);
+        //      assertEquals(POST response to " + resourceUrl + " location header incorrect", baseUrl + "/" + jobId, location);
 
         return response;
     }
@@ -365,8 +358,7 @@ public abstract class AbstractUWSTest
     /*
      * Delete a job using an HTTP POST request.
      */
-    protected WebResponse deleteJobWithPostRequest(WebConversation conversation, String jobId)
-        throws IOException, SAXException, JDOMException
+    protected WebResponse deleteJobWithPostRequest(WebConversation conversation, String jobId) throws IOException, SAXException, JDOMException
     {
         String resourceUrl = serviceUrl + "/" + jobId;
         log.debug("**************************************************");
@@ -379,8 +371,7 @@ public abstract class AbstractUWSTest
     /*
      * Delete a Job using a HTTP DELETE request.
      */
-    protected WebResponse deleteJobWithDeleteRequest(WebConversation conversation, String jobId)
-        throws IOException, SAXException, JDOMException
+    protected WebResponse deleteJobWithDeleteRequest(WebConversation conversation, String jobId) throws IOException, SAXException, JDOMException
     {
         String resourceUrl = serviceUrl + "/" + jobId;
         log.debug("**************************************************");
@@ -389,8 +380,7 @@ public abstract class AbstractUWSTest
         return deleteJob(conversation, deleteRequest, resourceUrl);
     }
 
-    private WebResponse deleteJob(WebConversation conversation, WebRequest request, String resourceUrl)
-        throws IOException, SAXException, JDOMException
+    private WebResponse deleteJob(WebConversation conversation, WebRequest request, String resourceUrl) throws IOException, SAXException, JDOMException
     {
         log.debug(Util.getRequestParameters(request));
 
@@ -431,5 +421,5 @@ public abstract class AbstractUWSTest
 
         return response;
     }
-    
+
 }
