@@ -242,7 +242,7 @@ public class VOTableWriter implements TableWriter
     private Document createDocument()
     {
         // the root VOTABLE element
-        Namespace vot = Namespace.getNamespace("vot", VOTABLE_NS_URI);
+        Namespace vot = Namespace.getNamespace(VOTABLE_NS_URI);
         Namespace xsi = Namespace.getNamespace("xsi", XSI_NS_URI);
         Element votable = new Element("VOTABLE", vot);
         votable.setAttribute("version", VOTABLE_VERSION);
