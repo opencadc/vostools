@@ -157,6 +157,7 @@ public class AdqlQuery implements TapQuery
         
         try
         {
+            log.debug("parsing query: " + _queryString);
             _statement = ParserUtil.receiveQuery(_queryString);
         }
         catch (JSQLParserException e)
@@ -231,6 +232,7 @@ public class AdqlQuery implements TapQuery
 
     public void setParameterList( List<Parameter> paramList )
     {
+        this._paramList = paramList;
         this._queryStringList = TapUtil.findParameterValues("QUERY", paramList);
         // Tested; when no query is provided, the obj is null
         if (_queryStringList == null)
