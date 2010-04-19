@@ -180,10 +180,10 @@ public class TableDataXMLOutputter extends XMLOutputter
             if (rowCount > maxRows)
             {
                 out.write(NEW_LINE);
-                out.write(getIndentLevel(level));
-                out.write("<");
-                out.write(element.getNamespacePrefix());
-                out.write(":INFO name=\"QUERY_STATUS\" value=\"OVERFLOW\"/>");
+                Element info = new Element("INFO", element.getNamespace());
+                info.setAttribute("name", "QUERY_STATUS");
+                info.setAttribute("value", "OVERFLOW");
+                super.printElement(out, info, level, namespaces);
             }
         }
         else if (element instanceof TableDataElement)
