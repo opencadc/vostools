@@ -179,7 +179,7 @@ public class PgsRegionConverterTest
     public void testFunctionCoordsys()
     {
         _query = "select COORDSYS(a.t_spoint) from TAP_SCHEMA.AllDataTypes";
-        _expected = "SELECT 'ICRS GEOCENTER' FROM TAP_SCHEMA.AllDataTypes";
+        _expected = "SELECT NULL FROM TAP_SCHEMA.AllDataTypes";
         doit();
     }
 

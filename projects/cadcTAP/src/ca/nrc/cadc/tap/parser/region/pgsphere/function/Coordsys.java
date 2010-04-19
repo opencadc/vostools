@@ -94,7 +94,8 @@ public class Coordsys extends PgsFunction
     @Override
     public String toString()
     {
-        return "'" + RegionFinder.ICRS + "'";
+        //return "'" + RegionFinder.ICRS + "'";
+        return "NULL";
     }
     
     public String valueString()
