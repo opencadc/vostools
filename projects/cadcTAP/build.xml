@@ -176,6 +176,7 @@
             <test name="ca.nrc.cadc.tap.parser.AllColumnConverterTest"/>
 	    <test name="ca.nrc.cadc.tap.parser.TopConverterTest"/>
             <test name="ca.nrc.cadc.tap.parser.ParserUtilTest"/>
+            <test name="ca.nrc.cadc.tap.parser.TapSchemaValidatorTest"/>
         </junit>
     </target>
 

@@ -98,6 +98,8 @@ public class TapSchemaUtil
 {
     protected static Logger log = Logger.getLogger(TapSchemaUtil.class);
 
+    private static String DEFAULT_SCHEMA = "default"; // a la VODataService
+
     /**
      * For a given Table, find it in TAP Schema, and returns a list of TapSelectItem of that Table
      * 
@@ -143,23 +145,23 @@ public class TapSchemaUtil
      */
     public static TableDesc findTableDesc(TapSchema tapSchema, Table table)
     {
-        TableDesc rtn = null;
-
+        String schemaName = table.getSchemaName();
+        if (schemaName == null)
+            schemaName = DEFAULT_SCHEMA;
         for (SchemaDesc sd : tapSchema.getSchemaDescs())
         {
-            if (sd.getSchemaName().equalsIgnoreCase(table.getSchemaName()))
+            if (sd.getSchemaName().equalsIgnoreCase(schemaName))
             {
                 for (TableDesc td : sd.getTableDescs())
                 {
                     if (td.getSimpleTableName().equalsIgnoreCase(table.getName()))
                     {
-                        rtn = td;
-                        break;
+                       return td;
                     }
                 }
             }
         }
-        return rtn;
+        return null;
     }
 
     /**
