@@ -69,6 +69,7 @@
 
 package ca.nrc.cadc.vos;
 
+import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
 
@@ -88,9 +89,10 @@ public class ContainerNode extends Node
     /**
      * ContainerNode constructor.
      */
-    public ContainerNode()
+    public ContainerNode(String uri)
     {
-        super();
+        super(uri);
+        nodes = new ArrayList<Node>();
     }
     
     /**

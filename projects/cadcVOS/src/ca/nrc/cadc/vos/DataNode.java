@@ -88,10 +88,11 @@ public class DataNode extends Node
     /**
      * DataNode constructor.
      */
-    public DataNode()
+    public DataNode(String uri)
     {
-        super();
+        super(uri);
         this.structured = false;
+        this.busy = false;
     }
 
     /**

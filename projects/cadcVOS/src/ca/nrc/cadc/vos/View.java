@@ -69,6 +69,7 @@
 
 package ca.nrc.cadc.vos;
 
+import java.util.ArrayList;
 import java.util.List;
 
 /**
@@ -106,6 +107,7 @@ public class View
         {
             original = false;
         }
+        param = new ArrayList<Param>();
     }
 
     /**

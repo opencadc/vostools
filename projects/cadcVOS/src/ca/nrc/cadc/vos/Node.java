@@ -69,6 +69,7 @@
 
 package ca.nrc.cadc.vos;
 
+import java.util.ArrayList;
 import java.util.List;
 
 /**
@@ -88,6 +89,17 @@ public abstract class Node
     
     // The list of node properties
     private List<Property> properties;
+    
+    /**
+     * Node constructor.
+     * 
+     * @param uri The node identifier.
+     */
+    public Node(String uri)
+    {
+        this.uri = uri;
+        properties = new ArrayList<Property>();
+    }
     
     /**
      * @return true if the VOSpace understands the format of the data.
@@ -110,16 +122,6 @@ public abstract class Node
     public String getUri()
     {
         return uri;
-    }
-    
-    /**
-     * Sets the node URI.
-     * 
-     * @param uri
-     */
-    public void setUri(String uri)
-    {
-        this.uri = uri;
     }
 
     /**
