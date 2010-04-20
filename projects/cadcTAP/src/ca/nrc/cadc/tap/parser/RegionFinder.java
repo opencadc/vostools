@@ -244,12 +244,14 @@ public class RegionFinder extends SelectNavigator
      * Convert a list of expressions and all parameters of them 
      * using provided implementation in the sub-class.
      * 
-     * @param Expression List
+     * @param adqlExprList Expression List
      * @return converted expression list
      */
     @SuppressWarnings("unchecked")
     public ExpressionList convertToImplementation(ExpressionList adqlExprList)
     {
+        if (adqlExprList == null || adqlExprList.getExpressions() == null)
+            return adqlExprList;
         List<Expression> adqlExprs = adqlExprList.getExpressions();
         List<Expression> implExprs = new ArrayList<Expression>();
         Expression e1 = null;

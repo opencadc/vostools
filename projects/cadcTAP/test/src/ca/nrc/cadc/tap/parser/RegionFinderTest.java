@@ -83,13 +83,10 @@ import org.junit.Test;
 
 import ca.nrc.cadc.tap.AdqlQuery;
 import ca.nrc.cadc.tap.TapQuery;
-import ca.nrc.cadc.tap.parser.extractor.SelectListExtractor;
-import ca.nrc.cadc.tap.parser.navigator.FromItemNavigator;
-import ca.nrc.cadc.tap.parser.navigator.ReferenceNavigator;
-import ca.nrc.cadc.tap.parser.navigator.SelectNavigator;
-import ca.nrc.cadc.tap.schema.TapSchema;
 import ca.nrc.cadc.util.Log4jInit;
 import ca.nrc.cadc.uws.Parameter;
+import junit.framework.Assert;
+import org.apache.log4j.Logger;
 
 
 /**
@@ -100,14 +97,8 @@ import ca.nrc.cadc.uws.Parameter;
  */
 public class RegionFinderTest
 {
-    public String _query;
+    private static Logger log = Logger.getLogger(RegionFinderTest.class);
 
-    SelectListExtractor _en;
-    ReferenceNavigator _rn;
-    FromItemNavigator _fn;
-    SelectNavigator _sn;
-
-    static TapSchema TAP_SCHEMA;
 
     /**
      * @throws java.lang.Exception
@@ -116,7 +107,6 @@ public class RegionFinderTest
     public static void setUpBeforeClass() throws Exception
     {
         Log4jInit.setLevel("ca.nrc.cadc", org.apache.log4j.Level.INFO);
-        TAP_SCHEMA = TestUtil.loadDefaultTapSchema();
     }
 
     /**
@@ -143,30 +133,58 @@ public class RegionFinderTest
     {
     }
 
-    private void doit()
+    private void doit(String query)
     {
-        Parameter para;
-        para = new Parameter("QUERY", _query);
+        log.debug("IN: " + query);
+        Parameter para = new Parameter("QUERY", query);
         List<Parameter> paramList = new ArrayList<Parameter>();
         paramList.add(para);
         
-        TapQuery tapQuery = new AdqlQuery();
-        tapQuery.setTapSchema(TAP_SCHEMA);
-        tapQuery.setExtraTables(null);
+        TapQuery tapQuery = new TestQuery();
         tapQuery.setParameterList(paramList);
         String sql = tapQuery.getSQL();
-        List<TapSelectItem> selectList = tapQuery.getSelectList();
-        System.out.println(sql);
-        System.out.println(selectList);
+        //List<TapSelectItem> selectList = tapQuery.getSelectList();
+        log.debug("OUT: " + sql);
+        //log.debug("select-list: " + selectList);
     }
 
     @Test
     public void testAll()
     {
-        _query = "select COORDSYS(a.t_box), COORD1(a.t_spoint), COORD2(a.t_spoint) from TAP_SCHEMA.AllDataTypes a"
-            + " where 0 = CONTAINS(POINT('ICRS GEOCENTER', 25.0, -19.5), POLYGON('ICRS GEOCENTER', 12, 44.0, 7.6, -19.5, a.t_long, a.t_double)) "
-            + "    and INTERSECTS(a.t_scircle, CIRCLE('ICRS GEOCENTER', 44.0, -7.6, 19.5))=1 ";
-        doit();
+        String query = "select COORDSYS(a), COORD1(a), COORD2(a) from someTable as a"
+            + " where 0 = CONTAINS(POINT('ICRS GEOCENTER', 25.0, -19.5), someRegionColumn) "
+            + "    and INTERSECTS(a.someShape, CIRCLE('ICRS', 12, 34, 5))=1 ";
+        try
+        {
+            doit(query);
+            Assert.fail("expected UnsupportedOperationException, got nothing");
+        }
+        catch(UnsupportedOperationException expected)
+        {
+
+        }
+        catch(Throwable unexpected)
+        {
+            Assert.fail("expected exception: " + unexpected);
+        }
     }
 
+    @Test
+    public void testCountStar()
+    {
+        String query = "select count(*) from SomeTable";
+        doit(query);
+    }
+
+    // TODO: re-instate fake TapSchema and test select list processing carefully
+
+    static class TestQuery extends AdqlQuery
+    {
+        @Override
+        protected void init()
+        {
+            //super.init();
+            super._navigatorList.add(new RegionFinder());
+        }
+    }
 }
