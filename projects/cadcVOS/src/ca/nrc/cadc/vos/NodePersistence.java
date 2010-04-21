@@ -82,12 +82,10 @@ public interface NodePersistence
     
     void save(Node node, boolean recursive);
     
-    void updateProperties(Node node, boolean recursive);
-    
     void delete(Node node);
     
     void move(Node node, String newURI);
     
-    void copy(Node node, String copyToURI);
+    void copy(Node node, String copyToURI, boolean recursive);
 
 }

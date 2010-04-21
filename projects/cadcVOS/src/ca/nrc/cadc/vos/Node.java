@@ -88,7 +88,7 @@ public abstract class Node
     private String uri;
     
     // The list of node properties
-    private List<Property> properties;
+    private List<NodeProperty> properties;
     
     /**
      * Node constructor.
@@ -98,7 +98,7 @@ public abstract class Node
     public Node(String uri)
     {
         this.uri = uri;
-        properties = new ArrayList<Property>();
+        properties = new ArrayList<NodeProperty>();
     }
     
     /**
@@ -127,7 +127,7 @@ public abstract class Node
     /**
      * @return The node properties as a list.
      */
-    public List<Property> getProperties()
+    public List<NodeProperty> getProperties()
     {
         return properties;
     }
@@ -137,7 +137,7 @@ public abstract class Node
      * 
      * @param properties
      */
-    public void setProperties(List<Property> properties)
+    public void setProperties(List<NodeProperty> properties)
     {
         this.properties = properties;
     }

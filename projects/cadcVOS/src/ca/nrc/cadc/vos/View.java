@@ -78,7 +78,7 @@ import java.util.List;
  * 
  * @author majorb
  */
-public class View
+public abstract class View
 {
     
     // The view identifier

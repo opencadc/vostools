@@ -75,7 +75,7 @@ package ca.nrc.cadc.vos;
  * @author majorb
  *
  */
-public class Property
+public class NodeProperty
 {
     
     // The property identifier
@@ -94,7 +94,7 @@ public class Property
      * @param value The property value.
      * @param readonly True if the property cannot be modified.
      */
-    public Property(String uri, String value, boolean readonly)
+    public NodeProperty(String uri, String value, boolean readonly)
     {
         this.uri = uri;
         this.value = value;
