@@ -137,6 +137,7 @@
         <junit printsummary="yes" haltonfailure="yes" fork="yes">
             <classpath>
                 <pathelement path="src"/>
+                <pathelement path="test/src"/>
                 <pathelement path="${resources.dir}"/>
                 <pathelement path="build/class"/>
                 <pathelement path="${jars}:${testingJars}"/>
@@ -159,6 +160,7 @@
         <junit printsummary="yes" haltonfailure="yes" fork="yes">
             <classpath>
                 <pathelement path="src"/>
+                <pathelement path="test/src"/>
                 <pathelement path="${resources.dir}"/>
                 <pathelement path="build/class"/>
                 <pathelement path="${jars}:${testingJars}"/>
@@ -184,6 +186,7 @@
         <junit printsummary="yes" haltonfailure="yes" fork="yes">
             <classpath>
                 <pathelement path="src"/>
+                <pathelement path="test/src"/>
                 <pathelement path="${resources.dir}"/>
                 <pathelement path="build/class"/>
                 <pathelement path="${jars}:${testingJars}"/>
@@ -203,6 +206,7 @@
         <junit printsummary="yes" haltonfailure="yes" fork="yes">
             <classpath>
                 <pathelement path="src"/>
+                <pathelement path="test/src"/>
                 <pathelement path="${resources.dir}"/>
                 <pathelement path="build/class"/>
                 <pathelement path="${jars}:${testingJars}"/>

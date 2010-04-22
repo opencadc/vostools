@@ -88,6 +88,8 @@ public class TableSet
 {
     private static Logger log = Logger.getLogger(TableSet.class);
 
+    private static String DEFAULT_SCHEMA = "default";
+    
     private TapSchema _tapSchema;
 
     private Namespace xsi = Namespace.getNamespace("xsi", VOSI.XSI_NS_URI);
@@ -141,12 +143,16 @@ public class TableSet
         Element eleSchema = new Element("schema");
         Element ele;
         ele = new Element("name");
-        ele.setText(sd.getSchemaName());
+        if (sd.getSchemaName() == null)
+            ele.setText(DEFAULT_SCHEMA);
+        else
+            ele.setText(sd.getSchemaName());
         eleSchema.addContent(ele);
-        for (TableDesc td : sd.getTableDescs())
-        {
-            eleSchema.addContent(toXmlElement(td));
-        }
+        if (sd.getTableDescs() != null)
+            for (TableDesc td : sd.getTableDescs())
+            {
+                eleSchema.addContent(toXmlElement(td));
+            }
         return eleSchema;
     }
 
@@ -164,10 +170,11 @@ public class TableSet
         ele.setText(td.getTableName());
         eleTable.addContent(ele);
 
-        for (ColumnDesc cd : td.getColumnDescs())
-        {
-            eleTable.addContent(toXmlElement(cd));
-        }
+        if (td.getColumnDescs() != null)
+            for (ColumnDesc cd : td.getColumnDescs())
+            {
+                eleTable.addContent(toXmlElement(cd));
+            }
 
         return eleTable;
     }

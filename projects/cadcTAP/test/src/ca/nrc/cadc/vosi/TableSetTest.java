@@ -115,6 +115,8 @@ public class TableSetTest
     String schemaNSKey2 = VOSI.VODATASERVICE_NS_URI;
     String schemaResource2 = "VODataService-v1.1.xsd";
 
+    String DEFAULT_SCHEMA = "default";
+
     //String schemaNSKey2 = "http://www.ivoa.net/xml/RegistryInterface/v1.0";
     //String schemaResource2 = "RI-v1.0.xsd";
 
@@ -192,6 +194,40 @@ public class TableSetTest
         }
     }
 
+    @Test
+    public final void testDefaultSchema()
+    {
+        log.debug("testMock");
+        try
+        {
+            TapSchema ts = new TapSchema();
+            ts.schemaDescs = new ArrayList<SchemaDesc>();
+            ts.schemaDescs.add(new SchemaDesc()); // empty default schema
+
+            TableSet tableSet = new TableSet(ts);
+            Document doc = tableSet.getDocument();
+            XMLOutputter xop = new XMLOutputter(Format.getPrettyFormat());
+            Writer stringWriter = new StringWriter();
+            xop.output(doc, stringWriter);
+            String xmlString = stringWriter.toString();
+
+            TestUtil.validateXml(xmlString, schemaNSMap);
+
+            TestUtil.assertXmlNode(doc, "/vosi:tableset");
+            TestUtil.assertXmlNode(doc, "/vosi:tableset/schema[name='default']");
+
+            checkRootElement(doc);
+
+            for (SchemaDesc sd : ts.schemaDescs)
+                checkSchema(doc, sd);
+
+        } catch (Throwable t)
+        {
+            t.printStackTrace(System.out);
+            Assert.fail(t.toString());
+        }
+    }
+
     /**
      * Test of getExtension method, of class VOTableWriter.
      */
@@ -217,19 +253,22 @@ public class TableSetTest
     private void checkSchema(Document doc, SchemaDesc sd) throws JDOMException
     {
         String schemaName = sd.getSchemaName();
-
+        if (schemaName == null)
+            schemaName = DEFAULT_SCHEMA;
+        
         XPath xpath = XPath.newInstance("/vosi:tableset/schema/name[.='" + schemaName + "']");
         List<?> rs = xpath.selectNodes(doc);
         Assert.assertTrue(rs.size() == 1);
 
-        for (TableDesc td : sd.getTableDescs())
-        {
-            xpath = XPath.newInstance("/vosi:tableset/schema[name='" + schemaName + "']/table[name='" + td.getTableName()
-                    + "']");
-            rs = xpath.selectNodes(doc);
-            Assert.assertTrue(rs.size() == 1);
-            checkColumns(doc, td);
-        }
+        if (sd.getTableDescs() != null)
+            for (TableDesc td : sd.getTableDescs())
+            {
+                xpath = XPath.newInstance("/vosi:tableset/schema[name='" + schemaName + "']/table[name='" + td.getTableName()
+                        + "']");
+                rs = xpath.selectNodes(doc);
+                Assert.assertTrue(rs.size() == 1);
+                checkColumns(doc, td);
+            }
     }
 
     private void checkRootElement(Document doc) throws JDOMException
@@ -245,12 +284,13 @@ public class TableSetTest
         List<?> rs;
         String schemaName = td.getSchemaName();
 
-        for (ColumnDesc cd : td.getColumnDescs())
-        {
-            xpath = XPath.newInstance("/vosi:tableset/schema[name='" + schemaName + "']/table[name='" + td.getTableName()
-                    + "']/column[name='" + cd.getColumnName() + "']");
-            rs = xpath.selectNodes(doc);
-            Assert.assertTrue(rs.size() == 1);
-        }
+        if (td.getColumnDescs() != null)
+            for (ColumnDesc cd : td.getColumnDescs())
+            {
+                xpath = XPath.newInstance("/vosi:tableset/schema[name='" + schemaName + "']/table[name='" + td.getTableName()
+                        + "']/column[name='" + cd.getColumnName() + "']");
+                rs = xpath.selectNodes(doc);
+                Assert.assertTrue(rs.size() == 1);
+            }
     }
 }

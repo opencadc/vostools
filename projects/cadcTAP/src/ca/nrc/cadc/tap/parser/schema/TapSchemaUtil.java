@@ -145,12 +145,10 @@ public class TapSchemaUtil
      */
     public static TableDesc findTableDesc(TapSchema tapSchema, Table table)
     {
-        String schemaName = table.getSchemaName();
-        if (schemaName == null)
-            schemaName = DEFAULT_SCHEMA;
         for (SchemaDesc sd : tapSchema.getSchemaDescs())
         {
-            if (sd.getSchemaName().equalsIgnoreCase(schemaName))
+            if ( (sd.getSchemaName() == null && table.getSchemaName() == null)
+                    || (sd.getSchemaName().equalsIgnoreCase(table.getSchemaName())) )
             {
                 for (TableDesc td : sd.getTableDescs())
                 {

@@ -117,7 +117,7 @@ public class TapSchemaValidatorTest
     @BeforeClass
     public static void setUpBeforeClass() throws Exception
     {
-        Log4jInit.setLevel("ca.nrc.cadc.tap.parser", org.apache.log4j.Level.INFO);
+        Log4jInit.setLevel("ca.nrc.cadc.tap.parser", org.apache.log4j.Level.DEBUG);
     }
 
     /**
@@ -162,6 +162,7 @@ public class TapSchemaValidatorTest
         }
         catch(Throwable unexpected)
         {
+            log.debug("FAIL", unexpected);
             Assert.fail("unexpected exception: " + unexpected);
         }
     }
@@ -182,6 +183,7 @@ public class TapSchemaValidatorTest
         }
         catch(Throwable unexpected)
         {
+            log.debug("FAIL", unexpected);
             Assert.fail("unexpected exception: " + unexpected);
         }
     }
@@ -220,15 +222,15 @@ public class TapSchemaValidatorTest
     {
         SchemaDesc sd = new SchemaDesc();
         sd.schemaName = schemaName;
-        if (schemaName == null)
-            sd.schemaName = "default";
         sd.tableDescs = new ArrayList<TableDesc>();
 
         TableDesc td = new TableDesc();
         td.schemaName = sd.schemaName;
-        td.tableName = "bar_from_"+sd.schemaName;
+        td.tableName = "bar";
         if (schemaName != null)
             td.tableName = schemaName+  ".bar_from_"+sd.schemaName;
+        else
+            td.tableName += "_from_default";
         td.columnDescs = new ArrayList<ColumnDesc>();
 
         ColumnDesc cd = new ColumnDesc();
