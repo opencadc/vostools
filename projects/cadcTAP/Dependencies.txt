@@ -13,4 +13,5 @@ junit.jar            junit-4.6                       http://www.junit.org
 postgresql-jdbc.jar  postgresql-jdbc-8.2.506.jar     http://jdbc.postgresql.org
 commons-logging.jar  commons-logging-1.1.1           http://commons.apache.org/logging
 cadcUtil.jar                                         http://code.google.com/p/opencadc    
+cadcVOSI.jar                                         http://code.google.com/p/opencadc
 cadcUWS.jar                                          http://code.google.com/p/opencadc
