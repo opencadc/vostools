@@ -78,6 +78,9 @@ package ca.nrc.cadc.vos;
 public class NodeProperty
 {
     
+    // The node property ID
+    private double nodePropertyId;
+    
     // The property identifier
     private String uri;
     
@@ -123,6 +126,16 @@ public class NodeProperty
     public boolean isReadOnly()
     {
         return readOnly;
+    }
+
+    public double getNodePropertyId()
+    {
+        return nodePropertyId;
+    }
+
+    public void setNodePropertyId(double nodePropertyId)
+    {
+        this.nodePropertyId = nodePropertyId;
     }
     
 }

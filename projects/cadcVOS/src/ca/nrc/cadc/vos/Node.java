@@ -84,21 +84,96 @@ import java.util.List;
 public abstract class Node
 {
     
-    // The node identifier
-    private String uri;
+    // The path (including the name) of the node
+    protected String path;
+    
+    // The name of the node
+    protected String name;
+    
+    // The parent of the node
+    protected ContainerNode parent;
     
     // The list of node properties
-    private List<NodeProperty> properties;
+    protected List<NodeProperty> properties;
+    
+    // The id of the node in the database
+    protected long nodeID;
     
     /**
      * Node constructor.
      * 
-     * @param uri The node identifier.
+     * @param path The path of the node;
      */
-    public Node(String uri)
+    public Node(String path)
     {
-        this.uri = uri;
+        this.path = path;
+        buildParent(path);
         properties = new ArrayList<NodeProperty>();
+    }
+    
+    /**
+     * Node constructor.
+     * 
+     * @param path The path of the node
+     * @param properties The node's properties
+     */
+    public Node(String path, List<NodeProperty> properties)
+    {
+        this.path = path;
+        buildParent(path);
+        this.properties = properties;
+    }
+    
+    /**
+     * Node Constructor
+     * 
+     * @param nodeID The ID of the node in the database.
+     */
+    public Node(long nodeID)
+    {
+        this.nodeID = nodeID;
+        path = "";
+        properties = new ArrayList<NodeProperty>();
+    }
+    
+    /**
+     * Given the path, build the parent if one exists.
+     * Set the name of the node.
+     * @param path
+     */
+    private void buildParent(String path)
+    {
+        if (path == null || path.trim().length() == 0)
+        {
+            throw new IllegalArgumentException("Node path not provided");
+        }
+        
+        String refinedPath = path;
+        if (refinedPath.startsWith("/"))
+        {
+            refinedPath = refinedPath.substring(1);
+        }
+        if (refinedPath.endsWith("/"))
+        {
+            refinedPath = refinedPath.substring(0, refinedPath.length() - 1);
+        }
+        String[] segments = refinedPath.split("/");
+        
+        if (segments == null || segments.length == 0)
+        {
+            throw new IllegalArgumentException("Node path invalid.");
+        }
+        
+        this.name = segments[segments.length - 1];
+        
+        if (segments.length == 1)
+        {
+            parent = null;
+        }
+        else
+        {
+            parent = new ContainerNode(refinedPath.substring(0, refinedPath.indexOf("/")));
+        }
     }
     
     /**
@@ -115,31 +190,61 @@ public abstract class Node
      * @return A list of views which the node can use for exporting.
      */
     public abstract List<View> provides();
-
+    
     /**
-     * @return The node URI.
+     * @return The database respresentation of this node type
      */
-    public String getUri()
+    public abstract char getDatabaseTypeRepresentation();
+    
+    public String getPath()
     {
-        return uri;
+        return path;
     }
 
-    /**
-     * @return The node properties as a list.
-     */
+    public void setPath(String path)
+    {
+        this.path = path;
+    }
+
+    public String getName()
+    {
+        return name;
+    }
+
+    public void setName(String name)
+    {
+        this.name = name;
+    }
+
+    public ContainerNode getParent()
+    {
+        return parent;
+    }
+
+    public void setParent(ContainerNode parent)
+    {
+        this.parent = parent;
+    }
+
     public List<NodeProperty> getProperties()
     {
         return properties;
     }
 
-    /**
-     * Sets the node properties list.
-     * 
-     * @param properties
-     */
     public void setProperties(List<NodeProperty> properties)
     {
         this.properties = properties;
     }
+
+    public long getNodeId()
+    {
+        return nodeID;
+    }
+
+    public void setNodeId(long nodeId)
+    {
+        this.nodeID = nodeId;
+    }
+
 
 }

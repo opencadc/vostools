@@ -79,6 +79,8 @@ import java.util.List;
 public class DataNode extends Node
 {
     
+    protected static final char DB_TYPE = 'D';
+    
     // Indicates if the node can be accessed.
     private boolean busy;
     
@@ -86,11 +88,31 @@ public class DataNode extends Node
     private boolean structured;
     
     /**
+     * Data node constructor
+     */
+    public DataNode(String path)
+    {
+        super(path);
+        this.structured = false;
+        this.busy = false;
+    }
+    
+    /**
      * DataNode constructor.
      */
-    public DataNode(String uri)
+    public DataNode(String path, List<NodeProperty> properties)
     {
-        super(uri);
+        super(path, properties);
+        this.structured = false;
+        this.busy = false;
+    }
+    
+    /**
+     * DataNode constructor.
+     */
+    public DataNode(long nodeID)
+    {
+        super(nodeID);
         this.structured = false;
         this.busy = false;
     }
@@ -138,6 +160,14 @@ public class DataNode extends Node
     {
         // TODO: Implement provides
         return null;
+    }
+    
+    /**
+     * @return The database respresentation of this node type
+     */
+    public char getDatabaseTypeRepresentation()
+    {
+        return DB_TYPE;
     }
 
 }

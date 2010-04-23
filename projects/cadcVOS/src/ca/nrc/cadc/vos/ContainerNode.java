@@ -83,15 +83,35 @@ import java.util.List;
 public class ContainerNode extends Node
 {
     
+    protected static final char DB_TYPE = 'C';
+    
     // The list of contained nodes.
     private List<Node> nodes;
     
     /**
      * ContainerNode constructor.
      */
-    public ContainerNode(String uri)
+    public ContainerNode(String path)
     {
-        super(uri);
+        super(path);
+        nodes = new ArrayList<Node>();
+    }
+    
+    /**
+     * ContainerNode constructor.
+     */
+    public ContainerNode(String path, List<NodeProperty> properties)
+    {
+        super(path, properties);
+        nodes = new ArrayList<Node>();
+    }
+    
+    /**
+     * ContainerNode constructor
+     */
+    public ContainerNode(long nodeID)
+    {
+        super(nodeID);
         nodes = new ArrayList<Node>();
     }
     
@@ -113,6 +133,40 @@ public class ContainerNode extends Node
             }
         }
         return structured;
+    }
+    
+    public boolean heirarchyEquals(ContainerNode containerNode)
+    {
+        if (containerNode == null)
+        {
+            return false;
+        }
+        if (this.name.equals(containerNode.getName()))
+        {
+            if (this.parent == null)
+            {
+                if (containerNode.parent == null)
+                {
+                    return true;
+                }
+                else
+                {
+                    return false;
+                }
+            }
+            else
+            {
+                if (containerNode.parent == null)
+                {
+                    return false;
+                }
+                else
+                {
+                    return this.parent.heirarchyEquals(containerNode.parent);
+                }
+            }
+        }
+        return false;
     }
 
     /**
@@ -149,6 +203,14 @@ public class ContainerNode extends Node
     {
         // TODO: Implement provides
         return null;
+    }
+    
+    /**
+     * @return The database respresentation of this node type
+     */
+    public char getDatabaseTypeRepresentation()
+    {
+        return DB_TYPE;
     }
 
 }
