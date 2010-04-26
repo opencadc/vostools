@@ -71,7 +71,10 @@ package ca.nrc.cadc.tap.writer.votable;
 
 import ca.nrc.cadc.tap.schema.TapSchema;
 import java.io.IOException;
+import java.io.PrintWriter;
+import java.io.StringWriter;
 import java.io.Writer;
+import java.net.URLDecoder;
 import java.util.Iterator;
 import java.util.List;
 import org.apache.log4j.Logger;
@@ -80,6 +83,7 @@ import org.jdom.DocType;
 import org.jdom.Document;
 import org.jdom.Element;
 import org.jdom.ProcessingInstruction;
+import org.jdom.Text;
 import org.jdom.output.XMLOutputter;
 
 /**
@@ -104,6 +108,9 @@ public class TableDataXMLOutputter extends XMLOutputter
 
     // Max number of rows to write.
     protected int maxRows;
+
+    // Indicates an error occurred writing results.
+    protected boolean error;
 
     /**
      * Default Constructor.
@@ -185,6 +192,14 @@ public class TableDataXMLOutputter extends XMLOutputter
                 info.setAttribute("value", "OVERFLOW");
                 super.printElement(out, info, level, namespaces);
             }
+            if (error)
+            {
+                out.write(NEW_LINE);
+                Element info = new Element("INFO", element.getNamespace());
+                info.setAttribute("name", "QUERY_STATUS");
+                info.setAttribute("value", "ERROR");
+                super.printElement(out, info, level, namespaces);
+            }
         }
         else if (element instanceof TableDataElement)
         {
@@ -199,7 +214,16 @@ public class TableDataXMLOutputter extends XMLOutputter
                 if (rowCount > maxRows)
                     break;
                 out.write(getIndentLevel(level + 1));
-                super.printElement(out, (Element) iterator.next(), level + 1, namespaces);
+                try
+                {
+                    Element row = (Element) iterator.next();
+                    super.printElement(out, row, level + 1, namespaces);
+                }
+                catch (Throwable t)
+                {
+                    error = true;
+                    break;
+                }
                 out.write(NEW_LINE);
             }
             out.write(getIndentLevel(level));
