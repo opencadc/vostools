@@ -101,7 +101,7 @@ public class Lat extends PgsFunction
     @Override
     public String toString()
     {
-        return "lat(" + _object.toString() + ")";
+        return "degrees(lat(" + _object.toString() + "))";
     }
     
     public String valueString()

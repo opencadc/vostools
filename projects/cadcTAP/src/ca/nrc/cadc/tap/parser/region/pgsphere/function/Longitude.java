@@ -101,7 +101,7 @@ public class Longitude extends PgsFunction
     @Override
     public String toString()
     {
-        return "long(" + _object.toString() + ")";
+        return "degrees(long(" + _object.toString() + "))";
     }
     
     public String valueString()

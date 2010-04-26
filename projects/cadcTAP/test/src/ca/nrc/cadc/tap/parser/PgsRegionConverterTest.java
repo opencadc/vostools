@@ -187,7 +187,7 @@ public class PgsRegionConverterTest
     public void testFunctionCoord1()
     {
         _query = "select COORD1(a.t_spoint) from TAP_SCHEMA.AllDataTypes";
-        _expected = "SELECT long(a.t_spoint) FROM TAP_SCHEMA.AllDataTypes";
+        _expected = "SELECT degrees(long(a.t_spoint)) FROM TAP_SCHEMA.AllDataTypes";
         doit();
     }
 
@@ -195,7 +195,7 @@ public class PgsRegionConverterTest
     public void testFunctionCoord2()
     {
         _query = "select COORD2(a.t_spoint) from TAP_SCHEMA.AllDataTypes";
-        _expected = "SELECT lat(a.t_spoint) FROM TAP_SCHEMA.AllDataTypes";
+        _expected = "SELECT degrees(lat(a.t_spoint)) FROM TAP_SCHEMA.AllDataTypes";
         doit();
     }
 
