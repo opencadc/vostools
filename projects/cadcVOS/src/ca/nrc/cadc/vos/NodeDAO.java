@@ -70,8 +70,11 @@
 package ca.nrc.cadc.vos;
 
 import java.security.AccessControlException;
+import java.sql.Connection;
+import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
+import java.sql.Statement;
 import java.util.Iterator;
 import java.util.List;
 
@@ -79,8 +82,11 @@ import javax.sql.DataSource;
 
 import org.apache.log4j.Logger;
 import org.springframework.jdbc.core.JdbcTemplate;
+import org.springframework.jdbc.core.PreparedStatementCreator;
 import org.springframework.jdbc.core.RowMapper;
 import org.springframework.jdbc.datasource.DataSourceTransactionManager;
+import org.springframework.jdbc.support.GeneratedKeyHolder;
+import org.springframework.jdbc.support.KeyHolder;
 import org.springframework.transaction.TransactionStatus;
 import org.springframework.transaction.support.DefaultTransactionDefinition;
 
@@ -170,6 +176,7 @@ public abstract class NodeDAO implements NodePersistence
             
             // get the node in question
             returnNode = getSingleNodeFromSelect(getSelectNodeByNameAndParentSQL(dbNode));
+            returnNode.setParent(dbNode.getParent());
         }
         
         if (returnNode == null)
@@ -180,7 +187,7 @@ public abstract class NodeDAO implements NodePersistence
         // check the permissions
         nodeAuthorizer.checkReadAccess(returnNode);
         
-        log.debug("get nodeID: " + returnNode.getNodeID() + " for path: " + node.getPath());
+        log.debug("get node success: nodeID: " + returnNode.getNodeID() + " for path: " + node.getPath());
         
         return returnNode;
     }
@@ -212,7 +219,23 @@ public abstract class NodeDAO implements NodePersistence
                 }
                 
                 // insert the node
-                jdbc.update(getInsertNodeSQL(node));
+                //jdbc.update(getInsertNodeSQL(node));
+                
+                KeyHolder keyHolder = new GeneratedKeyHolder();
+                //jdbc.update(psc, generatedKeyHolder);
+                final String insertSQL = getInsertNodeSQL(node);
+
+                jdbc.update(new PreparedStatementCreator() {
+                    public PreparedStatement createPreparedStatement(Connection connection)
+                        throws SQLException
+                    {
+                        PreparedStatement ps = connection.prepareStatement(insertSQL,
+                            Statement.RETURN_GENERATED_KEYS);
+                        return ps;
+                    }}, keyHolder);
+                
+                Long generatedId = new Long(keyHolder.getKey().longValue());
+                dbNode.setNodeID(generatedId);
 
                 // insert the node properties
                 Iterator<NodeProperty> propertyIterator = node.getProperties().iterator();
@@ -224,14 +247,14 @@ public abstract class NodeDAO implements NodePersistence
                 // Commit the transaction.
                 commitTransaction();
                 
-                log.debug("Inserted new node: " + node.getPath());
+                log.debug("Inserted new node: " + node);
                 
                 return dbNode;
                 
             } catch (Throwable t)
             {
                 rollbackTransaction();
-                log.error("Put rollback for node: " + node.getPath(), t);
+                log.error("Put rollback for node: " + node, t);
                 return null;
             }
         }
@@ -254,7 +277,7 @@ public abstract class NodeDAO implements NodePersistence
         {
             jdbc.update(getDeleteNodeSQL(nodeInDb));
         }
-        log.debug("Node deleted: " + node.getPath());
+        log.debug("Node deleted: " + node);
     }
     
     /**

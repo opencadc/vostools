@@ -197,6 +197,35 @@ public abstract class Node
     }
     
     /**
+     * A node is considered equal if the nodeID, name, and parent are
+     * equal.
+     */
+    public boolean equals(Object o)
+    {
+        if (o instanceof Node)
+        {
+            Node n = (Node) o;
+            if (n.getNodeID() == this.nodeID &&
+                n.getName().equals(this.getName()))
+            {
+                if (n.getParent() == null)
+                {
+                    return this.getParent() == null;
+                }
+                else
+                {
+                    if (this.getParent() == null)
+                    {
+                        return false;
+                    }
+                    return n.getParent().equals(this.getParent());
+                }
+            }
+        }
+        return false;
+    }
+    
+    /**
      * @return true if the VOSpace understands the format of the data.
      */
     public abstract boolean isStructured();

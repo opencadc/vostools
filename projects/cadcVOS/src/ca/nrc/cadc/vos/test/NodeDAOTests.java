@@ -69,6 +69,8 @@
 
 package ca.nrc.cadc.vos.test;
 
+import static org.junit.Assert.assertEquals;
+
 import java.sql.Connection;
 import java.sql.PreparedStatement;
 
@@ -80,6 +82,7 @@ import org.junit.Test;
 
 import ca.nrc.cadc.vos.ContainerNode;
 import ca.nrc.cadc.vos.DataNode;
+import ca.nrc.cadc.vos.Node;
 import ca.nrc.cadc.vos.NodeAuthorizer;
 import ca.nrc.cadc.vos.NodeDAO;
 
@@ -130,41 +133,66 @@ public abstract class NodeDAOTests
     }
 
     @Test
-    public void testPutDataNode() throws Exception
+    public void testPutGetDeleteDataNode() throws Exception
     {
-        String nodePath = null;
         DataNode dataNode = null;
         ContainerNode containerNode = null;
+        Node putNode = null;
+        Node getNode = null;
         
         // /a
-        nodePath = "/" + getNodeName("a");
-        dataNode = new DataNode(nodePath);
-        nodeDAO.put(dataNode);
+        String nodePath1 = "/" + getNodeName("a");
+        dataNode = new DataNode(nodePath1);
+        putNode = nodeDAO.put(dataNode);
+        getNode = nodeDAO.get(dataNode);
+        System.out.println("PutNode: " + putNode);
+        System.out.println("GetNode: " + getNode);
+        assertEquals(putNode, getNode);
         
         // /b
-        nodePath = "/" + getNodeName("b");
-        containerNode = new ContainerNode(nodePath);
-        nodeDAO.put(containerNode);
+        String nodePath2 = "/" + getNodeName("b");
+        containerNode = new ContainerNode(nodePath2);
+        putNode = nodeDAO.put(containerNode);
+        getNode = nodeDAO.get(containerNode);
+        System.out.println("PutNode: " + putNode);
+        System.out.println("GetNode: " + getNode);
+        assertEquals(putNode, getNode);
         
         // /c
-        nodePath = "/" + getNodeName("c");
-        containerNode = new ContainerNode(nodePath);
-        nodeDAO.put(containerNode);
+        String nodePath3 = "/" + getNodeName("c");
+        containerNode = new ContainerNode(nodePath3);
+        putNode = nodeDAO.put(containerNode);
+        getNode = nodeDAO.get(containerNode);
+        assertEquals(putNode, getNode);
         
         // /b/d
-        nodePath = "/" + getNodeName("b") + "/" + getNodeName("d");
-        dataNode = new DataNode(nodePath);
-        nodeDAO.put(dataNode);
+        String nodePath4 = "/" + getNodeName("b") + "/" + getNodeName("d");
+        dataNode = new DataNode(nodePath4);
+        putNode = nodeDAO.put(dataNode);
+        getNode = nodeDAO.get(dataNode);
+        assertEquals(putNode, getNode);
         
         // /c/e
-        nodePath = "/" + getNodeName("c") + "/" + getNodeName("e");
-        containerNode = new ContainerNode(nodePath);
-        nodeDAO.put(containerNode);
+        String nodePath5 = "/" + getNodeName("c") + "/" + getNodeName("e");
+        containerNode = new ContainerNode(nodePath5);
+        putNode = nodeDAO.put(containerNode);
+        getNode = nodeDAO.get(containerNode);
+        assertEquals(putNode, getNode);
         
         // /c/e/f
-        nodePath = "/" + getNodeName("c") + "/" + getNodeName("e") + "/" + getNodeName("f");
-        dataNode = new DataNode(nodePath);
-        nodeDAO.put(dataNode);
+        String nodePath6 = "/" + getNodeName("c") + "/" + getNodeName("e") + "/" + getNodeName("f");
+        dataNode = new DataNode(nodePath6);
+        putNode = nodeDAO.put(dataNode);
+        getNode = nodeDAO.get(dataNode);
+        assertEquals(putNode, getNode);
+        
+        nodeDAO.delete(new DataNode(nodePath6));
+        nodeDAO.delete(new ContainerNode(nodePath5));
+        nodeDAO.delete(new DataNode(nodePath4));
+        nodeDAO.delete(new ContainerNode(nodePath3));
+        nodeDAO.delete(new ContainerNode(nodePath2));
+        nodeDAO.delete(new DataNode(nodePath1));
+        
     }
     
 }
