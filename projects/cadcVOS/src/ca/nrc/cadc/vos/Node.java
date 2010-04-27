@@ -99,6 +99,9 @@ public abstract class Node
     // The id of the node in the database
     protected long nodeID;
     
+    // True if this is a leaf node
+    boolean leaf;
+    
     /**
      * Node constructor.
      * 
@@ -134,6 +137,17 @@ public abstract class Node
         this.nodeID = nodeID;
         path = "";
         properties = new ArrayList<NodeProperty>();
+    }
+    
+    public List<Node> getHeirarchy()
+    {
+        List<Node> list = new ArrayList<Node>();
+        if (parent != null)
+        {
+            list.addAll(parent.getHeirarchy());
+        }
+        list.add(this);
+        return list;
     }
     
     /**
@@ -172,8 +186,14 @@ public abstract class Node
         }
         else
         {
-            parent = new ContainerNode(refinedPath.substring(0, refinedPath.indexOf("/")));
+            parent = new ContainerNode(refinedPath.substring(0, refinedPath.lastIndexOf("/")));
+            parent.setLeaf(false);
         }
+    }
+    
+    public String toString()
+    {
+        return "Node Type: " + getDatabaseTypeRepresentation() + " Node Path: " + path + " Node ID: "+ nodeID;
     }
     
     /**
@@ -201,11 +221,6 @@ public abstract class Node
         return path;
     }
 
-    public void setPath(String path)
-    {
-        this.path = path;
-    }
-
     public String getName()
     {
         return name;
@@ -213,6 +228,11 @@ public abstract class Node
 
     public void setName(String name)
     {
+        if (name == null || !name.equals(this.name))
+        {
+            // reset the path
+            this.path = "";
+        }
         this.name = name;
     }
 
@@ -224,6 +244,10 @@ public abstract class Node
     public void setParent(ContainerNode parent)
     {
         this.parent = parent;
+        if (parent != null)
+        {
+            parent.setLeaf(false);
+        }
     }
 
     public List<NodeProperty> getProperties()
@@ -236,15 +260,29 @@ public abstract class Node
         this.properties = properties;
     }
 
-    public long getNodeId()
+    public long getNodeID()
     {
         return nodeID;
     }
 
-    public void setNodeId(long nodeId)
+    public void setNodeID(long nodeId)
     {
         this.nodeID = nodeId;
     }
 
+    public boolean isLeaf()
+    {
+        return leaf;
+    }
+    
+    void setLeaf(boolean leaf)
+    {
+        this.leaf = leaf;
+        if (leaf == false && parent != null)
+        {
+            parent.setLeaf(false);
+        }
+        
+    }
 
 }

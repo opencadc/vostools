@@ -95,6 +95,7 @@ public class ContainerNode extends Node
     {
         super(path);
         nodes = new ArrayList<Node>();
+        this.leaf = true;
     }
     
     /**
@@ -104,6 +105,7 @@ public class ContainerNode extends Node
     {
         super(path, properties);
         nodes = new ArrayList<Node>();
+        this.leaf = true;
     }
     
     /**
@@ -113,6 +115,7 @@ public class ContainerNode extends Node
     {
         super(nodeID);
         nodes = new ArrayList<Node>();
+        this.leaf = true;
     }
     
     /**

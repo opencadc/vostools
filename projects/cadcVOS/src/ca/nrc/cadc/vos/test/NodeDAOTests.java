@@ -67,27 +67,104 @@
 ************************************************************************
 */
 
-package ca.nrc.cadc.vos;
+package ca.nrc.cadc.vos.test;
 
-import java.security.AccessControlException;
+import java.sql.Connection;
+import java.sql.PreparedStatement;
+
+import javax.sql.DataSource;
+
+import org.junit.After;
+import org.junit.Before;
+import org.junit.Test;
+
+import ca.nrc.cadc.vos.ContainerNode;
+import ca.nrc.cadc.vos.DataNode;
+import ca.nrc.cadc.vos.NodeAuthorizer;
+import ca.nrc.cadc.vos.NodeDAO;
 
 /**
- * An interface defining the methods available for working with VOSpace
- * nodes in the persistent layer.
+ * Abstract class encompassing the logic behind running tests on the
+ * NodeDAO class.  Subclasses must provide dataSource and nodeAuthorizer
+ * implementations.
  * 
  * @author majorb
+ *
  */
-public interface NodePersistence
+public abstract class NodeDAOTests
 {
     
-    Node get(Node node) throws AccessControlException, NodeNotFoundException;
+    private NodeDAO nodeDAO;
+    String runId;
+    DataSource dataSource;
     
-    Node put(Node node) throws AccessControlException, NodeNotFoundException, NodeAlreadyExistsException;
+    @Before
+    public void before()
+    {
+        dataSource = getDataSource();
+        nodeDAO = getNodeDAO(dataSource, getNodeAuthorizer());
+        runId = NodeDAOTests.class.getName() + System.currentTimeMillis();
+    }
     
-    void delete(Node node) throws AccessControlException, NodeNotFoundException;
+    @After
+    public void after() throws Exception
+    {
+        Connection conn = dataSource.getConnection();
+        PreparedStatement prepStmt = conn.prepareStatement(
+            "delete from " + nodeDAO.getNodeTableName() + " where name like ?");
+        prepStmt.setString(1, runId + "%");
+        prepStmt.executeUpdate();
+        prepStmt.close();
+        conn.close();
+    }
     
-    void move(Node node, String newPath);
+    public abstract DataSource getDataSource();
     
-    void copy(Node node, String copyToPath);
+    public abstract NodeAuthorizer getNodeAuthorizer();
+    
+    public abstract NodeDAO getNodeDAO(DataSource dataSource, NodeAuthorizer nodeAuthorizer);
+    
+    private String getNodeName(String identifier)
+    {
+        return runId + identifier;
+    }
 
+    @Test
+    public void testPutDataNode() throws Exception
+    {
+        String nodePath = null;
+        DataNode dataNode = null;
+        ContainerNode containerNode = null;
+        
+        // /a
+        nodePath = "/" + getNodeName("a");
+        dataNode = new DataNode(nodePath);
+        nodeDAO.put(dataNode);
+        
+        // /b
+        nodePath = "/" + getNodeName("b");
+        containerNode = new ContainerNode(nodePath);
+        nodeDAO.put(containerNode);
+        
+        // /c
+        nodePath = "/" + getNodeName("c");
+        containerNode = new ContainerNode(nodePath);
+        nodeDAO.put(containerNode);
+        
+        // /b/d
+        nodePath = "/" + getNodeName("b") + "/" + getNodeName("d");
+        dataNode = new DataNode(nodePath);
+        nodeDAO.put(dataNode);
+        
+        // /c/e
+        nodePath = "/" + getNodeName("c") + "/" + getNodeName("e");
+        containerNode = new ContainerNode(nodePath);
+        nodeDAO.put(containerNode);
+        
+        // /c/e/f
+        nodePath = "/" + getNodeName("c") + "/" + getNodeName("e") + "/" + getNodeName("f");
+        dataNode = new DataNode(nodePath);
+        nodeDAO.put(dataNode);
+    }
+    
 }

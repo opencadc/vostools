@@ -95,6 +95,7 @@ public class DataNode extends Node
         super(path);
         this.structured = false;
         this.busy = false;
+        this.leaf = true;
     }
     
     /**
@@ -105,6 +106,7 @@ public class DataNode extends Node
         super(path, properties);
         this.structured = false;
         this.busy = false;
+        this.leaf = true;
     }
     
     /**
@@ -115,6 +117,7 @@ public class DataNode extends Node
         super(nodeID);
         this.structured = false;
         this.busy = false;
+        this.leaf = true;
     }
 
     /**
