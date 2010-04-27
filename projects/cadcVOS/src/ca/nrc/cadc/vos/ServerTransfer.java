@@ -67,76 +67,13 @@
 ************************************************************************
 */
 
-package ca.nrc.cadc.vos.client;
+package ca.nrc.cadc.vos;
 
-import org.apache.log4j.Logger;
-import ca.nrc.cadc.vos.*;
 /**
  * @author zhangsa
  *
  */
-public class VOSpaceClient
+public class ServerTransfer extends Transfer
 {
-    private static Logger log = Logger.getLogger(VOSpaceClient.class);
-    
-    
-    protected String _endpoint; 
 
-    
-    
-    
-    public Node createNode(Node node)
-    {
-        throw new UnsupportedOperationException("Feature under construction.");
-    }
-
-    public Node getNode(String path)
-    {
-        throw new UnsupportedOperationException("Feature under construction.");
-    }
-
-    public void setNode(Node node)
-    {
-        throw new UnsupportedOperationException("Feature under construction.");
-    }
-
-    public void createTransfer()
-    {
-        throw new UnsupportedOperationException("Feature under construction.");
-    }
-
-    public void doTransfer()
-    {
-        throw new UnsupportedOperationException("Feature under construction.");
-    }
-
-    public void copyNode()
-    {
-        throw new UnsupportedOperationException("Feature under construction.");
-    }
-
-    public void moveNode()
-    {
-        throw new UnsupportedOperationException("Feature under construction.");
-    }
-
-    public void createSearch()
-    {
-        throw new UnsupportedOperationException("Feature under construction.");
-    }
-
-    public void getProperties()
-    {
-        throw new UnsupportedOperationException("Feature under construction.");
-    }
-
-    public void getProtocols()
-    {
-        throw new UnsupportedOperationException("Feature under construction.");
-    }
-
-    public void getViews()
-    {
-        throw new UnsupportedOperationException("Feature under construction.");
-    }
 }

@@ -67,75 +67,33 @@
 ************************************************************************
 */
 
-package ca.nrc.cadc.vos.client;
+package ca.nrc.cadc.vos;
 
-import org.apache.log4j.Logger;
-import ca.nrc.cadc.vos.*;
 /**
  * @author zhangsa
  *
  */
-public class VOSpaceClient
+public class Transfer implements Runnable
 {
-    private static Logger log = Logger.getLogger(VOSpaceClient.class);
-    
-    
-    protected String _endpoint; 
+    protected View _view;
+    protected String _targetURI;
 
-    
-    
-    
-    public Node createNode(Node node)
+    public String getPhase()
     {
         throw new UnsupportedOperationException("Feature under construction.");
     }
 
-    public Node getNode(String path)
+    public String getResults()
     {
         throw new UnsupportedOperationException("Feature under construction.");
     }
 
-    public void setNode(Node node)
+    public String getErrors()
     {
         throw new UnsupportedOperationException("Feature under construction.");
     }
 
-    public void createTransfer()
-    {
-        throw new UnsupportedOperationException("Feature under construction.");
-    }
-
-    public void doTransfer()
-    {
-        throw new UnsupportedOperationException("Feature under construction.");
-    }
-
-    public void copyNode()
-    {
-        throw new UnsupportedOperationException("Feature under construction.");
-    }
-
-    public void moveNode()
-    {
-        throw new UnsupportedOperationException("Feature under construction.");
-    }
-
-    public void createSearch()
-    {
-        throw new UnsupportedOperationException("Feature under construction.");
-    }
-
-    public void getProperties()
-    {
-        throw new UnsupportedOperationException("Feature under construction.");
-    }
-
-    public void getProtocols()
-    {
-        throw new UnsupportedOperationException("Feature under construction.");
-    }
-
-    public void getViews()
+    public void run()
     {
         throw new UnsupportedOperationException("Feature under construction.");
     }
