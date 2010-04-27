@@ -86,7 +86,6 @@
 
     <property name="project" value="cadcVOS" />
 
-    <property name="cadc" value="${lib}/cadcUtil.jar" />
     <property name="ext" value="${ext.lib}/log4j.jar:${ext.lib}/spring.jar:${ext.dev}/junit.jar" />
 
     <property name="jars" value="${cadc}:${ext}" />

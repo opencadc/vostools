@@ -95,8 +95,8 @@ public abstract class NodeDAOTests
 {
     
     private NodeDAO nodeDAO;
-    String runId;
-    DataSource dataSource;
+    private String runId;
+    private DataSource dataSource;
     
     @Before
     public void before()
