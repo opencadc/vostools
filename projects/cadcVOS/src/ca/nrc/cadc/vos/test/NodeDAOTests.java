@@ -73,6 +73,7 @@ import static org.junit.Assert.assertEquals;
 
 import java.sql.Connection;
 import java.sql.PreparedStatement;
+import java.sql.ResultSet;
 
 import javax.sql.DataSource;
 
@@ -186,12 +187,22 @@ public abstract class NodeDAOTests
         getNode = nodeDAO.get(dataNode);
         assertEquals(putNode, getNode);
         
-        nodeDAO.delete(new DataNode(nodePath6));
-        nodeDAO.delete(new ContainerNode(nodePath5));
-        nodeDAO.delete(new DataNode(nodePath4));
-        nodeDAO.delete(new ContainerNode(nodePath3));
-        nodeDAO.delete(new ContainerNode(nodePath2));
+        // delete the three roots
         nodeDAO.delete(new DataNode(nodePath1));
+        nodeDAO.delete(new ContainerNode(nodePath2));
+        nodeDAO.delete(new ContainerNode(nodePath3));
+        
+        // ensure deleting the roots deleted all children
+        Connection conn = dataSource.getConnection();
+        PreparedStatement prepStmt = conn.prepareStatement(
+            "select count(*) from Node where name like ?");
+        prepStmt.setString(1, runId + "%");
+        ResultSet rs = prepStmt.executeQuery();
+        rs.next();
+        int remainingNodes = rs.getInt(1);
+        assertEquals(0, remainingNodes);
+        prepStmt.close();
+        conn.close();
         
     }
     

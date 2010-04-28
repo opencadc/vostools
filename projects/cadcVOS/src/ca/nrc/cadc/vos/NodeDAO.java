@@ -275,7 +275,24 @@ public abstract class NodeDAO implements NodePersistence
         
         synchronized (this)
         {
-            jdbc.update(getDeleteNodeSQL(nodeInDb));
+            try
+            {
+                startTransaction();
+            
+                // delete the node
+                jdbc.update(getDeleteNodeSQL(nodeInDb));
+                
+                // collect and delete children of the node
+                this.deleteChildrenOf(nodeInDb);
+                
+                commitTransaction();
+                
+            } catch (Throwable t)
+            {
+                rollbackTransaction();
+                log.error("Delete rollback for node: " + node, t);
+            }
+            
         }
         log.debug("Node deleted: " + node);
     }
@@ -359,6 +376,17 @@ public abstract class NodeDAO implements NodePersistence
         }
         return next;
     }
+    
+    protected void deleteChildrenOf(Node node)
+    {
+        List children = jdbc.query(getSelectNodesByParentSQL(node), new NodeMapper());
+        Iterator i = children.iterator();
+        while (i.hasNext())
+        {
+            deleteChildrenOf((Node) i.next());
+        }
+        jdbc.update(getDeleteNodesByParentSQL(node));
+    }
 
     /**
      * @return The name of the table for persisting nodes.
@@ -384,6 +412,14 @@ public abstract class NodeDAO implements NodePersistence
             + ((node.getParent() == null) ?
                 "parentID is null " :
                 "parentID = " + node.getParent().getNodeID()));
+        return sb.toString();
+    }
+    
+    protected String getSelectNodesByParentSQL(Node parent)
+    {
+        StringBuilder sb = new StringBuilder();
+        sb.append("select nodeID, parentID, name, type, owner, groupRead, groupWrite from Node where parentID = "
+            + parent.getNodeID());
         return sb.toString();
     }
 
@@ -471,6 +507,16 @@ public abstract class NodeDAO implements NodePersistence
         sb.append(getNodeTableName());
         sb.append(" where nodeID = ");
         sb.append(node.getNodeID());
+        return sb.toString();
+    }
+    
+    protected String getDeleteNodesByParentSQL(Node parent)
+    {
+        StringBuilder sb = new StringBuilder();
+        sb.append("delete from ");
+        sb.append(getNodeTableName());
+        sb.append(" where parentID = ");
+        sb.append(parent.getNodeID());
         return sb.toString();
     }
 
