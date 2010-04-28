@@ -1,0 +1,17 @@
+<node xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:type="vos:ContainerNode" uri="vos://nvo.caltech!vospace/mydir">
+  <properties>
+    <property uri="ivo://ivoa.net/vospace/core#description">My award winning images</property>
+  </properties>
+  <accepts>
+    <view uri="ivo://ivoa.net/vospace/core#anyview"/>
+  </accepts>
+  <provides>
+    <view uri="ivo://ivoa/net/vospace/core#defaultview"/>
+  </provides>
+  <capabilities/>
+  <nodes>
+    <node uri="vos://nvo.caltech!vospace/mydir/ngc4323"/>
+    <node uri="vos://nvo.caltech!vospace/mydir/ngc5796"/>
+    <node uri="vos://nvo.caltech!vospace/mydir/ngc6801"/>
+  </nodes>
+</node>

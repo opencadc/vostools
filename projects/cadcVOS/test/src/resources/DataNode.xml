@@ -1,0 +1,15 @@
+<node xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:type="vos:DataNode" uri="vos://nvo.caltech!vospace/mydata1" busy="false">
+  <properties>
+    <property uri="ivo://ivoa.net/vospace/core#description">My important results</property>
+    <property uri="ivo://ivoa.net/vospace/core#date">2010-03-12</property>
+  </properties>
+  <accepts>
+    <view uri="ivo://ivoa.net/vospace/core#anyview1"/>
+    <view uri="ivo://ivoa.net/vospace/core#anyview2"/>
+  </accepts>
+  <provides>
+      <view uri="ivo://ivoa.net/vospace/core#anyview3"/>
+      <view uri="ivo://ivoa.net/vospace/core#anyview4"/>
+  </provides>
+  <capabilities/>
+</node>

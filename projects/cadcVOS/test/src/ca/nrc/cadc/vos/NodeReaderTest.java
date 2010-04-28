@@ -1,4 +1,4 @@
-<!--
+/*
 ************************************************************************
 *******************  CANADIAN ASTRONOMY DATA CENTRE  *******************
 **************  CENTRE CANADIEN DE DONNÉES ASTRONOMIQUES  **************
@@ -8,7 +8,7 @@
 *  National Research Council            Conseil national de recherches
 *  Ottawa, Canada, K1A 0R6              Ottawa, Canada, K1A 0R6
 *  All rights reserved                  Tous droits réservés
-*                                       
+*
 *  NRC disclaims any warranties,        Le CNRC dénie toute garantie
 *  expressed, implied, or               énoncée, implicite ou légale,
 *  statutory, of any kind with          de quelque nature que ce
@@ -31,10 +31,10 @@
 *  software without specific prior      de ce logiciel sans autorisation
 *  written permission.                  préalable et particulière
 *                                       par écrit.
-*                                       
+*
 *  This file is part of the             Ce fichier fait partie du projet
 *  OpenCADC project.                    OpenCADC.
-*                                       
+*
 *  OpenCADC is free software:           OpenCADC est un logiciel libre ;
 *  you can redistribute it and/or       vous pouvez le redistribuer ou le
 *  modify it under the terms of         modifier suivant les termes de
@@ -44,7 +44,7 @@
 *  either version 3 of the              : soit la version 3 de cette
 *  License, or (at your option)         licence, soit (à votre gré)
 *  any later version.                   toute version ultérieure.
-*                                       
+*
 *  OpenCADC is distributed in the       OpenCADC est distribué
 *  hope that it will be useful,         dans l’espoir qu’il vous
 *  but WITHOUT ANY WARRANTY;            sera utile, mais SANS AUCUNE
@@ -54,7 +54,7 @@
 *  PURPOSE.  See the GNU Affero         PARTICULIER. Consultez la Licence
 *  General Public License for           Générale Publique GNU Affero
 *  more details.                        pour plus de détails.
-*                                       
+*
 *  You should have received             Vous devriez avoir reçu une
 *  a copy of the GNU Affero             copie de la Licence Générale
 *  General Public License along         Publique GNU Affero avec
@@ -65,71 +65,105 @@
 *  $Revision: 4 $
 *
 ************************************************************************
--->
+*/
 
-	
-<project default="build" basedir=".">
-  <property environment="env"/>
+package ca.nrc.cadc.vos;
 
-    <!-- site-specific build properties or overrides of values in opencadc.properties -->
-    <property file="${env.CADC_PREFIX}/etc/local.properties" />
+import ca.nrc.cadc.util.Log4jInit;
+import java.io.File;
+import java.io.FileInputStream;
+import java.io.IOException;
+import java.net.URL;
+import java.nio.MappedByteBuffer;
+import java.nio.channels.FileChannel;
+import java.nio.charset.Charset;
+import java.util.MissingResourceException;
+import org.apache.log4j.Level;
+import org.apache.log4j.Logger;
+import org.junit.After;
+import org.junit.AfterClass;
+import org.junit.Before;
+import org.junit.BeforeClass;
+import org.junit.Test;
+import static org.junit.Assert.*;
 
-    <!-- site-specific targets, e.g. install, cannot duplicate those in opencadc.targets.xml -->
-    <import file="${env.CADC_PREFIX}/etc/local.targets.xml" optional="true" />
+/**
+ *
+ * @author jburke
+ */
+public class NodeReaderTest
+{
+    private static Logger log = Logger.getLogger(NodeReaderTest.class);
+    {
+        Log4jInit.setLevel("ca", Level.DEBUG);
+    }
 
-    <!-- default properties and targets -->
-    <property file="${env.CADC_PREFIX}/etc/opencadc.properties" />
-    <import file="${env.CADC_PREFIX}/etc/opencadc.targets.xml"/>
+    public NodeReaderTest() { }
 
-    <!-- developer convenience: place for extra targets and properties -->
-    <import file="extras.xml" optional="true" />
+    @BeforeClass
+    public static void beforeClass() { }
 
-    <property name="project" value="cadcVOS" />
+    @AfterClass
+    public static void tearDownClass() throws Exception { }
 
-    <property name="jars" value="${ext.lib}/log4j.jar:${ext.lib}/spring.jar:${ext.lib}/jdom.jar:${ext.lib}/junit.jar" />
+    @Before
+    public void setUp() { }
 
-    <target name="build" depends="compile">
-        <jar jarfile="${build}/lib/${project}.jar"
-            basedir="${build}/class"
-            update="no">
-            <include name="ca/nrc/cadc/**" />
-        </jar>
-    </target>
+    @After
+    public void tearDown() { }
 
-    <!-- JAR files needed to run the test suite -->
-    <property name="cadcVOS" value="${build}/lib/${project}.jar" />
-    <property name="cadcUtil" value="${lib}/cadcUtil.jar" />
-    <property name="junit" value="${ext.lib}/junit.jar" />
-    <property name="xerces" value="${ext.lib}/xerces.jar" />
+    @Test
+    public void readContainerNodeTest()
+    {
+        try
+        {
+            log.debug("readContainerNodeTest");
+            String xml = readFile("build/class/ContainerNode.xml");
+            NodeReader reader = new NodeTestReader();
+            Node node = reader.read(xml);
+            log.debug(node);
+            log.info("readContainerNodeTest passed");
+        }
+        catch (Throwable t)
+        {
+            log.error(t);
+            fail(t.getMessage());
+        }
+    }
 
-    <property name="testingJars" value="${cadcVOS}:${cadcUtil}:${junit}:${xerces}" />
+    @Test
+    public void readDataNodeTest()
+    {
+        try
+        {
+            log.debug("readDataNodeTest");
+            String xml = readFile("build/class/DataNode.xml");
+            NodeReader reader = new NodeTestReader();
+            Node node = reader.read(xml);
+            log.debug(node);
+            log.info("readDataNodeTest passed");
+        }
+        catch (Throwable t)
+        {
+            log.error(t);
+            fail(t.getMessage());
+        }
+    }
 
-    <!-- compile the test classes -->
-    <target name="compile-test" depends="compile">
-        <javac destdir="${build}/class"
-               source="${java.source.version}"
-               target="${java.target.version}"
-               classpath="${jars}:${testingJars}" >
-            <src path="test/src"/>
-        </javac>
-    </target>
+    private static String readFile(String path)
+        throws IOException
+    {
+        FileInputStream stream = new FileInputStream(new File(path));
+        try
+        {
+            FileChannel fileChannel = stream.getChannel();
+            MappedByteBuffer byteBuffer = fileChannel.map(FileChannel.MapMode.READ_ONLY, 0, fileChannel.size());
+            return Charset.defaultCharset().decode(byteBuffer).toString();
+        }
+        finally
+        {
+            stream.close();
+        }
+    }
 
-    <!-- Run the test suite -->
-    <target name="test" depends="compile,compile-test">
-        <copy file="test/src/resources/VOSpace-2.0.xsd" todir="build/class"/>
-        <copy file="test/src/resources/ContainerNode.xml" todir="build/class"/>
-        <copy file="test/src/resources/DataNode.xml" todir="build/class"/>
-        <junit printsummary="yes" haltonfailure="yes" fork="yes">
-            <classpath>
-                <pathelement path="src"/>
-                <pathelement path="test/src"/>
-                <pathelement path="${resources.dir}"/>
-                <pathelement path="build/class"/>
-                <pathelement path="${jars}:${testingJars}"/>
-            </classpath>
-            <formatter type="plain" usefile="false"/>
-            <test name="ca.nrc.cadc.vos.NodeReaderTest"/>
-        </junit>
-    </target>
-
-</project>
+}
