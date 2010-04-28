@@ -70,7 +70,12 @@
 package ca.nrc.cadc.vos.client;
 
 import org.apache.log4j.Logger;
+
+import com.meterware.httpunit.controls.IllegalParameterValueException;
+
 import ca.nrc.cadc.vos.*;
+import java.net.*;
+import java.io.*;
 import java.util.*;
 
 /**
@@ -96,7 +101,39 @@ public class VOSpaceClient
      */
     public Node createNode(Node node)
     {
-        throw new UnsupportedOperationException("Feature under construction.");
+        int responseCode;
+        Node rtnNode = null;
+
+        try
+        {
+            URL url = new URL(_endpoint);
+            HttpURLConnection httpCon = (HttpURLConnection) url.openConnection();
+            httpCon.setDoOutput(true);
+            httpCon.setRequestMethod("PUT");
+            OutputStreamWriter out = new OutputStreamWriter(httpCon.getOutputStream());
+            out.write(node.getName()); //TODO: send XML text
+            out.close();
+
+            responseCode = httpCon.getResponseCode();
+            switch (responseCode)
+            {
+            case 201: // valid
+                InputStream in = httpCon.getInputStream();
+                // TODO generate returned node
+                in.close();
+                break;
+            case 500:
+            case 409:
+            case 400:
+            case 401:
+                throw new IllegalArgumentException("Error returned.  HTTP Response Code: " + responseCode);
+            default:
+                break;
+            }
+        } catch (IOException ex)
+        {
+        }
+        return rtnNode;
     }
 
     public Node getNode(String path)
