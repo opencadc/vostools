@@ -71,6 +71,8 @@ package ca.nrc.cadc.vos.client;
 
 import org.apache.log4j.Logger;
 import ca.nrc.cadc.vos.*;
+import java.util.*;
+
 /**
  * @author zhangsa
  *
@@ -78,13 +80,20 @@ import ca.nrc.cadc.vos.*;
 public class VOSpaceClient
 {
     private static Logger log = Logger.getLogger(VOSpaceClient.class);
-    
-    
-    protected String _endpoint; 
 
-    
-    
-    
+    protected String _endpoint;
+
+    /*
+     * The service SHALL throw a HTTP 500 status code including an InternalFault fault in the entity body if the operation fails
+     * The service SHALL throw a HTTP 409 status code including a DuplicateNode fault in the entity body if a Node already exists with the same URI
+     * The service SHALL throw a HTTP 400 status code including an InvalidURI fault in the entity body if the requested URI is invalid
+     * The service SHALL throw a HTTP 400 status code including a TypeNotSupported fault in the entity body if the type specified in xsi:type is not supported
+     * The service SHALL throw a HTTP 401 status code including PermissionDenied fault in the entity body if the user does not have permissions to perform the operation
+     * If a parent node in the URI path does not exist then the service MUST throw a HTTP 500 status code including a ContainerNotFound fault in the entity body.
+           o For example, given the URI path /a/b/c, the service must throw a HTTP 500 status code including a ContainerNotFound fault in the entity body if either /a or /a/b do not exist. 
+     * If a parent node in the URI path is a LinkNode, the service MUST throw a HTTP 500 status code including a LinkFound fault in the entity body.
+           o For example, given the URI path /a/b/c, the service must throw a HTTP 500 status code including a LinkFound fault in the entity body if either /a or /a/b are LinkNodes. 
+     */
     public Node createNode(Node node)
     {
         throw new UnsupportedOperationException("Feature under construction.");
@@ -100,42 +109,66 @@ public class VOSpaceClient
         throw new UnsupportedOperationException("Feature under construction.");
     }
 
-    public void createTransfer()
+    public Transfer createTransfer(Transfer transfer)
     {
         throw new UnsupportedOperationException("Feature under construction.");
     }
 
-    public void doTransfer()
+    public ServerTransfer createServerTransfer(ServerTransfer sTransfer)
     {
         throw new UnsupportedOperationException("Feature under construction.");
     }
 
-    public void copyNode()
+    /**
+     * For all faults, the service shall set the PHASE to "ERROR" in the Job representation. The <errorSummary> element in the Job representation shall be set to the appropriate value for the fault type and the appropriate fault representation (see section 5.5) provided at the error URI: http://rest-endpoint/transfers/{jobid}/error.
+    Fault description   errorSummary    Fault representation
+    Operation fails Internal Fault  InternalFault
+    User does not have permissions to perform the operation Permission Denied   PermissionDenied
+    Source node does not exist  Node Not Found  NodeNotFound
+    Destination node already exists and it is not a ContainerNode   Duplicate Node  DuplicateNode
+    A specified URI is invalid  Invalid URI InvalidURI
+     * @param src
+     * @param dest
+     * @return
+     */
+    public ServerTransfer copyNode(Node src, Node dest)
     {
         throw new UnsupportedOperationException("Feature under construction.");
     }
 
-    public void moveNode()
+    /**
+     *For all faults, the service shall set the PHASE to "ERROR" in the Job representation. The <errorSummary> element in the Job representation shall be set to the appropriate value for the fault type and the appropriate fault representation (see section 5.5) provided at the error URI: http://rest-endpoint/transfers/{jobid}/error.
+    Fault description   errorSummary    Fault representation
+    Operation fails Internal Fault  InternalFault
+    User does not have permissions to perform the operation Permission Denied   PermissionDenied
+    Source node does not exist  Node Not Found  NodeNotFound
+    Destination node already exists and it is not a ContainerNode   Duplicate Node  DuplicateNode
+    A specified URI is invalid  Invalid URI InvalidURI 
+     * @param src
+     * @param dest
+     * @return
+     */
+    public ServerTransfer moveNode(Node src, Node dest)
     {
         throw new UnsupportedOperationException("Feature under construction.");
     }
 
-    public void createSearch()
+    public Search createSearch(Search search)
     {
         throw new UnsupportedOperationException("Feature under construction.");
     }
 
-    public void getProperties()
+    public List<NodeProperty> getProperties()
     {
         throw new UnsupportedOperationException("Feature under construction.");
     }
 
-    public void getProtocols()
+    public List<Protocol> getProtocols()
     {
         throw new UnsupportedOperationException("Feature under construction.");
     }
 
-    public void getViews()
+    public List<View> getViews()
     {
         throw new UnsupportedOperationException("Feature under construction.");
     }
