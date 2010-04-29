@@ -69,14 +69,22 @@
 
 package ca.nrc.cadc.vos.client;
 
+import java.io.IOException;
+import java.io.InputStream;
+import java.io.OutputStreamWriter;
+import java.net.HttpURLConnection;
+import java.net.URL;
+import java.util.List;
+
 import org.apache.log4j.Logger;
 
-import com.meterware.httpunit.controls.IllegalParameterValueException;
-
-import ca.nrc.cadc.vos.*;
-import java.net.*;
-import java.io.*;
-import java.util.*;
+import ca.nrc.cadc.vos.Node;
+import ca.nrc.cadc.vos.NodeProperty;
+import ca.nrc.cadc.vos.Protocol;
+import ca.nrc.cadc.vos.Search;
+import ca.nrc.cadc.vos.ServerTransfer;
+import ca.nrc.cadc.vos.Transfer;
+import ca.nrc.cadc.vos.View;
 
 /**
  * @author zhangsa
