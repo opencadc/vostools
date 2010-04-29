@@ -144,14 +144,91 @@ public class VOSpaceClient
         return rtnNode;
     }
 
+    /**
+     * 
+        *  The service SHALL throw a HTTP 500 status code including an InternalFault fault in the entity-body if the operation fails
+        * The service SHALL throw a HTTP 401 status code including a PermissionDenied fault in the entity-body if the user does not have permissions to perform the operation
+        * The service SHALL throw a HTTP 404 status code including a NodeNotFound fault in the entity-body if the target Node does not exist 
+     * @param path
+     * @return
+     */
     public Node getNode(String path)
     {
-        throw new UnsupportedOperationException("Feature under construction.");
+        int responseCode;
+        Node rtnNode = null;
+
+        try
+        {
+            URL url = new URL(_endpoint + path);
+            HttpURLConnection httpCon = (HttpURLConnection) url.openConnection();
+            httpCon.setDoOutput(true);
+            httpCon.setRequestMethod("GET");
+
+            responseCode = httpCon.getResponseCode();
+            switch (responseCode)
+            {
+            case 201: // valid
+                InputStream in = httpCon.getInputStream();
+                // TODO generate returned node
+                in.close();
+                break;
+            case 500:
+            case 401:
+            case 404:
+                throw new IllegalArgumentException("Error returned.  HTTP Response Code: " + responseCode);
+            default:
+                break;
+            }
+        } catch (IOException ex)
+        {
+        }
+        return rtnNode;
     }
 
-    public void setNode(Node node)
+    /**
+    *  The service SHALL throw a HTTP 500 status code including an InternalFault fault in the entity-body if the operation fails
+    * The service SHALL throw a HTTP 401 status code including a PermissionDenied fault in the entity-body if the request attempts to modify a readonly Property
+    * The service SHALL throw a HTTP 401 status code including a PermissionDenied fault in the entity-body if the user does not have permissions to perform the operation
+    * The service SHALL throw a HTTP 404 status code including a NodeNotFound fault in the entity-body if the target Node does not exist
+    * The service SHALL throw a HTTP 400 status code including an InvalidArgument fault in the entity-body if a specified property value is invalid 
+     * @param node
+     * @return
+     */
+    public Node setNode(Node node)
     {
-        throw new UnsupportedOperationException("Feature under construction.");
+        int responseCode;
+        Node rtnNode = null;
+        try
+        {
+            URL url = new URL(_endpoint);
+            HttpURLConnection httpCon = (HttpURLConnection) url.openConnection();
+            httpCon.setDoOutput(true);
+            httpCon.setRequestMethod("POST");
+            OutputStreamWriter out = new OutputStreamWriter(httpCon.getOutputStream());
+            out.write(node.getName()); //TODO: send XML text
+            out.close();
+
+            responseCode = httpCon.getResponseCode();
+            switch (responseCode)
+            {
+            case 200: // valid
+                InputStream in = httpCon.getInputStream();
+                // TODO generate returned node
+                in.close();
+                break;
+            case 500:
+            case 409:
+            case 404:
+            case 400:
+            case 401:
+                throw new IllegalArgumentException("Error returned.  HTTP Response Code: " + responseCode);
+            default:
+                break;
+            }
+        } catch (IOException ex)
+        {
+        }
+        return rtnNode;
     }
 
     public Transfer createTransfer(Transfer transfer)

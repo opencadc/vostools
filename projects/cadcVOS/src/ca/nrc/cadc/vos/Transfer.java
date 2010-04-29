@@ -69,15 +69,30 @@
 
 package ca.nrc.cadc.vos;
 
+import java.util.List;
+
 /**
  * @author zhangsa
  *
  */
 public class Transfer implements Runnable
 {
-    protected View _view;
-    protected String _targetURI;
+    public enum Direction {
+        PUSH_TO_VO_SPACE,
+        PULL_TO_VO_SPACE,
+        PUSH_FROM_VO_SPACE,
+        PULL_FROM_VO_SPACE
+    }
 
+    protected Node _target;
+    protected Direction _direction;
+    protected View _view;    
+    protected List<Protocol> _protocols;
+    protected boolean _keepBytes;
+    
+
+    
+    
     public String getPhase()
     {
         throw new UnsupportedOperationException("Feature under construction.");

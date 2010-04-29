@@ -69,6 +69,8 @@
 
 package ca.nrc.cadc.vos;
 
+import java.util.Map;
+
 /**
  * @author zhangsa
  *
@@ -76,6 +78,8 @@ package ca.nrc.cadc.vos;
 public class Protocol
 {
     protected String _uri;
+    protected String _endpoint;
+    protected Map<String, String> _param;
 
     public String getUri()
     {
