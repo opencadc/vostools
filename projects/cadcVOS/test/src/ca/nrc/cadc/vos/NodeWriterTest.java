@@ -70,14 +70,9 @@
 package ca.nrc.cadc.vos;
 
 import ca.nrc.cadc.util.Log4jInit;
-import java.io.ByteArrayInputStream;
-import java.io.File;
-import java.io.FileInputStream;
-import java.io.IOException;
-import java.io.StringReader;
-import java.nio.MappedByteBuffer;
-import java.nio.channels.FileChannel;
-import java.nio.charset.Charset;
+import java.io.OutputStreamWriter;
+import java.util.ArrayList;
+import java.util.List;
 import org.apache.log4j.Level;
 import org.apache.log4j.Logger;
 import org.junit.After;
@@ -91,38 +86,70 @@ import static org.junit.Assert.*;
  *
  * @author jburke
  */
-public class NodeReaderTest
+public class NodeWriterTest
 {
-    private static Logger log = Logger.getLogger(NodeReaderTest.class);
+private static Logger log = Logger.getLogger(NodeWriterTest.class);
     {
         Log4jInit.setLevel("ca", Level.INFO);
     }
 
-    public NodeReaderTest() { }
+    static ContainerNode containerNode;
+    static DataNode dataNode;
+
+    public NodeWriterTest() {
+    }
 
     @BeforeClass
-    public static void beforeClass() { }
+    public static void setUpClass() throws Exception
+    {
+        // List of NodeProperty
+        List<NodeProperty> properties = new ArrayList<NodeProperty>();
+        NodeProperty nodeProperty = new NodeProperty("ivo://ivoa.net/vospace/core#description", "My award winning images");
+        nodeProperty.setReadOnly(true);
+        properties.add(nodeProperty);
+
+        // List of Node
+        List<Node> nodes = new ArrayList<Node>();
+        nodes.add(new DataNode("vos://nvo.caltech!vospace/mydir/ngc4323"));
+        nodes.add(new DataNode("vos://nvo.caltech!vospace/mydir/ngc5796"));
+        nodes.add(new DataNode("vos://nvo.caltech!vospace/mydir/ngc6801"));
+
+        // ContainerNode
+        containerNode = new ContainerNode("/dir/subdir", properties);
+        containerNode.setNodes(nodes);
+
+        // DataNode
+        dataNode = new DataNode("/dir/subdir", properties);
+        dataNode.setBusy(true);
+    }
 
     @AfterClass
-    public static void tearDownClass() throws Exception { }
+    public static void tearDownClass() throws Exception
+    {
+    }
 
     @Before
-    public void setUp() { }
+    public void setUp() {
+    }
 
     @After
-    public void tearDown() { }
+    public void tearDown() {
+    }
 
+    /**
+     * Test of write method, of class NodeWriter.
+     */
     @Test
-    public void read_ContainerNode_String()
+    public void write_ContainerNode_StringBuilder()
     {
         try
         {
-            log.debug("readContainerNodeString");
-            String xml = readFile("build/class/ContainerNode.xml");
-            NodeReader reader = new NodeTestReader();
-            Node node = reader.read(xml);
-            log.debug(node);
-            log.info("readContainerNodeString passed");
+            log.debug("write_ContainerNode_StringBuilder");
+            StringBuilder sb = new StringBuilder();
+            NodeWriter instance = new NodeWriter();
+            instance.write(containerNode, sb);
+            log.debug(sb.toString());
+            log.info("write_ContainerNode_StringBuilder passed");
         }
         catch (Throwable t)
         {
@@ -132,16 +159,16 @@ public class NodeReaderTest
     }
 
     @Test
-    public void read_DataNode_String()
+    public void write_DataNode_StringBuilder()
     {
         try
         {
-            log.debug("readDataNodeString");
-            String xml = readFile("build/class/DataNode.xml");
-            NodeReader reader = new NodeTestReader();
-            Node node = reader.read(xml);
-            log.debug(node);
-            log.info("readDataNodeString passed");
+            log.debug("write_DataNode_StringBuilder");
+            StringBuilder sb = new StringBuilder();
+            NodeWriter instance = new NodeWriter();
+            instance.write(dataNode, sb);
+            log.debug(sb.toString());
+            log.info("write_DataNode_StringBuilder passed");
         }
         catch (Throwable t)
         {
@@ -150,17 +177,18 @@ public class NodeReaderTest
         }
     }
 
+    /**
+     * Test of write method, of class NodeWriter.
+     */
     @Test
-    public void read_ContainerNode_InputStream()
+    public void write_ContainerNode_OutputStream()
     {
         try
         {
-            log.debug("readContainerNodeInputStream");
-            String xml = readFile("build/class/ContainerNode.xml");
-            NodeReader reader = new NodeTestReader();
-            Node node = reader.read(new ByteArrayInputStream(xml.getBytes("UTF-8")));
-            log.debug(node);
-            log.info("readContainerNodeInputStream passed");
+            log.debug("write_ContainerNode_OutputStream");
+            NodeWriter instance = new NodeWriter();
+            instance.write(containerNode, System.out);
+            log.info("write_ContainerNode_OutputStream passed");
         }
         catch (Throwable t)
         {
@@ -169,17 +197,18 @@ public class NodeReaderTest
         }
     }
 
+    /**
+     * Test of write method, of class NodeWriter.
+     */
     @Test
-    public void read_DataNode_InputStream()
+    public void write_DataNode_OutputStream()
     {
         try
         {
-            log.debug("readDataNodeInputStream");
-            String xml = readFile("build/class/DataNode.xml");
-            NodeReader reader = new NodeTestReader();
-            Node node = reader.read(new ByteArrayInputStream(xml.getBytes("UTF-8")));
-            log.debug(node);
-            log.info("readDataNodeInputStream passed");
+            log.debug("write_DataNode_OutputStream");
+            NodeWriter instance = new NodeWriter();
+            instance.write(dataNode, System.out);
+            log.info("write_DataNode_OutputStream passed");
         }
         catch (Throwable t)
         {
@@ -188,17 +217,18 @@ public class NodeReaderTest
         }
     }
 
+    /**
+     * Test of write method, of class NodeWriter.
+     */
     @Test
-    public void read_ContainerNode_Reader()
+    public void write_ContainerNode_Writer()
     {
         try
         {
-            log.debug("readContainerNodeReader");
-            String xml = readFile("build/class/ContainerNode.xml");
-            NodeReader reader = new NodeTestReader();
-            Node node = reader.read(new StringReader(xml));
-            log.debug(node);
-            log.info("readContainerNodeReader passed");
+            log.debug("write_ContainerNode_Writer");
+            NodeWriter instance = new NodeWriter();
+            instance.write(containerNode, new OutputStreamWriter(System.out, "UTF-8"));
+            log.info("write_ContainerNode_Writer passed");
         }
         catch (Throwable t)
         {
@@ -207,38 +237,23 @@ public class NodeReaderTest
         }
     }
 
+    /**
+     * Test of write method, of class NodeWriter.
+     */
     @Test
-    public void read_DataNode_Reader()
+    public void write_DataNode_Writer()
     {
         try
         {
-            log.debug("readDataNodeTestReader");
-            String xml = readFile("build/class/DataNode.xml");
-            NodeReader reader = new NodeTestReader();
-            Node node = reader.read(new StringReader(xml));
-            log.debug(node);
-            log.info("readDataNodeTestReader passed");
+            log.debug("write_DataNode_Writer");
+            NodeWriter instance = new NodeWriter();
+            instance.write(dataNode, new OutputStreamWriter(System.out, "UTF-8"));
+            log.info("write_DataNode_Writer passed");
         }
         catch (Throwable t)
         {
             log.error(t);
             fail(t.getMessage());
-        }
-    }
-
-    private static String readFile(String path)
-        throws IOException
-    {
-        FileInputStream stream = new FileInputStream(new File(path));
-        try
-        {
-            FileChannel fileChannel = stream.getChannel();
-            MappedByteBuffer byteBuffer = fileChannel.map(FileChannel.MapMode.READ_ONLY, 0, fileChannel.size());
-            return Charset.defaultCharset().decode(byteBuffer).toString();
-        }
-        finally
-        {
-            stream.close();
         }
     }
 
