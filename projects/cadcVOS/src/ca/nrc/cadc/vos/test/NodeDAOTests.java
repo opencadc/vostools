@@ -74,6 +74,8 @@ import static org.junit.Assert.assertEquals;
 import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
+import java.util.ArrayList;
+import java.util.List;
 
 import javax.sql.DataSource;
 
@@ -86,6 +88,7 @@ import ca.nrc.cadc.vos.DataNode;
 import ca.nrc.cadc.vos.Node;
 import ca.nrc.cadc.vos.NodeAuthorizer;
 import ca.nrc.cadc.vos.NodeDAO;
+import ca.nrc.cadc.vos.NodeProperty;
 
 /**
  * Abstract class encompassing the logic behind running tests on the
@@ -100,26 +103,26 @@ public abstract class NodeDAOTests
     
     private NodeDAO nodeDAO;
     private String runId;
-    private DataSource dataSource;
+    private Connection connection;
     
     @Before
-    public void before()
+    public void before() throws Exception
     {
-        dataSource = getDataSource();
+        DataSource dataSource = getDataSource();
         nodeDAO = getNodeDAO(dataSource, getNodeAuthorizer());
+        connection = dataSource.getConnection();
         runId = NodeDAOTests.class.getName() + System.currentTimeMillis();
     }
     
     @After
     public void after() throws Exception
     {
-        Connection conn = dataSource.getConnection();
-        PreparedStatement prepStmt = conn.prepareStatement(
+        PreparedStatement prepStmt = connection.prepareStatement(
             "delete from " + nodeDAO.getNodeTableName() + " where name like ?");
         prepStmt.setString(1, runId + "%");
         prepStmt.executeUpdate();
         prepStmt.close();
-        conn.close();
+        connection.close();
     }
     
     public abstract DataSource getDataSource();
@@ -143,49 +146,55 @@ public abstract class NodeDAOTests
         
         // /a
         String nodePath1 = "/" + getNodeName("a");
-        dataNode = new DataNode(nodePath1);
+        dataNode = new DataNode(nodePath1, getProperties());
         putNode = nodeDAO.put(dataNode);
         getNode = nodeDAO.get(dataNode);
         System.out.println("PutNode: " + putNode);
         System.out.println("GetNode: " + getNode);
         assertEquals(putNode, getNode);
+        assertEquals(putNode.getProperties(), getNode.getProperties());
         
         // /b
         String nodePath2 = "/" + getNodeName("b");
-        containerNode = new ContainerNode(nodePath2);
+        containerNode = new ContainerNode(nodePath2, getProperties());
         putNode = nodeDAO.put(containerNode);
         getNode = nodeDAO.get(containerNode);
         System.out.println("PutNode: " + putNode);
         System.out.println("GetNode: " + getNode);
         assertEquals(putNode, getNode);
+        assertEquals(putNode.getProperties(), getNode.getProperties());
         
         // /c
         String nodePath3 = "/" + getNodeName("c");
-        containerNode = new ContainerNode(nodePath3);
+        containerNode = new ContainerNode(nodePath3, getProperties());
         putNode = nodeDAO.put(containerNode);
         getNode = nodeDAO.get(containerNode);
         assertEquals(putNode, getNode);
+        assertEquals(putNode.getProperties(), getNode.getProperties());
         
         // /b/d
         String nodePath4 = "/" + getNodeName("b") + "/" + getNodeName("d");
-        dataNode = new DataNode(nodePath4);
+        dataNode = new DataNode(nodePath4, getProperties());
         putNode = nodeDAO.put(dataNode);
         getNode = nodeDAO.get(dataNode);
         assertEquals(putNode, getNode);
+        assertEquals(putNode.getProperties(), getNode.getProperties());
         
         // /c/e
         String nodePath5 = "/" + getNodeName("c") + "/" + getNodeName("e");
-        containerNode = new ContainerNode(nodePath5);
+        containerNode = new ContainerNode(nodePath5, getProperties());
         putNode = nodeDAO.put(containerNode);
         getNode = nodeDAO.get(containerNode);
         assertEquals(putNode, getNode);
+        assertEquals(putNode.getProperties(), getNode.getProperties());
         
         // /c/e/f
         String nodePath6 = "/" + getNodeName("c") + "/" + getNodeName("e") + "/" + getNodeName("f");
-        dataNode = new DataNode(nodePath6);
+        dataNode = new DataNode(nodePath6, getProperties());
         putNode = nodeDAO.put(dataNode);
         getNode = nodeDAO.get(dataNode);
         assertEquals(putNode, getNode);
+        assertEquals(putNode.getProperties(), getNode.getProperties());
         
         // delete the three roots
         nodeDAO.delete(new DataNode(nodePath1));
@@ -193,17 +202,26 @@ public abstract class NodeDAOTests
         nodeDAO.delete(new ContainerNode(nodePath3));
         
         // ensure deleting the roots deleted all children
-        Connection conn = dataSource.getConnection();
-        PreparedStatement prepStmt = conn.prepareStatement(
-            "select count(*) from Node where name like ?");
+        
+        PreparedStatement prepStmt = connection.prepareStatement(
+            "select count(*) from " + nodeDAO.getNodeTableName() + " where name like ?");
         prepStmt.setString(1, runId + "%");
         ResultSet rs = prepStmt.executeQuery();
         rs.next();
         int remainingNodes = rs.getInt(1);
         assertEquals(0, remainingNodes);
         prepStmt.close();
-        conn.close();
         
+    }
+    
+    private List<NodeProperty> getProperties()
+    {
+        List<NodeProperty> properties = new ArrayList<NodeProperty>();
+        NodeProperty prop1 = new NodeProperty("uri1", "value1");
+        NodeProperty prop2 = new NodeProperty("uri2", "value2");
+        properties.add(prop1);
+        properties.add(prop2);
+        return properties;
     }
     
 }

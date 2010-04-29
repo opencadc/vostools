@@ -67,83 +67,59 @@
 ************************************************************************
 */
 
-package ca.nrc.cadc.vos;
+package ca.nrc.cadc.vos.dao;
+
+import ca.nrc.cadc.vos.DataNode;
+import ca.nrc.cadc.vos.Node;
 
 /**
- * A VOSpace property representing metadata for a node.
+ * DAO wrapper class of a DataNode
  * 
  * @author majorb
  *
  */
-public class NodeProperty
+public class DAODataNode extends DAONode
 {
+    // The real data node object
+    private DataNode dataNode;
     
-    // The property identifier
-    private String propertyURI;
-    
-    // The value of the property
-    private String propertyValue;
-    
-    // true if the property cannot be modified.
-    private boolean readOnly;
-
     /**
-     * Property constructor.
+     * Constructor without nodeID
      * 
-     * @param uri The property identifier.
-     * @param value The property value.
-     * @param readonly True if the property cannot be modified.
+     * @param dataNode
      */
-    public NodeProperty(String uri, String value)
+    public DAODataNode(DataNode dataNode)
     {
-        this.propertyURI = uri;
-        this.propertyValue = value;
+        super(0);
+        this.dataNode = dataNode;
     }
     
-    public boolean equals(Object o)
+    /**
+     * Constructor with nodeID
+     * 
+     * @param dataNode
+     * @param nodeID
+     */
+    public DAODataNode(DataNode dataNode, long nodeID)
     {
-        if (o instanceof NodeProperty)
-        {
-            NodeProperty np = (NodeProperty) o;
-            if (propertyURI != null && propertyValue != null)
-            {
-                return propertyURI.equals(np.getPropertyURI()) &&
-                    propertyValue.equals(np.getPropertyValue());
-            }
-        }
-        return false;
+        super(nodeID);
+        this.dataNode = dataNode;
     }
 
     /**
-     * @return The property identifier.
+     * @return The database type representations
      */
-    public String getPropertyURI()
+    public char getDatabaseTypeRepresentation()
     {
-        return propertyURI;
+        return 'D';
     }
 
     /**
-     * @return The property value.
+     * The real node domain object.
      */
-    public String getPropertyValue()
+    public Node getNode()
     {
-        return propertyValue;
+        return dataNode;
     }
 
-    /**
-     * @return True if the property cannot be modified.
-     */
-    public boolean isReadOnly()
-    {
-        return readOnly;
-    }
-
-    /**
-     * @param readOnly
-     */
-    public void setReadOnly(boolean readOnly)
-    {
-        this.readOnly = readOnly;
-    }
-    
 }

@@ -67,83 +67,32 @@
 ************************************************************************
 */
 
-package ca.nrc.cadc.vos;
+package ca.nrc.cadc.vos.dao;
+
+import java.sql.ResultSet;
+import java.sql.SQLException;
+
+import org.springframework.jdbc.core.RowMapper;
+
+import ca.nrc.cadc.vos.NodeProperty;
 
 /**
- * A VOSpace property representing metadata for a node.
- * 
- * @author majorb
- *
+ * Class to map a result set into a NodeProperty object.
  */
-public class NodeProperty
+public class NodePropertyMapper implements RowMapper
 {
-    
-    // The property identifier
-    private String propertyURI;
-    
-    // The value of the property
-    private String propertyValue;
-    
-    // true if the property cannot be modified.
-    private boolean readOnly;
 
     /**
-     * Property constructor.
-     * 
-     * @param uri The property identifier.
-     * @param value The property value.
-     * @param readonly True if the property cannot be modified.
+     * Map the row to the appropriate type of node object.
      */
-    public NodeProperty(String uri, String value)
+    public Object mapRow(ResultSet rs, int rowNum) throws SQLException
     {
-        this.propertyURI = uri;
-        this.propertyValue = value;
-    }
-    
-    public boolean equals(Object o)
-    {
-        if (o instanceof NodeProperty)
-        {
-            NodeProperty np = (NodeProperty) o;
-            if (propertyURI != null && propertyValue != null)
-            {
-                return propertyURI.equals(np.getPropertyURI()) &&
-                    propertyValue.equals(np.getPropertyValue());
-            }
-        }
-        return false;
+        String propertyURI = rs.getString("propertyURI");
+        String propertyValue = rs.getString("propertyValue");
+        
+        NodeProperty daoNodeProperty = new NodeProperty(propertyURI, propertyValue);
+
+        return daoNodeProperty;
     }
 
-    /**
-     * @return The property identifier.
-     */
-    public String getPropertyURI()
-    {
-        return propertyURI;
-    }
-
-    /**
-     * @return The property value.
-     */
-    public String getPropertyValue()
-    {
-        return propertyValue;
-    }
-
-    /**
-     * @return True if the property cannot be modified.
-     */
-    public boolean isReadOnly()
-    {
-        return readOnly;
-    }
-
-    /**
-     * @param readOnly
-     */
-    public void setReadOnly(boolean readOnly)
-    {
-        this.readOnly = readOnly;
-    }
-    
 }

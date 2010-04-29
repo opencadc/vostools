@@ -83,10 +83,18 @@ import java.util.List;
 public class ContainerNode extends Node
 {
     
-    protected static final char DB_TYPE = 'C';
+    public static final char DB_TYPE = 'C';
     
     // The list of contained nodes.
     private List<Node> nodes;
+    
+    /**
+     * ContainerNode constructor.
+     */
+    public ContainerNode()
+    {
+        super();
+    }
     
     /**
      * ContainerNode constructor.
@@ -95,7 +103,6 @@ public class ContainerNode extends Node
     {
         super(path);
         nodes = new ArrayList<Node>();
-        this.leaf = true;
     }
     
     /**
@@ -105,17 +112,6 @@ public class ContainerNode extends Node
     {
         super(path, properties);
         nodes = new ArrayList<Node>();
-        this.leaf = true;
-    }
-    
-    /**
-     * ContainerNode constructor
-     */
-    public ContainerNode(long nodeID)
-    {
-        super(nodeID);
-        nodes = new ArrayList<Node>();
-        this.leaf = true;
     }
     
     /**

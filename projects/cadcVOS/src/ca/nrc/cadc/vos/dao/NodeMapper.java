@@ -67,83 +67,78 @@
 ************************************************************************
 */
 
-package ca.nrc.cadc.vos;
+package ca.nrc.cadc.vos.dao;
+
+import java.sql.ResultSet;
+import java.sql.SQLException;
+
+import org.springframework.jdbc.core.RowMapper;
+
+import ca.nrc.cadc.vos.ContainerNode;
+import ca.nrc.cadc.vos.DataNode;
+import ca.nrc.cadc.vos.Node;
 
 /**
- * A VOSpace property representing metadata for a node.
- * 
- * @author majorb
- *
+ * Class to map a result set into a Node object.
  */
-public class NodeProperty
+public class NodeMapper implements RowMapper
 {
     
-    // The property identifier
-    private String propertyURI;
-    
-    // The value of the property
-    private String propertyValue;
-    
-    // true if the property cannot be modified.
-    private boolean readOnly;
-
-    /**
-     * Property constructor.
-     * 
-     * @param uri The property identifier.
-     * @param value The property value.
-     * @param readonly True if the property cannot be modified.
-     */
-    public NodeProperty(String uri, String value)
+    public DAONode mapDomainNode(Node node)
     {
-        this.propertyURI = uri;
-        this.propertyValue = value;
-    }
-    
-    public boolean equals(Object o)
-    {
-        if (o instanceof NodeProperty)
+        DAONode returnNode = null;
+        if (node instanceof DataNode)
         {
-            NodeProperty np = (NodeProperty) o;
-            if (propertyURI != null && propertyValue != null)
-            {
-                return propertyURI.equals(np.getPropertyURI()) &&
-                    propertyValue.equals(np.getPropertyValue());
-            }
+            returnNode = new DAODataNode((DataNode) node);
         }
-        return false;
+        else if (node instanceof ContainerNode)
+        {
+            returnNode = new DAOContainerNode((ContainerNode) node);
+        }
+        
+        return returnNode;
     }
 
     /**
-     * @return The property identifier.
+     * Map the row to the appropriate type of node object.
      */
-    public String getPropertyURI()
+    public Object mapRow(ResultSet rs, int rowNum) throws SQLException
     {
-        return propertyURI;
+
+        long nodeID = rs.getLong("nodeID");
+        String name = rs.getString("name");
+        long parentID = rs.getLong("parentID");
+        DAOContainerNode parent = null;
+        if (parentID != 0)
+        {
+            ContainerNode containerNode = new ContainerNode();
+            parent = new DAOContainerNode(containerNode, parentID);
+        }
+
+        String typeString = rs.getString("type");
+        char type = typeString.charAt(0);
+        DAONode node = null;
+
+        if (ContainerNode.DB_TYPE == type)
+        {
+            ContainerNode containerNode = new ContainerNode();
+            node = new DAOContainerNode(containerNode, nodeID);
+        }
+        else if (DataNode.DB_TYPE == type)
+        {
+            DataNode dataNode = new DataNode();
+            node = new DAODataNode(dataNode, nodeID);
+        }
+        else
+        {
+            throw new IllegalStateException("Unknown node database type: "
+                    + type);
+        }
+
+        node.setName(name);
+        node.setParent(parent);
+
+        return node;
     }
 
-    /**
-     * @return The property value.
-     */
-    public String getPropertyValue()
-    {
-        return propertyValue;
-    }
-
-    /**
-     * @return True if the property cannot be modified.
-     */
-    public boolean isReadOnly()
-    {
-        return readOnly;
-    }
-
-    /**
-     * @param readOnly
-     */
-    public void setReadOnly(boolean readOnly)
-    {
-        this.readOnly = readOnly;
-    }
-    
 }

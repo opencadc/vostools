@@ -79,13 +79,21 @@ import java.util.List;
 public class DataNode extends Node
 {
     
-    protected static final char DB_TYPE = 'D';
+    public static final char DB_TYPE = 'D';
     
     // Indicates if the node can be accessed.
     private boolean busy;
     
     // Indicates if the VOSpace understands the data format.
     private boolean structured;
+    
+    /**
+     * DataNode constructor.
+     */
+    public DataNode()
+    {
+        super();
+    }
     
     /**
      * Data node constructor
@@ -95,7 +103,6 @@ public class DataNode extends Node
         super(path);
         this.structured = false;
         this.busy = false;
-        this.leaf = true;
     }
     
     /**
@@ -106,18 +113,6 @@ public class DataNode extends Node
         super(path, properties);
         this.structured = false;
         this.busy = false;
-        this.leaf = true;
-    }
-    
-    /**
-     * DataNode constructor.
-     */
-    public DataNode(long nodeID)
-    {
-        super(nodeID);
-        this.structured = false;
-        this.busy = false;
-        this.leaf = true;
     }
 
     /**

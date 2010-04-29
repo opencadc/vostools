@@ -67,83 +67,161 @@
 ************************************************************************
 */
 
-package ca.nrc.cadc.vos;
+package ca.nrc.cadc.vos.dao;
+
+import java.util.ArrayList;
+import java.util.List;
+
+import ca.nrc.cadc.vos.ContainerNode;
+import ca.nrc.cadc.vos.Node;
+import ca.nrc.cadc.vos.NodeProperty;
 
 /**
- * A VOSpace property representing metadata for a node.
+ * Abstact DAO wrapper class of a Node object.
  * 
  * @author majorb
  *
  */
-public class NodeProperty
+public abstract class DAONode
 {
     
-    // The property identifier
-    private String propertyURI;
+    // The id of the node in the database
+    protected long nodeID;
     
-    // The value of the property
-    private String propertyValue;
+    // The id of the parent
+    protected long parentId;
     
-    // true if the property cannot be modified.
-    private boolean readOnly;
-
     /**
-     * Property constructor.
+     * Node Constructor
      * 
-     * @param uri The property identifier.
-     * @param value The property value.
-     * @param readonly True if the property cannot be modified.
+     * @param nodeID The ID of the node in the database.
      */
-    public NodeProperty(String uri, String value)
+    public DAONode(long nodeID)
     {
-        this.propertyURI = uri;
-        this.propertyValue = value;
+        this.nodeID = nodeID;
     }
     
+    ///////////////////
+    // Abstract methods
+    ///////////////////
+    
+    /**
+     * @return The database representation of this node type
+     */
+    public abstract char getDatabaseTypeRepresentation();
+    
+    /**
+     * @return The node object
+     */
+    public abstract Node getNode();
+    
+    //////////////////
+    // Utility methods
+    //////////////////
+    
+    public String toString()
+    {
+        return "Node Type: " + getDatabaseTypeRepresentation() + " Node Path: " + getNode().getPath() + " Node ID: "+ nodeID;
+    }
+    
+    /**
+     * A DAONode is equal if the ids are equal.
+     */
     public boolean equals(Object o)
     {
-        if (o instanceof NodeProperty)
+        if (o instanceof DAONode)
         {
-            NodeProperty np = (NodeProperty) o;
-            if (propertyURI != null && propertyValue != null)
+            DAONode n = (DAONode) o;
+            if (this.nodeID == 0 || n.nodeID == 0)
             {
-                return propertyURI.equals(np.getPropertyURI()) &&
-                    propertyValue.equals(np.getPropertyValue());
+                return false;
             }
+            return this.nodeID == n.nodeID;
         }
         return false;
     }
-
-    /**
-     * @return The property identifier.
-     */
-    public String getPropertyURI()
+    
+    public List<DAONode> getHierarchy()
     {
-        return propertyURI;
-    }
-
-    /**
-     * @return The property value.
-     */
-    public String getPropertyValue()
-    {
-        return propertyValue;
-    }
-
-    /**
-     * @return True if the property cannot be modified.
-     */
-    public boolean isReadOnly()
-    {
-        return readOnly;
-    }
-
-    /**
-     * @param readOnly
-     */
-    public void setReadOnly(boolean readOnly)
-    {
-        this.readOnly = readOnly;
+        List<DAONode> list = new ArrayList<DAONode>();
+        if (getNode().getParent() != null)
+        {
+            list.addAll(new NodeMapper().mapDomainNode(getNode().getParent()).getHierarchy());
+        }
+        list.add(this);
+        return list;
     }
     
+    ///////////////////////////////////////////////////
+    // Methods that redirect to the real domain objects
+    ///////////////////////////////////////////////////
+    
+    public void setName(String name)
+    {
+        getNode().setName(name);
+    }
+    
+    public String getName()
+    {
+        return getNode().getName();
+    }
+    
+    public void setParent(DAOContainerNode parent)
+    {
+        if (parent != null)
+        {
+            this.parentId = parent.getNodeID();
+            getNode().setParent((ContainerNode) parent.getNode());
+        }
+        else
+        {
+            this.parentId = 0;
+            getNode().setParent(null);
+        }
+    }
+    
+    public DAOContainerNode getParent()
+    {
+        return new DAOContainerNode(getNode().getParent(), parentId);
+    }
+    
+    public void setProperties(List<NodeProperty> properties)
+    {
+        getNode().setProperties(properties);
+    }
+    
+    public List<NodeProperty> getProperties()
+    {
+        return getNode().getProperties();
+    }
+    
+    public String getPath()
+    {
+        return getNode().getPath();
+    }
+    
+    //////////////////////
+    // Getters and Setters
+    //////////////////////
+    
+    public long getNodeID()
+    {
+        return nodeID;
+    }
+
+    public void setNodeID(long nodeId)
+    {
+        this.nodeID = nodeId;
+    }
+
+    long getParentId()
+    {
+        return parentId;
+    }
+
+    void setParentId(long parentId)
+    {
+        this.parentId = parentId;
+    }
+
 }

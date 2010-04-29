@@ -96,11 +96,11 @@ public abstract class Node
     // The list of node properties
     protected List<NodeProperty> properties;
     
-    // The id of the node in the database
-    protected long nodeID;
-    
-    // True if this is a leaf node
-    boolean leaf;
+    public Node()
+    {
+        this.path = "";
+        properties = new ArrayList<NodeProperty>();
+    }
     
     /**
      * Node constructor.
@@ -125,29 +125,6 @@ public abstract class Node
         this.path = path;
         buildParent(path);
         this.properties = properties;
-    }
-    
-    /**
-     * Node Constructor
-     * 
-     * @param nodeID The ID of the node in the database.
-     */
-    public Node(long nodeID)
-    {
-        this.nodeID = nodeID;
-        path = "";
-        properties = new ArrayList<NodeProperty>();
-    }
-    
-    public List<Node> getHeirarchy()
-    {
-        List<Node> list = new ArrayList<Node>();
-        if (parent != null)
-        {
-            list.addAll(parent.getHeirarchy());
-        }
-        list.add(this);
-        return list;
     }
     
     /**
@@ -187,38 +164,35 @@ public abstract class Node
         else
         {
             parent = new ContainerNode(refinedPath.substring(0, refinedPath.lastIndexOf("/")));
-            parent.setLeaf(false);
         }
     }
     
     public String toString()
     {
-        return "Node Type: " + getDatabaseTypeRepresentation() + " Node Path: " + path + " Node ID: "+ nodeID;
+        return " Node Path: " + path;
     }
     
-    /**
-     * A node is considered equal if the nodeID, name, and parent are
-     * equal.
-     */
     public boolean equals(Object o)
     {
         if (o instanceof Node)
         {
             Node n = (Node) o;
-            if (n.getNodeID() == this.nodeID &&
-                n.getName().equals(this.getName()))
+            if (this.name.equals(n.name))
             {
-                if (n.getParent() == null)
+                if (this.parent == null)
                 {
-                    return this.getParent() == null;
+                    return (n.parent == null);
                 }
                 else
                 {
-                    if (this.getParent() == null)
+                    if (n.parent == null)
                     {
                         return false;
                     }
-                    return n.getParent().equals(this.getParent());
+                    else
+                    {
+                        return this.parent.equals(n.parent);
+                    }
                 }
             }
         }
@@ -239,11 +213,6 @@ public abstract class Node
      * @return A list of views which the node can use for exporting.
      */
     public abstract List<View> provides();
-    
-    /**
-     * @return The database respresentation of this node type
-     */
-    public abstract char getDatabaseTypeRepresentation();
     
     public String getPath()
     {
@@ -273,10 +242,6 @@ public abstract class Node
     public void setParent(ContainerNode parent)
     {
         this.parent = parent;
-        if (parent != null)
-        {
-            parent.setLeaf(false);
-        }
     }
 
     public List<NodeProperty> getProperties()
@@ -287,31 +252,6 @@ public abstract class Node
     public void setProperties(List<NodeProperty> properties)
     {
         this.properties = properties;
-    }
-
-    public long getNodeID()
-    {
-        return nodeID;
-    }
-
-    public void setNodeID(long nodeId)
-    {
-        this.nodeID = nodeId;
-    }
-
-    public boolean isLeaf()
-    {
-        return leaf;
-    }
-    
-    void setLeaf(boolean leaf)
-    {
-        this.leaf = leaf;
-        if (leaf == false && parent != null)
-        {
-            parent.setLeaf(false);
-        }
-        
     }
 
 }
