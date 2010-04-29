@@ -70,14 +70,14 @@
 package ca.nrc.cadc.vos;
 
 import ca.nrc.cadc.util.Log4jInit;
+import java.io.ByteArrayInputStream;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.IOException;
-import java.net.URL;
+import java.io.StringReader;
 import java.nio.MappedByteBuffer;
 import java.nio.channels.FileChannel;
 import java.nio.charset.Charset;
-import java.util.MissingResourceException;
 import org.apache.log4j.Level;
 import org.apache.log4j.Logger;
 import org.junit.After;
@@ -113,16 +113,16 @@ public class NodeReaderTest
     public void tearDown() { }
 
     @Test
-    public void readContainerNodeTest()
+    public void readContainerNodeString()
     {
         try
         {
-            log.debug("readContainerNodeTest");
+            log.debug("readContainerNodeString");
             String xml = readFile("build/class/ContainerNode.xml");
             NodeReader reader = new NodeTestReader();
             Node node = reader.read(xml);
             log.debug(node);
-            log.info("readContainerNodeTest passed");
+            log.info("readContainerNodeString passed");
         }
         catch (Throwable t)
         {
@@ -132,16 +132,92 @@ public class NodeReaderTest
     }
 
     @Test
-    public void readDataNodeTest()
+    public void readDataNodeString()
     {
         try
         {
-            log.debug("readDataNodeTest");
+            log.debug("readDataNodeString");
             String xml = readFile("build/class/DataNode.xml");
             NodeReader reader = new NodeTestReader();
             Node node = reader.read(xml);
             log.debug(node);
-            log.info("readDataNodeTest passed");
+            log.info("readDataNodeString passed");
+        }
+        catch (Throwable t)
+        {
+            log.error(t);
+            fail(t.getMessage());
+        }
+    }
+
+    @Test
+    public void readContainerNodeInputStream()
+    {
+        try
+        {
+            log.debug("readContainerNodeInputStream");
+            String xml = readFile("build/class/ContainerNode.xml");
+            NodeReader reader = new NodeTestReader();
+            Node node = reader.read(new ByteArrayInputStream(xml.getBytes("UTF-8")));
+            log.debug(node);
+            log.info("readContainerNodeInputStream passed");
+        }
+        catch (Throwable t)
+        {
+            log.error(t);
+            fail(t.getMessage());
+        }
+    }
+
+    @Test
+    public void readDataNodeInputStream()
+    {
+        try
+        {
+            log.debug("readDataNodeInputStream");
+            String xml = readFile("build/class/DataNode.xml");
+            NodeReader reader = new NodeTestReader();
+            Node node = reader.read(new ByteArrayInputStream(xml.getBytes("UTF-8")));
+            log.debug(node);
+            log.info("readDataNodeInputStream passed");
+        }
+        catch (Throwable t)
+        {
+            log.error(t);
+            fail(t.getMessage());
+        }
+    }
+
+    @Test
+    public void readContainerNodeReader()
+    {
+        try
+        {
+            log.debug("readContainerNodeReader");
+            String xml = readFile("build/class/ContainerNode.xml");
+            NodeReader reader = new NodeTestReader();
+            Node node = reader.read(new StringReader(xml));
+            log.debug(node);
+            log.info("readContainerNodeReader passed");
+        }
+        catch (Throwable t)
+        {
+            log.error(t);
+            fail(t.getMessage());
+        }
+    }
+
+    @Test
+    public void readDataNodeTestReader()
+    {
+        try
+        {
+            log.debug("readDataNodeTestReader");
+            String xml = readFile("build/class/DataNode.xml");
+            NodeReader reader = new NodeTestReader();
+            Node node = reader.read(new StringReader(xml));
+            log.debug(node);
+            log.info("readDataNodeTestReader passed");
         }
         catch (Throwable t)
         {

@@ -70,8 +70,11 @@
 package ca.nrc.cadc.vos;
 
 import java.io.IOException;
+import java.io.InputStream;
+import java.io.InputStreamReader;
+import java.io.Reader;
 import java.io.StringReader;
-import java.lang.reflect.Constructor;
+import java.io.UnsupportedEncodingException;
 import java.net.URI;
 import java.net.URISyntaxException;
 import java.util.ArrayList;
@@ -83,14 +86,19 @@ import org.jdom.JDOMException;
 import org.jdom.Namespace;
 import org.jdom.input.SAXBuilder;
 
+/**
+ * Constructs a Node from an XML source.
+ *
+ * @author jburke
+ */
 public class NodeReader
 {
-    private static Logger log = Logger.getLogger(NodeReader.class);
-
     public static final String VOSPACE_SCHEMA = "http://www.ivoa.net/xml/VOSpace/v2.0";
     public static final String XML_SCHEMA_INSTANCE = "http://www.w3.org/2001/XMLSchema-instance";
     public static final String PARSER = "org.apache.xerces.parsers.SAXParser";
 
+    private static Logger log = Logger.getLogger(NodeReader.class);
+    
     protected SAXBuilder parser;
     protected Namespace xsiNamespace;
 
@@ -106,14 +114,63 @@ public class NodeReader
         xsiNamespace = Namespace.getNamespace(XML_SCHEMA_INSTANCE);        
     }
 
+    /**
+     *  Construct a Node from an XML String source.
+     *
+     * @param xml String of the XML.
+     * @return Node Node.
+     * @throws NodeParsingException if there is an error parsing the XML.
+     */
     public Node read(String xml)
         throws NodeParsingException
     {
+        if (xml == null)
+            throw new IllegalArgumentException("XML must not be null");
+        return read(new StringReader(xml));
+    }
+
+    /**
+     * Construct a Node from a InputStream.
+     *
+     * @param in InputStream.
+     * @return Node Node.
+     * @throws NodeParsingException if there is an error parsing the XML.
+     */
+    public Node read(InputStream in)
+        throws IOException, NodeParsingException
+    {
+        if (in == null)
+            throw new IOException("stream closed");
+        InputStreamReader reader;
+        try
+        {
+            reader = new InputStreamReader(in, "UTF-8");
+        }
+        catch (UnsupportedEncodingException e)
+        {
+            throw new NodeParsingException("UTF-8 encoding not supported");
+        }
+        return read(reader);
+    }
+
+    /**
+     *  Construct a Node from a Reader.
+     *
+     * @param reader Reader.
+     * @return Node Node.
+     * @throws NodeParsingException if there is an error parsing the XML.
+     */
+    public Node read(Reader reader)
+        throws NodeParsingException
+    {
+        if (reader == null)
+            throw new IllegalArgumentException("reader must not be null");
+
         // Create a JDOM Document from the XML
         Document document;
         try
         {
-            document = parser.build(new StringReader(xml));
+            document = parser.build(reader);
         }
         catch (JDOMException jde)
         {
@@ -176,37 +233,39 @@ public class NodeReader
         log.debug("node type: " + type);
 
         if (type.equals(ContainerNode.class.getSimpleName()))
-            return readContainerNode(root, namespace, uri, path, type);
+            return buildContainerNode(root, namespace, path);
         else if (type.equals(DataNode.class.getSimpleName()))
-            return readDataNode(root, namespace, uri, path, type);
+            return buildDataNode(root, namespace, path);
         else
             throw new NodeParsingException("unknown node type " + type);
     }
 
+    /**
+     *  Get an String representation of the URL
+     *  to the VOSpace schema document.
+     *
+     * @return String of the VOSpace schema document URL
+     */
     protected String getVOSpaceSchema()
     {
         return VOSPACE_SCHEMA;
     }
 
-    protected Node readContainerNode(Element root, Namespace namespace, String uri, String path, String type)
+    /**
+     * Constructs a ContainerNode from the given root Element of the
+     * Document, Document Namespace, and Node path.
+     *
+     * @param root Root Element of the Document.
+     * @param namespace Document Namespace.
+     * @param path Node path.
+     * @return ContainerNode
+     * @throws NodeParsingException if there is an error parsing the XML.
+     */
+    protected Node buildContainerNode(Element root, Namespace namespace, String path)
         throws NodeParsingException
     {
         // Instantiate a ContainerNode class
-        String className = "ca.nrc.cadc.vos." + type;
-        ContainerNode node;
-        try
-        {
-            Class nodeClass = Class.forName(className);
-            Class[] args = new Class[] { String.class };
-            Constructor constructor = nodeClass.getDeclaredConstructor(args);
-            node = (ContainerNode) constructor.newInstance(new Object[] { path });
-        }
-        catch (Exception e)
-        {
-            String error = "Error creating class " + className;
-            log.error(error, e);
-            throw new NodeParsingException(error, e);
-        }
+        ContainerNode node = new ContainerNode(path);
 
         // properties element
         node.setProperties(getProperties(root, namespace));
@@ -239,25 +298,21 @@ public class NodeReader
         return node;
     }
 
-    protected Node readDataNode(Element root, Namespace namespace, String uri, String path, String type)
+    /**
+     * Constructs a DataNode from the given root Element of the
+     * Document, Document Namespace, and Node path.
+     *
+     * @param root Root Element of the Document.
+     * @param namespace Document Namespace.
+     * @param path Node path.
+     * @return DataNode.
+     * @throws NodeParsingException if there is an error parsing the XML.
+     */
+    protected Node buildDataNode(Element root, Namespace namespace, String path)
         throws NodeParsingException
     {
         // Instantiate a DataNode class
-        String className = "ca.nrc.cadc.vos." + type;
-        DataNode node;
-        try
-        {
-            Class nodeClass = Class.forName(className);
-            Class[] args = new Class[] { String.class };
-            Constructor constructor = nodeClass.getDeclaredConstructor(args);
-            node = (DataNode) constructor.newInstance(new Object[] { path });
-        }
-        catch (Exception e)
-        {
-            String error = "Error creating class " + className;
-            log.error(error, e);
-            throw new NodeParsingException(error, e);
-        }
+        DataNode node = new DataNode(path);
 
         // busy attribute
         String busy = root.getAttributeValue("busy");
@@ -283,7 +338,15 @@ public class NodeReader
         return node;
     }
 
-    protected List getProperties(Element root, Namespace namespace)
+    /**
+     * Builds a List of NodeProperty objects from the Document property Elements.
+     *
+     * @param root Root Element of the Document.
+     * @param namespace Document Namespace.
+     * @return List of NodeProperty objects.
+     * @throws NodeParsingException if there is an error parsing the XML.
+     */
+    protected List<NodeProperty> getProperties(Element root, Namespace namespace)
         throws NodeParsingException
     {
         // properties element
@@ -315,12 +378,22 @@ public class NodeReader
         return list;
     }
 
-    protected List getViews(Element root, Namespace namespace, String parent)
+    /**
+     * Builds a List of View objects from the view elements contained within
+     * the given parent element.
+     *
+     * @param root Root Element of the Document.
+     * @param namespace Document Namespace.
+     * @param parent View Parent Node.
+     * @return List of View objects.
+     * @throws NodeParsingException if there is an error parsing the XML.
+     */
+    protected List<View> getViews(Element root, Namespace namespace, String parent)
         throws NodeParsingException
     {
         // view parent element
-        Element accepts = root.getChild(parent, namespace);
-        if (accepts == null)
+        Element parentElement = root.getChild(parent, namespace);
+        if (parentElement == null)
         {
             String error = parent + " element not found in node";
             log.error(error);
@@ -331,7 +404,7 @@ public class NodeReader
         List<View> list = new ArrayList<View>();
 
         // view elements
-        List<Element> viewList = accepts.getChildren("view", namespace);
+        List<Element> viewList = parentElement.getChildren("view", namespace);
         for (Element view : viewList)
         {
             // view uri attribute
