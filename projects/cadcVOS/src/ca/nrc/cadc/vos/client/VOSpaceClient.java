@@ -69,22 +69,14 @@
 
 package ca.nrc.cadc.vos.client;
 
-import java.io.IOException;
-import java.io.InputStream;
-import java.io.OutputStreamWriter;
+import java.io.*;
 import java.net.HttpURLConnection;
 import java.net.URL;
 import java.util.List;
 
 import org.apache.log4j.Logger;
 
-import ca.nrc.cadc.vos.Node;
-import ca.nrc.cadc.vos.NodeProperty;
-import ca.nrc.cadc.vos.Protocol;
-import ca.nrc.cadc.vos.Search;
-import ca.nrc.cadc.vos.ServerTransfer;
-import ca.nrc.cadc.vos.Transfer;
-import ca.nrc.cadc.vos.View;
+import ca.nrc.cadc.vos.*;
 
 /**
  * @author zhangsa
@@ -107,7 +99,7 @@ public class VOSpaceClient
      * If a parent node in the URI path is a LinkNode, the service MUST throw a HTTP 500 status code including a LinkFound fault in the entity body.
            o For example, given the URI path /a/b/c, the service must throw a HTTP 500 status code including a LinkFound fault in the entity body if either /a or /a/b are LinkNodes. 
      */
-    public Node createNode(Node node)
+    public Node createNode(ContainerNode node)
     {
         int responseCode;
         Node rtnNode = null;
@@ -118,8 +110,9 @@ public class VOSpaceClient
             HttpURLConnection httpCon = (HttpURLConnection) url.openConnection();
             httpCon.setDoOutput(true);
             httpCon.setRequestMethod("PUT");
-            OutputStreamWriter out = new OutputStreamWriter(httpCon.getOutputStream());
-            out.write(node.getName()); //TODO: send XML text
+            OutputStream out = httpCon.getOutputStream();
+            NodeWriter nodeWriter = new NodeWriter();
+            nodeWriter.write(node, out);
             out.close();
 
             responseCode = httpCon.getResponseCode();
@@ -127,7 +120,8 @@ public class VOSpaceClient
             {
             case 201: // valid
                 InputStream in = httpCon.getInputStream();
-                // TODO generate returned node
+                NodeReader nodeReader = new NodeReader();
+                rtnNode = nodeReader.read(in);
                 in.close();
                 break;
             case 500:
@@ -138,8 +132,12 @@ public class VOSpaceClient
             default:
                 break;
             }
-        } catch (IOException ex)
+        } catch (IOException e)
         {
+            throw new IllegalStateException(e);
+        } catch (NodeParsingException e)
+        {
+            throw new IllegalStateException(e);
         }
         return rtnNode;
     }

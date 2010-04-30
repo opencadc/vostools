@@ -84,11 +84,18 @@ public class Transfer implements Runnable
         PULL_FROM_VO_SPACE
     }
 
-    protected Node _target;
     protected Direction _direction;
+
+    // Reqeust member variables
+    protected String _serviceUrl;
+    protected Node _target;
     protected View _view;    
     protected List<Protocol> _protocols;
     protected boolean _keepBytes;
+    
+    // Result member variables
+    protected String _endpoint = null;
+    
     
 
     
@@ -100,7 +107,8 @@ public class Transfer implements Runnable
 
     public String getResults()
     {
-        throw new UnsupportedOperationException("Feature under construction.");
+        return _endpoint;
+        //throw new UnsupportedOperationException("Feature under construction.");
     }
 
     public String getErrors()
