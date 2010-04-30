@@ -200,6 +200,36 @@ public abstract class DAONode
         return getNode().getPath();
     }
     
+    public String getGroupRead()
+    {
+        return getNode().getGroupRead();
+    }
+
+    public void setGroupRead(String groupRead)
+    {
+        getNode().setGroupRead(groupRead);
+    }
+
+    public String getGroupWrite()
+    {
+        return getNode().getGroupWrite();
+    }
+
+    public void setGroupWrite(String groupWrite)
+    {
+        getNode().setGroupWrite(groupWrite);
+    }
+    
+    public String getOwner()
+    {
+        return getNode().getOwner();
+    }
+
+    public void setOwner(String owner)
+    {
+        getNode().setOwner(owner);
+    }
+    
     //////////////////////
     // Getters and Setters
     //////////////////////

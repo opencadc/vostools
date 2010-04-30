@@ -77,6 +77,7 @@ import org.springframework.jdbc.core.RowMapper;
 import ca.nrc.cadc.vos.ContainerNode;
 import ca.nrc.cadc.vos.DataNode;
 import ca.nrc.cadc.vos.Node;
+import ca.nrc.cadc.vos.NodeProperty;
 
 /**
  * Class to map a result set into a Node object.
@@ -108,6 +109,16 @@ public class NodeMapper implements RowMapper
         long nodeID = rs.getLong("nodeID");
         String name = rs.getString("name");
         long parentID = rs.getLong("parentID");
+        
+        String groupRead = rs.getString("groupRead");
+        String groupWrite = rs.getString("groupWrite");
+        String owner = rs.getString("owner");
+        
+        long contentLength = rs.getLong("contentLength");
+        String contentType = rs.getString("contentType");
+        String contentEncoding = rs.getString("contentEncoding");
+        byte[] contentMD5 = rs.getBytes("contentMD5");
+        
         DAOContainerNode parent = null;
         if (parentID != 0)
         {
@@ -137,6 +148,15 @@ public class NodeMapper implements RowMapper
 
         node.setName(name);
         node.setParent(parent);
+        
+        node.setGroupRead(groupRead);
+        node.setGroupWrite(groupWrite);
+        node.setOwner(owner);
+        
+        node.getProperties().add(new NodeProperty(NodePropertyMapper.PROPERTY_CONTENTLENGTH_URI, new Long(contentLength).toString()));
+        node.getProperties().add(new NodeProperty(NodePropertyMapper.PROPERTY_CONTENTTYPE_URI, contentType));
+        node.getProperties().add(new NodeProperty(NodePropertyMapper.PROPERTY_CONTENTENCODING_URI, contentEncoding));
+        node.getProperties().add(new NodeProperty(NodePropertyMapper.PROPERTY_CONTENTMD5_URI, contentMD5.toString()));
 
         return node;
     }

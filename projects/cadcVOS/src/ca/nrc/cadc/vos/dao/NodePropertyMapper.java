@@ -81,6 +81,24 @@ import ca.nrc.cadc.vos.NodeProperty;
  */
 public class NodePropertyMapper implements RowMapper
 {
+    
+    public static final String PROPERTY_CONTENTLENGTH_URI = "ivo://ca.nrc.cadc.vos/vospace/properties#contentLength";
+    public static final String PROPERTY_CONTENTTYPE_URI = "ivo://ca.nrc.cadc.vos/vospace/properties#contentType";
+    public static final String PROPERTY_CONTENTENCODING_URI = "ivo://ca.nrc.cadc.vos/vospace/properties#contentEncoding";
+    public static final String PROPERTY_CONTENTMD5_URI = "ivo://ca.nrc.cadc.vos/vospace/properties#contentMD5";
+    
+    public static boolean isStandardHeaderProperty(NodeProperty nodeProperty)
+    {
+        String propertyURI = nodeProperty.getPropertyURI();
+        if (propertyURI != null)
+        {
+            return (propertyURI.equals(PROPERTY_CONTENTLENGTH_URI) ||
+                    propertyURI.equals(PROPERTY_CONTENTTYPE_URI) ||
+                    propertyURI.equals(PROPERTY_CONTENTENCODING_URI) ||
+                    propertyURI.equals(PROPERTY_CONTENTMD5_URI));
+        }
+        return false;
+    }
 
     /**
      * Map the row to the appropriate type of node object.

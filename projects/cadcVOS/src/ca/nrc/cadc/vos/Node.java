@@ -96,6 +96,15 @@ public abstract class Node
     // The list of node properties
     protected List<NodeProperty> properties;
     
+    // The group allowed to read
+    protected String groupRead;
+    
+    // The group allowed to write
+    protected String groupWrite;
+    
+    // The node owner
+    protected String owner;
+    
     public Node()
     {
         this.path = "";
@@ -252,6 +261,36 @@ public abstract class Node
     public void setProperties(List<NodeProperty> properties)
     {
         this.properties = properties;
+    }
+
+    public String getGroupRead()
+    {
+        return groupRead;
+    }
+
+    public void setGroupRead(String groupRead)
+    {
+        this.groupRead = groupRead;
+    }
+
+    public String getGroupWrite()
+    {
+        return groupWrite;
+    }
+
+    public void setGroupWrite(String groupWrite)
+    {
+        this.groupWrite = groupWrite;
+    }
+
+    public String getOwner()
+    {
+        return owner;
+    }
+
+    public void setOwner(String owner)
+    {
+        this.owner = owner;
     }
 
 }

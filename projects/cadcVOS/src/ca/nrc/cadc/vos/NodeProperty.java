@@ -105,13 +105,17 @@ public class NodeProperty
         if (o instanceof NodeProperty)
         {
             NodeProperty np = (NodeProperty) o;
-            if (propertyURI != null && propertyValue != null)
+            if (propertyURI != null)
             {
-                return propertyURI.equals(np.getPropertyURI()) &&
-                    propertyValue.equals(np.getPropertyValue());
+                return propertyURI.equals(np.getPropertyURI());
             }
         }
         return false;
+    }
+    
+    public String toString()
+    {
+        return propertyURI + ": " + propertyValue;
     }
 
     /**

@@ -89,6 +89,7 @@ import ca.nrc.cadc.vos.Node;
 import ca.nrc.cadc.vos.NodeAuthorizer;
 import ca.nrc.cadc.vos.NodeDAO;
 import ca.nrc.cadc.vos.NodeProperty;
+import ca.nrc.cadc.vos.dao.NodePropertyMapper;
 
 /**
  * Abstract class encompassing the logic behind running tests on the
@@ -202,7 +203,6 @@ public abstract class NodeDAOTests
         nodeDAO.delete(new ContainerNode(nodePath3));
         
         // ensure deleting the roots deleted all children
-        
         PreparedStatement prepStmt = connection.prepareStatement(
             "select count(*) from " + nodeDAO.getNodeTableName() + " where name like ?");
         prepStmt.setString(1, runId + "%");
@@ -219,9 +219,19 @@ public abstract class NodeDAOTests
         List<NodeProperty> properties = new ArrayList<NodeProperty>();
         NodeProperty prop1 = new NodeProperty("uri1", "value1");
         NodeProperty prop2 = new NodeProperty("uri2", "value2");
+        NodeProperty prop3 = new NodeProperty(NodePropertyMapper.PROPERTY_CONTENTLENGTH_URI, new Long(1024).toString());
+        NodeProperty prop4 = new NodeProperty(NodePropertyMapper.PROPERTY_CONTENTTYPE_URI, "text/plain");
+        NodeProperty prop5 = new NodeProperty(NodePropertyMapper.PROPERTY_CONTENTENCODING_URI, "gzip");
+        NodeProperty prop6 = new NodeProperty(NodePropertyMapper.PROPERTY_CONTENTMD5_URI, new byte[] {1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16}.toString());
+
+        properties.add(prop3);
+        properties.add(prop4);
+        properties.add(prop5);
+        properties.add(prop6);
         properties.add(prop1);
         properties.add(prop2);
         return properties;
     }
     
 }
+

@@ -200,11 +200,8 @@ public abstract class NodeDAO implements NodePersistence
                     throw new NodeAlreadyExistsException(node.getPath());
                 }
                 
-                // insert the node
-                //jdbc.update(getInsertNodeSQL(node));
-                
                 KeyHolder keyHolder = new GeneratedKeyHolder();
-                //jdbc.update(psc, generatedKeyHolder);
+                
                 final String insertSQL = getInsertNodeSQL(dbNode);
 
                 jdbc.update(new PreparedStatementCreator() {
@@ -223,7 +220,11 @@ public abstract class NodeDAO implements NodePersistence
                 Iterator<NodeProperty> propertyIterator = node.getProperties().iterator();
                 while (propertyIterator.hasNext())
                 {
-                    jdbc.update(getInsertNodePropertiesSQL(dbNode, propertyIterator.next()));
+                    NodeProperty next = propertyIterator.next();
+                    if (!NodePropertyMapper.isStandardHeaderProperty(next))
+                    {
+                        jdbc.update(getInsertNodePropertiesSQL(dbNode, next));
+                    }
                 }
 
                 // Commit the transaction.
@@ -310,7 +311,7 @@ public abstract class NodeDAO implements NodePersistence
             // get the node in question
             returnNode = getSingleNodeFromSelect(getSelectNodeByNameAndParentSQL(dbNode));
             List returnNodeProperties = jdbc.query(getSelectNodePropertiesByID(returnNode), new NodePropertyMapper());
-            returnNode.setProperties(returnNodeProperties);
+            returnNode.getProperties().addAll(returnNodeProperties);
             returnNode.setParent(dbNode.getParent());
         }
         
@@ -379,7 +380,7 @@ public abstract class NodeDAO implements NodePersistence
             
             // get the properties for the node
             List nodeProperties = jdbc.query(getSelectNodePropertiesByID(next), new NodePropertyMapper());
-            next.setProperties(nodeProperties);
+            next.getProperties().addAll(nodeProperties);
             
             if (hierarchyIterator.hasNext())
             {
@@ -425,7 +426,8 @@ public abstract class NodeDAO implements NodePersistence
     protected String getSelectNodeByNameAndParentSQL(DAONode node)
     {
         StringBuilder sb = new StringBuilder();
-        sb.append("select nodeID, parentID, name, type, owner, groupRead, groupWrite from Node where name = '"
+        sb.append("select nodeID, parentID, name, type, owner, groupRead, groupWrite, "
+            + "contentLength, contentType, contentEncoding, contentMD5 from Node where name = '"
             + node.getName()
             + "' and "
             + ((node.getParent() == null) ?
@@ -437,7 +439,8 @@ public abstract class NodeDAO implements NodePersistence
     protected String getSelectNodesByParentSQL(DAONode parent)
     {
         StringBuilder sb = new StringBuilder();
-        sb.append("select nodeID, parentID, name, type, owner, groupRead, groupWrite from Node where parentID = "
+        sb.append("select nodeID, parentID, name, type, owner, groupRead, groupWrite, "
+            + "contentLength, contentType, contentEncoding, contentMD5 from Node where parentID = "
             + parent.getNodeID());
         return sb.toString();
     }
@@ -449,7 +452,8 @@ public abstract class NodeDAO implements NodePersistence
     protected String getSelectNodeByIdSQL(DAONode node)
     {
         StringBuilder sb = new StringBuilder();
-        sb.append("select nodeID, parentID, name, type, owner, groupRead, groupWrite from Node where nodeID = "
+        sb.append("select nodeID, parentID, name, type, owner, groupRead, groupWrite, "
+           +  "contentLength, contentType, contentEncoding, contentMD5 from Node where nodeID = "
             + node.getNodeID());
         return sb.toString();
     }
@@ -470,6 +474,33 @@ public abstract class NodeDAO implements NodePersistence
      */
     protected String getInsertNodeSQL(DAONode node)
     {
+        
+        long contentLength = 0;
+        String contentType = null;
+        String contentEncoding = null;
+        byte[] contentMD5 = null;
+        
+        String contentLengthString = getPropertyValue(node, NodePropertyMapper.PROPERTY_CONTENTLENGTH_URI);
+        contentType = getPropertyValue(node, NodePropertyMapper.PROPERTY_CONTENTTYPE_URI);
+        contentEncoding = getPropertyValue(node, NodePropertyMapper.PROPERTY_CONTENTENCODING_URI);
+        String contentMD5String = getPropertyValue(node, NodePropertyMapper.PROPERTY_CONTENTMD5_URI);
+        
+        if (contentLengthString != null)
+        {
+            try
+            {
+                contentLength = new Long(contentLengthString);
+            } catch (NumberFormatException e)
+            {
+                log.warn("Content length is not a number, continuing.");
+            }
+        }
+        
+        if (contentMD5String != null)
+        {
+            contentMD5 = contentMD5String.getBytes();
+        }
+        
         StringBuilder sb = new StringBuilder();
         sb.append("insert into ");
         sb.append(getNodeTableName());
@@ -479,7 +510,11 @@ public abstract class NodeDAO implements NodePersistence
         sb.append("type,");
         sb.append("owner,");
         sb.append("groupRead,");
-        sb.append("groupWrite");
+        sb.append("groupWrite,");
+        sb.append("contentLength,");
+        sb.append("contentType,");
+        sb.append("contentEncoding,");
+        sb.append("contentMD5");
         sb.append(") values (");
         sb.append(node.getParent() == null ? null : node.getParent()
                 .getNodeID());
@@ -488,13 +523,32 @@ public abstract class NodeDAO implements NodePersistence
         sb.append("','");
         sb.append(node.getDatabaseTypeRepresentation());
         sb.append("','");
-        // sb.append(node.getOwner());
+        sb.append(node.getOwner());
         sb.append("','");
-        // sb.append(node.getGroupRead());
+        sb.append(node.getGroupRead());
         sb.append("','");
-        // sb.append(node.getGroupWrite());
+        sb.append(node.getGroupWrite());
+        sb.append("',");
+        sb.append(contentLength);
+        sb.append(",'");
+        sb.append(contentType);
+        sb.append("','");
+        sb.append(contentEncoding);
+        sb.append("','");
+        sb.append(contentMD5);
         sb.append("')");
         return sb.toString();
+    }
+    
+    private String getPropertyValue(DAONode node, String propertyURI)
+    {
+        int propertyIndex;
+        String value = null;
+        if ((propertyIndex = node.getProperties().indexOf(new NodeProperty(propertyURI, ""))) != -1)
+        {
+            value = ((NodeProperty) node.getProperties().get(propertyIndex)).getPropertyValue();
+        }        
+        return value;
     }
 
     /**
