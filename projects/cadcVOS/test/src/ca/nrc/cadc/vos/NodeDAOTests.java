@@ -67,7 +67,7 @@
 ************************************************************************
 */
 
-package ca.nrc.cadc.vos.test;
+package ca.nrc.cadc.vos;
 
 import static org.junit.Assert.assertEquals;
 
