@@ -109,21 +109,20 @@ public abstract class NodeDAO implements NodePersistence
     private DataSourceTransactionManager transactionManager;
     private DefaultTransactionDefinition defaultTransactionDef;
     private TransactionStatus transactionStatus;
-    private NodeAuthorizer nodeAuthorizer;
 
     /**
      * NodeDAO Constructor.
      * @param dataSource The data source for persisting nodes.
      * @param nodeAuthorizer The implementation of the authroization interface.
      */
-    public NodeDAO(DataSource dataSource, NodeAuthorizer nodeAuthorizer)
+    public NodeDAO()
     {
         this.defaultTransactionDef = new DefaultTransactionDefinition();
         defaultTransactionDef
                 .setIsolationLevel(DefaultTransactionDefinition.ISOLATION_READ_COMMITTED);
+        DataSource dataSource = getDataSource();
         this.jdbc = new JdbcTemplate(dataSource);
         this.transactionManager = new DataSourceTransactionManager(dataSource);
-        this.nodeAuthorizer = nodeAuthorizer;
     }
 
     /**
@@ -192,7 +191,7 @@ public abstract class NodeDAO implements NodePersistence
                 DAONode dbNode = getNodesAbove(new NodeMapper().mapDomainNode(node));
                 
                 // check the write permissions
-                nodeAuthorizer.checkWriteAccess(dbNode.getParent().getNode());
+                getNodeAuthorizer().checkWriteAccess(dbNode.getParent().getNode());
                 
                 // make sure the leaf node doesn't already exist
                 if (getSingleNodeFromSelect(getSelectNodeByNameAndParentSQL(dbNode)) != null)
@@ -254,7 +253,7 @@ public abstract class NodeDAO implements NodePersistence
         DAONode nodeInDb = this.getDAONode(node);
         
         // check delete permissions
-        nodeAuthorizer.checkDeleteAccess(nodeInDb.getNode());
+        getNodeAuthorizer().checkDeleteAccess(nodeInDb.getNode());
         
         synchronized (this)
         {
@@ -321,7 +320,7 @@ public abstract class NodeDAO implements NodePersistence
         }
         
         // check the permissions
-        nodeAuthorizer.checkReadAccess(returnNode.getNode());
+        getNodeAuthorizer().checkReadAccess(returnNode.getNode());
         
         log.debug("get node success: nodeID: " + returnNode.getNodeID() + " for path: " + node.getPath());
         
@@ -417,6 +416,16 @@ public abstract class NodeDAO implements NodePersistence
      * @return The name of the table for storing node properties.
      */
     public abstract String getNodePropertyTableName();
+    
+    /**
+     * @return The node data source to use.
+     */
+    public abstract DataSource getDataSource();
+    
+    /**
+     * @return The node authorizer to use.
+     */
+    public abstract NodeAuthorizer getNodeAuthorizer();
 
     /**
      * @param node The node to query for.
