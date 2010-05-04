@@ -143,6 +143,9 @@ public class QueryRunner implements JobRunner
     private static String uploadManagerClassName = "ca.nrc.cadc.tap.impl.UploadManagerImpl";
     private static String sqlParserClassName = "ca.nrc.cadc.tap.impl.SqlQueryImpl";
     private static String adqlParserClassName = "ca.nrc.cadc.tap.impl.AdqlQueryImpl";
+
+    // optional plugin classes that may be provided to override default behaviour
+    private static String maxrecValidatorClassName = "ca.nrc.cadc.tap.impl.MaxRecValidatorImpl";
     
 	static
 	{
@@ -271,6 +274,14 @@ public class QueryRunner implements JobRunner
 
             logger.debug("invoking MaxRecValidator...");
             MaxRecValidator maxRecValidator = new MaxRecValidator();
+            try
+            {
+                Class c = Class.forName(maxrecValidatorClassName);
+                maxRecValidator = (MaxRecValidator) c.newInstance();
+                
+            }
+            catch(Throwable ignore) { }
+            logger.debug("using " + maxRecValidator.getClass().getName());
             Integer maxRows = maxRecValidator.validate(paramList);
 
             logger.debug("invoking TapValidator to get LANG...");
@@ -286,15 +297,6 @@ public class QueryRunner implements JobRunner
             tapQuery.setParameterList(paramList);
             if (maxRows != null)
                 tapQuery.setMaxRowCount(maxRows + 1); // +1 so the TableWriter can detect overflow
-
-            // get the actual limit from the query implementation
-            Integer tmp = tapQuery.getMaxRowCount();
-            if (tmp != null)
-            {
-                tmp = tmp - 1;
-                if (maxRows == null || tmp < maxRows)
-                    maxRows = tmp;
-            }
             
             logger.debug("invoking TapQuery...");
         	String sql = tapQuery.getSQL();

@@ -71,15 +71,33 @@ package ca.nrc.cadc.tap;
 
 import ca.nrc.cadc.uws.Parameter;
 import java.util.List;
+import org.apache.log4j.Logger;
 
 /**
  * This class checks for a TAP parameter named MAXREC, and returns a validated
- * or default value.
+ * or default value. Implementors can/should subclass this with a class named
+ * <code>ca.nrc.cadc.tap.impl.MaxRecValidatorImpl</code> to set the default and
+ * maximum allowed values for their service. The values set here are null, which
+ * means no limit.
  * 
  * @author jburke
  */
 public class MaxRecValidator
 {
+    private static Logger log = Logger.getLogger(MaxRecValidator.class);
+
+    /**
+     * The default value when MAXREC is not specified.
+     */
+    protected Integer defaultValue;
+
+    /**
+     * The maximum allowed value.
+     */
+    protected Integer maxValue;
+
+    public MaxRecValidator() { }
+
     /**
      * Checks the parameter List for a parameter named MAXREC.
      * <p>
@@ -98,19 +116,22 @@ public class MaxRecValidator
     public Integer validate(List<Parameter> paramList)
     {
         String value = TapUtil.findParameterValue("MAXREC", paramList);
+
         if (value == null || value.trim().length() == 0)
-            return null;
+            return defaultValue;
 
         try
         {
-            int maxRec = Integer.parseInt(value);
-            if (maxRec < 0)
-                throw new IllegalArgumentException("Invalid MAXREC parameter: " + value);
-            return new Integer(maxRec);
+            Integer ret = new Integer(value);
+            if (ret < 0)
+                throw new IllegalArgumentException("Invalid MAXREC: " + value);
+            if (maxValue != null && maxValue < ret)
+                return maxValue;
+            return ret;
         }
         catch (NumberFormatException nfe)
         {
-            throw new IllegalArgumentException("Invalid MAXREC parameter: " + value);
+            throw new IllegalArgumentException("Invalid MAXREC: " + value);
         }
     }
 }
