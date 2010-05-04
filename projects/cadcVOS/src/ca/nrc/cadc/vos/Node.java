@@ -178,7 +178,7 @@ public abstract class Node
     
     public String toString()
     {
-        return " Node Path: " + path;
+        return "Node Path: " + path;
     }
     
     public boolean equals(Object o)

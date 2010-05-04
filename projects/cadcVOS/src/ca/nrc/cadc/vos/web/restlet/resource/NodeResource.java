@@ -96,6 +96,10 @@ public class NodeResource extends BaseResource
     {
 
         String path = (String) getRequest().getAttributes().get("nodePath");  
+        if (path == null || path.trim().length() == 0)
+        {
+            throw new ResourceException(Status.CLIENT_ERROR_BAD_REQUEST);
+        }
         
         try
         {

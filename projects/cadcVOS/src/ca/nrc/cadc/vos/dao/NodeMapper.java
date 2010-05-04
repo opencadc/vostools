@@ -96,6 +96,10 @@ public class NodeMapper implements RowMapper
         {
             returnNode = new DAOContainerNode((ContainerNode) node);
         }
+        else if (node instanceof SearchNode)
+        {
+            returnNode = new DAOSearchNode((SearchNode) node);
+        }
         
         return returnNode;
     }
@@ -153,10 +157,22 @@ public class NodeMapper implements RowMapper
         node.setGroupWrite(groupWrite);
         node.setOwner(owner);
         
-        node.getProperties().add(new NodeProperty(NodePropertyMapper.PROPERTY_CONTENTLENGTH_URI, new Long(contentLength).toString()));
-        node.getProperties().add(new NodeProperty(NodePropertyMapper.PROPERTY_CONTENTTYPE_URI, contentType));
-        node.getProperties().add(new NodeProperty(NodePropertyMapper.PROPERTY_CONTENTENCODING_URI, contentEncoding));
-        node.getProperties().add(new NodeProperty(NodePropertyMapper.PROPERTY_CONTENTMD5_URI, contentMD5.toString()));
+        if (contentLength != 0)
+        {
+            node.getProperties().add(new NodeProperty(NodePropertyMapper.PROPERTY_CONTENTLENGTH_URI, new Long(contentLength).toString()));
+        }
+        if (contentType != null && contentType.trim().length() > 0)
+        {
+            node.getProperties().add(new NodeProperty(NodePropertyMapper.PROPERTY_CONTENTTYPE_URI, contentType));
+        }
+        if (contentEncoding != null && contentEncoding.trim().length() > 0)
+        {
+            node.getProperties().add(new NodeProperty(NodePropertyMapper.PROPERTY_CONTENTENCODING_URI, contentEncoding));
+        }
+        if (contentMD5 != null)
+        {
+            node.getProperties().add(new NodeProperty(NodePropertyMapper.PROPERTY_CONTENTMD5_URI, contentMD5.toString()));
+        }
 
         return node;
     }

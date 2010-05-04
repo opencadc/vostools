@@ -172,6 +172,10 @@ public abstract class NodeDAO implements NodePersistence
     public Node get(Node node) throws AccessControlException,
             NodeNotFoundException
     {
+        if (node == null)
+        {
+            throw new IllegalArgumentException("Missing argument 'node'");
+        }
         return getDAONode(node).getNode();
     }
 
@@ -303,6 +307,7 @@ public abstract class NodeDAO implements NodePersistence
     protected DAONode getDAONode(Node node) throws AccessControlException,
             NodeNotFoundException
     {
+        
         DAONode returnNode;
         synchronized (this)
         {
@@ -311,6 +316,19 @@ public abstract class NodeDAO implements NodePersistence
             
             // get the node in question
             returnNode = getSingleNodeFromSelect(getSelectNodeByNameAndParentSQL(dbNode));
+            
+            if (returnNode == null)
+            {
+                throw new NodeNotFoundException(node.toString());
+            }
+            
+            // get the children if this is a container node
+            if (returnNode instanceof DAOContainerNode)
+            {
+                List children = jdbc.query(this.getSelectNodesByParentSQL(returnNode), new NodeMapper());
+                ((DAOContainerNode) returnNode).setNodes(children);
+            }
+            
             List returnNodeProperties = jdbc.query(getSelectNodePropertiesByID(returnNode), new NodePropertyMapper());
             returnNode.getProperties().addAll(returnNodeProperties);
             returnNode.setParent(dbNode.getParent());
@@ -441,7 +459,7 @@ public abstract class NodeDAO implements NodePersistence
             + "contentLength, contentType, contentEncoding, contentMD5 from Node where name = '"
             + node.getName()
             + "' and "
-            + ((node.getParent() == null) ?
+            + ((node.getParent() == null || (node.getParent().getNodeID() == 0)) ?
                 "parentID is null " :
                 "parentID = " + node.getParent().getNodeID()));
         return sb.toString();

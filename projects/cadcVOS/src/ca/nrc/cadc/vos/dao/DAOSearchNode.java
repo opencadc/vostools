@@ -67,150 +67,41 @@
 ************************************************************************
 */
 
-package ca.nrc.cadc.vos;
+package ca.nrc.cadc.vos.dao;
 
-import java.util.ArrayList;
-import java.util.Iterator;
-import java.util.List;
+import ca.nrc.cadc.vos.Node;
 
-/**
- * A VOSpace node that describes the a data item that contains other data
- * items.  A ContainerNode is similar to a directory.
- * 
- * @author majorb
- *
- */
-public class ContainerNode extends Node
+public class DAOSearchNode extends DAONode
 {
-    
-    public static final char DB_TYPE = 'C';
-    
-    // The list of contained nodes.
-    private List<Node> nodes;
+
+    // The real data node object
+    private SearchNode searchNode;
     
     /**
-     * ContainerNode constructor.
-     */
-    public ContainerNode()
-    {
-        super();
-        nodes = new ArrayList<Node>();
-    }
-    
-    /**
-     * ContainerNode constructor.
-     */
-    public ContainerNode(String path)
-    {
-        super(path);
-        nodes = new ArrayList<Node>();
-    }
-    
-    /**
-     * ContainerNode constructor.
-     */
-    public ContainerNode(String path, List<NodeProperty> properties)
-    {
-        super(path, properties);
-        nodes = new ArrayList<Node>();
-    }
-    
-    /**
-     * A container node is structured if all its
-     * nodes within are structured.
+     * Constructor without nodeID
      * 
-     * @return True if the node is considered structured.
+     * @param dataNode
      */
-    public boolean isStructured()
+    public DAOSearchNode(SearchNode searchNode)
     {
-        boolean structured = true;
-        Iterator<Node> i = nodes.iterator();
-        while (i.hasNext() && structured == true)
-        {
-            if (!i.next().isStructured())
-            {
-                structured = false;
-            }
-        }
-        return structured;
-    }
-    
-    public boolean heirarchyEquals(ContainerNode containerNode)
-    {
-        if (containerNode == null)
-        {
-            return false;
-        }
-        if (this.name.equals(containerNode.getName()))
-        {
-            if (this.parent == null)
-            {
-                if (containerNode.parent == null)
-                {
-                    return true;
-                }
-                else
-                {
-                    return false;
-                }
-            }
-            else
-            {
-                if (containerNode.parent == null)
-                {
-                    return false;
-                }
-                else
-                {
-                    return this.parent.heirarchyEquals(containerNode.parent);
-                }
-            }
-        }
-        return false;
+        super(0);
+        this.searchNode = searchNode;
     }
 
     /**
-     * @return A list of nodes contained by this node.
-     */
-    public List<Node> getNodes()
-    {
-        return nodes;
-    }
-
-    /**
-     * Sets the list of contained nodes.
-     * 
-     * @param nodes The nodes to contain.
-     */
-    public void setNodes(List<Node> nodes)
-    {
-        this.nodes = nodes;
-    }
-    
-    /**
-     * @return A list of views which the node can use for importing.
-     */
-    public List<View> accepts()
-    {
-        // TODO: Implement accepts()
-        return null;
-    }
-    
-    /**
-     * @return A list of views which the node can use for exporting.
-     */
-    public List<View> provides()
-    {
-        // TODO: Implement provides
-        return null;
-    }
-    
-    /**
-     * @return The database respresentation of this node type
+     * @return The database type representations
      */
     public char getDatabaseTypeRepresentation()
     {
-        return DB_TYPE;
+        throw new IllegalStateException("Cannot persist search nodes.");
     }
 
+    /**
+     * The real node domain object.
+     */
+    public Node getNode()
+    {
+        return searchNode;
+    }
+    
 }

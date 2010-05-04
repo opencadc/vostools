@@ -69,7 +69,11 @@
 
 package ca.nrc.cadc.vos.dao;
 
+import java.util.ArrayList;
+import java.util.List;
+
 import ca.nrc.cadc.vos.ContainerNode;
+import ca.nrc.cadc.vos.DataNode;
 import ca.nrc.cadc.vos.Node;
 
 /**
@@ -120,6 +124,34 @@ public class DAOContainerNode extends DAONode
     public Node getNode()
     {
         return containerNode;
+    }
+    
+    public List<DAONode> getNodes()
+    {
+        List<Node> nodes = containerNode.getNodes();
+        List<DAONode> daoNodes = new ArrayList<DAONode>(nodes.size());
+        for (Node node : nodes)
+        {
+            if (node instanceof DataNode)
+            {
+                daoNodes.add(new DAODataNode((DataNode) node));
+            }
+            if (node instanceof ContainerNode)
+            {
+                daoNodes.add(new DAOContainerNode((ContainerNode) node));
+            }
+        }
+        return daoNodes;
+    }
+    
+    public void setNodes(List<DAONode> doaNodes)
+    {
+        List<Node> nodes = new ArrayList<Node>(doaNodes.size());
+        for (DAONode doaNode : doaNodes)
+        {
+            nodes.add(doaNode.getNode());
+        }
+        containerNode.setNodes(nodes);
     }
 
 }
