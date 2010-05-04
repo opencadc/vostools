@@ -119,6 +119,15 @@
             <src path="test/src"/>
         </javac>
     </target>
+    
+    <!-- create jar file with test classes for clients to use -->
+    <target name="build-test" depends="compile-test">
+        <jar jarfile="${build}/lib/${project}.jar"
+            basedir="${build}/class"
+            update="no">
+            <include name="ca/nrc/cadc/**" />
+        </jar>
+    </target>
 
     <!-- Run the test suite -->
     <target name="test" depends="compile,compile-test">
