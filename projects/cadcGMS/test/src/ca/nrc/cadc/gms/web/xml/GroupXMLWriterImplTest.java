@@ -64,29 +64,52 @@
  *
  ************************************************************************
  */
-package ca.nrc.cadc.gms;
-
-import org.junit.runners.Suite;
-import org.junit.runner.RunWith;
-import ca.nrc.cadc.gms.service.UserServiceImplTest;
-import ca.nrc.cadc.gms.web.resources.restlet.*;
-import ca.nrc.cadc.gms.web.xml.GroupXMLWriterImplTest;
-import ca.nrc.cadc.gms.web.xml.UserXMLWriterImplTest;
+package ca.nrc.cadc.gms.web.xml;
 
 
-@RunWith(Suite.class)
-@Suite.SuiteClasses(
-        {
-                GroupImplTest.class,
-                UserImplTest.class,
-                UserServiceImplTest.class,
-                GroupListResourceTest.class,
-                GroupMemberResourceTest.class,
-                GroupMemberListResourceTest.class,
-                MemberGroupResourceTest.class,
-                MemberResourceTest.class,
-                UserXMLWriterImplTest.class
-        })
-public class GMSTestSuite
+import static org.easymock.EasyMock.*;
+
+import java.io.OutputStream;
+import java.io.ByteArrayOutputStream;
+
+
+public class GroupXMLWriterImplTest extends GroupXMLWriterTest
 {
+    private OutputStream outputStream;
+
+
+    /**
+     * Prepare the testSubject to be tested.
+     *
+     * @throws Exception For anything that went wrong.
+     */
+    public void initializeTestSubject() throws Exception
+    {
+        setOutputStream(new ByteArrayOutputStream());
+
+        setTestSubject(new GroupXMLWriterImpl(getOutputStream(),
+                                              getMockGroup()));
+    }
+
+    /**
+     * Obtain the written output.
+     *
+     * @return String output from the write.
+     * @throws Exception For anything that went wrong.
+     */
+    public String getOutput() throws Exception
+    {
+        return getOutputStream().toString();
+    }
+    
+
+    public OutputStream getOutputStream()
+    {
+        return outputStream;
+    }
+
+    public void setOutputStream(OutputStream outputStream)
+    {
+        this.outputStream = outputStream;
+    }
 }

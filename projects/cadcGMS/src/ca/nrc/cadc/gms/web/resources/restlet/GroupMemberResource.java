@@ -67,22 +67,31 @@
 package ca.nrc.cadc.gms.web.resources.restlet;
 
 import org.w3c.dom.Document;
-import org.w3c.dom.Element;
+import org.w3c.dom.Node;
 import org.restlet.data.Status;
+import org.xml.sax.InputSource;
+import org.xml.sax.SAXException;
+import org.apache.log4j.Logger;
+import org.apache.xerces.parsers.DOMParser;
 
 import java.io.IOException;
+import java.io.OutputStream;
+import java.io.ByteArrayOutputStream;
+import java.io.StringReader;
 import java.net.URLDecoder;
 
-import ca.nrc.cadc.gms.InvalidMemberException;
-import ca.nrc.cadc.gms.InvalidGroupException;
-import ca.nrc.cadc.gms.User;
-import ca.nrc.cadc.gms.AuthorizationException;
+import ca.nrc.cadc.gms.*;
+import ca.nrc.cadc.gms.web.xml.UserXMLWriter;
+import ca.nrc.cadc.gms.web.xml.UserXMLWriterImpl;
 import ca.nrc.cadc.gms.service.UserService;
 import ca.nrc.cadc.gms.service.GroupService;
 
 
 public class GroupMemberResource extends GroupResource
 {
+    private final static Logger LOGGER =
+            Logger.getLogger(GroupMemberResource.class);
+
     private UserService userService;
 
 
@@ -162,6 +171,11 @@ public class GroupMemberResource extends GroupResource
         return (String) getRequestAttribute("memberID");
     }
 
+    protected User getMember()
+    {
+        return getUserService().getUser(getMemberID());
+    }
+
     /**
      * Append the XML data to the given Document for this Group Member.
      *
@@ -169,16 +183,90 @@ public class GroupMemberResource extends GroupResource
      */
     private void appendContent(final Document document)
     {
-        final User user = getUserService().getUser(getMemberID());
+        final User member = getMember();
+        final OutputStream outputStream = getOutputStream();
+        final UserXMLWriter memberXMLWriter =
+                createMemberXMLWriter(outputStream, member);
 
-        final Element userElement = document.createElement("member");
-        userElement.setAttribute("id", user.getUserID());
+        try
+        {
+            memberXMLWriter.write();
 
-        final Element usernameElement = document.createElement("username");
-        usernameElement.setTextContent(user.getUsername());
-        userElement.appendChild(usernameElement);
+            final Node node = adoptNode(outputStream, document);
+            document.appendChild(node);
+        }
+        catch (WriterException we)
+        {
+            // Do nothing for now...
+        }
+    }
 
-        document.appendChild(userElement);
+    /**
+     * Obtain an OutputStream to write to.  This can be overridden.
+     * @return      An OutputStream instance.
+     */
+    protected OutputStream getOutputStream()
+    {
+        return new ByteArrayOutputStream(256);
+    }
+
+    /**
+     * Adopt a new Node based on the given Stream of data and Document.
+     *
+     * @param outputStream      The OutputStream to be written to
+     * @param document          The Document to import the node to.
+     * @return                  The newly created Node.
+     */
+    protected Node adoptNode(final OutputStream outputStream,
+                             final Document document)
+    {
+        final String writtenData = outputStream.toString();
+        return document.importNode(
+                parseDocument(writtenData).getDocumentElement(), true);
+    }
+
+    /**
+     * Parse a Document from the given String.
+     *
+     * @param writtenData   The String data.
+     * @return          The Document object.
+     */
+    protected Document parseDocument(final String writtenData)
+    {
+        final DOMParser parser = new DOMParser();
+
+        try
+        {
+            parser.parse(new InputSource(new StringReader(writtenData)));
+            return parser.getDocument();
+        }
+        catch (IOException e)
+        {
+            final String message = "Unable to parse document.";
+            LOGGER.error(message, e);
+            throw new WebRepresentationException(message, e);
+        }
+        catch (SAXException e)
+        {
+            final String message = "Unable to parse document.";
+            LOGGER.error(message, e);
+            throw new WebRepresentationException(message, e);
+        }
+    }
+
+    /**
+     * Create a new instance of a UserXMLWriter implementation.
+     *
+     * @param outputStream  The OutputStream to write out the data.
+     * @param member    The member to create it with.
+     * @return  An instance of an UserXMLWriter implementation.
+     *
+     * TODO - Make this configurable!
+     */
+    protected UserXMLWriter createMemberXMLWriter(
+            final OutputStream outputStream, final User member)
+    {
+        return new UserXMLWriterImpl(outputStream, member);
     }
 
 

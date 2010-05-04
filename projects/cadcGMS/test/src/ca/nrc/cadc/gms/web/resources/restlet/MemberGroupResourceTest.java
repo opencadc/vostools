@@ -67,56 +67,43 @@
 package ca.nrc.cadc.gms.web.resources.restlet;
 
 import ca.nrc.cadc.gms.User;
+import ca.nrc.cadc.gms.web.xml.UserXMLWriter;
 import ca.nrc.cadc.gms.service.UserService;
 import ca.nrc.cadc.gms.service.GroupService;
 
 import static org.easymock.EasyMock.*;
-import org.w3c.dom.Element;
 import org.w3c.dom.Document;
+import org.w3c.dom.Element;
 import org.junit.Test;
 
+import java.io.OutputStream;
+import java.io.ByteArrayOutputStream;
 
-public class MemberGroupResourceTest extends MemberResourceTest
+
+public class MemberGroupResourceTest
+        extends AbstractResourceTest<MemberGroupResource>
 {
-    @Test
-    public void buildXML() throws Exception
+    private OutputStream outputStream = new ByteArrayOutputStream(256);
+    private GroupService mockGroupService;
+    private UserService mockUserService;    
+    private UserXMLWriter mockUserWriter;
+    private Document mockParsedDocument;
+
+
+    /**
+     * Prepare the testSubject to be tested.
+     *
+     * @throws Exception For anything that went wrong.
+     */
+    public void initializeTestSubject() throws Exception
     {
-        final User mockUser = createMock(User.class);
-        final Element mockUserElement = createMock(Element.class);
-        final Element mockUsernameElement = createMock(Element.class);
-        final Document mockDocument = createMock(Document.class);
+        setMockGroupService(createMock(GroupService.class));
+        setMockUserService(createMock(UserService.class));
+        setMockUserWriter(createMock(UserXMLWriter.class));
+        mockParsedDocument = createMock(Document.class);
 
-        expect(mockUser.getUserID()).andReturn(Long.toString(88l)).once();
-        expect(mockUser.getUsername()).andReturn("TESTUSERNAME").once();
-
-        mockUsernameElement.setTextContent("TESTUSERNAME");
-        expectLastCall().once();
-
-        mockUserElement.setAttribute("id", Long.toString(88l));
-        expectLastCall().once();
-
-        expect(mockUserElement.appendChild(mockUsernameElement)).
-                andReturn(mockUsernameElement).once();
-        expect(mockDocument.createElement("member")).
-                andReturn(mockUserElement).once();
-        expect(mockDocument.createElement("username")).
-                andReturn(mockUsernameElement).once();
-        expect(mockDocument.appendChild(mockUserElement)).
-                andReturn(mockUserElement).once();
-
-        final UserService mockUserService = createMock(UserService.class);
-        expect(mockUserService.getMember(Long.toString(88l),
-                                         Long.toString(88l))).
-                andReturn(mockUser).once();
-        expect(mockUserService.getUser(Long.toString(88l))).
-                andReturn(mockUser).once();
-
-        final GroupService mockGroupService = createMock(GroupService.class);
-
-        replay(mockUser, mockDocument, mockUserService, mockGroupService);
-
-        final MemberGroupResource testSubject =
-                new MemberGroupResource(mockUserService, mockGroupService)
+        setTestSubject(new MemberGroupResource(getMockUserService(),
+                                               getMockGroupService())
         {
             @Override
             protected String getGroupID()
@@ -129,8 +116,116 @@ public class MemberGroupResourceTest extends MemberResourceTest
             {
                 return Long.toString(88l);
             }
-        };
 
-        testSubject.buildXML(mockDocument);
+            /**
+             * Parse a Document from the given String.
+             *
+             * @param writtenData The String data.
+             * @return The Document object.
+             */
+            @Override
+            protected Document parseDocument(final String writtenData)
+            {
+                return mockParsedDocument;
+            }            
+
+            /**
+             * Create a new instance of a UserXMLWriter implementation.
+             *
+             * @param outputStream The OutputStream to write out the data.
+             * @param member       The member to create it with.
+             * @return An instance of an UserXMLWriter implementation.
+             *         <p/>
+             */
+            @Override
+            protected UserXMLWriter createMemberXMLWriter(
+                    final OutputStream outputStream, final User member)
+            {
+                return getMockUserWriter();
+            }
+
+            /**
+             * Obtain an OutputStream to write to.  This can be overridden.
+             *
+             * @return An OutputStream instance.
+             */
+            @Override
+            protected OutputStream getOutputStream()
+            {
+                return outputStream;
+            }
+        });
+    }
+
+    @Test
+    public void buildXML() throws Exception
+    {
+        final StringBuilder xml = new StringBuilder(128);
+        xml.append("<?xml version=\"1.0\" encoding=\"UTF-8\" standalone=\"no\"?>\n");
+        xml.append("<member id=\"88\">\n");
+        xml.append("  <username>TESTUSERNAME</username>\n");
+        xml.append("</member>");
+
+        outputStream.write(xml.toString().getBytes());
+
+        final User mockUser = createMock(User.class);
+        final Document mockDocument = createMock(Document.class);
+        final Element mockParsedDocumentElement = createMock(Element.class);
+
+        expect(mockUser.getUserID()).andReturn(Long.toString(88l)).once();
+        expect(mockUser.getUsername()).andReturn("TESTUSERNAME").once();
+
+        getMockUserWriter().write();
+        expectLastCall().once();
+
+        expect(mockParsedDocument.getDocumentElement()).
+                andReturn(mockParsedDocumentElement).once();
+        expect(mockDocument.importNode(mockParsedDocumentElement, true)).
+                andReturn(mockParsedDocumentElement).once();
+        expect(mockDocument.appendChild(mockParsedDocumentElement)).
+                andReturn(mockParsedDocumentElement).once();
+
+        expect(getMockUserService().getMember(Long.toString(88l),
+                                              Long.toString(88l))).
+                andReturn(mockUser).once();
+        expect(getMockUserService().getUser(Long.toString(88l))).
+                andReturn(mockUser).once();
+
+        replay(mockUser, mockDocument, mockParsedDocument,
+               mockParsedDocumentElement, getMockUserService(),
+               getMockUserWriter(), getMockGroupService());
+
+        getTestSubject().buildXML(mockDocument);
+    }
+
+    
+    public GroupService getMockGroupService()
+    {
+        return mockGroupService;
+    }
+
+    public void setMockGroupService(GroupService mockGroupService)
+    {
+        this.mockGroupService = mockGroupService;
+    }
+
+    public UserService getMockUserService()
+    {
+        return mockUserService;
+    }
+
+    public void setMockUserService(UserService mockUserService)
+    {
+        this.mockUserService = mockUserService;
+    }
+
+    public UserXMLWriter getMockUserWriter()
+    {
+        return mockUserWriter;
+    }
+
+    public void setMockUserWriter(UserXMLWriter mockUserWriter)
+    {
+        this.mockUserWriter = mockUserWriter;
     }
 }

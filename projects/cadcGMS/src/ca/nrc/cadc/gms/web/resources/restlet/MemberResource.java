@@ -76,6 +76,8 @@ import ca.nrc.cadc.gms.User;
 public class MemberResource extends AbstractResource
 {
     private UserService userService;
+    private String groupWriterClassName;
+    private String userWriterClassName;    
 
 
     /**
@@ -133,5 +135,25 @@ public class MemberResource extends AbstractResource
     public void setUserService(UserService userService)
     {
         this.userService = userService;
+    }
+
+    public String getGroupWriterClassName()
+    {
+        return groupWriterClassName;
+    }
+
+    public void setGroupWriterClassName(String groupWriterClassName)
+    {
+        this.groupWriterClassName = groupWriterClassName;
+    }
+
+    public String getUserWriterClassName()
+    {
+        return userWriterClassName;
+    }
+
+    public void setUserWriterClassName(String userWriterClassName)
+    {
+        this.userWriterClassName = userWriterClassName;
     }
 }

@@ -79,6 +79,8 @@ import java.io.IOException;
 public class GroupResource extends AbstractResource
 {
     private GroupService groupService;
+    private String groupWriterClassName;
+    private String userWriterClassName;    
 
 
     /**
@@ -169,5 +171,25 @@ public class GroupResource extends AbstractResource
     public void setGroupService(final GroupService groupService)
     {
         this.groupService = groupService;
+    }
+
+    public String getGroupWriterClassName()
+    {
+        return groupWriterClassName;
+    }
+
+    public void setGroupWriterClassName(String groupWriterClassName)
+    {
+        this.groupWriterClassName = groupWriterClassName;
+    }
+
+    public String getUserWriterClassName()
+    {
+        return userWriterClassName;
+    }
+
+    public void setUserWriterClassName(String userWriterClassName)
+    {
+        this.userWriterClassName = userWriterClassName;
     }
 }

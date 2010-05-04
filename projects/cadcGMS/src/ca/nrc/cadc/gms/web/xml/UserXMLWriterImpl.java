@@ -64,29 +64,90 @@
  *
  ************************************************************************
  */
-package ca.nrc.cadc.gms;
+package ca.nrc.cadc.gms.web.xml;
 
-import org.junit.runners.Suite;
-import org.junit.runner.RunWith;
-import ca.nrc.cadc.gms.service.UserServiceImplTest;
-import ca.nrc.cadc.gms.web.resources.restlet.*;
-import ca.nrc.cadc.gms.web.xml.GroupXMLWriterImplTest;
-import ca.nrc.cadc.gms.web.xml.UserXMLWriterImplTest;
+import ca.nrc.cadc.gms.WriterException;
+import ca.nrc.cadc.gms.User;
+
+import java.io.OutputStreamWriter;
+import java.io.OutputStream;
+import java.io.IOException;
+
+import org.jdom.Element;
+import org.jdom.Document;
+import org.jdom.output.XMLOutputter;
 
 
-@RunWith(Suite.class)
-@Suite.SuiteClasses(
-        {
-                GroupImplTest.class,
-                UserImplTest.class,
-                UserServiceImplTest.class,
-                GroupListResourceTest.class,
-                GroupMemberResourceTest.class,
-                GroupMemberListResourceTest.class,
-                MemberGroupResourceTest.class,
-                MemberResourceTest.class,
-                UserXMLWriterImplTest.class
-        })
-public class GMSTestSuite
+public class UserXMLWriterImpl
+        extends OutputStreamWriter implements UserXMLWriter
 {
+    private User user;
+
+
+    /**
+     * Creates an OutputStreamWriter that uses the default character encoding.
+     *
+     * @param out   An OutputStream
+     * @param user  The User to write out to the Stream.
+     */
+    public UserXMLWriterImpl(final OutputStream out, final User user)
+    {
+        super(out);
+        this.user = user;
+    }
+
+
+    /**
+     * Write out this Writer's User.
+     *
+     * @throws ca.nrc.cadc.gms.WriterException
+     *          If something goes wrong during writing.
+     */
+    public void write() throws WriterException
+    {
+        final Element rootMemberElement = new Element("member");
+        rootMemberElement.setAttribute("id", getUser().getUserID());
+
+        final Element usernameElement = new Element("username");
+        usernameElement.setText(getUser().getUsername());
+        
+        rootMemberElement.addContent(usernameElement);
+
+        final Document document = new Document(rootMemberElement);
+        final XMLOutputter xmlOutputter = new XMLOutputter();
+        final String xmlOutput = xmlOutputter.outputString(document);
+
+        try
+        {
+            super.write(xmlOutput, 0, xmlOutput.length());
+        }
+        catch (IOException ie)
+        {
+            final String message = "Unable to write XML.";
+            throw new WriterException(message, ie);
+        }
+        finally
+        {
+            try
+            {
+                flush();
+                close();
+            }
+            catch (IOException ie)
+            {
+                // Just an finally endpoint.
+            }
+        }
+    }
+
+
+    public User getUser()
+    {
+        return user;
+    }
+
+    public void setUser(User user)
+    {
+        this.user = user;
+    }
 }

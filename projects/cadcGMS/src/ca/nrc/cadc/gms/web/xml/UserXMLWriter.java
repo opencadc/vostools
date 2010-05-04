@@ -64,29 +64,23 @@
  *
  ************************************************************************
  */
-package ca.nrc.cadc.gms;
+package ca.nrc.cadc.gms.web.xml;
 
-import org.junit.runners.Suite;
-import org.junit.runner.RunWith;
-import ca.nrc.cadc.gms.service.UserServiceImplTest;
-import ca.nrc.cadc.gms.web.resources.restlet.*;
-import ca.nrc.cadc.gms.web.xml.GroupXMLWriterImplTest;
-import ca.nrc.cadc.gms.web.xml.UserXMLWriterImplTest;
+import ca.nrc.cadc.gms.WriterException;
+import ca.nrc.cadc.gms.User;
 
 
-@RunWith(Suite.class)
-@Suite.SuiteClasses(
-        {
-                GroupImplTest.class,
-                UserImplTest.class,
-                UserServiceImplTest.class,
-                GroupListResourceTest.class,
-                GroupMemberResourceTest.class,
-                GroupMemberListResourceTest.class,
-                MemberGroupResourceTest.class,
-                MemberResourceTest.class,
-                UserXMLWriterImplTest.class
-        })
-public class GMSTestSuite
+/**
+ * Interface for XML writing a User.
+ */
+public interface UserXMLWriter
 {
+    /**
+     * Write out this Writer's User.
+     *
+     * @throws WriterException      If something goes wrong during writing.
+     */
+    void write() throws WriterException;
+    
+    void setUser(final User user);
 }

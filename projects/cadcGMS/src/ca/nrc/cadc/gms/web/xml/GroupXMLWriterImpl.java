@@ -64,29 +64,62 @@
  *
  ************************************************************************
  */
-package ca.nrc.cadc.gms;
+package ca.nrc.cadc.gms.web.xml;
 
-import org.junit.runners.Suite;
-import org.junit.runner.RunWith;
-import ca.nrc.cadc.gms.service.UserServiceImplTest;
-import ca.nrc.cadc.gms.web.resources.restlet.*;
-import ca.nrc.cadc.gms.web.xml.GroupXMLWriterImplTest;
-import ca.nrc.cadc.gms.web.xml.UserXMLWriterImplTest;
+import ca.nrc.cadc.gms.Group;
+import ca.nrc.cadc.gms.WriterException;
+
+import java.io.OutputStreamWriter;
+import java.io.OutputStream;
+
+import org.jdom.Document;
+import org.jdom.Element;
 
 
-@RunWith(Suite.class)
-@Suite.SuiteClasses(
-        {
-                GroupImplTest.class,
-                UserImplTest.class,
-                UserServiceImplTest.class,
-                GroupListResourceTest.class,
-                GroupMemberResourceTest.class,
-                GroupMemberListResourceTest.class,
-                MemberGroupResourceTest.class,
-                MemberResourceTest.class,
-                UserXMLWriterImplTest.class
-        })
-public class GMSTestSuite
+/**
+ * Default implementation of the GroupXMLWriter interface.  This implementation
+ * writes its Group out to an OutputStream.
+ */
+public class GroupXMLWriterImpl
+        extends OutputStreamWriter implements GroupXMLWriter
 {
+    private Group group;
+
+
+    /**
+     * Creates an OutputStreamWriter that uses the default character encoding.
+     *
+     * @param out       An OutputStream
+     * @param group     The Group to write.
+     */
+    public GroupXMLWriterImpl(final OutputStream out, final Group group)
+    {
+        super(out);
+        this.group = group;
+    }
+
+
+    /**
+     * Write out this Writer's Group.
+     *
+     * @throws WriterException      If something goes wrong during writing.
+     */
+    public void write() throws WriterException
+    {
+        final Element rootElement = new Element("member");
+        rootElement.setAttribute("id", "");
+
+        final Document document = new Document(rootElement);
+    }
+    
+
+    public Group getGroup()
+    {
+        return group;
+    }
+
+    public void setGroup(Group group)
+    {
+        this.group = group;
+    }
 }

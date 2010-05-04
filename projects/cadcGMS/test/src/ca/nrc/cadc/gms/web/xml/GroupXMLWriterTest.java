@@ -1,4 +1,4 @@
-<!--
+/**
 ************************************************************************
 *******************  CANADIAN ASTRONOMY DATA CENTRE  *******************
 **************  CENTRE CANADIEN DE DONNÉES ASTRONOMIQUES  **************
@@ -8,7 +8,7 @@
 *  National Research Council            Conseil national de recherches
 *  Ottawa, Canada, K1A 0R6              Ottawa, Canada, K1A 0R6
 *  All rights reserved                  Tous droits réservés
-*                                       
+*
 *  NRC disclaims any warranties,        Le CNRC dénie toute garantie
 *  expressed, implied, or               énoncée, implicite ou légale,
 *  statutory, of any kind with          de quelque nature que ce
@@ -31,10 +31,10 @@
 *  software without specific prior      de ce logiciel sans autorisation
 *  written permission.                  préalable et particulière
 *                                       par écrit.
-*                                       
+*
 *  This file is part of the             Ce fichier fait partie du projet
 *  OpenCADC project.                    OpenCADC.
-*                                       
+*
 *  OpenCADC is free software:           OpenCADC est un logiciel libre ;
 *  you can redistribute it and/or       vous pouvez le redistribuer ou le
 *  modify it under the terms of         modifier suivant les termes de
@@ -44,7 +44,7 @@
 *  either version 3 of the              : soit la version 3 de cette
 *  License, or (at your option)         licence, soit (à votre gré)
 *  any later version.                   toute version ultérieure.
-*                                       
+*
 *  OpenCADC is distributed in the       OpenCADC est distribué
 *  hope that it will be useful,         dans l’espoir qu’il vous
 *  but WITHOUT ANY WARRANTY;            sera utile, mais SANS AUCUNE
@@ -54,7 +54,7 @@
 *  PURPOSE.  See the GNU Affero         PARTICULIER. Consultez la Licence
 *  General Public License for           Générale Publique GNU Affero
 *  more details.                        pour plus de détails.
-*                                       
+*
 *  You should have received             Vous devriez avoir reçu une
 *  a copy of the GNU Affero             copie de la Licence Générale
 *  General Public License along         Publique GNU Affero avec
@@ -62,76 +62,55 @@
 *  <http://www.gnu.org/licenses/>.      pas le cas, consultez :
 *                                       <http://www.gnu.org/licenses/>.
 *
-*  $Revision: 4 $
-*
 ************************************************************************
--->
+*/
+package ca.nrc.cadc.gms.web.xml;
 
-	
-<project default="build" basedir=".">
-  <property environment="env"/>
+import ca.nrc.cadc.gms.GMSTest;
+import ca.nrc.cadc.gms.Group;
 
-    <!-- site-specific build properties or overrides of values in opencadc.properties -->
-    <property file="${env.CADC_PREFIX}/etc/local.properties" />
-
-    <!-- site-specific targets, e.g. install, cannot duplicate those in opencadc.targets.xml -->
-    <import file="${env.CADC_PREFIX}/etc/local.targets.xml" optional="true" />
-
-    <!-- default properties and targets -->
-    <property file="${env.CADC_PREFIX}/etc/opencadc.properties" />
-    <import file="${env.CADC_PREFIX}/etc/opencadc.targets.xml"/>
-
-    <!-- developer convenience: place for extra targets and properties -->
-    <import file="extras.xml" optional="true" />
-
-    <property name="project" value="cadcGMS" />
-    <property name="lib.jdom" value="${ext.lib}/jdom.jar" />
-    <property name="lib.xerces" value="${ext.lib}/xerces.jar" />
-
-    <property name="ext" value="${ext.lib}/log4j.jar:${lib.jdom}:${lib.xerces}:${ext.lib}/spring.jar:${ext.lib}/org.restlet.jar:${ext.lib}/org.restlet.ext.xml.jar" />
-
-    <property name="jars" value="${ext}" />
-
-    <target name="build" depends="simpleJar" />
-
-    <!-- target name="build" depends="compile">
-        <jar jarfile="${build}/lib/${project}.jar"
-            basedir="${build}/class"
-            update="no">
-            <include name="ca/nrc/cadc/**" />
-        </jar>
-    </target -->
+import org.junit.Test;
+import static org.junit.Assert.*;
+import static org.easymock.EasyMock.*;
 
 
-    <!-- JAR files needed to run the test suite -->
-    <property name="dev.junit" value="${ext.dev}/junit.jar" />
-    <property name="dev.easyMock" value="${ext.dev}/easymock.jar" />
-    <!--<property name="dev.xmlunit" value="${ext.lib}/xmlunit.jar" />-->
-    <property name="testingJars" value="${dev.junit}:${dev.easyMock}" />    
+public abstract class GroupXMLWriterTest extends GMSTest<GroupXMLWriter>
+{
+    protected Group mockGroup;
 
-    <!-- compile the test classes -->
-    <target name="compile-test" depends="compile">
-        <javac destdir="${build}/class"
-               source="${java.source.version}"
-               target="${java.target.version}"
-               classpath="${jars}:${testingJars}" >
-            <src path="test/src"/>
-        </javac>
-    </target>
 
-    <target name="test" depends="compile-test">
-        <echo message="Running test" />
+    protected GroupXMLWriterTest()
+    {
+        setMockGroup(createMock(Group.class));
+    }
+    
 
-        <!-- Run the junit test suite -->
-        <echo message="Running test suite..." />
-        <junit printsummary="yes" haltonfailure="yes" fork="yes">
-            <classpath>
-                <pathelement path="build/class"/>
-                <pathelement path="${jars}:${testingJars}"/>
-            </classpath>
-            <test name="ca.nrc.cadc.gms.GMSTestSuite" />
-            <formatter type="plain" usefile="false" />
-        </junit>
-    </target>
+    @Test
+    public void write() throws Exception
+    {
+        getTestSubject().write();
 
-</project>
+        final String output = getOutput();
+        assertNotNull("Output should be available.", output);
+        assertTrue("Output should not be empty.", !output.trim().equals(""));
+    }
+
+    /**
+     * Obtain the written output.
+     *
+     * @return              String output from the write.
+     * @throws Exception    For anything that went wrong.
+     */
+    public abstract String getOutput() throws Exception;
+
+
+    public Group getMockGroup()
+    {
+        return mockGroup;
+    }
+
+    public void setMockGroup(Group mockGroup)
+    {
+        this.mockGroup = mockGroup;
+    }
+}

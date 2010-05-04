@@ -64,29 +64,58 @@
  *
  ************************************************************************
  */
-package ca.nrc.cadc.gms;
+package ca.nrc.cadc.gms.web.xml;
 
-import org.junit.runners.Suite;
-import org.junit.runner.RunWith;
-import ca.nrc.cadc.gms.service.UserServiceImplTest;
-import ca.nrc.cadc.gms.web.resources.restlet.*;
-import ca.nrc.cadc.gms.web.xml.GroupXMLWriterImplTest;
-import ca.nrc.cadc.gms.web.xml.UserXMLWriterImplTest;
+import java.io.OutputStream;
+import java.io.ByteArrayOutputStream;
+
+import static org.easymock.EasyMock.*;
 
 
-@RunWith(Suite.class)
-@Suite.SuiteClasses(
-        {
-                GroupImplTest.class,
-                UserImplTest.class,
-                UserServiceImplTest.class,
-                GroupListResourceTest.class,
-                GroupMemberResourceTest.class,
-                GroupMemberListResourceTest.class,
-                MemberGroupResourceTest.class,
-                MemberResourceTest.class,
-                UserXMLWriterImplTest.class
-        })
-public class GMSTestSuite
+/**
+ * Default implementation test.
+ */
+public class UserXMLWriterImplTest extends UserXMLWriterTest
 {
+    private OutputStream outputStream;
+
+
+    /**
+     * Obtain the written output.
+     *
+     * @return String output from the write.
+     * @throws Exception For anything that went wrong.
+     */
+    public String getOutput() throws Exception
+    {
+        return getOutputStream().toString();
+    }
+
+    /**
+     * Prepare the testSubject to be tested.
+     *
+     * @throws Exception For anything that went wrong.
+     */
+    public void initializeTestSubject() throws Exception
+    {
+        setOutputStream(new ByteArrayOutputStream());
+
+        expect(getMockUser().getUserID()).andReturn(MEMBER_ID).once();
+        expect(getMockUser().getUsername()).andReturn(TESTUSERNAME).once();
+
+        replay(getMockUser());
+
+        setTestSubject(new UserXMLWriterImpl(getOutputStream(), getMockUser()));
+    }
+
+
+    public OutputStream getOutputStream()
+    {
+        return outputStream;
+    }
+
+    public void setOutputStream(OutputStream outputStream)
+    {
+        this.outputStream = outputStream;
+    }    
 }
