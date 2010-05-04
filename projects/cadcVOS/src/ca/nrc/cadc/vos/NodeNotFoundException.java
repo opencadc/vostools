@@ -75,7 +75,7 @@ package ca.nrc.cadc.vos;
  * @author majorb
  *
  */
-public class NodeNotFoundException extends Exception
+public class NodeNotFoundException extends VOSException
 {
 
     private static final long serialVersionUID = -3911716636812923950L;

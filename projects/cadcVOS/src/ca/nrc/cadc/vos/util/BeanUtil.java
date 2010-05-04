@@ -8,7 +8,7 @@
 *  National Research Council            Conseil national de recherches
 *  Ottawa, Canada, K1A 0R6              Ottawa, Canada, K1A 0R6
 *  All rights reserved                  Tous droits réservés
-*
+*                                       
 *  NRC disclaims any warranties,        Le CNRC dénie toute garantie
 *  expressed, implied, or               énoncée, implicite ou légale,
 *  statutory, of any kind with          de quelque nature que ce
@@ -31,10 +31,10 @@
 *  software without specific prior      de ce logiciel sans autorisation
 *  written permission.                  préalable et particulière
 *                                       par écrit.
-*
+*                                       
 *  This file is part of the             Ce fichier fait partie du projet
 *  OpenCADC project.                    OpenCADC.
-*
+*                                       
 *  OpenCADC is free software:           OpenCADC est un logiciel libre ;
 *  you can redistribute it and/or       vous pouvez le redistribuer ou le
 *  modify it under the terms of         modifier suivant les termes de
@@ -44,7 +44,7 @@
 *  either version 3 of the              : soit la version 3 de cette
 *  License, or (at your option)         licence, soit (à votre gré)
 *  any later version.                   toute version ultérieure.
-*
+*                                       
 *  OpenCADC is distributed in the       OpenCADC est distribué
 *  hope that it will be useful,         dans l’espoir qu’il vous
 *  but WITHOUT ANY WARRANTY;            sera utile, mais SANS AUCUNE
@@ -54,7 +54,7 @@
 *  PURPOSE.  See the GNU Affero         PARTICULIER. Consultez la Licence
 *  General Public License for           Générale Publique GNU Affero
 *  more details.                        pour plus de détails.
-*
+*                                       
 *  You should have received             Vous devriez avoir reçu une
 *  a copy of the GNU Affero             copie de la Licence Générale
 *  General Public License along         Publique GNU Affero avec
@@ -67,18 +67,71 @@
 ************************************************************************
 */
 
-package ca.nrc.cadc.vos;
+package ca.nrc.cadc.vos.util;
 
-public class NodeParsingException extends VOSException
+import org.apache.log4j.Logger;
+
+import ca.nrc.cadc.vos.InvalidServiceException;
+
+public class BeanUtil
 {
-    public NodeParsingException(String message)
+    
+    private static final Logger log = Logger.getLogger(BeanUtil.class);
+    
+    public final static String VOS_NODE_PERSISTENCE =
+            "ca.nrc.cadc.vos.NodePersistence";
+
+    private String className;
+
+
+    /**
+     * Constructor for this Bean Util.
+     *
+     * @param className     The name of the Class to create.
+     */
+    public BeanUtil(final String className)
     {
-        super(message);
+        this.className = className;
     }
 
-    public NodeParsingException(String message, Throwable cause)
+
+    /**
+     * Create the actual Object associated with this BeanUtil's class.
+     * @return      The Object instantiated.
+     */
+    public Object createBean() throws InvalidServiceException
     {
-        super(message, cause);
+        try
+        {
+            return Class.forName(getClassName()).newInstance();
+        }
+        catch (ClassNotFoundException e)
+        {
+            log.error("No such bean >> " + getClassName(), e);
+            throw new InvalidServiceException("No such bean >> "
+                                              + getClassName(), e);
+        }
+        catch (IllegalAccessException e)
+        {
+            log.error("Class or Constructor is inaccessible for "
+                         + "bean  >> " + getClassName(), e);
+            throw new InvalidServiceException("Class or Constructor is "
+                                              + "inaccessible for bean "
+                                              + ">> " + getClassName(), e);
+        }
+        catch (InstantiationException e)
+        {
+            log.error("Cannot create bean instance >> "
+                         + getClassName(), e);
+            throw new InvalidServiceException("Cannot create bean instance >> "
+                                              + getClassName(), e);
+        }
     }
-    
+
+
+    public String getClassName()
+    {
+        return className;
+    }
+
 }

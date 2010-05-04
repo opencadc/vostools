@@ -85,8 +85,14 @@
     <import file="extras.xml" optional="true" />
 
     <property name="project" value="cadcVOS" />
+    
+    <property name="ext.restlet" value="${ext.lib}/org.restlet.jar" />
+    <property name="ext.restlet.ext" value="${ext.lib}/org.restlet.ext.servlet.jar" />
+    <property name="ext.log4j" value="${ext.lib}/log4j.jar" />
+    <property name="ext.spring" value="${ext.lib}/spring.jar" />
+    <property name="ext.jdom" value="${ext.lib}/jdom.jar" />
 
-    <property name="jars" value="${ext.lib}/log4j.jar:${ext.lib}/spring.jar:${ext.lib}/jdom.jar" />
+    <property name="jars" value="${ext.restlet}:${ext.restlet.ext}:${ext.log4j}:${ext.spring}:${ext.jdom}" />
 
     <target name="build" depends="compile">
         <jar jarfile="${build}/lib/${project}.jar"

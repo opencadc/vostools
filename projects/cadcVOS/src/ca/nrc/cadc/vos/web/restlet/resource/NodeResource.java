@@ -8,7 +8,7 @@
 *  National Research Council            Conseil national de recherches
 *  Ottawa, Canada, K1A 0R6              Ottawa, Canada, K1A 0R6
 *  All rights reserved                  Tous droits réservés
-*
+*                                       
 *  NRC disclaims any warranties,        Le CNRC dénie toute garantie
 *  expressed, implied, or               énoncée, implicite ou légale,
 *  statutory, of any kind with          de quelque nature que ce
@@ -31,10 +31,10 @@
 *  software without specific prior      de ce logiciel sans autorisation
 *  written permission.                  préalable et particulière
 *                                       par écrit.
-*
+*                                       
 *  This file is part of the             Ce fichier fait partie du projet
 *  OpenCADC project.                    OpenCADC.
-*
+*                                       
 *  OpenCADC is free software:           OpenCADC est un logiciel libre ;
 *  you can redistribute it and/or       vous pouvez le redistribuer ou le
 *  modify it under the terms of         modifier suivant les termes de
@@ -44,7 +44,7 @@
 *  either version 3 of the              : soit la version 3 de cette
 *  License, or (at your option)         licence, soit (à votre gré)
 *  any later version.                   toute version ultérieure.
-*
+*                                       
 *  OpenCADC is distributed in the       OpenCADC est distribué
 *  hope that it will be useful,         dans l’espoir qu’il vous
 *  but WITHOUT ANY WARRANTY;            sera utile, mais SANS AUCUNE
@@ -54,7 +54,7 @@
 *  PURPOSE.  See the GNU Affero         PARTICULIER. Consultez la Licence
 *  General Public License for           Générale Publique GNU Affero
 *  more details.                        pour plus de détails.
-*
+*                                       
 *  You should have received             Vous devriez avoir reçu une
 *  a copy of the GNU Affero             copie de la Licence Générale
 *  General Public License along         Publique GNU Affero avec
@@ -67,18 +67,58 @@
 ************************************************************************
 */
 
-package ca.nrc.cadc.vos;
+package ca.nrc.cadc.vos.web.restlet.resource;
 
-public class NodeParsingException extends VOSException
+import org.apache.log4j.Logger;
+import org.restlet.data.Status;
+import org.restlet.representation.Representation;
+import org.restlet.resource.Get;
+import org.restlet.resource.ResourceException;
+
+import ca.nrc.cadc.vos.Node;
+import ca.nrc.cadc.vos.NodeNotFoundException;
+import ca.nrc.cadc.vos.NodeWriter;
+import ca.nrc.cadc.vos.dao.SearchNode;
+
+/**
+ * Handles HTTP requests for Node resources.
+ * 
+ * @author majorb
+ *
+ */
+public class NodeResource extends BaseResource
 {
-    public NodeParsingException(String message)
+    private static Logger log = Logger.getLogger(NodeResource.class);
+    
+    private Node node;
+    
+    public void doInit()
     {
-        super(message);
-    }
-
-    public NodeParsingException(String message, Throwable cause)
-    {
-        super(message, cause);
+        String path = super.getLocationRef().getLastSegment();
+        
+        try
+        {
+            Node searchNode = new SearchNode(path);
+            node = getNodePersistence().get(searchNode);   
+        }
+        catch (NodeNotFoundException e)
+        {
+            final String message = "Could not find node with path: " + path;
+            log.debug(message, e);
+            throw new ResourceException(Status.CLIENT_ERROR_NOT_FOUND, e);
+        }
     }
     
+    /**
+     * Obtain the XML Representation of this Resource.
+     *
+     * @return  The XML Representation.
+     */
+    @Get("xml")
+    public Representation represent()
+    {
+        NodeWriter nodeWriter = new NodeWriter();
+        return new NodeRepresentation(node, nodeWriter);
+    }
+
 }

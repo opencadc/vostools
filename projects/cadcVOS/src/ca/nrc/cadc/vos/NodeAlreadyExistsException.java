@@ -75,7 +75,7 @@ package ca.nrc.cadc.vos;
  * @author majorb
  *
  */
-public class NodeAlreadyExistsException extends Exception
+public class NodeAlreadyExistsException extends VOSException
 {
 
     private static final long serialVersionUID = -8893663061676929962L;
