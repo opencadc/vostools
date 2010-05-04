@@ -70,8 +70,12 @@
 
 package ca.nrc.cadc.vos.web.restlet;
 
+import java.util.Map;
+
 import org.restlet.Context;
 import org.restlet.routing.Router;
+import org.restlet.routing.TemplateRoute;
+import org.restlet.routing.Variable;
 
 import ca.nrc.cadc.vos.web.restlet.resource.NodeResource;
 
@@ -90,6 +94,8 @@ public class VOSpaceNodesRouter extends Router
     public VOSpaceNodesRouter(final Context context)
     {
         super(context);
-        attach("/{nodePath}", NodeResource.class);
+        TemplateRoute route = attach("/{nodePath}", NodeResource.class);
+        Map<String, Variable> routeVariables = route.getTemplate().getVariables();
+        routeVariables.put("nodePath", new Variable(Variable.TYPE_ALL)); 
     }
 }

@@ -75,6 +75,7 @@ import org.restlet.Context;
 import org.restlet.Restlet;
 
 import ca.nrc.cadc.vos.InvalidServiceException;
+import ca.nrc.cadc.vos.NodePersistence;
 import ca.nrc.cadc.vos.util.BeanUtil;
 
 /**
@@ -109,7 +110,9 @@ public class VOSpaceNodesApplication extends Application
             final String className = getContext().getParameters().
                     getFirstValue(BeanUtil.VOS_NODE_PERSISTENCE);
             final BeanUtil beanUtil = new BeanUtil(className);
-            context.getAttributes().put(BeanUtil.VOS_NODE_PERSISTENCE, beanUtil.createBean());
+            NodePersistence nodePersistence = (NodePersistence) beanUtil.createBean();
+            context.getAttributes().put(BeanUtil.VOS_NODE_PERSISTENCE, nodePersistence);
+            log.debug("Added node persistence bean to application context: " + nodePersistence);
         }
         catch (InvalidServiceException e)
         {

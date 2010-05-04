@@ -94,7 +94,8 @@ public class NodeResource extends BaseResource
     
     public void doInit()
     {
-        String path = super.getLocationRef().getLastSegment();
+
+        String path = (String) getRequest().getAttributes().get("nodePath");  
         
         try
         {

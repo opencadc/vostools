@@ -112,10 +112,12 @@ public abstract class NodeDAO implements NodePersistence
 
     /**
      * NodeDAO Constructor.
-     * @param dataSource The data source for persisting nodes.
-     * @param nodeAuthorizer The implementation of the authroization interface.
      */
     public NodeDAO()
+    {
+    }
+    
+    public void init()
     {
         this.defaultTransactionDef = new DefaultTransactionDefinition();
         defaultTransactionDef
