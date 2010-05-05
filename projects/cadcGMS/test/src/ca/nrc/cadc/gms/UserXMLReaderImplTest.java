@@ -66,28 +66,22 @@
  */
 package ca.nrc.cadc.gms;
 
-import org.junit.runners.Suite;
-import org.junit.runner.RunWith;
-import ca.nrc.cadc.gms.service.UserServiceImplTest;
-import ca.nrc.cadc.gms.web.resources.restlet.*;
-import ca.nrc.cadc.gms.UserXMLWriterImplTest;
-import ca.nrc.cadc.gms.UserXMLReaderImplTest;
+import java.io.InputStream;
+import java.io.ByteArrayInputStream;
 
 
-@RunWith(Suite.class)
-@Suite.SuiteClasses(
-        {
-                GroupImplTest.class,
-                UserImplTest.class,
-                UserServiceImplTest.class,
-                GroupListResourceTest.class,
-                GroupMemberResourceTest.class,
-                GroupMemberListResourceTest.class,
-                MemberGroupResourceTest.class,
-                MemberResourceTest.class,
-                UserXMLWriterImplTest.class,
-                UserXMLReaderImplTest.class
-        })
-public class GMSTestSuite
+public class UserXMLReaderImplTest extends UserXMLReaderTest
 {
+    /**
+     * Prepare the testSubject to be tested.
+     *
+     * @throws Exception For anything that went wrong.
+     */
+    public void initializeTestSubject() throws Exception
+    {
+        final InputStream inputStream =
+                new ByteArrayInputStream(XML_INPUT.toString().getBytes());
+
+        setTestSubject(new UserXMLReaderImpl(inputStream));
+    }
 }

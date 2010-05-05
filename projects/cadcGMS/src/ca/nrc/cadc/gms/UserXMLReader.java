@@ -64,30 +64,15 @@
  *
  ************************************************************************
  */
-package ca.nrc.cadc.gms.web.xml;
-
-import org.junit.Test;
-import ca.nrc.cadc.gms.Group;
+package ca.nrc.cadc.gms;
 
 
-public abstract class GroupXMLReaderTest
-        extends AbstractXMLReaderTest<GroupXMLReader>
+public interface UserXMLReader extends XMLReader
 {
-    protected final static String GROUP_ID = Long.toString(88l);
-    protected final StringBuilder XML_INPUT;
-
-
-    protected GroupXMLReaderTest()
-    {
-        XML_INPUT = new StringBuilder(128);       
-    }
-
-
-    @Test
-    public void readAndParse() throws Exception
-    {
-        getTestSubject().readAndParse();
-
-        final Group parsedGroup = getTestSubject().getGroup();
-    }
+    /**
+     * Obtain the User that was parsed from an Input Source.
+     *
+     * @return  User instance, or null if non-existent.
+     */
+    User getMember();
 }

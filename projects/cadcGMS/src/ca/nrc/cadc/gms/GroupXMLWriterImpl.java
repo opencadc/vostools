@@ -66,28 +66,56 @@
  */
 package ca.nrc.cadc.gms;
 
-import org.junit.runners.Suite;
-import org.junit.runner.RunWith;
-import ca.nrc.cadc.gms.service.UserServiceImplTest;
-import ca.nrc.cadc.gms.web.resources.restlet.*;
-import ca.nrc.cadc.gms.UserXMLWriterImplTest;
-import ca.nrc.cadc.gms.UserXMLReaderImplTest;
+import java.io.OutputStream;
+import java.io.IOException;
+
+import org.jdom.Document;
 
 
-@RunWith(Suite.class)
-@Suite.SuiteClasses(
-        {
-                GroupImplTest.class,
-                UserImplTest.class,
-                UserServiceImplTest.class,
-                GroupListResourceTest.class,
-                GroupMemberResourceTest.class,
-                GroupMemberListResourceTest.class,
-                MemberGroupResourceTest.class,
-                MemberResourceTest.class,
-                UserXMLWriterImplTest.class,
-                UserXMLReaderImplTest.class
-        })
-public class GMSTestSuite
+/**
+ * Default implementation of the GroupXMLWriter interface.  This implementation
+ * writes its Group out to an OutputStream.
+ */
+public class GroupXMLWriterImpl
+        extends AbstractOutputStreamWriterImpl implements GroupXMLWriter
 {
+    private Group group;
+
+
+    /**
+     * Creates an OutputStreamWriter that uses the default character encoding.
+     *
+     * @param out       An OutputStream
+     * @param group     The Group to write.
+     */
+    public GroupXMLWriterImpl(final OutputStream out, final Group group)
+    {
+        super(out);
+        this.group = group;
+    }
+
+
+    /**
+     * Build the DOM Document.
+     *
+     * @param document The Document to append to.
+     * @throws java.io.IOException If anything goes wrong during writing.
+     *
+     * TODO - Needs implementation.
+     */
+    protected void buildDocument(final Document document) throws IOException
+    {
+        // Not implemented yet!
+    }
+    
+
+    public Group getGroup()
+    {
+        return group;
+    }
+
+    public void setGroup(Group group)
+    {
+        this.group = group;
+    }
 }

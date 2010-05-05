@@ -64,13 +64,71 @@
  *
  ************************************************************************
  */
-package ca.nrc.cadc.gms.web.xml;
+package ca.nrc.cadc.gms;
 
-import ca.nrc.cadc.gms.GMSTest;
+import ca.nrc.cadc.gms.User;
+import org.junit.Test;
+import static org.junit.Assert.*;
+import static org.easymock.EasyMock.*;
+import org.jdom.Element;
+import org.jdom.Document;
+import org.jdom.output.XMLOutputter;
 
 
-public abstract class AbstractXMLWriterTest<R extends XMLWriter>
-        extends GMSTest<R>
+public abstract class UserXMLWriterTest
+        extends AbstractXMLWriterTest<UserXMLWriter>
 {
+    protected final static String TESTUSERNAME = "TESTUSERNAME";
+    protected final static String MEMBER_ID = Long.toString(88l);
 
+    private User mockUser;
+
+
+    protected UserXMLWriterTest()
+    {
+        setMockUser(createMock(User.class));
+    }
+
+
+    @Test
+    public void write() throws Exception
+    {
+        final Element rootMemberElement = new Element("member");
+        rootMemberElement.setAttribute("id", MEMBER_ID);
+
+        final Element usernameElement = new Element("username");
+        usernameElement.setText(TESTUSERNAME);
+
+        rootMemberElement.addContent(usernameElement);
+
+        final Document document = new Document(rootMemberElement);
+        final XMLOutputter xmlOutputter = new XMLOutputter();
+        final String xmlOutput = xmlOutputter.outputString(document);
+
+        getTestSubject().write();
+
+        final String output = getOutput();
+        assertNotNull("Output should be available.", output);
+        assertTrue("Output should not be empty.", !output.trim().equals(""));
+        assertEquals("Output does not match test XML.", xmlOutput, output);
+    }
+
+    /**
+     * Obtain the written output.
+     *
+     * @return              String output from the write.
+     * @throws Exception    For anything that went wrong.
+     */
+    public abstract String getOutput() throws Exception;
+
+
+    public User getMockUser()
+    {
+        return mockUser;
+    }
+
+    public void setMockUser(User mockUser)
+    {
+        this.mockUser = mockUser;
+    }
 }

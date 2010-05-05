@@ -66,28 +66,89 @@
  */
 package ca.nrc.cadc.gms;
 
-import org.junit.runners.Suite;
-import org.junit.runner.RunWith;
-import ca.nrc.cadc.gms.service.UserServiceImplTest;
-import ca.nrc.cadc.gms.web.resources.restlet.*;
-import ca.nrc.cadc.gms.UserXMLWriterImplTest;
-import ca.nrc.cadc.gms.UserXMLReaderImplTest;
+import java.io.InputStreamReader;
+import java.io.InputStream;
+import java.io.IOException;
+import java.io.StringReader;
+import java.util.Arrays;
+
+import org.jdom.Document;
+import org.jdom.JDOMException;
+import org.jdom.input.SAXBuilder;
 
 
-@RunWith(Suite.class)
-@Suite.SuiteClasses(
-        {
-                GroupImplTest.class,
-                UserImplTest.class,
-                UserServiceImplTest.class,
-                GroupListResourceTest.class,
-                GroupMemberResourceTest.class,
-                GroupMemberListResourceTest.class,
-                MemberGroupResourceTest.class,
-                MemberResourceTest.class,
-                UserXMLWriterImplTest.class,
-                UserXMLReaderImplTest.class
-        })
-public class GMSTestSuite
+public abstract class AbstractInputStreamReaderImpl extends InputStreamReader
 {
+    /**
+     * Creates an InputStreamReader that uses the default charset.
+     *
+     * @param in An InputStream
+     */
+    public AbstractInputStreamReaderImpl(final InputStream in)
+    {
+        super(in);
+    }
+
+
+    /**
+     * Read in the Document from the InputStream and parse it into an object.
+     *
+     * @throws  ReaderException     If anything went wrong during the read.
+     */
+    public void readAndParse() throws ReaderException
+    {
+        final StringBuilder xml = new StringBuilder(256);
+        final char[] buffer = new char[256];
+
+        int charCount;
+
+        try
+        {
+            while ((charCount = read(buffer)) > 0)
+            {
+                final char[] trimmedChars = Arrays.copyOf(buffer, charCount);
+                xml.append(new String(trimmedChars));
+            }
+
+            buildObject(parse(xml));
+        }
+        catch (IOException e)
+        {
+            final String message = "Unable to read the XML that was submitted.";
+            throw new ReaderException(message, e);
+        }
+        catch (JDOMException e)
+        {
+            final String message =
+                    "Unable to parse the XML that was submitted.";
+            throw new ReaderException(message, e);
+        }
+    }
+
+    /**
+     * Parse out the given XML into a Document.
+     *
+     * @param xml           The XML String that was read in.
+     * @return              A Document object.
+     * @throws JDOMException when errors occur in parsing
+     * @throws IOException when an I/O error prevents a document
+     *         from being fully parsed
+     */
+    protected Document parse(final StringBuilder xml)
+            throws IOException, JDOMException
+    {
+        // TODO - Turn on validation once the XML is sound!
+        final SAXBuilder parser = new SAXBuilder(false);
+        
+        return parser.build(new StringReader(xml.toString()));
+    }
+
+    /**
+     * Parse out the read in character data.
+     *
+     * @param document      The Document object parsed from the read in data.
+     * @throws IOException  If anything went wrong during the read.
+     */
+    protected abstract void buildObject(final Document document)
+            throws IOException;
 }

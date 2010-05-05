@@ -64,71 +64,70 @@
  *
  ************************************************************************
  */
-package ca.nrc.cadc.gms.web.xml;
+package ca.nrc.cadc.gms;
 
-import ca.nrc.cadc.gms.User;
-import org.junit.Test;
-import static org.junit.Assert.*;
-import static org.easymock.EasyMock.*;
-import org.jdom.Element;
 import org.jdom.Document;
 import org.jdom.output.XMLOutputter;
 
+import java.io.OutputStreamWriter;
+import java.io.OutputStream;
+import java.io.IOException;
 
-public abstract class UserXMLWriterTest
-        extends AbstractXMLWriterTest<UserXMLWriter>
+
+public abstract class AbstractOutputStreamWriterImpl
+        extends OutputStreamWriter
 {
-    protected final static String TESTUSERNAME = "TESTUSERNAME";
-    protected final static String MEMBER_ID = Long.toString(88l);
-
-    private User mockUser;
-
-
-    protected UserXMLWriterTest()
+    /**
+     * Creates an OutputStreamWriter that uses the default character encoding.
+     *
+     * @param out An OutputStream
+     */
+    protected AbstractOutputStreamWriterImpl(final OutputStream out)
     {
-        setMockUser(createMock(User.class));
+        super(out);
     }
 
 
-    @Test
-    public void write() throws Exception
+    /**
+     * Write the given Document to this Writer's OutputStream.
+     *
+     * @throws WriterException  If anything goes wrong during writing.
+     */
+    public void write() throws WriterException
     {
-        final Element rootMemberElement = new Element("member");
-        rootMemberElement.setAttribute("id", MEMBER_ID);
+        try
+        {
+            final Document document = new Document();
+            buildDocument(document);
 
-        final Element usernameElement = new Element("username");
-        usernameElement.setText(TESTUSERNAME);
-
-        rootMemberElement.addContent(usernameElement);
-
-        final Document document = new Document(rootMemberElement);
-        final XMLOutputter xmlOutputter = new XMLOutputter();
-        final String xmlOutput = xmlOutputter.outputString(document);
-
-        getTestSubject().write();
-
-        final String output = getOutput();
-        assertNotNull("Output should be available.", output);
-        assertTrue("Output should not be empty.", !output.trim().equals(""));
-        assertEquals("Output does not match test XML.", xmlOutput, output);
+            final XMLOutputter xmlOutputter = new XMLOutputter();
+            xmlOutputter.output(document, this);
+        }
+        catch (IOException ie)
+        {
+            final String message = "Unable to write XML.";
+            throw new WriterException(message, ie);
+        }
+        finally
+        {
+            try
+            {
+                flush();
+                close();
+            }
+            catch (IOException ie)
+            {
+                // Just an finally endpoint.
+            }
+        }
     }
 
     /**
-     * Obtain the written output.
+     * Build the DOM Document.
      *
-     * @return              String output from the write.
-     * @throws Exception    For anything that went wrong.
+     * @param document      The Document to append to.
+     * @throws IOException  If anything goes wrong during writing.
      */
-    public abstract String getOutput() throws Exception;
-
-
-    public User getMockUser()
-    {
-        return mockUser;
-    }
-
-    public void setMockUser(User mockUser)
-    {
-        this.mockUser = mockUser;
-    }
+    protected abstract void buildDocument(final Document document)
+            throws IOException;
 }

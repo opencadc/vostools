@@ -66,6 +66,7 @@
  */
 package ca.nrc.cadc.gms;
 
+
 public class WebRepresentationException extends RuntimeException
 {
     /**

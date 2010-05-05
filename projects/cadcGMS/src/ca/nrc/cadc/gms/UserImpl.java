@@ -70,6 +70,7 @@ import java.util.Collection;
 import java.util.Collections;
 import java.util.HashSet;
 
+
 public class UserImpl implements User
 {
     private String userID;

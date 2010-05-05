@@ -64,24 +64,70 @@
  *
  ************************************************************************
  */
-package ca.nrc.cadc.gms.web.xml;
+package ca.nrc.cadc.gms;
 
+import org.jdom.Document;
+
+import java.io.IOException;
 import java.io.InputStream;
-import java.io.ByteArrayInputStream;
 
 
-public class UserXMLReaderImplTest extends UserXMLReaderTest
+/**
+ * Default implementation of the GroupXMLReader interface.
+ */
+public class GroupXMLReaderImpl
+        extends AbstractInputStreamReaderImpl implements GroupXMLReader
 {
-    /**
-     * Prepare the testSubject to be tested.
-     *
-     * @throws Exception For anything that went wrong.
-     */
-    public void initializeTestSubject() throws Exception
-    {
-        final InputStream inputStream =
-                new ByteArrayInputStream(XML_INPUT.toString().getBytes());
+    private Group group;
 
-        setTestSubject(new UserXMLReaderImpl(inputStream));
+
+    /**
+     * Default and only available constructor.
+     * @param in    Input Stream to use.
+     */
+    public GroupXMLReaderImpl(final InputStream in)
+    {
+        super(in);
+    }
+
+
+    /**
+     * Parse out the read in character data.
+     *
+     * @param document The Document object parsed from the read in data.
+     * @throws java.io.IOException If anything went wrong during the read.
+     *
+     * TODO - Needs implementation!
+     */
+    protected void buildObject(final Document document) throws IOException
+    {
+
+    }
+    
+
+    /**
+     * Obtain the Group that was parsed from an Input Source.
+     *
+     * @return Group instance, or null if non-existent.
+     */
+    public Group getGroup()
+    {
+        return group;
+    }
+
+    public void setGroup(final Group group)
+    {
+        this.group = group;
+    }
+
+    /**
+     * Create a new instance of a Group.
+     *
+     * @param groupID       The Group ID.
+     * @return          Group instance.
+     */
+    protected Group createGroup(final String groupID)
+    {
+        return new GroupImpl(groupID);
     }
 }

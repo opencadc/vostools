@@ -67,7 +67,7 @@
 package ca.nrc.cadc.gms.web.resources.restlet;
 
 import ca.nrc.cadc.gms.User;
-import ca.nrc.cadc.gms.web.xml.UserXMLWriter;
+import ca.nrc.cadc.gms.UserXMLWriter;
 import ca.nrc.cadc.gms.service.UserService;
 import ca.nrc.cadc.gms.service.GroupService;
 

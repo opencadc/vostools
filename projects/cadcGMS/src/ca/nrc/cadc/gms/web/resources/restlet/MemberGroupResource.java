@@ -83,8 +83,8 @@ import java.net.URLDecoder;
 import ca.nrc.cadc.gms.service.GroupService;
 import ca.nrc.cadc.gms.service.UserService;
 import ca.nrc.cadc.gms.*;
-import ca.nrc.cadc.gms.web.xml.UserXMLWriter;
-import ca.nrc.cadc.gms.web.xml.UserXMLWriterImpl;
+import ca.nrc.cadc.gms.UserXMLWriter;
+import ca.nrc.cadc.gms.UserXMLWriterImpl;
 
 
 public class MemberGroupResource extends MemberResource

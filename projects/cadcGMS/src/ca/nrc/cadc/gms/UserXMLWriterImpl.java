@@ -64,58 +64,61 @@
  *
  ************************************************************************
  */
-package ca.nrc.cadc.gms.web.xml;
+package ca.nrc.cadc.gms;
 
 import java.io.OutputStream;
-import java.io.ByteArrayOutputStream;
+import java.io.IOException;
 
-import static org.easymock.EasyMock.*;
+import org.jdom.Element;
+import org.jdom.Document;
 
 
-/**
- * Default implementation test.
- */
-public class UserXMLWriterImplTest extends UserXMLWriterTest
+public class UserXMLWriterImpl
+        extends AbstractOutputStreamWriterImpl implements UserXMLWriter
 {
-    private OutputStream outputStream;
+    private User user;
 
 
     /**
-     * Obtain the written output.
+     * Creates an OutputStreamWriter that uses the default character encoding.
      *
-     * @return String output from the write.
-     * @throws Exception For anything that went wrong.
+     * @param out   An OutputStream
+     * @param user  The User to write out to the Stream.
      */
-    public String getOutput() throws Exception
+    public UserXMLWriterImpl(final OutputStream out, final User user)
     {
-        return getOutputStream().toString();
+        super(out);
+        this.user = user;
     }
 
+    
     /**
-     * Prepare the testSubject to be tested.
+     * Build the DOM Document.
      *
-     * @throws Exception For anything that went wrong.
+     * @param document The Document to append to.
+     * @throws java.io.IOException If anything goes wrong during writing.
      */
-    public void initializeTestSubject() throws Exception
+    protected void buildDocument(final Document document) throws IOException
     {
-        setOutputStream(new ByteArrayOutputStream());
+        final Element rootMemberElement = new Element("member");
+        rootMemberElement.setAttribute("id", getUser().getUserID());
 
-        expect(getMockUser().getUserID()).andReturn(MEMBER_ID).once();
-        expect(getMockUser().getUsername()).andReturn(TESTUSERNAME).once();
+        final Element usernameElement = new Element("username");
+        usernameElement.setText(getUser().getUsername());
 
-        replay(getMockUser());
-
-        setTestSubject(new UserXMLWriterImpl(getOutputStream(), getMockUser()));
+        rootMemberElement.addContent(usernameElement);
+        
+        document.addContent(rootMemberElement);
     }
 
 
-    public OutputStream getOutputStream()
+    public User getUser()
     {
-        return outputStream;
+        return user;
     }
 
-    public void setOutputStream(OutputStream outputStream)
+    public void setUser(User user)
     {
-        this.outputStream = outputStream;
-    }    
+        this.user = user;
+    }
 }

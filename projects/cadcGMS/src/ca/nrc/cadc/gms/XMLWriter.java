@@ -66,28 +66,13 @@
  */
 package ca.nrc.cadc.gms;
 
-import org.junit.runners.Suite;
-import org.junit.runner.RunWith;
-import ca.nrc.cadc.gms.service.UserServiceImplTest;
-import ca.nrc.cadc.gms.web.resources.restlet.*;
-import ca.nrc.cadc.gms.UserXMLWriterImplTest;
-import ca.nrc.cadc.gms.UserXMLReaderImplTest;
 
-
-@RunWith(Suite.class)
-@Suite.SuiteClasses(
-        {
-                GroupImplTest.class,
-                UserImplTest.class,
-                UserServiceImplTest.class,
-                GroupListResourceTest.class,
-                GroupMemberResourceTest.class,
-                GroupMemberListResourceTest.class,
-                MemberGroupResourceTest.class,
-                MemberResourceTest.class,
-                UserXMLWriterImplTest.class,
-                UserXMLReaderImplTest.class
-        })
-public class GMSTestSuite
+public interface XMLWriter
 {
+    /**
+     * Write out this Writer's Group.
+     *
+     * @throws ca.nrc.cadc.gms.WriterException      If something goes wrong during writing.
+     */
+    void write() throws WriterException;    
 }

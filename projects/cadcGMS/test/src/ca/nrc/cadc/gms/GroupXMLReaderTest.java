@@ -66,28 +66,28 @@
  */
 package ca.nrc.cadc.gms;
 
-import org.junit.runners.Suite;
-import org.junit.runner.RunWith;
-import ca.nrc.cadc.gms.service.UserServiceImplTest;
-import ca.nrc.cadc.gms.web.resources.restlet.*;
-import ca.nrc.cadc.gms.UserXMLWriterImplTest;
-import ca.nrc.cadc.gms.UserXMLReaderImplTest;
+import org.junit.Test;
+import ca.nrc.cadc.gms.Group;
 
 
-@RunWith(Suite.class)
-@Suite.SuiteClasses(
-        {
-                GroupImplTest.class,
-                UserImplTest.class,
-                UserServiceImplTest.class,
-                GroupListResourceTest.class,
-                GroupMemberResourceTest.class,
-                GroupMemberListResourceTest.class,
-                MemberGroupResourceTest.class,
-                MemberResourceTest.class,
-                UserXMLWriterImplTest.class,
-                UserXMLReaderImplTest.class
-        })
-public class GMSTestSuite
+public abstract class GroupXMLReaderTest
+        extends AbstractXMLReaderTest<GroupXMLReader>
 {
+    protected final static String GROUP_ID = Long.toString(88l);
+    protected final StringBuilder XML_INPUT;
+
+
+    protected GroupXMLReaderTest()
+    {
+        XML_INPUT = new StringBuilder(128);       
+    }
+
+
+    @Test
+    public void readAndParse() throws Exception
+    {
+        getTestSubject().readAndParse();
+
+        final Group parsedGroup = getTestSubject().getGroup();
+    }
 }

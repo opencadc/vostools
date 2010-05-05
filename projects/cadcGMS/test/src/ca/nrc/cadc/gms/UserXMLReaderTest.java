@@ -64,12 +64,10 @@
  *
  ************************************************************************
  */
-package ca.nrc.cadc.gms.web.xml;
+package ca.nrc.cadc.gms;
 
 import org.junit.Test;
 import static org.junit.Assert.*;
-
-import ca.nrc.cadc.gms.User;
 
 
 public abstract class UserXMLReaderTest

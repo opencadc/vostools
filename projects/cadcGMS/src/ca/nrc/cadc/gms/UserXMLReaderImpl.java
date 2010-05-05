@@ -66,28 +66,71 @@
  */
 package ca.nrc.cadc.gms;
 
-import org.junit.runners.Suite;
-import org.junit.runner.RunWith;
-import ca.nrc.cadc.gms.service.UserServiceImplTest;
-import ca.nrc.cadc.gms.web.resources.restlet.*;
-import ca.nrc.cadc.gms.UserXMLWriterImplTest;
-import ca.nrc.cadc.gms.UserXMLReaderImplTest;
+import java.io.InputStream;
+import java.io.IOException;
+
+import org.jdom.Document;
+import org.jdom.Element;
 
 
-@RunWith(Suite.class)
-@Suite.SuiteClasses(
-        {
-                GroupImplTest.class,
-                UserImplTest.class,
-                UserServiceImplTest.class,
-                GroupListResourceTest.class,
-                GroupMemberResourceTest.class,
-                GroupMemberListResourceTest.class,
-                MemberGroupResourceTest.class,
-                MemberResourceTest.class,
-                UserXMLWriterImplTest.class,
-                UserXMLReaderImplTest.class
-        })
-public class GMSTestSuite
+/**
+ * Default implementation of the UserXMLReader interface.
+ */
+public class UserXMLReaderImpl
+        extends AbstractInputStreamReaderImpl implements UserXMLReader
 {
+    private User member;
+
+    
+    public UserXMLReaderImpl(final InputStream inputStream)
+    {
+        super(inputStream);
+    }
+
+
+    /**
+     * Parse out the read in character data.
+     *
+     * @param document  The Document object that was built from the data.
+     * @throws IOException If anything went wrong during the read.
+     */
+    protected void buildObject(final Document document) throws IOException
+    {
+        final Element rootElement = document.getRootElement();
+        final Element usernameElement = rootElement.getChild("username");
+
+        final User readMember =
+                createMember(rootElement.getAttributeValue("id"),
+                             usernameElement.getValue());
+
+        setMember(readMember);
+    }
+
+
+    /**
+     * Obtain the User that was parsed from an Input Source.
+     *
+     * @return User instance, or null if non-existent.
+     */
+    public User getMember()
+    {
+        return member;
+    }
+
+    public void setMember(final User member)
+    {
+        this.member = member;
+    }
+
+    /**
+     * Create a new instance of a User.
+     *
+     * @param userID        The User Member's ID.
+     * @param username      The String username.
+     * @return              User instance.
+     */
+    protected User createMember(final String userID, final String username)
+    {
+        return new UserImpl(userID, username);
+    }
 }

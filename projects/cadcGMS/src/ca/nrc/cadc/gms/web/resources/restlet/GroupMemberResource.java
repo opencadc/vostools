@@ -78,7 +78,6 @@ import java.io.*;
 import java.net.URLDecoder;
 
 import ca.nrc.cadc.gms.*;
-import ca.nrc.cadc.gms.web.xml.UserXMLWriter;
 import ca.nrc.cadc.gms.service.UserService;
 import ca.nrc.cadc.gms.service.GroupService;
 

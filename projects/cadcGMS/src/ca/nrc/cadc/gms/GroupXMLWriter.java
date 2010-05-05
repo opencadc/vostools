@@ -64,53 +64,13 @@
 *
 ************************************************************************
 */
-package ca.nrc.cadc.gms.web.xml;
-
-import ca.nrc.cadc.gms.Group;
-
-import org.junit.Test;
-import static org.junit.Assert.*;
-import static org.easymock.EasyMock.*;
+package ca.nrc.cadc.gms;
 
 
-public abstract class GroupXMLWriterTest
-        extends AbstractXMLWriterTest<GroupXMLWriter>
+/**
+ * Interface for writing XML representing a Group.
+ */
+public interface GroupXMLWriter extends XMLWriter
 {
-    protected Group mockGroup;
-
-
-    protected GroupXMLWriterTest()
-    {
-        setMockGroup(createMock(Group.class));
-    }
-    
-
-    @Test
-    public void write() throws Exception
-    {
-        getTestSubject().write();
-
-        final String output = getOutput();
-        assertNotNull("Output should be available.", output);
-        assertTrue("Output should not be empty.", !output.trim().equals(""));
-    }
-
-    /**
-     * Obtain the written output.
-     *
-     * @return              String output from the write.
-     * @throws Exception    For anything that went wrong.
-     */
-    public abstract String getOutput() throws Exception;
-
-
-    public Group getMockGroup()
-    {
-        return mockGroup;
-    }
-
-    public void setMockGroup(Group mockGroup)
-    {
-        this.mockGroup = mockGroup;
-    }
+    void setGroup(final Group group);
 }

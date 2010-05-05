@@ -64,7 +64,7 @@
  *
  ************************************************************************
  */
-package ca.nrc.cadc.gms.web.xml;
+package ca.nrc.cadc.gms;
 
 
 import static org.easymock.EasyMock.*;
