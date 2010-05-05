@@ -66,58 +66,41 @@
  */
 package ca.nrc.cadc.gms.web.xml;
 
-import ca.nrc.cadc.gms.Group;
+import org.junit.Test;
+import static org.junit.Assert.*;
 
-import java.io.OutputStream;
-import java.io.IOException;
-
-import org.jdom.Document;
+import ca.nrc.cadc.gms.User;
 
 
-/**
- * Default implementation of the GroupXMLWriter interface.  This implementation
- * writes its Group out to an OutputStream.
- */
-public class GroupXMLWriterImpl
-        extends AbstractOutputStreamWriterImpl implements GroupXMLWriter
+public abstract class UserXMLReaderTest
+        extends AbstractXMLReaderTest<UserXMLReader>
 {
-    private Group group;
+    protected final static String TESTUSERNAME = "TESTUSERNAME";
+    protected final static String MEMBER_ID = Long.toString(88l);
+    protected final StringBuilder XML_INPUT;
 
 
-    /**
-     * Creates an OutputStreamWriter that uses the default character encoding.
-     *
-     * @param out       An OutputStream
-     * @param group     The Group to write.
-     */
-    public GroupXMLWriterImpl(final OutputStream out, final Group group)
+    protected UserXMLReaderTest()
     {
-        super(out);
-        this.group = group;
+        XML_INPUT = new StringBuilder(128);
+        XML_INPUT.append(
+                "<?xml version=\"1.0\" encoding=\"UTF-8\" standalone=\"no\"?>\n");
+        XML_INPUT.append("<member id=\"88\">\n");
+        XML_INPUT.append("  <username>TESTUSERNAME</username>\n");
+        XML_INPUT.append("</member>");
     }
 
-
-    /**
-     * Build the DOM Document.
-     *
-     * @param document The Document to append to.
-     * @throws java.io.IOException If anything goes wrong during writing.
-     *
-     * TODO - Needs implementation.
-     */
-    protected void buildDocument(final Document document) throws IOException
+    @Test
+    public void readAndParse() throws Exception
     {
-        // Not implemented yet!
-    }
-    
+        getTestSubject().readAndParse();
 
-    public Group getGroup()
-    {
-        return group;
-    }
+        final User parsedMember = getTestSubject().getMember();
 
-    public void setGroup(Group group)
-    {
-        this.group = group;
+        assertNotNull("Parsed Member should not be null.", parsedMember);
+        assertEquals("Parsed Member User's ID is inaccurate.",
+                     Long.toString(88l), parsedMember.getUserID());
+        assertEquals("Parsed Member Username is inaccurate.",
+                     "TESTUSERNAME", parsedMember.getUsername());        
     }
 }

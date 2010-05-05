@@ -66,7 +66,6 @@
 */
 package ca.nrc.cadc.gms.web.xml;
 
-import ca.nrc.cadc.gms.GMSTest;
 import ca.nrc.cadc.gms.Group;
 
 import org.junit.Test;
@@ -74,7 +73,8 @@ import static org.junit.Assert.*;
 import static org.easymock.EasyMock.*;
 
 
-public abstract class GroupXMLWriterTest extends GMSTest<GroupXMLWriter>
+public abstract class GroupXMLWriterTest
+        extends AbstractXMLWriterTest<GroupXMLWriter>
 {
     protected Group mockGroup;
 

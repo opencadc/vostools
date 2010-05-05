@@ -66,58 +66,72 @@
  */
 package ca.nrc.cadc.gms.web.xml;
 
-import ca.nrc.cadc.gms.Group;
+import org.jdom.Document;
+import org.jdom.output.XMLOutputter;
 
+import java.io.OutputStreamWriter;
 import java.io.OutputStream;
 import java.io.IOException;
 
-import org.jdom.Document;
+import ca.nrc.cadc.gms.WriterException;
 
 
-/**
- * Default implementation of the GroupXMLWriter interface.  This implementation
- * writes its Group out to an OutputStream.
- */
-public class GroupXMLWriterImpl
-        extends AbstractOutputStreamWriterImpl implements GroupXMLWriter
+public abstract class AbstractOutputStreamWriterImpl
+        extends OutputStreamWriter
 {
-    private Group group;
-
-
     /**
      * Creates an OutputStreamWriter that uses the default character encoding.
      *
-     * @param out       An OutputStream
-     * @param group     The Group to write.
+     * @param out An OutputStream
      */
-    public GroupXMLWriterImpl(final OutputStream out, final Group group)
+    protected AbstractOutputStreamWriterImpl(final OutputStream out)
     {
         super(out);
-        this.group = group;
     }
 
+
+    /**
+     * Write the given Document to this Writer's OutputStream.
+     *
+     * @throws WriterException  If anything goes wrong during writing.
+     */
+    public void write() throws WriterException
+    {
+        try
+        {
+            final Document document = new Document();
+            buildDocument(document);
+
+            final XMLOutputter xmlOutputter = new XMLOutputter();
+            final String xmlOutput = xmlOutputter.outputString(document);
+
+            write(xmlOutput, 0, xmlOutput.length());
+        }
+        catch (IOException ie)
+        {
+            final String message = "Unable to write XML.";
+            throw new WriterException(message, ie);
+        }
+        finally
+        {
+            try
+            {
+                flush();
+                close();
+            }
+            catch (IOException ie)
+            {
+                // Just an finally endpoint.
+            }
+        }
+    }
 
     /**
      * Build the DOM Document.
      *
-     * @param document The Document to append to.
-     * @throws java.io.IOException If anything goes wrong during writing.
-     *
-     * TODO - Needs implementation.
+     * @param document      The Document to append to.
+     * @throws IOException  If anything goes wrong during writing.
      */
-    protected void buildDocument(final Document document) throws IOException
-    {
-        // Not implemented yet!
-    }
-    
-
-    public Group getGroup()
-    {
-        return group;
-    }
-
-    public void setGroup(Group group)
-    {
-        this.group = group;
-    }
+    protected abstract void buildDocument(final Document document)
+            throws IOException;
 }

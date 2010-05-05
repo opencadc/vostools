@@ -74,15 +74,11 @@ import org.xml.sax.SAXException;
 import org.apache.log4j.Logger;
 import org.apache.xerces.parsers.DOMParser;
 
-import java.io.IOException;
-import java.io.OutputStream;
-import java.io.ByteArrayOutputStream;
-import java.io.StringReader;
+import java.io.*;
 import java.net.URLDecoder;
 
 import ca.nrc.cadc.gms.*;
 import ca.nrc.cadc.gms.web.xml.UserXMLWriter;
-import ca.nrc.cadc.gms.web.xml.UserXMLWriterImpl;
 import ca.nrc.cadc.gms.service.UserService;
 import ca.nrc.cadc.gms.service.GroupService;
 
@@ -252,21 +248,6 @@ public class GroupMemberResource extends GroupResource
             LOGGER.error(message, e);
             throw new WebRepresentationException(message, e);
         }
-    }
-
-    /**
-     * Create a new instance of a UserXMLWriter implementation.
-     *
-     * @param outputStream  The OutputStream to write out the data.
-     * @param member    The member to create it with.
-     * @return  An instance of an UserXMLWriter implementation.
-     *
-     * TODO - Make this configurable!
-     */
-    protected UserXMLWriter createMemberXMLWriter(
-            final OutputStream outputStream, final User member)
-    {
-        return new UserXMLWriterImpl(outputStream, member);
     }
 
 

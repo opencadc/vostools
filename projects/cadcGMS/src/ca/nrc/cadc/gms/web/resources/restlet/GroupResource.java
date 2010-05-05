@@ -68,19 +68,24 @@ package ca.nrc.cadc.gms.web.resources.restlet;
 
 import ca.nrc.cadc.gms.service.GroupService;
 import ca.nrc.cadc.gms.Group;
+import ca.nrc.cadc.gms.User;
+import ca.nrc.cadc.gms.web.xml.UserXMLWriter;
+import ca.nrc.cadc.gms.web.xml.UserXMLWriterImpl;
+import ca.nrc.cadc.gms.web.xml.UserXMLReader;
+import ca.nrc.cadc.gms.web.xml.UserXMLReaderImpl;
 import org.w3c.dom.Document;
 import org.restlet.resource.Post;
 import org.restlet.resource.Put;
 import org.restlet.resource.Delete;
 
 import java.io.IOException;
+import java.io.OutputStream;
+import java.io.InputStream;
 
 
 public class GroupResource extends AbstractResource
 {
     private GroupService groupService;
-    private String groupWriterClassName;
-    private String userWriterClassName;    
 
 
     /**
@@ -153,6 +158,35 @@ public class GroupResource extends AbstractResource
     }
 
 
+    /**
+     * Create a new instance of a UserXMLWriter implementation.
+     *
+     * @param outputStream  The OutputStream to write out the data.
+     * @param member    The member to create it with.
+     * @return  An instance of an UserXMLWriter implementation.
+     *
+     * TODO - Make this configurable!
+     */
+    protected UserXMLWriter createMemberXMLWriter(
+            final OutputStream outputStream, final User member)
+    {
+        return new UserXMLWriterImpl(outputStream, member);
+    }
+
+    /**
+     * Create a new instance of a GroupXMLWriter implementation.
+     *
+     * @param inputStream  The InputStream to write out the data.
+     * @return  An instance of an UserXMLWriter implementation.
+     *
+     * TODO - Make this configurable!
+     */
+    protected UserXMLReader createMemberXMLReader(
+            final InputStream inputStream)
+    {
+        return new UserXMLReaderImpl(inputStream);
+    }    
+
     protected Group getGroup()
     {
         return getGroupService().getGroup(getGroupID());
@@ -171,25 +205,5 @@ public class GroupResource extends AbstractResource
     public void setGroupService(final GroupService groupService)
     {
         this.groupService = groupService;
-    }
-
-    public String getGroupWriterClassName()
-    {
-        return groupWriterClassName;
-    }
-
-    public void setGroupWriterClassName(String groupWriterClassName)
-    {
-        this.groupWriterClassName = groupWriterClassName;
-    }
-
-    public String getUserWriterClassName()
-    {
-        return userWriterClassName;
-    }
-
-    public void setUserWriterClassName(String userWriterClassName)
-    {
-        this.userWriterClassName = userWriterClassName;
     }
 }

@@ -66,58 +66,89 @@
  */
 package ca.nrc.cadc.gms.web.xml;
 
-import ca.nrc.cadc.gms.Group;
+import ca.nrc.cadc.gms.ReaderException;
 
-import java.io.OutputStream;
+import java.io.InputStreamReader;
+import java.io.InputStream;
 import java.io.IOException;
+import java.io.StringReader;
+import java.util.Arrays;
 
 import org.jdom.Document;
+import org.jdom.JDOMException;
+import org.jdom.input.SAXBuilder;
 
 
-/**
- * Default implementation of the GroupXMLWriter interface.  This implementation
- * writes its Group out to an OutputStream.
- */
-public class GroupXMLWriterImpl
-        extends AbstractOutputStreamWriterImpl implements GroupXMLWriter
+public abstract class AbstractInputStreamReaderImpl extends InputStreamReader
 {
-    private Group group;
-
-
     /**
-     * Creates an OutputStreamWriter that uses the default character encoding.
+     * Creates an InputStreamReader that uses the default charset.
      *
-     * @param out       An OutputStream
-     * @param group     The Group to write.
+     * @param in An InputStream
      */
-    public GroupXMLWriterImpl(final OutputStream out, final Group group)
+    public AbstractInputStreamReaderImpl(final InputStream in)
     {
-        super(out);
-        this.group = group;
+        super(in);
     }
 
 
     /**
-     * Build the DOM Document.
+     * Read in the Document from the InputStream and parse it into an object.
      *
-     * @param document The Document to append to.
-     * @throws java.io.IOException If anything goes wrong during writing.
-     *
-     * TODO - Needs implementation.
+     * @throws  ReaderException     If anything went wrong during the read.
      */
-    protected void buildDocument(final Document document) throws IOException
+    public void readAndParse() throws ReaderException
     {
-        // Not implemented yet!
-    }
-    
+        final StringBuilder xml = new StringBuilder(256);
+        final char[] buffer = new char[256];
 
-    public Group getGroup()
-    {
-        return group;
+        int charCount;
+
+        try
+        {
+            while ((charCount = read(buffer)) > 0)
+            {
+                final char[] trimmedChars = Arrays.copyOf(buffer, charCount);
+                xml.append(new String(trimmedChars));
+            }
+
+            buildObject(parse(xml));
+        }
+        catch (IOException e)
+        {
+            final String message = "Unable to read the XML that was submitted.";
+            throw new ReaderException(message, e);
+        }
+        catch (JDOMException e)
+        {
+            final String message =
+                    "Unable to parse the XML that was submitted.";
+            throw new ReaderException(message, e);
+        }
     }
 
-    public void setGroup(Group group)
+    /**
+     * Parse out the given XML into a Document.
+     *
+     * @param xml           The XML String that was read in.
+     * @return              A Document object.
+     * @throws JDOMException when errors occur in parsing
+     * @throws IOException when an I/O error prevents a document
+     *         from being fully parsed
+     */
+    protected Document parse(final StringBuilder xml)
+            throws IOException, JDOMException
     {
-        this.group = group;
+        final SAXBuilder parser = new SAXBuilder(false);
+        return parser.build(new StringReader(xml.toString()));
     }
+
+    /**
+     * Parse out the read in character data.
+     *
+     * @param document      The Document object parsed from the read in data.
+     * @throws IOException  If anything went wrong during the read.
+     */
+    protected abstract void buildObject(final Document document)
+            throws IOException;
 }

@@ -70,8 +70,8 @@ import org.junit.runners.Suite;
 import org.junit.runner.RunWith;
 import ca.nrc.cadc.gms.service.UserServiceImplTest;
 import ca.nrc.cadc.gms.web.resources.restlet.*;
-import ca.nrc.cadc.gms.web.xml.GroupXMLWriterImplTest;
 import ca.nrc.cadc.gms.web.xml.UserXMLWriterImplTest;
+import ca.nrc.cadc.gms.web.xml.UserXMLReaderImplTest;
 
 
 @RunWith(Suite.class)
@@ -85,7 +85,8 @@ import ca.nrc.cadc.gms.web.xml.UserXMLWriterImplTest;
                 GroupMemberListResourceTest.class,
                 MemberGroupResourceTest.class,
                 MemberResourceTest.class,
-                UserXMLWriterImplTest.class
+                UserXMLWriterImplTest.class,
+                UserXMLReaderImplTest.class
         })
 public class GMSTestSuite
 {

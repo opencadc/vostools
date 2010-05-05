@@ -66,21 +66,13 @@
  */
 package ca.nrc.cadc.gms.web.xml;
 
-import ca.nrc.cadc.gms.WriterException;
 import ca.nrc.cadc.gms.User;
 
 
 /**
  * Interface for XML writing a User.
  */
-public interface UserXMLWriter
+public interface UserXMLWriter extends XMLWriter
 {
-    /**
-     * Write out this Writer's User.
-     *
-     * @throws WriterException      If something goes wrong during writing.
-     */
-    void write() throws WriterException;
-    
     void setUser(final User user);
 }

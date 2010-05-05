@@ -66,58 +66,74 @@
  */
 package ca.nrc.cadc.gms.web.xml;
 
-import ca.nrc.cadc.gms.Group;
+import ca.nrc.cadc.gms.User;
+import ca.nrc.cadc.gms.UserImpl;
 
-import java.io.OutputStream;
+import java.io.InputStream;
 import java.io.IOException;
 
 import org.jdom.Document;
+import org.jdom.Element;
 
 
 /**
- * Default implementation of the GroupXMLWriter interface.  This implementation
- * writes its Group out to an OutputStream.
+ * Default implementation of the UserXMLReader interface.
  */
-public class GroupXMLWriterImpl
-        extends AbstractOutputStreamWriterImpl implements GroupXMLWriter
+public class UserXMLReaderImpl
+        extends AbstractInputStreamReaderImpl implements UserXMLReader
 {
-    private Group group;
+    private User member;
 
-
-    /**
-     * Creates an OutputStreamWriter that uses the default character encoding.
-     *
-     * @param out       An OutputStream
-     * @param group     The Group to write.
-     */
-    public GroupXMLWriterImpl(final OutputStream out, final Group group)
-    {
-        super(out);
-        this.group = group;
-    }
-
-
-    /**
-     * Build the DOM Document.
-     *
-     * @param document The Document to append to.
-     * @throws java.io.IOException If anything goes wrong during writing.
-     *
-     * TODO - Needs implementation.
-     */
-    protected void buildDocument(final Document document) throws IOException
-    {
-        // Not implemented yet!
-    }
     
-
-    public Group getGroup()
+    public UserXMLReaderImpl(final InputStream inputStream)
     {
-        return group;
+        super(inputStream);
     }
 
-    public void setGroup(Group group)
+
+    /**
+     * Parse out the read in character data.
+     *
+     * @param document  The Document object that was built from the data.
+     * @throws IOException If anything went wrong during the read.
+     */
+    protected void buildObject(final Document document) throws IOException
     {
-        this.group = group;
+        final Element rootElement = document.getRootElement();
+        final Element usernameElement = rootElement.getChild("username");
+
+        final User readMember =
+                createMember(rootElement.getAttributeValue("id"),
+                             usernameElement.getValue());
+
+        setMember(readMember);
+    }
+
+
+    /**
+     * Obtain the User that was parsed from an Input Source.
+     *
+     * @return User instance, or null if non-existent.
+     */
+    public User getMember()
+    {
+        return member;
+    }
+
+    public void setMember(final User member)
+    {
+        this.member = member;
+    }
+
+    /**
+     * Create a new instance of a User.
+     *
+     * @param userID        The User Member's ID.
+     * @param username      The String username.
+     * @return              User instance.
+     */
+    protected User createMember(final String userID, final String username)
+    {
+        return new UserImpl(userID, username);
     }
 }

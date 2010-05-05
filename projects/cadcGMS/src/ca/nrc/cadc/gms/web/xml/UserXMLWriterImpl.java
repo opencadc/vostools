@@ -66,20 +66,17 @@
  */
 package ca.nrc.cadc.gms.web.xml;
 
-import ca.nrc.cadc.gms.WriterException;
 import ca.nrc.cadc.gms.User;
 
-import java.io.OutputStreamWriter;
 import java.io.OutputStream;
 import java.io.IOException;
 
 import org.jdom.Element;
 import org.jdom.Document;
-import org.jdom.output.XMLOutputter;
 
 
 public class UserXMLWriterImpl
-        extends OutputStreamWriter implements UserXMLWriter
+        extends AbstractOutputStreamWriterImpl implements UserXMLWriter
 {
     private User user;
 
@@ -96,48 +93,24 @@ public class UserXMLWriterImpl
         this.user = user;
     }
 
-
+    
     /**
-     * Write out this Writer's User.
+     * Build the DOM Document.
      *
-     * @throws ca.nrc.cadc.gms.WriterException
-     *          If something goes wrong during writing.
+     * @param document The Document to append to.
+     * @throws java.io.IOException If anything goes wrong during writing.
      */
-    public void write() throws WriterException
+    protected void buildDocument(final Document document) throws IOException
     {
         final Element rootMemberElement = new Element("member");
         rootMemberElement.setAttribute("id", getUser().getUserID());
 
         final Element usernameElement = new Element("username");
         usernameElement.setText(getUser().getUsername());
-        
+
         rootMemberElement.addContent(usernameElement);
-
-        final Document document = new Document(rootMemberElement);
-        final XMLOutputter xmlOutputter = new XMLOutputter();
-        final String xmlOutput = xmlOutputter.outputString(document);
-
-        try
-        {
-            super.write(xmlOutput, 0, xmlOutput.length());
-        }
-        catch (IOException ie)
-        {
-            final String message = "Unable to write XML.";
-            throw new WriterException(message, ie);
-        }
-        finally
-        {
-            try
-            {
-                flush();
-                close();
-            }
-            catch (IOException ie)
-            {
-                // Just an finally endpoint.
-            }
-        }
+        
+        document.addContent(rootMemberElement);
     }
 
 

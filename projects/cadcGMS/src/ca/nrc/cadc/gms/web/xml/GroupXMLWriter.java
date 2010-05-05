@@ -66,21 +66,13 @@
 */
 package ca.nrc.cadc.gms.web.xml;
 
-import ca.nrc.cadc.gms.WriterException;
 import ca.nrc.cadc.gms.Group;
 
 
 /**
  * Interface for writing XML representing a Group.
  */
-public interface GroupXMLWriter
+public interface GroupXMLWriter extends XMLWriter
 {
-    /**
-     * Write out this Writer's Group.
-     *
-     * @throws WriterException      If something goes wrong during writing.
-     */
-    void write() throws WriterException;
-
     void setGroup(final Group group);
 }

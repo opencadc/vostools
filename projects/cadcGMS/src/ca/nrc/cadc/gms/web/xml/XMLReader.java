@@ -66,58 +66,15 @@
  */
 package ca.nrc.cadc.gms.web.xml;
 
-import ca.nrc.cadc.gms.Group;
-
-import java.io.OutputStream;
-import java.io.IOException;
-
-import org.jdom.Document;
+import ca.nrc.cadc.gms.ReaderException;
 
 
-/**
- * Default implementation of the GroupXMLWriter interface.  This implementation
- * writes its Group out to an OutputStream.
- */
-public class GroupXMLWriterImpl
-        extends AbstractOutputStreamWriterImpl implements GroupXMLWriter
+public interface XMLReader
 {
-    private Group group;
-
-
     /**
-     * Creates an OutputStreamWriter that uses the default character encoding.
+     * Read in the Document from the InputStream and parse it into an object.
      *
-     * @param out       An OutputStream
-     * @param group     The Group to write.
+     * @throws  ReaderException     If anything went wrong during the read.
      */
-    public GroupXMLWriterImpl(final OutputStream out, final Group group)
-    {
-        super(out);
-        this.group = group;
-    }
-
-
-    /**
-     * Build the DOM Document.
-     *
-     * @param document The Document to append to.
-     * @throws java.io.IOException If anything goes wrong during writing.
-     *
-     * TODO - Needs implementation.
-     */
-    protected void buildDocument(final Document document) throws IOException
-    {
-        // Not implemented yet!
-    }
-    
-
-    public Group getGroup()
-    {
-        return group;
-    }
-
-    public void setGroup(Group group)
-    {
-        this.group = group;
-    }
+    public void readAndParse() throws ReaderException;
 }

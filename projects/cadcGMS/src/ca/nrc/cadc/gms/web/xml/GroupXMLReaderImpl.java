@@ -66,58 +66,71 @@
  */
 package ca.nrc.cadc.gms.web.xml;
 
-import ca.nrc.cadc.gms.Group;
-
-import java.io.OutputStream;
-import java.io.IOException;
-
 import org.jdom.Document;
+
+import java.io.IOException;
+import java.io.InputStream;
+
+import ca.nrc.cadc.gms.Group;
+import ca.nrc.cadc.gms.GroupImpl;
 
 
 /**
- * Default implementation of the GroupXMLWriter interface.  This implementation
- * writes its Group out to an OutputStream.
+ * Default implementation of the GroupXMLReader interface.
  */
-public class GroupXMLWriterImpl
-        extends AbstractOutputStreamWriterImpl implements GroupXMLWriter
+public class GroupXMLReaderImpl
+        extends AbstractInputStreamReaderImpl implements GroupXMLReader
 {
     private Group group;
 
 
     /**
-     * Creates an OutputStreamWriter that uses the default character encoding.
-     *
-     * @param out       An OutputStream
-     * @param group     The Group to write.
+     * Default and only available constructor.
+     * @param in    Input Stream to use.
      */
-    public GroupXMLWriterImpl(final OutputStream out, final Group group)
+    public GroupXMLReaderImpl(final InputStream in)
     {
-        super(out);
-        this.group = group;
+        super(in);
     }
 
 
     /**
-     * Build the DOM Document.
+     * Parse out the read in character data.
      *
-     * @param document The Document to append to.
-     * @throws java.io.IOException If anything goes wrong during writing.
+     * @param document The Document object parsed from the read in data.
+     * @throws java.io.IOException If anything went wrong during the read.
      *
-     * TODO - Needs implementation.
+     * TODO - Needs implementation!
      */
-    protected void buildDocument(final Document document) throws IOException
+    protected void buildObject(final Document document) throws IOException
     {
-        // Not implemented yet!
+
     }
     
 
+    /**
+     * Obtain the Group that was parsed from an Input Source.
+     *
+     * @return Group instance, or null if non-existent.
+     */
     public Group getGroup()
     {
         return group;
     }
 
-    public void setGroup(Group group)
+    public void setGroup(final Group group)
     {
         this.group = group;
+    }
+
+    /**
+     * Create a new instance of a Group.
+     *
+     * @param groupID       The Group ID.
+     * @return          Group instance.
+     */
+    protected Group createGroup(final String groupID)
+    {
+        return new GroupImpl(groupID);
     }
 }

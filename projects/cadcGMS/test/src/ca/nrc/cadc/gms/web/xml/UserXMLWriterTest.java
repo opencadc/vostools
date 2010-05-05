@@ -66,7 +66,6 @@
  */
 package ca.nrc.cadc.gms.web.xml;
 
-import ca.nrc.cadc.gms.GMSTest;
 import ca.nrc.cadc.gms.User;
 import org.junit.Test;
 import static org.junit.Assert.*;
@@ -76,7 +75,8 @@ import org.jdom.Document;
 import org.jdom.output.XMLOutputter;
 
 
-public abstract class UserXMLWriterTest extends GMSTest<UserXMLWriter>
+public abstract class UserXMLWriterTest
+        extends AbstractXMLWriterTest<UserXMLWriter>
 {
     protected final static String TESTUSERNAME = "TESTUSERNAME";
     protected final static String MEMBER_ID = Long.toString(88l);

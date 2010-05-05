@@ -69,9 +69,16 @@ package ca.nrc.cadc.gms.web.resources.restlet;
 import org.w3c.dom.Document;
 
 import java.io.IOException;
+import java.io.OutputStream;
+import java.io.InputStream;
 
 import ca.nrc.cadc.gms.service.UserService;
 import ca.nrc.cadc.gms.User;
+import ca.nrc.cadc.gms.web.xml.UserXMLWriter;
+import ca.nrc.cadc.gms.web.xml.UserXMLWriterImpl;
+import ca.nrc.cadc.gms.web.xml.UserXMLReader;
+import ca.nrc.cadc.gms.web.xml.UserXMLReaderImpl;
+
 
 public class MemberResource extends AbstractResource
 {
@@ -115,6 +122,35 @@ public class MemberResource extends AbstractResource
                                             getMemberID()));
     }
 
+
+    /**
+     * Create a new instance of a UserXMLWriter implementation.
+     *
+     * @param outputStream  The OutputStream to write out the data.
+     * @param member    The member to create it with.
+     * @return  An instance of an UserXMLWriter implementation.
+     *
+     * TODO - Make this configurable!
+     */
+    protected UserXMLWriter createMemberXMLWriter(
+            final OutputStream outputStream, final User member)
+    {
+        return new UserXMLWriterImpl(outputStream, member);
+    }
+
+    /**
+     * Create a new instance of a GroupXMLWriter implementation.
+     *
+     * @param inputStream  The InputStream to write out the data.
+     * @return  An instance of an UserXMLWriter implementation.
+     *
+     * TODO - Make this configurable!
+     */
+    protected UserXMLReader createMemberXMLReader(
+            final InputStream inputStream)
+    {
+        return new UserXMLReaderImpl(inputStream);
+    }    
 
     protected User getMember()
     {
