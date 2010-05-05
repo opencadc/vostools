@@ -137,6 +137,18 @@ public abstract class Node
     }
     
     /**
+     * Set the path to a new value and redetermine
+     * the parent hierarchy.
+     * 
+     * @param path
+     */
+    public void setPath(String path)
+    {
+        this.path = path;
+        buildParent(path);
+    }
+    
+    /**
      * Given the path, build the parent if one exists.
      * Set the name of the node.
      * @param path

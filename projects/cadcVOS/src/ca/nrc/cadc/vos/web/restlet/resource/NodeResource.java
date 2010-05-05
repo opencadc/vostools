@@ -114,7 +114,7 @@ public class NodeResource extends BaseResource
         path = (String) getRequest().getAttributes().get("nodePath");  
         if (path == null || path.trim().length() == 0)
         {
-            final String message = "No path information provided.";
+            final String message = "No node path information provided.";
             log.debug(message);
             setStatus(Status.CLIENT_ERROR_BAD_REQUEST, message);
         }
@@ -153,9 +153,25 @@ public class NodeResource extends BaseResource
         try
         {
             Node nodeToPut = new NodeReader().read(value.getStream());
-            Node returnNode = getNodePersistence().put(nodeToPut);
+            
+            if (!nodeToPut.getPath().equals(path))
+            {
+                log.warn("Node path different in XML ("
+                        + nodeToPut.getPath()
+                        + ") and URL ("
+                        + path
+                        + ")  Using URL version.");
+                
+                // overwrite the path with the one from the URL
+                nodeToPut.setPath(path);
+            }
+            
+            // store the node
+            Node storedNode = getNodePersistence().put(nodeToPut);
+            
+            // return the node in xml format
             NodeWriter nodeWriter = new NodeWriter();
-            return new NodeOutputRepresentation(returnNode, nodeWriter);
+            return new NodeOutputRepresentation(storedNode, nodeWriter);
         }
         catch (NodeParsingException e)
         {

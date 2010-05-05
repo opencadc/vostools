@@ -312,7 +312,7 @@ public abstract class NodeDAO implements NodePersistence
             }
             
         }
-        log.debug("Node deleted: " + node);
+        log.debug("Node deleted: " + nodeInDb);
     }
     
     /**
