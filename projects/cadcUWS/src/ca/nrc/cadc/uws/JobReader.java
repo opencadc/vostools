@@ -69,25 +69,21 @@
 
 package ca.nrc.cadc.uws;
 
-import java.io.IOException;
-import java.io.OutputStream;
-import java.io.Writer;
-
 import org.apache.log4j.Logger;
-import org.jdom.Document;
-import org.jdom.Element;
-import org.jdom.Namespace;
-import org.jdom.output.Format;
-import org.jdom.output.XMLOutputter;
+import org.jdom.*;
+import org.jdom.input.SAXBuilder;
+import java.io.*;
+import java.util.*;
+import java.net.MalformedURLException;
+import java.net.URL;
 
 /**
- * Writes a Job as XML to an output.
- * 
- * @author Sailor Zhang
+ * @author zhangsa
+ *
  */
-public class JobWriter
+public class JobReader
 {
-    private static Logger log = Logger.getLogger(JobWriter.class);
+    private static Logger log = Logger.getLogger(JobReader.class);
 
     public static Namespace XSI_NS = Namespace.getNamespace("xsi", "http://www.w3.org/2001/XMLSchema-instance");
     public static Namespace UWS_NS = Namespace.getNamespace("http://www.ivoa.net/xml/UWS/v1.0");
@@ -95,153 +91,98 @@ public class JobWriter
 
     protected Job _job;
     protected Document _document;
-    protected XMLOutputter _outputter;
 
-    public JobWriter(Job job)
+    protected SAXBuilder _saxBuilder;
+
+    public JobReader()
     {
-        _job = job;
-        buildDocument();
-        _outputter = new XMLOutputter();
-        _outputter.setFormat(Format.getPrettyFormat());
+        _saxBuilder = new SAXBuilder("org.apache.xerces.parsers.SAXParser", false);
+        _saxBuilder.setFeature("http://xml.org/sax/features/validation", true);
+        _saxBuilder.setFeature("http://apache.org/xml/features/validation/schema", true);
+        _saxBuilder.setFeature("http://apache.org/xml/features/validation/schema-full-checking", true);
+        _saxBuilder.setProperty("http://apache.org/xml/properties/schema/external-schemaLocation",
+                "http://www.ivoa.net/xml/UWS/v1.0 UWS.xsd");
     }
 
-    /**
-     * Write the job to a String.
-     */
-    public String toString()
+    public Job readFrom(Reader reader) throws JDOMException, IOException
     {
-        return _outputter.outputString(_document);
+        _document = _saxBuilder.build(reader);
+        parseJob();
+        return _job;
     }
 
-    /**
-     * Write the job to an OutputStream.
-     *
-     * @param out OutputStream to write to.
-     * @throws IOException if the writer fails to write.
-     */
-    public void writeTo(OutputStream out) throws IOException
+    private void parseJob()
     {
-        _outputter.output(_document, out);
+        Element root = _document.getRootElement();
     }
 
-    /**
-     * Write the job to a writer
-     *
-     * @param writer Writer to write to.
-     * @throws IOException if the writer fails to write.
-     */
-    public void writeTo(Writer writer) throws IOException
+    private List<Parameter> parseForParametersList() throws MalformedURLException
     {
-        _outputter.output(_document, writer);
-    }
-
-    /**
-     * Build XML Document for the job
-     */
-    private void buildDocument()
-    {
-        Element root = new Element("job", UWS_NS);
-        root.setAttribute("schemaLocation", "http://www.ivoa.net/xml/UWS/v1.0 UWS.xsd", XSI_NS);
-        root.setNamespace(XLINK_NS);
-
-        Element e = null;
-
-        e = new Element("jobId", UWS_NS);
-        e.addContent(_job.getID());
-        root.addContent(e);
-
-        e = new Element("runId", UWS_NS);
-        e.addContent(_job.getRunID());
-        root.addContent(e);
-
-        e = new Element("ownerId", UWS_NS);
-        e.setAttribute("nil", "true", XSI_NS);
-        e.addContent(_job.getOwner().toString());
-        root.addContent(e);
-
-        e = new Element("phase", UWS_NS);
-        e.addContent(_job.getExecutionPhase().toString());
-        root.addContent(e);
-
-        e = new Element("quote", UWS_NS);
-        e.setAttribute("nil", "true", XSI_NS);
-        e.addContent(_job.getQuote().toString());
-        root.addContent(e);
-
-        e = new Element("startTime", UWS_NS);
-        e.setAttribute("nil", "true", XSI_NS);
-        e.addContent(_job.getStartTime().toString());
-        root.addContent(e);
-
-        e = new Element("endTime", UWS_NS);
-        e.setAttribute("nil", "true", XSI_NS);
-        e.addContent(_job.getEndTime().toString());
-        root.addContent(e);
-
-        e = new Element("executionDuration", UWS_NS);
-        e.addContent(Long.toString(_job.getExecutionDuration()));
-        root.addContent(e);
-
-        e = new Element("destruction", UWS_NS);
-        e.setAttribute("nil", "true", XSI_NS);
-        e.addContent(_job.getDestructionTime().toString());
-        root.addContent(e);
-
-        e = createParameters();
-        root.addContent(e);
-
-        e = createResults();
-        root.addContent(e);
-
-        e = createErrorSummary();
-        root.addContent(e);
-
-        _document = new Document(root);
-    }
-
-    private Element createParameters()
-    {
-        Element rtn = new Element("parameters", UWS_NS);
-        Element e = null;
-        for (Parameter par : _job.getParameterList())
+        List<Parameter> rtn = null;
+        Element root = _document.getRootElement();
+        Element elementParameters = root.getChild("parameters", UWS_NS);
+        if (elementParameters != null)
         {
-            e = new Element("parameter", UWS_NS);
-            e.setAttribute("id", par.getName());
-            e.addContent(par.getValue());
-            rtn.addContent(e);
+            rtn = new ArrayList<Parameter>();
+
+            Parameter par = null;
+            List<?> listElement = elementParameters.getChildren("parameter", UWS_NS);
+            for (Object obj : listElement)
+            {
+                Element e = (Element) obj;
+                String id = e.getAttributeValue("id");
+                String value = e.getText();
+                par = new Parameter(id, value);
+                rtn.add(par);
+            }
         }
         return rtn;
     }
 
-    private Element createResults()
+    private List<Result> parseForResultsList() throws MalformedURLException
     {
-        Element rtn = new Element("results", UWS_NS);
-        Element e = null;
-        for (Result rs : _job.getResultsList())
+        List<Result> rtn = null;
+        Element root = _document.getRootElement();
+        Element e = root.getChild("results", UWS_NS);
+        if (e != null)
         {
-            e = new Element("result", UWS_NS);
-            e.setAttribute("id", rs.getName());
-            e.setAttribute("href", rs.getURL().toString(), XLINK_NS);
-            rtn.addContent(e);
+            rtn = new ArrayList<Result>();
+
+            Result rs = null;
+            List<?> listE = e.getChildren("result", UWS_NS);
+            for (Object obj : listE)
+            {
+                Element eRs = (Element) obj;
+                String id = eRs.getAttributeValue("id");
+                String href = eRs.getAttributeValue("href", XLINK_NS);
+                rs = new Result(id, new URL(href));
+                rtn.add(rs);
+            }
         }
         return rtn;
     }
 
-    private Element createErrorSummary()
+    private ErrorSummary parseForErrorSummary() throws MalformedURLException
     {
-        Element rtn = new Element("errorSummary", UWS_NS);
-        rtn.setAttribute("type", _job.getErrorSummary().getErrorType().toString());
+        ErrorSummary rtn = null;
+        Element root = _document.getRootElement();
+        Element e = root.getChild("errorSummary", UWS_NS);
+        if (e != null)
+        {
+            ErrorType errorType = null;
+            String strType = e.getAttributeValue("type");
+            if (strType.equalsIgnoreCase(ErrorType.FATAL.toString()))
+                errorType = ErrorType.FATAL;
+            else if (strType.equalsIgnoreCase(ErrorType.TRANSIENT.toString()))
+                errorType = ErrorType.TRANSIENT;
 
-        Element e = null;
+            Element eDetail = e.getChild("detail", UWS_NS);
+            String strDocUrl = eDetail.getAttributeValue("href", XLINK_NS);
+            URL url = new URL(strDocUrl);
 
-        e = new Element("message", UWS_NS);
-        e.addContent(_job.getErrorSummary().getSummaryMessage());
-        rtn.addContent(e);
-
-        e = new Element("detail", UWS_NS);
-        e.setAttribute("href", _job.getErrorSummary().getDocumentURL().toString(), XLINK_NS);
-        rtn.addContent(e);
-
+            String summaryMessage = e.getChildText("message", UWS_NS);
+            rtn = new ErrorSummary(summaryMessage, url, errorType);
+        }
         return rtn;
     }
 
