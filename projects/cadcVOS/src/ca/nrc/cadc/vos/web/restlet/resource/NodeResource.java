@@ -79,7 +79,6 @@ import org.restlet.representation.Representation;
 import org.restlet.resource.Delete;
 import org.restlet.resource.Get;
 import org.restlet.resource.Put;
-import org.restlet.resource.ResourceException;
 
 import ca.nrc.cadc.vos.Node;
 import ca.nrc.cadc.vos.NodeAlreadyExistsException;
@@ -115,8 +114,9 @@ public class NodeResource extends BaseResource
         path = (String) getRequest().getAttributes().get("nodePath");  
         if (path == null || path.trim().length() == 0)
         {
-            log.debug("No path information provided.");
-            throw new ResourceException(Status.CLIENT_ERROR_BAD_REQUEST);
+            final String message = "No path information provided.";
+            log.debug(message);
+            setStatus(Status.CLIENT_ERROR_BAD_REQUEST, message);
         }
         
         if (!getMethod().equals(Method.PUT))
@@ -130,7 +130,7 @@ public class NodeResource extends BaseResource
             {
                 final String message = "Could not find node with path: " + path;
                 log.debug(message, e);
-                throw new ResourceException(Status.CLIENT_ERROR_NOT_FOUND, e);
+                setStatus(Status.CLIENT_ERROR_NOT_FOUND, message);
             }
         }
     }
@@ -159,26 +159,29 @@ public class NodeResource extends BaseResource
         }
         catch (NodeParsingException e)
         {
-            log.debug("Bad node xml format.");
-            throw new ResourceException(Status.CLIENT_ERROR_BAD_REQUEST, e);
+            String message = "Bad node xml format.";
+            log.debug(message, e);
+            setStatus(Status.CLIENT_ERROR_BAD_REQUEST, message);
         }
         catch (NodeAlreadyExistsException e)
         {
             final String message = "Node already exists: " + path;
             log.debug(message, e);
-            throw new ResourceException(Status.CLIENT_ERROR_CONFLICT, e);
+            setStatus(Status.CLIENT_ERROR_CONFLICT, message);
         }
         catch (NodeNotFoundException e)
         {
             final String message = "Could not resolve part of path for node: " + path;
             log.debug(message, e);
-            throw new ResourceException(Status.CLIENT_ERROR_NOT_FOUND, e);
+            setStatus(Status.CLIENT_ERROR_NOT_FOUND, message);
         }
         catch (IOException e)
         {
-            log.debug("Unexception IOException", e);
-            throw new ResourceException(Status.SERVER_ERROR_INTERNAL);
+            final String message = "Unexception IOException";
+            log.debug(message, e);
+            setStatus(Status.SERVER_ERROR_INTERNAL, message);
         }
+        return null;
     }
     
     @Delete
@@ -192,7 +195,7 @@ public class NodeResource extends BaseResource
         {
             final String message = "Could not find node with path: " + path;
             log.debug(message, e);
-            throw new ResourceException(Status.CLIENT_ERROR_NOT_FOUND, e);
+            setStatus(Status.CLIENT_ERROR_NOT_FOUND, message);
         }
     }
 
