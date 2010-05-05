@@ -67,7 +67,7 @@
 ************************************************************************
 */
 
-package ca.nrc.cadc.vos.web.restlet.resource;
+package ca.nrc.cadc.vos.web.representation;
 
 import java.io.IOException;
 import java.io.OutputStream;
@@ -86,12 +86,12 @@ import ca.nrc.cadc.vos.NodeWriter;
  * @author majorb
  *
  */
-public class NodeRepresentation extends OutputRepresentation
+public class NodeOutputRepresentation extends OutputRepresentation
 {
     private Node node;
     private NodeWriter nodeWriter;
     
-    public NodeRepresentation(Node node, NodeWriter nodeWriter)
+    public NodeOutputRepresentation(Node node, NodeWriter nodeWriter)
     {
         super(MediaType.TEXT_XML);
         this.node = node;

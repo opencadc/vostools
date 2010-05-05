@@ -243,7 +243,22 @@ public abstract class NodeDAO implements NodePersistence
             {
                 rollbackTransaction();
                 log.error("Put rollback for node: " + node, t);
-                return null;
+                if (t instanceof NodeNotFoundException)
+                {
+                    throw (NodeNotFoundException) t;
+                }
+                else if (t instanceof NodeAlreadyExistsException)
+                {
+                    throw (NodeAlreadyExistsException) t;
+                }
+                else if (t instanceof AccessControlException)
+                {
+                    throw (AccessControlException) t;
+                }
+                else
+                {
+                    throw new IllegalStateException(t);
+                }
             }
         }
 
@@ -282,6 +297,18 @@ public abstract class NodeDAO implements NodePersistence
             {
                 rollbackTransaction();
                 log.error("Delete rollback for node: " + node, t);
+                if (t instanceof NodeNotFoundException)
+                {
+                    throw (NodeNotFoundException) t;
+                }
+                else if (t instanceof AccessControlException)
+                {
+                    throw (AccessControlException) t;
+                }
+                else
+                {
+                    throw new IllegalStateException(t);
+                }
             }
             
         }
@@ -379,6 +406,7 @@ public abstract class NodeDAO implements NodePersistence
         
         while (!next.getNode().equals(node.getNode()))
         {
+            log.debug("NodeDAO:getNodesAbove() next: " + next.getNode().getName());
             
             // select id from node where parent is next.getParent() and name = next.getName()
             DAONode nodeInDb = getSingleNodeFromSelect(getSelectNodeByNameAndParentSQL(next));
@@ -460,7 +488,7 @@ public abstract class NodeDAO implements NodePersistence
             + node.getName()
             + "' and "
             + ((node.getParent() == null || (node.getParent().getNodeID() == 0)) ?
-                "parentID is null " :
+                "(parentID is null or parentID = 0)" :
                 "parentID = " + node.getParent().getNodeID()));
         return sb.toString();
     }
@@ -545,7 +573,7 @@ public abstract class NodeDAO implements NodePersistence
         sb.append("contentEncoding,");
         sb.append("contentMD5");
         sb.append(") values (");
-        sb.append(node.getParent() == null ? null : node.getParent()
+        sb.append((node.getParent() == null || node.getParent().getNodeID() == 0) ? null : node.getParent()
                 .getNodeID());
         sb.append(",'");
         sb.append(node.getName());

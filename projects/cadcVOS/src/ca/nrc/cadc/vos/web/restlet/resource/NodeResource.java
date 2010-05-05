@@ -69,16 +69,26 @@
 
 package ca.nrc.cadc.vos.web.restlet.resource;
 
+import java.io.IOException;
+import java.util.HashSet;
+
 import org.apache.log4j.Logger;
+import org.restlet.data.Method;
 import org.restlet.data.Status;
 import org.restlet.representation.Representation;
+import org.restlet.resource.Delete;
 import org.restlet.resource.Get;
+import org.restlet.resource.Put;
 import org.restlet.resource.ResourceException;
 
 import ca.nrc.cadc.vos.Node;
+import ca.nrc.cadc.vos.NodeAlreadyExistsException;
 import ca.nrc.cadc.vos.NodeNotFoundException;
+import ca.nrc.cadc.vos.NodeParsingException;
+import ca.nrc.cadc.vos.NodeReader;
 import ca.nrc.cadc.vos.NodeWriter;
 import ca.nrc.cadc.vos.dao.SearchNode;
+import ca.nrc.cadc.vos.web.representation.NodeOutputRepresentation;
 
 /**
  * Handles HTTP requests for Node resources.
@@ -90,27 +100,38 @@ public class NodeResource extends BaseResource
 {
     private static Logger log = Logger.getLogger(NodeResource.class);
     
+    private String path;
     private Node node;
     
     public void doInit()
     {
 
-        String path = (String) getRequest().getAttributes().get("nodePath");  
+        HashSet<Method> allowedMethods = new HashSet<Method>();
+        allowedMethods.add(Method.GET);
+        allowedMethods.add(Method.PUT);
+        allowedMethods.add(Method.DELETE);
+        setAllowedMethods(allowedMethods);
+
+        path = (String) getRequest().getAttributes().get("nodePath");  
         if (path == null || path.trim().length() == 0)
         {
+            log.debug("No path information provided.");
             throw new ResourceException(Status.CLIENT_ERROR_BAD_REQUEST);
         }
         
-        try
+        if (!getMethod().equals(Method.PUT))
         {
-            Node searchNode = new SearchNode(path);
-            node = getNodePersistence().get(searchNode);   
-        }
-        catch (NodeNotFoundException e)
-        {
-            final String message = "Could not find node with path: " + path;
-            log.debug(message, e);
-            throw new ResourceException(Status.CLIENT_ERROR_NOT_FOUND, e);
+            try
+            {
+                Node searchNode = new SearchNode(path);
+                node = getNodePersistence().get(searchNode);   
+            }
+            catch (NodeNotFoundException e)
+            {
+                final String message = "Could not find node with path: " + path;
+                log.debug(message, e);
+                throw new ResourceException(Status.CLIENT_ERROR_NOT_FOUND, e);
+            }
         }
     }
     
@@ -123,7 +144,56 @@ public class NodeResource extends BaseResource
     public Representation represent()
     {
         NodeWriter nodeWriter = new NodeWriter();
-        return new NodeRepresentation(node, nodeWriter);
+        return new NodeOutputRepresentation(node, nodeWriter);
+    }
+    
+    @Put("xml")
+    public Representation store(Representation value)
+    {   
+        try
+        {
+            Node nodeToPut = new NodeReader().read(value.getStream());
+            Node returnNode = getNodePersistence().put(nodeToPut);
+            NodeWriter nodeWriter = new NodeWriter();
+            return new NodeOutputRepresentation(returnNode, nodeWriter);
+        }
+        catch (NodeParsingException e)
+        {
+            log.debug("Bad node xml format.");
+            throw new ResourceException(Status.CLIENT_ERROR_BAD_REQUEST, e);
+        }
+        catch (NodeAlreadyExistsException e)
+        {
+            final String message = "Node already exists: " + path;
+            log.debug(message, e);
+            throw new ResourceException(Status.CLIENT_ERROR_CONFLICT, e);
+        }
+        catch (NodeNotFoundException e)
+        {
+            final String message = "Could not resolve part of path for node: " + path;
+            log.debug(message, e);
+            throw new ResourceException(Status.CLIENT_ERROR_NOT_FOUND, e);
+        }
+        catch (IOException e)
+        {
+            log.debug("Unexception IOException", e);
+            throw new ResourceException(Status.SERVER_ERROR_INTERNAL);
+        }
+    }
+    
+    @Delete
+    public void remove()
+    {
+        try
+        {
+            getNodePersistence().delete(node);
+        }
+        catch (NodeNotFoundException e)
+        {
+            final String message = "Could not find node with path: " + path;
+            log.debug(message, e);
+            throw new ResourceException(Status.CLIENT_ERROR_NOT_FOUND, e);
+        }
     }
 
 }
