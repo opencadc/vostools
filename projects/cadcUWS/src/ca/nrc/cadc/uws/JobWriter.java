@@ -72,6 +72,7 @@ package ca.nrc.cadc.uws;
 import java.io.IOException;
 import java.io.OutputStream;
 import java.io.Writer;
+import java.util.Date;
 
 import org.apache.log4j.Logger;
 import org.jdom.Document;
@@ -79,6 +80,7 @@ import org.jdom.Element;
 import org.jdom.Namespace;
 import org.jdom.output.Format;
 import org.jdom.output.XMLOutputter;
+import ca.nrc.cadc.date.DateUtil;
 
 /**
  * Writes a Job as XML to an output.
@@ -165,17 +167,17 @@ public class JobWriter
 
         e = new Element("quote", UWS_NS);
         e.setAttribute("nil", "true", XSI_NS);
-        e.addContent(_job.getQuote().toString());
+        e.addContent(dateToString(_job.getQuote()));
         root.addContent(e);
 
         e = new Element("startTime", UWS_NS);
         e.setAttribute("nil", "true", XSI_NS);
-        e.addContent(_job.getStartTime().toString());
+        e.addContent(dateToString(_job.getStartTime()));
         root.addContent(e);
 
         e = new Element("endTime", UWS_NS);
         e.setAttribute("nil", "true", XSI_NS);
-        e.addContent(_job.getEndTime().toString());
+        e.addContent(dateToString(_job.getEndTime()));
         root.addContent(e);
 
         e = new Element("executionDuration", UWS_NS);
@@ -184,7 +186,7 @@ public class JobWriter
 
         e = new Element("destruction", UWS_NS);
         e.setAttribute("nil", "true", XSI_NS);
-        e.addContent(_job.getDestructionTime().toString());
+        e.addContent(dateToString(_job.getDestructionTime()));
         root.addContent(e);
 
         e = createParameters();
@@ -197,6 +199,13 @@ public class JobWriter
         root.addContent(e);
 
         _document = new Document(root);
+    }
+    
+    private static String dateToString(Date date)
+    {
+        String rtn = null;
+        rtn = DateUtil.toString(date, DateUtil.IVOA_DATE_FORMAT, DateUtil.UTC);
+        return rtn;
     }
 
     private Element createParameters()

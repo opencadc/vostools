@@ -69,13 +69,28 @@
 
 package ca.nrc.cadc.uws;
 
-import org.apache.log4j.Logger;
-import org.jdom.*;
-import org.jdom.input.SAXBuilder;
-import java.io.*;
-import java.util.*;
+import java.io.File;
+import java.io.IOException;
+import java.io.InputStream;
+import java.io.Reader;
+import java.io.StringReader;
 import java.net.MalformedURLException;
 import java.net.URL;
+import java.text.ParseException;
+import java.util.ArrayList;
+import java.util.Date;
+import java.util.List;
+
+import javax.security.auth.Subject;
+
+import org.apache.log4j.Logger;
+import org.jdom.Document;
+import org.jdom.Element;
+import org.jdom.JDOMException;
+import org.jdom.Namespace;
+import org.jdom.input.SAXBuilder;
+
+import ca.nrc.cadc.date.DateUtil;
 
 /**
  * @author zhangsa
@@ -89,7 +104,6 @@ public class JobReader
     public static Namespace UWS_NS = Namespace.getNamespace("http://www.ivoa.net/xml/UWS/v1.0");
     public static Namespace XLINK_NS = Namespace.getNamespace("http://www.w3.org/1999/xlink");
 
-    protected Job _job;
     protected Document _document;
 
     protected SAXBuilder _saxBuilder;
@@ -107,16 +121,96 @@ public class JobReader
     public Job readFrom(Reader reader) throws JDOMException, IOException
     {
         _document = _saxBuilder.build(reader);
-        parseJob();
-        return _job;
+        return parseJob();
     }
 
-    private void parseJob()
+    public Job readFrom(File file) throws JDOMException, IOException
+    {
+        _document = _saxBuilder.build(file);
+        return parseJob();
+    }
+
+    public Job readFrom(InputStream in) throws JDOMException, IOException
+    {
+        _document = _saxBuilder.build(in);
+        return parseJob();
+    }
+
+    public Job readFrom(URL url) throws JDOMException, IOException
+    {
+        _document = _saxBuilder.build(url);
+        return parseJob();
+    }
+
+    public Job readFrom(String string) throws JDOMException, IOException
+    {
+        StringReader reader = new StringReader(string);
+        _document = _saxBuilder.build(reader);
+        return parseJob();
+    }
+
+    private Job parseJob()
     {
         Element root = _document.getRootElement();
+
+        String jobID = root.getChildText("jobId", UWS_NS);
+        String runID = root.getChildText("runId", UWS_NS);
+        Subject owner = null; // It's not able to create a Subject based on XML text.
+        ExecutionPhase executionPhase = parseExecutionPhase();
+        Date quote = parseDate(root.getChildText("quote", UWS_NS));
+        Date startTime = parseDate(root.getChildText("startTime", UWS_NS));
+        Date endTime = parseDate(root.getChildText("endTime", UWS_NS));
+        Date destructionTime = parseDate(root.getChildText("destruction", UWS_NS));
+        long executionDuration = Long.parseLong(root.getChildText("executionDuration", UWS_NS));
+        ErrorSummary errorSummary = parseErrorSummary();
+        List<Result> resultsList = parseResultsList();
+        List<Parameter> parameterList = parseParametersList();
+        String requestPath = null; // not presented in XML text
+
+        return new Job(jobID, executionPhase, executionDuration, destructionTime, quote, startTime, endTime, errorSummary, owner,
+                runID, resultsList, parameterList, requestPath);
     }
 
-    private List<Parameter> parseForParametersList() throws MalformedURLException
+    private static Date parseDate(String strDate)
+    {
+        Date rtn = null;
+        try
+        {
+            rtn = DateUtil.toDate(strDate, DateUtil.IVOA_DATE_FORMAT, DateUtil.UTC);
+        } catch (ParseException e)
+        { // do nothing, use null as return value
+        }
+        return rtn;
+    }
+
+    private ExecutionPhase parseExecutionPhase()
+    {
+        ExecutionPhase rtn = null;
+        Element root = _document.getRootElement();
+        String strPhase = root.getChildText("phase", UWS_NS);
+        if (strPhase.equalsIgnoreCase(ExecutionPhase.PENDING.toString()))
+            rtn = ExecutionPhase.PENDING;
+        else if (strPhase.equalsIgnoreCase(ExecutionPhase.QUEUED.toString()))
+            rtn = ExecutionPhase.QUEUED;
+        else if (strPhase.equalsIgnoreCase(ExecutionPhase.EXECUTING.toString()))
+            rtn = ExecutionPhase.EXECUTING;
+        else if (strPhase.equalsIgnoreCase(ExecutionPhase.COMPLETED.toString()))
+            rtn = ExecutionPhase.COMPLETED;
+        else if (strPhase.equalsIgnoreCase(ExecutionPhase.ERROR.toString()))
+            rtn = ExecutionPhase.ERROR;
+        else if (strPhase.equalsIgnoreCase(ExecutionPhase.UNKNOWN.toString()))
+            rtn = ExecutionPhase.UNKNOWN;
+        else if (strPhase.equalsIgnoreCase(ExecutionPhase.HELD.toString()))
+            rtn = ExecutionPhase.HELD;
+        else if (strPhase.equalsIgnoreCase(ExecutionPhase.SUSPENDED.toString()))
+            rtn = ExecutionPhase.SUSPENDED;
+        else if (strPhase.equalsIgnoreCase(ExecutionPhase.ABORTED.toString()))
+            rtn = ExecutionPhase.ABORTED;
+
+        return rtn;
+    }
+
+    private List<Parameter> parseParametersList()
     {
         List<Parameter> rtn = null;
         Element root = _document.getRootElement();
@@ -139,7 +233,7 @@ public class JobReader
         return rtn;
     }
 
-    private List<Result> parseForResultsList() throws MalformedURLException
+    private List<Result> parseResultsList()
     {
         List<Result> rtn = null;
         Element root = _document.getRootElement();
@@ -155,14 +249,20 @@ public class JobReader
                 Element eRs = (Element) obj;
                 String id = eRs.getAttributeValue("id");
                 String href = eRs.getAttributeValue("href", XLINK_NS);
-                rs = new Result(id, new URL(href));
-                rtn.add(rs);
+                try
+                {
+                    rs = new Result(id, new URL(href));
+                    rtn.add(rs);
+                } catch (MalformedURLException ex)
+                {
+                    // do nothing; just do not add rs to list
+                }
             }
         }
         return rtn;
     }
 
-    private ErrorSummary parseForErrorSummary() throws MalformedURLException
+    private ErrorSummary parseErrorSummary()
     {
         ErrorSummary rtn = null;
         Element root = _document.getRootElement();
@@ -178,7 +278,14 @@ public class JobReader
 
             Element eDetail = e.getChild("detail", UWS_NS);
             String strDocUrl = eDetail.getAttributeValue("href", XLINK_NS);
-            URL url = new URL(strDocUrl);
+            URL url = null;
+            try
+            {
+                url = new URL(strDocUrl);
+            } catch (MalformedURLException ex)
+            {
+                // do nothing; use NULL value
+            }
 
             String summaryMessage = e.getChildText("message", UWS_NS);
             rtn = new ErrorSummary(summaryMessage, url, errorType);
