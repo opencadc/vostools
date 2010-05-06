@@ -430,6 +430,11 @@ public class QueryRunner implements JobRunner
             catch(Throwable t2)
             {
                 logger.error( "failed to persist error", t2);
+                // this is really bad
+                logger.debug("setting ExecutionPhase = " + ExecutionPhase.ERROR);
+                job.setExecutionPhase( ExecutionPhase.ERROR );
+                job.setErrorSummary(new ErrorSummary("failed to persist error document: " + t2, null));
+                this.job = manager.persist(job);
             }
 		}
         finally
