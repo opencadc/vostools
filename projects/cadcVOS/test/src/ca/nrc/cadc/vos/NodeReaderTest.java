@@ -150,7 +150,7 @@ public class NodeReaderTest
         }
     }
 
-    @Test
+//    @Test
     public void read_ContainerNode_InputStream()
     {
         try
@@ -169,7 +169,7 @@ public class NodeReaderTest
         }
     }
 
-    @Test
+//    @Test
     public void read_DataNode_InputStream()
     {
         try
@@ -188,7 +188,7 @@ public class NodeReaderTest
         }
     }
 
-    @Test
+//    @Test
     public void read_ContainerNode_Reader()
     {
         try
@@ -207,7 +207,7 @@ public class NodeReaderTest
         }
     }
 
-    @Test
+//    @Test
     public void read_DataNode_Reader()
     {
         try

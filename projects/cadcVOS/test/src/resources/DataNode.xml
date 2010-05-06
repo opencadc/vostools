@@ -5,7 +5,7 @@
       uri="vos://nvo.caltech!vospace/mydata1"
       busy="false">
   <properties>
-    <property uri="ivo://ivoa.net/vospace/core#description" readOnly="true">My important results</property>
+    <property uri="ivo://ivoa.net/vospace/core#description" readOnly="true" xsi:nil="true"></property>
     <property uri="ivo://ivoa.net/vospace/core#date" readOnly="true">2010-03-12</property>
   </properties>
   <accepts>

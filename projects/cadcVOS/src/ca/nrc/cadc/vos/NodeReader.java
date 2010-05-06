@@ -389,10 +389,27 @@ public class NodeReader
                 log.error(error);
                 throw new NodeParsingException(error);
             }
-            NodeProperty nodeProperty = new NodeProperty(propertyUri, property.getText());
+            // if marked for deletetion, property can not contain text content
+            String xsiNil = property.getAttributeValue("xsi:nil");
+            boolean markedForDeletion = false;
+            if (xsiNil != null)
+                markedForDeletion = xsiNil.equalsIgnoreCase("true") ? true : false;
+
+            // Property text content
+            String text = property.getText();
+            if (markedForDeletion)
+                text = "";
+
+            // new NodeProperty
+            NodeProperty nodeProperty = new NodeProperty(propertyUri, text);
+
+            // set readOnly attribute
             String readOnly = property.getAttributeValue("readOnly");
             if (readOnly != null)
                 nodeProperty.setReadOnly((readOnly.equalsIgnoreCase("true") ? true : false));
+
+            // markedForDeletion attribute
+            nodeProperty.setMarkedForDeletion(markedForDeletion);
             list.add(nodeProperty);
         }
 
