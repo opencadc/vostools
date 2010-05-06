@@ -1,4 +1,4 @@
-<!--
+/*
 ************************************************************************
 *******************  CANADIAN ASTRONOMY DATA CENTRE  *******************
 **************  CENTRE CANADIEN DE DONNÉES ASTRONOMIQUES  **************
@@ -65,61 +65,108 @@
 *  $Revision: 4 $
 *
 ************************************************************************
--->
+*/
 
-<project default="build" basedir=".">
-  <property environment="env"/>
+package ca.nrc.cadc.conformance.vos;
 
-    <!-- site-specific build properties or overrides of values in opencadc.properties -->
-    <property file="${env.CADC_PREFIX}/etc/local.properties" />
+import ca.nrc.cadc.vos.DataNode;
+import ca.nrc.cadc.vos.NodeProperty;
+import ca.nrc.cadc.vos.NodeReader;
+import com.meterware.httpunit.WebResponse;
+import java.util.ArrayList;
+import java.util.List;
+import org.apache.log4j.Logger;
+import org.junit.After;
+import org.junit.AfterClass;
+import org.junit.Before;
+import org.junit.BeforeClass;
+import org.junit.Test;
+import static org.junit.Assert.*;
 
-    <!-- site-specific targets, e.g. install, cannot duplicate those in opencadc.targets.xml -->
-    <import file="${env.CADC_PREFIX}/etc/local.targets.xml" optional="true" />
+public class DeleteDataNodeTest extends AbstractVOSTest
+{
+    private static Logger log = Logger.getLogger(DeleteDataNodeTest.class);
 
-    <!-- default properties and targets -->
-    <property file="${env.CADC_PREFIX}/etc/opencadc.properties" />
-    <import file="${env.CADC_PREFIX}/etc/opencadc.targets.xml"/>
+    static DataNode node;
 
-    <!-- developer convenience: place for extra targets and properties -->
-    <import file="extras.xml" optional="true" />
+    public DeleteDataNodeTest()
+    {
+        super();
+    }
 
-    <property name="project" value="cadcTestVOS" />
+    @BeforeClass
+    public static void setUpClass() throws Exception
+    {
+        // List of NodeProperty
+        List<NodeProperty> properties = new ArrayList<NodeProperty>();
+        NodeProperty nodeProperty = new NodeProperty("ivo://ivoa.net/vospace/core#description", "My award winning images");
+        nodeProperty.setReadOnly(true);
+        properties.add(nodeProperty);
 
-    <property name="cadc" value="${lib}/cadcUtil.jar:${lib}/cadcVOS.jar" />
-    <property name="ext" value="${ext.lib}/httpunit.jar:${ext.lib}/jdom.jar:${ext.lib}/junit.jar:${ext.lib}/log4j.jar:${ext.lib}/xmlunit.jar" />
+        // DataNode
+        node = new DataNode("/delete_data_node");
+        node.setProperties(properties);
+        node.setBusy(true);
+    }
 
-    <property name="jars" value="${cadc}:${ext}" />
+    @AfterClass
+    public static void tearDownClass() throws Exception
+    {
+    }
 
-    <target name="build" depends="compile">
-        <jar jarfile="${build}/lib/${project}.jar"
-            basedir="${build}/class"
-            update="no">
-        </jar>
-    </target>
+    @Before
+    public void setUp() {
+    }
 
-    <property name="testingJars" value="${ext.lib}/xerces.jar:${ext.lib}/nekohtml.jar:${ext.lib}/js.jar:${ext.dev}/junit.jar:${ext.lib}/jconn3.jar:${lib}/dbUtil.jar" />
+    @After
+    public void tearDown() {
+    }
 
-    <target name="test" depends="compile">
-        <echo message="Running test" />
+    @Test
+    public void deleteDataNode()
+    {
+        try
+        {
+            log.debug("deleteDataNode");
 
-        <!-- Run the junit test suite -->
-        <echo message="Running test suite..." />
-        <junit printsummary="yes" haltonfailure="yes" fork="yes">
-            <classpath>
-                <pathelement path="build/class"/>
-                <pathelement path="test/resources/"/>
-                <pathelement path="${jars}:${testingJars}"/>
-            </classpath>
-            <sysproperty key="service.url" value="http://localhost/vospace/nodes" />
-            <test name="ca.nrc.cadc.conformance.vos.CreateContainerNodeTest"/>
-            <!--<test name="ca.nrc.cadc.conformance.vos.CreateDataNodeTest"/>-->
-            <!--<test name="ca.nrc.cadc.conformance.vos.DeleteContainerNodeTest"/>-->
-            <!--<test name="ca.nrc.cadc.conformance.vos.DeleteDataNodeTest"/>-->
-            <!--<test name="ca.nrc.cadc.conformance.vos.UpdateContainerNodeTest"/>-->
-            <!--<test name="ca.nrc.cadc.conformance.vos.UpdateDataNodeTest"/>-->
-            <formatter type="plain" usefile="false"/>
-        </junit>
+            // Add ContainerNode to the VOSpace.
+            WebResponse response = put(node);
+            assertEquals("PUT response code should be 200", 200, response.getResponseCode());
 
-    </target>
+            // Get the response (an XML document)
+            String xml = response.getText();
+            log.debug("PUT XML:\r\n" + xml);
 
-</project>
+            // Create a DOM document from XML and validate against the VOSPace schema.
+            NodeReader reader = new NodeReader();
+            reader.read(xml);
+
+            // Delete the node.
+            response = delete(node);
+            assertEquals("DELETE response code should be 200", 200, response.getResponseCode());
+
+            // Get the response (an XML document)
+            xml = response.getText();
+            log.debug("DELETE XML:\r\n" + xml);
+            
+            // Try and get the node from vospace
+            response = get(node);
+            assertEquals("GET response code should be 404 for a node that doesn't exist", 404, response.getResponseCode());
+
+            // Get the response (an XML document)
+            xml = response.getText();
+            log.debug("GET XML:\r\n" + xml);
+
+            // Validate against the VOSPace schema.
+            reader.read(xml);
+
+            log.info("deleteDataNode passed.");
+        }
+        catch (Throwable t)
+        {
+            log.error(t);
+            fail(t.getMessage());
+        }
+    }
+
+}
