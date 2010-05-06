@@ -93,16 +93,13 @@ public class NodeWriter
     /*
      * The VOSpace Namespace.
      */
-    protected static Namespace voSpaceNamespace;
-    protected static Namespace nodeNamespace;
-    protected static Namespace vostNamespace;
+    protected static Namespace defaultNamespace;
+    protected static Namespace vosNamespace;
     protected static Namespace xsiNamespace;
     static
     {
-//        voSpaceNamespace = Namespace.getNamespace(NodeReader.VOSPACE_SCHEMA);
-        voSpaceNamespace = Namespace.NO_NAMESPACE;
-        nodeNamespace = Namespace.getNamespace("http://www.ivoa.net/xml/VOSpaceTypes-v2.0");
-        vostNamespace = Namespace.getNamespace("vost", "http://www.ivoa.net/xml/VOSpaceTypes-v2.0");
+        defaultNamespace = Namespace.getNamespace("http://www.ivoa.net/xml/VOSpace/v2.0");
+        vosNamespace = Namespace.getNamespace("vos", "http://www.ivoa.net/xml/VOSpace/v2.0");
         xsiNamespace = Namespace.getNamespace("xsi", "http://www.w3.org/2001/XMLSchema-instance");
     }
 
@@ -155,10 +152,10 @@ public class NodeWriter
         Element root = getRootElement(node);
 
         // properties element
-        root.setContent(getPropertiesElement(node));
+        root.addContent(getPropertiesElement(node));
 
         // nodes element
-        root.setContent(getNodesElement(node));
+        root.addContent(getNodesElement(node));
 
         // write out the Document
         write(root, writer);
@@ -216,7 +213,7 @@ public class NodeWriter
         root.setAttribute("busy", (node.isBusy() ? "true" : "false"));
 
         // properties element
-        root.setContent(getPropertiesElement(node));
+        root.addContent(getPropertiesElement(node));
 
         // write out the Document
         write(root, writer);
@@ -231,12 +228,11 @@ public class NodeWriter
     protected Element getRootElement(Node node)
     {
         // Create the root element (node).
-        Element root = new Element("node", voSpaceNamespace);
-//        root.setNamespace(nodeNamespace);
-//        root.setNamespace(vostNamespace);
-//        root.setNamespace(xsiNamespace);
+        Element root = new Element("node", defaultNamespace);
+        root.addNamespaceDeclaration(vosNamespace);
+        root.addNamespaceDeclaration(xsiNamespace);
         root.setAttribute("uri", node.getPath());
-        root.setAttribute("type", "vost:" + node.getClass().getSimpleName(), xsiNamespace);
+        root.setAttribute("type", "vos:" + node.getClass().getSimpleName() + "Type", xsiNamespace);
         return root;
     }
 
@@ -248,10 +244,10 @@ public class NodeWriter
      */
     protected Element getPropertiesElement(Node node)
     {
-        Element properties  = new Element("properties", voSpaceNamespace);
+        Element properties = new Element("properties", defaultNamespace);
         for (NodeProperty nodeProperty : node.getProperties())
         {
-            Element property = new Element("property", voSpaceNamespace);
+            Element property = new Element("property", defaultNamespace);
             property.setAttribute("uri", nodeProperty.getPropertyURI());
             property.setText(nodeProperty.getPropertyValue());
             property.setAttribute("readOnly", (nodeProperty.isReadOnly() ? "true" : "false"));
@@ -268,10 +264,10 @@ public class NodeWriter
      */
     protected Element getNodesElement(ContainerNode node)
     {
-        Element nodes = new Element("nodes", voSpaceNamespace);
+        Element nodes = new Element("nodes", defaultNamespace);
         for (Node childNode : node.getNodes())
         {
-            Element nodeElement = new Element("node", voSpaceNamespace);
+            Element nodeElement = new Element("node", defaultNamespace);
             nodeElement.setAttribute("uri", childNode.getPath());
             nodes.addContent(nodeElement);
         }

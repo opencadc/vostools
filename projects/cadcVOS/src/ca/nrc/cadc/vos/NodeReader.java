@@ -77,8 +77,10 @@ import java.io.StringReader;
 import java.io.UnsupportedEncodingException;
 import java.net.URI;
 import java.net.URISyntaxException;
+import java.net.URL;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.MissingResourceException;
 
 import org.apache.log4j.Logger;
 import org.jdom.Document;
@@ -94,16 +96,26 @@ import org.jdom.input.SAXBuilder;
  */
 public class NodeReader
 {
-    public static final String VOSPACE_SCHEMA = "http://www.ivoa.net/xml/VOSpace/v2.0";
+    private static final String VOSPACE_SCHEMA_RESOURCE = "VOSpace-2.0.xsd";
 
     private static Logger log = Logger.getLogger(NodeReader.class);
+    private static String schemaUrl;
+    static
+    {
+        URL schemaURL = NodeReader.class.getClassLoader().getResource(VOSPACE_SCHEMA_RESOURCE);
+        if (schemaURL == null)
+            throw new MissingResourceException("Resource not found: " + VOSPACE_SCHEMA_RESOURCE,
+                                               "NodeReader", VOSPACE_SCHEMA_RESOURCE);
+        schemaUrl = schemaURL.toString();
+        log.debug("vospaceSchemaUrl: " + schemaURL);
+    }
     
     protected SAXBuilder parser;
     protected Namespace xsiNamespace;
 
     public NodeReader()
     {
-        parser = new SAXBuilder("org.apache.xerces.parsers.SAXParser", false);
+        parser = new SAXBuilder("org.apache.xerces.parsers.SAXParser", true);
         parser.setFeature("http://xml.org/sax/features/validation", true);
         parser.setFeature("http://apache.org/xml/features/validation/schema", true);
         parser.setFeature("http://apache.org/xml/features/validation/schema-full-checking", true);
@@ -192,10 +204,10 @@ public class NodeReader
 
         /* Node base elements */
         // uri attribute of the node element
-        String uri = root.getAttributeValue("uri", namespace);
+        String uri = root.getAttributeValue("uri");
         if (uri == null)
         {
-            String error = "uri attribute not found in node element";
+            String error = "uri attribute not found in root element";
             log.error(error);
             throw new NodeParsingException(error);
         }
@@ -229,6 +241,12 @@ public class NodeReader
         // Split type into namespace and type value
         String[] types = xsiType.split(":");
         String type = types[1];
+        log.debug("type: " + type);
+
+        // Strip off 'Type'
+        int index = type.indexOf("Type");
+        if (index != -1)
+            type = type.substring(0, index);
         log.debug("node type: " + type);
 
         if (type.equals(ContainerNode.class.getSimpleName()))
@@ -247,7 +265,7 @@ public class NodeReader
      */
     protected String getVOSpaceSchema()
     {
-        return VOSPACE_SCHEMA;
+        return schemaUrl;
     }
 
     /**

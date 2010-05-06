@@ -1,16 +1,16 @@
 /*
  ************************************************************************
  *******************  CANADIAN ASTRONOMY DATA CENTRE  *******************
- **************  CENTRE CANADIEN DE DONNÉES ASTRONOMIQUES  **************
+ **************  CENTRE CANADIEN DE DONN√âES ASTRONOMIQUES  **************
  *
  *  (c) 2009.                            (c) 2009.
  *  Government of Canada                 Gouvernement du Canada
  *  National Research Council            Conseil national de recherches
  *  Ottawa, Canada, K1A 0R6              Ottawa, Canada, K1A 0R6
- *  All rights reserved                  Tous droits réservés
+ *  All rights reserved                  Tous droits r√©serv√©s
  *
- *  NRC disclaims any warranties,        Le CNRC dénie toute garantie
- *  expressed, implied, or               énoncée, implicite ou légale,
+ *  NRC disclaims any warranties,        Le CNRC d√©nie toute garantie
+ *  expressed, implied, or               √©nonc√©e, implicite ou l√©gale,
  *  statutory, of any kind with          de quelque nature que ce
  *  respect to the software,             soit, concernant le logiciel,
  *  including without limitation         y compris sans restriction
@@ -18,19 +18,19 @@
  *  or fitness for a particular          marchande ou de pertinence
  *  purpose. NRC shall not be            pour un usage particulier.
  *  liable in any event for any          Le CNRC ne pourra en aucun cas
- *  damages, whether direct or           être tenu responsable de tout
+ *  damages, whether direct or           √™tre tenu responsable de tout
  *  indirect, special or general,        dommage, direct ou indirect,
- *  consequential or incidental,         particulier ou général,
- *  arising from the use of the          accessoire ou fortuit, résultant
+ *  consequential or incidental,         particulier ou g√©n√©ral,
+ *  arising from the use of the          accessoire ou fortuit, r√©sultant
  *  software.  Neither the name          de l'utilisation du logiciel. Ni
  *  of the National Research             le nom du Conseil National de
  *  Council of Canada nor the            Recherches du Canada ni les noms
  *  names of its contributors may        de ses  participants ne peuvent
- *  be used to endorse or promote        être utilisés pour approuver ou
- *  products derived from this           promouvoir les produits dérivés
+ *  be used to endorse or promote        √™tre utilis√©s pour approuver ou
+ *  products derived from this           promouvoir les produits d√©riv√©s
  *  software without specific prior      de ce logiciel sans autorisation
- *  written permission.                  préalable et particulière
- *                                       par écrit.
+ *  written permission.                  pr√©alable et particuli√®re
+ *                                       par √©crit.
  *
  *  This file is part of the             Ce fichier fait partie du projet
  *  OpenCADC project.                    OpenCADC.
@@ -38,27 +38,27 @@
  *  OpenCADC is free software:           OpenCADC est un logiciel libre ;
  *  you can redistribute it and/or       vous pouvez le redistribuer ou le
  *  modify it under the terms of         modifier suivant les termes de
- *  the GNU Affero General Public        la “GNU Affero General Public
- *  License as published by the          License” telle que publiée
+ *  the GNU Affero General Public        la ‚ÄúGNU Affero General Public
+ *  License as published by the          License‚Äù telle que publi√©e
  *  Free Software Foundation,            par la Free Software Foundation
  *  either version 3 of the              : soit la version 3 de cette
- *  License, or (at your option)         licence, soit (à votre gré)
- *  any later version.                   toute version ultérieure.
+ *  License, or (at your option)         licence, soit (√† votre gr√©)
+ *  any later version.                   toute version ult√©rieure.
  *
- *  OpenCADC is distributed in the       OpenCADC est distribué
- *  hope that it will be useful,         dans l’espoir qu’il vous
+ *  OpenCADC is distributed in the       OpenCADC est distribu√©
+ *  hope that it will be useful,         dans l‚Äôespoir qu‚Äôil vous
  *  but WITHOUT ANY WARRANTY;            sera utile, mais SANS AUCUNE
- *  without even the implied             GARANTIE : sans même la garantie
- *  warranty of MERCHANTABILITY          implicite de COMMERCIALISABILITÉ
- *  or FITNESS FOR A PARTICULAR          ni d’ADÉQUATION À UN OBJECTIF
+ *  without even the implied             GARANTIE : sans m√™me la garantie
+ *  warranty of MERCHANTABILITY          implicite de COMMERCIALISABILIT√â
+ *  or FITNESS FOR A PARTICULAR          ni d‚ÄôAD√âQUATION √Ä UN OBJECTIF
  *  PURPOSE.  See the GNU Affero         PARTICULIER. Consultez la Licence
- *  General Public License for           Générale Publique GNU Affero
- *  more details.                        pour plus de détails.
+ *  General Public License for           G√©n√©rale Publique GNU Affero
+ *  more details.                        pour plus de d√©tails.
  *
- *  You should have received             Vous devriez avoir reçu une
- *  a copy of the GNU Affero             copie de la Licence Générale
+ *  You should have received             Vous devriez avoir re√ßu une
+ *  a copy of the GNU Affero             copie de la Licence G√©n√©rale
  *  General Public License along         Publique GNU Affero avec
- *  with OpenCADC.  If not, see          OpenCADC ; si ce n’est
+ *  with OpenCADC.  If not, see          OpenCADC ; si ce n‚Äôest
  *  <http://www.gnu.org/licenses/>.      pas le cas, consultez :
  *                                       <http://www.gnu.org/licenses/>.
  *
@@ -88,7 +88,7 @@ import static org.junit.Assert.*;
  */
 public class NodeWriterTest
 {
-private static Logger log = Logger.getLogger(NodeWriterTest.class);
+    private static Logger log = Logger.getLogger(NodeWriterTest.class);
     {
         Log4jInit.setLevel("ca", Level.INFO);
     }
@@ -115,11 +115,13 @@ private static Logger log = Logger.getLogger(NodeWriterTest.class);
         nodes.add(new DataNode("vos://nvo.caltech!vospace/mydir/ngc6801"));
 
         // ContainerNode
-        containerNode = new ContainerNode("/dir/subdir", properties);
+        containerNode = new ContainerNode("/dir/subdir");
+        containerNode.setProperties(properties);
         containerNode.setNodes(nodes);
 
         // DataNode
-        dataNode = new DataNode("/dir/subdir", properties);
+        dataNode = new DataNode("/dir/subdir");
+        dataNode.setProperties(properties);
         dataNode.setBusy(true);
     }
 
@@ -149,6 +151,11 @@ private static Logger log = Logger.getLogger(NodeWriterTest.class);
             NodeWriter instance = new NodeWriter();
             instance.write(containerNode, sb);
             log.debug(sb.toString());
+
+            // validate the XML
+            NodeReader reader = new NodeReader();
+            reader.read(sb.toString());
+            
             log.info("write_ContainerNode_StringBuilder passed");
         }
         catch (Throwable t)
@@ -168,6 +175,11 @@ private static Logger log = Logger.getLogger(NodeWriterTest.class);
             NodeWriter instance = new NodeWriter();
             instance.write(dataNode, sb);
             log.debug(sb.toString());
+
+            // validate the XML
+            NodeReader reader = new NodeReader();
+            reader.read(sb.toString());
+
             log.info("write_DataNode_StringBuilder passed");
         }
         catch (Throwable t)
@@ -180,7 +192,7 @@ private static Logger log = Logger.getLogger(NodeWriterTest.class);
     /**
      * Test of write method, of class NodeWriter.
      */
-    @Test
+//    @Test
     public void write_ContainerNode_OutputStream()
     {
         try
@@ -200,7 +212,7 @@ private static Logger log = Logger.getLogger(NodeWriterTest.class);
     /**
      * Test of write method, of class NodeWriter.
      */
-    @Test
+//    @Test
     public void write_DataNode_OutputStream()
     {
         try
@@ -220,7 +232,7 @@ private static Logger log = Logger.getLogger(NodeWriterTest.class);
     /**
      * Test of write method, of class NodeWriter.
      */
-    @Test
+//    @Test
     public void write_ContainerNode_Writer()
     {
         try
@@ -240,7 +252,7 @@ private static Logger log = Logger.getLogger(NodeWriterTest.class);
     /**
      * Test of write method, of class NodeWriter.
      */
-    @Test
+//    @Test
     public void write_DataNode_Writer()
     {
         try

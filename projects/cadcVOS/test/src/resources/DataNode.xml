@@ -1,7 +1,12 @@
-<node xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:type="vos:DataNode" uri="vos://nvo.caltech!vospace/mydata1" busy="false">
+<node xmlns="http://www.ivoa.net/xml/VOSpace/v2.0"
+      xmlns:vos="http://www.ivoa.net/xml/VOSpace/v2.0"
+      xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+      xsi:type="vos:DataNodeType"
+      uri="vos://nvo.caltech!vospace/mydata1"
+      busy="false">
   <properties>
-    <property uri="ivo://ivoa.net/vospace/core#description">My important results</property>
-    <property uri="ivo://ivoa.net/vospace/core#date">2010-03-12</property>
+    <property uri="ivo://ivoa.net/vospace/core#description" readOnly="true">My important results</property>
+    <property uri="ivo://ivoa.net/vospace/core#date" readOnly="true">2010-03-12</property>
   </properties>
   <accepts>
     <view uri="ivo://ivoa.net/vospace/core#anyview1"/>
