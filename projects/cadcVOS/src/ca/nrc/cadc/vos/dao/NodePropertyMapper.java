@@ -82,10 +82,10 @@ import ca.nrc.cadc.vos.NodeProperty;
 public class NodePropertyMapper implements RowMapper
 {
     
-    public static final String PROPERTY_CONTENTLENGTH_URI = "ivo://ca.nrc.cadc.vos/vospace/properties#contentLength";
-    public static final String PROPERTY_CONTENTTYPE_URI = "ivo://ca.nrc.cadc.vos/vospace/properties#contentType";
-    public static final String PROPERTY_CONTENTENCODING_URI = "ivo://ca.nrc.cadc.vos/vospace/properties#contentEncoding";
-    public static final String PROPERTY_CONTENTMD5_URI = "ivo://ca.nrc.cadc.vos/vospace/properties#contentMD5";
+    public static final String PROPERTY_CONTENTLENGTH_URI = "ivo://ivoa.net/vospace/core#length";
+    public static final String PROPERTY_CONTENTTYPE_URI = "ivo://ivoa.net/vospace/core#type";
+    public static final String PROPERTY_CONTENTENCODING_URI = "ivo://ivoa.net/vospace/core#encoding";
+    public static final String PROPERTY_CONTENTMD5_URI = "ivo://ivoa.net/vospace/core#MD5";
     
     public static boolean isStandardHeaderProperty(NodeProperty nodeProperty)
     {

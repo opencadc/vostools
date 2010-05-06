@@ -86,6 +86,9 @@ public class NodeProperty
     
     // true if the property cannot be modified.
     private boolean readOnly;
+    
+    // true if this property is marked for deletion
+    private boolean markedForDeletion;
 
     /**
      * Property constructor.
@@ -98,6 +101,7 @@ public class NodeProperty
     {
         this.propertyURI = uri;
         this.propertyValue = value;
+        this.markedForDeletion = false;
     }
     
     public boolean equals(Object o)
@@ -148,6 +152,16 @@ public class NodeProperty
     public void setReadOnly(boolean readOnly)
     {
         this.readOnly = readOnly;
+    }
+
+    public boolean isMarkedForDeletion()
+    {
+        return markedForDeletion;
+    }
+
+    public void setMarkedForDeletion(boolean markedForDeletion)
+    {
+        this.markedForDeletion = markedForDeletion;
     }
     
 }

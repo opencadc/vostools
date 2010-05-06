@@ -228,7 +228,7 @@ public abstract class NodeDAO implements NodePersistence
                     NodeProperty next = propertyIterator.next();
                     if (!NodePropertyMapper.isStandardHeaderProperty(next))
                     {
-                        jdbc.update(getInsertNodePropertiesSQL(dbNode, next));
+                        jdbc.update(getInsertNodePropertySQL(dbNode, next));
                     }
                 }
 
@@ -313,6 +313,77 @@ public abstract class NodeDAO implements NodePersistence
             
         }
         log.debug("Node deleted: " + nodeInDb);
+    }
+    
+    /**
+     * Update existing node properties, delete existing properties marked
+     * for deletion, and add any new properties.
+     */
+    public Node updateProperties(Node node) throws AccessControlException,
+        NodeNotFoundException
+    {
+        // Get the node from the database.
+        DAONode nodeInDb = this.getDAONode(node);
+        
+        // check update permissions
+        getNodeAuthorizer().checkUpdateAccess(nodeInDb.getNode());
+        
+        synchronized (this)
+        {
+            try
+            {
+                startTransaction();
+                
+                // Iterate through the user properties and the db properties,
+                // potentially updading, deleting or adding new ones
+                for (NodeProperty nextProperty : node.getProperties())
+                {
+                    // Is this property saved already?
+                    if (nodeInDb.getProperties().contains(nextProperty))
+                    {
+                        if (nextProperty.isMarkedForDeletion())
+                        {
+                            // delete the property
+                            jdbc.update(getDeleteNodePropertySQL(nodeInDb, nextProperty));
+                        }
+                        else
+                        {
+                            // update the property value
+                            jdbc.update(getUpdateNodePropertySQL(nodeInDb, nextProperty));
+                        }
+                    }
+                    else
+                    {
+                        // insert the new property
+                        jdbc.update(getInsertNodePropertySQL(nodeInDb, nextProperty));
+                    }
+                }
+                
+                commitTransaction();
+                
+            } catch (Throwable t)
+            {
+                rollbackTransaction();
+                log.error("Update rollback for node: " + node, t);
+                if (t instanceof NodeNotFoundException)
+                {
+                    throw (NodeNotFoundException) t;
+                }
+                else if (t instanceof AccessControlException)
+                {
+                    throw (AccessControlException) t;
+                }
+                else
+                {
+                    throw new IllegalStateException(t);
+                }
+            }
+            
+        }
+        log.debug("Node updated: " + nodeInDb);
+        
+        // return a fresh instance of the node
+        return get(node);
     }
     
     /**
@@ -613,7 +684,7 @@ public abstract class NodeDAO implements NodePersistence
      * @param nodeProperty  The property of the node
      * @return The SQL string for inserting the node property in the database.
      */
-    protected String getInsertNodePropertiesSQL(DAONode node,
+    protected String getInsertNodePropertySQL(DAONode node,
             NodeProperty nodeProperty)
     {
         StringBuilder sb = new StringBuilder();
@@ -654,6 +725,34 @@ public abstract class NodeDAO implements NodePersistence
         sb.append(getNodePropertyTableName());
         sb.append(" where nodeID = ");
         sb.append(node.getNodeID());
+        return sb.toString();
+    }
+    
+    protected String getDeleteNodePropertySQL(DAONode node, NodeProperty nodeProperty)
+    {
+        StringBuilder sb = new StringBuilder();
+        sb.append("delete from ");
+        sb.append(getNodePropertyTableName());
+        sb.append(" where nodeID = ");
+        sb.append(node.getNodeID());
+        sb.append(" and propertyURI = '");
+        sb.append(nodeProperty.getPropertyURI());
+        sb.append("'");
+        return sb.toString();
+    }
+    
+    protected String getUpdateNodePropertySQL(DAONode node, NodeProperty nodeProperty)
+    {
+        StringBuilder sb = new StringBuilder();
+        sb.append("update ");
+        sb.append(getNodePropertyTableName());
+        sb.append(" set propertyValue = '");
+        sb.append(nodeProperty.getPropertyValue());
+        sb.append("' where nodeID = ");
+        sb.append(node.getNodeID());
+        sb.append(" and propertyURI = '");
+        sb.append(nodeProperty.getPropertyURI());
+        sb.append("'");
         return sb.toString();
     }
     

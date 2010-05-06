@@ -86,6 +86,8 @@ public interface NodePersistence
     
     void delete(Node node) throws AccessControlException, NodeNotFoundException;
     
+    Node updateProperties(Node node) throws AccessControlException, NodeNotFoundException;
+    
     void move(Node node, String newPath);
     
     void copy(Node node, String copyToPath);
