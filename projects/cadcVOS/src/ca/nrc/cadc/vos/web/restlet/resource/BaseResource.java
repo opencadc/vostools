@@ -69,7 +69,6 @@
 
 package ca.nrc.cadc.vos.web.restlet.resource;
 
-import org.apache.log4j.Logger;
 import org.restlet.resource.ServerResource;
 
 import ca.nrc.cadc.vos.NodePersistence;
@@ -78,16 +77,19 @@ import ca.nrc.cadc.vos.util.BeanUtil;
 public abstract class BaseResource extends ServerResource
 {
     
-    private static final Logger log = Logger.getLogger(BaseResource.class);
-    
+    private String vosUri;
     private NodePersistence nodePersistence;
     
     protected BaseResource()
     {
         super();
         
+        vosUri =
+            (String) getApplication().getContext().getAttributes().
+                get(BeanUtil.IVOA_VOS_URI);
+        
         nodePersistence =
-            (NodePersistence) this.getApplication().getContext().getAttributes().
+            (NodePersistence) getApplication().getContext().getAttributes().
                 get(BeanUtil.VOS_NODE_PERSISTENCE);
 
     }
@@ -95,6 +97,11 @@ public abstract class BaseResource extends ServerResource
     public final NodePersistence getNodePersistence()
     {
         return nodePersistence;
+    }
+
+    public String getVosUri()
+    {
+        return vosUri;
     }
 
 }

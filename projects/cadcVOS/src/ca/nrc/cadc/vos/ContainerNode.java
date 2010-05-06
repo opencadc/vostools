@@ -100,18 +100,18 @@ public class ContainerNode extends Node
     /**
      * ContainerNode constructor.
      */
-    public ContainerNode(String path)
+    public ContainerNode(String uri)
     {
-        super(path);
+        super(uri);
         nodes = new ArrayList<Node>();
     }
     
     /**
      * ContainerNode constructor.
      */
-    public ContainerNode(String path, List<NodeProperty> properties)
+    public ContainerNode(String uri, List<NodeProperty> properties)
     {
-        super(path, properties);
+        super(uri, properties);
         nodes = new ArrayList<Node>();
     }
     

@@ -81,7 +81,7 @@ import ca.nrc.cadc.vos.Node;
 import ca.nrc.cadc.vos.NodeWriter;
 
 /**
- * Creates an XML representation of a Node/
+ * Creates an XML representation of a Node
  * 
  * @author majorb
  *

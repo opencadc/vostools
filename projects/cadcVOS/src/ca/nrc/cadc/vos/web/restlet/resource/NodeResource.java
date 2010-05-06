@@ -78,15 +78,16 @@ import org.restlet.data.Status;
 import org.restlet.representation.Representation;
 import org.restlet.resource.Delete;
 import org.restlet.resource.Get;
+import org.restlet.resource.Post;
 import org.restlet.resource.Put;
 
 import ca.nrc.cadc.vos.Node;
 import ca.nrc.cadc.vos.NodeAlreadyExistsException;
 import ca.nrc.cadc.vos.NodeNotFoundException;
 import ca.nrc.cadc.vos.NodeParsingException;
-import ca.nrc.cadc.vos.NodeReader;
 import ca.nrc.cadc.vos.NodeWriter;
 import ca.nrc.cadc.vos.dao.SearchNode;
+import ca.nrc.cadc.vos.web.representation.NodeInputRepresentation;
 import ca.nrc.cadc.vos.web.representation.NodeOutputRepresentation;
 
 /**
@@ -102,8 +103,12 @@ public class NodeResource extends BaseResource
     private String path;
     private Node node;
     
+    /**
+     * Called after object instantiation.
+     */
     public void doInit()
     {
+        log.debug("Enter NodeResource.doInit()");
 
         HashSet<Method> allowedMethods = new HashSet<Method>();
         allowedMethods.add(Method.GET);
@@ -119,7 +124,9 @@ public class NodeResource extends BaseResource
             setStatus(Status.CLIENT_ERROR_BAD_REQUEST, message);
         }
         
-        if (!getMethod().equals(Method.PUT))
+        // If doing a get or delete, get the node object based on
+        // the path
+        if (getMethod().equals(Method.GET) || getMethod().equals(Method.DELETE))
         {
             try
             {
@@ -136,35 +143,28 @@ public class NodeResource extends BaseResource
     }
     
     /**
-     * Obtain the XML Representation of this Resource.
-     *
-     * @return  The XML Representation.
+     * HTTP GET
      */
     @Get("xml")
     public Representation represent()
     {
+        log.debug("Enter NodeResource.represent()");
         NodeWriter nodeWriter = new NodeWriter();
         return new NodeOutputRepresentation(node, nodeWriter);
     }
     
+    /**
+     * HTTP PUT
+     */
     @Put("xml")
-    public Representation store(Representation value)
+    public Representation store(Representation xmlValue)
     {   
+        log.debug("Enter NodeResource.store()");
         try
         {
-            Node nodeToPut = new NodeReader().read(value.getStream());
-            
-            if (!nodeToPut.getPath().equals(path))
-            {
-                log.warn("Node path different in XML ("
-                        + nodeToPut.getPath()
-                        + ") and URL ("
-                        + path
-                        + ")  Using URL version.");
-                
-                // overwrite the path with the one from the URL
-                nodeToPut.setPath(path);
-            }
+            NodeInputRepresentation nodeInputRepresentation =
+                new NodeInputRepresentation(xmlValue, getVosUri(), path);
+            Node nodeToPut = nodeInputRepresentation.getNode();
             
             // store the node
             Node storedNode = getNodePersistence().put(nodeToPut);
@@ -175,7 +175,7 @@ public class NodeResource extends BaseResource
         }
         catch (NodeParsingException e)
         {
-            String message = "Bad node xml format.";
+            String message = "Bad node xml format: " + e.getMessage();
             log.debug(message, e);
             setStatus(Status.CLIENT_ERROR_BAD_REQUEST, message);
         }
@@ -200,9 +200,54 @@ public class NodeResource extends BaseResource
         return null;
     }
     
+    /**
+     * HTTP POST
+     */
+    @Post("xml")
+    public Representation accept(Representation xmlValue)
+    {
+        log.debug("Enter NodeResource.accept()");
+        try
+        {
+            NodeInputRepresentation nodeInputRepresentation =
+                new NodeInputRepresentation(xmlValue, getVosUri(), path);
+            Node nodeToUpdate = nodeInputRepresentation.getNode();
+            
+            // store the node properties
+            Node updatedNode = getNodePersistence().updateProperties(nodeToUpdate);
+            
+            // return the node in xml format
+            NodeWriter nodeWriter = new NodeWriter();
+            return new NodeOutputRepresentation(updatedNode, nodeWriter);
+        }
+        catch (NodeParsingException e)
+        {
+            String message = "Bad node xml format.";
+            log.debug(message, e);
+            setStatus(Status.CLIENT_ERROR_BAD_REQUEST, message);
+        }
+        catch (NodeNotFoundException e)
+        {
+            final String message = "Could not resolve part of path for node: " + path;
+            log.debug(message, e);
+            setStatus(Status.CLIENT_ERROR_NOT_FOUND, message);
+        }
+        catch (IOException e)
+        {
+            final String message = "Unexpected IOException";
+            log.debug(message, e);
+            setStatus(Status.SERVER_ERROR_INTERNAL, message);
+        }
+        return null;
+    }
+    
+    /**
+     * HTTP DELETE
+     */
     @Delete
     public void remove()
     {
+        log.debug("Enter NodeResource.remove()");
         try
         {
             getNodePersistence().delete(node);

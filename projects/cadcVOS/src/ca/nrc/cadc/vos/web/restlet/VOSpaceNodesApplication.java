@@ -75,6 +75,7 @@ import org.restlet.Context;
 import org.restlet.Restlet;
 
 import ca.nrc.cadc.vos.InvalidServiceException;
+import ca.nrc.cadc.vos.Node;
 import ca.nrc.cadc.vos.NodePersistence;
 import ca.nrc.cadc.vos.util.BeanUtil;
 
@@ -104,10 +105,27 @@ public class VOSpaceNodesApplication extends Application
         
         Context context = getContext();
         
+        // Get and save the vospace uri in the input representation
+        // for later use
+        final String vosURI = context.getParameters().
+                getFirstValue(BeanUtil.IVOA_VOS_URI);
+        if (vosURI == null || vosURI.trim().length() == 0)
+        {
+            final String message = "Context parameter not set: " + BeanUtil.IVOA_VOS_URI;
+            log.error(message);
+            throw new RuntimeException(message);
+        }
+        
+        // save the vospace uri in the application context
+        context.getAttributes().put(BeanUtil.IVOA_VOS_URI, vosURI);
+        
+        // set the vospace uri on nodes
+        Node.setUriPrefix(vosURI);
+        
         // Create the configured NodePersistence bean
         try
         {
-            final String className = getContext().getParameters().
+            final String className = context.getParameters().
                     getFirstValue(BeanUtil.VOS_NODE_PERSISTENCE);
             final BeanUtil beanUtil = new BeanUtil(className);
             NodePersistence nodePersistence = (NodePersistence) beanUtil.createBean();

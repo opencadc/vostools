@@ -98,9 +98,9 @@ public class DataNode extends Node
     /**
      * Data node constructor
      */
-    public DataNode(String path)
+    public DataNode(String uri)
     {
-        super(path);
+        super(uri);
         this.structured = false;
         this.busy = false;
     }
@@ -108,9 +108,9 @@ public class DataNode extends Node
     /**
      * DataNode constructor.
      */
-    public DataNode(String path, List<NodeProperty> properties)
+    public DataNode(String uri, List<NodeProperty> properties)
     {
-        super(path, properties);
+        super(uri, properties);
         this.structured = false;
         this.busy = false;
     }

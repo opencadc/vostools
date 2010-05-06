@@ -84,6 +84,12 @@ import java.util.List;
 public abstract class Node
 {
     
+    // The uri prefix to the path
+    private static String URI_PREFIX = "";
+    
+    // The node uri
+    protected String uri;
+    
     // The path (including the name) of the node
     protected String path;
     
@@ -107,60 +113,66 @@ public abstract class Node
     
     public Node()
     {
+        this.uri = "";
         this.path = "";
+        this.name = "";
         properties = new ArrayList<NodeProperty>();
     }
     
     /**
      * Node constructor.
      * 
-     * @param path The path of the node;
+     * @param uri The uri of the node;
      */
-    public Node(String path)
+    public Node(String uri)
     {
-        this.path = path;
-        buildParent(path);
+        this.uri = uri;
+        buildPath(uri);
         properties = new ArrayList<NodeProperty>();
     }
     
     /**
      * Node constructor.
      * 
-     * @param path The path of the node
+     * @param uri The uri of the node
      * @param properties The node's properties
      */
-    public Node(String path, List<NodeProperty> properties)
+    public Node(String uri, List<NodeProperty> properties)
     {
-        this.path = path;
-        buildParent(path);
+        this.uri = uri;
+        buildPath(uri);
         this.properties = properties;
     }
     
     /**
-     * Set the path to a new value and redetermine
-     * the parent hierarchy.
-     * 
-     * @param path
+     * Set the expected prefix to node URIs.
+     * @param uriPrefix
      */
-    public void setPath(String path)
+    public static final void setUriPrefix(String uriPrefix)
     {
-        this.path = path;
-        buildParent(path);
+        URI_PREFIX = uriPrefix;
     }
     
     /**
-     * Given the path, build the parent if one exists.
-     * Set the name of the node.
-     * @param path
+     * Given the uri, build the parent if one exists.
+     * Set the name of the node and path.
+     * @param uri
      */
-    private void buildParent(String path)
+    private void buildPath(String uri)
     {
-        if (path == null || path.trim().length() == 0)
+        if (uri == null || uri.trim().length() == 0)
         {
-            throw new IllegalArgumentException("Node path not provided");
+            throw new IllegalArgumentException("Node uriPrefix not provided");
         }
         
+        if (!uri.startsWith(URI_PREFIX))
+        {
+            throw new IllegalArgumentException("Node URI does not begin with: " + URI_PREFIX);
+        }
+        
+        path = uri.substring(URI_PREFIX.length());
         String refinedPath = path;
+        
         if (refinedPath.startsWith("/"))
         {
             refinedPath = refinedPath.substring(1);
@@ -184,7 +196,7 @@ public abstract class Node
         }
         else
         {
-            parent = new ContainerNode(refinedPath.substring(0, refinedPath.lastIndexOf("/")));
+            parent = new ContainerNode(uri.substring(0, uri.lastIndexOf("/")));
         }
     }
     
@@ -234,6 +246,11 @@ public abstract class Node
      * @return A list of views which the node can use for exporting.
      */
     public abstract List<View> provides();
+    
+    public String getUri()
+    {
+        return uri;
+    }
     
     public String getPath()
     {
