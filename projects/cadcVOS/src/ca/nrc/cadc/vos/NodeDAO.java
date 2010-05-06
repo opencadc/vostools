@@ -237,6 +237,7 @@ public abstract class NodeDAO implements NodePersistence
                 
                 log.debug("Inserted new node: " + node);
                 
+                dbNode.setUri(node.getUri());
                 return dbNode.getNode();
                 
             } catch (Throwable t)
