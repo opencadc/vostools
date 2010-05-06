@@ -252,6 +252,11 @@ public abstract class Node
         return uri;
     }
     
+    public void setUri(String uri)
+    {
+        this.uri = uri;
+    }
+    
     public String getPath()
     {
         return path;

@@ -430,6 +430,7 @@ public abstract class NodeDAO implements NodePersistence
             List returnNodeProperties = jdbc.query(getSelectNodePropertiesByID(returnNode), new NodePropertyMapper());
             returnNode.getProperties().addAll(returnNodeProperties);
             returnNode.setParent(dbNode.getParent());
+            returnNode.setUri(node.getUri());
         }
         
         if (returnNode == null)
@@ -508,7 +509,7 @@ public abstract class NodeDAO implements NodePersistence
             }
             else
             {
-                throw new IllegalStateException("Leaf node not found.");
+                throw new IllegalStateException("Target node missed.");
             }
         }
         return next;

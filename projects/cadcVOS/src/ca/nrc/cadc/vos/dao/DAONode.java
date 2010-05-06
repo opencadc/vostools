@@ -230,6 +230,16 @@ public abstract class DAONode
         getNode().setOwner(owner);
     }
     
+    public String getUri()
+    {
+        return getNode().getUri();
+    }
+     
+    public void setUri(String uri)
+    {
+        getNode().setUri(uri);
+    }
+    
     //////////////////////
     // Getters and Setters
     //////////////////////
