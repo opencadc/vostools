@@ -72,7 +72,11 @@ package ca.nrc.cadc.uws;
 import java.io.IOException;
 import java.io.OutputStream;
 import java.io.Writer;
+import java.security.Principal;
 import java.util.Date;
+import java.util.Set;
+
+import javax.security.auth.Subject;
 
 import org.apache.log4j.Logger;
 import org.jdom.Document;
@@ -81,6 +85,7 @@ import org.jdom.Namespace;
 import org.jdom.output.Format;
 import org.jdom.output.XMLOutputter;
 import ca.nrc.cadc.date.DateUtil;
+import ca.nrc.cadc.util.Log4jInit;
 
 /**
  * Writes a Job as XML to an output.
@@ -92,8 +97,9 @@ public class JobWriter
     private static Logger log = Logger.getLogger(JobWriter.class);
 
     public static Namespace XSI_NS = Namespace.getNamespace("xsi", "http://www.w3.org/2001/XMLSchema-instance");
-    public static Namespace UWS_NS = Namespace.getNamespace("http://www.ivoa.net/xml/UWS/v1.0");
-    public static Namespace XLINK_NS = Namespace.getNamespace("http://www.w3.org/1999/xlink");
+    public static Namespace UWS_NS = Namespace.getNamespace("uws", "http://www.ivoa.net/xml/UWS/v1.0");
+    public static Namespace XLINK_NS = Namespace.getNamespace("xlink", "http://www.w3.org/1999/xlink");
+        
 
     protected Job _job;
     protected Document _document;
@@ -110,8 +116,7 @@ public class JobWriter
     /**
      * Write the job to a String.
      */
-    public String toString()
-    {
+    public String toString() {
         return _outputter.outputString(_document);
     }
 
@@ -121,8 +126,7 @@ public class JobWriter
      * @param out OutputStream to write to.
      * @throws IOException if the writer fails to write.
      */
-    public void writeTo(OutputStream out) throws IOException
-    {
+    public void writeTo(OutputStream out) throws IOException {
         _outputter.output(_document, out);
     }
 
@@ -132,19 +136,18 @@ public class JobWriter
      * @param writer Writer to write to.
      * @throws IOException if the writer fails to write.
      */
-    public void writeTo(Writer writer) throws IOException
-    {
+    public void writeTo(Writer writer) throws IOException {
         _outputter.output(_document, writer);
     }
 
     /**
      * Build XML Document for the job
      */
-    private void buildDocument()
-    {
+    private void buildDocument() {
         Element root = new Element("job", UWS_NS);
+        root.addNamespaceDeclaration(UWS_NS);
+        root.addNamespaceDeclaration(XLINK_NS);
         root.setAttribute("schemaLocation", "http://www.ivoa.net/xml/UWS/v1.0 UWS.xsd", XSI_NS);
-        root.setNamespace(XLINK_NS);
 
         Element e = null;
 
@@ -156,9 +159,7 @@ public class JobWriter
         e.addContent(_job.getRunID());
         root.addContent(e);
 
-        e = new Element("ownerId", UWS_NS);
-        e.setAttribute("nil", "true", XSI_NS);
-        e.addContent(_job.getOwner().toString());
+        e = createOwnerId();
         root.addContent(e);
 
         e = new Element("phase", UWS_NS);
@@ -166,17 +167,17 @@ public class JobWriter
         root.addContent(e);
 
         e = new Element("quote", UWS_NS);
-        e.setAttribute("nil", "true", XSI_NS);
+        //e.setAttribute("nil", "true", XSI_NS);
         e.addContent(dateToString(_job.getQuote()));
         root.addContent(e);
 
         e = new Element("startTime", UWS_NS);
-        e.setAttribute("nil", "true", XSI_NS);
+        //e.setAttribute("nil", "true", XSI_NS);
         e.addContent(dateToString(_job.getStartTime()));
         root.addContent(e);
 
         e = new Element("endTime", UWS_NS);
-        e.setAttribute("nil", "true", XSI_NS);
+        //e.setAttribute("nil", "true", XSI_NS);
         e.addContent(dateToString(_job.getEndTime()));
         root.addContent(e);
 
@@ -185,7 +186,7 @@ public class JobWriter
         root.addContent(e);
 
         e = new Element("destruction", UWS_NS);
-        e.setAttribute("nil", "true", XSI_NS);
+        //e.setAttribute("nil", "true", XSI_NS);
         e.addContent(dateToString(_job.getDestructionTime()));
         root.addContent(e);
 
@@ -196,20 +197,37 @@ public class JobWriter
         root.addContent(e);
 
         e = createErrorSummary();
-        root.addContent(e);
+        if (e != null)
+            root.addContent(e);
 
-        _document = new Document(root);
+        _document = new Document();
+        _document.addContent(root);
     }
-    
-    private static String dateToString(Date date)
-    {
+
+    private Element createOwnerId() {
+        Element e = null;
+        e = new Element("ownerId", UWS_NS);
+        e.setAttribute("nil", "true", XSI_NS);
+        Subject subjectOwner = _job.getOwner();
+        if (subjectOwner != null)
+        {
+            Set<Principal> setPrincipal = subjectOwner.getPrincipals();
+            for (Principal prc : setPrincipal)
+            {
+                e.addContent(prc.getName());
+                break; // a convenient way to get the first principal in the set ONLY.
+            }
+        }
+        return e;
+    }
+
+    private static String dateToString(Date date) {
         String rtn = null;
         rtn = DateUtil.toString(date, DateUtil.IVOA_DATE_FORMAT, DateUtil.UTC);
         return rtn;
     }
 
-    private Element createParameters()
-    {
+    private Element createParameters() {
         Element rtn = new Element("parameters", UWS_NS);
         Element e = null;
         for (Parameter par : _job.getParameterList())
@@ -222,8 +240,7 @@ public class JobWriter
         return rtn;
     }
 
-    private Element createResults()
-    {
+    private Element createResults() {
         Element rtn = new Element("results", UWS_NS);
         Element e = null;
         for (Result rs : _job.getResultsList())
@@ -236,20 +253,24 @@ public class JobWriter
         return rtn;
     }
 
-    private Element createErrorSummary()
-    {
-        Element rtn = new Element("errorSummary", UWS_NS);
-        rtn.setAttribute("type", _job.getErrorSummary().getErrorType().toString());
+    private Element createErrorSummary() {
+        Element rtn = null;
+        ErrorSummary es = _job.getErrorSummary();
+        if (es != null)
+        {
+            rtn = new Element("errorSummary", UWS_NS);
+            rtn.setAttribute("type", es.getErrorType().toString());
 
-        Element e = null;
+            Element e = null;
 
-        e = new Element("message", UWS_NS);
-        e.addContent(_job.getErrorSummary().getSummaryMessage());
-        rtn.addContent(e);
+            e = new Element("message", UWS_NS);
+            e.addContent(_job.getErrorSummary().getSummaryMessage());
+            rtn.addContent(e);
 
-        e = new Element("detail", UWS_NS);
-        e.setAttribute("href", _job.getErrorSummary().getDocumentURL().toString(), XLINK_NS);
-        rtn.addContent(e);
+            e = new Element("detail", UWS_NS);
+            e.setAttribute("href", _job.getErrorSummary().getDocumentURL().toString(), XLINK_NS);
+            rtn.addContent(e);
+        }
 
         return rtn;
     }
