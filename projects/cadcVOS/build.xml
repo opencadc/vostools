@@ -85,14 +85,16 @@
     <import file="extras.xml" optional="true" />
 
     <property name="project" value="cadcVOS" />
-    
+
+    <property name="cadcUtil" value="${lib}/cadcUtil.jar" />
+ 
     <property name="ext.restlet" value="${ext.lib}/org.restlet.jar" />
     <property name="ext.restlet.ext" value="${ext.lib}/org.restlet.ext.servlet.jar" />
     <property name="ext.log4j" value="${ext.lib}/log4j.jar" />
     <property name="ext.spring" value="${ext.lib}/spring.jar" />
     <property name="ext.jdom" value="${ext.lib}/jdom.jar" />
 
-    <property name="jars" value="${ext.restlet}:${ext.restlet.ext}:${ext.log4j}:${ext.spring}:${ext.jdom}" />
+    <property name="jars" value="${ext.restlet}:${ext.restlet.ext}:${ext.log4j}:${ext.spring}:${ext.jdom}:${cadcUtil}" />
 
     <target name="build" depends="compile">
         <copy file="src/resources/VOSpace-2.0.xsd" todir="build/class"/>
@@ -106,11 +108,16 @@
 
     <!-- JAR files needed to run the test suite -->
     <property name="cadcVOS" value="${build}/lib/${project}.jar" />
-    <property name="cadcUtil" value="${lib}/cadcUtil.jar" />
     <property name="junit" value="${ext.lib}/junit.jar" />
     <property name="xerces" value="${ext.lib}/xerces.jar" />
+    <property name="dev.easyMock" value="${ext.dev}/easymock.jar" />
+    <property name="dev.easyMock.classextension" value="${ext.dev}/easymockclassextension.jar" />
+    <property name="dev.objenesis" value="${ext.dev}/objenesis.jar" />
+    <property name="dev.asm" value="${ext.dev}/asm.jar" />
+    <property name="dev.cglib" value="${ext.dev}/cglib.jar" />
 
-    <property name="testingJars" value="${cadcVOS}:${cadcUtil}:${junit}:${xerces}" />
+    <property name="testingJars"
+              value="${cadcVOS}:${cadcUtil}:${junit}:${xerces}:${dev.easyMock}:${dev.easyMock.classextension}:${dev.objenesis}:${dev.asm}:${dev.cglib}" />
 
     <!-- compile the test classes -->
     <target name="compile-test" depends="compile">
@@ -144,8 +151,7 @@
                 <pathelement path="${jars}:${testingJars}"/>
             </classpath>
             <formatter type="plain" usefile="false"/>
-            <test name="ca.nrc.cadc.vos.NodeReaderTest"/>
-            <test name="ca.nrc.cadc.vos.NodeWriterTest"/>
+            <test name="ca.nrc.cadc.vos.CADCVOSTestSuite"/>
         </junit>
     </target>
 
