@@ -144,7 +144,7 @@ public class VOSpaceClient
 
     /**
      * 
-        *  The service SHALL throw a HTTP 500 status code including an InternalFault fault in the entity-body if the operation fails
+        * The service SHALL throw a HTTP 500 status code including an InternalFault fault in the entity-body if the operation fails
         * The service SHALL throw a HTTP 401 status code including a PermissionDenied fault in the entity-body if the user does not have permissions to perform the operation
         * The service SHALL throw a HTTP 404 status code including a NodeNotFound fault in the entity-body if the target Node does not exist 
      * @param path
@@ -165,7 +165,7 @@ public class VOSpaceClient
             responseCode = httpCon.getResponseCode();
             switch (responseCode)
             {
-            case 201: // valid
+            case 200: // valid
                 InputStream in = httpCon.getInputStream();
                 // TODO generate returned node
                 in.close();
@@ -179,6 +179,7 @@ public class VOSpaceClient
             }
         } catch (IOException ex)
         {
+            //TODO handle the exception
         }
         return rtnNode;
     }
