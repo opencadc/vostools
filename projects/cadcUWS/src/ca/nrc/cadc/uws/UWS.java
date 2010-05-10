@@ -69,78 +69,27 @@
 
 package ca.nrc.cadc.uws;
 
-import java.io.IOException;
-import java.net.URL;
-import java.util.ArrayList;
-import java.util.Calendar;
-import java.util.List;
+import org.jdom.Namespace;
 
-import org.apache.log4j.Logger;
-import org.jdom.JDOMException;
-import org.junit.After;
-import org.junit.AfterClass;
-import org.junit.Before;
-import org.junit.BeforeClass;
-import org.junit.Test;
-
-import ca.nrc.cadc.util.Log4jInit;
 import ca.nrc.cadc.uws.util.XmlUtil;
 
 /**
+ * Holder of commonly used constants
+ * 
  * @author zhangsa
  *
  */
-public class JobWriterTest
+public class UWS
 {
-    static Logger log = Logger.getLogger(JobWriterTest.class);
+    public static String XSD_FILE_NAME = "UWS-1.0.xsd"; // local xsd file name
+    public static String XSD_KEY = "http://www.ivoa.net/xml/UWS/v1.0";
+    
+    public static Namespace NS = Namespace.getNamespace("uws", "http://www.ivoa.net/xml/UWS/v1.0");
+    public static Namespace XLINK_NS = Namespace.getNamespace("xlink", "http://www.w3.org/1999/xlink");
+    public static Namespace XSI_NS = Namespace.getNamespace("xsi", "http://www.w3.org/2001/XMLSchema-instance");
+    
+    public static String EXT_SCHEMA_LOCATION = XSD_KEY + " " + XmlUtil.getResourceUrlString(XSD_FILE_NAME, UWS.class);  
 
-    private final String JOB_ID = "AT88MPH";
-    private Job testJob;
 
-    @BeforeClass
-    public static void setUpBeforeClass() throws Exception {
-        Log4jInit.setLevel("ca.nrc.cadc", org.apache.log4j.Level.DEBUG);
-    }
 
-    @AfterClass
-    public static void tearDownAfterClass() throws Exception {}
-
-    /**
-     * @throws java.lang.Exception
-     */
-    @Before
-    public void setUp() throws Exception {
-        final Calendar cal = Calendar.getInstance();
-        cal.set(1997, Calendar.NOVEMBER, 25, 3, 21, 0);
-        cal.set(Calendar.MILLISECOND, 0);
-
-        final Calendar quoteCal = Calendar.getInstance();
-        quoteCal.set(1977, Calendar.NOVEMBER, 25, 8, 30, 0);
-        quoteCal.set(Calendar.MILLISECOND, 0);
-
-        final List<Result> results = new ArrayList<Result>();
-        results.add(new Result("rsName1", new URL("http://www.ivoa.net/url1"), true));
-        results.add(new Result("rsName2", new URL("http://www.ivoa.net/url2"), false));
-        final List<Parameter> parameters = new ArrayList<Parameter>();
-        parameters.add(new Parameter("parName1", "parV1"));
-        parameters.add(new Parameter("parName2", "parV2"));
-
-        testJob = new Job(JOB_ID, ExecutionPhase.PENDING, 88l, cal.getTime(), quoteCal.getTime(), cal.getTime(), cal.getTime(),
-                null, null, "RUN_ID", results, parameters, null);
-    }
-
-    /**
-     * @throws java.lang.Exception
-     */
-    @After
-    public void tearDown() throws Exception {}
-
-    @Test
-    public void testWriter() throws IOException, JDOMException {
-        JobWriter jobWriter = new JobWriter(testJob);
-        String strOut = jobWriter.toString();
-        XmlUtil.validateXml(strOut, UWS.XSD_KEY, UWS.XSD_FILE_NAME);
-        log.debug(strOut);
-
-    }
 }

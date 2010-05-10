@@ -81,11 +81,10 @@ import javax.security.auth.Subject;
 import org.apache.log4j.Logger;
 import org.jdom.Document;
 import org.jdom.Element;
-import org.jdom.Namespace;
 import org.jdom.output.Format;
 import org.jdom.output.XMLOutputter;
+
 import ca.nrc.cadc.date.DateUtil;
-import ca.nrc.cadc.util.Log4jInit;
 
 /**
  * Writes a Job as XML to an output.
@@ -95,11 +94,6 @@ import ca.nrc.cadc.util.Log4jInit;
 public class JobWriter
 {
     private static Logger log = Logger.getLogger(JobWriter.class);
-
-    public static Namespace XSI_NS = Namespace.getNamespace("xsi", "http://www.w3.org/2001/XMLSchema-instance");
-    public static Namespace UWS_NS = Namespace.getNamespace("uws", "http://www.ivoa.net/xml/UWS/v1.0");
-    public static Namespace XLINK_NS = Namespace.getNamespace("xlink", "http://www.w3.org/1999/xlink");
-        
 
     protected Job _job;
     protected Document _document;
@@ -144,48 +138,48 @@ public class JobWriter
      * Build XML Document for the job
      */
     private void buildDocument() {
-        Element root = new Element("job", UWS_NS);
-        root.addNamespaceDeclaration(UWS_NS);
-        root.addNamespaceDeclaration(XLINK_NS);
-        root.setAttribute("schemaLocation", "http://www.ivoa.net/xml/UWS/v1.0 UWS.xsd", XSI_NS);
+        Element root = new Element("job", UWS.NS);
+        root.addNamespaceDeclaration(UWS.NS);
+        root.addNamespaceDeclaration(UWS.XLINK_NS);
+        root.setAttribute("schemaLocation", "http://www.ivoa.net/xml/UWS/v1.0 UWS.xsd", UWS.XSI_NS);
 
         Element e = null;
 
-        e = new Element("jobId", UWS_NS);
+        e = new Element("jobId", UWS.NS);
         e.addContent(_job.getID());
         root.addContent(e);
 
-        e = new Element("runId", UWS_NS);
+        e = new Element("runId", UWS.NS);
         e.addContent(_job.getRunID());
         root.addContent(e);
 
         e = createOwnerId();
         root.addContent(e);
 
-        e = new Element("phase", UWS_NS);
+        e = new Element("phase", UWS.NS);
         e.addContent(_job.getExecutionPhase().toString());
         root.addContent(e);
 
-        e = new Element("quote", UWS_NS);
+        e = new Element("quote", UWS.NS);
         //e.setAttribute("nil", "true", XSI_NS);
         e.addContent(dateToString(_job.getQuote()));
         root.addContent(e);
 
-        e = new Element("startTime", UWS_NS);
+        e = new Element("startTime", UWS.NS);
         //e.setAttribute("nil", "true", XSI_NS);
         e.addContent(dateToString(_job.getStartTime()));
         root.addContent(e);
 
-        e = new Element("endTime", UWS_NS);
+        e = new Element("endTime", UWS.NS);
         //e.setAttribute("nil", "true", XSI_NS);
         e.addContent(dateToString(_job.getEndTime()));
         root.addContent(e);
 
-        e = new Element("executionDuration", UWS_NS);
+        e = new Element("executionDuration", UWS.NS);
         e.addContent(Long.toString(_job.getExecutionDuration()));
         root.addContent(e);
 
-        e = new Element("destruction", UWS_NS);
+        e = new Element("destruction", UWS.NS);
         //e.setAttribute("nil", "true", XSI_NS);
         e.addContent(dateToString(_job.getDestructionTime()));
         root.addContent(e);
@@ -206,8 +200,8 @@ public class JobWriter
 
     private Element createOwnerId() {
         Element e = null;
-        e = new Element("ownerId", UWS_NS);
-        e.setAttribute("nil", "true", XSI_NS);
+        e = new Element("ownerId", UWS.NS);
+        e.setAttribute("nil", "true", UWS.XSI_NS);
         Subject subjectOwner = _job.getOwner();
         if (subjectOwner != null)
         {
@@ -228,11 +222,11 @@ public class JobWriter
     }
 
     private Element createParameters() {
-        Element rtn = new Element("parameters", UWS_NS);
+        Element rtn = new Element("parameters", UWS.NS);
         Element e = null;
         for (Parameter par : _job.getParameterList())
         {
-            e = new Element("parameter", UWS_NS);
+            e = new Element("parameter", UWS.NS);
             e.setAttribute("id", par.getName());
             e.addContent(par.getValue());
             rtn.addContent(e);
@@ -241,13 +235,13 @@ public class JobWriter
     }
 
     private Element createResults() {
-        Element rtn = new Element("results", UWS_NS);
+        Element rtn = new Element("results", UWS.NS);
         Element e = null;
         for (Result rs : _job.getResultsList())
         {
-            e = new Element("result", UWS_NS);
+            e = new Element("result", UWS.NS);
             e.setAttribute("id", rs.getName());
-            e.setAttribute("href", rs.getURL().toString(), XLINK_NS);
+            e.setAttribute("href", rs.getURL().toString(), UWS.XLINK_NS);
             rtn.addContent(e);
         }
         return rtn;
@@ -258,17 +252,17 @@ public class JobWriter
         ErrorSummary es = _job.getErrorSummary();
         if (es != null)
         {
-            rtn = new Element("errorSummary", UWS_NS);
+            rtn = new Element("errorSummary", UWS.NS);
             rtn.setAttribute("type", es.getErrorType().toString());
 
             Element e = null;
 
-            e = new Element("message", UWS_NS);
+            e = new Element("message", UWS.NS);
             e.addContent(_job.getErrorSummary().getSummaryMessage());
             rtn.addContent(e);
 
-            e = new Element("detail", UWS_NS);
-            e.setAttribute("href", _job.getErrorSummary().getDocumentURL().toString(), XLINK_NS);
+            e = new Element("detail", UWS.NS);
+            e.setAttribute("href", _job.getErrorSummary().getDocumentURL().toString(), UWS.XLINK_NS);
             rtn.addContent(e);
         }
 

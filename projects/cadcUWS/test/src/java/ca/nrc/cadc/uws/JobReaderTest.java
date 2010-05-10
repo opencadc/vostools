@@ -73,7 +73,10 @@ import java.io.IOException;
 import java.net.URL;
 import java.util.ArrayList;
 import java.util.Calendar;
+import java.util.Date;
 import java.util.List;
+
+import junit.framework.Assert;
 
 import org.apache.log4j.Logger;
 import org.jdom.JDOMException;
@@ -90,12 +93,13 @@ import ca.nrc.cadc.uws.util.XmlUtil;
  * @author zhangsa
  *
  */
-public class JobWriterTest
+public class JobReaderTest
 {
-    static Logger log = Logger.getLogger(JobWriterTest.class);
+    static Logger log = Logger.getLogger(JobReaderTest.class);
 
-    private final String JOB_ID = "AT88MPH";
-    private Job testJob;
+    private String JOB_ID = "AT88MPH";
+    private Job _testJob;
+    private String _xmlString;
 
     @BeforeClass
     public static void setUpBeforeClass() throws Exception {
@@ -125,8 +129,29 @@ public class JobWriterTest
         parameters.add(new Parameter("parName1", "parV1"));
         parameters.add(new Parameter("parName2", "parV2"));
 
-        testJob = new Job(JOB_ID, ExecutionPhase.PENDING, 88l, cal.getTime(), quoteCal.getTime(), cal.getTime(), cal.getTime(),
+        /**
+         * Constructor.
+         *
+         * @param jobID                 The unique Job ID.
+         * @param executionPhase        The Execution Phase.
+         * @param executionDuration     The Duration in clock seconds.
+         * @param destructionTime       The date and time of destruction.
+         * @param quote                 The quoted date of completion.
+         * @param startTime             The start date of execution.
+         * @param endTime               The end date of execution.
+         * @param errorSummary          The error, if any.
+         * @param owner                 The Owner of this Job.
+         * @param runId                 The specific running ID.
+         * @param resultsList           The List of Results.
+         * @param parameterList         The List of Parameters.
+         * @param requestPath           The http request path.
+         */
+        _testJob = new Job(JOB_ID, ExecutionPhase.PENDING, 88L, new Date(0L), quoteCal.getTime(), cal.getTime(), cal.getTime(),
                 null, null, "RUN_ID", results, parameters, null);
+
+        JobWriter jobWriter = new JobWriter(_testJob);
+        _xmlString = jobWriter.toString();
+        XmlUtil.validateXml(_xmlString, UWS.XSD_KEY, UWS.XSD_FILE_NAME);
     }
 
     /**
@@ -136,11 +161,17 @@ public class JobWriterTest
     public void tearDown() throws Exception {}
 
     @Test
-    public void testWriter() throws IOException, JDOMException {
-        JobWriter jobWriter = new JobWriter(testJob);
-        String strOut = jobWriter.toString();
-        XmlUtil.validateXml(strOut, UWS.XSD_KEY, UWS.XSD_FILE_NAME);
-        log.debug(strOut);
+    public void testReader() throws IOException, JDOMException {
+        log.debug(_xmlString);
+        JobReader jobReader = new JobReader();
+        Job job = jobReader.readFrom(_xmlString);
 
+        Assert.assertEquals(job.getID(), JOB_ID);
+        Assert.assertEquals(job.getExecutionPhase(), ExecutionPhase.PENDING);
+        Assert.assertEquals(job.getExecutionDuration(), 88L);
+        Assert.assertEquals(job.getDestructionTime(), new Date(0L));
+        Assert.assertEquals(job.getParameterList().size(), 2);
+        Assert.assertEquals(job.getResultsList().size(), 2);
+        Assert.assertEquals(job.getRunID(), "RUN_ID");
     }
 }

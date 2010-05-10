@@ -67,80 +67,105 @@
 ************************************************************************
 */
 
-package ca.nrc.cadc.uws;
+package ca.nrc.cadc.uws.util;
 
 import java.io.IOException;
+import java.io.StringReader;
 import java.net.URL;
-import java.util.ArrayList;
-import java.util.Calendar;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
+import java.util.MissingResourceException;
 
 import org.apache.log4j.Logger;
+import org.jdom.Document;
 import org.jdom.JDOMException;
-import org.junit.After;
-import org.junit.AfterClass;
-import org.junit.Before;
-import org.junit.BeforeClass;
-import org.junit.Test;
+import org.jdom.input.SAXBuilder;
+import org.jdom.xpath.XPath;
 
-import ca.nrc.cadc.util.Log4jInit;
-import ca.nrc.cadc.uws.util.XmlUtil;
+import ca.nrc.cadc.uws.JobReader;
 
 /**
  * @author zhangsa
  *
  */
-public class JobWriterTest
+public class XmlUtil
 {
-    static Logger log = Logger.getLogger(JobWriterTest.class);
+    private static Logger log = Logger.getLogger(XmlUtil.class);
+    public static final String PARSER = "org.apache.xerces.parsers.SAXParser";
 
-    private final String JOB_ID = "AT88MPH";
-    private Job testJob;
-
-    @BeforeClass
-    public static void setUpBeforeClass() throws Exception {
-        Log4jInit.setLevel("ca.nrc.cadc", org.apache.log4j.Level.DEBUG);
+    public static Document validateXml(String xml, Map<String, String> schemaMap) throws IOException, JDOMException
+    {
+        log.debug("validateXml:\n" + xml);
+        
+        URL url;
+        String schemaResource, serviceSchema;
+        String space = " ";
+        StringBuffer sbSchemaLocations = new StringBuffer();
+        log.debug("schemaMap.size(): " + schemaMap.size());
+        
+        for (String schemaNSKey : schemaMap.keySet())
+        {
+            schemaResource = (String) schemaMap.get(schemaNSKey);
+            url = XmlUtil.class.getClassLoader().getResource(schemaResource);
+            if (url == null)
+                throw new RuntimeException("failed to find resource: " + schemaResource);
+            serviceSchema = url.toString();
+            log.debug(schemaResource + " -> " + serviceSchema);
+            sbSchemaLocations.append(schemaNSKey).append(space).append(serviceSchema).append(space);
+        }
+    
+        SAXBuilder schemaValidator;
+        schemaValidator = new SAXBuilder(PARSER, true);
+        schemaValidator.setFeature("http://xml.org/sax/features/validation", true);
+        schemaValidator.setFeature("http://apache.org/xml/features/validation/schema", true);
+        schemaValidator.setFeature("http://apache.org/xml/features/validation/schema-full-checking", true);
+        schemaValidator.setProperty("http://apache.org/xml/properties/schema/external-schemaLocation", sbSchemaLocations.toString());
+    
+        return schemaValidator.build(new StringReader(xml));
     }
 
-    @AfterClass
-    public static void tearDownAfterClass() throws Exception {}
-
-    /**
-     * @throws java.lang.Exception
-     */
-    @Before
-    public void setUp() throws Exception {
-        final Calendar cal = Calendar.getInstance();
-        cal.set(1997, Calendar.NOVEMBER, 25, 3, 21, 0);
-        cal.set(Calendar.MILLISECOND, 0);
-
-        final Calendar quoteCal = Calendar.getInstance();
-        quoteCal.set(1977, Calendar.NOVEMBER, 25, 8, 30, 0);
-        quoteCal.set(Calendar.MILLISECOND, 0);
-
-        final List<Result> results = new ArrayList<Result>();
-        results.add(new Result("rsName1", new URL("http://www.ivoa.net/url1"), true));
-        results.add(new Result("rsName2", new URL("http://www.ivoa.net/url2"), false));
-        final List<Parameter> parameters = new ArrayList<Parameter>();
-        parameters.add(new Parameter("parName1", "parV1"));
-        parameters.add(new Parameter("parName2", "parV2"));
-
-        testJob = new Job(JOB_ID, ExecutionPhase.PENDING, 88l, cal.getTime(), quoteCal.getTime(), cal.getTime(), cal.getTime(),
-                null, null, "RUN_ID", results, parameters, null);
+    public static Document validateXml(String xml, String schemaNSKey, String schemaResourceFileName) throws IOException, JDOMException
+    {
+        Map<String, String> map = new HashMap<String, String>();
+        map.put(schemaNSKey, schemaResourceFileName);
+        return validateXml(xml, map);
     }
 
     /**
-     * @throws java.lang.Exception
+     * count how many nodes are represented by the xpath
+     * 
+     * @param doc
+     * @param xpathStr
+     * @return
      */
-    @After
-    public void tearDown() throws Exception {}
-
-    @Test
-    public void testWriter() throws IOException, JDOMException {
-        JobWriter jobWriter = new JobWriter(testJob);
-        String strOut = jobWriter.toString();
-        XmlUtil.validateXml(strOut, UWS.XSD_KEY, UWS.XSD_FILE_NAME);
-        log.debug(strOut);
-
+    public static int getXmlNodeCount(Document doc, String xpathStr)
+    {
+        int rtn = 0;
+        XPath xpath;
+        try
+        {
+            xpath = XPath.newInstance(xpathStr);
+            List<?> rs = xpath.selectNodes(doc);
+            rtn = rs.size();
+        } catch (JDOMException e)
+        {
+            e.printStackTrace();
+        }
+        return rtn;
+    }
+    
+    /**
+     * Get an URL to the schema in the jar.
+     * @return
+     */
+    public static String getResourceUrlString(String resourceFileName, Class runningClass)
+    {
+        String rtn = null;
+        URL url = runningClass.getClassLoader().getResource(resourceFileName);
+        if (url == null)
+            throw new MissingResourceException("Resource not found: " + resourceFileName, runningClass.getName(), resourceFileName);
+        rtn = url.toString();
+        return rtn;
     }
 }

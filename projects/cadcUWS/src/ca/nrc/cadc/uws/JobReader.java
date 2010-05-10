@@ -87,7 +87,6 @@ import org.apache.log4j.Logger;
 import org.jdom.Document;
 import org.jdom.Element;
 import org.jdom.JDOMException;
-import org.jdom.Namespace;
 import org.jdom.input.SAXBuilder;
 
 import ca.nrc.cadc.date.DateUtil;
@@ -100,12 +99,7 @@ public class JobReader
 {
     private static Logger log = Logger.getLogger(JobReader.class);
 
-    public static Namespace XSI_NS = Namespace.getNamespace("xsi", "http://www.w3.org/2001/XMLSchema-instance");
-    public static Namespace UWS_NS = Namespace.getNamespace("http://www.ivoa.net/xml/UWS/v1.0");
-    public static Namespace XLINK_NS = Namespace.getNamespace("http://www.w3.org/1999/xlink");
-
     protected Document _document;
-
     protected SAXBuilder _saxBuilder;
 
     public JobReader()
@@ -114,10 +108,9 @@ public class JobReader
         _saxBuilder.setFeature("http://xml.org/sax/features/validation", true);
         _saxBuilder.setFeature("http://apache.org/xml/features/validation/schema", true);
         _saxBuilder.setFeature("http://apache.org/xml/features/validation/schema-full-checking", true);
-        _saxBuilder.setProperty("http://apache.org/xml/properties/schema/external-schemaLocation",
-                "http://www.ivoa.net/xml/UWS/v1.0 UWS.xsd");
+        _saxBuilder.setProperty("http://apache.org/xml/properties/schema/external-schemaLocation", UWS.EXT_SCHEMA_LOCATION);
     }
-
+    
     public Job readFrom(Reader reader) throws JDOMException, IOException
     {
         _document = _saxBuilder.build(reader);
@@ -153,15 +146,15 @@ public class JobReader
     {
         Element root = _document.getRootElement();
 
-        String jobID = root.getChildText("jobId", UWS_NS);
-        String runID = root.getChildText("runId", UWS_NS);
+        String jobID = root.getChildText("jobId", UWS.NS);
+        String runID = root.getChildText("runId", UWS.NS);
         Subject owner = null; // It's not able to create a Subject based on XML text.
         ExecutionPhase executionPhase = parseExecutionPhase();
-        Date quote = parseDate(root.getChildText("quote", UWS_NS));
-        Date startTime = parseDate(root.getChildText("startTime", UWS_NS));
-        Date endTime = parseDate(root.getChildText("endTime", UWS_NS));
-        Date destructionTime = parseDate(root.getChildText("destruction", UWS_NS));
-        long executionDuration = Long.parseLong(root.getChildText("executionDuration", UWS_NS));
+        Date quote = parseDate(root.getChildText("quote", UWS.NS));
+        Date startTime = parseDate(root.getChildText("startTime", UWS.NS));
+        Date endTime = parseDate(root.getChildText("endTime", UWS.NS));
+        Date destructionTime = parseDate(root.getChildText("destruction", UWS.NS));
+        long executionDuration = Long.parseLong(root.getChildText("executionDuration", UWS.NS));
         ErrorSummary errorSummary = parseErrorSummary();
         List<Result> resultsList = parseResultsList();
         List<Parameter> parameterList = parseParametersList();
@@ -187,7 +180,7 @@ public class JobReader
     {
         ExecutionPhase rtn = null;
         Element root = _document.getRootElement();
-        String strPhase = root.getChildText("phase", UWS_NS);
+        String strPhase = root.getChildText("phase", UWS.NS);
         if (strPhase.equalsIgnoreCase(ExecutionPhase.PENDING.toString()))
             rtn = ExecutionPhase.PENDING;
         else if (strPhase.equalsIgnoreCase(ExecutionPhase.QUEUED.toString()))
@@ -214,13 +207,13 @@ public class JobReader
     {
         List<Parameter> rtn = null;
         Element root = _document.getRootElement();
-        Element elementParameters = root.getChild("parameters", UWS_NS);
+        Element elementParameters = root.getChild("parameters", UWS.NS);
         if (elementParameters != null)
         {
             rtn = new ArrayList<Parameter>();
 
             Parameter par = null;
-            List<?> listElement = elementParameters.getChildren("parameter", UWS_NS);
+            List<?> listElement = elementParameters.getChildren("parameter", UWS.NS);
             for (Object obj : listElement)
             {
                 Element e = (Element) obj;
@@ -237,18 +230,18 @@ public class JobReader
     {
         List<Result> rtn = null;
         Element root = _document.getRootElement();
-        Element e = root.getChild("results", UWS_NS);
+        Element e = root.getChild("results", UWS.NS);
         if (e != null)
         {
             rtn = new ArrayList<Result>();
 
             Result rs = null;
-            List<?> listE = e.getChildren("result", UWS_NS);
+            List<?> listE = e.getChildren("result", UWS.NS);
             for (Object obj : listE)
             {
                 Element eRs = (Element) obj;
                 String id = eRs.getAttributeValue("id");
-                String href = eRs.getAttributeValue("href", XLINK_NS);
+                String href = eRs.getAttributeValue("href", UWS.XLINK_NS);
                 try
                 {
                     rs = new Result(id, new URL(href));
@@ -266,7 +259,7 @@ public class JobReader
     {
         ErrorSummary rtn = null;
         Element root = _document.getRootElement();
-        Element e = root.getChild("errorSummary", UWS_NS);
+        Element e = root.getChild("errorSummary", UWS.NS);
         if (e != null)
         {
             ErrorType errorType = null;
@@ -276,8 +269,8 @@ public class JobReader
             else if (strType.equalsIgnoreCase(ErrorType.TRANSIENT.toString()))
                 errorType = ErrorType.TRANSIENT;
 
-            Element eDetail = e.getChild("detail", UWS_NS);
-            String strDocUrl = eDetail.getAttributeValue("href", XLINK_NS);
+            Element eDetail = e.getChild("detail", UWS.NS);
+            String strDocUrl = eDetail.getAttributeValue("href", UWS.XLINK_NS);
             URL url = null;
             try
             {
@@ -287,7 +280,7 @@ public class JobReader
                 // do nothing; use NULL value
             }
 
-            String summaryMessage = e.getChildText("message", UWS_NS);
+            String summaryMessage = e.getChildText("message", UWS.NS);
             rtn = new ErrorSummary(summaryMessage, url, errorType);
         }
         return rtn;
