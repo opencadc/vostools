@@ -89,8 +89,6 @@ public class CreateContainerNodeTest extends AbstractVOSTest
 {
     private static Logger log = Logger.getLogger(CreateContainerNodeTest.class);
 
-    static ContainerNode node;
-
     public CreateContainerNodeTest()
     {
         super();
@@ -99,22 +97,6 @@ public class CreateContainerNodeTest extends AbstractVOSTest
     @BeforeClass
     public static void setUpClass() throws Exception
     {
-        // List of NodeProperty
-        List<NodeProperty> properties = new ArrayList<NodeProperty>();
-        NodeProperty nodeProperty = new NodeProperty("ivo://ivoa.net/vospace/core#description", "My award winning images");
-        nodeProperty.setReadOnly(true);
-        properties.add(nodeProperty);
-
-        // List of Node
-        List<Node> nodes = new ArrayList<Node>();
-        nodes.add(new DataNode("vos://nvo.caltech!vospace/mydir/ngc4323"));
-        nodes.add(new DataNode("vos://nvo.caltech!vospace/mydir/ngc5796"));
-        nodes.add(new DataNode("vos://nvo.caltech!vospace/mydir/ngc6801"));
-
-        // ContainerNode
-        node = new ContainerNode("/create_container_node");
-        node.setProperties(properties);
-        node.setNodes(nodes);
     }
 
     @AfterClass
@@ -136,7 +118,10 @@ public class CreateContainerNodeTest extends AbstractVOSTest
         try
         {
             log.debug("createContainerNode");
-            
+
+            // Get a ContainerNode.
+            ContainerNode node = getSampleContainerNode();
+
             // Add ContainerNode to the VOSpace.
             WebResponse response = put(node);
             assertEquals("PUT response code should be 200", 200, response.getResponseCode());
@@ -153,14 +138,236 @@ public class CreateContainerNodeTest extends AbstractVOSTest
             response = get(node);
             assertEquals("GET response code should be 200", 200, response.getResponseCode());
 
-            // Get the response (an XML document)
-            xml = response.getText();
-            log.debug("GET XML:\r\n" + xml);
-
-            // Validate against the VOSPace schema.
-            reader.read(xml);
+            // Delete the node
+            response = delete(node);
+            assertEquals("DELETE response code should be 200", 200, response.getResponseCode());
 
             log.info("createContainerNode passed.");
+        }
+        catch (Throwable t)
+        {
+            log.error(t);
+            fail(t.getMessage());
+        }
+    }
+
+    /**
+     * The service SHALL throw a HTTP 409 status code including a DuplicateNode
+     * fault in the entity body if a Node already exists with the same URI
+     */
+    @Test
+    public void duplicateNodeFault()
+    {
+        try
+        {
+            log.debug("duplicateNodeFault");
+
+            // Get a ContainerNode.
+            ContainerNode node = getSampleContainerNode();
+
+            // Add ContainerNode to the VOSpace.
+            WebResponse response = put(node);
+            assertEquals("PUT response code should be 200", 200, response.getResponseCode());
+
+            // Get the response (an XML document)
+            String xml = response.getText();
+            log.debug("PUT XML:\r\n" + xml);
+
+            // Create a DOM document from XML and validate against the VOSPace schema.
+            NodeReader reader = new NodeReader();
+            reader.read(xml);
+
+            // Get the node from vospace
+            response = get(node);
+            assertEquals("GET response code should be 200", 200, response.getResponseCode());
+
+            // Try and add the same ContainerNode to the VOSpace
+            response = put(node);
+
+            // Should get back a 409 status code.
+            assertEquals("PUT response code should be 409 when creating a duplicate node", 409, response.getResponseCode());
+
+            // Response message body should be 'DuplicateNode'
+            assertEquals("Response message body should be 'DuplicateNode'", "DuplicateNode", response.getResponseMessage());
+
+            // Delete the node
+            response = delete(node);
+            assertEquals("DELETE response code should be 200", 200, response.getResponseCode());
+
+            log.info("duplicateNodeFault passed.");
+        }
+        catch (Throwable t)
+        {
+            log.error(t);
+            fail(t.getMessage());
+        }
+    }
+
+    /**
+     * The service SHALL throw a HTTP 400 status code including an InvalidURI
+     * fault in the entity body if the requested URI is invalid
+     */
+    @Test
+    public void invalidURIPrefixFault()
+    {
+        try
+        {
+            log.debug("invalidURIPrefixFault");
+
+            // Create node with an invalid URI
+            ContainerNode invalidNode = new ContainerNode("zzz://cadc.nrc.ca!zzzspace/");
+
+            // Add ContainerNode to the VOSpace.
+            WebResponse response = put(invalidNode);
+            assertEquals("PUT response code should be 400 for an invalid URI", 400, response.getResponseCode());
+
+            // Response message body should be 'InvalidURI'
+            assertEquals("Response message body should be 'InvalidURI'", "InvalidURI", response.getResponseMessage());
+
+            // Check that the node wasn't created
+            response = get(invalidNode);
+            assertEquals("GET response code should be 404", 404, response.getResponseCode());
+
+            log.info("invalidURIPrefixFault passed.");
+        }
+        catch (Throwable t)
+        {
+            log.error(t);
+            fail(t.getMessage());
+        }
+    }
+
+    /**
+     * The service SHALL throw a HTTP 400 status code including an InvalidURI
+     * fault in the entity body if the requested URI is invalid
+     */
+    @Test
+    public void invalidURIPathFault()
+    {
+        try
+        {
+            log.debug("invalidURIPathFault");
+
+            // Create node with an invalid path, node A doesn't exist.
+            ContainerNode nodeAB = new ContainerNode(AbstractVOSTest.CADC_VOSPACE_URI + "/A/B");
+
+            // Add ContainerNode to the VOSpace.
+            WebResponse response = put(nodeAB);
+            assertEquals("PUT response code should be 400 for an invalid URI", 400, response.getResponseCode());
+
+            // Response message body should be 'InvalidURI'
+            assertEquals("Response message body should be 'InvalidURI'", "InvalidURI", response.getResponseMessage());
+
+            // Check that the node wasn't created
+            response = get(nodeAB);
+            assertEquals("GET response code should be 404", 404, response.getResponseCode());
+
+            log.info("invalidURIPathFault passed.");
+        }
+        catch (Throwable t)
+        {
+            log.error(t);
+            fail(t.getMessage());
+        }
+    }
+
+    /**
+     * The service SHALL throw a HTTP 400 status code including a TypeNotSupported
+     * fault in the entity body if the type specified in xsi:type is not supported
+     */
+    @Test
+    public void typeNotSupportedFault()
+    {
+        try
+        {
+            log.debug("typeNotSupportedFault");
+
+            // Get a ContainerNode.
+            ContainerNode node = getSampleContainerNode();
+
+            // Add ContainerNode to the VOSpace.
+            WebResponse response = put(node, new InvalidTypeNodeWriter());
+            assertEquals("PUT response code should be 400 for an invalid Node xsi:type", 400, response.getResponseCode());
+
+            // Response message body should be 'TypeNotSupported'
+            assertEquals("Response message body should be 'TypeNotSupported'", "TypeNotSupported", response.getResponseMessage());
+
+            // Check that the node wasn't created
+            response = get(node);
+            assertEquals("GET response code should be 404", 404, response.getResponseCode());
+
+            log.info("typeNotSupportedFault passed.");
+        }
+        catch (Throwable t)
+        {
+            log.error(t);
+            fail(t.getMessage());
+        }
+    }
+
+    /**
+     * The service SHALL throw a HTTP 401 status code including PermissionDenied
+     * fault in the entity body if the user does not have permissions to perform the operation
+     */
+//    @Test
+    public void permissionDeniedFault()
+    {
+        try
+        {
+            log.debug("permissionDeniedFault");
+
+            // Get a ContainerNode.
+            ContainerNode node = getSampleContainerNode();
+            
+            // Add ContainerNode to the VOSpace.
+            WebResponse response = put(node);
+            assertEquals("PUT response code should be 401", 401, response.getResponseCode());
+
+            // Response message body should be 'PermissionDenied'
+            assertEquals("Response message body should be 'PermissionDenied'", "PermissionDenied", response.getResponseMessage());
+
+            // Check that the node wasn't created
+            response = get(node);
+            assertEquals("GET response code should be 404", 404, response.getResponseCode());
+
+            log.info("permissionDeniedFault passed.");
+        }
+        catch (Throwable t)
+        {
+            log.error(t);
+            fail(t.getMessage());
+        }
+    }
+
+    /**
+     * If a parent node in the URI path does not exist then the service MUST
+     * throw a HTTP 500 status code including a ContainerNotFound fault in the entity body.
+     * For example, given the URI path /a/b/c, the service must throw a HTTP 500
+     * status code including a ContainerNotFound fault in the entity body if
+     * either /a or /a/b do not exist.
+     */
+    @Test
+    public void containerNotFoundFault()
+    {
+        try
+        {
+            log.debug("containerNotFoundFault");
+
+            // Create a Node path /A/B
+            ContainerNode nodeAB = new ContainerNode(AbstractVOSTest.CADC_VOSPACE_URI + "/A/B");
+
+            // Try and add the Node to the VOSpace.
+            WebResponse response = put(nodeAB);
+            assertEquals("PUT response code should be 500 for a invalid Node path", 500, response.getResponseCode());
+
+            // Response message body should be 'ContainerNotFound'
+            assertEquals("Response message body should be 'ContainerNotFound'", "ContainerNotFound", response.getResponseMessage());
+
+            // Check that the node wasn't created
+            response = get(nodeAB);
+            assertEquals("GET response code should be 404", 404, response.getResponseCode());
+
+            log.info("containerNotFoundFault passed.");
         }
         catch (Throwable t)
         {

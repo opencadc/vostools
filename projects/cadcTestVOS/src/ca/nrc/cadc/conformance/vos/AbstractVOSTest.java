@@ -73,6 +73,7 @@ import ca.nrc.cadc.util.Log4jInit;
 import ca.nrc.cadc.vos.ContainerNode;
 import ca.nrc.cadc.vos.DataNode;
 import ca.nrc.cadc.vos.Node;
+import ca.nrc.cadc.vos.NodeProperty;
 import ca.nrc.cadc.vos.NodeWriter;
 import com.meterware.httpunit.GetMethodWebRequest;
 import com.meterware.httpunit.PostMethodWebRequest;
@@ -83,6 +84,9 @@ import com.meterware.httpunit.WebResponse;
 import java.io.ByteArrayInputStream;
 import java.io.IOException;
 import java.io.InputStream;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Map;
 import org.apache.log4j.Level;
 import org.apache.log4j.Logger;
 import org.jdom.JDOMException;
@@ -98,6 +102,8 @@ public abstract class AbstractVOSTest
 
     private String serviceUrl;
 
+    public static final String CADC_VOSPACE_URI = "vos://cadc.nrc.ca!vospace";
+    
     public AbstractVOSTest()
     {
         serviceUrl = System.getProperty("service.url");
@@ -112,6 +118,42 @@ public abstract class AbstractVOSTest
         return serviceUrl;
     }
 
+    protected ContainerNode getSampleContainerNode()
+    {
+         // List of NodeProperty
+        List<NodeProperty> properties = new ArrayList<NodeProperty>();
+        NodeProperty nodeProperty = new NodeProperty("ivo://ivoa.net/vospace/core#description", "My award winning images");
+        nodeProperty.setReadOnly(true);
+        properties.add(nodeProperty);
+
+        // List of Node
+        List<Node> nodes = new ArrayList<Node>();
+        nodes.add(new DataNode("vos://cadc.nrc.ca!vospace/mydir/ngc4323"));
+        nodes.add(new DataNode("vos://cadc.nrc.ca!vospace/mydir/ngc5796"));
+        nodes.add(new DataNode("vos://cadc.nrc.ca!vospace/mydir/ngc6801"));
+
+        // ContainerNode
+        ContainerNode node = new ContainerNode(AbstractVOSTest.CADC_VOSPACE_URI + "/A");
+        node.setProperties(properties);
+        node.setNodes(nodes);
+        return node;
+    }
+
+    protected DataNode getSampleDataNode()
+    {
+        // List of NodeProperty
+        List<NodeProperty> properties = new ArrayList<NodeProperty>();
+        NodeProperty nodeProperty = new NodeProperty("ivo://ivoa.net/vospace/core#description", "My award winning images");
+        nodeProperty.setReadOnly(true);
+        properties.add(nodeProperty);
+
+        // DataNode
+        DataNode node = new DataNode("/A");
+        node.setProperties(properties);
+        node.setBusy(true);
+        return node;
+    }
+
     protected WebResponse delete(Node node)
         throws IOException, SAXException, JDOMException
     {
@@ -123,6 +165,7 @@ public abstract class AbstractVOSTest
         log.debug(getRequestParameters(request));
 
         WebConversation conversation = new WebConversation();
+        conversation.setExceptionsThrownOnErrorStatus(false);
         WebResponse response = conversation.getResponse(request);
         assertNotNull("Response to request is null", response);
 
@@ -136,14 +179,30 @@ public abstract class AbstractVOSTest
     protected WebResponse get(Node node)
         throws IOException, SAXException, JDOMException
     {
+        return get(node, null);
+    }
+
+    protected WebResponse get(Node node, Map<String, String> parameters)
+        throws IOException, SAXException, JDOMException
+    {
         String resourceUrl = getServiceUrl() + node.getPath();
         log.debug("**************************************************");
         log.debug("HTTP GET: " + resourceUrl);
         WebRequest request = new GetMethodWebRequest(resourceUrl);
 
+        if (parameters != null)
+        {
+            List<String> keyList = new ArrayList<String>(parameters.keySet());
+            for (String key : keyList)
+            {
+                String value = parameters.get(key);
+                request.setParameter(key, value);
+            }
+        }
         log.debug(getRequestParameters(request));
 
         WebConversation conversation = new WebConversation();
+        conversation.setExceptionsThrownOnErrorStatus(false);
         WebResponse response = conversation.getResponse(request);
         assertNotNull("Response to request is null", response);
 
@@ -171,6 +230,7 @@ public abstract class AbstractVOSTest
         log.debug(getRequestParameters(request));
 
         WebConversation conversation = new WebConversation();
+        conversation.setExceptionsThrownOnErrorStatus(false);
         WebResponse response = conversation.sendRequest(request);
         assertNotNull("POST response to " + resourceUrl + " is null", response);
 
@@ -197,6 +257,7 @@ public abstract class AbstractVOSTest
         log.debug(getRequestParameters(request));
 
         WebConversation conversation = new WebConversation();
+        conversation.setExceptionsThrownOnErrorStatus(false);
         WebResponse response = conversation.sendRequest(request);
         assertNotNull("POST response to " + resourceUrl + " is null", response);
 
@@ -209,19 +270,25 @@ public abstract class AbstractVOSTest
     protected WebResponse put(ContainerNode node)
         throws IOException, SAXException
     {
+        return put(node, new NodeWriter());
+    }
+
+    protected WebResponse put(ContainerNode node, NodeWriter writer)
+        throws IOException, SAXException
+    {
         String resourceUrl = getServiceUrl() + node.getPath();
         log.debug("**************************************************");
         log.debug("HTTP PUT: " + resourceUrl);
 
         StringBuilder sb = new StringBuilder();
-        NodeWriter nodeWriter = new NodeWriter();
-        nodeWriter.write(node, sb);
+        writer.write(node, sb);
         InputStream in = new ByteArrayInputStream(sb.toString().getBytes("UTF-8"));
         WebRequest request = new PutMethodWebRequest(resourceUrl, in, "text/xml");
 
         log.debug(getRequestParameters(request));
 
         WebConversation conversation = new WebConversation();
+        conversation.setExceptionsThrownOnErrorStatus(false);
         WebResponse response = conversation.sendRequest(request);
         assertNotNull("POST response to " + resourceUrl + " is null", response);
 
@@ -234,19 +301,25 @@ public abstract class AbstractVOSTest
     protected WebResponse put(DataNode node)
         throws IOException, SAXException
     {
+        return put(node, new NodeWriter());
+    }
+
+    protected WebResponse put(DataNode node, NodeWriter writer)
+        throws IOException, SAXException
+    {
         String resourceUrl = getServiceUrl() + node.getPath();
         log.debug("**************************************************");
         log.debug("HTTP PUT: " + resourceUrl);
         
         StringBuilder sb = new StringBuilder();
-        NodeWriter nodeWriter = new NodeWriter();
-        nodeWriter.write(node, sb);
+        writer.write(node, sb);
         InputStream in = new ByteArrayInputStream(sb.toString().getBytes("UTF-8"));
         WebRequest request = new PutMethodWebRequest(resourceUrl, in, "text/xml");
 
         log.debug(getRequestParameters(request));
 
         WebConversation conversation = new WebConversation();
+        conversation.setExceptionsThrownOnErrorStatus(false);
         WebResponse response = conversation.sendRequest(request);
         assertNotNull("POST response to " + resourceUrl + " is null", response);
 

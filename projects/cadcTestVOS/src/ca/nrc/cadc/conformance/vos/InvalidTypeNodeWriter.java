@@ -69,20 +69,26 @@
 
 package ca.nrc.cadc.conformance.vos;
 
-import org.junit.runner.RunWith;
-import org.junit.runners.Suite;
+import ca.nrc.cadc.vos.Node;
+import ca.nrc.cadc.vos.NodeWriter;
+import org.jdom.Element;
 
-@RunWith(Suite.class)
-@Suite.SuiteClasses
-({
-    CreateContainerNodeTest.class,
-    CreateDataNodeTest.class,
-    GetContainerNodeTest.class,
-    GetDataNodeTest.class,
-    UpdateContainerNodeTest.class,
-    UpdateDataNodeTest.class,
-    DeleteContainerNodeTest.class,
-    DeleteDataNodeTest.class
-})
+public class InvalidTypeNodeWriter extends NodeWriter
+{
+    public InvalidTypeNodeWriter()
+    {
+        super();
+    }
 
-public class VOSTestSuite {}
+    protected Element getRootElement(Node node)
+    {
+        // Create the root element (node).
+        Element root = new Element("node", defaultNamespace);
+        root.addNamespaceDeclaration(NodeWriter.vosNamespace);
+        root.addNamespaceDeclaration(NodeWriter.xsiNamespace);
+        root.setAttribute("uri", node.getUri());
+        root.setAttribute("type", "vos:invalid_type" + "Type", NodeWriter.xsiNamespace);
+        return root;
+    }
+
+}

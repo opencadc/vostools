@@ -87,8 +87,6 @@ public class UpdateDataNodeTest extends AbstractVOSTest
 {
     private static Logger log = Logger.getLogger(UpdateDataNodeTest.class);
 
-    static DataNode node;
-
     public UpdateDataNodeTest()
     {
         super();
@@ -97,16 +95,6 @@ public class UpdateDataNodeTest extends AbstractVOSTest
     @BeforeClass
     public static void setUpClass() throws Exception
     {
-        // List of NodeProperty
-        List<NodeProperty> properties = new ArrayList<NodeProperty>();
-        NodeProperty nodeProperty = new NodeProperty("ivo://ivoa.net/vospace/core#description", "My award winning images");
-        nodeProperty.setReadOnly(true);
-        properties.add(nodeProperty);
-
-        // DataNode
-        node = new DataNode("/update_data_node");
-        node.setProperties(properties);
-        node.setBusy(true);
     }
 
     @AfterClass
@@ -129,17 +117,12 @@ public class UpdateDataNodeTest extends AbstractVOSTest
         {
             log.debug("updateDataNode");
 
-            // Add ContainerNode to the VOSpace.
+            // Get a DataNode.
+            DataNode node = getSampleDataNode();
+            
+             // Add DataNode to the VOSpace.
             WebResponse response = put(node);
             assertEquals("PUT response code should be 200", 200, response.getResponseCode());
-
-            // Get the response (an XML document)
-            String xml = response.getText();
-            log.debug("PUT XML:\r\n" + xml);
-
-            // Create a DOM document from XML and validate against the VOSPace schema.
-            NodeReader reader = new NodeReader();
-            reader.read(xml);
 
             // Update the node by adding new Property.
             NodeProperty nodeProperty = new NodeProperty("ivo://ivoa.net/vospace/core#description", "My new award winning images");
@@ -149,13 +132,224 @@ public class UpdateDataNodeTest extends AbstractVOSTest
             assertEquals("POST response code should be 200", 200, response.getResponseCode());
 
             // Get the response (an XML document)
-            xml = response.getText();
+            String xml = response.getText();
             log.debug("POST XML:\r\n" + xml);
 
             // Validate against the VOSPace schema.
-            reader.read(xml);
+            NodeReader reader = new NodeReader();
+            DataNode updatedNode = (DataNode) reader.read(xml);
+
+            // Updated node should have 2 properties.
+            assertEquals("", 2, updatedNode.getProperties().size());
+
+            // Delete the node
+            response = delete(node);
+            assertEquals("DELETE response code should be 200", 200, response.getResponseCode());
 
             log.info("updateDataNode passed.");
+        }
+        catch (Throwable t)
+        {
+            log.error(t);
+            fail(t.getMessage());
+        }
+    }
+
+    /**
+     * To delete a Property, set the xsi:nil attribute to true
+     */
+    @Test
+    public void updateContainerNodeDeleteProperty()
+    {
+        try
+        {
+            log.debug("updateContainerNodeValue");
+
+            // Get a ContainerNode.
+            DataNode node = getSampleDataNode();
+
+            // Add ContainerNode to the VOSpace.
+            WebResponse response = put(node);
+            assertEquals("PUT response code should be 200", 200, response.getResponseCode());
+
+            // Mark the property as deleted.
+            node.getProperties().get(0).setMarkedForDeletion(true);
+            response = post(node);
+            assertEquals("POST response code should be 200", 200, response.getResponseCode());
+
+            // Get the response (an XML document)
+            String xml = response.getText();
+            log.debug("POST XML:\r\n" + xml);
+
+            // Validate against the VOSPace schema.
+            NodeReader reader = new NodeReader();
+            DataNode updatedNode = (DataNode) reader.read(xml);
+
+            // Node properties should be empty.
+            assertEquals("Node proerties should be empty", 0, updatedNode.getProperties().size());
+
+            // Delete the node
+            response = delete(node);
+            assertEquals("DELETE response code should be 200", 200, response.getResponseCode());
+
+            log.info("updateContainerNodeValue passed.");
+        }
+        catch (Throwable t)
+        {
+            log.error(t);
+            fail(t.getMessage());
+        }
+    }
+
+    /**
+     * The service SHALL throw a HTTP 401 status code including a PermissionDenied
+     * fault in the entity-body if the user does not have permissions to perform the operation
+     */
+    @Test
+    public void permissionDeniedFault()
+    {
+        try
+        {
+            log.debug("permissionDeniedFault");
+
+            // Get a ContainerNode.
+            DataNode node = getSampleDataNode();
+
+            // Add ContainerNode to the VOSpace.
+            WebResponse response = put(node);
+            assertEquals("PUT response code should be 200", 200, response.getResponseCode());
+
+            // Update the node by adding new Property.
+            NodeProperty nodeProperty = new NodeProperty("ivo://ivoa.net/vospace/core#description", "My new award winning images");
+            nodeProperty.setReadOnly(true);
+            node.getProperties().add(nodeProperty);
+
+            // TODO: how to update a node without permissions?
+            response = post(node);
+            assertEquals("POST response code should be 401", 401, response.getResponseCode());
+
+            // Response message body should be 'PermissionDenied'
+            assertEquals("Response message body should be 'PermissionDenied'", "PermissionDenied", response.getResponseMessage());
+
+            // Delete the node
+            response = delete(node);
+            assertEquals("DELETE response code should be 200", 200, response.getResponseCode());
+
+            log.info("permissionDeniedFault passed.");
+        }
+        catch (Throwable t)
+        {
+            log.error(t);
+            fail(t.getMessage());
+        }
+    }
+
+    /**
+     * The service SHALL throw a HTTP 401 status code including a PermissionDenied
+     * fault in the entity-body if the request attempts to modify a readonly Property
+     */
+    @Test
+    public void updateReadOnlyPermissionDeniedFault()
+    {
+        try
+        {
+            log.debug("updateReadOnlyPermissionDeniedFault");
+
+            // Get a ContainerNode.
+            DataNode node = getSampleDataNode();
+
+            // Add ContainerNode to the VOSpace.
+            WebResponse response = put(node);
+            assertEquals("PUT response code should be 200", 200, response.getResponseCode());
+
+            // Update the node by updating the read only property.
+            node.getProperties().get(0).setReadOnly(false);
+
+            // Update the node
+            response = post(node);
+            assertEquals("POST response code should be 401", 401, response.getResponseCode());
+
+            // Response message body should be 'PermissionDenied'
+            assertEquals("Response message body should be 'PermissionDenied'", "PermissionDenied", response.getResponseMessage());
+
+            // Delete the node
+            response = delete(node);
+            assertEquals("DELETE response code should be 200", 200, response.getResponseCode());
+
+            log.info("updateReadOnlyPermissionDeniedFault passed.");
+        }
+        catch (Throwable t)
+        {
+            log.error(t);
+            fail(t.getMessage());
+        }
+    }
+
+    /**
+     * The service SHALL throw a HTTP 404 status code including a NodeNotFound fault
+     * in the entity-body if the target Node does not exist
+     */
+    @Test
+    public void nodeNotFoundFault()
+    {
+        try
+        {
+            log.debug("nodeNotFoundFault");
+
+            // Create a Node with a nonexistent parent node
+            DataNode nodeAB = new DataNode(AbstractVOSTest.CADC_VOSPACE_URI + "/A/B");
+
+            // Try and get the Node from the VOSpace.
+            WebResponse response = post(nodeAB);
+            assertEquals("POST response code should be 404 for a node that doesn't exist", 404, response.getResponseCode());
+
+            // Response message body should be 'NodeNotFound'
+            assertEquals("Response message body should be 'NodeNotFound'", "NodeNotFound", response.getResponseMessage());
+
+            log.info("nodeNotFoundFault passed.");
+        }
+        catch (Throwable t)
+        {
+            log.error(t);
+            fail(t.getMessage());
+        }
+    }
+
+    /**
+     * The service SHALL throw a HTTP 400 status code including an InvalidArgument fault
+     * in the entity-body if a specified property value is invalid
+     */
+    @Test
+    public void invalidArgumentFault()
+    {
+        try
+        {
+            log.debug("invalidArgumentFault");
+
+            // Get a ContainerNode.
+            DataNode node = getSampleDataNode();
+
+            // Add ContainerNode to the VOSpace.
+            WebResponse response = put(node);
+            assertEquals("PUT response code should be 200", 200, response.getResponseCode());
+
+            // TODO: add an invalid Property
+            NodeProperty nodeProperty = new NodeProperty("zzz://aaa.bbb/ccc/ddd", "My invalid property");
+            nodeProperty.setReadOnly(false);
+            node.getProperties().add(nodeProperty);
+
+            // Update the node.
+            response = post(node);
+            assertEquals("POST response code should be 400 for a node with an invalid property", 400, response.getResponseCode());
+
+            // Response message body should be 'NodeNotFound'
+            assertEquals("Response message body should be 'NodeNotFound'", "NodeNotFound", response.getResponseMessage());
+
+            // Delete the node
+            response = delete(node);
+            assertEquals("DELETE response code should be 200", 200, response.getResponseCode());
+
+            log.info("invalidArgumentFault passed.");
         }
         catch (Throwable t)
         {

@@ -89,8 +89,6 @@ public class DeleteContainerNodeTest extends AbstractVOSTest
 {
     private static Logger log = Logger.getLogger(DeleteContainerNodeTest.class);
 
-    static ContainerNode node;
-
     public DeleteContainerNodeTest()
     {
         super();
@@ -99,22 +97,6 @@ public class DeleteContainerNodeTest extends AbstractVOSTest
     @BeforeClass
     public static void setUpClass() throws Exception
     {
-        // List of NodeProperty
-        List<NodeProperty> properties = new ArrayList<NodeProperty>();
-        NodeProperty nodeProperty = new NodeProperty("ivo://ivoa.net/vospace/core#description", "My award winning images");
-        nodeProperty.setReadOnly(true);
-        properties.add(nodeProperty);
-
-        // List of Node
-        List<Node> nodes = new ArrayList<Node>();
-        nodes.add(new DataNode("vos://nvo.caltech!vospace/mydir/ngc4323"));
-        nodes.add(new DataNode("vos://nvo.caltech!vospace/mydir/ngc5796"));
-        nodes.add(new DataNode("vos://nvo.caltech!vospace/mydir/ngc6801"));
-
-        // ContainerNode
-        node = new ContainerNode("/delete_container_node");
-        node.setProperties(properties);
-        node.setNodes(nodes);
     }
 
     @AfterClass
@@ -137,38 +119,131 @@ public class DeleteContainerNodeTest extends AbstractVOSTest
         {
             log.debug("deleteContainerNode");
 
+            // Get a ContainerNode.
+            ContainerNode node = getSampleContainerNode();
+
             // Add ContainerNode to the VOSpace.
             WebResponse response = put(node);
             assertEquals("PUT response code should be 200", 200, response.getResponseCode());
-
-            // Get the response (an XML document)
-            String xml = response.getText();
-            log.debug("PUT XML:\r\n" + xml);
-
-            // Create a DOM document from XML and validate against the VOSPace schema.
-            NodeReader reader = new NodeReader();
-            reader.read(xml);
 
             // Delete the node.
             response = delete(node);
             assertEquals("DELETE response code should be 200", 200, response.getResponseCode());
 
             // Get the response (an XML document)
-            xml = response.getText();
+            String xml = response.getText();
             log.debug("DELETE XML:\r\n" + xml);
+
+            // Validate against the VOSPace schema.
+            NodeReader reader = new NodeReader();
+            reader.read(xml);
 
             // Try and get the node from vospace
             response = get(node);
             assertEquals("GET response code should be 404 for a node that doesn't exist", 404, response.getResponseCode());
-
-            // Get the response (an XML document)
-            xml = response.getText();
-            log.debug("GET XML:\r\n" + xml);
-
-            // Validate against the VOSPace schema.
-            reader.read(xml);
-
+            
             log.info("deleteContainerNode passed.");
+        }
+        catch (Throwable t)
+        {
+            log.error(t);
+            fail(t.getMessage());
+        }
+    }
+
+    /**
+     * The service SHALL throw a HTTP 401 status code including a PermissionDenied
+     * fault in the entity-body if the user does not have permissions to perform the operation
+     */
+    @Test
+    public void permissionDeniedFault()
+    {
+        try
+        {
+            log.debug("permissionDeniedFault");
+
+            // Get a ContainerNode.
+            ContainerNode node = getSampleContainerNode();
+            
+            // Add ContainerNode to the VOSpace.
+            WebResponse response = put(node);
+            assertEquals("PUT response code should be 200", 200, response.getResponseCode());
+
+            // TODO: how do you delete a node without permissions?
+            response = delete(node);
+            assertEquals("DELETE response code should be 401", 401, response.getResponseCode());
+
+            // Response message body should be 'PermissionDenied'
+            assertEquals("Response message body should be 'PermissionDenied'", "PermissionDenied", response.getResponseMessage());
+
+            // Check that the node wasn't created
+            response = get(node);
+            assertEquals("GET response code should be 404 for a deleted node", 404, response.getResponseCode());
+
+            log.info("permissionDeniedFault passed.");
+        }
+        catch (Throwable t)
+        {
+            log.error(t);
+            fail(t.getMessage());
+        }
+    }
+
+    /**
+     * The service SHALL throw a HTTP 404 status code including a NodeNotFound
+     * fault in the entity-body if the target Node does not exist
+     */
+    @Test
+    public void nodeNotFoundFault()
+    {
+        try
+        {
+            log.debug("nodeNotFoundFault");
+
+            // Create a Node that should not exist.
+            ContainerNode nodeA = new ContainerNode(AbstractVOSTest.CADC_VOSPACE_URI + "/node_not_found");
+
+            // Try and delete the Node from the VOSpace.
+            WebResponse response = delete(nodeA);
+            assertEquals("DELETE response code should be 404 for a node that doesn't exist", 404, response.getResponseCode());
+
+            // Response message body should be 'NodeNotFound'
+            assertEquals("Response message body should be 'NodeNotFound'", "NodeNotFound", response.getResponseMessage());
+
+            log.info("nodeNotFoundFault passed.");
+        }
+        catch (Throwable t)
+        {
+            log.error(t);
+            fail(t.getMessage());
+        }
+    }
+
+    /**
+     * If a parent node in the URI path does not exist then the service MUST
+     * throw a HTTP 500 status code including a ContainerNotFound fault in the entity body.
+     * For example, given the URI path /a/b/c, the service must throw a HTTP 500
+     * status code including a ContainerNotFound fault in the entity body if
+     * either /a or /a/b do not exist.
+     */
+    @Test
+    public void containerNotFoundFault()
+    {
+        try
+        {
+            log.debug("containerNotFoundFault");
+
+            // Create a Node path /A/B
+            ContainerNode nodeAB = new ContainerNode(AbstractVOSTest.CADC_VOSPACE_URI + "/A/B");
+
+            // Try and delete the Node from the VOSpace.
+            WebResponse response = delete(nodeAB);
+            assertEquals("DELETE response code should be 500 for a invalid Node path", 500, response.getResponseCode());
+
+            // Response message body should be 'ContainerNotFound'
+            assertEquals("Response message body should be 'ContainerNotFound'", "ContainerNotFound", response.getResponseMessage());
+
+            log.info("containerNotFoundFault passed.");
         }
         catch (Throwable t)
         {
