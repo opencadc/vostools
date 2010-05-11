@@ -378,6 +378,7 @@ public abstract class NodeDAO implements NodePersistence
                 // potentially updading, deleting or adding new ones
                 for (NodeProperty nextProperty : node.getProperties())
                 {
+                    
                     // Is this property saved already?
                     if (dbNode.getProperties().contains(nextProperty))
                     {
@@ -385,24 +386,25 @@ public abstract class NodeDAO implements NodePersistence
                         {
                             // delete the property
                             jdbc.update(getDeleteNodePropertySQL(dbNode, nextProperty));
+                            dbNode.getProperties().remove(nextProperty);
                         }
                         else
                         {
                             // update the property value
                             jdbc.update(getUpdateNodePropertySQL(dbNode, nextProperty));
+                            dbNode.getProperties().remove(new NodeProperty(nextProperty.getPropertyURI(), null));
+                            dbNode.getProperties().add(nextProperty);
                         }
                     }
                     else
                     {
                         // insert the new property
                         jdbc.update(getInsertNodePropertySQL(dbNode, nextProperty));
+                        dbNode.getProperties().add(nextProperty);
                     }
                 }
                 
                 commitTransaction();
-                
-                // get the node again with the modified properties for return
-                dbNode = getFromParent(node, node.getParent());
                 
             } catch (Throwable t)
             {
@@ -715,32 +717,42 @@ public abstract class NodeDAO implements NodePersistence
             NodeProperty nodeProperty)
     {
         StringBuilder sb = new StringBuilder();
+        String value = nodeProperty.getPropertyValue();
         if (nodeProperty.getPropertyURI().equals(NodePropertyMapper.PROPERTY_CONTENTENCODING_URI))
         {
             sb.append("update ");
             sb.append(getNodeTableName());
-            sb.append(" set contentEncoding = null where nodeID = ");
+            sb.append(" set contentEncoding = ");
+            sb.append((value == null) ? null : "'" + value + "'");
+            sb.append(" where nodeID = ");
             sb.append(getNodeID(node));
         }
         else if (nodeProperty.getPropertyURI().equals(NodePropertyMapper.PROPERTY_CONTENTLENGTH_URI))
         {
+            Long contentLength = new Long(value);
             sb.append("update ");
             sb.append(getNodeTableName());
-            sb.append(" set contentLength = null where nodeID = ");
+            sb.append(" set contentLength = ");
+            sb.append(contentLength);
+            sb.append(" where nodeID = ");
             sb.append(getNodeID(node));
         }
         else if (nodeProperty.getPropertyURI().equals(NodePropertyMapper.PROPERTY_CONTENTMD5_URI))
         {
             sb.append("update ");
             sb.append(getNodeTableName());
-            sb.append(" set contentMD5 = null where nodeID = ");
+            sb.append(" set contentMD5 = ");
+            sb.append((value == null) ? null : "'" + value + "'");
+            sb.append(" where nodeID = ");
             sb.append(getNodeID(node));
         }
         else if (nodeProperty.getPropertyURI().equals(NodePropertyMapper.PROPERTY_CONTENTTYPE_URI))
         {
             sb.append("update ");
             sb.append(getNodeTableName());
-            sb.append(" set contentType = null where nodeID = ");
+            sb.append(" set contentType = ");
+            sb.append((value == null) ? null : "'" + value + "'");
+            sb.append(" where nodeID = ");
             sb.append(getNodeID(node));
         }
         else
@@ -878,21 +890,23 @@ public abstract class NodeDAO implements NodePersistence
     protected String getUpdateNodePropertySQL(Node node, NodeProperty nodeProperty)
     {
         StringBuilder sb = new StringBuilder();
+        String value = nodeProperty.getPropertyValue();
         if (nodeProperty.getPropertyURI().equals(NodePropertyMapper.PROPERTY_CONTENTENCODING_URI))
         {
             sb.append("update ");
             sb.append(getNodeTableName());
-            sb.append(" set contentEncoding = '");
-            sb.append(nodeProperty.getPropertyValue());
-            sb.append("' where nodeID = ");
+            sb.append(" set contentEncoding = ");
+            sb.append((value == null) ? null : "'" + value + "'");
+            sb.append(" where nodeID = ");
             sb.append(getNodeID(node));
         }
         else if (nodeProperty.getPropertyURI().equals(NodePropertyMapper.PROPERTY_CONTENTLENGTH_URI))
         {
+            Long contentLength = new Long(value);
             sb.append("update ");
             sb.append(getNodeTableName());
             sb.append(" set contentLength = ");
-            sb.append(new Long(nodeProperty.getPropertyValue()));
+            sb.append(contentLength);
             sb.append(" where nodeID = ");
             sb.append(getNodeID(node));
         }
@@ -901,7 +915,7 @@ public abstract class NodeDAO implements NodePersistence
             sb.append("update ");
             sb.append(getNodeTableName());
             sb.append(" set contentMD5 = ");
-            sb.append(nodeProperty.getPropertyValue().getBytes());
+            sb.append((value == null) ? null : "'" + value + "'");
             sb.append(" where nodeID = ");
             sb.append(getNodeID(node));
         }
@@ -909,9 +923,9 @@ public abstract class NodeDAO implements NodePersistence
         {
             sb.append("update ");
             sb.append(getNodeTableName());
-            sb.append(" set contentType = '");
-            sb.append(nodeProperty.getPropertyValue());
-            sb.append("' where nodeID = ");
+            sb.append(" set contentType = ");
+            sb.append((value == null) ? null : "'" + value + "'");
+            sb.append(" where nodeID = ");
             sb.append(getNodeID(node));
         }
         else

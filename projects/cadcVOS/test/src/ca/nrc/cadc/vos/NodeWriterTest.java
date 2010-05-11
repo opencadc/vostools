@@ -73,9 +73,7 @@ import static org.junit.Assert.fail;
 
 import java.io.OutputStreamWriter;
 import java.util.ArrayList;
-import java.util.HashSet;
 import java.util.List;
-import java.util.Set;
 
 import org.apache.log4j.Level;
 import org.apache.log4j.Logger;
@@ -108,7 +106,7 @@ public class NodeWriterTest
     public static void setUpClass() throws Exception
     {
         // List of NodeProperty
-        Set<NodeProperty> properties = new HashSet<NodeProperty>();
+        NodeProperties<NodeProperty> properties = new NodeProperties<NodeProperty>();
         NodeProperty nodeProperty = new NodeProperty("ivo://ivoa.net/vospace/core#description", "My award winning images");
         nodeProperty.setReadOnly(true);
         properties.add(nodeProperty);

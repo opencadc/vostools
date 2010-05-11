@@ -74,8 +74,6 @@ import static org.junit.Assert.assertEquals;
 import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
-import java.util.HashSet;
-import java.util.Set;
 
 import javax.sql.DataSource;
 
@@ -112,7 +110,7 @@ public abstract class NodeDAOTests
     @After
     public void after() throws Exception
     {
-        /*
+        
         PreparedStatement prepStmt = connection.prepareStatement(
                 "delete from " + nodeDAO.getNodePropertyTableName()
                 + " where nodeID in (select nodeID from "
@@ -127,7 +125,7 @@ public abstract class NodeDAOTests
         prepStmt.executeUpdate();
         
         prepStmt.close();
-        */
+        
         connection.close();
         
     }
@@ -235,8 +233,6 @@ public abstract class NodeDAOTests
         nodeFromGet.getProperties().add(new NodeProperty("uri2", "value1"));
         nodeFromGet.getProperties().add(new NodeProperty(NodePropertyMapper.PROPERTY_CONTENTENCODING_URI, "gzip"));
         nodeFromGet.getProperties().add(new NodeProperty(NodePropertyMapper.PROPERTY_CONTENTMD5_URI, new byte[] {1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16}.toString()));
-        
-        // Update then get the node
         DataNode nodeFromUpdate1 = (DataNode) nodeDAO.updateProperties(nodeFromGet);
         DataNode nodeFromGetUpdate1 = (DataNode) nodeDAO.getFromParent(nodeFromGet, null);
         assertEquals("assert2", nodeFromGet.getProperties(), nodeFromUpdate1.getProperties());
@@ -256,15 +252,28 @@ public abstract class NodeDAOTests
         
         // Delete property values
         nodeFromGetUpdate2.getProperties().remove(new NodeProperty("uri2", null));
+        NodeProperty newURI2 = new NodeProperty("uri2", "value1");
+        newURI2.setMarkedForDeletion(true);
+        nodeFromGetUpdate2.getProperties().add(newURI2);
         nodeFromGetUpdate2.getProperties().remove(new NodeProperty(NodePropertyMapper.PROPERTY_CONTENTENCODING_URI, null));
+        NodeProperty newEncoding = new NodeProperty(NodePropertyMapper.PROPERTY_CONTENTENCODING_URI, "gzip");
+        newEncoding.setMarkedForDeletion(true);
+        nodeFromGetUpdate2.getProperties().add(newEncoding);
         nodeFromGetUpdate2.getProperties().remove(new NodeProperty(NodePropertyMapper.PROPERTY_CONTENTMD5_URI, null));
+        NodeProperty newMD5 = new NodeProperty(NodePropertyMapper.PROPERTY_CONTENTMD5_URI, new byte[] {1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16}.toString());
+        newMD5.setMarkedForDeletion(true);
+        nodeFromGetUpdate2.getProperties().add(newMD5);
         DataNode nodeFromUpdate3 = (DataNode) nodeDAO.updateProperties(nodeFromGetUpdate2);
         DataNode nodeFromGetUpdate3 = (DataNode) nodeDAO.getFromParent(nodeFromGetUpdate2, null);
+        nodeFromGetUpdate2.getProperties().remove(newURI2);
+        nodeFromGetUpdate2.getProperties().remove(newEncoding);
+        nodeFromGetUpdate2.getProperties().remove(newMD5);
         assertEquals("assert6", nodeFromGetUpdate2.getProperties(), nodeFromUpdate3.getProperties());
         assertEquals("assert7", nodeFromGetUpdate2.getProperties(), nodeFromGetUpdate3.getProperties());
+        
     }
     
-    private DataNode getCommonDataNode(String uri, Set<NodeProperty> properties)
+    private DataNode getCommonDataNode(String uri, NodeProperties<NodeProperty> properties)
     {
         DataNode dataNode = getCommonDataNode(uri);
         dataNode.setProperties(properties);
@@ -278,7 +287,7 @@ public abstract class NodeDAOTests
         return dataNode;
     }
     
-    private ContainerNode getCommonContainerNode(String uri, Set<NodeProperty> properties)
+    private ContainerNode getCommonContainerNode(String uri, NodeProperties<NodeProperty> properties)
     {
         ContainerNode containerNode = getCommonContainerNode(uri);
         containerNode.setProperties(properties);
@@ -292,9 +301,9 @@ public abstract class NodeDAOTests
         return containerNode;
     }
     
-    private Set<NodeProperty> getCommonProperties()
+    private NodeProperties<NodeProperty> getCommonProperties()
     {
-        Set<NodeProperty> properties = new HashSet<NodeProperty>();
+        NodeProperties<NodeProperty> properties = new NodeProperties<NodeProperty>();
         NodeProperty prop1 = new NodeProperty("uri1", "value1");
         NodeProperty prop2 = new NodeProperty("uri2", "value2");
         NodeProperty prop3 = new NodeProperty(NodePropertyMapper.PROPERTY_CONTENTLENGTH_URI, new Long(1024).toString());

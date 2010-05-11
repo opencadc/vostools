@@ -79,10 +79,8 @@ import java.net.URI;
 import java.net.URISyntaxException;
 import java.net.URL;
 import java.util.ArrayList;
-import java.util.HashSet;
 import java.util.List;
 import java.util.MissingResourceException;
-import java.util.Set;
 
 import org.apache.log4j.Logger;
 import org.jdom.Document;
@@ -365,7 +363,7 @@ public class NodeReader
      * @return List of NodeProperty objects.
      * @throws NodeParsingException if there is an error parsing the XML.
      */
-    protected Set<NodeProperty> getProperties(Element root, Namespace namespace)
+    protected NodeProperties<NodeProperty> getProperties(Element root, Namespace namespace)
         throws NodeParsingException
     {
         // properties element
@@ -378,7 +376,7 @@ public class NodeReader
         }
 
         // new NodeProperty List
-        Set<NodeProperty> set = new HashSet<NodeProperty>();
+        NodeProperties<NodeProperty> set = new NodeProperties<NodeProperty>();
 
         // properties property elements
         List<Element> propertyList = properties.getChildren("property", namespace);

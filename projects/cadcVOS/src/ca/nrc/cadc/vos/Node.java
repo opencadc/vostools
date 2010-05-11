@@ -69,9 +69,7 @@
 
 package ca.nrc.cadc.vos;
 
-import java.util.HashSet;
 import java.util.List;
-import java.util.Set;
 
 /**
  * Abstract class defining a data object within a VOSpace.
@@ -101,7 +99,7 @@ public abstract class Node
     protected ContainerNode parent;
     
     // The list of node properties
-    protected Set<NodeProperty> properties;
+    protected NodeProperties<NodeProperty> properties;
     
     // The group allowed to read
     protected String groupRead;
@@ -120,7 +118,7 @@ public abstract class Node
         this.uri = "";
         this.path = "";
         this.name = "";
-        properties = new HashSet<NodeProperty>();
+        properties = new NodeProperties<NodeProperty>();
     }
     
     /**
@@ -132,7 +130,7 @@ public abstract class Node
     {
         this.uri = uri;
         buildPath(uri);
-        properties = new HashSet<NodeProperty>();
+        properties = new NodeProperties<NodeProperty>();
     }
     
     /**
@@ -141,7 +139,7 @@ public abstract class Node
      * @param uri The uri of the node
      * @param properties The node's properties
      */
-    public Node(String uri, Set<NodeProperty> properties)
+    public Node(String uri, NodeProperties<NodeProperty> properties)
     {
         this.uri = uri;
         buildPath(uri);
@@ -292,12 +290,12 @@ public abstract class Node
         this.parent = parent;
     }
 
-    public Set<NodeProperty> getProperties()
+    public NodeProperties<NodeProperty> getProperties()
     {
         return properties;
     }
 
-    public void setProperties(Set<NodeProperty> properties)
+    public void setProperties(NodeProperties<NodeProperty> properties)
     {
         this.properties = properties;
     }

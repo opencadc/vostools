@@ -69,100 +69,150 @@
 
 package ca.nrc.cadc.vos;
 
+import java.util.Collection;
+import java.util.HashSet;
+
 /**
- * A VOSpace property representing metadata for a node.
+ * Extension of HashSet that overrides equals, contains, and remove.
  * 
  * @author majorb
  *
+ * @param <E>
  */
-public class NodeProperty
+public class NodeProperties<E> extends HashSet<E>
 {
     
-    // The property identifier
-    private String propertyURI;
-    
-    // The value of the property
-    private String propertyValue;
-    
-    // true if the property cannot be modified.
-    private boolean readOnly;
-    
-    // true if this property is marked for deletion
-    private boolean markedForDeletion;
+    private static final long serialVersionUID = 6461983219785873279L;
 
     /**
-     * Property constructor.
-     * 
-     * @param uri The property identifier.
-     * @param value The property value.
-     * @param readonly True if the property cannot be modified.
+     * No argument constructor.
      */
-    public NodeProperty(String uri, String value)
+    NodeProperties()
     {
-        this.propertyURI = uri;
-        this.propertyValue = value;
-        this.markedForDeletion = false;
+        super();
     }
     
+    /**
+     * Contructor with existing collection
+     * @param c
+     */
+    NodeProperties(Collection<? extends E> c)
+    {
+        super(c);
+    }
+    
+    /**
+     * Returns true if the size of the set is the same and
+     * each has the same NodeProperty members.
+     */
     public boolean equals(Object o)
     {
-        if (o instanceof NodeProperty)
+        if (o instanceof NodeProperties)
         {
-            NodeProperty np = (NodeProperty) o;
-            if (propertyURI != null)
+            NodeProperties<NodeProperty> np = ((NodeProperties<NodeProperty>) o);
+            if (np.size() == this.size())
             {
-                boolean returnValue = propertyURI.equals(np.getPropertyURI());
-                return returnValue;
+                for (Object o1 : this)
+                {
+                    NodeProperty n1 = (NodeProperty) o1;
+                    boolean propertyFound = false;
+                    for (Object o2 : np)
+                    {
+                        NodeProperty n2 = (NodeProperty) o2;
+                        if (n1.equals(n2))
+                        {
+                            propertyFound = true;
+                        }
+                    }
+                    if (!propertyFound)
+                    {
+                        return false;
+                    }
+                }
+                return true;
             }
         }
         return false;
     }
     
-    public String toString()
-    {
-        return propertyURI + ": " + propertyValue;
-    }
-
     /**
-     * @return The property identifier.
+     * Returns true if a node property with the same
+     * URI exists.
      */
-    public String getPropertyURI()
+    public boolean contains(Object o2)
     {
-        return propertyURI;
-    }
-
-    /**
-     * @return The property value.
-     */
-    public String getPropertyValue()
-    {
-        return propertyValue;
-    }
-
-    /**
-     * @return True if the property cannot be modified.
-     */
-    public boolean isReadOnly()
-    {
-        return readOnly;
-    }
-
-    /**
-     * @param readOnly
-     */
-    public void setReadOnly(boolean readOnly)
-    {
-        this.readOnly = readOnly;
-    }
-
-    public boolean isMarkedForDeletion()
-    {
-        return markedForDeletion;
-    }
-
-    public void setMarkedForDeletion(boolean markedForDeletion)
-    {
-        this.markedForDeletion = markedForDeletion;
+        if (o2 instanceof NodeProperty)
+        {
+            NodeProperty n2 = (NodeProperty) o2;
+            for (Object o1 : this)
+            {
+                if (o1 instanceof NodeProperty)
+                {
+                    NodeProperty n1 = (NodeProperty) o1;
+                    if (n1.equals(n2))
+                    {
+                        return true;
+                    }
+                }
+            }
+            return false;
+        }
+        return super.contains(o2);
     }
     
+    /**
+     * Removes the property with the same URI
+     * as in o2.
+     */
+    public boolean remove(Object o2)
+    {
+        if (o2 instanceof NodeProperty)
+        {
+            NodeProperty n2 = (NodeProperty) o2;
+            Object toRemove = null;
+            for (Object o1: this)
+            {
+                if (o1 instanceof NodeProperty)
+                {
+                    NodeProperty n1 = (NodeProperty) o1;
+                    if (n1.equals(n2))
+                    {
+                        toRemove = o1;
+                    }
+                }
+            }
+            if (toRemove == null)
+            {
+                return false;
+            }
+            else
+            {
+                return super.remove(toRemove);
+            }
+        }
+        return false;
+    }
+    
+    /**
+     * Lists the contents of this set.
+     */
+    public String toString()
+    {
+        StringBuilder sb = new StringBuilder();
+        sb.append("[");
+        
+        for (Object o : this)
+        {
+            NodeProperty p = (NodeProperty) o;
+            sb.append(p);
+            sb.append(", ");
+        }
+        if (this.size() > 0)
+        {
+            sb.delete(sb.length() - 2, sb.length());
+        }
+        sb.append("]");
+        return sb.toString();
+    }
+
 }
