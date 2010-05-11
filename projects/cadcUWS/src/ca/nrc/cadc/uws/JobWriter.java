@@ -93,11 +93,12 @@ import ca.nrc.cadc.date.DateUtil;
  */
 public class JobWriter
 {
+    @SuppressWarnings("unused")
     private static Logger log = Logger.getLogger(JobWriter.class);
 
-    protected Job _job;
-    protected Document _document;
-    protected XMLOutputter _outputter;
+    private Job _job;
+    private Document _document;
+    private XMLOutputter _outputter;
 
     public JobWriter(Job job)
     {

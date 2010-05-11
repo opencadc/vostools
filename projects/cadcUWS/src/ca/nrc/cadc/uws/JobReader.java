@@ -97,10 +97,11 @@ import ca.nrc.cadc.date.DateUtil;
  */
 public class JobReader
 {
+    @SuppressWarnings("unused")
     private static Logger log = Logger.getLogger(JobReader.class);
 
-    protected Document _document;
-    protected SAXBuilder _saxBuilder;
+    private Document _document;
+    private SAXBuilder _saxBuilder;
 
     public JobReader()
     {
