@@ -111,6 +111,9 @@ public abstract class Node
     // The node owner
     protected String owner;
     
+    // To be used by controlling applications as they wish
+    public transient Object appData;
+    
     public Node()
     {
         this.uri = "";
@@ -255,6 +258,7 @@ public abstract class Node
     public void setUri(String uri)
     {
         this.uri = uri;
+        this.buildPath(uri);
     }
     
     public String getPath()

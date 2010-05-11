@@ -131,7 +131,7 @@ public class NodeResource extends BaseResource
             try
             {
                 Node searchNode = new SearchNode(path);
-                node = getNodePersistence().get(searchNode);   
+                node = getNodePersistence().getFromParent(searchNode, null);   
             }
             catch (NodeNotFoundException e)
             {
@@ -167,7 +167,7 @@ public class NodeResource extends BaseResource
             Node nodeToPut = nodeInputRepresentation.getNode();
             
             // store the node
-            Node storedNode = getNodePersistence().put(nodeToPut);
+            Node storedNode = getNodePersistence().putInContainer(nodeToPut, null);
             
             // return the node in xml format
             NodeWriter nodeWriter = new NodeWriter();
@@ -250,7 +250,7 @@ public class NodeResource extends BaseResource
         log.debug("Enter NodeResource.remove()");
         try
         {
-            getNodePersistence().delete(node);
+            getNodePersistence().delete(node, true);
         }
         catch (NodeNotFoundException e)
         {

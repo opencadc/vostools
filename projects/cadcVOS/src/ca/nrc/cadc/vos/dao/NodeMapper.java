@@ -85,23 +85,17 @@ import ca.nrc.cadc.vos.NodeProperty;
 public class NodeMapper implements RowMapper
 {
     
-    public DAONode mapDomainNode(Node node)
+    public static String getDatabaseTypeRepresentation(Node node)
     {
-        DAONode returnNode = null;
         if (node instanceof DataNode)
         {
-            returnNode = new DAODataNode((DataNode) node);
+            return "D";
         }
-        else if (node instanceof ContainerNode)
+        if (node instanceof ContainerNode)
         {
-            returnNode = new DAOContainerNode((ContainerNode) node);
+            return "C";
         }
-        else if (node instanceof SearchNode)
-        {
-            returnNode = new DAOSearchNode((SearchNode) node);
-        }
-        
-        return returnNode;
+        throw new IllegalStateException("Unknown node type: " + node);
     }
 
     /**
@@ -123,32 +117,32 @@ public class NodeMapper implements RowMapper
         String contentEncoding = rs.getString("contentEncoding");
         byte[] contentMD5 = rs.getBytes("contentMD5");
         
-        DAOContainerNode parent = null;
+        ContainerNode parent = null;
         if (parentID != 0)
         {
-            ContainerNode containerNode = new ContainerNode();
-            parent = new DAOContainerNode(containerNode, parentID);
+            parent = new ContainerNode();
+            parent.appData = new NodeID(parentID);
         }
 
         String typeString = rs.getString("type");
         char type = typeString.charAt(0);
-        DAONode node = null;
+        Node node = null;
 
         if (ContainerNode.DB_TYPE == type)
         {
-            ContainerNode containerNode = new ContainerNode();
-            node = new DAOContainerNode(containerNode, nodeID);
+            node = new ContainerNode();
         }
         else if (DataNode.DB_TYPE == type)
         {
-            DataNode dataNode = new DataNode();
-            node = new DAODataNode(dataNode, nodeID);
+            node = new DataNode();
         }
         else
         {
             throw new IllegalStateException("Unknown node database type: "
                     + type);
         }
+        
+        node.appData = new NodeID(nodeID);
 
         node.setName(name);
         node.setParent(parent);

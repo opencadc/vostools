@@ -69,8 +69,6 @@
 
 package ca.nrc.cadc.vos;
 
-import java.security.AccessControlException;
-
 /**
  * An interface defining the methods available for working with VOSpace
  * nodes in the persistent layer.
@@ -80,13 +78,13 @@ import java.security.AccessControlException;
 public interface NodePersistence
 {
     
-    Node get(Node node) throws AccessControlException, NodeNotFoundException;
+    Node getFromParent(Node node, ContainerNode parent) throws NodeNotFoundException;
     
-    Node put(Node node) throws AccessControlException, NodeNotFoundException, NodeAlreadyExistsException;
+    Node putInContainer(Node node, ContainerNode parent) throws NodeNotFoundException, NodeAlreadyExistsException;
     
-    void delete(Node node) throws AccessControlException, NodeNotFoundException;
+    void delete(Node node, boolean deleteChildren) throws NodeNotFoundException;
     
-    Node updateProperties(Node node) throws AccessControlException, NodeNotFoundException;
+    Node updateProperties(Node node) throws NodeNotFoundException;
     
     void move(Node node, String newPath);
     

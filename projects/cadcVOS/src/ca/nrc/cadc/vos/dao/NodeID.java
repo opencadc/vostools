@@ -69,57 +69,33 @@
 
 package ca.nrc.cadc.vos.dao;
 
-import ca.nrc.cadc.vos.DataNode;
-import ca.nrc.cadc.vos.Node;
-
 /**
- * DAO wrapper class of a DataNode
+ * Class used to hold the id of a Node in it's 'appId' memeber.
  * 
  * @author majorb
  *
  */
-public class DAODataNode extends DAONode
+public class NodeID
 {
-    // The real data node object
-    private DataNode dataNode;
+    // The node ID
+    private Long id;
     
     /**
-     * Constructor without nodeID
+     * NodeID constructor.
      * 
-     * @param dataNode
+     * @param id
      */
-    public DAODataNode(DataNode dataNode)
+    public NodeID(Long id)
     {
-        super(0);
-        this.dataNode = dataNode;
+        this.id = id;
     }
     
     /**
-     * Constructor with nodeID
-     * 
-     * @param dataNode
-     * @param nodeID
+     * @return The node ID.
      */
-    public DAODataNode(DataNode dataNode, long nodeID)
+    public Long getId()
     {
-        super(nodeID);
-        this.dataNode = dataNode;
+        return id;
     }
-
-    /**
-     * @return The database type representations
-     */
-    public char getDatabaseTypeRepresentation()
-    {
-        return 'D';
-    }
-
-    /**
-     * The real node domain object.
-     */
-    public Node getNode()
-    {
-        return dataNode;
-    }
-
+    
 }

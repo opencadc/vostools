@@ -84,9 +84,9 @@ import ca.nrc.cadc.vos.View;
 public class SearchNode extends Node
 {
     
-    public SearchNode(String path)
+    public SearchNode(String uri)
     {
-        super(path);
+        super(uri);
     }
 
     @Override

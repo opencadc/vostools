@@ -76,6 +76,7 @@ import java.sql.SQLException;
 import java.sql.Statement;
 import java.util.Iterator;
 import java.util.List;
+import java.util.Stack;
 
 import javax.sql.DataSource;
 
@@ -88,8 +89,7 @@ import org.springframework.jdbc.support.KeyHolder;
 import org.springframework.transaction.TransactionStatus;
 import org.springframework.transaction.support.DefaultTransactionDefinition;
 
-import ca.nrc.cadc.vos.dao.DAOContainerNode;
-import ca.nrc.cadc.vos.dao.DAONode;
+import ca.nrc.cadc.vos.dao.NodeID;
 import ca.nrc.cadc.vos.dao.NodeMapper;
 import ca.nrc.cadc.vos.dao.NodePropertyMapper;
 
@@ -117,6 +117,10 @@ public abstract class NodeDAO implements NodePersistence
     {
     }
     
+    /**
+     * Perform NodeDAO initialization.  This method must be called
+     * before any DAO operations are used.
+     */
     public void init()
     {
         this.defaultTransactionDef = new DefaultTransactionDefinition();
@@ -126,6 +130,21 @@ public abstract class NodeDAO implements NodePersistence
         this.jdbc = new JdbcTemplate(dataSource);
         this.transactionManager = new DataSourceTransactionManager(dataSource);
     }
+    
+    /**
+     * @return The name of the table for persisting nodes.
+     */
+    public abstract String getNodeTableName();
+
+    /**
+     * @return The name of the table for storing node properties.
+     */
+    public abstract String getNodePropertyTableName();
+    
+    /**
+     * @return The node data source to use.
+     */
+    public abstract DataSource getDataSource();
 
     /**
      * Start a transaction to the data source.
@@ -165,49 +184,65 @@ public abstract class NodeDAO implements NodePersistence
         this.transactionStatus = null;
         log.debug("rollback: OK");
     }
-
+    
     /**
-     * Get the node specified by argument 'node' from the database.
+     * Get the node from the parent.  This method assumes that the nodeID
+     * of the parent object is set.  If the parent object is null, it is
+     * assumed to be at the root level.
      */
-    public Node get(Node node) throws AccessControlException,
-            NodeNotFoundException
+    public Node getFromParent(Node node, ContainerNode parent) throws NodeNotFoundException
     {
         if (node == null)
         {
-            throw new IllegalArgumentException("Missing argument 'node'");
+            throw new NodeNotFoundException("Node parameter is null.");
         }
-        return getDAONode(node).getNode();
+        node.setParent(parent);
+        synchronized (this)
+        {
+            Node returnNode = getSingleNodeFromSelect(getSelectNodeByNameAndParentSQL(node));
+            if (returnNode == null)
+            {
+                throw new NodeNotFoundException(node.getPath());
+            }
+            
+            returnNode.setUri(node.getUri());
+            log.debug("Node retrieved from parent: " + returnNode);
+            return returnNode;
+        }
     }
-
+    
     /**
-     * Put the given node into the database.
+     * Put the node in the provided container.  This method assumes that the
+     * nodeID of the parent is set.  If the parent object is null, it is
+     * assumed to be at the root level.
      */
-    public Node put(final Node node) throws AccessControlException,
-            NodeNotFoundException, NodeAlreadyExistsException
+    public Node putInContainer(Node node, ContainerNode parent) throws NodeNotFoundException, NodeAlreadyExistsException
     {
-
+        
+        if (node == null)
+        {
+            throw new NodeNotFoundException("Node parameter is null.");
+        }
+        
         synchronized (this)
         {
             try
             {
-
                 // Start the transaction.
                 startTransaction();
                 
-                DAONode dbNode = getNodesAbove(new NodeMapper().mapDomainNode(node));
+                // make sure the entire parent tree exists
+                node.setParent(parent);
                 
-                // check the write permissions
-                getNodeAuthorizer().checkWriteAccess(dbNode.getParent().getNode());
-                
-                // make sure the leaf node doesn't already exist
-                if (getSingleNodeFromSelect(getSelectNodeByNameAndParentSQL(dbNode)) != null)
+                // make sure this leaf does not already exist
+                if (getSingleNodeFromSelect(getSelectNodeByNameAndParentSQL(node)) != null)
                 {
                     throw new NodeAlreadyExistsException(node.getPath());
                 }
                 
                 KeyHolder keyHolder = new GeneratedKeyHolder();
                 
-                final String insertSQL = getInsertNodeSQL(dbNode);
+                final String insertSQL = getInsertNodeSQL(node);
 
                 jdbc.update(new PreparedStatementCreator() {
                     public PreparedStatement createPreparedStatement(Connection connection)
@@ -218,8 +253,8 @@ public abstract class NodeDAO implements NodePersistence
                         return ps;
                     }}, keyHolder);
                 
-                Long generatedId = new Long(keyHolder.getKey().longValue());
-                dbNode.setNodeID(generatedId);
+                Long generatedID = new Long(keyHolder.getKey().longValue());
+                node.appData = new NodeID(generatedID);
 
                 // insert the node properties
                 Iterator<NodeProperty> propertyIterator = node.getProperties().iterator();
@@ -228,7 +263,7 @@ public abstract class NodeDAO implements NodePersistence
                     NodeProperty next = propertyIterator.next();
                     if (!NodePropertyMapper.isStandardHeaderProperty(next))
                     {
-                        jdbc.update(getInsertNodePropertySQL(dbNode, next));
+                        jdbc.update(getInsertNodePropertySQL(node, next));
                     }
                 }
 
@@ -237,10 +272,10 @@ public abstract class NodeDAO implements NodePersistence
                 
                 log.debug("Inserted new node: " + node);
                 
-                dbNode.setUri(node.getUri());
-                return dbNode.getNode();
+                return node;
                 
-            } catch (Throwable t)
+            }
+            catch (Throwable t)
             {
                 rollbackTransaction();
                 log.error("Put rollback for node: " + node, t);
@@ -262,35 +297,38 @@ public abstract class NodeDAO implements NodePersistence
                 }
             }
         }
-
     }
     
     /**
-     * Delete the given node from the database.
+     * Delete the node.  If deleteChildren is true, also recursively delete
+     * any children of the node.
      */
-    public void delete(Node node) throws AccessControlException,
-        NodeNotFoundException
+    public void delete(Node node, boolean deleteChildren) throws AccessControlException, NodeNotFoundException
     {
-        // Get the node from the database.
-        DAONode nodeInDb = this.getDAONode(node);
         
-        // check delete permissions
-        getNodeAuthorizer().checkDeleteAccess(nodeInDb.getNode());
+        Node dbNode = null;
         
         synchronized (this)
         {
             try
             {
+                
+                // Get the node from the database.
+                dbNode = this.getFromRoot(node);
+                
                 startTransaction();
                 
                 // delete the node properties
-                jdbc.update(getDeleteNodePropertiesSQL(nodeInDb));
+                jdbc.update(getDeleteNodePropertiesSQL(dbNode));
                 
                 // delete the node
-                jdbc.update(getDeleteNodeSQL(nodeInDb));
+                jdbc.update(getDeleteNodeSQL(dbNode));
                 
-                // collect and delete children of the node
-                this.deleteChildrenOf(nodeInDb);
+                if (deleteChildren)
+                {
+                    // collect and delete children of the node
+                    this.deleteChildrenOf(dbNode);
+                }
                 
                 commitTransaction();
                 
@@ -313,26 +351,27 @@ public abstract class NodeDAO implements NodePersistence
             }
             
         }
-        log.debug("Node deleted: " + nodeInDb);
+        log.debug("Node deleted: " + dbNode);
     }
     
     /**
-     * Update existing node properties, delete existing properties marked
-     * for deletion, and add any new properties.
+     * Update the properties associated with this node.  New properties are added,
+     * changed property values are updated, and properties marked for deletion are
+     * removed.
      */
-    public Node updateProperties(Node node) throws AccessControlException,
-        NodeNotFoundException
+    public Node updateProperties(Node node) throws AccessControlException, NodeNotFoundException
     {
-        // Get the node from the database.
-        DAONode nodeInDb = this.getDAONode(node);
-        
-        // check update permissions
-        getNodeAuthorizer().checkUpdateAccess(nodeInDb.getNode());
+
+        Node dbNode = null;
         
         synchronized (this)
         {
             try
             {
+                
+                // Get the node from the database.
+                dbNode = getFromRoot(node);
+                
                 startTransaction();
                 
                 // Iterate through the user properties and the db properties,
@@ -340,27 +379,30 @@ public abstract class NodeDAO implements NodePersistence
                 for (NodeProperty nextProperty : node.getProperties())
                 {
                     // Is this property saved already?
-                    if (nodeInDb.getProperties().contains(nextProperty))
+                    if (dbNode.getProperties().contains(nextProperty))
                     {
                         if (nextProperty.isMarkedForDeletion())
                         {
                             // delete the property
-                            jdbc.update(getDeleteNodePropertySQL(nodeInDb, nextProperty));
+                            jdbc.update(getDeleteNodePropertySQL(dbNode, nextProperty));
                         }
                         else
                         {
                             // update the property value
-                            jdbc.update(getUpdateNodePropertySQL(nodeInDb, nextProperty));
+                            jdbc.update(getUpdateNodePropertySQL(dbNode, nextProperty));
                         }
                     }
                     else
                     {
                         // insert the new property
-                        jdbc.update(getInsertNodePropertySQL(nodeInDb, nextProperty));
+                        jdbc.update(getInsertNodePropertySQL(dbNode, nextProperty));
                     }
                 }
                 
                 commitTransaction();
+                
+                // get the node again with the modified properties for return
+                dbNode = getFromParent(node, node.getParent());
                 
             } catch (Throwable t)
             {
@@ -381,72 +423,74 @@ public abstract class NodeDAO implements NodePersistence
             }
             
         }
-        log.debug("Node updated: " + nodeInDb);
         
-        // return a fresh instance of the node
-        return get(node);
+        log.debug("Node updated: " + dbNode);
+        
+        return dbNode;
     }
     
     /**
-     * Copy the node to the specified path.
-     */
-    public void copy(Node node, String copyToPath)
-    {
-        throw new UnsupportedOperationException("Copy not yet implemented.");
-    }
-    
-    /**
-     * Move the node to the specified path.
+     * Move the node to the new path
+     * @throws UnsupporedOperationException Until implementation is complete.
      */
     public void move(Node node, String newPath)
     {
-        throw new UnsupportedOperationException("Move not yet implemented.");
+        throw new UnsupportedOperationException("Move not implemented.");
     }
     
-    protected DAONode getDAONode(Node node) throws AccessControlException,
-            NodeNotFoundException
-    {
-        
-        DAONode returnNode;
-        synchronized (this)
-        {
-            // get the nodes above in the hierarchy
-            DAONode dbNode = getNodesAbove(new NodeMapper().mapDomainNode(node));
-            
-            // get the node in question
-            returnNode = getSingleNodeFromSelect(getSelectNodeByNameAndParentSQL(dbNode));
-            
-            if (returnNode == null)
-            {
-                throw new NodeNotFoundException(node.toString());
-            }
-            
-            // get the children if this is a container node
-            if (returnNode instanceof DAOContainerNode)
-            {
-                List children = jdbc.query(this.getSelectNodesByParentSQL(returnNode), new NodeMapper());
-                ((DAOContainerNode) returnNode).setNodes(children);
-            }
-            
-            List returnNodeProperties = jdbc.query(getSelectNodePropertiesByID(returnNode), new NodePropertyMapper());
-            returnNode.getProperties().addAll(returnNodeProperties);
-            returnNode.setParent(dbNode.getParent());
-            returnNode.setUri(node.getUri());
-        }
-        
-        if (returnNode == null)
-        {
-            throw new NodeNotFoundException(node.getPath());
-        }
-        
-        // check the permissions
-        getNodeAuthorizer().checkReadAccess(returnNode.getNode());
-        
-        log.debug("get node success: nodeID: " + returnNode.getNodeID() + " for path: " + node.getPath());
-        
-        return returnNode;
-    }
 
+    /**
+     * Copy the node to the new path
+     * @throws UnsupporedOperationException Until implementation is complete.
+     */
+    public void copy(Node node, String copyToPath)
+    {
+        throw new UnsupportedOperationException("Copy not implemented.");
+    }
+    
+    /**
+     * Get the node all the way up to it's root.
+     * @param node
+     * @return
+     * @throws NodeNotFoundException
+     */
+    protected Node getFromRoot(Node node) throws NodeNotFoundException
+    {
+        if (node == null)
+        {
+            throw new NodeNotFoundException("Node parameter is null.");
+        }
+        
+        Stack<Node> nodeStack = new Stack<Node>();
+        Node nextNode = node;
+        while (nextNode != null)
+        {
+            nodeStack.push(nextNode);
+            nextNode = nextNode.getParent();
+        }
+        
+        Node dbNode = null;
+        
+        ContainerNode parent = null;
+        while (!nodeStack.isEmpty())
+        {
+            nextNode = nodeStack.pop();
+            nextNode.setParent(parent);
+            dbNode = getSingleNodeFromSelect(getSelectNodeByNameAndParentSQL(nextNode));
+            if (dbNode == null)
+            {
+                throw new NodeNotFoundException(node.getPath());
+            }
+            if (dbNode instanceof ContainerNode)
+            {
+                parent = (ContainerNode) dbNode;
+            }
+        }
+        
+        dbNode.setUri(node.getUri());
+        return dbNode;
+    }
+    
     /**
      * Return the single node matching the select statement or null if none
      * were found.
@@ -454,155 +498,141 @@ public abstract class NodeDAO implements NodePersistence
      * @param sql The SQL to execute
      * @return The single node or null.
      */
-    protected DAONode getSingleNodeFromSelect(String sql)
+    protected Node getSingleNodeFromSelect(String sql)
     {
-        DAONode node = null;
-        List nodeList = jdbc.query(sql, new NodeMapper());
+        Node node = null;
+        List<Node> nodeList = jdbc.query(sql, new NodeMapper());
         if (nodeList.size() > 1)
         {
-            throw new IllegalStateException("More than one node with nodeID: "
-                    + node.getNodeID());
+            throw new IllegalStateException("More than one node returned for SQL: "
+                    + sql);
         }
         if (nodeList.size() == 1)
         {
-            return (DAONode) nodeList.get(0);
+            Node returnNode = (Node) nodeList.get(0);
+            
+            // get the children if this is a container node
+            if (returnNode instanceof ContainerNode)
+            {
+                List<Node> children = jdbc.query(getSelectNodesByParentSQL(returnNode), new NodeMapper());
+                ((ContainerNode) returnNode).setNodes(children);
+            }
+            
+            // get the properties for the node
+            List<NodeProperty> returnNodeProperties = jdbc.query(getSelectNodePropertiesByID(returnNode), new NodePropertyMapper());
+            returnNode.getProperties().addAll(returnNodeProperties);
+            
+            return returnNode;
         }
         return null;
     }
     
-    protected DAONode getNodesAbove(DAONode node) throws NodeNotFoundException
+    /**
+     * Delete the children of the provided node.
+     * @param node
+     */
+    protected void deleteChildrenOf(Node node)
     {
-        List<DAONode> hierarchyFromRoot = node.getHierarchy();
-        Iterator<DAONode> hierarchyIterator = hierarchyFromRoot.iterator();
-        DAONode next = null;
-        next = hierarchyIterator.next();
-        
-        while (!next.getNode().equals(node.getNode()))
-        {
-            log.debug("NodeDAO:getNodesAbove() next: " + next.getNode().getName());
-            
-            // select id from node where parent is next.getParent() and name = next.getName()
-            DAONode nodeInDb = getSingleNodeFromSelect(getSelectNodeByNameAndParentSQL(next));
-            
-            // check for existence
-            if (nodeInDb == null)
-            {
-                throw new NodeNotFoundException(node.getPath());
-            }
-            
-            // check that it is a container node
-            if (! (next instanceof DAOContainerNode))
-            {
-                throw new IllegalStateException("Non-container node found mid-hierarchy.");
-            }
-            
-            next.setNodeID(nodeInDb.getNodeID());
-            
-            // get the properties for the node
-            List nodeProperties = jdbc.query(getSelectNodePropertiesByID(next), new NodePropertyMapper());
-            next.getProperties().addAll(nodeProperties);
-            
-            if (hierarchyIterator.hasNext())
-            {
-                DAONode nextInHierarchy = hierarchyIterator.next();
-                nextInHierarchy.setParent((DAOContainerNode) next);
-                next = nextInHierarchy;
-            }
-            else
-            {
-                throw new IllegalStateException("Target node missed.");
-            }
-        }
-        return next;
-    }
-    
-    protected void deleteChildrenOf(DAONode node)
-    {
-        List children = jdbc.query(getSelectNodesByParentSQL(node), new NodeMapper());
-        Iterator i = children.iterator();
+        List<Node> children = jdbc.query(getSelectNodesByParentSQL(node), new NodeMapper());
+        Iterator<Node> i = children.iterator();
         while (i.hasNext())
         {
-            deleteChildrenOf((DAONode) i.next());
+            deleteChildrenOf(i.next());
         }
         jdbc.update(getDeleteNodePropertiesByParentSQL(node));
         jdbc.update(getDeleteNodesByParentSQL(node));
     }
-
-    /**
-     * @return The name of the table for persisting nodes.
-     */
-    public abstract String getNodeTableName();
-
-    /**
-     * @return The name of the table for storing node properties.
-     */
-    public abstract String getNodePropertyTableName();
     
     /**
-     * @return The node data source to use.
+     * The the nodeID of the provided node.
+     * @param node
+     * @return
      */
-    public abstract DataSource getDataSource();
+    protected Long getNodeID(Node node)
+    {
+        if (node == null || node.appData == null)
+        {
+            return null;
+        }
+        if (node.appData instanceof NodeID)
+        {
+            return ((NodeID) node.appData).getId();
+        }
+        return null;
+    }
     
     /**
-     * @return The node authorizer to use.
+     * Return the value of the specified property.
      */
-    public abstract NodeAuthorizer getNodeAuthorizer();
-
+    protected String getPropertyValue(Node node, String propertyURI)
+    {
+        int propertyIndex;
+        String value = null;
+        if ((propertyIndex = node.getProperties().indexOf(new NodeProperty(propertyURI, ""))) != -1)
+        {
+            value = ((NodeProperty) node.getProperties().get(propertyIndex)).getPropertyValue();
+        }        
+        return value;
+    }
+    
     /**
      * @param node The node to query for.
      * @return The SQL string for finding the node in the database by
      * name and parentID.
      */
-    protected String getSelectNodeByNameAndParentSQL(DAONode node)
+    protected String getSelectNodeByNameAndParentSQL(Node node)
     {
+        String parentWhereClause = null;
+        Long parentNodeID =  getNodeID(node.getParent());
+        if (parentNodeID == null)
+        {
+            parentWhereClause = "(parentID is null or parentID = 0)";
+        }
+        else
+        {
+            parentWhereClause = "parentID = " + parentNodeID;
+        }
         StringBuilder sb = new StringBuilder();
         sb.append("select nodeID, parentID, name, type, owner, groupRead, groupWrite, "
             + "contentLength, contentType, contentEncoding, contentMD5 from Node where name = '"
             + node.getName()
             + "' and "
-            + ((node.getParent() == null || (node.getParent().getNodeID() == 0)) ?
-                "(parentID is null or parentID = 0)" :
-                "parentID = " + node.getParent().getNodeID()));
+            + parentWhereClause);
         return sb.toString();
     }
     
-    protected String getSelectNodesByParentSQL(DAONode parent)
+    /**
+     * @param parent The node to query for.
+     * @return The SQL string for finding nodes given the parent. 
+     */
+    protected String getSelectNodesByParentSQL(Node parent)
     {
         StringBuilder sb = new StringBuilder();
         sb.append("select nodeID, parentID, name, type, owner, groupRead, groupWrite, "
             + "contentLength, contentType, contentEncoding, contentMD5 from Node where parentID = "
-            + parent.getNodeID());
-        return sb.toString();
-    }
-
-    /**
-     * @param node The node to query for.
-     * @return The SQL string for finding the node in the database by nodeID.
-     */
-    protected String getSelectNodeByIdSQL(DAONode node)
-    {
-        StringBuilder sb = new StringBuilder();
-        sb.append("select nodeID, parentID, name, type, owner, groupRead, groupWrite, "
-           +  "contentLength, contentType, contentEncoding, contentMD5 from Node where nodeID = "
-            + node.getNodeID());
+            + getNodeID(parent));
         return sb.toString();
     }
     
-    protected String getSelectNodePropertiesByID(DAONode node)
+    /**
+     * @param parent The node for which properties are queried.
+     * @return The SQL string for finding the node properties. 
+     */
+    protected String getSelectNodePropertiesByID(Node node)
     {
         StringBuilder sb = new StringBuilder();
         sb.append("select nodePropertyID, propertyURI, propertyValue from ");
         sb.append(getNodePropertyTableName());
         sb.append(" where nodeID = ");
-        sb.append(node.getNodeID());
+        sb.append(getNodeID(node));
         return sb.toString();
     }
-
+    
     /**
      * @param node The node to insert
      * @return The SQL string for inserting the node in the database.
      */
-    protected String getInsertNodeSQL(DAONode node)
+    protected String getInsertNodeSQL(Node node)
     {
         
         long contentLength = 0;
@@ -646,12 +676,11 @@ public abstract class NodeDAO implements NodePersistence
         sb.append("contentEncoding,");
         sb.append("contentMD5");
         sb.append(") values (");
-        sb.append((node.getParent() == null || node.getParent().getNodeID() == 0) ? null : node.getParent()
-                .getNodeID());
+        sb.append(getNodeID(node.getParent()));
         sb.append(",'");
         sb.append(node.getName());
         sb.append("','");
-        sb.append(node.getDatabaseTypeRepresentation());
+        sb.append(NodeMapper.getDatabaseTypeRepresentation(node));
         sb.append("','");
         sb.append(node.getOwner());
         sb.append("','");
@@ -670,23 +699,12 @@ public abstract class NodeDAO implements NodePersistence
         return sb.toString();
     }
     
-    private String getPropertyValue(DAONode node, String propertyURI)
-    {
-        int propertyIndex;
-        String value = null;
-        if ((propertyIndex = node.getProperties().indexOf(new NodeProperty(propertyURI, ""))) != -1)
-        {
-            value = ((NodeProperty) node.getProperties().get(propertyIndex)).getPropertyValue();
-        }        
-        return value;
-    }
-
     /**
      * @param node The node for the property
      * @param nodeProperty  The property of the node
      * @return The SQL string for inserting the node property in the database.
      */
-    protected String getInsertNodePropertySQL(DAONode node,
+    protected String getInsertNodePropertySQL(Node node,
             NodeProperty nodeProperty)
     {
         StringBuilder sb = new StringBuilder();
@@ -697,7 +715,7 @@ public abstract class NodeDAO implements NodePersistence
         sb.append("propertyURI,");
         sb.append("propertyValue");
         sb.append(") values (");
-        sb.append(node.getNodeID());
+        sb.append(((NodeID) node.appData).getId());
         sb.append(",'");
         sb.append(nodeProperty.getPropertyURI());
         sb.append("','");
@@ -705,70 +723,54 @@ public abstract class NodeDAO implements NodePersistence
         sb.append("')");
         return sb.toString();
     }
-
+    
     /**
      * @param node The node to delete
      * @return The SQL string for deleting the node from the database.
      */
-    protected String getDeleteNodeSQL(DAONode node)
+    protected String getDeleteNodeSQL(Node node)
     {
         StringBuilder sb = new StringBuilder();
         sb.append("delete from ");
         sb.append(getNodeTableName());
         sb.append(" where nodeID = ");
-        sb.append(node.getNodeID());
+        sb.append(getNodeID(node));
         return sb.toString();
     }
     
-    protected String getDeleteNodePropertiesSQL(DAONode node)
+    /**
+     * @param node Delete the properties of this node.
+     * @return The SQL string for performing property deletion.
+     */
+    protected String getDeleteNodePropertiesSQL(Node node)
     {
         StringBuilder sb = new StringBuilder();
         sb.append("delete from ");
         sb.append(getNodePropertyTableName());
         sb.append(" where nodeID = ");
-        sb.append(node.getNodeID());
+        sb.append(getNodeID(node));
         return sb.toString();
     }
     
-    protected String getDeleteNodePropertySQL(DAONode node, NodeProperty nodeProperty)
-    {
-        StringBuilder sb = new StringBuilder();
-        sb.append("delete from ");
-        sb.append(getNodePropertyTableName());
-        sb.append(" where nodeID = ");
-        sb.append(node.getNodeID());
-        sb.append(" and propertyURI = '");
-        sb.append(nodeProperty.getPropertyURI());
-        sb.append("'");
-        return sb.toString();
-    }
-    
-    protected String getUpdateNodePropertySQL(DAONode node, NodeProperty nodeProperty)
-    {
-        StringBuilder sb = new StringBuilder();
-        sb.append("update ");
-        sb.append(getNodePropertyTableName());
-        sb.append(" set propertyValue = '");
-        sb.append(nodeProperty.getPropertyValue());
-        sb.append("' where nodeID = ");
-        sb.append(node.getNodeID());
-        sb.append(" and propertyURI = '");
-        sb.append(nodeProperty.getPropertyURI());
-        sb.append("'");
-        return sb.toString();
-    }
-    
-    protected String getDeleteNodesByParentSQL(DAONode parent)
+    /**
+     * @param parent The parent who's children are to be deleted.
+     * @return The SQL string to perform this deletion.
+     */
+    protected String getDeleteNodesByParentSQL(Node parent)
     {
         StringBuilder sb = new StringBuilder();
         sb.append("delete from ");
         sb.append(getNodeTableName());
         sb.append(" where parentID = ");
-        sb.append(parent.getNodeID());
+        sb.append(getNodeID(parent));
         return sb.toString();
     }
     
-    protected String getDeleteNodePropertiesByParentSQL(DAONode parent)
+    /**
+     * @param parent Delete the properties of the children of this parent.
+     * @return The SQL string for performing this deletion.
+     */
+    protected String getDeleteNodePropertiesByParentSQL(Node parent)
     {
         StringBuilder sb = new StringBuilder();
         sb.append("delete from ");
@@ -776,9 +778,47 @@ public abstract class NodeDAO implements NodePersistence
         sb.append(" where nodeID in (select nodeID from ");
         sb.append(getNodeTableName());
         sb.append(" where parentID = ");
-        sb.append(parent.getNodeID());
+        sb.append(getNodeID(parent));
         sb.append(")");
         return sb.toString();
     }
-
+    
+    /**
+     * @param node The node for the properties.
+     * @param nodeProperty The property in question.
+     * @return The SQL string for performing this deletion.
+     */
+    protected String getDeleteNodePropertySQL(Node node, NodeProperty nodeProperty)
+    {
+        StringBuilder sb = new StringBuilder();
+        sb.append("delete from ");
+        sb.append(getNodePropertyTableName());
+        sb.append(" where nodeID = ");
+        sb.append(getNodeID(node));
+        sb.append(" and propertyURI = '");
+        sb.append(nodeProperty.getPropertyURI());
+        sb.append("'");
+        return sb.toString();
+    }
+    
+    /**
+     * @param node The node for which the properties are to be updated.
+     * @param nodeProperty The node property in question.
+     * @return The SQL string for performing this update.
+     */
+    protected String getUpdateNodePropertySQL(Node node, NodeProperty nodeProperty)
+    {
+        StringBuilder sb = new StringBuilder();
+        sb.append("update ");
+        sb.append(getNodePropertyTableName());
+        sb.append(" set propertyValue = '");
+        sb.append(nodeProperty.getPropertyValue());
+        sb.append("' where nodeID = ");
+        sb.append(getNodeID(node));
+        sb.append(" and propertyURI = '");
+        sb.append(nodeProperty.getPropertyURI());
+        sb.append("'");
+        return sb.toString();
+    }
+    
 }
