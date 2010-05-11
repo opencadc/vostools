@@ -708,19 +708,50 @@ public abstract class NodeDAO implements NodePersistence
             NodeProperty nodeProperty)
     {
         StringBuilder sb = new StringBuilder();
-        sb.append("insert into ");
-        sb.append(getNodePropertyTableName());
-        sb.append(" (");
-        sb.append("nodeID,");
-        sb.append("propertyURI,");
-        sb.append("propertyValue");
-        sb.append(") values (");
-        sb.append(((NodeID) node.appData).getId());
-        sb.append(",'");
-        sb.append(nodeProperty.getPropertyURI());
-        sb.append("','");
-        sb.append(nodeProperty.getPropertyValue());
-        sb.append("')");
+        if (nodeProperty.getPropertyURI().equals(NodePropertyMapper.PROPERTY_CONTENTENCODING_URI))
+        {
+            sb.append("update ");
+            sb.append(getNodeTableName());
+            sb.append(" set contentEncoding = null where nodeID = ");
+            sb.append(getNodeID(node));
+        }
+        else if (nodeProperty.getPropertyURI().equals(NodePropertyMapper.PROPERTY_CONTENTLENGTH_URI))
+        {
+            sb.append("update ");
+            sb.append(getNodeTableName());
+            sb.append(" set contentLength = null where nodeID = ");
+            sb.append(getNodeID(node));
+        }
+        else if (nodeProperty.getPropertyURI().equals(NodePropertyMapper.PROPERTY_CONTENTMD5_URI))
+        {
+            sb.append("update ");
+            sb.append(getNodeTableName());
+            sb.append(" set contentMD5 = null where nodeID = ");
+            sb.append(getNodeID(node));
+        }
+        else if (nodeProperty.getPropertyURI().equals(NodePropertyMapper.PROPERTY_CONTENTTYPE_URI))
+        {
+            sb.append("update ");
+            sb.append(getNodeTableName());
+            sb.append(" set contentType = null where nodeID = ");
+            sb.append(getNodeID(node));
+        }
+        else
+        {
+            sb.append("insert into ");
+            sb.append(getNodePropertyTableName());
+            sb.append(" (");
+            sb.append("nodeID,");
+            sb.append("propertyURI,");
+            sb.append("propertyValue");
+            sb.append(") values (");
+            sb.append(((NodeID) node.appData).getId());
+            sb.append(",'");
+            sb.append(nodeProperty.getPropertyURI());
+            sb.append("','");
+            sb.append(nodeProperty.getPropertyValue());
+            sb.append("')");
+        }
         return sb.toString();
     }
     
@@ -791,13 +822,44 @@ public abstract class NodeDAO implements NodePersistence
     protected String getDeleteNodePropertySQL(Node node, NodeProperty nodeProperty)
     {
         StringBuilder sb = new StringBuilder();
-        sb.append("delete from ");
-        sb.append(getNodePropertyTableName());
-        sb.append(" where nodeID = ");
-        sb.append(getNodeID(node));
-        sb.append(" and propertyURI = '");
-        sb.append(nodeProperty.getPropertyURI());
-        sb.append("'");
+        if (nodeProperty.getPropertyURI().equals(NodePropertyMapper.PROPERTY_CONTENTENCODING_URI))
+        {
+            sb.append("update ");
+            sb.append(getNodeTableName());
+            sb.append(" set contentEncoding = null where nodeID = ");
+            sb.append(getNodeID(node));
+        }
+        else if (nodeProperty.getPropertyURI().equals(NodePropertyMapper.PROPERTY_CONTENTLENGTH_URI))
+        {
+            sb.append("update ");
+            sb.append(getNodeTableName());
+            sb.append(" set contentLength = null where nodeID = ");
+            sb.append(getNodeID(node));
+        }
+        else if (nodeProperty.getPropertyURI().equals(NodePropertyMapper.PROPERTY_CONTENTMD5_URI))
+        {
+            sb.append("update ");
+            sb.append(getNodeTableName());
+            sb.append(" set contentMD5 = null where nodeID = ");
+            sb.append(getNodeID(node));
+        }
+        else if (nodeProperty.getPropertyURI().equals(NodePropertyMapper.PROPERTY_CONTENTTYPE_URI))
+        {
+            sb.append("update ");
+            sb.append(getNodeTableName());
+            sb.append(" set contentType = null where nodeID = ");
+            sb.append(getNodeID(node));
+        }
+        else
+        {
+            sb.append("delete from ");
+            sb.append(getNodePropertyTableName());
+            sb.append(" where nodeID = ");
+            sb.append(getNodeID(node));
+            sb.append(" and propertyURI = '");
+            sb.append(nodeProperty.getPropertyURI());
+            sb.append("'");
+        }
         return sb.toString();
     }
     
@@ -809,15 +871,54 @@ public abstract class NodeDAO implements NodePersistence
     protected String getUpdateNodePropertySQL(Node node, NodeProperty nodeProperty)
     {
         StringBuilder sb = new StringBuilder();
-        sb.append("update ");
-        sb.append(getNodePropertyTableName());
-        sb.append(" set propertyValue = '");
-        sb.append(nodeProperty.getPropertyValue());
-        sb.append("' where nodeID = ");
-        sb.append(getNodeID(node));
-        sb.append(" and propertyURI = '");
-        sb.append(nodeProperty.getPropertyURI());
-        sb.append("'");
+        if (nodeProperty.getPropertyURI().equals(NodePropertyMapper.PROPERTY_CONTENTENCODING_URI))
+        {
+            sb.append("update ");
+            sb.append(getNodeTableName());
+            sb.append(" set contentEncoding = '");
+            sb.append(nodeProperty.getPropertyValue());
+            sb.append("' where nodeID = ");
+            sb.append(getNodeID(node));
+        }
+        else if (nodeProperty.getPropertyURI().equals(NodePropertyMapper.PROPERTY_CONTENTLENGTH_URI))
+        {
+            sb.append("update ");
+            sb.append(getNodeTableName());
+            sb.append(" set contentLength = ");
+            sb.append(new Long(nodeProperty.getPropertyValue()));
+            sb.append(" where nodeID = ");
+            sb.append(getNodeID(node));
+        }
+        else if (nodeProperty.getPropertyURI().equals(NodePropertyMapper.PROPERTY_CONTENTMD5_URI))
+        {
+            sb.append("update ");
+            sb.append(getNodeTableName());
+            sb.append(" set contentMD5 = ");
+            sb.append(nodeProperty.getPropertyValue().getBytes());
+            sb.append(" where nodeID = ");
+            sb.append(getNodeID(node));
+        }
+        else if (nodeProperty.getPropertyURI().equals(NodePropertyMapper.PROPERTY_CONTENTTYPE_URI))
+        {
+            sb.append("update ");
+            sb.append(getNodeTableName());
+            sb.append(" set contentType = '");
+            sb.append(nodeProperty.getPropertyValue());
+            sb.append("' where nodeID = ");
+            sb.append(getNodeID(node));
+        }
+        else
+        {
+            sb.append("update ");
+            sb.append(getNodePropertyTableName());
+            sb.append(" set propertyValue = '");
+            sb.append(nodeProperty.getPropertyValue());
+            sb.append("' where nodeID = ");
+            sb.append(getNodeID(node));
+            sb.append(" and propertyURI = '");
+            sb.append(nodeProperty.getPropertyURI());
+            sb.append("'");
+        }
         return sb.toString();
     }
     

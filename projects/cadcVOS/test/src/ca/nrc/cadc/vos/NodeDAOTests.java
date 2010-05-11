@@ -72,6 +72,8 @@ package ca.nrc.cadc.vos;
 import static org.junit.Assert.assertEquals;
 
 import java.sql.Connection;
+import java.sql.PreparedStatement;
+import java.sql.ResultSet;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -110,7 +112,6 @@ public abstract class NodeDAOTests
     @After
     public void after() throws Exception
     {
-        /*
         PreparedStatement prepStmt = connection.prepareStatement(
                 "delete from " + nodeDAO.getNodePropertyTableName()
                 + " where nodeID in (select nodeID from "
@@ -125,7 +126,7 @@ public abstract class NodeDAOTests
         prepStmt.executeUpdate();
         
         prepStmt.close();
-        */
+        
         connection.close();
     }
     
@@ -197,7 +198,6 @@ public abstract class NodeDAOTests
         assertEquals(putNode, nodeF);
         assertEquals(putNode.getProperties(), nodeF.getProperties());
         
-        /*
         // delete the three roots
         nodeDAO.delete(new DataNode(nodePath1), true);
         nodeDAO.delete(new ContainerNode(nodePath2), true);
@@ -212,7 +212,6 @@ public abstract class NodeDAOTests
         int remainingNodes = rs.getInt(1);
         assertEquals(0, remainingNodes);
         prepStmt.close();
-        */
         
     }
     
