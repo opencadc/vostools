@@ -72,6 +72,7 @@ package ca.nrc.cadc.vos;
 import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
+import java.util.Set;
 
 /**
  * A VOSpace node that describes the a data item that contains other data
@@ -109,7 +110,7 @@ public class ContainerNode extends Node
     /**
      * ContainerNode constructor.
      */
-    public ContainerNode(String uri, List<NodeProperty> properties)
+    public ContainerNode(String uri, Set<NodeProperty> properties)
     {
         super(uri, properties);
         nodes = new ArrayList<Node>();

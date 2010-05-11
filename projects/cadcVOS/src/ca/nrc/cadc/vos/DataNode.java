@@ -70,6 +70,7 @@
 package ca.nrc.cadc.vos;
 
 import java.util.List;
+import java.util.Set;
 
 /**
  * A VOSpace node that describes a data item.
@@ -108,7 +109,7 @@ public class DataNode extends Node
     /**
      * DataNode constructor.
      */
-    public DataNode(String uri, List<NodeProperty> properties)
+    public DataNode(String uri, Set<NodeProperty> properties)
     {
         super(uri, properties);
         this.structured = false;

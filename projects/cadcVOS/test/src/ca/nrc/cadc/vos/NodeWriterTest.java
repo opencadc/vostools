@@ -69,10 +69,14 @@
 
 package ca.nrc.cadc.vos;
 
-import ca.nrc.cadc.util.Log4jInit;
+import static org.junit.Assert.fail;
+
 import java.io.OutputStreamWriter;
 import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
+
 import org.apache.log4j.Level;
 import org.apache.log4j.Logger;
 import org.junit.After;
@@ -80,7 +84,8 @@ import org.junit.AfterClass;
 import org.junit.Before;
 import org.junit.BeforeClass;
 import org.junit.Test;
-import static org.junit.Assert.*;
+
+import ca.nrc.cadc.util.Log4jInit;
 
 /**
  *
@@ -103,7 +108,7 @@ public class NodeWriterTest
     public static void setUpClass() throws Exception
     {
         // List of NodeProperty
-        List<NodeProperty> properties = new ArrayList<NodeProperty>();
+        Set<NodeProperty> properties = new HashSet<NodeProperty>();
         NodeProperty nodeProperty = new NodeProperty("ivo://ivoa.net/vospace/core#description", "My award winning images");
         nodeProperty.setReadOnly(true);
         properties.add(nodeProperty);

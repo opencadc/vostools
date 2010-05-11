@@ -74,8 +74,8 @@ import static org.junit.Assert.assertEquals;
 import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
-import java.util.ArrayList;
-import java.util.List;
+import java.util.HashSet;
+import java.util.Set;
 
 import javax.sql.DataSource;
 
@@ -112,6 +112,7 @@ public abstract class NodeDAOTests
     @After
     public void after() throws Exception
     {
+        /*
         PreparedStatement prepStmt = connection.prepareStatement(
                 "delete from " + nodeDAO.getNodePropertyTableName()
                 + " where nodeID in (select nodeID from "
@@ -126,8 +127,9 @@ public abstract class NodeDAOTests
         prepStmt.executeUpdate();
         
         prepStmt.close();
-        
+        */
         connection.close();
+        
     }
     
     public abstract DataSource getDataSource();
@@ -148,55 +150,55 @@ public abstract class NodeDAOTests
         
         // /a
         String nodePath1 = "/" + getNodeName("a");
-        dataNode = new DataNode(nodePath1, getCommonProperties());
+        dataNode = getCommonDataNode(nodePath1, getCommonProperties());
         putNode = nodeDAO.putInContainer(dataNode, null);
         Node nodeA = nodeDAO.getFromParent(putNode, null);
         System.out.println("PutNode: " + putNode);
         System.out.println("GetNode: " + nodeA);
-        assertEquals(putNode, nodeA);
-        assertEquals(putNode.getProperties(), nodeA.getProperties());
+        assertEquals("assert1", putNode, nodeA);
+        assertEquals("assert2", putNode.getProperties(), nodeA.getProperties());
         
         // /b
         String nodePath2 = "/" + getNodeName("b");
-        containerNode = new ContainerNode(nodePath2, getCommonProperties());
+        containerNode = getCommonContainerNode(nodePath2, getCommonProperties());
         putNode = nodeDAO.putInContainer(containerNode, null);
         Node nodeB = nodeDAO.getFromParent(putNode, null);
         System.out.println("PutNode: " + putNode);
         System.out.println("GetNode: " + nodeB);
-        assertEquals(putNode, nodeB);
-        assertEquals(putNode.getProperties(), nodeB.getProperties());
+        assertEquals("assert3", putNode, nodeB);
+        assertEquals("assert4", putNode.getProperties(), nodeB.getProperties());
         
         // /c
         String nodePath3 = "/" + getNodeName("c");
-        containerNode = new ContainerNode(nodePath3, getCommonProperties());
+        containerNode = getCommonContainerNode(nodePath3, getCommonProperties());
         putNode = nodeDAO.putInContainer(containerNode, null);
         Node nodeC = nodeDAO.getFromParent(putNode, null);
-        assertEquals(putNode, nodeC);
-        assertEquals(putNode.getProperties(), nodeC.getProperties());
+        assertEquals("assert5", putNode, nodeC);
+        assertEquals("assert6", putNode.getProperties(), nodeC.getProperties());
         
         // /b/d
         String nodePath4 = "/" + getNodeName("b") + "/" + getNodeName("d");
-        dataNode = new DataNode(nodePath4, getCommonProperties());
+        dataNode = getCommonDataNode(nodePath4, getCommonProperties());
         putNode = nodeDAO.putInContainer(dataNode, (ContainerNode) nodeB);
         Node nodeD = nodeDAO.getFromParent(putNode, putNode.getParent());
-        assertEquals(putNode, nodeD);
-        assertEquals(putNode.getProperties(), nodeD.getProperties());
+        assertEquals("assert7", putNode, nodeD);
+        assertEquals("assert8", putNode.getProperties(), nodeD.getProperties());
         
         // /c/e
         String nodePath5 = "/" + getNodeName("c") + "/" + getNodeName("e");
-        containerNode = new ContainerNode(nodePath5, getCommonProperties());
+        containerNode = getCommonContainerNode(nodePath5, getCommonProperties());
         putNode = nodeDAO.putInContainer(containerNode, (ContainerNode) nodeC);
         Node nodeE = nodeDAO.getFromParent(putNode, putNode.getParent());
-        assertEquals(putNode, nodeE);
-        assertEquals(putNode.getProperties(), nodeE.getProperties());
+        assertEquals("assert9", putNode, nodeE);
+        assertEquals("assert10", putNode.getProperties(), nodeE.getProperties());
         
         // /c/e/f
         String nodePath6 = "/" + getNodeName("c") + "/" + getNodeName("e") + "/" + getNodeName("f");
-        dataNode = new DataNode(nodePath6, getCommonProperties());
+        dataNode = getCommonDataNode(nodePath6, getCommonProperties());
         putNode = nodeDAO.putInContainer(dataNode, (ContainerNode) nodeE);
         Node nodeF = nodeDAO.getFromParent(putNode, putNode.getParent());
-        assertEquals(putNode, nodeF);
-        assertEquals(putNode.getProperties(), nodeF.getProperties());
+        assertEquals("assert11", putNode, nodeF);
+        assertEquals("assert12", putNode.getProperties(), nodeF.getProperties());
         
         // delete the three roots
         nodeDAO.delete(new DataNode(nodePath1), true);
@@ -210,14 +212,89 @@ public abstract class NodeDAOTests
         ResultSet rs = prepStmt.executeQuery();
         rs.next();
         int remainingNodes = rs.getInt(1);
-        assertEquals(0, remainingNodes);
+        assertEquals("assert13", 0, remainingNodes);
         prepStmt.close();
         
     }
     
-    private List<NodeProperty> getCommonProperties()
+    @Test
+    public void testUpdateProperties() throws Exception
     {
-        List<NodeProperty> properties = new ArrayList<NodeProperty>();
+        // Create a node with properties
+        DataNode dataNode = getCommonDataNode("/" + getNodeName("g"));
+        dataNode.getProperties().add(new NodeProperty("uri1", "value1"));
+        dataNode.getProperties().add(new NodeProperty(NodePropertyMapper.PROPERTY_CONTENTLENGTH_URI, new Long(1024).toString()));
+        dataNode.getProperties().add(new NodeProperty(NodePropertyMapper.PROPERTY_CONTENTTYPE_URI, "text/plain"));
+        
+        // Put then get the node
+        DataNode nodeFromPut = (DataNode) nodeDAO.putInContainer(dataNode, null);
+        DataNode nodeFromGet = (DataNode) nodeDAO.getFromParent(nodeFromPut, null);
+        assertEquals("assert1", nodeFromPut.getProperties(), nodeFromGet.getProperties());
+        
+        // Add new properties
+        nodeFromGet.getProperties().add(new NodeProperty("uri2", "value1"));
+        nodeFromGet.getProperties().add(new NodeProperty(NodePropertyMapper.PROPERTY_CONTENTENCODING_URI, "gzip"));
+        nodeFromGet.getProperties().add(new NodeProperty(NodePropertyMapper.PROPERTY_CONTENTMD5_URI, new byte[] {1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16}.toString()));
+        
+        // Update then get the node
+        DataNode nodeFromUpdate1 = (DataNode) nodeDAO.updateProperties(nodeFromGet);
+        DataNode nodeFromGetUpdate1 = (DataNode) nodeDAO.getFromParent(nodeFromGet, null);
+        assertEquals("assert2", nodeFromGet.getProperties(), nodeFromUpdate1.getProperties());
+        assertEquals("assert3", nodeFromGet.getProperties(), nodeFromGetUpdate1.getProperties());
+        
+        // Update property values
+        nodeFromGetUpdate1.getProperties().remove(new NodeProperty("uri1", null));
+        nodeFromGetUpdate1.getProperties().add(new NodeProperty("uri1", "value2"));
+        nodeFromGetUpdate1.getProperties().remove(new NodeProperty(NodePropertyMapper.PROPERTY_CONTENTLENGTH_URI, null));
+        nodeFromGetUpdate1.getProperties().add(new NodeProperty(NodePropertyMapper.PROPERTY_CONTENTLENGTH_URI, new Long(2048).toString()));
+        nodeFromGetUpdate1.getProperties().remove(new NodeProperty(NodePropertyMapper.PROPERTY_CONTENTTYPE_URI, null));
+        nodeFromGetUpdate1.getProperties().add(new NodeProperty(NodePropertyMapper.PROPERTY_CONTENTTYPE_URI, "application/pdf"));
+        DataNode nodeFromUpdate2 = (DataNode) nodeDAO.updateProperties(nodeFromGetUpdate1);
+        DataNode nodeFromGetUpdate2 = (DataNode) nodeDAO.getFromParent(nodeFromGetUpdate1, null);
+        assertEquals("assert4", nodeFromGetUpdate1.getProperties(), nodeFromUpdate2.getProperties());
+        assertEquals("assert5", nodeFromGetUpdate1.getProperties(), nodeFromGetUpdate2.getProperties());
+        
+        // Delete property values
+        nodeFromGetUpdate2.getProperties().remove(new NodeProperty("uri2", null));
+        nodeFromGetUpdate2.getProperties().remove(new NodeProperty(NodePropertyMapper.PROPERTY_CONTENTENCODING_URI, null));
+        nodeFromGetUpdate2.getProperties().remove(new NodeProperty(NodePropertyMapper.PROPERTY_CONTENTMD5_URI, null));
+        DataNode nodeFromUpdate3 = (DataNode) nodeDAO.updateProperties(nodeFromGetUpdate2);
+        DataNode nodeFromGetUpdate3 = (DataNode) nodeDAO.getFromParent(nodeFromGetUpdate2, null);
+        assertEquals("assert6", nodeFromGetUpdate2.getProperties(), nodeFromUpdate3.getProperties());
+        assertEquals("assert7", nodeFromGetUpdate2.getProperties(), nodeFromGetUpdate3.getProperties());
+    }
+    
+    private DataNode getCommonDataNode(String uri, Set<NodeProperty> properties)
+    {
+        DataNode dataNode = getCommonDataNode(uri);
+        dataNode.setProperties(properties);
+        return dataNode;
+    }
+    
+    private DataNode getCommonDataNode(String uri)
+    {
+        DataNode dataNode = new DataNode(uri);
+        dataNode.setOwner("testowner");
+        return dataNode;
+    }
+    
+    private ContainerNode getCommonContainerNode(String uri, Set<NodeProperty> properties)
+    {
+        ContainerNode containerNode = getCommonContainerNode(uri);
+        containerNode.setProperties(properties);
+        return containerNode;
+    }
+    
+    private ContainerNode getCommonContainerNode(String uri)
+    {
+        ContainerNode containerNode = new ContainerNode(uri);
+        containerNode.setOwner("testowner");
+        return containerNode;
+    }
+    
+    private Set<NodeProperty> getCommonProperties()
+    {
+        Set<NodeProperty> properties = new HashSet<NodeProperty>();
         NodeProperty prop1 = new NodeProperty("uri1", "value1");
         NodeProperty prop2 = new NodeProperty("uri2", "value2");
         NodeProperty prop3 = new NodeProperty(NodePropertyMapper.PROPERTY_CONTENTLENGTH_URI, new Long(1024).toString());
@@ -225,12 +302,13 @@ public abstract class NodeDAOTests
         NodeProperty prop5 = new NodeProperty(NodePropertyMapper.PROPERTY_CONTENTENCODING_URI, "gzip");
         NodeProperty prop6 = new NodeProperty(NodePropertyMapper.PROPERTY_CONTENTMD5_URI, new byte[] {1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16}.toString());
 
+        properties.add(prop1);
+        properties.add(prop2);
         properties.add(prop3);
         properties.add(prop4);
         properties.add(prop5);
         properties.add(prop6);
-        properties.add(prop1);
-        properties.add(prop2);
+
         return properties;
     }
     

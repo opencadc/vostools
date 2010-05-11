@@ -565,14 +565,16 @@ public abstract class NodeDAO implements NodePersistence
      * Return the value of the specified property.
      */
     protected String getPropertyValue(Node node, String propertyURI)
-    {
-        int propertyIndex;
-        String value = null;
-        if ((propertyIndex = node.getProperties().indexOf(new NodeProperty(propertyURI, ""))) != -1)
+    {   
+        final NodeProperty searchProperty = new NodeProperty(propertyURI, null);
+        for (NodeProperty nodeProperty : node.getProperties())
         {
-            value = ((NodeProperty) node.getProperties().get(propertyIndex)).getPropertyValue();
-        }        
-        return value;
+            if (nodeProperty.equals(searchProperty))
+            {
+                return nodeProperty.getPropertyValue();
+            }
+        }
+        return null;
     }
     
     /**
@@ -661,6 +663,11 @@ public abstract class NodeDAO implements NodePersistence
             contentMD5 = contentMD5String.getBytes();
         }
         
+        if (node.getOwner() == null)
+        {
+            throw new IllegalArgumentException("Node owner cannot be null.");
+        }
+        
         StringBuilder sb = new StringBuilder();
         sb.append("insert into ");
         sb.append(getNodeTableName());
@@ -683,19 +690,19 @@ public abstract class NodeDAO implements NodePersistence
         sb.append(NodeMapper.getDatabaseTypeRepresentation(node));
         sb.append("','");
         sb.append(node.getOwner());
-        sb.append("','");
-        sb.append(node.getGroupRead());
-        sb.append("','");
-        sb.append(node.getGroupWrite());
         sb.append("',");
+        sb.append((node.getGroupRead() == null) ? null : "'" + node.getGroupRead() + "'");
+        sb.append(",");
+        sb.append((node.getGroupWrite() == null) ? null : "'" + node.getGroupWrite() + "'");
+        sb.append(",");
         sb.append(contentLength);
-        sb.append(",'");
-        sb.append(contentType);
-        sb.append("','");
-        sb.append(contentEncoding);
-        sb.append("','");
-        sb.append(contentMD5);
-        sb.append("')");
+        sb.append(",");
+        sb.append((contentType == null) ? null : "'" + contentType + "'");
+        sb.append(",");
+        sb.append((contentEncoding == null) ? null : "'" + contentEncoding + "'");
+        sb.append(",");
+        sb.append((contentMD5== null) ? null : "'" + contentMD5 + "'");
+        sb.append(")");
         return sb.toString();
     }
     
