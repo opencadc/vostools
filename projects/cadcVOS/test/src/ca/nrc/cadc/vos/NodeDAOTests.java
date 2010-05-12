@@ -94,6 +94,8 @@ import ca.nrc.cadc.vos.dao.NodePropertyMapper;
 public abstract class NodeDAOTests
 {
     
+    private static final String VOS_URI_PREFIX = "vos://cadc.nrc.ca!vospace";
+    
     private NodeDAO nodeDAO;
     private String runId;
     private Connection connection;
@@ -110,7 +112,6 @@ public abstract class NodeDAOTests
     @After
     public void after() throws Exception
     {
-        
         PreparedStatement prepStmt = connection.prepareStatement(
                 "delete from " + nodeDAO.getNodePropertyTableName()
                 + " where nodeID in (select nodeID from "
@@ -282,7 +283,7 @@ public abstract class NodeDAOTests
     
     private DataNode getCommonDataNode(String path) throws Exception
     {
-        VOSURI vosuri = new VOSURI("vos://" + path);
+        VOSURI vosuri = new VOSURI(VOS_URI_PREFIX + path);
         DataNode dataNode = new DataNode(vosuri);
         dataNode.setOwner("testowner");
         return dataNode;
@@ -297,7 +298,7 @@ public abstract class NodeDAOTests
     
     private ContainerNode getCommonContainerNode(String path) throws Exception
     {
-        VOSURI vosuri = new VOSURI("vos://" + path);
+        VOSURI vosuri = new VOSURI(VOS_URI_PREFIX + path);
         ContainerNode containerNode = new ContainerNode(vosuri);
         containerNode.setOwner("testowner");
         return containerNode;
