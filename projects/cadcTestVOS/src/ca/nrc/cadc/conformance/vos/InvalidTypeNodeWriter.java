@@ -86,7 +86,7 @@ public class InvalidTypeNodeWriter extends NodeWriter
         Element root = new Element("node", defaultNamespace);
         root.addNamespaceDeclaration(NodeWriter.vosNamespace);
         root.addNamespaceDeclaration(NodeWriter.xsiNamespace);
-        root.setAttribute("uri", node.getUri());
+        root.setAttribute("uri", node.getUri().toString());
         root.setAttribute("type", "vos:invalid_type" + "Type", NodeWriter.xsiNamespace);
         return root;
     }

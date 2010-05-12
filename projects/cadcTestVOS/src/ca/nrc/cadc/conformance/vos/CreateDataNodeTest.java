@@ -70,11 +70,9 @@
 package ca.nrc.cadc.conformance.vos;
 
 import ca.nrc.cadc.vos.DataNode;
-import ca.nrc.cadc.vos.NodeProperty;
 import ca.nrc.cadc.vos.NodeReader;
+import ca.nrc.cadc.vos.VOSURI;
 import com.meterware.httpunit.WebResponse;
-import java.util.ArrayList;
-import java.util.List;
 import org.apache.log4j.Logger;
 import org.junit.After;
 import org.junit.AfterClass;
@@ -216,7 +214,7 @@ public class CreateDataNodeTest extends AbstractVOSTest
             DataNode node = getSampleDataNode();
 
             // Create node with an invalid URI
-            DataNode invalidNode = new DataNode("zzz://cadc.nrc.ca!zzzspace/");
+            DataNode invalidNode = new DataNode(new VOSURI("zzz://cadc.nrc.ca!zzzspace/"));
 
             // Add ContainerNode to the VOSpace.
             WebResponse response = put(node);
@@ -250,7 +248,7 @@ public class CreateDataNodeTest extends AbstractVOSTest
             log.debug("invalidURIPathFault");
 
             // Create node with an invalid URI, node A doesn't exist.
-            DataNode nodeAB = new DataNode(AbstractVOSTest.CADC_VOSPACE_URI + "/A/B");
+            DataNode nodeAB = new DataNode(new VOSURI(AbstractVOSTest.CADC_VOSPACE_URI + "/A/B"));
 
             // Add ContainerNode to the VOSpace.
             WebResponse response = put(nodeAB);
@@ -355,7 +353,7 @@ public class CreateDataNodeTest extends AbstractVOSTest
             log.debug("containerNotFoundFault");
 
             // Create a Node path /A/B
-            DataNode nodeAB = new DataNode(AbstractVOSTest.CADC_VOSPACE_URI + "/A/B");
+            DataNode nodeAB = new DataNode(new VOSURI(AbstractVOSTest.CADC_VOSPACE_URI + "/A/B"));
 
             // Try and add the Node to the VOSpace.
             WebResponse response = put(nodeAB);

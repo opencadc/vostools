@@ -71,6 +71,7 @@ package ca.nrc.cadc.conformance.vos;
 
 import ca.nrc.cadc.vos.DataNode;
 import ca.nrc.cadc.vos.NodeReader;
+import ca.nrc.cadc.vos.VOSURI;
 import com.meterware.httpunit.WebResponse;
 import java.util.HashMap;
 import java.util.Map;
@@ -272,7 +273,7 @@ public class GetDataNodeTest extends AbstractVOSTest
 
             // Request Parameters to get the node plus an offset
             Map<String, String> parameters = new HashMap<String, String>();
-            parameters.put("uri", node.getUri());
+            parameters.put("uri", node.getUri().toString());
             parameters.put("offset", "1");
 
             // Get the node from vospace
@@ -348,7 +349,7 @@ public class GetDataNodeTest extends AbstractVOSTest
             log.debug("nodeNotFoundFault");
 
             // Create a Node with a nonexistent parent node
-            DataNode nodeAB = new DataNode(AbstractVOSTest.CADC_VOSPACE_URI + "/A/B");
+            DataNode nodeAB = new DataNode(new VOSURI(AbstractVOSTest.CADC_VOSPACE_URI + "/A/B"));
 
             // Try and get the Node from the VOSpace.
             WebResponse response = get(nodeAB);

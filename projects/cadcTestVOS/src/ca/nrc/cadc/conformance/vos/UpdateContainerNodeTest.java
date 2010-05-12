@@ -70,13 +70,11 @@
 package ca.nrc.cadc.conformance.vos;
 
 import ca.nrc.cadc.vos.ContainerNode;
-import ca.nrc.cadc.vos.DataNode;
-import ca.nrc.cadc.vos.Node;
+import ca.nrc.cadc.vos.NodeProperties;
 import ca.nrc.cadc.vos.NodeProperty;
 import ca.nrc.cadc.vos.NodeReader;
+import ca.nrc.cadc.vos.VOSURI;
 import com.meterware.httpunit.WebResponse;
-import java.util.ArrayList;
-import java.util.List;
 import org.apache.log4j.Logger;
 import org.junit.After;
 import org.junit.AfterClass;
@@ -167,17 +165,15 @@ public class UpdateContainerNodeTest extends AbstractVOSTest
         {
             log.debug("updateContainerNodeValue");
 
-            // Get a ContainerNode.
-            ContainerNode node = getSampleContainerNode();
+            // Create a ContainerNode.
+            ContainerNode node = new ContainerNode(new VOSURI(AbstractVOSTest.CADC_VOSPACE_URI + "/A"));
+            NodeProperty nodeProperty = new NodeProperty("ivo://ivoa.net/vospace/core#description", "My award winning images");
+            nodeProperty.setReadOnly(true);
+            node.getProperties().add(nodeProperty);
 
             // Add ContainerNode to the VOSpace.
             WebResponse response = put(node);
             assertEquals("PUT response code should be 200", 200, response.getResponseCode());
-
-            // Mark the property as deleted.
-            node.getProperties().get(0).setMarkedForDeletion(true);
-            response = post(node);
-            assertEquals("POST response code should be 200", 200, response.getResponseCode());
 
             // Get the response (an XML document)
             String xml = response.getText();
@@ -187,11 +183,26 @@ public class UpdateContainerNodeTest extends AbstractVOSTest
             NodeReader reader = new NodeReader();
             ContainerNode updatedNode = (ContainerNode) reader.read(xml);
 
+            // Mark the property as deleted.
+            NodeProperties<NodeProperty> properties = updatedNode.getProperties();
+            for (NodeProperty property : properties)
+                property.setMarkedForDeletion(true);
+            
+            response = post(updatedNode);
+            assertEquals("POST response code should be 200", 200, response.getResponseCode());
+
+            // Get the response (an XML document)
+            xml = response.getText();
+            log.debug("POST XML:\r\n" + xml);
+
+            // Validate against the VOSPace schema.
+            reader.read(xml);
+
             // Node properties should be empty.
             assertEquals("Node proerties should be empty", 0, updatedNode.getProperties().size());
 
             // Delete the node
-            response = delete(node);
+            response = delete(updatedNode);
             assertEquals("DELETE response code should be 200", 200, response.getResponseCode());
 
             log.info("updateContainerNodeValue passed.");
@@ -257,25 +268,38 @@ public class UpdateContainerNodeTest extends AbstractVOSTest
         {
             log.debug("updateReadOnlyPermissionDeniedFault");
 
-            // Get a ContainerNode.
-            ContainerNode node = getSampleContainerNode();
+            // Create a ContainerNode.
+            ContainerNode node = new ContainerNode(new VOSURI(AbstractVOSTest.CADC_VOSPACE_URI + "/A"));
+            NodeProperty nodeProperty = new NodeProperty("ivo://ivoa.net/vospace/core#description", "My award winning images");
+            nodeProperty.setReadOnly(true);
+            node.getProperties().add(nodeProperty);
 
             // Add ContainerNode to the VOSpace.
             WebResponse response = put(node);
             assertEquals("PUT response code should be 200", 200, response.getResponseCode());
 
+            // Get the response (an XML document)
+            String xml = response.getText();
+            log.debug("POST XML:\r\n" + xml);
+
+            // Validate against the VOSPace schema.
+            NodeReader reader = new NodeReader();
+            ContainerNode updatedNode = (ContainerNode) reader.read(xml);
+
             // Update the node by updating the read only property.
-            node.getProperties().get(0).setReadOnly(false);
+            NodeProperties<NodeProperty> properties = updatedNode.getProperties();
+            for (NodeProperty property : properties)
+                property.setReadOnly(false);
 
             // Update the node
-            response = post(node);
+            response = post(updatedNode);
             assertEquals("POST response code should be 401", 401, response.getResponseCode());
 
             // Response message body should be 'PermissionDenied'
             assertEquals("Response message body should be 'PermissionDenied'", "PermissionDenied", response.getResponseMessage());
 
             // Delete the node
-            response = delete(node);
+            response = delete(updatedNode);
             assertEquals("DELETE response code should be 200", 200, response.getResponseCode());
 
             log.info("updateReadOnlyPermissionDeniedFault passed.");
@@ -299,7 +323,7 @@ public class UpdateContainerNodeTest extends AbstractVOSTest
             log.debug("nodeNotFoundFault");
 
             // Create a Node with a nonexistent parent node
-            ContainerNode nodeAB = new ContainerNode(AbstractVOSTest.CADC_VOSPACE_URI + "/A/B");
+            ContainerNode nodeAB = new ContainerNode(new VOSURI(AbstractVOSTest.CADC_VOSPACE_URI + "/A/B"));
 
             // Try and get the Node from the VOSpace.
             WebResponse response = post(nodeAB);

@@ -72,6 +72,7 @@ package ca.nrc.cadc.conformance.vos;
 import ca.nrc.cadc.vos.ContainerNode;
 import ca.nrc.cadc.vos.Node;
 import ca.nrc.cadc.vos.NodeReader;
+import ca.nrc.cadc.vos.VOSURI;
 import com.meterware.httpunit.WebResponse;
 import java.util.HashMap;
 import java.util.Map;
@@ -271,24 +272,24 @@ public class GetContainerNodeTest extends AbstractVOSTest
             log.debug("getUriOffsetNode");
 
             // Parent node.
-            ContainerNode nodeA = new ContainerNode(AbstractVOSTest.CADC_VOSPACE_URI + "/A");
+            ContainerNode nodeA = new ContainerNode(new VOSURI(AbstractVOSTest.CADC_VOSPACE_URI + "/A"));
 
             // Add ContainerNode to the VOSpace.
             WebResponse response = put(nodeA);
             assertEquals("PUT response code should be 200", 200, response.getResponseCode());
 
             // Child node B.
-            ContainerNode nodeAB = new ContainerNode(AbstractVOSTest.CADC_VOSPACE_URI + "/A/B");
+            ContainerNode nodeAB = new ContainerNode(new VOSURI(AbstractVOSTest.CADC_VOSPACE_URI + "/A/B"));
             response = put(nodeAB);
             assertEquals("PUT response code should be 200", 200, response.getResponseCode());
 
             // Child node C.
-            ContainerNode nodeABC = new ContainerNode(AbstractVOSTest.CADC_VOSPACE_URI + "/A/B/C");
+            ContainerNode nodeABC = new ContainerNode(new VOSURI(AbstractVOSTest.CADC_VOSPACE_URI + "/A/B/C"));
             response = put(nodeABC);
             assertEquals("PUT response code should be 200", 200, response.getResponseCode());
 
             // Child node D.
-            ContainerNode nodeABCD = new ContainerNode(AbstractVOSTest.CADC_VOSPACE_URI + "/A/B/C/D");
+            ContainerNode nodeABCD = new ContainerNode(new VOSURI(AbstractVOSTest.CADC_VOSPACE_URI + "/A/B/C/D"));
             response = put(nodeABCD);
             assertEquals("PUT response code should be 200", 200, response.getResponseCode());
 
@@ -381,7 +382,7 @@ public class GetContainerNodeTest extends AbstractVOSTest
             log.debug("nodeNotFoundFault");
 
             // Create a Node with a nonexistent parent node
-            ContainerNode nodeAB = new ContainerNode(AbstractVOSTest.CADC_VOSPACE_URI + "/A/B");
+            ContainerNode nodeAB = new ContainerNode(new VOSURI(AbstractVOSTest.CADC_VOSPACE_URI + "/A/B"));
 
             // Try and get the Node from the VOSpace.
             WebResponse response = get(nodeAB);

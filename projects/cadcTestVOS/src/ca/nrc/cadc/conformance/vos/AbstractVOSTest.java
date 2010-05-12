@@ -75,6 +75,7 @@ import ca.nrc.cadc.vos.DataNode;
 import ca.nrc.cadc.vos.Node;
 import ca.nrc.cadc.vos.NodeProperty;
 import ca.nrc.cadc.vos.NodeWriter;
+import ca.nrc.cadc.vos.VOSURI;
 import com.meterware.httpunit.GetMethodWebRequest;
 import com.meterware.httpunit.PostMethodWebRequest;
 import com.meterware.httpunit.PutMethodWebRequest;
@@ -84,6 +85,7 @@ import com.meterware.httpunit.WebResponse;
 import java.io.ByteArrayInputStream;
 import java.io.IOException;
 import java.io.InputStream;
+import java.net.URISyntaxException;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
@@ -95,6 +97,8 @@ import org.xml.sax.SAXException;
 
 public abstract class AbstractVOSTest
 {
+    public static final String CADC_VOSPACE_URI = "vos://cadc.nrc.ca!vospace";
+
     private static Logger log = Logger.getLogger(AbstractVOSTest.class);
     {
         Log4jInit.setLevel("ca", Level.DEBUG);
@@ -102,8 +106,6 @@ public abstract class AbstractVOSTest
 
     private String serviceUrl;
 
-    public static final String CADC_VOSPACE_URI = "vos://cadc.nrc.ca!vospace";
-    
     public AbstractVOSTest()
     {
         serviceUrl = System.getProperty("service.url");
@@ -118,38 +120,34 @@ public abstract class AbstractVOSTest
         return serviceUrl;
     }
 
-    protected ContainerNode getSampleContainerNode()
+    protected ContainerNode getSampleContainerNode() throws URISyntaxException
     {
          // List of NodeProperty
-        List<NodeProperty> properties = new ArrayList<NodeProperty>();
         NodeProperty nodeProperty = new NodeProperty("ivo://ivoa.net/vospace/core#description", "My award winning images");
         nodeProperty.setReadOnly(true);
-        properties.add(nodeProperty);
 
         // List of Node
         List<Node> nodes = new ArrayList<Node>();
-        nodes.add(new DataNode("vos://cadc.nrc.ca!vospace/mydir/ngc4323"));
-        nodes.add(new DataNode("vos://cadc.nrc.ca!vospace/mydir/ngc5796"));
-        nodes.add(new DataNode("vos://cadc.nrc.ca!vospace/mydir/ngc6801"));
+        nodes.add(new DataNode(new VOSURI("vos://cadc.nrc.ca!vospace/mydir/ngc4323")));
+        nodes.add(new DataNode(new VOSURI("vos://cadc.nrc.ca!vospace/mydir/ngc5796")));
+        nodes.add(new DataNode(new VOSURI("vos://cadc.nrc.ca!vospace/mydir/ngc6801")));
 
         // ContainerNode
-        ContainerNode node = new ContainerNode(AbstractVOSTest.CADC_VOSPACE_URI + "/A");
-        node.setProperties(properties);
+        ContainerNode node = new ContainerNode(new VOSURI(AbstractVOSTest.CADC_VOSPACE_URI + "/A"));
+        node.getProperties().add(nodeProperty);
         node.setNodes(nodes);
         return node;
     }
 
-    protected DataNode getSampleDataNode()
+    protected DataNode getSampleDataNode() throws URISyntaxException
     {
         // List of NodeProperty
-        List<NodeProperty> properties = new ArrayList<NodeProperty>();
         NodeProperty nodeProperty = new NodeProperty("ivo://ivoa.net/vospace/core#description", "My award winning images");
         nodeProperty.setReadOnly(true);
-        properties.add(nodeProperty);
 
         // DataNode
-        DataNode node = new DataNode("/A");
-        node.setProperties(properties);
+        DataNode node = new DataNode(new VOSURI(AbstractVOSTest.CADC_VOSPACE_URI + "/A"));
+        node.getProperties().add(nodeProperty);
         node.setBusy(true);
         return node;
     }

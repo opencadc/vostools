@@ -70,13 +70,9 @@
 package ca.nrc.cadc.conformance.vos;
 
 import ca.nrc.cadc.vos.ContainerNode;
-import ca.nrc.cadc.vos.DataNode;
-import ca.nrc.cadc.vos.Node;
-import ca.nrc.cadc.vos.NodeProperty;
 import ca.nrc.cadc.vos.NodeReader;
+import ca.nrc.cadc.vos.VOSURI;
 import com.meterware.httpunit.WebResponse;
-import java.util.ArrayList;
-import java.util.List;
 import org.apache.log4j.Logger;
 import org.junit.After;
 import org.junit.AfterClass;
@@ -215,7 +211,7 @@ public class CreateContainerNodeTest extends AbstractVOSTest
             log.debug("invalidURIPrefixFault");
 
             // Create node with an invalid URI
-            ContainerNode invalidNode = new ContainerNode("zzz://cadc.nrc.ca!zzzspace/");
+            ContainerNode invalidNode = new ContainerNode(new VOSURI("zzz://cadc.nrc.ca!zzzspace/"));
 
             // Add ContainerNode to the VOSpace.
             WebResponse response = put(invalidNode);
@@ -249,7 +245,7 @@ public class CreateContainerNodeTest extends AbstractVOSTest
             log.debug("invalidURIPathFault");
 
             // Create node with an invalid path, node A doesn't exist.
-            ContainerNode nodeAB = new ContainerNode(AbstractVOSTest.CADC_VOSPACE_URI + "/A/B");
+            ContainerNode nodeAB = new ContainerNode(new VOSURI(AbstractVOSTest.CADC_VOSPACE_URI + "/A/B"));
 
             // Add ContainerNode to the VOSpace.
             WebResponse response = put(nodeAB);
@@ -354,7 +350,7 @@ public class CreateContainerNodeTest extends AbstractVOSTest
             log.debug("containerNotFoundFault");
 
             // Create a Node path /A/B
-            ContainerNode nodeAB = new ContainerNode(AbstractVOSTest.CADC_VOSPACE_URI + "/A/B");
+            ContainerNode nodeAB = new ContainerNode(new VOSURI(AbstractVOSTest.CADC_VOSPACE_URI + "/A/B"));
 
             // Try and add the Node to the VOSpace.
             WebResponse response = put(nodeAB);

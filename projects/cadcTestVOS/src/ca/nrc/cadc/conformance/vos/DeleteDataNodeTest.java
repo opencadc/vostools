@@ -70,11 +70,9 @@
 package ca.nrc.cadc.conformance.vos;
 
 import ca.nrc.cadc.vos.DataNode;
-import ca.nrc.cadc.vos.NodeProperty;
 import ca.nrc.cadc.vos.NodeReader;
+import ca.nrc.cadc.vos.VOSURI;
 import com.meterware.httpunit.WebResponse;
-import java.util.ArrayList;
-import java.util.List;
 import org.apache.log4j.Logger;
 import org.junit.After;
 import org.junit.AfterClass;
@@ -199,7 +197,7 @@ public class DeleteDataNodeTest extends AbstractVOSTest
             log.debug("nodeNotFoundFault");
 
             // Create a Node that should not exist.
-            DataNode nodeA = new DataNode(AbstractVOSTest.CADC_VOSPACE_URI + "/node_not_found");
+            DataNode nodeA = new DataNode(new VOSURI(AbstractVOSTest.CADC_VOSPACE_URI + "/node_not_found"));
 
             // Try and delete the Node from the VOSpace.
             WebResponse response = delete(nodeA);
@@ -232,7 +230,7 @@ public class DeleteDataNodeTest extends AbstractVOSTest
             log.debug("containerNotFoundFault");
 
             // Create a Node path /A/B
-            DataNode nodeAB = new DataNode(AbstractVOSTest.CADC_VOSPACE_URI + "/A/B");
+            DataNode nodeAB = new DataNode(new VOSURI(AbstractVOSTest.CADC_VOSPACE_URI + "/A/B"));
 
             // Try and delete the Node from the VOSpace.
             WebResponse response = delete(nodeAB);
