@@ -199,9 +199,9 @@ public abstract class NodeDAOTests
         assertEquals("assert12", putNode.getProperties(), nodeF.getProperties());
         
         // delete the three roots
-        nodeDAO.delete(new DataNode(nodePath1), true);
-        nodeDAO.delete(new ContainerNode(nodePath2), true);
-        nodeDAO.delete(new ContainerNode(nodePath3), true);
+        nodeDAO.delete(getCommonDataNode(nodePath1), true);
+        nodeDAO.delete(getCommonContainerNode(nodePath2), true);
+        nodeDAO.delete(getCommonContainerNode(nodePath3), true);
         
         // ensure deleting the roots deleted all children
         PreparedStatement prepStmt = connection.prepareStatement(
@@ -273,30 +273,32 @@ public abstract class NodeDAOTests
         
     }
     
-    private DataNode getCommonDataNode(String uri, NodeProperties<NodeProperty> properties)
+    private DataNode getCommonDataNode(String uri, NodeProperties<NodeProperty> properties) throws Exception
     {
         DataNode dataNode = getCommonDataNode(uri);
         dataNode.setProperties(properties);
         return dataNode;
     }
     
-    private DataNode getCommonDataNode(String uri)
+    private DataNode getCommonDataNode(String uri) throws Exception
     {
-        DataNode dataNode = new DataNode(uri);
+        VOSURI vosuri = new VOSURI(uri);
+        DataNode dataNode = new DataNode(vosuri);
         dataNode.setOwner("testowner");
         return dataNode;
     }
     
-    private ContainerNode getCommonContainerNode(String uri, NodeProperties<NodeProperty> properties)
+    private ContainerNode getCommonContainerNode(String uri, NodeProperties<NodeProperty> properties) throws Exception
     {
         ContainerNode containerNode = getCommonContainerNode(uri);
         containerNode.setProperties(properties);
         return containerNode;
     }
     
-    private ContainerNode getCommonContainerNode(String uri)
+    private ContainerNode getCommonContainerNode(String uri) throws Exception
     {
-        ContainerNode containerNode = new ContainerNode(uri);
+        VOSURI vosuri = new VOSURI(uri);
+        ContainerNode containerNode = new ContainerNode(vosuri);
         containerNode.setOwner("testowner");
         return containerNode;
     }

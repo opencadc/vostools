@@ -163,7 +163,7 @@ public class NodeResource extends BaseResource
         try
         {
             NodeInputRepresentation nodeInputRepresentation =
-                new NodeInputRepresentation(xmlValue, getVosUri(), path);
+                new NodeInputRepresentation(xmlValue, path);
             Node nodeToPut = nodeInputRepresentation.getNode();
             
             // store the node
@@ -210,7 +210,7 @@ public class NodeResource extends BaseResource
         try
         {
             NodeInputRepresentation nodeInputRepresentation =
-                new NodeInputRepresentation(xmlValue, getVosUri(), path);
+                new NodeInputRepresentation(xmlValue, path);
             Node nodeToUpdate = nodeInputRepresentation.getNode();
             
             // store the node properties
