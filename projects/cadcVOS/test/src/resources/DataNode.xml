@@ -2,7 +2,7 @@
       xmlns:vos="http://www.ivoa.net/xml/VOSpace/v2.0"
       xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
       xsi:type="vos:DataNodeType"
-      uri="vos://nvo.caltech!vospace/mydata1"
+      uri="vos://cadc.nrc.ca!vospace/mydata1"
       busy="false">
   <properties>
     <property uri="ivo://ivoa.net/vospace/core#description" readOnly="true" xsi:nil="true"></property>

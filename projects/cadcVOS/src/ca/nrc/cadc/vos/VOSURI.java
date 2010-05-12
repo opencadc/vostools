@@ -160,4 +160,10 @@ public class VOSURI
         return vosURI.getScheme();
     }
 
+    @Override
+    public String toString()
+    {
+        return vosURI.toString();
+    }
+    
 }

@@ -91,7 +91,7 @@ import org.jdom.output.XMLOutputter;
 public class NodeWriter
 {
     /*
-     * The VOSpace Namespace.
+     * The VOSpace Namespaces.
      */
     protected static Namespace defaultNamespace;
     protected static Namespace vosNamespace;
@@ -231,8 +231,8 @@ public class NodeWriter
         Element root = new Element("node", defaultNamespace);
         root.addNamespaceDeclaration(vosNamespace);
         root.addNamespaceDeclaration(xsiNamespace);
-        root.setAttribute("uri", node.getPath());
-        root.setAttribute("type", "vos:" + node.getClass().getSimpleName() + "Type", xsiNamespace);
+        root.setAttribute("uri", node.getUri().toString());
+        root.setAttribute("type", "vos:" + node.getClass().getSimpleName(), xsiNamespace);
         return root;
     }
 
@@ -268,7 +268,7 @@ public class NodeWriter
         for (Node childNode : node.getNodes())
         {
             Element nodeElement = new Element("node", defaultNamespace);
-            nodeElement.setAttribute("uri", childNode.getPath());
+            nodeElement.setAttribute("uri", childNode.getUri().toString());
             nodes.addContent(nodeElement);
         }
         return nodes;

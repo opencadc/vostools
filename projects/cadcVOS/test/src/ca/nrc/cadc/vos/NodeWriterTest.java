@@ -113,17 +113,17 @@ public class NodeWriterTest
 
         // List of Node
         List<Node> nodes = new ArrayList<Node>();
-        nodes.add(new DataNode("vos://nvo.caltech!vospace/mydir/ngc4323"));
-        nodes.add(new DataNode("vos://nvo.caltech!vospace/mydir/ngc5796"));
-        nodes.add(new DataNode("vos://nvo.caltech!vospace/mydir/ngc6801"));
+        nodes.add(new DataNode(new VOSURI("vos://cadc.nrc.ca!vospace/mydir/ngc4323")));
+        nodes.add(new DataNode(new VOSURI("vos://cadc.nrc.ca!vospace/mydir/ngc5796")));
+        nodes.add(new DataNode(new VOSURI("vos://cadc.nrc.ca!vospace/mydir/ngc6801")));
 
         // ContainerNode
-        containerNode = new ContainerNode("/dir/subdir");
+        containerNode = new ContainerNode(new VOSURI("vos://cadc.nrc.ca!vospace/dir/subdir"));
         containerNode.setProperties(properties);
         containerNode.setNodes(nodes);
 
         // DataNode
-        dataNode = new DataNode("/dir/subdir");
+        dataNode = new DataNode(new VOSURI("vos://cadc.nrc.ca!vospace/dir/subdir"));
         dataNode.setProperties(properties);
         dataNode.setBusy(true);
     }

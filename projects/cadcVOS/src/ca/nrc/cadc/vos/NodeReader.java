@@ -75,7 +75,6 @@ import java.io.InputStreamReader;
 import java.io.Reader;
 import java.io.StringReader;
 import java.io.UnsupportedEncodingException;
-import java.net.URI;
 import java.net.URISyntaxException;
 import java.net.URL;
 import java.util.ArrayList;
@@ -99,15 +98,15 @@ public class NodeReader
     private static final String VOSPACE_SCHEMA_RESOURCE = "VOSpace-2.0.xsd";
 
     private static Logger log = Logger.getLogger(NodeReader.class);
-    private static String schemaUrl;
+    private static String vospaceSchemaUrl;
     static
     {
         URL schemaURL = NodeReader.class.getClassLoader().getResource(VOSPACE_SCHEMA_RESOURCE);
         if (schemaURL == null)
             throw new MissingResourceException("Resource not found: " + VOSPACE_SCHEMA_RESOURCE,
                                                "NodeReader", VOSPACE_SCHEMA_RESOURCE);
-        schemaUrl = schemaURL.toString();
-        log.debug("vospaceSchemaUrl: " + schemaURL);
+        vospaceSchemaUrl = schemaURL.toString();
+        log.debug("vospaceSchemaUrl: " + vospaceSchemaUrl);
     }
     
     protected SAXBuilder parser;
@@ -213,48 +212,26 @@ public class NodeReader
         }
         log.debug("node uri: " + uri);
 
-        // Get the path part of the URI
-        String path;
-        try
-        {
-            URI nodeUri = new URI(uri);
-            path = nodeUri.getPath();
-        }
-        catch (URISyntaxException ex)
-        {
-            String error = "Invalid node uri " + uri;
-            log.error(error);
-            throw new NodeParsingException(error, ex);
-        }
-        log.debug("node path: " + path);
-
-        // Get the Node type (class) and instantiate a Node
-        // Assuming attribute is called xsi:type a dumb thing to do?
+        // Get the xsi:type attribute which defines the Node class
         String xsiType = root.getAttributeValue("type", xsiNamespace);
         if (xsiType == null)
         {
-            String error = "type attribute not found in node element " + uri;
+            String error = "xsi:type attribute not found in node element " + uri;
             log.error(error);
             throw new NodeParsingException(error);
         }
 
-        // Split type into namespace and type value
+        // Split the type attribute into namespace and Node type
         String[] types = xsiType.split(":");
         String type = types[1];
-        log.debug("type: " + type);
-
-        // Strip off 'Type'
-        int index = type.indexOf("Type");
-        if (index != -1)
-            type = type.substring(0, index);
         log.debug("node type: " + type);
 
         if (type.equals(ContainerNode.class.getSimpleName()))
-            return buildContainerNode(root, namespace, path);
+            return buildContainerNode(root, namespace, uri);
         else if (type.equals(DataNode.class.getSimpleName()))
-            return buildDataNode(root, namespace, path);
+            return buildDataNode(root, namespace, uri);
         else
-            throw new NodeParsingException("unknown node type " + type);
+            throw new NodeParsingException("unsupported node type " + type);
     }
 
     /**
@@ -265,7 +242,7 @@ public class NodeReader
      */
     protected String getVOSpaceSchema()
     {
-        return schemaUrl;
+        return vospaceSchemaUrl;
     }
 
     /**
@@ -274,15 +251,25 @@ public class NodeReader
      *
      * @param root Root Element of the Document.
      * @param namespace Document Namespace.
-     * @param path Node path.
+     * @param uri Node uri attribute.
      * @return ContainerNode
      * @throws NodeParsingException if there is an error parsing the XML.
      */
-    protected Node buildContainerNode(Element root, Namespace namespace, String path)
+    protected Node buildContainerNode(Element root, Namespace namespace, String uri)
         throws NodeParsingException
     {
         // Instantiate a ContainerNode class
-        ContainerNode node = new ContainerNode(path);
+        ContainerNode node;
+        try
+        {
+            node = new ContainerNode(new VOSURI(uri));
+        }
+        catch (URISyntaxException e)
+        {
+            String error = "invalid node uri " + uri;
+            log.error(error, e);
+            throw new NodeParsingException(error, e);
+        }
 
         // properties element
         node.setProperties(getProperties(root, namespace));
@@ -308,8 +295,17 @@ public class NodeReader
                 throw new NodeParsingException(error);
             }
             // TODO: create DataNode for now, recurse later?
-            node.getNodes().add(new DataNode(childNodeUri));
-            log.debug("child node: " + childNodeUri);
+            try
+            {
+                node.getNodes().add(new DataNode(new VOSURI(childNodeUri)));
+            }
+            catch (URISyntaxException e)
+            {
+                String error = "invalid child node uri " + childNodeUri;
+                log.error(error, e);
+                throw new NodeParsingException(error, e);
+            }
+            log.debug("added child node: " + childNodeUri);
         }
 
         return node;
@@ -321,15 +317,25 @@ public class NodeReader
      *
      * @param root Root Element of the Document.
      * @param namespace Document Namespace.
-     * @param path Node path.
+     * @param uri Node uri attribute.
      * @return DataNode.
      * @throws NodeParsingException if there is an error parsing the XML.
      */
-    protected Node buildDataNode(Element root, Namespace namespace, String path)
+    protected Node buildDataNode(Element root, Namespace namespace, String uri)
         throws NodeParsingException
     {
         // Instantiate a DataNode class
-        DataNode node = new DataNode(path);
+        DataNode node;
+        try
+        {
+            node = new DataNode(new VOSURI(uri));
+        }
+        catch (URISyntaxException e)
+        {
+            String error = "invalid node uri " + uri;
+            log.error(error, e);
+            throw new NodeParsingException(error, e);
+        }
 
         // busy attribute
         String busy = root.getAttributeValue("busy");
@@ -347,10 +353,12 @@ public class NodeReader
         node.setProperties(getProperties(root, namespace));
 
         // accepts element
-        // TODO: add accepts element
+//        TODO: add accepts element
+//        node.accepts().addAll(getViews(root, namespace, "accepts"));
 
         // provides element
-        // TODO: add provides element
+//        TODO: add provides element
+//        node.provides().addAll(getViews(root, namespace, "provides"));
 
         return node;
     }
@@ -389,18 +397,19 @@ public class NodeReader
                 log.error(error);
                 throw new NodeParsingException(error);
             }
-            // if marked for deletetion, property can not contain text content
+
+            // xsi:nil set to true indicates Property is to be deleted
             String xsiNil = property.getAttributeValue("xsi:nil");
             boolean markedForDeletion = false;
             if (xsiNil != null)
                 markedForDeletion = xsiNil.equalsIgnoreCase("true") ? true : false;
 
-            // Property text content
+            // if marked for deletetion, property can not contain text content
             String text = property.getText();
             if (markedForDeletion)
                 text = "";
 
-            // new NodeProperty
+            // create new NodeProperty
             NodeProperty nodeProperty = new NodeProperty(propertyUri, text);
 
             // set readOnly attribute
@@ -484,5 +493,5 @@ public class NodeReader
 
         return list;
     }
-    
+
 }

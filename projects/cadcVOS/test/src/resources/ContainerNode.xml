@@ -2,7 +2,7 @@
       xmlns:vos="http://www.ivoa.net/xml/VOSpace/v2.0"
       xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
       xsi:type="vos:ContainerNodeType"
-      uri="vos://nvo.caltech!vospace/mydir">
+      uri="vos://cadc.nrc.ca!vospace/mydir">
   <vos:properties>
     <vos:property uri="ivo://ivoa.net/vospace/core#description" readOnly="true">My award winning images</vos:property>
   </vos:properties>
@@ -14,8 +14,8 @@
   </vos:provides>
   <vos:capabilities/>
   <vos:nodes>
-    <vos:node uri="vos://nvo.caltech!vospace/mydir/ngc4323"/>
-    <vos:node uri="vos://nvo.caltech!vospace/mydir/ngc5796"/>
-    <vos:node uri="vos://nvo.caltech!vospace/mydir/ngc6801"/>
+    <vos:node uri="vos://cadc.nrc.ca!vospace/mydir/ngc4323"/>
+    <vos:node uri="vos://cadc.nrc.ca!vospace/mydir/ngc5796"/>
+    <vos:node uri="vos://cadc.nrc.ca!vospace/mydir/ngc6801"/>
   </vos:nodes>
 </vos:node>

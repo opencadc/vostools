@@ -1,19 +1,24 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<xs:schema targetNamespace="http://www.ivoa.net/xml/VOSpace/v2.0" elementFormDefault="qualified"
-           attributeFormDefault="unqualified" xmlns:xs="http://www.w3.org/2001/XMLSchema"
-           xmlns:vos="http://www.ivoa.net/xml/VOSpace/v2.0" xmlns:uws="http://www.ivoa.net/xml/UWS/v1.0" xmlns:xlink="http://www.w3.org/1999/xlink">
+<xs:schema targetNamespace="http://www.ivoa.net/xml/VOSpace/v2.0"
+           elementFormDefault="qualified"
+           attributeFormDefault="unqualified"
+           xmlns:xs="http://www.w3.org/2001/XMLSchema"
+           xmlns:vos="http://www.ivoa.net/xml/VOSpace/v2.0"
+           xmlns:uws="http://www.ivoa.net/xml/UWS/v1.0"
+           xmlns:xlink="http://www.w3.org/1999/xlink">
+               
     <xs:import namespace="http://www.ivoa.net/xml/UWS/v1.0" schemaLocation="http://www.ivoa.net/xml/UWS/v1.0"/>
 
     <!-- ======== Node types ======== -->
 
-    <xs:complexType name="NodeType">
+    <xs:complexType name="Node">
         <xs:annotation>
             <xs:documentation>
                 The base class for all nodes.
             </xs:documentation>
         </xs:annotation>
         <xs:sequence>
-            <xs:element name="properties" type="vos:PropertyListType" minOccurs="0" maxOccurs="1">
+            <xs:element name="properties" type="vos:PropertyList" minOccurs="0" maxOccurs="1">
                 <xs:annotation>
                     <xs:documentation>
                         The list of node properties.
@@ -30,16 +35,16 @@
         </xs:attribute>
     </xs:complexType>
 
-    <xs:complexType name="DataNodeType">
+    <xs:complexType name="DataNode">
         <xs:annotation>
             <xs:documentation>
                 The base class for data nodes.
             </xs:documentation>
         </xs:annotation>
         <xs:complexContent>
-            <xs:extension base="vos:NodeType">
+            <xs:extension base="vos:Node">
                 <xs:sequence>
-                    <xs:element name="accepts" type="vos:ViewListType" minOccurs="0" maxOccurs="1">
+                    <xs:element name="accepts" type="vos:ViewList" minOccurs="0" maxOccurs="1">
                         <xs:annotation>
                             <xs:documentation>
                                 The list of views or data formats that this node can accept.
@@ -48,7 +53,7 @@
                             </xs:documentation>
                         </xs:annotation>
                     </xs:element>
-                    <xs:element name="provides" type="vos:ViewListType" minOccurs="0" maxOccurs="1">
+                    <xs:element name="provides" type="vos:ViewList" minOccurs="0" maxOccurs="1">
                         <xs:annotation>
                             <xs:documentation>
                                 The list of views or data formats that this node can provide.
@@ -57,7 +62,7 @@
                             </xs:documentation>
                         </xs:annotation>
                     </xs:element>
-                    <xs:element name="capabilities" type="vos:CapabilityListType" minOccurs="0" maxOccurs="1">
+                    <xs:element name="capabilities" type="vos:CapabilityList" minOccurs="0" maxOccurs="1">
                         <xs:annotation>
                             <xs:documentation>
                                 The list of capabilities that this node can support.
@@ -78,7 +83,7 @@
         </xs:complexContent>
     </xs:complexType>
 
-    <xs:complexType name="UnstructuredDataNodeType">
+    <xs:complexType name="UnstructuredDataNode">
         <xs:annotation>
             <xs:documentation>
                 An unstructured data node, containing unspecified content.
@@ -87,11 +92,11 @@
             </xs:documentation>
         </xs:annotation>
         <xs:complexContent>
-            <xs:extension base="vos:DataNodeType"/>
+            <xs:extension base="vos:DataNode"/>
         </xs:complexContent>
     </xs:complexType>
 
-    <xs:complexType name="StructuredDataNodeType">
+    <xs:complexType name="StructuredDataNode">
         <xs:annotation>
             <xs:documentation>
                 A structured data node, containing a specific data format that the service has understands.
@@ -100,18 +105,18 @@
             </xs:documentation>
         </xs:annotation>
         <xs:complexContent>
-            <xs:extension base="vos:DataNodeType"/>
+            <xs:extension base="vos:DataNode"/>
         </xs:complexContent>
     </xs:complexType>
 
-    <xs:complexType name="ContainerNodeType">
+    <xs:complexType name="ContainerNode">
         <xs:annotation>
             <xs:documentation>
                 A container node containing any type of node.
             </xs:documentation>
         </xs:annotation>
         <xs:complexContent>
-            <xs:extension base="vos:DataNodeType">
+            <xs:extension base="vos:DataNode">
                 <xs:sequence>
                     <xs:element name="nodes" minOccurs="1" maxOccurs="1">
                         <xs:annotation>
@@ -121,7 +126,7 @@
                         </xs:annotation>
                         <xs:complexType>
                             <xs:sequence>
-                                <xs:element name="node" type="vos:NodeType" minOccurs="0" maxOccurs="unbounded">
+                                <xs:element name="node" type="vos:Node" minOccurs="0" maxOccurs="unbounded">
                                     <!--<xs:attribute name="uri" type="xs:anyURI" use="required">-->
                                         <!--<xs:annotation>-->
                                             <!--<xs:documentation>-->
@@ -138,14 +143,14 @@
         </xs:complexContent>
     </xs:complexType>
 
-    <xs:complexType name="LinkNodeType">
+    <xs:complexType name="LinkNode">
         <xs:annotation>
             <xs:documentation>
                 A node that points to another resource.
             </xs:documentation>
         </xs:annotation>
         <xs:complexContent>
-            <xs:extension base="vos:NodeType">
+            <xs:extension base="vos:Node">
                 <xs:sequence>
                     <xs:element name="target" type="xs:anyURI" minOccurs="1" maxOccurs="1">
                         <xs:annotation>
@@ -161,62 +166,62 @@
 
     <!-- ======== Property types ======== -->
 
-    <xs:complexType name="PropertyType">
+    <xs:complexType name="Property">
         <xs:simpleContent>
             <xs:extension base="xs:string">
-                <xs:attributeGroup ref="vos:PropertyAttributeGroup"/>
+                <xs:attributeGroup ref="vos:PropertyAttribute"/>
             </xs:extension>
         </xs:simpleContent>
     </xs:complexType>
 
-    <xs:complexType name="PropertyListType">
+    <xs:complexType name="PropertyList">
         <xs:annotation>
             <xs:documentation>
                 A container element for a list of properties.
             </xs:documentation>
         </xs:annotation>
         <xs:sequence>
-            <xs:element name="property" type="vos:PropertyType" minOccurs="0" maxOccurs="unbounded" nillable="true"/>
+            <xs:element name="property" type="vos:Property" minOccurs="0" maxOccurs="unbounded" nillable="true"/>
         </xs:sequence>
     </xs:complexType>
 
-    <xs:complexType name="PropertyReferenceType">
+    <xs:complexType name="PropertyReference">
         <xs:annotation>
             <xs:documentation>
                 A reference to a property description, used in getProperties()
             </xs:documentation>
         </xs:annotation>
-        <xs:attributeGroup ref="vos:PropertyAttributeGroup"/>
+        <xs:attributeGroup ref="vos:PropertyAttribute"/>
     </xs:complexType>
 
-    <xs:complexType name="PropertyReferenceListType">
+    <xs:complexType name="PropertyReferenceList">
         <xs:annotation>
             <xs:documentation>
                 A container element for a list of property references.
             </xs:documentation>
         </xs:annotation>
         <xs:sequence>
-            <xs:element name="property" type="vos:PropertyReferenceType" minOccurs="0" maxOccurs="unbounded" nillable="true"/>
+            <xs:element name="property" type="vos:PropertyReference" minOccurs="0" maxOccurs="unbounded" nillable="true"/>
         </xs:sequence>
     </xs:complexType>
 
-    <xs:complexType name="GetPropertiesResponseType">
+    <xs:complexType name="GetPropertiesResponse">
         <xs:sequence>
-            <xs:element name="accepts" type="vos:PropertyReferenceListType">
+            <xs:element name="accepts" type="vos:PropertyReferenceList">
                 <xs:annotation>
                     <xs:documentation>
                         A list of identifiers for the properties that the service accepts and understands.
                     </xs:documentation>
                 </xs:annotation>
             </xs:element>
-            <xs:element name="provides" type="vos:PropertyReferenceListType">
+            <xs:element name="provides" type="vos:PropertyReferenceList">
                 <xs:annotation>
                     <xs:documentation>
                         A list of identifiers for the properties that the service provides.
                     </xs:documentation>
                 </xs:annotation>
             </xs:element>
-            <xs:element name="contains" type="vos:PropertyReferenceListType">
+            <xs:element name="contains" type="vos:PropertyReferenceList">
                 <xs:annotation>
                     <xs:documentation>
                         A list of identifiers for all the properties currently used by nodes within the service.
@@ -228,7 +233,7 @@
 
     <!-- ======== View types ======== -->
 
-    <xs:complexType name="ParamType">
+    <xs:complexType name="Param">
         <xs:annotation>
             <xs:documentation>
                 A view or protocol parameter.
@@ -241,7 +246,7 @@
         </xs:simpleContent>
     </xs:complexType>
 
-    <xs:complexType name="ViewType">
+    <xs:complexType name="View">
         <xs:annotation>
             <xs:documentation>
                 An element describing a view of a data-set.
@@ -251,7 +256,7 @@
             </xs:documentation>
         </xs:annotation>
         <xs:sequence>
-            <xs:element name="param" type="vos:ParamType" minOccurs="0" maxOccurs="unbounded" nillable="true">
+            <xs:element name="param" type="vos:Param" minOccurs="0" maxOccurs="unbounded" nillable="true">
                 <xs:annotation>
                     <xs:documentation>
                         A list of parameters for the view.
@@ -276,20 +281,20 @@
         </xs:attribute>
     </xs:complexType>
 
-    <xs:complexType name="ViewListType">
+    <xs:complexType name="ViewList">
         <xs:annotation>
             <xs:documentation>
                 A container element for a list of views.
             </xs:documentation>
         </xs:annotation>
         <xs:sequence>
-            <xs:element name="view" type="vos:ViewType" minOccurs="0" maxOccurs="unbounded" nillable="true"/>
+            <xs:element name="view" type="vos:View" minOccurs="0" maxOccurs="unbounded" nillable="true"/>
         </xs:sequence>
     </xs:complexType>
 
-    <xs:complexType name="GetViewsResponseType">
+    <xs:complexType name="GetViewsResponse">
         <xs:sequence>
-            <xs:element name="accepts" type="vos:ViewListType">
+            <xs:element name="accepts" type="vos:ViewList">
                 <xs:annotation>
                     <xs:documentation>
                         A list of identifiers for the views that the service can accept.
@@ -297,7 +302,7 @@
                     </xs:documentation>
                 </xs:annotation>
             </xs:element>
-            <xs:element name="provides" type="vos:ViewListType">
+            <xs:element name="provides" type="vos:ViewList">
                 <xs:annotation>
                     <xs:documentation>
                         A list of identifiers for the views that the service can provide.
@@ -310,7 +315,7 @@
 
     <!-- ======== Protocol types ======== -->
 
-    <xs:complexType name="ProtocolType">
+    <xs:complexType name="Protocol">
         <xs:annotation>
             <xs:documentation>
                 A protocol element, containing the protocol URI, the endpoint and any protocol specific parameters.
@@ -324,7 +329,7 @@
                     </xs:documentation>
                 </xs:annotation>
             </xs:element>
-            <xs:element name="param" type="vos:ParamType" minOccurs="0" maxOccurs="unbounded" nillable="true">
+            <xs:element name="param" type="vos:Param" minOccurs="0" maxOccurs="unbounded" nillable="true">
                 <xs:annotation>
                     <xs:documentation>
                         Any additional protocol specific parameters required to use the endpoint.
@@ -342,20 +347,20 @@
         </xs:attribute>
     </xs:complexType>
 
-    <xs:complexType name="ProtocolListType">
+    <xs:complexType name="ProtocolList">
         <xs:annotation>
             <xs:documentation>
                 A container element for a list of protocols.
             </xs:documentation>
         </xs:annotation>
         <xs:sequence>
-            <xs:element name="protocol" type="vos:ProtocolType" minOccurs="0" maxOccurs="unbounded" nillable="true"/>
+            <xs:element name="protocol" type="vos:Protocol" minOccurs="0" maxOccurs="unbounded" nillable="true"/>
         </xs:sequence>
     </xs:complexType>
 
-    <xs:complexType name="GetProtocolsResponseType">
+    <xs:complexType name="GetProtocolsResponse">
         <xs:sequence>
-            <xs:element name="accepts" type="vos:ProtocolListType">
+            <xs:element name="accepts" type="vos:ProtocolList">
                 <xs:annotation>
                     <xs:documentation>
                         A list of identifiers for the protocols that the service can accept.
@@ -363,7 +368,7 @@
                     </xs:documentation>
                 </xs:annotation>
             </xs:element>
-            <xs:element name="provides" type="vos:ProtocolListType">
+            <xs:element name="provides" type="vos:ProtocolList">
                 <xs:annotation>
                     <xs:documentation>
                         A list of identifiers for the protocols that the service can provide.
@@ -376,7 +381,7 @@
 
     <!-- ======== Capability types ======== -->
 
-    <xs:complexType name="CapabilityType">
+    <xs:complexType name="Capability">
         <xs:annotation>
             <xs:documentation>
                 A capability element, containing the capability URI, the
@@ -394,7 +399,7 @@
             <!--+
              | Uncommented Capability params.
              +-->
-            <xs:element name="param" type="vos:ParamType" minOccurs="0" maxOccurs="unbounded" nillable="true">
+            <xs:element name="param" type="vos:Param" minOccurs="0" maxOccurs="unbounded" nillable="true">
                 <xs:annotation>
                     <xs:documentation>
                         Any additional capability specific parameters required to use the endpoint.
@@ -412,20 +417,20 @@
         </xs:attribute>
     </xs:complexType>
 
-    <xs:complexType name="CapabilityListType">
+    <xs:complexType name="CapabilityList">
         <xs:annotation>
             <xs:documentation>
                 A container element for a list of capabilities.
             </xs:documentation>
         </xs:annotation>
         <xs:sequence>
-            <xs:element name="capability" type="vos:CapabilityType" minOccurs="0" maxOccurs="unbounded" nillable="true"/>
+            <xs:element name="capability" type="vos:Capability" minOccurs="0" maxOccurs="unbounded" nillable="true"/>
         </xs:sequence>
     </xs:complexType>
 
     <!-- ======== Node list type ======== -->
 
-    <xs:complexType name="NodeListType">
+    <xs:complexType name="NodeList">
         <xs:annotation>
             <xs:documentation>
                 A container element for search responses.
@@ -440,7 +445,7 @@
                 </xs:annotation>
                 <xs:complexType>
                     <xs:sequence>
-                        <xs:element name="node" type="vos:NodeType" minOccurs="0" maxOccurs="unbounded">
+                        <xs:element name="node" type="vos:Node" minOccurs="0" maxOccurs="unbounded">
                             <xs:annotation>
                                 <xs:documentation>
                                     At the maximum level of detail this will be replaced by the full element for the extended type, using xsi:type to indicate the node type/
@@ -455,22 +460,22 @@
 
     <!-- ======== Response representations ======== -->
 
-    <xs:element name="protocols" type="vos:ProtocolListType"/>
+    <xs:element name="protocols" type="vos:ProtocolList"/>
 
-    <xs:element name="views" type="vos:ViewListType"/>
+    <xs:element name="views" type="vos:ViewList"/>
 
-    <xs:element name="properties" type="vos:PropertyListType"/>
+    <xs:element name="properties" type="vos:PropertyList"/>
 
-    <xs:element name="transfer" type="vos:TransferType"/>
+    <xs:element name="transfer" type="vos:Transfer"/>
 
-    <xs:element name="searchDetails" type="vos:NodeListType"/>
+    <xs:element name="searchDetails" type="vos:NodeList"/>
 
     <!--Missing definitions-->
-    <xs:attributeGroup name="PropertyAttributeGroup">
+    <xs:attributeGroup name="PropertyAttribute">
         <xs:attribute name="uri" type="xs:anyURI" use="required"></xs:attribute>
         <xs:attribute name="readOnly" type="xs:boolean" use="required"></xs:attribute>
     </xs:attributeGroup>
 
-    <xs:complexType name="TransferType"></xs:complexType>
+    <xs:complexType name="Transfer"></xs:complexType>
     
 </xs:schema>

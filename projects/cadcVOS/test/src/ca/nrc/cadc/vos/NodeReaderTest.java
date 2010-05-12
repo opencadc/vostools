@@ -113,6 +113,16 @@ public class NodeReaderTest
     public void tearDown() { }
 
     @Test
+    public void test() throws Exception
+    {
+        String uri = "vos://nvo.caltech!vospace/myresults/siapout1.vot";
+        System.out.println(uri);
+        VOSURI Uri = new VOSURI(uri);
+        System.out.println("prefix: " + Uri.getPrefix());
+        System.out.println("path: " + Uri.getPath());
+
+    }
+//    @Test
     public void read_ContainerNode_String()
     {
         try
@@ -131,7 +141,7 @@ public class NodeReaderTest
         }
     }
 
-    @Test
+//    @Test
     public void read_DataNode_String()
     {
         try
