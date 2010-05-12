@@ -77,17 +77,46 @@ import java.util.Map;
  */
 public class Protocol
 {
-    protected String _uri;
-    protected String _endpoint;
-    protected Map<String, String> _param;
+    /**
+     * @param uri
+     * @param endpoint
+     * @param param
+     */
+    public Protocol(String uri, String endpoint, Map<String, String> param)
+    {
+        super();
+        this.uri = uri;
+        this.endpoint = endpoint;
+        this.param = param;
+    }
+
+    protected String uri;
+    protected String endpoint;
+    protected Map<String, String> param;
 
     public String getUri()
     {
-        return _uri;
+        return this.uri;
     }
 
     public void setUri(String uri)
     {
-        _uri = uri;
+        this.uri = uri;
+    }
+
+    public String getEndpoint() {
+        return this.endpoint;
+    }
+
+    public void setEndpoint(String endpoint) {
+        this.endpoint = endpoint;
+    }
+
+    public Map<String, String> getParam() {
+        return this.param;
+    }
+
+    public void setParam(Map<String, String> param) {
+        this.param = param;
     }
 }

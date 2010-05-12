@@ -69,111 +69,23 @@
 
 package ca.nrc.cadc.vos;
 
-import java.util.List;
+import org.jdom.Namespace;
+
+import ca.nrc.cadc.uws.util.XmlUtil;
 
 /**
+ * Holder of commonly used constants
+ * 
  * @author zhangsa
  *
  */
-public class Transfer implements Runnable
+public class VOS
 {
-    public enum Direction {
-        PUSH_TO_VO_SPACE,
-        PULL_TO_VO_SPACE,
-        PUSH_FROM_VO_SPACE,
-        PULL_FROM_VO_SPACE
-    }
+    public static String XSD_FILE_NAME = "VOSpace-2.0.xsd"; // local xsd file name
+    public static String XSD_KEY = "http://www.ivoa.net/xml/VOSpace/v2.0";
 
-    protected Direction direction;
+    public static Namespace NS = Namespace.getNamespace("vos", "http://www.ivoa.net/xml/VOSpace/v2.0");
 
-    // Reqeust member variables
-    protected String serviceUrl;
-    protected Node target;
-    protected View view;    
-    protected List<Protocol> protocols;
-    protected boolean keepBytes;
-    
-    // Result member variables
-    protected String endpoint = null;
-    
-    public Transfer() {}
+    public static String EXT_SCHEMA_LOCATION = XSD_KEY + " " + XmlUtil.getResourceUrlString(XSD_FILE_NAME, VOS.class);
 
-    
-    
-    public String getPhase()
-    {
-        throw new UnsupportedOperationException("Feature under construction.");
-    }
-
-    public String getResults()
-    {
-        return endpoint;
-        //throw new UnsupportedOperationException("Feature under construction.");
-    }
-
-    public String getErrors()
-    {
-        throw new UnsupportedOperationException("Feature under construction.");
-    }
-
-    public void run()
-    {
-        throw new UnsupportedOperationException("Feature under construction.");
-    }
-
-    public Direction getDirection() {
-        return direction;
-    }
-
-    public void setDirection(Direction direction) {
-        this.direction = direction;
-    }
-
-    public String getServiceUrl() {
-        return serviceUrl;
-    }
-
-    public void setServiceUrl(String serviceUrl) {
-        this.serviceUrl = serviceUrl;
-    }
-
-    public Node getTarget() {
-        return target;
-    }
-
-    public void setTarget(Node target) {
-        this.target = target;
-    }
-
-    public View getView() {
-        return view;
-    }
-
-    public void setView(View view) {
-        this.view = view;
-    }
-
-    public List<Protocol> getProtocols() {
-        return protocols;
-    }
-
-    public void setProtocols(List<Protocol> protocols) {
-        this.protocols = protocols;
-    }
-
-    public boolean isKeepBytes() {
-        return keepBytes;
-    }
-
-    public void setKeepBytes(boolean keepBytes) {
-        this.keepBytes = keepBytes;
-    }
-
-    public String getEndpoint() {
-        return endpoint;
-    }
-
-    public void setEndpoint(String endpoint) {
-        this.endpoint = endpoint;
-    }
 }

@@ -98,8 +98,8 @@ public class JobReaderTest
     static Logger log = Logger.getLogger(JobReaderTest.class);
 
     private String JOB_ID = "AT88MPH";
-    private Job _testJob;
-    private String _xmlString;
+    private Job testJob;
+    private String xmlString;
 
     @BeforeClass
     public static void setUpBeforeClass() throws Exception {
@@ -146,12 +146,12 @@ public class JobReaderTest
          * @param parameterList         The List of Parameters.
          * @param requestPath           The http request path.
          */
-        _testJob = new Job(JOB_ID, ExecutionPhase.PENDING, 88L, new Date(0L), quoteCal.getTime(), cal.getTime(), cal.getTime(),
+        testJob = new Job(JOB_ID, ExecutionPhase.PENDING, 88L, new Date(0L), quoteCal.getTime(), cal.getTime(), cal.getTime(),
                 null, null, "RUN_ID", results, parameters, null);
 
-        JobWriter jobWriter = new JobWriter(_testJob);
-        _xmlString = jobWriter.toString();
-        XmlUtil.validateXml(_xmlString, UWS.XSD_KEY, UWS.XSD_FILE_NAME);
+        JobWriter jobWriter = new JobWriter(testJob);
+        xmlString = jobWriter.toString();
+        XmlUtil.validateXml(xmlString, UWS.XSD_KEY, UWS.XSD_FILE_NAME);
     }
 
     /**
@@ -162,9 +162,9 @@ public class JobReaderTest
 
     @Test
     public void testReader() throws IOException, JDOMException {
-        log.debug(_xmlString);
+        log.debug(xmlString);
         JobReader jobReader = new JobReader();
-        Job job = jobReader.readFrom(_xmlString);
+        Job job = jobReader.readFrom(xmlString);
 
         Assert.assertEquals(job.getID(), JOB_ID);
         Assert.assertEquals(job.getExecutionPhase(), ExecutionPhase.PENDING);

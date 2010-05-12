@@ -69,111 +69,76 @@
 
 package ca.nrc.cadc.vos;
 
+import java.io.IOException;
+import java.util.ArrayList;
 import java.util.List;
+
+import org.apache.log4j.Logger;
+import org.jdom.JDOMException;
+import org.junit.After;
+import org.junit.AfterClass;
+import org.junit.Before;
+import org.junit.BeforeClass;
+import org.junit.Test;
+
+import ca.nrc.cadc.util.Log4jInit;
+import ca.nrc.cadc.uws.util.XmlUtil;
 
 /**
  * @author zhangsa
  *
  */
-public class Transfer implements Runnable
+public class TransferWriterTest
 {
-    public enum Direction {
-        PUSH_TO_VO_SPACE,
-        PULL_TO_VO_SPACE,
-        PUSH_FROM_VO_SPACE,
-        PULL_FROM_VO_SPACE
+    static Logger log = Logger.getLogger(TransferWriterTest.class);
+
+    private Transfer transfer;
+
+    @BeforeClass
+    public static void setUpBeforeClass() throws Exception {
+        Log4jInit.setLevel("ca.nrc.cadc", org.apache.log4j.Level.DEBUG);
     }
 
-    protected Direction direction;
+    @AfterClass
+    public static void tearDownAfterClass() throws Exception {}
 
-    // Reqeust member variables
-    protected String serviceUrl;
-    protected Node target;
-    protected View view;    
-    protected List<Protocol> protocols;
-    protected boolean keepBytes;
-    
-    // Result member variables
-    protected String endpoint = null;
-    
-    public Transfer() {}
+    /**
+     * @throws java.lang.Exception
+     */
+    @Before
+    public void setUp() throws Exception {
+        List<Protocol> protocols = new ArrayList<Protocol>();
+        protocols.add(new Protocol("vos://uri1.of.protocol", "vos://endpoint1.of.protocol", null));
+        protocols.add(new Protocol("vos://uri2.of.protocol", "vos://endpoint2.of.protocol", null));
+        protocols.add(new Protocol("vos://uri3.of.protocol", "vos://endpoint3.of.protocol", null));
+        
+        Node target = new DataNode(new VOSURI("vos://nvo.caltech!vospace/mydir/ngc1111"));
+        Node dataNode = new DataNode(new VOSURI("vos://nvo.caltech!vospace/mydir/ngc2222"));
+        View view = new DataView("vos://nvo.caltech!vospace/mydir/ngc1234", dataNode);
 
-    
-    
-    public String getPhase()
-    {
-        throw new UnsupportedOperationException("Feature under construction.");
+        transfer = new Transfer();
+        transfer.setDirection(Transfer.Direction.PUSH_TO_VO_SPACE);
+        transfer.setEndpoint("vos://endpoint.for.transfer");
+        transfer.setKeepBytes(true);
+        transfer.setProtocols(protocols);
+        transfer.setServiceUrl("http://service.url.for.transfer");
+        transfer.setTarget(target);
+        transfer.setView(view);
     }
 
-    public String getResults()
-    {
-        return endpoint;
-        //throw new UnsupportedOperationException("Feature under construction.");
-    }
+    /**
+     * @throws java.lang.Exception
+     */
+    @After
+    public void tearDown() throws Exception {}
 
-    public String getErrors()
-    {
-        throw new UnsupportedOperationException("Feature under construction.");
-    }
-
-    public void run()
-    {
-        throw new UnsupportedOperationException("Feature under construction.");
-    }
-
-    public Direction getDirection() {
-        return direction;
-    }
-
-    public void setDirection(Direction direction) {
-        this.direction = direction;
-    }
-
-    public String getServiceUrl() {
-        return serviceUrl;
-    }
-
-    public void setServiceUrl(String serviceUrl) {
-        this.serviceUrl = serviceUrl;
-    }
-
-    public Node getTarget() {
-        return target;
-    }
-
-    public void setTarget(Node target) {
-        this.target = target;
-    }
-
-    public View getView() {
-        return view;
-    }
-
-    public void setView(View view) {
-        this.view = view;
-    }
-
-    public List<Protocol> getProtocols() {
-        return protocols;
-    }
-
-    public void setProtocols(List<Protocol> protocols) {
-        this.protocols = protocols;
-    }
-
-    public boolean isKeepBytes() {
-        return keepBytes;
-    }
-
-    public void setKeepBytes(boolean keepBytes) {
-        this.keepBytes = keepBytes;
-    }
-
-    public String getEndpoint() {
-        return endpoint;
-    }
-
-    public void setEndpoint(String endpoint) {
-        this.endpoint = endpoint;
+    @Test
+    public void testWriter() throws IOException, JDOMException {
+        TransferWriter writer = new TransferWriter(transfer);
+        String strOut = writer.toString();
+        // as of May 12, 2010, the schema file does not have definition for the transfer node
+        // so we are not able to validate it against the XSD file.
+        //XmlUtil.validateXml(strOut, VOS.XSD_KEY, VOS.XSD_FILE_NAME);
+        log.debug(strOut);
     }
 }

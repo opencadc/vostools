@@ -69,111 +69,20 @@
 
 package ca.nrc.cadc.vos;
 
-import java.util.List;
-
 /**
  * @author zhangsa
  *
  */
-public class Transfer implements Runnable
+public class DataView extends View
 {
-    public enum Direction {
-        PUSH_TO_VO_SPACE,
-        PULL_TO_VO_SPACE,
-        PUSH_FROM_VO_SPACE,
-        PULL_FROM_VO_SPACE
-    }
-
-    protected Direction direction;
-
-    // Reqeust member variables
-    protected String serviceUrl;
-    protected Node target;
-    protected View view;    
-    protected List<Protocol> protocols;
-    protected boolean keepBytes;
-    
-    // Result member variables
-    protected String endpoint = null;
-    
-    public Transfer() {}
-
-    
-    
-    public String getPhase()
+    /**
+     * @param uri
+     * @param node
+     */
+    public DataView(String uri, Node node)
     {
-        throw new UnsupportedOperationException("Feature under construction.");
+        super(uri, node);
+        // TODO Auto-generated constructor stub
     }
 
-    public String getResults()
-    {
-        return endpoint;
-        //throw new UnsupportedOperationException("Feature under construction.");
-    }
-
-    public String getErrors()
-    {
-        throw new UnsupportedOperationException("Feature under construction.");
-    }
-
-    public void run()
-    {
-        throw new UnsupportedOperationException("Feature under construction.");
-    }
-
-    public Direction getDirection() {
-        return direction;
-    }
-
-    public void setDirection(Direction direction) {
-        this.direction = direction;
-    }
-
-    public String getServiceUrl() {
-        return serviceUrl;
-    }
-
-    public void setServiceUrl(String serviceUrl) {
-        this.serviceUrl = serviceUrl;
-    }
-
-    public Node getTarget() {
-        return target;
-    }
-
-    public void setTarget(Node target) {
-        this.target = target;
-    }
-
-    public View getView() {
-        return view;
-    }
-
-    public void setView(View view) {
-        this.view = view;
-    }
-
-    public List<Protocol> getProtocols() {
-        return protocols;
-    }
-
-    public void setProtocols(List<Protocol> protocols) {
-        this.protocols = protocols;
-    }
-
-    public boolean isKeepBytes() {
-        return keepBytes;
-    }
-
-    public void setKeepBytes(boolean keepBytes) {
-        this.keepBytes = keepBytes;
-    }
-
-    public String getEndpoint() {
-        return endpoint;
-    }
-
-    public void setEndpoint(String endpoint) {
-        this.endpoint = endpoint;
-    }
 }

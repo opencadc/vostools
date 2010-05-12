@@ -69,111 +69,110 @@
 
 package ca.nrc.cadc.vos;
 
-import java.util.List;
+import java.io.IOException;
+import java.io.OutputStream;
+import java.io.Writer;
+
+import org.apache.log4j.Logger;
+import org.jdom.Document;
+import org.jdom.Element;
+import org.jdom.output.Format;
+import org.jdom.output.XMLOutputter;
+
+import ca.nrc.cadc.uws.UWS;
 
 /**
- * @author zhangsa
- *
+ * Writes a Transfer as XML to an output.
+ * 
+ * @author Sailor Zhang
  */
-public class Transfer implements Runnable
+public class TransferWriter
 {
-    public enum Direction {
-        PUSH_TO_VO_SPACE,
-        PULL_TO_VO_SPACE,
-        PUSH_FROM_VO_SPACE,
-        PULL_FROM_VO_SPACE
-    }
+    @SuppressWarnings("unused")
+    private static Logger log = Logger.getLogger(TransferWriter.class);
 
-    protected Direction direction;
+    private Transfer transfer;
+    private Document document;
+    private XMLOutputter outputter;
 
-    // Reqeust member variables
-    protected String serviceUrl;
-    protected Node target;
-    protected View view;    
-    protected List<Protocol> protocols;
-    protected boolean keepBytes;
-    
-    // Result member variables
-    protected String endpoint = null;
-    
-    public Transfer() {}
-
-    
-    
-    public String getPhase()
+    public TransferWriter(Transfer transfer)
     {
-        throw new UnsupportedOperationException("Feature under construction.");
+        this.transfer = transfer;
+        buildDocument();
+        this.outputter = new XMLOutputter();
+        this.outputter.setFormat(Format.getPrettyFormat());
     }
 
-    public String getResults()
-    {
-        return endpoint;
-        //throw new UnsupportedOperationException("Feature under construction.");
+    /**
+     * Write the transfer to a String.
+     */
+    public String toString() {
+        return this.outputter.outputString(this.document);
     }
 
-    public String getErrors()
-    {
-        throw new UnsupportedOperationException("Feature under construction.");
+    /**
+     * Write the transfer to an OutputStream.
+     *
+     * @param out OutputStream to write to.
+     * @throws IOException if the writer fails to write.
+     */
+    public void writeTo(OutputStream out) throws IOException {
+        this.outputter.output(this.document, out);
     }
 
-    public void run()
-    {
-        throw new UnsupportedOperationException("Feature under construction.");
+    /**
+     * Write the transfer to a writer
+     *
+     * @param writer Writer to write to.
+     * @throws IOException if the writer fails to write.
+     */
+    public void writeTo(Writer writer) throws IOException {
+        this.outputter.output(this.document, writer);
     }
 
-    public Direction getDirection() {
-        return direction;
+    /**
+     * Build XML Document for the transfer
+     */
+    private void buildDocument() {
+        Element root = new Element("transfer", VOS.NS);
+        root.addNamespaceDeclaration(VOS.NS);
+        root.addNamespaceDeclaration(UWS.XLINK_NS);
+        root.setAttribute("schemaLocation", VOS.EXT_SCHEMA_LOCATION, UWS.XSI_NS);
+
+        Element e = null;
+
+        e = new Element("target", VOS.NS);
+        e.addContent(this.transfer.getTarget().getUri().toString());
+        root.addContent(e);
+
+        e = new Element("direction", VOS.NS);
+        e.addContent(this.transfer.getDirection().toString());
+        root.addContent(e);
+
+        e = new Element("view", VOS.NS);
+        e.addContent(this.transfer.getView().getUri());
+        root.addContent(e);
+
+        e = createProtocols();
+        root.addContent(e);
+
+        this.document = new Document();
+        this.document.addContent(root);
     }
 
-    public void setDirection(Direction direction) {
-        this.direction = direction;
-    }
-
-    public String getServiceUrl() {
-        return serviceUrl;
-    }
-
-    public void setServiceUrl(String serviceUrl) {
-        this.serviceUrl = serviceUrl;
-    }
-
-    public Node getTarget() {
-        return target;
-    }
-
-    public void setTarget(Node target) {
-        this.target = target;
-    }
-
-    public View getView() {
-        return view;
-    }
-
-    public void setView(View view) {
-        this.view = view;
-    }
-
-    public List<Protocol> getProtocols() {
-        return protocols;
-    }
-
-    public void setProtocols(List<Protocol> protocols) {
-        this.protocols = protocols;
-    }
-
-    public boolean isKeepBytes() {
-        return keepBytes;
-    }
-
-    public void setKeepBytes(boolean keepBytes) {
-        this.keepBytes = keepBytes;
-    }
-
-    public String getEndpoint() {
-        return endpoint;
-    }
-
-    public void setEndpoint(String endpoint) {
-        this.endpoint = endpoint;
+    private Element createProtocols() {
+        Element rtn = new Element("protocols", VOS.NS);
+        Element e = null;
+        Element e2 = null;
+        for (Protocol protocol : this.transfer.getProtocols())
+        {
+            e = new Element("protocol", VOS.NS);
+            e.setAttribute("uri", protocol.getUri());
+            e2 = new Element("endpoint", VOS.NS);
+            e2.addContent(protocol.getEndpoint());
+            e.addContent(e2);
+            rtn.addContent(e);
+        }
+        return rtn;
     }
 }
