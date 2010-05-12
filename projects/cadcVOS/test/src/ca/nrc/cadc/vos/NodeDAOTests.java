@@ -280,24 +280,24 @@ public abstract class NodeDAOTests
         return dataNode;
     }
     
-    private DataNode getCommonDataNode(String uri) throws Exception
+    private DataNode getCommonDataNode(String path) throws Exception
     {
-        VOSURI vosuri = new VOSURI(uri);
+        VOSURI vosuri = new VOSURI("vos://" + path);
         DataNode dataNode = new DataNode(vosuri);
         dataNode.setOwner("testowner");
         return dataNode;
     }
     
-    private ContainerNode getCommonContainerNode(String uri, NodeProperties<NodeProperty> properties) throws Exception
+    private ContainerNode getCommonContainerNode(String path, NodeProperties<NodeProperty> properties) throws Exception
     {
-        ContainerNode containerNode = getCommonContainerNode(uri);
+        ContainerNode containerNode = getCommonContainerNode(path);
         containerNode.setProperties(properties);
         return containerNode;
     }
     
-    private ContainerNode getCommonContainerNode(String uri) throws Exception
+    private ContainerNode getCommonContainerNode(String path) throws Exception
     {
-        VOSURI vosuri = new VOSURI(uri);
+        VOSURI vosuri = new VOSURI("vos://" + path);
         ContainerNode containerNode = new ContainerNode(vosuri);
         containerNode.setOwner("testowner");
         return containerNode;

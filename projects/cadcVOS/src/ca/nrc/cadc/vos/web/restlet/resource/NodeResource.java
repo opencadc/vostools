@@ -70,6 +70,7 @@
 package ca.nrc.cadc.vos.web.restlet.resource;
 
 import java.io.IOException;
+import java.net.URISyntaxException;
 import java.util.HashSet;
 
 import org.apache.log4j.Logger;
@@ -86,6 +87,7 @@ import ca.nrc.cadc.vos.NodeAlreadyExistsException;
 import ca.nrc.cadc.vos.NodeNotFoundException;
 import ca.nrc.cadc.vos.NodeParsingException;
 import ca.nrc.cadc.vos.NodeWriter;
+import ca.nrc.cadc.vos.VOSURI;
 import ca.nrc.cadc.vos.dao.SearchNode;
 import ca.nrc.cadc.vos.web.representation.NodeInputRepresentation;
 import ca.nrc.cadc.vos.web.representation.NodeOutputRepresentation;
@@ -128,9 +130,11 @@ public class NodeResource extends BaseResource
         // the path
         if (getMethod().equals(Method.GET) || getMethod().equals(Method.DELETE))
         {
+            VOSURI vosuri = null;
             try
             {
-                Node searchNode = new SearchNode(path);
+                vosuri = new VOSURI(getVosUri() + path);
+                Node searchNode = new SearchNode(vosuri);
                 node = getNodePersistence().getFromParent(searchNode, null);   
             }
             catch (NodeNotFoundException e)
@@ -138,6 +142,12 @@ public class NodeResource extends BaseResource
                 final String message = "Could not find node with path: " + path;
                 log.debug(message, e);
                 setStatus(Status.CLIENT_ERROR_NOT_FOUND, message);
+            }
+            catch (URISyntaxException e)
+            {
+                final String message = "URI not well formed: " + vosuri;
+                log.debug(message, e);
+                setStatus(Status.CLIENT_ERROR_BAD_REQUEST, message);
             }
         }
     }
@@ -191,6 +201,12 @@ public class NodeResource extends BaseResource
             log.debug(message, e);
             setStatus(Status.CLIENT_ERROR_NOT_FOUND, message);
         }
+        catch (URISyntaxException e)
+        {
+            final String message = "URI Malformed";
+            log.debug(message, e);
+            setStatus(Status.CLIENT_ERROR_BAD_REQUEST, message);
+        }
         catch (IOException e)
         {
             final String message = "Unexception IOException";
@@ -231,6 +247,12 @@ public class NodeResource extends BaseResource
             final String message = "Could not resolve part of path for node: " + path;
             log.debug(message, e);
             setStatus(Status.CLIENT_ERROR_NOT_FOUND, message);
+        }
+        catch (URISyntaxException e)
+        {
+            final String message = "URI Malformed";
+            log.debug(message, e);
+            setStatus(Status.CLIENT_ERROR_BAD_REQUEST, message);
         }
         catch (IOException e)
         {

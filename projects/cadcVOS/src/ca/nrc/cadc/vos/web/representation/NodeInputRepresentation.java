@@ -70,6 +70,7 @@
 package ca.nrc.cadc.vos.web.representation;
 
 import java.io.IOException;
+import java.net.URISyntaxException;
 
 import org.restlet.representation.Representation;
 
@@ -95,7 +96,7 @@ public class NodeInputRepresentation
         this.expectedPath = expectedPath;
     }
     
-    public Node getNode() throws IOException, NodeParsingException
+    public Node getNode() throws IOException, NodeParsingException, URISyntaxException
     {
         Node node = new NodeReader().read(xmlValue.getStream());
         

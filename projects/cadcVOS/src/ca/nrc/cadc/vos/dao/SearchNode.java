@@ -86,17 +86,9 @@ import ca.nrc.cadc.vos.View;
 public class SearchNode extends Node
 {
     
-    public SearchNode(String path)
+    public SearchNode(VOSURI uri) throws URISyntaxException
     {
-        super();
-        try
-        {
-            VOSURI uri = new VOSURI("vos://" + path);
-            super.setUri(uri);
-        } catch (URISyntaxException e)
-        {
-            throw new IllegalArgumentException("Path not well formed.");
-        }
+        super(uri);
     }
 
     @Override
