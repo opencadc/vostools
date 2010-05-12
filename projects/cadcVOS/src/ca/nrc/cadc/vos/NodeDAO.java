@@ -69,6 +69,7 @@
 
 package ca.nrc.cadc.vos;
 
+import java.net.URISyntaxException;
 import java.security.AccessControlException;
 import java.sql.Connection;
 import java.sql.PreparedStatement;
@@ -205,7 +206,14 @@ public abstract class NodeDAO implements NodePersistence
                 throw new NodeNotFoundException(node.getPath());
             }
             
-            returnNode.setUri(node.getUri());
+            try
+            {
+                returnNode.setUri(node.getUri());
+            }
+            catch (URISyntaxException e)
+            {
+                log.warn("Coudln't reset URI", e);
+            }
             log.debug("Node retrieved from parent: " + returnNode);
             return returnNode;
         }
@@ -489,7 +497,14 @@ public abstract class NodeDAO implements NodePersistence
             }
         }
         
-        dbNode.setUri(node.getUri());
+        try
+        {
+            dbNode.setUri(node.getUri());
+        }
+        catch (URISyntaxException e)
+        {
+            log.warn("Coudln't reset URI", e);
+        }
         return dbNode;
     }
     

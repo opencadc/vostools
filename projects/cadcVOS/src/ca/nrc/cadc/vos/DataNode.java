@@ -69,6 +69,7 @@
 
 package ca.nrc.cadc.vos;
 
+import java.net.URISyntaxException;
 import java.util.List;
 
 /**
@@ -97,8 +98,9 @@ public class DataNode extends Node
     
     /**
      * Data node constructor
+     * @throws URISyntaxException 
      */
-    public DataNode(String uri)
+    public DataNode(VOSURI uri) throws URISyntaxException
     {
         super(uri);
         this.structured = false;
@@ -107,8 +109,9 @@ public class DataNode extends Node
     
     /**
      * DataNode constructor.
+     * @throws URISyntaxException 
      */
-    public DataNode(String uri, NodeProperties<NodeProperty> properties)
+    public DataNode(VOSURI uri, NodeProperties<NodeProperty> properties) throws URISyntaxException
     {
         super(uri, properties);
         this.structured = false;

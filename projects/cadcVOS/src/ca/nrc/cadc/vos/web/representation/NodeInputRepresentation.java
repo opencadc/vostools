@@ -87,26 +87,17 @@ public class NodeInputRepresentation
 {
     
     private Representation xmlValue;
-    private String expectedURI;
     private String expectedPath;
     
-    public NodeInputRepresentation(Representation xmlValue, String expectedURI, String expectedPath)
+    public NodeInputRepresentation(Representation xmlValue, String expectedPath)
     {
         this.xmlValue = xmlValue;
-        this.expectedURI = expectedURI;
         this.expectedPath = expectedPath;
     }
     
     public Node getNode() throws IOException, NodeParsingException
     {
         Node node = new NodeReader().read(xmlValue.getStream());
-        
-        // check that the start of the node URI matches the CADC
-        // URI prefex
-        if (!node.getUri().startsWith(expectedURI))
-        {
-            throw new NodeParsingException("Node URI does not begin with: " + expectedURI);
-        }
         
         // ensure the path in the XML URI matches the path in the URL
         if (!node.getPath().equals(expectedPath))

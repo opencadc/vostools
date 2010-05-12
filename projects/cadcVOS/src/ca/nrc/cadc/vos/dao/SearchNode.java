@@ -69,9 +69,11 @@
 
 package ca.nrc.cadc.vos.dao;
 
+import java.net.URISyntaxException;
 import java.util.List;
 
 import ca.nrc.cadc.vos.Node;
+import ca.nrc.cadc.vos.VOSURI;
 import ca.nrc.cadc.vos.View;
 
 /**
@@ -84,7 +86,7 @@ import ca.nrc.cadc.vos.View;
 public class SearchNode extends Node
 {
     
-    public SearchNode(String uri)
+    public SearchNode(VOSURI uri) throws URISyntaxException
     {
         super(uri);
     }

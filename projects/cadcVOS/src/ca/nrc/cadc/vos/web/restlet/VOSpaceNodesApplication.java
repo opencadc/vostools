@@ -75,7 +75,6 @@ import org.restlet.Context;
 import org.restlet.Restlet;
 
 import ca.nrc.cadc.vos.InvalidServiceException;
-import ca.nrc.cadc.vos.Node;
 import ca.nrc.cadc.vos.NodePersistence;
 import ca.nrc.cadc.vos.util.BeanUtil;
 
@@ -118,9 +117,6 @@ public class VOSpaceNodesApplication extends Application
         
         // save the vospace uri in the application context
         context.getAttributes().put(BeanUtil.IVOA_VOS_URI, vosURI);
-        
-        // set the vospace uri on nodes
-        Node.setUriPrefix(vosURI);
         
         // Create the configured NodePersistence bean
         try

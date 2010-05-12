@@ -69,6 +69,7 @@
 
 package ca.nrc.cadc.vos;
 
+import java.net.URISyntaxException;
 import java.util.List;
 
 /**
@@ -83,11 +84,8 @@ import java.util.List;
 public abstract class Node
 {
     
-    // The uri prefix to the path
-    private static String URI_PREFIX = "";
-    
     // The node uri
-    protected String uri;
+    protected VOSURI uri;
     
     // The path (including the name) of the node
     protected String path;
@@ -115,7 +113,6 @@ public abstract class Node
     
     public Node()
     {
-        this.uri = "";
         this.path = "";
         this.name = "";
         properties = new NodeProperties<NodeProperty>();
@@ -125,8 +122,9 @@ public abstract class Node
      * Node constructor.
      * 
      * @param uri The uri of the node;
+     * @throws URISyntaxException 
      */
-    public Node(String uri)
+    public Node(VOSURI uri) throws URISyntaxException
     {
         this.uri = uri;
         buildPath(uri);
@@ -138,8 +136,9 @@ public abstract class Node
      * 
      * @param uri The uri of the node
      * @param properties The node's properties
+     * @throws URISyntaxException 
      */
-    public Node(String uri, NodeProperties<NodeProperty> properties)
+    public Node(VOSURI uri, NodeProperties<NodeProperty> properties) throws URISyntaxException
     {
         this.uri = uri;
         buildPath(uri);
@@ -147,32 +146,20 @@ public abstract class Node
     }
     
     /**
-     * Set the expected prefix to node URIs.
-     * @param uriPrefix
-     */
-    public static final void setUriPrefix(String uriPrefix)
-    {
-        URI_PREFIX = uriPrefix;
-    }
-    
-    /**
      * Given the uri, build the parent if one exists.
      * Set the name of the node and path.
      * @param uri
+     * @throws URISyntaxException 
      */
-    private void buildPath(String uri)
+    private void buildPath(VOSURI uri) throws URISyntaxException
     {
-        if (uri == null || uri.trim().length() == 0)
+        if (uri == null)
         {
-            throw new IllegalArgumentException("Node uriPrefix not provided");
+            throw new IllegalArgumentException("Node uri not provided");
         }
         
-        if (!uri.startsWith(URI_PREFIX))
-        {
-            throw new IllegalArgumentException("Node URI does not begin with: " + URI_PREFIX);
-        }
+        path = uri.getPath();
         
-        path = uri.substring(URI_PREFIX.length());
         String refinedPath = path;
         
         if (refinedPath.startsWith("/"))
@@ -198,7 +185,10 @@ public abstract class Node
         }
         else
         {
-            parent = new ContainerNode(uri.substring(0, uri.lastIndexOf("/")));
+            String uriString = uri.toString();
+            String parentUriString = uriString.substring(0, uriString.lastIndexOf("/"));
+            VOSURI parentURI = new VOSURI(parentUriString);
+            parent = new ContainerNode(parentURI);
         }
     }
     
@@ -249,12 +239,12 @@ public abstract class Node
      */
     public abstract List<View> provides();
     
-    public String getUri()
+    public VOSURI getUri()
     {
         return uri;
     }
     
-    public void setUri(String uri)
+    public void setUri(VOSURI uri) throws URISyntaxException
     {
         this.uri = uri;
         this.buildPath(uri);

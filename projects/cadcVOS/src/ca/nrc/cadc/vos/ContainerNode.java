@@ -69,6 +69,7 @@
 
 package ca.nrc.cadc.vos;
 
+import java.net.URISyntaxException;
 import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
@@ -99,8 +100,9 @@ public class ContainerNode extends Node
     
     /**
      * ContainerNode constructor.
+     * @throws URISyntaxException 
      */
-    public ContainerNode(String uri)
+    public ContainerNode(VOSURI uri) throws URISyntaxException
     {
         super(uri);
         nodes = new ArrayList<Node>();
@@ -108,8 +110,9 @@ public class ContainerNode extends Node
     
     /**
      * ContainerNode constructor.
+     * @throws URISyntaxException 
      */
-    public ContainerNode(String uri, NodeProperties<NodeProperty> properties)
+    public ContainerNode(VOSURI uri, NodeProperties<NodeProperty> properties) throws URISyntaxException
     {
         super(uri, properties);
         nodes = new ArrayList<Node>();
