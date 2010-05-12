@@ -96,23 +96,23 @@ public class JobWriter
     @SuppressWarnings("unused")
     private static Logger log = Logger.getLogger(JobWriter.class);
 
-    private Job _job;
-    private Document _document;
-    private XMLOutputter _outputter;
+    private Job job;
+    private Document document;
+    private XMLOutputter outputter;
 
     public JobWriter(Job job)
     {
-        _job = job;
+        this.job = job;
         buildDocument();
-        _outputter = new XMLOutputter();
-        _outputter.setFormat(Format.getPrettyFormat());
+        this.outputter = new XMLOutputter();
+        this.outputter.setFormat(Format.getPrettyFormat());
     }
 
     /**
      * Write the job to a String.
      */
     public String toString() {
-        return _outputter.outputString(_document);
+        return this.outputter.outputString(this.document);
     }
 
     /**
@@ -122,7 +122,7 @@ public class JobWriter
      * @throws IOException if the writer fails to write.
      */
     public void writeTo(OutputStream out) throws IOException {
-        _outputter.output(_document, out);
+        this.outputter.output(this.document, out);
     }
 
     /**
@@ -132,7 +132,7 @@ public class JobWriter
      * @throws IOException if the writer fails to write.
      */
     public void writeTo(Writer writer) throws IOException {
-        _outputter.output(_document, writer);
+        this.outputter.output(this.document, writer);
     }
 
     /**
@@ -147,42 +147,42 @@ public class JobWriter
         Element e = null;
 
         e = new Element("jobId", UWS.NS);
-        e.addContent(_job.getID());
+        e.addContent(this.job.getID());
         root.addContent(e);
 
         e = new Element("runId", UWS.NS);
-        e.addContent(_job.getRunID());
+        e.addContent(this.job.getRunID());
         root.addContent(e);
 
         e = createOwnerId();
         root.addContent(e);
 
         e = new Element("phase", UWS.NS);
-        e.addContent(_job.getExecutionPhase().toString());
+        e.addContent(this.job.getExecutionPhase().toString());
         root.addContent(e);
 
         e = new Element("quote", UWS.NS);
         //e.setAttribute("nil", "true", XSI_NS);
-        e.addContent(dateToString(_job.getQuote()));
+        e.addContent(dateToString(this.job.getQuote()));
         root.addContent(e);
 
         e = new Element("startTime", UWS.NS);
         //e.setAttribute("nil", "true", XSI_NS);
-        e.addContent(dateToString(_job.getStartTime()));
+        e.addContent(dateToString(this.job.getStartTime()));
         root.addContent(e);
 
         e = new Element("endTime", UWS.NS);
         //e.setAttribute("nil", "true", XSI_NS);
-        e.addContent(dateToString(_job.getEndTime()));
+        e.addContent(dateToString(this.job.getEndTime()));
         root.addContent(e);
 
         e = new Element("executionDuration", UWS.NS);
-        e.addContent(Long.toString(_job.getExecutionDuration()));
+        e.addContent(Long.toString(this.job.getExecutionDuration()));
         root.addContent(e);
 
         e = new Element("destruction", UWS.NS);
         //e.setAttribute("nil", "true", XSI_NS);
-        e.addContent(dateToString(_job.getDestructionTime()));
+        e.addContent(dateToString(this.job.getDestructionTime()));
         root.addContent(e);
 
         e = createParameters();
@@ -195,15 +195,15 @@ public class JobWriter
         if (e != null)
             root.addContent(e);
 
-        _document = new Document();
-        _document.addContent(root);
+        this.document = new Document();
+        this.document.addContent(root);
     }
 
     private Element createOwnerId() {
         Element e = null;
         e = new Element("ownerId", UWS.NS);
         e.setAttribute("nil", "true", UWS.XSI_NS);
-        Subject subjectOwner = _job.getOwner();
+        Subject subjectOwner = this.job.getOwner();
         if (subjectOwner != null)
         {
             Set<Principal> setPrincipal = subjectOwner.getPrincipals();
@@ -225,7 +225,7 @@ public class JobWriter
     private Element createParameters() {
         Element rtn = new Element("parameters", UWS.NS);
         Element e = null;
-        for (Parameter par : _job.getParameterList())
+        for (Parameter par : this.job.getParameterList())
         {
             e = new Element("parameter", UWS.NS);
             e.setAttribute("id", par.getName());
@@ -238,7 +238,7 @@ public class JobWriter
     private Element createResults() {
         Element rtn = new Element("results", UWS.NS);
         Element e = null;
-        for (Result rs : _job.getResultsList())
+        for (Result rs : this.job.getResultsList())
         {
             e = new Element("result", UWS.NS);
             e.setAttribute("id", rs.getName());
@@ -250,7 +250,7 @@ public class JobWriter
 
     private Element createErrorSummary() {
         Element rtn = null;
-        ErrorSummary es = _job.getErrorSummary();
+        ErrorSummary es = this.job.getErrorSummary();
         if (es != null)
         {
             rtn = new Element("errorSummary", UWS.NS);
@@ -259,11 +259,11 @@ public class JobWriter
             Element e = null;
 
             e = new Element("message", UWS.NS);
-            e.addContent(_job.getErrorSummary().getSummaryMessage());
+            e.addContent(this.job.getErrorSummary().getSummaryMessage());
             rtn.addContent(e);
 
             e = new Element("detail", UWS.NS);
-            e.setAttribute("href", _job.getErrorSummary().getDocumentURL().toString(), UWS.XLINK_NS);
+            e.setAttribute("href", this.job.getErrorSummary().getDocumentURL().toString(), UWS.XLINK_NS);
             rtn.addContent(e);
         }
 

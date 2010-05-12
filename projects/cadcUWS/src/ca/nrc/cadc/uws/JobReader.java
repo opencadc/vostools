@@ -100,52 +100,52 @@ public class JobReader
     @SuppressWarnings("unused")
     private static Logger log = Logger.getLogger(JobReader.class);
 
-    private Document _document;
-    private SAXBuilder _saxBuilder;
+    private Document document;
+    private SAXBuilder saxBuilder;
 
     public JobReader()
     {
-        _saxBuilder = new SAXBuilder("org.apache.xerces.parsers.SAXParser", false);
-        _saxBuilder.setFeature("http://xml.org/sax/features/validation", true);
-        _saxBuilder.setFeature("http://apache.org/xml/features/validation/schema", true);
-        _saxBuilder.setFeature("http://apache.org/xml/features/validation/schema-full-checking", true);
-        _saxBuilder.setProperty("http://apache.org/xml/properties/schema/external-schemaLocation", UWS.EXT_SCHEMA_LOCATION);
+        this.saxBuilder = new SAXBuilder("org.apache.xerces.parsers.SAXParser", false);
+        this.saxBuilder.setFeature("http://xml.org/sax/features/validation", true);
+        this.saxBuilder.setFeature("http://apache.org/xml/features/validation/schema", true);
+        this.saxBuilder.setFeature("http://apache.org/xml/features/validation/schema-full-checking", true);
+        this.saxBuilder.setProperty("http://apache.org/xml/properties/schema/external-schemaLocation", UWS.EXT_SCHEMA_LOCATION);
     }
     
     public Job readFrom(Reader reader) throws JDOMException, IOException
     {
-        _document = _saxBuilder.build(reader);
+        this.document = this.saxBuilder.build(reader);
         return parseJob();
     }
 
     public Job readFrom(File file) throws JDOMException, IOException
     {
-        _document = _saxBuilder.build(file);
+        this.document = this.saxBuilder.build(file);
         return parseJob();
     }
 
     public Job readFrom(InputStream in) throws JDOMException, IOException
     {
-        _document = _saxBuilder.build(in);
+        this.document = this.saxBuilder.build(in);
         return parseJob();
     }
 
     public Job readFrom(URL url) throws JDOMException, IOException
     {
-        _document = _saxBuilder.build(url);
+        this.document = this.saxBuilder.build(url);
         return parseJob();
     }
 
     public Job readFrom(String string) throws JDOMException, IOException
     {
         StringReader reader = new StringReader(string);
-        _document = _saxBuilder.build(reader);
+        this.document = this.saxBuilder.build(reader);
         return parseJob();
     }
 
     private Job parseJob()
     {
-        Element root = _document.getRootElement();
+        Element root = this.document.getRootElement();
 
         String jobID = root.getChildText("jobId", UWS.NS);
         String runID = root.getChildText("runId", UWS.NS);
@@ -180,7 +180,7 @@ public class JobReader
     private ExecutionPhase parseExecutionPhase()
     {
         ExecutionPhase rtn = null;
-        Element root = _document.getRootElement();
+        Element root = this.document.getRootElement();
         String strPhase = root.getChildText("phase", UWS.NS);
         if (strPhase.equalsIgnoreCase(ExecutionPhase.PENDING.toString()))
             rtn = ExecutionPhase.PENDING;
@@ -207,7 +207,7 @@ public class JobReader
     private List<Parameter> parseParametersList()
     {
         List<Parameter> rtn = null;
-        Element root = _document.getRootElement();
+        Element root = this.document.getRootElement();
         Element elementParameters = root.getChild("parameters", UWS.NS);
         if (elementParameters != null)
         {
@@ -230,7 +230,7 @@ public class JobReader
     private List<Result> parseResultsList()
     {
         List<Result> rtn = null;
-        Element root = _document.getRootElement();
+        Element root = this.document.getRootElement();
         Element e = root.getChild("results", UWS.NS);
         if (e != null)
         {
@@ -259,7 +259,7 @@ public class JobReader
     private ErrorSummary parseErrorSummary()
     {
         ErrorSummary rtn = null;
-        Element root = _document.getRootElement();
+        Element root = this.document.getRootElement();
         Element e = root.getChild("errorSummary", UWS.NS);
         if (e != null)
         {
