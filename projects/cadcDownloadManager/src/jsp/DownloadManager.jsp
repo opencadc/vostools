@@ -80,6 +80,10 @@
     String fragment = (String) request.getAttribute("fragment");
     String codebase = (String) request.getAttribute("codebase");
     String serverName = (String) request.getAttribute("serverName");
+
+    // this is XML: need to encode & in the uri and fragment
+    uris = uris.replaceAll("&", "&amp;");
+    fragment = fragment.replaceAll("&", "&amp;");
 %>
 
 <jnlp spec="1.0+" codebase="<%= codebase %>"> 

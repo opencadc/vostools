@@ -78,7 +78,9 @@ import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
 import java.net.Authenticator;
 import java.net.PasswordAuthentication;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import javax.swing.BorderFactory;
 import javax.swing.Box;
 import javax.swing.BoxLayout;
@@ -92,7 +94,11 @@ import javax.swing.JPasswordField;
 import javax.swing.JTextField;
 
 /**
- * TODO.
+ * Simple Authenticator that pops up a custom dialog to get a username/password.
+ * This implementation now caches the credentials in memory since OpenJDK does not
+ * do so and users don't like seeing the same dialog box N times. If the auth is
+ * HTTP BASIC this is not the biggest security problem, but is is less than optimal
+ * so use with care.
  *
  * @author pdowler
  */
@@ -101,18 +107,42 @@ public class HttpAuthenticator extends Authenticator
     private boolean debug = false;
     private Component parent;
     private MyAuthDialog mad;
+
+    // TODO: this is bad to store password(s) in memory...
+    private Map<RequestingApp,PasswordAuthentication> authMap = new HashMap<RequestingApp,PasswordAuthentication>();
     
     
     public HttpAuthenticator(Component parent) 
     { 
         super(); 
         this.parent = parent;
+        msg("constructor");
     }
-    
+
+    @Override
     protected PasswordAuthentication getPasswordAuthentication()
     {
-        msg("getPasswordAuthentication: " + getRequestingHost() + ", " + getRequestingPrompt());
-        return getCredentials();
+        RequestingApp ra = new RequestingApp();
+        ra.host = getRequestingHost();
+        ra.port = getRequestingPort();
+        ra.prompt = getRequestingPrompt();
+        ra.protocol = getRequestingProtocol();
+        ra.scheme = getRequestingScheme();
+        msg("getPasswordAuthentication: " + ra);
+        PasswordAuthentication pa = authMap.get(ra);
+        if (pa == null)
+        {
+            pa = getCredentials();
+            if (pa != null)
+                authMap.put(ra, pa);
+        }
+        if (pa == null)
+            return null;
+        // return a deep copy in case the caller tried to clean up
+        char[] pw = pa.getPassword();
+        char[] pwcp = new char[pw.length];
+        System.arraycopy(pw, 0, pwcp, 0, pw.length);
+        return new PasswordAuthentication(pa.getUserName(), pwcp);
     }
  
     private PasswordAuthentication getCredentials()
@@ -146,7 +176,10 @@ public class HttpAuthenticator extends Authenticator
                 
         private List netrc;
         
-        MyAuthDialog() { }
+        MyAuthDialog() 
+        {
+            msg("constrcutor: MyAuthDialog");
+        }
         
         public PasswordAuthentication getPasswordAuthentication(String host, String prompt)
         {
@@ -179,9 +212,10 @@ public class HttpAuthenticator extends Authenticator
         }
               
         private void init(String host, String prompt)
-	{
+        {
             if (dialog == null)
             {
+                msg("MyAuthDialog.init: creating JDialog...");
                 this.dialog = new JDialog(Util.findParentFrame(parent), "Authentication required", true);
                 dialog.setDefaultCloseOperation(JDialog.HIDE_ON_CLOSE);
                 
@@ -325,7 +359,46 @@ public class HttpAuthenticator extends Authenticator
                 msg("failed to find " + host + " in NetrcFile");
             }
         }
-        
-        
+    }
+
+    private class RequestingApp
+    {
+        String host;
+        int port;
+        String protocol;
+        String prompt;
+        String scheme;
+
+        String gunk;
+
+        RequestingApp() { }
+
+        public String toString()
+        {
+            init();
+            return "RequestingApp[" + gunk + "]";
+        }
+        private void init()
+        {
+           if (gunk == null)
+                gunk = protocol + "://" + host + ":"+port + "/" + prompt + "/" + scheme;
+        }
+
+        public boolean equals(Object o)
+        {
+            init();
+            if (o instanceof RequestingApp)
+            {
+                RequestingApp ra = (RequestingApp) o;
+                return gunk.equals(ra.gunk);
+            }
+            return false;
+        }
+
+        public int hashCode()
+        {
+            init();
+            return gunk.hashCode();
+        }
     }
 }
