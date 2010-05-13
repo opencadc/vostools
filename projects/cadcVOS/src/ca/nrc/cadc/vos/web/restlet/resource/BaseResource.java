@@ -71,6 +71,7 @@ package ca.nrc.cadc.vos.web.restlet.resource;
 
 import org.restlet.resource.ServerResource;
 
+import ca.nrc.cadc.auth.Authorizer;
 import ca.nrc.cadc.vos.NodePersistence;
 import ca.nrc.cadc.vos.util.BeanUtil;
 
@@ -79,6 +80,7 @@ public abstract class BaseResource extends ServerResource
     
     private String vosUri;
     private NodePersistence nodePersistence;
+    private Authorizer nodeAuthorizer;
     
     protected BaseResource()
     {
@@ -91,17 +93,25 @@ public abstract class BaseResource extends ServerResource
         nodePersistence =
             (NodePersistence) getApplication().getContext().getAttributes().
                 get(BeanUtil.VOS_NODE_PERSISTENCE);
-
+        
+        nodeAuthorizer = 
+            (Authorizer) getApplication().getContext().getAttributes().
+                get(BeanUtil.VOS_NODE_AUTHORIZER);
     }
     
-    public final NodePersistence getNodePersistence()
+    protected String getVosUri()
+    {
+        return vosUri;
+    }
+    
+    protected final NodePersistence getNodePersistence()
     {
         return nodePersistence;
     }
-
-    public String getVosUri()
+    
+    protected final Authorizer getNodeAuthorizer()
     {
-        return vosUri;
+        return nodeAuthorizer;
     }
 
 }

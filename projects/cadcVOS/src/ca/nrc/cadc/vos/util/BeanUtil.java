@@ -78,11 +78,14 @@ public class BeanUtil
     
     private static final Logger log = Logger.getLogger(BeanUtil.class);
     
-    public final static String IVOA_VOS_URI =
+    public static final String IVOA_VOS_URI =
             "ivoa.vos.uri";
     
-    public final static String VOS_NODE_PERSISTENCE =
+    public static final String VOS_NODE_PERSISTENCE =
             "ca.nrc.cadc.vos.NodePersistence";
+    
+    public static final String VOS_NODE_AUTHORIZER =
+            "ca.nrc.cadc.auth.Authorizer";
 
     private String className;
 

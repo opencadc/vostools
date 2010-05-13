@@ -99,6 +99,16 @@ public class VOSURI
         if (!vosURI.getScheme().equalsIgnoreCase("vos"))
             throw new URISyntaxException(uri, "Scheme must be vos");
     }
+    
+    /**
+     * Returns the underlying URI object.
+     * 
+     * @return The URI object for this VOSURI.
+     */
+    public URI getURIObject()
+    {
+        return vosURI;
+    }
 
     /**
      * Returns the decoded authority component of the URI.

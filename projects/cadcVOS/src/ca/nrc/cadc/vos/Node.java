@@ -159,8 +159,7 @@ public abstract class Node
         }
         
         path = uri.getPath();
-        
-        String refinedPath = path;
+        String refinedPath = uri.getPath();
         
         if (refinedPath.startsWith("/"))
         {
@@ -178,7 +177,7 @@ public abstract class Node
         }
         
         this.name = segments[segments.length - 1];
-        
+
         if (segments.length == 1)
         {
             parent = null;

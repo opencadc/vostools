@@ -75,7 +75,6 @@ import org.restlet.Context;
 import org.restlet.Restlet;
 
 import ca.nrc.cadc.vos.InvalidServiceException;
-import ca.nrc.cadc.vos.NodePersistence;
 import ca.nrc.cadc.vos.util.BeanUtil;
 
 /**
@@ -119,23 +118,34 @@ public class VOSpaceNodesApplication extends Application
         context.getAttributes().put(BeanUtil.IVOA_VOS_URI, vosURI);
         
         // Create the configured NodePersistence bean
+        createContextBean(context, ca.nrc.cadc.vos.NodePersistence.class, BeanUtil.VOS_NODE_PERSISTENCE);
+        // Create the configured Authorizer bean
+        createContextBean(context, ca.nrc.cadc.auth.Authorizer.class, BeanUtil.VOS_NODE_AUTHORIZER);
+        
+        return new VOSpaceNodesRouter(context);
+    }
+    
+    private void createContextBean(Context context, Class<?> beanInterface, String contextParam)
+    {
         try
         {
             final String className = context.getParameters().
-                    getFirstValue(BeanUtil.VOS_NODE_PERSISTENCE);
+                    getFirstValue(contextParam);
             final BeanUtil beanUtil = new BeanUtil(className);
-            NodePersistence nodePersistence = (NodePersistence) beanUtil.createBean();
-            context.getAttributes().put(BeanUtil.VOS_NODE_PERSISTENCE, nodePersistence);
-            log.debug("Added node persistence bean to application context: " + nodePersistence);
+            Object bean = beanUtil.createBean();
+            if (!beanInterface.isInstance(bean))
+            {
+                throw new InvalidServiceException("Bean does not implement interface: " + beanInterface.getName());
+            }
+            context.getAttributes().put(contextParam, bean);
+            log.debug("Added " + contextParam + " bean to application context: " + className);
         }
         catch (InvalidServiceException e)
         {
-            final String message = "Could not create NodePersistence bean: " + e.getMessage();
+            final String message = "Could not create bean: " + contextParam + ": " + e.getMessage();
             log.error(message, e);
             throw new RuntimeException(message, e);
         }
-        
-        return new VOSpaceNodesRouter(context);
     }
     
 }
