@@ -612,11 +612,13 @@ public abstract class NodeDAO implements NodePersistence
             parentWhereClause = "parentID = " + parentNodeID;
         }
         StringBuilder sb = new StringBuilder();
-        sb.append("select nodeID, parentID, name, type, owner, groupRead, groupWrite, "
-            + "contentLength, contentType, contentEncoding, contentMD5 from Node where name = '"
-            + node.getName()
-            + "' and "
-            + parentWhereClause);
+        sb.append("select nodeID, parentID, name, type, owner, groupRead, groupWrite, ");
+        sb.append("contentLength, contentType, contentEncoding, contentMD5 from ");
+        sb.append("vospace.." + getNodeTableName());
+        sb.append(" where name = '");
+        sb.append(node.getName());
+        sb.append("' and ");
+        sb.append(parentWhereClause);
         return sb.toString();
     }
     
@@ -627,9 +629,11 @@ public abstract class NodeDAO implements NodePersistence
     protected String getSelectNodesByParentSQL(Node parent)
     {
         StringBuilder sb = new StringBuilder();
-        sb.append("select nodeID, parentID, name, type, owner, groupRead, groupWrite, "
-            + "contentLength, contentType, contentEncoding, contentMD5 from Node where parentID = "
-            + getNodeID(parent));
+        sb.append("select nodeID, parentID, name, type, owner, groupRead, groupWrite, ");
+        sb.append("contentLength, contentType, contentEncoding, contentMD5 from ");
+        sb.append("vospace.." + getNodeTableName());
+        sb.append(" where parentID = ");
+        sb.append(getNodeID(parent));
         return sb.toString();
     }
     
@@ -641,7 +645,7 @@ public abstract class NodeDAO implements NodePersistence
     {
         StringBuilder sb = new StringBuilder();
         sb.append("select nodePropertyID, propertyURI, propertyValue from ");
-        sb.append(getNodePropertyTableName());
+        sb.append("vospace.." + getNodePropertyTableName());
         sb.append(" where nodeID = ");
         sb.append(getNodeID(node));
         return sb.toString();
@@ -687,7 +691,7 @@ public abstract class NodeDAO implements NodePersistence
         
         StringBuilder sb = new StringBuilder();
         sb.append("insert into ");
-        sb.append(getNodeTableName());
+        sb.append("vospace.." + getNodeTableName());
         sb.append(" (");
         sb.append("parentID,");
         sb.append("name,");
@@ -746,7 +750,7 @@ public abstract class NodeDAO implements NodePersistence
         {
             Long contentLength = new Long(value);
             sb.append("update ");
-            sb.append(getNodeTableName());
+            sb.append("vospace.." + getNodeTableName());
             sb.append(" set contentLength = ");
             sb.append(contentLength);
             sb.append(" where nodeID = ");
@@ -755,7 +759,7 @@ public abstract class NodeDAO implements NodePersistence
         else if (nodeProperty.getPropertyURI().equals(NodePropertyMapper.PROPERTY_CONTENTMD5_URI))
         {
             sb.append("update ");
-            sb.append(getNodeTableName());
+            sb.append("vospace.." + getNodeTableName());
             sb.append(" set contentMD5 = ");
             sb.append((value == null) ? null : "'" + value + "'");
             sb.append(" where nodeID = ");
@@ -764,7 +768,7 @@ public abstract class NodeDAO implements NodePersistence
         else if (nodeProperty.getPropertyURI().equals(NodePropertyMapper.PROPERTY_CONTENTTYPE_URI))
         {
             sb.append("update ");
-            sb.append(getNodeTableName());
+            sb.append("vospace.." + getNodeTableName());
             sb.append(" set contentType = ");
             sb.append((value == null) ? null : "'" + value + "'");
             sb.append(" where nodeID = ");
@@ -773,7 +777,7 @@ public abstract class NodeDAO implements NodePersistence
         else
         {
             sb.append("insert into ");
-            sb.append(getNodePropertyTableName());
+            sb.append("vospace.." + getNodePropertyTableName());
             sb.append(" (");
             sb.append("nodeID,");
             sb.append("propertyURI,");
@@ -797,7 +801,7 @@ public abstract class NodeDAO implements NodePersistence
     {
         StringBuilder sb = new StringBuilder();
         sb.append("delete from ");
-        sb.append(getNodeTableName());
+        sb.append("vospace.." + getNodeTableName());
         sb.append(" where nodeID = ");
         sb.append(getNodeID(node));
         return sb.toString();
@@ -811,7 +815,7 @@ public abstract class NodeDAO implements NodePersistence
     {
         StringBuilder sb = new StringBuilder();
         sb.append("delete from ");
-        sb.append(getNodePropertyTableName());
+        sb.append("vospace.." + getNodePropertyTableName());
         sb.append(" where nodeID = ");
         sb.append(getNodeID(node));
         return sb.toString();
@@ -825,7 +829,7 @@ public abstract class NodeDAO implements NodePersistence
     {
         StringBuilder sb = new StringBuilder();
         sb.append("delete from ");
-        sb.append(getNodeTableName());
+        sb.append("vospace.." + getNodeTableName());
         sb.append(" where parentID = ");
         sb.append(getNodeID(parent));
         return sb.toString();
@@ -839,9 +843,9 @@ public abstract class NodeDAO implements NodePersistence
     {
         StringBuilder sb = new StringBuilder();
         sb.append("delete from ");
-        sb.append(getNodePropertyTableName());
+        sb.append("vospace.." + getNodePropertyTableName());
         sb.append(" where nodeID in (select nodeID from ");
-        sb.append(getNodeTableName());
+        sb.append("vospace.." + getNodeTableName());
         sb.append(" where parentID = ");
         sb.append(getNodeID(parent));
         sb.append(")");
@@ -859,35 +863,35 @@ public abstract class NodeDAO implements NodePersistence
         if (nodeProperty.getPropertyURI().equals(NodePropertyMapper.PROPERTY_CONTENTENCODING_URI))
         {
             sb.append("update ");
-            sb.append(getNodeTableName());
+            sb.append("vospace.." + getNodeTableName());
             sb.append(" set contentEncoding = null where nodeID = ");
             sb.append(getNodeID(node));
         }
         else if (nodeProperty.getPropertyURI().equals(NodePropertyMapper.PROPERTY_CONTENTLENGTH_URI))
         {
             sb.append("update ");
-            sb.append(getNodeTableName());
+            sb.append("vospace.." + getNodeTableName());
             sb.append(" set contentLength = null where nodeID = ");
             sb.append(getNodeID(node));
         }
         else if (nodeProperty.getPropertyURI().equals(NodePropertyMapper.PROPERTY_CONTENTMD5_URI))
         {
             sb.append("update ");
-            sb.append(getNodeTableName());
+            sb.append("vospace.." + getNodeTableName());
             sb.append(" set contentMD5 = null where nodeID = ");
             sb.append(getNodeID(node));
         }
         else if (nodeProperty.getPropertyURI().equals(NodePropertyMapper.PROPERTY_CONTENTTYPE_URI))
         {
             sb.append("update ");
-            sb.append(getNodeTableName());
+            sb.append("vospace.." + getNodeTableName());
             sb.append(" set contentType = null where nodeID = ");
             sb.append(getNodeID(node));
         }
         else
         {
             sb.append("delete from ");
-            sb.append(getNodePropertyTableName());
+            sb.append("vospace.." + getNodePropertyTableName());
             sb.append(" where nodeID = ");
             sb.append(getNodeID(node));
             sb.append(" and propertyURI = '");
@@ -909,7 +913,7 @@ public abstract class NodeDAO implements NodePersistence
         if (nodeProperty.getPropertyURI().equals(NodePropertyMapper.PROPERTY_CONTENTENCODING_URI))
         {
             sb.append("update ");
-            sb.append(getNodeTableName());
+            sb.append("vospace.." + getNodeTableName());
             sb.append(" set contentEncoding = ");
             sb.append((value == null) ? null : "'" + value + "'");
             sb.append(" where nodeID = ");
@@ -919,7 +923,7 @@ public abstract class NodeDAO implements NodePersistence
         {
             Long contentLength = new Long(value);
             sb.append("update ");
-            sb.append(getNodeTableName());
+            sb.append("vospace.." + getNodeTableName());
             sb.append(" set contentLength = ");
             sb.append(contentLength);
             sb.append(" where nodeID = ");
@@ -928,7 +932,7 @@ public abstract class NodeDAO implements NodePersistence
         else if (nodeProperty.getPropertyURI().equals(NodePropertyMapper.PROPERTY_CONTENTMD5_URI))
         {
             sb.append("update ");
-            sb.append(getNodeTableName());
+            sb.append("vospace.." + getNodeTableName());
             sb.append(" set contentMD5 = ");
             sb.append((value == null) ? null : "'" + value + "'");
             sb.append(" where nodeID = ");
@@ -937,7 +941,7 @@ public abstract class NodeDAO implements NodePersistence
         else if (nodeProperty.getPropertyURI().equals(NodePropertyMapper.PROPERTY_CONTENTTYPE_URI))
         {
             sb.append("update ");
-            sb.append(getNodeTableName());
+            sb.append("vospace.." + getNodeTableName());
             sb.append(" set contentType = ");
             sb.append((value == null) ? null : "'" + value + "'");
             sb.append(" where nodeID = ");
@@ -946,7 +950,7 @@ public abstract class NodeDAO implements NodePersistence
         else
         {
             sb.append("update ");
-            sb.append(getNodePropertyTableName());
+            sb.append("vospace.." + getNodePropertyTableName());
             sb.append(" set propertyValue = '");
             sb.append(nodeProperty.getPropertyValue());
             sb.append("' where nodeID = ");
