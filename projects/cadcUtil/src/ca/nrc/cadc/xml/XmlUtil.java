@@ -1,4 +1,4 @@
-<!--
+/*
 ************************************************************************
 *******************  CANADIAN ASTRONOMY DATA CENTRE  *******************
 **************  CENTRE CANADIEN DE DONNÉES ASTRONOMIQUES  **************
@@ -65,39 +65,105 @@
 *  $Revision: 4 $
 *
 ************************************************************************
--->
+*/
 
+package ca.nrc.cadc.xml;
 
-<!DOCTYPE project>
-<project default="build" basedir=".">
-    <property environment="env"/>
+import java.io.IOException;
+import java.io.StringReader;
+import java.net.URL;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.MissingResourceException;
+
+import org.apache.log4j.Logger;
+import org.jdom.Document;
+import org.jdom.JDOMException;
+import org.jdom.input.SAXBuilder;
+import org.jdom.xpath.XPath;
+
+/**
+ * @author zhangsa
+ *
+ */
+public class XmlUtil
+{
+    private static Logger log = Logger.getLogger(XmlUtil.class);
+    public static final String PARSER = "org.apache.xerces.parsers.SAXParser";
+
+    public static Document validateXml(String xml, Map<String, String> schemaMap) throws IOException, JDOMException
+    {
+        log.debug("validateXml:\n" + xml);
+        
+        URL url;
+        String schemaResource, serviceSchema;
+        String space = " ";
+        StringBuffer sbSchemaLocations = new StringBuffer();
+        log.debug("schemaMap.size(): " + schemaMap.size());
+        
+        for (String schemaNSKey : schemaMap.keySet())
+        {
+            schemaResource = (String) schemaMap.get(schemaNSKey);
+            url = XmlUtil.class.getClassLoader().getResource(schemaResource);
+            if (url == null)
+                throw new RuntimeException("failed to find resource: " + schemaResource);
+            serviceSchema = url.toString();
+            log.debug(schemaResource + " -> " + serviceSchema);
+            sbSchemaLocations.append(schemaNSKey).append(space).append(serviceSchema).append(space);
+        }
     
-    <!-- site-specific build properties or overrides of values in opencadc.properties -->
-    <property file="${env.CADC_PREFIX}/etc/local.properties" />
+        SAXBuilder schemaValidator;
+        schemaValidator = new SAXBuilder(PARSER, true);
+        schemaValidator.setFeature("http://xml.org/sax/features/validation", true);
+        schemaValidator.setFeature("http://apache.org/xml/features/validation/schema", true);
+        schemaValidator.setFeature("http://apache.org/xml/features/validation/schema-full-checking", true);
+        schemaValidator.setProperty("http://apache.org/xml/properties/schema/external-schemaLocation", sbSchemaLocations.toString());
     
-    <!-- site-specific targets, e.g. install, cannot duplicate those in opencadc.targets.xml -->
-    <import file="${env.CADC_PREFIX}/etc/local.targets.xml" optional="true" />
+        return schemaValidator.build(new StringReader(xml));
+    }
 
-    <!-- default properties and targets -->
-    <property file="${env.CADC_PREFIX}/etc/opencadc.properties" />
-    <import file="${env.CADC_PREFIX}/etc/opencadc.targets.xml"/>
+    public static Document validateXml(String xml, String schemaNSKey, String schemaResourceFileName) throws IOException, JDOMException
+    {
+        Map<String, String> map = new HashMap<String, String>();
+        map.put(schemaNSKey, schemaResourceFileName);
+        return validateXml(xml, map);
+    }
+
+    /**
+     * count how many nodes are represented by the xpath
+     * 
+     * @param doc
+     * @param xpathStr
+     * @return
+     */
+    public static int getXmlNodeCount(Document doc, String xpathStr)
+    {
+        int rtn = 0;
+        XPath xpath;
+        try
+        {
+            xpath = XPath.newInstance(xpathStr);
+            List<?> rs = xpath.selectNodes(doc);
+            rtn = rs.size();
+        } catch (JDOMException e)
+        {
+            e.printStackTrace();
+        }
+        return rtn;
+    }
     
-    <!-- developer convenience: place for extra targets and properties -->
-    <import file="extras.xml" optional="true" />
-
-	<property name="project" value="cadcUtil" />
-
-	<property name="jars" value="${ext.lib}/servlet-api.jar:${ext.lib}/log4j.jar:${ext.lib}/jdom.jar" />
-
-<target name="build" depends="compile">
-    <jar jarfile="${build}/lib/${project}.jar"
-		basedir="${build}/class" 
-		update="no">
-            <include name="ca/nrc/cadc/**" />
-    </jar>
-</target>
-
-<target name="test">
-	<echo message="no tests implemented" />
-</target>
-</project>
+    /**
+     * Get an URL to the schema in the jar.
+     * @return
+     */
+    public static String getResourceUrlString(String resourceFileName, Class runningClass)
+    {
+        String rtn = null;
+        URL url = runningClass.getClassLoader().getResource(resourceFileName);
+        if (url == null)
+            throw new MissingResourceException("Resource not found: " + resourceFileName, runningClass.getName(), resourceFileName);
+        rtn = url.toString();
+        return rtn;
+    }
+}
