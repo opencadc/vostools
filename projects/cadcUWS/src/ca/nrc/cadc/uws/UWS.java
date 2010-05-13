@@ -71,7 +71,7 @@ package ca.nrc.cadc.uws;
 
 import org.jdom.Namespace;
 
-import ca.nrc.cadc.uws.util.XmlUtil;
+import ca.nrc.cadc.xml.XmlUtil;
 
 /**
  * Holder of commonly used constants
