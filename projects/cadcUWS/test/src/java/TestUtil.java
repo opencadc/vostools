@@ -73,7 +73,7 @@ import org.apache.log4j.Logger;
 import org.jdom.Document;
 import org.junit.Assert;
 
-import ca.nrc.cadc.uws.util.XmlUtil;
+import ca.nrc.cadc.xml.XmlUtil;
 
 /**
  * @author zhangsa

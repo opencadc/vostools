@@ -87,7 +87,7 @@ import org.junit.BeforeClass;
 import org.junit.Test;
 
 import ca.nrc.cadc.util.Log4jInit;
-import ca.nrc.cadc.uws.util.XmlUtil;
+import ca.nrc.cadc.xml.XmlUtil;
 
 /**
  * @author zhangsa
