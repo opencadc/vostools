@@ -108,10 +108,10 @@ public class NodeWriter
     /**
      * Write a ContainerNode to a StringBuilder.
      */
-    public NodeWriter() { }
+    public NodeWriter()
+    {}
 
-    public void write(ContainerNode node, StringBuilder builder)
-        throws IOException
+    public void write(ContainerNode node, StringBuilder builder) throws IOException
     {
         write(node, new StringBuilderWriter(builder));
     }
@@ -123,15 +123,13 @@ public class NodeWriter
      * @param out OutputStream to write to.
      * @throws IOException if the writer fails to write.
      */
-    public void write(ContainerNode node, OutputStream out)
-        throws IOException
+    public void write(ContainerNode node, OutputStream out) throws IOException
     {
         OutputStreamWriter outWriter;
         try
         {
             outWriter = new OutputStreamWriter(out, "UTF-8");
-        }
-        catch (UnsupportedEncodingException e)
+        } catch (UnsupportedEncodingException e)
         {
             throw new RuntimeException("UTF-8 encoding not supported", e);
         }
@@ -145,8 +143,7 @@ public class NodeWriter
      * @param writer Writer to write to.
      * @throws IOException if the writer fails to write.
      */
-    public void write(ContainerNode node, Writer writer)
-        throws IOException
+    public void write(ContainerNode node, Writer writer) throws IOException
     {
         // Create the root node element
         Element root = getRootElement(node);
@@ -162,14 +159,30 @@ public class NodeWriter
     }
 
     /**
+     * A wrapper to write node without specifying its type
+     * 
+     * @author Sailor Zhang
+     * @date May 13, 2010
+     * @param node
+     * @param writer
+     * @throws IOException
+     */
+    public void write(Node node, Writer writer) throws IOException
+    {
+        if (node instanceof ContainerNode)
+            write((ContainerNode)node, writer);
+        if (node instanceof DataNode)
+            write((DataNode)node, writer);
+    }
+
+    /**
      * Write a DataNode to a StringBuilder.
      * 
      * @param node Node to write.
      * @param builder StringBuilder to write to.
      * @throws IOException if the writer fails to write.
      */
-    public void write(DataNode node, StringBuilder builder)
-        throws IOException
+    public void write(DataNode node, StringBuilder builder) throws IOException
     {
         write(node, new StringBuilderWriter(builder));
     }
@@ -181,15 +194,13 @@ public class NodeWriter
      * @param out OutputStream to write to.
      * @throws IOException if the writer fails to write.
      */
-    public void write(DataNode node, OutputStream out)
-        throws IOException
+    public void write(DataNode node, OutputStream out) throws IOException
     {
         OutputStreamWriter outWriter;
         try
         {
             outWriter = new OutputStreamWriter(out, "UTF-8");
-        }
-        catch (UnsupportedEncodingException e)
+        } catch (UnsupportedEncodingException e)
         {
             throw new RuntimeException("UTF-8 encoding not supported", e);
         }
@@ -203,8 +214,7 @@ public class NodeWriter
      * @param writer Writer to write to.
      * @throws IOException if the writer fails to write.
      */
-    public void write(DataNode node, Writer writer)
-        throws IOException
+    public void write(DataNode node, Writer writer) throws IOException
     {
         // Create the root node element
         Element root = getRootElement(node);
@@ -281,8 +291,7 @@ public class NodeWriter
      * @param writer Writer to write to.
      * @throws IOException if the writer fails to write.
      */
-    protected void write(Element root, Writer writer)
-        throws IOException
+    protected void write(Element root, Writer writer) throws IOException
     {
         XMLOutputter outputter = new XMLOutputter();
         outputter.setFormat(Format.getPrettyFormat());
@@ -302,45 +311,42 @@ public class NodeWriter
         }
 
         @Override
-        public void write(char[] cbuf)
-            throws IOException
+        public void write(char[] cbuf) throws IOException
         {
             sb.append(cbuf);
         }
 
         @Override
-        public void write(char[] cbuf, int off, int len)
-            throws IOException
+        public void write(char[] cbuf, int off, int len) throws IOException
         {
             sb.append(cbuf, off, len);
         }
 
         @Override
-        public void write(int c)
-            throws IOException
+        public void write(int c) throws IOException
         {
             sb.append((char) c);
         }
 
         @Override
-        public void write(String str)
-            throws IOException
+        public void write(String str) throws IOException
         {
             sb.append(str);
         }
 
         @Override
-        public void write(String str, int off, int len)
-            throws IOException
+        public void write(String str, int off, int len) throws IOException
         {
             sb.append(str.substring(off, off + len));
         }
 
         @Override
-        public void flush() throws IOException { }
+        public void flush() throws IOException
+        {}
 
         @Override
-        public void close() throws IOException { }
+        public void close() throws IOException
+        {}
 
         public void reset()
         {
