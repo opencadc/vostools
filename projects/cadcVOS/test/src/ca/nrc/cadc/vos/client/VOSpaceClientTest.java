@@ -67,14 +67,14 @@
 ************************************************************************
 */
 
-package ca.nrc.cadc.vos;
+package ca.nrc.cadc.vos.client;
 
-import java.io.IOException;
+
 import java.util.ArrayList;
 import java.util.List;
 
+import org.apache.log4j.Level;
 import org.apache.log4j.Logger;
-import org.jdom.JDOMException;
 import org.junit.After;
 import org.junit.AfterClass;
 import org.junit.Before;
@@ -82,63 +82,58 @@ import org.junit.BeforeClass;
 import org.junit.Test;
 
 import ca.nrc.cadc.util.Log4jInit;
-import ca.nrc.cadc.xml.XmlUtil;
+import ca.nrc.cadc.vos.*;
 
 /**
  * @author zhangsa
  *
  */
-public class TransferWriterTest
+public class VOSpaceClientTest
 {
-    static Logger log = Logger.getLogger(TransferWriterTest.class);
-
-    private Transfer transfer;
-
-    @BeforeClass
-    public static void setUpBeforeClass() throws Exception {
-        Log4jInit.setLevel("ca.nrc.cadc", org.apache.log4j.Level.DEBUG);
+    private static Logger log = Logger.getLogger(NodeWriterTest.class);
+    {
+        Log4jInit.setLevel("ca", Level.DEBUG);
     }
+    VOSpaceClient client = new VOSpaceClient();
+    DataNode dataNode;
+    ContainerNode containerNode;
+    
+    
+    /**
+     * @throws java.lang.Exception
+     */
+    @BeforeClass
+    public static void setUpBeforeClass() throws Exception
+    {}
 
+    /**
+     * @throws java.lang.Exception
+     */
     @AfterClass
-    public static void tearDownAfterClass() throws Exception {}
+    public static void tearDownAfterClass() throws Exception
+    {}
 
     /**
      * @throws java.lang.Exception
      */
     @Before
-    public void setUp() throws Exception {
-        List<Protocol> protocols = new ArrayList<Protocol>();
-        protocols.add(new Protocol("vos://uri1.of.protocol", "vos://endpoint1.of.protocol", null));
-        protocols.add(new Protocol("vos://uri2.of.protocol", "vos://endpoint2.of.protocol", null));
-        protocols.add(new Protocol("vos://uri3.of.protocol", "vos://endpoint3.of.protocol", null));
-        
-        Node target = new DataNode(new VOSURI("vos://nvo.caltech!vospace/mydir/ngc1111"));
-        Node dataNode = new DataNode(new VOSURI("vos://nvo.caltech!vospace/mydir/ngc2222"));
-        View view = new DataView("vos://nvo.caltech!vospace/mydir/ngc1234", dataNode);
-
-        transfer = new Transfer();
-        transfer.setDirection(Transfer.Direction.PUSH_TO_VO_SPACE);
-        transfer.setEndpoint("vos://endpoint.for.transfer");
-        transfer.setKeepBytes(true);
-        transfer.setProtocols(protocols);
-        transfer.setServiceUrl("http://service.url.for.transfer");
-        transfer.setTarget(target);
-        transfer.setView(view);
+    public void setUp() throws Exception
+    {
+        containerNode = new ContainerNode(new VOSURI("vos://cadc.nrc.ca!vospace/dir/subdir"));
     }
 
     /**
      * @throws java.lang.Exception
      */
     @After
-    public void tearDown() throws Exception {}
+    public void tearDown() throws Exception
+    {}
 
     @Test
-    public void testWriter() throws IOException, JDOMException {
-        TransferWriter writer = new TransferWriter(transfer);
-        String strOut = writer.toString();
-        // as of May 12, 2010, the schema file does not have definition for the transfer node
-        // so we are not able to validate it against the XSD file.
-        //XmlUtil.validateXml(strOut, VOS.XSD_KEY, VOS.XSD_FILE_NAME);
-        log.debug(strOut);
+    public void testCreateNode() 
+    {
+        client.setEndpoint("http://localhost/vospace/nodes/mydata1");
+        Node nodeRtn = client.createNode(containerNode);
+        log.debug(nodeRtn);
     }
 }

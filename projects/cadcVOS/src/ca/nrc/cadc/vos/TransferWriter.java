@@ -136,8 +136,6 @@ public class TransferWriter
     private void buildDocument() {
         Element root = new Element("transfer", VOS.NS);
         root.addNamespaceDeclaration(VOS.NS);
-        root.addNamespaceDeclaration(UWS.XLINK_NS);
-        root.setAttribute("schemaLocation", VOS.EXT_SCHEMA_LOCATION, UWS.XSI_NS);
 
         Element e = null;
 

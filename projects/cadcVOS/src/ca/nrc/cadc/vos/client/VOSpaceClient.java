@@ -84,9 +84,10 @@ import ca.nrc.cadc.vos.*;
  */
 public class VOSpaceClient
 {
+    @SuppressWarnings("unused")
     private static Logger log = Logger.getLogger(VOSpaceClient.class);
 
-    protected String _endpoint;
+    protected String endpoint;
 
     /*
      * The service SHALL throw a HTTP 500 status code including an InternalFault fault in the entity body if the operation fails
@@ -99,18 +100,18 @@ public class VOSpaceClient
      * If a parent node in the URI path is a LinkNode, the service MUST throw a HTTP 500 status code including a LinkFound fault in the entity body.
            o For example, given the URI path /a/b/c, the service must throw a HTTP 500 status code including a LinkFound fault in the entity body if either /a or /a/b are LinkNodes. 
      */
-    public Node createNode(ContainerNode node)
+    public Node createNode(Node node)
     {
         int responseCode;
         Node rtnNode = null;
 
         try
         {
-            URL url = new URL(_endpoint);
+            URL url = new URL(this.endpoint);
             HttpURLConnection httpCon = (HttpURLConnection) url.openConnection();
             httpCon.setDoOutput(true);
             httpCon.setRequestMethod("PUT");
-            OutputStream out = httpCon.getOutputStream();
+            OutputStreamWriter out = new OutputStreamWriter(httpCon.getOutputStream());
             NodeWriter nodeWriter = new NodeWriter();
             nodeWriter.write(node, out);
             out.close();
@@ -130,7 +131,7 @@ public class VOSpaceClient
             case 401:
                 throw new IllegalArgumentException("Error returned.  HTTP Response Code: " + responseCode);
             default:
-                break;
+                throw new IllegalArgumentException("Error returned.  HTTP Response Code: " + responseCode);
             }
         } catch (IOException e)
         {
@@ -149,6 +150,7 @@ public class VOSpaceClient
         * The service SHALL throw a HTTP 404 status code including a NodeNotFound fault in the entity-body if the target Node does not exist 
      * @param path
      * @return
+     * @throws NodeParsingException 
      */
     public Node getNode(String path)
     {
@@ -157,7 +159,7 @@ public class VOSpaceClient
 
         try
         {
-            URL url = new URL(_endpoint + path);
+            URL url = new URL(this.endpoint + path);
             HttpURLConnection httpCon = (HttpURLConnection) url.openConnection();
             httpCon.setDoOutput(true);
             httpCon.setRequestMethod("GET");
@@ -167,7 +169,8 @@ public class VOSpaceClient
             {
             case 200: // valid
                 InputStream in = httpCon.getInputStream();
-                // TODO generate returned node
+                NodeReader nodeReader = new NodeReader();
+                rtnNode = nodeReader.read(in);
                 in.close();
                 break;
             case 500:
@@ -175,11 +178,14 @@ public class VOSpaceClient
             case 404:
                 throw new IllegalArgumentException("Error returned.  HTTP Response Code: " + responseCode);
             default:
-                break;
+                throw new IllegalArgumentException("Error returned.  HTTP Response Code: " + responseCode);
             }
         } catch (IOException ex)
         {
-            //TODO handle the exception
+            throw new IllegalStateException(ex);
+        } catch (NodeParsingException e)
+        {
+            throw new IllegalStateException(e);
         }
         return rtnNode;
     }
@@ -199,12 +205,13 @@ public class VOSpaceClient
         Node rtnNode = null;
         try
         {
-            URL url = new URL(_endpoint);
+            URL url = new URL(this.endpoint);
             HttpURLConnection httpCon = (HttpURLConnection) url.openConnection();
             httpCon.setDoOutput(true);
             httpCon.setRequestMethod("POST");
             OutputStreamWriter out = new OutputStreamWriter(httpCon.getOutputStream());
-            out.write(node.getName()); //TODO: send XML text
+            NodeWriter nodeWriter = new NodeWriter();
+            nodeWriter.write(node, out);
             out.close();
 
             responseCode = httpCon.getResponseCode();
@@ -212,7 +219,8 @@ public class VOSpaceClient
             {
             case 200: // valid
                 InputStream in = httpCon.getInputStream();
-                // TODO generate returned node
+                NodeReader nodeReader = new NodeReader();
+                rtnNode = nodeReader.read(in);
                 in.close();
                 break;
             case 500:
@@ -224,8 +232,12 @@ public class VOSpaceClient
             default:
                 break;
             }
-        } catch (IOException ex)
+        } catch (IOException e)
         {
+            throw new IllegalStateException(e);
+        } catch (NodeParsingException e)
+        {
+            throw new IllegalStateException(e);
         }
         return rtnNode;
     }
@@ -293,4 +305,34 @@ public class VOSpaceClient
     {
         throw new UnsupportedOperationException("Feature under construction.");
     }
+
+    public String getEndpoint()
+    {
+        return endpoint;
+    }
+
+    public void setEndpoint(String endpoint)
+    {
+        this.endpoint = endpoint;
+    }
+
+
+    public int deleteNode(String path)
+    {
+        int responseCode;
+        try
+        {
+            URL url = new URL(this.endpoint + path);
+            HttpURLConnection httpCon = (HttpURLConnection) url.openConnection();
+            httpCon.setDoOutput(true);
+            httpCon.setRequestMethod("DELETE");
+    
+            responseCode = httpCon.getResponseCode();
+        } catch (IOException ex)
+        {
+            throw new IllegalStateException(ex);
+        }
+        return responseCode;
+    }
+
 }
