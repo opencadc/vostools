@@ -69,6 +69,7 @@
 
 package ca.nrc.cadc.auth;
 
+import java.io.FileNotFoundException;
 import java.net.URI;
 import java.security.AccessControlException;
 
@@ -90,9 +91,11 @@ public interface Authorizer
      * @param resource
      * @return null or some object to be logged (type TBD)
      * @throws AccessControlException if the permission is denied
+     * @throws FileNotFoundException if the resource identified by
+     * the URI could not be found.
      */
     public Object getReadPermission(URI resource)
-        throws AccessControlException;
+        throws AccessControlException, FileNotFoundException;
 
     /**
      * Check if the current Subject is allowed to write (modify) the specified resource.
@@ -100,7 +103,9 @@ public interface Authorizer
      * @param resource
      * @return null or some object to be logged (type TBD)
      * @throws AccessControlException if the permission is denied
+     * @throws FileNotFoundException if the resource identified by
+     * the URI could not be found.
      */
     public Object getWritePermission(URI resource)
-        throws AccessControlException;
+        throws AccessControlException, FileNotFoundException;
 }
