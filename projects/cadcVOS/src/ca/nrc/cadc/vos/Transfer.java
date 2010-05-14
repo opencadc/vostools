@@ -78,10 +78,10 @@ import java.util.List;
 public class Transfer implements Runnable
 {
     public enum Direction {
-        PUSH_TO_VO_SPACE,
-        PULL_TO_VO_SPACE,
-        PUSH_FROM_VO_SPACE,
-        PULL_FROM_VO_SPACE
+        pushToVoSpace,
+        pullToVoSpace,
+        pushFromVoSpace,
+        pullFromVoSpace;
     }
 
     protected Direction direction;

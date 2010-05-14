@@ -161,14 +161,14 @@ public class TransferReader
         Transfer.Direction rtn = null;
         Element root = this.document.getRootElement();
         String strDirection = root.getChildText("direction", VOS.NS);
-        if (strDirection.equalsIgnoreCase(Transfer.Direction.PULL_FROM_VO_SPACE.toString()))
-            rtn = Transfer.Direction.PULL_FROM_VO_SPACE;
-        else if (strDirection.equalsIgnoreCase(Transfer.Direction.PULL_TO_VO_SPACE.toString()))
-            rtn = Transfer.Direction.PULL_TO_VO_SPACE;
-        else if (strDirection.equalsIgnoreCase(Transfer.Direction.PUSH_FROM_VO_SPACE.toString()))
-            rtn = Transfer.Direction.PUSH_FROM_VO_SPACE;
-        else if (strDirection.equalsIgnoreCase(Transfer.Direction.PUSH_TO_VO_SPACE.toString()))
-            rtn = Transfer.Direction.PUSH_TO_VO_SPACE;
+        if (strDirection.equalsIgnoreCase(Transfer.Direction.pullFromVoSpace.toString()))
+            rtn = Transfer.Direction.pullFromVoSpace;
+        else if (strDirection.equalsIgnoreCase(Transfer.Direction.pullToVoSpace.toString()))
+            rtn = Transfer.Direction.pullToVoSpace;
+        else if (strDirection.equalsIgnoreCase(Transfer.Direction.pushFromVoSpace.toString()))
+            rtn = Transfer.Direction.pushFromVoSpace;
+        else if (strDirection.equalsIgnoreCase(Transfer.Direction.pushToVoSpace.toString()))
+            rtn = Transfer.Direction.pushToVoSpace;
         return rtn;
     }
 
