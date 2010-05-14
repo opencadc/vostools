@@ -70,9 +70,6 @@
 package ca.nrc.cadc.vos.client;
 
 
-import java.util.ArrayList;
-import java.util.List;
-
 import org.apache.log4j.Level;
 import org.apache.log4j.Logger;
 import org.junit.After;
@@ -82,7 +79,11 @@ import org.junit.BeforeClass;
 import org.junit.Test;
 
 import ca.nrc.cadc.util.Log4jInit;
-import ca.nrc.cadc.vos.*;
+import ca.nrc.cadc.vos.ContainerNode;
+import ca.nrc.cadc.vos.DataNode;
+import ca.nrc.cadc.vos.Node;
+import ca.nrc.cadc.vos.NodeWriterTest;
+import ca.nrc.cadc.vos.VOSURI;
 
 /**
  * @author zhangsa
@@ -94,7 +95,7 @@ public class VOSpaceClientTest
     {
         Log4jInit.setLevel("ca", Level.DEBUG);
     }
-    VOSpaceClient client = new VOSpaceClient();
+    VOSpaceClient client = new VOSpaceClient("http://localhost/vospace");
     DataNode dataNode;
     ContainerNode containerNode;
     
@@ -119,7 +120,7 @@ public class VOSpaceClientTest
     @Before
     public void setUp() throws Exception
     {
-        containerNode = new ContainerNode(new VOSURI("vos://cadc.nrc.ca!vospace/dir/subdir"));
+        containerNode = new ContainerNode(new VOSURI("vos://cadc.nrc.ca!vospace/dir1"));
     }
 
     /**
@@ -132,7 +133,6 @@ public class VOSpaceClientTest
     @Test
     public void testCreateNode() 
     {
-        client.setEndpoint("http://localhost/vospace/nodes/mydata1");
         Node nodeRtn = client.createNode(containerNode);
         log.debug(nodeRtn);
     }

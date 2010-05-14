@@ -87,8 +87,13 @@ public class VOSpaceClient
     @SuppressWarnings("unused")
     private static Logger log = Logger.getLogger(VOSpaceClient.class);
 
-    protected String endpoint;
+    protected String baseUrl;
 
+    public VOSpaceClient(String baseUrl)
+    {
+        this.baseUrl = baseUrl;
+    }
+    
     /*
      * The service SHALL throw a HTTP 500 status code including an InternalFault fault in the entity body if the operation fails
      * The service SHALL throw a HTTP 409 status code including a DuplicateNode fault in the entity body if a Node already exists with the same URI
@@ -104,10 +109,13 @@ public class VOSpaceClient
     {
         int responseCode;
         Node rtnNode = null;
+        
+        String path = node.getPath();
 
         try
         {
-            URL url = new URL(this.endpoint);
+            URL url = new URL(this.baseUrl + "/nodes/" + path);
+            log.debug(url);
             HttpURLConnection httpCon = (HttpURLConnection) url.openConnection();
             httpCon.setDoOutput(true);
             httpCon.setRequestMethod("PUT");
@@ -115,6 +123,14 @@ public class VOSpaceClient
             NodeWriter nodeWriter = new NodeWriter();
             nodeWriter.write(node, out);
             out.close();
+            
+            StringWriter sw = new StringWriter();
+            nodeWriter.write(node, sw);
+            String xml = sw.toString();
+            sw.close();
+            log.debug(xml);
+            
+            
 
             responseCode = httpCon.getResponseCode();
             switch (responseCode)
@@ -129,9 +145,15 @@ public class VOSpaceClient
             case 409:
             case 400:
             case 401:
-                throw new IllegalArgumentException("Error returned.  HTTP Response Code: " + responseCode);
             default:
-                throw new IllegalArgumentException("Error returned.  HTTP Response Code: " + responseCode);
+                InputStream in2 = httpCon.getInputStream();
+                BufferedReader br = new BufferedReader(new InputStreamReader(in2));
+                String line;
+                while ((line = br.readLine()) != null) {
+                    log.debug(line);
+                }
+                in2.close();
+                //throw new IllegalArgumentException("Error returned.  HTTP Response Code: " + responseCode);
             }
         } catch (IOException e)
         {
@@ -159,7 +181,7 @@ public class VOSpaceClient
 
         try
         {
-            URL url = new URL(this.endpoint + path);
+            URL url = new URL(this.baseUrl + path);
             HttpURLConnection httpCon = (HttpURLConnection) url.openConnection();
             httpCon.setDoOutput(true);
             httpCon.setRequestMethod("GET");
@@ -205,7 +227,7 @@ public class VOSpaceClient
         Node rtnNode = null;
         try
         {
-            URL url = new URL(this.endpoint);
+            URL url = new URL(this.baseUrl);
             HttpURLConnection httpCon = (HttpURLConnection) url.openConnection();
             httpCon.setDoOutput(true);
             httpCon.setRequestMethod("POST");
@@ -306,23 +328,12 @@ public class VOSpaceClient
         throw new UnsupportedOperationException("Feature under construction.");
     }
 
-    public String getEndpoint()
-    {
-        return endpoint;
-    }
-
-    public void setEndpoint(String endpoint)
-    {
-        this.endpoint = endpoint;
-    }
-
-
     public int deleteNode(String path)
     {
         int responseCode;
         try
         {
-            URL url = new URL(this.endpoint + path);
+            URL url = new URL(this.baseUrl + path);
             HttpURLConnection httpCon = (HttpURLConnection) url.openConnection();
             httpCon.setDoOutput(true);
             httpCon.setRequestMethod("DELETE");
@@ -333,6 +344,16 @@ public class VOSpaceClient
             throw new IllegalStateException(ex);
         }
         return responseCode;
+    }
+
+    public String getBaseUrl()
+    {
+        return baseUrl;
+    }
+
+    public void setBaseUrl(String baseUrl)
+    {
+        this.baseUrl = baseUrl;
     }
 
 }
