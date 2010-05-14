@@ -151,7 +151,11 @@ public class JDownloadManager extends JPanel implements DownloadListener
     public JDownloadManager(int initialThreadCount, File initialDir)
     {
         super(new BorderLayout());
-        
+        if (initialThreadCount < 1)
+            initialThreadCount = 1;
+        if (initialThreadCount > DownloadManager.MAX_THREAD_COUNT)
+            initialThreadCount = DownloadManager.MAX_THREAD_COUNT;
+
         SpinnerThreadControl threadControl = new SpinnerThreadControl(new Integer(initialThreadCount), DownloadManager.MAX_THREAD_COUNT);
         downloadManager = new DownloadManager(threadControl, initialThreadCount, initialDir);
         downloadManager.addDownloadListener(this);

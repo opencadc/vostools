@@ -191,7 +191,7 @@ public class GraphicUI extends AbstractApplication implements ChangeListener, Us
     protected void makeUI()
     {
         // try to restore previous settings
-        int initialThreads = -1;
+        int initialThreads = DownloadManager.DEFAULT_THREAD_COUNT;
         ApplicationConfig conf = getApplicationContainer().getConfig();
         try 
         { 

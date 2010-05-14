@@ -102,13 +102,14 @@ public class ConsoleUI implements UserInterface, DownloadListener
         this.downloads = new ArrayList<Download>();
         this.downloadsCompeleteCond = downloadsCompleteCond;
         
-        int initialThreads = -1;
+        int initialThreads = DownloadManager.DEFAULT_THREAD_COUNT;
         try
         {
             initialThreads = Integer.parseInt(threads);
             if (initialThreads < 1 || initialThreads > DownloadManager.MAX_THREAD_COUNT)
                 initialThreads = -1;
-        } catch (Exception e)
+        }
+        catch (Exception e)
         {
             initialThreads = -1;
         }
@@ -125,7 +126,8 @@ public class ConsoleUI implements UserInterface, DownloadListener
                     initialThreads = Integer.parseInt(value);
             }
             catch(Exception notConfiguredYet) { }
-        } else
+        }
+        else
         {
             try
             {

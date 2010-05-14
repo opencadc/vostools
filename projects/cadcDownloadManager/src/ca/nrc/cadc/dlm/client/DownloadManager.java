@@ -107,14 +107,7 @@ public class DownloadManager implements DownloadListener
     
     public DownloadManager(ThreadControl threadControl, int initialThreadCount, File destinationDir)
     {
-        
         this.threadControl = threadControl;
-
-        if (initialThreadCount < 1)
-            initialThreadCount = 1;
-        if (initialThreadCount > MAX_THREAD_COUNT)
-            initialThreadCount = MAX_THREAD_COUNT;
-        
         setDestinationDir(destinationDir);
     }
 
