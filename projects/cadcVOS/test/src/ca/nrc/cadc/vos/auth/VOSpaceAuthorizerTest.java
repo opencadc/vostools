@@ -66,10 +66,12 @@
  */
 package ca.nrc.cadc.vos.auth;
 
-import org.junit.Test;
-import org.junit.Before;
+import static org.easymock.classextension.EasyMock.createMock;
+import static org.easymock.classextension.EasyMock.replay;
 
-import static org.easymock.classextension.EasyMock.*;
+import org.junit.Before;
+import org.junit.Test;
+
 import ca.nrc.cadc.vos.NodeDAO;
 
 
@@ -86,7 +88,9 @@ public class VOSpaceAuthorizerTest
     public void setup() throws Exception
     {
         setMockNodeDAO(createMock(NodeDAO.class));
-        setTestSubject(new VOSpaceAuthorizer(getMockNodeDAO()));
+        VOSpaceAuthorizer vospaceAuthorizer = new VOSpaceAuthorizer();
+        vospaceAuthorizer.setNodePersistence(getMockNodeDAO());
+        setTestSubject(vospaceAuthorizer);
     }
 
 
