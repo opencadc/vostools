@@ -119,8 +119,6 @@ public class VOSpaceNodesApplication extends Application
         
         // Create the configured NodePersistence bean
         createContextBean(context, ca.nrc.cadc.vos.NodePersistence.class, BeanUtil.VOS_NODE_PERSISTENCE);
-        // Create the configured Authorizer bean
-        createContextBean(context, ca.nrc.cadc.auth.Authorizer.class, BeanUtil.VOS_NODE_AUTHORIZER);
         
         return new VOSpaceNodesRouter(context);
     }

@@ -8,7 +8,7 @@
 *  National Research Council            Conseil national de recherches
 *  Ottawa, Canada, K1A 0R6              Ottawa, Canada, K1A 0R6
 *  All rights reserved                  Tous droits réservés
-*
+*                                       
 *  NRC disclaims any warranties,        Le CNRC dénie toute garantie
 *  expressed, implied, or               énoncée, implicite ou légale,
 *  statutory, of any kind with          de quelque nature que ce
@@ -31,10 +31,10 @@
 *  software without specific prior      de ce logiciel sans autorisation
 *  written permission.                  préalable et particulière
 *                                       par écrit.
-*
+*                                       
 *  This file is part of the             Ce fichier fait partie du projet
 *  OpenCADC project.                    OpenCADC.
-*
+*                                       
 *  OpenCADC is free software:           OpenCADC est un logiciel libre ;
 *  you can redistribute it and/or       vous pouvez le redistribuer ou le
 *  modify it under the terms of         modifier suivant les termes de
@@ -44,7 +44,7 @@
 *  either version 3 of the              : soit la version 3 de cette
 *  License, or (at your option)         licence, soit (à votre gré)
 *  any later version.                   toute version ultérieure.
-*
+*                                       
 *  OpenCADC is distributed in the       OpenCADC est distribué
 *  hope that it will be useful,         dans l’espoir qu’il vous
 *  but WITHOUT ANY WARRANTY;            sera utile, mais SANS AUCUNE
@@ -54,7 +54,7 @@
 *  PURPOSE.  See the GNU Affero         PARTICULIER. Consultez la Licence
 *  General Public License for           Générale Publique GNU Affero
 *  more details.                        pour plus de détails.
-*
+*                                       
 *  You should have received             Vous devriez avoir reçu une
 *  a copy of the GNU Affero             copie de la Licence Générale
 *  General Public License along         Publique GNU Affero avec
@@ -67,131 +67,34 @@
 ************************************************************************
 */
 
-package ca.nrc.cadc.vos;
+package ca.nrc.cadc.vos.auth;
 
-import java.net.URI;
-import java.net.URISyntaxException;
+import java.security.PrivilegedExceptionAction;
+
+import ca.nrc.cadc.vos.Node;
 
 /**
- * Wrapper for a VOSpace URI around an URI.
+ * Wrapper class for performing node read authorization checks as a privileged action.
+ * 
+ * @author majorb
  *
- * @author jburke
  */
-public class VOSURI
+public class PrivilegedReadAuthorizationExceptionAction implements PrivilegedExceptionAction<Object>
 {
-    private URI vosURI;
     
-    /**
-     * Attempts to create a URI using the specified uri. The scheme for the uri
-     * is expected to be vos, else a URISyntaxException will be thrown.
-     *
-     * @param uri The URI to use.
-     * @throws URISyntaxException if uri violates RFC 2396, or if the URI scheme is not vos.
-     * @throws NullPointerException if uri is null.
-     */
-    public VOSURI(URI uri)
-        throws URISyntaxException
-    {
-        vosURI = uri;
-
-        // Check the scheme is vos
-        if (!vosURI.getScheme().equalsIgnoreCase("vos"))
-            throw new URISyntaxException(uri.toString(), "Scheme must be vos");
-    }
-
-    /**
-     * Attempts to create a URI using the specified uri string. The scheme for the uri
-     * is expected to be vos, else a URISyntaxException will be thrown.
-     *
-     * @param uri String representation of a URI to decode.
-     * @throws URISyntaxException if uri violates RFC 2396, or if the URI scheme is not vos.
-     * @throws NullPointerException if uri is null.
-     */
-    public VOSURI(String uri)
-        throws URISyntaxException
-    {
-        // Make sure it's a valid URI
-        vosURI = new URI(uri);
-
-        // Check the scheme is vos
-        if (!vosURI.getScheme().equalsIgnoreCase("vos"))
-            throw new URISyntaxException(uri, "Scheme must be vos");
-    }
+    private VOSpaceAuthorizer authorizer;
+    private Node node;
     
-    /**
-     * Returns the underlying URI object.
-     * 
-     * @return The URI object for this VOSURI.
-     */
-    public URI getURIObject()
+    public PrivilegedReadAuthorizationExceptionAction(VOSpaceAuthorizer authorizer, Node node)
     {
-        return vosURI;
-    }
-
-    /**
-     * Returns the decoded authority component of the URI.
-     *
-     * @return authority of the URI, or null if the authority is undefined.
-     */
-    public String getAuthority()
-    {
-        return vosURI.getAuthority();
-    }
-
-    /**
-     * Returns the decoded fragment component of the URI.
-     *
-     * @return fragment of the URI, or null if the fragment is undefined.
-     */
-    public String getFragment()
-    {
-        return vosURI.getFragment();
-    }
-
-    /**
-     * Returns the decoded path component of the URI.
-     *
-     * @return path of the URI, or null if the path is undefined.
-     */
-    public String getPath()
-    {
-        return vosURI.getPath();
-    }
-
-    /**
-     * Returns the scheme, followed by a '://', and then the authority of the URI.
-     *
-     * @return [scheme]://[authority] of the URI.
-     */
-    public String getPrefix()
-    {
-        return vosURI.getScheme() + "://" + vosURI.getAuthority();
-    }
-
-    /**
-     * Returns the decoded query component of the URI.
-     *
-     * @return query of the URI, or null if the query is undefined.
-     */
-    public String getQuery()
-    {
-        return vosURI.getQuery();
-    }
-
-    /**
-     * Returns the scheme component of the URI, which must be vos.
-     *
-     * @return scheme of the URI.
-     */
-    public String getScheme()
-    {
-        return vosURI.getScheme();
+        this.authorizer = authorizer;
+        this.node = node;
     }
 
     @Override
-    public String toString()
+    public Object run() throws Exception
     {
-        return vosURI.toString();
+        return authorizer.getReadPermission(node);
     }
-    
+
 }

@@ -66,11 +66,27 @@
  */
 package ca.nrc.cadc.vos.auth;
 
-import ca.nrc.cadc.auth.Authorizer;
-import ca.nrc.cadc.vos.NodeDAO;
-
+import java.io.FileNotFoundException;
 import java.net.URI;
+import java.net.URISyntaxException;
+import java.security.AccessControlContext;
 import java.security.AccessControlException;
+import java.security.AccessController;
+import java.security.Principal;
+import java.util.Set;
+import java.util.Stack;
+
+import javax.security.auth.Subject;
+
+import org.apache.log4j.Logger;
+
+import ca.nrc.cadc.auth.Authorizer;
+import ca.nrc.cadc.vos.ContainerNode;
+import ca.nrc.cadc.vos.Node;
+import ca.nrc.cadc.vos.NodeNotFoundException;
+import ca.nrc.cadc.vos.NodePersistence;
+import ca.nrc.cadc.vos.VOSURI;
+import ca.nrc.cadc.vos.dao.SearchNode;
 
 
 /**
@@ -78,23 +94,13 @@ import java.security.AccessControlException;
  */
 public class VOSpaceAuthorizer implements Authorizer
 {
-    private NodeDAO nodeDAO;
-
+    private static Logger log = Logger.getLogger(VOSpaceAuthorizer.class);
+    
+    private NodePersistence nodePersistence;
 
     public VOSpaceAuthorizer()
     {
     }
-
-    /**
-     * Full constructor.
-     *
-     * @param nodeDAO       The DAO instance to use.
-     */
-    public VOSpaceAuthorizer(final NodeDAO nodeDAO)
-    {
-        this.nodeDAO = nodeDAO;
-    }
-
 
     /**
      * Obtain the Read Permission for the given URI.
@@ -102,12 +108,61 @@ public class VOSpaceAuthorizer implements Authorizer
      * @param uri       The URI to check.
      * @return          The Read Permission objectual representation, such as
      *                  a Group, or User.
-     * @throws AccessControlException
+     * @throws AccessControlException If the user does not have read permission
+     * @throws FileNotFoundException If the node could not be found
      */
     public Object getReadPermission(final URI uri)
-            throws AccessControlException
+            throws AccessControlException, FileNotFoundException
     {
-        return null;
+        try
+        {
+            Node searchNode = new SearchNode(new VOSURI(uri));
+            return getReadPermission(searchNode);
+            
+        } catch (URISyntaxException e)
+        {
+            throw new IllegalArgumentException("URI not well formed.");
+        }
+    }
+    
+    /**
+     * Obtain the Read Permission for the given Node.
+     *
+     * @param node      The Node to check.
+     * @return          The persistent version of the target node.
+     * @throws AccessControlException If the user does not have read permission
+     * @throws FileNotFoundException If the node could not be found
+     */
+    public Object getReadPermission(final Node node)
+            throws AccessControlException, FileNotFoundException
+    {        
+        NodeAuthorizer readPermissionAuthorizer = new NodeAuthorizer()
+        {
+            public void authorize(Subject subject, Node node, boolean isParentNode)
+                    throws AccessControlException
+            {
+                // return true if this is the owner of the node
+                if (subject != null) {
+                    Set<Principal> principals = subject.getPrincipals();
+                    for (Principal principal : principals)
+                    {
+                        if (node.getOwner().equals(principal.getName()))
+                        {
+                            // User is the owner
+                            return;
+                        }
+                    }
+                }
+                throw new AccessControlException("Read permission denied.");
+            }};
+        try
+        {
+            return checkPermissionFromRoot(node, readPermissionAuthorizer);
+        }
+        catch (NodeNotFoundException e)
+        {
+            throw new FileNotFoundException(e.getMessage());
+        }
     }
 
     /**
@@ -116,22 +171,132 @@ public class VOSpaceAuthorizer implements Authorizer
      * @param uri       The URI to check.
      * @return          The Write Permission objectual representation, such as
      *                  a Group, or User.
-     * @throws AccessControlException
+     * @throws AccessControlException If the user does not have write permission
+     * @throws FileNotFoundException If the node could not be found
      */
     public Object getWritePermission(final URI uri)
-            throws AccessControlException
+            throws AccessControlException, FileNotFoundException
     {
-        return null;
+        try
+        {
+            Node searchNode = new SearchNode(new VOSURI(uri));
+            return getWritePermission(searchNode);
+            
+        } catch (URISyntaxException e)
+        {
+            throw new IllegalArgumentException("URI not well formed.");
+        }
     }
 
-
-    public NodeDAO getNodeDAO()
+    /**
+     * Obtain the Write Permission for the given Node.
+     *
+     * @param uri       The Node to check.
+     * @return          The persistent version of the target node.
+     * @throws AccessControlException If the user does not have write permission
+     * @throws FileNotFoundException If the node could not be found
+     */
+    public Object getWritePermission(final Node node)
+            throws AccessControlException, FileNotFoundException
     {
-        return nodeDAO;
+        NodeAuthorizer writePermissionAuthorizer = new NodeAuthorizer()
+        {
+            public void authorize(Subject subject, Node node, boolean isParentNode)
+                    throws AccessControlException
+            {
+                // return true if this is the owner of the node
+                if (subject != null) {
+                    Set<Principal> principals = subject.getPrincipals();
+                    for (Principal principal : principals)
+                    {
+                        if (node.getOwner().equals(principal.getName()))
+                        {
+                            // User is the owner
+                            return;
+                        }
+                    }
+                }
+                throw new AccessControlException("Write permission denied.");
+            }};
+        try
+        {
+            return checkPermissionFromRoot(node, writePermissionAuthorizer);
+        }
+        catch (NodeNotFoundException e)
+        {
+            throw new FileNotFoundException(e.getMessage());
+        }
+    }
+    
+    private Object checkPermissionFromRoot(Node node, NodeAuthorizer nodeAuthorizer)
+    throws NodeNotFoundException
+    {
+        AccessControlContext acContext = AccessController.getContext();
+        Subject subject = Subject.getSubject(acContext);
+        
+        Stack<Node> nodeStack = stackToRoot(node);
+        Node persistentNode = null;
+        Node nextNode = null;
+        ContainerNode parent = null;
+        
+        while (!nodeStack.isEmpty())
+        {
+            nextNode = nodeStack.pop();
+            nextNode.setParent(parent);
+            log.debug("Retrieving node with path: " + nextNode.getPath());
+            
+            // get the node from the persistence layer
+            persistentNode = getNodePersistence().getFromParent(nextNode, parent);
+            
+            // check authorization
+            nodeAuthorizer.authorize(subject, persistentNode, !nodeStack.isEmpty());
+
+            // get the parent 
+            if (persistentNode instanceof ContainerNode)
+            {
+                parent = (ContainerNode) persistentNode;
+            }
+            else if (!nodeStack.isEmpty())
+            {
+                final String message = "Non-container node found mid-tree";
+                log.warn(message);
+                throw new NodeNotFoundException(message);
+            }
+            
+        }
+        
+        return persistentNode;
+    }
+    
+    /**
+     * Creates a stack to the node's root.
+     */
+    private Stack<Node> stackToRoot(Node node)
+    {
+        Stack<Node> nodeStack = new Stack<Node>();
+        Node nextNode = node;
+        while (nextNode != null)
+        {
+            nodeStack.push(nextNode);
+            nextNode = nextNode.getParent();
+        }
+        return nodeStack;
     }
 
-    public void setNodeDAO(final NodeDAO nodeDAO)
+    /**
+     * Node NodePersistence Getter.
+     */
+    public NodePersistence getNodePersistence()
     {
-        this.nodeDAO = nodeDAO;
+        return nodePersistence;
     }
+
+    /**
+     * Node NodePersistence Setter.
+     */
+    public void setNodePersistence(final NodePersistence nodePersistence)
+    {
+        this.nodePersistence = nodePersistence;
+    }
+    
 }

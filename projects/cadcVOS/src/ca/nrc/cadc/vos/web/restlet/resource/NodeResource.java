@@ -69,12 +69,21 @@
 
 package ca.nrc.cadc.vos.web.restlet.resource;
 
+import java.io.FileNotFoundException;
 import java.net.URISyntaxException;
 import java.security.AccessControlException;
+import java.security.Principal;
+import java.security.cert.X509Certificate;
+import java.util.Collection;
 import java.util.HashSet;
-import java.util.Stack;
+import java.util.Map;
+import java.util.Set;
+import java.util.concurrent.CopyOnWriteArraySet;
+
+import javax.security.auth.Subject;
 
 import org.apache.log4j.Logger;
+import org.restlet.Request;
 import org.restlet.data.Method;
 import org.restlet.data.Status;
 import org.restlet.representation.Representation;
@@ -83,13 +92,17 @@ import org.restlet.resource.Get;
 import org.restlet.resource.Post;
 import org.restlet.resource.Put;
 
-import ca.nrc.cadc.vos.ContainerNode;
+import ca.nrc.cadc.auth.HttpPrincipal;
+import ca.nrc.cadc.uws.util.StringUtil;
 import ca.nrc.cadc.vos.Node;
 import ca.nrc.cadc.vos.NodeAlreadyExistsException;
 import ca.nrc.cadc.vos.NodeNotFoundException;
 import ca.nrc.cadc.vos.NodeParsingException;
 import ca.nrc.cadc.vos.NodeWriter;
 import ca.nrc.cadc.vos.VOSURI;
+import ca.nrc.cadc.vos.auth.PrivilegedReadAuthorizationExceptionAction;
+import ca.nrc.cadc.vos.auth.PrivilegedWriteAuthorizationExceptionAction;
+import ca.nrc.cadc.vos.auth.VOSpaceAuthorizer;
 import ca.nrc.cadc.vos.dao.SearchNode;
 import ca.nrc.cadc.vos.web.representation.NodeInputRepresentation;
 import ca.nrc.cadc.vos.web.representation.NodeOutputRepresentation;
@@ -97,12 +110,14 @@ import ca.nrc.cadc.vos.web.representation.NodeOutputRepresentation;
 /**
  * Handles HTTP requests for Node resources.
  * 
- * @author majorb
+ * @author majorbNodeNotFoundException
  *
  */
 public class NodeResource extends BaseResource
 {
     private static Logger log = Logger.getLogger(NodeResource.class);
+    
+    private static final String CERTIFICATE_REQUEST_ATTRIBUTE_NAME = "org.restlet.https.clientCertificates";
     
     private String path;
     private Node node;
@@ -114,11 +129,18 @@ public class NodeResource extends BaseResource
     {
         log.debug("Enter NodeResource.doInit()");
 
-        // TODO: Put the authentication principals in a subject
+        // Create a subject for authentication
+        Set<Principal> principals = getPrincipals(getRequest());
+        Subject subject = null;
+        if (principals != null && principals.size() > 0) {
+            Set<Object> emptyCredentials = new HashSet<Object>();
+            subject = new Subject(true, principals, emptyCredentials, emptyCredentials);
+        }
+        
         VOSURI vosURI = null;
         try
         {
-            HashSet<Method> allowedMethods = new HashSet<Method>();
+            Set<Method> allowedMethods = new CopyOnWriteArraySet<Method>();
             allowedMethods.add(Method.GET);
             allowedMethods.add(Method.PUT);
             allowedMethods.add(Method.DELETE);
@@ -138,7 +160,6 @@ public class NodeResource extends BaseResource
             // Get the node for the operation, either from the persistent layer,
             // or from the client supplied xml
             Node clientNode = null;
-            
             if (getMethod().equals(Method.GET) || getMethod().equals(Method.DELETE))
             {
                 clientNode = new SearchNode(vosURI);
@@ -156,46 +177,26 @@ public class NodeResource extends BaseResource
             }
             
             log.debug("Client node is: " + clientNode);
-           
-            // find and stack the path of the node to
-            // the root
-            Stack<Node> nodeStack = stackToRoot(clientNode);
             
-            Node persistentNode = null;
-            Node nextNode = null;
-            ContainerNode parent = null;
-            
-            while (!nodeStack.isEmpty())
+            // perform the authorization check
+            VOSpaceAuthorizer voSpaceAuthorizer = new VOSpaceAuthorizer();
+            voSpaceAuthorizer.setNodePersistence(getNodePersistence());
+            if (getMethod().equals(Method.GET))
             {
-                nextNode = nodeStack.pop();
-                nextNode.setParent(parent);
-                log.debug("Retrieving node with path: " + nextNode.getPath());
-                
-                // get the node from the persistence layer
-                persistentNode = getNodePersistence().getFromParent(nextNode, parent);
-                
-                // check authorization
-                // TODO: Check authorization using Subject.doAs()
-                authorize(persistentNode, !nodeStack.isEmpty());
-
-                // get the parent 
-                if (persistentNode instanceof ContainerNode)
-                {
-                    parent = (ContainerNode) persistentNode;
-                }
-                else if (!nodeStack.isEmpty())
-                {
-                    final String message = "Non-container node found mid-tree";
-                    log.warn(message);
-                    throw new NodeNotFoundException(message);
-                }
-                
+                PrivilegedReadAuthorizationExceptionAction readAuthorization =
+                    new PrivilegedReadAuthorizationExceptionAction(voSpaceAuthorizer, clientNode);
+                node = (Node) Subject.doAs(subject, readAuthorization);
+            }
+            else
+            {
+                PrivilegedWriteAuthorizationExceptionAction writeAuthorization =
+                    new PrivilegedWriteAuthorizationExceptionAction(voSpaceAuthorizer, clientNode);
+                node = (Node) Subject.doAs(subject, writeAuthorization);
             }
             
-            node = persistentNode;
             log.debug("doInit() retrived node: " + node);
         }
-        catch (NodeNotFoundException e)
+        catch (FileNotFoundException e)
         {
             final String message = "Could not find node with path: " + path;
             log.debug(message, e);
@@ -331,42 +332,42 @@ public class NodeResource extends BaseResource
         }
     }
     
-    private Stack<Node> stackToRoot(Node node)
-    {
-        Stack<Node> nodeStack = new Stack<Node>();
-        Node nextNode = node;
-        while (nextNode != null)
+    /**
+     * Using the restlet request object, get all the basic authentication and
+     * certification authentication principals.
+     * @param request The restlet request object.
+     * @return A set of principals found in the restlet request.
+     */
+    @SuppressWarnings("unchecked")
+    private Set<Principal> getPrincipals(Request request) {
+        
+        Set<Principal> principals = new HashSet<Principal>();
+        
+        // look for basic authentication
+        if (request.getChallengeResponse() != null &&
+            StringUtil.hasLength(request.getChallengeResponse().getIdentifier()))
         {
-            nodeStack.push(nextNode);
-            nextNode = nextNode.getParent();
+            principals.add(new HttpPrincipal(request.getChallengeResponse().getIdentifier()));
         }
-        return nodeStack;
-    }
-    
-    private void authorize(Node node, boolean isParentNode)
-    throws AccessControlException
-    {
-        log.debug("Checking authorization for HTTP " + getMethod());
-        Object authorizationObject = null;
-        if (getMethod().equals(Method.GET))
+        
+        // look for X509 certificates
+        Map<String, Object> requestAttributes = request.getAttributes();
+        if (requestAttributes.containsKey(CERTIFICATE_REQUEST_ATTRIBUTE_NAME))
         {
-            authorizationObject = getNodeAuthorizer().getReadPermission(
-                    node.getUri().getURIObject());
-        }
-        else
-        {
-            if (isParentNode)
+            final Collection<X509Certificate> clientCertificates =
+                (Collection<X509Certificate>)requestAttributes.get(CERTIFICATE_REQUEST_ATTRIBUTE_NAME);
+            
+            if ((clientCertificates != null) && (!clientCertificates.isEmpty()))
             {
-                authorizationObject = getNodeAuthorizer().getReadPermission(
-                        node.getUri().getURIObject());
-            }
-            else
-            {
-                authorizationObject = getNodeAuthorizer().getWritePermission(
-                        node.getUri().getURIObject());
+                for (final X509Certificate cert : clientCertificates)
+                {
+                    principals.add(cert.getSubjectX500Principal());
+                }
             }
         }
-        log.info("Authorization for node " + node.getUri() + ": " + authorizationObject);
+        
+        return principals;
+        
     }
 
 }
