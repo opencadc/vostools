@@ -103,7 +103,11 @@ public class NodeInputRepresentation
         // ensure the path in the XML URI matches the path in the URL
         if (!node.getPath().equals(expectedPath))
         {
-            throw new NodeParsingException("Node path in URI XML not equal to node path in URL.");
+            throw new NodeParsingException("Node path in URI XML ("
+                    + node.getPath()
+                    + ") not equal to node path in URL ("
+                    + expectedPath
+                    + ")");
         }
         
         return node;

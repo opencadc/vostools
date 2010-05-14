@@ -159,17 +159,16 @@ public abstract class Node
         }
         
         path = uri.getPath();
-        String refinedPath = uri.getPath();
         
-        if (refinedPath.startsWith("/"))
+        if (path.startsWith("/"))
         {
-            refinedPath = refinedPath.substring(1);
+            path = path.substring(1);
         }
-        if (refinedPath.endsWith("/"))
+        if (path.endsWith("/"))
         {
-            refinedPath = refinedPath.substring(0, refinedPath.length() - 1);
+            path = path.substring(0, path.length() - 1);
         }
-        String[] segments = refinedPath.split("/");
+        String[] segments = path.split("/");
         
         if (segments == null || segments.length == 0)
         {
