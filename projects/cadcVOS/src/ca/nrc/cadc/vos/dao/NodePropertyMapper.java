@@ -75,6 +75,7 @@ import java.sql.SQLException;
 import org.springframework.jdbc.core.RowMapper;
 
 import ca.nrc.cadc.vos.NodeProperty;
+import ca.nrc.cadc.vos.VOS;
 
 /**
  * Class to map a result set into a NodeProperty object.
@@ -82,20 +83,15 @@ import ca.nrc.cadc.vos.NodeProperty;
 public class NodePropertyMapper implements RowMapper
 {
     
-    public static final String PROPERTY_CONTENTLENGTH_URI = "ivo://ivoa.net/vospace/core#length";
-    public static final String PROPERTY_CONTENTTYPE_URI = "ivo://ivoa.net/vospace/core#type";
-    public static final String PROPERTY_CONTENTENCODING_URI = "ivo://ivoa.net/vospace/core#encoding";
-    public static final String PROPERTY_CONTENTMD5_URI = "ivo://ivoa.net/vospace/core#MD5";
-    
     public static boolean isStandardHeaderProperty(NodeProperty nodeProperty)
     {
         String propertyURI = nodeProperty.getPropertyURI();
         if (propertyURI != null)
         {
-            return (propertyURI.equals(PROPERTY_CONTENTLENGTH_URI) ||
-                    propertyURI.equals(PROPERTY_CONTENTTYPE_URI) ||
-                    propertyURI.equals(PROPERTY_CONTENTENCODING_URI) ||
-                    propertyURI.equals(PROPERTY_CONTENTMD5_URI));
+            return (propertyURI.equals(VOS.PROPERTY_URI_CONTENTLENGTH) ||
+                    propertyURI.equals(VOS.PROPERTY_URI_CONTENTTYPE) ||
+                    propertyURI.equals(VOS.PROPERTY_URI_CONTENTENCODING) ||
+                    propertyURI.equals(VOS.PROPERTY_URI_CONTENTMD5));
         }
         return false;
     }

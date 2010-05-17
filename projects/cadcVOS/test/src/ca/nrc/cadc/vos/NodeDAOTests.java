@@ -81,7 +81,6 @@ import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
 
-import ca.nrc.cadc.vos.dao.NodePropertyMapper;
 
 /**
  * Abstract class encompassing the logic behind running tests on the
@@ -222,8 +221,8 @@ public abstract class NodeDAOTests
         // Create a node with properties
         DataNode dataNode = getCommonDataNode("/" + getNodeName("g"));
         dataNode.getProperties().add(new NodeProperty("uri1", "value1"));
-        dataNode.getProperties().add(new NodeProperty(NodePropertyMapper.PROPERTY_CONTENTLENGTH_URI, new Long(1024).toString()));
-        dataNode.getProperties().add(new NodeProperty(NodePropertyMapper.PROPERTY_CONTENTTYPE_URI, "text/plain"));
+        dataNode.getProperties().add(new NodeProperty(VOS.PROPERTY_URI_CONTENTLENGTH, new Long(1024).toString()));
+        dataNode.getProperties().add(new NodeProperty(VOS.PROPERTY_URI_CONTENTTYPE, "text/plain"));
         
         // Put then get the node
         DataNode nodeFromPut = (DataNode) nodeDAO.putInContainer(dataNode, null);
@@ -232,8 +231,8 @@ public abstract class NodeDAOTests
         
         // Add new properties
         nodeFromGet.getProperties().add(new NodeProperty("uri2", "value1"));
-        nodeFromGet.getProperties().add(new NodeProperty(NodePropertyMapper.PROPERTY_CONTENTENCODING_URI, "gzip"));
-        nodeFromGet.getProperties().add(new NodeProperty(NodePropertyMapper.PROPERTY_CONTENTMD5_URI, new byte[] {1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16}.toString()));
+        nodeFromGet.getProperties().add(new NodeProperty(VOS.PROPERTY_URI_CONTENTENCODING, "gzip"));
+        nodeFromGet.getProperties().add(new NodeProperty(VOS.PROPERTY_URI_CONTENTMD5, new byte[] {1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16}.toString()));
         DataNode nodeFromUpdate1 = (DataNode) nodeDAO.updateProperties(nodeFromGet);
         DataNode nodeFromGetUpdate1 = (DataNode) nodeDAO.getFromParent(nodeFromGet, null);
         assertEquals("assert2", nodeFromGet.getProperties(), nodeFromUpdate1.getProperties());
@@ -242,10 +241,10 @@ public abstract class NodeDAOTests
         // Update property values
         nodeFromGetUpdate1.getProperties().remove(new NodeProperty("uri1", null));
         nodeFromGetUpdate1.getProperties().add(new NodeProperty("uri1", "value2"));
-        nodeFromGetUpdate1.getProperties().remove(new NodeProperty(NodePropertyMapper.PROPERTY_CONTENTLENGTH_URI, null));
-        nodeFromGetUpdate1.getProperties().add(new NodeProperty(NodePropertyMapper.PROPERTY_CONTENTLENGTH_URI, new Long(2048).toString()));
-        nodeFromGetUpdate1.getProperties().remove(new NodeProperty(NodePropertyMapper.PROPERTY_CONTENTTYPE_URI, null));
-        nodeFromGetUpdate1.getProperties().add(new NodeProperty(NodePropertyMapper.PROPERTY_CONTENTTYPE_URI, "application/pdf"));
+        nodeFromGetUpdate1.getProperties().remove(new NodeProperty(VOS.PROPERTY_URI_CONTENTLENGTH, null));
+        nodeFromGetUpdate1.getProperties().add(new NodeProperty(VOS.PROPERTY_URI_CONTENTLENGTH, new Long(2048).toString()));
+        nodeFromGetUpdate1.getProperties().remove(new NodeProperty(VOS.PROPERTY_URI_CONTENTTYPE, null));
+        nodeFromGetUpdate1.getProperties().add(new NodeProperty(VOS.PROPERTY_URI_CONTENTTYPE, "application/pdf"));
         DataNode nodeFromUpdate2 = (DataNode) nodeDAO.updateProperties(nodeFromGetUpdate1);
         DataNode nodeFromGetUpdate2 = (DataNode) nodeDAO.getFromParent(nodeFromGetUpdate1, null);
         assertEquals("assert4", nodeFromGetUpdate1.getProperties(), nodeFromUpdate2.getProperties());
@@ -256,12 +255,12 @@ public abstract class NodeDAOTests
         NodeProperty newURI2 = new NodeProperty("uri2", "value1");
         newURI2.setMarkedForDeletion(true);
         nodeFromGetUpdate2.getProperties().add(newURI2);
-        nodeFromGetUpdate2.getProperties().remove(new NodeProperty(NodePropertyMapper.PROPERTY_CONTENTENCODING_URI, null));
-        NodeProperty newEncoding = new NodeProperty(NodePropertyMapper.PROPERTY_CONTENTENCODING_URI, "gzip");
+        nodeFromGetUpdate2.getProperties().remove(new NodeProperty(VOS.PROPERTY_URI_CONTENTENCODING, null));
+        NodeProperty newEncoding = new NodeProperty(VOS.PROPERTY_URI_CONTENTENCODING, "gzip");
         newEncoding.setMarkedForDeletion(true);
         nodeFromGetUpdate2.getProperties().add(newEncoding);
-        nodeFromGetUpdate2.getProperties().remove(new NodeProperty(NodePropertyMapper.PROPERTY_CONTENTMD5_URI, null));
-        NodeProperty newMD5 = new NodeProperty(NodePropertyMapper.PROPERTY_CONTENTMD5_URI, new byte[] {1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16}.toString());
+        nodeFromGetUpdate2.getProperties().remove(new NodeProperty(VOS.PROPERTY_URI_CONTENTMD5, null));
+        NodeProperty newMD5 = new NodeProperty(VOS.PROPERTY_URI_CONTENTMD5, new byte[] {1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16}.toString());
         newMD5.setMarkedForDeletion(true);
         nodeFromGetUpdate2.getProperties().add(newMD5);
         DataNode nodeFromUpdate3 = (DataNode) nodeDAO.updateProperties(nodeFromGetUpdate2);
@@ -309,10 +308,10 @@ public abstract class NodeDAOTests
         NodeProperties<NodeProperty> properties = new NodeProperties<NodeProperty>();
         NodeProperty prop1 = new NodeProperty("uri1", "value1");
         NodeProperty prop2 = new NodeProperty("uri2", "value2");
-        NodeProperty prop3 = new NodeProperty(NodePropertyMapper.PROPERTY_CONTENTLENGTH_URI, new Long(1024).toString());
-        NodeProperty prop4 = new NodeProperty(NodePropertyMapper.PROPERTY_CONTENTTYPE_URI, "text/plain");
-        NodeProperty prop5 = new NodeProperty(NodePropertyMapper.PROPERTY_CONTENTENCODING_URI, "gzip");
-        NodeProperty prop6 = new NodeProperty(NodePropertyMapper.PROPERTY_CONTENTMD5_URI, new byte[] {1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16}.toString());
+        NodeProperty prop3 = new NodeProperty(VOS.PROPERTY_URI_CONTENTLENGTH, new Long(1024).toString());
+        NodeProperty prop4 = new NodeProperty(VOS.PROPERTY_URI_CONTENTTYPE, "text/plain");
+        NodeProperty prop5 = new NodeProperty(VOS.PROPERTY_URI_CONTENTENCODING, "gzip");
+        NodeProperty prop6 = new NodeProperty(VOS.PROPERTY_URI_CONTENTMD5, new byte[] {1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16}.toString());
 
         properties.add(prop1);
         properties.add(prop2);

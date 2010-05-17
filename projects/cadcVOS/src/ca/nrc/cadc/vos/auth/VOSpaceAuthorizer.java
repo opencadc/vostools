@@ -74,19 +74,17 @@ import java.security.AccessControlException;
 import java.security.AccessController;
 import java.security.Principal;
 import java.util.Set;
-import java.util.Stack;
 
 import javax.security.auth.Subject;
 
-import org.apache.log4j.Logger;
-
 import ca.nrc.cadc.auth.Authorizer;
-import ca.nrc.cadc.vos.ContainerNode;
 import ca.nrc.cadc.vos.Node;
 import ca.nrc.cadc.vos.NodeNotFoundException;
 import ca.nrc.cadc.vos.NodePersistence;
 import ca.nrc.cadc.vos.VOSURI;
 import ca.nrc.cadc.vos.dao.SearchNode;
+import ca.nrc.cadc.vos.util.NodeStackListener;
+import ca.nrc.cadc.vos.util.NodeUtil;
 
 
 /**
@@ -94,7 +92,6 @@ import ca.nrc.cadc.vos.dao.SearchNode;
  */
 public class VOSpaceAuthorizer implements Authorizer
 {
-    private static Logger log = Logger.getLogger(VOSpaceAuthorizer.class);
     
     private NodePersistence nodePersistence;
 
@@ -136,11 +133,14 @@ public class VOSpaceAuthorizer implements Authorizer
     public Object getReadPermission(final Node node)
             throws AccessControlException, FileNotFoundException
     {        
-        NodeAuthorizer readPermissionAuthorizer = new NodeAuthorizer()
+        NodeStackListener readPermissionAuthorizer = new NodeStackListener()
         {
-            public void authorize(Subject subject, Node node, boolean isParentNode)
-                    throws AccessControlException
+            @Override
+            public void nodeVisited(Node node, boolean isParentNode)
             {
+                AccessControlContext acContext = AccessController.getContext();
+                Subject subject = Subject.getSubject(acContext);
+                
                 // return true if this is the owner of the node
                 if (subject != null) {
                     Set<Principal> principals = subject.getPrincipals();
@@ -157,7 +157,7 @@ public class VOSpaceAuthorizer implements Authorizer
             }};
         try
         {
-            return checkPermissionFromRoot(node, readPermissionAuthorizer);
+            return NodeUtil.iterateStack(node, readPermissionAuthorizer, getNodePersistence());
         }
         catch (NodeNotFoundException e)
         {
@@ -199,11 +199,15 @@ public class VOSpaceAuthorizer implements Authorizer
     public Object getWritePermission(final Node node)
             throws AccessControlException, FileNotFoundException
     {
-        NodeAuthorizer writePermissionAuthorizer = new NodeAuthorizer()
+        NodeStackListener writePermissionAuthorizer = new NodeStackListener()
         {
-            public void authorize(Subject subject, Node node, boolean isParentNode)
-                    throws AccessControlException
+
+            @Override
+            public void nodeVisited(Node node, boolean isParentNode)
             {
+                AccessControlContext acContext = AccessController.getContext();
+                Subject subject = Subject.getSubject(acContext);
+                
                 // return true if this is the owner of the node
                 if (subject != null) {
                     Set<Principal> principals = subject.getPrincipals();
@@ -217,70 +221,16 @@ public class VOSpaceAuthorizer implements Authorizer
                     }
                 }
                 throw new AccessControlException("Write permission denied.");
+                
             }};
         try
         {
-            return checkPermissionFromRoot(node, writePermissionAuthorizer);
+            return NodeUtil.iterateStack(node, writePermissionAuthorizer, getNodePersistence());
         }
         catch (NodeNotFoundException e)
         {
             throw new FileNotFoundException(e.getMessage());
         }
-    }
-    
-    private Object checkPermissionFromRoot(Node node, NodeAuthorizer nodeAuthorizer)
-    throws NodeNotFoundException
-    {
-        AccessControlContext acContext = AccessController.getContext();
-        Subject subject = Subject.getSubject(acContext);
-        
-        Stack<Node> nodeStack = stackToRoot(node);
-        Node persistentNode = null;
-        Node nextNode = null;
-        ContainerNode parent = null;
-        
-        while (!nodeStack.isEmpty())
-        {
-            nextNode = nodeStack.pop();
-            nextNode.setParent(parent);
-            log.debug("Retrieving node with path: " + nextNode.getPath());
-            
-            // get the node from the persistence layer
-            persistentNode = getNodePersistence().getFromParent(nextNode, parent);
-            
-            // check authorization
-            nodeAuthorizer.authorize(subject, persistentNode, !nodeStack.isEmpty());
-
-            // get the parent 
-            if (persistentNode instanceof ContainerNode)
-            {
-                parent = (ContainerNode) persistentNode;
-            }
-            else if (!nodeStack.isEmpty())
-            {
-                final String message = "Non-container node found mid-tree";
-                log.warn(message);
-                throw new NodeNotFoundException(message);
-            }
-            
-        }
-        
-        return persistentNode;
-    }
-    
-    /**
-     * Creates a stack to the node's root.
-     */
-    private Stack<Node> stackToRoot(Node node)
-    {
-        Stack<Node> nodeStack = new Stack<Node>();
-        Node nextNode = node;
-        while (nextNode != null)
-        {
-            nodeStack.push(nextNode);
-            nextNode = nextNode.getParent();
-        }
-        return nodeStack;
     }
 
     /**

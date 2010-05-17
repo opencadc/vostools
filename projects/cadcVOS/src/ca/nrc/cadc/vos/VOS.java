@@ -87,5 +87,10 @@ public class VOS
     public static Namespace NS = Namespace.getNamespace("vos", "http://www.ivoa.net/xml/VOSpace/v2.0");
 
     public static String EXT_SCHEMA_LOCATION = XSD_KEY + " " + XmlUtil.getResourceUrlString(XSD_FILE_NAME, VOS.class);
+    
+    public static final String PROPERTY_URI_CONTENTLENGTH = "ivo://ivoa.net/vospace/core#length";
+    public static final String PROPERTY_URI_CONTENTTYPE = "ivo://ivoa.net/vospace/core#type";
+    public static final String PROPERTY_URI_CONTENTENCODING = "ivo://ivoa.net/vospace/core#encoding";
+    public static final String PROPERTY_URI_CONTENTMD5 = "ivo://ivoa.net/vospace/core#MD5";
 
 }

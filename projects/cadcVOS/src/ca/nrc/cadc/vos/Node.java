@@ -71,6 +71,7 @@ package ca.nrc.cadc.vos;
 
 import java.net.URISyntaxException;
 import java.util.List;
+import java.util.Stack;
 
 /**
  * Abstract class defining a data object within a VOSpace.
@@ -220,6 +221,21 @@ public abstract class Node
             }
         }
         return false;
+    }
+    
+    /**
+     * Creates a stack to the node's root.
+     */
+    public Stack<Node> stackToRoot()
+    {
+        Stack<Node> nodeStack = new Stack<Node>();
+        Node nextNode = this;
+        while (nextNode != null)
+        {
+            nodeStack.push(nextNode);
+            nextNode = nextNode.getParent();
+        }
+        return nodeStack;
     }
     
     /**

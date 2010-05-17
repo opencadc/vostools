@@ -67,109 +67,121 @@
 ************************************************************************
 */
 
-package ca.nrc.cadc.vos.dao;
+package ca.nrc.cadc.vos.util;
 
-import java.sql.ResultSet;
-import java.sql.SQLException;
+import java.io.FileNotFoundException;
+import java.net.URI;
+import java.net.URISyntaxException;
 
-import org.springframework.jdbc.core.RowMapper;
+import org.apache.log4j.Logger;
 
-import ca.nrc.cadc.vos.ContainerNode;
+import ca.nrc.cadc.util.FileMetadata;
+import ca.nrc.cadc.util.FileMetadataSource;
 import ca.nrc.cadc.vos.DataNode;
 import ca.nrc.cadc.vos.Node;
+import ca.nrc.cadc.vos.NodeNotFoundException;
+import ca.nrc.cadc.vos.NodePersistence;
 import ca.nrc.cadc.vos.NodeProperty;
 import ca.nrc.cadc.vos.VOS;
+import ca.nrc.cadc.vos.VOSURI;
+import ca.nrc.cadc.vos.dao.SearchNode;
 
-/**
- * Class to map a result set into a Node object.
- */
-public class NodeMapper implements RowMapper
+public class VOSpaceFileMetadataSource implements FileMetadataSource
 {
     
-    public static String getDatabaseTypeRepresentation(Node node)
+    private static Logger log = Logger.getLogger(VOSpaceFileMetadataSource.class);
+    
+    private NodePersistence nodePersistence;
+    
+    public VOSpaceFileMetadataSource()
     {
-        if (node instanceof DataNode)
-        {
-            return "D";
-        }
-        if (node instanceof ContainerNode)
-        {
-            return "C";
-        }
-        throw new IllegalStateException("Unknown node type: " + node);
     }
 
-    /**
-     * Map the row to the appropriate type of node object.
-     */
-    public Object mapRow(ResultSet rs, int rowNum) throws SQLException
+    @Override
+    public FileMetadata get(URI resource) throws FileNotFoundException,
+            IllegalArgumentException
     {
+        if (nodePersistence == null)
+        {
+            throw new IllegalStateException("NodePersistence not set.");
+        }
+        try
+        {
+            Node searchNode = new SearchNode(new VOSURI(resource));
+            Node persistentNode = NodeUtil.iterateStack(searchNode, null, nodePersistence);
+            
+            if (! (persistentNode instanceof DataNode))
+            {
+                throw new FileNotFoundException("Node at " + resource + " is not a data node.");
+            }
+            
+            FileMetadata fileMetadata = new FileMetadata();
+            
+            // fileName
+            fileMetadata.setFileName(persistentNode.getName());
+            
+            // contentEncoding
+            NodeProperty contentEncoding = persistentNode.getProperties().getProperty(VOS.PROPERTY_URI_CONTENTENCODING);
+            if (contentEncoding != null)
+            {
+                fileMetadata.setContentEncoding(contentEncoding.getPropertyValue());
+            }
+            
+            // contentLength
+            NodeProperty contentLength = persistentNode.getProperties().getProperty(VOS.PROPERTY_URI_CONTENTLENGTH);
+            if (contentLength != null)
+            {
+                try
+                {
+                    fileMetadata.setContentLength(new Long(contentLength.getPropertyValue()));
+                }
+                catch (NumberFormatException e) {
+                    log.warn("Content Length is not a number for resource: " + resource);
+                }
+            }
+            
+            // contentType
+            NodeProperty contentType = persistentNode.getProperties().getProperty(VOS.PROPERTY_URI_CONTENTTYPE);
+            if (contentType != null)
+            {
+                fileMetadata.setContentType(contentType.getPropertyValue());
+            }
+            
+            // md5Sum
+            NodeProperty md5Sum = persistentNode.getProperties().getProperty(VOS.PROPERTY_URI_CONTENTMD5);
+            if (md5Sum != null)
+            {
+                fileMetadata.setMd5Sum(md5Sum.getPropertyValue());
+            }
+            
+            return fileMetadata;
+        }
+        catch (URISyntaxException e)
+        {
+            throw new IllegalArgumentException(e.getMessage(), e);
+        }
+        catch (NodeNotFoundException e)
+        {
+            throw new FileNotFoundException(resource.toString());
+        }
+    }
 
-        long nodeID = rs.getLong("nodeID");
-        String name = rs.getString("name");
-        long parentID = rs.getLong("parentID");
+    @Override
+    public void set(URI resource, FileMetadata meta)
+            throws FileNotFoundException, IllegalArgumentException
+    {
+        // TODO Auto-generated method stub
         
-        String groupRead = rs.getString("groupRead");
-        String groupWrite = rs.getString("groupWrite");
-        String owner = rs.getString("owner");
-        
-        long contentLength = rs.getLong("contentLength");
-        String contentType = rs.getString("contentType");
-        String contentEncoding = rs.getString("contentEncoding");
-        byte[] contentMD5 = rs.getBytes("contentMD5");
-        
-        ContainerNode parent = null;
-        if (parentID != 0)
-        {
-            parent = new ContainerNode();
-            parent.appData = new NodeID(parentID);
-        }
-
-        String typeString = rs.getString("type");
-        char type = typeString.charAt(0);
-        Node node = null;
-
-        if (ContainerNode.DB_TYPE == type)
-        {
-            node = new ContainerNode();
-        }
-        else if (DataNode.DB_TYPE == type)
-        {
-            node = new DataNode();
-        }
-        else
-        {
-            throw new IllegalStateException("Unknown node database type: "
-                    + type);
-        }
-        
-        node.appData = new NodeID(nodeID);
-
-        node.setName(name);
-        node.setParent(parent);
-        
-        node.setGroupRead(groupRead);
-        node.setGroupWrite(groupWrite);
-        node.setOwner(owner);
-        
-        if (contentLength != 0)
-        {
-            node.getProperties().add(new NodeProperty(VOS.PROPERTY_URI_CONTENTLENGTH, new Long(contentLength).toString()));
-        }
-        if (contentType != null && contentType.trim().length() > 0)
-        {
-            node.getProperties().add(new NodeProperty(VOS.PROPERTY_URI_CONTENTTYPE, contentType));
-        }
-        if (contentEncoding != null && contentEncoding.trim().length() > 0)
-        {
-            node.getProperties().add(new NodeProperty(VOS.PROPERTY_URI_CONTENTENCODING, contentEncoding));
-        }
-        if (contentMD5 != null)
-        {
-            node.getProperties().add(new NodeProperty(VOS.PROPERTY_URI_CONTENTMD5, contentMD5.toString()));
-        }
-
-        return node;
+    }
+    
+    public void setNodePersistence(NodePersistence nodePersistence)
+    {
+        this.nodePersistence = nodePersistence;
+    }
+    
+    public NodePersistence getNodePersistence()
+    {
+        return nodePersistence;
     }
 
 }

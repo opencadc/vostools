@@ -193,6 +193,23 @@ public class NodeProperties<E> extends HashSet<E>
         return false;
     }
     
+    public NodeProperty getProperty(String uri)
+    {
+        NodeProperty searchProperty = new NodeProperty(uri, null);
+        for (Object o1 : this)
+        {
+            if (o1 instanceof NodeProperty)
+            {
+                NodeProperty nodeProperty = (NodeProperty) o1;
+                if (nodeProperty.equals(searchProperty))
+                {
+                    return nodeProperty;
+                }
+            }
+        }
+        return null;
+    }
+    
     /**
      * Lists the contents of this set.
      */
