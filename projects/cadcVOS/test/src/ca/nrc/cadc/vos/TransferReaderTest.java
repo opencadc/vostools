@@ -119,7 +119,7 @@ public class TransferReaderTest
         View view = new DataView("vos://nvo.caltech!vospace/mydir/ngc1234", dataNode);
 
         transfer = new Transfer();
-        transfer.setDirection(Transfer.Direction.PUSH_TO_VO_SPACE);
+        transfer.setDirection(Transfer.Direction.pushToVoSpace);
         transfer.setEndpoint("vos://endpoint.for.transfer");
         transfer.setKeepBytes(true);
         transfer.setProtocols(protocols);
@@ -144,6 +144,6 @@ public class TransferReaderTest
         Transfer transfer2 = reader.readFrom(this.xmlString);
 
         Assert.assertEquals(transfer2.getProtocols().size(), 3);
-        Assert.assertEquals(transfer2.getDirection(), Transfer.Direction.PUSH_TO_VO_SPACE);
+        Assert.assertEquals(transfer2.getDirection(), Transfer.Direction.pushToVoSpace);
     }
 }

@@ -82,7 +82,6 @@ import org.junit.BeforeClass;
 import org.junit.Test;
 
 import ca.nrc.cadc.util.Log4jInit;
-import ca.nrc.cadc.xml.XmlUtil;
 
 /**
  * @author zhangsa
@@ -117,7 +116,7 @@ public class TransferWriterTest
         View view = new DataView("vos://nvo.caltech!vospace/mydir/ngc1234", dataNode);
 
         transfer = new Transfer();
-        transfer.setDirection(Transfer.Direction.PUSH_TO_VO_SPACE);
+        transfer.setDirection(Transfer.Direction.pushToVoSpace);
         transfer.setEndpoint("vos://endpoint.for.transfer");
         transfer.setKeepBytes(true);
         transfer.setProtocols(protocols);
