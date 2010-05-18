@@ -67,7 +67,7 @@
 ************************************************************************
 */
 
-package ca.nrc.cadc.vos.util;
+package ca.nrc.cadc.vos;
 
 import java.io.FileNotFoundException;
 import java.net.URI;
@@ -77,14 +77,8 @@ import org.apache.log4j.Logger;
 
 import ca.nrc.cadc.util.FileMetadata;
 import ca.nrc.cadc.util.FileMetadataSource;
-import ca.nrc.cadc.vos.DataNode;
-import ca.nrc.cadc.vos.Node;
-import ca.nrc.cadc.vos.NodeNotFoundException;
-import ca.nrc.cadc.vos.NodePersistence;
-import ca.nrc.cadc.vos.NodeProperty;
-import ca.nrc.cadc.vos.VOS;
-import ca.nrc.cadc.vos.VOSURI;
 import ca.nrc.cadc.vos.dao.SearchNode;
+import ca.nrc.cadc.vos.util.NodeUtil;
 
 /**
  * Class to get and set the meta data of vospace data nodes.  This class
