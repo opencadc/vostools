@@ -192,6 +192,13 @@ public class NodeResource extends BaseResource
                 node = (Node) Subject.doAs(subject, writeAuthorization);
             }
             
+            // If this is an HTTP PUT, set the owner on the node to be
+            // the distinguished name contained in the client certificate(s)
+            if (getMethod().equals(Method.PUT))
+            {
+                clientNode.setOwner(getOwner(principals));
+            }
+            
             log.debug("doInit() retrived node: " + node);
         }
         catch (FileNotFoundException e)
@@ -341,17 +348,15 @@ public class NodeResource extends BaseResource
         
         Set<Principal> principals = new HashSet<Principal>();
         
-        // look for basic authentication
-        
-        // Removed: Basic authentication credentials no longer
+        // BM Removed: Basic authentication credentials no longer
         // collected
-        /*
-        if (request.getChallengeResponse() != null &&
-            StringUtil.hasLength(request.getChallengeResponse().getIdentifier()))
-        {
-            principals.add(new HttpPrincipal(request.getChallengeResponse().getIdentifier()));
-        }
-        */
+        //
+        // look for basic authentication
+        // if (request.getChallengeResponse() != null &&
+        //    StringUtil.hasLength(request.getChallengeResponse().getIdentifier()))
+        // {
+        //     principals.add(new HttpPrincipal(request.getChallengeResponse().getIdentifier()));
+        // }
         
         // look for X509 certificates
         Map<String, Object> requestAttributes = request.getAttributes();
@@ -371,6 +376,20 @@ public class NodeResource extends BaseResource
         
         return principals;
         
+    }
+    
+    /**
+     * Get the first distinguished name found from the set of principals.
+     * @param principals
+     * @return
+     */
+    private String getOwner(Set<Principal> principals)
+    {
+        for (Principal principal : principals)
+        {
+            return principal.getName();
+        }
+        return "";
     }
 
 }
