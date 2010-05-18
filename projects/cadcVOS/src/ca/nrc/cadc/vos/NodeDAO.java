@@ -77,7 +77,6 @@ import java.sql.SQLException;
 import java.sql.Statement;
 import java.util.Iterator;
 import java.util.List;
-import java.util.Stack;
 
 import javax.sql.DataSource;
 
@@ -190,6 +189,9 @@ public abstract class NodeDAO implements NodePersistence
      * Get the node from the parent.  This method assumes that the nodeID
      * of the parent object is set.  If the parent object is null, it is
      * assumed to be at the root level.
+     * @param node The node to get
+     * @param parent The parent of the node, or null if this is a root.  This object
+     * must have been retrived from the NodePersistence interface.
      */
     public Node getFromParent(Node node, ContainerNode parent) throws NodeNotFoundException
     {
@@ -223,6 +225,9 @@ public abstract class NodeDAO implements NodePersistence
      * Put the node in the provided container.  This method assumes that the
      * nodeID of the parent is set.  If the parent object is null, it is
      * assumed to be at the root level.
+     * @param node The node to put
+     * @param parent The parent of the node.  This object must have been retrieved
+     * from the NodePersistence interface.
      */
     public Node putInContainer(Node node, ContainerNode parent) throws NodeNotFoundException, NodeAlreadyExistsException
     {
@@ -310,32 +315,29 @@ public abstract class NodeDAO implements NodePersistence
     /**
      * Delete the node.  If deleteChildren is true, also recursively delete
      * any children of the node.
+     * @param persistentNode The node to delete.  This node must
+     * have been retrived by the NodePersistence interface.
      */
-    public void delete(Node node, boolean deleteChildren) throws AccessControlException, NodeNotFoundException
+    public void delete(Node persistentNode, boolean deleteChildren) throws AccessControlException, NodeNotFoundException
     {
-        
-        Node dbNode = null;
         
         synchronized (this)
         {
             try
             {
                 
-                // Get the node from the database.
-                dbNode = this.getFromRoot(node);
-                
                 startTransaction();
                 
                 // delete the node properties
-                jdbc.update(getDeleteNodePropertiesSQL(dbNode));
+                jdbc.update(getDeleteNodePropertiesSQL(persistentNode));
                 
                 // delete the node
-                jdbc.update(getDeleteNodeSQL(dbNode));
+                jdbc.update(getDeleteNodeSQL(persistentNode));
                 
                 if (deleteChildren)
                 {
                     // collect and delete children of the node
-                    this.deleteChildrenOf(dbNode);
+                    this.deleteChildrenOf(persistentNode);
                 }
                 
                 commitTransaction();
@@ -343,7 +345,7 @@ public abstract class NodeDAO implements NodePersistence
             } catch (Throwable t)
             {
                 rollbackTransaction();
-                log.error("Delete rollback for node: " + node, t);
+                log.error("Delete rollback for node: " + persistentNode, t);
                 if (t instanceof NodeNotFoundException)
                 {
                     throw (NodeNotFoundException) t;
@@ -359,56 +361,60 @@ public abstract class NodeDAO implements NodePersistence
             }
             
         }
-        log.debug("Node deleted: " + dbNode);
+        log.debug("Node deleted: " + persistentNode);
     }
     
     /**
      * Update the properties associated with this node.  New properties are added,
      * changed property values are updated, and properties marked for deletion are
      * removed.
+     * @param updatedPersistentNode The node whos properties to update.  This node must
+     * have been retrived by the NodePersistence interface.
      */
-    public Node updateProperties(Node node) throws AccessControlException, NodeNotFoundException
+    public Node updateProperties(Node updatedPersistentNode) throws AccessControlException, NodeNotFoundException
     {
-
-        Node dbNode = null;
+        
+        Node currentDbNode = getFromParent(updatedPersistentNode, updatedPersistentNode.getParent());
         
         synchronized (this)
         {
             try
             {
                 
-                // Get the node from the database.
-                dbNode = getFromRoot(node);
-                
                 startTransaction();
                 
+                
                 // Iterate through the user properties and the db properties,
-                // potentially updading, deleting or adding new ones
-                for (NodeProperty nextProperty : node.getProperties())
+                // potentially updating, deleting or adding new ones
+
+                for (NodeProperty nextProperty : updatedPersistentNode.getProperties())
                 {
                     
-                    // Is this property saved already?
-                    if (dbNode.getProperties().contains(nextProperty))
+                    // Does this property exist already?
+                    if (currentDbNode.getProperties().contains(nextProperty))
                     {
                         if (nextProperty.isMarkedForDeletion())
                         {
                             // delete the property
-                            jdbc.update(getDeleteNodePropertySQL(dbNode, nextProperty));
-                            dbNode.getProperties().remove(nextProperty);
+                            log.debug("Deleting node property: " + nextProperty.getPropertyURI());
+                            jdbc.update(getDeleteNodePropertySQL(currentDbNode, nextProperty));
+                            currentDbNode.getProperties().remove(nextProperty);
                         }
                         else
                         {
                             // update the property value
-                            jdbc.update(getUpdateNodePropertySQL(dbNode, nextProperty));
-                            dbNode.getProperties().remove(new NodeProperty(nextProperty.getPropertyURI(), null));
-                            dbNode.getProperties().add(nextProperty);
+                            log.debug("Updating node property: " + nextProperty.getPropertyURI());
+                            jdbc.update(getUpdateNodePropertySQL(currentDbNode, nextProperty));
+                            currentDbNode.getProperties().remove(new NodeProperty(nextProperty.getPropertyURI(), null));
+                            currentDbNode.getProperties().add(nextProperty);
                         }
                     }
                     else
                     {
                         // insert the new property
-                        jdbc.update(getInsertNodePropertySQL(dbNode, nextProperty));
-                        dbNode.getProperties().add(nextProperty);
+                        log.debug("Inserting node property: " + nextProperty.getPropertyURI());
+                        jdbc.update(getInsertNodePropertySQL(currentDbNode, nextProperty));
+                        currentDbNode.getProperties().add(nextProperty);
                     }
                 }
                 
@@ -417,7 +423,7 @@ public abstract class NodeDAO implements NodePersistence
             } catch (Throwable t)
             {
                 rollbackTransaction();
-                log.error("Update rollback for node: " + node, t);
+                log.error("Update rollback for node: " + updatedPersistentNode, t);
                 if (t instanceof NodeNotFoundException)
                 {
                     throw (NodeNotFoundException) t;
@@ -434,9 +440,10 @@ public abstract class NodeDAO implements NodePersistence
             
         }
         
-        log.debug("Node updated: " + dbNode);
-        
-        return dbNode;
+        log.debug("Node updated: " + currentDbNode);
+        // return the new node from the database
+        return currentDbNode;
+
     }
     
     /**
@@ -456,56 +463,6 @@ public abstract class NodeDAO implements NodePersistence
     public void copy(Node node, String copyToPath)
     {
         throw new UnsupportedOperationException("Copy not implemented.");
-    }
-    
-    /**
-     * Get the node all the way up to it's root.
-     * @param node
-     * @return
-     * @throws NodeNotFoundException
-     */
-    protected Node getFromRoot(Node node) throws NodeNotFoundException
-    {
-        if (node == null)
-        {
-            throw new NodeNotFoundException("Node parameter is null.");
-        }
-        
-        Stack<Node> nodeStack = new Stack<Node>();
-        Node nextNode = node;
-        while (nextNode != null)
-        {
-            nodeStack.push(nextNode);
-            nextNode = nextNode.getParent();
-        }
-        
-        Node dbNode = null;
-        
-        ContainerNode parent = null;
-        while (!nodeStack.isEmpty())
-        {
-            nextNode = nodeStack.pop();
-            nextNode.setParent(parent);
-            dbNode = getSingleNodeFromSelect(getSelectNodeByNameAndParentSQL(nextNode));
-            if (dbNode == null)
-            {
-                throw new NodeNotFoundException(node.getPath());
-            }
-            if (dbNode instanceof ContainerNode)
-            {
-                parent = (ContainerNode) dbNode;
-            }
-        }
-        
-        try
-        {
-            dbNode.setUri(node.getUri());
-        }
-        catch (URISyntaxException e)
-        {
-            log.warn("Coudln't reset URI", e);
-        }
-        return dbNode;
     }
     
     /**
