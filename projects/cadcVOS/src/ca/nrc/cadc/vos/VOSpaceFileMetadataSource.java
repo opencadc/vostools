@@ -140,7 +140,7 @@ public class VOSpaceFileMetadataSource implements FileMetadataSource
         }
         
         // contentType
-        NodeProperty contentType = persistentNode.getProperties().getProperty(VOS.PROPERTY_URI_CONTENTTYPE);
+        NodeProperty contentType = persistentNode.getProperties().getProperty(VOS.PROPERTY_URI_TYPE);
         if (contentType != null)
         {
             fileMetadata.setContentType(contentType.getPropertyValue());
@@ -198,7 +198,7 @@ public class VOSpaceFileMetadataSource implements FileMetadataSource
         // contentType
         if (meta.getContentType() != null)
         {
-            NodeProperty contentType = new NodeProperty(VOS.PROPERTY_URI_CONTENTTYPE, meta.getContentType());
+            NodeProperty contentType = new NodeProperty(VOS.PROPERTY_URI_TYPE, meta.getContentType());
             persistentNode.getProperties().remove(contentType);
             persistentNode.getProperties().add(contentType);
         }

@@ -156,7 +156,7 @@ public class NodeMapper implements RowMapper
         }
         if (contentType != null && contentType.trim().length() > 0)
         {
-            node.getProperties().add(new NodeProperty(VOS.PROPERTY_URI_CONTENTTYPE, contentType));
+            node.getProperties().add(new NodeProperty(VOS.PROPERTY_URI_TYPE, contentType));
         }
         if (contentEncoding != null && contentEncoding.trim().length() > 0)
         {

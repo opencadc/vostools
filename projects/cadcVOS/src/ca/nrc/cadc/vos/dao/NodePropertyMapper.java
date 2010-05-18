@@ -89,7 +89,7 @@ public class NodePropertyMapper implements RowMapper
         if (propertyURI != null)
         {
             return (propertyURI.equals(VOS.PROPERTY_URI_CONTENTLENGTH) ||
-                    propertyURI.equals(VOS.PROPERTY_URI_CONTENTTYPE) ||
+                    propertyURI.equals(VOS.PROPERTY_URI_TYPE) ||
                     propertyURI.equals(VOS.PROPERTY_URI_CONTENTENCODING) ||
                     propertyURI.equals(VOS.PROPERTY_URI_CONTENTMD5));
         }

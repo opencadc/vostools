@@ -222,7 +222,7 @@ public abstract class NodeDAOTests
         DataNode dataNode = getCommonDataNode("/" + getNodeName("g"));
         dataNode.getProperties().add(new NodeProperty("uri1", "value1"));
         dataNode.getProperties().add(new NodeProperty(VOS.PROPERTY_URI_CONTENTLENGTH, new Long(1024).toString()));
-        dataNode.getProperties().add(new NodeProperty(VOS.PROPERTY_URI_CONTENTTYPE, "text/plain"));
+        dataNode.getProperties().add(new NodeProperty(VOS.PROPERTY_URI_TYPE, "text/plain"));
         
         // Put then get the node
         DataNode nodeFromPut = (DataNode) nodeDAO.putInContainer(dataNode, null);
@@ -243,8 +243,8 @@ public abstract class NodeDAOTests
         nodeFromGetUpdate1.getProperties().add(new NodeProperty("uri1", "value2"));
         nodeFromGetUpdate1.getProperties().remove(new NodeProperty(VOS.PROPERTY_URI_CONTENTLENGTH, null));
         nodeFromGetUpdate1.getProperties().add(new NodeProperty(VOS.PROPERTY_URI_CONTENTLENGTH, new Long(2048).toString()));
-        nodeFromGetUpdate1.getProperties().remove(new NodeProperty(VOS.PROPERTY_URI_CONTENTTYPE, null));
-        nodeFromGetUpdate1.getProperties().add(new NodeProperty(VOS.PROPERTY_URI_CONTENTTYPE, "application/pdf"));
+        nodeFromGetUpdate1.getProperties().remove(new NodeProperty(VOS.PROPERTY_URI_TYPE, null));
+        nodeFromGetUpdate1.getProperties().add(new NodeProperty(VOS.PROPERTY_URI_TYPE, "application/pdf"));
         DataNode nodeFromUpdate2 = (DataNode) nodeDAO.updateProperties(nodeFromGetUpdate1);
         DataNode nodeFromGetUpdate2 = (DataNode) nodeDAO.getFromParent(nodeFromGetUpdate1, null);
         assertEquals("assert4", nodeFromGetUpdate1.getProperties(), nodeFromUpdate2.getProperties());
@@ -309,7 +309,7 @@ public abstract class NodeDAOTests
         NodeProperty prop1 = new NodeProperty("uri1", "value1");
         NodeProperty prop2 = new NodeProperty("uri2", "value2");
         NodeProperty prop3 = new NodeProperty(VOS.PROPERTY_URI_CONTENTLENGTH, new Long(1024).toString());
-        NodeProperty prop4 = new NodeProperty(VOS.PROPERTY_URI_CONTENTTYPE, "text/plain");
+        NodeProperty prop4 = new NodeProperty(VOS.PROPERTY_URI_TYPE, "text/plain");
         NodeProperty prop5 = new NodeProperty(VOS.PROPERTY_URI_CONTENTENCODING, "gzip");
         NodeProperty prop6 = new NodeProperty(VOS.PROPERTY_URI_CONTENTMD5, new byte[] {1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16}.toString());
 
