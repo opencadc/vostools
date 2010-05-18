@@ -92,8 +92,6 @@ import org.restlet.resource.Get;
 import org.restlet.resource.Post;
 import org.restlet.resource.Put;
 
-import ca.nrc.cadc.auth.HttpPrincipal;
-import ca.nrc.cadc.uws.util.StringUtil;
 import ca.nrc.cadc.vos.Node;
 import ca.nrc.cadc.vos.NodeAlreadyExistsException;
 import ca.nrc.cadc.vos.NodeNotFoundException;
@@ -344,11 +342,16 @@ public class NodeResource extends BaseResource
         Set<Principal> principals = new HashSet<Principal>();
         
         // look for basic authentication
+        
+        // Removed: Basic authentication credentials no longer
+        // collected
+        /*
         if (request.getChallengeResponse() != null &&
             StringUtil.hasLength(request.getChallengeResponse().getIdentifier()))
         {
             principals.add(new HttpPrincipal(request.getChallengeResponse().getIdentifier()));
         }
+        */
         
         // look for X509 certificates
         Map<String, Object> requestAttributes = request.getAttributes();
