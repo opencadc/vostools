@@ -662,11 +662,15 @@ public abstract class NodeDAO implements NodePersistence
         String contentType = null;
         String contentEncoding = null;
         byte[] contentMD5 = null;
+        String groupRead = null;
+        String groupWrite = null;
         
         String contentLengthString = getPropertyValue(node, VOS.PROPERTY_URI_CONTENTLENGTH);
         contentType = getPropertyValue(node, VOS.PROPERTY_URI_CONTENTTYPE);
         contentEncoding = getPropertyValue(node, VOS.PROPERTY_URI_CONTENTENCODING);
         String contentMD5String = getPropertyValue(node, VOS.PROPERTY_URI_CONTENTMD5);
+        groupRead = getPropertyValue(node, VOS.PROPERTY_URI_GROUPREAD);
+        groupWrite = getPropertyValue(node, VOS.PROPERTY_URI_GROUPWRITE);
         
         if (contentLengthString != null)
         {
@@ -712,9 +716,9 @@ public abstract class NodeDAO implements NodePersistence
         sb.append("','");
         sb.append(node.getOwner());
         sb.append("',");
-        sb.append((node.getGroupRead() == null) ? null : "'" + node.getGroupRead() + "'");
+        sb.append((groupRead == null) ? null : "'" + groupRead + "'");
         sb.append(",");
-        sb.append((node.getGroupWrite() == null) ? null : "'" + node.getGroupWrite() + "'");
+        sb.append((groupWrite == null) ? null : "'" + groupWrite + "'");
         sb.append(",");
         sb.append(contentLength);
         sb.append(",");
@@ -770,6 +774,24 @@ public abstract class NodeDAO implements NodePersistence
             sb.append("update ");
             sb.append("vospace.." + getNodeTableName());
             sb.append(" set contentType = ");
+            sb.append((value == null) ? null : "'" + value + "'");
+            sb.append(" where nodeID = ");
+            sb.append(getNodeID(node));
+        }
+        else if (nodeProperty.getPropertyURI().equals(VOS.PROPERTY_URI_GROUPREAD))
+        {
+            sb.append("update ");
+            sb.append("vospace.." + getNodeTableName());
+            sb.append(" set groupRead = ");
+            sb.append((value == null) ? null : "'" + value + "'");
+            sb.append(" where nodeID = ");
+            sb.append(getNodeID(node));
+        }
+        else if (nodeProperty.getPropertyURI().equals(VOS.PROPERTY_URI_GROUPWRITE))
+        {
+            sb.append("update ");
+            sb.append("vospace.." + getNodeTableName());
+            sb.append(" set groupWrite = ");
             sb.append((value == null) ? null : "'" + value + "'");
             sb.append(" where nodeID = ");
             sb.append(getNodeID(node));
@@ -888,6 +910,20 @@ public abstract class NodeDAO implements NodePersistence
             sb.append(" set contentType = null where nodeID = ");
             sb.append(getNodeID(node));
         }
+        else if (nodeProperty.getPropertyURI().equals(VOS.PROPERTY_URI_GROUPREAD))
+        {
+            sb.append("update ");
+            sb.append("vospace.." + getNodeTableName());
+            sb.append(" set groupRead = null where nodeID = ");
+            sb.append(getNodeID(node));
+        }
+        else if (nodeProperty.getPropertyURI().equals(VOS.PROPERTY_URI_GROUPWRITE))
+        {
+            sb.append("update ");
+            sb.append("vospace.." + getNodeTableName());
+            sb.append(" set groupWrite = null where nodeID = ");
+            sb.append(getNodeID(node));
+        }
         else
         {
             sb.append("delete from ");
@@ -943,6 +979,24 @@ public abstract class NodeDAO implements NodePersistence
             sb.append("update ");
             sb.append("vospace.." + getNodeTableName());
             sb.append(" set contentType = ");
+            sb.append((value == null) ? null : "'" + value + "'");
+            sb.append(" where nodeID = ");
+            sb.append(getNodeID(node));
+        }
+        else if (nodeProperty.getPropertyURI().equals(VOS.PROPERTY_URI_GROUPREAD))
+        {
+            sb.append("update ");
+            sb.append("vospace.." + getNodeTableName());
+            sb.append(" set groupRead = ");
+            sb.append((value == null) ? null : "'" + value + "'");
+            sb.append(" where nodeID = ");
+            sb.append(getNodeID(node));
+        }
+        else if (nodeProperty.getPropertyURI().equals(VOS.PROPERTY_URI_GROUPWRITE))
+        {
+            sb.append("update ");
+            sb.append("vospace.." + getNodeTableName());
+            sb.append(" set groupWrite = ");
             sb.append((value == null) ? null : "'" + value + "'");
             sb.append(" where nodeID = ");
             sb.append(getNodeID(node));

@@ -92,5 +92,7 @@ public class VOS
     public static final String PROPERTY_URI_CONTENTTYPE = "ivo://ivoa.net/vospace/core#type";
     public static final String PROPERTY_URI_CONTENTENCODING = "ivo://ivoa.net/vospace/core#encoding";
     public static final String PROPERTY_URI_CONTENTMD5 = "ivo://ivoa.net/vospace/core#MD5";
+    public static final String PROPERTY_URI_GROUPREAD = "ivo://ivoa.net/vospace/core#groupread";
+    public static final String PROPERTY_URI_GROUPWRITE = "ivo://ivoa.net/vospace/core#groupwrite";
 
 }

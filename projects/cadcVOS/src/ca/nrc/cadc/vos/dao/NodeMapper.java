@@ -148,8 +148,6 @@ public class NodeMapper implements RowMapper
         node.setName(name);
         node.setParent(parent);
         
-        node.setGroupRead(groupRead);
-        node.setGroupWrite(groupWrite);
         node.setOwner(owner);
         
         if (contentLength != 0)
@@ -167,6 +165,14 @@ public class NodeMapper implements RowMapper
         if (contentMD5 != null)
         {
             node.getProperties().add(new NodeProperty(VOS.PROPERTY_URI_CONTENTMD5, contentMD5.toString()));
+        }
+        if (groupRead != null && groupRead.trim().length() > 0)
+        {
+            node.getProperties().add(new NodeProperty(VOS.PROPERTY_URI_GROUPREAD, groupRead));
+        }
+        if (groupWrite != null && groupWrite.trim().length() > 0)
+        {
+            node.getProperties().add(new NodeProperty(VOS.PROPERTY_URI_GROUPREAD, groupWrite));
         }
 
         return node;
