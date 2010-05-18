@@ -86,20 +86,155 @@ import ca.nrc.cadc.vos.VOS;
 import ca.nrc.cadc.vos.VOSURI;
 import ca.nrc.cadc.vos.dao.SearchNode;
 
+/**
+ * Class to get and set the meta data of vospace data nodes.  This class
+ * requires that the NodePersistence be set before any calls are made.
+ * 
+ * @author majorb
+ *
+ */
 public class VOSpaceFileMetadataSource implements FileMetadataSource
 {
     
     private static Logger log = Logger.getLogger(VOSpaceFileMetadataSource.class);
     
     private NodePersistence nodePersistence;
-    
+
+    /**
+     * No argument constructor.
+     */
     public VOSpaceFileMetadataSource()
     {
     }
 
+    /**
+     * Get the current file metadata for the specified resource.
+     * 
+     * @param resource identifier for the target resource
+     * @return a FileMetadata object, populated with available metadata
+     * @throws FileNotFoundException if the specified resource is not found
+     * @throws IllegalArgumentException if the specified resource is not a file
+     */
     @Override
     public FileMetadata get(URI resource) throws FileNotFoundException,
             IllegalArgumentException
+    {
+        Node persistentNode = getPersistentNode(resource);
+        FileMetadata fileMetadata = new FileMetadata();
+        
+        // fileName
+        fileMetadata.setFileName(persistentNode.getName());
+        
+        // contentEncoding
+        NodeProperty contentEncoding = persistentNode.getProperties().getProperty(VOS.PROPERTY_URI_CONTENTENCODING);
+        if (contentEncoding != null)
+        {
+            fileMetadata.setContentEncoding(contentEncoding.getPropertyValue());
+        }
+        
+        // contentLength
+        NodeProperty contentLength = persistentNode.getProperties().getProperty(VOS.PROPERTY_URI_CONTENTLENGTH);
+        if (contentLength != null)
+        {
+            try
+            {
+                fileMetadata.setContentLength(new Long(contentLength.getPropertyValue()));
+            }
+            catch (NumberFormatException e) {
+                log.warn("Content Length is not a number for resource: " + resource);
+            }
+        }
+        
+        // contentType
+        NodeProperty contentType = persistentNode.getProperties().getProperty(VOS.PROPERTY_URI_CONTENTTYPE);
+        if (contentType != null)
+        {
+            fileMetadata.setContentType(contentType.getPropertyValue());
+        }
+        
+        // md5Sum
+        NodeProperty md5Sum = persistentNode.getProperties().getProperty(VOS.PROPERTY_URI_CONTENTMD5);
+        if (md5Sum != null)
+        {
+            fileMetadata.setMd5Sum(md5Sum.getPropertyValue());
+        }
+        
+        return fileMetadata;
+    }
+
+    /** 
+     * Set the current file metadata for the specified resource. 
+     * 
+     * @param resource identifier for the target resource
+     * @param meta new metadata values to persist
+     * @throws FileNotFoundException if the specified resource is not found
+     * @throws IllegalArgumentException if the specified resource is not a file
+     */
+    @Override
+    public void set(URI resource, FileMetadata meta)
+            throws FileNotFoundException, IllegalArgumentException
+    {
+        if (meta == null)
+        {
+            throw new IllegalArgumentException("FileMetadata is null.");
+        }
+        
+        Node persistentNode = getPersistentNode(resource);
+        
+        // fileName
+        // Ignore file name property - this is the name of the node as specified
+        // in the resource
+        
+        // contentEncoding
+        if (meta.getContentEncoding() != null)
+        {
+            NodeProperty contentEncoding = new NodeProperty(VOS.PROPERTY_URI_CONTENTENCODING, meta.getContentEncoding());
+            persistentNode.getProperties().remove(contentEncoding);
+            persistentNode.getProperties().add(contentEncoding);
+        }
+        
+        // contentLength
+        if (meta.getContentLength() != null)
+        {
+            NodeProperty contentLength = new NodeProperty(VOS.PROPERTY_URI_CONTENTLENGTH, meta.getContentLength().toString());
+            persistentNode.getProperties().remove(contentLength);
+            persistentNode.getProperties().add(contentLength);
+        }
+        
+        // contentType
+        if (meta.getContentType() != null)
+        {
+            NodeProperty contentType = new NodeProperty(VOS.PROPERTY_URI_CONTENTTYPE, meta.getContentType());
+            persistentNode.getProperties().remove(contentType);
+            persistentNode.getProperties().add(contentType);
+        }
+        
+        // md5Sum
+        if (meta.getMd5Sum() != null)
+        {
+            NodeProperty md5Sum = new NodeProperty(VOS.PROPERTY_URI_CONTENTMD5, meta.getMd5Sum());
+            persistentNode.getProperties().remove(md5Sum);
+            persistentNode.getProperties().add(md5Sum);
+        }
+        
+        try
+        {
+            nodePersistence.updateProperties(persistentNode);
+        }
+        catch (NodeNotFoundException e)
+        {
+            throw new FileNotFoundException(e.getMessage());
+        }
+        
+    }
+    
+    /**
+     * Return the persistent node at the specified resource.
+     * @param resource
+     * @return
+     * @throws FileNotFoundException
+     */
+    private Node getPersistentNode(URI resource) throws FileNotFoundException
     {
         if (nodePersistence == null)
         {
@@ -112,49 +247,9 @@ public class VOSpaceFileMetadataSource implements FileMetadataSource
             
             if (! (persistentNode instanceof DataNode))
             {
-                throw new FileNotFoundException("Node at " + resource + " is not a data node.");
+                throw new IllegalArgumentException("Node at " + resource + " is not a data node.");
             }
-            
-            FileMetadata fileMetadata = new FileMetadata();
-            
-            // fileName
-            fileMetadata.setFileName(persistentNode.getName());
-            
-            // contentEncoding
-            NodeProperty contentEncoding = persistentNode.getProperties().getProperty(VOS.PROPERTY_URI_CONTENTENCODING);
-            if (contentEncoding != null)
-            {
-                fileMetadata.setContentEncoding(contentEncoding.getPropertyValue());
-            }
-            
-            // contentLength
-            NodeProperty contentLength = persistentNode.getProperties().getProperty(VOS.PROPERTY_URI_CONTENTLENGTH);
-            if (contentLength != null)
-            {
-                try
-                {
-                    fileMetadata.setContentLength(new Long(contentLength.getPropertyValue()));
-                }
-                catch (NumberFormatException e) {
-                    log.warn("Content Length is not a number for resource: " + resource);
-                }
-            }
-            
-            // contentType
-            NodeProperty contentType = persistentNode.getProperties().getProperty(VOS.PROPERTY_URI_CONTENTTYPE);
-            if (contentType != null)
-            {
-                fileMetadata.setContentType(contentType.getPropertyValue());
-            }
-            
-            // md5Sum
-            NodeProperty md5Sum = persistentNode.getProperties().getProperty(VOS.PROPERTY_URI_CONTENTMD5);
-            if (md5Sum != null)
-            {
-                fileMetadata.setMd5Sum(md5Sum.getPropertyValue());
-            }
-            
-            return fileMetadata;
+            return persistentNode;
         }
         catch (URISyntaxException e)
         {
@@ -165,20 +260,20 @@ public class VOSpaceFileMetadataSource implements FileMetadataSource
             throw new FileNotFoundException(resource.toString());
         }
     }
-
-    @Override
-    public void set(URI resource, FileMetadata meta)
-            throws FileNotFoundException, IllegalArgumentException
-    {
-        // TODO Auto-generated method stub
-        
-    }
     
+    /**
+     * NodePersistence setter.
+     * @param nodePersistence
+     */
     public void setNodePersistence(NodePersistence nodePersistence)
     {
         this.nodePersistence = nodePersistence;
     }
     
+    /**
+     * NodePersistence getter.
+     * @return
+     */
     public NodePersistence getNodePersistence()
     {
         return nodePersistence;
