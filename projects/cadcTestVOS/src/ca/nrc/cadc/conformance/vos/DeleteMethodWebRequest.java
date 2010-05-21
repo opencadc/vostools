@@ -72,6 +72,11 @@ package ca.nrc.cadc.conformance.vos;
 import com.meterware.httpunit.HeaderOnlyWebRequest;
 import java.net.URL;
 
+/**
+ * Class extends HttpUnit HeaderOnlyWebRequest to provide a DELETE web request.
+ *
+ * @author jburke
+ */
 public class DeleteMethodWebRequest extends HeaderOnlyWebRequest
 {
     public DeleteMethodWebRequest(String urlString)

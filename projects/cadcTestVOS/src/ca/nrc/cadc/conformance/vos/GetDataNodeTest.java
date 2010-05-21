@@ -83,7 +83,12 @@ import org.junit.BeforeClass;
 import org.junit.Test;
 import static org.junit.Assert.*;
 
-public class GetDataNodeTest extends AbstractVOSTest
+/**
+ * Test case for creating DataNodes.
+ *
+ * @author jburke
+ */
+public class GetDataNodeTest extends VOSNodeTest
 {
     private static Logger log = Logger.getLogger(CreateDataNodeTest.class);
 
@@ -349,7 +354,7 @@ public class GetDataNodeTest extends AbstractVOSTest
             log.debug("nodeNotFoundFault");
 
             // Create a Node with a nonexistent parent node
-            DataNode nodeAB = new DataNode(new VOSURI(AbstractVOSTest.CADC_VOSPACE_URI + "/A/B"));
+            DataNode nodeAB = new DataNode(new VOSURI(VOSBaseTest.VOSPACE_URI + "/A/B"));
 
             // Try and get the Node from the VOSpace.
             WebResponse response = get(nodeAB);

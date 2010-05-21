@@ -84,7 +84,12 @@ import org.junit.BeforeClass;
 import org.junit.Test;
 import static org.junit.Assert.*;
 
-public class GetContainerNodeTest extends AbstractVOSTest
+/**
+ * Test case for creating ContainerNodes.
+ *
+ * @author jburke
+ */
+public class GetContainerNodeTest extends VOSNodeTest
 {
     private static Logger log = Logger.getLogger(CreateContainerNodeTest.class);
 
@@ -272,30 +277,30 @@ public class GetContainerNodeTest extends AbstractVOSTest
             log.debug("getUriOffsetNode");
 
             // Parent node.
-            ContainerNode nodeA = new ContainerNode(new VOSURI(AbstractVOSTest.CADC_VOSPACE_URI + "/A"));
+            ContainerNode nodeA = new ContainerNode(new VOSURI(VOSBaseTest.VOSPACE_URI + "/A"));
 
             // Add ContainerNode to the VOSpace.
             WebResponse response = put(nodeA);
             assertEquals("PUT response code should be 200", 200, response.getResponseCode());
 
             // Child node B.
-            ContainerNode nodeAB = new ContainerNode(new VOSURI(AbstractVOSTest.CADC_VOSPACE_URI + "/A/B"));
+            ContainerNode nodeAB = new ContainerNode(new VOSURI(VOSBaseTest.VOSPACE_URI + "/A/B"));
             response = put(nodeAB);
             assertEquals("PUT response code should be 200", 200, response.getResponseCode());
 
             // Child node C.
-            ContainerNode nodeABC = new ContainerNode(new VOSURI(AbstractVOSTest.CADC_VOSPACE_URI + "/A/B/C"));
+            ContainerNode nodeABC = new ContainerNode(new VOSURI(VOSBaseTest.VOSPACE_URI + "/A/B/C"));
             response = put(nodeABC);
             assertEquals("PUT response code should be 200", 200, response.getResponseCode());
 
             // Child node D.
-            ContainerNode nodeABCD = new ContainerNode(new VOSURI(AbstractVOSTest.CADC_VOSPACE_URI + "/A/B/C/D"));
+            ContainerNode nodeABCD = new ContainerNode(new VOSURI(VOSBaseTest.VOSPACE_URI + "/A/B/C/D"));
             response = put(nodeABCD);
             assertEquals("PUT response code should be 200", 200, response.getResponseCode());
 
             // Request Parameters to get child nodes B & C only
             Map<String, String> parameters = new HashMap<String, String>();
-            parameters.put("uri", AbstractVOSTest.CADC_VOSPACE_URI + "/A/B");
+            parameters.put("uri", VOSBaseTest.VOSPACE_URI + "/A/B");
             parameters.put("offset", "1");
 
             // Get the node from vospace
@@ -382,7 +387,7 @@ public class GetContainerNodeTest extends AbstractVOSTest
             log.debug("nodeNotFoundFault");
 
             // Create a Node with a nonexistent parent node
-            ContainerNode nodeAB = new ContainerNode(new VOSURI(AbstractVOSTest.CADC_VOSPACE_URI + "/A/B"));
+            ContainerNode nodeAB = new ContainerNode(new VOSURI(VOSBaseTest.VOSPACE_URI + "/A/B"));
 
             // Try and get the Node from the VOSpace.
             WebResponse response = get(nodeAB);

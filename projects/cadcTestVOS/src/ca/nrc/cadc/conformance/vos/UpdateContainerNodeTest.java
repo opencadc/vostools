@@ -83,7 +83,12 @@ import org.junit.BeforeClass;
 import org.junit.Test;
 import static org.junit.Assert.*;
 
-public class UpdateContainerNodeTest extends AbstractVOSTest
+/**
+ * Test case for updating ContainerNodes.
+ *
+ * @author jburke
+ */
+public class UpdateContainerNodeTest extends VOSNodeTest
 {
     private static Logger log = Logger.getLogger(UpdateContainerNodeTest.class);
 
@@ -166,7 +171,7 @@ public class UpdateContainerNodeTest extends AbstractVOSTest
             log.debug("updateContainerNodeValue");
 
             // Create a ContainerNode.
-            ContainerNode node = new ContainerNode(new VOSURI(AbstractVOSTest.CADC_VOSPACE_URI + "/A"));
+            ContainerNode node = new ContainerNode(new VOSURI(VOSBaseTest.VOSPACE_URI + "/A"));
             NodeProperty nodeProperty = new NodeProperty("ivo://ivoa.net/vospace/core#description", "My award winning images");
             nodeProperty.setReadOnly(true);
             node.getProperties().add(nodeProperty);
@@ -269,7 +274,7 @@ public class UpdateContainerNodeTest extends AbstractVOSTest
             log.debug("updateReadOnlyPermissionDeniedFault");
 
             // Create a ContainerNode.
-            ContainerNode node = new ContainerNode(new VOSURI(AbstractVOSTest.CADC_VOSPACE_URI + "/A"));
+            ContainerNode node = new ContainerNode(new VOSURI(VOSBaseTest.VOSPACE_URI + "/A"));
             NodeProperty nodeProperty = new NodeProperty("ivo://ivoa.net/vospace/core#description", "My award winning images");
             nodeProperty.setReadOnly(true);
             node.getProperties().add(nodeProperty);
@@ -323,7 +328,7 @@ public class UpdateContainerNodeTest extends AbstractVOSTest
             log.debug("nodeNotFoundFault");
 
             // Create a Node with a nonexistent parent node
-            ContainerNode nodeAB = new ContainerNode(new VOSURI(AbstractVOSTest.CADC_VOSPACE_URI + "/A/B"));
+            ContainerNode nodeAB = new ContainerNode(new VOSURI(VOSBaseTest.VOSPACE_URI + "/A/B"));
 
             // Try and get the Node from the VOSpace.
             WebResponse response = post(nodeAB);

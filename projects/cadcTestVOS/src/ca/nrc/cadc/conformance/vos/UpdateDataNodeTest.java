@@ -83,7 +83,12 @@ import org.junit.BeforeClass;
 import org.junit.Test;
 import static org.junit.Assert.*;
 
-public class UpdateDataNodeTest extends AbstractVOSTest
+/**
+ * Test case for updating DataNodes.
+ *
+ * @author jburke
+ */
+public class UpdateDataNodeTest extends VOSNodeTest
 {
     private static Logger log = Logger.getLogger(UpdateDataNodeTest.class);
 
@@ -166,7 +171,7 @@ public class UpdateDataNodeTest extends AbstractVOSTest
             log.debug("updateDataNodeDeleteProperty");
 
             // Create a DataNode.
-            DataNode node = new DataNode(new VOSURI(AbstractVOSTest.CADC_VOSPACE_URI + "/A"));
+            DataNode node = new DataNode(new VOSURI(VOSBaseTest.VOSPACE_URI + "/A"));
             NodeProperty nodeProperty = new NodeProperty("ivo://ivoa.net/vospace/core#description", "My award winning images");
             nodeProperty.setReadOnly(true);
             node.getProperties().add(nodeProperty);
@@ -269,7 +274,7 @@ public class UpdateDataNodeTest extends AbstractVOSTest
             log.debug("updateReadOnlyPermissionDeniedFault");
 
             // Create a ContainerNode.
-            DataNode node = new DataNode(new VOSURI(AbstractVOSTest.CADC_VOSPACE_URI + "/A"));
+            DataNode node = new DataNode(new VOSURI(VOSBaseTest.VOSPACE_URI + "/A"));
             NodeProperty nodeProperty = new NodeProperty("ivo://ivoa.net/vospace/core#description", "My award winning images");
             nodeProperty.setReadOnly(true);
             node.getProperties().add(nodeProperty);
@@ -323,7 +328,7 @@ public class UpdateDataNodeTest extends AbstractVOSTest
             log.debug("nodeNotFoundFault");
 
             // Create a Node with a nonexistent parent node
-            DataNode nodeAB = new DataNode(new VOSURI(AbstractVOSTest.CADC_VOSPACE_URI + "/A/B"));
+            DataNode nodeAB = new DataNode(new VOSURI(VOSBaseTest.VOSPACE_URI + "/A/B"));
 
             // Try and get the Node from the VOSpace.
             WebResponse response = post(nodeAB);
@@ -343,7 +348,7 @@ public class UpdateDataNodeTest extends AbstractVOSTest
 
     /**
      * The service SHALL throw a HTTP 400 status code including an InvalidArgument fault
-     * in the entity-body if a specified property value is invalid
+     * in the entity-body if a specified property value is invalid.
      */
     @Test
     public void invalidArgumentFault()

@@ -81,7 +81,12 @@ import org.junit.BeforeClass;
 import org.junit.Test;
 import static org.junit.Assert.*;
 
-public class DeleteDataNodeTest extends AbstractVOSTest
+/**
+ * Test case for deleting DataNodes.
+ *
+ * @author jburke
+ */
+public class DeleteDataNodeTest extends VOSNodeTest
 {
     private static Logger log = Logger.getLogger(DeleteDataNodeTest.class);
 
@@ -197,7 +202,7 @@ public class DeleteDataNodeTest extends AbstractVOSTest
             log.debug("nodeNotFoundFault");
 
             // Create a Node that should not exist.
-            DataNode nodeA = new DataNode(new VOSURI(AbstractVOSTest.CADC_VOSPACE_URI + "/node_not_found"));
+            DataNode nodeA = new DataNode(new VOSURI(VOSBaseTest.VOSPACE_URI + "/node_not_found"));
 
             // Try and delete the Node from the VOSpace.
             WebResponse response = delete(nodeA);
@@ -230,7 +235,7 @@ public class DeleteDataNodeTest extends AbstractVOSTest
             log.debug("containerNotFoundFault");
 
             // Create a Node path /A/B
-            DataNode nodeAB = new DataNode(new VOSURI(AbstractVOSTest.CADC_VOSPACE_URI + "/A/B"));
+            DataNode nodeAB = new DataNode(new VOSURI(VOSBaseTest.VOSPACE_URI + "/A/B"));
 
             // Try and delete the Node from the VOSpace.
             WebResponse response = delete(nodeAB);

@@ -81,7 +81,12 @@ import org.junit.BeforeClass;
 import org.junit.Test;
 import static org.junit.Assert.*;
 
-public class DeleteContainerNodeTest extends AbstractVOSTest
+/**
+ * Test case for deleting ContainerNodes.
+ *
+ * @author jburke
+ */
+public class DeleteContainerNodeTest extends VOSNodeTest
 {
     private static Logger log = Logger.getLogger(DeleteContainerNodeTest.class);
 
@@ -197,7 +202,7 @@ public class DeleteContainerNodeTest extends AbstractVOSTest
             log.debug("nodeNotFoundFault");
 
             // Create a Node that should not exist.
-            ContainerNode nodeA = new ContainerNode(new VOSURI(AbstractVOSTest.CADC_VOSPACE_URI + "/node_not_found"));
+            ContainerNode nodeA = new ContainerNode(new VOSURI(VOSBaseTest.VOSPACE_URI + "/node_not_found"));
 
             // Try and delete the Node from the VOSpace.
             WebResponse response = delete(nodeA);
@@ -230,7 +235,7 @@ public class DeleteContainerNodeTest extends AbstractVOSTest
             log.debug("containerNotFoundFault");
 
             // Create a Node path /A/B
-            ContainerNode nodeAB = new ContainerNode(new VOSURI(AbstractVOSTest.CADC_VOSPACE_URI + "/A/B"));
+            ContainerNode nodeAB = new ContainerNode(new VOSURI(VOSBaseTest.VOSPACE_URI + "/A/B"));
 
             // Try and delete the Node from the VOSpace.
             WebResponse response = delete(nodeAB);

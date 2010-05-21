@@ -110,13 +110,15 @@
                 <pathelement path="test/resources/"/>
                 <pathelement path="${jars}:${testingJars}"/>
             </classpath>
-            <sysproperty key="service.url" value="http://localhost/vospace/nodes" />
+            <sysproperty key="service.url" value="http://localhost/vospace" />
             <test name="ca.nrc.cadc.conformance.vos.CreateContainerNodeTest"/>
-            <!--<test name="ca.nrc.cadc.conformance.vos.CreateDataNodeTest"/>-->
-            <!--<test name="ca.nrc.cadc.conformance.vos.DeleteContainerNodeTest"/>-->
-            <!--<test name="ca.nrc.cadc.conformance.vos.DeleteDataNodeTest"/>-->
-            <!--<test name="ca.nrc.cadc.conformance.vos.UpdateContainerNodeTest"/>-->
-            <!--<test name="ca.nrc.cadc.conformance.vos.UpdateDataNodeTest"/>-->
+            <test name="ca.nrc.cadc.conformance.vos.CreateDataNodeTest"/>
+            <test name="ca.nrc.cadc.conformance.vos.DeleteContainerNodeTest"/>
+            <test name="ca.nrc.cadc.conformance.vos.DeleteDataNodeTest"/>
+            <test name="ca.nrc.cadc.conformance.vos.GetContainerNodeTest"/>
+            <test name="ca.nrc.cadc.conformance.vos.GetDataNodeTest"/>
+            <test name="ca.nrc.cadc.conformance.vos.UpdateContainerNodeTest"/>
+            <test name="ca.nrc.cadc.conformance.vos.UpdateDataNodeTest"/>
             <formatter type="plain" usefile="false"/>
         </junit>
 

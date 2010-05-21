@@ -81,7 +81,12 @@ import org.junit.BeforeClass;
 import org.junit.Test;
 import static org.junit.Assert.*;
 
-public class CreateContainerNodeTest extends AbstractVOSTest
+/**
+ * Test case for creating ContainerNodes.
+ * 
+ * @author jburke
+ */
+public class CreateContainerNodeTest extends VOSNodeTest
 {
     private static Logger log = Logger.getLogger(CreateContainerNodeTest.class);
 
@@ -245,7 +250,7 @@ public class CreateContainerNodeTest extends AbstractVOSTest
             log.debug("invalidURIPathFault");
 
             // Create node with an invalid path, node A doesn't exist.
-            ContainerNode nodeAB = new ContainerNode(new VOSURI(AbstractVOSTest.CADC_VOSPACE_URI + "/A/B"));
+            ContainerNode nodeAB = new ContainerNode(new VOSURI(VOSBaseTest.VOSPACE_URI + "/A/B"));
 
             // Add ContainerNode to the VOSpace.
             WebResponse response = put(nodeAB);
@@ -350,7 +355,7 @@ public class CreateContainerNodeTest extends AbstractVOSTest
             log.debug("containerNotFoundFault");
 
             // Create a Node path /A/B
-            ContainerNode nodeAB = new ContainerNode(new VOSURI(AbstractVOSTest.CADC_VOSPACE_URI + "/A/B"));
+            ContainerNode nodeAB = new ContainerNode(new VOSURI(VOSBaseTest.VOSPACE_URI + "/A/B"));
 
             // Try and add the Node to the VOSpace.
             WebResponse response = put(nodeAB);

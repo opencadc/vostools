@@ -69,40 +69,16 @@
 
 package ca.nrc.cadc.conformance.vos;
 
-import ca.nrc.cadc.vos.Node;
-import ca.nrc.cadc.vos.NodeWriter;
-import org.jdom.Element;
-
 /**
- * Class extends NodeWriter to create a Node with an invalid xsi:type
- * attribute.
- * 
+ * Base class for testing Node resources.
+ *
  * @author jburke
  */
-public class InvalidTypeNodeWriter extends NodeWriter
+public class VOSNodeTest extends VOSBaseTest
 {
-    public InvalidTypeNodeWriter()
+    public VOSNodeTest()
     {
-        super();
+        super("/nodes");
     }
-
-    /**
-     * Returns the root JDOM Element of the node, with an invalid xsi:type
-     * attribute.
-     *
-     * @param node the Node.
-     * @return the root element.
-     */
-    @Override
-    protected Element getRootElement(Node node)
-    {
-        // Create the root element (node).
-        Element root = new Element("node", defaultNamespace);
-        root.addNamespaceDeclaration(NodeWriter.vosNamespace);
-        root.addNamespaceDeclaration(NodeWriter.xsiNamespace);
-        root.setAttribute("uri", node.getUri().toString());
-        root.setAttribute("type", "vos:invalid_type" + "Type", NodeWriter.xsiNamespace);
-        return root;
-    }
-
+    
 }

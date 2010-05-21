@@ -81,7 +81,12 @@ import org.junit.BeforeClass;
 import org.junit.Test;
 import static org.junit.Assert.*;
 
-public class CreateDataNodeTest extends AbstractVOSTest
+/**
+ * Test case for creating DataNodes.
+ * 
+ * @author jburke
+ */
+public class CreateDataNodeTest extends VOSNodeTest
 {
     private static Logger log = Logger.getLogger(CreateDataNodeTest.class);
 
@@ -248,7 +253,7 @@ public class CreateDataNodeTest extends AbstractVOSTest
             log.debug("invalidURIPathFault");
 
             // Create node with an invalid URI, node A doesn't exist.
-            DataNode nodeAB = new DataNode(new VOSURI(AbstractVOSTest.CADC_VOSPACE_URI + "/A/B"));
+            DataNode nodeAB = new DataNode(new VOSURI(VOSBaseTest.VOSPACE_URI + "/A/B"));
 
             // Add ContainerNode to the VOSpace.
             WebResponse response = put(nodeAB);
@@ -353,7 +358,7 @@ public class CreateDataNodeTest extends AbstractVOSTest
             log.debug("containerNotFoundFault");
 
             // Create a Node path /A/B
-            DataNode nodeAB = new DataNode(new VOSURI(AbstractVOSTest.CADC_VOSPACE_URI + "/A/B"));
+            DataNode nodeAB = new DataNode(new VOSURI(VOSBaseTest.VOSPACE_URI + "/A/B"));
 
             // Try and add the Node to the VOSpace.
             WebResponse response = put(nodeAB);
