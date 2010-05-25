@@ -141,8 +141,28 @@ public class VOS
     
     // Denotes the amount of space available within a container
     public static final String PROPERTY_URI_AVAILABLESPACE = "ivo://ivoa.net/vospace/core#availableSpace";
-    
-    
+
+    // SHALL be used as the protocol URI for a HTTP GET transfer
+    public static final String PROTOCOL_HTTP_GET = "ivo://ivoa.net/vospace/core#httpget";
+            
+    // SHALL be used as the protocol URI for a HTTP PUT transfer
+    public static final String PROTOCOL_HTTP_PUT = "ivo://ivoa.net/vospace/core#httpput";
+
+    // SHALL be used as the protocol URI for a HTTPS GET transfer
+    public static final String PROTOCOL_HTTPS_GET = "ivo://ivoa.net/vospace/core#httpsget";
+
+    // SHALL be used as the protocol URI for a HTTPS PUT transfer
+    public static final String PROTOCOL_HTTPS_PUT = "ivo://ivoa.net/vospace/core#httpsput";
+
+    // SHALL be used as the view URI to indicate that a service will accept any view for an import operation
+    public static final String VIEW_ANY = "ivo://ivoa.net/vospace/core#anyview";
+
+    // SHALL be used as the view URI to import or export data as a binary file
+    public static final String VIEW_BINARY = "ivo://ivoa.net/vospace/core#binaryview";
+
+    // SHALL be used by a client to indicate that the service should choose the most appropriate view for a data export
+    public static final String VIEW_DEFAULT = "ivo://ivoa.net/vospace/core#defaultview";
+
     /**
      * Standard Node Properties defined by the CADC
      */
