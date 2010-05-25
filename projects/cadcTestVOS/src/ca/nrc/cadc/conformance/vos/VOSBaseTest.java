@@ -70,11 +70,15 @@
 package ca.nrc.cadc.conformance.vos;
 
 import ca.nrc.cadc.util.Log4jInit;
+import ca.nrc.cadc.uws.Job;
+import ca.nrc.cadc.uws.Parameter;
 import ca.nrc.cadc.vos.ContainerNode;
 import ca.nrc.cadc.vos.DataNode;
 import ca.nrc.cadc.vos.Node;
 import ca.nrc.cadc.vos.NodeProperty;
 import ca.nrc.cadc.vos.NodeWriter;
+import ca.nrc.cadc.vos.Transfer;
+import ca.nrc.cadc.vos.VOS;
 import ca.nrc.cadc.vos.VOSURI;
 import com.meterware.httpunit.GetMethodWebRequest;
 import com.meterware.httpunit.PostMethodWebRequest;
@@ -91,7 +95,6 @@ import java.util.List;
 import java.util.Map;
 import org.apache.log4j.Level;
 import org.apache.log4j.Logger;
-import org.jdom.JDOMException;
 import static org.junit.Assert.*;
 import org.xml.sax.SAXException;
 
@@ -443,9 +446,45 @@ public abstract class VOSBaseTest
 
         WebRequest request = new GetMethodWebRequest(resourceUrl);
         WebConversation conversation = new WebConversation();
-        conversation.clearContents();
         WebResponse response = conversation.getResponse(request);
         assertNotNull("GET response to " + resourceUrl + " is null", response);
+
+        log.debug(getResponseHeaders(response));
+
+        return response;
+    }
+
+    /**
+     * Post parameters to the service url.
+     *
+     * @param  parameters Map of HTTP request parameters.
+     * @return a HttpUnit WebResponse.
+     * @throws IOException
+     * @throws SAXException if there is an error parsing the retrieved page.
+     */
+    protected WebResponse post(Map<String, String> parameters)
+        throws IOException, SAXException
+    {
+        // POST request to the phase resource.
+        log.debug("**************************************************");
+        log.debug("HTTP POST: " + serviceUrl);
+
+        WebRequest request = new PostMethodWebRequest(serviceUrl);
+        request.setHeaderField("Content-Type", "multipart/form-data");
+        if (parameters != null)
+        {
+            List<String> keyList = new ArrayList<String>(parameters.keySet());
+            for (String key : keyList)
+            {
+                String value = parameters.get(key);
+                request.setParameter(key, value);
+            }
+        }
+        log.debug(getRequestParameters(request));
+
+        WebConversation conversation = new WebConversation();
+        WebResponse response = conversation.getResponse(request);
+        assertNotNull("POST response to " + serviceUrl + " is null", response);
 
         log.debug(getResponseHeaders(response));
 

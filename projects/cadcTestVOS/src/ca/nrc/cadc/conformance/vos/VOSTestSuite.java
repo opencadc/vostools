@@ -82,7 +82,9 @@ import org.junit.runners.Suite;
     UpdateContainerNodeTest.class,
     UpdateDataNodeTest.class,
     DeleteContainerNodeTest.class,
-    DeleteDataNodeTest.class
+    DeleteDataNodeTest.class,
+    PullFromVOSpaceTest.class,
+    PushToVOSpaceTest.class
 })
 
 public class VOSTestSuite {}

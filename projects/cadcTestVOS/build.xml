@@ -85,7 +85,7 @@
 
     <property name="project" value="cadcTestVOS" />
 
-    <property name="cadc" value="${lib}/cadcUtil.jar:${lib}/cadcVOS.jar" />
+    <property name="cadc" value="${lib}/cadcUtil.jar:${lib}/cadcUWS.jar:${lib}/cadcVOS.jar" />
     <property name="ext" value="${ext.lib}/httpunit.jar:${ext.lib}/jdom.jar:${ext.lib}/junit.jar:${ext.lib}/log4j.jar:${ext.lib}/xmlunit.jar" />
 
     <property name="jars" value="${cadc}:${ext}" />
