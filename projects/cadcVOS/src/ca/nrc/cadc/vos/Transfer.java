@@ -73,20 +73,17 @@ import java.io.IOException;
 import java.io.StringWriter;
 import java.util.List;
 
-import ca.nrc.cadc.uws.JobWriter;
-
 /**
  * @author zhangsa
  *
  */
 public class Transfer implements Runnable
 {
+    /**
+     * Transfer Directions
+     */
     public enum Direction {
-//        pushToVoSpace, PULL_TO_VO_SPACE, PUSH_FROM_VO_SPACE, pullFromVoSpace,
-        pushToVoSpace,
-        pullToVoSpace,
-        pushFromVoSpace,
-        pullFromVoSpace;
+        pushToVoSpace, pullToVoSpace, pushFromVoSpace, pullFromVoSpace;
     }
 
     protected Direction direction;
@@ -102,7 +99,8 @@ public class Transfer implements Runnable
     protected String endpoint = null;
 
     public Transfer()
-    {}
+    {
+    }
 
     public String getPhase()
     {

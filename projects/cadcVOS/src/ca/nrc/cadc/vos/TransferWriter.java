@@ -79,8 +79,6 @@ import org.jdom.Element;
 import org.jdom.output.Format;
 import org.jdom.output.XMLOutputter;
 
-import ca.nrc.cadc.uws.UWS;
-
 /**
  * Writes a Transfer as XML to an output.
  * 
@@ -121,7 +119,7 @@ public class TransferWriter
     }
 
     /**
-     * Write the transfer to a writer
+     * Write the transfer to a writer.
      *
      * @param writer Writer to write to.
      * @throws IOException if the writer fails to write.

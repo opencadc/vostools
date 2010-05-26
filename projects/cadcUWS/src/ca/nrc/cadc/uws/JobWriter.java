@@ -126,7 +126,7 @@ public class JobWriter
     }
 
     /**
-     * Write the job to a writer
+     * Write the job to a writer.
      *
      * @param writer Writer to write to.
      * @throws IOException if the writer fails to write.

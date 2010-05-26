@@ -74,7 +74,7 @@ import org.jdom.Namespace;
 import ca.nrc.cadc.xml.XmlUtil;
 
 /**
- * Holder of commonly used constants
+ * Holder of commonly used constants.
  * 
  * @author zhangsa
  *

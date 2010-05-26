@@ -77,6 +77,10 @@ import java.util.Map;
  */
 public class Protocol
 {
+    protected String uri;
+    protected String endpoint;
+    protected Map<String, String> param;
+
     /**
      * @param uri
      * @param endpoint
@@ -90,10 +94,6 @@ public class Protocol
         this.param = param;
     }
 
-    protected String uri;
-    protected String endpoint;
-    protected Map<String, String> param;
-
     public String getUri()
     {
         return this.uri;
@@ -104,19 +104,23 @@ public class Protocol
         this.uri = uri;
     }
 
-    public String getEndpoint() {
+    public String getEndpoint()
+    {
         return this.endpoint;
     }
 
-    public void setEndpoint(String endpoint) {
+    public void setEndpoint(String endpoint)
+    {
         this.endpoint = endpoint;
     }
 
-    public Map<String, String> getParam() {
+    public Map<String, String> getParam()
+    {
         return this.param;
     }
 
-    public void setParam(Map<String, String> param) {
+    public void setParam(Map<String, String> param)
+    {
         this.param = param;
     }
 }

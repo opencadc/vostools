@@ -172,7 +172,9 @@ public class JobReader
         {
             rtn = DateUtil.toDate(strDate, DateUtil.IVOA_DATE_FORMAT, DateUtil.UTC);
         } catch (ParseException e)
-        { // do nothing, use null as return value
+        { 
+            // do nothing, use null as return value
+            log.debug(e.getMessage());
         }
         return rtn;
     }
@@ -250,6 +252,7 @@ public class JobReader
                 } catch (MalformedURLException ex)
                 {
                     // do nothing; just do not add rs to list
+                    log.debug(ex.getMessage());
                 }
             }
         }
@@ -279,6 +282,7 @@ public class JobReader
             } catch (MalformedURLException ex)
             {
                 // do nothing; use NULL value
+                log.debug(ex.getMessage());
             }
 
             String summaryMessage = e.getChildText("message", UWS.NS);

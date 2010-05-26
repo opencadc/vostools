@@ -69,7 +69,12 @@
 
 package ca.nrc.cadc.vos.client;
 
-import java.io.*;
+import java.io.BufferedReader;
+import java.io.IOException;
+import java.io.InputStream;
+import java.io.InputStreamReader;
+import java.io.OutputStreamWriter;
+import java.io.StringWriter;
 import java.net.HttpURLConnection;
 import java.net.URL;
 import java.util.List;
@@ -84,7 +89,17 @@ import ca.nrc.cadc.uws.Job;
 import ca.nrc.cadc.uws.JobReader;
 import ca.nrc.cadc.uws.JobWriter;
 import ca.nrc.cadc.uws.Parameter;
-import ca.nrc.cadc.vos.*;
+import ca.nrc.cadc.vos.Node;
+import ca.nrc.cadc.vos.NodeParsingException;
+import ca.nrc.cadc.vos.NodeProperty;
+import ca.nrc.cadc.vos.NodeReader;
+import ca.nrc.cadc.vos.NodeWriter;
+import ca.nrc.cadc.vos.Protocol;
+import ca.nrc.cadc.vos.Search;
+import ca.nrc.cadc.vos.ServerTransfer;
+import ca.nrc.cadc.vos.Transfer;
+import ca.nrc.cadc.vos.TransferReader;
+import ca.nrc.cadc.vos.View;
 
 /**
  * @author zhangsa
@@ -92,7 +107,6 @@ import ca.nrc.cadc.vos.*;
  */
 public class VOSpaceClient
 {
-    @SuppressWarnings("unused")
     private static Logger log = Logger.getLogger(VOSpaceClient.class);
 
     protected String baseUrl;
@@ -101,23 +115,12 @@ public class VOSpaceClient
     {
         this.baseUrl = baseUrl;
     }
-    
-    /*
-     * The service SHALL throw a HTTP 500 status code including an InternalFault fault in the entity body if the operation fails
-     * The service SHALL throw a HTTP 409 status code including a DuplicateNode fault in the entity body if a Node already exists with the same URI
-     * The service SHALL throw a HTTP 400 status code including an InvalidURI fault in the entity body if the requested URI is invalid
-     * The service SHALL throw a HTTP 400 status code including a TypeNotSupported fault in the entity body if the type specified in xsi:type is not supported
-     * The service SHALL throw a HTTP 401 status code including PermissionDenied fault in the entity body if the user does not have permissions to perform the operation
-     * If a parent node in the URI path does not exist then the service MUST throw a HTTP 500 status code including a ContainerNotFound fault in the entity body.
-           o For example, given the URI path /a/b/c, the service must throw a HTTP 500 status code including a ContainerNotFound fault in the entity body if either /a or /a/b do not exist. 
-     * If a parent node in the URI path is a LinkNode, the service MUST throw a HTTP 500 status code including a LinkFound fault in the entity body.
-           o For example, given the URI path /a/b/c, the service must throw a HTTP 500 status code including a LinkFound fault in the entity body if either /a or /a/b are LinkNodes. 
-     */
+
     public Node createNode(Node node)
     {
         int responseCode;
         Node rtnNode = null;
-        
+
         String path = node.getPath();
 
         try
@@ -131,14 +134,12 @@ public class VOSpaceClient
             NodeWriter nodeWriter = new NodeWriter();
             nodeWriter.write(node, out);
             out.close();
-            
+
             StringWriter sw = new StringWriter();
             nodeWriter.write(node, sw);
             String xml = sw.toString();
             sw.close();
             log.debug(xml);
-            
-            
 
             responseCode = httpCon.getResponseCode();
             switch (responseCode)
@@ -149,15 +150,34 @@ public class VOSpaceClient
                 rtnNode = nodeReader.read(in);
                 in.close();
                 break;
+
             case 500:
+                // The service SHALL throw a HTTP 500 status code including an InternalFault fault in the entity body 
+                // if the operation fails
+
+                // If a parent node in the URI path does not exist 
+                // then the service MUST throw a HTTP 500 status code including a ContainerNotFound fault in the entity body.
+
+                // If a parent node in the URI path is a LinkNode, 
+                // the service MUST throw a HTTP 500 status code including a LinkFound fault in the entity body.
             case 409:
+                // The service SHALL throw a HTTP 409 status code including a DuplicateNode fault in the entity body 
+                // if a Node already exists with the same URI
+
             case 400:
+                // The service SHALL throw a HTTP 400 status code including an InvalidURI fault in the entity body 
+                // if the requested URI is invalid
+                // The service SHALL throw a HTTP 400 status code including a TypeNotSupported fault in the entity body 
+                // if the type specified in xsi:type is not supported
             case 401:
+                // The service SHALL throw a HTTP 401 status code including PermissionDenied fault in the entity body
+                // if the user does not have permissions to perform the operation
             default:
                 InputStream in2 = httpCon.getInputStream();
                 BufferedReader br = new BufferedReader(new InputStreamReader(in2));
                 String line;
-                while ((line = br.readLine()) != null) {
+                while ((line = br.readLine()) != null)
+                {
                     log.debug(line);
                 }
                 in2.close();
@@ -174,10 +194,8 @@ public class VOSpaceClient
     }
 
     /**
-     * 
-        * The service SHALL throw a HTTP 500 status code including an InternalFault fault in the entity-body if the operation fails
-        * The service SHALL throw a HTTP 401 status code including a PermissionDenied fault in the entity-body if the user does not have permissions to perform the operation
-        * The service SHALL throw a HTTP 404 status code including a NodeNotFound fault in the entity-body if the target Node does not exist 
+     * Get Node.
+     *  
      * @param path
      * @return
      * @throws NodeParsingException 
@@ -204,8 +222,11 @@ public class VOSpaceClient
                 in.close();
                 break;
             case 500:
+                // The service SHALL throw a HTTP 500 status code including an InternalFault fault in the entity-body if the operation fails
             case 401:
+                // The service SHALL throw a HTTP 401 status code including a PermissionDenied fault in the entity-body if the user does not have permissions to perform the operation
             case 404:
+                // The service SHALL throw a HTTP 404 status code including a NodeNotFound fault in the entity-body if the target Node does not exist 
                 throw new IllegalArgumentException("Error returned.  HTTP Response Code: " + responseCode);
             default:
                 throw new IllegalArgumentException("Error returned.  HTTP Response Code: " + responseCode);
@@ -220,12 +241,8 @@ public class VOSpaceClient
         return rtnNode;
     }
 
+
     /**
-    *  The service SHALL throw a HTTP 500 status code including an InternalFault fault in the entity-body if the operation fails
-    * The service SHALL throw a HTTP 401 status code including a PermissionDenied fault in the entity-body if the request attempts to modify a readonly Property
-    * The service SHALL throw a HTTP 401 status code including a PermissionDenied fault in the entity-body if the user does not have permissions to perform the operation
-    * The service SHALL throw a HTTP 404 status code including a NodeNotFound fault in the entity-body if the target Node does not exist
-    * The service SHALL throw a HTTP 400 status code including an InvalidArgument fault in the entity-body if a specified property value is invalid 
      * @param node
      * @return
      */
@@ -254,10 +271,18 @@ public class VOSpaceClient
                 in.close();
                 break;
             case 500:
+             // The service SHALL throw a HTTP 500 status code including an InternalFault fault in the entity-body if the operation fails
             case 409:
             case 404:
+                // The service SHALL throw a HTTP 404 status code including a NodeNotFound fault in the entity-body if the target Node does not exist
             case 400:
+                // The service SHALL throw a HTTP 400 status code including an InvalidArgument fault in the entity-body if a specified property value is invalid 
             case 401:
+                // The service SHALL throw a HTTP 401 status code including a PermissionDenied fault in the entity-body 
+                // if the request attempts to modify a readonly Property
+                
+                // The service SHALL throw a HTTP 401 status code including a PermissionDenied fault in the entity-body 
+                // if the user does not have permissions to perform the operation
                 throw new IllegalArgumentException("Error returned.  HTTP Response Code: " + responseCode);
             default:
                 break;
@@ -280,21 +305,23 @@ public class VOSpaceClient
     private Transfer createTransfer(Transfer transfer, Transfer.Direction direction)
     {
         Transfer rtn = null;
-        
+
         Job job = new Job();
-        //TODO: Transfer fields for values of parameter need to be confirmed.
+        //TODO Transfer fields for values of parameter need to be confirmed.
         job.setExecutionDuration(0);
-        //TODO: is there a RUN for execution phase?
+        //TODO is there a RUN for execution phase?
         job.setExecutionPhase(ExecutionPhase.EXECUTING);
         job.addParameter(new Parameter("target", transfer.getTarget().getUri().toString()));
         job.addParameter(new Parameter("view", transfer.getView().getUri().toString()));
-        
-        if (direction == Transfer.Direction.pushToVoSpace) {
+
+        if (direction == Transfer.Direction.pushToVoSpace)
+        {
             job.addParameter(new Parameter("direction", Transfer.Direction.pushToVoSpace.toString()));
             job.addParameter(new Parameter("protocol", transfer.getProtocols().get(0).getUri()));
-        } else if (direction == Transfer.Direction.pullFromVoSpace) {
+        } else if (direction == Transfer.Direction.pullFromVoSpace)
+        {
             job.addParameter(new Parameter("direction", Transfer.Direction.pullFromVoSpace.toString()));
-            for (Protocol protocol : transfer.getProtocols()) 
+            for (Protocol protocol : transfer.getProtocols())
             {
                 job.addParameter(new Parameter("protocol", protocol.getUri()));
             }
@@ -311,7 +338,7 @@ public class VOSpaceClient
             JobWriter jobWriter = new JobWriter(job);
             jobWriter.writeTo(out);
             out.close();
-            
+
             StringWriter sw = new StringWriter();
             jobWriter.writeTo(sw);
             String xml = sw.toString();
@@ -319,13 +346,13 @@ public class VOSpaceClient
             log.debug(xml);
 
             String redirectLocation = getRedirectLocation(httpCon);
-            
+
             URL urlRedirect = new URL(redirectLocation);
             JobReader jobReader = new JobReader();
             Job jobResult = jobReader.readFrom(urlRedirect);
-            
+
             String strResultUrl = jobResult.getResultsList().get(0).getURL().toString();
-            
+
             URL urlTransferDetail = new URL(strResultUrl);
             TransferReader txfReader = new TransferReader();
             rtn = txfReader.readFrom(urlTransferDetail);
@@ -341,12 +368,11 @@ public class VOSpaceClient
         return rtn;
     }
 
-
     public Transfer pushToVoSpace(Transfer transfer)
     {
         return createTransfer(transfer, Transfer.Direction.pushToVoSpace);
     }
-    
+
     public Transfer pullFromVoSpace(Transfer transfer)
     {
         return createTransfer(transfer, Transfer.Direction.pullFromVoSpace);
@@ -380,13 +406,38 @@ public class VOSpaceClient
     }
 
     /**
-     * For all faults, the service shall set the PHASE to "ERROR" in the Job representation. The <errorSummary> element in the Job representation shall be set to the appropriate value for the fault type and the appropriate fault representation (see section 5.5) provided at the error URI: http://rest-endpoint/transfers/{jobid}/error.
-    Fault description   errorSummary    Fault representation
-    Operation fails Internal Fault  InternalFault
-    User does not have permissions to perform the operation Permission Denied   PermissionDenied
-    Source node does not exist  Node Not Found  NodeNotFound
-    Destination node already exists and it is not a ContainerNode   Duplicate Node  DuplicateNode
-    A specified URI is invalid  Invalid URI InvalidURI
+     * Copy Node.
+     * 
+     * For all faults, the service shall set the PHASE to "ERROR" in the Job representation. 
+     * The <errorSummary> element in the Job representation shall be set to the appropriate value 
+     * for the fault type and the appropriate fault representation (see section 5.5) provided at 
+     * the error URI: http://rest-endpoint/transfers/{jobid}/error.
+    
+    
+    -Fault description   
+    --errorSummary    
+    ---Fault representation
+    
+    -Operation fails 
+    --Internal Fault  
+    ---InternalFault
+    
+    -User does not have permissions to perform the operation 
+    --Permission Denied   
+    ---PermissionDenied
+    
+    -Source node does not exist  
+    --Node Not Found  
+    ---NodeNotFound
+    
+    -Destination node already exists and it is not a ContainerNode   
+    --Duplicate Node  
+    ---DuplicateNode
+    
+    -A specified URI is invalid  
+    --Invalid URI 
+    ---InvalidURI
+    
      * @param src
      * @param dest
      * @return
@@ -397,13 +448,38 @@ public class VOSpaceClient
     }
 
     /**
-     *For all faults, the service shall set the PHASE to "ERROR" in the Job representation. The <errorSummary> element in the Job representation shall be set to the appropriate value for the fault type and the appropriate fault representation (see section 5.5) provided at the error URI: http://rest-endpoint/transfers/{jobid}/error.
-    Fault description   errorSummary    Fault representation
-    Operation fails Internal Fault  InternalFault
-    User does not have permissions to perform the operation Permission Denied   PermissionDenied
-    Source node does not exist  Node Not Found  NodeNotFound
-    Destination node already exists and it is not a ContainerNode   Duplicate Node  DuplicateNode
-    A specified URI is invalid  Invalid URI InvalidURI 
+     * Move Node.
+     * 
+     * For all faults, the service shall set the PHASE to "ERROR" in the Job representation. 
+     * The <errorSummary> element in the Job representation shall be set to the appropriate value 
+     * for the fault type and the appropriate fault representation (see section 5.5) provided at 
+     * the error URI: http://rest-endpoint/transfers/{jobid}/error.
+    
+    
+    -Fault description   
+    --errorSummary    
+    ---Fault representation
+    
+    -Operation fails 
+    --Internal Fault  
+    ---InternalFault
+    
+    -User does not have permissions to perform the operation 
+    --Permission Denied   
+    ---PermissionDenied
+    
+    -Source node does not exist  
+    --Node Not Found  
+    ---NodeNotFound
+    
+    -Destination node already exists and it is not a ContainerNode   
+    --Duplicate Node  
+    ---DuplicateNode
+    
+    -A specified URI is invalid  
+    --Invalid URI 
+    ---InvalidURI
+
      * @param src
      * @param dest
      * @return
@@ -442,7 +518,7 @@ public class VOSpaceClient
             HttpURLConnection httpCon = (HttpURLConnection) url.openConnection();
             httpCon.setDoOutput(true);
             httpCon.setRequestMethod("DELETE");
-    
+
             responseCode = httpCon.getResponseCode();
         } catch (IOException ex)
         {
