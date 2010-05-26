@@ -383,7 +383,6 @@ public abstract class NodeDAO implements NodePersistence
                 
                 startTransaction();
                 
-                
                 // Iterate through the user properties and the db properties,
                 // potentially updating, deleting or adding new ones
 
@@ -570,7 +569,7 @@ public abstract class NodeDAO implements NodePersistence
         }
         StringBuilder sb = new StringBuilder();
         sb.append("select nodeID, parentID, name, type, owner, groupRead, groupWrite, ");
-        sb.append("contentLength, contentType, contentEncoding, contentMD5 from ");
+        sb.append("contentLength, contentType, contentEncoding, contentMD5, createdOn, lastModified from ");
         sb.append("vospace.." + getNodeTableName());
         sb.append(" where name = '");
         sb.append(node.getName());
@@ -587,7 +586,7 @@ public abstract class NodeDAO implements NodePersistence
     {
         StringBuilder sb = new StringBuilder();
         sb.append("select nodeID, parentID, name, type, owner, groupRead, groupWrite, ");
-        sb.append("contentLength, contentType, contentEncoding, contentMD5 from ");
+        sb.append("contentLength, contentType, contentEncoding, contentMD5, createdOn, lastModified from ");
         sb.append("vospace.." + getNodeTableName());
         sb.append(" where parentID = ");
         sb.append(getNodeID(parent));
@@ -649,6 +648,8 @@ public abstract class NodeDAO implements NodePersistence
         {
             throw new IllegalArgumentException("Node owner cannot be null.");
         }
+        
+        
         
         StringBuilder sb = new StringBuilder();
         sb.append("insert into ");

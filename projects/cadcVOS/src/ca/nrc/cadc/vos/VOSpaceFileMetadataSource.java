@@ -72,9 +72,11 @@ package ca.nrc.cadc.vos;
 import java.io.FileNotFoundException;
 import java.net.URI;
 import java.net.URISyntaxException;
+import java.text.ParseException;
 
 import org.apache.log4j.Logger;
 
+import ca.nrc.cadc.date.DateUtil;
 import ca.nrc.cadc.util.FileMetadata;
 import ca.nrc.cadc.util.FileMetadataSource;
 import ca.nrc.cadc.vos.dao.SearchNode;
@@ -151,6 +153,22 @@ public class VOSpaceFileMetadataSource implements FileMetadataSource
         if (md5Sum != null)
         {
             fileMetadata.setMd5Sum(md5Sum.getPropertyValue());
+        }
+        
+        // lastModified
+        NodeProperty lastModified = persistentNode.getProperties().getProperty(VOS.PROPERTY_URI_LASTMODIFIED);
+        if (lastModified != null)
+        {
+            try
+            {
+                fileMetadata.setLastModified(DateUtil.toDate(lastModified.getPropertyValue(), DateUtil.ISO_DATE_FORMAT));
+            }
+            catch (ParseException e)
+            {
+                log.warn("Couldn't convert date string "
+                        + lastModified.getPropertyValue()
+                        + " to Date object.", e);
+            }
         }
         
         return fileMetadata;
