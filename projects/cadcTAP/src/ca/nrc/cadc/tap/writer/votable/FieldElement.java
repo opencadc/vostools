@@ -146,11 +146,11 @@ public class FieldElement extends Element
         {
             setAttribute("datatype", "long");
         }
-        else if (datatype.equals("adql:REAL"))
+        else if (datatype.equals("adql:REAL") || datatype.equals("adql:FLOAT"))
         {
             setAttribute("datatype", "float");
         }
-        else if (datatype.equals("adql:DOUBLE"))
+        else if (datatype.equals("adql:DOUBLE") )
         {
             setAttribute("datatype", "double");
         }

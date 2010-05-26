@@ -261,11 +261,11 @@ public class VOTableWriter implements TableWriter
         {
             for (TableDesc tableDesc : schemaDesc.tableDescs)
             {
-                if (tableDesc.tableName.equals(selectItem.getTableName()))
+                if (tableDesc.tableName.equalsIgnoreCase(selectItem.getTableName()))
                 {
                     for (ColumnDesc columnDesc : tableDesc.columnDescs)
                     {
-                        if (columnDesc.columnName.equals(selectItem.getColumnName()))
+                        if (columnDesc.columnName.equalsIgnoreCase(selectItem.getColumnName()))
                         {
                             return new FieldElement(selectItem, columnDesc, namespace);
                         }
@@ -273,6 +273,7 @@ public class VOTableWriter implements TableWriter
                 }
             }
         }
+        log.warn(selectItem + " did not match any ColumnDesc, defaulting to no metadata");
         // select item did not match a column, must be a function call or expression
         Element e = new Element("FIELD", namespace);
         String name = selectItem.getAlias();
