@@ -74,8 +74,16 @@ import java.net.HttpURLConnection;
 import java.net.URL;
 import java.util.List;
 
-import org.apache.log4j.Logger;
+import javax.net.ssl.HttpsURLConnection;
 
+import org.apache.log4j.Logger;
+import org.jdom.JDOMException;
+
+import ca.nrc.cadc.uws.ExecutionPhase;
+import ca.nrc.cadc.uws.Job;
+import ca.nrc.cadc.uws.JobReader;
+import ca.nrc.cadc.uws.JobWriter;
+import ca.nrc.cadc.uws.Parameter;
 import ca.nrc.cadc.vos.*;
 
 /**
@@ -116,7 +124,7 @@ public class VOSpaceClient
         {
             URL url = new URL(this.baseUrl + "/nodes/" + path);
             log.debug(url);
-            HttpURLConnection httpCon = (HttpURLConnection) url.openConnection();
+            HttpsURLConnection httpCon = (HttpsURLConnection) url.openConnection();
             httpCon.setDoOutput(true);
             httpCon.setRequestMethod("PUT");
             OutputStreamWriter out = new OutputStreamWriter(httpCon.getOutputStream());
@@ -264,14 +272,111 @@ public class VOSpaceClient
         return rtnNode;
     }
 
-    public Transfer createTransfer(Transfer transfer)
+    public ServerTransfer createServerTransfer(ServerTransfer sTransfer)
     {
         throw new UnsupportedOperationException("Feature under construction.");
     }
 
-    public ServerTransfer createServerTransfer(ServerTransfer sTransfer)
+    private Transfer createTransfer(Transfer transfer, Transfer.Direction direction)
     {
-        throw new UnsupportedOperationException("Feature under construction.");
+        Transfer rtn = null;
+        
+        Job job = new Job();
+        //TODO: Transfer fields for values of parameter need to be confirmed.
+        job.setExecutionDuration(0);
+        //TODO: is there a RUN for execution phase?
+        job.setExecutionPhase(ExecutionPhase.EXECUTING);
+        job.addParameter(new Parameter("target", transfer.getTarget().getUri().toString()));
+        job.addParameter(new Parameter("view", transfer.getView().getUri().toString()));
+        
+        if (direction == Transfer.Direction.pushToVoSpace) {
+            job.addParameter(new Parameter("direction", Transfer.Direction.pushToVoSpace.toString()));
+            job.addParameter(new Parameter("protocol", transfer.getProtocols().get(0).getUri()));
+        } else if (direction == Transfer.Direction.pullFromVoSpace) {
+            job.addParameter(new Parameter("direction", Transfer.Direction.pullFromVoSpace.toString()));
+            for (Protocol protocol : transfer.getProtocols()) 
+            {
+                job.addParameter(new Parameter("protocol", protocol.getUri()));
+            }
+        }
+
+        try
+        {
+            URL url = new URL(this.baseUrl + "/transfers");
+            log.debug(url);
+            HttpURLConnection httpCon = (HttpURLConnection) url.openConnection();
+            httpCon.setDoOutput(true);
+            httpCon.setRequestMethod("PUT");
+            OutputStreamWriter out = new OutputStreamWriter(httpCon.getOutputStream());
+            JobWriter jobWriter = new JobWriter(job);
+            jobWriter.writeTo(out);
+            out.close();
+            
+            StringWriter sw = new StringWriter();
+            jobWriter.writeTo(sw);
+            String xml = sw.toString();
+            sw.close();
+            log.debug(xml);
+
+            String redirectLocation = getRedirectLocation(httpCon);
+            
+            URL urlRedirect = new URL(redirectLocation);
+            JobReader jobReader = new JobReader();
+            Job jobResult = jobReader.readFrom(urlRedirect);
+            
+            String strResultUrl = jobResult.getResultsList().get(0).getURL().toString();
+            
+            URL urlTransferDetail = new URL(strResultUrl);
+            TransferReader txfReader = new TransferReader();
+            rtn = txfReader.readFrom(urlTransferDetail);
+
+        } catch (IOException e)
+        {
+            throw new IllegalStateException(e);
+        } catch (JDOMException e)
+        {
+            e.printStackTrace();
+            throw new IllegalStateException(e);
+        }
+        return rtn;
+    }
+
+
+    public Transfer pushToVoSpace(Transfer transfer)
+    {
+        return createTransfer(transfer, Transfer.Direction.pushToVoSpace);
+    }
+    
+    public Transfer pullFromVoSpace(Transfer transfer)
+    {
+        return createTransfer(transfer, Transfer.Direction.pullFromVoSpace);
+    }
+
+    /**
+     * @param httpCon
+     * @return
+     * @throws IOException 
+     */
+    private String getRedirectLocation(HttpURLConnection httpCon) throws IOException
+    {
+        // Check response code from tapServer, should be 303.
+        int responseCode = httpCon.getResponseCode();
+        log.debug("responseCode: " + responseCode);
+        if (responseCode != HttpURLConnection.HTTP_SEE_OTHER)
+        {
+            String error = "Query request returned non 303 response code " + responseCode;
+            throw new IllegalStateException(error);
+        }
+
+        // Get the redirect Location header.
+        String location = httpCon.getHeaderField("Location");
+        log.debug("Location: " + location);
+        if (location == null || location.length() == 0)
+        {
+            String error = "Query response missing Location header";
+            throw new IllegalStateException(error);
+        }
+        return location;
     }
 
     /**

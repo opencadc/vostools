@@ -69,7 +69,11 @@
 
 package ca.nrc.cadc.vos;
 
+import java.io.IOException;
+import java.io.StringWriter;
 import java.util.List;
+
+import ca.nrc.cadc.uws.JobWriter;
 
 /**
  * @author zhangsa
@@ -78,6 +82,7 @@ import java.util.List;
 public class Transfer implements Runnable
 {
     public enum Direction {
+//        pushToVoSpace, PULL_TO_VO_SPACE, PUSH_FROM_VO_SPACE, pullFromVoSpace,
         pushToVoSpace,
         pullToVoSpace,
         pushFromVoSpace,
@@ -89,17 +94,16 @@ public class Transfer implements Runnable
     // Reqeust member variables
     protected String serviceUrl;
     protected Node target;
-    protected View view;    
+    protected View view;
     protected List<Protocol> protocols;
     protected boolean keepBytes;
-    
+
     // Result member variables
     protected String endpoint = null;
-    
-    public Transfer() {}
 
-    
-    
+    public Transfer()
+    {}
+
     public String getPhase()
     {
         throw new UnsupportedOperationException("Feature under construction.");
@@ -121,59 +125,91 @@ public class Transfer implements Runnable
         throw new UnsupportedOperationException("Feature under construction.");
     }
 
-    public Direction getDirection() {
+    public String toXmlString()
+    {
+        String rtn = null;
+        try
+        {
+            TransferWriter writer = new TransferWriter(this);
+            StringWriter sw = new StringWriter();
+            writer.writeTo(sw);
+            rtn = sw.toString();
+            sw.close();
+        } catch (IOException e)
+        {
+            e.printStackTrace();
+            throw new RuntimeException(e);
+        }
+        return rtn;
+    }
+
+    public Direction getDirection()
+    {
         return direction;
     }
 
-    public void setDirection(Direction direction) {
+    public void setDirection(Direction direction)
+    {
         this.direction = direction;
     }
 
-    public String getServiceUrl() {
+    public String getServiceUrl()
+    {
         return serviceUrl;
     }
 
-    public void setServiceUrl(String serviceUrl) {
+    public void setServiceUrl(String serviceUrl)
+    {
         this.serviceUrl = serviceUrl;
     }
 
-    public Node getTarget() {
+    public Node getTarget()
+    {
         return target;
     }
 
-    public void setTarget(Node target) {
+    public void setTarget(Node target)
+    {
         this.target = target;
     }
 
-    public View getView() {
+    public View getView()
+    {
         return view;
     }
 
-    public void setView(View view) {
+    public void setView(View view)
+    {
         this.view = view;
     }
 
-    public List<Protocol> getProtocols() {
+    public List<Protocol> getProtocols()
+    {
         return protocols;
     }
 
-    public void setProtocols(List<Protocol> protocols) {
+    public void setProtocols(List<Protocol> protocols)
+    {
         this.protocols = protocols;
     }
 
-    public boolean isKeepBytes() {
+    public boolean isKeepBytes()
+    {
         return keepBytes;
     }
 
-    public void setKeepBytes(boolean keepBytes) {
+    public void setKeepBytes(boolean keepBytes)
+    {
         this.keepBytes = keepBytes;
     }
 
-    public String getEndpoint() {
+    public String getEndpoint()
+    {
         return endpoint;
     }
 
-    public void setEndpoint(String endpoint) {
+    public void setEndpoint(String endpoint)
+    {
         this.endpoint = endpoint;
     }
 }

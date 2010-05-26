@@ -81,9 +81,12 @@ import org.junit.Test;
 import ca.nrc.cadc.util.Log4jInit;
 import ca.nrc.cadc.vos.ContainerNode;
 import ca.nrc.cadc.vos.DataNode;
+import ca.nrc.cadc.vos.DataView;
 import ca.nrc.cadc.vos.Node;
 import ca.nrc.cadc.vos.NodeWriterTest;
+import ca.nrc.cadc.vos.Transfer;
 import ca.nrc.cadc.vos.VOSURI;
+import ca.nrc.cadc.vos.View;
 
 /**
  * @author zhangsa
@@ -95,9 +98,11 @@ public class VOSpaceClientTest
     {
         Log4jInit.setLevel("ca", Level.DEBUG);
     }
-    VOSpaceClient client = new VOSpaceClient("http://localhost/vospace");
+    VOSpaceClient client = new VOSpaceClient("https://arran.cadc.dao.nrc.ca/vospace");
     DataNode dataNode;
     ContainerNode containerNode;
+    Transfer transfer;
+    View view;
     
     
     /**
@@ -120,7 +125,13 @@ public class VOSpaceClientTest
     @Before
     public void setUp() throws Exception
     {
-        containerNode = new ContainerNode(new VOSURI("vos://cadc.nrc.ca!vospace/dir1"));
+        this.containerNode = new ContainerNode(new VOSURI("vos://cadc.nrc.ca!vospace/dir1"));
+        this.dataNode = new DataNode(new VOSURI("vos://cadc.nrc.ca!vospace/dir2"));
+        this.view = new DataView("ivo://myregegistry/vospace/views#myview", this.dataNode);
+        this.transfer = new Transfer();
+        //this.transfer.setEndpoint(endpoint);
+        this.transfer.setTarget(this.dataNode);
+        this.transfer.setView(this.view);
     }
 
     /**
@@ -136,4 +147,21 @@ public class VOSpaceClientTest
         Node nodeRtn = client.createNode(containerNode);
         log.debug(nodeRtn);
     }
+    
+    @Test
+    public void testPushToVoSpace()
+    {
+        this.transfer.setDirection(Transfer.Direction.pushToVoSpace);
+        Transfer transferRtn = client.pushToVoSpace(transfer);
+        log.debug(transferRtn.toXmlString());
+    }
+
+    @Test
+    public void testPullFromVoSpace()
+    {
+        this.transfer.setDirection(Transfer.Direction.pullFromVoSpace);
+        Transfer transferRtn = client.pullFromVoSpace(transfer);
+        log.debug(transferRtn.toXmlString());
+    }
+
 }
