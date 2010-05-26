@@ -69,6 +69,8 @@
 
 package ca.nrc.cadc.util;
 
+import java.util.Date;
+
 /**
  * Simple class to store minimal file metadata.
  *
@@ -81,6 +83,7 @@ public class FileMetadata
     private Long contentLength;
     private String md5Sum;
     private String fileName;
+    private Date lastModified;
 
     public FileMetadata() { }
 
@@ -132,5 +135,15 @@ public class FileMetadata
     public void setMd5Sum(String md5Sum)
     {
         this.md5Sum = md5Sum;
+    }
+
+    public Date getLastModified()
+    {
+        return lastModified;
+    }
+
+    public void setLastModified(Date lastModified)
+    {
+        this.lastModified = lastModified;
     }
 }
