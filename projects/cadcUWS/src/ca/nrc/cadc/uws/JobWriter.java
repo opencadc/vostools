@@ -85,6 +85,7 @@ import org.jdom.output.Format;
 import org.jdom.output.XMLOutputter;
 
 import ca.nrc.cadc.date.DateUtil;
+import ca.nrc.cadc.xml.XmlUtil;
 
 /**
  * Writes a Job as XML to an output.
@@ -162,18 +163,15 @@ public class JobWriter
         root.addContent(e);
 
         e = new Element("quote", UWS.NS);
-        //e.setAttribute("nil", "true", XSI_NS);
-        e.addContent(dateToString(this.job.getQuote()));
+        XmlUtil.addElementContent(e, this.job.getQuote(), true);
         root.addContent(e);
 
         e = new Element("startTime", UWS.NS);
-        //e.setAttribute("nil", "true", XSI_NS);
-        e.addContent(dateToString(this.job.getStartTime()));
+        XmlUtil.addElementContent(e, this.job.getStartTime(), true);
         root.addContent(e);
 
         e = new Element("endTime", UWS.NS);
-        //e.setAttribute("nil", "true", XSI_NS);
-        e.addContent(dateToString(this.job.getEndTime()));
+        XmlUtil.addElementContent(e, this.job.getEndTime(), true);
         root.addContent(e);
 
         e = new Element("executionDuration", UWS.NS);
@@ -181,8 +179,7 @@ public class JobWriter
         root.addContent(e);
 
         e = new Element("destruction", UWS.NS);
-        //e.setAttribute("nil", "true", XSI_NS);
-        e.addContent(dateToString(this.job.getDestructionTime()));
+        XmlUtil.addElementContent(e, this.job.getDestructionTime(), true);
         root.addContent(e);
 
         e = createParameters();
@@ -215,13 +212,7 @@ public class JobWriter
         }
         return e;
     }
-
-    private static String dateToString(Date date) {
-        String rtn = null;
-        rtn = DateUtil.toString(date, DateUtil.IVOA_DATE_FORMAT, DateUtil.UTC);
-        return rtn;
-    }
-
+    
     private Element createParameters() {
         Element rtn = new Element("parameters", UWS.NS);
         Element e = null;
