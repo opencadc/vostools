@@ -72,6 +72,7 @@ package ca.nrc.cadc.xml;
 import java.io.IOException;
 import java.io.StringReader;
 import java.net.URL;
+import java.util.Date;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -79,9 +80,13 @@ import java.util.MissingResourceException;
 
 import org.apache.log4j.Logger;
 import org.jdom.Document;
+import org.jdom.Element;
 import org.jdom.JDOMException;
+import org.jdom.Namespace;
 import org.jdom.input.SAXBuilder;
 import org.jdom.xpath.XPath;
+
+import ca.nrc.cadc.date.DateUtil;
 
 /**
  * @author zhangsa
@@ -91,17 +96,43 @@ public class XmlUtil
 {
     private static Logger log = Logger.getLogger(XmlUtil.class);
     public static final String PARSER = "org.apache.xerces.parsers.SAXParser";
+    public static final Namespace XSI_NS = Namespace.getNamespace("xsi", "http://www.w3.org/2001/XMLSchema-instance");
+
+    public static String dateToString(Date date)
+    {
+        String rtn = null;
+        if (date != null)
+            rtn = DateUtil.toString(date, DateUtil.IVOA_DATE_FORMAT, DateUtil.UTC);
+        return rtn;
+    }
+
+    public static void addElementContent(Element ele, Date date, boolean allowNil)
+    {
+        if (date == null)
+        {
+            if (allowNil)
+            {
+                ele.setAttribute("nil", "true", XSI_NS);
+            } else
+            {
+                throw new IllegalArgumentException("Trying to add null date value to an Element not accepting Nil");
+            }
+        } else
+        {
+            ele.addContent(dateToString(date));
+        }
+    }
 
     public static Document validateXml(String xml, Map<String, String> schemaMap) throws IOException, JDOMException
     {
         log.debug("validateXml:\n" + xml);
-        
+
         URL url;
         String schemaResource, serviceSchema;
         String space = " ";
         StringBuffer sbSchemaLocations = new StringBuffer();
         log.debug("schemaMap.size(): " + schemaMap.size());
-        
+
         for (String schemaNSKey : schemaMap.keySet())
         {
             schemaResource = (String) schemaMap.get(schemaNSKey);
@@ -112,14 +143,15 @@ public class XmlUtil
             log.debug(schemaResource + " -> " + serviceSchema);
             sbSchemaLocations.append(schemaNSKey).append(space).append(serviceSchema).append(space);
         }
-    
+
         SAXBuilder schemaValidator;
         schemaValidator = new SAXBuilder(PARSER, true);
         schemaValidator.setFeature("http://xml.org/sax/features/validation", true);
         schemaValidator.setFeature("http://apache.org/xml/features/validation/schema", true);
         schemaValidator.setFeature("http://apache.org/xml/features/validation/schema-full-checking", true);
-        schemaValidator.setProperty("http://apache.org/xml/properties/schema/external-schemaLocation", sbSchemaLocations.toString());
-    
+        schemaValidator
+                .setProperty("http://apache.org/xml/properties/schema/external-schemaLocation", sbSchemaLocations.toString());
+
         return schemaValidator.build(new StringReader(xml));
     }
 
@@ -152,7 +184,7 @@ public class XmlUtil
         }
         return rtn;
     }
-    
+
     /**
      * Get an URL to the schema in the jar.
      * @return
