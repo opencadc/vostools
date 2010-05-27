@@ -101,6 +101,13 @@ public class NodeUtil
     public static Node iterateStack(Node targetNode, NodeStackListener listener, NodePersistence nodePersistence)
     throws NodeNotFoundException
     {
+        
+        if (targetNode == null)
+        {
+            // root container, return null
+            return null;
+        }
+        
         Stack<Node> nodeStack = targetNode.stackToRoot();
         Node persistentNode = null;
         Node nextNode = null;

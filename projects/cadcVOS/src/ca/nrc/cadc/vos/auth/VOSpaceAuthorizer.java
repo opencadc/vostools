@@ -157,7 +157,12 @@ public class VOSpaceAuthorizer implements Authorizer
             }};
         try
         {
-            return NodeUtil.iterateStack(node, readPermissionAuthorizer, getNodePersistence());
+            Node persistentNode = NodeUtil.iterateStack(node, readPermissionAuthorizer, getNodePersistence());
+            if (persistentNode == null)
+            {
+                throw new AccessControlException("Read permission on root denied.");
+            }
+            return persistentNode;
         }
         catch (NodeNotFoundException e)
         {
@@ -225,7 +230,12 @@ public class VOSpaceAuthorizer implements Authorizer
             }};
         try
         {
-            return NodeUtil.iterateStack(node, writePermissionAuthorizer, getNodePersistence());
+            Node persistentNode = NodeUtil.iterateStack(node, writePermissionAuthorizer, getNodePersistence());
+            if (persistentNode == null)
+            {
+                throw new AccessControlException("Write permission to root denied.");
+            }
+            return persistentNode;
         }
         catch (NodeNotFoundException e)
         {

@@ -73,6 +73,7 @@ import java.io.FileNotFoundException;
 import java.net.URISyntaxException;
 import java.security.AccessControlException;
 import java.security.Principal;
+import java.security.PrivilegedActionException;
 import java.security.cert.X509Certificate;
 import java.util.Collection;
 import java.util.HashSet;
@@ -125,7 +126,7 @@ public class NodeResource extends BaseResource
      */
     public void doInit()
     {
-        log.debug("Enter NodeResource.doInit()");
+        log.debug("Enter NodeResource.doInit(): " + getMethod());
 
         // Create a subject for authentication
         Set<Principal> principals = getPrincipals(getRequest());
@@ -134,6 +135,8 @@ public class NodeResource extends BaseResource
             Set<Object> emptyCredentials = new HashSet<Object>();
             subject = new Subject(true, principals, emptyCredentials, emptyCredentials);
         }
+        
+        log.debug(principals.size() + " principals found in request.");
         
         VOSURI vosURI = null;
         try
@@ -146,7 +149,7 @@ public class NodeResource extends BaseResource
             setAllowedMethods(allowedMethods);
 
             path = (String) getRequest().getAttributes().get("nodePath");  
-            log.debug("doInit() path = " + path);
+            log.debug("path = " + path);
             
             if (path == null || path.trim().length() == 0)
             {
@@ -179,17 +182,32 @@ public class NodeResource extends BaseResource
             // perform the authorization check
             VOSpaceAuthorizer voSpaceAuthorizer = new VOSpaceAuthorizer();
             voSpaceAuthorizer.setNodePersistence(getNodePersistence());
-            if (getMethod().equals(Method.GET))
+            try
             {
-                PrivilegedReadAuthorizationExceptionAction readAuthorization =
-                    new PrivilegedReadAuthorizationExceptionAction(voSpaceAuthorizer, clientNode);
-                node = (Node) Subject.doAs(subject, readAuthorization);
+                if (getMethod().equals(Method.GET))
+                {
+                    PrivilegedReadAuthorizationExceptionAction readAuthorization =
+                        new PrivilegedReadAuthorizationExceptionAction(voSpaceAuthorizer, clientNode);
+                    node = (Node) Subject.doAs(subject, readAuthorization);
+                }
+                else if (getMethod().equals(Method.PUT))
+                {
+                    PrivilegedWriteAuthorizationExceptionAction writeAuthorization =
+                        new PrivilegedWriteAuthorizationExceptionAction(voSpaceAuthorizer, clientNode.getParent());
+                    node = (Node) Subject.doAs(subject, writeAuthorization);
+                }
+                else 
+                {
+                    // (DELETE or POST)
+                    PrivilegedWriteAuthorizationExceptionAction writeAuthorization =
+                        new PrivilegedWriteAuthorizationExceptionAction(voSpaceAuthorizer, clientNode);
+                    node = (Node) Subject.doAs(subject, writeAuthorization);
+                }
             }
-            else
+            catch (PrivilegedActionException e)
             {
-                PrivilegedWriteAuthorizationExceptionAction writeAuthorization =
-                    new PrivilegedWriteAuthorizationExceptionAction(voSpaceAuthorizer, clientNode);
-                node = (Node) Subject.doAs(subject, writeAuthorization);
+                log.info("Authentication failed: " + e.getCause().getMessage());
+                throw e.getCause();
             }
             
             // If this is an HTTP PUT, set the owner on the node to be
@@ -206,6 +224,15 @@ public class NodeResource extends BaseResource
             final String message = "Could not find node with path: " + path;
             log.debug(message, e);
             setStatus(Status.CLIENT_ERROR_NOT_FOUND, message);
+        }
+        catch (NodeAlreadyExistsException e)
+        {
+            // TODO: Check to see if user has read permission of parent node
+            // before telling them that the node exists.  If they don't they
+            // should only see a Not Authorized exception
+            final String message = "Node with path: " + path + " already exists";
+            log.debug(message, e);
+            setStatus(Status.CLIENT_ERROR_CONFLICT, message);
         }
         catch (URISyntaxException e)
         {
