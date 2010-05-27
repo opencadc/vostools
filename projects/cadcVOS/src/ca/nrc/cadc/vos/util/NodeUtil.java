@@ -135,6 +135,7 @@ public class NodeUtil
             
         }
         
+        persistentNode.setParent(parent);
         return persistentNode;
     }
 
