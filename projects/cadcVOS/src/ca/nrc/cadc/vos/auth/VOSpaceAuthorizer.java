@@ -76,6 +76,9 @@ import java.security.Principal;
 import java.util.Set;
 
 import javax.security.auth.Subject;
+import javax.security.auth.x500.X500Principal;
+
+import org.apache.log4j.Logger;
 
 import ca.nrc.cadc.auth.Authorizer;
 import ca.nrc.cadc.vos.Node;
@@ -92,6 +95,7 @@ import ca.nrc.cadc.vos.util.NodeUtil;
  */
 public class VOSpaceAuthorizer implements Authorizer
 {
+    protected static final Logger LOG = Logger.getLogger(VOSpaceAuthorizer.class);
     
     private NodePersistence nodePersistence;
 
@@ -215,10 +219,13 @@ public class VOSpaceAuthorizer implements Authorizer
                 
                 // return true if this is the owner of the node
                 if (subject != null) {
+                    
+                    X500Principal nodeOwner = new X500Principal(node.getOwner());
+                    
                     Set<Principal> principals = subject.getPrincipals();
                     for (Principal principal : principals)
                     {
-                        if (node.getOwner().equals(principal.getName()))
+                        if (nodeOwner.equals(principal))
                         {
                             // User is the owner
                             return;
