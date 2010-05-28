@@ -93,6 +93,7 @@ import org.restlet.resource.Get;
 import org.restlet.resource.Post;
 import org.restlet.resource.Put;
 
+import ca.nrc.cadc.vos.ContainerNode;
 import ca.nrc.cadc.vos.Node;
 import ca.nrc.cadc.vos.NodeAlreadyExistsException;
 import ca.nrc.cadc.vos.NodeNotFoundException;
@@ -194,7 +195,9 @@ public class NodeResource extends BaseResource
                 {
                     PrivilegedWriteAuthorizationExceptionAction writeAuthorization =
                         new PrivilegedWriteAuthorizationExceptionAction(voSpaceAuthorizer, clientNode.getParent());
-                    node = (Node) Subject.doAs(subject, writeAuthorization);
+                    ContainerNode parent = (ContainerNode) Subject.doAs(subject, writeAuthorization);
+                    node = clientNode;
+                    node.setParent(parent);
                 }
                 else 
                 {

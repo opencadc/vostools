@@ -151,7 +151,6 @@ public class NodeMapper implements RowMapper
 
         node.setName(name);
         node.setParent(parent);
-        
         node.setOwner(owner);
         
         if (contentLength != 0)

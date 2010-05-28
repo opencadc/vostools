@@ -74,6 +74,7 @@ import java.util.Stack;
 import org.apache.log4j.Logger;
 
 import ca.nrc.cadc.vos.ContainerNode;
+import ca.nrc.cadc.vos.DataNode;
 import ca.nrc.cadc.vos.Node;
 import ca.nrc.cadc.vos.NodeNotFoundException;
 import ca.nrc.cadc.vos.NodePersistence;
@@ -142,7 +143,10 @@ public class NodeUtil
             
         }
         
-        persistentNode.setParent(parent);
+        if (persistentNode instanceof DataNode)
+        {
+            persistentNode.setParent(parent);
+        }
         return persistentNode;
     }
 
