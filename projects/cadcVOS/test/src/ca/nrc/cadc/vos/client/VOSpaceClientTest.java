@@ -70,6 +70,11 @@
 package ca.nrc.cadc.vos.client;
 
 
+import java.io.OutputStreamWriter;
+import java.io.StringWriter;
+import java.util.ArrayList;
+import java.util.List;
+
 import org.apache.log4j.Level;
 import org.apache.log4j.Logger;
 import org.junit.After;
@@ -83,8 +88,11 @@ import ca.nrc.cadc.vos.ContainerNode;
 import ca.nrc.cadc.vos.DataNode;
 import ca.nrc.cadc.vos.DataView;
 import ca.nrc.cadc.vos.Node;
+import ca.nrc.cadc.vos.NodeWriter;
 import ca.nrc.cadc.vos.NodeWriterTest;
+import ca.nrc.cadc.vos.Protocol;
 import ca.nrc.cadc.vos.Transfer;
+import ca.nrc.cadc.vos.VOS;
 import ca.nrc.cadc.vos.VOSURI;
 import ca.nrc.cadc.vos.View;
 
@@ -98,12 +106,15 @@ public class VOSpaceClientTest
     {
         Log4jInit.setLevel("ca", Level.DEBUG);
     }
-    VOSpaceClient client = new VOSpaceClient("https://arran.cadc.dao.nrc.ca/vospace");
+    VOSpaceClient client = new VOSpaceClient("https://linkwood.cadc.dao.nrc.ca/vospace");
+//    VOSpaceClient client = new VOSpaceClient("https://arran.cadc.dao.nrc.ca/vospace");
     DataNode dataNode;
     ContainerNode containerNode;
     Transfer transfer;
     View view;
-    
+    String endpoint = "https://arran.cadc.dao.nrc.ca";
+    Protocol protocol;
+    List<Protocol> protocols = new ArrayList<Protocol>();
     
     /**
      * @throws java.lang.Exception
@@ -125,13 +136,20 @@ public class VOSpaceClientTest
     @Before
     public void setUp() throws Exception
     {
-        this.containerNode = new ContainerNode(new VOSURI("vos://cadc.nrc.ca!vospace/dir1"));
+        this.containerNode = new ContainerNode(new VOSURI("vos://cadc.nrc.ca!vospace/zhangsa/dir1c"));
         this.dataNode = new DataNode(new VOSURI("vos://cadc.nrc.ca!vospace/dir2"));
         this.view = new DataView("ivo://myregegistry/vospace/views#myview", this.dataNode);
+        
+        this.protocol = new Protocol(VOS.PROTOCOL_HTTPS_GET, this.endpoint, null);
+        this.protocols.add(this.protocol);
+        
+
         this.transfer = new Transfer();
-        //this.transfer.setEndpoint(endpoint);
+        this.transfer.setEndpoint(endpoint);
         this.transfer.setTarget(this.dataNode);
         this.transfer.setView(this.view);
+        
+        this.transfer.setProtocols(this.protocols);
     }
 
     /**
@@ -142,13 +160,20 @@ public class VOSpaceClientTest
     {}
 
     @Test
-    public void testCreateNode() 
+    public void testCreateNode() throws Exception
     {
         Node nodeRtn = client.createNode(containerNode);
         log.debug(nodeRtn);
+
+        StringWriter sw = new StringWriter();
+        NodeWriter nodeWriter = new NodeWriter();
+        nodeWriter.write(nodeRtn, sw);
+        String xml = sw.toString();
+        sw.close();
+        log.debug(xml);
     }
     
-    @Test
+    //@Test
     public void testPushToVoSpace()
     {
         this.transfer.setDirection(Transfer.Direction.pushToVoSpace);
@@ -156,7 +181,7 @@ public class VOSpaceClientTest
         log.debug(transferRtn.toXmlString());
     }
 
-    @Test
+    //@Test
     public void testPullFromVoSpace()
     {
         this.transfer.setDirection(Transfer.Direction.pullFromVoSpace);

@@ -127,10 +127,16 @@ public class VOSpaceClient
         {
             URL url = new URL(this.baseUrl + "/nodes/" + path);
             log.debug(url);
-            HttpsURLConnection httpCon = (HttpsURLConnection) url.openConnection();
-            httpCon.setDoOutput(true);
-            httpCon.setRequestMethod("PUT");
-            OutputStreamWriter out = new OutputStreamWriter(httpCon.getOutputStream());
+            HttpsURLConnection httpsCon = (HttpsURLConnection) url.openConnection();
+            httpsCon.setDoOutput(true);
+            httpsCon.setRequestMethod("PUT");
+            //httpsCon.setRequestProperty("Content-Type", "application/x-www-form-urlencoded");
+            //httpsCon.setRequestProperty("Content-Language", "en-US");
+            httpsCon.setUseCaches(false);
+            httpsCon.setDoInput(true);
+            httpsCon.setDoOutput(true);
+
+            OutputStreamWriter out = new OutputStreamWriter(httpsCon.getOutputStream());
             NodeWriter nodeWriter = new NodeWriter();
             nodeWriter.write(node, out);
             out.close();
@@ -141,14 +147,26 @@ public class VOSpaceClient
             sw.close();
             log.debug(xml);
 
-            responseCode = httpCon.getResponseCode();
+
+//            InputStream in2 = httpsCon.getInputStream();
+//            BufferedReader br = new BufferedReader(new InputStreamReader(in2));
+//            String line;
+//            while ((line = br.readLine()) != null)
+//            {
+//                log.debug(line);
+//            }
+//            in2.close();
+
+            responseCode = httpsCon.getResponseCode();
             switch (responseCode)
             {
             case 201: // valid
-                InputStream in = httpCon.getInputStream();
+                InputStream in = httpsCon.getInputStream();
                 NodeReader nodeReader = new NodeReader();
                 rtnNode = nodeReader.read(in);
                 in.close();
+                log.debug(rtnNode.getName());
+                log.debug(rtnNode.getPath());
                 break;
 
             case 500:
@@ -173,18 +191,11 @@ public class VOSpaceClient
                 // The service SHALL throw a HTTP 401 status code including PermissionDenied fault in the entity body
                 // if the user does not have permissions to perform the operation
             default:
-                InputStream in2 = httpCon.getInputStream();
-                BufferedReader br = new BufferedReader(new InputStreamReader(in2));
-                String line;
-                while ((line = br.readLine()) != null)
-                {
-                    log.debug(line);
-                }
-                in2.close();
-                //throw new IllegalArgumentException("Error returned.  HTTP Response Code: " + responseCode);
+                throw new IllegalArgumentException("Error returned.  HTTP Response Code: " + responseCode);
             }
         } catch (IOException e)
         {
+            e.printStackTrace(System.err);
             throw new IllegalStateException(e);
         } catch (NodeParsingException e)
         {
@@ -241,7 +252,6 @@ public class VOSpaceClient
         return rtnNode;
     }
 
-
     /**
      * @param node
      * @return
@@ -271,7 +281,7 @@ public class VOSpaceClient
                 in.close();
                 break;
             case 500:
-             // The service SHALL throw a HTTP 500 status code including an InternalFault fault in the entity-body if the operation fails
+                // The service SHALL throw a HTTP 500 status code including an InternalFault fault in the entity-body if the operation fails
             case 409:
             case 404:
                 // The service SHALL throw a HTTP 404 status code including a NodeNotFound fault in the entity-body if the target Node does not exist
@@ -280,7 +290,7 @@ public class VOSpaceClient
             case 401:
                 // The service SHALL throw a HTTP 401 status code including a PermissionDenied fault in the entity-body 
                 // if the request attempts to modify a readonly Property
-                
+
                 // The service SHALL throw a HTTP 401 status code including a PermissionDenied fault in the entity-body 
                 // if the user does not have permissions to perform the operation
                 throw new IllegalArgumentException("Error returned.  HTTP Response Code: " + responseCode);

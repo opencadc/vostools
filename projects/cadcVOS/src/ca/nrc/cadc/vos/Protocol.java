@@ -77,8 +77,8 @@ import java.util.Map;
  */
 public class Protocol
 {
-    protected String uri;
-    protected String endpoint;
+    protected String uri; // the formal URI
+    protected String endpoint; 
     protected Map<String, String> param;
 
     /**
