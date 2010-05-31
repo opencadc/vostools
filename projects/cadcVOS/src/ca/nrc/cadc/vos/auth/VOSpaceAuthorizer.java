@@ -147,10 +147,13 @@ public class VOSpaceAuthorizer implements Authorizer
                 
                 // return true if this is the owner of the node
                 if (subject != null) {
+                    
+                    X500Principal nodeOwner = new X500Principal(node.getOwner());
+                    
                     Set<Principal> principals = subject.getPrincipals();
                     for (Principal principal : principals)
                     {
-                        if (node.getOwner().equals(principal.getName()))
+                        if (nodeOwner.equals(principal))
                         {
                             // User is the owner
                             return;
@@ -170,7 +173,7 @@ public class VOSpaceAuthorizer implements Authorizer
         }
         catch (NodeNotFoundException e)
         {
-            throw new FileNotFoundException(e.getMessage());
+            throw new FileNotFoundException(node.getPath());
         }
     }
 
@@ -246,7 +249,7 @@ public class VOSpaceAuthorizer implements Authorizer
         }
         catch (NodeNotFoundException e)
         {
-            throw new FileNotFoundException(e.getMessage());
+            throw new FileNotFoundException(node.getPath());
         }
     }
 
