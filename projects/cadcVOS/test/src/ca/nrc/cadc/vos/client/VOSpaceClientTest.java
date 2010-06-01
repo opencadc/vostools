@@ -136,7 +136,7 @@ public class VOSpaceClientTest
     @Before
     public void setUp() throws Exception
     {
-        this.containerNode = new ContainerNode(new VOSURI("vos://cadc.nrc.ca!vospace/zhangsa/dir1c"));
+        this.containerNode = new ContainerNode(new VOSURI("vos://cadc.nrc.ca!vospace/zhangsa/dir1h"));
         this.dataNode = new DataNode(new VOSURI("vos://cadc.nrc.ca!vospace/dir2"));
         this.view = new DataView("ivo://myregegistry/vospace/views#myview", this.dataNode);
         

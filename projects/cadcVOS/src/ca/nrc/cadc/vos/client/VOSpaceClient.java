@@ -148,15 +148,8 @@ public class VOSpaceClient
             log.debug(xml);
 
 
-//            InputStream in2 = httpsCon.getInputStream();
-//            BufferedReader br = new BufferedReader(new InputStreamReader(in2));
-//            String line;
-//            while ((line = br.readLine()) != null)
-//            {
-//                log.debug(line);
-//            }
-//            in2.close();
 
+            String responseMessage = httpsCon.getResponseMessage();
             responseCode = httpsCon.getResponseCode();
             switch (responseCode)
             {
@@ -191,6 +184,15 @@ public class VOSpaceClient
                 // The service SHALL throw a HTTP 401 status code including PermissionDenied fault in the entity body
                 // if the user does not have permissions to perform the operation
             default:
+                log.error(responseMessage + ". HTTP Code: " + responseCode);
+                InputStream errStrm = httpsCon.getErrorStream();
+                BufferedReader br = new BufferedReader(new InputStreamReader(errStrm));
+                String line;
+                while ((line = br.readLine()) != null)
+                {
+                    log.debug(line);
+                }
+                errStrm.close();
                 throw new IllegalArgumentException("Error returned.  HTTP Response Code: " + responseCode);
             }
         } catch (IOException e)
