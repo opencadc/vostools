@@ -78,7 +78,7 @@ package ca.nrc.cadc.vos;
 public interface NodePersistence
 {
     
-    Node getFromParent(Node node, ContainerNode parent) throws NodeNotFoundException;
+    Node getFromParent(String name, ContainerNode parent) throws NodeNotFoundException;
     
     Node putInContainer(Node node, ContainerNode parent) throws NodeNotFoundException, NodeAlreadyExistsException;
     

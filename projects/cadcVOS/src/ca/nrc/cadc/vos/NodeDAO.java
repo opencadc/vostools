@@ -69,7 +69,6 @@
 
 package ca.nrc.cadc.vos;
 
-import java.net.URISyntaxException;
 import java.security.AccessControlException;
 import java.sql.Connection;
 import java.sql.PreparedStatement;
@@ -92,6 +91,7 @@ import org.springframework.transaction.support.DefaultTransactionDefinition;
 import ca.nrc.cadc.vos.dao.NodeID;
 import ca.nrc.cadc.vos.dao.NodeMapper;
 import ca.nrc.cadc.vos.dao.NodePropertyMapper;
+import ca.nrc.cadc.vos.dao.SearchNode;
 
 /**
  * Default implementation of the NodePersistence interface.
@@ -189,33 +189,26 @@ public abstract class NodeDAO implements NodePersistence
      * Get the node from the parent.  This method assumes that the nodeID
      * of the parent object is set.  If the parent object is null, it is
      * assumed to be at the root level.
-     * @param node The node to get
+     * @param name The node to get
      * @param parent The parent of the node, or null if this is a root.  This object
      * must have been retrived from the NodePersistence interface.
      */
-    public Node getFromParent(Node node, ContainerNode parent) throws NodeNotFoundException
+    public Node getFromParent(String name, ContainerNode parent) throws NodeNotFoundException
     {
-        if (node == null)
+        if (name == null)
         {
             throw new NodeNotFoundException("Node parameter is null.");
         }
+        SearchNode node = new SearchNode(name);
         node.setParent(parent);
         synchronized (this)
         {
             Node returnNode = getSingleNodeFromSelect(getSelectNodeByNameAndParentSQL(node));
             if (returnNode == null)
             {
-                throw new NodeNotFoundException(node.getPath());
+                throw new NodeNotFoundException(node.getName());
             }
             
-            try
-            {
-                returnNode.setUri(node.getUri());
-            }
-            catch (URISyntaxException e)
-            {
-                log.warn("Coudln't reset URI", e);
-            }
             log.debug("Node retrieved from parent: " + returnNode);
             return returnNode;
         }
@@ -374,7 +367,7 @@ public abstract class NodeDAO implements NodePersistence
     public Node updateProperties(Node updatedPersistentNode) throws AccessControlException, NodeNotFoundException
     {
         
-        Node currentDbNode = getFromParent(updatedPersistentNode, updatedPersistentNode.getParent());
+        Node currentDbNode = getFromParent(updatedPersistentNode.getName(), updatedPersistentNode.getParent());
         
         synchronized (this)
         {

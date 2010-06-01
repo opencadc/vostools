@@ -86,6 +86,11 @@ import ca.nrc.cadc.vos.View;
 public class SearchNode extends Node
 {
     
+    public SearchNode(String name)
+    {
+        super(name);
+    }
+    
     public SearchNode(VOSURI uri) throws URISyntaxException
     {
         super(uri);

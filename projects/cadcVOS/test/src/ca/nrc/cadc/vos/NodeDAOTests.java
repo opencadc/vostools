@@ -150,7 +150,7 @@ public abstract class NodeDAOTests
         String nodePath1 = "/" + getNodeName("a");
         dataNode = getCommonDataNode(nodePath1, getCommonProperties());
         putNode = nodeDAO.putInContainer(dataNode, null);
-        Node nodeA = nodeDAO.getFromParent(putNode, null);
+        Node nodeA = nodeDAO.getFromParent(putNode.getName(), null);
         System.out.println("PutNode: " + putNode);
         System.out.println("GetNode: " + nodeA);
         assertEquals("assert1", putNode, nodeA);
@@ -160,7 +160,7 @@ public abstract class NodeDAOTests
         String nodePath2 = "/" + getNodeName("b");
         containerNode = getCommonContainerNode(nodePath2, getCommonProperties());
         putNode = nodeDAO.putInContainer(containerNode, null);
-        Node nodeB = nodeDAO.getFromParent(putNode, null);
+        Node nodeB = nodeDAO.getFromParent(putNode.getName(), null);
         System.out.println("PutNode: " + putNode);
         System.out.println("GetNode: " + nodeB);
         assertEquals("assert3", putNode, nodeB);
@@ -170,7 +170,7 @@ public abstract class NodeDAOTests
         String nodePath3 = "/" + getNodeName("c");
         containerNode = getCommonContainerNode(nodePath3, getCommonProperties());
         putNode = nodeDAO.putInContainer(containerNode, null);
-        Node nodeC = nodeDAO.getFromParent(putNode, null);
+        Node nodeC = nodeDAO.getFromParent(putNode.getName(), null);
         assertEquals("assert5", putNode, nodeC);
         assertEquals("assert6", putNode.getProperties(), nodeC.getProperties());
         
@@ -178,7 +178,7 @@ public abstract class NodeDAOTests
         String nodePath4 = "/" + getNodeName("b") + "/" + getNodeName("d");
         dataNode = getCommonDataNode(nodePath4, getCommonProperties());
         putNode = nodeDAO.putInContainer(dataNode, (ContainerNode) nodeB);
-        Node nodeD = nodeDAO.getFromParent(putNode, putNode.getParent());
+        Node nodeD = nodeDAO.getFromParent(putNode.getName(), putNode.getParent());
         assertEquals("assert7", putNode, nodeD);
         assertEquals("assert8", putNode.getProperties(), nodeD.getProperties());
         
@@ -186,7 +186,7 @@ public abstract class NodeDAOTests
         String nodePath5 = "/" + getNodeName("c") + "/" + getNodeName("e");
         containerNode = getCommonContainerNode(nodePath5, getCommonProperties());
         putNode = nodeDAO.putInContainer(containerNode, (ContainerNode) nodeC);
-        Node nodeE = nodeDAO.getFromParent(putNode, putNode.getParent());
+        Node nodeE = nodeDAO.getFromParent(putNode.getName(), putNode.getParent());
         assertEquals("assert9", putNode, nodeE);
         assertEquals("assert10", putNode.getProperties(), nodeE.getProperties());
         
@@ -194,7 +194,7 @@ public abstract class NodeDAOTests
         String nodePath6 = "/" + getNodeName("c") + "/" + getNodeName("e") + "/" + getNodeName("f");
         dataNode = getCommonDataNode(nodePath6, getCommonProperties());
         putNode = nodeDAO.putInContainer(dataNode, (ContainerNode) nodeE);
-        Node nodeF = nodeDAO.getFromParent(putNode, putNode.getParent());
+        Node nodeF = nodeDAO.getFromParent(putNode.getName(), putNode.getParent());
         assertEquals("assert11", putNode, nodeF);
         assertEquals("assert12", putNode.getProperties(), nodeF.getProperties());
         
@@ -226,7 +226,7 @@ public abstract class NodeDAOTests
         
         // Put then get the node
         DataNode nodeFromPut = (DataNode) nodeDAO.putInContainer(dataNode, null);
-        DataNode nodeFromGet = (DataNode) nodeDAO.getFromParent(nodeFromPut, null);
+        DataNode nodeFromGet = (DataNode) nodeDAO.getFromParent(nodeFromPut.getName(), null);
         assertEquals("assert1", nodeFromPut.getProperties(), nodeFromGet.getProperties());
         
         // Add new properties
@@ -234,7 +234,7 @@ public abstract class NodeDAOTests
         nodeFromGet.getProperties().add(new NodeProperty(VOS.PROPERTY_URI_CONTENTENCODING, "gzip"));
         nodeFromGet.getProperties().add(new NodeProperty(VOS.PROPERTY_URI_CONTENTMD5, new byte[] {1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16}.toString()));
         DataNode nodeFromUpdate1 = (DataNode) nodeDAO.updateProperties(nodeFromGet);
-        DataNode nodeFromGetUpdate1 = (DataNode) nodeDAO.getFromParent(nodeFromGet, null);
+        DataNode nodeFromGetUpdate1 = (DataNode) nodeDAO.getFromParent(nodeFromGet.getName(), null);
         assertEquals("assert2", nodeFromGet.getProperties(), nodeFromUpdate1.getProperties());
         assertEquals("assert3", nodeFromGet.getProperties(), nodeFromGetUpdate1.getProperties());
         
@@ -246,7 +246,7 @@ public abstract class NodeDAOTests
         nodeFromGetUpdate1.getProperties().remove(new NodeProperty(VOS.PROPERTY_URI_TYPE, null));
         nodeFromGetUpdate1.getProperties().add(new NodeProperty(VOS.PROPERTY_URI_TYPE, "application/pdf"));
         DataNode nodeFromUpdate2 = (DataNode) nodeDAO.updateProperties(nodeFromGetUpdate1);
-        DataNode nodeFromGetUpdate2 = (DataNode) nodeDAO.getFromParent(nodeFromGetUpdate1, null);
+        DataNode nodeFromGetUpdate2 = (DataNode) nodeDAO.getFromParent(nodeFromGetUpdate1.getName(), null);
         assertEquals("assert4", nodeFromGetUpdate1.getProperties(), nodeFromUpdate2.getProperties());
         assertEquals("assert5", nodeFromGetUpdate1.getProperties(), nodeFromGetUpdate2.getProperties());
         
@@ -264,7 +264,7 @@ public abstract class NodeDAOTests
         newMD5.setMarkedForDeletion(true);
         nodeFromGetUpdate2.getProperties().add(newMD5);
         DataNode nodeFromUpdate3 = (DataNode) nodeDAO.updateProperties(nodeFromGetUpdate2);
-        DataNode nodeFromGetUpdate3 = (DataNode) nodeDAO.getFromParent(nodeFromGetUpdate2, null);
+        DataNode nodeFromGetUpdate3 = (DataNode) nodeDAO.getFromParent(nodeFromGetUpdate2.getName(), null);
         nodeFromGetUpdate2.getProperties().remove(newURI2);
         nodeFromGetUpdate2.getProperties().remove(newEncoding);
         nodeFromGetUpdate2.getProperties().remove(newMD5);

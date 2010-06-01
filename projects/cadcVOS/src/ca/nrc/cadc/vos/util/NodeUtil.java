@@ -121,7 +121,7 @@ public class NodeUtil
             log.debug("Retrieving node with path: " + nextNode.getPath());
             
             // get the node from the persistence layer
-            persistentNode = nodePersistence.getFromParent(nextNode, parent);
+            persistentNode = nodePersistence.getFromParent(nextNode.getName(), parent);
             
             // call the listener
             if (listener != null)

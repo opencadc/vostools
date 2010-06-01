@@ -97,7 +97,16 @@ public class DataNode extends Node
     }
     
     /**
-     * Data node constructor
+     * DataNode constructor.
+     * @param name
+     */
+    public DataNode(String name)
+    {
+        super(name);
+    }
+    
+    /**
+     * Data node constructor.
      * @throws URISyntaxException 
      */
     public DataNode(VOSURI uri) throws URISyntaxException

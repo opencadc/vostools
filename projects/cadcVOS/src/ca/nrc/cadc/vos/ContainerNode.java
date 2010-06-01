@@ -100,6 +100,16 @@ public class ContainerNode extends Node
     
     /**
      * ContainerNode constructor.
+     * @param name
+     */
+    public ContainerNode(String name)
+    {
+        super(name);
+        nodes = new ArrayList<Node>();
+    }
+    
+    /**
+     * ContainerNode constructor.
      * @throws URISyntaxException 
      */
     public ContainerNode(VOSURI uri) throws URISyntaxException

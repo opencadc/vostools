@@ -113,6 +113,13 @@ public abstract class Node
         properties = new NodeProperties<NodeProperty>();
     }
     
+    public Node(String name)
+    {
+        this.path = "";
+        this.name = name;
+        properties = new NodeProperties<NodeProperty>();
+    }
+    
     /**
      * Node constructor.
      * 
