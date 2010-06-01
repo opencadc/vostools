@@ -95,101 +95,106 @@ import ca.nrc.cadc.uws.Parameter;
 
 /**
  * TapQuery implementation for LANG=SQL.
+ * 
+ * @author zhangsa
+ *
  */
 public class SqlQuery implements TapQuery
 {
     protected static Logger log = Logger.getLogger(SqlQuery.class);
-    
-    protected TapSchema _tapSchema;
-    protected Map<String, TableDesc> _extraTables;
-    protected List<Parameter> _paramList;
-    protected String _queryString;
-    protected Integer _maxRows;
 
-    protected Statement _statement;
-    protected List<TapSelectItem> _tapSelectItemList;
-    protected List<SelectNavigator> _navigatorList = new ArrayList<SelectNavigator>();
+    protected TapSchema tapSchema;
+    protected Map<String, TableDesc> extraTables;
+    protected List<Parameter> paramList;
+    protected String queryString;
+    protected Integer maxRows;
+
+    protected Statement statement;
+    protected List<TapSelectItem> tapSelectItemList;
+    protected List<SelectNavigator> navigatorList = new ArrayList<SelectNavigator>();
 
     protected transient boolean navigated = false;
-    
-    public SqlQuery() { }
-	
+
+    public SqlQuery()
+    {
+    }
+
     /**
      * Set up the List<SelectNavigator>. Subclasses should override this method to
      * add extra navigators that check or modify the parsed query statement. This
      * implementation creates: TapSchemaValidator, AllColumnConverter.
      */
-	protected void init()
-	{
+    protected void init()
+    {
         ExpressionNavigator en;
         ReferenceNavigator rn;
         FromItemNavigator fn;
         SelectNavigator sn;
 
         en = new ExpressionNavigator();
-        rn = new TapSchemaColumnValidator(_tapSchema);
-        fn = new TapSchemaTableValidator(_tapSchema);
+        rn = new TapSchemaColumnValidator(tapSchema);
+        fn = new TapSchemaTableValidator(tapSchema);
         sn = new SelectNavigator(en, rn, fn);
-        _navigatorList.add(sn);
+        navigatorList.add(sn);
 
-        sn = new AllColumnConverter(_tapSchema);
-        _navigatorList.add(sn);
+        sn = new AllColumnConverter(tapSchema);
+        navigatorList.add(sn);
 
-        en = new SelectListExpressionExtractor(_tapSchema, _extraTables);
+        en = new SelectListExpressionExtractor(tapSchema, extraTables);
         rn = null;
         fn = null;
         sn = new SelectListExtractor(en, rn, fn);
-        _navigatorList.add(sn);
-	}
-	
+        navigatorList.add(sn);
+    }
+
     protected void doNavigate()
     {
         if (navigated) // idempotent
             return;
-        
-        init(); 
-        
+
+        init();
+
         // parse for syntax
         try
         {
-            _statement = ParserUtil.receiveQuery(_queryString);
-        } catch (JSQLParserException e)
+            statement = ParserUtil.receiveQuery(queryString);
+        }
+        catch (JSQLParserException e)
         {
             e.printStackTrace();
             throw new IllegalArgumentException(e);
         }
-        
+
         // run all the navigators
-        for (SelectNavigator sn : _navigatorList)
+        for (SelectNavigator sn : navigatorList)
         {
             log.debug("Navigated by: " + sn.getClass().getName());
-            
-            ParserUtil.parseStatement(_statement, sn);
-            
+
+            ParserUtil.parseStatement(statement, sn);
+
             if (sn instanceof SelectListExtractor)
             {
                 SelectListExpressionExtractor slen = (SelectListExpressionExtractor) sn.getExpressionNavigator();
-                _tapSelectItemList = slen.getTapSelectItemList();
+                tapSelectItemList = slen.getTapSelectItemList();
             }
         }
-        navigated = true; 
+        navigated = true;
     }
 
-	public void setTapSchema(TapSchema tapSchema) 
+    public void setTapSchema(TapSchema tapSchema)
     {
-        this._tapSchema = tapSchema;
+        this.tapSchema = tapSchema;
     }
 
     public void setExtraTables(Map<String, TableDesc> extraTables)
     {
-        this._extraTables = extraTables;
+        this.extraTables = extraTables;
     }
 
-    public void setParameterList( List<Parameter> paramList )
+    public void setParameterList(List<Parameter> paramList)
     {
-        this._queryString = TapUtil.findParameterValue("QUERY", paramList);
-        if (_queryString == null)
-            throw new IllegalArgumentException( "parameter not found: QUERY" );
+        this.queryString = TapUtil.findParameterValue("QUERY", paramList);
+        if (queryString == null) throw new IllegalArgumentException("parameter not found: QUERY");
     }
 
     /**
@@ -197,32 +202,29 @@ public class SqlQuery implements TapQuery
      */
     public void setMaxRowCount(Integer count)
     {
-        if (_maxRows == null)
-            this._maxRows = count;
-        else if (count != null && count < _maxRows)
-            this._maxRows = count;
+        if (maxRows == null)
+            this.maxRows = count;
+        else if (count != null && count < maxRows) this.maxRows = count;
     }
 
     public Integer getMaxRowCount()
     {
-        return _maxRows;
+        return maxRows;
     }
-    
-	public String getSQL()
-	{
-		if (_queryString == null) 
-            throw new IllegalStateException();
-		
-		doNavigate();
-		return _statement.toString();
-	}
 
-	public List<TapSelectItem> getSelectList() 
+    public String getSQL()
     {
-        if (_queryString == null)
-            throw new IllegalStateException();
-        
-        doNavigate();;
-        return _tapSelectItemList;
-	}
+        if (queryString == null) throw new IllegalStateException();
+
+        doNavigate();
+        return statement.toString();
+    }
+
+    public List<TapSelectItem> getSelectList()
+    {
+        if (queryString == null) throw new IllegalStateException();
+
+        doNavigate();
+        return tapSelectItemList;
+    }
 }

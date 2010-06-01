@@ -86,11 +86,12 @@ import ca.nrc.cadc.tap.schema.TapSchema;
  */
 public class TableSet
 {
+    @SuppressWarnings("unused")
     private static Logger log = Logger.getLogger(TableSet.class);
 
-    private static String DEFAULT_SCHEMA = "default";
-    
-    private TapSchema _tapSchema;
+    private static final String DEFAULT_SCHEMA = "default";
+
+    private TapSchema tapSchema;
 
     private Namespace xsi = Namespace.getNamespace("xsi", VOSI.XSI_NS_URI);
     private Namespace vosi = Namespace.getNamespace("vosi", VOSI.TABLES_NS_URI);
@@ -98,7 +99,7 @@ public class TableSet
 
     public TableSet(TapSchema tapSchema)
     {
-        this._tapSchema = tapSchema;
+        this.tapSchema = tapSchema;
     }
 
     /**
@@ -107,7 +108,7 @@ public class TableSet
     public Document getDocument()
     {
 
-        Element eleTableset = toXmlElement(_tapSchema);
+        Element eleTableset = toXmlElement(tapSchema);
         eleTableset.addNamespaceDeclaration(xsi);
         eleTableset.addNamespaceDeclaration(vod);
 
@@ -125,8 +126,7 @@ public class TableSet
         Element eleTableset = new Element("tableset", vosi);
         //Comment comment = new Comment("This is a temporary solution as of 2010-03-12.");
         //eleTableset.addContent(comment);
-        if (tapSchema.getSchemaDescs().size() == 0)
-            throw new IllegalArgumentException("Error: at least one schema is required.");
+        if (tapSchema.getSchemaDescs().size() == 0) throw new IllegalArgumentException("Error: at least one schema is required.");
         for (SchemaDesc sd : tapSchema.getSchemaDescs())
         {
             eleTableset.addContent(toXmlElement(sd));
@@ -148,11 +148,10 @@ public class TableSet
         else
             ele.setText(sd.getSchemaName());
         eleSchema.addContent(ele);
-        if (sd.getTableDescs() != null)
-            for (TableDesc td : sd.getTableDescs())
-            {
-                eleSchema.addContent(toXmlElement(td));
-            }
+        if (sd.getTableDescs() != null) for (TableDesc td : sd.getTableDescs())
+        {
+            eleSchema.addContent(toXmlElement(td));
+        }
         return eleSchema;
     }
 
@@ -170,11 +169,10 @@ public class TableSet
         ele.setText(td.getTableName());
         eleTable.addContent(ele);
 
-        if (td.getColumnDescs() != null)
-            for (ColumnDesc cd : td.getColumnDescs())
-            {
-                eleTable.addContent(toXmlElement(cd));
-            }
+        if (td.getColumnDescs() != null) for (ColumnDesc cd : td.getColumnDescs())
+        {
+            eleTable.addContent(toXmlElement(cd));
+        }
 
         return eleTable;
     }
@@ -199,8 +197,7 @@ public class TableSet
             Attribute attType = new Attribute("type", vod.getPrefix() + ":TAP", xsi);
             eleDt.setAttribute(attType);
 
-            if (cd.getSize() != null && cd.getSize() > 0)
-                eleDt.setAttribute("size", cd.getSize().toString());
+            if (cd.getSize() != null && cd.getSize() > 0) eleDt.setAttribute("size", cd.getSize().toString());
         }
 
         return eleColumn;
@@ -220,11 +217,11 @@ public class TableSet
 
     public TapSchema getTapSchema()
     {
-        return _tapSchema;
+        return tapSchema;
     }
 
     public void setTapSchema(TapSchema tapSchema)
     {
-        _tapSchema = tapSchema;
+        this.tapSchema = tapSchema;
     }
 }

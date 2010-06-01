@@ -69,7 +69,6 @@
 
 package ca.nrc.cadc.tap.parser;
 
-
 /**
  * TAP Select Item, contains table name, column name and select item alias for the interests of TAP.
  * 
@@ -78,56 +77,57 @@ package ca.nrc.cadc.tap.parser;
  */
 public class TapSelectItem
 {
-    private String _tableName;
-    private String _columnName;
-    private String _alias;
+    private String tableName;
+    private String columnName;
+    private String alias;
 
     public TapSelectItem(String alias)
     {
-        _alias = alias;
+        this.alias = alias;
     }
 
     public TapSelectItem(String tableName, String columnName, String alias)
     {
-        _tableName = tableName;
-        _columnName = columnName;
-        _alias = alias;
+        this.tableName = tableName;
+        this.columnName = columnName;
+        this.alias = alias;
     }
 
     public String getTableName()
     {
-        return _tableName;
+        return this.tableName;
     }
 
     public void setTableName(String tableName)
     {
-        _tableName = tableName;
+        this.tableName = tableName;
     }
 
     public String getColumnName()
     {
-        return _columnName;
+        return this.columnName;
     }
 
     public void setColumnName(String columnName)
     {
-        _columnName = columnName;
+        this.columnName = columnName;
     }
 
     public String getAlias()
     {
-        return _alias;
+        return this.alias;
     }
 
     public void setAlias(String alias)
     {
-        _alias = alias;
+        this.alias = alias;
     }
 
     @Override
     public String toString()
     {
-        return "\r\n\tTapSelectItem [_alias=" + _alias + ", _columnName=" + _columnName + ", _tableName=" + _tableName + "]";
+        return "\r\n\tTapSelectItem [this._alias=" + this.alias + ", this._columnName=" + this.columnName + ", this._tableName="
+                + this.tableName + "]";
     }
 
     @Override
@@ -135,40 +135,34 @@ public class TapSelectItem
     {
         final int prime = 31;
         int result = 1;
-        result = prime * result + ((_alias == null) ? 0 : _alias.hashCode());
-        result = prime * result + ((_columnName == null) ? 0 : _columnName.hashCode());
-        result = prime * result + ((_tableName == null) ? 0 : _tableName.hashCode());
+        result = prime * result + ((this.alias == null) ? 0 : this.alias.hashCode());
+        result = prime * result + ((this.columnName == null) ? 0 : this.columnName.hashCode());
+        result = prime * result + ((this.tableName == null) ? 0 : this.tableName.hashCode());
         return result;
     }
 
     @Override
     public boolean equals(Object obj)
     {
-        if (this == obj)
-            return true;
-        if (obj == null)
-            return false;
-        if (getClass() != obj.getClass())
-            return false;
+        if (this == obj) return true;
+        if (obj == null) return false;
+        if (getClass() != obj.getClass()) return false;
         TapSelectItem other = (TapSelectItem) obj;
-        if (_alias == null)
+        if (this.alias == null)
         {
-            if (other._alias != null)
-                return false;
-        } else if (!_alias.equals(other._alias))
-            return false;
-        if (_columnName == null)
+            if (other.alias != null) return false;
+        }
+        else if (!this.alias.equals(other.alias)) return false;
+        if (this.columnName == null)
         {
-            if (other._columnName != null)
-                return false;
-        } else if (!_columnName.equals(other._columnName))
-            return false;
-        if (_tableName == null)
+            if (other.columnName != null) return false;
+        }
+        else if (!this.columnName.equals(other.columnName)) return false;
+        if (this.tableName == null)
         {
-            if (other._tableName != null)
-                return false;
-        } else if (!_tableName.equals(other._tableName))
-            return false;
+            if (other.tableName != null) return false;
+        }
+        else if (!this.tableName.equals(other.tableName)) return false;
         return true;
     }
 }

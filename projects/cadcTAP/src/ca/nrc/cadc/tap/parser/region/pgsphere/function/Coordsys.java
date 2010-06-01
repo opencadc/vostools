@@ -69,7 +69,6 @@
 
 package ca.nrc.cadc.tap.parser.region.pgsphere.function;
 
-import ca.nrc.cadc.tap.parser.RegionFinder;
 import net.sf.jsqlparser.expression.Function;
 
 /**

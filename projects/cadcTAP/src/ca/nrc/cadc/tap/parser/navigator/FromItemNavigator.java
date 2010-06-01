@@ -89,15 +89,14 @@ public class FromItemNavigator extends SubNavigator implements FromItemVisitor
 {
     protected static Logger log = Logger.getLogger(FromItemNavigator.class);
 
+    public FromItemNavigator()
+    {
+    }
+
     public FromItemNavigator clone()
     {
         FromItemNavigator rtn = (FromItemNavigator) super.clone();
         return rtn;
-    }
-
-    public FromItemNavigator()
-    {
-        // TODO Auto-generated constructor stub
     }
 
     /* (non-Javadoc)
@@ -117,13 +116,13 @@ public class FromItemNavigator extends SubNavigator implements FromItemVisitor
     public void visit(SubSelect subSelect)
     {
         log.debug("visit(subSelect) " + subSelect);
-        VisitingPart visiting = _selectNavigator.getVisitingPart();
+        VisitingPart visiting = selectNavigator.getVisitingPart();
         if (visiting.equals(VisitingPart.FROM))
             throw new UnsupportedOperationException("sub-select not supported in FROM clause.");
         else if (visiting.equals(VisitingPart.SELECT_ITEM))
             throw new UnsupportedOperationException("sub-select not supported in SELECT ITEM.");
         else
-            subSelect.getSelectBody().accept(_selectNavigator);
+            subSelect.getSelectBody().accept(selectNavigator);
     }
 
     /* (non-Javadoc)

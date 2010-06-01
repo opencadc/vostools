@@ -76,14 +76,14 @@ import net.sf.jsqlparser.expression.Function;
 
 /**
  * the PgSphere implementation of ADQL function
- * CENTER
+ * CENTER.
  * 
  * @author zhangsa
  * 
  */
 public class Center extends PgsFunction
 {
-    protected Expression _object;
+    protected Expression object;
 
     public Center(Function adqlFunction)
     {
@@ -95,13 +95,13 @@ public class Center extends PgsFunction
     protected void convertParameters()
     {
         List<Expression> params = this.getParameters().getExpressions();
-        _object = params.get(0);
+        object = params.get(0);
     }
 
     @Override
     public String toString()
     {
-        return "center(" + _object.toString() + ")";
+        return "center(" + object.toString() + ")";
     }
     
     public String valueString()

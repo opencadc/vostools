@@ -78,7 +78,7 @@ package ca.nrc.cadc.tap.parser.navigator;
 public class SubNavigator implements Cloneable
 {
 
-    protected SelectNavigator _selectNavigator;
+    protected SelectNavigator selectNavigator;
 
     public SubNavigator()
     {
@@ -91,11 +91,13 @@ public class SubNavigator implements Cloneable
         try
         {
             rtn = this.getClass().newInstance();
-        } catch (InstantiationException e)
+        }
+        catch (InstantiationException e)
         {
             // TODO Auto-generated catch block
             e.printStackTrace();
-        } catch (IllegalAccessException e)
+        }
+        catch (IllegalAccessException e)
         {
             // TODO Auto-generated catch block
             e.printStackTrace();
@@ -105,11 +107,11 @@ public class SubNavigator implements Cloneable
 
     public SelectNavigator getSelectNavigator()
     {
-        return _selectNavigator;
+        return selectNavigator;
     }
 
     public void setSelectNavigator(SelectNavigator selectNavigator)
     {
-        _selectNavigator = selectNavigator;
+        this.selectNavigator = selectNavigator;
     }
 }

@@ -70,29 +70,22 @@
 package ca.nrc.cadc.tap.parser.exception;
 
 /**
- * Exception specifically for TAP Parser
+ * Exception specifically for TAP Parser.
  * 
  * @author zhangsa
  *
  */
 public class TapParserException extends Exception
 {
+    private static final long serialVersionUID = 1L;
 
-    /**
-     * 
-     */
     public TapParserException()
     {
-        // TODO Auto-generated constructor stub
     }
 
-    /**
-     * @param message
-     */
     public TapParserException(String message)
     {
         super(message);
-        // TODO Auto-generated constructor stub
     }
 
     /**
@@ -101,7 +94,6 @@ public class TapParserException extends Exception
     public TapParserException(Throwable cause)
     {
         super(cause);
-        // TODO Auto-generated constructor stub
     }
 
     /**
@@ -111,7 +103,6 @@ public class TapParserException extends Exception
     public TapParserException(String message, Throwable cause)
     {
         super(message, cause);
-        // TODO Auto-generated constructor stub
     }
 
 }

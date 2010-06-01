@@ -80,7 +80,7 @@ import net.sf.jsqlparser.statement.select.Limit;
 public class PgLimit extends Limit
 {
     private long offset;
-    private long rowCount ;
+    private long rowCount;
     private boolean rowCountJdbcParameter = false;
     private boolean offsetJdbcParameter = false;
     private boolean limitAll;
@@ -93,59 +93,71 @@ public class PgLimit extends Limit
         this.offsetJdbcParameter = limit.isOffsetJdbcParameter();
         this.limitAll = limit.isLimitAll();
     }
-    
-    public String toString() {
+
+    public String toString()
+    {
         String retVal = "";
-        if (rowCount >= 0 || rowCountJdbcParameter ) {
-            retVal += " LIMIT "+(rowCountJdbcParameter?"?":rowCount+"");
+        if (rowCount >= 0 || rowCountJdbcParameter)
+        {
+            retVal += " LIMIT " + (rowCountJdbcParameter ? "?" : rowCount + "");
         }
-        if (offset > 0 || offsetJdbcParameter) {
-            retVal += " OFFSET "+(offsetJdbcParameter?"?":offset+"");
+        if (offset > 0 || offsetJdbcParameter)
+        {
+            retVal += " OFFSET " + (offsetJdbcParameter ? "?" : offset + "");
         }
         return retVal;
     }
 
-    public long getOffset() {
+    public long getOffset()
+    {
         return offset;
     }
 
-    public long getRowCount() {
+    public long getRowCount()
+    {
         return rowCount;
     }
 
-    public void setOffset(long l) {
+    public void setOffset(long l)
+    {
         offset = l;
     }
 
-    public void setRowCount(long l) {
+    public void setRowCount(long l)
+    {
         rowCount = l;
     }
 
-    public boolean isOffsetJdbcParameter() {
+    public boolean isOffsetJdbcParameter()
+    {
         return offsetJdbcParameter;
     }
 
-    public boolean isRowCountJdbcParameter() {
+    public boolean isRowCountJdbcParameter()
+    {
         return rowCountJdbcParameter;
     }
 
-    public void setOffsetJdbcParameter(boolean b) {
+    public void setOffsetJdbcParameter(boolean b)
+    {
         offsetJdbcParameter = b;
     }
 
-    public void setRowCountJdbcParameter(boolean b) {
+    public void setRowCountJdbcParameter(boolean b)
+    {
         rowCountJdbcParameter = b;
     }
-
 
     /**
      * @return true if the limit is "LIMIT ALL [OFFSET ...])
      */
-    public boolean isLimitAll() {
+    public boolean isLimitAll()
+    {
         return limitAll;
     }
 
-    public void setLimitAll(boolean b) {
+    public void setLimitAll(boolean b)
+    {
         limitAll = b;
     }
 

@@ -83,13 +83,13 @@ import net.sf.jsqlparser.expression.LongValue;
  */
 public class DegreeLong extends Degree
 {
-    private LongValue _value;
-    
+    private LongValue value;
+
     public DegreeLong(LongValue value)
     {
         setValue(value);
     }
-    
+
     public String toString()
     {
         return getValue().toString() + "d";
@@ -100,7 +100,7 @@ public class DegreeLong extends Degree
      */
     public void setValue(LongValue value)
     {
-        _value = value;
+        this.value = value;
     }
 
     /**
@@ -108,7 +108,7 @@ public class DegreeLong extends Degree
      */
     public LongValue getValue()
     {
-        return _value;
+        return value;
     }
 
 }

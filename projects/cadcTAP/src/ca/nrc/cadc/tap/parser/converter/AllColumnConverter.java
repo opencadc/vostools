@@ -72,7 +72,6 @@ package ca.nrc.cadc.tap.parser.converter;
 import java.util.ArrayList;
 import java.util.List;
 
-
 import net.sf.jsqlparser.schema.Table;
 import net.sf.jsqlparser.statement.select.AllColumns;
 import net.sf.jsqlparser.statement.select.AllTableColumns;
@@ -83,8 +82,8 @@ import org.apache.log4j.Logger;
 
 import ca.nrc.cadc.tap.parser.ParserUtil;
 import ca.nrc.cadc.tap.parser.navigator.SelectNavigator;
-import ca.nrc.cadc.tap.schema.TapSchema;
 import ca.nrc.cadc.tap.parser.schema.TapSchemaUtil;
+import ca.nrc.cadc.tap.schema.TapSchema;
 
 /**
  * Convert "all column" (*) into list of column names.
@@ -96,13 +95,13 @@ public class AllColumnConverter extends SelectNavigator
 {
     protected static Logger log = Logger.getLogger(AllColumnConverter.class);
 
-    protected TapSchema _tapSchema;
+    protected TapSchema tapSchema;
 
     public AllColumnConverter(TapSchema tapSchema)
     {
-        _tapSchema = tapSchema;
+        this.tapSchema = tapSchema;
     }
-    
+
     /**
      * Only convert top level plainSelect.
      * 
@@ -115,24 +114,26 @@ public class AllColumnConverter extends SelectNavigator
 
         List<SelectItem> oldSelectItemList = plainSelect.getSelectItems();
         List<SelectItem> newSelectItemList = new ArrayList<SelectItem>();
-        
+
         for (SelectItem si : oldSelectItemList)
         {
-            if ( si instanceof AllColumns)
+            if (si instanceof AllColumns)
             {
                 List<Table> fromTableList = ParserUtil.getFromTableList(plainSelect);
                 for (Table table : fromTableList)
                 {
-                    List<SelectItem> columnSelectItemList = TapSchemaUtil.getSelectItemList(_tapSchema, table);
+                    List<SelectItem> columnSelectItemList = TapSchemaUtil.getSelectItemList(this.tapSchema, table);
                     newSelectItemList.addAll(columnSelectItemList);
                 }
-            } else if ( si instanceof AllTableColumns)
+            }
+            else if (si instanceof AllTableColumns)
             {
-                String tableNameOrAlias = ((AllTableColumns)si).getTable().getName();
+                String tableNameOrAlias = ((AllTableColumns) si).getTable().getName();
                 Table table = ParserUtil.findFromTable(plainSelect, tableNameOrAlias);
-                List<SelectItem> columnSelectItemList = TapSchemaUtil.getSelectItemList(_tapSchema, table);
+                List<SelectItem> columnSelectItemList = TapSchemaUtil.getSelectItemList(this.tapSchema, table);
                 newSelectItemList.addAll(columnSelectItemList);
-            } else 
+            }
+            else
             {
                 newSelectItemList.add(si);
             }
@@ -145,11 +146,11 @@ public class AllColumnConverter extends SelectNavigator
 
     public TapSchema getTapSchema()
     {
-        return _tapSchema;
+        return this.tapSchema;
     }
 
     public void setTapSchema(TapSchema tapSchema)
     {
-        _tapSchema = tapSchema;
+        this.tapSchema = tapSchema;
     }
 }

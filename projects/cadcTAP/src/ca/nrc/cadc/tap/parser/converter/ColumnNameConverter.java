@@ -89,13 +89,13 @@ public class ColumnNameConverter extends ReferenceNavigator
     protected static Logger log = Logger.getLogger(ColumnNameConverter.class);
 
     public Map<String, String> map;
-    
+
     public ColumnNameConverter(boolean ignoreCase)
     {
         if (ignoreCase)
-            this.map = new TreeMap<String,String>(new IgnoreCaseComparator());
+            this.map = new TreeMap<String, String>(new IgnoreCaseComparator());
         else
-            this.map = new TreeMap<String,String>();
+            this.map = new TreeMap<String, String>();
     }
 
     /**
@@ -108,7 +108,7 @@ public class ColumnNameConverter extends ReferenceNavigator
     {
         map.put(originalName, newName);
     }
-    
+
     /* (non-Javadoc)
      * @see net.sf.jsqlparser.statement.select.ColumnReferenceVisitor#visit(net.sf.jsqlparser.schema.Column)
      */
@@ -119,7 +119,6 @@ public class ColumnNameConverter extends ReferenceNavigator
         //VisitingPart visiting = _selectNavigator.getVisitingPart(); 
         String columnName = column.getColumnName();
         String newName = map.get(columnName);
-        if (newName != null)
-            column.setColumnName(newName);
+        if (newName != null) column.setColumnName(newName);
     }
 }

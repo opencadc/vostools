@@ -85,16 +85,16 @@ public class Intersects extends PgsBinaryFunction implements PredicateFunction
     public Intersects(Function adqlFunction)
     {
         super(adqlFunction);
-        _operator = "&&";
+        operator = "&&";
     }
 
     public Intersects(IntersectsNot intersectsNot)
     {
-        _operator = "&&";
+        operator = "&&";
         setParameters(intersectsNot.getParameters());
-        _adqlFunction = intersectsNot.getAdqlFunction();
-        _left = intersectsNot.getLeft();
-        _right = intersectsNot.getRight();
+        adqlFunction = intersectsNot.getAdqlFunction();
+        left = intersectsNot.getLeft();
+        right = intersectsNot.getRight();
     }
 
     /* (non-Javadoc)

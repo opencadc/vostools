@@ -72,28 +72,26 @@ package ca.nrc.cadc.tap.parser.region.pgsphere.function;
 import java.util.ArrayList;
 import java.util.List;
 
-import ca.nrc.cadc.stc.Circle;
+import net.sf.jsqlparser.expression.Expression;
+import net.sf.jsqlparser.expression.Function;
+import net.sf.jsqlparser.expression.StringValue;
+import net.sf.jsqlparser.expression.operators.relational.ExpressionList;
 import ca.nrc.cadc.stc.CoordPair;
 import ca.nrc.cadc.stc.Position;
 import ca.nrc.cadc.tap.parser.RegionFinder;
 import ca.nrc.cadc.tap.parser.region.pgsphere.expression.DegreeDouble;
 
-import net.sf.jsqlparser.expression.Expression;
-import net.sf.jsqlparser.expression.Function;
-import net.sf.jsqlparser.expression.StringValue;
-import net.sf.jsqlparser.expression.operators.relational.ExpressionList;
-
 /**
  * the PgSphere implementation of ADQL function
- * POINT
+ * POINT.
  * 
  * @author zhangsa
  * 
  */
 public class Spoint extends PgsFunction
 {
-    private Expression _longitude;
-    private Expression _latitude;
+    private Expression longitude;
+    private Expression latitude;
 
     private boolean isOperand;
 
@@ -105,13 +103,14 @@ public class Spoint extends PgsFunction
 
     public Spoint(Expression longitude, Expression latitude)
     {
-        _longitude = longitude;
-        _latitude = latitude;
+        this.longitude = longitude;
+        this.latitude = latitude;
     }
 
     public Spoint(Position position)
     {
-        double ra, dec;
+        double ra;
+        double dec;
         List<Expression> expressions = new ArrayList<Expression>();
         expressions.add(new StringValue(RegionFinder.ICRS));
         CoordPair cp = position.getCoordPair();
@@ -124,17 +123,16 @@ public class Spoint extends PgsFunction
         convertParameters();
     }
 
-
     @SuppressWarnings("unchecked")
     protected void convertParameters()
     {
         List<Expression> params = this.getParameters().getExpressions();
-        _longitude = params.get(1);
-        _latitude = params.get(2);
+        longitude = params.get(1);
+        latitude = params.get(2);
 
         List<Expression> pgsParams = new ArrayList<Expression>(2);
-        pgsParams.add(_longitude);
-        pgsParams.add(_latitude);
+        pgsParams.add(longitude);
+        pgsParams.add(latitude);
         ExpressionList pgsParamExprList = new ExpressionList(pgsParams);
         setParameters(pgsParamExprList);
     }
@@ -143,18 +141,17 @@ public class Spoint extends PgsFunction
     {
         this.isOperand = isOp;
     }
-    
+
     @Override
     public String toString()
     {
-        String ret = "spoint '(" + _longitude + "," + _latitude + ")'";
-        if (isOperand)
-            ret = "cast(" + ret + " as scircle)";
+        String ret = "spoint '(" + longitude + "," + latitude + ")'";
+        if (isOperand) ret = "cast(" + ret + " as scircle)";
         return ret;
     }
 
     public String valueString()
     {
-        return "(" + _longitude + "," + _latitude + ")";
+        return "(" + longitude + "," + latitude + ")";
     }
 }

@@ -81,21 +81,7 @@ import org.apache.log4j.Logger;
 public class TapProperties
 {
     protected static Logger logger = Logger.getLogger(TapProperties.class);
-    protected Properties _prop;
-
-    protected void init(String propertyFile) throws Exception
-    {
-        logger.debug("init(" + propertyFile + ")");
-        _prop = new Properties();
-        InputStream is = getClass().getClassLoader().getResourceAsStream(propertyFile);
-        if (is == null)
-        {
-            String errStr = "Property file: " + propertyFile + " can not be loaded/found";
-            logger.error(errStr);
-            throw new Exception(errStr);
-        }
-        _prop.load(is);
-    }
+    protected Properties prop;
 
     protected TapProperties()
     {
@@ -106,31 +92,44 @@ public class TapProperties
         init(propertyFile);
     }
 
+    protected void init(String propertyFile) throws Exception
+    {
+        logger.debug("init(" + propertyFile + ")");
+        prop = new Properties();
+        InputStream is = getClass().getClassLoader().getResourceAsStream(propertyFile);
+        if (is == null)
+        {
+            String errStr = "Property file: " + propertyFile + " can not be loaded/found";
+            logger.error(errStr);
+            throw new Exception(errStr);
+        }
+        prop.load(is);
+    }
+
     public String getProperty(String key)
     {
         String message;
 
-        message = _prop.getProperty(key);
-        if (message == null)
-            message = "missing: " + key;
+        message = prop.getProperty(key);
+        if (message == null) message = "missing: " + key;
         return message;
     }
 
     public long getPropertyLong(String key)
     {
-        String message = _prop.getProperty(key);
+        String message = prop.getProperty(key);
         return Long.parseLong(message);
     }
 
     public int getPropertyInt(String key)
     {
-        String message = _prop.getProperty(key);
+        String message = prop.getProperty(key);
         return Integer.parseInt(message);
     }
 
     public boolean getPropertyBooloean(String key)
     {
-        String message = _prop.getProperty(key);
+        String message = prop.getProperty(key);
         return Boolean.parseBoolean(message);
     }
 }

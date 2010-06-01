@@ -96,9 +96,9 @@ import ca.nrc.cadc.tap.parser.schema.TapSchemaUtil;
  */
 public class SelectListExpressionExtractor extends ExpressionNavigator
 {
-    protected List<TapSelectItem> _tapSelectItemList = new ArrayList<TapSelectItem>();
-    protected TapSchema _tapSchema;
-    protected Map<String,TableDesc> _extraTablesMap;
+    protected List<TapSelectItem> tapSelectItemList = new ArrayList<TapSelectItem>();
+    protected TapSchema tapSchema;
+    protected Map<String, TableDesc> extraTablesMap;
 
     /**
      * @param tapSchema
@@ -107,8 +107,8 @@ public class SelectListExpressionExtractor extends ExpressionNavigator
     public SelectListExpressionExtractor(TapSchema tapSchema, Map<String, TableDesc> extraTablesMap)
     {
         super();
-        _tapSchema = tapSchema;
-        _extraTablesMap = extraTablesMap;
+        this.tapSchema = tapSchema;
+        this.extraTablesMap = extraTablesMap;
     }
 
     /* (non-Javadoc)
@@ -117,7 +117,7 @@ public class SelectListExpressionExtractor extends ExpressionNavigator
     @Override
     public void visit(AllColumns allColumns)
     {
-        PlainSelect ps = _selectNavigator.getPlainSelect();
+        PlainSelect ps = selectNavigator.getPlainSelect();
         List<Table> fromTableList = ParserUtil.getFromTableList(ps);
 
         try
@@ -125,10 +125,11 @@ public class SelectListExpressionExtractor extends ExpressionNavigator
             List<TapSelectItem> tableTsiList;
             for (Table table : fromTableList)
             {
-                tableTsiList = TapSchemaUtil.getTapSelectItemList(_tapSchema, table);
-                _tapSelectItemList.addAll(tableTsiList);
+                tableTsiList = TapSchemaUtil.getTapSelectItemList(this.tapSchema, table);
+                this.tapSelectItemList.addAll(tableTsiList);
             }
-        } catch (TapParserException ex)
+        }
+        catch (TapParserException ex)
         {
             throw new UnsupportedOperationException(ex);
         }
@@ -140,16 +141,17 @@ public class SelectListExpressionExtractor extends ExpressionNavigator
     @Override
     public void visit(AllTableColumns allTableColumns)
     {
-        PlainSelect ps = _selectNavigator.getPlainSelect();
+        PlainSelect ps = selectNavigator.getPlainSelect();
         String tableNameOrAlias = allTableColumns.getTable().getName();
         Table table = ParserUtil.findFromTable(ps, tableNameOrAlias);
         log.debug(table);
 
         try
         {
-            List<TapSelectItem> tableTsiList = TapSchemaUtil.getTapSelectItemList(_tapSchema, table);
-            _tapSelectItemList.addAll(tableTsiList);
-        } catch (TapParserException ex)
+            List<TapSelectItem> tableTsiList = TapSchemaUtil.getTapSelectItemList(this.tapSchema, table);
+            this.tapSelectItemList.addAll(tableTsiList);
+        }
+        catch (TapParserException ex)
         {
             throw new UnsupportedOperationException(ex);
         }
@@ -185,7 +187,8 @@ public class SelectListExpressionExtractor extends ExpressionNavigator
                     // schema name presented in the column expression. e.g. schemaA.tableA.columnA
                     schemaAndTableName = schemaName + "." + table.getName();
                     tapSelectItem = new TapSelectItem(schemaAndTableName, columnName, alias);
-                } else
+                }
+                else
                 {
                     // No schema name presented in the column expression. 
                     // e.g. tableA.columnA, aliasA.columnA, columnB
@@ -193,24 +196,26 @@ public class SelectListExpressionExtractor extends ExpressionNavigator
                     if (tableNameOrAlias != null)
                     {
                         // table name or alias presented. e.g. tableA.columnA, aliasA.columnA
-                        Table fromTable = ParserUtil.findFromTable(_selectNavigator.getPlainSelect(), tableNameOrAlias);
+                        Table fromTable = ParserUtil.findFromTable(selectNavigator.getPlainSelect(), tableNameOrAlias);
                         if (fromTable != null)
                         {
                             column2.setTable(fromTable);
-                            if (TapSchemaUtil.isValidColumn(_tapSchema, column2))
+                            if (TapSchemaUtil.isValidColumn(this.tapSchema, column2))
                             {
                                 schemaAndTableName = fromTable.getSchemaName() + "." + fromTable.getName();
                                 tapSelectItem = new TapSelectItem(schemaAndTableName, columnName, alias); // all valid
                             }
                             else
                                 throw new TapParserException("Column [ " + columnName + " ] does not exist.");
-                        } else
+                        }
+                        else
                             throw new TapParserException("Table name/alias: [ " + tableNameOrAlias + " ] does not exist.");
-                    } else
+                    }
+                    else
                     {
                         // only column name is presented. e.g. columnB, 
                         // as sub-select is not supported, does not consider columnAliasC (refer to column alias in subselect)
-                        table = TapSchemaUtil.findTableForColumnName(_tapSchema, _selectNavigator.getPlainSelect(), columnName);
+                        table = TapSchemaUtil.findTableForColumnName(this.tapSchema, selectNavigator.getPlainSelect(), columnName);
                         if (table != null)
                         {
                             schemaAndTableName = table.getSchemaName() + "." + table.getName();
@@ -220,15 +225,17 @@ public class SelectListExpressionExtractor extends ExpressionNavigator
                             throw new TapParserException("Column [ " + columnName + " ] does not exist.");
                     }
                 }
-            } else
+            }
+            else
             {
                 if (alias != null && !alias.equals(""))
                     tapSelectItem = new TapSelectItem(alias);
                 else
                     tapSelectItem = new TapSelectItem(expression.toString());
             }
-            _tapSelectItemList.add(tapSelectItem);
-        } catch (TapParserException ex)
+            this.tapSelectItemList.add(tapSelectItem);
+        }
+        catch (TapParserException ex)
         {
             throw new UnsupportedOperationException(ex);
         }
@@ -236,31 +243,31 @@ public class SelectListExpressionExtractor extends ExpressionNavigator
 
     public List<TapSelectItem> getTapSelectItemList()
     {
-        return _tapSelectItemList;
+        return this.tapSelectItemList;
     }
 
     public void setTapSelectItemList(List<TapSelectItem> tapSelectItemList)
     {
-        _tapSelectItemList = tapSelectItemList;
+        this.tapSelectItemList = tapSelectItemList;
     }
 
     public TapSchema getTapSchema()
     {
-        return _tapSchema;
+        return this.tapSchema;
     }
 
     public void setTapSchema(TapSchema tapSchema)
     {
-        _tapSchema = tapSchema;
+        this.tapSchema = tapSchema;
     }
 
     public Map<String, ca.nrc.cadc.tap.schema.TableDesc> getExtraTablesMap()
     {
-        return _extraTablesMap;
+        return this.extraTablesMap;
     }
 
     public void setExtraTablesMap(Map<String, ca.nrc.cadc.tap.schema.TableDesc> extraTablesMap)
     {
-        _extraTablesMap = extraTablesMap;
+        this.extraTablesMap = extraTablesMap;
     }
 }

@@ -128,15 +128,14 @@ public class ExpressionNavigator extends SubNavigator implements ExpressionVisit
 {
     protected static Logger log = Logger.getLogger(ExpressionNavigator.class);
 
+    public ExpressionNavigator()
+    {
+    }
+
     public ExpressionNavigator clone()
     {
         ExpressionNavigator rtn = (ExpressionNavigator) super.clone();
         return rtn;
-    }
-
-    public ExpressionNavigator()
-    {
-        // TODO Auto-generated constructor stub
     }
 
     /* (non-Javadoc)
@@ -434,7 +433,7 @@ public class ExpressionNavigator extends SubNavigator implements ExpressionVisit
     @Override
     public void visit(Column tableColumn)
     {
-        tableColumn.accept(_selectNavigator.getReferenceNavigator());
+        tableColumn.accept(selectNavigator.getReferenceNavigator());
     }
 
     /* (non-Javadoc)
@@ -444,7 +443,7 @@ public class ExpressionNavigator extends SubNavigator implements ExpressionVisit
     public void visit(SubSelect subSelect)
     {
         log.debug("visit(subSelect)" + subSelect);
-        this._selectNavigator.getFromItemNavigator().visit(subSelect);
+        this.selectNavigator.getFromItemNavigator().visit(subSelect);
     }
 
     /* (non-Javadoc)
@@ -500,7 +499,7 @@ public class ExpressionNavigator extends SubNavigator implements ExpressionVisit
     public void visit(AllComparisonExpression allComparisonExpression)
     {
         log.debug("visit(allComparisonExpression)" + allComparisonExpression);
-        allComparisonExpression.GetSubSelect().accept(this._selectNavigator.getFromItemNavigator());
+        allComparisonExpression.GetSubSelect().accept(this.selectNavigator.getFromItemNavigator());
     }
 
     /* (non-Javadoc)
@@ -510,7 +509,7 @@ public class ExpressionNavigator extends SubNavigator implements ExpressionVisit
     public void visit(AnyComparisonExpression anyComparisonExpression)
     {
         log.debug("visit(anyComparisonExpression)" + anyComparisonExpression);
-        anyComparisonExpression.GetSubSelect().accept(this._selectNavigator.getFromItemNavigator());
+        anyComparisonExpression.GetSubSelect().accept(this.selectNavigator.getFromItemNavigator());
     }
 
     /* (non-Javadoc)
@@ -544,7 +543,7 @@ public class ExpressionNavigator extends SubNavigator implements ExpressionVisit
     public void visit(AllTableColumns allTableColumns)
     {
         log.debug("visit(allTableColumns)" + allTableColumns);
-        this._selectNavigator.getFromItemNavigator().visit(allTableColumns.getTable());
+        this.selectNavigator.getFromItemNavigator().visit(allTableColumns.getTable());
     }
 
     /* (non-Javadoc)

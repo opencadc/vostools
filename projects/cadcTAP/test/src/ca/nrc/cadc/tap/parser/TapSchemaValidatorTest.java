@@ -201,7 +201,7 @@ public class TapSchemaValidatorTest
             ReferenceNavigator rn = new TapSchemaColumnValidator(ts);
             FromItemNavigator fn = new TapSchemaTableValidator(ts);
             SelectNavigator sn = new SelectNavigator(en, rn, fn);
-            _navigatorList.add(sn);
+            super.navigatorList.add(sn);
         }
     }
 

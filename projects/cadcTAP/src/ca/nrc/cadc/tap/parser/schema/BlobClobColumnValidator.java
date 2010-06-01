@@ -82,16 +82,18 @@ import ca.nrc.cadc.tap.parser.navigator.SelectNavigator.VisitingPart;
 import ca.nrc.cadc.tap.schema.ColumnDesc;
 import ca.nrc.cadc.tap.schema.TapSchema;
 
-/*
+/**
  * Column cannot be BLOB/CLOB type if it's not in the SELECT ITEM part of query.
  * 
+ * @author zhangsa
+ *
  */
 public class BlobClobColumnValidator extends TapSchemaColumnValidator
 {
-    protected static Logger log = Logger.getLogger(BlobClobColumnValidator.class);
+    public static final String BLOB = "BLOB";
+    public static final String CLOB = "CLOB";
 
-    public static String BLOB = "BLOB";
-    public static String CLOB = "CLOB";
+    protected static Logger log = Logger.getLogger(BlobClobColumnValidator.class);
 
     public BlobClobColumnValidator(TapSchema ts)
     {
@@ -103,8 +105,8 @@ public class BlobClobColumnValidator extends TapSchemaColumnValidator
     {
         super.visit(column); // Perform default standard validation
 
-        PlainSelect plainSelect = _selectNavigator.getPlainSelect();
-        VisitingPart visiting = _selectNavigator.getVisitingPart();
+        PlainSelect plainSelect = selectNavigator.getPlainSelect();
+        VisitingPart visiting = selectNavigator.getVisitingPart();
 
         if (!visiting.equals(VisitingPart.SELECT_ITEM))
         {
@@ -127,13 +129,11 @@ public class BlobClobColumnValidator extends TapSchemaColumnValidator
                 {
                     isAlias = true; // ok
                     Expression ex = ((SelectExpressionItem) si).getExpression();
-                    if (ex instanceof Column)
-                        columnDesc = TapSchemaUtil.findColumnDesc(_tapSchema, plainSelect, (Column) ex);
+                    if (ex instanceof Column) columnDesc = TapSchemaUtil.findColumnDesc(super.tapSchema, plainSelect, (Column) ex);
                 }
             }
 
-            if (!isAlias)
-                columnDesc = TapSchemaUtil.findColumnDesc(_tapSchema, plainSelect, column);
+            if (!isAlias) columnDesc = TapSchemaUtil.findColumnDesc(super.tapSchema, plainSelect, column);
 
             if (columnDesc != null)
             {

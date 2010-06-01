@@ -89,7 +89,6 @@ import net.sf.jsqlparser.statement.select.Union;
 
 import org.apache.log4j.Logger;
 
-
 /**
  * Basic SelectVisitor implementation. 
  * It holds three other navigators: ExpressionNavigator, ReferenceNavigator, and FromItemNavigator. 
@@ -102,57 +101,68 @@ public class SelectNavigator implements SelectVisitor
 {
     protected static Logger log = Logger.getLogger(SelectNavigator.class);
 
+    /**
+     * Type of plainSelect.
+     * 
+     * @author zhangsa
+     *
+     */
     public enum PlainSelectType {
         ROOT_SELECT, FROM_SUB_SELECT, WHERE_SUB_SELECT, HAVING_SUB_SELECT
     }
 
+    /**
+     * Used to indicate which part the visitor is visiting.
+     * 
+     * @author zhangsa
+     *
+     */
     public enum VisitingPart {
         SELECT_ITEM, FROM, WHERE, HAVING, ORDER_BY, GROUP_BY
     }
-    
-    protected PlainSelectType _plainSelectType;
-    protected VisitingPart _visitingPart;
+
+    protected PlainSelectType plainSelectType;
+    protected VisitingPart visitingPart;
 
     protected boolean toStop = false;
-    protected PlainSelect _plainSelect;
-    protected Stack<PlainSelect> _psStack = new Stack<PlainSelect>();
-    protected Stack<VisitingPart> _visitingPartStack = new Stack<VisitingPart>();
+    protected PlainSelect plainSelect;
+    protected Stack<PlainSelect> psStack = new Stack<PlainSelect>();
+    protected Stack<VisitingPart> visitingPartStack = new Stack<VisitingPart>();
 
     // Other navigators controlled by SelectNavigator
-    protected ExpressionNavigator _expressionNavigator;
-    protected ReferenceNavigator _referenceNavigator;
-    protected FromItemNavigator _fromItemNavigator;
+    protected ExpressionNavigator expressionNavigator;
+    protected ReferenceNavigator referenceNavigator;
+    protected FromItemNavigator fromItemNavigator;
 
-    protected SelectNavigator() {}
-    
+    protected SelectNavigator()
+    {
+    }
+
     public SelectNavigator(ExpressionNavigator en, ReferenceNavigator rn, FromItemNavigator fn)
     {
-        _expressionNavigator = en;
-        _referenceNavigator = rn;
-        _fromItemNavigator = fn;
-        
+        this.expressionNavigator = en;
+        this.referenceNavigator = rn;
+        this.fromItemNavigator = fn;
+
         if (en != null) en.setSelectNavigator(this);
         if (rn != null) rn.setSelectNavigator(this);
         if (fn != null) fn.setSelectNavigator(this);
     }
-    
+
     protected void enterPlainSelect(PlainSelect plainSelect)
     {
-        if (_visitingPart != null)
-            _visitingPartStack.push(_visitingPart);
-        _plainSelect = plainSelect;
-        _psStack.push(_plainSelect);
-        
+        if (this.visitingPart != null) this.visitingPartStack.push(this.visitingPart);
+        this.plainSelect = plainSelect;
+        this.psStack.push(this.plainSelect);
+
     }
 
     protected void leavePlainSelect()
     {
-        if (!_visitingPartStack.empty())
-            _visitingPart = _visitingPartStack.pop();
+        if (!this.visitingPartStack.empty()) this.visitingPart = this.visitingPartStack.pop();
 
-        _psStack.pop();
-        if (!_psStack.empty())
-            _plainSelect = _psStack.peek();
+        this.psStack.pop();
+        if (!this.psStack.empty()) this.plainSelect = this.psStack.peek();
     }
 
     @SuppressWarnings("unchecked")
@@ -161,71 +171,60 @@ public class SelectNavigator implements SelectVisitor
         log.debug("visit(PlainSelect) " + plainSelect);
         enterPlainSelect(plainSelect);
 
-        this._visitingPart = VisitingPart.FROM;
-        FromItem fromItem = _plainSelect.getFromItem();
+        this.visitingPart = VisitingPart.FROM;
+        FromItem fromItem = this.plainSelect.getFromItem();
         if (fromItem instanceof Table)
-            fromItem.accept(_fromItemNavigator);
+            fromItem.accept(this.fromItemNavigator);
         else if (fromItem instanceof SubSelect)
             throw new UnsupportedOperationException("sub-select not supported in FROM clause.");
 
-        if (isToStop())
-            return;
+        if (isToStop()) return;
 
-        NavigateJoins();
-        if (isToStop())
-            return;
+        navigateJoins();
+        if (isToStop()) return;
 
-        this._visitingPart = VisitingPart.SELECT_ITEM;
-        List<SelectItem> selectItems = _plainSelect.getSelectItems();
-        if (selectItems != null)
-            for (SelectItem s : selectItems)
-                s.accept(this._expressionNavigator);
+        this.visitingPart = VisitingPart.SELECT_ITEM;
+        List<SelectItem> selectItems = this.plainSelect.getSelectItems();
+        if (selectItems != null) for (SelectItem s : selectItems)
+            s.accept(this.expressionNavigator);
 
-        this._visitingPart = VisitingPart.WHERE;
-        if (_plainSelect.getWhere() != null)
-            _plainSelect.getWhere().accept(_expressionNavigator);
+        this.visitingPart = VisitingPart.WHERE;
+        if (this.plainSelect.getWhere() != null) this.plainSelect.getWhere().accept(this.expressionNavigator);
 
-        this._visitingPart = VisitingPart.GROUP_BY;
-        List<ColumnReference> crs = _plainSelect.getGroupByColumnReferences();
-        if (crs != null)
-            for (ColumnReference cr : crs)
-                cr.accept(_referenceNavigator);
+        this.visitingPart = VisitingPart.GROUP_BY;
+        List<ColumnReference> crs = this.plainSelect.getGroupByColumnReferences();
+        if (crs != null) for (ColumnReference cr : crs)
+            cr.accept(this.referenceNavigator);
 
-        this._visitingPart = VisitingPart.ORDER_BY;
-        List<OrderByElement> obes = _plainSelect.getOrderByElements();
+        this.visitingPart = VisitingPart.ORDER_BY;
+        List<OrderByElement> obes = this.plainSelect.getOrderByElements();
         if (obes != null)
         {
             for (OrderByElement obe : obes)
             {
                 ColumnReference cr = obe.getColumnReference();
-                if (cr != null)
-                    cr.accept(_referenceNavigator);
+                if (cr != null) cr.accept(this.referenceNavigator);
             }
         }
 
-        this._visitingPart = VisitingPart.HAVING;
-        if (_plainSelect.getHaving() != null)
-            _plainSelect.getHaving().accept(_expressionNavigator);
+        this.visitingPart = VisitingPart.HAVING;
+        if (this.plainSelect.getHaving() != null) this.plainSelect.getHaving().accept(this.expressionNavigator);
 
         // other SELECT options
-        if (_plainSelect.getLimit() != null)
-            handleLimit(_plainSelect.getLimit());
-        if (_plainSelect.getDistinct() != null)
-            handleDistinct(_plainSelect.getDistinct());
-        if (_plainSelect.getInto() != null)
-            handleInto(_plainSelect.getInto());
-        if (_plainSelect.getTop() != null)
-            handleTop(_plainSelect.getTop());
+        if (this.plainSelect.getLimit() != null) handleLimit(this.plainSelect.getLimit());
+        if (this.plainSelect.getDistinct() != null) handleDistinct(this.plainSelect.getDistinct());
+        if (this.plainSelect.getInto() != null) handleInto(this.plainSelect.getInto());
+        if (this.plainSelect.getTop() != null) handleTop(this.plainSelect.getTop());
 
         log.debug("visit(PlainSelect) done");
-        
+
         leavePlainSelect();
     }
 
     @SuppressWarnings("unchecked")
-    protected void NavigateJoins()
+    protected void navigateJoins()
     {
-        PlainSelect ps = this._plainSelect;
+        PlainSelect ps = this.plainSelect;
         List<Join> joins = ps.getJoins();
         if (joins != null)
         {
@@ -235,16 +234,15 @@ public class SelectNavigator implements SelectVisitor
                 if (fromItem instanceof Table)
                 {
                     Table rightTable = (Table) join.getRightItem();
-                    rightTable.accept(this._fromItemNavigator);
+                    rightTable.accept(this.fromItemNavigator);
 
-                    if (join.getOnExpression() != null)
-                        join.getOnExpression().accept(this._expressionNavigator);
+                    if (join.getOnExpression() != null) join.getOnExpression().accept(this.expressionNavigator);
 
                     List<Column> columns = join.getUsingColumns();
-                    if (columns != null)
-                        for (Column column : columns)
-                            column.accept(this._expressionNavigator);
-                } else if (fromItem instanceof SubSelect)
+                    if (columns != null) for (Column column : columns)
+                        column.accept(this.expressionNavigator);
+                }
+                else if (fromItem instanceof SubSelect)
                     throw new UnsupportedOperationException("sub-select not supported in FROM clause.");
             }
         }
@@ -256,22 +254,22 @@ public class SelectNavigator implements SelectVisitor
 
     public final PlainSelectType getPlainSelectType()
     {
-        return _plainSelectType;
+        return this.plainSelectType;
     }
 
     public final void setPlainSelectType(PlainSelectType type)
     {
-        this._plainSelectType = type;
+        this.plainSelectType = type;
     }
 
     public final VisitingPart getVisitingPart()
     {
-        return _visitingPart;
+        return this.visitingPart;
     }
 
     public final void setVisitingPart(VisitingPart visitingPart)
     {
-        this._visitingPart = visitingPart;
+        this.visitingPart = visitingPart;
     }
 
     public boolean isToStop()
@@ -308,12 +306,11 @@ public class SelectNavigator implements SelectVisitor
     protected void handleDistinct(Distinct distinct)
     {
         log.debug("handleDistinct: " + distinct);
-        List<SelectItem> onSelectItems = distinct.getOnSelectItems(); 
-        if ( onSelectItems != null)
-            for (SelectItem si : onSelectItems) {
-                if (si != null)
-                    si.accept(_expressionNavigator);
-            }
+        List<SelectItem> onSelectItems = distinct.getOnSelectItems();
+        if (onSelectItems != null) for (SelectItem si : onSelectItems)
+        {
+            if (si != null) si.accept(this.expressionNavigator);
+        }
     }
 
     /**
@@ -327,42 +324,42 @@ public class SelectNavigator implements SelectVisitor
 
     public PlainSelect getPlainSelect()
     {
-        return _plainSelect;
+        return this.plainSelect;
     }
 
     public void setPlainSelect(PlainSelect plainSelect)
     {
-        _plainSelect = plainSelect;
+        this.plainSelect = plainSelect;
     }
 
     public ExpressionNavigator getExpressionNavigator()
     {
-        return _expressionNavigator;
+        return this.expressionNavigator;
     }
 
     public void setExpressionNavigator(ExpressionNavigator expressionNavigator)
     {
-        _expressionNavigator = expressionNavigator;
+        this.expressionNavigator = expressionNavigator;
     }
 
     public ReferenceNavigator getReferenceNavigator()
     {
-        return _referenceNavigator;
+        return this.referenceNavigator;
     }
 
     public void setReferenceNavigator(ReferenceNavigator referenceNavigator)
     {
-        _referenceNavigator = referenceNavigator;
+        this.referenceNavigator = referenceNavigator;
     }
 
     public FromItemNavigator getFromItemNavigator()
     {
-        return _fromItemNavigator;
+        return this.fromItemNavigator;
     }
 
     public void setFromItemNavigator(FromItemNavigator fromItemNavigator)
     {
-        _fromItemNavigator = fromItemNavigator;
+        this.fromItemNavigator = fromItemNavigator;
     }
 
     /* (non-Javadoc)
@@ -371,7 +368,7 @@ public class SelectNavigator implements SelectVisitor
     @Override
     public void visit(Union union)
     {
-        log.debug("visit(union) " + union); 
+        log.debug("visit(union) " + union);
         throw new UnsupportedOperationException("UNION is not supported.");
     }
 

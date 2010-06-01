@@ -72,28 +72,26 @@ package ca.nrc.cadc.tap.parser.region.pgsphere.function;
 import java.util.ArrayList;
 import java.util.List;
 
-import ca.nrc.cadc.stc.Circle;
-import ca.nrc.cadc.stc.CoordPair;
-import ca.nrc.cadc.stc.Polygon;
-import ca.nrc.cadc.tap.parser.RegionFinder;
-import ca.nrc.cadc.tap.parser.region.pgsphere.expression.DegreeDouble;
-
 import net.sf.jsqlparser.expression.Expression;
 import net.sf.jsqlparser.expression.Function;
 import net.sf.jsqlparser.expression.StringValue;
 import net.sf.jsqlparser.expression.operators.relational.ExpressionList;
+import ca.nrc.cadc.stc.Circle;
+import ca.nrc.cadc.stc.CoordPair;
+import ca.nrc.cadc.tap.parser.RegionFinder;
+import ca.nrc.cadc.tap.parser.region.pgsphere.expression.DegreeDouble;
 
 /**
  * the PgSphere implementation of ADQL function
- * CIRCLE
+ * CIRCLE.
  * 
  * @author zhangsa
  * 
  */
 public class Scircle extends PgsFunction
 {
-    private Spoint _point;
-    private Expression _radius;
+    private Spoint point;
+    private Expression radius;
 
     public Scircle(Function adqlFunction)
     {
@@ -102,13 +100,15 @@ public class Scircle extends PgsFunction
     }
 
     /**
-     * Create Scircle from STC CIRCLE
+     * Create Scircle from STC CIRCLE.
      * 
      * @param circle
      */
     public Scircle(Circle circle)
     {
-        double ra, dec, radius;
+        double ra;
+        double dec;
+        double radius;
         List<Expression> expressions = new ArrayList<Expression>();
         expressions.add(new StringValue(RegionFinder.ICRS));
         CoordPair cp = circle.getCoordPair();
@@ -127,12 +127,12 @@ public class Scircle extends PgsFunction
     protected void convertParameters()
     {
         List<Expression> params = this.getParameters().getExpressions();
-        _point = new Spoint(params.get(1), params.get(2));
-        _radius = params.get(3);
-        
+        point = new Spoint(params.get(1), params.get(2));
+        radius = params.get(3);
+
         List<Expression> pgsParams = new ArrayList<Expression>(2);
-        pgsParams.add(_point);
-        pgsParams.add(_radius);
+        pgsParams.add(point);
+        pgsParams.add(radius);
         ExpressionList pgsParamExprList = new ExpressionList(pgsParams);
         setParameters(pgsParamExprList);
     }
@@ -140,12 +140,12 @@ public class Scircle extends PgsFunction
     @Override
     public String toString()
     {
-        return "scircle '<" + _point.valueString() + "," + _radius + ">'";
+        return "scircle '<" + point.valueString() + "," + radius + ">'";
     }
-    
+
     public String valueString()
     {
-        return "<" + _point.valueString() + "," + _radius + ">";
+        return "<" + point.valueString() + "," + radius + ">";
     }
 
 }

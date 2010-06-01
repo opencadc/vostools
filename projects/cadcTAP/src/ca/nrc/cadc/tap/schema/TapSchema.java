@@ -88,7 +88,9 @@ public class TapSchema
     /**
      * Default no-arg constructor.
      */
-    public TapSchema() {}
+    public TapSchema()
+    {
+    }
 
     /**
      * Construct a KeyColumn using the specified parameters.

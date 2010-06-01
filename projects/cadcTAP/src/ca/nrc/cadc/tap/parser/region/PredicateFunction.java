@@ -87,5 +87,5 @@ public interface PredicateFunction
      * 
      * @return Negated function
      */
-    public Expression negate();
+    Expression negate();
 }

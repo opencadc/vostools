@@ -73,7 +73,6 @@ import java.io.IOException;
 
 import javax.naming.Context;
 import javax.naming.InitialContext;
-import javax.servlet.ServletConfig;
 import javax.servlet.ServletException;
 import javax.servlet.http.HttpServlet;
 import javax.servlet.http.HttpServletRequest;
@@ -98,12 +97,11 @@ public class TableServlet extends HttpServlet
 {
     private static Logger log = Logger.getLogger(TableServlet.class);
     private static final long serialVersionUID = 201003131300L;
-    
+
     private static String queryDataSourceName = "jdbc/tapuser";
 
     @Override
-    protected void doGet(HttpServletRequest request, HttpServletResponse response)
-        throws ServletException, IOException
+    protected void doGet(HttpServletRequest request, HttpServletResponse response) throws ServletException, IOException
     {
         boolean started = false;
         try
@@ -127,12 +125,7 @@ public class TableServlet extends HttpServlet
         catch (Throwable t)
         {
             log.error("BUG", t);
-            if (!started)
-                response.sendError(HttpServletResponse.SC_SERVICE_UNAVAILABLE, t.getMessage());
-        }
-        finally
-        {
-
+            if (!started) response.sendError(HttpServletResponse.SC_SERVICE_UNAVAILABLE, t.getMessage());
         }
     }
 }

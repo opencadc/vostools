@@ -88,7 +88,6 @@ import net.sf.jsqlparser.statement.select.SelectExpressionItem;
 import org.apache.log4j.Logger;
 
 import ca.nrc.cadc.tap.parser.navigator.SelectNavigator;
-import ca.nrc.cadc.tap.parser.navigator.SelectNavigator.VisitingPart;
 
 /**
  * This visitor finds all occurances of ADQL geometry constructs. The default
@@ -100,24 +99,24 @@ import ca.nrc.cadc.tap.parser.navigator.SelectNavigator.VisitingPart;
  */
 public class RegionFinder extends SelectNavigator
 {
-    private static Logger log = Logger.getLogger(RegionFinder.class);
-
-    public static String ICRS = "ICRS GEOCENTER";
-    public static String ICRS_PREFIX = "ICRS";
+    public static final String ICRS = "ICRS GEOCENTER";
+    public static final String ICRS_PREFIX = "ICRS";
 
     // ADQL region functions
-    public static String CONTAINS = "CONTAINS";
-    public static String INTERSECTS = "INTERSECTS";
-    public static String BOX = "BOX";
-    public static String POINT = "POINT";
-    public static String CIRCLE = "CIRCLE";
-    public static String POLYGON = "POLYGON";
-    public static String REGION = "REGION";
-    public static String AREA = "AREA";
-    public static String CENTROID = "CENTROID";
-    public static String COORDSYS = "COORDSYS";
-    public static String COORD1 = "COORD1";
-    public static String COORD2 = "COORD2";
+    public static final String CONTAINS = "CONTAINS";
+    public static final String INTERSECTS = "INTERSECTS";
+    public static final String BOX = "BOX";
+    public static final String POINT = "POINT";
+    public static final String CIRCLE = "CIRCLE";
+    public static final String POLYGON = "POLYGON";
+    public static final String REGION = "REGION";
+    public static final String AREA = "AREA";
+    public static final String CENTROID = "CENTROID";
+    public static final String COORDSYS = "COORDSYS";
+    public static final String COORD1 = "COORD1";
+    public static final String COORD2 = "COORD2";
+
+    private static Logger log = Logger.getLogger(RegionFinder.class);
 
     public RegionFinder()
     {
@@ -136,7 +135,7 @@ public class RegionFinder extends SelectNavigator
         super.enterPlainSelect(plainSelect);
 
         // Visiting select items
-        this._visitingPart = VisitingPart.SELECT_ITEM;
+        this.visitingPart = VisitingPart.SELECT_ITEM;
         ListIterator i = plainSelect.getSelectItems().listIterator();
         while (i.hasNext())
         {
@@ -149,8 +148,8 @@ public class RegionFinder extends SelectNavigator
                 s.setExpression(implExpression);
             }
         }
-        
-        this._visitingPart = VisitingPart.FROM;
+
+        this.visitingPart = VisitingPart.FROM;
         List<Join> joins = plainSelect.getJoins();
         if (joins != null)
         {
@@ -163,7 +162,7 @@ public class RegionFinder extends SelectNavigator
             }
         }
 
-        this._visitingPart = VisitingPart.WHERE;
+        this.visitingPart = VisitingPart.WHERE;
         if (plainSelect.getWhere() != null)
         {
             Expression e = plainSelect.getWhere();
@@ -172,7 +171,7 @@ public class RegionFinder extends SelectNavigator
             plainSelect.setWhere(implExpression);
         }
 
-        this._visitingPart = VisitingPart.HAVING;
+        this.visitingPart = VisitingPart.HAVING;
         if (plainSelect.getHaving() != null)
         {
             Expression e = plainSelect.getHaving();
@@ -201,14 +200,15 @@ public class RegionFinder extends SelectNavigator
         if (adqlExpr instanceof Function)
         {
             Function adqlFunction = (Function) adqlExpr;
-            
+
             // Convert parameters of the function first.
             ExpressionList adqlExprList = adqlFunction.getParameters();
             ExpressionList implExprList = convertToImplementation(adqlExprList);
             adqlFunction.setParameters(implExprList); // method in Function
 
             implExpr = convertToImplementation(adqlFunction);
-        } else if (adqlExpr instanceof BinaryExpression)
+        }
+        else if (adqlExpr instanceof BinaryExpression)
         {
             BinaryExpression expr1 = (BinaryExpression) adqlExpr;
             Expression left = expr1.getLeftExpression();
@@ -222,14 +222,16 @@ public class RegionFinder extends SelectNavigator
             implExpr = expr1;
 
             implExpr = handleRegionPredicate((BinaryExpression) implExpr);
-        } else if (adqlExpr instanceof InverseExpression)
+        }
+        else if (adqlExpr instanceof InverseExpression)
         {
             InverseExpression expr1 = (InverseExpression) adqlExpr;
             Expression child = expr1.getExpression();
             Expression child2 = convertToImplementation(child);
             expr1.setExpression(child2);
             implExpr = expr1;
-        } else if (adqlExpr instanceof Parenthesis)
+        }
+        else if (adqlExpr instanceof Parenthesis)
         {
             Parenthesis expr1 = (Parenthesis) adqlExpr;
             Expression child = expr1.getExpression();
@@ -250,8 +252,7 @@ public class RegionFinder extends SelectNavigator
     @SuppressWarnings("unchecked")
     public ExpressionList convertToImplementation(ExpressionList adqlExprList)
     {
-        if (adqlExprList == null || adqlExprList.getExpressions() == null)
-            return adqlExprList;
+        if (adqlExprList == null || adqlExprList.getExpressions() == null) return adqlExprList;
         List<Expression> adqlExprs = adqlExprList.getExpressions();
         List<Expression> implExprs = new ArrayList<Expression>();
         Expression e1 = null;
@@ -283,41 +284,52 @@ public class RegionFinder extends SelectNavigator
         if (AREA.equalsIgnoreCase(fname))
         {
             implExpr = handleArea(adqlFunction);
-        } else if (BOX.equalsIgnoreCase(fname))
+        }
+        else if (BOX.equalsIgnoreCase(fname))
         {
             validateCoordSys(adqlFunction);
             implExpr = handleBox(adqlFunction);
-        } else if (CENTROID.equalsIgnoreCase(fname))
+        }
+        else if (CENTROID.equalsIgnoreCase(fname))
         {
             implExpr = handleCentroid(adqlFunction);
-        } else if (CIRCLE.equalsIgnoreCase(fname))
+        }
+        else if (CIRCLE.equalsIgnoreCase(fname))
         {
             validateCoordSys(adqlFunction);
             implExpr = handleCircle(adqlFunction);
-        } else if (CONTAINS.equalsIgnoreCase(fname))
+        }
+        else if (CONTAINS.equalsIgnoreCase(fname))
         {
             implExpr = handleContains(adqlFunction);
-        } else if (COORD1.equalsIgnoreCase(fname))
+        }
+        else if (COORD1.equalsIgnoreCase(fname))
         {
             implExpr = handleCoord1(adqlFunction);
-        } else if (COORD2.equalsIgnoreCase(fname))
+        }
+        else if (COORD2.equalsIgnoreCase(fname))
         {
             implExpr = handleCoord2(adqlFunction);
-        } else if (COORDSYS.equalsIgnoreCase(fname))
+        }
+        else if (COORDSYS.equalsIgnoreCase(fname))
         {
             implExpr = handleCoordSys(adqlFunction);
-        } else if (INTERSECTS.equalsIgnoreCase(fname))
+        }
+        else if (INTERSECTS.equalsIgnoreCase(fname))
         {
             implExpr = handleIntersects(adqlFunction);
-        } else if (POINT.equalsIgnoreCase(fname))
+        }
+        else if (POINT.equalsIgnoreCase(fname))
         {
             validateCoordSys(adqlFunction);
             implExpr = handlePoint(adqlFunction);
-        } else if (POLYGON.equalsIgnoreCase(fname))
+        }
+        else if (POLYGON.equalsIgnoreCase(fname))
         {
             validateCoordSys(adqlFunction);
             implExpr = handlePolygon(adqlFunction);
-        } else if (REGION.equalsIgnoreCase(fname))
+        }
+        else if (REGION.equalsIgnoreCase(fname))
         {
             implExpr = handleRegion(adqlFunction);
         }
@@ -340,14 +352,12 @@ public class RegionFinder extends SelectNavigator
         else if (firstPara instanceof StringValue)
         {
             StringValue sv = (StringValue) firstPara;
-            if (sv == null || sv.getValue().equals("") || sv.getValue().startsWith(RegionFinder.ICRS_PREFIX) )
-                valid = true;
+            if (sv == null || sv.getValue().equals("") || sv.getValue().startsWith(RegionFinder.ICRS_PREFIX)) valid = true;
         }
-        
-        if (!valid)
-            throw new UnsupportedOperationException(firstPara.toString() + " is not a supported coordinate system.");
+
+        if (!valid) throw new UnsupportedOperationException(firstPara.toString() + " is not a supported coordinate system.");
     }
-    
+
     /**
     * This method is called when a REGION PREDICATE function is one of the arguments in a binary expression, 
     * and after the direct function convertion.
@@ -373,8 +383,6 @@ public class RegionFinder extends SelectNavigator
      * This could occurr if the query had CONTAINS(...) in the select list or as
      * part of an arithmetic expression or aggregate function (since CONTAINS 
      * returns a numeric value). 
-     * 
-     * @param ex the CONTAINS expression
      */
     protected Expression handleContains(Function adqlFunction)
     {
@@ -386,8 +394,6 @@ public class RegionFinder extends SelectNavigator
      * This could occurr if the query had INTERSECTS(...) in the select list or as
      * part of an arithmetic expression or aggregate function (since INTERSECTS 
      * returns a numeric value). 
-     * 
-     * @param ex the CONTAINS expression
      */
     protected Expression handleIntersects(Function adqlFunction)
     {
@@ -396,8 +402,6 @@ public class RegionFinder extends SelectNavigator
 
     /**
      * This method is called when a POINT geometry value is found.
-     * 
-     * @param ex the POINT expression
      */
     protected Expression handlePoint(Function adqlFunction)
     {
@@ -406,8 +410,6 @@ public class RegionFinder extends SelectNavigator
 
     /**
      * This method is called when a CIRCLE geometry value is found.
-     * 
-     * @param ex the CIRCLE expression
      */
     protected Expression handleCircle(Function adqlFunction)
     {
@@ -416,8 +418,6 @@ public class RegionFinder extends SelectNavigator
 
     /**
      * This method is called when a BOX geometry value is found.
-     * 
-     * @param ex the BOX expression
      */
     protected Expression handleBox(Function adqlFunction)
     {
@@ -426,8 +426,6 @@ public class RegionFinder extends SelectNavigator
 
     /**
      * This method is called when a POLYGON geometry value is found.
-     * 
-     * @param ex the POLYGON expression
      */
     protected Expression handlePolygon(Function adqlFunction)
     {
@@ -436,8 +434,6 @@ public class RegionFinder extends SelectNavigator
 
     /**
      * This method is called when a REGION geometry value is found.
-     * 
-     * @param ex the REGION expression
      */
     protected Expression handleRegion(Function adqlFunction)
     {
@@ -446,8 +442,6 @@ public class RegionFinder extends SelectNavigator
 
     /**
      * This method is called when the CENTROID function is found.
-     * 
-     * @param ex the CENTROID expression
      */
     protected Expression handleCentroid(Function adqlFunction)
     {
@@ -456,8 +450,6 @@ public class RegionFinder extends SelectNavigator
 
     /**
      * This method is called when AREA function is found.
-     * 
-     * @param ex the AREA expression
      */
     protected Expression handleArea(Function adqlFunction)
     {
@@ -466,8 +458,6 @@ public class RegionFinder extends SelectNavigator
 
     /**
      * This method is called when COORD1 function is found.
-     * 
-     * @param ex the COORD1 expression
      */
     protected Expression handleCoord1(Function adqlFunction)
     {
@@ -476,8 +466,6 @@ public class RegionFinder extends SelectNavigator
 
     /**
      * This method is called when COORD2 function is found.
-     * 
-     * @param ex the COORD2 expression
      */
     protected Expression handleCoord2(Function adqlFunction)
     {
@@ -487,7 +475,6 @@ public class RegionFinder extends SelectNavigator
     /**
      * This method is called when COORDSYS function is found.
      * 
-     * @param ex the COORDSYS expression
      */
     protected Expression handleCoordSys(Function adqlFunction)
     {

@@ -75,22 +75,21 @@ import java.util.List;
 import ca.nrc.cadc.uws.Parameter;
 
 /**
- * Utility class related to TAP
+ * Utility class related to TAP.
  * 
  * @author zhangsa
  *
  */
-public class TapUtil 
+public class TapUtil
 {
     /*
-     * Find String value from the Parameter List by its name
+     * Find String value from the Parameter List by its name.
      */
-    public static String findParameterValue(String name,  List<Parameter> paramList) 
+    public static String findParameterValue(String name, List<Parameter> paramList)
     {
-        for (Parameter parameter : paramList) 
+        for (Parameter parameter : paramList)
         {
-            if (name.equalsIgnoreCase(parameter.getName())) 
-                return parameter.getValue();
+            if (name.equalsIgnoreCase(parameter.getName())) return parameter.getValue();
         }
         return null;
     }
@@ -103,26 +102,26 @@ public class TapUtil
      * @param paramList
      * @return
      */
-    public static List<String> findParameterValues(String name, List<Parameter> paramList) 
+    public static List<String> findParameterValues(String name, List<Parameter> paramList)
     {
         List<String> namedParamList = new ArrayList<String>();
-        
-        for (Parameter parameter : paramList) 
+
+        for (Parameter parameter : paramList)
         {
-            if (name.equalsIgnoreCase(parameter.getName())) 
+            if (name.equalsIgnoreCase(parameter.getName()))
             {
                 String namedParamStr = parameter.getValue();
-                if ( namedParamStr==null || namedParamStr.length()==0)
-                    throw new IllegalStateException( "Missing "+name+" values" );
+                if (namedParamStr == null || namedParamStr.length() == 0)
+                    throw new IllegalStateException("Missing " + name + " values");
                 else
                 {
-                    String [] namedParams = namedParamStr.split(";");
-                    for ( String param : namedParams )
+                    String[] namedParams = namedParamStr.split(";");
+                    for (String param : namedParams)
                         namedParamList.add(param);
-                }    
+                }
             }
         }
-        if ( namedParamList.size() > 0 )
+        if (namedParamList.size() > 0)
             return namedParamList;
         else
             return null;

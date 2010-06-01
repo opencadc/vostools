@@ -76,14 +76,14 @@ import net.sf.jsqlparser.expression.Function;
 
 /**
  * the PgSphere implementation of ADQL function
- * COORD2
+ * COORD2.
  * 
  * @author zhangsa
  * 
  */
 public class Lat extends PgsFunction
 {
-    protected Expression _object;
+    protected Expression object;
 
     public Lat(Function adqlFunction)
     {
@@ -95,13 +95,13 @@ public class Lat extends PgsFunction
     protected void convertParameters()
     {
         List<Expression> params = this.getParameters().getExpressions();
-        _object = params.get(0);
+        object = params.get(0);
     }
 
     @Override
     public String toString()
     {
-        return "degrees(lat(" + _object.toString() + "))";
+        return "degrees(lat(" + object.toString() + "))";
     }
     
     public String valueString()

@@ -85,16 +85,16 @@ public class Contains extends PgsBinaryFunction implements PredicateFunction
     public Contains(Function adqlFunction)
     {
         super(adqlFunction);
-        _operator = "@";
+        operator = "@";
     }
 
     public Contains(ContainsNot containsNot)
     {
-        _operator = "@";
+        operator = "@";
         setParameters(containsNot.getParameters());
-        _adqlFunction = containsNot.getAdqlFunction();
-        _left = containsNot.getLeft();
-        _right = containsNot.getRight();
+        adqlFunction = containsNot.getAdqlFunction();
+        left = containsNot.getLeft();
+        right = containsNot.getRight();
     }
 
     /* (non-Javadoc)

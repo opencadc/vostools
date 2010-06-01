@@ -88,16 +88,16 @@ public class ReferenceNavigator extends SubNavigator implements ColumnReferenceV
 {
     protected static Logger log = Logger.getLogger(ReferenceNavigator.class);
 
+    public ReferenceNavigator()
+    {
+    }
+
     public ReferenceNavigator clone()
     {
         ReferenceNavigator rtn = (ReferenceNavigator) super.clone();
         return rtn;
     }
 
-    public ReferenceNavigator()
-    {
-        // TODO Auto-generated constructor stub
-    }
 
     /* (non-Javadoc)
      * @see net.sf.jsqlparser.statement.select.ColumnReferenceVisitor#visit(net.sf.jsqlparser.statement.select.ColumnIndex)
@@ -126,5 +126,4 @@ public class ReferenceNavigator extends SubNavigator implements ColumnReferenceV
         log.debug("visit(orderByElement)" + orderBy);
         orderBy.getColumnReference().accept(this);
     }
-
 }

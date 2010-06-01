@@ -112,7 +112,7 @@ public class TapSchemaTableValidator extends FromItemNavigator
     {
         log.debug("visit(table) " + table);
         String tableNameOrAlias = table.getName();
-        Table qTable = ParserUtil.findFromTable(_selectNavigator.getPlainSelect(), tableNameOrAlias);
+        Table qTable = ParserUtil.findFromTable(selectNavigator.getPlainSelect(), tableNameOrAlias);
         // all table should be in TapSchema
         TableDesc td = TapSchemaUtil.findTableDesc(tapSchema, qTable);
         if (td == null)

@@ -72,10 +72,13 @@ package ca.nrc.cadc.tap.parser.region.pgsphere.function;
 import java.util.ArrayList;
 import java.util.List;
 
+import net.sf.jsqlparser.expression.DoubleValue;
+import net.sf.jsqlparser.expression.Expression;
+import net.sf.jsqlparser.expression.Function;
+import net.sf.jsqlparser.expression.LongValue;
+import net.sf.jsqlparser.expression.operators.relational.ExpressionList;
 import ca.nrc.cadc.tap.parser.region.pgsphere.expression.DegreeDouble;
 import ca.nrc.cadc.tap.parser.region.pgsphere.expression.DegreeLong;
-import net.sf.jsqlparser.expression.*;
-import net.sf.jsqlparser.expression.operators.relational.*;
 
 /**
  * super class of all PgSphere function implemention.
@@ -85,7 +88,7 @@ import net.sf.jsqlparser.expression.operators.relational.*;
  */
 public abstract class PgsFunction extends Function
 {
-    protected Function _adqlFunction;
+    protected Function adqlFunction;
 
     public PgsFunction()
     {
@@ -93,15 +96,15 @@ public abstract class PgsFunction extends Function
 
     public PgsFunction(Function adqlFunction)
     {
-        _adqlFunction = adqlFunction;
+        this.adqlFunction = adqlFunction;
         // at the point this object is created,
         // parameters have already been converted to implemented version.
         ExpressionList adqlExprList = adqlFunction.getParameters();
         ExpressionList pgsExprList = toDegreeExpressionList(adqlExprList);
         setParameters(pgsExprList); // method in Function
-        
+
     }
-    
+
     /**
      * @param adqlExprList
      * @return
@@ -119,7 +122,7 @@ public abstract class PgsFunction extends Function
             e2 = toDegreeExpression(e1);
             pgsParams.add(e2);
         }
-        
+
         ExpressionList pgsExprList = new ExpressionList(pgsParams);
         // TODO...
         return pgsExprList;
@@ -129,9 +132,9 @@ public abstract class PgsFunction extends Function
     {
         Expression rtn = null;
         if (expr instanceof LongValue)
-            rtn = new DegreeLong((LongValue)expr);
+            rtn = new DegreeLong((LongValue) expr);
         else if (expr instanceof DoubleValue)
-            rtn = new DegreeDouble((DoubleValue)expr);
+            rtn = new DegreeDouble((DoubleValue) expr);
         else
             rtn = expr;
         return rtn;
@@ -144,12 +147,12 @@ public abstract class PgsFunction extends Function
 
     public Function getAdqlFunction()
     {
-        return _adqlFunction;
+        return adqlFunction;
     }
 
     public void setAdqlFunction(Function adqlFunction)
     {
-        _adqlFunction = adqlFunction;
+        this.adqlFunction = adqlFunction;
     }
 
 }

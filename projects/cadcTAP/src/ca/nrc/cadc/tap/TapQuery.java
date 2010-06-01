@@ -79,7 +79,9 @@ import java.util.Map;
 
 /**
  * Interface for classes that handle parameters for a single value of LANG and 
- * generate the SQL to be executed. TODO: allow deployet to define new LANG values
+ * generate the SQL to be executed. 
+ * 
+ * TODO allow deployet to define new LANG values
  * and implementation classes to go with them (currently hard-coded in QueryRunner).
  * 
  * @author pdowler
@@ -91,33 +93,33 @@ public interface TapQuery
      * 
      * @param ts
      */
-    public void setTapSchema(TapSchema ts);
-    
+    void setTapSchema(TapSchema ts);
+
     /**
      * Caller provides the original table names and metadata for temporary tables not
      * described in TapSchema.
      * 
      * @param extraTables
      */
-    public void setExtraTables(Map<String,TableDesc> extraTables);
-    
+    void setExtraTables(Map<String, TableDesc> extraTables);
+
     /**
      * Set the parameter list. Calling this method clears all previous
      * parsing state.
      * 
      * @param params
      */
-    public void setParameterList(List<Parameter> params);
-    
+    void setParameterList(List<Parameter> params);
+
     /**
      * @return the SQL query to execute
      */
-    public String getSQL();
-    
+    String getSQL();
+
     /**
      * @return the metadata for columns in the result set
      */
-    public List<TapSelectItem> getSelectList();
+    List<TapSelectItem> getSelectList();
 
     /**
      * Limit number of table rows.

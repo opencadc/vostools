@@ -69,22 +69,20 @@
 
 package ca.nrc.cadc.tap.writer.votable;
 
-import ca.nrc.cadc.tap.schema.TapSchema;
 import java.io.IOException;
-import java.io.PrintWriter;
-import java.io.StringWriter;
 import java.io.Writer;
-import java.net.URLDecoder;
 import java.util.Iterator;
 import java.util.List;
+
 import org.apache.log4j.Logger;
 import org.jdom.Comment;
 import org.jdom.DocType;
 import org.jdom.Document;
 import org.jdom.Element;
 import org.jdom.ProcessingInstruction;
-import org.jdom.Text;
 import org.jdom.output.XMLOutputter;
+
+import ca.nrc.cadc.tap.schema.TapSchema;
 
 /**
  * Extends JDOM XMLOutputter and outputs a custom TABLEDATA element.
@@ -92,6 +90,7 @@ import org.jdom.output.XMLOutputter;
  */
 public class TableDataXMLOutputter extends XMLOutputter
 {
+    @SuppressWarnings("unused")
     private static Logger log = Logger.getLogger(TableDataXMLOutputter.class);
 
     // XML declaration.
@@ -137,8 +136,7 @@ public class TableDataXMLOutputter extends XMLOutputter
      * @throws IOException
      */
     @Override
-    public void output(Document document, Writer out)
-        throws IOException
+    public void output(Document document, Writer out) throws IOException
     {
         out.write(XML_DECLARATION);
         out.write(NEW_LINE);
@@ -178,8 +176,7 @@ public class TableDataXMLOutputter extends XMLOutputter
      * @throws IOException
      */
     @Override
-    protected void printElement(Writer out, Element element, int level, XMLOutputter.NamespaceStack namespaces)
-        throws IOException
+    protected void printElement(Writer out, Element element, int level, XMLOutputter.NamespaceStack namespaces) throws IOException
     {
         if (element.getName().equalsIgnoreCase("TABLE"))
         {
@@ -211,8 +208,7 @@ public class TableDataXMLOutputter extends XMLOutputter
             for (Iterator iterator = content.iterator(); iterator.hasNext();)
             {
                 rowCount++;
-                if (rowCount > maxRows)
-                    break;
+                if (rowCount > maxRows) break;
                 out.write(getIndentLevel(level + 1));
                 try
                 {
@@ -239,13 +235,14 @@ public class TableDataXMLOutputter extends XMLOutputter
 
     protected class MyNamespaceStack extends NamespaceStack
     {
-        MyNamespaceStack() {}
+        MyNamespaceStack()
+        {
+        }
     }
 
     private String getIndentLevel(int level)
     {
-        if (getFormat().getIndent() == null || getFormat().getIndent().equals(""))
-            return "";
+        if (getFormat().getIndent() == null || getFormat().getIndent().equals("")) return "";
 
         StringBuilder sb = new StringBuilder();
         for (int i = 0; i < level; i++)

@@ -103,11 +103,11 @@ public class SelectListExtractor extends SelectNavigator
         log.debug("visit(PlainSelect) " + plainSelect);
         enterPlainSelect(plainSelect);
 
-        this._visitingPart = VisitingPart.SELECT_ITEM;
-        List<SelectItem> selectItems = _plainSelect.getSelectItems();
+        this.visitingPart = VisitingPart.SELECT_ITEM;
+        List<SelectItem> selectItems = plainSelect.getSelectItems();
         if (selectItems != null)
             for (SelectItem s : selectItems)
-                s.accept(this._expressionNavigator);
+                s.accept(this.expressionNavigator);
 
         log.debug("visit(PlainSelect) done");
         leavePlainSelect();

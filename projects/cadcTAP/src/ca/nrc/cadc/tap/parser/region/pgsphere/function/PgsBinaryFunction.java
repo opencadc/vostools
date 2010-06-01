@@ -82,13 +82,16 @@ import net.sf.jsqlparser.expression.Function;
  */
 public class PgsBinaryFunction extends PgsFunction
 {
-    protected String _operator;
-    protected final String SPACE = " ";
-    protected Expression _left;
-    protected Expression _right;
-
-    public PgsBinaryFunction() {}
+    protected static final String SPACE = " ";
     
+    protected String operator;
+    protected Expression left;
+    protected Expression right;
+
+    public PgsBinaryFunction()
+    {
+    }
+
     public PgsBinaryFunction(Function adqlFunction)
     {
         super(adqlFunction);
@@ -99,20 +102,18 @@ public class PgsBinaryFunction extends PgsFunction
     protected void convertParameters()
     {
         List<Expression> params = this.getParameters().getExpressions();
-        _left =  params.get(0);
-        _right = params.get(1);
-        if (_left instanceof Spoint)
-           ((Spoint)_left).setIsOperand(true);
-        if (_right instanceof Spoint)
-            ((Spoint)_right).setIsOperand(true);
+        left = params.get(0);
+        right = params.get(1);
+        if (left instanceof Spoint) ((Spoint) left).setIsOperand(true);
+        if (right instanceof Spoint) ((Spoint) right).setIsOperand(true);
     }
 
     @Override
     public String toString()
     {
-        return _left.toString() + SPACE + _operator + SPACE + _right.toString() ;
+        return left.toString() + SPACE + operator + SPACE + right.toString();
     }
-    
+
     public String valueString()
     {
         return toString();
@@ -120,33 +121,32 @@ public class PgsBinaryFunction extends PgsFunction
 
     public String getOperator()
     {
-        return _operator;
+        return operator;
     }
 
     public void setOperator(String operator)
     {
-        _operator = operator;
+        this.operator = operator;
     }
 
     public Expression getLeft()
     {
-        return _left;
+        return left;
     }
 
     public void setLeft(Expression left)
     {
-        _left = left;
+        this.left = left;
     }
 
     public Expression getRight()
     {
-        return _right;
+        return right;
     }
 
     public void setRight(Expression right)
     {
-        _right = right;
+        this.right = right;
     }
-
 
 }

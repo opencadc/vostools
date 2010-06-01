@@ -75,7 +75,7 @@ import net.sf.jsqlparser.expression.Function;
 
 /**
  * the PgSphere implementation of the negated value of ADQL function
- * INTERSECTS 
+ * INTERSECTS.
  * 
  * @author zhangsa
  * 
@@ -85,16 +85,16 @@ public class IntersectsNot extends PgsBinaryFunction implements PredicateFunctio
     public IntersectsNot(Function adqlFunction)
     {
         super(adqlFunction);
-        _operator = "!&&";
+        operator = "!&&";
     }
     
     public IntersectsNot(Intersects intersects)
     {
-        _operator = "!&&";
+        operator = "!&&";
         setParameters(intersects.getParameters());
-        _adqlFunction = intersects.getAdqlFunction();
-        _left = intersects.getLeft();
-        _right = intersects.getRight();
+        adqlFunction = intersects.getAdqlFunction();
+        left = intersects.getLeft();
+        right = intersects.getRight();
     }
 
     /* (non-Javadoc)

@@ -427,6 +427,6 @@ class AdqlPgsRegionQuery extends AdqlQuery
     protected void init()
     {
         //super.init();
-        _navigatorList.add(new PgsphereRegionConverter());
+        super.navigatorList.add(new PgsphereRegionConverter());
     }
 }

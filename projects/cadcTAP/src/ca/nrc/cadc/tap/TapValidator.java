@@ -73,36 +73,37 @@ import java.util.List;
 
 import ca.nrc.cadc.uws.Parameter;
 
+/**
+ * TAP Validator. 
+ *
+ */
 public class TapValidator
 {
-	private String lang;
-	
-	public void validate( List<Parameter> paramList )
-	{
-		if ( paramList==null || paramList.size()==0)
-			throw new IllegalStateException("Missing required parameter: REQUEST");
-		
+    private String lang;
+
+    public void validate(List<Parameter> paramList)
+    {
+        if (paramList == null || paramList.size() == 0) throw new IllegalStateException("Missing required parameter: REQUEST");
+
         //  REQUEST
-		String request = TapUtil.findParameterValue( "REQUEST", paramList );
-        if ( request==null || request.trim().length()==0)
+        String request = TapUtil.findParameterValue("REQUEST", paramList);
+        if (request == null || request.trim().length() == 0)
             throw new IllegalStateException("Missing required parameter: REQUEST");
-        if ( !request.equals( "doQuery" ) )
-            throw new IllegalArgumentException( "Unknown REQUEST value: "+request );
-        
+        if (!request.equals("doQuery")) throw new IllegalArgumentException("Unknown REQUEST value: " + request);
+
         //  LANG
-        lang = TapUtil.findParameterValue( "LANG", paramList );
-        if ( lang==null || lang.length()==0 )
-            throw new IllegalStateException( "REQUEST=doQuery not acompanied by LANG param" );
+        lang = TapUtil.findParameterValue("LANG", paramList);
+        if (lang == null || lang.length() == 0) throw new IllegalStateException("REQUEST=doQuery not acompanied by LANG param");
 
         //  VERSION
-        String version = TapUtil.findParameterValue( "VERSION", paramList );
-        if ( version!=null && version.length()!=0 && !version.equals("1.0") )
-            throw new IllegalArgumentException( "Unsupported TAP version: "+version );
-	}
+        String version = TapUtil.findParameterValue("VERSION", paramList);
+        if (version != null && version.length() != 0 && !version.equals("1.0"))
+            throw new IllegalArgumentException("Unsupported TAP version: " + version);
+    }
 
-	public String getLang()
-	{
-		return lang;
-	}
-	
+    public String getLang()
+    {
+        return lang;
+    }
+
 }

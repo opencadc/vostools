@@ -70,7 +70,6 @@
 package ca.nrc.cadc.tap.parser.region.pgsphere.expression;
 
 import net.sf.jsqlparser.expression.DoubleValue;
-import net.sf.jsqlparser.expression.LongValue;
 
 /**
  * Represents the Degree expression of PgSphere, 
@@ -84,7 +83,7 @@ import net.sf.jsqlparser.expression.LongValue;
  */
 public class DegreeDouble extends Degree
 {
-    private DoubleValue _value;
+    private DoubleValue value;
     
     public DegreeDouble(DoubleValue value)
     {
@@ -93,7 +92,7 @@ public class DegreeDouble extends Degree
 
     public DegreeDouble(double value)
     {
-        _value = new DoubleValue(String.valueOf(value));
+        this.value = new DoubleValue(String.valueOf(value));
     }
 
     public String toString()
@@ -106,7 +105,7 @@ public class DegreeDouble extends Degree
      */
     public void setValue(DoubleValue value)
     {
-        _value = value;
+        this.value = value;
     }
 
     /**
@@ -114,7 +113,7 @@ public class DegreeDouble extends Degree
      */
     public DoubleValue getValue()
     {
-        return _value;
+        return value;
     }
 
 }

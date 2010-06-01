@@ -167,7 +167,7 @@ public class ColumnNameConverterTest
             cnc.put("oldColumn", "newColumn");
             SelectNavigator sn = new SelectNavigator(
                     new ExpressionNavigator(), cnc, new FromItemNavigator());
-            super._navigatorList.add(sn);
+            super.navigatorList.add(sn);
         }
     }
 }

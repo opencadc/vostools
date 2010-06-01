@@ -213,7 +213,7 @@ public class TableNameConverterTest
             //super.init();
             SelectNavigator sn = new SelectNavigator(
                     new ExpressionNavigator(), new ReferenceNavigator(), tnc);
-            super._navigatorList.add(sn);
+            super.navigatorList.add(sn);
         }
     }
 

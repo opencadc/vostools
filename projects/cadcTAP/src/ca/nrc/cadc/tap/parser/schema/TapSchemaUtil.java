@@ -89,7 +89,7 @@ import ca.nrc.cadc.tap.schema.TableDesc;
 import ca.nrc.cadc.tap.schema.TapSchema;
 
 /**
- * Utility class related to TAP Schema
+ * Utility class related to TAP Schema.
  * 
  * @author zhangsa
  *
@@ -98,10 +98,8 @@ public class TapSchemaUtil
 {
     protected static Logger log = Logger.getLogger(TapSchemaUtil.class);
 
-    private static String DEFAULT_SCHEMA = "default"; // a la VODataService
-
     /**
-     * For a given Table, find it in TAP Schema, and returns a list of TapSelectItem of that Table
+     * For a given Table, find it in TAP Schema, and returns a list of TapSelectItem of that Table.
      * 
      * @param tapSchema
      * @param table
@@ -118,7 +116,7 @@ public class TapSchemaUtil
     }
 
     /**
-     * Return the TapSelectItem List of a given tableDesc
+     * Return the TapSelectItem List of a given tableDesc.
      * 
      * @param tableDesc
      * @return
@@ -137,7 +135,7 @@ public class TapSchemaUtil
     }
 
     /**
-     * Find TableDesc in TAP Schema for a given Table
+     * Find TableDesc in TAP Schema for a given Table.
      * 
      * @param tapSchema
      * @param table
@@ -147,14 +145,14 @@ public class TapSchemaUtil
     {
         for (SchemaDesc sd : tapSchema.getSchemaDescs())
         {
-            if ( (sd.getSchemaName() == null && table.getSchemaName() == null)
-                    || (sd.getSchemaName().equalsIgnoreCase(table.getSchemaName())) )
+            if ((sd.getSchemaName() == null && table.getSchemaName() == null)
+                    || (sd.getSchemaName().equalsIgnoreCase(table.getSchemaName())))
             {
                 for (TableDesc td : sd.getTableDescs())
                 {
                     if (td.getSimpleTableName().equalsIgnoreCase(table.getName()))
                     {
-                       return td;
+                        return td;
                     }
                 }
             }
@@ -163,7 +161,7 @@ public class TapSchemaUtil
     }
 
     /**
-     * Check whether a column exists in a tapSchema
+     * Check whether a column exists in a tapSchema.
      * 
      * @param tapSchema
      * @param column
@@ -187,7 +185,7 @@ public class TapSchemaUtil
     }
 
     /**
-     * For a columnName and a plainSelect, find the Table from TAP Schema
+     * For a columnName and a plainSelect, find the Table from TAP Schema.
      * 
      * @param tapSchema
      * @param plainSelect
@@ -204,8 +202,7 @@ public class TapSchemaUtil
         for (Table fromTable : fromTableList)
         {
             td = findTableDesc(tapSchema, fromTable);
-            if (td == null)
-                throw new IllegalArgumentException("Table [" + fromTable + "] does not exist.");
+            if (td == null) throw new IllegalArgumentException("Table [" + fromTable + "] does not exist.");
             if (isValidColumnName(td, columnName))
             {
                 matchCount++;
@@ -215,8 +212,7 @@ public class TapSchemaUtil
         }
         if (matchCount == 0)
             throw new IllegalArgumentException("Column [" + columnName + "] does not exist.");
-        else if (matchCount > 1)
-            throw new IllegalArgumentException("Column [" + columnName + "] is ambiguous.");
+        else if (matchCount > 1) throw new IllegalArgumentException("Column [" + columnName + "] is ambiguous.");
 
         Table rtn = getTable(rtnTd);
         return rtn;
@@ -253,13 +249,13 @@ public class TapSchemaUtil
     {
 
         Table rtn = null;
-        if (rtnTd != null)
-            rtn = new Table(rtnTd.getSchemaName(), rtnTd.getSimpleTableName());
+        if (rtnTd != null) rtn = new Table(rtnTd.getSchemaName(), rtnTd.getSimpleTableName());
         return rtn;
     }
 
     /**
-     * Validate a column which is not an alias of selectItem
+     * Validate a column which is not an alias of selectItem.
+     * 
      * Form of column could be possibly:
      * 
      * table.columnName, tableAilas.columnName, or schema.table.ColumnName
@@ -278,9 +274,9 @@ public class TapSchemaUtil
             // form: columnName
             String columnName = column.getColumnName();
             Table fromTable = TapSchemaUtil.findTableForColumnName(tapSchema, plainSelect, columnName);
-            if (fromTable == null)
-                throw new IllegalArgumentException("Column: [" + columnName + "] does not exist.");
-        } else
+            if (fromTable == null) throw new IllegalArgumentException("Column: [" + columnName + "] does not exist.");
+        }
+        else
         {
             // table.columnName, tableAilas.columnName, or schema.table.ColumnName
             String schemaName = table.getSchemaName();
@@ -298,7 +294,8 @@ public class TapSchemaUtil
                     if (!TapSchemaUtil.isValidColumnName(fromTableDesc, columnName))
                         throw new IllegalArgumentException("Column: [" + columnName + "] does not exist.");
                 }
-            } else
+            }
+            else
             {
                 // schema.table.ColumnName
                 TableDesc fromTableDesc = TapSchemaUtil.findTableDesc(tapSchema, table);
@@ -351,7 +348,7 @@ public class TapSchemaUtil
     }
 
     /**
-     * Find ColumnDesc from TAP Schema for given Column and plainSelect
+     * Find ColumnDesc from TAP Schema for given Column and plainSelect.
      * 
      * @param tapSchema
      * @param plainSelect
@@ -396,14 +393,16 @@ public class TapSchemaUtil
         {
             // columnName only
             qTable = findTableForColumnName(tapSchema, plainSelect, columnName);
-        } else
+        }
+        else
         {
             // table.columnName, tableAilas.columnName, or schema.table.ColumnName
 
             if (table.getSchemaName() != null && !table.getSchemaName().equals(""))
             {
                 qTable = table;
-            } else
+            }
+            else
             {
                 String tableNameOrAlias = table.getName();
                 qTable = ParserUtil.findFromTable(plainSelect, tableNameOrAlias);

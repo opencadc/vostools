@@ -130,14 +130,13 @@ import javax.naming.NameNotFoundException;
  */
 public class QueryRunner implements JobRunner
 {
-	private static final Logger logger = Logger.getLogger(QueryRunner.class);
-	
-	private static final HashMap<String,String> langQueries    = new HashMap<String,String>();
-	
-    
+    private static final Logger logger = Logger.getLogger(QueryRunner.class);
+
+    private static final HashMap<String, String> langQueries = new HashMap<String, String>();
+
     private static String queryDataSourceName = "jdbc/tapuser";
     private static String uploadDataSourceName = "jdbc/tapuploadadm";
-    
+
     // names of plugin classes that must be provided by service implementation
     private static String fileStoreClassName = "ca.nrc.cadc.tap.impl.FileStoreImpl";
     private static String uploadManagerClassName = "ca.nrc.cadc.tap.impl.UploadManagerImpl";
@@ -146,20 +145,22 @@ public class QueryRunner implements JobRunner
 
     // optional plugin classes that may be provided to override default behaviour
     private static String maxrecValidatorClassName = "ca.nrc.cadc.tap.impl.MaxRecValidatorImpl";
-    
-	static
-	{
-		langQueries.put("ADQL", adqlParserClassName);
-		langQueries.put("SQL", sqlParserClassName);
-	}
+
+    static
+    {
+        langQueries.put("ADQL", adqlParserClassName);
+        langQueries.put("SQL", sqlParserClassName);
+    }
 
     private String jobID;
-	private Job job;
+    private Job job;
     private JobManager manager;
 
-    public QueryRunner() { }
+    public QueryRunner()
+    {
+    }
 
-    public void setJob( Job job )
+    public void setJob(Job job)
     {
         this.job = job;
         this.jobID = job.getID();
@@ -174,7 +175,7 @@ public class QueryRunner implements JobRunner
     {
         this.manager = jm;
     }
-    
+
     public void run()
     {
         logger.debug("START");
@@ -184,7 +185,7 @@ public class QueryRunner implements JobRunner
         tList.add(System.currentTimeMillis());
         sList.add("start");
 
-        // check job state, TODO: optimise this
+        // check job state, TODO optimise this
         this.job = manager.getJob(jobID);
         if (job == null || job.getExecutionPhase().equals(ExecutionPhase.ABORTED))
         {
@@ -198,23 +199,23 @@ public class QueryRunner implements JobRunner
         FileStore fs = null;
         try
         {
-            fs = (FileStore) Class.forName( fileStoreClassName ).newInstance();
+            fs = (FileStore) Class.forName(fileStoreClassName).newInstance();
         }
-        catch ( Throwable t )
+        catch (Throwable t)
         {
-        	logger.error( "Failed to instantiate FileStore class: "+fileStoreClassName, t );
-        	return;
+            logger.error("Failed to instantiate FileStore class: " + fileStoreClassName, t);
+            return;
         }
 
         try
         {
             logger.debug("setting/persisting ExecutionPhase = " + ExecutionPhase.EXECUTING);
-            job.setExecutionPhase( ExecutionPhase.EXECUTING );
+            job.setExecutionPhase(ExecutionPhase.EXECUTING);
             this.job = manager.persist(job);
 
             tList.add(System.currentTimeMillis());
             sList.add("set phase = EXECUTING: ");
-            
+
             // start processing the job
             List<Parameter> paramList = job.getParameterList();
 
@@ -222,7 +223,7 @@ public class QueryRunner implements JobRunner
 
             logger.debug("invoking TapValiator for REQUEST and VERSION...");
             TapValidator tapValidator = new TapValidator();
-            tapValidator.validate( paramList );
+            tapValidator.validate(paramList);
 
             tList.add(System.currentTimeMillis());
             sList.add("initialisation: ");
@@ -233,22 +234,22 @@ public class QueryRunner implements JobRunner
             DataSource queryDataSource = (DataSource) envContext.lookup(queryDataSourceName);
             // this one is optional, so take care
             DataSource uploadDataSource = null;
-            try 
+            try
             {
                 uploadDataSource = (DataSource) envContext.lookup(uploadDataSourceName);
             }
-            catch(NameNotFoundException nex)
+            catch (NameNotFoundException nex)
             {
                 logger.warn(nex.toString());
             }
-            
+
             if (queryDataSource == null) // application server config issue
                 throw new RuntimeException("failed to find the query DataSource");
 
             tList.add(System.currentTimeMillis());
             sList.add("find DataSources via JNDI: ");
 
-            // check job state, TODO: optimise this
+            // check job state, TODO optimise this
             this.job = manager.getJob(jobID);
             if (job == null || job.getExecutionPhase().equals(ExecutionPhase.ABORTED))
             {
@@ -264,13 +265,13 @@ public class QueryRunner implements JobRunner
 
             tList.add(System.currentTimeMillis());
             sList.add("read tap_schema: ");
-            
+
             logger.debug("loading " + uploadManagerClassName);
-            Class umc =  Class.forName(uploadManagerClassName);
+            Class umc = Class.forName(uploadManagerClassName);
             UploadManager uploadManager = (UploadManager) umc.newInstance();
             uploadManager.setDataSource(uploadDataSource);
             logger.debug("invoking UploadManager for UPLOAD...");
-            Map<String,TableDesc> tableDescs = uploadManager.upload( paramList, job.getID() );
+            Map<String, TableDesc> tableDescs = uploadManager.upload(paramList, job.getID());
 
             logger.debug("invoking MaxRecValidator...");
             MaxRecValidator maxRecValidator = new MaxRecValidator();
@@ -278,36 +279,35 @@ public class QueryRunner implements JobRunner
             {
                 Class c = Class.forName(maxrecValidatorClassName);
                 maxRecValidator = (MaxRecValidator) c.newInstance();
-                
+
             }
-            catch(Throwable ignore) { }
+            catch (Throwable ignore)
+            {
+            }
             logger.debug("using " + maxRecValidator.getClass().getName());
             Integer maxRows = maxRecValidator.validate(paramList);
 
             logger.debug("invoking TapValidator to get LANG...");
-        	String lang = tapValidator.getLang();
+            String lang = tapValidator.getLang();
             String cname = langQueries.get(lang);
-            if (cname == null)
-                throw new UnsupportedOperationException("unknown LANG: " + lang);
+            if (cname == null) throw new UnsupportedOperationException("unknown LANG: " + lang);
             logger.debug("loading TapQuery " + cname);
             Class tqc = Class.forName(cname);
             TapQuery tapQuery = (TapQuery) tqc.newInstance();
             tapQuery.setTapSchema(tapSchema);
             tapQuery.setExtraTables(tableDescs);
             tapQuery.setParameterList(paramList);
-            if (maxRows != null)
-                tapQuery.setMaxRowCount(maxRows + 1); // +1 so the TableWriter can detect overflow
-            
+            if (maxRows != null) tapQuery.setMaxRowCount(maxRows + 1); // +1 so the TableWriter can detect overflow
+
             logger.debug("invoking TapQuery...");
-        	String sql = tapQuery.getSQL();
+            String sql = tapQuery.getSQL();
             List<TapSelectItem> selectList = tapQuery.getSelectList();
-            
+
             logger.debug("invoking TableWriterFactory for FORMAT...");
             TableWriter writer = TableWriterFactory.getWriter(paramList);
             writer.setTapSchema(tapSchema);
             writer.setSelectList(selectList);
-            if (maxRows != null)
-                writer.setMaxRowCount(maxRows);
+            if (maxRows != null) writer.setMaxRowCount(maxRows);
 
             tList.add(System.currentTimeMillis());
             sList.add("parse/convert query: ");
@@ -329,37 +329,57 @@ public class QueryRunner implements JobRunner
 
                 tList.add(System.currentTimeMillis());
                 sList.add("execute query and get ResultSet: ");
-                
-                // TODO: if checking for abort was fast, check it here and save writing and storing
+
+                // TODO if checking for abort was fast, check it here and save writing and storing
 
                 tmpFile = new File(fs.getStorageDir(), "result_" + job.getID() + "." + writer.getExtension());
                 logger.debug("writing ResultSet to " + tmpFile);
                 OutputStream ostream = new FileOutputStream(tmpFile);
                 writer.write(rs, ostream);
-                
-                try { ostream.close(); }
-                catch(Throwable ignore) { }
+
+                try
+                {
+                    ostream.close();
+                }
+                catch (Throwable ignore)
+                {
+                }
 
                 tList.add(System.currentTimeMillis());
                 sList.add("write ResultSet to tmp file: ");
-                
+
                 logger.debug("executing query... [OK]");
-            } 
+            }
             catch (SQLException ex)
             {
                 logger.error("SQL Execution error.", ex);
                 throw ex;
-            } 
+            }
             finally
             {
                 if (connection != null)
                 {
-                    try { rs.close(); }
-                    catch(Throwable ignore) { }
-                    try { pstmt.close(); }
-                    catch(Throwable ignore) { }
-                    try { connection.close(); }
-                    catch(Throwable ignore) { }
+                    try
+                    {
+                        rs.close();
+                    }
+                    catch (Throwable ignore)
+                    {
+                    }
+                    try
+                    {
+                        pstmt.close();
+                    }
+                    catch (Throwable ignore)
+                    {
+                    }
+                    try
+                    {
+                        connection.close();
+                    }
+                    catch (Throwable ignore)
+                    {
+                    }
                 }
             }
 
@@ -373,38 +393,38 @@ public class QueryRunner implements JobRunner
             List<Result> results = new ArrayList<Result>();
             results.add(res);
 
-            // check job state, TODO: optimise this
+            // check job state, TODO optimise this
             this.job = manager.getJob(jobID);
             if (job == null || job.getExecutionPhase().equals(ExecutionPhase.ABORTED))
             {
                 logger.debug("job aborted");
                 return;
             }
-            
+
             logger.debug("setting ExecutionPhase = " + ExecutionPhase.COMPLETED);
             job.setResultsList(results);
-            job.setExecutionPhase( ExecutionPhase.COMPLETED );
+            job.setExecutionPhase(ExecutionPhase.COMPLETED);
             this.job = manager.persist(job);
-		}
-        catch ( Throwable t )
+        }
+        catch (Throwable t)
         {
             //t.printStackTrace();
-        	String errorMessage = null;
-        	URL errorURL = null;
-        	try
-        	{
+            String errorMessage = null;
+            URL errorURL = null;
+            try
+            {
                 tList.add(System.currentTimeMillis());
                 sList.add("encounter failure: ");
 
                 logger.error("query failed", t);
-        		errorMessage = t.getClass().getSimpleName() + ":" + t.getMessage();
-        		logger.debug( "Error message: "+errorMessage );
-        		VOTableWriter writer = new VOTableWriter();
+                errorMessage = t.getClass().getSimpleName() + ":" + t.getMessage();
+                logger.debug("Error message: " + errorMessage);
+                VOTableWriter writer = new VOTableWriter();
                 File errorFile = new File(fs.getStorageDir(), "error_" + job.getID() + "." + writer.getExtension());
-                logger.debug( "Error file: "+errorFile.getAbsolutePath());
-           		FileOutputStream errorOutput = new FileOutputStream( errorFile );
-           		writer.write(t, errorOutput );
-           		errorOutput.close();
+                logger.debug("Error file: " + errorFile.getAbsolutePath());
+                FileOutputStream errorOutput = new FileOutputStream(errorFile);
+                writer.write(t, errorOutput);
+                errorOutput.close();
 
                 tList.add(System.currentTimeMillis());
                 sList.add("write error to tmp file: ");
@@ -414,8 +434,8 @@ public class QueryRunner implements JobRunner
                 tList.add(System.currentTimeMillis());
                 sList.add("store error file with FileStore ");
 
-           		logger.debug( "Error URL: " + errorURL);
-                // check job state, TODO: optimise this
+                logger.debug("Error URL: " + errorURL);
+                // check job state, TODO optimise this
                 this.job = manager.getJob(jobID);
                 if (job == null || job.getExecutionPhase().equals(ExecutionPhase.ABORTED))
                 {
@@ -423,28 +443,28 @@ public class QueryRunner implements JobRunner
                     return;
                 }
                 logger.debug("setting ExecutionPhase = " + ExecutionPhase.ERROR);
-                job.setExecutionPhase( ExecutionPhase.ERROR );
+                job.setExecutionPhase(ExecutionPhase.ERROR);
                 job.setErrorSummary(new ErrorSummary(errorMessage, errorURL));
                 this.job = manager.persist(job);
-        	}
-            catch(Throwable t2)
+            }
+            catch (Throwable t2)
             {
-                logger.error( "failed to persist error", t2);
+                logger.error("failed to persist error", t2);
                 // this is really bad
                 logger.debug("setting ExecutionPhase = " + ExecutionPhase.ERROR);
-                job.setExecutionPhase( ExecutionPhase.ERROR );
+                job.setExecutionPhase(ExecutionPhase.ERROR);
                 job.setErrorSummary(new ErrorSummary("failed to persist error document: " + t2, null));
                 this.job = manager.persist(job);
             }
-		}
+        }
         finally
         {
             tList.add(System.currentTimeMillis());
             sList.add("set final job state: ");
 
-            for (int i=1; i<tList.size(); i++)
+            for (int i = 1; i < tList.size(); i++)
             {
-                long dt = tList.get(i) - tList.get(i-1);
+                long dt = tList.get(i) - tList.get(i - 1);
                 logger.info(job.getID() + " -- " + sList.get(i) + dt + "ms");
             }
 

@@ -78,6 +78,8 @@ import net.sf.jsqlparser.expression.DoubleValue;
 import net.sf.jsqlparser.expression.Expression;
 import net.sf.jsqlparser.expression.Function;
 import net.sf.jsqlparser.expression.LongValue;
+import net.sf.jsqlparser.expression.NullValue;
+import net.sf.jsqlparser.expression.StringValue;
 import net.sf.jsqlparser.parser.CCJSqlParserManager;
 import net.sf.jsqlparser.schema.Column;
 import net.sf.jsqlparser.schema.Table;
@@ -87,14 +89,14 @@ import net.sf.jsqlparser.statement.select.Join;
 import net.sf.jsqlparser.statement.select.PlainSelect;
 import net.sf.jsqlparser.statement.select.SelectExpressionItem;
 import net.sf.jsqlparser.statement.select.SelectItem;
-import ca.nrc.cadc.stc.Box;
-import ca.nrc.cadc.tap.parser.navigator.SelectNavigator;
-import net.sf.jsqlparser.expression.NullValue;
-import net.sf.jsqlparser.expression.StringValue;
+
 import org.apache.log4j.Logger;
 
+import ca.nrc.cadc.stc.Box;
+import ca.nrc.cadc.tap.parser.navigator.SelectNavigator;
+
 /**
- * Utility class for the use of Tap Parser
+ * Utility class for the use of Tap Parser.
  * 
  * @author zhangsa
  *
@@ -103,12 +105,9 @@ import org.apache.log4j.Logger;
 public class ParserUtil
 {
     private static Logger log = Logger.getLogger(ParserUtil.class);
-    
+
     /**
-     * parse a Statement using given SelectNavigator
-     * 
-     * @param statement
-     * @param sn
+     * parse a Statement using given SelectNavigator.
      */
     public static void parseStatement(Statement statement, SelectNavigator sn)
     {
@@ -116,12 +115,10 @@ public class ParserUtil
         statement.accept(statementNavigator);
         return;
     }
-    
+
     /**
-     * Parse a SQL/ADQL string using JSqlParser, return the result Statement
+     * Parse a SQL/ADQL string using JSqlParser, return the result Statement.
      * 
-     * @param query
-     * @return Statement
      * @throws JSQLParserException
      */
     public static Statement receiveQuery(String query) throws JSQLParserException
@@ -135,16 +132,14 @@ public class ParserUtil
     }
 
     /**
-     * Extract a list of Table from the FROM part of query
+     * Extract a list of Table from the FROM part of query.
      *  
-     * @param ps
-     * @return
      */
     @SuppressWarnings("unchecked")
     public static List<Table> getFromTableList(PlainSelect ps)
     {
         List<Table> fromTableList = new ArrayList<Table>();
-        
+
         FromItem fromItem = ps.getFromItem();
         if (fromItem instanceof Table)
         {
@@ -166,7 +161,7 @@ public class ParserUtil
         }
         return fromTableList;
     }
-    
+
     /**
      * Find "from Table" by table name or alias.
      * 
@@ -180,8 +175,7 @@ public class ParserUtil
         List<Table> fromTableList = getFromTableList(ps);
         for (Table table : fromTableList)
         {
-            if (tableNameOrAlias.equalsIgnoreCase(table.getAlias()) 
-                    || tableNameOrAlias.equalsIgnoreCase(table.getName()) )
+            if (tableNameOrAlias.equalsIgnoreCase(table.getAlias()) || tableNameOrAlias.equalsIgnoreCase(table.getName()))
             {
                 rtn = table;
                 break;
@@ -191,7 +185,7 @@ public class ParserUtil
     }
 
     /**
-     * find SelectItem by column name or alias
+     * find SelectItem by column name or alias.
      * 
      * @param plainSelect
      * @param columnNameOrAlias
@@ -201,7 +195,7 @@ public class ParserUtil
     public static SelectItem findSelectItemByAlias(PlainSelect plainSelect, String columnNameOrAlias)
     {
         SelectItem rtn = null;
-        List<SelectItem> siList = plainSelect.getSelectItems(); 
+        List<SelectItem> siList = plainSelect.getSelectItems();
         for (SelectItem si : siList)
         {
             if (si instanceof SelectExpressionItem)
@@ -218,7 +212,7 @@ public class ParserUtil
     }
 
     /**
-     * count number of SelectItems in a plainSelect
+     * count number of SelectItems in a plainSelect.
      * 
      * @param plainSelect
      * @return int
@@ -243,8 +237,7 @@ public class ParserUtil
         if (si != null || si instanceof SelectExpressionItem)
         {
             Expression ex = ((SelectExpressionItem) si).getExpression();
-            if (ex instanceof Column)
-                rtn = (Column) ex;
+            if (ex instanceof Column) rtn = (Column) ex;
         }
         return rtn;
     }
@@ -267,9 +260,9 @@ public class ParserUtil
     }
 
     /**
-     * Convert  ADQL BOX function to STC Box 
+     * Convert  ADQL BOX function to STC Box .
      * 
-     * @param adqlFunction, as: BOX('ICRS GEOCENTER', 10, 20, 30, 40)
+     * @param adqlFunction ADQL Function, such as: BOX('ICRS GEOCENTER', 10, 20, 30, 40)
      */
     @SuppressWarnings("unchecked")
     public static Box convertToStcBox(Function adqlFunction)
@@ -279,8 +272,7 @@ public class ParserUtil
         {
             List<Expression> adqlParams = adqlFunction.getParameters().getExpressions();
             int size = adqlParams.size();
-            if (size != 5)
-                throw new IllegalArgumentException("Not recognized as a valid BOX function: " + adqlFunction);
+            if (size != 5) throw new IllegalArgumentException("Not recognized as a valid BOX function: " + adqlFunction);
             String coordsys = parseToString(adqlParams.get(0));
             log.debug("coordsys=" + coordsys);
             String frame = null;
@@ -293,17 +285,15 @@ public class ParserUtil
                 {
                     String[] parts = coordsys.split(" ");
                     frame = parts[0];
-                    if (parts.length > 1)
-                        refpos = parts[1];
-                    if (parts.length > 2)
-                        flavor = parts[2];
+                    if (parts.length > 1) refpos = parts[1];
+                    if (parts.length > 2) flavor = parts[2];
                 }
             }
             log.debug("frame=" + frame + " refpos=" + refpos + " flavor=" + flavor);
-            
+
             double ra = parseToDouble(adqlParams.get(1));
             double dec = parseToDouble(adqlParams.get(2));
-            double width  = parseToDouble(adqlParams.get(3));
+            double width = parseToDouble(adqlParams.get(3));
             double height = parseToDouble(adqlParams.get(4));
 
             box = new Box(frame, refpos, flavor, ra, dec, width, height);
@@ -314,11 +304,7 @@ public class ParserUtil
     }
 
     /**
-     * Parse a jSql Expression as Double object
-     * 
-     * @param param
-     * @return
-     * @throws StcsParsingException
+     * Parse a jSql Expression as Double object.
      */
     public static double parseToDouble(Expression param)
     {
@@ -334,19 +320,13 @@ public class ParserUtil
     }
 
     /**
-     * Parse a jSql Expression as String object
-     *
-     * @param param
-     * @return
-     * @throws StcsParsingException
+     * Parse a jSql Expression as String object.
      */
     public static String parseToString(Expression param)
     {
-        if (param instanceof NullValue)
-            return null;
+        if (param instanceof NullValue) return null;
 
-        if (param instanceof StringValue)
-            return ((StringValue)param).getNotExcapedValue();
+        if (param instanceof StringValue) return ((StringValue) param).getNotExcapedValue();
 
         throw new IllegalArgumentException("Cannot be parsed as double value: " + param);
     }

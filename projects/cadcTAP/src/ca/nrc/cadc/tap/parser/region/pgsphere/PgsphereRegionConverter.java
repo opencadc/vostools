@@ -84,7 +84,6 @@ import ca.nrc.cadc.stc.Box;
 import ca.nrc.cadc.stc.Circle;
 import ca.nrc.cadc.stc.Polygon;
 import ca.nrc.cadc.stc.Position;
-import ca.nrc.cadc.stc.Region;
 import ca.nrc.cadc.stc.STC;
 import ca.nrc.cadc.stc.StcsParsingException;
 import ca.nrc.cadc.tap.parser.ParserUtil;
@@ -128,7 +127,6 @@ public class PgsphereRegionConverter extends RegionFinder
       * 1 = CONTAINS() 
       * 0 = CONTAINS()
       * 
-     * @param biExpr the binary expression which one side is a converted region function
      */
     protected Expression handleRegionPredicate(BinaryExpression binaryExpression)
     {
@@ -146,7 +144,8 @@ public class PgsphereRegionConverter extends RegionFinder
                 proceed = true;
                 value = ((LongValue) right).getValue();
                 predicateFunc = (PredicateFunction) left;
-            } else if (ParserUtil.isBinaryValue(left) && isPredicate(right))
+            }
+            else if (ParserUtil.isBinaryValue(left) && isPredicate(right))
             {
                 proceed = true;
                 value = ((LongValue) left).getValue();
@@ -154,8 +153,7 @@ public class PgsphereRegionConverter extends RegionFinder
             }
         }
 
-        if (proceed)
-            rtn = (Expression) ((value == 1) ? predicateFunc : predicateFunc.negate());
+        if (proceed) rtn = (Expression) ((value == 1) ? predicateFunc : predicateFunc.negate());
         return rtn;
     }
 
@@ -165,7 +163,6 @@ public class PgsphereRegionConverter extends RegionFinder
      * part of an arithmetic expression or aggregate function (since CONTAINS 
      * returns a numeric value). 
      * 
-     * @param ex the CONTAINS expression
      */
     protected Expression handleContains(Function adqlFunction)
     {
@@ -179,7 +176,6 @@ public class PgsphereRegionConverter extends RegionFinder
      * part of an arithmetic expression or aggregate function (since INTERSECTS 
      * returns a numeric value). 
      * 
-     * @param ex the CONTAINS expression
      */
     protected Expression handleIntersects(Function adqlFunction)
     {
@@ -190,7 +186,6 @@ public class PgsphereRegionConverter extends RegionFinder
     /**
      * This method is called when a POINT geometry value is found.
      * 
-     * @param ex the POINT expression
      */
     protected Expression handlePoint(Function adqlFunction)
     {
@@ -201,7 +196,6 @@ public class PgsphereRegionConverter extends RegionFinder
     /**
      * This method is called when a CIRCLE geometry value is found.
      * 
-     * @param ex the CIRCLE expression
      */
     protected Expression handleCircle(Function adqlFunction)
     {
@@ -212,7 +206,6 @@ public class PgsphereRegionConverter extends RegionFinder
     /**
      * This method is called when a POLYGON geometry value is found.
      * 
-     * @param ex the POLYGON expression
      */
     protected Expression handlePolygon(Function adqlFunction)
     {
@@ -223,7 +216,6 @@ public class PgsphereRegionConverter extends RegionFinder
     /**
      * This method is called when the CENTROID function is found.
      * 
-     * @param ex the CENTROID expression
      */
     protected Expression handleCentroid(Function adqlFunction)
     {
@@ -234,7 +226,6 @@ public class PgsphereRegionConverter extends RegionFinder
     /**
      * This method is called when COORD1 function is found.
      * 
-     * @param ex the COORD1 expression
      */
     protected Expression handleCoord1(Function adqlFunction)
     {
@@ -245,7 +236,6 @@ public class PgsphereRegionConverter extends RegionFinder
     /**
      * This method is called when COORD2 function is found.
      * 
-     * @param ex the COORD2 expression
      */
     protected Expression handleCoord2(Function adqlFunction)
     {
@@ -255,8 +245,6 @@ public class PgsphereRegionConverter extends RegionFinder
 
     /**
      * This method is called when COORDSYS function is found.
-     * 
-     * @param ex the COORDSYS expression
      */
     protected Expression handleCoordSys(Function adqlFunction)
     {
@@ -267,8 +255,6 @@ public class PgsphereRegionConverter extends RegionFinder
     /**
      * Check whether the parameter is a predicate function.
      * 
-     * @param expr
-     * @return
      */
     protected boolean isPredicate(Expression expr)
     {
@@ -300,16 +286,17 @@ public class PgsphereRegionConverter extends RegionFinder
         String regionParamStr = strV.getValue();
         String tokens[] = regionParamStr.split(" ");
         String fname = tokens[0].toUpperCase();
-        
+
         //BOX", "CIRCLE", "POLYGON", "POSITION", "UNION", "NOT", "INTERSECTION"
-        
+
         if (Box.NAME.equalsIgnoreCase(fname))
         {
             Box box;
             try
             {
                 box = (Box) STC.parse(regionParamStr);
-            } catch (StcsParsingException e)
+            }
+            catch (StcsParsingException e)
             {
                 throw new IllegalArgumentException(e);
             }
@@ -322,7 +309,8 @@ public class PgsphereRegionConverter extends RegionFinder
             try
             {
                 polygon = (Polygon) STC.parse(regionParamStr);
-            } catch (StcsParsingException e)
+            }
+            catch (StcsParsingException e)
             {
                 throw new IllegalArgumentException(e);
             }
@@ -334,7 +322,8 @@ public class PgsphereRegionConverter extends RegionFinder
             try
             {
                 circle = (Circle) STC.parse(regionParamStr);
-            } catch (StcsParsingException e)
+            }
+            catch (StcsParsingException e)
             {
                 throw new IllegalArgumentException(e);
             }
@@ -346,7 +335,8 @@ public class PgsphereRegionConverter extends RegionFinder
             try
             {
                 position = (Position) STC.parse(regionParamStr);
-            } catch (StcsParsingException e)
+            }
+            catch (StcsParsingException e)
             {
                 throw new IllegalArgumentException(e);
             }
@@ -354,7 +344,7 @@ public class PgsphereRegionConverter extends RegionFinder
         }
         else
             return super.handleRegion(adqlFunction);
-         
+
         return pgsFunc;
     }
 }

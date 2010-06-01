@@ -83,8 +83,8 @@ import net.sf.jsqlparser.expression.StringValue;
 import net.sf.jsqlparser.expression.operators.relational.ExpressionList;
 
 /**
- * the PgSphere implementation of ADQL function
- * POLYGON 
+ * the PgSphere implementation of ADQL function 
+ * POLYGON.
  * 
  * @author zhangsa
  * 
@@ -96,15 +96,16 @@ public class Spoly extends PgsFunction
         super(adqlFunction);
         convertParameters();
     }
-    
+
     /**
-     * create from STC Polygon object
+     * create from STC Polygon object.
      * 
      * @param polygon
      */
     public Spoly(Polygon polygon)
     {
-        double ra, dec;
+        double ra;
+        double dec;
         List<Expression> expressions = new ArrayList<Expression>();
         expressions.add(new StringValue(RegionFinder.ICRS));
         for (CoordPair cp : polygon.getCoordPairs())
@@ -123,14 +124,14 @@ public class Spoly extends PgsFunction
     protected void convertParameters()
     {
         List<Expression> pgsParams = new ArrayList<Expression>();
-        
+
         List<Expression> params = this.getParameters().getExpressions();
         int size = params.size();
-        
+
         Spoint spoint = null;
-        for (int i=1; i<size; i=i+2)
+        for (int i = 1; i < size; i = i + 2)
         {
-            spoint = new Spoint(params.get(i), params.get(i+1));
+            spoint = new Spoint(params.get(i), params.get(i + 1));
             pgsParams.add(spoint);
         }
         ExpressionList pgsParamExprList = new ExpressionList(pgsParams);
@@ -146,7 +147,7 @@ public class Spoly extends PgsFunction
         sb.append("'");
         return sb.toString();
     }
-    
+
     public String valueString()
     {
         StringBuffer sb = new StringBuffer();

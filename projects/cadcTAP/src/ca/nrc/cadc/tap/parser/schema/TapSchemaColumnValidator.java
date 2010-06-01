@@ -72,7 +72,6 @@ package ca.nrc.cadc.tap.parser.schema;
 import net.sf.jsqlparser.schema.Column;
 import net.sf.jsqlparser.schema.Table;
 import net.sf.jsqlparser.statement.select.ColumnIndex;
-import net.sf.jsqlparser.statement.select.OrderByElement;
 import net.sf.jsqlparser.statement.select.PlainSelect;
 import net.sf.jsqlparser.statement.select.SelectItem;
 
@@ -93,22 +92,22 @@ public class TapSchemaColumnValidator extends ReferenceNavigator
 {
     protected static Logger log = Logger.getLogger(TapSchemaColumnValidator.class);
 
-    protected TapSchema _tapSchema;
-    
+    protected TapSchema tapSchema;
+
     public TapSchemaColumnValidator()
     {
     }
-    
+
     public TapSchemaColumnValidator(TapSchema ts)
     {
-        this._tapSchema = ts;
+        this.tapSchema = ts;
     }
 
     public void setTapSchema(TapSchema tapSchema)
     {
-        this._tapSchema = tapSchema;
+        this.tapSchema = tapSchema;
     }
-    
+
     /* (non-Javadoc)
      * @see net.sf.jsqlparser.statement.select.ColumnReferenceVisitor#visit(net.sf.jsqlparser.statement.select.ColumnIndex)
      */
@@ -116,9 +115,9 @@ public class TapSchemaColumnValidator extends ReferenceNavigator
     public void visit(ColumnIndex columnIndex)
     {
         log.debug("visit(columnIndex)" + columnIndex);
-        // TODO: this is non-tapschema validation, move to someplace else?
+        // TODO this is non-tapschema validation, move to someplace else?
         int ci = columnIndex.getIndex();
-        if ( ci > ParserUtil.countSelectItems(_selectNavigator.getPlainSelect()))
+        if (ci > ParserUtil.countSelectItems(selectNavigator.getPlainSelect()))
             throw new IllegalArgumentException("ColumnIndex " + columnIndex + " is out of scope.");
     }
 
@@ -130,26 +129,27 @@ public class TapSchemaColumnValidator extends ReferenceNavigator
     {
         log.debug("visit(column)" + column);
         // The column may be referred by alias, by columnName, by table.columnName, tableAilas.columnName, or by schema.table.ColumnName
-        
-        PlainSelect plainSelect = _selectNavigator.getPlainSelect();
+
+        PlainSelect plainSelect = selectNavigator.getPlainSelect();
         log.debug("plainSelect is:" + plainSelect);
-        VisitingPart visiting = _selectNavigator.getVisitingPart(); 
+        VisitingPart visiting = selectNavigator.getVisitingPart();
         log.debug("visiting is:" + visiting);
-        if (visiting.equals(VisitingPart.SELECT_ITEM) 
-                || visiting.equals(VisitingPart.FROM)
+        if (visiting.equals(VisitingPart.SELECT_ITEM) || visiting.equals(VisitingPart.FROM)
                 || visiting.equals(VisitingPart.GROUP_BY))
         {
             // cannot be by alias
             // possible forms: columnName, table.columnName, tableAilas.columnName, or schema.table.ColumnName
-            TapSchemaUtil.validateColumnNonAlias(_tapSchema, plainSelect, column);
-        } else // visiting WHERE, HAVING, ORDER BY
+            TapSchemaUtil.validateColumnNonAlias(tapSchema, plainSelect, column);
+        }
+        else
+        // visiting WHERE, HAVING, ORDER BY
         {
             // can be by alias
             // Possible form as:
             // alias, columnName, table.columnName, tableAilas.columnName, or schema.table.ColumnName
             boolean isAlias = false;
             Table table = column.getTable();
-            if (table == null || table.getName() == null || table.getName().equals("") )
+            if (table == null || table.getName() == null || table.getName().equals(""))
             {
                 // form: alias, or columnName
                 String columnNameOrAlias = column.getColumnName();
@@ -157,9 +157,8 @@ public class TapSchemaColumnValidator extends ReferenceNavigator
                 if (selectItem != null) // it's an alias, found selectItem
                     isAlias = true; // ok
             }
-            
-            if (!isAlias)
-                TapSchemaUtil.validateColumnNonAlias(_tapSchema, plainSelect, column);
+
+            if (!isAlias) TapSchemaUtil.validateColumnNonAlias(tapSchema, plainSelect, column);
         }
     }
 }

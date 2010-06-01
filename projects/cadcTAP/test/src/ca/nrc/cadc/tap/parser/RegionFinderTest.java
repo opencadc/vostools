@@ -184,7 +184,7 @@ public class RegionFinderTest
         protected void init()
         {
             //super.init();
-            super._navigatorList.add(new RegionFinder());
+            super.navigatorList.add(new RegionFinder());
         }
     }
 }
