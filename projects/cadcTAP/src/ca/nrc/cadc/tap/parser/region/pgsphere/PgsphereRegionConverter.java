@@ -153,7 +153,13 @@ public class PgsphereRegionConverter extends RegionFinder
             }
         }
 
-        if (proceed) rtn = (Expression) ((value == 1) ? predicateFunc : predicateFunc.negate());
+        if (proceed)
+        {
+            if (value == 1)
+                rtn = (Expression) predicateFunc;
+            else
+                rtn = (Expression) predicateFunc.negate();
+        }
         return rtn;
     }
 
@@ -284,7 +290,7 @@ public class PgsphereRegionConverter extends RegionFinder
         List<Expression> params = adqlFunction.getParameters().getExpressions();
         StringValue strV = (StringValue) params.get(0);
         String regionParamStr = strV.getValue();
-        String tokens[] = regionParamStr.split(" ");
+        String[] tokens = regionParamStr.split(" ");
         String fname = tokens[0].toUpperCase();
 
         //BOX", "CIRCLE", "POLYGON", "POSITION", "UNION", "NOT", "INTERSECTION"

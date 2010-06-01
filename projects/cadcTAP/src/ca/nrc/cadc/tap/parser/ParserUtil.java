@@ -119,7 +119,9 @@ public class ParserUtil
     /**
      * Parse a SQL/ADQL string using JSqlParser, return the result Statement.
      * 
-     * @throws JSQLParserException
+     * @param query
+     * @return
+     * @throws JSQLParserException SQL syntax error
      */
     public static Statement receiveQuery(String query) throws JSQLParserException
     {

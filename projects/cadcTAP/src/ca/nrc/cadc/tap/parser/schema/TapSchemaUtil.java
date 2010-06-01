@@ -98,13 +98,14 @@ public class TapSchemaUtil
 {
     protected static Logger log = Logger.getLogger(TapSchemaUtil.class);
 
+
     /**
      * For a given Table, find it in TAP Schema, and returns a list of TapSelectItem of that Table.
      * 
      * @param tapSchema
      * @param table
      * @return
-     * @throws TapParserException
+     * @throws TapParserException when the parse fails
      */
     public static List<TapSelectItem> getTapSelectItemList(TapSchema tapSchema, Table table) throws TapParserException
     {

@@ -172,14 +172,8 @@ public class SelectNavigator implements SelectVisitor
         enterPlainSelect(plainSelect);
 
         this.visitingPart = VisitingPart.FROM;
-        FromItem fromItem = this.plainSelect.getFromItem();
-        if (fromItem instanceof Table)
-            fromItem.accept(this.fromItemNavigator);
-        else if (fromItem instanceof SubSelect)
-            throw new UnsupportedOperationException("sub-select not supported in FROM clause.");
-
+        navigateFromItem();
         if (isToStop()) return;
-
         navigateJoins();
         if (isToStop()) return;
 
@@ -197,28 +191,27 @@ public class SelectNavigator implements SelectVisitor
             cr.accept(this.referenceNavigator);
 
         this.visitingPart = VisitingPart.ORDER_BY;
-        List<OrderByElement> obes = this.plainSelect.getOrderByElements();
-        if (obes != null)
-        {
-            for (OrderByElement obe : obes)
-            {
-                ColumnReference cr = obe.getColumnReference();
-                if (cr != null) cr.accept(this.referenceNavigator);
-            }
-        }
+        navigateOrderBy();
 
         this.visitingPart = VisitingPart.HAVING;
         if (this.plainSelect.getHaving() != null) this.plainSelect.getHaving().accept(this.expressionNavigator);
 
         // other SELECT options
-        if (this.plainSelect.getLimit() != null) handleLimit(this.plainSelect.getLimit());
-        if (this.plainSelect.getDistinct() != null) handleDistinct(this.plainSelect.getDistinct());
-        if (this.plainSelect.getInto() != null) handleInto(this.plainSelect.getInto());
-        if (this.plainSelect.getTop() != null) handleTop(this.plainSelect.getTop());
+        navigateOthers();
 
         log.debug("visit(PlainSelect) done");
 
         leavePlainSelect();
+    }
+
+
+    private void navigateFromItem()
+    {
+        FromItem fromItem = this.plainSelect.getFromItem();
+        if (fromItem instanceof Table)
+            fromItem.accept(this.fromItemNavigator);
+        else if (fromItem instanceof SubSelect)
+            throw new UnsupportedOperationException("sub-select not supported in FROM clause.");
     }
 
     @SuppressWarnings("unchecked")
@@ -246,6 +239,27 @@ public class SelectNavigator implements SelectVisitor
                     throw new UnsupportedOperationException("sub-select not supported in FROM clause.");
             }
         }
+    }
+
+    private void navigateOrderBy()
+    {
+        List<OrderByElement> obes = this.plainSelect.getOrderByElements();
+        if (obes != null)
+        {
+            for (OrderByElement obe : obes)
+            {
+                ColumnReference cr = obe.getColumnReference();
+                if (cr != null) cr.accept(this.referenceNavigator);
+            }
+        }
+    }
+
+    private void navigateOthers()
+    {
+        if (this.plainSelect.getLimit() != null) handleLimit(this.plainSelect.getLimit());
+        if (this.plainSelect.getDistinct() != null) handleDistinct(this.plainSelect.getDistinct());
+        if (this.plainSelect.getInto() != null) handleInto(this.plainSelect.getInto());
+        if (this.plainSelect.getTop() != null) handleTop(this.plainSelect.getTop());
     }
 
     /*

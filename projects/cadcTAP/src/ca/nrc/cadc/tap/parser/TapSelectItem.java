@@ -135,34 +135,44 @@ public class TapSelectItem
     {
         final int prime = 31;
         int result = 1;
-        result = prime * result + ((this.alias == null) ? 0 : this.alias.hashCode());
-        result = prime * result + ((this.columnName == null) ? 0 : this.columnName.hashCode());
-        result = prime * result + ((this.tableName == null) ? 0 : this.tableName.hashCode());
+
+        result = prime * result;
+        if (this.alias != null) result += this.alias.hashCode();
+
+        result = prime * result;
+        if (this.columnName != null) result += this.columnName.hashCode();
+
+        result = prime * result;
+        if (this.tableName != null) result += this.tableName.hashCode();
+
         return result;
     }
 
     @Override
     public boolean equals(Object obj)
     {
-        if (this == obj) return true;
-        if (obj == null) return false;
-        if (getClass() != obj.getClass()) return false;
-        TapSelectItem other = (TapSelectItem) obj;
-        if (this.alias == null)
+        if (this == obj)
+            return true;
+        else if (obj == null)
+            return false;
+        else if (getClass() != obj.getClass())
+            return false;
+        else
         {
-            if (other.alias != null) return false;
+            TapSelectItem other = (TapSelectItem) obj;
+            if (this.alias == null && other.alias != null)
+                return false;
+            else if (!this.alias.equals(other.alias))
+                return false;
+            else if (this.columnName == null && other.columnName != null)
+                return false;
+            else if (!this.columnName.equals(other.columnName))
+                return false;
+            else if (this.tableName == null && other.tableName != null)
+                return false;
+            else if (!this.tableName.equals(other.tableName)) return false;
+
         }
-        else if (!this.alias.equals(other.alias)) return false;
-        if (this.columnName == null)
-        {
-            if (other.columnName != null) return false;
-        }
-        else if (!this.columnName.equals(other.columnName)) return false;
-        if (this.tableName == null)
-        {
-            if (other.tableName != null) return false;
-        }
-        else if (!this.tableName.equals(other.tableName)) return false;
         return true;
     }
 }
