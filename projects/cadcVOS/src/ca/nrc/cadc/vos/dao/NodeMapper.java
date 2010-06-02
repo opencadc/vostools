@@ -120,7 +120,6 @@ public class NodeMapper implements RowMapper
         String contentEncoding = rs.getString("contentEncoding");
         byte[] contentMD5 = rs.getBytes("contentMD5");
         Date lastModified = rs.getDate("lastModified");
-        Date createdOn = rs.getDate("createdOn");
         
         ContainerNode parent = null;
         if (parentID != 0)
@@ -171,11 +170,7 @@ public class NodeMapper implements RowMapper
         }
         if (lastModified != null)
         {
-            node.getProperties().add(new NodeProperty(VOS.PROPERTY_URI_LASTMODIFIED, DateUtil.toString(lastModified, DateUtil.ISO_DATE_FORMAT)));
-        }
-        if (createdOn != null)
-        {
-            node.getProperties().add(new NodeProperty(VOS.PROPERTY_URI_CREATEDON, DateUtil.toString(createdOn, DateUtil.ISO_DATE_FORMAT)));
+            node.getProperties().add(new NodeProperty(VOS.PROPERTY_URI_DATE, DateUtil.toString(lastModified, DateUtil.ISO_DATE_FORMAT)));
         }
         if (groupRead != null && groupRead.trim().length() > 0)
         {

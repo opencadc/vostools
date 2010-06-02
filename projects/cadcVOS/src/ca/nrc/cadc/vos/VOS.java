@@ -176,12 +176,6 @@ public class VOS
     // The MD5 Checksum of the resource
     public static final String PROPERTY_URI_CONTENTMD5 = "ivo://ivoa.net/vospace/core#MD5";
     
-    // The created on date of the resource
-    public static final String PROPERTY_URI_CREATEDON = "ivo://ivoa.net/vospace/core#createdon";
-    
-    // The Last Modified date of the resource
-    public static final String PROPERTY_URI_LASTMODIFIED = "ivo://ivoa.net/vospace/core#lastmodified";
-    
     // The groups who can read the resource
     public static final String PROPERTY_URI_GROUPREAD = "ivo://ivoa.net/vospace/core#groupread";
     

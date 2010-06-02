@@ -642,8 +642,6 @@ public abstract class NodeDAO implements NodePersistence
             throw new IllegalArgumentException("Node owner cannot be null.");
         }
         
-        
-        
         StringBuilder sb = new StringBuilder();
         sb.append("insert into ");
         sb.append("vospace.." + getNodeTableName());
