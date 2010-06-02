@@ -104,6 +104,7 @@ import ca.nrc.cadc.vos.auth.PrivilegedReadAuthorizationExceptionAction;
 import ca.nrc.cadc.vos.auth.PrivilegedWriteAuthorizationExceptionAction;
 import ca.nrc.cadc.vos.auth.VOSpaceAuthorizer;
 import ca.nrc.cadc.vos.dao.SearchNode;
+import ca.nrc.cadc.vos.web.representation.NodeErrorRepresentation;
 import ca.nrc.cadc.vos.web.representation.NodeInputRepresentation;
 import ca.nrc.cadc.vos.web.representation.NodeOutputRepresentation;
 
@@ -121,6 +122,8 @@ public class NodeResource extends BaseResource
     
     private String path;
     private Node node;
+    private NodeError nodeError = null;
+    private VOSURI vosURI = null;
     
     /**
      * Called after object instantiation.
@@ -139,7 +142,6 @@ public class NodeResource extends BaseResource
         
         log.debug(principals.size() + " principals found in request.");
         
-        VOSURI vosURI = null;
         try
         {
             Set<Method> allowedMethods = new CopyOnWriteArraySet<Method>();
@@ -213,6 +215,8 @@ public class NodeResource extends BaseResource
                 throw e.getCause();
             }
             
+            node.setUri(vosURI);
+            
             // If this is an HTTP PUT, set the owner on the node to be
             // the distinguished name contained in the client certificate(s)
             if (getMethod().equals(Method.PUT))
@@ -224,60 +228,44 @@ public class NodeResource extends BaseResource
         }
         catch (FileNotFoundException e)
         {
-            final String message = "Could not find node with path: " + path;
-            log.debug(message, e);
-            setStatus(Status.CLIENT_ERROR_NOT_FOUND, message);
-        }
-        catch (NodeAlreadyExistsException e)
-        {
-            // TODO: Check to see if user has read permission of parent node
-            // before telling them that the node exists.  If they don't they
-            // should only see a Not Authorized exception
-            final String message = "Node with path: " + path + " already exists";
-            log.debug(message, e);
-            setStatus(Status.CLIENT_ERROR_CONFLICT, message);
+            log.debug("Could not find node with path: " + path, e);
+            nodeError = new NodeError(NodeFault.NodeNotFound, vosURI.toString());
         }
         catch (URISyntaxException e)
         {
-            final String message = "URI not well formed: " + vosURI;
+            String message = "URI not well formed: " + vosURI;
             log.debug(message, e);
-            setStatus(Status.CLIENT_ERROR_BAD_REQUEST, message);
+            nodeError = new NodeError(NodeFault.InvalidURI, message);
         }
         catch (AccessControlException e)
         {
             final String message = "Access Denied: " + e.getMessage();
             log.debug(message, e);
-            setStatus(Status.CLIENT_ERROR_UNAUTHORIZED, message);
+            nodeError = new NodeError(NodeFault.PermissionDenied, message);
         }
         catch (NodeParsingException e)
         {
             final String message = "Node XML not well formed: " + e.getMessage();
             log.debug(message, e);
-            setStatus(Status.CLIENT_ERROR_BAD_REQUEST, message);
+            nodeError = new NodeError(NodeFault.InvalidToken, message);
         }
         catch (UnsupportedOperationException e)
         {
             final String message = "Not supported: " + e.getMessage();
             log.debug(message, e);
-            setStatus(Status.SERVER_ERROR_NOT_IMPLEMENTED, message);
+            nodeError = new NodeError(NodeFault.NotSupported, message);
         }
         catch (IllegalArgumentException e)
         {
             final String message = "Bad input: " + e.getMessage();
             log.debug(message, e);
-            setStatus(Status.CLIENT_ERROR_BAD_REQUEST, message);
-        }
-        catch (IllegalStateException e)
-        {
-            final String message = "Internal Error:" + e.getMessage();
-            log.debug(message, e);
-            setStatus(Status.SERVER_ERROR_INTERNAL, message);
+            nodeError = new NodeError(NodeFault.BadRequest, message);
         }
         catch (Throwable t)
         {
             final String message = "Internal Error:" + t.getMessage();
             log.debug(message, t);
-            setStatus(Status.SERVER_ERROR_INTERNAL, message);
+            nodeError = new NodeError(NodeFault.InternalFault, message);
         }
     }
     
@@ -288,49 +276,75 @@ public class NodeResource extends BaseResource
     public Representation represent()
     {
         log.debug("Enter NodeResource.represent()");
-        NodeWriter nodeWriter = new NodeWriter();
-        return new NodeOutputRepresentation(node, nodeWriter);
+        if (nodeError != null)
+        {
+            return createNodeFaultRepresentation(nodeError);
+        }
+        
+        try
+        {
+            NodeWriter nodeWriter = new NodeWriter();
+            return new NodeOutputRepresentation(node, nodeWriter);
+        }
+        catch (Throwable t)
+        {
+            log.debug(t);
+            return createNodeFaultRepresentation(new NodeError(NodeFault.InternalFault, t.getMessage()));
+        }
     }
     
     /**
      * HTTP PUT
      */
     @Put("xml")
-    //public Representation store(Representation xmlValue)
     public Representation store()
     {   
         log.debug("Enter NodeResource.store()");
+        if (nodeError != null)
+        {
+            return createNodeFaultRepresentation(nodeError);
+        }
+        
         try
         {
             Node storedNode = getNodePersistence().putInContainer(node, node.getParent());
             
             // return the node in xml format
             NodeWriter nodeWriter = new NodeWriter();
-            return new NodeOutputRepresentation(storedNode, nodeWriter);
+            NodeOutputRepresentation nodeOutputRepresentation =
+                new NodeOutputRepresentation(storedNode, nodeWriter);
+            setStatus(Status.SUCCESS_CREATED);
+            return nodeOutputRepresentation;
         }
         catch (NodeAlreadyExistsException e)
         {
-            final String message = "Node already exists: " + path;
-            log.debug(message, e);
-            setStatus(Status.CLIENT_ERROR_CONFLICT, message);
+            log.debug("Node already exists: " + path, e);
+            return createNodeFaultRepresentation(new NodeError(NodeFault.DuplicateNode, vosURI.toString()));
         }
         catch (NodeNotFoundException e)
         {
-            final String message = "Could not resolve part of path for node: " + path;
-            log.debug(message, e);
-            setStatus(Status.CLIENT_ERROR_NOT_FOUND, message);
+            log.debug("Could not resolve part of path for node: " + path, e);
+            return createNodeFaultRepresentation(new NodeError(NodeFault.ContainerNotFound));
         }
-        return null;
+        catch (Throwable t)
+        {
+            log.debug(t);
+            return createNodeFaultRepresentation(new NodeError(NodeFault.InternalFault, t.getMessage()));
+        }
     }
     
     /**
      * HTTP POST
      */
     @Post("xml")
-    //public Representation accept(Representation xmlValue)
     public Representation accept()
     {
         log.debug("Enter NodeResource.accept()");
+        if (nodeError != null)
+        {
+            return createNodeFaultRepresentation(nodeError);
+        }
+        
         try
         {
             Node updatedNode = getNodePersistence().updateProperties(node);
@@ -341,29 +355,42 @@ public class NodeResource extends BaseResource
         }
         catch (NodeNotFoundException e)
         {
-            final String message = "Could not resolve part of path for node: " + path;
-            log.debug(message, e);
-            setStatus(Status.CLIENT_ERROR_NOT_FOUND, message);
+            log.debug("Could not resolve part of path for node: " + path);
+            return createNodeFaultRepresentation(new NodeError(NodeFault.NodeNotFound, vosURI.toString()));
         }
-        return null;
+        catch (Throwable t)
+        {
+            log.debug(t);
+            return createNodeFaultRepresentation(new NodeError(NodeFault.InternalFault, t.getMessage()));
+        }
     }
     
     /**
      * HTTP DELETE
      */
     @Delete
-    public void remove()
+    public Representation remove()
     {
         log.debug("Enter NodeResource.remove()");
+        if (nodeError != null)
+        {
+            return createNodeFaultRepresentation(nodeError);
+        }
+        
         try
         {
             getNodePersistence().delete(node, true);
+            return null;
         }
         catch (NodeNotFoundException e)
         {
-            final String message = "Could not find node with path: " + path;
-            log.debug(message, e);
-            setStatus(Status.CLIENT_ERROR_NOT_FOUND, message);
+            log.debug("Could not find node with path: " + path, e);
+            return createNodeFaultRepresentation(new NodeError(NodeFault.NodeNotFound, vosURI.toString()));
+        }
+        catch (Throwable t)
+        {
+            log.debug(t);
+            return createNodeFaultRepresentation(new NodeError(NodeFault.InternalFault, t.getMessage()));
         }
     }
     
@@ -378,7 +405,7 @@ public class NodeResource extends BaseResource
         
         Set<Principal> principals = new HashSet<Principal>();
         
-        // BM Removed: Basic authentication credentials no longer
+        // BM: Removed: Basic authentication credentials no longer
         // collected
         //
         // look for basic authentication
@@ -421,5 +448,11 @@ public class NodeResource extends BaseResource
         }
         return "";
     }
-
+    
+    private NodeErrorRepresentation createNodeFaultRepresentation(NodeError nodeError)
+    {
+        setStatus(nodeError.getNodeFault().getStatus());
+        return new NodeErrorRepresentation(nodeError.getNodeFault(), nodeError.getMessage());
+    }
+    
 }
