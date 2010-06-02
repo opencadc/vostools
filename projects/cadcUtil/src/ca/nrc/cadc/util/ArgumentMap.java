@@ -67,7 +67,7 @@
 ************************************************************************
 */
 
-package ca.nrc.cadc.dlm.client;
+package ca.nrc.cadc.util;
 
 import java.util.Map;
 import java.util.HashMap;

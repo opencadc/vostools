@@ -72,6 +72,7 @@ package ca.nrc.cadc.dlm.client;
 import java.awt.Component;
 
 import ca.nrc.cadc.thread.ConditionVar;
+import ca.nrc.cadc.util.ArgumentMap;
 import ca.onfire.ak.Application;
 import ca.onfire.ak.ApplicationFrame;
 
