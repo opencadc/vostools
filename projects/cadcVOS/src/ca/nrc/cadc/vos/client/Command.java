@@ -69,11 +69,12 @@
 
 package ca.nrc.cadc.vos.client;
 
+import java.util.List;
+
 import org.apache.log4j.Level;
 
 import ca.nrc.cadc.util.ArgumentMap;
 import ca.nrc.cadc.util.Log4jInit;
-import ca.nrc.cadc.vos.NodeProperties;
 import ca.nrc.cadc.vos.NodeProperty;
 import ca.nrc.cadc.vos.VOSURI;
 
@@ -109,7 +110,7 @@ public class Command
     boolean debug = false;
     Operation operation;
     VOSURI target;
-    NodeProperties<NodeProperty> properties;
+    List<NodeProperty> properties;
     VOSURI source;
     VOSURI destination;
 
