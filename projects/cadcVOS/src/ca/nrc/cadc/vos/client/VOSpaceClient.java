@@ -84,6 +84,7 @@ import javax.net.ssl.HttpsURLConnection;
 import org.apache.log4j.Logger;
 import org.jdom.JDOMException;
 
+import ca.nrc.cadc.util.ArgumentMap;
 import ca.nrc.cadc.uws.ExecutionPhase;
 import ca.nrc.cadc.uws.Job;
 import ca.nrc.cadc.uws.JobReader;
@@ -548,5 +549,4 @@ public class VOSpaceClient
     {
         this.baseUrl = baseUrl;
     }
-
 }
