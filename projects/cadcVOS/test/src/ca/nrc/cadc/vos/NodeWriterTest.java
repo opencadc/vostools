@@ -106,7 +106,7 @@ public class NodeWriterTest
     public static void setUpClass() throws Exception
     {
         // List of NodeProperty
-        NodeProperties<NodeProperty> properties = new NodeProperties<NodeProperty>();
+        List<NodeProperty> properties = new ArrayList<NodeProperty>();
         NodeProperty nodeProperty = new NodeProperty("ivo://ivoa.net/vospace/core#description", "My award winning images");
         nodeProperty.setReadOnly(true);
         properties.add(nodeProperty);

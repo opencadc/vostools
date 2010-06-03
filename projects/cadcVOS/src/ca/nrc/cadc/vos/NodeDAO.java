@@ -950,6 +950,15 @@ public abstract class NodeDAO implements NodePersistence
             sb.append(" where nodeID = ");
             sb.append(getNodeID(node));
         }
+        else if (nodeProperty.getPropertyURI().equals(VOS.PROPERTY_URI_DATE))
+        {
+            // let the trigger update the lastModified field
+            sb.append("update ");
+            sb.append("vospace.." + getNodeTableName());
+            sb.append(" set lastModified = lastModified");
+            sb.append(" where nodeID = ");
+            sb.append(getNodeID(node));
+        }
         else
         {
             sb.append("update ");

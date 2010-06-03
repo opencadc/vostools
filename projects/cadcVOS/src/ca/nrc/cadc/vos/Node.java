@@ -70,6 +70,7 @@
 package ca.nrc.cadc.vos;
 
 import java.net.URISyntaxException;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Stack;
 
@@ -98,7 +99,7 @@ public abstract class Node
     protected ContainerNode parent;
     
     // The list of node properties
-    protected NodeProperties<NodeProperty> properties;
+    protected List<NodeProperty> properties;
     
     // The node owner
     protected String owner;
@@ -110,14 +111,14 @@ public abstract class Node
     {
         this.path = "";
         this.name = "";
-        properties = new NodeProperties<NodeProperty>();
+        properties = new ArrayList<NodeProperty>();
     }
     
     public Node(String name)
     {
         this.path = "";
         this.name = name;
-        properties = new NodeProperties<NodeProperty>();
+        properties = new ArrayList<NodeProperty>();
     }
     
     /**
@@ -130,7 +131,7 @@ public abstract class Node
     {
         this.uri = uri;
         buildPath(uri);
-        properties = new NodeProperties<NodeProperty>();
+        properties = new ArrayList<NodeProperty>();
     }
     
     /**
@@ -140,7 +141,7 @@ public abstract class Node
      * @param properties The node's properties
      * @throws URISyntaxException 
      */
-    public Node(VOSURI uri, NodeProperties<NodeProperty> properties) throws URISyntaxException
+    public Node(VOSURI uri, List<NodeProperty> properties) throws URISyntaxException
     {
         this.uri = uri;
         buildPath(uri);
@@ -295,12 +296,12 @@ public abstract class Node
         this.parent = parent;
     }
 
-    public NodeProperties<NodeProperty> getProperties()
+    public List<NodeProperty> getProperties()
     {
         return properties;
     }
 
-    public void setProperties(NodeProperties<NodeProperty> properties)
+    public void setProperties(List<NodeProperty> properties)
     {
         this.properties = properties;
     }

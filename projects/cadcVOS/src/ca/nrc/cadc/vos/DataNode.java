@@ -120,7 +120,7 @@ public class DataNode extends Node
      * DataNode constructor.
      * @throws URISyntaxException 
      */
-    public DataNode(VOSURI uri, NodeProperties<NodeProperty> properties) throws URISyntaxException
+    public DataNode(VOSURI uri, List<NodeProperty> properties) throws URISyntaxException
     {
         super(uri, properties);
         this.structured = false;

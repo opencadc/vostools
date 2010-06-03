@@ -121,20 +121,22 @@ public class VOSpaceFileMetadataSource implements FileMetadataSource
         // fileName
         fileMetadata.setFileName(persistentNode.getName());
         
+        int index;
+        
         // contentEncoding
-        NodeProperty contentEncoding = persistentNode.getProperties().getProperty(VOS.PROPERTY_URI_CONTENTENCODING);
+        String contentEncoding = getPropertyValue(persistentNode, VOS.PROPERTY_URI_CONTENTENCODING);
         if (contentEncoding != null)
         {
-            fileMetadata.setContentEncoding(contentEncoding.getPropertyValue());
+            fileMetadata.setContentEncoding(contentEncoding);
         }
         
         // contentLength
-        NodeProperty contentLength = persistentNode.getProperties().getProperty(VOS.PROPERTY_URI_CONTENTLENGTH);
+        String contentLength = getPropertyValue(persistentNode, VOS.PROPERTY_URI_CONTENTLENGTH);
         if (contentLength != null)
         {
             try
             {
-                fileMetadata.setContentLength(new Long(contentLength.getPropertyValue()));
+                fileMetadata.setContentLength(new Long(contentLength));
             }
             catch (NumberFormatException e) {
                 log.warn("Content Length is not a number for resource: " + resource);
@@ -142,31 +144,31 @@ public class VOSpaceFileMetadataSource implements FileMetadataSource
         }
         
         // contentType
-        NodeProperty contentType = persistentNode.getProperties().getProperty(VOS.PROPERTY_URI_TYPE);
+        String contentType = getPropertyValue(persistentNode, VOS.PROPERTY_URI_TYPE);
         if (contentType != null)
         {
-            fileMetadata.setContentType(contentType.getPropertyValue());
+            fileMetadata.setContentType(contentType);
         }
         
         // md5Sum
-        NodeProperty md5Sum = persistentNode.getProperties().getProperty(VOS.PROPERTY_URI_CONTENTMD5);
+        String md5Sum = getPropertyValue(persistentNode, VOS.PROPERTY_URI_CONTENTMD5);
         if (md5Sum != null)
         {
-            fileMetadata.setMd5Sum(md5Sum.getPropertyValue());
+            fileMetadata.setMd5Sum(md5Sum);
         }
         
         // lastModified
-        NodeProperty lastModified = persistentNode.getProperties().getProperty(VOS.PROPERTY_URI_DATE);
+        String lastModified = getPropertyValue(persistentNode, VOS.PROPERTY_URI_DATE);
         if (lastModified != null)
         {
             try
             {
-                fileMetadata.setLastModified(DateUtil.toDate(lastModified.getPropertyValue(), DateUtil.ISO_DATE_FORMAT));
+                fileMetadata.setLastModified(DateUtil.toDate(lastModified, DateUtil.ISO_DATE_FORMAT));
             }
             catch (ParseException e)
             {
                 log.warn("Couldn't convert date string "
-                        + lastModified.getPropertyValue()
+                        + lastModified
                         + " to Date object.", e);
             }
         }
@@ -271,6 +273,16 @@ public class VOSpaceFileMetadataSource implements FileMetadataSource
         {
             throw new FileNotFoundException(resource.toString());
         }
+    }
+    
+    private String getPropertyValue(Node node, String propertyURI)
+    {
+        int index = node.getProperties().indexOf(new NodeProperty(propertyURI, null));
+        if (index != -1)
+        {
+            return node.getProperties().get(index).getPropertyValue();
+        }
+        return null;
     }
     
     /**

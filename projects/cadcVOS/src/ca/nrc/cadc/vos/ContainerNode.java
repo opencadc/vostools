@@ -122,7 +122,7 @@ public class ContainerNode extends Node
      * ContainerNode constructor.
      * @throws URISyntaxException 
      */
-    public ContainerNode(VOSURI uri, NodeProperties<NodeProperty> properties) throws URISyntaxException
+    public ContainerNode(VOSURI uri, List<NodeProperty> properties) throws URISyntaxException
     {
         super(uri, properties);
         nodes = new ArrayList<Node>();

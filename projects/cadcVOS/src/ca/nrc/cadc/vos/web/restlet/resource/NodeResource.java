@@ -98,7 +98,9 @@ import ca.nrc.cadc.vos.Node;
 import ca.nrc.cadc.vos.NodeAlreadyExistsException;
 import ca.nrc.cadc.vos.NodeNotFoundException;
 import ca.nrc.cadc.vos.NodeParsingException;
+import ca.nrc.cadc.vos.NodeProperty;
 import ca.nrc.cadc.vos.NodeWriter;
+import ca.nrc.cadc.vos.VOS;
 import ca.nrc.cadc.vos.VOSURI;
 import ca.nrc.cadc.vos.auth.PrivilegedReadAuthorizationExceptionAction;
 import ca.nrc.cadc.vos.auth.PrivilegedWriteAuthorizationExceptionAction;
@@ -347,6 +349,9 @@ public class NodeResource extends BaseResource
         
         try
         {
+            // filter out any non-modifiable properties
+            filterPropertiesForUpdate(node);
+            
             Node updatedNode = getNodePersistence().updateProperties(node);
             
             // return the node in xml format
@@ -449,10 +454,28 @@ public class NodeResource extends BaseResource
         return "";
     }
     
+    /**
+     * Set the status according to the fault and create an output representation
+     * of the fault.
+     * @param nodeError
+     * @return
+     */
     private NodeErrorRepresentation createNodeFaultRepresentation(NodeError nodeError)
     {
         setStatus(nodeError.getNodeFault().getStatus());
         return new NodeErrorRepresentation(nodeError.getNodeFault(), nodeError.getMessage());
+    }
+    
+    /**
+     * Remove any properties from the Node that cannot be updated.
+     * @param node
+     */
+    private void filterPropertiesForUpdate(Node node)
+    {
+        if (node.getProperties().contains(VOS.PROPERTY_URI_DATE))
+        {
+            node.getProperties().remove(new NodeProperty(VOS.PROPERTY_URI_DATE, null));
+        }
     }
     
 }

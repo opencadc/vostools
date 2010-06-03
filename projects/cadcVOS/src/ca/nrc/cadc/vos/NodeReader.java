@@ -371,7 +371,7 @@ public class NodeReader
      * @return List of NodeProperty objects.
      * @throws NodeParsingException if there is an error parsing the XML.
      */
-    protected NodeProperties<NodeProperty> getProperties(Element root, Namespace namespace)
+    protected List<NodeProperty> getProperties(Element root, Namespace namespace)
         throws NodeParsingException
     {
         // properties element
@@ -384,7 +384,7 @@ public class NodeReader
         }
 
         // new NodeProperty List
-        NodeProperties<NodeProperty> set = new NodeProperties<NodeProperty>();
+        List<NodeProperty> set = new ArrayList<NodeProperty>();
 
         // properties property elements
         List<Element> propertyList = properties.getChildren("property", namespace);

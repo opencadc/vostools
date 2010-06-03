@@ -74,6 +74,8 @@ import static org.junit.Assert.assertEquals;
 import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
+import java.util.ArrayList;
+import java.util.List;
 
 import javax.sql.DataSource;
 
@@ -273,7 +275,7 @@ public abstract class NodeDAOTests
         
     }
     
-    private DataNode getCommonDataNode(String uri, NodeProperties<NodeProperty> properties) throws Exception
+    private DataNode getCommonDataNode(String uri, List<NodeProperty> properties) throws Exception
     {
         DataNode dataNode = getCommonDataNode(uri);
         dataNode.setProperties(properties);
@@ -288,7 +290,7 @@ public abstract class NodeDAOTests
         return dataNode;
     }
     
-    private ContainerNode getCommonContainerNode(String path, NodeProperties<NodeProperty> properties) throws Exception
+    private ContainerNode getCommonContainerNode(String path, List<NodeProperty> properties) throws Exception
     {
         ContainerNode containerNode = getCommonContainerNode(path);
         containerNode.setProperties(properties);
@@ -303,9 +305,9 @@ public abstract class NodeDAOTests
         return containerNode;
     }
     
-    private NodeProperties<NodeProperty> getCommonProperties()
+    private List<NodeProperty> getCommonProperties()
     {
-        NodeProperties<NodeProperty> properties = new NodeProperties<NodeProperty>();
+        List<NodeProperty> properties = new ArrayList<NodeProperty>();
         NodeProperty prop1 = new NodeProperty("uri1", "value1");
         NodeProperty prop2 = new NodeProperty("uri2", "value2");
         NodeProperty prop3 = new NodeProperty(VOS.PROPERTY_URI_CONTENTLENGTH, new Long(1024).toString());
