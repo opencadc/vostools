@@ -156,7 +156,7 @@ public class VOSpaceFileMetadataSource implements FileMetadataSource
         }
         
         // lastModified
-        NodeProperty lastModified = persistentNode.getProperties().getProperty(VOS.PROPERTY_URI_LASTMODIFIED);
+        NodeProperty lastModified = persistentNode.getProperties().getProperty(VOS.PROPERTY_URI_DATE);
         if (lastModified != null)
         {
             try
