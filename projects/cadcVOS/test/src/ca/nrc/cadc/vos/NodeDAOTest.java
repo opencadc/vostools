@@ -70,6 +70,7 @@
 package ca.nrc.cadc.vos;
 
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertTrue;
 
 import java.sql.Connection;
 import java.sql.PreparedStatement;
@@ -92,7 +93,7 @@ import org.junit.Test;
  * @author majorb
  *
  */
-public abstract class NodeDAOTests
+public abstract class NodeDAOTest
 {
     
     private static final String VOS_URI_PREFIX = "vos://cadc.nrc.ca!vospace";
@@ -100,6 +101,7 @@ public abstract class NodeDAOTests
     private NodeDAO nodeDAO;
     private String runId;
     private Connection connection;
+    List<NodeProperty> propertyIgnoreList;
     
     @Before
     public void before() throws Exception
@@ -107,7 +109,10 @@ public abstract class NodeDAOTests
         DataSource dataSource = getDataSource();
         nodeDAO = getNodeDAO(dataSource);
         connection = dataSource.getConnection();
-        runId = NodeDAOTests.class.getName() + System.currentTimeMillis();
+        runId = NodeDAOTest.class.getName() + System.currentTimeMillis();
+        
+        propertyIgnoreList = new ArrayList<NodeProperty>();
+        propertyIgnoreList.add(new NodeProperty(VOS.PROPERTY_URI_DATE, null));
     }
     
     @After
@@ -156,7 +161,7 @@ public abstract class NodeDAOTests
         System.out.println("PutNode: " + putNode);
         System.out.println("GetNode: " + nodeA);
         assertEquals("assert1", putNode, nodeA);
-        assertEquals("assert2", putNode.getProperties(), nodeA.getProperties());
+        compareProperties("assert2", putNode.getProperties(), nodeA.getProperties());
         
         // /b
         String nodePath2 = "/" + getNodeName("b");
@@ -166,7 +171,7 @@ public abstract class NodeDAOTests
         System.out.println("PutNode: " + putNode);
         System.out.println("GetNode: " + nodeB);
         assertEquals("assert3", putNode, nodeB);
-        assertEquals("assert4", putNode.getProperties(), nodeB.getProperties());
+        compareProperties("assert4", putNode.getProperties(), nodeB.getProperties());
         
         // /c
         String nodePath3 = "/" + getNodeName("c");
@@ -174,7 +179,7 @@ public abstract class NodeDAOTests
         putNode = nodeDAO.putInContainer(containerNode, null);
         Node nodeC = nodeDAO.getFromParent(putNode.getName(), null);
         assertEquals("assert5", putNode, nodeC);
-        assertEquals("assert6", putNode.getProperties(), nodeC.getProperties());
+        compareProperties("assert6", putNode.getProperties(), nodeC.getProperties());
         
         // /b/d
         String nodePath4 = "/" + getNodeName("b") + "/" + getNodeName("d");
@@ -182,7 +187,7 @@ public abstract class NodeDAOTests
         putNode = nodeDAO.putInContainer(dataNode, (ContainerNode) nodeB);
         Node nodeD = nodeDAO.getFromParent(putNode.getName(), putNode.getParent());
         assertEquals("assert7", putNode, nodeD);
-        assertEquals("assert8", putNode.getProperties(), nodeD.getProperties());
+        compareProperties("assert8", putNode.getProperties(), nodeD.getProperties());
         
         // /c/e
         String nodePath5 = "/" + getNodeName("c") + "/" + getNodeName("e");
@@ -190,7 +195,7 @@ public abstract class NodeDAOTests
         putNode = nodeDAO.putInContainer(containerNode, (ContainerNode) nodeC);
         Node nodeE = nodeDAO.getFromParent(putNode.getName(), putNode.getParent());
         assertEquals("assert9", putNode, nodeE);
-        assertEquals("assert10", putNode.getProperties(), nodeE.getProperties());
+        compareProperties("assert10", putNode.getProperties(), nodeE.getProperties());
         
         // /c/e/f
         String nodePath6 = "/" + getNodeName("c") + "/" + getNodeName("e") + "/" + getNodeName("f");
@@ -198,7 +203,7 @@ public abstract class NodeDAOTests
         putNode = nodeDAO.putInContainer(dataNode, (ContainerNode) nodeE);
         Node nodeF = nodeDAO.getFromParent(putNode.getName(), putNode.getParent());
         assertEquals("assert11", putNode, nodeF);
-        assertEquals("assert12", putNode.getProperties(), nodeF.getProperties());
+        compareProperties("assert12", putNode.getProperties(), nodeF.getProperties());
         
         // delete the three roots
         nodeDAO.delete(getCommonDataNode(nodePath1), true);
@@ -229,7 +234,7 @@ public abstract class NodeDAOTests
         // Put then get the node
         DataNode nodeFromPut = (DataNode) nodeDAO.putInContainer(dataNode, null);
         DataNode nodeFromGet = (DataNode) nodeDAO.getFromParent(nodeFromPut.getName(), null);
-        assertEquals("assert1", nodeFromPut.getProperties(), nodeFromGet.getProperties());
+        compareProperties("assert1", nodeFromPut.getProperties(), nodeFromGet.getProperties());
         
         // Add new properties
         nodeFromGet.getProperties().add(new NodeProperty("uri2", "value1"));
@@ -237,8 +242,8 @@ public abstract class NodeDAOTests
         nodeFromGet.getProperties().add(new NodeProperty(VOS.PROPERTY_URI_CONTENTMD5, new byte[] {1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16}.toString()));
         DataNode nodeFromUpdate1 = (DataNode) nodeDAO.updateProperties(nodeFromGet);
         DataNode nodeFromGetUpdate1 = (DataNode) nodeDAO.getFromParent(nodeFromGet.getName(), null);
-        assertEquals("assert2", nodeFromGet.getProperties(), nodeFromUpdate1.getProperties());
-        assertEquals("assert3", nodeFromGet.getProperties(), nodeFromGetUpdate1.getProperties());
+        compareProperties("assert2", nodeFromGet.getProperties(), nodeFromUpdate1.getProperties());
+        compareProperties("assert3", nodeFromGet.getProperties(), nodeFromGetUpdate1.getProperties());
         
         // Update property values
         nodeFromGetUpdate1.getProperties().remove(new NodeProperty("uri1", null));
@@ -249,8 +254,8 @@ public abstract class NodeDAOTests
         nodeFromGetUpdate1.getProperties().add(new NodeProperty(VOS.PROPERTY_URI_TYPE, "application/pdf"));
         DataNode nodeFromUpdate2 = (DataNode) nodeDAO.updateProperties(nodeFromGetUpdate1);
         DataNode nodeFromGetUpdate2 = (DataNode) nodeDAO.getFromParent(nodeFromGetUpdate1.getName(), null);
-        assertEquals("assert4", nodeFromGetUpdate1.getProperties(), nodeFromUpdate2.getProperties());
-        assertEquals("assert5", nodeFromGetUpdate1.getProperties(), nodeFromGetUpdate2.getProperties());
+        compareProperties("assert4", nodeFromGetUpdate1.getProperties(), nodeFromUpdate2.getProperties());
+        compareProperties("assert5", nodeFromGetUpdate1.getProperties(), nodeFromGetUpdate2.getProperties());
         
         // Delete property values
         nodeFromGetUpdate2.getProperties().remove(new NodeProperty("uri2", null));
@@ -270,8 +275,8 @@ public abstract class NodeDAOTests
         nodeFromGetUpdate2.getProperties().remove(newURI2);
         nodeFromGetUpdate2.getProperties().remove(newEncoding);
         nodeFromGetUpdate2.getProperties().remove(newMD5);
-        assertEquals("assert6", nodeFromGetUpdate2.getProperties(), nodeFromUpdate3.getProperties());
-        assertEquals("assert7", nodeFromGetUpdate2.getProperties(), nodeFromGetUpdate3.getProperties());
+        compareProperties("assert6", nodeFromGetUpdate2.getProperties(), nodeFromUpdate3.getProperties());
+        compareProperties("assert7", nodeFromGetUpdate2.getProperties(), nodeFromGetUpdate3.getProperties());
         
     }
     
@@ -323,6 +328,28 @@ public abstract class NodeDAOTests
         properties.add(prop6);
 
         return properties;
+    }
+    
+    private void compareProperties(String assertName, List<NodeProperty> properties1, List<NodeProperty> properties2)
+    {
+        properties1.removeAll(propertyIgnoreList);
+        properties2.removeAll(propertyIgnoreList);
+        if (properties1.size() != properties2.size())
+        {
+            assertTrue(assertName + " property list sizes different", false);
+        }
+        boolean match = true;
+        for (NodeProperty list1property : properties1)
+        {
+            if (!propertyIgnoreList.contains(list1property))
+            {
+                if (!properties2.contains(list1property))
+                {
+                    match = false;
+                }
+            }
+        }
+        assertTrue(assertName, match);
     }
     
 }

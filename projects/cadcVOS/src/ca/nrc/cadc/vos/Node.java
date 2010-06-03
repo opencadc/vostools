@@ -154,7 +154,7 @@ public abstract class Node
      * @param uri
      * @throws URISyntaxException 
      */
-    private void buildPath(VOSURI uri) throws URISyntaxException
+    void buildPath(VOSURI uri) throws URISyntaxException
     {
         if (uri == null)
         {
