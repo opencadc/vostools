@@ -86,7 +86,6 @@ import javax.security.auth.Subject;
 import org.apache.log4j.Logger;
 import org.restlet.Request;
 import org.restlet.data.Method;
-import org.restlet.data.Status;
 import org.restlet.representation.Representation;
 import org.restlet.resource.Delete;
 import org.restlet.resource.Get;
@@ -95,12 +94,7 @@ import org.restlet.resource.Put;
 
 import ca.nrc.cadc.vos.ContainerNode;
 import ca.nrc.cadc.vos.Node;
-import ca.nrc.cadc.vos.NodeAlreadyExistsException;
-import ca.nrc.cadc.vos.NodeNotFoundException;
 import ca.nrc.cadc.vos.NodeParsingException;
-import ca.nrc.cadc.vos.NodeProperty;
-import ca.nrc.cadc.vos.NodeWriter;
-import ca.nrc.cadc.vos.VOS;
 import ca.nrc.cadc.vos.VOSURI;
 import ca.nrc.cadc.vos.auth.PrivilegedReadAuthorizationExceptionAction;
 import ca.nrc.cadc.vos.auth.PrivilegedWriteAuthorizationExceptionAction;
@@ -108,7 +102,11 @@ import ca.nrc.cadc.vos.auth.VOSpaceAuthorizer;
 import ca.nrc.cadc.vos.dao.SearchNode;
 import ca.nrc.cadc.vos.web.representation.NodeErrorRepresentation;
 import ca.nrc.cadc.vos.web.representation.NodeInputRepresentation;
-import ca.nrc.cadc.vos.web.representation.NodeOutputRepresentation;
+import ca.nrc.cadc.vos.web.restlet.resource.action.CreateNodeAction;
+import ca.nrc.cadc.vos.web.restlet.resource.action.DeleteNodeAction;
+import ca.nrc.cadc.vos.web.restlet.resource.action.GetNodeAction;
+import ca.nrc.cadc.vos.web.restlet.resource.action.NodeAction;
+import ca.nrc.cadc.vos.web.restlet.resource.action.UpdatePropertiesAction;
 
 /**
  * Handles HTTP requests for Node resources.
@@ -124,8 +122,11 @@ public class NodeResource extends BaseResource
     
     private String path;
     private Node node;
-    private NodeError nodeError = null;
-    private VOSURI vosURI = null;
+    private String ownerDN;
+    private NodeFault nodeFault;
+    private String faultMessage;
+    private VOSURI vosURI;
+    
     
     /**
      * Called after object instantiation.
@@ -161,7 +162,7 @@ public class NodeResource extends BaseResource
                 throw new IllegalArgumentException("No node path information provided.");
             }
             
-            vosURI = new VOSURI(getVosUri() + "/" + path);
+            vosURI = new VOSURI(getVosUriPrefix() + "/" + path);
             
             // Get the node for the operation, either from the persistent layer,
             // or from the client supplied xml
@@ -223,51 +224,86 @@ public class NodeResource extends BaseResource
             // the distinguished name contained in the client certificate(s)
             if (getMethod().equals(Method.PUT))
             {
-                clientNode.setOwner(getOwner(principals));
+                clientNode.setOwner(ownerDN);
             }
             
             log.debug("doInit() retrived node: " + node);
         }
         catch (FileNotFoundException e)
         {
+            faultMessage = vosURI.toString();
             log.debug("Could not find node with path: " + path, e);
-            nodeError = new NodeError(NodeFault.NodeNotFound, vosURI.toString());
+            nodeFault = NodeFault.NodeNotFound;
         }
         catch (URISyntaxException e)
         {
-            String message = "URI not well formed: " + vosURI;
-            log.debug(message, e);
-            nodeError = new NodeError(NodeFault.InvalidURI, message);
+            faultMessage = "URI not well formed: " + vosURI;
+            log.debug(faultMessage, e);
+            nodeFault = NodeFault.InvalidURI;
         }
         catch (AccessControlException e)
         {
-            final String message = "Access Denied: " + e.getMessage();
-            log.debug(message, e);
-            nodeError = new NodeError(NodeFault.PermissionDenied, message);
+            faultMessage = "Access Denied: " + e.getMessage();
+            log.debug(faultMessage, e);
+            nodeFault = NodeFault.PermissionDenied;
         }
         catch (NodeParsingException e)
         {
-            final String message = "Node XML not well formed: " + e.getMessage();
-            log.debug(message, e);
-            nodeError = new NodeError(NodeFault.InvalidToken, message);
+            faultMessage = "Node XML not well formed: " + e.getMessage();
+            log.debug(faultMessage, e);
+            nodeFault = NodeFault.InvalidToken;
         }
         catch (UnsupportedOperationException e)
         {
-            final String message = "Not supported: " + e.getMessage();
-            log.debug(message, e);
-            nodeError = new NodeError(NodeFault.NotSupported, message);
+            faultMessage = "Not supported: " + e.getMessage();
+            log.debug(faultMessage, e);
+            nodeFault = NodeFault.NotSupported;
         }
         catch (IllegalArgumentException e)
         {
-            final String message = "Bad input: " + e.getMessage();
-            log.debug(message, e);
-            nodeError = new NodeError(NodeFault.BadRequest, message);
+            faultMessage = "Bad input: " + e.getMessage();
+            log.debug(faultMessage, e);
+            nodeFault = NodeFault.BadRequest;
         }
         catch (Throwable t)
         {
-            final String message = "Internal Error:" + t.getMessage();
-            log.debug(message, t);
-            nodeError = new NodeError(NodeFault.InternalFault, message);
+            faultMessage = "Internal Error:" + t.getMessage();
+            log.debug(faultMessage, t);
+            nodeFault = NodeFault.InternalFault;
+        }
+    }
+    
+    /**
+     * Performs the specified node action, first checking for errors, and
+     * catching any errors that may happen.
+     * @param action The action to perform.
+     * @return A representation of the output or of any error that happens.
+     */
+    public Representation performNodeAction(NodeAction action)
+    {
+        log.debug("Enter NodeResource.performNodeAction()");
+        try
+        {
+            if (nodeFault != null)
+            {
+                setStatus(nodeFault.getStatus());
+                if (faultMessage == null)
+                {
+                    return new NodeErrorRepresentation(nodeFault);
+                }
+                else
+                {
+                    return new NodeErrorRepresentation(nodeFault, faultMessage);
+                }
+            }
+
+            return action.perform(this);
+        }
+        catch (Throwable t)
+        {
+            log.debug(t);
+            setStatus(NodeFault.InternalFault.getStatus());
+            return new NodeErrorRepresentation(NodeFault.InternalFault, t.getMessage());
         }
     }
     
@@ -278,21 +314,7 @@ public class NodeResource extends BaseResource
     public Representation represent()
     {
         log.debug("Enter NodeResource.represent()");
-        if (nodeError != null)
-        {
-            return createNodeFaultRepresentation(nodeError);
-        }
-        
-        try
-        {
-            NodeWriter nodeWriter = new NodeWriter();
-            return new NodeOutputRepresentation(node, nodeWriter);
-        }
-        catch (Throwable t)
-        {
-            log.debug(t);
-            return createNodeFaultRepresentation(new NodeError(NodeFault.InternalFault, t.getMessage()));
-        }
+        return performNodeAction(new GetNodeAction());
     }
     
     /**
@@ -302,37 +324,7 @@ public class NodeResource extends BaseResource
     public Representation store()
     {   
         log.debug("Enter NodeResource.store()");
-        if (nodeError != null)
-        {
-            return createNodeFaultRepresentation(nodeError);
-        }
-        
-        try
-        {
-            Node storedNode = getNodePersistence().putInContainer(node, node.getParent());
-            
-            // return the node in xml format
-            NodeWriter nodeWriter = new NodeWriter();
-            NodeOutputRepresentation nodeOutputRepresentation =
-                new NodeOutputRepresentation(storedNode, nodeWriter);
-            setStatus(Status.SUCCESS_CREATED);
-            return nodeOutputRepresentation;
-        }
-        catch (NodeAlreadyExistsException e)
-        {
-            log.debug("Node already exists: " + path, e);
-            return createNodeFaultRepresentation(new NodeError(NodeFault.DuplicateNode, vosURI.toString()));
-        }
-        catch (NodeNotFoundException e)
-        {
-            log.debug("Could not resolve part of path for node: " + path, e);
-            return createNodeFaultRepresentation(new NodeError(NodeFault.ContainerNotFound));
-        }
-        catch (Throwable t)
-        {
-            log.debug(t);
-            return createNodeFaultRepresentation(new NodeError(NodeFault.InternalFault, t.getMessage()));
-        }
+        return performNodeAction(new CreateNodeAction());
     }
     
     /**
@@ -342,32 +334,7 @@ public class NodeResource extends BaseResource
     public Representation accept()
     {
         log.debug("Enter NodeResource.accept()");
-        if (nodeError != null)
-        {
-            return createNodeFaultRepresentation(nodeError);
-        }
-        
-        try
-        {
-            // filter out any non-modifiable properties
-            filterPropertiesForUpdate(node);
-            
-            Node updatedNode = getNodePersistence().updateProperties(node);
-            
-            // return the node in xml format
-            NodeWriter nodeWriter = new NodeWriter();
-            return new NodeOutputRepresentation(updatedNode, nodeWriter);
-        }
-        catch (NodeNotFoundException e)
-        {
-            log.debug("Could not resolve part of path for node: " + path);
-            return createNodeFaultRepresentation(new NodeError(NodeFault.NodeNotFound, vosURI.toString()));
-        }
-        catch (Throwable t)
-        {
-            log.debug(t);
-            return createNodeFaultRepresentation(new NodeError(NodeFault.InternalFault, t.getMessage()));
-        }
+        return performNodeAction(new UpdatePropertiesAction());
     }
     
     /**
@@ -377,26 +344,7 @@ public class NodeResource extends BaseResource
     public Representation remove()
     {
         log.debug("Enter NodeResource.remove()");
-        if (nodeError != null)
-        {
-            return createNodeFaultRepresentation(nodeError);
-        }
-        
-        try
-        {
-            getNodePersistence().delete(node, true);
-            return null;
-        }
-        catch (NodeNotFoundException e)
-        {
-            log.debug("Could not find node with path: " + path, e);
-            return createNodeFaultRepresentation(new NodeError(NodeFault.NodeNotFound, vosURI.toString()));
-        }
-        catch (Throwable t)
-        {
-            log.debug(t);
-            return createNodeFaultRepresentation(new NodeError(NodeFault.InternalFault, t.getMessage()));
-        }
+        return performNodeAction(new DeleteNodeAction());
     }
     
     /**
@@ -409,17 +357,6 @@ public class NodeResource extends BaseResource
     private Set<Principal> getPrincipals(Request request) {
         
         Set<Principal> principals = new HashSet<Principal>();
-        
-        // BM: Removed: Basic authentication credentials no longer
-        // collected
-        //
-        // look for basic authentication
-        // if (request.getChallengeResponse() != null &&
-        //    StringUtil.hasLength(request.getChallengeResponse().getIdentifier()))
-        // {
-        //     principals.add(new HttpPrincipal(request.getChallengeResponse().getIdentifier()));
-        // }
-        
         // look for X509 certificates
         Map<String, Object> requestAttributes = request.getAttributes();
         if (requestAttributes.containsKey(CERTIFICATE_REQUEST_ATTRIBUTE_NAME))
@@ -432,6 +369,10 @@ public class NodeResource extends BaseResource
                 for (final X509Certificate cert : clientCertificates)
                 {
                     principals.add(cert.getSubjectX500Principal());
+                    if (ownerDN == null)
+                    {
+                        ownerDN = cert.getSubjectX500Principal().getName();
+                    }
                 }
             }
         }
@@ -440,42 +381,19 @@ public class NodeResource extends BaseResource
         
     }
     
-    /**
-     * Get the first distinguished name found from the set of principals.
-     * @param principals
-     * @return
-     */
-    private String getOwner(Set<Principal> principals)
+    public Node getNode()
     {
-        for (Principal principal : principals)
-        {
-            return principal.getName();
-        }
-        return "";
+        return node;
     }
     
-    /**
-     * Set the status according to the fault and create an output representation
-     * of the fault.
-     * @param nodeError
-     * @return
-     */
-    private NodeErrorRepresentation createNodeFaultRepresentation(NodeError nodeError)
+    public VOSURI getVosURI()
     {
-        setStatus(nodeError.getNodeFault().getStatus());
-        return new NodeErrorRepresentation(nodeError.getNodeFault(), nodeError.getMessage());
+        return vosURI;
     }
     
-    /**
-     * Remove any properties from the Node that cannot be updated.
-     * @param node
-     */
-    private void filterPropertiesForUpdate(Node node)
+    public String getPath()
     {
-        if (node.getProperties().contains(VOS.PROPERTY_URI_DATE))
-        {
-            node.getProperties().remove(new NodeProperty(VOS.PROPERTY_URI_DATE, null));
-        }
+        return path;
     }
     
 }

@@ -86,10 +86,16 @@ public class NodeErrorRepresentation extends OutputRepresentation
     
     private String message;
     
-    public NodeErrorRepresentation(NodeFault nodeFault, String message)
+    public NodeErrorRepresentation(NodeFault nodeFault)
     {
         super(MediaType.TEXT_PLAIN);
-        this.message = message;
+        this.message = nodeFault.toString();
+    }
+    
+    public NodeErrorRepresentation(NodeFault nodeFault, String info)
+    {
+        super(MediaType.TEXT_PLAIN);
+        this.message = nodeFault.toString() + " " + info;
     }
 
     @Override

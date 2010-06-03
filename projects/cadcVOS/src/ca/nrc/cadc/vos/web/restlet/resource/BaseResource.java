@@ -77,14 +77,14 @@ import ca.nrc.cadc.vos.util.BeanUtil;
 public abstract class BaseResource extends ServerResource
 {
     
-    private String vosUri;
+    private String vosUriPrefix;
     private NodePersistence nodePersistence;
     
     protected BaseResource()
     {
         super();
         
-        vosUri =
+        vosUriPrefix =
             (String) getApplication().getContext().getAttributes().
                 get(BeanUtil.IVOA_VOS_URI);
         
@@ -93,12 +93,12 @@ public abstract class BaseResource extends ServerResource
                 get(BeanUtil.VOS_NODE_PERSISTENCE);
     }
     
-    protected String getVosUri()
+    public String getVosUriPrefix()
     {
-        return vosUri;
+        return vosUriPrefix;
     }
     
-    protected final NodePersistence getNodePersistence()
+    public final NodePersistence getNodePersistence()
     {
         return nodePersistence;
     }
