@@ -8,7 +8,7 @@
 *  National Research Council            Conseil national de recherches
 *  Ottawa, Canada, K1A 0R6              Ottawa, Canada, K1A 0R6
 *  All rights reserved                  Tous droits réservés
-*                                       
+*
 *  NRC disclaims any warranties,        Le CNRC dénie toute garantie
 *  expressed, implied, or               énoncée, implicite ou légale,
 *  statutory, of any kind with          de quelque nature que ce
@@ -31,10 +31,10 @@
 *  software without specific prior      de ce logiciel sans autorisation
 *  written permission.                  préalable et particulière
 *                                       par écrit.
-*                                       
+*
 *  This file is part of the             Ce fichier fait partie du projet
 *  OpenCADC project.                    OpenCADC.
-*                                       
+*
 *  OpenCADC is free software:           OpenCADC est un logiciel libre ;
 *  you can redistribute it and/or       vous pouvez le redistribuer ou le
 *  modify it under the terms of         modifier suivant les termes de
@@ -44,7 +44,7 @@
 *  either version 3 of the              : soit la version 3 de cette
 *  License, or (at your option)         licence, soit (à votre gré)
 *  any later version.                   toute version ultérieure.
-*                                       
+*
 *  OpenCADC is distributed in the       OpenCADC est distribué
 *  hope that it will be useful,         dans l’espoir qu’il vous
 *  but WITHOUT ANY WARRANTY;            sera utile, mais SANS AUCUNE
@@ -54,7 +54,7 @@
 *  PURPOSE.  See the GNU Affero         PARTICULIER. Consultez la Licence
 *  General Public License for           Générale Publique GNU Affero
 *  more details.                        pour plus de détails.
-*                                       
+*
 *  You should have received             Vous devriez avoir reçu une
 *  a copy of the GNU Affero             copie de la Licence Générale
 *  General Public License along         Publique GNU Affero avec
@@ -69,111 +69,98 @@
 
 package ca.nrc.cadc.vos.util;
 
-import java.util.Stack;
-
+import java.util.Set;
+import ca.nrc.cadc.util.Log4jInit;
+import org.apache.log4j.Level;
 import org.apache.log4j.Logger;
-
-import ca.nrc.cadc.vos.ContainerNode;
-import ca.nrc.cadc.vos.DataNode;
-import ca.nrc.cadc.vos.Node;
-import ca.nrc.cadc.vos.NodeNotFoundException;
-import ca.nrc.cadc.vos.NodePersistence;
-import ca.nrc.cadc.vos.VOS;
-import ca.nrc.cadc.vos.VOSURI;
-import java.net.URISyntaxException;
+import org.junit.After;
+import org.junit.AfterClass;
+import org.junit.Before;
+import org.junit.BeforeClass;
+import org.junit.Test;
+import static org.junit.Assert.*;
 
 /**
- * Methods that add convenience in dealing with Nodes.
- * 
- * @author majorb
  *
+ * @author jburke
  */
-public class NodeUtil
+public class FixedSizeTreeSetTest
 {
-    
-    private static Logger log = Logger.getLogger(NodeUtil.class);
-    
-    /**
-     * Iterate the parental hierarchy of the node from root to self.
-     * 
-     * @param targetNode The node whos hierarchy is to be iterated
-     * @param listener An optional listener notified at each stack level.
-     * @param nodePersistence The node persistence implementation
-     * @return The persistent version of the target node.
-     * @throws NodeNotFoundException If the target node could not be found.
-     */
-    public static Node iterateStack(Node targetNode, NodeStackListener listener, NodePersistence nodePersistence)
-    throws NodeNotFoundException
+    private static Logger log = Logger.getLogger(FixedSizeTreeSetTest.class);
     {
-        
-        if (targetNode == null)
-        {
-            // root container, return null
-            return null;
-        }
-        
-        Stack<Node> nodeStack = targetNode.stackToRoot();
-        Node persistentNode = null;
-        Node nextNode = null;
-        ContainerNode parent = null;
-        
-        while (!nodeStack.isEmpty())
-        {
-            nextNode = nodeStack.pop();
-            nextNode.setParent(parent);
-            log.debug("Retrieving node with path: " + nextNode.getPath());
-            
-            // get the node from the persistence layer
-            persistentNode = nodePersistence.getFromParent(nextNode.getName(), parent);
-            
-            // call the listener
-            if (listener != null)
-            {
-                listener.nodeVisited(persistentNode, !nodeStack.isEmpty());
-            }
+        Log4jInit.setLevel("ca", Level.DEBUG);
+    }
 
-            // get the parent 
-            if (persistentNode instanceof ContainerNode)
-            {
-                parent = (ContainerNode) persistentNode;
-            }
-            else if (!nodeStack.isEmpty())
-            {
-                final String message = "Non-container node found mid-tree";
-                log.warn(message);
-                throw new NodeNotFoundException(message);
-            }
-            
-        }
-        
-        if (persistentNode instanceof DataNode)
-        {
-            persistentNode.setParent(parent);
-        }
-        return persistentNode;
+    public FixedSizeTreeSetTest() {
+    }
+
+    @BeforeClass
+    public static void setUpClass() throws Exception
+    {
+    }
+
+    @AfterClass
+    public static void tearDownClass() throws Exception
+    {
+    }
+
+    @Before
+    public void setUp() {
+    }
+
+    @After
+    public void tearDown() {
     }
 
     /**
-     * Create a VOSURI from a Node and it's parent.
-     *
-     * @param node The Node to create the VOSURI for.
-     * @param parent The parent of the Node.
-     * @return A VOSURI for the node.
-     * @throws URISyntaxException if the VOSURI syntax is invalid.
+     * Test of add method, of class FixedSizeTreeSet.
      */
-    public static VOSURI createVOSURI(Node node, Node parent)
-        throws URISyntaxException
+    @Test
+    public void testAdd()
     {
-        StringBuilder sb = new StringBuilder();
-        sb.append(VOS.VOS_URI);
-        if (parent != null)
-        {
-            sb.append("/");
-            sb.append(parent.getPath());
-        }
-        sb.append("/");
-        sb.append(node.getName());
+        log.debug("testAdd");
 
-        return new VOSURI(sb.toString());
+        FixedSizeTreeSet set = new FixedSizeTreeSet();
+        set.setMaxSize(3);
+        assertTrue(set.isEmpty());
+
+        String s1 = "a";
+        boolean changed = set.add(s1);
+        System.out.println("added 1 size: " + set.size() + " , " + changed);
+        assertEquals(1, set.size());
+
+        String s2 = "b";
+        changed = set.add(s2);
+        assertEquals(2, set.size());
+
+        String s3 = "c";
+        changed = set.add(s3);
+        assertEquals(3, set.size());
+
+        String s4 = "d";
+        changed = set.add(s4);
+        assertEquals(3, set.size());
+
+        String s5 = "e";
+        changed = set.add(s5);
+        assertEquals(3, set.size());
+
+        changed = set.remove(s5);
+        assertEquals(3, set.size());
+
+        changed = set.remove(s4);
+        assertEquals(3, set.size());
+
+        changed = set.remove(s3);
+        assertEquals(2, set.size());
+
+        changed = set.remove(s2);
+        assertEquals(1, set.size());
+
+        changed = set.remove(s1);
+        assertTrue(set.isEmpty());
+
+        log.info("testAdd passed");
     }
+
 }

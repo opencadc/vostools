@@ -69,6 +69,7 @@
 
 package ca.nrc.cadc.vos;
 
+import ca.nrc.cadc.util.StringBuilderWriter;
 import java.io.BufferedWriter;
 import java.io.IOException;
 import java.io.OutputStream;
@@ -105,12 +106,12 @@ public class NodeWriter
 
     private static Logger log = Logger.getLogger(NodeWriter.class);
 
-    /**
-     * Write a ContainerNode to a StringBuilder.
-     */
     public NodeWriter()
     {}
 
+    /**
+     * Write a ContainerNode to a StringBuilder.
+     */
     public void write(ContainerNode node, StringBuilder builder) throws IOException
     {
         write(node, new StringBuilderWriter(builder));
@@ -296,63 +297,6 @@ public class NodeWriter
         XMLOutputter outputter = new XMLOutputter();
         outputter.setFormat(Format.getPrettyFormat());
         outputter.output(new Document(root), writer);
-    }
-
-    /**
-     * Class wraps a Writer around a StringBuilder.
-     */
-    public class StringBuilderWriter extends Writer
-    {
-        private StringBuilder sb;
-
-        public StringBuilderWriter(StringBuilder sb)
-        {
-            this.sb = sb;
-        }
-
-        @Override
-        public void write(char[] cbuf) throws IOException
-        {
-            sb.append(cbuf);
-        }
-
-        @Override
-        public void write(char[] cbuf, int off, int len) throws IOException
-        {
-            sb.append(cbuf, off, len);
-        }
-
-        @Override
-        public void write(int c) throws IOException
-        {
-            sb.append((char) c);
-        }
-
-        @Override
-        public void write(String str) throws IOException
-        {
-            sb.append(str);
-        }
-
-        @Override
-        public void write(String str, int off, int len) throws IOException
-        {
-            sb.append(str.substring(off, off + len));
-        }
-
-        @Override
-        public void flush() throws IOException
-        {}
-
-        @Override
-        public void close() throws IOException
-        {}
-
-        public void reset()
-        {
-            sb.setLength(0);
-        }
-
     }
 
 }

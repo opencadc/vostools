@@ -8,7 +8,7 @@
 *  National Research Council            Conseil national de recherches
 *  Ottawa, Canada, K1A 0R6              Ottawa, Canada, K1A 0R6
 *  All rights reserved                  Tous droits réservés
-*                                       
+*
 *  NRC disclaims any warranties,        Le CNRC dénie toute garantie
 *  expressed, implied, or               énoncée, implicite ou légale,
 *  statutory, of any kind with          de quelque nature que ce
@@ -31,10 +31,10 @@
 *  software without specific prior      de ce logiciel sans autorisation
 *  written permission.                  préalable et particulière
 *                                       par écrit.
-*                                       
+*
 *  This file is part of the             Ce fichier fait partie du projet
 *  OpenCADC project.                    OpenCADC.
-*                                       
+*
 *  OpenCADC is free software:           OpenCADC est un logiciel libre ;
 *  you can redistribute it and/or       vous pouvez le redistribuer ou le
 *  modify it under the terms of         modifier suivant les termes de
@@ -44,7 +44,7 @@
 *  either version 3 of the              : soit la version 3 de cette
 *  License, or (at your option)         licence, soit (à votre gré)
 *  any later version.                   toute version ultérieure.
-*                                       
+*
 *  OpenCADC is distributed in the       OpenCADC est distribué
 *  hope that it will be useful,         dans l’espoir qu’il vous
 *  but WITHOUT ANY WARRANTY;            sera utile, mais SANS AUCUNE
@@ -54,7 +54,7 @@
 *  PURPOSE.  See the GNU Affero         PARTICULIER. Consultez la Licence
 *  General Public License for           Générale Publique GNU Affero
 *  more details.                        pour plus de détails.
-*                                       
+*
 *  You should have received             Vous devriez avoir reçu une
 *  a copy of the GNU Affero             copie de la Licence Générale
 *  General Public License along         Publique GNU Affero avec
@@ -66,114 +66,94 @@
 *
 ************************************************************************
 */
-
 package ca.nrc.cadc.vos.util;
 
-import java.util.Stack;
-
-import org.apache.log4j.Logger;
-
-import ca.nrc.cadc.vos.ContainerNode;
-import ca.nrc.cadc.vos.DataNode;
+import ca.nrc.cadc.date.DateUtil;
 import ca.nrc.cadc.vos.Node;
-import ca.nrc.cadc.vos.NodeNotFoundException;
-import ca.nrc.cadc.vos.NodePersistence;
+import ca.nrc.cadc.vos.NodeProperty;
 import ca.nrc.cadc.vos.VOS;
-import ca.nrc.cadc.vos.VOSURI;
-import java.net.URISyntaxException;
+import java.text.ParseException;
+import java.util.Comparator;
+import java.util.Date;
+import java.util.List;
 
 /**
- * Methods that add convenience in dealing with Nodes.
- * 
- * @author majorb
+ * Class to compare two Nodes based on their LastModified property. Nodes are
+ * sorted in descending Date order, with the most recent Dates first.
  *
+ * @author jburke
  */
-public class NodeUtil
+public class NodeDateComparator implements Comparator
 {
-    
-    private static Logger log = Logger.getLogger(NodeUtil.class);
-    
-    /**
-     * Iterate the parental hierarchy of the node from root to self.
-     * 
-     * @param targetNode The node whos hierarchy is to be iterated
-     * @param listener An optional listener notified at each stack level.
-     * @param nodePersistence The node persistence implementation
-     * @return The persistent version of the target node.
-     * @throws NodeNotFoundException If the target node could not be found.
-     */
-    public static Node iterateStack(Node targetNode, NodeStackListener listener, NodePersistence nodePersistence)
-    throws NodeNotFoundException
-    {
-        
-        if (targetNode == null)
-        {
-            // root container, return null
-            return null;
-        }
-        
-        Stack<Node> nodeStack = targetNode.stackToRoot();
-        Node persistentNode = null;
-        Node nextNode = null;
-        ContainerNode parent = null;
-        
-        while (!nodeStack.isEmpty())
-        {
-            nextNode = nodeStack.pop();
-            nextNode.setParent(parent);
-            log.debug("Retrieving node with path: " + nextNode.getPath());
-            
-            // get the node from the persistence layer
-            persistentNode = nodePersistence.getFromParent(nextNode.getName(), parent);
-            
-            // call the listener
-            if (listener != null)
-            {
-                listener.nodeVisited(persistentNode, !nodeStack.isEmpty());
-            }
-
-            // get the parent 
-            if (persistentNode instanceof ContainerNode)
-            {
-                parent = (ContainerNode) persistentNode;
-            }
-            else if (!nodeStack.isEmpty())
-            {
-                final String message = "Non-container node found mid-tree";
-                log.warn(message);
-                throw new NodeNotFoundException(message);
-            }
-            
-        }
-        
-        if (persistentNode instanceof DataNode)
-        {
-            persistentNode.setParent(parent);
-        }
-        return persistentNode;
-    }
 
     /**
-     * Create a VOSURI from a Node and it's parent.
+     * Compare two Nodes based on their LastModified property.
      *
-     * @param node The Node to create the VOSURI for.
-     * @param parent The parent of the Node.
-     * @return A VOSURI for the node.
-     * @throws URISyntaxException if the VOSURI syntax is invalid.
+     * @param o1 The first Node to compare.
+     * @param o2 The second Node to compare.
+     * @return 
      */
-    public static VOSURI createVOSURI(Node node, Node parent)
-        throws URISyntaxException
+    public int compare(Object o1, Object o2)
     {
-        StringBuilder sb = new StringBuilder();
-        sb.append(VOS.VOS_URI);
-        if (parent != null)
-        {
-            sb.append("/");
-            sb.append(parent.getPath());
-        }
-        sb.append("/");
-        sb.append(node.getName());
+        // Get the Nodes.
+        Node n1 = (Node) o1;
+        Node n2 = (Node) o2;
 
-        return new VOSURI(sb.toString());
+        // Properties for each Node.
+        List<NodeProperty> nps1 = n1.getProperties();
+        List<NodeProperty> nps2 = n2.getProperties();
+
+        // LastModifed date for each Node.
+        String np1 = null;
+        for (NodeProperty nodeProperty : nps1)
+        {
+            if (nodeProperty.getPropertyURI().equals(VOS.PROPERTY_URI_DATE))
+                np1 = nodeProperty.getPropertyValue();
+
+        }
+        String np2 = null;
+        for (NodeProperty nodeProperty : nps2)
+        {
+            if (nodeProperty.getPropertyURI().equals(VOS.PROPERTY_URI_DATE))
+                np2 = nodeProperty.getPropertyValue();
+
+        }
+
+        // If Node A does not have a LastModified property while Node B does
+        // have a LastModified property, then Node A is considered to be
+        // less than Node B. If neither Node's have a LastModified property,
+        // then the Nodes are considered to be equal.
+        if (np1 == null && np2 != null)
+            return -1;
+        if (np1 != null && np2 == null)
+            return 1;
+        if (np1 == null && np2 == null)
+            return 0;
+
+        Date d1 = null;
+        try
+        {
+            d1 = DateUtil.toDate(np1, DateUtil.ISO_DATE_FORMAT, DateUtil.UTC);
+        }
+        catch (ParseException ignore) { }
+
+        Date d2 = null;
+        try
+        {
+            d2 = DateUtil.toDate(np2, DateUtil.ISO_DATE_FORMAT, DateUtil.UTC);
+        }
+        catch (ParseException ignore) { }
+
+        // Dates are handled the same as the LastModified property. A Node with
+        // a null Date is considered to be less than a Node whose Date is not null.
+        if (d1 == null && d2 != null)
+            return -1;
+        if (d1 != null && d2 == null)
+            return 1;
+        if (d1 == null && d2 == null)
+            return 0;
+
+        return d2.compareTo(d1);
     }
+
 }

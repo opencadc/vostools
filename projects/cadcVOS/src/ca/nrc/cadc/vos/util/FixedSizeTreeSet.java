@@ -8,7 +8,7 @@
 *  National Research Council            Conseil national de recherches
 *  Ottawa, Canada, K1A 0R6              Ottawa, Canada, K1A 0R6
 *  All rights reserved                  Tous droits réservés
-*                                       
+*
 *  NRC disclaims any warranties,        Le CNRC dénie toute garantie
 *  expressed, implied, or               énoncée, implicite ou légale,
 *  statutory, of any kind with          de quelque nature que ce
@@ -31,10 +31,10 @@
 *  software without specific prior      de ce logiciel sans autorisation
 *  written permission.                  préalable et particulière
 *                                       par écrit.
-*                                       
+*
 *  This file is part of the             Ce fichier fait partie du projet
 *  OpenCADC project.                    OpenCADC.
-*                                       
+*
 *  OpenCADC is free software:           OpenCADC est un logiciel libre ;
 *  you can redistribute it and/or       vous pouvez le redistribuer ou le
 *  modify it under the terms of         modifier suivant les termes de
@@ -44,7 +44,7 @@
 *  either version 3 of the              : soit la version 3 de cette
 *  License, or (at your option)         licence, soit (à votre gré)
 *  any later version.                   toute version ultérieure.
-*                                       
+*
 *  OpenCADC is distributed in the       OpenCADC est distribué
 *  hope that it will be useful,         dans l’espoir qu’il vous
 *  but WITHOUT ANY WARRANTY;            sera utile, mais SANS AUCUNE
@@ -54,7 +54,7 @@
 *  PURPOSE.  See the GNU Affero         PARTICULIER. Consultez la Licence
 *  General Public License for           Générale Publique GNU Affero
 *  more details.                        pour plus de détails.
-*                                       
+*
 *  You should have received             Vous devriez avoir reçu une
 *  a copy of the GNU Affero             copie de la Licence Générale
 *  General Public License along         Publique GNU Affero avec
@@ -66,114 +66,65 @@
 *
 ************************************************************************
 */
-
 package ca.nrc.cadc.vos.util;
 
-import java.util.Stack;
-
-import org.apache.log4j.Logger;
-
-import ca.nrc.cadc.vos.ContainerNode;
-import ca.nrc.cadc.vos.DataNode;
-import ca.nrc.cadc.vos.Node;
-import ca.nrc.cadc.vos.NodeNotFoundException;
-import ca.nrc.cadc.vos.NodePersistence;
-import ca.nrc.cadc.vos.VOS;
-import ca.nrc.cadc.vos.VOSURI;
-import java.net.URISyntaxException;
+import java.util.Collection;
+import java.util.Comparator;
+import java.util.TreeSet;
 
 /**
- * Methods that add convenience in dealing with Nodes.
+ * Implementation of a TreeSet with a settable upper size limit.
  * 
- * @author majorb
- *
+ * @author jburke
+ * @param <E>
  */
-public class NodeUtil
+public class FixedSizeTreeSet<E> extends TreeSet<E>
 {
-    
-    private static Logger log = Logger.getLogger(NodeUtil.class);
-    
-    /**
-     * Iterate the parental hierarchy of the node from root to self.
-     * 
-     * @param targetNode The node whos hierarchy is to be iterated
-     * @param listener An optional listener notified at each stack level.
-     * @param nodePersistence The node persistence implementation
-     * @return The persistent version of the target node.
-     * @throws NodeNotFoundException If the target node could not be found.
-     */
-    public static Node iterateStack(Node targetNode, NodeStackListener listener, NodePersistence nodePersistence)
-    throws NodeNotFoundException
-    {
-        
-        if (targetNode == null)
-        {
-            // root container, return null
-            return null;
-        }
-        
-        Stack<Node> nodeStack = targetNode.stackToRoot();
-        Node persistentNode = null;
-        Node nextNode = null;
-        ContainerNode parent = null;
-        
-        while (!nodeStack.isEmpty())
-        {
-            nextNode = nodeStack.pop();
-            nextNode.setParent(parent);
-            log.debug("Retrieving node with path: " + nextNode.getPath());
-            
-            // get the node from the persistence layer
-            persistentNode = nodePersistence.getFromParent(nextNode.getName(), parent);
-            
-            // call the listener
-            if (listener != null)
-            {
-                listener.nodeVisited(persistentNode, !nodeStack.isEmpty());
-            }
-
-            // get the parent 
-            if (persistentNode instanceof ContainerNode)
-            {
-                parent = (ContainerNode) persistentNode;
-            }
-            else if (!nodeStack.isEmpty())
-            {
-                final String message = "Non-container node found mid-tree";
-                log.warn(message);
-                throw new NodeNotFoundException(message);
-            }
-            
-        }
-        
-        if (persistentNode instanceof DataNode)
-        {
-            persistentNode.setParent(parent);
-        }
-        return persistentNode;
-    }
+    // The maximum size of the Set.
+    private int maxSize = Integer.MAX_VALUE;
 
     /**
-     * Create a VOSURI from a Node and it's parent.
+     * Set the maximum size of the TreeSet.
      *
-     * @param node The Node to create the VOSURI for.
-     * @param parent The parent of the Node.
-     * @return A VOSURI for the node.
-     * @throws URISyntaxException if the VOSURI syntax is invalid.
+     * @param maxSize The maximum size of the Set.
      */
-    public static VOSURI createVOSURI(Node node, Node parent)
-        throws URISyntaxException
+    public void setMaxSize(int maxSize)
     {
-        StringBuilder sb = new StringBuilder();
-        sb.append(VOS.VOS_URI);
-        if (parent != null)
-        {
-            sb.append("/");
-            sb.append(parent.getPath());
-        }
-        sb.append("/");
-        sb.append(node.getName());
-
-        return new VOSURI(sb.toString());
+        this.maxSize = maxSize;
     }
+
+    /**
+     * Add the specified element to the TreeSet.
+     *
+     * @param e The element to add.
+     * @return true if the Set is changed as a result of the add, false otherwise.
+     */
+    @Override
+    public boolean add(E e)
+    {
+        boolean changed = super.add(e);
+        while (size() > maxSize)
+        {
+            pollLast();
+        }
+        return changed;
+    }
+
+    /**
+     * Add the specified Collection to the TreeSet.
+     * 
+     * @param c The Collection to add.
+     * @return true if the Set is changed as a result of the add, false otherwise.
+     */
+    @Override
+    public boolean addAll(Collection<? extends E> c)
+    {
+        boolean changed = super.addAll(c);
+        while (size() > maxSize)
+        {
+            pollLast();
+        }
+        return changed;
+    }
+
 }
