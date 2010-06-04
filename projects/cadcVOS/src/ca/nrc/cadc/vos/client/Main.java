@@ -85,8 +85,8 @@ import ca.nrc.cadc.vos.VOSURI;
  */
 public class Main
 {
-    public static final String CR = "\n";
-    public static final String LF = " ";
+    public static final String CR = System.getProperty("line.separator"); // OS independant new line
+    public static final String EL = " "; // empty line
 
     public static final String ARG_HELP = "help";
     public static final String ARG_VERBOSE = "verbose";
@@ -222,19 +222,19 @@ public class Main
     {
         String[] um = {
                 "Usage:                                                                                                                             ",
-                LF,
+                EL,
                 "<comm> is an environment-specific command to run this VOSpace Client program,                                                                ",
                 "  e.g. \"java Command\", or \"java -jar VoSpaceClient.jar \"                                                                                 ",
-                LF,
+                EL,
                 "To display usage:                                                                                                                             ",
                 "<comm> --help                                                                                                                             ",
-                LF,
+                EL,
                 "General syntax:                                                                                                                             ",
-                LF,
+                EL,
                 "<comm> <outputOption> <operation> <operationParameters>                                                                                    ",
                 "i.e.                                                                                                                   ",
                 "<comm> [-v|-d] --view|create|delete|set|copy <operationParameters>                                                                          ",
-                LF,
+                EL,
                 "<operationParameters> for create|delete|set:                                                                                                 ",
                 "   --target=<uri>                                                                                                                   ",
                 "   --content-type=<string>                                                                                                                ",
@@ -242,18 +242,18 @@ public class Main
                 "   --group-read=<localFilePath>                                                                                                              ",
                 "   --group-write=<localFilePath>                                                                                                             ",
                 "   --prop=<localFilePath>                                                                                                                    ",
-                LF,
+                EL,
                 "<operationParameters> for copy:                                                                                                              ",
                 "   --src=<sourceUri>                                                                                                                ",
                 "   --dest=<destinationUri>                                                                                                                ",
-                LF,
+                EL,
                 "<operationParameters> for view:                                                                                                              ",
                 "   --target=<uri>                                                                                                                   ",
                 "                                                                                                                   ",
                 "<outputOption>:                                                                                                                   ",
                 "   -v, --verbose /t Verbose mode. optional.                                                                                                   ",
                 "   -d, --debug   /t Debug mode. optional.                                                                                                     ",
-                LF,
+                EL,
                 "format of <uri>, e.g.:",
                 "   vos://cadc.nrc.ca!vospace/dirNameA                                                                                                         ",
                 "                                                                                                                   ",
