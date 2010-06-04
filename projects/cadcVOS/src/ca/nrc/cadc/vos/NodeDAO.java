@@ -465,9 +465,36 @@ public abstract class NodeDAO implements NodePersistence
 
     }
     
-    public void setBusyState(Node node, NodeBusyState state) throws NodeNotFoundException
+    public void setBusyState(DataNode persistentNode, NodeBusyState state) throws NodeNotFoundException
     {
-        throw new UnsupportedOperationException("setBusyState not implemented.");
+        synchronized (this)
+        {
+            try
+            {
+                
+                startTransaction();
+                
+                // set the new state
+                jdbc.update(getSetBusyStateSQL(persistentNode, state));
+                
+                commitTransaction();
+                
+            } catch (Throwable t)
+            {
+                rollbackTransaction();
+                log.error("Set busy state rollback for node: " + persistentNode, t);
+                if (t instanceof NodeNotFoundException)
+                {
+                    throw (NodeNotFoundException) t;
+                }
+                else
+                {
+                    throw new IllegalStateException(t);
+                }
+            }
+            
+        }
+        log.debug("Node busy state updated for: " + persistentNode);
     }
     
     /**
@@ -1025,6 +1052,18 @@ public abstract class NodeDAO implements NodePersistence
         sb.append("update vospace..");
         sb.append(getNodeTableName());
         sb.append(" set markedForDeletion=1 where nodeID = ");
+        sb.append(getNodeID(node));
+        return sb.toString();
+    }
+    
+    protected String getSetBusyStateSQL(DataNode node, NodeBusyState state)
+    {
+        StringBuilder sb = new StringBuilder();
+        sb.append("update vospace..");
+        sb.append(getNodeTableName());
+        sb.append(" set busyState=' ");
+        sb.append(state.getValue());
+        sb.append("' where nodeID = ");
         sb.append(getNodeID(node));
         return sb.toString();
     }

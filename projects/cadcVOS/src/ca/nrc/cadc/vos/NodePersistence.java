@@ -142,7 +142,7 @@ public interface NodePersistence
      * @param state The new state for the node.
      * @throws NodeNotFoundException If the node could not be found.
      */
-    void setBusyState(Node node, NodeBusyState state) throws NodeNotFoundException;
+    void setBusyState(DataNode node, NodeBusyState state) throws NodeNotFoundException;
     
     /**
      * Move the specified node to the new path.  The node must have been retrieved
