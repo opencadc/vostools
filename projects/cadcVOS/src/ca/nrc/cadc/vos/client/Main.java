@@ -146,12 +146,14 @@ public class Main
             int numOp = command.validateOperationArgument(argMap);
             if (numOp == 0)
             {
-                System.out.println("One operation should be defined. \n");
+                System.out.println("One operation should be defined.");
+                System.out.println();
                 System.out.println(Main.usage);
             }
             else if (numOp > 1)
             {
-                System.out.println("Only one operation can be defined. \n");
+                System.out.println("Only one operation can be defined.");
+                System.out.println();
                 System.out.println(Main.usage);
             }
             else
