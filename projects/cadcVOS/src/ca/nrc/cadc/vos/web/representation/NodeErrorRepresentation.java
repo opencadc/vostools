@@ -73,7 +73,7 @@ import java.io.OutputStream;
 import org.restlet.data.MediaType;
 import org.restlet.representation.OutputRepresentation;
 
-import ca.nrc.cadc.vos.web.restlet.resource.NodeFault;
+import ca.nrc.cadc.vos.NodeFault;
 
 /**
  * Plain text representation of a NodeFault.

@@ -72,6 +72,8 @@ package ca.nrc.cadc.vos;
 import java.net.URISyntaxException;
 import java.util.List;
 
+import ca.nrc.cadc.vos.VOS.NodeBusyState;
+
 /**
  * A VOSpace node that describes a data item.
  * 
@@ -83,7 +85,7 @@ public class DataNode extends Node
     public static final char DB_TYPE = 'D';
     
     // Indicates if the node can be accessed.
-    private boolean busy;
+    private NodeBusyState busy;
     
     // Indicates if the VOSpace understands the data format.
     private boolean structured;
@@ -103,6 +105,8 @@ public class DataNode extends Node
     public DataNode(String name)
     {
         super(name);
+        this.structured = false;
+        this.busy = NodeBusyState.notBusy;
     }
     
     /**
@@ -113,7 +117,7 @@ public class DataNode extends Node
     {
         super(uri);
         this.structured = false;
-        this.busy = false;
+        this.busy = NodeBusyState.notBusy;
     }
     
     /**
@@ -124,25 +128,7 @@ public class DataNode extends Node
     {
         super(uri, properties);
         this.structured = false;
-        this.busy = false;
-    }
-
-    /**
-     * @return false if the node cannot be accessed.
-     */
-    public boolean isBusy()
-    {
-        return busy;
-    }
-
-    /**
-     * Sets the value of the busy flag.
-     * 
-     * @param busy
-     */
-    public void setBusy(boolean busy)
-    {
-        this.busy = busy;
+        this.busy = NodeBusyState.notBusy;
     }
 
     /**
@@ -178,6 +164,16 @@ public class DataNode extends Node
     public char getDatabaseTypeRepresentation()
     {
         return DB_TYPE;
+    }
+
+    public NodeBusyState getBusy()
+    {
+        return busy;
+    }
+
+    public void setBusy(NodeBusyState busy)
+    {
+        this.busy = busy;
     }
 
 }

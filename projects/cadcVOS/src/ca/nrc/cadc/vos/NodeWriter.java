@@ -84,6 +84,8 @@ import org.jdom.Namespace;
 import org.jdom.output.Format;
 import org.jdom.output.XMLOutputter;
 
+import ca.nrc.cadc.vos.VOS.NodeBusyState;
+
 /**
  * Writes a Node as XML to an output.
  * 
@@ -221,7 +223,7 @@ public class NodeWriter
         Element root = getRootElement(node);
 
         // busy attribute
-        root.setAttribute("busy", (node.isBusy() ? "true" : "false"));
+        root.setAttribute("busy", (node.getBusy().equals(NodeBusyState.notBusy) ? "false" : "true"));
 
         // properties element
         root.addContent(getPropertiesElement(node));

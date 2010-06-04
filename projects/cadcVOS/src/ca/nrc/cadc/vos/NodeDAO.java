@@ -88,6 +88,7 @@ import org.springframework.jdbc.support.KeyHolder;
 import org.springframework.transaction.TransactionStatus;
 import org.springframework.transaction.support.DefaultTransactionDefinition;
 
+import ca.nrc.cadc.vos.VOS.NodeBusyState;
 import ca.nrc.cadc.vos.dao.NodeID;
 import ca.nrc.cadc.vos.dao.NodeMapper;
 import ca.nrc.cadc.vos.dao.NodePropertyMapper;
@@ -312,7 +313,7 @@ public abstract class NodeDAO implements NodePersistence
      * @param persistentNode The node to delete.  This node must
      * have been retrived by the NodePersistence interface.
      */
-    public void delete(Node persistentNode, boolean deleteChildren) throws AccessControlException, NodeNotFoundException
+    public void delete(Node persistentNode, boolean deleteChildren) throws NodeNotFoundException
     {
         
         synchronized (this)
@@ -358,6 +359,16 @@ public abstract class NodeDAO implements NodePersistence
         log.debug("Node deleted: " + persistentNode);
     }
     
+    public void markForDeletion(Node persistentNode, boolean markChildren) throws NodeNotFoundException
+    {
+        synchronized (this)
+        {
+            
+            
+            
+        }
+    }
+    
     /**
      * Update the properties associated with this node.  New properties are added,
      * changed property values are updated, and properties marked for deletion are
@@ -365,7 +376,7 @@ public abstract class NodeDAO implements NodePersistence
      * @param updatedPersistentNode The node whos properties to update.  This node must
      * have been retrived by the NodePersistence interface.
      */
-    public Node updateProperties(Node updatedPersistentNode) throws AccessControlException, NodeNotFoundException
+    public Node updateProperties(Node updatedPersistentNode) throws NodeNotFoundException
     {
         
         Node currentDbNode = getFromParent(updatedPersistentNode.getName(), updatedPersistentNode.getParent());
@@ -437,6 +448,11 @@ public abstract class NodeDAO implements NodePersistence
         // return the new node from the database
         return currentDbNode;
 
+    }
+    
+    public void setBusyState(Node node, NodeBusyState state) throws NodeNotFoundException
+    {
+        throw new UnsupportedOperationException("setBusyState not implemented.");
     }
     
     /**

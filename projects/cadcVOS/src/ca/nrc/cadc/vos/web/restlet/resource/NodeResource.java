@@ -94,6 +94,7 @@ import org.restlet.resource.Put;
 
 import ca.nrc.cadc.vos.ContainerNode;
 import ca.nrc.cadc.vos.Node;
+import ca.nrc.cadc.vos.NodeFault;
 import ca.nrc.cadc.vos.NodeParsingException;
 import ca.nrc.cadc.vos.VOSURI;
 import ca.nrc.cadc.vos.auth.PrivilegedReadAuthorizationExceptionAction;
@@ -348,8 +349,8 @@ public class NodeResource extends BaseResource
     }
     
     /**
-     * Using the restlet request object, get all the basic authentication and
-     * certification authentication principals.
+     * Using the restlet request object, get all the
+     * certificate authentication principals.
      * @param request The restlet request object.
      * @return A set of principals found in the restlet request.
      */

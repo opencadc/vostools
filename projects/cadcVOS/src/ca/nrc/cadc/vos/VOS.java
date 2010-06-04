@@ -90,6 +90,26 @@ public class VOS
     
     public static final String VOS_URI = "vos://cadc.nrc.ca!vospace";
     
+    // Enumeration for Node busy states
+    public enum NodeBusyState
+    {
+        notBusy ("N"),
+        busyWithRead ("R"),
+        busyWithWrite ("W");
+        
+        private String value;
+        
+        private NodeBusyState(String value)
+        {
+            this.value = value;
+        }
+        
+        public String getValue()
+        {
+            return value;
+        }
+    }
+    
     /**
      * Standard Node Properties defined by the IVOA
      */

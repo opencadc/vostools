@@ -5,23 +5,25 @@
 
 package ca.nrc.cadc.vos;
 
-import java.io.OutputStream;
 import java.io.IOException;
-import org.jdom.Document;
-import org.jdom.output.Format;
-import org.jdom.output.XMLOutputter;
-import java.util.Collection;
-import ca.nrc.cadc.date.DateUtil;
+import java.io.OutputStream;
 import java.net.URISyntaxException;
 import java.util.ArrayList;
 import java.util.Calendar;
+import java.util.Collection;
+
 import org.apache.log4j.Logger;
+import org.jdom.Document;
 import org.jdom.Element;
+import org.jdom.output.Format;
+import org.jdom.output.XMLOutputter;
 import org.junit.After;
 import org.junit.AfterClass;
 import org.junit.Before;
 import org.junit.BeforeClass;
 import org.junit.Test;
+
+import ca.nrc.cadc.date.DateUtil;
 
 /**
  *
@@ -174,7 +176,7 @@ public class RssFeedTest
         cal.clear();
         cal.set(year, month, date);
         String lastModified = DateUtil.toString(cal.getTime(), DateUtil.ISO_DATE_FORMAT, DateUtil.UTC);
-        cnode.getProperties().add(new NodeProperty(VOS.PROPERTY_URI_LASTMODIFIED, lastModified));
+        cnode.getProperties().add(new NodeProperty(VOS.PROPERTY_URI_DATE, lastModified));
         return cnode;
     }
 
@@ -191,7 +193,7 @@ public class RssFeedTest
         cal.clear();
         cal.set(year, month, date);
         String lastModified = DateUtil.toString(cal.getTime(), DateUtil.ISO_DATE_FORMAT, DateUtil.UTC);
-        dnode.getProperties().add(new NodeProperty(VOS.PROPERTY_URI_LASTMODIFIED, lastModified));
+        dnode.getProperties().add(new NodeProperty(VOS.PROPERTY_URI_DATE, lastModified));
         return dnode;
     }
 

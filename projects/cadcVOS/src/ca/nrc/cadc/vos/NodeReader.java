@@ -88,6 +88,8 @@ import org.jdom.JDOMException;
 import org.jdom.Namespace;
 import org.jdom.input.SAXBuilder;
 
+import ca.nrc.cadc.vos.VOS.NodeBusyState;
+
 /**
  * Constructs a Node from an XML source.
  *
@@ -346,7 +348,19 @@ public class NodeReader
             throw new NodeParsingException(error);
         }
         boolean isBusy = busy.equalsIgnoreCase("true") ? true : false;
-        node.setBusy(isBusy);
+        
+        // TODO: BM: Change the XML schema to support the three possible
+        // values for the busy state: not busy, busy with read, busy
+        // with write.  For now, we'll consider busy to be the more
+        // restrictive busy with write.
+        if (isBusy)
+        {
+            node.setBusy(NodeBusyState.busyWithWrite);
+        }
+        else
+        {
+            node.setBusy(NodeBusyState.notBusy);
+        }
         log.debug("busy: " + isBusy);
 
         // properties element

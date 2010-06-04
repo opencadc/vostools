@@ -104,6 +104,9 @@ public abstract class Node
     // The node owner
     protected String owner;
     
+    // True if marked for deletion
+    protected boolean markedForDeletion;
+    
     // To be used by controlling applications as they wish
     public transient Object appData;
     
@@ -314,6 +317,16 @@ public abstract class Node
     public void setOwner(String owner)
     {
         this.owner = owner;
+    }
+
+    public boolean isMarkedForDeletion()
+    {
+        return markedForDeletion;
+    }
+
+    public void setMarkedForDeletion(boolean markedForDeletion)
+    {
+        this.markedForDeletion = markedForDeletion;
     }
 
 }

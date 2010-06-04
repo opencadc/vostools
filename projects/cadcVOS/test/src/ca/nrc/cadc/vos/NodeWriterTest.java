@@ -84,6 +84,7 @@ import org.junit.BeforeClass;
 import org.junit.Test;
 
 import ca.nrc.cadc.util.Log4jInit;
+import ca.nrc.cadc.vos.VOS.NodeBusyState;
 
 /**
  *
@@ -125,7 +126,7 @@ public class NodeWriterTest
         // DataNode
         dataNode = new DataNode(new VOSURI("vos://cadc.nrc.ca!vospace/dir/subdir"));
         dataNode.setProperties(properties);
-        dataNode.setBusy(true);
+        dataNode.setBusy(NodeBusyState.busyWithWrite);
     }
 
     @AfterClass

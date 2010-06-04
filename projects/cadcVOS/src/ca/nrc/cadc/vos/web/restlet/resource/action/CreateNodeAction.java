@@ -6,11 +6,11 @@ import org.restlet.representation.Representation;
 
 import ca.nrc.cadc.vos.Node;
 import ca.nrc.cadc.vos.NodeAlreadyExistsException;
+import ca.nrc.cadc.vos.NodeFault;
 import ca.nrc.cadc.vos.NodeNotFoundException;
 import ca.nrc.cadc.vos.NodeWriter;
 import ca.nrc.cadc.vos.web.representation.NodeErrorRepresentation;
 import ca.nrc.cadc.vos.web.representation.NodeOutputRepresentation;
-import ca.nrc.cadc.vos.web.restlet.resource.NodeFault;
 import ca.nrc.cadc.vos.web.restlet.resource.NodeResource;
 
 public class CreateNodeAction implements NodeAction

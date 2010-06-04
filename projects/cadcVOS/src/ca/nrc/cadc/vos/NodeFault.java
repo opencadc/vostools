@@ -65,7 +65,7 @@
  ************************************************************************
  */
 
-package ca.nrc.cadc.vos.web.restlet.resource;
+package ca.nrc.cadc.vos;
 
 import org.restlet.data.Status;
 
