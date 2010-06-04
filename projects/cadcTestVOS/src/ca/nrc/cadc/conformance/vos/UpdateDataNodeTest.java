@@ -69,8 +69,8 @@
 
 package ca.nrc.cadc.conformance.vos;
 
+import java.util.List;
 import ca.nrc.cadc.vos.DataNode;
-import ca.nrc.cadc.vos.NodeProperties;
 import ca.nrc.cadc.vos.NodeProperty;
 import ca.nrc.cadc.vos.NodeReader;
 import ca.nrc.cadc.vos.VOSURI;
@@ -189,7 +189,7 @@ public class UpdateDataNodeTest extends VOSNodeTest
             DataNode updatedNode = (DataNode) reader.read(xml);
 
             // Mark the property as deleted.
-            NodeProperties<NodeProperty> properties = updatedNode.getProperties();
+            List<NodeProperty> properties = updatedNode.getProperties();
             for (NodeProperty property : properties)
                 property.setMarkedForDeletion(true);
 
@@ -292,7 +292,7 @@ public class UpdateDataNodeTest extends VOSNodeTest
             DataNode updatedNode = (DataNode) reader.read(xml);
 
             // Update the node by updating the read only property.
-            NodeProperties<NodeProperty> properties = updatedNode.getProperties();
+            List<NodeProperty> properties = updatedNode.getProperties();
             for (NodeProperty property : properties)
                 property.setReadOnly(false);
 
