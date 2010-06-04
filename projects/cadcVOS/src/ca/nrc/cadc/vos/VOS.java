@@ -108,6 +108,23 @@ public class VOS
         {
             return value;
         }
+        
+        public static NodeBusyState getStateFromValue(String value)
+        {
+            if (value.equals("N"))
+            {
+                return notBusy;
+            }
+            else if (value.equals("R"))
+            {
+                return busyWithRead;
+            }
+            else if (value.equals("W"))
+            {
+                return busyWithWrite;
+            }
+            return null;
+        }
     }
     
     /**

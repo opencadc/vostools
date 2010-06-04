@@ -81,6 +81,7 @@ import ca.nrc.cadc.vos.DataNode;
 import ca.nrc.cadc.vos.Node;
 import ca.nrc.cadc.vos.NodeProperty;
 import ca.nrc.cadc.vos.VOS;
+import ca.nrc.cadc.vos.VOS.NodeBusyState;
 
 /**
  * Class to map a result set into a Node object.
@@ -111,6 +112,9 @@ public class NodeMapper implements RowMapper
         String name = rs.getString("name");
         long parentID = rs.getLong("parentID");
         
+        String busyString = rs.getString("busyState");
+        boolean markedForDeletion = rs.getBoolean("markedForDeletion");
+        
         String groupRead = rs.getString("groupRead");
         String groupWrite = rs.getString("groupWrite");
         String owner = rs.getString("owner");
@@ -139,6 +143,7 @@ public class NodeMapper implements RowMapper
         else if (DataNode.DB_TYPE == type)
         {
             node = new DataNode();
+            ((DataNode) node).setBusy(NodeBusyState.getStateFromValue(busyString));
         }
         else
         {
@@ -151,6 +156,7 @@ public class NodeMapper implements RowMapper
         node.setName(name);
         node.setParent(parent);
         node.setOwner(owner);
+        node.setMarkedForDeletion(markedForDeletion);
         
         if (contentLength != 0)
         {

@@ -69,7 +69,6 @@
 
 package ca.nrc.cadc.vos;
 
-import java.security.AccessControlException;
 import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.SQLException;
@@ -295,10 +294,6 @@ public abstract class NodeDAO implements NodePersistence
                 {
                     throw (NodeAlreadyExistsException) t;
                 }
-                else if (t instanceof AccessControlException)
-                {
-                    throw (AccessControlException) t;
-                }
                 else
                 {
                     throw new IllegalStateException(t);
@@ -345,10 +340,6 @@ public abstract class NodeDAO implements NodePersistence
                 {
                     throw (NodeNotFoundException) t;
                 }
-                else if (t instanceof AccessControlException)
-                {
-                    throw (AccessControlException) t;
-                }
                 else
                 {
                     throw new IllegalStateException(t);
@@ -363,10 +354,38 @@ public abstract class NodeDAO implements NodePersistence
     {
         synchronized (this)
         {
-            
-            
+            try
+            {
+                
+                startTransaction();
+                
+                // mark the node for deletion
+                jdbc.update(getMarkNodeForDeletionSQL(persistentNode));
+                
+                if (markChildren)
+                {
+                    // collect and delete children of the node
+                    this.markForDeletionChildrenOf(persistentNode);
+                }
+                
+                commitTransaction();
+                
+            } catch (Throwable t)
+            {
+                rollbackTransaction();
+                log.error("Mark for deletion rollback for node: " + persistentNode, t);
+                if (t instanceof NodeNotFoundException)
+                {
+                    throw (NodeNotFoundException) t;
+                }
+                else
+                {
+                    throw new IllegalStateException(t);
+                }
+            }
             
         }
+        log.debug("Node marked for deletion: " + persistentNode);
     }
     
     /**
@@ -431,10 +450,6 @@ public abstract class NodeDAO implements NodePersistence
                 if (t instanceof NodeNotFoundException)
                 {
                     throw (NodeNotFoundException) t;
-                }
-                else if (t instanceof AccessControlException)
-                {
-                    throw (AccessControlException) t;
                 }
                 else
                 {
@@ -517,13 +532,26 @@ public abstract class NodeDAO implements NodePersistence
     protected void deleteChildrenOf(Node node)
     {
         List<Node> children = jdbc.query(getSelectNodesByParentSQL(node), new NodeMapper());
-        Iterator<Node> i = children.iterator();
-        while (i.hasNext())
+        for (Node next : children)
         {
-            deleteChildrenOf(i.next());
+            deleteChildrenOf(next);
         }
         jdbc.update(getDeleteNodePropertiesByParentSQL(node));
         jdbc.update(getDeleteNodesByParentSQL(node));
+    }
+    
+    /**
+     * Mark the children of the provided node for deletion
+     * @param node
+     */
+    protected void markForDeletionChildrenOf(Node node)
+    {
+        List<Node> children = jdbc.query(getSelectNodesByParentSQL(node), new NodeMapper());
+        for (Node next : children)
+        {
+            markForDeletionChildrenOf(next);
+        }
+        jdbc.update(getMarkNodeForDeletionSQL(node));
     }
     
     /**
@@ -578,7 +606,7 @@ public abstract class NodeDAO implements NodePersistence
             parentWhereClause = "parentID = " + parentNodeID;
         }
         StringBuilder sb = new StringBuilder();
-        sb.append("select nodeID, parentID, name, type, owner, groupRead, groupWrite, ");
+        sb.append("select nodeID, parentID, name, type, busyState, markedForDeletion, owner, groupRead, groupWrite, ");
         sb.append("contentLength, contentType, contentEncoding, contentMD5, createdOn, lastModified from ");
         sb.append("vospace.." + getNodeTableName());
         sb.append(" where name = '");
@@ -595,7 +623,7 @@ public abstract class NodeDAO implements NodePersistence
     protected String getSelectNodesByParentSQL(Node parent)
     {
         StringBuilder sb = new StringBuilder();
-        sb.append("select nodeID, parentID, name, type, owner, groupRead, groupWrite, ");
+        sb.append("select nodeID, parentID, name, type, busyState, markedForDeletion, owner, groupRead, groupWrite, ");
         sb.append("contentLength, contentType, contentEncoding, contentMD5, createdOn, lastModified from ");
         sb.append("vospace.." + getNodeTableName());
         sb.append(" where parentID = ");
@@ -988,6 +1016,16 @@ public abstract class NodeDAO implements NodePersistence
             sb.append(nodeProperty.getPropertyURI());
             sb.append("'");
         }
+        return sb.toString();
+    }
+    
+    protected String getMarkNodeForDeletionSQL(Node node)
+    {
+        StringBuilder sb = new StringBuilder();
+        sb.append("update vospace..");
+        sb.append(getNodeTableName());
+        sb.append(" set markedForDeletion=1 where nodeID = ");
+        sb.append(getNodeID(node));
         return sb.toString();
     }
     
