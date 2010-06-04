@@ -72,6 +72,7 @@ package ca.nrc.cadc.vos.client;
 import java.util.List;
 
 import org.apache.log4j.Level;
+import org.apache.log4j.Logger;
 
 import ca.nrc.cadc.util.ArgumentMap;
 import ca.nrc.cadc.util.Log4jInit;
@@ -82,9 +83,9 @@ import ca.nrc.cadc.vos.VOSURI;
  * @author zhangsa
  *
  */
-public class Command
+public class Main
 {
-    public static final String CR = "\r";
+    public static final String CR = "\n";
     public static final String LF = " ";
 
     public static final String ARG_HELP = "help";
@@ -95,6 +96,9 @@ public class Command
     public static final String ARG_DELETE = "delete";
     public static final String ARG_SET = "set";
     public static final String ARG_COPY = "copy";
+
+    public static String usage = Main.usageMessage();
+    private static Logger log = Logger.getLogger(Main.class);
 
     /**
      * Operations of VoSpace Client.
@@ -122,10 +126,10 @@ public class Command
         ArgumentMap argMap = new ArgumentMap(args);
 
         if (argMap.isSet(ARG_HELP))
-            System.out.println(usageMessage());
+            System.out.println(Main.usage);
         else
         {
-            Command command = new Command();
+            Main command = new Main();
             if (argMap.isSet(ARG_DEBUG))
             {
                 command.setDebug(true);
@@ -143,12 +147,12 @@ public class Command
             if (numOp == 0)
             {
                 System.out.println("One operation should be defined. \n");
-                System.out.println(usageMessage());
+                System.out.println(Main.usage);
             }
             else if (numOp > 1)
             {
                 System.out.println("Only one operation can be defined. \n");
-                System.out.println(usageMessage());
+                System.out.println(Main.usage);
             }
             else
             {
@@ -214,9 +218,9 @@ public class Command
     /**
      * @return The usage string
      */
-    private static String usageMessage()
+    public static String usageMessage()
     {
-        final String[] um = {
+        String[] um = {
                 "Usage:                                                                                                                             ",
                 LF,
                 "<comm> is an environment-specific command to run this VOSpace Client program,                                                                ",
@@ -256,7 +260,9 @@ public class Command
                 "                                                   " };
         StringBuilder sb = new StringBuilder();
         for (String line : um)
+        {
             sb.append(line).append(CR);
+        }
         return sb.toString();
     }
 
