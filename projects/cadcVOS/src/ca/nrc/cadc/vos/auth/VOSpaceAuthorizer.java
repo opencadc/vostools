@@ -227,8 +227,7 @@ public class VOSpaceAuthorizer implements Authorizer
                     
                     Set<Principal> principals = subject.getPrincipals();
                     for (Principal principal : principals)
-                    {
-                        
+                    {   
                         if (nodeOwner.equals(principal))
                         {
                             // User is the owner

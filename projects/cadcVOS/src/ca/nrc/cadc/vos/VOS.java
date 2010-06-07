@@ -91,7 +91,7 @@ public class VOS
     public static final String VOS_URI = "vos://cadc.nrc.ca!vospace";
     
     // Enumeration for Node busy states
-    public enum NodeBusyState
+    public static enum NodeBusyState
     {
         notBusy ("N"),
         busyWithRead ("R"),
