@@ -69,7 +69,6 @@
 
 package ca.nrc.cadc.vos.client;
 
-
 import java.io.OutputStreamWriter;
 import java.io.StringWriter;
 import java.util.ArrayList;
@@ -88,6 +87,7 @@ import ca.nrc.cadc.vos.ContainerNode;
 import ca.nrc.cadc.vos.DataNode;
 import ca.nrc.cadc.vos.DataView;
 import ca.nrc.cadc.vos.Node;
+import ca.nrc.cadc.vos.NodeProperty;
 import ca.nrc.cadc.vos.NodeWriter;
 import ca.nrc.cadc.vos.NodeWriterTest;
 import ca.nrc.cadc.vos.Protocol;
@@ -95,6 +95,7 @@ import ca.nrc.cadc.vos.Transfer;
 import ca.nrc.cadc.vos.VOS;
 import ca.nrc.cadc.vos.VOSURI;
 import ca.nrc.cadc.vos.View;
+import ca.nrc.cadc.vos.VOS.NodeBusyState;
 
 /**
  * @author zhangsa
@@ -106,29 +107,32 @@ public class VOSpaceClientTest
     {
         Log4jInit.setLevel("ca", Level.DEBUG);
     }
-    VOSpaceClient client = new VOSpaceClient("https://linkwood.cadc.dao.nrc.ca/vospace");
-//    VOSpaceClient client = new VOSpaceClient("https://arran.cadc.dao.nrc.ca/vospace");
+    //VOSpaceClient client = new VOSpaceClient("https://linkwood.cadc.dao.nrc.ca/vospace");
+    VOSpaceClient client = new VOSpaceClient("https://arran.cadc.dao.nrc.ca/vospace");
     DataNode dataNode;
     ContainerNode containerNode;
+    ContainerNode containerNode2;
     Transfer transfer;
     View view;
     String endpoint = "https://arran.cadc.dao.nrc.ca";
     Protocol protocol;
     List<Protocol> protocols = new ArrayList<Protocol>();
-    
+
     /**
      * @throws java.lang.Exception
      */
     @BeforeClass
     public static void setUpBeforeClass() throws Exception
-    {}
+    {
+    }
 
     /**
      * @throws java.lang.Exception
      */
     @AfterClass
     public static void tearDownAfterClass() throws Exception
-    {}
+    {
+    }
 
     /**
      * @throws java.lang.Exception
@@ -136,19 +140,41 @@ public class VOSpaceClientTest
     @Before
     public void setUp() throws Exception
     {
-        this.containerNode = new ContainerNode(new VOSURI("vos://cadc.nrc.ca!vospace/zhangsa/dir1l"));
-        this.dataNode = new DataNode(new VOSURI("vos://cadc.nrc.ca!vospace/dir2"));
-        this.view = new DataView("ivo://myregegistry/vospace/views#myview", this.dataNode);
+        this.containerNode = new ContainerNode(new VOSURI("vos://cadc.nrc.ca!vospace/zhangsa/dir11d"));
         
+        // List of NodeProperty
+        List<NodeProperty> properties = new ArrayList<NodeProperty>();
+        NodeProperty nodeProperty = new NodeProperty("ivo://ivoa.net/vospace/core#description", "My award winning images");
+        nodeProperty.setReadOnly(true);
+        properties.add(nodeProperty);
+
+        // List of Node
+        List<Node> nodes = new ArrayList<Node>();
+        nodes.add(new DataNode(new VOSURI("vos://cadc.nrc.ca!vospace/zhangsa/dir2a/ngc4323")));
+        nodes.add(new DataNode(new VOSURI("vos://cadc.nrc.ca!vospace/zhangsa/dir2a/ngc5796")));
+        nodes.add(new DataNode(new VOSURI("vos://cadc.nrc.ca!vospace/zhangsa/dir2a/ngc6801")));
+
+        // ContainerNode
+        containerNode2 = new ContainerNode(new VOSURI("vos://cadc.nrc.ca!vospace/zhangsa/dir2a"));
+        containerNode2.setProperties(properties);
+        containerNode2.setNodes(nodes);
+
+        // DataNode
+        dataNode = new DataNode(new VOSURI("vos://cadc.nrc.ca!vospace/zhangsa/data1b"));
+        dataNode.setProperties(properties);
+        dataNode.setBusy(NodeBusyState.busyWithWrite);
+
+        
+        this.view = new DataView("ivo://myregegistry/vospace/views#myview", this.dataNode);
+
         this.protocol = new Protocol(VOS.PROTOCOL_HTTPS_GET, this.endpoint, null);
         this.protocols.add(this.protocol);
-        
 
         this.transfer = new Transfer();
         this.transfer.setEndpoint(endpoint);
         this.transfer.setTarget(this.dataNode);
         this.transfer.setView(this.view);
-        
+
         this.transfer.setProtocols(this.protocols);
     }
 
@@ -157,10 +183,11 @@ public class VOSpaceClientTest
      */
     @After
     public void tearDown() throws Exception
-    {}
+    {
+    }
 
-    @Test
-    public void testCreateNode() throws Exception
+    //@Test
+    public void testCreateContainerNode() throws Exception
     {
         Node nodeRtn = client.createNode(containerNode);
         log.debug(nodeRtn);
@@ -172,7 +199,35 @@ public class VOSpaceClientTest
         sw.close();
         log.debug(xml);
     }
-    
+
+    @Test
+    public void testCreateContainerNode2() throws Exception
+    {
+        Node nodeRtn = client.createNode(containerNode2);
+        log.debug(nodeRtn);
+
+        StringWriter sw = new StringWriter();
+        NodeWriter nodeWriter = new NodeWriter();
+        nodeWriter.write(nodeRtn, sw);
+        String xml = sw.toString();
+        sw.close();
+        log.debug(xml);
+    }
+
+    //@Test
+    public void testCreateDataNode() throws Exception
+    {
+        Node nodeRtn = client.createNode(this.dataNode);
+        log.debug(nodeRtn);
+
+        StringWriter sw = new StringWriter();
+        NodeWriter nodeWriter = new NodeWriter();
+        nodeWriter.write(nodeRtn, sw);
+        String xml = sw.toString();
+        sw.close();
+        log.debug(xml);
+    }
+
     //@Test
     public void testPushToVoSpace()
     {

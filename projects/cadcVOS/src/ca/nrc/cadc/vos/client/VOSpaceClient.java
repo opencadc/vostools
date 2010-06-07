@@ -109,6 +109,7 @@ import ca.nrc.cadc.vos.View;
 public class VOSpaceClient
 {
     private static Logger log = Logger.getLogger(VOSpaceClient.class);
+    public static final String CR = System.getProperty("line.separator"); // OS independant new line
 
     protected String baseUrl;
 
@@ -156,9 +157,20 @@ public class VOSpaceClient
             {
             case 201: // valid
                 InputStream in = httpsCon.getInputStream();
-                NodeReader nodeReader = new NodeReader();
-                rtnNode = nodeReader.read(in);
+                
+                BufferedReader br = new BufferedReader(new InputStreamReader(in));
+                StringBuffer sb = new StringBuffer();
+                String line;
+                while ((line = br.readLine()) != null)
+                {
+                    sb.append(line).append(CR);
+                }
                 in.close();
+
+                log.debug("response from server: \n" + sb.toString());
+                
+                NodeReader nodeReader = new NodeReader();
+                rtnNode = nodeReader.read(sb.toString());
                 log.debug(rtnNode.getName());
                 log.debug(rtnNode.getPath());
                 break;
@@ -187,8 +199,7 @@ public class VOSpaceClient
             default:
                 log.error(responseMessage + ". HTTP Code: " + responseCode);
                 InputStream errStrm = httpsCon.getErrorStream();
-                BufferedReader br = new BufferedReader(new InputStreamReader(errStrm));
-                String line;
+                br = new BufferedReader(new InputStreamReader(errStrm));
                 while ((line = br.readLine()) != null)
                 {
                     log.debug(line);
