@@ -79,6 +79,7 @@ import ca.nrc.cadc.vos.NodeProperty;
 import ca.nrc.cadc.vos.NodeWriter;
 import ca.nrc.cadc.vos.Transfer;
 import ca.nrc.cadc.vos.VOS;
+import ca.nrc.cadc.vos.VOS.NodeBusyState;
 import ca.nrc.cadc.vos.VOSURI;
 import com.meterware.httpunit.GetMethodWebRequest;
 import com.meterware.httpunit.PostMethodWebRequest;
@@ -173,7 +174,7 @@ public abstract class VOSBaseTest
         // DataNode
         DataNode node = new DataNode(new VOSURI(VOSBaseTest.VOSPACE_URI + "/A"));
         node.getProperties().add(nodeProperty);
-        node.setBusy(true);
+        node.setBusy(NodeBusyState.notBusy);
         return node;
     }
 
