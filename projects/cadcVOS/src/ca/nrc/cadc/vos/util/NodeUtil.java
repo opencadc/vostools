@@ -69,6 +69,7 @@
 
 package ca.nrc.cadc.vos.util;
 
+import java.net.URISyntaxException;
 import java.util.Stack;
 
 import org.apache.log4j.Logger;
@@ -80,7 +81,6 @@ import ca.nrc.cadc.vos.NodeNotFoundException;
 import ca.nrc.cadc.vos.NodePersistence;
 import ca.nrc.cadc.vos.VOS;
 import ca.nrc.cadc.vos.VOSURI;
-import java.net.URISyntaxException;
 
 /**
  * Methods that add convenience in dealing with Nodes.
@@ -125,6 +125,12 @@ public class NodeUtil
             
             // get the node from the persistence layer
             persistentNode = nodePersistence.getFromParent(nextNode.getName(), parent);
+            
+            // check if it is marked for deletion
+            if (persistentNode.isMarkedForDeletion())
+            {
+                throw new NodeNotFoundException("Node is marked for deletion.");
+            }
             
             // call the listener
             if (listener != null)
