@@ -175,5 +175,10 @@ public class DataNode extends Node
     {
         this.busy = busy;
     }
+    
+    public boolean isBusy()
+    {
+        return !NodeBusyState.notBusy.equals(busy);
+    }
 
 }

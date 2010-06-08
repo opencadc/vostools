@@ -3,6 +3,7 @@ package ca.nrc.cadc.vos.web.restlet.resource.action;
 import org.apache.log4j.Logger;
 import org.restlet.representation.Representation;
 
+import ca.nrc.cadc.vos.DataNode;
 import ca.nrc.cadc.vos.Node;
 import ca.nrc.cadc.vos.NodeFault;
 import ca.nrc.cadc.vos.NodeNotFoundException;
@@ -21,6 +22,19 @@ public class UpdatePropertiesAction implements NodeAction
     @Override
     public Representation perform(NodeResource nodeResource) throws Throwable
     {
+        
+        // check for a busy node
+        if (nodeResource.getNode() instanceof DataNode)
+        {
+            if (((DataNode) nodeResource.getNode()).isBusy())
+            {
+                log.debug("Node is busy: " + nodeResource.getPath());
+                nodeResource.setStatus(NodeFault.NodeBusy.getStatus());
+                return new NodeErrorRepresentation(
+                        NodeFault.NodeBusy, nodeResource.getVosURI().toString());
+            }
+        }
+        
         try
         {
             // filter out any non-modifiable properties

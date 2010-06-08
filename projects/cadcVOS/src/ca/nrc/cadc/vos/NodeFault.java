@@ -90,7 +90,8 @@ public enum NodeFault
     
     // Other Faults
     NotSupported ( Status.SERVER_ERROR_NOT_IMPLEMENTED ),
-    BadRequest ( Status.CLIENT_ERROR_BAD_REQUEST );
+    BadRequest ( Status.CLIENT_ERROR_BAD_REQUEST ),
+    NodeBusy ( Status.CLIENT_ERROR_CONFLICT );
 
     private Status status;
     
