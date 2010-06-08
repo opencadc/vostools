@@ -69,10 +69,12 @@
 
 package ca.nrc.cadc.vos.client;
 
-import java.io.OutputStreamWriter;
 import java.io.StringWriter;
 import java.util.ArrayList;
+import java.util.Date;
 import java.util.List;
+
+import junit.framework.Assert;
 
 import org.apache.log4j.Level;
 import org.apache.log4j.Logger;
@@ -82,6 +84,7 @@ import org.junit.Before;
 import org.junit.BeforeClass;
 import org.junit.Test;
 
+import ca.nrc.cadc.date.DateUtil;
 import ca.nrc.cadc.util.Log4jInit;
 import ca.nrc.cadc.vos.ContainerNode;
 import ca.nrc.cadc.vos.DataNode;
@@ -91,11 +94,13 @@ import ca.nrc.cadc.vos.NodeProperty;
 import ca.nrc.cadc.vos.NodeWriter;
 import ca.nrc.cadc.vos.NodeWriterTest;
 import ca.nrc.cadc.vos.Protocol;
+import ca.nrc.cadc.vos.TestUtil;
 import ca.nrc.cadc.vos.Transfer;
 import ca.nrc.cadc.vos.VOS;
 import ca.nrc.cadc.vos.VOSURI;
 import ca.nrc.cadc.vos.View;
 import ca.nrc.cadc.vos.VOS.NodeBusyState;
+import ca.nrc.cadc.vos.util.NodeUtil;
 
 /**
  * @author zhangsa
@@ -107,14 +112,14 @@ public class VOSpaceClientTest
     {
         Log4jInit.setLevel("ca", Level.DEBUG);
     }
-    //VOSpaceClient client = new VOSpaceClient("https://linkwood.cadc.dao.nrc.ca/vospace");
-    VOSpaceClient client = new VOSpaceClient("https://arran.cadc.dao.nrc.ca/vospace");
+    static String ENDPOINT = "https://arran.cadc.dao.nrc.ca";
+    static String ROOT_NODE = "zhangsa/";
+    VOSpaceClient client = new VOSpaceClient(ENDPOINT + "/vospace");
     DataNode dataNode;
     ContainerNode containerNode;
     ContainerNode containerNode2;
     Transfer transfer;
     View view;
-    String endpoint = "https://arran.cadc.dao.nrc.ca";
     Protocol protocol;
     List<Protocol> protocols = new ArrayList<Protocol>();
 
@@ -140,38 +145,13 @@ public class VOSpaceClientTest
     @Before
     public void setUp() throws Exception
     {
-        this.containerNode = new ContainerNode(new VOSURI("vos://cadc.nrc.ca!vospace/zhangsa/dir11d"));
-        
-        // List of NodeProperty
-        List<NodeProperty> properties = new ArrayList<NodeProperty>();
-        NodeProperty nodeProperty = new NodeProperty("ivo://ivoa.net/vospace/core#description", "My award winning images");
-        nodeProperty.setReadOnly(true);
-        properties.add(nodeProperty);
-
-        // List of Node
-        List<Node> nodes = new ArrayList<Node>();
-        nodes.add(new DataNode(new VOSURI("vos://cadc.nrc.ca!vospace/zhangsa/dir2a/ngc4323")));
-        nodes.add(new DataNode(new VOSURI("vos://cadc.nrc.ca!vospace/zhangsa/dir2a/ngc5796")));
-        nodes.add(new DataNode(new VOSURI("vos://cadc.nrc.ca!vospace/zhangsa/dir2a/ngc6801")));
-
-        // ContainerNode
-        containerNode2 = new ContainerNode(new VOSURI("vos://cadc.nrc.ca!vospace/zhangsa/dir2a"));
-        containerNode2.setProperties(properties);
-        containerNode2.setNodes(nodes);
-
-        // DataNode
-        dataNode = new DataNode(new VOSURI("vos://cadc.nrc.ca!vospace/zhangsa/data1b"));
-        dataNode.setProperties(properties);
-        dataNode.setBusy(NodeBusyState.busyWithWrite);
-
-        
         this.view = new DataView("ivo://myregegistry/vospace/views#myview", this.dataNode);
 
-        this.protocol = new Protocol(VOS.PROTOCOL_HTTPS_GET, this.endpoint, null);
+        this.protocol = new Protocol(VOS.PROTOCOL_HTTPS_GET, this.ENDPOINT, null);
         this.protocols.add(this.protocol);
 
         this.transfer = new Transfer();
-        this.transfer.setEndpoint(endpoint);
+        this.transfer.setEndpoint(ENDPOINT);
         this.transfer.setTarget(this.dataNode);
         this.transfer.setView(this.view);
 
@@ -187,45 +167,72 @@ public class VOSpaceClientTest
     }
 
     //@Test
-    public void testCreateContainerNode() throws Exception
+    public void testGetNode() throws Exception
     {
-        Node nodeRtn = client.createNode(containerNode);
-        log.debug(nodeRtn);
+        String slashPath1 = "/" + ROOT_NODE + TestUtil.uniqueStringOnTime();
+        ContainerNode cnode = new ContainerNode(new VOSURI(VOS.VOS_URI + slashPath1));
 
-        StringWriter sw = new StringWriter();
-        NodeWriter nodeWriter = new NodeWriter();
-        nodeWriter.write(nodeRtn, sw);
-        String xml = sw.toString();
-        sw.close();
-        log.debug(xml);
+        Node nodeRtn = client.createNode(cnode);
+        log.debug("Returned Node: " + nodeRtn);
+        log.debug("XML of Returned Node: " + NodeUtil.xmlString(nodeRtn));
+
+        Node nodeRtn2 = client.getNode(nodeRtn.getPath());
+        log.debug("GetNode: " + nodeRtn2);
+        log.debug("XML of GetNode: " + NodeUtil.xmlString(nodeRtn2));
+        Assert.assertEquals(nodeRtn.getPath(), nodeRtn2.getPath());
     }
 
-    @Test
-    public void testCreateContainerNode2() throws Exception
+@Test
+    public void testCreateContainerNode() throws Exception
     {
-        Node nodeRtn = client.createNode(containerNode2);
-        log.debug(nodeRtn);
+        String slashPath1 = "/" + ROOT_NODE + TestUtil.uniqueStringOnTime();
+        ContainerNode cnode = new ContainerNode(new VOSURI(VOS.VOS_URI + slashPath1));
 
-        StringWriter sw = new StringWriter();
-        NodeWriter nodeWriter = new NodeWriter();
-        nodeWriter.write(nodeRtn, sw);
-        String xml = sw.toString();
-        sw.close();
-        log.debug(xml);
+        Node nodeRtn = client.createNode(cnode);
+        log.debug("Returned Node: " + nodeRtn);
+        log.debug("XML of Returned Node: " + NodeUtil.xmlString(nodeRtn));
+        Assert.assertEquals("/" + nodeRtn.getPath(), slashPath1);
+    }
+
+    //@Test
+    public void testCreateSemanticContainerNode() throws Exception
+    {
+        String dir1 = TestUtil.uniqueStringOnTime();
+        String slashPath1 = "/" + ROOT_NODE + dir1;
+        String slashPath1a = slashPath1 + "/" + TestUtil.uniqueStringOnTime();
+        String slashPath1b = slashPath1 + "/" + TestUtil.uniqueStringOnTime();
+
+        // List of NodeProperty
+        List<NodeProperty> properties = new ArrayList<NodeProperty>();
+        NodeProperty nodeProperty = new NodeProperty(VOS.PROPERTY_URI_DESCRIPTION, "My award winning images");
+        nodeProperty.setReadOnly(true);
+        properties.add(nodeProperty);
+
+        // List of Node
+        List<Node> nodes = new ArrayList<Node>();
+        nodes.add(new DataNode(new VOSURI(VOS.VOS_URI + slashPath1a)));
+        nodes.add(new DataNode(new VOSURI(VOS.VOS_URI + slashPath1b)));
+
+        // ContainerNode
+        ContainerNode cnode;
+        cnode = new ContainerNode(new VOSURI(VOS.VOS_URI + slashPath1));
+        cnode.setProperties(properties);
+        cnode.setNodes(nodes);
+
+        Node nodeRtn = client.createNode(cnode);
+        log.debug("Returned Node: " + nodeRtn);
+        log.debug("XML of Returned Node: " + NodeUtil.xmlString(nodeRtn));
     }
 
     //@Test
     public void testCreateDataNode() throws Exception
     {
-        Node nodeRtn = client.createNode(this.dataNode);
-        log.debug(nodeRtn);
+        String slashPath1 = "/" + ROOT_NODE + TestUtil.uniqueStringOnTime();
+        DataNode dnode = new DataNode(new VOSURI(VOS.VOS_URI + slashPath1));
 
-        StringWriter sw = new StringWriter();
-        NodeWriter nodeWriter = new NodeWriter();
-        nodeWriter.write(nodeRtn, sw);
-        String xml = sw.toString();
-        sw.close();
-        log.debug(xml);
+        Node nodeRtn = client.createNode(dnode);
+        log.debug("Returned Node: " + nodeRtn);
+        log.debug("XML of Returned Node: " + NodeUtil.xmlString(nodeRtn));
     }
 
     //@Test

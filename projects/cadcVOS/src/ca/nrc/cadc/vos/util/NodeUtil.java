@@ -69,6 +69,8 @@
 
 package ca.nrc.cadc.vos.util;
 
+import java.io.IOException;
+import java.io.StringWriter;
 import java.net.URISyntaxException;
 import java.util.Stack;
 
@@ -79,6 +81,7 @@ import ca.nrc.cadc.vos.DataNode;
 import ca.nrc.cadc.vos.Node;
 import ca.nrc.cadc.vos.NodeNotFoundException;
 import ca.nrc.cadc.vos.NodePersistence;
+import ca.nrc.cadc.vos.NodeWriter;
 import ca.nrc.cadc.vos.VOS;
 import ca.nrc.cadc.vos.VOSURI;
 
@@ -90,9 +93,9 @@ import ca.nrc.cadc.vos.VOSURI;
  */
 public class NodeUtil
 {
-    
+
     private static Logger log = Logger.getLogger(NodeUtil.class);
-    
+
     /**
      * Iterate the parental hierarchy of the node from root to self.
      * 
@@ -102,36 +105,35 @@ public class NodeUtil
      * @return The persistent version of the target node.
      * @throws NodeNotFoundException If the target node could not be found.
      */
-    public static Node iterateStack(Node targetNode, NodeStackListener listener, NodePersistence nodePersistence)
-    throws NodeNotFoundException
+    public static Node iterateStack(Node targetNode, NodeStackListener listener, NodePersistence nodePersistence) throws NodeNotFoundException
     {
-        
+
         if (targetNode == null)
         {
             // root container, return null
             return null;
         }
-        
+
         Stack<Node> nodeStack = targetNode.stackToRoot();
         Node persistentNode = null;
         Node nextNode = null;
         ContainerNode parent = null;
-        
+
         while (!nodeStack.isEmpty())
         {
             nextNode = nodeStack.pop();
             nextNode.setParent(parent);
             log.debug("Retrieving node with path: " + nextNode.getPath());
-            
+
             // get the node from the persistence layer
             persistentNode = nodePersistence.getFromParent(nextNode.getName(), parent);
-            
+
             // check if it is marked for deletion
             if (persistentNode.isMarkedForDeletion())
             {
                 throw new NodeNotFoundException("Node is marked for deletion.");
             }
-            
+
             // call the listener
             if (listener != null)
             {
@@ -149,9 +151,9 @@ public class NodeUtil
                 log.warn(message);
                 throw new NodeNotFoundException(message);
             }
-            
+
         }
-        
+
         if (persistentNode instanceof DataNode)
         {
             persistentNode.setParent(parent);
@@ -167,8 +169,7 @@ public class NodeUtil
      * @return A VOSURI for the node.
      * @throws URISyntaxException if the VOSURI syntax is invalid.
      */
-    public static VOSURI createVOSURI(Node node, Node parent)
-        throws URISyntaxException
+    public static VOSURI createVOSURI(Node node, Node parent) throws URISyntaxException
     {
         StringBuilder sb = new StringBuilder();
         sb.append(VOS.VOS_URI);
@@ -182,4 +183,31 @@ public class NodeUtil
 
         return new VOSURI(sb.toString());
     }
+
+    /**
+     * get the XML string of node.
+     * 
+     * @param node
+     * @return XML string of the node
+     * 
+     * @author Sailor Zhang
+     */
+    public static String xmlString(Node node)
+    {
+        String xml = null;
+        StringWriter sw = new StringWriter();
+        try
+        {
+            NodeWriter nodeWriter = new NodeWriter();
+            nodeWriter.write(node, sw);
+            xml = sw.toString();
+            sw.close();
+        }
+        catch (IOException e)
+        {
+            xml = "Error getting XML string from node: " + e.getMessage();
+        }
+        return xml;
+    }
+
 }

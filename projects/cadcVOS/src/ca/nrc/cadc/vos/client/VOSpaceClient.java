@@ -171,8 +171,6 @@ public class VOSpaceClient
                 
                 NodeReader nodeReader = new NodeReader();
                 rtnNode = nodeReader.read(sb.toString());
-                log.debug(rtnNode.getName());
-                log.debug(rtnNode.getPath());
                 break;
 
             case 500:
@@ -232,19 +230,42 @@ public class VOSpaceClient
 
         try
         {
-            URL url = new URL(this.baseUrl + path);
-            HttpURLConnection httpCon = (HttpURLConnection) url.openConnection();
-            httpCon.setDoOutput(true);
-            httpCon.setRequestMethod("GET");
+            URL url = new URL(this.baseUrl + "/nodes/" + path);
+            log.debug(url);
+            HttpsURLConnection httpsCon = (HttpsURLConnection) url.openConnection();
+            httpsCon.setDoOutput(true);
+            httpsCon.setRequestMethod("GET");
+            //httpsCon.setRequestProperty("Content-Type", "application/x-www-form-urlencoded");
+            //httpsCon.setRequestProperty("Content-Language", "en-US");
+            httpsCon.setUseCaches(false);
+            httpsCon.setDoInput(true);
+            httpsCon.setDoOutput(false);
 
-            responseCode = httpCon.getResponseCode();
+
+
+            String responseMessage = httpsCon.getResponseMessage();
+            responseCode = httpsCon.getResponseCode();
+
             switch (responseCode)
             {
             case 200: // valid
-                InputStream in = httpCon.getInputStream();
-                NodeReader nodeReader = new NodeReader();
-                rtnNode = nodeReader.read(in);
+                InputStream in = httpsCon.getInputStream();
+                
+                BufferedReader br = new BufferedReader(new InputStreamReader(in));
+                StringBuffer sb = new StringBuffer();
+                String line;
+                while ((line = br.readLine()) != null)
+                {
+                    sb.append(line).append(CR);
+                }
                 in.close();
+
+                log.debug("response from server: \n" + sb.toString());
+                
+                NodeReader nodeReader = new NodeReader();
+                rtnNode = nodeReader.read(sb.toString());
+                log.debug(rtnNode.getName());
+                log.debug(rtnNode.getPath());
                 break;
             case 500:
                 // The service SHALL throw a HTTP 500 status code including an InternalFault fault in the entity-body if the operation fails
@@ -252,7 +273,6 @@ public class VOSpaceClient
                 // The service SHALL throw a HTTP 401 status code including a PermissionDenied fault in the entity-body if the user does not have permissions to perform the operation
             case 404:
                 // The service SHALL throw a HTTP 404 status code including a NodeNotFound fault in the entity-body if the target Node does not exist 
-                throw new IllegalArgumentException("Error returned.  HTTP Response Code: " + responseCode);
             default:
                 throw new IllegalArgumentException("Error returned.  HTTP Response Code: " + responseCode);
             }
