@@ -226,6 +226,9 @@ public abstract class NodeDAO implements NodePersistence
     public Node putInContainer(Node node, ContainerNode parent) throws NodeNotFoundException, NodeAlreadyExistsException
     {
         
+        log.debug("NodeDAO.putInContainer(): node is: " + node);
+        log.debug("NodeDAO.putInContainer(): node parent is: " + parent);
+        
         if (node == null)
         {
             throw new NodeNotFoundException("Node parameter is null.");

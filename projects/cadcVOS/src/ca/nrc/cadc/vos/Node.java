@@ -192,13 +192,22 @@ public abstract class Node
             String uriString = uri.toString();
             String parentUriString = uriString.substring(0, uriString.lastIndexOf("/"));
             VOSURI parentURI = new VOSURI(parentUriString);
+            
+            // preserve the appData if it exists
+            Object parentAppData = null;
+            if (parent != null)
+            {
+                parentAppData = parent.appData;
+            }
+            
             parent = new ContainerNode(parentURI);
+            parent.appData = parentAppData;
         }
     }
     
     public String toString()
     {
-        return "Node Path: " + path;
+        return "Node Path: " + path + " Id: " + appData;
     }
     
     public boolean equals(Object o)

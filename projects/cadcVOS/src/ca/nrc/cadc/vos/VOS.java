@@ -111,15 +111,15 @@ public class VOS
         
         public static NodeBusyState getStateFromValue(String value)
         {
-            if (value.equals("N"))
+            if (value.equals(notBusy.getValue()))
             {
                 return notBusy;
             }
-            else if (value.equals("R"))
+            else if (value.equals(busyWithRead.getValue()))
             {
                 return busyWithRead;
             }
-            else if (value.equals("W"))
+            else if (value.equals(busyWithWrite.getValue()))
             {
                 return busyWithWrite;
             }
