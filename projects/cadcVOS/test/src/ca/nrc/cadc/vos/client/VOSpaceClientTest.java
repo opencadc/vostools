@@ -167,6 +167,59 @@ public class VOSpaceClientTest
     }
 
     //@Test
+    public void testSetNode() throws Exception
+    {
+        String slashPath1 = "/" + ROOT_NODE + TestUtil.uniqueStringOnTime();
+        ContainerNode cnode = new ContainerNode(new VOSURI(VOS.VOS_URI + slashPath1));
+
+        Node nodeRtn = client.createNode(cnode);
+        log.debug("Returned Node: " + nodeRtn);
+        log.debug("XML of Returned Node: " + NodeUtil.xmlString(nodeRtn));
+
+        Node nodeRtn2 = client.getNode(nodeRtn.getPath());
+        log.debug("GetNode: " + nodeRtn2);
+        log.debug("XML of GetNode: " + NodeUtil.xmlString(nodeRtn2));
+        Assert.assertEquals(nodeRtn.getPath(), nodeRtn2.getPath());
+
+        String now = DateUtil.toString(new Date(), DateUtil.ISO_DATE_FORMAT, DateUtil.LOCAL);
+        List<NodeProperty> properties = new ArrayList<NodeProperty>();
+        NodeProperty nodeProperty = new NodeProperty(VOS.PROPERTY_URI_DATE, now);
+        nodeProperty.setReadOnly(true);
+        properties.add(nodeProperty);
+        nodeRtn2.setProperties(properties);
+
+        Node nodeRtn3 = client.setNode(nodeRtn2);
+        log.debug("Returned SetNode3: " + nodeRtn3);
+        log.debug("XML of Returned SetNode3: " + NodeUtil.xmlString(nodeRtn3));
+        String propValue = nodeRtn3.getProperties().get(0).getPropertyValue();
+        Assert.assertEquals(propValue, now);
+    }
+
+    @Test
+    public void testDeleteNode() throws Exception
+    {
+        String slashPath1 = "/" + ROOT_NODE + TestUtil.uniqueStringOnTime();
+        ContainerNode cnode = new ContainerNode(new VOSURI(VOS.VOS_URI + slashPath1));
+
+        Node nodeRtn = client.createNode(cnode);
+        log.debug("Returned Node: " + nodeRtn);
+        log.debug("XML of Returned Node: " + NodeUtil.xmlString(nodeRtn));
+
+        client.deleteNode(nodeRtn.getPath());
+
+        boolean exceptionThrown = false;
+        try
+        {
+            Node nodeRtn2 = client.getNode(nodeRtn.getPath());
+        }
+        catch (IllegalArgumentException ex)
+        {
+            exceptionThrown = true;
+        }
+        Assert.assertEquals(exceptionThrown, true);
+    }
+
+    //@Test
     public void testGetNode() throws Exception
     {
         String slashPath1 = "/" + ROOT_NODE + TestUtil.uniqueStringOnTime();
@@ -182,7 +235,7 @@ public class VOSpaceClientTest
         Assert.assertEquals(nodeRtn.getPath(), nodeRtn2.getPath());
     }
 
-@Test
+    //@Test
     public void testCreateContainerNode() throws Exception
     {
         String slashPath1 = "/" + ROOT_NODE + TestUtil.uniqueStringOnTime();
@@ -222,6 +275,9 @@ public class VOSpaceClientTest
         Node nodeRtn = client.createNode(cnode);
         log.debug("Returned Node: " + nodeRtn);
         log.debug("XML of Returned Node: " + NodeUtil.xmlString(nodeRtn));
+        ContainerNode cnode2 = (ContainerNode) nodeRtn;
+        List<Node> nodes2 = cnode2.getNodes();
+        Assert.assertEquals(nodes2.size(), 2);
     }
 
     //@Test
@@ -233,9 +289,10 @@ public class VOSpaceClientTest
         Node nodeRtn = client.createNode(dnode);
         log.debug("Returned Node: " + nodeRtn);
         log.debug("XML of Returned Node: " + NodeUtil.xmlString(nodeRtn));
+        Assert.assertEquals("/" + nodeRtn.getPath(), slashPath1);
     }
 
-    //@Test
+    ////@Test
     public void testPushToVoSpace()
     {
         this.transfer.setDirection(Transfer.Direction.pushToVoSpace);
@@ -243,7 +300,7 @@ public class VOSpaceClientTest
         log.debug(transferRtn.toXmlString());
     }
 
-    //@Test
+    ////@Test
     public void testPullFromVoSpace()
     {
         this.transfer.setDirection(Transfer.Direction.pullFromVoSpace);

@@ -101,6 +101,7 @@ import ca.nrc.cadc.vos.ServerTransfer;
 import ca.nrc.cadc.vos.Transfer;
 import ca.nrc.cadc.vos.TransferReader;
 import ca.nrc.cadc.vos.View;
+import ca.nrc.cadc.vos.util.NodeUtil;
 
 /**
  * @author zhangsa
@@ -123,11 +124,9 @@ public class VOSpaceClient
         int responseCode;
         Node rtnNode = null;
 
-        String path = node.getPath();
-
         try
         {
-            URL url = new URL(this.baseUrl + "/nodes/" + path);
+            URL url = new URL(this.baseUrl + "/nodes/" + node.getPath());
             log.debug(url);
             HttpsURLConnection httpsCon = (HttpsURLConnection) url.openConnection();
             httpsCon.setDoOutput(true);
@@ -143,13 +142,7 @@ public class VOSpaceClient
             nodeWriter.write(node, out);
             out.close();
 
-            StringWriter sw = new StringWriter();
-            nodeWriter.write(node, sw);
-            String xml = sw.toString();
-            sw.close();
-            log.debug(xml);
-
-
+            log.debug(NodeUtil.xmlString(node));
 
             String responseMessage = httpsCon.getResponseMessage();
             responseCode = httpsCon.getResponseCode();
@@ -157,7 +150,7 @@ public class VOSpaceClient
             {
             case 201: // valid
                 InputStream in = httpsCon.getInputStream();
-                
+
                 BufferedReader br = new BufferedReader(new InputStreamReader(in));
                 StringBuffer sb = new StringBuffer();
                 String line;
@@ -168,7 +161,7 @@ public class VOSpaceClient
                 in.close();
 
                 log.debug("response from server: \n" + sb.toString());
-                
+
                 NodeReader nodeReader = new NodeReader();
                 rtnNode = nodeReader.read(sb.toString());
                 break;
@@ -205,11 +198,13 @@ public class VOSpaceClient
                 errStrm.close();
                 throw new IllegalArgumentException("Error returned.  HTTP Response Code: " + responseCode);
             }
-        } catch (IOException e)
+        }
+        catch (IOException e)
         {
             e.printStackTrace(System.err);
             throw new IllegalStateException(e);
-        } catch (NodeParsingException e)
+        }
+        catch (NodeParsingException e)
         {
             throw new IllegalStateException(e);
         }
@@ -241,16 +236,13 @@ public class VOSpaceClient
             httpsCon.setDoInput(true);
             httpsCon.setDoOutput(false);
 
-
-
             String responseMessage = httpsCon.getResponseMessage();
             responseCode = httpsCon.getResponseCode();
-
             switch (responseCode)
             {
             case 200: // valid
                 InputStream in = httpsCon.getInputStream();
-                
+
                 BufferedReader br = new BufferedReader(new InputStreamReader(in));
                 StringBuffer sb = new StringBuffer();
                 String line;
@@ -261,7 +253,7 @@ public class VOSpaceClient
                 in.close();
 
                 log.debug("response from server: \n" + sb.toString());
-                
+
                 NodeReader nodeReader = new NodeReader();
                 rtnNode = nodeReader.read(sb.toString());
                 log.debug(rtnNode.getName());
@@ -276,10 +268,12 @@ public class VOSpaceClient
             default:
                 throw new IllegalArgumentException("Error returned.  HTTP Response Code: " + responseCode);
             }
-        } catch (IOException ex)
+        }
+        catch (IOException ex)
         {
             throw new IllegalStateException(ex);
-        } catch (NodeParsingException e)
+        }
+        catch (NodeParsingException e)
         {
             throw new IllegalStateException(e);
         }
@@ -296,20 +290,31 @@ public class VOSpaceClient
         Node rtnNode = null;
         try
         {
-            URL url = new URL(this.baseUrl);
-            HttpURLConnection httpCon = (HttpURLConnection) url.openConnection();
-            httpCon.setDoOutput(true);
-            httpCon.setRequestMethod("POST");
-            OutputStreamWriter out = new OutputStreamWriter(httpCon.getOutputStream());
+            URL url = new URL(this.baseUrl + "/nodes/" + node.getPath());
+            log.debug(url);
+            HttpsURLConnection httpsCon = (HttpsURLConnection) url.openConnection();
+            httpsCon.setDoOutput(true);
+            httpsCon.setRequestMethod("POST");
+            //httpsCon.setRequestProperty("Content-Type", "application/x-www-form-urlencoded");
+            //httpsCon.setRequestProperty("Content-Language", "en-US");
+            httpsCon.setUseCaches(false);
+            httpsCon.setDoInput(true);
+            httpsCon.setDoOutput(true);
+
+            OutputStreamWriter out = new OutputStreamWriter(httpsCon.getOutputStream());
             NodeWriter nodeWriter = new NodeWriter();
             nodeWriter.write(node, out);
             out.close();
 
-            responseCode = httpCon.getResponseCode();
+            log.debug(NodeUtil.xmlString(node));
+
+            String responseMessage = httpsCon.getResponseMessage();
+            responseCode = httpsCon.getResponseCode();
+
             switch (responseCode)
             {
             case 200: // valid
-                InputStream in = httpCon.getInputStream();
+                InputStream in = httpsCon.getInputStream();
                 NodeReader nodeReader = new NodeReader();
                 rtnNode = nodeReader.read(in);
                 in.close();
@@ -327,14 +332,24 @@ public class VOSpaceClient
 
                 // The service SHALL throw a HTTP 401 status code including a PermissionDenied fault in the entity-body 
                 // if the user does not have permissions to perform the operation
-                throw new IllegalArgumentException("Error returned.  HTTP Response Code: " + responseCode);
             default:
-                break;
+                log.error(responseMessage + ". HTTP Code: " + responseCode);
+                InputStream errStrm = httpsCon.getErrorStream();
+                BufferedReader br = new BufferedReader(new InputStreamReader(errStrm));
+                String line;
+                while ((line = br.readLine()) != null)
+                {
+                    log.debug(line);
+                }
+                errStrm.close();
+                throw new IllegalArgumentException("Error returned.  HTTP Response Code: " + responseCode);
             }
-        } catch (IOException e)
+        }
+        catch (IOException e)
         {
             throw new IllegalStateException(e);
-        } catch (NodeParsingException e)
+        }
+        catch (NodeParsingException e)
         {
             throw new IllegalStateException(e);
         }
@@ -362,7 +377,8 @@ public class VOSpaceClient
         {
             job.addParameter(new Parameter("direction", Transfer.Direction.pushToVoSpace.toString()));
             job.addParameter(new Parameter("protocol", transfer.getProtocols().get(0).getUri()));
-        } else if (direction == Transfer.Direction.pullFromVoSpace)
+        }
+        else if (direction == Transfer.Direction.pullFromVoSpace)
         {
             job.addParameter(new Parameter("direction", Transfer.Direction.pullFromVoSpace.toString()));
             for (Protocol protocol : transfer.getProtocols())
@@ -401,10 +417,12 @@ public class VOSpaceClient
             TransferReader txfReader = new TransferReader();
             rtn = txfReader.readFrom(urlTransferDetail);
 
-        } catch (IOException e)
+        }
+        catch (IOException e)
         {
             throw new IllegalStateException(e);
-        } catch (JDOMException e)
+        }
+        catch (JDOMException e)
         {
             e.printStackTrace();
             throw new IllegalStateException(e);
@@ -553,22 +571,68 @@ public class VOSpaceClient
         throw new UnsupportedOperationException("Feature under construction.");
     }
 
-    public int deleteNode(String path)
+    public void deleteNode(String path)
     {
         int responseCode;
         try
         {
-            URL url = new URL(this.baseUrl + path);
-            HttpURLConnection httpCon = (HttpURLConnection) url.openConnection();
-            httpCon.setDoOutput(true);
-            httpCon.setRequestMethod("DELETE");
+            URL url = new URL(this.baseUrl + "/nodes/" + path);
+            log.debug(url);
+            HttpsURLConnection httpsCon = (HttpsURLConnection) url.openConnection();
+            httpsCon.setDoOutput(true);
+            httpsCon.setRequestMethod("DELETE");
+            //httpsCon.setRequestProperty("Content-Type", "application/x-www-form-urlencoded");
+            //httpsCon.setRequestProperty("Content-Language", "en-US");
+            httpsCon.setUseCaches(false);
+            httpsCon.setDoInput(true);
+            httpsCon.setDoOutput(false);
 
-            responseCode = httpCon.getResponseCode();
-        } catch (IOException ex)
+            String responseMessage = httpsCon.getResponseMessage();
+            responseCode = httpsCon.getResponseCode();
+            switch (responseCode)
+            {
+            case 200: // successful
+                break;
+
+            case 500:
+                // The service SHALL throw a HTTP 500 status code including an InternalFault fault in the entity-body 
+                // if the operation fails
+                //
+                // If a parent node in the URI path does not exist then 
+                // the service MUST throw a HTTP 500 status code including a ContainerNotFound fault in the entity-body
+                //
+                // If a parent node in the URI path is a LinkNode, 
+                // the service MUST throw a HTTP 500 status code including a LinkFound fault in the entity-body.
+
+            case 401:
+                /* The service SHALL throw a HTTP 401 status code including a PermissionDenied fault in the entity-body 
+                 * if the user does not have permissions to perform the operation
+                 */
+            case 404:
+                /*
+                 * The service SHALL throw a HTTP 404 status code including a NodeNotFound fault in the entity-body 
+                 * if the target node does not exist
+                 * 
+                 * If the target node in the URI path does not exist, 
+                 * the service MUST throw a HTTP 404 status code including a NodeNotFound fault in the entity-body. 
+                 */
+            default:
+                log.error(responseMessage + ". HTTP Code: " + responseCode);
+                InputStream errStrm = httpsCon.getErrorStream();
+                BufferedReader br = new BufferedReader(new InputStreamReader(errStrm));
+                String line;
+                while ((line = br.readLine()) != null)
+                {
+                    log.debug(line);
+                }
+                errStrm.close();
+                throw new IllegalArgumentException("Error returned.  HTTP Response Code: " + responseCode);
+            }
+        }
+        catch (IOException ex)
         {
             throw new IllegalStateException(ex);
         }
-        return responseCode;
     }
 
     public String getBaseUrl()
