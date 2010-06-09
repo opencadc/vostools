@@ -271,7 +271,7 @@ public abstract class NodeDAO implements NodePersistence
                 while (propertyIterator.hasNext())
                 {
                     NodeProperty next = propertyIterator.next();
-                    if (!NodePropertyMapper.isStandardHeaderProperty(next))
+                    if (!NodePropertyMapper.isNodeTableProperty(next))
                     {
                         jdbc.update(getInsertNodePropertySQL(node, next));
                     }

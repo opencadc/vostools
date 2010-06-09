@@ -83,7 +83,7 @@ import ca.nrc.cadc.vos.VOS;
 public class NodePropertyMapper implements RowMapper
 {
     
-    public static boolean isStandardHeaderProperty(NodeProperty nodeProperty)
+    public static boolean isNodeTableProperty(NodeProperty nodeProperty)
     {
         String propertyURI = nodeProperty.getPropertyURI();
         if (propertyURI != null)
@@ -91,7 +91,8 @@ public class NodePropertyMapper implements RowMapper
             return (propertyURI.equals(VOS.PROPERTY_URI_CONTENTLENGTH) ||
                     propertyURI.equals(VOS.PROPERTY_URI_TYPE) ||
                     propertyURI.equals(VOS.PROPERTY_URI_CONTENTENCODING) ||
-                    propertyURI.equals(VOS.PROPERTY_URI_CONTENTMD5));
+                    propertyURI.equals(VOS.PROPERTY_URI_CONTENTMD5) ||
+                    propertyURI.equals(VOS.PROPERTY_URI_DATE));
         }
         return false;
     }
