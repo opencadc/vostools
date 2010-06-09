@@ -76,6 +76,8 @@ import java.util.Stack;
 
 import org.apache.log4j.Logger;
 
+import ca.nrc.cadc.uws.Job;
+import ca.nrc.cadc.uws.JobWriter;
 import ca.nrc.cadc.vos.ContainerNode;
 import ca.nrc.cadc.vos.DataNode;
 import ca.nrc.cadc.vos.Node;
@@ -210,4 +212,29 @@ public class NodeUtil
         return xml;
     }
 
+    /**
+     * get the XML string of a job.
+     * 
+     * @param job
+     * @return XML string of the job
+     * 
+     * @author Sailor Zhang
+     */
+    public static String xmlString(Job job)
+    {
+        String xml = null;
+        StringWriter sw = new StringWriter();
+        try
+        {
+            JobWriter jobWriter = new JobWriter(job);
+            jobWriter.writeTo(sw);
+            xml = sw.toString();
+            sw.close();
+        }
+        catch (IOException e)
+        {
+            xml = "Error getting XML string from job: " + e.getMessage();
+        }
+        return xml;
+    }
 }

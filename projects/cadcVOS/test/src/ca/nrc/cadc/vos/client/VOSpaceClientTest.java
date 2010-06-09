@@ -69,7 +69,6 @@
 
 package ca.nrc.cadc.vos.client;
 
-import java.io.StringWriter;
 import java.util.ArrayList;
 import java.util.Date;
 import java.util.List;
@@ -91,15 +90,12 @@ import ca.nrc.cadc.vos.DataNode;
 import ca.nrc.cadc.vos.DataView;
 import ca.nrc.cadc.vos.Node;
 import ca.nrc.cadc.vos.NodeProperty;
-import ca.nrc.cadc.vos.NodeWriter;
 import ca.nrc.cadc.vos.NodeWriterTest;
 import ca.nrc.cadc.vos.Protocol;
 import ca.nrc.cadc.vos.TestUtil;
 import ca.nrc.cadc.vos.Transfer;
 import ca.nrc.cadc.vos.VOS;
 import ca.nrc.cadc.vos.VOSURI;
-import ca.nrc.cadc.vos.View;
-import ca.nrc.cadc.vos.VOS.NodeBusyState;
 import ca.nrc.cadc.vos.util.NodeUtil;
 
 /**
@@ -115,13 +111,6 @@ public class VOSpaceClientTest
     static String ENDPOINT = "https://arran.cadc.dao.nrc.ca";
     static String ROOT_NODE = "zhangsa/";
     VOSpaceClient client = new VOSpaceClient(ENDPOINT + "/vospace");
-    DataNode dataNode;
-    ContainerNode containerNode;
-    ContainerNode containerNode2;
-    Transfer transfer;
-    View view;
-    Protocol protocol;
-    List<Protocol> protocols = new ArrayList<Protocol>();
 
     /**
      * @throws java.lang.Exception
@@ -145,17 +134,6 @@ public class VOSpaceClientTest
     @Before
     public void setUp() throws Exception
     {
-        this.view = new DataView("ivo://myregegistry/vospace/views#myview", this.dataNode);
-
-        this.protocol = new Protocol(VOS.PROTOCOL_HTTPS_GET, this.ENDPOINT, null);
-        this.protocols.add(this.protocol);
-
-        this.transfer = new Transfer();
-        this.transfer.setEndpoint(ENDPOINT);
-        this.transfer.setTarget(this.dataNode);
-        this.transfer.setView(this.view);
-
-        this.transfer.setProtocols(this.protocols);
     }
 
     /**
@@ -166,7 +144,7 @@ public class VOSpaceClientTest
     {
     }
 
-    //@Test
+    @Test
     public void testSetNode() throws Exception
     {
         String slashPath1 = "/" + ROOT_NODE + TestUtil.uniqueStringOnTime();
@@ -181,21 +159,22 @@ public class VOSpaceClientTest
         log.debug("XML of GetNode: " + NodeUtil.xmlString(nodeRtn2));
         Assert.assertEquals(nodeRtn.getPath(), nodeRtn2.getPath());
 
-        String now = DateUtil.toString(new Date(), DateUtil.ISO_DATE_FORMAT, DateUtil.LOCAL);
+        String newUniqueValue = TestUtil.uniqueStringOnTime();
         List<NodeProperty> properties = new ArrayList<NodeProperty>();
-        NodeProperty nodeProperty = new NodeProperty(VOS.PROPERTY_URI_DATE, now);
+        NodeProperty nodeProperty = new NodeProperty(VOS.PROPERTY_URI_CONTRIBUTOR, newUniqueValue);
         nodeProperty.setReadOnly(true);
         properties.add(nodeProperty);
         nodeRtn2.setProperties(properties);
 
         Node nodeRtn3 = client.setNode(nodeRtn2);
-        log.debug("Returned SetNode3: " + nodeRtn3);
-        log.debug("XML of Returned SetNode3: " + NodeUtil.xmlString(nodeRtn3));
         String propValue = nodeRtn3.getProperties().get(0).getPropertyValue();
-        Assert.assertEquals(propValue, now);
+        log.debug("XML of SetNode: " + NodeUtil.xmlString(nodeRtn3));
+        log.debug("newUniqueValue: " + newUniqueValue);
+        log.debug("propValue: " + propValue);
+        Assert.assertEquals(newUniqueValue, propValue);
     }
 
-    @Test
+    //@Test
     public void testDeleteNode() throws Exception
     {
         String slashPath1 = "/" + ROOT_NODE + TestUtil.uniqueStringOnTime();
@@ -210,7 +189,7 @@ public class VOSpaceClientTest
         boolean exceptionThrown = false;
         try
         {
-            Node nodeRtn2 = client.getNode(nodeRtn.getPath());
+            client.getNode(nodeRtn.getPath());
         }
         catch (IllegalArgumentException ex)
         {
@@ -293,17 +272,44 @@ public class VOSpaceClientTest
     }
 
     ////@Test
-    public void testPushToVoSpace()
+    public void testPushToVoSpace() throws Exception
     {
-        this.transfer.setDirection(Transfer.Direction.pushToVoSpace);
+        String slashPath1 = "/" + ROOT_NODE + TestUtil.uniqueStringOnTime();
+        DataNode dnode = new DataNode(new VOSURI(VOS.VOS_URI + slashPath1));
+        DataView dview = new DataView(VOS.VIEW_DEFAULT, dnode);
+
+        List<Protocol> protocols = new ArrayList<Protocol>();
+        Protocol protocol = new Protocol(VOS.PROTOCOL_HTTPS_GET, ENDPOINT, null);
+        protocols.add(protocol);
+
+        Transfer transfer = new Transfer();
+        transfer.setEndpoint(ENDPOINT);
+        transfer.setTarget(dnode);
+        transfer.setView(dview);
+        transfer.setProtocols(protocols);
+        transfer.setDirection(Transfer.Direction.pushToVoSpace);
+
         Transfer transferRtn = client.pushToVoSpace(transfer);
         log.debug(transferRtn.toXmlString());
     }
 
     ////@Test
-    public void testPullFromVoSpace()
+    public void testPullFromVoSpace() throws Exception
     {
-        this.transfer.setDirection(Transfer.Direction.pullFromVoSpace);
+        String slashPath1 = "/" + ROOT_NODE + TestUtil.uniqueStringOnTime();
+        DataNode dnode = new DataNode(new VOSURI(VOS.VOS_URI + slashPath1));
+        DataView dview = new DataView(VOS.VIEW_DEFAULT, dnode);
+
+        List<Protocol> protocols = new ArrayList<Protocol>();
+        Protocol protocol = new Protocol(VOS.PROTOCOL_HTTPS_GET, ENDPOINT, null);
+        protocols.add(protocol);
+
+        Transfer transfer = new Transfer();
+        transfer.setEndpoint(ENDPOINT);
+        transfer.setTarget(dnode);
+        transfer.setView(dview);
+        transfer.setProtocols(protocols);
+        transfer.setDirection(Transfer.Direction.pullFromVoSpace);
         Transfer transferRtn = client.pullFromVoSpace(transfer);
         log.debug(transferRtn.toXmlString());
     }

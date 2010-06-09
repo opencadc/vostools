@@ -391,21 +391,24 @@ public class VOSpaceClient
         {
             URL url = new URL(this.baseUrl + "/transfers");
             log.debug(url);
-            HttpURLConnection httpCon = (HttpURLConnection) url.openConnection();
-            httpCon.setDoOutput(true);
-            httpCon.setRequestMethod("PUT");
-            OutputStreamWriter out = new OutputStreamWriter(httpCon.getOutputStream());
+            
+            HttpsURLConnection httpsCon = (HttpsURLConnection) url.openConnection();
+            httpsCon.setDoOutput(true);
+            httpsCon.setRequestMethod("POST");
+            //httpsCon.setRequestProperty("Content-Type", "application/x-www-form-urlencoded");
+            //httpsCon.setRequestProperty("Content-Language", "en-US");
+            httpsCon.setUseCaches(false);
+            httpsCon.setDoInput(true);
+            httpsCon.setDoOutput(true);
+            
+            OutputStreamWriter out = new OutputStreamWriter(httpsCon.getOutputStream());
             JobWriter jobWriter = new JobWriter(job);
             jobWriter.writeTo(out);
             out.close();
 
-            StringWriter sw = new StringWriter();
-            jobWriter.writeTo(sw);
-            String xml = sw.toString();
-            sw.close();
-            log.debug(xml);
+            log.debug(NodeUtil.xmlString(job));
 
-            String redirectLocation = getRedirectLocation(httpCon);
+            String redirectLocation = getRedirectLocation(httpsCon);
 
             URL urlRedirect = new URL(redirectLocation);
             JobReader jobReader = new JobReader();
@@ -441,23 +444,34 @@ public class VOSpaceClient
     }
 
     /**
-     * @param httpCon
+     * @param httpsCon
      * @return
      * @throws IOException 
      */
-    private String getRedirectLocation(HttpURLConnection httpCon) throws IOException
+    private String getRedirectLocation(HttpsURLConnection httpsCon) throws IOException
     {
         // Check response code from tapServer, should be 303.
-        int responseCode = httpCon.getResponseCode();
+        String responseMessage = httpsCon.getResponseMessage();
+        int responseCode = httpsCon.getResponseCode();
         log.debug("responseCode: " + responseCode);
         if (responseCode != HttpURLConnection.HTTP_SEE_OTHER)
         {
+            log.error(responseMessage + ". HTTP Code: " + responseCode);
+            InputStream errStrm = httpsCon.getErrorStream();
+            BufferedReader br = new BufferedReader(new InputStreamReader(errStrm));
+            String line;
+            while ((line = br.readLine()) != null)
+            {
+                log.debug(line);
+            }
+            errStrm.close();
+
             String error = "Query request returned non 303 response code " + responseCode;
             throw new IllegalStateException(error);
         }
 
         // Get the redirect Location header.
-        String location = httpCon.getHeaderField("Location");
+        String location = httpsCon.getHeaderField("Location");
         log.debug("Location: " + location);
         if (location == null || location.length() == 0)
         {
