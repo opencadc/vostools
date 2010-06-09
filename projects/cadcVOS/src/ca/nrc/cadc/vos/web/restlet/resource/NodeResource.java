@@ -204,6 +204,9 @@ public class NodeResource extends BaseResource
                     ContainerNode parent = (ContainerNode) Subject.doAs(subject, writeAuthorization);
                     node = clientNode;
                     node.setParent(parent);
+                    // set the owner on the node to be the distinguished name
+                    // contained in the client certificate(s)
+                    node.setOwner(ownerDN);
                 }
                 else 
                 {
@@ -211,6 +214,7 @@ public class NodeResource extends BaseResource
                     PrivilegedWriteAuthorizationExceptionAction writeAuthorization =
                         new PrivilegedWriteAuthorizationExceptionAction(voSpaceAuthorizer, clientNode);
                     node = (Node) Subject.doAs(subject, writeAuthorization);
+                    node.setProperties(clientNode.getProperties());
                 }
             }
             catch (PrivilegedActionException e)
@@ -220,13 +224,6 @@ public class NodeResource extends BaseResource
             }
             
             node.setUri(vosURI);
-            
-            // If this is an HTTP PUT, set the owner on the node to be
-            // the distinguished name contained in the client certificate(s)
-            if (getMethod().equals(Method.PUT))
-            {
-                clientNode.setOwner(ownerDN);
-            }
             
             log.debug("doInit() retrived node: " + node);
         }
