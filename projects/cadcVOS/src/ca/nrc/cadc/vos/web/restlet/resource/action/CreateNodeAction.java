@@ -25,6 +25,7 @@ public class CreateNodeAction implements NodeAction
         {
             Node storedNode = nodeResource.getNodePersistence().putInContainer(
                     nodeResource.getNode(), nodeResource.getNode().getParent());
+            storedNode.setUri(nodeResource.getVosURI());
             
             // return the node in xml format
             NodeWriter nodeWriter = new NodeWriter();

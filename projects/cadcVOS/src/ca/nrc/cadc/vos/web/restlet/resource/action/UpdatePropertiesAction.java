@@ -42,6 +42,7 @@ public class UpdatePropertiesAction implements NodeAction
             
             Node updatedNode = nodeResource.getNodePersistence().updateProperties(
                     nodeResource.getNode());
+            updatedNode.setUri(nodeResource.getVosURI());
             
             // return the node in xml format
             NodeWriter nodeWriter = new NodeWriter();

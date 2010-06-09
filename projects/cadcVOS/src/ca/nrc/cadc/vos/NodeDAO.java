@@ -463,6 +463,7 @@ public abstract class NodeDAO implements NodePersistence
         }
         
         log.debug("Node updated: " + currentDbNode);
+        //currentDbNode.setUri(updatedPersistentNode.getUri());
         // return the new node from the database
         return currentDbNode;
 
