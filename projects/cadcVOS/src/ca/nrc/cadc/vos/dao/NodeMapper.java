@@ -123,7 +123,7 @@ public class NodeMapper implements RowMapper
         String contentType = rs.getString("contentType");
         String contentEncoding = rs.getString("contentEncoding");
         byte[] contentMD5 = rs.getBytes("contentMD5");
-        Date lastModified = rs.getDate("lastModified");
+        Date lastModified = rs.getTimestamp("lastModified");
         
         ContainerNode parent = null;
         if (parentID != 0)
