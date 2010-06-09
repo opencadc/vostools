@@ -80,6 +80,7 @@ import java.util.List;
 
 import javax.sql.DataSource;
 
+import org.apache.log4j.Logger;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
@@ -95,6 +96,8 @@ import org.junit.Test;
  */
 public abstract class NodeDAOTest
 {
+    
+    private static Logger log = Logger.getLogger(NodeDAOTest.class);
     
     private static final String VOS_URI_PREFIX = "vos://cadc.nrc.ca!vospace";
     
@@ -206,9 +209,9 @@ public abstract class NodeDAOTest
         compareProperties("assert12", putNode.getProperties(), nodeF.getProperties());
         
         // delete the three roots
-        nodeDAO.delete(getCommonDataNode(nodePath1), true);
-        nodeDAO.delete(getCommonContainerNode(nodePath2), true);
-        nodeDAO.delete(getCommonContainerNode(nodePath3), true);
+        nodeDAO.delete(nodeA, true);
+        nodeDAO.delete(nodeB, true);
+        nodeDAO.delete(nodeC, true);
         
         // ensure deleting the roots deleted all children
         PreparedStatement prepStmt = connection.prepareStatement(
