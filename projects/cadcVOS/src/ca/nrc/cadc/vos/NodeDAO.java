@@ -314,6 +314,16 @@ public abstract class NodeDAO implements NodePersistence
     public void delete(Node persistentNode, boolean deleteChildren) throws NodeNotFoundException
     {
         
+        if (persistentNode == null)
+        {
+            throw new IllegalArgumentException("Cannot delete the root (null)");
+        }
+        
+        if (persistentNode.appData == null)
+        {
+            throw new IllegalArgumentException("Node recevied on delete is not persistent.");
+        }
+        
         synchronized (this)
         {
             try
@@ -355,6 +365,17 @@ public abstract class NodeDAO implements NodePersistence
     
     public void markForDeletion(Node persistentNode, boolean markChildren) throws NodeNotFoundException
     {
+        
+        if (persistentNode == null)
+        {
+            throw new IllegalArgumentException("Cannot mark the root (null) as deleted");
+        }
+        
+        if (persistentNode.appData == null)
+        {
+            throw new IllegalArgumentException("Node recevied on markMarkForDeletion is not persistent.");
+        }
+        
         synchronized (this)
         {
             try
