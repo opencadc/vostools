@@ -100,6 +100,8 @@ public abstract class NodeDAOTest
     private static Logger log = Logger.getLogger(NodeDAOTest.class);
     
     private static final String VOS_URI_PREFIX = "vos://cadc.nrc.ca!vospace";
+    private static final String ROOT_CONTAINER = "CADCRegtest1";
+    private static final String NODE_OWNER = "CN=CADC Regtest1 10577,OU=CADC,O=HIA";
     
     private NodeDAO nodeDAO;
     private String runId;
@@ -156,36 +158,38 @@ public abstract class NodeDAOTest
         ContainerNode containerNode = null;
         Node putNode = null;
         
+        ContainerNode rootContainer = (ContainerNode) nodeDAO.getFromParent(ROOT_CONTAINER, null);
+        
         // /a
-        String nodePath1 = "/" + getNodeName("a");
+        String nodePath1 = ROOT_CONTAINER + "/" + getNodeName("a");
         dataNode = getCommonDataNode(nodePath1, getCommonProperties());
-        putNode = nodeDAO.putInContainer(dataNode, null);
-        Node nodeA = nodeDAO.getFromParent(putNode.getName(), null);
+        putNode = nodeDAO.putInContainer(dataNode, rootContainer);
+        Node nodeA = nodeDAO.getFromParent(putNode.getName(), rootContainer);
         System.out.println("PutNode: " + putNode);
         System.out.println("GetNode: " + nodeA);
         assertEquals("assert1", putNode, nodeA);
         compareProperties("assert2", putNode.getProperties(), nodeA.getProperties());
         
         // /b
-        String nodePath2 = "/" + getNodeName("b");
+        String nodePath2 = ROOT_CONTAINER + "/" + getNodeName("b");
         containerNode = getCommonContainerNode(nodePath2, getCommonProperties());
-        putNode = nodeDAO.putInContainer(containerNode, null);
-        Node nodeB = nodeDAO.getFromParent(putNode.getName(), null);
+        putNode = nodeDAO.putInContainer(containerNode, rootContainer);
+        Node nodeB = nodeDAO.getFromParent(putNode.getName(), rootContainer);
         System.out.println("PutNode: " + putNode);
         System.out.println("GetNode: " + nodeB);
         assertEquals("assert3", putNode, nodeB);
         compareProperties("assert4", putNode.getProperties(), nodeB.getProperties());
         
         // /c
-        String nodePath3 = "/" + getNodeName("c");
+        String nodePath3 = ROOT_CONTAINER + "/" + getNodeName("c");
         containerNode = getCommonContainerNode(nodePath3, getCommonProperties());
-        putNode = nodeDAO.putInContainer(containerNode, null);
-        Node nodeC = nodeDAO.getFromParent(putNode.getName(), null);
+        putNode = nodeDAO.putInContainer(containerNode, rootContainer);
+        Node nodeC = nodeDAO.getFromParent(putNode.getName(), rootContainer);
         assertEquals("assert5", putNode, nodeC);
         compareProperties("assert6", putNode.getProperties(), nodeC.getProperties());
         
         // /b/d
-        String nodePath4 = "/" + getNodeName("b") + "/" + getNodeName("d");
+        String nodePath4 = ROOT_CONTAINER + "/" + getNodeName("b") + "/" + getNodeName("d");
         dataNode = getCommonDataNode(nodePath4, getCommonProperties());
         putNode = nodeDAO.putInContainer(dataNode, (ContainerNode) nodeB);
         Node nodeD = nodeDAO.getFromParent(putNode.getName(), putNode.getParent());
@@ -193,7 +197,7 @@ public abstract class NodeDAOTest
         compareProperties("assert8", putNode.getProperties(), nodeD.getProperties());
         
         // /c/e
-        String nodePath5 = "/" + getNodeName("c") + "/" + getNodeName("e");
+        String nodePath5 = ROOT_CONTAINER + "/" + getNodeName("c") + "/" + getNodeName("e");
         containerNode = getCommonContainerNode(nodePath5, getCommonProperties());
         putNode = nodeDAO.putInContainer(containerNode, (ContainerNode) nodeC);
         Node nodeE = nodeDAO.getFromParent(putNode.getName(), putNode.getParent());
@@ -201,7 +205,7 @@ public abstract class NodeDAOTest
         compareProperties("assert10", putNode.getProperties(), nodeE.getProperties());
         
         // /c/e/f
-        String nodePath6 = "/" + getNodeName("c") + "/" + getNodeName("e") + "/" + getNodeName("f");
+        String nodePath6 = ROOT_CONTAINER + "/" + getNodeName("c") + "/" + getNodeName("e") + "/" + getNodeName("f");
         dataNode = getCommonDataNode(nodePath6, getCommonProperties());
         putNode = nodeDAO.putInContainer(dataNode, (ContainerNode) nodeE);
         Node nodeF = nodeDAO.getFromParent(putNode.getName(), putNode.getParent());
@@ -229,7 +233,7 @@ public abstract class NodeDAOTest
     public void testUpdateProperties() throws Exception
     {
         // Create a node with properties
-        DataNode dataNode = getCommonDataNode("/" + getNodeName("g"));
+        DataNode dataNode = getCommonDataNode(ROOT_CONTAINER + "/" + getNodeName("g"));
         dataNode.getProperties().add(new NodeProperty("uri1", "value1"));
         dataNode.getProperties().add(new NodeProperty(VOS.PROPERTY_URI_CONTENTLENGTH, new Long(1024).toString()));
         dataNode.getProperties().add(new NodeProperty(VOS.PROPERTY_URI_TYPE, "text/plain"));
@@ -294,7 +298,7 @@ public abstract class NodeDAOTest
     {
         VOSURI vosuri = new VOSURI(VOS_URI_PREFIX + path);
         DataNode dataNode = new DataNode(vosuri);
-        dataNode.setOwner("testowner");
+        dataNode.setOwner(NODE_OWNER);
         return dataNode;
     }
     
@@ -309,7 +313,7 @@ public abstract class NodeDAOTest
     {
         VOSURI vosuri = new VOSURI(VOS_URI_PREFIX + path);
         ContainerNode containerNode = new ContainerNode(vosuri);
-        containerNode.setOwner("testowner");
+        containerNode.setOwner(NODE_OWNER);
         return containerNode;
     }
     
