@@ -338,4 +338,25 @@ public abstract class Node
         this.markedForDeletion = markedForDeletion;
     }
 
+    /**
+     * Find a property by its key (propertyUri)
+     * 
+     * @param propertyUri
+     * @return
+     * 
+     * @author zhangsa
+     */
+    public NodeProperty findProperty(String propertyUri)
+    {
+        NodeProperty rtn = null;
+        for (NodeProperty prop : this.properties)
+        {
+            if (prop.getPropertyURI().equalsIgnoreCase(propertyUri))
+            {
+                rtn = prop;
+                break;
+            }
+        }
+        return rtn;
+    }
 }
