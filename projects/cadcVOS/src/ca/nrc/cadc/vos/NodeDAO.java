@@ -449,11 +449,20 @@ public abstract class NodeDAO implements NodePersistence
                         }
                         else
                         {
-                            // update the property value
-                            log.debug("Updating node property: " + nextProperty.getPropertyURI());
-                            jdbc.update(getUpdateNodePropertySQL(currentDbNode, nextProperty));
-                            currentDbNode.getProperties().remove(new NodeProperty(nextProperty.getPropertyURI(), null));
-                            currentDbNode.getProperties().add(nextProperty);
+                            // update the property value if it is different
+                            int propertyIndex = currentDbNode.getProperties().indexOf(nextProperty);
+                            String currentValue = currentDbNode.getProperties().get(propertyIndex).getPropertyValue();
+                            if (!currentValue.equals(nextProperty.getPropertyValue()))
+                            {
+                                log.debug("Updating node property: " + nextProperty.getPropertyURI());
+                                jdbc.update(getUpdateNodePropertySQL(currentDbNode, nextProperty));
+                                currentDbNode.getProperties().remove(new NodeProperty(nextProperty.getPropertyURI(), null));
+                                currentDbNode.getProperties().add(nextProperty);
+                            }
+                            else
+                            {
+                                log.debug("Not updating node property: " + nextProperty.getPropertyURI());
+                            }
                         }
                     }
                     else
