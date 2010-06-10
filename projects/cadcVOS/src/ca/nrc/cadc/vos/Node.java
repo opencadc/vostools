@@ -75,7 +75,7 @@ import java.util.List;
 import java.util.Stack;
 
 /**
- * Abstract class defining a data object within a VOSpace.
+ * Abstract class defining an object within VOSpace.
  *  
  * @see ca.nrc.cadc.vos.DataNode
  * @see ca.nrc.cadc.vos.ContainerNode
@@ -110,6 +110,9 @@ public abstract class Node
     // To be used by controlling applications as they wish
     public transient Object appData;
     
+    /**
+     * Node constructor.
+     */
     public Node()
     {
         this.path = "";
@@ -117,6 +120,11 @@ public abstract class Node
         properties = new ArrayList<NodeProperty>();
     }
     
+    /**
+     * Node constructor.
+     * 
+     * @param name The name of the node;
+     */
     public Node(String name)
     {
         this.path = "";
@@ -210,6 +218,11 @@ public abstract class Node
         return "Node Path: " + path + " Id: " + appData;
     }
     
+    /**
+     * Nodes are considered equal if their names, and their
+     * parents (and thus their parent names) are equal.
+     */
+    @Override
     public boolean equals(Object o)
     {
         if (o instanceof Node)
