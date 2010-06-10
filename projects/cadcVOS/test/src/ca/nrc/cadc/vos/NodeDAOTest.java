@@ -72,16 +72,11 @@ package ca.nrc.cadc.vos;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
 
-import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.util.ArrayList;
 import java.util.List;
 
-import javax.sql.DataSource;
-
-import org.apache.log4j.Logger;
-import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
 
@@ -94,63 +89,17 @@ import org.junit.Test;
  * @author majorb
  *
  */
-public abstract class NodeDAOTest
-{
-    
-    private static Logger log = Logger.getLogger(NodeDAOTest.class);
-    
-    private NodeDAO nodeDAO;
-    private String runId;
-    private Connection connection;
+public abstract class NodeDAOTest extends PersistenceTest
+{   
+
     List<NodeProperty> propertyIgnoreList;
     
     @Before
     public void before() throws Exception
     {
-        DataSource dataSource = getDataSource();
-        nodeDAO = getNodeDAO(dataSource);
-        connection = dataSource.getConnection();
-        runId = NodeDAOTest.class.getName() + System.currentTimeMillis();
-        
+        super.commonBefore();
         propertyIgnoreList = new ArrayList<NodeProperty>();
         propertyIgnoreList.add(new NodeProperty(VOS.PROPERTY_URI_DATE, null));
-    }
-    
-    @After
-    public void after() throws Exception
-    {
-        PreparedStatement prepStmt = connection.prepareStatement(
-                "delete from " + nodeDAO.getNodePropertyTableName()
-                + " where nodeID in (select nodeID from "
-                +  nodeDAO.getNodeTableName()
-                + " where name like ?)");
-        prepStmt.setString(1, runId + "%");
-        prepStmt.executeUpdate();
-        
-        prepStmt = connection.prepareStatement(
-            "delete from " + nodeDAO.getNodeTableName() + " where name like ?");
-        prepStmt.setString(1, runId + "%");
-        prepStmt.executeUpdate();
-        
-        prepStmt.close();
-        
-        connection.close();
-        
-    }
-    
-    public abstract DataSource getDataSource();
-    
-    public abstract NodeDAO getNodeDAO(DataSource dataSource);
-    
-    public abstract String getVOSURIPrefix();
-    
-    public abstract String getRootContainerName();
-    
-    public abstract String getNodeOwner();
-    
-    private String getNodeName(String identifier)
-    {
-        return runId + identifier;
     }
 
     @Test
