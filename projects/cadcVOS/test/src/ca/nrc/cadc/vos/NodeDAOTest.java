@@ -89,10 +89,15 @@ import org.junit.Test;
  * @author majorb
  *
  */
-public abstract class NodeDAOTest extends PersistenceTest
+public abstract class NodeDAOTest extends AbstractPersistenceTest
 {   
 
     List<NodeProperty> propertyIgnoreList;
+    
+    public NodeDAOTest()
+    {
+        super();
+    }
     
     @Before
     public void before() throws Exception

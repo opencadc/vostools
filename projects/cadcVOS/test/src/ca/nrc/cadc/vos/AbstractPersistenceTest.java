@@ -7,22 +7,46 @@ import javax.sql.DataSource;
 
 import org.junit.After;
 
-public abstract class PersistenceTest
+public abstract class AbstractPersistenceTest implements TestPersistence
 {
-    
+
     protected NodeDAO nodeDAO;
     protected String runId;
     protected Connection connection;
     
-    public abstract DataSource getDataSource();
+    private TestPersistence testPersistence;
     
-    public abstract NodeDAO getNodeDAO(DataSource dataSource);
+    public AbstractPersistenceTest()
+    {
+        this.testPersistence = getTestPersistence();
+    }
     
-    public abstract String getVOSURIPrefix();
+    public abstract TestPersistence getTestPersistence();
     
-    public abstract String getRootContainerName();
+    public DataSource getDataSource()
+    {
+        return testPersistence.getDataSource();
+    }
     
-    public abstract String getNodeOwner();
+    public NodeDAO getNodeDAO(DataSource dataSource)
+    {
+        return testPersistence.getNodeDAO(dataSource);
+    }
+    
+    public String getVOSURIPrefix()
+    {
+        return testPersistence.getVOSURIPrefix();
+    }
+    
+    public String getRootContainerName()
+    {
+        return testPersistence.getRootContainerName();
+    }
+    
+    public String getNodeOwner()
+    {
+        return testPersistence.getNodeOwner();
+    }
     
     protected String getNodeName(String identifier)
     {
@@ -34,7 +58,7 @@ public abstract class PersistenceTest
         DataSource dataSource = getDataSource();
         nodeDAO = getNodeDAO(dataSource);
         connection = dataSource.getConnection();
-        runId = NodeDAOTest.class.getName() + System.currentTimeMillis();
+        runId = "NodePersistenceTest" + System.currentTimeMillis();
     }
     
     @After
@@ -51,12 +75,11 @@ public abstract class PersistenceTest
         prepStmt = connection.prepareStatement(
             "delete from " + nodeDAO.getNodeTableName() + " where name like ?");
         prepStmt.setString(1, runId + "%");
-        prepStmt.executeUpdate();
+        //prepStmt.executeUpdate();
         
         prepStmt.close();
         
         connection.close();
-        
     }
-
+    
 }
