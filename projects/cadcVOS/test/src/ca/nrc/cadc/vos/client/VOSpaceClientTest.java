@@ -144,7 +144,7 @@ public class VOSpaceClientTest
     {
     }
 
-    @Test
+    //@Test
     public void testSetNode() throws Exception
     {
         String slashPath1 = "/" + ROOT_NODE + TestUtil.uniqueStringOnTime();
@@ -159,19 +159,26 @@ public class VOSpaceClientTest
         log.debug("XML of GetNode: " + NodeUtil.xmlString(nodeRtn2));
         Assert.assertEquals(nodeRtn.getPath(), nodeRtn2.getPath());
 
-        String newUniqueValue = TestUtil.uniqueStringOnTime();
         List<NodeProperty> properties = new ArrayList<NodeProperty>();
+
+        String newUniqueValue = TestUtil.uniqueStringOnTime();
         NodeProperty nodeProperty = new NodeProperty(VOS.PROPERTY_URI_CONTRIBUTOR, newUniqueValue);
         nodeProperty.setReadOnly(true);
         properties.add(nodeProperty);
+
+        String newUniqueValue2 = TestUtil.uniqueStringOnTime();
+        NodeProperty nodeProperty2 = new NodeProperty(VOS.PROPERTY_URI_COVERAGE, newUniqueValue2);
+        nodeProperty2.setReadOnly(true);
+        properties.add(nodeProperty2);
+        
         nodeRtn2.setProperties(properties);
 
         Node nodeRtn3 = client.setNode(nodeRtn2);
-        String propValue = nodeRtn3.getProperties().get(0).getPropertyValue();
+        String propValue = nodeRtn3.findProperty(VOS.PROPERTY_URI_CONTRIBUTOR).getPropertyValue();
+        String propValue2 = nodeRtn3.findProperty(VOS.PROPERTY_URI_COVERAGE).getPropertyValue();
         log.debug("XML of SetNode: " + NodeUtil.xmlString(nodeRtn3));
-        log.debug("newUniqueValue: " + newUniqueValue);
-        log.debug("propValue: " + propValue);
         Assert.assertEquals(newUniqueValue, propValue);
+        Assert.assertEquals(newUniqueValue2, propValue2);
     }
 
     //@Test
@@ -283,7 +290,6 @@ public class VOSpaceClientTest
         protocols.add(protocol);
 
         Transfer transfer = new Transfer();
-        transfer.setEndpoint(ENDPOINT);
         transfer.setTarget(dnode);
         transfer.setView(dview);
         transfer.setProtocols(protocols);
@@ -293,7 +299,7 @@ public class VOSpaceClientTest
         log.debug(transferRtn.toXmlString());
     }
 
-    ////@Test
+    @Test
     public void testPullFromVoSpace() throws Exception
     {
         String slashPath1 = "/" + ROOT_NODE + TestUtil.uniqueStringOnTime();
@@ -305,7 +311,6 @@ public class VOSpaceClientTest
         protocols.add(protocol);
 
         Transfer transfer = new Transfer();
-        transfer.setEndpoint(ENDPOINT);
         transfer.setTarget(dnode);
         transfer.setView(dview);
         transfer.setProtocols(protocols);

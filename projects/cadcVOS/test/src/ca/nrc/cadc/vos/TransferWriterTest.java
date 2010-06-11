@@ -117,7 +117,6 @@ public class TransferWriterTest
 
         transfer = new Transfer();
         transfer.setDirection(Transfer.Direction.pushToVoSpace);
-        transfer.setEndpoint("vos://endpoint.for.transfer");
         transfer.setKeepBytes(true);
         transfer.setProtocols(protocols);
         transfer.setServiceUrl("http://service.url.for.transfer");

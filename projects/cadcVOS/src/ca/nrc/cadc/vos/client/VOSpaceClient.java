@@ -457,14 +457,14 @@ public class VOSpaceClient
         if (responseCode != HttpURLConnection.HTTP_SEE_OTHER)
         {
             log.error(responseMessage + ". HTTP Code: " + responseCode);
-            InputStream errStrm = httpsCon.getErrorStream();
-            BufferedReader br = new BufferedReader(new InputStreamReader(errStrm));
+            InputStream inStrm = httpsCon.getInputStream();
+            BufferedReader br = new BufferedReader(new InputStreamReader(inStrm));
             String line;
             while ((line = br.readLine()) != null)
             {
                 log.debug(line);
             }
-            errStrm.close();
+            inStrm.close();
 
             String error = "Query request returned non 303 response code " + responseCode;
             throw new IllegalStateException(error);

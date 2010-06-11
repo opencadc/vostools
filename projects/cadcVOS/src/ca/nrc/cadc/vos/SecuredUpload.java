@@ -69,185 +69,166 @@
 
 package ca.nrc.cadc.vos;
 
-import java.io.BufferedReader;
 import java.io.File;
+import java.io.FileInputStream;
+import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.InputStream;
-import java.io.InputStreamReader;
+import java.io.OutputStream;
 import java.io.OutputStreamWriter;
-import java.io.StringWriter;
-import java.net.MalformedURLException;
+import java.net.ProtocolException;
 import java.net.URL;
-import java.util.List;
 
+import javax.management.RuntimeErrorException;
 import javax.net.ssl.HttpsURLConnection;
 
 import org.apache.log4j.Logger;
 
 import ca.nrc.cadc.vos.client.VOSpaceClient;
-import ca.nrc.cadc.vos.util.NodeUtil;
 
 /**
+ * Perform an upload.
+ * 
+ * Following the structure of Download.java
+ * 
+ * @see /cadcDownloadManager/src/ca/nrc/cadc/dlm/client/Download.java
+ * 
  * @author zhangsa
  *
  */
-public class Transfer implements Runnable
+public class SecuredUpload implements Runnable
 {
-    private static Logger log = Logger.getLogger(Transfer.class);
-    /**
-     * Transfer Directions
-     */
-    public enum Direction {
-        pushToVoSpace, pullToVoSpace, pushFromVoSpace, pullFromVoSpace;
-    }
+    private static Logger log = Logger.getLogger(SecuredUpload.class);
+    private int ioBufferSize = 4096;
 
-    protected Direction direction;
+    private URL url;
+    private File localFile;
 
-    // Reqeust member variables
-    protected String serviceUrl;
-    protected Node target;
-    protected View view;
-    protected List<Protocol> protocols;
-    protected boolean keepBytes;
+    private transient boolean go;
+    private transient Thread thread;
 
-    public Transfer()
+
+    public SecuredUpload(File file, URL url)
     {
-    }
-
-    public void doUpload(File file)
-    {
-        URL url;
-        try
-        {
-            url = new URL(getPutEndpoint());
-        }
-        catch (MalformedURLException e)
-        {
-            log.error("get putEndpoint");
-            e.printStackTrace();
-            throw new IllegalArgumentException(e);
-        }
-        log.debug(url);
-        
-        SecuredUpload upload = new SecuredUpload(file, url);
-        upload.run();
-    }
-
-    public String getPutEndpoint() 
-    {
-        String rtn = null;
-        if (this.protocols != null)
-        {
-            for (Protocol p : this.protocols)
-            {
-                if (p.getUri().equalsIgnoreCase(VOS.PROTOCOL_HTTP_PUT)) {
-                    rtn = p.getEndpoint();
-                    break;
-                }
-            }
-        }
-        return rtn;
+        this.localFile = file;
+        this.url = url;
     }
     
-    public String getPhase()
-    {
-        throw new UnsupportedOperationException("Feature under construction.");
-    }
-
-    public String getResults()
-    {
-        //TODO
-        return null;
-        //throw new UnsupportedOperationException("Feature under construction.");
-    }
-
-    public String getErrors()
-    {
-        throw new UnsupportedOperationException("Feature under construction.");
-    }
-
+    @Override
     public void run()
     {
-        throw new UnsupportedOperationException("Feature under construction.");
-    }
+        if (this.url == null) throw new IllegalArgumentException("URL is null.");
+        if (this.localFile == null) throw new IllegalArgumentException("Local File is null.");
 
-    public String toXmlString()
-    {
-        String rtn = null;
         try
         {
-            TransferWriter writer = new TransferWriter(this);
-            StringWriter sw = new StringWriter();
-            writer.writeTo(sw);
-            rtn = sw.toString();
-            sw.close();
-        } catch (IOException e)
-        {
-            e.printStackTrace();
-            throw new RuntimeException(e);
+            this.thread = Thread.currentThread();
+            HttpsURLConnection httpsCon;
+            try
+            {
+                httpsCon = (HttpsURLConnection) this.url.openConnection();
+            }
+            catch (IOException e)
+            {
+                log.error("cannot connect to URL");
+                e.printStackTrace();
+                throw new RuntimeException(e);
+            }
+
+            try
+            {
+                httpsCon.setRequestMethod("PUT");
+            }
+            catch (ProtocolException e)
+            {
+                log.error("cannot set request method.");
+                e.printStackTrace();
+                throw new RuntimeException(e);
+            }
+            httpsCon.setUseCaches(false);
+            httpsCon.setDoInput(false);
+            httpsCon.setDoOutput(true);
+
+            OutputStream outStream = null;
+            try
+            {
+                outStream = httpsCon.getOutputStream();
+            }
+            catch (IOException e)
+            {
+                log.error("cannot obtain outputStream.");
+                e.printStackTrace();
+                throw new RuntimeException(e);
+            }
+            InputStream inStream = null;
+            try
+            {
+                inStream = new FileInputStream(this.localFile);
+            }
+            catch (FileNotFoundException e)
+            {
+                log.error("local file not found.");
+                e.printStackTrace();
+                throw new RuntimeException(e);
+            }
+
+            try
+            {
+                ioLoop(inStream, outStream, this.ioBufferSize);
+            }
+            catch (IOException e)
+            {
+                // TODO Auto-generated catch block
+                e.printStackTrace();
+                throw new RuntimeException(e);
+            }
+            catch (InterruptedException e)
+            {
+                // TODO Auto-generated catch block
+                e.printStackTrace();
+                throw new RuntimeException(e);
+            }
         }
-        return rtn;
+        catch (RuntimeException re)
+        {
+            throw re;
+        }
+        finally
+        {
+            this.thread = null;
+        }
+
     }
 
-    public Direction getDirection()
+    private void ioLoop(InputStream istream, OutputStream ostream, int bufferSize) throws IOException, InterruptedException
     {
-        return direction;
-    }
+        log.debug("ioLoop: using java.io with byte[] buffer size " + bufferSize);
+        byte[] buffer = new byte[bufferSize];
 
-    public void setDirection(Direction direction)
-    {
-        this.direction = direction;
-    }
+        int bytesRead = 0;
+        int nb2 = 0;
+        int tot = 0;
 
-    public String getServiceUrl()
-    {
-        return serviceUrl;
-    }
+        while (bytesRead != -1)
+        {
+            // check/clear interrupted flag and throw if necessary
+            if (Thread.interrupted()) throw new InterruptedException();
 
-    public void setServiceUrl(String serviceUrl)
-    {
-        this.serviceUrl = serviceUrl;
-    }
+            bytesRead = istream.read(buffer, 0, bufferSize);
+            if (bytesRead != -1)
+            {
+                if (bytesRead < bufferSize / 2)
+                {
+                    // try to get more data: merges a small chunk with a 
+                    // subsequent one to minimise write calls
+                    nb2 = istream.read(buffer, bytesRead, bufferSize - bytesRead);
+                    if (nb2 > 0) bytesRead += nb2;
+                }
 
-    public Node getTarget()
-    {
-        return target;
+                ostream.write(buffer, 0, bytesRead);
+                tot += bytesRead;
+            }
+        }
     }
-
-    public void setTarget(Node target)
-    {
-        this.target = target;
-    }
-
-    public View getView()
-    {
-        return view;
-    }
-
-    public void setView(View view)
-    {
-        this.view = view;
-    }
-
-    public List<Protocol> getProtocols()
-    {
-        return protocols;
-    }
-
-    public void setProtocols(List<Protocol> protocols)
-    {
-        this.protocols = protocols;
-    }
-
-    public boolean isKeepBytes()
-    {
-        return keepBytes;
-    }
-
-    public void setKeepBytes(boolean keepBytes)
-    {
-        this.keepBytes = keepBytes;
-    }
-
 
 }
