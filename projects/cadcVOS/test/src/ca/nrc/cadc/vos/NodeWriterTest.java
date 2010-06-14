@@ -196,7 +196,7 @@ public class NodeWriterTest
     /**
      * Test of write method, of class NodeWriter.
      */
-//    @Test
+    @Test
     public void write_ContainerNode_OutputStream()
     {
         try
@@ -216,7 +216,7 @@ public class NodeWriterTest
     /**
      * Test of write method, of class NodeWriter.
      */
-//    @Test
+    @Test
     public void write_DataNode_OutputStream()
     {
         try
@@ -236,7 +236,7 @@ public class NodeWriterTest
     /**
      * Test of write method, of class NodeWriter.
      */
-//    @Test
+    @Test
     public void write_ContainerNode_Writer()
     {
         try
@@ -256,7 +256,7 @@ public class NodeWriterTest
     /**
      * Test of write method, of class NodeWriter.
      */
-//    @Test
+    @Test
     public void write_DataNode_Writer()
     {
         try

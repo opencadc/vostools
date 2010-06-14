@@ -1,7 +1,7 @@
 <node xmlns="http://www.ivoa.net/xml/VOSpace/v2.0"
       xmlns:vos="http://www.ivoa.net/xml/VOSpace/v2.0"
       xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
-      xsi:type="vos:DataNodeType"
+      xsi:type="vos:DataNode"
       uri="vos://cadc.nrc.ca!vospace/mydata1"
       busy="false">
   <properties>
