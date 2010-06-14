@@ -188,6 +188,24 @@ public class VOSURI
         return vosURI.getScheme();
     }
 
+    /**
+     * Attempts to parse out the path of the parent Node described
+     * by this URI.
+     *
+     * @return path of the parent, or null if the URI path is null
+     *         of if the Node has no parent.
+     */
+    public String getParent()
+    {
+        String path = vosURI.getPath();
+        if (path == null)
+            return null;
+        int index = path.lastIndexOf('/');
+        if (index <= 0)
+            return null;
+        return path.substring(0, index);
+    }
+
     @Override
     public String toString()
     {
