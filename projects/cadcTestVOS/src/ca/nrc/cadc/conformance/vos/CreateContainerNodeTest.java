@@ -69,6 +69,7 @@
 
 package ca.nrc.cadc.conformance.vos;
 
+import ca.nrc.cadc.vos.VOS;
 import ca.nrc.cadc.vos.ContainerNode;
 import ca.nrc.cadc.vos.NodeReader;
 import ca.nrc.cadc.vos.VOSURI;
@@ -125,7 +126,7 @@ public class CreateContainerNodeTest extends VOSNodeTest
 
             // Add ContainerNode to the VOSpace.
             WebResponse response = put(node);
-            assertEquals("PUT response code should be 200", 200, response.getResponseCode());
+            assertEquals("PUT response code should be 201", 201, response.getResponseCode());
 
             // Get the response (an XML document)
             String xml = response.getText();
@@ -168,7 +169,7 @@ public class CreateContainerNodeTest extends VOSNodeTest
 
             // Add ContainerNode to the VOSpace.
             WebResponse response = put(node);
-            assertEquals("PUT response code should be 200", 200, response.getResponseCode());
+            assertEquals("PUT response code should be 201", 201, response.getResponseCode());
 
             // Get the response (an XML document)
             String xml = response.getText();
@@ -250,7 +251,7 @@ public class CreateContainerNodeTest extends VOSNodeTest
             log.debug("invalidURIPathFault");
 
             // Create node with an invalid path, node A doesn't exist.
-            ContainerNode nodeAB = new ContainerNode(new VOSURI(VOSBaseTest.VOSPACE_URI + "/A/B"));
+            ContainerNode nodeAB = new ContainerNode(new VOSURI(VOS.VOS_URI + "/A/B"));
 
             // Add ContainerNode to the VOSpace.
             WebResponse response = put(nodeAB);
@@ -355,7 +356,7 @@ public class CreateContainerNodeTest extends VOSNodeTest
             log.debug("containerNotFoundFault");
 
             // Create a Node path /A/B
-            ContainerNode nodeAB = new ContainerNode(new VOSURI(VOSBaseTest.VOSPACE_URI + "/A/B"));
+            ContainerNode nodeAB = new ContainerNode(new VOSURI(VOS.VOS_URI + "/A/B"));
 
             // Try and add the Node to the VOSpace.
             WebResponse response = put(nodeAB);

@@ -69,6 +69,7 @@
 
 package ca.nrc.cadc.conformance.vos;
 
+import ca.nrc.cadc.vos.VOS;
 import java.util.List;
 import ca.nrc.cadc.vos.DataNode;
 import ca.nrc.cadc.vos.NodeProperty;
@@ -127,7 +128,7 @@ public class UpdateDataNodeTest extends VOSNodeTest
             
              // Add DataNode to the VOSpace.
             WebResponse response = put(node);
-            assertEquals("PUT response code should be 200", 200, response.getResponseCode());
+            assertEquals("PUT response code should be 201", 201, response.getResponseCode());
 
             // Update the node by adding new Property.
             NodeProperty nodeProperty = new NodeProperty("ivo://ivoa.net/vospace/core#description", "My new award winning images");
@@ -171,14 +172,14 @@ public class UpdateDataNodeTest extends VOSNodeTest
             log.debug("updateDataNodeDeleteProperty");
 
             // Create a DataNode.
-            DataNode node = new DataNode(new VOSURI(VOSBaseTest.VOSPACE_URI + "/A"));
+            DataNode node = new DataNode(new VOSURI(VOS.VOS_URI + "/A"));
             NodeProperty nodeProperty = new NodeProperty("ivo://ivoa.net/vospace/core#description", "My award winning images");
             nodeProperty.setReadOnly(true);
             node.getProperties().add(nodeProperty);
 
             // Add ContainerNode to the VOSpace.
             WebResponse response = put(node);
-            assertEquals("PUT response code should be 200", 200, response.getResponseCode());
+            assertEquals("PUT response code should be 201", 201, response.getResponseCode());
 
             // Get the response (an XML document)
             String xml = response.getText();
@@ -223,7 +224,7 @@ public class UpdateDataNodeTest extends VOSNodeTest
      * The service SHALL throw a HTTP 401 status code including a PermissionDenied
      * fault in the entity-body if the user does not have permissions to perform the operation
      */
-    @Test
+//    @Test
     public void permissionDeniedFault()
     {
         try
@@ -235,7 +236,7 @@ public class UpdateDataNodeTest extends VOSNodeTest
 
             // Add ContainerNode to the VOSpace.
             WebResponse response = put(node);
-            assertEquals("PUT response code should be 200", 200, response.getResponseCode());
+            assertEquals("PUT response code should be 201", 201, response.getResponseCode());
 
             // Update the node by adding new Property.
             NodeProperty nodeProperty = new NodeProperty("ivo://ivoa.net/vospace/core#description", "My new award winning images");
@@ -274,14 +275,14 @@ public class UpdateDataNodeTest extends VOSNodeTest
             log.debug("updateReadOnlyPermissionDeniedFault");
 
             // Create a ContainerNode.
-            DataNode node = new DataNode(new VOSURI(VOSBaseTest.VOSPACE_URI + "/A"));
+            DataNode node = new DataNode(new VOSURI(VOS.VOS_URI + "/A"));
             NodeProperty nodeProperty = new NodeProperty("ivo://ivoa.net/vospace/core#description", "My award winning images");
             nodeProperty.setReadOnly(true);
             node.getProperties().add(nodeProperty);
 
             // Add ContainerNode to the VOSpace.
             WebResponse response = put(node);
-            assertEquals("PUT response code should be 200", 200, response.getResponseCode());
+            assertEquals("PUT response code should be 201", 201, response.getResponseCode());
 
              // Get the response (an XML document)
             String xml = response.getText();
@@ -328,7 +329,7 @@ public class UpdateDataNodeTest extends VOSNodeTest
             log.debug("nodeNotFoundFault");
 
             // Create a Node with a nonexistent parent node
-            DataNode nodeAB = new DataNode(new VOSURI(VOSBaseTest.VOSPACE_URI + "/A/B"));
+            DataNode nodeAB = new DataNode(new VOSURI(VOS.VOS_URI + "/A/B"));
 
             // Try and get the Node from the VOSpace.
             WebResponse response = post(nodeAB);
@@ -362,7 +363,7 @@ public class UpdateDataNodeTest extends VOSNodeTest
 
             // Add ContainerNode to the VOSpace.
             WebResponse response = put(node);
-            assertEquals("PUT response code should be 200", 200, response.getResponseCode());
+            assertEquals("PUT response code should be 201", 201, response.getResponseCode());
 
             // TODO: add an invalid Property
             NodeProperty nodeProperty = new NodeProperty("zzz://aaa.bbb/ccc/ddd", "My invalid property");

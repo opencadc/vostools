@@ -72,7 +72,6 @@ package ca.nrc.cadc.conformance.vos;
 import ca.nrc.cadc.uws.Job;
 import ca.nrc.cadc.uws.JobWriter;
 import ca.nrc.cadc.uws.Parameter;
-import ca.nrc.cadc.vos.DataNode;
 import ca.nrc.cadc.vos.Node;
 import ca.nrc.cadc.vos.NodeReader;
 import ca.nrc.cadc.vos.Transfer;
@@ -113,7 +112,7 @@ public class PushToVOSpaceTest extends VOSTransferTest
     {
         job = new Job();
         job.setID("job123");
-        job.addParameter(new Parameter("target", VOSBaseTest.VOSPACE_URI + "/A"));
+        job.addParameter(new Parameter("target", VOS.VOS_URI + "/A"));
         job.addParameter(new Parameter("direction", Transfer.Direction.pushToVoSpace.name()));
         job.addParameter(new Parameter("view", VOS.VIEW_DEFAULT));
         job.addParameter(new Parameter("protocol", VOS.PROTOCOL_HTTP_PUT));

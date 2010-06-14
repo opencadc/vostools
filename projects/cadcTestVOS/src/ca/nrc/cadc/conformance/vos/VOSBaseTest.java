@@ -70,14 +70,11 @@
 package ca.nrc.cadc.conformance.vos;
 
 import ca.nrc.cadc.util.Log4jInit;
-import ca.nrc.cadc.uws.Job;
-import ca.nrc.cadc.uws.Parameter;
 import ca.nrc.cadc.vos.ContainerNode;
 import ca.nrc.cadc.vos.DataNode;
 import ca.nrc.cadc.vos.Node;
 import ca.nrc.cadc.vos.NodeProperty;
 import ca.nrc.cadc.vos.NodeWriter;
-import ca.nrc.cadc.vos.Transfer;
 import ca.nrc.cadc.vos.VOS;
 import ca.nrc.cadc.vos.VOS.NodeBusyState;
 import ca.nrc.cadc.vos.VOSURI;
@@ -91,7 +88,10 @@ import java.io.ByteArrayInputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.net.URISyntaxException;
+import java.text.SimpleDateFormat;
 import java.util.ArrayList;
+import java.util.Calendar;
+import java.util.Date;
 import java.util.List;
 import java.util.Map;
 import org.apache.log4j.Level;
@@ -107,11 +107,17 @@ import org.xml.sax.SAXException;
  */
 public abstract class VOSBaseTest
 {
-    public static final String VOSPACE_URI = "vos://cadc.nrc.ca!vospace";
+//    public static final String VOSPACE_URI = "vos://cadc.nrc.ca!vospace";
 
     private static Logger log = Logger.getLogger(VOSBaseTest.class);
 
+    private static String DATE_FORMAT = "yyyy-MM-dd.HH:mm:ss.SSS";
+
+    private SimpleDateFormat dateFormat;
+
     private String serviceUrl;
+
+
 
     /**
      * Constructor takes a path argument, which is the path to the resource
@@ -130,6 +136,8 @@ public abstract class VOSBaseTest
             throw new RuntimeException("service.url System property not set");
         serviceUrl += path;
         log.debug("serviceUrl: " + serviceUrl);
+
+        dateFormat = new SimpleDateFormat(DATE_FORMAT);
     }
 
     /**
@@ -152,7 +160,9 @@ public abstract class VOSBaseTest
         nodes.add(new DataNode(new VOSURI("vos://cadc.nrc.ca!vospace/mydir/ngc6801")));
 
         // ContainerNode
-        ContainerNode node = new ContainerNode(new VOSURI(VOSBaseTest.VOSPACE_URI + "/A"));
+        String name = System.getProperty("user.name", "cadcTestVOS");
+        String date = dateFormat.format(Calendar.getInstance().getTime());
+        ContainerNode node = new ContainerNode(new VOSURI(VOS.VOS_URI + "/CADCRegtest1/" + name + "_" + date));
         node.getProperties().add(nodeProperty);
         node.setNodes(nodes);
         return node;
@@ -172,7 +182,9 @@ public abstract class VOSBaseTest
         nodeProperty.setReadOnly(true);
 
         // DataNode
-        DataNode node = new DataNode(new VOSURI(VOSBaseTest.VOSPACE_URI + "/A"));
+        String name = System.getProperty("user.name", "cadcTestVOS");
+        String date = dateFormat.format(Calendar.getInstance().getTime());
+        DataNode node = new DataNode(new VOSURI(VOS.VOS_URI + "/CADCRegtest1/" + name + "_" + date));
         node.getProperties().add(nodeProperty);
         node.setBusy(NodeBusyState.notBusy);
         return node;
@@ -189,7 +201,7 @@ public abstract class VOSBaseTest
     protected WebResponse delete(Node node)
         throws IOException, SAXException
     {
-        String resourceUrl = serviceUrl + node.getPath();
+        String resourceUrl = serviceUrl + "/" + node.getPath();
         log.debug("**************************************************");
         log.debug("HTTP DELETE: " + resourceUrl);
         WebRequest request = new DeleteMethodWebRequest(resourceUrl);
@@ -235,7 +247,7 @@ public abstract class VOSBaseTest
     protected WebResponse get(Node node, Map<String, String> parameters)
         throws IOException, SAXException
     {
-        String resourceUrl = serviceUrl + node.getPath();
+        String resourceUrl = serviceUrl + "/" + node.getPath();
         log.debug("**************************************************");
         log.debug("HTTP GET: " + resourceUrl);
         WebRequest request = new GetMethodWebRequest(resourceUrl);
@@ -274,16 +286,17 @@ public abstract class VOSBaseTest
     protected WebResponse post(ContainerNode node)
         throws IOException, SAXException
     {
-        String resourceUrl = serviceUrl + node.getPath();
+        String resourceUrl = serviceUrl + "/" + node.getPath();
         log.debug("**************************************************");
         log.debug("HTTP POST: " + resourceUrl);
-        WebRequest request = new PostMethodWebRequest(resourceUrl);
-
 
         StringBuilder sb = new StringBuilder();
         NodeWriter nodeWriter = new NodeWriter();
         nodeWriter.write(node, sb);
-        request.setParameter(null, sb.toString());
+        
+        ByteArrayInputStream in = new ByteArrayInputStream(sb.toString().getBytes("UTF-8"));
+
+        WebRequest request = new PostMethodWebRequest(resourceUrl, in, "text/xml");
 
         log.debug(getRequestParameters(request));
 
@@ -309,16 +322,17 @@ public abstract class VOSBaseTest
     protected WebResponse post(DataNode node)
         throws IOException, SAXException
     {
-        String resourceUrl = serviceUrl + node.getPath();
+        String resourceUrl = serviceUrl + "/" + node.getPath();
         log.debug("**************************************************");
         log.debug("HTTP POST: " + resourceUrl);
-        WebRequest request = new PostMethodWebRequest(resourceUrl);
         
-
         StringBuilder sb = new StringBuilder();
         NodeWriter nodeWriter = new NodeWriter();
         nodeWriter.write(node, sb);
-        request.setParameter(null, sb.toString());
+
+        ByteArrayInputStream in = new ByteArrayInputStream(sb.toString().getBytes("UTF-8"));
+
+        WebRequest request = new PostMethodWebRequest(resourceUrl, in, "text/xml");
 
         log.debug(getRequestParameters(request));
 
@@ -360,7 +374,7 @@ public abstract class VOSBaseTest
     protected WebResponse put(ContainerNode node, NodeWriter writer)
         throws IOException, SAXException
     {
-        String resourceUrl = serviceUrl + node.getPath();
+        String resourceUrl = serviceUrl + "/" + node.getPath();
         log.debug("**************************************************");
         log.debug("HTTP PUT: " + resourceUrl);
 
@@ -409,7 +423,7 @@ public abstract class VOSBaseTest
     protected WebResponse put(DataNode node, NodeWriter writer)
         throws IOException, SAXException
     {
-        String resourceUrl = serviceUrl + node.getPath();
+        String resourceUrl = serviceUrl + "/" + node.getPath();
         log.debug("**************************************************");
         log.debug("HTTP PUT: " + resourceUrl);
         

@@ -69,6 +69,7 @@
 
 package ca.nrc.cadc.conformance.vos;
 
+import ca.nrc.cadc.vos.VOS;
 import ca.nrc.cadc.vos.DataNode;
 import ca.nrc.cadc.vos.NodeReader;
 import ca.nrc.cadc.vos.VOSURI;
@@ -90,7 +91,7 @@ import static org.junit.Assert.*;
  */
 public class GetDataNodeTest extends VOSNodeTest
 {
-    private static Logger log = Logger.getLogger(CreateDataNodeTest.class);
+    private static Logger log = Logger.getLogger(GetDataNodeTest.class);
 
     public GetDataNodeTest()
     {
@@ -127,7 +128,7 @@ public class GetDataNodeTest extends VOSNodeTest
 
             // Add DataNode to the VOSpace.
             WebResponse response = put(node);
-            assertEquals("PUT response code should be 200", 200, response.getResponseCode());
+            assertEquals("PUT response code should be 201", 201, response.getResponseCode());
 
             // Get the node from vospace
             response = get(node);
@@ -171,7 +172,7 @@ public class GetDataNodeTest extends VOSNodeTest
 
             // Add DataNode to the VOSpace.
             WebResponse response = put(node);
-            assertEquals("PUT response code should be 200", 200, response.getResponseCode());
+            assertEquals("PUT response code should be 201", 201, response.getResponseCode());
 
             // Request Parameters
             Map<String, String> parameters = new HashMap<String, String>();
@@ -221,7 +222,7 @@ public class GetDataNodeTest extends VOSNodeTest
 
             // Add DataNode to the VOSpace.
             WebResponse response = put(node);
-            assertEquals("PUT response code should be 200", 200, response.getResponseCode());
+            assertEquals("PUT response code should be 201", 201, response.getResponseCode());
 
             // Request Parameters
             Map<String, String> parameters = new HashMap<String, String>();
@@ -274,7 +275,7 @@ public class GetDataNodeTest extends VOSNodeTest
 
             // Add DataNode to the VOSpace.
             WebResponse response = put(node);
-            assertEquals("PUT response code should be 200", 200, response.getResponseCode());
+            assertEquals("PUT response code should be 201", 201, response.getResponseCode());
 
             // Request Parameters to get the node plus an offset
             Map<String, String> parameters = new HashMap<String, String>();
@@ -312,7 +313,7 @@ public class GetDataNodeTest extends VOSNodeTest
      * The service SHALL throw a HTTP 401 status code including a PermissionDenied
      * fault in the entity-body if the user does not have permissions to perform the operation
      */
-    @Test
+//    @Test
     public void permissionDeniedFault()
     {
         try
@@ -324,7 +325,7 @@ public class GetDataNodeTest extends VOSNodeTest
             
             // Add ContainerNode to the VOSpace.
             WebResponse response = put(node);
-            assertEquals("PUT response code should be 200", 200, response.getResponseCode());
+            assertEquals("PUT response code should be 201", 201, response.getResponseCode());
 
             // TODO: how to get the node without permission to do so?
             response = get(node);
@@ -354,7 +355,7 @@ public class GetDataNodeTest extends VOSNodeTest
             log.debug("nodeNotFoundFault");
 
             // Create a Node with a nonexistent parent node
-            DataNode nodeAB = new DataNode(new VOSURI(VOSBaseTest.VOSPACE_URI + "/A/B"));
+            DataNode nodeAB = new DataNode(new VOSURI(VOS.VOS_URI + "/A/B"));
 
             // Try and get the Node from the VOSpace.
             WebResponse response = get(nodeAB);

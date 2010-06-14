@@ -69,6 +69,7 @@
 
 package ca.nrc.cadc.conformance.vos;
 
+import ca.nrc.cadc.vos.VOS;
 import ca.nrc.cadc.vos.DataNode;
 import ca.nrc.cadc.vos.NodeReader;
 import ca.nrc.cadc.vos.VOSURI;
@@ -125,19 +126,11 @@ public class DeleteDataNodeTest extends VOSNodeTest
 
             // Add ContainerNode to the VOSpace.
             WebResponse response = put(node);
-            assertEquals("PUT response code should be 200", 200, response.getResponseCode());
+            assertEquals("PUT response code should be 201", 201, response.getResponseCode());
 
             // Delete the node.
             response = delete(node);
             assertEquals("DELETE response code should be 200", 200, response.getResponseCode());
-
-            // Get the response (an XML document)
-            String xml = response.getText();
-            log.debug("DELETE XML:\r\n" + xml);
-
-            // Validate against the VOSPace schema.
-            NodeReader reader = new NodeReader();
-            reader.read(xml);
 
             // Try and get the node from vospace
             response = get(node);
@@ -156,7 +149,7 @@ public class DeleteDataNodeTest extends VOSNodeTest
      * The service SHALL throw a HTTP 401 status code including a PermissionDenied
      * fault in the entity-body if the user does not have permissions to perform the operation
      */
-    @Test
+//    @Test
     public void permissionDeniedFault()
     {
         try
@@ -168,7 +161,7 @@ public class DeleteDataNodeTest extends VOSNodeTest
             
             // Add ContainerNode to the VOSpace.
             WebResponse response = put(node);
-            assertEquals("PUT response code should be 200", 200, response.getResponseCode());
+            assertEquals("PUT response code should be 201", 201, response.getResponseCode());
 
             // TODO: how do you delete a node without permissions?
             response = delete(node);
@@ -202,7 +195,7 @@ public class DeleteDataNodeTest extends VOSNodeTest
             log.debug("nodeNotFoundFault");
 
             // Create a Node that should not exist.
-            DataNode nodeA = new DataNode(new VOSURI(VOSBaseTest.VOSPACE_URI + "/node_not_found"));
+            DataNode nodeA = new DataNode(new VOSURI(VOS.VOS_URI + "/node_not_found"));
 
             // Try and delete the Node from the VOSpace.
             WebResponse response = delete(nodeA);
@@ -235,7 +228,7 @@ public class DeleteDataNodeTest extends VOSNodeTest
             log.debug("containerNotFoundFault");
 
             // Create a Node path /A/B
-            DataNode nodeAB = new DataNode(new VOSURI(VOSBaseTest.VOSPACE_URI + "/A/B"));
+            DataNode nodeAB = new DataNode(new VOSURI(VOS.VOS_URI + "/A/B"));
 
             // Try and delete the Node from the VOSpace.
             WebResponse response = delete(nodeAB);
