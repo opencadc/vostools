@@ -2,6 +2,9 @@ package ca.nrc.cadc.vos;
 
 import static org.junit.Assert.assertEquals;
 
+import java.nio.charset.Charset;
+import java.security.MessageDigest;
+
 import org.junit.Before;
 import org.junit.Test;
 
@@ -38,13 +41,20 @@ public abstract class VOSpaceFileMetadataSourceTest extends AbstractPersistenceT
         String contentEncoding = "gzip";
         Long contentLength = 256L;
         String contentType = "text/xml";
-        String md5Sum = new String(new byte[] {1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16});
+        
+        String md5SumSource = "valuetohashis a longer string now.";
+        
+        MessageDigest md = MessageDigest.getInstance("MD5");
+        md.reset();
+        md.update(md5SumSource.getBytes("iso-8859-1"), 0, md5SumSource.length());
+        byte[] md5hash = md.digest();
+        String contentMD5 = new String(md5hash, Charset.forName("iso-8859-1"));
         
         FileMetadata metadata1 = new FileMetadata();
         metadata1.setContentEncoding(contentEncoding);
         metadata1.setContentLength(contentLength);
         metadata1.setContentType(contentType);
-        metadata1.setMd5Sum(md5Sum);
+        metadata1.setMd5Sum(contentMD5);
         
         vospaceFileMetadataSource.set(testURI.getURIObject(), metadata1);
         FileMetadata metadata2 = vospaceFileMetadataSource.get(testURI.getURIObject());
@@ -52,7 +62,7 @@ public abstract class VOSpaceFileMetadataSourceTest extends AbstractPersistenceT
         assertEquals(contentEncoding, metadata2.getContentEncoding());
         assertEquals(contentLength, metadata2.getContentLength());
         assertEquals(contentType, metadata2.getContentType());
-        assertEquals(md5Sum, metadata2.getMd5Sum());
+        assertEquals(contentMD5, metadata2.getMd5Sum());
 
     }
 

@@ -88,7 +88,7 @@
 
     <property name="cadcUtil" value="${lib}/cadcUtil.jar" />
     <property name="cadcUWS" value="${lib}/cadcUWS.jar" />
- 
+
     <property name="ext.restlet" value="${ext.lib}/org.restlet.jar" />
     <property name="ext.restlet.ext" value="${ext.lib}/org.restlet.ext.servlet.jar" />
     <property name="ext.log4j" value="${ext.lib}/log4j.jar" />
@@ -116,9 +116,10 @@
     <property name="dev.objenesis" value="${ext.dev}/objenesis.jar" />
     <property name="dev.asm" value="${ext.dev}/asm.jar" />
     <property name="dev.cglib" value="${ext.dev}/cglib.jar" />
+    <property name="javaUtil" value="${lib}/javaUtil.jar" />
 
     <property name="testingJars"
-              value="${cadcVOS}:${cadcUtil}:${junit}:${xerces}:${dev.easyMock}:${dev.easyMock.classextension}:${dev.objenesis}:${dev.asm}:${dev.cglib}" />
+              value="${cadcVOS}:${cadcUtil}:${javaUtil}:${junit}:${xerces}:${dev.easyMock}:${dev.easyMock.classextension}:${dev.objenesis}:${dev.asm}:${dev.cglib}" />
 
     <!-- compile the test classes -->
     <target name="compile-test" depends="compile">

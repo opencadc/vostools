@@ -69,6 +69,7 @@
 
 package ca.nrc.cadc.vos.dao;
 
+import java.nio.charset.Charset;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.util.Date;
@@ -122,7 +123,7 @@ public class NodeMapper implements RowMapper
         long contentLength = rs.getLong("contentLength");
         String contentType = rs.getString("contentType");
         String contentEncoding = rs.getString("contentEncoding");
-        byte[] contentMD5 = rs.getBytes("contentMD5");
+        Object contentMD5 = rs.getObject("contentMD5");
         Date lastModified = rs.getTimestamp("lastModified");
         
         ContainerNode parent = null;
@@ -170,9 +171,10 @@ public class NodeMapper implements RowMapper
         {
             node.getProperties().add(new NodeProperty(VOS.PROPERTY_URI_CONTENTENCODING, contentEncoding));
         }
-        if (contentMD5 != null)
+        if (contentMD5 != null && contentMD5 instanceof byte[])
         {
-            node.getProperties().add(new NodeProperty(VOS.PROPERTY_URI_CONTENTMD5, contentMD5.toString()));
+            String contentMD5String = new String((byte[]) contentMD5, Charset.forName("iso-8859-1"));
+            node.getProperties().add(new NodeProperty(VOS.PROPERTY_URI_CONTENTMD5, contentMD5String));
         }
         if (lastModified != null)
         {

@@ -69,6 +69,7 @@
 
 package ca.nrc.cadc.vos;
 
+import java.io.UnsupportedEncodingException;
 import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.SQLException;
@@ -740,7 +741,15 @@ public abstract class NodeDAO implements NodePersistence
         
         if (contentMD5String != null)
         {
-            contentMD5 = contentMD5String.getBytes();
+            try
+            {
+                contentMD5 = contentMD5String.getBytes("iso-8859-1");
+            }
+            catch (UnsupportedEncodingException e)
+            {
+                log.warn("Could not convert MD5 String to Byte[], ignoring. " + e.getMessage(), e);
+                contentMD5 = null;
+            }
         }
         
         if (node.getOwner() == null)
