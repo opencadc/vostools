@@ -96,24 +96,23 @@ import ca.nrc.cadc.vos.client.VOSpaceClient;
  * @author zhangsa
  *
  */
-public class SecuredUpload implements Runnable
+public class Upload implements Runnable
 {
-    private static Logger log = Logger.getLogger(SecuredUpload.class);
+    private static Logger log = Logger.getLogger(Upload.class);
     private int ioBufferSize = 4096;
 
     private URL url;
     private File localFile;
 
     private transient boolean go;
-    private transient Thread thread;
+    private transient Thread thread; // the thread that runs the upload
 
-
-    public SecuredUpload(File file, URL url)
+    public Upload(File file, URL url)
     {
         this.localFile = file;
         this.url = url;
     }
-    
+
     @Override
     public void run()
     {
@@ -200,7 +199,8 @@ public class SecuredUpload implements Runnable
 
     }
 
-    private void ioLoop(InputStream istream, OutputStream ostream, int bufferSize) throws IOException, InterruptedException
+    //    private void ioLoop(InputStream istream, OutputStream ostream, int bufferSize) throws IOException, InterruptedException
+    public void ioLoop(InputStream istream, OutputStream ostream, int bufferSize) throws IOException, InterruptedException
     {
         log.debug("ioLoop: using java.io with byte[] buffer size " + bufferSize);
         byte[] buffer = new byte[bufferSize];

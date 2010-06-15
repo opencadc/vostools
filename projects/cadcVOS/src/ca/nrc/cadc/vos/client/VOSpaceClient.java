@@ -409,17 +409,25 @@ public class VOSpaceClient
             log.debug(NodeUtil.xmlString(job));
 
             String redirectLocation = getRedirectLocation(httpsCon);
+            
+            if (direction == Transfer.Direction.pushToVoSpace)
+            {
+                URL urlRedirect = new URL(redirectLocation);
+                JobReader jobReader = new JobReader();
+                Job jobResult = jobReader.readFrom(urlRedirect);
 
-            URL urlRedirect = new URL(redirectLocation);
-            JobReader jobReader = new JobReader();
-            Job jobResult = jobReader.readFrom(urlRedirect);
+                String strResultUrl = jobResult.getResultsList().get(0).getURL().toString();
 
-            String strResultUrl = jobResult.getResultsList().get(0).getURL().toString();
-
-            URL urlTransferDetail = new URL(strResultUrl);
-            TransferReader txfReader = new TransferReader();
-            rtn = txfReader.readFrom(urlTransferDetail);
-
+                URL urlTransferDetail = new URL(strResultUrl);
+                TransferReader txfReader = new TransferReader();
+                rtn = txfReader.readFrom(urlTransferDetail);
+            }
+            else if (direction == Transfer.Direction.pullFromVoSpace)
+            {
+                URL urlRedirect = new URL(redirectLocation);
+                TransferReader txfReader = new TransferReader();
+                rtn = txfReader.readFrom(urlRedirect);
+            }
         }
         catch (IOException e)
         {

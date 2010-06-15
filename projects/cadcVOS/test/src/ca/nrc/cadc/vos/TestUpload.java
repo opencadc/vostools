@@ -69,197 +69,67 @@
 
 package ca.nrc.cadc.vos;
 
-import java.io.BufferedReader;
+
 import java.io.File;
-import java.io.IOException;
-import java.io.InputStream;
-import java.io.InputStreamReader;
-import java.io.OutputStreamWriter;
-import java.io.StringWriter;
-import java.net.MalformedURLException;
-import java.net.URL;
-import java.util.List;
+import java.io.FileInputStream;
+import java.io.FileOutputStream;
 
-import javax.net.ssl.HttpsURLConnection;
-
-import org.apache.log4j.Logger;
-
-import ca.nrc.cadc.vos.client.VOSpaceClient;
-import ca.nrc.cadc.vos.util.NodeUtil;
+import org.junit.After;
+import org.junit.AfterClass;
+import org.junit.Before;
+import org.junit.BeforeClass;
+import org.junit.Test;
 
 /**
  * @author zhangsa
  *
  */
-public class Transfer implements Runnable
+public class TestUpload
 {
-    private static Logger log = Logger.getLogger(Transfer.class);
+    Upload sul;
+
     /**
-     * Transfer Directions
+     * @throws java.lang.Exception
      */
-    public enum Direction {
-        pushToVoSpace, pullToVoSpace, pushFromVoSpace, pullFromVoSpace;
-    }
-
-    protected Direction direction;
-
-    // Reqeust member variables
-    protected String serviceUrl;
-    protected Node target;
-    protected View view;
-    protected List<Protocol> protocols;
-    protected boolean keepBytes;
-
-    public Transfer()
+    @BeforeClass
+    public static void setUpBeforeClass() throws Exception
     {
     }
 
-    public void doUpload(File file)
+    /**
+     * @throws java.lang.Exception
+     */
+    @AfterClass
+    public static void tearDownAfterClass() throws Exception
     {
-        URL url;
-        try
-        {
-            url = new URL(getUploadEndpoint());
-        }
-        catch (MalformedURLException e)
-        {
-            log.error("get putEndpoint");
-            e.printStackTrace();
-            throw new IllegalArgumentException(e);
-        }
-        log.debug(url);
-        
-        Upload upload = new Upload(file, url);
-        upload.run();
     }
 
-    public String getUploadEndpoint() 
+    /**
+     * @throws java.lang.Exception
+     */
+    @Before
+    public void setUp() throws Exception
     {
-        return getEndpoint(VOS.PROTOCOL_HTTP_PUT);
+        this.sul = new Upload(null, null);
     }
 
-    public String getDownloadEndpoint() 
+    /**
+     * @throws java.lang.Exception
+     */
+    @After
+    public void tearDown() throws Exception
     {
-        String rtn = null;
-        rtn = getEndpoint(VOS.PROTOCOL_HTTP_GET);
-        return rtn;
     }
 
-    public String getEndpoint(String strProtocol) 
+    @Test
+    public void testIoLoop() throws Exception
     {
-        String rtn = null;
-        if (this.protocols != null)
-        {
-            for (Protocol p : this.protocols)
-            {
-                if (p.getUri().equalsIgnoreCase(strProtocol)) {
-                    rtn = p.getEndpoint();
-                    break;
-                }
-            }
-        }
-        return rtn;
+        File f1 = new File ("/tmp/sul1");
+        File f2 = new File ("/tmp/sul2");
+        f2.deleteOnExit();
+        FileInputStream fi = new FileInputStream(f1);
+        FileOutputStream fo = new FileOutputStream(f2);
+        int bufferSize = 4096;
+        sul.ioLoop(fi, fo, bufferSize);
     }
-
-    public String getPhase()
-    {
-        throw new UnsupportedOperationException("Feature under construction.");
-    }
-
-    public String getResults()
-    {
-        //TODO
-        return null;
-        //throw new UnsupportedOperationException("Feature under construction.");
-    }
-
-    public String getErrors()
-    {
-        throw new UnsupportedOperationException("Feature under construction.");
-    }
-
-    public void run()
-    {
-        throw new UnsupportedOperationException("Feature under construction.");
-    }
-
-    public String toXmlString()
-    {
-        String rtn = null;
-        try
-        {
-            TransferWriter writer = new TransferWriter(this);
-            StringWriter sw = new StringWriter();
-            writer.writeTo(sw);
-            rtn = sw.toString();
-            sw.close();
-        } catch (IOException e)
-        {
-            e.printStackTrace();
-            throw new RuntimeException(e);
-        }
-        return rtn;
-    }
-
-    public Direction getDirection()
-    {
-        return direction;
-    }
-
-    public void setDirection(Direction direction)
-    {
-        this.direction = direction;
-    }
-
-    public String getServiceUrl()
-    {
-        return serviceUrl;
-    }
-
-    public void setServiceUrl(String serviceUrl)
-    {
-        this.serviceUrl = serviceUrl;
-    }
-
-    public Node getTarget()
-    {
-        return target;
-    }
-
-    public void setTarget(Node target)
-    {
-        this.target = target;
-    }
-
-    public View getView()
-    {
-        return view;
-    }
-
-    public void setView(View view)
-    {
-        this.view = view;
-    }
-
-    public List<Protocol> getProtocols()
-    {
-        return protocols;
-    }
-
-    public void setProtocols(List<Protocol> protocols)
-    {
-        this.protocols = protocols;
-    }
-
-    public boolean isKeepBytes()
-    {
-        return keepBytes;
-    }
-
-    public void setKeepBytes(boolean keepBytes)
-    {
-        this.keepBytes = keepBytes;
-    }
-
-
 }
