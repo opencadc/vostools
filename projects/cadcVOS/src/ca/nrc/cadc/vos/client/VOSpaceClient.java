@@ -74,17 +74,13 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.io.OutputStreamWriter;
-import java.io.StringWriter;
 import java.net.HttpURLConnection;
 import java.net.URL;
 import java.util.List;
 
-import javax.net.ssl.HttpsURLConnection;
-
 import org.apache.log4j.Logger;
 import org.jdom.JDOMException;
 
-import ca.nrc.cadc.util.ArgumentMap;
 import ca.nrc.cadc.uws.ExecutionPhase;
 import ca.nrc.cadc.uws.Job;
 import ca.nrc.cadc.uws.JobReader;
@@ -128,28 +124,28 @@ public class VOSpaceClient
         {
             URL url = new URL(this.baseUrl + "/nodes/" + node.getPath());
             log.debug(url);
-            HttpsURLConnection httpsCon = (HttpsURLConnection) url.openConnection();
-            httpsCon.setDoOutput(true);
-            httpsCon.setRequestMethod("PUT");
-            //httpsCon.setRequestProperty("Content-Type", "application/x-www-form-urlencoded");
-            //httpsCon.setRequestProperty("Content-Language", "en-US");
-            httpsCon.setUseCaches(false);
-            httpsCon.setDoInput(true);
-            httpsCon.setDoOutput(true);
+            HttpURLConnection connection = (HttpURLConnection) url.openConnection();
+            connection.setDoOutput(true);
+            connection.setRequestMethod("PUT");
+            //connection.setRequestProperty("Content-Type", "application/x-www-form-urlencoded");
+            //connection.setRequestProperty("Content-Language", "en-US");
+            connection.setUseCaches(false);
+            connection.setDoInput(true);
+            connection.setDoOutput(true);
 
-            OutputStreamWriter out = new OutputStreamWriter(httpsCon.getOutputStream());
+            OutputStreamWriter out = new OutputStreamWriter(connection.getOutputStream());
             NodeWriter nodeWriter = new NodeWriter();
             nodeWriter.write(node, out);
             out.close();
 
             log.debug(NodeUtil.xmlString(node));
 
-            String responseMessage = httpsCon.getResponseMessage();
-            responseCode = httpsCon.getResponseCode();
+            String responseMessage = connection.getResponseMessage();
+            responseCode = connection.getResponseCode();
             switch (responseCode)
             {
             case 201: // valid
-                InputStream in = httpsCon.getInputStream();
+                InputStream in = connection.getInputStream();
 
                 BufferedReader br = new BufferedReader(new InputStreamReader(in));
                 StringBuffer sb = new StringBuffer();
@@ -189,7 +185,7 @@ public class VOSpaceClient
                 // if the user does not have permissions to perform the operation
             default:
                 log.error(responseMessage + ". HTTP Code: " + responseCode);
-                InputStream errStrm = httpsCon.getErrorStream();
+                InputStream errStrm = connection.getErrorStream();
                 br = new BufferedReader(new InputStreamReader(errStrm));
                 while ((line = br.readLine()) != null)
                 {
@@ -227,21 +223,21 @@ public class VOSpaceClient
         {
             URL url = new URL(this.baseUrl + "/nodes/" + path);
             log.debug(url);
-            HttpsURLConnection httpsCon = (HttpsURLConnection) url.openConnection();
-            httpsCon.setDoOutput(true);
-            httpsCon.setRequestMethod("GET");
-            //httpsCon.setRequestProperty("Content-Type", "application/x-www-form-urlencoded");
-            //httpsCon.setRequestProperty("Content-Language", "en-US");
-            httpsCon.setUseCaches(false);
-            httpsCon.setDoInput(true);
-            httpsCon.setDoOutput(false);
+            HttpURLConnection connection = (HttpURLConnection) url.openConnection();
+            connection.setDoOutput(true);
+            connection.setRequestMethod("GET");
+            //connection.setRequestProperty("Content-Type", "application/x-www-form-urlencoded");
+            //connection.setRequestProperty("Content-Language", "en-US");
+            connection.setUseCaches(false);
+            connection.setDoInput(true);
+            connection.setDoOutput(false);
 
-            String responseMessage = httpsCon.getResponseMessage();
-            responseCode = httpsCon.getResponseCode();
+            String responseMessage = connection.getResponseMessage();
+            responseCode = connection.getResponseCode();
             switch (responseCode)
             {
             case 200: // valid
-                InputStream in = httpsCon.getInputStream();
+                InputStream in = connection.getInputStream();
 
                 BufferedReader br = new BufferedReader(new InputStreamReader(in));
                 StringBuffer sb = new StringBuffer();
@@ -292,29 +288,29 @@ public class VOSpaceClient
         {
             URL url = new URL(this.baseUrl + "/nodes/" + node.getPath());
             log.debug(url);
-            HttpsURLConnection httpsCon = (HttpsURLConnection) url.openConnection();
-            httpsCon.setDoOutput(true);
-            httpsCon.setRequestMethod("POST");
-            //httpsCon.setRequestProperty("Content-Type", "application/x-www-form-urlencoded");
-            //httpsCon.setRequestProperty("Content-Language", "en-US");
-            httpsCon.setUseCaches(false);
-            httpsCon.setDoInput(true);
-            httpsCon.setDoOutput(true);
+            HttpURLConnection connection = (HttpURLConnection) url.openConnection();
+            connection.setDoOutput(true);
+            connection.setRequestMethod("POST");
+            //connection.setRequestProperty("Content-Type", "application/x-www-form-urlencoded");
+            //connection.setRequestProperty("Content-Language", "en-US");
+            connection.setUseCaches(false);
+            connection.setDoInput(true);
+            connection.setDoOutput(true);
 
-            OutputStreamWriter out = new OutputStreamWriter(httpsCon.getOutputStream());
+            OutputStreamWriter out = new OutputStreamWriter(connection.getOutputStream());
             NodeWriter nodeWriter = new NodeWriter();
             nodeWriter.write(node, out);
             out.close();
 
             log.debug(NodeUtil.xmlString(node));
 
-            String responseMessage = httpsCon.getResponseMessage();
-            responseCode = httpsCon.getResponseCode();
+            String responseMessage = connection.getResponseMessage();
+            responseCode = connection.getResponseCode();
 
             switch (responseCode)
             {
             case 200: // valid
-                InputStream in = httpsCon.getInputStream();
+                InputStream in = connection.getInputStream();
                 NodeReader nodeReader = new NodeReader();
                 rtnNode = nodeReader.read(in);
                 in.close();
@@ -334,7 +330,7 @@ public class VOSpaceClient
                 // if the user does not have permissions to perform the operation
             default:
                 log.error(responseMessage + ". HTTP Code: " + responseCode);
-                InputStream errStrm = httpsCon.getErrorStream();
+                InputStream errStrm = connection.getErrorStream();
                 BufferedReader br = new BufferedReader(new InputStreamReader(errStrm));
                 String line;
                 while ((line = br.readLine()) != null)
@@ -391,25 +387,25 @@ public class VOSpaceClient
         {
             URL url = new URL(this.baseUrl + "/transfers");
             log.debug(url);
-            
-            HttpsURLConnection httpsCon = (HttpsURLConnection) url.openConnection();
-            httpsCon.setDoOutput(true);
-            httpsCon.setRequestMethod("POST");
-            //httpsCon.setRequestProperty("Content-Type", "application/x-www-form-urlencoded");
-            //httpsCon.setRequestProperty("Content-Language", "en-US");
-            httpsCon.setUseCaches(false);
-            httpsCon.setDoInput(true);
-            httpsCon.setDoOutput(true);
-            
-            OutputStreamWriter out = new OutputStreamWriter(httpsCon.getOutputStream());
+
+            HttpURLConnection connection = (HttpURLConnection) url.openConnection();
+            connection.setDoOutput(true);
+            connection.setRequestMethod("POST");
+            //connection.setRequestProperty("Content-Type", "application/x-www-form-urlencoded");
+            //connection.setRequestProperty("Content-Language", "en-US");
+            connection.setUseCaches(false);
+            connection.setDoInput(true);
+            connection.setDoOutput(true);
+
+            OutputStreamWriter out = new OutputStreamWriter(connection.getOutputStream());
             JobWriter jobWriter = new JobWriter(job);
             jobWriter.writeTo(out);
             out.close();
 
             log.debug(NodeUtil.xmlString(job));
 
-            String redirectLocation = getRedirectLocation(httpsCon);
-            
+            String redirectLocation = getRedirectLocation(connection);
+
             if (direction == Transfer.Direction.pushToVoSpace)
             {
                 URL urlRedirect = new URL(redirectLocation);
@@ -452,20 +448,20 @@ public class VOSpaceClient
     }
 
     /**
-     * @param httpsCon
+     * @param connection
      * @return
      * @throws IOException 
      */
-    private String getRedirectLocation(HttpsURLConnection httpsCon) throws IOException
+    private String getRedirectLocation(HttpURLConnection connection) throws IOException
     {
         // Check response code from tapServer, should be 303.
-        String responseMessage = httpsCon.getResponseMessage();
-        int responseCode = httpsCon.getResponseCode();
+        String responseMessage = connection.getResponseMessage();
+        int responseCode = connection.getResponseCode();
         log.debug("responseCode: " + responseCode);
         if (responseCode != HttpURLConnection.HTTP_SEE_OTHER)
         {
             log.error(responseMessage + ". HTTP Code: " + responseCode);
-            InputStream inStrm = httpsCon.getInputStream();
+            InputStream inStrm = connection.getInputStream();
             BufferedReader br = new BufferedReader(new InputStreamReader(inStrm));
             String line;
             while ((line = br.readLine()) != null)
@@ -479,7 +475,7 @@ public class VOSpaceClient
         }
 
         // Get the redirect Location header.
-        String location = httpsCon.getHeaderField("Location");
+        String location = connection.getHeaderField("Location");
         log.debug("Location: " + location);
         if (location == null || location.length() == 0)
         {
@@ -600,17 +596,17 @@ public class VOSpaceClient
         {
             URL url = new URL(this.baseUrl + "/nodes/" + path);
             log.debug(url);
-            HttpsURLConnection httpsCon = (HttpsURLConnection) url.openConnection();
-            httpsCon.setDoOutput(true);
-            httpsCon.setRequestMethod("DELETE");
-            //httpsCon.setRequestProperty("Content-Type", "application/x-www-form-urlencoded");
-            //httpsCon.setRequestProperty("Content-Language", "en-US");
-            httpsCon.setUseCaches(false);
-            httpsCon.setDoInput(true);
-            httpsCon.setDoOutput(false);
+            HttpURLConnection connection = (HttpURLConnection) url.openConnection();
+            connection.setDoOutput(true);
+            connection.setRequestMethod("DELETE");
+            //connection.setRequestProperty("Content-Type", "application/x-www-form-urlencoded");
+            //connection.setRequestProperty("Content-Language", "en-US");
+            connection.setUseCaches(false);
+            connection.setDoInput(true);
+            connection.setDoOutput(false);
 
-            String responseMessage = httpsCon.getResponseMessage();
-            responseCode = httpsCon.getResponseCode();
+            String responseMessage = connection.getResponseMessage();
+            responseCode = connection.getResponseCode();
             switch (responseCode)
             {
             case 200: // successful
@@ -640,7 +636,7 @@ public class VOSpaceClient
                  */
             default:
                 log.error(responseMessage + ". HTTP Code: " + responseCode);
-                InputStream errStrm = httpsCon.getErrorStream();
+                InputStream errStrm = connection.getErrorStream();
                 BufferedReader br = new BufferedReader(new InputStreamReader(errStrm));
                 String line;
                 while ((line = br.readLine()) != null)

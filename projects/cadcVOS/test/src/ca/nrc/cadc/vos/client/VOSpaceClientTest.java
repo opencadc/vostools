@@ -144,7 +144,7 @@ public class VOSpaceClientTest
     {
     }
 
-    //@Test
+    @Test
     public void testSetNode() throws Exception
     {
         String slashPath1 = "/" + ROOT_NODE + TestUtil.uniqueStringOnTime();
@@ -181,7 +181,7 @@ public class VOSpaceClientTest
         Assert.assertEquals(newUniqueValue2, propValue2);
     }
 
-    //@Test
+    @Test
     public void testDeleteNode() throws Exception
     {
         String slashPath1 = "/" + ROOT_NODE + TestUtil.uniqueStringOnTime();
@@ -205,7 +205,7 @@ public class VOSpaceClientTest
         Assert.assertEquals(exceptionThrown, true);
     }
 
-    //@Test
+    @Test
     public void testGetNode() throws Exception
     {
         String slashPath1 = "/" + ROOT_NODE + TestUtil.uniqueStringOnTime();
@@ -221,7 +221,7 @@ public class VOSpaceClientTest
         Assert.assertEquals(nodeRtn.getPath(), nodeRtn2.getPath());
     }
 
-    //@Test
+    @Test
     public void testCreateContainerNode() throws Exception
     {
         String slashPath1 = "/" + ROOT_NODE + TestUtil.uniqueStringOnTime();
@@ -233,7 +233,7 @@ public class VOSpaceClientTest
         Assert.assertEquals("/" + nodeRtn.getPath(), slashPath1);
     }
 
-    //@Test
+    @Test
     public void testCreateSemanticContainerNode() throws Exception
     {
         String dir1 = TestUtil.uniqueStringOnTime();
@@ -266,7 +266,7 @@ public class VOSpaceClientTest
         Assert.assertEquals(nodes2.size(), 2);
     }
 
-    //@Test
+    @Test
     public void testCreateDataNode() throws Exception
     {
         String slashPath1 = "/" + ROOT_NODE + TestUtil.uniqueStringOnTime();
@@ -278,7 +278,7 @@ public class VOSpaceClientTest
         Assert.assertEquals("/" + nodeRtn.getPath(), slashPath1);
     }
 
-    ////@Test
+    //@Test
     public void testPushToVoSpace() throws Exception
     {
         String slashPath1 = "/" + ROOT_NODE + TestUtil.uniqueStringOnTime();
@@ -299,7 +299,7 @@ public class VOSpaceClientTest
         log.debug(transferRtn.toXmlString());
     }
 
-    @Test
+    //@Test
     public void testPullFromVoSpace() throws Exception
     {
         String slashPath1 = "/" + ROOT_NODE + TestUtil.uniqueStringOnTime();
