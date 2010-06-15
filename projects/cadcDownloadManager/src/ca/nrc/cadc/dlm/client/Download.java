@@ -109,12 +109,12 @@ public class Download implements Runnable
     public boolean decompress = false;  
     public boolean overwrite = false;
     public File destDir = null;
-    
+    public String suggestedFilename = null;
+
     // state that gets set as the Download is setup/run/completed
     private File origFile;
     private File decompFile;
     private File removeFile;
-    private String suggestedFilename;
     private int decompressor;
     
     // state that observer(s) might be interested in
@@ -430,17 +430,17 @@ public class Download implements Runnable
         // determine filename
         String origFilename = null;
 
-        // use supplied filename if present in http header
+	// first option: use what the caller suggested
+	if (origFilename == null)
+		origFilename = suggestedFilename;
+        
+	// second option: use supplied filename if present in http header
         String cdisp = conn.getHeaderField("Content-Disposition");
         msg("HTTP HEAD: Content-Disposition = " + cdisp);
         if ( cdisp != null )
             origFilename = parseContentDisposition(cdisp);
 
-        // second option: use what the caller suggested
-        if (origFilename == null)
-            origFilename = suggestedFilename;
-
-        // last resort: pull something from the URL
+        // last resort: pull something from the end of the URL
         if (origFilename == null)
         {
             String s = url.getPath();
