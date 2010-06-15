@@ -69,11 +69,11 @@ package ca.nrc.cadc.gms.web.xml;
 import org.jdom.Document;
 import org.jdom.output.XMLOutputter;
 
+import ca.nrc.cadc.gms.WriterException;
+
 import java.io.OutputStreamWriter;
 import java.io.OutputStream;
 import java.io.IOException;
-
-import ca.nrc.cadc.gms.WriterException;
 
 
 public abstract class AbstractOutputStreamWriterImpl
@@ -103,9 +103,7 @@ public abstract class AbstractOutputStreamWriterImpl
             buildDocument(document);
 
             final XMLOutputter xmlOutputter = new XMLOutputter();
-            final String xmlOutput = xmlOutputter.outputString(document);
-
-            write(xmlOutput, 0, xmlOutput.length());
+            xmlOutputter.output(document, this);
         }
         catch (IOException ie)
         {

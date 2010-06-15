@@ -67,6 +67,7 @@
 package ca.nrc.cadc.gms;
 
 import ca.nrc.cadc.gms.GMSTest;
+import ca.nrc.cadc.gms.web.xml.XMLWriter;
 
 
 public abstract class AbstractXMLWriterTest<R extends XMLWriter>

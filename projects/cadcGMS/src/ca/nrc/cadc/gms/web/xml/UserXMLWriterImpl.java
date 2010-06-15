@@ -66,13 +66,13 @@
  */
 package ca.nrc.cadc.gms.web.xml;
 
-import ca.nrc.cadc.gms.User;
-
 import java.io.OutputStream;
 import java.io.IOException;
 
 import org.jdom.Element;
 import org.jdom.Document;
+
+import ca.nrc.cadc.gms.User;
 
 
 public class UserXMLWriterImpl

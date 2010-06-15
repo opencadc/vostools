@@ -66,8 +66,6 @@
  */
 package ca.nrc.cadc.gms.web.xml;
 
-import ca.nrc.cadc.gms.ReaderException;
-
 import java.io.InputStreamReader;
 import java.io.InputStream;
 import java.io.IOException;
@@ -77,6 +75,8 @@ import java.util.Arrays;
 import org.jdom.Document;
 import org.jdom.JDOMException;
 import org.jdom.input.SAXBuilder;
+
+import ca.nrc.cadc.gms.ReaderException;
 
 
 public abstract class AbstractInputStreamReaderImpl extends InputStreamReader
@@ -139,7 +139,9 @@ public abstract class AbstractInputStreamReaderImpl extends InputStreamReader
     protected Document parse(final StringBuilder xml)
             throws IOException, JDOMException
     {
+        // TODO - Turn on validation once the XML is sound!
         final SAXBuilder parser = new SAXBuilder(false);
+        
         return parser.build(new StringReader(xml.toString()));
     }
 

@@ -67,6 +67,8 @@
 package ca.nrc.cadc.gms;
 
 import ca.nrc.cadc.gms.User;
+import ca.nrc.cadc.gms.web.xml.UserXMLWriter;
+
 import org.junit.Test;
 import static org.junit.Assert.*;
 import static org.easymock.EasyMock.*;

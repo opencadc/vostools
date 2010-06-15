@@ -73,11 +73,11 @@ import java.io.OutputStream;
 import java.io.InputStream;
 
 import ca.nrc.cadc.gms.service.UserService;
+import ca.nrc.cadc.gms.web.xml.UserXMLReader;
+import ca.nrc.cadc.gms.web.xml.UserXMLReaderImpl;
+import ca.nrc.cadc.gms.web.xml.UserXMLWriter;
+import ca.nrc.cadc.gms.web.xml.UserXMLWriterImpl;
 import ca.nrc.cadc.gms.User;
-import ca.nrc.cadc.gms.UserXMLWriter;
-import ca.nrc.cadc.gms.UserXMLWriterImpl;
-import ca.nrc.cadc.gms.UserXMLReader;
-import ca.nrc.cadc.gms.UserXMLReaderImpl;
 
 
 public class MemberResource extends AbstractResource

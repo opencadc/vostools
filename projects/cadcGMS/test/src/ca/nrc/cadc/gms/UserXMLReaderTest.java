@@ -67,6 +67,8 @@
 package ca.nrc.cadc.gms;
 
 import org.junit.Test;
+
+import ca.nrc.cadc.gms.web.xml.UserXMLReader;
 import static org.junit.Assert.*;
 
 

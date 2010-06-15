@@ -72,8 +72,8 @@ import org.w3c.dom.Document;
 import org.w3c.dom.Element;
 import ca.nrc.cadc.gms.service.UserService;
 import ca.nrc.cadc.gms.service.GroupService;
+import ca.nrc.cadc.gms.web.xml.UserXMLWriter;
 import ca.nrc.cadc.gms.User;
-import ca.nrc.cadc.gms.UserXMLWriter;
 
 import java.io.OutputStream;
 import java.io.ByteArrayOutputStream;

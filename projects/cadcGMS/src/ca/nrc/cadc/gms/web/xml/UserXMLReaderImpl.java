@@ -66,14 +66,14 @@
  */
 package ca.nrc.cadc.gms.web.xml;
 
-import ca.nrc.cadc.gms.User;
-import ca.nrc.cadc.gms.UserImpl;
-
 import java.io.InputStream;
 import java.io.IOException;
 
 import org.jdom.Document;
 import org.jdom.Element;
+
+import ca.nrc.cadc.gms.User;
+import ca.nrc.cadc.gms.UserImpl;
 
 
 /**

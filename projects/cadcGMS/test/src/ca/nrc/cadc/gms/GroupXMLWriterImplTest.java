@@ -72,6 +72,8 @@ import static org.easymock.EasyMock.*;
 import java.io.OutputStream;
 import java.io.ByteArrayOutputStream;
 
+import ca.nrc.cadc.gms.web.xml.GroupXMLWriterImpl;
+
 
 public class GroupXMLWriterImplTest extends GroupXMLWriterTest
 {

@@ -68,6 +68,8 @@ package ca.nrc.cadc.gms;
 
 
 import org.junit.Test;
+
+import ca.nrc.cadc.gms.web.xml.GroupXMLWriter;
 import static org.junit.Assert.*;
 import static org.easymock.EasyMock.*;
 

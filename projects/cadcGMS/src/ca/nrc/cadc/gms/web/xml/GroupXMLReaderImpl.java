@@ -68,11 +68,11 @@ package ca.nrc.cadc.gms.web.xml;
 
 import org.jdom.Document;
 
-import java.io.IOException;
-import java.io.InputStream;
-
 import ca.nrc.cadc.gms.Group;
 import ca.nrc.cadc.gms.GroupImpl;
+
+import java.io.IOException;
+import java.io.InputStream;
 
 
 /**

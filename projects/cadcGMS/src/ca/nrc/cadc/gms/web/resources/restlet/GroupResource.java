@@ -67,12 +67,12 @@
 package ca.nrc.cadc.gms.web.resources.restlet;
 
 import ca.nrc.cadc.gms.service.GroupService;
+import ca.nrc.cadc.gms.web.xml.UserXMLReader;
+import ca.nrc.cadc.gms.web.xml.UserXMLReaderImpl;
+import ca.nrc.cadc.gms.web.xml.UserXMLWriter;
+import ca.nrc.cadc.gms.web.xml.UserXMLWriterImpl;
 import ca.nrc.cadc.gms.Group;
 import ca.nrc.cadc.gms.User;
-import ca.nrc.cadc.gms.UserXMLWriter;
-import ca.nrc.cadc.gms.UserXMLWriterImpl;
-import ca.nrc.cadc.gms.UserXMLReader;
-import ca.nrc.cadc.gms.UserXMLReaderImpl;
 import org.w3c.dom.Document;
 import org.restlet.resource.Post;
 import org.restlet.resource.Put;
