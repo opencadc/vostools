@@ -1,4 +1,4 @@
-<!--
+/*
 ************************************************************************
 *******************  CANADIAN ASTRONOMY DATA CENTRE  *******************
 **************  CENTRE CANADIEN DE DONNÉES ASTRONOMIQUES  **************
@@ -65,98 +65,75 @@
 *  $Revision: 4 $
 *
 ************************************************************************
--->
+*/
 
-	
-<project default="build" basedir=".">
-  <property environment="env"/>
+package ca.nrc.cadc.vos;
 
-    <!-- site-specific build properties or overrides of values in opencadc.properties -->
-    <property file="${env.CADC_PREFIX}/etc/local.properties" />
+import java.io.File;
+import java.net.MalformedURLException;
+import java.net.URL;
 
-    <!-- site-specific targets, e.g. install, cannot duplicate those in opencadc.targets.xml -->
-    <import file="${env.CADC_PREFIX}/etc/local.targets.xml" optional="true" />
+import org.apache.log4j.Logger;
 
-    <!-- default properties and targets -->
-    <property file="${env.CADC_PREFIX}/etc/opencadc.properties" />
-    <import file="${env.CADC_PREFIX}/etc/opencadc.targets.xml"/>
+import ca.nrc.cadc.dlm.client.Download;
 
-    <!-- developer convenience: place for extra targets and properties -->
-    <import file="extras.xml" optional="true" />
+/**
+ * @author zhangsa
+ *
+ */
+public class ClientTransfer extends Transfer
+{
+    private static Logger log = Logger.getLogger(ClientTransfer.class);
 
-    <property name="project" value="cadcVOS" />
+    /**
+     * 
+     */
+    public ClientTransfer()
+    {
+        super();
+    }
 
-    <property name="cadcUtil" value="${lib}/cadcUtil.jar" />
-    <property name="cadcUWS" value="${lib}/cadcUWS.jar" />
-    <property name="cadcDownloadManagerClient" value="${lib}/cadcDownloadManagerClient.jar" />
-    
+    public void doUpload(File file)
+    {
+        URL url;
+        try
+        {
+            url = new URL(super.getUploadEndpoint());
+        }
+        catch (MalformedURLException e)
+        {
+            log.error("get putEndpoint");
+            e.printStackTrace();
+            throw new IllegalArgumentException(e);
+        }
+        log.debug(url);
+        
+        Upload upload = new Upload(file, url);
+        upload.run();
+    }
 
-    <property name="ext.restlet" value="${ext.lib}/org.restlet.jar" />
-    <property name="ext.restlet.ext" value="${ext.lib}/org.restlet.ext.servlet.jar" />
-    <property name="ext.log4j" value="${ext.lib}/log4j.jar" />
-    <property name="ext.spring" value="${ext.lib}/spring.jar" />
-    <property name="ext.jdom" value="${ext.lib}/jdom.jar" />
+    public void doDownload(File file)
+    {
+        File dir = file.getParentFile();
+        String fname = file.getName();
+        URL url;
+        try
+        {
+            url = new URL(super.getDownloadEndpoint());
+        }
+        catch (MalformedURLException e)
+        {
+            log.error("get putEndpoint");
+            e.printStackTrace();
+            throw new IllegalArgumentException(e);
+        }
+        log.debug(url);
 
-    <property name="jars" value="${ext.restlet}:${ext.restlet.ext}:${ext.log4j}:${ext.spring}:${ext.jdom}:${cadcUtil}:${cadcUWS}:${cadcDownloadManagerClient}" />
+        Download download = new Download();
+        download.destDir = dir;
+        download.suggestedFilename = fname;
+        download.url = url;
+        download.run();
+    }
 
-    <target name="build" depends="compile">
-        <copy file="src/resources/VOSpace-2.0.xsd" todir="build/class"/>
-        <jar jarfile="${build}/lib/${project}.jar"
-            basedir="${build}/class"
-            update="no">
-            <include name="ca/nrc/cadc/**" />
-            <include name="VOSpace-2.0.xsd" />
-        </jar>
-    </target>
-
-    <!-- JAR files needed to run the test suite -->
-    <property name="cadcVOS" value="${build}/lib/${project}.jar" />
-    <property name="junit" value="${ext.lib}/junit.jar" />
-    <property name="xerces" value="${ext.lib}/xerces.jar" />
-    <property name="dev.easyMock" value="${ext.dev}/easymock.jar" />
-    <property name="dev.easyMock.classextension" value="${ext.dev}/easymockclassextension.jar" />
-    <property name="dev.objenesis" value="${ext.dev}/objenesis.jar" />
-    <property name="dev.asm" value="${ext.dev}/asm.jar" />
-    <property name="dev.cglib" value="${ext.dev}/cglib.jar" />
-    <property name="javaUtil" value="${lib}/javaUtil.jar" />
-
-    <property name="testingJars"
-              value="${cadcVOS}:${cadcUtil}:${javaUtil}:${junit}:${xerces}:${dev.easyMock}:${dev.easyMock.classextension}:${dev.objenesis}:${dev.asm}:${dev.cglib}" />
-
-    <!-- compile the test classes -->
-    <target name="compile-test" depends="compile">
-        <javac destdir="${build}/class"
-               source="${java.source.version}"
-               target="${java.target.version}"
-               classpath="${jars}:${testingJars}" >
-            <src path="test/src"/>
-        </javac>
-    </target>
-    
-    <!-- create jar file with test classes for clients to use -->
-    <target name="build-test" depends="compile-test">
-        <jar jarfile="${build}/lib/${project}.jar"
-            basedir="${build}/class"
-            update="no">
-            <include name="ca/nrc/cadc/**" />
-        </jar>
-    </target>
-
-    <!-- Run the test suite -->
-    <target name="test" depends="compile,compile-test">
-        <copy file="test/src/resources/ContainerNode.xml" todir="build/class"/>
-        <copy file="test/src/resources/DataNode.xml" todir="build/class"/>
-        <junit printsummary="yes" haltonfailure="yes" fork="yes">
-            <classpath>
-                <pathelement path="src"/>
-                <pathelement path="test/src"/>
-                <pathelement path="${resources.dir}"/>
-                <pathelement path="build/class"/>
-                <pathelement path="${jars}:${testingJars}"/>
-            </classpath>
-            <formatter type="plain" usefile="false"/>
-            <test name="ca.nrc.cadc.vos.CADCVOSTestSuite"/>
-        </junit>
-    </target>
-
-</project>
+}

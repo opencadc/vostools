@@ -69,11 +69,11 @@
 
 package ca.nrc.cadc.vos;
 
-import java.io.IOException;
-import java.io.StringWriter;
+import java.io.File;
 import java.util.Date;
 
 import ca.nrc.cadc.date.DateUtil;
+import ca.nrc.cadc.xml.XmlUtil;
 
 /**
  * @author zhangsa
@@ -89,8 +89,18 @@ public class TestUtil
         int strLen = strR.length();
         String strR2 = strR.substring(strLen - 4);
         String uniqueStringFormat = "MMMdd_HH.mm_";
-        String strD =  DateUtil.toString(new Date(), uniqueStringFormat, DateUtil.LOCAL);
-        return strD + strR2 ;
+        String strD = DateUtil.toString(new Date(), uniqueStringFormat, DateUtil.LOCAL);
+        return strD + strR2;
+    }
+
+    /**
+     * @return
+     */
+    public static File getTestFile()
+    {
+        String strUrl = XmlUtil.getResourceUrlString(VOS.XSD_FILE_NAME, VOS.class);
+        File testFile = new File(strUrl);
+        return testFile;
     }
 
 }

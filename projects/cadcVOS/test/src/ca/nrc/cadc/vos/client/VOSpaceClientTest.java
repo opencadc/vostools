@@ -69,6 +69,8 @@
 
 package ca.nrc.cadc.vos.client;
 
+import java.io.File;
+import java.net.URL;
 import java.util.ArrayList;
 import java.util.Date;
 import java.util.List;
@@ -84,12 +86,15 @@ import org.junit.BeforeClass;
 import org.junit.Test;
 
 import ca.nrc.cadc.date.DateUtil;
+import ca.nrc.cadc.util.FileUtil;
 import ca.nrc.cadc.util.Log4jInit;
+import ca.nrc.cadc.vos.ClientTransfer;
 import ca.nrc.cadc.vos.ContainerNode;
 import ca.nrc.cadc.vos.DataNode;
 import ca.nrc.cadc.vos.DataView;
 import ca.nrc.cadc.vos.Node;
 import ca.nrc.cadc.vos.NodeProperty;
+import ca.nrc.cadc.vos.NodeReader;
 import ca.nrc.cadc.vos.NodeWriterTest;
 import ca.nrc.cadc.vos.Protocol;
 import ca.nrc.cadc.vos.TestUtil;
@@ -97,6 +102,7 @@ import ca.nrc.cadc.vos.Transfer;
 import ca.nrc.cadc.vos.VOS;
 import ca.nrc.cadc.vos.VOSURI;
 import ca.nrc.cadc.vos.util.NodeUtil;
+import ca.nrc.cadc.xml.XmlUtil;
 
 /**
  * @author zhangsa
@@ -144,7 +150,7 @@ public class VOSpaceClientTest
     {
     }
 
-    @Test
+    //@Test
     public void testSetNode() throws Exception
     {
         String slashPath1 = "/" + ROOT_NODE + TestUtil.uniqueStringOnTime();
@@ -170,7 +176,7 @@ public class VOSpaceClientTest
         NodeProperty nodeProperty2 = new NodeProperty(VOS.PROPERTY_URI_COVERAGE, newUniqueValue2);
         nodeProperty2.setReadOnly(true);
         properties.add(nodeProperty2);
-        
+
         nodeRtn2.setProperties(properties);
 
         Node nodeRtn3 = client.setNode(nodeRtn2);
@@ -181,7 +187,7 @@ public class VOSpaceClientTest
         Assert.assertEquals(newUniqueValue2, propValue2);
     }
 
-    @Test
+    //@Test
     public void testDeleteNode() throws Exception
     {
         String slashPath1 = "/" + ROOT_NODE + TestUtil.uniqueStringOnTime();
@@ -205,7 +211,7 @@ public class VOSpaceClientTest
         Assert.assertEquals(exceptionThrown, true);
     }
 
-    @Test
+    //@Test
     public void testGetNode() throws Exception
     {
         String slashPath1 = "/" + ROOT_NODE + TestUtil.uniqueStringOnTime();
@@ -221,7 +227,7 @@ public class VOSpaceClientTest
         Assert.assertEquals(nodeRtn.getPath(), nodeRtn2.getPath());
     }
 
-    @Test
+    //@Test
     public void testCreateContainerNode() throws Exception
     {
         String slashPath1 = "/" + ROOT_NODE + TestUtil.uniqueStringOnTime();
@@ -233,7 +239,7 @@ public class VOSpaceClientTest
         Assert.assertEquals("/" + nodeRtn.getPath(), slashPath1);
     }
 
-    @Test
+    //@Test
     public void testCreateSemanticContainerNode() throws Exception
     {
         String dir1 = TestUtil.uniqueStringOnTime();
@@ -266,7 +272,7 @@ public class VOSpaceClientTest
         Assert.assertEquals(nodes2.size(), 2);
     }
 
-    @Test
+    //@Test
     public void testCreateDataNode() throws Exception
     {
         String slashPath1 = "/" + ROOT_NODE + TestUtil.uniqueStringOnTime();
@@ -278,9 +284,15 @@ public class VOSpaceClientTest
         Assert.assertEquals("/" + nodeRtn.getPath(), slashPath1);
     }
 
-    //@Test
-    public void testPushToVoSpace() throws Exception
+    
+    @Test
+    public ClientTransfer testPushToVoSpace() throws Exception
     {
+        File testFile = TestUtil.getTestFile();
+        Assert.assertNotNull(testFile);
+        log.debug(testFile.getAbsolutePath());
+        log.debug(testFile.getCanonicalPath());
+
         String slashPath1 = "/" + ROOT_NODE + TestUtil.uniqueStringOnTime();
         DataNode dnode = new DataNode(new VOSURI(VOS.VOS_URI + slashPath1));
         DataView dview = new DataView(VOS.VIEW_DEFAULT, dnode);
@@ -295,28 +307,38 @@ public class VOSpaceClientTest
         transfer.setProtocols(protocols);
         transfer.setDirection(Transfer.Direction.pushToVoSpace);
 
-        Transfer transferRtn = client.pushToVoSpace(transfer);
-        log.debug(transferRtn.toXmlString());
+        ClientTransfer clientTransfer = (ClientTransfer) client.pushToVoSpace(transfer);
+        log.debug(clientTransfer.toXmlString());
+
+        
+        clientTransfer.doUpload(testFile);
+        Node node = clientTransfer.getTarget();
+        Node nodeRtn = client.getNode(node.getPath());
+        log.debug(NodeUtil.xmlString(nodeRtn));
+        return clientTransfer;
     }
 
-    //@Test
+    ////@Test
     public void testPullFromVoSpace() throws Exception
     {
-        String slashPath1 = "/" + ROOT_NODE + TestUtil.uniqueStringOnTime();
-        DataNode dnode = new DataNode(new VOSURI(VOS.VOS_URI + slashPath1));
-        DataView dview = new DataView(VOS.VIEW_DEFAULT, dnode);
-
-        List<Protocol> protocols = new ArrayList<Protocol>();
-        Protocol protocol = new Protocol(VOS.PROTOCOL_HTTPS_GET, ENDPOINT, null);
-        protocols.add(protocol);
-
-        Transfer transfer = new Transfer();
-        transfer.setTarget(dnode);
-        transfer.setView(dview);
-        transfer.setProtocols(protocols);
+        ClientTransfer transfer = this.testPushToVoSpace();
         transfer.setDirection(Transfer.Direction.pullFromVoSpace);
-        Transfer transferRtn = client.pullFromVoSpace(transfer);
-        log.debug(transferRtn.toXmlString());
+        
+        ClientTransfer clientTransfer = (ClientTransfer) client.pullFromVoSpace(transfer);
+        log.debug(clientTransfer.toXmlString());
+        
+        File file = new File("/tmp/" + TestUtil.uniqueStringOnTime());
+        log.debug(file.getAbsolutePath());
+        log.debug(file.getCanonicalPath());
+        clientTransfer.doDownload(file);
+
+        File origFile = TestUtil.getTestFile();
+        Assert.assertNotNull(origFile);
+        log.debug(origFile.getAbsolutePath());
+        log.debug(origFile.getCanonicalPath());
+        
+        Assert.assertEquals(FileUtil.compare(origFile, file), true);
+        // file.delete();
     }
 
 }

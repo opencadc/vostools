@@ -114,25 +114,6 @@ public class Transfer implements Runnable
     {
     }
 
-    public void doUpload(File file)
-    {
-        URL url;
-        try
-        {
-            url = new URL(getUploadEndpoint());
-        }
-        catch (MalformedURLException e)
-        {
-            log.error("get putEndpoint");
-            e.printStackTrace();
-            throw new IllegalArgumentException(e);
-        }
-        log.debug(url);
-        
-        Upload upload = new Upload(file, url);
-        upload.run();
-    }
-
     public String getUploadEndpoint() 
     {
         return getEndpoint(VOS.PROTOCOL_HTTP_PUT);
