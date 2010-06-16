@@ -67,25 +67,51 @@
 ************************************************************************
 */
 
-package ca.nrc.cadc.vos;
+package ca.nrc.cadc.vos.server;
+
+import java.net.URISyntaxException;
+import java.util.List;
 
 import ca.nrc.cadc.vos.Node;
+import ca.nrc.cadc.vos.VOSURI;
 import ca.nrc.cadc.vos.View;
 
 /**
- * @author zhangsa
+ * Simple convenience extension of Node to allow for searching in
+ * the DAO.
+ * 
+ * @author majorb
  *
  */
-public class DataView extends View
+public class SearchNode extends Node
 {
-    /**
-     * @param uri
-     * @param node
-     */
-    public DataView(String uri, Node node)
+    
+    public SearchNode(String name)
     {
-        super(uri, node);
-        // TODO Auto-generated constructor stub
+        super(name);
+    }
+    
+    public SearchNode(VOSURI uri) throws URISyntaxException
+    {
+        super(uri);
+    }
+
+    @Override
+    public List<View> accepts()
+    {
+        return null;
+    }
+
+    @Override
+    public boolean isStructured()
+    {
+        return false;
+    }
+
+    @Override
+    public List<View> provides()
+    {
+        return null;
     }
 
 }

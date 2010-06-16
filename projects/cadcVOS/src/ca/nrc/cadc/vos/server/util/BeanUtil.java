@@ -67,25 +67,74 @@
 ************************************************************************
 */
 
-package ca.nrc.cadc.vos;
+package ca.nrc.cadc.vos.server.util;
 
-import ca.nrc.cadc.vos.Node;
-import ca.nrc.cadc.vos.View;
+import org.apache.log4j.Logger;
 
-/**
- * @author zhangsa
- *
- */
-public class DataView extends View
+import ca.nrc.cadc.vos.InvalidServiceException;
+
+public class BeanUtil
 {
+    
+    private static final Logger log = Logger.getLogger(BeanUtil.class);
+    
+    public static final String IVOA_VOS_URI =
+            "ivoa.vos.uri";
+    
+    public static final String VOS_NODE_PERSISTENCE =
+            "ca.nrc.cadc.vos.NodePersistence";
+
+    private String className;
+
+
     /**
-     * @param uri
-     * @param node
+     * Constructor for this Bean Util.
+     *
+     * @param className     The name of the Class to create.
      */
-    public DataView(String uri, Node node)
+    public BeanUtil(final String className)
     {
-        super(uri, node);
-        // TODO Auto-generated constructor stub
+        this.className = className;
+    }
+
+
+    /**
+     * Create the actual Object associated with this BeanUtil's class.
+     * @return      The Object instantiated.
+     */
+    public Object createBean() throws InvalidServiceException
+    {
+        try
+        {
+            return Class.forName(getClassName()).newInstance();
+        }
+        catch (ClassNotFoundException e)
+        {
+            log.error("No such bean >> " + getClassName(), e);
+            throw new InvalidServiceException("No such bean >> "
+                                              + getClassName(), e);
+        }
+        catch (IllegalAccessException e)
+        {
+            log.error("Class or Constructor is inaccessible for "
+                         + "bean  >> " + getClassName(), e);
+            throw new InvalidServiceException("Class or Constructor is "
+                                              + "inaccessible for bean "
+                                              + ">> " + getClassName(), e);
+        }
+        catch (InstantiationException e)
+        {
+            log.error("Cannot create bean instance >> "
+                         + getClassName(), e);
+            throw new InvalidServiceException("Cannot create bean instance >> "
+                                              + getClassName(), e);
+        }
+    }
+
+
+    public String getClassName()
+    {
+        return className;
     }
 
 }

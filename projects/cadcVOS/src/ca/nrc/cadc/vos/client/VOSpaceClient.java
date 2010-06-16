@@ -97,7 +97,6 @@ import ca.nrc.cadc.vos.ServerTransfer;
 import ca.nrc.cadc.vos.Transfer;
 import ca.nrc.cadc.vos.TransferReader;
 import ca.nrc.cadc.vos.View;
-import ca.nrc.cadc.vos.util.NodeUtil;
 
 /**
  * @author zhangsa
@@ -138,7 +137,7 @@ public class VOSpaceClient
             nodeWriter.write(node, out);
             out.close();
 
-            log.debug(NodeUtil.xmlString(node));
+            //log.debug(NodeUtil.xmlString(node));
 
             String responseMessage = connection.getResponseMessage();
             responseCode = connection.getResponseCode();
@@ -302,7 +301,7 @@ public class VOSpaceClient
             nodeWriter.write(node, out);
             out.close();
 
-            log.debug(NodeUtil.xmlString(node));
+            //log.debug(NodeUtil.xmlString(node));
 
             String responseMessage = connection.getResponseMessage();
             responseCode = connection.getResponseCode();
@@ -402,7 +401,7 @@ public class VOSpaceClient
             jobWriter.writeTo(out);
             out.close();
 
-            log.debug(NodeUtil.xmlString(job));
+            //log.debug(NodeUtil.xmlString(job));
 
             String redirectLocation = getRedirectLocation(connection);
 

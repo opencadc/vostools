@@ -67,25 +67,27 @@
 ************************************************************************
 */
 
-package ca.nrc.cadc.vos;
+package ca.nrc.cadc.vos.server.util;
 
 import ca.nrc.cadc.vos.Node;
-import ca.nrc.cadc.vos.View;
 
 /**
- * @author zhangsa
+ * Interface for objects wishing to be notified of each node whos 
+ * parent hierarchy is traversed from root to self.
+ *  
+ * @author majorb
  *
  */
-public class DataView extends View
+public interface NodeStackListener
 {
+    
     /**
-     * @param uri
-     * @param node
+     * A node in the heirartical stack is visisted.
+     * 
+     * @param node The visting node.
+     * @param isParentNode True if this node is a parent of
+     * the original target node.
      */
-    public DataView(String uri, Node node)
-    {
-        super(uri, node);
-        // TODO Auto-generated constructor stub
-    }
+    public void nodeVisited(Node node, boolean isParentNode);
 
 }

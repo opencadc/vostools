@@ -69,7 +69,7 @@
 
 package ca.nrc.cadc.vos.util;
 
-import java.util.Set;
+import ca.nrc.cadc.vos.server.util.FixedSizeTreeSet;
 import ca.nrc.cadc.util.Log4jInit;
 import org.apache.log4j.Level;
 import org.apache.log4j.Logger;

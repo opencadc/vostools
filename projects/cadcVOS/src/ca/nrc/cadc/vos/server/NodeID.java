@@ -67,25 +67,35 @@
 ************************************************************************
 */
 
-package ca.nrc.cadc.vos;
-
-import ca.nrc.cadc.vos.Node;
-import ca.nrc.cadc.vos.View;
+package ca.nrc.cadc.vos.server;
 
 /**
- * @author zhangsa
+ * Class used to hold the id of a Node in it's 'appId' memeber.
+ * 
+ * @author majorb
  *
  */
-public class DataView extends View
+public class NodeID
 {
+    // The node ID
+    private Long id;
+    
     /**
-     * @param uri
-     * @param node
+     * NodeID constructor.
+     * 
+     * @param id
      */
-    public DataView(String uri, Node node)
+    public NodeID(Long id)
     {
-        super(uri, node);
-        // TODO Auto-generated constructor stub
+        this.id = id;
     }
-
+    
+    /**
+     * @return The node ID.
+     */
+    public Long getId()
+    {
+        return id;
+    }
+    
 }

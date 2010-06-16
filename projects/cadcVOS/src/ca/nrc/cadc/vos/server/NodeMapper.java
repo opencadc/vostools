@@ -67,25 +67,129 @@
 ************************************************************************
 */
 
-package ca.nrc.cadc.vos;
+package ca.nrc.cadc.vos.server;
 
+import java.nio.charset.Charset;
+import java.sql.ResultSet;
+import java.sql.SQLException;
+import java.util.Date;
+
+import org.springframework.jdbc.core.RowMapper;
+
+import ca.nrc.cadc.date.DateUtil;
+import ca.nrc.cadc.vos.ContainerNode;
+import ca.nrc.cadc.vos.DataNode;
 import ca.nrc.cadc.vos.Node;
-import ca.nrc.cadc.vos.View;
+import ca.nrc.cadc.vos.NodeProperty;
+import ca.nrc.cadc.vos.VOS;
+import ca.nrc.cadc.vos.VOS.NodeBusyState;
 
 /**
- * @author zhangsa
- *
+ * Class to map a result set into a Node object.
  */
-public class DataView extends View
+public class NodeMapper implements RowMapper
 {
-    /**
-     * @param uri
-     * @param node
-     */
-    public DataView(String uri, Node node)
+    
+    public static String getDatabaseTypeRepresentation(Node node)
     {
-        super(uri, node);
-        // TODO Auto-generated constructor stub
+        if (node instanceof DataNode)
+        {
+            return "D";
+        }
+        if (node instanceof ContainerNode)
+        {
+            return "C";
+        }
+        throw new IllegalStateException("Unknown node type: " + node);
+    }
+
+    /**
+     * Map the row to the appropriate type of node object.
+     */
+    public Object mapRow(ResultSet rs, int rowNum) throws SQLException
+    {
+
+        long nodeID = rs.getLong("nodeID");
+        String name = rs.getString("name");
+        long parentID = rs.getLong("parentID");
+        
+        String busyString = rs.getString("busyState");
+        boolean markedForDeletion = rs.getBoolean("markedForDeletion");
+        
+        String groupRead = rs.getString("groupRead");
+        String groupWrite = rs.getString("groupWrite");
+        String owner = rs.getString("owner");
+        
+        long contentLength = rs.getLong("contentLength");
+        String contentType = rs.getString("contentType");
+        String contentEncoding = rs.getString("contentEncoding");
+        Object contentMD5 = rs.getObject("contentMD5");
+        Date lastModified = rs.getTimestamp("lastModified");
+        
+        ContainerNode parent = null;
+        if (parentID != 0)
+        {
+            parent = new ContainerNode();
+            parent.appData = new NodeID(parentID);
+        }
+
+        String typeString = rs.getString("type");
+        char type = typeString.charAt(0);
+        Node node = null;
+
+        if (ContainerNode.DB_TYPE == type)
+        {
+            node = new ContainerNode();
+        }
+        else if (DataNode.DB_TYPE == type)
+        {
+            node = new DataNode();
+            ((DataNode) node).setBusy(NodeBusyState.getStateFromValue(busyString));
+        }
+        else
+        {
+            throw new IllegalStateException("Unknown node database type: "
+                    + type);
+        }
+        
+        node.appData = new NodeID(nodeID);
+
+        node.setName(name);
+        node.setParent(parent);
+        node.setOwner(owner);
+        node.setMarkedForDeletion(markedForDeletion);
+        
+        if (contentLength != 0)
+        {
+            node.getProperties().add(new NodeProperty(VOS.PROPERTY_URI_CONTENTLENGTH, new Long(contentLength).toString()));
+        }
+        if (contentType != null && contentType.trim().length() > 0)
+        {
+            node.getProperties().add(new NodeProperty(VOS.PROPERTY_URI_TYPE, contentType));
+        }
+        if (contentEncoding != null && contentEncoding.trim().length() > 0)
+        {
+            node.getProperties().add(new NodeProperty(VOS.PROPERTY_URI_CONTENTENCODING, contentEncoding));
+        }
+        if (contentMD5 != null && contentMD5 instanceof byte[])
+        {
+            String contentMD5String = new String((byte[]) contentMD5, Charset.forName("iso-8859-1"));
+            node.getProperties().add(new NodeProperty(VOS.PROPERTY_URI_CONTENTMD5, contentMD5String));
+        }
+        if (lastModified != null)
+        {
+            node.getProperties().add(new NodeProperty(VOS.PROPERTY_URI_DATE, DateUtil.toString(lastModified, DateUtil.ISO_DATE_FORMAT)));
+        }
+        if (groupRead != null && groupRead.trim().length() > 0)
+        {
+            node.getProperties().add(new NodeProperty(VOS.PROPERTY_URI_GROUPREAD, groupRead));
+        }
+        if (groupWrite != null && groupWrite.trim().length() > 0)
+        {
+            node.getProperties().add(new NodeProperty(VOS.PROPERTY_URI_GROUPREAD, groupWrite));
+        }
+
+        return node;
     }
 
 }

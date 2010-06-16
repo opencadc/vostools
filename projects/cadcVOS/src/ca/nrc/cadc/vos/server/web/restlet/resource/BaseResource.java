@@ -67,25 +67,40 @@
 ************************************************************************
 */
 
-package ca.nrc.cadc.vos;
+package ca.nrc.cadc.vos.server.web.restlet.resource;
 
-import ca.nrc.cadc.vos.Node;
-import ca.nrc.cadc.vos.View;
+import org.restlet.resource.ServerResource;
 
-/**
- * @author zhangsa
- *
- */
-public class DataView extends View
+import ca.nrc.cadc.vos.server.NodePersistence;
+import ca.nrc.cadc.vos.server.util.BeanUtil;
+
+public abstract class BaseResource extends ServerResource
 {
-    /**
-     * @param uri
-     * @param node
-     */
-    public DataView(String uri, Node node)
+    
+    private String vosUriPrefix;
+    private NodePersistence nodePersistence;
+    
+    protected BaseResource()
     {
-        super(uri, node);
-        // TODO Auto-generated constructor stub
+        super();
+        
+        vosUriPrefix =
+            (String) getApplication().getContext().getAttributes().
+                get(BeanUtil.IVOA_VOS_URI);
+        
+        nodePersistence =
+            (NodePersistence) getApplication().getContext().getAttributes().
+                get(BeanUtil.VOS_NODE_PERSISTENCE);
+    }
+    
+    public String getVosUriPrefix()
+    {
+        return vosUriPrefix;
+    }
+    
+    public final NodePersistence getNodePersistence()
+    {
+        return nodePersistence;
     }
 
 }

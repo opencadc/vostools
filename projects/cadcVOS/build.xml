@@ -99,14 +99,30 @@
 
     <property name="jars" value="${ext.restlet}:${ext.restlet.ext}:${ext.log4j}:${ext.spring}:${ext.jdom}:${cadcUtil}:${cadcUWS}:${cadcDownloadManagerClient}" />
 
-    <target name="build" depends="compile">
-        <copy file="src/resources/VOSpace-2.0.xsd" todir="build/class"/>
+    <target name="build" depends="client,server" />
+
+    <target name="server" depends="compile,schema">
         <jar jarfile="${build}/lib/${project}.jar"
             basedir="${build}/class"
             update="no">
             <include name="ca/nrc/cadc/**" />
             <include name="VOSpace-2.0.xsd" />
         </jar>
+    </target>
+
+    <target name="client" depends="compile,schema">
+        <jar jarfile="${build}/lib/${project}Client.jar"
+            basedir="${build}/class"
+            update="no"
+            manifest="src/${project}Client.mf">
+            <include name="ca/nrc/cadc/vos/client/**" />
+            <include name="ca/nrc/cadc/vos/**.class" />
+            <include name="VOSpace-2.0.xsd" />
+        </jar>
+    </target>
+
+    <target name="schema">
+        <copy file="src/resources/VOSpace-2.0.xsd" todir="build/class"/>
     </target>
 
     <!-- JAR files needed to run the test suite -->

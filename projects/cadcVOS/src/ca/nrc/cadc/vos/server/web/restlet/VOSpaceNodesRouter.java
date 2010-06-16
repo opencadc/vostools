@@ -67,25 +67,35 @@
 ************************************************************************
 */
 
-package ca.nrc.cadc.vos;
 
-import ca.nrc.cadc.vos.Node;
-import ca.nrc.cadc.vos.View;
+package ca.nrc.cadc.vos.server.web.restlet;
+
+import java.util.Map;
+
+import org.restlet.Context;
+import org.restlet.routing.Router;
+import org.restlet.routing.TemplateRoute;
+import org.restlet.routing.Variable;
+
+import ca.nrc.cadc.vos.server.web.restlet.resource.NodeResource;
+
 
 /**
- * @author zhangsa
- *
+ * Router to handle Node resources
  */
-public class DataView extends View
+public class VOSpaceNodesRouter extends Router
 {
-    /**
-     * @param uri
-     * @param node
-     */
-    public DataView(String uri, Node node)
-    {
-        super(uri, node);
-        // TODO Auto-generated constructor stub
-    }
 
+    /**
+     * Constructor.
+     *
+     * @param context The context.
+     */
+    public VOSpaceNodesRouter(final Context context)
+    {
+        super(context);
+        TemplateRoute route = attach("/{nodePath}", NodeResource.class);
+        Map<String, Variable> routeVariables = route.getTemplate().getVariables();
+        routeVariables.put("nodePath", new Variable(Variable.TYPE_ALL)); 
+    }
 }

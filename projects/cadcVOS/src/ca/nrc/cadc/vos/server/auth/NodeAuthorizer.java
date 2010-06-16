@@ -67,25 +67,24 @@
 ************************************************************************
 */
 
-package ca.nrc.cadc.vos;
+package ca.nrc.cadc.vos.server.auth;
+
+import java.security.AccessControlException;
+
+import javax.security.auth.Subject;
 
 import ca.nrc.cadc.vos.Node;
-import ca.nrc.cadc.vos.View;
 
 /**
- * @author zhangsa
+ * Interface for checking the authorization of a node.
+ * 
+ * @author majorb
  *
  */
-public class DataView extends View
+public interface NodeAuthorizer
 {
-    /**
-     * @param uri
-     * @param node
-     */
-    public DataView(String uri, Node node)
-    {
-        super(uri, node);
-        // TODO Auto-generated constructor stub
-    }
+    
+    public void authorize(Subject subject, Node node, boolean isParentNode)
+    throws AccessControlException;
 
 }

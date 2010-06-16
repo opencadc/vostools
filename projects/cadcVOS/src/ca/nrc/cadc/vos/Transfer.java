@@ -85,7 +85,7 @@ import javax.net.ssl.HttpsURLConnection;
 import org.apache.log4j.Logger;
 
 import ca.nrc.cadc.vos.client.VOSpaceClient;
-import ca.nrc.cadc.vos.util.NodeUtil;
+import ca.nrc.cadc.vos.server.util.NodeUtil;
 
 /**
  * @author zhangsa

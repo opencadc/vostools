@@ -67,25 +67,104 @@
 ************************************************************************
 */
 
-package ca.nrc.cadc.vos;
+package ca.nrc.cadc.vos.server;
 
+import ca.nrc.cadc.vos.ContainerNode;
+import ca.nrc.cadc.vos.DataNode;
 import ca.nrc.cadc.vos.Node;
-import ca.nrc.cadc.vos.View;
+import ca.nrc.cadc.vos.NodeAlreadyExistsException;
+import ca.nrc.cadc.vos.NodeNotFoundException;
+import ca.nrc.cadc.vos.VOS.NodeBusyState;
 
 /**
- * @author zhangsa
- *
+ * An interface defining the methods available for working with VOSpace
+ * nodes in the persistent layer.
+ * 
+ * @author majorb
  */
-public class DataView extends View
+public interface NodePersistence
 {
+    
     /**
-     * @param uri
-     * @param node
+     * Find the node with the specified name and parent.  The parent must have been
+     * retrieved from the persistent layer.  A parent of 'null' indicates that
+     * the node to be returned is a root node.
+     * 
+     * @param name The name of the node
+     * @param parent The persistent parent object, or null if a root node.
+     * @return The persistent object specified by name.
+     * @throws NodeNotFoundException If the node could not be found.
      */
-    public DataView(String uri, Node node)
-    {
-        super(uri, node);
-        // TODO Auto-generated constructor stub
-    }
+    Node getFromParent(String name, ContainerNode parent) throws NodeNotFoundException;
+    
+    /**
+     * Persist the node in the given container.  The container must have been retrieved
+     * from the persistent layer.
+     * 
+     * @param node The node to persist
+     * @param parent The persistent parent node of 'node'
+     * @return The persistent version of the node.
+     * @throws NodeNotFoundException If the parent node could not be found.
+     * @throws NodeAlreadyExistsException If a node with the same name already exists
+     * in the parent container.
+     */
+    Node putInContainer(Node node, ContainerNode parent) throws NodeNotFoundException, NodeAlreadyExistsException;
+    
+    /**
+     * Delete the node.  This node must have been retrieved previously from the
+     * persistent layer.
+     * 
+     * @param node The node to delete.
+     * @param deleteChildren If true, delete any children of this node.
+     * @throws NodeNotFoundException If the node could not be found.
+     */
+    void delete(Node node, boolean deleteChildren) throws NodeNotFoundException;
+    
+    /**
+     * Mark the node for deletion.  This node must have been retrieved previously
+     * from the persistent layer.
+     * 
+     * @param node The node to mark as deleted.
+     * @param markChildren If true, mark any children as deleted as well.
+     * @throws NodeNotFoundException If the node could not be found.
+     */
+    void markForDeletion(Node node, boolean markChildren) throws NodeNotFoundException;
+    
+    /**
+     * Update the properties of the specified node.  The node must have been retrieved
+     * from the persistent layer.
+     * 
+     * @param node The node containing the properties to update.
+     * @return The persistent version of the updated node and properties.
+     * @throws NodeNotFoundException If the node could not be found.
+     */
+    Node updateProperties(Node node) throws NodeNotFoundException;
+    
+    /**
+     * Set the busy state of the node.
+     * 
+     * @param node The node on which to alter the busy state.
+     * @param state The new state for the node.
+     * @throws NodeNotFoundException If the node could not be found.
+     */
+    void setBusyState(DataNode node, NodeBusyState state) throws NodeNotFoundException;
+    
+    /**
+     * Move the specified node to the new path.  The node must have been retrieved
+     * from the persistent layer.
+     * 
+     * @param node
+     * @param newPath
+     */
+    void move(Node node, String newPath);
+    
+    /**
+     * Copy the specified node to the specified path.  The node must been retrieved
+     * from the persistent layer.
+     * 
+     * @param node
+     * @param copyToPath
+     */
+    void copy(Node node, String copyToPath);
 
 }

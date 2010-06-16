@@ -290,6 +290,12 @@ public abstract class Node
         this.uri = uri;
         this.buildPath(uri);
     }
+
+    // TODO: confirm with BM about need for this method in NodeDAO
+    public void setPath(String path)
+    {
+        this.path = path;
+    }
     
     public String getPath()
     {

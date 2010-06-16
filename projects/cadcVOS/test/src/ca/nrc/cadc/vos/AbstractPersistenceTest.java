@@ -1,5 +1,6 @@
 package ca.nrc.cadc.vos;
 
+import ca.nrc.cadc.vos.server.NodeDAO;
 import java.sql.Connection;
 import java.sql.PreparedStatement;
 

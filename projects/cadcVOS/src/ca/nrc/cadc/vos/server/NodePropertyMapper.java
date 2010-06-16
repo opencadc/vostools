@@ -67,25 +67,47 @@
 ************************************************************************
 */
 
-package ca.nrc.cadc.vos;
+package ca.nrc.cadc.vos.server;
 
-import ca.nrc.cadc.vos.Node;
-import ca.nrc.cadc.vos.View;
+import java.sql.ResultSet;
+import java.sql.SQLException;
+
+import org.springframework.jdbc.core.RowMapper;
+
+import ca.nrc.cadc.vos.NodeProperty;
+import ca.nrc.cadc.vos.VOS;
 
 /**
- * @author zhangsa
- *
+ * Class to map a result set into a NodeProperty object.
  */
-public class DataView extends View
+public class NodePropertyMapper implements RowMapper
 {
-    /**
-     * @param uri
-     * @param node
-     */
-    public DataView(String uri, Node node)
+    
+    public static boolean isNodeTableProperty(NodeProperty nodeProperty)
     {
-        super(uri, node);
-        // TODO Auto-generated constructor stub
+        String propertyURI = nodeProperty.getPropertyURI();
+        if (propertyURI != null)
+        {
+            return (propertyURI.equals(VOS.PROPERTY_URI_CONTENTLENGTH) ||
+                    propertyURI.equals(VOS.PROPERTY_URI_TYPE) ||
+                    propertyURI.equals(VOS.PROPERTY_URI_CONTENTENCODING) ||
+                    propertyURI.equals(VOS.PROPERTY_URI_CONTENTMD5) ||
+                    propertyURI.equals(VOS.PROPERTY_URI_DATE));
+        }
+        return false;
+    }
+
+    /**
+     * Map the row to the appropriate type of node object.
+     */
+    public Object mapRow(ResultSet rs, int rowNum) throws SQLException
+    {
+        String propertyURI = rs.getString("propertyURI");
+        String propertyValue = rs.getString("propertyValue");
+        
+        NodeProperty daoNodeProperty = new NodeProperty(propertyURI, propertyValue);
+
+        return daoNodeProperty;
     }
 
 }

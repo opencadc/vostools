@@ -67,25 +67,33 @@
 ************************************************************************
 */
 
-package ca.nrc.cadc.vos;
+package ca.nrc.cadc.vos.server.auth;
+
+import java.security.PrivilegedExceptionAction;
 
 import ca.nrc.cadc.vos.Node;
-import ca.nrc.cadc.vos.View;
 
 /**
- * @author zhangsa
+ * Wrapper class for performing node write authorization checks as a privileged action.
+ * 
+ * @author majorb
  *
  */
-public class DataView extends View
+public class PrivilegedWriteAuthorizationExceptionAction implements PrivilegedExceptionAction<Object>
 {
-    /**
-     * @param uri
-     * @param node
-     */
-    public DataView(String uri, Node node)
+    private VOSpaceAuthorizer authorizer;
+    private Node node;
+    
+    public PrivilegedWriteAuthorizationExceptionAction(VOSpaceAuthorizer authorizer, Node node)
     {
-        super(uri, node);
-        // TODO Auto-generated constructor stub
+        this.authorizer = authorizer;
+        this.node = node;
+    }
+
+    @Override
+    public Object run() throws Exception
+    {
+        return authorizer.getWritePermission(node);
     }
 
 }

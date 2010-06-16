@@ -67,25 +67,83 @@
 ************************************************************************
 */
 
-package ca.nrc.cadc.vos;
+package ca.nrc.cadc.vos.server.web.restlet;
 
-import ca.nrc.cadc.vos.Node;
-import ca.nrc.cadc.vos.View;
+import org.apache.log4j.Logger;
+import org.restlet.Application;
+import org.restlet.Context;
+import org.restlet.Restlet;
+
+import ca.nrc.cadc.vos.InvalidServiceException;
+import ca.nrc.cadc.vos.server.util.BeanUtil;
 
 /**
- * @author zhangsa
+ * Application for handling Node routing and resources.
+ * 
+ * @author majorb
  *
  */
-public class DataView extends View
+public class VOSpaceNodesApplication extends Application
 {
-    /**
-     * @param uri
-     * @param node
-     */
-    public DataView(String uri, Node node)
+    
+    private static final Logger log = Logger.getLogger(VOSpaceNodesApplication.class);
+
+    public VOSpaceNodesApplication()
     {
-        super(uri, node);
-        // TODO Auto-generated constructor stub
     }
 
+    public VOSpaceNodesApplication(final Context context)
+    {
+        super(context);
+    }
+
+    @Override
+    public Restlet createInboundRoot()
+    {
+        
+        Context context = getContext();
+        
+        // Get and save the vospace uri in the input representation
+        // for later use
+        final String vosURI = context.getParameters().
+                getFirstValue(BeanUtil.IVOA_VOS_URI);
+        if (vosURI == null || vosURI.trim().length() == 0)
+        {
+            final String message = "Context parameter not set: " + BeanUtil.IVOA_VOS_URI;
+            log.error(message);
+            throw new RuntimeException(message);
+        }
+        
+        // save the vospace uri in the application context
+        context.getAttributes().put(BeanUtil.IVOA_VOS_URI, vosURI);
+        
+        // Create the configured NodePersistence bean
+        createContextBean(context, ca.nrc.cadc.vos.server.NodePersistence.class, BeanUtil.VOS_NODE_PERSISTENCE);
+        
+        return new VOSpaceNodesRouter(context);
+    }
+    
+    private void createContextBean(Context context, Class<?> beanInterface, String contextParam)
+    {
+        try
+        {
+            final String className = context.getParameters().
+                    getFirstValue(contextParam);
+            final BeanUtil beanUtil = new BeanUtil(className);
+            Object bean = beanUtil.createBean();
+            if (!beanInterface.isInstance(bean))
+            {
+                throw new InvalidServiceException("Bean does not implement interface: " + beanInterface.getName());
+            }
+            context.getAttributes().put(contextParam, bean);
+            log.debug("Added " + contextParam + " bean to application context: " + className);
+        }
+        catch (InvalidServiceException e)
+        {
+            final String message = "Could not create bean: " + contextParam + ": " + e.getMessage();
+            log.error(message, e);
+            throw new RuntimeException(message, e);
+        }
+    }
+    
 }

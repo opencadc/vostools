@@ -100,7 +100,6 @@ public class Main
     public static final String ARG_SET = "set";
     public static final String ARG_COPY = "copy";
 
-    public static String usage = Main.usageMessage();
     private static Logger log = Logger.getLogger(Main.class);
 
     /**
@@ -129,7 +128,7 @@ public class Main
         ArgumentMap argMap = new ArgumentMap(args);
 
         if (argMap.isSet(ARG_HELP) || argMap.isSet(ARG_H))
-            System.out.println(Main.usage);
+            usage();
         else
         {
             Main command = new Main();
@@ -151,13 +150,13 @@ public class Main
             {
                 System.out.println("One operation should be defined.");
                 System.out.println();
-                System.out.println(Main.usage);
+                usage();
             }
             else if (numOp > 1)
             {
                 System.out.println("Only one operation can be defined.");
                 System.out.println();
-                System.out.println(Main.usage);
+                usage();
             }
             else
             {
@@ -223,69 +222,63 @@ public class Main
     /**
      * @return The usage string
      */
-    public static String usageMessage()
+    public static void usage()
     {
-        String[] um = {
-                "Usage: java -jar VOSpaceClient.jar [-v|--verbose|-d|--debug]  ...                                 ",
-                "                                                                                                  ",
-                "Help:                                                                                             ",
-                "java -jar VOSpaceClient.jar <-h | --help>                                                         ",
-                "                                                                                                  ",
-                "Create node:                                                                                      ",
-                "java -jar VOSpaceClient.jar  [-v|--verbose|-d|--debug]                                            ",
-                "   --create --target=<target URI>                                                                  ",
-                "   [--group-read=<group URI>]                                                                      ",
-                "   [--group-write=<group URI>]                                                                     ",
-                "   [--prop=<properties file>]                                                                      ",
-                "                                                                                                  ",
-                "Note: --create defaults to creating a ContainerNode (directory). Creating                         ",
-                "other types of nodes specifically is not suppoerted at this time.                                 ",
-                "                                                                                                  ",
-                "Copy file:                                                                                        ",
-                "java -jar VOSpaceClient.jar  [-v|--verbose|-d|--debug]                                            ",
-                "   --copy --src=<source URI> --target=<destination URI>                                            ",
-                "   [--content-type=<mimetype of source>]                                                           ",
-                "   [--content-encoding=<encoding of source>]                                                       ",
-                "   [--group-read=<group URI>]                                                                      ",
-                "   [--group-write=<group URI>]                                                                     ",
-                "   [--prop=<properties file>]                                                                      ",
-                "                                                                                                  ",
-                "Note: One of --src and --target may be a \"vos\" URI and the other may be an                        ",
-                "absolute or relative path to a file. If the target node does not exist, a                         ",
-                "DataNode is created and data copied. If it does exist, the data (and                              ",
-                "properties?) are overwritten.                                                                     ",
-                "                                                                                                  ",
-                "View node:                                                                                        ",
-                "java -jar VOSpaceClient.jar  [-v|--verbose|-d|--debug]                                            ",
-                "   --view --target=<target URI>                                                                    ",
-                "   [--group-read=<group URI>]                                                                      ",
-                "   [--group-write=<group URI>]                                                                     ",
-                "   [--prop=<properties file>]                                                                      ",
-                "                                                                                                  ",
-                "Delete node:                                                                                      ",
-                "java -jar VOSpaceClient.jar  [-v|--verbose|-d|--debug]                                            ",
-                "   --delete --target=<target URI>                                                                  ",
-                "   [--content-type=<mimetype of source>]                                                           ",
-                "   [--content-encoding=<encoding of source>]                                                       ",
-                "   [--group-read=<group URI>]                                                                      ",
-                "   [--group-write=<group URI>]                                                                     ",
-                "   [--prop=<properties file>]                                                                      ",
-                "                                                                                                  ",
-                "Set node:                                                                                         ",
-                "java -jar VOSpaceClient.jar  [-v|--verbose|-d|--debug]                                            ",
-                "   --set --target=<target URI>                                                                     ",
-                "   [--content-type=<mimetype of source>]                                                           ",
-                "   [--content-encoding=<encoding of source>]                                                       ",
-                "   [--group-read=<group URI>]                                                                      ",
-                "   [--group-write=<group URI>]                                                                     ",
-                "   [--prop=<properties file>]                                                                      ",
-                "                                                   " };
-        StringBuilder sb = new StringBuilder();
-        for (String line : um)
+        String invoke = "java -jar cadcVOSClient.jar [-v|--verbose|-d|--debug]";
+
+        String[] um =
         {
-            sb.append(line).append(CR);
-        }
-        return sb.toString();
+                "Usage: " + invoke + " ...",
+                "",
+                "Help: java -jar VOSClient.jar <-h | --help>",
+                "",
+                "Create node: java -jar VOSpaceClient.jar  [-v|--verbose|-d|--debug]",
+                "   --create --target=<target URI>",
+                "   [--group-read=<group URI>]",
+                "   [--group-write=<group URI>]",
+                "   [--prop=<properties file>]",
+                "",
+                "Note: --create defaults to creating a ContainerNode (directory). Creating",
+                "other types of nodes specifically is not supported at this time.",
+                "",
+                "Copy file: " + invoke,
+                "   --copy --src=<source URI> --target=<destination URI>",
+                "   [--content-type=<mimetype of source>]",
+                "   [--content-encoding=<encoding of source>]",
+                "   [--group-read=<group URI>]",
+                "   [--group-write=<group URI>]",
+                "   [--prop=<properties file>]",
+                "",
+                "Note: One of --src and --target may be a \"vos\" URI and the other may be an",
+                "absolute or relative path to a file. If the target node does not exist, a",
+                "DataNode is created and data copied. If it does exist, the data (and",
+                "properties?) are overwritten.",
+                "",
+                "View node: " + invoke,
+                "   --view --target=<target URI>",
+                "   [--group-read=<group URI>]",
+                "   [--group-write=<group URI>]",
+                "   [--prop=<properties file>]",
+                "",
+                "Delete node: " + invoke,
+                "   --delete --target=<target URI>",
+                "   [--content-type=<mimetype of source>]",
+                "   [--content-encoding=<encoding of source>]",
+                "   [--group-read=<group URI>]",
+                "   [--group-write=<group URI>]",
+                "   [--prop=<properties file>]",
+                "",
+                "Set node: " + invoke,
+                "   --set --target=<target URI>",
+                "   [--content-type=<mimetype of source>]",
+                "   [--content-encoding=<encoding of source>]",
+                "   [--group-read=<group URI>]",
+                "   [--group-write=<group URI>]",
+                "   [--prop=<properties file>]",
+                ""
+        };
+        for (String line : um)
+            System.out.println(line);
     }
 
     public boolean isVerbose()

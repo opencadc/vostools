@@ -67,25 +67,49 @@
 ************************************************************************
 */
 
-package ca.nrc.cadc.vos;
+package ca.nrc.cadc.vos.server.web.representation;
+
+import java.io.IOException;
+import java.net.URISyntaxException;
+
+import org.restlet.representation.Representation;
 
 import ca.nrc.cadc.vos.Node;
-import ca.nrc.cadc.vos.View;
+import ca.nrc.cadc.vos.NodeParsingException;
+import ca.nrc.cadc.vos.NodeReader;
 
 /**
- * @author zhangsa
+ * Creates a Node object from an XML representation
+ * 
+ * @author majorb
  *
  */
-public class DataView extends View
+public class NodeInputRepresentation
 {
-    /**
-     * @param uri
-     * @param node
-     */
-    public DataView(String uri, Node node)
+    
+    private Representation xmlValue;
+    private String expectedPath;
+    
+    public NodeInputRepresentation(Representation xmlValue, String expectedPath)
     {
-        super(uri, node);
-        // TODO Auto-generated constructor stub
+        this.xmlValue = xmlValue;
+        this.expectedPath = expectedPath;
     }
-
+    
+    public Node getNode() throws IOException, NodeParsingException, URISyntaxException
+    {
+        Node node = new NodeReader().read(xmlValue.getStream());
+        
+        // ensure the path in the XML URI matches the path in the URL
+        if (!node.getPath().equals(expectedPath))
+        {
+            throw new NodeParsingException("Node path in URI XML ("
+                    + node.getPath()
+                    + ") not equal to node path in URL ("
+                    + expectedPath
+                    + ")");
+        }
+        
+        return node;
+    }
 }

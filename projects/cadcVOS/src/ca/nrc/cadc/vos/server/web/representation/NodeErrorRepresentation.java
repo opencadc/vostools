@@ -64,67 +64,44 @@
  *
  ************************************************************************
  */
-package ca.nrc.cadc.vos.auth;
 
-import ca.nrc.cadc.vos.server.auth.VOSpaceAuthorizer;
-import static org.easymock.classextension.EasyMock.createMock;
-import static org.easymock.classextension.EasyMock.replay;
+package ca.nrc.cadc.vos.server.web.representation;
 
-import org.junit.Before;
-import org.junit.Test;
+import java.io.IOException;
+import java.io.OutputStream;
 
-import ca.nrc.cadc.vos.server.NodeDAO;
+import org.restlet.data.MediaType;
+import org.restlet.representation.OutputRepresentation;
 
+import ca.nrc.cadc.vos.NodeFault;
 
 /**
- * Test class for the VOSpaceAuthorizer.
+ * Plain text representation of a NodeFault.
+ * 
+ * @author majorb
+ *
  */
-public class VOSpaceAuthorizerTest
+public class NodeErrorRepresentation extends OutputRepresentation
 {
-    private VOSpaceAuthorizer testSubject;
-    private NodeDAO mockNodeDAO;
-
-
-    @Before
-    public void setup() throws Exception
-    {
-        setMockNodeDAO(createMock(NodeDAO.class));
-        VOSpaceAuthorizer vospaceAuthorizer = new VOSpaceAuthorizer();
-        vospaceAuthorizer.setNodePersistence(getMockNodeDAO());
-        setTestSubject(vospaceAuthorizer);
-    }
-
-
-    @Test
-    public void getReadPermission() throws Exception
-    {
-        replay(getMockNodeDAO());
-    }
-
-    @Test
-    public void getWritePermission() throws Exception
-    {
-        replay(getMockNodeDAO());
-    }
-
     
-    public VOSpaceAuthorizer getTestSubject()
+    private String message;
+    
+    public NodeErrorRepresentation(NodeFault nodeFault)
     {
-        return testSubject;
+        super(MediaType.TEXT_PLAIN);
+        this.message = nodeFault.toString();
+    }
+    
+    public NodeErrorRepresentation(NodeFault nodeFault, String info)
+    {
+        super(MediaType.TEXT_PLAIN);
+        this.message = nodeFault.toString() + " " + info;
     }
 
-    public void setTestSubject(VOSpaceAuthorizer testSubject)
+    @Override
+    public void write(OutputStream arg0) throws IOException
     {
-        this.testSubject = testSubject;
+        arg0.write(message.getBytes());
     }
 
-    public NodeDAO getMockNodeDAO()
-    {
-        return mockNodeDAO;
-    }
-
-    public void setMockNodeDAO(NodeDAO mockNodeDAO)
-    {
-        this.mockNodeDAO = mockNodeDAO;
-    }
 }

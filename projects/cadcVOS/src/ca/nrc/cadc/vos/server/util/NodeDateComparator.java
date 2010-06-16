@@ -8,7 +8,7 @@
 *  National Research Council            Conseil national de recherches
 *  Ottawa, Canada, K1A 0R6              Ottawa, Canada, K1A 0R6
 *  All rights reserved                  Tous droits réservés
-*                                       
+*
 *  NRC disclaims any warranties,        Le CNRC dénie toute garantie
 *  expressed, implied, or               énoncée, implicite ou légale,
 *  statutory, of any kind with          de quelque nature que ce
@@ -31,10 +31,10 @@
 *  software without specific prior      de ce logiciel sans autorisation
 *  written permission.                  préalable et particulière
 *                                       par écrit.
-*                                       
+*
 *  This file is part of the             Ce fichier fait partie du projet
 *  OpenCADC project.                    OpenCADC.
-*                                       
+*
 *  OpenCADC is free software:           OpenCADC est un logiciel libre ;
 *  you can redistribute it and/or       vous pouvez le redistribuer ou le
 *  modify it under the terms of         modifier suivant les termes de
@@ -44,7 +44,7 @@
 *  either version 3 of the              : soit la version 3 de cette
 *  License, or (at your option)         licence, soit (à votre gré)
 *  any later version.                   toute version ultérieure.
-*                                       
+*
 *  OpenCADC is distributed in the       OpenCADC est distribué
 *  hope that it will be useful,         dans l’espoir qu’il vous
 *  but WITHOUT ANY WARRANTY;            sera utile, mais SANS AUCUNE
@@ -54,7 +54,7 @@
 *  PURPOSE.  See the GNU Affero         PARTICULIER. Consultez la Licence
 *  General Public License for           Générale Publique GNU Affero
 *  more details.                        pour plus de détails.
-*                                       
+*
 *  You should have received             Vous devriez avoir reçu une
 *  a copy of the GNU Affero             copie de la Licence Générale
 *  General Public License along         Publique GNU Affero avec
@@ -66,26 +66,94 @@
 *
 ************************************************************************
 */
+package ca.nrc.cadc.vos.server.util;
 
-package ca.nrc.cadc.vos;
-
+import ca.nrc.cadc.date.DateUtil;
 import ca.nrc.cadc.vos.Node;
-import ca.nrc.cadc.vos.View;
+import ca.nrc.cadc.vos.NodeProperty;
+import ca.nrc.cadc.vos.VOS;
+import java.text.ParseException;
+import java.util.Comparator;
+import java.util.Date;
+import java.util.List;
 
 /**
- * @author zhangsa
+ * Class to compare two Nodes based on their LastModified property. Nodes are
+ * sorted in descending Date order, with the most recent Dates first.
  *
+ * @author jburke
  */
-public class DataView extends View
+public class NodeDateComparator implements Comparator
 {
+
     /**
-     * @param uri
-     * @param node
+     * Compare two Nodes based on their LastModified property.
+     *
+     * @param o1 The first Node to compare.
+     * @param o2 The second Node to compare.
+     * @return 
      */
-    public DataView(String uri, Node node)
+    public int compare(Object o1, Object o2)
     {
-        super(uri, node);
-        // TODO Auto-generated constructor stub
+        // Get the Nodes.
+        Node n1 = (Node) o1;
+        Node n2 = (Node) o2;
+
+        // Properties for each Node.
+        List<NodeProperty> nps1 = n1.getProperties();
+        List<NodeProperty> nps2 = n2.getProperties();
+
+        // LastModifed date for each Node.
+        String np1 = null;
+        for (NodeProperty nodeProperty : nps1)
+        {
+            if (nodeProperty.getPropertyURI().equals(VOS.PROPERTY_URI_DATE))
+                np1 = nodeProperty.getPropertyValue();
+
+        }
+        String np2 = null;
+        for (NodeProperty nodeProperty : nps2)
+        {
+            if (nodeProperty.getPropertyURI().equals(VOS.PROPERTY_URI_DATE))
+                np2 = nodeProperty.getPropertyValue();
+
+        }
+
+        // If Node A does not have a LastModified property while Node B does
+        // have a LastModified property, then Node A is considered to be
+        // less than Node B. If neither Node's have a LastModified property,
+        // then the Nodes are considered to be equal.
+        if (np1 == null && np2 != null)
+            return -1;
+        if (np1 != null && np2 == null)
+            return 1;
+        if (np1 == null && np2 == null)
+            return 0;
+
+        Date d1 = null;
+        try
+        {
+            d1 = DateUtil.toDate(np1, DateUtil.ISO_DATE_FORMAT, DateUtil.UTC);
+        }
+        catch (ParseException ignore) { }
+
+        Date d2 = null;
+        try
+        {
+            d2 = DateUtil.toDate(np2, DateUtil.ISO_DATE_FORMAT, DateUtil.UTC);
+        }
+        catch (ParseException ignore) { }
+
+        // Dates are handled the same as the LastModified property. A Node with
+        // a null Date is considered to be less than a Node whose Date is not null.
+        if (d1 == null && d2 != null)
+            return -1;
+        if (d1 != null && d2 == null)
+            return 1;
+        if (d1 == null && d2 == null)
+            return 0;
+
+        return d2.compareTo(d1);
     }
 
 }

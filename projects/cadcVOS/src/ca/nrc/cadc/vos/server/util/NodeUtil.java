@@ -67,25 +67,122 @@
 ************************************************************************
 */
 
-package ca.nrc.cadc.vos;
+package ca.nrc.cadc.vos.server.util;
 
+import java.io.IOException;
+import java.io.StringWriter;
+import java.net.URISyntaxException;
+import java.util.Stack;
+
+import org.apache.log4j.Logger;
+
+import ca.nrc.cadc.uws.Job;
+import ca.nrc.cadc.uws.JobWriter;
+import ca.nrc.cadc.vos.ContainerNode;
+import ca.nrc.cadc.vos.DataNode;
 import ca.nrc.cadc.vos.Node;
-import ca.nrc.cadc.vos.View;
+import ca.nrc.cadc.vos.NodeNotFoundException;
+import ca.nrc.cadc.vos.server.NodePersistence;
+import ca.nrc.cadc.vos.NodeWriter;
+import ca.nrc.cadc.vos.VOS;
+import ca.nrc.cadc.vos.VOSURI;
 
 /**
- * @author zhangsa
+ * Methods that add convenience in dealing with Nodes.
+ * 
+ * @author majorb
  *
  */
-public class DataView extends View
+public class NodeUtil
 {
+
+    private static Logger log = Logger.getLogger(NodeUtil.class);
+
     /**
-     * @param uri
-     * @param node
+     * Iterate the parental hierarchy of the node from root to self.
+     * 
+     * @param targetNode The node whos hierarchy is to be iterated
+     * @param listener An optional listener notified at each stack level.
+     * @param nodePersistence The node persistence implementation
+     * @return The persistent version of the target node.
+     * @throws NodeNotFoundException If the target node could not be found.
      */
-    public DataView(String uri, Node node)
+    public static Node iterateStack(Node targetNode, NodeStackListener listener, NodePersistence nodePersistence) throws NodeNotFoundException
     {
-        super(uri, node);
-        // TODO Auto-generated constructor stub
+
+        if (targetNode == null)
+        {
+            // root container, return null
+            return null;
+        }
+
+        Stack<Node> nodeStack = targetNode.stackToRoot();
+        Node persistentNode = null;
+        Node nextNode = null;
+        ContainerNode parent = null;
+
+        while (!nodeStack.isEmpty())
+        {
+            nextNode = nodeStack.pop();
+            nextNode.setParent(parent);
+            log.debug("Retrieving node with path: " + nextNode.getPath());
+
+            // get the node from the persistence layer
+            persistentNode = nodePersistence.getFromParent(nextNode.getName(), parent);
+
+            // check if it is marked for deletion
+            if (persistentNode.isMarkedForDeletion())
+            {
+                throw new NodeNotFoundException("Node is marked for deletion.");
+            }
+
+            // call the listener
+            if (listener != null)
+            {
+                listener.nodeVisited(persistentNode, !nodeStack.isEmpty());
+            }
+
+            // get the parent 
+            if (persistentNode instanceof ContainerNode)
+            {
+                parent = (ContainerNode) persistentNode;
+            }
+            else if (!nodeStack.isEmpty())
+            {
+                final String message = "Non-container node found mid-tree";
+                log.warn(message);
+                throw new NodeNotFoundException(message);
+            }
+
+        }
+
+        if (persistentNode instanceof DataNode)
+        {
+            persistentNode.setParent(parent);
+        }
+        return persistentNode;
     }
 
+    /**
+     * Create a VOSURI from a Node and it's parent.
+     *
+     * @param node The Node to create the VOSURI for.
+     * @param parent The parent of the Node.
+     * @return A VOSURI for the node.
+     * @throws URISyntaxException if the VOSURI syntax is invalid.
+     */
+    public static VOSURI createVOSURI(Node node, Node parent) throws URISyntaxException
+    {
+        StringBuilder sb = new StringBuilder();
+        sb.append(VOS.VOS_URI);
+        if (parent != null)
+        {
+            sb.append("/");
+            sb.append(parent.getPath());
+        }
+        sb.append("/");
+        sb.append(node.getName());
+
+        return new VOSURI(sb.toString());
+    }
 }

@@ -67,25 +67,48 @@
 ************************************************************************
 */
 
-package ca.nrc.cadc.vos;
+package ca.nrc.cadc.vos.server.web.representation;
 
+import java.io.IOException;
+import java.io.OutputStream;
+
+import org.restlet.data.MediaType;
+import org.restlet.representation.OutputRepresentation;
+
+import ca.nrc.cadc.vos.ContainerNode;
+import ca.nrc.cadc.vos.DataNode;
 import ca.nrc.cadc.vos.Node;
-import ca.nrc.cadc.vos.View;
+import ca.nrc.cadc.vos.NodeWriter;
 
 /**
- * @author zhangsa
+ * Creates an XML representation of a Node
+ * 
+ * @author majorb
  *
  */
-public class DataView extends View
+public class NodeOutputRepresentation extends OutputRepresentation
 {
-    /**
-     * @param uri
-     * @param node
-     */
-    public DataView(String uri, Node node)
+    private Node node;
+    private NodeWriter nodeWriter;
+    
+    public NodeOutputRepresentation(Node node, NodeWriter nodeWriter)
     {
-        super(uri, node);
-        // TODO Auto-generated constructor stub
+        super(MediaType.TEXT_XML);
+        this.node = node;
+        this.nodeWriter = nodeWriter;
+    }
+
+    @Override
+    public void write(OutputStream outputStream) throws IOException
+    {
+        if (node instanceof DataNode)
+        {
+            nodeWriter.write((DataNode) node, outputStream);
+        }
+        if (node instanceof ContainerNode)
+        {
+            nodeWriter.write((ContainerNode) node, outputStream);
+        }
     }
 
 }
