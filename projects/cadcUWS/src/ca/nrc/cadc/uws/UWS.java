@@ -71,25 +71,19 @@ package ca.nrc.cadc.uws;
 
 import org.jdom.Namespace;
 
-import ca.nrc.cadc.xml.XmlUtil;
-
 /**
- * Holder of commonly used constants
+ * Holder of commonly used constants.
  * 
  * @author zhangsa
  *
  */
 public class UWS
 {
-    public static String XSD_FILE_NAME = "UWS-1.0.xsd"; // local xsd file name
-    public static String XSD_KEY = "http://www.ivoa.net/xml/UWS/v1.0";
+    public static final String XSD_FILE_NAME = "UWS-1.0.xsd"; // local xsd file name
+    public static final String XSD_KEY = "http://www.ivoa.net/xml/UWS/v1.0";
     
-    public static Namespace NS = Namespace.getNamespace("uws", "http://www.ivoa.net/xml/UWS/v1.0");
-    public static Namespace XLINK_NS = Namespace.getNamespace("xlink", "http://www.w3.org/1999/xlink");
-    public static Namespace XSI_NS = Namespace.getNamespace("xsi", "http://www.w3.org/2001/XMLSchema-instance");
+    public static final Namespace NS = Namespace.getNamespace("uws", "http://www.ivoa.net/xml/UWS/v1.0");
+    public static final Namespace XLINK_NS = Namespace.getNamespace("xlink", "http://www.w3.org/1999/xlink");
+    public static final Namespace XSI_NS = Namespace.getNamespace("xsi", "http://www.w3.org/2001/XMLSchema-instance");
     
-    public static String EXT_SCHEMA_LOCATION = XSD_KEY + " " + XmlUtil.getResourceUrlString(XSD_FILE_NAME, UWS.class);  
-
-
-
 }

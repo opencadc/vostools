@@ -75,7 +75,6 @@ import ca.nrc.cadc.uws.JobRunner;
 import ca.nrc.cadc.uws.PrivilegedActionJobRunner;
 import ca.nrc.cadc.uws.Result;
 import ca.nrc.cadc.uws.TimeTrackingRunnable;
-import org.w3c.dom.Document;
 import org.restlet.representation.Representation;
 import org.restlet.representation.EmptyRepresentation;
 import org.restlet.resource.Get;
@@ -85,6 +84,7 @@ import java.io.IOException;
 import java.util.List;
 
 import javax.security.auth.Subject;
+import org.jdom.Document;
 
 
 

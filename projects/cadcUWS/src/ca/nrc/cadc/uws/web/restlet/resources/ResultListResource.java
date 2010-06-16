@@ -70,12 +70,10 @@
 
 package ca.nrc.cadc.uws.web.restlet.resources;
 
-import ca.nrc.cadc.uws.Job;
-import org.w3c.dom.Document;
-import org.w3c.dom.Element;
 
 import ca.nrc.cadc.uws.JobAttribute;
-import ca.nrc.cadc.uws.Result;
+import ca.nrc.cadc.uws.JobWriter;
+import org.jdom.Document;
 
 
 /**
@@ -91,34 +89,8 @@ public class ResultListResource extends BaseJobResource
      */
     protected void buildXML(final Document document)
     {
-        Element resultsListElement = getElement(document, job);
-        document.appendChild(resultsListElement);
+        JobWriter jobWriter = new JobWriter(job);
+        document.addContent(jobWriter.getResults());
     }
 
-    // used above and re-used from JobAsynchResource
-    static Element getElement(Document document, Job job)
-    {
-        final Element resultsListElement =
-                document.createElementNS(XML_NAMESPACE_URI,
-                                         JobAttribute.RESULTS.
-                                                 getAttributeName());
-        resultsListElement.setPrefix(XML_NAMESPACE_PREFIX);
-        resultsListElement.setAttribute("xmlns:xlink",
-                                        "http://www.w3.org/1999/xlink");
-
-        for (final Result result : job.getResultsList())
-        {
-            final Element resultElement =
-                    document.createElementNS(XML_NAMESPACE_URI,
-                                             JobAttribute.RESULT.
-                                                     getAttributeName());
-            resultElement.setPrefix(XML_NAMESPACE_PREFIX);
-            resultElement.setAttribute("id", result.getName());
-            resultElement.setAttribute("xlink:href",
-                                       result.getURL().toExternalForm());
-            resultsListElement.appendChild(resultElement);
-        }
-
-        return resultsListElement;
-    }
 }

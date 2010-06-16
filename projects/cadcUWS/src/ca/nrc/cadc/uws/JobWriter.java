@@ -73,7 +73,6 @@ import java.io.IOException;
 import java.io.OutputStream;
 import java.io.Writer;
 import java.security.Principal;
-import java.util.Date;
 import java.util.Set;
 
 import javax.security.auth.Subject;
@@ -84,7 +83,6 @@ import org.jdom.Element;
 import org.jdom.output.Format;
 import org.jdom.output.XMLOutputter;
 
-import ca.nrc.cadc.date.DateUtil;
 import ca.nrc.cadc.xml.XmlUtil;
 
 /**
@@ -108,12 +106,14 @@ public class JobWriter
         this.outputter = new XMLOutputter();
         this.outputter.setFormat(Format.getPrettyFormat());
     }
-
+    
     /**
      * Write the job to a String.
      */
-    public String toString() {
-        return this.outputter.outputString(this.document);
+    @Override
+    public String toString()
+    {
+        return outputter.outputString(document);
     }
 
     /**
@@ -122,8 +122,10 @@ public class JobWriter
      * @param out OutputStream to write to.
      * @throws IOException if the writer fails to write.
      */
-    public void writeTo(OutputStream out) throws IOException {
-        this.outputter.output(this.document, out);
+    public void writeTo(OutputStream out)
+        throws IOException
+    {
+        outputter.output(document, out);
     }
 
     /**
@@ -132,133 +134,265 @@ public class JobWriter
      * @param writer Writer to write to.
      * @throws IOException if the writer fails to write.
      */
-    public void writeTo(Writer writer) throws IOException {
-        this.outputter.output(this.document, writer);
+    public void writeTo(Writer writer)
+        throws IOException
+    {
+        outputter.output(document, writer);
     }
 
     /**
-     * Build XML Document for the job
+     * Get the JDOM Document representing this Job.
+     *
+     * @return The JDOM Document.
      */
-    private void buildDocument() {
-        Element root = new Element("job", UWS.NS);
-        root.addNamespaceDeclaration(UWS.NS);
-        root.addNamespaceDeclaration(UWS.XLINK_NS);
-        root.setAttribute("schemaLocation", "http://www.ivoa.net/xml/UWS/v1.0 UWS.xsd", UWS.XSI_NS);
-
-        Element e = null;
-
-        e = new Element("jobId", UWS.NS);
-        e.addContent(this.job.getID());
-        root.addContent(e);
-
-        e = new Element("runId", UWS.NS);
-        e.addContent(this.job.getRunID());
-        root.addContent(e);
-
-        e = createOwnerId();
-        root.addContent(e);
-
-        e = new Element("phase", UWS.NS);
-        e.addContent(this.job.getExecutionPhase().toString());
-        root.addContent(e);
-
-        e = new Element("quote", UWS.NS);
-        XmlUtil.addElementContent(e, this.job.getQuote(), true);
-        root.addContent(e);
-
-        e = new Element("startTime", UWS.NS);
-        XmlUtil.addElementContent(e, this.job.getStartTime(), true);
-        root.addContent(e);
-
-        e = new Element("endTime", UWS.NS);
-        XmlUtil.addElementContent(e, this.job.getEndTime(), true);
-        root.addContent(e);
-
-        e = new Element("executionDuration", UWS.NS);
-        e.addContent(Long.toString(this.job.getExecutionDuration()));
-        root.addContent(e);
-
-        e = new Element("destruction", UWS.NS);
-        XmlUtil.addElementContent(e, this.job.getDestructionTime(), true);
-        root.addContent(e);
-
-        e = createParameters();
-        root.addContent(e);
-
-        e = createResults();
-        root.addContent(e);
-
-        e = createErrorSummary();
-        if (e != null)
-            root.addContent(e);
-
-        this.document = new Document();
-        this.document.addContent(root);
+    public Document getDocument()
+    {
+        return document;
     }
 
-    private Element createOwnerId() {
-        Element e = null;
-        e = new Element("ownerId", UWS.NS);
-        e.setAttribute("nil", "true", UWS.XSI_NS);
-        Subject subjectOwner = this.job.getOwner();
+    /**
+     * Get an Element representing a job Element.
+     *
+     * @return A job Element.
+     */
+    public static Element getJob()
+    {
+        Element element = new Element(JobAttribute.JOB.getAttributeName(), UWS.NS);
+        element.addNamespaceDeclaration(UWS.NS);
+        element.addNamespaceDeclaration(UWS.XLINK_NS);
+        element.setAttribute("schemaLocation", "http://www.ivoa.net/xml/UWS/v1.0 UWS.xsd", UWS.XSI_NS);
+        return element;
+    }
+
+    /**
+     * Get an Element representing a jobs Element.
+     *
+     * @return A jobs element.
+     */
+    public static Element getJobs()
+    {
+        Element element = new Element(JobAttribute.JOBS.getAttributeName(), UWS.NS);
+        element.addNamespaceDeclaration(UWS.NS);
+        element.addNamespaceDeclaration(UWS.XLINK_NS);
+        element.setAttribute("schemaLocation", "http://www.ivoa.net/xml/UWS/v1.0 UWS.xsd", UWS.XSI_NS);
+        return element;
+    }
+    
+    /**
+     * Get an Element representing the Job jobId.
+     *
+     * @return The Job jobId Element.
+     */
+    public Element getJobId()
+    {
+        Element element = new Element(JobAttribute.JOB_ID.getAttributeName(), UWS.NS);
+        element.addContent(job.getID());
+        return element;
+    }
+
+    /**
+     * Get an Element representing the Job jobref.
+     *
+     * @param host The host part of the Job request URL.
+     * @return The Job jobref Element.
+     */
+    public Element getJobRef(String host)
+    {
+        Element element = new Element(JobAttribute.JOB_REF.getAttributeName(), UWS.NS);
+        element.setAttribute("id", job.getID());
+        element.setAttribute("xlink:href", host + job.getRequestPath() + "/" + job.getID());
+        return element;
+    }
+
+    /**
+     * Get an Element representing the Job runId.
+     *
+     * @return The Job runId Element.
+     */
+    public Element getRunId()
+    {
+        Element element = new Element(JobAttribute.RUN_ID.getAttributeName(), UWS.NS);
+        element.addContent(job.getRunID());
+        return element;
+    }
+
+    /**
+     * Get an Element representing the Job ownerId.
+     *
+     * @return The Job ownerId Element.
+     */
+    public Element getOwnerId()
+    {
+        Element element = new Element(JobAttribute.OWNER_ID.getAttributeName(), UWS.NS);
+        element.setAttribute("nil", "true", UWS.XSI_NS);
+        Subject subjectOwner = job.getOwner();
         if (subjectOwner != null)
         {
             Set<Principal> setPrincipal = subjectOwner.getPrincipals();
             for (Principal prc : setPrincipal)
             {
-                e.addContent(prc.getName());
+                element.addContent(prc.getName());
                 break; // a convenient way to get the first principal in the set ONLY.
             }
         }
-        return e;
-    }
-    
-    private Element createParameters() {
-        Element rtn = new Element("parameters", UWS.NS);
-        Element e = null;
-        for (Parameter par : this.job.getParameterList())
-        {
-            e = new Element("parameter", UWS.NS);
-            e.setAttribute("id", par.getName());
-            e.addContent(par.getValue());
-            rtn.addContent(e);
-        }
-        return rtn;
+        return element;
     }
 
-    private Element createResults() {
-        Element rtn = new Element("results", UWS.NS);
-        Element e = null;
-        for (Result rs : this.job.getResultsList())
-        {
-            e = new Element("result", UWS.NS);
-            e.setAttribute("id", rs.getName());
-            e.setAttribute("href", rs.getURL().toString(), UWS.XLINK_NS);
-            rtn.addContent(e);
-        }
-        return rtn;
+    /**
+     * Get an Element representing the Job phase.
+     *
+     * @return The Job phase Element.
+     */
+    public Element getPhase()
+    {
+        Element element = new Element(JobAttribute.EXECUTION_PHASE.getAttributeName(), UWS.NS);
+        element.addContent(job.getExecutionPhase().toString());
+        return element;
     }
 
-    private Element createErrorSummary() {
-        Element rtn = null;
-        ErrorSummary es = this.job.getErrorSummary();
+    /**
+     * Get an Element representing the Job quote.
+     *
+     * @return The Job quote Element.
+     */
+    public Element getQuote()
+    {
+        Element element = new Element(JobAttribute.QUOTE.getAttributeName(), UWS.NS);
+        XmlUtil.addElementContent(element, job.getQuote(), true);
+        return element;
+    }
+
+    /**
+     * Get an Element representing the Job startTime.
+     *
+     * @return The Job startTime Element.
+     */
+    public Element getStartTime()
+    {
+        Element element = new Element(JobAttribute.START_TIME.getAttributeName(), UWS.NS);
+        XmlUtil.addElementContent(element, job.getStartTime(), true);
+        return element;
+    }
+
+    /**
+     * Get an Element representing the Job endTime.
+     *
+     * @return The Job endTime Element.
+     */
+    public Element getEndTime()
+    {
+        Element element = new Element(JobAttribute.END_TIME.getAttributeName(), UWS.NS);
+        XmlUtil.addElementContent(element, job.getEndTime(), true);
+        return element;
+    }
+
+    /**
+     * Get an Element representing the Job executionDuration.
+     *
+     * @return The Job executionDuration Element.
+     */
+    public Element getExecutionDuration()
+    {
+        Element element = new Element(JobAttribute.EXECUTION_DURATION.getAttributeName(), UWS.NS);
+        element.addContent(Long.toString(job.getExecutionDuration()));
+        return element;
+    }
+
+    /**
+     * Get an Element representing the Job destruction.
+     *
+     * @return The Job destruction Element.
+     */
+    public Element getDestruction()
+    {
+        Element element = new Element(JobAttribute.DESTRUCTION_TIME.getAttributeName(), UWS.NS);
+        XmlUtil.addElementContent(element, job.getDestructionTime(), true);
+        return element;
+    }
+
+    /**
+     * Get an Element representing the Job parameters.
+     *
+     * @return The Job parameters Element.
+     */
+    public Element getParameters()
+    {
+        Element element = new Element(JobAttribute.PARAMETERS.getAttributeName(), UWS.NS);
+        for (Parameter parameter : job.getParameterList())
+        {
+            Element e = new Element(JobAttribute.PARAMETER.getAttributeName(), UWS.NS);
+            e.setAttribute("id", parameter.getName());
+            e.addContent(parameter.getValue());
+            element.addContent(e);
+        }
+        return element;
+    }
+
+    /**
+     * Get an Element representing the Job results.
+     *
+     * @return The Job results Element.
+     */
+    public Element getResults()
+    {
+        Element element = new Element(JobAttribute.RESULTS.getAttributeName(), UWS.NS);
+        for (Result result : job.getResultsList())
+        {
+            Element e = new Element(JobAttribute.RESULT.getAttributeName(), UWS.NS);
+            e.setAttribute("id", result.getName());
+            e.setAttribute("href", result.getURL().toString(), UWS.XLINK_NS);
+            element.addContent(e);
+        }
+        return element;
+    }
+
+    /**
+     * Get an Element representing the Job errorSummary.
+     *
+     * @return The Job errorSummary Element.
+     */
+    public Element getErrorSummary()
+    {
+        Element element = null;
+        ErrorSummary es = job.getErrorSummary();
         if (es != null)
         {
-            rtn = new Element("errorSummary", UWS.NS);
-            rtn.setAttribute("type", es.getErrorType().toString());
+            element = new Element(JobAttribute.ERROR_SUMMARY.getAttributeName(), UWS.NS);
+            element.setAttribute("type", es.getErrorType().toString());
 
-            Element e = null;
+            Element e = new Element(JobAttribute.ERROR_SUMMARY_MESSAGE.getAttributeName(), UWS.NS);
+            e.addContent(job.getErrorSummary().getSummaryMessage());
+            element.addContent(e);
 
-            e = new Element("message", UWS.NS);
-            e.addContent(this.job.getErrorSummary().getSummaryMessage());
-            rtn.addContent(e);
-
-            e = new Element("detail", UWS.NS);
-            e.setAttribute("href", this.job.getErrorSummary().getDocumentURL().toString(), UWS.XLINK_NS);
-            rtn.addContent(e);
+            e = new Element(JobAttribute.ERROR_SUMMARY_DETAIL_LINK.getAttributeName(), UWS.NS);
+            e.setAttribute("href", job.getErrorSummary().getDocumentURL().toString(), UWS.XLINK_NS);
+            element.addContent(e);
         }
+        return element;
+    }
 
-        return rtn;
+    /**
+     * Build XML Document for the job
+     */
+    private void buildDocument()
+    {
+        Element root = getJob();
+        root.addContent(getJobId());
+        root.addContent(getRunId());
+        root.addContent(getOwnerId());
+        root.addContent(getPhase());
+        root.addContent(getQuote());
+        root.addContent(getStartTime());
+        root.addContent(getEndTime());
+        root.addContent(getExecutionDuration());
+        root.addContent(getDestruction());
+        root.addContent(getParameters());
+        root.addContent(getResults());
+        Element errorSummary = getErrorSummary();
+        if (errorSummary != null)
+            root.addContent(errorSummary);
+
+        document = new Document(root);
     }
 
 }

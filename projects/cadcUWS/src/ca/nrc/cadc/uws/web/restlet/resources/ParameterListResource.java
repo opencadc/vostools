@@ -70,17 +70,16 @@
 
 package ca.nrc.cadc.uws.web.restlet.resources;
 
-import ca.nrc.cadc.uws.Job;
-import org.w3c.dom.Document;
-import org.w3c.dom.Element;
+import ca.nrc.cadc.uws.JobAttribute;
+import ca.nrc.cadc.uws.JobWriter;
 import org.restlet.resource.Post;
 import org.restlet.representation.Representation;
 import org.restlet.data.Form;
 
-import ca.nrc.cadc.uws.JobAttribute;
 import ca.nrc.cadc.uws.Parameter;
 
 import java.util.Map;
+import org.jdom.Document;
 
 
 /**
@@ -115,32 +114,8 @@ public class ParameterListResource extends BaseJobResource
      */
     protected void buildXML(final Document document)
     {
-        Element parametersListElement = getElement(document, job);
-        document.appendChild(parametersListElement);       
+        JobWriter jobWriter = new JobWriter(job);
+        document.addContent(jobWriter.getParameters());
     }
 
-    // create the parameters list element for the specified job
-    // this is used above and re-used by JobAsynchResource
-    static Element getElement(Document doc, Job job)
-    {
-        final Element parametersListElement =
-                doc.createElementNS(XML_NAMESPACE_URI,
-                                         JobAttribute.PARAMETERS.
-                                                 getAttributeName());
-        parametersListElement.setPrefix(XML_NAMESPACE_PREFIX);
-
-        for (final Parameter parameter : job.getParameterList())
-        {
-            final Element parameterElement =
-                    doc.createElementNS(XML_NAMESPACE_URI,
-                                             JobAttribute.PARAMETER.
-                                                     getAttributeName());
-            parameterElement.setPrefix(XML_NAMESPACE_PREFIX);
-            parameterElement.setAttribute("id", parameter.getName());
-            parameterElement.setTextContent(parameter.getValue());
-            parametersListElement.appendChild(parameterElement);
-        }
-
-        return parametersListElement;
-    }
 }

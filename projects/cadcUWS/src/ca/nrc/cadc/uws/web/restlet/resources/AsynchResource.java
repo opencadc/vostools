@@ -69,14 +69,11 @@
 
 package ca.nrc.cadc.uws.web.restlet.resources;
 
-
 import ca.nrc.cadc.uws.Job;
-import ca.nrc.cadc.uws.JobAttribute;
+import ca.nrc.cadc.uws.JobWriter;
 import ca.nrc.cadc.uws.web.restlet.JobAssembler;
 import ca.nrc.cadc.uws.web.WebRepresentationException;
 
-import org.w3c.dom.Document;
-import org.w3c.dom.Element;
 import org.restlet.resource.Post;
 import org.restlet.representation.Representation;
 import org.restlet.data.Form;
@@ -89,6 +86,8 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import javax.security.auth.Subject;
+import org.jdom.Document;
+import org.jdom.Element;
 
 
 /**
@@ -151,41 +150,14 @@ public class AsynchResource extends UWSResource
      */
     protected void buildXML(final Document document) throws IOException
     {
-        final Element jobsElement =
-                document.createElementNS(XML_NAMESPACE_URI,
-                                         JobAttribute.JOBS.getAttributeName());
-
-        jobsElement.setAttribute("xmlns:xlink",
-                                 "http://www.w3.org/1999/xlink");
-        jobsElement.setAttribute("xmlns:xsi",
-                                 "http://www.w3.org/2001/XMLSchema-instance");
-
-        jobsElement.setPrefix(XML_NAMESPACE_PREFIX);
-
-        for (final Job job : getJobs())
+        Element jobsElement = JobWriter.getJobs();
+        for (Job job : getJobs())
         {
-            final Element jobRefElement =
-                    document.createElementNS(XML_NAMESPACE_URI,
-                                             JobAttribute.JOB_REF.
-                                                     getAttributeName());
-            
-            jobRefElement.setPrefix(XML_NAMESPACE_PREFIX);
-            jobRefElement.setAttribute("id", job.getID());
-            jobRefElement.setAttribute("xlink:href", getHostPart()
-                                       + job.getRequestPath() + "/" + job.getID());
-            
-            final Element jobRefPhaseElement =
-                    document.createElementNS(XML_NAMESPACE_URI,
-                                             JobAttribute.EXECUTION_PHASE.
-                                                     getAttributeName());
-            jobRefPhaseElement.setPrefix(XML_NAMESPACE_PREFIX);
-            jobRefPhaseElement.setTextContent(job.getExecutionPhase().name());
-
-            jobRefElement.appendChild(jobRefPhaseElement);
-            jobsElement.appendChild(jobRefElement);
+            JobWriter jobWriter = new JobWriter(job);
+            jobsElement.addContent(jobWriter.getJobRef(getHostPart()));
+            jobsElement.addContent(jobWriter.getPhase());
         }
-
-        document.appendChild(jobsElement);
+        document.addContent(jobsElement);
     }
 
     /**

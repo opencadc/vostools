@@ -72,12 +72,12 @@ package ca.nrc.cadc.uws.web.restlet.resources;
 
 import org.restlet.representation.Representation;
 import org.restlet.resource.Get;
-import org.w3c.dom.Document;
 
 import ca.nrc.cadc.uws.ErrorSummary;
 import ca.nrc.cadc.uws.InvalidResourceException;
 
 import java.io.IOException;
+import org.jdom.Document;
 
 
 /**

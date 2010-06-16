@@ -33,15 +33,14 @@
  */
 package ca.nrc.cadc.uws.web.restlet.resources;
 
-import org.w3c.dom.Document;
 import org.restlet.resource.Get;
 import org.restlet.representation.Representation;
 
 import java.io.IOException;
 
-import ca.nrc.cadc.uws.Job;
 import ca.nrc.cadc.uws.Result;
 import ca.nrc.cadc.uws.InvalidResourceException;
+import org.jdom.Document;
 
 
 public class ResultResource extends BaseJobResource

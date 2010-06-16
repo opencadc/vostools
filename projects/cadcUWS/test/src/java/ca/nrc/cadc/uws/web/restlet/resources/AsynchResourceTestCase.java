@@ -71,10 +71,6 @@
 package ca.nrc.cadc.uws.web.restlet.resources;
 
 import static junit.framework.TestCase.*;
-import org.w3c.dom.Document;
-import org.w3c.dom.Element;
-import org.custommonkey.xmlunit.XMLUnit;
-import org.custommonkey.xmlunit.Diff;
 import org.junit.Before;
 import org.junit.After;
 import org.junit.Test;
@@ -87,7 +83,8 @@ import java.util.Date;
 import java.util.List;
 import java.net.URL;
 
-import javax.security.auth.Subject;
+import org.jdom.Document;
+import org.jdom.Element;
 
 
 /**
@@ -166,8 +163,8 @@ public class AsynchResourceTestCase
             }
         };
 
-        documentToBuild = XMLUnit.newControlParser().newDocument();
-        expectedDocument = XMLUnit.newControlParser().newDocument();
+        documentToBuild = new Document(); //XMLUnit.newControlParser().newDocument();
+        expectedDocument = new Document(); //XMLUnit.newControlParser().newDocument();
         buildTestXML(expectedDocument);        
     }
 
@@ -187,49 +184,27 @@ public class AsynchResourceTestCase
     public void buildXML() throws Exception
     {
         asynchResource.buildXML(documentToBuild);
-
-        documentToBuild.normalizeDocument();
         
-        final Diff diff = new Diff(expectedDocument, documentToBuild);
-        assertTrue("Good document.", diff.similar());
+        assertTrue("Good document.", documentToBuild.equals(expectedDocument));
     }
 
     protected void buildTestXML(final Document document)
     {
-        final Element jobsElement =
-                document.createElementNS(XML_NAMESPACE_URI,
-                                         JobAttribute.JOBS.getAttributeName());
+        Element jobsElement = new Element(JobAttribute.JOBS.getAttributeName(), UWS.NS);
+        jobsElement.addNamespaceDeclaration(UWS.NS);
+        jobsElement.addNamespaceDeclaration(UWS.XLINK_NS);
+        jobsElement.setAttribute("schemaLocation", "http://www.ivoa.net/xml/UWS/v1.0 UWS.xsd", UWS.XSI_NS);
 
-        jobsElement.setAttribute("xmlns:xlink",
-                                 "http://www.w3.org/1999/xlink");
-        jobsElement.setAttribute("xmlns:xsi",
-                                 "http://www.w3.org/2001/XMLSchema-instance");
-
-        jobsElement.setPrefix(XML_NAMESPACE_PREFIX);
-
-        final Element jobRefElement =
-                document.createElementNS(XML_NAMESPACE_URI,
-                                         JobAttribute.JOB_REF.
-                                                 getAttributeName());
-
-        jobRefElement.setPrefix(XML_NAMESPACE_PREFIX);
+        Element jobRefElement = new Element(JobAttribute.JOB_REF.getAttributeName(), UWS.NS);
         jobRefElement.setAttribute("id", job.getID());
-        jobRefElement.setAttribute("xlink:href",
-                                   HOST_PART + "/async/"
-                                   + job.getID());
+        jobRefElement.setAttribute("xlink:href", HOST_PART + "/async/" + job.getID());
 
-        final Element jobRefPhaseElement =
-                document.createElementNS(XML_NAMESPACE_URI,
-                                         JobAttribute.EXECUTION_PHASE.
-                                                 getAttributeName());
-        jobRefPhaseElement.setPrefix(XML_NAMESPACE_PREFIX);
-        jobRefPhaseElement.setTextContent(job.getExecutionPhase().name());
+        Element jobRefPhaseElement = new Element(JobAttribute.EXECUTION_PHASE.getAttributeName(), UWS.NS);
+        jobRefPhaseElement.addContent(job.getExecutionPhase().name());
 
-        jobRefElement.appendChild(jobRefPhaseElement);
-        jobsElement.appendChild(jobRefElement);
+        jobRefElement.addContent(jobRefPhaseElement);
+        jobsElement.addContent(jobRefElement);
         
-        document.appendChild(jobsElement);
-
-        document.normalizeDocument();
+        document.addContent(jobsElement);
     }
 }

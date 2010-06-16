@@ -74,28 +74,25 @@ import org.restlet.resource.ServerResource;
 import org.restlet.resource.Get;
 import org.restlet.representation.Representation;
 import org.restlet.representation.StringRepresentation;
-import org.restlet.ext.xml.DomRepresentation;
 import org.apache.log4j.Logger;
-import org.w3c.dom.Document;
 
 import ca.nrc.cadc.uws.JobManager;
 import ca.nrc.cadc.uws.util.BeanUtil;
 import ca.nrc.cadc.uws.util.RestletUtil;
 import ca.nrc.cadc.uws.web.validators.FormValidator;
 import ca.nrc.cadc.uws.web.WebRepresentationException;
+import ca.nrc.cadc.uws.web.restlet.representation.JDOMRepresentation;
 import ca.nrc.cadc.uws.web.restlet.validators.JobFormValidatorImpl;
 
 import javax.security.auth.Subject;
-import javax.xml.transform.Transformer;
-import javax.xml.transform.OutputKeys;
 import java.io.IOException;
 import java.security.Principal;
 import java.util.HashSet;
 import java.util.Map;
 import java.util.Set;
+import org.jdom.Document;
 import org.restlet.data.Form;
 import org.restlet.data.MediaType;
-import org.restlet.data.Method;
 import org.restlet.data.Reference;
 import org.restlet.data.Status;
 
@@ -107,8 +104,8 @@ public abstract class UWSResource extends ServerResource
 {
     private static final Logger LOGGER = Logger.getLogger(UWSResource.class);
 
-    protected final static String XML_NAMESPACE_PREFIX = "uws";
-    protected final static String XML_NAMESPACE_URI = "http://www.ivoa.net/xml/UWS/v1.0";
+//    protected final static String XML_NAMESPACE_PREFIX = "uws";
+//    protected final static String XML_NAMESPACE_URI = "http://www.ivoa.net/xml/UWS/v1.0";
 
     protected FormValidator formValidator;
 
@@ -137,52 +134,18 @@ public abstract class UWSResource extends ServerResource
     {
         try
         {
-            final DomRepresentation rep =
-                    new DomRepresentation(MediaType.TEXT_XML)
-                    {
-                        /**
-                         * Creates a new JAXP Transformer object that will be
-                         * used to serialize this DOM. This method may be
-                         * overridden in order to set custom properties on the
-                         * Transformer.
-                         *
-                         * @return The transformer to be used for serialization.
-                         */
-                        @Override
-                        protected Transformer createTransformer()
-                                throws IOException
-                        {
-                            final Transformer transformer =
-                                    super.createTransformer();
-                            
-                            transformer.setOutputProperty(OutputKeys.INDENT,
-                                                          "yes");
-                            transformer.setOutputProperty(
-                                    "{http://xml.apache.org/xslt}indent-amount",
-                                    "2");
-
-                            return transformer;
-                        }
-                    };
-            
-            final Document document = rep.getDocument();
-            
+            Document document = new Document();
             buildXML(document);
-            document.normalizeDocument();
-
-            return rep;
+            JDOMRepresentation representation = new JDOMRepresentation(MediaType.TEXT_XML, document);
+            return representation;
         }
         catch (final IOException e)
         {
             setExisting(false);
             LOGGER.error("Unable to create XML Document.");
-            throw new WebRepresentationException(
-                    "Unable to create XML Document.", e);
+            throw new WebRepresentationException("Unable to create XML Document.", e);
         }
-//        catch (final Exception e)
-//        {
-//            throw new ResourceException(Status.CLIENT_ERROR_NOT_FOUND);
-//        }
+
     }
 
     /**

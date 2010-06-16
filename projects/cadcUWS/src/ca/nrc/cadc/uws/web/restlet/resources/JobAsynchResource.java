@@ -73,29 +73,29 @@ package ca.nrc.cadc.uws.web.restlet.resources;
 import org.restlet.resource.Post;
 import org.restlet.representation.Representation;
 import org.apache.log4j.Logger;
-import org.w3c.dom.Document;
-import org.w3c.dom.Element;
 
 import java.io.IOException;
 import java.text.ParseException;
 
 import ca.nrc.cadc.uws.web.InvalidActionException;
 import ca.nrc.cadc.date.DateUtil;
-import ca.nrc.cadc.uws.ErrorSummary;
 import ca.nrc.cadc.uws.ExecutionPhase;
 import ca.nrc.cadc.uws.InvalidResourceException;
 import ca.nrc.cadc.uws.JobAttribute;
 import ca.nrc.cadc.uws.JobExecutor;
 import ca.nrc.cadc.uws.JobRunner;
+import ca.nrc.cadc.uws.JobWriter;
 import ca.nrc.cadc.uws.Parameter;
+import ca.nrc.cadc.uws.UWS;
 import ca.nrc.cadc.uws.util.BeanUtil;
 import java.security.Principal;
 
 import java.text.DateFormat;
 import java.util.Date;
-import java.util.Map;
 import java.util.Set;
 import javax.security.auth.Subject;
+import org.jdom.Document;
+import org.jdom.Element;
 import org.restlet.data.Form;
 
 
@@ -220,19 +220,11 @@ public class JobAsynchResource extends BaseJobResource
      * @param document      The Document to build up.
      * @param pathInfo      Information on the current Path.
      */
-    protected void buildAttributeXML(final Document document,
-                                     final String pathInfo)
+    protected void buildAttributeXML(final Document document, final String pathInfo)
     {
         String text;
         final JobAttribute jobAttribute;
 
-        //if (pathInfo.endsWith("execute")) // what is this??
-        //{
-        //    executeJob();
-        //    text = job.getID();
-        //    jobAttribute = JobAttribute.JOB_ID;
-        //}
-        //else
         if (pathInfo.endsWith("phase"))
         {
             text = job.getExecutionPhase().name();
@@ -260,17 +252,12 @@ public class JobAsynchResource extends BaseJobResource
         }
         else
         {
-            throw new InvalidResourceException("No such Resource > "
-                                               + pathInfo);
+            throw new InvalidResourceException("No such Resource > " + pathInfo);
         }
 
-        final Element elem =
-                document.createElementNS(XML_NAMESPACE_URI,
-                                         jobAttribute.getAttributeName());
-        elem.setPrefix(XML_NAMESPACE_PREFIX);
-        elem.setTextContent(text);
-
-        document.appendChild(elem);
+        Element element = new Element(jobAttribute.getAttributeName(), UWS.NS);
+        element.addContent(text);
+        document.addContent(element);
     }
 
 
@@ -305,148 +292,8 @@ public class JobAsynchResource extends BaseJobResource
      */
     protected void buildJobXML(final Document document) throws IOException
     {
-        final Element jobElement = 
-                document.createElementNS(XML_NAMESPACE_URI, 
-                                        JobAttribute.JOB.getAttributeName());
-        jobElement.setPrefix(XML_NAMESPACE_PREFIX);
-
-        jobElement.setAttribute("xmlns:xlink", "http://www.w3.org/1999/xlink");
-        jobElement.setAttribute("xmlns:xs", "http://www.w3.org/2001/XMLSchema");
-        jobElement.setAttribute("xmlns:xsi", "http://www.w3.org/2001/XMLSchema-instance");
-
-        document.appendChild(jobElement);
-
-        // <uws:jobId>
-        final Element jobIdElement =
-                document.createElementNS(XML_NAMESPACE_URI,
-                     JobAttribute.JOB_ID.getAttributeName());
-        jobIdElement.setPrefix(XML_NAMESPACE_PREFIX);
-        jobIdElement.setTextContent(job.getID());
-        jobElement.appendChild(jobIdElement);
-
-        // <uws:runId>
-        final Element runIdElement =
-                document.createElementNS(XML_NAMESPACE_URI,
-                     JobAttribute.RUN_ID.getAttributeName());
-        runIdElement.setPrefix(XML_NAMESPACE_PREFIX);
-        runIdElement.setTextContent(job.getRunID());
-        jobElement.appendChild(runIdElement);
-
-        // <uws:ownerId>
-        final Element ownerNameElement =
-                document.createElementNS(XML_NAMESPACE_URI,
-                     JobAttribute.OWNER_ID.getAttributeName());
-        ownerNameElement.setPrefix(XML_NAMESPACE_PREFIX);
-        if (job.getOwner() == null)
-            ownerNameElement.setAttribute("xsi:nil", "true");
-        else
-            ownerNameElement.setTextContent(format(job.getOwner()));
-        jobElement.appendChild(ownerNameElement);
-
-        // <uws:phase>
-        final Element executionPhaseElement =
-                document.createElementNS(XML_NAMESPACE_URI,
-                     JobAttribute.EXECUTION_PHASE.getAttributeName());
-        executionPhaseElement.setPrefix(XML_NAMESPACE_PREFIX);
-        executionPhaseElement.setTextContent(job.getExecutionPhase().name());
-        jobElement.appendChild(executionPhaseElement);
-
-        // <uws:quote>
-        final Element quoteElement =
-                document.createElementNS(XML_NAMESPACE_URI,
-                     JobAttribute.QUOTE.getAttributeName());
-        quoteElement.setPrefix(XML_NAMESPACE_PREFIX);
-        quoteElement.setTextContent( dateFormat.format(job.getQuote()) );
-        jobElement.appendChild(quoteElement);
-
-        // <uws:startTime>
-        final Element startTimeElement =
-                document.createElementNS(XML_NAMESPACE_URI,
-                     JobAttribute.START_TIME.getAttributeName());
-        startTimeElement.setPrefix(XML_NAMESPACE_PREFIX);
-        if (job.getStartTime() == null)
-            startTimeElement.setAttribute("xsi:nil", "true");
-        else
-            startTimeElement.setTextContent( dateFormat.format(job.getStartTime()) );
-        jobElement.appendChild(startTimeElement);
-
-        // <uws:endTime>
-         final Element endTimeElement =
-                document.createElementNS(XML_NAMESPACE_URI,
-                     JobAttribute.END_TIME.getAttributeName());
-        endTimeElement.setPrefix(XML_NAMESPACE_PREFIX);
-        if (job.getEndTime() == null)
-            endTimeElement.setAttribute("xsi:nil", "true");
-        else
-            endTimeElement.setTextContent( dateFormat.format(job.getEndTime()) );
-        jobElement.appendChild(endTimeElement);       
-
-        // <uws:executionDuration>
-        final Element executionDurationElement =
-                document.createElementNS(XML_NAMESPACE_URI,
-                     JobAttribute.EXECUTION_DURATION.getAttributeName());
-        executionDurationElement.setPrefix(XML_NAMESPACE_PREFIX);
-        executionDurationElement.setTextContent(
-                Long.toString(job.getExecutionDuration()));
-        jobElement.appendChild(executionDurationElement);
-
-        // <uws:destructionTime>
-        final Element destructionTimeElement =
-                document.createElementNS(XML_NAMESPACE_URI,
-                     JobAttribute.DESTRUCTION_TIME.getAttributeName());
-        destructionTimeElement.setPrefix(XML_NAMESPACE_PREFIX);
-        destructionTimeElement.setTextContent( dateFormat.format(job.getDestructionTime()) );
-        jobElement.appendChild(destructionTimeElement);
-
-        // <uws:parameters>
-        Element parameterListElement = ParameterListResource.getElement(document, job);
-        jobElement.appendChild(parameterListElement);
-        
-
-        // <uws:results>
-        Element resultListElement = ResultListResource.getElement(document, job);
-        jobElement.appendChild(resultListElement);
-
-        // <uws:errorSummary>
-        final ErrorSummary errorSummary = job.getErrorSummary();
-        final Element errorSummaryElement =
-                document.createElementNS(XML_NAMESPACE_URI,
-                     JobAttribute.ERROR_SUMMARY.getAttributeName());
-        errorSummaryElement.setPrefix(XML_NAMESPACE_PREFIX);
-
-        if (errorSummary == null)
-        {
-            final Element errorSummaryMessageElement =
-                    document.createElementNS(XML_NAMESPACE_URI,
-                         JobAttribute.ERROR_SUMMARY_MESSAGE.getAttributeName());
-            errorSummaryMessageElement.setPrefix(XML_NAMESPACE_PREFIX);
-            errorSummaryElement.appendChild(errorSummaryMessageElement);
-        }
-        else
-        {
-            final Element errorSummaryMessageElement =
-                    document.createElementNS(XML_NAMESPACE_URI,
-                         JobAttribute.ERROR_SUMMARY_MESSAGE.getAttributeName());
-            errorSummaryMessageElement.setPrefix(XML_NAMESPACE_PREFIX);
-            errorSummaryMessageElement.setTextContent(
-                    errorSummary.getSummaryMessage());
-
-            final Element errorDocumentURIElement =
-                    document.createElementNS(XML_NAMESPACE_URI,
-                         JobAttribute.ERROR_SUMMARY_DETAIL_LINK.getAttributeName());
-            errorDocumentURIElement.setPrefix(XML_NAMESPACE_PREFIX);
-            errorDocumentURIElement.setAttribute(
-                    "xlink:href", errorSummary.getDocumentURL() == null
-                    ? ""
-                    : errorSummary.getDocumentURL().toString());
-
-            errorSummaryElement.setAttribute(JobAttribute.ERROR_SUMMARY_TYPE.getAttributeName(), errorSummary.getErrorType().name());
-
-            errorSummaryElement.appendChild(errorSummaryMessageElement);
-            errorSummaryElement.appendChild(errorDocumentURIElement);
-        }
-
-        jobElement.appendChild(errorSummaryElement);
+        JobWriter writer = new JobWriter(job);
+        document.setRootElement(writer.getDocument().detachRootElement());
     }
 
     protected JobExecutor getJobExecutorService()

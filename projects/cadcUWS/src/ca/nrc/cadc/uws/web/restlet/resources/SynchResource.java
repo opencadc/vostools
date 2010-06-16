@@ -69,7 +69,6 @@
 
 package ca.nrc.cadc.uws.web.restlet.resources;
 
-import org.w3c.dom.Document;
 import org.restlet.resource.Post;
 import org.restlet.resource.Get;
 import org.restlet.representation.Representation;
@@ -86,6 +85,7 @@ import ca.nrc.cadc.uws.web.restlet.UWSSyncRouter;
 import java.net.MalformedURLException;
 
 import javax.security.auth.Subject;
+import org.jdom.Document;
 import org.restlet.data.Form;
 import org.restlet.data.Method;
 import org.restlet.data.Reference;

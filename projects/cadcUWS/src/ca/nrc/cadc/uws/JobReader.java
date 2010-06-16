@@ -90,6 +90,7 @@ import org.jdom.JDOMException;
 import org.jdom.input.SAXBuilder;
 
 import ca.nrc.cadc.date.DateUtil;
+import ca.nrc.cadc.xml.XmlUtil;
 
 /**
  * @author zhangsa
@@ -105,11 +106,13 @@ public class JobReader
 
     public JobReader()
     {
+        String EXT_SCHEMA_LOCATION = UWS.XSD_KEY + " " + XmlUtil.getResourceUrlString(UWS.XSD_FILE_NAME, UWS.class);
+        
         this.saxBuilder = new SAXBuilder("org.apache.xerces.parsers.SAXParser", false);
         this.saxBuilder.setFeature("http://xml.org/sax/features/validation", true);
         this.saxBuilder.setFeature("http://apache.org/xml/features/validation/schema", true);
         this.saxBuilder.setFeature("http://apache.org/xml/features/validation/schema-full-checking", true);
-        this.saxBuilder.setProperty("http://apache.org/xml/properties/schema/external-schemaLocation", UWS.EXT_SCHEMA_LOCATION);
+        this.saxBuilder.setProperty("http://apache.org/xml/properties/schema/external-schemaLocation", EXT_SCHEMA_LOCATION);
     }
     
     public Job readFrom(Reader reader) throws JDOMException, IOException
@@ -147,15 +150,15 @@ public class JobReader
     {
         Element root = this.document.getRootElement();
 
-        String jobID = root.getChildText("jobId", UWS.NS);
-        String runID = root.getChildText("runId", UWS.NS);
+        String jobID = root.getChildText(JobAttribute.JOB_ID.getAttributeName(), UWS.NS);
+        String runID = root.getChildText(JobAttribute.RUN_ID.getAttributeName(), UWS.NS);
         Subject owner = null; // It's not able to create a Subject based on XML text.
         ExecutionPhase executionPhase = parseExecutionPhase();
-        Date quote = parseDate(root.getChildText("quote", UWS.NS));
-        Date startTime = parseDate(root.getChildText("startTime", UWS.NS));
-        Date endTime = parseDate(root.getChildText("endTime", UWS.NS));
-        Date destructionTime = parseDate(root.getChildText("destruction", UWS.NS));
-        long executionDuration = Long.parseLong(root.getChildText("executionDuration", UWS.NS));
+        Date quote = parseDate(root.getChildText(JobAttribute.QUOTE.getAttributeName(), UWS.NS));
+        Date startTime = parseDate(root.getChildText(JobAttribute.START_TIME.getAttributeName(), UWS.NS));
+        Date endTime = parseDate(root.getChildText(JobAttribute.END_TIME.getAttributeName(), UWS.NS));
+        Date destructionTime = parseDate(root.getChildText(JobAttribute.DESTRUCTION_TIME.getAttributeName(), UWS.NS));
+        long executionDuration = Long.parseLong(root.getChildText(JobAttribute.EXECUTION_DURATION.getAttributeName(), UWS.NS));
         ErrorSummary errorSummary = parseErrorSummary();
         List<Result> resultsList = parseResultsList();
         List<Parameter> parameterList = parseParametersList();
@@ -183,7 +186,7 @@ public class JobReader
     {
         ExecutionPhase rtn = null;
         Element root = this.document.getRootElement();
-        String strPhase = root.getChildText("phase", UWS.NS);
+        String strPhase = root.getChildText(JobAttribute.EXECUTION_PHASE.getAttributeName(), UWS.NS);
         if (strPhase.equalsIgnoreCase(ExecutionPhase.PENDING.toString()))
             rtn = ExecutionPhase.PENDING;
         else if (strPhase.equalsIgnoreCase(ExecutionPhase.QUEUED.toString()))
@@ -210,13 +213,13 @@ public class JobReader
     {
         List<Parameter> rtn = null;
         Element root = this.document.getRootElement();
-        Element elementParameters = root.getChild("parameters", UWS.NS);
+        Element elementParameters = root.getChild(JobAttribute.PARAMETERS.getAttributeName(), UWS.NS);
         if (elementParameters != null)
         {
             rtn = new ArrayList<Parameter>();
 
             Parameter par = null;
-            List<?> listElement = elementParameters.getChildren("parameter", UWS.NS);
+            List<?> listElement = elementParameters.getChildren(JobAttribute.PARAMETER.getAttributeName(), UWS.NS);
             for (Object obj : listElement)
             {
                 Element e = (Element) obj;
@@ -233,13 +236,13 @@ public class JobReader
     {
         List<Result> rtn = null;
         Element root = this.document.getRootElement();
-        Element e = root.getChild("results", UWS.NS);
+        Element e = root.getChild(JobAttribute.RESULTS.getAttributeName(), UWS.NS);
         if (e != null)
         {
             rtn = new ArrayList<Result>();
 
             Result rs = null;
-            List<?> listE = e.getChildren("result", UWS.NS);
+            List<?> listE = e.getChildren(JobAttribute.RESULT.getAttributeName(), UWS.NS);
             for (Object obj : listE)
             {
                 Element eRs = (Element) obj;
@@ -263,7 +266,7 @@ public class JobReader
     {
         ErrorSummary rtn = null;
         Element root = this.document.getRootElement();
-        Element e = root.getChild("errorSummary", UWS.NS);
+        Element e = root.getChild(JobAttribute.ERROR_SUMMARY.getAttributeName(), UWS.NS);
         if (e != null)
         {
             ErrorType errorType = null;
@@ -273,7 +276,7 @@ public class JobReader
             else if (strType.equalsIgnoreCase(ErrorType.TRANSIENT.toString()))
                 errorType = ErrorType.TRANSIENT;
 
-            Element eDetail = e.getChild("detail", UWS.NS);
+            Element eDetail = e.getChild(JobAttribute.ERROR_SUMMARY_DETAIL_LINK.getAttributeName(), UWS.NS);
             String strDocUrl = eDetail.getAttributeValue("href", UWS.XLINK_NS);
             URL url = null;
             try
@@ -285,7 +288,7 @@ public class JobReader
                 log.debug(ex.getMessage());
             }
 
-            String summaryMessage = e.getChildText("message", UWS.NS);
+            String summaryMessage = e.getChildText(JobAttribute.ERROR_SUMMARY_MESSAGE.getAttributeName(), UWS.NS);
             rtn = new ErrorSummary(summaryMessage, url, errorType);
         }
         return rtn;
