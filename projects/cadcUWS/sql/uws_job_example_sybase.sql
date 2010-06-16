@@ -59,6 +59,7 @@ create table uws_result
     jobID                   varchar(16)     not null,
     name                    varchar(32)     not null,
     url                     varchar(256)    null,
+    primary                 tinyint         default 0
 
     foreign key (jobID) references uws_job (jobID)
 );

@@ -27,7 +27,7 @@ create table uws.Job
     requestPath             varchar,
     deletedByUser           integer         default 0,
 
-     primary key (jobID) using index tablespace caom_index
+    primary key (jobID) using index tablespace caom_index
 -- can append this to previous line: using index tablespace <name of tablespace>
 );
 
@@ -47,6 +47,7 @@ create table uws.Result
     jobID                   varchar(16)     not null,
     name                    varchar         not null,
     url                     varchar,
+    primary                 integer         default 0,
 
     foreign key (jobID) references uws.Job (jobID)
 );
