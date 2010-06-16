@@ -76,7 +76,6 @@ import com.meterware.httpunit.WebRequest;
 import com.meterware.httpunit.WebResponse;
 import java.util.Calendar;
 import java.util.Date;
-import org.apache.log4j.Level;
 import org.apache.log4j.Logger;
 import org.jdom.Document;
 import org.jdom.Element;
@@ -90,9 +89,6 @@ public class DestructionTest extends AbstractUWSTest
     // Destruction date passed to UWS service.
     private String destruction;
 
-    // Destruction date expected back from UWS (returned as UTC).
-    private String destructionUTC;
-
     public DestructionTest()
     {
         super();
@@ -100,8 +96,7 @@ public class DestructionTest extends AbstractUWSTest
         Calendar cal = Calendar.getInstance();
         cal.roll(Calendar.DATE, true);
         Date date = cal.getTime();
-        destruction = DateUtil.toString(date, DateUtil.IVOA_DATE_FORMAT);
-        destructionUTC = DateUtil.toString(date, DateUtil.IVOA_DATE_FORMAT, DateUtil.UTC);
+        destruction = DateUtil.toString(date, DateUtil.IVOA_DATE_FORMAT, DateUtil.LOCAL);
     }
 
     /**
@@ -149,7 +144,7 @@ public class DestructionTest extends AbstractUWSTest
 
             // Validate the dstruction time.
             log.debug("uws:destruction: " + root.getText());
-            assertEquals("Destruction element not updated in XML returned from GET of " + resourceUrl, destructionUTC, root.getText());
+            assertEquals("Destruction element not updated in XML returned from GET of " + resourceUrl, destruction, root.getText());
 
             // Delete the job.
             deleteJob(conversation, jobId);
