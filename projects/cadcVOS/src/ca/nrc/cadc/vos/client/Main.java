@@ -90,7 +90,10 @@ public class Main
 
     public static final String ARG_HELP = "help";
     public static final String ARG_VERBOSE = "verbose";
-    public static final String ARG_DEBUG = "debig";
+    public static final String ARG_DEBUG = "debug";
+    public static final String ARG_H = "h";
+    public static final String ARG_V = "v";
+    public static final String ARG_D = "d";
     public static final String ARG_VIEW = "view";
     public static final String ARG_CREATE = "create";
     public static final String ARG_DELETE = "delete";
@@ -125,17 +128,17 @@ public class Main
     {
         ArgumentMap argMap = new ArgumentMap(args);
 
-        if (argMap.isSet(ARG_HELP))
+        if (argMap.isSet(ARG_HELP) || argMap.isSet(ARG_H))
             System.out.println(Main.usage);
         else
         {
             Main command = new Main();
-            if (argMap.isSet(ARG_DEBUG))
+            if (argMap.isSet(ARG_DEBUG) || argMap.isSet(ARG_D))
             {
                 command.setDebug(true);
                 Log4jInit.setLevel("ca.nrc.cadc.vos.client", Level.DEBUG);
             }
-            else if (argMap.isSet(ARG_VERBOSE))
+            else if (argMap.isSet(ARG_VERBOSE) || argMap.isSet(ARG_V))
             {
                 command.setVerbose(true);
                 Log4jInit.setLevel("ca.nrc.cadc.vos.client", Level.INFO);
