@@ -90,51 +90,51 @@
     <property name="project" value="cadcSampleUWS" />
 
     <!-- JAR files to be included in classpath and war file -->
-    <property name="ext.log4j"       value="${ext.lib}/log4j.jar" />
-    <property name="ext.servlet-api" value="${ext.lib}/servlet-api.jar" />
-    <property name="lib.cadcUtil"    value="${lib}/cadcUtil.jar" />
-    <property name="lib.cadcLog"     value="${lib}/cadcLog.jar" />
-    <property name="lib.cadcUWS"     value="${lib}/cadcUWS.jar" />
+    <property name="cadcUtil"           value="${lib}/cadcUtil.jar" />
+    <property name="cadcLog"            value="${lib}/cadcLog.jar" />
+    <property name="cadcUWS"            value="${lib}/cadcUWS.jar" />
+    <property name="jdom"               value="${ext.lib}/jdom.jar" />
+    <property name="log4j"              value="${ext.lib}/log4j.jar" />
+    <property name="restlet"            value="${ext.lib}/org.restlet.jar" />
+    <property name="restlet.servlet"    value="${ext.lib}/org.restlet.ext.servlet.jar" />
+    <property name="servlet-api"        value="${ext.lib}/servlet-api.jar" />
 
-    <property name="jars" value="${ext.log4j}:${ext.servlet-api}:${lib.cadcUtil}:${lib.cadcUWS}" />
+    <property name="jars" value="${log4j}:${servlet-api}:${cadcUtil}:${cadcUWS}" />
 
-    <target name="build" depends="cadcSampleUWS,webapp" />
+    <target name="build" depends="cadcSampleUWS-jar,webapp" />
 
-    <target name="cadcSampleUWS" depends="compile">
-            <jar jarfile="${build}/tmp/cadcSampleUWS.jar"
-                    basedir="${build}/class" update="no">
-                    <exclude name="test/**" />
-            </jar>
+    <target name="cadcSampleUWS-jar" depends="compile">
+        <jar jarfile="${build}/tmp/${project}.jar"
+            basedir="${build}/class" update="no">
+            <exclude name="test/**" />
+        </jar>
     </target>
 
-    <target name="webapp" depends="cadcSampleUWS">
-            <war warfile="${build}/webapps/cadcSampleUWS.war" webxml="src/xml/web.xml" update="no">
-                <lib dir="${ext.lib}">
-                    <include name="log4j.jar" />
-                    <include name="org.restlet.ext.servlet.jar" />
-                    <include name="org.restlet.ext.xml.jar" />
-                    <include name="org.restlet.jar" />
-                </lib>
-                <lib file="${lib.cadcUtil}" />
-                <lib file="${lib.cadcLog}" />
-                <lib file="${lib.cadcUWS}" />
-                <lib file="${build}/tmp/cadcSampleUWS.jar" />
-                <fileset dir="src/text">
-                    <include name="**/*.txt" />
-                </fileset>
-                <fileset dir="src/jsp">
-                    <include name="**/*.jsp" />
-                </fileset>
-            </war>
+    <target name="webapp" depends="cadcSampleUWS-jar">
+        <war warfile="${build}/webapps/${project}.war" webxml="src/xml/web.xml" update="no">
+            <lib file="${build}/tmp/${project}.jar" />
+            <lib file="${cadcLog}" />
+            <lib file="${cadcUtil}" />
+            <lib file="${cadcUWS}" />
+            <lib file="${jdom}" />
+            <lib file="${log4j}" />
+            <lib file="${restlet}" />
+            <lib file="${restlet.servlet}" />
+            <fileset dir="src/text">
+                <include name="**/*.txt" />
+            </fileset>
+            <fileset dir="src/jsp">
+                <include name="**/*.jsp" />
+            </fileset>
+        </war>
     </target>
 
     <!-- JAR files needed to run the test suite -->
-    <property name="lib.cadcTestUWS" value="${lib}/cadcTestUWS.jar" />
-    <property name="lib.jdom" value="${ext.lib}/jdom.jar" />
-    <property name="dev.junit" value="${ext.dev}/junit.jar" />
-    <property name="dev.httpunit" value="${ext.dev}/httpunit.jar:${ext.lib}/xerces.jar:${ext.lib}/js.jar:${ext.lib}/nekohtml.jar" />
-    <property name="dev.xmlunit" value="${ext.lib}/xmlunit.jar" />
-    <property name="testingJars" value="${lib.cadcTestUWS}:${lib.jdom}:${dev.junit}:${dev.httpunit}:${dev.xmlunit}" />
+    <property name="cadcTestUWS"    value="${lib}/cadcTestUWS.jar" />
+    <property name="junit"          value="${ext.dev}/junit.jar" />
+    <property name="httpunit"       value="${ext.dev}/httpunit.jar:${ext.lib}/xerces.jar:${ext.lib}/js.jar:${ext.lib}/nekohtml.jar" />
+    <property name="xmlunit"        value="${ext.lib}/xmlunit.jar" />
+    <property name="testingJars"    value="${cadcTestUWS}:${jdom}:${junit}:${httpunit}:${xmlunit}" />
 
     <!-- Directory used to deploy the WAR file -->
     <property name="deployDir" value="/data/test/webapps" />
@@ -149,9 +149,7 @@
         </javac>
     </target>
 
-    <!-- Run the test suite -->
-    <target name="test" depends="compile-test">
-        <echo message="Running test" />
+    <target name="deploy" depends="webapp">
 
         <!-- Delete old WAR file -->
         <echo message="Deleting old WAR file ${deployDir}/${project}.war" />
@@ -160,7 +158,7 @@
         <!-- Delete old delployed directory -->
         <echo message="Deleting old deployment directory ${deployDir}/${project}/" />
         <delete dir="${deployDir}/${project}" includeEmptyDirs="true"/>
-        
+
         <!-- Copy new WAR file to /data/test/webapps -->
         <echo message="Copying new WAR file to deployment directory..." />
         <copy file="${build}/webapps/${project}.war" todir="${deployDir}"/>
@@ -182,9 +180,11 @@
         <waitfor>
             <available file="${deployDir}/${project}/WEB-INF/web.xml"/>
         </waitfor>
-        
-        <!-- Run the junit test suite -->
-        <echo message="Running test suite..." />
+        <echo message="Deployment to Tomcat complete" />
+    </target>
+
+    <!-- Run the integration test suite -->
+    <target name="int-test" depends="compile-test, deploy">
         <junit printsummary="yes" haltonfailure="yes" fork="yes">
             <classpath>
                 <pathelement path="build/class"/>
@@ -195,7 +195,6 @@
             <test name="ca.nrc.cadc.conformance.uws.UWSTestSuite"/>
             <formatter type="plain" usefile="false"/>
         </junit>
-
     </target>
     
 </project>
