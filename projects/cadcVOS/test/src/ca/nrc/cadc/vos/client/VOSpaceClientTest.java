@@ -85,23 +85,18 @@ import org.junit.Test;
 
 import ca.nrc.cadc.util.FileUtil;
 import ca.nrc.cadc.util.Log4jInit;
-import ca.nrc.cadc.uws.Job;
-import ca.nrc.cadc.uws.JobWriter;
 import ca.nrc.cadc.vos.ClientTransfer;
 import ca.nrc.cadc.vos.ContainerNode;
 import ca.nrc.cadc.vos.DataNode;
 import ca.nrc.cadc.vos.DataView;
 import ca.nrc.cadc.vos.Node;
 import ca.nrc.cadc.vos.NodeProperty;
-import ca.nrc.cadc.vos.NodeWriter;
 import ca.nrc.cadc.vos.NodeWriterTest;
 import ca.nrc.cadc.vos.Protocol;
 import ca.nrc.cadc.vos.TestUtil;
 import ca.nrc.cadc.vos.Transfer;
 import ca.nrc.cadc.vos.VOS;
 import ca.nrc.cadc.vos.VOSURI;
-import java.io.IOException;
-import java.io.StringWriter;
 
 /**
  * @author zhangsa
@@ -157,11 +152,11 @@ public class VOSpaceClientTest
 
         Node nodeRtn = client.createNode(cnode);
         log.debug("Returned Node: " + nodeRtn);
-        log.debug("XML of Returned Node: " + xmlString(nodeRtn));
+        log.debug("XML of Returned Node: " + VOSClientUtil.xmlString(nodeRtn));
 
         Node nodeRtn2 = client.getNode(nodeRtn.getPath());
         log.debug("GetNode: " + nodeRtn2);
-        log.debug("XML of GetNode: " + xmlString(nodeRtn2));
+        log.debug("XML of GetNode: " + VOSClientUtil.xmlString(nodeRtn2));
         Assert.assertEquals(nodeRtn.getPath(), nodeRtn2.getPath());
 
         List<NodeProperty> properties = new ArrayList<NodeProperty>();
@@ -181,7 +176,7 @@ public class VOSpaceClientTest
         Node nodeRtn3 = client.setNode(nodeRtn2);
         String propValue = nodeRtn3.findProperty(VOS.PROPERTY_URI_CONTRIBUTOR).getPropertyValue();
         String propValue2 = nodeRtn3.findProperty(VOS.PROPERTY_URI_COVERAGE).getPropertyValue();
-        log.debug("XML of SetNode: " + xmlString(nodeRtn3));
+        log.debug("XML of SetNode: " + VOSClientUtil.xmlString(nodeRtn3));
         Assert.assertEquals(newUniqueValue, propValue);
         Assert.assertEquals(newUniqueValue2, propValue2);
     }
@@ -194,7 +189,7 @@ public class VOSpaceClientTest
 
         Node nodeRtn = client.createNode(cnode);
         log.debug("Returned Node: " + nodeRtn);
-        log.debug("XML of Returned Node: " + xmlString(nodeRtn));
+        log.debug("XML of Returned Node: " + VOSClientUtil.xmlString(nodeRtn));
 
         client.deleteNode(nodeRtn.getPath());
 
@@ -218,11 +213,11 @@ public class VOSpaceClientTest
 
         Node nodeRtn = client.createNode(cnode);
         log.debug("Returned Node: " + nodeRtn);
-        log.debug("XML of Returned Node: " + xmlString(nodeRtn));
+        log.debug("XML of Returned Node: " + VOSClientUtil.xmlString(nodeRtn));
 
         Node nodeRtn2 = client.getNode(nodeRtn.getPath());
         log.debug("GetNode: " + nodeRtn2);
-        log.debug("XML of GetNode: " + xmlString(nodeRtn2));
+        log.debug("XML of GetNode: " + VOSClientUtil.xmlString(nodeRtn2));
         Assert.assertEquals(nodeRtn.getPath(), nodeRtn2.getPath());
     }
 
@@ -234,7 +229,7 @@ public class VOSpaceClientTest
 
         Node nodeRtn = client.createNode(cnode);
         log.debug("Returned Node: " + nodeRtn);
-        log.debug("XML of Returned Node: " + xmlString(nodeRtn));
+        log.debug("XML of Returned Node: " + VOSClientUtil.xmlString(nodeRtn));
         Assert.assertEquals("/" + nodeRtn.getPath(), slashPath1);
     }
 
@@ -265,7 +260,7 @@ public class VOSpaceClientTest
 
         Node nodeRtn = client.createNode(cnode);
         log.debug("Returned Node: " + nodeRtn);
-        log.debug("XML of Returned Node: " + xmlString(nodeRtn));
+        log.debug("XML of Returned Node: " + VOSClientUtil.xmlString(nodeRtn));
         ContainerNode cnode2 = (ContainerNode) nodeRtn;
         List<Node> nodes2 = cnode2.getNodes();
         Assert.assertEquals(nodes2.size(), 2);
@@ -279,7 +274,7 @@ public class VOSpaceClientTest
 
         Node nodeRtn = client.createNode(dnode);
         log.debug("Returned Node: " + nodeRtn);
-        log.debug("XML of Returned Node: " + xmlString(nodeRtn));
+        log.debug("XML of Returned Node: " + VOSClientUtil.xmlString(nodeRtn));
         Assert.assertEquals("/" + nodeRtn.getPath(), slashPath1);
     }
 
@@ -313,7 +308,7 @@ public class VOSpaceClientTest
         clientTransfer.doUpload(testFile);
         Node node = clientTransfer.getTarget();
         Node nodeRtn = client.getNode(node.getPath());
-        log.debug(xmlString(nodeRtn));
+        log.debug(VOSClientUtil.xmlString(nodeRtn));
         return clientTransfer;
     }
 
@@ -338,58 +333,5 @@ public class VOSpaceClientTest
         
         Assert.assertEquals(FileUtil.compare(origFile, file), true);
         // file.delete();
-    }
-
-
-    /**
-     * get the XML string of node.
-     *
-     * @param node
-     * @return XML string of the node
-     *
-     * @author Sailor Zhang
-     */
-    public static String xmlString(Node node)
-    {
-        String xml = null;
-        StringWriter sw = new StringWriter();
-        try
-        {
-            NodeWriter nodeWriter = new NodeWriter();
-            nodeWriter.write(node, sw);
-            xml = sw.toString();
-            sw.close();
-        }
-        catch (IOException e)
-        {
-            xml = "Error getting XML string from node: " + e.getMessage();
-        }
-        return xml;
-    }
-
-    /**
-     * get the XML string of a job.
-     *
-     * @param job
-     * @return XML string of the job
-     *
-     * @author Sailor Zhang
-     */
-    public static String xmlString(Job job)
-    {
-        String xml = null;
-        StringWriter sw = new StringWriter();
-        try
-        {
-            JobWriter jobWriter = new JobWriter(job);
-            jobWriter.writeTo(sw);
-            xml = sw.toString();
-            sw.close();
-        }
-        catch (IOException e)
-        {
-            xml = "Error getting XML string from job: " + e.getMessage();
-        }
-        return xml;
     }
 }

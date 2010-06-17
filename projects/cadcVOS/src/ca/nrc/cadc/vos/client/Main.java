@@ -69,6 +69,7 @@
 
 package ca.nrc.cadc.vos.client;
 
+import java.net.URISyntaxException;
 import java.util.List;
 
 import org.apache.log4j.Level;
@@ -76,8 +77,12 @@ import org.apache.log4j.Logger;
 
 import ca.nrc.cadc.util.ArgumentMap;
 import ca.nrc.cadc.util.Log4jInit;
+import ca.nrc.cadc.vos.ContainerNode;
+import ca.nrc.cadc.vos.Node;
 import ca.nrc.cadc.vos.NodeProperty;
+import ca.nrc.cadc.vos.VOS;
 import ca.nrc.cadc.vos.VOSURI;
+import ca.nrc.cadc.vos.server.util.NodeUtil;
 
 /**
  * @author zhangsa
@@ -99,6 +104,13 @@ public class Main
     public static final String ARG_DELETE = "delete";
     public static final String ARG_SET = "set";
     public static final String ARG_COPY = "copy";
+    public static final String ARG_TARGET = "target";
+    public static final String ARG_GROUP_READ = "group-read";
+    public static final String ARG_GROUP_WRITE = "group-write";
+    public static final String ARG_PROP = "prop";
+    public static final String ARG_SRC = "src";
+    public static final String ARG_CONTENT_TYPE = "content-type";
+    public static final String ARG_CONTENT_ENCODING = "content-encoding";
 
     private static Logger log = Logger.getLogger(Main.class);
 
@@ -119,6 +131,7 @@ public class Main
     List<NodeProperty> properties;
     VOSURI source;
     VOSURI destination;
+    RegistryClient registryClient = new RegistryClient();
 
     /**
      * @param args
@@ -126,12 +139,17 @@ public class Main
     public static void main(String[] args)
     {
         ArgumentMap argMap = new ArgumentMap(args);
+        Main command = new Main();
+        boolean runCommand = true;
 
         if (argMap.isSet(ARG_HELP) || argMap.isSet(ARG_H))
+        {
+            runCommand = false;
             usage();
+        }
         else
         {
-            Main command = new Main();
+            // Set debug mode
             if (argMap.isSet(ARG_DEBUG) || argMap.isSet(ARG_D))
             {
                 command.setDebug(true);
@@ -145,30 +163,39 @@ public class Main
             else
                 Log4jInit.setLevel("ca.nrc.cadc.vos.client", Level.WARN);
 
-            int numOp = command.validateOperationArgument(argMap);
-            if (numOp == 0)
+            try
             {
-                System.out.println("One operation should be defined.");
+                command.validateCommand(argMap);
+                command.validateCommandArguments(argMap);
+            }
+            catch (IllegalArgumentException ex)
+            {
+                runCommand = false;
+                System.out.println(ex.getMessage());
                 System.out.println();
                 usage();
             }
-            else if (numOp > 1)
-            {
-                System.out.println("Only one operation can be defined.");
-                System.out.println();
-                usage();
-            }
-            else
-            {
-                command.init(argMap);
-                command.run();
-            }
+        }
+
+        if (runCommand)
+        {
+            command.init(argMap);
+            command.run();
         }
         return;
     }
 
     private void run()
     {
+        if (this.operation == Operation.CREATE)
+        {
+            VOSpaceClient client = new VOSpaceClient(registryClient.getBaseURL(this.target));
+            System.out.println(this.target.getPath());
+            ContainerNode cnode = new ContainerNode(this.target.getPath());
+            System.out.println(VOSClientUtil.xmlString(cnode));
+            Node nodeRtn = client.createNode(cnode);
+            System.out.println(nodeRtn);
+        }
         // TODO implementation
     }
 
@@ -176,16 +203,47 @@ public class Main
      * Initialize command member variables based on arguments passed in.
      * 
      * @param argMap
+     * @throws URISyntaxException 
      */
-    private void init(ArgumentMap argMap)
+    private void init(ArgumentMap argMap) 
     {
+        String strTarget = argMap.getValue(ARG_TARGET);
+        try
+        {
+            this.target = new VOSURI(strTarget);
+        }
+        catch (URISyntaxException e)
+        {
+            // TODO Auto-generated catch block
+            e.printStackTrace();
+        }
+        
+
+        if (this.operation == Operation.CREATE)
+        {
+            
+        }
+        else if (this.operation == Operation.CREATE)
+        {
+            String strSrc = argMap.getValue(ARG_SRC);
+            try
+            {
+                this.source = new VOSURI(strSrc);
+            }
+            catch (URISyntaxException e)
+            {
+                // TODO Auto-generated catch block
+                e.printStackTrace();
+            }
+
+        }
         // TODO implementation
     }
 
     /**
      * @param argMap
      */
-    private int validateOperationArgument(ArgumentMap argMap)
+    private void validateCommand(ArgumentMap argMap) throws IllegalArgumentException
     {
         int numOp = 0;
         if (argMap.isSet(ARG_VIEW))
@@ -214,14 +272,33 @@ public class Main
             this.operation = Operation.COPY;
         }
 
-        if (numOp > 1) this.operation = null;
+        if (numOp == 0)
+            throw new IllegalArgumentException("One operation should be defined.");
+        else if (numOp > 1) throw new IllegalArgumentException("Only one operation can be defined.");
 
-        return numOp;
+        return;
     }
 
     /**
-     * @return The usage string
+     * @param argMap
      */
+    private void validateCommandArguments(ArgumentMap argMap) throws IllegalArgumentException
+    {
+        String strTarget = argMap.getValue(ARG_TARGET);
+        if (strTarget == null) throw new IllegalArgumentException("Argument target is required for " + this.operation);
+
+        if (this.operation.equals(Operation.COPY))
+        {
+            String strSrc = argMap.getValue(ARG_SRC);
+            if (strSrc == null) throw new IllegalArgumentException("Argument src is required for " + this.operation);
+        }
+
+        return;
+    }
+
+    /**
+         * @return The usage string
+         */
     public static void usage()
     {
         //String invoke = "java -jar cadcVOSClient.jar [-v|--verbose|-d|--debug]";
