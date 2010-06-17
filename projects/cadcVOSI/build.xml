@@ -116,17 +116,12 @@
     <property name="ext.postgres" value="${ext.lib}/postgresql-jdbc.jar" />
     <property name="ext.junit" value="${ext.lib}/junit.jar" />
     <property name="ext.xerces" value="${ext.lib}/xerces.jar" />
-    <property name="ext.jaxen.core" value="/usr/cadc/external/java/lib/jaxen-core.jar"/>
-    <property name="ext.jaxen.jdom" value="/usr/cadc/external/java/lib/jaxen-jdom.jar"/>
-    <property name="ext.saxpath" value="/usr/cadc/external/java/lib/saxpath.jar"/>
+    <property name="ext.jaxen.core" value="${ext.lib}/jaxen-core.jar"/>
+    <property name="ext.jaxen.jdom" value="${ext.lib}/jaxen-jdom.jar"/>
+    <property name="ext.saxpath" value="${ext.lib}/saxpath.jar"/>
     <property name="ext.commonsLog" value="${ext.lib}/commons-logging.jar" />
     <property name="testingJars" value="${build.cadcTAP}:${ext.junit}:${ext.xerces}:${ext.jaxen.core}:${ext.jaxen.jdom}:${ext.saxpath}:${ext.postgres}:${ext.commonsLog}" />
-
-	<property name="resources.dir" value="test/resources/" />    
-
-
-    <!-- Directory used to deploy the WAR file -->
-    <property name="deployDir" value="/data/test/webapps" />
+    <property name="resources.dir" value="test/resources/" />
 
     <!-- compile the test classes -->
     <target name="compile-test" depends="build">
