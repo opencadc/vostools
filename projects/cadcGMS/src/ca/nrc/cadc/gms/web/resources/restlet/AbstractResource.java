@@ -66,26 +66,39 @@
 */
 package ca.nrc.cadc.gms.web.resources.restlet;
 
+import java.io.ByteArrayOutputStream;
+import java.io.FileNotFoundException;
+import java.io.IOException;
+import java.io.OutputStream;
+import java.io.StringReader;
+import java.util.ArrayList;
+import java.util.List;
+
+import javax.xml.transform.OutputKeys;
+import javax.xml.transform.Transformer;
+
+import org.apache.log4j.Logger;
+import org.apache.xerces.parsers.DOMParser;
+import org.restlet.data.Form;
+import org.restlet.data.MediaType;
+import org.restlet.data.Method;
+import org.restlet.data.Reference;
+import org.restlet.data.Status;
+import org.restlet.ext.xml.DomRepresentation;
+import org.restlet.representation.EmptyRepresentation;
 import org.restlet.representation.Representation;
 import org.restlet.representation.StringRepresentation;
-import org.restlet.ext.xml.DomRepresentation;
-import org.restlet.data.*;
-import org.restlet.resource.ServerResource;
 import org.restlet.resource.Get;
+import org.restlet.resource.ServerResource;
 import org.restlet.security.User;
 import org.w3c.dom.Document;
 import org.w3c.dom.Element;
-import org.apache.log4j.Logger;
+import org.w3c.dom.Node;
+import org.xml.sax.InputSource;
+import org.xml.sax.SAXException;
 
-import java.io.IOException;
-import java.util.List;
-import java.util.ArrayList;
-
-import ca.nrc.cadc.gms.web.InvalidRepresentationException;
 import ca.nrc.cadc.gms.WebRepresentationException;
-
-import javax.xml.transform.Transformer;
-import javax.xml.transform.OutputKeys;
+import ca.nrc.cadc.gms.web.InvalidRepresentationException;
 
 
 /**
@@ -172,6 +185,13 @@ public abstract class AbstractResource extends ServerResource
     {
         try
         {
+            // get the resource and return nothing if this fails or
+            // if this is an HTTP HEAD request
+            if (!obtainResource() || getMethod().equals(Method.HEAD))
+            {
+                return null;
+            }
+
             final DomRepresentation rep =
                     new DomRepresentation(MediaType.TEXT_XML)
                     {
@@ -215,6 +235,15 @@ public abstract class AbstractResource extends ServerResource
                     "Unable to create XML Document.", e);
         }
     }
+    
+    /**
+     * Get a reference to the resource identified by the user.
+     * @return TODO
+     * 
+     * @throws FileNotFoundException If the resouce doesn't exist.
+     */
+    protected abstract boolean obtainResource()
+                throws FileNotFoundException;
 
     /**
      * Assemble the XML for this Resource's Representation into the given
@@ -332,10 +361,18 @@ public abstract class AbstractResource extends ServerResource
                                 final Status status, final String message)
     {
         LOGGER.error(message, throwable);
-
-        getResponse().setEntity(
-                new StringRepresentation(message, MediaType.TEXT_PLAIN));
+        if (getMethod().equals(Method.HEAD))
+        {
+            getResponse().setEntity(
+                    new EmptyRepresentation());
+        }
+        else
+        {
+            getResponse().setEntity(
+                    new StringRepresentation(message, MediaType.TEXT_PLAIN));
+        }
         getResponse().setStatus(status);
+        
     }
 
     /**
@@ -361,5 +398,60 @@ public abstract class AbstractResource extends ServerResource
     public Object getRequestAttribute(final String attributeName)
     {
         return getRequest().getAttributes().get(attributeName);
+    }
+    
+    /**
+     * Obtain an OutputStream to write to.  This can be overridden.
+     * @return      An OutputStream instance.
+     */
+    protected OutputStream getOutputStream()
+    {
+        return new ByteArrayOutputStream(256);
+    }
+    
+
+    /**
+     * Adopt a new Node based on the given Stream of data and Document.
+     *
+     * @param outputStream      The OutputStream to be written to
+     * @param document          The Document to import the node to.
+     * @return                  The newly created Node.
+     */
+    protected Node adoptNode(final OutputStream outputStream,
+                             final Document document)
+    {
+        final String writtenData = outputStream.toString();
+        return document.importNode(
+                parseDocument(writtenData).getDocumentElement(), true);
+    }
+    
+
+    /**
+     * Parse a Document from the given String.
+     *
+     * @param writtenData   The String data.
+     * @return          The Document object.
+     */
+    protected Document parseDocument(final String writtenData)
+    {
+        final DOMParser parser = new DOMParser();
+
+        try
+        {
+            parser.parse(new InputSource(new StringReader(writtenData)));
+            return parser.getDocument();
+        }
+        catch (IOException e)
+        {
+            final String message = "Unable to parse document.";
+            LOGGER.error(message, e);
+            throw new WebRepresentationException(message, e);
+        }
+        catch (SAXException e)
+        {
+            final String message = "Unable to parse document.";
+            LOGGER.error(message, e);
+            throw new WebRepresentationException(message, e);
+        }
     }
 }

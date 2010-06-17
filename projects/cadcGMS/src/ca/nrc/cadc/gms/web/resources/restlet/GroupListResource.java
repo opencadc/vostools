@@ -66,14 +66,29 @@
  */
 package ca.nrc.cadc.gms.web.resources.restlet;
 
+import java.io.FileNotFoundException;
+import java.io.IOException;
+
 import org.restlet.resource.Put;
 import org.w3c.dom.Document;
-
-import java.io.IOException;
 
 
 public class GroupListResource extends AbstractResource
 {
+    
+    /**
+     * Get a reference to the resource identified by the user.
+     * 
+     * @throws FileNotFoundException If the resouce doesn't exist.
+     */
+    @Override
+    protected boolean obtainResource() throws FileNotFoundException
+    {
+        processNotImplemented("The Service to see a list of groups"
+                            + " is not yet implemented.");
+        return false;
+    }
+    
     /**
      * Assemble the XML for this Resource's Representation into the given
      * Document.

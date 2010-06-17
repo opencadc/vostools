@@ -66,27 +66,43 @@
  */
 package ca.nrc.cadc.gms.web.resources.restlet;
 
-import ca.nrc.cadc.gms.service.GroupService;
-import ca.nrc.cadc.gms.web.xml.UserXMLReader;
-import ca.nrc.cadc.gms.web.xml.UserXMLReaderImpl;
-import ca.nrc.cadc.gms.web.xml.UserXMLWriter;
-import ca.nrc.cadc.gms.web.xml.UserXMLWriterImpl;
-import ca.nrc.cadc.gms.Group;
-import ca.nrc.cadc.gms.User;
-import org.w3c.dom.Document;
+import java.io.FileNotFoundException;
+import java.io.IOException;
+import java.io.InputStream;
+import java.io.OutputStream;
+import java.io.UnsupportedEncodingException;
+import java.net.URLDecoder;
+
+import org.apache.log4j.Logger;
+import org.restlet.data.Status;
+import org.restlet.resource.Delete;
 import org.restlet.resource.Post;
 import org.restlet.resource.Put;
-import org.restlet.resource.Delete;
+import org.w3c.dom.Document;
+import org.w3c.dom.Node;
 
-import java.io.IOException;
-import java.io.OutputStream;
-import java.io.InputStream;
+import ca.nrc.cadc.gms.AuthorizationException;
+import ca.nrc.cadc.gms.Group;
+import ca.nrc.cadc.gms.GroupXMLWriter;
+import ca.nrc.cadc.gms.GroupXMLWriterImpl;
+import ca.nrc.cadc.gms.InvalidGroupException;
+import ca.nrc.cadc.gms.User;
+import ca.nrc.cadc.gms.UserXMLReader;
+import ca.nrc.cadc.gms.UserXMLReaderImpl;
+import ca.nrc.cadc.gms.UserXMLWriter;
+import ca.nrc.cadc.gms.UserXMLWriterImpl;
+import ca.nrc.cadc.gms.WriterException;
+import ca.nrc.cadc.gms.service.GroupService;
 
 
 public class GroupResource extends AbstractResource
 {
+    private final static Logger LOGGER =
+        Logger.getLogger(GroupResource.class);
+    
     private GroupService groupService;
 
+    private Group group;
 
     /**
      * Hidden constructor for JavaBean tools.
@@ -106,6 +122,60 @@ public class GroupResource extends AbstractResource
         this.groupService = groupService;
     }
 
+    /**
+     * Get a reference to the resource identified by the user.
+     * 
+     * @throws FileNotFoundException If the resouce doesn't exist.
+     */
+    @Override
+    protected boolean obtainResource() throws FileNotFoundException
+    {
+        LOGGER.debug("Enter GroupResource.obtainResource()");
+        String groupMemberID = null;
+        String groupID = null;
+        
+        try
+        {
+            groupID = URLDecoder.decode(getGroupID(), "UTF-8");
+            LOGGER.debug(String.format(
+                    "groupID: %s",
+                    groupID));
+            
+            group = getGroupService().getGroup(groupID);
+            return true;
+        }
+        catch (final InvalidGroupException e)
+        {
+            final String message = String.format("No such Group with ID %s",
+                                                 groupID);
+            processError(e, Status.CLIENT_ERROR_NOT_FOUND, message);
+        }
+        catch (IllegalArgumentException e)
+        {
+            final String message =
+                    String.format("The given User with ID %s is not a member "
+                                  + "of Group with ID %s.", groupMemberID,
+                                  groupID);
+            processError(e, Status.CLIENT_ERROR_NOT_FOUND, message);
+        }
+        catch (AuthorizationException e)
+        {
+            final String message =
+                    String.format("You are not authorized to view Member ID "
+                                  + "'%s' of Group ID '%s'.", 
+                                  groupMemberID, groupID);
+            processError(e, Status.CLIENT_ERROR_UNAUTHORIZED, message);
+        }
+        catch (UnsupportedEncodingException e)
+        {
+            final String message =
+                String.format("Could not URL decode groupMemberID (%s) or "
+                              + "groupID (%s).", 
+                              groupMemberID, groupID);
+            processError(e, Status.CLIENT_ERROR_BAD_REQUEST, message);
+        }
+        return false;
+    }
     
     /**
      * Assemble the XML for this Resource's Representation into the given
@@ -114,14 +184,28 @@ public class GroupResource extends AbstractResource
      * @param document The Document to build up.
      * @throws java.io.IOException If something went wrong or the XML cannot be
      *                             built.
-     * TODO - Needs implementation!
-     * TODO - jenkinsd 2010.04.19
      */
     protected void buildXML(final Document document) throws IOException
     {
-        processNotImplemented(String.format("The Service to see Group with ID "
-                                            + "'%s' is not yet implemented.",
-                                            getGroupID()));
+        LOGGER.debug("Enter GroupMemberResource.buildXML()");
+        final OutputStream outputStream = getOutputStream();
+        
+        final GroupXMLWriter groupXMLWriter = new GroupXMLWriterImpl(outputStream, group);
+
+        try
+        {
+            groupXMLWriter.write();
+
+            final Node node = adoptNode(outputStream, document);
+            document.appendChild(node);
+        }
+        catch (WriterException e)
+        {
+            final String message =
+                String.format("Encountered a problem generating resource "
+                        + "representation: " + e.getMessage());
+            processError(e, Status.SERVER_ERROR_INTERNAL, message);
+        }
     }
 
     /**
@@ -136,12 +220,12 @@ public class GroupResource extends AbstractResource
     }
 
     /**
-     * Accept a PUT to this Resource to Update a Group.
+     * Accept a PUT to this Resource to Create a Group.
      */
     @Put
     public void acceptPut()
     {
-        processNotImplemented(String.format("The Service to update Group with "
+        processNotImplemented(String.format("The Service to create Group with "
                                             + "ID '%s' is not yet implemented.",
                                             getGroupID()));
     }
@@ -187,7 +271,7 @@ public class GroupResource extends AbstractResource
         return new UserXMLReaderImpl(inputStream);
     }    
 
-    protected Group getGroup()
+    protected Group getGroup() throws AuthorizationException, InvalidGroupException
     {
         return getGroupService().getGroup(getGroupID());
     }

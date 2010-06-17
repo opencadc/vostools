@@ -66,21 +66,25 @@
  */
 package ca.nrc.cadc.gms.web.resources.restlet;
 
-import org.w3c.dom.Document;
-import org.w3c.dom.Node;
-import org.restlet.data.Status;
-import org.xml.sax.InputSource;
-import org.xml.sax.SAXException;
-import org.apache.log4j.Logger;
-import org.apache.xerces.parsers.DOMParser;
-
-import java.io.*;
+import java.io.FileNotFoundException;
+import java.io.IOException;
+import java.io.OutputStream;
+import java.io.UnsupportedEncodingException;
 import java.net.URLDecoder;
 
-import ca.nrc.cadc.gms.*;
-import ca.nrc.cadc.gms.service.UserService;
+import org.apache.log4j.Logger;
+import org.restlet.data.Status;
+import org.w3c.dom.Document;
+import org.w3c.dom.Node;
+
+import ca.nrc.cadc.gms.AuthorizationException;
+import ca.nrc.cadc.gms.InvalidGroupException;
+import ca.nrc.cadc.gms.InvalidMemberException;
+import ca.nrc.cadc.gms.User;
+import ca.nrc.cadc.gms.UserXMLWriter;
+import ca.nrc.cadc.gms.WriterException;
 import ca.nrc.cadc.gms.service.GroupService;
-import ca.nrc.cadc.gms.web.xml.UserXMLWriter;
+import ca.nrc.cadc.gms.service.UserService;
 
 
 public class GroupMemberResource extends GroupResource
@@ -89,6 +93,8 @@ public class GroupMemberResource extends GroupResource
             Logger.getLogger(GroupMemberResource.class);
 
     private UserService userService;
+    
+    private User groupMember;
 
 
     /**
@@ -111,26 +117,29 @@ public class GroupMemberResource extends GroupResource
         super(groupService);
         this.userService = userService;
     }
-
-
+    
     /**
-     * Assemble the XML for this Resource's Representation into the given
-     * Document.
-     *
-     * @param document The Document to build up.
-     * @throws java.io.IOException If something went wrong or the XML cannot be
-     *                             built.
+     * Get a reference to the resource identified by the user.
+     * 
+     * @throws FileNotFoundException If the resouce doesn't exist.
      */
     @Override
-    protected void buildXML(final Document document) throws IOException
+    protected boolean obtainResource() throws FileNotFoundException
     {
-        final String groupMemberID = URLDecoder.decode(getMemberID(), "UTF-8");
-        final String groupID = URLDecoder.decode(getGroupID(), "UTF-8");
-
+        LOGGER.debug("Enter GroupMemberResource.obtainResource()");
+        String groupMemberID = null;
+        String groupID = null;
+        
         try
         {
-            getUserService().getMember(groupMemberID, groupID);
-            appendContent(document);
+            groupMemberID = URLDecoder.decode(getMemberID(), "UTF-8");
+            groupID = URLDecoder.decode(getGroupID(), "UTF-8");
+            LOGGER.debug(String.format(
+                    "groupID: %s memberID: %s",
+                    groupID, groupMemberID));
+            
+            groupMember = getUserService().getMember(groupMemberID, groupID);
+            return true;
         }
         catch (final InvalidGroupException e)
         {
@@ -160,6 +169,48 @@ public class GroupMemberResource extends GroupResource
                                   groupMemberID, groupID);
             processError(e, Status.CLIENT_ERROR_UNAUTHORIZED, message);
         }
+        catch (UnsupportedEncodingException e)
+        {
+            final String message =
+                String.format("Could not URL decode groupMemberID (%s) or "
+                              + "groupID (%s).", 
+                              groupMemberID, groupID);
+            processError(e, Status.CLIENT_ERROR_BAD_REQUEST, message);
+        }
+        return false;
+    }
+
+
+    /**
+     * Assemble the XML for this Resource's Representation into the given
+     * Document.
+     *
+     * @param document The Document to build up.
+     * @throws java.io.IOException If something went wrong or the XML cannot be
+     *                             built.
+     */
+    @Override
+    protected void buildXML(final Document document) throws IOException
+    {
+        LOGGER.debug("Enter GroupMemberResource.buildXML()");
+        final OutputStream outputStream = getOutputStream();
+        final UserXMLWriter memberXMLWriter =
+                createMemberXMLWriter(outputStream, groupMember);
+
+        try
+        {
+            memberXMLWriter.write();
+
+            final Node node = adoptNode(outputStream, document);
+            document.appendChild(node);
+        }
+        catch (WriterException e)
+        {
+            final String message =
+                String.format("Encountered a problem generating resource "
+                        + "representation: " + e.getMessage());
+            processError(e, Status.SERVER_ERROR_INTERNAL, message);
+        }
     }
 
     protected String getMemberID()
@@ -172,83 +223,7 @@ public class GroupMemberResource extends GroupResource
         return getUserService().getUser(getMemberID());
     }
 
-    /**
-     * Append the XML data to the given Document for this Group Member.
-     *
-     * @param document  The Document, already initialized.
-     */
-    private void appendContent(final Document document)
-    {
-        final User member = getMember();
-        final OutputStream outputStream = getOutputStream();
-        final UserXMLWriter memberXMLWriter =
-                createMemberXMLWriter(outputStream, member);
 
-        try
-        {
-            memberXMLWriter.write();
-
-            final Node node = adoptNode(outputStream, document);
-            document.appendChild(node);
-        }
-        catch (WriterException we)
-        {
-            // Do nothing for now...
-        }
-    }
-
-    /**
-     * Obtain an OutputStream to write to.  This can be overridden.
-     * @return      An OutputStream instance.
-     */
-    protected OutputStream getOutputStream()
-    {
-        return new ByteArrayOutputStream(256);
-    }
-
-    /**
-     * Adopt a new Node based on the given Stream of data and Document.
-     *
-     * @param outputStream      The OutputStream to be written to
-     * @param document          The Document to import the node to.
-     * @return                  The newly created Node.
-     */
-    protected Node adoptNode(final OutputStream outputStream,
-                             final Document document)
-    {
-        final String writtenData = outputStream.toString();
-        return document.importNode(
-                parseDocument(writtenData).getDocumentElement(), true);
-    }
-
-    /**
-     * Parse a Document from the given String.
-     *
-     * @param writtenData   The String data.
-     * @return          The Document object.
-     */
-    protected Document parseDocument(final String writtenData)
-    {
-        final DOMParser parser = new DOMParser();
-
-        try
-        {
-            parser.parse(new InputSource(new StringReader(writtenData)));
-            return parser.getDocument();
-        }
-        catch (IOException e)
-        {
-            final String message = "Unable to parse document.";
-            LOGGER.error(message, e);
-            throw new WebRepresentationException(message, e);
-        }
-        catch (SAXException e)
-        {
-            final String message = "Unable to parse document.";
-            LOGGER.error(message, e);
-            throw new WebRepresentationException(message, e);
-        }
-    }
 
 
     public UserService getUserService()

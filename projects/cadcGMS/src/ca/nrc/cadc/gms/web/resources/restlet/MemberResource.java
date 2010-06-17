@@ -66,18 +66,19 @@
  */
 package ca.nrc.cadc.gms.web.resources.restlet;
 
+import java.io.FileNotFoundException;
+import java.io.IOException;
+import java.io.InputStream;
+import java.io.OutputStream;
+
 import org.w3c.dom.Document;
 
-import java.io.IOException;
-import java.io.OutputStream;
-import java.io.InputStream;
-
-import ca.nrc.cadc.gms.service.UserService;
-import ca.nrc.cadc.gms.web.xml.UserXMLReader;
-import ca.nrc.cadc.gms.web.xml.UserXMLReaderImpl;
-import ca.nrc.cadc.gms.web.xml.UserXMLWriter;
-import ca.nrc.cadc.gms.web.xml.UserXMLWriterImpl;
 import ca.nrc.cadc.gms.User;
+import ca.nrc.cadc.gms.UserXMLReader;
+import ca.nrc.cadc.gms.UserXMLReaderImpl;
+import ca.nrc.cadc.gms.UserXMLWriter;
+import ca.nrc.cadc.gms.UserXMLWriterImpl;
+import ca.nrc.cadc.gms.service.UserService;
 
 
 public class MemberResource extends AbstractResource
@@ -104,6 +105,19 @@ public class MemberResource extends AbstractResource
         setUserService(userService);
     }
 
+    /**
+     * Get a reference to the resource identified by the user.
+     * 
+     * @throws FileNotFoundException If the resouce doesn't exist.
+     */
+    @Override
+    protected boolean obtainResource() throws FileNotFoundException
+    {
+        processNotImplemented(String.format("The Service to see Member with ID "
+                                            + "'%s' is not yet implemented.",
+                                            getMemberID()));
+        return false;
+    }
 
     /**
      * Assemble the XML for this Resource's Representation into the given

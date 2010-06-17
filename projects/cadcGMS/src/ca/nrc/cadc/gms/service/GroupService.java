@@ -66,7 +66,9 @@
  */
 package ca.nrc.cadc.gms.service;
 
+import ca.nrc.cadc.gms.AuthorizationException;
 import ca.nrc.cadc.gms.Group;
+import ca.nrc.cadc.gms.InvalidGroupException;
 
 
 public interface GroupService
@@ -77,5 +79,7 @@ public interface GroupService
      * @param groupID   Unique Group identifier.
      * @return          The Group object for the given ID.
      */
-    Group getGroup(final String groupID);
+    Group getGroup(final String groupID)
+        throws InvalidGroupException,
+               IllegalArgumentException, AuthorizationException;
 }

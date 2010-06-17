@@ -69,7 +69,6 @@ package ca.nrc.cadc.gms;
 import java.io.InputStream;
 import java.io.ByteArrayInputStream;
 
-import ca.nrc.cadc.gms.web.xml.UserXMLReaderImpl;
 
 
 public class UserXMLReaderImplTest extends UserXMLReaderTest

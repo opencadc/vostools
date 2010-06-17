@@ -66,7 +66,9 @@
  */
 package ca.nrc.cadc.gms.service;
 
+import ca.nrc.cadc.gms.AuthorizationException;
 import ca.nrc.cadc.gms.Group;
+import ca.nrc.cadc.gms.InvalidGroupException;
 import ca.nrc.cadc.gms.persistence.GroupPersistence;
 
 public class GroupServiceImpl implements GroupService
@@ -98,8 +100,18 @@ public class GroupServiceImpl implements GroupService
      * @return The Group object for the given ID.
      */
     public Group getGroup(final String groupID)
+            throws InvalidGroupException,
+                   IllegalArgumentException, AuthorizationException
     {
-        return getGroupPersistence().getGroup(groupID);
+        Group group = getGroupPersistence().getGroup(groupID);
+        
+        if (group == null)
+        {
+            throw new InvalidGroupException(
+                    String.format("No such Group with ID %s", groupID));
+        }
+        
+        return group;
     }
 
 

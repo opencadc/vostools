@@ -68,7 +68,6 @@ package ca.nrc.cadc.gms;
 
 import org.junit.Test;
 import ca.nrc.cadc.gms.Group;
-import ca.nrc.cadc.gms.web.xml.GroupXMLReader;
 
 
 public abstract class GroupXMLReaderTest

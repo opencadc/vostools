@@ -66,25 +66,31 @@
  */
 package ca.nrc.cadc.gms.web.resources.restlet;
 
-import org.w3c.dom.Document;
-import org.w3c.dom.Node;
-import org.restlet.data.Status;
-import org.apache.xerces.parsers.DOMParser;
-import org.apache.log4j.Logger;
-import org.xml.sax.InputSource;
-import org.xml.sax.SAXException;
-
+import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.OutputStream;
-import java.io.ByteArrayOutputStream;
 import java.io.StringReader;
 import java.net.URLDecoder;
 
+import org.apache.log4j.Logger;
+import org.apache.xerces.parsers.DOMParser;
+import org.restlet.data.Status;
+import org.w3c.dom.Document;
+import org.w3c.dom.Node;
+import org.xml.sax.InputSource;
+import org.xml.sax.SAXException;
+
+import ca.nrc.cadc.gms.AuthorizationException;
+import ca.nrc.cadc.gms.Group;
+import ca.nrc.cadc.gms.InvalidGroupException;
+import ca.nrc.cadc.gms.InvalidMemberException;
+import ca.nrc.cadc.gms.User;
+import ca.nrc.cadc.gms.UserXMLWriter;
+import ca.nrc.cadc.gms.UserXMLWriterImpl;
+import ca.nrc.cadc.gms.WebRepresentationException;
+import ca.nrc.cadc.gms.WriterException;
 import ca.nrc.cadc.gms.service.GroupService;
 import ca.nrc.cadc.gms.service.UserService;
-import ca.nrc.cadc.gms.web.xml.UserXMLWriter;
-import ca.nrc.cadc.gms.web.xml.UserXMLWriterImpl;
-import ca.nrc.cadc.gms.*;
 
 
 public class MemberGroupResource extends MemberResource
@@ -265,7 +271,7 @@ public class MemberGroupResource extends MemberResource
         return (String) getRequestAttribute("groupID");
     }
 
-    protected Group getGroup()
+    protected Group getGroup() throws AuthorizationException, InvalidGroupException
     {
         return getGroupService().getGroup(getGroupID());
     }

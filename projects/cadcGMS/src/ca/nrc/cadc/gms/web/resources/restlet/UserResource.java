@@ -66,9 +66,10 @@
  */
 package ca.nrc.cadc.gms.web.resources.restlet;
 
-import org.w3c.dom.Document;
-
+import java.io.FileNotFoundException;
 import java.io.IOException;
+
+import org.w3c.dom.Document;
 
 import ca.nrc.cadc.gms.service.UserService;
 
@@ -95,6 +96,19 @@ public class UserResource extends AbstractResource
         this.userService = userService;
     }
 
+    /**
+     * Get a reference to the resource identified by the user.
+     * 
+     * @throws FileNotFoundException If the resouce doesn't exist.
+     */
+    @Override
+    protected boolean obtainResource() throws FileNotFoundException
+    {
+        processNotImplemented(String.format("The Service to see User with ID "
+                                            + "'%s' is not yet implemented.",
+                                            getUserID()));
+        return false;
+    }
 
     /**
      * Assemble the XML for this Resource's Representation into the given

@@ -67,10 +67,6 @@
 package ca.nrc.cadc.gms.client;
 
 import ca.nrc.cadc.gms.*;
-import ca.nrc.cadc.gms.web.xml.GroupXMLReader;
-import ca.nrc.cadc.gms.web.xml.GroupXMLReaderImpl;
-import ca.nrc.cadc.gms.web.xml.UserXMLReader;
-import ca.nrc.cadc.gms.web.xml.UserXMLReaderImpl;
 
 import java.net.URL;
 import java.net.MalformedURLException;

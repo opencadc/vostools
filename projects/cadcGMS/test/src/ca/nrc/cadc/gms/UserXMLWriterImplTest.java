@@ -69,7 +69,6 @@ package ca.nrc.cadc.gms;
 import java.io.OutputStream;
 import java.io.ByteArrayOutputStream;
 
-import ca.nrc.cadc.gms.web.xml.UserXMLWriterImpl;
 
 import static org.easymock.EasyMock.*;
 
