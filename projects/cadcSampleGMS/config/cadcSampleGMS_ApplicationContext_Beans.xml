@@ -116,7 +116,9 @@
 
   <bean name="/groups/{groupID}" id="groupResource"
         parent="baseResource"
-        class="ca.nrc.cadc.gms.web.resources.restlet.GroupResource" />
+        class="ca.nrc.cadc.gms.web.resources.restlet.GroupResource">
+    <property name="groupService" ref="groupService" />
+  </bean>
 
   <bean name="/groups/{groupID}/members" id="groupMemberListResource"
         parent="baseResource"

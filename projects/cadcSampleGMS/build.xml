@@ -94,6 +94,7 @@
   <property name="ext.servlet-api"  value="${ext.lib}/servlet-api.jar" />
   <property name="lib.cadcGMS"      value="${lib}/cadcGMS.jar" />
   <property name="lib.cadcVOSI"     value="${lib}/cadcVOSI.jar" />
+  <property name="lib.cadcLog"      value="${lib}/cadcLog.jar" />
   <property name="restlet.lib.home" value="${ext.lib}" />
 
   <property name="jars"
@@ -118,6 +119,7 @@
       <lib dir="${ext.lib}">
         <include name="spring.jar" />
         <include name="jdom.jar" />
+        <include name="xerces.jar" />
         <include name="log4j.jar" />
       </lib>
       <lib dir="${restlet.lib.home}">
@@ -128,6 +130,7 @@
       </lib>
       <lib file="${lib.cadcGMS}" />
       <lib file="${lib.cadcVOSI}" />
+      <lib file="${lib.cadcLog}" />
       <lib file="${build}/tmp/cadcSampleGMS.jar" />
     </war>
   </target>

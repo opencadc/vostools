@@ -116,6 +116,33 @@
       <param-value>ca.nrc.cadc.gms.webservice.ServiceAvailability</param-value>
     </init-param>
   </servlet>
+  
+  <!--
+    Log Control Servlet
+  -->
+  <servlet>
+      <!--
+      To make sure the logging level gets set before any
+      logging gets done, set load-on-startup to a smaller
+      whole number than is used for any other servlet
+      in this webapp.  This assumes Tomcat 5.5 or later.
+      -->
+      <servlet-name>logControl</servlet-name>
+      <servlet-class>ca.nrc.cadc.log.LogControlServlet</servlet-class>
+      <init-param>
+          <param-name>logLevel</param-name>
+          <param-value>debug</param-value>
+      </init-param>
+      <init-param>
+          <param-name>logLevelPackages</param-name>
+          <param-value>
+              ca.nrc.cadc.log
+              ca.nrc.cadc.gms
+              ca.nrc.cadc.archive
+          </param-value>
+      </init-param>
+      <load-on-startup>1</load-on-startup>
+  </servlet>
 
   <!--
     The GMS Endpoints
@@ -131,6 +158,13 @@
   <servlet-mapping>
     <servlet-name>AvailabilityServlet</servlet-name>
     <url-pattern>/availability</url-pattern>
+  </servlet-mapping>
+  
+  <!-- Log control servlet mapping.
+  -->
+  <servlet-mapping>
+      <servlet-name>logControl</servlet-name>
+      <url-pattern>/logControl/*</url-pattern>
   </servlet-mapping>
   
 </web-app>
