@@ -226,4 +226,12 @@ public class ContainerNode extends Node
         return DB_TYPE;
     }
 
+    @Override
+    public String toString()
+    {
+        return "ContainerNode [nodes=" + nodes + ", appData=" + appData + ", markedForDeletion=" + markedForDeletion + ", name="
+                + name + ", owner=" + owner + ", parent=" + parent + ", path=" + path + ", properties=" + properties + ", uri="
+                + uri + "]";
+    }
+
 }

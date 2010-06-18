@@ -85,31 +85,31 @@ import java.util.Stack;
  */
 public abstract class Node
 {
-    
+
     // The node uri
     protected VOSURI uri;
-    
+
     // The path (including the name) of the node
     protected String path;
-    
+
     // The name of the node
     protected String name;
-    
+
     // The parent of the node
     protected ContainerNode parent;
-    
+
     // The list of node properties
     protected List<NodeProperty> properties;
-    
+
     // The node owner
     protected String owner;
-    
+
     // True if marked for deletion
     protected boolean markedForDeletion;
-    
+
     // To be used by controlling applications as they wish
     public transient Object appData;
-    
+
     /**
      * Node constructor.
      */
@@ -119,7 +119,7 @@ public abstract class Node
         this.name = "";
         properties = new ArrayList<NodeProperty>();
     }
-    
+
     /**
      * Node constructor.
      * 
@@ -131,7 +131,7 @@ public abstract class Node
         this.name = name;
         properties = new ArrayList<NodeProperty>();
     }
-    
+
     /**
      * Node constructor.
      * 
@@ -144,7 +144,7 @@ public abstract class Node
         buildPath(uri);
         properties = new ArrayList<NodeProperty>();
     }
-    
+
     /**
      * Node constructor.
      * 
@@ -158,7 +158,7 @@ public abstract class Node
         buildPath(uri);
         this.properties = properties;
     }
-    
+
     /**
      * Given the uri, build the parent if one exists.
      * Set the name of the node and path.
@@ -171,9 +171,9 @@ public abstract class Node
         {
             throw new IllegalArgumentException("Node uri not provided");
         }
-        
+
         path = uri.getPath();
-        
+
         if (path.startsWith("/"))
         {
             path = path.substring(1);
@@ -183,12 +183,12 @@ public abstract class Node
             path = path.substring(0, path.length() - 1);
         }
         String[] segments = path.split("/");
-        
+
         if (segments == null || segments.length == 0)
         {
             throw new IllegalArgumentException("Node path invalid.");
         }
-        
+
         this.name = segments[segments.length - 1];
 
         if (segments.length == 1)
@@ -200,24 +200,26 @@ public abstract class Node
             String uriString = uri.toString();
             String parentUriString = uriString.substring(0, uriString.lastIndexOf("/"));
             VOSURI parentURI = new VOSURI(parentUriString);
-            
+
             // preserve the appData if it exists
             Object parentAppData = null;
             if (parent != null)
             {
                 parentAppData = parent.appData;
             }
-            
+
             parent = new ContainerNode(parentURI);
             parent.appData = parentAppData;
         }
     }
-    
+
+    @Override
     public String toString()
     {
-        return "Node Path: " + path + " Id: " + appData;
+        return "Node [appData=" + appData + ", markedForDeletion=" + markedForDeletion + ", name=" + name + ", owner=" + owner
+                + ", parent=" + parent + ", path=" + path + ", properties=" + properties + ", uri=" + uri + "]";
     }
-    
+
     /**
      * Nodes are considered equal if their names, and their
      * parents (and thus their parent names) are equal.
@@ -249,7 +251,7 @@ public abstract class Node
         }
         return false;
     }
-    
+
     /**
      * Creates a stack to the node's root.
      */
@@ -264,27 +266,27 @@ public abstract class Node
         }
         return nodeStack;
     }
-    
+
     /**
      * @return true if the VOSpace understands the format of the data.
      */
     public abstract boolean isStructured();
-    
+
     /**
      * @return A list of views which the node can use for importing.
      */
     public abstract List<View> accepts();
-    
+
     /**
      * @return A list of views which the node can use for exporting.
      */
     public abstract List<View> provides();
-    
+
     public VOSURI getUri()
     {
         return uri;
     }
-    
+
     public void setUri(VOSURI uri) throws URISyntaxException
     {
         this.uri = uri;
@@ -296,7 +298,7 @@ public abstract class Node
     {
         this.path = path;
     }
-    
+
     public String getPath()
     {
         return path;

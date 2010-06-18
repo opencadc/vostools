@@ -190,11 +190,47 @@ public class Main
         if (this.operation == Operation.CREATE)
         {
             VOSpaceClient client = new VOSpaceClient(registryClient.getBaseURL(this.target));
-            System.out.println(this.target.getPath());
-            ContainerNode cnode = new ContainerNode(this.target.getPath());
-            System.out.println(VOSClientUtil.xmlString(cnode));
+            System.out.println("Create Node of URI: " + this.target.getURIObject().toString());
+            
+            ContainerNode cnode = null;
+            try
+            {
+                cnode = new ContainerNode(this.target);
+            }
+            catch (URISyntaxException e)
+            {
+                e.printStackTrace();
+                throw new RuntimeException(e);
+            }
             Node nodeRtn = client.createNode(cnode);
+            System.out.println("Created Node on Server:");
             System.out.println(nodeRtn);
+        }
+        else if (this.operation == Operation.VIEW)
+        {
+            VOSpaceClient client = new VOSpaceClient(registryClient.getBaseURL(this.target));
+            System.out.println("View Node of URI: " + this.target.getURIObject().toString());
+            
+            ContainerNode cnode = null;
+            try
+            {
+                cnode = new ContainerNode(this.target);
+            }
+            catch (URISyntaxException e)
+            {
+                e.printStackTrace();
+                throw new RuntimeException(e);
+            }
+            Node nodeRtn = client.getNode(cnode.getPath());
+            System.out.println("Node on Server:");
+            System.out.println(nodeRtn.getUri());
+            if (nodeRtn instanceof ContainerNode)
+            {
+                for (Node node : ((ContainerNode)nodeRtn).getNodes() )
+                {
+                    System.out.println(node.getUri());
+                }
+            }
         }
         // TODO implementation
     }
