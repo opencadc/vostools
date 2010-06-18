@@ -183,7 +183,7 @@ public class GmsClient
      */
     public Group getGroup(String groupID)
     {
-        throw new UnsupportedOperationException("getGroupAndMembers() not yet implemented.");
+        throw new UnsupportedOperationException("getGroup() not yet implemented.");
     }
 
     /**
