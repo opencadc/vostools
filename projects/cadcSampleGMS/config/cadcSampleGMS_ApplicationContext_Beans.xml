@@ -107,41 +107,41 @@
         class="ca.nrc.cadc.gms.web.CADCGMSMetadataService" />
 
   <!-- Resources -->
-  <bean abstract="true" name="baseResource"
+  <bean abstract="true" name="baseResource" scope="prototype"
         class="ca.nrc.cadc.gms.web.resources.restlet.AbstractResource" />
 
-  <bean name="/groups" id="groupListResource"
+  <bean name="/groups" id="groupListResource" scope="prototype"
         parent="baseResource"
         class="ca.nrc.cadc.gms.web.resources.restlet.GroupListResource" />
 
-  <bean name="/groups/{groupID}" id="groupResource"
+  <bean name="/groups/{groupID}" id="groupResource" scope="prototype"
         parent="baseResource"
         class="ca.nrc.cadc.gms.web.resources.restlet.GroupResource">
     <property name="groupService" ref="groupService" />
   </bean>
 
-  <bean name="/groups/{groupID}/members" id="groupMemberListResource"
+  <bean name="/groups/{groupID}/members" id="groupMemberListResource" scope="prototype"
         parent="baseResource"
         class="ca.nrc.cadc.gms.web.resources.restlet.GroupMemberListResource" />
 
-  <bean name="/groups/{groupID}/properties" id="groupPropertiesResource"
+  <bean name="/groups/{groupID}/properties" id="groupPropertiesResource" scope="prototype"
         parent="baseResource"
         class="ca.nrc.cadc.gms.web.resources.restlet.GroupPropertiesResource" />
 
-  <bean name="/groups/{groupID}/{memberID}" id="groupMemberResource"
+  <bean name="/groups/{groupID}/{memberID}" id="groupMemberResource" scope="prototype"
         parent="baseResource"
         class="ca.nrc.cadc.gms.web.resources.restlet.GroupMemberResource">
     <property name="userService" ref="userService" />
     <property name="groupService" ref="groupService" />
   </bean>
 
-  <bean name="/members/{memberID}" id="memberResource"
+  <bean name="/members/{memberID}" id="memberResource" scope="prototype"
         parent="baseResource"
         class="ca.nrc.cadc.gms.web.resources.restlet.MemberResource">
     <property name="userService" ref="userService" />
   </bean>
 
-  <bean name="/members/{memberID}/{groupID}" id="memberGroupResource"
+  <bean name="/members/{memberID}/{groupID}" id="memberGroupResource" scope="prototype"
         parent="baseResource"
         class="ca.nrc.cadc.gms.web.resources.restlet.MemberGroupResource">
     <property name="userService" ref="userService" />
