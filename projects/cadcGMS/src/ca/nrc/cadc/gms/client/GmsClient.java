@@ -66,13 +66,20 @@
  */
 package ca.nrc.cadc.gms.client;
 
-import ca.nrc.cadc.gms.*;
-
-import java.net.URL;
-import java.net.MalformedURLException;
-import java.io.InputStream;
-import java.io.IOException;
 import java.io.BufferedInputStream;
+import java.io.IOException;
+import java.io.InputStream;
+import java.net.MalformedURLException;
+import java.net.URL;
+import java.util.Collection;
+
+import ca.nrc.cadc.gms.Group;
+import ca.nrc.cadc.gms.GroupXMLReader;
+import ca.nrc.cadc.gms.GroupXMLReaderImpl;
+import ca.nrc.cadc.gms.ReaderException;
+import ca.nrc.cadc.gms.User;
+import ca.nrc.cadc.gms.UserXMLReader;
+import ca.nrc.cadc.gms.UserXMLReaderImpl;
 
 
 public class GmsClient
@@ -142,6 +149,42 @@ public class GmsClient
             throw new IllegalArgumentException(message, e);
         }
     }
+    
+    /**
+     * Returns true of the user identified by memberID is a member of the group
+     * identified by groupID.  Otherwise, false is returned.
+     * 
+     * @param groupID The group identifier.
+     * @param memberID The member identifier.
+     * @return true if the user is a member of the group.
+     */
+    public boolean isMember(String groupID, String memberID)
+    {
+        throw new UnsupportedOperationException("isMember() not yet implemented.");
+    }
+    
+    /**
+     * Returns a collection of groups in which the user identified by memberID is
+     * a member.
+     * 
+     * @param memberID Identified the user.
+     * @return The list of groups in which the user is a member.
+     */
+    public Collection<Group> getMemberships(String memberID)
+    {
+        throw new UnsupportedOperationException("getMemberships() not yet implemented.");
+    }
+    
+    /**
+     * Get the group identified by groupID.  Associated members will be included.
+     * 
+     * @param groupID Identifes the group.
+     * @return The group, or null if not found.
+     */
+    public Group getGroup(String groupID)
+    {
+        throw new UnsupportedOperationException("getGroupAndMembers() not yet implemented.");
+    }
 
     /**
      * Build a User member from the given URL.
@@ -151,7 +194,7 @@ public class GmsClient
      * @throws ReaderException  If the URL's response could not be read.
      * @throws IOException      For any unforeseen I/O errors.
      */
-    protected User constructUser(final URL resourceURL)
+    private User constructUser(final URL resourceURL)
             throws IOException, ReaderException
     {
         final User member;
@@ -197,18 +240,6 @@ public class GmsClient
         return new BufferedInputStream(resourceURL.openStream());
     }
 
-
-    public URL getBaseServiceURL()
-    {
-        return baseServiceURL;
-    }
-
-    public void setBaseServiceURL(URL baseServiceURL)
-    {
-        this.baseServiceURL = baseServiceURL;
-    }
-
-
     /**
      * Create a new instance of a UserXMLReader.
      *
@@ -234,4 +265,15 @@ public class GmsClient
     {
         return new GroupXMLReaderImpl(inputStream);
     }
+    
+    public URL getBaseServiceURL()
+    {
+        return baseServiceURL;
+    }
+
+    public void setBaseServiceURL(URL baseServiceURL)
+    {
+        this.baseServiceURL = baseServiceURL;
+    }
+    
 }
