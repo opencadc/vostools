@@ -97,10 +97,10 @@ import ca.nrc.cadc.vos.Node;
 import ca.nrc.cadc.vos.NodeFault;
 import ca.nrc.cadc.vos.NodeParsingException;
 import ca.nrc.cadc.vos.VOSURI;
+import ca.nrc.cadc.vos.server.SearchNode;
 import ca.nrc.cadc.vos.server.auth.PrivilegedReadAuthorizationExceptionAction;
 import ca.nrc.cadc.vos.server.auth.PrivilegedWriteAuthorizationExceptionAction;
 import ca.nrc.cadc.vos.server.auth.VOSpaceAuthorizer;
-import ca.nrc.cadc.vos.server.SearchNode;
 import ca.nrc.cadc.vos.server.web.representation.NodeErrorRepresentation;
 import ca.nrc.cadc.vos.server.web.representation.NodeInputRepresentation;
 import ca.nrc.cadc.vos.server.web.restlet.action.CreateNodeAction;
@@ -223,7 +223,8 @@ public class NodeResource extends BaseResource
                 throw e.getCause();
             }
             
-            node.setUri(vosURI);
+            setNodeURI(node, vosURI);
+            
             
             log.debug("doInit() retrived node: " + node);
         }
@@ -377,6 +378,20 @@ public class NodeResource extends BaseResource
         
         return principals;
         
+    }
+    
+    private void setNodeURI(Node node, VOSURI uri) throws URISyntaxException
+    {
+        node.setUri(uri);
+        if (node instanceof ContainerNode)
+        {
+            ContainerNode containerNode = (ContainerNode) node;
+            for (Node child : containerNode.getNodes())
+            {
+                VOSURI childURI = new VOSURI(uri.toString() + "/" + child.getName());
+                setNodeURI(child, childURI);
+            }
+        }
     }
     
     public Node getNode()
