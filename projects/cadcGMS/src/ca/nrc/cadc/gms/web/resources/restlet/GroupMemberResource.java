@@ -68,24 +68,20 @@ package ca.nrc.cadc.gms.web.resources.restlet;
 
 import java.io.FileNotFoundException;
 import java.io.IOException;
-import java.io.OutputStream;
 import java.io.UnsupportedEncodingException;
 import java.net.URLDecoder;
 
 import org.apache.log4j.Logger;
 import org.restlet.data.Status;
-import org.w3c.dom.Document;
-import org.w3c.dom.Node;
 
 import ca.nrc.cadc.gms.AuthorizationException;
 import ca.nrc.cadc.gms.InvalidGroupException;
 import ca.nrc.cadc.gms.InvalidMemberException;
 import ca.nrc.cadc.gms.User;
-import ca.nrc.cadc.gms.UserXMLWriter;
-import ca.nrc.cadc.gms.WriterException;
+import ca.nrc.cadc.gms.UserWriter;
 import ca.nrc.cadc.gms.service.GroupService;
 import ca.nrc.cadc.gms.service.UserService;
-
+import org.jdom.Document;
 
 public class GroupMemberResource extends GroupResource
 {
@@ -121,7 +117,7 @@ public class GroupMemberResource extends GroupResource
     /**
      * Get a reference to the resource identified by the user.
      * 
-     * @throws FileNotFoundException If the resouce doesn't exist.
+     * @throws FileNotFoundException If the resource doesn't exist.
      */
     @Override
     protected boolean obtainResource() throws FileNotFoundException
@@ -193,24 +189,7 @@ public class GroupMemberResource extends GroupResource
     protected void buildXML(final Document document) throws IOException
     {
         LOGGER.debug("Enter GroupMemberResource.buildXML()");
-        final OutputStream outputStream = getOutputStream();
-        final UserXMLWriter memberXMLWriter =
-                createMemberXMLWriter(outputStream, groupMember);
-
-        try
-        {
-            memberXMLWriter.write();
-
-            final Node node = adoptNode(outputStream, document);
-            document.appendChild(node);
-        }
-        catch (WriterException e)
-        {
-            final String message =
-                String.format("Encountered a problem generating resource "
-                        + "representation: " + e.getMessage());
-            processError(e, Status.SERVER_ERROR_INTERNAL, message);
-        }
+        document.addContent(UserWriter.getUserElement(groupMember));
     }
 
     protected String getMemberID()
@@ -223,9 +202,6 @@ public class GroupMemberResource extends GroupResource
         return getUserService().getUser(getMemberID());
     }
 
-
-
-
     public UserService getUserService()
     {
         return userService;
@@ -235,4 +211,5 @@ public class GroupMemberResource extends GroupResource
     {
         this.userService = userService;
     }
+    
 }

@@ -68,15 +68,15 @@ package ca.nrc.cadc.gms.web.resources.restlet;
 
 import org.junit.Test;
 import static org.easymock.EasyMock.*;
-import org.w3c.dom.Document;
-import org.w3c.dom.Element;
 import ca.nrc.cadc.gms.service.UserService;
 import ca.nrc.cadc.gms.service.GroupService;
 import ca.nrc.cadc.gms.User;
-import ca.nrc.cadc.gms.UserXMLWriter;
+import ca.nrc.cadc.gms.UserWriter;
 
 import java.io.OutputStream;
 import java.io.ByteArrayOutputStream;
+import org.jdom.Document;
+import org.jdom.Element;
 
 
 public class GroupMemberResourceTest
@@ -84,7 +84,7 @@ public class GroupMemberResourceTest
 {
     private GroupService mockGroupService;
     private UserService mockUserService;
-    private UserXMLWriter mockUserWriter;
+    private UserWriter mockUserWriter;
     private OutputStream outputStream = new ByteArrayOutputStream(256);
     private Document mockParsedDocument;
 
@@ -98,7 +98,7 @@ public class GroupMemberResourceTest
     {
         setMockGroupService(createMock(GroupService.class));
         setMockUserService(createMock(UserService.class));
-        setMockUserWriter(createMock(UserXMLWriter.class));
+        setMockUserWriter(createMock(UserWriter.class));
         mockParsedDocument = createMock(Document.class);
 
         setTestSubject(new GroupMemberResource(getMockGroupService(),
@@ -126,21 +126,6 @@ public class GroupMemberResourceTest
             protected Document parseDocument(final String writtenData)
             {
                 return mockParsedDocument;
-            }
-
-            /**
-             * Create a new instance of a UserXMLWriter implementation.
-             *
-             * @param outputStream The OutputStream to write out the data.
-             * @param member       The member to create it with.
-             * @return An instance of an UserXMLWriter implementation.
-             *         <p/>
-             */
-            @Override
-            protected UserXMLWriter createMemberXMLWriter(
-                    final OutputStream outputStream, final User member)
-            {
-                return getMockUserWriter();
             }
 
             /**
@@ -174,15 +159,16 @@ public class GroupMemberResourceTest
         expect(mockUser.getUserID()).andReturn(Long.toString(88l)).once();
         expect(mockUser.getUsername()).andReturn("TESTUSERNAME").once();
         
-        getMockUserWriter().write();
+//        getMockUserWriter().write();
+        getMockUserWriter().write(mockUser, outputStream);
         expectLastCall().once();
 
-        expect(mockParsedDocument.getDocumentElement()).
+        expect(mockParsedDocument.getRootElement()).
                 andReturn(mockParsedDocumentElement).once();
-        expect(mockDocument.importNode(mockParsedDocumentElement, true)).
-                andReturn(mockParsedDocumentElement).once();
-        expect(mockDocument.appendChild(mockParsedDocumentElement)).
-                andReturn(mockParsedDocumentElement).once();
+//        expect(mockDocument.importNode(mockParsedDocumentElement, true)).
+//                andReturn(mockParsedDocumentElement).once();
+//        expect(mockDocument.appendChild(mockParsedDocumentElement)).
+//                andReturn(mockParsedDocumentElement).once();
 
         expect(getMockUserService().getMember(Long.toString(88l),
                                               Long.toString(88l))).
@@ -217,12 +203,12 @@ public class GroupMemberResourceTest
         this.mockUserService = mockUserService;
     }
 
-    public UserXMLWriter getMockUserWriter()
+    public UserWriter getMockUserWriter()
     {
         return mockUserWriter;
     }
 
-    public void setMockUserWriter(UserXMLWriter mockUserWriter)
+    public void setMockUserWriter(UserWriter mockUserWriter)
     {
         this.mockUserWriter = mockUserWriter;
     }

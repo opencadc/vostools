@@ -68,8 +68,6 @@ package ca.nrc.cadc.gms.web.resources.restlet;
 
 import java.io.FileNotFoundException;
 import java.io.IOException;
-import java.io.InputStream;
-import java.io.OutputStream;
 import java.io.UnsupportedEncodingException;
 import java.net.URLDecoder;
 
@@ -78,21 +76,13 @@ import org.restlet.data.Status;
 import org.restlet.resource.Delete;
 import org.restlet.resource.Post;
 import org.restlet.resource.Put;
-import org.w3c.dom.Document;
-import org.w3c.dom.Node;
 
 import ca.nrc.cadc.gms.AuthorizationException;
 import ca.nrc.cadc.gms.Group;
-import ca.nrc.cadc.gms.GroupXMLWriter;
-import ca.nrc.cadc.gms.GroupXMLWriterImpl;
+import ca.nrc.cadc.gms.GroupWriter;
 import ca.nrc.cadc.gms.InvalidGroupException;
-import ca.nrc.cadc.gms.User;
-import ca.nrc.cadc.gms.UserXMLReader;
-import ca.nrc.cadc.gms.UserXMLReaderImpl;
-import ca.nrc.cadc.gms.UserXMLWriter;
-import ca.nrc.cadc.gms.UserXMLWriterImpl;
-import ca.nrc.cadc.gms.WriterException;
 import ca.nrc.cadc.gms.service.GroupService;
+import org.jdom.Document;
 
 
 public class GroupResource extends AbstractResource
@@ -125,7 +115,7 @@ public class GroupResource extends AbstractResource
     /**
      * Get a reference to the resource identified by the user.
      * 
-     * @throws FileNotFoundException If the resouce doesn't exist.
+     * @throws FileNotFoundException If the resource doesn't exist.
      */
     @Override
     protected boolean obtainResource() throws FileNotFoundException
@@ -188,24 +178,7 @@ public class GroupResource extends AbstractResource
     protected void buildXML(final Document document) throws IOException
     {
         LOGGER.debug("Enter GroupMemberResource.buildXML()");
-        final OutputStream outputStream = getOutputStream();
-        
-        final GroupXMLWriter groupXMLWriter = new GroupXMLWriterImpl(outputStream, group);
-
-        try
-        {
-            groupXMLWriter.write();
-
-            final Node node = adoptNode(outputStream, document);
-            document.appendChild(node);
-        }
-        catch (WriterException e)
-        {
-            final String message =
-                String.format("Encountered a problem generating resource "
-                        + "representation: " + e.getMessage());
-            processError(e, Status.SERVER_ERROR_INTERNAL, message);
-        }
+        document.addContent(GroupWriter.getGroupElement(group));
     }
 
     /**
@@ -240,36 +213,6 @@ public class GroupResource extends AbstractResource
                                             + "ID '%s' is not yet implemented.",
                                             getGroupID()));
     }
-
-
-    /**
-     * Create a new instance of a UserXMLWriter implementation.
-     *
-     * @param outputStream  The OutputStream to write out the data.
-     * @param member    The member to create it with.
-     * @return  An instance of an UserXMLWriter implementation.
-     *
-     * TODO - Make this configurable!
-     */
-    protected UserXMLWriter createMemberXMLWriter(
-            final OutputStream outputStream, final User member)
-    {
-        return new UserXMLWriterImpl(outputStream, member);
-    }
-
-    /**
-     * Create a new instance of a GroupXMLWriter implementation.
-     *
-     * @param inputStream  The InputStream to write out the data.
-     * @return  An instance of an UserXMLWriter implementation.
-     *
-     * TODO - Make this configurable!
-     */
-    protected UserXMLReader createMemberXMLReader(
-            final InputStream inputStream)
-    {
-        return new UserXMLReaderImpl(inputStream);
-    }    
 
     protected Group getGroup() throws AuthorizationException, InvalidGroupException
     {

@@ -68,18 +68,16 @@ package ca.nrc.cadc.gms.web.resources.restlet;
 
 import java.io.FileNotFoundException;
 import java.io.IOException;
+import org.jdom.Document;
 
 import org.restlet.resource.Put;
-import org.w3c.dom.Document;
-
 
 public class GroupListResource extends AbstractResource
-{
-    
+{   
     /**
      * Get a reference to the resource identified by the user.
      * 
-     * @throws FileNotFoundException If the resouce doesn't exist.
+     * @throws FileNotFoundException If the resource doesn't exist.
      */
     @Override
     protected boolean obtainResource() throws FileNotFoundException
@@ -112,4 +110,5 @@ public class GroupListResource extends AbstractResource
         processNotImplemented("The Service to Create a Group is not yet "
                               + "implemented.");
     }
+    
 }

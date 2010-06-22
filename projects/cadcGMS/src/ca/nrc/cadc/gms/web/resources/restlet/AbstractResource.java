@@ -70,36 +70,29 @@ import java.io.ByteArrayOutputStream;
 import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.OutputStream;
-import java.io.StringReader;
 import java.util.ArrayList;
 import java.util.List;
 
-import javax.xml.transform.OutputKeys;
-import javax.xml.transform.Transformer;
-
 import org.apache.log4j.Logger;
-import org.apache.xerces.parsers.DOMParser;
 import org.restlet.data.Form;
 import org.restlet.data.MediaType;
 import org.restlet.data.Method;
 import org.restlet.data.Reference;
 import org.restlet.data.Status;
-import org.restlet.ext.xml.DomRepresentation;
 import org.restlet.representation.EmptyRepresentation;
 import org.restlet.representation.Representation;
 import org.restlet.representation.StringRepresentation;
 import org.restlet.resource.Get;
 import org.restlet.resource.ServerResource;
 import org.restlet.security.User;
-import org.w3c.dom.Document;
-import org.w3c.dom.Element;
-import org.w3c.dom.Node;
-import org.xml.sax.InputSource;
-import org.xml.sax.SAXException;
 
 import ca.nrc.cadc.gms.WebRepresentationException;
-import ca.nrc.cadc.gms.web.InvalidRepresentationException;
-
+import ca.nrc.cadc.gms.web.restlet.representation.JDOMRepresentation;
+import java.io.StringReader;
+import org.jdom.Document;
+import org.jdom.Element;
+import org.jdom.JDOMException;
+import org.jdom.input.SAXBuilder;
 
 /**
  * Base resource.
@@ -119,7 +112,6 @@ public abstract class AbstractResource extends ServerResource
     {
         super();
     }
-
 
     /**
      * Obtain the username of the currently authenticated User.
@@ -146,33 +138,19 @@ public abstract class AbstractResource extends ServerResource
             final String errorMessage, final String errorCode)
     {
         // Generate the output representation
-        try
-        {
-            final DomRepresentation representation =
-                    new DomRepresentation(MediaType.TEXT_XML);
+        final Document document = new Document();
+        final Element errorElement = new Element("error");
+        document.addContent(errorElement);
 
-            // Generate a DOM document representing the list of
-            // items.
-            final Document document = representation.getDocument();
+        final Element codeElement = new Element("code");
+        codeElement.setText(errorCode);
+        errorElement.addContent(codeElement);
 
-            final Element errorElement = document.createElement("error");
+        final Element messageElement = new Element("message");
+        messageElement.setText(errorMessage);
+        errorElement.addContent(messageElement);
 
-            final Element codeElement = document.createElement("code");
-            codeElement.appendChild(document.createTextNode(errorCode));
-            errorElement.appendChild(codeElement);
-
-            final Element messageElement = document.createElement("message");
-            messageElement.appendChild(document.createTextNode(errorMessage));
-            errorElement.appendChild(messageElement);
-
-            return representation;
-        }
-        catch (IOException e)
-        {
-            final String message = "Unable to create XML Representation.";
-            LOGGER.error(message, e);
-            throw new InvalidRepresentationException(message, e);
-        }
+        return new JDOMRepresentation(MediaType.TEXT_XML, document);
     }
 
     /**
@@ -192,40 +170,9 @@ public abstract class AbstractResource extends ServerResource
                 return null;
             }
 
-            final DomRepresentation rep =
-                    new DomRepresentation(MediaType.TEXT_XML)
-                    {
-                        /**
-                         * Creates a new JAXP Transformer object that will be
-                         * used to serialize this DOM. This method may be
-                         * overridden in order to set custom properties on the
-                         * Transformer.
-                         *
-                         * @return The transformer to be used for serialization.
-                         */
-                        @Override
-                        protected Transformer createTransformer()
-                                throws IOException
-                        {
-                            final Transformer transformer =
-                                    super.createTransformer();
-
-                            transformer.setOutputProperty(OutputKeys.INDENT,
-                                                          "yes");
-                            transformer.setOutputProperty(
-                                    "{http://xml.apache.org/xslt}indent-amount",
-                                    "2");
-
-                            return transformer;
-                        }
-                    };
-
-            final Document document = rep.getDocument();
-            
+            Document document = new Document();
             buildXML(document);
-            document.normalizeDocument();
-
-            return rep;
+            return new JDOMRepresentation(MediaType.TEXT_XML, document);
         }
         catch (final IOException e)
         {
@@ -240,7 +187,7 @@ public abstract class AbstractResource extends ServerResource
      * Get a reference to the resource identified by the user.
      * @return TODO
      * 
-     * @throws FileNotFoundException If the resouce doesn't exist.
+     * @throws FileNotFoundException If the resource doesn't exist.
      */
     protected abstract boolean obtainResource()
                 throws FileNotFoundException;
@@ -408,23 +355,6 @@ public abstract class AbstractResource extends ServerResource
     {
         return new ByteArrayOutputStream(256);
     }
-    
-
-    /**
-     * Adopt a new Node based on the given Stream of data and Document.
-     *
-     * @param outputStream      The OutputStream to be written to
-     * @param document          The Document to import the node to.
-     * @return                  The newly created Node.
-     */
-    protected Node adoptNode(final OutputStream outputStream,
-                             final Document document)
-    {
-        final String writtenData = outputStream.toString();
-        return document.importNode(
-                parseDocument(writtenData).getDocumentElement(), true);
-    }
-    
 
     /**
      * Parse a Document from the given String.
@@ -434,12 +364,11 @@ public abstract class AbstractResource extends ServerResource
      */
     protected Document parseDocument(final String writtenData)
     {
-        final DOMParser parser = new DOMParser();
+        final SAXBuilder parser = new SAXBuilder();
 
         try
         {
-            parser.parse(new InputSource(new StringReader(writtenData)));
-            return parser.getDocument();
+            return parser.build(new StringReader(writtenData));
         }
         catch (IOException e)
         {
@@ -447,11 +376,12 @@ public abstract class AbstractResource extends ServerResource
             LOGGER.error(message, e);
             throw new WebRepresentationException(message, e);
         }
-        catch (SAXException e)
+        catch (JDOMException e)
         {
             final String message = "Unable to parse document.";
             LOGGER.error(message, e);
             throw new WebRepresentationException(message, e);
         }
     }
+    
 }

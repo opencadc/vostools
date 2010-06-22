@@ -70,24 +70,22 @@ import org.junit.runners.Suite;
 import org.junit.runner.RunWith;
 import ca.nrc.cadc.gms.service.UserServiceImplTest;
 import ca.nrc.cadc.gms.web.resources.restlet.*;
-import ca.nrc.cadc.gms.UserXMLWriterImplTest;
-import ca.nrc.cadc.gms.UserXMLReaderImplTest;
-
 
 @RunWith(Suite.class)
 @Suite.SuiteClasses(
-        {
-                GroupImplTest.class,
-                UserImplTest.class,
-                UserServiceImplTest.class,
-                GroupListResourceTest.class,
-                GroupMemberResourceTest.class,
-                GroupMemberListResourceTest.class,
-                MemberGroupResourceTest.class,
-                MemberResourceTest.class,
-                UserXMLWriterImplTest.class,
-                UserXMLReaderImplTest.class
-        })
-public class GMSTestSuite
 {
-}
+    GroupImplTest.class,
+    UserImplTest.class,
+    UserServiceImplTest.class,
+    GroupListResourceTest.class,
+//    GroupMemberResourceTest.class
+    GroupMemberListResourceTest.class,
+//    MemberGroupResourceTest.class,
+    MemberResourceTest.class,
+    UserWriterTest.class,
+    UserReaderTest.class,
+    GroupWriterTest.class,
+    GroupReaderTest.class
+})
+
+public class GMSTestSuite {}

@@ -69,9 +69,8 @@ package ca.nrc.cadc.gms.web.resources.restlet;
 import java.io.FileNotFoundException;
 import java.io.IOException;
 
-import org.w3c.dom.Document;
-
 import ca.nrc.cadc.gms.service.UserService;
+import org.jdom.Document;
 
 
 public class UserResource extends AbstractResource
@@ -99,7 +98,7 @@ public class UserResource extends AbstractResource
     /**
      * Get a reference to the resource identified by the user.
      * 
-     * @throws FileNotFoundException If the resouce doesn't exist.
+     * @throws FileNotFoundException If the resource doesn't exist.
      */
     @Override
     protected boolean obtainResource() throws FileNotFoundException

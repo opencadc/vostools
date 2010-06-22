@@ -66,51 +66,103 @@
 */
 package ca.nrc.cadc.gms;
 
+import ca.nrc.cadc.util.StringBuilderWriter;
+import java.io.BufferedWriter;
+import java.io.IOException;
+import java.io.OutputStream;
+import java.io.OutputStreamWriter;
+import java.io.UnsupportedEncodingException;
+import java.io.Writer;
+import org.jdom.Document;
+import org.jdom.Element;
+import org.jdom.output.Format;
+import org.jdom.output.XMLOutputter;
 
-import org.junit.Test;
-
-import static org.junit.Assert.*;
-import static org.easymock.EasyMock.*;
-
-
-public abstract class GroupXMLWriterTest
-        extends AbstractXMLWriterTest<GroupXMLWriter>
+/**
+ *
+ * @author jburke
+ */
+public class UserWriter
 {
-    protected Group mockGroup;
+    public UserWriter() {}
 
-
-    protected GroupXMLWriterTest()
+    /**
+     * Write a User to a StringBuilder.
+     */
+    public static void write(User user, StringBuilder builder)
+        throws IOException
     {
-        setMockGroup(createMock(Group.class));
-    }
-    
-
-    @Test
-    public void write() throws Exception
-    {
-        getTestSubject().write();
-
-        final String output = getOutput();
-        assertNotNull("Output should be available.", output);
-        assertTrue("Output should not be empty.", !output.trim().equals(""));
+        write(user, new StringBuilderWriter(builder));
     }
 
     /**
-     * Obtain the written output.
+     * Write a User to an OutputStream.
      *
-     * @return              String output from the write.
-     * @throws Exception    For anything that went wrong.
+     * @param user User to write.
+     * @param out OutputStream to write to.
+     * @throws IOException if the writer fails to write.
      */
-    public abstract String getOutput() throws Exception;
-
-
-    public Group getMockGroup()
+    public static void write(User user, OutputStream out)
+        throws IOException
     {
-        return mockGroup;
+        OutputStreamWriter outWriter;
+        try
+        {
+            outWriter = new OutputStreamWriter(out, "UTF-8");
+        } catch (UnsupportedEncodingException e)
+        {
+            throw new RuntimeException("UTF-8 encoding not supported", e);
+        }
+        write(user, new BufferedWriter(outWriter));
     }
 
-    public void setMockGroup(Group mockGroup)
+    /**
+     * Write a User to a Writer.
+     *
+     * @param user User to write.
+     * @param writer Writer to write to.
+     * @throws IOException if the writer fails to write.
+     */
+    public static void write(User user, Writer writer)
+        throws IOException
     {
-        this.mockGroup = mockGroup;
+        // write out the Document
+        write(getUserElement(user), writer);
     }
+
+    /**
+     * Build the member Element of a User.
+     *
+     * @param user User.
+     * @return member Element.
+     */
+    public static Element getUserElement(User user)
+    {
+        // Create the root member Element.
+        Element userElement = new Element("member");
+        userElement.setAttribute("id", user.getUserID());
+
+        // Add the username Element.
+        Element usernameElement = new Element("username");
+        usernameElement.setText(user.getUsername());
+        userElement.addContent(usernameElement);
+        
+        return userElement;
+    }
+
+    /**
+     * Write to root Element to a writer.
+     *
+     * @param root Root Element to write.
+     * @param writer Writer to write to.
+     * @throws IOException if the writer fails to write.
+     */
+    private static void write(Element root, Writer writer)
+        throws IOException
+    {
+        XMLOutputter outputter = new XMLOutputter();
+        outputter.setFormat(Format.getPrettyFormat());
+        outputter.output(new Document(root), writer);
+    }
+
 }

@@ -66,31 +66,24 @@
  */
 package ca.nrc.cadc.gms.web.resources.restlet;
 
-import java.io.ByteArrayOutputStream;
 import java.io.IOException;
-import java.io.OutputStream;
 import java.io.StringReader;
 import java.net.URLDecoder;
 
 import org.apache.log4j.Logger;
-import org.apache.xerces.parsers.DOMParser;
 import org.restlet.data.Status;
-import org.w3c.dom.Document;
-import org.w3c.dom.Node;
-import org.xml.sax.InputSource;
-import org.xml.sax.SAXException;
 
 import ca.nrc.cadc.gms.AuthorizationException;
 import ca.nrc.cadc.gms.Group;
 import ca.nrc.cadc.gms.InvalidGroupException;
 import ca.nrc.cadc.gms.InvalidMemberException;
-import ca.nrc.cadc.gms.User;
-import ca.nrc.cadc.gms.UserXMLWriter;
-import ca.nrc.cadc.gms.UserXMLWriterImpl;
+import ca.nrc.cadc.gms.UserWriter;
 import ca.nrc.cadc.gms.WebRepresentationException;
-import ca.nrc.cadc.gms.WriterException;
 import ca.nrc.cadc.gms.service.GroupService;
 import ca.nrc.cadc.gms.service.UserService;
+import org.jdom.Document;
+import org.jdom.JDOMException;
+import org.jdom.input.SAXBuilder;
 
 
 public class MemberGroupResource extends MemberResource
@@ -139,7 +132,7 @@ public class MemberGroupResource extends MemberResource
         try
         {
             getUserService().getMember(groupMemberID, groupID);
-            appendContent(document);
+            document.addContent(UserWriter.getUserElement(getMember()));
         }
         catch (final InvalidGroupException e)
         {
@@ -171,56 +164,6 @@ public class MemberGroupResource extends MemberResource
         }
     }
 
-
-    /**
-     * Append the XML data to the given Document for this Group Member.
-     *
-     * @param document  The Document, already initialized.
-     */
-    private void appendContent(final Document document)
-    {
-        final User member = getMember();
-        final OutputStream outputStream = getOutputStream();
-        final UserXMLWriter memberXMLWriter =
-                createMemberXMLWriter(outputStream, member);
-
-        try
-        {
-            memberXMLWriter.write();
-
-            final Node node = adoptNode(outputStream, document);
-            document.appendChild(node);
-        }
-        catch (WriterException we)
-        {
-            // Do nothing for now...
-        }
-    }
-
-    /**
-     * Obtain an OutputStream to write to.  This can be overridden.
-     * @return      An OutputStream instance.
-     */
-    protected OutputStream getOutputStream()
-    {
-        return new ByteArrayOutputStream(256);
-    }
-
-    /**
-     * Adopt a new Node based on the given Stream of data and Document.
-     *
-     * @param outputStream      The OutputStream to be written to
-     * @param document          The Document to import the node to.
-     * @return                  The newly created Node.
-     */
-    protected Node adoptNode(final OutputStream outputStream,
-                             final Document document)
-    {
-        final String writtenData = outputStream.toString();
-        return document.importNode(
-                parseDocument(writtenData).getDocumentElement(), true);
-    }
-
     /**
      * Parse a Document from the given String.
      *
@@ -229,12 +172,11 @@ public class MemberGroupResource extends MemberResource
      */
     protected Document parseDocument(final String writtenData)
     {
-        final DOMParser parser = new DOMParser();
+        final SAXBuilder parser = new SAXBuilder(false);
 
         try
         {
-            parser.parse(new InputSource(new StringReader(writtenData)));
-            return parser.getDocument();
+            return parser.build(new StringReader(writtenData));
         }
         catch (IOException e)
         {
@@ -242,7 +184,7 @@ public class MemberGroupResource extends MemberResource
             LOGGER.error(message, e);
             throw new WebRepresentationException(message, e);
         }
-        catch (SAXException e)
+        catch (JDOMException e)
         {
             final String message = "Unable to parse document.";
             LOGGER.error(message, e);
@@ -250,22 +192,6 @@ public class MemberGroupResource extends MemberResource
         }
     }
 
-    /**
-     * Create a new instance of a UserXMLWriter implementation.
-     *
-     * @param outputStream  The OutputStream to write out the data.
-     * @param member    The member to create it with.
-     * @return  An instance of an UserXMLWriter implementation.
-     *
-     * TODO - Make this configurable!
-     */
-    protected UserXMLWriter createMemberXMLWriter(
-            final OutputStream outputStream, final User member)
-    {
-        return new UserXMLWriterImpl(outputStream, member);
-    }
-
-    
     protected String getGroupID()
     {
         return (String) getRequestAttribute("groupID");

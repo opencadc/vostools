@@ -66,10 +66,8 @@
  */
 package ca.nrc.cadc.gms.web.resources.restlet;
 
-import org.w3c.dom.Document;
-
 import java.io.IOException;
-
+import org.jdom.Document;
 
 public class GroupPropertiesResource extends GroupResource
 {

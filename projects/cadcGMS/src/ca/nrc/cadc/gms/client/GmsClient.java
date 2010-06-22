@@ -74,12 +74,9 @@ import java.net.URL;
 import java.util.Collection;
 
 import ca.nrc.cadc.gms.Group;
-import ca.nrc.cadc.gms.GroupXMLReader;
-import ca.nrc.cadc.gms.GroupXMLReaderImpl;
 import ca.nrc.cadc.gms.ReaderException;
 import ca.nrc.cadc.gms.User;
-import ca.nrc.cadc.gms.UserXMLReader;
-import ca.nrc.cadc.gms.UserXMLReaderImpl;
+import ca.nrc.cadc.gms.UserReader;
 
 
 public class GmsClient
@@ -203,11 +200,13 @@ public class GmsClient
         try
         {
             inputStream = getInputStream(resourceURL);
-            final UserXMLReader userReader = getUserXMLReader(inputStream);
+//            final UserXMLReader userReader = getUserXMLReader(inputStream);
 
-            userReader.readAndParse();
+//            userReader.readAndParse();
 
-            member = userReader.getMember();
+//            member = userReader.getMember();
+            member = UserReader.read(inputStream);
+
         }
         finally
         {
@@ -248,10 +247,10 @@ public class GmsClient
      * @param inputStream   The InputStream waiting to be read from.
      * @return      Instance of UserXMLReader.
      */
-    public UserXMLReader getUserXMLReader(final InputStream inputStream)
-    {
-        return new UserXMLReaderImpl(inputStream);
-    }
+//    public UserXMLReader getUserXMLReader(final InputStream inputStream)
+//    {
+//        return new UserXMLReaderImpl(inputStream);
+//    }
 
     /**
      * Create a new instance of a GroupXMLReader.
@@ -261,10 +260,10 @@ public class GmsClient
      * @param inputStream   The InputStream waiting to be read from.
      * @return      Instance of GroupXMLReader.
      */
-    public GroupXMLReader getGroupXMLReader(final InputStream inputStream)
-    {
-        return new GroupXMLReaderImpl(inputStream);
-    }
+//    public GroupXMLReader getGroupXMLReader(final InputStream inputStream)
+//    {
+//        return new GroupXMLReaderImpl(inputStream);
+//    }
     
     public URL getBaseServiceURL()
     {

@@ -1,4 +1,4 @@
-<!--
+/**
 ************************************************************************
 *******************  CANADIAN ASTRONOMY DATA CENTRE  *******************
 **************  CENTRE CANADIEN DE DONNÉES ASTRONOMIQUES  **************
@@ -8,7 +8,7 @@
 *  National Research Council            Conseil national de recherches
 *  Ottawa, Canada, K1A 0R6              Ottawa, Canada, K1A 0R6
 *  All rights reserved                  Tous droits réservés
-*                                       
+*
 *  NRC disclaims any warranties,        Le CNRC dénie toute garantie
 *  expressed, implied, or               énoncée, implicite ou légale,
 *  statutory, of any kind with          de quelque nature que ce
@@ -31,10 +31,10 @@
 *  software without specific prior      de ce logiciel sans autorisation
 *  written permission.                  préalable et particulière
 *                                       par écrit.
-*                                       
+*
 *  This file is part of the             Ce fichier fait partie du projet
 *  OpenCADC project.                    OpenCADC.
-*                                       
+*
 *  OpenCADC is free software:           OpenCADC est un logiciel libre ;
 *  you can redistribute it and/or       vous pouvez le redistribuer ou le
 *  modify it under the terms of         modifier suivant les termes de
@@ -44,7 +44,7 @@
 *  either version 3 of the              : soit la version 3 de cette
 *  License, or (at your option)         licence, soit (à votre gré)
 *  any later version.                   toute version ultérieure.
-*                                       
+*
 *  OpenCADC is distributed in the       OpenCADC est distribué
 *  hope that it will be useful,         dans l’espoir qu’il vous
 *  but WITHOUT ANY WARRANTY;            sera utile, mais SANS AUCUNE
@@ -54,7 +54,7 @@
 *  PURPOSE.  See the GNU Affero         PARTICULIER. Consultez la Licence
 *  General Public License for           Générale Publique GNU Affero
 *  more details.                        pour plus de détails.
-*                                       
+*
 *  You should have received             Vous devriez avoir reçu une
 *  a copy of the GNU Affero             copie de la Licence Générale
 *  General Public License along         Publique GNU Affero avec
@@ -62,69 +62,81 @@
 *  <http://www.gnu.org/licenses/>.      pas le cas, consultez :
 *                                       <http://www.gnu.org/licenses/>.
 *
-*  $Revision: 4 $
-*
 ************************************************************************
--->
+*/
 
-	
-<project default="build" basedir=".">
-  <property environment="env"/>
+package ca.nrc.cadc.gms;
 
-    <!-- site-specific build properties or overrides of values in opencadc.properties -->
-    <property file="${env.CADC_PREFIX}/etc/local.properties" />
+import ca.nrc.cadc.util.Log4jInit;
+import org.apache.log4j.Level;
+import org.apache.log4j.Logger;
+import org.junit.After;
+import org.junit.AfterClass;
+import org.junit.Before;
+import org.junit.BeforeClass;
+import org.junit.Test;
+import static org.junit.Assert.*;
 
-    <!-- site-specific targets, e.g. install, cannot duplicate those in opencadc.targets.xml -->
-    <import file="${env.CADC_PREFIX}/etc/local.targets.xml" optional="true" />
+/**
+ *
+ * @author jburke
+ */
+public class GroupReaderTest
+{
+    private static Logger log = Logger.getLogger(GroupReaderTest.class);
+    {
+        Log4jInit.setLevel("ca", Level.INFO);
+    }
 
-    <!-- default properties and targets -->
-    <property file="${env.CADC_PREFIX}/etc/opencadc.properties" />
-    <import file="${env.CADC_PREFIX}/etc/opencadc.targets.xml"/>
+    static Group group;
+    static String groupXML;
 
-    <!-- developer convenience: place for extra targets and properties -->
-    <import file="extras.xml" optional="true" />
+    public GroupReaderTest() {}
 
-    <property name="project"        value="cadcGMS" />
+    @BeforeClass
+    public static void setUpClass() throws Exception
+    {
+        group = new GroupImpl("groupId");
+        group.addMember(new UserImpl("memberId", "username"));
 
-    <property name="cadcUtil"       value="${lib}/cadcUtil.jar" />
-    <property name="jdom"           value="${ext.lib}/jdom.jar" />
-    <property name="log4j"          value="${ext.lib}/log4j.jar" />
-    <property name="restlet"        value="${ext.lib}/org.restlet.jar" />
+        StringBuilder sb = new StringBuilder();
+        sb.append("<group id=\"groupId\">");
+        sb.append("<member id=\"memberId\">");
+        sb.append("<username>username</username>");
+        sb.append("</member>");
+        sb.append("</group>");
+        groupXML = sb.toString();
+    }
 
-    <property name="jars" value="${cadcUtil}:${jdom}:${log4j}:${restlet}" />
+    @AfterClass
+    public static void tearDownClass() throws Exception {}
 
-    <target name="build" depends="simpleJar" />
+    @Before
+    public void setUp() {}
 
-    <!-- JAR files needed to run the test suite -->
-    <property name="easyMock"       value="${ext.dev}/easymock.jar" />
-    <property name="junit"          value="${ext.dev}/junit.jar" />
-    <property name="xmlunit"        value="${ext.dev}/xmlunit.jar" />
-    <property name="xerces"         value="${ext.lib}/xerces.jar" />
-    <property name="testingJars"    value="${easyMock}:${junit}:${xmlunit}:${xerces}" />
+    @After
+    public void tearDown() {}
 
-    <!-- compile the test classes -->
-    <target name="compile-test" depends="compile">
-        <javac destdir="${build}/class"
-               source="${java.source.version}"
-               target="${java.target.version}"
-               classpath="${jars}:${testingJars}" >
-            <src path="test/src"/>
-        </javac>
-    </target>
+    /**
+     * Test of read method, of class GroupReader.
+     */
+    @Test
+    public void testRead_String() throws Exception
+    {
+        try
+        {
+            log.debug("testRead_String");
+            Group g = GroupReader.read(groupXML);
 
-    <target name="test" depends="compile-test">
-        <echo message="Running test" />
+            assertEquals(group, g);
 
-        <!-- Run the junit test suite -->
-        <echo message="Running test suite..." />
-        <junit printsummary="yes" haltonfailure="yes" fork="yes">
-            <classpath>
-                <pathelement path="build/class"/>
-                <pathelement path="${jars}:${testingJars}"/>
-            </classpath>
-            <test name="ca.nrc.cadc.gms.GMSTestSuite" />
-            <formatter type="plain" usefile="false" />
-        </junit>
-    </target>
+            log.info("testRead_String passed");
+        }
+        catch (Throwable t)
+        {
+            log.error(t);
+            fail(t.getMessage());
+        }
+    }
 
-</project>
+}

@@ -64,14 +64,129 @@
 *
 ************************************************************************
 */
+
 package ca.nrc.cadc.gms;
 
-
+import java.util.List;
+import org.custommonkey.xmlunit.XMLAssert;
+import org.custommonkey.xmlunit.XMLUnit;
+import ca.nrc.cadc.util.Log4jInit;
+import org.apache.log4j.Level;
+import org.apache.log4j.Logger;
+import java.io.OutputStream;
+import java.io.Writer;
+import org.jdom.Element;
+import org.junit.After;
+import org.junit.AfterClass;
+import org.junit.Before;
+import org.junit.BeforeClass;
+import org.junit.Test;
+import static org.junit.Assert.*;
 
 /**
- * Interface for writing XML representing a Group.
+ *
+ * @author jburke
  */
-public interface GroupXMLWriter extends XMLWriter
+public class GroupWriterTest
 {
-    void setGroup(final Group group);
+private static Logger log = Logger.getLogger(GroupWriterTest.class);
+    {
+        Log4jInit.setLevel("ca", Level.INFO);
+    }
+
+    static Group group;
+    static String groupXML;
+
+    public GroupWriterTest() {}
+
+    @BeforeClass
+    public static void setUpClass() throws Exception
+    {
+        XMLUnit.setIgnoreWhitespace(true);
+
+        group = new GroupImpl("groupId");
+        group.addMember(new UserImpl("memberId", "username"));
+
+        StringBuilder sb = new StringBuilder();
+        sb.append("<group id=\"groupId\">");
+        sb.append("<member id=\"memberId\">");
+        sb.append("<username>username</username>");
+        sb.append("</member>");
+        sb.append("</group>");
+        groupXML = sb.toString();
+    }
+
+    @AfterClass
+    public static void tearDownClass() throws Exception {}
+
+    @Before
+    public void setUp() {}
+
+    @After
+    public void tearDown() {}
+
+    /**
+     * Test of write method, of class GroupWriter.
+     */
+    @Test
+    public void testWrite_Group_StringBuilder() throws Exception
+    {
+        try
+        {
+            log.debug("testWrite_Group_StringBuilder");
+            StringBuilder sb = new StringBuilder();
+            GroupWriter.write(group, sb);
+            log.debug(sb.toString());
+            log.debug(groupXML);
+
+            XMLAssert.assertXMLEqual(groupXML, sb.toString());
+
+            log.info("testWrite_Group_StringBuilder passed");
+        }
+        catch (Throwable t)
+        {
+            log.error(t);
+            fail(t.getMessage());
+        }
+    }
+
+    /**
+     * Test of getGroupElement method, of class GroupWriter.
+     */
+    @Test
+    public void testGetGroupElement()
+    {
+        try
+        {
+            log.debug("testGetGroupElement");
+            Element groupElement = GroupWriter.getGroupElement(group);
+
+            assertTrue(groupElement.getName().equals("group"));
+            assertNotNull(groupElement.getAttribute("id"));
+            assertTrue(groupElement.getAttributeValue("id").equals("groupId"));
+
+            List<Element> userElements = groupElement.getChildren("member");
+            assertNotNull(userElements);
+            assertEquals(1, userElements.size());
+
+            Element userElement = userElements.get(0);
+            assertNotNull(userElement);
+
+            assertTrue(userElement.getName().equals("member"));
+            assertNotNull(userElement.getAttribute("id"));
+            assertTrue(userElement.getAttributeValue("id").equals("memberId"));
+
+            Element usernameElement = userElement.getChild("username");
+            assertNotNull(usernameElement);
+            assertEquals("username", usernameElement.getText());
+
+            log.info("testGetGroupElement passed");
+        }
+        catch (Throwable t)
+        {
+            log.error(t);
+            fail(t.getMessage());
+        }
+    }
+
 }

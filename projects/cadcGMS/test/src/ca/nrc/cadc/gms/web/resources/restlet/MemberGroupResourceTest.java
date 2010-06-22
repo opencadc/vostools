@@ -67,17 +67,17 @@
 package ca.nrc.cadc.gms.web.resources.restlet;
 
 import ca.nrc.cadc.gms.User;
-import ca.nrc.cadc.gms.UserXMLWriter;
+import ca.nrc.cadc.gms.UserWriter;
 import ca.nrc.cadc.gms.service.UserService;
 import ca.nrc.cadc.gms.service.GroupService;
 
 import static org.easymock.EasyMock.*;
-import org.w3c.dom.Document;
-import org.w3c.dom.Element;
 import org.junit.Test;
 
 import java.io.OutputStream;
 import java.io.ByteArrayOutputStream;
+import org.jdom.Document;
+import org.jdom.Element;
 
 
 public class MemberGroupResourceTest
@@ -86,7 +86,7 @@ public class MemberGroupResourceTest
     private OutputStream outputStream = new ByteArrayOutputStream(256);
     private GroupService mockGroupService;
     private UserService mockUserService;    
-    private UserXMLWriter mockUserWriter;
+    private UserWriter mockUserWriter;
     private Document mockParsedDocument;
 
 
@@ -99,7 +99,7 @@ public class MemberGroupResourceTest
     {
         setMockGroupService(createMock(GroupService.class));
         setMockUserService(createMock(UserService.class));
-        setMockUserWriter(createMock(UserXMLWriter.class));
+        setMockUserWriter(createMock(UserWriter.class));
         mockParsedDocument = createMock(Document.class);
 
         setTestSubject(new MemberGroupResource(getMockUserService(),
@@ -130,21 +130,6 @@ public class MemberGroupResourceTest
             }            
 
             /**
-             * Create a new instance of a UserXMLWriter implementation.
-             *
-             * @param outputStream The OutputStream to write out the data.
-             * @param member       The member to create it with.
-             * @return An instance of an UserXMLWriter implementation.
-             *         <p/>
-             */
-            @Override
-            protected UserXMLWriter createMemberXMLWriter(
-                    final OutputStream outputStream, final User member)
-            {
-                return getMockUserWriter();
-            }
-
-            /**
              * Obtain an OutputStream to write to.  This can be overridden.
              *
              * @return An OutputStream instance.
@@ -166,7 +151,7 @@ public class MemberGroupResourceTest
         xml.append("  <username>TESTUSERNAME</username>\n");
         xml.append("</member>");
 
-        outputStream.write(xml.toString().getBytes());
+//        outputStream.write(xml.toString().getBytes());
 
         final User mockUser = createMock(User.class);
         final Document mockDocument = createMock(Document.class);
@@ -175,15 +160,15 @@ public class MemberGroupResourceTest
         expect(mockUser.getUserID()).andReturn(Long.toString(88l)).once();
         expect(mockUser.getUsername()).andReturn("TESTUSERNAME").once();
 
-        getMockUserWriter().write();
+//        getMockUserWriter().write();
         expectLastCall().once();
 
-        expect(mockParsedDocument.getDocumentElement()).
+        expect(mockParsedDocument.getRootElement()).
                 andReturn(mockParsedDocumentElement).once();
-        expect(mockDocument.importNode(mockParsedDocumentElement, true)).
-                andReturn(mockParsedDocumentElement).once();
-        expect(mockDocument.appendChild(mockParsedDocumentElement)).
-                andReturn(mockParsedDocumentElement).once();
+//        expect(mockDocument.importNode(mockParsedDocumentElement, true)).
+//                andReturn(mockParsedDocumentElement).once();
+//        expect(mockDocument.appendChild(mockParsedDocumentElement)).
+//                andReturn(mockParsedDocumentElement).once();
 
         expect(getMockUserService().getMember(Long.toString(88l),
                                               Long.toString(88l))).
@@ -219,12 +204,12 @@ public class MemberGroupResourceTest
         this.mockUserService = mockUserService;
     }
 
-    public UserXMLWriter getMockUserWriter()
+    public UserWriter getMockUserWriter()
     {
         return mockUserWriter;
     }
 
-    public void setMockUserWriter(UserXMLWriter mockUserWriter)
+    public void setMockUserWriter(UserWriter mockUserWriter)
     {
         this.mockUserWriter = mockUserWriter;
     }

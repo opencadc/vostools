@@ -68,17 +68,10 @@ package ca.nrc.cadc.gms.web.resources.restlet;
 
 import java.io.FileNotFoundException;
 import java.io.IOException;
-import java.io.InputStream;
-import java.io.OutputStream;
-
-import org.w3c.dom.Document;
 
 import ca.nrc.cadc.gms.User;
-import ca.nrc.cadc.gms.UserXMLReader;
-import ca.nrc.cadc.gms.UserXMLReaderImpl;
-import ca.nrc.cadc.gms.UserXMLWriter;
-import ca.nrc.cadc.gms.UserXMLWriterImpl;
 import ca.nrc.cadc.gms.service.UserService;
+import org.jdom.Document;
 
 
 public class MemberResource extends AbstractResource
@@ -108,7 +101,7 @@ public class MemberResource extends AbstractResource
     /**
      * Get a reference to the resource identified by the user.
      * 
-     * @throws FileNotFoundException If the resouce doesn't exist.
+     * @throws FileNotFoundException If the resource doesn't exist.
      */
     @Override
     protected boolean obtainResource() throws FileNotFoundException
@@ -135,36 +128,6 @@ public class MemberResource extends AbstractResource
                                             + "'%s' is not yet implemented.",
                                             getMemberID()));
     }
-
-
-    /**
-     * Create a new instance of a UserXMLWriter implementation.
-     *
-     * @param outputStream  The OutputStream to write out the data.
-     * @param member    The member to create it with.
-     * @return  An instance of an UserXMLWriter implementation.
-     *
-     * TODO - Make this configurable!
-     */
-    protected UserXMLWriter createMemberXMLWriter(
-            final OutputStream outputStream, final User member)
-    {
-        return new UserXMLWriterImpl(outputStream, member);
-    }
-
-    /**
-     * Create a new instance of a GroupXMLWriter implementation.
-     *
-     * @param inputStream  The InputStream to write out the data.
-     * @return  An instance of an UserXMLWriter implementation.
-     *
-     * TODO - Make this configurable!
-     */
-    protected UserXMLReader createMemberXMLReader(
-            final InputStream inputStream)
-    {
-        return new UserXMLReaderImpl(inputStream);
-    }    
 
     protected User getMember()
     {
