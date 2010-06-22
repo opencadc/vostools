@@ -81,10 +81,13 @@ import javax.security.auth.x500.X500Principal;
 import org.apache.log4j.Logger;
 
 import ca.nrc.cadc.auth.Authorizer;
+import ca.nrc.cadc.gms.client.GmsClient;
 import ca.nrc.cadc.vos.Node;
 import ca.nrc.cadc.vos.NodeNotFoundException;
-import ca.nrc.cadc.vos.server.NodePersistence;
+import ca.nrc.cadc.vos.NodeProperty;
+import ca.nrc.cadc.vos.VOS;
 import ca.nrc.cadc.vos.VOSURI;
+import ca.nrc.cadc.vos.server.NodePersistence;
 import ca.nrc.cadc.vos.server.SearchNode;
 import ca.nrc.cadc.vos.server.util.NodeStackListener;
 import ca.nrc.cadc.vos.server.util.NodeUtil;
@@ -98,6 +101,7 @@ public class VOSpaceAuthorizer implements Authorizer
     protected static final Logger LOG = Logger.getLogger(VOSpaceAuthorizer.class);
     
     private NodePersistence nodePersistence;
+    private GmsClient gmsClient;
 
     public VOSpaceAuthorizer()
     {
@@ -140,12 +144,13 @@ public class VOSpaceAuthorizer implements Authorizer
         NodeStackListener readPermissionAuthorizer = new NodeStackListener()
         {
             @Override
-            public void nodeVisited(Node node, boolean isParentNode)
+            public void nodeVisited(Node node, int parentLevel)
             {
                 AccessControlContext acContext = AccessController.getContext();
                 Subject subject = Subject.getSubject(acContext);
                 
-                // return true if this is the owner of the node
+                // return true if this is the owner of the node or if a member
+                // of the groupRead property
                 if (subject != null) {
                     
                     X500Principal nodeOwner = new X500Principal(node.getOwner());
@@ -153,13 +158,26 @@ public class VOSpaceAuthorizer implements Authorizer
                     Set<Principal> principals = subject.getPrincipals();
                     for (Principal principal : principals)
                     {
+                        // Check for ownership
                         if (nodeOwner.equals(principal))
                         {
                             // User is the owner
                             return;
                         }
+                        
+                        // Check for group membership
+                        NodeProperty groupRead = node.findProperty(VOS.PROPERTY_URI_GROUPREAD);
+                        if (principal != null && groupRead != null && groupRead.getPropertyValue() != null)
+                        {
+                            if (gmsClient.isMember(groupRead.getPropertyValue(), principal.getName()))
+                            {
+                                // User is a member
+                                return;
+                            }
+                        }
                     }
                 }
+                
                 throw new AccessControlException("Read permission denied.");
             }};
         try
@@ -213,9 +231,8 @@ public class VOSpaceAuthorizer implements Authorizer
     {
         NodeStackListener writePermissionAuthorizer = new NodeStackListener()
         {
-
             @Override
-            public void nodeVisited(Node node, boolean isParentNode)
+            public void nodeVisited(Node node, int parentLevel)
             {
                 AccessControlContext acContext = AccessController.getContext();
                 Subject subject = Subject.getSubject(acContext);
@@ -228,10 +245,22 @@ public class VOSpaceAuthorizer implements Authorizer
                     Set<Principal> principals = subject.getPrincipals();
                     for (Principal principal : principals)
                     {   
+                        // Check for ownership
                         if (nodeOwner.equals(principal))
                         {
                             // User is the owner
                             return;
+                        }
+                        
+                        // Check for group membership
+                        NodeProperty groupWrite = node.findProperty(VOS.PROPERTY_URI_GROUPWRITE);
+                        if (principal != null && groupWrite != null && groupWrite.getPropertyValue() != null)
+                        {
+                            if (gmsClient.isMember(groupWrite.getPropertyValue(), principal.getName()))
+                            {
+                                // User is a member
+                                return;
+                            }
                         }
                     }
                 }
@@ -267,6 +296,22 @@ public class VOSpaceAuthorizer implements Authorizer
     public void setNodePersistence(final NodePersistence nodePersistence)
     {
         this.nodePersistence = nodePersistence;
+    }
+
+    /**
+     * GmsClient Getter.
+     */
+    public GmsClient getGmsClient()
+    {
+        return gmsClient;
+    }
+
+    /**
+     * GmsClient Setter.
+     */
+    public void setGmsClient(GmsClient gmsClient)
+    {
+        this.gmsClient = gmsClient;
     }
     
 }

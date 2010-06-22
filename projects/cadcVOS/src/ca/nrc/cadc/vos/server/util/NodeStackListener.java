@@ -85,9 +85,12 @@ public interface NodeStackListener
      * A node in the heirartical stack is visisted.
      * 
      * @param node The visting node.
-     * @param isParentNode True if this node is a parent of
-     * the original target node.
+     * @param isParentNode The 'generation' of the parent:
+     *                     0 - The actual target node
+     *                     1 - The immediate parent
+     *                     2 - The 'grandparent'
+     *                     ... - Continues until the root
      */
-    public void nodeVisited(Node node, boolean isParentNode);
+    public void nodeVisited(Node node, int parentLevel);
 
 }

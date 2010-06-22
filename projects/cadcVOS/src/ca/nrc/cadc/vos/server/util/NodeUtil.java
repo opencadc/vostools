@@ -69,23 +69,18 @@
 
 package ca.nrc.cadc.vos.server.util;
 
-import java.io.IOException;
-import java.io.StringWriter;
 import java.net.URISyntaxException;
 import java.util.Stack;
 
 import org.apache.log4j.Logger;
 
-import ca.nrc.cadc.uws.Job;
-import ca.nrc.cadc.uws.JobWriter;
 import ca.nrc.cadc.vos.ContainerNode;
 import ca.nrc.cadc.vos.DataNode;
 import ca.nrc.cadc.vos.Node;
 import ca.nrc.cadc.vos.NodeNotFoundException;
-import ca.nrc.cadc.vos.server.NodePersistence;
-import ca.nrc.cadc.vos.NodeWriter;
 import ca.nrc.cadc.vos.VOS;
 import ca.nrc.cadc.vos.VOSURI;
+import ca.nrc.cadc.vos.server.NodePersistence;
 
 /**
  * Methods that add convenience in dealing with Nodes.
@@ -117,12 +112,16 @@ public class NodeUtil
         }
 
         Stack<Node> nodeStack = targetNode.stackToRoot();
+        int stackSize = nodeStack.size();
+        int iteration = 0;
         Node persistentNode = null;
         Node nextNode = null;
         ContainerNode parent = null;
 
         while (!nodeStack.isEmpty())
         {
+            iteration++;
+            
             nextNode = nodeStack.pop();
             nextNode.setParent(parent);
             log.debug("Retrieving node with path: " + nextNode.getPath());
@@ -139,7 +138,7 @@ public class NodeUtil
             // call the listener
             if (listener != null)
             {
-                listener.nodeVisited(persistentNode, !nodeStack.isEmpty());
+                listener.nodeVisited(persistentNode, stackSize - iteration);
             }
 
             // get the parent 
