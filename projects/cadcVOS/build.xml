@@ -88,6 +88,7 @@
 
     <property name="cadcUtil" value="${lib}/cadcUtil.jar" />
     <property name="cadcUWS" value="${lib}/cadcUWS.jar" />
+    <property name="cadcGMS" value="${lib}/cadcGMS.jar" />
     <property name="cadcDownloadManagerClient" value="${lib}/cadcDownloadManagerClient.jar" />
     
 
@@ -97,7 +98,7 @@
     <property name="ext.spring" value="${ext.lib}/spring.jar" />
     <property name="ext.jdom" value="${ext.lib}/jdom.jar" />
 
-    <property name="jars" value="${ext.restlet}:${ext.restlet.ext}:${ext.log4j}:${ext.spring}:${ext.jdom}:${cadcUtil}:${cadcUWS}:${cadcDownloadManagerClient}" />
+    <property name="jars" value="${ext.restlet}:${ext.restlet.ext}:${ext.log4j}:${ext.spring}:${ext.jdom}:${cadcUtil}:${cadcUWS}:${cadcGMS}:${cadcDownloadManagerClient}" />
 
     <target name="build" depends="client,server" />
 
