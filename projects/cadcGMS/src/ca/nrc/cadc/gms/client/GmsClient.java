@@ -74,9 +74,11 @@ import java.net.URL;
 import java.util.Collection;
 
 import ca.nrc.cadc.gms.Group;
+import ca.nrc.cadc.gms.GroupReader;
 import ca.nrc.cadc.gms.ReaderException;
 import ca.nrc.cadc.gms.User;
 import ca.nrc.cadc.gms.UserReader;
+import java.net.HttpURLConnection;
 
 
 public class GmsClient
@@ -91,7 +93,7 @@ public class GmsClient
      */
     public GmsClient(final URL baseServiceURL)
     {
-        setBaseServiceURL(baseServiceURL);
+        this.baseServiceURL = baseServiceURL;
     }
 
     
@@ -157,7 +159,39 @@ public class GmsClient
      */
     public boolean isMember(String groupID, String memberID)
     {
-        throw new UnsupportedOperationException("isMember() not yet implemented.");
+        final StringBuilder resourcePath = new StringBuilder(64);
+        resourcePath.append("/groups/");
+        resourcePath.append(groupID);
+        resourcePath.append("/");
+        resourcePath.append(memberID);
+
+        try
+        {
+            final URL resourceURL = new URL(getBaseServiceURL(), resourcePath.toString());
+            HttpURLConnection connection = (HttpURLConnection) resourceURL.openConnection();
+            connection.setRequestMethod("HEAD");
+            connection.connect();
+            if (connection.getResponseCode() == 200)
+                return true;
+            return false;
+        }
+        catch (MalformedURLException e)
+        {
+            final String message =
+                    String.format("The supplied URL (%s) cannot be used.",
+                                  getBaseServiceURL().toExternalForm()
+                                  + resourcePath.toString());
+            throw new IllegalArgumentException(message, e);
+        }
+        catch (IOException e)
+        {
+            final String message =
+                    String.format("Client BUG: The supplied URL (%s) cannot "
+                                  + "be hit.",
+                                  getBaseServiceURL().toExternalForm()
+                                  + resourcePath.toString());
+            throw new IllegalArgumentException(message, e);
+        }
     }
     
     /**
@@ -169,25 +203,108 @@ public class GmsClient
      */
     public Collection<Group> getMemberships(String memberID)
     {
+        // TODO: is a new resource needed to implement this?
         throw new UnsupportedOperationException("getMemberships() not yet implemented.");
     }
     
     /**
      * Get the group identified by groupID.  Associated members will be included.
      * 
-     * @param groupID Identifes the group.
+     * @param groupID Identifies the group.
      * @return The group, or null if not found.
      */
     public Group getGroup(String groupID)
     {
-        throw new UnsupportedOperationException("getGroup() not yet implemented.");
+        final StringBuilder resourcePath = new StringBuilder(64);
+        resourcePath.append("/groups/");
+        resourcePath.append(groupID);
+
+        try
+        {
+            final URL resourceURL = new URL(getBaseServiceURL(),
+                                            resourcePath.toString());
+            return constructGroup(resourceURL);
+        }
+        catch (MalformedURLException e)
+        {
+            final String message =
+                    String.format("The supplied URL (%s) cannot be used.",
+                                  getBaseServiceURL().toExternalForm()
+                                  + resourcePath.toString());
+            throw new IllegalArgumentException(message, e);
+        }
+        catch (ReaderException e)
+        {
+            final String message =
+                    String.format("The supplied URL (%s) cannot be read from.",
+                                  getBaseServiceURL().toExternalForm()
+                                  + resourcePath.toString());
+            throw new IllegalArgumentException(message, e);
+        }
+        catch (IOException e)
+        {
+            final String message =
+                    String.format("Client BUG: The supplied URL (%s) cannot "
+                                  + "be hit.",
+                                  getBaseServiceURL().toExternalForm()
+                                  + resourcePath.toString());
+            throw new IllegalArgumentException(message, e);
+        }
+    }
+
+    /**
+     * Returns a collection of members belonging to the group identified by
+     * the specified groupID.
+     * 
+     * @param groupID Identifies the group.
+     * @return The list of members in this group.
+     */
+    public Collection<User> getGroupMembers(String groupID)
+    {
+        final StringBuilder resourcePath = new StringBuilder(64);
+        resourcePath.append("/groups/");
+        resourcePath.append(groupID);
+        resourcePath.append("/members");
+
+        try
+        {
+            final URL resourceURL = new URL(getBaseServiceURL(),
+                                            resourcePath.toString());
+            Group group = constructGroup(resourceURL);
+            return group.getMembers();
+        }
+        catch (MalformedURLException e)
+        {
+            final String message =
+                    String.format("The supplied URL (%s) cannot be used.",
+                                  getBaseServiceURL().toExternalForm()
+                                  + resourcePath.toString());
+            throw new IllegalArgumentException(message, e);
+        }
+        catch (ReaderException e)
+        {
+            final String message =
+                    String.format("The supplied URL (%s) cannot be read from.",
+                                  getBaseServiceURL().toExternalForm()
+                                  + resourcePath.toString());
+            throw new IllegalArgumentException(message, e);
+        }
+        catch (IOException e)
+        {
+            final String message =
+                    String.format("Client BUG: The supplied URL (%s) cannot "
+                                  + "be hit.",
+                                  getBaseServiceURL().toExternalForm()
+                                  + resourcePath.toString());
+            throw new IllegalArgumentException(message, e);
+        }
     }
 
     /**
      * Build a User member from the given URL.
      *
      * @param resourceURL   The URL to submit a GET to to obtain the User.
-     * @return      User instance, or null if none available.
+     * @return User instance, or null if none available.
      * @throws ReaderException  If the URL's response could not be read.
      * @throws IOException      For any unforeseen I/O errors.
      */
@@ -200,13 +317,7 @@ public class GmsClient
         try
         {
             inputStream = getInputStream(resourceURL);
-//            final UserXMLReader userReader = getUserXMLReader(inputStream);
-
-//            userReader.readAndParse();
-
-//            member = userReader.getMember();
             member = UserReader.read(inputStream);
-
         }
         finally
         {
@@ -227,6 +338,43 @@ public class GmsClient
     }
 
     /**
+     * Build a Group from the given URL.
+     *
+     * @param resourceURL   The URL to submit a GET to to obtain the User.
+     * @return Group instance, or null if none available.
+     * @throws ReaderException  If the URL's response could not be read.
+     * @throws IOException      For any unforeseen I/O errors.
+     */
+    private Group constructGroup(final URL resourceURL)
+            throws IOException, ReaderException
+    {
+        final Group group;
+        InputStream inputStream = null;
+
+        try
+        {
+            inputStream = getInputStream(resourceURL);
+            group = GroupReader.read(inputStream);
+        }
+        finally
+        {
+            try
+            {
+                if (inputStream != null)
+                {
+                    inputStream.close();
+                }
+            }
+            catch (IOException e)
+            {
+                // Don't worry about it.
+            }
+        }
+
+        return group;
+    }
+
+    /**
      * Obtain a Stream from the given URL.
      *
      * @param resourceURL       The URL to obtain an InputStream to.
@@ -238,32 +386,6 @@ public class GmsClient
     {
         return new BufferedInputStream(resourceURL.openStream());
     }
-
-    /**
-     * Create a new instance of a UserXMLReader.
-     *
-     * TODO - Make this configurable!
-     *
-     * @param inputStream   The InputStream waiting to be read from.
-     * @return      Instance of UserXMLReader.
-     */
-//    public UserXMLReader getUserXMLReader(final InputStream inputStream)
-//    {
-//        return new UserXMLReaderImpl(inputStream);
-//    }
-
-    /**
-     * Create a new instance of a GroupXMLReader.
-     *
-     * TODO - Make this configurable!
-     *
-     * @param inputStream   The InputStream waiting to be read from.
-     * @return      Instance of GroupXMLReader.
-     */
-//    public GroupXMLReader getGroupXMLReader(final InputStream inputStream)
-//    {
-//        return new GroupXMLReaderImpl(inputStream);
-//    }
     
     public URL getBaseServiceURL()
     {
