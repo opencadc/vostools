@@ -66,14 +66,18 @@
  */
 package ca.nrc.cadc.vos.auth;
 
-import ca.nrc.cadc.vos.server.auth.VOSpaceAuthorizer;
 import static org.easymock.classextension.EasyMock.createMock;
 import static org.easymock.classextension.EasyMock.replay;
+
+import java.net.URL;
 
 import org.junit.Before;
 import org.junit.Test;
 
+import ca.nrc.cadc.gms.client.GmsClient;
+import ca.nrc.cadc.gms.client.GmsRegistryClient;
 import ca.nrc.cadc.vos.server.NodeDAO;
+import ca.nrc.cadc.vos.server.auth.VOSpaceAuthorizer;
 
 
 /**
@@ -91,6 +95,8 @@ public class VOSpaceAuthorizerTest
         setMockNodeDAO(createMock(NodeDAO.class));
         VOSpaceAuthorizer vospaceAuthorizer = new VOSpaceAuthorizer();
         vospaceAuthorizer.setNodePersistence(getMockNodeDAO());
+        URL gmsBaseURL = new URL(new GmsRegistryClient().getBaseURL());
+        vospaceAuthorizer.setGmsClient(new GmsClient(gmsBaseURL));
         setTestSubject(vospaceAuthorizer);
     }
 
@@ -107,7 +113,6 @@ public class VOSpaceAuthorizerTest
         replay(getMockNodeDAO());
     }
 
-    
     public VOSpaceAuthorizer getTestSubject()
     {
         return testSubject;

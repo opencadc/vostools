@@ -189,6 +189,7 @@ public class NodeResource extends BaseResource
             // perform the authorization check
             VOSpaceAuthorizer voSpaceAuthorizer = new VOSpaceAuthorizer();
             voSpaceAuthorizer.setNodePersistence(getNodePersistence());
+            voSpaceAuthorizer.setGmsClient(getGmsClient());
             try
             {
                 if (getMethod().equals(Method.GET))

@@ -69,11 +69,16 @@
 
 package ca.nrc.cadc.vos.server.web.restlet;
 
+import java.net.MalformedURLException;
+import java.net.URL;
+
 import org.apache.log4j.Logger;
 import org.restlet.Application;
 import org.restlet.Context;
 import org.restlet.Restlet;
 
+import ca.nrc.cadc.gms.client.GmsClient;
+import ca.nrc.cadc.gms.client.GmsRegistryClient;
 import ca.nrc.cadc.vos.InvalidServiceException;
 import ca.nrc.cadc.vos.server.util.BeanUtil;
 
@@ -120,6 +125,21 @@ public class VOSpaceNodesApplication extends Application
         // Create the configured NodePersistence bean
         createContextBean(context, ca.nrc.cadc.vos.server.NodePersistence.class, BeanUtil.VOS_NODE_PERSISTENCE);
         
+        // Get the endpoint URL for the gms client through the registry
+        String gmsBaseURL = new GmsRegistryClient().getBaseURL();
+        
+        // Create the GmsClient and store it in the application context
+        try
+        {
+            GmsClient gmsClient = new GmsClient(new URL(gmsBaseURL));
+            context.getAttributes().put(BeanUtil.GMS_CLIENT, gmsClient);
+        }
+        catch (MalformedURLException e)
+        {
+            throw new IllegalStateException(String.format(
+                    "GmsClient baseURL malformed: %s", gmsBaseURL));
+        }
+        
         return new VOSpaceNodesRouter(context);
     }
     
@@ -131,7 +151,7 @@ public class VOSpaceNodesApplication extends Application
                     getFirstValue(contextParam);
             final BeanUtil beanUtil = new BeanUtil(className);
             Object bean = beanUtil.createBean();
-            if (!beanInterface.isInstance(bean))
+            if ((beanInterface != null) && !beanInterface.isInstance(bean))
             {
                 throw new InvalidServiceException("Bean does not implement interface: " + beanInterface.getName());
             }

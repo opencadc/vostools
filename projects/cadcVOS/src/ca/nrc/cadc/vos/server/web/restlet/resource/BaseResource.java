@@ -71,6 +71,7 @@ package ca.nrc.cadc.vos.server.web.restlet.resource;
 
 import org.restlet.resource.ServerResource;
 
+import ca.nrc.cadc.gms.client.GmsClient;
 import ca.nrc.cadc.vos.server.NodePersistence;
 import ca.nrc.cadc.vos.server.util.BeanUtil;
 
@@ -79,6 +80,7 @@ public abstract class BaseResource extends ServerResource
     
     private String vosUriPrefix;
     private NodePersistence nodePersistence;
+    private GmsClient gmsClient;
     
     protected BaseResource()
     {
@@ -91,6 +93,10 @@ public abstract class BaseResource extends ServerResource
         nodePersistence =
             (NodePersistence) getApplication().getContext().getAttributes().
                 get(BeanUtil.VOS_NODE_PERSISTENCE);
+        
+       gmsClient =
+            (GmsClient) getApplication().getContext().getAttributes().
+                get(BeanUtil.GMS_CLIENT);
     }
     
     public String getVosUriPrefix()
@@ -101,6 +107,11 @@ public abstract class BaseResource extends ServerResource
     public final NodePersistence getNodePersistence()
     {
         return nodePersistence;
+    }
+    
+    public final GmsClient getGmsClient()
+    {
+        return gmsClient;
     }
 
 }
