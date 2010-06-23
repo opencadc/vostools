@@ -132,4 +132,10 @@ public class ErrorSummary
     {
         return errorType;
     }
+
+    @Override
+    public String toString()
+    {
+        return "ErrorSummary [documentURL=" + documentURL + ", errorType=" + errorType + ", summaryMessage=" + summaryMessage + "]";
+    }
 }

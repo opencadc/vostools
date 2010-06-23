@@ -107,14 +107,14 @@ public class JobReader
     public JobReader()
     {
         String EXT_SCHEMA_LOCATION = UWS.XSD_KEY + " " + XmlUtil.getResourceUrlString(UWS.XSD_FILE_NAME, UWS.class);
-        
+
         this.saxBuilder = new SAXBuilder("org.apache.xerces.parsers.SAXParser", false);
         this.saxBuilder.setFeature("http://xml.org/sax/features/validation", true);
         this.saxBuilder.setFeature("http://apache.org/xml/features/validation/schema", true);
         this.saxBuilder.setFeature("http://apache.org/xml/features/validation/schema-full-checking", true);
         this.saxBuilder.setProperty("http://apache.org/xml/properties/schema/external-schemaLocation", EXT_SCHEMA_LOCATION);
     }
-    
+
     public Job readFrom(Reader reader) throws JDOMException, IOException
     {
         this.document = this.saxBuilder.build(reader);
@@ -159,7 +159,8 @@ public class JobReader
         Date endTime = parseDate(root.getChildText(JobAttribute.END_TIME.getAttributeName(), UWS.NS));
         Date destructionTime = parseDate(root.getChildText(JobAttribute.DESTRUCTION_TIME.getAttributeName(), UWS.NS));
         long executionDuration = Long.parseLong(root.getChildText(JobAttribute.EXECUTION_DURATION.getAttributeName(), UWS.NS));
-        ErrorSummary errorSummary = parseErrorSummary();
+        ErrorSummary errorSummary = null;
+        if (executionPhase.equals(ExecutionPhase.ERROR)) errorSummary = parseErrorSummary();
         List<Result> resultsList = parseResultsList();
         List<Parameter> parameterList = parseParametersList();
         String requestPath = null; // not presented in XML text
@@ -174,8 +175,9 @@ public class JobReader
         try
         {
             rtn = DateUtil.toDate(strDate, DateUtil.IVOA_DATE_FORMAT, DateUtil.UTC);
-        } catch (ParseException e)
-        { 
+        }
+        catch (ParseException e)
+        {
             // do nothing, use null as return value
             log.debug(e.getMessage());
         }
@@ -203,8 +205,7 @@ public class JobReader
             rtn = ExecutionPhase.HELD;
         else if (strPhase.equalsIgnoreCase(ExecutionPhase.SUSPENDED.toString()))
             rtn = ExecutionPhase.SUSPENDED;
-        else if (strPhase.equalsIgnoreCase(ExecutionPhase.ABORTED.toString()))
-            rtn = ExecutionPhase.ABORTED;
+        else if (strPhase.equalsIgnoreCase(ExecutionPhase.ABORTED.toString())) rtn = ExecutionPhase.ABORTED;
 
         return rtn;
     }
@@ -252,7 +253,8 @@ public class JobReader
                 {
                     rs = new Result(id, new URL(href));
                     rtn.add(rs);
-                } catch (MalformedURLException ex)
+                }
+                catch (MalformedURLException ex)
                 {
                     // do nothing; just do not add rs to list
                     log.debug(ex.getMessage());
@@ -273,19 +275,23 @@ public class JobReader
             String strType = e.getAttributeValue("type");
             if (strType.equalsIgnoreCase(ErrorType.FATAL.toString()))
                 errorType = ErrorType.FATAL;
-            else if (strType.equalsIgnoreCase(ErrorType.TRANSIENT.toString()))
-                errorType = ErrorType.TRANSIENT;
+            else if (strType.equalsIgnoreCase(ErrorType.TRANSIENT.toString())) errorType = ErrorType.TRANSIENT;
 
-            Element eDetail = e.getChild(JobAttribute.ERROR_SUMMARY_DETAIL_LINK.getAttributeName(), UWS.NS);
-            String strDocUrl = eDetail.getAttributeValue("href", UWS.XLINK_NS);
             URL url = null;
-            try
+            Element eDetail = e.getChild(JobAttribute.ERROR_SUMMARY_DETAIL_LINK.getAttributeName(), UWS.NS);
+            if (eDetail != null) 
             {
-                url = new URL(strDocUrl);
-            } catch (MalformedURLException ex)
-            {
-                // do nothing; use NULL value
-                log.debug(ex.getMessage());
+                String strDocUrl = eDetail.getAttributeValue("href", UWS.XLINK_NS);
+                try
+                {
+                    url = new URL(strDocUrl);
+                }
+                catch (MalformedURLException ex)
+                {
+                    // do nothing; use NULL value
+                    log.debug(ex.getMessage());
+                }
+                
             }
 
             String summaryMessage = e.getChildText(JobAttribute.ERROR_SUMMARY_MESSAGE.getAttributeName(), UWS.NS);

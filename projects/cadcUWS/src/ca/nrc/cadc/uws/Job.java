@@ -179,7 +179,10 @@ public class Job
     @Override
     public String toString()
     {
-        return "Job[" + jobID + "," + executionPhase + "]";
+        return "Job [any=" + any + ", destructionTime=" + destructionTime + ", endTime=" + endTime + ", errorSummary="
+                + errorSummary + ", executionDuration=" + executionDuration + ", executionPhase=" + executionPhase + ", jobID="
+                + jobID + ", owner=" + owner + ", parameterList=" + parameterList + ", quote=" + quote + ", requestPath="
+                + requestPath + ", resultsList=" + resultsList + ", runID=" + runID + ", startTime=" + startTime + "]";
     }
 
     public void setID(String jobID)

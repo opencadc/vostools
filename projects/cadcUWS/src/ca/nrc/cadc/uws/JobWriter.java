@@ -72,6 +72,7 @@ package ca.nrc.cadc.uws;
 import java.io.IOException;
 import java.io.OutputStream;
 import java.io.Writer;
+import java.net.URL;
 import java.security.Principal;
 import java.util.Set;
 
@@ -102,6 +103,7 @@ public class JobWriter
     public JobWriter(Job job)
     {
         this.job = job;
+        log.debug(job);
         buildDocument();
         this.outputter = new XMLOutputter();
         this.outputter.setFormat(Format.getPrettyFormat());
@@ -353,22 +355,27 @@ public class JobWriter
      */
     public Element getErrorSummary()
     {
-        Element element = null;
+        Element eleErrorSummary = null;
         ErrorSummary es = job.getErrorSummary();
         if (es != null)
         {
-            element = new Element(JobAttribute.ERROR_SUMMARY.getAttributeName(), UWS.NS);
-            element.setAttribute("type", es.getErrorType().toString());
+            eleErrorSummary = new Element(JobAttribute.ERROR_SUMMARY.getAttributeName(), UWS.NS);
+            eleErrorSummary.setAttribute("type", es.getErrorType().toString());
 
-            Element e = new Element(JobAttribute.ERROR_SUMMARY_MESSAGE.getAttributeName(), UWS.NS);
-            e.addContent(job.getErrorSummary().getSummaryMessage());
-            element.addContent(e);
+            Element eleMessage = new Element(JobAttribute.ERROR_SUMMARY_MESSAGE.getAttributeName(), UWS.NS);
+            eleMessage.addContent(job.getErrorSummary().getSummaryMessage());
+            eleErrorSummary.addContent(eleMessage);
+            
+            URL esDocUrl = job.getErrorSummary().getDocumentURL();
+            if (esDocUrl != null) 
+            {
+                Element eleDetail = new Element(JobAttribute.ERROR_SUMMARY_DETAIL_LINK.getAttributeName(), UWS.NS);
+                eleDetail.setAttribute("href", esDocUrl.toString(), UWS.XLINK_NS);
+                eleErrorSummary.addContent(eleDetail);
+            }
 
-            e = new Element(JobAttribute.ERROR_SUMMARY_DETAIL_LINK.getAttributeName(), UWS.NS);
-            e.setAttribute("href", job.getErrorSummary().getDocumentURL().toString(), UWS.XLINK_NS);
-            element.addContent(e);
         }
-        return element;
+        return eleErrorSummary;
     }
 
     /**
