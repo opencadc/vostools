@@ -73,8 +73,10 @@ import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
+import java.io.OutputStream;
 import java.io.OutputStreamWriter;
 import java.net.HttpURLConnection;
+import java.net.MalformedURLException;
 import java.net.URL;
 import java.util.List;
 
@@ -105,6 +107,7 @@ import ca.nrc.cadc.vos.View;
 public class VOSpaceClient
 {
     private static Logger log = Logger.getLogger(VOSpaceClient.class);
+    public static final int MAX_NUM_READ_JOB = 8;
     public static final String CR = System.getProperty("line.separator"); // OS independant new line
 
     protected String baseUrl;
@@ -356,7 +359,7 @@ public class VOSpaceClient
         throw new UnsupportedOperationException("Feature under construction.");
     }
 
-    private Transfer createTransfer(Transfer transfer, Transfer.Direction direction)
+    private Transfer createTransferPostXml(Transfer transfer, Transfer.Direction direction)
     {
         Transfer rtn = null;
 
@@ -390,18 +393,19 @@ public class VOSpaceClient
             HttpURLConnection connection = (HttpURLConnection) url.openConnection();
             connection.setDoOutput(true);
             connection.setRequestMethod("POST");
-            //connection.setRequestProperty("Content-Type", "application/x-www-form-urlencoded");
-            //connection.setRequestProperty("Content-Language", "en-US");
+            connection.setRequestProperty("Content-Type", "application/x-www-form-urlencoded");
+            connection.setRequestProperty("Content-Language", "en-US");
             connection.setUseCaches(false);
             connection.setDoInput(true);
             connection.setDoOutput(true);
+            connection.setInstanceFollowRedirects(false);
 
             OutputStreamWriter out = new OutputStreamWriter(connection.getOutputStream());
             JobWriter jobWriter = new JobWriter(job);
             jobWriter.writeTo(out);
             out.close();
 
-            //log.debug(NodeUtil.xmlString(job));
+            log.debug(VOSClientUtil.xmlString(job));
 
             String redirectLocation = getRedirectLocation(connection);
 
@@ -410,6 +414,7 @@ public class VOSpaceClient
                 URL urlRedirect = new URL(redirectLocation);
                 JobReader jobReader = new JobReader();
                 Job jobResult = jobReader.readFrom(urlRedirect);
+                log.debug(VOSClientUtil.xmlString(jobResult));
 
                 String strResultUrl = jobResult.getResultsList().get(0).getURL().toString();
 
@@ -426,6 +431,7 @@ public class VOSpaceClient
         }
         catch (IOException e)
         {
+            e.printStackTrace(System.err);
             throw new IllegalStateException(e);
         }
         catch (JDOMException e)
@@ -433,6 +439,164 @@ public class VOSpaceClient
             e.printStackTrace();
             throw new IllegalStateException(e);
         }
+        return rtn;
+    }
+
+    private Transfer createTransfer(Transfer transfer, Transfer.Direction direction)
+    {
+        Transfer rtn = null;
+        URL url = null;
+        String strJobUrl;
+        Job job = null;
+        Job jobRtn = null; // the Job returned from server
+        JobReader jobReader = null;
+        try
+        {
+            strJobUrl = postJob(this.baseUrl + "/transfers", "");
+            log.debug("Job URL is: " + strJobUrl);
+            jobReader = new JobReader();
+            URL jobUrl = new URL(strJobUrl);
+            job = jobReader.readFrom(jobUrl);
+            log.debug(VOSClientUtil.xmlString(job));
+
+            job.setExecutionDuration(0);
+            //TODO is there a RUN for execution phase?
+            //job.setExecutionPhase(ExecutionPhase.EXECUTING);
+            job.addParameter(new Parameter("target", transfer.getTarget().getUri().toString()));
+            job.addParameter(new Parameter("view", transfer.getView().getUri().toString()));
+
+            if (direction == Transfer.Direction.pushToVoSpace)
+            {
+                job.addParameter(new Parameter("direction", Transfer.Direction.pushToVoSpace.toString()));
+                job.addParameter(new Parameter("protocol", transfer.getProtocols().get(0).getUri()));
+            }
+            else if (direction == Transfer.Direction.pullFromVoSpace)
+            {
+                job.addParameter(new Parameter("direction", Transfer.Direction.pullFromVoSpace.toString()));
+                for (Protocol protocol : transfer.getProtocols())
+                {
+                    job.addParameter(new Parameter("protocol", protocol.getUri()));
+                }
+            }
+
+            // POST the parameters to the Job.
+            String parameters = getParameters(job);
+            postJob(strJobUrl, parameters);
+            postJob(strJobUrl + "/phase", "PHASE=RUN");
+
+            jobRtn = jobReader.readFrom(jobUrl);
+            log.debug(VOSClientUtil.xmlString(jobRtn));
+            int numTry = MAX_NUM_READ_JOB;
+            while (jobRtn != null && numTry-- > 0 && !jobRtn.getExecutionPhase().equals(ExecutionPhase.COMPLETED)
+                    && !jobRtn.getExecutionPhase().equals(ExecutionPhase.ERROR))
+            {
+                jobRtn = jobReader.readFrom(jobUrl);
+                log.debug(VOSClientUtil.xmlString(jobRtn));
+            }
+
+            if (jobRtn != null && jobRtn.getExecutionPhase().equals(ExecutionPhase.COMPLETED))
+            {
+                String strResultUrl = jobRtn.getResultsList().get(0).getURL().toString();
+
+                URL urlTransferDetail = new URL(strResultUrl);
+                TransferReader txfReader = new TransferReader();
+                rtn = txfReader.readFrom(urlTransferDetail);
+                log.debug(rtn.toXmlString());
+            }
+            else if (jobRtn != null && jobRtn.getExecutionPhase().equals(ExecutionPhase.ERROR))
+            {
+                log.error(jobRtn.toString());
+                throw new RuntimeException("ERROR returned from server: " + jobRtn.getErrorSummary().getSummaryMessage());
+            }
+        }
+        catch (MalformedURLException e2)
+        {
+            e2.printStackTrace();
+            throw new RuntimeException(e2);
+        }
+        catch (IOException e2)
+        {
+            e2.printStackTrace();
+            throw new RuntimeException(e2);
+        }
+        catch (JDOMException e)
+        {
+            e.printStackTrace();
+            throw new RuntimeException(e);
+        }
+
+        //        //TODO Transfer fields for values of parameter need to be confirmed.
+        //        job.setExecutionDuration(0);
+        //        //TODO is there a RUN for execution phase?
+        //        job.setExecutionPhase(ExecutionPhase.EXECUTING);
+        //        job.addParameter(new Parameter("target", transfer.getTarget().getUri().toString()));
+        //        job.addParameter(new Parameter("view", transfer.getView().getUri().toString()));
+        //
+        //        if (direction == Transfer.Direction.pushToVoSpace)
+        //        {
+        //            job.addParameter(new Parameter("direction", Transfer.Direction.pushToVoSpace.toString()));
+        //            job.addParameter(new Parameter("protocol", transfer.getProtocols().get(0).getUri()));
+        //        }
+        //        else if (direction == Transfer.Direction.pullFromVoSpace)
+        //        {
+        //            job.addParameter(new Parameter("direction", Transfer.Direction.pullFromVoSpace.toString()));
+        //            for (Protocol protocol : transfer.getProtocols())
+        //            {
+        //                job.addParameter(new Parameter("protocol", protocol.getUri()));
+        //            }
+        //        }
+        //
+        //        try
+        //        {
+        //
+        //            HttpURLConnection connection = (HttpURLConnection) url.openConnection();
+        //            connection.setDoOutput(true);
+        //            connection.setRequestMethod("POST");
+        //            //connection.setRequestProperty("Content-Type", "application/x-www-form-urlencoded");
+        //            //connection.setRequestProperty("Content-Language", "en-US");
+        //            connection.setUseCaches(false);
+        //            connection.setDoInput(true);
+        //            connection.setDoOutput(true);
+        //            connection.setInstanceFollowRedirects(false);
+        //
+        //            OutputStreamWriter out = new OutputStreamWriter(connection.getOutputStream());
+        //            JobWriter jobWriter = new JobWriter(job);
+        //            jobWriter.writeTo(out);
+        //            out.close();
+        //
+        //            log.debug(VOSClientUtil.xmlString(job));
+        //
+        //            String redirectLocation = getRedirectLocation(connection);
+        //
+        //            if (direction == Transfer.Direction.pushToVoSpace)
+        //            {
+        //                URL urlRedirect = new URL(redirectLocation);
+        //                Job jobResult = jobReader.readFrom(urlRedirect);
+        //                log.debug(VOSClientUtil.xmlString(jobResult));
+        //
+        //                String strResultUrl = jobResult.getResultsList().get(0).getURL().toString();
+        //
+        //                URL urlTransferDetail = new URL(strResultUrl);
+        //                TransferReader txfReader = new TransferReader();
+        //                rtn = txfReader.readFrom(urlTransferDetail);
+        //            }
+        //            else if (direction == Transfer.Direction.pullFromVoSpace)
+        //            {
+        //                URL urlRedirect = new URL(redirectLocation);
+        //                TransferReader txfReader = new TransferReader();
+        //                rtn = txfReader.readFrom(urlRedirect);
+        //            }
+        //        }
+        //        catch (IOException e)
+        //        {
+        //            e.printStackTrace(System.err);
+        //            throw new IllegalStateException(e);
+        //        }
+        //        catch (JDOMException e)
+        //        {
+        //            e.printStackTrace();
+        //            throw new IllegalStateException(e);
+        //        }
         return rtn;
     }
 
@@ -469,7 +633,7 @@ public class VOSpaceClient
             }
             inStrm.close();
 
-            String error = "Query request returned non 303 response code " + responseCode;
+            String error = "Request returned non 303 response code " + responseCode;
             throw new IllegalStateException(error);
         }
 
@@ -478,7 +642,7 @@ public class VOSpaceClient
         log.debug("Location: " + location);
         if (location == null || location.length() == 0)
         {
-            String error = "Query response missing Location header";
+            String error = "Response missing Location header";
             throw new IllegalStateException(error);
         }
         return location;
@@ -660,5 +824,47 @@ public class VOSpaceClient
     public void setBaseUrl(String baseUrl)
     {
         this.baseUrl = baseUrl;
+    }
+
+    private String postJob(String strUrl, String strParam) throws MalformedURLException, IOException
+    {
+        // Async connection to the tapServer.
+        URL url = new URL(strUrl);
+        HttpURLConnection connection = (HttpURLConnection) url.openConnection();
+        connection.setRequestMethod("POST");
+        connection.setRequestProperty("Content-Length", "" + Integer.toString(strParam.getBytes().length));
+        connection.setRequestProperty("Content-Type", "application/x-www-form-urlencoded");
+        connection.setInstanceFollowRedirects(false);
+        connection.setUseCaches(false);
+        connection.setDoOutput(true);
+        connection.setDoInput(true);
+
+        // POST the parameters to the tapServer.
+        OutputStream outputStream = connection.getOutputStream();
+        outputStream.write(strParam.getBytes("UTF-8"));
+        outputStream.flush();
+        outputStream.close();
+        log.debug("POST " + url.toString() + " " + strParam);
+
+        String redirectLocation = getRedirectLocation(connection);
+
+        return redirectLocation;
+    }
+
+    private String getParameters(Job job)
+    {
+        StringBuilder sb = new StringBuilder();
+        sb = new StringBuilder();
+        //sb.append("REQUEST=doQuery");
+        sb.append("&RUNID=").append(job.getID());
+        List<Parameter> parameters = job.getParameterList();
+        for (Parameter parameter : parameters)
+        {
+            sb.append("&");
+            sb.append(parameter.getName());
+            sb.append("=");
+            sb.append(parameter.getValue());
+        }
+        return sb.toString();
     }
 }

@@ -209,6 +209,7 @@ public class VOSpaceClientTest
     public void testGetNode() throws Exception
     {
         String slashPath1 = "/" + ROOT_NODE + TestUtil.uniqueStringOnTime();
+//        String slashPath1 = "/" + ROOT_NODE;
         ContainerNode cnode = new ContainerNode(new VOSURI(VOS.VOS_URI + slashPath1));
 
         Node nodeRtn = client.createNode(cnode);
@@ -220,6 +221,22 @@ public class VOSpaceClientTest
         log.debug("XML of GetNode: " + VOSClientUtil.xmlString(nodeRtn2));
         Assert.assertEquals(nodeRtn.getPath(), nodeRtn2.getPath());
     }
+
+
+    //@Test
+    public void testGetRootNode() throws Exception
+    {
+        String slashPath1 = "/" + ROOT_NODE ;
+//        String slashPath1 = "/zhangsa/Jun15_09.25_0631";
+        
+        ContainerNode cnode = new ContainerNode(new VOSURI(VOS.VOS_URI + slashPath1));
+
+        Node nodeRtn2 = client.getNode(cnode.getPath());
+        log.debug("GetNode: " + nodeRtn2);
+        log.debug("XML of GetNode: " + VOSClientUtil.xmlString(nodeRtn2));
+        //Assert.assertEquals(nodeRtn.getPath(), nodeRtn2.getPath());
+    }
+
 
     //@Test
     public void testCreateContainerNode() throws Exception
@@ -278,9 +295,7 @@ public class VOSpaceClientTest
         Assert.assertEquals("/" + nodeRtn.getPath(), slashPath1);
     }
 
-    
-    @Test
-    public ClientTransfer testPushToVoSpace() throws Exception
+    public ClientTransfer pushToVoSpace() throws Exception
     {
         File testFile = TestUtil.getTestFile();
         Assert.assertNotNull(testFile);
@@ -292,8 +307,7 @@ public class VOSpaceClientTest
         DataView dview = new DataView(VOS.VIEW_DEFAULT, dnode);
 
         List<Protocol> protocols = new ArrayList<Protocol>();
-        Protocol protocol = new Protocol(VOS.PROTOCOL_HTTPS_GET, ENDPOINT, null);
-        protocols.add(protocol);
+        protocols.add(new Protocol(VOS.PROTOCOL_HTTPS_PUT, ENDPOINT, null));
 
         Transfer transfer = new Transfer();
         transfer.setTarget(dnode);
@@ -303,7 +317,6 @@ public class VOSpaceClientTest
 
         ClientTransfer clientTransfer = (ClientTransfer) client.pushToVoSpace(transfer);
         log.debug(clientTransfer.toXmlString());
-
         
         clientTransfer.doUpload(testFile);
         Node node = clientTransfer.getTarget();
@@ -312,19 +325,33 @@ public class VOSpaceClientTest
         return clientTransfer;
     }
 
+    @Test
+    public void testPushToVoSpace() throws Exception
+    {
+        this.pushToVoSpace();
+    }
+
     ////@Test
     public void testPullFromVoSpace() throws Exception
     {
-        ClientTransfer transfer = this.testPushToVoSpace();
-        transfer.setDirection(Transfer.Direction.pullFromVoSpace);
+        ClientTransfer txUpload = this.pushToVoSpace();
         
-        ClientTransfer clientTransfer = (ClientTransfer) client.pullFromVoSpace(transfer);
-        log.debug(clientTransfer.toXmlString());
+        List<Protocol> protocols = new ArrayList<Protocol>();
+        protocols.add(new Protocol(VOS.PROTOCOL_HTTPS_GET, ENDPOINT, null));
+        
+        Transfer txSent = new Transfer();
+        txSent.setTarget(txUpload.getTarget());
+        txSent.setDirection(Transfer.Direction.pullFromVoSpace);
+        txSent.setView(txUpload.getView());
+        txSent.setProtocols(protocols);
+        
+        ClientTransfer txRtn = (ClientTransfer) client.pullFromVoSpace(txSent);
+        log.debug(txRtn.toXmlString());
         
         File file = new File("/tmp/" + TestUtil.uniqueStringOnTime());
         log.debug(file.getAbsolutePath());
         log.debug(file.getCanonicalPath());
-        clientTransfer.doDownload(file);
+        txRtn.doDownload(file);
 
         File origFile = TestUtil.getTestFile();
         Assert.assertNotNull(origFile);
@@ -333,5 +360,13 @@ public class VOSpaceClientTest
         
         Assert.assertEquals(FileUtil.compare(origFile, file), true);
         // file.delete();
+    }
+
+
+    @Override
+    public String toString()
+    {
+        return "VOSpaceClientTest [client=" + client + ", getClass()=" + getClass() + ", hashCode()=" + hashCode()
+                + ", toString()=" + super.toString() + "]";
     }
 }

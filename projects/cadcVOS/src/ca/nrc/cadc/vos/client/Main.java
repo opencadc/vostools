@@ -223,12 +223,12 @@ public class Main
             }
             Node nodeRtn = client.getNode(cnode.getPath());
             System.out.println("Node on Server:");
-            System.out.println(nodeRtn.getUri());
+            System.out.println(nodeRtn.getName());
             if (nodeRtn instanceof ContainerNode)
             {
                 for (Node node : ((ContainerNode)nodeRtn).getNodes() )
                 {
-                    System.out.println(node.getUri());
+                    System.out.println("\t" + node.getName());
                 }
             }
         }
