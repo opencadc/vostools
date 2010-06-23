@@ -85,7 +85,6 @@ public class GmsClient
 {
     private URL baseServiceURL;
 
-
     /**
      * Default, and only available constructor.
      *
@@ -95,7 +94,6 @@ public class GmsClient
     {
         this.baseServiceURL = baseServiceURL;
     }
-
     
     /**
      * Obtain the Member for the given Group and Member IDs.
