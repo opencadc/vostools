@@ -304,6 +304,7 @@ public class VOSpaceClientTest
 
         String slashPath1 = "/" + ROOT_NODE + TestUtil.uniqueStringOnTime();
         DataNode dnode = new DataNode(new VOSURI(VOS.VOS_URI + slashPath1));
+        dnode = (DataNode) client.createNode(dnode);
         DataView dview = new DataView(VOS.VIEW_DEFAULT, dnode);
 
         List<Protocol> protocols = new ArrayList<Protocol>();

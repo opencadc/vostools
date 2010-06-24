@@ -80,7 +80,7 @@ import java.net.URISyntaxException;
 public class VOSURI
 {
     private URI vosURI;
-    
+
     /**
      * Attempts to create a URI using the specified uri. The scheme for the uri
      * is expected to be vos, else a URISyntaxException will be thrown.
@@ -89,14 +89,12 @@ public class VOSURI
      * @throws URISyntaxException if uri violates RFC 2396, or if the URI scheme is not vos.
      * @throws NullPointerException if uri is null.
      */
-    public VOSURI(URI uri)
-        throws URISyntaxException
+    public VOSURI(URI uri) throws URISyntaxException
     {
         vosURI = uri;
 
         // Check the scheme is vos
-        if (!vosURI.getScheme().equalsIgnoreCase("vos"))
-            throw new URISyntaxException(uri.toString(), "Scheme must be vos");
+        if (!vosURI.getScheme().equalsIgnoreCase("vos")) throw new URISyntaxException(uri.toString(), "Scheme must be vos");
     }
 
     /**
@@ -107,17 +105,15 @@ public class VOSURI
      * @throws URISyntaxException if uri violates RFC 2396, or if the URI scheme is not vos.
      * @throws NullPointerException if uri is null.
      */
-    public VOSURI(String uri)
-        throws URISyntaxException
+    public VOSURI(String uri) throws URISyntaxException
     {
         // Make sure it's a valid URI
         vosURI = new URI(uri);
 
         // Check the scheme is vos
-        if (!vosURI.getScheme().equalsIgnoreCase("vos"))
-            throw new URISyntaxException(uri, "Scheme must be vos");
+        if (!vosURI.getScheme().equalsIgnoreCase("vos")) throw new URISyntaxException(uri, "Scheme must be vos");
     }
-    
+
     /**
      * Returns the underlying URI object.
      * 
@@ -198,12 +194,10 @@ public class VOSURI
     public String getParent()
     {
         String path = vosURI.getPath();
-        if (path == null)
-            return null;
+        if (path == null) return null;
         int index = path.lastIndexOf('/');
-        if (index <= 0)
-            return null;
-        return path.substring(0, index);
+        if (index <= 0) return null;
+        return path.substring(1, index);
     }
 
     @Override
@@ -211,5 +205,16 @@ public class VOSURI
     {
         return vosURI.toString();
     }
-    
+
+    public String getName()
+    {
+        String rtn = null;
+        String path = vosURI.getPath();
+        if (path != null)
+        {
+            int index = path.lastIndexOf('/');
+            if (index > 0) rtn = path.substring(index + 1);
+        }
+        return rtn;
+    }
 }

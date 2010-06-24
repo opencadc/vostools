@@ -563,8 +563,13 @@ public abstract class NodeDAO implements NodePersistence
      */
     protected Node getSingleNodeFromSelect(String sql)
     {
+        //TODO added by sz, need remove
+        log.debug("sz SQL: " + sql);
+
         Node node = null;
         List<Node> nodeList = jdbc.query(sql, new NodeMapper());
+        //TODO added by sz, need remove
+        log.debug("sz nodeList: " + nodeList);
         if (nodeList.size() > 1)
         {
             throw new IllegalStateException("More than one node returned for SQL: "
