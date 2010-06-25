@@ -289,7 +289,9 @@ public abstract class UWSResource extends ServerResource
     protected Subject getSubject()
     {
     	Set<Principal> principals = RestletUtil.getPrincipals(getRequest());
-    	
+    	//TODO sz remove it.
+    	LOGGER.debug("getSubject, principals: " + principals);
+        LOGGER.debug(principals.size() + " principals found in request.");
     	if (principals != null && principals.size() > 0) {
     		Set<Object> emptyCredentials = new HashSet<Object>();
     		return new Subject(true, principals, emptyCredentials, emptyCredentials);
