@@ -116,13 +116,13 @@ public class Transfer implements Runnable
 
     public String getUploadEndpoint() 
     {
-        return getEndpoint(VOS.PROTOCOL_HTTP_PUT);
+        return getEndpoint(VOS.PROTOCOL_HTTPS_PUT);
     }
 
     public String getDownloadEndpoint() 
     {
         String rtn = null;
-        rtn = getEndpoint(VOS.PROTOCOL_HTTP_GET);
+        rtn = getEndpoint(VOS.PROTOCOL_HTTPS_GET);
         return rtn;
     }
 
@@ -242,5 +242,11 @@ public class Transfer implements Runnable
         this.keepBytes = keepBytes;
     }
 
+    @Override
+    public String toString()
+    {
+        return "Transfer [direction=" + direction + ", keepBytes=" + keepBytes + ", protocols=" + protocols + ", serviceUrl="
+                + serviceUrl + ", target=" + target + ", view=" + view + "]";
+    }
 
 }

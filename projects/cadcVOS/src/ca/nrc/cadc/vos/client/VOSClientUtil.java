@@ -72,6 +72,10 @@ package ca.nrc.cadc.vos.client;
 import java.io.IOException;
 import java.io.StringWriter;
 
+import org.jdom.Document;
+import org.jdom.output.Format;
+import org.jdom.output.XMLOutputter;
+
 import ca.nrc.cadc.uws.Job;
 import ca.nrc.cadc.uws.JobWriter;
 import ca.nrc.cadc.vos.Node;
@@ -136,4 +140,10 @@ public class VOSClientUtil
         return xml;
     }
 
+    public static String xmlString(Document doc)
+    {
+        XMLOutputter outputter = new XMLOutputter();
+        outputter.setFormat(Format.getPrettyFormat());
+        return outputter.outputString(doc);
+    }
 }

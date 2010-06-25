@@ -497,6 +497,7 @@ public class VOSpaceClient
             if (jobRtn != null && jobRtn.getExecutionPhase().equals(ExecutionPhase.COMPLETED))
             {
                 String strResultUrl = jobRtn.getResultsList().get(0).getURL().toString();
+                log.debug("Result URL: " + strResultUrl);
 
                 URL urlTransferDetail = new URL(strResultUrl);
                 TransferReader txfReader = new TransferReader();
@@ -524,79 +525,6 @@ public class VOSpaceClient
             e.printStackTrace();
             throw new RuntimeException(e);
         }
-
-        //        //TODO Transfer fields for values of parameter need to be confirmed.
-        //        job.setExecutionDuration(0);
-        //        //TODO is there a RUN for execution phase?
-        //        job.setExecutionPhase(ExecutionPhase.EXECUTING);
-        //        job.addParameter(new Parameter("target", transfer.getTarget().getUri().toString()));
-        //        job.addParameter(new Parameter("view", transfer.getView().getUri().toString()));
-        //
-        //        if (direction == Transfer.Direction.pushToVoSpace)
-        //        {
-        //            job.addParameter(new Parameter("direction", Transfer.Direction.pushToVoSpace.toString()));
-        //            job.addParameter(new Parameter("protocol", transfer.getProtocols().get(0).getUri()));
-        //        }
-        //        else if (direction == Transfer.Direction.pullFromVoSpace)
-        //        {
-        //            job.addParameter(new Parameter("direction", Transfer.Direction.pullFromVoSpace.toString()));
-        //            for (Protocol protocol : transfer.getProtocols())
-        //            {
-        //                job.addParameter(new Parameter("protocol", protocol.getUri()));
-        //            }
-        //        }
-        //
-        //        try
-        //        {
-        //
-        //            HttpURLConnection connection = (HttpURLConnection) url.openConnection();
-        //            connection.setDoOutput(true);
-        //            connection.setRequestMethod("POST");
-        //            //connection.setRequestProperty("Content-Type", "application/x-www-form-urlencoded");
-        //            //connection.setRequestProperty("Content-Language", "en-US");
-        //            connection.setUseCaches(false);
-        //            connection.setDoInput(true);
-        //            connection.setDoOutput(true);
-        //            connection.setInstanceFollowRedirects(false);
-        //
-        //            OutputStreamWriter out = new OutputStreamWriter(connection.getOutputStream());
-        //            JobWriter jobWriter = new JobWriter(job);
-        //            jobWriter.writeTo(out);
-        //            out.close();
-        //
-        //            log.debug(VOSClientUtil.xmlString(job));
-        //
-        //            String redirectLocation = getRedirectLocation(connection);
-        //
-        //            if (direction == Transfer.Direction.pushToVoSpace)
-        //            {
-        //                URL urlRedirect = new URL(redirectLocation);
-        //                Job jobResult = jobReader.readFrom(urlRedirect);
-        //                log.debug(VOSClientUtil.xmlString(jobResult));
-        //
-        //                String strResultUrl = jobResult.getResultsList().get(0).getURL().toString();
-        //
-        //                URL urlTransferDetail = new URL(strResultUrl);
-        //                TransferReader txfReader = new TransferReader();
-        //                rtn = txfReader.readFrom(urlTransferDetail);
-        //            }
-        //            else if (direction == Transfer.Direction.pullFromVoSpace)
-        //            {
-        //                URL urlRedirect = new URL(redirectLocation);
-        //                TransferReader txfReader = new TransferReader();
-        //                rtn = txfReader.readFrom(urlRedirect);
-        //            }
-        //        }
-        //        catch (IOException e)
-        //        {
-        //            e.printStackTrace(System.err);
-        //            throw new IllegalStateException(e);
-        //        }
-        //        catch (JDOMException e)
-        //        {
-        //            e.printStackTrace();
-        //            throw new IllegalStateException(e);
-        //        }
         return rtn;
     }
 

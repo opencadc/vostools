@@ -123,4 +123,10 @@ public class Protocol
     {
         this.param = param;
     }
+
+    @Override
+    public String toString()
+    {
+        return "Protocol [endpoint=" + endpoint + ", param=" + param + ", uri=" + uri + "]";
+    }
 }

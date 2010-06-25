@@ -299,8 +299,9 @@ public class VOSpaceClientTest
     {
         File testFile = TestUtil.getTestFile();
         Assert.assertNotNull(testFile);
-        log.debug(testFile.getAbsolutePath());
-        log.debug(testFile.getCanonicalPath());
+        log.debug("testfile exists? " + testFile.exists() );
+        log.debug("testfile absolutePath: " + testFile.getAbsolutePath());
+        log.debug("testfile Canonical path: " + testFile.getCanonicalPath());
 
         String slashPath1 = "/" + ROOT_NODE + TestUtil.uniqueStringOnTime();
         DataNode dnode = new DataNode(new VOSURI(VOS.VOS_URI + slashPath1));
@@ -316,7 +317,7 @@ public class VOSpaceClientTest
         transfer.setProtocols(protocols);
         transfer.setDirection(Transfer.Direction.pushToVoSpace);
 
-        ClientTransfer clientTransfer = (ClientTransfer) client.pushToVoSpace(transfer);
+        ClientTransfer clientTransfer = new ClientTransfer(client.pushToVoSpace(transfer));
         log.debug(clientTransfer.toXmlString());
         
         clientTransfer.doUpload(testFile);
@@ -326,13 +327,13 @@ public class VOSpaceClientTest
         return clientTransfer;
     }
 
-    @Test
+    //@Test
     public void testPushToVoSpace() throws Exception
     {
         this.pushToVoSpace();
     }
 
-    ////@Test
+    @Test
     public void testPullFromVoSpace() throws Exception
     {
         ClientTransfer txUpload = this.pushToVoSpace();

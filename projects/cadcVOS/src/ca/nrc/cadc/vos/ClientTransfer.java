@@ -72,10 +72,12 @@ package ca.nrc.cadc.vos;
 import java.io.File;
 import java.net.MalformedURLException;
 import java.net.URL;
+import java.util.List;
 
 import org.apache.log4j.Logger;
 
 import ca.nrc.cadc.dlm.client.Download;
+import ca.nrc.cadc.vos.Transfer.Direction;
 
 /**
  * @author zhangsa
@@ -93,11 +95,27 @@ public class ClientTransfer extends Transfer
         super();
     }
 
+    /**
+     * Casting a Transfer to ClientTransfer by referencing member objects.
+     * 
+     * @param transfer
+     */
+    public ClientTransfer(Transfer transfer)
+    {
+        super.setDirection(transfer.getDirection());
+        super.setServiceUrl(transfer.getServiceUrl());
+        super.setTarget(transfer.getTarget());
+        super.setView(transfer.getView());
+        super.setProtocols(transfer.getProtocols());
+        super.setKeepBytes(transfer.isKeepBytes());
+    }
+
     public void doUpload(File file)
     {
         URL url;
         try
         {
+            log.debug("ClientTransfer is: " + this);
             url = new URL(super.getUploadEndpoint());
         }
         catch (MalformedURLException e)

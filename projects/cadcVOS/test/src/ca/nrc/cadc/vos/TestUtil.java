@@ -72,6 +72,8 @@ package ca.nrc.cadc.vos;
 import java.io.File;
 import java.util.Date;
 
+import org.apache.log4j.Logger;
+
 import ca.nrc.cadc.date.DateUtil;
 import ca.nrc.cadc.xml.XmlUtil;
 
@@ -81,6 +83,7 @@ import ca.nrc.cadc.xml.XmlUtil;
  */
 public class TestUtil
 {
+    private static Logger log = Logger.getLogger(TestUtil.class);
 
     public static String uniqueStringOnTime()
     {
@@ -99,6 +102,8 @@ public class TestUtil
     public static File getTestFile()
     {
         String strUrl = XmlUtil.getResourceUrlString(VOS.XSD_FILE_NAME, VOS.class);
+        strUrl = strUrl.substring(5);
+        log.debug("test file URL: " + strUrl);
         File testFile = new File(strUrl);
         return testFile;
     }

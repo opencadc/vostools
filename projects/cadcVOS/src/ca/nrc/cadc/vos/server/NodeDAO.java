@@ -214,7 +214,7 @@ public abstract class NodeDAO implements NodePersistence
             }
             returnNode.setPath( (parent == null) ? returnNode.getName() : parent.getPath() + "/" + returnNode.getName() );
             returnNode.setParent(parent);
-            log.debug("Node retrieved from parent: " + returnNode);
+            //log.debug("Node retrieved from parent: " + returnNode);
             return returnNode;
         }
     }

@@ -85,6 +85,8 @@ import org.jdom.Element;
 import org.jdom.JDOMException;
 import org.jdom.input.SAXBuilder;
 
+import ca.nrc.cadc.vos.client.VOSClientUtil;
+
 /**
  * @author zhangsa
  *
@@ -123,6 +125,7 @@ public class TransferReader
 
     public Transfer readFrom(URL url) throws JDOMException, IOException {
         this.document = this.saxBuilder.build(url);
+        log.debug("Transfer XML read from URL: " + url + "\n" + VOSClientUtil.xmlString(this.document));
         return parseTransfer();
     }
 
@@ -187,7 +190,7 @@ public class TransferReader
             {
                 Element eProtocol = (Element) obj;
                 String uri = eProtocol.getAttributeValue("uri");
-                String endpoint = eProtocol.getChildText("endpoint");
+                String endpoint = eProtocol.getChildText("endpoint", VOS.NS);
                 rs = new Protocol(uri, endpoint, null);
                 rtn.add(rs);
             }
