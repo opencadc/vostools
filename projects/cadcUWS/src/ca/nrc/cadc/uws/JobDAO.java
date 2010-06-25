@@ -72,6 +72,7 @@ package ca.nrc.cadc.uws;
 import ca.nrc.cadc.date.DateUtil;
 import java.io.UnsupportedEncodingException;
 import java.lang.reflect.Constructor;
+import java.lang.reflect.InvocationTargetException;
 import java.net.MalformedURLException;
 import java.net.URL;
 import java.net.URLDecoder;
@@ -86,6 +87,7 @@ import java.util.Date;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Random;
+import java.util.logging.Level;
 import javax.security.auth.Subject;
 import javax.sql.DataSource;
 import org.apache.log4j.Logger;
@@ -103,7 +105,7 @@ import org.springframework.transaction.support.DefaultTransactionDefinition;
  * persistence methods are called.
  * </p><p>
  * Users must create at least 3 tables (possibly multiple parameter tables) with the
- * following columns. TODO: List the requied columns for each table.
+ * following columns. TODO: List the required columns for each table.
  *
  * @author jburke
  */
@@ -130,7 +132,7 @@ public abstract class JobDAO implements JobPersistence
     }
 
     /**
-     * Initialise the JobDAO using the specified DataSource.
+     * Initialize the JobDAO using the specified DataSource.
      *
      * @param dataSource JobDAO DataSource.
      */
@@ -647,7 +649,7 @@ public abstract class JobDAO implements JobPersistence
 
     /**
      * Returns SQL to delete all Parameters in the given Parameter table
-     * with the specifed jobID.
+     * with the specified jobID.
      *
      * @param jobID of the Job.
      * @param table name of the Parameter table.
@@ -665,7 +667,7 @@ public abstract class JobDAO implements JobPersistence
     }
 
     /**
-     * Returns the SQL to delte all Results with the specified jobID.
+     * Returns the SQL to delete all Results with the specified jobID.
      *
      * @param jobID of the Job.
      * @return SQL to delete the Results for this jobID.
@@ -754,45 +756,47 @@ public abstract class JobDAO implements JobPersistence
             sb.append("[");
             sb.append(encode(principal.getName()));
             sb.append("]");
-            if (it.hasNext())
-                sb.append(",");
         }
         return sb.toString();
     }
 
-    // Build a Subject from the encodeding.
+    // Build a Subject from the encoding.
     private static Subject decodeSubject(String s)
     {
         if (s == null || s.length() == 0)
             return null;
-        Subject subject = new Subject();
-        String[] principals = decode(s).split(",");
-        for (int i = 0; i < principals.length; i++)
+        Subject subject = null;
+        int pStart = 0;
+        int nameStart = s.indexOf("[", pStart);
+        try
         {
-            try
+            while (nameStart != -1)
             {
-                String token = principals[i];
-                int start = token.indexOf("[");
-                int end = token.lastIndexOf("]");
-                if (start == -1 || end == -1)
+                int nameEnd = s.indexOf("]", nameStart);
+                if (nameEnd == -1)
                 {
-                    log.error("Invalid Principal encoding: " + token);
-                    continue;
+                    log.error("Invalid Principal encoding: " + s);
+                    return null;
                 }
-                Class c = Class.forName(token.substring(0, start));
-                Class[] args = new Class[] { String.class };
+                Class c = Class.forName(s.substring(pStart, nameStart));
+                Class[] args = new Class[]{String.class};
                 Constructor constructor = c.getDeclaredConstructor(args);
-                Principal principal = (Principal) constructor.newInstance(token.substring(start + 1, end));
+                String name = decode(s.substring(nameStart + 1, nameEnd));
+                Principal principal = (Principal) constructor.newInstance(name);
+                if (subject == null)
+                    subject = new Subject();
                 subject.getPrincipals().add(principal);
+                pStart = nameEnd + 1;
+                nameStart = s.indexOf("[", pStart);
             }
-            catch (IndexOutOfBoundsException ioe)
-            {
-                log.error(ioe);
-            }
-            catch (Exception e)
-            {
-                log.error(e);
-            }
+        }
+        catch (IndexOutOfBoundsException ioe)
+        {
+            log.error(ioe.getMessage(), ioe);
+        }
+        catch (Exception e)
+        {
+            log.error(e.getMessage(), e);
         }
         return subject;
     }
