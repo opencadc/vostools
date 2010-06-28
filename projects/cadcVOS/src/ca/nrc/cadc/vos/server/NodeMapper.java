@@ -186,7 +186,7 @@ public class NodeMapper implements RowMapper
         }
         if (groupWrite != null && groupWrite.trim().length() > 0)
         {
-            node.getProperties().add(new NodeProperty(VOS.PROPERTY_URI_GROUPREAD, groupWrite));
+            node.getProperties().add(new NodeProperty(VOS.PROPERTY_URI_GROUPWRITE, groupWrite));
         }
 
         return node;
