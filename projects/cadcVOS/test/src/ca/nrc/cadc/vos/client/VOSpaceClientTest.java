@@ -347,7 +347,7 @@ public class VOSpaceClientTest
         txSent.setView(txUpload.getView());
         txSent.setProtocols(protocols);
         
-        ClientTransfer txRtn = (ClientTransfer) client.pullFromVoSpace(txSent);
+        ClientTransfer txRtn = new ClientTransfer(client.pullFromVoSpace(txSent));
         log.debug(txRtn.toXmlString());
         
         File file = new File("/tmp/" + TestUtil.uniqueStringOnTime());
