@@ -69,8 +69,10 @@ package ca.nrc.cadc.gms.client;
 import java.io.BufferedInputStream;
 import java.io.IOException;
 import java.io.InputStream;
+import java.net.HttpURLConnection;
 import java.net.MalformedURLException;
 import java.net.URL;
+import java.net.URLEncoder;
 import java.util.Collection;
 
 import ca.nrc.cadc.gms.Group;
@@ -78,7 +80,6 @@ import ca.nrc.cadc.gms.GroupReader;
 import ca.nrc.cadc.gms.ReaderException;
 import ca.nrc.cadc.gms.User;
 import ca.nrc.cadc.gms.UserReader;
-import java.net.HttpURLConnection;
 
 
 public class GmsClient
@@ -109,14 +110,15 @@ public class GmsClient
             throws IllegalArgumentException
     {
         final StringBuilder resourcePath = new StringBuilder(64);
-        resourcePath.append("/members/");
-        resourcePath.append(memberID);
-        resourcePath.append("/");
-        resourcePath.append(groupID);
 
         try
         {
-            final URL resourceURL = new URL(getBaseServiceURL(),
+            resourcePath.append("/members/");
+            resourcePath.append(URLEncoder.encode(memberID, "UTF-8"));
+            resourcePath.append("/");
+            resourcePath.append(URLEncoder.encode(groupID, "UTF-8"));
+            
+            final URL resourceURL = new URL(getBaseServiceURL() +
                                             resourcePath.toString());
             return constructUser(resourceURL);
         }
@@ -158,17 +160,18 @@ public class GmsClient
     public boolean isMember(String groupID, String memberID)
     {
         final StringBuilder resourcePath = new StringBuilder(64);
-        resourcePath.append("/groups/");
-        resourcePath.append(groupID);
-        resourcePath.append("/");
-        resourcePath.append(memberID);
-
         try
         {
-            final URL resourceURL = new URL(getBaseServiceURL(), resourcePath.toString());
+            resourcePath.append("/groups/");
+            resourcePath.append(URLEncoder.encode(groupID, "UTF-8"));
+            resourcePath.append("/");
+            resourcePath.append(URLEncoder.encode(memberID, "UTF-8"));
+            
+            final URL resourceURL = new URL(getBaseServiceURL() + resourcePath.toString());            
             HttpURLConnection connection = (HttpURLConnection) resourceURL.openConnection();
             connection.setRequestMethod("HEAD");
             connection.connect();
+
             if (connection.getResponseCode() == 200)
                 return true;
             return false;
@@ -214,12 +217,14 @@ public class GmsClient
     public Group getGroup(String groupID)
     {
         final StringBuilder resourcePath = new StringBuilder(64);
-        resourcePath.append("/groups/");
-        resourcePath.append(groupID);
+
 
         try
         {
-            final URL resourceURL = new URL(getBaseServiceURL(),
+            resourcePath.append("/groups/");
+            resourcePath.append(URLEncoder.encode(groupID, "UTF-8"));
+            
+            final URL resourceURL = new URL(getBaseServiceURL() +
                                             resourcePath.toString());
             return constructGroup(resourceURL);
         }
@@ -260,13 +265,15 @@ public class GmsClient
     public Collection<User> getGroupMembers(String groupID)
     {
         final StringBuilder resourcePath = new StringBuilder(64);
-        resourcePath.append("/groups/");
-        resourcePath.append(groupID);
-        resourcePath.append("/members");
+
 
         try
         {
-            final URL resourceURL = new URL(getBaseServiceURL(),
+            resourcePath.append("/groups/");
+            resourcePath.append(URLEncoder.encode(groupID, "UTF-8"));
+            resourcePath.append("/members");
+            
+            final URL resourceURL = new URL(getBaseServiceURL() +
                                             resourcePath.toString());
             Group group = constructGroup(resourceURL);
             return group.getMembers();
