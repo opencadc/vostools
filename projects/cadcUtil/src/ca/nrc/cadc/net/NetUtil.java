@@ -72,7 +72,10 @@
 
 package ca.nrc.cadc.net;
 
+import java.io.UnsupportedEncodingException;
 import java.net.InetAddress;
+import java.net.URLDecoder;
+import java.net.URLEncoder;
 import java.net.UnknownHostException;
 
 /**
@@ -142,4 +145,35 @@ public class NetUtil
         // default: localhost
         return "localhost";
     }
+
+    // URLEncode a string.
+    public static String encode(String s)
+    {
+        if (s == null)
+            return null;
+        try
+        {
+            return URLEncoder.encode(s, "UTF-8");
+        }
+        catch (UnsupportedEncodingException e)
+        {
+            throw new RuntimeException("Unsupported encoding used", e);
+        }
+    }
+
+    // URLDecode a string.
+    public static String decode(String s)
+    {
+        if (s == null)
+            return null;
+        try
+        {
+            return URLDecoder.decode(s, "UTF-8");
+        }
+        catch (UnsupportedEncodingException e)
+        {
+            throw new RuntimeException("Unsupported decoding used", e);
+        }
+    }
+
 }

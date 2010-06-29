@@ -69,13 +69,17 @@
 
 package ca.nrc.cadc.auth;
 
+import ca.nrc.cadc.net.NetUtil;
+import java.lang.reflect.Constructor;
 import java.security.Principal;
 import java.security.cert.X509Certificate;
 import java.util.HashSet;
+import java.util.Iterator;
 import java.util.Set;
 
-import javax.security.auth.x500.X500Principal;
+import javax.security.auth.Subject;
 import javax.servlet.http.HttpServletRequest;
+import org.apache.log4j.Logger;
 
 /**
  * Security utility.
@@ -85,6 +89,7 @@ import javax.servlet.http.HttpServletRequest;
  */
 public class AuthenticationUtil
 {
+    private static Logger log = Logger.getLogger(AuthenticationUtil.class);
 
     /**
      * Method to extract Principals from a request. Two types of
@@ -122,5 +127,64 @@ public class AuthenticationUtil
         return principals;
     }
     
+    // Encode a Subject in the format:
+    // Principal Class name[Principal name]
+    public static String encodeSubject(Subject subject)
+    {
+        if (subject == null)
+            return null;
+        StringBuilder sb = new StringBuilder();
+        Iterator it = subject.getPrincipals().iterator();
+        while (it.hasNext())
+        {
+            Principal principal = (Principal) it.next();
+            sb.append(principal.getClass().getName());
+            sb.append("[");
+            sb.append(NetUtil.encode(principal.getName()));
+            sb.append("]");
+        }
+        return sb.toString();
+    }
+
+    // Build a Subject from the encoding.
+    public static Subject decodeSubject(String s)
+    {
+        if (s == null || s.length() == 0)
+            return null;
+        Subject subject = null;
+        int pStart = 0;
+        int nameStart = s.indexOf("[", pStart);
+        try
+        {
+            while (nameStart != -1)
+            {
+                int nameEnd = s.indexOf("]", nameStart);
+                if (nameEnd == -1)
+                {
+                    log.error("Invalid Principal encoding: " + s);
+                    return null;
+                }
+                Class c = Class.forName(s.substring(pStart, nameStart));
+                Class[] args = new Class[]{String.class};
+                Constructor constructor = c.getDeclaredConstructor(args);
+                String name = NetUtil.decode(s.substring(nameStart + 1, nameEnd));
+                Principal principal = (Principal) constructor.newInstance(name);
+                if (subject == null)
+                    subject = new Subject();
+                subject.getPrincipals().add(principal);
+                pStart = nameEnd + 1;
+                nameStart = s.indexOf("[", pStart);
+            }
+        }
+        catch (IndexOutOfBoundsException ioe)
+        {
+            log.error(ioe.getMessage(), ioe);
+        }
+        catch (Exception e)
+        {
+            log.error(e.getMessage(), e);
+        }
+        return subject;
+    }
 
 }
