@@ -104,7 +104,7 @@
 
   <!-- Metadata Service -->
   <bean name="metadataService"
-        class="ca.nrc.cadc.gms.web.CADCGMSMetadataService" />
+        class="ca.nrc.cadc.gms.server.web.CADCGMSMetadataService" />
 
   <!-- Resources -->
   <bean abstract="true" name="baseResource" scope="prototype"
