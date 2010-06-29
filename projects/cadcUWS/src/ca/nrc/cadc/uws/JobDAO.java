@@ -69,25 +69,19 @@
 
 package ca.nrc.cadc.uws;
 
+import ca.nrc.cadc.auth.AuthenticationUtil;
 import ca.nrc.cadc.date.DateUtil;
-import java.io.UnsupportedEncodingException;
-import java.lang.reflect.Constructor;
-import java.lang.reflect.InvocationTargetException;
+import ca.nrc.cadc.net.NetUtil;
 import java.net.MalformedURLException;
 import java.net.URL;
-import java.net.URLDecoder;
-import java.net.URLEncoder;
-import java.security.Principal;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.util.ArrayList;
 import java.util.Calendar;
 import java.util.Collection;
 import java.util.Date;
-import java.util.Iterator;
 import java.util.List;
 import java.util.Random;
-import java.util.logging.Level;
 import javax.security.auth.Subject;
 import javax.sql.DataSource;
 import org.apache.log4j.Logger;
@@ -457,7 +451,7 @@ public abstract class JobDAO implements JobPersistence
             else
             {
                 sb.append("'");
-                sb.append(encode(job.getErrorSummary().getSummaryMessage()));
+                sb.append(NetUtil.encode(job.getErrorSummary().getSummaryMessage()));
                 sb.append("'");
             }
             sb.append(",");
@@ -468,7 +462,7 @@ public abstract class JobDAO implements JobPersistence
             else
             {
                 sb.append("'");
-                sb.append(encode(job.getErrorSummary().getDocumentURL().toString()));
+                sb.append(NetUtil.encode(job.getErrorSummary().getDocumentURL().toString()));
                 sb.append("'");
             }
         }
@@ -477,7 +471,7 @@ public abstract class JobDAO implements JobPersistence
             sb.append("NULL");
         else
         {
-            String owner = encodeSubject(job.getOwner());
+            String owner = AuthenticationUtil.encodeSubject(job.getOwner());
             if (owner.length() == 0)
                 sb.append("NULL");
             else
@@ -493,7 +487,7 @@ public abstract class JobDAO implements JobPersistence
         else
         {
             sb.append("'");
-            sb.append(encode(job.getRunID()));
+            sb.append(NetUtil.encode(job.getRunID()));
             sb.append("'");
         }
         sb.append(",");
@@ -525,7 +519,7 @@ public abstract class JobDAO implements JobPersistence
         sb.append(" (jobID, name, value) values ('");
         sb.append(jobID);
         sb.append("','");
-        sb.append(encode(parameter.getName()));
+        sb.append(NetUtil.encode(parameter.getName()));
         sb.append("',");
         if (parameter.getValue() == null)
         {
@@ -534,7 +528,7 @@ public abstract class JobDAO implements JobPersistence
         else
         {
             sb.append("'");
-            sb.append(encode(parameter.getValue()));
+            sb.append(NetUtil.encode(parameter.getValue()));
             sb.append("'");
         }
         sb.append(")");
@@ -557,7 +551,7 @@ public abstract class JobDAO implements JobPersistence
         sb.append(" (jobID, name, url, primaryResult) values ('");
         sb.append(jobID);
         sb.append("','");
-        sb.append(encode(result.getName()));
+        sb.append(NetUtil.encode(result.getName()));
         sb.append("',");
         if (result.getURL() == null)
         {
@@ -566,7 +560,7 @@ public abstract class JobDAO implements JobPersistence
         else
         {
             sb.append("'");
-            sb.append(encode(result.getURL().toString()));
+            sb.append(NetUtil.encode(result.getURL().toString()));
             sb.append("'");
         }
         sb.append(",");
@@ -711,6 +705,8 @@ public abstract class JobDAO implements JobPersistence
         return new String(c);
     }
 
+    /*
+    // TODO: use NetUtil.encode.
     // URLEncode a string.
     private static String encode(String s)
     {
@@ -726,6 +722,7 @@ public abstract class JobDAO implements JobPersistence
         }
     }
 
+    // TODO: use NetUtil.decode.
     // URLDecode a string.
     private static String decode(String s)
     {
@@ -741,6 +738,7 @@ public abstract class JobDAO implements JobPersistence
         }
     }
 
+    // TODO: use AuthenticationUtil.encodeSubject.
     // Encode a Subject in the format:
     // Principal Class name[Principal name]
     private static String encodeSubject(Subject subject)
@@ -760,6 +758,7 @@ public abstract class JobDAO implements JobPersistence
         return sb.toString();
     }
 
+    // TODO: use AuthenticationUtil.decodeSubject.
     // Build a Subject from the encoding.
     private static Subject decodeSubject(String s)
     {
@@ -800,7 +799,7 @@ public abstract class JobDAO implements JobPersistence
         }
         return subject;
     }
-
+*/
     /**
      * Creates a List of Job populated from the ResultSet.
      */
@@ -836,23 +835,23 @@ public abstract class JobDAO implements JobPersistence
                 URL errorUrl;
                 try
                 {
-                    errorUrl = new URL(decode(rs.getString("error_documentURL")));
+                    errorUrl = new URL(NetUtil.decode(rs.getString("error_documentURL")));
                 }
                 catch (MalformedURLException e)
                 {
                     errorUrl = null;
                 }
-                errorSummary = new ErrorSummary(decode(rs.getString("error_summaryMessage")), errorUrl);
+                errorSummary = new ErrorSummary(NetUtil.decode(rs.getString("error_summaryMessage")), errorUrl);
             }
 
             // owner
-            Subject owner = decodeSubject(rs.getString("owner"));
+            Subject owner = AuthenticationUtil.decodeSubject(rs.getString("owner"));
             
             // runID
-            String runID = decode(rs.getString("runID"));
+            String runID = NetUtil.decode(rs.getString("runID"));
 
             // request path
-            String requestPath = decode(rs.getString("requestPath"));
+            String requestPath = NetUtil.decode(rs.getString("requestPath"));
 
             // Create the job
             Job job = new Job(jobID, executionPhase, executionDuration, destructionTime,
@@ -870,7 +869,7 @@ public abstract class JobDAO implements JobPersistence
     {
         public Object mapRow(ResultSet rs, int rowNum) throws SQLException
         {
-            return new Parameter(decode(rs.getString("name")), decode(rs.getString("value")));
+            return new Parameter(NetUtil.decode(rs.getString("name")), NetUtil.decode(rs.getString("value")));
         }
     }
     
@@ -884,13 +883,13 @@ public abstract class JobDAO implements JobPersistence
             URL url;
             try
             {
-                url = new URL(decode(rs.getString("url")));
+                url = new URL(NetUtil.decode(rs.getString("url")));
             }
             catch (MalformedURLException e)
             {
                 url = null;
             }
-            return new Result(decode(rs.getString("name")), url, rs.getInt("primaryResult") == 0 ? false : true);
+            return new Result(NetUtil.decode(rs.getString("name")), url, rs.getInt("primaryResult") == 0 ? false : true);
         }
     }
     
