@@ -64,29 +64,64 @@
  *
  ************************************************************************
  */
-package ca.nrc.cadc.gms;
+package ca.nrc.cadc.gms.server;
 
-import org.junit.runners.Suite;
-import org.junit.runner.RunWith;
+import ca.nrc.cadc.gms.AuthorizationException;
+import ca.nrc.cadc.gms.Group;
+import ca.nrc.cadc.gms.InvalidGroupException;
+import ca.nrc.cadc.gms.server.persistence.GroupPersistence;
 
-import ca.nrc.cadc.gms.server.UserServiceImplTest;
-import ca.nrc.cadc.gms.server.web.restlet.*;
-
-@RunWith(Suite.class)
-@Suite.SuiteClasses(
+public class GroupServiceImpl implements GroupService
 {
-    GroupImplTest.class,
-    UserImplTest.class,
-    UserServiceImplTest.class,
-    GroupListResourceTest.class,
-//    GroupMemberResourceTest.class
-    GroupMemberListResourceTest.class,
-//    MemberGroupResourceTest.class,
-    MemberResourceTest.class,
-    UserWriterTest.class,
-    UserReaderTest.class,
-    GroupWriterTest.class,
-    GroupReaderTest.class
-})
+    private GroupPersistence groupPersistence;
 
-public class GMSTestSuite {}
+
+    /**
+     * No-arg constructor.
+     */
+    public GroupServiceImpl()
+    {
+    }
+
+    /**
+     * Full constructor for members.
+     *
+     * @param groupPersistence  The GroupPersistence object.
+     */
+    public GroupServiceImpl(final GroupPersistence groupPersistence)
+    {
+        this.groupPersistence = groupPersistence;
+    }
+
+    /**
+     * Obtain the Group with the given Group ID.
+     *
+     * @param groupID Unique Group identifier.
+     * @return The Group object for the given ID.
+     */
+    public Group getGroup(final String groupID)
+            throws InvalidGroupException,
+                   IllegalArgumentException, AuthorizationException
+    {
+        Group group = getGroupPersistence().getGroup(groupID);
+        
+        if (group == null)
+        {
+            throw new InvalidGroupException(
+                    String.format("No such Group with ID %s", groupID));
+        }
+        
+        return group;
+    }
+
+
+    public GroupPersistence getGroupPersistence()
+    {
+        return groupPersistence;
+    }
+
+    public void setGroupPersistence(GroupPersistence groupPersistence)
+    {
+        this.groupPersistence = groupPersistence;
+    }
+}

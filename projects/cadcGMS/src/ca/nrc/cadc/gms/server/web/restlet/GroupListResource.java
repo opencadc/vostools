@@ -64,29 +64,51 @@
  *
  ************************************************************************
  */
-package ca.nrc.cadc.gms;
+package ca.nrc.cadc.gms.server.web.restlet;
 
-import org.junit.runners.Suite;
-import org.junit.runner.RunWith;
+import java.io.FileNotFoundException;
+import java.io.IOException;
+import org.jdom.Document;
 
-import ca.nrc.cadc.gms.server.UserServiceImplTest;
-import ca.nrc.cadc.gms.server.web.restlet.*;
+import org.restlet.resource.Put;
 
-@RunWith(Suite.class)
-@Suite.SuiteClasses(
-{
-    GroupImplTest.class,
-    UserImplTest.class,
-    UserServiceImplTest.class,
-    GroupListResourceTest.class,
-//    GroupMemberResourceTest.class
-    GroupMemberListResourceTest.class,
-//    MemberGroupResourceTest.class,
-    MemberResourceTest.class,
-    UserWriterTest.class,
-    UserReaderTest.class,
-    GroupWriterTest.class,
-    GroupReaderTest.class
-})
+public class GroupListResource extends AbstractResource
+{   
+    /**
+     * Get a reference to the resource identified by the user.
+     * 
+     * @throws FileNotFoundException If the resource doesn't exist.
+     */
+    @Override
+    protected boolean obtainResource() throws FileNotFoundException
+    {
+        processNotImplemented("The Service to see a list of groups"
+                            + " is not yet implemented.");
+        return false;
+    }
+    
+    /**
+     * Assemble the XML for this Resource's Representation into the given
+     * Document.
+     *
+     * @param document The Document to build up.
+     * @throws java.io.IOException If something went wrong or the XML cannot be
+     *                             built.
+     */
+    protected void buildXML(final Document document) throws IOException
+    {
+        processNotImplemented("The Service to list all Groups is not yet "
+                              + "implemented.");
+    }
 
-public class GMSTestSuite {}
+    /**
+     * Accept a POST Request to this Resource to Create a new Group.
+     */
+    @Put
+    protected void acceptPost()
+    {
+        processNotImplemented("The Service to Create a Group is not yet "
+                              + "implemented.");
+    }
+    
+}

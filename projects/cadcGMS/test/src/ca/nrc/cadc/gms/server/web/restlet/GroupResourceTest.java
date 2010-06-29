@@ -64,29 +64,41 @@
  *
  ************************************************************************
  */
-package ca.nrc.cadc.gms;
+package ca.nrc.cadc.gms.server.web.restlet;
 
-import org.junit.runners.Suite;
-import org.junit.runner.RunWith;
+import static org.easymock.EasyMock.*;
 
-import ca.nrc.cadc.gms.server.UserServiceImplTest;
-import ca.nrc.cadc.gms.server.web.restlet.*;
+import ca.nrc.cadc.gms.server.GroupService;
+import ca.nrc.cadc.gms.server.web.restlet.GroupResource;
 
-@RunWith(Suite.class)
-@Suite.SuiteClasses(
+
+public class GroupResourceTest extends AbstractResourceTest<GroupResource>
 {
-    GroupImplTest.class,
-    UserImplTest.class,
-    UserServiceImplTest.class,
-    GroupListResourceTest.class,
-//    GroupMemberResourceTest.class
-    GroupMemberListResourceTest.class,
-//    MemberGroupResourceTest.class,
-    MemberResourceTest.class,
-    UserWriterTest.class,
-    UserReaderTest.class,
-    GroupWriterTest.class,
-    GroupReaderTest.class
-})
+    private GroupService mockGroupService;
 
-public class GMSTestSuite {}
+
+    /**
+     * Prepare the testSubject to be tested.
+     *
+     * @throws Exception For anything that went wrong.
+     */
+    public void initializeTestSubject() throws Exception
+    {
+        setMockGroupService(createMock(GroupService.class));
+
+        setTestSubject(new GroupResource(getMockGroupService()));
+    }
+
+
+    
+
+    public GroupService getMockGroupService()
+    {
+        return mockGroupService;
+    }
+
+    public void setMockGroupService(GroupService mockGroupService)
+    {
+        this.mockGroupService = mockGroupService;
+    }
+}

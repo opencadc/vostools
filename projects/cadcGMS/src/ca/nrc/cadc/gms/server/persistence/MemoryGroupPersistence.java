@@ -64,29 +64,59 @@
  *
  ************************************************************************
  */
-package ca.nrc.cadc.gms;
+package ca.nrc.cadc.gms.server.persistence;
 
-import org.junit.runners.Suite;
-import org.junit.runner.RunWith;
+import ca.nrc.cadc.gms.Group;
+import ca.nrc.cadc.gms.GroupImpl;
+import ca.nrc.cadc.gms.UserImpl;
 
-import ca.nrc.cadc.gms.server.UserServiceImplTest;
-import ca.nrc.cadc.gms.server.web.restlet.*;
+import java.util.concurrent.ConcurrentMap;
+import java.util.concurrent.ConcurrentHashMap;
 
-@RunWith(Suite.class)
-@Suite.SuiteClasses(
+
+public class MemoryGroupPersistence implements GroupPersistence
 {
-    GroupImplTest.class,
-    UserImplTest.class,
-    UserServiceImplTest.class,
-    GroupListResourceTest.class,
-//    GroupMemberResourceTest.class
-    GroupMemberListResourceTest.class,
-//    MemberGroupResourceTest.class,
-    MemberResourceTest.class,
-    UserWriterTest.class,
-    UserReaderTest.class,
-    GroupWriterTest.class,
-    GroupReaderTest.class
-})
+    // The Database.
+    private final ConcurrentMap<String, Group> GROUP_MAP =
+            new ConcurrentHashMap<String, Group>();
 
-public class GMSTestSuite {}
+
+    public MemoryGroupPersistence()
+    {
+        try
+        {
+            final Group firstGroup = new GroupImpl(Long.toString(88l));
+            firstGroup.addMember(new UserImpl(Long.toString(88l), "jenkinsd"));
+
+            final Group secondGroup = new GroupImpl(Long.toString(99l));
+            secondGroup.addMember(new UserImpl(Long.toString(99l), "adamian"));
+
+            final Group thirdGroup = new GroupImpl("MY TEST GROUP");
+            thirdGroup.addMember(new UserImpl(Long.toString(888l),
+                                              "testuser"));
+
+            GROUP_MAP.put(Long.toString(88l), firstGroup);
+            GROUP_MAP.put(Long.toString(99l), secondGroup);
+            GROUP_MAP.put("MY TEST GROUP", thirdGroup);
+        }
+        catch (Exception e)
+        {
+            // Not worried about it here...
+            e.printStackTrace();
+        }        
+    }
+
+    /**
+     * Obtain a Group with the given Group ID.
+     *
+     * @param groupID The Group unique ID.
+     * @return A Group instance, or null if none found.
+     */
+    public Group getGroup(final String groupID)
+    {
+        synchronized (GROUP_MAP)
+        {
+            return GROUP_MAP.get(groupID);
+        }
+    }
+}

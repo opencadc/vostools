@@ -64,29 +64,17 @@
  *
  ************************************************************************
  */
-package ca.nrc.cadc.gms;
+package ca.nrc.cadc.gms.server.persistence;
 
-import org.junit.runners.Suite;
-import org.junit.runner.RunWith;
+import ca.nrc.cadc.gms.Group;
 
-import ca.nrc.cadc.gms.server.UserServiceImplTest;
-import ca.nrc.cadc.gms.server.web.restlet.*;
-
-@RunWith(Suite.class)
-@Suite.SuiteClasses(
+public interface GroupPersistence
 {
-    GroupImplTest.class,
-    UserImplTest.class,
-    UserServiceImplTest.class,
-    GroupListResourceTest.class,
-//    GroupMemberResourceTest.class
-    GroupMemberListResourceTest.class,
-//    MemberGroupResourceTest.class,
-    MemberResourceTest.class,
-    UserWriterTest.class,
-    UserReaderTest.class,
-    GroupWriterTest.class,
-    GroupReaderTest.class
-})
-
-public class GMSTestSuite {}
+    /**
+     * Obtain a Group with the given Group ID.
+     *
+     * @param groupID   The Group unique ID.
+     * @return          A Group instance, or null if none found.
+     */
+    Group getGroup(final String groupID);
+}

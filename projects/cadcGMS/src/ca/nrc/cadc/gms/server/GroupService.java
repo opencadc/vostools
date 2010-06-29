@@ -64,29 +64,22 @@
  *
  ************************************************************************
  */
-package ca.nrc.cadc.gms;
+package ca.nrc.cadc.gms.server;
 
-import org.junit.runners.Suite;
-import org.junit.runner.RunWith;
+import ca.nrc.cadc.gms.AuthorizationException;
+import ca.nrc.cadc.gms.Group;
+import ca.nrc.cadc.gms.InvalidGroupException;
 
-import ca.nrc.cadc.gms.server.UserServiceImplTest;
-import ca.nrc.cadc.gms.server.web.restlet.*;
 
-@RunWith(Suite.class)
-@Suite.SuiteClasses(
+public interface GroupService
 {
-    GroupImplTest.class,
-    UserImplTest.class,
-    UserServiceImplTest.class,
-    GroupListResourceTest.class,
-//    GroupMemberResourceTest.class
-    GroupMemberListResourceTest.class,
-//    MemberGroupResourceTest.class,
-    MemberResourceTest.class,
-    UserWriterTest.class,
-    UserReaderTest.class,
-    GroupWriterTest.class,
-    GroupReaderTest.class
-})
-
-public class GMSTestSuite {}
+    /**
+     * Obtain the Group with the given Group ID.
+     *
+     * @param groupID   Unique Group identifier.
+     * @return          The Group object for the given ID.
+     */
+    Group getGroup(final String groupID)
+        throws InvalidGroupException,
+               IllegalArgumentException, AuthorizationException;
+}

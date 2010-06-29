@@ -64,29 +64,26 @@
  *
  ************************************************************************
  */
-package ca.nrc.cadc.gms;
+package ca.nrc.cadc.gms.server.web.restlet;
 
-import org.junit.runners.Suite;
-import org.junit.runner.RunWith;
+import java.io.IOException;
+import org.jdom.Document;
 
-import ca.nrc.cadc.gms.server.UserServiceImplTest;
-import ca.nrc.cadc.gms.server.web.restlet.*;
-
-@RunWith(Suite.class)
-@Suite.SuiteClasses(
+public class GroupPropertiesResource extends GroupResource
 {
-    GroupImplTest.class,
-    UserImplTest.class,
-    UserServiceImplTest.class,
-    GroupListResourceTest.class,
-//    GroupMemberResourceTest.class
-    GroupMemberListResourceTest.class,
-//    MemberGroupResourceTest.class,
-    MemberResourceTest.class,
-    UserWriterTest.class,
-    UserReaderTest.class,
-    GroupWriterTest.class,
-    GroupReaderTest.class
-})
-
-public class GMSTestSuite {}
+    /**
+     * Assemble the XML for this Resource's Representation into the given
+     * Document.
+     *
+     * @param document The Document to build up.
+     * @throws java.io.IOException If something went wrong or the XML cannot be
+     *                             built.
+     */
+    protected void buildXML(final Document document) throws IOException
+    {
+        processNotImplemented(
+                String.format("The Service to obtain all of the Properties of "
+                              + "Group with ID '%s' is not yet implemented.",
+                              getGroupID()));
+    }
+}

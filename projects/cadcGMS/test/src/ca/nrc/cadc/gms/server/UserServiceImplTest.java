@@ -64,29 +64,87 @@
  *
  ************************************************************************
  */
-package ca.nrc.cadc.gms;
+package ca.nrc.cadc.gms.server;
 
-import org.junit.runners.Suite;
-import org.junit.runner.RunWith;
+import ca.nrc.cadc.gms.server.UserServiceImpl;
+import ca.nrc.cadc.gms.server.persistence.GroupPersistence;
+import ca.nrc.cadc.gms.server.persistence.UserPersistence;
+import ca.nrc.cadc.gms.User;
+import ca.nrc.cadc.gms.Group;
 
-import ca.nrc.cadc.gms.server.UserServiceImplTest;
-import ca.nrc.cadc.gms.server.web.restlet.*;
+import static org.easymock.EasyMock.*;
+import org.junit.Test;
 
-@RunWith(Suite.class)
-@Suite.SuiteClasses(
+import java.util.HashSet;
+import java.util.Collection;
+
+
+public class UserServiceImplTest extends UserServiceTest
 {
-    GroupImplTest.class,
-    UserImplTest.class,
-    UserServiceImplTest.class,
-    GroupListResourceTest.class,
-//    GroupMemberResourceTest.class
-    GroupMemberListResourceTest.class,
-//    MemberGroupResourceTest.class,
-    MemberResourceTest.class,
-    UserWriterTest.class,
-    UserReaderTest.class,
-    GroupWriterTest.class,
-    GroupReaderTest.class
-})
+    protected UserPersistence mockUserPersistence =
+            createMock(UserPersistence.class);
+    protected GroupPersistence mockGroupPersistence =
+            createMock(GroupPersistence.class);
 
-public class GMSTestSuite {}
+    /**
+     * Prepare the testSubject to be tested.
+     *
+     * @throws Exception For anything that went wrong.
+     */
+    public void initializeTestSubject() throws Exception
+    {
+        setTestSubject(new UserServiceImpl(mockUserPersistence,
+                                           mockGroupPersistence));
+    }
+
+    
+    @Override
+    @Test
+    public void getMemberships() throws Exception
+    {
+        final Collection<Group> mockUserMemberships = new HashSet<Group>();
+        final User mockUser = createMock(User.class);
+        final Group mockGroup = createMock(Group.class);
+
+        mockUserMemberships.add(mockGroup);
+        expect(mockGroup.getGMSGroupID()).andReturn(GROUP_ID).once();
+        expect(mockUserPersistence.getUser(NON_MEMBER_USER_ID)).
+                andReturn(null).once();
+        expect(mockUserPersistence.getUser(MEMBER_USER_ID)).
+                andReturn(mockUser).once();
+        expect(mockUser.getGMSMemberships()).andReturn(mockUserMemberships).
+                once();
+
+        replay(mockGroupPersistence, mockUserPersistence, mockUser, mockGroup);
+
+        super.getMemberships();
+    }
+
+    @Override
+    @Test
+    public void getMember() throws Exception
+    {
+        final User mockUser = createMock(User.class);
+        final Group mockGroup = createMock(Group.class);
+        final Group mockNoMembershipGroup = createMock(Group.class);
+
+        expect(mockUser.getUserID()).andReturn(MEMBER_USER_ID).once();
+        expect(mockUser.isMemberOf(mockGroup)).andReturn(true).once();
+        expect(mockUser.isMemberOf(mockNoMembershipGroup)).andReturn(false).
+                once();
+        expect(mockUserPersistence.getUser(NON_MEMBER_USER_ID)).
+                andReturn(null).once();
+        expect(mockUserPersistence.getUser(MEMBER_USER_ID)).
+                andReturn(mockUser).times(3);
+        expect(mockGroupPersistence.getGroup(NON_GROUP_ID)).andReturn(null).
+                once();
+        expect(mockGroupPersistence.getGroup(GROUP_ID)).andReturn(mockGroup).
+                times(2);
+        expect(mockGroupPersistence.getGroup(NO_MEMBERSHIP_GROUP_ID)).
+                andReturn(mockNoMembershipGroup).once();
+
+        replay(mockUserPersistence, mockGroupPersistence, mockUser, mockGroup);
+
+        super.getMember();
+    }
+}

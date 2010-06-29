@@ -64,29 +64,62 @@
  *
  ************************************************************************
  */
-package ca.nrc.cadc.gms;
+package ca.nrc.cadc.gms.server.persistence;
 
-import org.junit.runners.Suite;
-import org.junit.runner.RunWith;
+import ca.nrc.cadc.gms.User;
+import ca.nrc.cadc.gms.UserImpl;
+import ca.nrc.cadc.gms.GroupImpl;
 
-import ca.nrc.cadc.gms.server.UserServiceImplTest;
-import ca.nrc.cadc.gms.server.web.restlet.*;
+import java.util.concurrent.ConcurrentMap;
+import java.util.concurrent.ConcurrentHashMap;
 
-@RunWith(Suite.class)
-@Suite.SuiteClasses(
+
+public class MemoryUserPersistence implements UserPersistence
 {
-    GroupImplTest.class,
-    UserImplTest.class,
-    UserServiceImplTest.class,
-    GroupListResourceTest.class,
-//    GroupMemberResourceTest.class
-    GroupMemberListResourceTest.class,
-//    MemberGroupResourceTest.class,
-    MemberResourceTest.class,
-    UserWriterTest.class,
-    UserReaderTest.class,
-    GroupWriterTest.class,
-    GroupReaderTest.class
-})
+    // The Database.
+    private final ConcurrentMap<String, User> USER_MAP =
+            new ConcurrentHashMap<String, User>();
 
-public class GMSTestSuite {}
+
+    /**
+     * Default constructor.
+     */
+    public MemoryUserPersistence()
+    {
+        try
+        {
+            final User jenkinsd = new UserImpl(Long.toString(88l), "jenkinsd");
+            jenkinsd.addMembership(new GroupImpl(Long.toString(88l)));
+
+            final User adamian = new UserImpl(Long.toString(99l), "adamian");
+            adamian.addMembership(new GroupImpl(Long.toString(99l)));
+
+            final User testuser = new UserImpl(Long.toString(888l),
+                                               "testuser");
+            testuser.addMembership(new GroupImpl("MY TEST GROUP"));
+
+            USER_MAP.put(Long.toString(88l), jenkinsd);
+            USER_MAP.put(Long.toString(99l), adamian);
+            USER_MAP.put(Long.toString(888l), testuser);
+        }
+        catch (Exception e)
+        {
+            // Not worried about it here...
+            e.printStackTrace();
+        }
+    }
+
+    /**
+     * Obtain a User based on the given unique ID.
+     *
+     * @param userID The unique User ID.
+     * @return User instance, or null if none found.
+     */
+    public User getUser(final String userID)
+    {
+        synchronized (USER_MAP)
+        {
+            return USER_MAP.get(userID);
+        }
+    }
+}

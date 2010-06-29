@@ -64,29 +64,21 @@
  *
  ************************************************************************
  */
-package ca.nrc.cadc.gms;
+package ca.nrc.cadc.gms.server;
 
-import org.junit.runners.Suite;
-import org.junit.runner.RunWith;
+import ca.nrc.cadc.gms.GMSTest;
+import ca.nrc.cadc.gms.Group;
+import ca.nrc.cadc.gms.server.GroupService;
 
-import ca.nrc.cadc.gms.server.UserServiceImplTest;
-import ca.nrc.cadc.gms.server.web.restlet.*;
+import org.junit.Test;
 
-@RunWith(Suite.class)
-@Suite.SuiteClasses(
+import java.util.Collection;
+
+public abstract class GroupServiceTest extends GMSTest<GroupService>
 {
-    GroupImplTest.class,
-    UserImplTest.class,
-    UserServiceImplTest.class,
-    GroupListResourceTest.class,
-//    GroupMemberResourceTest.class
-    GroupMemberListResourceTest.class,
-//    MemberGroupResourceTest.class,
-    MemberResourceTest.class,
-    UserWriterTest.class,
-    UserReaderTest.class,
-    GroupWriterTest.class,
-    GroupReaderTest.class
-})
-
-public class GMSTestSuite {}
+    @Test
+    public void getGroups() throws Exception
+    {
+        
+    }
+}

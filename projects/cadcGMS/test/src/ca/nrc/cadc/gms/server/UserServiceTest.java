@@ -1,4 +1,4 @@
-<!--
+/**
 ************************************************************************
 *******************  CANADIAN ASTRONOMY DATA CENTRE  *******************
 **************  CENTRE CANADIEN DE DONNÉES ASTRONOMIQUES  **************
@@ -8,7 +8,7 @@
 *  National Research Council            Conseil national de recherches
 *  Ottawa, Canada, K1A 0R6              Ottawa, Canada, K1A 0R6
 *  All rights reserved                  Tous droits réservés
-*                                       
+*
 *  NRC disclaims any warranties,        Le CNRC dénie toute garantie
 *  expressed, implied, or               énoncée, implicite ou légale,
 *  statutory, of any kind with          de quelque nature que ce
@@ -31,10 +31,10 @@
 *  software without specific prior      de ce logiciel sans autorisation
 *  written permission.                  préalable et particulière
 *                                       par écrit.
-*                                       
+*
 *  This file is part of the             Ce fichier fait partie du projet
 *  OpenCADC project.                    OpenCADC.
-*                                       
+*
 *  OpenCADC is free software:           OpenCADC est un logiciel libre ;
 *  you can redistribute it and/or       vous pouvez le redistribuer ou le
 *  modify it under the terms of         modifier suivant les termes de
@@ -44,7 +44,7 @@
 *  either version 3 of the              : soit la version 3 de cette
 *  License, or (at your option)         licence, soit (à votre gré)
 *  any later version.                   toute version ultérieure.
-*                                       
+*
 *  OpenCADC is distributed in the       OpenCADC est distribué
 *  hope that it will be useful,         dans l’espoir qu’il vous
 *  but WITHOUT ANY WARRANTY;            sera utile, mais SANS AUCUNE
@@ -54,7 +54,7 @@
 *  PURPOSE.  See the GNU Affero         PARTICULIER. Consultez la Licence
 *  General Public License for           Générale Publique GNU Affero
 *  more details.                        pour plus de détails.
-*                                       
+*
 *  You should have received             Vous devriez avoir reçu une
 *  a copy of the GNU Affero             copie de la Licence Générale
 *  General Public License along         Publique GNU Affero avec
@@ -62,86 +62,91 @@
 *  <http://www.gnu.org/licenses/>.      pas le cas, consultez :
 *                                       <http://www.gnu.org/licenses/>.
 *
-*  $Revision: 4 $
-*
 ************************************************************************
--->
+*/
+package ca.nrc.cadc.gms.server;
 
-	
-<project default="build" basedir=".">
-  <property environment="env"/>
+import ca.nrc.cadc.gms.*;
+import ca.nrc.cadc.gms.server.UserService;
 
-    <!-- site-specific build properties or overrides of values in opencadc.properties -->
-    <property file="${env.CADC_PREFIX}/etc/local.properties" />
+import org.junit.Test;
+import static org.junit.Assert.*;
 
-    <!-- site-specific targets, e.g. install, cannot duplicate those in opencadc.targets.xml -->
-    <import file="${env.CADC_PREFIX}/etc/local.targets.xml" optional="true" />
+import java.util.Collection;
 
-    <!-- default properties and targets -->
-    <property file="${env.CADC_PREFIX}/etc/opencadc.properties" />
-    <import file="${env.CADC_PREFIX}/etc/opencadc.targets.xml"/>
 
-    <!-- developer convenience: place for extra targets and properties -->
-    <import file="extras.xml" optional="true" />
+/**
+ * Unit test for the UserService interface's implementations.
+ */
+public abstract class UserServiceTest extends GMSTest<UserService>
+{
+    protected final static String NO_MEMBERSHIP_GROUP_ID = Long.toString(999l);
+    protected final static String GROUP_ID = Long.toString(888l);
+    protected final static String NON_GROUP_ID = Long.toString(-888l);
+    protected final static String MEMBER_USER_ID = Long.toString(88l);
+    protected final static String NON_MEMBER_USER_ID = Long.toString(-88l);
 
-    <property name="project"        value="cadcGMS" />
 
-    <property name="cadcUtil"       value="${lib}/cadcUtil.jar" />
-    <property name="jdom"           value="${ext.lib}/jdom.jar" />
-    <property name="log4j"          value="${ext.lib}/log4j.jar" />
-    <property name="restlet"        value="${ext.lib}/org.restlet.jar" />
+    @Test
+    public void getMemberships() throws Exception
+    {
+        final Collection<Group> memberships =
+                getTestSubject().getMemberships(MEMBER_USER_ID);
+        assertNotNull("Group Collection may never be null.", memberships);
+        assertEquals("Group should have a single member.", 1,
+                     memberships.size());
+        assertEquals("Group should be the 888 Group.", GROUP_ID, 
+                   ((Group) memberships.toArray()[0]).getGMSGroupID());
 
-    <property name="jars" value="${cadcUtil}:${jdom}:${log4j}:${restlet}" />
+        try
+        {
+            getTestSubject().getMemberships(NON_MEMBER_USER_ID);
+            fail("Non member ID found!");
+        }
+        catch (InvalidMemberException ime)
+        {
+            // Good!
+        }
+    }
 
-    <target name="build" depends="client,server" />
-    
-    <target name="server" depends="compile">
-        <jar jarfile="${build}/lib/${project}.jar"
-            basedir="${build}/class"
-            update="no">
-            <include name="ca/nrc/cadc/**" />
-        </jar>
-    </target>
+    @Test
+    public void getMember() throws Exception
+    {
+        final User member =
+                getTestSubject().getMember(MEMBER_USER_ID, GROUP_ID);
 
-    <target name="client" depends="compile">
-        <jar jarfile="${build}/lib/${project}Client.jar"
-            basedir="${build}/class"
-            update="no">
-            <include name="ca/nrc/cadc/gms/client/**" />
-            <include name="ca/nrc/cadc/gms/**.class" />
-        </jar>
-    </target>
+        assertNotNull("The member returned should be valid.", member);
+        assertEquals("The member is the wrong one.", MEMBER_USER_ID,
+                     member.getUserID());
 
-    <!-- JAR files needed to run the test suite -->
-    <property name="easyMock"       value="${ext.dev}/easymock.jar" />
-    <property name="junit"          value="${ext.dev}/junit.jar" />
-    <property name="xmlunit"        value="${ext.dev}/xmlunit.jar" />
-    <property name="xerces"         value="${ext.lib}/xerces.jar" />
-    <property name="testingJars"    value="${easyMock}:${junit}:${xmlunit}:${xerces}" />
+        try
+        {
+            getTestSubject().getMember(MEMBER_USER_ID, NO_MEMBERSHIP_GROUP_ID);
+            fail("The User with this MEMBER_USER_ID is not a member.");
+        }
+        catch (IllegalArgumentException iae)
+        {
+            // Good!
+        }
 
-    <!-- compile the test classes -->
-    <target name="compile-test" depends="compile">
-        <javac destdir="${build}/class"
-               source="${java.source.version}"
-               target="${java.target.version}"
-               classpath="${jars}:${testingJars}" >
-            <src path="test/src"/>
-        </javac>
-    </target>
+        try
+        {
+            getTestSubject().getMember(NON_MEMBER_USER_ID, GROUP_ID);
+            fail("This member is not a member.");
+        }
+        catch (InvalidMemberException ime)
+        {
+            // Good!
+        }
 
-    <target name="test" depends="compile-test">
-        <echo message="Running test" />
-
-        <!-- Run the junit test suite -->
-        <echo message="Running test suite..." />
-        <junit printsummary="yes" haltonfailure="yes" fork="yes">
-            <classpath>
-                <pathelement path="build/class"/>
-                <pathelement path="${jars}:${testingJars}"/>
-            </classpath>
-            <test name="ca.nrc.cadc.gms.GMSTestSuite" />
-            <formatter type="plain" usefile="false" />
-        </junit>
-    </target>
-
-</project>
+        try
+        {
+            getTestSubject().getMember(MEMBER_USER_ID, NON_GROUP_ID);
+            fail("This Group is not a Group.");
+        }
+        catch (InvalidGroupException ige)
+        {
+            // Good!
+        }
+    }
+}

@@ -64,29 +64,17 @@
  *
  ************************************************************************
  */
-package ca.nrc.cadc.gms;
+package ca.nrc.cadc.gms.server.persistence;
 
-import org.junit.runners.Suite;
-import org.junit.runner.RunWith;
+import ca.nrc.cadc.gms.User;
 
-import ca.nrc.cadc.gms.server.UserServiceImplTest;
-import ca.nrc.cadc.gms.server.web.restlet.*;
-
-@RunWith(Suite.class)
-@Suite.SuiteClasses(
+public interface UserPersistence
 {
-    GroupImplTest.class,
-    UserImplTest.class,
-    UserServiceImplTest.class,
-    GroupListResourceTest.class,
-//    GroupMemberResourceTest.class
-    GroupMemberListResourceTest.class,
-//    MemberGroupResourceTest.class,
-    MemberResourceTest.class,
-    UserWriterTest.class,
-    UserReaderTest.class,
-    GroupWriterTest.class,
-    GroupReaderTest.class
-})
-
-public class GMSTestSuite {}
+    /**
+     * Obtain a User based on the given unique ID.
+     *
+     * @param userID        The unique User ID.
+     * @return              User instance, or null if none found.
+     */
+    User getUser(final String userID);
+}

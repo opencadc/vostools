@@ -64,29 +64,110 @@
  *
  ************************************************************************
  */
-package ca.nrc.cadc.gms;
+package ca.nrc.cadc.gms.server.web.restlet;
 
-import org.junit.runners.Suite;
-import org.junit.runner.RunWith;
+import java.io.FileNotFoundException;
+import java.io.IOException;
 
-import ca.nrc.cadc.gms.server.UserServiceImplTest;
-import ca.nrc.cadc.gms.server.web.restlet.*;
+import ca.nrc.cadc.gms.User;
+import ca.nrc.cadc.gms.server.UserService;
 
-@RunWith(Suite.class)
-@Suite.SuiteClasses(
+import org.jdom.Document;
+
+
+public class MemberResource extends AbstractResource
 {
-    GroupImplTest.class,
-    UserImplTest.class,
-    UserServiceImplTest.class,
-    GroupListResourceTest.class,
-//    GroupMemberResourceTest.class
-    GroupMemberListResourceTest.class,
-//    MemberGroupResourceTest.class,
-    MemberResourceTest.class,
-    UserWriterTest.class,
-    UserReaderTest.class,
-    GroupWriterTest.class,
-    GroupReaderTest.class
-})
+    private UserService userService;
+    private String groupWriterClassName;
+    private String userWriterClassName;    
 
-public class GMSTestSuite {}
+
+    /**
+     * No-argument constructor.
+     */
+    public MemberResource()
+    {
+    }
+
+    /**
+     * Full constructor with appropriate arguments.
+     *
+     * @param userService   The UserService instance.
+     */
+    public MemberResource(final UserService userService)
+    {
+        setUserService(userService);
+    }
+
+    /**
+     * Get a reference to the resource identified by the user.
+     * 
+     * @throws FileNotFoundException If the resource doesn't exist.
+     */
+    @Override
+    protected boolean obtainResource() throws FileNotFoundException
+    {
+        processNotImplemented(String.format("The Service to see Member with ID "
+                                            + "'%s' is not yet implemented.",
+                                            getMemberID()));
+        return false;
+    }
+
+    /**
+     * Assemble the XML for this Resource's Representation into the given
+     * Document.
+     *
+     * @param document The Document to build up.
+     * @throws java.io.IOException If something went wrong or the XML cannot be
+     *                             built.
+     * TODO - Needs implementation!
+     * TODO - jenkinsd 2010.04.26
+     */
+    protected void buildXML(final Document document) throws IOException
+    {
+        processNotImplemented(String.format("The Service to see Member with ID "
+                                            + "'%s' is not yet implemented.",
+                                            getMemberID()));
+    }
+
+    protected User getMember()
+    {
+        return getUserService().getUser(getMemberID());
+    }
+
+    protected String getMemberID()
+    {
+        return (String) getRequestAttribute("memberID");
+    }
+
+
+    public UserService getUserService()
+    {
+        return userService;
+    }
+
+    public void setUserService(UserService userService)
+    {
+        this.userService = userService;
+    }
+
+    public String getGroupWriterClassName()
+    {
+        return groupWriterClassName;
+    }
+
+    public void setGroupWriterClassName(String groupWriterClassName)
+    {
+        this.groupWriterClassName = groupWriterClassName;
+    }
+
+    public String getUserWriterClassName()
+    {
+        return userWriterClassName;
+    }
+
+    public void setUserWriterClassName(String userWriterClassName)
+    {
+        this.userWriterClassName = userWriterClassName;
+    }
+}

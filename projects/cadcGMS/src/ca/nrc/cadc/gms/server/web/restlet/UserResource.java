@@ -64,29 +64,81 @@
  *
  ************************************************************************
  */
-package ca.nrc.cadc.gms;
+package ca.nrc.cadc.gms.server.web.restlet;
 
-import org.junit.runners.Suite;
-import org.junit.runner.RunWith;
+import java.io.FileNotFoundException;
+import java.io.IOException;
 
-import ca.nrc.cadc.gms.server.UserServiceImplTest;
-import ca.nrc.cadc.gms.server.web.restlet.*;
+import ca.nrc.cadc.gms.server.UserService;
 
-@RunWith(Suite.class)
-@Suite.SuiteClasses(
+import org.jdom.Document;
+
+
+public class UserResource extends AbstractResource
 {
-    GroupImplTest.class,
-    UserImplTest.class,
-    UserServiceImplTest.class,
-    GroupListResourceTest.class,
-//    GroupMemberResourceTest.class
-    GroupMemberListResourceTest.class,
-//    MemberGroupResourceTest.class,
-    MemberResourceTest.class,
-    UserWriterTest.class,
-    UserReaderTest.class,
-    GroupWriterTest.class,
-    GroupReaderTest.class
-})
+    private UserService userService;
 
-public class GMSTestSuite {}
+
+    /**
+     * Hidden no-arg constructor.
+     */
+    UserResource()
+    {
+    }
+
+    /**
+     * Complete constructor.
+     *
+     * @param userService       The User Service instance.
+     */
+    public UserResource(final UserService userService)
+    {
+        this.userService = userService;
+    }
+
+    /**
+     * Get a reference to the resource identified by the user.
+     * 
+     * @throws FileNotFoundException If the resource doesn't exist.
+     */
+    @Override
+    protected boolean obtainResource() throws FileNotFoundException
+    {
+        processNotImplemented(String.format("The Service to see User with ID "
+                                            + "'%s' is not yet implemented.",
+                                            getUserID()));
+        return false;
+    }
+
+    /**
+     * Assemble the XML for this Resource's Representation into the given
+     * Document.
+     *
+     * @param document The Document to build up.
+     * @throws java.io.IOException If something went wrong or the XML cannot be
+     *                             built.
+     *
+     * TODO - Needs Implementation!
+     * TODO - jenkinsd 2010.04.21
+     */
+    protected void buildXML(final Document document) throws IOException
+    {
+        
+    }
+
+    protected String getUserID()
+    {
+        return (String) getRequestAttribute("userID");
+    }
+
+
+    public UserService getUserService()
+    {
+        return userService;
+    }
+
+    public void setUserService(UserService userService)
+    {
+        this.userService = userService;
+    }
+}
