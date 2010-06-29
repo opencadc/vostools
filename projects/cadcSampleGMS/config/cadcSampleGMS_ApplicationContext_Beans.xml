@@ -12,21 +12,21 @@
 
   <!-- Persistenct beans. -->
   <bean id="userPersistence" name="userPersistence"
-        class="ca.nrc.cadc.gms.persistence.MemoryUserPersistence" />
+        class="ca.nrc.cadc.gms.server.persistence.MemoryUserPersistence" />
 
   <bean id="groupPersistence" name="groupPersistence"
-        class="ca.nrc.cadc.gms.persistence.MemoryGroupPersistence" />  
+        class="ca.nrc.cadc.gms.server.persistence.MemoryGroupPersistence" />  
 
 
   <!-- Service Beans. -->
   <bean id="userService" name="userService"
-        class="ca.nrc.cadc.gms.service.UserServiceImpl">
+        class="ca.nrc.cadc.gms.server.UserServiceImpl">
     <property name="userPersistence" ref="userPersistence" />
     <property name="groupPersistence" ref="groupPersistence" />
   </bean>
 
   <bean id="groupService" name="groupService"
-        class="ca.nrc.cadc.gms.service.GroupServiceImpl">
+        class="ca.nrc.cadc.gms.server.GroupServiceImpl">
     <property name="groupPersistence" ref="groupPersistence" />
   </bean>
 
@@ -108,42 +108,42 @@
 
   <!-- Resources -->
   <bean abstract="true" name="baseResource" scope="prototype"
-        class="ca.nrc.cadc.gms.web.resources.restlet.AbstractResource" />
+        class="ca.nrc.cadc.gms.server.web.restlet.AbstractResource" />
 
   <bean name="/groups" id="groupListResource" scope="prototype"
         parent="baseResource"
-        class="ca.nrc.cadc.gms.web.resources.restlet.GroupListResource" />
+        class="ca.nrc.cadc.gms.server.web.restlet.GroupListResource" />
 
   <bean name="/groups/{groupID}" id="groupResource" scope="prototype"
         parent="baseResource"
-        class="ca.nrc.cadc.gms.web.resources.restlet.GroupResource">
+        class="ca.nrc.cadc.gms.server.web.restlet.GroupResource">
     <property name="groupService" ref="groupService" />
   </bean>
 
   <bean name="/groups/{groupID}/members" id="groupMemberListResource" scope="prototype"
         parent="baseResource"
-        class="ca.nrc.cadc.gms.web.resources.restlet.GroupMemberListResource" />
+        class="ca.nrc.cadc.gms.server.web.restlet.GroupMemberListResource" />
 
   <bean name="/groups/{groupID}/properties" id="groupPropertiesResource" scope="prototype"
         parent="baseResource"
-        class="ca.nrc.cadc.gms.web.resources.restlet.GroupPropertiesResource" />
+        class="ca.nrc.cadc.gms.server.web.restlet.GroupPropertiesResource" />
 
   <bean name="/groups/{groupID}/{memberID}" id="groupMemberResource" scope="prototype"
         parent="baseResource"
-        class="ca.nrc.cadc.gms.web.resources.restlet.GroupMemberResource">
+        class="ca.nrc.cadc.gms.server.web.restlet.GroupMemberResource">
     <property name="userService" ref="userService" />
     <property name="groupService" ref="groupService" />
   </bean>
 
   <bean name="/members/{memberID}" id="memberResource" scope="prototype"
         parent="baseResource"
-        class="ca.nrc.cadc.gms.web.resources.restlet.MemberResource">
+        class="ca.nrc.cadc.gms.server.web.restlet.MemberResource">
     <property name="userService" ref="userService" />
   </bean>
 
   <bean name="/members/{memberID}/{groupID}" id="memberGroupResource" scope="prototype"
         parent="baseResource"
-        class="ca.nrc.cadc.gms.web.resources.restlet.MemberGroupResource">
+        class="ca.nrc.cadc.gms.server.web.restlet.MemberGroupResource">
     <property name="userService" ref="userService" />
     <property name="groupService" ref="groupService" />
   </bean>
