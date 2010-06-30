@@ -125,7 +125,7 @@ public class VOSpaceClient
         try
         {
             URL url = new URL(this.baseUrl + "/nodes/" + node.getPath());
-            log.debug(url);
+            log.debug("createNode(), URL=" + url);
             HttpURLConnection connection = (HttpURLConnection) url.openConnection();
             connection.setDoOutput(true);
             connection.setRequestMethod("PUT");
@@ -139,8 +139,6 @@ public class VOSpaceClient
             NodeWriter nodeWriter = new NodeWriter();
             nodeWriter.write(node, out);
             out.close();
-
-            //log.debug(NodeUtil.xmlString(node));
 
             String responseMessage = connection.getResponseMessage();
             responseCode = connection.getResponseCode();
@@ -158,7 +156,7 @@ public class VOSpaceClient
                 }
                 in.close();
 
-                log.debug("response from server: \n" + sb.toString());
+                log.debug("createNode(), Response from server: \n" + sb.toString());
 
                 NodeReader nodeReader = new NodeReader();
                 rtnNode = nodeReader.read(sb.toString());
@@ -186,7 +184,7 @@ public class VOSpaceClient
                 // The service SHALL throw a HTTP 401 status code including PermissionDenied fault in the entity body
                 // if the user does not have permissions to perform the operation
             default:
-                log.error(responseMessage + ". HTTP Code: " + responseCode);
+                log.error("createNode(), exceptional response from server: " + responseMessage + ". HTTP Code: " + responseCode);
                 InputStream errStrm = connection.getErrorStream();
                 br = new BufferedReader(new InputStreamReader(errStrm));
                 while ((line = br.readLine()) != null)
@@ -224,7 +222,7 @@ public class VOSpaceClient
         try
         {
             URL url = new URL(this.baseUrl + "/nodes/" + path);
-            log.debug(url);
+            log.debug("getNode(), URL=" + url);
             HttpURLConnection connection = (HttpURLConnection) url.openConnection();
             connection.setDoOutput(true);
             connection.setRequestMethod("GET");
@@ -254,8 +252,7 @@ public class VOSpaceClient
 
                 NodeReader nodeReader = new NodeReader();
                 rtnNode = nodeReader.read(sb.toString());
-                log.debug(rtnNode.getName());
-                log.debug(rtnNode.getPath());
+                log.debug("getNode, returned node: " + rtnNode);
                 break;
             case 500:
                 // The service SHALL throw a HTTP 500 status code including an InternalFault fault in the entity-body if the operation fails
@@ -289,7 +286,7 @@ public class VOSpaceClient
         try
         {
             URL url = new URL(this.baseUrl + "/nodes/" + node.getPath());
-            log.debug(url);
+            log.debug("setNode(), URL=" + url);
             HttpURLConnection connection = (HttpURLConnection) url.openConnection();
             connection.setDoOutput(true);
             connection.setRequestMethod("POST");
@@ -303,8 +300,6 @@ public class VOSpaceClient
             NodeWriter nodeWriter = new NodeWriter();
             nodeWriter.write(node, out);
             out.close();
-
-            //log.debug(NodeUtil.xmlString(node));
 
             String responseMessage = connection.getResponseMessage();
             responseCode = connection.getResponseCode();

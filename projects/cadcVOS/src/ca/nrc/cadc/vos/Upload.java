@@ -76,6 +76,7 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
 import java.io.OutputStreamWriter;
+import java.net.HttpURLConnection;
 import java.net.ProtocolException;
 import java.net.URL;
 
@@ -118,14 +119,16 @@ public class Upload implements Runnable
     {
         if (this.url == null) throw new IllegalArgumentException("URL is null.");
         if (this.localFile == null) throw new IllegalArgumentException("Local File is null.");
+        
+        log.debug("Upload.run(). url=" + this.url.toString() + " localFile=" + this.localFile.getPath());
 
         try
         {
             this.thread = Thread.currentThread();
-            HttpsURLConnection httpsCon;
+            HttpURLConnection httpsCon;
             try
             {
-                httpsCon = (HttpsURLConnection) this.url.openConnection();
+                httpsCon = (HttpURLConnection) this.url.openConnection();
             }
             catch (IOException e)
             {
@@ -145,7 +148,7 @@ public class Upload implements Runnable
                 throw new RuntimeException(e);
             }
             httpsCon.setUseCaches(false);
-            httpsCon.setDoInput(false);
+            httpsCon.setDoInput(true);
             httpsCon.setDoOutput(true);
 
             OutputStream outStream = null;
@@ -174,6 +177,11 @@ public class Upload implements Runnable
             try
             {
                 ioLoop(inStream, outStream, this.ioBufferSize);
+                inStream.close();
+                outStream.close();
+                String responseMessage = httpsCon.getResponseMessage();
+                int responseCode = httpsCon.getResponseCode();
+                log.debug("run(). responseCode=" + responseCode + "; res msg=" + responseMessage);
             }
             catch (IOException e)
             {
@@ -187,6 +195,9 @@ public class Upload implements Runnable
                 e.printStackTrace();
                 throw new RuntimeException(e);
             }
+            
+            
+            log.debug("Upload completed.");
         }
         catch (RuntimeException re)
         {

@@ -322,8 +322,9 @@ public class VOSpaceClientTest
         
         clientTransfer.doUpload(testFile);
         Node node = clientTransfer.getTarget();
+        log.debug("clientTransfer getTarget: " + node);
         Node nodeRtn = client.getNode(node.getPath());
-        log.debug(VOSClientUtil.xmlString(nodeRtn));
+        log.debug("Node returned from getNode, after doUpload: " + VOSClientUtil.xmlString(nodeRtn));
         return clientTransfer;
     }
 
