@@ -181,7 +181,7 @@ public class VOSpaceClientTest
         Assert.assertEquals(newUniqueValue2, propValue2);
     }
 
-    //@Test
+    @Test
     public void testDeleteNode() throws Exception
     {
         String slashPath1 = "/" + ROOT_NODE + TestUtil.uniqueStringOnTime();
@@ -191,6 +191,7 @@ public class VOSpaceClientTest
         log.debug("Returned Node: " + nodeRtn);
         log.debug("XML of Returned Node: " + VOSClientUtil.xmlString(nodeRtn));
 
+        log.debug("getPath(): " + nodeRtn.getPath());
         client.deleteNode(nodeRtn.getPath());
 
         boolean exceptionThrown = false;
@@ -334,7 +335,7 @@ public class VOSpaceClientTest
         this.pushToVoSpace();
     }
 
-    @Test
+    //@Test
     public void testPullFromVoSpace() throws Exception
     {
         ClientTransfer txUpload = this.pushToVoSpace();

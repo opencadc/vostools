@@ -680,6 +680,9 @@ public class VOSpaceClient
         int responseCode;
         try
         {
+            if (path.startsWith("/"))
+                path = path.substring(1); // removed leading slash to avoid confusion
+            
             URL url = new URL(this.baseUrl + "/nodes/" + path);
             log.debug(url);
             HttpURLConnection connection = (HttpURLConnection) url.openConnection();
