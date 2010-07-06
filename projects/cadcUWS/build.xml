@@ -91,11 +91,12 @@
 
     <property name="jars" value="${cadc}:${external}" />
 
-    <target name="build" depends="compile">
+    <target name="build" depends="schema,compile">
         <jar jarfile="${build}/lib/${project}.jar"
             basedir="${build}/class"
             update="no">
             <include name="ca/nrc/cadc/**" />
+            <include name="UWS-1.0.xsd" />
         </jar>
     </target>
 
@@ -104,6 +105,11 @@
     <property name="dev.junit" value="${ext.dev}/junit.jar" />
     <property name="dev.easyMock" value="${ext.dev}/easymock.jar" />
     <property name="testingJars" value="${dev.junit}:${dev.easyMock}" />    
+
+
+    <target name="schema">
+        <copy file="src/resources/dtd/UWS-1.0.xsd" todir="build/class"/>
+    </target>
 
     <!-- compile the test classes -->
     <target name="compile-test" depends="compile">
