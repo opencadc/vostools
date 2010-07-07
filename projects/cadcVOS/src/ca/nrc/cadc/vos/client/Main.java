@@ -249,7 +249,7 @@ public class Main
         }
         else if (this.operation.equals(Operation.COPY))
         {
-            if (this.transferDirection.equals(Direction.pushToVoSpace))
+            if (this.transferDirection.equals(Transfer.Direction.pushToVoSpace))
             {
                 try
                 {
@@ -264,7 +264,7 @@ public class Main
                     transfer.setTarget(dnode);
                     transfer.setView(dview);
                     transfer.setProtocols(protocols);
-                    transfer.setDirection(Transfer.Direction.pushToVoSpace);
+                    transfer.setDirection(this.transferDirection);
 
                     ClientTransfer clientTransfer = new ClientTransfer(this.client.pushToVoSpace(transfer));
                     log.debug(clientTransfer.toXmlString());
@@ -283,9 +283,38 @@ public class Main
                     throw new RuntimeException(e);
                 }
             }
-            else if (this.transferDirection.equals(Direction.pullFromVoSpace))
+            else if (this.transferDirection.equals(Transfer.Direction.pullFromVoSpace))
             {
+                try
+                {
+                    DataNode dnode = new DataNode(new VOSURI(this.source));
+                    DataView dview = new DataView(VOS.VIEW_DEFAULT, dnode);
 
+                    List<Protocol> protocols = new ArrayList<Protocol>();
+                    protocols.add(new Protocol(VOS.PROTOCOL_HTTPS_GET, this.baseUrl, null));
+
+                    Transfer transfer = new Transfer();
+                    transfer.setTarget(dnode);
+                    transfer.setView(dview);
+                    transfer.setProtocols(protocols);
+                    transfer.setDirection(this.transferDirection);
+
+                    ClientTransfer clientTransfer = new ClientTransfer(this.client.pullFromVoSpace(transfer));
+                    log.debug(clientTransfer.toXmlString());
+
+                    log.debug("this.source: " + this.source);
+                    File fileToSave = new File(this.destination);
+                    clientTransfer.doDownload(fileToSave);
+                    Node node = clientTransfer.getTarget();
+                    log.debug("clientTransfer getTarget: " + node);
+                    Node nodeRtn = this.client.getNode(node.getPath());
+                    log.debug("Node returned from getNode, after doDownload: " + VOSClientUtil.xmlString(nodeRtn));
+                }
+                catch (URISyntaxException e)
+                {
+                    e.printStackTrace();
+                    throw new RuntimeException(e);
+                }
             }
 
         }
