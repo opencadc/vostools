@@ -1,0 +1,40 @@
+This is the OpenCADC utility library. 
+
+It includes classes that are very general purpose and used in multiple other OpenCADC
+projects. 
+
+
+* Note about the SSL support in ca.nrc.cadc.auth
+
+The SSLUtil class is intended to support IVOA Single Sign On (SSO) so the
+current functionaility is aimed at mutual authentication: both the client
+and the server have X509 certificates. We assume the client is actually using 
+a short-lived, no-password proxy certificate. The createProxyCert script uses
+openssl to create a proxy certificate and associated priovate key for this 
+purpose.
+
+The SSLUtilTest code assumes that you have created test/resources/proxy.crt and
+test/resources/proxy.key using this script, eg:
+
+./scripts/createProxycert <your real cert> <your private key> <days> test/resources/proxy
+
+This also creates a file called test/resources/proxy.pem that can be used with curl, 
+assuming your version of curl is built with SSL support.
+
+The SSL tests try to connect to 3 different https URLS:
+https://www.google.com/
+https://<FQDN of localhost>/
+https://www.cadc-ccda.hia-iha.nrc-cnrc.gc.ca/
+
+Google has a valid server certificate and does not challenge for a client certificate.
+
+We assume localhost has an invalid (eg self-signed) server certificate and the test is
+intended to fail to trust the server. This is typical of a developer workstation, for
+example. A second test with this server passes when a special system property is set 
+(see BasicX509TrustManager); this is intended for use in test code only and not as a
+work-around for using real services with invalid certificates!!
+
+CADC's public web servers have valid server certificates and require client authentication via
+certificate so they act a as a decent SSO setup test.
+
+

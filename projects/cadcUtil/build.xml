@@ -89,15 +89,42 @@
 
 	<property name="jars" value="${ext.lib}/servlet-api.jar:${ext.lib}/log4j.jar:${ext.lib}/jdom.jar" />
 
-<target name="build" depends="compile">
-    <jar jarfile="${build}/lib/${project}.jar"
-		basedir="${build}/class" 
-		update="no">
-            <include name="ca/nrc/cadc/**" />
-    </jar>
-</target>
+    <target name="build" depends="compile">
+        <jar jarfile="${build}/lib/${project}.jar"
+                    basedir="${build}/class"
+                    update="no">
+                <include name="ca/nrc/cadc/**" />
+        </jar>
+    </target>
 
-<target name="test">
-	<echo message="no tests implemented" />
-</target>
+    <!-- JAR files needed to run the test suite -->
+    <property name="ext.junit" value="${ext.lib}/junit.jar" />
+
+    <!-- compile the test classes -->
+    <target name="compile-test" depends="build">
+        <javac destdir="${build}/class"
+               source="${java.source.version}"
+               target="${java.target.version}"
+               classpath="${jars}:${ext.junit}:${resources.dir}" >
+            <src path="test/src"/>
+        </javac>
+    </target>
+
+    <!-- Run the test suite -->
+    <target name="test" depends="compile-test">
+        <echo message="Running test" />
+
+        <!-- Run the junit test suite -->
+        <echo message="Running test suite..." />
+        <junit printsummary="yes" haltonfailure="yes" fork="yes">
+            <classpath>
+                <pathelement path="build/class"/>
+                <pathelement path="${resources.dir}"/>
+                <pathelement path="${jars}:${ext.junit}"/>
+            </classpath>
+
+            <test name="ca.nrc.cadc.auth.SSLUtilTest"/>
+            <formatter type="plain" usefile="false"/>
+        </junit>
+    </target>
 </project>

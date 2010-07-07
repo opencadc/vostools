@@ -1,0 +1,178 @@
+#!/bin/sh
+#
+#***********************************************************************
+#******************  CANADIAN ASTRONOMY DATA CENTRE  *******************
+#*************  CENTRE CANADIEN DE DONNÉES ASTRONOMIQUES  **************
+#
+#  (c) 2010.                            (c) 2010.
+#  Government of Canada                 Gouvernement du Canada
+#  National Research Council            Conseil national de recherches
+#  Ottawa, Canada, K1A 0R6              Ottawa, Canada, K1A 0R6
+#  All rights reserved                  Tous droits réservés
+#                                       
+#  NRC disclaims any warranties,        Le CNRC dénie toute garantie
+#  expressed, implied, or               énoncée, implicite ou légale,
+#  statutory, of any kind with          de quelque nature que ce
+#  respect to the software,             soit, concernant le logiciel,
+#  including without limitation         y compris sans restriction
+#  any warranty of merchantability      toute garantie de valeur
+#  or fitness for a particular          marchande ou de pertinence
+#  purpose. NRC shall not be            pour un usage particulier.
+#  liable in any event for any          Le CNRC ne pourra en aucun cas
+#  damages, whether direct or           être tenu responsable de tout
+#  indirect, special or general,        dommage, direct ou indirect,
+#  consequential or incidental,         particulier ou général,
+#  arising from the use of the          accessoire ou fortuit, résultant
+#  software.  Neither the name          de l'utilisation du logiciel. Ni
+#  of the National Research             le nom du Conseil National de
+#  Council of Canada nor the            Recherches du Canada ni les noms
+#  names of its contributors may        de ses  participants ne peuvent
+#  be used to endorse or promote        être utilisés pour approuver ou
+#  products derived from this           promouvoir les produits dérivés
+#  software without specific prior      de ce logiciel sans autorisation
+#  written permission.                  préalable et particulière
+#                                       par écrit.
+#                                       
+#  This file is part of the             Ce fichier fait partie du projet
+#  OpenCADC project.                    OpenCADC.
+#                                       
+#  OpenCADC is free software:           OpenCADC est un logiciel libre ;
+#  you can redistribute it and/or       vous pouvez le redistribuer ou le
+#  modify it under the terms of         modifier suivant les termes de
+#  the GNU Affero General Public        la “GNU Affero General Public
+#  License as published by the          License” telle que publiée
+#  Free Software Foundation,            par la Free Software Foundation
+#  either version 3 of the              : soit la version 3 de cette
+#  License, or (at your option)         licence, soit (à votre gré)
+#  any later version.                   toute version ultérieure.
+#                                       
+#  OpenCADC is distributed in the       OpenCADC est distribué
+#  hope that it will be useful,         dans l’espoir qu’il vous
+#  but WITHOUT ANY WARRANTY;            sera utile, mais SANS AUCUNE
+#  without even the implied             GARANTIE : sans même la garantie
+#  warranty of MERCHANTABILITY          implicite de COMMERCIALISABILITÉ
+#  or FITNESS FOR A PARTICULAR          ni d’ADÉQUATION À UN OBJECTIF
+#  PURPOSE.  See the GNU Affero         PARTICULIER. Consultez la Licence
+#  General Public License for           Générale Publique GNU Affero
+#  more details.                        pour plus de détails.
+#                                       
+#  You should have received             Vous devriez avoir reçu une
+#  a copy of the GNU Affero             copie de la Licence Générale
+#  General Public License along         Publique GNU Affero avec
+#  with OpenCADC.  If not, see          OpenCADC ; si ce n’est
+#  <http://www.gnu.org/licenses/>.      pas le cas, consultez :
+#                                       <http://www.gnu.org/licenses/>.
+#
+#  $Revision: 4 $
+#
+#***********************************************************************
+#
+
+USAGE="Usage: createProxyCert <UserPublicCertificateFile>  <UserPrivateKeyFile> <DaysValid> <ProxyFileBasename>"
+
+# we want at least one parameter (it may be a flag or an argument)
+if [ $# -ne 4 ]; then
+	echo $USAGE >&2
+	exit 1
+fi
+
+userpubcert=$1
+userprivcert=$2
+days=$3
+proxyfilename=$4
+
+subj_temp=`openssl x509 -subject -noout -in $userpubcert`
+
+
+
+#Kludge to strip off 'subject='
+subj=`echo $subj_temp | awk -F"subject= " '{print $2}'`
+
+#Additonal hack to get CN
+cn=`echo $subj | awk -F/ '{for (i=2 ; i<=NF ; i++) {print $i}}' | awk -F'=' '{if ($1 ~ "CN") {print $2}}'`
+cnf=`echo $cn | awk '{gsub(" ","",$0); print $0}'`
+
+randomdirname=`/bin/date +%N`
+
+# Make sure the remove at the end will not kill all of /tmp
+if [ "X$randomdirname" = "X" ]; then
+  randomdirname="FALLBACK_TMP_DIR"
+fi
+
+tmpdir="/tmp/$randomdirname/$cnf"
+/bin/mkdir -p $tmpdir
+
+echo "[ req ]
+default_bits       = 512
+#default_keyfile    = proxykey.pem
+distinguished_name = req_distinguished_name
+encrypt_rsa_key    = no
+default_md         = md5
+
+
+[ req_distinguished_name ]
+organizationName         = Organization Name \"O\" (eg, company)
+organizationName_default =
+
+organizationalUnitName         = Organizational Unit Name \"OU\" (eg, section)
+organizationalUnitName_default =
+
+0.commonName         = Common Name \"CN\" (eg, YOUR name)
+0.commonName_default =
+
+emailAddress         = Email Address
+emailAddress_default =
+
+1.commonName         = Common Name \"CN\" (unique 8 digit number)
+1.commonName_default =
+
+[ v3_proxy ]
+proxyCertInfo=critical,language:id-ppl-inheritAll
+keyUsage=digitalSignature,keyEncipherment,dataEncipherment
+" > $tmpdir/csr.conf
+
+openssl req -new -config $tmpdir/csr.conf -out $tmpdir/proxyreq$cnf.csr -keyout $tmpdir/proxy$cnf.key -subj "$subj/CN=$$"
+
+if [ $? != 0 ]; then
+    echo "Errors generating the proxy certificate"
+    exit $?
+fi
+
+# make sure the key is PKCS#1
+openssl rsa -in $tmpdir/proxy$cnf.key -out  $tmpdir/proxy$cnf.key
+
+openssl x509 -req -md5 -CAcreateserial -in $tmpdir/proxyreq$cnf.csr -days 1 -CA $userpubcert -CAkey $userprivcert -extfile $tmpdir/csr.conf -extensions v3_proxy -out $tmpdir/proxyclient$cnf.pem
+
+if [ $? != 0 ]; then
+    echo "Errors signing the proxy certificate"
+    rm -Rf $tmpdir
+    exit $?
+fi
+
+# extract just the cert from the userpubcert file
+openssl x509 -in $userpubcert -outform PEM -out $tmpdir/userpubcert.pem
+
+# extract the RSA private key in DER format for java apps
+openssl pkcs8 -topk8 -inform PEM -in $tmpdir/proxy$cnf.key -outform DER -nocrypt -out $proxyfilename.key
+
+
+cat $tmpdir/proxyclient$cnf.pem $tmpdir/proxy$cnf.key $tmpdir/userpubcert.pem > $proxyfilename.pem
+cat $tmpdir/proxyclient$cnf.pem $tmpdir/userpubcert.pem > $proxyfilename.crt
+
+echo "
+Successfully generated proxy certificate $proxyfilename. The certificate is valid for $days days.
+"
+
+echo "
+This will create three files with the same base name:
+.pem file with both the certificate chain and a new private key)
+.crt file with just the certificate chain (PEM format)
+.key file with just the private key (DER format)
+
+The PEM file is usable with ssl-enabled curl (--cert) while the .crt and .key files are usable with Java
+applications that use the SSLUtil class from OpenCADC (this library).
+"
+
+#clean up
+rm -Rf $tmpdir
+
