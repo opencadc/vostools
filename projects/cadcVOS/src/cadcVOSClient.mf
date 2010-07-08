@@ -1,2 +1,0 @@
-Main-Class: ca.nrc.cadc.vos.client.Main
-Class-Path: cadcUtil.jar cadcUWS.jar jdom.jar xerces.jar log4j.jar cadcDownloadManagerClient.jar 

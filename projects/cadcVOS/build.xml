@@ -100,6 +100,7 @@
 
     <property name="jars" value="${ext.restlet}:${ext.restlet.ext}:${ext.log4j}:${ext.spring}:${ext.jdom}:${cadcUtil}:${cadcUWS}:${cadcGMS}:${cadcDownloadManagerClient}" />
 
+    <property name="client.jars" value="cadcUtil.jar cadcUWS.jar cadcDownloadManagerClient.jar ${ext.jdom} ${ext.log4j} jdom.jar log4j.jar" />
     <target name="build" depends="client,server" />
 
     <target name="server" depends="compile,schema">
@@ -111,11 +112,11 @@
         </jar>
     </target>
 
-    <target name="client" depends="compile,schema">
+    <target name="client" depends="compile,schema,manifest">
         <jar jarfile="${build}/lib/${project}Client.jar"
             basedir="${build}/class"
             update="no"
-            manifest="src/${project}Client.mf">
+            manifest="${build}/tmp/${project}Client.mf">
             <include name="ca/nrc/cadc/vos/client/**" />
             <include name="ca/nrc/cadc/vos/**.class" />
             <include name="VOSpace-2.0.xsd" />
@@ -124,6 +125,14 @@
 
     <target name="schema">
         <copy file="src/resources/VOSpace-2.0.xsd" todir="build/class"/>
+    </target>
+
+    <target name="manifest">
+        <manifest file="build/tmp/${project}Client.mf" mode="replace">
+            <attribute name="Main-Class" value="ca.nrc.cadc.vos.client.Main"/>
+            <attribute name="Class-Path" value="${client.jars}" />
+        </manifest>
+
     </target>
 
     <!-- JAR files needed to run the test suite -->
