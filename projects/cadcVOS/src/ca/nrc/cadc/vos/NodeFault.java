@@ -94,6 +94,7 @@ public enum NodeFault
     NodeBusy ( Status.CLIENT_ERROR_CONFLICT );
 
     private Status status;
+    private String message;
     
     private NodeFault(Status status)
     {
@@ -108,6 +109,16 @@ public enum NodeFault
     public String toString()
     {
         return name();
+    }
+
+    public String getMessage()
+    {
+        return message;
+    }
+
+    public void setMessage(String message)
+    {
+        this.message = message;
     }
 
 }

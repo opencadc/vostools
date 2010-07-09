@@ -69,44 +69,27 @@
 
 package ca.nrc.cadc.vos.server.web.restlet.resource;
 
-import java.io.FileNotFoundException;
 import java.net.URISyntaxException;
 import java.security.AccessControlException;
-import java.security.Principal;
-import java.security.PrivilegedActionException;
-import java.security.cert.X509Certificate;
-import java.util.Collection;
-import java.util.HashSet;
-import java.util.Map;
-import java.util.Set;
-import java.util.concurrent.CopyOnWriteArraySet;
 
 import javax.security.auth.Subject;
 
 import org.apache.log4j.Logger;
-import org.restlet.Request;
-import org.restlet.data.Method;
 import org.restlet.representation.Representation;
 import org.restlet.resource.Delete;
 import org.restlet.resource.Get;
 import org.restlet.resource.Post;
 import org.restlet.resource.Put;
 
-import ca.nrc.cadc.vos.ContainerNode;
-import ca.nrc.cadc.vos.Node;
 import ca.nrc.cadc.vos.NodeFault;
-import ca.nrc.cadc.vos.NodeParsingException;
 import ca.nrc.cadc.vos.VOSURI;
-import ca.nrc.cadc.vos.server.SearchNode;
-import ca.nrc.cadc.vos.server.auth.PrivilegedReadAuthorizationExceptionAction;
-import ca.nrc.cadc.vos.server.auth.PrivilegedWriteAuthorizationExceptionAction;
 import ca.nrc.cadc.vos.server.auth.VOSpaceAuthorizer;
 import ca.nrc.cadc.vos.server.web.representation.NodeErrorRepresentation;
-import ca.nrc.cadc.vos.server.web.representation.NodeInputRepresentation;
 import ca.nrc.cadc.vos.server.web.restlet.action.CreateNodeAction;
 import ca.nrc.cadc.vos.server.web.restlet.action.DeleteNodeAction;
 import ca.nrc.cadc.vos.server.web.restlet.action.GetNodeAction;
 import ca.nrc.cadc.vos.server.web.restlet.action.NodeAction;
+import ca.nrc.cadc.vos.server.web.restlet.action.NodeActionResult;
 import ca.nrc.cadc.vos.server.web.restlet.action.UpdatePropertiesAction;
 
 /**
@@ -119,15 +102,9 @@ public class NodeResource extends BaseResource
 {
     private static Logger log = Logger.getLogger(NodeResource.class);
     
-    private static final String CERTIFICATE_REQUEST_ATTRIBUTE_NAME = "org.restlet.https.clientCertificates";
-    
     private String path;
-    private Node node;
-    private String ownerDN;
     private NodeFault nodeFault;
-    private String faultMessage;
     private VOSURI vosURI;
-    
     
     /**
      * Called after object instantiation.
@@ -136,25 +113,10 @@ public class NodeResource extends BaseResource
     {
         log.debug("Enter NodeResource.doInit(): " + getMethod());
 
-        // Create a subject for authentication
-        Set<Principal> principals = getPrincipals(getRequest());
-        Subject subject = null;
-        if (principals != null && principals.size() > 0) {
-            Set<Object> emptyCredentials = new HashSet<Object>();
-            subject = new Subject(true, principals, emptyCredentials, emptyCredentials);
-        }
-        
-        log.debug(principals.size() + " principals found in request.");
-        
         try
         {
-            Set<Method> allowedMethods = new CopyOnWriteArraySet<Method>();
-            allowedMethods.add(Method.GET);
-            allowedMethods.add(Method.PUT);
-            allowedMethods.add(Method.DELETE);
-            allowedMethods.add(Method.POST);
-            setAllowedMethods(allowedMethods);
-
+            super.doInit();
+            
             path = (String) getRequest().getAttributes().get("nodePath");  
             log.debug("path = " + path);
             
@@ -165,111 +127,41 @@ public class NodeResource extends BaseResource
             
             vosURI = new VOSURI(getVosUriPrefix() + "/" + path);
             
-            // Get the node for the operation, either from the persistent layer,
-            // or from the client supplied xml
-            Node clientNode = null;
-            if (getMethod().equals(Method.GET) || getMethod().equals(Method.DELETE))
-            {
-                clientNode = new SearchNode(vosURI);
-            }
-            else if (getMethod().equals(Method.PUT) || getMethod().equals(Method.POST))
-            {
-                Representation xml = getRequestEntity();
-                NodeInputRepresentation nodeInputRepresentation =
-                    new NodeInputRepresentation(xml, path);
-                clientNode = nodeInputRepresentation.getNode();
-            }
-            else
-            {
-                throw new UnsupportedOperationException("Method not supported: " + getMethod());
-            }
-            
-            log.debug("Client node is: " + clientNode);
-            
-            // perform the authorization check
-            VOSpaceAuthorizer voSpaceAuthorizer = new VOSpaceAuthorizer();
-            voSpaceAuthorizer.setNodePersistence(getNodePersistence());
-            voSpaceAuthorizer.setGmsClient(getGmsClient());
-            try
-            {
-                if (getMethod().equals(Method.GET))
-                {
-                    PrivilegedReadAuthorizationExceptionAction readAuthorization =
-                        new PrivilegedReadAuthorizationExceptionAction(voSpaceAuthorizer, clientNode);
-                    node = (Node) Subject.doAs(subject, readAuthorization);
-                }
-                else if (getMethod().equals(Method.PUT))
-                {
-                    PrivilegedWriteAuthorizationExceptionAction writeAuthorization =
-                        new PrivilegedWriteAuthorizationExceptionAction(voSpaceAuthorizer, clientNode.getParent());
-                    ContainerNode parent = (ContainerNode) Subject.doAs(subject, writeAuthorization);
-                    node = clientNode;
-                    node.setParent(parent);
-                    // set the owner on the node to be the distinguished name
-                    // contained in the client certificate(s)
-                    node.setOwner(ownerDN);
-                }
-                else 
-                {
-                    // (DELETE or POST)
-                    PrivilegedWriteAuthorizationExceptionAction writeAuthorization =
-                        new PrivilegedWriteAuthorizationExceptionAction(voSpaceAuthorizer, clientNode);
-                    node = (Node) Subject.doAs(subject, writeAuthorization);
-                    node.setProperties(clientNode.getProperties());
-                }
-            }
-            catch (PrivilegedActionException e)
-            {
-                log.info("Authentication failed: " + e.getCause().getMessage());
-                throw e.getCause();
-            }
-            
-            setNodeURI(node, vosURI);
-            
-            
-            log.debug("doInit() retrived node: " + node);
-        }
-        catch (FileNotFoundException e)
-        {
-            faultMessage = vosURI.toString();
-            log.debug("Could not find node with path: " + path, e);
-            nodeFault = NodeFault.NodeNotFound;
         }
         catch (URISyntaxException e)
         {
-            faultMessage = "URI not well formed: " + vosURI;
-            log.debug(faultMessage, e);
+            String message = "URI not well formed: " + vosURI;
+            log.debug(message, e);
             nodeFault = NodeFault.InvalidURI;
+            nodeFault.setMessage(message);
         }
         catch (AccessControlException e)
         {
-            faultMessage = "Access Denied: " + e.getMessage();
-            log.debug(faultMessage, e);
+            String message = "Access Denied: " + e.getMessage();
+            log.debug(message, e);
             nodeFault = NodeFault.PermissionDenied;
-        }
-        catch (NodeParsingException e)
-        {
-            faultMessage = "Node XML not well formed: " + e.getMessage();
-            log.debug(faultMessage, e);
-            nodeFault = NodeFault.InvalidToken;
+            nodeFault.setMessage(message);
         }
         catch (UnsupportedOperationException e)
         {
-            faultMessage = "Not supported: " + e.getMessage();
-            log.debug(faultMessage, e);
+            String message = "Not supported: " + e.getMessage();
+            log.debug(message, e);
             nodeFault = NodeFault.NotSupported;
+            nodeFault.setMessage(message);
         }
         catch (IllegalArgumentException e)
         {
-            faultMessage = "Bad input: " + e.getMessage();
-            log.debug(faultMessage, e);
+            String message = "Bad input: " + e.getMessage();
+            log.debug(message, e);
             nodeFault = NodeFault.BadRequest;
+            nodeFault.setMessage(message);
         }
         catch (Throwable t)
         {
-            faultMessage = "Internal Error:" + t.getMessage();
-            log.debug(faultMessage, t);
+            String message = "Internal Error:" + t.getMessage();
+            log.debug(message, t);
             nodeFault = NodeFault.InternalFault;
+            nodeFault.setMessage(message);
         }
     }
     
@@ -287,23 +179,41 @@ public class NodeResource extends BaseResource
             if (nodeFault != null)
             {
                 setStatus(nodeFault.getStatus());
-                if (faultMessage == null)
-                {
-                    return new NodeErrorRepresentation(nodeFault);
-                }
-                else
-                {
-                    return new NodeErrorRepresentation(nodeFault, faultMessage);
-                }
+                return new NodeErrorRepresentation(nodeFault);
             }
+            
+            VOSpaceAuthorizer voSpaceAuthorizer = new VOSpaceAuthorizer();
+            voSpaceAuthorizer.setNodePersistence(getNodePersistence());
+            voSpaceAuthorizer.setGmsClient(getGmsClient());
+            
+            action.setVOSpaceAuthorizer(voSpaceAuthorizer);
+            action.setNodePersistence(getNodePersistence());
+            action.setVosURI(vosURI);
+            action.setNodeXML(getRequestEntity());
 
-            return action.perform(this);
+            NodeActionResult result = null;
+            if (getSubject() == null)
+            {
+                result = (NodeActionResult) action.run();
+            }
+            else
+            {
+                result = (NodeActionResult) Subject.doAs(getSubject(), action);
+            }
+            
+            if (result != null)
+            {
+                setStatus(result.getStatus());
+                return result.getRepresentation();
+            }
+            return null;
+            
         }
         catch (Throwable t)
         {
             log.debug(t);
             setStatus(NodeFault.InternalFault.getStatus());
-            return new NodeErrorRepresentation(NodeFault.InternalFault, t.getMessage());
+            return new NodeErrorRepresentation(NodeFault.InternalFault);
         }
     }
     
@@ -347,67 +257,6 @@ public class NodeResource extends BaseResource
         return performNodeAction(new DeleteNodeAction());
     }
     
-    /**
-     * Using the restlet request object, get all the
-     * certificate authentication principals.
-     * @param request The restlet request object.
-     * @return A set of principals found in the restlet request.
-     */
-    @SuppressWarnings("unchecked")
-    private Set<Principal> getPrincipals(Request request) {
-        
-        Set<Principal> principals = new HashSet<Principal>();
-        // look for X509 certificates
-        Map<String, Object> requestAttributes = request.getAttributes();
-        if (requestAttributes.containsKey(CERTIFICATE_REQUEST_ATTRIBUTE_NAME))
-        {
-            final Collection<X509Certificate> clientCertificates =
-                (Collection<X509Certificate>)requestAttributes.get(CERTIFICATE_REQUEST_ATTRIBUTE_NAME);
-            
-            if ((clientCertificates != null) && (!clientCertificates.isEmpty()))
-            {
-                for (final X509Certificate cert : clientCertificates)
-                {
-                    principals.add(cert.getSubjectX500Principal());
-                    if (ownerDN == null)
-                    {
-                        ownerDN = cert.getSubjectX500Principal().getName();
-                    }
-                }
-            }
-        }
-        
-        return principals;
-        
-    }
-    
-    private void setNodeURI(Node node, VOSURI uri) throws URISyntaxException
-    {
-        node.setUri(uri);
-        if (node instanceof ContainerNode)
-        {
-            ContainerNode containerNode = (ContainerNode) node;
-            for (Node child : containerNode.getNodes())
-            {
-                VOSURI childURI = new VOSURI(uri.toString() + "/" + child.getName());
-                setNodeURI(child, childURI);
-            }
-        }
-    }
-    
-    public Node getNode()
-    {
-        return node;
-    }
-    
-    public VOSURI getVosURI()
-    {
-        return vosURI;
-    }
-    
-    public String getPath()
-    {
-        return path;
-    }
+
     
 }

@@ -93,12 +93,24 @@ public class NodeInputRepresentation
     public NodeInputRepresentation(Representation xmlValue, String expectedPath)
     {
         this.xmlValue = xmlValue;
-        this.expectedPath = expectedPath;
+        
+        if (expectedPath != null)
+        {
+            if (expectedPath.startsWith("/"))
+            {
+                this.expectedPath = expectedPath.substring(1);
+            }
+            else
+            {
+                this.expectedPath = expectedPath;
+            }
+        }
     }
     
     public Node getNode() throws IOException, NodeParsingException, URISyntaxException
     {
         Node node = new NodeReader().read(xmlValue.getStream());
+        
         
         // ensure the path in the XML URI matches the path in the URL
         if (!node.getPath().equals(expectedPath))

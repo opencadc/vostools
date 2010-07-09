@@ -90,12 +90,10 @@ public class NodeErrorRepresentation extends OutputRepresentation
     {
         super(MediaType.TEXT_PLAIN);
         this.message = nodeFault.toString();
-    }
-    
-    public NodeErrorRepresentation(NodeFault nodeFault, String info)
-    {
-        super(MediaType.TEXT_PLAIN);
-        this.message = nodeFault.toString() + " " + info;
+        if (nodeFault.getMessage() != null)
+        {
+            this.message += " " + nodeFault.getMessage();
+        }
     }
 
     @Override

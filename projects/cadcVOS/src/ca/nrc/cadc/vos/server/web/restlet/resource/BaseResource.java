@@ -69,6 +69,19 @@
 
 package ca.nrc.cadc.vos.server.web.restlet.resource;
 
+import java.security.Principal;
+import java.security.cert.X509Certificate;
+import java.util.Collection;
+import java.util.HashSet;
+import java.util.Map;
+import java.util.Set;
+import java.util.concurrent.CopyOnWriteArraySet;
+
+import javax.security.auth.Subject;
+
+import org.apache.log4j.Logger;
+import org.restlet.Request;
+import org.restlet.data.Method;
 import org.restlet.resource.ServerResource;
 
 import ca.nrc.cadc.gms.client.GmsClient;
@@ -77,10 +90,14 @@ import ca.nrc.cadc.vos.server.util.BeanUtil;
 
 public abstract class BaseResource extends ServerResource
 {
+    private static Logger log = Logger.getLogger(BaseResource.class);
+    
+    private static final String CERTIFICATE_REQUEST_ATTRIBUTE_NAME = "org.restlet.https.clientCertificates";
     
     private String vosUriPrefix;
     private NodePersistence nodePersistence;
     private GmsClient gmsClient;
+    private Subject subject;
     
     protected BaseResource()
     {
@@ -99,7 +116,25 @@ public abstract class BaseResource extends ServerResource
                 get(BeanUtil.GMS_CLIENT);
     }
     
-    public String getVosUriPrefix()
+    public void doInit()
+    {
+        Set<Method> allowedMethods = new CopyOnWriteArraySet<Method>();
+        allowedMethods.add(Method.GET);
+        allowedMethods.add(Method.PUT);
+        allowedMethods.add(Method.DELETE);
+        allowedMethods.add(Method.POST);
+        setAllowedMethods(allowedMethods);
+        
+        // Create a subject for authentication
+        Set<Principal> principals = getPrincipals(getRequest());
+        if (principals != null && principals.size() > 0) {
+            Set<Object> emptyCredentials = new HashSet<Object>();
+            subject = new Subject(true, principals, emptyCredentials, emptyCredentials);
+        }
+        log.debug(principals.size() + " principals found in request.");
+    }
+    
+    public final String getVosUriPrefix()
     {
         return vosUriPrefix;
     }
@@ -112,6 +147,41 @@ public abstract class BaseResource extends ServerResource
     public final GmsClient getGmsClient()
     {
         return gmsClient;
+    }
+    
+    public final Subject getSubject()
+    {
+        return subject;
+    }
+    
+    /**
+     * Using the restlet request object, get all the
+     * certificate authentication principals.
+     * @param request The restlet request object.
+     * @return A set of principals found in the restlet request.
+     */
+    @SuppressWarnings("unchecked")
+    protected Set<Principal> getPrincipals(Request request) {
+        
+        Set<Principal> principals = new HashSet<Principal>();
+        // look for X509 certificates
+        Map<String, Object> requestAttributes = request.getAttributes();
+        if (requestAttributes.containsKey(CERTIFICATE_REQUEST_ATTRIBUTE_NAME))
+        {
+            final Collection<X509Certificate> clientCertificates =
+                (Collection<X509Certificate>)requestAttributes.get(CERTIFICATE_REQUEST_ATTRIBUTE_NAME);
+            
+            if ((clientCertificates != null) && (!clientCertificates.isEmpty()))
+            {
+                for (final X509Certificate cert : clientCertificates)
+                {
+                    principals.add(cert.getSubjectX500Principal());
+                }
+            }
+        }
+        
+        return principals;
+        
     }
 
 }
