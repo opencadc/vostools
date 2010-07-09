@@ -97,10 +97,12 @@
     <property name="ext.log4j" value="${ext.lib}/log4j.jar" />
     <property name="ext.spring" value="${ext.lib}/spring.jar" />
     <property name="ext.jdom" value="${ext.lib}/jdom.jar" />
+    <property name="ext.xerces" value="${ext.lib}/xerces.jar" />
 
     <property name="jars" value="${ext.restlet}:${ext.restlet.ext}:${ext.log4j}:${ext.spring}:${ext.jdom}:${cadcUtil}:${cadcUWS}:${cadcGMS}:${cadcDownloadManagerClient}" />
 
-    <property name="client.jars" value="cadcUtil.jar cadcUWS.jar cadcDownloadManagerClient.jar ${ext.jdom} ${ext.log4j} jdom.jar log4j.jar" />
+    <property name="client.jars" value="cadcUtil.jar cadcUWS.jar cadcDownloadManagerClient.jar ${ext.jdom} ${ext.xerces} ${ext.log4j} jdom.jar xerces.jar log4j.jar" />
+
     <target name="build" depends="client,server" />
 
     <target name="server" depends="compile,schema">
