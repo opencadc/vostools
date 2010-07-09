@@ -75,12 +75,8 @@ import java.io.InputStream;
 import java.net.InetAddress;
 import java.net.MalformedURLException;
 import java.net.URI;
-import java.net.URISyntaxException;
 import java.net.URL;
 import java.net.UnknownHostException;
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import org.apache.log4j.Logger;
@@ -89,6 +85,13 @@ import org.apache.log4j.Logger;
 /**
  * A very simple caching IVOA Registry client. All the lookups done by this client use a properties
  * file named RegistryClient.properties found via the classpath.
+ * </p><p>
+ * Note for developers: You can set a system property to force this class to replace the hostname
+ * in the resuting URL with the canonical hostname of the local host. This is useful for testing:
+ * </p>
+ * <pre>
+ * ca.nrc.cadc.reg.client.RegistryClient.local=true
+ * </pre>
  *
  * @author pdowler
  */
