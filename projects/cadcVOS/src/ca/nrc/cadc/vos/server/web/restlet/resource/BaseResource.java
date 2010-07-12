@@ -69,6 +69,7 @@
 
 package ca.nrc.cadc.vos.server.web.restlet.resource;
 
+import ca.nrc.cadc.auth.AuthenticationUtil;
 import java.security.Principal;
 import java.security.cert.X509Certificate;
 import java.util.Collection;
@@ -115,7 +116,8 @@ public abstract class BaseResource extends ServerResource
             (GmsClient) getApplication().getContext().getAttributes().
                 get(BeanUtil.GMS_CLIENT);
     }
-    
+
+    @Override
     public void doInit()
     {
         Set<Method> allowedMethods = new CopyOnWriteArraySet<Method>();
@@ -126,12 +128,11 @@ public abstract class BaseResource extends ServerResource
         setAllowedMethods(allowedMethods);
         
         // Create a subject for authentication
-        Set<Principal> principals = getPrincipals(getRequest());
-        if (principals != null && principals.size() > 0) {
-            Set<Object> emptyCredentials = new HashSet<Object>();
-            subject = new Subject(true, principals, emptyCredentials, emptyCredentials);
-        }
-        log.debug(principals.size() + " principals found in request.");
+        Request request = getRequest();
+        Map<String, Object> requestAttributes = request.getAttributes();
+        Collection<X509Certificate> certs = (Collection<X509Certificate>) requestAttributes.get(CERTIFICATE_REQUEST_ATTRIBUTE_NAME);
+        this.subject = AuthenticationUtil.getSubject(null, certs);
+        log.debug(subject);
     }
     
     public final String getVosUriPrefix()
@@ -153,35 +154,4 @@ public abstract class BaseResource extends ServerResource
     {
         return subject;
     }
-    
-    /**
-     * Using the restlet request object, get all the
-     * certificate authentication principals.
-     * @param request The restlet request object.
-     * @return A set of principals found in the restlet request.
-     */
-    @SuppressWarnings("unchecked")
-    protected Set<Principal> getPrincipals(Request request) {
-        
-        Set<Principal> principals = new HashSet<Principal>();
-        // look for X509 certificates
-        Map<String, Object> requestAttributes = request.getAttributes();
-        if (requestAttributes.containsKey(CERTIFICATE_REQUEST_ATTRIBUTE_NAME))
-        {
-            final Collection<X509Certificate> clientCertificates =
-                (Collection<X509Certificate>)requestAttributes.get(CERTIFICATE_REQUEST_ATTRIBUTE_NAME);
-            
-            if ((clientCertificates != null) && (!clientCertificates.isEmpty()))
-            {
-                for (final X509Certificate cert : clientCertificates)
-                {
-                    principals.add(cert.getSubjectX500Principal());
-                }
-            }
-        }
-        
-        return principals;
-        
-    }
-
 }
