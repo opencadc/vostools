@@ -73,7 +73,8 @@ import ca.nrc.cadc.net.NetUtil;
 import java.lang.reflect.Constructor;
 import java.security.Principal;
 import java.security.cert.X509Certificate;
-import java.util.Enumeration;
+import java.util.Arrays;
+import java.util.Collection;
 import java.util.HashSet;
 import java.util.Iterator;
 import java.util.Set;
@@ -131,6 +132,22 @@ public class AuthenticationUtil
     }
 
     /**
+     * Create a complete Subject with principal(s) and credentials (X509Certificate) from an
+     * HttpServletRequest. 
+     *
+     * @see #getSubject(String, Collection<X509Certificate>)
+     * @param request
+     * @return a Subject with all available request content
+     */
+    public static Subject getSubject(HttpServletRequest request)
+    {
+        String remoteUser = request.getRemoteUser();
+        X509Certificate[] ca = (X509Certificate[]) request.getAttribute("javax.servlet.request.X509Certificate");
+        Collection<X509Certificate> certs = Arrays.asList(ca);
+        return getSubject(remoteUser, certs);
+    }
+
+    /**
      * Create a complete Subject with principal(s) and credentials (X509Certificate).
      * This method tries to detect the use ofa proxy certificate and add the Principal
      * representing the real identity of the user by comparing the subject and issuer fields
@@ -138,33 +155,24 @@ public class AuthenticationUtil
      * If the user has connected anonymously, the returned Subject will have no
      * principals and no credentials, but should be safe to use with Subject.doAs(...).
      *
-     * @param request
+     * @param remoteUser the remote user id (e.g. from http authentication)
+     * @param certificates certificates extracted from the calling context/session
      * @return a Subject with all available request content
      */
-    public static Subject getSubject(HttpServletRequest request)
+    public static Subject getSubject(String remoteUser, Collection<X509Certificate> certificates)
     {
         Set<Principal> principals = new HashSet<Principal>();
         Set<X509Certificate> publicCred = new HashSet<X509Certificate>();
         Set privateCreds = new HashSet();
 
         // look for basic authentication
-        String userId = request.getRemoteUser();
-        if (userId != null)
+        if (remoteUser != null)
         {
             // user logged in. Create corresponding Principal
-            principals.add(new HttpPrincipal(userId));
+            principals.add(new HttpPrincipal(remoteUser));
         }
 
-        Enumeration e = request.getAttributeNames();
-        while ( e.hasMoreElements() )
-        {
-            String name = (String) e.nextElement();
-            Object value = request.getAttribute(name);
-            log.debug("attribute: " + name+  " -- " + value.getClass().getName());
-        }
-        
         // look for X509 certificates
-        X509Certificate[] certificates = (X509Certificate[]) request.getAttribute("javax.servlet.request.X509Certificate");
         if (certificates != null)
         {
             for (X509Certificate c : certificates)
