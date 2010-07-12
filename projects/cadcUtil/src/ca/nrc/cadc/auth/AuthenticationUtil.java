@@ -73,11 +73,13 @@ import ca.nrc.cadc.net.NetUtil;
 import java.lang.reflect.Constructor;
 import java.security.Principal;
 import java.security.cert.X509Certificate;
+import java.util.Enumeration;
 import java.util.HashSet;
 import java.util.Iterator;
 import java.util.Set;
 
 import javax.security.auth.Subject;
+import javax.security.auth.x500.X500Principal;
 import javax.servlet.http.HttpServletRequest;
 import org.apache.log4j.Logger;
 
@@ -100,6 +102,7 @@ public class AuthenticationUtil
      *            request that contains use authentication information
      * @return Set of Principals extracted from the request. The Set is
      *         empty if no Principals have been extracted.
+     * @deprecated use getSubject(HttpServletRequest) instead
      */
     public static Set<Principal> getPrincipals(HttpServletRequest request)
     {
@@ -125,6 +128,71 @@ public class AuthenticationUtil
         }
 
         return principals;
+    }
+
+    /**
+     * Create a complete Subject with principal(s) and credentials (X509Certificate).
+     * This method tries to detect the use ofa proxy certificate and add the Principal
+     * representing the real identity of the user by comparing the subject and issuer fields
+     * of the certficicate and using the issuer principal when the certificate is self-signed.
+     * If the user has connected anonymously, the returned Subject will have no
+     * principals and no credentials, but should be safe to use with Subject.doAs(...).
+     *
+     * @param request
+     * @return a Subject with all available request content
+     */
+    public static Subject getSubject(HttpServletRequest request)
+    {
+        Set<Principal> principals = new HashSet<Principal>();
+        Set<X509Certificate> publicCred = new HashSet<X509Certificate>();
+        Set privateCreds = new HashSet();
+
+        // look for basic authentication
+        String userId = request.getRemoteUser();
+        if (userId != null)
+        {
+            // user logged in. Create corresponding Principal
+            principals.add(new HttpPrincipal(userId));
+        }
+
+        Enumeration e = request.getAttributeNames();
+        while ( e.hasMoreElements() )
+        {
+            String name = (String) e.nextElement();
+            Object value = request.getAttribute(name);
+            log.debug("attribute: " + name+  " -- " + value.getClass().getName());
+        }
+        
+        // look for X509 certificates
+        X509Certificate[] certificates = (X509Certificate[]) request.getAttribute("javax.servlet.request.X509Certificate");
+        if (certificates != null)
+        {
+            for (X509Certificate c : certificates)
+            {
+                // we add the certificate to public credentials and try to add the real
+                // principal to principals, eg detect proxy certificate usage here
+                Principal p = null;
+                X500Principal sp = c.getSubjectX500Principal();
+                String sdn = sp.getName(X500Principal.RFC1779);
+                X500Principal ip = c.getIssuerX500Principal();
+                String idn = ip.getName(X500Principal.RFC1779);
+                if ( sdn.endsWith(idn) )
+                {
+                    log.debug("detected self-issued proxy certificate by " + idn);
+                    p = ip;
+                }
+                else
+                {
+                    log.debug("sp.getName(RFC1779) = " + sdn);
+                    log.debug("sp.getName(RFC2253) = " + idn);
+                    p = sp;
+                }
+                principals.add(p);
+                publicCred.add(c);
+            }
+        }
+        // put the certficates into pubCredentials?
+        return new Subject(false, principals, publicCred, privateCreds);
     }
     
     // Encode a Subject in the format:
