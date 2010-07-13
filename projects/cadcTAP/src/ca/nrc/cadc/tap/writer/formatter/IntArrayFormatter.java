@@ -102,10 +102,13 @@ public class IntArrayFormatter implements Formatter
                 throw new IllegalArgumentException("Error accessing array data for " + object.getClass().getCanonicalName(), e);
             }
         }
-        if (!(object instanceof int[]))
-            throw new IllegalArgumentException("Expecting int[], " + object.getClass().getCanonicalName() + " not supported.");
+        if (object instanceof int[])
+            return toString((int[]) object);
 
-        return toString((int[]) object);
+        if (object instanceof Integer[])
+            return toString((Integer[]) object);
+
+        throw new IllegalArgumentException(object.getClass().getCanonicalName() + " not supported.");
     }
 
     private String toString(int[] iarray)
@@ -114,6 +117,17 @@ public class IntArrayFormatter implements Formatter
         for (int i : iarray)
         {
             sb.append(Integer.toString(i));
+            sb.append(",");
+        }
+        return sb.substring(0, sb.length() - 1); // trim trailing comma
+    }
+
+    private String toString(Integer[] iarray)
+    {
+        StringBuffer sb = new StringBuffer();
+        for (Integer i : iarray)
+        {
+            sb.append(i.toString());
             sb.append(",");
         }
         return sb.substring(0, sb.length() - 1); // trim trailing comma

@@ -101,10 +101,15 @@ public class DoubleArrayFormatter implements Formatter
                 throw new IllegalArgumentException("Error accessing array data for " + object.getClass().getCanonicalName(), e);
             }
         }
-        if (!(object instanceof double[]))
-            throw new IllegalArgumentException("Expecting double[], " + object.getClass().getCanonicalName() + " not supported.");
+        if (object instanceof double[])
+            return toString((double[]) object);
 
-        return toString((double[]) object);
+        if (object instanceof Double[])
+            return toString((Double[]) object);
+
+        throw new IllegalArgumentException(object.getClass().getCanonicalName() + " not supported.");
+
+        
     }
 
     private String toString(double[] arr)
@@ -113,6 +118,17 @@ public class DoubleArrayFormatter implements Formatter
         for (double d : arr)
         {
             sb.append(Double.toString(d));
+            sb.append(",");
+        }
+        return sb.substring(0, sb.length() - 1); // trim trailing comma
+    }
+
+    private String toString(Double[] arr)
+    {
+        StringBuffer sb = new StringBuffer();
+        for (Double d : arr)
+        {
+            sb.append(d.toString());
             sb.append(",");
         }
         return sb.substring(0, sb.length() - 1); // trim trailing comma

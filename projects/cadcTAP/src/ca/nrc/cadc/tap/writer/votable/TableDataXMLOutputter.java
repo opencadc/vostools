@@ -217,6 +217,7 @@ public class TableDataXMLOutputter extends XMLOutputter
                 }
                 catch (Throwable t)
                 {
+                    log.error("failed while iterating over TableDataElement", t);
                     error = true;
                     break;
                 }
