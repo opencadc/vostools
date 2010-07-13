@@ -143,7 +143,9 @@ public class AuthenticationUtil
     {
         String remoteUser = request.getRemoteUser();
         X509Certificate[] ca = (X509Certificate[]) request.getAttribute("javax.servlet.request.X509Certificate");
-        Collection<X509Certificate> certs = Arrays.asList(ca);
+        Collection<X509Certificate> certs = null;
+        if (ca != null && ca.length > 0)
+            certs = Arrays.asList(ca);
         return getSubject(remoteUser, certs);
     }
 
