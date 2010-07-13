@@ -158,6 +158,16 @@ public class VOSpaceAuthorizer implements Authorizer
                     Set<Principal> principals = subject.getPrincipals();
                     for (Principal principal : principals)
                     {
+                        NodeProperty groupRead = node.findProperty(VOS.PROPERTY_URI_GROUPREAD);
+                        
+                        if (LOG.isDebugEnabled())
+                        {
+                            String principalString = principal == null ? "null" : principal.getName();
+                            String groupReadString = groupRead == null ? "null" : groupRead.getPropertyValue();
+                            LOG.debug(String.format("Checking read permission on node (owner=%s,groupRead=%s) where user=%s",
+                                    node.getOwner(), groupReadString, principalString));
+                        }
+                        
                         // Check for ownership
                         if (nodeOwner.equals(principal))
                         {
@@ -166,7 +176,6 @@ public class VOSpaceAuthorizer implements Authorizer
                         }
                         
                         // Check for group membership
-                        NodeProperty groupRead = node.findProperty(VOS.PROPERTY_URI_GROUPREAD);
                         if (principal != null && groupRead != null && groupRead.getPropertyValue() != null)
                         {
                             if (gmsClient.isMember(groupRead.getPropertyValue(), principal.getName()))
@@ -245,6 +254,17 @@ public class VOSpaceAuthorizer implements Authorizer
                     Set<Principal> principals = subject.getPrincipals();
                     for (Principal principal : principals)
                     {   
+                        
+                        NodeProperty groupWrite = node.findProperty(VOS.PROPERTY_URI_GROUPWRITE);
+                        
+                        if (LOG.isDebugEnabled())
+                        {
+                            String principalString = principal == null ? "null" : principal.getName();
+                            String groupWriteString = groupWrite == null ? "null" : groupWrite.getPropertyValue();
+                            LOG.debug(String.format("Checking write permission on node (owner=%s,groupWrite=%s) where user=%s",
+                                    node.getOwner(), groupWriteString, principalString));
+                        }
+                        
                         // Check for ownership
                         if (nodeOwner.equals(principal))
                         {
@@ -253,7 +273,6 @@ public class VOSpaceAuthorizer implements Authorizer
                         }
                         
                         // Check for group membership
-                        NodeProperty groupWrite = node.findProperty(VOS.PROPERTY_URI_GROUPWRITE);
                         if (principal != null && groupWrite != null && groupWrite.getPropertyValue() != null)
                         {
                             if (gmsClient.isMember(groupWrite.getPropertyValue(), principal.getName()))
