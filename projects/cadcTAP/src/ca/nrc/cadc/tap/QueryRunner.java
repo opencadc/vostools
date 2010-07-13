@@ -322,8 +322,16 @@ public class QueryRunner implements JobRunner
                 {
                     logger.debug("getting database connection...");
                     connection = queryDataSource.getConnection();
-                    logger.info("executing query: " + sql);
+
+                    // manually control transaction, make fetch size (client batch size) small,
+                    // and restrict to forward only so that client memory usage is minimal since
+                    // we are only interested in reading the ResultSet once
+                    connection.setAutoCommit(false);
                     pstmt = connection.prepareStatement(sql);
+                    pstmt.setFetchSize(1000);
+                    pstmt.setFetchDirection(ResultSet.FETCH_FORWARD);
+                    
+                    logger.info("executing query: " + sql);
                     rs = pstmt.executeQuery();
                 }
 
@@ -336,6 +344,8 @@ public class QueryRunner implements JobRunner
                 logger.debug("writing ResultSet to " + tmpFile);
                 OutputStream ostream = new FileOutputStream(tmpFile);
                 writer.write(rs, ostream);
+
+
 
                 try
                 {
@@ -361,25 +371,24 @@ public class QueryRunner implements JobRunner
                 {
                     try
                     {
+                        connection.setAutoCommit(true);
+                    }
+                    catch(Throwable ignore) { }
+                    try
+                    {
                         rs.close();
                     }
-                    catch (Throwable ignore)
-                    {
-                    }
+                    catch (Throwable ignore) { }
                     try
                     {
                         pstmt.close();
                     }
-                    catch (Throwable ignore)
-                    {
-                    }
+                    catch (Throwable ignore) { }
                     try
                     {
                         connection.close();
                     }
-                    catch (Throwable ignore)
-                    {
-                    }
+                    catch (Throwable ignore) { }
                 }
             }
 
