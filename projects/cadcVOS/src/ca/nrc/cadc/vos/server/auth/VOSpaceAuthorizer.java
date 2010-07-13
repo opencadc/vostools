@@ -159,8 +159,6 @@ public class VOSpaceAuthorizer implements Authorizer
                     for (Principal principal : principals)
                     {
                         // Check for ownership
-System.out.println("^^^^^^^^^^^^^^^^BM1: " + nodeOwner.getName());
-System.out.println("^^^^^^^^^^^^^^^^BM2: " + principal.getName());
                         if (nodeOwner.equals(principal))
                         {
                             // User is the owner
