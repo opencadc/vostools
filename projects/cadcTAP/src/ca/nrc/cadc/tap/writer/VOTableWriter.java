@@ -120,6 +120,8 @@ public class VOTableWriter implements TableWriter
     // List of column names used in the select statement.
     protected List<TapSelectItem> selectList;
 
+    protected String jobID;
+    
     protected List<Parameter> params;
     
     // Maximum number of rows to write.
@@ -129,6 +131,11 @@ public class VOTableWriter implements TableWriter
     public VOTableWriter()
     {
         maxRows = Integer.MAX_VALUE;
+    }
+
+    public void setJobID(String jobID)
+    {
+        this.jobID = jobID;
     }
 
     public void setParameterList(List<Parameter> params)
@@ -166,6 +173,8 @@ public class VOTableWriter implements TableWriter
             throw new IllegalStateException("TapSchema cannot be null, set using setTapSchema()");
 
         FormatterFactory factory = DefaultFormatterFactory.getFormatterFactory();
+        factory.setJobID(jobID);
+        factory.setParamList(params);
         List<Formatter> formatters = factory.getFormatters(tapSchema, selectList);
 
         if (resultSet != null)

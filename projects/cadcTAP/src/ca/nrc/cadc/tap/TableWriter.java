@@ -87,6 +87,13 @@ import ca.nrc.cadc.uws.Parameter;
 public interface TableWriter
 {
     /**
+     * Provide the jobID to the TableWriter so it can include it with the output.
+     * 
+     * @param jobID
+     */
+    public void setJobID(String jobID);
+
+    /**
      * The complete list of job parameters. This is here to allow implementations to
      * provide custom extensions such as client control of the output.
      *

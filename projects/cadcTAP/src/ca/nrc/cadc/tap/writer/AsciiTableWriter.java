@@ -75,7 +75,6 @@ import java.io.IOException;
 import java.io.OutputStream;
 import java.nio.charset.Charset;
 import java.sql.ResultSet;
-import java.sql.ResultSetMetaData;
 import java.sql.SQLException;
 import java.util.List;
 
@@ -123,6 +122,8 @@ public class AsciiTableWriter implements TableWriter
     // List of column names used in the select statement.
     protected List<TapSelectItem> selectList;
 
+    protected String jobID;
+    
     protected List<Parameter> params;
 
     // Maximum number of rows to write.
@@ -161,6 +162,12 @@ public class AsciiTableWriter implements TableWriter
         else
             throw new IllegalArgumentException("illegal format: " + format);
     }
+
+    public void setJobID(String jobID)
+    {
+        this.jobID = jobID;
+    }
+
 
     public void setParameterList(List<Parameter> params)
     {

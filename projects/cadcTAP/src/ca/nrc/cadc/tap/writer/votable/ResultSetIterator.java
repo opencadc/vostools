@@ -76,6 +76,7 @@ import java.sql.SQLException;
 import java.util.Iterator;
 import java.util.List;
 import java.util.NoSuchElementException;
+import org.apache.log4j.Logger;
 import org.jdom.Element;
 import org.jdom.Namespace;
 
@@ -85,6 +86,8 @@ import org.jdom.Namespace;
  */
 public class ResultSetIterator implements Iterator
 {
+    private static Logger log = Logger.getLogger(ResultSetIterator.class);
+
     // ResultSet for iteration.
     private ResultSet resultSet;
 
@@ -98,10 +101,14 @@ public class ResultSetIterator implements Iterator
     // past the current position in the ResultSet.
     private boolean hasNext;
 
+    private int numRows = 0;
+
     /**
      * Constructor.
      *
      * @param resultSet
+     * @param formatters
+     * @param namespace 
      */
     public ResultSetIterator(ResultSet resultSet, List<Formatter> formatters, Namespace namespace)
     {

@@ -307,6 +307,8 @@ public class QueryRunner implements JobRunner
             TableWriter writer = TableWriterFactory.getWriter(paramList);
             writer.setTapSchema(tapSchema);
             writer.setSelectList(selectList);
+            writer.setJobID(jobID);
+            writer.setParameterList(paramList);
             if (maxRows != null) writer.setMaxRowCount(maxRows);
 
             tList.add(System.currentTimeMillis());

@@ -72,6 +72,7 @@ package ca.nrc.cadc.tap.writer.formatter;
 import ca.nrc.cadc.tap.parser.TapSelectItem;
 import ca.nrc.cadc.tap.schema.ColumnDesc;
 import ca.nrc.cadc.tap.schema.TapSchema;
+import ca.nrc.cadc.uws.Parameter;
 import java.util.List;
 
 /**
@@ -80,6 +81,10 @@ import java.util.List;
  */
 public interface FormatterFactory
 {
+    void setJobID(String jobID);
+    
+    void setParamList(List<Parameter> params);
+    
     List<Formatter> getFormatters(TapSchema tapSchema, List<TapSelectItem> selectList);
 
     Formatter getFormatter(TapSchema tapSchema, TapSelectItem selectItem);

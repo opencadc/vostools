@@ -74,6 +74,7 @@ import ca.nrc.cadc.tap.schema.ColumnDesc;
 import ca.nrc.cadc.tap.schema.SchemaDesc;
 import ca.nrc.cadc.tap.schema.TableDesc;
 import ca.nrc.cadc.tap.schema.TapSchema;
+import ca.nrc.cadc.uws.Parameter;
 import java.util.ArrayList;
 import java.util.List;
 import org.apache.log4j.Logger;
@@ -87,6 +88,9 @@ public class DefaultFormatterFactory implements FormatterFactory
     private static final String IMPL_CLASS = "ca.nrc.cadc.tap.impl.FormatterFactoryImpl";
     private static final Logger LOG = Logger.getLogger(DefaultFormatterFactory.class);
 
+    protected String jobID;
+    protected List<Parameter> params;
+    
     public DefaultFormatterFactory() { }
 
     /**
@@ -110,6 +114,17 @@ public class DefaultFormatterFactory implements FormatterFactory
             throw new RuntimeException(e);
         }
     }
+
+    public void setJobID(String jobID)
+    {
+        this.jobID = jobID;
+    }
+    
+    public void setParamList(List<Parameter> params)
+    {
+        this.params = params;
+    }
+
 
     public List<Formatter> getFormatters(TapSchema tapSchema, List<TapSelectItem> selectList)
     {
