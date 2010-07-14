@@ -121,7 +121,7 @@
         </javac>
     </target>
 
-    <target name="test" depends="compile-test">
+    <target name="test" depends="build,compile-test">
         <echo message="Running test" />
 
         <!-- Run the junit test suite -->
