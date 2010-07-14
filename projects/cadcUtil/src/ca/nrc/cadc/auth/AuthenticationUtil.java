@@ -69,7 +69,6 @@
 
 package ca.nrc.cadc.auth;
 
-import ca.nrc.cadc.net.NetUtil;
 import java.lang.reflect.Constructor;
 import java.security.Principal;
 import java.security.cert.X509Certificate;
@@ -82,7 +81,10 @@ import java.util.Set;
 import javax.security.auth.Subject;
 import javax.security.auth.x500.X500Principal;
 import javax.servlet.http.HttpServletRequest;
+
 import org.apache.log4j.Logger;
+
+import ca.nrc.cadc.net.NetUtil;
 
 /**
  * Security utility.
@@ -263,6 +265,65 @@ public class AuthenticationUtil
             log.error(e.getMessage(), e);
         }
         return subject;
+    }
+    
+    /**
+     * Given two principal objects, return true if they represent
+     * the same identity.
+     * 
+     * If the principals are instances of X500Principal, the
+     * cannonical form of their names are compared.  Otherwise,
+     * their names are compared directly.
+     * 
+     * Two null principals are considered equal.
+     * 
+     * @param p1 Principal object 1.
+     * @param p2 Principal object 2.
+     * 
+     * @return True if they are equal, false otherwise.
+     */
+    public static boolean equals(Principal p1, Principal p2)
+    {
+        if (p1 == null && p2 == null)
+        {
+            return true;
+        }
+        
+        if (p1 == null)
+        {
+            return false;
+        }
+        
+        if (p2 == null)
+        {
+            return false;
+        }
+        
+        if (p1 instanceof X500Principal)
+        {
+            if (p2 instanceof X500Principal)
+            {
+                X500Principal x1 = (X500Principal) p1;
+                X500Principal x2 = (X500Principal) p2;
+                return x1.getName(X500Principal.CANONICAL).equals(
+                        x2.getName(X500Principal.CANONICAL));
+            }
+            else
+            {
+                return false;
+            }
+        }
+        else
+        {
+            if (p2 instanceof X500Principal)
+            {
+                return false;
+            }
+            else
+            {
+                return p1.getName().equals(p2.getName());
+            }
+        }
     }
 
 }
