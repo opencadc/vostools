@@ -80,6 +80,7 @@ import javax.security.auth.x500.X500Principal;
 
 import org.apache.log4j.Logger;
 
+import ca.nrc.cadc.auth.AuthenticationUtil;
 import ca.nrc.cadc.auth.Authorizer;
 import ca.nrc.cadc.gms.client.GmsClient;
 import ca.nrc.cadc.vos.Node;
@@ -164,12 +165,12 @@ public class VOSpaceAuthorizer implements Authorizer
                         {
                             String principalString = principal == null ? "null" : principal.getName();
                             String groupReadString = groupRead == null ? "null" : groupRead.getPropertyValue();
-                            LOG.debug(String.format("Checking read permission on node (owner=%s,groupRead=%s) where user=%s",
+                            LOG.debug(String.format("Checking read permission on node (owner=\"%s\",groupRead=\"%s\") where user=\"%s\"",
                                     node.getOwner(), groupReadString, principalString));
                         }
                         
                         // Check for ownership
-                        if (nodeOwner.equals(principal))
+                        if (AuthenticationUtil.equals(nodeOwner, principal))
                         {
                             // User is the owner
                             return;
@@ -261,12 +262,12 @@ public class VOSpaceAuthorizer implements Authorizer
                         {
                             String principalString = principal == null ? "null" : principal.getName();
                             String groupWriteString = groupWrite == null ? "null" : groupWrite.getPropertyValue();
-                            LOG.debug(String.format("Checking write permission on node (owner=%s,groupWrite=%s) where user=%s",
+                            LOG.debug(String.format("Checking write permission on node (owner=\"%s\",groupWrite=\"%s\") where user=\"%s\"",
                                     node.getOwner(), groupWriteString, principalString));
                         }
                         
                         // Check for ownership
-                        if (nodeOwner.equals(principal))
+                        if (AuthenticationUtil.equals(nodeOwner, principal))
                         {
                             // User is the owner
                             return;
