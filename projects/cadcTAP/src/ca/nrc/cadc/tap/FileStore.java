@@ -82,6 +82,14 @@ import java.util.List;
 public interface FileStore
 {
     /**
+     * Set the jobID.  This is here to allow implementations to add the jobID to
+     * output filenames or logging.
+     * 
+     * @param jobID
+     */
+    public void setJobID(String jobID);
+
+    /**
      * The complete list of job parameters. This is here to allow implementations to
      * provide custom extensions such as client control of the output.
      * 
