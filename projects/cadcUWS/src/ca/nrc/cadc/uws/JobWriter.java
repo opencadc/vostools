@@ -162,7 +162,7 @@ public class JobWriter
         Element element = new Element(JobAttribute.JOB.getAttributeName(), UWS.NS);
         element.addNamespaceDeclaration(UWS.NS);
         element.addNamespaceDeclaration(UWS.XLINK_NS);
-        element.setAttribute("schemaLocation", "http://www.ivoa.net/xml/UWS/v1.0 UWS.xsd", UWS.XSI_NS);
+        //element.setAttribute("schemaLocation", "http://www.ivoa.net/xml/UWS/v1.0 UWS.xsd", UWS.XSI_NS);
         return element;
     }
 
@@ -171,14 +171,14 @@ public class JobWriter
      *
      * @return A jobs element.
      */
-    public static Element getJobs()
-    {
-        Element element = new Element(JobAttribute.JOBS.getAttributeName(), UWS.NS);
-        element.addNamespaceDeclaration(UWS.NS);
-        element.addNamespaceDeclaration(UWS.XLINK_NS);
-        element.setAttribute("schemaLocation", "http://www.ivoa.net/xml/UWS/v1.0 UWS.xsd", UWS.XSI_NS);
-        return element;
-    }
+    //public static Element getJobs()
+    //{
+    //    Element element = new Element(JobAttribute.JOBS.getAttributeName(), UWS.NS);
+    //    element.addNamespaceDeclaration(UWS.NS);
+    //    element.addNamespaceDeclaration(UWS.XLINK_NS);
+    //    //element.setAttribute("schemaLocation", "http://www.ivoa.net/xml/UWS/v1.0 UWS.xsd", UWS.XSI_NS);
+    //    return element;
+    //}
     
     /**
      * Get an Element representing the Job jobId.

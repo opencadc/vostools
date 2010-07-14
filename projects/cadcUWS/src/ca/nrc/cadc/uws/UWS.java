@@ -79,7 +79,7 @@ import org.jdom.Namespace;
  */
 public class UWS
 {
-    public static final String XSD_FILE_NAME = "UWS-1.0.xsd"; // local xsd file name
+    public static final String XSD_FILE_NAME = "UWS-v1.0.xsd"; // local xsd file name
     public static final String XSD_KEY = "http://www.ivoa.net/xml/UWS/v1.0";
     
     public static final Namespace NS = Namespace.getNamespace("uws", "http://www.ivoa.net/xml/UWS/v1.0");

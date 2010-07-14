@@ -209,7 +209,7 @@ public class JobAsynchResource extends BaseJobResource
         this.job = getJobManager().persist(job);
 
         if (jobRunner != null)
-            getJobExecutorService().execute(jobRunner, job.getOwner());
+            getJobExecutorService().execute(jobRunner, getSubject());
 
         redirectSeeOther(getHostPart() + job.getRequestPath() + "/" + job.getID());
     }

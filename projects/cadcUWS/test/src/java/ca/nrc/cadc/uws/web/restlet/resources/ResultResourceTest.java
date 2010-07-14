@@ -38,8 +38,6 @@ import org.junit.Before;
 import org.junit.After;
 import org.junit.Test;
 import org.restlet.representation.Representation;
-import org.restlet.representation.StringRepresentation;
-import org.restlet.data.MediaType;
 import ca.nrc.cadc.uws.Result;
 
 import java.net.URL;

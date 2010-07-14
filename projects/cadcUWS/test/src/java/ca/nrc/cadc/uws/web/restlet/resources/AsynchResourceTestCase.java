@@ -70,11 +70,18 @@
 
 package ca.nrc.cadc.uws.web.restlet.resources;
 
+import ca.nrc.cadc.uws.ErrorSummary;
+import ca.nrc.cadc.uws.ExecutionPhase;
+import ca.nrc.cadc.uws.Job;
+import ca.nrc.cadc.uws.JobAttribute;
+import ca.nrc.cadc.uws.Parameter;
+import ca.nrc.cadc.uws.Result;
+import ca.nrc.cadc.uws.UWS;
+
 import static junit.framework.TestCase.*;
 import org.junit.Before;
 import org.junit.After;
 import org.junit.Test;
-import ca.nrc.cadc.uws.*;
 
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -82,6 +89,7 @@ import java.util.Calendar;
 import java.util.Date;
 import java.util.List;
 import java.net.URL;
+import java.security.AccessControlException;
 
 import org.jdom.Document;
 import org.jdom.Element;
@@ -183,9 +191,16 @@ public class AsynchResourceTestCase
     @Test
     public void buildXML() throws Exception
     {
-        asynchResource.buildXML(documentToBuild);
-        
-        assertTrue("Good document.", documentToBuild.equals(expectedDocument));
+        try
+        {
+            asynchResource.buildXML(documentToBuild);
+            //assertTrue("Good document.", documentToBuild.equals(expectedDocument));
+            assertFalse("expected AccessControlException", true);
+        }
+        catch(AccessControlException expected)
+        {
+
+        }
     }
 
     protected void buildTestXML(final Document document)
@@ -193,11 +208,12 @@ public class AsynchResourceTestCase
         Element jobsElement = new Element(JobAttribute.JOBS.getAttributeName(), UWS.NS);
         jobsElement.addNamespaceDeclaration(UWS.NS);
         jobsElement.addNamespaceDeclaration(UWS.XLINK_NS);
-        jobsElement.setAttribute("schemaLocation", "http://www.ivoa.net/xml/UWS/v1.0 UWS.xsd", UWS.XSI_NS);
+        //jobsElement.setAttribute("schemaLocation", "http://www.ivoa.net/xml/UWS/v1.0 UWS.xsd", UWS.XSI_NS);
 
         Element jobRefElement = new Element(JobAttribute.JOB_REF.getAttributeName(), UWS.NS);
         jobRefElement.setAttribute("id", job.getID());
-        jobRefElement.setAttribute("xlink:href", HOST_PART + "/async/" + job.getID());
+        //jobRefElement.setAttribute("xlink:href", HOST_PART + "/async/" + job.getID());
+        jobRefElement.setAttribute("href", HOST_PART + "/async/" + job.getID(), UWS.XLINK_NS);
 
         Element jobRefPhaseElement = new Element(JobAttribute.EXECUTION_PHASE.getAttributeName(), UWS.NS);
         jobRefPhaseElement.addContent(job.getExecutionPhase().name());

@@ -82,6 +82,7 @@ import org.apache.log4j.Logger;
 import java.io.IOException;
 import java.text.ParseException;
 import java.net.MalformedURLException;
+import java.security.AccessControlException;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
@@ -148,8 +149,10 @@ public class AsynchResource extends UWSResource
      * @throws java.io.IOException If something went wrong or the XML cannot be
      *                             built.
      */
+    
     protected void buildXML(final Document document) throws IOException
     {
+        /*
         Element jobsElement = JobWriter.getJobs();
         for (Job job : getJobs())
         {
@@ -158,8 +161,10 @@ public class AsynchResource extends UWSResource
             jobsElement.addContent(jobWriter.getPhase());
         }
         document.addContent(jobsElement);
+        */
+        throw new AccessControlException("permission denied: job list");
     }
-
+    
     /**
      * Obtain all of the Jobs available to list to the client.
      *

@@ -72,8 +72,6 @@ package ca.nrc.cadc.uws;
 
 import javax.security.auth.Subject;
 
-
-
 /**
  * Service interface to control job execution. The implementation class name used
   * must be configured as a context-param with key <code>ca.nrc.cadc.uws.JobExecutor</code>.
@@ -100,5 +98,5 @@ public interface JobExecutor
      *                     No nulls area permitted.
      * @param subject       The Subject used to run this job
      */
-    void execute(final JobRunner jobRunner, final Subject subject);
+    void execute(JobRunner jobRunner, Subject subject);
 }

@@ -70,6 +70,8 @@
 
 package ca.nrc.cadc.uws;
 
+import java.security.AccessControlContext;
+import java.security.AccessController;
 import javax.security.auth.Subject;
 
 
@@ -104,7 +106,7 @@ public class ThreadExecutor implements JobExecutor
         }
         
         Thread t = null;
-
+        
         if (subject == null)
         {
         	t = new Thread(new TimeTrackingRunnable(jobManager, jobRunner));

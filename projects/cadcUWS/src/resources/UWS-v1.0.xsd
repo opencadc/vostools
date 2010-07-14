@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="UTF-8"?>
-   <!-- $Id: UWS.xsd,v 1.1 2009/06/15 15:30:32 pah Exp $ -->
-   <!-- proposal for basic UWS schema - Paul Harrison May 2008 -->
+   <!-- $Revision: 1246 $ $Date: 2010-02-09 20:05:36 +0000 (Tue, 09 Feb 2010) $  $HeadURL: https://volute.googlecode.com/svn/trunk/projects/grid/uws/doc/UWS.html $ -->
+   <!-- UWS schema - Paul Harrison May 2008 -->
    <!--
       $Log: UWS.xsd,v $
       Revision 1.1  2009/06/15 15:30:32  pah
@@ -17,12 +17,13 @@
    xmlns:xlink="http://www.w3.org/1999/xlink" elementFormDefault="qualified"
    attributeFormDefault="unqualified"
 >
+<!--
    <xs:import namespace="http://www.w3.org/1999/xlink"
-      schemaLocation="http://www.ivoa.net/xml/Xlink/xlink.xsd" />
-   <!--
+      schemaLocation="../../../stc/STC/v1.30/XLINK.xsd" />
+-->   
       <xs:import namespace="http://www.w3.org/1999/xlink"
       schemaLocation="http://www.ivoa.net/xml/Xlink/xlink.xsd"/>
-   -->
+   
    <xs:complexType name="ShortJobDescription">
       <xs:sequence>
          <xs:element name="phase" type="uws:ExecutionPhase">
@@ -45,12 +46,6 @@
       <xs:attribute ref="xlink:href" use="optional" />
    </xs:attributeGroup>
    <xs:simpleType name="ExecutionPhase">
-      <!--
-         need to think a little here about the implication of allowing a
-         "re-entrant" application that is capable of running
-         mini-jobs...probably this is indicated with a different state
-         varible entirely
-      -->
       <xs:annotation>
          <xs:documentation> Enumeration of possible phases of job
             execution</xs:documentation>
@@ -88,14 +83,14 @@
          </xs:enumeration>
          <xs:enumeration value="UNKNOWN">
             <xs:annotation>
-               <xs:documentation> The job is in an unknown state
+               <xs:documentation> The job is in an unknown state.
                </xs:documentation>
             </xs:annotation>
          </xs:enumeration>
          <xs:enumeration value="HELD">
             <xs:annotation>
                <xs:documentation> The job is HELD pending execution and
-                  will not automatically be executed (cf pending)
+                  will not automatically be executed - can occur after a PHASE=RUN request has been made (cf PENDING).
                </xs:documentation>
             </xs:annotation>
          </xs:enumeration>
@@ -189,8 +184,7 @@
             minOccurs="0"
          >
                 <xs:annotation>
-                   <xs:documentation>The parameters to the job (where appropriate)
-can also be retrieved at /(jobs)/(jobid)/parameters</xs:documentation>
+                   <xs:documentation>The parameters to the job (where appropriate)can also be retrieved at /(jobs)/(jobid)/parameters</xs:documentation>
                 </xs:annotation>
          </xs:element>
          <xs:element ref="uws:results">
@@ -254,13 +248,6 @@ can also be retrieved at /(jobs)/(jobid)/parameters</xs:documentation>
          <xs:documentation> A reference to a UWS result
          </xs:documentation>
       </xs:annotation>
-      <xs:sequence>
-         <xs:element name="phase"  maxOccurs="1" minOccurs="0" type="uws:ExecutionPhase"></xs:element>
-         <!--
-            pah - TODO why is this here - there was a use case to do
-            with picking up results of partially finished jobs ?
-         -->
-      </xs:sequence>
       <xs:attribute name="id" type="xs:string" use="required"></xs:attribute>
       <xs:attributeGroup ref="uws:reference"></xs:attributeGroup>
    </xs:complexType>
@@ -279,24 +266,25 @@ can also be retrieved at /(jobs)/(jobid)/parameters</xs:documentation>
    </xs:element>
    <xs:complexType name="ErrorSummary">
       <xs:annotation>
-         <xs:documentation> A short summary of an error - a fuller representation of the error may be retrieved from /(jobs)/(jobid)/error
+         <xs:documentation>
+            A short summary of an error - a fuller representation of the
+            error may be retrieved from /(jobs)/(jobid)/error
          </xs:documentation>
       </xs:annotation>
       <xs:sequence>
          <xs:element name="message" type="xs:string"></xs:element>
-         <!-- is this detail redundant if we say that the "detailed message" is always available from /(jobs)/(jobid)/error-->
-         <xs:element name="detail" maxOccurs="1" minOccurs="0">
-            <xs:complexType>
-               <xs:attributeGroup ref="uws:reference"></xs:attributeGroup>
-            </xs:complexType>
-         </xs:element>
       </xs:sequence>
-      <xs:attribute name="type" type="uws:ErrorType">
+      <xs:attribute name="type" type="uws:ErrorType" use="required">
          <xs:annotation>
-            <xs:documentation>characterization of the
-               type of the error</xs:documentation>
+            <xs:documentation>
+               characterization of the type of the error
+            </xs:documentation>
          </xs:annotation>
       </xs:attribute>
+      <xs:attribute name="hasDetail" type="xs:boolean" use="required">
+         <xs:annotation>
+            <xs:documentation>if true then there is a more detailed error message available at /(jobs)/(jobid)/error</xs:documentation>
+         </xs:annotation></xs:attribute>
    </xs:complexType>
    <xs:simpleType name="ErrorType">
       <xs:restriction base="xs:string">
@@ -346,6 +334,4 @@ can also be retrieved at /(jobs)/(jobid)/parameters</xs:documentation>
    </xs:element>
 </xs:schema>
 
-   <!--
-
- -->
+<!-- -->

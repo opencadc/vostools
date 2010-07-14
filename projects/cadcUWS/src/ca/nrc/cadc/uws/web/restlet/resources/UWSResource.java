@@ -70,6 +70,7 @@
 
 package ca.nrc.cadc.uws.web.restlet.resources;
 
+import ca.nrc.cadc.auth.AuthenticationUtil;
 import org.restlet.resource.ServerResource;
 import org.restlet.resource.Get;
 import org.restlet.representation.Representation;
@@ -78,7 +79,6 @@ import org.apache.log4j.Logger;
 
 import ca.nrc.cadc.uws.JobManager;
 import ca.nrc.cadc.uws.util.BeanUtil;
-import ca.nrc.cadc.uws.util.RestletUtil;
 import ca.nrc.cadc.uws.web.validators.FormValidator;
 import ca.nrc.cadc.uws.web.WebRepresentationException;
 import ca.nrc.cadc.uws.web.restlet.representation.JDOMRepresentation;
@@ -86,11 +86,11 @@ import ca.nrc.cadc.uws.web.restlet.validators.JobFormValidatorImpl;
 
 import javax.security.auth.Subject;
 import java.io.IOException;
-import java.security.Principal;
-import java.util.HashSet;
+import java.security.cert.X509Certificate;
+import java.util.Collection;
 import java.util.Map;
-import java.util.Set;
 import org.jdom.Document;
+import org.restlet.Request;
 import org.restlet.data.Form;
 import org.restlet.data.MediaType;
 import org.restlet.data.Reference;
@@ -104,9 +104,9 @@ public abstract class UWSResource extends ServerResource
 {
     private static final Logger LOGGER = Logger.getLogger(UWSResource.class);
 
-//    protected final static String XML_NAMESPACE_PREFIX = "uws";
-//    protected final static String XML_NAMESPACE_URI = "http://www.ivoa.net/xml/UWS/v1.0";
+    private static final String CERTIFICATE_REQUEST_ATTRIBUTE_NAME = "org.restlet.https.clientCertificates";
 
+    private Subject subject;
     protected FormValidator formValidator;
 
     /**
@@ -121,6 +121,13 @@ public abstract class UWSResource extends ServerResource
     protected void doInit()
     {
         super.doInit();
+
+        // Create a subject for authentication
+        Request request = getRequest();
+        Map<String, Object> requestAttributes = request.getAttributes();
+        Collection<X509Certificate> certs = (Collection<X509Certificate>) requestAttributes.get(CERTIFICATE_REQUEST_ATTRIBUTE_NAME);
+        this.subject = AuthenticationUtil.getSubject(null, certs);
+        LOGGER.debug(subject);
     }
 
 
@@ -288,16 +295,7 @@ public abstract class UWSResource extends ServerResource
      */
     protected Subject getSubject()
     {
-    	Set<Principal> principals = RestletUtil.getPrincipals(getRequest());
-    	//TODO sz remove it.
-    	LOGGER.debug("getSubject, principals: " + principals);
-        LOGGER.debug(principals.size() + " principals found in request.");
-    	if (principals != null && principals.size() > 0) {
-    		Set<Object> emptyCredentials = new HashSet<Object>();
-    		return new Subject(true, principals, emptyCredentials, emptyCredentials);
-    	} else {
-    		return null;
-    	}
+        return subject;
     }
 
     /**

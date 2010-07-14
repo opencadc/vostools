@@ -33,9 +33,12 @@
  */
 package ca.nrc.cadc.uws.web;
 
+import ca.nrc.cadc.uws.web.restlet.resources.AsynchResourceTestCase;
+import ca.nrc.cadc.uws.web.restlet.resources.JobAsynchResourceExecutionTest;
+import ca.nrc.cadc.uws.web.restlet.resources.JobSyncSubmissionResourceTest;
+import ca.nrc.cadc.uws.web.restlet.resources.ResultResourceTest;
 import org.junit.runner.RunWith;
 import org.junit.runners.Suite;
-import ca.nrc.cadc.uws.web.restlet.resources.*;
 
 
 @RunWith(Suite.class)
