@@ -265,7 +265,13 @@ public class SSLUtilTest
         }
     }
 
-    @Test
+    // Note: this test requies some custom setup: an http server running on
+    // localhost with an invalid (e.g. self-signed) server certificate for
+    // SSL (https) and SSL config requiring a client certificate to get the
+    // root document - this is only here to test the BasicX509TrustManager
+    // local work-around for developers
+
+    //@Test
     public void testInvalidServerHTTPS() throws Exception
     {
         InetAddress localhost = InetAddress.getLocalHost();
