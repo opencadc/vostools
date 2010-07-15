@@ -184,7 +184,6 @@ public class NodeResource extends BaseResource
             
             VOSpaceAuthorizer voSpaceAuthorizer = new VOSpaceAuthorizer();
             voSpaceAuthorizer.setNodePersistence(getNodePersistence());
-            voSpaceAuthorizer.setGmsClient(getGmsClient());
             
             action.setVOSpaceAuthorizer(voSpaceAuthorizer);
             action.setNodePersistence(getNodePersistence());

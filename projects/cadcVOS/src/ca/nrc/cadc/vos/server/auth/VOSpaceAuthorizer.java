@@ -67,8 +67,10 @@
 package ca.nrc.cadc.vos.server.auth;
 
 import java.io.FileNotFoundException;
+import java.net.MalformedURLException;
 import java.net.URI;
 import java.net.URISyntaxException;
+import java.net.URL;
 import java.security.AccessControlContext;
 import java.security.AccessControlException;
 import java.security.AccessController;
@@ -83,6 +85,7 @@ import org.apache.log4j.Logger;
 import ca.nrc.cadc.auth.AuthenticationUtil;
 import ca.nrc.cadc.auth.Authorizer;
 import ca.nrc.cadc.gms.client.GmsClient;
+import ca.nrc.cadc.reg.client.RegistryClient;
 import ca.nrc.cadc.vos.Node;
 import ca.nrc.cadc.vos.NodeNotFoundException;
 import ca.nrc.cadc.vos.NodeProperty;
@@ -102,7 +105,6 @@ public class VOSpaceAuthorizer implements Authorizer
     protected static final Logger LOG = Logger.getLogger(VOSpaceAuthorizer.class);
     
     private NodePersistence nodePersistence;
-    private GmsClient gmsClient;
 
     public VOSpaceAuthorizer()
     {
@@ -179,10 +181,14 @@ public class VOSpaceAuthorizer implements Authorizer
                         // Check for group membership
                         if (principal != null && groupRead != null && groupRead.getPropertyValue() != null)
                         {
-                            if (gmsClient.isMember(groupRead.getPropertyValue(), principal.getName()))
+                            GmsClient gmsClient = getGmsClient(groupRead.getPropertyURI());
+                            if (gmsClient != null)
                             {
-                                // User is a member
-                                return;
+                                if (gmsClient.isMember(groupRead.getPropertyValue(), principal.getName()))
+                                {
+                                    // User is a member
+                                    return;
+                                }
                             }
                         }
                     }
@@ -276,10 +282,14 @@ public class VOSpaceAuthorizer implements Authorizer
                         // Check for group membership
                         if (principal != null && groupWrite != null && groupWrite.getPropertyValue() != null)
                         {
-                            if (gmsClient.isMember(groupWrite.getPropertyValue(), principal.getName()))
+                            GmsClient gmsClient = getGmsClient(groupWrite.getPropertyURI());
+                            if (gmsClient != null)
                             {
-                                // User is a member
-                                return;
+                                if (gmsClient.isMember(groupWrite.getPropertyValue(), principal.getName()))
+                                {
+                                    // User is a member
+                                    return;
+                                }
                             }
                         }
                     }
@@ -301,6 +311,29 @@ public class VOSpaceAuthorizer implements Authorizer
             throw new FileNotFoundException(node.getPath());
         }
     }
+    
+    /**
+     * Given the groupURI, return the appropriate GmsClient.
+     */
+    private GmsClient getGmsClient(String groupURI)
+    {
+        try
+        {
+            RegistryClient registryClient = new RegistryClient();
+            URL gmsBaseURL = registryClient.getServiceURL(new URI(groupURI), VOS.GMS_PROTOCOL);
+            return new GmsClient(gmsBaseURL);
+        }
+        catch (MalformedURLException e)
+        {
+            LOG.error("GMSClient invalid URL", e);
+            throw new IllegalStateException(e);
+        }
+        catch (URISyntaxException e)
+        {
+            LOG.warn("Invalid Group URI: " + groupURI, e);
+            return null;
+        }
+    }
 
     /**
      * Node NodePersistence Getter.
@@ -316,22 +349,6 @@ public class VOSpaceAuthorizer implements Authorizer
     public void setNodePersistence(final NodePersistence nodePersistence)
     {
         this.nodePersistence = nodePersistence;
-    }
-
-    /**
-     * GmsClient Getter.
-     */
-    public GmsClient getGmsClient()
-    {
-        return gmsClient;
-    }
-
-    /**
-     * GmsClient Setter.
-     */
-    public void setGmsClient(GmsClient gmsClient)
-    {
-        this.gmsClient = gmsClient;
     }
     
 }

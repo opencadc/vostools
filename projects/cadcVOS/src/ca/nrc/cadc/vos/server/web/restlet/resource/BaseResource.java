@@ -69,11 +69,8 @@
 
 package ca.nrc.cadc.vos.server.web.restlet.resource;
 
-import ca.nrc.cadc.auth.AuthenticationUtil;
-import java.security.Principal;
 import java.security.cert.X509Certificate;
 import java.util.Collection;
-import java.util.HashSet;
 import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.CopyOnWriteArraySet;
@@ -85,7 +82,7 @@ import org.restlet.Request;
 import org.restlet.data.Method;
 import org.restlet.resource.ServerResource;
 
-import ca.nrc.cadc.gms.client.GmsClient;
+import ca.nrc.cadc.auth.AuthenticationUtil;
 import ca.nrc.cadc.vos.server.NodePersistence;
 import ca.nrc.cadc.vos.server.util.BeanUtil;
 
@@ -97,7 +94,6 @@ public abstract class BaseResource extends ServerResource
     
     private String vosUriPrefix;
     private NodePersistence nodePersistence;
-    private GmsClient gmsClient;
     private Subject subject;
     
     protected BaseResource()
@@ -111,10 +107,6 @@ public abstract class BaseResource extends ServerResource
         nodePersistence =
             (NodePersistence) getApplication().getContext().getAttributes().
                 get(BeanUtil.VOS_NODE_PERSISTENCE);
-        
-       gmsClient =
-            (GmsClient) getApplication().getContext().getAttributes().
-                get(BeanUtil.GMS_CLIENT);
     }
 
     @Override
@@ -143,11 +135,6 @@ public abstract class BaseResource extends ServerResource
     public final NodePersistence getNodePersistence()
     {
         return nodePersistence;
-    }
-    
-    public final GmsClient getGmsClient()
-    {
-        return gmsClient;
     }
     
     public final Subject getSubject()

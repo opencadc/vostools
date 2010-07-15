@@ -83,9 +83,6 @@ public class BeanUtil
     
     public static final String VOS_NODE_PERSISTENCE =
             "ca.nrc.cadc.vos.NodePersistence";
-    
-    public static final String GMS_CLIENT = 
-            "ca.nrc.cadc.gms.client.GmsClient";
 
     private String className;
 

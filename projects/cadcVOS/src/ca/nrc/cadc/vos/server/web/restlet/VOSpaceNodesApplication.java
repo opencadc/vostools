@@ -69,20 +69,12 @@
 
 package ca.nrc.cadc.vos.server.web.restlet;
 
-import java.net.MalformedURLException;
-import java.net.URI;
-import java.net.URISyntaxException;
-import java.net.URL;
-
 import org.apache.log4j.Logger;
 import org.restlet.Application;
 import org.restlet.Context;
 import org.restlet.Restlet;
 
-import ca.nrc.cadc.gms.client.GmsClient;
-import ca.nrc.cadc.reg.client.RegistryClient;
 import ca.nrc.cadc.vos.InvalidServiceException;
-import ca.nrc.cadc.vos.VOS;
 import ca.nrc.cadc.vos.server.util.BeanUtil;
 
 /**
@@ -127,28 +119,6 @@ public class VOSpaceNodesApplication extends Application
         
         // Create the configured NodePersistence bean
         createContextBean(context, ca.nrc.cadc.vos.server.NodePersistence.class, BeanUtil.VOS_NODE_PERSISTENCE);
-        
-        // Get the endpoint URL for the gms client through the registry
-        URL gmsBaseURL = null;
-        
-        // Create the GmsClient and store it in the application context
-        try
-        {
-            RegistryClient registryClient = new RegistryClient();
-            gmsBaseURL = registryClient.getServiceURL(new URI(VOS.GMS_SERVICE_URI), VOS.GMS_PROTOCOL);
-            GmsClient gmsClient = new GmsClient(gmsBaseURL);
-            context.getAttributes().put(BeanUtil.GMS_CLIENT, gmsClient);
-        }
-        catch (MalformedURLException e)
-        {
-            throw new IllegalStateException(String.format(
-                    "GmsClient baseURL malformed: %s", gmsBaseURL));
-        }
-        catch (URISyntaxException e)
-        {
-            throw new IllegalStateException(String.format(
-                    "Invalid GMS Service URI: %s", VOS.GMS_SERVICE_URI));
-        }
         
         return new VOSpaceNodesRouter(context);
     }
