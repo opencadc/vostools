@@ -308,10 +308,7 @@ public class AuthenticationUtil
                 return x1.getName(X500Principal.CANONICAL).equals(
                         x2.getName(X500Principal.CANONICAL));
             }
-            else
-            {
-                return false;
-            }
+            return false;
         }
         else
         {
@@ -319,10 +316,7 @@ public class AuthenticationUtil
             {
                 return false;
             }
-            else
-            {
-                return p1.getName().equals(p2.getName());
-            }
+            return p1.getName().equals(p2.getName());
         }
     }
 
