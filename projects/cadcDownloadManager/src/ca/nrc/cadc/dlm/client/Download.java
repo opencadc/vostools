@@ -668,8 +668,8 @@ public class Download implements Runnable
                 istream = new ZipInputStream(new BufferedInputStream(new FileInputStream(origFile)));
             }
             msg("output: " + decompFile);
-            ostream = new BufferedOutputStream(new FileOutputStream(origFile), sz);
-            //ostream = new RandomAccessFile(origFile, "rwd");
+            ostream = new BufferedOutputStream(new FileOutputStream(decompFile), sz);
+            //ostream = new RandomAccessFile(decompFile, "rwd");
 
             this.removeFile = origFile;
 
