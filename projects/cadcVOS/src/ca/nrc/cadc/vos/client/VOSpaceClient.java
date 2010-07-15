@@ -99,6 +99,7 @@ import ca.nrc.cadc.vos.ServerTransfer;
 import ca.nrc.cadc.vos.Transfer;
 import ca.nrc.cadc.vos.TransferReader;
 import ca.nrc.cadc.vos.View;
+import java.text.ParseException;
 
 /**
  * @author zhangsa
@@ -197,12 +198,12 @@ public class VOSpaceClient
         }
         catch (IOException e)
         {
-            e.printStackTrace(System.err);
-            throw new IllegalStateException(e);
+            log.debug("failed to create node", e);
+            throw new IllegalStateException("failed to create node", e);
         }
         catch (NodeParsingException e)
         {
-            throw new IllegalStateException(e);
+            throw new IllegalStateException("failed to create node", e);
         }
         return rtnNode;
     }
@@ -266,11 +267,11 @@ public class VOSpaceClient
         }
         catch (IOException ex)
         {
-            throw new IllegalStateException(ex);
+            throw new IllegalStateException("failed to get node", ex);
         }
         catch (NodeParsingException e)
         {
-            throw new IllegalStateException(e);
+            throw new IllegalStateException("failed to get node", e);
         }
         return rtnNode;
     }
@@ -340,11 +341,11 @@ public class VOSpaceClient
         }
         catch (IOException e)
         {
-            throw new IllegalStateException(e);
+            throw new IllegalStateException("failed to set node", e);
         }
         catch (NodeParsingException e)
         {
-            throw new IllegalStateException(e);
+            throw new IllegalStateException("failed to set node", e);
         }
         return rtnNode;
     }
@@ -426,12 +427,17 @@ public class VOSpaceClient
         }
         catch (IOException e)
         {
-            e.printStackTrace(System.err);
+            log.debug("failed to read transfer", e);
+            throw new IllegalStateException(e);
+        }
+        catch (ParseException e)
+        {
+            log.debug("failed to read transfer", e);
             throw new IllegalStateException(e);
         }
         catch (JDOMException e)
         {
-            e.printStackTrace();
+            log.debug("failed to read transfer", e);
             throw new IllegalStateException(e);
         }
         return rtn;
@@ -505,19 +511,24 @@ public class VOSpaceClient
                 throw new RuntimeException("ERROR returned from server: " + jobRtn.getErrorSummary().getSummaryMessage());
             }
         }
-        catch (MalformedURLException e2)
+        catch (MalformedURLException e)
         {
-            e2.printStackTrace();
-            throw new RuntimeException(e2);
+            log.debug("failed to create transfer", e);
+            throw new RuntimeException(e);
         }
-        catch (IOException e2)
+        catch (IOException e)
         {
-            e2.printStackTrace();
-            throw new RuntimeException(e2);
+            log.debug("failed to create transfer", e);
+            throw new RuntimeException(e);
+        }
+        catch (ParseException e)
+        {
+            log.debug("got bad XML from service", e);
+            throw new IllegalStateException(e);
         }
         catch (JDOMException e)
         {
-            e.printStackTrace();
+            log.debug("got bad XML from service", e);
             throw new RuntimeException(e);
         }
         return rtn;
@@ -738,7 +749,7 @@ public class VOSpaceClient
         }
         catch (IOException ex)
         {
-            throw new IllegalStateException(ex);
+            throw new IllegalStateException("failed to delete node", ex);
         }
     }
 
