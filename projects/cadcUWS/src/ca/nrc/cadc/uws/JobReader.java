@@ -115,31 +115,36 @@ public class JobReader
         this.saxBuilder.setProperty("http://apache.org/xml/properties/schema/external-schemaLocation", EXT_SCHEMA_LOCATION);
     }
 
-    public Job readFrom(Reader reader) throws JDOMException, IOException
+    public Job readFrom(Reader reader) 
+        throws JDOMException, IOException, ParseException
     {
         this.document = this.saxBuilder.build(reader);
         return parseJob();
     }
 
-    public Job readFrom(File file) throws JDOMException, IOException
+    public Job readFrom(File file) 
+        throws JDOMException, IOException, ParseException
     {
         this.document = this.saxBuilder.build(file);
         return parseJob();
     }
 
-    public Job readFrom(InputStream in) throws JDOMException, IOException
+    public Job readFrom(InputStream in) 
+        throws JDOMException, IOException, ParseException
     {
         this.document = this.saxBuilder.build(in);
         return parseJob();
     }
 
-    public Job readFrom(URL url) throws JDOMException, IOException
+    public Job readFrom(URL url) 
+        throws JDOMException, IOException, ParseException
     {
         this.document = this.saxBuilder.build(url);
         return parseJob();
     }
 
-    public Job readFrom(String string) throws JDOMException, IOException
+    public Job readFrom(String string)
+        throws JDOMException, IOException, ParseException
     {
         StringReader reader = new StringReader(string);
         this.document = this.saxBuilder.build(reader);
@@ -147,6 +152,7 @@ public class JobReader
     }
 
     private Job parseJob()
+        throws ParseException
     {
         Element root = this.document.getRootElement();
 
@@ -170,18 +176,14 @@ public class JobReader
     }
 
     private static Date parseDate(String strDate)
+        throws ParseException
     {
-        Date rtn = null;
-        try
-        {
-            rtn = DateUtil.toDate(strDate, DateUtil.IVOA_DATE_FORMAT, DateUtil.UTC);
-        }
-        catch (ParseException e)
-        {
-            // do nothing, use null as return value
-            log.debug(e.getMessage());
-        }
-        return rtn;
+        if (strDate == null)
+            return null;
+        strDate = strDate.trim();
+        if (strDate.length() == 0)
+            return null;
+        return DateUtil.toDate(strDate, DateUtil.IVOA_DATE_FORMAT, DateUtil.UTC);
     }
 
     private ExecutionPhase parseExecutionPhase()

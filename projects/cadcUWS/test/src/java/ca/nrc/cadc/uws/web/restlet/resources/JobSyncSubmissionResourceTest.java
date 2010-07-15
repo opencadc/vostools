@@ -58,9 +58,9 @@ public class JobSyncSubmissionResourceTest
     protected JobManager mockJobManager;
     protected JobRunner mockJobRunner;
 
+    private final long POLL_TIME = 3000L;
     private final String JOB_ID = "AT88MPH";
     private Job testJob;
-
 
     @Before
     public void setup()
@@ -130,7 +130,7 @@ public class JobSyncSubmissionResourceTest
             @Override
             protected void pollRunningJob()
             {
-                super.pollRunningJob(10l * 1000l);
+                super.pollRunningJob(POLL_TIME);
             }
         };
         testSubject.doInit();
@@ -169,8 +169,8 @@ public class JobSyncSubmissionResourceTest
                      testJob.getExecutionPhase(), ExecutionPhase.QUEUED);
         final long currTime = System.currentTimeMillis();
         testSubject.executeJob();
-        assertTrue("Should be at least ten seconds later...",
+        assertTrue("Should be at least "+POLL_TIME + "ms...",
                    (System.currentTimeMillis() - currTime)
-                   >= (10l * 1000l));
+                   >= (POLL_TIME));
     }
 }

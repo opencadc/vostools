@@ -93,7 +93,6 @@ import ca.nrc.cadc.xml.XmlUtil;
  */
 public class JobWriter
 {
-    @SuppressWarnings("unused")
     private static Logger log = Logger.getLogger(JobWriter.class);
 
     private Job job;
@@ -103,7 +102,6 @@ public class JobWriter
     public JobWriter(Job job)
     {
         this.job = job;
-        log.debug(job);
         buildDocument();
         this.outputter = new XMLOutputter();
         this.outputter.setFormat(Format.getPrettyFormat());

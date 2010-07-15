@@ -68,7 +68,7 @@ public class JobAsynchResourceExecutionTest
 
     static
     {
-        Log4jInit.setLevel("ca.nrc.cadc", org.apache.log4j.Level.DEBUG);
+        Log4jInit.setLevel("ca.nrc.cadc", org.apache.log4j.Level.INFO);
     }
 
     @Before
