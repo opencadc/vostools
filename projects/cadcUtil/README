@@ -16,7 +16,7 @@ purpose.
 The SSLUtilTest code assumes that you have created test/resources/proxy.crt and
 test/resources/proxy.key using this script, eg:
 
-./scripts/createProxycert <your real cert> <your private key> <days> test/resources/proxy
+./scripts/createProxyCert <your real cert> <your private key> <days> test/resources/proxy
 
 This also creates a file called test/resources/proxy.pem that can be used with curl, 
 assuming your version of curl is built with SSL support.
@@ -37,4 +37,5 @@ work-around for using real services with invalid certificates!!
 CADC's public web servers have valid server certificates and require client authentication via
 certificate so they act a as a decent SSO setup test.
 
+Note: The local host test is currently disabled in the test code (pdowler 2010-07-15)
 

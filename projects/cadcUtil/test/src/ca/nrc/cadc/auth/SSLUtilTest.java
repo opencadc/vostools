@@ -286,7 +286,7 @@ public class SSLUtilTest
         }
         catch(SSLHandshakeException expected)
         {
-            log.debug("caught expected exce[ption: " + expected);
+            log.debug("caught expected exception: " + expected);
         }
 
         System.setProperty(BasicX509TrustManager.class.getName() + ".trust", "something");
