@@ -113,7 +113,7 @@ public abstract class AbstractUWSTest
     protected static final Level[] LOGGING_LEVEL = new Level[] { Level.ALL, Level.DEBUG, Level.ERROR, Level.FATAL, Level.INFO,
             Level.OFF, Level.TRACE, Level.WARN };
 
-    private static final String UWS_SCHEMA_RESOURCE = "UWS-1.0.xsd";
+    private static final String UWS_SCHEMA_RESOURCE = "UWS-v1.0.xsd";
     private static final String PARSER = "org.apache.xerces.parsers.SAXParser";
 
     private static SAXBuilder parser;
@@ -316,7 +316,7 @@ public abstract class AbstractUWSTest
         assertEquals("Non-200 GET response code to " + resourceUrl, 200, response.getResponseCode());
 
         log.debug("Content-Type: " + response.getContentType());
-        //        assertEquals("GET response Content-Type header to " + resourceUrl + " is incorrect", "text/xml", response.getContentType());
+        assertEquals("GET response Content-Type header to " + resourceUrl + " is incorrect", "text/xml", response.getContentType());
 
         return response;
     }

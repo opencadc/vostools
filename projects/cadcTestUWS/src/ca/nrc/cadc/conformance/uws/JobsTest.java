@@ -69,9 +69,9 @@
 
 package ca.nrc.cadc.conformance.uws;
 
+import com.meterware.httpunit.HttpException;
 import com.meterware.httpunit.WebConversation;
 import com.meterware.httpunit.WebResponse;
-import org.apache.log4j.Level;
 import org.apache.log4j.Logger;
 import org.jdom.Document;
 import org.jdom.Element;
@@ -96,11 +96,18 @@ public class JobsTest extends AbstractUWSTest
     public void testEmptyJobs()
         throws Exception
     {
+        WebResponse response = null;
         try
         {
             // Request the UWS service.
             WebConversation conversation = new WebConversation();
-            WebResponse response = get(conversation, serviceUrl);
+            response = get(conversation, serviceUrl);
+
+            if (response.getResponseCode() == 403) // forbidden: a plausible interpretation
+            {
+                
+                return;
+            }
 
             // Validate the XML against the schema.
             log.debug("XML:\r\n" + response.getText());
@@ -114,9 +121,21 @@ public class JobsTest extends AbstractUWSTest
 
             log.info("JobsTest.testEmptyJobs completed.");
         }
+        catch(HttpException ex)
+        {
+            if (ex.getResponseCode() == 403)
+            {
+                log.warn("GET access to job-list was Forbidden (403) -- cannot test output");
+            }
+            else
+            {
+                log.error("unexpected exception", ex);
+                fail(ex.getMessage());
+            }
+        }
         catch (Throwable t)
         {
-            log.error(t);
+            log.error("unexpected exception", t);
             fail(t.getMessage());
         }
     }
