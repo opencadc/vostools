@@ -90,7 +90,6 @@ public class VOS
     
     public static final String VOS_URI = "vos://cadc.nrc.ca!vospace";
     
-    public static final String GMS_SERVICE_URI = "ivo://cadc.nrc.ca/gms";
     public static final String GMS_PROTOCOL = "http";
     
     // Enumeration for Node busy states
