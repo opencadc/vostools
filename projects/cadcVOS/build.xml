@@ -87,6 +87,7 @@
     <property name="project" value="cadcVOS" />
 
     <property name="cadcUtil" value="${lib}/cadcUtil.jar" />
+    <property name="cadcRegistryClient" value="${lib}/cadcRegistryClient.jar" />
     <property name="cadcUWS" value="${lib}/cadcUWS.jar" />
     <property name="cadcGMS" value="${lib}/cadcGMS.jar" />
     <property name="cadcDownloadManagerClient" value="${lib}/cadcDownloadManagerClient.jar" />
@@ -99,9 +100,9 @@
     <property name="ext.jdom" value="${ext.lib}/jdom.jar" />
     <property name="ext.xerces" value="${ext.lib}/xerces.jar" />
 
-    <property name="jars" value="${ext.restlet}:${ext.restlet.ext}:${ext.log4j}:${ext.spring}:${ext.jdom}:${cadcUtil}:${cadcUWS}:${cadcGMS}:${cadcDownloadManagerClient}" />
+    <property name="jars" value="${ext.restlet}:${ext.restlet.ext}:${ext.log4j}:${ext.spring}:${ext.jdom}:${cadcUtil}:${cadcRegistryClient}:${cadcUWS}:${cadcGMS}:${cadcDownloadManagerClient}" />
 
-    <property name="client.jars" value="cadcUtil.jar cadcUWS.jar cadcDownloadManagerClient.jar ${ext.jdom} ${ext.xerces} ${ext.log4j} jdom.jar xerces.jar log4j.jar" />
+    <property name="client.jars" value="cadcUtil.jar cadcRegistryClient.jar cadcUWS.jar cadcDownloadManagerClient.jar ${ext.jdom} ${ext.xerces} ${ext.log4j} jdom.jar xerces.jar log4j.jar" />
 
     <target name="build" depends="client,server" />
 

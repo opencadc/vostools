@@ -8,6 +8,7 @@ org.restlet.jar              restlet-jee-2.0m7       http://www.restlet.org
 org.restlet.ext.servlet.jar  restlet-jee-2.0m7       http://www.restlet.org
 spring.jar                   spring-framework-2.5.6  http://www.springsource.org
 jdom.jar                     jdom-1.1  i             http://www.jdom.org/
-cadcUtil.jar                                         http://code.google.com/p/opencadc    
+cadcUtil.jar                                         http://code.google.com/p/opencadc  
+cadcRegistryClient.jar                               http://code.google.com/p/opencadc  
 cadcUWS.jar                                          http://code.google.com/p/opencadc    
 cadcGWS.jar                                          http://code.google.com/p/opencadc
