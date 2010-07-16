@@ -79,7 +79,6 @@ import java.util.List;
 import org.apache.log4j.Level;
 import org.apache.log4j.Logger;
 
-import ca.nrc.cadc.auth.BasicX509TrustManager;
 import ca.nrc.cadc.auth.SSLUtil;
 import ca.nrc.cadc.reg.client.RegistryClient;
 import ca.nrc.cadc.util.ArgumentMap;
@@ -369,7 +368,8 @@ public class Main
                 {
                     this.transferDirection = Direction.pushToVoSpace;
                     serverUri = new VOSURI(strDest).getServiceURI();
-                    this.source = new URI("file://" + strSrc);
+                    File f = new File(strSrc);
+                    this.source = new URI("file", f.getAbsolutePath(), null);
                     this.destination = new URI(strDest);
                 }
                 else if (strSrc.startsWith(VOS_PREFIX) && !strDest.startsWith(VOS_PREFIX))
@@ -377,7 +377,8 @@ public class Main
                     this.transferDirection = Direction.pullFromVoSpace;
                     serverUri = new VOSURI(strSrc).getServiceURI();
                     this.source = new URI(strSrc);
-                    this.destination = new URI("file://" + strDest);
+                    File f = new File(strDest);
+                    this.destination = new URI("file", f.getAbsolutePath(), null);
                 }
                 else
                     throw new UnsupportedOperationException("The type of your copy operation is not supported yet.");
