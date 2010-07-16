@@ -74,6 +74,7 @@ import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.SQLException;
 import java.sql.Statement;
+import java.util.Date;
 import java.util.Iterator;
 import java.util.List;
 
@@ -107,6 +108,9 @@ public abstract class NodeDAO implements NodePersistence
 {
     
     private static Logger log = Logger.getLogger(NodeDAO.class);
+    
+    private static final int NODE_NAME_COLUMN_SIZE = 256;
+    private static final int MAX_TIMESTAMP_LENGTH = 30;
 
     // Database connection.
     private JdbcTemplate jdbc;
@@ -393,7 +397,7 @@ public abstract class NodeDAO implements NodePersistence
                 if (markChildren)
                 {
                     // collect and delete children of the node
-                    this.markForDeletionChildrenOf(persistentNode);
+                    this.markForDeletionChildrenOf(persistentNode, true);
                 }
                 
                 commitTransaction();
@@ -614,14 +618,17 @@ public abstract class NodeDAO implements NodePersistence
      * Mark the children of the provided node for deletion
      * @param node
      */
-    protected void markForDeletionChildrenOf(Node node)
+    protected void markForDeletionChildrenOf(Node node, boolean root)
     {
         List<Node> children = jdbc.query(getSelectNodesByParentSQL(node), new NodeMapper());
         for (Node next : children)
         {
-            markForDeletionChildrenOf(next);
+            markForDeletionChildrenOf(next, false);
         }
-        jdbc.update(getMarkNodeForDeletionSQL(node));
+        if (!root)
+        {
+            jdbc.update(getMarkNodeForDeletionSQL(node));
+        }
     }
     
     /**
@@ -1099,10 +1106,24 @@ public abstract class NodeDAO implements NodePersistence
     
     protected String getMarkNodeForDeletionSQL(Node node)
     {
+        // since we're appending the timestamp to the name, ensure
+        // the combined length is ok
+        String newNodeName = node.getName();
+        int maximumNameLength = NODE_NAME_COLUMN_SIZE - MAX_TIMESTAMP_LENGTH;
+        if (newNodeName.length() > maximumNameLength)
+        {
+            newNodeName = newNodeName.substring(0, maximumNameLength - 1);
+        }
+        newNodeName += "-" + new Date().toString();
+
         StringBuilder sb = new StringBuilder();
         sb.append("update ");
         sb.append(getNodeTableName());
-        sb.append(" set markedForDeletion=1 where nodeID = ");
+        sb.append(" set");
+        sb.append(" name='");
+        sb.append(newNodeName);
+        sb.append("',");
+        sb.append(" markedForDeletion=1 where nodeID = ");
         sb.append(getNodeID(node));
         return sb.toString();
     }
