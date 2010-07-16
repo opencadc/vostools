@@ -181,14 +181,10 @@ public class VOSpaceAuthorizer implements Authorizer
                         // Check for group membership
                         if (principal != null && groupRead != null && groupRead.getPropertyValue() != null)
                         {
-                            GmsClient gmsClient = getGmsClient(groupRead.getPropertyURI());
-                            if (gmsClient != null)
+                            if (hasMembership(groupRead.getPropertyValue(), principal))
                             {
-                                if (gmsClient.isMember(groupRead.getPropertyValue(), principal.getName()))
-                                {
-                                    // User is a member
-                                    return;
-                                }
+                                // User is a member
+                                return;
                             }
                         }
                     }
@@ -282,14 +278,10 @@ public class VOSpaceAuthorizer implements Authorizer
                         // Check for group membership
                         if (principal != null && groupWrite != null && groupWrite.getPropertyValue() != null)
                         {
-                            GmsClient gmsClient = getGmsClient(groupWrite.getPropertyURI());
-                            if (gmsClient != null)
+                            if (hasMembership(groupWrite.getPropertyValue(), principal))
                             {
-                                if (gmsClient.isMember(groupWrite.getPropertyValue(), principal.getName()))
-                                {
-                                    // User is a member
-                                    return;
-                                }
+                                // User is a member
+                                return;
                             }
                         }
                     }
@@ -313,6 +305,31 @@ public class VOSpaceAuthorizer implements Authorizer
     }
     
     /**
+     * Given the groupURI, determine if the user identified by 'principal'
+     * has membership.
+     * @param groupURI The group
+     * @param principal The user identifier
+     * @return True if the user is a member
+     */
+    private boolean hasMembership(String groupURI, Principal principal)
+    {
+        GmsClient gmsClient = getGmsClient(groupURI);
+        if (gmsClient != null)
+        {
+            String rawGroupValue = getGroupValue(groupURI);
+            if (rawGroupValue != null)
+            {
+                if (gmsClient.isMember(groupURI, principal.getName()))
+                {
+                    // User is a member
+                    return true;
+                }
+            }
+        }
+        return false;
+    }
+    
+    /**
      * Given the groupURI, return the appropriate GmsClient.
      */
     private GmsClient getGmsClient(String groupURI)
@@ -333,6 +350,23 @@ public class VOSpaceAuthorizer implements Authorizer
             LOG.warn("Invalid Group URI: " + groupURI, e);
             return null;
         }
+    }
+    
+    /**
+     * Parse the raw group value from the URI.  The value follows
+     * the hash mark (#) on the URI.
+     * @param groupURI
+     * @return The raw group value
+     */
+    private String getGroupValue(String groupURI)
+    {
+        int hashIndex = groupURI.lastIndexOf('#');
+        String groupValue = null;
+        if (hashIndex != -1)
+        {
+            groupValue = groupURI.substring(hashIndex + 1);
+        }
+        return groupValue;
     }
 
     /**
