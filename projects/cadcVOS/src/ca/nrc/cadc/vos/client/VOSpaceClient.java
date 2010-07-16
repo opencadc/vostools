@@ -443,11 +443,6 @@ public class VOSpaceClient
             log.debug("failed to read transfer", e);
             throw new IllegalStateException(e);
         }
-        catch (ParseException e)
-        {
-            e.printStackTrace();
-            throw new IllegalStateException(e);
-        }
         return rtn;
     }
 
@@ -537,11 +532,6 @@ public class VOSpaceClient
         catch (JDOMException e)
         {
             log.debug("got bad XML from service", e);
-            throw new RuntimeException(e);
-        }
-        catch (ParseException e)
-        {
-            e.printStackTrace();
             throw new RuntimeException(e);
         }
         return rtn;
