@@ -396,16 +396,18 @@ public class Main
 
             this.baseUrl = registryClient.getServiceURL(serverUri, "https").toString();
             this.client = new VOSpaceClient(baseUrl);
+            //TODO change to log.info
             System.out.println("server uri: " + serverUri);
             System.out.println("base url: " + this.baseUrl);
         }
         catch (URISyntaxException e)
         {
+            //TODO tell user  url is not good
             e.printStackTrace();
         }
         catch (MalformedURLException e)
         {
-            // TODO Auto-generated catch block
+            //TODO tell user cannot get to the specified service URL
             e.printStackTrace();
         }
     }

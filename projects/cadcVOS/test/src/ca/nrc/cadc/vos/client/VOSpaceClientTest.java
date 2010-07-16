@@ -70,6 +70,8 @@
 package ca.nrc.cadc.vos.client;
 
 import java.io.File;
+import java.net.InetAddress;
+import java.net.URL;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -83,6 +85,8 @@ import org.junit.Before;
 import org.junit.BeforeClass;
 import org.junit.Test;
 
+import ca.nrc.cadc.auth.BasicX509TrustManager;
+import ca.nrc.cadc.auth.SSLUtil;
 import ca.nrc.cadc.util.FileUtil;
 import ca.nrc.cadc.util.Log4jInit;
 import ca.nrc.cadc.vos.ClientTransfer;
@@ -97,6 +101,7 @@ import ca.nrc.cadc.vos.TestUtil;
 import ca.nrc.cadc.vos.Transfer;
 import ca.nrc.cadc.vos.VOS;
 import ca.nrc.cadc.vos.VOSURI;
+import ca.nrc.cadc.xml.XmlUtil;
 
 /**
  * @author zhangsa
@@ -105,12 +110,16 @@ import ca.nrc.cadc.vos.VOSURI;
 public class VOSpaceClientTest
 {
     private static Logger log = Logger.getLogger(NodeWriterTest.class);
-    {
-        Log4jInit.setLevel("ca", Level.DEBUG);
-    }
-    static String ENDPOINT = "https://arran.cadc.dao.nrc.ca";
-    static String ROOT_NODE = "zhangsa/";
-    VOSpaceClient client = new VOSpaceClient(ENDPOINT + "/vospace");
+    private static String ROOT_NODE = "zhangsa/";
+//    private static String TEST_CERT ="test/resources/proxy.crt";
+//    private static String TEST_KEY = "test/resources/proxy.key";
+    private static String TEST_CERT ="proxy.crt";
+    private static String TEST_KEY = "proxy.key";
+
+    String endpoint;
+    VOSpaceClient client;
+    
+    
 
     /**
      * @throws java.lang.Exception
@@ -118,6 +127,13 @@ public class VOSpaceClientTest
     @BeforeClass
     public static void setUpBeforeClass() throws Exception
     {
+        Log4jInit.setLevel("ca", Level.DEBUG);
+        System.setProperty(BasicX509TrustManager.class.getName() + ".trust", "true");
+
+        File cert = FileUtil.getFileFromResource(VOSpaceClientTest.TEST_CERT, VOSpaceClientTest.class);
+        File key = FileUtil.getFileFromResource(VOSpaceClientTest.TEST_KEY, VOSpaceClientTest.class);
+        SSLUtil.initSSL(cert, key);
+        
     }
 
     /**
@@ -134,6 +150,12 @@ public class VOSpaceClientTest
     @Before
     public void setUp() throws Exception
     {
+        InetAddress localhost = InetAddress.getLocalHost();
+        String hostname = localhost.getCanonicalHostName();
+        log.debug("hostname=" + hostname);
+        endpoint = "https://" + hostname;
+        log.debug("endpoint=" + endpoint);
+        client = new VOSpaceClient(endpoint + "/vospace");
     }
 
     /**
@@ -239,7 +261,7 @@ public class VOSpaceClientTest
     }
 
 
-    //@Test
+    @Test
     public void testCreateContainerNode() throws Exception
     {
         String slashPath1 = "/" + ROOT_NODE + TestUtil.uniqueStringOnTime();
@@ -296,7 +318,7 @@ public class VOSpaceClientTest
         Assert.assertEquals("/" + nodeRtn.getPath(), slashPath1);
     }
 
-    @Test
+    //@Test
     public void testCreateDataNodeWithProperties() throws Exception
     {
 //        String slashPath1 = "/" + ROOT_NODE + "nodeWithPropertiesA";
@@ -349,7 +371,7 @@ public class VOSpaceClientTest
         DataView dview = new DataView(VOS.VIEW_DEFAULT, dnode);
 
         List<Protocol> protocols = new ArrayList<Protocol>();
-        protocols.add(new Protocol(VOS.PROTOCOL_HTTPS_PUT, ENDPOINT, null));
+        protocols.add(new Protocol(VOS.PROTOCOL_HTTPS_PUT, endpoint, null));
 
         Transfer transfer = new Transfer();
         transfer.setTarget(dnode);
@@ -380,7 +402,7 @@ public class VOSpaceClientTest
         ClientTransfer txUpload = this.pushToVoSpace();
         
         List<Protocol> protocols = new ArrayList<Protocol>();
-        protocols.add(new Protocol(VOS.PROTOCOL_HTTPS_GET, ENDPOINT, null));
+        protocols.add(new Protocol(VOS.PROTOCOL_HTTPS_GET, endpoint, null));
         
         Transfer txSent = new Transfer();
         txSent.setTarget(txUpload.getTarget());
