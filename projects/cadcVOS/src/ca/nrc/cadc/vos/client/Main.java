@@ -70,6 +70,7 @@
 package ca.nrc.cadc.vos.client;
 
 import java.io.File;
+import java.net.MalformedURLException;
 import java.net.URI;
 import java.net.URISyntaxException;
 import java.util.ArrayList;
@@ -78,6 +79,9 @@ import java.util.List;
 import org.apache.log4j.Level;
 import org.apache.log4j.Logger;
 
+import ca.nrc.cadc.auth.BasicX509TrustManager;
+import ca.nrc.cadc.auth.SSLUtil;
+import ca.nrc.cadc.reg.client.RegistryClient;
 import ca.nrc.cadc.util.ArgumentMap;
 import ca.nrc.cadc.util.Log4jInit;
 import ca.nrc.cadc.vos.ClientTransfer;
@@ -91,7 +95,6 @@ import ca.nrc.cadc.vos.Transfer;
 import ca.nrc.cadc.vos.VOS;
 import ca.nrc.cadc.vos.VOSURI;
 import ca.nrc.cadc.vos.Transfer.Direction;
-import ca.nrc.cadc.vos.server.util.NodeUtil;
 
 /**
  * @author zhangsa
@@ -121,6 +124,8 @@ public class Main
     public static final String ARG_DEST = "dest";
     public static final String ARG_CONTENT_TYPE = "content-type";
     public static final String ARG_CONTENT_ENCODING = "content-encoding";
+    public static final String ARG_CERT = "cert";
+    public static final String ARG_KEY = "key";
 
     public static final String VOS_PREFIX = "vos://";
 
@@ -176,7 +181,7 @@ public class Main
                 Log4jInit.setLevel("ca.nrc.cadc.vos.client", Level.INFO);
             }
             else
-                Log4jInit.setLevel("ca.nrc.cadc.vos.client", Level.WARN);
+                Log4jInit.setLevel("ca", Level.WARN);
 
             try
             {
@@ -204,121 +209,141 @@ public class Main
     {
         if (this.operation.equals(Operation.CREATE))
         {
-            ContainerNode cnode = null;
-            try
-            {
-                cnode = new ContainerNode(this.target);
-            }
-            catch (URISyntaxException e)
-            {
-                e.printStackTrace();
-                throw new RuntimeException(e);
-            }
-            Node nodeRtn = this.client.createNode(cnode);
-            System.out.println("Created Node on Server:");
-            System.out.println(nodeRtn);
+            doCreate();
         }
         else if (this.operation.equals(Operation.DELETE))
         {
-            log.debug("target.getPath()" + this.target.getPath());
-            this.client.deleteNode(this.target.getPath());
-            System.out.println("Node deleted: " + this.target.getPath());
+            doDelete();
         }
         else if (this.operation.equals(Operation.VIEW))
         {
-            ContainerNode cnode = null;
+            doView();
+        }
+        else if (this.operation.equals(Operation.COPY))
+        {
+            doCopy();
+        }
+    }
+
+    private void doDelete()
+    {
+        log.debug("target.getPath()" + this.target.getPath());
+        this.client.deleteNode(this.target.getPath());
+        System.out.println("Node deleted: " + this.target.getPath());
+    }
+
+    private void doCopy()
+    {
+        if (this.transferDirection.equals(Transfer.Direction.pushToVoSpace))
+        {
             try
             {
-                cnode = new ContainerNode(this.target);
+                DataNode dnode = new DataNode(new VOSURI(this.destination));
+                dnode = (DataNode) this.client.createNode(dnode);
+                DataView dview = new DataView(VOS.VIEW_DEFAULT, dnode);
+
+                List<Protocol> protocols = new ArrayList<Protocol>();
+                protocols.add(new Protocol(VOS.PROTOCOL_HTTPS_PUT, this.baseUrl, null));
+
+                Transfer transfer = new Transfer();
+                transfer.setTarget(dnode);
+                transfer.setView(dview);
+                transfer.setProtocols(protocols);
+                transfer.setDirection(this.transferDirection);
+
+                ClientTransfer clientTransfer = new ClientTransfer(this.client.pushToVoSpace(transfer));
+                log.debug(clientTransfer.toXmlString());
+
+                log.debug("this.source: " + this.source);
+                File fileToUpload = new File(this.source);
+                clientTransfer.doUpload(fileToUpload);
+                Node node = clientTransfer.getTarget();
+                log.debug("clientTransfer getTarget: " + node);
+                Node nodeRtn = this.client.getNode(node.getPath());
+                log.debug("Node returned from getNode, after doUpload: " + VOSClientUtil.xmlString(nodeRtn));
             }
             catch (URISyntaxException e)
             {
                 e.printStackTrace();
                 throw new RuntimeException(e);
             }
-            Node nodeRtn = this.client.getNode(cnode.getPath());
-            System.out.println("Node on Server:");
-            System.out.println(nodeRtn.getName());
-            if (nodeRtn instanceof ContainerNode)
-            {
-                for (Node node : ((ContainerNode) nodeRtn).getNodes())
-                {
-                    System.out.println("\t" + node.getName());
-                }
-            }
         }
-        else if (this.operation.equals(Operation.COPY))
+        else if (this.transferDirection.equals(Transfer.Direction.pullFromVoSpace))
         {
-            if (this.transferDirection.equals(Transfer.Direction.pushToVoSpace))
+            try
             {
-                try
-                {
-                    DataNode dnode = new DataNode(new VOSURI(this.destination));
-                    dnode = (DataNode) this.client.createNode(dnode);
-                    DataView dview = new DataView(VOS.VIEW_DEFAULT, dnode);
+                DataNode dnode = new DataNode(new VOSURI(this.source));
+                DataView dview = new DataView(VOS.VIEW_DEFAULT, dnode);
 
-                    List<Protocol> protocols = new ArrayList<Protocol>();
-                    protocols.add(new Protocol(VOS.PROTOCOL_HTTPS_PUT, this.baseUrl, null));
+                List<Protocol> protocols = new ArrayList<Protocol>();
+                protocols.add(new Protocol(VOS.PROTOCOL_HTTPS_GET, this.baseUrl, null));
 
-                    Transfer transfer = new Transfer();
-                    transfer.setTarget(dnode);
-                    transfer.setView(dview);
-                    transfer.setProtocols(protocols);
-                    transfer.setDirection(this.transferDirection);
+                Transfer transfer = new Transfer();
+                transfer.setTarget(dnode);
+                transfer.setView(dview);
+                transfer.setProtocols(protocols);
+                transfer.setDirection(this.transferDirection);
 
-                    ClientTransfer clientTransfer = new ClientTransfer(this.client.pushToVoSpace(transfer));
-                    log.debug(clientTransfer.toXmlString());
+                ClientTransfer clientTransfer = new ClientTransfer(this.client.pullFromVoSpace(transfer));
+                log.debug(clientTransfer.toXmlString());
 
-                    log.debug("this.source: " + this.source);
-                    File fileToUpload = new File(this.source);
-                    clientTransfer.doUpload(fileToUpload);
-                    Node node = clientTransfer.getTarget();
-                    log.debug("clientTransfer getTarget: " + node);
-                    Node nodeRtn = this.client.getNode(node.getPath());
-                    log.debug("Node returned from getNode, after doUpload: " + VOSClientUtil.xmlString(nodeRtn));
-                }
-                catch (URISyntaxException e)
-                {
-                    e.printStackTrace();
-                    throw new RuntimeException(e);
-                }
+                log.debug("this.source: " + this.source);
+                File fileToSave = new File(this.destination);
+                clientTransfer.doDownload(fileToSave);
+                Node node = clientTransfer.getTarget();
+                log.debug("clientTransfer getTarget: " + node);
+                Node nodeRtn = this.client.getNode(node.getPath());
+                log.debug("Node returned from getNode, after doDownload: " + VOSClientUtil.xmlString(nodeRtn));
             }
-            else if (this.transferDirection.equals(Transfer.Direction.pullFromVoSpace))
+            catch (URISyntaxException e)
             {
-                try
-                {
-                    DataNode dnode = new DataNode(new VOSURI(this.source));
-                    DataView dview = new DataView(VOS.VIEW_DEFAULT, dnode);
-
-                    List<Protocol> protocols = new ArrayList<Protocol>();
-                    protocols.add(new Protocol(VOS.PROTOCOL_HTTPS_GET, this.baseUrl, null));
-
-                    Transfer transfer = new Transfer();
-                    transfer.setTarget(dnode);
-                    transfer.setView(dview);
-                    transfer.setProtocols(protocols);
-                    transfer.setDirection(this.transferDirection);
-
-                    ClientTransfer clientTransfer = new ClientTransfer(this.client.pullFromVoSpace(transfer));
-                    log.debug(clientTransfer.toXmlString());
-
-                    log.debug("this.source: " + this.source);
-                    File fileToSave = new File(this.destination);
-                    clientTransfer.doDownload(fileToSave);
-                    Node node = clientTransfer.getTarget();
-                    log.debug("clientTransfer getTarget: " + node);
-                    Node nodeRtn = this.client.getNode(node.getPath());
-                    log.debug("Node returned from getNode, after doDownload: " + VOSClientUtil.xmlString(nodeRtn));
-                }
-                catch (URISyntaxException e)
-                {
-                    e.printStackTrace();
-                    throw new RuntimeException(e);
-                }
+                e.printStackTrace();
+                throw new RuntimeException(e);
             }
-
         }
-        // TODO implementation
+    }
+
+    private void doCreate()
+    {
+        ContainerNode cnode = null;
+        try
+        {
+            cnode = new ContainerNode(this.target);
+        }
+        catch (URISyntaxException e)
+        {
+            e.printStackTrace();
+            throw new RuntimeException(e);
+        }
+        Node nodeRtn = this.client.createNode(cnode);
+        System.out.println("Created Node on Server:");
+        System.out.println(nodeRtn);
+    }
+
+    private void doView()
+    {
+        Node nodeRtn = this.client.getNode(this.target.getPath());
+        System.out.println("Node: " + nodeRtn.getUri());
+        if (nodeRtn instanceof ContainerNode)
+        {
+            for (Node node : ((ContainerNode) nodeRtn).getNodes())
+            {
+                System.out.println("\t" + node.getName());
+            }
+        }
+        else if (nodeRtn instanceof DataNode)
+        {
+            System.out.println("Properties of Node:");
+            for (NodeProperty np : nodeRtn.getProperties())
+            {
+                System.out.println("\t" + np.getPropertyURI() + ": " + np.getPropertyValue());
+            }
+        }
+        else
+        {
+            log.debug("class of returned node: " + nodeRtn.getClass().getName());
+        }
+
     }
 
     /**
@@ -327,11 +352,15 @@ public class Main
      * @param argMap
      * @throws URISyntaxException 
      */
-    private void init(ArgumentMap argMap)
+    private void init(ArgumentMap argMap) 
     {
-        VOSURI serverUri = null;
+        URI serverUri = null;
         try
         {
+            String certFn = argMap.getValue(ARG_CERT);
+            String keyFn = argMap.getValue(ARG_KEY);
+            SSLUtil.initSSL(new File(certFn), new File(keyFn));
+            
             if (this.operation.equals(Operation.COPY))
             {
                 String strSrc = argMap.getValue(ARG_SRC);
@@ -339,14 +368,14 @@ public class Main
                 if (!strSrc.startsWith(VOS_PREFIX) && strDest.startsWith(VOS_PREFIX))
                 {
                     this.transferDirection = Direction.pushToVoSpace;
-                    serverUri = new VOSURI(strDest);
+                    serverUri = new VOSURI(strDest).getServiceURI();
                     this.source = new URI("file://" + strSrc);
                     this.destination = new URI(strDest);
                 }
                 else if (strSrc.startsWith(VOS_PREFIX) && !strDest.startsWith(VOS_PREFIX))
                 {
                     this.transferDirection = Direction.pullFromVoSpace;
-                    serverUri = new VOSURI(strSrc);
+                    serverUri = new VOSURI(strSrc).getServiceURI();
                     this.source = new URI(strSrc);
                     this.destination = new URI("file://" + strDest);
                 }
@@ -357,16 +386,21 @@ public class Main
             {
                 String strTarget = argMap.getValue(ARG_TARGET);
                 this.target = new VOSURI(strTarget);
-                serverUri = this.target;
+                serverUri = this.target.getServiceURI();
             }
 
-            this.baseUrl = registryClient.getBaseURL(serverUri);
+            this.baseUrl = registryClient.getServiceURL(serverUri, "https").toString();
             this.client = new VOSpaceClient(baseUrl);
-            System.out.println("server uri: " + serverUri.getURIObject().toString());
+            System.out.println("server uri: " + serverUri);
             System.out.println("base url: " + this.baseUrl);
         }
         catch (URISyntaxException e)
         {
+            e.printStackTrace();
+        }
+        catch (MalformedURLException e)
+        {
+            // TODO Auto-generated catch block
             e.printStackTrace();
         }
     }

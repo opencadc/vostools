@@ -78,6 +78,7 @@ import java.io.OutputStreamWriter;
 import java.net.HttpURLConnection;
 import java.net.MalformedURLException;
 import java.net.URL;
+import java.text.ParseException;
 import java.util.List;
 
 import org.apache.log4j.Logger;
@@ -222,6 +223,7 @@ public class VOSpaceClient
 
         try
         {
+            if (path.startsWith("/")) path = path.substring(1);
             URL url = new URL(this.baseUrl + "/nodes/" + path);
             log.debug("getNode(), URL=" + url);
             HttpURLConnection connection = (HttpURLConnection) url.openConnection();
@@ -262,6 +264,7 @@ public class VOSpaceClient
             case 404:
                 // The service SHALL throw a HTTP 404 status code including a NodeNotFound fault in the entity-body if the target Node does not exist 
             default:
+                log.error(responseMessage + ". HTTP Code: " + responseCode);
                 throw new IllegalArgumentException("Error returned.  HTTP Response Code: " + responseCode);
             }
         }
@@ -440,6 +443,11 @@ public class VOSpaceClient
             log.debug("failed to read transfer", e);
             throw new IllegalStateException(e);
         }
+        catch (ParseException e)
+        {
+            e.printStackTrace();
+            throw new IllegalStateException(e);
+        }
         return rtn;
     }
 
@@ -529,6 +537,11 @@ public class VOSpaceClient
         catch (JDOMException e)
         {
             log.debug("got bad XML from service", e);
+            throw new RuntimeException(e);
+        }
+        catch (ParseException e)
+        {
+            e.printStackTrace();
             throw new RuntimeException(e);
         }
         return rtn;
@@ -691,9 +704,8 @@ public class VOSpaceClient
         int responseCode;
         try
         {
-            if (path.startsWith("/"))
-                path = path.substring(1); // removed leading slash to avoid confusion
-            
+            if (path.startsWith("/")) path = path.substring(1); // removed leading slash to avoid confusion
+
             URL url = new URL(this.baseUrl + "/nodes/" + path);
             log.debug(url);
             HttpURLConnection connection = (HttpURLConnection) url.openConnection();

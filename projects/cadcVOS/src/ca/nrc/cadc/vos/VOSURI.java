@@ -217,4 +217,39 @@ public class VOSURI
         }
         return rtn;
     }
+
+    /**
+     * return the service URI which is with ivo:// scheme.
+     * e.g.
+     * for VOSURI("vos://cadc.nrc.ca!vospace/zhangsa/nodeWithPropertiesA"),
+     * it returns:
+     * URI("ivo://cadc.nrc.ca/vospace")
+     * 
+     * @throws URISyntaxException
+     * @author Sailor Zhang, 2010-07-15
+     */
+    public URI getServiceURI() throws URISyntaxException
+    {
+        String authority = getAuthority();
+        authority = authority.replace('!', '/');
+        String str = "ivo://" + authority; 
+        return new URI(str);
+    }
+ 
+    public static void main(String[] args) throws Exception
+    {
+        String str = "vos://cadc.nrc.ca!vospace/zhangsa/nodeWithPropertiesA";
+        VOSURI vu = new VOSURI(str);
+        System.out.println(vu.getAuthority());
+        System.out.println(vu);
+        System.out.println(vu.getName());
+        System.out.println(vu.getFragment());
+        System.out.println(vu.getPath());
+        System.out.println(vu.getPrefix());
+        System.out.println(vu.getQuery());
+        System.out.println(vu.getScheme());
+        System.out.println(vu.getURIObject());
+        System.out.println(vu.getServiceURI());
+        
+    }
 }
