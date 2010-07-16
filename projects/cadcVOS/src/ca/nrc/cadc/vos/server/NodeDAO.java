@@ -117,12 +117,33 @@ public abstract class NodeDAO implements NodePersistence
     private DataSourceTransactionManager transactionManager;
     private DefaultTransactionDefinition defaultTransactionDef;
     private TransactionStatus transactionStatus;
+    
+    private boolean getNodesMarkedForDeletion = false;
 
     /**
      * NodeDAO Constructor.
      */
     public NodeDAO()
     {
+    }
+    
+    /**
+     * Returns true if nodes marked for deletion are
+     * returned by the DAO
+     */
+    public boolean getGetNodesMarkedForDeletion()
+    {
+        return getNodesMarkedForDeletion;
+    }
+    
+    /**
+     * If true, retrieve nodes in the database that have
+     * been marked for deletion
+     * @param value The new value.
+     */
+    public void setGetNodesMarkedForDeletion(boolean value)
+    {
+        getNodesMarkedForDeletion = value;
     }
     
     /**
@@ -567,13 +588,10 @@ public abstract class NodeDAO implements NodePersistence
      */
     protected Node getSingleNodeFromSelect(String sql)
     {
-        //TODO added by sz, need remove
-        log.debug("sz SQL: " + sql);
+        log.debug("getSingleNodeFromSelect SQL: " + sql);
 
-        Node node = null;
         List<Node> nodeList = jdbc.query(sql, new NodeMapper());
-        //TODO added by sz, need remove
-        log.debug("sz nodeList: " + nodeList);
+
         if (nodeList.size() > 1)
         {
             throw new IllegalStateException("More than one node returned for SQL: "
@@ -690,6 +708,10 @@ public abstract class NodeDAO implements NodePersistence
         sb.append(node.getName());
         sb.append("' and ");
         sb.append(parentWhereClause);
+        if (!getNodesMarkedForDeletion)
+        {
+            sb.append(" and markedForDeletion = 0");
+        }
         return sb.toString();
     }
     
@@ -705,6 +727,10 @@ public abstract class NodeDAO implements NodePersistence
         sb.append(getNodeTableName());
         sb.append(" where parentID = ");
         sb.append(getNodeID(parent));
+        if (!getNodesMarkedForDeletion)
+        {
+            sb.append(" and markedForDeletion = 0");
+        }
         return sb.toString();
     }
     
