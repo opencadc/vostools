@@ -358,6 +358,7 @@ public class Main
         {
             String certFn = argMap.getValue(ARG_CERT);
             String keyFn = argMap.getValue(ARG_KEY);
+            // TODO: check for nulls, that files exist and are readable
             SSLUtil.initSSL(new File(certFn), new File(keyFn));
             
             if (this.operation.equals(Operation.COPY))
@@ -369,6 +370,7 @@ public class Main
                     this.transferDirection = Direction.pushToVoSpace;
                     serverUri = new VOSURI(strDest).getServiceURI();
                     File f = new File(strSrc);
+                    // TODO: check f.exists() and f.canRead()
                     this.source = new URI("file", f.getAbsolutePath(), null);
                     this.destination = new URI(strDest);
                 }
@@ -378,6 +380,8 @@ public class Main
                     serverUri = new VOSURI(strSrc).getServiceURI();
                     this.source = new URI(strSrc);
                     File f = new File(strDest);
+                    // TDOD: check f.exists() and f.canWrite()
+                    // TODO: check f.getParent(): isDirectory() and canWrite()
                     this.destination = new URI("file", f.getAbsolutePath(), null);
                 }
                 else
