@@ -181,7 +181,7 @@ public class VOSpaceClientTest
         Assert.assertEquals(newUniqueValue2, propValue2);
     }
 
-    @Test
+    //@Test
     public void testDeleteNode() throws Exception
     {
         String slashPath1 = "/" + ROOT_NODE + TestUtil.uniqueStringOnTime();
@@ -294,6 +294,45 @@ public class VOSpaceClientTest
         log.debug("Returned Node: " + nodeRtn);
         log.debug("XML of Returned Node: " + VOSClientUtil.xmlString(nodeRtn));
         Assert.assertEquals("/" + nodeRtn.getPath(), slashPath1);
+    }
+
+    @Test
+    public void testCreateDataNodeWithProperties() throws Exception
+    {
+//        String slashPath1 = "/" + ROOT_NODE + "nodeWithPropertiesA";
+        String slashPath1 = "/" + ROOT_NODE + TestUtil.uniqueStringOnTime();
+        DataNode dnode = new DataNode(new VOSURI(VOS.VOS_URI + slashPath1));
+
+        Node nodeRtn = client.createNode(dnode);
+        Node nodeRtn2 = client.getNode(nodeRtn.getPath());
+        Assert.assertEquals(nodeRtn.getPath(), nodeRtn2.getPath());
+
+        List<NodeProperty> properties = new ArrayList<NodeProperty>();
+        properties.add(new NodeProperty(VOS.PROPERTY_URI_TITLE, "sz_title")); 
+        properties.add(new NodeProperty(VOS.PROPERTY_URI_CREATOR, "sz_creator"));
+        properties.add(new NodeProperty(VOS.PROPERTY_URI_SUBJECT, "sz_subject"));
+        properties.add(new NodeProperty(VOS.PROPERTY_URI_DESCRIPTION, "sz_description"));
+        properties.add(new NodeProperty(VOS.PROPERTY_URI_PUBLISHER, "sz_publisher"));
+        properties.add(new NodeProperty(VOS.PROPERTY_URI_CONTRIBUTOR, "sz_contributor"));
+        properties.add(new NodeProperty(VOS.PROPERTY_URI_DATE, "sz_date"));
+        properties.add(new NodeProperty(VOS.PROPERTY_URI_TYPE, "sz_type"));
+        properties.add(new NodeProperty(VOS.PROPERTY_URI_FORMAT, "sz_format"));
+        properties.add(new NodeProperty(VOS.PROPERTY_URI_IDENTIFIER, "sz_identifier"));
+        properties.add(new NodeProperty(VOS.PROPERTY_URI_SOURCE, "sz_source")); 
+        properties.add(new NodeProperty(VOS.PROPERTY_URI_LANGUAGE, "sz_language")); 
+        properties.add(new NodeProperty(VOS.PROPERTY_URI_RELATION, "sz_relation")); 
+        properties.add(new NodeProperty(VOS.PROPERTY_URI_COVERAGE, "sz_coverage"));
+        properties.add(new NodeProperty(VOS.PROPERTY_URI_RIGHTS, "sz_rights")); 
+        properties.add(new NodeProperty(VOS.PROPERTY_URI_AVAILABLESPACE, "sz_availableSpace"));
+
+        nodeRtn2.setProperties(properties);
+
+        Node nodeRtn3 = client.setNode(nodeRtn2);
+        log.debug("After setNode: " + nodeRtn3);
+        for (NodeProperty np : nodeRtn3.getProperties())
+        {
+            Assert.assertEquals(np.getPropertyValue().startsWith("sz"), true);
+        }
     }
 
     public ClientTransfer pushToVoSpace() throws Exception
