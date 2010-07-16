@@ -73,6 +73,9 @@ import java.io.BufferedInputStream;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.IOException;
+import java.net.URI;
+import java.net.URL;
+import java.util.MissingResourceException;
 import java.util.zip.CRC32;
 import java.util.zip.CheckedInputStream;
 
@@ -116,4 +119,15 @@ public class FileUtil
         }
         return cInStream.getChecksum().getValue();
     }
+
+    public static File getFileFromResource(String resourceFileName, Class runningClass)
+    {
+        URL url = runningClass.getClassLoader().getResource(resourceFileName);
+        if (url == null)
+            throw new MissingResourceException("Resource not found: " + resourceFileName, runningClass.getName(), resourceFileName);
+        String path = url.getPath();
+        File rtn = new File(path);
+        return rtn;
+    }
+
 }
