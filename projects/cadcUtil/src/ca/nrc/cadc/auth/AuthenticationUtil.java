@@ -289,16 +289,11 @@ public class AuthenticationUtil
             return true;
         }
         
-        if (p1 == null)
+        if (p1 == null || p2 == null)
         {
             return false;
         }
-        
-        if (p2 == null)
-        {
-            return false;
-        }
-        
+                
         if (p1 instanceof X500Principal)
         {
             if (p2 instanceof X500Principal)
