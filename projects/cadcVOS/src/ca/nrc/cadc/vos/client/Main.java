@@ -151,6 +151,8 @@ public class Main
     Direction transferDirection = null;
     String baseUrl = null;
     VOSpaceClient client = null;
+    File certFile = null;
+    File keyFile = null;
 
     /**
      * @param args
@@ -349,67 +351,146 @@ public class Main
      * Initialize command member variables based on arguments passed in.
      * 
      * @param argMap
-     * @throws URISyntaxException 
      */
-    private void init(ArgumentMap argMap) 
+    private void init(ArgumentMap argMap)
     {
         URI serverUri = null;
-        try
+        validateInitSSL(argMap);
+
+        if (this.operation.equals(Operation.COPY))
         {
-            String certFn = argMap.getValue(ARG_CERT);
-            String keyFn = argMap.getValue(ARG_KEY);
-            // TODO: check for nulls, that files exist and are readable
-            SSLUtil.initSSL(new File(certFn), new File(keyFn));
-            
-            if (this.operation.equals(Operation.COPY))
+            String strSrc = argMap.getValue(ARG_SRC);
+            String strDest = argMap.getValue(ARG_DEST);
+            if (!strSrc.startsWith(VOS_PREFIX) && strDest.startsWith(VOS_PREFIX))
             {
-                String strSrc = argMap.getValue(ARG_SRC);
-                String strDest = argMap.getValue(ARG_DEST);
-                if (!strSrc.startsWith(VOS_PREFIX) && strDest.startsWith(VOS_PREFIX))
+                this.transferDirection = Direction.pushToVoSpace;
+                try
                 {
-                    this.transferDirection = Direction.pushToVoSpace;
-                    serverUri = new VOSURI(strDest).getServiceURI();
-                    File f = new File(strSrc);
-                    // TODO: check f.exists() and f.canRead()
-                    this.source = new URI("file", f.getAbsolutePath(), null);
                     this.destination = new URI(strDest);
+                    serverUri = new VOSURI(strDest).getServiceURI();
                 }
-                else if (strSrc.startsWith(VOS_PREFIX) && !strDest.startsWith(VOS_PREFIX))
+                catch (URISyntaxException e)
                 {
-                    this.transferDirection = Direction.pullFromVoSpace;
+                    throw new IllegalArgumentException("Invalid VOS URI: " + strDest);
+                }
+                File f = new File(strSrc);
+                if (!f.exists() || !f.canRead())
+                    throw new IllegalArgumentException("Source file " + strSrc + " does not exist or cannot be read.");
+                try
+                {
+                    this.source = new URI("file", f.getAbsolutePath(), null);
+                }
+                catch (URISyntaxException e)
+                {
+                    throw new IllegalArgumentException("Invalid file path: " + strSrc);
+                }
+            }
+            else if (strSrc.startsWith(VOS_PREFIX) && !strDest.startsWith(VOS_PREFIX))
+            {
+                this.transferDirection = Direction.pullFromVoSpace;
+                try
+                {
                     serverUri = new VOSURI(strSrc).getServiceURI();
                     this.source = new URI(strSrc);
-                    File f = new File(strDest);
-                    // TDOD: check f.exists() and f.canWrite()
-                    // TODO: check f.getParent(): isDirectory() and canWrite()
-                    this.destination = new URI("file", f.getAbsolutePath(), null);
+                }
+                catch (URISyntaxException e)
+                {
+                    throw new IllegalArgumentException("Invalid VOS URI: " + strSrc);
+                }
+                File f = new File(strDest);
+                if (f.exists())
+                {
+                    if (!f.canWrite()) throw new IllegalArgumentException("Destination file " + strDest + " is not writable.");
                 }
                 else
-                    throw new UnsupportedOperationException("The type of your copy operation is not supported yet.");
+                {
+                    File parent = f.getParentFile();
+                    if (parent.isDirectory())
+                    {
+                        if (!parent.canWrite())
+                            throw new IllegalArgumentException("The parent directory of destination file " + strDest
+                                    + " is not writable.");
+                    }
+                    else
+                        throw new IllegalArgumentException("Destination file " + strDest + " is not within a directory.");
+                }
+                try
+                {
+                    this.destination = new URI("file", f.getAbsolutePath(), null);
+                }
+                catch (URISyntaxException e)
+                {
+                    throw new IllegalArgumentException("Invalid file path: " + strDest);
+                }
             }
             else
+                throw new UnsupportedOperationException("The type of your copy operation is not supported yet.");
+        }
+        else
+        {
+            String strTarget = argMap.getValue(ARG_TARGET);
+            try
             {
-                String strTarget = argMap.getValue(ARG_TARGET);
                 this.target = new VOSURI(strTarget);
                 serverUri = this.target.getServiceURI();
             }
-
-            this.baseUrl = registryClient.getServiceURL(serverUri, "https").toString();
-            this.client = new VOSpaceClient(baseUrl);
-            //TODO change to log.info
-            System.out.println("server uri: " + serverUri);
-            System.out.println("base url: " + this.baseUrl);
+            catch (URISyntaxException e)
+            {
+                throw new IllegalArgumentException("Invalid VOS URI: " + strTarget);
+            }
         }
-        catch (URISyntaxException e)
+
+        try
         {
-            //TODO tell user  url is not good
-            e.printStackTrace();
+            this.baseUrl = registryClient.getServiceURL(serverUri, "https").toString();
         }
         catch (MalformedURLException e)
         {
-            //TODO tell user cannot get to the specified service URL
-            e.printStackTrace();
+            throw new IllegalArgumentException("Invalid VOS URI: " + serverUri);
         }
+        this.client = new VOSpaceClient(baseUrl);
+        log.info("server uri: " + serverUri);
+        log.info("base url: " + this.baseUrl);
+    }
+
+    private void validateInitSSL(ArgumentMap argMap)
+    {
+        String strCert = argMap.getValue(ARG_CERT);
+        String strKey = argMap.getValue(ARG_KEY);
+
+        this.certFile = new File(strCert);
+        this.keyFile = new File(strKey);
+
+        StringBuffer sbSslMsg = new StringBuffer();
+        boolean sslError = false;
+        if (!certFile.exists())
+        {
+            sbSslMsg.append("Certificate file " + strCert + " does not exist. \n");
+            sslError = true;
+        }
+        if (!keyFile.exists())
+        {
+            sbSslMsg.append("Key file " + strKey + " does not exist. \n");
+            sslError = true;
+        }
+        if (!sslError)
+        {
+            if (!certFile.canRead())
+            {
+                sbSslMsg.append("Certificate file " + strCert + " cannot be read. \n");
+                sslError = true;
+            }
+            if (!keyFile.canRead())
+            {
+                sbSslMsg.append("Key file " + strKey + " cannot be read. \n");
+                sslError = true;
+            }
+        }
+        if (sslError)
+        {
+            throw new IllegalArgumentException(sbSslMsg.toString());
+        }
+        SSLUtil.initSSL(this.certFile, this.keyFile);
     }
 
     /**
@@ -456,6 +537,10 @@ public class Main
      */
     private void validateCommandArguments(ArgumentMap argMap) throws IllegalArgumentException
     {
+        String strCert = argMap.getValue(ARG_CERT);
+        String strKey = argMap.getValue(ARG_KEY);
+        if (strCert == null || strKey == null) throw new IllegalArgumentException("Argument cert and key are all required.");
+
         if (this.operation.equals(Operation.COPY))
         {
             String strSrc = argMap.getValue(ARG_SRC);
@@ -542,8 +627,7 @@ public class Main
                 "   [--content-encoding=<encoding of source>]                                                       ",
                 "   [--group-read=<group URI>]                                                                      ",
                 "   [--group-write=<group URI>]                                                                     ",
-                "   [--prop=<properties file>]                                                                      ",
-                "" };
+                "   [--prop=<properties file>]                                                                      ", "" };
         for (String line : um)
             System.out.println(line);
     }

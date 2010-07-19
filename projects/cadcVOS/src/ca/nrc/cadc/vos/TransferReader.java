@@ -143,12 +143,12 @@ public class TransferReader
         Node target = null;
         try
         {
-            target = new DataNode(new VOSURI(root.getChildText("target", VOS.NS))); //TODO confirmation needed
+            target = new DataNode(new VOSURI(root.getChildText("target", VOS.NS))); 
         } catch (URISyntaxException e)
         { 
             log.debug(e.getMessage());
         }
-        View view = new DataView(root.getChildText("view", VOS.NS), null); //TODO confirmation needed    
+        View view = new DataView(root.getChildText("view", VOS.NS), null);     
         List<Protocol> protocols = parseProtocols();
         // boolean keepBytes; // not in XML yet
         // String endpoint; // not in XML yet

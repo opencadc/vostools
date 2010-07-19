@@ -363,9 +363,7 @@ public class VOSpaceClient
         Transfer rtn = null;
 
         Job job = new Job();
-        //TODO Transfer fields for values of parameter need to be confirmed.
         job.setExecutionDuration(0);
-        //TODO is there a RUN for execution phase?
         job.setExecutionPhase(ExecutionPhase.EXECUTING);
         job.addParameter(new Parameter("target", transfer.getTarget().getUri().toString()));
         job.addParameter(new Parameter("view", transfer.getView().getUri().toString()));
@@ -464,8 +462,6 @@ public class VOSpaceClient
             log.debug(VOSClientUtil.xmlString(job));
 
             job.setExecutionDuration(0);
-            //TODO is there a RUN for execution phase?
-            //job.setExecutionPhase(ExecutionPhase.EXECUTING);
             job.addParameter(new Parameter("target", transfer.getTarget().getUri().toString()));
             job.addParameter(new Parameter("view", transfer.getView().getUri().toString()));
 

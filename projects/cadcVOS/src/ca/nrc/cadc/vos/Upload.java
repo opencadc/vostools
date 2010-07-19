@@ -185,13 +185,11 @@ public class Upload implements Runnable
             }
             catch (IOException e)
             {
-                // TODO Auto-generated catch block
                 e.printStackTrace();
                 throw new RuntimeException(e);
             }
             catch (InterruptedException e)
             {
-                // TODO Auto-generated catch block
                 e.printStackTrace();
                 throw new RuntimeException(e);
             }
