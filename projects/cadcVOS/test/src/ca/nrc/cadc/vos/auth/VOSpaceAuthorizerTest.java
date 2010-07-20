@@ -66,8 +66,8 @@
  */
 package ca.nrc.cadc.vos.auth;
 
-import static org.easymock.classextension.EasyMock.createMock;
-import static org.easymock.classextension.EasyMock.replay;
+import static org.easymock.EasyMock.createMock;
+import static org.easymock.EasyMock.replay;
 
 import org.junit.Before;
 import org.junit.Test;
