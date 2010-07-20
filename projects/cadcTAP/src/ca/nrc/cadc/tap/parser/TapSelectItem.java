@@ -126,7 +126,7 @@ public class TapSelectItem
     @Override
     public String toString()
     {
-        return "\r\n\tTapSelectItem [this._alias=" + this.alias + ", this._columnName=" + this.columnName + ", this._tableName="
+        return "\r\n\tTapSelectItem [this.alias=" + this.alias + ", this.columnName=" + this.columnName + ", this.tableName="
                 + this.tableName + "]";
     }
 
@@ -162,7 +162,7 @@ public class TapSelectItem
             TapSelectItem other = (TapSelectItem) obj;
             if (this.alias == null && other.alias != null)
                 return false;
-            else if (!this.alias.equals(other.alias))
+            else if (this.alias != null && !this.alias.equals(other.alias))
                 return false;
             else if (this.columnName == null && other.columnName != null)
                 return false;
