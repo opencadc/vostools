@@ -69,13 +69,13 @@
 
 package ca.nrc.cadc.auth;
 
-import ca.nrc.cadc.util.Log4jInit;
 import java.io.File;
 import java.net.HttpURLConnection;
 import java.net.InetAddress;
 import java.net.URL;
 import java.net.URLConnection;
 import java.security.KeyStore;
+
 import javax.net.SocketFactory;
 import javax.net.ssl.HttpsURLConnection;
 import javax.net.ssl.KeyManagerFactory;
@@ -83,29 +83,31 @@ import javax.net.ssl.SSLContext;
 import javax.net.ssl.SSLHandshakeException;
 import javax.net.ssl.SSLSocketFactory;
 import javax.net.ssl.TrustManagerFactory;
+
 import org.apache.log4j.Level;
 import org.apache.log4j.Logger;
-
 import org.junit.After;
 import org.junit.AfterClass;
+import org.junit.Assert;
 import org.junit.Before;
 import org.junit.BeforeClass;
 import org.junit.Test;
-import org.junit.Assert;
+
+import ca.nrc.cadc.util.FileUtil;
+import ca.nrc.cadc.util.Log4jInit;
 
 /**
  * Unit tests for SSLUtil.
  *
  * @author pdowler
  */
-public class SSLUtilTest 
+public class SSLUtilTest
 {
     private static Logger log = Logger.getLogger(SSLUtilTest.class);
-    static
-    {
-        Log4jInit.setLevel("ca.nrc.cadc.auth", Level.INFO);
-    }
-
+    private static String TEST_CERT_FN = "x509_CADCAuthtest1.crt";
+    private static String TEST_KEY_FN = "x509_CADCAuthtest1.key";
+    private static File SSL_CERT;
+    private static File SSL_KEY;
 
     /**
      * @throws java.lang.Exception
@@ -113,6 +115,9 @@ public class SSLUtilTest
     @BeforeClass
     public static void setUpBeforeClass() throws Exception
     {
+        Log4jInit.setLevel("ca.nrc.cadc.auth", Level.INFO);
+        SSL_CERT = FileUtil.getFileFromResource(TEST_CERT_FN, SSLUtilTest.class);
+        SSL_KEY = FileUtil.getFileFromResource(TEST_KEY_FN, SSLUtilTest.class);
     }
 
     /**
@@ -139,18 +144,15 @@ public class SSLUtilTest
     {
     }
 
-    private static File TEST_CERT = new File("test/resources/proxy.crt");
-    private static File TEST_KEY = new File("test/resources/proxy.key");
-    
     //@Test
     public void testReadCert() throws Exception
     {
         try
         {
-            KeyStore ks = SSLUtil.readCertificates(TEST_CERT, TEST_KEY);
+            KeyStore ks = SSLUtil.readCertificates(SSL_CERT, SSL_KEY);
             SSLUtil.printKeyStoreInfo(ks);
         }
-        catch(Throwable t)
+        catch (Throwable t)
         {
             t.printStackTrace();
             Assert.fail("unexpected exception: " + t);
@@ -162,10 +164,10 @@ public class SSLUtilTest
     {
         try
         {
-            KeyStore ks = SSLUtil.readCertificates(TEST_CERT, TEST_KEY);
+            KeyStore ks = SSLUtil.readCertificates(SSL_CERT, SSL_KEY);
             KeyManagerFactory kmf = SSLUtil.getKeyManagerFactory(ks);
         }
-        catch(Throwable t)
+        catch (Throwable t)
         {
             t.printStackTrace();
             Assert.fail("unexpected exception: " + t);
@@ -177,13 +179,13 @@ public class SSLUtilTest
     {
         try
         {
-            KeyStore ks = SSLUtil.readCertificates(TEST_CERT, TEST_KEY);
+            KeyStore ks = SSLUtil.readCertificates(SSL_CERT, SSL_KEY);
             KeyStore ts = null;
             KeyManagerFactory kmf = SSLUtil.getKeyManagerFactory(ks);
             TrustManagerFactory tmf = SSLUtil.getTrustManagerFactory(ts);
             SSLContext ctx = SSLUtil.getContext(kmf, tmf, ks);
         }
-        catch(Throwable t)
+        catch (Throwable t)
         {
             t.printStackTrace();
             Assert.fail("unexpected exception: " + t);
@@ -195,9 +197,9 @@ public class SSLUtilTest
     {
         try
         {
-            SocketFactory sf = SSLUtil.getSocketFactory(TEST_CERT, TEST_KEY);
+            SocketFactory sf = SSLUtil.getSocketFactory(SSL_CERT, SSL_KEY);
         }
-        catch(Throwable t)
+        catch (Throwable t)
         {
             t.printStackTrace();
             Assert.fail("unexpected exception: " + t);
@@ -209,9 +211,9 @@ public class SSLUtilTest
     {
         try
         {
-            SSLUtil.initSSL(TEST_CERT, TEST_KEY);
+            SSLUtil.initSSL(SSL_CERT, SSL_KEY);
         }
-        catch(Throwable t)
+        catch (Throwable t)
         {
             t.printStackTrace();
             Assert.fail("unexpected exception: " + t);
@@ -222,7 +224,7 @@ public class SSLUtilTest
     {
         HttpURLConnection.setFollowRedirects(false);
 
-        SSLSocketFactory sf = SSLUtil.getSocketFactory(TEST_CERT, TEST_KEY);
+        SSLSocketFactory sf = SSLUtil.getSocketFactory(SSL_CERT, SSL_KEY);
         URLConnection con = url.openConnection();
 
         log.debug("URLConnection type: " + con.getClass().getName());
@@ -242,7 +244,7 @@ public class SSLUtilTest
             log.debug("test URL: " + url);
             testHTTPS(url);
         }
-        catch(Throwable t)
+        catch (Throwable t)
         {
             t.printStackTrace();
             Assert.fail("unexpected exception: " + t);
@@ -258,7 +260,7 @@ public class SSLUtilTest
             log.debug("test URL: " + url);
             testHTTPS(url);
         }
-        catch(Throwable t)
+        catch (Throwable t)
         {
             t.printStackTrace();
             Assert.fail("unexpected exception: " + t);
@@ -276,15 +278,15 @@ public class SSLUtilTest
     {
         InetAddress localhost = InetAddress.getLocalHost();
         String hostname = localhost.getCanonicalHostName();
-        URL url = new URL("https://"+hostname+"/");
-        
+        URL url = new URL("https://" + hostname + "/");
+
         try
         {
             log.debug("test URL: " + url);
             testHTTPS(url);
             Assert.fail("expected an SSLHandshakeException but did not fail");
         }
-        catch(SSLHandshakeException expected)
+        catch (SSLHandshakeException expected)
         {
             log.debug("caught expected exception: " + expected);
         }
@@ -295,12 +297,11 @@ public class SSLUtilTest
             log.debug("test URL: " + url);
             testHTTPS(url);
         }
-        catch(Throwable t)
+        catch (Throwable t)
         {
             t.printStackTrace();
             Assert.fail("unexpected exception: " + t);
         }
     }
 
-    
 }
