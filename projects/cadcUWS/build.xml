@@ -104,7 +104,8 @@
     <!-- JAR files needed to run the test suite -->
     <property name="dev.junit" value="${ext.dev}/junit.jar" />
     <property name="dev.easyMock" value="${ext.dev}/easymock.jar" />
-    <property name="testingJars" value="${dev.junit}:${dev.easyMock}:${ext.lib}/xerces.jar" />
+    <property name="lib.cglib" value="${ext.lib}/cglib.jar" />
+    <property name="testingJars" value="${dev.junit}:${dev.easyMock}:${lib.cglib}:${ext.lib}/asm-attrs.jar:${ext.lib}/asm.jar:${ext.lib}/xerces.jar" />
 
 
     <target name="schema">
