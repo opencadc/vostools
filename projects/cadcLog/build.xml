@@ -104,6 +104,41 @@
 	</target>
 
 	<!-- JAR files needed to run the test suite -->
+	<property name="dev.junit" value="${ext.dev}/junit.jar" />
+	<property name="dev.easyMock" value="${ext.dev}/easymock.jar" />
+	<property name="dev.cglib" value="${ext.dev}/cglib.jar" />
+	<property name="dev.objenesis" value="${ext.dev}/objenesis.jar" />
+	<property name="dev.asm" value="${ext.dev}/asm.jar" />
+	<property name="testingJars" value="${dev.junit}:${dev.easyMock}:${dev.cglib}:${dev.asm}:${dev.objenesis}" />
+
+  <!-- compile the test classes -->
+  <target name="compile-test" depends="compile">
+    <mkdir dir="${build}/test/class" />
+    <javac destdir="${build}/test/class"
+           source="${java.source.version}"
+           target="${java.target.version}"
+           classpath="${build}/class:${jars}:${testingJars}" >
+      <src path="test/src" />
+    </javac>
+  </target>
+
+  <target name="test" depends="compile-test">
+    <echo message="Running test" />
+
+    <!-- Run the junit test suite -->
+    <echo message="Running test suite..." />
+    <junit printsummary="yes" haltonfailure="yes" fork="yes">
+      <classpath>
+        <pathelement path="build/test/class" />
+        <pathelement path="build/class" />
+        <pathelement path="${jars}:${testingJars}" />
+      </classpath>
+      <!--
+      <test name="${TEST_SUITE_CLASS}" />
+      -->
+      <formatter type="plain" usefile="false" />
+    </junit>
+  </target>
 
 	<!-- Directory used to deploy the WAR file -->
 
@@ -112,3 +147,5 @@
 	<!-- Run the test suite -->
 
 </project>
+
+
