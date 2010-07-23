@@ -117,7 +117,11 @@
     <property name="junit"          value="${ext.dev}/junit.jar" />
     <property name="xmlunit"        value="${ext.dev}/xmlunit.jar" />
     <property name="xerces"         value="${ext.lib}/xerces.jar" />
-    <property name="testingJars"    value="${easyMock}:${junit}:${xmlunit}:${xerces}" />
+    <property name="dev.cglib" value="${ext.dev}/cglib.jar" />
+    <property name="dev.objenesis" value="${ext.dev}/objenesis.jar" />
+    <property name="dev.asm" value="${ext.dev}/asm.jar" />
+
+    <property name="testingJars"    value="${easyMock}:${junit}:${xmlunit}:${xerces}:${dev.cglib}:${dev.asm}:${dev.objenesis}" />
 
     <!-- compile the test classes -->
     <target name="compile-test" depends="compile">
