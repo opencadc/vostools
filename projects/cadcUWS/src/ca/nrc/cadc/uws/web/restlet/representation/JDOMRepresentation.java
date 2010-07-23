@@ -111,7 +111,7 @@ public class JDOMRepresentation extends OutputRepresentation
         throws IOException
     {
         XMLOutputter outputter = new XMLOutputter();
-        outputter.setFormat(Format.getRawFormat());
+        outputter.setFormat(Format.getPrettyFormat());
         outputter.output(document, out);
     }
 
