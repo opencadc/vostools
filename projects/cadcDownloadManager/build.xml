@@ -129,7 +129,7 @@
 </target>
 
 <target name="test">
-	<echo message="no tests implemented" />
+	<echo message="WARNING: no tests implemented" />
 </target>
 
 <!-- 
