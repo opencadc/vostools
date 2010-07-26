@@ -69,7 +69,6 @@
 
 package ca.nrc.cadc.auth;
 
-
 import ca.nrc.cadc.util.Base64;
 import java.io.BufferedInputStream;
 import java.io.BufferedReader;
@@ -114,22 +113,22 @@ import org.apache.log4j.Logger;
  *
  * @author pdowler
  */
-public class SSLUtil 
+public class SSLUtil
 {
     private static Logger log = Logger.getLogger(SSLUtil.class);
 
     // SSL, SSLv2mm SSLv3, TLS, TLSv1, TLSv1.1
-    private static String SSL_PROTOCOL = "TLS";
+    private static final String SSL_PROTOCOL = "TLS";
 
     // jceks, jks, pkcs12
-    private static String KEYSTORE_TYPE = "JKS";
+    private static final String KEYSTORE_TYPE = "JKS";
 
     // SunX509
-    private static String KEYMANAGER_ALGORITHM = "SunX509";
-    
-    private static String CERT_ALIAS = "opencadc_x509";
-    
-    private static char[] THE_PASSWORD = CERT_ALIAS.toCharArray();
+    private static final String KEYMANAGER_ALGORITHM = "SunX509";
+
+    private static final String CERT_ALIAS = "opencadc_x509";
+
+    private static final char[] THE_PASSWORD = CERT_ALIAS.toCharArray();
 
     /**
      * Initialise the default SSL socket factory so that all HTTPS connections use the
@@ -137,7 +136,7 @@ public class SSLUtil
      *
      * @see HttpsURLConnection#setDefaultSSLSocketFactory(javax.net.ssl.SSLSocketFactory)
      * @param certFile proxy certificate
-     * @param private key file in DER format
+     * @param keyFile private key file in DER format
      */
     public static void initSSL(File certFile, File keyFile)
     {
@@ -150,7 +149,7 @@ public class SSLUtil
      * provided key store to authenticate (when the server requies client authentication).
      *
      * @param certFile proxy certificate
-     * @param private key file in DER format
+     * @param keyFile private key file in DER format
      * @return configured SSL socket factory
      */
     public static SSLSocketFactory getSocketFactory(File certFile, File keyFile)
@@ -164,11 +163,10 @@ public class SSLUtil
         return sf;
     }
 
-    static byte[] readFile(File f)
-        throws IOException
+    static byte[] readFile(File f) throws IOException
     {
         DataInputStream dis = new DataInputStream(new FileInputStream(f));
-        byte[] ret = new byte[(int)f.length()];
+        byte[] ret = new byte[(int) f.length()];
         dis.readFully(ret);
         dis.close();
         log.debug("readFile: " + ret.length);
@@ -176,8 +174,7 @@ public class SSLUtil
     }
 
     // not working due to Base64 decoding to byte array not producing valid DER format key
-    static byte[] getPrivateKey(byte[] certBuf)
-        throws IOException
+    static byte[] getPrivateKey(byte[] certBuf) throws IOException
     {
         BufferedReader rdr = new BufferedReader(new InputStreamReader(new ByteArrayInputStream(certBuf)));
         String line = rdr.readLine();
@@ -188,7 +185,7 @@ public class SSLUtil
             {
                 log.debug(line);
                 line = rdr.readLine();
-                while ( line != null && !line.startsWith("-----END RSA PRIVATE KEY-") )
+                while (line != null && !line.startsWith("-----END RSA PRIVATE KEY-"))
                 {
                     log.debug(line + " (" + line.length() + ")");
                     base64.append(line);
@@ -226,62 +223,64 @@ public class SSLUtil
             BufferedInputStream istream = new BufferedInputStream(new ByteArrayInputStream(certBuf));
             CertificateFactory cf = CertificateFactory.getInstance("X.509");
             ArrayList certs = new ArrayList();
-            while ( istream.available() > 0 )
+            while (istream.available() > 0)
             {
                 Certificate cert = cf.generateCertificate(istream);
                 log.debug("found: " + cert);
                 certs.add(cert);
             }
             istream.close();
-            
+
             Certificate[] chain = new Certificate[certs.size()];
             Iterator i = certs.iterator();
             int c = 0;
-            while ( i.hasNext() )
+            while (i.hasNext())
             {
                 X509Certificate x509 = (X509Certificate) i.next();
                 chain[c++] = x509;
-                try { x509.checkValidity(); }
-                catch(CertificateException ex)
+                try
+                {
+                    x509.checkValidity();
+                }
+                catch (CertificateException ex)
                 {
                     throw new RuntimeException("certificate from file " + certFile + " is not valid", ex);
                 }
                 log.debug("X509 certificate is valid");
             }
-            
+
             KeyStore ks = KeyStore.getInstance(KEYSTORE_TYPE);
-            ks.load(null,null); // empty
+            ks.load(null, null); // empty
             KeyStore.Entry ke = new KeyStore.PrivateKeyEntry(pk, chain);
             ks.setKeyEntry(CERT_ALIAS, pk, THE_PASSWORD, chain);
             return ks;
         }
-        catch(InvalidKeySpecException ex)
+        catch (InvalidKeySpecException ex)
         {
             throw new RuntimeException("failed to read RSA private key from " + keyFile, ex);
         }
-        catch(KeyStoreException ex)
+        catch (KeyStoreException ex)
         {
             throw new RuntimeException("failed to find/load KeyStore of type " + KEYSTORE_TYPE, ex);
         }
-        catch(FileNotFoundException ex)
+        catch (FileNotFoundException ex)
         {
             throw new RuntimeException("failed to find certificate file " + certFile, ex);
         }
-        catch(IOException ex)
+        catch (IOException ex)
         {
             throw new RuntimeException("failed to read certificate file " + certFile, ex);
         }
-        catch(NoSuchAlgorithmException ex)
+        catch (NoSuchAlgorithmException ex)
         {
             throw new RuntimeException("BUG: failed to create empty KeyStore", ex);
         }
-        catch(CertificateException ex)
+        catch (CertificateException ex)
         {
             throw new RuntimeException("failed to load certificate from file " + certFile, ex);
         }
         finally
         {
-            
         }
     }
 
@@ -296,30 +295,35 @@ public class SSLUtil
             ks.load(istream, THE_PASSWORD); // assume a non-password-protected proxy cert
             return ks;
         }
-        catch(KeyStoreException ex)
+        catch (KeyStoreException ex)
         {
             throw new RuntimeException("failed to find KeyStore for " + KEYSTORE_TYPE, ex);
         }
-        catch(FileNotFoundException ex)
+        catch (FileNotFoundException ex)
         {
             throw new RuntimeException("failed to find key store file " + f, ex);
         }
-        catch(IOException ex)
+        catch (IOException ex)
         {
             throw new RuntimeException("failed to read key store file " + f, ex);
         }
-        catch(NoSuchAlgorithmException ex)
+        catch (NoSuchAlgorithmException ex)
         {
             throw new RuntimeException("failed to check integtrity of key store file " + f, ex);
         }
-        catch(CertificateException ex)
+        catch (CertificateException ex)
         {
             throw new RuntimeException("failed to load proxy certificate(s) from key store file " + f, ex);
         }
         finally
         {
-            try { istream.close(); }
-            catch(Throwable ignore) { }
+            try
+            {
+                istream.close();
+            }
+            catch (Throwable ignore)
+            {
+            }
         }
     }
 
@@ -332,15 +336,15 @@ public class SSLUtil
             kmf.init(keyStore, THE_PASSWORD); // assume a non-password-protected proxy cert
             return kmf;
         }
-        catch(NoSuchAlgorithmException ex)
+        catch (NoSuchAlgorithmException ex)
         {
             throw new RuntimeException("failed to find KeyManagerFactory for " + da, ex);
         }
-        catch(KeyStoreException ex)
+        catch (KeyStoreException ex)
         {
             throw new RuntimeException("failed to init KeyManagerFactory", ex);
         }
-        catch(UnrecoverableKeyException ex)
+        catch (UnrecoverableKeyException ex)
         {
             throw new RuntimeException("failed to init KeyManagerFactory", ex);
         }
@@ -354,15 +358,15 @@ public class SSLUtil
             tmf.init(trustStore);
             return tmf;
         }
-        catch(NoSuchAlgorithmException ex)
+        catch (NoSuchAlgorithmException ex)
         {
             throw new RuntimeException("BUG: failed to create TrustManagerFactory for algorithm=PKIX", ex);
         }
-        catch(NoSuchProviderException ex)
+        catch (NoSuchProviderException ex)
         {
             throw new RuntimeException("BUG: failed to create TrustManagerFactory for provider=SunJSSE", ex);
         }
-        catch(KeyStoreException ex)
+        catch (KeyStoreException ex)
         {
             throw new RuntimeException("failed to init trustManagerFactory", ex);
         }
@@ -373,14 +377,14 @@ public class SSLUtil
         try
         {
             KeyManager[] kms = kmf.getKeyManagers();
-            for (int i=0; i<kms.length; i++)
+            for (int i = 0; i < kms.length; i++)
             {
                 // cast is safe since we used KEYMANAGER_ALGORITHM=SunX509 above
-                BasicX509KeyManager wrapper = new BasicX509KeyManager( (X509KeyManager) kms[i], CERT_ALIAS);
+                BasicX509KeyManager wrapper = new BasicX509KeyManager((X509KeyManager) kms[i], CERT_ALIAS);
                 kms[i] = wrapper;
             }
             TrustManager[] tms = tmf.getTrustManagers();
-            for (int i=0; i<tms.length; i++)
+            for (int i = 0; i < tms.length; i++)
             {
                 // safe cast since we used PKIX, SunJSSE above
                 BasicX509TrustManager wrapper = new BasicX509TrustManager((X509TrustManager) tms[i]);
@@ -392,27 +396,25 @@ public class SSLUtil
             ctx.init(kms, tms, null);
             return ctx;
         }
-        catch(NoSuchAlgorithmException ex)
+        catch (NoSuchAlgorithmException ex)
         {
             throw new RuntimeException("failed to find SSLContext for " + SSL_PROTOCOL, ex);
         }
-        catch(KeyManagementException ex)
+        catch (KeyManagementException ex)
         {
             throw new RuntimeException("failed to init SSLContext", ex);
         }
     }
 
-    
-
-    static void printKeyStoreInfo(KeyStore keystore)
-        throws KeyStoreException
+    static void printKeyStoreInfo(KeyStore keystore) throws KeyStoreException
     {
         log.debug("Provider : " + keystore.getProvider().getName());
         log.debug("Type : " + keystore.getType());
         log.debug("Size : " + keystore.size());
 
         Enumeration en = keystore.aliases();
-        while (en.hasMoreElements()) {
+        while (en.hasMoreElements())
+        {
             System.out.println("Alias: " + en.nextElement());
         }
     }
