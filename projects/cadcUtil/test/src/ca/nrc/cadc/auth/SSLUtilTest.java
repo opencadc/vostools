@@ -104,8 +104,8 @@ import ca.nrc.cadc.util.Log4jInit;
 public class SSLUtilTest
 {
     private static Logger log = Logger.getLogger(SSLUtilTest.class);
-    private static String TEST_CERT_FN = "x509_CADCAuthtest1.crt";
-    private static String TEST_KEY_FN = "x509_CADCAuthtest1.key";
+    private static String TEST_CERT_FN = "proxy.crt";
+    private static String TEST_KEY_FN = "proxy.key";
     private static File SSL_CERT;
     private static File SSL_KEY;
 

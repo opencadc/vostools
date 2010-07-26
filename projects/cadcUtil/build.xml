@@ -89,8 +89,6 @@
 
 	<property name="jars" value="${ext.lib}/servlet-api.jar:${ext.lib}/log4j.jar:${ext.lib}/jdom.jar" />
 	<property name="resources.dir" value="test/resources/" /> 
-	<property name="cert.dir" value="${env.A}/test-certificates" /> 
-	
 
     <target name="build" depends="compile">
         <jar jarfile="${build}/lib/${project}.jar"
@@ -108,7 +106,7 @@
         <javac destdir="${build}/class"
                source="${java.source.version}"
                target="${java.target.version}"
-               classpath="${jars}:${ext.junit}:${resources.dir}:${cert.dir}" >
+               classpath="${jars}:${ext.junit}:${resources.dir}" >
             <src path="test/src"/>
         </javac>
     </target>
@@ -123,7 +121,6 @@
             <classpath>
                 <pathelement path="build/class"/>
                 <pathelement path="${resources.dir}"/>
-                <pathelement path="${cert.dir}"/>
                 <pathelement path="${jars}:${ext.junit}"/>
             </classpath>
 
