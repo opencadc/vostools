@@ -79,6 +79,7 @@ import java.util.Map;
 import java.text.ParseException;
 
 import ca.nrc.cadc.uws.Job;
+import ca.nrc.cadc.uws.JobReader;
 import ca.nrc.cadc.uws.web.restlet.JobAssembler;
 import ca.nrc.cadc.uws.web.WebRepresentationException;
 import ca.nrc.cadc.uws.web.restlet.UWSSyncRouter;
@@ -86,7 +87,9 @@ import java.net.MalformedURLException;
 
 import javax.security.auth.Subject;
 import org.jdom.Document;
+import org.jdom.JDOMException;
 import org.restlet.data.Form;
+import org.restlet.data.MediaType;
 import org.restlet.data.Method;
 import org.restlet.data.Reference;
 
@@ -130,38 +133,93 @@ public class SynchResource extends UWSResource
 
     protected void process()
     {
-        Form form;
-        if (getMethod().equals(Method.GET))
-            form = getQuery();
-        else
-            form = new Form(getRequest().getEntity());
-
-        final Subject subject = getSubject();
-        final Map<String, String> errors = validate(form);
-
-        if (!errors.isEmpty())
-        {
-            generateErrorRepresentation(errors);
-            return;
-        }
-
         final Job job;
+        Form form;
+        final Subject subject = getSubject();
 
-        try
+        if (getMethod() == Method.GET)
         {
-            final JobAssembler jobAssembler = new JobAssembler(form, subject);
-            job = jobAssembler.assemble();
-            job.setRequestPath(getRequestPath());
+            form = getQuery();
+            final Map<String, String> errors = validate(form);
+            if (!errors.isEmpty())
+            {
+                generateErrorRepresentation(errors);
+                return;
+            }
+
+            try
+            {
+                final JobAssembler jobAssembler = new JobAssembler(form, subject);
+                job = jobAssembler.assemble();
+                job.setRequestPath(getRequestPath());
+            }
+            catch (ParseException e)
+            {
+                LOGGER.error("Unable to create Job! ", e);
+                throw new WebRepresentationException("Unable to create Job!", e);
+            }
+            catch(MalformedURLException e)
+            {
+                LOGGER.error("Unable to create Job!", e);
+                throw new WebRepresentationException("Unable to create Job!", e);
+            }
         }
-        catch (ParseException e)
+        else if (getMethod() == Method.POST)
         {
-            LOGGER.error("Unable to create Job! ", e);
-            throw new WebRepresentationException("Unable to create Job!", e);
+            MediaType mediaType = getRequestEntity().getMediaType();
+            if (mediaType.equals(MediaType.APPLICATION_WWW_FORM)
+                || mediaType.equals(MediaType.MULTIPART_FORM_DATA))
+            {
+                form = new Form(getRequest().getEntity());
+                final Map<String, String> errors = validate(form);
+                if (!errors.isEmpty())
+                {
+                    generateErrorRepresentation(errors);
+                    return;
+                }
+
+                try
+                {
+                    final JobAssembler jobAssembler = new JobAssembler(form, subject);
+                    job = jobAssembler.assemble();
+                    job.setRequestPath(getRequestPath());
+                }
+                catch (ParseException e)
+                {
+                    LOGGER.error("Unable to create Job! ", e);
+                    throw new WebRepresentationException("Unable to create Job!", e);
+                }
+                catch(MalformedURLException e)
+                {
+                    LOGGER.error("Unable to create Job!", e);
+                    throw new WebRepresentationException("Unable to create Job!", e);
+                }
+            }
+            else if (mediaType.equals(MediaType.APPLICATION_XML)
+                     || mediaType.equals(MediaType.TEXT_XML))
+            {
+                try
+                {
+                    JobReader jobReader = new JobReader();
+                    job = jobReader.readFrom(getRequestEntity().getReader());
+                    job.setOwner(subject);
+                }
+                catch (Exception e)
+                {
+                    LOGGER.error("Unable to create Job! ", e);
+                    throw new WebRepresentationException("Unable to create Job!", e);
+                }
+            }
+            else
+            {
+                LOGGER.error("Unsupported POST request Content-Type: " + getRequestEntity().getMediaType().getName());
+                throw new WebRepresentationException("Unsupported POST request Content-Type: " + getRequestEntity().getMediaType().getName());
+            }
         }
-        catch(MalformedURLException e)
+        else
         {
-            LOGGER.error("Unable to create Job!", e);
-            throw new WebRepresentationException("Unable to create Job!", e);
+            LOGGER.error("The request method is unsupported: " + getMethod().getName());
+            throw new WebRepresentationException("The request method is unsupported: " + getMethod().getName());
         }
 
         Job persistedJob = getJobManager().persist(job);

@@ -70,9 +70,11 @@
 package ca.nrc.cadc.uws.web.restlet.resources;
 
 import ca.nrc.cadc.uws.Job;
-import ca.nrc.cadc.uws.JobWriter;
+import ca.nrc.cadc.uws.JobReader;
 import ca.nrc.cadc.uws.web.restlet.JobAssembler;
 import ca.nrc.cadc.uws.web.WebRepresentationException;
+import java.util.logging.Level;
+import org.jdom.JDOMException;
 
 import org.restlet.resource.Post;
 import org.restlet.representation.Representation;
@@ -88,7 +90,7 @@ import java.util.List;
 import java.util.Map;
 import javax.security.auth.Subject;
 import org.jdom.Document;
-import org.jdom.Element;
+import org.restlet.data.MediaType;
 
 
 /**
@@ -96,7 +98,7 @@ import org.jdom.Element;
  */
 public class AsynchResource extends UWSResource
 {
-    private final static Logger LOGGER = Logger.getLogger(UWSResource.class);
+    private final static Logger LOGGER = Logger.getLogger(AsynchResource.class);
 
 
     /**
@@ -107,36 +109,59 @@ public class AsynchResource extends UWSResource
     @Post
     public void accept(final Representation entity)
     {
-        final Form form = new Form(entity);
-        final Map<String, String> errors = validate(form);
-        final Subject subject = getSubject();
-        
-        if (!errors.isEmpty())
-        {
-            generateErrorRepresentation(errors);
-            return;
-        }
-
         final Job job;
+        final Subject subject = getSubject();
+        MediaType mediaType = entity.getMediaType();
+        if (mediaType.equals(MediaType.APPLICATION_WWW_FORM)
+            || mediaType.equals(MediaType.MULTIPART_FORM_DATA))
+        {
+            final Form form = new Form(entity);
+            final Map<String, String> errors = validate(form);
+            if (!errors.isEmpty())
+            {
+                generateErrorRepresentation(errors);
+                return;
+            }
 
-        try
-        {
-            final JobAssembler jobAssembler = new JobAssembler(form, subject);
-            job = jobAssembler.assemble();
-            job.setRequestPath(getRequestPath());
+            try
+            {
+                final JobAssembler jobAssembler = new JobAssembler(form, subject);
+                job = jobAssembler.assemble();
+            }
+            catch (ParseException e)
+            {
+                LOGGER.error("Unable to create Job! ", e);
+                throw new WebRepresentationException("Unable to create Job!", e);
+            }
+            catch (MalformedURLException e)
+            {
+                LOGGER.error("The Error URL is invalid.", e);
+                throw new WebRepresentationException("The Error URL is invalid.",
+                                                     e);
+            }
         }
-        catch (ParseException e)
+        else if (mediaType.equals(MediaType.APPLICATION_XML)
+                 || mediaType.equals(MediaType.TEXT_XML))
         {
-            LOGGER.error("Unable to create Job! ", e);
-            throw new WebRepresentationException("Unable to create Job!", e);
+            try
+            {
+                JobReader jobReader = new JobReader();
+                job = jobReader.readFrom(entity.getText());
+                job.setOwner(subject);
+            }
+            catch (Exception e)
+            {
+                LOGGER.error("Unable to create Job! ", e);
+                throw new WebRepresentationException("Unable to create Job!", e);
+            }
         }
-        catch (MalformedURLException e)
+        else
         {
-            LOGGER.error("The Error URL is invalid.", e);
-            throw new WebRepresentationException("The Error URL is invalid.",
-                                                 e);
+            LOGGER.error("Unsupported POST request Content-Type: " + entity.getMediaType());
+            throw new WebRepresentationException("Unsupported POST request Content-Type: " + entity.getMediaType());
         }
 
+        job.setRequestPath(getRequestPath());
         Job persistedJob = getJobManager().persist(job);
         redirectSeeOther(getHostPart() + getRequestPath() + "/" + persistedJob.getID());
     }
