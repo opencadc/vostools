@@ -156,9 +156,16 @@ public class SSLUtil
     {
         KeyStore ks = readCertificates(certFile, keyFile);
         KeyStore ts = null;
-        KeyManagerFactory kmf = getKeyManagerFactory(ks);
-        TrustManagerFactory tmf = getTrustManagerFactory(ts);
-        SSLContext ctx = getContext(kmf, tmf, ks);
+        return getSocketFactory(ks, ts);
+    }
+
+    // may in future try to support other KeyStore formats, but for now we only
+    // expose File args above
+    static SSLSocketFactory getSocketFactory(KeyStore keyStore, KeyStore trustStore)
+    {
+        KeyManagerFactory kmf = getKeyManagerFactory(keyStore);
+        TrustManagerFactory tmf = getTrustManagerFactory(trustStore);
+        SSLContext ctx = getContext(kmf, tmf, keyStore);
         SSLSocketFactory sf = ctx.getSocketFactory();
         return sf;
     }
