@@ -150,7 +150,10 @@ public abstract class Util
         try
         {
             while ((line = reader.readLine()) != null)
-                sb.append(line + "\n");
+            {
+                sb.append(line);
+                sb.append("\n");
+            }
         }
         finally
         {

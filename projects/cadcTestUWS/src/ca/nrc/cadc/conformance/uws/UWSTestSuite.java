@@ -76,6 +76,7 @@ import org.junit.runners.Suite;
 @Suite.SuiteClasses
 ({
     JobsTest.class,
+    JobTest.class,
     JobIdTest.class,
     ExecutionDurationTest.class,
     DestructionTest.class,
