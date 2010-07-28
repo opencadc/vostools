@@ -198,7 +198,11 @@ public abstract class Node
         else
         {
             String uriString = uri.toString();
-            String parentUriString = uriString.substring(0, uriString.lastIndexOf("/"));
+            if (uriString.endsWith("/"))
+            {
+                uriString = uriString.substring(0, uriString.length() - 1);
+            }
+            String parentUriString = uriString.substring(0, uriString .lastIndexOf("/"));
             VOSURI parentURI = new VOSURI(parentUriString);
 
             // preserve the appData if it exists

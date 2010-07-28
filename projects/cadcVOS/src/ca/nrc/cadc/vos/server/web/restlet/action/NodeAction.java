@@ -90,6 +90,9 @@ import ca.nrc.cadc.vos.server.auth.VOSpaceAuthorizer;
  * setNodePersistence() are called before using any concrete implementations of
  * this class.
  * 
+ * Operations should be performed using Subject.doAs(subject, action) if a
+ * subject is available.  This will invoke the entry point run() below.
+ * 
  * @author majorb
  */
 public abstract class NodeAction implements PrivilegedAction<Object>

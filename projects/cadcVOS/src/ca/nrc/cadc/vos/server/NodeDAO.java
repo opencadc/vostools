@@ -69,7 +69,6 @@
 
 package ca.nrc.cadc.vos.server;
 
-import java.io.UnsupportedEncodingException;
 import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.SQLException;
@@ -89,6 +88,7 @@ import org.springframework.jdbc.support.KeyHolder;
 import org.springframework.transaction.TransactionStatus;
 import org.springframework.transaction.support.DefaultTransactionDefinition;
 
+import ca.nrc.cadc.util.HexUtil;
 import ca.nrc.cadc.vos.ContainerNode;
 import ca.nrc.cadc.vos.DataNode;
 import ca.nrc.cadc.vos.Node;
@@ -782,15 +782,7 @@ public abstract class NodeDAO implements NodePersistence
         
         if (contentMD5String != null)
         {
-            try
-            {
-                contentMD5 = contentMD5String.getBytes("iso-8859-1");
-            }
-            catch (UnsupportedEncodingException e)
-            {
-                log.warn("Could not convert MD5 String to Byte[], ignoring. " + e.getMessage(), e);
-                contentMD5 = null;
-            }
+            contentMD5 = HexUtil.toBytes(contentMD5String);
         }
         
         if (node.getOwner() == null)
@@ -870,7 +862,7 @@ public abstract class NodeDAO implements NodePersistence
             sb.append("update ");
             sb.append(getNodeTableName());
             sb.append(" set contentMD5 = ");
-            sb.append((value == null) ? null : "'" + value + "'");
+            sb.append((value == null) ? null : ("0x" + value));
             sb.append(" where nodeID = ");
             sb.append(getNodeID(node));
         }
@@ -1075,7 +1067,7 @@ public abstract class NodeDAO implements NodePersistence
             sb.append("update ");
             sb.append(getNodeTableName());
             sb.append(" set contentMD5 = ");
-            sb.append((value == null) ? null : "'" + value + "'");
+            sb.append((value == null) ? null : ("0x" + value));
             sb.append(" where nodeID = ");
             sb.append(getNodeID(node));
         }

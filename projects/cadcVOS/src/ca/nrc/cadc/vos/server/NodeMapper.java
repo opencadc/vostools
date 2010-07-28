@@ -69,7 +69,6 @@
 
 package ca.nrc.cadc.vos.server;
 
-import java.nio.charset.Charset;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.util.Date;
@@ -77,6 +76,7 @@ import java.util.Date;
 import org.springframework.jdbc.core.RowMapper;
 
 import ca.nrc.cadc.date.DateUtil;
+import ca.nrc.cadc.util.HexUtil;
 import ca.nrc.cadc.vos.ContainerNode;
 import ca.nrc.cadc.vos.DataNode;
 import ca.nrc.cadc.vos.Node;
@@ -173,7 +173,7 @@ public class NodeMapper implements RowMapper
         }
         if (contentMD5 != null && contentMD5 instanceof byte[])
         {
-            String contentMD5String = new String((byte[]) contentMD5, Charset.forName("iso-8859-1"));
+            String contentMD5String = HexUtil.toHex((byte[]) contentMD5);
             node.getProperties().add(new NodeProperty(VOS.PROPERTY_URI_CONTENTMD5, contentMD5String));
         }
         if (lastModified != null)
@@ -187,6 +187,10 @@ public class NodeMapper implements RowMapper
         if (groupWrite != null && groupWrite.trim().length() > 0)
         {
             node.getProperties().add(new NodeProperty(VOS.PROPERTY_URI_GROUPWRITE, groupWrite));
+        }
+        if (owner != null && owner.trim().length() > 0)
+        {
+            node.getProperties().add(new NodeProperty(VOS.PROPERTY_URI_CREATOR, owner));
         }
 
         return node;
