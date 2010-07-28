@@ -101,7 +101,7 @@ public class Download implements Runnable
     private static int GZIP = 1;
     private static int ZIP = 2;
 
-    private boolean debug = true;
+    private boolean debug = false;
     
     // these have to be configured by the caller
     public URL url;
