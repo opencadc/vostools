@@ -146,7 +146,7 @@ public class TransferWriter
         root.addContent(e);
 
         e = new Element("view", VOS.NS);
-        e.addContent(this.transfer.getView().getUri());
+        e.addContent(this.transfer.getView().getURI().toString());
         root.addContent(e);
 
         e = createProtocols();

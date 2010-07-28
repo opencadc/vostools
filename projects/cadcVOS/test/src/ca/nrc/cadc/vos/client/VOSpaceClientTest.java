@@ -71,7 +71,6 @@ package ca.nrc.cadc.vos.client;
 
 import java.io.File;
 import java.net.InetAddress;
-import java.net.URL;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -92,7 +91,6 @@ import ca.nrc.cadc.util.Log4jInit;
 import ca.nrc.cadc.vos.ClientTransfer;
 import ca.nrc.cadc.vos.ContainerNode;
 import ca.nrc.cadc.vos.DataNode;
-import ca.nrc.cadc.vos.DataView;
 import ca.nrc.cadc.vos.Node;
 import ca.nrc.cadc.vos.NodeProperty;
 import ca.nrc.cadc.vos.NodeWriterTest;
@@ -101,7 +99,8 @@ import ca.nrc.cadc.vos.TestUtil;
 import ca.nrc.cadc.vos.Transfer;
 import ca.nrc.cadc.vos.VOS;
 import ca.nrc.cadc.vos.VOSURI;
-import ca.nrc.cadc.xml.XmlUtil;
+import ca.nrc.cadc.vos.View;
+import java.net.URI;
 
 /**
  * @author zhangsa
@@ -368,7 +367,7 @@ public class VOSpaceClientTest
         String slashPath1 = "/" + ROOT_NODE + TestUtil.uniqueStringOnTime();
         DataNode dnode = new DataNode(new VOSURI(VOS.VOS_URI + slashPath1));
         dnode = (DataNode) client.createNode(dnode);
-        DataView dview = new DataView(VOS.VIEW_DEFAULT, dnode);
+        View dview = new View(new URI(VOS.VIEW_DEFAULT));
 
         List<Protocol> protocols = new ArrayList<Protocol>();
         protocols.add(new Protocol(VOS.PROTOCOL_HTTPS_PUT, endpoint, null));

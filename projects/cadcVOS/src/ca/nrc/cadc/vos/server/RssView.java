@@ -80,6 +80,7 @@ import java.io.OutputStream;
 import java.io.OutputStreamWriter;
 import java.io.UnsupportedEncodingException;
 import java.io.Writer;
+import java.net.URI;
 import org.apache.log4j.Logger;
 import org.jdom.Document;
 import org.jdom.Element;
@@ -98,9 +99,6 @@ public class RssView extends View
 
     // Default maximum number of nodes to display in the feed.
     private static final int DEFAULT_MAX_NUMBER_NODES = 10;
-
-    // Node URI
-    protected String uri;
 
     // ContainerNode
     protected Node node;
@@ -121,10 +119,9 @@ public class RssView extends View
      * @param uri The view identifier.
      * @param node The node applicable to the view.
      */
-    public RssView(String uri, Node node)
+    public RssView(URI uri, Node node)
     {
-        super(uri, node);
-        this.uri = uri;
+        super(uri);
         this.node = node;
 
         // Set the default maximum number of nodes to return.

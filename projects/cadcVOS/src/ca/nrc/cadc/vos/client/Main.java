@@ -86,7 +86,7 @@ import ca.nrc.cadc.util.Log4jInit;
 import ca.nrc.cadc.vos.ClientTransfer;
 import ca.nrc.cadc.vos.ContainerNode;
 import ca.nrc.cadc.vos.DataNode;
-import ca.nrc.cadc.vos.DataView;
+import ca.nrc.cadc.vos.server.DataView;
 import ca.nrc.cadc.vos.Node;
 import ca.nrc.cadc.vos.NodeNotFoundException;
 import ca.nrc.cadc.vos.NodeProperty;
@@ -95,6 +95,7 @@ import ca.nrc.cadc.vos.Transfer;
 import ca.nrc.cadc.vos.VOS;
 import ca.nrc.cadc.vos.VOSURI;
 import ca.nrc.cadc.vos.Transfer.Direction;
+import ca.nrc.cadc.vos.View;
 import java.io.FileReader;
 import java.io.IOException;
 import java.net.URL;
@@ -408,7 +409,7 @@ public class Main
 
 
 
-        DataView dview = new DataView(VOS.VIEW_DEFAULT, dnode);
+        View dview = new View(new URI(VOS.VIEW_DEFAULT));
 
         List<Protocol> protocols = new ArrayList<Protocol>();
         protocols.add(new Protocol(VOS.PROTOCOL_HTTPS_PUT, baseUrl, null));
@@ -435,7 +436,7 @@ public class Main
         throws Exception
     {
         DataNode dnode = new DataNode(new VOSURI(source));
-        DataView dview = new DataView(VOS.VIEW_DEFAULT, dnode);
+        View dview = new View(new URI(VOS.VIEW_DEFAULT));
 
         List<Protocol> protocols = new ArrayList<Protocol>();
         protocols.add(new Protocol(VOS.PROTOCOL_HTTPS_GET, baseUrl, null));

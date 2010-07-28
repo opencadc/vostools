@@ -67,10 +67,11 @@
 ************************************************************************
 */
 
-package ca.nrc.cadc.vos;
+package ca.nrc.cadc.vos.server;
 
 import ca.nrc.cadc.vos.Node;
 import ca.nrc.cadc.vos.View;
+import java.net.URI;
 
 /**
  * @author zhangsa
@@ -82,9 +83,9 @@ public class DataView extends View
      * @param uri
      * @param node
      */
-    public DataView(String uri, Node node)
+    public DataView(URI uri, Node node)
     {
-        super(uri, node);
+        super(uri);
         // TODO Auto-generated constructor stub
     }
 

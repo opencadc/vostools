@@ -86,6 +86,7 @@ import org.jdom.JDOMException;
 import org.jdom.input.SAXBuilder;
 
 import ca.nrc.cadc.vos.client.VOSClientUtil;
+import java.net.URI;
 
 /**
  * @author zhangsa
@@ -141,14 +142,16 @@ public class TransferReader
         Transfer.Direction direction = parseDirection();
         // String serviceUrl; // not in XML yet
         Node target = null;
+        View view = null;
         try
         {
-            target = new DataNode(new VOSURI(root.getChildText("target", VOS.NS))); 
-        } catch (URISyntaxException e)
+            target = new DataNode(new VOSURI(root.getChildText("target", VOS.NS)));
+            view = new View(new URI(root.getChildText("view", VOS.NS)));
+        }
+        catch (URISyntaxException e)
         { 
             log.debug(e.getMessage());
         }
-        View view = new DataView(root.getChildText("view", VOS.NS), null);     
         List<Protocol> protocols = parseProtocols();
         // boolean keepBytes; // not in XML yet
         // String endpoint; // not in XML yet

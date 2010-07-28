@@ -69,7 +69,7 @@
 
 package ca.nrc.cadc.vos;
 
-import java.util.ArrayList;
+import java.net.URI;
 import java.util.List;
 
 /**
@@ -78,42 +78,43 @@ import java.util.List;
  * 
  * @author majorb
  */
-public abstract class View
+public class View
 {
-    
     // The view identifier
-    private String uri;
+    private URI uri;
     
     // Whether the view is showing original data.
     private boolean original;
     
     // The list of name value pair parameters for this view.
-    private List<Param> param;
+    private List<Parameter> param;
     
     /**
      * View constructor.
      * 
      * @param uri The view identifier.
-     * @param node The node applicable to the view.
      */
-    public View(String uri, Node node)
+    public View(URI uri)
+    {
+        this(uri, false);
+    }
+
+    /**
+     * View constructor for service-side.
+     *
+     * @param uri The view identifier.
+     * @param original 
+     */
+    public View(URI uri, boolean original)
     {
         this.uri = uri;
-        if (node != null)
-        {
-            original = node.isStructured();
-        }
-        else
-        {
-            original = false;
-        }
-        param = new ArrayList<Param>();
+        this.original = original;
     }
 
     /**
      * @return The view identifier.
      */
-    public String getUri()
+    public URI getURI()
     {
         return uri;
     }
@@ -121,7 +122,7 @@ public abstract class View
     /**
      * @return The view param list.
      */
-    public List<Param> getParam()
+    public List<Parameter> getParameters()
     {
         return param;
     }
@@ -131,7 +132,7 @@ public abstract class View
      * 
      * @param param
      */
-    public void setParam(List<Param> param)
+    public void setParameters(List<Parameter> param)
     {
         this.param = param;
     }
@@ -149,7 +150,7 @@ public abstract class View
      * 
      * @author majorb
      */
-    public class Param
+    public static class Parameter
     {
         // The name of the parameter
         private String name;
@@ -163,7 +164,7 @@ public abstract class View
          * @param name The param name.
          * @param value The param value.
          */
-        Param(String name, String value)
+        public Parameter(String name, String value)
         {
             this.name = name;
             this.value = value;

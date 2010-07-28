@@ -82,6 +82,7 @@ import org.junit.BeforeClass;
 import org.junit.Test;
 
 import ca.nrc.cadc.util.Log4jInit;
+import java.net.URI;
 
 /**
  * @author zhangsa
@@ -113,7 +114,7 @@ public class TransferWriterTest
         
         Node target = new DataNode(new VOSURI("vos://nvo.caltech!vospace/mydir/ngc1111"));
         Node dataNode = new DataNode(new VOSURI("vos://nvo.caltech!vospace/mydir/ngc2222"));
-        View view = new DataView("vos://nvo.caltech!vospace/mydir/ngc1234", dataNode);
+        View view = new View(new URI(VOS.VIEW_DEFAULT));
 
         transfer = new Transfer();
         transfer.setDirection(Transfer.Direction.pushToVoSpace);

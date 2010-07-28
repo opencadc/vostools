@@ -382,7 +382,7 @@ public class VOSpaceClient
         job.setExecutionDuration(0);
         job.setExecutionPhase(ExecutionPhase.EXECUTING);
         job.addParameter(new Parameter("target", transfer.getTarget().getUri().toString()));
-        job.addParameter(new Parameter("view", transfer.getView().getUri().toString()));
+        job.addParameter(new Parameter("view", transfer.getView().getURI().toString()));
 
         if (direction == Transfer.Direction.pushToVoSpace)
         {
@@ -479,7 +479,7 @@ public class VOSpaceClient
 
             job.setExecutionDuration(0);
             job.addParameter(new Parameter("target", transfer.getTarget().getUri().toString()));
-            job.addParameter(new Parameter("view", transfer.getView().getUri().toString()));
+            job.addParameter(new Parameter("view", transfer.getView().getURI().toString()));
 
             if (direction == Transfer.Direction.pushToVoSpace)
             {
