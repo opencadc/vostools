@@ -69,9 +69,10 @@
 
 package ca.nrc.cadc.vos.server;
 
+import java.net.URI;
+
 import ca.nrc.cadc.vos.Node;
 import ca.nrc.cadc.vos.View;
-import java.net.URI;
 
 /**
  * @author zhangsa
@@ -79,6 +80,17 @@ import java.net.URI;
  */
 public class DataView extends View
 {
+    
+    public DataView()
+    {
+        super();
+    }
+    
+    public DataView(URI uri)
+    {
+        super(uri);
+    }
+    
     /**
      * @param uri
      * @param node

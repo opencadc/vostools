@@ -91,6 +91,13 @@ public class View
     
     /**
      * View constructor.
+     */
+    protected View()
+    {
+    }
+    
+    /**
+     * View constructor.
      * 
      * @param uri The view identifier.
      */
@@ -109,6 +116,15 @@ public class View
     {
         this.uri = uri;
         this.original = original;
+    }
+    
+    /**
+     * View URI setter.
+     */
+    
+    protected void setURI(URI uri)
+    {
+        this.uri = uri;
     }
 
     /**

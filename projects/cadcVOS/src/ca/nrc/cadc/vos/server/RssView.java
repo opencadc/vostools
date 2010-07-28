@@ -68,12 +68,6 @@
 */
 package ca.nrc.cadc.vos.server;
 
-import ca.nrc.cadc.util.StringBuilderWriter;
-import ca.nrc.cadc.vos.ContainerNode;
-import ca.nrc.cadc.vos.Node;
-import ca.nrc.cadc.vos.View;
-import ca.nrc.cadc.vos.server.util.FixedSizeTreeSet;
-import ca.nrc.cadc.vos.server.util.NodeWalker;
 import java.io.BufferedWriter;
 import java.io.IOException;
 import java.io.OutputStream;
@@ -81,11 +75,19 @@ import java.io.OutputStreamWriter;
 import java.io.UnsupportedEncodingException;
 import java.io.Writer;
 import java.net.URI;
+
 import org.apache.log4j.Logger;
 import org.jdom.Document;
 import org.jdom.Element;
 import org.jdom.output.Format;
 import org.jdom.output.XMLOutputter;
+
+import ca.nrc.cadc.util.StringBuilderWriter;
+import ca.nrc.cadc.vos.ContainerNode;
+import ca.nrc.cadc.vos.Node;
+import ca.nrc.cadc.vos.View;
+import ca.nrc.cadc.vos.server.util.FixedSizeTreeSet;
+import ca.nrc.cadc.vos.server.util.NodeWalker;
 
 /**
  * Writes a RSS feed consisting of the late modified child nodes of the
@@ -112,6 +114,11 @@ public class RssView extends View
      * Maximum number of nodes to display.
      */
     protected int maxNodes;
+    
+    public RssView()
+    {
+        
+    }
 
     /**
      * View constructor.

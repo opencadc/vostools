@@ -5,10 +5,14 @@ import java.util.Map;
 import java.util.MissingResourceException;
 import java.util.ResourceBundle;
 
+import org.apache.log4j.Logger;
+
 import ca.nrc.cadc.vos.View;
 
 public class ViewFactory
 {
+    
+    private static Logger log = Logger.getLogger(ViewFactory.class);
     
     private static final String VIEWS_PROPERTY_FILE = "Views";
     
@@ -46,7 +50,10 @@ public class ViewFactory
         
         try
         {
-            String[] viewNames = rb.getStringArray(KEY_VIEW_LIST);
+            String viewNamesString = rb.getString(KEY_VIEW_LIST);
+            String[] viewNames = viewNamesString.split(" ");
+            
+            log.info("ViewFactory loading views: " + viewNames);
             
             for (String viewName : viewNames)
             {
@@ -54,12 +61,13 @@ public class ViewFactory
                 String viewURI = rb.getString(viewName + "." + KEY_VIEW_URI);
                 String viewClassName = rb.getString(viewName + "." + KEY_VIEW_CLASS);
                 Class<?> viewClass = Class.forName(viewClassName);
-                if (!viewClass.isInstance(View.class))
+                View view = (View) viewClass.newInstance();
+                if (view instanceof View)
                 {
                     throw new ExceptionInInitializerError("Class " + viewClass
                             + " is not an instance of " + View.class);
                 }
-                View view = (View) viewClass.newInstance();
+                
                 if (viewMap.containsKey(viewAlias))
                 {
                     throw new ExceptionInInitializerError("Duplicate view reference " + viewAlias
@@ -76,6 +84,8 @@ public class ViewFactory
         }
         catch (Exception e)
         {
+            e.printStackTrace();
+            log.error(e);
             throw new ExceptionInInitializerError(e);
         }
         
