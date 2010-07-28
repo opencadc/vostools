@@ -88,12 +88,19 @@ import ca.nrc.cadc.vos.ContainerNode;
 import ca.nrc.cadc.vos.DataNode;
 import ca.nrc.cadc.vos.DataView;
 import ca.nrc.cadc.vos.Node;
+import ca.nrc.cadc.vos.NodeNotFoundException;
 import ca.nrc.cadc.vos.NodeProperty;
 import ca.nrc.cadc.vos.Protocol;
 import ca.nrc.cadc.vos.Transfer;
 import ca.nrc.cadc.vos.VOS;
 import ca.nrc.cadc.vos.VOSURI;
 import ca.nrc.cadc.vos.Transfer.Direction;
+import java.io.FileReader;
+import java.io.IOException;
+import java.net.URL;
+import java.util.HashMap;
+import java.util.Map;
+import java.util.Properties;
 
 /**
  * @author zhangsa
@@ -123,13 +130,16 @@ public class Main
     public static final String ARG_DEST = "dest";
     public static final String ARG_CONTENT_TYPE = "content-type";
     public static final String ARG_CONTENT_ENCODING = "content-encoding";
+    public static final String ARG_CONTENT_MD5 = "content-md5";
     public static final String ARG_CERT = "cert";
     public static final String ARG_KEY = "key";
 
     public static final String VOS_PREFIX = "vos://";
 
     private static Logger log = Logger.getLogger(Main.class);
-
+    private static final int INIT_STATUS = 1; // exit code for initialisation failure
+    private static final int NET_STATUS = 2;  // exit code for client-server failures
+    
     /**
      * Operations of VoSpace Client.
      * 
@@ -140,8 +150,6 @@ public class Main
         VIEW, CREATE, DELETE, SET, COPY
     };
 
-    boolean verbose = false;
-    boolean debug = false;
     Operation operation;
     VOSURI target;
     List<NodeProperty> properties;
@@ -161,53 +169,59 @@ public class Main
     {
         ArgumentMap argMap = new ArgumentMap(args);
         Main command = new Main();
-        boolean runCommand = true;
 
         if (argMap.isSet(ARG_HELP) || argMap.isSet(ARG_H))
         {
-            runCommand = false;
             usage();
+            System.exit(0);
+        }
+
+        // Set debug mode
+        if (argMap.isSet(ARG_DEBUG) || argMap.isSet(ARG_D))
+        {
+            Log4jInit.setLevel("ca.nrc.cadc.vos.client", Level.DEBUG);
+        }
+        else if (argMap.isSet(ARG_VERBOSE) || argMap.isSet(ARG_V))
+        {
+            Log4jInit.setLevel("ca.nrc.cadc.vos.client", Level.INFO);
         }
         else
-        {
-            // Set debug mode
-            if (argMap.isSet(ARG_DEBUG) || argMap.isSet(ARG_D))
-            {
-                command.setDebug(true);
-                Log4jInit.setLevel("ca.nrc.cadc.vos.client", Level.DEBUG);
-            }
-            else if (argMap.isSet(ARG_VERBOSE) || argMap.isSet(ARG_V))
-            {
-                command.setVerbose(true);
-                Log4jInit.setLevel("ca.nrc.cadc.vos.client", Level.INFO);
-            }
-            else
-                Log4jInit.setLevel("ca", Level.WARN);
+            Log4jInit.setLevel("ca", Level.WARN);
 
-            try
-            {
-                command.validateCommand(argMap);
-                command.validateCommandArguments(argMap);
-            }
-            catch (IllegalArgumentException ex)
-            {
-                runCommand = false;
-                System.out.println(ex.getMessage());
-                System.out.println();
-                usage();
-            }
+        try
+        {
+            command.validateCommand(argMap);
+            command.validateCommandArguments(argMap);
+        }
+        catch (IllegalArgumentException ex)
+        {
+            msg("illegal argument(s): " + ex.getMessage());
+            msg("");
+            usage();
+            System.exit(INIT_STATUS);
         }
 
-        if (runCommand)
+        try
         {
             command.init(argMap);
             command.run();
         }
-        return;
+        catch(Throwable t)
+        {
+            log.error("unexpected failure", t);
+        }
+        System.exit(0);
+    }
+
+    // encapsulate all messages to console here
+    private static void msg(String s)
+    {
+        System.out.println(s);
     }
 
     private void run()
     {
+        log.debug("run - START");
         if (this.operation.equals(Operation.CREATE))
         {
             doCreate();
@@ -224,127 +238,268 @@ public class Main
         {
             doCopy();
         }
+        else if (this.operation.equals(Operation.SET))
+        {
+            doSet();
+        }
+        log.debug("run - DONE");
+    }
+
+    private void doSet()
+    {
+        log.debug("doSet");
+        try
+        {
+            log.debug("target.getPath()" + this.target.getPath());
+            Node n = this.client.getNode(this.target.getPath());
+            copyProperties(n);
+            this.client.setNode(n);
+            log.info("updated properties: " + this.target);
+        }
+        catch(NodeNotFoundException ex)
+        {
+            msg("not found: " + target);
+            System.exit(NET_STATUS);
+        }
+        catch(Throwable t)
+        {
+            msg("failed to delete: " + target);
+            if (t.getMessage() != null)
+                msg("          reason: " + t.getMessage());
+            else
+                msg("          reason: " + t);
+            System.exit(NET_STATUS);
+        }
     }
 
     private void doDelete()
     {
-        log.debug("target.getPath()" + this.target.getPath());
-        this.client.deleteNode(this.target.getPath());
-        System.out.println("Node deleted: " + this.target.getPath());
+        log.debug("doDelete");
+        try
+        {
+            log.debug("target.getPath()" + this.target.getPath());
+            this.client.deleteNode(this.target.getPath());
+            log.info("deleted: " + this.target);
+        }
+        catch(Throwable t)
+        {
+            msg("failed to delete: " + target);
+            if (t.getMessage() != null)
+                msg("          reason: " + t.getMessage());
+            else
+                msg("          reason: " + t);
+            System.exit(NET_STATUS);
+        }
     }
 
     private void doCopy()
     {
-        if (this.transferDirection.equals(Transfer.Direction.pushToVoSpace))
+        log.debug("doCopy");
+        try
         {
-            try
+            if (this.transferDirection.equals(Transfer.Direction.pushToVoSpace))
             {
-                DataNode dnode = new DataNode(new VOSURI(this.destination));
-                dnode = (DataNode) this.client.createNode(dnode);
-                DataView dview = new DataView(VOS.VIEW_DEFAULT, dnode);
-
-                List<Protocol> protocols = new ArrayList<Protocol>();
-                protocols.add(new Protocol(VOS.PROTOCOL_HTTPS_PUT, this.baseUrl, null));
-
-                Transfer transfer = new Transfer();
-                transfer.setTarget(dnode);
-                transfer.setView(dview);
-                transfer.setProtocols(protocols);
-                transfer.setDirection(this.transferDirection);
-
-                ClientTransfer clientTransfer = new ClientTransfer(this.client.pushToVoSpace(transfer));
-                log.debug(clientTransfer.toXmlString());
-
-                log.debug("this.source: " + this.source);
-                File fileToUpload = new File(this.source);
-                clientTransfer.doUpload(fileToUpload);
-                Node node = clientTransfer.getTarget();
-                log.debug("clientTransfer getTarget: " + node);
-                Node nodeRtn = this.client.getNode(node.getPath());
-                log.debug("Node returned from getNode, after doUpload: " + VOSClientUtil.xmlString(nodeRtn));
+                copyToVOSpace();
             }
-            catch (URISyntaxException e)
+            else if (this.transferDirection.equals(Transfer.Direction.pullFromVoSpace))
             {
-                e.printStackTrace();
-                throw new RuntimeException(e);
+                copyFromVOSpace();
             }
         }
-        else if (this.transferDirection.equals(Transfer.Direction.pullFromVoSpace))
+        catch(Throwable t)
         {
-            try
-            {
-                DataNode dnode = new DataNode(new VOSURI(this.source));
-                DataView dview = new DataView(VOS.VIEW_DEFAULT, dnode);
-
-                List<Protocol> protocols = new ArrayList<Protocol>();
-                protocols.add(new Protocol(VOS.PROTOCOL_HTTPS_GET, this.baseUrl, null));
-
-                Transfer transfer = new Transfer();
-                transfer.setTarget(dnode);
-                transfer.setView(dview);
-                transfer.setProtocols(protocols);
-                transfer.setDirection(this.transferDirection);
-
-                ClientTransfer clientTransfer = new ClientTransfer(this.client.pullFromVoSpace(transfer));
-                log.debug(clientTransfer.toXmlString());
-
-                log.debug("this.source: " + this.source);
-                File fileToSave = new File(this.destination);
-                clientTransfer.doDownload(fileToSave);
-                Node node = clientTransfer.getTarget();
-                log.debug("clientTransfer getTarget: " + node);
-                Node nodeRtn = this.client.getNode(node.getPath());
-                log.debug("Node returned from getNode, after doDownload: " + VOSClientUtil.xmlString(nodeRtn));
-            }
-            catch (URISyntaxException e)
-            {
-                e.printStackTrace();
-                throw new RuntimeException(e);
-            }
+            msg("failed to copy: " + source + " -> " + destination);
+            if (t.getMessage() != null)
+                msg("          reason: " + t.getMessage());
+            else
+                msg("          reason: " + t);
+            t.printStackTrace();
+            System.exit(NET_STATUS);
         }
     }
 
+    
     private void doCreate()
     {
-        ContainerNode cnode = null;
         try
         {
-            cnode = new ContainerNode(this.target);
+            ContainerNode cnode = new ContainerNode(target);
+            Node nodeRtn = client.createNode(cnode);
+            log.info("created: " + nodeRtn.getUri());
         }
-        catch (URISyntaxException e)
+        catch(Throwable t)
         {
-            e.printStackTrace();
-            throw new RuntimeException(e);
+            msg("failed to create: " + target);
+            if (t.getMessage() != null)
+                msg("          reason: " + t.getMessage());
+            else
+                msg("          reason: " + t);
+            System.exit(NET_STATUS);
         }
-        Node nodeRtn = this.client.createNode(cnode);
-        System.out.println("Created Node on Server:");
-        System.out.println(nodeRtn);
     }
 
     private void doView()
     {
-        Node nodeRtn = this.client.getNode(this.target.getPath());
-        System.out.println("Node: " + nodeRtn.getUri());
-        if (nodeRtn instanceof ContainerNode)
+        try
         {
-            for (Node node : ((ContainerNode) nodeRtn).getNodes())
+            Node n = client.getNode(target.getPath());
+            msg(getType(n) + ": " + n.getUri());
+            msg("creator: " + safePropertyRef(n, VOS.PROPERTY_URI_CREATOR));
+            msg("last modified: " + safePropertyRef(n, VOS.PROPERTY_URI_DATE));
+            msg("readable by: " + safePropertyRef(n, VOS.PROPERTY_URI_GROUPREAD));
+            msg("writable by: " + safePropertyRef(n, VOS.PROPERTY_URI_GROUPWRITE));
+            if (n instanceof ContainerNode)
             {
-                System.out.println("\t" + node.getName());
+                ContainerNode cn = (ContainerNode) n;
+                msg("child nodes:");
+                for (Node child : cn.getNodes())
+                {
+                    //msg("\tchild: " + child.getName() + "\t" + getType(child) + "\t" + child.getUri());
+                    msg("\t" + child.getUri());
+                }
+            }
+            else if (n instanceof DataNode)
+            {
+                msg("size: " + safePropertyRef(n, VOS.PROPERTY_URI_CONTENTLENGTH));
+                msg("type: " + safePropertyRef(n, VOS.PROPERTY_URI_TYPE));
+                msg("encoding: " + safePropertyRef(n, VOS.PROPERTY_URI_CONTENTENCODING));
+                msg("md5sum: " + safePropertyRef(n, VOS.PROPERTY_URI_CONTENTMD5));
+            }
+            else
+            {
+                log.debug("class of returned node: " + n.getClass().getName());
             }
         }
-        else if (nodeRtn instanceof DataNode)
+        catch(NodeNotFoundException ex)
         {
-            System.out.println("Properties of Node:");
-            for (NodeProperty np : nodeRtn.getProperties())
+            msg("not found: " + target);
+            System.exit(NET_STATUS);
+        }
+    }
+
+    private void copyToVOSpace()
+        throws Exception
+    {
+        Node n = null;
+        try { n = client.getNode(destination.getPath()); }
+        catch(NodeNotFoundException ignore) { }
+        if (n != null && !(n instanceof DataNode))
+            throw new IllegalArgumentException("destination is an existing node of type " + getType(n));
+
+        DataNode dnode = null;
+        if (n != null)
+        {
+            log.info("overwriting existing data node: " + destination);
+            dnode = (DataNode) n;
+            // update props if necessary
+            if (copyProperties(dnode))
             {
-                System.out.println("\t" + np.getPropertyURI() + ": " + np.getPropertyValue());
+                log.info("updating node properties: " + destination);
+                dnode = (DataNode) client.setNode(dnode);
             }
         }
         else
         {
-            log.debug("class of returned node: " + nodeRtn.getClass().getName());
+            log.info("creating new data node: " + destination);
+            dnode = new DataNode(new VOSURI(this.destination));
+            copyProperties(dnode);
+            dnode = (DataNode) client.createNode(dnode);
         }
 
+
+
+        DataView dview = new DataView(VOS.VIEW_DEFAULT, dnode);
+
+        List<Protocol> protocols = new ArrayList<Protocol>();
+        protocols.add(new Protocol(VOS.PROTOCOL_HTTPS_PUT, baseUrl, null));
+
+        Transfer transfer = new Transfer();
+        transfer.setTarget(dnode);
+        transfer.setView(dview);
+        transfer.setProtocols(protocols);
+        transfer.setDirection(this.transferDirection);
+
+        ClientTransfer clientTransfer = new ClientTransfer(this.client.pushToVoSpace(transfer));
+        log.debug(clientTransfer.toXmlString());
+
+        log.debug("this.source: " + source);
+        File fileToUpload = new File(source);
+        clientTransfer.doUpload(fileToUpload);
+        Node node = clientTransfer.getTarget();
+        log.debug("clientTransfer getTarget: " + node);
+        Node nodeRtn = this.client.getNode(node.getPath());
+        log.debug("Node returned from getNode, after doUpload: " + VOSClientUtil.xmlString(nodeRtn));
+    }
+
+    private void copyFromVOSpace()
+        throws Exception
+    {
+        DataNode dnode = new DataNode(new VOSURI(source));
+        DataView dview = new DataView(VOS.VIEW_DEFAULT, dnode);
+
+        List<Protocol> protocols = new ArrayList<Protocol>();
+        protocols.add(new Protocol(VOS.PROTOCOL_HTTPS_GET, baseUrl, null));
+
+        Transfer transfer = new Transfer();
+        transfer.setTarget(dnode);
+        transfer.setView(dview);
+        transfer.setProtocols(protocols);
+        transfer.setDirection(transferDirection);
+
+        ClientTransfer clientTransfer = new ClientTransfer(client.pullFromVoSpace(transfer));
+        log.debug(clientTransfer.toXmlString());
+
+        log.debug("this.source: " + source);
+        File fileToSave = new File(destination);
+        if (fileToSave.exists())
+            log.info("overwriting existing file: " + destination);
+        clientTransfer.doDownload(fileToSave);
+        Node node = clientTransfer.getTarget();
+        log.debug("clientTransfer getTarget: " + node);
+    }
+
+    // copy properties specified on command-line to the specified node
+    private boolean copyProperties(Node n)
+    {
+        List<NodeProperty> cur = n.getProperties();
+        if (cur == null)
+            n.setProperties(properties);
+        else
+        {
+            Map<String,NodeProperty> map = new HashMap<String,NodeProperty>();
+            // copy current
+            for (NodeProperty np : cur)
+                map.put(np.getPropertyURI(), np);
+            // replace with specified values
+            for (NodeProperty np : properties)
+                map.put(np.getPropertyURI(), np);
+            cur.clear();
+            cur.addAll(map.values());
+        }
+        // return true if some props were set
+        return (properties.size() > 0);
+    }
+
+    private static String ZERO_LENGTH = "";
+    private String safePropertyRef(Node n, String key)
+    {
+        if (n == null || key == null)
+            return ZERO_LENGTH;
+        NodeProperty p = n.findProperty(key);
+        if (p == null)
+            return ZERO_LENGTH;
+        String ret = p.getPropertyValue();
+        if (ret == null)
+            return ZERO_LENGTH;
+        return ret;
+    }
+    private String getType(Node n)
+    {
+        if (n instanceof ContainerNode)
+            return "container";
+        if (n instanceof DataNode)
+            return "data";
+        return ZERO_LENGTH;
     }
 
     /**
@@ -355,98 +510,125 @@ public class Main
     private void init(ArgumentMap argMap)
     {
         URI serverUri = null;
-        validateInitSSL(argMap);
-
-        if (this.operation.equals(Operation.COPY))
+        try
         {
-            String strSrc = argMap.getValue(ARG_SRC);
-            String strDest = argMap.getValue(ARG_DEST);
-            if (!strSrc.startsWith(VOS_PREFIX) && strDest.startsWith(VOS_PREFIX))
-            {
-                this.transferDirection = Direction.pushToVoSpace;
-                try
-                {
-                    this.destination = new URI(strDest);
-                    serverUri = new VOSURI(strDest).getServiceURI();
-                }
-                catch (URISyntaxException e)
-                {
-                    throw new IllegalArgumentException("Invalid VOS URI: " + strDest);
-                }
-                File f = new File(strSrc);
-                if (!f.exists() || !f.canRead())
-                    throw new IllegalArgumentException("Source file " + strSrc + " does not exist or cannot be read.");
-                try
-                {
-                    this.source = new URI("file", f.getAbsolutePath(), null);
-                }
-                catch (URISyntaxException e)
-                {
-                    throw new IllegalArgumentException("Invalid file path: " + strSrc);
-                }
-            }
-            else if (strSrc.startsWith(VOS_PREFIX) && !strDest.startsWith(VOS_PREFIX))
-            {
-                this.transferDirection = Direction.pullFromVoSpace;
-                try
-                {
-                    serverUri = new VOSURI(strSrc).getServiceURI();
-                    this.source = new URI(strSrc);
-                }
-                catch (URISyntaxException e)
-                {
-                    throw new IllegalArgumentException("Invalid VOS URI: " + strSrc);
-                }
-                File f = new File(strDest);
-                if (f.exists())
-                {
-                    if (!f.canWrite()) throw new IllegalArgumentException("Destination file " + strDest + " is not writable.");
-                }
-                else
-                {
-                    File parent = f.getParentFile();
-                    if (parent.isDirectory())
-                    {
-                        if (!parent.canWrite())
-                            throw new IllegalArgumentException("The parent directory of destination file " + strDest
-                                    + " is not writable.");
-                    }
-                    else
-                        throw new IllegalArgumentException("Destination file " + strDest + " is not within a directory.");
-                }
-                try
-                {
-                    this.destination = new URI("file", f.getAbsolutePath(), null);
-                }
-                catch (URISyntaxException e)
-                {
-                    throw new IllegalArgumentException("Invalid file path: " + strDest);
-                }
-            }
-            else
-                throw new UnsupportedOperationException("The type of your copy operation is not supported yet.");
+            validateInitSSL(argMap);
         }
-        else
+        catch(Exception ex)
         {
-            String strTarget = argMap.getValue(ARG_TARGET);
-            try
-            {
-                this.target = new VOSURI(strTarget);
-                serverUri = this.target.getServiceURI();
-            }
-            catch (URISyntaxException e)
-            {
-                throw new IllegalArgumentException("Invalid VOS URI: " + strTarget);
-            }
+            log.error("failed to initialise SSL from certificates: " + ex.getMessage());
+            System.exit(INIT_STATUS);
         }
 
         try
         {
-            this.baseUrl = registryClient.getServiceURL(serverUri, "https").toString();
+            if (this.operation.equals(Operation.COPY))
+            {
+                String strSrc = argMap.getValue(ARG_SRC);
+                String strDest = argMap.getValue(ARG_DEST);
+                if (!strSrc.startsWith(VOS_PREFIX) && strDest.startsWith(VOS_PREFIX))
+                {
+                    this.transferDirection = Direction.pushToVoSpace;
+                    try
+                    {
+                        this.destination = new URI(strDest);
+                        serverUri = new VOSURI(strDest).getServiceURI();
+                    }
+                    catch (URISyntaxException e)
+                    {
+                        throw new IllegalArgumentException("Invalid VOS URI: " + strDest);
+                    }
+                    File f = new File(strSrc);
+                    if (!f.exists() || !f.canRead())
+                        throw new IllegalArgumentException("Source file " + strSrc + " does not exist or cannot be read.");
+                    try
+                    {
+                        this.source = new URI("file", f.getAbsolutePath(), null);
+                    }
+                    catch (URISyntaxException e)
+                    {
+                        throw new IllegalArgumentException("Invalid file path: " + strSrc);
+                    }
+                }
+                else if (strSrc.startsWith(VOS_PREFIX) && !strDest.startsWith(VOS_PREFIX))
+                {
+                    this.transferDirection = Direction.pullFromVoSpace;
+                    try
+                    {
+                        serverUri = new VOSURI(strSrc).getServiceURI();
+                        this.source = new URI(strSrc);
+                    }
+                    catch (URISyntaxException e)
+                    {
+                        throw new IllegalArgumentException("Invalid VOS URI: " + strSrc);
+                    }
+                    File f = new File(strDest);
+                    if (f.exists())
+                    {
+                        if (!f.canWrite()) throw new IllegalArgumentException("Destination file " + strDest + " is not writable.");
+                    }
+                    else
+                    {
+                        File parent = f.getParentFile();
+                        if (parent == null)
+                        {
+                            String cwd = System.getProperty("user.dir");
+                            parent = new File(cwd);
+                        }
+                        if (parent.isDirectory())
+                        {
+                            if (!parent.canWrite())
+                                throw new IllegalArgumentException("The parent directory of destination file " + strDest
+                                        + " is not writable.");
+                        }
+                        else
+                            throw new IllegalArgumentException("Destination file " + strDest + " is not within a directory.");
+                    }
+                    this.destination = f.toURI();
+                }
+                else
+                    throw new UnsupportedOperationException("The type of your copy operation is not supported yet.");
+            }
+            else
+            {
+                String strTarget = argMap.getValue(ARG_TARGET);
+                try
+                {
+                    this.target = new VOSURI(strTarget);
+                    serverUri = this.target.getServiceURI();
+                }
+                catch (URISyntaxException e)
+                {
+                    throw new IllegalArgumentException("Invalid VOS URI: " + strTarget);
+                }
+            }
+        }
+        catch(NullPointerException nex)
+        {
+            log.error("BUG", nex);
+            System.exit(-1);
+        }
+        catch(Exception ex)
+        {
+            log.error(ex.toString());
+            System.exit(INIT_STATUS);
+        }
+
+        try
+        {
+            URL baseURL = registryClient.getServiceURL(serverUri, "https");
+            if (baseURL == null)
+            {
+                log.error("failed to find service URL for " + serverUri);
+                System.exit(INIT_STATUS);
+            }
+            this.baseUrl = baseURL.toString();
         }
         catch (MalformedURLException e)
         {
-            throw new IllegalArgumentException("Invalid VOS URI: " + serverUri);
+            log.error("failed to find service URL for " + serverUri);
+            log.error("reason: " + e.getMessage());
+            System.exit(INIT_STATUS);
         }
         this.client = new VOSpaceClient(baseUrl);
         log.info("server uri: " + serverUri);
@@ -535,7 +717,8 @@ public class Main
     /**
      * @param argMap
      */
-    private void validateCommandArguments(ArgumentMap argMap) throws IllegalArgumentException
+    private void validateCommandArguments(ArgumentMap argMap)
+        throws IllegalArgumentException
     {
         String strCert = argMap.getValue(ARG_CERT);
         String strKey = argMap.getValue(ARG_KEY);
@@ -554,6 +737,61 @@ public class Main
             String strTarget = argMap.getValue(ARG_TARGET);
             if (strTarget == null) throw new IllegalArgumentException("Argument target is required for " + this.operation);
         }
+
+        // optional properties
+        this.properties = new ArrayList<NodeProperty>();
+        
+        String propFile = argMap.getValue(ARG_PROP);
+        if (propFile != null)
+        {
+            File f = new File(propFile);
+            if (f.exists())
+            {
+                if (f.canRead())
+                {
+                    try
+                    {
+                        Properties p = new Properties();
+                        p.load(new FileReader(f));
+                        for ( String key : p.stringPropertyNames())
+                        {
+                            String val = p.getProperty(key);
+                            properties.add(new NodeProperty(key, val));
+                        }
+                    }
+                    catch(IOException ex)
+                    {
+                        log.info("failed to read properties file: "
+                                + f.getAbsolutePath()
+                                + "(" + ex.getMessage() + ", skipping)");
+                    }
+                }
+                else
+                    log.info("cannot read properties file: "
+                            + f.getAbsolutePath() + " (permission denied, skipping)");
+            }
+            else
+                log.info("cannot read properties file: "
+                        + f.getAbsolutePath() + " (does not exist, skipping)");
+        }
+
+        String contentType = argMap.getValue(ARG_CONTENT_TYPE);
+        String contentEncoding = argMap.getValue(ARG_CONTENT_ENCODING);
+        String contentMD5 = argMap.getValue(ARG_CONTENT_MD5);
+        String groupRead = argMap.getValue(ARG_GROUP_READ);
+        String groupWrite = argMap.getValue(ARG_GROUP_WRITE);
+
+        if (contentType != null)
+            properties.add(new NodeProperty(VOS.PROPERTY_URI_TYPE, contentType));
+        if (contentEncoding != null)
+            properties.add(new NodeProperty(VOS.PROPERTY_URI_CONTENTENCODING, contentEncoding));
+        if (contentMD5 != null)
+            properties.add(new NodeProperty(VOS.PROPERTY_URI_CONTENTMD5, contentMD5));
+        if (groupRead != null)
+            properties.add(new NodeProperty(VOS.PROPERTY_URI_GROUPREAD, groupRead));
+        if (groupWrite != null)
+            properties.add(new NodeProperty(VOS.PROPERTY_URI_GROUPWRITE, groupWrite));
+
     }
 
     /**
@@ -629,27 +867,6 @@ public class Main
                 "   [--group-write=<group URI>]                                                                     ",
                 "   [--prop=<properties file>]                                                                      ", "" };
         for (String line : um)
-            System.out.println(line);
+            msg(line);
     }
-
-    public boolean isVerbose()
-    {
-        return verbose;
-    }
-
-    public void setVerbose(boolean verbose)
-    {
-        this.verbose = verbose;
-    }
-
-    public boolean isDebug()
-    {
-        return debug;
-    }
-
-    public void setDebug(boolean debug)
-    {
-        this.debug = debug;
-    }
-
 }

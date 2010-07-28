@@ -235,21 +235,4 @@ public class VOSURI
         String str = "ivo://" + authority; 
         return new URI(str);
     }
- 
-    public static void main(String[] args) throws Exception
-    {
-        String str = "vos://cadc.nrc.ca!vospace/zhangsa/nodeWithPropertiesA";
-        VOSURI vu = new VOSURI(str);
-        System.out.println(vu.getAuthority());
-        System.out.println(vu);
-        System.out.println(vu.getName());
-        System.out.println(vu.getFragment());
-        System.out.println(vu.getPath());
-        System.out.println(vu.getPrefix());
-        System.out.println(vu.getQuery());
-        System.out.println(vu.getScheme());
-        System.out.println(vu.getURIObject());
-        System.out.println(vu.getServiceURI());
-        
-    }
 }

@@ -72,12 +72,10 @@ package ca.nrc.cadc.vos;
 import java.io.File;
 import java.net.MalformedURLException;
 import java.net.URL;
-import java.util.List;
 
 import org.apache.log4j.Logger;
 
 import ca.nrc.cadc.dlm.client.Download;
-import ca.nrc.cadc.vos.Transfer.Direction;
 
 /**
  * @author zhangsa

@@ -90,6 +90,7 @@ import ca.nrc.cadc.uws.JobReader;
 import ca.nrc.cadc.uws.JobWriter;
 import ca.nrc.cadc.uws.Parameter;
 import ca.nrc.cadc.vos.Node;
+import ca.nrc.cadc.vos.NodeNotFoundException;
 import ca.nrc.cadc.vos.NodeParsingException;
 import ca.nrc.cadc.vos.NodeProperty;
 import ca.nrc.cadc.vos.NodeReader;
@@ -100,6 +101,7 @@ import ca.nrc.cadc.vos.ServerTransfer;
 import ca.nrc.cadc.vos.Transfer;
 import ca.nrc.cadc.vos.TransferReader;
 import ca.nrc.cadc.vos.View;
+import java.security.AccessControlException;
 import java.text.ParseException;
 
 /**
@@ -131,8 +133,7 @@ public class VOSpaceClient
             HttpURLConnection connection = (HttpURLConnection) url.openConnection();
             connection.setDoOutput(true);
             connection.setRequestMethod("PUT");
-            //connection.setRequestProperty("Content-Type", "application/x-www-form-urlencoded");
-            //connection.setRequestProperty("Content-Language", "en-US");
+            connection.setRequestProperty("Content-Type", "text/xml");
             connection.setUseCaches(false);
             connection.setDoInput(true);
             connection.setDoOutput(true);
@@ -144,22 +145,24 @@ public class VOSpaceClient
 
             String responseMessage = connection.getResponseMessage();
             responseCode = connection.getResponseCode();
+            log.debug("createNode(), response code: " + responseCode);
+            log.debug("createNode(), response message: " + responseMessage);
+            
             switch (responseCode)
             {
             case 201: // valid
-                InputStream in = connection.getInputStream();
 
-                BufferedReader br = new BufferedReader(new InputStreamReader(in));
+                // WHY read into a string buffer and then read with NodeReader?
+                
                 StringBuffer sb = new StringBuffer();
+                InputStream in = connection.getInputStream();
+                BufferedReader br = new BufferedReader(new InputStreamReader(in));
                 String line;
                 while ((line = br.readLine()) != null)
                 {
                     sb.append(line).append(CR);
                 }
                 in.close();
-
-                log.debug("createNode(), Response from server: \n" + sb.toString());
-
                 NodeReader nodeReader = new NodeReader();
                 rtnNode = nodeReader.read(sb.toString());
                 break;
@@ -173,20 +176,29 @@ public class VOSpaceClient
 
                 // If a parent node in the URI path is a LinkNode, 
                 // the service MUST throw a HTTP 500 status code including a LinkFound fault in the entity body.
+                throw new RuntimeException(responseMessage);
             case 409:
                 // The service SHALL throw a HTTP 409 status code including a DuplicateNode fault in the entity body 
                 // if a Node already exists with the same URI
-
+                throw new IllegalArgumentException(responseMessage);
             case 400:
                 // The service SHALL throw a HTTP 400 status code including an InvalidURI fault in the entity body 
                 // if the requested URI is invalid
                 // The service SHALL throw a HTTP 400 status code including a TypeNotSupported fault in the entity body 
                 // if the type specified in xsi:type is not supported
+                throw new IllegalArgumentException(responseMessage);
             case 401:
                 // The service SHALL throw a HTTP 401 status code including PermissionDenied fault in the entity body
                 // if the user does not have permissions to perform the operation
+                throw new AccessControlException(responseMessage);
+
+            case 404:
+                // handle server response when parent (container) does not exist
+                throw new IllegalArgumentException(responseMessage);
             default:
-                log.error("createNode(), exceptional response from server: " + responseMessage + ". HTTP Code: " + responseCode);
+
+                // TODO: does this actually capture something useful? has it ever happened?
+                // don't we just say that the service responded in a non-compliant way and give up? 
                 InputStream errStrm = connection.getErrorStream();
                 br = new BufferedReader(new InputStreamReader(errStrm));
                 while ((line = br.readLine()) != null)
@@ -194,7 +206,8 @@ public class VOSpaceClient
                     log.debug(line);
                 }
                 errStrm.close();
-                throw new IllegalArgumentException("Error returned.  HTTP Response Code: " + responseCode);
+                
+                throw new RuntimeException("unexpected failure mode: " + responseMessage + "(" + responseCode + ")");
             }
         }
         catch (IOException e)
@@ -214,9 +227,11 @@ public class VOSpaceClient
      *  
      * @param path
      * @return
-     * @throws NodeParsingException 
+     * @throws NodeParsingException
+     * @throws NodeNotFoundException when the requested node does not exist on the server
      */
     public Node getNode(String path)
+        throws NodeNotFoundException
     {
         int responseCode;
         Node rtnNode = null;
@@ -262,7 +277,8 @@ public class VOSpaceClient
             case 401:
                 // The service SHALL throw a HTTP 401 status code including a PermissionDenied fault in the entity-body if the user does not have permissions to perform the operation
             case 404:
-                // The service SHALL throw a HTTP 404 status code including a NodeNotFound fault in the entity-body if the target Node does not exist 
+                // The service SHALL throw a HTTP 404 status code including a NodeNotFound fault in the entity-body if the target Node does not exist
+                throw new NodeNotFoundException("not found: " + path);
             default:
                 log.error(responseMessage + ". HTTP Code: " + responseCode);
                 throw new IllegalArgumentException("Error returned.  HTTP Response Code: " + responseCode);
@@ -550,7 +566,7 @@ public class VOSpaceClient
      */
     private String getRedirectLocation(HttpURLConnection connection) throws IOException
     {
-        // Check response code from tapServer, should be 303.
+        // Check response code from server, should be 303.
         String responseMessage = connection.getResponseMessage();
         int responseCode = connection.getResponseCode();
         log.debug("responseCode: " + responseCode);
@@ -697,8 +713,6 @@ public class VOSpaceClient
             HttpURLConnection connection = (HttpURLConnection) url.openConnection();
             connection.setDoOutput(true);
             connection.setRequestMethod("DELETE");
-            //connection.setRequestProperty("Content-Type", "application/x-www-form-urlencoded");
-            //connection.setRequestProperty("Content-Language", "en-US");
             connection.setUseCaches(false);
             connection.setDoInput(true);
             connection.setDoOutput(false);
@@ -719,11 +733,12 @@ public class VOSpaceClient
                 //
                 // If a parent node in the URI path is a LinkNode, 
                 // the service MUST throw a HTTP 500 status code including a LinkFound fault in the entity-body.
-
+                throw new RuntimeException(responseMessage);
             case 401:
                 /* The service SHALL throw a HTTP 401 status code including a PermissionDenied fault in the entity-body 
                  * if the user does not have permissions to perform the operation
                  */
+                throw new AccessControlException(responseMessage);
             case 404:
                 /*
                  * The service SHALL throw a HTTP 404 status code including a NodeNotFound fault in the entity-body 
@@ -732,6 +747,7 @@ public class VOSpaceClient
                  * If the target node in the URI path does not exist, 
                  * the service MUST throw a HTTP 404 status code including a NodeNotFound fault in the entity-body. 
                  */
+                throw new IllegalArgumentException(responseMessage);
             default:
                 log.error(responseMessage + ". HTTP Code: " + responseCode);
                 InputStream errStrm = connection.getErrorStream();
@@ -742,7 +758,7 @@ public class VOSpaceClient
                     log.debug(line);
                 }
                 errStrm.close();
-                throw new IllegalArgumentException("Error returned.  HTTP Response Code: " + responseCode);
+                throw new RuntimeException("unexpected failure mode: " + responseMessage + "(" + responseCode + ")");
             }
         }
         catch (IOException ex)
