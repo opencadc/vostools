@@ -116,7 +116,12 @@ public class RssView extends AbstractView
     
     public RssView()
     {
-        
+        super();
+    }
+    
+    public RssView(URI uri)
+    {
+        super(uri);
     }
 
     /**

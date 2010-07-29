@@ -70,6 +70,7 @@
 package ca.nrc.cadc.vos.server;
 
 import java.net.URISyntaxException;
+import java.util.ArrayList;
 import java.util.List;
 
 import ca.nrc.cadc.vos.Node;
@@ -95,13 +96,7 @@ public class SearchNode extends Node
     {
         super(uri);
     }
-
-    @Override
-    public List<View> accepts()
-    {
-        return null;
-    }
-
+    
     @Override
     public boolean isStructured()
     {
@@ -109,9 +104,15 @@ public class SearchNode extends Node
     }
 
     @Override
+    public List<View> accepts()
+    {
+        return new ArrayList<View>(0);
+    }
+
+    @Override
     public List<View> provides()
     {
-        return null;
+        return new ArrayList<View>(0);
     }
 
 }

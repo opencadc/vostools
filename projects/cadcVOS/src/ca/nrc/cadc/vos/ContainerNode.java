@@ -69,10 +69,15 @@
 
 package ca.nrc.cadc.vos;
 
+import java.net.URI;
 import java.net.URISyntaxException;
 import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
+
+import org.apache.log4j.Logger;
+
+import ca.nrc.cadc.vos.server.RssView;
 
 /**
  * A VOSpace node that describes the a data item that contains other data
@@ -83,6 +88,8 @@ import java.util.List;
  */
 public class ContainerNode extends Node
 {
+    
+    private static Logger log = Logger.getLogger(ContainerNode.class);
     
     public static final char DB_TYPE = 'C';
     
@@ -205,8 +212,15 @@ public class ContainerNode extends Node
      */
     public List<View> accepts()
     {
-        // TODO: Implement accepts()
-        return null;
+        List<View> accepts = new ArrayList<View>(1);
+        try
+        {
+            accepts.add(new RssView(new URI("ivo://cadc.nrc.ca/vospace/core#rssview")));
+        } catch (URISyntaxException e)
+        {
+            log.error(e);
+        }
+        return accepts;
     }
     
     /**
@@ -215,7 +229,7 @@ public class ContainerNode extends Node
     public List<View> provides()
     {
         // TODO: Implement provides
-        return null;
+        return new ArrayList<View>(0);
     }
     
     /**

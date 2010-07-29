@@ -69,7 +69,6 @@
 
 package ca.nrc.cadc.vos;
 
-import ca.nrc.cadc.util.StringBuilderWriter;
 import java.io.BufferedWriter;
 import java.io.IOException;
 import java.io.OutputStream;
@@ -84,6 +83,7 @@ import org.jdom.Namespace;
 import org.jdom.output.Format;
 import org.jdom.output.XMLOutputter;
 
+import ca.nrc.cadc.util.StringBuilderWriter;
 import ca.nrc.cadc.vos.VOS.NodeBusyState;
 
 /**
@@ -227,6 +227,9 @@ public class NodeWriter
 
         // properties element
         root.addContent(getPropertiesElement(node));
+        
+        // accepts element
+        root.addContent(getAcceptsElement(node));
 
         // write out the Document
         write(root, writer);
@@ -267,6 +270,24 @@ public class NodeWriter
             properties.addContent(property);
         }
         return properties;
+    }
+    
+    /**
+     * Build the accepts Element of a Node.
+     *
+     * @param node Node.
+     * @return accepts Element.
+     */
+    protected Element getAcceptsElement(Node node)
+    {
+        Element accepts = new Element("accepts", defaultNamespace);
+        for (View view : node.accepts())
+        {
+            Element viewElement = new Element("view", defaultNamespace);
+            viewElement.setAttribute("uri", view.getURI().toString());
+            accepts.addContent(viewElement);
+        }
+        return accepts;
     }
 
     /**
