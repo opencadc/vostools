@@ -81,7 +81,9 @@ import ca.nrc.cadc.vos.Node;
 import ca.nrc.cadc.vos.NodeFault;
 import ca.nrc.cadc.vos.NodeParsingException;
 import ca.nrc.cadc.vos.VOSURI;
+import ca.nrc.cadc.vos.server.AbstractView;
 import ca.nrc.cadc.vos.server.NodePersistence;
+import ca.nrc.cadc.vos.server.ViewFactory;
 import ca.nrc.cadc.vos.server.auth.VOSpaceAuthorizer;
 
 /**
@@ -103,6 +105,7 @@ public abstract class NodeAction implements PrivilegedAction<Object>
     private NodePersistence nodePersistence;
     private VOSURI vosURI;
     private Representation nodeXML;
+    private String viewReference;
     
     /**
      * Set the URI for this action.
@@ -138,6 +141,45 @@ public abstract class NodeAction implements PrivilegedAction<Object>
     public void setNodePersistence(NodePersistence nodePersistence)
     {
         this.nodePersistence = nodePersistence;
+    }
+    
+    /**
+     * Set the view reference sent in by the client.
+     * @param viewReference
+     */
+    public void setViewReference(String viewReference)
+    {
+        this.viewReference = viewReference;
+    }
+    
+    /**
+     * Return the view reference sent in by the client.
+     * @return
+     */
+    protected String getViewReference()
+    {
+        return viewReference;
+    }
+    
+    /**
+     * Return the view requested by the client, or null if none specified.
+     * @throws IllegalAccessException 
+     * @throws InstantiationException 
+     */
+    protected AbstractView getView() throws InstantiationException, IllegalAccessException
+    {
+        if (viewReference == null || viewReference.trim().length() == 0)
+        {
+            return null;
+        }
+        ViewFactory viewFactory = new ViewFactory();
+        AbstractView view = viewFactory.getView(viewReference);
+        if (view == null)
+        {
+            throw new UnsupportedOperationException("No view configured matching reference: "
+                    + viewReference);
+        }
+        return view;
     }
     
     /**

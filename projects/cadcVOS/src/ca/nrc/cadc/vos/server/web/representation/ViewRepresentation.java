@@ -67,174 +67,89 @@
 ************************************************************************
 */
 
-package ca.nrc.cadc.vos.server;
+package ca.nrc.cadc.vos.server.web.representation;
 
 import java.io.IOException;
 import java.io.OutputStream;
-import java.net.URI;
-import java.net.URL;
-import java.text.ParseException;
 import java.util.Date;
 import java.util.List;
 
-import org.apache.log4j.Logger;
+import org.restlet.data.Digest;
 import org.restlet.data.Encoding;
-import org.restlet.data.MediaType;
+import org.restlet.representation.OutputRepresentation;
 
-import ca.nrc.cadc.date.DateUtil;
-import ca.nrc.cadc.vos.Node;
-import ca.nrc.cadc.vos.NodeProperty;
-import ca.nrc.cadc.vos.VOS;
-import ca.nrc.cadc.vos.View;
+import ca.nrc.cadc.util.HexUtil;
+import ca.nrc.cadc.vos.server.AbstractView;
 
 /**
- * This abstract class defines the required behaviour of server side implementations
- * of a View.
- * 
- * Generally, subclasses should implement setNode(Node, String) and either:
- * 
- * 1) For views that result in a redirect:
- *     - getRedirectURL() or, the set of:
- * 
- * 2) For views that result in data returned: 
- *     - write(OutputStream)
- *     - getContentLength()
- *     - getMediaType()
- *     - getContentEncoding()
- *     - getContentMD5()
+ * The Restlet representation for an AbstractView.
  * 
  * @author majorb
  *
  */
-public abstract class AbstractView extends View
+public class ViewRepresentation extends OutputRepresentation
 {
-    
-    protected static Logger log = Logger.getLogger(AbstractView.class);
-    
-    // The node for which to create the view
-    protected Node node;
+    // The view to represent
+    private AbstractView view;
     
     /**
-     * AbstractView constructor.
-     */
-    protected AbstractView()
-    {
-        super();
-    }
-    
-    /**
-     * AbstractView constructor.
+     * ViewRepresentation constructor.
      * 
-     * @param uri The view identifier.
+     * @param view
      */
-    public AbstractView(URI uri)
+    public ViewRepresentation(AbstractView view)
     {
-        super(uri);
+        super(view.getMediaType());
+        this.view = view;
     }
 
     /**
-     * AbstractView constructor for service-side.
-     *
-     * @param uri The view identifier.
-     * @param original 
+     * Write the view contents to the output stream.
      */
-    public AbstractView(URI uri, boolean original)
-    {
-        super(uri, original);
-    }
-    
-    /**
-     * Get the node for this view.
-     */
-    protected Node getNode()
-    {
-        return node;
-    }
-    
-    /**
-     * Set the node to be used by the view.
-     * 
-     * @param node The node to be used.
-     * @param viewReference The name used to reference this view.
-     * @throws UnsupportedOperationException If this view cannot be created for the given node.
-     */
-    public void setNode(Node node, String viewReference) throws UnsupportedOperationException
-    {
-        if (node == null)
-        {
-            throw new UnsupportedOperationException("Node for view is null.");
-        }
-        this.node = node;
-    }
-    
-    /**
-     * Return the redirect URL for this view, or null if a redirect is not
-     * a result of the view.
-     */
-    public URL getRedirectURL()
-    {
-        return null;
-    }
-    
-    /**
-     * Write the view data to the outputStream if that is the result of the view.
-     * @param outputStream The output stream on which to write.
-     * @throws IOException If an I/O problem occurs.
-     */
+    @Override
     public void write(OutputStream outputStream) throws IOException
     {
+        view.write(outputStream);
     }
     
     /**
-     * Return the content length of the data for the view.
+     * Set the content length.
      */
-    public long getContentLength()
+    @Override
+    public long getAvailableSize()
     {
-        return 0;
+        return view.getContentLength();
     }
     
     /**
-     * Return the content type of the data for the view.
+     * Set the MD5 checksum.
      */
-    public MediaType getMediaType()
+    @Override
+    public Digest getDigest()
     {
-        return null;
+        String contentMD5 = view.getContentMD5();
+        if (contentMD5 == null || !(contentMD5.length() == 32))
+        {
+            return null;
+        }
+        return new Digest(Digest.ALGORITHM_MD5, HexUtil.toBytes(contentMD5));
     }
     
     /**
-     * Return the content encoding of the data for the view.
+     * Set the list of encodings.
      */
+    @Override
     public List<Encoding> getEncodings()
     {
-        return null;
+        return view.getEncodings();
     }
     
     /**
-     * Return the MD5 Checksum of the data for the view.
+     * Set the modification date.
      */
-    public String getContentMD5()
+    @Override
+    public Date getModificationDate()
     {
-        return null;
+        return view.getLastModified();
     }
-    
-    /**
-     * Return the last modification date of the Node.
-     */
-    public Date getLastModified()
-    {
-        NodeProperty modificationDate = node.findProperty(VOS.PROPERTY_URI_DATE);
-        if (modificationDate != null)
-        {
-            try
-            {
-                return DateUtil.toDate(modificationDate.getPropertyValue());
-            } catch (ParseException e)
-            {
-                log.warn("Date " + modificationDate.getPropertyValue()
-                        + " could not be parsed.");
-            }
-        }
-        return null;
-    }
-
 }

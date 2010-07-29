@@ -76,8 +76,6 @@ import java.util.ResourceBundle;
 
 import org.apache.log4j.Logger;
 
-import ca.nrc.cadc.vos.View;
-
 /**
  * The ViewFactory is responsible for loading the views from Views.properties and
  * for creating instances of views through method getView(String viewReference)
@@ -108,7 +106,7 @@ public class ViewFactory
     }
     
     // The map of configured view classes
-    private static Map<String, Class<View>> viewMap;
+    private static Map<String, Class<AbstractView>> viewMap;
     
     /**
      * Given a viewReference, return a new instance of the associated view or
@@ -120,16 +118,16 @@ public class ViewFactory
      * @throws InstantiationException If the object could not be constructed.
      * @throws IllegalAccessException If a constructor could not be found.
      */
-    public View getView(String viewReference) throws InstantiationException, IllegalAccessException
+    public AbstractView getView(String viewReference) throws InstantiationException, IllegalAccessException
     {
-        Class<View> viewClass = viewMap.get(viewReference);
+        Class<AbstractView> viewClass = viewMap.get(viewReference);
         if (viewClass == null)
         {
             log.debug("No view found for reference: " + viewReference);
             return null;
         }
         log.debug("Returning new view of type " + viewClass + " for reference " + viewReference);
-        return (View) viewClass.newInstance();
+        return (AbstractView) viewClass.newInstance();
     }
     
     /**
@@ -149,7 +147,7 @@ public class ViewFactory
                     + VIEWS_PROPERTY_FILE + ".properties: " + e.getMessage());
         }
         
-        viewMap = new HashMap<String, Class<View>>();
+        viewMap = new HashMap<String, Class<AbstractView>>();
         
         try
         {
@@ -170,7 +168,7 @@ public class ViewFactory
                     throw new ExceptionInInitializerError(configClass
                             + " is not an instance of " + AbstractView.class);
                 }
-                Class<View> viewClass = (Class<View>) configClass;
+                Class<AbstractView> viewClass = (Class<AbstractView>) configClass;
                 if (viewMap.containsKey(viewAlias))
                 {
                     throw new ExceptionInInitializerError("Duplicate view reference " + viewAlias

@@ -75,6 +75,7 @@ import java.security.AccessControlException;
 import javax.security.auth.Subject;
 
 import org.apache.log4j.Logger;
+import org.restlet.data.Form;
 import org.restlet.representation.Representation;
 import org.restlet.resource.Delete;
 import org.restlet.resource.Get;
@@ -105,6 +106,7 @@ public class NodeResource extends BaseResource
     private String path;
     private NodeFault nodeFault;
     private VOSURI vosURI;
+    private String viewReference;
     
     /**
      * Called after object instantiation.
@@ -127,6 +129,9 @@ public class NodeResource extends BaseResource
             
             vosURI = new VOSURI(getVosUriPrefix() + "/" + path);
             
+            Form form = getRequest().getResourceRef().getQueryAsForm();
+            viewReference = form.getFirstValue("view");
+            log.debug("viewReference = " + viewReference);
         }
         catch (URISyntaxException e)
         {
@@ -171,7 +176,7 @@ public class NodeResource extends BaseResource
      * @param action The action to perform.
      * @return A representation of the output or of any error that happens.
      */
-    public Representation performNodeAction(NodeAction action)
+    private Representation performNodeAction(NodeAction action)
     {
         log.debug("Enter NodeResource.performNodeAction()");
         try
@@ -189,6 +194,7 @@ public class NodeResource extends BaseResource
             action.setNodePersistence(getNodePersistence());
             action.setVosURI(vosURI);
             action.setNodeXML(getRequestEntity());
+            action.setViewReference(viewReference);
 
             NodeActionResult result = null;
             if (getSubject() == null)
@@ -203,9 +209,19 @@ public class NodeResource extends BaseResource
             if (result != null)
             {
                 setStatus(result.getStatus());
-                return result.getRepresentation();
+                if (result.getRedirectURL() != null)
+                {
+                    getResponse().redirectSeeOther(
+                            result.getRedirectURL().toString());
+                }
+                else
+                {
+                    return result.getRepresentation();
+                }
             }
             return null;
+            
+            
             
         }
         catch (Throwable t)

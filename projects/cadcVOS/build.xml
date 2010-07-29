@@ -108,7 +108,7 @@
 
     <target name="build" depends="client,server" />
 
-    <target name="server" depends="compile,schema">
+    <target name="server" depends="compile,resources,schema">
         <jar jarfile="${build}/lib/${project}.jar"
             basedir="${build}/class"
             update="no">
@@ -127,6 +127,10 @@
             <include name="ca/nrc/cadc/vos/**.class" />
             <include name="VOSpace-2.0.xsd" />
         </jar>
+    </target>
+    
+    <target name="resources">
+        <copy file="src/resources/Views.properties" todir="build/class"/>
     </target>
 
     <target name="schema">

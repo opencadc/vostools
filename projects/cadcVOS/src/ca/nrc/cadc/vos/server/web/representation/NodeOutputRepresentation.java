@@ -71,14 +71,20 @@ package ca.nrc.cadc.vos.server.web.representation;
 
 import java.io.IOException;
 import java.io.OutputStream;
+import java.text.ParseException;
+import java.util.Date;
 
+import org.apache.log4j.Logger;
 import org.restlet.data.MediaType;
 import org.restlet.representation.OutputRepresentation;
 
+import ca.nrc.cadc.date.DateUtil;
 import ca.nrc.cadc.vos.ContainerNode;
 import ca.nrc.cadc.vos.DataNode;
 import ca.nrc.cadc.vos.Node;
+import ca.nrc.cadc.vos.NodeProperty;
 import ca.nrc.cadc.vos.NodeWriter;
+import ca.nrc.cadc.vos.VOS;
 
 /**
  * Creates an XML representation of a Node
@@ -88,6 +94,8 @@ import ca.nrc.cadc.vos.NodeWriter;
  */
 public class NodeOutputRepresentation extends OutputRepresentation
 {
+    protected static Logger log = Logger.getLogger(NodeOutputRepresentation.class);
+    
     private Node node;
     private NodeWriter nodeWriter;
     
@@ -109,6 +117,24 @@ public class NodeOutputRepresentation extends OutputRepresentation
         {
             nodeWriter.write((ContainerNode) node, outputStream);
         }
+    }
+    
+    @Override
+    public Date getModificationDate()
+    {
+        NodeProperty modificationDate = node.findProperty(VOS.PROPERTY_URI_DATE);
+        if (modificationDate != null)
+        {
+            try
+            {
+                return DateUtil.toDate(modificationDate.getPropertyValue());
+            } catch (ParseException e)
+            {
+                log.warn("Date " + modificationDate.getPropertyValue()
+                        + " could not be parsed.");
+            }
+        }
+        return null;
     }
 
 }

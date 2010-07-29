@@ -67,6 +67,8 @@
 
 package ca.nrc.cadc.vos.server.web.restlet.action;
 
+import java.net.URL;
+
 import org.restlet.data.Status;
 import org.restlet.representation.Representation;
 
@@ -79,6 +81,7 @@ public class NodeActionResult
     private Status status = Status.SUCCESS_OK;
     private NodeFault nodeFault;
     private Representation representation;
+    private URL redirectURL;
     
     public NodeActionResult(Representation representation)
     {
@@ -97,9 +100,20 @@ public class NodeActionResult
         this.status = nodeFault.getStatus();
     }
     
+    public NodeActionResult(URL redirectURL)
+    {
+        this.status = Status.REDIRECTION_SEE_OTHER;
+        this.redirectURL = redirectURL;
+    }
+    
     public Status getStatus()
     {
         return status;
+    }
+    
+    public URL getRedirectURL()
+    {
+        return redirectURL;
     }
     
     public Representation getRepresentation()

@@ -78,10 +78,12 @@ import ca.nrc.cadc.vos.Node;
 import ca.nrc.cadc.vos.NodeParsingException;
 import ca.nrc.cadc.vos.NodeWriter;
 import ca.nrc.cadc.vos.VOSURI;
+import ca.nrc.cadc.vos.server.AbstractView;
 import ca.nrc.cadc.vos.server.NodePersistence;
 import ca.nrc.cadc.vos.server.SearchNode;
 import ca.nrc.cadc.vos.server.auth.VOSpaceAuthorizer;
 import ca.nrc.cadc.vos.server.web.representation.NodeOutputRepresentation;
+import ca.nrc.cadc.vos.server.web.representation.ViewRepresentation;
 
 /**
  * Class to perform the retrieval of a Node.
@@ -114,13 +116,32 @@ public class GetNodeAction extends NodeAction
     }
     
     /**
-     * Perform the node retrieval from the persistent layer.
+     * Return the correct representation for the node.
      */
     @Override
     public NodeActionResult performNodeAction(Node node, NodePersistence nodePersistence) throws Exception
     {
-        NodeWriter nodeWriter = new NodeWriter();
-        return new NodeActionResult(new NodeOutputRepresentation(node, nodeWriter));
+        AbstractView view = getView();
+        if (view == null)
+        {
+            // no view specified or found--return the xml representation
+            NodeWriter nodeWriter = new NodeWriter();
+            return new NodeActionResult(new NodeOutputRepresentation(node, nodeWriter));
+        }
+        else
+        {
+            view.setNode(node, getViewReference());
+            if (view.getRedirectURL() != null)
+            {
+                return new NodeActionResult(view.getRedirectURL());
+            }
+            else
+            {
+                // return a representation for the view
+                ViewRepresentation viewRepresentation = new ViewRepresentation(view);
+                return new NodeActionResult(viewRepresentation);
+            }
+        }
     }
     
 }
