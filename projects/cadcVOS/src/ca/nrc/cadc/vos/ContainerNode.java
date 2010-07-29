@@ -212,15 +212,8 @@ public class ContainerNode extends Node
      */
     public List<View> accepts()
     {
-        List<View> accepts = new ArrayList<View>(1);
-        try
-        {
-            accepts.add(new RssView(new URI("ivo://cadc.nrc.ca/vospace/core#rssview")));
-        } catch (URISyntaxException e)
-        {
-            log.error(e);
-        }
-        return accepts;
+        // TODO: Implement accepts
+        return new ArrayList<View>(0);
     }
     
     /**
@@ -228,8 +221,15 @@ public class ContainerNode extends Node
      */
     public List<View> provides()
     {
-        // TODO: Implement provides
-        return new ArrayList<View>(0);
+        List<View> provides = new ArrayList<View>(1);
+        try
+        {
+            provides.add(new RssView(new URI("ivo://cadc.nrc.ca/vospace/core#rssview")));
+        } catch (URISyntaxException e)
+        {
+            log.error(e);
+        }
+        return provides;
     }
     
     /**

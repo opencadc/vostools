@@ -230,6 +230,9 @@ public class NodeWriter
         
         // accepts element
         root.addContent(getAcceptsElement(node));
+        
+        // provides element
+        root.addContent(getProvidesElement(node));
 
         // write out the Document
         write(root, writer);
@@ -288,6 +291,24 @@ public class NodeWriter
             accepts.addContent(viewElement);
         }
         return accepts;
+    }
+    
+    /**
+     * Build the accepts Element of a Node.
+     *
+     * @param node Node.
+     * @return accepts Element.
+     */
+    protected Element getProvidesElement(Node node)
+    {
+        Element provides = new Element("provides", defaultNamespace);
+        for (View view : node.provides())
+        {
+            Element viewElement = new Element("view", defaultNamespace);
+            viewElement.setAttribute("uri", view.getURI().toString());
+            provides.addContent(viewElement);
+        }
+        return provides;
     }
 
     /**
