@@ -72,13 +72,12 @@ package ca.nrc.cadc.vos.server;
 import java.net.URI;
 
 import ca.nrc.cadc.vos.Node;
-import ca.nrc.cadc.vos.View;
 
 /**
  * @author zhangsa
  *
  */
-public class DataView extends View
+public class DataView extends AbstractView
 {
     
     public DataView()

@@ -69,42 +69,140 @@
 
 package ca.nrc.cadc.vos.server;
 
-import static org.junit.Assert.assertEquals;
+import java.io.IOException;
+import java.io.OutputStream;
+import java.net.URI;
+import java.net.URL;
 
-import org.junit.Test;
-
+import ca.nrc.cadc.vos.Node;
 import ca.nrc.cadc.vos.View;
 
 /**
- * Test the loading and creation of views in the ViewFactory
+ * This abstract class defines the required behaviour of server side implementations
+ * of a View.
+ * 
+ * Generally, subclasses should implement setNode(Node, String) and either:
+ * 
+ * 1) For views that result in a redirect:
+ *     - getRedirectURL() or, the set of:
+ * 
+ * 2) For views that result in data returned: 
+ *     - write(OutputStream)
+ *     - getContentLength()
+ *     - getContentType()
+ *     - getContentEncoding()
+ *     - getContentMD5()
  * 
  * @author majorb
  *
  */
-public class ViewFactoryTest
+public abstract class AbstractView extends View
 {
     
-    @Test
-    public void testDefaultConfiguration() throws Exception
+    // The node for which to create the view
+    protected Node node;
+    
+    /**
+     * AbstractView constructor.
+     */
+    protected AbstractView()
     {
-        try
+        super();
+    }
+    
+    /**
+     * AbstractView constructor.
+     * 
+     * @param uri The view identifier.
+     */
+    public AbstractView(URI uri)
+    {
+        super(uri);
+    }
+
+    /**
+     * AbstractView constructor for service-side.
+     *
+     * @param uri The view identifier.
+     * @param original 
+     */
+    public AbstractView(URI uri, boolean original)
+    {
+        super(uri, original);
+    }
+    
+    /**
+     * Get the node for this view.
+     */
+    protected Node getNode()
+    {
+        return node;
+    }
+    
+    /**
+     * Set the node to be used by the view.
+     * 
+     * @param node The node to be used.
+     * @param viewReference The name used to reference this view.
+     * @throws UnsupportedOperationException If this view cannot be created for the given node.
+     */
+    protected void setNode(Node node, String viewReference) throws UnsupportedOperationException
+    {
+        if (node == null)
         {
-            ViewFactory viewFactory = new ViewFactory();
-            View view = null;
-            view = viewFactory.getView("data");
-            assertEquals(view.getClass(), DataView.class);
-            view = viewFactory.getView("ivo://cadc.nrc.ca/vospace/core#dataview");
-            assertEquals(view.getClass(), DataView.class);
-            view = viewFactory.getView("rss");
-            assertEquals(view.getClass(), RssView.class);
-            view = viewFactory.getView("ivo://cadc.nrc.ca/vospace/core#rssview");
-            assertEquals(view.getClass(), RssView.class);
+            throw new UnsupportedOperationException("Node for view is null.");
         }
-        catch (Exception e)
-        {
-            e.printStackTrace();
-            throw e;
-        }
+        this.node = node;
+    }
+    
+    /**
+     * Return the redirect URL for this view, or null if a redirect is not
+     * a result of the view.
+     */
+    protected URL getRedirectURL()
+    {
+        return null;
+    }
+    
+    /**
+     * Write the view data to the outputStream if that is the result of the view.
+     * @param outputStream The output stream on which to write.
+     * @throws IOException If an I/O problem occurs.
+     */
+    protected void write(OutputStream outputStream) throws IOException
+    {
+    }
+    
+    /**
+     * Return the content length of the data for the view.
+     */
+    protected long getContentLength()
+    {
+        return 0;
+    }
+    
+    /**
+     * Return the content type of the data for the view.
+     */
+    protected String getContentType()
+    {
+        return null;
+    }
+    
+    /**
+     * Return the content encoding of the data for the view.
+     */
+    protected String getContentEncoding()
+    {
+        return null;
+    }
+    
+    /**
+     * Return the MD5 Checksum of the data for the view.
+     */
+    protected String getContentMD5()
+    {
+        return null;
     }
 
 }

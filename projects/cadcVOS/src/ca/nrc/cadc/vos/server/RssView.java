@@ -85,7 +85,6 @@ import org.jdom.output.XMLOutputter;
 import ca.nrc.cadc.util.StringBuilderWriter;
 import ca.nrc.cadc.vos.ContainerNode;
 import ca.nrc.cadc.vos.Node;
-import ca.nrc.cadc.vos.View;
 import ca.nrc.cadc.vos.server.util.FixedSizeTreeSet;
 import ca.nrc.cadc.vos.server.util.NodeWalker;
 
@@ -95,7 +94,7 @@ import ca.nrc.cadc.vos.server.util.NodeWalker;
  *
  * @author jburke
  */
-public class RssView extends View
+public class RssView extends AbstractView
 {
     private static Logger log = Logger.getLogger(RssView.class);
 
