@@ -73,6 +73,7 @@ import java.net.URISyntaxException;
 import java.security.AccessControlException;
 
 import org.apache.log4j.Logger;
+import org.restlet.Request;
 import org.restlet.representation.Representation;
 
 import ca.nrc.cadc.vos.Node;
@@ -122,7 +123,7 @@ public class DeleteNodeAction extends NodeAction
      * Mark the node, and all child nodes, for deletion.
      */
     @Override
-    public NodeActionResult performNodeAction(Node node, NodePersistence nodePersistence) throws Exception
+    public NodeActionResult performNodeAction(Node node, NodePersistence nodePersistence, Request requets) throws Exception
     {
         try
         {

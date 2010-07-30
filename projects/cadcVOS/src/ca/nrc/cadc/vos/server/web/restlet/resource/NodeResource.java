@@ -194,6 +194,7 @@ public class NodeResource extends BaseResource
             action.setNodePersistence(getNodePersistence());
             action.setVosURI(vosURI);
             action.setNodeXML(getRequestEntity());
+            action.setRequest(getRequest());
             action.setViewReference(viewReference);
 
             NodeActionResult result = null;

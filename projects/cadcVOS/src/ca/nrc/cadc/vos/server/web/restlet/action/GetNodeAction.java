@@ -72,6 +72,7 @@ import java.io.IOException;
 import java.net.URISyntaxException;
 import java.security.AccessControlException;
 
+import org.restlet.Request;
 import org.restlet.representation.Representation;
 
 import ca.nrc.cadc.vos.Node;
@@ -119,7 +120,7 @@ public class GetNodeAction extends NodeAction
      * Return the correct representation for the node.
      */
     @Override
-    public NodeActionResult performNodeAction(Node node, NodePersistence nodePersistence) throws Exception
+    public NodeActionResult performNodeAction(Node node, NodePersistence nodePersistence, Request request) throws Exception
     {
         AbstractView view = getView();
         if (view == null)
@@ -130,7 +131,7 @@ public class GetNodeAction extends NodeAction
         }
         else
         {
-            view.setNode(node, getViewReference());
+            view.setNode(node, request, getViewReference());
             if (view.getRedirectURL() != null)
             {
                 return new NodeActionResult(view.getRedirectURL());

@@ -79,6 +79,7 @@ import java.util.Set;
 import javax.security.auth.Subject;
 import javax.security.auth.x500.X500Principal;
 
+import org.restlet.Request;
 import org.restlet.data.Status;
 import org.restlet.representation.Representation;
 
@@ -134,7 +135,7 @@ public class CreateNodeAction extends NodeAction
      * Perform the Node creation.
      */
     @Override
-    public NodeActionResult performNodeAction(Node node, NodePersistence nodePersistence) throws Exception
+    public NodeActionResult performNodeAction(Node node, NodePersistence nodePersistence, Request request) throws Exception
     {
         try
         {

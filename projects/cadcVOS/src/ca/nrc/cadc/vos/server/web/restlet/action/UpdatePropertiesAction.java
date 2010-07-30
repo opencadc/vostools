@@ -73,6 +73,7 @@ import java.net.URISyntaxException;
 import java.security.AccessControlException;
 
 import org.apache.log4j.Logger;
+import org.restlet.Request;
 import org.restlet.representation.Representation;
 
 import ca.nrc.cadc.vos.DataNode;
@@ -129,7 +130,7 @@ public class UpdatePropertiesAction extends NodeAction
      * Perform the updating of the Node's properties.
      */
     @Override
-    public NodeActionResult performNodeAction(Node node, NodePersistence nodePersistence) throws Exception
+    public NodeActionResult performNodeAction(Node node, NodePersistence nodePersistence, Request request) throws Exception
     {
         
         // check for a busy node

@@ -78,6 +78,7 @@ import java.util.Date;
 import java.util.List;
 
 import org.apache.log4j.Logger;
+import org.restlet.Request;
 import org.restlet.data.Encoding;
 import org.restlet.data.MediaType;
 
@@ -158,7 +159,7 @@ public abstract class AbstractView extends View
      * @param viewReference The name used to reference this view.
      * @throws UnsupportedOperationException If this view cannot be created for the given node.
      */
-    public void setNode(Node node, String viewReference) throws UnsupportedOperationException
+    public void setNode(Node node, Request request, String viewReference) throws UnsupportedOperationException
     {
         if (node == null)
         {

@@ -74,6 +74,7 @@ import java.security.AccessControlException;
 import java.security.PrivilegedAction;
 
 import org.apache.log4j.Logger;
+import org.restlet.Request;
 import org.restlet.representation.Representation;
 
 import ca.nrc.cadc.vos.ContainerNode;
@@ -105,6 +106,7 @@ public abstract class NodeAction implements PrivilegedAction<Object>
     private NodePersistence nodePersistence;
     private VOSURI vosURI;
     private Representation nodeXML;
+    private Request request;
     private String viewReference;
     
     /**
@@ -141,6 +143,15 @@ public abstract class NodeAction implements PrivilegedAction<Object>
     public void setNodePersistence(NodePersistence nodePersistence)
     {
         this.nodePersistence = nodePersistence;
+    }
+    
+    /**
+     * Set the request object.
+     * @param request
+     */
+    public void setRequest(Request request)
+    {
+        this.request = request;
     }
     
     /**
@@ -190,10 +201,11 @@ public abstract class NodeAction implements PrivilegedAction<Object>
      * 
      * @param node
      * @param nodePersistence
+     * @param request
      * @return The NodeAction result
      * @throws Exception If a problem occurs.
      */
-    abstract NodeActionResult performNodeAction(Node node, NodePersistence nodePersistence) throws Exception;
+    abstract NodeActionResult performNodeAction(Node node, NodePersistence nodePersistence, Request request) throws Exception;
     
     /**
      * Given the node URI and XML, return the Node object specified
@@ -233,7 +245,7 @@ public abstract class NodeAction implements PrivilegedAction<Object>
             log.debug("doAuthorizationCheck() retrived node: " + node);
             
             // perform the node action
-            return performNodeAction(node, nodePersistence);
+            return performNodeAction(node, nodePersistence, request);
             
         }
         catch (FileNotFoundException e)
