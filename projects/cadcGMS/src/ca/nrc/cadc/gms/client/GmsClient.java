@@ -75,7 +75,6 @@ import java.net.URL;
 import java.net.URLConnection;
 import java.net.URLEncoder;
 import java.security.AccessControlException;
-import java.util.Collection;
 
 import org.apache.log4j.Logger;
 
@@ -272,16 +271,16 @@ public class GmsClient
             logger.debug("Failed to check membership", e);
             throw new IllegalArgumentException(message, e);
         }
-    }
+    }    
 
     /**
-     * Returns a collection of groups in which the user identified by
-     * memberID is a member.
+     * Get the group identified by groupID. Associated members will be
+     * included.
      * 
-     * @param memberID
-     *            Identified the user.
-     * @return The list of groups in which the user is a member.
-     * @throws IllegalArgumentException
+     * @param groupID
+     *            Identifies the group.
+     * @return The group, or null if not found.
+     *      * @throws IllegalArgumentException
      *             If the Group ID, Member ID, or accepted baseServiceURL,
      *             or any combination of them produces an error.
      * @throws AccessControlException 
@@ -293,21 +292,6 @@ public class GmsClient
      * @throws IOException
      *             For any unforeseen I/O errors.
      *                  
-     */
-    public Collection<Group> getMemberships(String memberID)
-    {
-        // TODO: is a new resource needed to implement this?
-        throw new UnsupportedOperationException(
-                "getMemberships() not yet implemented.");
-    }
-
-    /**
-     * Get the group identified by groupID. Associated members will be
-     * included.
-     * 
-     * @param groupID
-     *            Identifies the group.
-     * @return The group, or null if not found.
      */
     public Group getGroup(String groupID)
     {
