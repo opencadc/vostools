@@ -67,22 +67,18 @@
  ************************************************************************
  */
 
-package ca.nrc.cadc.auth;
+package ca.nrc.cadc.net;
 
+import ca.nrc.cadc.auth.BasicX509TrustManager;
+import ca.nrc.cadc.auth.RunnableAction;
+import ca.nrc.cadc.auth.SSLUtil;
+import ca.nrc.cadc.util.FileUtil;
+import ca.nrc.cadc.util.Log4jInit;
 import java.io.File;
-import java.net.HttpURLConnection;
-import java.net.InetAddress;
+import java.io.FileOutputStream;
 import java.net.URL;
-import java.net.URLConnection;
-import java.security.KeyStore;
-
-import javax.net.SocketFactory;
-import javax.net.ssl.HttpsURLConnection;
-import javax.net.ssl.KeyManagerFactory;
-import javax.net.ssl.SSLContext;
-import javax.net.ssl.SSLHandshakeException;
-import javax.net.ssl.SSLSocketFactory;
-import javax.net.ssl.TrustManagerFactory;
+import java.util.Random;
+import javax.security.auth.Subject;
 
 import org.apache.log4j.Level;
 import org.apache.log4j.Logger;
@@ -92,22 +88,21 @@ import org.junit.Assert;
 import org.junit.Before;
 import org.junit.BeforeClass;
 import org.junit.Test;
-
-import ca.nrc.cadc.util.FileUtil;
-import ca.nrc.cadc.util.Log4jInit;
-
 /**
- * Unit tests for SSLUtil.
  *
  * @author pdowler
  */
-public class SSLUtilTest
+public class HttpUploadTest 
 {
-    private static Logger log = Logger.getLogger(SSLUtilTest.class);
+    private static Logger log = Logger.getLogger(HttpUploadTest.class);
     private static String TEST_CERT_FN = "proxy.crt";
     private static String TEST_KEY_FN = "proxy.key";
     private static File SSL_CERT;
     private static File SSL_KEY;
+
+    private URL httpsURL;
+    private File srcFile;
+    private byte[] origBytes;
 
     /**
      * @throws java.lang.Exception
@@ -115,9 +110,10 @@ public class SSLUtilTest
     @BeforeClass
     public static void setUpBeforeClass() throws Exception
     {
-        Log4jInit.setLevel("ca.nrc.cadc.auth", Level.INFO);
-        SSL_CERT = FileUtil.getFileFromResource(TEST_CERT_FN, SSLUtilTest.class);
-        SSL_KEY = FileUtil.getFileFromResource(TEST_KEY_FN, SSLUtilTest.class);
+        Log4jInit.setLevel("ca.nrc.cadc.net", Level.DEBUG);
+        SSL_CERT = FileUtil.getFileFromResource(TEST_CERT_FN, HttpUploadTest.class);
+        SSL_KEY = FileUtil.getFileFromResource(TEST_KEY_FN, HttpUploadTest.class);
+        System.setProperty(BasicX509TrustManager.class.getName() + ".trust", "true");
     }
 
     /**
@@ -134,6 +130,16 @@ public class SSLUtilTest
     @Before
     public void setUp() throws Exception
     {
+        this.srcFile = File.createTempFile("public"+HttpUploadTest.class.getSimpleName(), ".in");
+        Random rnd = new Random();
+        FileOutputStream ostream = new FileOutputStream(srcFile);
+        origBytes = new byte[1024*1024];
+        rnd.nextBytes(origBytes);
+        ostream.write(origBytes);
+        ostream.close();
+        srcFile.deleteOnExit();
+        //this.httpsURL = new URL("https://test.cadc-ccda.hia-iha.nrc-cnrc.gc.ca/data/pub/TEST/"+srcFile.getName());
+        this.httpsURL = new URL("https://scapa.cadc.dao.nrc.ca/data/pub/TEST/"+srcFile.getName());
     }
 
     /**
@@ -144,46 +150,20 @@ public class SSLUtilTest
     {
     }
 
-    //@Test
-    public void testReadCert() throws Exception
+    @Test
+    public void testNullSrc() throws Exception
     {
+        log.debug("TEST: testNullSrc");
+        File src = null;
+        URL dest = httpsURL;
         try
         {
-            KeyStore ks = SSLUtil.getKeyStore(SSL_CERT, SSL_KEY);
-            SSLUtil.printKeyStoreInfo(ks);
+            HttpUpload dl = new HttpUpload(src, dest);
+            Assert.fail("expected IllegalArgumentException");
         }
-        catch (Throwable t)
+        catch(IllegalArgumentException expected)
         {
-            t.printStackTrace();
-            Assert.fail("unexpected exception: " + t);
-        }
-    }
-
-    //@Test
-    public void testGetKMF() throws Exception
-    {
-        try
-        {
-            KeyStore ks = SSLUtil.getKeyStore(SSL_CERT, SSL_KEY);
-            KeyManagerFactory kmf = SSLUtil.getKeyManagerFactory(ks);
-        }
-        catch (Throwable t)
-        {
-            t.printStackTrace();
-            Assert.fail("unexpected exception: " + t);
-        }
-    }
-
-    //@Test
-    public void testGetContext() throws Exception
-    {
-        try
-        {
-            KeyStore ks = SSLUtil.getKeyStore(SSL_CERT, SSL_KEY);
-            KeyStore ts = null;
-            KeyManagerFactory kmf = SSLUtil.getKeyManagerFactory(ks);
-            TrustManagerFactory tmf = SSLUtil.getTrustManagerFactory(ts);
-            SSLContext ctx = SSLUtil.getContext(kmf, tmf, ks);
+            log.debug("caught expected: " + expected);
         }
         catch (Throwable t)
         {
@@ -193,11 +173,19 @@ public class SSLUtilTest
     }
 
     @Test
-    public void testGetSocketFactory() throws Exception
+    public void testNullDest() throws Exception
     {
+        log.debug("TEST: testNullDest");
+        File src = srcFile;
+        URL dest = null;
         try
         {
-            SocketFactory sf = SSLUtil.getSocketFactory(SSL_CERT, SSL_KEY);
+            HttpUpload dl = new HttpUpload(src, dest);
+            Assert.fail("expected IllegalArgumentException");
+        }
+        catch(IllegalArgumentException expected)
+        {
+            log.debug("caught expected: " + expected);
         }
         catch (Throwable t)
         {
@@ -205,103 +193,50 @@ public class SSLUtilTest
             Assert.fail("unexpected exception: " + t);
         }
     }
+
+
 
     @Test
-    public void testInitSSL() throws Exception
+    public void testUploadHTTPS() throws Exception
     {
+        log.debug("TEST: testUploadHTTPS");
+        URL dest = httpsURL;
+        File src = srcFile;
+        File tmp = null;
         try
         {
-            SSLUtil.initSSL(SSL_CERT, SSL_KEY);
+            Subject s = SSLUtil.createSubject(SSL_CERT, SSL_KEY);
+
+            HttpUpload up = new HttpUpload(src, dest);
+            up.setContentType("application/octet-stream");
+            Subject.doAs(s, new RunnableAction(up));
+            Assert.assertNull("upload failure", up.getThrowable());
+
+            URL check = dest;
+            //URL check = new URL("http", dest.getHost(), dest.getPath());
+            tmp = File.createTempFile("public"+HttpUploadTest.class.getSimpleName(), ".out");
+
+            HttpDownload down = new HttpDownload(HttpUploadTest.class.getSimpleName(), check, tmp);
+            down.setOverwrite(true);
+            
+            Subject.doAs(s, new RunnableAction(down));
+            Assert.assertNull("download failure", down.getThrowable());
+            File out = down.getFile();
+            Assert.assertNotNull("result file", out);
+            Assert.assertEquals("file sizes", srcFile.length(), out.length());
+
+            byte[] resultBytes = FileUtil.readFile(tmp);
+            Assert.assertArrayEquals("bytes", origBytes, resultBytes);
         }
         catch (Throwable t)
         {
             t.printStackTrace();
             Assert.fail("unexpected exception: " + t);
         }
-    }
-
-    public void testHTTPS(URL url) throws Exception
-    {
-        HttpURLConnection.setFollowRedirects(false);
-
-        SSLSocketFactory sf = SSLUtil.getSocketFactory(SSL_CERT, SSL_KEY);
-        URLConnection con = url.openConnection();
-
-        log.debug("URLConnection type: " + con.getClass().getName());
-        HttpsURLConnection ucon = (HttpsURLConnection) con;
-        ucon.setSSLSocketFactory(sf);
-        log.debug("status: " + ucon.getResponseCode());
-        log.debug("content-length: " + ucon.getContentLength());
-        log.debug("content-type: " + ucon.getContentType());
-    }
-
-    @Test
-    public void testGoogleHTTPS() throws Exception
-    {
-        try
+        finally
         {
-            URL url = new URL("https://www.google.com/");
-            log.debug("test URL: " + url);
-            testHTTPS(url);
-        }
-        catch (Throwable t)
-        {
-            t.printStackTrace();
-            Assert.fail("unexpected exception: " + t);
+            if (tmp != null && tmp.exists())
+                tmp.delete();
         }
     }
-
-    @Test
-    public void testCadcHTTPS() throws Exception
-    {
-        try
-        {
-            URL url = new URL("https://www.cadc-ccda.hia-iha.nrc-cnrc.gc.ca/");
-            log.debug("test URL: " + url);
-            testHTTPS(url);
-        }
-        catch (Throwable t)
-        {
-            t.printStackTrace();
-            Assert.fail("unexpected exception: " + t);
-        }
-    }
-
-    // Note: this test requies some custom setup: an http server running on
-    // localhost with an invalid (e.g. self-signed) server certificate for
-    // SSL (https) and SSL config requiring a client certificate to get the
-    // root document - this is only here to test the BasicX509TrustManager
-    // local work-around for developers
-
-    //@Test
-    public void testInvalidServerHTTPS() throws Exception
-    {
-        InetAddress localhost = InetAddress.getLocalHost();
-        String hostname = localhost.getCanonicalHostName();
-        URL url = new URL("https://" + hostname + "/");
-
-        try
-        {
-            log.debug("test URL: " + url);
-            testHTTPS(url);
-            Assert.fail("expected an SSLHandshakeException but did not fail");
-        }
-        catch (SSLHandshakeException expected)
-        {
-            log.debug("caught expected exception: " + expected);
-        }
-
-        System.setProperty(BasicX509TrustManager.class.getName() + ".trust", "something");
-        try
-        {
-            log.debug("test URL: " + url);
-            testHTTPS(url);
-        }
-        catch (Throwable t)
-        {
-            t.printStackTrace();
-            Assert.fail("unexpected exception: " + t);
-        }
-    }
-
 }

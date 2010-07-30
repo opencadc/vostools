@@ -85,6 +85,7 @@ import javax.servlet.http.HttpServletRequest;
 import org.apache.log4j.Logger;
 
 import ca.nrc.cadc.net.NetUtil;
+import java.security.PrivateKey;
 
 /**
  * Security utility.
@@ -165,9 +166,19 @@ public class AuthenticationUtil
      */
     public static Subject getSubject(String remoteUser, Collection<X509Certificate> certificates)
     {
+        return getSubject(remoteUser, certificates, null);
+    }
+
+    public static Subject getSubject(Collection<X509Certificate> certificates, Collection<PrivateKey> keys)
+    {
+        return getSubject(null, certificates, keys);
+    }
+
+    private static Subject getSubject(String remoteUser, Collection<X509Certificate> certificates, Collection<PrivateKey> keys)
+    {
         Set<Principal> principals = new HashSet<Principal>();
         Set<X509Certificate> publicCred = new HashSet<X509Certificate>();
-        Set privateCreds = new HashSet();
+        Set privateCreds = new HashSet<PrivateKey>();
 
         // look for basic authentication
         if (remoteUser != null)
@@ -201,6 +212,13 @@ public class AuthenticationUtil
                 }
                 principals.add(p);
                 publicCred.add(c);
+            }
+        }
+        if (keys != null)
+        {
+            for (PrivateKey pk : keys)
+            {
+                privateCreds.add(pk);
             }
         }
         // put the certficates into pubCredentials?

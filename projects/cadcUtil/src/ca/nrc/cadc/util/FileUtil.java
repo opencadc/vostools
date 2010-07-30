@@ -70,10 +70,10 @@
 package ca.nrc.cadc.util;
 
 import java.io.BufferedInputStream;
+import java.io.DataInputStream;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.IOException;
-import java.net.URI;
 import java.net.URL;
 import java.util.MissingResourceException;
 import java.util.zip.CRC32;
@@ -118,6 +118,32 @@ public class FileUtil
             // Read file in completely
         }
         return cInStream.getChecksum().getValue();
+    }
+
+    /**
+     * Read a (small) file into a byte array.
+     * 
+     * @param f
+     * @return byte array containing the content of the file
+     * @throws IOException
+     */
+    public static byte[] readFile(File f) throws IOException
+    {
+        DataInputStream dis = null;
+        try
+        {
+            dis = new DataInputStream(new FileInputStream(f));
+            byte[] ret = new byte[(int) f.length()];
+            dis.readFully(ret);
+            dis.close();
+            return ret;
+        }
+        finally
+        {
+            if (dis != null)
+                try { dis.close(); }
+                catch(IOException ignore) { }
+        }
     }
 
     public static File getFileFromResource(String resourceFileName, Class runningClass)

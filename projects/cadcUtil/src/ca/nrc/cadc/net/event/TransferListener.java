@@ -1,4 +1,4 @@
-<!--
+/*
 ************************************************************************
 *******************  CANADIAN ASTRONOMY DATA CENTRE  *******************
 **************  CENTRE CANADIEN DE DONNÉES ASTRONOMIQUES  **************
@@ -65,83 +65,33 @@
 *  $Revision: 4 $
 *
 ************************************************************************
--->
+*/
 
 
-<!DOCTYPE project>
-<project default="build" basedir=".">
-    <property environment="env"/>
+package ca.nrc.cadc.net.event;
+
+/**
+ * Receiver for DownloadEents.
+ *
+ * @version $Version$
+ * @author pdowler
+ */
+public interface TransferListener
+{
+    /**
+     * Handle a DownloadEvent. This method is called whenever a Download makes a transition
+     * from to one of the states defined in DownloadEvent.
+     * 
+     * @param e
+     */
+    void transferEvent(TransferEvent e);
     
-    <!-- site-specific build properties or overrides of values in opencadc.properties -->
-    <property file="${env.CADC_PREFIX}/etc/local.properties" />
-    
-    <!-- site-specific targets, e.g. install, cannot duplicate those in opencadc.targets.xml -->
-    <import file="${env.CADC_PREFIX}/etc/local.targets.xml" optional="true" />
-
-    <!-- default properties and targets -->
-    <property file="${env.CADC_PREFIX}/etc/opencadc.properties" />
-    <import file="${env.CADC_PREFIX}/etc/opencadc.targets.xml"/>
-    
-    <!-- developer convenience: place for extra targets and properties -->
-    <import file="extras.xml" optional="true" />
-
-	<property name="project" value="cadcUtil" />
-
-	<property name="jars" value="${ext.lib}/servlet-api.jar:${ext.lib}/log4j.jar:${ext.lib}/jdom.jar" />
-	<property name="resources.dir" value="test/resources/" /> 
-
-    <target name="build" depends="compile">
-        <jar jarfile="${build}/lib/${project}.jar"
-                    basedir="${build}/class"
-                    update="no">
-                <include name="ca/nrc/cadc/**" />
-        </jar>
-    </target>
-
-    <!-- JAR files needed to run the test suite -->
-    <property name="jars.test" value="${build}/class:${jars}:${ext.lib}/junit.jar:${resources.dir}" />
-
-    <!-- Run the test suite -->
-    <target name="test" depends="util-test,auth-test,net-test" />
-
-    <target name="util-test" depends="compile-test">
-        <junit printsummary="yes" haltonfailure="yes" fork="yes">
-            <classpath>
-                <pathelement path="${build}/class"/>
-                <pathelement path="test/src"/>
-                <pathelement path="src"/>
-                <pathelement path="${jars.test}"/>
-            </classpath>
-
-            <test name="ca.nrc.cadc.util.HexUtilTest"/>
-            <formatter type="plain" usefile="false"/>
-        </junit>
-    </target>
-    <target name="net-test" depends="compile-test">
-        <junit printsummary="yes" haltonfailure="yes" fork="yes">
-            <classpath>
-                <pathelement path="${build}/class"/>
-                <pathelement path="test/src"/>
-                <pathelement path="src"/>
-                <pathelement path="${jars.test}"/>
-            </classpath>
-
-            <test name="ca.nrc.cadc.net.HttpDownloadTest"/>
-            <test name="ca.nrc.cadc.net.HttpUploadTest"/>
-            <formatter type="plain" usefile="false"/>
-        </junit>
-    </target>
-    <target name="auth-test" depends="compile-test">
-        <junit printsummary="yes" haltonfailure="yes" fork="yes">
-            <classpath>
-                <pathelement path="${build}/class"/>
-                <pathelement path="test/src"/>
-                <pathelement path="src"/>
-                <pathelement path="${jars.test}"/>
-            </classpath>
-
-            <test name="ca.nrc.cadc.auth.SSLUtilTest"/>
-            <formatter type="plain" usefile="false"/>
-        </junit>
-    </target>
-</project>
+    /**
+     * Get the transfer protocol header (typically http header) used to carry a custom
+     * event identifier. If this method returns a non-null value, transfers will try to get
+     * a value from the transfer protocol and add it to any TransferEvent objects it creates.
+     * 
+     * @return a header key of interest
+     */
+    String getEventHeader();
+}

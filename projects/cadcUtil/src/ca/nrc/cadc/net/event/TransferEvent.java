@@ -1,4 +1,4 @@
-<!--
+/*
 ************************************************************************
 *******************  CANADIAN ASTRONOMY DATA CENTRE  *******************
 **************  CENTRE CANADIEN DE DONNÉES ASTRONOMIQUES  **************
@@ -65,83 +65,143 @@
 *  $Revision: 4 $
 *
 ************************************************************************
--->
+*/
 
 
-<!DOCTYPE project>
-<project default="build" basedir=".">
-    <property environment="env"/>
+package ca.nrc.cadc.net.event;
+
+import java.io.File;
+import java.net.URL;
+import java.util.EventObject;
+
+/**
+ * Simple event that specifies a Download changed states.
+ *
+ * @version $Version$
+ * @author pdowler
+ */
+public class TransferEvent extends EventObject
+{
+    private static int MIN_STATE = 0;
+    public static final int CONNECTING = 1;
+    public static final int CONNECTED  = 2;
+    public static final int TRANSFERING = 3;
+    public static final int DECOMPRESSING = 4;
+    public static final int COMPLETED  = 5;
+    public static final int CANCELLED  = 6;
+    public static final int FAILED     = 7;
+    private static int MAX_STATE = 8;
+    private String[] states = new String[]
+    {
+        "min", "CONNECTING", "CONNECTED", "DOWNLOADING", "DECOMPRESSING", "COMPLETED", "CANCELLED", "FAILED", "max"
+    };
     
-    <!-- site-specific build properties or overrides of values in opencadc.properties -->
-    <property file="${env.CADC_PREFIX}/etc/local.properties" />
+    private URL url;
+    private File file;
+    private int state;
+    private Throwable error;
+    private String eventID;
     
-    <!-- site-specific targets, e.g. install, cannot duplicate those in opencadc.targets.xml -->
-    <import file="${env.CADC_PREFIX}/etc/local.targets.xml" optional="true" />
-
-    <!-- default properties and targets -->
-    <property file="${env.CADC_PREFIX}/etc/opencadc.properties" />
-    <import file="${env.CADC_PREFIX}/etc/opencadc.targets.xml"/>
+    private int startingPos; // for resumed download only
     
-    <!-- developer convenience: place for extra targets and properties -->
-    <import file="extras.xml" optional="true" />
+    /**
+     * Convenience constructor for a COMPLETED download event.
+     * @param source
+     * @param url
+     * @param file
+     */
+    public TransferEvent(Object source, String eventID, URL url, File file)
+    {
+        this(source, eventID, url, file, COMPLETED, null);
+    }
 
-	<property name="project" value="cadcUtil" />
-
-	<property name="jars" value="${ext.lib}/servlet-api.jar:${ext.lib}/log4j.jar:${ext.lib}/jdom.jar" />
-	<property name="resources.dir" value="test/resources/" /> 
-
-    <target name="build" depends="compile">
-        <jar jarfile="${build}/lib/${project}.jar"
-                    basedir="${build}/class"
-                    update="no">
-                <include name="ca/nrc/cadc/**" />
-        </jar>
-    </target>
-
-    <!-- JAR files needed to run the test suite -->
-    <property name="jars.test" value="${build}/class:${jars}:${ext.lib}/junit.jar:${resources.dir}" />
-
-    <!-- Run the test suite -->
-    <target name="test" depends="util-test,auth-test,net-test" />
-
-    <target name="util-test" depends="compile-test">
-        <junit printsummary="yes" haltonfailure="yes" fork="yes">
-            <classpath>
-                <pathelement path="${build}/class"/>
-                <pathelement path="test/src"/>
-                <pathelement path="src"/>
-                <pathelement path="${jars.test}"/>
-            </classpath>
-
-            <test name="ca.nrc.cadc.util.HexUtilTest"/>
-            <formatter type="plain" usefile="false"/>
-        </junit>
-    </target>
-    <target name="net-test" depends="compile-test">
-        <junit printsummary="yes" haltonfailure="yes" fork="yes">
-            <classpath>
-                <pathelement path="${build}/class"/>
-                <pathelement path="test/src"/>
-                <pathelement path="src"/>
-                <pathelement path="${jars.test}"/>
-            </classpath>
-
-            <test name="ca.nrc.cadc.net.HttpDownloadTest"/>
-            <test name="ca.nrc.cadc.net.HttpUploadTest"/>
-            <formatter type="plain" usefile="false"/>
-        </junit>
-    </target>
-    <target name="auth-test" depends="compile-test">
-        <junit printsummary="yes" haltonfailure="yes" fork="yes">
-            <classpath>
-                <pathelement path="${build}/class"/>
-                <pathelement path="test/src"/>
-                <pathelement path="src"/>
-                <pathelement path="${jars.test}"/>
-            </classpath>
-
-            <test name="ca.nrc.cadc.auth.SSLUtilTest"/>
-            <formatter type="plain" usefile="false"/>
-        </junit>
-    </target>
-</project>
+    /**
+     * Convenience constructor for a FAILED download event.
+     * @param source
+     * @param url
+     * @param file
+     * @param error
+     */
+    public TransferEvent(Object source, String eventID, URL url, File file, Throwable error)
+    {
+        this(source, eventID, url, file, FAILED, error);
+    }
+    
+    /**
+     * Generic sate transition constructor.
+     *
+     * @param source
+     * @param eventID
+     * @param url
+     * @param file
+     * @param state
+     */
+    public TransferEvent(Object source, String eventID, URL url, File file, int state)
+    {
+        this(source, eventID, url, file, state, (Throwable) null);
+    }
+    
+    private TransferEvent(Object source, String eventID, URL url, File file, int state, Throwable error)
+    {
+        super(source);
+        this.eventID = eventID;
+        this.url = url;
+        this.file = file;
+        this.state = state;
+        this.error = error;
+        if (error != null && state != FAILED)
+            throw new IllegalArgumentException("state: " + state + " error: " + error);
+        if (state <= MIN_STATE || state >= MAX_STATE)
+            throw new IllegalArgumentException("unknown state: " + state);
+    }
+  
+    public int getState() { return state; }
+    
+    /**
+     * Get the eventID for the download.
+     * 
+     * @return
+     */
+    public String getEventID() { return eventID; }
+    
+    /**
+     * Get the source URL for the download.
+     * 
+     * @return
+     */
+    public URL getURL() { return url; }
+    
+    /**
+     * Get the destination file.
+     * 
+     * @return
+     */
+    public File getFile() { return file; }
+    
+    /**
+     * Get associated error. This is null if the download completed successfully or was cancelled.
+     * 
+     * @return error that caused failure
+     */
+    public Throwable getError() { return error; }
+    
+    public void setStartingPosition(int start) { this.startingPos = start; }
+    
+    public int getStartingPosition() { return startingPos; }
+    
+    public boolean isFinalState()
+    {
+        if (state == COMPLETED ||
+            state == CANCELLED ||
+            state == FAILED)
+        {
+            return true;
+        }
+        return false;
+    }
+    
+    public String toString() 
+    {
+        return "DownloadEvent[url=" + url + ", file=" + file + ",state=" + state + "(" + states[state] + "), error=" + error + "]";
+    }
+}

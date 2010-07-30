@@ -69,17 +69,14 @@
 
 package ca.nrc.cadc.auth;
 
-import ca.nrc.cadc.util.Base64;
+import ca.nrc.cadc.util.FileUtil;
 import java.io.BufferedInputStream;
-import java.io.BufferedReader;
 import java.io.ByteArrayInputStream;
-import java.io.DataInputStream;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.InputStream;
-import java.io.InputStreamReader;
 import java.security.KeyFactory;
 import java.security.cert.Certificate;
 import java.security.KeyManagementException;
@@ -95,8 +92,11 @@ import java.security.cert.X509Certificate;
 import java.security.spec.InvalidKeySpecException;
 import java.security.spec.PKCS8EncodedKeySpec;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Enumeration;
 import java.util.Iterator;
+import java.util.List;
+import java.util.Set;
 import javax.net.ssl.HttpsURLConnection;
 import javax.net.ssl.KeyManager;
 import javax.net.ssl.KeyManagerFactory;
@@ -106,6 +106,7 @@ import javax.net.ssl.TrustManager;
 import javax.net.ssl.TrustManagerFactory;
 import javax.net.ssl.X509KeyManager;
 import javax.net.ssl.X509TrustManager;
+import javax.security.auth.Subject;
 import org.apache.log4j.Logger;
 
 /**
@@ -154,9 +155,59 @@ public class SSLUtil
      */
     public static SSLSocketFactory getSocketFactory(File certFile, File keyFile)
     {
-        KeyStore ks = readCertificates(certFile, keyFile);
+        KeyStore ks = getKeyStore(certFile, keyFile);
         KeyStore ts = null;
         return getSocketFactory(ks, ts);
+    }
+
+    public static SSLSocketFactory getSocketFactory(Set<X509Certificate> certs, Set<PrivateKey> keys)
+    {
+        Certificate[] chain = null;
+        if (certs != null)
+            chain = certs.toArray(new Certificate[certs.size()]);
+
+        PrivateKey pk = null;
+        if (keys != null)
+        {
+            Iterator<PrivateKey> i = keys.iterator();
+            if (i.hasNext())
+                pk = i.next();
+        }
+        KeyStore ks = getKeyStore(chain, pk);
+        KeyStore ts = null;
+        return getSocketFactory(ks, ts);
+    }
+
+    public static Subject createSubject(File certFile, File keyFile)
+    {
+        try
+        {
+            PrivateKey pk = readPrivateKey(keyFile);
+            X509Certificate[] chain = readCertificateChain(certFile);
+            List<X509Certificate> certs = Arrays.asList(chain);
+            List<PrivateKey> keys = Arrays.asList(new PrivateKey[] { pk });
+            return AuthenticationUtil.getSubject(certs, keys);
+        }
+        catch (InvalidKeySpecException ex)
+        {
+            throw new RuntimeException("failed to read RSA private key from " + keyFile, ex);
+        }
+        catch (NoSuchAlgorithmException ex)
+        {
+            throw new RuntimeException("BUG: failed to create empty KeyStore", ex);
+        }
+        catch (FileNotFoundException ex)
+        {
+            throw new RuntimeException("failed to find certificate and/or key file " + certFile + "," + keyFile, ex);
+        }
+        catch (IOException ex)
+        {
+            throw new RuntimeException("failed to read certificate file " + certFile, ex);
+        }
+        catch (CertificateException ex)
+        {
+            throw new RuntimeException("failed to load certificate from file " + certFile, ex);
+        }
     }
 
     // may in future try to support other KeyStore formats, but for now we only
@@ -170,17 +221,10 @@ public class SSLUtil
         return sf;
     }
 
-    static byte[] readFile(File f) throws IOException
-    {
-        DataInputStream dis = new DataInputStream(new FileInputStream(f));
-        byte[] ret = new byte[(int) f.length()];
-        dis.readFully(ret);
-        dis.close();
-        log.debug("readFile: " + ret.length);
-        return ret;
-    }
+    
 
     // not working due to Base64 decoding to byte array not producing valid DER format key
+    /*
     static byte[] getPrivateKey(byte[] certBuf) throws IOException
     {
         BufferedReader rdr = new BufferedReader(new InputStreamReader(new ByteArrayInputStream(certBuf)));
@@ -214,80 +258,96 @@ public class SSLUtil
 
         return ret;
     }
+    */
 
-    static KeyStore readCertificates(File certFile, File keyFile)
+    static X509Certificate[] readCertificateChain(File certFile)
+        throws CertificateException, IOException
+    {
+        byte[] certBuf = FileUtil.readFile(certFile);
+        BufferedInputStream istream = new BufferedInputStream(new ByteArrayInputStream(certBuf));
+        CertificateFactory cf = CertificateFactory.getInstance("X.509");
+        ArrayList certs = new ArrayList();
+        while (istream.available() > 0)
+        {
+            Certificate cert = cf.generateCertificate(istream);
+            log.debug("found: " + cert);
+            certs.add(cert);
+        }
+        istream.close();
+
+        X509Certificate[] chain = new X509Certificate[certs.size()];
+        Iterator i = certs.iterator();
+        int c = 0;
+        while (i.hasNext())
+        {
+            X509Certificate x509 = (X509Certificate) i.next();
+            chain[c++] = x509;
+            try
+            {
+                x509.checkValidity();
+            }
+            catch (CertificateException ex)
+            {
+                throw new RuntimeException("certificate from file " + certFile + " is not valid", ex);
+            }
+            log.debug("X509 certificate is valid");
+        }
+        return chain;
+    }
+    
+    static PrivateKey readPrivateKey(File keyFile)
+        throws InvalidKeySpecException, NoSuchAlgorithmException, IOException
+    {
+        byte[] priv = FileUtil.readFile(keyFile);
+        KeyFactory kf = KeyFactory.getInstance("RSA");
+        PKCS8EncodedKeySpec spec = new PKCS8EncodedKeySpec(priv);
+        PrivateKey pk = kf.generatePrivate(spec);
+        return pk;
+    }
+
+    static KeyStore getKeyStore(Certificate[] chain, PrivateKey pk)
     {
         try
         {
-            byte[] certBuf = readFile(certFile);
-
-            KeyFactory kf = KeyFactory.getInstance("RSA");
-            //byte[] priv = getPrivateKey(certBuf);
-            byte[] priv = readFile(keyFile);
-            PKCS8EncodedKeySpec spec = new PKCS8EncodedKeySpec(priv);
-            PrivateKey pk = kf.generatePrivate(spec);
-
-            BufferedInputStream istream = new BufferedInputStream(new ByteArrayInputStream(certBuf));
-            CertificateFactory cf = CertificateFactory.getInstance("X.509");
-            ArrayList certs = new ArrayList();
-            while (istream.available() > 0)
-            {
-                Certificate cert = cf.generateCertificate(istream);
-                log.debug("found: " + cert);
-                certs.add(cert);
-            }
-            istream.close();
-
-            Certificate[] chain = new Certificate[certs.size()];
-            Iterator i = certs.iterator();
-            int c = 0;
-            while (i.hasNext())
-            {
-                X509Certificate x509 = (X509Certificate) i.next();
-                chain[c++] = x509;
-                try
-                {
-                    x509.checkValidity();
-                }
-                catch (CertificateException ex)
-                {
-                    throw new RuntimeException("certificate from file " + certFile + " is not valid", ex);
-                }
-                log.debug("X509 certificate is valid");
-            }
-
             KeyStore ks = KeyStore.getInstance(KEYSTORE_TYPE);
-            ks.load(null, null); // empty
+            try { ks.load(null, null); } // empty
+            catch(Exception ignore) { }
             KeyStore.Entry ke = new KeyStore.PrivateKeyEntry(pk, chain);
             ks.setKeyEntry(CERT_ALIAS, pk, THE_PASSWORD, chain);
             return ks;
-        }
-        catch (InvalidKeySpecException ex)
-        {
-            throw new RuntimeException("failed to read RSA private key from " + keyFile, ex);
         }
         catch (KeyStoreException ex)
         {
             throw new RuntimeException("failed to find/load KeyStore of type " + KEYSTORE_TYPE, ex);
         }
-        catch (FileNotFoundException ex)
+    }
+    static KeyStore getKeyStore(File certFile, File keyFile)
+    {
+        try
         {
-            throw new RuntimeException("failed to find certificate file " + certFile, ex);
+            PrivateKey pk = readPrivateKey(keyFile);
+            Certificate[] chain = readCertificateChain(certFile);
+            return getKeyStore(chain, pk);
         }
-        catch (IOException ex)
+        catch (InvalidKeySpecException ex)
         {
-            throw new RuntimeException("failed to read certificate file " + certFile, ex);
+            throw new RuntimeException("failed to read RSA private key from " + keyFile, ex);
         }
         catch (NoSuchAlgorithmException ex)
         {
             throw new RuntimeException("BUG: failed to create empty KeyStore", ex);
         }
+        catch (FileNotFoundException ex)
+        {
+            throw new RuntimeException("failed to find certificate and/or key file " + certFile + "," + keyFile, ex);
+        }
+        catch (IOException ex)
+        {
+            throw new RuntimeException("failed to read certificate file " + certFile, ex);
+        }
         catch (CertificateException ex)
         {
             throw new RuntimeException("failed to load certificate from file " + certFile, ex);
-        }
-        finally
-        {
         }
     }
 

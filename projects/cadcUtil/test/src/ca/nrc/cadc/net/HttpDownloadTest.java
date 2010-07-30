@@ -67,22 +67,15 @@
  ************************************************************************
  */
 
-package ca.nrc.cadc.auth;
+package ca.nrc.cadc.net;
 
+import ca.nrc.cadc.auth.RunnableAction;
+import ca.nrc.cadc.auth.SSLUtil;
+import ca.nrc.cadc.util.FileUtil;
+import ca.nrc.cadc.util.Log4jInit;
 import java.io.File;
-import java.net.HttpURLConnection;
-import java.net.InetAddress;
 import java.net.URL;
-import java.net.URLConnection;
-import java.security.KeyStore;
-
-import javax.net.SocketFactory;
-import javax.net.ssl.HttpsURLConnection;
-import javax.net.ssl.KeyManagerFactory;
-import javax.net.ssl.SSLContext;
-import javax.net.ssl.SSLHandshakeException;
-import javax.net.ssl.SSLSocketFactory;
-import javax.net.ssl.TrustManagerFactory;
+import javax.security.auth.Subject;
 
 import org.apache.log4j.Level;
 import org.apache.log4j.Logger;
@@ -93,31 +86,31 @@ import org.junit.Before;
 import org.junit.BeforeClass;
 import org.junit.Test;
 
-import ca.nrc.cadc.util.FileUtil;
-import ca.nrc.cadc.util.Log4jInit;
-
 /**
- * Unit tests for SSLUtil.
  *
  * @author pdowler
  */
-public class SSLUtilTest
+public class HttpDownloadTest 
 {
-    private static Logger log = Logger.getLogger(SSLUtilTest.class);
+    private static Logger log = Logger.getLogger(HttpDownloadTest.class);
     private static String TEST_CERT_FN = "proxy.crt";
     private static String TEST_KEY_FN = "proxy.key";
     private static File SSL_CERT;
     private static File SSL_KEY;
 
+    private URL httpURL;
+    private URL httpsURL;
+    private File tmpDir;
+    
     /**
      * @throws java.lang.Exception
      */
     @BeforeClass
     public static void setUpBeforeClass() throws Exception
     {
-        Log4jInit.setLevel("ca.nrc.cadc.auth", Level.INFO);
-        SSL_CERT = FileUtil.getFileFromResource(TEST_CERT_FN, SSLUtilTest.class);
-        SSL_KEY = FileUtil.getFileFromResource(TEST_KEY_FN, SSLUtilTest.class);
+        Log4jInit.setLevel("ca.nrc.cadc.net", Level.INFO);
+        SSL_CERT = FileUtil.getFileFromResource(TEST_CERT_FN, HttpDownloadTest.class);
+        SSL_KEY = FileUtil.getFileFromResource(TEST_KEY_FN, HttpDownloadTest.class);
     }
 
     /**
@@ -134,6 +127,9 @@ public class SSLUtilTest
     @Before
     public void setUp() throws Exception
     {
+        this.httpURL = new URL("http://www.cadc-ccda.hia-iha.nrc-cnrc.gc.ca/robots.txt");
+        this.httpsURL = new URL("https://www.cadc-ccda.hia-iha.nrc-cnrc.gc.ca/robots.txt");
+        this.tmpDir = new File(System.getProperty("user.dir"));
     }
 
     /**
@@ -144,13 +140,20 @@ public class SSLUtilTest
     {
     }
 
-    //@Test
-    public void testReadCert() throws Exception
+    @Test
+    public void testNullSrc() throws Exception
     {
+        log.debug("TEST: testNullArgs");
+        URL src = null;
+        File dest = tmpDir;
         try
         {
-            KeyStore ks = SSLUtil.getKeyStore(SSL_CERT, SSL_KEY);
-            SSLUtil.printKeyStoreInfo(ks);
+            HttpDownload dl = new HttpDownload(src, dest);
+            Assert.fail("expected IllegalArgumentException");
+        }
+        catch(IllegalArgumentException expected)
+        {
+            log.debug("caught expected: " + expected);
         }
         catch (Throwable t)
         {
@@ -158,32 +161,21 @@ public class SSLUtilTest
             Assert.fail("unexpected exception: " + t);
         }
     }
-
-    //@Test
-    public void testGetKMF() throws Exception
+    
+    @Test
+    public void testNullDest() throws Exception
     {
+        log.debug("TEST: testNullArgs");
+        URL src = httpURL;
+        File dest = null;
         try
         {
-            KeyStore ks = SSLUtil.getKeyStore(SSL_CERT, SSL_KEY);
-            KeyManagerFactory kmf = SSLUtil.getKeyManagerFactory(ks);
+            HttpDownload dl = new HttpDownload(src, dest);
+            Assert.fail("expected IllegalArgumentException");
         }
-        catch (Throwable t)
+        catch(IllegalArgumentException expected)
         {
-            t.printStackTrace();
-            Assert.fail("unexpected exception: " + t);
-        }
-    }
-
-    //@Test
-    public void testGetContext() throws Exception
-    {
-        try
-        {
-            KeyStore ks = SSLUtil.getKeyStore(SSL_CERT, SSL_KEY);
-            KeyStore ts = null;
-            KeyManagerFactory kmf = SSLUtil.getKeyManagerFactory(ks);
-            TrustManagerFactory tmf = SSLUtil.getTrustManagerFactory(ts);
-            SSLContext ctx = SSLUtil.getContext(kmf, tmf, ks);
+            log.debug("caught expected: " + expected);
         }
         catch (Throwable t)
         {
@@ -193,11 +185,23 @@ public class SSLUtilTest
     }
 
     @Test
-    public void testGetSocketFactory() throws Exception
+    public void testDownloadFileToFile() throws Exception
     {
+        log.debug("TEST: testDownloadFileToFile");
+        URL src = httpURL;
+        File dest = new File(tmpDir, "robots.txt");
         try
         {
-            SocketFactory sf = SSLUtil.getSocketFactory(SSL_CERT, SSL_KEY);
+            if (dest.exists())
+                dest.delete();
+            Assert.assertTrue("dest file does not exist before download", !dest.exists());
+            HttpDownload dl = new HttpDownload(src, dest);
+            dl.setOverwrite(false);
+            dl.run();
+            File out = dl.getFile();
+            Assert.assertNotNull("result file", out);
+            Assert.assertTrue("dest file exists before download", out.exists());
+            Assert.assertTrue("dest file size > 0", out.length() > 0);
         }
         catch (Throwable t)
         {
@@ -207,42 +211,20 @@ public class SSLUtilTest
     }
 
     @Test
-    public void testInitSSL() throws Exception
+    public void testDownloadFileToDir() throws Exception
     {
+        log.debug("TEST: testDownloadFileToDir");
+        URL src = httpURL;
+        File dest = new File(System.getProperty("user.dir"));
         try
         {
-            SSLUtil.initSSL(SSL_CERT, SSL_KEY);
-        }
-        catch (Throwable t)
-        {
-            t.printStackTrace();
-            Assert.fail("unexpected exception: " + t);
-        }
-    }
-
-    public void testHTTPS(URL url) throws Exception
-    {
-        HttpURLConnection.setFollowRedirects(false);
-
-        SSLSocketFactory sf = SSLUtil.getSocketFactory(SSL_CERT, SSL_KEY);
-        URLConnection con = url.openConnection();
-
-        log.debug("URLConnection type: " + con.getClass().getName());
-        HttpsURLConnection ucon = (HttpsURLConnection) con;
-        ucon.setSSLSocketFactory(sf);
-        log.debug("status: " + ucon.getResponseCode());
-        log.debug("content-length: " + ucon.getContentLength());
-        log.debug("content-type: " + ucon.getContentType());
-    }
-
-    @Test
-    public void testGoogleHTTPS() throws Exception
-    {
-        try
-        {
-            URL url = new URL("https://www.google.com/");
-            log.debug("test URL: " + url);
-            testHTTPS(url);
+            HttpDownload dl = new HttpDownload(src, dest);
+            dl.setOverwrite(true);
+            dl.run();
+            File out = dl.getFile();
+            Assert.assertNotNull("result file", out);
+            Assert.assertTrue("dest file exists before download", out.exists());
+            Assert.assertTrue("dest file size > 0", out.length() > 0);
         }
         catch (Throwable t)
         {
@@ -252,13 +234,23 @@ public class SSLUtilTest
     }
 
     @Test
-    public void testCadcHTTPS() throws Exception
+    public void testDownloadFileToRelativeFile() throws Exception
     {
+        log.debug("TEST: testDownloadFileToRelativeFile");
+        URL src = httpURL;
+        File dest = new File("robots.txt");
         try
         {
-            URL url = new URL("https://www.cadc-ccda.hia-iha.nrc-cnrc.gc.ca/");
-            log.debug("test URL: " + url);
-            testHTTPS(url);
+            // relative fails if file does not exist
+            if (dest.exists())
+                dest.delete();
+            Assert.assertTrue("dest file does not exist before download", !dest.exists());
+            HttpDownload dl = new HttpDownload(src, dest);
+            Assert.fail("expected IllegalArgumentException");
+        }
+        catch(IllegalArgumentException expected)
+        {
+            log.debug("caught expected: " + expected);
         }
         catch (Throwable t)
         {
@@ -267,35 +259,21 @@ public class SSLUtilTest
         }
     }
 
-    // Note: this test requies some custom setup: an http server running on
-    // localhost with an invalid (e.g. self-signed) server certificate for
-    // SSL (https) and SSL config requiring a client certificate to get the
-    // root document - this is only here to test the BasicX509TrustManager
-    // local work-around for developers
-
-    //@Test
-    public void testInvalidServerHTTPS() throws Exception
+    @Test
+    public void testDownloadFileToRelativeDir() throws Exception
     {
-        InetAddress localhost = InetAddress.getLocalHost();
-        String hostname = localhost.getCanonicalHostName();
-        URL url = new URL("https://" + hostname + "/");
-
+        log.debug("TEST: testDownloadFileToRelativeDir");
+        URL src = httpURL;
+        File dest = new File("build/tmp");
         try
         {
-            log.debug("test URL: " + url);
-            testHTTPS(url);
-            Assert.fail("expected an SSLHandshakeException but did not fail");
-        }
-        catch (SSLHandshakeException expected)
-        {
-            log.debug("caught expected exception: " + expected);
-        }
-
-        System.setProperty(BasicX509TrustManager.class.getName() + ".trust", "something");
-        try
-        {
-            log.debug("test URL: " + url);
-            testHTTPS(url);
+            HttpDownload dl = new HttpDownload(src, dest);
+            dl.setOverwrite(true);
+            dl.run();
+            File out = dl.getFile();
+            Assert.assertNotNull("result file", out);
+            Assert.assertTrue("dest file exists before download", out.exists());
+            Assert.assertTrue("dest file size > 0", out.length() > 0);
         }
         catch (Throwable t)
         {
@@ -304,4 +282,32 @@ public class SSLUtilTest
         }
     }
 
+    @Test
+    public void testDownloadHTTPS() throws Exception
+    {
+        log.debug("TEST: testDownloadHTTPS");
+        URL src = httpsURL;
+        File dest = new File(tmpDir, "robots.txt");
+        try
+        {
+            if (dest.exists())
+                dest.delete();
+            Assert.assertTrue("dest file does not exist before download", !dest.exists());
+            HttpDownload dl = new HttpDownload(src, dest);
+            dl.setOverwrite(false);
+
+            Subject s = SSLUtil.createSubject(SSL_CERT, SSL_KEY);
+            Subject.doAs(s, new RunnableAction(dl));
+
+            File out = dl.getFile();
+            Assert.assertNotNull("result file", out);
+            Assert.assertTrue("dest file exists before download", out.exists());
+            Assert.assertTrue("dest file size > 0", out.length() > 0);
+        }
+        catch (Throwable t)
+        {
+            t.printStackTrace();
+            Assert.fail("unexpected exception: " + t);
+        }
+    }
 }

@@ -1,4 +1,4 @@
-<!--
+/*
 ************************************************************************
 *******************  CANADIAN ASTRONOMY DATA CENTRE  *******************
 **************  CENTRE CANADIEN DE DONNÉES ASTRONOMIQUES  **************
@@ -65,83 +65,21 @@
 *  $Revision: 4 $
 *
 ************************************************************************
--->
+*/
 
 
-<!DOCTYPE project>
-<project default="build" basedir=".">
-    <property environment="env"/>
-    
-    <!-- site-specific build properties or overrides of values in opencadc.properties -->
-    <property file="${env.CADC_PREFIX}/etc/local.properties" />
-    
-    <!-- site-specific targets, e.g. install, cannot duplicate those in opencadc.targets.xml -->
-    <import file="${env.CADC_PREFIX}/etc/local.targets.xml" optional="true" />
+package ca.nrc.cadc.net.event;
 
-    <!-- default properties and targets -->
-    <property file="${env.CADC_PREFIX}/etc/opencadc.properties" />
-    <import file="${env.CADC_PREFIX}/etc/opencadc.targets.xml"/>
-    
-    <!-- developer convenience: place for extra targets and properties -->
-    <import file="extras.xml" optional="true" />
-
-	<property name="project" value="cadcUtil" />
-
-	<property name="jars" value="${ext.lib}/servlet-api.jar:${ext.lib}/log4j.jar:${ext.lib}/jdom.jar" />
-	<property name="resources.dir" value="test/resources/" /> 
-
-    <target name="build" depends="compile">
-        <jar jarfile="${build}/lib/${project}.jar"
-                    basedir="${build}/class"
-                    update="no">
-                <include name="ca/nrc/cadc/**" />
-        </jar>
-    </target>
-
-    <!-- JAR files needed to run the test suite -->
-    <property name="jars.test" value="${build}/class:${jars}:${ext.lib}/junit.jar:${resources.dir}" />
-
-    <!-- Run the test suite -->
-    <target name="test" depends="util-test,auth-test,net-test" />
-
-    <target name="util-test" depends="compile-test">
-        <junit printsummary="yes" haltonfailure="yes" fork="yes">
-            <classpath>
-                <pathelement path="${build}/class"/>
-                <pathelement path="test/src"/>
-                <pathelement path="src"/>
-                <pathelement path="${jars.test}"/>
-            </classpath>
-
-            <test name="ca.nrc.cadc.util.HexUtilTest"/>
-            <formatter type="plain" usefile="false"/>
-        </junit>
-    </target>
-    <target name="net-test" depends="compile-test">
-        <junit printsummary="yes" haltonfailure="yes" fork="yes">
-            <classpath>
-                <pathelement path="${build}/class"/>
-                <pathelement path="test/src"/>
-                <pathelement path="src"/>
-                <pathelement path="${jars.test}"/>
-            </classpath>
-
-            <test name="ca.nrc.cadc.net.HttpDownloadTest"/>
-            <test name="ca.nrc.cadc.net.HttpUploadTest"/>
-            <formatter type="plain" usefile="false"/>
-        </junit>
-    </target>
-    <target name="auth-test" depends="compile-test">
-        <junit printsummary="yes" haltonfailure="yes" fork="yes">
-            <classpath>
-                <pathelement path="${build}/class"/>
-                <pathelement path="test/src"/>
-                <pathelement path="src"/>
-                <pathelement path="${jars.test}"/>
-            </classpath>
-
-            <test name="ca.nrc.cadc.auth.SSLUtilTest"/>
-            <formatter type="plain" usefile="false"/>
-        </junit>
-    </target>
-</project>
+/**
+ * Listens for progress updates from a long-running download task.
+ *
+ * @author pdowler
+ */
+public interface ProgressListener extends TransferListener
+{
+    /**
+     * @param newBytes number of bytes read/written since last update()
+     * @param totalBytes total number of bytes read/written
+     */
+    public void update(int newBytes, int totalBytes);
+}
