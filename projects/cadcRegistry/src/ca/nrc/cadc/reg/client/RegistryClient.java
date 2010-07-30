@@ -72,6 +72,7 @@ package ca.nrc.cadc.reg.client;
 import ca.nrc.cadc.util.MultiValuedProperties;
 import java.io.IOException;
 import java.io.InputStream;
+import java.net.Inet4Address;
 import java.net.InetAddress;
 import java.net.MalformedURLException;
 import java.net.URI;
@@ -92,6 +93,13 @@ import org.apache.log4j.Logger;
  * <pre>
  * ca.nrc.cadc.reg.client.RegistryClient.local=true
  * </pre>
+ * </p><p>
+ * Note for developers: You can set a system property to force this class to replace the hostname
+ * in the resuting URL with an arbitrary hostname. This is useful for testing a specific remote server:
+ * </p>
+ * <pre>
+ * ca.nrc.cadc.reg.client.RegistryClient.host=www.example.com
+ * </pre>
  *
  * @author pdowler
  */
@@ -101,10 +109,43 @@ public class RegistryClient
 
     private static final String CACHE_FILENAME = RegistryClient.class.getSimpleName() + ".properties";
     private static final String LOCAL_PROPERTY = RegistryClient.class.getName() + ".local";
+    private static final String HOST_PROPERTY = RegistryClient.class.getName() + ".host";
 
 
     private Map<URI,List<URL>> lookup;
     private MultiValuedProperties mvp;
+    
+    private String hostname;
+
+    public RegistryClient()
+    {
+        try
+        {
+            if ( "true".equals(System.getProperty(LOCAL_PROPERTY)) )
+            {
+                log.debug(LOCAL_PROPERTY + " is set, assuming localhost runs the service");
+                this.hostname = InetAddress.getLocalHost().getCanonicalHostName();
+            }
+            else
+            {
+                String hp = System.getProperty(HOST_PROPERTY);
+                if (hp != null)
+                {
+                    hp = hp.trim();
+                    if (hp.length() > 0)
+                    {
+                        InetAddress inet = InetAddress.getByName(hp);
+                        this.hostname = inet.getCanonicalHostName();
+                    }
+                }
+            }
+        }
+        catch(UnknownHostException ex)
+        {
+            throw new RuntimeException("failed to determine canonical local host name", ex);
+        }
+
+    }
 
     /**
      * Find the service URL for the service registered under the specified identifier. The
@@ -162,7 +203,7 @@ public class RegistryClient
         }
 
         URL ret = new URL(url);
-        if ( "true".equals(System.getProperty(LOCAL_PROPERTY)) )
+        if ( hostname != null )
         {
             try
             {
@@ -170,7 +211,7 @@ public class RegistryClient
                 StringBuffer sb = new StringBuffer();
                 sb.append(ret.getProtocol());
                 sb.append("://");
-                sb.append(InetAddress.getLocalHost().getCanonicalHostName());
+                sb.append(hostname);
                 int p = ret.getPort();
                 if (p > 0 && p != ret.getDefaultPort())
                 {
@@ -185,10 +226,6 @@ public class RegistryClient
                     sb.append(q);
                 }
                 ret = new URL(sb.toString());
-            }
-            catch(UnknownHostException ex)
-            {
-                throw new RuntimeException("failed to determine canonical local host name", ex);
             }
             catch(MalformedURLException ex)
             {

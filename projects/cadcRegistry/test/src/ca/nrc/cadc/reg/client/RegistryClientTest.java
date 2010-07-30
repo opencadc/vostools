@@ -170,31 +170,7 @@ private static Logger log = Logger.getLogger(RegistryClientTest.class);
         }
     }
 
-    @Test
-    public void testFoundLocal() throws Exception
-    {
-        try
-        {
-            System.setProperty(RegistryClient.class.getName() + ".local", "true");
-            RegistryClient rc = new RegistryClient();
-            
-            String localhost = InetAddress.getLocalHost().getCanonicalHostName();
-            URL expected = new URL("http://" + localhost + "/current/path/to/my/service");
-            
-            URL url = rc.getServiceURL(new URI(DUMMY_URI));
-            Assert.assertEquals(expected, url);
-        }
-        catch(Throwable t)
-        {
-            t.printStackTrace();
-            Assert.fail("unexpected exception: " + t);
-        }
-        finally
-        {
-            System.setProperty(RegistryClient.class.getName() + ".local", "false");
-        }
-    }
-
+    
     @Test
     public void testFoundWithProtocol() throws Exception
     {
@@ -217,4 +193,53 @@ private static Logger log = Logger.getLogger(RegistryClientTest.class);
         }
     }
 
+    @Test
+    public void testFoundLocal() throws Exception
+    {
+        try
+        {
+            System.setProperty(RegistryClient.class.getName() + ".local", "true");
+            RegistryClient rc = new RegistryClient();
+
+            String localhost = InetAddress.getLocalHost().getCanonicalHostName();
+            URL expected = new URL("http://" + localhost + "/current/path/to/my/service");
+
+            URL url = rc.getServiceURL(new URI(DUMMY_URI));
+            Assert.assertEquals(expected, url);
+        }
+        catch(Throwable t)
+        {
+            t.printStackTrace();
+            Assert.fail("unexpected exception: " + t);
+        }
+        finally
+        {
+            System.setProperty(RegistryClient.class.getName() + ".local", "false");
+        }
+    }
+
+    @Test
+    public void testFoundHost() throws Exception
+    {
+        try
+        {
+            System.setProperty(RegistryClient.class.getName() + ".host", "cadcweb0");
+            RegistryClient rc = new RegistryClient();
+
+            String localhost = InetAddress.getLocalHost().getCanonicalHostName();
+            URL expected = new URL("http://cadcweb0/current/path/to/my/service");
+
+            URL url = rc.getServiceURL(new URI(DUMMY_URI));
+            Assert.assertEquals(expected, url);
+        }
+        catch(Throwable t)
+        {
+            t.printStackTrace();
+            Assert.fail("unexpected exception: " + t);
+        }
+        finally
+        {
+            System.setProperty(RegistryClient.class.getName() + ".host", "");
+        }
+    }
 }
