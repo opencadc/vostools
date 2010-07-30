@@ -124,6 +124,13 @@ public class TransferReader
         return parseTransfer();
     }
 
+    /**
+     * @deprecated not plausible to implement with SSL
+     * @param url
+     * @return
+     * @throws JDOMException
+     * @throws IOException
+     */
     public Transfer readFrom(URL url) throws JDOMException, IOException {
         this.document = this.saxBuilder.build(url);
         log.debug("Transfer XML read from URL: " + url + "\n" + VOSClientUtil.xmlString(this.document));

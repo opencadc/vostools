@@ -69,6 +69,7 @@
 
 package ca.nrc.cadc.vos.client;
 
+import ca.nrc.cadc.auth.SSLUtil;
 import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStream;
@@ -100,8 +101,16 @@ import ca.nrc.cadc.vos.ServerTransfer;
 import ca.nrc.cadc.vos.Transfer;
 import ca.nrc.cadc.vos.TransferReader;
 import ca.nrc.cadc.vos.View;
+import java.security.AccessControlContext;
 import java.security.AccessControlException;
+import java.security.AccessController;
+import java.security.PrivateKey;
+import java.security.cert.X509Certificate;
 import java.text.ParseException;
+import java.util.Set;
+import javax.net.ssl.HttpsURLConnection;
+import javax.net.ssl.SSLSocketFactory;
+import javax.security.auth.Subject;
 
 /**
  * @author zhangsa
@@ -114,10 +123,23 @@ public class VOSpaceClient
     public static final String CR = System.getProperty("line.separator"); // OS independant new line
 
     protected String baseUrl;
+    private SSLSocketFactory sslSocketFactory;
 
     public VOSpaceClient(String baseUrl)
     {
         this.baseUrl = baseUrl;
+    }
+
+    public void setSSLSocketFactory(SSLSocketFactory sslSocketFactory)
+    {
+        this.sslSocketFactory = sslSocketFactory;
+    }
+
+    // temp hack to share SSL with ClientTransfer
+    public SSLSocketFactory getSslSocketFactory()
+    {
+        initHTTPS(null);
+        return sslSocketFactory;
     }
 
     public Node createNode(Node node)
@@ -130,6 +152,11 @@ public class VOSpaceClient
             URL url = new URL(this.baseUrl + "/nodes/" + node.getPath());
             log.debug("createNode(), URL=" + url);
             HttpURLConnection connection = (HttpURLConnection) url.openConnection();
+            if (connection instanceof HttpsURLConnection)
+            {
+                HttpsURLConnection sslConn = (HttpsURLConnection) connection;
+                initHTTPS(sslConn);
+            }
             connection.setDoOutput(true);
             connection.setRequestMethod("PUT");
             connection.setRequestProperty("Content-Type", "text/xml");
@@ -241,6 +268,11 @@ public class VOSpaceClient
             URL url = new URL(this.baseUrl + "/nodes/" + path);
             log.debug("getNode(), URL=" + url);
             HttpURLConnection connection = (HttpURLConnection) url.openConnection();
+            if (connection instanceof HttpsURLConnection)
+            {
+                HttpsURLConnection sslConn = (HttpsURLConnection) connection;
+                initHTTPS(sslConn);
+            }
             connection.setDoOutput(true);
             connection.setRequestMethod("GET");
             //connection.setRequestProperty("Content-Type", "application/x-www-form-urlencoded");
@@ -307,6 +339,11 @@ public class VOSpaceClient
             URL url = new URL(this.baseUrl + "/nodes/" + node.getPath());
             log.debug("setNode(), URL=" + url);
             HttpURLConnection connection = (HttpURLConnection) url.openConnection();
+            if (connection instanceof HttpsURLConnection)
+            {
+                HttpsURLConnection sslConn = (HttpsURLConnection) connection;
+                initHTTPS(sslConn);
+            }
             connection.setDoOutput(true);
             connection.setRequestMethod("POST");
             //connection.setRequestProperty("Content-Type", "application/x-www-form-urlencoded");
@@ -403,6 +440,11 @@ public class VOSpaceClient
             log.debug(url);
 
             HttpURLConnection connection = (HttpURLConnection) url.openConnection();
+            if (connection instanceof HttpsURLConnection)
+            {
+                HttpsURLConnection sslConn = (HttpsURLConnection) connection;
+                initHTTPS(sslConn);
+            }
             connection.setDoOutput(true);
             connection.setRequestMethod("POST");
             connection.setRequestProperty("Content-Type", "application/x-www-form-urlencoded");
@@ -425,20 +467,37 @@ public class VOSpaceClient
             {
                 URL urlRedirect = new URL(redirectLocation);
                 JobReader jobReader = new JobReader();
-                Job jobResult = jobReader.readFrom(urlRedirect);
+                connection = (HttpURLConnection) urlRedirect.openConnection();
+                if (connection instanceof HttpsURLConnection)
+                {
+                    HttpsURLConnection sslConn = (HttpsURLConnection) connection;
+                    initHTTPS(sslConn);
+                }
+                Job jobResult = jobReader.readFrom(connection.getInputStream());
                 log.debug(VOSClientUtil.xmlString(jobResult));
 
                 String strResultUrl = jobResult.getResultsList().get(0).getURL().toString();
 
                 URL urlTransferDetail = new URL(strResultUrl);
                 TransferReader txfReader = new TransferReader();
-                rtn = txfReader.readFrom(urlTransferDetail);
+                connection = (HttpURLConnection) urlTransferDetail.openConnection();
+                if (connection instanceof HttpsURLConnection)
+                {
+                    HttpsURLConnection sslConn = (HttpsURLConnection) connection;
+                    initHTTPS(sslConn);
+                }
+                rtn = txfReader.readFrom(connection.getInputStream());
             }
             else if (direction == Transfer.Direction.pullFromVoSpace)
             {
                 URL urlRedirect = new URL(redirectLocation);
-                TransferReader txfReader = new TransferReader();
-                rtn = txfReader.readFrom(urlRedirect);
+                TransferReader txfReader = new TransferReader();connection = (HttpURLConnection) urlRedirect.openConnection();
+                if (connection instanceof HttpsURLConnection)
+                {
+                    HttpsURLConnection sslConn = (HttpsURLConnection) connection;
+                    initHTTPS(sslConn);
+                }
+                rtn = txfReader.readFrom(connection.getInputStream());
             }
         }
         catch (IOException e)
@@ -473,7 +532,13 @@ public class VOSpaceClient
             log.debug("Job URL is: " + strJobUrl);
             jobReader = new JobReader();
             URL jobUrl = new URL(strJobUrl);
-            job = jobReader.readFrom(jobUrl);
+            HttpURLConnection conn = (HttpURLConnection) jobUrl.openConnection();
+            if (conn instanceof HttpsURLConnection)
+            {
+                HttpsURLConnection sslConn = (HttpsURLConnection) conn;
+                initHTTPS(sslConn);
+            }
+            job = jobReader.readFrom(conn.getInputStream());
             log.debug(VOSClientUtil.xmlString(job));
 
             job.setExecutionDuration(0);
@@ -499,13 +564,25 @@ public class VOSpaceClient
             postJob(strJobUrl, parameters);
             postJob(strJobUrl + "/phase", "PHASE=RUN");
 
-            jobRtn = jobReader.readFrom(jobUrl);
+            conn = (HttpURLConnection) jobUrl.openConnection();
+            if (conn instanceof HttpsURLConnection)
+            {
+                HttpsURLConnection sslConn = (HttpsURLConnection) conn;
+                initHTTPS(sslConn);
+            }
+            jobRtn = jobReader.readFrom(conn.getInputStream());
             log.debug(VOSClientUtil.xmlString(jobRtn));
             int numTry = MAX_NUM_READ_JOB;
             while (jobRtn != null && numTry-- > 0 && !jobRtn.getExecutionPhase().equals(ExecutionPhase.COMPLETED)
                     && !jobRtn.getExecutionPhase().equals(ExecutionPhase.ERROR))
             {
-                jobRtn = jobReader.readFrom(jobUrl);
+                conn = (HttpURLConnection) jobUrl.openConnection();
+                if (conn instanceof HttpsURLConnection)
+                {
+                    HttpsURLConnection sslConn = (HttpsURLConnection) conn;
+                    initHTTPS(sslConn);
+                }
+                jobRtn = jobReader.readFrom(conn.getInputStream());
                 log.debug(VOSClientUtil.xmlString(jobRtn));
             }
 
@@ -516,7 +593,13 @@ public class VOSpaceClient
 
                 URL urlTransferDetail = new URL(strResultUrl);
                 TransferReader txfReader = new TransferReader();
-                rtn = txfReader.readFrom(urlTransferDetail);
+                conn = (HttpURLConnection) urlTransferDetail.openConnection();
+                if (conn instanceof HttpsURLConnection)
+                {
+                    HttpsURLConnection sslConn = (HttpsURLConnection) conn;
+                    initHTTPS(sslConn);
+                }
+                rtn = txfReader.readFrom(conn.getInputStream());
                 log.debug(rtn.toXmlString());
             }
             else if (jobRtn != null && jobRtn.getExecutionPhase().equals(ExecutionPhase.ERROR))
@@ -710,6 +793,11 @@ public class VOSpaceClient
             URL url = new URL(this.baseUrl + "/nodes/" + path);
             log.debug(url);
             HttpURLConnection connection = (HttpURLConnection) url.openConnection();
+            if (connection instanceof HttpsURLConnection)
+            {
+                HttpsURLConnection sslConn = (HttpsURLConnection) connection;
+                initHTTPS(sslConn);
+            }
             connection.setDoOutput(true);
             connection.setRequestMethod("DELETE");
             connection.setUseCaches(false);
@@ -781,6 +869,11 @@ public class VOSpaceClient
         // Async connection to the tapServer.
         URL url = new URL(strUrl);
         HttpURLConnection connection = (HttpURLConnection) url.openConnection();
+        if (connection instanceof HttpsURLConnection)
+        {
+            HttpsURLConnection sslConn = (HttpsURLConnection) connection;
+            initHTTPS(sslConn);
+        }
         connection.setRequestMethod("POST");
         connection.setRequestProperty("Content-Length", "" + Integer.toString(strParam.getBytes().length));
         connection.setRequestProperty("Content-Type", "application/x-www-form-urlencoded");
@@ -816,5 +909,27 @@ public class VOSpaceClient
             sb.append(parameter.getValue());
         }
         return sb.toString();
+    }
+
+    private void initHTTPS(HttpsURLConnection sslConn)
+    {
+        if (sslSocketFactory == null) // lazy init
+        {
+            log.debug("initHTTPS: lazy init");
+            AccessControlContext ac = AccessController.getContext();
+            Subject s = Subject.getSubject(ac);
+            if (s != null)
+            {
+                Set<X509Certificate> certs = s.getPublicCredentials(X509Certificate.class);
+                Set<PrivateKey> keys = s.getPrivateCredentials(PrivateKey.class);
+                log.debug("initHTTPS: found " + certs.size() + " certificate(s) and " + keys.size() + " key(s)");
+                this.sslSocketFactory = SSLUtil.getSocketFactory(certs, keys);
+            }
+        }
+        if (sslSocketFactory != null && sslConn != null)
+        {
+            log.debug("setting SSLSocketFactory on " + sslConn.getClass().getName());
+            sslConn.setSSLSocketFactory(sslSocketFactory);
+        }
     }
 }

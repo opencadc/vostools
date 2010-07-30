@@ -69,6 +69,8 @@
 
 package ca.nrc.cadc.vos.client;
 
+import ca.nrc.cadc.auth.RunnableAction;
+import ca.nrc.cadc.auth.SSLUtil;
 import java.io.File;
 import java.io.FileReader;
 import java.io.IOException;
@@ -85,7 +87,6 @@ import java.util.Properties;
 import org.apache.log4j.Level;
 import org.apache.log4j.Logger;
 
-import ca.nrc.cadc.auth.SSLUtil;
 import ca.nrc.cadc.reg.client.RegistryClient;
 import ca.nrc.cadc.util.ArgumentMap;
 import ca.nrc.cadc.util.Log4jInit;
@@ -101,12 +102,13 @@ import ca.nrc.cadc.vos.VOS;
 import ca.nrc.cadc.vos.VOSURI;
 import ca.nrc.cadc.vos.View;
 import ca.nrc.cadc.vos.Transfer.Direction;
+import javax.security.auth.Subject;
 
 /**
  * @author zhangsa
  *
  */
-public class Main
+public class Main implements Runnable
 {
     public static final String CR = System.getProperty("line.separator"); // OS independant new line
     public static final String EL = " "; // empty line
@@ -159,8 +161,7 @@ public class Main
     Direction transferDirection = null;
     String baseUrl = null;
     VOSpaceClient client = null;
-    File certFile = null;
-    File keyFile = null;
+    private Subject subject;
 
     /**
      * @param args
@@ -204,7 +205,7 @@ public class Main
         try
         {
             command.init(argMap);
-            command.run();
+            Subject.doAs(command.subject, new RunnableAction(command));
         }
         catch(Throwable t)
         {
@@ -219,7 +220,7 @@ public class Main
         System.out.println(s);
     }
 
-    private void run()
+    public void run()
     {
         log.debug("run - START");
         if (this.operation.equals(Operation.CREATE))
@@ -424,6 +425,7 @@ public class Main
 
         log.debug("this.source: " + source);
         File fileToUpload = new File(source);
+        clientTransfer.setSSLSocketFactory(client.getSslSocketFactory());
         clientTransfer.doUpload(fileToUpload);
         Node node = clientTransfer.getTarget();
         log.debug("clientTransfer getTarget: " + node);
@@ -453,6 +455,7 @@ public class Main
         File fileToSave = new File(destination);
         if (fileToSave.exists())
             log.info("overwriting existing file: " + destination);
+        clientTransfer.setSSLSocketFactory(client.getSslSocketFactory());
         clientTransfer.doDownload(fileToSave);
         Node node = clientTransfer.getTarget();
         log.debug("clientTransfer getTarget: " + node);
@@ -512,7 +515,7 @@ public class Main
         URI serverUri = null;
         try
         {
-            validateInitSSL(argMap);
+            initSubject(argMap);
         }
         catch(Exception ex)
         {
@@ -635,13 +638,13 @@ public class Main
         log.info("base url: " + this.baseUrl);
     }
 
-    private void validateInitSSL(ArgumentMap argMap)
+    private void initSubject(ArgumentMap argMap)
     {
         String strCert = argMap.getValue(ARG_CERT);
         String strKey = argMap.getValue(ARG_KEY);
 
-        this.certFile = new File(strCert);
-        this.keyFile = new File(strKey);
+        File certFile = new File(strCert);
+        File keyFile = new File(strKey);
 
         StringBuffer sbSslMsg = new StringBuffer();
         boolean sslError = false;
@@ -672,7 +675,7 @@ public class Main
         {
             throw new IllegalArgumentException(sbSslMsg.toString());
         }
-        SSLUtil.initSSL(this.certFile, this.keyFile);
+        this.subject = SSLUtil.createSubject(certFile, keyFile);
     }
 
     /**

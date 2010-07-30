@@ -109,9 +109,8 @@ import java.net.URI;
 public class VOSpaceClientTest
 {
     private static Logger log = Logger.getLogger(NodeWriterTest.class);
-    private static String ROOT_NODE = "zhangsa/";
-//    private static String TEST_CERT ="test/resources/proxy.crt";
-//    private static String TEST_KEY = "test/resources/proxy.key";
+    private static String ROOT_NODE;
+    private static String VOS_URI =  "vos://cadc.nrc.ca!vospace";
     private static String TEST_CERT ="proxy.crt";
     private static String TEST_KEY = "proxy.key";
 
@@ -126,13 +125,14 @@ public class VOSpaceClientTest
     @BeforeClass
     public static void setUpBeforeClass() throws Exception
     {
-        Log4jInit.setLevel("ca", Level.DEBUG);
+        Log4jInit.setLevel("ca.nrc.cadc.vos.client", Level.INFO);
         System.setProperty(BasicX509TrustManager.class.getName() + ".trust", "true");
 
-        File cert = FileUtil.getFileFromResource(VOSpaceClientTest.TEST_CERT, VOSpaceClientTest.class);
-        File key = FileUtil.getFileFromResource(VOSpaceClientTest.TEST_KEY, VOSpaceClientTest.class);
+        File cert = FileUtil.getFileFromResource(TEST_CERT, VOSpaceClientTest.class);
+        File key = FileUtil.getFileFromResource(TEST_KEY, VOSpaceClientTest.class);
         SSLUtil.initSSL(cert, key);
-        
+
+        ROOT_NODE = System.getProperty("user.name") + "/";
     }
 
     /**
@@ -169,7 +169,7 @@ public class VOSpaceClientTest
     public void testSetNode() throws Exception
     {
         String slashPath1 = "/" + ROOT_NODE + TestUtil.uniqueStringOnTime();
-        ContainerNode cnode = new ContainerNode(new VOSURI(VOS.VOS_URI + slashPath1));
+        ContainerNode cnode = new ContainerNode(new VOSURI(VOS_URI + slashPath1));
 
         Node nodeRtn = client.createNode(cnode);
         log.debug("Returned Node: " + nodeRtn);
@@ -206,7 +206,7 @@ public class VOSpaceClientTest
     public void testDeleteNode() throws Exception
     {
         String slashPath1 = "/" + ROOT_NODE + TestUtil.uniqueStringOnTime();
-        ContainerNode cnode = new ContainerNode(new VOSURI(VOS.VOS_URI + slashPath1));
+        ContainerNode cnode = new ContainerNode(new VOSURI(VOS_URI + slashPath1));
 
         Node nodeRtn = client.createNode(cnode);
         log.debug("Returned Node: " + nodeRtn);
@@ -232,7 +232,7 @@ public class VOSpaceClientTest
     {
         String slashPath1 = "/" + ROOT_NODE + TestUtil.uniqueStringOnTime();
 //        String slashPath1 = "/" + ROOT_NODE;
-        ContainerNode cnode = new ContainerNode(new VOSURI(VOS.VOS_URI + slashPath1));
+        ContainerNode cnode = new ContainerNode(new VOSURI(VOS_URI + slashPath1));
 
         Node nodeRtn = client.createNode(cnode);
         log.debug("Returned Node: " + nodeRtn);
@@ -251,7 +251,7 @@ public class VOSpaceClientTest
         String slashPath1 = "/" + ROOT_NODE ;
 //        String slashPath1 = "/zhangsa/Jun15_09.25_0631";
         
-        ContainerNode cnode = new ContainerNode(new VOSURI(VOS.VOS_URI + slashPath1));
+        ContainerNode cnode = new ContainerNode(new VOSURI(VOS_URI + slashPath1));
 
         Node nodeRtn2 = client.getNode(cnode.getPath());
         log.debug("GetNode: " + nodeRtn2);
@@ -264,7 +264,7 @@ public class VOSpaceClientTest
     public void testCreateContainerNode() throws Exception
     {
         String slashPath1 = "/" + ROOT_NODE + TestUtil.uniqueStringOnTime();
-        ContainerNode cnode = new ContainerNode(new VOSURI(VOS.VOS_URI + slashPath1));
+        ContainerNode cnode = new ContainerNode(new VOSURI(VOS_URI + slashPath1));
 
         Node nodeRtn = client.createNode(cnode);
         log.debug("Returned Node: " + nodeRtn);
@@ -288,12 +288,12 @@ public class VOSpaceClientTest
 
         // List of Node
         List<Node> nodes = new ArrayList<Node>();
-        nodes.add(new DataNode(new VOSURI(VOS.VOS_URI + slashPath1a)));
-        nodes.add(new DataNode(new VOSURI(VOS.VOS_URI + slashPath1b)));
+        nodes.add(new DataNode(new VOSURI(VOS_URI + slashPath1a)));
+        nodes.add(new DataNode(new VOSURI(VOS_URI + slashPath1b)));
 
         // ContainerNode
         ContainerNode cnode;
-        cnode = new ContainerNode(new VOSURI(VOS.VOS_URI + slashPath1));
+        cnode = new ContainerNode(new VOSURI(VOS_URI + slashPath1));
         cnode.setProperties(properties);
         cnode.setNodes(nodes);
 
@@ -309,7 +309,7 @@ public class VOSpaceClientTest
     public void testCreateDataNode() throws Exception
     {
         String slashPath1 = "/" + ROOT_NODE + TestUtil.uniqueStringOnTime();
-        DataNode dnode = new DataNode(new VOSURI(VOS.VOS_URI + slashPath1));
+        DataNode dnode = new DataNode(new VOSURI(VOS_URI + slashPath1));
 
         Node nodeRtn = client.createNode(dnode);
         log.debug("Returned Node: " + nodeRtn);
@@ -322,7 +322,7 @@ public class VOSpaceClientTest
     {
 //        String slashPath1 = "/" + ROOT_NODE + "nodeWithPropertiesA";
         String slashPath1 = "/" + ROOT_NODE + TestUtil.uniqueStringOnTime();
-        DataNode dnode = new DataNode(new VOSURI(VOS.VOS_URI + slashPath1));
+        DataNode dnode = new DataNode(new VOSURI(VOS_URI + slashPath1));
 
         Node nodeRtn = client.createNode(dnode);
         Node nodeRtn2 = client.getNode(nodeRtn.getPath());
@@ -365,7 +365,7 @@ public class VOSpaceClientTest
         log.debug("testfile Canonical path: " + testFile.getCanonicalPath());
 
         String slashPath1 = "/" + ROOT_NODE + TestUtil.uniqueStringOnTime();
-        DataNode dnode = new DataNode(new VOSURI(VOS.VOS_URI + slashPath1));
+        DataNode dnode = new DataNode(new VOSURI(VOS_URI + slashPath1));
         dnode = (DataNode) client.createNode(dnode);
         View dview = new View(new URI(VOS.VIEW_DEFAULT));
 

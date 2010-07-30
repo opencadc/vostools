@@ -88,7 +88,7 @@ public class VOS
 
     public static String EXT_SCHEMA_LOCATION = XSD_KEY + " " + XmlUtil.getResourceUrlString(XSD_FILE_NAME, VOS.class);
     
-    public static final String VOS_URI = "vos://cadc.nrc.ca!vospace";
+    //public static final String VOS_URI = "vos://cadc.nrc.ca!vospace";
     
     public static final String GMS_PROTOCOL = "http";
     

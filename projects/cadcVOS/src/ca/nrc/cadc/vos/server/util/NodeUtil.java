@@ -161,27 +161,4 @@ public class NodeUtil
         }
         return persistentNode;
     }
-
-    /**
-     * Create a VOSURI from a Node and it's parent.
-     *
-     * @param node The Node to create the VOSURI for.
-     * @param parent The parent of the Node.
-     * @return A VOSURI for the node.
-     * @throws URISyntaxException if the VOSURI syntax is invalid.
-     */
-    public static VOSURI createVOSURI(Node node, Node parent) throws URISyntaxException
-    {
-        StringBuilder sb = new StringBuilder();
-        sb.append(VOS.VOS_URI);
-        if (parent != null)
-        {
-            sb.append("/");
-            sb.append(parent.getPath());
-        }
-        sb.append("/");
-        sb.append(node.getName());
-
-        return new VOSURI(sb.toString());
-    }
 }

@@ -77,6 +77,7 @@ import org.apache.log4j.Logger;
 
 import ca.nrc.cadc.net.HttpDownload;
 import ca.nrc.cadc.net.HttpUpload;
+import javax.net.ssl.SSLSocketFactory;
 
 /**
  * @author zhangsa
@@ -86,6 +87,8 @@ public class ClientTransfer extends Transfer
 {
     private static Logger log = Logger.getLogger(ClientTransfer.class);
 
+    private SSLSocketFactory sslSocketFactory;
+    
     /**
      * 
      */
@@ -109,6 +112,11 @@ public class ClientTransfer extends Transfer
         super.setKeepBytes(transfer.isKeepBytes());
     }
 
+    public void setSSLSocketFactory(SSLSocketFactory sslSocketFactory)
+    {
+        this.sslSocketFactory = sslSocketFactory;
+    }
+
     public void doUpload(File file)
     {
         URL url;
@@ -126,6 +134,7 @@ public class ClientTransfer extends Transfer
         log.debug(url);
         
         HttpUpload upload = new HttpUpload(file, url);
+        upload.setSSLSocketFactory(sslSocketFactory);
         upload.run();
     }
 
@@ -146,6 +155,7 @@ public class ClientTransfer extends Transfer
 
         HttpDownload download = new HttpDownload(url, file);
         download.setOverwrite(true);
+        download.setSSLSocketFactory(sslSocketFactory);
         download.run();
     }
 
