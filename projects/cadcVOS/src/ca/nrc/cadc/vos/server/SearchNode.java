@@ -69,13 +69,13 @@
 
 package ca.nrc.cadc.vos.server;
 
+import java.net.URI;
 import java.net.URISyntaxException;
 import java.util.ArrayList;
 import java.util.List;
 
 import ca.nrc.cadc.vos.Node;
 import ca.nrc.cadc.vos.VOSURI;
-import ca.nrc.cadc.vos.View;
 
 /**
  * Simple convenience extension of Node to allow for searching in
@@ -104,15 +104,15 @@ public class SearchNode extends Node
     }
 
     @Override
-    public List<View> accepts()
+    public List<URI> accepts()
     {
-        return new ArrayList<View>(0);
+        return new ArrayList<URI>(0);
     }
 
     @Override
-    public List<View> provides()
+    public List<URI> provides()
     {
-        return new ArrayList<View>(0);
+        return new ArrayList<URI>(0);
     }
 
 }

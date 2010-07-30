@@ -69,6 +69,7 @@
 
 package ca.nrc.cadc.vos;
 
+import java.net.URI;
 import java.net.URISyntaxException;
 import java.util.ArrayList;
 import java.util.List;
@@ -277,14 +278,14 @@ public abstract class Node
     public abstract boolean isStructured();
 
     /**
-     * @return A list of views which the node can use for importing.
+     * @return A list of view uris which the node can use for importing.
      */
-    public abstract List<View> accepts();
+    public abstract List<URI> accepts();
 
     /**
-     * @return A list of views which the node can use for exporting.
+     * @return A list of view uris which the node can use for exporting.
      */
-    public abstract List<View> provides();
+    public abstract List<URI> provides();
 
     public VOSURI getUri()
     {

@@ -75,6 +75,7 @@ import java.io.OutputStream;
 import java.io.OutputStreamWriter;
 import java.io.UnsupportedEncodingException;
 import java.io.Writer;
+import java.net.URI;
 
 import org.apache.log4j.Logger;
 import org.jdom.Document;
@@ -284,10 +285,10 @@ public class NodeWriter
     protected Element getAcceptsElement(Node node)
     {
         Element accepts = new Element("accepts", defaultNamespace);
-        for (View view : node.accepts())
+        for (URI viewURI : node.accepts())
         {
             Element viewElement = new Element("view", defaultNamespace);
-            viewElement.setAttribute("uri", view.getURI().toString());
+            viewElement.setAttribute("uri", viewURI.toString());
             accepts.addContent(viewElement);
         }
         return accepts;
@@ -302,10 +303,10 @@ public class NodeWriter
     protected Element getProvidesElement(Node node)
     {
         Element provides = new Element("provides", defaultNamespace);
-        for (View view : node.provides())
+        for (URI viewURI : node.provides())
         {
             Element viewElement = new Element("view", defaultNamespace);
-            viewElement.setAttribute("uri", view.getURI().toString());
+            viewElement.setAttribute("uri", viewURI.toString());
             provides.addContent(viewElement);
         }
         return provides;

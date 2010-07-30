@@ -100,7 +100,7 @@ import ca.nrc.cadc.vos.View;
  *     - write(OutputStream)
  *     - getContentLength()
  *     - getMediaType()
- *     - getContentEncoding()
+ *     - getEncodings()
  *     - getContentMD5()
  * 
  * @author majorb

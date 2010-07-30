@@ -70,11 +70,17 @@
 package ca.nrc.cadc.vos.client;
 
 import java.io.File;
+import java.io.FileReader;
+import java.io.IOException;
 import java.net.MalformedURLException;
 import java.net.URI;
 import java.net.URISyntaxException;
+import java.net.URL;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
+import java.util.Properties;
 
 import org.apache.log4j.Level;
 import org.apache.log4j.Logger;
@@ -86,7 +92,6 @@ import ca.nrc.cadc.util.Log4jInit;
 import ca.nrc.cadc.vos.ClientTransfer;
 import ca.nrc.cadc.vos.ContainerNode;
 import ca.nrc.cadc.vos.DataNode;
-import ca.nrc.cadc.vos.server.DataView;
 import ca.nrc.cadc.vos.Node;
 import ca.nrc.cadc.vos.NodeNotFoundException;
 import ca.nrc.cadc.vos.NodeProperty;
@@ -94,14 +99,8 @@ import ca.nrc.cadc.vos.Protocol;
 import ca.nrc.cadc.vos.Transfer;
 import ca.nrc.cadc.vos.VOS;
 import ca.nrc.cadc.vos.VOSURI;
-import ca.nrc.cadc.vos.Transfer.Direction;
 import ca.nrc.cadc.vos.View;
-import java.io.FileReader;
-import java.io.IOException;
-import java.net.URL;
-import java.util.HashMap;
-import java.util.Map;
-import java.util.Properties;
+import ca.nrc.cadc.vos.Transfer.Direction;
 
 /**
  * @author zhangsa

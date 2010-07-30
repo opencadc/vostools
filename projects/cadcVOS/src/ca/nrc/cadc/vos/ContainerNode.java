@@ -77,8 +77,6 @@ import java.util.List;
 
 import org.apache.log4j.Logger;
 
-import ca.nrc.cadc.vos.server.RssView;
-
 /**
  * A VOSpace node that describes the a data item that contains other data
  * items.  A ContainerNode is similar to a directory.
@@ -210,21 +208,21 @@ public class ContainerNode extends Node
     /**
      * @return A list of views which the node can use for importing.
      */
-    public List<View> accepts()
+    public List<URI> accepts()
     {
         // TODO: Implement accepts
-        return new ArrayList<View>(0);
+        return new ArrayList<URI>(0);
     }
     
     /**
      * @return A list of views which the node can use for exporting.
      */
-    public List<View> provides()
+    public List<URI> provides()
     {
-        List<View> provides = new ArrayList<View>(1);
+        List<URI> provides = new ArrayList<URI>(1);
         try
         {
-            provides.add(new RssView(new URI("ivo://cadc.nrc.ca/vospace/core#rssview")));
+            provides.add(new URI("ivo://cadc.nrc.ca/vospace/core#rssview"));
         } catch (URISyntaxException e)
         {
             log.error(e);

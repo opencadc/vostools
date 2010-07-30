@@ -77,15 +77,15 @@ import ca.nrc.cadc.vos.Node;
  * @author zhangsa
  *
  */
-public class DataView extends AbstractView
+public class TestDataView extends AbstractView
 {
     
-    public DataView()
+    public TestDataView()
     {
         super();
     }
     
-    public DataView(URI uri)
+    public TestDataView(URI uri)
     {
         super(uri);
     }
@@ -94,10 +94,9 @@ public class DataView extends AbstractView
      * @param uri
      * @param node
      */
-    public DataView(URI uri, Node node)
+    public TestDataView(URI uri, Node node)
     {
         super(uri);
-        // TODO Auto-generated constructor stub
     }
 
 }

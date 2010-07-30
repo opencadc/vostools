@@ -108,13 +108,12 @@
 
     <target name="build" depends="client,server" />
 
-    <target name="server" depends="compile,resources,schema">
+    <target name="server" depends="compile,schema">
         <jar jarfile="${build}/lib/${project}.jar"
             basedir="${build}/class"
             update="no">
             <include name="ca/nrc/cadc/**" />
             <include name="VOSpace-2.0.xsd" />
-            <include name="Views.properties" />
         </jar>
     </target>
 
@@ -127,10 +126,6 @@
             <include name="ca/nrc/cadc/vos/**.class" />
             <include name="VOSpace-2.0.xsd" />
         </jar>
-    </target>
-    
-    <target name="resources">
-        <copy file="src/resources/Views.properties" todir="build/class"/>
     </target>
 
     <target name="schema">
@@ -183,7 +178,7 @@
     <target name="test" depends="compile,compile-test">
         <copy file="test/src/resources/ContainerNode.xml" todir="build/class"/>
         <copy file="test/src/resources/DataNode.xml" todir="build/class"/>
-        <copy file="src/resources/Views.properties" todir="build/class"/>
+        <copy file="test/src/resources/Views.properties" todir="build/class"/>
         <junit printsummary="yes" haltonfailure="yes" fork="yes">
             <classpath>
                 <pathelement path="."/>

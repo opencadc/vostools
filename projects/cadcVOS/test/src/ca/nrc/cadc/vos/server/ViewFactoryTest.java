@@ -92,9 +92,9 @@ public class ViewFactoryTest
             ViewFactory viewFactory = new ViewFactory();
             View view = null;
             view = viewFactory.getView("data");
-            assertEquals(view.getClass(), DataView.class);
+            assertEquals(view.getClass(), TestDataView.class);
             view = viewFactory.getView("ivo://cadc.nrc.ca/vospace/core#dataview");
-            assertEquals(view.getClass(), DataView.class);
+            assertEquals(view.getClass(), TestDataView.class);
             view = viewFactory.getView("rss");
             assertEquals(view.getClass(), RssView.class);
             view = viewFactory.getView("ivo://cadc.nrc.ca/vospace/core#rssview");
