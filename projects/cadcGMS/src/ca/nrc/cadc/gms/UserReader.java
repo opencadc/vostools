@@ -160,6 +160,12 @@ public class UserReader
         Element root = document.getRootElement();
         Namespace namespace = root.getNamespace();
 
+        return parseMember(root, namespace);
+    }
+
+    protected static User parseMember(Element root, Namespace namespace)
+            throws ReaderException
+    {
         // id attribute of the User element
         String id = root.getAttributeValue("id");
         if (id == null)

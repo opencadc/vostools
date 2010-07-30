@@ -66,11 +66,14 @@
  */
 package ca.nrc.cadc.gms;
 
-import org.junit.runners.Suite;
 import org.junit.runner.RunWith;
+import org.junit.runners.Suite;
 
+import ca.nrc.cadc.gms.client.GmsClientTest;
 import ca.nrc.cadc.gms.server.UserServiceImplTest;
-import ca.nrc.cadc.gms.server.web.restlet.*;
+import ca.nrc.cadc.gms.server.web.restlet.GroupListResourceTest;
+import ca.nrc.cadc.gms.server.web.restlet.GroupMemberListResourceTest;
+import ca.nrc.cadc.gms.server.web.restlet.MemberResourceTest;
 
 @RunWith(Suite.class)
 @Suite.SuiteClasses(
@@ -86,7 +89,8 @@ import ca.nrc.cadc.gms.server.web.restlet.*;
     UserWriterTest.class,
     UserReaderTest.class,
     GroupWriterTest.class,
-    GroupReaderTest.class
+    GroupReaderTest.class,
+    GmsClientTest.class
 })
 
 public class GMSTestSuite {}

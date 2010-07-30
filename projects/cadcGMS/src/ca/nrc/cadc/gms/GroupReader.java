@@ -168,12 +168,12 @@ public class GroupReader
         Group group = new GroupImpl(id);
 
         // List of Group Members.
-        List<Element> members = root.getChildren("members", namespace);
+        List<Element> members = root.getChildren("member", namespace);
         for (Element member : members)
         {
             try
             {
-                group.addMember(UserReader.read(member.getText()));
+                group.addMember(UserReader.parseMember(member, namespace));
             }
             catch (InvalidMemberException e)
             {

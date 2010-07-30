@@ -66,45 +66,62 @@
  */
 package ca.nrc.cadc.gms.client;
 
-import java.io.BufferedInputStream;
 import java.io.IOException;
 import java.io.InputStream;
+import java.io.OutputStreamWriter;
 import java.net.HttpURLConnection;
 import java.net.MalformedURLException;
 import java.net.URL;
+import java.net.URLConnection;
 import java.net.URLEncoder;
+import java.security.AccessControlException;
 import java.util.Collection;
+
+import org.apache.log4j.Logger;
 
 import ca.nrc.cadc.gms.Group;
 import ca.nrc.cadc.gms.GroupReader;
+import ca.nrc.cadc.gms.GroupWriter;
 import ca.nrc.cadc.gms.ReaderException;
 import ca.nrc.cadc.gms.User;
 import ca.nrc.cadc.gms.UserReader;
 
-
 public class GmsClient
 {
+    private static Logger logger = Logger.getLogger(GmsClient.class);
     private URL baseServiceURL;
 
     /**
      * Default, and only available constructor.
-     *
-     * @param baseServiceURL    The
+     * 
+     * @param baseServiceURL
+     *            The
      */
     public GmsClient(final URL baseServiceURL)
     {
         this.baseServiceURL = baseServiceURL;
     }
-    
+
     /**
      * Obtain the Member for the given Group and Member IDs.
-     *
-     * @param groupID       The Group ID to check.
-     * @param memberID      The Member ID to check.
-     * @return              The User member instance for the given Member's ID.
+     * 
+     * @param groupID
+     *            The Group ID to check.
+     * @param memberID
+     *            The Member ID to check.
+     * @return The User member instance for the given Member's ID.
      * @throws IllegalArgumentException
-     *                  If the Group ID, Member ID, or accepted baseServiceURL,
-     *                  or any combination of them produces an error.
+     *             If the Group ID, Member ID, or accepted baseServiceURL,
+     *             or any combination of them produces an error.
+     * @throws AccessControlException 
+     *             If user not allow to access the resource
+     * @throws MalformedURLException 
+     *             If the arguments generate a bad URL
+     * @throws ReaderException
+     *             If the URL's response could not be read.
+     * @throws IOException
+     *             For any unforeseen I/O errors.
+     * 
      */
     public User getMember(final String groupID, final String memberID)
             throws IllegalArgumentException
@@ -117,45 +134,81 @@ public class GmsClient
             resourcePath.append(URLEncoder.encode(memberID, "UTF-8"));
             resourcePath.append("/");
             resourcePath.append(URLEncoder.encode(groupID, "UTF-8"));
-            
-            final URL resourceURL = new URL(getBaseServiceURL() +
-                                            resourcePath.toString());
-            return constructUser(resourceURL);
-        }
-        catch (MalformedURLException e)
-        {
-            final String message =
-                    String.format("The supplied URL (%s) cannot be used.",
-                                  getBaseServiceURL().toExternalForm()
-                                  + resourcePath.toString());
-            throw new IllegalArgumentException(message, e);
+
+            final URL resourceURL = new URL(getBaseServiceURL()
+                    + resourcePath.toString());
+            logger.debug("getMember(), URL=" + resourceURL);
+            HttpURLConnection connection = (HttpURLConnection) openConnection(resourceURL);
+            connection.setRequestMethod("GET");
+            connection.setUseCaches(false);
+            connection.setDoInput(true);
+            connection.setDoOutput(false);
+            connection.connect();
+
+            String responseMessage = connection.getResponseMessage();
+            int responseCode = connection.getResponseCode();
+            logger.debug("getMember(), response code: "
+                    + responseCode);
+            logger.debug("getMember(), response message: "
+                    + responseMessage);
+
+            switch (responseCode)
+            {
+                case HttpURLConnection.HTTP_OK:
+                    return constructUser(connection);
+                case HttpURLConnection.HTTP_NOT_FOUND:
+                    return null;
+                case HttpURLConnection.HTTP_FORBIDDEN:
+                    throw new AccessControlException(responseMessage);
+                default:
+                    throw new RuntimeException(
+                            "Unexpected failure mode: "
+                                    + responseMessage + "("
+                                    + responseCode + ")");
+            }
+
         }
         catch (ReaderException e)
         {
-            final String message =
-                    String.format("The supplied URL (%s) cannot be read from.",
-                                  getBaseServiceURL().toExternalForm()
-                                  + resourcePath.toString());            
+            final String message = String.format(
+                    "The supplied URL (%s) cannot be read from.",
+                    getBaseServiceURL().toExternalForm()
+                            + resourcePath.toString());
+            logger.debug("Failed to get member", e);
             throw new IllegalArgumentException(message, e);
         }
         catch (IOException e)
         {
-            final String message =
-                    String.format("Client BUG: The supplied URL (%s) cannot "
-                                  + "be hit.",
-                                  getBaseServiceURL().toExternalForm()
-                                  + resourcePath.toString());
+            final String message = String.format(
+                    "Client BUG: The supplied URL (%s) cannot "
+                            + "be hit.", getBaseServiceURL()
+                            .toExternalForm()
+                            + resourcePath.toString());
+            logger.debug("Failed to get member", e);
             throw new IllegalArgumentException(message, e);
         }
     }
-    
+
     /**
-     * Returns true of the user identified by memberID is a member of the group
-     * identified by groupID.  Otherwise, false is returned.
+     * Returns true of the user identified by memberID is a member of the
+     * group identified by groupID. Otherwise, false is returned.
      * 
-     * @param groupID The group identifier.
-     * @param memberID The member identifier.
+     * @param groupID
+     *            The group identifier.
+     * @param memberID
+     *            The member identifier.
      * @return true if the user is a member of the group.
+     * @throws IllegalArgumentException
+     *             If the Group ID, Member ID, or accepted baseServiceURL,
+     *             or any combination of them produces an error.
+     * @throws AccessControlException 
+     *             If user not allow to access the resource
+     * @throws MalformedURLException 
+     *             If the arguments generate a bad URL
+     * @throws ReaderException
+     *             If the URL's response could not be read.
+     * @throws IOException
+     *             For any unforeseen I/O errors.
      */
     public boolean isMember(String groupID, String memberID)
     {
@@ -166,162 +219,500 @@ public class GmsClient
             resourcePath.append(URLEncoder.encode(groupID, "UTF-8"));
             resourcePath.append("/");
             resourcePath.append(URLEncoder.encode(memberID, "UTF-8"));
-            
-            final URL resourceURL = new URL(getBaseServiceURL() + resourcePath.toString());            
-            HttpURLConnection connection = (HttpURLConnection) resourceURL.openConnection();
+
+            final URL resourceURL = new URL(getBaseServiceURL()
+                    + resourcePath.toString());
+            logger.debug("isMember(), URL=" + resourceURL);
+            HttpURLConnection connection = (HttpURLConnection) resourceURL
+                    .openConnection();
             connection.setRequestMethod("HEAD");
+            connection.setUseCaches(false);
+            connection.setDoInput(true);
+            connection.setDoOutput(false);
             connection.connect();
 
-            if (connection.getResponseCode() == 200)
-                return true;
-            return false;
+            String responseMessage = connection.getResponseMessage();
+            int responseCode = connection.getResponseCode();
+            logger.debug("isMember(), response code: "
+                    + responseCode);
+            logger.debug("isMember(), response message: "
+                    + responseMessage);
+
+            switch (responseCode)
+            {
+                case HttpURLConnection.HTTP_OK:
+                    return true;
+                case HttpURLConnection.HTTP_NOT_FOUND:
+                    return false;
+                case HttpURLConnection.HTTP_FORBIDDEN:
+                    throw new AccessControlException(responseMessage);
+                default:
+                    throw new RuntimeException(
+                            "Unexpected failure mode: "
+                                    + responseMessage + "("
+                                    + responseCode + ")");
+            }
         }
         catch (MalformedURLException e)
         {
-            final String message =
-                    String.format("The supplied URL (%s) cannot be used.",
-                                  getBaseServiceURL().toExternalForm()
-                                  + resourcePath.toString());
+            final String message = String.format(
+                    "The supplied URL (%s) cannot be used.",
+                    getBaseServiceURL().toExternalForm()
+                            + resourcePath.toString());
+            logger.debug("Failed to check membership", e);
             throw new IllegalArgumentException(message, e);
         }
         catch (IOException e)
         {
-            final String message =
-                    String.format("Client BUG: The supplied URL (%s) cannot "
-                                  + "be hit.",
-                                  getBaseServiceURL().toExternalForm()
-                                  + resourcePath.toString());
+            final String message = String.format(
+                    "Client BUG: The supplied URL (%s) cannot "
+                            + "be hit.", getBaseServiceURL()
+                            .toExternalForm()
+                            + resourcePath.toString());
+            logger.debug("Failed to check membership", e);
             throw new IllegalArgumentException(message, e);
         }
     }
-    
+
     /**
-     * Returns a collection of groups in which the user identified by memberID is
-     * a member.
+     * Returns a collection of groups in which the user identified by
+     * memberID is a member.
      * 
-     * @param memberID Identified the user.
+     * @param memberID
+     *            Identified the user.
      * @return The list of groups in which the user is a member.
+     * @throws IllegalArgumentException
+     *             If the Group ID, Member ID, or accepted baseServiceURL,
+     *             or any combination of them produces an error.
+     * @throws AccessControlException 
+     *             If user not allow to access the resource
+     * @throws MalformedURLException 
+     *             If the arguments generate a bad URL
+     * @throws ReaderException
+     *             If the URL's response could not be read.
+     * @throws IOException
+     *             For any unforeseen I/O errors.
+     *                  
      */
     public Collection<Group> getMemberships(String memberID)
     {
         // TODO: is a new resource needed to implement this?
-        throw new UnsupportedOperationException("getMemberships() not yet implemented.");
+        throw new UnsupportedOperationException(
+                "getMemberships() not yet implemented.");
     }
-    
+
     /**
-     * Get the group identified by groupID.  Associated members will be included.
+     * Get the group identified by groupID. Associated members will be
+     * included.
      * 
-     * @param groupID Identifies the group.
+     * @param groupID
+     *            Identifies the group.
      * @return The group, or null if not found.
      */
     public Group getGroup(String groupID)
     {
         final StringBuilder resourcePath = new StringBuilder(64);
 
-
         try
         {
             resourcePath.append("/groups/");
             resourcePath.append(URLEncoder.encode(groupID, "UTF-8"));
-            
-            final URL resourceURL = new URL(getBaseServiceURL() +
-                                            resourcePath.toString());
-            return constructGroup(resourceURL);
-        }
-        catch (MalformedURLException e)
-        {
-            final String message =
-                    String.format("The supplied URL (%s) cannot be used.",
-                                  getBaseServiceURL().toExternalForm()
-                                  + resourcePath.toString());
-            throw new IllegalArgumentException(message, e);
+
+            final URL resourceURL = new URL(getBaseServiceURL()
+                    + resourcePath.toString());
+            logger.debug("getGroup(), URL=" + resourceURL);
+            HttpURLConnection connection = (HttpURLConnection) openConnection(resourceURL);
+            connection.setRequestMethod("GET");
+            connection.connect();
+            connection.setUseCaches(false);
+            connection.setDoInput(true);
+            connection.setDoOutput(false);
+
+
+            String responseMessage = connection.getResponseMessage();
+            int responseCode = connection.getResponseCode();
+            logger.debug("getGroup(), response code: "
+                    + responseCode);
+            logger.debug("getGroup(), response message: "
+                    + responseMessage);
+
+            switch (responseCode)
+            {
+                case HttpURLConnection.HTTP_OK:
+                    return constructGroup(connection);
+                case HttpURLConnection.HTTP_NOT_FOUND:
+                    return null;
+                case HttpURLConnection.HTTP_FORBIDDEN:
+                    throw new AccessControlException(responseMessage);
+                default:
+                    throw new RuntimeException(
+                            "Unexpected failure mode: "
+                                    + responseMessage + "("
+                                    + responseCode + ")");
+            }
+
         }
         catch (ReaderException e)
         {
-            final String message =
-                    String.format("The supplied URL (%s) cannot be read from.",
-                                  getBaseServiceURL().toExternalForm()
-                                  + resourcePath.toString());
+            final String message = String.format(
+                    "The supplied URL (%s) cannot be read from.",
+                    getBaseServiceURL().toExternalForm()
+                            + resourcePath.toString());
+            logger.debug("Failed to get group", e);
             throw new IllegalArgumentException(message, e);
         }
         catch (IOException e)
         {
-            final String message =
-                    String.format("Client BUG: The supplied URL (%s) cannot "
-                                  + "be hit.",
-                                  getBaseServiceURL().toExternalForm()
-                                  + resourcePath.toString());
+            final String message = String.format(
+                    "Client BUG: The supplied URL (%s) cannot "
+                            + "be hit.", getBaseServiceURL()
+                            .toExternalForm()
+                            + resourcePath.toString());
+            logger.debug("Failed to get group", e);
             throw new IllegalArgumentException(message, e);
         }
     }
 
     /**
-     * Returns a collection of members belonging to the group identified by
-     * the specified groupID.
+     * Create the group identified by groupID.
      * 
-     * @param groupID Identifies the group.
-     * @return The list of members in this group.
+     * @param group
+     *            Group to create. The groupID is assigned by the service
+     *            when this parameter is null.
+     * @return The newly created group group
+     * @throws IllegalArgument
+     *             Exception If the Group ID, or accepted baseServiceURL,
+     *             or any combination of them produces an error.
+     * @throws AccessControlException 
+     *             If user not allow to access the resource
+     * @throws MalformedURLException 
+     *             If the arguments generate a bad URL
+     * @throws ReaderException
+     *             If the URL's response could not be read.
+     * @throws IOException
+     *             For any unforeseen I/O errors.
      */
-    public Collection<User> getGroupMembers(String groupID)
+    public Group createGroup(Group group) throws IllegalArgumentException
     {
         final StringBuilder resourcePath = new StringBuilder(64);
-
-
         try
         {
-            resourcePath.append("/groups/");
-            resourcePath.append(URLEncoder.encode(groupID, "UTF-8"));
-            resourcePath.append("/members");
-            
-            final URL resourceURL = new URL(getBaseServiceURL() +
-                                            resourcePath.toString());
-            Group group = constructGroup(resourceURL);
-            return group.getMembers();
-        }
-        catch (MalformedURLException e)
-        {
-            final String message =
-                    String.format("The supplied URL (%s) cannot be used.",
-                                  getBaseServiceURL().toExternalForm()
-                                  + resourcePath.toString());
-            throw new IllegalArgumentException(message, e);
+            if (group == null)
+            {
+                // user does not have the group created. Through a POST.
+                // the server generates one and returns it to the user
+                resourcePath.append("/groups/");
+
+                final URL resourceURL = new URL(getBaseServiceURL()
+                        + resourcePath.toString());
+                logger.debug("createGroup(), URL=" + resourceURL);
+                HttpURLConnection connection = (HttpURLConnection) openConnection(resourceURL);
+                connection.setRequestMethod("POST");
+                connection.setDoInput(true);
+                connection.setDoOutput(true);
+                connection.setUseCaches(false);
+                connection.connect();
+                
+                String responseMessage = connection.getResponseMessage();
+                int responseCode = connection.getResponseCode();
+                logger.debug("deleteGroup(), response code: " + responseCode);
+                logger.debug("deleteGroup(), response message: "
+                        + responseMessage);
+
+                switch (responseCode)
+                {
+                    case HttpURLConnection.HTTP_OK:
+                        return constructGroup(connection);
+                    case HttpURLConnection.HTTP_CONFLICT:
+                        // break intentionally left out
+                    case HttpURLConnection.HTTP_NOT_FOUND:
+                        // parent node not found
+                        // break intentionally left out
+                    case HttpURLConnection.HTTP_BAD_REQUEST:
+                        // duplicate group
+                        throw new IllegalArgumentException(responseMessage);
+                    case HttpURLConnection.HTTP_FORBIDDEN:
+                        throw new AccessControlException(responseMessage);
+                    default:
+                        throw new RuntimeException(
+                                "Unexpected failure mode: " + responseMessage
+                                        + "(" + responseCode + ")");
+                }
+            }
+            else
+            {
+                resourcePath.append("/groups/");
+                resourcePath.append(URLEncoder.encode(group
+                        .getGMSGroupID(), "UTF-8"));
+
+                final URL resourceURL = new URL(getBaseServiceURL()
+                        + resourcePath.toString());
+                logger.debug("createGroup(), URL=" + resourceURL);
+                HttpURLConnection connection = (HttpURLConnection) openConnection(resourceURL);
+                connection.setRequestMethod("PUT");
+                connection.setDoInput(true);
+                connection.setDoOutput(true);
+                connection.setRequestProperty("Content-Type", "text/xml");
+                connection.setUseCaches(false);
+
+                OutputStreamWriter out = new OutputStreamWriter(
+                        connection.getOutputStream());
+                GroupWriter.write(group, out);
+                out.close();
+
+                String responseMessage = connection.getResponseMessage();
+                int responseCode = connection.getResponseCode();
+                logger.debug("createGroup(), response code: "
+                        + responseCode);
+                logger.debug("createGroup(), response message: "
+                        + responseMessage);
+
+                switch (responseCode)
+                {
+                    case HttpURLConnection.HTTP_CREATED:
+                        return constructGroup(connection);
+                    case HttpURLConnection.HTTP_CONFLICT:
+                        // break intentionally left out
+                    case HttpURLConnection.HTTP_NOT_FOUND:
+                        // parent node not found
+                        // break intentionally left out
+                    case HttpURLConnection.HTTP_BAD_REQUEST:
+                        // duplicate group
+                        throw new IllegalArgumentException(
+                                responseMessage);
+                    case HttpURLConnection.HTTP_FORBIDDEN:
+                        throw new AccessControlException(responseMessage);
+                    default:
+                        throw new RuntimeException(
+                                "Unexpected failure mode: "
+                                        + responseMessage + "("
+                                        + responseCode + ")");
+                }
+
+            }
+
         }
         catch (ReaderException e)
         {
-            final String message =
-                    String.format("The supplied URL (%s) cannot be read from.",
-                                  getBaseServiceURL().toExternalForm()
-                                  + resourcePath.toString());
+            final String message = String.format(
+                    "The supplied URL (%s) cannot be read from.",
+                    getBaseServiceURL().toExternalForm()
+                            + resourcePath.toString());
+            logger.debug("Failed to create group", e);
+            throw new IllegalStateException(message, e);
+        }
+        catch (IOException e)
+        {
+            final String message = String.format(
+                    "Client BUG: The supplied URL (%s) cannot "
+                            + "be hit.", getBaseServiceURL()
+                            .toExternalForm()
+                            + resourcePath.toString());
+            logger.debug("Failed to create group", e);
+            throw new IllegalStateException(message, e);
+        }
+    }
+
+    /**
+     * Deletes the group identified by groupID.
+     * 
+     * @param groupID
+     *            Identifies the group.
+     * @throws IllegalArgument
+     *             Exception If the Group ID, or accepted baseServiceURL,
+     *             or any combination of them produces an error.
+     * @throws AccessControlException 
+     *             If user not allow to access the resource
+     * @throws MalformedURLException 
+     *             If the arguments generate a bad URL
+     * @throws ReaderException
+     *             If the URL's response could not be read.
+     * @throws IOException
+     *             For any unforeseen I/O errors.
+     */
+    public void deleteGroup(String groupID)
+            throws IllegalArgumentException
+    {
+        // check if group with ID exists
+        Group group = getGroup(groupID);
+        if (group == null)
+        {
+            throw new IllegalArgumentException("Group with ID " + groupID
+                    + " not found for delete.");
+        }
+        final StringBuilder resourcePath = new StringBuilder(64);
+        try
+        {
+            resourcePath.append("/groups/" + groupID);
+            resourcePath.append(URLEncoder.encode(groupID, "UTF-8"));
+
+            final URL resourceURL = new URL(getBaseServiceURL()
+                    + resourcePath.toString());
+            logger.debug("deleteGroup(), URL=" + resourceURL);
+            HttpURLConnection connection = (HttpURLConnection) openConnection(resourceURL);
+            connection.setRequestMethod("DELETE");
+            connection.setUseCaches(false);
+            connection.setDoInput(true);
+            connection.setDoOutput(false);
+            connection.connect();
+
+            String responseMessage = connection.getResponseMessage();
+            int responseCode = connection.getResponseCode();
+            logger.debug("deleteGroup(), response code: " + responseCode);
+            logger.debug("deleteGroup(), response message: "
+                    + responseMessage);
+
+            switch (responseCode)
+            {
+                case HttpURLConnection.HTTP_OK:
+                    return;
+                case HttpURLConnection.HTTP_CONFLICT:
+                    // break intentionally left out
+                case HttpURLConnection.HTTP_NOT_FOUND:
+                    // parent node not found
+                    // break intentionally left out
+                case HttpURLConnection.HTTP_BAD_REQUEST:
+                    // duplicate group
+                    throw new IllegalArgumentException(responseMessage);
+                case HttpURLConnection.HTTP_FORBIDDEN:
+                    throw new AccessControlException(responseMessage);
+                default:
+                    throw new RuntimeException(
+                            "Unexpected failure mode: " + responseMessage
+                                    + "(" + responseCode + ")");
+            }
+        }
+        catch (MalformedURLException e)
+        {
+            final String message = String.format(
+                    "The supplied URL (%s) cannot be used.",
+                    getBaseServiceURL().toExternalForm()
+                            + resourcePath.toString());
+            logger.debug("Failed to delete group", e);
             throw new IllegalArgumentException(message, e);
         }
         catch (IOException e)
         {
-            final String message =
-                    String.format("Client BUG: The supplied URL (%s) cannot "
-                                  + "be hit.",
-                                  getBaseServiceURL().toExternalForm()
-                                  + resourcePath.toString());
+            final String message = String.format(
+                    "Client BUG: The supplied URL (%s) cannot "
+                            + "be hit.", getBaseServiceURL()
+                            .toExternalForm()
+                            + resourcePath.toString());
+            logger.debug("Failed to delete group", e);
             throw new IllegalArgumentException(message, e);
         }
     }
+
+    /**
+     * Updates the group identified by groupID.
+     * 
+     * @param group
+     *            Group to set. Cannot be null.
+     * @throws IllegalArgumentException
+     *             If the Group ID, or accepted baseServiceURL, or any
+     *             combination of them produces an error.
+     * @throws AccessControlException 
+     *             If user not allow to access the resource
+     * @throws MalformedURLException 
+     *             If the arguments generate a bad URL
+     * @throws ReaderException
+     *             If the URL's response could not be read.
+     * @throws IOException
+     *             For any unforeseen I/O errors.
+     */
+    public Group setGroup(Group group) throws IllegalArgumentException
+    {
+        final StringBuilder resourcePath = new StringBuilder(64);
+        try
+        {
+            resourcePath.append("/groups/");
+            resourcePath.append(URLEncoder.encode(group.getGMSGroupID(),
+                    "UTF-8"));
+
+            final URL resourceURL = new URL(getBaseServiceURL()
+                    + resourcePath.toString());
+            logger.debug("setGroup(), URL=" + resourceURL);
+            HttpURLConnection connection = (HttpURLConnection) openConnection(resourceURL);
+            connection.setRequestMethod("POST");
+            connection.setDoInput(true);
+            connection.setDoOutput(true);
+            connection.setRequestProperty("Content-Type", "text/xml");
+            connection.setUseCaches(false);
+
+            OutputStreamWriter out = new OutputStreamWriter(connection
+                    .getOutputStream());
+            GroupWriter.write(group, out);
+            out.close();
+
+            String responseMessage = connection.getResponseMessage();
+            int responseCode = connection.getResponseCode();
+            logger.debug("setGroup(), response code: " + responseCode);
+            logger.debug("setGroup(), response message: "
+                    + responseMessage);
+
+            switch (responseCode)
+            {
+                case HttpURLConnection.HTTP_OK:
+                    return constructGroup(connection);
+                case HttpURLConnection.HTTP_CONFLICT:
+                    // break intentionally left out
+                case HttpURLConnection.HTTP_NOT_FOUND:
+                    // parent node not found
+                    // break intentionally left out
+                case HttpURLConnection.HTTP_BAD_REQUEST:
+                    // duplicate group
+                    throw new IllegalArgumentException(responseMessage);
+                case HttpURLConnection.HTTP_FORBIDDEN:
+                    throw new AccessControlException(responseMessage);
+                default:
+                    throw new RuntimeException(
+                            "Unexpected failure mode: " + responseMessage
+                                    + "(" + responseCode + ")");
+            }
+
+        }
+        catch (ReaderException e)
+        {
+            final String message = String.format(
+                    "The supplied URL (%s) cannot be read from.",
+                    getBaseServiceURL().toExternalForm()
+                            + resourcePath.toString());
+            logger.debug("Failed to set group", e);
+            throw new IllegalStateException(message, e);
+        }
+        catch (IOException e)
+        {
+            final String message = String.format(
+                    "Client BUG: The supplied URL (%s) cannot "
+                            + "be hit.", getBaseServiceURL()
+                            .toExternalForm()
+                            + resourcePath.toString());
+            logger.debug("Failed to seet group", e);
+            throw new IllegalStateException(message, e);
+        }
+    }
+
 
     /**
      * Build a User member from the given URL.
-     *
-     * @param resourceURL   The URL to submit a GET to to obtain the User.
+     * 
+     * @param connection
+     *            The HttpURLConnection used to retrieve data. Caller must
+     *            call and check the return code of the connection.
      * @return User instance, or null if none available.
-     * @throws ReaderException  If the URL's response could not be read.
-     * @throws IOException      For any unforeseen I/O errors.
+     * @throws ReaderException
+     *             If the URL's response could not be read.
+     * @throws IOException
+     *             For any unforeseen I/O errors.
      */
-    private User constructUser(final URL resourceURL)
+    private User constructUser(final HttpURLConnection connection)
             throws IOException, ReaderException
     {
         final User member;
-        InputStream inputStream = null;
+        InputStream inputStream = connection.getInputStream();
 
         try
         {
-            inputStream = getInputStream(resourceURL);
             member = UserReader.read(inputStream);
         }
         finally
@@ -344,21 +735,24 @@ public class GmsClient
 
     /**
      * Build a Group from the given URL.
-     *
-     * @param resourceURL   The URL to submit a GET to to obtain the User.
+     * 
+     * @param connection
+     *            The HttpURLConnection used to retrieve data. Caller must
+     *            call and check the return code of the connection.
      * @return Group instance, or null if none available.
-     * @throws ReaderException  If the URL's response could not be read.
-     * @throws IOException      For any unforeseen I/O errors.
+     * @throws ReaderException
+     *             If the URL's response could not be read.
+     * @throws IOException
+     *             For any unforeseen I/O errors.
      */
-    private Group constructGroup(final URL resourceURL)
+    private Group constructGroup(final HttpURLConnection connection)
             throws IOException, ReaderException
     {
         final Group group;
-        InputStream inputStream = null;
+        InputStream inputStream = connection.getInputStream();
 
         try
         {
-            inputStream = getInputStream(resourceURL);
             group = GroupReader.read(inputStream);
         }
         finally
@@ -380,18 +774,19 @@ public class GmsClient
     }
 
     /**
-     * Obtain a Stream from the given URL.
-     *
-     * @param resourceURL       The URL to obtain an InputStream to.
-     * @return                  InputStream instance.
-     * @throws IOException      If the Stream cannot be read from.
+     * Open and HttpURLConnection. Used primarily as a hookup for the unit
+     * testing.
+     * 
+     * @param url
+     * @return UTLConnection returns an open connection to URL
+     * @throws IOException
      */
-    protected InputStream getInputStream(final URL resourceURL)
+    protected URLConnection openConnection(final URL url)
             throws IOException
     {
-        return new BufferedInputStream(resourceURL.openStream());
+        return url.openConnection();
     }
-    
+
     public URL getBaseServiceURL()
     {
         return baseServiceURL;
@@ -401,5 +796,5 @@ public class GmsClient
     {
         this.baseServiceURL = baseServiceURL;
     }
-    
+
 }

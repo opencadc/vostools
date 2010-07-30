@@ -91,7 +91,7 @@
     <property name="log4j"          value="${ext.lib}/log4j.jar" />
     <property name="restlet"        value="${ext.lib}/org.restlet.jar" />
 
-    <property name="jars" value="${cadcUtil}:${jdom}:${log4j}:${restlet}" />
+    <property name="jars" value="${cadcUtil}:${jdom}:${log4j}:${restlet}:${lib}/accessControl.jar" />
 
     <target name="build" depends="client,server" />
     
