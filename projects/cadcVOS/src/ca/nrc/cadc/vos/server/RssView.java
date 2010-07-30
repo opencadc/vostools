@@ -81,12 +81,12 @@ import org.jdom.Document;
 import org.jdom.Element;
 import org.jdom.output.Format;
 import org.jdom.output.XMLOutputter;
+import org.restlet.Request;
 
 import ca.nrc.cadc.util.StringBuilderWriter;
 import ca.nrc.cadc.vos.ContainerNode;
 import ca.nrc.cadc.vos.Node;
 import ca.nrc.cadc.vos.server.util.FixedSizeTreeSet;
-import ca.nrc.cadc.vos.server.util.NodeWalker;
 
 /**
  * Writes a RSS feed consisting of the late modified child nodes of the
@@ -103,60 +103,43 @@ public class RssView extends AbstractView
 
     // ContainerNode
     protected Node node;
-    
-    /**
-     * Job persistence
-     */
-    protected NodeDAO nodeDAO;
 
     /**
      * Maximum number of nodes to display.
      */
     protected int maxNodes;
     
+    /**
+     * RssView constructor.
+     */
     public RssView()
     {
         super();
+        maxNodes = DEFAULT_MAX_NUMBER_NODES;
     }
     
+    /**
+     * RssView constructor.
+     * @param uri
+     */
     public RssView(URI uri)
     {
         super(uri);
-    }
-
-    /**
-     * View constructor.
-     *
-     * @param uri The view identifier.
-     * @param node The node applicable to the view.
-     */
-    public RssView(URI uri, Node node)
-    {
-        super(uri);
-        this.node = node;
-
-        // Set the default maximum number of nodes to return.
         maxNodes = DEFAULT_MAX_NUMBER_NODES;
     }
-
+    
     /**
-     * Set the NodePersistence to use.
-     *
-     * @param nodeDAO
+     * Setup the RRSView with the given node.
      */
-    public void setNodeDAO(NodeDAO nodeDAO)
+    @Override
+    public void setNode(Node node, Request request, String viewReference) throws UnsupportedOperationException
     {
-        this.nodeDAO = nodeDAO;
-    }
-
-    /**
-     * Set the maximum number of nodes to return in the feed.
-     *
-     * @param maxNodes
-     */
-    public void setMaxNodes(int maxNodes)
-    {
-        this.maxNodes = maxNodes;
+        super.setNode(node, request, viewReference);
+        if (!(node instanceof ContainerNode))
+        {
+            throw new UnsupportedOperationException("RssView is only for container nodes.");
+        }
+        
     }
 
     /**
@@ -204,9 +187,6 @@ public class RssView extends AbstractView
     public void write(Writer writer)
         throws IOException
     {
-        // Check we have persistence.
-        if (nodeDAO == null)
-            throw new IllegalStateException("NodeDAO must be set using setNodeDAO()");
 
         // Check that the Node specified is a ContainerNode.
         if (!(node instanceof ContainerNode))
@@ -221,10 +201,6 @@ public class RssView extends AbstractView
             // TreeSet to hold the Nodes sorted by their date property.
             FixedSizeTreeSet<Node> nodeSet = new FixedSizeTreeSet<Node>();
             nodeSet.setMaxSize(maxNodes);
-
-            // Fill the Set with the node and all child nodes.
-            NodeWalker walker = new NodeWalker(nodeDAO);
-            walker.traverseNodes(node, null, nodeSet);
 
             // Build the RSS feed XML.
             Element feed = RssFeed.createFeed(node, nodeSet);

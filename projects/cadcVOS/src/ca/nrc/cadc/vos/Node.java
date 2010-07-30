@@ -75,6 +75,8 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Stack;
 
+import org.apache.log4j.Logger;
+
 /**
  * Abstract class defining an object within VOSpace.
  *  
@@ -86,6 +88,8 @@ import java.util.Stack;
  */
 public abstract class Node
 {
+    
+    private static Logger log = Logger.getLogger(Node.class);
 
     // The node uri
     protected VOSURI uri;
@@ -191,6 +195,7 @@ public abstract class Node
         }
 
         this.name = segments[segments.length - 1];
+        log.debug("Node name is: " + this.name);
 
         if (segments.length == 1)
         {
@@ -203,7 +208,7 @@ public abstract class Node
             {
                 uriString = uriString.substring(0, uriString.length() - 1);
             }
-            String parentUriString = uriString.substring(0, uriString .lastIndexOf("/"));
+            String parentUriString = uriString.substring(0, uriString.lastIndexOf("/"));
             VOSURI parentURI = new VOSURI(parentUriString);
 
             // preserve the appData if it exists
