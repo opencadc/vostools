@@ -91,6 +91,8 @@ import org.jdom.input.SAXBuilder;
 
 import ca.nrc.cadc.date.DateUtil;
 import ca.nrc.cadc.xml.XmlUtil;
+import java.net.HttpURLConnection;
+import javax.net.ssl.HttpsURLConnection;
 
 /**
  * @author zhangsa
@@ -136,6 +138,14 @@ public class JobReader
         return parseJob();
     }
 
+    /**
+     * @deprecated cannot be correctly intialised with SSL in all contexts
+     * @param url
+     * @return
+     * @throws JDOMException
+     * @throws IOException
+     * @throws ParseException
+     */
     public Job readFrom(URL url) 
         throws JDOMException, IOException, ParseException
     {
