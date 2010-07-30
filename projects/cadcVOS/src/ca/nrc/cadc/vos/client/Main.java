@@ -157,7 +157,6 @@ public class Main implements Runnable
     List<NodeProperty> properties;
     URI source;
     URI destination;
-    RegistryClient registryClient = new RegistryClient();
     Direction transferDirection = null;
     String baseUrl = null;
     VOSpaceClient client = null;
@@ -619,7 +618,8 @@ public class Main implements Runnable
 
         try
         {
-            URL baseURL = registryClient.getServiceURL(serverUri, "https");
+            RegistryClient reg = new RegistryClient();
+            URL baseURL = reg.getServiceURL(serverUri, "https");
             if (baseURL == null)
             {
                 log.error("failed to find service URL for " + serverUri);
