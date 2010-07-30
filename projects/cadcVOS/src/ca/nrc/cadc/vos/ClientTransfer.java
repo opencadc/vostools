@@ -75,7 +75,8 @@ import java.net.URL;
 
 import org.apache.log4j.Logger;
 
-import ca.nrc.cadc.dlm.client.Download;
+import ca.nrc.cadc.net.HttpDownload;
+import ca.nrc.cadc.net.HttpUpload;
 
 /**
  * @author zhangsa
@@ -124,14 +125,12 @@ public class ClientTransfer extends Transfer
         }
         log.debug(url);
         
-        Upload upload = new Upload(file, url);
+        HttpUpload upload = new HttpUpload(file, url);
         upload.run();
     }
 
     public void doDownload(File file)
     {
-        File dir = file.getParentFile();
-        String fname = file.getName();
         URL url;
         try
         {
@@ -145,10 +144,8 @@ public class ClientTransfer extends Transfer
         }
         log.debug(url);
 
-        Download download = new Download();
-        download.destDir = dir;
-        download.suggestedFilename = fname;
-        download.url = url;
+        HttpDownload download = new HttpDownload(url, file);
+        download.setOverwrite(true);
         download.run();
     }
 
