@@ -10,7 +10,6 @@ import org.junit.Before;
 import org.junit.Test;
 
 import ca.nrc.cadc.util.FileMetadata;
-import ca.nrc.cadc.vos.AbstractPersistenceTest;
 import ca.nrc.cadc.vos.ContainerNode;
 import ca.nrc.cadc.vos.DataNode;
 import ca.nrc.cadc.vos.VOSURI;

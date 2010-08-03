@@ -69,7 +69,6 @@
 
 package ca.nrc.cadc.vos.server;
 
-import ca.nrc.cadc.vos.AbstractPersistenceTest;
 import ca.nrc.cadc.vos.ContainerNode;
 import ca.nrc.cadc.vos.DataNode;
 import ca.nrc.cadc.vos.Node;

@@ -1,4 +1,4 @@
-package ca.nrc.cadc.vos;
+package ca.nrc.cadc.vos.server;
 
 import ca.nrc.cadc.vos.server.NodeDAO;
 import javax.sql.DataSource;

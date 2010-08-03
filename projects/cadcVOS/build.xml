@@ -106,7 +106,7 @@
 
     <property name="client.jars" value="cadcUtil.jar cadcRegistryClient.jar cadcUWS.jar cadcDownloadManagerClient.jar ${ext.jdom} ${ext.xerces} ${ext.log4j} jdom.jar xerces.jar log4j.jar" />
 
-    <target name="build" depends="client,server" />
+    <target name="build" depends="client,server,testlib" />
 
     <target name="server" depends="compile,schema">
         <jar jarfile="${build}/lib/${project}.jar"
@@ -114,6 +114,7 @@
             update="no">
             <include name="ca/nrc/cadc/**" />
             <include name="VOSpace-2.0.xsd" />
+            <exclude name="**Test**" />
         </jar>
     </target>
 
@@ -125,6 +126,20 @@
             <include name="ca/nrc/cadc/vos/client/**" />
             <include name="ca/nrc/cadc/vos/**.class" />
             <include name="VOSpace-2.0.xsd" />
+            <exclude name="**Test**" />
+        </jar>
+    </target>
+
+    <!-- create jar file with test classes for clients to use -->
+    <target name="testlib" depends="compile-test">
+        <jar jarfile="${build}/lib/${project}-daotest.jar"
+            basedir="${build}/test/class"
+            update="no">
+            <include name="**/server/TestPersistence.class" />
+            <include name="**/server/AbstractPersistenceTest.class" />
+            <include name="**/server/VOSpaceFileMetadataSourceTest.class" />
+            <include name="**/server/NodeDAOTest.class" />
+            <include name="Views.properties" />
         </jar>
     </target>
 
@@ -154,25 +169,7 @@
     <property name="testingJars"
               value="${cadcVOS}:${cadcUtil}:${javaUtil}:${junit}:${xerces}:${dev.easyMock}:${dev.easyMock.classextension}:${dev.objenesis}:${dev.asm}:${dev.cglib}" />
 
-    <!-- compile the test classes -->
-    <target name="compile-test" depends="compile">
-        <javac destdir="${build}/class"
-               source="${java.source.version}"
-               target="${java.target.version}"
-               classpath="${jars}:${testingJars}" >
-            <src path="test/src"/>
-        </javac>
-    </target>
     
-    <!-- create jar file with test classes for clients to use -->
-    <target name="build-test" depends="compile-test">
-        <jar jarfile="${build}/lib/${project}.jar"
-            basedir="${build}/class"
-            update="no">
-            <include name="ca/nrc/cadc/**" />
-            <include name="Views.properties" />
-        </jar>
-    </target>
 
     <!-- Run the test suite -->
     <target name="test" depends="compile,compile-test">
