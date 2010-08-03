@@ -100,7 +100,7 @@ public class PushToVOSpaceTest extends VOSTransferTest
 {
     private static Logger log = Logger.getLogger(PushToVOSpaceTest.class);
 
-    static Job job;
+    Job job;
 
     public PushToVOSpaceTest()
     {
@@ -110,12 +110,7 @@ public class PushToVOSpaceTest extends VOSTransferTest
     @BeforeClass
     public static void setUpClass() throws Exception
     {
-        job = new Job();
-        job.setID("job123");
-        job.addParameter(new Parameter("target", VOS.VOS_URI + "/A"));
-        job.addParameter(new Parameter("direction", Transfer.Direction.pushToVoSpace.name()));
-        job.addParameter(new Parameter("view", VOS.VIEW_DEFAULT));
-        job.addParameter(new Parameter("protocol", VOS.PROTOCOL_HTTP_PUT));
+       
     }
 
     @AfterClass
@@ -124,7 +119,14 @@ public class PushToVOSpaceTest extends VOSTransferTest
     }
 
     @Before
-    public void setUp() {
+    public void setUp() 
+    {
+        job = new Job();
+        job.setID("job123");
+        job.addParameter(new Parameter("target", baseURI + "/A"));
+        job.addParameter(new Parameter("direction", Transfer.Direction.pushToVoSpace.name()));
+        job.addParameter(new Parameter("view", VOS.VIEW_DEFAULT));
+        job.addParameter(new Parameter("protocol", VOS.PROTOCOL_HTTP_PUT));
     }
 
     @After

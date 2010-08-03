@@ -251,7 +251,7 @@ public class CreateContainerNodeTest extends VOSNodeTest
             log.debug("invalidURIPathFault");
 
             // Create node with an invalid path, node A doesn't exist.
-            ContainerNode nodeAB = new ContainerNode(new VOSURI(VOS.VOS_URI + "/A/B"));
+            ContainerNode nodeAB = new ContainerNode(new VOSURI(baseURI + "/A/B"));
 
             // Add ContainerNode to the VOSpace.
             WebResponse response = put(nodeAB);
@@ -356,7 +356,7 @@ public class CreateContainerNodeTest extends VOSNodeTest
             log.debug("containerNotFoundFault");
 
             // Create a Node path /A/B
-            ContainerNode nodeAB = new ContainerNode(new VOSURI(VOS.VOS_URI + "/A/B"));
+            ContainerNode nodeAB = new ContainerNode(new VOSURI(baseURI + "/A/B"));
 
             // Try and add the Node to the VOSpace.
             WebResponse response = put(nodeAB);

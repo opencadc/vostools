@@ -69,6 +69,9 @@
 
 package ca.nrc.cadc.conformance.vos;
 
+import ca.nrc.cadc.auth.SSLUtil;
+import ca.nrc.cadc.util.FileUtil;
+import java.io.File;
 import org.junit.runner.RunWith;
 import org.junit.runners.Suite;
 
@@ -87,4 +90,19 @@ import org.junit.runners.Suite;
     PushToVOSpaceTest.class
 })
 
-public class VOSTestSuite {}
+public class VOSTestSuite
+{
+    public VOSTestSuite()
+    {
+        try
+        {
+            File crt = FileUtil.getFileFromResource("proxy.crt", this.getClass());
+            File key = FileUtil.getFileFromResource("proxy.key", this.getClass());
+            SSLUtil.initSSL(crt, key);
+        }
+        catch(Throwable t)
+        {
+            throw new RuntimeException("failed to init SSL", t);
+        }
+    }
+}

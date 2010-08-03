@@ -278,30 +278,30 @@ public class GetContainerNodeTest extends VOSNodeTest
             log.debug("getUriOffsetNode");
 
             // Parent node.
-            ContainerNode nodeA = new ContainerNode(new VOSURI(VOS.VOS_URI + "/A"));
+            ContainerNode nodeA = new ContainerNode(new VOSURI(baseURI + "/A"));
 
             // Add ContainerNode to the VOSpace.
             WebResponse response = put(nodeA);
             assertEquals("PUT response code should be 201", 201, response.getResponseCode());
 
             // Child node B.
-            ContainerNode nodeAB = new ContainerNode(new VOSURI(VOS.VOS_URI + "/A/B"));
+            ContainerNode nodeAB = new ContainerNode(new VOSURI(baseURI + "/A/B"));
             response = put(nodeAB);
             assertEquals("PUT response code should be 201", 201, response.getResponseCode());
 
             // Child node C.
-            ContainerNode nodeABC = new ContainerNode(new VOSURI(VOS.VOS_URI + "/A/B/C"));
+            ContainerNode nodeABC = new ContainerNode(new VOSURI(baseURI + "/A/B/C"));
             response = put(nodeABC);
             assertEquals("PUT response code should be 201", 201, response.getResponseCode());
 
             // Child node D.
-            ContainerNode nodeABCD = new ContainerNode(new VOSURI(VOS.VOS_URI + "/A/B/C/D"));
+            ContainerNode nodeABCD = new ContainerNode(new VOSURI(baseURI + "/A/B/C/D"));
             response = put(nodeABCD);
             assertEquals("PUT response code should be 201", 201, response.getResponseCode());
 
             // Request Parameters to get child nodes B & C only
             Map<String, String> parameters = new HashMap<String, String>();
-            parameters.put("uri", VOS.VOS_URI + "/A/B");
+            parameters.put("uri", baseURI + "/A/B");
             parameters.put("offset", "1");
 
             // Get the node from vospace
@@ -388,7 +388,7 @@ public class GetContainerNodeTest extends VOSNodeTest
             log.debug("nodeNotFoundFault");
 
             // Create a Node with a nonexistent parent node
-            ContainerNode nodeAB = new ContainerNode(new VOSURI(VOS.VOS_URI + "/A/B"));
+            ContainerNode nodeAB = new ContainerNode(new VOSURI(baseURI + "/A/B"));
 
             // Try and get the Node from the VOSpace.
             WebResponse response = get(nodeAB);

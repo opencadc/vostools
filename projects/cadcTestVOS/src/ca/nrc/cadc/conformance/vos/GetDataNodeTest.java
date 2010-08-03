@@ -355,7 +355,7 @@ public class GetDataNodeTest extends VOSNodeTest
             log.debug("nodeNotFoundFault");
 
             // Create a Node with a nonexistent parent node
-            DataNode nodeAB = new DataNode(new VOSURI(VOS.VOS_URI + "/A/B"));
+            DataNode nodeAB = new DataNode(new VOSURI(baseURI + "/A/B"));
 
             // Try and get the Node from the VOSpace.
             WebResponse response = get(nodeAB);

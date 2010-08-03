@@ -195,7 +195,7 @@ public class DeleteContainerNodeTest extends VOSNodeTest
             log.debug("nodeNotFoundFault");
 
             // Create a Node that should not exist.
-            ContainerNode nodeA = new ContainerNode(new VOSURI(VOS.VOS_URI + "/node_not_found"));
+            ContainerNode nodeA = new ContainerNode(new VOSURI(baseURI + "/node_not_found"));
 
             // Try and delete the Node from the VOSpace.
             WebResponse response = delete(nodeA);
@@ -228,7 +228,7 @@ public class DeleteContainerNodeTest extends VOSNodeTest
             log.debug("containerNotFoundFault");
 
             // Create a Node path /A/B
-            ContainerNode nodeAB = new ContainerNode(new VOSURI(VOS.VOS_URI + "/A/B"));
+            ContainerNode nodeAB = new ContainerNode(new VOSURI(baseURI + "/A/B"));
 
             // Try and delete the Node from the VOSpace.
             WebResponse response = delete(nodeAB);

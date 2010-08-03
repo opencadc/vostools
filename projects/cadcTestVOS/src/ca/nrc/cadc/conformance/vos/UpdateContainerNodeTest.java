@@ -172,7 +172,7 @@ public class UpdateContainerNodeTest extends VOSNodeTest
             log.debug("updateContainerNodeValue");
 
             // Create a ContainerNode.
-            ContainerNode node = new ContainerNode(new VOSURI(VOS.VOS_URI + "/A"));
+            ContainerNode node = new ContainerNode(new VOSURI(baseURI + "/A"));
             NodeProperty nodeProperty = new NodeProperty("ivo://ivoa.net/vospace/core#description", "My award winning images");
             nodeProperty.setReadOnly(true);
             node.getProperties().add(nodeProperty);
@@ -275,7 +275,7 @@ public class UpdateContainerNodeTest extends VOSNodeTest
             log.debug("updateReadOnlyPermissionDeniedFault");
 
             // Create a ContainerNode.
-            ContainerNode node = new ContainerNode(new VOSURI(VOS.VOS_URI + "/A"));
+            ContainerNode node = new ContainerNode(new VOSURI(baseURI + "/A"));
             NodeProperty nodeProperty = new NodeProperty("ivo://ivoa.net/vospace/core#description", "My award winning images");
             nodeProperty.setReadOnly(true);
             node.getProperties().add(nodeProperty);
@@ -329,7 +329,7 @@ public class UpdateContainerNodeTest extends VOSNodeTest
             log.debug("nodeNotFoundFault");
 
             // Create a Node with a nonexistent parent node
-            ContainerNode nodeAB = new ContainerNode(new VOSURI(VOS.VOS_URI + "/A/B"));
+            ContainerNode nodeAB = new ContainerNode(new VOSURI(baseURI + "/A/B"));
 
             // Try and get the Node from the VOSpace.
             WebResponse response = post(nodeAB);
