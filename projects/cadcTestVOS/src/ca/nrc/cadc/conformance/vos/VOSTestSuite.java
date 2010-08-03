@@ -71,7 +71,10 @@ package ca.nrc.cadc.conformance.vos;
 
 import ca.nrc.cadc.auth.SSLUtil;
 import ca.nrc.cadc.util.FileUtil;
+import ca.nrc.cadc.util.Log4jInit;
 import java.io.File;
+import org.apache.log4j.Level;
+import org.apache.log4j.Logger;
 import org.junit.runner.RunWith;
 import org.junit.runners.Suite;
 
@@ -92,13 +95,18 @@ import org.junit.runners.Suite;
 
 public class VOSTestSuite
 {
-    public VOSTestSuite()
+    private static Logger log = Logger.getLogger(VOSTestSuite.class);
+    
+    static
     {
         try
         {
-            File crt = FileUtil.getFileFromResource("proxy.crt", this.getClass());
-            File key = FileUtil.getFileFromResource("proxy.key", this.getClass());
+            Log4jInit.setLevel("ca.nrc.cadc", Level.INFO);
+
+            File crt = FileUtil.getFileFromResource("proxy.crt", VOSTestSuite.class);
+            File key = FileUtil.getFileFromResource("proxy.key", VOSTestSuite.class);
             SSLUtil.initSSL(crt, key);
+            log.debug("initSSL: " + crt + "," + key);
         }
         catch(Throwable t)
         {

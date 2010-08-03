@@ -77,7 +77,6 @@ import ca.nrc.cadc.vos.DataNode;
 import ca.nrc.cadc.vos.Node;
 import ca.nrc.cadc.vos.NodeProperty;
 import ca.nrc.cadc.vos.NodeWriter;
-import ca.nrc.cadc.vos.VOS;
 import ca.nrc.cadc.vos.VOS.NodeBusyState;
 import ca.nrc.cadc.vos.VOSURI;
 import com.meterware.httpunit.GetMethodWebRequest;
@@ -127,13 +126,12 @@ public abstract class VOSBaseTest
      */
     public VOSBaseTest(String path)
     {
-        Log4jInit.setLevel("ca.nrc.cadc", Level.DEBUG);
-
         try
         {
             String prop = VOSTestSuite.class.getName() + ".baseURI";
             RegistryClient rc = new RegistryClient();
             String suri = System.getProperty(prop);
+            log.debug(prop + "=" + suri);
             if (suri != null)
             {
                 this.baseURI = new VOSURI(suri);
@@ -145,10 +143,9 @@ public abstract class VOSBaseTest
         }
         catch(Throwable t)
         {
-            throw new RuntimeException("failed to init VOSpace URI and URL for tests");
+            throw new RuntimeException("failed to init VOSpace URI and URL for tests", t);
         }
-        dateFormat = DateUtil.getDateFormat(DateUtil.ISO_DATE_FORMAT, DateUtil.LOCAL);
-
+        dateFormat = DateUtil.getDateFormat("yyyy-MM-dd.HH:mm:ss.SSS", DateUtil.LOCAL);
         log.debug("baseURI: " + baseURI);
         log.debug("serviceURL: " + resourceURL);
         log.debug("resourceURL: " + resourceURL);

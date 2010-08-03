@@ -88,7 +88,7 @@ public class VOSTransferTest extends VOSBaseTest
     {
         super("/transfers");
         
-        uwsSchemaUrl = XmlUtil.getResourceUrlString("UWS-1.0.xsd", VOSTransferTest.class);
+        uwsSchemaUrl = XmlUtil.getResourceUrlString("UWS-v1.0.xsd", VOSTransferTest.class);
         xlinkNamespace = Namespace.getNamespace("http://www.w3.org/1999/xlink");
     }
     
