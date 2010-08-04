@@ -208,10 +208,6 @@ public abstract class AbstractUWSTest
         // Create a new Job with default values.
         WebRequest postRequest = new PostMethodWebRequest(serviceUrl);
 
-        // Hack to prevent a null Representation being passed to a Resource,
-        // however causes a Restlet warning about an empty parameter.
-        postRequest.setParameter("", "");
-
         return createJob(conversation, postRequest);
     }
 
