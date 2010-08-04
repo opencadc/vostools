@@ -161,21 +161,21 @@ public abstract class VOSBaseTest
         throws URISyntaxException
     {
          // List of NodeProperty
-        NodeProperty nodeProperty = new NodeProperty("ivo://ivoa.net/vospace/core#description", "My award winning images");
+        NodeProperty nodeProperty = new NodeProperty("ivo://ivoa.net/vospace/core#description", "My award winning stuff");
         nodeProperty.setReadOnly(true);
 
         // List of Node
-        List<Node> nodes = new ArrayList<Node>();
-        nodes.add(new DataNode(new VOSURI("vos://cadc.nrc.ca!vospace/mydir/ngc4323")));
-        nodes.add(new DataNode(new VOSURI("vos://cadc.nrc.ca!vospace/mydir/ngc5796")));
-        nodes.add(new DataNode(new VOSURI("vos://cadc.nrc.ca!vospace/mydir/ngc6801")));
+        //List<Node> nodes = new ArrayList<Node>();
+        //nodes.add(new DataNode(new VOSURI("vos://cadc.nrc.ca!vospace/mydir/ngc4323")));
+        //nodes.add(new DataNode(new VOSURI("vos://cadc.nrc.ca!vospace/mydir/ngc5796")));
+        //nodes.add(new DataNode(new VOSURI("vos://cadc.nrc.ca!vospace/mydir/ngc6801")));
 
         // ContainerNode
         String name = System.getProperty("user.name", "cadcTestVOS");
         String date = dateFormat.format(Calendar.getInstance().getTime());
-        ContainerNode node = new ContainerNode(new VOSURI(baseURI + "/CADCRegtest1/" + name + "_" + date));
+        ContainerNode node = new ContainerNode(new VOSURI(baseURI + "/" + name + "_" + date));
         node.getProperties().add(nodeProperty);
-        node.setNodes(nodes);
+        //node.setNodes(nodes);
         return node;
     }
 
@@ -189,13 +189,13 @@ public abstract class VOSBaseTest
         throws URISyntaxException
     {
         // List of NodeProperty
-        NodeProperty nodeProperty = new NodeProperty("ivo://ivoa.net/vospace/core#description", "My award winning images");
+        NodeProperty nodeProperty = new NodeProperty("ivo://ivoa.net/vospace/core#description", "My award winning thing");
         nodeProperty.setReadOnly(true);
 
         // DataNode
         String name = System.getProperty("user.name", "cadcTestVOS");
         String date = dateFormat.format(Calendar.getInstance().getTime());
-        DataNode node = new DataNode(new VOSURI(baseURI + "/CADCRegtest1/" + name + "_" + date));
+        DataNode node = new DataNode(new VOSURI(baseURI + "/" + name + "_" + date));
         node.getProperties().add(nodeProperty);
         node.setBusy(NodeBusyState.notBusy);
         return node;
