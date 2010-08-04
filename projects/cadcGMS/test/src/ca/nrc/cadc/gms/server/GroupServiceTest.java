@@ -66,13 +66,9 @@
  */
 package ca.nrc.cadc.gms.server;
 
-import ca.nrc.cadc.gms.GMSTest;
-import ca.nrc.cadc.gms.Group;
-import ca.nrc.cadc.gms.server.GroupService;
-
 import org.junit.Test;
 
-import java.util.Collection;
+import ca.nrc.cadc.gms.GMSTest;
 
 public abstract class GroupServiceTest extends GMSTest<GroupService>
 {

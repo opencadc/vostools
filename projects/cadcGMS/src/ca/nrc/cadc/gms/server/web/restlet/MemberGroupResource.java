@@ -71,6 +71,9 @@ import java.io.StringReader;
 import java.net.URLDecoder;
 
 import org.apache.log4j.Logger;
+import org.jdom.Document;
+import org.jdom.JDOMException;
+import org.jdom.input.SAXBuilder;
 import org.restlet.data.Status;
 
 import ca.nrc.cadc.gms.AuthorizationException;
@@ -81,10 +84,6 @@ import ca.nrc.cadc.gms.UserWriter;
 import ca.nrc.cadc.gms.WebRepresentationException;
 import ca.nrc.cadc.gms.server.GroupService;
 import ca.nrc.cadc.gms.server.UserService;
-
-import org.jdom.Document;
-import org.jdom.JDOMException;
-import org.jdom.input.SAXBuilder;
 
 
 public class MemberGroupResource extends MemberResource

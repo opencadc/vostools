@@ -67,8 +67,8 @@
 package ca.nrc.cadc.gms;
 
 import java.util.Collection;
-import java.util.HashSet;
 import java.util.Collections;
+import java.util.HashSet;
 
 
 /**
@@ -124,7 +124,7 @@ public class GroupImpl implements Group
         {
             throw new InvalidMemberException("Unable to add NULL Member");
         }
-        else if (hasMember(newMember))
+        else if (getMembers().contains((newMember)))
         {
             throw new InvalidMemberException(
                     String.format("Member %s already exists.",
@@ -140,49 +140,61 @@ public class GroupImpl implements Group
     /**
      * Remove the given User member from this Group.
      *
-     * @param member            The member to remove.  Null values and
-     *                          non-existent members are not tolerated.
+     * @param memberID            The member to remove.  Null values and
+     *                            non-existent members are not tolerated.
      * @throws InvalidMemberException
      *          If the given Member cannot be removed.
      */
-    public void removeMember(final User member) throws InvalidMemberException
+    public void removeMember(final String memberID) throws InvalidMemberException
     {
-        if (member == null)
+        if (memberID == null)
         {
             throw new InvalidMemberException("Unable to remove NULL Member");
         }
-        else if (!hasMember(member))
-        {
-            throw new InvalidMemberException(
-                    String.format("Member %s does not exist.",
-                                  member.getUsername()));
-        }
         else
         {
-            this.members.remove(member);
-            member.removeMembership(this);
+            for( User member : getMembers())
+            {
+                if (member.getUserID().equals(memberID))
+                {
+                    members.remove(member);
+                    return;
+                }
+            }
+            // member not found
+            throw new InvalidMemberException(
+                    String.format("Member %s does not exist.",
+                                  memberID));
         }
     }
-
+    
     /**
      * Obtain whether the given user is a member of this Group.
      *
-     * @param user The User to check for.  Null values will not be
-     *             tolerated.
+     * @param userID The ID of User to check for.  Null values will not be
+     *               tolerated.
      * @return True if they are a member, False otherwise.
      * @throws ca.nrc.cadc.gms.InvalidMemberException
      *          If the given User cannot be used to
      *          check (i.e. null).
      */
-    public boolean hasMember(final User user) throws InvalidMemberException
+    public boolean hasMember(final String userID) throws InvalidMemberException
     {
-        if (user == null)
+        if (userID == null)
         {
             throw new InvalidMemberException("Unable to check NULL Member");
         }
         else
         {
-            return getMembers().contains(user);
+            for( User member : getMembers())
+            {
+                if (member.getUserID().equals(userID))
+                {
+                    return true;
+                }
+            }
+            // not found
+            return false;
         }
     }
 

@@ -67,18 +67,18 @@
 
 package ca.nrc.cadc.gms;
 
-import ca.nrc.cadc.util.Log4jInit;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.fail;
+
 import org.apache.log4j.Level;
 import org.apache.log4j.Logger;
-import org.custommonkey.xmlunit.XMLAssert;
-import java.io.InputStream;
-import java.io.Reader;
 import org.junit.After;
 import org.junit.AfterClass;
 import org.junit.Before;
 import org.junit.BeforeClass;
 import org.junit.Test;
-import static org.junit.Assert.*;
+
+import ca.nrc.cadc.util.Log4jInit;
 
 /**
  *

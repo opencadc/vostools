@@ -66,17 +66,19 @@
  */
 package ca.nrc.cadc.gms.server;
 
-import ca.nrc.cadc.gms.server.UserServiceImpl;
-import ca.nrc.cadc.gms.server.persistence.GroupPersistence;
-import ca.nrc.cadc.gms.server.persistence.UserPersistence;
-import ca.nrc.cadc.gms.User;
-import ca.nrc.cadc.gms.Group;
+import static org.easymock.EasyMock.createMock;
+import static org.easymock.EasyMock.expect;
+import static org.easymock.EasyMock.replay;
 
-import static org.easymock.EasyMock.*;
+import java.util.Collection;
+import java.util.HashSet;
+
 import org.junit.Test;
 
-import java.util.HashSet;
-import java.util.Collection;
+import ca.nrc.cadc.gms.Group;
+import ca.nrc.cadc.gms.User;
+import ca.nrc.cadc.gms.server.persistence.GroupPersistence;
+import ca.nrc.cadc.gms.server.persistence.UserPersistence;
 
 
 public class UserServiceImplTest extends UserServiceTest

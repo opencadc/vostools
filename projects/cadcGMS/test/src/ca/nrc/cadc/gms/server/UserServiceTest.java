@@ -66,13 +66,19 @@
 */
 package ca.nrc.cadc.gms.server;
 
-import ca.nrc.cadc.gms.*;
-import ca.nrc.cadc.gms.server.UserService;
-
-import org.junit.Test;
-import static org.junit.Assert.*;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertNotNull;
+import static org.junit.Assert.fail;
 
 import java.util.Collection;
+
+import org.junit.Test;
+
+import ca.nrc.cadc.gms.GMSTest;
+import ca.nrc.cadc.gms.Group;
+import ca.nrc.cadc.gms.InvalidGroupException;
+import ca.nrc.cadc.gms.InvalidMemberException;
+import ca.nrc.cadc.gms.User;
 
 
 /**

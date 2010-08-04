@@ -66,10 +66,6 @@
  */
 package ca.nrc.cadc.gms;
 
-import static org.easymock.EasyMock.*;
-
-import java.util.Collection;
-import java.util.HashSet;
 
 
 public class UserImplTest extends UserTest

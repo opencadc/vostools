@@ -67,6 +67,7 @@
 package ca.nrc.cadc.gms.server.web.restlet;
 
 import java.io.IOException;
+
 import org.jdom.Document;
 
 public class GroupMemberListResource extends GroupResource

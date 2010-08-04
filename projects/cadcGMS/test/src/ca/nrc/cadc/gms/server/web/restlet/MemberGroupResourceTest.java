@@ -66,19 +66,22 @@
  */
 package ca.nrc.cadc.gms.server.web.restlet;
 
+import static org.easymock.EasyMock.createMock;
+import static org.easymock.EasyMock.expect;
+import static org.easymock.EasyMock.expectLastCall;
+import static org.easymock.EasyMock.replay;
+
+import java.io.ByteArrayOutputStream;
+import java.io.OutputStream;
+
+import org.jdom.Document;
+import org.jdom.Element;
+import org.junit.Test;
+
 import ca.nrc.cadc.gms.User;
 import ca.nrc.cadc.gms.UserWriter;
 import ca.nrc.cadc.gms.server.GroupService;
 import ca.nrc.cadc.gms.server.UserService;
-import ca.nrc.cadc.gms.server.web.restlet.MemberGroupResource;
-
-import static org.easymock.EasyMock.*;
-import org.junit.Test;
-
-import java.io.OutputStream;
-import java.io.ByteArrayOutputStream;
-import org.jdom.Document;
-import org.jdom.Element;
 
 
 public class MemberGroupResourceTest

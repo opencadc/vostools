@@ -66,7 +66,6 @@
  */
 package ca.nrc.cadc.gms.server.web.restlet;
 
-import ca.nrc.cadc.gms.server.web.restlet.GroupMemberListResource;
 
 public class GroupMemberListResourceTest
         extends AbstractResourceTest<GroupMemberListResource>

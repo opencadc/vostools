@@ -71,6 +71,7 @@ package ca.nrc.cadc.gms.server.web.restlet;
 
 import java.io.IOException;
 import java.io.OutputStream;
+
 import org.jdom.Document;
 import org.jdom.output.Format;
 import org.jdom.output.XMLOutputter;

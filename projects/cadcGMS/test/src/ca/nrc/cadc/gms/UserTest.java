@@ -66,9 +66,12 @@
 */
 package ca.nrc.cadc.gms;
 
+import static org.easymock.EasyMock.createMock;
+import static org.easymock.EasyMock.replay;
+import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertTrue;
+
 import org.junit.Test;
-import static org.junit.Assert.*;
-import static org.easymock.EasyMock.*;
 
 
 public abstract class UserTest extends GMSTest<User>

@@ -66,9 +66,13 @@
 */
 package ca.nrc.cadc.gms.server;
 
-import ca.nrc.cadc.gms.*;
-
 import java.util.Collection;
+
+import ca.nrc.cadc.gms.AuthorizationException;
+import ca.nrc.cadc.gms.Group;
+import ca.nrc.cadc.gms.InvalidGroupException;
+import ca.nrc.cadc.gms.InvalidMemberException;
+import ca.nrc.cadc.gms.User;
 
 
 public interface UserService

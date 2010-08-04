@@ -1,7 +1,7 @@
 package ca.nrc.cadc.gms.server.web;
 
-import org.restlet.service.MetadataService;
 import org.restlet.data.MediaType;
+import org.restlet.service.MetadataService;
 
 
 /**

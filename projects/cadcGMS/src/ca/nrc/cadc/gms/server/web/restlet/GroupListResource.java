@@ -68,8 +68,8 @@ package ca.nrc.cadc.gms.server.web.restlet;
 
 import java.io.FileNotFoundException;
 import java.io.IOException;
-import org.jdom.Document;
 
+import org.jdom.Document;
 import org.restlet.resource.Put;
 
 public class GroupListResource extends AbstractResource

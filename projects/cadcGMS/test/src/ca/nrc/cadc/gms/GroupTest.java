@@ -66,9 +66,17 @@
 */
 package ca.nrc.cadc.gms;
 
+import static org.easymock.EasyMock.createMock;
+import static org.easymock.EasyMock.expect;
+import static org.easymock.EasyMock.expectLastCall;
+import static org.easymock.EasyMock.replay;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertNotNull;
+import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.fail;
+
 import org.junit.Test;
-import static org.junit.Assert.*;
-import static org.easymock.EasyMock.*;
 
 
 public abstract class GroupTest extends GMSTest<Group>
@@ -154,13 +162,18 @@ public abstract class GroupTest extends GMSTest<Group>
         }
 
         final User mockUserOne = createMock(User.class);
-        expect(mockUserOne.getUsername()).andReturn("ONE").once();
         
         final User mockUserTwo = createMock(User.class);
         final User mockUserThree = createMock(User.class);
 
         mockUserOne.addMembership(getTestSubject());
         expectLastCall().times(2);
+        
+        expect(mockUserOne.getUserID()).andReturn("ONE_ID").times(4);
+        
+        expect(mockUserTwo.getUserID()).andReturn("TWO_ID").times(2);
+        
+        expect(mockUserThree.getUserID()).andReturn("THREE_ID").times(1);
 
         mockUserOne.removeMembership(getTestSubject());
         expectLastCall().once();
@@ -178,7 +191,7 @@ public abstract class GroupTest extends GMSTest<Group>
 
         try
         {
-            getTestSubject().removeMember(mockUserOne);
+            getTestSubject().removeMember(mockUserOne.getUserID());
             fail("Cannot remove a non-existent member.");
         }
         catch (InvalidMemberException iae)
@@ -190,7 +203,7 @@ public abstract class GroupTest extends GMSTest<Group>
         assertTrue("Member was not added for removal.",
                    getTestSubject().getMembers().contains(mockUserOne));
 
-        getTestSubject().removeMember(mockUserOne);
+        getTestSubject().removeMember(mockUserOne.getUserID());
         assertFalse("Member One was not removed.",
                    getTestSubject().getMembers().contains(mockUserOne));
 
@@ -200,7 +213,7 @@ public abstract class GroupTest extends GMSTest<Group>
         assertEquals("Three members should have been added.", 3,
                      getTestSubject().getMembers().size());
 
-        getTestSubject().removeMember(mockUserTwo);
+        getTestSubject().removeMember(mockUserTwo.getUserID());
         assertTrue("Member One was removed but should not have been.",
                    getTestSubject().getMembers().contains(mockUserOne));
         assertTrue("Member Three was removed but should not have been.",
@@ -222,23 +235,37 @@ public abstract class GroupTest extends GMSTest<Group>
             // Good!
         }
 
+
         final User mockUserOne = createMock(User.class);
+        
+        final User mockUserTwo = createMock(User.class);
+        
+        expect(mockUserOne.getUserID()).andReturn("ONE_ID").atLeastOnce();
+        expect(mockUserTwo.getUserID()).andReturn("TWO_ID").atLeastOnce();
+
+        mockUserOne.addMembership(getTestSubject());
+        expectLastCall().times(1);
+        
+        mockUserTwo.addMembership(getTestSubject());
+        expectLastCall().times(1);
+        
+        replay(mockUserOne, mockUserTwo);
+
         assertFalse("No members exist yet.",
-                    getTestSubject().hasMember(mockUserOne));
+                    getTestSubject().hasMember(mockUserOne.getUserID()));
 
         getTestSubject().addMember(mockUserOne);
         assertTrue("User One is a member.",
-                   getTestSubject().hasMember(mockUserOne));
+                   getTestSubject().hasMember(mockUserOne.getUserID()));
 
-        final User mockUserTwo = createMock(User.class);
         getTestSubject().addMember(mockUserTwo);
         assertTrue("User Two is a member.",
-                   getTestSubject().hasMember(mockUserTwo));
+                   getTestSubject().hasMember(mockUserTwo.getUserID()));
         assertTrue("User One is still a member.",
-                   getTestSubject().hasMember(mockUserOne));
+                   getTestSubject().hasMember(mockUserOne.getUserID()));
 
-        getTestSubject().removeMember(mockUserTwo);
+        getTestSubject().removeMember(mockUserTwo.getUserID());
         assertFalse("User Two should no longer be a member.",
-                   getTestSubject().hasMember(mockUserTwo));        
+                   getTestSubject().hasMember(mockUserTwo.getUserID()));        
     }
 }

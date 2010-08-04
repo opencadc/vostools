@@ -66,7 +66,6 @@
  */
 package ca.nrc.cadc.gms.server.web.restlet;
 
-import ca.nrc.cadc.gms.server.web.restlet.GroupPropertiesResource;
 
 public class GroupPropertiesResourceTest
         extends AbstractResourceTest<GroupPropertiesResource>

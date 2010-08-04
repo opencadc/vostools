@@ -67,7 +67,6 @@
 package ca.nrc.cadc.gms.server.web.restlet;
 
 import ca.nrc.cadc.gms.GMSTest;
-import ca.nrc.cadc.gms.server.web.restlet.AbstractResource;
 
 
 public abstract class AbstractResourceTest<R extends AbstractResource>

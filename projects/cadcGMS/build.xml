@@ -87,11 +87,13 @@
     <property name="project"        value="cadcGMS" />
 
     <property name="cadcUtil"       value="${lib}/cadcUtil.jar" />
+    <property name="cadcRegistry"   value="${lib}/cadcRegistryClient.jar" />
     <property name="jdom"           value="${ext.lib}/jdom.jar" />
     <property name="log4j"          value="${ext.lib}/log4j.jar" />
     <property name="restlet"        value="${ext.lib}/org.restlet.jar" />
 
-    <property name="jars" value="${cadcUtil}:${jdom}:${log4j}:${restlet}" />
+    <property name="jars" value="${cadcUtil}:${cadcRegistry}:${jdom}:${log4j}:${restlet}" />
+    <property name="client.jars" value="${cadcUtil}:${cadcRegistry}:${jdom}:${log4j}" />
 
     <target name="build" depends="client,server" />
     
@@ -103,13 +105,21 @@
         </jar>
     </target>
 
-    <target name="client" depends="compile">
+    <target name="client" depends="compile, manifest">
         <jar jarfile="${build}/lib/${project}Client.jar"
             basedir="${build}/class"
-            update="no">
+            update="no"
+	    manifest="${build}/tmp/${project}Client.mf">
             <include name="ca/nrc/cadc/gms/client/**" />
             <include name="ca/nrc/cadc/gms/**.class" />
         </jar>
+    </target>
+
+    <target name="manifest">
+        <manifest file="build/tmp/${project}Client.mf" mode="replace">
+            <attribute name="Main-Class" value="ca.nrc.cadc.gms.client.GmsClientMain"/>
+            <attribute name="Class-Path" value="${client.jars}" />
+        </manifest>
     </target>
 
     <!-- JAR files needed to run the test suite -->

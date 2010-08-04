@@ -66,10 +66,8 @@
  */
 package ca.nrc.cadc.gms.server.web.restlet;
 
-import static org.easymock.EasyMock.*;
-
+import static org.easymock.EasyMock.createMock;
 import ca.nrc.cadc.gms.server.GroupService;
-import ca.nrc.cadc.gms.server.web.restlet.GroupResource;
 
 
 public class GroupResourceTest extends AbstractResourceTest<GroupResource>

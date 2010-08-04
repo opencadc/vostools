@@ -69,9 +69,9 @@ package ca.nrc.cadc.gms.server.web.restlet;
 import java.io.FileNotFoundException;
 import java.io.IOException;
 
-import ca.nrc.cadc.gms.server.UserService;
-
 import org.jdom.Document;
+
+import ca.nrc.cadc.gms.server.UserService;
 
 
 public class UserResource extends AbstractResource

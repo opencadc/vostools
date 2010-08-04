@@ -93,22 +93,22 @@ public interface Group
     /**
      * Remove the given User member from this Group.
      *
-     * @param member            The member to remove.  Null values and
+     * @param memberID          The ID of member to remove.  Null values and
      *                          non-existent members are not tolerated.
      * @throws InvalidMemberException   If the given Member cannot be removed.
      */
-    void removeMember(final User member) throws InvalidMemberException;
+    void removeMember(final String memberID) throws InvalidMemberException;
 
     /**
      * Obtain whether the given user is a member of this Group.
      *
-     * @param user          The User to check for.  Null values will not be
+     * @param userID        The ID of User to check for.  Null values will not be
      *                      tolerated.
      * @return              True if they are a member, False otherwise.
      * @throws InvalidMemberException       If the given User cannot be used to
      *                                      check (i.e. null).
      */
-    boolean hasMember(final User user) throws InvalidMemberException;
+    boolean hasMember(final String userID) throws InvalidMemberException;
 
     /**
      * Obtain all of the Members of this Group.

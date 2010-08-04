@@ -72,6 +72,7 @@ import java.io.UnsupportedEncodingException;
 import java.net.URLDecoder;
 
 import org.apache.log4j.Logger;
+import org.jdom.Document;
 import org.restlet.data.Status;
 import org.restlet.resource.Delete;
 import org.restlet.resource.Post;
@@ -82,8 +83,6 @@ import ca.nrc.cadc.gms.Group;
 import ca.nrc.cadc.gms.GroupWriter;
 import ca.nrc.cadc.gms.InvalidGroupException;
 import ca.nrc.cadc.gms.server.GroupService;
-
-import org.jdom.Document;
 
 
 public class GroupResource extends AbstractResource

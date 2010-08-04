@@ -66,12 +66,12 @@
  */
 package ca.nrc.cadc.gms.server.persistence;
 
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ConcurrentMap;
+
+import ca.nrc.cadc.gms.GroupImpl;
 import ca.nrc.cadc.gms.User;
 import ca.nrc.cadc.gms.UserImpl;
-import ca.nrc.cadc.gms.GroupImpl;
-
-import java.util.concurrent.ConcurrentMap;
-import java.util.concurrent.ConcurrentHashMap;
 
 
 public class MemoryUserPersistence implements UserPersistence
