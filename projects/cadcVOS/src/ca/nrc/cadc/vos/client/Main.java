@@ -268,6 +268,8 @@ public class Main implements Runnable
                 msg("          reason: " + t.getMessage());
             else
                 msg("          reason: " + t);
+            if (t.getCause() != null)
+                msg("          reason: " + t.getCause());
             System.exit(NET_STATUS);
         }
     }
@@ -288,6 +290,8 @@ public class Main implements Runnable
                 msg("          reason: " + t.getMessage());
             else
                 msg("          reason: " + t);
+            if (t.getCause() != null)
+                msg("          reason: " + t.getCause());
             System.exit(NET_STATUS);
         }
     }
@@ -313,7 +317,8 @@ public class Main implements Runnable
                 msg("          reason: " + t.getMessage());
             else
                 msg("          reason: " + t);
-            t.printStackTrace();
+            if (t.getCause() != null)
+                msg("          reason: " + t.getCause());
             System.exit(NET_STATUS);
         }
     }
@@ -334,6 +339,8 @@ public class Main implements Runnable
                 msg("          reason: " + t.getMessage());
             else
                 msg("          reason: " + t);
+            if (t.getCause() != null)
+                msg("          reason: " + t.getCause());
             System.exit(NET_STATUS);
         }
     }

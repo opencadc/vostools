@@ -77,6 +77,7 @@ import org.apache.log4j.Logger;
 
 import ca.nrc.cadc.net.HttpDownload;
 import ca.nrc.cadc.net.HttpUpload;
+import java.io.IOException;
 import javax.net.ssl.SSLSocketFactory;
 
 /**
@@ -117,7 +118,14 @@ public class ClientTransfer extends Transfer
         this.sslSocketFactory = sslSocketFactory;
     }
 
+    /**
+     * Run the data transfer.
+     *
+     * @param file source file to read
+     * @throws IOException
+     */
     public void doUpload(File file)
+        throws IOException
     {
         URL url;
         try
@@ -136,9 +144,18 @@ public class ClientTransfer extends Transfer
         HttpUpload upload = new HttpUpload(file, url);
         upload.setSSLSocketFactory(sslSocketFactory);
         upload.run();
+        if (upload.getThrowable() != null)
+            throw new IOException("failed to upload file", upload.getThrowable());
     }
 
+    /**
+     * Run the data transfer.
+     *
+     * @param file destination file to create or overwrite.
+     * @throws IOException if the download fails
+     */
     public void doDownload(File file)
+        throws IOException
     {
         URL url;
         try
@@ -157,6 +174,8 @@ public class ClientTransfer extends Transfer
         download.setOverwrite(true);
         download.setSSLSocketFactory(sslSocketFactory);
         download.run();
+        if (download.getThrowable() != null)
+            throw new IOException("failed to upload file", download.getThrowable());
     }
 
 }
