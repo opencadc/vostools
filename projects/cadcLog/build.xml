@@ -93,7 +93,7 @@
 	<property name="ext.log4j" value="${ext.lib}/log4j.jar" />
 	<property name="ext.servlet-api" value="${ext.lib}/servlet-api.jar" />
 
-	<property name="jars" value="${ext.log4j}:${ext.servlet-api}" />
+	<property name="jars" value="${lib}/cadcUtil.jar:${ext.log4j}:${ext.servlet-api}" />
 
 	<target name="build" depends="cadcLog" />
 

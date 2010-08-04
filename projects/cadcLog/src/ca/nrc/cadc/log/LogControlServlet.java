@@ -71,11 +71,13 @@
 package ca.nrc.cadc.log;
 
 
+import ca.nrc.cadc.auth.AuthenticationUtil;
 import java.io.IOException;
 import java.io.PrintWriter;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.StringTokenizer;
+import javax.security.auth.Subject;
 
 import javax.servlet.ServletConfig;
 import javax.servlet.ServletException;
@@ -133,7 +135,11 @@ public class LogControlServlet extends HttpServlet
      *  Initialize the logging.  This method should only get
      *  executed once and, if properly configured, it should
      *  be the first method to be executed.
+     *
+     * @param config
+     * @throws ServletException
      */
+    @Override
 	public void init( final ServletConfig config ) throws ServletException
     {
     	super.init( config );
@@ -180,31 +186,36 @@ public class LogControlServlet extends HttpServlet
     	packageNames = tokens.toArray(new String[0]);
 
     	ConsoleAppender appender = new ConsoleAppender( new PatternLayout(LONG_FORMAT) );
+        BasicConfigurator.resetConfiguration();
 		BasicConfigurator.configure( appender );
 		
 		logger.info( "Logging initialized at level="+level );
     }
-	
-	/**
-	 * In response to an HTTP GET, return the current logging level and the list
+
+    /**
+     * In response to an HTTP GET, return the current logging level and the list
 	 * of packages for which logging is enabled.
-	 */
-	public void doGet(HttpServletRequest request, HttpServletResponse response)
-	throws ServletException, IOException
+     * 
+     * @param request
+     * @param response
+     * @throws ServletException
+     * @throws IOException
+     */
+    @Override
+    public void doGet(HttpServletRequest request, HttpServletResponse response)
+        throws ServletException, IOException
 	{
-        StringBuffer content = new StringBuffer();
-        content.append("Logging level " + level + " set on " + packageNames.length + " packages:\n");
-        for ( int i=0; i<packageNames.length; i++ )
-        {
-        	content.append(packageNames[i] + "\n");
-        }
-        
+        Subject subject = AuthenticationUtil.getSubject(request);
+        logger.debug(subject.toString());
+
         response.setContentType("text/plain");
-        response.setContentLength(content.length());
-     
-        PrintWriter printWriter = response.getWriter();
-        printWriter.write(content.toString());
-        printWriter.close();
+        PrintWriter writer = response.getWriter();
+
+        writer.println("Logging level " + level + " set on " + packageNames.length + " packages:");
+        for ( int i=0; i<packageNames.length; i++ )
+        	writer.println(packageNames[i]);
+        
+        writer.close();
 	}
 	
     
