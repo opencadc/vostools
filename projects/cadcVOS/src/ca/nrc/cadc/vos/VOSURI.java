@@ -114,6 +114,18 @@ public class VOSURI
         if (!vosURI.getScheme().equalsIgnoreCase("vos")) throw new URISyntaxException(uri, "Scheme must be vos");
     }
 
+    @Override
+    public boolean equals(Object rhs)
+    {
+        if (rhs == null)
+            return false;
+        if (this == rhs)
+            return true;
+
+        VOSURI vu = (VOSURI) rhs;
+        return vosURI.equals(vu.vosURI);
+    }
+
     /**
      * Returns the underlying URI object.
      * 
