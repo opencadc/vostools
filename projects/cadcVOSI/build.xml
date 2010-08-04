@@ -124,14 +124,6 @@
     <property name="resources.dir" value="test/resources/" />
 
     <!-- compile the test classes -->
-    <target name="compile-test" depends="build">
-        <javac destdir="${build}/class"
-               source="${java.source.version}"
-               target="${java.target.version}"
-               classpath="${jars}:${testingJars}:${resources.dir}" >
-            <src path="test/src"/>
-        </javac>
-    </target>
 
     <!-- Run the test suite -->
     <target name="test" depends="compile-test">

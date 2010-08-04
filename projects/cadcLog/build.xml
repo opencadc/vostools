@@ -112,15 +112,6 @@
 	<property name="testingJars" value="${dev.junit}:${dev.easyMock}:${dev.cglib}:${dev.asm}:${dev.objenesis}" />
 
   <!-- compile the test classes -->
-  <target name="compile-test" depends="compile">
-    <mkdir dir="${build}/test/class" />
-    <javac destdir="${build}/test/class"
-           source="${java.source.version}"
-           target="${java.target.version}"
-           classpath="${build}/class:${jars}:${testingJars}" >
-      <src path="test/src" />
-    </javac>
-  </target>
 
   <target name="test" depends="compile-test">
     <echo message="Running test" />
