@@ -166,9 +166,9 @@ public class SynchResource extends UWSResource
         }
         else if (getMethod() == Method.POST)
         {
-            MediaType mediaType = getRequestEntity().getMediaType();
-            if (mediaType.equals(MediaType.APPLICATION_WWW_FORM)
-                || mediaType.equals(MediaType.MULTIPART_FORM_DATA))
+            if (getRequestEntity().getMediaType() == null
+                || getRequestEntity().getMediaType().equals(MediaType.APPLICATION_WWW_FORM)
+                || getRequestEntity().getMediaType().equals(MediaType.MULTIPART_FORM_DATA))
             {
                 form = new Form(getRequest().getEntity());
                 final Map<String, String> errors = validate(form);
@@ -195,8 +195,8 @@ public class SynchResource extends UWSResource
                     throw new WebRepresentationException("Unable to create Job!", e);
                 }
             }
-            else if (mediaType.equals(MediaType.APPLICATION_XML)
-                     || mediaType.equals(MediaType.TEXT_XML))
+            else if (getRequestEntity().getMediaType().equals(MediaType.APPLICATION_XML)
+                     || getRequestEntity().getMediaType().equals(MediaType.TEXT_XML))
             {
                 try
                 {

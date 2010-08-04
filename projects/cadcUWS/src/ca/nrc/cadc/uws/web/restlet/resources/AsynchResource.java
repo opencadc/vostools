@@ -111,9 +111,9 @@ public class AsynchResource extends UWSResource
     {
         final Job job;
         final Subject subject = getSubject();
-        MediaType mediaType = entity.getMediaType();
-        if (mediaType.equals(MediaType.APPLICATION_WWW_FORM)
-            || mediaType.equals(MediaType.MULTIPART_FORM_DATA))
+        if (entity == null
+            || entity.getMediaType().equals(MediaType.APPLICATION_WWW_FORM)
+            || entity.getMediaType().equals(MediaType.MULTIPART_FORM_DATA))
         {
             final Form form = new Form(entity);
             final Map<String, String> errors = validate(form);
@@ -140,8 +140,8 @@ public class AsynchResource extends UWSResource
                                                      e);
             }
         }
-        else if (mediaType.equals(MediaType.APPLICATION_XML)
-                 || mediaType.equals(MediaType.TEXT_XML))
+        else if (entity.getMediaType().equals(MediaType.APPLICATION_XML)
+                 || entity.getMediaType().equals(MediaType.TEXT_XML))
         {
             try
             {
@@ -165,7 +165,7 @@ public class AsynchResource extends UWSResource
         Job persistedJob = getJobManager().persist(job);
         redirectSeeOther(getHostPart() + getRequestPath() + "/" + persistedJob.getID());
     }
-    
+
     /**
      * Assemble the XML for this Resource's Representation into the given
      * Document.
