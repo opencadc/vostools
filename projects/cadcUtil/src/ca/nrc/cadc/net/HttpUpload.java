@@ -250,8 +250,8 @@ public class HttpUpload extends HttpTransfer
                 catch(Exception ignore) { }
             }
 
-            if (failure != null)
-                failure.printStackTrace();
+            //if (failure != null)
+            //    failure.printStackTrace();
 
             synchronized(this) // vs sync block in terminate()
             {
