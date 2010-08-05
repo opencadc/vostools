@@ -85,6 +85,7 @@
 
 		<!-- subdirs used to build -->
 		<mkdir dir="${build}/class" />
+		<mkdir dir="${build}/test/class" />
 		<mkdir dir="${build}/tmp" />
 	</target>
 
@@ -107,6 +108,21 @@
 				<src path="src" />
 		</javac>
 	</target>
+        
+        <target name="compile-test" depends="build">
+                <echo message="java.source.version: ${java.source.version}" />
+                <echo message="java.target.version: ${java.target.version}" />
+                <javac destdir="${build}/test/class"
+                        classpath="${build}/class:${jars}:${testingJars}"
+                        source="${java.source.version}"
+                        target="${java.target.version}"
+                        optimize="off"
+                        debug="on"
+                        deprecation="on">
+                                <src path="test/src" />
+                </javac>
+        </target>
+
 	<target name="javadoc_check">
                 <condition property="docs.uptodate">
                         <or>
