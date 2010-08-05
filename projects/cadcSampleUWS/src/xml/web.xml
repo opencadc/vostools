@@ -165,7 +165,7 @@
         <servlet-class>ca.nrc.cadc.log.LogControlServlet</servlet-class>
         <init-param>
             <param-name>logLevel</param-name>
-            <param-value>debug</param-value>
+            <param-value>info</param-value>
         </init-param>
         <init-param>
             <param-name>logLevelPackages</param-name>
@@ -206,6 +206,11 @@
   <servlet-mapping>
       <servlet-name>doc</servlet-name>
       <url-pattern>doc.jsp</url-pattern>
+  </servlet-mapping>
+
+  <servlet-mapping>
+      <servlet-name>logControl</servlet-name>
+      <url-pattern>logControl</url-pattern>
   </servlet-mapping>
 
   <welcome-file-list>
