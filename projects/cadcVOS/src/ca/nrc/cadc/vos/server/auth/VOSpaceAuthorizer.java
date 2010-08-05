@@ -167,8 +167,8 @@ public class VOSpaceAuthorizer implements Authorizer
                         {
                             String principalString = principal == null ? "null" : principal.getName();
                             String groupReadString = groupRead == null ? "null" : groupRead.getPropertyValue();
-                            LOG.debug(String.format("Checking read permission on node (owner=\"%s\",groupRead=\"%s\") where user=\"%s\"",
-                                    node.getOwner(), groupReadString, principalString));
+                            LOG.debug(String.format("Checking read permission on node \"%s\" (owner=\"%s\",groupRead=\"%s\") where user=\"%s\"",
+                                    node.getName(), node.getOwner(), groupReadString, principalString));
                         }
                         
                         // Check for ownership
@@ -316,16 +316,12 @@ public class VOSpaceAuthorizer implements Authorizer
         GmsClient gmsClient = getGmsClient(groupURI);
         if (gmsClient != null)
         {
-            String rawGroupValue = getGroupValue(groupURI);
-            if (rawGroupValue != null)
-            {
-                if (gmsClient.isMember(groupURI, principal.getName()))
-                {
-                    // User is a member
-                    return true;
-                }
-            }
+            
+            boolean ret = gmsClient.isMember(groupURI, principal.getName());
+            LOG.debug("GmsClient.isMember(" + groupURI + "," + principal.getName() + " returned " + ret);
+            return ret;
         }
+        LOG.warn("failed to load GmsClient");
         return false;
     }
     
@@ -337,7 +333,10 @@ public class VOSpaceAuthorizer implements Authorizer
         try
         {
             RegistryClient registryClient = new RegistryClient();
-            URL gmsBaseURL = registryClient.getServiceURL(new URI(groupURI), VOS.GMS_PROTOCOL);
+            URI guri = new URI(groupURI);
+            URI serviceURI = new URI(guri.getScheme(), guri.getSchemeSpecificPart(), null); // drop fragment
+            URL gmsBaseURL = registryClient.getServiceURL(serviceURI, VOS.GMS_PROTOCOL);
+            LOG.debug("GmsClient baseURL: " + gmsBaseURL);
             return new GmsClient(gmsBaseURL);
         }
         catch (MalformedURLException e)
