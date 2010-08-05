@@ -263,7 +263,7 @@ public class Main implements Runnable
         }
         catch(Throwable t)
         {
-            msg("failed to delete: " + target);
+            msg("failed to set properties on node: " + target);
             if (t.getMessage() != null)
                 msg("          reason: " + t.getMessage());
             else
