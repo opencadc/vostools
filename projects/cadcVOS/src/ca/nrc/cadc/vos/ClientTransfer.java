@@ -175,7 +175,7 @@ public class ClientTransfer extends Transfer
         download.setSSLSocketFactory(sslSocketFactory);
         download.run();
         if (download.getThrowable() != null)
-            throw new IOException("failed to upload file", download.getThrowable());
+            throw new IOException("failed to download file", download.getThrowable());
     }
 
 }

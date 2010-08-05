@@ -313,31 +313,24 @@ public class VOSpaceAuthorizer implements Authorizer
      */
     private boolean hasMembership(String groupURI, Principal principal)
     {
-        GmsClient gmsClient = getGmsClient(groupURI);
-        if (gmsClient != null)
-        {
-            
-            boolean ret = gmsClient.isMember(groupURI, principal.getName());
-            LOG.debug("GmsClient.isMember(" + groupURI + "," + principal.getName() + " returned " + ret);
-            return ret;
-        }
-        LOG.warn("failed to load GmsClient");
-        return false;
-    }
-    
-    /**
-     * Given the groupURI, return the appropriate GmsClient.
-     */
-    private GmsClient getGmsClient(String groupURI)
-    {
         try
         {
             RegistryClient registryClient = new RegistryClient();
             URI guri = new URI(groupURI);
             URI serviceURI = new URI(guri.getScheme(), guri.getSchemeSpecificPart(), null); // drop fragment
             URL gmsBaseURL = registryClient.getServiceURL(serviceURI, VOS.GMS_PROTOCOL);
+
             LOG.debug("GmsClient baseURL: " + gmsBaseURL);
-            return new GmsClient(gmsBaseURL);
+            if (gmsBaseURL == null)
+            {
+                LOG.warn("failed to find base URL for GMS service: " + serviceURI);
+                return false;
+            }
+            GmsClient gms = new GmsClient(gmsBaseURL);
+
+            boolean ret = gms.isMember(guri.getFragment(), principal.getName());
+            LOG.debug("GmsClient.isMember(" + guri.getFragment() + "," + principal.getName() + " returned " + ret);
+            return ret;
         }
         catch (MalformedURLException e)
         {
@@ -347,7 +340,7 @@ public class VOSpaceAuthorizer implements Authorizer
         catch (URISyntaxException e)
         {
             LOG.warn("Invalid Group URI: " + groupURI, e);
-            return null;
+            return false;
         }
     }
     
