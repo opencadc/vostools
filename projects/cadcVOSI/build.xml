@@ -111,6 +111,8 @@
         </copy>
     </target>
 
+    <property name="resources.dir" value="test/resources/" />
+
     <!-- JAR files needed to run the test suite -->
     <property name="build.cadcTAP" value="${build}/lib/${project}.jar" />
     <property name="ext.postgres" value="${ext.lib}/postgresql-jdbc.jar" />
@@ -121,9 +123,6 @@
     <property name="ext.saxpath" value="${ext.lib}/saxpath.jar"/>
     <property name="ext.commonsLog" value="${ext.lib}/commons-logging.jar" />
     <property name="testingJars" value="${build.cadcTAP}:${ext.junit}:${ext.xerces}:${ext.jaxen.core}:${ext.jaxen.jdom}:${ext.saxpath}:${ext.postgres}:${ext.commonsLog}" />
-    <property name="resources.dir" value="test/resources/" />
-
-    <!-- compile the test classes -->
 
     <!-- Run the test suite -->
     <target name="test" depends="compile-test">
@@ -133,9 +132,10 @@
         <echo message="Running test suite..." />
         <junit printsummary="yes" haltonfailure="yes" fork="yes">
             <classpath>
-                <pathelement path="build/class"/>
+                <pathelement path="${build}/class"/>
+                <pathelement path="${build}/test/class"/>
                 <pathelement path="${resources.dir}"/>
-                <pathelement path="${jars}:${testingJars}"/>
+                <pathelement path="${jars}:${testingJars}" />
             </classpath>
             
             <test name="ca.nrc.cadc.vosi.AvailabilityTest"/>
