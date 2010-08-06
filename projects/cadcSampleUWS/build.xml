@@ -190,5 +190,8 @@
             <formatter type="plain" usefile="false"/>
         </junit>
     </target>
+
+	<target name="test" depends="int-test">
+	</target>
     
 </project>
