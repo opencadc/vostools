@@ -87,9 +87,9 @@
 
 <property name="project" value="cadcDownloadManager" />
 
-<property name="jars" value="${lib}/cadcUtil.jar:${ext.lib}/servlet-api.jar" />
+<property name="jars" value="${lib}/cadcUtil.jar:${ext.lib}/servlet-api.jar:${ext.lib}/log4j.jar" />
 
-<target name="build" depends="client,servlet,api,resources" />
+<target name="build" depends="client,servlet,resources" />
 
 <target name="client" depends="compile">
     <jar jarfile="${build}/lib/${project}Client.jar"
@@ -109,15 +109,6 @@
             <include name="ca/nrc/cadc/dlm/server/**" />
     </jar>
     
-</target>
-
-<!-- a jar to contain the extension API -->
-<target name="api" depends="compile">
-    <jar jarfile="${build}/lib/${project}API.jar"
-		basedir="${build}/class" 
-		update="no">
-            <include name="ca/nrc/cadc/dlm/client/event/**" />
-    </jar>
 </target>
 
 <target name="resources" depends="init">
@@ -148,6 +139,9 @@ note: client jars are not signed
         <fileset dir="${lib}">
             <include name="cadcUtil.jar" />
         </fileset>
+        <fileset dir="${ext.lib}">
+            <include name="log4j.jar" />
+        </fileset>
 
         <lib dir="${build}/lib">
             <include name="cadcDownloadManagerServer.jar" />
@@ -159,6 +153,7 @@ note: client jars are not signed
         <lib dir="${ext.lib}">
             <include name="jstl.jar" />
             <include name="standard.jar" />
+            <include name="log4j.jar" />
         </lib>
         <webinf dir="${ext.lib}/tld">
             <include name="c.tld" />

@@ -75,7 +75,6 @@ import java.awt.Graphics;
 import java.io.File;
 import java.io.IOException;
 import java.util.ArrayList;
-import java.util.Iterator;
 import java.util.List;
 
 import javax.swing.BorderFactory;
@@ -84,10 +83,13 @@ import javax.swing.event.ChangeEvent;
 import javax.swing.event.ChangeListener;
 
 import ca.nrc.cadc.dlm.DownloadUtil;
-import ca.nrc.cadc.dlm.client.event.DownloadListener;
+import ca.nrc.cadc.net.HttpDownload;
+import ca.nrc.cadc.net.HttpTransfer;
+import ca.nrc.cadc.net.event.TransferListener;
 import ca.nrc.cadc.thread.ConditionVar;
 import ca.onfire.ak.AbstractApplication;
 import ca.onfire.ak.ApplicationConfig;
+import org.apache.log4j.Logger;
 
 /**
  * The main class for graphical output display.
@@ -96,75 +98,47 @@ import ca.onfire.ak.ApplicationConfig;
  */
 public class GraphicUI extends AbstractApplication implements ChangeListener, UserInterface
 {
+    private static final long serialVersionUID = 201008051500L;
+    private static Logger log = Logger.getLogger(GraphicUI.class);
 
     private JDownloadManager downloadManager;
-    private DownloadListener downloadListener;
+    private TransferListener downloadListener;
     
     private ConditionVar uiInitCond;
     private ConditionVar engineInitCond;
-    private List downloads;
-    private boolean debug;
+    private final List<DownloadUtil.ParsedURI> uris = new ArrayList<DownloadUtil.ParsedURI>();
+    private String fragment;
+    private String userAgent;
     
     public GraphicUI() 
     {
-        super(new BorderLayout()); 
-        this.downloads = new ArrayList();
-        this.downloadListener = initDownloadLister();
-        
+        super(new BorderLayout());
+        this.downloadListener = initTransferLister();
+        this.userAgent = "CADC DownloadManager(GraphicUI) " + HttpTransfer.DEFAULT_USER_AGENT;
+
         this.uiInitCond = new ConditionVar();
         uiInitCond.set(false);
         this.engineInitCond = new ConditionVar();
         engineInitCond.set(false);
     }
     
-    public void setDownloadListener(DownloadListener dl)
-    {
-        this.downloadListener = dl;
-    }
-    
-    private void msg(String s)
-    {
-        if (debug) System.out.println("[GraphicUI] " + s);
-    }
-    
     public void add(String[] strs, String fragment)
     {
-        List<DownloadUtil.ParsedURI> uris = DownloadUtil.parseURIs(strs, fragment);
-        List<DownloadUtil.GeneratedURL> urls = DownloadUtil.generateURLs(uris, fragment);
-        Iterator<DownloadUtil.GeneratedURL> i = urls.iterator();
-        while ( i.hasNext() )
-        {
-            DownloadUtil.GeneratedURL g = i.next();
-            if (g.error == null)
-                addDownload(g);
-            else
-            {
-                logError(g);
-            }
-        }
-    }
-    
-    private void addDownload(DownloadUtil.GeneratedURL gen)
-    {
-        Download dl = new Download();
-        dl.url = gen.url;
-        // TODO: put original URI here? URL?
-        dl.label = gen.str;
-        synchronized(downloads)
-        {
-            downloads.add(dl);
-        }
+        List<DownloadUtil.ParsedURI> parsed = DownloadUtil.parseURIs(strs, fragment);
+        this.uris.addAll(parsed);
+        this.fragment = fragment;
     }
     
     private void logError(DownloadUtil.GeneratedURL gen)
     {
         // TODO: display in a window? create a Download in FAILED state?
-        String msg = "[CoreUI] cannot download " + gen.str + " because: " + gen.error.getMessage();
+        String msg = "cannot download " + gen.str + ", cause: " + gen.error.getMessage();
         if (gen.error.getCause() != null)
             msg += ", " + gen.error.getCause().getMessage();
-        System.err.println(msg);
+        log.error(msg);
     }
-    
+
+    @Override
     public boolean quit()
     {
         boolean ret = getConfirmation("OK to quit?");
@@ -212,18 +186,7 @@ public class GraphicUI extends AbstractApplication implements ChangeListener, Us
         }
         catch(Exception notConfiguredYet) { }
 
-        this.debug = false;
-        try 
-        { 
-            conf.setSection(configSection, true);
-            String s = conf.getValue(debugKey);
-            if (s != null)
-                debug = new Boolean(s).booleanValue();
-        }
-        catch(Exception notConfiguredYet) { }
-        
         this.downloadManager = new JDownloadManager(initialThreads, downloadDir);
-        downloadManager.setDebug(debug);
         downloadManager.addChangeListener(this);
         downloadManager.addDownloadListener(downloadListener);
 
@@ -261,16 +224,31 @@ public class GraphicUI extends AbstractApplication implements ChangeListener, Us
                 });
                 
                 engineInitCond.waitForTrue();
-                synchronized (downloads)
+                // TODO: show the user we are busy with something...
+                synchronized (uris)
                 {
-                    for (int i=0; i<downloads.size(); i++)
-                        downloadManager.add((Download) downloads.get(i));
-                    downloads.clear();
+                    List<DownloadUtil.GeneratedURL> gus = DownloadUtil.generateURLs(uris, fragment);
+                    // TODO: stop showing busy since the first add will show action
+                    for (DownloadUtil.GeneratedURL g : gus)
+                    {
+                        if (g.error == null)
+                        {
+                            HttpDownload dl = new HttpDownload(userAgent, g.url, downloadManager.getDestinationDir());
+                            downloadManager.add(dl);
+                        }
+                        else
+                            logError(g);
+                    }
+                    uris.clear();
                 }
             }
             catch(Throwable t) 
             { 
-                msg("DelayedInit failed: " + t);
+                log.error("DelayedInit failed: " + t);
+            }
+            finally
+            {
+                // TODO: stop showing busy
             }
         }
     }
@@ -285,36 +263,36 @@ public class GraphicUI extends AbstractApplication implements ChangeListener, Us
 
         try 
         {
-            msg("updating configuration...");
+            log.debug("updating configuration...");
             conf.setSection(configSection, true);
             conf.putValue(threadCountConfigKey, Integer.toString(threadCount)); 
             if (destDir != null)
                 conf.putValue(downloadDirConfigKey, destDir.getAbsolutePath()); 
-            msg("updating configuration... done");
+            log.debug("updating configuration... done");
         }
         catch(IOException ioex) 
         {
-            msg("updating configuration... failed: " + ioex.getMessage());
+            log.debug("updating configuration... failed: " + ioex.getMessage());
         }
     }
     
-    private static DownloadListener initDownloadLister()
+    private static TransferListener initTransferLister()
     {
         // TODO: read a class name from a config file and try to instantiate it 
         String cname = "ca.nrc.cadc.logserver.HttpDownloadLogger";
         
         try
         {
-            System.out.println("[GraphicUI] loading: " + cname);
+            log.debug("[GraphicUI] loading: " + cname);
             Class c = Class.forName(cname);
-            System.out.println("[GraphicUI] instantiating: " + c);
-            DownloadListener dl = (DownloadListener) c.newInstance();
-            System.out.println("[GraphicUI] success: " + dl);
-            return dl;
+            log.debug("[GraphicUI] instantiating: " + c);
+            TransferListener ret = (TransferListener) c.newInstance();
+            log.debug("[GraphicUI] success: " + ret);
+            return ret;
         }
         catch(Throwable oops)
         {
-            System.out.println("[GraphicUI] failed to create DownloadListener: " + cname + ", " + oops);
+            log.warn("[GraphicUI] failed to create DownloadListener: " + cname + ", " + oops);
         }
         return null;
     }

@@ -80,7 +80,7 @@
 <applet name="DownloadManager"
         code="ca.nrc.cadc.dlm.client.AppletWrapper"
         codebase="/downloadManager" 
-        archive="cadcDownloadManagerClient.jar,cadcUtil.jar"
+        archive="cadcDownloadManagerClient.jar,cadcUtil.jar,log4j.jar"
         width="600" height="600">
     
     <param name="uris" value="<%= uris %>" />

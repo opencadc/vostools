@@ -70,16 +70,19 @@
 
 package ca.nrc.cadc.dlm.client.event;
 
+import ca.nrc.cadc.net.event.TransferEvent;
+import ca.nrc.cadc.net.event.TransferListener;
+
 /**
  * Listens for events and logs to System.out.
  *
  * @author pdowler
  */
-public class ConsoleEventLogger implements DownloadListener
+public class ConsoleEventLogger implements TransferListener
 {
     public ConsoleEventLogger() { }
     
-    public void downloadEvent(DownloadEvent e) 
+    public void transferEvent(TransferEvent e)
     {
         System.out.println("[ConsoleEventLogger] event: " + e); 
     }

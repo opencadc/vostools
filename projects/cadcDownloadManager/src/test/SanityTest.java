@@ -70,7 +70,8 @@
 
 package test;
 
-import ca.nrc.cadc.dlm.client.Download;
+import ca.nrc.cadc.net.HttpDownload;
+
 
 /**
  * TODO.
@@ -103,11 +104,11 @@ public class SanityTest
             for (int i=0; i<tests.length; i++)
             {
                 s = tests[i];
-                f = Download.parseContentDisposition(s);
+                f = HttpDownload.parseContentDisposition(s);
                 System.out.println(s + " -->> " + f);
 
                 s = s.toUpperCase();
-                f = Download.parseContentDisposition(s);
+                f = HttpDownload.parseContentDisposition(s);
                 System.out.println(s + " -->> " + f);
             }
         }

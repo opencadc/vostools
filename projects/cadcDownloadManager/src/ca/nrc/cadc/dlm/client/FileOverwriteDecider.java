@@ -70,6 +70,7 @@
 
 package ca.nrc.cadc.dlm.client;
 
+import ca.nrc.cadc.net.OverwriteChooser;
 import java.awt.Component;
 import java.lang.reflect.InvocationTargetException;
 import java.util.Date;
@@ -82,7 +83,7 @@ import javax.swing.SwingUtilities;
  *
  * @author pdowler
  */
-public class FileOverwriteDecider 
+public class FileOverwriteDecider implements OverwriteChooser
 {
     private Component parent;
     private boolean overwriteInit = false;
@@ -94,7 +95,7 @@ public class FileOverwriteDecider
         this.parent = parent;
     }
     
-    public boolean overwriteFile(String fileName, long oldSize, long oldLastModified, long newSize, long newLastModified)
+    public boolean overwriteFile(String fileName, long oldSize, long oldLastModified, Long newSize, Long newLastModified)
     {
         // unsynchronised non-blocking response
         if (overwriteAll)

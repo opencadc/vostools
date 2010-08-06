@@ -73,8 +73,11 @@ import java.awt.Component;
 
 import ca.nrc.cadc.thread.ConditionVar;
 import ca.nrc.cadc.util.ArgumentMap;
+import ca.nrc.cadc.util.Log4jInit;
 import ca.onfire.ak.Application;
 import ca.onfire.ak.ApplicationFrame;
+import org.apache.log4j.Level;
+import org.apache.log4j.Logger;
 
 /**
  * TODO
@@ -84,36 +87,59 @@ import ca.onfire.ak.ApplicationFrame;
  */
 public class Main
 {
+    private static Logger log = Logger.getLogger(Main.class);
+
     public static void main(String[] args)
     {
         try
         {
             ArgumentMap am = new ArgumentMap(args);
-            
+            if ( am.isSet("h") || am.isSet("help") )
+            {
+                usage();
+                System.exit(0);
+            }
+            if ( am.isSet("d") || am.isSet("debug") )
+                Log4jInit.setLevel("ca.nrc.cadc", Level.DEBUG);
+            else if ( am.isSet("v") || am.isSet("verbose") )
+                Log4jInit.setLevel("ca.nrc.cadc", Level.INFO);
+            else if ( am.isSet("q") || am.isSet("quiet") )
+                Log4jInit.setLevel("ca.nrc.cadc", Level.OFF);
+            else
+                Log4jInit.setLevel("ca.nrc.cadc", Level.WARN);
+
             String uriStr = fixNull(am.getValue("uris"));
             String fragment = fixNull(am.getValue("fragment"));
-            String headless = fixNull(am.getValue("headless"));
-            String threads = fixNull(am.getValue("threads"));
-            
-            try 
-            { 
-                if (headless != null && new Boolean(headless))
-                    headless = "true";
-                else
-                    headless = null;
-            }
-            catch(Exception notSet) { headless = null; }
+            boolean headless = am.isSet("headless");
             
             UserInterface ui = null;
             ConditionVar downloadCompleteCond = new ConditionVar();
             
-            if (headless == null)
+            if (headless)
+            {
+                boolean decompress = am.isSet("decompress");
+                boolean overwrite = am.isSet("overwrite");
+                String dest = am.getValue("dest");
+                String thStr = am.getValue("threads");
+                Integer threads = null;
+                if (thStr != null)
+                    try
+                    {
+                        threads = new Integer(thStr);
+                    }
+                    catch(NumberFormatException ex)
+                    {
+                        throw new IllegalArgumentException("failed to parse '" + thStr + "' as an integer");
+                    }
+                downloadCompleteCond.set(false);
+                ui = new ConsoleUI(threads, dest, decompress, overwrite, downloadCompleteCond);
+            }
+            else
             {
                 ui = new GraphicUI();
-            } else
-            {
-                downloadCompleteCond.set(false);
-                ui = new ConsoleUI(threads, downloadCompleteCond);
+                ApplicationFrame frame  = new ApplicationFrame(Constants.name, (Application)ui);
+                frame.getContentPane().add((Component)ui);
+                frame.setVisible(true);
             }
             
             if (uriStr != null)
@@ -121,27 +147,29 @@ public class Main
                 String[] uris = uriStr.split(",");
                 ui.add(uris, fragment);
             }
-            
-            if (headless == null)
-            {
-                ApplicationFrame frame  = new ApplicationFrame(Constants.name, (Application)ui);
-                frame.getContentPane().add((Component)ui);
-                frame.setVisible(true);
-            }
-            
+
+            log.debug("starting UI...");
             ui.start();
             
             // if running headless, don't exit
             // until the downloads have been completed.
-            if (headless != null)
+            if (headless)
             {
+                log.debug("headless: waiting for downloads to complete");
                 downloadCompleteCond.waitForTrue();
+                log.debug("headless: downloads completed");
             }
-                
+        }
+        catch(IllegalArgumentException ex)
+        {
+            log.error(ex.toString());
+            usage();
+            System.exit(1);
         }
         catch(Throwable oops) 
         {
             oops.printStackTrace();
+            System.exit(2);
         }
     }
     
@@ -154,5 +182,20 @@ public class Main
         if (s.length() == 0)
             return null;
         return s;
+    }
+
+    private static void usage()
+    {
+        System.out.println("java -jar cadcDownloadManagerClient.jar -h || --help");
+        System.out.println("java -jar cadcDownloadManagerClient.jar [-v|--verbose | -d|--debug | -q|--quiet ]");
+        System.out.println("          --uris=<comma-separated list of URIs>");
+        System.out.println("         [ --fragment=<common fragment to append to all URIs> ]");
+        System.out.println("         [--headless] : run in non-interactive (no GUI) mode");
+        System.out.println();
+        System.out.println("optional arguments to use with --headless:");
+        System.out.println("        --dest=<directory> : directory must exist and be writable by the user");
+        System.out.println("        --decompress : decompress files after download (gzip,zip supported)");
+        System.out.println("        --overwrite : overwrite existing files with the same name");
+        System.out.println("        --threads=<number of threads> : allowed range is [1,11]");
     }
 }

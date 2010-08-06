@@ -104,6 +104,7 @@
             href="http://java.sun.com/products/autodl/j2se"/> 
         <jar href="cadcUtil.jar"/> 
         <jar href="cadcDownloadManagerClient.jar"/>
+        <jar href="log4j.jar"/>
         <property name="ca.nrc.cadc.net.serverName" value="<%= serverName %>" />
     </resources> 
 

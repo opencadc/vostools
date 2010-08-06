@@ -70,6 +70,9 @@
 
 package ca.nrc.cadc.dlm.client;
 
+import ca.nrc.cadc.net.HttpDownload;
+import ca.nrc.cadc.net.event.TransferEvent;
+import ca.nrc.cadc.net.event.TransferListener;
 import java.awt.BorderLayout;
 import java.awt.Color;
 import java.awt.Component;
@@ -96,9 +99,7 @@ import javax.swing.JScrollPane;
 import javax.swing.JSpinner;
 import javax.swing.SwingUtilities;
 import javax.swing.event.ChangeListener;
-
-import ca.nrc.cadc.dlm.client.event.DownloadEvent;
-import ca.nrc.cadc.dlm.client.event.DownloadListener;
+import org.apache.log4j.Logger;
 
 /**
  * Manage download of multiple files simultaneously.
@@ -107,12 +108,11 @@ import ca.nrc.cadc.dlm.client.event.DownloadListener;
  * @version $Version$
  * @author pdowler
  */
-public class JDownloadManager extends JPanel implements DownloadListener
+public class JDownloadManager extends JPanel implements TransferListener
 {
-    
-    private static boolean testing = false;
-    private boolean debug = false;
-    
+    private static final long serialVersionUID = 201008051500L;
+    private static Logger log = Logger.getLogger(JDownloadManager.class);
+
     private static String COMPLETED = " Completed: ";
     private static String CANCELLED = " Cancelled: ";
     private static String FAILED = " Failed: ";
@@ -215,8 +215,6 @@ public class JDownloadManager extends JPanel implements DownloadListener
         setInitialDir(initialDir);
     }
 
-    public void setDebug(boolean debug) { this.debug = debug; }
-    
     private class CancelAction extends AbstractAction
     {
         public CancelAction() 
@@ -227,7 +225,7 @@ public class JDownloadManager extends JPanel implements DownloadListener
         
         public void actionPerformed(ActionEvent e)
         {
-            msg("CancelAction.actionPerformed()");
+            log.debug("CancelAction.actionPerformed()");
             stop();
             cancelButton.setEnabled(false);
         }
@@ -248,13 +246,13 @@ public class JDownloadManager extends JPanel implements DownloadListener
             this.type = type;
             switch(type)
             {
-                case DownloadEvent.COMPLETED:
+                case TransferEvent.COMPLETED:
                     putValue(Action.SHORT_DESCRIPTION, "Remove all completed downloads from the list.");
                     break;
-                case DownloadEvent.CANCELLED:
+                case TransferEvent.CANCELLED:
                     putValue(Action.SHORT_DESCRIPTION, "Remove all cancelled downloads from the list.");
                     break;
-                case DownloadEvent.FAILED:
+                case TransferEvent.FAILED:
                     putValue(Action.SHORT_DESCRIPTION, "Remove all failed downloads from the list.");
                     break;
             }
@@ -262,13 +260,13 @@ public class JDownloadManager extends JPanel implements DownloadListener
         
         public void actionPerformed(ActionEvent e)
         {
-            msg("ClearAction.actionPerformed()");
+            log.debug("ClearAction.actionPerformed()");
             ArrayList removals = new ArrayList();
             for (int i=0; i<downloads.getComponentCount(); i++)
             {
                 JDownload jdl = (JDownload) downloads.getComponent(i);
-                DownloadEvent de = jdl.getLastEvent();
-                if (de != null && doClear(de.getState()))
+                TransferEvent te = jdl.getLastEvent();
+                if (te != null && doClear(te.getState()))
                     removals.add(jdl);
             }
             for (int i=0; i<removals.size(); i++)
@@ -281,17 +279,12 @@ public class JDownloadManager extends JPanel implements DownloadListener
         {
             if (this.type == state)
                 return true;
-            if (state == DownloadEvent.COMPLETED || state == DownloadEvent.CANCELLED)
+            if (state == TransferEvent.COMPLETED || state == TransferEvent.CANCELLED)
                 return true;
             return false;
         }
     }
     
-    private void msg(String s)
-    {
-         if (debug) System.out.println("[JDownloadManager] " + s);
-    }
-
     public int getThreadCount() 
     {
         return downloadManager.getThreadCount();
@@ -324,7 +317,7 @@ public class JDownloadManager extends JPanel implements DownloadListener
      *
      * @param dl the listener
      */
-    public void addDownloadListener(DownloadListener dl)
+    public void addDownloadListener(TransferListener dl)
     {
         if (dl == null)
             return;
@@ -333,7 +326,7 @@ public class JDownloadManager extends JPanel implements DownloadListener
         downloadListeners.add(dl);
     }
     
-    public void removeDownloadListener(DownloadListener dl)
+    public void removeDownloadListener(TransferListener dl)
     {
         if (dl == null)
             return;
@@ -343,14 +336,14 @@ public class JDownloadManager extends JPanel implements DownloadListener
     }
     
     // DownloadListener
-    public void downloadEvent(DownloadEvent e)
+    public void transferEvent(TransferEvent e)
     {
-        msg("downloadEvent: " + e);
+        log.debug("downloadEvent: " + e);
         switch(e.getState())
         {
-            case DownloadEvent.FAILED:
-            case DownloadEvent.CANCELLED:
-            case DownloadEvent.COMPLETED: 
+            case TransferEvent.FAILED:
+            case TransferEvent.CANCELLED:
+            case TransferEvent.COMPLETED:
                 if (SwingUtilities.isEventDispatchThread())
                     new UpdateUI(e).run();
                 else
@@ -362,8 +355,8 @@ public class JDownloadManager extends JPanel implements DownloadListener
             return;
         for (int i=0; i<downloadListeners.size(); i++)
         {
-            DownloadListener dl = (DownloadListener) downloadListeners.get(i);
-            dl.downloadEvent(e);
+            TransferListener tl = (TransferListener) downloadListeners.get(i);
+            tl.transferEvent(e);
         }
     }
     
@@ -376,7 +369,7 @@ public class JDownloadManager extends JPanel implements DownloadListener
     {
         try
         {
-            msg("initialDir: " + getInitialDir());
+            log.debug("initialDir: " + getInitialDir());
             MyFileChooser chooser = new MyFileChooser(getInitialDir());
             
             int returnVal = chooser.showDialog(parent, "Select");
@@ -404,7 +397,7 @@ public class JDownloadManager extends JPanel implements DownloadListener
         {
             rex.printStackTrace();
         }
-        msg("destDir: " + downloadManager.getDestinationDir());
+        log.debug("destDir: " + downloadManager.getDestinationDir());
     }
     
     public void start()
@@ -414,13 +407,13 @@ public class JDownloadManager extends JPanel implements DownloadListener
         
         if ( SwingUtilities.isEventDispatchThread() )
         {
-            msg("invoking doStart() directly");
+            log.debug("invoking doStart() directly");
             downloadManager.startThreadControl();
         }
         else
             try
             {
-                msg("invoking doStart() via invokeAndWait");
+                log.debug("invoking doStart() via invokeAndWait");
                 SwingUtilities.invokeAndWait(new Runnable() 
                 { 
                     public void run() {downloadManager.startThreadControl(); } 
@@ -452,19 +445,19 @@ public class JDownloadManager extends JPanel implements DownloadListener
     
     private class UpdateUI implements Runnable
     {
-        DownloadEvent e;
-        UpdateUI(DownloadEvent e) { this.e = e; }
+        TransferEvent e;
+        UpdateUI(TransferEvent e) { this.e = e; }
         public void run()
         {
             switch(e.getState())
             {
-                case DownloadEvent.FAILED:
+                case TransferEvent.FAILED:
                     numFailed++;
                     break;
-                case DownloadEvent.CANCELLED:
+                case TransferEvent.CANCELLED:
                     numCancelled++;
                     break;
-                case DownloadEvent.COMPLETED:
+                case TransferEvent.COMPLETED:
                     numCompleted++;
                     break;
             }
@@ -490,8 +483,9 @@ public class JDownloadManager extends JPanel implements DownloadListener
     /**
      * Add a new Download to the queue. This method will silently do nothing and return if the user
      * cancelled the selection of a destination directory.
+     * @param dl
      */
-    public void add(final Download dl)
+    public void add(final HttpDownload dl)
     {
         if ( SwingUtilities.isEventDispatchThread())
             doAddDownload(dl);
@@ -506,18 +500,14 @@ public class JDownloadManager extends JPanel implements DownloadListener
     }
     
     // implementation to be invoked in the UI event thread
-    private void doAddDownload(Download dl)
+    private void doAddDownload(HttpDownload dl)
     {
         if (downloadManager.getDestinationDir() == null)
             return; // user cancelled dest dir selection dialog, nothing to do
-        dl.destDir = downloadManager.getDestinationDir();
+        dl.setOverwriteChooser(fod);
 
-        dl.setDebug(debug);
-        dl.setFileOverwriteDecider(fod);
-
-        msg("adding " + dl + " to queue");
+        log.debug("adding " + dl + " to queue");
         JDownload jdl = new JDownload(dl);
-        jdl.setDebug(debug);
         Util.recursiveSetBackground(jdl, Color.WHITE);
         downloads.add(jdl);
         validateTree();

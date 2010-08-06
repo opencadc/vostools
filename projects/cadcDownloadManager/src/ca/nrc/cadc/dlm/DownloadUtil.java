@@ -80,6 +80,7 @@ import java.util.List;
 
 import ca.nrc.cadc.net.MultiSchemeHandler;
 import ca.nrc.cadc.net.SchemeHandler;
+import org.apache.log4j.Logger;
 
 /**
  * Miscellanneous methods for use in JSP pages.
@@ -88,6 +89,7 @@ import ca.nrc.cadc.net.SchemeHandler;
  */
 public class DownloadUtil
 {
+    private static Logger log = Logger.getLogger(DownloadUtil.class);
     private static MultiSchemeHandler schemeHandler;
     
     private DownloadUtil() { }
@@ -124,21 +126,21 @@ public class DownloadUtil
             {
                 try
                 {
-                    System.out.println("[DownloadUtil] configuring: " + uris[i]);
+                    log.debug("[DownloadUtil] configuring: " + uris[i]);
                     URI u = new URI(uris[i]);
                     String scheme = u.getScheme();
                     String cname = u.getSchemeSpecificPart();
-                    System.out.println("[DownloadUtil] loading: " + cname);
+                    log.debug("[DownloadUtil] loading: " + cname);
                     Class c = Class.forName(cname);
-                    System.out.println("[DownloadUtil] instantiating: " + c);
+                    log.debug("[DownloadUtil] instantiating: " + c);
                     SchemeHandler handler = (SchemeHandler) c.newInstance();
-                    System.out.println("[DownloadUtil] adding: " + scheme + "," + handler);
+                    log.debug("[DownloadUtil] adding: " + scheme + "," + handler);
                     schemeHandler.addSchemeHandler(scheme, handler);
-                    System.out.println("[DownloadUtil] success: " + scheme + " is supported");
+                    log.debug("[DownloadUtil] success: " + scheme + " is supported");
                 }
                 catch(Throwable oops)
                 {
-                    System.out.println("[DownloadUtil] failed to create SchemeHandler: " + uris[i] + ", " + oops);
+                    log.warn("[DownloadUtil] failed to create SchemeHandler: " + oops);
                 }
             }
         }
@@ -179,7 +181,7 @@ public class DownloadUtil
     
     public static List<GeneratedURL> generateURLs(List<ParsedURI> uris, String commonFragment)
     {
-        System.out.println("[DownloadUtil] generateURLs: START");
+        log.debug("[DownloadUtil] generateURLs: START");
         List ret = new ArrayList<GeneratedURL>();
         
         Iterator<ParsedURI> i = uris.iterator();
@@ -218,7 +220,7 @@ public class DownloadUtil
                 }
             }
         }
-        System.out.println("[DownloadUtil] generateURLs: " + ret.size() + " URLs");
+        log.debug("[DownloadUtil] generateURLs: " + ret.size() + " URLs");
         return ret;
     }
     
@@ -280,7 +282,7 @@ public class DownloadUtil
     // generate a List of URIs from the comma-separated list of URIs
     private static void parseURIs(String uris, String commonFragment, List<ParsedURI> ret)
     {
-        System.out.println("[DownloadUtil] parseURIs: " + uris + " commonFragment: " + commonFragment);
+        log.debug("[DownloadUtil] parseURIs: " + uris + " commonFragment: " + commonFragment);
         if (uris != null)
         {
             if (commonFragment != null)
@@ -330,23 +332,23 @@ public class DownloadUtil
 
     public static void debug(String key, String value)
     {
-        System.out.println("[DownloadUtil] " + key + " = " + value);
+        log.debug("[DownloadUtil] " + key + " = " + value);
     }
     public static void debug(String key, String[] value)
     {
         try
         {
-            System.out.println("[DownloadUtil] " + key + " START");
+            log.debug("[DownloadUtil] " + key + " START");
     
             if (value == null)
                 return;
-            System.out.println("[DownloadUtil] " + key + " = " + value.length);
+            log.debug("[DownloadUtil] " + key + " = " + value.length);
             for (int i=0; i<value.length; i++)
                 debug("\t"+key, value[i]);
         }
         finally
         {
-            System.out.println("[DownloadUtil] " + key + " DONE");
+            log.debug("[DownloadUtil] " + key + " DONE");
         }
     }
 }

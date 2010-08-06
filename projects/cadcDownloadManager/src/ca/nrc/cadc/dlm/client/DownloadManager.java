@@ -69,6 +69,9 @@
 
 package ca.nrc.cadc.dlm.client;
 
+import ca.nrc.cadc.net.HttpDownload;
+import ca.nrc.cadc.net.event.TransferEvent;
+import ca.nrc.cadc.net.event.TransferListener;
 import java.io.File;
 import java.util.ArrayList;
 import java.util.List;
@@ -77,10 +80,9 @@ import java.util.ListIterator;
 import javax.swing.event.ChangeEvent;
 import javax.swing.event.ChangeListener;
 
-import ca.nrc.cadc.dlm.client.event.DownloadEvent;
-import ca.nrc.cadc.dlm.client.event.DownloadListener;
 import ca.nrc.cadc.thread.Queue;
 import ca.nrc.cadc.thread.QueueUpdater;
+import org.apache.log4j.Logger;
 
 /**
  * Handles the core download logic.
@@ -88,9 +90,10 @@ import ca.nrc.cadc.thread.QueueUpdater;
  * @author majorb
  *
  */
-public class DownloadManager implements DownloadListener
+public class DownloadManager implements TransferListener
 {
-    
+    private static Logger log = Logger.getLogger(DownloadManager.class);
+
     private static boolean testing = false;
     private boolean debug = false;
     
@@ -113,11 +116,6 @@ public class DownloadManager implements DownloadListener
 
     public void setDebug(boolean debug) { this.debug = debug; }
     
-    private void msg(String s)
-    {
-         if (debug) System.out.println("[JDownloadManager] " + s);
-    }
-
     public int getThreadCount() 
     {
         return ((Integer)threadControl.getValue()).intValue(); 
@@ -136,7 +134,7 @@ public class DownloadManager implements DownloadListener
     {
         if (pool == null)
         {
-            msg("creating ThreadPool");
+            log.debug("creating ThreadPool");
             this.pool = new ThreadPool();
             threadControl.addListener(pool);
         }
@@ -198,7 +196,7 @@ public class DownloadManager implements DownloadListener
      *
      * @param dl the listener
      */
-    public void addDownloadListener(DownloadListener dl)
+    public void addDownloadListener(TransferListener dl)
     {
         if (dl == null)
             return;
@@ -207,7 +205,7 @@ public class DownloadManager implements DownloadListener
         downloadListeners.add(dl);
     }
     
-    public void removeDownloadListener(DownloadListener dl)
+    public void removeDownloadListener(TransferListener dl)
     {
         if (dl == null)
             return;
@@ -217,16 +215,16 @@ public class DownloadManager implements DownloadListener
     }
     
     // DownloadListener
-    public void downloadEvent(DownloadEvent e)
+    public void transferEvent(TransferEvent e)
     {
-        msg("downloadEvent: " + e);
+        log.debug("transferEvent: " + e);
         // rebroadcast event to other listeners
         if (downloadListeners == null || downloadListeners.size() == 0)
             return;
         for (int i=0; i<downloadListeners.size(); i++)
         {
-            DownloadListener dl = (DownloadListener) downloadListeners.get(i);
-            dl.downloadEvent(e);
+            TransferListener dl = (TransferListener) downloadListeners.get(i);
+            dl.transferEvent(e);
         }
     }
 
@@ -235,14 +233,13 @@ public class DownloadManager implements DownloadListener
         return null;
     }
     
-    public void addDownload(final Download dl)
+    public void addDownload(final HttpDownload dl)
     {
-        dl.setDownloadListener(this);
-        dl.destDir = getDestinationDir();
+        dl.setTransferListener(this);
         pool.add(dl);
     }
     
-    private String workerBasename = "JDownloadManager.WorkerThread: ";
+    private String workerBasename = "DownloadManager.WorkerThread: ";
 
     private class ThreadPool implements ThreadControlListener
     {
@@ -256,20 +253,16 @@ public class DownloadManager implements DownloadListener
             this.threads = new ArrayList(MAX_THREAD_COUNT);
             threadValueChanged(null); // init threads
         }
-        void msg(String s)
-        {
-            if (debug) System.out.println("[ThreadPool] " + s);
-        }
         
-        public void add(Download task)
+        public void add(HttpDownload task)
         {
-            msg("queueing: " + task);
+            log.debug("queueing: " + task);
             tasks.push(task);
         }
 
         public void terminate()
         {
-            msg("ThreadPool.terminate()");
+            log.debug("ThreadPool.terminate()");
             
             // terminate thread pool members
             numWorkers = 0;
@@ -277,25 +270,25 @@ public class DownloadManager implements DownloadListener
             {
                 for (int i=0; i<threads.size(); i++)
                 {
-                    msg("ThreadPool.terminate() interrupting WorkerThread " + i);
+                    log.debug("ThreadPool.terminate() interrupting WorkerThread " + i);
                     WorkerThread wt = (WorkerThread) threads.get(i);
                     synchronized(wt)
                     {
-                        msg("ThreadPool.terminate(): interrupting " + wt.getName());
+                        log.debug("ThreadPool.terminate(): interrupting " + wt.getName());
                         wt.interrupt();
                     }
                 }
             }
 
             // pop remaining tasks from queue and cancel them
-            msg("ThreadPool.terminate() flushing queue");
+            log.debug("ThreadPool.terminate() flushing queue");
             tasks.update(new QueueFlush());
-            msg("ThreadPool.terminate() DONE");
+            log.debug("ThreadPool.terminate() DONE");
         }
         
         public void threadValueChanged(Integer newValue)
         {
-            msg("ThreadPool: stateChanged("+newValue+")");
+            log.debug("ThreadPool: stateChanged("+newValue+")");
             this.numWorkers = ((Integer) threadControl.getValue()).intValue();
             if (numWorkers < 1)
             {
@@ -308,7 +301,7 @@ public class DownloadManager implements DownloadListener
                 return;
             }
                 
-            msg("current thread count: " + threads.size() + " new size: " + numWorkers);
+            log.debug("current thread count: " + threads.size() + " new size: " + numWorkers);
             if (threads.size() == numWorkers)
                 return;
             
@@ -316,7 +309,7 @@ public class DownloadManager implements DownloadListener
             {
                 while (threads.size() < numWorkers)
                 {
-                    msg("adding worker thread");
+                    log.debug("adding worker thread");
                     WorkerThread t = new WorkerThread();
                     t.setPriority(Thread.MIN_PRIORITY); // mainly IO blocked anyway, so keep the UI thread happy
                     threads.add(t);
@@ -345,8 +338,8 @@ public class DownloadManager implements DownloadListener
                 ListIterator i = list.listIterator();
                 while ( i.hasNext() )
                 {
-                    Download dl = (Download) i.next();
-                    msg("ThreadPool: terminating queued download");
+                    HttpDownload dl = (HttpDownload) i.next();
+                    log.debug("ThreadPool: terminating queued download");
                     dl.terminate();
                     i.remove();
                     count++;
@@ -357,7 +350,7 @@ public class DownloadManager implements DownloadListener
     
         private class WorkerThread extends Thread
         {
-            Download currentTask;
+            HttpDownload currentTask;
             
             WorkerThread()
             {
@@ -369,7 +362,7 @@ public class DownloadManager implements DownloadListener
             // threads keep running as long as they are in the threads list
             public void run()
             {
-                msg(workerBasename + "START");
+                log.debug(workerBasename + "START");
                 boolean cont = true;
                 while (cont)
                 {
@@ -378,7 +371,7 @@ public class DownloadManager implements DownloadListener
                         Object tmp = tasks.pop(); // block here
                         synchronized(this) 
                         {
-                            currentTask = (Download) tmp;
+                            currentTask = (HttpDownload) tmp;
                         }
                         synchronized(threads) 
                         {
@@ -386,21 +379,21 @@ public class DownloadManager implements DownloadListener
                         }
                         if (cont)
                         {
-                            msg(workerBasename + "still part of pool");
+                            log.debug(workerBasename + "still part of pool");
                             // set thread name so thread dumps are intelligible
                             setName(workerBasename + currentTask);
                             currentTask.run();
                         }
                         else
                         {
-                            msg(workerBasename + "no longer part of pool");
+                            log.debug(workerBasename + "no longer part of pool");
                             synchronized(this) // vs sync block in terminate()
                             {
                                 // make sure to clear interrupt flag from an interrupt() in stateChanged()
                                 // in case it comes after pop() and before threads.contains()
                                 interrupted();
                                 // we should quit, so put task back
-                                msg(workerBasename + "OOPS (put it back): " + tmp);
+                                log.debug(workerBasename + "OOPS (put it back): " + tmp);
                                 tasks.push(tmp);
                                 currentTask = null;
                             }
@@ -419,14 +412,14 @@ public class DownloadManager implements DownloadListener
                         {
                             if (threads.size() > numWorkers)
                             {
-                                msg(workerBasename + "numWorkers=" + numWorkers + " threads.size() = " + threads.size());
+                                log.debug(workerBasename + "numWorkers=" + numWorkers + " threads.size() = " + threads.size());
                                 threads.remove(this);
                             }
                             cont = threads.contains(this);
                         }
                     }
                 }
-                msg(workerBasename + "DONE");
+                log.debug(workerBasename + "DONE");
             }
         }
     }

@@ -70,9 +70,9 @@
 
 package ca.nrc.cadc.dlm.client;
 
-import ca.nrc.cadc.dlm.client.event.ProgressListener;
-import ca.nrc.cadc.dlm.client.event.DownloadEvent;
-import ca.nrc.cadc.dlm.client.event.DownloadListener;
+import ca.nrc.cadc.net.HttpDownload;
+import ca.nrc.cadc.net.event.ProgressListener;
+import ca.nrc.cadc.net.event.TransferEvent;
 import java.awt.BorderLayout;
 import java.awt.Color;
 import java.awt.FlowLayout;
@@ -88,22 +88,25 @@ import javax.swing.JTextArea;
 import javax.swing.SwingUtilities;
 import javax.swing.border.Border;
 import javax.swing.border.LineBorder;
+import org.apache.log4j.Logger;
 
 /**
  * Simple UI to show progress of a Download task.
  *
  * @author pdowler
  */
-public class JDownload extends JPanel implements DownloadListener, ProgressListener, Runnable
+public class JDownload extends JPanel implements ProgressListener, Runnable
 {
-    private boolean debug = true;
+    private static final long serialVersionUID = 201008051500L;
+    private static Logger log = Logger.getLogger(JDownload.class);
+    
     private boolean showBorder = false;
     
     private static Color COMPLETED_COLOR = Color.BLACK;
     private static Color FAILED_COLOR = Color.RED;
     private static Color CANCELLED_COLOR = Color.GRAY;
     
-    private Download dl;
+    private HttpDownload dl;
         
     //private String status;
     private JTextArea textPane; // main result display so user can copy and paste it
@@ -115,26 +118,26 @@ public class JDownload extends JPanel implements DownloadListener, ProgressListe
     private String totalStr;
     private long startTime = 0;
     private long lastUpdate = 0;
-    private int newBytes;
-    private int totalBytes;
-    private int startingPos;
+    private long totalBytes;
+    private long startingPos;
+    private long totalSize = -1;
     
     // for instananeous rate
     private long dtSinceLastUpdate;
-    private int bytesSinceLastUpdate;
+    private long bytesSinceLastUpdate;
     private long dtSinceLastUpdate2;
-    private int bytesSinceLastUpdate2;
+    private long bytesSinceLastUpdate2;
     
-    private DownloadEvent lastEvent;
+    private TransferEvent lastEvent;
 
-    public JDownload(Download dl) 
+    public JDownload(HttpDownload dl)
     { 
         super(new BorderLayout());
         this.dl = dl;
         dl.setProgressListener(this);
 
-        if (dl.label == null && dl.url != null)
-            dl.label = dl.url.toString();
+        //if (dl.label == null && dl.url != null)
+        //    dl.label = dl.url.toString();
  
         JPanel content = new JPanel(new BorderLayout());
         content.setBorder(BorderFactory.createEmptyBorder(4, 4, 4, 4));
@@ -174,13 +177,11 @@ public class JDownload extends JPanel implements DownloadListener, ProgressListe
             this.setBorder(spaceBorder);
         
         // starting content
-        textPane.setText(dl.label);
+        textPane.setText(dl.getURL().toString());
         transLabel.setText("Queued");
     }
     
-    public void setDebug(boolean debug) { this.debug = debug; }
-    
-    public DownloadEvent getLastEvent() { return lastEvent; }
+    public TransferEvent getLastEvent() { return lastEvent; }
     
     public void cancel()
     {
@@ -188,10 +189,9 @@ public class JDownload extends JPanel implements DownloadListener, ProgressListe
             dl.terminate();
     }
 
-    // DownloadListener
-    public void downloadEvent(DownloadEvent e)
+    // TransferListener
+    public void transferEvent(TransferEvent e)
     {
-        msg("downloadEvent: " + e);
         this.lastEvent = e;
         SwingUtilities.invokeLater(new UpdateUI(e));
     }
@@ -200,88 +200,100 @@ public class JDownload extends JPanel implements DownloadListener, ProgressListe
     
     private class UpdateUI implements Runnable
     {
-        DownloadEvent e;
-        UpdateUI(DownloadEvent e) { this.e = e; }
+        TransferEvent e;
+        UpdateUI(TransferEvent e) { this.e = e; }
         public void run()
         {
-            msg("UpdateUI: " + e);
+            //log.debug("UpdateUI: " + e);
             switch(e.getState())
             {
-                case DownloadEvent.CONNECTING:
+                case TransferEvent.CONNECTING:
                     //status = "Connecting...";
                     transLabel.setText("Connecting...");
                     progress.setIndeterminate(true);
                     break;
                     
-                case DownloadEvent.CONNECTED:
+                case TransferEvent.CONNECTED:
                     //status = "Connected";
                     transLabel.setText("Connected");
                     break;
                     
-                case DownloadEvent.DOWNLOADING:
-                case DownloadEvent.DECOMPRESSING:
+                case TransferEvent.TRANSFERING:
+                case TransferEvent.DECOMPRESSING:
                     JDownload.this.startingPos = e.getStartingPosition();
-                    if (e.getState() == DownloadEvent.DECOMPRESSING)
-                        textPane.setText("decompressing " + dl.label);
-                    
-                    transLabel.setText("");
-                    if (dl.getSize() > 0)
+                    if (e.getState() == TransferEvent.TRANSFERING)
+                    {
+                        textPane.setText("downloading -> " + e.getFile().getAbsolutePath());
+                        totalSize = dl.getContentLength();
+                    }
+                    else
+                    {
+                        textPane.setText("decompressing -> " + e.getFile().getAbsolutePath());
+                        totalSize = dl.getSize();
+                    }
+                    if (totalSize > 0)
                     {
                         totalStr = " of " + sizeToString(dl.getSize(), 0);
                         progress.setIndeterminate(false);
                         progress.setMinimum(0);
-                        progress.setMaximum(dl.getSize());
+                        progress.setMaximum(100);
                     }
                     else
                         progress.setIndeterminate(true);
+                    validate();
                     break;
                     
-                case DownloadEvent.FAILED:
-                case DownloadEvent.CANCELLED:
-                    if (e.getState() == DownloadEvent.FAILED)
-                    {
-                        String status = "failed: " + e.getError().getMessage();
+                case TransferEvent.FAILED:
+                    // switch to textPane so displayed result is selectable
+                    textPane.setText(dl.getURL() + "\nfailed: " +  e.getError().getMessage());
+                    textPane.setForeground(FAILED_COLOR);
+                    validate();
+                    break;
 
-                        // switch to textPane so displayed result is selectable
-                        textPane.setText(dl.label + "\n" + status);
-                        textPane.setForeground(FAILED_COLOR);
-                    }
-                    else
+                case TransferEvent.CANCELLED:
+                    transLabel.setText("");
+                    textPane.setText(dl.getURL() + "\ncancelled");
+                    textPane.setForeground(CANCELLED_COLOR);
+                    textPane.setFont(transLabel.getFont()); // keep same font
+                    if (showBorder)
                     {
-                        //status = "cancelled";
-                        
-                        // switch to textPane so displayed result is selectable
-                        textPane.setText(dl.label + "\ncancelled");
-                        textPane.setForeground(CANCELLED_COLOR);
-                        textPane.setFont(transLabel.getFont()); // keep same font
-                        if (showBorder)
-                        {
-                            LineBorder lineBorder = new LineBorder(Color.GRAY, 1, true);
-                            setBorder(BorderFactory.createCompoundBorder(spaceBorder, lineBorder));
-                        }
+                        LineBorder lineBorder = new LineBorder(Color.GRAY, 1, true);
+                        setBorder(BorderFactory.createCompoundBorder(spaceBorder, lineBorder));
                     }
                     validate();
                     break;
-                case DownloadEvent.COMPLETED:
+                    
+                case TransferEvent.COMPLETED:
                     double dt = (System.currentTimeMillis() - startTime) / 1000.0; // seconds
                     if (dt == 0.0)
                         dt = 1.0;
-                    String name = dl.label + " -> " + e.getFile();
-                    String status = "completed " + sizeToString(totalBytes, 0) + " in " + dt + "sec (" + sizeToString((totalBytes-startingPos), dt) + ")";
-                    
-                    // switch to textPane so displayed result is selectable
+                    StringBuffer sb = new StringBuffer();
+                    sb.append(dl.getURL().toString());
+                    sb.append(" -> ");
+                    sb.append(e.getFile().getAbsolutePath());
+                    sb.append("\ncompleted ");
+                    sb.append(sizeToString(totalBytes, 0));
+                    sb.append(" in ");
+                    sb.append(Double.toString(dt));
+                    sb.append("sec (");
+                    sb.append(sizeToString((totalBytes-startingPos), dt));
+                    sb.append(")");
+                    transLabel.setText("");
                     textPane.setForeground(COMPLETED_COLOR);
-                    textPane.setText(name + "\n" + status);
+                    textPane.setText(sb.toString());
                     textPane.setFont(transLabel.getFont()); // keep same font
                     validate();
                     break;
+
+                default:
+                    log.warn("unexpected event: " + e.getStateLabel());
             }
             // handle button and progress bar separately
             switch(e.getState())
             {
-                case DownloadEvent.FAILED:
-                case DownloadEvent.CANCELLED:
-                case DownloadEvent.COMPLETED:
+                case TransferEvent.FAILED:
+                case TransferEvent.CANCELLED:
+                case TransferEvent.COMPLETED:
                     if (cancelButton != null)
                     {
                         // disable and remove
@@ -314,7 +326,6 @@ public class JDownload extends JPanel implements DownloadListener, ProgressListe
     // ProgressListener
     public void update(int newBytes, int totalBytes)
     {
-        this.newBytes = newBytes;
         this.totalBytes = totalBytes;
         if (startTime == 0)
             startTime = System.currentTimeMillis();
@@ -323,7 +334,7 @@ public class JDownload extends JPanel implements DownloadListener, ProgressListe
         long t = System.currentTimeMillis();
         this.dtSinceLastUpdate = t - lastUpdate;
         this.bytesSinceLastUpdate += newBytes;
-        if (dtSinceLastUpdate > 1000) // milliseconds
+        if (dtSinceLastUpdate > 333) // milliseconds
         {
             this.dtSinceLastUpdate2 = this.dtSinceLastUpdate; // copy values to "back-buffer" for rendering in run()
             this.bytesSinceLastUpdate2 = this.bytesSinceLastUpdate;
@@ -344,7 +355,10 @@ public class JDownload extends JPanel implements DownloadListener, ProgressListe
             dt = 1.0;
         
         if (progress != null && !progress.isIndeterminate() && totalBytes > 0)
-            progress.setValue(totalBytes);
+        {
+            int percentComplete = (int) (100*totalBytes / totalSize);
+            progress.setValue(percentComplete);
+        }
         
         String s = sizeToString(totalBytes, 0);
         if (totalStr != null)
@@ -406,11 +420,5 @@ public class JDownload extends JPanel implements DownloadListener, ProgressListe
         public CancelAction() { super("Cancel"); }
 
         public void actionPerformed(ActionEvent e) { cancel(); }
-    }
-    
-    // debug messages
-    private void msg(String s)
-    {
-        if (debug) System.out.println("[JDownload] " + s);
     }
 }

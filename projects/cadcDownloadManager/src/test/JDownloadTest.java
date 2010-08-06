@@ -71,8 +71,9 @@
 package test;
 
 import ca.nrc.cadc.dlm.client.event.ConsoleEventLogger;
-import ca.nrc.cadc.dlm.client.Download;
 import ca.nrc.cadc.dlm.client.JDownload;
+import ca.nrc.cadc.net.HttpDownload;
+import ca.nrc.cadc.util.Log4jInit;
 
 import ca.onfire.ak.AbstractApplication;
 import ca.onfire.ak.ApplicationFrame;
@@ -81,6 +82,7 @@ import java.awt.BorderLayout;
 import java.io.File;
 import java.net.URL;
 import javax.swing.JPanel;
+import org.apache.log4j.Level;
 
 /**
  * TODO.
@@ -91,23 +93,20 @@ public class JDownloadTest extends AbstractApplication
 {
     public static void main(String[] args)
     {
-        String baseURL = "http://cadcweb0/getData?";
+        String baseURL = "http://cadcweb0/getData/anon/";
         try
         {
-            Download dl = new Download();
+            Log4jInit.setLevel("ca.nrc.cadc", Level.DEBUG);
+
+            HttpDownload dl = new HttpDownload(
+                new URL(baseURL + "HSTCA/J8FU02030_DRZ"),
+                new File("/tmp")
+            );
             
-            //dl.url = new URL(baseURL + "archive=HST&file_id=U27R9G01B.2");
-            //dl.label = "HST/U27R9G01B.2";
-            dl.url = new URL(baseURL + "archive=HSTCA&file_id=J8FU02030_DRZ");
-            dl.label = "HSTCA/J8FU02030_DRZ";
-            //dl.url = new URL(baseURL + "archive=CFHT&file_id=535741p");
-            //dl.label = "CFHT/535741p";
+            dl.setDecompress(true);
+            dl.setOverwrite(true);
             
-            dl.decompress = true;
-            dl.overwrite = true;
-            dl.destDir = new File("/tmp");
-            
-            dl.setDownloadListener(new ConsoleEventLogger());
+            dl.setTransferListener(new ConsoleEventLogger());
             
             JDownloadTest ui = new JDownloadTest(dl);
             ApplicationFrame frame  = new ApplicationFrame("JDownloadTest", ui);
@@ -116,33 +115,36 @@ public class JDownloadTest extends AbstractApplication
                         
             Thread.sleep(3000L);
             long t1 = System.currentTimeMillis();
-            dl.run();
+            Thread t = new Thread(dl);
+            t.start();
+            t.join();
+            
             long dt = System.currentTimeMillis() - t1;
             dt /= 1000L;
             
             msg("duration: " + dt + " sec");
             
-            msg("output: " + dl.destFile);
-            msg("skipped: " + dl.skipped);
-            msg("failure: " + dl.failure);
-            msg("eventID: " + dl.eventID);
+            msg("output: " + dl.getFile());
+            msg("failure: " + dl.getThrowable());
         }
         catch(Throwable t) { t.printStackTrace(); }
     }
+
+    HttpDownload download;
     
-    public JDownloadTest(Download dl)
+    public JDownloadTest(HttpDownload dl)
     {
         super(new BorderLayout());
-        JDownload jdl = new JDownload(dl);
-        add(new JPanel(), BorderLayout.CENTER);
-        add(jdl, BorderLayout.NORTH);
+        this.download = dl;
     }
     
     protected void makeUI()
     {
-        
+        JDownload jdl = new JDownload(download);
+        add(new JPanel(), BorderLayout.CENTER);
+        add(jdl, BorderLayout.NORTH);
     }
-    
+
     private static void msg(String s)
     {
          System.out.println("[JDownloadTest] " + s);
