@@ -82,6 +82,8 @@ import java.util.EventObject;
  */
 public class TransferEvent extends EventObject
 {
+    private static final long serialVersionUID = 201008051500L;
+    
     private static int MIN_STATE = 0;
     public static final int CONNECTING = 1;
     public static final int CONNECTED  = 2;
@@ -90,10 +92,14 @@ public class TransferEvent extends EventObject
     public static final int COMPLETED  = 5;
     public static final int CANCELLED  = 6;
     public static final int FAILED     = 7;
-    private static int MAX_STATE = 8;
+    public static final int DELETED = 8;
+    private static int MAX_STATE = 9;
     private String[] states = new String[]
     {
-        "min", "CONNECTING", "CONNECTED", "DOWNLOADING", "DECOMPRESSING", "COMPLETED", "CANCELLED", "FAILED", "max"
+        "min", 
+        "CONNECTING", "CONNECTED", "TRANSFERING", "DECOMPRESSING",
+        "COMPLETED", "CANCELLED", "FAILED", "DELETED",
+        "max"
     };
     
     private URL url;
@@ -107,6 +113,7 @@ public class TransferEvent extends EventObject
     /**
      * Convenience constructor for a COMPLETED download event.
      * @param source
+     * @param eventID
      * @param url
      * @param file
      */
@@ -118,6 +125,7 @@ public class TransferEvent extends EventObject
     /**
      * Convenience constructor for a FAILED download event.
      * @param source
+     * @param eventID
      * @param url
      * @param file
      * @param error
@@ -128,7 +136,7 @@ public class TransferEvent extends EventObject
     }
     
     /**
-     * Generic sate transition constructor.
+     *  Constructor for state transition events.
      *
      * @param source
      * @param eventID
@@ -154,8 +162,20 @@ public class TransferEvent extends EventObject
         if (state <= MIN_STATE || state >= MAX_STATE)
             throw new IllegalArgumentException("unknown state: " + state);
     }
-  
+
+    /**
+     * Get the state. TODO: change this to an enum.
+     *
+     * @return
+     */
     public int getState() { return state; }
+
+    /**
+     * Get the state as a string. This is useful for debugging (eg when getting an unexpected state).
+     *
+     * @return
+     */
+    public String getStateLabel() { return states[state]; }
     
     /**
      * Get the eventID for the download.
@@ -199,9 +219,11 @@ public class TransferEvent extends EventObject
         }
         return false;
     }
-    
+
+    @Override
     public String toString() 
     {
-        return "DownloadEvent[url=" + url + ", file=" + file + ",state=" + state + "(" + states[state] + "), error=" + error + "]";
+        return this.getClass().getSimpleName()
+                + "[url=" + url + ", file=" + file + ",state=" + state + "(" + states[state] + "), error=" + error + "]";
     }
 }

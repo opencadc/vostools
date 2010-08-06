@@ -100,13 +100,14 @@ import org.apache.log4j.Logger;
 public abstract class HttpTransfer implements Runnable
 {
     private static Logger log = Logger.getLogger(HttpTransfer.class);
-    private static String DEFAULT_USER_AGENT;
+    public static String DEFAULT_USER_AGENT;
 
     protected int bufferSize = 8192;
     protected OverwriteChooser overwriteChooser;
     protected ProgressListener progressListener;
     protected TransferListener transferListener;
     protected boolean fireEvents = false;
+    protected boolean fireCancelOnce = true;
 
     protected String userAgent;
     protected boolean use_nio = false; // throughput not great, needs work before use
@@ -136,6 +137,8 @@ public abstract class HttpTransfer implements Runnable
     {
         this.go = true;
     }
+
+    public URL getURL() { return remoteURL; }
 
     public void setBufferSize(int bufferSize)
     {
@@ -187,7 +190,8 @@ public abstract class HttpTransfer implements Runnable
                 catch(Throwable ignore) { }
             }
         }
-        fireEvent(TransferEvent.CANCELLED);
+        fireCancelledEvent();
+        this.fireCancelOnce = false;
     }
 
     protected void findEventID(HttpURLConnection conn)
@@ -199,27 +203,48 @@ public abstract class HttpTransfer implements Runnable
             this.eventID = conn.getHeaderField(eventHeader);
     }
 
+    private void fireCancelledEvent()
+    {
+        if (fireCancelOnce)
+        {
+            TransferEvent e = new TransferEvent(this, eventID, remoteURL, localFile, TransferEvent.CANCELLED);
+            fireEvent(e);
+        }
+    }
+    private void fireEvent(TransferEvent e)
+    {
+        log.debug("fireEvent: " + e);
+        if (transferListener != null)
+            transferListener.transferEvent(e);
+        if (progressListener != null)
+            progressListener.transferEvent(e);
+    }
+
     protected void fireEvent(int state)
+    {
+        fireEvent(localFile, state);
+    }
+
+    protected void fireEvent(File file, int state)
     {
         if (fireEvents)
         {
-            TransferEvent de = new TransferEvent(this, eventID, remoteURL, localFile, state);
-            if (transferListener != null)
-                transferListener.transferEvent(de);
-            if (progressListener != null)
-                progressListener.transferEvent(de);
+            TransferEvent e = new TransferEvent(this, eventID, remoteURL, file, state);
+            fireEvent(e);
         }
     }
 
     protected void fireEvent(Throwable t)
     {
+        fireEvent(localFile, t);
+    }
+    
+    protected void fireEvent(File file, Throwable t)
+    {
         if (fireEvents)
         {
-            TransferEvent de = new TransferEvent(this, eventID, remoteURL, localFile, t);
-            if (transferListener != null)
-                transferListener.transferEvent(de);
-            if (progressListener != null)
-                progressListener.transferEvent(de);
+            TransferEvent e = new TransferEvent(this, eventID, remoteURL, file, t);
+            fireEvent(e);
         }
     }
 

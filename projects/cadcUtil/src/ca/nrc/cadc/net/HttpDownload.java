@@ -81,10 +81,6 @@ import java.io.InputStream;
 import java.io.OutputStream;
 import java.net.HttpURLConnection;
 import java.net.URL;
-import java.nio.ByteBuffer;
-import java.nio.channels.Channels;
-import java.nio.channels.ReadableByteChannel;
-import java.nio.channels.WritableByteChannel;
 import java.util.zip.GZIPInputStream;
 import java.util.zip.ZipInputStream;
 import javax.net.ssl.HttpsURLConnection;
@@ -184,7 +180,12 @@ public class HttpDownload extends HttpTransfer
     private HttpDownload() { }
 
     @Override
-    public String toString() { return "HttpDownload[" + remoteURL + "," + localFile + "]"; }
+    public String toString() 
+    {
+        if (localFile == null)
+            return "HttpDownload[" + remoteURL + "]";
+        return "HttpDownload[" + remoteURL + "," + localFile + "]";
+    }
 
     /**
      * Enable optional decompression of the data after download. GZIP and ZIP are supported.
@@ -204,6 +205,22 @@ public class HttpDownload extends HttpTransfer
     {
         this.overwrite = overwrite;
     }
+
+    /**
+     * Get the size of the result file. This may be smaller than the content-length if the
+     * file is being decompressed.
+     * 
+     * @return the size in bytes, or -1 of unknown
+     */
+    public long getSize() { return size; }
+
+    /**
+     * Get the size of the download (the Content-Length).
+     *
+     * @return the content-length or -1 of unknown
+     */
+    public long getContentLength() { return contentLength; }
+
 
     /**
      * Get a reference to the result file. In some cases this is null until the
@@ -247,6 +264,7 @@ public class HttpDownload extends HttpTransfer
             
             if (doDownload)
             {
+                fireEvent(origFile, TransferEvent.TRANSFERING);
                 File tmp = origFile;
                 origFile = new File(origFile.getAbsolutePath() + ".part");
                 doGet();
@@ -256,6 +274,7 @@ public class HttpDownload extends HttpTransfer
             }
             if (decompress && decompressor != NONE)
             {
+                fireEvent(decompFile, TransferEvent.DECOMPRESSING);
                 doDecompress();
             }
         }
@@ -291,15 +310,25 @@ public class HttpDownload extends HttpTransfer
             if (failure == null && removeFile != null) // only remove if download was successful
             {
                 log.debug("removing: " + removeFile);
+                fireEvent(removeFile, TransferEvent.DELETED);
                 removeFile.delete();
             }
 
             if (!go)
+            {
+                log.debug("cancelled");
                 fireEvent(TransferEvent.CANCELLED);
+            }
             else if (failure != null)
+            {
+                log.debug("failed");
                 fireEvent(failure);
+            }
             else
-                fireEvent(TransferEvent.COMPLETED);
+            {
+                log.debug("completed");
+                fireEvent(destFile, TransferEvent.COMPLETED);
+            }
         }
     }
 
@@ -358,7 +387,8 @@ public class HttpDownload extends HttpTransfer
             if ( askOverwrite(decompFile, decompSize, lastModified) )
             {
                 log.debug("overwrite: YES -- " + decompFile);
-                decompFile.delete(); // origFile does not exist
+                //decompFile.delete(); // origFile does not exist
+                this.removeFile = decompFile;
                 if (decompress && decompressor != NONE)
                     this.destFile = decompFile;    // download and decompress
                 else
@@ -382,7 +412,7 @@ public class HttpDownload extends HttpTransfer
                 this.destFile = origFile;
         }
         log.debug("destination file: " + destFile);
-        
+        this.localFile = destFile;
         return doDownload;
     }
     
@@ -437,8 +467,6 @@ public class HttpDownload extends HttpTransfer
         
         if (origFile == null)
         {
-            
-
             // second option: use supplied filename if present in http header
             String cdisp = conn.getHeaderField("Content-Disposition");
             log.debug("HTTP HEAD: Content-Disposition = " + cdisp);
@@ -496,7 +524,7 @@ public class HttpDownload extends HttpTransfer
         String s = conn.getHeaderField("X-Uncompressed-Length");
         if (s != null)
         {
-            try { this.decompSize = Integer.parseInt(s); }
+            try { this.decompSize = Long.parseLong(s); }
             catch(NumberFormatException ignore) { }
         }
         
@@ -604,8 +632,6 @@ public class HttpDownload extends HttpTransfer
                 istream = new BufferedInputStream(istream, bufferSize);
             }
 
-            fireEvent(TransferEvent.TRANSFERING);
-
             log.debug("output: " + origFile + " append: " + append);
             ostream = new FileOutputStream(origFile, append);
             log.debug("using BufferedOutputStream");
@@ -647,7 +673,6 @@ public class HttpDownload extends HttpTransfer
         try
         {
             this.size = decompSize;
-            fireEvent(TransferEvent.DECOMPRESSING);
             int sz = bufferSize;
             if (decompressor == GZIP)
             {
