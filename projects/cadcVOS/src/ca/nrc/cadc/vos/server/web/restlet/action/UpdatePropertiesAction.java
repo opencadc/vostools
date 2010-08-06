@@ -151,7 +151,7 @@ public class UpdatePropertiesAction extends NodeAction
             filterPropertiesForUpdate(node);
             
             Node updatedNode = nodePersistence.updateProperties(node);
-            updatedNode.setUri(node.getUri());
+            setNodeURI(updatedNode, node.getUri());
             
             // return the node in xml format
             NodeWriter nodeWriter = new NodeWriter();

@@ -310,7 +310,7 @@ public abstract class NodeAction implements PrivilegedAction<Object>
      * @param uri
      * @throws URISyntaxException
      */
-    private void setNodeURI(Node node, VOSURI uri) throws URISyntaxException
+    protected void setNodeURI(Node node, VOSURI uri) throws URISyntaxException
     {
         node.setUri(uri);
         if (node instanceof ContainerNode)

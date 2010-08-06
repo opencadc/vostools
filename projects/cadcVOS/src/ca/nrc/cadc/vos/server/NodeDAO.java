@@ -474,7 +474,6 @@ public abstract class NodeDAO implements NodePersistence
                             // delete the property
                             log.debug("Deleting node property: " + nextProperty.getPropertyURI());
                             jdbc.update(getDeleteNodePropertySQL(currentDbNode, nextProperty));
-                            currentDbNode.getProperties().remove(nextProperty);
                         }
                         else
                         {
@@ -485,8 +484,6 @@ public abstract class NodeDAO implements NodePersistence
                             {
                                 log.debug("Updating node property: " + nextProperty.getPropertyURI());
                                 jdbc.update(getUpdateNodePropertySQL(currentDbNode, nextProperty));
-                                currentDbNode.getProperties().remove(new NodeProperty(nextProperty.getPropertyURI(), null));
-                                currentDbNode.getProperties().add(nextProperty);
                             }
                             else
                             {
@@ -499,7 +496,6 @@ public abstract class NodeDAO implements NodePersistence
                         // insert the new property
                         log.debug("Inserting node property: " + nextProperty.getPropertyURI());
                         jdbc.update(getInsertNodePropertySQL(currentDbNode, nextProperty));
-                        currentDbNode.getProperties().add(nextProperty);
                     }
                 }
                 
@@ -522,9 +518,9 @@ public abstract class NodeDAO implements NodePersistence
         }
         
         log.debug("Node updated: " + currentDbNode);
-        //currentDbNode.setUri(updatedPersistentNode.getUri());
+
         // return the new node from the database
-        return currentDbNode;
+        return getFromParent(updatedPersistentNode.getName(), updatedPersistentNode.getParent());
 
     }
     

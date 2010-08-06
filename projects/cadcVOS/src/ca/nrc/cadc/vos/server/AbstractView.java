@@ -229,7 +229,8 @@ public abstract class AbstractView extends View
             try
             {
                 return DateUtil.toDate(modificationDate.getPropertyValue());
-            } catch (ParseException e)
+            }
+            catch (ParseException e)
             {
                 log.warn("Date " + modificationDate.getPropertyValue()
                         + " could not be parsed.");
