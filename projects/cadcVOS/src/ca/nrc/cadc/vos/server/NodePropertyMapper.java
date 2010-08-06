@@ -92,7 +92,8 @@ public class NodePropertyMapper implements RowMapper
                     propertyURI.equals(VOS.PROPERTY_URI_TYPE) ||
                     propertyURI.equals(VOS.PROPERTY_URI_CONTENTENCODING) ||
                     propertyURI.equals(VOS.PROPERTY_URI_CONTENTMD5) ||
-                    propertyURI.equals(VOS.PROPERTY_URI_DATE));
+                    propertyURI.equals(VOS.PROPERTY_URI_DATE) ||
+                    propertyURI.equals(VOS.PROPERTY_URI_ISPUBLIC));
         }
         return false;
     }

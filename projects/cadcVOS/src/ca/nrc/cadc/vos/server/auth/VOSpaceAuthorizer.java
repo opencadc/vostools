@@ -149,6 +149,14 @@ public class VOSpaceAuthorizer implements Authorizer
             @Override
             public void nodeVisited(Node node, int parentLevel)
             {
+                
+                // Check if the node is public
+                if (node.isPublic())
+                {
+                    // Node is open for public reading
+                    return;
+                }
+                
                 AccessControlContext acContext = AccessController.getContext();
                 Subject subject = Subject.getSubject(acContext);
                 
@@ -342,23 +350,6 @@ public class VOSpaceAuthorizer implements Authorizer
             LOG.warn("Invalid Group URI: " + groupURI, e);
             return false;
         }
-    }
-    
-    /**
-     * Parse the raw group value from the URI.  The value follows
-     * the hash mark (#) on the URI.
-     * @param groupURI
-     * @return The raw group value
-     */
-    private String getGroupValue(String groupURI)
-    {
-        int hashIndex = groupURI.lastIndexOf('#');
-        String groupValue = null;
-        if (hashIndex != -1)
-        {
-            groupValue = groupURI.substring(hashIndex + 1);
-        }
-        return groupValue;
     }
 
     /**

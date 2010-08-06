@@ -129,7 +129,7 @@ public class VOS
         }
     }
     
-    /**
+    /*
      * Standard Node Properties defined by the IVOA
      */
     
@@ -209,7 +209,7 @@ public class VOS
     // Used as the view URI to import or export data as a RSS feed
     public static final String VIEW_RSS = "ivo://ivoa.net/vospace/core#rssview";
 
-    /**
+    /*
      * Standard Node Properties defined by the CADC
      */
     
@@ -227,5 +227,16 @@ public class VOS
     
     // The groups who can write to the resource
     public static final String PROPERTY_URI_GROUPWRITE = "ivo://ivoa.net/vospace/core#groupwrite";
+    
+    // Flag indicating if the Node is public (true/false)
+    public static final String PROPERTY_URI_ISPUBLIC = "ivo://ivoa.net/vospace/core#ispublic";
+    
+    /*
+     * List of properties that are read-only
+     */
+    public static final String[] READ_ONLY_PROPERTIES = new String[]
+        {
+            PROPERTY_URI_DATE
+        };
 
 }

@@ -174,10 +174,15 @@ public class UpdatePropertiesAction extends NodeAction
      */
     private void filterPropertiesForUpdate(Node node)
     {
-        if (node.getProperties().contains(VOS.PROPERTY_URI_DATE))
+        for (String propertyURI : VOS.READ_ONLY_PROPERTIES)
         {
-            node.getProperties().remove(new NodeProperty(VOS.PROPERTY_URI_DATE, null));
+            int propertyIndex = node.getProperties().indexOf(new NodeProperty(propertyURI, null));
+            if (propertyIndex != -1)
+            {
+                node.getProperties().remove(propertyIndex);
+            }
         }
+
     }
 
 }

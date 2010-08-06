@@ -108,12 +108,16 @@ public abstract class Node
 
     // The node owner
     protected String owner;
+    
+    // Flag indicating if the node is public
+    protected boolean isPublic;
 
     // True if marked for deletion
     protected boolean markedForDeletion;
 
     // To be used by controlling applications as they wish
     public transient Object appData;
+    
 
     /**
      * Node constructor.
@@ -368,6 +372,16 @@ public abstract class Node
     {
         this.markedForDeletion = markedForDeletion;
     }
+    
+    public boolean isPublic()
+    {
+        return isPublic;
+    }
+
+    public void setPublic(boolean isPublic)
+    {
+        this.isPublic = isPublic;
+    }
 
     /**
      * Find a property by its key (propertyUri)
@@ -390,4 +404,5 @@ public abstract class Node
         }
         return rtn;
     }
+
 }

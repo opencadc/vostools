@@ -118,6 +118,7 @@ public class NodeMapper implements RowMapper
         
         String groupRead = rs.getString("groupRead");
         String groupWrite = rs.getString("groupWrite");
+        boolean isPublic = rs.getBoolean("isPublic");
         String owner = rs.getString("owner");
         
         long contentLength = rs.getLong("contentLength");
@@ -158,6 +159,7 @@ public class NodeMapper implements RowMapper
         node.setParent(parent);
         node.setOwner(owner);
         node.setMarkedForDeletion(markedForDeletion);
+        node.setPublic(isPublic);
         
         if (contentLength != 0)
         {
@@ -191,6 +193,17 @@ public class NodeMapper implements RowMapper
         if (owner != null && owner.trim().length() > 0)
         {
             node.getProperties().add(new NodeProperty(VOS.PROPERTY_URI_CREATOR, owner));
+        }
+        node.getProperties().add(new NodeProperty(VOS.PROPERTY_URI_ISPUBLIC, isPublic ? "true" : "false"));
+        
+        // set the read-only flag on the properties
+        for (String propertyURI : VOS.READ_ONLY_PROPERTIES)
+        {
+            int propertyIndex = node.getProperties().indexOf(new NodeProperty(propertyURI, null));
+            if (propertyIndex != -1)
+            {
+                node.getProperties().get(propertyIndex).setReadOnly(true);
+            }
         }
 
         return node;

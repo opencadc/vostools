@@ -107,7 +107,7 @@ public abstract class NodeAction implements PrivilegedAction<Object>
     private VOSURI vosURI;
     private Representation nodeXML;
     private Request request;
-    private String viewReference;
+    private String viewReference; 
     
     /**
      * Set the URI for this action.

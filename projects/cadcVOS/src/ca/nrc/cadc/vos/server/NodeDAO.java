@@ -697,7 +697,7 @@ public abstract class NodeDAO implements NodePersistence
             parentWhereClause = "parentID = " + parentNodeID;
         }
         StringBuilder sb = new StringBuilder();
-        sb.append("select nodeID, parentID, name, type, busyState, markedForDeletion, owner, groupRead, groupWrite, ");
+        sb.append("select nodeID, parentID, name, type, busyState, markedForDeletion, owner, isPublic, groupRead, groupWrite, ");
         sb.append("contentLength, contentType, contentEncoding, contentMD5, createdOn, lastModified from ");
         sb.append(getNodeTableName());
         sb.append(" where name = '");
@@ -718,7 +718,7 @@ public abstract class NodeDAO implements NodePersistence
     protected String getSelectNodesByParentSQL(Node parent)
     {
         StringBuilder sb = new StringBuilder();
-        sb.append("select nodeID, parentID, name, type, busyState, markedForDeletion, owner, groupRead, groupWrite, ");
+        sb.append("select nodeID, parentID, name, type, busyState, markedForDeletion, owner, isPublic, groupRead, groupWrite, ");
         sb.append("contentLength, contentType, contentEncoding, contentMD5, createdOn, lastModified from ");
         sb.append(getNodeTableName());
         sb.append(" where parentID = ");
@@ -757,6 +757,7 @@ public abstract class NodeDAO implements NodePersistence
         byte[] contentMD5 = null;
         String groupRead = null;
         String groupWrite = null;
+        boolean isPublic = false;
         
         String contentLengthString = getPropertyValue(node, VOS.PROPERTY_URI_CONTENTLENGTH);
         contentType = getPropertyValue(node, VOS.PROPERTY_URI_TYPE);
@@ -764,6 +765,7 @@ public abstract class NodeDAO implements NodePersistence
         String contentMD5String = getPropertyValue(node, VOS.PROPERTY_URI_CONTENTMD5);
         groupRead = getPropertyValue(node, VOS.PROPERTY_URI_GROUPREAD);
         groupWrite = getPropertyValue(node, VOS.PROPERTY_URI_GROUPWRITE);
+        String isPublicString = getPropertyValue(node, VOS.PROPERTY_URI_ISPUBLIC);
         
         if (contentLengthString != null)
         {
@@ -781,10 +783,20 @@ public abstract class NodeDAO implements NodePersistence
             contentMD5 = HexUtil.toBytes(contentMD5String);
         }
         
+        if (isPublicString != null)
+        {
+            if (isPublicString.trim().equalsIgnoreCase("true"))
+            {
+                isPublic = true;
+            }
+        }
+        
         if (node.getOwner() == null)
         {
             throw new IllegalArgumentException("Node owner cannot be null.");
         }
+        
+        
         
         StringBuilder sb = new StringBuilder();
         sb.append("insert into ");
@@ -794,6 +806,7 @@ public abstract class NodeDAO implements NodePersistence
         sb.append("name,");
         sb.append("type,");
         sb.append("owner,");
+        sb.append("isPublic,");
         sb.append("groupRead,");
         sb.append("groupWrite,");
         sb.append("contentLength,");
@@ -809,6 +822,8 @@ public abstract class NodeDAO implements NodePersistence
         sb.append("','");
         sb.append(node.getOwner());
         sb.append("',");
+        sb.append((isPublic) ? "1" : "0");
+        sb.append(",");
         sb.append((groupRead == null) ? null : "'" + groupRead + "'");
         sb.append(",");
         sb.append((groupWrite == null) ? null : "'" + groupWrite + "'");
@@ -888,6 +903,39 @@ public abstract class NodeDAO implements NodePersistence
             sb.append((value == null) ? null : "'" + value + "'");
             sb.append(" where nodeID = ");
             sb.append(getNodeID(node));
+        }
+        else if (nodeProperty.getPropertyURI().equals(VOS.PROPERTY_URI_ISPUBLIC))
+        {
+            int isPublic = -1;
+            if (value != null)
+            {
+                if (value.trim().equalsIgnoreCase("true"))
+                {
+                    isPublic = 1;
+                }
+                if (value.trim().equalsIgnoreCase("false"))
+                {
+                    isPublic = 0;
+                }
+            }
+            if (isPublic == -1)
+            {
+                log.warn("Unrecognized value for property " + VOS.PROPERTY_URI_ISPUBLIC);
+                sb.append("update ");
+                sb.append(getNodeTableName());
+                sb.append(" set isPublic=isPublic");
+                sb.append(" where nodeID = ");
+                sb.append(getNodeID(node));
+            }
+            else
+            {
+                sb.append("update ");
+                sb.append(getNodeTableName());
+                sb.append(" set isPublic = ");
+                sb.append(isPublic);
+                sb.append(" where nodeID = ");
+                sb.append(getNodeID(node));
+            }
         }
         else
         {
@@ -1102,6 +1150,39 @@ public abstract class NodeDAO implements NodePersistence
             sb.append(" set lastModified = lastModified");
             sb.append(" where nodeID = ");
             sb.append(getNodeID(node));
+        }
+        else if (nodeProperty.getPropertyURI().equals(VOS.PROPERTY_URI_ISPUBLIC))
+        {
+            int isPublic = -1;
+            if (value != null)
+            {
+                if (value.trim().equalsIgnoreCase("true"))
+                {
+                    isPublic = 1;
+                }
+                if (value.trim().equalsIgnoreCase("false"))
+                {
+                    isPublic = 0;
+                }
+            }
+            if (isPublic == -1)
+            {
+                log.warn("Unrecognized value for property " + VOS.PROPERTY_URI_ISPUBLIC);
+                sb.append("update ");
+                sb.append(getNodeTableName());
+                sb.append(" set isPublic=isPublic");
+                sb.append(" where nodeID = ");
+                sb.append(getNodeID(node));
+            }
+            else
+            {
+                sb.append("update ");
+                sb.append(getNodeTableName());
+                sb.append(" set isPublic = ");
+                sb.append(isPublic);
+                sb.append(" where nodeID = ");
+                sb.append(getNodeID(node));
+            }
         }
         else
         {
