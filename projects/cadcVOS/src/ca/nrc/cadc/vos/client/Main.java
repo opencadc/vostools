@@ -329,6 +329,7 @@ public class Main implements Runnable
         try
         {
             ContainerNode cnode = new ContainerNode(target);
+            copyProperties(cnode);
             Node nodeRtn = client.createNode(cnode);
             log.info("created: " + nodeRtn.getUri());
         }
