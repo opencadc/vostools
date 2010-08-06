@@ -110,7 +110,7 @@
                 <pathelement path="${build}/class"/>
                 <pathelement path="test/src"/>
                 <pathelement path="src"/>
-                <pathelement path="${jars.test}"/>
+                <pathelement path="${testingJars}"/>
             </classpath>
 
             <test name="ca.nrc.cadc.util.HexUtilTest"/>
@@ -123,7 +123,7 @@
                 <pathelement path="${build}/class"/>
                 <pathelement path="test/src"/>
                 <pathelement path="src"/>
-                <pathelement path="${jars.test}"/>
+                <pathelement path="${testingJars}"/>
             </classpath>
 
             <test name="ca.nrc.cadc.net.HttpDownloadTest"/>
@@ -137,7 +137,7 @@
                 <pathelement path="${build}/class"/>
                 <pathelement path="test/src"/>
                 <pathelement path="src"/>
-                <pathelement path="${jars.test}"/>
+                <pathelement path="${testingJars}"/>
             </classpath>
 
             <test name="ca.nrc.cadc.auth.SSLUtilTest"/>
