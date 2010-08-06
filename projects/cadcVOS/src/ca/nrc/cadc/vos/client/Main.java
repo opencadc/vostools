@@ -125,6 +125,7 @@ public class Main implements Runnable
     public static final String ARG_SET = "set";
     public static final String ARG_COPY = "copy";
     public static final String ARG_TARGET = "target";
+    public static final String ARG_PUBLIC = "public";
     public static final String ARG_GROUP_READ = "group-read";
     public static final String ARG_GROUP_WRITE = "group-write";
     public static final String ARG_PROP = "prop";
@@ -354,6 +355,7 @@ public class Main implements Runnable
             msg(getType(n) + ": " + n.getUri());
             msg("creator: " + safePropertyRef(n, VOS.PROPERTY_URI_CREATOR));
             msg("last modified: " + safePropertyRef(n, VOS.PROPERTY_URI_DATE));
+            msg("readable by anyone: " + safePropertyRef(n, VOS.PROPERTY_URI_ISPUBLIC));
             msg("readable by: " + safePropertyRef(n, VOS.PROPERTY_URI_GROUPREAD));
             msg("writable by: " + safePropertyRef(n, VOS.PROPERTY_URI_GROUPWRITE));
             if (n instanceof ContainerNode)
@@ -792,6 +794,16 @@ public class Main implements Runnable
         String groupRead = argMap.getValue(ARG_GROUP_READ);
         String groupWrite = argMap.getValue(ARG_GROUP_WRITE);
 
+        // support --public and --public=true; everything else sets it to false
+        boolean isPublic = argMap.isSet(ARG_PUBLIC);
+        if (isPublic)
+        {
+            String s = argMap.getValue(ARG_PUBLIC);
+            if (s != null  && s.trim().length() > 0)
+                isPublic = Boolean.valueOf(s);
+        }
+
+
         if (contentType != null)
             properties.add(new NodeProperty(VOS.PROPERTY_URI_TYPE, contentType));
         if (contentEncoding != null)
@@ -802,7 +814,8 @@ public class Main implements Runnable
             properties.add(new NodeProperty(VOS.PROPERTY_URI_GROUPREAD, groupRead));
         if (groupWrite != null)
             properties.add(new NodeProperty(VOS.PROPERTY_URI_GROUPWRITE, groupWrite));
-
+        // always set this
+        properties.add(new NodeProperty(VOS.PROPERTY_URI_ISPUBLIC, Boolean.toString(isPublic)));
     }
 
     /**
@@ -830,6 +843,7 @@ public class Main implements Runnable
                 "java -jar VOSpaceClient.jar  [-v|--verbose|-d|--debug]                                            ",
                 "   --cert=<SSL certificate file> --key=<SSL key file>                                             ",
                 "   --create --target=<target URI>                                                                  ",
+                "   [--public[=true|false]                                                                         ",
                 "   [--group-read=<group URI>]                                                                      ",
                 "   [--group-write=<group URI>]                                                                     ",
                 "   [--prop=<properties file>]                                                                      ",
@@ -843,6 +857,7 @@ public class Main implements Runnable
                 "   --copy --src=<source URI> --dest=<destination URI>                                            ",
                 "   [--content-type=<mimetype of source>]                                                           ",
                 "   [--content-encoding=<encoding of source>]                                                       ",
+                "   [--public[=true|false]                                                                         ",
                 "   [--group-read=<group URI>]                                                                      ",
                 "   [--group-write=<group URI>]                                                                     ",
                 "   [--prop=<properties file>]                                                                      ",
@@ -856,6 +871,7 @@ public class Main implements Runnable
                 "java -jar VOSpaceClient.jar  [-v|--verbose|-d|--debug]                                            ",
                 "   --cert=<SSL certificate file> --key=<SSL key file>                                             ",
                 "   --view --target=<target URI>                                                                    ",
+                "   [--public[=true|false]                                                                         ",
                 "   [--group-read=<group URI>]                                                                      ",
                 "   [--group-write=<group URI>]                                                                     ",
                 "                                                                                                  ",
@@ -865,6 +881,7 @@ public class Main implements Runnable
                 "   --delete --target=<target URI>                                                                  ",
                 "   [--content-type=<mimetype of source>]                                                           ",
                 "   [--content-encoding=<encoding of source>]                                                       ",
+                "   [--public[=true|false]                                                                         ",
                 "   [--group-read=<group URI>]                                                                      ",
                 "   [--group-write=<group URI>]                                                                     ",
                 "                                                                                                  ",
@@ -874,6 +891,7 @@ public class Main implements Runnable
                 "   --set --target=<target URI>                                                                     ",
                 "   [--content-type=<mimetype of source>]                                                           ",
                 "   [--content-encoding=<encoding of source>]                                                       ",
+                "   [--public[=true|false]                                                                         ",
                 "   [--group-read=<group URI>]                                                                      ",
                 "   [--group-write=<group URI>]                                                                     ",
                 "   [--prop=<properties file>]                                                                      ", "" };
