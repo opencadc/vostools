@@ -108,8 +108,7 @@
         <junit printsummary="yes" haltonfailure="yes" fork="yes">
             <classpath>
                 <pathelement path="${build}/class"/>
-                <pathelement path="test/src"/>
-                <pathelement path="src"/>
+                <pathelement path="${build}/test/class"/>
                 <pathelement path="${testingJars}"/>
             </classpath>
 
@@ -117,12 +116,12 @@
             <formatter type="plain" usefile="false"/>
         </junit>
     </target>
+    
     <target name="net-test" depends="compile-test">
         <junit printsummary="yes" haltonfailure="yes" fork="yes">
             <classpath>
                 <pathelement path="${build}/class"/>
-                <pathelement path="test/src"/>
-                <pathelement path="src"/>
+                <pathelement path="${build}/test/class"/>
                 <pathelement path="${testingJars}"/>
             </classpath>
 
@@ -131,12 +130,12 @@
             <formatter type="plain" usefile="false"/>
         </junit>
     </target>
+
     <target name="auth-test" depends="compile-test">
         <junit printsummary="yes" haltonfailure="yes" fork="yes">
             <classpath>
                 <pathelement path="${build}/class"/>
-                <pathelement path="test/src"/>
-                <pathelement path="src"/>
+                <pathelement path="${build}/test/class"/>
                 <pathelement path="${testingJars}"/>
             </classpath>
 
