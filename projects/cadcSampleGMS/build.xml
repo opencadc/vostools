@@ -144,12 +144,14 @@
   <property name="testingJars" value="${lib.jdom}:${dev.easyMock}:${dev.junit}:${dev.httpunit}:${dev.xmlunit}" />
 
   <!-- Directory used to deploy the WAR file -->
-  <property name="deployDir" value="/data/test/tomcat/webapps" />
+  <property name="deployDir" value="/data/test/webapps" />
 
   <!-- compile the test classes -->
+<target name="test" depends="int-test">
+</target>
 
   <!-- Run the Integration/Conformance test suite -->
-  <target name="int-test" depends="compile-test">
+  <target name="int-test" depends="webapp,compile-test">
     <echo message="Running Conformance/Integration tests" />
 
     <!-- Delete old WAR file -->
@@ -187,6 +189,7 @@
     <junit printsummary="yes" haltonfailure="yes" fork="yes">
       <classpath>
         <pathelement path="build/class" />
+        <pathelement path="build/test/class" />
         <pathelement path="${jars}:${testingJars}" />
       </classpath>
       <sysproperty key="service.url"
