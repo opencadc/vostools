@@ -110,6 +110,9 @@ public class RssView extends AbstractView
     
     // The RSS Feed element
     private Element feed;
+    
+    // A String version of the XML
+    StringBuilder xmlString;
 
     /**
      * Maximum number of nodes to display.
@@ -154,6 +157,17 @@ public class RssView extends AbstractView
 
         // Build the RSS feed XML.
         feed = RssFeed.createFeed(node, nodeSet);
+        
+        // Create a string version of the XML for metadata calculations
+        xmlString = new StringBuilder();
+        try
+        {
+            write(xmlString);
+        }
+        catch (IOException e)
+        {
+            throw new IllegalStateException(e);
+        }
     }
 
     /**
@@ -238,7 +252,7 @@ public class RssView extends AbstractView
     @Override
     public long getContentLength()
     {
-        return feed.getContentSize();
+        return xmlString.length();
     }
     
     /**
@@ -269,13 +283,7 @@ public class RssView extends AbstractView
         {
             MessageDigest md = MessageDigest.getInstance("MD5");
             byte[] md5hash = new byte[32];
-            
-            // TODO: determine if there's a way to compute
-            // the MD5 without having to do two write
-            // operations
-            StringBuilder sb = new StringBuilder(feed.getContentSize());
-            write(sb);
-            md.update(sb.toString().getBytes("iso-8859-1"), 0, sb.toString().length());
+            md.update(xmlString.toString().getBytes("iso-8859-1"), 0, xmlString.toString().length());
             md5hash = md.digest();
             return HexUtil.toHex(md5hash);
         }
@@ -286,10 +294,6 @@ public class RssView extends AbstractView
         catch (UnsupportedEncodingException e)
         {
             log.warn("ISO-8859-1 encoding not found.", e);
-        }
-        catch (IOException e)
-        {
-            log.warn("Could not create MD5 on RSSFeed: " + e.getMessage());
         }
         return null;
     }
