@@ -86,7 +86,7 @@ import org.apache.log4j.Logger;
  * @author majorb
  *
  */
-public abstract class Node
+public abstract class Node implements Comparable<Object>
 {
     
     private static Logger log = Logger.getLogger(Node.class);
@@ -232,6 +232,27 @@ public abstract class Node
     {
         return "Node [appData=" + appData + ", markedForDeletion=" + markedForDeletion + ", name=" + name + ", owner=" + owner
                 + ", parent=" + parent + ", path=" + path + ", properties=" + properties + ", uri=" + uri + "]";
+    }
+    
+    /**
+     * Return an integer denoting the display order for two nodes.
+     */
+    @Override
+    public int compareTo(Object o1)
+    {
+        if (o1 == null)
+        {
+            return -1;
+        }
+        if (! (o1 instanceof Node))
+        {
+            return -1;
+        }
+        if (this.equals(o1))
+        {
+            return 0;
+        }
+        return this.getName().compareTo(((Node) o1).getName());
     }
 
     /**

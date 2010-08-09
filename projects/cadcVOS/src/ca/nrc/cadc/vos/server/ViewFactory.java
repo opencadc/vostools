@@ -180,9 +180,9 @@ public class ViewFactory
                             + " in file " + VIEWS_PROPERTY_FILE + ".properties");
                 }
                 viewMap.put(viewAlias, viewClass);
-                log.debug("Mapped alias " + viewAlias + " to class " + viewClass);
+                log.debug("Mapped alias '" + viewAlias + "' to class " + viewClass);
                 viewMap.put(viewURI, viewClass);
-                log.debug("Mapped URI " + viewURI + " to class " + viewClass);
+                log.debug("Mapped URI '" + viewURI + "' to class " + viewClass);
             }
         }
         catch (Exception e)

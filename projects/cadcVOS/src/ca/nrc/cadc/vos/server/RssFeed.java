@@ -68,6 +68,13 @@
  */
 package ca.nrc.cadc.vos.server;
 
+import java.text.ParseException;
+import java.util.Collection;
+import java.util.Date;
+
+import org.apache.log4j.Logger;
+import org.jdom.Element;
+
 import ca.nrc.cadc.date.DateUtil;
 import ca.nrc.cadc.net.NetUtil;
 import ca.nrc.cadc.vos.ContainerNode;
@@ -75,11 +82,6 @@ import ca.nrc.cadc.vos.DataNode;
 import ca.nrc.cadc.vos.Node;
 import ca.nrc.cadc.vos.NodeProperty;
 import ca.nrc.cadc.vos.VOS;
-import java.text.ParseException;
-import java.util.Collection;
-import java.util.Date;
-import org.apache.log4j.Logger;
-import org.jdom.Element;
 
 /**
  * 

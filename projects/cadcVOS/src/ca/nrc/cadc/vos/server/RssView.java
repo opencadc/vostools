@@ -75,6 +75,10 @@ import java.io.OutputStreamWriter;
 import java.io.UnsupportedEncodingException;
 import java.io.Writer;
 import java.net.URI;
+import java.security.MessageDigest;
+import java.security.NoSuchAlgorithmException;
+import java.util.ArrayList;
+import java.util.List;
 
 import org.apache.log4j.Logger;
 import org.jdom.Document;
@@ -82,7 +86,10 @@ import org.jdom.Element;
 import org.jdom.output.Format;
 import org.jdom.output.XMLOutputter;
 import org.restlet.Request;
+import org.restlet.data.Encoding;
+import org.restlet.data.MediaType;
 
+import ca.nrc.cadc.util.HexUtil;
 import ca.nrc.cadc.util.StringBuilderWriter;
 import ca.nrc.cadc.vos.ContainerNode;
 import ca.nrc.cadc.vos.Node;
@@ -100,9 +107,9 @@ public class RssView extends AbstractView
 
     // Default maximum number of nodes to display in the feed.
     private static final int DEFAULT_MAX_NUMBER_NODES = 10;
-
-    // ContainerNode
-    protected Node node;
+    
+    // The RSS Feed element
+    private Element feed;
 
     /**
      * Maximum number of nodes to display.
@@ -140,6 +147,13 @@ public class RssView extends AbstractView
             throw new UnsupportedOperationException("RssView is only for container nodes.");
         }
         
+        // TreeSet to hold the Nodes sorted by their date property.
+        FixedSizeTreeSet<Node> nodeSet = new FixedSizeTreeSet<Node>();
+        nodeSet.setMaxSize(maxNodes);
+        nodeSet.addAll(((ContainerNode) node).getNodes());
+
+        // Build the RSS feed XML.
+        feed = RssFeed.createFeed(node, nodeSet);
     }
 
     /**
@@ -162,6 +176,7 @@ public class RssView extends AbstractView
      * @param out OutputStream to write to.
      * @throws IOException thrown if there was some problem writing to the OutputStream.
      */
+    @Override
     public void write(OutputStream out)
         throws IOException
     {
@@ -187,32 +202,17 @@ public class RssView extends AbstractView
     public void write(Writer writer)
         throws IOException
     {
-
-        // Check that the Node specified is a ContainerNode.
-        if (!(node instanceof ContainerNode))
-        {
-            Element feed = RssFeed.createErrorFeed(node, "RssView only supports ContainerNodes");
-            write(feed, writer);
-            return;
-        }
-
         try
         {
-            // TreeSet to hold the Nodes sorted by their date property.
-            FixedSizeTreeSet<Node> nodeSet = new FixedSizeTreeSet<Node>();
-            nodeSet.setMaxSize(maxNodes);
-
-            // Build the RSS feed XML.
-            Element feed = RssFeed.createFeed(node, nodeSet);
-
             // Write out the feed.
             write(feed, writer);
         }
         catch (Exception e)
         {
+            log.debug(e);
             Element feed = RssFeed.createErrorFeed(node, e.getMessage());
             write(feed, writer);
-        }        
+        }
     }
     
     /**
@@ -226,7 +226,72 @@ public class RssView extends AbstractView
     {
         XMLOutputter outputter = new XMLOutputter();
         outputter.setFormat(Format.getPrettyFormat());
-        outputter.output(new Document(root), writer);
+        Document document = new Document();
+        root.detach();
+        document.setRootElement(root);
+        outputter.output(document, writer);
+    }
+    
+    /**
+     * Return the content length of the data for the view.
+     */
+    @Override
+    public long getContentLength()
+    {
+        return feed.getContentSize();
+    }
+    
+    /**
+     * Return the content type of the data for the view.
+     */
+    @Override
+    public MediaType getMediaType()
+    {
+        return MediaType.APPLICATION_RSS;
+    }
+    
+    /**
+     * Return the content encoding of the data for the view.
+     */
+    @Override
+    public List<Encoding> getEncodings()
+    {
+        return new ArrayList<Encoding>(0);
+    }
+    
+    /**
+     * Return the MD5 Checksum of the data for the view.
+     */
+    @Override
+    public String getContentMD5()
+    {
+        try
+        {
+            MessageDigest md = MessageDigest.getInstance("MD5");
+            byte[] md5hash = new byte[32];
+            
+            // TODO: determine if there's a way to compute
+            // the MD5 without having to do two write
+            // operations
+            StringBuilder sb = new StringBuilder(feed.getContentSize());
+            write(sb);
+            md.update(sb.toString().getBytes("iso-8859-1"), 0, sb.toString().length());
+            md5hash = md.digest();
+            return HexUtil.toHex(md5hash);
+        }
+        catch (NoSuchAlgorithmException e)
+        {
+            log.warn("Algorithm MD5 not found.", e);
+        }
+        catch (UnsupportedEncodingException e)
+        {
+            log.warn("ISO-8859-1 encoding not found.", e);
+        }
+        catch (IOException e)
+        {
+            log.warn("Could not create MD5 on RSSFeed: " + e.getMessage());
+        }
+        return null;
     }
 
 }
