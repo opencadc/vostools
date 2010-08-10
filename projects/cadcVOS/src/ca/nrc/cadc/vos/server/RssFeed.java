@@ -77,7 +77,6 @@ import org.jdom.Element;
 
 import ca.nrc.cadc.date.DateUtil;
 import ca.nrc.cadc.net.NetUtil;
-import ca.nrc.cadc.vos.ContainerNode;
 import ca.nrc.cadc.vos.DataNode;
 import ca.nrc.cadc.vos.Node;
 import ca.nrc.cadc.vos.NodeProperty;
@@ -126,7 +125,7 @@ public class RssFeed
         // channel title.
         if (parentTitle == null)
         {
-            parentTitle = "Last modified directories and files for " + parent.getName();
+            parentTitle = "Last modified nodes for " + parent.getName();
         }
         Element channelTitle = new Element("title");
         channelTitle.setText(parentTitle);
@@ -135,7 +134,7 @@ public class RssFeed
         // channel description.
         if (parentDescription == null)
         {
-            parentDescription = nodes.size() + " last modified directories and files";
+            parentDescription = nodes.size() + " last modified nodes";
         }
         Element channelDescription = new Element("description");
         channelDescription.setText(parentDescription);
@@ -194,15 +193,11 @@ public class RssFeed
             {
                 if (node instanceof DataNode)
                 {
-                    nodeDescription = "File container";
-                }
-                else if (node instanceof ContainerNode)
-                {
-                    nodeDescription = "Directory container";
+                    nodeDescription = "Data Node";
                 }
                 else
                 {
-                    nodeDescription = "";
+                    nodeDescription = "Container Node";
                 }
             }
             Element itemDescription = new Element("description");
@@ -226,10 +221,23 @@ public class RssFeed
                 item.addContent(itemPubDate);
             }
 
-            // item link.
+            // item link, comment
             Element itemLink = new Element("link");
-            itemLink.setText("http://" + NetUtil.getServerName(null) + "/vospace/transfers/" + node.getPath());
+            Element comments = new Element("comments");
+            String linkText = "http://" + NetUtil.getServerName(null) + "/vospace/nodes/" + node.getPath();
+            if (node instanceof DataNode)
+            {
+                linkText += "?view=data";
+                comments.setText("Click to download this data node.");
+            }
+            else
+            {
+                linkText += "?view=rss";
+                comments.setText("Click to see the last modified nodes within this container node.");
+            }
+            itemLink.setText(linkText);
             item.addContent(itemLink);
+            item.addContent(comments);
 
             // item author
             if (node.getOwner() != null)

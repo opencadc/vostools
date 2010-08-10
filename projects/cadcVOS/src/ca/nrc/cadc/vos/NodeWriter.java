@@ -141,28 +141,6 @@ public class NodeWriter
     }
 
     /**
-     * Write a ContainerNode to a Writer.
-     *
-     * @param node Node to write.
-     * @param writer Writer to write to.
-     * @throws IOException if the writer fails to write.
-     */
-    public void write(ContainerNode node, Writer writer) throws IOException
-    {
-        // Create the root node element
-        Element root = getRootElement(node);
-
-        // properties element
-        root.addContent(getPropertiesElement(node));
-
-        // nodes element
-        root.addContent(getNodesElement(node));
-
-        // write out the Document
-        write(root, writer);
-    }
-
-    /**
      * A wrapper to write node without specifying its type
      * 
      * @author Sailor Zhang
@@ -209,6 +187,34 @@ public class NodeWriter
             throw new RuntimeException("UTF-8 encoding not supported", e);
         }
         write(node, new BufferedWriter(outWriter));
+    }
+    
+    /**
+     * Write a ContainerNode to a Writer.
+     *
+     * @param node Node to write.
+     * @param writer Writer to write to.
+     * @throws IOException if the writer fails to write.
+     */
+    public void write(ContainerNode node, Writer writer) throws IOException
+    {
+        // Create the root node element
+        Element root = getRootElement(node);
+
+        // properties element
+        root.addContent(getPropertiesElement(node));
+
+        // nodes element
+        root.addContent(getNodesElement(node));
+        
+        // accepts element
+        root.addContent(getAcceptsElement(node));
+        
+        // provides element
+        root.addContent(getProvidesElement(node));
+
+        // write out the Document
+        write(root, writer);
     }
 
     /**
