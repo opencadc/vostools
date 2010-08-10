@@ -206,7 +206,10 @@ public class HttpUpload extends HttpTransfer
 
             fireEvent(TransferEvent.TRANSFERING);
 
-            ioLoop(istream, ostream, 2*this.bufferSize, 0);
+            if (istream != null)
+                ioLoop(istream, ostream, 2*this.bufferSize, 0);
+            //else
+                // wrapper.write(ostream);
 
             ostream.flush();
             log.debug("flushing and closing OutputStream");
