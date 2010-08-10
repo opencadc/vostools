@@ -70,9 +70,13 @@
 package ca.nrc.cadc.conformance.vos;
 
 import ca.nrc.cadc.auth.SSLUtil;
+import ca.nrc.cadc.date.DateUtil;
 import ca.nrc.cadc.util.FileUtil;
 import ca.nrc.cadc.util.Log4jInit;
+import ca.nrc.cadc.vos.ContainerNode;
 import java.io.File;
+import java.text.DateFormat;
+import java.util.Calendar;
 import org.apache.log4j.Level;
 import org.apache.log4j.Logger;
 import org.junit.runner.RunWith;
@@ -97,6 +101,10 @@ public class VOSTestSuite
 {
     private static Logger log = Logger.getLogger(VOSTestSuite.class);
     
+    public static final String baseTestNodeName = "test";
+    public static String testSuiteNodeName;
+    public static String userName;
+    
     static
     {
         try
@@ -112,5 +120,10 @@ public class VOSTestSuite
         {
             throw new RuntimeException("failed to init SSL", t);
         }
+
+        DateFormat dateFormat = DateUtil.getDateFormat("yyyy-MM-dd.HH:mm:ss.SSS", DateUtil.LOCAL);
+        userName = System.getProperty("user.name", "cadcTestVOS");
+        testSuiteNodeName = userName + "_int-test_" + dateFormat.format(Calendar.getInstance().getTime());
+        log.debug("VOSTestSuite Node name: " + testSuiteNodeName);
     }
 }

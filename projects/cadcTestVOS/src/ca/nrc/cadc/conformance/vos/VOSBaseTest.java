@@ -71,13 +71,13 @@ package ca.nrc.cadc.conformance.vos;
 
 import ca.nrc.cadc.date.DateUtil;
 import ca.nrc.cadc.reg.client.RegistryClient;
-import ca.nrc.cadc.util.Log4jInit;
 import ca.nrc.cadc.vos.ContainerNode;
 import ca.nrc.cadc.vos.DataNode;
 import ca.nrc.cadc.vos.Node;
 import ca.nrc.cadc.vos.NodeProperty;
 import ca.nrc.cadc.vos.NodeWriter;
 import ca.nrc.cadc.vos.VOS.NodeBusyState;
+import ca.nrc.cadc.vos.VOSException;
 import ca.nrc.cadc.vos.VOSURI;
 import com.meterware.httpunit.GetMethodWebRequest;
 import com.meterware.httpunit.PostMethodWebRequest;
@@ -95,7 +95,6 @@ import java.util.ArrayList;
 import java.util.Calendar;
 import java.util.List;
 import java.util.Map;
-import org.apache.log4j.Level;
 import org.apache.log4j.Logger;
 import static org.junit.Assert.*;
 import org.xml.sax.SAXException;
@@ -111,6 +110,9 @@ public abstract class VOSBaseTest
     private static Logger log = Logger.getLogger(VOSBaseTest.class);
 
     protected DateFormat dateFormat;
+
+    protected static ContainerNode baseTestNode;
+    protected static ContainerNode testSuiteNode;
 
     protected VOSURI baseURI;
     protected URL resourceURL;
@@ -147,8 +149,91 @@ public abstract class VOSBaseTest
         }
         dateFormat = DateUtil.getDateFormat("yyyy-MM-dd.HH:mm:ss.SSS", DateUtil.LOCAL);
         log.debug("baseURI: " + baseURI);
-        log.debug("serviceURL: " + resourceURL);
+        log.debug("serviceURL: " + serviceURL);
         log.debug("resourceURL: " + resourceURL);
+    }
+
+    /**
+     * 
+     * @return a ContainerNode.
+     */
+    private ContainerNode getBaseTestNode()
+    {
+        if (baseTestNode == null)
+        {
+            String baseNodeName = baseURI + "/" + VOSTestSuite.baseTestNodeName;
+            try
+            {
+                baseTestNode = new ContainerNode(new VOSURI(baseNodeName));
+                String resourceUrl = resourceURL + "/" + baseTestNode.getPath();
+                log.debug("**************************************************");
+                log.debug("HTTP PUT: " + resourceUrl);
+
+                StringBuilder sb = new StringBuilder();
+                NodeWriter writer = new NodeWriter();
+                writer.write(baseTestNode, sb);
+                InputStream in = new ByteArrayInputStream(sb.toString().getBytes("UTF-8"));
+                WebRequest request = new PutMethodWebRequest(resourceUrl, in, "text/xml");
+                WebConversation conversation = new WebConversation();
+                conversation.setExceptionsThrownOnErrorStatus(false);
+                WebResponse response = conversation.sendRequest(request);
+                log.debug(getResponseHeaders(response));
+                log.debug("Response code: " + response.getResponseCode());
+                if (response.getResponseCode() != 201 && response.getResponseCode() != 409)
+                    throw new VOSException(response.getResponseMessage());
+            }
+            catch (Throwable t)
+            {
+                throw new RuntimeException("Cannot create base test Node " + baseNodeName, t);
+            }
+        }
+        log.debug("Created base test Node: " + baseTestNode);
+        return baseTestNode;
+    }
+
+    /**
+     *
+     * @return a ContainerNode.
+     */
+    private ContainerNode getTestSuiteNode()
+    {
+        if (testSuiteNode == null)
+        {
+//            String testNodeName = baseURI + "/" + VOSTestSuite.baseTestNodeName + "/" + VOSTestSuite.testSuiteNodeName;
+            String testNodeName = baseURI + "/" + getBaseTestNode().getName() + "/" + VOSTestSuite.testSuiteNodeName;
+            try
+            {
+                testSuiteNode = new ContainerNode(new VOSURI(testNodeName));
+                String resourceUrl = resourceURL + "/" + testSuiteNode.getPath();
+                log.debug("**************************************************");
+                log.debug("HTTP PUT: " + resourceUrl);
+
+                StringBuilder sb = new StringBuilder();
+                NodeWriter writer = new NodeWriter();
+                writer.write(testSuiteNode, sb);
+                InputStream in = new ByteArrayInputStream(sb.toString().getBytes("UTF-8"));
+                WebRequest request = new PutMethodWebRequest(resourceUrl, in, "text/xml");
+                WebConversation conversation = new WebConversation();
+                conversation.setExceptionsThrownOnErrorStatus(false);
+                WebResponse response = conversation.sendRequest(request);
+                log.debug(getResponseHeaders(response));
+                log.debug("Response code: " + response.getResponseCode());
+                if (response.getResponseCode() != 201 && response.getResponseCode() != 409)
+                    throw new VOSException(response.getResponseMessage());
+            }
+            catch (Throwable t)
+            {
+                throw new RuntimeException("Cannot create test suite Node " + testNodeName, t);
+            }
+        }
+        log.debug("Created test suite Node: " + testSuiteNode);
+        return testSuiteNode;
+    }
+
+    protected ContainerNode getSampleContainerNode()
+        throws URISyntaxException
+    {
+        return getSampleContainerNode("");
     }
 
     /**
@@ -157,7 +242,7 @@ public abstract class VOSBaseTest
      * @return a ContainerNode.
      * @throws URISyntaxException if a Node URI is malformed.
      */
-    protected ContainerNode getSampleContainerNode()
+    protected ContainerNode getSampleContainerNode(String name)
         throws URISyntaxException
     {
          // List of NodeProperty
@@ -171,9 +256,9 @@ public abstract class VOSBaseTest
         //nodes.add(new DataNode(new VOSURI("vos://cadc.nrc.ca!vospace/mydir/ngc6801")));
 
         // ContainerNode
-        String name = System.getProperty("user.name", "cadcTestVOS");
         String date = dateFormat.format(Calendar.getInstance().getTime());
-        ContainerNode node = new ContainerNode(new VOSURI(baseURI + "/" + name + "_" + date));
+        String nodeName = getTestSuiteNode().getUri() + "/" + VOSTestSuite.userName + "_sample_" + date + name;
+        ContainerNode node = new ContainerNode(new VOSURI(nodeName));
         node.getProperties().add(nodeProperty);
         //node.setNodes(nodes);
         return node;
@@ -188,14 +273,27 @@ public abstract class VOSBaseTest
     protected DataNode getSampleDataNode()
         throws URISyntaxException
     {
+        return getSampleDataNode("");
+    }
+
+    /**
+     * Builds and returns a sample DataNode for use in test cases.
+     *
+     * @param name
+     * @return a DataNode.
+     * @throws URISyntaxException if a Node URI is malformed.
+     */
+    protected DataNode getSampleDataNode(String name)
+        throws URISyntaxException
+    {
         // List of NodeProperty
         NodeProperty nodeProperty = new NodeProperty("ivo://ivoa.net/vospace/core#description", "My award winning thing");
         nodeProperty.setReadOnly(true);
 
         // DataNode
-        String name = System.getProperty("user.name", "cadcTestVOS");
         String date = dateFormat.format(Calendar.getInstance().getTime());
-        DataNode node = new DataNode(new VOSURI(baseURI + "/" + name + "_" + date));
+        String nodeName = getTestSuiteNode().getUri() + "/" + VOSTestSuite.userName + "_sample_" + date + name;
+        DataNode node = new DataNode(new VOSURI(nodeName));
         node.getProperties().add(nodeProperty);
         node.setBusy(NodeBusyState.notBusy);
         return node;
@@ -374,7 +472,7 @@ public abstract class VOSBaseTest
 
     /**
      * Put a ContainerNode to the VOSpace. Also takes a NodeWriter which
-     * allows customiztion of the XML output to testing purposes.
+     * allows customization of the XML output to testing purposes.
      *
      * @param node to put.
      * @param writer to write Node XML.
@@ -423,7 +521,7 @@ public abstract class VOSBaseTest
 
     /**
      * Put a DataNode to the VOSpace. Also takes a NodeWriter which
-     * allows customiztion of the XML output to testing purposes.
+     * allows customization of the XML output to testing purposes.
      *
      * @param node to put.
      * @param writer to write Node XML.
@@ -544,7 +642,7 @@ public abstract class VOSBaseTest
      * Build a String representation of the Response header fields.
      *
      * @param response the HttpUnit WebResponse.
-     * @return a String represntation of the response header fields.
+     * @return a String representation of the response header fields.
      */
     public static String getResponseHeaders(WebResponse response)
     {

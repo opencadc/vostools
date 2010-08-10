@@ -69,7 +69,6 @@
 
 package ca.nrc.cadc.conformance.vos;
 
-import ca.nrc.cadc.vos.VOS;
 import ca.nrc.cadc.vos.DataNode;
 import ca.nrc.cadc.vos.NodeReader;
 import ca.nrc.cadc.vos.VOSURI;
@@ -355,10 +354,11 @@ public class GetDataNodeTest extends VOSNodeTest
             log.debug("nodeNotFoundFault");
 
             // Create a Node with a nonexistent parent node
-            DataNode nodeAB = new DataNode(new VOSURI(baseURI + "/A/B"));
+//            DataNode nodeAB = new DataNode(new VOSURI(baseURI + "/A/B"));
+            DataNode node = getSampleDataNode();
 
             // Try and get the Node from the VOSpace.
-            WebResponse response = get(nodeAB);
+            WebResponse response = get(node);
             assertEquals("GET response code should be 404 for a node that doesn't exist", 404, response.getResponseCode());
 
             // Response message body should be 'NodeNotFound'

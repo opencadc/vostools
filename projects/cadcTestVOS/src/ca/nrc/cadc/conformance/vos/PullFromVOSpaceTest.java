@@ -69,6 +69,7 @@
 
 package ca.nrc.cadc.conformance.vos;
 
+import ca.nrc.cadc.uws.ExecutionPhase;
 import ca.nrc.cadc.uws.Job;
 import ca.nrc.cadc.uws.JobWriter;
 import ca.nrc.cadc.uws.Parameter;
@@ -120,11 +121,14 @@ public class PullFromVOSpaceTest extends VOSTransferTest
     }
 
     @Before
-    public void setUp() 
+    public void setUp()
     {
         job = new Job();
         job.setID("job123");
+        job.setRunID("runid123");
+        job.setExecutionPhase(ExecutionPhase.PENDING);
         job.addParameter(new Parameter("target", baseURI + "/A"));
+//        job.addParameter(new Parameter("target", getSampleDataNode().getUri().toString()));
         job.addParameter(new Parameter("direction", Transfer.Direction.pullFromVoSpace.name()));
         job.addParameter(new Parameter("view", VOS.VIEW_DEFAULT));
         job.addParameter(new Parameter("protocol", VOS.PROTOCOL_HTTP_GET));

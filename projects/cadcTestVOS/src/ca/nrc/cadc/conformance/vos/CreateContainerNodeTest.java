@@ -207,9 +207,10 @@ public class CreateContainerNodeTest extends VOSNodeTest
 
     /**
      * The service SHALL throw a HTTP 400 status code including an InvalidURI
-     * fault in the entity body if the requested URI is invalid
+     * fault in the entity body if the requested URI is invalid.
      */
-    @Test
+// Test disabled because VOSURI class throws exception if scheme isn't vos.
+//    @Test
     public void invalidURIPrefixFault()
     {
         try
@@ -251,7 +252,8 @@ public class CreateContainerNodeTest extends VOSNodeTest
             log.debug("invalidURIPathFault");
 
             // Create node with an invalid path, node A doesn't exist.
-            ContainerNode nodeAB = new ContainerNode(new VOSURI(baseURI + "/A/B"));
+//            ContainerNode nodeAB = new ContainerNode(new VOSURI(baseURI + "/A/B"));
+            ContainerNode nodeAB = getSampleContainerNode("/A/B");
 
             // Add ContainerNode to the VOSpace.
             WebResponse response = put(nodeAB);
@@ -356,7 +358,8 @@ public class CreateContainerNodeTest extends VOSNodeTest
             log.debug("containerNotFoundFault");
 
             // Create a Node path /A/B
-            ContainerNode nodeAB = new ContainerNode(new VOSURI(baseURI + "/A/B"));
+//            ContainerNode nodeAB = new ContainerNode(new VOSURI(baseURI + "/A/B"));
+            ContainerNode nodeAB = getSampleContainerNode("/A/B");
 
             // Try and add the Node to the VOSpace.
             WebResponse response = put(nodeAB);

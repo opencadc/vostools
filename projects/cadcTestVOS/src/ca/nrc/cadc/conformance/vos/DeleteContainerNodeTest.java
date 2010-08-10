@@ -69,9 +69,7 @@
 
 package ca.nrc.cadc.conformance.vos;
 
-import ca.nrc.cadc.vos.VOS;
 import ca.nrc.cadc.vos.ContainerNode;
-import ca.nrc.cadc.vos.NodeReader;
 import ca.nrc.cadc.vos.VOSURI;
 import com.meterware.httpunit.WebResponse;
 import org.apache.log4j.Logger;
@@ -195,7 +193,8 @@ public class DeleteContainerNodeTest extends VOSNodeTest
             log.debug("nodeNotFoundFault");
 
             // Create a Node that should not exist.
-            ContainerNode nodeA = new ContainerNode(new VOSURI(baseURI + "/node_not_found"));
+//            ContainerNode nodeA = new ContainerNode(new VOSURI(baseURI + "/node_not_found"));
+            ContainerNode nodeA = getSampleContainerNode();
 
             // Try and delete the Node from the VOSpace.
             WebResponse response = delete(nodeA);
@@ -228,7 +227,8 @@ public class DeleteContainerNodeTest extends VOSNodeTest
             log.debug("containerNotFoundFault");
 
             // Create a Node path /A/B
-            ContainerNode nodeAB = new ContainerNode(new VOSURI(baseURI + "/A/B"));
+//            ContainerNode nodeAB = new ContainerNode(new VOSURI(baseURI + "/A/B"));
+            ContainerNode nodeAB = getSampleContainerNode("/A/B");
 
             // Try and delete the Node from the VOSpace.
             WebResponse response = delete(nodeAB);

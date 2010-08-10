@@ -1,0 +1,14 @@
+JAR files required for the OpenCADC cadcTestVOS project
+=======================================================
+
+Name in build.xml            Versioned Name          Project URL
+-----------------            --------------          -----------
+httpunit.jar                 httpunit-1.7            http://www.httpunit.org/
+jdom.jar                     jdom-1.1                http://www.jdom.org/
+junit.jar                    junit-4.6               http://www.junit.org/
+log4j.jar                    log4j-1.2.15            http://logging.apache.org
+xmlunit.jar                  xmlunit-1.2             http://xmlunit.sourceforge.net/
+cadcUtil.jar                                         http://code.google.com/p/opencadc  
+cadcRegistryClient.jar                               http://code.google.com/p/opencadc  
+cadcUWS.jar                                          http://code.google.com/p/opencadc    
+cadcVOS.jar                                          http://code.google.com/p/opencadc

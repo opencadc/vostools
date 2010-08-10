@@ -69,7 +69,6 @@
 
 package ca.nrc.cadc.conformance.vos;
 
-import ca.nrc.cadc.vos.VOS;
 import java.util.List;
 import ca.nrc.cadc.vos.DataNode;
 import ca.nrc.cadc.vos.NodeProperty;
@@ -131,7 +130,7 @@ public class UpdateDataNodeTest extends VOSNodeTest
             assertEquals("PUT response code should be 201", 201, response.getResponseCode());
 
             // Update the node by adding new Property.
-            NodeProperty nodeProperty = new NodeProperty("ivo://ivoa.net/vospace/core#description", "My new award winning images");
+            NodeProperty nodeProperty = new NodeProperty("ivo://ivoa.net/vospace/core#description", "My new award winning thing");
             nodeProperty.setReadOnly(true);
             node.getProperties().add(nodeProperty);
             response = post(node);
@@ -172,10 +171,11 @@ public class UpdateDataNodeTest extends VOSNodeTest
             log.debug("updateDataNodeDeleteProperty");
 
             // Create a DataNode.
-            DataNode node = new DataNode(new VOSURI(baseURI + "/A"));
-            NodeProperty nodeProperty = new NodeProperty("ivo://ivoa.net/vospace/core#description", "My award winning images");
-            nodeProperty.setReadOnly(true);
-            node.getProperties().add(nodeProperty);
+//            DataNode node = new DataNode(new VOSURI(baseURI + "/A"));
+            DataNode node = getSampleDataNode();
+//            NodeProperty nodeProperty = new NodeProperty("ivo://ivoa.net/vospace/core#description", "My award winning thing");
+//            nodeProperty.setReadOnly(true);
+//            node.getProperties().add(nodeProperty);
 
             // Add ContainerNode to the VOSpace.
             WebResponse response = put(node);
@@ -239,7 +239,7 @@ public class UpdateDataNodeTest extends VOSNodeTest
             assertEquals("PUT response code should be 201", 201, response.getResponseCode());
 
             // Update the node by adding new Property.
-            NodeProperty nodeProperty = new NodeProperty("ivo://ivoa.net/vospace/core#description", "My new award winning images");
+            NodeProperty nodeProperty = new NodeProperty("ivo://ivoa.net/vospace/core#description", "My new award winning thing");
             nodeProperty.setReadOnly(true);
             node.getProperties().add(nodeProperty);
 
@@ -275,10 +275,11 @@ public class UpdateDataNodeTest extends VOSNodeTest
             log.debug("updateReadOnlyPermissionDeniedFault");
 
             // Create a ContainerNode.
-            DataNode node = new DataNode(new VOSURI(baseURI + "/A"));
-            NodeProperty nodeProperty = new NodeProperty("ivo://ivoa.net/vospace/core#description", "My award winning images");
-            nodeProperty.setReadOnly(true);
-            node.getProperties().add(nodeProperty);
+//            DataNode node = new DataNode(new VOSURI(baseURI + "/A"));
+            DataNode node = getSampleDataNode();
+//            NodeProperty nodeProperty = new NodeProperty("ivo://ivoa.net/vospace/core#description", "My award winning thing");
+//            nodeProperty.setReadOnly(true);
+//            node.getProperties().add(nodeProperty);
 
             // Add ContainerNode to the VOSpace.
             WebResponse response = put(node);
@@ -329,10 +330,11 @@ public class UpdateDataNodeTest extends VOSNodeTest
             log.debug("nodeNotFoundFault");
 
             // Create a Node with a nonexistent parent node
-            DataNode nodeAB = new DataNode(new VOSURI(baseURI + "/A/B"));
+//            DataNode nodeAB = new DataNode(new VOSURI(baseURI + "/A/B"));
+            DataNode node = getSampleDataNode("/A/B");
 
             // Try and get the Node from the VOSpace.
-            WebResponse response = post(nodeAB);
+            WebResponse response = post(node);
             assertEquals("POST response code should be 404 for a node that doesn't exist", 404, response.getResponseCode());
 
             // Response message body should be 'NodeNotFound'

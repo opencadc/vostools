@@ -69,9 +69,7 @@
 
 package ca.nrc.cadc.conformance.vos;
 
-import ca.nrc.cadc.vos.VOS;
 import ca.nrc.cadc.vos.DataNode;
-import ca.nrc.cadc.vos.NodeReader;
 import ca.nrc.cadc.vos.VOSURI;
 import com.meterware.httpunit.WebResponse;
 import org.apache.log4j.Logger;
@@ -124,7 +122,7 @@ public class DeleteDataNodeTest extends VOSNodeTest
             // Get a DataNode.
             DataNode node = getSampleDataNode();
 
-            // Add ContainerNode to the VOSpace.
+            // Add DataNode to the VOSpace.
             WebResponse response = put(node);
             assertEquals("PUT response code should be 201", 201, response.getResponseCode());
 
@@ -159,7 +157,7 @@ public class DeleteDataNodeTest extends VOSNodeTest
             // Get a DataNode.
             DataNode node = getSampleDataNode();
             
-            // Add ContainerNode to the VOSpace.
+            // Add DataNode to the VOSpace.
             WebResponse response = put(node);
             assertEquals("PUT response code should be 201", 201, response.getResponseCode());
 
@@ -195,7 +193,8 @@ public class DeleteDataNodeTest extends VOSNodeTest
             log.debug("nodeNotFoundFault");
 
             // Create a Node that should not exist.
-            DataNode nodeA = new DataNode(new VOSURI(baseURI + "/node_not_found"));
+//            DataNode nodeA = new DataNode(new VOSURI(baseURI + "/node_not_found"));
+            DataNode nodeA = getSampleDataNode();
 
             // Try and delete the Node from the VOSpace.
             WebResponse response = delete(nodeA);
@@ -228,7 +227,8 @@ public class DeleteDataNodeTest extends VOSNodeTest
             log.debug("containerNotFoundFault");
 
             // Create a Node path /A/B
-            DataNode nodeAB = new DataNode(new VOSURI(baseURI + "/A/B"));
+//            DataNode nodeAB = new DataNode(new VOSURI(baseURI + "/A/B"));
+            DataNode nodeAB = getSampleDataNode("/A/B");
 
             // Try and delete the Node from the VOSpace.
             WebResponse response = delete(nodeAB);

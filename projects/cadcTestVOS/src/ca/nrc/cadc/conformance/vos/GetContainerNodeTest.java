@@ -69,7 +69,6 @@
 
 package ca.nrc.cadc.conformance.vos;
 
-import ca.nrc.cadc.vos.VOS;
 import ca.nrc.cadc.vos.ContainerNode;
 import ca.nrc.cadc.vos.Node;
 import ca.nrc.cadc.vos.NodeReader;
@@ -278,30 +277,31 @@ public class GetContainerNodeTest extends VOSNodeTest
             log.debug("getUriOffsetNode");
 
             // Parent node.
-            ContainerNode nodeA = new ContainerNode(new VOSURI(baseURI + "/A"));
+//            ContainerNode nodeA = new ContainerNode(new VOSURI(baseURI + "/A"));
+            ContainerNode nodeA = getSampleContainerNode("/A");
 
             // Add ContainerNode to the VOSpace.
             WebResponse response = put(nodeA);
             assertEquals("PUT response code should be 201", 201, response.getResponseCode());
 
             // Child node B.
-            ContainerNode nodeAB = new ContainerNode(new VOSURI(baseURI + "/A/B"));
+            ContainerNode nodeAB = new ContainerNode(new VOSURI(nodeA.getUri() + "/B"));
             response = put(nodeAB);
             assertEquals("PUT response code should be 201", 201, response.getResponseCode());
 
             // Child node C.
-            ContainerNode nodeABC = new ContainerNode(new VOSURI(baseURI + "/A/B/C"));
+            ContainerNode nodeABC = new ContainerNode(new VOSURI(nodeAB.getUri() + "/C"));
             response = put(nodeABC);
             assertEquals("PUT response code should be 201", 201, response.getResponseCode());
 
             // Child node D.
-            ContainerNode nodeABCD = new ContainerNode(new VOSURI(baseURI + "/A/B/C/D"));
+            ContainerNode nodeABCD = new ContainerNode(new VOSURI(nodeABC.getUri() + "/D"));
             response = put(nodeABCD);
             assertEquals("PUT response code should be 201", 201, response.getResponseCode());
 
             // Request Parameters to get child nodes B & C only
             Map<String, String> parameters = new HashMap<String, String>();
-            parameters.put("uri", baseURI + "/A/B");
+            parameters.put("uri", nodeAB.getUri().toString());
             parameters.put("offset", "1");
 
             // Get the node from vospace
@@ -388,7 +388,8 @@ public class GetContainerNodeTest extends VOSNodeTest
             log.debug("nodeNotFoundFault");
 
             // Create a Node with a nonexistent parent node
-            ContainerNode nodeAB = new ContainerNode(new VOSURI(baseURI + "/A/B"));
+//            ContainerNode nodeAB = new ContainerNode(new VOSURI(baseURI + "/A/B"));
+            ContainerNode nodeAB = getSampleContainerNode("/A/B");
 
             // Try and get the Node from the VOSpace.
             WebResponse response = get(nodeAB);
