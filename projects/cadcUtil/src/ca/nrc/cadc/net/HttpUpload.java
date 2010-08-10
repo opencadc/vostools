@@ -101,15 +101,28 @@ public class HttpUpload extends HttpTransfer
     private String contentEncoding;
     private String contentMD5;
 
+    private InputStream istream;
+
     public HttpUpload(File src, URL dest)
     {
+        super();
         this.localFile = src;
         this.remoteURL = dest;
         if (remoteURL == null)
             throw new IllegalArgumentException("destination URL cannot be null");
         if (localFile == null) 
             throw new IllegalArgumentException("source File cannot be null");
+    }
 
+    public HttpUpload(InputStream src, URL dest)
+    {
+        super();
+        this.istream = src;
+        this.remoteURL = dest;
+        if (remoteURL == null)
+            throw new IllegalArgumentException("destination URL cannot be null");
+        if (istream == null)
+            throw new IllegalArgumentException("source InputStream cannot be null");
     }
     
     // unused
@@ -141,7 +154,6 @@ public class HttpUpload extends HttpTransfer
         if (!go)
             return; // cancelled while queued, event notification handled in terminate()
         
-        InputStream istream = null;
         OutputStream ostream = null;
         try
         {
@@ -165,7 +177,8 @@ public class HttpUpload extends HttpTransfer
             // this seesm to fail, maybe not allowed with PUT
             //conn.setRequestProperty("User-Agent", userAgent);
 
-            conn.setRequestProperty("Content-Length", Long.toString(localFile.length()));
+            if (localFile != null)
+                conn.setRequestProperty("Content-Length", Long.toString(localFile.length()));
             if (contentType != null)
                 conn.setRequestProperty("Content-Type", contentType);
             if (contentEncoding != null)
@@ -174,18 +187,19 @@ public class HttpUpload extends HttpTransfer
                 conn.setRequestProperty("Content-MD5", contentMD5);
             
             int bSize = bufferSize;
-            if (localFile.length() < bSize)
+            if (localFile != null && localFile.length() < bSize)
                 bSize = (int) localFile.length();
 
             ostream = conn.getOutputStream();
-            istream = new FileInputStream(localFile);
-            if (bSize < localFile.length())
+            if (istream == null)
+                istream = new FileInputStream(localFile);
+            if ( !(ostream instanceof BufferedOutputStream) )
             {
-                if ( !(ostream instanceof BufferedOutputStream) )
-                {
-                    log.debug("using BufferedOutputStream");
-                    ostream = new BufferedOutputStream(ostream, bufferSize);
-                }
+                log.debug("using BufferedOutputStream");
+                ostream = new BufferedOutputStream(ostream, bufferSize);
+            }
+            if (localFile != null)
+            {
                 log.debug("using BufferedInputStream");
                 istream = new BufferedInputStream(istream, bufferSize);
             }
@@ -194,7 +208,6 @@ public class HttpUpload extends HttpTransfer
 
             ioLoop(istream, ostream, 2*this.bufferSize, 0);
 
-            
             ostream.flush();
             log.debug("flushing and closing OutputStream");
             try { ostream.close(); }
