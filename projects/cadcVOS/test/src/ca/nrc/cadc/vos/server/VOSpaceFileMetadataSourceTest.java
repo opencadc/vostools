@@ -1,15 +1,12 @@
 package ca.nrc.cadc.vos.server;
 
-import ca.nrc.cadc.vos.server.VOSpaceFileMetadataSource;
 import static org.junit.Assert.assertEquals;
-
-import java.nio.charset.Charset;
-import java.security.MessageDigest;
 
 import org.junit.Before;
 import org.junit.Test;
 
 import ca.nrc.cadc.util.FileMetadata;
+import ca.nrc.cadc.util.HexUtil;
 import ca.nrc.cadc.vos.ContainerNode;
 import ca.nrc.cadc.vos.DataNode;
 import ca.nrc.cadc.vos.VOSURI;
@@ -46,13 +43,9 @@ public abstract class VOSpaceFileMetadataSourceTest extends AbstractPersistenceT
         Long contentLength = 256L;
         String contentType = "text/xml";
         
-        String md5SumSource = "valuetohashis a longer string now.";
+        //String md5SumSource = "valuetohashis a longer string now.";
         
-        MessageDigest md = MessageDigest.getInstance("MD5");
-        md.reset();
-        md.update(md5SumSource.getBytes("iso-8859-1"), 0, md5SumSource.length());
-        byte[] md5hash = md.digest();
-        String contentMD5 = new String(md5hash, Charset.forName("iso-8859-1"));
+        String contentMD5 = HexUtil.toHex(new byte[] {0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15});
         
         FileMetadata metadata1 = new FileMetadata();
         metadata1.setContentEncoding(contentEncoding);

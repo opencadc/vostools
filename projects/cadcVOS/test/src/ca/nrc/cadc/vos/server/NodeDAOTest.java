@@ -69,12 +69,6 @@
 
 package ca.nrc.cadc.vos.server;
 
-import ca.nrc.cadc.vos.ContainerNode;
-import ca.nrc.cadc.vos.DataNode;
-import ca.nrc.cadc.vos.Node;
-import ca.nrc.cadc.vos.NodeProperty;
-import ca.nrc.cadc.vos.VOS;
-import ca.nrc.cadc.vos.VOSURI;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
 
@@ -85,6 +79,14 @@ import java.util.List;
 
 import org.junit.Before;
 import org.junit.Test;
+
+import ca.nrc.cadc.util.HexUtil;
+import ca.nrc.cadc.vos.ContainerNode;
+import ca.nrc.cadc.vos.DataNode;
+import ca.nrc.cadc.vos.Node;
+import ca.nrc.cadc.vos.NodeProperty;
+import ca.nrc.cadc.vos.VOS;
+import ca.nrc.cadc.vos.VOSURI;
 
 
 /**
@@ -111,6 +113,8 @@ public abstract class NodeDAOTest extends AbstractPersistenceTest
         super.commonBefore();
         propertyIgnoreList = new ArrayList<NodeProperty>();
         propertyIgnoreList.add(new NodeProperty(VOS.PROPERTY_URI_DATE, null));
+        propertyIgnoreList.add(new NodeProperty(VOS.PROPERTY_URI_CREATOR, null));
+        propertyIgnoreList.add(new NodeProperty(VOS.PROPERTY_URI_ISPUBLIC, null));
     }
 
     @Test
@@ -208,7 +212,7 @@ public abstract class NodeDAOTest extends AbstractPersistenceTest
         // Add new properties
         nodeFromGet.getProperties().add(new NodeProperty("uri2", "value1"));
         nodeFromGet.getProperties().add(new NodeProperty(VOS.PROPERTY_URI_CONTENTENCODING, "gzip"));
-        nodeFromGet.getProperties().add(new NodeProperty(VOS.PROPERTY_URI_CONTENTMD5, new byte[] {1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16}.toString()));
+        nodeFromGet.getProperties().add(new NodeProperty(VOS.PROPERTY_URI_CONTENTMD5, HexUtil.toHex(new byte[] {1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16})));
         DataNode nodeFromUpdate1 = (DataNode) nodeDAO.updateProperties(nodeFromGet);
         DataNode nodeFromGetUpdate1 = (DataNode) nodeDAO.getFromParent(nodeFromGet.getName(), null);
         compareProperties("assert2", nodeFromGet.getProperties(), nodeFromUpdate1.getProperties());
@@ -236,7 +240,7 @@ public abstract class NodeDAOTest extends AbstractPersistenceTest
         newEncoding.setMarkedForDeletion(true);
         nodeFromGetUpdate2.getProperties().add(newEncoding);
         nodeFromGetUpdate2.getProperties().remove(new NodeProperty(VOS.PROPERTY_URI_CONTENTMD5, null));
-        NodeProperty newMD5 = new NodeProperty(VOS.PROPERTY_URI_CONTENTMD5, new byte[] {1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16}.toString());
+        NodeProperty newMD5 = new NodeProperty(VOS.PROPERTY_URI_CONTENTMD5, HexUtil.toHex(new byte[] {1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16}));
         newMD5.setMarkedForDeletion(true);
         nodeFromGetUpdate2.getProperties().add(newMD5);
         DataNode nodeFromUpdate3 = (DataNode) nodeDAO.updateProperties(nodeFromGetUpdate2);
@@ -287,7 +291,7 @@ public abstract class NodeDAOTest extends AbstractPersistenceTest
         NodeProperty prop3 = new NodeProperty(VOS.PROPERTY_URI_CONTENTLENGTH, new Long(1024).toString());
         NodeProperty prop4 = new NodeProperty(VOS.PROPERTY_URI_TYPE, "text/plain");
         NodeProperty prop5 = new NodeProperty(VOS.PROPERTY_URI_CONTENTENCODING, "gzip");
-        NodeProperty prop6 = new NodeProperty(VOS.PROPERTY_URI_CONTENTMD5, new byte[] {1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16}.toString());
+        NodeProperty prop6 = new NodeProperty(VOS.PROPERTY_URI_CONTENTMD5, HexUtil.toHex(new byte[] {1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16}));
 
         properties.add(prop1);
         properties.add(prop2);
@@ -303,6 +307,17 @@ public abstract class NodeDAOTest extends AbstractPersistenceTest
     {
         properties1.removeAll(propertyIgnoreList);
         properties2.removeAll(propertyIgnoreList);
+        
+        
+        for (NodeProperty list1property : properties1)
+        {
+            System.out.println("^^^^^^^^^^1: " + list1property.getPropertyURI());
+        }
+        for (NodeProperty list2property : properties2)
+        {
+            System.out.println("^^^^^^^^^^2: " + list2property.getPropertyURI());
+        }
+        
         if (properties1.size() != properties2.size())
         {
             assertTrue(assertName + " property list sizes different", false);
