@@ -70,7 +70,7 @@ import org.junit.runner.RunWith;
 import org.junit.runners.Suite;
 
 import ca.nrc.cadc.vos.auth.VOSpaceAuthorizerTest;
-import ca.nrc.cadc.vos.server.ViewFactoryTest;
+import ca.nrc.cadc.vos.server.ViewsTest;
 
 
 @RunWith(Suite.class)
@@ -79,7 +79,7 @@ import ca.nrc.cadc.vos.server.ViewFactoryTest;
                 NodeReaderTest.class,
                 NodeWriterTest.class,
                 VOSpaceAuthorizerTest.class,
-                ViewFactoryTest.class
+                ViewsTest.class
         })
 public class CADCVOSTestSuite
 {

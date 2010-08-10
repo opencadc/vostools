@@ -69,42 +69,147 @@
 
 package ca.nrc.cadc.vos.server;
 
-import static org.junit.Assert.assertEquals;
+import java.io.BufferedWriter;
+import java.io.IOException;
+import java.io.OutputStream;
+import java.io.OutputStreamWriter;
+import java.io.UnsupportedEncodingException;
+import java.io.Writer;
+import java.util.List;
 
-import org.junit.Test;
+import org.apache.log4j.Logger;
+import org.jdom.Document;
+import org.jdom.Element;
+import org.jdom.Namespace;
+import org.jdom.output.Format;
+import org.jdom.output.XMLOutputter;
 
-import ca.nrc.cadc.vos.View;
+import ca.nrc.cadc.util.StringBuilderWriter;
 
 /**
- * Test the loading and creation of views in the ViewFactory
+ * Class responsible for creating the XML version of the Views resource.
  * 
  * @author majorb
  *
  */
-public class ViewFactoryTest
+public class ViewsWriter
 {
     
-    @Test
-    public void testDefaultConfiguration() throws Exception
+    /*
+     * The VOSpace Namespaces.
+     */
+    protected static Namespace defaultNamespace;
+    protected static Namespace vosNamespace;
+    protected static Namespace xsiNamespace;
+    static
     {
+        defaultNamespace = Namespace.getNamespace("http://www.ivoa.net/xml/VOSpace/v2.0");
+        vosNamespace = Namespace.getNamespace("vos", "http://www.ivoa.net/xml/VOSpace/v2.0");
+        xsiNamespace = Namespace.getNamespace("xsi", "http://www.w3.org/2001/XMLSchema-instance");
+    }
+
+    private static Logger log = Logger.getLogger(ViewsWriter.class);
+    
+    /**
+     * ViewsWriter constructor.
+     */
+    public ViewsWriter()
+    {
+    }
+    
+    /**
+     * Write accepts and provides to a StringBuilder.
+     */
+    public void write(List<String> accepts, List<String> provides, StringBuilder builder) throws IOException
+    {
+        write(accepts, provides, new StringBuilderWriter(builder));
+    }
+
+    /**
+     * Write accepts and provides to an OutputStream.
+     *
+     * @param node Node to write.
+     * @param out OutputStream to write to.
+     * @throws IOException if the writer fails to write.
+     */
+    public void write(List<String> accepts, List<String> provides, OutputStream out) throws IOException
+    {
+        OutputStreamWriter outWriter;
         try
         {
-            ViewFactory viewFactory = new ViewFactory();
-            View view = null;
-            view = viewFactory.getView("data");
-            assertEquals(view.getClass(), TestDataView.class);
-            view = viewFactory.getView("ivo://cadc.nrc.ca/vospace/core#dataview");
-            assertEquals(view.getClass(), TestDataView.class);
-            view = viewFactory.getView("rss");
-            assertEquals(view.getClass(), RssView.class);
-            view = viewFactory.getView("ivo://cadc.nrc.ca/vospace/core#rssview");
-            assertEquals(view.getClass(), RssView.class);
-        }
-        catch (Exception e)
+            outWriter = new OutputStreamWriter(out, "UTF-8");
+        } catch (UnsupportedEncodingException e)
         {
-            e.printStackTrace();
-            throw e;
+            throw new RuntimeException("UTF-8 encoding not supported", e);
         }
+        write(accepts, provides, new BufferedWriter(outWriter));        
+    }
+
+    /**
+     * Write accepts and provides to a Writer.
+     *
+     * @param node Node to write.
+     * @param writer Writer to write to.
+     * @throws IOException if the writer fails to write.
+     */
+    public void write(List<String> accepts, List<String> provides, Writer writer) throws IOException
+    {
+        // Create the root node element
+        Element root = getRootElement();
+
+        // accepts element
+        root.addContent(getViewsListElement("accepts", accepts));
+
+        // provides element
+        root.addContent(getViewsListElement("provides", provides));
+
+        // write out the Document
+        write(root, writer);
+    }
+    
+    /**
+     * Create the root views element.
+     * @return
+     */
+    protected Element getRootElement()
+    {
+        // Create the root element (node).
+        Element root = new Element("views", defaultNamespace);
+        root.addNamespaceDeclaration(vosNamespace);
+        root.addNamespaceDeclaration(xsiNamespace);
+        return root;
+    }
+    
+    /**
+     * Create a URI list for the views.
+     * @param name
+     * @param uris
+     * @return
+     */
+    protected Element getViewsListElement(String name, List<String> uris)
+    {
+        Element viewList = new Element(name, defaultNamespace);
+        for (String uri : uris)
+        {
+            Element property = new Element("view", defaultNamespace);
+            property.setAttribute("uri", uri);
+            viewList.addContent(property);
+        }
+        return viewList;
+    }
+    
+    /**
+     * Write to root Element to a writer.
+     *
+     * @param root Root Element to write.
+     * @param writer Writer to write to.
+     * @throws IOException if the writer fails to write.
+     */
+    protected void write(Element root, Writer writer) throws IOException
+    {
+        XMLOutputter outputter = new XMLOutputter();
+        outputter.setFormat(Format.getPrettyFormat());
+        outputter.output(new Document(root), writer);
     }
 
 }

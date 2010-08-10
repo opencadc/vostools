@@ -67,83 +67,44 @@
 ************************************************************************
 */
 
-package ca.nrc.cadc.vos.server.web.restlet;
+package ca.nrc.cadc.vos.server.web.restlet.resource;
 
 import org.apache.log4j.Logger;
-import org.restlet.Application;
-import org.restlet.Context;
-import org.restlet.Restlet;
+import org.restlet.representation.Representation;
+import org.restlet.resource.Get;
 
-import ca.nrc.cadc.vos.InvalidServiceException;
-import ca.nrc.cadc.vos.server.util.BeanUtil;
+import ca.nrc.cadc.vos.server.Views;
+import ca.nrc.cadc.vos.server.ViewsWriter;
+import ca.nrc.cadc.vos.server.web.representation.ViewsRepresentation;
 
 /**
- * Application for handling Node routing and resources.
+ * Handles HTTP requests for Views.
  * 
  * @author majorb
  *
  */
-public class VOSpaceNodesApplication extends Application
+public class ViewsResource extends BaseResource
 {
+    private static Logger log = Logger.getLogger(ViewsResource.class);
     
-    private static final Logger log = Logger.getLogger(VOSpaceNodesApplication.class);
-
-    public VOSpaceNodesApplication()
-    {
-    }
-
-    public VOSpaceNodesApplication(final Context context)
-    {
-        super(context);
-    }
-
+    /**
+     * Called after object instantiation.
+     */
     @Override
-    public Restlet createInboundRoot()
+    public void doInit()
     {
-        
-        Context context = getContext();
-        
-        // Get and save the vospace uri in the input representation
-        // for later use
-        final String vosURI = context.getParameters().
-                getFirstValue(BeanUtil.IVOA_VOS_URI);
-        if (vosURI == null || vosURI.trim().length() == 0)
-        {
-            final String message = "Context parameter not set: " + BeanUtil.IVOA_VOS_URI;
-            log.error(message);
-            throw new RuntimeException(message);
-        }
-        
-        // save the vospace uri in the application context
-        context.getAttributes().put(BeanUtil.IVOA_VOS_URI, vosURI);
-        
-        // Create the configured NodePersistence bean
-        createContextBean(context, ca.nrc.cadc.vos.server.NodePersistence.class, BeanUtil.VOS_NODE_PERSISTENCE);
-        
-        return new VOSpaceNodesRouter(context);
+        log.debug("Enter ViewsResource.doInit(): " + getMethod());
+        super.doInit();
     }
     
-    private void createContextBean(Context context, Class<?> beanInterface, String contextParam)
+    /**
+     * HTTP GET
+     */
+    @Get("xml")
+    public Representation represent()
     {
-        try
-        {
-            final String className = context.getParameters().
-                    getFirstValue(contextParam);
-            final BeanUtil beanUtil = new BeanUtil(className);
-            Object bean = beanUtil.createBean();
-            if ((beanInterface != null) && !beanInterface.isInstance(bean))
-            {
-                throw new InvalidServiceException("Bean does not implement interface: " + beanInterface.getName());
-            }
-            context.getAttributes().put(contextParam, bean);
-            log.debug("Added " + contextParam + " bean to application context: " + className);
-        }
-        catch (InvalidServiceException e)
-        {
-            final String message = "Could not create bean: " + contextParam + ": " + e.getMessage();
-            log.error(message, e);
-            throw new RuntimeException(message, e);
-        }
+        log.debug("Enter ViewsResource.represent()");
+        return new ViewsRepresentation(Views.accepts(), Views.provides(), new ViewsWriter());
     }
     
 }

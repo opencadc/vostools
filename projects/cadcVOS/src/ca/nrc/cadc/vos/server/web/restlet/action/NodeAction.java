@@ -84,7 +84,7 @@ import ca.nrc.cadc.vos.NodeParsingException;
 import ca.nrc.cadc.vos.VOSURI;
 import ca.nrc.cadc.vos.server.AbstractView;
 import ca.nrc.cadc.vos.server.NodePersistence;
-import ca.nrc.cadc.vos.server.ViewFactory;
+import ca.nrc.cadc.vos.server.Views;
 import ca.nrc.cadc.vos.server.auth.VOSpaceAuthorizer;
 
 /**
@@ -183,8 +183,8 @@ public abstract class NodeAction implements PrivilegedAction<Object>
         {
             return null;
         }
-        ViewFactory viewFactory = new ViewFactory();
-        AbstractView view = viewFactory.getView(viewReference);
+        Views views = new Views();
+        AbstractView view = views.getView(viewReference);
         if (view == null)
         {
             throw new UnsupportedOperationException("No view configured matching reference: "

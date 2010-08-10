@@ -69,15 +69,19 @@
 
 package ca.nrc.cadc.vos.server;
 
+import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.MissingResourceException;
 import java.util.ResourceBundle;
 
 import org.apache.log4j.Logger;
 
+import ca.nrc.cadc.vos.VOS;
+
 /**
- * The ViewFactory is responsible for loading the views from Views.properties and
+ * The class Views is responsible for loading the views from Views.properties and
  * for creating instances of views through method getView(String viewReference)
  * where viewReference can either be the alias or URI of a view that has been loaded
  * from configuration.
@@ -85,17 +89,19 @@ import org.apache.log4j.Logger;
  * @author majorb
  *
  */
-public class ViewFactory
+public class Views
 {
     
-    private static Logger log = Logger.getLogger(ViewFactory.class);
+    private static Logger log = Logger.getLogger(Views.class);
     
-    private static final String VIEWS_PROPERTY_FILE = "Views";
+    private static final String VIEWS_PROPERTY_FILE = Views.class.getSimpleName();
     
     private static final String KEY_VIEW_LIST = "views";
     private static final String KEY_VIEW_ALIAS = "alias";
     private static final String KEY_VIEW_URI = "uri";
     private static final String KEY_VIEW_CLASS = "class";
+    private static final String KEY_VIEW_ACCEPTS = "accepts";
+    private static final String KEY_VIEW_PROVIDES = "provides";
     
     /**
      * Load the views upon class loading.
@@ -107,6 +113,12 @@ public class ViewFactory
     
     // The map of configured view classes
     private static Map<String, Class<AbstractView>> viewMap;
+    
+    // The list of accepting views
+    private static List<String> accepts;
+    
+    // The list of providing views
+    private static List<String> provides;
     
     /**
      * Given a viewReference, return a new instance of the associated view or
@@ -131,6 +143,22 @@ public class ViewFactory
     }
     
     /**
+     * Get the list of accepts URIs.
+     */
+    public static List<String> accepts()
+    {
+        return accepts;
+    }
+    
+    /**
+     * Get the list of provides URIs.
+     */
+    public static List<String> provides()
+    {
+        return provides;
+    }
+    
+    /**
      * Load the view aliases, uri, and classes from Views.properties
      */
     @SuppressWarnings("unchecked")
@@ -148,6 +176,12 @@ public class ViewFactory
         }
         
         viewMap = new HashMap<String, Class<AbstractView>>();
+        accepts = new ArrayList<String>();
+        provides = new ArrayList<String>();
+        
+        // Add the default accepts and provides views
+        accepts.add(VOS.VIEW_DEFAULT);
+        provides.add(VOS.VIEW_DEFAULT);
         
         try
         {
@@ -183,6 +217,34 @@ public class ViewFactory
                 log.debug("Mapped alias '" + viewAlias + "' to class " + viewClass);
                 viewMap.put(viewURI, viewClass);
                 log.debug("Mapped URI '" + viewURI + "' to class " + viewClass);
+                
+                // see if this view 'accepts'
+                try
+                {
+                    String acceptsValue = rb.getString(viewName + "." + KEY_VIEW_ACCEPTS);
+                    if (acceptsValue != null && acceptsValue.trim().equalsIgnoreCase("true"))
+                    {
+                        accepts.add(viewURI);
+                    }
+                }
+                catch (MissingResourceException e)
+                {
+                    // ingore--no accepts setting in configuration
+                }
+                
+                // see if this view 'provides'
+                try
+                {
+                    String providesValue = rb.getString(viewName + "." + KEY_VIEW_PROVIDES);
+                    if (providesValue != null && providesValue.trim().equalsIgnoreCase("true"))
+                    {
+                        provides.add(viewURI);
+                    }
+                }
+                catch (MissingResourceException e)
+                {
+                    // ingore--no provides setting in configuration
+                }
             }
         }
         catch (Exception e)

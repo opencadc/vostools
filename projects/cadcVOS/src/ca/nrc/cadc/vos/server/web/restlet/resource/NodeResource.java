@@ -96,7 +96,7 @@ import ca.nrc.cadc.vos.server.web.restlet.action.UpdatePropertiesAction;
 /**
  * Handles HTTP requests for Node resources.
  * 
- * @author majorbNodeNotFoundException
+ * @author majorb
  *
  */
 public class NodeResource extends BaseResource
@@ -111,6 +111,7 @@ public class NodeResource extends BaseResource
     /**
      * Called after object instantiation.
      */
+    @Override
     public void doInit()
     {
         log.debug("Enter NodeResource.doInit(): " + getMethod());
