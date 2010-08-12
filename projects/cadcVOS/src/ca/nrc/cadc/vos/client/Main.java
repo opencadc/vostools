@@ -311,6 +311,11 @@ public class Main implements Runnable
                 copyFromVOSpace();
             }
         }
+        catch(NullPointerException ex)
+        {
+            log.error("BUG", ex);
+            System.exit(NET_STATUS);
+        }
         catch(Throwable t)
         {
             msg("failed to copy: " + source + " -> " + destination);
