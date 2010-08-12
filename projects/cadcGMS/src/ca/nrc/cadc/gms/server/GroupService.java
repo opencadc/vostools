@@ -82,4 +82,23 @@ public interface GroupService
     Group getGroup(final String groupID)
         throws InvalidGroupException,
                IllegalArgumentException, AuthorizationException;
+    
+    /**
+     * Create the Group with the given Group ID.
+     *
+     * @param groupID   Unique Group identifier.
+     * @return          The Group object for the given ID.
+     */
+    Group putGroup(final String groupID)
+        throws InvalidGroupException,
+               AuthorizationException;
+    
+    /**
+     * Delete the Group with the given Group ID.
+     *
+     * @param groupID   Unique Group identifier.
+     */
+    void deleteGroup(final String groupID)
+        throws InvalidGroupException,
+               AuthorizationException;
 }

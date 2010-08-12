@@ -96,7 +96,7 @@ public class GmsClientTest extends GMSTest<GmsClient>
     private final String createPOSTGrID = "createPOSTGroup";
     private final String deleteGrID = "deleteGroup";
     private final String setGrID = "setGroup";
-    
+
     // values for members in setGroup test
     private final String setGrMemberID = "auser";
     private final String setGrMemberName = "A User";
@@ -124,24 +124,25 @@ public class GmsClientTest extends GMSTest<GmsClient>
                     public int getResponseCode()
                     {
                         String path = getURL().getPath();
-                        if (path.contains(createPUTGrID) && 
-                                getRequestMethod().equals("GET"))
+                        if (path.contains(createPUTGrID)
+                                && getRequestMethod().equals("GET"))
                         {
                             // this is the call to verify if resource
                             // exists before creating it. Pretend it
                             // doesn't exist
                             return HttpURLConnection.HTTP_NOT_FOUND;
                         }
-                        
-                        if( getRequestMethod().equals("PUT"))
+
+                        if (getRequestMethod().equals("PUT"))
                         {
                             return HttpURLConnection.HTTP_CREATED;
                         }
                         return HttpURLConnection.HTTP_OK;
                     }
-                    
+
                     @Override
-                    public OutputStream getOutputStream() throws IOException
+                    public OutputStream getOutputStream()
+                            throws IOException
                     {
                         connect();
                         return new FileOutputStream("/dev/null");
@@ -169,7 +170,7 @@ public class GmsClientTest extends GMSTest<GmsClient>
                                         .lastIndexOf("/"));
                             }
                         }
-                        if (path.contains("groups"))
+                        if (path.contains("groups/"))
                         {
                             path = path.substring(path.indexOf("groups"));
                             groupID = path
@@ -232,15 +233,16 @@ public class GmsClientTest extends GMSTest<GmsClient>
                                         128);
                                 XML_INPUT
                                         .append("<?xml version=\"1.0\" encoding=\"UTF-8\" standalone=\"no\"?>\n");
-                                XML_INPUT.append("<group id=\""
-                                        + setGrID + "\">\n");
+                                XML_INPUT.append("<group id=\"" + setGrID
+                                        + "\">\n");
                                 XML_INPUT.append("<member id=\""
                                         + setGrMemberID + "\">\n");
-                                XML_INPUT.append("  <username>" + setGrMemberName
+                                XML_INPUT.append("  <username>"
+                                        + setGrMemberName
                                         + "</username>\n");
                                 XML_INPUT.append("</member>");
                                 XML_INPUT.append("</group>");
-                                
+
                                 inStream = new ByteArrayInputStream(
                                         XML_INPUT.toString().getBytes());
                                 return;
@@ -259,19 +261,19 @@ public class GmsClientTest extends GMSTest<GmsClient>
                                         XML_INPUT.toString().getBytes());
                                 return;
                             }
-                            if (group.length() == 0)
-                            {
-                                // this is post to create group
-                                final StringBuilder XML_INPUT = new StringBuilder(
-                                        128);
-                                XML_INPUT
-                                        .append("<?xml version=\"1.0\" encoding=\"UTF-8\" standalone=\"no\"?>\n");
-                                XML_INPUT
-                                        .append("<group id=\"" + createPOSTGrID + "\"/>\n");
-                                inStream = new ByteArrayInputStream(
-                                        XML_INPUT.toString().getBytes());
-                                return;
-                            }
+                        }
+                        else
+                        {
+                            // this is post to create group
+                            final StringBuilder XML_INPUT = new StringBuilder(
+                                    128);
+                            XML_INPUT
+                                    .append("<?xml version=\"1.0\" encoding=\"UTF-8\" standalone=\"no\"?>\n");
+                            XML_INPUT.append("<group id=\""
+                                    + createPOSTGrID + "\"/>\n");
+                            inStream = new ByteArrayInputStream(XML_INPUT
+                                    .toString().getBytes());
+                            return;
                         }
 
                     }
@@ -345,18 +347,17 @@ public class GmsClientTest extends GMSTest<GmsClient>
         assertEquals("Group's ID is " + groupID, groupID, group
                 .getGMSGroupID());
 
-        assertNotNull(
-                "Member with ID auser is a Member of Group " + setGrID,
-                group.getMembers());
+        assertNotNull("Member with ID auser is a Member of Group "
+                + setGrID, group.getMembers());
         Collection<User> members = group.getMembers();
         assertEquals("Number of members is 1", 1, members.size());
-        
-        for(User member : members)
+
+        for (User member : members)
         {
-            assertEquals("Member's ID is " + setGrMemberID, setGrMemberID, member
-                    .getUserID());
-            assertEquals("Member's Username is " + setGrMemberName, setGrMemberName,
-                    member.getUsername());
+            assertEquals("Member's ID is " + setGrMemberID,
+                    setGrMemberID, member.getUserID());
+            assertEquals("Member's Username is " + setGrMemberName,
+                    setGrMemberName, member.getUsername());
         }
 
     }

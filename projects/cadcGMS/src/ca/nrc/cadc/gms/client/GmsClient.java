@@ -307,10 +307,10 @@ public class GmsClient
             logger.debug("getGroup(), URL=" + resourceURL);
             HttpURLConnection connection = (HttpURLConnection) openConnection(resourceURL);
             connection.setRequestMethod("GET");
-            connection.connect();
             connection.setUseCaches(false);
             connection.setDoInput(true);
             connection.setDoOutput(false);
+            connection.connect();
 
 
             String responseMessage = connection.getResponseMessage();
@@ -385,7 +385,7 @@ public class GmsClient
             {
                 // user does not have the group created. Through a POST.
                 // the server generates one and returns it to the user
-                resourcePath.append("/groups/");
+                resourcePath.append("/groups");
 
                 final URL resourceURL = new URL(getBaseServiceURL()
                         + resourcePath.toString());
@@ -399,8 +399,8 @@ public class GmsClient
                 
                 String responseMessage = connection.getResponseMessage();
                 int responseCode = connection.getResponseCode();
-                logger.debug("deleteGroup(), response code: " + responseCode);
-                logger.debug("deleteGroup(), response message: "
+                logger.debug("createGroup(), response code: " + responseCode);
+                logger.debug("createGroup(), response message: "
                         + responseMessage);
 
                 switch (responseCode)
@@ -517,17 +517,10 @@ public class GmsClient
     public void deleteGroup(String groupID)
             throws IllegalArgumentException
     {
-        // check if group with ID exists
-        Group group = getGroup(groupID);
-        if (group == null)
-        {
-            throw new IllegalArgumentException("Group with ID " + groupID
-                    + " not found for delete.");
-        }
         final StringBuilder resourcePath = new StringBuilder(64);
         try
         {
-            resourcePath.append("/groups/" + groupID);
+            resourcePath.append("/groups/");
             resourcePath.append(URLEncoder.encode(groupID, "UTF-8"));
 
             final URL resourceURL = new URL(getBaseServiceURL()

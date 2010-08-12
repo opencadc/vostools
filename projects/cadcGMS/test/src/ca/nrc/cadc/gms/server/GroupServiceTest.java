@@ -66,15 +66,80 @@
  */
 package ca.nrc.cadc.gms.server;
 
+import static org.easymock.EasyMock.createMock;
+import static org.easymock.EasyMock.expect;
+import static org.easymock.EasyMock.replay;
+import static org.easymock.EasyMock.expectLastCall;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertNotNull;
+
 import org.junit.Test;
 
 import ca.nrc.cadc.gms.GMSTest;
+import ca.nrc.cadc.gms.Group;
+import ca.nrc.cadc.gms.GroupImpl;
+import ca.nrc.cadc.gms.server.persistence.GroupPersistence;
 
-public abstract class GroupServiceTest extends GMSTest<GroupService>
+public class GroupServiceTest extends GMSTest<GroupService>
 {
+    private final String groupID = "aGroup";
+    private GroupPersistence mockGroupPersistence = createMock(GroupPersistence.class);
+    private Group mockGroup = createMock(Group.class);
+    
+    
+    @Override
+    public void initializeTestSubject() throws Exception
+    {
+        setTestSubject(new GroupServiceImpl(mockGroupPersistence));
+        
+    }
+
+    
+    
     @Test
     public void getGroups() throws Exception
     {
         
+        expect(mockGroupPersistence.getGroup(groupID)).andReturn(mockGroup).once();
+        expect(mockGroup.getGMSGroupID()).andReturn(groupID).once();
+        
+        replay(mockGroup, mockGroupPersistence);
+        
+        Group group = getTestSubject().getGroup(groupID);
+        
+        assertNotNull("Group", group);
+        assertEquals("GroupID", groupID, group.getGMSGroupID());
+        
     }
+    
+    @Test
+    public void putGroups() throws Exception
+    {
+        
+        expect(mockGroupPersistence.putGroup(new GroupImpl(groupID))).andReturn(mockGroup).once();
+        expect(mockGroup.getGMSGroupID()).andReturn(groupID).once();
+        
+        replay(mockGroup, mockGroupPersistence);
+        
+        Group group = getTestSubject().putGroup(groupID);
+        
+        assertNotNull("Group", group);
+        assertEquals("GroupID", groupID, group.getGMSGroupID());
+        
+    }
+    
+    @Test
+    public void deleteGroups() throws Exception
+    {
+        mockGroupPersistence.deleteGroup(groupID);
+        expectLastCall();
+        
+        replay(mockGroup, mockGroupPersistence);
+        
+        getTestSubject().deleteGroup(groupID);
+        
+        
+    }
+    
+    
 }

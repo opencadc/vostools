@@ -67,6 +67,7 @@
 package ca.nrc.cadc.gms.server.persistence;
 
 import ca.nrc.cadc.gms.Group;
+import ca.nrc.cadc.gms.InvalidGroupException;
 
 public interface GroupPersistence
 {
@@ -76,5 +77,19 @@ public interface GroupPersistence
      * @param groupID   The Group unique ID.
      * @return          A Group instance, or null if none found.
      */
-    Group getGroup(final String groupID);
+    Group getGroup(final String groupID) throws InvalidGroupException;
+    
+    
+    /**
+     * Creates a group.
+     * @param group to create
+     * @return created group
+     */
+    Group putGroup(final Group group) throws InvalidGroupException;
+    
+    /**
+     * Deletes a group.
+     * @param groupID Group ID to delete
+     */
+    void deleteGroup(final String groupID) throws InvalidGroupException;
 }

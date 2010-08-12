@@ -93,7 +93,7 @@
     <property name="restlet"        value="${ext.lib}/org.restlet.jar" />
 
     <property name="jars" value="${cadcUtil}:${cadcRegistry}:${jdom}:${log4j}:${restlet}" />
-    <property name="client.jars" value="${cadcUtil}:${cadcRegistry}:${jdom}:${log4j}" />
+    <property name="client.jars" value="${cadcUtil} ${cadcRegistry} ${jdom} ${log4j}" />
 
     <target name="build" depends="client,server" />
     

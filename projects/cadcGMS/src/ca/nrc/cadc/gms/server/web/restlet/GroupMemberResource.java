@@ -120,7 +120,7 @@ public class GroupMemberResource extends GroupResource
      * @throws FileNotFoundException If the resource doesn't exist.
      */
     @Override
-    protected boolean obtainResource() throws FileNotFoundException
+    protected boolean obtainResource()
     {
         LOGGER.debug("Enter GroupMemberResource.obtainResource()");
         String groupMemberID = null;

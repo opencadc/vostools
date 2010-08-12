@@ -133,6 +133,8 @@ public class GmsClientMain
 
     File certFile = null;
     File keyFile = null;
+    
+    private static final String SERVICE_ID = "ivo://cadc.nrc.ca/gms";
 
     /**
      * @param args
@@ -193,10 +195,10 @@ public class GmsClientMain
      */
     private void init(ArgumentMap argMap)
     {
-        URI serverUri = null;
         try
         {
-            validateInitSSL(argMap);
+            // TODO enable SSL
+            // validateInitSSL(argMap);
         }
         catch (Exception ex)
         {
@@ -207,24 +209,26 @@ public class GmsClientMain
 
         try
         {
+            //TODO pass the https protocol to this method when ready for use
             URL baseURL = registryClient
-                    .getServiceURL(serverUri, "https");
+                    .getServiceURL(new URI(SERVICE_ID));
             if (baseURL == null)
             {
                 logger.error("failed to find service URL for "
-                        + serverUri);
+                        + SERVICE_ID);
                 System.exit(INIT_STATUS);
             }
             this.baseURL = baseURL.toString();
             this.client = new GmsClient(new URL(this.baseURL));
         }
-        catch (MalformedURLException e)
+        catch (Exception e)
         {
-            logger.error("failed to find service URL for " + serverUri);
+            logger.error("failed to find service URL for " + SERVICE_ID);
             logger.error("reason: " + e.getMessage());
             System.exit(INIT_STATUS);
         }
-        logger.info("server uri: " + serverUri);
+        
+        logger.info("server uri: " + SERVICE_ID);
         logger.info("base url: " + this.baseURL);
     }
 
@@ -237,6 +241,9 @@ public class GmsClientMain
     {
         String strCert = argMap.getValue(ARG_CERT);
         String strKey = argMap.getValue(ARG_KEY);
+        if (strCert == null || strKey == null)
+            throw new IllegalArgumentException(
+                    "Argument cert and key are all required.");
 
         this.certFile = new File(strCert);
         this.keyFile = new File(strKey);
@@ -355,14 +362,9 @@ public class GmsClientMain
     private void validateCommandArguments(ArgumentMap argMap)
             throws IllegalArgumentException
     {
-        String strCert = argMap.getValue(ARG_CERT);
-        String strKey = argMap.getValue(ARG_KEY);
-        if (strCert == null || strKey == null)
-            throw new IllegalArgumentException(
-                    "Argument cert and key are all required.");
 
         String strTarget = argMap.getValue(ARG_TARGET);
-        if (this.operation.equals(Operation.CREATE))
+        if (this.operation.equals(Operation.ADD_MEMBER))
         {
             target = strTarget;
             memberName = argMap.getValue(ARG_MEMBER_NAME);
@@ -376,7 +378,8 @@ public class GmsClientMain
         }
         else
         {
-            if (strTarget == null)
+            if (!this.operation.equals(Operation.CREATE)
+                    && (strTarget == null))
                 throw new IllegalArgumentException(
                         "Argument target is required for "
                                 + this.operation);
@@ -434,10 +437,10 @@ public class GmsClientMain
                 return;
             }
             msg("Group: " + group.getGMSGroupID());
-            msg("\t Members: (user ID) Name");
+            msg("Members: Name (user ID)");
             for (User user : group.getMembers())
             {
-                msg("(" + user.getUserID() + ") " + user.getUsername());
+                msg("\t" + user.getUsername() + " (" + user.getUserID() + ") ");
             }
         }
         catch (Exception e)
@@ -460,7 +463,7 @@ public class GmsClientMain
         }
         catch (Exception e)
         {
-            logger.error("failed to delete group "  + target);
+            logger.error("failed to delete group " + target);
             logger.error("reason: " + e.getMessage());
             System.exit(NET_STATUS);
         }

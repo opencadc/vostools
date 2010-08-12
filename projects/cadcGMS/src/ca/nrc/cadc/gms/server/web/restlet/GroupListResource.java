@@ -69,22 +69,92 @@ package ca.nrc.cadc.gms.server.web.restlet;
 import java.io.FileNotFoundException;
 import java.io.IOException;
 
+import org.apache.log4j.Logger;
 import org.jdom.Document;
-import org.restlet.resource.Put;
+import org.restlet.data.Status;
+import org.restlet.representation.Representation;
+import org.restlet.resource.Post;
+
+import ca.nrc.cadc.gms.AuthorizationException;
+import ca.nrc.cadc.gms.Group;
+import ca.nrc.cadc.gms.GroupWriter;
+import ca.nrc.cadc.gms.InvalidGroupException;
+import ca.nrc.cadc.gms.server.GroupService;
 
 public class GroupListResource extends AbstractResource
-{   
+{
+    private final static Logger logger = Logger
+            .getLogger(GroupListResource.class);
+
+    private GroupService groupService;
+    
+    private Group group;
+
+    /**
+     * Hidden constructor for JavaBean tools.
+     */
+    GroupListResource()
+    {
+        super();
+    }
+
+    /**
+     * Full constructor.
+     * 
+     * @param groupService
+     *            The GroupService instance.
+     */
+    public GroupListResource(final GroupService groupService)
+    {
+        this.groupService = groupService;
+    }
+
     /**
      * Get a reference to the resource identified by the user.
      * 
-     * @throws FileNotFoundException If the resource doesn't exist.
+     * @throws FileNotFoundException
+     *             If the resource doesn't exist.
      */
     @Override
     protected boolean obtainResource() throws FileNotFoundException
     {
         processNotImplemented("The Service to see a list of groups"
-                            + " is not yet implemented.");
-        return false;
+                + " is not yet implemented.");
+        return true;
+    }
+
+
+    /**
+     * Accept a POST Request to this Resource to Create a new Group.
+     * 
+     * @Post protected void acceptPost() { processNotImplemented("The
+     *       Service to Create a Group is not yet " + "implemented."); }
+     */
+
+    /**
+     * Handle POST requests: create a new Group.
+     */
+    @Post
+    public void acceptPost(Representation entity)
+    {
+        logger.debug("Create a new group.");
+        try
+        {
+            group = getGroupService().putGroup(null);
+            logger.debug(String.format("Created groupID: %s", group
+                    .getGMSGroupID()));
+        }
+        catch (AuthorizationException e)
+        {
+            final String message = "You are not authorized to create new groups.";
+            processError(e, Status.CLIENT_ERROR_UNAUTHORIZED, message);
+        }
+        catch (InvalidGroupException e)
+        {
+            // this should not happen for a null group id
+            final String message = "Creation of new groups not supported";
+            processError(e, Status.CLIENT_ERROR_BAD_REQUEST, message);
+        }
     }
     
     /**
@@ -97,18 +167,18 @@ public class GroupListResource extends AbstractResource
      */
     protected void buildXML(final Document document) throws IOException
     {
-        processNotImplemented("The Service to list all Groups is not yet "
-                              + "implemented.");
+        logger.debug("Enter GroupMemberResource.buildXML()");
+        document.addContent(GroupWriter.getGroupElement(group));
     }
 
-    /**
-     * Accept a POST Request to this Resource to Create a new Group.
-     */
-    @Put
-    protected void acceptPost()
+    private GroupService getGroupService()
     {
-        processNotImplemented("The Service to Create a Group is not yet "
-                              + "implemented.");
+        return groupService;
     }
     
+    public void setGroupService(final GroupService groupService)
+    {
+        this.groupService = groupService;
+    }
+
 }

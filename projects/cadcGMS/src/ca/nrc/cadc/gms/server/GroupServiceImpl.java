@@ -68,13 +68,13 @@ package ca.nrc.cadc.gms.server;
 
 import ca.nrc.cadc.gms.AuthorizationException;
 import ca.nrc.cadc.gms.Group;
+import ca.nrc.cadc.gms.GroupImpl;
 import ca.nrc.cadc.gms.InvalidGroupException;
 import ca.nrc.cadc.gms.server.persistence.GroupPersistence;
 
 public class GroupServiceImpl implements GroupService
 {
     private GroupPersistence groupPersistence;
-
 
     /**
      * No-arg constructor.
@@ -85,8 +85,9 @@ public class GroupServiceImpl implements GroupService
 
     /**
      * Full constructor for members.
-     *
-     * @param groupPersistence  The GroupPersistence object.
+     * 
+     * @param groupPersistence
+     *            The GroupPersistence object.
      */
     public GroupServiceImpl(final GroupPersistence groupPersistence)
     {
@@ -95,26 +96,47 @@ public class GroupServiceImpl implements GroupService
 
     /**
      * Obtain the Group with the given Group ID.
-     *
-     * @param groupID Unique Group identifier.
+     * 
+     * @param groupID
+     *            Unique Group identifier.
      * @return The Group object for the given ID.
      */
     public Group getGroup(final String groupID)
-            throws InvalidGroupException,
-                   IllegalArgumentException, AuthorizationException
+            throws InvalidGroupException, IllegalArgumentException,
+            AuthorizationException
     {
         Group group = getGroupPersistence().getGroup(groupID);
-        
-        if (group == null)
-        {
-            throw new InvalidGroupException(
-                    String.format("No such Group with ID %s", groupID));
-        }
-        
+
         return group;
     }
 
+    /**
+     * Create the Group with the given Group ID.
+     * 
+     * @param groupID
+     *            Unique Group identifier.
+     * @return The Group object for the given ID.
+     */
+    public Group putGroup(final String groupID)
+            throws InvalidGroupException, AuthorizationException
+    {
+        Group group = new GroupImpl(groupID);
+        group = getGroupPersistence().putGroup(group); // returned group
+        return group;
+    }
 
+    /**
+     * Delete the Group with the given Group ID.
+     * 
+     * @param groupID
+     *            Unique Group identifier.
+     */
+    public void deleteGroup(final String groupID)
+            throws InvalidGroupException, AuthorizationException
+    {
+        getGroupPersistence().deleteGroup(groupID);
+    }
+    
     public GroupPersistence getGroupPersistence()
     {
         return groupPersistence;

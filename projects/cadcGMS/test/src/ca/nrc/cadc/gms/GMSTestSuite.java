@@ -70,6 +70,7 @@ import org.junit.runner.RunWith;
 import org.junit.runners.Suite;
 
 import ca.nrc.cadc.gms.client.GmsClientTest;
+import ca.nrc.cadc.gms.server.GroupServiceTest;
 import ca.nrc.cadc.gms.server.UserServiceImplTest;
 import ca.nrc.cadc.gms.server.web.restlet.GroupListResourceTest;
 import ca.nrc.cadc.gms.server.web.restlet.GroupMemberListResourceTest;
@@ -78,6 +79,7 @@ import ca.nrc.cadc.gms.server.web.restlet.MemberResourceTest;
 @RunWith(Suite.class)
 @Suite.SuiteClasses(
 {
+    GroupServiceTest.class,
     GroupImplTest.class,
     UserImplTest.class,
     UserServiceImplTest.class,

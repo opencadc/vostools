@@ -118,7 +118,7 @@ public class GroupResource extends AbstractResource
      * @throws FileNotFoundException If the resource doesn't exist.
      */
     @Override
-    protected boolean obtainResource() throws FileNotFoundException
+    protected boolean obtainResource()
     {
         LOGGER.debug("Enter GroupResource.obtainResource()");
         String groupMemberID = null;
@@ -209,9 +209,33 @@ public class GroupResource extends AbstractResource
     @Delete
     public void acceptDelete()
     {
-        processNotImplemented(String.format("The Service to delete Group with "
-                                            + "ID '%s' is not yet implemented.",
-                                            getGroupID()));
+        LOGGER.debug("Delete group.");
+        try
+        {
+            String groupID = URLDecoder.decode(getGroupID(), "UTF-8");
+            LOGGER.debug(String.format(
+                    "groupID: %s",
+                    groupID));
+            
+            getGroupService().deleteGroup(groupID);
+            LOGGER.debug(String.format("Deleted groupID: %s", groupID));
+        }
+        catch (AuthorizationException e)
+        {
+            final String message = "You are not authorized to delete groups.";
+            processError(e, Status.CLIENT_ERROR_UNAUTHORIZED, message);
+        }
+        catch (InvalidGroupException e)
+        {
+            // this should not happen for a null group id
+            final String message = "Deletion of new groups not supported";
+            processError(e, Status.CLIENT_ERROR_BAD_REQUEST, message);
+        }
+        catch (UnsupportedEncodingException e)
+        {
+            final String message = "Client encoding not supported in delete";
+            processError(e, Status.CLIENT_ERROR_BAD_REQUEST, message);
+        }
     }
 
     protected Group getGroup() throws AuthorizationException, InvalidGroupException

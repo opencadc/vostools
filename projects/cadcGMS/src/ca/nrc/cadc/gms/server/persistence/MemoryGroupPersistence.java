@@ -66,34 +66,35 @@
  */
 package ca.nrc.cadc.gms.server.persistence;
 
+import java.util.Random;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 
 import ca.nrc.cadc.gms.Group;
 import ca.nrc.cadc.gms.GroupImpl;
+import ca.nrc.cadc.gms.InvalidGroupException;
 import ca.nrc.cadc.gms.UserImpl;
-
 
 public class MemoryGroupPersistence implements GroupPersistence
 {
     // The Database.
-    private final ConcurrentMap<String, Group> GROUP_MAP =
-            new ConcurrentHashMap<String, Group>();
-
+    private final ConcurrentMap<String, Group> GROUP_MAP = new ConcurrentHashMap<String, Group>();
 
     public MemoryGroupPersistence()
     {
         try
         {
             final Group firstGroup = new GroupImpl(Long.toString(88l));
-            firstGroup.addMember(new UserImpl(Long.toString(88l), "jenkinsd"));
+            firstGroup.addMember(new UserImpl(Long.toString(88l),
+                    "jenkinsd"));
 
             final Group secondGroup = new GroupImpl(Long.toString(99l));
-            secondGroup.addMember(new UserImpl(Long.toString(99l), "adamian"));
+            secondGroup.addMember(new UserImpl(Long.toString(99l),
+                    "adamian"));
 
             final Group thirdGroup = new GroupImpl("MY TEST GROUP");
             thirdGroup.addMember(new UserImpl(Long.toString(888l),
-                                              "testuser"));
+                    "testuser"));
 
             GROUP_MAP.put(Long.toString(88l), firstGroup);
             GROUP_MAP.put(Long.toString(99l), secondGroup);
@@ -103,20 +104,88 @@ public class MemoryGroupPersistence implements GroupPersistence
         {
             // Not worried about it here...
             e.printStackTrace();
-        }        
+        }
     }
 
     /**
      * Obtain a Group with the given Group ID.
-     *
-     * @param groupID The Group unique ID.
+     * 
+     * @param groupID
+     *            The Group unique ID.
      * @return A Group instance, or null if none found.
+     * @throws InvalidGroupException
+     *             if group not found
      */
     public Group getGroup(final String groupID)
+            throws InvalidGroupException
     {
         synchronized (GROUP_MAP)
         {
-            return GROUP_MAP.get(groupID);
+            if (GROUP_MAP.containsKey(groupID))
+            {
+                return GROUP_MAP.get(groupID);
+            }
+            else
+            {
+                throw new InvalidGroupException("Group with ID "
+                        + groupID + " not found.");
+            }
+        }
+    }
+
+    /**
+     * Creates a group.
+     * 
+     * @param group
+     *            group to create
+     * @return created group
+     * @throws InvalidGroupException
+     *             if group already exists
+     */
+    public Group putGroup(final Group group) throws InvalidGroupException
+    {
+        Group gr = group;
+        if (group.getGMSGroupID() == null)
+        {
+            Random rand = new Random();
+            // generate a random group ID
+            int randomNo = rand.nextInt();
+            gr = new GroupImpl(Integer.toString(randomNo));
+        }
+        synchronized (GROUP_MAP)
+        {
+
+            if (GROUP_MAP.containsKey(gr.getGMSGroupID()))
+            {
+                throw new InvalidGroupException("Group with ID "
+                        + gr.getGMSGroupID() + " already exists.");
+            }
+            else
+            {
+                GROUP_MAP.put(gr.getGMSGroupID(), gr);
+                return GROUP_MAP.get(gr.getGMSGroupID());
+            }
+        }
+    }
+
+    /**
+     * Deletes a group.
+     * 
+     * @param groupID
+     *            of group to delete
+     */
+    public void deleteGroup(final String groupID)
+            throws InvalidGroupException
+    {
+
+        if (!GROUP_MAP.containsKey(groupID))
+        {
+            throw new InvalidGroupException("Group with ID " + groupID
+                    + " doeas not exists so it cannot be deleted.");
+        }
+        else
+        {
+            GROUP_MAP.remove(groupID);
         }
     }
 }
