@@ -13,8 +13,9 @@ a short-lived, no-password proxy certificate. The createProxyCert script uses
 openssl to create a proxy certificate and associated priovate key for this 
 purpose.
 
-The SSLUtilTest code assumes that you have created test/resources/proxy.crt and
-test/resources/proxy.key using this script, eg:
+The SSLUtilTest code assumes that you have a valid proxy certificate named proxy.crt 
+and associated private key (proxy.key) in the classpath (e.g. in build/test/class). The
+proxy certficate and key can be created with the script:
 
 ./scripts/createProxyCert <your real cert> <your private key> <days> test/resources/proxy
 
@@ -35,7 +36,7 @@ example. A second test with this server passes when a special system property is
 work-around for using real services with invalid certificates!!
 
 CADC's public web servers have valid server certificates and require client authentication via
-certificate so they act a as a decent SSO setup test.
+certificate so they act as a decent SSO setup test.
 
 Note: The local host test is currently disabled in the test code (pdowler 2010-07-15)
 

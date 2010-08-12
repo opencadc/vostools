@@ -95,6 +95,7 @@ import org.junit.Test;
 
 import ca.nrc.cadc.util.FileUtil;
 import ca.nrc.cadc.util.Log4jInit;
+import javax.security.auth.Subject;
 
 /**
  * Unit tests for SSLUtil.
@@ -193,11 +194,36 @@ public class SSLUtilTest
     }
 
     @Test
-    public void testGetSocketFactory() throws Exception
+    public void testGetSocketFactoryFromNull() throws Exception
     {
         try
         {
-            SocketFactory sf = SSLUtil.getSocketFactory(SSL_CERT, SSL_KEY);
+            SocketFactory sf;
+            
+            X509CertificateChain chain = null;
+            sf = SSLUtil.getSocketFactory(chain);
+            Assert.assertNotNull("SSLSocketFactory from null X509CertificateChain", sf);
+
+            Subject sub = null;
+            sf = SSLUtil.getSocketFactory(sub);
+            Assert.assertNull("SSLSocketFactory from null Subject", sf);
+        }
+        catch (Throwable t)
+        {
+            t.printStackTrace();
+            Assert.fail("unexpected exception: " + t);
+        }
+    }
+
+    @Test
+    public void testGetSocketFactoryFromFile() throws Exception
+    {
+        try
+        {
+            SocketFactory sf;
+
+            sf = SSLUtil.getSocketFactory(SSL_CERT, SSL_KEY);
+            Assert.assertNotNull("SSLSocketFactory from cert/key file", sf);
         }
         catch (Throwable t)
         {

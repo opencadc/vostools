@@ -70,6 +70,7 @@
 package ca.nrc.cadc.net;
 
 import ca.nrc.cadc.auth.SSLUtil;
+import ca.nrc.cadc.auth.X509CertificateChain;
 import ca.nrc.cadc.net.event.ProgressListener;
 import ca.nrc.cadc.net.event.TransferEvent;
 import ca.nrc.cadc.net.event.TransferListener;
@@ -86,7 +87,6 @@ import java.nio.channels.WritableByteChannel;
 import java.security.AccessControlContext;
 import java.security.AccessController;
 import java.security.PrivateKey;
-import java.security.cert.X509Certificate;
 import java.util.Set;
 import javax.net.ssl.HttpsURLConnection;
 import javax.net.ssl.SSLSocketFactory;
@@ -258,13 +258,7 @@ public abstract class HttpTransfer implements Runnable
             log.debug("initHTTPS: lazy init");
             AccessControlContext ac = AccessController.getContext();
             Subject s = Subject.getSubject(ac);
-            if (s != null)
-            {
-                Set<X509Certificate> certs = s.getPublicCredentials(X509Certificate.class);
-                Set<PrivateKey> keys = s.getPrivateCredentials(PrivateKey.class);
-                log.debug("initHTTPS: found " + certs.size() + " certificate(s) and " + keys.size() + " key(s)");
-                this.sslSocketFactory = SSLUtil.getSocketFactory(certs, keys);
-            }
+            this.sslSocketFactory = SSLUtil.getSocketFactory(s);
         }
         if (sslSocketFactory != null)
         {

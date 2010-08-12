@@ -99,7 +99,7 @@
     </target>
 
     <!-- JAR files needed to run the test suite -->
-    <property name="testingJars" value="${build}/class:${jars}:${ext.lib}/junit.jar:${resources.dir}" />
+    <property name="testingJars" value="${build}/class:${jars}:${ext.lib}/junit.jar" />
 
     <!-- Run the test suite -->
     <target name="test" depends="util-test,auth-test,net-test" />

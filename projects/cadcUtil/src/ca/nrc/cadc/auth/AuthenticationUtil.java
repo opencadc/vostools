@@ -69,23 +69,25 @@
 
 package ca.nrc.cadc.auth;
 
+import ca.nrc.cadc.net.NetUtil;
+
 import java.lang.reflect.Constructor;
 import java.security.Principal;
+import java.security.PrivateKey;
 import java.security.cert.X509Certificate;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.HashSet;
 import java.util.Iterator;
 import java.util.Set;
-
 import javax.security.auth.Subject;
 import javax.security.auth.x500.X500Principal;
 import javax.servlet.http.HttpServletRequest;
 
 import org.apache.log4j.Logger;
 
-import ca.nrc.cadc.net.NetUtil;
-import java.security.PrivateKey;
+
+
 
 /**
  * Security utility.
@@ -135,12 +137,12 @@ public class AuthenticationUtil
     }
 
     /**
-     * Create a complete Subject with principal(s) and credentials (X509Certificate) from an
-     * HttpServletRequest. 
+     * Create a complete Subject with principal(s) and possibly X509 credentials.
      *
      * @see #getSubject(String, Collection<X509Certificate>)
      * @param request
      * @return a Subject with all available request content
+     * @deprecated use getSubject(String,Collection<X509Certificate>)
      */
     public static Subject getSubject(HttpServletRequest request)
     {
@@ -154,75 +156,61 @@ public class AuthenticationUtil
 
     /**
      * Create a complete Subject with principal(s) and credentials (X509Certificate).
-     * This method tries to detect the use ofa proxy certificate and add the Principal
+     * This method tries to detect the use of a proxy certificate and add the Principal
      * representing the real identity of the user by comparing the subject and issuer fields
      * of the certficicate and using the issuer principal when the certificate is self-signed.
      * If the user has connected anonymously, the returned Subject will have no
      * principals and no credentials, but should be safe to use with Subject.doAs(...).
      *
      * @param remoteUser the remote user id (e.g. from http authentication)
-     * @param certificates certificates extracted from the calling context/session
-     * @return a Subject with all available request content
+     * @param certs certificates extracted from the calling context/session
+     * @return a Subject
      */
-    public static Subject getSubject(String remoteUser, Collection<X509Certificate> certificates)
+    public static Subject getSubject(String remoteUser, Collection<X509Certificate> certs)
     {
-        return getSubject(remoteUser, certificates, null);
+        X509CertificateChain chain = null;
+        if (certs != null &&  certs.size() > 0)
+            chain = new X509CertificateChain(certs);
+        return getSubject(remoteUser, chain);
     }
 
-    public static Subject getSubject(Collection<X509Certificate> certificates, Collection<PrivateKey> keys)
+    /**
+     * Create a subject with the specified certificate chain and private key.
+     * 
+     * @param certs a non-null and non-empty certficate chain
+     * @param key optionakl private key
+     * @return a Subject
+     */
+    public static Subject getSubject(X509Certificate[] certs, PrivateKey key)
     {
-        return getSubject(null, certificates, keys);
+        X509CertificateChain chain = new X509CertificateChain(certs, key);
+        return getSubject(null, chain);
     }
 
-    private static Subject getSubject(String remoteUser, Collection<X509Certificate> certificates, Collection<PrivateKey> keys)
+    private static Subject getSubject(String remoteUser, X509CertificateChain chain)
     {
         Set<Principal> principals = new HashSet<Principal>();
-        Set<X509Certificate> publicCred = new HashSet<X509Certificate>();
-        Set privateCreds = new HashSet<PrivateKey>();
+        Set publicCred = new HashSet();
+        Set privateCred = new HashSet();
 
-        // look for basic authentication
+        // basic authentication
         if (remoteUser != null)
         {
             // user logged in. Create corresponding Principal
             principals.add(new HttpPrincipal(remoteUser));
         }
 
-        // look for X509 certificates
-        if (certificates != null)
+        // SSL authentication
+        if (chain != null)
         {
-            for (X509Certificate c : certificates)
-            {
-                // we add the certificate to public credentials and try to add the real
-                // principal to principals, eg detect proxy certificate usage here
-                Principal p = null;
-                X500Principal sp = c.getSubjectX500Principal();
-                String sdn = sp.getName(X500Principal.RFC1779);
-                X500Principal ip = c.getIssuerX500Principal();
-                String idn = ip.getName(X500Principal.RFC1779);
-                if ( sdn.endsWith(idn) )
-                {
-                    log.debug("detected self-issued proxy certificate by " + idn);
-                    p = ip;
-                }
-                else
-                {
-                    log.debug("sp.getName(RFC1779) = " + sdn);
-                    log.debug("sp.getName(RFC2253) = " + idn);
-                    p = sp;
-                }
-                principals.add(p);
-                publicCred.add(c);
-            }
+            principals.add(chain.getpX500Principal());
+            publicCred.add(chain);
+            // note: we just leave the PrivateKey in the chain (eg public) rather
+            // than extracting and putting it into the privateCred set... TBD
         }
-        if (keys != null)
-        {
-            for (PrivateKey pk : keys)
-            {
-                privateCreds.add(pk);
-            }
-        }
+
         // put the certficates into pubCredentials?
-        return new Subject(false, principals, publicCred, privateCreds);
+        return new Subject(false, principals, publicCred, privateCred);
     }
     
     // Encode a Subject in the format:

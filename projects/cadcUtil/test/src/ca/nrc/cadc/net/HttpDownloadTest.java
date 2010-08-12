@@ -75,6 +75,7 @@ import ca.nrc.cadc.util.FileUtil;
 import ca.nrc.cadc.util.Log4jInit;
 import java.io.File;
 import java.net.URL;
+import javax.net.ssl.SSLSocketFactory;
 import javax.security.auth.Subject;
 
 import org.apache.log4j.Level;
@@ -108,7 +109,7 @@ public class HttpDownloadTest
     @BeforeClass
     public static void setUpBeforeClass() throws Exception
     {
-        Log4jInit.setLevel("ca.nrc.cadc.net", Level.INFO);
+        Log4jInit.setLevel("ca.nrc.cadc", Level.INFO);
         SSL_CERT = FileUtil.getFileFromResource(TEST_CERT_FN, HttpDownloadTest.class);
         SSL_KEY = FileUtil.getFileFromResource(TEST_KEY_FN, HttpDownloadTest.class);
     }

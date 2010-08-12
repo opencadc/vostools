@@ -92,10 +92,8 @@ import java.security.cert.X509Certificate;
 import java.security.spec.InvalidKeySpecException;
 import java.security.spec.PKCS8EncodedKeySpec;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.Enumeration;
 import java.util.Iterator;
-import java.util.List;
 import java.util.Set;
 import javax.net.ssl.HttpsURLConnection;
 import javax.net.ssl.KeyManager;
@@ -160,20 +158,34 @@ public class SSLUtil
         return getSocketFactory(ks, ts);
     }
 
-    public static SSLSocketFactory getSocketFactory(Set<X509Certificate> certs, Set<PrivateKey> keys)
+    /**
+     * Create an SSLSocketfactory from the credentials in the specified Subject.
+     * This method extracts a X509CertificateChain from the public credentials and
+     * uses the certificate chain and private key found there to set up a KeyStore
+     * for the SSLSocketFactory.
+     * 
+     * @param s
+     * @return an SSLSocketFactory, or null if no X509CertificateChain can be found
+     */
+    public static SSLSocketFactory getSocketFactory(Subject s)
     {
-        Certificate[] chain = null;
-        if (certs != null)
-            chain = certs.toArray(new Certificate[certs.size()]);
-
-        PrivateKey pk = null;
-        if (keys != null)
+        X509CertificateChain chain = null;
+        if (s != null)
         {
-            Iterator<PrivateKey> i = keys.iterator();
-            if (i.hasNext())
-                pk = i.next();
+            Set<X509CertificateChain> certs = s.getPublicCredentials(X509CertificateChain.class);
+            if (certs.size() > 0)
+                chain = certs.iterator().next();
         }
-        KeyStore ks = getKeyStore(chain, pk);
+        if (chain == null)
+            return null;
+        return getSocketFactory(chain);
+    }
+
+    public static SSLSocketFactory getSocketFactory(X509CertificateChain chain)
+    {
+        KeyStore ks = null;
+        if (chain != null)
+            ks = getKeyStore(chain.getChain(), chain.getPrivateKey());
         KeyStore ts = null;
         return getSocketFactory(ks, ts);
     }
@@ -184,9 +196,7 @@ public class SSLUtil
         {
             PrivateKey pk = readPrivateKey(keyFile);
             X509Certificate[] chain = readCertificateChain(certFile);
-            List<X509Certificate> certs = Arrays.asList(chain);
-            List<PrivateKey> keys = Arrays.asList(new PrivateKey[] { pk });
-            return AuthenticationUtil.getSubject(certs, keys);
+            return AuthenticationUtil.getSubject(chain, pk);
         }
         catch (InvalidKeySpecException ex)
         {
@@ -210,8 +220,7 @@ public class SSLUtil
         }
     }
 
-    // may in future try to support other KeyStore formats, but for now we only
-    // expose File args above
+    // may in future try to support other KeyStore formats
     static SSLSocketFactory getSocketFactory(KeyStore keyStore, KeyStore trustStore)
     {
         KeyManagerFactory kmf = getKeyManagerFactory(keyStore);
@@ -220,8 +229,6 @@ public class SSLUtil
         SSLSocketFactory sf = ctx.getSocketFactory();
         return sf;
     }
-
-    
 
     // not working due to Base64 decoding to byte array not producing valid DER format key
     /*

@@ -77,6 +77,7 @@ import ca.nrc.cadc.util.Log4jInit;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileOutputStream;
+import java.net.InetAddress;
 import java.net.URL;
 import java.util.Random;
 import javax.security.auth.Subject;
@@ -111,7 +112,7 @@ public class HttpUploadTest
     @BeforeClass
     public static void setUpBeforeClass() throws Exception
     {
-        Log4jInit.setLevel("ca.nrc.cadc.net", Level.DEBUG);
+        Log4jInit.setLevel("ca.nrc.cadc.net", Level.INFO);
         SSL_CERT = FileUtil.getFileFromResource(TEST_CERT_FN, HttpUploadTest.class);
         SSL_KEY = FileUtil.getFileFromResource(TEST_KEY_FN, HttpUploadTest.class);
         System.setProperty(BasicX509TrustManager.class.getName() + ".trust", "true");
@@ -139,8 +140,11 @@ public class HttpUploadTest
         ostream.write(origBytes);
         ostream.close();
         srcFile.deleteOnExit();
-        //this.httpsURL = new URL("https://test.cadc-ccda.hia-iha.nrc-cnrc.gc.ca/data/pub/TEST/"+srcFile.getName());
-        this.httpsURL = new URL("https://scapa.cadc.dao.nrc.ca/data/pub/TEST/"+srcFile.getName());
+        boolean local = true;
+
+        InetAddress localhost = InetAddress.getLocalHost();
+        String hostname = localhost.getCanonicalHostName();
+        this.httpsURL = new URL("https://"+hostname+"/data/pub/TEST/"+srcFile.getName());
     }
 
     /**
@@ -205,9 +209,10 @@ public class HttpUploadTest
         try
         {
             Subject s = SSLUtil.createSubject(SSL_CERT, SSL_KEY);
-
+            
             HttpUpload up = new HttpUpload(src, dest);
             up.setContentType("application/octet-stream");
+
             Subject.doAs(s, new RunnableAction(up));
             if (up.getThrowable() != null)
                 log.error("run failed", up.getThrowable());
@@ -251,9 +256,10 @@ public class HttpUploadTest
         try
         {
             Subject s = SSLUtil.createSubject(SSL_CERT, SSL_KEY);
-
+            
             HttpUpload up = new HttpUpload(new FileInputStream(src), dest);
             up.setContentType("application/octet-stream");
+
             Subject.doAs(s, new RunnableAction(up));
             if (up.getThrowable() != null)
                 log.error("run failed", up.getThrowable());
@@ -265,7 +271,7 @@ public class HttpUploadTest
 
             HttpDownload down = new HttpDownload(HttpUploadTest.class.getSimpleName(), check, tmp);
             down.setOverwrite(true);
-
+            
             Subject.doAs(s, new RunnableAction(down));
             Assert.assertNull("download failure", down.getThrowable());
             File out = down.getFile();
