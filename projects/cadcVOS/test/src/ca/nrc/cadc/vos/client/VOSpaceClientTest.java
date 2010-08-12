@@ -101,6 +101,7 @@ import ca.nrc.cadc.vos.VOS;
 import ca.nrc.cadc.vos.VOSURI;
 import ca.nrc.cadc.vos.View;
 import java.net.URI;
+import javax.net.ssl.SSLSocketFactory;
 
 /**
  * @author zhangsa
@@ -116,8 +117,6 @@ public class VOSpaceClientTest
 
     String endpoint;
     VOSpaceClient client;
-    
-    
 
     /**
      * @throws java.lang.Exception
@@ -125,7 +124,7 @@ public class VOSpaceClientTest
     @BeforeClass
     public static void setUpBeforeClass() throws Exception
     {
-        Log4jInit.setLevel("ca.nrc.cadc.vos.client", Level.INFO);
+        Log4jInit.setLevel("ca.nrc.cadc.vos.client", Level.DEBUG);
         System.setProperty(BasicX509TrustManager.class.getName() + ".trust", "true");
 
         File cert = FileUtil.getFileFromResource(TEST_CERT, VOSpaceClientTest.class);

@@ -69,6 +69,7 @@
 
 package ca.nrc.cadc.vos;
 
+import ca.nrc.cadc.util.FileUtil;
 import ca.nrc.cadc.util.Log4jInit;
 import java.io.ByteArrayInputStream;
 import java.io.File;
@@ -118,7 +119,7 @@ public class NodeReaderTest
         try
         {
             log.debug("readContainerNodeString");
-            String xml = readFile("build/class/ContainerNode.xml");
+            String xml = readFile("ContainerNode.xml");
             NodeReader reader = new NodeReader();
             Node node = reader.read(xml);
             log.debug(node);
@@ -137,7 +138,7 @@ public class NodeReaderTest
         try
         {
             log.debug("readDataNodeString");
-            String xml = readFile("build/class/DataNode.xml");
+            String xml = readFile("DataNode.xml");
             NodeReader reader = new NodeReader();
             Node node = reader.read(xml);
             log.debug(node);
@@ -156,7 +157,7 @@ public class NodeReaderTest
         try
         {
             log.debug("readContainerNodeInputStream");
-            String xml = readFile("build/class/ContainerNode.xml");
+            String xml = readFile("ContainerNode.xml");
             NodeReader reader = new NodeReader();
             Node node = reader.read(new ByteArrayInputStream(xml.getBytes("UTF-8")));
             log.debug(node);
@@ -175,7 +176,7 @@ public class NodeReaderTest
         try
         {
             log.debug("readDataNodeInputStream");
-            String xml = readFile("build/class/DataNode.xml");
+            String xml = readFile("DataNode.xml");
             NodeReader reader = new NodeReader();
             Node node = reader.read(new ByteArrayInputStream(xml.getBytes("UTF-8")));
             log.debug(node);
@@ -194,7 +195,7 @@ public class NodeReaderTest
         try
         {
             log.debug("readContainerNodeReader");
-            String xml = readFile("build/class/ContainerNode.xml");
+            String xml = readFile("ContainerNode.xml");
             NodeReader reader = new NodeReader();
             Node node = reader.read(new StringReader(xml));
             log.debug(node);
@@ -213,7 +214,7 @@ public class NodeReaderTest
         try
         {
             log.debug("readDataNodeTestReader");
-            String xml = readFile("build/class/DataNode.xml");
+            String xml = readFile("DataNode.xml");
             NodeReader reader = new NodeReader();
             Node node = reader.read(new StringReader(xml));
             log.debug(node);
@@ -229,7 +230,8 @@ public class NodeReaderTest
     private static String readFile(String path)
         throws IOException
     {
-        FileInputStream stream = new FileInputStream(new File(path));
+        File f = FileUtil.getFileFromResource(path, NodeReaderTest.class);
+        FileInputStream stream = new FileInputStream(f);
         try
         {
             FileChannel fileChannel = stream.getChannel();

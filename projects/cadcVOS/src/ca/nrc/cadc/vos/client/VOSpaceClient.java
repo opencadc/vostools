@@ -104,10 +104,7 @@ import ca.nrc.cadc.vos.View;
 import java.security.AccessControlContext;
 import java.security.AccessControlException;
 import java.security.AccessController;
-import java.security.PrivateKey;
-import java.security.cert.X509Certificate;
 import java.text.ParseException;
-import java.util.Set;
 import javax.net.ssl.HttpsURLConnection;
 import javax.net.ssl.SSLSocketFactory;
 import javax.security.auth.Subject;
@@ -275,8 +272,6 @@ public class VOSpaceClient
             }
             connection.setDoOutput(true);
             connection.setRequestMethod("GET");
-            //connection.setRequestProperty("Content-Type", "application/x-www-form-urlencoded");
-            //connection.setRequestProperty("Content-Language", "en-US");
             connection.setUseCaches(false);
             connection.setDoInput(true);
             connection.setDoOutput(false);
@@ -918,13 +913,7 @@ public class VOSpaceClient
             log.debug("initHTTPS: lazy init");
             AccessControlContext ac = AccessController.getContext();
             Subject s = Subject.getSubject(ac);
-            if (s != null)
-            {
-                Set<X509Certificate> certs = s.getPublicCredentials(X509Certificate.class);
-                Set<PrivateKey> keys = s.getPrivateCredentials(PrivateKey.class);
-                log.debug("initHTTPS: found " + certs.size() + " certificate(s) and " + keys.size() + " key(s)");
-                this.sslSocketFactory = SSLUtil.getSocketFactory(certs, keys);
-            }
+            this.sslSocketFactory = SSLUtil.getSocketFactory(s);
         }
         if (sslSocketFactory != null && sslConn != null)
         {
