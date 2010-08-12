@@ -203,15 +203,15 @@ public class NodeWriter
 
         // properties element
         root.addContent(getPropertiesElement(node));
-
-        // nodes element
-        root.addContent(getNodesElement(node));
         
         // accepts element
         root.addContent(getAcceptsElement(node));
         
         // provides element
         root.addContent(getProvidesElement(node));
+        
+        // nodes element
+        root.addContent(getNodesElement(node));
 
         // write out the Document
         write(root, writer);
