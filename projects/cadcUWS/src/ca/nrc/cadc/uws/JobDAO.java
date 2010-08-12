@@ -191,6 +191,12 @@ public abstract class JobDAO implements JobPersistence
                 List jobs = jdbc.query(getSelectJobSQL(jobID), new JobMapper());
                 if (jobs.isEmpty())
                 {
+                    log.warn("Job not found for query: " + getSelectJobSQL(jobID));
+                    jobs = jdbc.query(getSelectJobSQL(jobID), new JobMapper());
+                }
+                if (jobs.isEmpty())
+                {
+                    log.error("Job not found after (2x) query: " + getSelectJobSQL(jobID));
                     job = null;
                 }
                 else if (jobs.size() == 1)
