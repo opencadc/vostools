@@ -88,10 +88,12 @@ import ca.nrc.cadc.gms.server.web.restlet.MemberResourceTest;
     GroupMemberListResourceTest.class,
 //    MemberGroupResourceTest.class,
     MemberResourceTest.class,
-    UserWriterTest.class,
+    UserWriterTest.class,   
     UserReaderTest.class,
     GroupWriterTest.class,
     GroupReaderTest.class,
+    UserMembershipWriterTest.class,
+    UserMembershipReaderTest.class,
     GmsClientTest.class
 })
 
