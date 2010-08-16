@@ -113,9 +113,11 @@ public class MemoryUserPersistence implements UserPersistence
      * Obtain a User based on the given unique ID.
      *
      * @param userID The unique User ID.
+     * @param withMembership  Whether to include membership info (true)
+     *                        or not (false).
      * @return User instance, or null if none found.
      */
-    public User getUser(final String userID)
+    public User getUser(final String userID, boolean withMembership)
     {
         synchronized (USER_MAP)
         {

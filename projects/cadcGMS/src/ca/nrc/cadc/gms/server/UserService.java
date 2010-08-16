@@ -66,10 +66,7 @@
 */
 package ca.nrc.cadc.gms.server;
 
-import java.util.Collection;
-
 import ca.nrc.cadc.gms.AuthorizationException;
-import ca.nrc.cadc.gms.Group;
 import ca.nrc.cadc.gms.InvalidGroupException;
 import ca.nrc.cadc.gms.InvalidMemberException;
 import ca.nrc.cadc.gms.User;
@@ -81,9 +78,11 @@ public interface UserService
      * Obtain a User for the given ID.
      *
      * @param userID        The unique User ID.
+     * @param withMembership  Whether to include membership info (true)
+     *                        or not (false).
      * @return              The User instance, or null if none found.
      */
-    User getUser(final String userID);
+    User getUser(final String userID, boolean withMembership);
 
     /**
      * Obtain the Member with the given Member's User ID of the Group with the
@@ -104,18 +103,4 @@ public interface UserService
             throws InvalidMemberException, InvalidGroupException,
                    IllegalArgumentException, AuthorizationException;
 
-    /**
-     * Obtain all of the memberships that the given User's ID is a member of.
-     *
-     * @param memberUserID      The Member's User ID.
-     * @return              Collection of Group instances that the given User
-     *                      ID is a member of, or an empty Collection.  This
-     *                      may not return null.
-     * @throws InvalidMemberException  If a User with the given ID does not
-     *                                 exist.
-     * @throws AuthorizationException  If the executing User is not authorized
-     *                                 to do so.
-     */
-    Collection<Group> getMemberships(final String memberUserID)
-            throws InvalidMemberException, AuthorizationException;
 }

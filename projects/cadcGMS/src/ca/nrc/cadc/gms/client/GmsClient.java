@@ -81,6 +81,7 @@ import org.apache.log4j.Logger;
 import ca.nrc.cadc.gms.Group;
 import ca.nrc.cadc.gms.GroupReader;
 import ca.nrc.cadc.gms.GroupWriter;
+import ca.nrc.cadc.gms.UserMembershipReader;
 import ca.nrc.cadc.gms.ReaderException;
 import ca.nrc.cadc.gms.User;
 import ca.nrc.cadc.gms.UserReader;
@@ -669,7 +670,89 @@ public class GmsClient
         }
     }
 
+    /**
+     * Get groups the the user is member of.
+     * 
+     * @param userID
+     *            Identifies the user.
+     * @return The User with all the groups he's member of, 
+     * or null if not found.
+     *      * @throws IllegalArgumentException
+     *             If the User ID, or accepted baseServiceURL,
+     *             or any combination of them produces an error.
+     * @throws AccessControlException 
+     *             If user not allow to access the resource
+     * @throws MalformedURLException 
+     *             If the arguments generate a bad URL
+     * @throws ReaderException
+     *             If the URL's response could not be read.
+     * @throws IOException
+     *             For any unforeseen I/O errors.
+     *                  
+     */
+    public User getGMSMembership(String userID)
+    {
+        final StringBuilder resourcePath = new StringBuilder(64);
 
+        try
+        {
+            resourcePath.append("/members/");
+            resourcePath.append(URLEncoder.encode(userID, "UTF-8"));
+            final URL resourceURL = new URL(getBaseServiceURL()
+                    + resourcePath.toString());
+            logger.debug("getGMSMembership(), URL=" + resourceURL);
+            HttpURLConnection connection = (HttpURLConnection) openConnection(resourceURL);
+            connection.setRequestMethod("GET");
+            connection.setUseCaches(false);
+            connection.setDoInput(true);
+            connection.setDoOutput(false);
+            connection.connect();
+
+
+            String responseMessage = connection.getResponseMessage();
+            int responseCode = connection.getResponseCode();
+            logger.debug("getGMSMembership(), response code: "
+                    + responseCode);
+            logger.debug("getGMSMembership(), response message: "
+                    + responseMessage);
+
+            switch (responseCode)
+            {
+                case HttpURLConnection.HTTP_OK:
+                    return constructMember(connection);
+                case HttpURLConnection.HTTP_NOT_FOUND:
+                    return null;
+                case HttpURLConnection.HTTP_FORBIDDEN:
+                    throw new AccessControlException(responseMessage);
+                default:
+                    throw new RuntimeException(
+                            "Unexpected failure mode: "
+                                    + responseMessage + "("
+                                    + responseCode + ")");
+            }
+
+        }
+        catch (ReaderException e)
+        {
+            final String message = String.format(
+                    "The supplied URL (%s) cannot be read from.",
+                    getBaseServiceURL().toExternalForm()
+                            + resourcePath.toString());
+            logger.debug("Failed to get group", e);
+            throw new IllegalArgumentException(message, e);
+        }
+        catch (IOException e)
+        {
+            final String message = String.format(
+                    "Client BUG: The supplied URL (%s) cannot "
+                            + "be hit.", getBaseServiceURL()
+                            .toExternalForm()
+                            + resourcePath.toString());
+            logger.debug("Failed to get group", e);
+            throw new IllegalArgumentException(message, e);
+        }
+    }
+    
     /**
      * Build a User member from the given URL.
      * 
@@ -709,6 +792,46 @@ public class GmsClient
 
         return member;
     }
+    
+    /**
+     * Build a User with the groups it is member of from the given URL.
+     * 
+     * @param connection
+     *            The HttpURLConnection used to retrieve data. Caller must
+     *            call and check the return code of the connection.
+     * @return User instance, or null if none available.
+     * @throws ReaderException
+     *             If the URL's response could not be read.
+     * @throws IOException
+     *             For any unforeseen I/O errors.
+     */
+    private User constructMember(final HttpURLConnection connection)
+            throws IOException, ReaderException
+    {
+        final User member;
+        InputStream inputStream = connection.getInputStream();
+
+        try
+        {
+            member = UserMembershipReader.read(inputStream);
+        }
+        finally
+        {
+            try
+            {
+                if (inputStream != null)
+                {
+                    inputStream.close();
+                }
+            }
+            catch (IOException e)
+            {
+                // Don't worry about it.
+            }
+        }
+
+        return member;
+    }    
 
     /**
      * Build a Group from the given URL.

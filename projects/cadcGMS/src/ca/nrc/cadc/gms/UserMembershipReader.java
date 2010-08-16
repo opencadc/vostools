@@ -64,124 +64,157 @@
  *
  ************************************************************************
  */
-package ca.nrc.cadc.gms.server;
+package ca.nrc.cadc.gms;
 
-import ca.nrc.cadc.gms.AuthorizationException;
-import ca.nrc.cadc.gms.Group;
-import ca.nrc.cadc.gms.InvalidGroupException;
-import ca.nrc.cadc.gms.InvalidMemberException;
-import ca.nrc.cadc.gms.User;
-import ca.nrc.cadc.gms.server.persistence.GroupPersistence;
-import ca.nrc.cadc.gms.server.persistence.UserPersistence;
+import java.io.IOException;
+import java.io.InputStream;
+import java.io.InputStreamReader;
+import java.io.Reader;
+import java.io.StringReader;
+import java.io.UnsupportedEncodingException;
+import java.util.List;
 
+import org.jdom.Document;
+import org.jdom.Element;
+import org.jdom.JDOMException;
+import org.jdom.Namespace;
+import org.jdom.input.SAXBuilder;
 
 /**
- * Default implementation for a UserService.
+ * 
+ * @author jburke
  */
-public class UserServiceImpl implements UserService
+public class UserMembershipReader
 {
-    private UserPersistence userPersistence;
-    private GroupPersistence groupPersistence;
+    private static SAXBuilder parser;
+    static
+    {
+        parser = new SAXBuilder("org.apache.xerces.parsers.SAXParser",
+                false);
+    }
 
-
-    /**
-     * Hidden no-arg constructor for Javabean tools like Reflection.
-     */
-    UserServiceImpl()
+    public UserMembershipReader()
     {
     }
 
     /**
-     * Constructor to populate the fields.
-     *
-     * @param userPersistence       The Persistence for User instances.
-     * @param groupPersistence      The Persistence for Group instances.
+     * Construct a User from an XML String source.
+     * 
+     * @param xml
+     *            String of the XML.
+     * @return User User.
+     * @throws UserParsingException
+     *             if there is an error parsing the XML.
      */
-    public UserServiceImpl(final UserPersistence userPersistence,
-                           final GroupPersistence groupPersistence)
+    public static User read(String xml) throws ReaderException,
+            IOException
     {
-        this.userPersistence = userPersistence;
-        this.groupPersistence = groupPersistence;
-    }
-
-
-    /**
-     * Obtain a User for the given ID.
-     *
-     * @param userID The unique User ID.
-     * @param withMembership  Whether to include membership info (true)
-     *                        or not (false).
-     * @return The User instance, or null if none found.
-     */
-    public User getUser(final String userID, boolean withMembership)
-    {
-        return getUserPersistence().getUser(userID, withMembership);
+        if (xml == null)
+            throw new IllegalArgumentException("XML must not be null");
+        return read(new StringReader(xml));
     }
 
     /**
-     * Obtain the Member with the given Member's User ID of the Group with the
-     * given Group ID.
-     *
-     * @param memberUserID The Member's User ID.
-     * @param groupID      The Group's ID.
-     * @return The User member of the given Group, or null if they
-     *         are not a member.
-     * @throws ca.nrc.cadc.gms.InvalidMemberException
-     *          If the given User ID does not exist.
-     * @throws ca.nrc.cadc.gms.InvalidGroupException
-     *          If the given Group does not exist.
-     * @throws IllegalArgumentException  If the given member is not a member of
-     *                                 the given Group.
-     * @throws AuthorizationException  If the executing User is not authorized
-     *                                 to do so.
+     * Construct a User from a InputStream.
+     * 
+     * @param in
+     *            InputStream.
+     * @return User User.
+     * @throws UserParsingException
+     *             if there is an error parsing the XML.
      */
-    public User getMember(final String memberUserID, final String groupID)
-            throws InvalidMemberException, InvalidGroupException,
-                   IllegalArgumentException, AuthorizationException
+    public static User read(InputStream in) throws ReaderException,
+            IOException
     {
-        final User member = getUserPersistence().getUser(memberUserID, false);
-
-        if (member == null)
+        if (in == null)
+            throw new IOException("stream closed");
+        InputStreamReader reader;
+        try
         {
-            throw new InvalidMemberException(
-                    String.format("No such User with ID %s", memberUserID));
+            reader = new InputStreamReader(in, "UTF-8");
+        }
+        catch (UnsupportedEncodingException e)
+        {
+            throw new RuntimeException("UTF-8 encoding not supported");
+        }
+        return read(reader);
+    }
+
+    /**
+     * Construct a User from a Reader.
+     * 
+     * @param reader
+     *            Reader.
+     * @return User User.
+     * @throws UserParsingException
+     *             if there is an error parsing the XML.
+     */
+    public static User read(Reader reader) throws ReaderException,
+            IOException
+    {
+        if (reader == null)
+            throw new IllegalArgumentException("reader must not be null");
+
+        // Create a JDOM Document from the XML
+        Document document;
+        try
+        {
+            document = parser.build(reader);
+        }
+        catch (JDOMException jde)
+        {
+            String error = "XML failed validation: " + jde.getMessage();
+            throw new ReaderException(error, jde);
         }
 
-        final Group group = getGroupPersistence().getGroup(groupID);
+        // Root element and namespace of the Document
+        Element root = document.getRootElement();
+        Namespace namespace = root.getNamespace();
 
-        if (group == null)
+        return parseMember(root, namespace);
+    }
+
+    protected static User parseMember(Element root, Namespace namespace)
+            throws ReaderException
+    {
+        // id attribute of the User element
+        String id = root
+                .getAttributeValue(UserMembershipWriter.userElementID);
+        if (id == null)
         {
-            throw new InvalidGroupException(
-                    String.format("No such Group with ID %s", groupID));
+            String error = "id attribute not found in member element";
+            throw new ReaderException(error);
         }
 
-        if (!member.isMemberOf(group))
+        // Get the username element
+        String username = root.getChildText(
+                UserMembershipWriter.userElementName, namespace);
+        if (username == null)
         {
-            throw new IllegalArgumentException(
-                    String.format("The given User, '%s', is not a member "
-                                  + "of Group '%s'.", memberUserID, groupID));
+            String error = "username element not found in member element";
+            throw new ReaderException(error);
         }
 
-        return member;
+        User user = new UserImpl(id, username);
+        // List of Group Members.
+        List<Element> memberGroups = root.getChildren(
+                UserMembershipWriter.groupElementStr, namespace);
+        for (Element group : memberGroups)
+        {
+
+            // id attribute of the Group element
+            String grid = group
+                    .getAttributeValue(UserMembershipWriter.groupElementID);
+            if (grid == null)
+            {
+                String error = "id attribute not found in group element";
+                throw new ReaderException(error);
+            }
+            Group gr = new GroupImpl(grid);
+            user.addMembership(gr);
+
+        }
+        return user;
     }
 
-    public UserPersistence getUserPersistence()
-    {
-        return userPersistence;
-    }
-
-    public void setUserPersistence(UserPersistence userPersistence)
-    {
-        this.userPersistence = userPersistence;
-    }
-
-    public GroupPersistence getGroupPersistence()
-    {
-        return groupPersistence;
-    }
-
-    public void setGroupPersistence(GroupPersistence groupPersistence)
-    {
-        this.groupPersistence = groupPersistence;
-    }
 }

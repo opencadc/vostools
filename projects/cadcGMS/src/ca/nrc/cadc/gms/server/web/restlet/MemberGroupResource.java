@@ -80,6 +80,7 @@ import ca.nrc.cadc.gms.AuthorizationException;
 import ca.nrc.cadc.gms.Group;
 import ca.nrc.cadc.gms.InvalidGroupException;
 import ca.nrc.cadc.gms.InvalidMemberException;
+import ca.nrc.cadc.gms.User;
 import ca.nrc.cadc.gms.UserWriter;
 import ca.nrc.cadc.gms.WebRepresentationException;
 import ca.nrc.cadc.gms.server.GroupService;
@@ -202,6 +203,10 @@ public class MemberGroupResource extends MemberResource
         return getGroupService().getGroup(getGroupID());
     }
 
+    protected User getMember() throws AuthorizationException, InvalidGroupException
+    {
+        return getUserService().getUser(getMemberID(), false);
+    }
 
     public GroupService getGroupService()
     {

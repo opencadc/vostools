@@ -68,19 +68,23 @@ package ca.nrc.cadc.gms.server.web.restlet;
 
 import java.io.FileNotFoundException;
 import java.io.IOException;
+import java.io.UnsupportedEncodingException;
+import java.net.URLDecoder;
 
+import org.apache.log4j.Logger;
 import org.jdom.Document;
+import org.restlet.data.Status;
 
 import ca.nrc.cadc.gms.User;
+import ca.nrc.cadc.gms.UserMembershipWriter;
 import ca.nrc.cadc.gms.server.UserService;
-
 
 public class MemberResource extends AbstractResource
 {
+    private final static Logger LOGGER = Logger
+            .getLogger(MemberResource.class);
     private UserService userService;
-    private String groupWriterClassName;
-    private String userWriterClassName;    
-
+    private User user;
 
     /**
      * No-argument constructor.
@@ -91,8 +95,9 @@ public class MemberResource extends AbstractResource
 
     /**
      * Full constructor with appropriate arguments.
-     *
-     * @param userService   The UserService instance.
+     * 
+     * @param userService
+     *            The UserService instance.
      */
     public MemberResource(final UserService userService)
     {
@@ -102,44 +107,52 @@ public class MemberResource extends AbstractResource
     /**
      * Get a reference to the resource identified by the user.
      * 
-     * @throws FileNotFoundException If the resource doesn't exist.
+     * @throws FileNotFoundException
+     *             If the resource doesn't exist.
      */
     @Override
     protected boolean obtainResource() throws FileNotFoundException
     {
-        processNotImplemented(String.format("The Service to see Member with ID "
-                                            + "'%s' is not yet implemented.",
-                                            getMemberID()));
+        LOGGER.debug("Enter MemberResource.obtainResource()");
+        String memberUserID = null;
+        try
+        {
+            memberUserID = URLDecoder.decode(getMemberID(), "UTF-8");
+            LOGGER.debug(String.format("userID: %s", memberUserID));
+            // get the user first
+            user = getUserService().getUser(memberUserID, true);
+            return true;
+        }
+        catch (UnsupportedEncodingException e)
+        {
+            final String message = String.format(
+                    "Could not URL decode groupMemberID (%s)",
+                    memberUserID);
+            processError(e, Status.CLIENT_ERROR_BAD_REQUEST, message);
+        }
         return false;
     }
 
     /**
      * Assemble the XML for this Resource's Representation into the given
      * Document.
-     *
-     * @param document The Document to build up.
-     * @throws java.io.IOException If something went wrong or the XML cannot be
-     *                             built.
-     * TODO - Needs implementation!
-     * TODO - jenkinsd 2010.04.26
+     * 
+     * @param document
+     *            The Document to build up.
+     * @throws java.io.IOException
+     *             If something went wrong or the XML cannot be built.
+     *             TODO - Needs implementation! TODO - jenkinsd 2010.04.26
      */
     protected void buildXML(final Document document) throws IOException
     {
-        processNotImplemented(String.format("The Service to see Member with ID "
-                                            + "'%s' is not yet implemented.",
-                                            getMemberID()));
-    }
-
-    protected User getMember()
-    {
-        return getUserService().getUser(getMemberID());
+        LOGGER.debug("Enter MemberResource.buildXML()");
+        document.addContent(UserMembershipWriter.getUserElement(user));
     }
 
     protected String getMemberID()
     {
         return (String) getRequestAttribute("memberID");
     }
-
 
     public UserService getUserService()
     {
@@ -151,23 +164,4 @@ public class MemberResource extends AbstractResource
         this.userService = userService;
     }
 
-    public String getGroupWriterClassName()
-    {
-        return groupWriterClassName;
-    }
-
-    public void setGroupWriterClassName(String groupWriterClassName)
-    {
-        this.groupWriterClassName = groupWriterClassName;
-    }
-
-    public String getUserWriterClassName()
-    {
-        return userWriterClassName;
-    }
-
-    public void setUserWriterClassName(String userWriterClassName)
-    {
-        this.userWriterClassName = userWriterClassName;
-    }
 }

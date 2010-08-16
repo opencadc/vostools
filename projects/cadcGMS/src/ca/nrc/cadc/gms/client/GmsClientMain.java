@@ -105,12 +105,15 @@ public class GmsClientMain
     public static final String ARG_ADD_MEMBER = "add";
     public static final String ARG_MEMBER_NAME = "name";
     public static final String ARG_REMOVE_MEMBER = "remove";
+    public static final String ARG_LIST_MEMBER_GROUPS = "listMember";
+    public static final String ARG_LIST_OWNER_GROUPS = "listOwner";
     public static final String ARG_CERT = "cert";
     public static final String ARG_KEY = "key";
 
     // Operations on GMS client
     public enum Operation {
-        VIEW, CREATE, DELETE, ADD_MEMBER, REMOVE_MEMBER
+        VIEW, CREATE, DELETE, ADD_MEMBER, REMOVE_MEMBER, 
+        LIST_MEMBER_GR, LIST_OWNER_GR
     };
 
     public static final String VOS_PREFIX = "vos://";
@@ -125,7 +128,7 @@ public class GmsClientMain
     private GmsClient client;
 
     private Operation operation; // current operation on GMS client
-    private String target; // group ID the operation is executed on
+    private String target; // group/user ID the operation is executed on
     private String memberID; // ID of a member to be added or removed
     // from a group
     private String memberName; // the name of the member to be added
@@ -133,7 +136,7 @@ public class GmsClientMain
 
     File certFile = null;
     File keyFile = null;
-    
+
     private static final String SERVICE_ID = "ivo://cadc.nrc.ca/gms";
 
     /**
@@ -209,7 +212,8 @@ public class GmsClientMain
 
         try
         {
-            //TODO pass the https protocol to this method when ready for use
+            // TODO pass the https protocol to this method when ready for
+            // use
             URL baseURL = registryClient
                     .getServiceURL(new URI(SERVICE_ID));
             if (baseURL == null)
@@ -227,7 +231,7 @@ public class GmsClientMain
             logger.error("reason: " + e.getMessage());
             System.exit(INIT_STATUS);
         }
-        
+
         logger.info("server uri: " + SERVICE_ID);
         logger.info("base url: " + this.baseURL);
     }
@@ -306,6 +310,14 @@ public class GmsClientMain
         {
             doRemoveMember();
         }
+        else if (this.operation.equals(Operation.LIST_MEMBER_GR))
+        {
+            doListMemberGroups();
+        }
+        else if (this.operation.equals(Operation.LIST_OWNER_GR))
+        {
+            doListMyGroups();
+        }
         logger.debug("run - DONE");
     }
 
@@ -342,6 +354,16 @@ public class GmsClientMain
         {
             numOp++;
             this.operation = Operation.REMOVE_MEMBER;
+        }
+        if (argMap.isSet(ARG_LIST_MEMBER_GROUPS))
+        {
+            numOp++;
+            this.operation = Operation.LIST_MEMBER_GR;
+        }
+        if (argMap.isSet(ARG_LIST_OWNER_GROUPS))
+        {
+            numOp++;
+            this.operation = Operation.LIST_OWNER_GR;
         }
 
         if (numOp == 0)
@@ -383,13 +405,20 @@ public class GmsClientMain
                 throw new IllegalArgumentException(
                         "Argument target is required for "
                                 + this.operation);
-            else
-                target = strTarget;
+            else if (this.operation.equals(Operation.LIST_MEMBER_GR)
+                     && (strTarget == null))
+            {
+                //TODO target is the authenticated user.
+                // Read target from certificates
+                throw new UnsupportedOperationException("Cannot determine target");
+            }
+                
+            target = strTarget;
 
             // check remove argument
             if (this.operation.equals(Operation.REMOVE_MEMBER))
             {
-                memberID = argMap.getValue(ARG_CREATE);
+                memberID = argMap.getValue(ARG_DELETE);
                 if (memberID == null)
                 {
                     throw new IllegalArgumentException(
@@ -440,7 +469,8 @@ public class GmsClientMain
             msg("Members: Name (user ID)");
             for (User user : group.getMembers())
             {
-                msg("\t" + user.getUsername() + " (" + user.getUserID() + ") ");
+                msg("\t" + user.getUsername() + " (" + user.getUserID()
+                        + ") ");
             }
         }
         catch (Exception e)
@@ -528,6 +558,46 @@ public class GmsClientMain
     }
 
     /**
+     * Executes list groups user is member of command
+     */
+    private void doListMemberGroups()
+    {
+        try
+        {
+            User user = client.getGMSMembership(target);
+            if (user == null)
+            {
+                msg("User: " + target + " not found");
+                return;
+            }
+            msg("User: " + user.getUserID());
+            msg("Group Membership (Group IDs):");
+            for (Group group : user.getGMSMemberships())
+            {
+                msg("     " + group.getGMSGroupID());
+            }
+            msg("Total groups: " + user.getGMSMemberships().size());
+            
+        }
+        catch (Exception e)
+        {
+            logger.error("failed to list groups of member " + target);
+            logger.error("reason: " + e.getMessage());
+            System.exit(NET_STATUS);
+        }
+
+    }
+
+    /**
+     * Executes list groups that the user is owner of
+     */
+    private void doListMyGroups()
+    {
+        //TODO - when required
+        throw new UnsupportedOperationException("Not yet implemented");
+    }
+
+    /**
      * Formats the usage message.
      */
     public static void usage()
@@ -545,15 +615,21 @@ public class GmsClientMain
                 "Other group operations:                                                                              ",
                 "java -jar cadcGMSClient.jar  [-v|--verbose|-d|--debug]                                            ",
                 "   --cert=<SSL certificate file> --key=<SSL key file>                                             ",
-                "   --target=<group ID>                                                                            ",
+                "   --target=<Group ID>                                                                            ",
                 "   [--create|--view|--delete]                                ",
                 "                                                                                                  ",
-                "Member operations:                                                                              ",
+                "Group Membership operations:                                                                              ",
                 "java -jar cadcGMSClient.jar  [-v|--verbose|-d|--debug]                                            ",
                 "   --cert=<SSL certificate file> --key=<SSL key file>                                             ",
-                "   --target=<group ID>                                                                            ",
-                "   [--add=<Group ID> --name=<User Name>|--remove=<Group ID>]                                ",
-                "" };
+                "   --target=<Group ID>                                                                            ",
+                "   [--add=<User ID> --name=<User Name>|--remove=<User ID>]                                ",
+                "                                                                                                  ",
+                "User operations:                                                                              ",
+                "java -jar cadcGMSClient.jar  [-v|--verbose|-d|--debug]                                            ",
+                "   --cert=<SSL certificate file> --key=<SSL key file>                                             ",
+                "   [--listMember|--listOwner] [--target=<User ID>]                                                                           ",
+                "                                                                                                  ",
+        };
 
         for (String line : um)
             msg(line);

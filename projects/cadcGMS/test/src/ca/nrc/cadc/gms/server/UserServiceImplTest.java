@@ -110,9 +110,9 @@ public class UserServiceImplTest extends UserServiceTest
 
         mockUserMemberships.add(mockGroup);
         expect(mockGroup.getGMSGroupID()).andReturn(GROUP_ID).once();
-        expect(mockUserPersistence.getUser(NON_MEMBER_USER_ID)).
+        expect(mockUserPersistence.getUser(NON_MEMBER_USER_ID, true)).
                 andReturn(null).once();
-        expect(mockUserPersistence.getUser(MEMBER_USER_ID)).
+        expect(mockUserPersistence.getUser(MEMBER_USER_ID, true)).
                 andReturn(mockUser).once();
         expect(mockUser.getGMSMemberships()).andReturn(mockUserMemberships).
                 once();
@@ -134,9 +134,9 @@ public class UserServiceImplTest extends UserServiceTest
         expect(mockUser.isMemberOf(mockGroup)).andReturn(true).once();
         expect(mockUser.isMemberOf(mockNoMembershipGroup)).andReturn(false).
                 once();
-        expect(mockUserPersistence.getUser(NON_MEMBER_USER_ID)).
+        expect(mockUserPersistence.getUser(NON_MEMBER_USER_ID, false)).
                 andReturn(null).once();
-        expect(mockUserPersistence.getUser(MEMBER_USER_ID)).
+        expect(mockUserPersistence.getUser(MEMBER_USER_ID, false)).
                 andReturn(mockUser).times(3);
         expect(mockGroupPersistence.getGroup(NON_GROUP_ID)).andReturn(null).
                 once();

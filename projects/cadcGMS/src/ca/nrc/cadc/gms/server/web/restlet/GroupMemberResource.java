@@ -199,7 +199,7 @@ public class GroupMemberResource extends GroupResource
 
     protected User getMember()
     {
-        return getUserService().getUser(getMemberID());
+        return getUserService().getUser(getMemberID(), false);
     }
 
     public UserService getUserService()

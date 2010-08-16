@@ -177,7 +177,7 @@ public class MemberGroupResourceTest
         expect(getMockUserService().getMember(Long.toString(88l),
                                               Long.toString(88l))).
                 andReturn(mockUser).once();
-        expect(getMockUserService().getUser(Long.toString(88l))).
+        expect(getMockUserService().getUser(Long.toString(88l), false)).
                 andReturn(mockUser).once();
 
         replay(mockUser, mockDocument, mockParsedDocument,

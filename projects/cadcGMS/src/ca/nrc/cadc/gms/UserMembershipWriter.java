@@ -64,85 +64,125 @@
 *
 ************************************************************************
 */
-package ca.nrc.cadc.gms.server;
+package ca.nrc.cadc.gms;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.fail;
+import java.io.BufferedWriter;
+import java.io.IOException;
+import java.io.OutputStream;
+import java.io.OutputStreamWriter;
+import java.io.UnsupportedEncodingException;
+import java.io.Writer;
 
-import java.util.Collection;
+import org.jdom.Document;
+import org.jdom.Element;
+import org.jdom.output.Format;
+import org.jdom.output.XMLOutputter;
 
-import org.junit.Test;
-
-import ca.nrc.cadc.gms.GMSTest;
-import ca.nrc.cadc.gms.Group;
-import ca.nrc.cadc.gms.InvalidGroupException;
-import ca.nrc.cadc.gms.InvalidMemberException;
-import ca.nrc.cadc.gms.User;
-
+import ca.nrc.cadc.util.StringBuilderWriter;
 
 /**
- * Unit test for the UserService interface's implementations.
+ *
+ * @author adriand
  */
-public abstract class UserServiceTest extends GMSTest<UserService>
+public class UserMembershipWriter
 {
-    protected final static String NO_MEMBERSHIP_GROUP_ID = Long.toString(999l);
-    protected final static String GROUP_ID = Long.toString(888l);
-    protected final static String NON_GROUP_ID = Long.toString(-888l);
-    protected final static String MEMBER_USER_ID = Long.toString(88l);
-    protected final static String NON_MEMBER_USER_ID = Long.toString(-88l);
+    protected final static String userElementStr = "user";
+    protected final static String userElementID = "id";
+    protected final static String userElementName = "username";
+    protected final static String groupElementStr = "group";
+    protected final static String groupElementID = "id";
+    
+    
+    public UserMembershipWriter() {}
 
-
-    @Test
-    public void getMemberships() throws Exception
+    /**
+     * Write a User to a StringBuilder.
+     */
+    public static void write(User user, StringBuilder builder)
+        throws IOException
     {
-        final Collection<Group> memberships =
-                getTestSubject().getUser(MEMBER_USER_ID, true).getGMSMemberships();
-        assertNotNull("Group Collection may never be null.", memberships);
-        assertEquals("Group should have a single member.", 1,
-                     memberships.size());
-        assertEquals("Group should be the 888 Group.", GROUP_ID, 
-                   ((Group) memberships.toArray()[0]).getGMSGroupID());
+        write(user, new StringBuilderWriter(builder));
     }
 
-    @Test
-    public void getMember() throws Exception
+    /**
+     * Write a User to an OutputStream.
+     *
+     * @param user User to write.
+     * @param out OutputStream to write to.
+     * @throws IOException if the writer fails to write.
+     */
+    public static void write(User user, OutputStream out)
+        throws IOException
     {
-        final User member =
-                getTestSubject().getMember(MEMBER_USER_ID, GROUP_ID);
-
-        assertNotNull("The member returned should be valid.", member);
-        assertEquals("The member is the wrong one.", MEMBER_USER_ID,
-                     member.getUserID());
-
+        OutputStreamWriter outWriter;
         try
         {
-            getTestSubject().getMember(MEMBER_USER_ID, NO_MEMBERSHIP_GROUP_ID);
-            fail("The User with this MEMBER_USER_ID is not a member.");
-        }
-        catch (IllegalArgumentException iae)
+            outWriter = new OutputStreamWriter(out, "UTF-8");
+        } catch (UnsupportedEncodingException e)
         {
-            // Good!
+            throw new RuntimeException("UTF-8 encoding not supported", e);
         }
-
-        try
-        {
-            getTestSubject().getMember(NON_MEMBER_USER_ID, GROUP_ID);
-            fail("This member is not a member.");
-        }
-        catch (InvalidMemberException ime)
-        {
-            // Good!
-        }
-
-        try
-        {
-            getTestSubject().getMember(MEMBER_USER_ID, NON_GROUP_ID);
-            fail("This Group is not a Group.");
-        }
-        catch (InvalidGroupException ige)
-        {
-            // Good!
-        }
+        write(user, new BufferedWriter(outWriter));
     }
+
+    /**
+     * Write a User to a Writer.
+     *
+     * @param user User to write.
+     * @param writer Writer to write to.
+     * @throws IOException if the writer fails to write.
+     */
+    public static void write(User user, Writer writer)
+        throws IOException
+    {
+        // write out the Document
+        write(getUserElement(user), writer);
+    }
+
+    /**
+     * Build the member Element of a User.
+     *
+     * @param user User.
+     * @return member Element.
+     */
+    public static Element getUserElement(User user)
+    {
+        // Create the root member Element.
+        Element userElement = new Element(userElementStr);
+        userElement.setAttribute(userElementID, user.getUserID());
+
+        // Add the username Element.
+        Element usernameElement = new Element(userElementName);
+        usernameElement.setText(user.getUsername());
+        userElement.addContent(usernameElement);
+        
+        // Add the groups user is member
+        for (Group group : user.getGMSMemberships())
+        {
+            // Create the root group element.
+            Element groupElement = new Element(groupElementStr);
+            String groupID = group.getGMSGroupID();
+            groupElement.setAttribute(groupElementID, groupID);
+            
+            userElement.addContent(groupElement);
+        }
+        
+        return userElement;
+    }
+
+    /**
+     * Write to root Element to a writer.
+     *
+     * @param root Root Element to write.
+     * @param writer Writer to write to.
+     * @throws IOException if the writer fails to write.
+     */
+    private static void write(Element root, Writer writer)
+        throws IOException
+    {
+        XMLOutputter outputter = new XMLOutputter();
+        outputter.setFormat(Format.getPrettyFormat());
+        outputter.output(new Document(root), writer);
+    }
+
 }
