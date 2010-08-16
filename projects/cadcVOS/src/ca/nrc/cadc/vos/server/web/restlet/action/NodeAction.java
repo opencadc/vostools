@@ -81,6 +81,7 @@ import ca.nrc.cadc.vos.ContainerNode;
 import ca.nrc.cadc.vos.Node;
 import ca.nrc.cadc.vos.NodeFault;
 import ca.nrc.cadc.vos.NodeParsingException;
+import ca.nrc.cadc.vos.VOS;
 import ca.nrc.cadc.vos.VOSURI;
 import ca.nrc.cadc.vos.server.AbstractView;
 import ca.nrc.cadc.vos.server.NodePersistence;
@@ -108,6 +109,7 @@ public abstract class NodeAction implements PrivilegedAction<Object>
     private Representation nodeXML;
     private Request request;
     private String viewReference; 
+    private String stylesheetReference;
     
     /**
      * Set the URI for this action.
@@ -173,6 +175,22 @@ public abstract class NodeAction implements PrivilegedAction<Object>
     }
     
     /**
+     * Set the stylesheet reference.
+     */
+    public void setStylesheetReference(String stylesheetReference)
+    {
+        this.stylesheetReference = stylesheetReference;
+    }
+    
+    /**
+     * Get the stylesheet reference.
+     */
+    protected String getStylesheetReference()
+    {
+        return stylesheetReference;
+    }
+    
+    /**
      * Return the view requested by the client, or null if none specified.
      * @throws IllegalAccessException 
      * @throws InstantiationException 
@@ -183,6 +201,13 @@ public abstract class NodeAction implements PrivilegedAction<Object>
         {
             return null;
         }
+        
+        // the default view is the same as no view
+        if (viewReference.equalsIgnoreCase(VOS.VIEW_DEFAULT))
+        {
+            return null;
+        }
+        
         Views views = new Views();
         AbstractView view = views.getView(viewReference);
         if (view == null)

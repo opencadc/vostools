@@ -127,6 +127,7 @@ public class GetNodeAction extends NodeAction
         {
             // no view specified or found--return the xml representation
             NodeWriter nodeWriter = new NodeWriter();
+            nodeWriter.setStylesheetURL(getStylesheetURL(request));
             return new NodeActionResult(new NodeOutputRepresentation(node, nodeWriter));
         }
         else
@@ -143,6 +144,32 @@ public class GetNodeAction extends NodeAction
                 return new NodeActionResult(viewRepresentation);
             }
         }
+    }
+    
+    /**
+     * Look for the stylesheet URL in the request context.
+     * @param request
+     * @return
+     */
+    public String getStylesheetURL(Request request)
+    {
+        log.debug("Stylesheet Reference is: " + getStylesheetReference());
+        if (getStylesheetReference() != null)
+        {
+            String scheme = request.getHostRef().getScheme();
+            String server = request.getHostRef().getHostDomain();
+            StringBuilder url = new StringBuilder();
+            url.append(scheme);
+            url.append("://");
+            url.append(server);
+            if (!getStylesheetReference().startsWith("/"))
+            {
+                url.append("/");
+            }
+            url.append(getStylesheetReference());
+            return url.toString();
+        }
+        return null;
     }
     
 }

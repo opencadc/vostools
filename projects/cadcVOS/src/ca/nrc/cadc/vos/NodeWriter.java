@@ -76,11 +76,14 @@ import java.io.OutputStreamWriter;
 import java.io.UnsupportedEncodingException;
 import java.io.Writer;
 import java.net.URI;
+import java.util.HashMap;
+import java.util.Map;
 
 import org.apache.log4j.Logger;
 import org.jdom.Document;
 import org.jdom.Element;
 import org.jdom.Namespace;
+import org.jdom.ProcessingInstruction;
 import org.jdom.output.Format;
 import org.jdom.output.XMLOutputter;
 
@@ -100,6 +103,7 @@ public class NodeWriter
     protected static Namespace defaultNamespace;
     protected static Namespace vosNamespace;
     protected static Namespace xsiNamespace;
+    
     static
     {
         defaultNamespace = Namespace.getNamespace("http://www.ivoa.net/xml/VOSpace/v2.0");
@@ -108,9 +112,21 @@ public class NodeWriter
     }
 
     private static Logger log = Logger.getLogger(NodeWriter.class);
+    
+    private String stylesheetURL = null;
 
     public NodeWriter()
     {}
+    
+    public void setStylesheetURL(String stylesheetURL)
+    {
+        this.stylesheetURL = stylesheetURL;
+    }
+    
+    public String getStylesheetURL()
+    {
+        return stylesheetURL;
+    }
 
     /**
      * Write a ContainerNode to a StringBuilder.
@@ -343,11 +359,21 @@ public class NodeWriter
      * @param writer Writer to write to.
      * @throws IOException if the writer fails to write.
      */
+    @SuppressWarnings("unchecked")
     protected void write(Element root, Writer writer) throws IOException
     {
         XMLOutputter outputter = new XMLOutputter();
         outputter.setFormat(Format.getPrettyFormat());
-        outputter.output(new Document(root), writer);
+        Document document = new Document(root);
+        if (stylesheetURL != null)
+        {
+            Map<String, String> instructionMap = new HashMap<String, String>(2);
+            instructionMap.put("type", "text/xsl");
+            instructionMap.put("href", stylesheetURL);
+            ProcessingInstruction pi = new ProcessingInstruction("xml-stylesheet", instructionMap);
+            document.getContent().add(0, pi);
+        }
+        outputter.output(document, writer);
     }
 
 }

@@ -197,6 +197,7 @@ public class NodeResource extends BaseResource
             action.setNodeXML(getRequestEntity());
             action.setRequest(getRequest());
             action.setViewReference(viewReference);
+            action.setStylesheetReference(getStylesheetReference());
 
             NodeActionResult result = null;
             if (getSubject() == null)

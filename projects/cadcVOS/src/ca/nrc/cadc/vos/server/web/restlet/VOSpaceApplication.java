@@ -117,6 +117,10 @@ public class VOSpaceApplication extends Application
         // save the vospace uri in the application context
         context.getAttributes().put(BeanUtil.IVOA_VOS_URI, vosURI);
         
+        // stylesheet reference
+        String stylesheetReference = context.getParameters().getFirstValue(BeanUtil.VOS_STYLESHEET_REFERENCE);
+        context.getAttributes().put(BeanUtil.VOS_STYLESHEET_REFERENCE, stylesheetReference);
+        
         // Create the configured NodePersistence bean
         createContextBean(context, ca.nrc.cadc.vos.server.NodePersistence.class, BeanUtil.VOS_NODE_PERSISTENCE);
         

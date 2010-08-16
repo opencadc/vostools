@@ -94,6 +94,7 @@ public abstract class BaseResource extends ServerResource
     
     private String vosUriPrefix;
     private NodePersistence nodePersistence;
+    private String stylesheetReference;
     private Subject subject;
     
     protected BaseResource()
@@ -107,6 +108,10 @@ public abstract class BaseResource extends ServerResource
         nodePersistence =
             (NodePersistence) getApplication().getContext().getAttributes().
                 get(BeanUtil.VOS_NODE_PERSISTENCE);
+        
+        stylesheetReference =
+            (String) getApplication().getContext().getAttributes().
+                get(BeanUtil.VOS_STYLESHEET_REFERENCE);
     }
 
     @Override
@@ -135,6 +140,11 @@ public abstract class BaseResource extends ServerResource
     public final NodePersistence getNodePersistence()
     {
         return nodePersistence;
+    }
+    
+    public final String getStylesheetReference()
+    {
+        return stylesheetReference;
     }
     
     public final Subject getSubject()
