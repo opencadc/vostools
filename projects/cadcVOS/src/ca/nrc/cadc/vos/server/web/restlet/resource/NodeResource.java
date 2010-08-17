@@ -180,6 +180,10 @@ public class NodeResource extends BaseResource
     private Representation performNodeAction(NodeAction action)
     {
         log.debug("Enter NodeResource.performNodeAction()");
+        
+        long start = System.currentTimeMillis();
+        long end = -1;
+        
         try
         {
             if (nodeFault != null)
@@ -209,6 +213,8 @@ public class NodeResource extends BaseResource
                 result = (NodeActionResult) Subject.doAs(getSubject(), action);
             }
             
+            end = System.currentTimeMillis();
+            
             if (result != null)
             {
                 setStatus(result.getStatus());
@@ -224,14 +230,21 @@ public class NodeResource extends BaseResource
             }
             return null;
             
-            
-            
         }
         catch (Throwable t)
         {
             log.debug(t);
             setStatus(NodeFault.InternalFault.getStatus());
             return new NodeErrorRepresentation(NodeFault.InternalFault);
+        }
+        finally
+        {
+            if (end == -1)
+            {
+                end = System.currentTimeMillis();
+            }
+            log.info("Node request " + NodeAction.class.getSimpleName()
+                    + " elapsed time (ms): " + (end - start));
         }
     }
     
