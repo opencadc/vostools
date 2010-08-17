@@ -75,6 +75,8 @@ import org.apache.log4j.Logger;
 import org.jdom.Document;
 import org.restlet.data.Status;
 
+import ca.nrc.cadc.gms.AuthorizationException;
+import ca.nrc.cadc.gms.InvalidMemberException;
 import ca.nrc.cadc.gms.User;
 import ca.nrc.cadc.gms.UserMembershipWriter;
 import ca.nrc.cadc.gms.server.UserService;
@@ -111,7 +113,7 @@ public class MemberResource extends AbstractResource
      *             If the resource doesn't exist.
      */
     @Override
-    protected boolean obtainResource() throws FileNotFoundException
+    protected boolean obtainResource()
     {
         LOGGER.debug("Enter MemberResource.obtainResource()");
         String memberUserID = null;
@@ -129,6 +131,20 @@ public class MemberResource extends AbstractResource
                     "Could not URL decode groupMemberID (%s)",
                     memberUserID);
             processError(e, Status.CLIENT_ERROR_BAD_REQUEST, message);
+        }
+        catch (InvalidMemberException e)
+        {
+            final String message = String.format(
+                    "Could not find resource (%s)",
+                    memberUserID);
+            processError(e, Status.CLIENT_ERROR_NOT_FOUND, message);
+        }
+        catch (AuthorizationException e)
+        {
+            final String message = String.format(
+                    "Could not find resource (%s)",
+                    memberUserID);
+            processError(e, Status.CLIENT_ERROR_NOT_FOUND, message);
         }
         return false;
     }

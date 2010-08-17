@@ -86,14 +86,12 @@ import ca.nrc.cadc.gms.WebRepresentationException;
 import ca.nrc.cadc.gms.server.GroupService;
 import ca.nrc.cadc.gms.server.UserService;
 
-
 public class MemberGroupResource extends MemberResource
 {
-    private final static Logger LOGGER =
-            Logger.getLogger(MemberGroupResource.class);
+    private final static Logger LOGGER = Logger
+            .getLogger(MemberGroupResource.class);
 
     private GroupService groupService;
-
 
     /**
      * No-argument constructor.
@@ -105,12 +103,14 @@ public class MemberGroupResource extends MemberResource
 
     /**
      * Full constructor with appropriate arguments.
-     *
-     * @param userService The UserService instance.
-     * @param groupService  The GroupService instance.
+     * 
+     * @param userService
+     *            The UserService instance.
+     * @param groupService
+     *            The GroupService instance.
      */
     public MemberGroupResource(final UserService userService,
-                               final GroupService groupService)
+            final GroupService groupService)
     {
         super(userService);
         setGroupService(groupService);
@@ -119,15 +119,17 @@ public class MemberGroupResource extends MemberResource
     /**
      * Assemble the XML for this Resource's Representation into the given
      * Document.
-     *
-     * @param document The Document to build up.
-     * @throws java.io.IOException If something went wrong or the XML cannot be
-     *                             built.
+     * 
+     * @param document
+     *            The Document to build up.
+     * @throws java.io.IOException
+     *             If something went wrong or the XML cannot be built.
      */
     @Override
     protected void buildXML(final Document document) throws IOException
     {
-        final String groupMemberID = URLDecoder.decode(getMemberID(), "UTF-8");
+        final String groupMemberID = URLDecoder.decode(getMemberID(),
+                "UTF-8");
         final String groupID = URLDecoder.decode(getGroupID(), "UTF-8");
 
         try
@@ -137,39 +139,40 @@ public class MemberGroupResource extends MemberResource
         }
         catch (final InvalidGroupException e)
         {
-            final String message = String.format("No such Group with ID %s",
-                                                 groupID);
+            final String message = String.format(
+                    "No such Group with ID %s", groupID);
             processError(e, Status.CLIENT_ERROR_NOT_FOUND, message);
         }
         catch (InvalidMemberException e)
         {
-            final String message = String.format("No such User with ID %s",
-                                                 groupMemberID);
+            final String message = String.format(
+                    "No such User with ID %s", groupMemberID);
             processError(e, Status.CLIENT_ERROR_NOT_FOUND, message);
         }
         catch (IllegalArgumentException e)
         {
-            final String message =
-                    String.format("The given User with ID %s is not a member "
-                                  + "of Group with ID %s.", groupMemberID,
-                                  groupID);
+            final String message = String.format(
+                    "The given User with ID %s is not a member "
+                            + "of Group with ID %s.", groupMemberID,
+                    groupID);
             processError(e, Status.CLIENT_ERROR_NOT_FOUND, message);
         }
         catch (AuthorizationException e)
         {
-            final String message =
-                    String.format("You are not authorized to view Member ID "
-                                  + "'%s' of Group ID '%s'.",
-                                  groupMemberID, groupID);
+            final String message = String.format(
+                    "You are not authorized to view Member ID "
+                            + "'%s' of Group ID '%s'.", groupMemberID,
+                    groupID);
             processError(e, Status.CLIENT_ERROR_UNAUTHORIZED, message);
         }
     }
 
     /**
      * Parse a Document from the given String.
-     *
-     * @param writtenData   The String data.
-     * @return          The Document object.
+     * 
+     * @param writtenData
+     *            The String data.
+     * @return The Document object.
      */
     protected Document parseDocument(final String writtenData)
     {
@@ -198,12 +201,14 @@ public class MemberGroupResource extends MemberResource
         return (String) getRequestAttribute("groupID");
     }
 
-    protected Group getGroup() throws AuthorizationException, InvalidGroupException
+    protected Group getGroup() throws AuthorizationException,
+            InvalidGroupException
     {
         return getGroupService().getGroup(getGroupID());
     }
 
-    protected User getMember() throws AuthorizationException, InvalidGroupException
+    protected User getMember() throws AuthorizationException,
+            InvalidGroupException, InvalidMemberException
     {
         return getUserService().getUser(getMemberID(), false);
     }

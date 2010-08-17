@@ -85,13 +85,12 @@ import ca.nrc.cadc.gms.server.UserService;
 
 public class GroupMemberResource extends GroupResource
 {
-    private final static Logger LOGGER =
-            Logger.getLogger(GroupMemberResource.class);
+    private final static Logger LOGGER = Logger
+            .getLogger(GroupMemberResource.class);
 
     private UserService userService;
-    
-    private User groupMember;
 
+    private User groupMember;
 
     /**
      * Hidden constructor for JavaBean tools.
@@ -103,21 +102,24 @@ public class GroupMemberResource extends GroupResource
 
     /**
      * Full constructor.
-     *
-     * @param groupService      The Group Service to use.
-     * @param userService       The User Service to use.
+     * 
+     * @param groupService
+     *            The Group Service to use.
+     * @param userService
+     *            The User Service to use.
      */
     public GroupMemberResource(final GroupService groupService,
-                               final UserService userService)
+            final UserService userService)
     {
         super(groupService);
         this.userService = userService;
     }
-    
+
     /**
      * Get a reference to the resource identified by the user.
      * 
-     * @throws FileNotFoundException If the resource doesn't exist.
+     * @throws FileNotFoundException
+     *             If the resource doesn't exist.
      */
     @Override
     protected boolean obtainResource()
@@ -125,65 +127,64 @@ public class GroupMemberResource extends GroupResource
         LOGGER.debug("Enter GroupMemberResource.obtainResource()");
         String groupMemberID = null;
         String groupID = null;
-        
+
         try
         {
             groupMemberID = URLDecoder.decode(getMemberID(), "UTF-8");
             groupID = URLDecoder.decode(getGroupID(), "UTF-8");
-            LOGGER.debug(String.format(
-                    "groupID: %s memberID: %s",
+            LOGGER.debug(String.format("groupID: %s memberID: %s",
                     groupID, groupMemberID));
-            
-            groupMember = getUserService().getMember(groupMemberID, groupID);
+
+            groupMember = getUserService().getMember(groupMemberID,
+                    groupID);
             return true;
         }
         catch (final InvalidGroupException e)
         {
-            final String message = String.format("No such Group with ID %s",
-                                                 groupID);
+            final String message = String.format(
+                    "No such Group with ID %s", groupID);
             processError(e, Status.CLIENT_ERROR_NOT_FOUND, message);
         }
         catch (InvalidMemberException e)
         {
-            final String message = String.format("No such User with ID %s",
-                                                 groupMemberID);
+            final String message = String.format(
+                    "No such User with ID %s", groupMemberID);
             processError(e, Status.CLIENT_ERROR_NOT_FOUND, message);
         }
         catch (IllegalArgumentException e)
         {
-            final String message =
-                    String.format("The given User with ID %s is not a member "
-                                  + "of Group with ID %s.", groupMemberID,
-                                  groupID);
+            final String message = String.format(
+                    "The given User with ID %s is not a member "
+                            + "of Group with ID %s.", groupMemberID,
+                    groupID);
             processError(e, Status.CLIENT_ERROR_NOT_FOUND, message);
         }
         catch (AuthorizationException e)
         {
-            final String message =
-                    String.format("You are not authorized to view Member ID "
-                                  + "'%s' of Group ID '%s'.", 
-                                  groupMemberID, groupID);
+            final String message = String.format(
+                    "You are not authorized to view Member ID "
+                            + "'%s' of Group ID '%s'.", groupMemberID,
+                    groupID);
             processError(e, Status.CLIENT_ERROR_UNAUTHORIZED, message);
         }
         catch (UnsupportedEncodingException e)
         {
-            final String message =
-                String.format("Could not URL decode groupMemberID (%s) or "
-                              + "groupID (%s).", 
-                              groupMemberID, groupID);
+            final String message = String.format(
+                    "Could not URL decode groupMemberID (%s) or "
+                            + "groupID (%s).", groupMemberID, groupID);
             processError(e, Status.CLIENT_ERROR_BAD_REQUEST, message);
         }
         return false;
     }
 
-
     /**
      * Assemble the XML for this Resource's Representation into the given
      * Document.
-     *
-     * @param document The Document to build up.
-     * @throws java.io.IOException If something went wrong or the XML cannot be
-     *                             built.
+     * 
+     * @param document
+     *            The Document to build up.
+     * @throws java.io.IOException
+     *             If something went wrong or the XML cannot be built.
      */
     @Override
     protected void buildXML(final Document document) throws IOException
@@ -197,7 +198,8 @@ public class GroupMemberResource extends GroupResource
         return (String) getRequestAttribute("memberID");
     }
 
-    protected User getMember()
+    protected User getMember() throws InvalidMemberException,
+            AuthorizationException
     {
         return getUserService().getUser(getMemberID(), false);
     }
@@ -211,5 +213,5 @@ public class GroupMemberResource extends GroupResource
     {
         this.userService = userService;
     }
-    
+
 }

@@ -82,7 +82,8 @@ public interface UserService
      *                        or not (false).
      * @return              The User instance, or null if none found.
      */
-    User getUser(final String userID, boolean withMembership);
+    User getUser(final String userID, boolean withMembership)
+    throws InvalidMemberException, AuthorizationException;
 
     /**
      * Obtain the Member with the given Member's User ID of the Group with the

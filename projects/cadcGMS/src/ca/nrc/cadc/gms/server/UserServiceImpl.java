@@ -114,8 +114,14 @@ public class UserServiceImpl implements UserService
      * @return The User instance, or null if none found.
      */
     public User getUser(final String userID, boolean withMembership)
+    throws InvalidMemberException, AuthorizationException
     {
-        return getUserPersistence().getUser(userID, withMembership);
+        User user = getUserPersistence().getUser(userID, withMembership);
+        if (user == null)
+        {
+            throw new InvalidMemberException(userID + " not found");
+        }
+        return user;
     }
 
     /**
