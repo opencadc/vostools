@@ -139,7 +139,7 @@ public class UserServiceImpl implements UserService
             throws InvalidMemberException, InvalidGroupException,
                    IllegalArgumentException, AuthorizationException
     {
-        final User member = getUserPersistence().getUser(memberUserID, false);
+        final User member = getUserPersistence().getUser(memberUserID, true);
 
         if (member == null)
         {
