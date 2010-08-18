@@ -102,6 +102,7 @@ public class HttpUpload extends HttpTransfer
     private String contentMD5;
 
     private InputStream istream;
+    private OutputStreamWrapper wrapper;
 
     public HttpUpload(File src, URL dest)
     {
@@ -123,6 +124,17 @@ public class HttpUpload extends HttpTransfer
             throw new IllegalArgumentException("destination URL cannot be null");
         if (istream == null)
             throw new IllegalArgumentException("source InputStream cannot be null");
+    }
+
+    public HttpUpload(OutputStreamWrapper src, URL dest)
+    {
+        super();
+        this.wrapper = src;
+        this.remoteURL = dest;
+        if (remoteURL == null)
+            throw new IllegalArgumentException("destination URL cannot be null");
+        if (wrapper == null)
+            throw new IllegalArgumentException("source OutputStreamWrapper cannot be null");
     }
     
     // unused
@@ -191,7 +203,7 @@ public class HttpUpload extends HttpTransfer
                 bSize = (int) localFile.length();
 
             ostream = conn.getOutputStream();
-            if (istream == null)
+            if (localFile != null && istream == null)
                 istream = new FileInputStream(localFile);
             if ( !(ostream instanceof BufferedOutputStream) )
             {
@@ -208,8 +220,8 @@ public class HttpUpload extends HttpTransfer
 
             if (istream != null)
                 ioLoop(istream, ostream, 2*this.bufferSize, 0);
-            //else
-                // wrapper.write(ostream);
+            else
+                 wrapper.write(ostream);
 
             ostream.flush();
             log.debug("flushing and closing OutputStream");
