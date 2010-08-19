@@ -8,7 +8,7 @@
 *  National Research Council            Conseil national de recherches
 *  Ottawa, Canada, K1A 0R6              Ottawa, Canada, K1A 0R6
 *  All rights reserved                  Tous droits réservés
-*                                       
+*
 *  NRC disclaims any warranties,        Le CNRC dénie toute garantie
 *  expressed, implied, or               énoncée, implicite ou légale,
 *  statutory, of any kind with          de quelque nature que ce
@@ -31,10 +31,10 @@
 *  software without specific prior      de ce logiciel sans autorisation
 *  written permission.                  préalable et particulière
 *                                       par écrit.
-*                                       
+*
 *  This file is part of the             Ce fichier fait partie du projet
 *  OpenCADC project.                    OpenCADC.
-*                                       
+*
 *  OpenCADC is free software:           OpenCADC est un logiciel libre ;
 *  you can redistribute it and/or       vous pouvez le redistribuer ou le
 *  modify it under the terms of         modifier suivant les termes de
@@ -44,7 +44,7 @@
 *  either version 3 of the              : soit la version 3 de cette
 *  License, or (at your option)         licence, soit (à votre gré)
 *  any later version.                   toute version ultérieure.
-*                                       
+*
 *  OpenCADC is distributed in the       OpenCADC est distribué
 *  hope that it will be useful,         dans l’espoir qu’il vous
 *  but WITHOUT ANY WARRANTY;            sera utile, mais SANS AUCUNE
@@ -54,7 +54,7 @@
 *  PURPOSE.  See the GNU Affero         PARTICULIER. Consultez la Licence
 *  General Public License for           Générale Publique GNU Affero
 *  more details.                        pour plus de détails.
-*                                       
+*
 *  You should have received             Vous devriez avoir reçu une
 *  a copy of the GNU Affero             copie de la Licence Générale
 *  General Public License along         Publique GNU Affero avec
@@ -67,122 +67,123 @@
 ************************************************************************
 */
 
-
 package ca.nrc.cadc.uws;
 
-import java.util.Calendar;
 import java.util.Collection;
-import java.util.Date;
+import java.util.List;
 
+import javax.sql.DataSource;
 
 /**
- * Default implementation of the Job Service.
+ * Class to provide database persistence of jobs through the use
+ * of the JobDAO.
+ * 
+ * A new JobDAO object is instantiated upon each request to ensure
+ * its thread safety.
+ * 
+ * @author majorb
+ *
  */
-public class BasicJobManager implements JobManager
+public abstract class DatabasePersistence implements JobPersistence
 {
-    private JobPersistence jobPersistence;
-
+    
     /**
-     * Maximum execution time in seconds.
+     * DatabasePersistence constructor.
      */
-    protected int timeLimit = 600; // 10 minutes
-
-    /**
-     * Number of hours a job will be stored before being destroyed.
-     */
-    protected int destructionLimit = 24; // hours
-
-
-    /**
-     * Obtain the Jobs that are available to the client.
-     *
-     * @return Collection of Job instances, or empty Collection, never NULL.
-     */
-    public Collection<Job> getJobs()
+    public DatabasePersistence()
     {
-        return getJobPersistence().getJobs();
+    }
+    
+    /**
+     * Create a new JobDAO and set the appropriate resources.
+     * 
+     * TODO:  Refactor the relationship between DatabasePersistence
+     *        and JobDAO so that there isn't a circular dependency
+     *        (jobDAO.setDatabasePersistence(this))
+     * 
+     * @return A new JobDAO
+     */
+    private JobDAO createJobDAO()
+    {
+        JobDAO jobDAO = new JobDAO();
+        jobDAO.setDataSource(this.getDataSource());
+        jobDAO.setDatabasePersistence(this);
+        return jobDAO;
     }
 
     /**
-     * Obtain the job with the given identifier.
-     *
-     * @param jobID Job Identifier.
-     * @return Job instance, or null if none found.
+     * Delete the job.
      */
-    public Job getJob(final String jobID)
-    {
-        return getJobPersistence().getJob(jobID);
-    }
-
-    /**
-     * Delete the specified job.
-     *
-     * @param jobID
-     */
+    @Override
     public void delete(String jobID)
     {
-        getJobPersistence().delete(jobID);
-    }
-
-
-    /**
-     * Persist the given Job.
-     *
-     * @param job The Job to persist.
-     * @return The persisted Job, populated, as necessary, with a
-     *         unique identifier.
-     */
-    public Job persist(final Job job)
-    {
-        insertDefaultValues(job);
-        return getJobPersistence().persist(job);
+        JobDAO jobDAO = createJobDAO();
+        jobDAO.delete(jobID);
     }
 
     /**
-     * Insert default values to those fields that require a value, but haven't
-     * been given one.
-     *
-     * @param job The job to insert values for.
+     * Get the job.
      */
-    public void insertDefaultValues(final Job job)
+    @Override
+    public Job getJob(String jobID)
     {
-        if (job.getExecutionPhase() == null)
-        {
-            job.setExecutionPhase(ExecutionPhase.PENDING);
-        }
-
-        if (job.getExecutionDuration() == 0)
-        {
-            job.setExecutionDuration(timeLimit);
-        }
-
-        if (job.getDestructionTime() == null)
-        {
-            final Calendar cal = Calendar.getInstance();
-            cal.setTime(new Date());
-            cal.add(Calendar.HOUR, destructionLimit);
-
-            job.setDestructionTime(cal.getTime());
-        }
-
-        if (job.getQuote() == null)
-        {
-            final Calendar cal = Calendar.getInstance();
-            cal.setTime(new Date());
-            cal.add(Calendar.SECOND, timeLimit);
-            // assuming immediate queue and execution
-            job.setQuote(cal.getTime());
-        }
+        JobDAO jobDAO = createJobDAO();
+        return jobDAO.getJob(jobID);
     }
 
-
-    public JobPersistence getJobPersistence()
+    /**
+     * Get all the jobs.
+     */
+    @Override
+    public Collection<Job> getJobs()
     {
-        return jobPersistence;
+        JobDAO jobDAO = createJobDAO();
+        return jobDAO.getJobs();
     }
 
-    public void setJobPersistence(final JobPersistence jobPersistence)
+    /**
+     * Save the job.
+     */
+    @Override
+    public Job persist(Job job)
     {
-        this.jobPersistence = jobPersistence;
+        JobDAO jobDAO = createJobDAO();
+        return jobDAO.persist(job);
     }
+    
+    /**
+     * Returns the name of the Job table.
+     *
+     * @return job table name.
+     */
+    protected abstract String getJobTable();
+
+    /**
+     * Returns the name of the Parameter table for the given Parameter name.
+     *
+     * @param name Parameter name.
+     * @return Parameter table name for this Parameter name.
+     */
+    protected abstract String getParameterTable(String name);
+
+    /**
+     * Returns the name of the Result table.
+     * 
+     * @return Result table name.
+     */
+    protected abstract String getResultTable();
+
+    /**
+     * Returns a List containing the names of all Parameter tables.
+     *
+     * @return List of Parameter table names.
+     */
+    protected abstract List<String> getParameterTables();
+    
+    /**
+     * Returns the datasource to be used.
+     * @return
+     */
+    protected abstract DataSource getDataSource();
+
 }

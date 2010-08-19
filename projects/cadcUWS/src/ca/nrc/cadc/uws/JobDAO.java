@@ -69,9 +69,6 @@
 
 package ca.nrc.cadc.uws;
 
-import ca.nrc.cadc.auth.AuthenticationUtil;
-import ca.nrc.cadc.date.DateUtil;
-import ca.nrc.cadc.net.NetUtil;
 import java.net.MalformedURLException;
 import java.net.URL;
 import java.sql.ResultSet;
@@ -82,8 +79,10 @@ import java.util.Collection;
 import java.util.Date;
 import java.util.List;
 import java.util.Random;
+
 import javax.security.auth.Subject;
 import javax.sql.DataSource;
+
 import org.apache.log4j.Logger;
 import org.springframework.dao.DataAccessException;
 import org.springframework.jdbc.core.JdbcTemplate;
@@ -91,6 +90,10 @@ import org.springframework.jdbc.core.RowMapper;
 import org.springframework.jdbc.datasource.DataSourceTransactionManager;
 import org.springframework.transaction.TransactionStatus;
 import org.springframework.transaction.support.DefaultTransactionDefinition;
+
+import ca.nrc.cadc.auth.AuthenticationUtil;
+import ca.nrc.cadc.date.DateUtil;
+import ca.nrc.cadc.net.NetUtil;
 
 /**
  * JobPersistence c lass that stores the jobs in a RDBMS. This is an abstract class;
@@ -103,8 +106,9 @@ import org.springframework.transaction.support.DefaultTransactionDefinition;
  *
  * @author jburke
  */
-public abstract class JobDAO implements JobPersistence
+public class JobDAO
 {
+    
     // generate a random modest-length lower case string
     private static final int ID_LENGTH = 16;
     private static final String ID_CHARS = "abcdefghijklmnopqrstuvwxyz0123456789";
@@ -118,11 +122,14 @@ public abstract class JobDAO implements JobPersistence
     private DataSourceTransactionManager transactionManager;
     private DefaultTransactionDefinition defaultTransactionDef;
     private TransactionStatus transactionStatus;
+    
+    // Class holding table information
+    DatabasePersistence databasePersistence;
 
     protected JobDAO() 
     {
         this.defaultTransactionDef = new DefaultTransactionDefinition();
-        defaultTransactionDef.setIsolationLevel(DefaultTransactionDefinition.ISOLATION_READ_COMMITTED);
+        defaultTransactionDef.setIsolationLevel(DefaultTransactionDefinition.ISOLATION_REPEATABLE_READ);
     }
 
     /**
@@ -134,6 +141,16 @@ public abstract class JobDAO implements JobPersistence
     {
         this.jdbc = new JdbcTemplate(dataSource);
         this.transactionManager = new DataSourceTransactionManager(dataSource);
+    }
+    
+    /**
+     * Set the class holding table information
+     * 
+     * @param databasePersistence
+     */
+    public void setDatabasePersistence(DatabasePersistence databasePersistence)
+    {
+        this.databasePersistence = databasePersistence;
     }
 
     /**
@@ -182,51 +199,45 @@ public abstract class JobDAO implements JobPersistence
      */
     public Job getJob(final String jobID)
     {
+        startTransaction();
+        
         // Job for this jobID.
         Job job;
-        try
+        List jobs = jdbc.query(getSelectJobSQL(jobID), new JobMapper());
+        if (jobs.isEmpty())
         {
-            synchronized(this)
-            {
-                List jobs = jdbc.query(getSelectJobSQL(jobID), new JobMapper());
-                if (jobs.isEmpty())
-                {
-                    log.warn("Job not found for query: " + getSelectJobSQL(jobID));
-                    jobs = jdbc.query(getSelectJobSQL(jobID), new JobMapper());
-                }
-                if (jobs.isEmpty())
-                {
-                    log.error("Job not found after (2x) query: " + getSelectJobSQL(jobID));
-                    job = null;
-                }
-                else if (jobs.size() == 1)
-                {
-                    job = (Job) jobs.get(0);
-
-                    // List of Parameters for this jobID.
-                    List<Parameter> parameterList = null;
-                    for (String table : getParameterTables())
-                    {
-                        if (parameterList == null)
-                            parameterList = new ArrayList<Parameter>();
-                        parameterList.addAll(jdbc.query(getSelectParameterSQL(jobID, table), new ParameterMapper()));
-                    }
-                    job.setParameterList(parameterList);
-
-                    // List of Results for this jobID.
-                    job.setResultsList(jdbc.query(getSelectResultSQL(jobID), new ResultMapper()));
-                }
-                else
-                {
-                    throw new IllegalStateException("Multiple jobs with jobID " + jobID);
-                }
-            }
+            log.warn("Job not found for query: " + getSelectJobSQL(jobID));
+            jobs = jdbc.query(getSelectJobSQL(jobID), new JobMapper());
         }
-        finally
+        if (jobs.isEmpty())
         {
+            log.error("Job not found after (2x) query: " + getSelectJobSQL(jobID));
+            job = null;
+        }
+        else if (jobs.size() == 1)
+        {
+            job = (Job) jobs.get(0);
 
+            // List of Parameters for this jobID.
+            List<Parameter> parameterList = null;
+            for (String table : databasePersistence.getParameterTables())
+            {
+                if (parameterList == null)
+                    parameterList = new ArrayList<Parameter>();
+                parameterList.addAll(jdbc.query(getSelectParameterSQL(jobID, table), new ParameterMapper()));
+            }
+            job.setParameterList(parameterList);
+
+            // List of Results for this jobID.
+            job.setResultsList(jdbc.query(getSelectResultSQL(jobID), new ResultMapper()));
+        }
+        else
+        {
+            throw new IllegalStateException("Multiple jobs with jobID " + jobID);
         }
         log.debug("getJob jobID = " + jobID);
+        
+        commitTransaction();
         return job;
     }
 
@@ -238,11 +249,10 @@ public abstract class JobDAO implements JobPersistence
     public void delete(String jobID)
     {
         // Delete the Job by setting the deletedByUser field to true.
-        synchronized(this)
-        {
-            jdbc.update(getUpdateJobDeletedSQL(jobID));
-        }
+        startTransaction();
+        jdbc.update(getUpdateJobDeletedSQL(jobID));
         log.debug("delete jobID = " + jobID);
+        commitTransaction();
     }
 
     /**
@@ -265,109 +275,87 @@ public abstract class JobDAO implements JobPersistence
     public Job persist(final Job job)
     {
         Job ret = null;
-        String jobID = job.getID();
-        synchronized(this)
+        try
         {
-            try
+
+            // Start the transaction.
+            startTransaction();
+            
+            // Insert Job, catching any possible errors due to constraint violations.
+            int attempts = 0;
+            boolean done = false;
+            while (!done)
             {
-
-                // Start the transaction.
-                startTransaction();
-
-                // If Job exists, i.e. has a jobID, then delete the current Job
-                // and any Parameter's and Result's for the Job.
-                if (job.getID() != null)
+                try
                 {
-                    // Delete all the Parameter's for the Job.
-                    for (String table : getParameterTables())
-                        jdbc.update(getDeleteParameterSQL(job.getID(), table));
+                    // If Job exists, i.e. has a jobID, then update the current Job
+                    // and any Parameter's and Result's for the Job.
+                    if (job.getID() != null)
+                    {
+                        
+                        ret = job;
+                        
+                        // Delete the Job.
+                        jdbc.update(getUpdateJobSQL(job));
+                        
+                        // Delete all the Parameters for the Job.
+                        for (String table : databasePersistence.getParameterTables())
+                            jdbc.update(getDeleteParameterSQL(job.getID(), table));
 
-                    // Delete all the Result's for the Job.
-                    jdbc.update(getDeleteResultSQL(job.getID()));
+                        // Delete all the Results for the Job.
+                        jdbc.update(getDeleteResultSQL(job.getID()));
+                        
+                        // Add the Job Parameters.
+                        for (Parameter parameter : job.getParameterList())
+                            jdbc.update(getInsertParameterSQL(job.getID(), parameter));
 
-                    // Delete the Job.
-                    jdbc.update(getDeleteJobSQL(job.getID()));
-                }
-
-                // Insert Job, catching any possible errors due to constraint violations.
-                int attempts = 0;
-                boolean done = false;
-                while (!done)
-                {
-                    try
+                        // Add the Job Results.
+                        for (Result result : job.getResultsList())
+                            jdbc.update(getInsertResultSQL(job.getID(), result));
+                        
+                        done = true;
+                    }
+                    else
                     {
                         // Create new Job to persist.
-                        if (job.getID() == null)
-                            ret = new Job(generateID(), job);
-                        else
-                            ret = job;
-                        jobID = job.getID();
+                        ret = new Job(generateID(), job);
                         
                         // Add a new Job.
                         jdbc.update(getInsertJobSQL(ret));
 
-                        // Add the Job Parameter's.
+                        // Add the Job Parameters.
                         for (Parameter parameter : job.getParameterList())
                             jdbc.update(getInsertParameterSQL(ret.getID(), parameter));
 
-                        // Add the Job Result's.
+                        // Add the Job Results.
                         for (Result result : job.getResultsList())
                             jdbc.update(getInsertResultSQL(ret.getID(), result));
 
                         done = true;
                     }
-                    catch (DataAccessException e)
-                    {
-                        log.error(e);
-                        attempts++;
-                        if (attempts == MAX_INSERT_ATTEMPTS)
-                            throw new JobPersistenceException(e.getMessage());
-                    }
                 }
-
-                // Commit the transaction.
-                commitTransaction();
-                log.debug("persist jobID = " + ret.getID());
-
-                return ret;
+                catch (DataAccessException e)
+                {
+                    log.error(e);
+                    attempts++;
+                    if (attempts == MAX_INSERT_ATTEMPTS)
+                        throw new JobPersistenceException(e.getMessage());
+                }
             }
-            catch (Throwable t)
-            {
-                rollbackTransaction();
-                log.error("persist rollback jobID = " + job.getID(), t);
-                return null;
-            }
+
+            // Commit the transaction.
+            commitTransaction();
+            log.debug("persist jobID = " + ret.getID());
+
+            return ret;
+        }
+        catch (Throwable t)
+        {
+            rollbackTransaction();
+            log.error("persist rollback jobID = " + job.getID(), t);
+            return null;
         }
     }
-
-    /**
-     * Returns the name of the Job table.
-     *
-     * @return job table name.
-     */
-    protected abstract String getJobTable();
-
-    /**
-     * Returns the name of the Parameter table for the given Parameter name.
-     *
-     * @param name Parameter name.
-     * @return Parameter table name for this Parameter name.
-     */
-    protected abstract String getParameterTable(String name);
-
-    /**
-     * Returns the name of the Result table.
-     * 
-     * @return Result table name.
-     */
-    protected abstract String getResultTable();
-
-    /**
-     * Returns a List containing the names of all Parameter tables.
-     *
-     * @return List of Parameter table names.
-     */
-    protected abstract List<String> getParameterTables();
 
     /**
      * Builds the SQL to persist the specified Job.
@@ -379,7 +367,7 @@ public abstract class JobDAO implements JobPersistence
     {
         StringBuilder sb = new StringBuilder();
         sb.append("insert into ");
-        sb.append(getJobTable());
+        sb.append(databasePersistence.getJobTable());
         sb.append(" (");
         sb.append("jobID,");
         sb.append("executionPhase,");
@@ -508,6 +496,165 @@ public abstract class JobDAO implements JobPersistence
         sb.append(")");
         return sb.toString();
     }
+    
+    /**
+     * Builds the SQL to update the specified Job.
+     *
+     * @param job Job being updated.
+     * @return SQL to persist the Job.
+     */
+    protected String getUpdateJobSQL(final Job job)
+    {
+        StringBuilder sb = new StringBuilder();
+        sb.append("update ");
+        sb.append(databasePersistence.getJobTable());
+        sb.append(" set ");
+        
+        sb.append("executionPhase = '");
+        sb.append(job.getExecutionPhase().name());
+        sb.append("', ");
+        
+        sb.append("executionDuration = ");
+        sb.append(job.getExecutionDuration());
+        sb.append(", ");
+        
+        sb.append("destructionTime = ");
+        if (job.getDestructionTime() == null)
+        {
+            sb.append("NULL");
+        }
+        else
+        {
+            sb.append("'");
+            sb.append(DateUtil.toString(job.getDestructionTime(), DateUtil.ISO_DATE_FORMAT, DateUtil.UTC));
+            sb.append("'");
+        }
+        sb.append(", ");
+        
+        sb.append("quote = ");
+        
+        if (job.getQuote() == null)
+        {
+            sb.append("NULL");
+        }
+        else
+        {
+            sb.append("'");
+            sb.append(DateUtil.toString(job.getQuote(), DateUtil.ISO_DATE_FORMAT, DateUtil.UTC));
+            sb.append("'");
+        }
+        sb.append(", ");
+        
+        sb.append("startTime = ");
+        if (job.getStartTime() == null)
+        {
+            sb.append("NULL");
+        }
+        else
+        {
+            sb.append("'");
+            sb.append(DateUtil.toString(job.getStartTime(), DateUtil.ISO_DATE_FORMAT, DateUtil.UTC));
+            sb.append("'");
+        }
+        sb.append(", ");
+        
+        sb.append("endTime = ");
+        if (job.getEndTime() == null)
+        {
+            sb.append("NULL");
+        }
+        else
+        {
+            sb.append("'");
+            sb.append(DateUtil.toString(job.getEndTime(), DateUtil.ISO_DATE_FORMAT, DateUtil.UTC));
+            sb.append("'");
+        }
+        sb.append(", ");
+        
+        sb.append("error_summaryMessage = ");
+        if (job.getErrorSummary() == null)
+        {
+            sb.append("NULL");
+        }
+        else
+        {
+            if (job.getErrorSummary().getSummaryMessage() == null)
+            {
+                sb.append("NULL");
+            }
+            else
+            {
+                sb.append("'");
+                sb.append(NetUtil.encode(job.getErrorSummary().getSummaryMessage()));
+                sb.append("'");
+            }
+        }
+        sb.append(", ");
+        
+        sb.append("error_documentURL = ");
+        if (job.getErrorSummary() == null)
+        {
+            sb.append("NULL");
+        }
+        else
+        {
+            if (job.getErrorSummary().getDocumentURL() == null)
+            {
+                sb.append("NULL");
+            }
+            else
+            {
+                sb.append("'");
+                sb.append(NetUtil.encode(job.getErrorSummary().getDocumentURL().toString()));
+                sb.append("'");
+            }
+        }
+        sb.append(", ");
+        
+        sb.append("owner = ");
+        if (job.getOwner() == null)
+            sb.append("NULL");
+        else
+        {
+            String owner = AuthenticationUtil.encodeSubject(job.getOwner());
+            if (owner.length() == 0)
+                sb.append("NULL");
+            else
+            {
+                sb.append("'");
+                sb.append(owner);
+                sb.append("'");
+            }
+        }
+        sb.append(", ");
+        
+        sb.append("runID = ");
+        if (job.getRunID() == null)
+            sb.append("NULL");
+        else
+        {
+            sb.append("'");
+            sb.append(NetUtil.encode(job.getRunID()));
+            sb.append("'");
+        }
+        sb.append(", ");
+        
+        sb.append("requestPath = ");
+        if (job.getRequestPath() == null)
+            sb.append("NULL");
+        else
+        {
+            sb.append("'");
+            sb.append(job.getRequestPath());
+            sb.append("'");
+        }
+        
+        sb.append(" where jobID = '");
+        sb.append(job.getID());
+        sb.append("'");
+ 
+        return sb.toString();
+    }
 
     /**
      * Returns the SQL to persist the specified Parameter in the Job specified
@@ -521,7 +668,7 @@ public abstract class JobDAO implements JobPersistence
     {
         StringBuilder sb = new StringBuilder();
         sb.append("insert into ");
-        sb.append(getParameterTable(parameter.getName()));
+        sb.append(databasePersistence.getParameterTable(parameter.getName()));
         sb.append(" (jobID, name, value) values ('");
         sb.append(jobID);
         sb.append("','");
@@ -553,7 +700,7 @@ public abstract class JobDAO implements JobPersistence
     {
         StringBuilder sb = new StringBuilder();
         sb.append("insert into ");
-        sb.append(getResultTable());
+        sb.append(databasePersistence.getResultTable());
         sb.append(" (jobID, name, url, primaryResult) values ('");
         sb.append(jobID);
         sb.append("','");
@@ -585,7 +732,7 @@ public abstract class JobDAO implements JobPersistence
     {
         StringBuilder sb = new StringBuilder();
         sb.append("select * from ");
-        sb.append(getJobTable());
+        sb.append(databasePersistence.getJobTable());
         sb.append(" where deletedByUser = 0 and jobID = '");
         sb.append(jobID);
         sb.append("'");
@@ -602,7 +749,7 @@ public abstract class JobDAO implements JobPersistence
      */
     protected String getSelectParameterSQL(final String jobID, final String table)
     {
-        List<String> tables = getParameterTables();
+        List<String> tables = databasePersistence.getParameterTables();
         StringBuilder sb = new StringBuilder();
         sb.append("select * from ");
         sb.append(table);
@@ -622,7 +769,7 @@ public abstract class JobDAO implements JobPersistence
     {
         StringBuilder sb = new StringBuilder();
         sb.append("select * from ");
-        sb.append(getResultTable());
+        sb.append(databasePersistence.getResultTable());
         sb.append(" where jobID = '");
         sb.append(jobID);
         sb.append("'");
@@ -640,7 +787,7 @@ public abstract class JobDAO implements JobPersistence
     {
         StringBuilder sb = new StringBuilder();
         sb.append("delete from ");
-        sb.append(getJobTable());
+        sb.append(databasePersistence.getJobTable());
         sb.append(" where jobID = '");
         sb.append(jobID);
         sb.append("'");
@@ -676,7 +823,7 @@ public abstract class JobDAO implements JobPersistence
     {
         StringBuilder sb = new StringBuilder();
         sb.append("delete from ");
-        sb.append(getResultTable());
+        sb.append(databasePersistence.getResultTable());
         sb.append(" where jobID = '");
         sb.append(jobID);
         sb.append("'");
@@ -693,7 +840,7 @@ public abstract class JobDAO implements JobPersistence
     {
         StringBuilder sb = new StringBuilder();
         sb.append("update ");
-        sb.append(getJobTable());
+        sb.append(databasePersistence.getJobTable());
         sb.append(" set deletedByUser = 1 ");
         sb.append(" where jobID = '");
         sb.append(jobID);
