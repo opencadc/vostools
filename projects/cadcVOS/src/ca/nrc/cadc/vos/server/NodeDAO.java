@@ -154,7 +154,7 @@ public abstract class NodeDAO implements NodePersistence
     {
         this.defaultTransactionDef = new DefaultTransactionDefinition();
         defaultTransactionDef
-                .setIsolationLevel(DefaultTransactionDefinition.ISOLATION_READ_COMMITTED);
+                .setIsolationLevel(DefaultTransactionDefinition.ISOLATION_REPEATABLE_READ);
         DataSource dataSource = getDataSource();
         this.jdbc = new JdbcTemplate(dataSource);
         this.transactionManager = new DataSourceTransactionManager(dataSource);
