@@ -1,7 +1,5 @@
 package ca.nrc.cadc.vos.server;
 
-import ca.nrc.cadc.vos.server.TestPersistence;
-import ca.nrc.cadc.vos.server.NodeDAO;
 import java.sql.Connection;
 import java.sql.PreparedStatement;
 
@@ -12,6 +10,7 @@ import org.junit.After;
 public abstract class AbstractPersistenceTest implements TestPersistence
 {
 
+    protected DataSource dataSource;
     protected NodeDAO nodeDAO;
     protected String runId;
     protected Connection connection;
@@ -57,10 +56,10 @@ public abstract class AbstractPersistenceTest implements TestPersistence
     
     public void commonBefore() throws Exception
     {
-        DataSource dataSource = getDataSource();
+        dataSource = getDataSource();
         nodeDAO = getNodeDAO(dataSource);
         connection = dataSource.getConnection();
-        runId = "NodePersistenceTest" + System.currentTimeMillis();
+        runId = this.getClass().getSimpleName() + System.currentTimeMillis();
     }
     
     @After

@@ -308,16 +308,6 @@ public abstract class NodeDAOTest extends AbstractPersistenceTest
         properties1.removeAll(propertyIgnoreList);
         properties2.removeAll(propertyIgnoreList);
         
-        
-        for (NodeProperty list1property : properties1)
-        {
-            System.out.println("^^^^^^^^^^1: " + list1property.getPropertyURI());
-        }
-        for (NodeProperty list2property : properties2)
-        {
-            System.out.println("^^^^^^^^^^2: " + list2property.getPropertyURI());
-        }
-        
         if (properties1.size() != properties2.size())
         {
             assertTrue(assertName + " property list sizes different", false);

@@ -134,6 +134,8 @@
             <include name="**/server/AbstractPersistenceTest.class" />
             <include name="**/server/VOSpaceFileMetadataSourceTest.class" />
             <include name="**/server/NodeDAOTest.class" />
+            <include name="**/server/NodeDAOLoadTest.class" />
+            <include name="**/server/NodeDAOLoadTest$LoadTestRunner.class" />
             <include name="Views.properties" />
         </jar>
     </target>
