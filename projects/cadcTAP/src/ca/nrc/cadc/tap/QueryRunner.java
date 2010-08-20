@@ -108,8 +108,8 @@ import javax.naming.NameNotFoundException;
  * servlet configurations from cadcUWS.
  * </p><p>
  * This class dynamically loads and uses implementation classes as described in the
- * package documentation. This allows one to control the behavoour of several key components:
- * query processing, upload support, and qwriting the result-set to the output file format.
+ * package documentation. This allows one to control the behavior of several key components:
+ * query processing, upload support, and writing the result-set to the output file format.
  * </p><p>
  * In addition, this class uses JDNI to find <code>java.sql.DataSource</code> instances for 
  * executing database statements. 
@@ -139,6 +139,7 @@ public class QueryRunner implements JobRunner
 
     // names of plugin classes that must be provided by service implementation
     private static String fileStoreClassName = "ca.nrc.cadc.tap.impl.FileStoreImpl";
+    private static String resultStoreImplClassName = "ca.nrc.cadc.tap.impl.ResultStoreImpl";
     private static String uploadManagerClassName = "ca.nrc.cadc.tap.impl.UploadManagerImpl";
     private static String sqlParserClassName = "ca.nrc.cadc.tap.impl.SqlQueryImpl";
     private static String adqlParserClassName = "ca.nrc.cadc.tap.impl.AdqlQueryImpl";
@@ -203,8 +204,23 @@ public class QueryRunner implements JobRunner
         }
         catch (Throwable t)
         {
-            logger.error("Failed to instantiate FileStore class: " + fileStoreClassName, t);
-            return;
+            logger.debug("Failed to instantiate FileStore class: " + fileStoreClassName, t);
+        }
+
+        logger.debug("loading " + resultStoreImplClassName);
+        ResultStore rs = null;
+        try
+        {
+            rs = (ResultStore) Class.forName(resultStoreImplClassName).newInstance();
+        }
+        catch (Throwable t)
+        {
+            logger.debug("Failed to instantiate ResultStore class: " + resultStoreImplClassName, t);
+        }
+
+        if (fs == null && rs == null)
+        {
+            throw new RuntimeException("Failed to instantiate a FileStore or ResultStore class");
         }
 
         try
@@ -219,8 +235,11 @@ public class QueryRunner implements JobRunner
             // start processing the job
             List<Parameter> paramList = job.getParameterList();
 
-            fs.setJobID(jobID);
-            fs.setParameterList(paramList);
+            if (rs == null)
+            {
+                fs.setJobID(jobID);
+                fs.setParameterList(paramList);
+            }
 
             logger.debug("invoking TapValiator for REQUEST and VERSION...");
             TapValidator tapValidator = new TapValidator();
@@ -280,7 +299,6 @@ public class QueryRunner implements JobRunner
             {
                 Class c = Class.forName(maxrecValidatorClassName);
                 maxRecValidator = (MaxRecValidator) c.newInstance();
-
             }
             catch (Throwable ignore)
             {
@@ -291,14 +309,17 @@ public class QueryRunner implements JobRunner
             logger.debug("invoking TapValidator to get LANG...");
             String lang = tapValidator.getLang();
             String cname = langQueries.get(lang);
-            if (cname == null) throw new UnsupportedOperationException("unknown LANG: " + lang);
+            if (cname == null)
+                throw new UnsupportedOperationException("unknown LANG: " + lang);
+
             logger.debug("loading TapQuery " + cname);
             Class tqc = Class.forName(cname);
             TapQuery tapQuery = (TapQuery) tqc.newInstance();
             tapQuery.setTapSchema(tapSchema);
             tapQuery.setExtraTables(tableDescs);
             tapQuery.setParameterList(paramList);
-            if (maxRows != null) tapQuery.setMaxRowCount(maxRows + 1); // +1 so the TableWriter can detect overflow
+            if (maxRows != null)
+                tapQuery.setMaxRowCount(maxRows + 1); // +1 so the TableWriter can detect overflow
 
             logger.debug("invoking TapQuery...");
             String sql = tapQuery.getSQL();
@@ -310,15 +331,17 @@ public class QueryRunner implements JobRunner
             writer.setSelectList(selectList);
             writer.setJobID(jobID);
             writer.setParameterList(paramList);
-            if (maxRows != null) writer.setMaxRowCount(maxRows);
+            if (maxRows != null)
+                writer.setMaxRowCount(maxRows);
 
             tList.add(System.currentTimeMillis());
             sList.add("parse/convert query: ");
 
             Connection connection = null;
             PreparedStatement pstmt = null;
-            ResultSet rs = null;
+            ResultSet resultSet = null;
             File tmpFile = null;
+            URL url = null;
             try
             {
                 if (maxRows == null || maxRows.intValue() > 0)
@@ -335,7 +358,7 @@ public class QueryRunner implements JobRunner
                     pstmt.setFetchDirection(ResultSet.FETCH_FORWARD);
                     
                     logger.info("executing query: " + sql);
-                    rs = pstmt.executeQuery();
+                    resultSet = pstmt.executeQuery();
                 }
 
                 tList.add(System.currentTimeMillis());
@@ -343,25 +366,45 @@ public class QueryRunner implements JobRunner
 
                 // TODO if checking for abort was fast, check it here and save writing and storing
 
-                tmpFile = new File(fs.getStorageDir(), "result_" + job.getID() + "." + writer.getExtension());
-                logger.debug("writing ResultSet to " + tmpFile);
-                OutputStream ostream = new FileOutputStream(tmpFile);
-                writer.write(rs, ostream);
-
-
-
-                try
+                String filename = "result_" + job.getID() + "." + writer.getExtension();
+                if (rs != null)
                 {
-                    ostream.close();
+                    logger.debug("setting ResultStore filename: " + filename);
+                    rs.setFilename("public_" + filename);
+                    rs.setContentType("text/xml");
                 }
-                catch (Throwable ignore)
+                else
                 {
-                }
+                    tmpFile = new File(fs.getStorageDir(), filename);
+                    logger.debug("writing ResultSet to " + tmpFile);
+                    OutputStream ostream = new FileOutputStream(tmpFile);
+                    writer.write(resultSet, ostream);
+                    tList.add(System.currentTimeMillis());
+                    sList.add("store tmp file with FileStore: ");
 
-                tList.add(System.currentTimeMillis());
-                sList.add("write ResultSet to tmp file: ");
+                    try
+                    {
+                        ostream.close();
+                    }
+                    catch (Throwable ignore)
+                    {
+                    }
+                    tList.add(System.currentTimeMillis());
+                    sList.add("write ResultSet to tmp file: ");
+                }
 
                 logger.debug("executing query... [OK]");
+
+                if (rs != null)
+                {
+                    logger.debug("storing results with ResultStore...");
+                    url = rs.put(resultSet, writer);
+                }
+                else
+                {
+                    logger.debug("storing results with FileStore...");
+                    url = fs.put(tmpFile);
+                }
             }
             catch (SQLException ex)
             {
@@ -379,7 +422,7 @@ public class QueryRunner implements JobRunner
                     catch(Throwable ignore) { }
                     try
                     {
-                        rs.close();
+                        resultSet.close();
                     }
                     catch (Throwable ignore) { }
                     try
@@ -394,12 +437,6 @@ public class QueryRunner implements JobRunner
                     catch (Throwable ignore) { }
                 }
             }
-
-            logger.debug("storing results with FileStore...");
-            URL url = fs.put(tmpFile);
-
-            tList.add(System.currentTimeMillis());
-            sList.add("store tmp file with FileStore: ");
 
             Result res = new Result("result", url);
             List<Result> results = new ArrayList<Result>();
@@ -432,20 +469,30 @@ public class QueryRunner implements JobRunner
                 errorMessage = t.getClass().getSimpleName() + ":" + t.getMessage();
                 logger.debug("Error message: " + errorMessage);
                 VOTableWriter writer = new VOTableWriter();
-                File errorFile = new File(fs.getStorageDir(), "error_" + job.getID() + "." + writer.getExtension());
-                logger.debug("Error file: " + errorFile.getAbsolutePath());
-                FileOutputStream errorOutput = new FileOutputStream(errorFile);
-                writer.write(t, errorOutput);
-                errorOutput.close();
+                if (rs != null)
+                {
+                    rs.put(t, writer);
 
-                tList.add(System.currentTimeMillis());
-                sList.add("write error to tmp file: ");
+                    tList.add(System.currentTimeMillis());
+                    sList.add("store Throwable with ResultStore ");
+                }
+                else
+                {
+                    File errorFile = new File(fs.getStorageDir(), "error_" + job.getID() + "." + writer.getExtension());
+                    logger.debug("Error file: " + errorFile.getAbsolutePath());
+                    FileOutputStream errorOutput = new FileOutputStream(errorFile);
+                    writer.write(t, errorOutput);
+                    errorOutput.close();
 
-                errorURL = fs.put(errorFile);
+                    tList.add(System.currentTimeMillis());
+                    sList.add("write error to tmp file: ");
 
-                tList.add(System.currentTimeMillis());
-                sList.add("store error file with FileStore ");
+                    errorURL = fs.put(errorFile);
 
+                    tList.add(System.currentTimeMillis());
+                    sList.add("store error file with FileStore ");
+                }
+                
                 logger.debug("Error URL: " + errorURL);
                 // check job state, TODO optimise this
                 this.job = manager.getJob(jobID);

@@ -8,7 +8,7 @@
 *  National Research Council            Conseil national de recherches
 *  Ottawa, Canada, K1A 0R6              Ottawa, Canada, K1A 0R6
 *  All rights reserved                  Tous droits réservés
-*                                       
+*
 *  NRC disclaims any warranties,        Le CNRC dénie toute garantie
 *  expressed, implied, or               énoncée, implicite ou légale,
 *  statutory, of any kind with          de quelque nature que ce
@@ -31,10 +31,10 @@
 *  software without specific prior      de ce logiciel sans autorisation
 *  written permission.                  préalable et particulière
 *                                       par écrit.
-*                                       
+*
 *  This file is part of the             Ce fichier fait partie du projet
 *  OpenCADC project.                    OpenCADC.
-*                                       
+*
 *  OpenCADC is free software:           OpenCADC est un logiciel libre ;
 *  you can redistribute it and/or       vous pouvez le redistribuer ou le
 *  modify it under the terms of         modifier suivant les termes de
@@ -44,7 +44,7 @@
 *  either version 3 of the              : soit la version 3 de cette
 *  License, or (at your option)         licence, soit (à votre gré)
 *  any later version.                   toute version ultérieure.
-*                                       
+*
 *  OpenCADC is distributed in the       OpenCADC est distribué
 *  hope that it will be useful,         dans l’espoir qu’il vous
 *  but WITHOUT ANY WARRANTY;            sera utile, mais SANS AUCUNE
@@ -54,7 +54,7 @@
 *  PURPOSE.  See the GNU Affero         PARTICULIER. Consultez la Licence
 *  General Public License for           Générale Publique GNU Affero
 *  more details.                        pour plus de détails.
-*                                       
+*
 *  You should have received             Vous devriez avoir reçu une
 *  a copy of the GNU Affero             copie de la Licence Générale
 *  General Public License along         Publique GNU Affero avec
@@ -69,47 +69,53 @@
 
 package ca.nrc.cadc.tap;
 
-import ca.nrc.cadc.uws.Parameter;
-import java.io.File;
+import ca.nrc.cadc.tap.writer.VOTableWriter;
+import java.io.IOException;
 import java.net.URL;
-import java.util.List;
+import java.sql.ResultSet;
 
 /**
- * Interface to temporary storage of result or error files.
+ * Interface to store a result set or error message.
  *
- * @deprecated
- * @author pdowler
+ * @author jburke
  */
-public interface FileStore
+public interface ResultStore
 {
     /**
-     * Set the jobID.  This is here to allow implementations to add the jobID to
-     * output filenames or logging.
-     *
-     * @deprecated
-     * @param jobID
+     * Store the ResultSet and returns an
+     * URL to the stored file.
+     * @param rs ResultSet to store.
+     * @param writer TableWriter.
+     * @return an URL to the stored ResultSet.
+     * @throws IOException
      */
-    public void setJobID(String jobID);
+    URL put(ResultSet rs, TableWriter writer)
+        throws IOException;
 
     /**
-     * The complete list of job parameters. This is here to allow implementations to
-     * provide custom extensions such as client control of the output.
+     * Stores the Throwable as a VOTable, and returns an
+     * URL to the stored file.
      *
-     * @deprecated
-     * @param params
+     * @param t Throwable to store.
+     * @param writer VOTableWriter.
+     * @return an URL to the stored Throwable.
+     * @throws IOException
      */
-    public void setParameterList(List<Parameter> params);
+    URL put(Throwable t, VOTableWriter writer)
+        throws IOException;
 
     /**
-     * @deprecated
-     * @return the directory to use for (temporary) result files.
+     * Set the content type of the stored file.
+     *
+     * @param contentType format of the stored
      */
-    public File getStorageDir();
-    
+    void setContentType(String contentType);
+
     /**
-     * @deprecated
-     * @param file the result/error file
-     * @return an absolute URL to the specified file
+     * Set the name of the stored file.
+     *
+     * @param filename name for the stored file.
      */
-	public URL put( File file );
+    void setFilename(String filename);
+
 }
