@@ -94,7 +94,9 @@ public class UserMembershipReaderTest
     static User user;
     static String userXML;
     static final String GR1 = "11111";
+    static final String GR1Name = "gr1name";
     static final String GR2 = "22222";
+    static final String GR2Name = "gr2name";
     
     public UserMembershipReaderTest() {}
 
@@ -102,14 +104,14 @@ public class UserMembershipReaderTest
     public static void setUpClass() throws Exception
     {
         user = new UserImpl("memberId", "username");
-        user.addMembership(new GroupImpl(GR1));
-        user.addMembership(new GroupImpl(GR2));
+        user.addMembership(new GroupImpl(GR1, GR1Name));
+        user.addMembership(new GroupImpl(GR2, GR2Name));
 
         StringBuilder sb = new StringBuilder();
         sb.append("<user id=\"memberId\">");
         sb.append("<username>username</username>");
-        sb.append("<group id=\"" + GR1 + "\" />" );
-        sb.append("<group id=\"" + GR2 + "\" />" );
+        sb.append("<group uri=\"" + GR1 + "\" name=\"" + GR1Name + "\" />" );
+        sb.append("<group uri=\"" + GR2 + "\" name=\"" + GR2Name + "\" />" );
         sb.append("</user>");
         userXML = sb.toString();
     }

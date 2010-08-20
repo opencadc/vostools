@@ -108,11 +108,11 @@ private static Logger log = Logger.getLogger(GroupWriterTest.class);
     {
         XMLUnit.setIgnoreWhitespace(true);
 
-        group = new GroupImpl("groupId");
+        group = new GroupImpl("groupId", "groupName");
         group.addMember(new UserImpl("memberId", "username"));
 
         StringBuilder sb = new StringBuilder();
-        sb.append("<group id=\"groupId\">");
+        sb.append("<group uri=\"groupId\" name=\"groupName\">");
         sb.append("<member id=\"memberId\">");
         sb.append("<username>username</username>");
         sb.append("</member>");
@@ -166,8 +166,10 @@ private static Logger log = Logger.getLogger(GroupWriterTest.class);
             Element groupElement = GroupWriter.getGroupElement(group);
 
             assertTrue(groupElement.getName().equals("group"));
-            assertNotNull(groupElement.getAttribute("id"));
-            assertTrue(groupElement.getAttributeValue("id").equals("groupId"));
+            assertNotNull(groupElement.getAttribute("uri"));
+            assertTrue(groupElement.getAttributeValue("uri").equals("groupId"));
+            assertNotNull(groupElement.getAttribute("name"));
+            assertTrue(groupElement.getAttributeValue("name").equals("groupName"));
 
             List<Element> userElements = groupElement.getChildren("member");
             assertNotNull(userElements);

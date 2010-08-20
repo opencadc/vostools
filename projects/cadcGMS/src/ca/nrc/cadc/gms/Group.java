@@ -80,6 +80,13 @@ public interface Group
      * @return      String group ID.
      */
     String getGMSGroupID();
+    
+    /**
+     * Obtain this Group's name.
+     * 
+     * @return      String group name.
+     */
+    String getGMSGroupName();
 
     /**
      * Add the given User as a member of this Group.

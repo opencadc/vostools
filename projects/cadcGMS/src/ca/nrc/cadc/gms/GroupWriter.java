@@ -137,7 +137,9 @@ public class GroupWriter
         // Create the root group element.
         Element groupElement = new Element("group");
         String groupID = group.getGMSGroupID() == null ? "" : group.getGMSGroupID();
-        groupElement.setAttribute("id", groupID);
+        String groupName = group.getGMSGroupName() == null ? "" : group.getGMSGroupName();
+        groupElement.setAttribute("uri", groupID);
+        groupElement.setAttribute("name", groupName);
 
         // Add the Group's Users.
         for (User user : group.getMembers())

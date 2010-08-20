@@ -204,10 +204,10 @@ public class UserMembershipReader
 
             // id attribute of the Group element
             String grid = group
-                    .getAttributeValue(UserMembershipWriter.groupElementID);
+                    .getAttributeValue(UserMembershipWriter.groupElementURI);
             if (grid == null)
             {
-                String error = "id attribute not found in group element";
+                String error = "uri attribute not found in group element";
                 throw new ReaderException(error);
             }
             Group gr = new GroupImpl(grid);

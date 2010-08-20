@@ -90,7 +90,8 @@ public class UserMembershipWriter
     protected final static String userElementID = "id";
     protected final static String userElementName = "username";
     protected final static String groupElementStr = "group";
-    protected final static String groupElementID = "id";
+    protected final static String groupElementURI = "uri";
+    protected final static String groupElementName = "name";
     
     
     public UserMembershipWriter() {}
@@ -162,7 +163,9 @@ public class UserMembershipWriter
             // Create the root group element.
             Element groupElement = new Element(groupElementStr);
             String groupID = group.getGMSGroupID();
-            groupElement.setAttribute(groupElementID, groupID);
+            groupElement.setAttribute(groupElementURI, groupID);
+            String groupName = group.getGMSGroupName();
+            groupElement.setAttribute(groupElementName, groupName);
             
             userElement.addContent(groupElement);
         }

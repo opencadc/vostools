@@ -77,6 +77,7 @@ import java.util.HashSet;
 public class GroupImpl implements Group
 {
     private String groupID;
+    private String groupName;
     private Collection<User> members;
 
 
@@ -99,15 +100,37 @@ public class GroupImpl implements Group
         this.groupID = groupID;
     }
     
+    /**
+     * Full constructor.
+     *
+     * @param groupID       The new Group ID, if already generated/known.
+     */
+    public GroupImpl(final String groupID, final String groupName)
+    {
+        this();
+        this.groupID = groupID;
+        this.groupName = groupName;
+    }
+    
 
     /**
      * Obtain this Group's unique identifier.
      *
-     * @return long group ID.
+     * @return String group ID.
      */
     public String getGMSGroupID()
     {
         return groupID;
+    }
+    
+    /**
+     * Obtain this Group's name.
+     * 
+     * @return String group name.
+     */
+    public String getGMSGroupName()
+    {
+        return groupName;
     }
 
     /**
