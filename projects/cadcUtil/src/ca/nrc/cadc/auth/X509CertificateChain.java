@@ -71,7 +71,9 @@ package ca.nrc.cadc.auth;
 import java.security.PrivateKey;
 import java.security.cert.X509Certificate;
 import java.util.Collection;
+
 import javax.security.auth.x500.X500Principal;
+
 import org.apache.log4j.Logger;
 
 /**
@@ -105,7 +107,7 @@ public class X509CertificateChain
         initPrincipal();
     }
 
-    public X500Principal getpX500Principal() { return principal; }
+    public X500Principal getX500Principal() { return principal; }
     
     public X509Certificate[] getChain() { return chain; }
 
@@ -129,7 +131,9 @@ public class X509CertificateChain
             }
             else
                 this.principal = sp;
+            
         }
+        this.principal = new X500Principal(principal.getName());
         log.debug("principal: " + principal.getName(X500Principal.RFC1779));
     }
 }

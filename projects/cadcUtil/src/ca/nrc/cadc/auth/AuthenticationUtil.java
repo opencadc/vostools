@@ -69,8 +69,6 @@
 
 package ca.nrc.cadc.auth;
 
-import ca.nrc.cadc.net.NetUtil;
-
 import java.lang.reflect.Constructor;
 import java.security.Principal;
 import java.security.PrivateKey;
@@ -80,11 +78,14 @@ import java.util.Collection;
 import java.util.HashSet;
 import java.util.Iterator;
 import java.util.Set;
+
 import javax.security.auth.Subject;
 import javax.security.auth.x500.X500Principal;
 import javax.servlet.http.HttpServletRequest;
 
 import org.apache.log4j.Logger;
+
+import ca.nrc.cadc.net.NetUtil;
 
 
 
@@ -203,7 +204,7 @@ public class AuthenticationUtil
         // SSL authentication
         if (chain != null)
         {
-            principals.add(chain.getpX500Principal());
+            principals.add(chain.getX500Principal());
             publicCred.add(chain);
             // note: we just leave the PrivateKey in the chain (eg public) rather
             // than extracting and putting it into the privateCred set... TBD
@@ -304,8 +305,13 @@ public class AuthenticationUtil
         {
             if (p2 instanceof X500Principal)
             {
+                
                 X500Principal x1 = (X500Principal) p1;
                 X500Principal x2 = (X500Principal) p2;
+                
+System.out.println("^^^^^^^^^^^BM: compare1: " + x1.getName(X500Principal.CANONICAL));
+System.out.println("^^^^^^^^^^^BM: compare2: " + x2.getName(X500Principal.CANONICAL));
+                
                 return x1.getName(X500Principal.CANONICAL).equals(
                         x2.getName(X500Principal.CANONICAL));
             }
