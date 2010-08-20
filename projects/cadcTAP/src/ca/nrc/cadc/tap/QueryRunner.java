@@ -370,7 +370,7 @@ public class QueryRunner implements JobRunner
                 if (rs != null)
                 {
                     logger.debug("setting ResultStore filename: " + filename);
-                    rs.setFilename("public_" + filename);
+                    rs.setFilename(filename);
                     rs.setContentType("text/xml");
                 }
                 else
