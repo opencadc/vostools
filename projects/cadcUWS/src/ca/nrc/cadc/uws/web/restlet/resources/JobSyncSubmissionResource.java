@@ -140,7 +140,18 @@ public class JobSyncSubmissionResource extends BaseJobResource
         else if (error != null)
         {
             final ErrorSummary errorSummary = job.getErrorSummary();
-            redirectSeeOther(errorSummary.getDocumentURL().toString());
+            if (errorSummary.getDocumentURL() != null)
+                redirectSeeOther(errorSummary.getDocumentURL().toString());
+            else
+            {
+                // redirect back to the job to show the error summary - which
+                // currently does not work either since you cannot get a job
+                // from the /sync endpoint
+                // TODO: should we just write out the errorSummary element?
+                String path = getRequestPath();
+                path = path.replace("/result", "");
+                redirectSeeOther(getHostPart() + path);
+            }
             representation = new EmptyRepresentation();
         }
         else

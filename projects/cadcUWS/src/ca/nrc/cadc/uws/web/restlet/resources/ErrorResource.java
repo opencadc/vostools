@@ -96,10 +96,18 @@ public class ErrorResource extends BaseJobResource
     {
         final ErrorSummary errorSummary = job.getErrorSummary();
 
-        if ((errorSummary != null)
-            && (errorSummary.getDocumentURL() != null))
+        if (errorSummary != null)
         {
-            redirectSeeOther(errorSummary.getDocumentURL().toExternalForm());
+            if (errorSummary.getDocumentURL() != null)
+                redirectSeeOther(errorSummary.getDocumentURL().toExternalForm());
+            else
+            {
+                // redirect back to the job to show the error summary
+                // TODO: should we just write out the errorSummary element?
+                String path = getRequestPath();
+                path = path.replace("/error", "");
+                redirectSeeOther(getHostPart() + path);
+            }
             return null;
         }
         else
