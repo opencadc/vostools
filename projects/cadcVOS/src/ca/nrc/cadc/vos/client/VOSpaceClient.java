@@ -116,7 +116,11 @@ import javax.security.auth.Subject;
 public class VOSpaceClient
 {
     private static Logger log = Logger.getLogger(VOSpaceClient.class);
-    public static final int MAX_NUM_READ_JOB = 8;
+    private static final int MAX_FAST_READ = 10;
+    private static final int MAX_SLOW_READ = 15;
+    private static final long FAST_READ = 10L; // milliseconds
+    private static final long SLOW_READ = 100L; // milliseconds
+    
     public static final String CR = System.getProperty("line.separator"); // OS independant new line
 
     protected String baseUrl;
@@ -565,20 +569,36 @@ public class VOSpaceClient
                 HttpsURLConnection sslConn = (HttpsURLConnection) conn;
                 initHTTPS(sslConn);
             }
+            int code = conn.getResponseCode();
+            if (code != 200)
+                throw new RuntimeException("failed to read transfer job (" + code + "): " + conn.getResponseMessage());
             jobRtn = jobReader.readFrom(conn.getInputStream());
-            log.debug(VOSClientUtil.xmlString(jobRtn));
-            int numTry = MAX_NUM_READ_JOB;
-            while (jobRtn != null && numTry-- > 0 && !jobRtn.getExecutionPhase().equals(ExecutionPhase.COMPLETED)
-                    && !jobRtn.getExecutionPhase().equals(ExecutionPhase.ERROR))
+            log.debug("current job state: " + jobRtn.getExecutionPhase());
+            int numTry = 0;
+            while (numTry++ < MAX_FAST_READ+MAX_SLOW_READ
+                    && !jobRtn.getExecutionPhase().equals(ExecutionPhase.COMPLETED)
+                    && !jobRtn.getExecutionPhase().equals(ExecutionPhase.ERROR)
+                    && !jobRtn.getExecutionPhase().equals(ExecutionPhase.ABORTED) )
             {
+                try 
+                {
+                    if (numTry < MAX_FAST_READ)
+                        Thread.sleep(FAST_READ);
+                    else
+                        Thread.sleep(SLOW_READ);
+                }
+                catch(InterruptedException inter) { break; }
                 conn = (HttpURLConnection) jobUrl.openConnection();
                 if (conn instanceof HttpsURLConnection)
                 {
                     HttpsURLConnection sslConn = (HttpsURLConnection) conn;
                     initHTTPS(sslConn);
                 }
+                code = conn.getResponseCode();
+                if (code != 200)
+                    throw new RuntimeException("failed to read transfer job (" + code + "): " + conn.getResponseMessage());
                 jobRtn = jobReader.readFrom(conn.getInputStream());
-                log.debug(VOSClientUtil.xmlString(jobRtn));
+                log.debug("current job state: " + jobRtn.getExecutionPhase());
             }
 
             if (jobRtn != null && jobRtn.getExecutionPhase().equals(ExecutionPhase.COMPLETED))
@@ -594,6 +614,9 @@ public class VOSpaceClient
                     HttpsURLConnection sslConn = (HttpsURLConnection) conn;
                     initHTTPS(sslConn);
                 }
+                code = conn.getResponseCode();
+                if (code != 200)
+                    throw new RuntimeException("failed to read transfer description (" + code + "): " + conn.getResponseMessage());
                 rtn = txfReader.readFrom(conn.getInputStream());
                 log.debug(rtn.toXmlString());
             }

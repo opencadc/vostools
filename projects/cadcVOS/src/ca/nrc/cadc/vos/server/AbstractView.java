@@ -87,6 +87,7 @@ import ca.nrc.cadc.vos.Node;
 import ca.nrc.cadc.vos.NodeProperty;
 import ca.nrc.cadc.vos.VOS;
 import ca.nrc.cadc.vos.View;
+import java.text.DateFormat;
 
 /**
  * This abstract class defines the required behaviour of server side implementations
@@ -228,7 +229,8 @@ public abstract class AbstractView extends View
         {
             try
             {
-                return DateUtil.toDate(modificationDate.getPropertyValue());
+                DateFormat df = DateUtil.getDateFormat(DateUtil.IVOA_DATE_FORMAT, DateUtil.UTC);
+                return df.parse(modificationDate.getPropertyValue());
             }
             catch (ParseException e)
             {

@@ -68,14 +68,11 @@
  */
 package ca.nrc.cadc.vos.server;
 
-import java.text.ParseException;
 import java.util.Collection;
-import java.util.Date;
 
 import org.apache.log4j.Logger;
 import org.jdom.Element;
 
-import ca.nrc.cadc.date.DateUtil;
 import ca.nrc.cadc.net.NetUtil;
 import ca.nrc.cadc.vos.DataNode;
 import ca.nrc.cadc.vos.Node;
@@ -152,7 +149,7 @@ public class RssFeed
             author.setText(parent.getOwner());
             channel.addContent(author);
         }
-        System.out.println("num nodes: " + nodes.size());
+        log.debug("num nodes: " + nodes.size());
         // Create an item for each Node and add to channel.
         for (Node node : nodes)
         {
@@ -208,16 +205,7 @@ public class RssFeed
             if (nodeDate != null)
             {
                 Element itemPubDate = new Element("pubDate");
-                try
-                {
-                    Date lastModifiedDate = DateUtil.toDate(nodeDate, DateUtil.ISO_DATE_FORMAT, DateUtil.UTC);
-                    itemPubDate.setText(DateUtil.toString(lastModifiedDate, DateUtil.ISO_DATE_FORMAT));
-                }
-                catch (ParseException e)
-                {
-                    log.error(e);
-                    itemPubDate.setText(e.getMessage());
-                }
+                itemPubDate.setText(nodeDate);
                 item.addContent(itemPubDate);
             }
 

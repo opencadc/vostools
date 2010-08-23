@@ -89,12 +89,10 @@
     <property name="cadcUtil" value="${lib}/cadcUtil.jar" />
     <property name="cadcRegistryClient" value="${lib}/cadcRegistryClient.jar" />
     <property name="cadcUWS" value="${lib}/cadcUWS.jar" />
-    <property name="cadcGMS" value="${lib}/cadcGMS.jar" />
-    <property name="cadcDownloadManagerClient" value="${lib}/cadcDownloadManagerClient.jar" />
+    <property name="cadcGMS" value="${lib}/cadcGMSClient.jar" />
     
 
     <property name="ext.restlet" value="${ext.lib}/org.restlet.jar" />
-    <property name="ext.restlet.ext" value="${ext.lib}/org.restlet.ext.servlet.jar" />
     <property name="ext.log4j" value="${ext.lib}/log4j.jar" />
     <property name="ext.spring" value="${ext.lib}/spring.jar" />
     <property name="ext.jdom" value="${ext.lib}/jdom.jar" />
@@ -102,9 +100,9 @@
     <property name="resources.dir" value="test/resources/" />    
     
 
-    <property name="jars" value="${ext.restlet}:${ext.restlet.ext}:${ext.log4j}:${ext.spring}:${ext.jdom}:${cadcUtil}:${cadcRegistryClient}:${cadcUWS}:${cadcGMS}:${cadcDownloadManagerClient}" />
+    <property name="jars" value="${ext.restlet}:${ext.log4j}:${ext.spring}:${ext.jdom}:${cadcUtil}:${cadcRegistryClient}:${cadcUWS}:${cadcGMS}" />
 
-    <property name="client.jars" value="cadcUtil.jar cadcRegistryClient.jar cadcUWS.jar cadcDownloadManagerClient.jar ${ext.jdom} ${ext.xerces} ${ext.log4j} jdom.jar xerces.jar log4j.jar" />
+    <property name="client.jars" value="cadcUtil.jar cadcRegistryClient.jar cadcUWS.jar ${ext.jdom} ${ext.xerces} ${ext.log4j} jdom.jar xerces.jar log4j.jar" />
 
     <target name="build" depends="compile,compile-test,schema,manifest">
 

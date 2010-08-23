@@ -72,6 +72,7 @@ import ca.nrc.cadc.date.DateUtil;
 import ca.nrc.cadc.vos.Node;
 import ca.nrc.cadc.vos.NodeProperty;
 import ca.nrc.cadc.vos.VOS;
+import java.text.DateFormat;
 import java.text.ParseException;
 import java.util.Comparator;
 import java.util.Date;
@@ -85,6 +86,7 @@ import java.util.List;
  */
 public class NodeDateComparator implements Comparator
 {
+    private DateFormat df = DateUtil.getDateFormat(DateUtil.IVOA_DATE_FORMAT, DateUtil.UTC);
 
     /**
      * Compare two Nodes based on their LastModified property.
@@ -131,16 +133,17 @@ public class NodeDateComparator implements Comparator
             return 0;
 
         Date d1 = null;
+
         try
         {
-            d1 = DateUtil.toDate(np1, DateUtil.ISO_DATE_FORMAT, DateUtil.UTC);
+            d1 = df.parse(np1);
         }
         catch (ParseException ignore) { }
 
         Date d2 = null;
         try
         {
-            d2 = DateUtil.toDate(np2, DateUtil.ISO_DATE_FORMAT, DateUtil.UTC);
+            d2 = df.parse(np2);
         }
         catch (ParseException ignore) { }
 

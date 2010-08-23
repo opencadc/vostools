@@ -86,6 +86,7 @@ import ca.nrc.cadc.vos.NodeProperty;
 import ca.nrc.cadc.vos.VOS;
 import ca.nrc.cadc.vos.VOSURI;
 import ca.nrc.cadc.vos.server.util.NodeUtil;
+import java.text.DateFormat;
 
 /**
  * Class to get and set the meta data of vospace data nodes.  This class
@@ -168,7 +169,8 @@ public class VOSpaceFileMetadataSource implements FileMetadataSource
         {
             try
             {
-                fileMetadata.setLastModified(DateUtil.toDate(lastModified, DateUtil.ISO_DATE_FORMAT));
+                DateFormat df = DateUtil.getDateFormat(DateUtil.IVOA_DATE_FORMAT, DateUtil.UTC);
+                fileMetadata.setLastModified(df.parse(lastModified));
             }
             catch (ParseException e)
             {

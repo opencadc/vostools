@@ -11,4 +11,5 @@ jdom.jar                     jdom-1.1                http://www.jdom.org/
 cadcUtil.jar                                         http://code.google.com/p/opencadc  
 cadcRegistryClient.jar                               http://code.google.com/p/opencadc  
 cadcUWS.jar                                          http://code.google.com/p/opencadc    
-cadcGWS.jar                                          http://code.google.com/p/opencadc
+cadcGMSClient.jar                                    http://code.google.com/p/opencadc
+

@@ -83,13 +83,23 @@ import ca.nrc.cadc.vos.Node;
 import ca.nrc.cadc.vos.NodeProperty;
 import ca.nrc.cadc.vos.VOS;
 import ca.nrc.cadc.vos.VOS.NodeBusyState;
+import java.text.DateFormat;
+import java.util.Calendar;
 
 /**
  * Class to map a result set into a Node object.
  */
 public class NodeMapper implements RowMapper
 {
-    
+    private DateFormat dateFormat;
+    private Calendar cal;
+
+    public NodeMapper()
+    {
+        this.dateFormat = DateUtil.getDateFormat(DateUtil.IVOA_DATE_FORMAT, DateUtil.UTC);
+        this.cal = Calendar.getInstance(DateUtil.LOCAL);
+    }
+
     public static String getDatabaseTypeRepresentation(Node node)
     {
         if (node instanceof DataNode)
@@ -125,7 +135,7 @@ public class NodeMapper implements RowMapper
         String contentType = rs.getString("contentType");
         String contentEncoding = rs.getString("contentEncoding");
         Object contentMD5 = rs.getObject("contentMD5");
-        Date lastModified = rs.getTimestamp("lastModified");
+        Date lastModified = rs.getTimestamp("lastModified", cal);
         
         ContainerNode parent = null;
         if (parentID != 0)
@@ -180,7 +190,7 @@ public class NodeMapper implements RowMapper
         }
         if (lastModified != null)
         {
-            node.getProperties().add(new NodeProperty(VOS.PROPERTY_URI_DATE, DateUtil.toString(lastModified, DateUtil.ISO_DATE_FORMAT)));
+            node.getProperties().add(new NodeProperty(VOS.PROPERTY_URI_DATE, dateFormat.format(lastModified)));
         }
         if (groupRead != null && groupRead.trim().length() > 0)
         {

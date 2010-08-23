@@ -85,6 +85,7 @@ import ca.nrc.cadc.vos.Node;
 import ca.nrc.cadc.vos.NodeProperty;
 import ca.nrc.cadc.vos.NodeWriter;
 import ca.nrc.cadc.vos.VOS;
+import java.text.DateFormat;
 
 /**
  * Creates an XML representation of a Node
@@ -127,8 +128,10 @@ public class NodeOutputRepresentation extends OutputRepresentation
         {
             try
             {
-                return DateUtil.toDate(modificationDate.getPropertyValue());
-            } catch (ParseException e)
+                DateFormat df = DateUtil.getDateFormat(DateUtil.IVOA_DATE_FORMAT, DateUtil.UTC);
+                return df.parse(modificationDate.getPropertyValue());
+            }
+            catch (ParseException e)
             {
                 log.warn("Date " + modificationDate.getPropertyValue()
                         + " could not be parsed.");
