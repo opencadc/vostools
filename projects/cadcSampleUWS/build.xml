@@ -191,7 +191,8 @@
         </junit>
     </target>
 
-	<target name="test" depends="int-test">
-	</target>
+<target name="test">
+	<echo message="WARNING: no tests implemented." />
+</target>
     
 </project>
