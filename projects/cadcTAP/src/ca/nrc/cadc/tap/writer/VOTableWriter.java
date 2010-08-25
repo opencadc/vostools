@@ -123,7 +123,7 @@ public class VOTableWriter implements TableWriter
     protected String jobID;
     
     protected List<Parameter> params;
-    
+
     // Maximum number of rows to write.
     protected int maxRows;
 
@@ -146,6 +146,11 @@ public class VOTableWriter implements TableWriter
     public String getExtension()
     {
         return "xml";
+    }
+
+    public String getContentType()
+    {
+        return "application/x-votable+xml";
     }
 
     public void setSelectList(List<TapSelectItem> items)

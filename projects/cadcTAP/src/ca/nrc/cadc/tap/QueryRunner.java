@@ -204,7 +204,7 @@ public class QueryRunner implements JobRunner
         }
         catch (Throwable t)
         {
-            logger.debug("Failed to instantiate FileStore class: " + fileStoreClassName, t);
+            logger.warn("Failed to instantiate FileStore class: " + fileStoreClassName);
         }
 
         logger.debug("loading " + resultStoreImplClassName);
@@ -215,7 +215,7 @@ public class QueryRunner implements JobRunner
         }
         catch (Throwable t)
         {
-            logger.debug("Failed to instantiate ResultStore class: " + resultStoreImplClassName, t);
+            logger.warn("Failed to instantiate ResultStore class: " + resultStoreImplClassName);
         }
 
         if (fs == null && rs == null)
@@ -367,11 +367,14 @@ public class QueryRunner implements JobRunner
                 // TODO if checking for abort was fast, check it here and save writing and storing
 
                 String filename = "result_" + job.getID() + "." + writer.getExtension();
+                logger.debug("result filename: " + filename);
                 if (rs != null)
                 {
-                    logger.debug("setting ResultStore filename: " + filename);
                     rs.setFilename(filename);
-                    rs.setContentType("text/xml");
+                    rs.setContentType(writer.getContentType());
+                    url = rs.put(resultSet, writer);
+                    tList.add(System.currentTimeMillis());
+                    sList.add("write ResultSet to ResultStore: ");
                 }
                 else
                 {
@@ -379,32 +382,16 @@ public class QueryRunner implements JobRunner
                     logger.debug("writing ResultSet to " + tmpFile);
                     OutputStream ostream = new FileOutputStream(tmpFile);
                     writer.write(resultSet, ostream);
-                    tList.add(System.currentTimeMillis());
-                    sList.add("store tmp file with FileStore: ");
-
-                    try
-                    {
-                        ostream.close();
-                    }
-                    catch (Throwable ignore)
-                    {
-                    }
+                    ostream.close();
                     tList.add(System.currentTimeMillis());
                     sList.add("write ResultSet to tmp file: ");
-                }
 
-                logger.debug("executing query... [OK]");
-
-                if (rs != null)
-                {
-                    logger.debug("storing results with ResultStore...");
-                    url = rs.put(resultSet, writer);
-                }
-                else
-                {
                     logger.debug("storing results with FileStore...");
                     url = fs.put(tmpFile);
+                    tList.add(System.currentTimeMillis());
+                    sList.add("store tmp file with FileStore: ");
                 }
+                logger.debug("executing query... [OK]");
             }
             catch (SQLException ex)
             {
@@ -469,16 +456,19 @@ public class QueryRunner implements JobRunner
                 errorMessage = t.getClass().getSimpleName() + ":" + t.getMessage();
                 logger.debug("Error message: " + errorMessage);
                 VOTableWriter writer = new VOTableWriter();
+                String filename = "error_" + job.getID() + "." + writer.getExtension();
                 if (rs != null)
                 {
-                    rs.put(t, writer);
+                    rs.setFilename(filename);
+                    rs.setContentType(writer.getContentType());
+                    errorURL = rs.put(t, writer);
 
                     tList.add(System.currentTimeMillis());
-                    sList.add("store Throwable with ResultStore ");
+                    sList.add("store error with ResultStore ");
                 }
                 else
                 {
-                    File errorFile = new File(fs.getStorageDir(), "error_" + job.getID() + "." + writer.getExtension());
+                    File errorFile = new File(fs.getStorageDir(), filename);
                     logger.debug("Error file: " + errorFile.getAbsolutePath());
                     FileOutputStream errorOutput = new FileOutputStream(errorFile);
                     writer.write(t, errorOutput);

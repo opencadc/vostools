@@ -98,7 +98,7 @@ public class TableWriterFactory
     
     
     private static Map<String,String> knownFormats;
-    
+
     static
     {
         knownFormats = new TreeMap<String,String>();
@@ -116,7 +116,7 @@ public class TableWriterFactory
         //knownFormats.put(TEXT, TEXT);
         //knownFormats.put(HTML, HTML);
     }
-    
+
     public static TableWriter getWriter(List<Parameter> params)
     {
         String rfmt = TapUtil.findParameterValue(FORMAT, params);

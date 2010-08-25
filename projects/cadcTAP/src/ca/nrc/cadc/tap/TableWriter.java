@@ -102,12 +102,19 @@ public interface TableWriter
     public void setParameterList(List<Parameter> params);
     
     /**
-     * Get the usual filename extenasion for this format.
+     * Get the usual filename extension for this format.
      * 
      * @return filename extension
      */
     String getExtension();
     
+    /**
+     * Get the usual or requested content-type (mimetype).
+     * 
+     * @return content-type
+     */
+    String getContentType();
+
     /**
      * The ordered selected items from the query.
      * 

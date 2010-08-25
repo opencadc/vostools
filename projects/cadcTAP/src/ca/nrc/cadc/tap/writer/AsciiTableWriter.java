@@ -180,6 +180,13 @@ public class AsciiTableWriter implements TableWriter
         return format;
     }
 
+    public String getContentType()
+    {
+        if (format.equals(CSV))
+            return "text/csv";
+        return "text/tab-separated-values";
+    }
+
     public void setSelectList(List<TapSelectItem> items)
     {
         this.selectList = items;
