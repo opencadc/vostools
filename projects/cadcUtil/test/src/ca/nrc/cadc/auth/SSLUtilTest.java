@@ -317,7 +317,7 @@ public class SSLUtilTest
             log.debug("caught expected exception: " + expected);
         }
 
-        System.setProperty(BasicX509TrustManager.class.getName() + ".trust", "something");
+        System.setProperty(BasicX509TrustManager.class.getName() + ".trust", "true");
         try
         {
             log.debug("test URL: " + url);

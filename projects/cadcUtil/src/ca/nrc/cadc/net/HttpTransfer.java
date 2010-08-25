@@ -70,7 +70,6 @@
 package ca.nrc.cadc.net;
 
 import ca.nrc.cadc.auth.SSLUtil;
-import ca.nrc.cadc.auth.X509CertificateChain;
 import ca.nrc.cadc.net.event.ProgressListener;
 import ca.nrc.cadc.net.event.TransferEvent;
 import ca.nrc.cadc.net.event.TransferListener;
@@ -86,8 +85,6 @@ import java.nio.channels.ReadableByteChannel;
 import java.nio.channels.WritableByteChannel;
 import java.security.AccessControlContext;
 import java.security.AccessController;
-import java.security.PrivateKey;
-import java.util.Set;
 import javax.net.ssl.HttpsURLConnection;
 import javax.net.ssl.SSLSocketFactory;
 import javax.security.auth.Subject;

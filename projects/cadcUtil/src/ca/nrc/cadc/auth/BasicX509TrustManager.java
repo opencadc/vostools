@@ -79,7 +79,7 @@ import org.apache.log4j.Logger;
  * This class currently only adds some debug-level logging of method calls and supports
  * a way to bypass checking server certificates for testing (e.g. against a server without
  * a valid certificate). To bypass server validation entirely, simply set the system property
- * <code>ca.nrc.cadc.auth.BasicX509TrustManager.trust</code> to any value. This feature
+ * <code>ca.nrc.cadc.auth.BasicX509TrustManager.trust=true</code>. This feature
  * should only be used for running test code with self-signed certificates.
  *
  * @author pdowler

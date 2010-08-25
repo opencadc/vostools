@@ -77,6 +77,7 @@ import ca.nrc.cadc.util.Log4jInit;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileOutputStream;
+import java.net.HttpURLConnection;
 import java.net.InetAddress;
 import java.net.URL;
 import java.util.Random;
@@ -206,12 +207,13 @@ public class HttpUploadTest
         URL dest = httpsURL;
         File src = srcFile;
         File tmp = null;
+        String contentType = "application/octet-stream";
         try
         {
             Subject s = SSLUtil.createSubject(SSL_CERT, SSL_KEY);
             
             HttpUpload up = new HttpUpload(src, dest);
-            up.setContentType("application/octet-stream");
+            up.setContentType(contentType);
 
             Subject.doAs(s, new RunnableAction(up));
             if (up.getThrowable() != null)
@@ -219,6 +221,7 @@ public class HttpUploadTest
             Assert.assertNull("upload failure", up.getThrowable());
 
             URL check = dest;
+
             //URL check = new URL("http", dest.getHost(), dest.getPath());
             tmp = File.createTempFile("public"+HttpUploadTest.class.getSimpleName(), ".out");
 
@@ -227,6 +230,10 @@ public class HttpUploadTest
             
             Subject.doAs(s, new RunnableAction(down));
             Assert.assertNull("download failure", down.getThrowable());
+
+            Assert.assertEquals("content-length header", src.length(), down.getContentLength());
+            Assert.assertEquals("content-type header", contentType, down.getContentType());
+
             File out = down.getFile();
             Assert.assertNotNull("result file", out);
             Assert.assertEquals("file sizes", srcFile.length(), out.length());
@@ -253,20 +260,22 @@ public class HttpUploadTest
         URL dest = httpsURL;
         File src = srcFile;
         File tmp = null;
+        String contentType = "application/octet-stream";
         try
         {
             Subject s = SSLUtil.createSubject(SSL_CERT, SSL_KEY);
             
             HttpUpload up = new HttpUpload(new FileInputStream(src), dest);
-            up.setContentType("application/octet-stream");
+            up.setContentType(contentType);
 
             Subject.doAs(s, new RunnableAction(up));
             if (up.getThrowable() != null)
                 log.error("run failed", up.getThrowable());
             Assert.assertNull("upload failure", up.getThrowable());
 
-            URL check = dest;
             //URL check = new URL("http", dest.getHost(), dest.getPath());
+            URL check = dest;
+
             tmp = File.createTempFile("public"+HttpUploadTest.class.getSimpleName(), ".out");
 
             HttpDownload down = new HttpDownload(HttpUploadTest.class.getSimpleName(), check, tmp);
@@ -274,6 +283,10 @@ public class HttpUploadTest
             
             Subject.doAs(s, new RunnableAction(down));
             Assert.assertNull("download failure", down.getThrowable());
+
+            Assert.assertEquals("content-length header", src.length(), down.getContentLength());
+            Assert.assertEquals("content-type header", contentType, down.getContentType());
+
             File out = down.getFile();
             Assert.assertNotNull("result file", out);
             Assert.assertEquals("file sizes", srcFile.length(), out.length());

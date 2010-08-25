@@ -113,6 +113,7 @@ public class HttpDownload extends HttpTransfer
     
     private File destFile;
     private boolean skipped = false;
+    private String contentType;
     private long contentLength = -1;
     private long decompSize = -1;
     private long size = -1;
@@ -213,6 +214,16 @@ public class HttpDownload extends HttpTransfer
      * @return the size in bytes, or -1 of unknown
      */
     public long getSize() { return size; }
+
+    /**
+     * Get the content-type returned by the server.
+     * @return
+     */
+    public String getContentType()
+    {
+        return contentType;
+    }
+
 
     /**
      * Get the size of the download (the Content-Length).
@@ -517,6 +528,8 @@ public class HttpDownload extends HttpTransfer
             }
             this.decompressor = ZIP;
         }
+
+        this.contentType = conn.getContentType();
         
         // get content-length
         this.contentLength = conn.getContentLength();
