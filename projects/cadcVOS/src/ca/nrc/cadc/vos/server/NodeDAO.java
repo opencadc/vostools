@@ -228,22 +228,44 @@ public abstract class NodeDAO implements NodePersistence
         {
             throw new NodeNotFoundException("Node parameter is null.");
         }
-        SearchNode node = new SearchNode(name);
-        node.setParent(parent);
+        
         synchronized (this)
         {
-            Node returnNode = getSingleNodeFromSelect(getSelectNodeByNameAndParentSQL(node));
-            if (returnNode == null)
+            try
             {
-                throw new NodeNotFoundException(node.getName());
+                startTransaction();
+                Node ret = getFromParentImpl(name, parent);
+                commitTransaction();
+                return ret;
             }
-            returnNode.setPath( (parent == null) ? returnNode.getName() : parent.getPath() + "/" + returnNode.getName() );
-            returnNode.setParent(parent);
-            //log.debug("Node retrieved from parent: " + returnNode);
-            return returnNode;
+            catch(Throwable t)
+            {
+                log.error("getFromParent: " + name + "," + parent, t);
+                if (transactionStatus != null)
+                    try { rollbackTransaction(); }
+                    catch(Throwable oops) { log.error("failed to rollback transaction", oops); }
+                if (t instanceof NodeNotFoundException)
+                {
+                    throw (NodeNotFoundException) t;
+                }
+                else
+                {
+                    throw new IllegalStateException(t);
+                }
+            }
+            finally
+            {
+                if (transactionStatus != null)
+                    try
+                    {
+                        log.warn("getFromParent - BUG - transaction still open in finally... calling rollback");
+                        rollbackTransaction();
+                    }
+                    catch(Throwable oops) { log.error("failed to rollback transaction in finally", oops); }
+            }
         }
     }
-    
+
     /**
      * Put the node in the provided container.  This method assumes that the
      * nodeID of the parent is set.  If the parent object is null, it is
@@ -316,8 +338,10 @@ public abstract class NodeDAO implements NodePersistence
             }
             catch (Throwable t)
             {
-                rollbackTransaction();
                 log.error("Put rollback for node: " + node, t);
+                if (transactionStatus != null)
+                    try { rollbackTransaction(); }
+                    catch(Throwable oops) { log.error("failed to rollback transaction", oops); }
                 if (t instanceof NodeNotFoundException)
                 {
                     throw (NodeNotFoundException) t;
@@ -330,6 +354,16 @@ public abstract class NodeDAO implements NodePersistence
                 {
                     throw new IllegalStateException(t);
                 }
+            }
+            finally
+            {
+                if (transactionStatus != null)
+                    try
+                    {
+                        log.warn("putInContainer - BUG - transaction still open in finally... calling rollback");
+                        rollbackTransaction();
+                    }
+                    catch(Throwable oops) { log.error("failed to rollback transaction in finally", oops); }
             }
         }
     }
@@ -357,7 +391,6 @@ public abstract class NodeDAO implements NodePersistence
         {
             try
             {
-                
                 startTransaction();
                 
                 // delete the node properties
@@ -371,13 +404,15 @@ public abstract class NodeDAO implements NodePersistence
                     // collect and delete children of the node
                     this.deleteChildrenOf(persistentNode);
                 }
-                
                 commitTransaction();
-                
-            } catch (Throwable t)
+                log.debug("Node deleted: " + persistentNode);
+            }
+            catch (Throwable t)
             {
-                rollbackTransaction();
                 log.error("Delete rollback for node: " + persistentNode, t);
+                if (transactionStatus != null)
+                    try { rollbackTransaction(); }
+                    catch(Throwable oops) { log.error("failed to rollback transaction", oops); }
                 if (t instanceof NodeNotFoundException)
                 {
                     throw (NodeNotFoundException) t;
@@ -387,9 +422,17 @@ public abstract class NodeDAO implements NodePersistence
                     throw new IllegalStateException(t);
                 }
             }
-            
+            finally
+            {
+                if (transactionStatus != null)
+                    try
+                    {
+                        log.warn("delete - BUG - transaction still open in finally... calling rollback");
+                        rollbackTransaction();
+                    }
+                    catch(Throwable oops) { log.error("failed to rollback transaction in finally", oops); }
+            }
         }
-        log.debug("Node deleted: " + persistentNode);
     }
     
     public void markForDeletion(Node persistentNode, boolean markChildren) throws NodeNotFoundException
@@ -409,7 +452,6 @@ public abstract class NodeDAO implements NodePersistence
         {
             try
             {
-                
                 startTransaction();
                 
                 // mark the node for deletion
@@ -420,13 +462,16 @@ public abstract class NodeDAO implements NodePersistence
                     // collect and delete children of the node
                     this.markForDeletionChildrenOf(persistentNode, true);
                 }
-                
+
                 commitTransaction();
-                
-            } catch (Throwable t)
+                log.debug("Node marked for deletion: " + persistentNode);
+            }
+            catch (Throwable t)
             {
-                rollbackTransaction();
                 log.error("Mark for deletion rollback for node: " + persistentNode, t);
+                if (transactionStatus != null)
+                    try { rollbackTransaction(); }
+                    catch(Throwable oops) { log.error("failed to rollback transaction", oops); }
                 if (t instanceof NodeNotFoundException)
                 {
                     throw (NodeNotFoundException) t;
@@ -436,9 +481,17 @@ public abstract class NodeDAO implements NodePersistence
                     throw new IllegalStateException(t);
                 }
             }
-            
+            finally
+            {
+                if (transactionStatus != null)
+                    try
+                    {
+                        log.warn("markForDeletion - BUG - transaction still open in finally... calling rollback");
+                        rollbackTransaction();
+                    }
+                    catch(Throwable oops) { log.error("failed to rollback transaction in finally", oops); }
+            }
         }
-        log.debug("Node marked for deletion: " + persistentNode);
     }
     
     /**
@@ -450,14 +503,12 @@ public abstract class NodeDAO implements NodePersistence
      */
     public Node updateProperties(Node updatedPersistentNode) throws NodeNotFoundException
     {
-        
         Node currentDbNode = getFromParent(updatedPersistentNode.getName(), updatedPersistentNode.getParent());
         
         synchronized (this)
         {
             try
             {
-                
                 startTransaction();
                 
                 // Iterate through the user properties and the db properties,
@@ -498,13 +549,15 @@ public abstract class NodeDAO implements NodePersistence
                         jdbc.update(getInsertNodePropertySQL(currentDbNode, nextProperty));
                     }
                 }
-                
                 commitTransaction();
-                
-            } catch (Throwable t)
+                log.debug("Node updated: " + currentDbNode);
+            }
+            catch (Throwable t)
             {
-                rollbackTransaction();
                 log.error("Update rollback for node: " + updatedPersistentNode, t);
+                if (transactionStatus != null)
+                    try { rollbackTransaction(); }
+                    catch(Throwable oops) { log.error("failed to rollback transaction", oops); }
                 if (t instanceof NodeNotFoundException)
                 {
                     throw (NodeNotFoundException) t;
@@ -514,14 +567,20 @@ public abstract class NodeDAO implements NodePersistence
                     throw new IllegalStateException(t);
                 }
             }
+            finally
+            {
+                if (transactionStatus != null)
+                    try
+                    {
+                        log.warn("updateProperties - BUG - transaction still open in finally... calling rollback");
+                        rollbackTransaction();
+                    }
+                    catch(Throwable oops) { log.error("failed to rollback transaction in finally", oops); }
+            }
             
         }
-        
-        log.debug("Node updated: " + currentDbNode);
-
-        // return the new node from the database
+        // return the new node from the database, in a new transaction?
         return getFromParent(updatedPersistentNode.getName(), updatedPersistentNode.getParent());
-
     }
     
     public void setBusyState(DataNode persistentNode, NodeBusyState state) throws NodeNotFoundException
@@ -530,18 +589,17 @@ public abstract class NodeDAO implements NodePersistence
         {
             try
             {
-                
                 startTransaction();
-                
-                // set the new state
                 jdbc.update(getSetBusyStateSQL(persistentNode, state));
-                
                 commitTransaction();
-                
-            } catch (Throwable t)
+                log.debug("Node busy state updated for: " + persistentNode);
+            }
+            catch (Throwable t)
             {
-                rollbackTransaction();
                 log.error("Set busy state rollback for node: " + persistentNode, t);
+                if (transactionStatus != null)
+                    try { rollbackTransaction(); }
+                    catch(Throwable oops) { log.error("failed to rollback transaction", oops); }
                 if (t instanceof NodeNotFoundException)
                 {
                     throw (NodeNotFoundException) t;
@@ -551,9 +609,17 @@ public abstract class NodeDAO implements NodePersistence
                     throw new IllegalStateException(t);
                 }
             }
-            
+            finally
+            {
+                if (transactionStatus != null)
+                    try
+                    {
+                        log.warn("setBusyState - BUG - transaction still open in finally... calling rollback");
+                        rollbackTransaction();
+                    }
+                    catch(Throwable oops) { log.error("failed to rollback transaction in finally", oops); }
+            }
         }
-        log.debug("Node busy state updated for: " + persistentNode);
     }
     
     /**
@@ -573,6 +639,33 @@ public abstract class NodeDAO implements NodePersistence
     public void copy(Node node, String copyToPath)
     {
         throw new UnsupportedOperationException("Copy not implemented.");
+    }
+
+    /**
+     * Implementation of getFromParent. Like all protected methods, the caller must
+     * use a transaction if necessary and perform any required synchronization.
+     *
+     * @param name
+     * @param parent
+     * @return
+     * @throws NodeNotFoundException
+     */
+    protected Node getFromParentImpl(String name, ContainerNode parent) throws NodeNotFoundException
+    {
+        if (name == null)
+        {
+            throw new NodeNotFoundException("Node parameter is null.");
+        }
+        SearchNode node = new SearchNode(name);
+        node.setParent(parent);
+        Node returnNode = getSingleNodeFromSelect(getSelectNodeByNameAndParentSQL(node));
+        if (returnNode == null)
+        {
+            throw new NodeNotFoundException(node.getName());
+        }
+        returnNode.setPath( (parent == null) ? returnNode.getName() : parent.getPath() + "/" + returnNode.getName() );
+        returnNode.setParent(parent);
+        return returnNode;
     }
     
     /**
