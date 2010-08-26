@@ -84,7 +84,6 @@ import javax.security.auth.Subject;
 import javax.sql.DataSource;
 
 import org.apache.log4j.Logger;
-import org.springframework.dao.DataAccessException;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.jdbc.core.RowMapper;
 import org.springframework.jdbc.datasource.DataSourceTransactionManager;
@@ -96,7 +95,7 @@ import ca.nrc.cadc.date.DateUtil;
 import ca.nrc.cadc.net.NetUtil;
 
 /**
- * JobPersistence c lass that stores the jobs in a RDBMS. This is an abstract class;
+ * JobDAO class that stores the jobs in a RDBMS. This is an abstract class;
  * users of this class must implement the abstract methods to return the names of tables
  * where the job is to be stored. The subclass must also call setDataSource before any
  * persistence methods are called.
@@ -199,46 +198,69 @@ public class JobDAO
      */
     public Job getJob(final String jobID)
     {
-        startTransaction();
-        
-        // Job for this jobID.
-        Job job;
-        List jobs = jdbc.query(getSelectJobSQL(jobID), new JobMapper());
-        if (jobs.isEmpty())
+        log.debug("getJob: " + jobID);
+        try
         {
-            log.warn("Job not found for query: " + getSelectJobSQL(jobID));
-            jobs = jdbc.query(getSelectJobSQL(jobID), new JobMapper());
-        }
-        if (jobs.isEmpty())
-        {
-            log.error("Job not found after (2x) query: " + getSelectJobSQL(jobID));
-            job = null;
-        }
-        else if (jobs.size() == 1)
-        {
-            job = (Job) jobs.get(0);
-
-            // List of Parameters for this jobID.
-            List<Parameter> parameterList = null;
-            for (String table : databasePersistence.getParameterTables())
+            startTransaction();
+            List jobs = jdbc.query(getSelectJobSQL(jobID), new JobMapper());
+            /*
+            if (jobs.isEmpty())
             {
-                if (parameterList == null)
-                    parameterList = new ArrayList<Parameter>();
-                parameterList.addAll(jdbc.query(getSelectParameterSQL(jobID, table), new ParameterMapper()));
+                log.warn("Job not found for query: " + getSelectJobSQL(jobID));
+                jobs = jdbc.query(getSelectJobSQL(jobID), new JobMapper());
             }
-            job.setParameterList(parameterList);
+            if (jobs.isEmpty())
+            {
+                log.error("Job not found after (2x) query: " + getSelectJobSQL(jobID));
+                job = null;
+            }
+            else
+             */
+            if (jobs.size() == 0)
+            {
+                commitTransaction();
+                return null;
+            }
 
-            // List of Results for this jobID.
-            job.setResultsList(jdbc.query(getSelectResultSQL(jobID), new ResultMapper()));
+            if (jobs.size() == 1)
+            {
+                Job job = (Job) jobs.get(0);
+
+                // List of Parameters for this jobID.
+                List<Parameter> parameterList = new ArrayList<Parameter>();
+                for (String table : databasePersistence.getParameterTables())
+                {
+                    parameterList.addAll(jdbc.query(getSelectParameterSQL(jobID, table), new ParameterMapper()));
+                }
+                job.setParameterList(parameterList);
+
+                // List of Results for this jobID.
+                job.setResultsList(jdbc.query(getSelectResultSQL(jobID), new ResultMapper()));
+                commitTransaction();
+                return job;
+            }
+            // state invariant broken == serious bug
+            commitTransaction();
+            throw new IllegalStateException("BUG: found " + jobs.size() + " jobs with jobID = " + jobID);
         }
-        else
+        catch(Throwable t)
         {
-            throw new IllegalStateException("Multiple jobs with jobID " + jobID);
+            log.error("failed to get job: " + jobID, t);
+            if (transactionStatus != null)
+                try { rollbackTransaction(); }
+                catch(Throwable oops) { log.error("failed to rollback transaction", oops); }
         }
-        log.debug("getJob jobID = " + jobID);
-        
-        commitTransaction();
-        return job;
+        finally
+        {
+            if (transactionStatus != null)
+                try 
+                {
+                    log.warn("getJob - BUG - transaction still open in finally... calling rollback");
+                    rollbackTransaction();
+                }
+                catch(Throwable oops) { log.error("failed to rollback transaction in finally", oops); }
+        }
+        return null;
     }
 
     /**
@@ -249,10 +271,30 @@ public class JobDAO
     public void delete(String jobID)
     {
         // Delete the Job by setting the deletedByUser field to true.
-        startTransaction();
-        jdbc.update(getUpdateJobDeletedSQL(jobID));
-        log.debug("delete jobID = " + jobID);
-        commitTransaction();
+        try
+        {
+            startTransaction();
+            jdbc.update(getUpdateJobDeletedSQL(jobID));
+            log.debug("delete jobID = " + jobID);
+            commitTransaction();
+        }
+        catch(Throwable t)
+        {
+            log.error("failed to delete job", t);
+            if (transactionStatus != null)
+                try { rollbackTransaction(); }
+                catch(Throwable oops) { log.error("failed to rollback transaction", oops); }
+        }
+        finally
+        {
+            if (transactionStatus != null)
+                try
+                {
+                    log.warn("delete - BUG - transaction still open in finally... calling rollback");
+                    rollbackTransaction();
+                }
+                catch(Throwable oops) { log.error("failed to rollback transaction in finally", oops); }
+        }
     }
 
     /**
@@ -277,84 +319,58 @@ public class JobDAO
         Job ret = null;
         try
         {
-
-            // Start the transaction.
             startTransaction();
             
-            // Insert Job, catching any possible errors due to constraint violations.
-            int attempts = 0;
-            boolean done = false;
-            while (!done)
+            if (job.getID() != null)
             {
-                try
-                {
-                    // If Job exists, i.e. has a jobID, then update the current Job
-                    // and any Parameter's and Result's for the Job.
-                    if (job.getID() != null)
-                    {
-                        
-                        ret = job;
-                        
-                        // Delete the Job.
-                        jdbc.update(getUpdateJobSQL(job));
-                        
-                        // Delete all the Parameters for the Job.
-                        for (String table : databasePersistence.getParameterTables())
-                            jdbc.update(getDeleteParameterSQL(job.getID(), table));
+                ret = job;
 
-                        // Delete all the Results for the Job.
-                        jdbc.update(getDeleteResultSQL(job.getID()));
-                        
-                        // Add the Job Parameters.
-                        for (Parameter parameter : job.getParameterList())
-                            jdbc.update(getInsertParameterSQL(job.getID(), parameter));
+                // Delete the Job.
+                jdbc.update(getUpdateJobSQL(job));
+            }
+            else
+            {
+                // Create new Job to persist.
+                ret = new Job(generateID(), job);
 
-                        // Add the Job Results.
-                        for (Result result : job.getResultsList())
-                            jdbc.update(getInsertResultSQL(job.getID(), result));
-                        
-                        done = true;
-                    }
-                    else
-                    {
-                        // Create new Job to persist.
-                        ret = new Job(generateID(), job);
-                        
-                        // Add a new Job.
-                        jdbc.update(getInsertJobSQL(ret));
-
-                        // Add the Job Parameters.
-                        for (Parameter parameter : job.getParameterList())
-                            jdbc.update(getInsertParameterSQL(ret.getID(), parameter));
-
-                        // Add the Job Results.
-                        for (Result result : job.getResultsList())
-                            jdbc.update(getInsertResultSQL(ret.getID(), result));
-
-                        done = true;
-                    }
-                }
-                catch (DataAccessException e)
-                {
-                    log.error(e);
-                    attempts++;
-                    if (attempts == MAX_INSERT_ATTEMPTS)
-                        throw new JobPersistenceException(e.getMessage());
-                }
+                // Add a new Job.
+                jdbc.update(getInsertJobSQL(ret));
             }
 
-            // Commit the transaction.
+            // delete and insert the parameters to make sure list content is correct
+            for (String table : databasePersistence.getParameterTables())
+                jdbc.update(getDeleteParameterSQL(job.getID(), table));
+            for (Parameter parameter : job.getParameterList())
+                jdbc.update(getInsertParameterSQL(job.getID(), parameter));
+
+            // delete and insert the results to make sure list content is correct
+            jdbc.update(getDeleteResultSQL(job.getID()));
+            for (Result result : job.getResultsList())
+                jdbc.update(getInsertResultSQL(job.getID(), result));
+                    
             commitTransaction();
             log.debug("persist jobID = " + ret.getID());
 
             return ret;
         }
-        catch (Throwable t)
+        catch(Throwable t)
         {
-            rollbackTransaction();
-            log.error("persist rollback jobID = " + job.getID(), t);
-            return null;
+            log.error("failed to persist job", t);
+            if (transactionStatus != null)
+                try { rollbackTransaction(); }
+                catch(Throwable oops) { log.error("failed to rollback transaction", oops); }
         }
+        finally
+        {
+            if (transactionStatus != null)
+                try
+                {
+                    log.warn("persist - BUG - transaction still open in finally... calling rollback");
+                    rollbackTransaction();
+                }
+                catch(Throwable oops) { log.error("failed to rollback transaction in finally", oops); }
+        }
+        return null;
     }
 
     /**
@@ -858,101 +874,6 @@ public class JobDAO
         return new String(c);
     }
 
-    /*
-    // TODO: use NetUtil.encode.
-    // URLEncode a string.
-    private static String encode(String s)
-    {
-        if (s == null)
-            return null;
-        try
-        {
-            return URLEncoder.encode(s, "UTF-8");
-        }
-        catch (UnsupportedEncodingException e)
-        {
-            throw new RuntimeException("Unsupported encoding used", e);
-        }
-    }
-
-    // TODO: use NetUtil.decode.
-    // URLDecode a string.
-    private static String decode(String s)
-    {
-        if (s == null)
-            return null;
-        try
-        {
-            return URLDecoder.decode(s, "UTF-8");
-        }
-        catch (UnsupportedEncodingException e)
-        {
-            throw new RuntimeException("Unsupported decoding used", e);
-        }
-    }
-
-    // TODO: use AuthenticationUtil.encodeSubject.
-    // Encode a Subject in the format:
-    // Principal Class name[Principal name]
-    private static String encodeSubject(Subject subject)
-    {
-        if (subject == null)
-            return null;
-        StringBuilder sb = new StringBuilder();
-        Iterator it = subject.getPrincipals().iterator();
-        while (it.hasNext())
-        {
-            Principal principal = (Principal) it.next();
-            sb.append(principal.getClass().getName());
-            sb.append("[");
-            sb.append(encode(principal.getName()));
-            sb.append("]");
-        }
-        return sb.toString();
-    }
-
-    // TODO: use AuthenticationUtil.decodeSubject.
-    // Build a Subject from the encoding.
-    private static Subject decodeSubject(String s)
-    {
-        if (s == null || s.length() == 0)
-            return null;
-        Subject subject = null;
-        int pStart = 0;
-        int nameStart = s.indexOf("[", pStart);
-        try
-        {
-            while (nameStart != -1)
-            {
-                int nameEnd = s.indexOf("]", nameStart);
-                if (nameEnd == -1)
-                {
-                    log.error("Invalid Principal encoding: " + s);
-                    return null;
-                }
-                Class c = Class.forName(s.substring(pStart, nameStart));
-                Class[] args = new Class[]{String.class};
-                Constructor constructor = c.getDeclaredConstructor(args);
-                String name = decode(s.substring(nameStart + 1, nameEnd));
-                Principal principal = (Principal) constructor.newInstance(name);
-                if (subject == null)
-                    subject = new Subject();
-                subject.getPrincipals().add(principal);
-                pStart = nameEnd + 1;
-                nameStart = s.indexOf("[", pStart);
-            }
-        }
-        catch (IndexOutOfBoundsException ioe)
-        {
-            log.error(ioe.getMessage(), ioe);
-        }
-        catch (Exception e)
-        {
-            log.error(e.getMessage(), e);
-        }
-        return subject;
-    }
-*/
     /**
      * Creates a List of Job populated from the ResultSet.
      */
