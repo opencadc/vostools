@@ -126,7 +126,7 @@ public class Job
      * @param endTime               The end date of execution.
      * @param errorSummary          The error, if any.
      * @param owner                 The Owner of this Job.
-     * @param runId                 The specific running ID.
+     * @param runID                 The specific running ID.
      * @param resultsList           The List of Results.
      * @param parameterList         The List of Parameters.
      * @param requestPath           The http request path.

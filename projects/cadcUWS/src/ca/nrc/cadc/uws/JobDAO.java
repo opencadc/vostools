@@ -78,7 +78,6 @@ import java.util.Calendar;
 import java.util.Collection;
 import java.util.Date;
 import java.util.List;
-import java.util.Random;
 
 import javax.security.auth.Subject;
 import javax.sql.DataSource;
@@ -107,15 +106,8 @@ import ca.nrc.cadc.net.NetUtil;
  */
 public class JobDAO
 {
-    
-    // generate a random modest-length lower case string
-    private static final int ID_LENGTH = 16;
-    private static final String ID_CHARS = "abcdefghijklmnopqrstuvwxyz0123456789";
-    
-    // Number of time to attempt to insert a Job.
-    private static final int MAX_INSERT_ATTEMPTS = 2;
     private static Logger log = Logger.getLogger(JobDAO.class);
-
+    
     // Database connection.
     private JdbcTemplate jdbc;
     private DataSourceTransactionManager transactionManager;
@@ -324,16 +316,12 @@ public class JobDAO
             if (job.getID() != null)
             {
                 ret = job;
-
-                // Delete the Job.
                 jdbc.update(getUpdateJobSQL(job));
             }
             else
             {
-                // Create new Job to persist.
-                ret = new Job(generateID(), job);
-
-                // Add a new Job.
+                // create
+                ret = new Job(databasePersistence.generateID(), job);
                 jdbc.update(getInsertJobSQL(ret));
             }
 
@@ -864,15 +852,7 @@ public class JobDAO
         return sb.toString();
     }
 
-    private static String generateID()
-    {
-        Random rnd = new Random(System.currentTimeMillis());
-        char[] c = new char[ID_LENGTH];
-        c[0] = ID_CHARS.charAt(rnd.nextInt(ID_CHARS.length() - 10)); // letters only
-        for (int i=1; i<ID_LENGTH; i++)
-            c[i] = ID_CHARS.charAt(rnd.nextInt(ID_CHARS.length()));
-        return new String(c);
-    }
+    
 
     /**
      * Creates a List of Job populated from the ResultSet.

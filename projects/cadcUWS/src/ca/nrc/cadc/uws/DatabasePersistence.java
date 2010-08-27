@@ -71,6 +71,7 @@ package ca.nrc.cadc.uws;
 
 import java.util.Collection;
 import java.util.List;
+import java.util.Random;
 
 import javax.sql.DataSource;
 
@@ -86,7 +87,13 @@ import javax.sql.DataSource;
  */
 public abstract class DatabasePersistence implements JobPersistence
 {
+    // generate a random modest-length lower case string
+    private static final int ID_LENGTH = 16;
+    private static final String ID_CHARS = "abcdefghijklmnopqrstuvwxyz0123456789";
     
+    // chared random number generator for jobID generation
+    private Random rnd = new Random(System.currentTimeMillis());
+
     /**
      * DatabasePersistence constructor.
      */
@@ -149,6 +156,19 @@ public abstract class DatabasePersistence implements JobPersistence
     {
         JobDAO jobDAO = createJobDAO();
         return jobDAO.persist(job);
+    }
+
+    // package access for use by JobDAO
+    String generateID()
+    {
+        synchronized(rnd)
+        {
+            char[] c = new char[ID_LENGTH];
+            c[0] = ID_CHARS.charAt(rnd.nextInt(ID_CHARS.length() - 10)); // letters only
+            for (int i=1; i<ID_LENGTH; i++)
+                c[i] = ID_CHARS.charAt(rnd.nextInt(ID_CHARS.length()));
+            return new String(c);
+        }
     }
     
     /**
