@@ -327,14 +327,14 @@ public class JobDAO
 
             // delete and insert the parameters to make sure list content is correct
             for (String table : databasePersistence.getParameterTables())
-                jdbc.update(getDeleteParameterSQL(job.getID(), table));
-            for (Parameter parameter : job.getParameterList())
-                jdbc.update(getInsertParameterSQL(job.getID(), parameter));
+                jdbc.update(getDeleteParameterSQL(ret.getID(), table));
+            for (Parameter parameter : ret.getParameterList())
+                jdbc.update(getInsertParameterSQL(ret.getID(), parameter));
 
             // delete and insert the results to make sure list content is correct
-            jdbc.update(getDeleteResultSQL(job.getID()));
-            for (Result result : job.getResultsList())
-                jdbc.update(getInsertResultSQL(job.getID(), result));
+            jdbc.update(getDeleteResultSQL(ret.getID()));
+            for (Result result : ret.getResultsList())
+                jdbc.update(getInsertResultSQL(ret.getID(), result));
                     
             commitTransaction();
             log.debug("persist jobID = " + ret.getID());
