@@ -249,7 +249,12 @@ public class ContainerNode extends Node
     @Override
     public String toString()
     {
-        return "ContainerNode [nodes=" + nodes + ", appData=" + appData + ", markedForDeletion=" + markedForDeletion + ", name="
+        int children = 0;
+        if (nodes != null)
+        {
+            children = nodes.size();
+        }
+        return "ContainerNode [node count=" + children + ", appData=" + appData + ", markedForDeletion=" + markedForDeletion + ", name="
                 + name + ", owner=" + owner + ", parent=" + parent + ", path=" + path + ", properties=" + properties + ", uri="
                 + uri + "]";
     }
