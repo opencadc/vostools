@@ -199,7 +199,7 @@
             </resources>
         </copy>
         <tar destfile="build/cadcVOSClient.tar" basedir="${tmpDir}" />
-        <!-- delete dir="${tmpDir}"/ -->
+        <delete dir="${tmpDir}"/>
     </target>
 
 </project>
