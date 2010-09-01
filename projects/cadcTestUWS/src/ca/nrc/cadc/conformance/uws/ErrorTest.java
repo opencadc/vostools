@@ -211,9 +211,9 @@ public class ErrorTest extends AbstractUWSTest
                 assertEquals(properties.filename + " errorSummary message element should only have a single element in XML returned from GET of " + resourceUrl, 1, list.size());
                 validateErrorMessage(conversation, response, list);
 
-                list = errorSummary.getChildren("detail", namespace);
-                assertEquals(properties.filename + " errorSummary detail element should only have a single element in XML returned from GET of " + resourceUrl, 1, list.size());
-                validateErrorDetail(conversation, response, list);
+//                list = errorSummary.getChildren("detail", namespace);
+//                assertEquals(properties.filename + " errorSummary detail element should only have a single element in XML returned from GET of " + resourceUrl, 1, list.size());
+//                validateErrorDetail(conversation, response, list);
 
                 deleteJob(conversation, jobId);
 
