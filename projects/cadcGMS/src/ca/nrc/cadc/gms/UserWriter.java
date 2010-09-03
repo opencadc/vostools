@@ -129,7 +129,7 @@ public class UserWriter
         throws IOException
     {
         // write out the Document
-        write(getUserElement(user), writer);
+        write(getUserElement(new Element("member"), user), writer);
     }
 
     /**
@@ -138,10 +138,9 @@ public class UserWriter
      * @param user User.
      * @return member Element.
      */
-    public static Element getUserElement(User user)
+    public static Element getUserElement(Element userElement, User user)
     {
         // Create the root member Element.
-        Element userElement = new Element("member");
         userElement.setAttribute("id", user.getUserID());
 
         // Add the username Element.

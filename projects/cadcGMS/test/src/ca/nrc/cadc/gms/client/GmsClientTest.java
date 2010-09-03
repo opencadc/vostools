@@ -82,6 +82,7 @@ import java.util.Collection;
 import org.junit.Test;
 
 import ca.nrc.cadc.gms.GMSTest;
+import ca.nrc.cadc.gms.GMSTestSuite;
 import ca.nrc.cadc.gms.Group;
 import ca.nrc.cadc.gms.GroupImpl;
 import ca.nrc.cadc.gms.User;
@@ -90,12 +91,20 @@ import ca.nrc.cadc.gms.UserImpl;
 public class GmsClientTest extends GMSTest<GmsClient>
 {
     // group IDs
-    private final String getGrID = "getGroup";
-    private final String getMemberID = "getMember";
-    private final String createPUTGrID = "createPUTGroup";
-    private final String createPOSTGrID = "createPOSTGroup";
-    private final String deleteGrID = "deleteGroup";
-    private final String setGrID = "setGroup";
+    private final String getGrID = "getGroupID";
+    private final String getMemberID = "getMemberID";
+    private final String createPUTGrID = "createPUTGroupID";
+    private final String createPOSTGrID = "createPOSTGroupID";
+    private final String deleteGrID = "deleteGroupID";
+    private final String setGrID = "setGroupID";
+
+    // group names
+    private final String getGrName = "getGroup";
+    private final String getMemberName = "getMember";
+    private final String createPUTGrName = "createPUTGroup";
+    private final String createPOSTGrName = "createPOSTGroup";
+    private final String deleteGrName = "deleteGroup";
+    private final String setGrName = "setGroup";
 
     // values for members in setGroup test
     private final String setGrMemberID = "auser";
@@ -233,14 +242,22 @@ public class GmsClientTest extends GMSTest<GmsClient>
                                         128);
                                 XML_INPUT
                                         .append("<?xml version=\"1.0\" encoding=\"UTF-8\" standalone=\"no\"?>\n");
-                                XML_INPUT.append("<group id=\"" + setGrID
-                                        + "\">\n");
+                                XML_INPUT
+                                        .append("<group id=\""
+                                                + setGrID
+                                                + "\" name=\""
+                                                + setGrName
+                                                + "\" uriPrefix=\""
+                                                + GMSTestSuite.CADC_GROUP_URI
+                                                + "\" description=\"description\" >\n");
+                                XML_INPUT.append("<members>");
                                 XML_INPUT.append("<member id=\""
                                         + setGrMemberID + "\">\n");
                                 XML_INPUT.append("  <username>"
                                         + setGrMemberName
                                         + "</username>\n");
                                 XML_INPUT.append("</member>");
+                                XML_INPUT.append("</members>");
                                 XML_INPUT.append("</group>");
 
                                 inStream = new ByteArrayInputStream(
@@ -255,8 +272,13 @@ public class GmsClientTest extends GMSTest<GmsClient>
                                         128);
                                 XML_INPUT
                                         .append("<?xml version=\"1.0\" encoding=\"UTF-8\" standalone=\"no\"?>\n");
-                                XML_INPUT.append("<group id=\"" + group
-                                        + "\"/>\n");
+                                XML_INPUT
+                                        .append("<group id=\""
+                                                + group
+                                                + "\" uriPrefix=\""
+                                                + GMSTestSuite.CADC_GROUP_URI
+                                                + "\" name=\"Some name\" description=\"some description\" "
+                                                + "/>\n");
                                 inStream = new ByteArrayInputStream(
                                         XML_INPUT.toString().getBytes());
                                 return;
@@ -269,8 +291,12 @@ public class GmsClientTest extends GMSTest<GmsClient>
                                     128);
                             XML_INPUT
                                     .append("<?xml version=\"1.0\" encoding=\"UTF-8\" standalone=\"no\"?>\n");
-                            XML_INPUT.append("<group id=\""
-                                    + createPOSTGrID + "\"/>\n");
+                            XML_INPUT
+                                    .append("<group id=\""
+                                            + createPOSTGrID
+                                            + "\" uriPrefix=\""
+                                            + GMSTestSuite.CADC_GROUP_URI
+                                            + "\" name=\"A name\" description=\"A description\" />\n");
                             inStream = new ByteArrayInputStream(XML_INPUT
                                     .toString().getBytes());
                             return;
@@ -306,8 +332,11 @@ public class GmsClientTest extends GMSTest<GmsClient>
         final Group group = getTestSubject().getGroup(groupID);
 
         assertNotNull("Group 88.", group);
-        assertEquals("Group's ID is getGroup.", "getGroup", group
+        assertEquals("Group's ID is getGroup.", "getGroupID", group
                 .getGMSGroupID());
+        assertEquals("Group's URI is getGroup.",
+                GMSTestSuite.CADC_GROUP_URI + "getGroupID", group
+                        .getGroupURI());
     }
 
     @Test
@@ -330,6 +359,9 @@ public class GmsClientTest extends GMSTest<GmsClient>
         assertNotNull("Group createPOSTGroup.", group);
         assertEquals("Group's ID is " + createPOSTGrID, createPOSTGrID,
                 group.getGMSGroupID());
+        assertEquals("Group's URI is " + createPOSTGrID,
+                GMSTestSuite.CADC_GROUP_URI + createPOSTGrID, group
+                        .getGroupURI());
     }
 
     @Test

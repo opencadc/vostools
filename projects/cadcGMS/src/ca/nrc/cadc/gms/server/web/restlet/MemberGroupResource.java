@@ -72,6 +72,7 @@ import java.net.URLDecoder;
 
 import org.apache.log4j.Logger;
 import org.jdom.Document;
+import org.jdom.Element;
 import org.jdom.JDOMException;
 import org.jdom.input.SAXBuilder;
 import org.restlet.data.Status;
@@ -135,7 +136,7 @@ public class MemberGroupResource extends MemberResource
         try
         {
             getUserService().getMember(groupMemberID, groupID);
-            document.addContent(UserWriter.getUserElement(getMember()));
+            document.addContent(UserWriter.getUserElement(new Element("member"), getMember()));
         }
         catch (final InvalidGroupException e)
         {

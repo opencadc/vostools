@@ -97,4 +97,8 @@ import ca.nrc.cadc.gms.server.web.restlet.MemberResourceTest;
     GmsClientTest.class
 })
 
-public class GMSTestSuite {}
+public class GMSTestSuite {
+    
+    public static final String CADC_GROUP_URI = "ivo://cadc.nrc.ca/gms#";
+    
+}

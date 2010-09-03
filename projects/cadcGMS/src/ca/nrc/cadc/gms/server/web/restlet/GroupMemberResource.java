@@ -73,6 +73,7 @@ import java.net.URLDecoder;
 
 import org.apache.log4j.Logger;
 import org.jdom.Document;
+import org.jdom.Element;
 import org.restlet.data.Status;
 
 import ca.nrc.cadc.gms.AuthorizationException;
@@ -190,7 +191,8 @@ public class GroupMemberResource extends GroupResource
     protected void buildXML(final Document document) throws IOException
     {
         LOGGER.debug("Enter GroupMemberResource.buildXML()");
-        document.addContent(UserWriter.getUserElement(groupMember));
+        document.addContent(UserWriter.getUserElement(new Element(
+                "member"), groupMember));
     }
 
     protected String getMemberID()

@@ -116,14 +116,18 @@ public class UserMembershipWriterTest
         XMLUnit.setIgnoreWhitespace(true);
 
         user = new UserImpl("memberId", "username");
-        user.addMembership(new GroupImpl(testGr1, testGr1Name));
-        user.addMembership(new GroupImpl(testGr2, testGr2Name));
+        user.addMembership(new GroupImpl(testGr1, testGr1Name, null,
+                "Test1", GMSTestSuite.CADC_GROUP_URI));
+        user.addMembership(new GroupImpl(testGr2, testGr2Name, null,
+                "Test2", GMSTestSuite.CADC_GROUP_URI));
 
         StringBuilder sb = new StringBuilder();
         sb.append("<user id=\"memberId\">");
         sb.append("<username>username</username>");
-        sb.append("<group uri=\"" + testGr2 + "\" name=\"" + testGr2Name + "\" />");
-        sb.append("<group uri=\"" + testGr1 + "\" name=\"" + testGr1Name + "\" />");
+        sb.append("<group uri=\"" + testGr2 + "\" name=\"" + testGr2Name
+                + "\" />");
+        sb.append("<group uri=\"" + testGr1 + "\" name=\"" + testGr1Name
+                + "\" />");
         sb.append("</user>");
         userXML = sb.toString();
     }
@@ -198,17 +202,23 @@ public class UserMembershipWriterTest
             if (groupElems.get(0).getAttributeValue(
                     UserMembershipWriter.groupElementURI).equals(testGr1))
             {
-                assertEquals("Group 2", groupElems.get(0).getAttributeValue(
-                        UserMembershipWriter.groupElementURI), testGr2);
-                assertEquals("Group 2 Name", groupElems.get(0).getAttributeValue(
-                        UserMembershipWriter.groupElementName), testGr2Name);
+                assertEquals("Group 2", groupElems.get(0)
+                        .getAttributeValue(
+                                UserMembershipWriter.groupElementURI),
+                        testGr2);
+                assertEquals("Group 2 Name", groupElems.get(0)
+                        .getAttributeValue(
+                                UserMembershipWriter.groupElementName),
+                        testGr2Name);
             }
             else
             {
-                assertEquals("Group 1", testGr1, groupElems.get(1).getAttributeValue(
-                        UserMembershipWriter.groupElementURI));
-                assertEquals("Group 1", testGr1Name, groupElems.get(1).getAttributeValue(
-                        UserMembershipWriter.groupElementName));
+                assertEquals("Group 1", testGr1, groupElems.get(1)
+                        .getAttributeValue(
+                                UserMembershipWriter.groupElementURI));
+                assertEquals("Group 1", testGr1Name, groupElems.get(1)
+                        .getAttributeValue(
+                                UserMembershipWriter.groupElementName));
             }
 
             log.info("testGetUserMembershipElement passed");

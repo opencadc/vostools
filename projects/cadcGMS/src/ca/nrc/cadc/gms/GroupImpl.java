@@ -70,7 +70,6 @@ import java.util.Collection;
 import java.util.Collections;
 import java.util.HashSet;
 
-
 /**
  * Default implementation of a Group.
  */
@@ -79,7 +78,9 @@ public class GroupImpl implements Group
     private String groupID;
     private String groupName;
     private Collection<User> members;
-
+    private User owner;
+    private String description;
+    private String uriPrefix;
 
     /**
      * Default empty constructor.
@@ -91,31 +92,42 @@ public class GroupImpl implements Group
 
     /**
      * Full constructor.
-     *
-     * @param groupID       The new Group ID, if already generated/known.
+     * 
+     * @param groupID
+     *            The new Group ID, if already generated/known.
      */
     public GroupImpl(final String groupID)
     {
         this();
         this.groupID = groupID;
     }
-    
+
     /**
      * Full constructor.
-     *
-     * @param groupID       The new Group ID, if already generated/known.
+     * 
+     * @param groupID
+     *            The new Group ID, if already generated/known.
+     * @param groupName
+     *            The name of the group.
+     * @param owner
+     *            The user that owns this group
+     * @param description
+     *            Description of the group
      */
-    public GroupImpl(final String groupID, final String groupName)
+    public GroupImpl(final String groupID, final String groupName,
+            final User owner, final String description, final String uriPrefix)
     {
         this();
         this.groupID = groupID;
         this.groupName = groupName;
+        this.owner = owner;
+        this.description = description;
+        this.uriPrefix = uriPrefix;
     }
-    
 
     /**
      * Obtain this Group's unique identifier.
-     *
+     * 
      * @return String group ID.
      */
     public String getGMSGroupID()
@@ -123,6 +135,20 @@ public class GroupImpl implements Group
         return groupID;
     }
     
+    /**
+     * Obtain this Group's unique URI.
+     * 
+     * @return String group URI.
+     */
+    public String getGroupURI()
+    {
+        if( uriPrefix == null )
+        {
+            throw new IllegalStateException("No URI prefix specified");
+        }
+        return uriPrefix + groupID;
+    }
+
     /**
      * Obtain this Group's name.
      * 
@@ -134,14 +160,46 @@ public class GroupImpl implements Group
     }
 
     /**
-     * Add the given User as a member of this Group.
-     *
-     * @param newMember The new user.  Null values and duplicates are not
-     *                                 tolerated.
-     * @throws ca.nrc.cadc.gms.InvalidMemberException
-     *          If the given Member cannot be added.
+     * Obtain this Group's description.
+     * 
+     * @return String group name.
      */
-    public void addMember(final User newMember) throws InvalidMemberException
+    public String getDescription()
+    {
+        return description;
+    }
+
+    /**
+     * Obtain this Group's owner.
+     * 
+     * @return group owner.
+     */
+    public User getOwner()
+    {
+        return owner;
+    }
+    
+    /**
+     * Obtain this Group uri prefix.
+     * 
+     * @return String group URI prefix.
+     */
+    public String getUriPrefix()
+    {
+        return uriPrefix;
+    }
+
+    /**
+     * Add the given User as a member of this Group.
+     * 
+     * @param newMember
+     *            The new user. Null values and duplicates are not
+     *            tolerated.
+     * @throws ca.nrc.cadc.gms.InvalidMemberException
+     *             If the given Member cannot be added.
+     */
+    public void addMember(final User newMember)
+            throws InvalidMemberException
     {
         if (newMember == null)
         {
@@ -149,9 +207,8 @@ public class GroupImpl implements Group
         }
         else if (getMembers().contains((newMember)))
         {
-            throw new InvalidMemberException(
-                    String.format("Member %s already exists.",
-                                  newMember.getUsername()));
+            throw new InvalidMemberException(String.format(
+                    "Member %s already exists.", newMember.getUsername()));
         }
         else
         {
@@ -162,21 +219,24 @@ public class GroupImpl implements Group
 
     /**
      * Remove the given User member from this Group.
-     *
-     * @param memberID            The member to remove.  Null values and
-     *                            non-existent members are not tolerated.
+     * 
+     * @param memberID
+     *            The member to remove. Null values and non-existent
+     *            members are not tolerated.
      * @throws InvalidMemberException
-     *          If the given Member cannot be removed.
+     *             If the given Member cannot be removed.
      */
-    public void removeMember(final String memberID) throws InvalidMemberException
+    public void removeMember(final String memberID)
+            throws InvalidMemberException
     {
         if (memberID == null)
         {
-            throw new InvalidMemberException("Unable to remove NULL Member");
+            throw new InvalidMemberException(
+                    "Unable to remove NULL Member");
         }
         else
         {
-            for( User member : getMembers())
+            for (User member : getMembers())
             {
                 if (member.getUserID().equals(memberID))
                 {
@@ -185,31 +245,32 @@ public class GroupImpl implements Group
                 }
             }
             // member not found
-            throw new InvalidMemberException(
-                    String.format("Member %s does not exist.",
-                                  memberID));
+            throw new InvalidMemberException(String.format(
+                    "Member %s does not exist.", memberID));
         }
     }
-    
+
     /**
      * Obtain whether the given user is a member of this Group.
-     *
-     * @param userID The ID of User to check for.  Null values will not be
-     *               tolerated.
+     * 
+     * @param userID
+     *            The ID of User to check for. Null values will not be
+     *            tolerated.
      * @return True if they are a member, False otherwise.
      * @throws ca.nrc.cadc.gms.InvalidMemberException
-     *          If the given User cannot be used to
-     *          check (i.e. null).
+     *             If the given User cannot be used to check (i.e. null).
      */
-    public boolean hasMember(final String userID) throws InvalidMemberException
+    public boolean hasMember(final String userID)
+            throws InvalidMemberException
     {
         if (userID == null)
         {
-            throw new InvalidMemberException("Unable to check NULL Member");
+            throw new InvalidMemberException(
+                    "Unable to check NULL Member");
         }
         else
         {
-            for( User member : getMembers())
+            for (User member : getMembers())
             {
                 if (member.getUserID().equals(userID))
                 {
@@ -223,9 +284,9 @@ public class GroupImpl implements Group
 
     /**
      * Obtain all of the Members of this Group.
-     *
-     * @return Collection of User instances, or empty Collection.  This will
-     *         never return null.
+     * 
+     * @return Collection of User instances, or empty Collection. This
+     *         will never return null.
      */
     public Collection<User> getMembers()
     {
@@ -236,7 +297,6 @@ public class GroupImpl implements Group
     {
         this.members = members;
     }
-
 
     @Override
     public boolean equals(Object o)
@@ -253,8 +313,8 @@ public class GroupImpl implements Group
 
         final GroupImpl group = (GroupImpl) o;
 
-        return !(groupID != null
-                 ? !groupID.equals(group.groupID) : group.groupID != null);
+        return !(groupID != null ? !groupID.equals(group.groupID)
+                : group.groupID != null);
     }
 
     @Override

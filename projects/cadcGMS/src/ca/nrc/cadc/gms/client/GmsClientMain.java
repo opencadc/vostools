@@ -68,7 +68,6 @@
 package ca.nrc.cadc.gms.client;
 
 import java.io.File;
-import java.net.MalformedURLException;
 import java.net.URI;
 import java.net.URL;
 
@@ -112,8 +111,7 @@ public class GmsClientMain
 
     // Operations on GMS client
     public enum Operation {
-        VIEW, CREATE, DELETE, ADD_MEMBER, REMOVE_MEMBER, 
-        LIST_MEMBER_GR, LIST_OWNER_GR
+        VIEW, CREATE, DELETE, ADD_MEMBER, REMOVE_MEMBER, LIST_MEMBER_GR, LIST_OWNER_GR
     };
 
     public static final String VOS_PREFIX = "vos://";
@@ -406,13 +404,14 @@ public class GmsClientMain
                         "Argument target is required for "
                                 + this.operation);
             else if (this.operation.equals(Operation.LIST_MEMBER_GR)
-                     && (strTarget == null))
+                    && (strTarget == null))
             {
-                //TODO target is the authenticated user.
+                // TODO target is the authenticated user.
                 // Read target from certificates
-                throw new UnsupportedOperationException("Cannot determine target");
+                throw new UnsupportedOperationException(
+                        "Cannot determine target");
             }
-                
+
             target = strTarget;
 
             // check remove argument
@@ -465,7 +464,18 @@ public class GmsClientMain
                 msg("Group: " + group.getGMSGroupID() + " not found");
                 return;
             }
-            msg("Group: " + group.getGMSGroupID());
+            msg("   Group ID: " + group.getGMSGroupID());
+            msg("        URI: " + group.getGroupURI());
+            msg("       Name: " + group.getGMSGroupName());
+            msg("Description: " + group.getDescription());
+            User owner = group.getOwner();
+            String ownerStr = "N/A";
+            if (owner != null)
+            {
+                ownerStr = owner.getUsername() + " (" + owner.getUserID()
+                        + ")";
+            }
+            msg("      Owner: " + group.getOwner());
             msg("Members: Name (user ID)");
             for (User user : group.getMembers())
             {
@@ -571,13 +581,15 @@ public class GmsClientMain
                 return;
             }
             msg("User: " + user.getUserID());
-            msg("Group Membership (Group IDs):");
+            msg("Group Membership (Group Name / Group URI / Group Descripton):");
             for (Group group : user.getGMSMemberships())
             {
-                msg("     " + group.getGMSGroupID());
+                msg("     " + group.getGMSGroupName() + " / "
+                        + group.getGroupURI() + " / "
+                        + group.getDescription());
             }
             msg("Total groups: " + user.getGMSMemberships().size());
-            
+
         }
         catch (Exception e)
         {
@@ -593,7 +605,7 @@ public class GmsClientMain
      */
     private void doListMyGroups()
     {
-        //TODO - when required
+        // TODO - when required
         throw new UnsupportedOperationException("Not yet implemented");
     }
 
@@ -628,8 +640,7 @@ public class GmsClientMain
                 "java -jar cadcGMSClient.jar  [-v|--verbose|-d|--debug]                                            ",
                 "   --cert=<SSL certificate file> --key=<SSL key file>                                             ",
                 "   [--listMember|--listOwner] [--target=<User ID>]                                                                           ",
-                "                                                                                                  ",
-        };
+                "                                                                                                  ", };
 
         for (String line : um)
             msg(line);

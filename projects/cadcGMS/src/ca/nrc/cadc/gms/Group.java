@@ -82,11 +82,39 @@ public interface Group
     String getGMSGroupID();
     
     /**
+     * Obtain this Group's unique URI.
+     * 
+     * @return String group URI.
+     */
+    String getGroupURI();
+    
+    /**
+     * Obtain the URI prefix of the group.
+     * 
+     * @return String group URI prefix.
+     */
+    String getUriPrefix();
+    
+    /**
      * Obtain this Group's name.
      * 
      * @return      String group name.
      */
     String getGMSGroupName();
+    
+    /**
+     * Obtain this Group's description.
+     * 
+     * @return      String group name.
+     */
+    String getDescription();    
+    
+    /**
+     * Obtain this Group's owner.
+     * 
+     * @return      group owner.
+     */
+    User getOwner();
 
     /**
      * Add the given User as a member of this Group.
