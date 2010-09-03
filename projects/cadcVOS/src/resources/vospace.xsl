@@ -7,8 +7,11 @@ xmlns:xsl="http://www.w3.org/1999/XSL/Transform" xmlns="http://www.ivoa.net/xml/
 <xsl:output method="html" indent="yes" media-type="text/xml"/>
 
 <xsl:template match="/">
- <xsl:variable name="nodeuri" select="vos:node/@uri"/>
+ 
  <html xmlns="http://www.w3.org/1999/xhtml">
+ 
+    <xsl:variable name="nodeuri" select="vos:node/@uri"/>
+ 
  	<head>
  		<title>
  		  <xsl:value-of select="vos:node/@xsi:type"/>: <xsl:value-of select="$nodeuri"/>
@@ -101,6 +104,7 @@ xmlns:xsl="http://www.w3.org/1999/XSL/Transform" xmlns="http://www.ivoa.net/xml/
 
  <xsl:template match="//vos:view">
  	<xsl:param name="link"/>
+ 	<xsl:variable name="nodeuri" select="vos:node/@uri"/>
  	<xsl:if test="$link='true'">
  		<li xmlns="http://www.w3.org/1999/xhtml">
  			<xsl:variable name="viewurl">

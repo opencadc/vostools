@@ -69,8 +69,6 @@
 
 package ca.nrc.cadc.vos.client;
 
-import ca.nrc.cadc.auth.RunnableAction;
-import ca.nrc.cadc.auth.SSLUtil;
 import java.io.File;
 import java.io.FileReader;
 import java.io.IOException;
@@ -84,9 +82,13 @@ import java.util.List;
 import java.util.Map;
 import java.util.Properties;
 
+import javax.security.auth.Subject;
+
 import org.apache.log4j.Level;
 import org.apache.log4j.Logger;
 
+import ca.nrc.cadc.auth.RunnableAction;
+import ca.nrc.cadc.auth.SSLUtil;
 import ca.nrc.cadc.reg.client.RegistryClient;
 import ca.nrc.cadc.util.ArgumentMap;
 import ca.nrc.cadc.util.Log4jInit;
@@ -102,7 +104,6 @@ import ca.nrc.cadc.vos.VOS;
 import ca.nrc.cadc.vos.VOSURI;
 import ca.nrc.cadc.vos.View;
 import ca.nrc.cadc.vos.Transfer.Direction;
-import javax.security.auth.Subject;
 
 /**
  * @author zhangsa
@@ -319,6 +320,7 @@ public class Main implements Runnable
         catch(Throwable t)
         {
             msg("failed to copy: " + source + " -> " + destination);
+t.printStackTrace();
             if (t.getMessage() != null)
                 msg("          reason: " + t.getMessage());
             else
