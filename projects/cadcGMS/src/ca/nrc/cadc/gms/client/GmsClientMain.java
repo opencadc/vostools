@@ -475,7 +475,7 @@ public class GmsClientMain
                 ownerStr = owner.getUsername() + " (" + owner.getUserID()
                         + ")";
             }
-            msg("      Owner: " + group.getOwner());
+            msg("      Owner: " + ownerStr);
             msg("Members: Name (user ID)");
             for (User user : group.getMembers())
             {
