@@ -69,10 +69,6 @@
 
 package ca.nrc.cadc.net;
 
-import ca.nrc.cadc.auth.SSLUtil;
-import ca.nrc.cadc.net.event.ProgressListener;
-import ca.nrc.cadc.net.event.TransferEvent;
-import ca.nrc.cadc.net.event.TransferListener;
 import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
@@ -85,10 +81,17 @@ import java.nio.channels.ReadableByteChannel;
 import java.nio.channels.WritableByteChannel;
 import java.security.AccessControlContext;
 import java.security.AccessController;
+
 import javax.net.ssl.HttpsURLConnection;
 import javax.net.ssl.SSLSocketFactory;
 import javax.security.auth.Subject;
+
 import org.apache.log4j.Logger;
+
+import ca.nrc.cadc.auth.SSLUtil;
+import ca.nrc.cadc.net.event.ProgressListener;
+import ca.nrc.cadc.net.event.TransferEvent;
+import ca.nrc.cadc.net.event.TransferListener;
 
 /**
  *

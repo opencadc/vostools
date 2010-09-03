@@ -69,7 +69,6 @@
 
 package ca.nrc.cadc.net;
 
-import ca.nrc.cadc.net.event.TransferEvent;
 import java.io.BufferedInputStream;
 import java.io.BufferedOutputStream;
 import java.io.File;
@@ -79,9 +78,12 @@ import java.io.InputStream;
 import java.io.OutputStream;
 import java.net.HttpURLConnection;
 import java.net.URL;
+
 import javax.net.ssl.HttpsURLConnection;
 
 import org.apache.log4j.Logger;
+
+import ca.nrc.cadc.net.event.TransferEvent;
 
 /**
  * Perform an upload (PUT).
@@ -180,6 +182,8 @@ public class HttpUpload extends HttpTransfer
                 HttpsURLConnection sslConn = (HttpsURLConnection) conn;
                 initHTTPS(sslConn);
             }
+            
+            conn.setChunkedStreamingMode(bufferSize);
 
             conn.setRequestMethod("PUT");
             conn.setUseCaches(false);
@@ -203,6 +207,7 @@ public class HttpUpload extends HttpTransfer
                 bSize = (int) localFile.length();
 
             ostream = conn.getOutputStream();
+            
             if (localFile != null && istream == null)
                 istream = new FileInputStream(localFile);
             if ( !(ostream instanceof BufferedOutputStream) )
@@ -210,6 +215,7 @@ public class HttpUpload extends HttpTransfer
                 log.debug("using BufferedOutputStream");
                 ostream = new BufferedOutputStream(ostream, bufferSize);
             }
+            
             if (localFile != null)
             {
                 log.debug("using BufferedInputStream");

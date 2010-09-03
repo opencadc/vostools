@@ -70,7 +70,6 @@
 
 package ca.nrc.cadc.net;
 
-import ca.nrc.cadc.net.event.TransferEvent;
 import java.io.BufferedInputStream;
 import java.io.BufferedOutputStream;
 import java.io.File;
@@ -83,8 +82,12 @@ import java.net.HttpURLConnection;
 import java.net.URL;
 import java.util.zip.GZIPInputStream;
 import java.util.zip.ZipInputStream;
+
 import javax.net.ssl.HttpsURLConnection;
+
 import org.apache.log4j.Logger;
+
+import ca.nrc.cadc.net.event.TransferEvent;
 
 /**
  * Simple task to encapsulate a single download (GET). This class supports http and https
