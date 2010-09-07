@@ -114,7 +114,7 @@ public class DeleteNodeAction extends NodeAction
     public Node doAuthorizationCheck(VOSpaceAuthorizer voSpaceAuthorizer, Node clientNode)
             throws AccessControlException, FileNotFoundException
     {
-        Node node = (Node) voSpaceAuthorizer.getWritePermission(clientNode);
+        Node node = (Node) voSpaceAuthorizer.getWritePermission(clientNode.getParent());
         node.setProperties(clientNode.getProperties());
         return node;
     }
@@ -123,7 +123,7 @@ public class DeleteNodeAction extends NodeAction
      * Mark the node, and all child nodes, for deletion.
      */
     @Override
-    public NodeActionResult performNodeAction(Node node, NodePersistence nodePersistence, Request requets) throws Exception
+    public NodeActionResult performNodeAction(Node node, NodePersistence nodePersistence, Request request) throws Exception
     {
         try
         {
