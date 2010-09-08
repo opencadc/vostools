@@ -167,6 +167,7 @@ public class GmsClientMain
         {
             command.validateCommand(argMap);
             command.validateCommandArguments(argMap);
+            
         }
         catch (IllegalArgumentException ex)
         {
@@ -198,8 +199,7 @@ public class GmsClientMain
     {
         try
         {
-            // TODO enable SSL
-            // validateInitSSL(argMap);
+            validateInitSSL(argMap);
         }
         catch (Exception ex)
         {
@@ -213,7 +213,7 @@ public class GmsClientMain
             // TODO pass the https protocol to this method when ready for
             // use
             URL baseURL = registryClient
-                    .getServiceURL(new URI(SERVICE_ID));
+                    .getServiceURL(new URI(SERVICE_ID), "https");
             if (baseURL == null)
             {
                 logger.error("failed to find service URL for "

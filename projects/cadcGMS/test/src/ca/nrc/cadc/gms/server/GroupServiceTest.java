@@ -116,12 +116,12 @@ public class GroupServiceTest extends GMSTest<GroupService>
     public void putGroups() throws Exception
     {
         
-        expect(mockGroupPersistence.putGroup(new GroupImpl(groupID))).andReturn(mockGroup).once();
+        expect(mockGroupPersistence.putGroup(mockGroup)).andReturn(mockGroup).once();
         expect(mockGroup.getGMSGroupID()).andReturn(groupID).once();
         
         replay(mockGroup, mockGroupPersistence);
         
-        Group group = getTestSubject().putGroup(groupID);
+        Group group = getTestSubject().putGroup(mockGroup);
         
         assertNotNull("Group", group);
         assertEquals("GroupID", groupID, group.getGMSGroupID());

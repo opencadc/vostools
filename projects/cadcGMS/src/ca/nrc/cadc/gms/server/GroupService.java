@@ -84,12 +84,12 @@ public interface GroupService
                IllegalArgumentException, AuthorizationException;
     
     /**
-     * Create the Group with the given Group ID.
+     * Create a new Group.
      *
-     * @param groupID   Unique Group identifier.
-     * @return          The Group object for the given ID.
+     * @param group   new Group.
+     * @return        The saved group.
      */
-    Group putGroup(final String groupID)
+    Group putGroup(final Group group)
         throws InvalidGroupException,
                AuthorizationException;
     

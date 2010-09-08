@@ -111,18 +111,16 @@ public class GroupServiceImpl implements GroupService
     }
 
     /**
-     * Create the Group with the given Group ID.
+     * Create a new Group
      * 
-     * @param groupID
-     *            Unique Group identifier.
+     * @param group
+     *            Updated group
      * @return The Group object for the given ID.
      */
-    public Group putGroup(final String groupID)
+    public Group putGroup(final Group group)
             throws InvalidGroupException, AuthorizationException
     {
-        Group group = new GroupImpl(groupID);
-        group = getGroupPersistence().putGroup(group); // returned group
-        return group;
+        return getGroupPersistence().putGroup(group); // returned group
     }
 
     /**
