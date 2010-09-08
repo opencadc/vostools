@@ -76,6 +76,7 @@ import org.apache.log4j.Logger;
 import org.restlet.Request;
 import org.restlet.representation.Representation;
 
+import ca.nrc.cadc.vos.ContainerNode;
 import ca.nrc.cadc.vos.Node;
 import ca.nrc.cadc.vos.NodeFault;
 import ca.nrc.cadc.vos.NodeNotFoundException;
@@ -114,9 +115,9 @@ public class DeleteNodeAction extends NodeAction
     public Node doAuthorizationCheck(VOSpaceAuthorizer voSpaceAuthorizer, Node clientNode)
             throws AccessControlException, FileNotFoundException
     {
-        Node node = (Node) voSpaceAuthorizer.getWritePermission(clientNode.getParent());
-        node.setProperties(clientNode.getProperties());
-        return node;
+        ContainerNode parent = (ContainerNode) voSpaceAuthorizer.getWritePermission(clientNode.getParent());
+        clientNode.setParent(parent);
+        return clientNode;
     }
 
     /**
@@ -127,7 +128,8 @@ public class DeleteNodeAction extends NodeAction
     {
         try
         {
-            nodePersistence.markForDeletion(node, true);
+            Node persistentNode = nodePersistence.getFromParent(node.getName(), node.getParent());
+            nodePersistence.markForDeletion(persistentNode, true);
             return null;
         }
         catch (NodeNotFoundException e)
@@ -138,7 +140,5 @@ public class DeleteNodeAction extends NodeAction
             return new NodeActionResult(nodeFault);
         }
     }
-
-
     
 }
