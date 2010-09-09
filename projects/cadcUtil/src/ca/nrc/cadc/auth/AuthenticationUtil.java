@@ -70,6 +70,9 @@
 package ca.nrc.cadc.auth;
 
 import java.lang.reflect.Constructor;
+import java.security.AccessControlContext;
+import java.security.AccessControlException;
+import java.security.AccessController;
 import java.security.Principal;
 import java.security.PrivateKey;
 import java.security.cert.X509Certificate;
@@ -221,7 +224,7 @@ public class AuthenticationUtil
         if (subject == null)
             return null;
         StringBuilder sb = new StringBuilder();
-        Iterator it = subject.getPrincipals().iterator();
+        Iterator<Principal> it = subject.getPrincipals().iterator();
         while (it.hasNext())
         {
             Principal principal = (Principal) it.next();
@@ -231,6 +234,31 @@ public class AuthenticationUtil
             sb.append("]");
         }
         return sb.toString();
+    }
+    
+    /**
+     * Get corresponding user IDs from Subject's HttpPrincipals
+     * @return set of user ids extracted from the HttpPrincipals
+     */
+    public static Set<String> getUseridsFromSubject()
+    {
+        AccessControlContext acc = AccessController.getContext();
+        Subject subject = Subject.getSubject(acc);
+
+        Set<String> userids = new HashSet<String>();
+        if (subject != null)
+        {
+            Set<HttpPrincipal> principals = subject
+                    .getPrincipals(HttpPrincipal.class);
+            String userId = null;
+
+            for (HttpPrincipal principal : principals)
+            {
+                userId = principal.getName();
+                userids.add(userId);
+            }
+        }
+        return userids;
     }
 
     // Build a Subject from the encoding.
