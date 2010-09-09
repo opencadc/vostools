@@ -111,14 +111,31 @@ public class RegistryClient
     private static final String LOCAL_PROPERTY = RegistryClient.class.getName() + ".local";
     private static final String HOST_PROPERTY = RegistryClient.class.getName() + ".host";
 
-
-    private Map<URI,List<URL>> lookup;
+    private URL url;
     private MultiValuedProperties mvp;
     
     private String hostname;
 
+    /**
+     * Constructor. Uses a properties file called RegistryClient.properties found in the classpath.
+     */
     public RegistryClient()
     {
+        this(RegistryClient.class.getClassLoader().getResource(CACHE_FILENAME), false);
+    }
+
+    /**
+     * Constructor. Uses a properties file loaded from the specified url.
+     * @param url
+     */
+    public RegistryClient(URL url)
+    {
+        this(url, false);
+    }
+
+    private RegistryClient(URL url, boolean unused)
+    {
+        this.url = url;
         try
         {
             if ( "true".equals(System.getProperty(LOCAL_PROPERTY)) )
@@ -144,9 +161,7 @@ public class RegistryClient
         {
             throw new RuntimeException("failed to determine canonical local host name", ex);
         }
-
     }
-
     /**
      * Find the service URL for the service registered under the specified identifier. The
      * identifier must be an IVOA identifier (e.g. with URI scheme os "ivo"). If the service
@@ -245,7 +260,6 @@ public class RegistryClient
         try
         {
             // find RegistryClient.properties in classpath
-            URL url = RegistryClient.class.getClassLoader().getResource(CACHE_FILENAME);
             if (url == null)
                 throw new RuntimeException("failed to find resource: " + CACHE_FILENAME);
 

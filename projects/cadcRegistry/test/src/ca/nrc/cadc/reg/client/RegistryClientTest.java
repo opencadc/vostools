@@ -169,6 +169,27 @@ private static Logger log = Logger.getLogger(RegistryClientTest.class);
             Assert.fail("unexpected exception: " + t);
         }
     }
+    @Test
+    public void testFoundAltURL() throws Exception
+    {
+        try
+        {
+            // TODO: verify that this works with an arbitrary URL (eg http)
+            RegistryClient rc = new RegistryClient(
+                    RegistryClient.class.getClassLoader().getResource(
+                        RegistryClient.class.getSimpleName() + ".properties") );
+
+            URL expected = new URL(DUMMY_URL);
+            URL url = rc.getServiceURL(new URI(DUMMY_URI));
+            Assert.assertEquals(expected, url);
+        }
+        catch(Throwable t)
+        {
+            t.printStackTrace();
+            Assert.fail("unexpected exception: " + t);
+        }
+    }
+
 
     
     @Test
