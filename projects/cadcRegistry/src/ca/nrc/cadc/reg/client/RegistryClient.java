@@ -69,18 +69,18 @@
 
 package ca.nrc.cadc.reg.client;
 
-import ca.nrc.cadc.util.MultiValuedProperties;
 import java.io.IOException;
 import java.io.InputStream;
-import java.net.Inet4Address;
 import java.net.InetAddress;
 import java.net.MalformedURLException;
 import java.net.URI;
 import java.net.URL;
 import java.net.UnknownHostException;
 import java.util.List;
-import java.util.Map;
+
 import org.apache.log4j.Logger;
+
+import ca.nrc.cadc.util.MultiValuedProperties;
 
 
 /**
@@ -259,9 +259,9 @@ public class RegistryClient
 
         try
         {
-            // find RegistryClient.properties in classpath
+            // find the cache resource from the url
             if (url == null)
-                throw new RuntimeException("failed to find resource: " + CACHE_FILENAME);
+                throw new RuntimeException("failed to find cache resource.");
 
             // read the properties
             InputStream istream = url.openStream();
