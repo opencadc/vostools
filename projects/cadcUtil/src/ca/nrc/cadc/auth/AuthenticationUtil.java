@@ -336,10 +336,6 @@ public class AuthenticationUtil
                 
                 X500Principal x1 = (X500Principal) p1;
                 X500Principal x2 = (X500Principal) p2;
-                
-System.out.println("^^^^^^^^^^^BM: compare1: " + x1.getName(X500Principal.CANONICAL));
-System.out.println("^^^^^^^^^^^BM: compare2: " + x2.getName(X500Principal.CANONICAL));
-                
                 return x1.getName(X500Principal.CANONICAL).equals(
                         x2.getName(X500Principal.CANONICAL));
             }
