@@ -200,16 +200,14 @@ public class UserReader
         }
 
         // user group membership
-        Element membership = root
-                .getChild("membershipGroups", namespace);
+        Element membership = root.getChild("membershipGroups", namespace);
         List<Element> groups = membership.getChildren();
         for (Element group : groups)
         {
-            GroupReader.parseGroup(group, namespace);
+            Group membershipGroup = GroupReader.parseGroup(group, namespace);
+            user.getGMSMemberships().add(membershipGroup);
         }
         return user;
     }
-    
-    
 
 }

@@ -142,6 +142,12 @@ public class GroupMemberResource extends GroupResource
             groupMember = getUserService().getMember(
                     new X500Principal(groupMemberID),
                     new URI(groupService.getGroupUriPrefix() + groupID));
+            if( groupMember==null )
+            {
+                final String message = String.format(
+                        "No such User with ID %s", groupMemberID);
+                processError(null, Status.CLIENT_ERROR_NOT_FOUND, message);
+            }
             return true;
         }
         catch (final InvalidGroupException e)

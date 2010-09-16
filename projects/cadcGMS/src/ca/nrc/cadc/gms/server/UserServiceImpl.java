@@ -75,6 +75,7 @@ import ca.nrc.cadc.gms.Group;
 import ca.nrc.cadc.gms.InvalidGroupException;
 import ca.nrc.cadc.gms.InvalidMemberException;
 import ca.nrc.cadc.gms.User;
+import ca.nrc.cadc.gms.UserImpl;
 import ca.nrc.cadc.gms.server.persistence.GroupPersistence;
 import ca.nrc.cadc.gms.server.persistence.UserPersistence;
 
@@ -149,13 +150,14 @@ public class UserServiceImpl implements UserService
             throws InvalidMemberException, InvalidGroupException,
                    AuthorizationException
     {
-        final User member = getUserPersistence().getUser(memberUserID, true);
-
-        if (member == null)
-        {
-            throw new InvalidMemberException(
-                    String.format("No such User with ID %s", memberUserID));
-        }
+        // Not sure we need to read this from the persistance layer.
+//        final User member = getUserPersistence().getUser(memberUserID, true);
+//
+//        if (member == null)
+//        {
+//            throw new InvalidMemberException(
+//                    String.format("No such User with ID %s", memberUserID));
+//        }
 
         final Group group = getGroupPersistence().getGroup(groupID);
 
@@ -165,11 +167,10 @@ public class UserServiceImpl implements UserService
                     String.format("No such Group with ID %s", groupID));
         }
 
-        if (!member.isMemberOf(group))
+        final User member = new UserImpl(memberUserID);
+        if (!group.getMembers().contains(member))
         {
-            throw new IllegalArgumentException(
-                    String.format("The given User, '%s', is not a member "
-                                  + "of Group '%s'.", memberUserID, groupID));
+            return null;
         }
 
         return member;

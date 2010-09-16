@@ -489,19 +489,22 @@ public class GmsClientMain
             }
         }
         msg("Members:");
+        int count = 0;
         for (User user : group.getMembers())
         {
-            msg("\t" + group.getID());
+            count++;
+            msg("\t" + user.getID());
             if (group.getProperties().size() > 0)
             {
-                msg("\t\ttProperties:");
-                for (ElemProperty prop : group.getProperties())
+                msg("\t\tProperties:");
+                for (ElemProperty prop : user.getProperties())
                 {
                     msg("\t\t" + prop.getPropertyURI() + ": "
                             + prop.getPropertyValue());
                 }
-            }
+            }           
         }
+        msg("Total members: " + count);
     }
 
     /**
@@ -595,7 +598,7 @@ public class GmsClientMain
                 msg("User: " + target + " not found");
                 return;
             }
-            msg("User: " + user.getID());
+            msg("User ID: " + user.getID());
             msg("Group Membership (Group ID / Group Descripton):");
             for (Group group : user.getGMSMemberships())
             {
