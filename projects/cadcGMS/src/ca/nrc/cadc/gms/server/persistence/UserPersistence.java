@@ -66,6 +66,8 @@
  */
 package ca.nrc.cadc.gms.server.persistence;
 
+import javax.security.auth.x500.X500Principal;
+
 import ca.nrc.cadc.gms.User;
 
 public interface UserPersistence
@@ -78,5 +80,5 @@ public interface UserPersistence
      *                        or not (false).
      * @return              User instance, or null if none found.
      */
-    User getUser(final String userID, boolean withMembership);
+    User getUser(final X500Principal userID, boolean withMembership);
 }

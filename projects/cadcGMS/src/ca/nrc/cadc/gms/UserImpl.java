@@ -66,28 +66,36 @@
  */
 package ca.nrc.cadc.gms;
 
+import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.HashSet;
+import java.util.List;
+
+import javax.security.auth.x500.X500Principal;
 
 
 public class UserImpl implements User
 {
-    private String userID;
-    private String username;
+    // the unique user ID as X500Principal
+    private X500Principal userID;
+    
     private Collection<Group> memberships;
+    
+    // members' s properties
+    protected List<ElemProperty> properties;
 
 
     public UserImpl()
     {
         setMemberships(new HashSet<Group>());
+        setProperties(new ArrayList<ElemProperty>());
     }
 
-    public UserImpl(final String userID, final String username)
+    public UserImpl(final X500Principal userID)
     {
         this();
         this.userID = userID;
-        this.username = username;
     }
 
     /**
@@ -95,39 +103,9 @@ public class UserImpl implements User
      *
      * @return long user ID.
      */
-    public String getUserID()
+    public X500Principal getID()
     {
         return userID;
-    }
-
-    /**
-     * Obtain the (mostly) unique username.
-     *
-     * @return String username.
-     */
-    public String getUsername()
-    {
-        return username;
-    }
-
-    /**
-     * Add the given Group to this User's memberships.
-     *
-     * @param group The Group to add to.  Nulls are not tolerated.
-     */
-    public void addMembership(final Group group)
-    {
-        this.memberships.add(group);
-    }
-
-    /**
-     * Remove the given Group from this User's memberships.
-     *
-     * @param group The Group to remove from.
-     */
-    public void removeMembership(final Group group)
-    {
-        this.memberships.remove(group);
     }
 
     /**
@@ -140,16 +118,34 @@ public class UserImpl implements User
     {
         return getGMSMemberships().contains(group);
     }
+    
+    /**
+     * 
+     * @return properties associated with a user
+     */
+    public List<ElemProperty> getProperties()
+    {
+        return properties;
+    }
 
     /**
-     * Obtain the Groups that this User is a member of.  No modifications can
-     * be made through this method.
+     * Sets the properties associated with a user.
+     * 
+     * @param elemProperties new properties for the user
+     */
+    public void setProperties(List<ElemProperty> elemProperties)
+    {
+        properties = elemProperties;
+    }
+
+    /**
+     * Obtain the Groups that this User is a member of.  
      *
      * @return Collection of Group Instances, or empty Collection.  Never null.
      */
     public Collection<Group> getGMSMemberships()
     {
-        return Collections.unmodifiableCollection(memberships);
+        return memberships;
     }
 
     public void setMemberships(final Collection<Group> memberships)
@@ -175,16 +171,13 @@ public class UserImpl implements User
 
         return !(userID != null
                  ? !userID.equals(user.userID)
-                 : user.userID != null)
-               && !(username != null
-                    ? !username.equals(user.username) : user.username != null);
+                 : user.userID != null);
     }
 
     @Override
     public int hashCode()
     {
         int result = userID != null ? userID.hashCode() : 0;
-        result = 31 * result + (username != null ? username.hashCode() : 0);
         return result;
     }
 }

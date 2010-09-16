@@ -69,11 +69,14 @@ package ca.nrc.cadc.gms.server.web.restlet;
 import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.UnsupportedEncodingException;
+import java.net.URI;
+import java.net.URISyntaxException;
 import java.net.URLDecoder;
+
+import javax.security.auth.x500.X500Principal;
 
 import org.apache.log4j.Logger;
 import org.jdom.Document;
-import org.jdom.Element;
 import org.restlet.data.Status;
 
 import ca.nrc.cadc.gms.AuthorizationException;
@@ -136,8 +139,9 @@ public class GroupMemberResource extends GroupResource
             LOGGER.debug(String.format("groupID: %s memberID: %s",
                     groupID, groupMemberID));
 
-            groupMember = getUserService().getMember(groupMemberID,
-                    groupID);
+            groupMember = getUserService().getMember(
+                    new X500Principal(groupMemberID),
+                    new URI(groupService.getGroupUriPrefix() + groupID));
             return true;
         }
         catch (final InvalidGroupException e)
@@ -150,14 +154,6 @@ public class GroupMemberResource extends GroupResource
         {
             final String message = String.format(
                     "No such User with ID %s", groupMemberID);
-            processError(e, Status.CLIENT_ERROR_NOT_FOUND, message);
-        }
-        catch (IllegalArgumentException e)
-        {
-            final String message = String.format(
-                    "The given User with ID %s is not a member "
-                            + "of Group with ID %s.", groupMemberID,
-                    groupID);
             processError(e, Status.CLIENT_ERROR_NOT_FOUND, message);
         }
         catch (AuthorizationException e)
@@ -173,6 +169,12 @@ public class GroupMemberResource extends GroupResource
             final String message = String.format(
                     "Could not URL decode groupMemberID (%s) or "
                             + "groupID (%s).", groupMemberID, groupID);
+            processError(e, Status.CLIENT_ERROR_BAD_REQUEST, message);
+        }
+        catch (URISyntaxException e)
+        {
+            final String message = String.format(
+                    "Could not URI decode groupID (%s).", groupID);
             processError(e, Status.CLIENT_ERROR_BAD_REQUEST, message);
         }
         return false;
@@ -191,8 +193,7 @@ public class GroupMemberResource extends GroupResource
     protected void buildXML(final Document document) throws IOException
     {
         LOGGER.debug("Enter GroupMemberResource.buildXML()");
-        document.addContent(UserWriter.getUserElement(new Element(
-                "member"), groupMember));
+        document.addContent(UserWriter.getUserElement(groupMember));
     }
 
     protected String getMemberID()
@@ -203,7 +204,8 @@ public class GroupMemberResource extends GroupResource
     protected User getMember() throws InvalidMemberException,
             AuthorizationException
     {
-        return getUserService().getUser(getMemberID(), false);
+        return getUserService().getUser(new X500Principal(getMemberID()),
+                false);
     }
 
     public UserService getUserService()

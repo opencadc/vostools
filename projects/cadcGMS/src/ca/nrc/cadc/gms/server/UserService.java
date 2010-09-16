@@ -66,6 +66,10 @@
 */
 package ca.nrc.cadc.gms.server;
 
+import java.net.URI;
+
+import javax.security.auth.x500.X500Principal;
+
 import ca.nrc.cadc.gms.AuthorizationException;
 import ca.nrc.cadc.gms.InvalidGroupException;
 import ca.nrc.cadc.gms.InvalidMemberException;
@@ -82,7 +86,7 @@ public interface UserService
      *                        or not (false).
      * @return              The User instance, or null if none found.
      */
-    User getUser(final String userID, boolean withMembership)
+    User getUser(final X500Principal userID, boolean withMembership)
     throws InvalidMemberException, AuthorizationException;
 
     /**
@@ -100,8 +104,7 @@ public interface UserService
      * @throws AuthorizationException  If the executing User is not authorized
      *                                 to do so.
      */
-    User getMember(final String memberUserID, final String groupID)
+    User getMember(final X500Principal memberUserID, final URI groupID)
             throws InvalidMemberException, InvalidGroupException,
                    IllegalArgumentException, AuthorizationException;
-
 }

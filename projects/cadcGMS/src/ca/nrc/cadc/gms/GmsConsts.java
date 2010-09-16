@@ -64,122 +64,19 @@
  *
  ************************************************************************
  */
-package ca.nrc.cadc.gms.server.web.restlet;
 
-import java.io.FileNotFoundException;
-import java.io.IOException;
-import java.io.UnsupportedEncodingException;
-import java.net.URISyntaxException;
-import java.net.URLDecoder;
 
-import javax.security.auth.x500.X500Principal;
+package ca.nrc.cadc.gms;
 
-import org.apache.log4j.Logger;
-import org.jdom.Document;
-import org.restlet.data.Status;
-
-import ca.nrc.cadc.gms.AuthorizationException;
-import ca.nrc.cadc.gms.InvalidMemberException;
-import ca.nrc.cadc.gms.User;
-import ca.nrc.cadc.gms.UserWriter;
-import ca.nrc.cadc.gms.server.UserService;
-
-public class MemberResource extends AbstractResource
+/**
+ * Holder of commonly used consts in GMS
+ */
+public class GmsConsts
 {
-    private final static Logger LOGGER = Logger
-            .getLogger(MemberResource.class);
-    private UserService userService;
-    private User user;
-
-    /**
-     * No-argument constructor.
-     */
-    public MemberResource()
-    {
-    }
-
-    /**
-     * Full constructor with appropriate arguments.
-     * 
-     * @param userService
-     *            The UserService instance.
-     */
-    public MemberResource(final UserService userService)
-    {
-        setUserService(userService);
-    }
-
-    /**
-     * Get a reference to the resource identified by the user.
-     * 
-     * @throws FileNotFoundException
-     *             If the resource doesn't exist.
-     */
-    @Override
-    protected boolean obtainResource() throws URISyntaxException
-    {
-        LOGGER.debug("Enter MemberResource.obtainResource()");
-        String memberUserID = null;
-        try
-        {
-            memberUserID = URLDecoder.decode(getMemberID(), "UTF-8");
-            LOGGER.debug(String.format("userID: %s", memberUserID));
-            // get the user first
-            user = getUserService().getUser(
-                    new X500Principal(memberUserID), true);
-            return true;
-        }
-        catch (UnsupportedEncodingException e)
-        {
-            final String message = String.format(
-                    "Could not URL decode groupMemberID (%s)",
-                    memberUserID);
-            processError(e, Status.CLIENT_ERROR_BAD_REQUEST, message);
-        }
-        catch (InvalidMemberException e)
-        {
-            final String message = String.format(
-                    "Could not find resource (%s)", memberUserID);
-            processError(e, Status.CLIENT_ERROR_NOT_FOUND, message);
-        }
-        catch (AuthorizationException e)
-        {
-            final String message = String.format(
-                    "Could not find resource (%s)", memberUserID);
-            processError(e, Status.CLIENT_ERROR_NOT_FOUND, message);
-        }
-        return false;
-    }
-
-    /**
-     * Assemble the XML for this Resource's Representation into the given
-     * Document.
-     * 
-     * @param document
-     *            The Document to build up.
-     * @throws java.io.IOException
-     *             If something went wrong or the XML cannot be built.
-     *             TODO - Needs implementation! TODO - jenkinsd 2010.04.26
-     */
-    protected void buildXML(final Document document) throws IOException
-    {
-        LOGGER.debug("Enter MemberResource.buildXML()");
-        document.addContent(UserWriter.getUserElement(user));
-    }
-
-    protected String getMemberID()
-    {
-        return (String) getRequestAttribute("memberID");
-    }
-
-    public UserService getUserService()
-    {
-        return userService;
-    }
-
-    public void setUserService(UserService userService)
-    {
-        this.userService = userService;
-    }
+    // Denotes a description given to a group
+    public static final String PROPERTY_GROUP_DESCRIPTION = "ivo://ivoa.net/gms#description"; 
+    
+    // Denotes the DN of a user
+    public static final String PROPERTY_USER_DN = "ivo://ivoa.net/gms#user_dn"; 
 
 }

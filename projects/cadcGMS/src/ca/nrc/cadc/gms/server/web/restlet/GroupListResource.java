@@ -79,6 +79,7 @@ import ca.nrc.cadc.gms.AuthorizationException;
 import ca.nrc.cadc.gms.Group;
 import ca.nrc.cadc.gms.GroupWriter;
 import ca.nrc.cadc.gms.InvalidGroupException;
+import ca.nrc.cadc.gms.InvalidMemberException;
 import ca.nrc.cadc.gms.server.GroupService;
 
 public class GroupListResource extends AbstractResource
@@ -142,7 +143,7 @@ public class GroupListResource extends AbstractResource
         {
             group = getGroupService().putGroup(null);
             logger.debug(String.format("Created groupID: %s", group
-                    .getGMSGroupID()));
+                    .getID()));
         }
         catch (AuthorizationException e)
         {

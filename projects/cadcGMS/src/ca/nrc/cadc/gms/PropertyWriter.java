@@ -64,119 +64,26 @@
 *
 ************************************************************************
 */
+
+
 package ca.nrc.cadc.gms;
 
-import java.io.BufferedWriter;
-import java.io.IOException;
-import java.io.OutputStream;
-import java.io.OutputStreamWriter;
-import java.io.UnsupportedEncodingException;
-import java.io.Writer;
-
-import org.jdom.Attribute;
-import org.jdom.Document;
 import org.jdom.Element;
-import org.jdom.output.Format;
-import org.jdom.output.XMLOutputter;
-
-import ca.nrc.cadc.util.StringBuilderWriter;
 
 /**
- *
- * @author jburke
+ * Utility class to write a property to a corresponding jdom element
  */
-public class UserWriter
+public class PropertyWriter
 {
-    public UserWriter() {}
-
-    /**
-     * Write a User to a StringBuilder.
-     */
-    public static void write(User user, StringBuilder builder)
-        throws IOException
+    public static Element write(ElemProperty property)
     {
-        write(user, new StringBuilderWriter(builder));
-    }
-
-    /**
-     * Write a User to an OutputStream.
-     *
-     * @param user User to write.
-     * @param out OutputStream to write to.
-     * @throws IOException if the writer fails to write.
-     */
-    public static void write(User user, OutputStream out)
-        throws IOException
-    {
-        OutputStreamWriter outWriter;
-        try
+        Element result = new Element("property");
+        result.setAttribute("name", property.getPropertyURI());
+        result.setAttribute("value", property.getPropertyValue());
+        if( property.isReadOnly())
         {
-            outWriter = new OutputStreamWriter(out, "UTF-8");
-        } catch (UnsupportedEncodingException e)
-        {
-            throw new RuntimeException("UTF-8 encoding not supported", e);
+            result.setAttribute("readOnly", "true");
         }
-        write(user, new BufferedWriter(outWriter));
+        return result;
     }
-
-    /**
-     * Write a User to a Writer.
-     *
-     * @param user User to write.
-     * @param writer Writer to write to.
-     * @throws IOException if the writer fails to write.
-     */
-    public static void write(User user, Writer writer)
-        throws IOException
-    {
-        // write out the Document
-        write(getUserElement(user), writer);
-    }
-
-    /**
-     * Build the member Element of a User.
-     *
-     * @param user User.
-     * @return member Element.
-     */
-    public static Element getUserElement(User user)
-    {
-        // Create the user element Element.
-        Element userElement = new Element("member");
-        userElement.setAttribute("dn", user.getID().getName());
-
-        // Add the username Element.
-        for( ElemProperty property : user.getProperties() )
-        {
-            userElement.addContent(PropertyWriter.write(property));
-        }
-        
-        if( user.getGMSMemberships() != null )
-        {
-            Element membershipElem = new Element("membershipGroups");
-            for( Group group : user.getGMSMemberships() )
-            {
-                membershipElem.addContent(GroupWriter.getGroupElement(group));
-            }
-            userElement.addContent(membershipElem);
-        }
-        
-        return userElement;
-    }
-
-    /**
-     * Write to root Element to a writer.
-     *
-     * @param root Root Element to write.
-     * @param writer Writer to write to.
-     * @throws IOException if the writer fails to write.
-     */
-    private static void write(Element root, Writer writer)
-        throws IOException
-    {
-        XMLOutputter outputter = new XMLOutputter();
-        outputter.setFormat(Format.getPrettyFormat());
-        outputter.output(new Document(root), writer);
-    }
-
 }

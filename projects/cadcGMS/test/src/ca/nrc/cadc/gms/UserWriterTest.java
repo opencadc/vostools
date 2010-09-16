@@ -72,6 +72,12 @@ import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
 
+import java.net.URI;
+import java.util.HashSet;
+import java.util.Set;
+
+import javax.security.auth.x500.X500Principal;
+
 import org.apache.log4j.Level;
 import org.apache.log4j.Logger;
 import org.custommonkey.xmlunit.XMLAssert;
@@ -96,8 +102,17 @@ public class UserWriterTest
         Log4jInit.setLevel("ca", Level.INFO);
     }
 
-    static User user;
+    static String MEMBER_ID = "CN=test user,OU=hia.nrc.ca,O=Grid,C=CA";
+    static String USER_NAME_PROP = "ivo://cadc.nrc.ca/gms#member_name";
+    static String USER_ID_PROP = "ivo://cadc.nrc.ca/gms#member_id";
+    static String groupID = "groupID";
+    final static String groupURI = "ivo://cadc.nrc.ca/gms/group#" + groupID;
+    final static String GROUP_DESCR = "ivo://cadc.nrc.ca/gms/group_description";
+    static String userName = "Test User";
+    static String userId = "userId";
+    static UserImpl user;
     static String userXML;
+    static String description = "This is my test group";
 
     public UserWriterTest()
     {
@@ -108,12 +123,28 @@ public class UserWriterTest
     {
         XMLUnit.setIgnoreWhitespace(true);
 
-        user = new UserImpl("memberId", "username");
-
+        user = new UserImpl(new X500Principal(MEMBER_ID));
+        user.getProperties().add(new ElemPropertyImpl(USER_NAME_PROP, userName));
+        ElemProperty eProp = new ElemPropertyImpl(USER_ID_PROP, userId);
+        eProp.setReadOnly(true);
+        user.getProperties().add(eProp);
+        GroupImpl group = new GroupImpl(new URI(groupURI));
+        group.getProperties().add(new ElemPropertyImpl(GROUP_DESCR, description));
+        Set<Group> memberships = new HashSet<Group>();
+        memberships.add(group);
+        user.setMemberships(memberships);
+        
         StringBuilder sb = new StringBuilder();
-        sb.append("<member id=\"memberId\">");
-        sb.append("<username>username</username>");
-        sb.append("</member>");
+        sb.append("<member dn=\"" + MEMBER_ID + "\">\n");
+        sb.append("<property name=\"" + USER_NAME_PROP + "\" value=\"" + userName + "\" />\n");
+        sb.append("<property name=\"" + USER_ID_PROP + "\" value=\"" + userId + "\" readOnly=\"true\" />\n");
+        sb.append("<membershipGroups>\n");
+        sb.append("<group uri=\"" + groupURI + "\" >");
+        sb.append("<property name=\"" + GROUP_DESCR + "\" value=\"" + description +"\" />\n");
+        sb.append("<members/>\n");
+        sb.append("</group>\n");
+        sb.append("</membershipGroups>\n");
+        sb.append("</member>\n");
         userXML = sb.toString();
     }
 
@@ -167,17 +198,22 @@ public class UserWriterTest
         {
             log.debug("testGetUserElement");
 
-            Element userElement = UserWriter.getUserElement(new Element(
-                    "member"), user);
+            Element userElement = UserWriter.getUserElement(user);
 
             assertTrue(userElement.getName().equals("member"));
-            assertNotNull(userElement.getAttribute("id"));
-            assertTrue(userElement.getAttributeValue("id").equals(
-                    "memberId"));
+            assertNotNull(userElement.getAttribute("dn"));
+            assertTrue(userElement.getAttributeValue("dn").equals(
+                    MEMBER_ID));
 
-            Element usernameElement = userElement.getChild("username");
+            Element usernameElement = userElement.getChild("property");
             assertNotNull(usernameElement);
-            assertEquals("username", usernameElement.getText());
+            assertNotNull(usernameElement.getAttribute("name"));
+            assertTrue(usernameElement.getAttributeValue("name").equals(
+                    USER_NAME_PROP));
+            assertNotNull(usernameElement.getAttribute("value"));
+            assertTrue(usernameElement.getAttributeValue("value").equals(
+                    userName));
+
 
             log.info("testGetUserElement passed");
         }

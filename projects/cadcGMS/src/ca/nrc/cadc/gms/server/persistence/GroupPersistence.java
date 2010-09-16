@@ -66,30 +66,37 @@
  */
 package ca.nrc.cadc.gms.server.persistence;
 
+import java.net.URI;
+
 import ca.nrc.cadc.gms.Group;
 import ca.nrc.cadc.gms.InvalidGroupException;
+import ca.nrc.cadc.gms.InvalidMemberException;
 
 public interface GroupPersistence
 {
     /**
      * Obtain a Group with the given Group ID.
-     *
-     * @param groupID   The Group unique ID.
-     * @return          A Group instance, or null if none found.
+     * 
+     * @param groupID
+     *            The Group unique ID.
+     * @return A Group instance, or null if none found.
      */
-    Group getGroup(final String groupID) throws InvalidGroupException;
-    
-    
+    Group getGroup(final URI groupID) throws InvalidGroupException;
+
     /**
      * Creates a group.
-     * @param group to create
+     * 
+     * @param group
+     *            to create
      * @return created group
      */
     Group putGroup(final Group group) throws InvalidGroupException;
-    
+
     /**
      * Deletes a group.
-     * @param groupID Group ID to delete
+     * 
+     * @param groupID
+     *            Group ID to delete
      */
-    void deleteGroup(final String groupID) throws InvalidGroupException;
+    void deleteGroup(final URI groupID) throws InvalidGroupException;
 }

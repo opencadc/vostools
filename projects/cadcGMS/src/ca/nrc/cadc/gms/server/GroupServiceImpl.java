@@ -66,15 +66,18 @@
  */
 package ca.nrc.cadc.gms.server;
 
+import java.net.URI;
+
 import ca.nrc.cadc.gms.AuthorizationException;
 import ca.nrc.cadc.gms.Group;
-import ca.nrc.cadc.gms.GroupImpl;
 import ca.nrc.cadc.gms.InvalidGroupException;
+import ca.nrc.cadc.gms.InvalidMemberException;
 import ca.nrc.cadc.gms.server.persistence.GroupPersistence;
 
 public class GroupServiceImpl implements GroupService
 {
     private GroupPersistence groupPersistence;
+    private String uriGroupPrefix;
 
     /**
      * No-arg constructor.
@@ -89,9 +92,11 @@ public class GroupServiceImpl implements GroupService
      * @param groupPersistence
      *            The GroupPersistence object.
      */
-    public GroupServiceImpl(final GroupPersistence groupPersistence)
+    public GroupServiceImpl(final GroupPersistence groupPersistence,
+            final String uriGroupPrefix)
     {
         this.groupPersistence = groupPersistence;
+        this.uriGroupPrefix = uriGroupPrefix;
     }
 
     /**
@@ -101,7 +106,7 @@ public class GroupServiceImpl implements GroupService
      *            Unique Group identifier.
      * @return The Group object for the given ID.
      */
-    public Group getGroup(final String groupID)
+    public Group getGroup(final URI groupID)
             throws InvalidGroupException, IllegalArgumentException,
             AuthorizationException
     {
@@ -114,27 +119,52 @@ public class GroupServiceImpl implements GroupService
      * Create a new Group
      * 
      * @param group
-     *            Updated group
+     *            New group
      * @return The Group object for the given ID.
      */
     public Group putGroup(final Group group)
             throws InvalidGroupException, AuthorizationException
     {
+        if (getGroup(group.getID()) != null)
+        {
+            throw new InvalidGroupException(
+                    "Cannot put group. Group with ID " + group.getID()
+                            + " already exists");
+        }
         return getGroupPersistence().putGroup(group); // returned group
     }
 
+    /**
+     * Modify an existing Group
+     * 
+     * @param group
+     *            Updated group
+     * @return The Group object for the given ID.
+     */
+    public Group postGroup(final Group group)
+            throws InvalidGroupException, AuthorizationException
+    {
+        if (getGroup(group.getID()) == null)
+        {
+            throw new InvalidGroupException(
+                    "Cannot post group. Group with ID " + group.getID()
+                            + " not found");
+        }
+        return getGroupPersistence().putGroup(group); // returned group
+    }    
+    
     /**
      * Delete the Group with the given Group ID.
      * 
      * @param groupID
      *            Unique Group identifier.
      */
-    public void deleteGroup(final String groupID)
+    public void deleteGroup(final URI groupID)
             throws InvalidGroupException, AuthorizationException
     {
         getGroupPersistence().deleteGroup(groupID);
     }
-    
+
     public GroupPersistence getGroupPersistence()
     {
         return groupPersistence;
@@ -143,5 +173,23 @@ public class GroupServiceImpl implements GroupService
     public void setGroupPersistence(GroupPersistence groupPersistence)
     {
         this.groupPersistence = groupPersistence;
+    }
+
+    /**
+     * 
+     * @return the group URI prefix associated with this service
+     */
+    public String getGroupUriPrefix()
+    {
+        return uriGroupPrefix;
+    }
+    
+    /**
+     * Set Group URI Prefix of the service
+     * @param uriGroupPrefix
+     */
+    public void setGroupUriPrefix(String uriGroupPrefix)
+    {
+        this.uriGroupPrefix = uriGroupPrefix;
     }
 }

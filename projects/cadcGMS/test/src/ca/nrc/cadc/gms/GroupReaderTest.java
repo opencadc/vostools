@@ -70,6 +70,10 @@ package ca.nrc.cadc.gms;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.fail;
 
+import java.net.URI;
+
+import javax.security.auth.x500.X500Principal;
+
 import org.apache.log4j.Level;
 import org.apache.log4j.Logger;
 import org.junit.After;
@@ -93,6 +97,19 @@ public class GroupReaderTest
 
     static Group group;
     static String groupXML;
+    static String groupID = "groupID";
+    final static String groupURI = "ivo://cadc.nrc.ca/gms/group#" + groupID;
+    final static String GROUP_DESCR = "ivo://cadc.nrc.ca/gms/group_description";
+    final static String OWNER_ID_PROP = "ivo://cadc.nrc.ca/gms/group_owner_dn";
+    final static String OWNER_NAME_PROP = "ivo://cadc.nrc.ca/gms/group_owner_name";
+    final static String USER_NAME_PROP = "ivo://cadc.nrc.ca/gms#member_name";
+    static String userName = "Test User";
+    static String userId = "userId";
+    static String ownerName = "Owner User";
+    static String ownerId = "ownerId";
+    final static String MEMBER_ID = "CN=test user,OU=hia.nrc.ca,O=Grid,C=CA";
+    final static String OWNER_ID = "CN=owner user,OU=hia.nrc.ca,O=Grid,C=CA";
+    static String description = "This is my test group";
 
     public GroupReaderTest()
     {
@@ -101,19 +118,31 @@ public class GroupReaderTest
     @BeforeClass
     public static void setUpClass() throws Exception
     {
-        group = new GroupImpl("groupId", "grName", null, "description",
-                GMSTestSuite.CADC_GROUP_URI);
-        group.addMember(new UserImpl("memberId", "username"));
+        group = new GroupImpl(new URI(groupURI));
+        User user = new UserImpl(new X500Principal(OWNER_ID));
+        ElemProperty eProp = new ElemPropertyImpl(OWNER_ID_PROP, OWNER_ID);
+        group.getProperties().add(eProp);
+        eProp = new ElemPropertyImpl(OWNER_NAME_PROP, ownerName);
+        eProp.setReadOnly(true);
+        group.getProperties().add(eProp);
+        group.getProperties().add(new ElemPropertyImpl(GROUP_DESCR, description));
+        user = new UserImpl(new X500Principal(MEMBER_ID));
+        eProp = new ElemPropertyImpl(USER_NAME_PROP, userName);
+        eProp.setReadOnly(true);
+        user.getProperties().add(eProp);
+        group.addMember(user);
 
         StringBuilder sb = new StringBuilder();
-        sb.append("<group id=\"groupId\" uriPrefix=\""
-                + GMSTestSuite.CADC_GROUP_URI
-                + "\" name=\"gnName\" description=\"description\" >");
-        sb.append("<members>");
-        sb.append("<member id=\"memberId\">");
-        sb.append("<username>username</username>");
-        sb.append("</member>");
-        sb.append("</members>");
+        sb.append("<group uri=\"" + groupURI + "\" >\n");
+        sb.append("<property name=\"" + OWNER_ID_PROP + "\" value=\"" + OWNER_ID + "\" />\n");
+        sb.append("<property name=\"" + OWNER_NAME_PROP + "\" value=\"" + ownerName + "\" readOnly=\"true\" />\n");
+        sb.append("<property name=\"" + GROUP_DESCR + "\" value=\"" + description + "\" />\n");
+        sb.append("<members>\n");
+        sb.append("<member dn=\"" + MEMBER_ID + "\" >\n");
+        sb.append("<property name=\"" + USER_NAME_PROP + "\" value=\"" + userName + "\" readOnly=\"true\" />\n");
+        sb.append("<membershipGroups/>");
+        sb.append("</member>\n");
+        sb.append("</members>\n");
         sb.append("</group>");
         groupXML = sb.toString();
     }

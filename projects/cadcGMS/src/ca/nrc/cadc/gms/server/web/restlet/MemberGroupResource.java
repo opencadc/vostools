@@ -68,11 +68,14 @@ package ca.nrc.cadc.gms.server.web.restlet;
 
 import java.io.IOException;
 import java.io.StringReader;
+import java.net.URI;
+import java.net.URISyntaxException;
 import java.net.URLDecoder;
+
+import javax.security.auth.x500.X500Principal;
 
 import org.apache.log4j.Logger;
 import org.jdom.Document;
-import org.jdom.Element;
 import org.jdom.JDOMException;
 import org.jdom.input.SAXBuilder;
 import org.restlet.data.Status;
@@ -135,8 +138,9 @@ public class MemberGroupResource extends MemberResource
 
         try
         {
-            getUserService().getMember(groupMemberID, groupID);
-            document.addContent(UserWriter.getUserElement(new Element("member"), getMember()));
+            getUserService().getMember(new X500Principal(groupMemberID),
+                    new URI(groupService.getGroupUriPrefix() + groupID));
+            document.addContent(UserWriter.getUserElement(getMember()));
         }
         catch (final InvalidGroupException e)
         {
@@ -150,14 +154,6 @@ public class MemberGroupResource extends MemberResource
                     "No such User with ID %s", groupMemberID);
             processError(e, Status.CLIENT_ERROR_NOT_FOUND, message);
         }
-        catch (IllegalArgumentException e)
-        {
-            final String message = String.format(
-                    "The given User with ID %s is not a member "
-                            + "of Group with ID %s.", groupMemberID,
-                    groupID);
-            processError(e, Status.CLIENT_ERROR_NOT_FOUND, message);
-        }
         catch (AuthorizationException e)
         {
             final String message = String.format(
@@ -165,6 +161,13 @@ public class MemberGroupResource extends MemberResource
                             + "'%s' of Group ID '%s'.", groupMemberID,
                     groupID);
             processError(e, Status.CLIENT_ERROR_UNAUTHORIZED, message);
+        }
+        catch (URISyntaxException e)
+        {
+            final String message = String.format(
+                    "Cannot determine the URI for group " + "'%s'",
+                    groupService.getGroupUriPrefix() + groupID);
+            processError(e, Status.CLIENT_ERROR_NOT_FOUND, message);
         }
     }
 
@@ -203,15 +206,15 @@ public class MemberGroupResource extends MemberResource
     }
 
     protected Group getGroup() throws AuthorizationException,
-            InvalidGroupException
+            InvalidGroupException, URISyntaxException
     {
-        return getGroupService().getGroup(getGroupID());
+        return getGroupService().getGroup(new URI(getGroupID()));
     }
 
     protected User getMember() throws AuthorizationException,
             InvalidGroupException, InvalidMemberException
     {
-        return getUserService().getUser(getMemberID(), false);
+        return getUserService().getUser(new X500Principal(getMemberID()), false);
     }
 
     public GroupService getGroupService()

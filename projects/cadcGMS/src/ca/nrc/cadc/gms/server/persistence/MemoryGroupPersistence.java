@@ -66,9 +66,13 @@
  */
 package ca.nrc.cadc.gms.server.persistence;
 
+import java.net.URI;
+import java.net.URISyntaxException;
 import java.util.Random;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
+
+import javax.security.auth.x500.X500Principal;
 
 import ca.nrc.cadc.gms.Group;
 import ca.nrc.cadc.gms.GroupImpl;
@@ -84,19 +88,22 @@ public class MemoryGroupPersistence implements GroupPersistence
     {
         try
         {
-            final Group firstGroup = new GroupImpl(Long.toString(88l));
-            firstGroup.addMember(new UserImpl(Long.toString(88l),
-                    "jenkinsd"));
+            final Group firstGroup = new GroupImpl(new URI(
+                    "ivo://cadc.nrc.ca/gms/group#Test-Group1"));
+            firstGroup.addMember(new UserImpl(new X500Principal(
+                    "CN=User1 ,OU=hia.nrc.ca,O=Grid,C=CA")));
 
-            final Group secondGroup = new GroupImpl(Long.toString(99l));
-            secondGroup.addMember(new UserImpl(Long.toString(99l),
-                    "adamian"));
+            final Group secondGroup = new GroupImpl(new URI(
+                    "ivo://cadc.nrc.ca/gms/group#Test-Group2"));
+            firstGroup.addMember(new UserImpl(new X500Principal(
+                    "CN=User2 ,OU=hia.nrc.ca,O=Grid,C=CA")));
 
-            final Group thirdGroup = new GroupImpl("MY TEST GROUP");
-            thirdGroup.addMember(new UserImpl(Long.toString(888l),
-                    "testuser"));
+            final Group thirdGroup = new GroupImpl(new URI(
+                    "ivo://cadc.nrc.ca/gms/group#Test-Group3"));
+            firstGroup.addMember(new UserImpl(new X500Principal(
+                    "CN=User3 ,OU=hia.nrc.ca,O=Grid,C=CA")));
 
-            GROUP_MAP.put(Long.toString(88l), firstGroup);
+            GROUP_MAP.put(firstGroup.getID().toString(), firstGroup);
             GROUP_MAP.put(Long.toString(99l), secondGroup);
             GROUP_MAP.put("MY TEST GROUP", thirdGroup);
         }
@@ -116,7 +123,7 @@ public class MemoryGroupPersistence implements GroupPersistence
      * @throws InvalidGroupException
      *             if group not found
      */
-    public Group getGroup(final String groupID)
+    public Group getGroup(final URI groupID)
             throws InvalidGroupException
     {
         synchronized (GROUP_MAP)
@@ -145,25 +152,33 @@ public class MemoryGroupPersistence implements GroupPersistence
     public Group putGroup(final Group group) throws InvalidGroupException
     {
         Group gr = group;
-        if (group.getGMSGroupID() == null)
+        if (group.getID() == null)
         {
             Random rand = new Random();
             // generate a random group ID
             int randomNo = rand.nextInt();
-            gr = new GroupImpl(Integer.toString(randomNo));
+            
+            try
+            {
+                gr = new GroupImpl(new URI("ivo://cadc.nrc.ca/gms/group#" + Integer.toString(randomNo)));
+            }
+            catch( URISyntaxException e)
+            {
+                throw new InvalidGroupException("Invalid group id");
+            }
         }
         synchronized (GROUP_MAP)
         {
 
-            if (GROUP_MAP.containsKey(gr.getGMSGroupID()))
+            if (GROUP_MAP.containsKey(gr.getID()))
             {
                 throw new InvalidGroupException("Group with ID "
-                        + gr.getGMSGroupID() + " already exists.");
+                        + gr.getID() + " already exists.");
             }
             else
             {
-                GROUP_MAP.put(gr.getGMSGroupID(), gr);
-                return GROUP_MAP.get(gr.getGMSGroupID());
+                GROUP_MAP.put(gr.getID().toString(), gr);
+                return GROUP_MAP.get(gr.getID());
             }
         }
     }
@@ -174,7 +189,7 @@ public class MemoryGroupPersistence implements GroupPersistence
      * @param groupID
      *            of group to delete
      */
-    public void deleteGroup(final String groupID)
+    public void deleteGroup(final URI groupID)
             throws InvalidGroupException
     {
 

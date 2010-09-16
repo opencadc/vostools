@@ -66,17 +66,19 @@
  */
 package ca.nrc.cadc.gms;
 
-
+import javax.security.auth.x500.X500Principal;
 
 public class UserImplTest extends UserTest
 {
     /**
      * Prepare the testSubject to be tested.
-     *
-     * @throws Exception For anything that went wrong.
+     * 
+     * @throws Exception
+     *             For anything that went wrong.
      */
     public void initializeTestSubject() throws Exception
     {
-        setTestSubject(new UserImpl(String.valueOf(-1l), "TESTUSERNAME"));
+        setTestSubject(new UserImpl(new X500Principal(
+                "CN=test user,OU=hia.nrc.ca,O=Grid,C=CA")));
     }
 }

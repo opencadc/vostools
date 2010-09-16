@@ -73,6 +73,9 @@ import static org.easymock.EasyMock.replay;
 
 import java.io.ByteArrayOutputStream;
 import java.io.OutputStream;
+import java.net.URI;
+
+import javax.security.auth.x500.X500Principal;
 
 import org.jdom.Document;
 import org.jdom.Element;
@@ -83,21 +86,20 @@ import ca.nrc.cadc.gms.UserWriter;
 import ca.nrc.cadc.gms.server.GroupService;
 import ca.nrc.cadc.gms.server.UserService;
 
-
-public class MemberGroupResourceTest
-        extends AbstractResourceTest<MemberGroupResource>
+public class MemberGroupResourceTest extends
+        AbstractResourceTest<MemberGroupResource>
 {
     private OutputStream outputStream = new ByteArrayOutputStream(256);
     private GroupService mockGroupService;
-    private UserService mockUserService;    
+    private UserService mockUserService;
     private UserWriter mockUserWriter;
     private Document mockParsedDocument;
 
-
     /**
      * Prepare the testSubject to be tested.
-     *
-     * @throws Exception For anything that went wrong.
+     * 
+     * @throws Exception
+     *             For anything that went wrong.
      */
     public void initializeTestSubject() throws Exception
     {
@@ -107,7 +109,7 @@ public class MemberGroupResourceTest
         mockParsedDocument = createMock(Document.class);
 
         setTestSubject(new MemberGroupResource(getMockUserService(),
-                                               getMockGroupService())
+                getMockGroupService())
         {
             @Override
             protected String getGroupID()
@@ -123,19 +125,20 @@ public class MemberGroupResourceTest
 
             /**
              * Parse a Document from the given String.
-             *
-             * @param writtenData The String data.
+             * 
+             * @param writtenData
+             *            The String data.
              * @return The Document object.
              */
             @Override
             protected Document parseDocument(final String writtenData)
             {
                 return mockParsedDocument;
-            }            
+            }
 
             /**
-             * Obtain an OutputStream to write to.  This can be overridden.
-             *
+             * Obtain an OutputStream to write to. This can be overridden.
+             * 
              * @return An OutputStream instance.
              */
             @Override
@@ -150,44 +153,48 @@ public class MemberGroupResourceTest
     public void buildXML() throws Exception
     {
         final StringBuilder xml = new StringBuilder(128);
-        xml.append("<?xml version=\"1.0\" encoding=\"UTF-8\" standalone=\"no\"?>\n");
+        xml
+                .append("<?xml version=\"1.0\" encoding=\"UTF-8\" standalone=\"no\"?>\n");
         xml.append("<member id=\"88\">\n");
         xml.append("  <username>TESTUSERNAME</username>\n");
         xml.append("</member>");
 
-//        outputStream.write(xml.toString().getBytes());
+        // outputStream.write(xml.toString().getBytes());
 
         final User mockUser = createMock(User.class);
         final Document mockDocument = createMock(Document.class);
         final Element mockParsedDocumentElement = createMock(Element.class);
 
-        expect(mockUser.getUserID()).andReturn(Long.toString(88l)).once();
-        expect(mockUser.getUsername()).andReturn("TESTUSERNAME").once();
+        X500Principal user = new X500Principal(
+        "CN=test user ,OU=hia.nrc.ca,O=Grid,C=CA");
+        expect(mockUser.getID()).andReturn(
+                user)
+                .once();
 
-//        getMockUserWriter().write();
+        // getMockUserWriter().write();
         expectLastCall().once();
 
-        expect(mockParsedDocument.getRootElement()).
-                andReturn(mockParsedDocumentElement).once();
-//        expect(mockDocument.importNode(mockParsedDocumentElement, true)).
-//                andReturn(mockParsedDocumentElement).once();
-//        expect(mockDocument.appendChild(mockParsedDocumentElement)).
-//                andReturn(mockParsedDocumentElement).once();
+        expect(mockParsedDocument.getRootElement()).andReturn(
+                mockParsedDocumentElement).once();
+        // expect(mockDocument.importNode(mockParsedDocumentElement,
+        // true)).
+        // andReturn(mockParsedDocumentElement).once();
+        // expect(mockDocument.appendChild(mockParsedDocumentElement)).
+        // andReturn(mockParsedDocumentElement).once();
 
-        expect(getMockUserService().getMember(Long.toString(88l),
-                                              Long.toString(88l))).
-                andReturn(mockUser).once();
-        expect(getMockUserService().getUser(Long.toString(88l), false)).
-                andReturn(mockUser).once();
+        expect(
+                getMockUserService().getMember(user,
+                        new URI("TEST"))).andReturn(mockUser).once();
+        expect(getMockUserService().getUser(user, false))
+                .andReturn(mockUser).once();
 
         replay(mockUser, mockDocument, mockParsedDocument,
-               mockParsedDocumentElement, getMockUserService(),
-               getMockUserWriter(), getMockGroupService());
+                mockParsedDocumentElement, getMockUserService(),
+                getMockUserWriter(), getMockGroupService());
 
         getTestSubject().buildXML(mockDocument);
     }
 
-    
     public GroupService getMockGroupService()
     {
         return mockGroupService;

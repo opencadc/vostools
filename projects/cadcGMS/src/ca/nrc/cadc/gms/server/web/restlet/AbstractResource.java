@@ -71,6 +71,7 @@ import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.OutputStream;
 import java.io.StringReader;
+import java.net.URISyntaxException;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -180,6 +181,13 @@ public abstract class AbstractResource extends ServerResource
             throw new WebRepresentationException(
                     "Unable to create XML Document.", e);
         }
+        catch (final URISyntaxException e)
+        {
+            setExisting(false);
+            LOGGER.error("Unable to create the group URI.");
+            throw new WebRepresentationException(
+                    "Unable to create XML Document.", e);
+        }
     }
     
     /**
@@ -189,7 +197,7 @@ public abstract class AbstractResource extends ServerResource
      * @throws FileNotFoundException If the resource doesn't exist.
      */
     protected abstract boolean obtainResource()
-                throws FileNotFoundException;
+                throws FileNotFoundException, URISyntaxException;
 
     /**
      * Assemble the XML for this Resource's Representation into the given

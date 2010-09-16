@@ -66,39 +66,56 @@
  */
 package ca.nrc.cadc.gms.server;
 
+import java.net.URI;
+
 import ca.nrc.cadc.gms.AuthorizationException;
 import ca.nrc.cadc.gms.Group;
 import ca.nrc.cadc.gms.InvalidGroupException;
-
 
 public interface GroupService
 {
     /**
      * Obtain the Group with the given Group ID.
-     *
-     * @param groupID   Unique Group identifier.
-     * @return          The Group object for the given ID.
+     * 
+     * @param groupID
+     *            Unique Group identifier.
+     * @return The Group object for the given ID.
      */
-    Group getGroup(final String groupID)
-        throws InvalidGroupException,
-               IllegalArgumentException, AuthorizationException;
-    
+    Group getGroup(final URI groupID) throws InvalidGroupException,
+            AuthorizationException;
+
     /**
      * Create a new Group.
-     *
-     * @param group   new Group.
-     * @return        The saved group.
+     * 
+     * @param group
+     *            new Group.
+     * @return The saved group.
      */
-    Group putGroup(final Group group)
-        throws InvalidGroupException,
-               AuthorizationException;
+    Group putGroup(final Group group) throws InvalidGroupException,
+            AuthorizationException;
     
     /**
-     * Delete the Group with the given Group ID.
-     *
-     * @param groupID   Unique Group identifier.
+     * Modify an existing Group.
+     * 
+     * @param group
+     *            Group to modify.
+     * @return The saved group.
      */
-    void deleteGroup(final String groupID)
-        throws InvalidGroupException,
-               AuthorizationException;
+    Group postGroup(final Group group) throws InvalidGroupException,
+            AuthorizationException;
+
+    /**
+     * Delete the Group with the given Group ID.
+     * 
+     * @param groupID
+     *            Unique Group identifier.
+     */
+    void deleteGroup(final URI groupID) throws InvalidGroupException,
+            AuthorizationException;
+    
+    /**
+     * 
+     * @return the group URI prefix associated with this service
+     */
+    String getGroupUriPrefix();
 }

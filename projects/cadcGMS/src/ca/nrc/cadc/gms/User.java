@@ -67,6 +67,9 @@
 package ca.nrc.cadc.gms;
 
 import java.util.Collection;
+import java.util.List;
+
+import javax.security.auth.x500.X500Principal;
 
 /**
  * A User in the system.
@@ -74,33 +77,21 @@ import java.util.Collection;
 public interface User
 {
     /**
-     * Obtain the unique identifier.
+     * Obtain the (mostly) unique identifier. ypically the DN but it might be
+     * the CADC user ID when the DN is missing. Check the properties to
+     * get the values of DN or CADC user ID or Name.
      *
      * @return  long user ID.
      */
-    String getUserID();
+    X500Principal getID();
+
 
     /**
-     * Obtain the (mostly) unique username.
-     *
-     * @return  String username.
-     */
-    String getUsername();
-
-    /**
-     * Obtain the Groups that this User is a member of.  No modifications can
-     * be made through this method.
+     * Obtain the Groups that this User is a member of.  
      *
      * @return  Collection of Group Instances, or empty Collection.  Never null.
      */
     Collection<Group> getGMSMemberships();
-
-    /**
-     * Add the given Group to this User's memberships.
-     *
-     * @param   group       The Group to add to.  Nulls are not tolerated.
-     */
-    void addMembership(final Group group);
 
     /**
      * Obtain whether this User is a member of the given Group.
@@ -111,9 +102,16 @@ public interface User
     boolean isMemberOf(final Group group);
 
     /**
-     * Remove the given Group from this User's memberships.
-     *
-     * @param group     The Group to remove from.
+     * 
+     * @return properties associated with a user/member such as DN or name
      */
-    void removeMembership(final Group group);
+    public List<ElemProperty> getProperties();
+
+    /**
+     * Sets the properties associated with a group.
+     * 
+     * @param elemProperties new properties for the group
+     */
+    public void setProperties(List<ElemProperty> elemProperties);
+    
 }

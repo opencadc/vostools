@@ -68,29 +68,32 @@ package ca.nrc.cadc.gms.server;
 
 import static org.easymock.EasyMock.createMock;
 import static org.easymock.EasyMock.expect;
-import static org.easymock.EasyMock.replay;
 import static org.easymock.EasyMock.expectLastCall;
+import static org.easymock.EasyMock.replay;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotNull;
+
+import java.net.URI;
 
 import org.junit.Test;
 
 import ca.nrc.cadc.gms.GMSTest;
 import ca.nrc.cadc.gms.Group;
-import ca.nrc.cadc.gms.GroupImpl;
 import ca.nrc.cadc.gms.server.persistence.GroupPersistence;
 
 public class GroupServiceTest extends GMSTest<GroupService>
 {
-    private final String groupID = "aGroup";
+    private URI groupID;
     private GroupPersistence mockGroupPersistence = createMock(GroupPersistence.class);
     private Group mockGroup = createMock(Group.class);
+    private String uriPrefix = "ivo://cadc.nrc.ca/gms#";
     
     
     @Override
     public void initializeTestSubject() throws Exception
     {
-        setTestSubject(new GroupServiceImpl(mockGroupPersistence));
+        groupID = new URI("ivo://cadc.nrc.ca/gms/group#aGroup");
+        setTestSubject(new GroupServiceImpl(mockGroupPersistence, uriPrefix));
         
     }
 
@@ -101,14 +104,14 @@ public class GroupServiceTest extends GMSTest<GroupService>
     {
         
         expect(mockGroupPersistence.getGroup(groupID)).andReturn(mockGroup).once();
-        expect(mockGroup.getGMSGroupID()).andReturn(groupID).once();
+        expect(mockGroup.getID()).andReturn(groupID).once();
         
         replay(mockGroup, mockGroupPersistence);
         
         Group group = getTestSubject().getGroup(groupID);
         
         assertNotNull("Group", group);
-        assertEquals("GroupID", groupID, group.getGMSGroupID());
+        assertEquals("GroupID", groupID, group.getID());
         
     }
     
@@ -116,15 +119,19 @@ public class GroupServiceTest extends GMSTest<GroupService>
     public void putGroups() throws Exception
     {
         
+        expect(mockGroup.getID()).andReturn(groupID).once();
+        expect(mockGroupPersistence.getGroup(groupID)).andReturn(null).once();
         expect(mockGroupPersistence.putGroup(mockGroup)).andReturn(mockGroup).once();
-        expect(mockGroup.getGMSGroupID()).andReturn(groupID).once();
+        expect(mockGroup.getID()).andReturn(groupID).once();
+        
+        
         
         replay(mockGroup, mockGroupPersistence);
         
         Group group = getTestSubject().putGroup(mockGroup);
         
         assertNotNull("Group", group);
-        assertEquals("GroupID", groupID, group.getGMSGroupID());
+        assertEquals("GroupID", groupID, group.getID());
         
     }
     

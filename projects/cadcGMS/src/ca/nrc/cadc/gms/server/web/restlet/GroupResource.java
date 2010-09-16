@@ -69,6 +69,8 @@ package ca.nrc.cadc.gms.server.web.restlet;
 import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.UnsupportedEncodingException;
+import java.net.URI;
+import java.net.URISyntaxException;
 import java.net.URLDecoder;
 
 import org.apache.log4j.Logger;
@@ -84,13 +86,12 @@ import ca.nrc.cadc.gms.GroupWriter;
 import ca.nrc.cadc.gms.InvalidGroupException;
 import ca.nrc.cadc.gms.server.GroupService;
 
-
 public class GroupResource extends AbstractResource
 {
-    private final static Logger LOGGER =
-        Logger.getLogger(GroupResource.class);
-    
-    private GroupService groupService;
+    private final static Logger LOGGER = Logger
+            .getLogger(GroupResource.class);
+
+    protected GroupService groupService;
 
     private Group group;
 
@@ -104,8 +105,9 @@ public class GroupResource extends AbstractResource
 
     /**
      * Full constructor.
-     *
-     * @param groupService      The GroupService instance.
+     * 
+     * @param groupService
+     *            The GroupService instance.
      */
     public GroupResource(final GroupService groupService)
     {
@@ -115,7 +117,8 @@ public class GroupResource extends AbstractResource
     /**
      * Get a reference to the resource identified by the user.
      * 
-     * @throws FileNotFoundException If the resource doesn't exist.
+     * @throws FileNotFoundException
+     *             If the resource doesn't exist.
      */
     @Override
     protected boolean obtainResource()
@@ -123,57 +126,53 @@ public class GroupResource extends AbstractResource
         LOGGER.debug("Enter GroupResource.obtainResource()");
         String groupMemberID = null;
         String groupID = null;
-        
+
         try
         {
             groupID = URLDecoder.decode(getGroupID(), "UTF-8");
-            LOGGER.debug(String.format(
-                    "groupID: %s",
-                    groupID));
-            
-            group = getGroupService().getGroup(groupID);
+            LOGGER.debug(String.format("groupID: %s", groupID));
+
+            group = getGroupService().getGroup(
+                    new URI(groupService.getGroupUriPrefix() + groupID));
             return true;
         }
         catch (final InvalidGroupException e)
         {
-            final String message = String.format("No such Group with ID %s",
-                                                 groupID);
-            processError(e, Status.CLIENT_ERROR_NOT_FOUND, message);
-        }
-        catch (IllegalArgumentException e)
-        {
-            final String message =
-                    String.format("The given User with ID %s is not a member "
-                                  + "of Group with ID %s.", groupMemberID,
-                                  groupID);
+            final String message = String.format(
+                    "No such Group with ID %s", groupID);
             processError(e, Status.CLIENT_ERROR_NOT_FOUND, message);
         }
         catch (AuthorizationException e)
         {
-            final String message =
-                    String.format("You are not authorized to view Member ID "
-                                  + "'%s' of Group ID '%s'.", 
-                                  groupMemberID, groupID);
+            final String message = String.format(
+                    "You are not authorized to view Member ID "
+                            + "'%s' of Group ID '%s'.", groupMemberID,
+                    groupID);
             processError(e, Status.CLIENT_ERROR_UNAUTHORIZED, message);
         }
         catch (UnsupportedEncodingException e)
         {
-            final String message =
-                String.format("Could not URL decode groupMemberID (%s) or "
-                              + "groupID (%s).", 
-                              groupMemberID, groupID);
+            final String message = String.format(
+                    "Could not URL decode groupMemberID (%s) or "
+                            + "groupID (%s).", groupMemberID, groupID);
+            processError(e, Status.CLIENT_ERROR_BAD_REQUEST, message);
+        }
+        catch (URISyntaxException e)
+        {
+            final String message = "Client encoding not supported in delete";
             processError(e, Status.CLIENT_ERROR_BAD_REQUEST, message);
         }
         return false;
     }
-    
+
     /**
      * Assemble the XML for this Resource's Representation into the given
      * Document.
-     *
-     * @param document The Document to build up.
-     * @throws java.io.IOException If something went wrong or the XML cannot be
-     *                             built.
+     * 
+     * @param document
+     *            The Document to build up.
+     * @throws java.io.IOException
+     *             If something went wrong or the XML cannot be built.
      */
     protected void buildXML(final Document document) throws IOException
     {
@@ -187,9 +186,9 @@ public class GroupResource extends AbstractResource
     @Post
     public void acceptPost()
     {
-        processNotImplemented(String.format("The Service to update Group with "
-                                            + "ID '%s' is not yet implemented.",
-                                            getGroupID()));
+        processNotImplemented(String
+                .format("The Service to update Group with "
+                        + "ID '%s' is not yet implemented.", getGroupID()));
     }
 
     /**
@@ -198,9 +197,9 @@ public class GroupResource extends AbstractResource
     @Put
     public void acceptPut()
     {
-        processNotImplemented(String.format("The Service to create Group with "
-                                            + "ID '%s' is not yet implemented.",
-                                            getGroupID()));
+        processNotImplemented(String
+                .format("The Service to create Group with "
+                        + "ID '%s' is not yet implemented.", getGroupID()));
     }
 
     /**
@@ -213,11 +212,10 @@ public class GroupResource extends AbstractResource
         try
         {
             String groupID = URLDecoder.decode(getGroupID(), "UTF-8");
-            LOGGER.debug(String.format(
-                    "groupID: %s",
-                    groupID));
-            
-            getGroupService().deleteGroup(groupID);
+            LOGGER.debug(String.format("groupID: %s", groupID));
+
+            getGroupService().deleteGroup(
+                    new URI(groupService.getGroupUriPrefix() + groupID));
             LOGGER.debug(String.format("Deleted groupID: %s", groupID));
         }
         catch (AuthorizationException e)
@@ -236,11 +234,18 @@ public class GroupResource extends AbstractResource
             final String message = "Client encoding not supported in delete";
             processError(e, Status.CLIENT_ERROR_BAD_REQUEST, message);
         }
+        catch (URISyntaxException e)
+        {
+            final String message = "Client encoding not supported in delete";
+            processError(e, Status.CLIENT_ERROR_BAD_REQUEST, message);
+        }
     }
 
-    protected Group getGroup() throws AuthorizationException, InvalidGroupException
+    protected Group getGroup() throws AuthorizationException,
+            InvalidGroupException, URISyntaxException
     {
-        return getGroupService().getGroup(getGroupID());
+        return getGroupService().getGroup(
+                new URI(groupService.getGroupUriPrefix() + getGroupID()));
     }
 
     protected String getGroupID()

@@ -71,10 +71,14 @@ import java.io.File;
 import java.net.URI;
 import java.net.URL;
 
+import javax.security.auth.x500.X500Principal;
+
 import org.apache.log4j.Level;
 import org.apache.log4j.Logger;
 
 import ca.nrc.cadc.auth.SSLUtil;
+import ca.nrc.cadc.gms.ElemProperty;
+import ca.nrc.cadc.gms.GmsConsts;
 import ca.nrc.cadc.gms.Group;
 import ca.nrc.cadc.gms.GroupImpl;
 import ca.nrc.cadc.gms.InvalidMemberException;
@@ -129,8 +133,6 @@ public class GmsClientMain
     private String target; // group/user ID the operation is executed on
     private String memberID; // ID of a member to be added or removed
     // from a group
-    private String memberName; // the name of the member to be added
-    // to a group
 
     File certFile = null;
     File keyFile = null;
@@ -167,7 +169,7 @@ public class GmsClientMain
         {
             command.validateCommand(argMap);
             command.validateCommandArguments(argMap);
-            
+
         }
         catch (IllegalArgumentException ex)
         {
@@ -212,8 +214,8 @@ public class GmsClientMain
         {
             // TODO pass the https protocol to this method when ready for
             // use
-            URL baseURL = registryClient
-                    .getServiceURL(new URI(SERVICE_ID), "https");
+            URL baseURL = registryClient.getServiceURL(
+                    new URI(SERVICE_ID), "https");
             if (baseURL == null)
             {
                 logger.error("failed to find service URL for "
@@ -387,9 +389,8 @@ public class GmsClientMain
         if (this.operation.equals(Operation.ADD_MEMBER))
         {
             target = strTarget;
-            memberName = argMap.getValue(ARG_MEMBER_NAME);
             memberID = argMap.getValue(ARG_CREATE);
-            if (memberName == null || memberID == null)
+            if (memberID == null)
             {
                 throw new IllegalArgumentException(
                         "Arguments add and name are required for "
@@ -434,13 +435,13 @@ public class GmsClientMain
     private void doCreate()
     {
         Group group = null;
-        if (target != null)
-        {
-            // user specifies the group ID
-            group = new GroupImpl(target);
-        }
         try
         {
+            if (target != null)
+            {
+                // user specifies the group ID
+                group = new GroupImpl(new URI(target));
+            }
             client.createGroup(group);
         }
         catch (Exception e)
@@ -458,30 +459,8 @@ public class GmsClientMain
     {
         try
         {
-            Group group = client.getGroup(target);
-            if (group == null)
-            {
-                msg("Group: " + group.getGMSGroupID() + " not found");
-                return;
-            }
-            msg("   Group ID: " + group.getGMSGroupID());
-            msg("        URI: " + group.getGroupURI());
-            msg("       Name: " + group.getGMSGroupName());
-            msg("Description: " + group.getDescription());
-            User owner = group.getOwner();
-            String ownerStr = "N/A";
-            if (owner != null)
-            {
-                ownerStr = owner.getUsername() + " (" + owner.getUserID()
-                        + ")";
-            }
-            msg("      Owner: " + ownerStr);
-            msg("Members: Name (user ID)");
-            for (User user : group.getMembers())
-            {
-                msg("\t" + user.getUsername() + " (" + user.getUserID()
-                        + ") ");
-            }
+            Group group = client.getGroup(new URI(target));
+            displayGroup(group);
         }
         catch (Exception e)
         {
@@ -492,6 +471,39 @@ public class GmsClientMain
 
     }
 
+    private void displayGroup(Group group)
+    {
+        if (group == null)
+        {
+            msg("Group: " + group.getID() + " not found");
+            return;
+        }
+        msg("   Group ID: " + group.getID());
+        if (group.getProperties().size() > 0)
+        {
+            msg("   Properties:");
+            for (ElemProperty prop : group.getProperties())
+            {
+                msg(prop.getPropertyURI() + ": "
+                        + prop.getPropertyValue());
+            }
+        }
+        msg("Members:");
+        for (User user : group.getMembers())
+        {
+            msg("\t" + group.getID());
+            if (group.getProperties().size() > 0)
+            {
+                msg("\t\ttProperties:");
+                for (ElemProperty prop : group.getProperties())
+                {
+                    msg("\t\t" + prop.getPropertyURI() + ": "
+                            + prop.getPropertyValue());
+                }
+            }
+        }
+    }
+
     /**
      * Executes group delete command
      */
@@ -499,7 +511,7 @@ public class GmsClientMain
     {
         try
         {
-            client.deleteGroup(target);
+            client.deleteGroup(new URI(target));
         }
         catch (Exception e)
         {
@@ -516,23 +528,25 @@ public class GmsClientMain
     {
         try
         {
-            if (!client.isMember(target, memberID))
+            Group group = client.getGroup(new URI(target));
+            // verify user is not already member
+            User user = new UserImpl(new X500Principal(memberID));
+            if (!group.getMembers().contains(user))
             {
-                Group group = client.getGroup(target);
-                group.addMember(new UserImpl(memberID, memberName));
+                group.addMember(user);
                 client.setGroup(group);
+
             }
             else
             {
-                logger.error("User " + memberID + " (" + memberName
-                        + ") already a member of group " + target);
+                logger.error("User " + memberID
+                        + " already a member of group " + target);
                 System.exit(INIT_STATUS);
             }
         }
-        catch (InvalidMemberException e)
+        catch (Exception e)
         {
-            logger.error("failed add user " + memberID + " ("
-                    + memberName + ")");
+            logger.error("failed add user " + memberID);
             logger.error("reason: " + e.getMessage());
             System.exit(NET_STATUS);
         }
@@ -545,23 +559,24 @@ public class GmsClientMain
     {
         try
         {
-            if (client.isMember(target, memberID))
+            X500Principal userURI = new X500Principal(memberID);
+            User user = new UserImpl(userURI);
+            Group group = client.getGroup(new URI(target));
+            if (group.getMembers().contains(user))
             {
-                Group group = client.getGroup(target);
-                group.removeMember(memberID);
+                group.removeMember(userURI);
                 client.setGroup(group);
             }
             else
             {
-                logger.error("User " + memberID + " (" + memberName
-                        + ") not a member of group " + target);
+                logger.error("User " + memberID
+                        + " not a member of group " + target);
                 System.exit(INIT_STATUS);
             }
         }
-        catch (InvalidMemberException e)
+        catch (Exception e)
         {
-            logger.error("failed add user " + memberID + " ("
-                    + memberName + ")");
+            logger.error("failed add user " + memberID);
             logger.error("reason: " + e.getMessage());
             System.exit(NET_STATUS);
         }
@@ -574,19 +589,27 @@ public class GmsClientMain
     {
         try
         {
-            User user = client.getGMSMembership(target);
+            User user = client.getGMSMembership(new X500Principal(target));
             if (user == null)
             {
                 msg("User: " + target + " not found");
                 return;
             }
-            msg("User: " + user.getUserID());
-            msg("Group Membership (Group Name / Group URI / Group Descripton):");
+            msg("User: " + user.getID());
+            msg("Group Membership (Group ID / Group Descripton):");
             for (Group group : user.getGMSMemberships())
             {
-                msg("     " + group.getGMSGroupName() + " / "
-                        + group.getGroupURI() + " / "
-                        + group.getDescription());
+                String description = "N/A";
+                for (ElemProperty prop : group.getProperties())
+                {
+                    if (GmsConsts.PROPERTY_GROUP_DESCRIPTION.equals(prop
+                            .getPropertyURI()))
+                    {
+                        description = prop.getPropertyValue();
+                        break;
+                    }
+                }
+                msg("     " + group.getID() + " / " + description);
             }
             msg("Total groups: " + user.getGMSMemberships().size());
 
@@ -634,7 +657,7 @@ public class GmsClientMain
                 "java -jar cadcGMSClient.jar  [-v|--verbose|-d|--debug]                                            ",
                 "   --cert=<SSL certificate file> --key=<SSL key file>                                             ",
                 "   --target=<Group ID>                                                                            ",
-                "   [--add=<User ID> --name=<User Name>|--remove=<User ID>]                                ",
+                "   [--add=<User ID> |--remove=<User ID>]                                ",
                 "                                                                                                  ",
                 "User operations:                                                                              ",
                 "java -jar cadcGMSClient.jar  [-v|--verbose|-d|--debug]                                            ",

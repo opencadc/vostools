@@ -84,21 +84,17 @@ import ca.nrc.cadc.gms.server.web.restlet.MemberResourceTest;
     UserImplTest.class,
     UserServiceImplTest.class,
     GroupListResourceTest.class,
-//    GroupMemberResourceTest.class
     GroupMemberListResourceTest.class,
-//    MemberGroupResourceTest.class,
     MemberResourceTest.class,
     UserWriterTest.class,   
     UserReaderTest.class,
     GroupWriterTest.class,
     GroupReaderTest.class,
-    UserMembershipWriterTest.class,
-    UserMembershipReaderTest.class,
     GmsClientTest.class
 })
 
 public class GMSTestSuite {
     
-    public static final String CADC_GROUP_URI = "ivo://cadc.nrc.ca/gms#";
+    public static final String CADC_GROUP_URI = "ivo://ivoa.net/gms/group#";
     
 }

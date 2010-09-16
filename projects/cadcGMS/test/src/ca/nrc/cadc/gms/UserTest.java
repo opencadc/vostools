@@ -67,49 +67,27 @@
 package ca.nrc.cadc.gms;
 
 import static org.easymock.EasyMock.createMock;
-import static org.easymock.EasyMock.replay;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
+
+import java.util.HashSet;
+import java.util.Set;
 
 import org.junit.Test;
 
 
-public abstract class UserTest extends GMSTest<User>
+public abstract class UserTest extends GMSTest<UserImpl>
 {
     protected Group mockGroupOne = createMock(Group.class);
     protected Group mockGroupTwo = createMock(Group.class);    
 
-    @Test
-    public void addMembership() throws Exception
-    {
-        replay(mockGroupTwo);
-
-        getTestSubject().addMembership(mockGroupTwo);
-
-        assertTrue("Group Two should be part of the memberships.",
-                   getTestSubject().isMemberOf(mockGroupTwo));
-    }
-
-    @Test
-    public void removeMembership() throws Exception
-    {
-        replay(mockGroupTwo);
-
-        getTestSubject().addMembership(mockGroupTwo);
-
-        assertTrue("Group Two should be part of the memberships.",
-                   getTestSubject().isMemberOf(mockGroupTwo));
-
-        getTestSubject().removeMembership(mockGroupTwo);
-
-        assertFalse("Group Two should no longer be a part of the memberships.",
-                    getTestSubject().isMemberOf(mockGroupTwo));
-    }
 
     @Test
     public void isMemberOf() throws Exception
     {
-        getTestSubject().addMembership(mockGroupTwo);
+        Set<Group> membershipGroups = new HashSet<Group>();
+        membershipGroups.add(mockGroupTwo);
+        getTestSubject().setMemberships(membershipGroups);
 
         assertFalse("This User is not a member of this group.",
                     getTestSubject().isMemberOf(mockGroupOne));

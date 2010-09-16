@@ -72,12 +72,14 @@ import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
 
+import java.net.URI;
 import java.util.List;
+
+import javax.security.auth.x500.X500Principal;
 
 import org.apache.log4j.Level;
 import org.apache.log4j.Logger;
 import org.custommonkey.xmlunit.XMLAssert;
-import org.custommonkey.xmlunit.XMLUnit;
 import org.jdom.Element;
 import org.junit.After;
 import org.junit.AfterClass;
@@ -100,6 +102,20 @@ public class GroupWriterTest
 
     static Group group;
     static String groupXML;
+    static String groupID = "groupID";
+    final static String groupURI = "ivo://cadc.nrc.ca/gms/group#"
+            + groupID;
+    final static String GROUP_DESCR = "ivo://cadc.nrc.ca/gms/group_description";
+    final static String OWNER_ID_PROP = "ivo://cadc.nrc.ca/gms/group_owner_dn";
+    final static String OWNER_NAME_PROP = "ivo://cadc.nrc.ca/gms/group_owner_name";
+    final static String USER_NAME_PROP = "ivo://cadc.nrc.ca/gms#member_name";
+    static String userName = "Test User";
+    static String userId = "userId";
+    static String ownerName = "Owner User";
+    static String ownerId = "ownerId";
+    final static String MEMBER_ID = "CN=test user,OU=hia.nrc.ca,O=Grid,C=CA";
+    final static String OWNER_ID = "CN=owner user,OU=hia.nrc.ca,O=Grid,C=CA";
+    static String description = "This is my test group";
 
     public GroupWriterTest()
     {
@@ -108,26 +124,36 @@ public class GroupWriterTest
     @BeforeClass
     public static void setUpClass() throws Exception
     {
-        XMLUnit.setIgnoreWhitespace(true);
-
-        group = new GroupImpl("groupId", "groupName", new UserImpl(
-                "ownerId", "owner name"), "This is just a test",
-                GMSTestSuite.CADC_GROUP_URI);
-        group.addMember(new UserImpl("memberId", "username"));
+        group = new GroupImpl(new URI(groupURI));
+        User user = new UserImpl(new X500Principal(OWNER_ID));
+        ElemProperty eProp = new ElemPropertyImpl(OWNER_ID_PROP, ownerId);
+        group.getProperties().add(eProp);
+        eProp = new ElemPropertyImpl(OWNER_NAME_PROP, ownerName);
+        eProp.setReadOnly(true);
+        group.getProperties().add(eProp);
+        group.getProperties().add(
+                new ElemPropertyImpl(GROUP_DESCR, description));
+        user = new UserImpl(new X500Principal(MEMBER_ID));
+        eProp = new ElemPropertyImpl(USER_NAME_PROP, userName);
+        eProp.setReadOnly(true);
+        user.getProperties().add(eProp);
+        group.addMember(user);
 
         StringBuilder sb = new StringBuilder();
-        sb
-                .append("<group id=\"groupId\" uriPrefix=\""
-                        + GMSTestSuite.CADC_GROUP_URI
-                        + "\" name=\"groupName\" description=\"This is just a test\" >");
-        sb.append("<owner id=\"ownerId\" >");
-        sb.append("<username>owner name</username>");
-        sb.append("</owner>");
-        sb.append("<members>");
-        sb.append("<member id=\"memberId\">");
-        sb.append("<username>username</username>");
-        sb.append("</member>");
-        sb.append("</members>");
+        sb.append("<group uri=\"" + groupURI + "\" >\n");
+        sb.append("<property name=\"" + OWNER_ID_PROP + "\" value=\""
+                + ownerId + "\" />\n");
+        sb.append("<property name=\"" + OWNER_NAME_PROP + "\" value=\""
+                + ownerName + "\" readOnly=\"true\" />\n");
+        sb.append("<property name=\"" + GROUP_DESCR + "\" value=\""
+                + description + "\" />\n");
+        sb.append("<members>\n");
+        sb.append("<member dn=\"" + MEMBER_ID + "\" >\n");
+        sb.append("<property name=\"" + USER_NAME_PROP + "\" value=\""
+                + userName + "\" readOnly=\"true\" />\n");
+        sb.append("<membershipGroups/>");
+        sb.append("</member>\n");
+        sb.append("</members>\n");
         sb.append("</group>");
         groupXML = sb.toString();
     }
@@ -184,23 +210,28 @@ public class GroupWriterTest
             Element groupElement = GroupWriter.getGroupElement(group);
 
             assertTrue(groupElement.getName().equals("group"));
-            assertNotNull(groupElement.getAttribute("id"));
-            assertTrue(groupElement.getAttributeValue("id").equals(
-                    "groupId"));
-            assertNotNull(groupElement.getAttribute("uriPrefix"));
-            assertTrue(groupElement.getAttributeValue("uriPrefix").equals(
-                    GMSTestSuite.CADC_GROUP_URI));
-            assertNotNull(groupElement.getAttribute("name"));
-            assertTrue(groupElement.getAttributeValue("name").equals(
-                    "groupName"));
+            assertNotNull(groupElement.getAttribute("uri"));
+            assertTrue(groupElement.getAttributeValue("uri").equals(
+                    groupURI));
 
-            Element owner = groupElement.getChild("owner");
-            assertNotNull(owner);
-            assertNotNull(owner.getAttribute("id"));
-            assertTrue(owner.getAttributeValue("id").equals("ownerId"));
-            Element ownerName = owner.getChild("username");
-            assertNotNull(ownerName);
-            assertEquals("owner name", ownerName.getText());
+            List<Element> props = groupElement.getChildren("property");
+            assertNotNull(props);
+            assertTrue(props.size() == 3);
+
+            Element ownerIDElem = props.get(0);
+            assertNotNull(ownerIDElem.getAttribute("name"));
+            assertTrue(ownerIDElem.getAttributeValue("value").equals(
+                    ownerId));
+
+            Element ownerNameElem = props.get(1);
+            assertNotNull(ownerNameElem.getAttribute("name"));
+            assertTrue(ownerNameElem.getAttributeValue("value").equals(
+                    ownerName));
+
+            Element descriptionElem = props.get(2);
+            assertNotNull(descriptionElem.getAttribute("name"));
+            assertTrue(descriptionElem.getAttributeValue("value").equals(
+                    description));
 
             Element userElements = groupElement.getChild("members");
             assertNotNull(userElements);
@@ -208,14 +239,15 @@ public class GroupWriterTest
             Element userElement = userElements.getChild("member");
             assertNotNull(userElement);
 
-            assertTrue(userElement.getName().equals("member"));
-            assertNotNull(userElement.getAttribute("id"));
-            assertTrue(userElement.getAttributeValue("id").equals(
-                    "memberId"));
+            assertNotNull(userElement.getAttribute("dn"));
+            assertTrue(userElement.getAttributeValue("dn").equals(
+                    MEMBER_ID));
 
-            Element usernameElement = userElement.getChild("username");
-            assertNotNull(usernameElement);
-            assertEquals("username", usernameElement.getText());
+            Element memberNameElem = userElement.getChild("property");
+            assertNotNull(memberNameElem);
+            assertNotNull(memberNameElem.getAttribute("name"));
+            assertTrue(memberNameElem.getAttributeValue("value")
+                    .equals(userName));
 
             log.info("testGetGroupElement passed");
         }

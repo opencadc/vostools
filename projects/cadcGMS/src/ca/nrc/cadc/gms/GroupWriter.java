@@ -73,6 +73,7 @@ import java.io.OutputStreamWriter;
 import java.io.UnsupportedEncodingException;
 import java.io.Writer;
 
+import org.jdom.Attribute;
 import org.jdom.Document;
 import org.jdom.Element;
 import org.jdom.output.Format;
@@ -145,35 +146,22 @@ public class GroupWriter
     {
         // Create the root group element.
         Element groupElement = new Element("group");
-        String groupID = group.getGMSGroupID() == null ? "" : group
-                .getGMSGroupID();
-        String groupName = group.getGMSGroupName() == null ? "" : group
-                .getGMSGroupName();
-        String description = group.getDescription() == null ? "" : group
-                .getDescription();
-        groupElement.setAttribute("id", groupID);
-        if( group.getUriPrefix() != null )
+        String groupID = group.getID() == null ? "" : group
+                .getID().toString();
+        groupElement.setAttribute(new Attribute("uri", groupID));
+        for( ElemProperty property : group.getProperties())
         {
-            groupElement.setAttribute("uriPrefix", group.getUriPrefix());            
-        }
-        groupElement.setAttribute("name", groupName);
-        groupElement.setAttribute("description", description);
-
-        if (group.getOwner() != null)
-        {
-            Element ownerElement = new Element("owner");
-            groupElement.addContent(UserWriter.getUserElement(
-                    ownerElement, group.getOwner()));
+            groupElement.addContent(PropertyWriter.write(property));
         }
 
-        // Add the Group's Users.
+        // Add the Group's Members.
         if ((group.getMembers() != null))
         {
             Element membersElement = new Element("members");
             for (User user : group.getMembers())
             {
                 membersElement
-                        .addContent(UserWriter.getUserElement(new Element("member"), user));
+                        .addContent(UserWriter.getUserElement(user));
             }
             groupElement.addContent(membersElement);
         }

@@ -70,6 +70,7 @@ import static org.easymock.EasyMock.createMock;
 import static org.easymock.EasyMock.expect;
 import static org.easymock.EasyMock.replay;
 
+import java.net.URISyntaxException;
 import java.util.Collection;
 import java.util.HashSet;
 
@@ -93,7 +94,7 @@ public class UserServiceImplTest extends UserServiceTest
      *
      * @throws Exception For anything that went wrong.
      */
-    public void initializeTestSubject() throws Exception
+    public void initializeTestSubject() throws Exception, URISyntaxException
     {
         setTestSubject(new UserServiceImpl(mockUserPersistence,
                                            mockGroupPersistence));
@@ -109,7 +110,7 @@ public class UserServiceImplTest extends UserServiceTest
         final Group mockGroup = createMock(Group.class);
 
         mockUserMemberships.add(mockGroup);
-        expect(mockGroup.getGMSGroupID()).andReturn(GROUP_ID).once();
+        expect(mockGroup.getID()).andReturn(GROUP_ID).once();
         expect(mockUserPersistence.getUser(NON_MEMBER_USER_ID, true)).
                 andReturn(null).once();
         expect(mockUserPersistence.getUser(MEMBER_USER_ID, true)).
@@ -130,7 +131,7 @@ public class UserServiceImplTest extends UserServiceTest
         final Group mockGroup = createMock(Group.class);
         final Group mockNoMembershipGroup = createMock(Group.class);
 
-        expect(mockUser.getUserID()).andReturn(MEMBER_USER_ID).once();
+        expect(mockUser.getID()).andReturn(MEMBER_USER_ID).once();
         expect(mockUser.isMemberOf(mockGroup)).andReturn(true).once();
         expect(mockUser.isMemberOf(mockNoMembershipGroup)).andReturn(false).
                 once();

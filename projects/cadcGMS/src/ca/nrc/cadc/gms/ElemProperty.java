@@ -67,97 +67,28 @@
 
 package ca.nrc.cadc.gms;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.fail;
-
-import org.apache.log4j.Level;
-import org.apache.log4j.Logger;
-import org.junit.After;
-import org.junit.AfterClass;
-import org.junit.Before;
-import org.junit.BeforeClass;
-import org.junit.Test;
-
-import ca.nrc.cadc.util.Log4jInit;
-
-/**
- * 
- * @author jburke
- */
-public class UserMembershipReaderTest
+public interface ElemProperty
 {
-    private static Logger log = Logger
-            .getLogger(UserMembershipReaderTest.class);
-    {
-        Log4jInit.setLevel("ca", Level.INFO);
-    }
-
-    static User user;
-    static String userXML;
-    static final String GR1 = "11111";
-    static final String GR1Name = "gr1name";
-    static final String GR2 = "22222";
-    static final String GR2Name = "gr2name";
-
-    public UserMembershipReaderTest()
-    {
-    }
-
-    @BeforeClass
-    public static void setUpClass() throws Exception
-    {
-        user = new UserImpl("memberId", "username");
-        user.addMembership(new GroupImpl(GR1, GR1Name, null, "Test1",
-                GMSTestSuite.CADC_GROUP_URI));
-        user.addMembership(new GroupImpl(GR2, GR2Name, null, "Test2",
-                GMSTestSuite.CADC_GROUP_URI));
-
-        StringBuilder sb = new StringBuilder();
-        sb.append("<user id=\"memberId\">");
-        sb.append("<username>username</username>");
-        sb.append("<group uri=\"" + GR1 + "\" name=\"" + GR1Name
-                + "\" />");
-        sb.append("<group uri=\"" + GR2 + "\" name=\"" + GR2Name
-                + "\" />");
-        sb.append("</user>");
-        userXML = sb.toString();
-    }
-
-    @AfterClass
-    public static void tearDownClass() throws Exception
-    {
-    }
-
-    @Before
-    public void setUp()
-    {
-    }
-
-    @After
-    public void tearDown()
-    {
-    }
 
     /**
-     * Test of read method, of class UserReader.
+     * @return The property identifier.
      */
-    @Test
-    public void testRead_String() throws Exception
-    {
-        try
-        {
-            log.debug("testRead_String");
-            User u = UserMembershipReader.read(userXML);
+    public abstract String getPropertyURI();
 
-            assertEquals(user, u);
+    /**
+     * @return The property value.
+     */
+    public abstract String getPropertyValue();
 
-            log.info("testRead_String passed");
-        }
-        catch (Throwable t)
-        {
-            log.error(t);
-            fail(t.getMessage());
-        }
-    }
+    /**
+     * @return True if the property cannot be modified.
+     */
+    public abstract boolean isReadOnly();
+
+    /**
+     * @param readOnly
+     */
+    public abstract void setReadOnly(boolean readOnly);
+
 
 }

@@ -72,6 +72,8 @@ import java.io.InputStreamReader;
 import java.io.Reader;
 import java.io.StringReader;
 import java.io.UnsupportedEncodingException;
+import java.net.URI;
+import java.net.URISyntaxException;
 import java.util.List;
 
 import org.jdom.Document;
@@ -105,7 +107,7 @@ public class GroupReader
      * @return Group Group.
      */
     public static Group read(String xml) throws ReaderException,
-            IOException
+            IOException, URISyntaxException
     {
         if (xml == null)
             throw new IllegalArgumentException("XML must not be null");
@@ -120,7 +122,7 @@ public class GroupReader
      * @return Group Group.
      */
     public static Group read(InputStream in) throws ReaderException,
-            IOException
+            IOException, URISyntaxException
     {
         if (in == null)
             throw new IOException("stream closed");
@@ -144,7 +146,7 @@ public class GroupReader
      * @return Group Group.
      */
     public static Group read(Reader reader) throws ReaderException,
-            IOException
+            IOException, URISyntaxException
     {
         if (reader == null)
             throw new IllegalArgumentException("reader must not be null");
@@ -163,45 +165,54 @@ public class GroupReader
 
         // Root element and namespace of the Document
         Element root = document.getRootElement();
+
+        String groupElemName = root.getName();
         Namespace namespace = root.getNamespace();
 
+        if (!groupElemName.equalsIgnoreCase("group"))
+        {
+            String error = "Incorrect root element: " + groupElemName;
+            throw new ReaderException(error);
+        }
+
+        return parseGroup(root, namespace);
+    }
+
+    @SuppressWarnings("unchecked")
+    protected static Group parseGroup(Element root, Namespace namespace)
+            throws URISyntaxException, ReaderException
+    {
         // id attribute of the Group element
-        String name = root.getAttributeValue("name");
-        if (name == null)
-        {
-            String error = "name attribute not found in group element";
-            throw new ReaderException(error);
-        }
-        String id = root.getAttributeValue("id");
-        if (id == null)
-        {
-            String error = "id attribute not found in group element";
-            throw new ReaderException(error);
-        }
-        
-        // uriPrefix not mandatory
-        String uriPrefix = root.getAttributeValue("uriPrefix");
+        String id = root.getAttributeValue("uri");
 
-        String description = root.getAttributeValue("description");
-        if (description == null)
+        URI uri = null;
+        if (id != null && (id.length() > 0) )
         {
-            String error = "description attribute not found in group element";
-            throw new ReaderException(error);
+            uri = new URI(id);
         }
 
-        User owner = null;
-        Element ownerElem = root.getChild("owner", namespace);
-        if (ownerElem != null)
-        {
-            owner = UserReader.parseMember(ownerElem, namespace);
-        }
+        GroupImpl group = new GroupImpl(uri);
 
-        Group group = new GroupImpl(id, name, owner, description, uriPrefix);
+        // group properties
+        List<Element> properties = root
+                .getChildren("property", namespace);
+        for (Element property : properties)
+        {
+            String name = property.getAttributeValue("name");
+            String value = property.getAttributeValue("value");
+            ElemProperty prop = new ElemPropertyImpl(name, value);
+            if ("readOnly".equals(property.getAttributeValue("readOnly")))
+            {
+                prop.setReadOnly(true);
+            }
+
+            group.getProperties().add(prop);
+        }
 
         // List of Group Members.
         Element membersElem = root.getChild("members", namespace);
         if (membersElem != null)
-        {           
+        {
             List<Element> members = membersElem.getChildren("member");
             for (Element member : members)
             {
