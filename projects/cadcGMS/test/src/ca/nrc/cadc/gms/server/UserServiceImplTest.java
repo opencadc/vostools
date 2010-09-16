@@ -73,6 +73,7 @@ import static org.easymock.EasyMock.replay;
 import java.net.URISyntaxException;
 import java.util.Collection;
 import java.util.HashSet;
+import java.util.Set;
 
 import org.junit.Test;
 
@@ -81,26 +82,24 @@ import ca.nrc.cadc.gms.User;
 import ca.nrc.cadc.gms.server.persistence.GroupPersistence;
 import ca.nrc.cadc.gms.server.persistence.UserPersistence;
 
-
 public class UserServiceImplTest extends UserServiceTest
 {
-    protected UserPersistence mockUserPersistence =
-            createMock(UserPersistence.class);
-    protected GroupPersistence mockGroupPersistence =
-            createMock(GroupPersistence.class);
+    protected UserPersistence mockUserPersistence = createMock(UserPersistence.class);
+    protected GroupPersistence mockGroupPersistence = createMock(GroupPersistence.class);
 
     /**
      * Prepare the testSubject to be tested.
-     *
-     * @throws Exception For anything that went wrong.
+     * 
+     * @throws Exception
+     *             For anything that went wrong.
      */
-    public void initializeTestSubject() throws Exception, URISyntaxException
+    public void initializeTestSubject() throws Exception,
+            URISyntaxException
     {
         setTestSubject(new UserServiceImpl(mockUserPersistence,
-                                           mockGroupPersistence));
+                mockGroupPersistence));
     }
 
-    
     @Override
     @Test
     public void getMemberships() throws Exception
@@ -111,14 +110,15 @@ public class UserServiceImplTest extends UserServiceTest
 
         mockUserMemberships.add(mockGroup);
         expect(mockGroup.getID()).andReturn(GROUP_ID).once();
-        expect(mockUserPersistence.getUser(NON_MEMBER_USER_ID, true)).
-                andReturn(null).once();
-        expect(mockUserPersistence.getUser(MEMBER_USER_ID, true)).
-                andReturn(mockUser).once();
-        expect(mockUser.getGMSMemberships()).andReturn(mockUserMemberships).
-                once();
+        expect(mockUserPersistence.getUser(NON_MEMBER_USER_ID, true))
+                .andReturn(null).once();
+        expect(mockUserPersistence.getUser(MEMBER_USER_ID, true))
+                .andReturn(mockUser).once();
+        expect(mockUser.getGMSMemberships()).andReturn(
+                mockUserMemberships).once();
 
-        replay(mockGroupPersistence, mockUserPersistence, mockUser, mockGroup);
+        replay(mockGroupPersistence, mockUserPersistence, mockUser,
+                mockGroup);
 
         super.getMemberships();
     }
@@ -130,23 +130,26 @@ public class UserServiceImplTest extends UserServiceTest
         final User mockUser = createMock(User.class);
         final Group mockGroup = createMock(Group.class);
         final Group mockNoMembershipGroup = createMock(Group.class);
-
+        Set<User> members = new HashSet<User>();
+        members.add(mockUser);
         expect(mockUser.getID()).andReturn(MEMBER_USER_ID).once();
-        expect(mockUser.isMemberOf(mockGroup)).andReturn(true).once();
-        expect(mockUser.isMemberOf(mockNoMembershipGroup)).andReturn(false).
-                once();
-        expect(mockUserPersistence.getUser(NON_MEMBER_USER_ID, true)).
-                andReturn(null).once();
-        expect(mockUserPersistence.getUser(MEMBER_USER_ID, true)).
-                andReturn(mockUser).times(3);
-        expect(mockGroupPersistence.getGroup(NON_GROUP_ID)).andReturn(null).
-                once();
-        expect(mockGroupPersistence.getGroup(GROUP_ID)).andReturn(mockGroup).
-                times(2);
-        expect(mockGroupPersistence.getGroup(NO_MEMBERSHIP_GROUP_ID)).
-                andReturn(mockNoMembershipGroup).once();
+        expect(mockGroup.getMembers()).andReturn(members).once();
+        expect(mockUser.equals(mockUser)).andReturn(true).once();
+        expect(mockNoMembershipGroup.getMembers()).andReturn(
+                new HashSet<User>()).once();
+        expect(mockUserPersistence.getUser(NON_MEMBER_USER_ID, true))
+                .andReturn(null).once();
+        expect(mockUserPersistence.getUser(MEMBER_USER_ID, true))
+                .andReturn(mockUser).times(3);
+        expect(mockGroupPersistence.getGroup(NON_GROUP_ID)).andReturn(
+                null).once();
+        expect(mockGroupPersistence.getGroup(GROUP_ID)).andReturn(
+                mockGroup).times(2);
+        expect(mockGroupPersistence.getGroup(NO_MEMBERSHIP_GROUP_ID))
+                .andReturn(mockNoMembershipGroup).once();
 
-        replay(mockUserPersistence, mockGroupPersistence, mockUser, mockGroup);
+        replay(mockUserPersistence, mockGroupPersistence, mockUser,
+                mockGroup);
 
         super.getMember();
     }

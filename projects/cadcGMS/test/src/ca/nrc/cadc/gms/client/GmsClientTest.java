@@ -223,6 +223,7 @@ public class GmsClientTest extends GMSTest<GmsClient>
                                         .append("<?xml version=\"1.0\" encoding=\"UTF-8\" standalone=\"no\"?>\n");
                                 XML_INPUT.append("<member dn=\""
                                         + setGrMemberID + "\">\n");
+                                XML_INPUT.append("<membershipGroups/>");
                                 XML_INPUT.append("</member>");
                                 inStream = new ByteArrayInputStream(
                                         XML_INPUT.toString().getBytes());
@@ -239,6 +240,7 @@ public class GmsClientTest extends GMSTest<GmsClient>
                                 XML_INPUT.append("<members>");
                                 XML_INPUT.append("<member dn=\""
                                         + setGrMemberID + "\">\n");
+                                XML_INPUT.append("<membershipGroups/>");
                                 XML_INPUT.append("</member>");
                                 XML_INPUT.append("</members>");
                                 XML_INPUT.append("</group>");
