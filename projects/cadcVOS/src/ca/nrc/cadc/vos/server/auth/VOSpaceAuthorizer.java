@@ -336,7 +336,7 @@ public class VOSpaceAuthorizer implements Authorizer
             }
             GmsClient gms = new GmsClient(gmsBaseURL);
 
-            boolean ret = gms.isMember(guri, principal);
+            boolean ret = gms.isMember(guri, (X500Principal)principal);
             LOG.debug("GmsClient.isMember(" + guri.getFragment() + "," + principal.getName() + " returned " + ret);
             return ret;
         }
