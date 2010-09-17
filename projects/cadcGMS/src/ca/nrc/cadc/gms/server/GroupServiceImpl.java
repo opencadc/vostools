@@ -107,7 +107,7 @@ public class GroupServiceImpl implements GroupService
      * @return The Group object for the given ID.
      */
     public Group getGroup(final URI groupID)
-            throws InvalidGroupException, IllegalArgumentException,
+            throws InvalidGroupException,
             AuthorizationException
     {
         Group group = getGroupPersistence().getGroup(groupID);
@@ -125,12 +125,6 @@ public class GroupServiceImpl implements GroupService
     public Group putGroup(final Group group)
             throws InvalidGroupException, AuthorizationException
     {
-        if (getGroup(group.getID()) != null)
-        {
-            throw new InvalidGroupException(
-                    "Cannot put group. Group with ID " + group.getID()
-                            + " already exists");
-        }
         return getGroupPersistence().putGroup(group); // returned group
     }
 

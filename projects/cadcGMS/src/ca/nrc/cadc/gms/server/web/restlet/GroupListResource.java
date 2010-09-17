@@ -79,7 +79,6 @@ import ca.nrc.cadc.gms.AuthorizationException;
 import ca.nrc.cadc.gms.Group;
 import ca.nrc.cadc.gms.GroupWriter;
 import ca.nrc.cadc.gms.InvalidGroupException;
-import ca.nrc.cadc.gms.InvalidMemberException;
 import ca.nrc.cadc.gms.server.GroupService;
 
 public class GroupListResource extends AbstractResource
@@ -141,6 +140,7 @@ public class GroupListResource extends AbstractResource
         logger.debug("Create a new group.");
         try
         {
+            //TODO group ID specified by the user
             group = getGroupService().putGroup(null);
             logger.debug(String.format("Created groupID: %s", group
                     .getID()));
