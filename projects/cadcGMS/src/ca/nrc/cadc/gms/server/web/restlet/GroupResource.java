@@ -79,6 +79,7 @@ import org.restlet.data.Status;
 import org.restlet.resource.Delete;
 import org.restlet.resource.Post;
 import org.restlet.resource.Put;
+import org.restlet.representation.Representation;
 
 import ca.nrc.cadc.gms.AuthorizationException;
 import ca.nrc.cadc.gms.Group;
@@ -182,9 +183,11 @@ public class GroupResource extends AbstractResource
 
     /**
      * Accept a POST to this Resource to Update a Group.
+     *
+     * @param entity        The Request payload.
      */
     @Post
-    public void acceptPost()
+    public void acceptPost(final Representation entity)
     {
         processNotImplemented(String
                 .format("The Service to update Group with "
@@ -193,9 +196,11 @@ public class GroupResource extends AbstractResource
 
     /**
      * Accept a PUT to this Resource to Create a Group.
+     *
+     * @param entity        The Request payload.
      */
     @Put
-    public void acceptPut()
+    public void acceptPut(final Representation entity)
     {
         processNotImplemented(String
                 .format("The Service to create Group with "

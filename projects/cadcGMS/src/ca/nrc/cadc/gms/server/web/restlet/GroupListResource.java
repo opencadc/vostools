@@ -72,6 +72,7 @@ import java.io.IOException;
 import org.apache.log4j.Logger;
 import org.jdom.Document;
 import org.restlet.data.Status;
+import org.restlet.data.Form;
 import org.restlet.representation.Representation;
 import org.restlet.resource.Post;
 
@@ -126,13 +127,8 @@ public class GroupListResource extends AbstractResource
 
     /**
      * Accept a POST Request to this Resource to Create a new Group.
-     * 
-     * @Post protected void acceptPost() { processNotImplemented("The
-     *       Service to Create a Group is not yet " + "implemented."); }
-     */
-
-    /**
-     * Handle POST requests: create a new Group.
+     *
+     * @param entity    The Request payload.
      */
     @Post
     public void acceptPost(Representation entity)
