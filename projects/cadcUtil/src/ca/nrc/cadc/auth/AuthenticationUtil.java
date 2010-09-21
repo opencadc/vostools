@@ -350,5 +350,19 @@ public class AuthenticationUtil
             return p1.getName().equals(p2.getName());
         }
     }
+    
+    /**
+     * Perform canonization operation on a distinguished name.
+     * 
+     * @param dnSrc
+     * @return canonized dn
+     */
+    public static String canonizeDistinguishedName(String dnSrc)
+    {
+        String rtn = null;
+        X500Principal p = new X500Principal(dnSrc);
+        rtn = p.getName(X500Principal.CANONICAL);
+        return rtn;
+    }
 
 }
