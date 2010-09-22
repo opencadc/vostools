@@ -71,6 +71,7 @@
 package ca.nrc.cadc.uws.web.restlet.resources;
 
 import ca.nrc.cadc.uws.ErrorSummary;
+import ca.nrc.cadc.uws.ErrorType;
 import ca.nrc.cadc.uws.ExecutionPhase;
 import ca.nrc.cadc.uws.Job;
 import ca.nrc.cadc.uws.JobAttribute;
@@ -136,7 +137,8 @@ public class AsynchResourceTestCase
         final List<Result> results = new ArrayList<Result>();
         final List<Parameter> parameters = new ArrayList<Parameter>();
         final ErrorSummary errorSummary =
-                new ErrorSummary("SUMMARY", new URL("http://www.nrc.ca"));
+                new ErrorSummary("SUMMARY", ErrorType.FATAL, true);
+        errorSummary.setDocumentURL(new URL("http://www.nrc.ca"));
         
         job = new Job("88l", ExecutionPhase.QUEUED, 88l, cal.getTime(),
                         quoteCal.getTime(), cal.getTime(), cal.getTime(), 
@@ -147,7 +149,7 @@ public class AsynchResourceTestCase
             /**
              * Obtain the current Job in the context of this Request.
              *
-             * @return This Request's Job.
+             * @return This Requests Job.
              */
             @Override
             protected List<Job> getJobs()

@@ -41,6 +41,7 @@ import ca.nrc.cadc.uws.JobExecutor;
 import ca.nrc.cadc.uws.JobRunner;
 import ca.nrc.cadc.uws.Parameter;
 import ca.nrc.cadc.uws.Result;
+import ca.nrc.cadc.uws.SyncJobRunner;
 import static junit.framework.TestCase.*;
 import static org.easymock.EasyMock.*;
 import org.junit.Before;
@@ -116,7 +117,7 @@ public class JobAsynchResourceExecutionTest
             @Override
             protected JobRunner createJobRunner()
             {
-                return mockJobRunner;
+                return (JobRunner) mockJobRunner;
             }
 
             @Override
@@ -181,7 +182,7 @@ public class JobAsynchResourceExecutionTest
             @Override
             protected JobRunner createJobRunner()
             {
-                return mockJobRunner;
+                return (JobRunner) mockJobRunner;
             }
 
             @Override
