@@ -71,7 +71,6 @@ package ca.nrc.cadc.auth;
 
 import java.lang.reflect.Constructor;
 import java.security.AccessControlContext;
-import java.security.AccessControlException;
 import java.security.AccessController;
 import java.security.Principal;
 import java.security.PrivateKey;
@@ -89,9 +88,6 @@ import javax.servlet.http.HttpServletRequest;
 import org.apache.log4j.Logger;
 
 import ca.nrc.cadc.net.NetUtil;
-
-
-
 
 /**
  * Security utility.
@@ -127,8 +123,7 @@ public class AuthenticationUtil
         }
 
         // look for X509 certificates
-        X509Certificate[] certificates = (X509Certificate[]) request
-                .getAttribute("javax.servlet.request.X509Certificate");
+        X509Certificate[] certificates = (X509Certificate[]) request.getAttribute("javax.servlet.request.X509Certificate");
         if (certificates != null)
         {
             for (X509Certificate cert : certificates)
@@ -153,8 +148,7 @@ public class AuthenticationUtil
         String remoteUser = request.getRemoteUser();
         X509Certificate[] ca = (X509Certificate[]) request.getAttribute("javax.servlet.request.X509Certificate");
         Collection<X509Certificate> certs = null;
-        if (ca != null && ca.length > 0)
-            certs = Arrays.asList(ca);
+        if (ca != null && ca.length > 0) certs = Arrays.asList(ca);
         return getSubject(remoteUser, certs);
     }
 
@@ -173,8 +167,7 @@ public class AuthenticationUtil
     public static Subject getSubject(String remoteUser, Collection<X509Certificate> certs)
     {
         X509CertificateChain chain = null;
-        if (certs != null &&  certs.size() > 0)
-            chain = new X509CertificateChain(certs);
+        if (certs != null && certs.size() > 0) chain = new X509CertificateChain(certs);
         return getSubject(remoteUser, chain);
     }
 
@@ -191,6 +184,7 @@ public class AuthenticationUtil
         return getSubject(null, chain);
     }
 
+    @SuppressWarnings("unchecked")
     private static Subject getSubject(String remoteUser, X509CertificateChain chain)
     {
         Set<Principal> principals = new HashSet<Principal>();
@@ -216,13 +210,12 @@ public class AuthenticationUtil
         // put the certficates into pubCredentials?
         return new Subject(false, principals, publicCred, privateCred);
     }
-    
+
     // Encode a Subject in the format:
     // Principal Class name[Principal name]
     public static String encodeSubject(Subject subject)
     {
-        if (subject == null)
-            return null;
+        if (subject == null) return null;
         StringBuilder sb = new StringBuilder();
         Iterator<Principal> it = subject.getPrincipals().iterator();
         while (it.hasNext())
@@ -235,7 +228,7 @@ public class AuthenticationUtil
         }
         return sb.toString();
     }
-    
+
     /**
      * Get corresponding user IDs from Subject's HttpPrincipals
      * @return set of user ids extracted from the HttpPrincipals
@@ -248,8 +241,7 @@ public class AuthenticationUtil
         Set<String> userids = new HashSet<String>();
         if (subject != null)
         {
-            Set<HttpPrincipal> principals = subject
-                    .getPrincipals(HttpPrincipal.class);
+            Set<HttpPrincipal> principals = subject.getPrincipals(HttpPrincipal.class);
             String userId = null;
 
             for (HttpPrincipal principal : principals)
@@ -262,10 +254,10 @@ public class AuthenticationUtil
     }
 
     // Build a Subject from the encoding.
+    @SuppressWarnings("unchecked")
     public static Subject decodeSubject(String s)
     {
-        if (s == null || s.length() == 0)
-            return null;
+        if (s == null || s.length() == 0) return null;
         Subject subject = null;
         int pStart = 0;
         int nameStart = s.indexOf("[", pStart);
@@ -280,12 +272,11 @@ public class AuthenticationUtil
                     return null;
                 }
                 Class c = Class.forName(s.substring(pStart, nameStart));
-                Class[] args = new Class[]{String.class};
+                Class[] args = new Class[] { String.class };
                 Constructor constructor = c.getDeclaredConstructor(args);
                 String name = NetUtil.decode(s.substring(nameStart + 1, nameEnd));
                 Principal principal = (Principal) constructor.newInstance(name);
-                if (subject == null)
-                    subject = new Subject();
+                if (subject == null) subject = new Subject();
                 subject.getPrincipals().add(principal);
                 pStart = nameEnd + 1;
                 nameStart = s.indexOf("[", pStart);
@@ -301,7 +292,7 @@ public class AuthenticationUtil
         }
         return subject;
     }
-    
+
     /**
      * Given two principal objects, return true if they represent
      * the same identity.
@@ -323,21 +314,20 @@ public class AuthenticationUtil
         {
             return true;
         }
-        
+
         if (p1 == null || p2 == null)
         {
             return false;
         }
-                
+
         if (p1 instanceof X500Principal)
         {
             if (p2 instanceof X500Principal)
             {
-                
+
                 X500Principal x1 = (X500Principal) p1;
                 X500Principal x2 = (X500Principal) p2;
-                return x1.getName(X500Principal.CANONICAL).equals(
-                        x2.getName(X500Principal.CANONICAL));
+                return x1.getName(X500Principal.CANONICAL).equals(x2.getName(X500Principal.CANONICAL));
             }
             return false;
         }
@@ -350,7 +340,7 @@ public class AuthenticationUtil
             return p1.getName().equals(p2.getName());
         }
     }
-    
+
     /**
      * Perform canonization operation on a distinguished name.
      * 

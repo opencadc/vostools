@@ -69,8 +69,8 @@
 
 package ca.nrc.cadc.util;
 
-import java.util.Map;
 import java.util.HashMap;
+import java.util.Map;
 import java.util.Set;
 
 /**
@@ -90,135 +90,144 @@ import java.util.Set;
  */
 public class ArgumentMap
 {
-	private Map map;
-	private boolean verbose;
+    @SuppressWarnings("unchecked")
+    private Map map;
+    private boolean verbose;
 
-	public ArgumentMap(String[] args) { this(args,false); }
+    public ArgumentMap(String[] args)
+    {
+        this(args, false);
+    }
 
-	public ArgumentMap(String[] args, boolean verbose)
-	{
-		this.map = new HashMap();
-		this.verbose = verbose;
-		for (int i=0; i<args.length; i++)
-		{
-			imsg( args[i] );
-			String key = null;
-			String str = null;
-			Object value = null;
-			if ( args[i].startsWith("--") )
-			{
-				// put generic arg in argmap
-				try
-				{
-					int j = args[i].indexOf('=');
-					if (j <= 0)
-					{
-						// map to true
-						key = args[i].substring(2,args[i].length());
-						value = Boolean.TRUE;
-					}
-					else
-					{
-						// map to string value
-						key = args[i].substring(2,j);
-						str = args[i].substring(j+1,args[i].length());
+    @SuppressWarnings("unchecked")
+    public ArgumentMap(String[] args, boolean verbose)
+    {
+        this.map = new HashMap();
+        this.verbose = verbose;
+        for (int i = 0; i < args.length; i++)
+        {
+            imsg(args[i]);
+            String key = null;
+            String str = null;
+            Object value = null;
+            if (args[i].startsWith("--"))
+            {
+                // put generic arg in argmap
+                try
+                {
+                    int j = args[i].indexOf('=');
+                    if (j <= 0)
+                    {
+                        // map to true
+                        key = args[i].substring(2, args[i].length());
+                        value = Boolean.TRUE;
+                    }
+                    else
+                    {
+                        // map to string value
+                        key = args[i].substring(2, j);
+                        str = args[i].substring(j + 1, args[i].length());
 
-						// special %% stuff %% delimiters
-						if ( str.startsWith("%%") )
-						{
-							// look for the next %% on the command-line
-							str = str.substring(2,str.length());
-							if ( str.endsWith("%%") )
-							{
-								value = str.substring(0,str.length()-2);
-							}
-							else
-							{
-								StringBuffer sb = new StringBuffer(str);
-								boolean done = false;
-								while ( i+1 < args.length && !done )
-								{
-									i++;
-									imsg( args[i] );
-									if ( args[i].endsWith("%%") )
-									{
-										str = args[i].substring(0, args[i].length()-2);
-										done = true;
-									}
-									else
-										str = args[i];
-									sb.append(" " + str);
-								}
-								value = sb.toString();
-							}
-						}
-						else
-							value = str;
-					}
-				}
-				catch(Exception ignorable)
-				{
-					imsg(" skipping: " + ignorable.toString());
-				}
-			}
-			else if ( args[i].startsWith("-") )
-			{
-				try
-				{
-					key = args[i].substring(1,args[i].length());
-					value = Boolean.TRUE;
-				}
-				catch(Exception ignorable)
-				{
-					imsg(" skipping: " + ignorable.toString());
-				}
-			}
+                        // special %% stuff %% delimiters
+                        if (str.startsWith("%%"))
+                        {
+                            // look for the next %% on the command-line
+                            str = str.substring(2, str.length());
+                            if (str.endsWith("%%"))
+                            {
+                                value = str.substring(0, str.length() - 2);
+                            }
+                            else
+                            {
+                                StringBuffer sb = new StringBuffer(str);
+                                boolean done = false;
+                                while (i + 1 < args.length && !done)
+                                {
+                                    i++;
+                                    imsg(args[i]);
+                                    if (args[i].endsWith("%%"))
+                                    {
+                                        str = args[i].substring(0, args[i].length() - 2);
+                                        done = true;
+                                    }
+                                    else
+                                        str = args[i];
+                                    sb.append(" " + str);
+                                }
+                                value = sb.toString();
+                            }
+                        }
+                        else
+                            value = str;
+                    }
+                }
+                catch (Exception ignorable)
+                {
+                    imsg(" skipping: " + ignorable.toString());
+                }
+            }
+            else if (args[i].startsWith("-"))
+            {
+                try
+                {
+                    key = args[i].substring(1, args[i].length());
+                    value = Boolean.TRUE;
+                }
+                catch (Exception ignorable)
+                {
+                    imsg(" skipping: " + ignorable.toString());
+                }
+            }
 
-			if ( key != null && value != null )
-			{
-				imsg("adding " + key + "->" + value);
-				Object old_value = map.put(key, value);
-				if ( old_value != null )
-					imsg(" (old mapping removed: " + key + " : " + old_value + ")");
-			}
-			imsg3();
-		}
-	}
+            if (key != null && value != null)
+            {
+                imsg("adding " + key + "->" + value);
+                Object old_value = map.put(key, value);
+                if (old_value != null) imsg(" (old mapping removed: " + key + " : " + old_value + ")");
+            }
+            imsg3();
+        }
+    }
 
-	public String getValue(String key)
-	{
-		Object obj = map.get(key);
-		if ( obj != null)
-			return obj.toString();
-		return null;
-	}
+    public String getValue(String key)
+    {
+        Object obj = map.get(key);
+        if (obj != null) return obj.toString();
+        return null;
+    }
 
-	public boolean isSet(String key) { return map.containsKey(key); }
+    public boolean isSet(String key)
+    {
+        return map.containsKey(key);
+    }
 
-    public Set keySet() { return map.keySet(); }
-    
-	private void imsg(String s)
-	{
-		if (verbose)
-			System.out.println("[ArgumentMap] " + s);
-	}
+    @SuppressWarnings("unchecked")
+    public Set keySet()
+    {
+        return map.keySet();
+    }
 
-	private void imsg1(String s)
-	{
-		if (verbose)
-			System.out.print("[ArgumentMap] " + s);
-	}
-	private void imsg2(String s)
-	{
-		if (verbose)
-			System.out.print(s);
-	}
-	private void imsg3()
-	{
-		if (verbose)
-			System.out.println();
-	}
+    private void imsg(String s)
+    {
+        if (verbose) System.out.println("[ArgumentMap] " + s);
+    }
 
+    @SuppressWarnings("unused")
+    private void imsg1(String s)
+    {
+        if (verbose) System.out.print("[ArgumentMap] " + s);
+    }
+
+    @SuppressWarnings("unused")
+    private void imsg2(String s)
+    {
+        if (verbose) System.out.print(s);
+    }
+
+    private void imsg3()
+    {
+        if (verbose) System.out.println();
+    }
 
 }
 

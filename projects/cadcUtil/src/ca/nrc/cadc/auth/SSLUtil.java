@@ -69,7 +69,6 @@
 
 package ca.nrc.cadc.auth;
 
-import ca.nrc.cadc.util.FileUtil;
 import java.io.BufferedInputStream;
 import java.io.ByteArrayInputStream;
 import java.io.File;
@@ -78,7 +77,6 @@ import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.InputStream;
 import java.security.KeyFactory;
-import java.security.cert.Certificate;
 import java.security.KeyManagementException;
 import java.security.KeyStore;
 import java.security.KeyStoreException;
@@ -86,6 +84,7 @@ import java.security.NoSuchAlgorithmException;
 import java.security.NoSuchProviderException;
 import java.security.PrivateKey;
 import java.security.UnrecoverableKeyException;
+import java.security.cert.Certificate;
 import java.security.cert.CertificateException;
 import java.security.cert.CertificateFactory;
 import java.security.cert.X509Certificate;
@@ -95,6 +94,7 @@ import java.util.ArrayList;
 import java.util.Enumeration;
 import java.util.Iterator;
 import java.util.Set;
+
 import javax.net.ssl.HttpsURLConnection;
 import javax.net.ssl.KeyManager;
 import javax.net.ssl.KeyManagerFactory;
@@ -105,7 +105,10 @@ import javax.net.ssl.TrustManagerFactory;
 import javax.net.ssl.X509KeyManager;
 import javax.net.ssl.X509TrustManager;
 import javax.security.auth.Subject;
+
 import org.apache.log4j.Logger;
+
+import ca.nrc.cadc.util.FileUtil;
 
 /**
  * Utility class to setup SSL before trying to use HTTPS.
@@ -173,19 +176,16 @@ public class SSLUtil
         if (s != null)
         {
             Set<X509CertificateChain> certs = s.getPublicCredentials(X509CertificateChain.class);
-            if (certs.size() > 0)
-                chain = certs.iterator().next();
+            if (certs.size() > 0) chain = certs.iterator().next();
         }
-        if (chain == null)
-            return null;
+        if (chain == null) return null;
         return getSocketFactory(chain);
     }
 
     public static SSLSocketFactory getSocketFactory(X509CertificateChain chain)
     {
         KeyStore ks = null;
-        if (chain != null)
-            ks = getKeyStore(chain.getChain(), chain.getPrivateKey());
+        if (chain != null) ks = getKeyStore(chain.getChain(), chain.getPrivateKey());
         KeyStore ts = null;
         return getSocketFactory(ks, ts);
     }
@@ -267,8 +267,8 @@ public class SSLUtil
     }
     */
 
-    static X509Certificate[] readCertificateChain(File certFile)
-        throws CertificateException, IOException
+    @SuppressWarnings("unchecked")
+    static X509Certificate[] readCertificateChain(File certFile) throws CertificateException, IOException
     {
         byte[] certBuf = FileUtil.readFile(certFile);
         BufferedInputStream istream = new BufferedInputStream(new ByteArrayInputStream(certBuf));
@@ -301,9 +301,8 @@ public class SSLUtil
         }
         return chain;
     }
-    
-    static PrivateKey readPrivateKey(File keyFile)
-        throws InvalidKeySpecException, NoSuchAlgorithmException, IOException
+
+    static PrivateKey readPrivateKey(File keyFile) throws InvalidKeySpecException, NoSuchAlgorithmException, IOException
     {
         byte[] priv = FileUtil.readFile(keyFile);
         KeyFactory kf = KeyFactory.getInstance("RSA");
@@ -317,9 +316,14 @@ public class SSLUtil
         try
         {
             KeyStore ks = KeyStore.getInstance(KEYSTORE_TYPE);
-            try { ks.load(null, null); } // empty
-            catch(Exception ignore) { }
-            KeyStore.Entry ke = new KeyStore.PrivateKeyEntry(pk, chain);
+            try
+            {
+                ks.load(null, null);
+            } // empty
+            catch (Exception ignore)
+            {
+            }
+            @SuppressWarnings("unused") KeyStore.Entry ke = new KeyStore.PrivateKeyEntry(pk, chain);
             ks.setKeyEntry(CERT_ALIAS, pk, THE_PASSWORD, chain);
             return ks;
         }
@@ -328,6 +332,7 @@ public class SSLUtil
             throw new RuntimeException("failed to find/load KeyStore of type " + KEYSTORE_TYPE, ex);
         }
     }
+
     static KeyStore getKeyStore(File certFile, File keyFile)
     {
         try
@@ -480,6 +485,7 @@ public class SSLUtil
         }
     }
 
+    @SuppressWarnings("unchecked")
     static void printKeyStoreInfo(KeyStore keystore) throws KeyStoreException
     {
         log.debug("Provider : " + keystore.getProvider().getName());
