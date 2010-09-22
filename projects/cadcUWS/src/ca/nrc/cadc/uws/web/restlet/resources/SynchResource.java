@@ -87,7 +87,6 @@ import java.net.MalformedURLException;
 
 import javax.security.auth.Subject;
 import org.jdom.Document;
-import org.jdom.JDOMException;
 import org.restlet.data.Form;
 import org.restlet.data.MediaType;
 import org.restlet.data.Method;
@@ -151,7 +150,6 @@ public class SynchResource extends UWSResource
             {
                 final JobAssembler jobAssembler = new JobAssembler(form, subject);
                 job = jobAssembler.assemble();
-                job.setRequestPath(getRequestPath());
             }
             catch (ParseException e)
             {
@@ -182,7 +180,6 @@ public class SynchResource extends UWSResource
                 {
                     final JobAssembler jobAssembler = new JobAssembler(form, subject);
                     job = jobAssembler.assemble();
-                    job.setRequestPath(getRequestPath());
                 }
                 catch (ParseException e)
                 {
@@ -222,6 +219,7 @@ public class SynchResource extends UWSResource
             throw new WebRepresentationException("The request method is unsupported: " + getMethod().getName());
         }
 
+        job.setRequestPath(getRequestPath());
         Job persistedJob = getJobManager().persist(job);
         redirectSeeOther(getHostPart() + getRequestPath() + "/" + persistedJob.getID() + "/" + UWSSyncRouter.SYNC_RESOURCE);
     }
@@ -250,5 +248,5 @@ public class SynchResource extends UWSResource
 
         return elementURI.toString();
     }
-
+    
 }

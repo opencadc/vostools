@@ -73,8 +73,6 @@ import ca.nrc.cadc.uws.Job;
 import ca.nrc.cadc.uws.JobReader;
 import ca.nrc.cadc.uws.web.restlet.JobAssembler;
 import ca.nrc.cadc.uws.web.WebRepresentationException;
-import java.util.logging.Level;
-import org.jdom.JDOMException;
 
 import org.restlet.resource.Post;
 import org.restlet.representation.Representation;
@@ -199,4 +197,5 @@ public class AsynchResource extends UWSResource
     {
         return new ArrayList<Job>(getJobManager().getJobs());
     }
+
 }

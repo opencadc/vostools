@@ -8,7 +8,7 @@
 *  National Research Council            Conseil national de recherches
 *  Ottawa, Canada, K1A 0R6              Ottawa, Canada, K1A 0R6
 *  All rights reserved                  Tous droits réservés
-*                                       
+*
 *  NRC disclaims any warranties,        Le CNRC dénie toute garantie
 *  expressed, implied, or               énoncée, implicite ou légale,
 *  statutory, of any kind with          de quelque nature que ce
@@ -31,10 +31,10 @@
 *  software without specific prior      de ce logiciel sans autorisation
 *  written permission.                  préalable et particulière
 *                                       par écrit.
-*                                       
+*
 *  This file is part of the             Ce fichier fait partie du projet
 *  OpenCADC project.                    OpenCADC.
-*                                       
+*
 *  OpenCADC is free software:           OpenCADC est un logiciel libre ;
 *  you can redistribute it and/or       vous pouvez le redistribuer ou le
 *  modify it under the terms of         modifier suivant les termes de
@@ -44,7 +44,7 @@
 *  either version 3 of the              : soit la version 3 de cette
 *  License, or (at your option)         licence, soit (à votre gré)
 *  any later version.                   toute version ultérieure.
-*                                       
+*
 *  OpenCADC is distributed in the       OpenCADC est distribué
 *  hope that it will be useful,         dans l’espoir qu’il vous
 *  but WITHOUT ANY WARRANTY;            sera utile, mais SANS AUCUNE
@@ -54,7 +54,7 @@
 *  PURPOSE.  See the GNU Affero         PARTICULIER. Consultez la Licence
 *  General Public License for           Générale Publique GNU Affero
 *  more details.                        pour plus de détails.
-*                                       
+*
 *  You should have received             Vous devriez avoir reçu une
 *  a copy of the GNU Affero             copie de la Licence Générale
 *  General Public License along         Publique GNU Affero avec
@@ -67,89 +67,118 @@
 ************************************************************************
 */
 
+package ca.nrc.cadc.uws.web.restlet.representation;
 
-package ca.nrc.cadc.uws.web.restlet.resources;
-
+import ca.nrc.cadc.uws.ErrorSummary;
+import ca.nrc.cadc.uws.ErrorType;
 import ca.nrc.cadc.uws.ExecutionPhase;
-import ca.nrc.cadc.uws.InvalidResourceException;
 import ca.nrc.cadc.uws.Job;
-import ca.nrc.cadc.uws.JobAttribute;
-import ca.nrc.cadc.uws.util.StringUtil;
-
+import ca.nrc.cadc.uws.JobManager;
+import ca.nrc.cadc.uws.PrivilegedActionJobRunner;
+import ca.nrc.cadc.uws.SyncJobRunner;
+import ca.nrc.cadc.uws.SyncOutput;
+import ca.nrc.cadc.uws.TimeTrackingRunnable;
+import java.io.IOException;
+import java.io.OutputStream;
+import javax.security.auth.Subject;
 import org.apache.log4j.Logger;
-import org.restlet.data.Form;
-
+import org.restlet.data.MediaType;
+import org.restlet.representation.OutputRepresentation;
 
 /**
- * Base Job Resource to obtain Jobs.
+ *
+ * @author jburke
  */
-public abstract class BaseJobResource extends UWSResource
+public class SyncRepresentation extends OutputRepresentation
 {
-    private static final Logger LOGGER = Logger.getLogger(UWSResource.class);
-    
-    protected Job job;
+    private static final Logger LOGGER = Logger.getLogger(SyncRepresentation.class);
+    private Job job;
+    private JobManager jobManager;
+    private SyncJobRunner jobRunner;
+
+    public SyncRepresentation(MediaType mediaType, Job job, JobManager jobManager, SyncJobRunner jobRunner)
+    {
+        super(mediaType);
+        this.job = job;
+        this.jobManager = jobManager;
+        this.jobRunner = jobRunner;
+    }
 
     @Override
-    protected void doInit()
+    public void write(OutputStream out)
+        throws IOException
     {
-        super.doInit();
-        String jobID = (String) getRequest().getAttributes().get("jobID");
-        this.job = getJobManager().getJob(jobID);
-        if (job == null)
-            throw new InvalidResourceException("No such Job: " + jobID);
-        LOGGER.debug("doInit: found job " + jobID);
+        try
+        {
+            SyncOutputImpl syncOutput = new SyncOutputImpl(out);
+            jobRunner.setOutput(syncOutput);
+
+            if (job.getOwner() == null)
+            {
+                Runnable r = new TimeTrackingRunnable(jobManager, jobRunner);
+                r.run();
+            }
+            else
+            {
+                Subject.doAs(job.getOwner(), new PrivilegedActionJobRunner(jobManager, jobRunner));
+            }
+
+            // get current state
+            job = jobManager.getJob(job.getID());
+        }
+        catch (Throwable t)
+        {
+            ErrorSummary error = new ErrorSummary(t.getMessage(), ErrorType.FATAL, false);
+			job.setErrorSummary(error);
+            job.setExecutionPhase(ExecutionPhase.ERROR);
+            job = jobManager.persist(job);
+
+            if (out == null)
+            {
+                LOGGER.error("Unable to write ErrorSummary, OutputStream closed", t);
+            }
+            else
+            {
+                String message = "\r\n\r\nUnable to complete the request because an error occurred:\r\n\r\n " + t.getMessage();
+                out.write(message.getBytes());
+            }
+        }
     }
 
-    /**
-     * Obtain whether this job is active.
-     *
-     * @return  True if active, false otherwise.
-     */
-    protected boolean jobIsActive()
+    class SyncOutputImpl implements SyncOutput
     {
-        final ExecutionPhase executionPhase = job.getExecutionPhase();
-        return (executionPhase.equals(ExecutionPhase.QUEUED))
-               || (executionPhase.equals(ExecutionPhase.EXECUTING));
+        private OutputStream out;
+                
+        public SyncOutputImpl(OutputStream out)
+        {
+            this.out = out;
+        }
+
+        public void setContentType(String contentType)
+        {
+            throw new UnsupportedOperationException("setContentType is not supported");
+        }
+
+        public void setContentEncoding(String contentEncoding)
+        {
+            throw new UnsupportedOperationException("setContentEncoding is not supported");
+        }
+
+        public void setContentLength(long contentLength)
+        {
+            throw new UnsupportedOperationException("setContentLength is not supported");
+        }
+
+        public void setHeader(String key, String value)
+        {
+            throw new UnsupportedOperationException("setHeader is not supported");
+        }
+
+        public OutputStream getOutputStream()
+        {
+            return out;
+        }
+
     }
-
-    /**
-     * Obtain whether this job has successfully completed execution.
-     *
-     * @return  True if COMPLETE, false otherwise.
-     */
-    protected boolean jobHasRun()
-    {
-        final ExecutionPhase executionPhase = job.getExecutionPhase();
-        return executionPhase.equals(ExecutionPhase.COMPLETED)
-               || executionPhase.equals(ExecutionPhase.ERROR);
-    }
-
-    /**
-     * Obtain whether this Job is awaiting execution.
-     *
-     * @return      True if job is waiting, False otherwise.
-     */
-    protected boolean jobIsPending()
-    {
-        final ExecutionPhase executionPhase = job.getExecutionPhase();
-        return executionPhase.equals(ExecutionPhase.PENDING);
-    }
-
-    /**
-     * Obtain whether this Job can still have POSTs made to it to modify it.
-     *
-     * @param form
-     * @return  True if it can be modified, False otherwise.
-     */
-    protected boolean jobModificationAllowed(Form form)
-    {
-        final String phase =
-                form.getFirstValue(JobAttribute.EXECUTION_PHASE.
-                        getAttributeName().toUpperCase());
-
-        return jobIsPending() || ((getPathInfo().endsWith("phase")
-                                   && StringUtil.hasLength(phase)
-                                   && phase.equals("ABORT")));
-    }
-
+    
 }

@@ -81,6 +81,7 @@ import ca.nrc.cadc.uws.web.InvalidActionException;
 import ca.nrc.cadc.date.DateUtil;
 import ca.nrc.cadc.uws.ExecutionPhase;
 import ca.nrc.cadc.uws.InvalidResourceException;
+import ca.nrc.cadc.uws.InvalidServiceException;
 import ca.nrc.cadc.uws.JobAttribute;
 import ca.nrc.cadc.uws.JobExecutor;
 import ca.nrc.cadc.uws.JobRunner;
@@ -88,6 +89,7 @@ import ca.nrc.cadc.uws.JobWriter;
 import ca.nrc.cadc.uws.Parameter;
 import ca.nrc.cadc.uws.UWS;
 import ca.nrc.cadc.uws.util.BeanUtil;
+import ca.nrc.cadc.uws.util.StringUtil;
 import java.security.Principal;
 
 import java.text.DateFormat;
@@ -313,5 +315,31 @@ public class JobAsynchResource extends BaseJobResource
             }
         }
         return "";
+    }
+
+    /**
+     * Obtain a new instance of the Job Runner interface as defined in the
+     * Context
+     *
+     * @return  The JobRunner instance.
+     */
+    @SuppressWarnings("unchecked")
+    protected JobRunner createJobRunner()
+    {
+        if (!StringUtil.hasText(
+                getContext().getParameters().getFirstValue(
+                        BeanUtil.UWS_RUNNER)))
+        {
+            throw new InvalidServiceException(
+                    "The JobRunner is mandatory!\n\n Please set the "
+                    + BeanUtil.UWS_RUNNER + " context-param in the web.xml, "
+                    + "or insert it into the Context manually.");
+        }
+
+        final String jobRunnerClassName =
+                getContext().getParameters().getFirstValue(BeanUtil.UWS_RUNNER);
+        final BeanUtil beanUtil = new BeanUtil(jobRunnerClassName);
+
+        return (JobRunner) beanUtil.createBean();
     }
 }

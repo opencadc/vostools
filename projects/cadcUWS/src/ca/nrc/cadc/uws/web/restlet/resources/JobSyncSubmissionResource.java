@@ -69,24 +69,23 @@
 
 package ca.nrc.cadc.uws.web.restlet.resources;
 
-import ca.nrc.cadc.uws.ErrorSummary;
 import ca.nrc.cadc.uws.ExecutionPhase;
-import ca.nrc.cadc.uws.JobRunner;
-import ca.nrc.cadc.uws.PrivilegedActionJobRunner;
-import ca.nrc.cadc.uws.Result;
-import ca.nrc.cadc.uws.TimeTrackingRunnable;
+import ca.nrc.cadc.uws.InvalidServiceException;
+import ca.nrc.cadc.uws.SyncJobRunner;
+import ca.nrc.cadc.uws.util.BeanUtil;
+import ca.nrc.cadc.uws.util.StringUtil;
+import ca.nrc.cadc.uws.web.restlet.representation.SyncRepresentation;
 import org.restlet.representation.Representation;
-import org.restlet.representation.EmptyRepresentation;
 import org.restlet.resource.Get;
 import org.apache.log4j.Logger;
 
 import java.io.IOException;
-import java.util.List;
+import java.net.URL;
 
-import javax.security.auth.Subject;
 import org.jdom.Document;
-
-
+import org.restlet.data.MediaType;
+import org.restlet.data.Status;
+import org.restlet.representation.EmptyRepresentation;
 
 /**
  * Synchronous Job submission, and result retrieval.  This Resource will submit
@@ -109,53 +108,32 @@ public class JobSyncSubmissionResource extends BaseJobResource
     @Override
     public Representation represent()
     {
-        if (jobIsPending())
-            executeJob();
-        else if (jobIsActive())
-            pollRunningJob();
-
-        final Representation representation;
-        final List<Result> results = job.getResultsList();
-        final ErrorSummary error = job.getErrorSummary();
-        if (results != null && results.size() > 0)
+        // If Job isn't in to QUEUED state, return a 404.
+        if (!job.getExecutionPhase().equals(ExecutionPhase.PENDING))
         {
-            // Look for first Result marked as primary (should only be one.)
-            boolean primaryResult = false;
-            for (Result result : results)
-            {
-                if (result.isPrimaryResult())
-                {
-                    primaryResult = true;
-                    redirectSeeOther(result.getURL().toString());
-                    break;
-                }
-            }
-            if (!primaryResult)
-            {
-                final Result result = results.get(0);
-                redirectSeeOther(result.getURL().toString());
-            }
-            representation = new EmptyRepresentation();
+            setStatus(Status.CLIENT_ERROR_NOT_FOUND);
+            return new EmptyRepresentation();
         }
-        else if (error != null)
+
+        SyncJobRunner jobRunner = createJobRunner();
+        jobRunner.setJob(job);
+        jobRunner.setJobManager(getJobManager());
+
+        job.setExecutionPhase(ExecutionPhase.QUEUED);
+        job = getJobManager().persist(job);
+
+        Representation representation;
+        URL redirectURL = jobRunner.getRedirectURL();
+        if (redirectURL == null)
         {
-            final ErrorSummary errorSummary = job.getErrorSummary();
-            if (errorSummary.getDocumentURL() != null)
-                redirectSeeOther(errorSummary.getDocumentURL().toString());
-            else
-            {
-                // redirect back to the job to show the error summary - which
-                // currently does not work either since you cannot get a job
-                // from the /sync endpoint
-                // TODO: should we just write out the errorSummary element?
-                String path = getRequestPath();
-                path = path.replace("/result", "");
-                redirectSeeOther(getHostPart() + path);
-            }
-            representation = new EmptyRepresentation();
+            final MediaType mediaType = MediaType.valueOf(jobRunner.getContentType());
+            representation = new SyncRepresentation(mediaType, job, getJobManager(), jobRunner);
         }
         else
-            throw new IllegalStateException("Job finished but did not provide results or error: " + job.getID());
+        {
+            redirectSeeOther(redirectURL.toString());
+            representation = new EmptyRepresentation();
+        }
 
         return representation;
     }
@@ -174,24 +152,46 @@ public class JobSyncSubmissionResource extends BaseJobResource
     }
 
     /**
+     * Obtain a new instance of the Job Runner interface as defined in the
+     * Context
+     *
+     * @return  The JobRunner instance.
+     */
+    @SuppressWarnings("unchecked")
+    protected SyncJobRunner createJobRunner()
+    {
+        if (!StringUtil.hasText(
+                getContext().getParameters().getFirstValue(
+                        BeanUtil.UWS_RUNNER)))
+        {
+            throw new InvalidServiceException(
+                    "The JobRunner is mandatory!\n\n Please set the "
+                    + BeanUtil.UWS_RUNNER + " context-param in the web.xml, "
+                    + "or insert it into the Context manually.");
+        }
+
+        final String jobRunnerClassName =
+                getContext().getParameters().getFirstValue(BeanUtil.UWS_RUNNER);
+        final BeanUtil beanUtil = new BeanUtil(jobRunnerClassName);
+
+        return (SyncJobRunner) beanUtil.createBean();
+    }
+    
+    /**
      * Execute the current Job.  This method will set a new Job Runner with
      * every execution to make it ThreadSafe.
      */
-    protected void executeJob()
+    /*
+    protected void executeJob(SyncJobRunner jobRunner)
     {
         if (jobIsActive())
-        {
-            pollRunningJob();
-        }
-        else if (jobIsPending())
-        {
-            final JobRunner jobRunner = createJobRunner();
-            jobRunner.setJob(job);
-            jobRunner.setJobManager(getJobManager());
+            return;
 
+        if (jobIsPending())
+        {
             job.setExecutionPhase(ExecutionPhase.QUEUED);
             this.job = getJobManager().persist(job);
-            
+
             if (job.getOwner() == null)
             {
                 Runnable r = new TimeTrackingRunnable(getJobManager(), jobRunner);
@@ -205,14 +205,19 @@ public class JobSyncSubmissionResource extends BaseJobResource
         // get current state
         this.job = getJobManager().getJob(job.getID());
     }
+     *
+     */
 
     /**
      * Poll the current job.
      */
+    /*
     protected void pollRunningJob()
     {
         pollRunningJob(MAX_POLLING_TIME_MILLIS);
     }
+     *
+     */
 
     /**
      * Poll the current job and wait for it to complete within the given amount
@@ -220,6 +225,7 @@ public class JobSyncSubmissionResource extends BaseJobResource
      *
      * @param maxWait       Maximum time to poll for in milliseconds.
      */
+    /*
     protected void pollRunningJob(final long maxWait)
     {
         long waitTime = maxWait;
@@ -243,5 +249,8 @@ public class JobSyncSubmissionResource extends BaseJobResource
         {
             LOGGER.error("pollRunningJob: FAILED", t);
         }
-    }    
+    } 
+     * 
+     */
+
 }
