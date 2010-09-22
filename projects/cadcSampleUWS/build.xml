@@ -104,13 +104,19 @@
 
     <target name="build" depends="cadcSampleUWS-jar,webapp" />
 
-    <target name="cadcSampleUWS-jar" depends="compile">
+    <target name="cadcSampleUWS-jar" depends="compile, resources">
         <jar jarfile="${build}/tmp/${project}.jar"
             basedir="${build}/class" update="no">
             <exclude name="test/**" />
         </jar>
     </target>
 
+    <target name="resources">
+        <copy todir="build/class">
+            <fileset dir="src/text" />
+        </copy>
+    </target>
+    
     <target name="webapp" depends="cadcSampleUWS-jar">
         <war warfile="${build}/webapps/${project}.war" webxml="src/xml/web.xml" update="no">
             <lib file="${build}/tmp/${project}.jar" />
@@ -157,10 +163,6 @@
         <echo message="Copying new WAR file to deployment directory..." />
         <copy file="${build}/webapps/${project}.war" todir="${deployDir}"/>
 
-        <!-- Copy log4j properties file to build/class -->
-        <echo message="Copying log4j.properties to build/class..." />
-        <copy file="test/src/resources/log4j.properties" todir="build/class"/>
-
         <!-- Copy properties files from test/src/resources to build/resources -->
         <echo message="Copying resource to build/resources..." />
         <copy todir="build/resources">
@@ -186,13 +188,13 @@
             </classpath>
             <sysproperty key="service.url" value="http://localhost/cadcSampleUWS/async"/>
             <sysproperty key="properties.directory" value="build/resources"/>
-            <test name="ca.nrc.cadc.conformance.uws.UWSTestSuite"/>
+            <test name="ca.nrc.cadc.conformance.uws.UWSASyncTestSuite"/>
             <formatter type="plain" usefile="false"/>
         </junit>
     </target>
 
-<target name="test">
-	<echo message="WARNING: no tests implemented." />
-</target>
+    <target name="test">
+        <echo message="WARNING: no tests implemented." />
+    </target>
     
 </project>
