@@ -71,6 +71,7 @@ package ca.nrc.cadc.stc;
 
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Iterator;
 import java.util.List;
 
 /**
@@ -146,60 +147,63 @@ public class Union extends SpatialSubphrase implements Region
             throw new StcsParsingException("Union arguments must be enclosed in parentheses: " + phrase);
         String union = phrase.substring(open + 1, close).trim();
 
-        int index = 0;
-        String subPhrase = getNextRegion(union, index);
-        while (subPhrase != null)
-        {
-            if (regions == null)
-                regions = new ArrayList<Region>();
-            regions.add(STC.parse(subPhrase));
-            index = index + subPhrase.length();
-            subPhrase = getNextRegion(union, index);
-        }
+        List<String> phrases = getRegions(union);
+        regions = new ArrayList<Region>(phrases.size());
+        for (String s : phrases)
+            regions.add(STC.parse(s));
 
         // Must be two or more regions in a Union.
         if (regions.size() < 2)
             throw new StcsParsingException("Union must contain 2 or more regions : " + phrase);
     }
 
-    private String getNextRegion(String phrase, int index)
+    private List<String> getRegions(String subPhrase)
     {
         // Uppercase phrase.
-        String upperPhrase = phrase.toUpperCase();
+        String upperPhrase = subPhrase.toUpperCase();
 
-        // Search the phrase for a Region.
-        Regions[] values = Regions.values();
-        int[] indexes = new int[values.length];
-        for (int i = 0; i < indexes.length; i++)
-            indexes[i] = upperPhrase.indexOf(values[i].name(), index);
+        // List of parsed regions.
+        List<String> phrases = new ArrayList<String>();
 
-        // Sort in descending order.
+        int index = -1;
+        int start = 0;
+        int end = 0;
+        while (start != -1)
+        {
+            index = findRegion(upperPhrase, index);
+            end = index;
+            if (start != -1 && end > start)
+                phrases.add(subPhrase.substring(start, end));
+            else if (start != -1 && end == -1)
+                phrases.add(subPhrase.substring(start));
+            start = index;
+            index = index + 1;
+        }
+
+        return phrases;
+    }
+
+    private int findRegion(String s, int start)
+    {
+        String upper = s.toUpperCase();
+        Regions[] candidates = Regions.values();
+        int[] indexes = new int[candidates.length];
+        for (int i = 0; i < candidates.length; i++)
+            indexes[i] = upper.indexOf(candidates[i].name(), start);
+
+        // Sort in ascending order.
         Arrays.sort(indexes);
 
-        // Assign start the first positive index.
-        // Assign end the second positive index.
-        int start = -1;
-        int end = -1;
+        int index = -1;
         for (int i = 0; i < indexes.length; i++)
         {
-            if (indexes[i] == -1)
-                continue;
-            if (start == -1)
+            if (indexes[i] != -1)
             {
-                start = indexes[i];
-                continue;
-            }
-            if (end == -1)
-            {
-                end = indexes[i];
+                index = indexes[i];
                 break;
             }
         }
-        if (start != -1 && end == -1)
-            return phrase.substring(start);
-        else if (start != -1 && end != -1)
-            return phrase.substring(start, end);
-        return null;
+        return index;
     }
 
 }
