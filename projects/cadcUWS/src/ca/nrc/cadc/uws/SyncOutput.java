@@ -8,7 +8,7 @@
 *  National Research Council            Conseil national de recherches
 *  Ottawa, Canada, K1A 0R6              Ottawa, Canada, K1A 0R6
 *  All rights reserved                  Tous droits réservés
-*                                       
+*
 *  NRC disclaims any warranties,        Le CNRC dénie toute garantie
 *  expressed, implied, or               énoncée, implicite ou légale,
 *  statutory, of any kind with          de quelque nature que ce
@@ -31,10 +31,10 @@
 *  software without specific prior      de ce logiciel sans autorisation
 *  written permission.                  préalable et particulière
 *                                       par écrit.
-*                                       
+*
 *  This file is part of the             Ce fichier fait partie du projet
 *  OpenCADC project.                    OpenCADC.
-*                                       
+*
 *  OpenCADC is free software:           OpenCADC est un logiciel libre ;
 *  you can redistribute it and/or       vous pouvez le redistribuer ou le
 *  modify it under the terms of         modifier suivant les termes de
@@ -44,7 +44,7 @@
 *  either version 3 of the              : soit la version 3 de cette
 *  License, or (at your option)         licence, soit (à votre gré)
 *  any later version.                   toute version ultérieure.
-*                                       
+*
 *  OpenCADC is distributed in the       OpenCADC est distribué
 *  hope that it will be useful,         dans l’espoir qu’il vous
 *  but WITHOUT ANY WARRANTY;            sera utile, mais SANS AUCUNE
@@ -54,7 +54,7 @@
 *  PURPOSE.  See the GNU Affero         PARTICULIER. Consultez la Licence
 *  General Public License for           Générale Publique GNU Affero
 *  more details.                        pour plus de détails.
-*                                       
+*
 *  You should have received             Vous devriez avoir reçu une
 *  a copy of the GNU Affero             copie de la Licence Générale
 *  General Public License along         Publique GNU Affero avec
@@ -67,102 +67,50 @@
 ************************************************************************
 */
 
-
 package ca.nrc.cadc.uws;
 
-import java.net.URL;
-
+import java.io.OutputStream;
 
 /**
- * The error object gives a human readable error message (if any) for the
- * underlying job. This object is intended to be a detailed error message, and
- * consequently might be a large piece of text such as a stack trace. When
- * there is an error running a job a summary of the error should be given using
- * the optional errorSummary element of the JobSummary type.
+ *
+ * @author jburke
  */
-public class ErrorSummary
+public interface SyncOutput
 {
-    private String summaryMessage;
-    private ErrorType errorType;
-    private boolean hasDetail;
-
-    /*
-     * Used in the CADC implementation.
-     */
-    private URL documentURL;
-
     /**
-     * Public no-arg constructor.
-     */
-    public ErrorSummary()
-    {
-    }
-
-    /**
-     * Complete constructor.
+     * Set the HTTP Content-Type header parameter.
      *
-     * @param summaryMessage        The summary of the error.
-     * @param errorType             The type of the error.
-     * @param hasDetail             Does the summary contain a error message.
+     * @param contentType
      */
-    public ErrorSummary(final String summaryMessage, final ErrorType errorType, final boolean hasDetail)
-    {
-        this.summaryMessage = summaryMessage;
-        this.errorType = errorType;
-        this.hasDetail = hasDetail;
-        this.documentURL = null;
-    }
+    void setContentType(String contentType);
 
     /**
-     * Complete constructor.
+     * Set the HTTP Content_Encoding header parameter.
      *
-     * @param summaryMessage        The summary of the error.
-     * @param documentURI           The URI to the actual Document.
-     * @deprecated
+     * @param contentEncoding
      */
-    public ErrorSummary(final String summaryMessage, final URL documentURL)
-    {
-        this(summaryMessage, documentURL, ErrorType.FATAL);
-    }
+    void setContentEncoding(String contentEncoding);
 
     /**
-     * Complete constructor.
+     * Set the HTTP Content-Length header parameter.
      *
-     * @param summaryMessage        The summary of the error.
-     * @param documentURI           The URI to the actual Document.
-     * @param errorType             The type of the error.
-     * @deprecated
+     * @param contentLength
      */
-    public ErrorSummary(final String summaryMessage, final URL documentURL, final ErrorType errorType)
-    {
-        this.summaryMessage = summaryMessage;
-        this.documentURL = documentURL;
-        this.errorType = errorType;
-    }
+    void setContentLength(long contentLength);
 
-    public String getSummaryMessage()
-    {
-        return summaryMessage;
-    }
+    /**
+     * Set a HTTP header parameter.
+     *
+     * @param key header key.
+     * @param value header value.
+     */
+    void setHeader(String key, String value);
 
-    public void setDocumentURL(URL url)
-    {
-        documentURL = url;
-    }
+    /**
+     * Returns an OutputStream for streaming search results.
+     *
+     * @return OutputStream
+     */
+    OutputStream getOutputStream();
 
-    public URL getDocumentURL()
-    {
-        return documentURL;
-    }
-
-    public ErrorType getErrorType()
-    {
-        return errorType;
-    }
-
-    @Override
-    public String toString()
-    {
-        return "ErrorSummary [documentURL=" + documentURL + ", errorType=" + errorType + ", summaryMessage=" + summaryMessage + "]";
-    }
 }

@@ -358,20 +358,23 @@ public class JobWriter
         if (es != null)
         {
             eleErrorSummary = new Element(JobAttribute.ERROR_SUMMARY.getAttributeName(), UWS.NS);
-            eleErrorSummary.setAttribute("type", es.getErrorType().toString());
+            eleErrorSummary.setAttribute("type", es.getErrorType().toString().toLowerCase());
+            String hasDetail = "false";
+            if (job.getErrorSummary().getDocumentURL() != null)
+                hasDetail = "true";
+            eleErrorSummary.setAttribute("hasDetail", hasDetail);
 
             Element eleMessage = new Element(JobAttribute.ERROR_SUMMARY_MESSAGE.getAttributeName(), UWS.NS);
             eleMessage.addContent(job.getErrorSummary().getSummaryMessage());
             eleErrorSummary.addContent(eleMessage);
             
-            URL esDocUrl = job.getErrorSummary().getDocumentURL();
-            if (esDocUrl != null) 
-            {
-                Element eleDetail = new Element(JobAttribute.ERROR_SUMMARY_DETAIL_LINK.getAttributeName(), UWS.NS);
-                eleDetail.setAttribute("href", esDocUrl.toString(), UWS.XLINK_NS);
-                eleErrorSummary.addContent(eleDetail);
-            }
-
+//            URL esDocUrl = job.getErrorSummary().getDocumentURL();
+//            if (esDocUrl != null)
+//            {
+//                Element eleDetail = new Element(JobAttribute.ERROR_SUMMARY_DETAIL_LINK.getAttributeName(), UWS.NS);
+//                eleDetail.setAttribute("href", esDocUrl.toString(), UWS.XLINK_NS);
+//                eleErrorSummary.addContent(eleDetail);
+//            }
         }
         return eleErrorSummary;
     }

@@ -109,8 +109,9 @@ public class JobReader
     public JobReader()
     {
         String EXT_SCHEMA_LOCATION = UWS.XSD_KEY + " " + XmlUtil.getResourceUrlString(UWS.XSD_FILE_NAME, UWS.class);
-
-        this.saxBuilder = new SAXBuilder("org.apache.xerces.parsers.SAXParser", false);
+        log.debug("external schema location: " + EXT_SCHEMA_LOCATION);
+        
+        this.saxBuilder = new SAXBuilder("org.apache.xerces.parsers.SAXParser", true);
         this.saxBuilder.setFeature("http://xml.org/sax/features/validation", true);
         this.saxBuilder.setFeature("http://apache.org/xml/features/validation/schema", true);
         this.saxBuilder.setFeature("http://apache.org/xml/features/validation/schema-full-checking", true);
@@ -139,7 +140,7 @@ public class JobReader
     }
 
     /**
-     * @deprecated cannot be correctly intialised with SSL in all contexts
+     * @deprecated cannot be correctly initialized with SSL in all contexts
      * @param url
      * @return
      * @throws JDOMException
@@ -167,6 +168,8 @@ public class JobReader
         Element root = this.document.getRootElement();
 
         String jobID = root.getChildText(JobAttribute.JOB_ID.getAttributeName(), UWS.NS);
+        if (jobID != null && jobID.trim().length() == 0)
+            jobID = null;
         String runID = root.getChildText(JobAttribute.RUN_ID.getAttributeName(), UWS.NS);
         Subject owner = null; // It's not able to create a Subject based on XML text.
         ExecutionPhase executionPhase = parseExecutionPhase();
@@ -287,27 +290,32 @@ public class JobReader
             String strType = e.getAttributeValue("type");
             if (strType.equalsIgnoreCase(ErrorType.FATAL.toString()))
                 errorType = ErrorType.FATAL;
-            else if (strType.equalsIgnoreCase(ErrorType.TRANSIENT.toString())) errorType = ErrorType.TRANSIENT;
+            else if (strType.equalsIgnoreCase(ErrorType.TRANSIENT.toString()))
+                errorType = ErrorType.TRANSIENT;
 
-            URL url = null;
-            Element eDetail = e.getChild(JobAttribute.ERROR_SUMMARY_DETAIL_LINK.getAttributeName(), UWS.NS);
-            if (eDetail != null) 
-            {
-                String strDocUrl = eDetail.getAttributeValue("href", UWS.XLINK_NS);
-                try
-                {
-                    url = new URL(strDocUrl);
-                }
-                catch (MalformedURLException ex)
-                {
+            boolean hasDetail = false;
+            String strDetail = e.getAttributeValue("hasDetail");
+            if (strDetail.equalsIgnoreCase("true"))
+                hasDetail = true;
+            
+//            URL url = null;
+//            Element eDetail = e.getChild(JobAttribute.ERROR_SUMMARY_DETAIL_LINK.getAttributeName(), UWS.NS);
+//            if (eDetail != null)
+//            {
+//                String strDocUrl = eDetail.getAttributeValue("href", UWS.XLINK_NS);
+//                try
+//                {
+//                    url = new URL(strDocUrl);
+//                }
+//                catch (MalformedURLException ex)
+//                {
                     // do nothing; use NULL value
-                    log.debug(ex.getMessage());
-                }
-                
-            }
+//                    log.debug(ex.getMessage());
+//                }
+//            }
 
             String summaryMessage = e.getChildText(JobAttribute.ERROR_SUMMARY_MESSAGE.getAttributeName(), UWS.NS);
-            rtn = new ErrorSummary(summaryMessage, url, errorType);
+            rtn = new ErrorSummary(summaryMessage, errorType, hasDetail);
         }
         return rtn;
     }

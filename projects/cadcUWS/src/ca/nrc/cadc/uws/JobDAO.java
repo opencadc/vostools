@@ -895,7 +895,11 @@ public class JobDAO
                 {
                     errorUrl = null;
                 }
-                errorSummary = new ErrorSummary(NetUtil.decode(rs.getString("error_summaryMessage")), errorUrl);
+                boolean hasDetail = false;
+                if (errorUrl != null)
+                    hasDetail = true;
+                errorSummary = new ErrorSummary(NetUtil.decode(rs.getString("error_summaryMessage")), ErrorType.FATAL, hasDetail);
+                errorSummary.setDocumentURL(errorUrl);
             }
 
             // owner

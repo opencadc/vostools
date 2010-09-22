@@ -141,7 +141,7 @@ public class InMemoryPersistence implements JobPersistence
         synchronized(jobMap)
         {
 
-            if (job.getID() == null)
+            if (job.getID() == null || job.getID().length() == 0)
             {
                 // create and add new job to map
                 ret = new Job(generateID(), job);
