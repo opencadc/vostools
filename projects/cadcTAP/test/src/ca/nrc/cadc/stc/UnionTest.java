@@ -162,4 +162,19 @@ public class UnionTest
         log.info("testParseMixedCase passed");
     }
 
+    @Test
+    public void testRegionDatatype() throws Exception
+    {
+        log.debug("testRegionDatatype");
+
+        String phrase = "UNION ICRS GEOCENTER ( POLYGON 333.2791651497387 0.7845913924934536 333.2791634406593 0.5434017765673644 332.29753124484876 0.5402904151546579 332.29752111368873 0.7814800606654444 POLYGON 332.2815701240659 0.5252547632945266 333.2834390185924 0.04593646286895137 332.2988535605711 0.042944906951163375 332.29751188195274 0.5226421761327771 POLYGON 331.28354109914096 0.02812723821034524 333.28353930108085 -0.2130624075237364 332.3009376019881 -0.2164694179186597 332.3009275377211 0.02472018291649647 )";
+
+        Region space = STC.parse(phrase);
+        String actual = STC.format(space);
+        log.debug("expected: " + phrase);
+        log.debug("  actual: " + actual);
+        assertEquals(phrase, actual);
+        log.info("testRegionDatatype passed");
+    }
+
 }
