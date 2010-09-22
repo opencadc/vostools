@@ -68,9 +68,12 @@ package ca.nrc.cadc.gms.server;
 
 import java.net.URI;
 
+import javax.security.auth.x500.X500Principal;
+
 import ca.nrc.cadc.gms.AuthorizationException;
 import ca.nrc.cadc.gms.Group;
 import ca.nrc.cadc.gms.InvalidGroupException;
+import ca.nrc.cadc.gms.InvalidMemberException;
 
 public interface GroupService
 {
@@ -93,7 +96,7 @@ public interface GroupService
      */
     Group putGroup(final Group group) throws InvalidGroupException,
             AuthorizationException;
-    
+
     /**
      * Modify an existing Group.
      * 
@@ -112,10 +115,38 @@ public interface GroupService
      */
     void deleteGroup(final URI groupID) throws InvalidGroupException,
             AuthorizationException;
-    
+
     /**
      * 
      * @return the group URI prefix associated with this service
      */
     String getGroupUriPrefix();
+
+    /**
+     * Add user to a Group.
+     * 
+     * @param groupID
+     *            group to add the user to.
+     * @param memberID
+     *            member ID
+     * 
+     * @return The updated group.
+     */
+    Group addUserToGroup(final URI groupID, X500Principal memberID)
+            throws InvalidGroupException, InvalidMemberException,
+            AuthorizationException;
+    
+    /**
+     * Add user to a Group.
+     * 
+     * @param groupID
+     *            group to remove the user from.
+     * @param memberID
+     *            member ID
+     * 
+     * @return The updated group.
+     */
+    Group deleteUserFromGroup(final URI groupID, X500Principal memberID)
+            throws InvalidGroupException, InvalidMemberException,
+            AuthorizationException;
 }

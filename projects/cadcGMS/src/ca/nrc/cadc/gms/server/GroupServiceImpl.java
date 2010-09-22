@@ -68,10 +68,14 @@ package ca.nrc.cadc.gms.server;
 
 import java.net.URI;
 
+import javax.security.auth.x500.X500Principal;
+
 import ca.nrc.cadc.gms.AuthorizationException;
 import ca.nrc.cadc.gms.Group;
 import ca.nrc.cadc.gms.InvalidGroupException;
 import ca.nrc.cadc.gms.InvalidMemberException;
+import ca.nrc.cadc.gms.User;
+import ca.nrc.cadc.gms.UserImpl;
 import ca.nrc.cadc.gms.server.persistence.GroupPersistence;
 
 public class GroupServiceImpl implements GroupService
@@ -107,8 +111,7 @@ public class GroupServiceImpl implements GroupService
      * @return The Group object for the given ID.
      */
     public Group getGroup(final URI groupID)
-            throws InvalidGroupException,
-            AuthorizationException
+            throws InvalidGroupException, AuthorizationException
     {
         Group group = getGroupPersistence().getGroup(groupID);
 
@@ -145,8 +148,8 @@ public class GroupServiceImpl implements GroupService
                             + " not found");
         }
         return getGroupPersistence().putGroup(group); // returned group
-    }    
-    
+    }
+
     /**
      * Delete the Group with the given Group ID.
      * 
@@ -157,6 +160,46 @@ public class GroupServiceImpl implements GroupService
             throws InvalidGroupException, AuthorizationException
     {
         getGroupPersistence().deleteGroup(groupID);
+    }
+
+    /**
+     * Add user to a Group.
+     * 
+     * @param groupID
+     *            group to add the user to.
+     * @param memberID
+     *            member ID
+     * 
+     * @return The updated group.
+     */
+    public Group addUserToGroup(final URI groupID, X500Principal memberID)
+            throws InvalidGroupException, InvalidMemberException,
+            AuthorizationException
+    {
+        Group group = getGroupPersistence().getGroup(groupID);
+
+        group.getMembers().add(new UserImpl(memberID));
+        return getGroupPersistence().putGroup(group);
+    }
+    
+    /**
+     * Delete user from a Group.
+     * 
+     * @param groupID
+     *            group to add the user to.
+     * @param memberID
+     *            member ID
+     * 
+     * @return The updated group.
+     */
+    public Group deleteUserFromGroup(final URI groupID, X500Principal memberID)
+            throws InvalidGroupException, InvalidMemberException,
+            AuthorizationException
+    {
+        Group group = getGroupPersistence().getGroup(groupID);
+
+        group.getMembers().remove(new UserImpl(memberID));
+        return getGroupPersistence().putGroup(group);
     }
 
     public GroupPersistence getGroupPersistence()
@@ -177,9 +220,10 @@ public class GroupServiceImpl implements GroupService
     {
         return uriGroupPrefix;
     }
-    
+
     /**
      * Set Group URI Prefix of the service
+     * 
      * @param uriGroupPrefix
      */
     public void setGroupUriPrefix(String uriGroupPrefix)

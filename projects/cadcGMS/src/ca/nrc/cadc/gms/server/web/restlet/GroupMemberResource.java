@@ -78,8 +78,12 @@ import javax.security.auth.x500.X500Principal;
 import org.apache.log4j.Logger;
 import org.jdom.Document;
 import org.restlet.data.Status;
+import org.restlet.representation.Representation;
+import org.restlet.resource.Delete;
+import org.restlet.resource.Post;
 
 import ca.nrc.cadc.gms.AuthorizationException;
+import ca.nrc.cadc.gms.Group;
 import ca.nrc.cadc.gms.InvalidGroupException;
 import ca.nrc.cadc.gms.InvalidMemberException;
 import ca.nrc.cadc.gms.User;
@@ -142,7 +146,7 @@ public class GroupMemberResource extends GroupResource
             groupMember = getUserService().getMember(
                     new X500Principal(groupMemberID),
                     new URI(groupService.getGroupUriPrefix() + groupID));
-            if( groupMember==null )
+            if (groupMember == null)
             {
                 final String message = String.format(
                         "No such User with ID %s", groupMemberID);
@@ -165,8 +169,8 @@ public class GroupMemberResource extends GroupResource
         catch (AuthorizationException e)
         {
             final String message = String.format(
-                    "You are not authorized to view Member ID "
-                            + "'%s' of Group ID '%s'.", groupMemberID,
+                    "You are not authorized to get Member ID "
+                            + "'%s' from Group ID '%s'.", groupMemberID,
                     groupID);
             processError(e, Status.CLIENT_ERROR_UNAUTHORIZED, message);
         }
@@ -187,6 +191,113 @@ public class GroupMemberResource extends GroupResource
     }
 
     /**
+     * Handle POST requests: add a member to a group
+     */
+    @Post
+    public void acceptPost(Representation entity)
+    {
+        LOGGER.debug("Delete member " + getMemberID() + " from group "
+                + getGroupID());
+        try
+        {
+            URI grID = new URI(groupService.getGroupUriPrefix()
+                    + URLDecoder.decode(getGroupID(), "UTF-8"));
+            X500Principal usrID = new X500Principal(URLDecoder.decode(
+                    getMemberID(), "UTF-8"));
+            Group group = getGroupService().addUserToGroup(grID,
+                    usrID);
+            setStatus(Status.SUCCESS_CREATED);
+        }
+        catch (InvalidMemberException e)
+        {
+            final String message = String.format(
+                    "Cannot add User with ID %s", getMemberID());
+            processError(e, Status.CLIENT_ERROR_BAD_REQUEST, message);
+        }
+        catch (AuthorizationException e)
+        {
+            final String message = String.format(
+                    "You are not authorized to add Member ID "
+                            + "'%s' in Group ID '%s'.", getMemberID(),
+                    getGroupID());
+            processError(e, Status.CLIENT_ERROR_UNAUTHORIZED, message);
+        }
+        catch (InvalidGroupException e)
+        {
+            // this should not happen for a null group id
+            final String message = "Creation of new groups not supported";
+            processError(e, Status.CLIENT_ERROR_BAD_REQUEST, message);
+        }
+        catch (URISyntaxException e)
+        {
+            final String message = String.format(
+                    "Could not URI decode groupID (%s).", getGroupID());
+            processError(e, Status.CLIENT_ERROR_BAD_REQUEST, message);
+        }
+        catch (UnsupportedEncodingException e)
+        {
+            final String message = String.format(
+                    "Could not URL decode groupMemberID (%s) or "
+                            + "groupID (%s).", getMemberID(),
+                    getGroupID());
+            processError(e, Status.CLIENT_ERROR_BAD_REQUEST, message);
+        }
+    }
+
+    /**
+     * Handle DELETE requests: remove a member from a group.
+     */
+    @Delete
+    public void acceptDelete(Representation entity)
+    {
+        LOGGER.debug("Delete member " + getMemberID() + " to group "
+                + getGroupID());
+        try
+        {
+            URI grID = new URI(groupService.getGroupUriPrefix()
+                    + URLDecoder.decode(getGroupID(), "UTF-8"));
+            X500Principal usrID = new X500Principal(URLDecoder.decode(
+                    getMemberID(), "UTF-8"));
+            Group group = getGroupService().deleteUserFromGroup(grID, usrID);
+            setStatus(Status.SUCCESS_OK);
+        }
+        catch (InvalidMemberException e)
+        {
+            final String message = String.format(
+                    "Cannot add User with ID %s", getMemberID());
+            processError(e, Status.CLIENT_ERROR_BAD_REQUEST, message);
+        }
+        catch (AuthorizationException e)
+        {
+            final String message = String.format(
+                    "You are not authorized to delete Member ID "
+                            + "'%s' from Group ID '%s'.", getMemberID(),
+                    getGroupID());
+            processError(e, Status.CLIENT_ERROR_UNAUTHORIZED, message);
+        }
+        catch (InvalidGroupException e)
+        {
+            // this should not happen for a null group id
+            final String message = "Creation of new groups not supported";
+            processError(e, Status.CLIENT_ERROR_BAD_REQUEST, message);
+        }
+        catch (URISyntaxException e)
+        {
+            final String message = String.format(
+                    "Could not URI decode groupID (%s).", getGroupID());
+            processError(e, Status.CLIENT_ERROR_BAD_REQUEST, message);
+        }
+        catch (UnsupportedEncodingException e)
+        {
+            final String message = String.format(
+                    "Could not URL decode groupMemberID (%s) or "
+                            + "groupID (%s).", getMemberID(),
+                    getGroupID());
+            processError(e, Status.CLIENT_ERROR_BAD_REQUEST, message);
+        }
+    }
+
+    /**
      * Assemble the XML for this Resource's Representation into the given
      * Document.
      * 
@@ -204,6 +315,7 @@ public class GroupMemberResource extends GroupResource
 
     protected String getMemberID()
     {
+        // TODO add decode
         return (String) getRequestAttribute("memberID");
     }
 

@@ -126,9 +126,7 @@ public class GroupListResource extends AbstractResource
 
 
     /**
-     * Accept a POST Request to this Resource to Create a new Group.
-     *
-     * @param entity    The Request payload.
+     * Handle POST requests: create a new Group.
      */
     @Post
     public void acceptPost(Representation entity)
@@ -136,10 +134,11 @@ public class GroupListResource extends AbstractResource
         logger.debug("Create a new group.");
         try
         {
-            //TODO group ID specified by the user
-            group = getGroupService().putGroup(null);
+            group = getGroupService().postGroup(null);
             logger.debug(String.format("Created groupID: %s", group
                     .getID()));
+            setLocationRef(group.getID().toString());
+            setStatus(Status.SUCCESS_CREATED);
         }
         catch (AuthorizationException e)
         {
