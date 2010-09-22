@@ -70,6 +70,7 @@
 package ca.nrc.cadc.tap;
 
 import ca.nrc.cadc.tap.writer.VOTableWriter;
+import ca.nrc.cadc.uws.SyncOutput;
 import java.io.File;
 import java.io.FileOutputStream;
 import java.io.OutputStream;
@@ -96,9 +97,9 @@ import ca.nrc.cadc.uws.ErrorSummary;
 import ca.nrc.cadc.uws.ExecutionPhase;
 import ca.nrc.cadc.uws.Job;
 import ca.nrc.cadc.uws.JobManager;
-import ca.nrc.cadc.uws.JobRunner;
 import ca.nrc.cadc.uws.Parameter;
 import ca.nrc.cadc.uws.Result;
+import ca.nrc.cadc.uws.SyncJobRunner;
 import java.util.ArrayList;
 import javax.naming.NameNotFoundException;
 
@@ -128,7 +129,7 @@ import javax.naming.NameNotFoundException;
  * 
  * @author pdowler
  */
-public class QueryRunner implements JobRunner
+public class QueryRunner implements SyncJobRunner
 {
     private static final Logger logger = Logger.getLogger(QueryRunner.class);
 
@@ -156,15 +157,19 @@ public class QueryRunner implements JobRunner
     private String jobID;
     private Job job;
     private JobManager manager;
+    private SyncOutput syncOutput;
+    private TableWriter writer;
 
     public QueryRunner()
     {
+        syncOutput = null;
     }
 
     public void setJob(Job job)
     {
         this.job = job;
-        this.jobID = job.getID();
+        jobID = job.getID();
+        writer = TableWriterFactory.getWriter(job.getParameterList());
     }
 
     public Job getJob()
@@ -175,6 +180,28 @@ public class QueryRunner implements JobRunner
     public void setJobManager(JobManager jm)
     {
         this.manager = jm;
+    }
+
+    public void setOutput(SyncOutput syncOutput)
+    {
+        this.syncOutput = syncOutput;
+    }
+
+    public String getContentType()
+    {
+        if (writer == null)
+        {
+            if (job == null)
+                throw new IllegalStateException("The Job must be set before calling the getContentType method");
+            else
+                writer = TableWriterFactory.getWriter(job.getParameterList());
+        }
+        return writer.getContentType();
+    }
+
+    public URL getRedirectURL()
+    {
+        return null;
     }
 
     public void run()
@@ -196,6 +223,7 @@ public class QueryRunner implements JobRunner
         tList.add(System.currentTimeMillis());
         sList.add("check if aborted: ");
 
+        // try and instantiate a FileStore instance
         logger.debug("loading " + fileStoreClassName);
         FileStore fs = null;
         try
@@ -207,6 +235,7 @@ public class QueryRunner implements JobRunner
             logger.warn("Failed to instantiate FileStore class: " + fileStoreClassName);
         }
 
+        // try and instantiate a ResultStore instance
         logger.debug("loading " + resultStoreImplClassName);
         ResultStore rs = null;
         try
@@ -218,6 +247,7 @@ public class QueryRunner implements JobRunner
             logger.warn("Failed to instantiate ResultStore class: " + resultStoreImplClassName);
         }
 
+        // Check if a store or stream have been set for a context
         if (fs == null && rs == null)
         {
             throw new RuntimeException("Failed to instantiate a FileStore or ResultStore class");
@@ -234,12 +264,6 @@ public class QueryRunner implements JobRunner
 
             // start processing the job
             List<Parameter> paramList = job.getParameterList();
-
-            if (rs == null)
-            {
-                fs.setJobID(jobID);
-                fs.setParameterList(paramList);
-            }
 
             logger.debug("invoking TapValiator for REQUEST and VERSION...");
             TapValidator tapValidator = new TapValidator();
@@ -326,7 +350,7 @@ public class QueryRunner implements JobRunner
             List<TapSelectItem> selectList = tapQuery.getSelectList();
 
             logger.debug("invoking TableWriterFactory for FORMAT...");
-            TableWriter writer = TableWriterFactory.getWriter(paramList);
+//            TableWriter writer = TableWriterFactory.getWriter(paramList);
             writer.setTapSchema(tapSchema);
             writer.setSelectList(selectList);
             writer.setJobID(jobID);
@@ -365,31 +389,41 @@ public class QueryRunner implements JobRunner
                 sList.add("execute query and get ResultSet: ");
 
                 // TODO if checking for abort was fast, check it here and save writing and storing
-
-                String filename = "result_" + job.getID() + "." + writer.getExtension();
-                logger.debug("result filename: " + filename);
-                if (rs != null)
+                if (syncOutput != null)
                 {
-                    rs.setFilename(filename);
-                    rs.setContentType(writer.getContentType());
-                    url = rs.put(resultSet, writer);
-                    tList.add(System.currentTimeMillis());
-                    sList.add("write ResultSet to ResultStore: ");
+                    logger.debug("streaming results with OutputStream...");
+                    writer.write(resultSet, syncOutput.getOutputStream());
                 }
                 else
                 {
-                    tmpFile = new File(fs.getStorageDir(), filename);
-                    logger.debug("writing ResultSet to " + tmpFile);
-                    OutputStream ostream = new FileOutputStream(tmpFile);
-                    writer.write(resultSet, ostream);
-                    ostream.close();
-                    tList.add(System.currentTimeMillis());
-                    sList.add("write ResultSet to tmp file: ");
+                    String filename = "result_" + job.getID() + "." + writer.getExtension();
+                    logger.debug("result filename: " + filename);
+                    if (rs != null)
+                    {
+                        logger.debug("setting ResultStore filename: " + filename);
+                        rs.setFilename(filename);
+                        rs.setContentType(writer.getContentType());
+                        url = rs.put(resultSet, writer);
+                        tList.add(System.currentTimeMillis());
+                        sList.add("write ResultSet to ResultStore: ");
+                    }
+                    else
+                    {
+                        tmpFile = new File(fs.getStorageDir(), filename);
+                        logger.debug("writing ResultSet to " + tmpFile);
+                        OutputStream ostream = new FileOutputStream(tmpFile);
+                        writer.write(resultSet, ostream);
+                        ostream.close();
+                        tList.add(System.currentTimeMillis());
+                        sList.add("write ResultSet to tmp file: ");
 
-                    logger.debug("storing results with FileStore...");
-                    url = fs.put(tmpFile);
-                    tList.add(System.currentTimeMillis());
-                    sList.add("store tmp file with FileStore: ");
+                        logger.debug("storing results with FileStore...");
+                        fs.setJobID(jobID);
+                        fs.setParameterList(paramList);
+                        url = fs.put(tmpFile);
+                        tList.add(System.currentTimeMillis());
+                        sList.add("store tmp file with FileStore: ");
+                    }
                 }
                 logger.debug("executing query... [OK]");
             }
@@ -425,10 +459,6 @@ public class QueryRunner implements JobRunner
                 }
             }
 
-            Result res = new Result("result", url);
-            List<Result> results = new ArrayList<Result>();
-            results.add(res);
-
             // check job state, TODO optimise this
             this.job = manager.getJob(jobID);
             if (job == null || job.getExecutionPhase().equals(ExecutionPhase.ABORTED))
@@ -437,8 +467,15 @@ public class QueryRunner implements JobRunner
                 return;
             }
 
+            if (syncOutput == null)
+            {
+                Result res = new Result("result", url);
+                List<Result> results = new ArrayList<Result>();
+                results.add(res);
+                job.setResultsList(results);
+            }
+
             logger.debug("setting ExecutionPhase = " + ExecutionPhase.COMPLETED);
-            job.setResultsList(results);
             job.setExecutionPhase(ExecutionPhase.COMPLETED);
             this.job = manager.persist(job);
         }
@@ -456,31 +493,38 @@ public class QueryRunner implements JobRunner
                 errorMessage = t.getClass().getSimpleName() + ":" + t.getMessage();
                 logger.debug("Error message: " + errorMessage);
                 VOTableWriter writer = new VOTableWriter();
-                String filename = "error_" + job.getID() + "." + writer.getExtension();
-                if (rs != null)
+                if (syncOutput != null)
                 {
-                    rs.setFilename(filename);
-                    rs.setContentType(writer.getContentType());
-                    errorURL = rs.put(t, writer);
-
-                    tList.add(System.currentTimeMillis());
-                    sList.add("store error with ResultStore ");
+                    writer.write(t, syncOutput.getOutputStream());
                 }
                 else
                 {
-                    File errorFile = new File(fs.getStorageDir(), filename);
-                    logger.debug("Error file: " + errorFile.getAbsolutePath());
-                    FileOutputStream errorOutput = new FileOutputStream(errorFile);
-                    writer.write(t, errorOutput);
-                    errorOutput.close();
+                    String filename = "error_" + job.getID() + "." + writer.getExtension();
+                    if (rs != null)
+                    {
+                        rs.setFilename(filename);
+                        rs.setContentType(writer.getContentType());
+                        errorURL = rs.put(t, writer);
 
-                    tList.add(System.currentTimeMillis());
-                    sList.add("write error to tmp file: ");
+                        tList.add(System.currentTimeMillis());
+                        sList.add("store error with ResultStore ");
+                    }
+                    else
+                    {
+                        File errorFile = new File(fs.getStorageDir(), filename);
+                        logger.debug("Error file: " + errorFile.getAbsolutePath());
+                        FileOutputStream errorOutput = new FileOutputStream(errorFile);
+                        writer.write(t, errorOutput);
+                        errorOutput.close();
 
-                    errorURL = fs.put(errorFile);
+                        tList.add(System.currentTimeMillis());
+                        sList.add("write error to tmp file: ");
 
-                    tList.add(System.currentTimeMillis());
-                    sList.add("store error file with FileStore ");
+                        errorURL = fs.put(errorFile);
+
+                        tList.add(System.currentTimeMillis());
+                        sList.add("store error file with FileStore ");
+                    }
                 }
                 
                 logger.debug("Error URL: " + errorURL);
@@ -520,4 +564,5 @@ public class QueryRunner implements JobRunner
             logger.debug("DONE");
         }
     }
+    
 }

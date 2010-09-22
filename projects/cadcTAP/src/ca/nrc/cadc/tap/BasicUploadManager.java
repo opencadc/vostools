@@ -96,6 +96,7 @@ import ca.nrc.cadc.date.DateUtil;
 import ca.nrc.cadc.tap.schema.ColumnDesc;
 import ca.nrc.cadc.tap.schema.TableDesc;
 import ca.nrc.cadc.uws.Parameter;
+import ca.nrc.cadc.uws.util.ParameterUtil;
 
 /**
  * Implements the upload of VOTable files into a database.
@@ -293,7 +294,7 @@ public class BasicUploadManager implements UploadManager
      */
     private Map<String,URI> getUploadParams(List<Parameter> paramList) {
 
-        List<String> uploadParamPairs  = TapUtil.findParameterValues( UPLOAD, paramList );
+        List<String> uploadParamPairs  = ParameterUtil.findParameterValues( UPLOAD, paramList );
         Map<String,URI> uniqueTableParams = new HashMap<String,URI>();
 
         if ( uploadParamPairs != null ) {

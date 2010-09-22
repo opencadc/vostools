@@ -71,6 +71,7 @@ package ca.nrc.cadc.tap;
 
 import ca.nrc.cadc.tap.schema.TableDesc;
 import ca.nrc.cadc.uws.Parameter;
+import ca.nrc.cadc.uws.util.ParameterUtil;
 import java.util.List;
 import java.util.Map;
 import javax.sql.DataSource;
@@ -94,7 +95,7 @@ public class UploadNotSupported implements UploadManager
      */
     public Map<String, TableDesc> upload(List<Parameter> paramList, String jobID) 
     {
-        List<String> uploads  = TapUtil.findParameterValues(UPLOAD, paramList );
+        List<String> uploads  = ParameterUtil.findParameterValues(UPLOAD, paramList );
         if (uploads == null || uploads.size() == 0)
             return null;
         throw new UnsupportedOperationException("UPLOAD parameter not supported by this service");

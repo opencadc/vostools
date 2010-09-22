@@ -72,6 +72,7 @@ package ca.nrc.cadc.tap;
 import java.util.List;
 
 import ca.nrc.cadc.uws.Parameter;
+import ca.nrc.cadc.uws.util.ParameterUtil;
 
 /**
  * TAP Validator. 
@@ -86,17 +87,17 @@ public class TapValidator
         if (paramList == null || paramList.size() == 0) throw new IllegalStateException("Missing required parameter: REQUEST");
 
         //  REQUEST
-        String request = TapUtil.findParameterValue("REQUEST", paramList);
+        String request = ParameterUtil.findParameterValue("REQUEST", paramList);
         if (request == null || request.trim().length() == 0)
             throw new IllegalStateException("Missing required parameter: REQUEST");
         if (!request.equals("doQuery")) throw new IllegalArgumentException("Unknown REQUEST value: " + request);
 
         //  LANG
-        lang = TapUtil.findParameterValue("LANG", paramList);
+        lang = ParameterUtil.findParameterValue("LANG", paramList);
         if (lang == null || lang.length() == 0) throw new IllegalStateException("REQUEST=doQuery not acompanied by LANG param");
 
         //  VERSION
-        String version = TapUtil.findParameterValue("VERSION", paramList);
+        String version = ParameterUtil.findParameterValue("VERSION", paramList);
         if (version != null && version.length() != 0 && !version.equals("1.0"))
             throw new IllegalArgumentException("Unsupported TAP version: " + version);
     }

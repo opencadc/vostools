@@ -92,6 +92,7 @@ import ca.nrc.cadc.tap.parser.schema.TapSchemaTableValidator;
 import ca.nrc.cadc.tap.schema.TableDesc;
 import ca.nrc.cadc.tap.schema.TapSchema;
 import ca.nrc.cadc.uws.Parameter;
+import ca.nrc.cadc.uws.util.ParameterUtil;
 
 /**
  * TapQuery implementation for LANG=SQL.
@@ -193,7 +194,7 @@ public class SqlQuery implements TapQuery
 
     public void setParameterList(List<Parameter> paramList)
     {
-        this.queryString = TapUtil.findParameterValue("QUERY", paramList);
+        this.queryString = ParameterUtil.findParameterValue("QUERY", paramList);
         if (queryString == null) throw new IllegalArgumentException("parameter not found: QUERY");
     }
 

@@ -184,7 +184,7 @@ public class TapSchemaDAO
                 if (tableDesc.schemaName.equals(schemaDesc.schemaName))
                 {
                     if (schemaDesc.tableDescs == null)
-                        schemaDesc.tableDescs = new ArrayList();
+                        schemaDesc.tableDescs = new ArrayList<TableDesc>();
                     schemaDesc.tableDescs.add(tableDesc);
                     break;
                 }
@@ -207,7 +207,7 @@ public class TapSchemaDAO
                 if (col.tableName.equals(tableDesc.tableName))
                 {
                     if (tableDesc.columnDescs == null)
-                        tableDesc.columnDescs = new ArrayList();
+                        tableDesc.columnDescs = new ArrayList<ColumnDesc>();
                     tableDesc.columnDescs.add(col);
                     break;
                 }
@@ -230,7 +230,7 @@ public class TapSchemaDAO
                 if (keyColumnDesc.keyId.equals(keyDesc.keyId))
                 {
                     if (keyDesc.keyColumnDescs == null)
-                        keyDesc.keyColumnDescs = new ArrayList();
+                        keyDesc.keyColumnDescs = new ArrayList<KeyColumnDesc>();
                     keyDesc.keyColumnDescs.add(keyColumnDesc);
                     break;
                 }

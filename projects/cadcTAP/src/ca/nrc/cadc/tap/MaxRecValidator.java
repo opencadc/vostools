@@ -70,6 +70,7 @@
 package ca.nrc.cadc.tap;
 
 import ca.nrc.cadc.uws.Parameter;
+import ca.nrc.cadc.uws.util.ParameterUtil;
 import java.util.List;
 import org.apache.log4j.Logger;
 
@@ -105,7 +106,7 @@ public class MaxRecValidator
      * of MAXREC as an int. If the parsing fails, or if the value of MAXREC is
      * negative, an IllegalArgumentException is thrown.
      * <p>
-     * If the MAXREC parameter is not found in the List of paramters,
+     * If the MAXREC parameter is not found in the List of parameters,
      * the default value of {@link Integer.MAX_VALUE} is returned.
      * <p>
      *
@@ -115,7 +116,7 @@ public class MaxRecValidator
      */
     public Integer validate(List<Parameter> paramList)
     {
-        String value = TapUtil.findParameterValue("MAXREC", paramList);
+        String value = ParameterUtil.findParameterValue("MAXREC", paramList);
 
         if (value == null || value.trim().length() == 0)
             return defaultValue;

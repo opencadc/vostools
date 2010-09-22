@@ -72,10 +72,11 @@ package ca.nrc.cadc.tap;
 import ca.nrc.cadc.tap.writer.VOTableWriter;
 import ca.nrc.cadc.tap.writer.AsciiTableWriter;
 import java.util.List;
-import java.util.Map;
-import java.util.TreeMap;
 
 import ca.nrc.cadc.uws.Parameter;
+import ca.nrc.cadc.uws.util.ParameterUtil;
+import java.util.Map;
+import java.util.TreeMap;
 import org.apache.log4j.Logger;
 
 /**
@@ -88,51 +89,61 @@ import org.apache.log4j.Logger;
 public class TableWriterFactory
 {
     private static Logger log = Logger.getLogger(TableWriterFactory.class);
-    
-    private static String VOTABLE = "votable";
-    private static String CSV = "csv";
-    private static String TSV = "tsv";
-    
+
+    // Returned format type
+    private static final String CSV = "csv";
+//    private static final String FITS = "fits";
+//    private static final String HTML = "html";
+//    private static final String TEXT = "text";
+    private static final String TSV = "tsv";
+    private static final String VOTABLE = "votable";
+
+    // MIME types
+//    private static final String APPLICATION_FITS = "application/fits";
+    private static final String APPLICATION_VOTABLE_XML = "application/x-votable+xml";
+    private static final String TEXT_CSV = "text/csv";
+//    private static final String TEXT_HTML = "text/html";
+//    private static final String TEXT_PLAIN = "text/plain";
+    private static final String TEXT_TAB_SEPARATED_VALUES = "text/tab-separated-values";
+    private static final String TEXT_XML = "text/xml";
+
     private static String FORMAT = "FORMAT";
-    
-    
-    
+
     private static Map<String,String> knownFormats;
 
     static
     {
         knownFormats = new TreeMap<String,String>();
-        knownFormats.put("application/x-votable+xml", VOTABLE);
-        knownFormats.put("text/xml", VOTABLE);
-        knownFormats.put("text/csv", CSV);
-        knownFormats.put("text/tab-separated-values", TSV);
-        //knownFormats.put("application/fits", FITS);
-        //knownFormats.put("text/plain", TEXT);
-        //knownFormats.put("text/html", HTML);
+        knownFormats.put(APPLICATION_VOTABLE_XML, VOTABLE);
+        knownFormats.put(TEXT_XML, VOTABLE);
+        knownFormats.put(TEXT_CSV, CSV);
+        knownFormats.put(TEXT_TAB_SEPARATED_VALUES, TSV);
+//        knownFormats.put(APPLICATION_FITS, FITS);
+//        knownFormats.put(TEXT_PLAIN, TEXT);
+//        knownFormats.put(TEXT_HTML, HTML);
         knownFormats.put(VOTABLE, VOTABLE);
         knownFormats.put(CSV, CSV);
         knownFormats.put(TSV, TSV);
-        //knownFormats.put(FITS, FITS);
-        //knownFormats.put(TEXT, TEXT);
-        //knownFormats.put(HTML, HTML);
+//        knownFormats.put(FITS, FITS);
+//        knownFormats.put(TEXT, TEXT);
+//        knownFormats.put(HTML, HTML);
     }
 
     public static TableWriter getWriter(List<Parameter> params)
     {
-        String rfmt = TapUtil.findParameterValue(FORMAT, params);
-        if (rfmt == null)
-            rfmt = VOTABLE;
-        String fmt = rfmt.toLowerCase(); // keys in the knownFormats map are lower case
-        fmt = knownFormats.get(fmt);
-        log.debug("getWriter: fmt = " + fmt);
-        
-        if (VOTABLE.equals(fmt))
+        String format = ParameterUtil.findParameterValue(FORMAT, params);
+        if (format == null)
+            format = VOTABLE;
+        String type = knownFormats.get(format.toLowerCase());
+
+        if (type.equals(VOTABLE))
             return new VOTableWriter();
-        if (CSV.equals(fmt))
+        if (type.equals(CSV))
             return new AsciiTableWriter(CSV);
-        if (TSV.equals(fmt))
+        if (type.equals(TSV))
             return new AsciiTableWriter(TSV);
-        
-        throw new UnsupportedOperationException("unknown format: " + rfmt);
+
+        throw new UnsupportedOperationException("unknown format: " + format);
     }
+
 }

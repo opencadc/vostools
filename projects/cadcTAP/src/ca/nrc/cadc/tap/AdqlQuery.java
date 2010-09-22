@@ -96,6 +96,7 @@ import ca.nrc.cadc.tap.parser.schema.TapSchemaTableValidator;
 import ca.nrc.cadc.tap.schema.TableDesc;
 import ca.nrc.cadc.tap.schema.TapSchema;
 import ca.nrc.cadc.uws.Parameter;
+import ca.nrc.cadc.uws.util.ParameterUtil;
 
 /**
  * TapQuery implementation for LANG=ADQL.
@@ -238,7 +239,7 @@ public class AdqlQuery implements TapQuery
     public void setParameterList(List<Parameter> paramList)
     {
         this.paramList = paramList;
-        this.queryStringList = TapUtil.findParameterValues("QUERY", paramList);
+        this.queryStringList = ParameterUtil.findParameterValues("QUERY", paramList);
         // Tested; when no query is provided, the obj is null
         if (queryStringList == null) throw new IllegalArgumentException("parameter not found: QUERY");
         this.queryString = queryStringList.get(0);
