@@ -87,4 +87,4 @@ import org.junit.runners.Suite;
     SchemaTest.class
 })
 
-public class UWSTestSuite {}
+public class UWSASyncTestSuite {}

@@ -76,17 +76,34 @@ public class PropertiesFilenameFilter implements FilenameFilter
 {
     private static final String PROPERTIES = ".PROPERTIES";
     private String filename;
+    private String invalid;
 
     public PropertiesFilenameFilter(String filename)
     {
-        this.filename = filename.toUpperCase();
+        this(filename, null);
+    }
+
+    public PropertiesFilenameFilter(String filename, String invalid)
+    {
+        this.filename = filename;
+        this.invalid = invalid;
     }
 
     public boolean accept(File dir, String name)
     {
-        if (name.toUpperCase().startsWith(filename) &&
+        if (name.toUpperCase().startsWith(filename.toUpperCase()) &&
             name.toUpperCase().endsWith(PROPERTIES))
-            return true;
+        {
+            if (invalid == null)
+            {
+                return true;
+            }
+            else
+            {
+                if (!name.toUpperCase().startsWith(invalid.toUpperCase()))
+                    return true;
+            }
+        }
         return false;
     }
     

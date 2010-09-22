@@ -118,8 +118,8 @@ public abstract class AbstractUWSTest
         Level.ALL, Level.DEBUG, Level.ERROR, Level.FATAL, Level.INFO, Level.OFF, Level.TRACE, Level.WARN
     };
 
-    private static final String UWS_SCHEMA_RESOURCE = "UWS-v1.0.xsd";
-    private static final String PARSER = "org.apache.xerces.parsers.SAXParser";
+    protected static final String UWS_SCHEMA_RESOURCE = "UWS-v1.0.xsd";
+    protected static final String PARSER = "org.apache.xerces.parsers.SAXParser";
 
     private static SAXBuilder parser;
     private static SAXBuilder validatingParser;
@@ -214,7 +214,6 @@ public abstract class AbstractUWSTest
     protected String createJob(WebConversation conversation, String xml)
         throws IOException, SAXException, JDOMException
     {
-        String jobId = null;
         log.debug("**************************************************");
         log.debug("HTTP POST: " + serviceUrl);
 
@@ -248,6 +247,9 @@ public abstract class AbstractUWSTest
                 postRequest.setParameter(key, valueList.toArray(new String[0]));
             }
         }
+
+        // Set the RUNID to INTTEST
+        postRequest.setParameter("runId", new String[] {"INTTEST"});
 
         log.debug(Util.getRequestParameters(postRequest));
 

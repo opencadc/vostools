@@ -69,46 +69,13 @@
 
 package ca.nrc.cadc.conformance.uws;
 
-import java.io.File;
-import java.io.FileReader;
-import java.io.IOException;
-import java.util.ArrayList;
-import java.util.List;
+import org.junit.runner.RunWith;
+import org.junit.runners.Suite;
 
-public class TestPropertiesList
-{
-    public List<TestProperties> propertiesList;
+@RunWith(Suite.class)
+@Suite.SuiteClasses
+({
+    SyncTest.class
+})
 
-    public TestPropertiesList(String propertiesDirectory, String className)
-        throws IOException
-    {
-        this(propertiesDirectory, className, null);
-    }
-
-    public TestPropertiesList(String propertiesDirectory, String className, String invalidPrefix)
-        throws IOException
-    {
-        propertiesList = new ArrayList<TestProperties>();
-        File[] files = getPropertiesFiles(propertiesDirectory, className, invalidPrefix);
-        for (int i = 0; i < files.length; i++)
-        {
-            File file = files[i];
-            TestProperties properties = new TestProperties();
-            FileReader reader = new FileReader(file);
-            
-            properties.load(reader, file.getName());
-            propertiesList.add(properties);
-        }
-    }
-
-    protected File[] getPropertiesFiles(String propertiesDirectory, String className, String invalidPrefix)
-        throws IOException
-    {
-        File directory = new File(propertiesDirectory);
-        if (!directory.canRead())
-            throw new IOException("Error reading " + propertiesDirectory);
-        PropertiesFilenameFilter filter = new PropertiesFilenameFilter(className, invalidPrefix);
-        return directory.listFiles(filter);
-    }
-
-}
+public class UWSSyncTestSuite {}

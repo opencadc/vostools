@@ -198,17 +198,20 @@ public class JobTest extends AbstractUWSTest
             sb.append("xmlns:xsi=\"http://www.w3.org/2001/XMLSchema-instance\" ");
             sb.append("xsi:schemaLocation=\"http://www.ivoa.net/xml/UWS/v1.0 UWS.xsd \" ");
             sb.append(">\n");
-            sb.append("  <uws:ownerId xsi:nil=\"true\">ownerId value</uws:ownerId>\n");
+            sb.append("  <uws:jobId/>");
+            sb.append("  <uws:runId>INTTEST</uws:runId>\n");
+            sb.append("  <uws:ownerId>ownerId value</uws:ownerId>\n");
             sb.append("  <uws:phase>PENDING</uws:phase>");
+            sb.append("  <uws:quote xsi:nil=\"true\"/>");
             sb.append("  <uws:startTime xsi:nil=\"true\"/>");
             sb.append("  <uws:endTime xsi:nil=\"true\"/>");
             sb.append("  <uws:executionDuration>0</uws:executionDuration>");
             sb.append("  <uws:destruction xsi:nil=\"true\"/>");
-            sb.append("  <uws:quote xsi:nil=\"true\"/>");
             sb.append("  <uws:parameters>\n");
             sb.append("    <uws:parameter id=\"parameter 1\">parameter 1 value</uws:parameter>\n");
             sb.append("    <uws:parameter id=\"parameter 2\">parameter 2 value</uws:parameter>\n");
             sb.append("  </uws:parameters>\n");
+            sb.append("  <uws:results/>");
             sb.append("</uws:job>");
 
             // Create a new Job.
