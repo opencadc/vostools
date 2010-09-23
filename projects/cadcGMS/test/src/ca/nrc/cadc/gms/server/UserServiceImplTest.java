@@ -79,6 +79,7 @@ import org.junit.Test;
 
 import ca.nrc.cadc.gms.Group;
 import ca.nrc.cadc.gms.User;
+import ca.nrc.cadc.gms.UserImpl;
 import ca.nrc.cadc.gms.server.persistence.GroupPersistence;
 import ca.nrc.cadc.gms.server.persistence.UserPersistence;
 
@@ -127,29 +128,29 @@ public class UserServiceImplTest extends UserServiceTest
     @Test
     public void getMember() throws Exception
     {
-        final User mockUser = createMock(User.class);
+        final User user = new UserImpl(MEMBER_USER_ID);
         final Group mockGroup = createMock(Group.class);
         final Group mockNoMembershipGroup = createMock(Group.class);
         Set<User> members = new HashSet<User>();
-        members.add(mockUser);
-        expect(mockUser.getID()).andReturn(MEMBER_USER_ID).once();
-        expect(mockGroup.getMembers()).andReturn(members).once();
-        expect(mockUser.equals(mockUser)).andReturn(true).once();
-        expect(mockNoMembershipGroup.getMembers()).andReturn(
-                new HashSet<User>()).once();
+        members.add(user);
+
         expect(mockUserPersistence.getUser(NON_MEMBER_USER_ID, true))
                 .andReturn(null).once();
         expect(mockUserPersistence.getUser(MEMBER_USER_ID, true))
-                .andReturn(mockUser).times(3);
+                .andReturn(user).times(3);
         expect(mockGroupPersistence.getGroup(NON_GROUP_ID)).andReturn(
                 null).once();
         expect(mockGroupPersistence.getGroup(GROUP_ID)).andReturn(
                 mockGroup).times(2);
         expect(mockGroupPersistence.getGroup(NO_MEMBERSHIP_GROUP_ID))
                 .andReturn(mockNoMembershipGroup).once();
+        expect(mockGroup.getMembers()).andReturn(members)
+                .times(2);
+        expect(mockNoMembershipGroup.getMembers()).andReturn(new HashSet<User>())
+                .times(2);
 
-        replay(mockUserPersistence, mockGroupPersistence, mockUser,
-                mockGroup);
+        replay(mockUserPersistence, mockGroupPersistence, mockGroup,
+                mockNoMembershipGroup);
 
         super.getMember();
     }

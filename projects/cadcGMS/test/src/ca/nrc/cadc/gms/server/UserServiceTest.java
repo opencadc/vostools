@@ -93,7 +93,8 @@ public abstract class UserServiceTest extends GMSTest<UserService>
     protected static URI NO_MEMBERSHIP_GROUP_ID;
     protected static URI GROUP_ID = null;
     protected static URI NON_GROUP_ID = null;
-    protected final static X500Principal MEMBER_USER_ID = new X500Principal("CN=test user,OU=hia.nrc.ca,O=Grid,C=CA");
+    protected final static X500Principal MEMBER_USER_ID = new X500Principal(
+            "CN=test user,OU=hia.nrc.ca,O=Grid,C=CA");
     protected final static X500Principal NON_MEMBER_USER_ID = new X500Principal(
             "CN=test user2,OU=hia.nrc.ca,O=Grid,C=CA");
 
@@ -102,17 +103,17 @@ public abstract class UserServiceTest extends GMSTest<UserService>
     {
         try
         {
-        GROUP_ID = new URI(URI_PREFIX + "grID");
-        NON_GROUP_ID = new URI(URI_PREFIX + "nonGrID");
-        NO_MEMBERSHIP_GROUP_ID = new URI(URI_PREFIX
-                + "membershiGrID");
+            GROUP_ID = new URI(URI_PREFIX + "grID");
+            NON_GROUP_ID = new URI(URI_PREFIX + "nonGrID");
+            NO_MEMBERSHIP_GROUP_ID = new URI(URI_PREFIX
+                    + "noMembershipGrID");
         }
         catch (URISyntaxException e)
         {
             throw new RuntimeException("Cannot intialize test", e);
         }
     }
-    
+
     @Test
     public void getMemberships() throws Exception
     {
@@ -130,29 +131,17 @@ public abstract class UserServiceTest extends GMSTest<UserService>
                 GROUP_ID);
 
         assertNotNull("The member returned should be valid.", member);
-        assertEquals("The member is the wrong one.", MEMBER_USER_ID, member.getID());
+        assertEquals("The member is the wrong one.", MEMBER_USER_ID,
+                member.getID());
 
-        try
-        {
-            getTestSubject().getMember(MEMBER_USER_ID,
-                    NO_MEMBERSHIP_GROUP_ID);
-            fail("The User with this MEMBER_USER_ID is not a member.");
-        }
-        catch (IllegalArgumentException iae)
-        {
-            // Good!
-        }
+        User user = getTestSubject().getMember(MEMBER_USER_ID,
+                NO_MEMBERSHIP_GROUP_ID);
+        assertEquals("The User with this " + MEMBER_USER_ID
+                + " ID is not a member.", user, null);
 
-        try
-        {
-            getTestSubject().getMember(NON_MEMBER_USER_ID, GROUP_ID);
-            fail("This member is not a member.");
-        }
-        catch (InvalidMemberException ime)
-        {
-            // Good!
-        }
-
+        user =    getTestSubject().getMember(NON_MEMBER_USER_ID, GROUP_ID);
+        assertEquals("The User with this " + NON_MEMBER_USER_ID
+                + " ID is not a member.", user, null);
         try
         {
             getTestSubject().getMember(MEMBER_USER_ID, NON_GROUP_ID);

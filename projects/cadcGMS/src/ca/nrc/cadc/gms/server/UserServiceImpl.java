@@ -150,15 +150,6 @@ public class UserServiceImpl implements UserService
             throws InvalidMemberException, InvalidGroupException,
                    AuthorizationException
     {
-        // Not sure we need to read this from the persistance layer.
-//        final User member = getUserPersistence().getUser(memberUserID, true);
-//
-//        if (member == null)
-//        {
-//            throw new InvalidMemberException(
-//                    String.format("No such User with ID %s", memberUserID));
-//        }
-
         final Group group = getGroupPersistence().getGroup(groupID);
 
         if (group == null)

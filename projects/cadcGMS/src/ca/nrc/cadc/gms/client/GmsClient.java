@@ -574,19 +574,12 @@ public class GmsClient
      * 
      * @param group
      *            Group to set. Cannot be null.
-     * @throws IllegalArgumentException
-     *             If the Group ID, or accepted baseServiceURL, or any
-     *             combination of them produces an error.
-     * @throws AccessControlException
-     *             If user not allow to access the resource
-     * @throws MalformedURLException
-     *             If the arguments generate a bad URL
-     * @throws ReaderException
-     *             If the URL's response could not be read.
+     * @returns 
+     *            True if update was successfull.
      * @throws IOException
      *             For any unforeseen I/O errors.
      */
-    public Group setGroup(Group group) throws IllegalArgumentException
+    public boolean setGroup(Group group) throws IllegalArgumentException
     {
         final StringBuilder resourcePath = new StringBuilder(64);
         try
@@ -619,7 +612,7 @@ public class GmsClient
             switch (responseCode)
             {
                 case HttpURLConnection.HTTP_OK:
-                    return constructGroup(connection);
+                    return true;
                 case HttpURLConnection.HTTP_CONFLICT:
                     // break intentionally left out
                 case HttpURLConnection.HTTP_NOT_FOUND:
@@ -636,15 +629,6 @@ public class GmsClient
                                     + "(" + responseCode + ")");
             }
 
-        }
-        catch (ReaderException e)
-        {
-            final String message = String.format(
-                    "The supplied URL (%s) cannot be read from.",
-                    getBaseServiceURL().toExternalForm()
-                            + resourcePath.toString());
-            logger.debug("Failed to set group", e);
-            throw new IllegalStateException(message, e);
         }
         catch (IOException e)
         {

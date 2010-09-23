@@ -136,11 +136,22 @@ public class GmsClientTest extends GMSTest<GmsClient>
                             return HttpURLConnection.HTTP_NOT_FOUND;
                         }
 
-                        if (getRequestMethod().equals("PUT"))
+                        if (getRequestMethod().equals("POST"))
                         {
                             return HttpURLConnection.HTTP_CREATED;
                         }
                         return HttpURLConnection.HTTP_OK;
+                    }
+
+                    @Override
+                    public String getHeaderField(String headerField)
+                    {
+                        if (getRequestMethod().equals("POST"))
+                        {
+                            return GMSTestSuite.CADC_GROUP_URI
+                                    + createPOSTGrID;
+                        }
+                        return null;
                     }
 
                     @Override
@@ -235,8 +246,9 @@ public class GmsClientTest extends GMSTest<GmsClient>
                                         128);
                                 XML_INPUT
                                         .append("<?xml version=\"1.0\" encoding=\"UTF-8\" standalone=\"no\"?>\n");
-                                XML_INPUT.append("<group uri=\"" + GMSTestSuite.CADC_GROUP_URI + setGrID
-                                        + "\" > \n");
+                                XML_INPUT.append("<group uri=\""
+                                        + GMSTestSuite.CADC_GROUP_URI
+                                        + setGrID + "\" > \n");
                                 XML_INPUT.append("<members>");
                                 XML_INPUT.append("<member dn=\""
                                         + setGrMemberID + "\">\n");
@@ -251,6 +263,7 @@ public class GmsClientTest extends GMSTest<GmsClient>
                             }
                             if (group.equals(createPUTGrID)
                                     || group.equals(getGrID)
+                                    || group.equals(createPOSTGrID)
                                     || group.equals(deleteGrID))
                             {
                                 final StringBuilder XML_INPUT = new StringBuilder(
@@ -272,10 +285,9 @@ public class GmsClientTest extends GMSTest<GmsClient>
                                     128);
                             XML_INPUT
                                     .append("<?xml version=\"1.0\" encoding=\"UTF-8\" standalone=\"no\"?>\n");
-                            XML_INPUT
-                                    .append("<group uri=\""
-                                             + GMSTestSuite.CADC_GROUP_URI + createPOSTGrID +
-                                            "\" />\n");
+                            XML_INPUT.append("<group uri=\""
+                                    + GMSTestSuite.CADC_GROUP_URI
+                                    + createPOSTGrID + "\" />\n");
                             inStream = new ByteArrayInputStream(XML_INPUT
                                     .toString().getBytes());
                             return;
@@ -296,11 +308,10 @@ public class GmsClientTest extends GMSTest<GmsClient>
         final User member = getTestSubject().getMember(new URI(groupID),
                 new X500Principal(memberID));
 
-        assertNotNull(
-                "Member with ID " + setGrMemberID + " is a Member of Group getMember.",
-                member);
-        assertEquals("Member's ID is " + setGrMemberID, new X500Principal(setGrMemberID), member
-                .getID());
+        assertNotNull("Member with ID " + setGrMemberID
+                + " is a Member of Group getMember.", member);
+        assertEquals("Member's ID is " + setGrMemberID,
+                new X500Principal(setGrMemberID), member.getID());
     }
 
     @Test
@@ -315,14 +326,14 @@ public class GmsClientTest extends GMSTest<GmsClient>
     }
 
     @Test
-    public void createPUTGroup() throws Exception
+    public void createPOSTWithGIDGroup() throws Exception
     {
         final String groupID = GMSTestSuite.CADC_GROUP_URI
-                + createPUTGrID;
+                + createPOSTGrID;
         Group group = new GroupImpl(new URI(groupID));
         final Group createdGroup = getTestSubject().createGroup(group);
 
-        assertNotNull("Group createPUTGrroup.", createdGroup);
+        assertNotNull("Group createPOSTGrroup.", createdGroup);
         assertEquals("Group's ID is " + groupID, new URI(groupID),
                 createdGroup.getID());
     }
@@ -346,21 +357,8 @@ public class GmsClientTest extends GMSTest<GmsClient>
         String memberID = setGrMemberID;
         User newUser = new UserImpl(new X500Principal(memberID));
         newGroup.addMember(newUser);
-        final Group group = getTestSubject().setGroup(newGroup);
 
-        assertNotNull("Group SetNewTestGroup.", group);
-        assertEquals("Group's ID is " + groupID, new URI(groupID), group.getID());
-
-        assertNotNull("Member with ID auser is a Member of Group "
-                + setGrID, group.getMembers());
-        Collection<User> members = group.getMembers();
-        assertEquals("Number of members is 1", 1, members.size());
-
-        for (User member : members)
-        {
-            assertEquals("Member's ID is " + setGrMemberID,
-                    new X500Principal(setGrMemberID), member.getID());
-        }
+        assert (getTestSubject().setGroup(newGroup));
 
     }
 
