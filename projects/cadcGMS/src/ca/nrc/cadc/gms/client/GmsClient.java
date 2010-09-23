@@ -574,7 +574,7 @@ public class GmsClient
      * 
      * @param group
      *            Group to set. Cannot be null.
-     * @returns 
+     * @return
      *            True if update was successfull.
      * @throws IOException
      *             For any unforeseen I/O errors.

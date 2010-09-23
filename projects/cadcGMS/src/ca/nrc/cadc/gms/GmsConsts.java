@@ -76,6 +76,9 @@ public class GmsConsts
     // Denotes a description given to a group
     public static final String PROPERTY_GROUP_DESCRIPTION = "ivo://ivoa.net/gms#description"; 
     
+    // Denotes the DN of a group owner
+    public static final String PROPERTY_OWNER_DN = "ivo://ivoa.net/gms#owner_dn"; 
+
     // Denotes the DN of a user
     public static final String PROPERTY_USER_DN = "ivo://ivoa.net/gms#user_dn"; 
 
