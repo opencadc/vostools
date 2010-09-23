@@ -92,6 +92,7 @@ import org.springframework.transaction.support.DefaultTransactionDefinition;
 import ca.nrc.cadc.auth.AuthenticationUtil;
 import ca.nrc.cadc.date.DateUtil;
 import ca.nrc.cadc.net.NetUtil;
+import java.text.DateFormat;
 
 /**
  * JobDAO class that stores the jobs in a RDBMS. This is an abstract class;
@@ -116,11 +117,13 @@ public class JobDAO
     
     // Class holding table information
     DatabasePersistence databasePersistence;
+    DateFormat dateFormat;
 
     protected JobDAO() 
     {
         this.defaultTransactionDef = new DefaultTransactionDefinition();
         defaultTransactionDef.setIsolationLevel(DefaultTransactionDefinition.ISOLATION_REPEATABLE_READ);
+        this.dateFormat = DateUtil.getDateFormat(DateUtil.IVOA_DATE_FORMAT, DateUtil.UTC);
     }
 
     /**
@@ -399,7 +402,7 @@ public class JobDAO
         else
         {
             sb.append("'");
-            sb.append(DateUtil.toString(job.getDestructionTime(), DateUtil.ISO_DATE_FORMAT, DateUtil.UTC));
+            sb.append(dateFormat.format(job.getDestructionTime()));
             sb.append("'");
         }
         sb.append(",");
@@ -410,7 +413,7 @@ public class JobDAO
         else
         {
             sb.append("'");
-            sb.append(DateUtil.toString(job.getQuote(), DateUtil.ISO_DATE_FORMAT, DateUtil.UTC));
+            sb.append(dateFormat.format(job.getQuote()));
             sb.append("'");
         }
         sb.append(",");
@@ -421,7 +424,7 @@ public class JobDAO
         else
         {
             sb.append("'");
-            sb.append(DateUtil.toString(job.getStartTime(), DateUtil.ISO_DATE_FORMAT, DateUtil.UTC));
+            sb.append(dateFormat.format(job.getStartTime()));
             sb.append("'");
         }
         sb.append(",");
@@ -432,7 +435,7 @@ public class JobDAO
         else
         {
             sb.append("'");
-            sb.append(DateUtil.toString(job.getEndTime(), DateUtil.ISO_DATE_FORMAT, DateUtil.UTC));
+            sb.append(dateFormat.format(job.getEndTime()));
             sb.append("'");
         }
         sb.append(",");
@@ -530,7 +533,7 @@ public class JobDAO
         else
         {
             sb.append("'");
-            sb.append(DateUtil.toString(job.getDestructionTime(), DateUtil.ISO_DATE_FORMAT, DateUtil.UTC));
+            sb.append(dateFormat.format(job.getDestructionTime()));
             sb.append("'");
         }
         sb.append(", ");
@@ -544,7 +547,7 @@ public class JobDAO
         else
         {
             sb.append("'");
-            sb.append(DateUtil.toString(job.getQuote(), DateUtil.ISO_DATE_FORMAT, DateUtil.UTC));
+            sb.append(dateFormat.format(job.getQuote()));
             sb.append("'");
         }
         sb.append(", ");
@@ -557,7 +560,7 @@ public class JobDAO
         else
         {
             sb.append("'");
-            sb.append(DateUtil.toString(job.getStartTime(), DateUtil.ISO_DATE_FORMAT, DateUtil.UTC));
+            sb.append(dateFormat.format(job.getStartTime()));
             sb.append("'");
         }
         sb.append(", ");
@@ -570,7 +573,7 @@ public class JobDAO
         else
         {
             sb.append("'");
-            sb.append(DateUtil.toString(job.getEndTime(), DateUtil.ISO_DATE_FORMAT, DateUtil.UTC));
+            sb.append(dateFormat.format(job.getEndTime()));
             sb.append("'");
         }
         sb.append(", ");

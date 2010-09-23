@@ -88,20 +88,20 @@ import java.util.TimeZone;
  */
 public class DateUtil
 {
-    public static String ISO_DATE_FORMAT = "yyyy-MM-dd HH:mm:ss.SSS";
-    public static String ISO_DATE_FORMAT_TZ = "yyyy-MM-dd HH:mm:ss.SSSZ";
+    public static final String ISO_DATE_FORMAT = "yyyy-MM-dd HH:mm:ss.SSS";
+    public static final String ISO_DATE_FORMAT_TZ = "yyyy-MM-dd HH:mm:ss.SSSZ";
     
-    public static String IVOA_DATE_FORMAT = "yyyy-MM-dd'T'HH:mm:ss.SSS";
+    public static final String IVOA_DATE_FORMAT = "yyyy-MM-dd'T'HH:mm:ss.SSS";
 
-    public static TimeZone UTC = TimeZone.getTimeZone("UTC");
+    public static final TimeZone UTC = TimeZone.getTimeZone("UTC");
     
-    public static TimeZone LOCAL = TimeZone.getDefault();
+    public static final TimeZone LOCAL = TimeZone.getDefault();
 
     /**
      * A pre-configured IVOA formatter (ISO8601+UTC).
      *
      */
-    public static DateFormat ivoaDateFormat = getDateFormat(IVOA_DATE_FORMAT, UTC);
+    //public static DateFormat ivoaDateFormat = getDateFormat(IVOA_DATE_FORMAT, UTC);
 
     private static HashMap<String, DateFormat> formats =
             new HashMap<String, DateFormat>();
@@ -139,6 +139,7 @@ public class DateUtil
      * @param format
      * @param tz
      * @return
+     * @deprecated not thread safe, will be removed
      */
     public static synchronized DateFormat getSharedDateFormat(String format, TimeZone tz)
     {
@@ -171,6 +172,7 @@ public class DateUtil
      * @param s representation of the date
      * @return a Date
      * @throws java.text.ParseException   If the String is unparseable.
+     * @deprecated not thread safe, will be removed
      */
     public static Date toDate(String s)
             throws ParseException
@@ -187,6 +189,7 @@ public class DateUtil
      * @param format format string to use (null: default)
      * @return the Date
      * @throws java.text.ParseException  If the String is unparseable.
+     * @deprecated not thread safe, will be removed
      */
     public static Date toDate(String s, String format)
             throws ParseException
@@ -211,6 +214,7 @@ public class DateUtil
      * @param tz timezone to assume (null: default)
      * @return the Date
      * @throws java.text.ParseException  If the String is unparseable.
+     * @deprecated not thread safe, will be removed
      */
     public static Date toDate(String s, String format, TimeZone tz)
             throws ParseException
@@ -266,20 +270,6 @@ public class DateUtil
         catch (ParseException ignore) { }
         catch (NumberFormatException ignore) { }
 
-        // more lenient?
-	/* temporary HACK: need to fix recursion before enabling this
-	try
-        {
-            fmt.setLenient(true);
-            return flexToDate(s, fmt);
-        }
-        catch (ParseException ignore) { }
-        catch (NumberFormatException ignore) { }
-        finally
-        {
-            fmt.setLenient(false);
-        }
-	*/
         if (orig != null)
             throw orig;
         throw new ParseException("failed to parse '" + s + "': " + origN, 0);
@@ -305,6 +295,7 @@ public class DateUtil
      * @param format
      * @param tz
      * @return Formatted Date in String format.
+     * @deprecated not thread safe, will be removed
      */
     public static String toString(Date d, String format, TimeZone tz)
     {

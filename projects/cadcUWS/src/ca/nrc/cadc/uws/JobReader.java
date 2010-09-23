@@ -91,8 +91,7 @@ import org.jdom.input.SAXBuilder;
 
 import ca.nrc.cadc.date.DateUtil;
 import ca.nrc.cadc.xml.XmlUtil;
-import java.net.HttpURLConnection;
-import javax.net.ssl.HttpsURLConnection;
+import java.text.DateFormat;
 
 /**
  * @author zhangsa
@@ -105,6 +104,7 @@ public class JobReader
 
     private Document document;
     private SAXBuilder saxBuilder;
+    private DateFormat dateFormat;
 
     public JobReader()
     {
@@ -116,6 +116,7 @@ public class JobReader
         this.saxBuilder.setFeature("http://apache.org/xml/features/validation/schema", true);
         this.saxBuilder.setFeature("http://apache.org/xml/features/validation/schema-full-checking", true);
         this.saxBuilder.setProperty("http://apache.org/xml/properties/schema/external-schemaLocation", EXT_SCHEMA_LOCATION);
+        this.dateFormat = DateUtil.getDateFormat(DateUtil.IVOA_DATE_FORMAT, DateUtil.UTC);
     }
 
     public Job readFrom(Reader reader) 
@@ -188,7 +189,7 @@ public class JobReader
                 runID, resultsList, parameterList, requestPath);
     }
 
-    private static Date parseDate(String strDate)
+    private Date parseDate(String strDate)
         throws ParseException
     {
         if (strDate == null)
@@ -196,7 +197,7 @@ public class JobReader
         strDate = strDate.trim();
         if (strDate.length() == 0)
             return null;
-        return DateUtil.toDate(strDate, DateUtil.IVOA_DATE_FORMAT, DateUtil.UTC);
+        return dateFormat.parse(strDate);
     }
 
     private ExecutionPhase parseExecutionPhase()

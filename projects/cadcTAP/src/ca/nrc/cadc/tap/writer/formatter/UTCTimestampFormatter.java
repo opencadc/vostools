@@ -73,6 +73,7 @@ import ca.nrc.cadc.date.DateUtil;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Timestamp;
+import java.text.DateFormat;
 import java.util.Calendar;
 import java.util.Date;
 
@@ -82,6 +83,8 @@ import java.util.Date;
  */
 public class UTCTimestampFormatter implements ResultSetFormatter
 {
+    private DateFormat dateFormat = DateUtil.getDateFormat(DateUtil.IVOA_DATE_FORMAT, DateUtil.UTC);
+
     /**
      * Takes a ResultSet and column index of the Date or Timestamp
      * and returns a String in UTC ISO8601 date format.
@@ -120,7 +123,7 @@ public class UTCTimestampFormatter implements ResultSetFormatter
             date = DateUtil.toDate(object);
 
         if (date != null)
-            return DateUtil.toString(date, DateUtil.ISO_DATE_FORMAT, DateUtil.UTC);
+            return dateFormat.format(date);
         else
             throw new UnsupportedOperationException("formatting " + object.getClass().getName() + " " + object);
     }

@@ -94,6 +94,7 @@ import ca.nrc.cadc.tap.schema.TableDesc;
 import ca.nrc.cadc.tap.schema.TapSchema;
 import ca.nrc.cadc.tap.schema.TapSchemaDAO;
 import ca.nrc.cadc.uws.ErrorSummary;
+import ca.nrc.cadc.uws.ErrorType;
 import ca.nrc.cadc.uws.ExecutionPhase;
 import ca.nrc.cadc.uws.Job;
 import ca.nrc.cadc.uws.JobManager;
@@ -158,7 +159,7 @@ public class QueryRunner implements SyncJobRunner
     private Job job;
     private JobManager manager;
     private SyncOutput syncOutput;
-    private TableWriter writer;
+    private TableWriter tableWriter;
 
     public QueryRunner()
     {
@@ -169,7 +170,6 @@ public class QueryRunner implements SyncJobRunner
     {
         this.job = job;
         jobID = job.getID();
-        writer = TableWriterFactory.getWriter(job.getParameterList());
     }
 
     public Job getJob()
@@ -189,14 +189,13 @@ public class QueryRunner implements SyncJobRunner
 
     public String getContentType()
     {
-        if (writer == null)
+        if (tableWriter == null)
         {
             if (job == null)
                 throw new IllegalStateException("The Job must be set before calling the getContentType method");
-            else
-                writer = TableWriterFactory.getWriter(job.getParameterList());
+            tableWriter = TableWriterFactory.getWriter(job.getParameterList());
         }
-        return writer.getContentType();
+        return tableWriter.getContentType();
     }
 
     public URL getRedirectURL()
@@ -350,13 +349,12 @@ public class QueryRunner implements SyncJobRunner
             List<TapSelectItem> selectList = tapQuery.getSelectList();
 
             logger.debug("invoking TableWriterFactory for FORMAT...");
-//            TableWriter writer = TableWriterFactory.getWriter(paramList);
-            writer.setTapSchema(tapSchema);
-            writer.setSelectList(selectList);
-            writer.setJobID(jobID);
-            writer.setParameterList(paramList);
+            tableWriter.setTapSchema(tapSchema);
+            tableWriter.setSelectList(selectList);
+            tableWriter.setJobID(jobID);
+            tableWriter.setParameterList(paramList);
             if (maxRows != null)
-                writer.setMaxRowCount(maxRows);
+                tableWriter.setMaxRowCount(maxRows);
 
             tList.add(System.currentTimeMillis());
             sList.add("parse/convert query: ");
@@ -392,18 +390,19 @@ public class QueryRunner implements SyncJobRunner
                 if (syncOutput != null)
                 {
                     logger.debug("streaming results with OutputStream...");
-                    writer.write(resultSet, syncOutput.getOutputStream());
+                    //syncOutput.setContentType(writer.getContentType());
+                    tableWriter.write(resultSet, syncOutput.getOutputStream());
                 }
                 else
                 {
-                    String filename = "result_" + job.getID() + "." + writer.getExtension();
+                    String filename = "result_" + job.getID() + "." + tableWriter.getExtension();
                     logger.debug("result filename: " + filename);
                     if (rs != null)
                     {
                         logger.debug("setting ResultStore filename: " + filename);
                         rs.setFilename(filename);
-                        rs.setContentType(writer.getContentType());
-                        url = rs.put(resultSet, writer);
+                        rs.setContentType(tableWriter.getContentType());
+                        url = rs.put(resultSet, tableWriter);
                         tList.add(System.currentTimeMillis());
                         sList.add("write ResultSet to ResultStore: ");
                     }
@@ -412,7 +411,7 @@ public class QueryRunner implements SyncJobRunner
                         tmpFile = new File(fs.getStorageDir(), filename);
                         logger.debug("writing ResultSet to " + tmpFile);
                         OutputStream ostream = new FileOutputStream(tmpFile);
-                        writer.write(resultSet, ostream);
+                        tableWriter.write(resultSet, ostream);
                         ostream.close();
                         tList.add(System.currentTimeMillis());
                         sList.add("write ResultSet to tmp file: ");
@@ -489,22 +488,21 @@ public class QueryRunner implements SyncJobRunner
                 tList.add(System.currentTimeMillis());
                 sList.add("encounter failure: ");
 
-                logger.error("query failed", t);
                 errorMessage = t.getClass().getSimpleName() + ":" + t.getMessage();
                 logger.debug("Error message: " + errorMessage);
-                VOTableWriter writer = new VOTableWriter();
+                VOTableWriter ewriter = new VOTableWriter();
                 if (syncOutput != null)
                 {
-                    writer.write(t, syncOutput.getOutputStream());
+                    ewriter.write(t, syncOutput.getOutputStream());
                 }
                 else
                 {
-                    String filename = "error_" + job.getID() + "." + writer.getExtension();
+                    String filename = "error_" + job.getID() + "." + ewriter.getExtension();
                     if (rs != null)
                     {
                         rs.setFilename(filename);
-                        rs.setContentType(writer.getContentType());
-                        errorURL = rs.put(t, writer);
+                        rs.setContentType(ewriter.getContentType());
+                        errorURL = rs.put(t, ewriter);
 
                         tList.add(System.currentTimeMillis());
                         sList.add("store error with ResultStore ");
@@ -514,7 +512,7 @@ public class QueryRunner implements SyncJobRunner
                         File errorFile = new File(fs.getStorageDir(), filename);
                         logger.debug("Error file: " + errorFile.getAbsolutePath());
                         FileOutputStream errorOutput = new FileOutputStream(errorFile);
-                        writer.write(t, errorOutput);
+                        ewriter.write(t, errorOutput);
                         errorOutput.close();
 
                         tList.add(System.currentTimeMillis());
@@ -537,7 +535,9 @@ public class QueryRunner implements SyncJobRunner
                 }
                 logger.debug("setting ExecutionPhase = " + ExecutionPhase.ERROR);
                 job.setExecutionPhase(ExecutionPhase.ERROR);
-                job.setErrorSummary(new ErrorSummary(errorMessage, errorURL));
+                ErrorSummary es = new ErrorSummary(errorMessage, ErrorType.FATAL, true);
+                es.setDocumentURL(errorURL);
+                job.setErrorSummary(es);
                 this.job = manager.persist(job);
             }
             catch (Throwable t2)
@@ -546,7 +546,8 @@ public class QueryRunner implements SyncJobRunner
                 // this is really bad
                 logger.debug("setting ExecutionPhase = " + ExecutionPhase.ERROR);
                 job.setExecutionPhase(ExecutionPhase.ERROR);
-                job.setErrorSummary(new ErrorSummary("failed to persist error document: " + t2, null));
+                ErrorSummary es = new ErrorSummary(errorMessage, ErrorType.FATAL, false);
+                job.setErrorSummary(es);
                 this.job = manager.persist(job);
             }
         }

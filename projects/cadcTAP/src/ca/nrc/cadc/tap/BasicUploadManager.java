@@ -97,6 +97,7 @@ import ca.nrc.cadc.tap.schema.ColumnDesc;
 import ca.nrc.cadc.tap.schema.TableDesc;
 import ca.nrc.cadc.uws.Parameter;
 import ca.nrc.cadc.uws.util.ParameterUtil;
+import java.text.DateFormat;
 
 /**
  * Implements the upload of VOTable files into a database.
@@ -380,7 +381,9 @@ public class BasicUploadManager implements UploadManager
         }
     }
     
-    private void readDataRows( String baseName, String tableName, Element el ) {
+    private void readDataRows( String baseName, String tableName, Element el ) 
+    {
+        DateFormat df = DateUtil.getDateFormat(DateUtil.IVOA_DATE_FORMAT, DateUtil.UTC);
         List<Element> els = el.getChildren();
         if ( els.size() < 1 )
             return;
@@ -394,8 +397,9 @@ public class BasicUploadManager implements UploadManager
                 for ( int i=0; i<numCols; i++ ) {
                     String value = colVals.get(i).getValue();
                     if ( metadata.get(baseName).columnDescs.get(i).datatype.equals(TIMESTAMP) )
-                        try {
-                            row[i] = DateUtil.toString( DateUtil.toDate(value,DateUtil.IVOA_DATE_FORMAT), DateUtil.IVOA_DATE_FORMAT);
+                        try
+                        {
+                            row[i] = df.format( df.parse(value) );
                         }
                         catch ( ParseException pe ) {
                             throw new IllegalStateException( "UPLOAD parameter value for table: "+baseName+

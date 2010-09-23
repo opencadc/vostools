@@ -106,7 +106,10 @@ public class ThreadExecutor implements JobExecutor
         }
         
         Thread t = null;
-        
+
+        // TODO: set phase to QUEUED, fail if not PENDING, update JobExecutor javadoc to
+        // specify this responsibility
+
         if (subject == null)
         {
         	t = new Thread(new TimeTrackingRunnable(jobManager, jobRunner));
@@ -122,7 +125,7 @@ public class ThreadExecutor implements JobExecutor
 	        		}
         		});
         }
-        
+
         t.setDaemon(true); // so the thread will not block application shutdown
         t.start();
     }

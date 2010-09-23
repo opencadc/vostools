@@ -73,9 +73,9 @@ import ca.nrc.cadc.date.DateUtil;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Timestamp;
+import java.text.DateFormat;
 import java.util.Calendar;
 import java.util.Date;
-import java.util.TimeZone;
 
 /**
  * Formats a Date or Timestamp into a String.
@@ -83,6 +83,8 @@ import java.util.TimeZone;
  */
 public class LocalTimestampFormatter implements ResultSetFormatter
 {
+    private DateFormat dateFormat = DateUtil.getDateFormat(DateUtil.IVOA_DATE_FORMAT, DateUtil.LOCAL);
+    
     /**
      *
      * Takes a ResultSet and column index of the Date or Timestamp
@@ -122,7 +124,7 @@ public class LocalTimestampFormatter implements ResultSetFormatter
             date = DateUtil.toDate(object);
 
         if (date != null)
-            return DateUtil.toString(date, DateUtil.ISO_DATE_FORMAT, DateUtil.LOCAL);
+            return dateFormat.format(date);
         else
             throw new UnsupportedOperationException("formatting " + object.getClass().getName() + " " + object);
     }

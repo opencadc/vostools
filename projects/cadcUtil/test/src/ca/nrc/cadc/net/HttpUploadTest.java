@@ -91,8 +91,11 @@ import org.junit.Assert;
 import org.junit.Before;
 import org.junit.BeforeClass;
 import org.junit.Test;
+
 /**
- *
+ * These tests assume an http service running locally will accept HTTP PUT to
+ * https://canonical.name.of.localhost/data/pub/TEST/.
+ * 
  * @author pdowler
  */
 public class HttpUploadTest 

@@ -107,6 +107,10 @@ import org.restlet.data.Form;
 public class JobAsynchResource extends BaseJobResource
 {
     private static final Logger LOGGER = Logger.getLogger(AsynchResource.class);
+
+    private static final String RUN = "RUN";
+    private static final String ABORT = "ABORT";
+
     private DateFormat dateFormat;
 
     public JobAsynchResource()
@@ -143,7 +147,7 @@ public class JobAsynchResource extends BaseJobResource
 
         if (pathInfo.endsWith("phase"))
         {
-            if (phase.equals("RUN"))
+            if (RUN.equalsIgnoreCase(phase))
             {
                 if (jobIsPending())
                 {
@@ -153,7 +157,7 @@ public class JobAsynchResource extends BaseJobResource
                     job.setExecutionPhase(ExecutionPhase.QUEUED);
                 }
             }
-            else if (phase.equals("ABORT"))
+            else if (ABORT.equalsIgnoreCase(phase))
             {
                 if (!jobHasRun())
                     job.setExecutionPhase(ExecutionPhase.ABORTED);
