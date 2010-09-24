@@ -135,6 +135,16 @@ public interface Group
      */
     public List<ElemProperty> getProperties();
 
+
+    /**
+     * Obtain a Property by its unique property URI.
+     *
+     * @param propertyURI       The URI key to search on.  Null values will
+     *                          return null.
+     * @return              The ElemProperty found, or null if none found.
+     */
+    public ElemProperty getProperty(final String propertyURI);
+
     /**
      * Sets the properties associated with a group.
      * 

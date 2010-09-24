@@ -141,6 +141,18 @@ public class GroupImpl implements Group
     }
 
     /**
+     * Obtain a Property by its unique property URI.
+     *
+     * @param propertyURI       The URI key to search on.  Null values will
+     *                          return null.
+     * @return The ElemProperty found, or null if none found.
+     */
+    public ElemProperty getProperty(String propertyURI)
+    {
+        return null;  //To change body of implemented methods use File | Settings | File Templates.
+    }
+
+    /**
      * Add the given User as a member of this Group.
      * 
      * @param newMember

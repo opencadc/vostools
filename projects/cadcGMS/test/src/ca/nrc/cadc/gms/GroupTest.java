@@ -66,15 +66,8 @@
  */
 package ca.nrc.cadc.gms;
 
-import static org.easymock.EasyMock.createMock;
-import static org.easymock.EasyMock.expect;
-import static org.easymock.EasyMock.expectLastCall;
-import static org.easymock.EasyMock.replay;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.assertTrue;
-import static org.junit.Assert.fail;
+import static org.easymock.EasyMock.*;
+import static org.junit.Assert.*;
 
 import javax.security.auth.x500.X500Principal;
 
@@ -256,5 +249,26 @@ public abstract class GroupTest extends GMSTest<Group>
         assertFalse("User Two should no longer be a member.",
                 getTestSubject()
                         .hasMember(mockUserTwo.getID()));
+    }
+
+    @Test
+    public void getProperty() throws Exception
+    {
+        assertNull("Passing in null should return null.",
+                   getTestSubject().getProperty(null));
+
+        final ElemProperty mockProperty = createMock(ElemProperty.class);
+        expect(mockProperty.getPropertyURI()).andReturn("PROPERTY1").once();
+        
+
+        getTestSubject().getProperties().add(mockProperty);
+
+        final ElemProperty foundProperty =
+                getTestSubject().getProperty("PROPERTY1");
+        assertNotNull("Property should exist.", foundProperty);
+        assertEquals("Property should be PROPERTY1.", "PROPERTY1",
+                     foundProperty.getPropertyURI());
+
+        verify(mockProperty);
     }
 }
