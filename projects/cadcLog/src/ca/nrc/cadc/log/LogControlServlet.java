@@ -119,9 +119,9 @@ public class LogControlServlet extends HttpServlet
 {
 	private static final long serialVersionUID = 200909091014L;
 
-	private static final Logger logger = Logger.getLogger( LogControlServlet.class );;
+	private static final Logger logger = Logger.getLogger( LogControlServlet.class);
 
-	private static final Level DEFAULT_LEVEL = Level.DEBUG;
+	private static final Level DEFAULT_LEVEL = Level.INFO;
 	
 	private static final String LONG_FORMAT = "%d{ABSOLUTE} [%t] %-5p %c{1} %x - %m\n";
 	
@@ -130,7 +130,7 @@ public class LogControlServlet extends HttpServlet
 
 	private static Level level = null;
 	private static String[] packageNames;
-	
+
     /**
      *  Initialize the logging.  This method should only get
      *  executed once and, if properly configured, it should
@@ -143,10 +143,17 @@ public class LogControlServlet extends HttpServlet
 	public void init( final ServletConfig config ) throws ServletException
     {
     	super.init( config );
+        packageNames = new String[0];
+
+        //System.out.println("effective level: " + logger.getEffectiveLevel());
+
+        //System.out.println("BasicConfigurator.resetConfiguration()");
+        BasicConfigurator.resetConfiguration();
+        //System.out.println("effective level: " + logger.getEffectiveLevel());
 
 		//  Log all classes at this level except where a
     	//  different level is specified in the web.xml file.
-    	Logger.getRootLogger().setLevel( Level.INFO );
+    	Logger.getRootLogger().setLevel( Level.WARN );
 
     	//  Determine the desired logging level.
     	String levelVal = config.getInitParameter( LOG_LEVEL_PARAM );
@@ -166,30 +173,40 @@ public class LogControlServlet extends HttpServlet
     		level = Level.FATAL;
     	else
     		level = DEFAULT_LEVEL;
-    	
+
+        //System.out.println("new ConsoleAppender(new PatternLayout(...))");
+    	ConsoleAppender appender = new ConsoleAppender( new PatternLayout(LONG_FORMAT) );
+        //System.out.println("effective level: " + logger.getEffectiveLevel());
+
+        //System.out.println("BasicConfigurator.configure(appender)");
+		BasicConfigurator.configure( appender );
+        //System.out.println("effective level: " + logger.getEffectiveLevel());
+
     	// Get the list of configured packages and
     	// set the log level on each.
-    	String packageParamValues = config.getInitParameter( PACKAGES_PARAM );
-    	StringTokenizer stringTokenizer = new StringTokenizer(packageParamValues, " \n\t\r", false);
-    	List<String> tokens = new ArrayList<String>();
-    	String nextToken = null;
-    	while (stringTokenizer.hasMoreTokens()) {
-    		nextToken = stringTokenizer.nextToken();
-    		if ( nextToken.length() > 0 )
-    		{
-    			Logger.getLogger( nextToken ).setLevel( level );
-    			tokens.add( nextToken );
-    		}
-    		
-    		
-    	}
-    	packageNames = tokens.toArray(new String[0]);
+        logger.setLevel(DEFAULT_LEVEL);
+        
+        String packageParamValues = config.getInitParameter( PACKAGES_PARAM );
+        if (packageParamValues != null)
+        {
+            StringTokenizer stringTokenizer = new StringTokenizer(packageParamValues, " \n\t\r", false);
+            List<String> tokens = new ArrayList<String>();
+            while (stringTokenizer.hasMoreTokens())
+            {
+                String pkg = stringTokenizer.nextToken();
+                if ( pkg.length() > 0 )
+                {
+                    logger.info("log level: " + pkg + " =  " + level);
+                    Logger.getLogger(pkg).setLevel( level );
+                    tokens.add(pkg);
+                }
+            }
+            packageNames = tokens.toArray(new String[0]);
+        }
 
-    	ConsoleAppender appender = new ConsoleAppender( new PatternLayout(LONG_FORMAT) );
-        BasicConfigurator.resetConfiguration();
-		BasicConfigurator.configure( appender );
-		
-		logger.info( "Logging initialized at level="+level );
+        // these are here to help detect problems with logging setup
+        logger.info("init complete");
+        logger.debug("init complete -- YOU SHOULD NEVER SEE THIS MESSAGE");
     }
 
     /**
@@ -205,8 +222,8 @@ public class LogControlServlet extends HttpServlet
     public void doGet(HttpServletRequest request, HttpServletResponse response)
         throws ServletException, IOException
 	{
-        Subject subject = AuthenticationUtil.getSubject(request);
-        logger.debug(subject.toString());
+        //Subject subject = AuthenticationUtil.getSubject(request);
+        //logger.debug(subject.toString());
 
         response.setContentType("text/plain");
         PrintWriter writer = response.getWriter();
