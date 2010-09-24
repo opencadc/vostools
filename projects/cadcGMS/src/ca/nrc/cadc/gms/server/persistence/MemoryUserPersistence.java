@@ -71,8 +71,8 @@ import java.util.concurrent.ConcurrentMap;
 
 import javax.security.auth.x500.X500Principal;
 
+import ca.nrc.cadc.gms.InvalidMemberException;
 import ca.nrc.cadc.gms.User;
-import ca.nrc.cadc.gms.UserImpl;
 
 
 public class MemoryUserPersistence implements UserPersistence
@@ -105,8 +105,10 @@ public class MemoryUserPersistence implements UserPersistence
      * @param withMembership  Whether to include membership info (true)
      *                        or not (false).
      * @return User instance, or null if none found.
+     * @throws InvalidMemberException when user not found.
      */
     public User getUser(final X500Principal userID, boolean withMembership)
+    throws InvalidMemberException
     {
         synchronized (USER_MAP)
         {

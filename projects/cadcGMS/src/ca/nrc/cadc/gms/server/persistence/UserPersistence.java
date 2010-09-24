@@ -68,17 +68,22 @@ package ca.nrc.cadc.gms.server.persistence;
 
 import javax.security.auth.x500.X500Principal;
 
+import ca.nrc.cadc.gms.InvalidMemberException;
 import ca.nrc.cadc.gms.User;
 
 public interface UserPersistence
 {
     /**
      * Obtain a User based on the given unique ID.
-     *
-     * @param userID          The unique User ID.
-     * @param withMembership  Whether to include membership info (true)
-     *                        or not (false).
-     * @return              User instance, or null if none found.
+     * 
+     * @param userID
+     *            The unique User ID.
+     * @param withMembership
+     *            Whether to include membership info (true) or not
+     *            (false).
+     * @return User instance.
+     * @throws InvalidMemberException when user not found.
      */
-    User getUser(final X500Principal userID, boolean withMembership);
+    User getUser(final X500Principal userID, boolean withMembership)
+            throws InvalidMemberException;
 }
