@@ -67,10 +67,12 @@
 package ca.nrc.cadc.gms.server.persistence;
 
 import java.net.URI;
+import java.util.Collection;
+import java.util.Map;
 
 import ca.nrc.cadc.gms.Group;
 import ca.nrc.cadc.gms.InvalidGroupException;
-import ca.nrc.cadc.gms.InvalidMemberException;
+
 
 public interface GroupPersistence
 {
@@ -99,4 +101,20 @@ public interface GroupPersistence
      *            Group ID to delete
      */
     void deleteGroup(final URI groupID) throws InvalidGroupException;
+
+    /**
+     * Obtain a Collection of Groups that fit the given query.
+     *
+     * Example:
+     *   {[ivo://ivoa.net/gms#owner_dn] [CN=CADC OPS,OU=hia.nrc.ca,O=Grid,C=CA,CN=myCADCusername]}
+     *
+     * Where the IVOA GMS key is ivo://ivoa.net/gms#owner_dn,
+     * and the value is CN=CADC OPS,OU=hia.nrc.ca,O=Grid,C=CA,CN=myCADCusername  
+     *
+     * @param criteria      The Criteria to search on.
+     * @return      Collection of Groups matching the query, or empty
+     *              Collection.  Never null.
+     * @see ca.nrc.cadc.gms.GmsConsts
+     */
+    Collection<Group> getGroups(final Map<String, String> criteria);
 }

@@ -67,6 +67,8 @@
 package ca.nrc.cadc.gms.server;
 
 import java.net.URI;
+import java.util.Collection;
+import java.util.Map;
 
 import javax.security.auth.x500.X500Principal;
 
@@ -149,4 +151,20 @@ public interface GroupService
     Group deleteUserFromGroup(final URI groupID, X500Principal memberID)
             throws InvalidGroupException, InvalidMemberException,
             AuthorizationException;
+
+    /**
+     * Obtain a Collection of Groups that fit the given query.
+     *
+     * Example:
+     *   {[ivo://ivoa.net/gms#owner_dn] [CN=CADC OPS,OU=hia.nrc.ca,O=Grid,C=CA,CN=myCADCusername]}
+     *
+     * Where the IVOA GMS key is ivo://ivoa.net/gms#owner_dn,
+     * and the value is CN=CADC OPS,OU=hia.nrc.ca,O=Grid,C=CA,CN=myCADCusername
+     *
+     * @param criteria      The Criteria to search on.
+     * @return      Collection of Groups matching the query, or empty
+     *              Collection.  Never null.
+     * @see ca.nrc.cadc.gms.GmsConsts
+     */
+    Collection<Group> getGroups(final Map<String, String> criteria);    
 }

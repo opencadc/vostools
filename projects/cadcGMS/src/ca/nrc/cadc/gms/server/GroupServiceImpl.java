@@ -67,6 +67,8 @@
 package ca.nrc.cadc.gms.server;
 
 import java.net.URI;
+import java.util.Collection;
+import java.util.Map;
 
 import javax.security.auth.x500.X500Principal;
 
@@ -200,6 +202,25 @@ public class GroupServiceImpl implements GroupService
 
         group.getMembers().remove(new UserImpl(memberID));
         return getGroupPersistence().putGroup(group);
+    }
+
+    /**
+     * Obtain a Collection of Groups that fit the given query.
+     * <p/>
+     * Example:
+     * {[ivo://ivoa.net/gms#owner_dn] [CN=CADC OPS,OU=hia.nrc.ca,O=Grid,C=CA,CN=myCADCusername]}
+     * <p/>
+     * Where the IVOA GMS key is ivo://ivoa.net/gms#owner_dn,
+     * and the value is CN=CADC OPS,OU=hia.nrc.ca,O=Grid,C=CA,CN=myCADCusername
+     *
+     * @param criteria The Criteria to search on.
+     * @return Collection of Groups matching the query, or empty
+     *         Collection.  Never null.
+     * @see ca.nrc.cadc.gms.GmsConsts
+     */
+    public Collection<Group> getGroups(Map<String, String> criteria)
+    {
+        return null;  //To change body of implemented methods use File | Settings | File Templates.
     }
 
     public GroupPersistence getGroupPersistence()
