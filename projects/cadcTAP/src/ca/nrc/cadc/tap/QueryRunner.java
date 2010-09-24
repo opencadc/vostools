@@ -170,6 +170,7 @@ public class QueryRunner implements SyncJobRunner
     {
         this.job = job;
         jobID = job.getID();
+        this.tableWriter = TableWriterFactory.getWriter(job.getParameterList());
     }
 
     public Job getJob()
@@ -189,12 +190,8 @@ public class QueryRunner implements SyncJobRunner
 
     public String getContentType()
     {
-        if (tableWriter == null)
-        {
-            if (job == null)
-                throw new IllegalStateException("The Job must be set before calling the getContentType method");
-            tableWriter = TableWriterFactory.getWriter(job.getParameterList());
-        }
+        if (job == null)
+            throw new IllegalStateException("setJob must be set before getContentType");
         return tableWriter.getContentType();
     }
 
@@ -489,6 +486,7 @@ public class QueryRunner implements SyncJobRunner
                 sList.add("encounter failure: ");
 
                 errorMessage = t.getClass().getSimpleName() + ":" + t.getMessage();
+                logger.debug("BUG", t);
                 logger.debug("Error message: " + errorMessage);
                 VOTableWriter ewriter = new VOTableWriter();
                 if (syncOutput != null)
