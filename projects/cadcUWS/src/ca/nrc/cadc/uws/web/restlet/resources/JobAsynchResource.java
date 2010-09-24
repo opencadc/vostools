@@ -154,7 +154,6 @@ public class JobAsynchResource extends BaseJobResource
                     jobRunner = createJobRunner();
                     jobRunner.setJobManager(getJobManager());
                     jobRunner.setJob(job);
-                    job.setExecutionPhase(ExecutionPhase.QUEUED);
                 }
             }
             else if (ABORT.equalsIgnoreCase(phase))

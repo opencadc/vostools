@@ -101,14 +101,18 @@ public class ThreadExecutor implements JobExecutor
     public void execute(final JobRunner jobRunner, final Subject subject)
     {
         if (jobRunner == null)
-        {
             throw new IllegalArgumentException("BUG: JobRunner cannot be null");
-        }
-        
-        Thread t = null;
 
-        // TODO: set phase to QUEUED, fail if not PENDING, update JobExecutor javadoc to
-        // specify this responsibility
+        Job job = jobRunner.getJob();
+
+        if (job == null)
+            throw new IllegalArgumentException("BUG: JobRunner did not contain a Job");
+
+        if ( !ExecutionPhase.PENDING.equals(job.getExecutionPhase()) )
+            throw new IllegalArgumentException("BUG: JobExecutor invoked with a Job in illegal phase: "
+                    + job.getExecutionPhase().name());
+
+        Thread t = null;
 
         if (subject == null)
         {

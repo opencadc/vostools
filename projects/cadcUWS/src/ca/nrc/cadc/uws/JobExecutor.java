@@ -92,7 +92,8 @@ public interface JobExecutor
      * argument is not null, the job is exected using PrivilegedActionJobRunner
      * and the Subject.doAs() method. This puts the Subject into the current
      * AccessControlContext for use by any code within the JobRunner. The JobExecutor
-     * is responsible for setting the startTime and endTime attributes of the job.
+     * is responsible for setting the phase to QUEUED immediately, setting the startTime
+     * right before executing the job, and setting the endTime after the job returns.
      *
      * @param jobRunner    The JobRunner with the Job to execute.
      *                     No nulls area permitted.
