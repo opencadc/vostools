@@ -149,7 +149,23 @@ public class GroupImpl implements Group
      */
     public ElemProperty getProperty(String propertyURI)
     {
-        return null;  //To change body of implemented methods use File | Settings | File Templates.
+        ElemProperty epRtn = null;
+        if (propertyURI != null)
+        {
+            List<ElemProperty> epList = getProperties();
+            if (epList != null)
+            {
+                for (ElemProperty ep : epList)
+                {
+                    if (propertyURI.equals(ep.getPropertyURI()))
+                    {
+                        epRtn = ep;
+                        break;
+                    }
+                }
+            }
+        }
+        return epRtn;
     }
 
     /**
@@ -161,8 +177,7 @@ public class GroupImpl implements Group
      * @throws ca.nrc.cadc.gms.InvalidMemberException
      *             If the given Member cannot be added.
      */
-    public void addMember(final User newMember)
-            throws InvalidMemberException
+    public void addMember(final User newMember) throws InvalidMemberException
     {
         if (newMember == null)
         {
@@ -170,8 +185,7 @@ public class GroupImpl implements Group
         }
         else if (getMembers().contains((newMember)))
         {
-            throw new InvalidMemberException(String.format(
-                    "Member %s already exists.", newMember.getID()));
+            throw new InvalidMemberException(String.format("Member %s already exists.", newMember.getID()));
         }
         else
         {
@@ -188,13 +202,11 @@ public class GroupImpl implements Group
      * @throws InvalidMemberException
      *             If the given Member cannot be removed.
      */
-    public void removeMember(final X500Principal memberID)
-            throws InvalidMemberException
+    public void removeMember(final X500Principal memberID) throws InvalidMemberException
     {
         if (memberID == null)
         {
-            throw new InvalidMemberException(
-                    "Unable to remove NULL Member");
+            throw new InvalidMemberException("Unable to remove NULL Member");
         }
         else
         {
@@ -207,8 +219,7 @@ public class GroupImpl implements Group
                 }
             }
             // member not found
-            throw new InvalidMemberException(String.format(
-                    "Member %s does not exist.", memberID));
+            throw new InvalidMemberException(String.format("Member %s does not exist.", memberID));
         }
     }
 
@@ -222,13 +233,11 @@ public class GroupImpl implements Group
      * @throws ca.nrc.cadc.gms.InvalidMemberException
      *             If the given User cannot be used to check (i.e. null).
      */
-    public boolean hasMember(final X500Principal userID)
-            throws InvalidMemberException
+    public boolean hasMember(final X500Principal userID) throws InvalidMemberException
     {
         if (userID == null)
         {
-            throw new InvalidMemberException(
-                    "Unable to check NULL Member");
+            throw new InvalidMemberException("Unable to check NULL Member");
         }
         else
         {
@@ -275,8 +284,7 @@ public class GroupImpl implements Group
 
         final GroupImpl group = (GroupImpl) o;
 
-        return !(groupID != null ? !groupID.equals(group.groupID)
-                : group.groupID != null);
+        return !(groupID != null ? !groupID.equals(group.groupID) : group.groupID != null);
     }
 
     @Override
