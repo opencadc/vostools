@@ -72,14 +72,20 @@ import java.io.IOException;
 import java.io.OutputStream;
 import java.io.StringReader;
 import java.net.URISyntaxException;
+import java.security.cert.X509Certificate;
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.List;
+import java.util.Map;
+
+import javax.security.auth.Subject;
 
 import org.apache.log4j.Logger;
 import org.jdom.Document;
 import org.jdom.Element;
 import org.jdom.JDOMException;
 import org.jdom.input.SAXBuilder;
+import org.restlet.Request;
 import org.restlet.data.Form;
 import org.restlet.data.MediaType;
 import org.restlet.data.Method;
@@ -92,6 +98,7 @@ import org.restlet.resource.Get;
 import org.restlet.resource.ServerResource;
 import org.restlet.security.User;
 
+import ca.nrc.cadc.auth.AuthenticationUtil;
 import ca.nrc.cadc.gms.WebRepresentationException;
 
 /**
@@ -103,7 +110,10 @@ public abstract class AbstractResource extends ServerResource
             Logger.getLogger(AbstractResource.class);
 
     protected final static String XML_PREFIX = "gms";
+    private static final String CERTIFICATE_REQUEST_ATTRIBUTE_NAME = "org.restlet.https.clientCertificates";
 
+
+    private Subject subject;
 
     /**
      * Hidden constructor for JavaBean tools.
@@ -113,6 +123,21 @@ public abstract class AbstractResource extends ServerResource
         super();
     }
 
+
+    @Override
+    protected void doInit()
+    {
+        super.doInit();
+
+        // Create a subject for authentication
+        Request request = getRequest();
+        Map<String, Object> requestAttributes = request.getAttributes();
+        Collection<X509Certificate> certs = (Collection<X509Certificate>) requestAttributes.get(CERTIFICATE_REQUEST_ATTRIBUTE_NAME);
+        this.subject = AuthenticationUtil.getSubject(null, certs);
+        LOGGER.debug(subject);
+    }
+
+    
     /**
      * Obtain the username of the currently authenticated User.
      *
@@ -390,6 +415,16 @@ public abstract class AbstractResource extends ServerResource
             LOGGER.error(message, e);
             throw new WebRepresentationException(message, e);
         }
+    }
+
+    public Subject getSubject()
+    {
+        return subject;
+    }
+
+    public void setSubject(Subject subject)
+    {
+        this.subject = subject;
     }
     
 }
