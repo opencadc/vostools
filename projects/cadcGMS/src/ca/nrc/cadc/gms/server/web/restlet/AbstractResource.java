@@ -124,6 +124,7 @@ public abstract class AbstractResource extends ServerResource
     }
 
 
+    @SuppressWarnings("unchecked")
     @Override
     protected void doInit()
     {
