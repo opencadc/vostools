@@ -68,14 +68,17 @@ package ca.nrc.cadc.gms.server.persistence;
 
 import java.net.URI;
 import java.net.URISyntaxException;
+import java.util.HashSet;
 import java.util.Random;
 import java.util.Collection;
 import java.util.Map;
+import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 
 import javax.security.auth.x500.X500Principal;
 
+import ca.nrc.cadc.gms.GmsConsts;
 import ca.nrc.cadc.gms.Group;
 import ca.nrc.cadc.gms.GroupImpl;
 import ca.nrc.cadc.gms.InvalidGroupException;
@@ -222,6 +225,21 @@ public class MemoryGroupPersistence implements GroupPersistence
      */
     public Collection<Group> getGroups(Map<String, String> criteria)
     {
-        return null;  //To change body of implemented methods use File | Settings | File Templates.
+        Set<Group> groupRtn = new HashSet<Group>();
+        Set<String> keys = criteria.keySet();
+        if (keys.contains(GmsConsts.PROPERTY_OWNER_DN))
+        {
+            String dn = criteria.get(GmsConsts.PROPERTY_OWNER_DN);
+            synchronized (GROUP_MAP)
+            {
+                Collection<Group> groups = GROUP_MAP.values();
+                for (Group group : groups)
+                {
+                  if (group.getProperty(GmsConsts.PROPERTY_OWNER_DN).equals(dn))
+                      groupRtn.add(group);
+                }
+            }
+        }
+        return groupRtn;
     }
 }

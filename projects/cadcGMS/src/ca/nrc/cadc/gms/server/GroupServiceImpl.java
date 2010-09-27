@@ -216,11 +216,12 @@ public class GroupServiceImpl implements GroupService
      * @param criteria The Criteria to search on.
      * @return Collection of Groups matching the query, or empty
      *         Collection.  Never null.
+     * @throws InvalidGroupException 
      * @see ca.nrc.cadc.gms.GmsConsts
      */
-    public Collection<Group> getGroups(Map<String, String> criteria)
+    public Collection<Group> getGroups(Map<String, String> criteria) throws InvalidGroupException
     {
-        return null;  //To change body of implemented methods use File | Settings | File Templates.
+        return getGroupPersistence().getGroups(criteria);
     }
 
     public GroupPersistence getGroupPersistence()

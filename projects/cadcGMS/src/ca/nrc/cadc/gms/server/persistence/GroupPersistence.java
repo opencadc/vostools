@@ -73,7 +73,6 @@ import java.util.Map;
 import ca.nrc.cadc.gms.Group;
 import ca.nrc.cadc.gms.InvalidGroupException;
 
-
 public interface GroupPersistence
 {
     /**
@@ -116,5 +115,5 @@ public interface GroupPersistence
      *              Collection.  Never null.
      * @see ca.nrc.cadc.gms.GmsConsts
      */
-    Collection<Group> getGroups(final Map<String, String> criteria);
+    Collection<Group> getGroups(final Map<String, String> criteria) throws InvalidGroupException;
 }

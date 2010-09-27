@@ -164,7 +164,8 @@ public interface GroupService
      * @param criteria      The Criteria to search on.
      * @return      Collection of Groups matching the query, or empty
      *              Collection.  Never null.
+     * @throws InvalidGroupException 
      * @see ca.nrc.cadc.gms.GmsConsts
      */
-    Collection<Group> getGroups(final Map<String, String> criteria);    
+    Collection<Group> getGroups(final Map<String, String> criteria) throws InvalidGroupException;    
 }
