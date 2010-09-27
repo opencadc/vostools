@@ -68,6 +68,12 @@ package ca.nrc.cadc.gms.server.web.restlet;
 
 import java.io.FileNotFoundException;
 import java.io.IOException;
+import java.security.Principal;
+import java.util.HashSet;
+import java.util.Set;
+
+import javax.security.auth.Subject;
+import javax.security.auth.x500.X500Principal;
 
 import org.apache.log4j.Logger;
 import org.jdom.Document;
@@ -76,6 +82,8 @@ import org.restlet.data.Form;
 import org.restlet.representation.Representation;
 import org.restlet.resource.Post;
 
+import ca.nrc.cadc.auth.AuthenticationUtil;
+import ca.nrc.cadc.auth.HttpPrincipal;
 import ca.nrc.cadc.gms.AuthorizationException;
 import ca.nrc.cadc.gms.Group;
 import ca.nrc.cadc.gms.GroupWriter;
@@ -119,6 +127,21 @@ public class GroupListResource extends AbstractResource
     @Override
     protected boolean obtainResource() throws FileNotFoundException
     {
+        Subject subject = getSubject();
+        
+        Set<Principal> principals = subject.getPrincipals();
+        X500Principal x500Principal = null;
+        for (Principal principal : principals)
+        {
+           if (principal instanceof X500Principal) {
+               x500Principal = (X500Principal) principal;
+           }
+        }
+
+        if (x500Principal == null)
+            throw new RuntimeException("There is no authorized user to perform such operation.");
+
+        
         processNotImplemented("The Service to see a list of groups"
                 + " is not yet implemented.");
         return true;
