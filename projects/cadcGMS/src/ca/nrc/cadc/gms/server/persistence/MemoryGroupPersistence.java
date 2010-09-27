@@ -68,16 +68,20 @@ package ca.nrc.cadc.gms.server.persistence;
 
 import java.net.URI;
 import java.net.URISyntaxException;
-import java.util.HashSet;
-import java.util.Random;
+import java.util.ArrayList;
 import java.util.Collection;
+import java.util.HashSet;
+import java.util.List;
 import java.util.Map;
+import java.util.Random;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 
 import javax.security.auth.x500.X500Principal;
 
+import ca.nrc.cadc.gms.ElemProperty;
+import ca.nrc.cadc.gms.ElemPropertyImpl;
 import ca.nrc.cadc.gms.GmsConsts;
 import ca.nrc.cadc.gms.Group;
 import ca.nrc.cadc.gms.GroupImpl;
@@ -93,20 +97,20 @@ public class MemoryGroupPersistence implements GroupPersistence
     {
         try
         {
-            final Group firstGroup = new GroupImpl(new URI(
-                    "ivo://cadc.nrc.ca/gms/group#Test-Group1"));
-            firstGroup.addMember(new UserImpl(new X500Principal(
-                    "CN=User1 ,OU=hia.nrc.ca,O=Grid,C=CA")));
+            String dn2 = "CN=User2 ,OU=hia.nrc.ca,O=Grid,C=CA";
+            final Group firstGroup = new GroupImpl(new URI("ivo://cadc.nrc.ca/gms/group#Test-Group1"));
+            firstGroup.addMember(new UserImpl(new X500Principal("CN=User1 ,OU=hia.nrc.ca,O=Grid,C=CA")));
 
-            final Group secondGroup = new GroupImpl(new URI(
-                    "ivo://cadc.nrc.ca/gms/group#Test-Group2"));
-            firstGroup.addMember(new UserImpl(new X500Principal(
-                    "CN=User2 ,OU=hia.nrc.ca,O=Grid,C=CA")));
+            final Group secondGroup = new GroupImpl(new URI("ivo://cadc.nrc.ca/gms/group#Test-Group2"));
+            firstGroup.addMember(new UserImpl(new X500Principal(dn2)));
 
-            final Group thirdGroup = new GroupImpl(new URI(
-                    "ivo://cadc.nrc.ca/gms/group#Test-Group3"));
-            firstGroup.addMember(new UserImpl(new X500Principal(
-                    "CN=User3 ,OU=hia.nrc.ca,O=Grid,C=CA")));
+            final Group thirdGroup = new GroupImpl(new URI("ivo://cadc.nrc.ca/gms/group#Test-Group3"));
+            firstGroup.addMember(new UserImpl(new X500Principal("CN=User3 ,OU=hia.nrc.ca,O=Grid,C=CA")));
+
+            ElemProperty ep = new ElemPropertyImpl(GmsConsts.PROPERTY_OWNER_DN, dn2);
+            List<ElemProperty> epList = new ArrayList<ElemProperty>();
+            epList.add(ep);
+            firstGroup.setProperties(epList);
 
             GROUP_MAP.put(firstGroup.getID().toString(), firstGroup);
             GROUP_MAP.put(Long.toString(99l), secondGroup);
@@ -128,8 +132,7 @@ public class MemoryGroupPersistence implements GroupPersistence
      * @throws InvalidGroupException
      *             if group not found
      */
-    public Group getGroup(final URI groupID)
-            throws InvalidGroupException
+    public Group getGroup(final URI groupID) throws InvalidGroupException
     {
         synchronized (GROUP_MAP)
         {
@@ -139,8 +142,7 @@ public class MemoryGroupPersistence implements GroupPersistence
             }
             else
             {
-                throw new InvalidGroupException("Group with ID "
-                        + groupID + " not found.");
+                throw new InvalidGroupException("Group with ID " + groupID + " not found.");
             }
         }
     }
@@ -162,12 +164,12 @@ public class MemoryGroupPersistence implements GroupPersistence
             Random rand = new Random();
             // generate a random group ID
             int randomNo = rand.nextInt();
-            
+
             try
             {
                 gr = new GroupImpl(new URI("ivo://cadc.nrc.ca/gms/group#" + Integer.toString(randomNo)));
             }
-            catch( URISyntaxException e)
+            catch (URISyntaxException e)
             {
                 throw new InvalidGroupException("Invalid group id");
             }
@@ -177,8 +179,7 @@ public class MemoryGroupPersistence implements GroupPersistence
 
             if (GROUP_MAP.containsKey(gr.getID()))
             {
-                throw new InvalidGroupException("Group with ID "
-                        + gr.getID() + " already exists.");
+                throw new InvalidGroupException("Group with ID " + gr.getID() + " already exists.");
             }
             else
             {
@@ -194,14 +195,12 @@ public class MemoryGroupPersistence implements GroupPersistence
      * @param groupID
      *            of group to delete
      */
-    public void deleteGroup(final URI groupID)
-            throws InvalidGroupException
+    public void deleteGroup(final URI groupID) throws InvalidGroupException
     {
 
         if (!GROUP_MAP.containsKey(groupID))
         {
-            throw new InvalidGroupException("Group with ID " + groupID
-                    + " doeas not exists so it cannot be deleted.");
+            throw new InvalidGroupException("Group with ID " + groupID + " doeas not exists so it cannot be deleted.");
         }
         else
         {
@@ -235,8 +234,8 @@ public class MemoryGroupPersistence implements GroupPersistence
                 Collection<Group> groups = GROUP_MAP.values();
                 for (Group group : groups)
                 {
-                  if (group.getProperty(GmsConsts.PROPERTY_OWNER_DN).equals(dn))
-                      groupRtn.add(group);
+                    ElemProperty ep = group.getProperty(GmsConsts.PROPERTY_OWNER_DN);
+                    if (ep != null && dn.equals(ep.getPropertyValue())) groupRtn.add(group);
                 }
             }
         }
