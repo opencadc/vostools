@@ -231,7 +231,7 @@ public class MemoryGroupPersistence implements GroupPersistence
             String dn = criteria.get(GmsConsts.PROPERTY_OWNER_DN);
             synchronized (GROUP_MAP)
             {
-                Collection<Group> groups = GROUP_MAP.values();
+                Collection<Group> groups = getAllGroups();
                 for (Group group : groups)
                 {
                     ElemProperty ep = group.getProperty(GmsConsts.PROPERTY_OWNER_DN);
@@ -240,5 +240,10 @@ public class MemoryGroupPersistence implements GroupPersistence
             }
         }
         return groupRtn;
+    }
+    
+    protected Collection<Group> getAllGroups()
+    {
+        return GROUP_MAP.values();
     }
 }
