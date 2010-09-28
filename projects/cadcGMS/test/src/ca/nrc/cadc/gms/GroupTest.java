@@ -259,15 +259,16 @@ public abstract class GroupTest extends GMSTest<Group>
 
         final ElemProperty mockProperty = createMock(ElemProperty.class);
         expect(mockProperty.getPropertyURI()).andReturn("PROPERTY1").once();
-        
+
+        replay(mockProperty);
 
         getTestSubject().getProperties().add(mockProperty);
 
         final ElemProperty foundProperty =
                 getTestSubject().getProperty("PROPERTY1");
         assertNotNull("Property should exist.", foundProperty);
-        assertEquals("Property should be PROPERTY1.", "PROPERTY1",
-                     foundProperty.getPropertyURI());
+        assertEquals("Property should be PROPERTY1.", mockProperty,
+                     foundProperty);
 
         verify(mockProperty);
     }
