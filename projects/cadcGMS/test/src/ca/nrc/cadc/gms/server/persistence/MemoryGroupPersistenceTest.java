@@ -71,9 +71,16 @@ package ca.nrc.cadc.gms.server.persistence;
 
 import static org.junit.Assert.*;
 
+import java.net.URI;
+import java.util.ArrayList;
 import java.util.Collection;
 import java.util.HashMap;
+import java.util.HashSet;
+import java.util.List;
 import java.util.Map;
+import java.util.Set;
+
+import javax.security.auth.x500.X500Principal;
 
 import junit.framework.Assert;
 
@@ -84,8 +91,12 @@ import org.junit.BeforeClass;
 import org.junit.Test;
 
 import ca.nrc.cadc.gms.ElemProperty;
+import ca.nrc.cadc.gms.ElemPropertyImpl;
 import ca.nrc.cadc.gms.GmsConsts;
 import ca.nrc.cadc.gms.Group;
+import ca.nrc.cadc.gms.GroupImpl;
+import ca.nrc.cadc.gms.InvalidMemberException;
+import ca.nrc.cadc.gms.UserImpl;
 
 /**
  * @author zhangsa
@@ -132,17 +143,47 @@ public class MemoryGroupPersistenceTest
     @Test
     public void testGetGroups()
     {
+        final Set<Group> ALL_GROUPS = new HashSet<Group>();
+        String dn2 = "CN=User2 ,OU=hia.nrc.ca,O=Grid,C=CA";
+        try {
+        final Group firstGroup = new GroupImpl(new URI("ivo://cadc.nrc.ca/gms/group#Test-Group1"));
+        firstGroup.addMember(new UserImpl(new X500Principal("CN=User1 ,OU=hia.nrc.ca,O=Grid,C=CA")));
+
+        final Group secondGroup = new GroupImpl(new URI("ivo://cadc.nrc.ca/gms/group#Test-Group2"));
+        firstGroup.addMember(new UserImpl(new X500Principal(dn2)));
+
+        final Group thirdGroup = new GroupImpl(new URI("ivo://cadc.nrc.ca/gms/group#Test-Group3"));
+        firstGroup.addMember(new UserImpl(new X500Principal("CN=User3 ,OU=hia.nrc.ca,O=Grid,C=CA")));
+
+        ElemProperty ep = new ElemPropertyImpl(GmsConsts.PROPERTY_OWNER_DN, dn2);
+        List<ElemProperty> epList = new ArrayList<ElemProperty>();
+        epList.add(ep);
+        firstGroup.setProperties(epList);
+
+        ALL_GROUPS.add(firstGroup);
+        ALL_GROUPS.add(secondGroup);
+        ALL_GROUPS.add(thirdGroup);
+        } catch (Exception ex) {
+            throw new RuntimeException("Error in preparing test env.");
+        }
+        
         boolean included = false;
-        String dn2 = "CN=User2 ,OU=hia.nrc.ca,O=Grid,C=CA"; 
         Map<String, String> map = new HashMap<String, String>();
         map.put(GmsConsts.PROPERTY_OWNER_DN, dn2);
-        MemoryGroupPersistence mgp = new MemoryGroupPersistence();
+        MemoryGroupPersistence mgp = new MemoryGroupPersistence()
+        {
+            @Override
+            protected Collection<Group> getAllGroups()
+            {
+                return ALL_GROUPS;
+            }
+        };
         Collection<Group> groups = mgp.getGroups(map);
         if (groups != null)
         for (Group group : groups)
         {
-            ElemProperty ep = group.getProperty(GmsConsts.PROPERTY_OWNER_DN);
-            if (ep != null && dn2.equals(ep.getPropertyValue())) {
+            ElemProperty epRtn = group.getProperty(GmsConsts.PROPERTY_OWNER_DN);
+            if (epRtn != null && dn2.equals(epRtn.getPropertyValue())) {
                 included = true;
                 break;
             }
