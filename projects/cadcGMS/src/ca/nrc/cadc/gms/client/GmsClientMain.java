@@ -70,7 +70,11 @@ package ca.nrc.cadc.gms.client;
 import java.io.File;
 import java.net.URI;
 import java.net.URL;
+import java.security.AccessControlContext;
+import java.security.AccessController;
+import java.security.PrivilegedAction;
 
+import javax.security.auth.Subject;
 import javax.security.auth.x500.X500Principal;
 
 import org.apache.log4j.Level;
@@ -81,9 +85,7 @@ import ca.nrc.cadc.gms.ElemProperty;
 import ca.nrc.cadc.gms.GmsConsts;
 import ca.nrc.cadc.gms.Group;
 import ca.nrc.cadc.gms.GroupImpl;
-import ca.nrc.cadc.gms.InvalidMemberException;
 import ca.nrc.cadc.gms.User;
-import ca.nrc.cadc.gms.UserImpl;
 import ca.nrc.cadc.reg.client.RegistryClient;
 import ca.nrc.cadc.util.ArgumentMap;
 import ca.nrc.cadc.util.Log4jInit;
@@ -91,7 +93,7 @@ import ca.nrc.cadc.util.Log4jInit;
 /**
  * Main class for the GmsClient
  */
-public class GmsClientMain
+public class GmsClientMain implements PrivilegedAction<Boolean>
 {
     private static Logger logger = Logger.getLogger(GmsClientMain.class);
 
@@ -118,8 +120,6 @@ public class GmsClientMain
         VIEW, CREATE, DELETE, ADD_MEMBER, REMOVE_MEMBER, LIST_MEMBER_GR, LIST_OWNER_GR
     };
 
-    public static final String VOS_PREFIX = "vos://";
-
     private static final int INIT_STATUS = 1; // exit code for
     // initialisation failure
     private static final int NET_STATUS = 2; // exit code for
@@ -133,9 +133,9 @@ public class GmsClientMain
     private String target; // group/user ID the operation is executed on
     private String memberID; // ID of a member to be added or removed
     // from a group
-
-    File certFile = null;
-    File keyFile = null;
+    
+    // authenticated subject
+    private static Subject subject;
 
     private static final String SERVICE_ID = "ivo://cadc.nrc.ca/gms";
 
@@ -182,7 +182,7 @@ public class GmsClientMain
         try
         {
             command.init(argMap);
-            command.run();
+            Subject.doAs(subject, command);
         }
         catch (Throwable t)
         {
@@ -249,8 +249,8 @@ public class GmsClientMain
             throw new IllegalArgumentException(
                     "Argument cert and key are all required.");
 
-        this.certFile = new File(strCert);
-        this.keyFile = new File(strKey);
+        File certFile = new File(strCert);
+        File keyFile = new File(strKey);
 
         StringBuffer sbSslMsg = new StringBuffer();
         boolean sslError = false;
@@ -284,10 +284,10 @@ public class GmsClientMain
         {
             throw new IllegalArgumentException(sbSslMsg.toString());
         }
-        SSLUtil.initSSL(this.certFile, this.keyFile);
+        subject = SSLUtil.createSubject(certFile, keyFile);
     }
 
-    private void run()
+    public Boolean run()
     {
         logger.debug("run - START");
         if (this.operation.equals(Operation.CREATE))
@@ -319,6 +319,7 @@ public class GmsClientMain
             doListMyGroups();
         }
         logger.debug("run - DONE");
+        return new Boolean(true);
     }
 
     /**
@@ -562,18 +563,18 @@ public class GmsClientMain
             if (client.removeMember(new URI(target), new X500Principal(
                     memberID)))
             {
-                msg("User " + memberID + " added to group " + target);
+                msg("User " + memberID + " removed from group " + target);
             }
             else
             {
                 logger.error("User " + memberID
-                        + " cannot be added to the group " + target);
+                        + " cannot be removed from the group " + target);
                 System.exit(INIT_STATUS);
             }
         }
         catch (Exception e)
         {
-            logger.error("failed add user " + memberID);
+            logger.error("failed remove user " + memberID);
             logger.error("reason: " + e.getMessage());
             System.exit(NET_STATUS);
         }

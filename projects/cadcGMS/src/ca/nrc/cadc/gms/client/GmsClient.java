@@ -74,14 +74,19 @@ import java.net.MalformedURLException;
 import java.net.URI;
 import java.net.URISyntaxException;
 import java.net.URL;
-import java.net.URLConnection;
 import java.net.URLEncoder;
+import java.security.AccessControlContext;
 import java.security.AccessControlException;
+import java.security.AccessController;
 
+import javax.net.ssl.HttpsURLConnection;
+import javax.net.ssl.SSLSocketFactory;
+import javax.security.auth.Subject;
 import javax.security.auth.x500.X500Principal;
 
 import org.apache.log4j.Logger;
 
+import ca.nrc.cadc.auth.SSLUtil;
 import ca.nrc.cadc.gms.Group;
 import ca.nrc.cadc.gms.GroupReader;
 import ca.nrc.cadc.gms.GroupWriter;
@@ -89,10 +94,18 @@ import ca.nrc.cadc.gms.ReaderException;
 import ca.nrc.cadc.gms.User;
 import ca.nrc.cadc.gms.UserReader;
 
+/**
+ * Client class for the GMS service. This class must be invoked from a
+ * subject context and the subject must be authenticated with
+ * X509Principals
+ */
 public class GmsClient
 {
     private static Logger logger = Logger.getLogger(GmsClient.class);
     private URL baseServiceURL;
+
+    // socket factory to use when connecting
+    SSLSocketFactory sf;
 
     /**
      * Default, and only available constructor.
@@ -216,8 +229,7 @@ public class GmsClient
             final URL resourceURL = new URL(getBaseServiceURL()
                     + resourcePath.toString());
             logger.debug("isMember(), URL=" + resourceURL);
-            HttpURLConnection connection = (HttpURLConnection) resourceURL
-                    .openConnection();
+            HttpURLConnection connection = (HttpURLConnection) openConnection(resourceURL);
             connection.setRequestMethod("HEAD");
             connection.setUseCaches(false);
             connection.setDoInput(true);
@@ -574,8 +586,7 @@ public class GmsClient
      * 
      * @param group
      *            Group to set. Cannot be null.
-     * @return
-     *            True if update was successfull.
+     * @return True if update was successfull.
      * @throws IOException
      *             For any unforeseen I/O errors.
      */
@@ -747,8 +758,7 @@ public class GmsClient
             final URL resourceURL = new URL(getBaseServiceURL()
                     + resourcePath.toString());
             logger.debug("addMember(), URL=" + resourceURL);
-            HttpURLConnection connection = (HttpURLConnection) resourceURL
-                    .openConnection();
+            HttpURLConnection connection = (HttpURLConnection) openConnection(resourceURL);
             connection.setRequestMethod("POST");
             connection.setUseCaches(false);
             connection.setDoInput(true);
@@ -797,8 +807,7 @@ public class GmsClient
             throw new IllegalArgumentException(message, e);
         }
     }
-    
-    
+
     /**
      * Deletes a user from a group
      * 
@@ -828,8 +837,7 @@ public class GmsClient
             final URL resourceURL = new URL(getBaseServiceURL()
                     + resourcePath.toString());
             logger.debug("removeMember(), URL=" + resourceURL);
-            HttpURLConnection connection = (HttpURLConnection) resourceURL
-                    .openConnection();
+            HttpURLConnection connection = (HttpURLConnection) openConnection(resourceURL);
             connection.setRequestMethod("DELETE");
             connection.setUseCaches(false);
             connection.setDoInput(true);
@@ -838,7 +846,9 @@ public class GmsClient
 
             String responseMessage = connection.getResponseMessage();
             int responseCode = connection.getResponseCode();
-            logger.debug("removeMember(), response code: " + responseCode);
+            logger
+                    .debug("removeMember(), response code: "
+                            + responseCode);
             logger.debug("removeMember(), response message: "
                     + responseMessage);
 
@@ -973,17 +983,32 @@ public class GmsClient
     }
 
     /**
-     * Open and HttpURLConnection. Used primarily as a hookup for the unit
-     * testing.
+     * Open a HttpsURLConnection with a SocketFactory created based on
+     * user credentials.
      * 
      * @param url
-     * @return UTLConnection returns an open connection to URL
+     * @return UTLConnection returns an open https connection to URL
      * @throws IOException
      */
-    protected URLConnection openConnection(final URL url)
+    protected HttpsURLConnection openConnection(final URL url)
             throws IOException
     {
-        return url.openConnection();
+        if (sf == null)
+        {
+            // lazy initialization of socket factory
+            AccessControlContext ac = AccessController.getContext();
+            Subject subject = Subject.getSubject(ac);
+            sf = SSLUtil.getSocketFactory(subject);
+        }
+        if (!url.getProtocol().equals("https"))
+        {
+            throw new IllegalArgumentException("Wrong protocol: "
+                    + url.getProtocol() + ". GMS works on https only");
+        }
+        HttpsURLConnection con = (HttpsURLConnection) url
+                .openConnection();
+        con.setSSLSocketFactory(sf);
+        return con;
     }
 
     public URL getBaseServiceURL()

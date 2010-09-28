@@ -77,9 +77,9 @@ import java.io.OutputStream;
 import java.net.HttpURLConnection;
 import java.net.URI;
 import java.net.URL;
-import java.net.URLConnection;
-import java.util.Collection;
+import java.security.cert.Certificate;
 
+import javax.net.ssl.HttpsURLConnection;
 import javax.security.auth.x500.X500Principal;
 
 import org.junit.Test;
@@ -116,10 +116,10 @@ public class GmsClientTest extends GMSTest<GmsClient>
         setTestSubject(new GmsClient(
                 new URL("http://localhost/myservice"))
         {
-            protected URLConnection openConnection(final URL url)
+            protected HttpsURLConnection openConnection(final URL url)
                     throws IOException
             {
-                return new HttpURLConnection(url)
+                return new HttpsURLConnection(url)
                 {
                     InputStream inStream;
 
@@ -207,6 +207,24 @@ public class GmsClientTest extends GMSTest<GmsClient>
                     public void disconnect()
                     {
                     };
+                    
+                    @Override
+                    public String getCipherSuite()
+                    {
+                        return null;
+                    }
+                    
+                    @Override
+                    public Certificate[] getServerCertificates()
+                    {
+                        return null;
+                    }
+                    
+                    @Override
+                    public Certificate[] getLocalCertificates()
+                    {
+                        return null;
+                    }
 
                     @Override
                     public boolean usingProxy()
