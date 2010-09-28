@@ -99,6 +99,7 @@ import org.restlet.resource.ServerResource;
 import org.restlet.security.User;
 
 import ca.nrc.cadc.auth.AuthenticationUtil;
+import ca.nrc.cadc.gms.InvalidGroupException;
 import ca.nrc.cadc.gms.WebRepresentationException;
 
 /**
@@ -214,6 +215,13 @@ public abstract class AbstractResource extends ServerResource
             throw new WebRepresentationException(
                     "Unable to create XML Document.", e);
         }
+        catch (InvalidGroupException e)
+        {
+            setExisting(false);
+            LOGGER.error("Unable to get groups");
+            throw new WebRepresentationException(
+                    "Unable to get groups.", e);
+        }
     }
     
     /**
@@ -221,9 +229,10 @@ public abstract class AbstractResource extends ServerResource
      * @return TODO
      * 
      * @throws FileNotFoundException If the resource doesn't exist.
+     * @throws InvalidGroupException 
      */
     protected abstract boolean obtainResource()
-                throws FileNotFoundException, URISyntaxException;
+                throws FileNotFoundException, URISyntaxException, InvalidGroupException;
 
     /**
      * Assemble the XML for this Resource's Representation into the given

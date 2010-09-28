@@ -72,6 +72,7 @@ import java.io.OutputStream;
 import java.io.OutputStreamWriter;
 import java.io.UnsupportedEncodingException;
 import java.io.Writer;
+import java.util.Collection;
 
 import org.jdom.Attribute;
 import org.jdom.Document;
@@ -140,6 +141,27 @@ public class GroupWriter
     {
         // write out the Document
         write(getGroupElement(group), writer);
+    }
+
+    /**
+     * Create a <groups> Element for a collection of groups
+     * 
+     * @param groups
+     * @return <groups> Element
+     */
+    public static Element getGroupsElement(Collection<Group> groups)
+    {
+        // Create the root groups element.
+        Element eleGroups = new Element("groups");
+        if (groups != null)
+        {
+            for (Group group : groups)
+            {
+                Element eleGroup = getGroupElement(group);
+                eleGroups.addContent(eleGroup);
+            }
+        }
+        return eleGroups;
     }
 
     public static Element getGroupElement(Group group)

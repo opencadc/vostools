@@ -69,7 +69,9 @@ package ca.nrc.cadc.gms.server.web.restlet;
 import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.security.Principal;
-import java.util.HashSet;
+import java.util.Collection;
+import java.util.HashMap;
+import java.util.Map;
 import java.util.Set;
 
 import javax.security.auth.Subject;
@@ -77,14 +79,9 @@ import javax.security.auth.x500.X500Principal;
 
 import org.apache.log4j.Logger;
 import org.jdom.Document;
-import org.restlet.data.Status;
-import org.restlet.data.Form;
-import org.restlet.representation.Representation;
-import org.restlet.resource.Post;
+import org.jdom.Element;
 
-import ca.nrc.cadc.auth.AuthenticationUtil;
-import ca.nrc.cadc.auth.HttpPrincipal;
-import ca.nrc.cadc.gms.AuthorizationException;
+import ca.nrc.cadc.gms.GmsConsts;
 import ca.nrc.cadc.gms.Group;
 import ca.nrc.cadc.gms.GroupWriter;
 import ca.nrc.cadc.gms.InvalidGroupException;
@@ -92,12 +89,12 @@ import ca.nrc.cadc.gms.server.GroupService;
 
 public class GroupListResource extends AbstractResource
 {
-    private final static Logger logger = Logger
-            .getLogger(GroupListResource.class);
+    @SuppressWarnings("unused")
+    private final static Logger logger = Logger.getLogger(GroupListResource.class);
 
     private GroupService groupService;
-    
-    private Group group;
+
+    private Collection<Group> groups;
 
     /**
      * Hidden constructor for JavaBean tools.
@@ -123,59 +120,33 @@ public class GroupListResource extends AbstractResource
      * 
      * @throws FileNotFoundException
      *             If the resource doesn't exist.
+     * @throws InvalidGroupException 
      */
     @Override
-    protected boolean obtainResource() throws FileNotFoundException
+    protected boolean obtainResource() throws FileNotFoundException, InvalidGroupException
     {
         Subject subject = getSubject();
-        
+
         Set<Principal> principals = subject.getPrincipals();
         X500Principal x500Principal = null;
         for (Principal principal : principals)
         {
-           if (principal instanceof X500Principal) {
-               x500Principal = (X500Principal) principal;
-           }
+            if (principal instanceof X500Principal)
+            {
+                x500Principal = (X500Principal) principal;
+            }
         }
 
-        if (x500Principal == null)
-            throw new RuntimeException("There is no authorized user to perform such operation.");
+        if (x500Principal == null) throw new RuntimeException("There is no authorized user to perform such operation.");
 
-        
-        processNotImplemented("The Service to see a list of groups"
-                + " is not yet implemented.");
+        String dn = x500Principal.getName(X500Principal.CANONICAL);
+        Map<String, String> map = new HashMap<String, String>();
+        map.put(GmsConsts.PROPERTY_OWNER_DN, dn);
+
+        groups = getGroupService().getGroups(map);
         return true;
     }
 
-
-    /**
-     * Handle POST requests: create a new Group.
-     */
-    @Post
-    public void acceptPost(Representation entity)
-    {
-        logger.debug("Create a new group.");
-        try
-        {
-            group = getGroupService().postGroup(null);
-            logger.debug(String.format("Created groupID: %s", group
-                    .getID()));
-            setLocationRef(group.getID().toString());
-            setStatus(Status.SUCCESS_CREATED);
-        }
-        catch (AuthorizationException e)
-        {
-            final String message = "You are not authorized to create new groups.";
-            processError(e, Status.CLIENT_ERROR_UNAUTHORIZED, message);
-        }
-        catch (InvalidGroupException e)
-        {
-            // this should not happen for a null group id
-            final String message = "Creation of new groups not supported";
-            processError(e, Status.CLIENT_ERROR_BAD_REQUEST, message);
-        }
-    }
-    
     /**
      * Assemble the XML for this Resource's Representation into the given
      * Document.
@@ -186,15 +157,15 @@ public class GroupListResource extends AbstractResource
      */
     protected void buildXML(final Document document) throws IOException
     {
-        logger.debug("Enter GroupMemberResource.buildXML()");
-        document.addContent(GroupWriter.getGroupElement(group));
+        Element eleGroups = GroupWriter.getGroupsElement(groups);
+        document.addContent(eleGroups);
     }
 
     private GroupService getGroupService()
     {
         return groupService;
     }
-    
+
     public void setGroupService(final GroupService groupService)
     {
         this.groupService = groupService;
