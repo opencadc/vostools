@@ -141,11 +141,11 @@
     <property name="userService" ref="userService" />
   </bean>
 
-  <bean name="/members/{memberID}/{groupID}" id="memberGroupResource" scope="prototype"
-        parent="baseResource"
-        class="ca.nrc.cadc.gms.server.web.restlet.MemberGroupResource">
-    <property name="userService" ref="userService" />
-    <property name="groupService" ref="groupService" />
-  </bean>
+  <!--<bean name="/members/{memberID}/{groupID}" id="memberGroupResource" scope="prototype"-->
+        <!--parent="baseResource"-->
+        <!--class="ca.nrc.cadc.gms.server.web.restlet.MemberGroupResource">-->
+    <!--<property name="userService" ref="userService" />-->
+    <!--<property name="groupService" ref="groupService" />-->
+  <!--</bean>-->
   
 </beans>
