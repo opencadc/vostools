@@ -268,7 +268,7 @@ public class SSLUtil
     */
 
     @SuppressWarnings("unchecked")
-    static X509Certificate[] readCertificateChain(File certFile) throws CertificateException, IOException
+    public static X509Certificate[] readCertificateChain(File certFile) throws CertificateException, IOException
     {
         byte[] certBuf = FileUtil.readFile(certFile);
         BufferedInputStream istream = new BufferedInputStream(new ByteArrayInputStream(certBuf));
@@ -302,7 +302,7 @@ public class SSLUtil
         return chain;
     }
 
-    static PrivateKey readPrivateKey(File keyFile) throws InvalidKeySpecException, NoSuchAlgorithmException, IOException
+    public static PrivateKey readPrivateKey(File keyFile) throws InvalidKeySpecException, NoSuchAlgorithmException, IOException
     {
         byte[] priv = FileUtil.readFile(keyFile);
         KeyFactory kf = KeyFactory.getInstance("RSA");
