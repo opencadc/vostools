@@ -80,7 +80,9 @@ import javax.security.auth.x500.X500Principal;
 import org.apache.log4j.Logger;
 import org.jdom.Document;
 import org.jdom.Element;
+import org.restlet.data.Form;
 
+import ca.nrc.cadc.gms.AuthorizationException;
 import ca.nrc.cadc.gms.GmsConsts;
 import ca.nrc.cadc.gms.Group;
 import ca.nrc.cadc.gms.GroupWriter;
@@ -121,29 +123,20 @@ public class GroupListResource extends AbstractResource
      * @throws FileNotFoundException
      *             If the resource doesn't exist.
      * @throws InvalidGroupException 
+     * @throws AuthorizationException 
      */
     @Override
-    protected boolean obtainResource() throws FileNotFoundException, InvalidGroupException
+    protected boolean obtainResource() throws FileNotFoundException, InvalidGroupException, AuthorizationException
     {
-        Subject subject = getSubject();
+        // Get the criteria from http query
+        Form queryForm = getForm();
+        String dn = queryForm.getFirstValue(GmsConsts.PROPERTY_OWNER_DN);
+        logger.info("DN=" + dn);
+        
+        Map<String, String> criteria = new HashMap<String, String>();
+        criteria.put(GmsConsts.PROPERTY_OWNER_DN, dn);
 
-        Set<Principal> principals = subject.getPrincipals();
-        X500Principal x500Principal = null;
-        for (Principal principal : principals)
-        {
-            if (principal instanceof X500Principal)
-            {
-                x500Principal = (X500Principal) principal;
-            }
-        }
-
-        if (x500Principal == null) throw new RuntimeException("There is no authorized user to perform such operation.");
-
-        String dn = x500Principal.getName(X500Principal.CANONICAL);
-        Map<String, String> map = new HashMap<String, String>();
-        map.put(GmsConsts.PROPERTY_OWNER_DN, dn);
-
-        groups = getGroupService().getGroups(map);
+        groups = getGroupService().getGroups(criteria);
         return true;
     }
 

@@ -64,109 +64,133 @@
  *
  ************************************************************************
  */
-package ca.nrc.cadc.gms.server;
+package ca.nrc.cadc.gms;
 
-import java.net.URI;
+import java.io.IOException;
+import java.io.InputStream;
+import java.io.InputStreamReader;
+import java.io.Reader;
+import java.io.StringReader;
+import java.io.UnsupportedEncodingException;
+import java.net.URISyntaxException;
+import java.util.ArrayList;
 import java.util.Collection;
-import java.util.Map;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Set;
 
-import javax.security.auth.x500.X500Principal;
+import org.jdom.Document;
+import org.jdom.Element;
+import org.jdom.JDOMException;
+import org.jdom.Namespace;
+import org.jdom.input.SAXBuilder;
 
-import ca.nrc.cadc.gms.AuthorizationException;
-import ca.nrc.cadc.gms.Group;
-import ca.nrc.cadc.gms.InvalidGroupException;
-import ca.nrc.cadc.gms.InvalidMemberException;
-
-public interface GroupService
+/**
+ * @see GroupReader
+ * 
+ * @author Sailor Zhang
+ */
+public class GroupsReader
 {
-    /**
-     * Obtain the Group with the given Group ID.
-     * 
-     * @param groupID
-     *            Unique Group identifier.
-     * @return The Group object for the given ID.
-     */
-    Group getGroup(final URI groupID) throws InvalidGroupException,
-            AuthorizationException;
+    private static SAXBuilder parser;
+    static
+    {
+        parser = new SAXBuilder("org.apache.xerces.parsers.SAXParser", false);
+    }
+
+    public GroupsReader()
+    {
+    }
 
     /**
-     * Create a new Group.
+     * Construct a collection of Group objects from an XML String source.
      * 
-     * @param group
-     *            new Group.
-     * @return The saved group.
+     * @param xml
+     *            String of the XML.
+     * @return collection of Group objects.
      */
-    Group putGroup(final Group group) throws InvalidGroupException,
-            AuthorizationException;
+    public static Collection<Group> read(String xml) throws ReaderException, IOException, URISyntaxException
+    {
+        if (xml == null) throw new IllegalArgumentException("XML must not be null");
+        return read(new StringReader(xml));
+    }
 
     /**
-     * Modify an existing Group.
+     * Construct a collection of Group objects from a InputStream.
      * 
-     * @param group
-     *            Group to modify.
-     * @return The saved group.
+     * @param in
+     *            InputStream.
+     * @return collection of Group objects.
+     * @throws IOException 
      */
-    Group postGroup(final Group group) throws InvalidGroupException,
-            AuthorizationException;
+    public static Collection<Group> read(InputStream in) throws ReaderException, IOException, URISyntaxException
+    {
+        if (in == null) throw new IOException("stream closed");
+        InputStreamReader reader;
+        try
+        {
+            reader = new InputStreamReader(in, "UTF-8");
+        }
+        catch (UnsupportedEncodingException e)
+        {
+            throw new RuntimeException("UTF-8 encoding not supported");
+        }
+        return read(reader);
+    }
 
     /**
-     * Delete the Group with the given Group ID.
+     * Construct a collection of Group objects from a Reader.
      * 
-     * @param groupID
-     *            Unique Group identifier.
+     * @param reader
+     *            Reader.
+     * @return collection of Group objects.
+     * @throws ReaderException 
+     * @throws IOException 
+     * @throws URISyntaxException 
      */
-    void deleteGroup(final URI groupID) throws InvalidGroupException,
-            AuthorizationException;
+    public static Collection<Group> read(Reader reader) throws ReaderException, IOException, URISyntaxException
+    {
+        List<Group> groups = new ArrayList<Group>();
 
-    /**
-     * 
-     * @return the group URI prefix associated with this service
-     */
-    String getGroupUriPrefix();
+        if (reader == null) throw new IllegalArgumentException("reader must not be null");
 
-    /**
-     * Add user to a Group.
-     * 
-     * @param groupID
-     *            group to add the user to.
-     * @param memberID
-     *            member ID
-     * 
-     * @return The updated group.
-     */
-    Group addUserToGroup(final URI groupID, X500Principal memberID)
-            throws InvalidGroupException, InvalidMemberException,
-            AuthorizationException;
-    
-    /**
-     * Add user to a Group.
-     * 
-     * @param groupID
-     *            group to remove the user from.
-     * @param memberID
-     *            member ID
-     * 
-     * @return The updated group.
-     */
-    Group deleteUserFromGroup(final URI groupID, X500Principal memberID)
-            throws InvalidGroupException, InvalidMemberException,
-            AuthorizationException;
+        // Create a JDOM Document from the XML
+        Document document;
+        try
+        {
+            document = parser.build(reader);
+        }
+        catch (JDOMException jde)
+        {
+            String error = "XML failed validation: " + jde.getMessage();
+            throw new ReaderException(error, jde);
+        }
 
-    /**
-     * Obtain a Collection of Groups that fit the given query.
-     *
-     * Example:
-     *   {[ivo://ivoa.net/gms#owner_dn] [CN=CADC OPS,OU=hia.nrc.ca,O=Grid,C=CA,CN=myCADCusername]}
-     *
-     * Where the IVOA GMS key is ivo://ivoa.net/gms#owner_dn,
-     * and the value is CN=CADC OPS,OU=hia.nrc.ca,O=Grid,C=CA,CN=myCADCusername
-     *
-     * @param criteria      The Criteria to search on.
-     * @return      Collection of Groups matching the query, or empty
-     *              Collection.  Never null.
-     * @throws InvalidGroupException 
-     * @see ca.nrc.cadc.gms.GmsConsts
-     */
-    Collection<Group> getGroups(final Map<String, String> criteria) 
-    throws InvalidGroupException, AuthorizationException;    
+        // Root element and namespace of the Document
+        Element root = document.getRootElement();
+
+        String groupsEleName = root.getName();
+        Namespace namespace = root.getNamespace();
+
+        if (!groupsEleName.equalsIgnoreCase("groups"))
+        {
+            String error = "Incorrect root element: " + groupsEleName;
+            throw new ReaderException(error);
+        }
+
+        List<?> eleGroupList = root.getChildren();
+        if (eleGroupList != null)
+        {
+            for (Object obj : eleGroupList)
+            {
+                if (obj instanceof Element)
+                {
+                    Element eleGroup = (Element) obj;
+                    Group group = GroupReader.parseGroup(eleGroup, namespace);
+                    groups.add(group);
+                }
+            }
+        }
+        return groups;
+    }
 }

@@ -99,6 +99,7 @@ import org.restlet.resource.ServerResource;
 import org.restlet.security.User;
 
 import ca.nrc.cadc.auth.AuthenticationUtil;
+import ca.nrc.cadc.gms.AuthorizationException;
 import ca.nrc.cadc.gms.InvalidGroupException;
 import ca.nrc.cadc.gms.WebRepresentationException;
 
@@ -222,6 +223,12 @@ public abstract class AbstractResource extends ServerResource
             throw new WebRepresentationException(
                     "Unable to get groups.", e);
         }
+        catch (AuthorizationException e)
+        {
+            setExisting(false);
+            LOGGER.error("Not authorized operation.");
+            throw new WebRepresentationException("Not authorized operation.", e);
+        }
     }
     
     /**
@@ -230,9 +237,10 @@ public abstract class AbstractResource extends ServerResource
      * 
      * @throws FileNotFoundException If the resource doesn't exist.
      * @throws InvalidGroupException 
+     * @throws AuthorizationException 
      */
     protected abstract boolean obtainResource()
-                throws FileNotFoundException, URISyntaxException, InvalidGroupException;
+                throws FileNotFoundException, URISyntaxException, InvalidGroupException, AuthorizationException;
 
     /**
      * Assemble the XML for this Resource's Representation into the given

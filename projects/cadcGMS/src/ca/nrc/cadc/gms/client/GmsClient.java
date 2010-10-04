@@ -69,16 +69,20 @@ package ca.nrc.cadc.gms.client;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStreamWriter;
+import java.io.UnsupportedEncodingException;
 import java.net.HttpURLConnection;
 import java.net.MalformedURLException;
 import java.net.URI;
 import java.net.URISyntaxException;
 import java.net.URL;
+import java.net.URLConnection;
 import java.net.URLEncoder;
 import java.security.AccessControlContext;
 import java.security.AccessControlException;
 import java.security.AccessController;
+import java.util.Collection;
 
+import javax.management.RuntimeErrorException;
 import javax.net.ssl.HttpsURLConnection;
 import javax.net.ssl.SSLSocketFactory;
 import javax.security.auth.Subject;
@@ -87,9 +91,11 @@ import javax.security.auth.x500.X500Principal;
 import org.apache.log4j.Logger;
 
 import ca.nrc.cadc.auth.SSLUtil;
+import ca.nrc.cadc.gms.GmsConsts;
 import ca.nrc.cadc.gms.Group;
 import ca.nrc.cadc.gms.GroupReader;
 import ca.nrc.cadc.gms.GroupWriter;
+import ca.nrc.cadc.gms.GroupsReader;
 import ca.nrc.cadc.gms.ReaderException;
 import ca.nrc.cadc.gms.User;
 import ca.nrc.cadc.gms.UserReader;
@@ -106,6 +112,7 @@ public class GmsClient
 
     // socket factory to use when connecting
     SSLSocketFactory sf;
+    private SSLSocketFactory sslSocketFactory;
 
     /**
      * Default, and only available constructor.
@@ -993,6 +1000,11 @@ public class GmsClient
     protected HttpsURLConnection openConnection(final URL url)
             throws IOException
     {
+        if (!url.getProtocol().equals("https"))
+        {
+            throw new IllegalArgumentException("Wrong protocol: "
+                    + url.getProtocol() + ". GMS works on https only");
+        }
         if (sf == null)
         {
             // lazy initialization of socket factory
@@ -1000,16 +1012,18 @@ public class GmsClient
             Subject subject = Subject.getSubject(ac);
             sf = SSLUtil.getSocketFactory(subject);
         }
-        if (!url.getProtocol().equals("https"))
-        {
-            throw new IllegalArgumentException("Wrong protocol: "
-                    + url.getProtocol() + ". GMS works on https only");
-        }
         HttpsURLConnection con = (HttpsURLConnection) url
                 .openConnection();
+        if (sf != null)
         con.setSSLSocketFactory(sf);
         return con;
     }
+    
+    protected URLConnection openConnectionOld(final URL url) throws IOException
+    {
+        return url.openConnection();
+    }
+
 
     public URL getBaseServiceURL()
     {
@@ -1019,6 +1033,126 @@ public class GmsClient
     public void setBaseServiceURL(URL baseServiceURL)
     {
         this.baseServiceURL = baseServiceURL;
+    }
+
+    /**
+     * Get groups owned by a usr.
+     * 
+     * @param subject The subject of the owner
+     * @return Collection of Group object
+     */
+    public Collection<Group> getGroups(final X500Principal x500Principal)
+    {
+        if (x500Principal == null)
+            throw new RuntimeException("Cannot get groups with a null X500Principal.");
+        
+        Collection<Group> groups = null;
+
+        StringBuffer resourcePath = new StringBuffer("/groups?");
+        try
+        {
+            resourcePath.append(URLEncoder.encode(GmsConsts.PROPERTY_OWNER_DN, "UTF-8"));
+            resourcePath.append("=");
+            resourcePath.append(URLEncoder.encode(x500Principal.getName(X500Principal.CANONICAL), "UTF-8"));
+        }
+        catch (UnsupportedEncodingException e)
+        {
+            // this should not happen as the DN should be always valid.
+            throw new RuntimeException("Error encoding distinguished name query.", e);
+        }
+
+        try
+        {
+            final URL resourceURL = new URL(getBaseServiceURL() + resourcePath.toString());
+            logger.debug("getGroup(), URL=" + resourceURL);
+            // Always use secure HTTP connection
+            HttpsURLConnection sslConnection = (HttpsURLConnection) openConnection(resourceURL);
+            
+            sslConnection.setRequestMethod("GET");
+            sslConnection.setUseCaches(false);
+            sslConnection.setDoInput(true);
+            sslConnection.setDoOutput(false);
+            sslConnection.connect();
+
+            String responseMessage = sslConnection.getResponseMessage();
+            int responseCode = sslConnection.getResponseCode();
+            logger.debug("getGroup(), response code: " + responseCode);
+            logger.debug("getGroup(), response message: " + responseMessage);
+
+            switch (responseCode)
+            {
+            case HttpURLConnection.HTTP_OK:
+                InputStream is = sslConnection.getInputStream();
+                try
+                {
+                    groups = GroupsReader.read(is);
+                }
+                catch (Exception e)
+                {
+                    final String message = String.format("Error occurs reading/processing server response.");
+                    logger.debug("Failed to get groups", e);
+                    throw new IllegalArgumentException(message, e);
+                }
+                finally
+                {
+                    if (is != null) is.close();
+                }
+                return groups;
+            case HttpURLConnection.HTTP_NOT_FOUND:
+                return null;
+            case HttpURLConnection.HTTP_FORBIDDEN:
+                throw new AccessControlException(responseMessage);
+            default:
+                throw new RuntimeException("Unexpected failure mode: " + responseMessage + "(" + responseCode + ")");
+            }
+        }
+        catch (IOException e)
+        {
+            final String message = String.format("Client BUG: The supplied URL (%s) cannot " + "be hit.", getBaseServiceURL()
+                    .toExternalForm()
+                    + resourcePath);
+            logger.debug("Failed to get group", e);
+            throw new IllegalArgumentException(message, e);
+        }
+    }
+
+    /**
+     * Initialize SSL connection using subject provided.
+     * 
+     * @param sslConnection
+     * @param subject
+     */
+    private void initHTTPS(HttpsURLConnection sslConnection, Subject subject)
+    {
+
+        if (getSslSocketFactory() == null) // lazy init
+        {
+            logger.debug("initHTTPS using Subject: " + subject.toString());
+            SSLSocketFactory sslSocketFactory = SSLUtil.getSocketFactory(subject);
+            this.setSslSocketFactory(sslSocketFactory);
+        }
+
+        if (getSslSocketFactory() != null && sslConnection != null)
+        {
+            logger.debug("setting SSLSocketFactory on " + sslConnection.getClass().getName());
+            sslConnection.setSSLSocketFactory(getSslSocketFactory());
+        }
+    }
+
+    /**
+     * @param sslSocketFactory the sslSocketFactory to set
+     */
+    public void setSslSocketFactory(SSLSocketFactory sslSocketFactory)
+    {
+        this.sslSocketFactory = sslSocketFactory;
+    }
+
+    /**
+     * @return the sslSocketFactory
+     */
+    public SSLSocketFactory getSslSocketFactory()
+    {
+        return sslSocketFactory;
     }
 
 }

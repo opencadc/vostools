@@ -219,7 +219,8 @@ public class GroupServiceImpl implements GroupService
      * @throws InvalidGroupException 
      * @see ca.nrc.cadc.gms.GmsConsts
      */
-    public Collection<Group> getGroups(Map<String, String> criteria) throws InvalidGroupException
+    public Collection<Group> getGroups(Map<String, String> criteria) 
+    throws InvalidGroupException, AuthorizationException
     {
         return getGroupPersistence().getGroups(criteria);
     }
