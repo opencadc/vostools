@@ -355,4 +355,21 @@ public class AuthenticationUtil
         return rtn;
     }
 
+    /**
+     * Object the X500Principal from a Subject.
+     * 
+     * @param subject
+     * @return X500 Principal
+     */
+    public static X500Principal getX500Principal(Subject subject)
+    {
+        X500Principal x500Principal = null;
+        Set<Principal> principals = subject.getPrincipals();
+        for (Principal principal : principals) {
+            if (principal instanceof X500Principal)
+                x500Principal = (X500Principal) principal;
+        }
+        return x500Principal;
+    }
+
 }
