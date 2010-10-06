@@ -69,37 +69,21 @@
 
 package ca.nrc.cadc.uws;
 
+import java.io.IOException;
 import java.io.OutputStream;
 
 /**
+ * Simple wrapper to set up synchronous output from a SyncJobRunner. All HTTP headers
+ * must be set befoer the OutputStream is opened. the caller is responsibel for closing
+ * the OutputStream.
  *
  * @author jburke
  */
 public interface SyncOutput
 {
     /**
-     * Set the HTTP Content-Type header parameter.
-     *
-     * @param contentType
-     */
-    void setContentType(String contentType);
-
-    /**
-     * Set the HTTP Content_Encoding header parameter.
-     *
-     * @param contentEncoding
-     */
-    void setContentEncoding(String contentEncoding);
-
-    /**
-     * Set the HTTP Content-Length header parameter.
-     *
-     * @param contentLength
-     */
-    void setContentLength(long contentLength);
-
-    /**
-     * Set a HTTP header parameter.
+     * Set an HTTP header parameter. Calls to this method that occur after the
+     * OutputStream is opened are silently ignored.
      *
      * @param key header key.
      * @param value header value.
@@ -109,8 +93,10 @@ public interface SyncOutput
     /**
      * Returns an OutputStream for streaming search results.
      *
+     * @throws IOException
      * @return OutputStream
      */
-    OutputStream getOutputStream();
+    OutputStream getOutputStream()
+        throws IOException;
 
 }

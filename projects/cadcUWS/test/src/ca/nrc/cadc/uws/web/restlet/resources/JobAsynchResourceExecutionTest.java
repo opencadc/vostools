@@ -41,7 +41,6 @@ import ca.nrc.cadc.uws.JobExecutor;
 import ca.nrc.cadc.uws.JobRunner;
 import ca.nrc.cadc.uws.Parameter;
 import ca.nrc.cadc.uws.Result;
-import ca.nrc.cadc.uws.SyncJobRunner;
 import static junit.framework.TestCase.*;
 import static org.easymock.EasyMock.*;
 import org.junit.Before;
@@ -76,10 +75,10 @@ public class JobAsynchResourceExecutionTest
     public void setup()
     {
         mockJobRunner = createMock(JobRunner.class);
-
+        Subject s = null;
         mockJobExecutor = createMock(JobExecutor.class);
-        mockJobExecutor.execute(mockJobRunner, null);
-        mockJobExecutor.execute(mockJobRunner, null);
+        mockJobExecutor.execute(mockJobRunner, s);
+        mockJobExecutor.execute(mockJobRunner, s);
         replay(mockJobExecutor);
     }
 

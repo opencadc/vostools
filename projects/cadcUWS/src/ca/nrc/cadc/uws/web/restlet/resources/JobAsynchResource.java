@@ -343,6 +343,14 @@ public class JobAsynchResource extends BaseJobResource
                 getContext().getParameters().getFirstValue(BeanUtil.UWS_RUNNER);
         final BeanUtil beanUtil = new BeanUtil(jobRunnerClassName);
 
-        return (JobRunner) beanUtil.createBean();
+        try
+        {
+            return (JobRunner) beanUtil.createBean();
+        }
+        catch(ClassCastException err)
+        {
+            throw new InvalidServiceException("invalid JobRunner: " + jobRunnerClassName
+                    + " must implement " + JobRunner.class.getName());
+        }
     }
 }

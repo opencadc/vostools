@@ -90,7 +90,9 @@ import org.restlet.representation.EmptyRepresentation;
 /**
  * Synchronous Job submission, and result retrieval.  This Resource will submit
  * a job upon a GET, then return either the Result of the Job submission, or
- * an error if it did not complete properly. 
+ * an error if it did not complete properly.
+ * @deprecated not possible to set the MediaType correctly with SyncRepresentation
+ * @see ca.nrc.cadc.uws.server.SyncServlet
  */
 public class JobSyncSubmissionResource extends BaseJobResource
 {
@@ -122,20 +124,19 @@ public class JobSyncSubmissionResource extends BaseJobResource
         job.setExecutionPhase(ExecutionPhase.QUEUED);
         job = getJobManager().persist(job);
 
-        Representation representation;
+        // BUG: this method should be called with the correct Subject
         URL redirectURL = jobRunner.getRedirectURL();
-        if (redirectURL == null)
-        {
-            final MediaType mediaType = MediaType.valueOf(jobRunner.getContentType());
-            representation = new SyncRepresentation(mediaType, job, getJobManager(), jobRunner);
-        }
-        else
+        if (redirectURL != null)
         {
             redirectSeeOther(redirectURL.toString());
-            representation = new EmptyRepresentation();
+            return new EmptyRepresentation();
         }
 
-        return representation;
+        // streaming output
+        // BUG: this method method should be called with correct Subject and it is
+        // fundamentally flawed since it cannot set the MediaType because the JobRunner
+        // cannot really predict it
+        return new SyncRepresentation(null, job, getJobManager(), jobRunner);
     }
 
     /**
@@ -160,20 +161,16 @@ public class JobSyncSubmissionResource extends BaseJobResource
     @SuppressWarnings("unchecked")
     protected SyncJobRunner createJobRunner()
     {
-        if (!StringUtil.hasText(
-                getContext().getParameters().getFirstValue(
-                        BeanUtil.UWS_RUNNER)))
+        String jobRunnerClassName =
+                getContext().getParameters().getFirstValue(BeanUtil.UWS_RUNNER);
+        if (!StringUtil.hasText(jobRunnerClassName))
         {
             throw new InvalidServiceException(
                     "The JobRunner is mandatory!\n\n Please set the "
                     + BeanUtil.UWS_RUNNER + " context-param in the web.xml, "
                     + "or insert it into the Context manually.");
         }
-
-        final String jobRunnerClassName =
-                getContext().getParameters().getFirstValue(BeanUtil.UWS_RUNNER);
         final BeanUtil beanUtil = new BeanUtil(jobRunnerClassName);
-
         return (SyncJobRunner) beanUtil.createBean();
     }
     

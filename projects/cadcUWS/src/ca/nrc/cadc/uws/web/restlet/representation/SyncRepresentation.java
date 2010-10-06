@@ -78,6 +78,7 @@ import ca.nrc.cadc.uws.PrivilegedActionJobRunner;
 import ca.nrc.cadc.uws.SyncJobRunner;
 import ca.nrc.cadc.uws.SyncOutput;
 import ca.nrc.cadc.uws.TimeTrackingRunnable;
+import java.io.FilterOutputStream;
 import java.io.IOException;
 import java.io.OutputStream;
 import javax.security.auth.Subject;
@@ -86,7 +87,8 @@ import org.restlet.data.MediaType;
 import org.restlet.representation.OutputRepresentation;
 
 /**
- *
+ * @deprecated not possible to set the MediaType correctly
+ * @see ca.nrc.cadc.uws.server.SyncServlet
  * @author jburke
  */
 public class SyncRepresentation extends OutputRepresentation
@@ -128,19 +130,18 @@ public class SyncRepresentation extends OutputRepresentation
         }
         catch (Throwable t)
         {
-            ErrorSummary error = new ErrorSummary(t.getMessage(), ErrorType.FATAL, false);
-			job.setErrorSummary(error);
-            job.setExecutionPhase(ExecutionPhase.ERROR);
-            job = jobManager.persist(job);
-
-            if (out == null)
+            LOGGER.error("streaming output from " + jobRunner.getClass().getName()
+                    + " failed for job " + job.getID(), t);
+            try
             {
-                LOGGER.error("Unable to write ErrorSummary, OutputStream closed", t);
+                ErrorSummary error = new ErrorSummary(t.getMessage(), ErrorType.FATAL, false);
+                job.setErrorSummary(error);
+                job.setExecutionPhase(ExecutionPhase.ERROR);
+                job = jobManager.persist(job);
             }
-            else
+            catch(Throwable oops)
             {
-                String message = "\r\n\r\nUnable to complete the request because an error occurred:\r\n\r\n " + t.getMessage();
-                out.write(message.getBytes());
+                LOGGER.error("failed to persist error stat for job " + job.getID());
             }
         }
     }
@@ -151,34 +152,30 @@ public class SyncRepresentation extends OutputRepresentation
                 
         public SyncOutputImpl(OutputStream out)
         {
-            this.out = out;
-        }
-
-        public void setContentType(String contentType)
-        {
-            throw new UnsupportedOperationException("setContentType is not supported");
-        }
-
-        public void setContentEncoding(String contentEncoding)
-        {
-            throw new UnsupportedOperationException("setContentEncoding is not supported");
-        }
-
-        public void setContentLength(long contentLength)
-        {
-            throw new UnsupportedOperationException("setContentLength is not supported");
+            this.out = new SafeOutputStream(out);
         }
 
         public void setHeader(String key, String value)
         {
-            throw new UnsupportedOperationException("setHeader is not supported");
+            // silently ignore since OutputStream is already open
         }
 
         public OutputStream getOutputStream()
         {
             return out;
         }
-
     }
-    
+
+    private class SafeOutputStream extends FilterOutputStream
+    {
+        SafeOutputStream(OutputStream ostream) { super(ostream); }
+
+        @Override
+        public void close()
+            throws IOException
+        {
+            // must not let the JobRunner call close on the OutputStream!!!
+            LOGGER.warn("SafeOutputStream.close() was called");
+        }
+    }
 }

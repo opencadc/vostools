@@ -87,7 +87,7 @@
     <property name="project" value="cadcUWS" />
 
     <property name="cadc" value="${lib}/cadcUtil.jar" />
-    <property name="external" value="${ext.lib}/log4j.jar:${ext.lib}/org.restlet.jar:${ext.lib}/spring.jar:${ext.lib}/jdom.jar" />
+    <property name="external" value="${ext.lib}/log4j.jar:${ext.lib}/org.restlet.jar:${ext.lib}/spring.jar:${ext.lib}/jdom.jar:${ext.lib}/servlet-api.jar" />
 
     <property name="jars" value="${cadc}:${external}" />
 

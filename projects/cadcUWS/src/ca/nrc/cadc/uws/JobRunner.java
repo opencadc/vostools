@@ -101,10 +101,10 @@ public interface JobRunner extends Runnable
      * @param jm
      */
     void setJobManager(JobManager jm);
-    
+
     /**
-     * Run the job. This method is invoked by the JobExecutor to run the job. The run()
-     * method is responsible for setting the following Job state: phase, error, resultList.
+     * Run the job. This is where an applciation puts the job-specific code. This
+     * method will only be called once with a Job in the QUEUED state.
      */
     void run();
 }

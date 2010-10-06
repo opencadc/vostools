@@ -221,6 +221,7 @@ public class SynchResource extends UWSResource
 
         job.setRequestPath(getRequestPath());
         Job persistedJob = getJobManager().persist(job);
+        LOGGER.info("created sync job: " + persistedJob.getID());
         redirectSeeOther(getHostPart() + getRequestPath() + "/" + persistedJob.getID() + "/" + UWSSyncRouter.SYNC_RESOURCE);
     }
 

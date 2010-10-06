@@ -72,33 +72,46 @@ package ca.nrc.cadc.uws;
 import java.net.URL;
 
 /**
- * Runner interface that will handle the execution of a Job: service MUST implement
- * this interface to execute the job. The implementation class contains the code to actually
- * execute the job as defined by the service. The implementation class name used
- * must be configured as a context-param with key <code>ca.nrc.cadc.uws.JobRunner</code>.
+ * Runner interface that will handle the synchronous execution of a Job.
+ * An implementation of this interface is required to use the UWSSyncApplication.
+ * </p><p>
+ * The implementation class name used must be configured as a context-param with
+ * key <code>ca.nrc.cadc.uws.JobRunner</code>.
  *
  * JobRunner implementations are always instantiated via their no-arg constructor.
  */
 public interface SyncJobRunner extends JobRunner
 {
     /**
-     * Set an OutputStream that can be used to stream the query results.
+     * Redirect to the output. If this method returns a URL, the client
+     * is redirected to the URL (HTTP "See Other", 303). Otherwise, the setOutput
+     * method is called and the job runner is responsible for setting headers and
+     * writing content directly (streaming output).
+     * </p><p>
+     * This mechanism can be used when the real output is produced by some other
+     * dynamic resource or available in a static resource, possibly in another
+     * application or even on a different server. If the implementation returns a URL here,
+     * it must also update the job phase to one of the final states (COMPLETED or ERROR).
      *
-     * @param out   The OutputStream to write to.
-     */
-    void setOutput(SyncOutput syncOutput);
-
-    /*
-     * Returns the HTTP header Content-Type.
-     *
-     */
-    String getContentType();
-
-    /**
-     * Returns an URL to the query results, or null if the query results
-     * are to be streamed.
-     * 
+     * @return a URL to the actual results, or null to try streaming output
      */
     URL getRedirectURL();
 
+    /**
+     * Streaming output. If the getRedirectURL() method returns null, this method is
+     * called to do streaming output from the job; it is always called before the run()
+     * method so that a single JobRunner can be implemented to work in both synchronous and
+     * asynchronous mode.
+     *
+     * @param out the output destination
+     */
+    void setOutput(SyncOutput out);
+
+    /**
+     * Streaming output. This method is called right after setOutput; this is
+     * where the implementation code for the job is executed. The implementation is responsible
+     * for (i) setting requried header values before opening the OutputStream
+     * and (ii) updating the job phase to one of the final states (COMPLETED or ERROR).
+     */
+    void run();
 }
