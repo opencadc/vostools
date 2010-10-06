@@ -75,6 +75,7 @@ import ca.nrc.cadc.uws.Job;
 import ca.nrc.cadc.uws.JobAttribute;
 import ca.nrc.cadc.uws.JobManager;
 import ca.nrc.cadc.uws.JobPersistence;
+import ca.nrc.cadc.uws.JobRunner;
 import ca.nrc.cadc.uws.JobWriter;
 import ca.nrc.cadc.uws.Parameter;
 import ca.nrc.cadc.uws.SyncJobRunner;
@@ -105,26 +106,29 @@ import org.apache.log4j.Logger;
  * Servlet that runs a SyncJobRunner for each request. This servlet supports both
  * GET and POST, creates and persists a jobm and issues a redirect to cause execution.
  * </p><p>
- * This servlet requires 3 init-params to be set to specify the class names that implement
- * the 3 requires interfaces. The <code>param-name</code> specifies the interface and
+ * This servlet requires 3 context params to be set to specify the class names that implement
+ * the 3 required interfaces. The <code>param-name</code> specifies the interface and
  * the <code>param-value</code> is the class name that implements the interface.
+ * These context params are used by both the SyncServlet and the ASync support; as a
+ * result, the JobRunner implementation still needs to implement SyncJobRunner, but is configured
+ * using just the JobRunner interface name.
  * For example:
  * </p><p>
  * <pre>
- *      <init-param>
+ *      <context-param>
  *          <param-name>ca.nrc.cadc.uws.JobManager</param-name>
  *          <param-value>ca.nrc.cadc.uws.BasicJobManager</param-value>
- *      </init-param>
+ *      </context-param>
  *
- *      <init-param>
+ *      <context-param>
  *          <param-name>ca.nrc.cadc.uws.JobPersistence</param-name>
  *          <param-value>ca.nrc.cadc.uws.InMemoryPersistence</param-value>
- *      </init-param>
+ *      </context-param>
  *
- *      <init-param>
- *          <param-name>ca.nrc.cadc.uws.SyncJobRunner</param-name>
- *          <param-value>com.example.MySyncJobRunner</param-value>
- *      </init-param>
+ *      <context-param>
+ *          <param-name>ca.nrc.cadc.uws.JobRunner</param-name>
+ *          <param-value>com.example.MyJobRunner</param-value>
+ *      </context-param>
  * </pre>
  *
  * @author pdowler
@@ -149,7 +153,8 @@ public class SyncServlet extends HttpServlet
         try
         {
             pname = JobManager.class.getName();
-            cname = config.getInitParameter(pname);
+            //cname = config.getInitParameter(pname);
+            cname = config.getServletContext().getInitParameter(pname);
             if (cname != null && cname.trim().length() > 0)
             {
                 Class c = Class.forName(cname);
@@ -160,7 +165,8 @@ public class SyncServlet extends HttpServlet
                 log.error("required init-param not found: " + pname);
 
             pname = JobPersistence.class.getName();
-            cname = config.getInitParameter(pname);
+            //cname = config.getInitParameter(pname);
+            cname = config.getServletContext().getInitParameter(pname);
             if (cname != null )
             {
                 Class c = Class.forName(cname);
@@ -172,8 +178,9 @@ public class SyncServlet extends HttpServlet
             else
                 log.error("required init-param not found: " + pname);
 
-            pname = SyncJobRunner.class.getName();
-            cname = config.getInitParameter(pname);
+            pname = JobRunner.class.getName();
+            //cname = config.getInitParameter(pname);
+            cname = config.getServletContext().getInitParameter(pname);
             if (cname != null )
             {
                 Class c = Class.forName(cname);
