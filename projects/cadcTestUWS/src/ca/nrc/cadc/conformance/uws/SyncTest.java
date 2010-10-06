@@ -69,6 +69,7 @@
 
 package ca.nrc.cadc.conformance.uws;
 
+import ca.nrc.cadc.util.Log4jInit;
 import java.net.URLEncoder;
 import org.xml.sax.SAXException;
 import com.meterware.httpunit.GetMethodWebRequest;
@@ -82,6 +83,7 @@ import com.meterware.httpunit.WebRequest;
 import com.meterware.httpunit.WebResponse;
 import org.junit.Test;
 import java.io.IOException;
+import org.apache.log4j.Level;
 import org.apache.log4j.Logger;
 import static org.junit.Assert.*;
 
@@ -95,12 +97,13 @@ public class SyncTest extends AbstractUWSTest
 
     private static Logger log = Logger.getLogger(SyncTest.class);
 
-    private static final String CLASS_NAME = "SyncTest";
+    private static final String CLASS_NAME = SyncTest.class.getSimpleName();
 
     public SyncTest()
     {
         super();
-        setLoggingLevel(log);
+        //setLoggingLevel(log);
+        Log4jInit.setLevel("ca.nrc.cadc.conformance.uws", Level.INFO);
     }
 
     @Before
@@ -121,7 +124,7 @@ public class SyncTest extends AbstractUWSTest
     }
 
     @Test
-    public void getTest()
+    public void testGET()
     {
         try
         {
@@ -139,6 +142,7 @@ public class SyncTest extends AbstractUWSTest
                 // Build the POST request.
                 StringBuilder sb = new StringBuilder();
 
+                String contentType = null;
                 // Add parameters if available.
                 if (properties.parameters != null)
                 {
@@ -148,17 +152,20 @@ public class SyncTest extends AbstractUWSTest
                     for (String key : keyList)
                     {
                         valueList = parameters.get(key);
-                        for (String value : valueList)
-                        {
-                            sb.append(key);
-                            sb.append("=");
-                            sb.append(value);
-                            sb.append("&");
-                        }
+                        if (key.equalsIgnoreCase("Content-Type"))
+                            contentType = valueList.get(0);
+                        else
+                            for (String value : valueList)
+                            {
+                                sb.append(key);
+                                sb.append("=");
+                                sb.append(URLEncoder.encode(value, "UTF-8"));
+                                sb.append("&");
+                            }
                     }
                 }
 
-                String getUrl = serviceUrl + "?" + URLEncoder.encode(sb.toString(), "UTF-8");
+                String getUrl = serviceUrl + "?" + sb.substring(0, sb.length()-1); // strip trailing &
                 WebConversation conversation = new WebConversation();
                 WebRequest request = new GetMethodWebRequest(getUrl);
 
@@ -166,7 +173,7 @@ public class SyncTest extends AbstractUWSTest
                 log.debug("**************************************************");
                 log.debug("HTTP GET: " + request.getURL().toString());
 
-                process(conversation, request);
+                process(conversation, request, contentType);
             }
         }
         catch (Throwable t)
@@ -178,7 +185,7 @@ public class SyncTest extends AbstractUWSTest
     }
 
     @Test
-    public void postTest()
+    public void testPOST()
     {
         try
         {
@@ -197,6 +204,7 @@ public class SyncTest extends AbstractUWSTest
                 WebConversation conversation = new WebConversation();
                 WebRequest request = new PostMethodWebRequest(serviceUrl);
 
+                String contentType = null;
                 // Add parameters if available.
                 if (properties.parameters != null)
                 {
@@ -206,7 +214,10 @@ public class SyncTest extends AbstractUWSTest
                     for (String key : keyList)
                     {
                         valueList = parameters.get(key);
-                        request.setParameter(key, valueList.toArray(new String[0]));
+                        if (key.equalsIgnoreCase("Content-Type"))
+                            contentType = valueList.get(0);
+                        else
+                            request.setParameter(key, valueList.toArray(new String[0]));
                     }
                 }
 
@@ -215,7 +226,7 @@ public class SyncTest extends AbstractUWSTest
                 log.debug("HTTP POST: " + request.getURL().toString());
                 log.debug(Util.getRequestParameters(request));
 
-                process(conversation, request);
+                process(conversation, request, contentType);
             }
         }
         catch (Throwable t)
@@ -226,7 +237,7 @@ public class SyncTest extends AbstractUWSTest
         log.info("SyncTest.postTest completed.");
     }
 
-    protected void process(WebConversation conversation, WebRequest request)
+    protected void process(WebConversation conversation, WebRequest request,String expectedContentType)
         throws IOException, SAXException
     {
         WebResponse response = conversation.getResponse(request);
@@ -294,6 +305,9 @@ public class SyncTest extends AbstractUWSTest
             fail("Non-200 or 303 POST response code to " + serviceUrl);
         }
 
+        String contentType = response.getHeaderField("Content-Type");
+        assertEquals("Content-Type", expectedContentType, contentType);
+        
         // Get the response text.
         log.debug("Response text:\r\n" + response.getText());
     }
