@@ -219,34 +219,39 @@ public class QueryRunner implements SyncJobRunner
         tList.add(System.currentTimeMillis());
         sList.add("check if aborted: ");
 
-        // try and instantiate a FileStore instance
-        logger.debug("loading " + fileStoreClassName);
+        
+        
         FileStore fs = null;
-        try
-        {
-            fs = (FileStore) Class.forName(fileStoreClassName).newInstance();
-        }
-        catch (Throwable t)
-        {
-            logger.warn("Failed to instantiate FileStore class: " + fileStoreClassName);
-        }
-
-        // try and instantiate a ResultStore instance
-        logger.debug("loading " + resultStoreImplClassName);
         ResultStore rs = null;
-        try
+        if (syncOutput == null)
         {
-            rs = (ResultStore) Class.forName(resultStoreImplClassName).newInstance();
-        }
-        catch (Throwable t)
-        {
-            logger.warn("Failed to instantiate ResultStore class: " + resultStoreImplClassName);
+            // try to instantiate a deprecated FileStore instance
+            try
+            {
+                logger.debug("loading " + fileStoreClassName);
+                fs = (FileStore) Class.forName(fileStoreClassName).newInstance();
+            }
+            catch (Throwable t)
+            {
+                logger.warn("Failed to instantiate FileStore class: " + fileStoreClassName);
+            }
+
+            // try to instantiate a ResultStore instance
+            try
+            {
+                logger.debug("loading " + resultStoreImplClassName);
+                rs = (ResultStore) Class.forName(resultStoreImplClassName).newInstance();
+            }
+            catch (Throwable t)
+            {
+                logger.warn("Failed to instantiate ResultStore class: " + resultStoreImplClassName);
+            }
         }
 
         // Check if a store or stream have been set for a context
-        if (fs == null && rs == null)
+        if (fs == null && rs == null && syncOutput == null)
         {
-            throw new RuntimeException("Failed to instantiate a FileStore or ResultStore class");
+            throw new RuntimeException("async mode: Failed to instantiate a FileStore or ResultStore class");
         }
 
         try
@@ -386,9 +391,12 @@ public class QueryRunner implements SyncJobRunner
                 // TODO if checking for abort was fast, check it here and save writing and storing
                 if (syncOutput != null)
                 {
-                    logger.debug("streaming results with OutputStream...");
-                    //syncOutput.setContentType(writer.getContentType());
+                    String contentType = tableWriter.getContentType();
+                    logger.debug("streaming output: " + contentType);
+                    syncOutput.setHeader("Content-Type", contentType);
                     tableWriter.write(resultSet, syncOutput.getOutputStream());
+                    tList.add(System.currentTimeMillis());
+                    sList.add("stream Result set as " + contentType + ": ");
                 }
                 else
                 {
@@ -491,6 +499,7 @@ public class QueryRunner implements SyncJobRunner
                 VOTableWriter ewriter = new VOTableWriter();
                 if (syncOutput != null)
                 {
+                    syncOutput.setHeader("Content-Type", ewriter.getContentType());
                     ewriter.write(t, syncOutput.getOutputStream());
                 }
                 else
