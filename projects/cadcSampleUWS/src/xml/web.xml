@@ -100,6 +100,7 @@
       attributes set properly.
      -->
     <servlet>
+         <load-on-startup>2</load-on-startup>
       <servlet-name>AsyncServlet</servlet-name>
       <servlet-class>org.restlet.ext.servlet.ServerServlet</servlet-class>
 
@@ -108,45 +109,12 @@
         <param-value>ca.nrc.cadc.uws.web.restlet.UWSAsyncApplication</param-value>
       </init-param>
 
-      <init-param>
-        <param-name>org.restlet.attribute.component</param-name>
-        <param-value>ca.nrc.cadc.uws.web.restlet.UWSAsyncComponent</param-value>
-      </init-param>
-
-      <init-param>
-        <param-name>org.restlet.attribute.server</param-name>
-        <param-value>ca.nrc.cadc.uws.web.restlet.UWSAsyncServer</param-value>
-      </init-param>
-
-      <init-param>
-        <param-name>org.restlet.attribute.application</param-name>
-        <param-value>ca.nrc.cadc.uws.web.restlet.UWSAsyncApplication</param-value>
-      </init-param>
     </servlet>
 
     <servlet>
+        <load-on-startup>2</load-on-startup>
       <servlet-name>SyncServlet</servlet-name>
-      <servlet-class>org.restlet.ext.servlet.ServerServlet</servlet-class>
-
-      <init-param>
-        <param-name>org.restlet.application</param-name>
-        <param-value>ca.nrc.cadc.uws.web.restlet.UWSSyncApplication</param-value>
-      </init-param>
-
-      <init-param>
-        <param-name>org.restlet.attribute.component</param-name>
-        <param-value>ca.nrc.cadc.uws.web.restlet.UWSSyncComponent</param-value>
-      </init-param>
-
-      <init-param>
-        <param-name>org.restlet.attribute.server</param-name>
-        <param-value>ca.nrc.cadc.uws.web.restlet.UWSSyncServer</param-value>
-      </init-param>
-
-      <init-param>
-        <param-name>org.restlet.attribute.application</param-name>
-        <param-value>ca.nrc.cadc.uws.web.restlet.UWSSyncApplication</param-value>
-      </init-param>
+      <servlet-class>ca.nrc.cadc.uws.server.SyncServlet</servlet-class>
     </servlet>
 
     <servlet>
@@ -170,7 +138,6 @@
         <init-param>
             <param-name>logLevelPackages</param-name>
             <param-value>
-                ca.nrc.cadc.log
                 ca.nrc.cadc.uws
             </param-value>
         </init-param>
@@ -189,11 +156,6 @@
 	</servlet-mapping>
 	
 	<servlet-mapping>
-		<servlet-name>logControl</servlet-name>
-		<url-pattern>/loggingConfig</url-pattern>
-	</servlet-mapping>
-
-	<servlet-mapping>
  		<servlet-name>doc</servlet-name>
  		<url-pattern>index.html</url-pattern>
 	</servlet-mapping>
@@ -210,7 +172,7 @@
 
   <servlet-mapping>
       <servlet-name>logControl</servlet-name>
-      <url-pattern>logControl</url-pattern>
+      <url-pattern>/logControl</url-pattern>
   </servlet-mapping>
 
   <welcome-file-list>

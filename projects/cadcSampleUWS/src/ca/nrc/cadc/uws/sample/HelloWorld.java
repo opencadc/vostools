@@ -112,26 +112,13 @@ public class HelloWorld implements SyncJobRunner
     private JobManager manager;
 	private Job job;
     private SyncOutput syncOutput;
-    private String contentType;
     private String server;
     private boolean pass;
     private int runfor;
     private boolean sync;
     private boolean stream;
 
-    public HelloWorld()
-    {
-        try
-        {
-        	logger.info("Initializing sample JobRunner");
-            this.contentType = "text/plain";
-        }
-        catch(Exception e)
-        {
-            e.printStackTrace();
-            return;
-        }
-    }
+    public HelloWorld() { }
 
     public void setJob(final Job job)
     {
@@ -255,11 +242,6 @@ public class HelloWorld implements SyncJobRunner
     public void setOutput(SyncOutput syncOutput)
     {
         this.syncOutput = syncOutput;
-    }
-
-    public String getContentType()
-    {
-        return this.contentType;
     }
 
     public URL getRedirectURL()

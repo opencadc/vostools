@@ -112,13 +112,16 @@ In addition to the async UWS access, you can also run the sample job using the s
 in synchronous mode. 
 </p>
 <p>
-The sync PRG endpoint: <b><%= sync %></b>
+The sync endpoint: <b><%= sync %></b>
 </p>
 <p>
-Note: The sync implementation is currently limited and only supports POST at this time.
-PRG stands for Post-Redirect-Get, a standard web pattern used here by the sync endpoint. It means that
-you POST a request, get redirected to another URL, and then GET the results.
-</pre>
+Note: The sync implementation supports both GET and POST requests in two modes: streaming output or a redirect
+to another resource. (Technically there is always at least one redirect after the request; the latter mode allows
+the job code to run and then issue a redirect itself instead of streaming the output.)
+</p>
+<p>
+TODO: document the streaming vs redirect parameter
+</p>
 
 </body>
 
