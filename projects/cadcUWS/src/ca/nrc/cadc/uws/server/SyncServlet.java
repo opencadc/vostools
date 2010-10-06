@@ -206,18 +206,18 @@ public class SyncServlet extends HttpServlet
     protected void doGet(HttpServletRequest request, HttpServletResponse response)
         throws ServletException, IOException
     {
-        log.info("doGet - START");
+        log.debug("doGet - START");
         doit(request, response);
-        log.info("doGet - DONE");
+        log.debug("doGet - DONE");
     }
 
     @Override
     protected void doPost(HttpServletRequest request, HttpServletResponse response)
         throws ServletException, IOException
     {
-        log.info("doPost - START");
+        log.debug("doPost - START");
         doit(request, response);
-        log.info("doPost - DONE");
+        log.debug("doPost - DONE");
     }
 
     private void doit(HttpServletRequest request, HttpServletResponse response)
@@ -238,7 +238,6 @@ public class SyncServlet extends HttpServlet
                 
                 // redirect
                 String jobURL = getJobURL(request, job.getID());
-                log.debug("jobURL: "+ jobURL);
                 response.setHeader("Location", jobURL);
                 response.setStatus(HttpServletResponse.SC_SEE_OTHER);
                 log.info("created job: " + jobURL);
