@@ -252,7 +252,7 @@ public class ResultsTest extends AbstractUWSTest
 
                 deleteJob(conversation, jobId);
 
-                log.info("ResultsTest.testResults completed.");
+                log.debug("ResultsTest.testResults completed.");
             }
         }
         catch (Throwable t)

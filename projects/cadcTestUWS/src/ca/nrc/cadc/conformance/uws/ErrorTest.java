@@ -217,7 +217,6 @@ public class ErrorTest extends AbstractUWSTest
 
                 deleteJob(conversation, jobId);
 
-                log.info("ErrorTest.testError completed.");
             }
         }
         catch (Throwable t)
