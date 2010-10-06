@@ -92,6 +92,9 @@ import org.jdom.input.SAXBuilder;
 import ca.nrc.cadc.date.DateUtil;
 import ca.nrc.cadc.xml.XmlUtil;
 import java.text.DateFormat;
+import java.util.HashSet;
+import java.util.Set;
+import javax.security.auth.x500.X500Principal;
 
 /**
  * @author zhangsa
@@ -172,7 +175,7 @@ public class JobReader
         if (jobID != null && jobID.trim().length() == 0)
             jobID = null;
         String runID = root.getChildText(JobAttribute.RUN_ID.getAttributeName(), UWS.NS);
-        Subject owner = null; // It's not able to create a Subject based on XML text.
+        Subject owner = createSubject(root.getChildText(JobAttribute.OWNER_ID.getAttributeName(), UWS.NS));
         ExecutionPhase executionPhase = parseExecutionPhase();
         Date quote = parseDate(root.getChildText(JobAttribute.QUOTE.getAttributeName(), UWS.NS));
         Date startTime = parseDate(root.getChildText(JobAttribute.START_TIME.getAttributeName(), UWS.NS));
@@ -189,6 +192,19 @@ public class JobReader
                 runID, resultsList, parameterList, requestPath);
     }
 
+    private Subject createSubject(String owner)
+    {
+        if (owner == null)
+            return null;
+        owner = owner.trim();
+        if (owner.length() == 0)
+            return null;
+        Set<X500Principal> principals = new HashSet<X500Principal>();
+        Set<Object> pub = new HashSet();
+        Set<Object> priv = new HashSet();
+        principals.add(new X500Principal(owner));
+        return new Subject(true, principals, pub, priv);
+    }
     private Date parseDate(String strDate)
         throws ParseException
     {

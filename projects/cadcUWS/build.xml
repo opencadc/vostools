@@ -125,8 +125,8 @@
                 <pathelement path="${jars}:${testingJars}"/>
             </classpath>
             
-            <test name="ca.nrc.cadc.uws.JobReaderWriterTest" />
             <test name="ca.nrc.cadc.uws.web.CADCUWSTestSuite" />
+            <test name="ca.nrc.cadc.uws.JobReaderWriterTest" />
             <formatter type="plain" usefile="false" />
         </junit>
     </target>

@@ -224,17 +224,20 @@ public class JobWriter
     public Element getOwnerId()
     {
         Element element = new Element(JobAttribute.OWNER_ID.getAttributeName(), UWS.NS);
-        element.setAttribute("nil", "true", UWS.XSI_NS);
         Subject subjectOwner = job.getOwner();
+        boolean nil = true;
         if (subjectOwner != null)
         {
             Set<Principal> setPrincipal = subjectOwner.getPrincipals();
             for (Principal prc : setPrincipal)
             {
                 element.addContent(prc.getName());
+                nil = false;
                 break; // a convenient way to get the first principal in the set ONLY.
             }
         }
+        if (nil)
+            element.setAttribute("nil", "true", UWS.XSI_NS);
         return element;
     }
 

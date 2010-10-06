@@ -91,8 +91,10 @@ import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.StringWriter;
 import java.security.Principal;
+import java.util.HashSet;
 import java.util.Set;
 import javax.security.auth.Subject;
+import javax.security.auth.x500.X500Principal;
 
 /**
  * @author zhangsa
@@ -358,6 +360,28 @@ public class JobReaderWriterTest
         {
             Job job = createPendingJob();
             complete(job);
+            test(job);
+        }
+        catch(Throwable unexpected)
+        {
+            log.debug("unexpected exception", unexpected);
+            Assert.fail("unexpected exception: " + unexpected);
+        }
+    }
+
+    @Test
+    public void testWithOwner()
+    {
+        try
+        {
+            Set<X500Principal> principals = new HashSet<X500Principal>();
+            Set<Object> pub = new HashSet();
+            Set<Object> priv = new HashSet();
+            principals.add(new X500Principal("CN=Duke, OU=JavaSoft, O=Sun Microsystems, C=US"));
+            Subject s = new Subject(true, principals, pub, priv);
+
+            Job job = createPendingJob();
+            job.setOwner(s);
             test(job);
         }
         catch(Throwable unexpected)
