@@ -112,7 +112,6 @@ public class GmsClient
 
     // socket factory to use when connecting
     SSLSocketFactory sf;
-    private SSLSocketFactory sslSocketFactory;
 
     /**
      * Default, and only available constructor.
@@ -236,7 +235,7 @@ public class GmsClient
             final URL resourceURL = new URL(getBaseServiceURL()
                     + resourcePath.toString());
             logger.debug("isMember(), URL=" + resourceURL);
-            HttpURLConnection connection = (HttpURLConnection) openConnection(resourceURL);
+            HttpURLConnection connection = openConnection(resourceURL);
             connection.setRequestMethod("HEAD");
             connection.setUseCaches(false);
             connection.setDoInput(true);
@@ -311,7 +310,7 @@ public class GmsClient
             final URL resourceURL = new URL(getBaseServiceURL()
                     + resourcePath.toString());
             logger.debug("getGroup(), URL=" + resourceURL);
-            HttpURLConnection connection = (HttpURLConnection) openConnection(resourceURL);
+            HttpURLConnection connection = openConnection(resourceURL);
             connection.setRequestMethod("GET");
             connection.setUseCaches(false);
             connection.setDoInput(true);
@@ -376,21 +375,19 @@ public class GmsClient
     public Group createGroup(Group group) throws IllegalArgumentException
     {
         final StringBuilder resourcePath = new StringBuilder(64);
-        resourcePath.append("/groups");
-        
         try
         {
             if (group == null)
             {
                 // user does not have the group created. Through a POST.
                 // the server generates one and returns it to the user
-//                resourcePath.append("/groups");
+                resourcePath.append("/groups");
 
                 final URL resourceURL = new URL(getBaseServiceURL()
                         + resourcePath.toString());
                 logger.debug("createGroup(), URL=" + resourceURL);
                 HttpURLConnection connection = openConnection(resourceURL);
-                connection.setRequestMethod("PUT");
+                connection.setRequestMethod("POST");
                 connection.setDoInput(true);
                 connection.setDoOutput(true);
                 connection.setUseCaches(false);
@@ -431,19 +428,19 @@ public class GmsClient
             }
             else
             {
-//                resourcePath.append("/groups");
-//                String grID = "";
-//                if (group.getID() != null)
-//                {
-//                    grID = group.getID().getFragment();
-//                }
-//                resourcePath.append(URLEncoder.encode(grID, "UTF-8"));
+                resourcePath.append("/groups/");
+                String grID = "";
+                if (group.getID() != null)
+                {
+                    grID = group.getID().getFragment();
+                }
+                resourcePath.append(URLEncoder.encode(grID, "UTF-8"));
 
                 final URL resourceURL = new URL(getBaseServiceURL()
                         + resourcePath.toString());
                 logger.debug("createGroup(), URL=" + resourceURL);
                 HttpURLConnection connection = openConnection(resourceURL);
-                connection.setRequestMethod("PUT");
+                connection.setRequestMethod("POST");
                 connection.setDoInput(true);
                 connection.setDoOutput(true);
                 connection.setRequestProperty("Content-Type", "text/xml");
@@ -464,8 +461,8 @@ public class GmsClient
                 switch (responseCode)
                 {
                     case HttpURLConnection.HTTP_CREATED:
-                        final String location =
-                                connection.getHeaderField("Location");
+                        String location = connection
+                                .getHeaderField("Location");
                         return getGroup(new URI(location));
                     case HttpURLConnection.HTTP_CONFLICT:
                         // break intentionally left out
@@ -536,7 +533,7 @@ public class GmsClient
             final URL resourceURL = new URL(getBaseServiceURL()
                     + resourcePath.toString());
             logger.debug("deleteGroup(), URL=" + resourceURL);
-            HttpURLConnection connection = (HttpURLConnection) openConnection(resourceURL);
+            HttpURLConnection connection = openConnection(resourceURL);
             connection.setRequestMethod("DELETE");
             connection.setUseCaches(false);
             connection.setDoInput(true);
@@ -611,7 +608,7 @@ public class GmsClient
             final URL resourceURL = new URL(getBaseServiceURL()
                     + resourcePath.toString());
             logger.debug("setGroup(), URL=" + resourceURL);
-            HttpURLConnection connection = (HttpURLConnection) openConnection(resourceURL);
+            HttpURLConnection connection = openConnection(resourceURL);
             connection.setRequestMethod("POST");
             connection.setDoInput(true);
             connection.setDoOutput(true);
@@ -688,7 +685,7 @@ public class GmsClient
             final URL resourceURL = new URL(getBaseServiceURL()
                     + resourcePath.toString());
             logger.debug("getGMSMembership(), URL=" + resourceURL);
-            HttpURLConnection connection = (HttpURLConnection) openConnection(resourceURL);
+            HttpURLConnection connection = openConnection(resourceURL);
             connection.setRequestMethod("GET");
             connection.setUseCaches(false);
             connection.setDoInput(true);
@@ -767,7 +764,7 @@ public class GmsClient
             final URL resourceURL = new URL(getBaseServiceURL()
                     + resourcePath.toString());
             logger.debug("addMember(), URL=" + resourceURL);
-            HttpURLConnection connection = (HttpURLConnection) openConnection(resourceURL);
+            HttpURLConnection connection = openConnection(resourceURL);
             connection.setRequestMethod("POST");
             connection.setUseCaches(false);
             connection.setDoInput(true);
@@ -846,7 +843,7 @@ public class GmsClient
             final URL resourceURL = new URL(getBaseServiceURL()
                     + resourcePath.toString());
             logger.debug("removeMember(), URL=" + resourceURL);
-            HttpURLConnection connection = (HttpURLConnection) openConnection(resourceURL);
+            HttpURLConnection connection = openConnection(resourceURL);
             connection.setRequestMethod("DELETE");
             connection.setUseCaches(false);
             connection.setDoInput(true);
@@ -1040,7 +1037,7 @@ public class GmsClient
     /**
      * Get groups owned by a usr.
      * 
-     * @param subject The subject of the owner
+     * @param x500Principal The principal of the owner
      * @return Collection of Group object
      */
     public Collection<Group> getGroups(final X500Principal x500Principal)
@@ -1118,35 +1115,13 @@ public class GmsClient
         }
     }
 
-    /**
-     * Initialize SSL connection using subject provided.
-     * 
-     * @param sslConnection
-     * @param subject
-     */
-    private void initHTTPS(HttpsURLConnection sslConnection, Subject subject)
-    {
-
-        if (getSslSocketFactory() == null) // lazy init
-        {
-            logger.debug("initHTTPS using Subject: " + subject.toString());
-            SSLSocketFactory sslSocketFactory = SSLUtil.getSocketFactory(subject);
-            this.setSslSocketFactory(sslSocketFactory);
-        }
-
-        if (getSslSocketFactory() != null && sslConnection != null)
-        {
-            logger.debug("setting SSLSocketFactory on " + sslConnection.getClass().getName());
-            sslConnection.setSSLSocketFactory(getSslSocketFactory());
-        }
-    }
 
     /**
      * @param sslSocketFactory the sslSocketFactory to set
      */
     public void setSslSocketFactory(SSLSocketFactory sslSocketFactory)
     {
-        this.sslSocketFactory = sslSocketFactory;
+        this.sf = sslSocketFactory;
     }
 
     /**
@@ -1154,7 +1129,7 @@ public class GmsClient
      */
     public SSLSocketFactory getSslSocketFactory()
     {
-        return sslSocketFactory;
+        return sf;
     }
 
 }

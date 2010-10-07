@@ -115,7 +115,6 @@ public abstract class AbstractResource extends ServerResource
     private static final String CERTIFICATE_REQUEST_ATTRIBUTE_NAME = "org.restlet.https.clientCertificates";
 
 
-    private Subject subject;
 
     /**
      * Hidden constructor for JavaBean tools.
@@ -136,8 +135,7 @@ public abstract class AbstractResource extends ServerResource
         Request request = getRequest();
         Map<String, Object> requestAttributes = request.getAttributes();
         Collection<X509Certificate> certs = (Collection<X509Certificate>) requestAttributes.get(CERTIFICATE_REQUEST_ATTRIBUTE_NAME);
-        this.subject = AuthenticationUtil.getSubject(null, certs);
-        LOGGER.debug(subject);
+
     }
 
     
@@ -435,14 +433,5 @@ public abstract class AbstractResource extends ServerResource
         }
     }
 
-    public Subject getSubject()
-    {
-        return subject;
-    }
-
-    public void setSubject(Subject subject)
-    {
-        this.subject = subject;
-    }
     
 }
