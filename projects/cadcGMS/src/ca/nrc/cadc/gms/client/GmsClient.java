@@ -376,19 +376,21 @@ public class GmsClient
     public Group createGroup(Group group) throws IllegalArgumentException
     {
         final StringBuilder resourcePath = new StringBuilder(64);
+        resourcePath.append("/groups");
+        
         try
         {
             if (group == null)
             {
                 // user does not have the group created. Through a POST.
                 // the server generates one and returns it to the user
-                resourcePath.append("/groups");
+//                resourcePath.append("/groups");
 
                 final URL resourceURL = new URL(getBaseServiceURL()
                         + resourcePath.toString());
                 logger.debug("createGroup(), URL=" + resourceURL);
-                HttpURLConnection connection = (HttpURLConnection) openConnection(resourceURL);
-                connection.setRequestMethod("POST");
+                HttpURLConnection connection = openConnection(resourceURL);
+                connection.setRequestMethod("PUT");
                 connection.setDoInput(true);
                 connection.setDoOutput(true);
                 connection.setUseCaches(false);
@@ -429,19 +431,19 @@ public class GmsClient
             }
             else
             {
-                resourcePath.append("/groups/");
-                String grID = "";
-                if (group.getID() != null)
-                {
-                    grID = group.getID().getFragment();
-                }
-                resourcePath.append(URLEncoder.encode(grID, "UTF-8"));
+//                resourcePath.append("/groups");
+//                String grID = "";
+//                if (group.getID() != null)
+//                {
+//                    grID = group.getID().getFragment();
+//                }
+//                resourcePath.append(URLEncoder.encode(grID, "UTF-8"));
 
                 final URL resourceURL = new URL(getBaseServiceURL()
                         + resourcePath.toString());
                 logger.debug("createGroup(), URL=" + resourceURL);
-                HttpURLConnection connection = (HttpURLConnection) openConnection(resourceURL);
-                connection.setRequestMethod("POST");
+                HttpURLConnection connection = openConnection(resourceURL);
+                connection.setRequestMethod("PUT");
                 connection.setDoInput(true);
                 connection.setDoOutput(true);
                 connection.setRequestProperty("Content-Type", "text/xml");
@@ -462,8 +464,8 @@ public class GmsClient
                 switch (responseCode)
                 {
                     case HttpURLConnection.HTTP_CREATED:
-                        String location = connection
-                                .getHeaderField("Location");
+                        final String location =
+                                connection.getHeaderField("Location");
                         return getGroup(new URI(location));
                     case HttpURLConnection.HTTP_CONFLICT:
                         // break intentionally left out

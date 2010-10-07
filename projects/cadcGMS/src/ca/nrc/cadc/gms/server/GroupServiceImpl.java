@@ -76,9 +76,9 @@ import ca.nrc.cadc.gms.AuthorizationException;
 import ca.nrc.cadc.gms.Group;
 import ca.nrc.cadc.gms.InvalidGroupException;
 import ca.nrc.cadc.gms.InvalidMemberException;
-import ca.nrc.cadc.gms.User;
 import ca.nrc.cadc.gms.UserImpl;
 import ca.nrc.cadc.gms.server.persistence.GroupPersistence;
+
 
 public class GroupServiceImpl implements GroupService
 {
@@ -97,6 +97,8 @@ public class GroupServiceImpl implements GroupService
      * 
      * @param groupPersistence
      *            The GroupPersistence object.
+     * @param uriGroupPrefix
+     *            The GMS URI Prefix.
      */
     public GroupServiceImpl(final GroupPersistence groupPersistence,
             final String uriGroupPrefix)
@@ -115,9 +117,7 @@ public class GroupServiceImpl implements GroupService
     public Group getGroup(final URI groupID)
             throws InvalidGroupException, AuthorizationException
     {
-        Group group = getGroupPersistence().getGroup(groupID);
-
-        return group;
+        return getGroupPersistence().getGroup(groupID);
     }
 
     /**
@@ -247,7 +247,7 @@ public class GroupServiceImpl implements GroupService
     /**
      * Set Group URI Prefix of the service
      * 
-     * @param uriGroupPrefix
+     * @param uriGroupPrefix    The GMS URI Prefix for Group IDs.
      */
     public void setGroupUriPrefix(String uriGroupPrefix)
     {

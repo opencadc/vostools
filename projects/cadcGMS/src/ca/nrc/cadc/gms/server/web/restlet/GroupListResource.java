@@ -68,26 +68,22 @@ package ca.nrc.cadc.gms.server.web.restlet;
 
 import java.io.FileNotFoundException;
 import java.io.IOException;
-import java.security.Principal;
 import java.util.Collection;
 import java.util.HashMap;
 import java.util.Map;
-import java.util.Set;
-
-import javax.security.auth.Subject;
-import javax.security.auth.x500.X500Principal;
+import java.net.URISyntaxException;
 
 import org.apache.log4j.Logger;
 import org.jdom.Document;
 import org.jdom.Element;
 import org.restlet.data.Form;
+import org.restlet.data.Status;
+import org.restlet.resource.Put;
+import org.restlet.representation.Representation;
 
-import ca.nrc.cadc.gms.AuthorizationException;
-import ca.nrc.cadc.gms.GmsConsts;
-import ca.nrc.cadc.gms.Group;
-import ca.nrc.cadc.gms.GroupWriter;
-import ca.nrc.cadc.gms.InvalidGroupException;
+import ca.nrc.cadc.gms.*;
 import ca.nrc.cadc.gms.server.GroupService;
+
 
 public class GroupListResource extends AbstractResource
 {
@@ -126,7 +122,9 @@ public class GroupListResource extends AbstractResource
      * @throws AuthorizationException 
      */
     @Override
-    protected boolean obtainResource() throws FileNotFoundException, InvalidGroupException, AuthorizationException
+    protected boolean obtainResource() throws FileNotFoundException,
+                                              InvalidGroupException,
+                                              AuthorizationException
     {
         // Get the criteria from http query
         Form queryForm = getForm();
@@ -138,6 +136,47 @@ public class GroupListResource extends AbstractResource
 
         groups = getGroupService().getGroups(criteria);
         return true;
+    }
+
+    /**
+     * Accept a PUT request to create a new Group.
+     *
+     * @param  payload      The Request body to PUT.
+     */
+    @Put
+    public void store(final Representation payload)
+    {
+        try
+        {
+            final Group group = GroupReader.read(payload.getStream());
+            getGroupService().putGroup(group);
+        }
+        catch (ReaderException e)
+        {
+            processError(e, Status.CLIENT_ERROR_UNPROCESSABLE_ENTITY,
+                         "Unable to build Group from input.");
+        }
+        catch (AuthorizationException e)
+        {
+            processError(e, Status.CLIENT_ERROR_FORBIDDEN,
+                         "Not Authorized to Create Groups.");
+        }
+        catch (IOException e)
+        {
+            processError(e, Status.CLIENT_ERROR_UNPROCESSABLE_ENTITY,
+                         "Unable to build Group from input.");
+        }
+        catch (InvalidGroupException e)
+        {
+            processError(e, Status.CLIENT_ERROR_UNPROCESSABLE_ENTITY,
+                         "Unable to build Group from input.");            
+        }
+        catch (URISyntaxException e)
+        {
+            processError(e, Status.CLIENT_ERROR_UNPROCESSABLE_ENTITY,
+                         "Unable to build Group from input.");
+        }
+
     }
 
     /**
