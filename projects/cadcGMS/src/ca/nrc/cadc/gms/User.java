@@ -105,13 +105,21 @@ public interface User
      * 
      * @return properties associated with a user/member such as DN or name
      */
-    public List<ElemProperty> getProperties();
+    List<ElemProperty> getProperties();
+
+    /**
+     * Obtain the Property for the given URI.
+     *
+     * @param  propertyURI      The Property URI to search on.
+     * @return      The ElemProperty with the given URI, or null if none found.
+     */
+    ElemProperty getProperty(final String propertyURI);
 
     /**
      * Sets the properties associated with a group.
      * 
      * @param elemProperties new properties for the group
      */
-    public void setProperties(List<ElemProperty> elemProperties);
+    void setProperties(List<ElemProperty> elemProperties);
     
 }

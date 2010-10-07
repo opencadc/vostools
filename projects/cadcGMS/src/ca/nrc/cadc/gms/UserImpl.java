@@ -68,7 +68,6 @@ package ca.nrc.cadc.gms;
 
 import java.util.ArrayList;
 import java.util.Collection;
-import java.util.Collections;
 import java.util.HashSet;
 import java.util.List;
 
@@ -129,6 +128,25 @@ public class UserImpl implements User
     }
 
     /**
+     * Obtain the Property for the given URI.
+     *
+     * @param propertyURI The Property URI to search on.
+     * @return The ElemProperty with the given URI, or null if none found.
+     */
+    public ElemProperty getProperty(final String propertyURI)
+    {
+        for (final ElemProperty property : getProperties())
+        {
+            if (property.getPropertyURI().equals(propertyURI))
+            {
+                return property;
+            }
+        }
+
+        return null;
+    }
+
+    /**
      * Sets the properties associated with a user.
      * 
      * @param elemProperties new properties for the user
@@ -177,7 +195,6 @@ public class UserImpl implements User
     @Override
     public int hashCode()
     {
-        int result = userID != null ? userID.hashCode() : 0;
-        return result;
+        return userID != null ? userID.hashCode() : 0;
     }
 }

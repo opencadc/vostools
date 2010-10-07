@@ -157,7 +157,7 @@ public class GmsClient
             final URL resourceURL = new URL(getBaseServiceURL()
                     + resourcePath.toString());
             logger.debug("getMember(), URL=" + resourceURL);
-            HttpURLConnection connection = (HttpURLConnection) openConnection(resourceURL);
+            HttpURLConnection connection = openConnection(resourceURL);
             connection.setRequestMethod("GET");
             connection.setUseCaches(false);
             connection.setDoInput(true);
