@@ -69,9 +69,13 @@
 
 package ca.nrc.cadc.tap;
 
+import ca.nrc.cadc.tap.schema.TableDesc;
+import ca.nrc.cadc.tap.schema.TapSchema;
+import ca.nrc.cadc.uws.Job;
 import ca.nrc.cadc.uws.Parameter;
 import ca.nrc.cadc.uws.util.ParameterUtil;
 import java.util.List;
+import java.util.Map;
 import org.apache.log4j.Logger;
 
 /**
@@ -88,16 +92,47 @@ public class MaxRecValidator
     private static Logger log = Logger.getLogger(MaxRecValidator.class);
 
     /**
-     * The default value when MAXREC is not specified.
+     * The default value when MAXREC is not specified. May be null for unlimited.
      */
     protected Integer defaultValue;
 
     /**
-     * The maximum allowed value.
+     * The maximum allowed value. May be null for unlimited.
      */
     protected Integer maxValue;
 
+    /**
+     * The UWS Job. This may be used by subclasses to dynamically determine
+     * the limit in the validate method.
+     */
+    protected Job job;
+
+    /**
+     * This gets set to true if the job is running in synchronous mode. In
+     * sync mode, the QueryRunner streams the output and thus consumes a finite
+     * amount of memory and no storage space.
+     */
+    protected boolean sync;
+
+    protected TapSchema tapSchema;
+    
+    protected Map<String, TableDesc> extraTables;
+
     public MaxRecValidator() { }
+
+    public void setJob(Job job) { this.job = job; }
+
+    public void setSynchronousMode(boolean sync) { this.sync = sync; }
+
+    public void setTapSchema(TapSchema tapSchema)
+    {
+        this.tapSchema = tapSchema;
+    }
+
+    public void setExtraTables(Map<String, TableDesc> extraTables)
+    {
+        this.extraTables = extraTables;
+    }
 
     /**
      * Checks the parameter List for a parameter named MAXREC.

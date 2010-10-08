@@ -159,7 +159,6 @@ public class QueryRunner implements SyncJobRunner
     private Job job;
     private JobManager manager;
     private SyncOutput syncOutput;
-    private TableWriter tableWriter;
 
     public QueryRunner()
     {
@@ -170,7 +169,6 @@ public class QueryRunner implements SyncJobRunner
     {
         this.job = job;
         jobID = job.getID();
-        this.tableWriter = TableWriterFactory.getWriter(job.getParameterList());
     }
 
     public Job getJob()
@@ -183,21 +181,14 @@ public class QueryRunner implements SyncJobRunner
         this.manager = jm;
     }
 
-    public void setOutput(SyncOutput syncOutput)
-    {
-        this.syncOutput = syncOutput;
-    }
-
-    public String getContentType()
-    {
-        if (job == null)
-            throw new IllegalStateException("setJob must be set before getContentType");
-        return tableWriter.getContentType();
-    }
-
     public URL getRedirectURL()
     {
         return null;
+    }
+
+    public void setOutput(SyncOutput syncOutput)
+    {
+        this.syncOutput = syncOutput;
     }
 
     public void run()
@@ -329,6 +320,10 @@ public class QueryRunner implements SyncJobRunner
             {
             }
             logger.debug("using " + maxRecValidator.getClass().getName());
+            maxRecValidator.setJob(job);
+            maxRecValidator.setSynchronousMode(syncOutput != null);
+            maxRecValidator.setTapSchema(tapSchema);
+            maxRecValidator.setExtraTables(tableDescs);
             Integer maxRows = maxRecValidator.validate(paramList);
 
             logger.debug("invoking TapValidator to get LANG...");
@@ -351,6 +346,7 @@ public class QueryRunner implements SyncJobRunner
             List<TapSelectItem> selectList = tapQuery.getSelectList();
 
             logger.debug("invoking TableWriterFactory for FORMAT...");
+            TableWriter tableWriter = TableWriterFactory.getWriter(job.getParameterList());
             tableWriter.setTapSchema(tapSchema);
             tableWriter.setSelectList(selectList);
             tableWriter.setJobID(jobID);

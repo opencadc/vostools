@@ -90,24 +90,26 @@ public class TableWriterFactory
 {
     private static Logger log = Logger.getLogger(TableWriterFactory.class);
 
-    // Returned format type
-    private static final String CSV = "csv";
-//    private static final String FITS = "fits";
-//    private static final String HTML = "html";
-//    private static final String TEXT = "text";
-    private static final String TSV = "tsv";
-    private static final String VOTABLE = "votable";
+    private static final String FORMAT = "FORMAT";
 
-    // MIME types
-//    private static final String APPLICATION_FITS = "application/fits";
+    // shortcuts
+    public static final String CSV = "csv";
+    public static final String FITS = "fits";
+    public static final String HTML = "html";
+    public static final String TEXT = "text";
+    public static final String TSV = "tsv";
+    public static final String VOTABLE = "votable";
+
+    // content-type
+    private static final String APPLICATION_FITS = "application/fits";
     private static final String APPLICATION_VOTABLE_XML = "application/x-votable+xml";
     private static final String TEXT_CSV = "text/csv";
-//    private static final String TEXT_HTML = "text/html";
-//    private static final String TEXT_PLAIN = "text/plain";
+    private static final String TEXT_HTML = "text/html";
+    private static final String TEXT_PLAIN = "text/plain";
     private static final String TEXT_TAB_SEPARATED_VALUES = "text/tab-separated-values";
     private static final String TEXT_XML = "text/xml";
 
-    private static String FORMAT = "FORMAT";
+    
 
     private static Map<String,String> knownFormats;
 
@@ -129,12 +131,26 @@ public class TableWriterFactory
 //        knownFormats.put(HTML, HTML);
     }
 
-    public static TableWriter getWriter(List<Parameter> params)
+    /**
+     * Find the FORMAT parameter and return one of the public constants ion this class.
+     * 
+     * @param params
+     * @return one of the format constants
+     */
+    public static String getFormat(List<Parameter> params)
     {
         String format = ParameterUtil.findParameterValue(FORMAT, params);
         if (format == null)
             format = VOTABLE;
         String type = knownFormats.get(format.toLowerCase());
+        if (type == null)
+            throw new UnsupportedOperationException("unknown format: " + format);
+        return type;
+    }
+    
+    public static TableWriter getWriter(List<Parameter> params)
+    {
+        String type = getFormat(params);
 
         if (type.equals(VOTABLE))
             return new VOTableWriter();
@@ -143,7 +159,8 @@ public class TableWriterFactory
         if (type.equals(TSV))
             return new AsciiTableWriter(TSV);
 
-        throw new UnsupportedOperationException("unknown format: " + format);
+        // legal format but we don't have a table writer for it
+        throw new UnsupportedOperationException("unsupported format: " + type);
     }
 
 }
