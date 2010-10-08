@@ -297,7 +297,7 @@ public class SyncServlet extends HttpServlet
                 response.setStatus(HttpServletResponse.SC_BAD_REQUEST);
                 response.setContentType("text/plain");
                 PrintWriter w = response.getWriter();
-                w.println("sycnhronous job " + jobID + " has already been run");
+                w.println("synchronous job " + jobID + " has already been run");
                 w.close();
                 return;
             }
