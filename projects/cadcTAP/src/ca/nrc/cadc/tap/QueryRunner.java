@@ -481,7 +481,6 @@ public class QueryRunner implements SyncJobRunner
         }
         catch (Throwable t)
         {
-            //t.printStackTrace();
             String errorMessage = null;
             URL errorURL = null;
             try
@@ -490,7 +489,7 @@ public class QueryRunner implements SyncJobRunner
                 sList.add("encounter failure: ");
 
                 errorMessage = t.getClass().getSimpleName() + ":" + t.getMessage();
-                logger.debug("BUG", t);
+                logger.debug("BADNESS", t);
                 logger.debug("Error message: " + errorMessage);
                 VOTableWriter ewriter = new VOTableWriter();
                 if (syncOutput != null)
