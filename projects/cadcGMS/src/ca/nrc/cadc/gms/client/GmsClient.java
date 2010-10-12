@@ -82,7 +82,6 @@ import java.security.AccessControlException;
 import java.security.AccessController;
 import java.util.Collection;
 
-import javax.management.RuntimeErrorException;
 import javax.net.ssl.HttpsURLConnection;
 import javax.net.ssl.SSLSocketFactory;
 import javax.security.auth.Subject;
@@ -366,124 +365,66 @@ public class GmsClient
      *            Group to create. The groupID is assigned by the service
      *            when this parameter is null.
      * @return The newly created group group
-     * @throws IllegalArgument
-     *             Exception If the Group ID, or accepted baseServiceURL,
+     * @throws IllegalArgumentException If the Group ID, or accepted baseServiceURL,
      *             or any combination of them produces an error.
      * @throws AccessControlException
      *             If user not allow to access the resource
      */
-    public Group createGroup(Group group) throws IllegalArgumentException
+    public Group createGroup(final Group group) throws IllegalArgumentException
     {
         final StringBuilder resourcePath = new StringBuilder(64);
+        resourcePath.append("/groups");
+        
         try
         {
-            if (group == null)
+            final URL resourceURL = new URL(getBaseServiceURL()
+                    + resourcePath.toString());
+            logger.debug("createGroup(), URL=" + resourceURL);
+            HttpURLConnection connection = openConnection(resourceURL);
+            connection.setRequestMethod("PUT");
+            connection.setDoInput(true);
+            connection.setDoOutput(true);
+            connection.setUseCaches(false);
+
+            OutputStreamWriter out = new OutputStreamWriter(
+                    connection.getOutputStream());
+
+            GroupWriter.write(group, out);
+            out.flush();
+            out.close();
+
+            String responseMessage = connection.getResponseMessage();
+            int responseCode = connection.getResponseCode();
+            logger.debug("createGroup(), response code: "
+                    + responseCode);
+            logger.debug("createGroup(), response message: "
+                    + responseMessage);
+
+            switch (responseCode)
             {
-                // user does not have the group created. Through a POST.
-                // the server generates one and returns it to the user
-                resourcePath.append("/groups");
-
-                final URL resourceURL = new URL(getBaseServiceURL()
-                        + resourcePath.toString());
-                logger.debug("createGroup(), URL=" + resourceURL);
-                HttpURLConnection connection = openConnection(resourceURL);
-                connection.setRequestMethod("POST");
-                connection.setDoInput(true);
-                connection.setDoOutput(true);
-                connection.setUseCaches(false);
-                connection.connect();
-
-                String responseMessage = connection.getResponseMessage();
-                int responseCode = connection.getResponseCode();
-                logger.debug("createGroup(), response code: "
-                        + responseCode);
-                logger.debug("createGroup(), response message: "
-                        + responseMessage);
-
-                switch (responseCode)
-                {
-                    case HttpURLConnection.HTTP_CREATED:
-                        String location = connection
-                                .getHeaderField("Location");
-                        return getGroup(new URI(location));
-                    case HttpURLConnection.HTTP_OK:
-                        // break intentionally left out
-                    case HttpURLConnection.HTTP_CONFLICT:
-                        // break intentionally left out
-                    case HttpURLConnection.HTTP_NOT_FOUND:
-                        // parent node not found
-                        // break intentionally left out
-                    case HttpURLConnection.HTTP_BAD_REQUEST:
-                        // duplicate group
-                        throw new IllegalArgumentException(
-                                responseMessage);
-                    case HttpURLConnection.HTTP_FORBIDDEN:
-                        throw new AccessControlException(responseMessage);
-                    default:
-                        throw new RuntimeException(
-                                "Unexpected failure mode: "
-                                        + responseMessage + "("
-                                        + responseCode + ")");
-                }
+                case HttpURLConnection.HTTP_CREATED:
+                    String location = connection
+                            .getHeaderField("Location");
+                    return getGroup(new URI(location));
+                case HttpURLConnection.HTTP_OK:
+                    // break intentionally left out
+                case HttpURLConnection.HTTP_CONFLICT:
+                    // break intentionally left out
+                case HttpURLConnection.HTTP_NOT_FOUND:
+                    // parent node not found
+                    // break intentionally left out
+                case HttpURLConnection.HTTP_BAD_REQUEST:
+                    // duplicate group
+                    throw new IllegalArgumentException(
+                            responseMessage);
+                case HttpURLConnection.HTTP_FORBIDDEN:
+                    throw new AccessControlException(responseMessage);
+                default:
+                    throw new RuntimeException(
+                            "Unexpected failure mode: "
+                                    + responseMessage + "("
+                                    + responseCode + ")");
             }
-            else
-            {
-                resourcePath.append("/groups/");
-                String grID = "";
-                if (group.getID() != null)
-                {
-                    grID = group.getID().getFragment();
-                }
-                resourcePath.append(URLEncoder.encode(grID, "UTF-8"));
-
-                final URL resourceURL = new URL(getBaseServiceURL()
-                        + resourcePath.toString());
-                logger.debug("createGroup(), URL=" + resourceURL);
-                HttpURLConnection connection = openConnection(resourceURL);
-                connection.setRequestMethod("POST");
-                connection.setDoInput(true);
-                connection.setDoOutput(true);
-                connection.setRequestProperty("Content-Type", "text/xml");
-                connection.setUseCaches(false);
-
-                OutputStreamWriter out = new OutputStreamWriter(
-                        connection.getOutputStream());
-                GroupWriter.write(group, out);
-                out.close();
-
-                String responseMessage = connection.getResponseMessage();
-                int responseCode = connection.getResponseCode();
-                logger.debug("createGroup(), response code: "
-                        + responseCode);
-                logger.debug("createGroup(), response message: "
-                        + responseMessage);
-
-                switch (responseCode)
-                {
-                    case HttpURLConnection.HTTP_CREATED:
-                        String location = connection
-                                .getHeaderField("Location");
-                        return getGroup(new URI(location));
-                    case HttpURLConnection.HTTP_CONFLICT:
-                        // break intentionally left out
-                    case HttpURLConnection.HTTP_NOT_FOUND:
-                        // parent node not found
-                        // break intentionally left out
-                    case HttpURLConnection.HTTP_BAD_REQUEST:
-                        // duplicate group
-                        throw new IllegalArgumentException(
-                                responseMessage);
-                    case HttpURLConnection.HTTP_FORBIDDEN:
-                        throw new AccessControlException(responseMessage);
-                    default:
-                        throw new RuntimeException(
-                                "Unexpected failure mode: "
-                                        + responseMessage + "("
-                                        + responseCode + ")");
-                }
-
-            }
-
         }
         catch (IOException e)
         {
@@ -505,21 +446,101 @@ public class GmsClient
     }
 
     /**
+     * Update (POST) the changes to the given Group.
+     *
+     * @param group     The group, modified.
+     * @return          The updated group.
+     * @throws IllegalArgumentException If the Group ID, or accepted baseServiceURL,
+     *             or any combination of them produces an error.
+     * @throws AccessControlException
+     *             If user not allow to access the resource
+     */
+    public Group updateGroup(final Group group) throws IllegalArgumentException
+    {
+        final StringBuilder resourcePath = new StringBuilder(64);
+        resourcePath.append("/groups");
+
+        try
+        {
+            String grID = group.getID().getFragment();
+
+            resourcePath.append("/");
+            resourcePath.append(URLEncoder.encode(grID, "UTF-8"));
+
+            final URL resourceURL = new URL(getBaseServiceURL()
+                    + resourcePath.toString());
+            logger.debug("createGroup(), URL=" + resourceURL);
+            HttpURLConnection connection = openConnection(resourceURL);
+            connection.setRequestMethod("POST");
+            connection.setDoInput(true);
+            connection.setDoOutput(true);
+            connection.setRequestProperty("Content-Type", "text/xml");
+            connection.setUseCaches(false);
+
+            OutputStreamWriter out = new OutputStreamWriter(
+                    connection.getOutputStream());
+            GroupWriter.write(group, out);
+            out.close();
+
+            String responseMessage = connection.getResponseMessage();
+            int responseCode = connection.getResponseCode();
+            logger.debug("createGroup(), response code: "
+                    + responseCode);
+            logger.debug("createGroup(), response message: "
+                    + responseMessage);
+
+            switch (responseCode)
+            {
+                case HttpURLConnection.HTTP_CREATED:
+                    String location = connection
+                            .getHeaderField("Location");
+                    return getGroup(new URI(location));
+                case HttpURLConnection.HTTP_CONFLICT:
+                    // break intentionally left out
+                case HttpURLConnection.HTTP_NOT_FOUND:
+                    // parent node not found
+                    // break intentionally left out
+                case HttpURLConnection.HTTP_BAD_REQUEST:
+                    // duplicate group
+                    throw new IllegalArgumentException(
+                            responseMessage);
+                case HttpURLConnection.HTTP_FORBIDDEN:
+                    throw new AccessControlException(responseMessage);
+                default:
+                    throw new RuntimeException(
+                            "Unexpected failure mode: "
+                                    + responseMessage + "("
+                                    + responseCode + ")");
+            }
+        }
+        catch (IOException e)
+        {
+            final String message = String.format(
+                    "Client BUG: The supplied URL (%s) cannot "
+                            + "be hit.", getBaseServiceURL()
+                            .toExternalForm()
+                            + resourcePath.toString());
+            logger.debug("Failed to create group", e);
+            throw new IllegalStateException(message, e);
+        }
+        catch (URISyntaxException e)
+        {
+            final String message = String
+                    .format("Cannot follow URI to the created group");
+            logger.debug("Failed to get the created group", e);
+            throw new IllegalStateException(message, e);
+        }            
+    }
+
+    /**
      * Deletes the group identified by groupID.
      * 
      * @param groupID
      *            Identifies the group.
-     * @throws IllegalArgument
-     *             Exception If the Group ID, or accepted baseServiceURL,
+     * @throws IllegalArgumentException If the Group ID, or accepted baseServiceURL,
      *             or any combination of them produces an error.
      * @throws AccessControlException
      *             If user not allow to access the resource
-     * @throws MalformedURLException
-     *             If the arguments generate a bad URL
-     * @throws ReaderException
-     *             If the URL's response could not be read.
-     * @throws IOException
-     *             For any unforeseen I/O errors.
      */
     public void deleteGroup(URI groupID) throws IllegalArgumentException
     {
@@ -592,9 +613,11 @@ public class GmsClient
      * 
      * @param group
      *            Group to set. Cannot be null.
-     * @return True if update was successfull.
-     * @throws IOException
-     *             For any unforeseen I/O errors.
+     * @return True if update was successful, False otherwise.
+     * @throws IllegalArgumentException If the Group ID, or accepted baseServiceURL,
+     *             or any combination of them produces an error.
+     * @throws AccessControlException
+     *             If user not allow to access the resource
      */
     public boolean setGroup(Group group) throws IllegalArgumentException
     {
@@ -992,9 +1015,9 @@ public class GmsClient
      * Open a HttpsURLConnection with a SocketFactory created based on
      * user credentials.
      * 
-     * @param url
+     * @param url       The URL to open a connection to.
      * @return UTLConnection returns an open https connection to URL
-     * @throws IOException
+     * @throws IOException  If the connection cannot be established.
      */
     protected HttpsURLConnection openConnection(final URL url)
             throws IOException
@@ -1065,7 +1088,7 @@ public class GmsClient
             final URL resourceURL = new URL(getBaseServiceURL() + resourcePath.toString());
             logger.debug("getGroup(), URL=" + resourceURL);
             // Always use secure HTTP connection
-            HttpsURLConnection sslConnection = (HttpsURLConnection) openConnection(resourceURL);
+            HttpsURLConnection sslConnection = openConnection(resourceURL);
             
             sslConnection.setRequestMethod("GET");
             sslConnection.setUseCaches(false);

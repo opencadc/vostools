@@ -66,10 +66,8 @@
  */
 package ca.nrc.cadc.gms.server.web.restlet;
 
-import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.UnsupportedEncodingException;
-import java.net.URISyntaxException;
 import java.net.URLDecoder;
 
 import javax.security.auth.x500.X500Principal;
@@ -111,12 +109,9 @@ public class MemberResource extends AbstractResource
 
     /**
      * Get a reference to the resource identified by the user.
-     * 
-     * @throws FileNotFoundException
-     *             If the resource doesn't exist.
      */
     @Override
-    protected boolean obtainResource() throws URISyntaxException
+    protected boolean obtainResource()
     {
         LOGGER.debug("Enter MemberResource.obtainResource()");
         String memberUserID = null;

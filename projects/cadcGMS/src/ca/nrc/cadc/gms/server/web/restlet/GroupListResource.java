@@ -149,7 +149,10 @@ public class GroupListResource extends AbstractResource
         try
         {
             final Group group = GroupReader.read(payload.getStream());
-            getGroupService().putGroup(group);
+            final Group createdGroup = getGroupService().putGroup(group);
+
+            getResponse().setStatus(Status.SUCCESS_CREATED);
+            getResponse().setLocationRef(createdGroup.getID().toString());
         }
         catch (ReaderException e)
         {
@@ -176,7 +179,6 @@ public class GroupListResource extends AbstractResource
             processError(e, Status.CLIENT_ERROR_UNPROCESSABLE_ENTITY,
                          "Unable to build Group from input.");
         }
-
     }
 
     /**
