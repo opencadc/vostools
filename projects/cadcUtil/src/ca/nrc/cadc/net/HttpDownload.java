@@ -88,9 +88,12 @@ import javax.net.ssl.HttpsURLConnection;
 import org.apache.log4j.Logger;
 
 import ca.nrc.cadc.net.event.TransferEvent;
-import java.util.HashMap;
+import ca.nrc.cadc.util.CaseInsensitiveStringComparator;
+import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
+import java.util.Map.Entry;
+import java.util.TreeMap;
 
 /**
  * Simple task to encapsulate a single download (GET). This class supports http and https
@@ -125,8 +128,6 @@ public class HttpDownload extends HttpTransfer
     private long decompSize = -1;
     private long size = -1;
     private long lastModified = -1;
-
-    private Map<String,List<String>> headers = new HashMap<String,List<String>>();
 
     /**
      * Constructor with default user-agent string.
@@ -250,16 +251,6 @@ public class HttpDownload extends HttpTransfer
     public long getContentLength() { return contentLength; }
 
     /**
-     * Get a map with all the HTTP headers.
-     * @return
-     */
-    public Map<String,List<String>> getHeaders()
-    {
-        return headers;
-    }
-
-
-    /**
      * Get a reference to the result file. In some cases this is null until the
      * download is complete.
      * 
@@ -330,8 +321,8 @@ public class HttpDownload extends HttpTransfer
         }
         finally
         {
-            if (failure != null)
-                failure.printStackTrace();
+            //if (failure != null)
+            //    failure.printStackTrace();
             
             synchronized(this) // vs sync block in terminate() 
             {
@@ -495,8 +486,6 @@ public class HttpDownload extends HttpTransfer
             }
         }
 
-        headers = conn.getHeaderFields();
-            
         // determine filename and use destDir
         String origFilename = null;
 
