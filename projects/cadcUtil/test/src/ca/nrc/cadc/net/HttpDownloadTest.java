@@ -201,7 +201,7 @@ public class HttpDownloadTest
             dl.run();
             File out = dl.getFile();
             Assert.assertNotNull("result file", out);
-            Assert.assertTrue("dest file exists before download", out.exists());
+            Assert.assertTrue("dest file exists after download", out.exists());
             Assert.assertTrue("dest file size > 0", out.length() > 0);
         }
         catch (Throwable t)
@@ -224,7 +224,7 @@ public class HttpDownloadTest
             dl.run();
             File out = dl.getFile();
             Assert.assertNotNull("result file", out);
-            Assert.assertTrue("dest file exists before download", out.exists());
+            Assert.assertTrue("dest file exists after download", out.exists());
             Assert.assertTrue("dest file size > 0", out.length() > 0);
         }
         catch (Throwable t)
@@ -273,7 +273,7 @@ public class HttpDownloadTest
             dl.run();
             File out = dl.getFile();
             Assert.assertNotNull("result file", out);
-            Assert.assertTrue("dest file exists before download", out.exists());
+            Assert.assertTrue("dest file exists after download", out.exists());
             Assert.assertTrue("dest file size > 0", out.length() > 0);
         }
         catch (Throwable t)
@@ -302,7 +302,7 @@ public class HttpDownloadTest
 
             File out = dl.getFile();
             Assert.assertNotNull("result file", out);
-            Assert.assertTrue("dest file exists before download", out.exists());
+            Assert.assertTrue("dest file exists after download", out.exists());
             Assert.assertTrue("dest file size > 0", out.length() > 0);
         }
         catch (Throwable t)

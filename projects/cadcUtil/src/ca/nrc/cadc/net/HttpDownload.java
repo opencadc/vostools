@@ -88,6 +88,9 @@ import javax.net.ssl.HttpsURLConnection;
 import org.apache.log4j.Logger;
 
 import ca.nrc.cadc.net.event.TransferEvent;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
 
 /**
  * Simple task to encapsulate a single download (GET). This class supports http and https
@@ -117,10 +120,13 @@ public class HttpDownload extends HttpTransfer
     private File destFile;
     private boolean skipped = false;
     private String contentType;
+    private String contentEncoding;
     private long contentLength = -1;
     private long decompSize = -1;
     private long size = -1;
     private long lastModified = -1;
+
+    private Map<String,List<String>> headers = new HashMap<String,List<String>>();
 
     /**
      * Constructor with default user-agent string.
@@ -227,6 +233,14 @@ public class HttpDownload extends HttpTransfer
         return contentType;
     }
 
+    /**
+     * Get the content-encoding returned by the server.
+     * @return
+     */
+    public String getContentEncoding()
+    {
+        return contentEncoding;
+    }
 
     /**
      * Get the size of the download (the Content-Length).
@@ -234,6 +248,15 @@ public class HttpDownload extends HttpTransfer
      * @return the content-length or -1 of unknown
      */
     public long getContentLength() { return contentLength; }
+
+    /**
+     * Get a map with all the HTTP headers.
+     * @return
+     */
+    public Map<String,List<String>> getHeaders()
+    {
+        return headers;
+    }
 
 
     /**
@@ -471,6 +494,8 @@ public class HttpDownload extends HttpTransfer
                     
             }
         }
+
+        headers = conn.getHeaderFields();
             
         // determine filename and use destDir
         String origFilename = null;
@@ -508,8 +533,8 @@ public class HttpDownload extends HttpTransfer
         origFilename = origFile.getName();
 
         // check if incoming data is compressed, determine decompressed filename
-        String encoding = conn.getHeaderField(("Content-Encoding"));
-        if ("gzip".equals(encoding) || origFilename.endsWith(".gz"))
+        this.contentEncoding = conn.getHeaderField(("Content-Encoding"));
+        if ("gzip".equals(contentEncoding) || origFilename.endsWith(".gz"))
         {
             if (origFilename.endsWith(".gz"))
                 this.decompFile = new File(destDir, origFilename.substring(0, origFilename.length() - 3));
@@ -520,7 +545,7 @@ public class HttpDownload extends HttpTransfer
             }
             this.decompressor = GZIP;
         }    
-        else if ("zip".equals(encoding) || origFilename.endsWith(".zip"))
+        else if ("zip".equals(contentEncoding) || origFilename.endsWith(".zip"))
         {
             if (origFilename.endsWith(".zip"))
                 this.decompFile = new File(destDir, origFilename.substring(0, origFilename.length() - 4));
@@ -549,6 +574,8 @@ public class HttpDownload extends HttpTransfer
         log.debug("   original file: " + origFile);
         log.debug("     decomp file: " + decompFile);
         log.debug("  content length: " + contentLength);
+        log.debug("    content type: " + contentType);
+        log.debug("content encoding: " + contentEncoding);
         log.debug("     decomp size: " + decompSize);
         log.debug("    decompressor: " + decompressor);
         log.debug("    lastModified: " + lastModified);
