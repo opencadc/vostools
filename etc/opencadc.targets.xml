@@ -104,7 +104,8 @@
 			target="${java.target.version}"
 			optimize="off" 
 			debug="on" 
-			deprecation="on">
+			deprecation="on"
+			includeantruntime="false">
 				<src path="src" />
 		</javac>
 	</target>
@@ -118,7 +119,8 @@
                         target="${java.target.version}"
                         optimize="off"
                         debug="on"
-                        deprecation="on">
+                        deprecation="on"
+                        includeantruntime="false">
                                 <src path="test/src" />
                 </javac>
         </target>
@@ -144,12 +146,15 @@
 	</target>
 	
 	<target name="clean" >
-		<delete verbose="false" includeEmptyDirs="true">
-			<fileset dir=".">
-				<include name="build/**" />
-				<exclude name="build" />
+		<echo message="deleting ${build}/**" />
+		<delete verbose="false" includeEmptyDirs="true" >
+			<fileset dir="${build}">
+				<include name="*/**" />
 			</fileset>
 		</delete>
 	</target>
 
+	<target name="build" depends="compile">
+		<fail message="dummy build run from project base-build-script! should invoke 'build' target in actual project/module build.xml!"/>
+	</target>
 </project>

@@ -71,6 +71,7 @@ package ca.nrc.cadc.tap.writer.formatter;
 
 import ca.nrc.cadc.date.DateUtil;
 import ca.nrc.cadc.util.Log4jInit;
+import java.text.DateFormat;
 import java.util.Date;
 import org.apache.log4j.Level;
 import org.apache.log4j.Logger;
@@ -92,15 +93,15 @@ public class LocalTimestampFormatterTest
     {
         Log4jInit.setLevel("ca", Level.INFO);
     }
-    private static final String DATE_TIME = "2009-01-02 03:04:05.678";
-    private static Date date;
+    private static final String DATE_TIME = "2009-01-02T03:04:05.678";
+    private static DateFormat formatter;
 
     public LocalTimestampFormatterTest() { }
 
     @BeforeClass
     public static void setUpClass() throws Exception
     {
-        date = DateUtil.toDate(DATE_TIME);
+        formatter = DateUtil.getDateFormat(DateUtil.IVOA_DATE_FORMAT, DateUtil.LOCAL);
     }
 
     @AfterClass
@@ -114,21 +115,18 @@ public class LocalTimestampFormatterTest
     @After
     public void tearDown() { }
 
-    /**
-     * Test of format method, of class LocalTimestampFormatter.
-     */
     @Test
-    public void testFormat_Object() throws Exception
+    public void testFormatValue() throws Exception
     {
         LOG.debug("testFormat");
 
-        Object object = null;
-        LocalTimestampFormatter instance = new LocalTimestampFormatter();
-        String expResult = "";
-        String result = instance.format(object);
-        assertEquals(expResult, result);
+        Formatter instance = new LocalTimestampFormatter();
 
-        object = DateUtil.toDate(DATE_TIME);
+        Date date = formatter.parse(DATE_TIME);
+        Object object;
+        String result;
+
+        object = date;
         result = instance.format(object);
         assertEquals(DATE_TIME, result);
 
@@ -143,4 +141,18 @@ public class LocalTimestampFormatterTest
         LOG.info("testFormat passed");
     }
 
+    @Test
+    public void testFormatNull() throws Exception
+    {
+        LOG.debug("testFormat");
+
+        Formatter instance = new LocalTimestampFormatter();
+
+        Object object = null;
+        String expResult = "";
+        String result = instance.format(object);
+        assertEquals(expResult, result);
+
+        LOG.info("testFormat passed");
+    }
 }

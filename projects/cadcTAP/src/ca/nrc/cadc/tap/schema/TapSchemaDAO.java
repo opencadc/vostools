@@ -163,8 +163,13 @@ public class TapSchemaDAO
         // Add the KeyColumns to the Keys.
         addKeyColumnsToKeys(tapSchema.keyDescs, keyColumnDescs);
 
-        for (SchemaDesc s : tapSchema.schemaDescs)
-            log.debug("schema " + s.schemaName + " has " + s.tableDescs.size() + " tables");
+        for (SchemaDesc s : tapSchema.schemaDescs) 
+        {
+            int num = 0;
+            if (s.tableDescs != null)
+                num = s.tableDescs.size();
+            log.debug("schema " + s.schemaName + " has " + num + " tables");
+        }
         
         return tapSchema;
     }

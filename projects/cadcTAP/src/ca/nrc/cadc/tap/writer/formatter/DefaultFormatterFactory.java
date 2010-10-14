@@ -152,6 +152,8 @@ public class DefaultFormatterFactory implements FormatterFactory
         // Find the class name of the formatter for this colummn.
         for (SchemaDesc schemaDesc : tapSchema.schemaDescs)
         {
+        	if (schemaDesc.tableDescs == null)
+        		continue;
             for (TableDesc tableDesc : schemaDesc.tableDescs)
             {
                 if (tableDesc.tableName.equals(selectItem.getTableName()))
