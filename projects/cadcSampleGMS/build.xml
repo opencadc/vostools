@@ -166,13 +166,13 @@
     <echo message="Copying new WAR file to deployment directory..." />
     <copy file="${build}/webapps/${project}.war" todir="${deployDir}"/>
 
-    <!-- Copy log4j properties file to build/class -->
-    <echo message="Copying log4j.properties to build/class..." />
-    <copy file="test/src/resources/log4j.properties" todir="build/class"/>
+    <!-- Copy log4j properties file to ${build}/class -->
+    <echo message="Copying log4j.properties to ${build}/class..." />
+    <copy file="test/src/resources/log4j.properties" todir="${build}/class"/>
 
-    <!-- Copy properties files from test/src/resources to build/resources -->
-    <echo message="Copying resource to build/resources..." />
-    <copy todir="build/resources">
+    <!-- Copy properties files from test/src/resources to ${build}/resources -->
+    <echo message="Copying resource to ${build}/resources..." />
+    <copy todir="${build}/resources">
       <fileset dir="test/src/resources">
         <exclude name="log4j.properties"/>
       </fileset>
@@ -188,13 +188,13 @@
     <echo message="Running test suite..." />
     <junit printsummary="yes" haltonfailure="yes" fork="yes">
       <classpath>
-        <pathelement path="build/class" />
-        <pathelement path="build/test/class" />
+        <pathelement path="${build}/class" />
+        <pathelement path="${build}/test/class" />
         <pathelement path="${jars}:${testingJars}" />
       </classpath>
       <sysproperty key="service.url"
                    value="http://localhost/cadcSampleGMS" />
-      <sysproperty key="properties.directory" value="build/resources" />
+      <sysproperty key="properties.directory" value="${build}/resources" />
       <test name="ca.nrc.cadc.gms.web.GMSWebTestSuite" />
       <formatter type="plain" usefile="false" />
     </junit>

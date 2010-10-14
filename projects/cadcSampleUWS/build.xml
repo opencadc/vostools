@@ -112,7 +112,7 @@
     </target>
 
     <target name="resources">
-        <copy todir="build/class">
+        <copy todir="${build}/class">
             <fileset dir="src/text" />
         </copy>
     </target>
@@ -163,9 +163,9 @@
         <echo message="Copying new WAR file to deployment directory..." />
         <copy file="${build}/webapps/${project}.war" todir="${deployDir}"/>
 
-        <!-- Copy properties files from test/src/resources to build/resources -->
-        <echo message="Copying resource to build/resources..." />
-        <copy todir="build/resources">
+        <!-- Copy properties files from test/src/resources to ${build}/resources -->
+        <echo message="Copying resource to ${build}/resources..." />
+        <copy todir="${build}/resources">
             <fileset dir="test/src/resources">
                 <exclude name="log4j.properties"/>
             </fileset>
@@ -183,11 +183,11 @@
     <target name="int-test" depends="compile-test, deploy">
         <junit printsummary="yes" haltonfailure="yes" fork="yes">
             <classpath>
-                <pathelement path="build/class"/>
+                <pathelement path="${build}/class"/>
                 <pathelement path="${jars}:${testingJars}"/>
             </classpath>
             <sysproperty key="service.url" value="http://localhost/cadcSampleUWS/async"/>
-            <sysproperty key="properties.directory" value="build/resources"/>
+            <sysproperty key="properties.directory" value="${build}/resources"/>
             <test name="ca.nrc.cadc.conformance.uws.UWSASyncTestSuite"/>
             <formatter type="plain" usefile="false"/>
         </junit>

@@ -117,7 +117,7 @@
     </target>
 
     <target name="manifest">
-        <manifest file="build/tmp/${project}Client.mf" mode="replace">
+        <manifest file="${build}/tmp/${project}Client.mf" mode="replace">
             <attribute name="Main-Class" value="ca.nrc.cadc.gms.client.GmsClientMain"/>
             <attribute name="Class-Path" value="${client.jars}" />
         </manifest>
@@ -141,8 +141,8 @@
         <echo message="Running test suite..." />
         <junit printsummary="yes" haltonfailure="yes" fork="yes">
             <classpath>
-                <pathelement path="build/class"/>
-                <pathelement path="build/test/class"/>
+                <pathelement path="${build}/class"/>
+                <pathelement path="${build}/test/class"/>
                 <pathelement path="${testingJars}"/>
             </classpath>
             <test name="ca.nrc.cadc.gms.GMSTestSuite" />

@@ -120,8 +120,8 @@
     <echo message="Running test suite..." />
     <junit printsummary="yes" haltonfailure="yes" fork="yes">
       <classpath>
-        <pathelement path="build/test/class" />
-        <pathelement path="build/class" />
+        <pathelement path="${build}/test/class" />
+        <pathelement path="${build}/class" />
         <pathelement path="${jars}:${testingJars}" />
       </classpath>
       <!--

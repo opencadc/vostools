@@ -91,7 +91,7 @@
 <property name="jars" value="${cadc}:${ext}" />
 
 <target name="build" depends="compile">
-    <copy file="src/resources/UWS-v1.0.xsd" todir="build/class"/>
+    <copy file="src/resources/UWS-v1.0.xsd" todir="${build}/class"/>
     <jar jarfile="${build}/lib/${project}.jar"
         basedir="${build}/class"
         update="no">
