@@ -98,6 +98,12 @@ public class XmlUtil
     public static final String PARSER = "org.apache.xerces.parsers.SAXParser";
     public static final Namespace XSI_NS = Namespace.getNamespace("xsi", "http://www.w3.org/2001/XMLSchema-instance");
 
+    /**
+     * WARNING: This method is not thread-safe!!!
+     * @deprecated makes assumptions about format and time zone that are not true for every XML usage
+     * @param date
+     * @return
+     */
     public static String dateToString(Date date)
     {
         String rtn = null;
@@ -106,6 +112,12 @@ public class XmlUtil
         return rtn;
     }
 
+    /**
+     * @deprecated uses another deprecated method and cannot be fixed
+     * @param ele
+     * @param date
+     * @param allowNil
+     */
     public static void addElementContent(Element ele, Date date, boolean allowNil)
     {
         if (date == null)
@@ -149,8 +161,8 @@ public class XmlUtil
         schemaValidator.setFeature("http://xml.org/sax/features/validation", true);
         schemaValidator.setFeature("http://apache.org/xml/features/validation/schema", true);
         schemaValidator.setFeature("http://apache.org/xml/features/validation/schema-full-checking", true);
-        schemaValidator
-                .setProperty("http://apache.org/xml/properties/schema/external-schemaLocation", sbSchemaLocations.toString());
+        schemaValidator.setProperty("http://apache.org/xml/properties/schema/external-schemaLocation",
+                sbSchemaLocations.toString());
 
         return schemaValidator.build(new StringReader(xml));
     }
