@@ -289,14 +289,15 @@ public class VOTableWriter implements TableWriter
                 }
             }
         }
-        log.warn(selectItem + " did not match any ColumnDesc, defaulting to no metadata");
+        log.debug(selectItem + " did not match any ColumnDesc, defaulting to no metadata");
         // select item did not match a column, must be a function call or expression
-        Element e = new Element("FIELD", namespace);
-        String name = selectItem.getAlias();
-        if (name == null)
-            name = selectItem.getColumnName();
-        e.setAttribute("name", name);
-        return e;
+        //Element e = new Element("FIELD", namespace);
+        //String name = selectItem.getAlias();
+        //if (name == null)
+        //    name = selectItem.getColumnName();
+        //e.setAttribute("name", name);
+        //return e;
+        return new FieldElement(selectItem, null, namespace);
     }
 
     // Build a String containing the nested Exception messages.

@@ -80,25 +80,39 @@ public class FieldElement extends Element
      * Builds a FIELD Element from a Column.
      *
      * @param selectItem
-     * @param columnDesc 
+     * @param columnDesc
+     * @param namespace 
      */
     public FieldElement(TapSelectItem selectItem, ColumnDesc columnDesc, Namespace namespace)
     {
         super("FIELD", namespace);
-        setFieldName(selectItem.getAlias(), columnDesc.columnName);
-        setFieldAttribute("utype", columnDesc.utype);
-        setFieldAttribute("ucd", columnDesc.ucd);
-        setFieldAttribute("unit", columnDesc.unit);
-        setFieldAttribute("xtype", columnDesc.datatype);
-        setDescription(columnDesc.description, namespace);
-        setDatatypeAndWidth(columnDesc.datatype, columnDesc.size);
+        if (columnDesc != null)
+        {
+            setFieldName(selectItem.getAlias(), columnDesc.columnName);
+            setFieldAttribute("utype", columnDesc.utype);
+            setFieldAttribute("ucd", columnDesc.ucd);
+            setFieldAttribute("unit", columnDesc.unit);
+            setFieldAttribute("xtype", columnDesc.datatype);
+            setDescription(columnDesc.description, namespace);
+            setDatatypeAndWidth(columnDesc.datatype, columnDesc.size);
+        }
+        else
+        {
+            setFieldName(selectItem.getAlias(), null);
+            setDescription(selectItem.getExpression(), namespace);
+        }
      }
 
     // Set the name using the alias first, then the column name.
     private void setFieldName(String alias, String name)
     {
         if (alias != null)
+        {
+            // strip off double-quotes used for an alias with spaces or dots in it
+            if (alias.charAt(0) == '"' && alias.charAt(alias.length()-1) == '"')
+                alias = alias.substring(1, alias.length() - 1);
             setAttribute("name", alias);
+        }
         else if (name != null)
             setAttribute("name", name);
     }

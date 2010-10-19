@@ -134,8 +134,7 @@
                 <pathelement path="${jars}:${testingJars}"/>
             </classpath>
             <formatter type="plain" usefile="false"/>
-            <test name="ca.nrc.cadc.tap.writer.AsciiTableWriterTest"/>
-            <test name="ca.nrc.cadc.tap.writer.VOTableWriterTest"/>
+            
             <test name="ca.nrc.cadc.tap.writer.formatter.ByteArrayFormatterTest"/>
             <test name="ca.nrc.cadc.tap.writer.formatter.DefaultFormatterTest"/>
             <test name="ca.nrc.cadc.tap.writer.formatter.DoubleArrayFormatterTest"/>
@@ -144,6 +143,9 @@
             <test name="ca.nrc.cadc.tap.writer.formatter.UTCTimestampFormatterTest"/>
             <test name="ca.nrc.cadc.tap.writer.formatter.SPointFormatterTest"/>
             <test name="ca.nrc.cadc.tap.writer.formatter.SPolyFormatterTest"/>
+            <test name="ca.nrc.cadc.tap.writer.AsciiTableWriterTest"/>
+            <test name="ca.nrc.cadc.tap.writer.VOTableWriterTest"/>
+            <test name="ca.nrc.cadc.tap.writer.FieldElementTest"/>
         </junit>
     </target>
 

@@ -87,6 +87,7 @@ import ca.nrc.cadc.tap.parser.navigator.ExpressionNavigator;
 import ca.nrc.cadc.tap.schema.TableDesc;
 import ca.nrc.cadc.tap.schema.TapSchema;
 import ca.nrc.cadc.tap.parser.schema.TapSchemaUtil;
+import net.sf.jsqlparser.expression.Function;
 
 /**
  * Extract a list of TapSelectItem from query.
@@ -229,9 +230,9 @@ public class SelectListExpressionExtractor extends ExpressionNavigator
             else
             {
                 if (alias != null && !alias.equals(""))
-                    tapSelectItem = new TapSelectItem(alias);
+                    tapSelectItem = new TapSelectItem(expression.toString(), alias);
                 else
-                    tapSelectItem = new TapSelectItem(expression.toString());
+                    tapSelectItem = new TapSelectItem(expression.toString(), expression.toString());
             }
             this.tapSelectItemList.add(tapSelectItem);
         }

@@ -80,9 +80,11 @@ public class TapSelectItem
     private String tableName;
     private String columnName;
     private String alias;
+    private String expression;
 
-    public TapSelectItem(String alias)
+    public TapSelectItem(String expression, String alias)
     {
+        this.expression = expression;
         this.alias = alias;
     }
 
@@ -111,6 +113,16 @@ public class TapSelectItem
     public void setColumnName(String columnName)
     {
         this.columnName = columnName;
+    }
+
+    public String getExpression()
+    {
+        return expression;
+    }
+
+    public void setExpression(String expression)
+    {
+        this.expression = expression;
     }
 
     public String getAlias()
