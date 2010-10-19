@@ -133,7 +133,7 @@ public interface Group
      * @return properties associated with a group such as description or
      *         other optional properties.
      */
-    public List<ElemProperty> getProperties();
+    List<ElemProperty> getProperties();
 
 
     /**
@@ -143,7 +143,17 @@ public interface Group
      *                          return null.
      * @return              The ElemProperty found, or null if none found.
      */
-    public ElemProperty getProperty(final String propertyURI);
+    ElemProperty getProperty(final String propertyURI);
+
+    /**
+     * Add the given property to this Group's properties.
+     *
+     * @param property  The Property to add.  Null is not acceptable.
+     * @throws InvalidPropertyException  If the given property is null or does
+     *                                  not conform.
+     */
+    void addProperty(final ElemProperty property)
+            throws InvalidPropertyException;
 
     /**
      * Sets the properties associated with a group.
@@ -151,6 +161,27 @@ public interface Group
      * @param elemProperties
      *            new properties for the group
      */
-    public void setProperties(List<ElemProperty> elemProperties);
+    void setProperties(List<ElemProperty> elemProperties);
 
+    /**
+     * Add the given property to this Group's properties.
+     *
+     * @param property  The Property to add.  Null is not acceptable.
+     * @throws InvalidPropertyException  If the given property is null or does
+     *                                  not exist in this Group.
+     */
+    void removeProperty(final ElemProperty property)
+            throws InvalidPropertyException;
+
+    /**
+     * Add the given property to this Group's properties.
+     *
+     * @param propertyURI  The URI (name) of the property to look for.
+     * @return      True if the property with the given URI exists, false
+     *              otherwise.
+     * @throws InvalidPropertyException  If the given property URI is null or
+     *                                   does not conform.
+     */
+    boolean hasProperty(final String propertyURI)
+            throws InvalidPropertyException;
 }

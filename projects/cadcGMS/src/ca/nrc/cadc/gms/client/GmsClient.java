@@ -90,14 +90,8 @@ import javax.security.auth.x500.X500Principal;
 import org.apache.log4j.Logger;
 
 import ca.nrc.cadc.auth.SSLUtil;
-import ca.nrc.cadc.gms.GmsConsts;
-import ca.nrc.cadc.gms.Group;
-import ca.nrc.cadc.gms.GroupReader;
-import ca.nrc.cadc.gms.GroupWriter;
-import ca.nrc.cadc.gms.GroupsReader;
-import ca.nrc.cadc.gms.ReaderException;
-import ca.nrc.cadc.gms.User;
-import ca.nrc.cadc.gms.UserReader;
+import ca.nrc.cadc.gms.*;
+
 
 /**
  * Client class for the GMS service. This class must be invoked from a
@@ -372,8 +366,18 @@ public class GmsClient
      */
     public Group createGroup(final Group group) throws IllegalArgumentException
     {
+        final Group groupToUse;
         final StringBuilder resourcePath = new StringBuilder(64);
         resourcePath.append("/groups");
+
+        if (group == null)
+        {
+            groupToUse = new GroupImpl();
+        }
+        else
+        {
+            groupToUse = group;
+        }
         
         try
         {
@@ -389,7 +393,7 @@ public class GmsClient
             OutputStreamWriter out = new OutputStreamWriter(
                     connection.getOutputStream());
 
-            GroupWriter.write(group, out);
+            GroupWriter.write(groupToUse, out);
             out.flush();
             out.close();
 

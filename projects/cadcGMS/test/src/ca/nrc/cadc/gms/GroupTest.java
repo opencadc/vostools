@@ -272,4 +272,111 @@ public abstract class GroupTest extends GMSTest<Group>
 
         verify(mockProperty);
     }
+
+    @Test
+    public void addProperty() throws Exception
+    {
+        try
+        {
+            getTestSubject().addProperty(null);
+            fail("Should throw InvalidPropertyException for null entry.");
+        }
+        catch (InvalidPropertyException e)
+        {
+            // Good!
+        }
+
+        final ElemProperty mockPropertyOne = createMock(ElemProperty.class);
+
+        replay(mockPropertyOne);
+
+        getTestSubject().addProperty(mockPropertyOne);
+
+        assertEquals("Property size should be one.", 1,
+                     getTestSubject().getProperties().size());
+
+        verify(mockPropertyOne);
+    }
+
+    @Test
+    public void removeProperty() throws Exception
+    {
+        try
+        {
+            getTestSubject().removeProperty(null);
+            fail("Should throw InvalidPropertyException for null entry.");
+        }
+        catch (InvalidPropertyException e)
+        {
+            // Good!
+        }
+
+        final ElemProperty mockPropertyOne = createMock(ElemProperty.class);
+
+        replay(mockPropertyOne);
+
+        try
+        {
+            getTestSubject().removeProperty(mockPropertyOne);
+            fail("Should throw InvalidPropertyException for non-existant "
+                 + "entry.");
+        }
+        catch (InvalidPropertyException e)
+        {
+            // Good!
+        }
+
+        verify(mockPropertyOne);
+
+        reset(mockPropertyOne);
+
+        final ElemProperty mockPropertyTwo = createMock(ElemProperty.class);
+
+        getTestSubject().addProperty(mockPropertyOne);
+        getTestSubject().addProperty(mockPropertyTwo);
+
+        replay(mockPropertyOne, mockPropertyTwo);
+
+        getTestSubject().removeProperty(mockPropertyTwo);
+
+        verify(mockPropertyOne, mockPropertyTwo);
+
+        assertEquals("Size should be one.", 1,
+                     getTestSubject().getProperties().size());
+    }
+
+    @Test
+    public void hasProperty() throws Exception
+    {
+        try
+        {
+            getTestSubject().hasProperty(null);
+            fail("Should throw InvalidPropertyException for null entry.");
+        }
+        catch (InvalidPropertyException e)
+        {
+            // Good!
+        }
+
+        final ElemProperty mockPropertyOne = createMock(ElemProperty.class);
+        final ElemProperty mockPropertyTwo = createMock(ElemProperty.class);
+        final ElemProperty mockPropertyThree = createMock(ElemProperty.class);
+
+        expect(mockPropertyOne.getPropertyURI()).andReturn("URI_ONE").times(3);
+        expect(mockPropertyTwo.getPropertyURI()).andReturn("URI_TWO").times(2);
+
+        getTestSubject().addProperty(mockPropertyOne);
+        getTestSubject().addProperty(mockPropertyTwo);
+
+        replay(mockPropertyOne, mockPropertyTwo, mockPropertyThree);
+
+        assertFalse("Property three should not exist.",
+                    getTestSubject().hasProperty("URI_THREE"));
+        assertTrue("Property one should exist.",
+                   getTestSubject().hasProperty("URI_ONE"));
+        assertTrue("Property two should exist.",
+                   getTestSubject().hasProperty("URI_TWO"));
+
+        verify(mockPropertyOne, mockPropertyTwo, mockPropertyThree);
+    }
 }
