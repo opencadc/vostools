@@ -84,6 +84,7 @@ import java.io.FilterOutputStream;
 import java.io.IOException;
 import java.io.OutputStream;
 import java.io.PrintWriter;
+import java.net.MalformedURLException;
 import java.net.URL;
 import java.security.Principal;
 import java.security.PrivilegedAction;
@@ -234,7 +235,9 @@ public class SyncServlet extends HttpServlet
             {
                 // create
                 Job job = create(request, subject);
+                log.debug("persisting job from " + job.getRequestPath());
                 job = jobManager.persist(job);
+                log.debug("persisted job: " + job);
                 
                 // redirect
                 String jobURL = getJobURL(request, job.getID());
@@ -470,7 +473,15 @@ public class SyncServlet extends HttpServlet
     {
         Job job = new Job();
         job.setOwner(subject);
-
+        try
+        {
+            URL u = new URL(request.getRequestURL().toString());
+            job.setRequestPath(u.getPath());
+        }
+        catch(MalformedURLException oops)
+        {
+            log.error("failed to get request path", oops);
+        }
         Enumeration<String> paramNames = request.getParameterNames();
         while ( paramNames.hasMoreElements() )
         {
