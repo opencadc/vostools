@@ -83,6 +83,7 @@ import javax.net.ssl.SSLContext;
 import javax.net.ssl.SSLHandshakeException;
 import javax.net.ssl.SSLSocketFactory;
 import javax.net.ssl.TrustManagerFactory;
+import javax.security.auth.Subject;
 
 import org.apache.log4j.Level;
 import org.apache.log4j.Logger;
@@ -95,7 +96,6 @@ import org.junit.Test;
 
 import ca.nrc.cadc.util.FileUtil;
 import ca.nrc.cadc.util.Log4jInit;
-import javax.security.auth.Subject;
 
 /**
  * Unit tests for SSLUtil.
@@ -107,8 +107,10 @@ public class SSLUtilTest
     private static Logger log = Logger.getLogger(SSLUtilTest.class);
     private static String TEST_CERT_FN = "proxy.crt";
     private static String TEST_KEY_FN = "proxy.key";
+    private static String TEST_PEM_FN = "proxy.pem";
     private static File SSL_CERT;
     private static File SSL_KEY;
+    private static File SSL_PEM;
 
     /**
      * @throws java.lang.Exception
@@ -119,6 +121,7 @@ public class SSLUtilTest
         Log4jInit.setLevel("ca.nrc.cadc.auth", Level.INFO);
         SSL_CERT = FileUtil.getFileFromResource(TEST_CERT_FN, SSLUtilTest.class);
         SSL_KEY = FileUtil.getFileFromResource(TEST_KEY_FN, SSLUtilTest.class);
+        SSL_PEM = FileUtil.getFileFromResource(TEST_PEM_FN, SSLUtilTest.class);
     }
 
     /**
@@ -145,13 +148,28 @@ public class SSLUtilTest
     {
     }
 
-    //@Test
+    @Test
     public void testReadCert() throws Exception
     {
         try
         {
             KeyStore ks = SSLUtil.getKeyStore(SSL_CERT, SSL_KEY);
             SSLUtil.printKeyStoreInfo(ks);
+        }
+        catch (Throwable t)
+        {
+            t.printStackTrace();
+            Assert.fail("unexpected exception: " + t);
+        }
+    }
+    
+    @Test
+    public void testReadPem() throws Exception
+    {
+        try
+        {
+            X509CertificateChain chain = SSLUtil.parsePEMCertificateAndKey(SSL_PEM);
+            Assert.assertNotNull("Null chain", chain);
         }
         catch (Throwable t)
         {
