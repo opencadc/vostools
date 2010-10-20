@@ -87,6 +87,7 @@ import org.jdom.input.SAXBuilder;
 import org.jdom.xpath.XPath;
 
 import ca.nrc.cadc.date.DateUtil;
+import java.io.Reader;
 
 /**
  * @author zhangsa
@@ -135,43 +136,40 @@ public class XmlUtil
         }
     }
 
+    public static Document validateXml(String xml, String schemaNSKey, String schemaResourceFileName) throws IOException, JDOMException
+    {
+        Map<String, String> map = new HashMap<String, String>();
+        map.put(schemaNSKey, schemaResourceFileName);
+        return validateXml(xml, map);
+    }
+
     public static Document validateXml(String xml, Map<String, String> schemaMap) throws IOException, JDOMException
     {
         log.debug("validateXml:\n" + xml);
-
-        URL url;
-        String schemaResource, serviceSchema;
+        return validateXml(new StringReader(xml), schemaMap);
+    }
+    
+    public static Document validateXml(Reader reader, Map<String, String> schemaMap) throws IOException, JDOMException
+    {
+        String schemaResource;
         String space = " ";
-        StringBuffer sbSchemaLocations = new StringBuffer();
+        StringBuilder sbSchemaLocations = new StringBuilder();
         log.debug("schemaMap.size(): " + schemaMap.size());
 
         for (String schemaNSKey : schemaMap.keySet())
         {
             schemaResource = (String) schemaMap.get(schemaNSKey);
-            url = XmlUtil.class.getClassLoader().getResource(schemaResource);
-            if (url == null)
-                throw new RuntimeException("failed to find resource: " + schemaResource);
-            serviceSchema = url.toString();
-            log.debug(schemaResource + " -> " + serviceSchema);
-            sbSchemaLocations.append(schemaNSKey).append(space).append(serviceSchema).append(space);
+            sbSchemaLocations.append(schemaNSKey).append(space).append(schemaResource).append(space);
         }
 
         SAXBuilder schemaValidator;
         schemaValidator = new SAXBuilder(PARSER, true);
         schemaValidator.setFeature("http://xml.org/sax/features/validation", true);
         schemaValidator.setFeature("http://apache.org/xml/features/validation/schema", true);
-        schemaValidator.setFeature("http://apache.org/xml/features/validation/schema-full-checking", true);
         schemaValidator.setProperty("http://apache.org/xml/properties/schema/external-schemaLocation",
                 sbSchemaLocations.toString());
-
-        return schemaValidator.build(new StringReader(xml));
-    }
-
-    public static Document validateXml(String xml, String schemaNSKey, String schemaResourceFileName) throws IOException, JDOMException
-    {
-        Map<String, String> map = new HashMap<String, String>();
-        map.put(schemaNSKey, schemaResourceFileName);
-        return validateXml(xml, map);
+        
+        return schemaValidator.build(reader);
     }
 
     /**

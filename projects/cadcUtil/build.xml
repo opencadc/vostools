@@ -99,7 +99,7 @@
     </target>
 
     <!-- JAR files needed to run the test suite -->
-    <property name="testingJars" value="${build}/class:${jars}:${ext.lib}/junit.jar" />
+    <property name="testingJars" value="${build}/class:${jars}:${ext.lib}/junit.jar:${ext.lib}/xerces.jar" />
 
     <!-- Run the test suite -->
     <target name="test" depends="util-test,auth-test,net-test" />
@@ -140,6 +140,22 @@
             </classpath>
 
             <test name="ca.nrc.cadc.auth.SSLUtilTest"/>
+            <formatter type="plain" usefile="false"/>
+        </junit>
+    </target>
+
+    <target name="xml-test" depends="compile-test">
+        <copy file="test/src/resources/foo.xsd" todir="${build}/class"/>
+        <copy file="test/src/resources/bar.xsd" todir="${build}/class"/>
+
+        <junit printsummary="yes" haltonfailure="yes" fork="yes">
+            <classpath>
+                <pathelement path="${build}/class"/>
+                <pathelement path="${build}/test/class"/>
+                <pathelement path="${testingJars}"/>
+            </classpath>
+
+            <test name="ca.nrc.cadc.xml.XmlUtilTest"/>
             <formatter type="plain" usefile="false"/>
         </junit>
     </target>
