@@ -73,7 +73,6 @@ import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.Reader;
-import java.io.StringReader;
 import java.net.MalformedURLException;
 import java.net.URL;
 import java.text.ParseException;
@@ -87,12 +86,17 @@ import org.apache.log4j.Logger;
 import org.jdom.Document;
 import org.jdom.Element;
 import org.jdom.JDOMException;
-import org.jdom.input.SAXBuilder;
 
 import ca.nrc.cadc.date.DateUtil;
 import ca.nrc.cadc.xml.XmlUtil;
+import java.io.FileNotFoundException;
+import java.io.FileReader;
+import java.io.InputStreamReader;
+import java.io.UnsupportedEncodingException;
 import java.text.DateFormat;
+import java.util.HashMap;
 import java.util.HashSet;
+import java.util.Map;
 import java.util.Set;
 import javax.security.auth.x500.X500Principal;
 
@@ -104,42 +108,76 @@ public class JobReader
 {
     @SuppressWarnings("unused")
     private static Logger log = Logger.getLogger(JobReader.class);
+    
+    private static final String UWS_SCHEMA_URL = "http://www.ivoa.net/xml/UWS/v1.0";
+    private static final String UWS_SCHEMA_RESOURCE = "UWS-v1.0.xsd";
+    private static final String XLINK_SCHEMA_URL = "http://www.w3.org/1999/xlink";
+    private static final String XLINK_SCHEMA_RESOURCE = "XLINK.xsd";
+    
+    private static final String uwsSchemaUrl;
+    private static final String xlinkSchemaUrl;
+    static
+    {        
+        uwsSchemaUrl = XmlUtil.getResourceUrlString(UWS_SCHEMA_RESOURCE, JobReader.class);
+        log.debug("uwsSchemaUrl: " + uwsSchemaUrl);
+        
+        xlinkSchemaUrl = XmlUtil.getResourceUrlString(XLINK_SCHEMA_RESOURCE, JobReader.class);
+        log.debug("xlinkSchemaUrl: " + xlinkSchemaUrl);
+    }
 
     private Document document;
-    private SAXBuilder saxBuilder;
     private DateFormat dateFormat;
+    protected Map<String, String> schemaMap;
 
     public JobReader()
     {
-        String EXT_SCHEMA_LOCATION = UWS.XSD_KEY + " " + XmlUtil.getResourceUrlString(UWS.XSD_FILE_NAME, UWS.class);
-        log.debug("external schema location: " + EXT_SCHEMA_LOCATION);
-        
-        this.saxBuilder = new SAXBuilder("org.apache.xerces.parsers.SAXParser", true);
-        this.saxBuilder.setFeature("http://xml.org/sax/features/validation", true);
-        this.saxBuilder.setFeature("http://apache.org/xml/features/validation/schema", true);
-        this.saxBuilder.setFeature("http://apache.org/xml/features/validation/schema-full-checking", true);
-        this.saxBuilder.setProperty("http://apache.org/xml/properties/schema/external-schemaLocation", EXT_SCHEMA_LOCATION);
-        this.dateFormat = DateUtil.getDateFormat(DateUtil.IVOA_DATE_FORMAT, DateUtil.UTC);
-    }
+        schemaMap = new HashMap<String, String>();
+        schemaMap.put(UWS_SCHEMA_URL, uwsSchemaUrl);
+        schemaMap.put(XLINK_SCHEMA_URL, xlinkSchemaUrl);
 
-    public Job readFrom(Reader reader) 
-        throws JDOMException, IOException, ParseException
-    {
-        this.document = this.saxBuilder.build(reader);
-        return parseJob();
+        this.dateFormat = DateUtil.getDateFormat(DateUtil.IVOA_DATE_FORMAT, DateUtil.UTC);
     }
 
     public Job readFrom(File file) 
         throws JDOMException, IOException, ParseException
     {
-        this.document = this.saxBuilder.build(file);
+        if (file == null)
+            throw new IOException("Null file reference");
+        FileReader reader;
+        try
+        {
+            reader = new FileReader(file);
+        }
+        catch (FileNotFoundException e)
+        {
+            throw new RuntimeException("File not found " + file.getAbsoluteFile());
+        }
+        this.document = XmlUtil.validateXml(reader, schemaMap);
         return parseJob();
     }
 
     public Job readFrom(InputStream in) 
         throws JDOMException, IOException, ParseException
     {
-        this.document = this.saxBuilder.build(in);
+        if (in == null)
+            throw new IOException("InputStream is closed");
+        InputStreamReader reader;
+        try
+        {
+            reader = new InputStreamReader(in, "UTF-8");
+        }
+        catch (UnsupportedEncodingException e)
+        {
+            throw new RuntimeException("UTF-8 encoding not supported");
+        }
+        this.document = XmlUtil.validateXml(reader, schemaMap);
+        return parseJob();
+    }
+
+    public Job readFrom(Reader reader) 
+        throws JDOMException, IOException, ParseException
+    {
+        this.document = XmlUtil.validateXml(reader, schemaMap);
         return parseJob();
     }
 
@@ -154,15 +192,23 @@ public class JobReader
     public Job readFrom(URL url) 
         throws JDOMException, IOException, ParseException
     {
-        this.document = this.saxBuilder.build(url);
+        InputStreamReader reader;
+        try
+        {
+            reader = new InputStreamReader(url.openConnection().getInputStream(), "UTF-8");
+        }
+        catch (UnsupportedEncodingException e)
+        {
+            throw new RuntimeException("UTF-8 encoding not supported");
+        }
+        this.document = XmlUtil.validateXml(reader, schemaMap);
         return parseJob();
     }
 
     public Job readFrom(String string)
         throws JDOMException, IOException, ParseException
     {
-        StringReader reader = new StringReader(string);
-        this.document = this.saxBuilder.build(reader);
+        this.document = XmlUtil.validateXml(string, schemaMap);
         return parseJob();
     }
 

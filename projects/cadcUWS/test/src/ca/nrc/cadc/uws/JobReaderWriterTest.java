@@ -110,7 +110,7 @@ public class JobReaderWriterTest
 
     private Job testJob;
 
-    private static final boolean DEBUG_OUTPUT_XML = true;
+    private static final boolean DEBUG_OUTPUT_XML = false;
 
     @BeforeClass
     public static void setUpBeforeClass() 

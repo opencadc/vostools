@@ -91,27 +91,27 @@
 
     <property name="jars" value="${cadc}:${external}" />
 
-    <target name="build" depends="schema,compile">
+    <target name="build" depends="compile,resources">
         <jar jarfile="${build}/lib/${project}.jar"
-            basedir="${build}/class"
-            update="no">
-            <include name="ca/nrc/cadc/**" />
-            <include name="UWS-v1.0.xsd" />
+            basedir="${build}/class" update="no">
+                <exclude name="test/**" />
         </jar>
     </target>
 
+    <target name="resources">
+        <copy todir="${build}/class">
+            <fileset dir="src/resources">
+                <include name="**.xsd" />
+            </fileset>
+        </copy>
+    </target>
 
     <!-- JAR files needed to run the test suite -->
     <property name="dev.junit" value="${ext.dev}/junit.jar" />
     <property name="dev.easyMock" value="${ext.dev}/easymock.jar" />
     <property name="lib.cglib" value="${ext.lib}/cglib.jar" />
     <property name="testingJars" value="${dev.junit}:${dev.easyMock}:${lib.cglib}:${ext.lib}/asm-attrs.jar:${ext.lib}/asm.jar:${ext.lib}/xerces.jar" />
-
-
-    <target name="schema">
-        <copy file="src/resources/UWS-v1.0.xsd" todir="${build}/class"/>
-    </target>
-
+    
     <target name="test" depends="build,compile-test">
         <echo message="Running test" />
 
