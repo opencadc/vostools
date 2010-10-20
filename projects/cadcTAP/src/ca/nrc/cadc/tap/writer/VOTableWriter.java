@@ -91,6 +91,7 @@ import ca.nrc.cadc.tap.writer.votable.FieldElement;
 import ca.nrc.cadc.tap.writer.formatter.Formatter;
 import ca.nrc.cadc.tap.writer.formatter.FormatterFactory;
 import ca.nrc.cadc.uws.Parameter;
+import ca.nrc.cadc.uws.util.ParameterUtil;
 import org.apache.log4j.Logger;
 
 /**
@@ -150,6 +151,10 @@ public class VOTableWriter implements TableWriter
 
     public String getContentType()
     {
+        // if caller requested a custom format that is a valid mimetype, use that
+        String fmt = ParameterUtil.findParameterValue("FORMAT", params);
+        if (fmt != null && fmt.startsWith("text/xml")) // HACK: good enough for now
+            return fmt;
         return "application/x-votable+xml";
     }
 

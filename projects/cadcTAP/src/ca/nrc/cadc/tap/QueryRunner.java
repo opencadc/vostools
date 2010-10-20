@@ -492,6 +492,7 @@ public class QueryRunner implements SyncJobRunner
                 logger.debug("BADNESS", t);
                 logger.debug("Error message: " + errorMessage);
                 VOTableWriter ewriter = new VOTableWriter();
+                ewriter.setParameterList(job.getParameterList()); // to check custom xml format
                 if (syncOutput != null)
                 {
                     syncOutput.setHeader("Content-Type", ewriter.getContentType());

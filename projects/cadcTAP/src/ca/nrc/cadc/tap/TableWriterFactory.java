@@ -103,6 +103,7 @@ public class TableWriterFactory
     // content-type
     private static final String APPLICATION_FITS = "application/fits";
     private static final String APPLICATION_VOTABLE_XML = "application/x-votable+xml";
+    private static final String TEXT_XML_VOTABLE = "text/xml;content=x-votable"; // the SIAv1 mimetype
     private static final String TEXT_CSV = "text/csv";
     private static final String TEXT_HTML = "text/html";
     private static final String TEXT_PLAIN = "text/plain";
@@ -118,6 +119,7 @@ public class TableWriterFactory
         knownFormats = new TreeMap<String,String>();
         knownFormats.put(APPLICATION_VOTABLE_XML, VOTABLE);
         knownFormats.put(TEXT_XML, VOTABLE);
+        knownFormats.put(TEXT_XML_VOTABLE, VOTABLE);
         knownFormats.put(TEXT_CSV, CSV);
         knownFormats.put(TEXT_TAB_SEPARATED_VALUES, TSV);
 //        knownFormats.put(APPLICATION_FITS, FITS);
