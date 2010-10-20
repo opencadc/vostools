@@ -13,14 +13,15 @@ a short-lived, no-password proxy certificate. The createProxyCert script uses
 openssl to create a proxy certificate and associated priovate key for this 
 purpose.
 
-The SSLUtilTest code assumes that you have a valid proxy certificate named proxy.crt 
-and associated private key (proxy.key) in the classpath (e.g. in build/test/class). The
-proxy certficate and key can be created with the script:
+The SSLUtilTest code assumes that you have a valid proxy certificate named proxy.crt, 
+associated private key (proxy.key) and a file that contains both the certificate and the
+key (proxy.pem) in the classpath (e.g. in build/test/class). All three types of files 
+can be created with the script:
 
 ./scripts/createProxyCert <your real cert> <your private key> <days> test/resources/proxy
 
-This also creates a file called test/resources/proxy.pem that can be used with curl, 
-assuming your version of curl is built with SSL support.
+The test/resources/proxy.pem file can be used with curl, assuming your version of curl 
+is built with SSL support.
 
 The SSL tests try to connect to 3 different https URLS:
 https://www.google.com/
