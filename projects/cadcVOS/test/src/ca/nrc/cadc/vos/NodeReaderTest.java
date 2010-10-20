@@ -96,7 +96,7 @@ public class NodeReaderTest
 {
     private static Logger log = Logger.getLogger(NodeReaderTest.class);
     {
-        Log4jInit.setLevel("ca", Level.DEBUG);
+        Log4jInit.setLevel("ca", Level.INFO);
     }
 
     public NodeReaderTest() { }

@@ -76,19 +76,19 @@ import java.io.Reader;
 import java.io.StringReader;
 import java.io.UnsupportedEncodingException;
 import java.net.URISyntaxException;
-import java.net.URL;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.MissingResourceException;
 
 import org.apache.log4j.Logger;
 import org.jdom.Document;
 import org.jdom.Element;
 import org.jdom.JDOMException;
 import org.jdom.Namespace;
-import org.jdom.input.SAXBuilder;
 
 import ca.nrc.cadc.vos.VOS.NodeBusyState;
+import ca.nrc.cadc.xml.XmlUtil;
+import java.util.HashMap;
+import java.util.Map;
 
 /**
  * Constructs a Node from an XML source.
@@ -97,31 +97,40 @@ import ca.nrc.cadc.vos.VOS.NodeBusyState;
  */
 public class NodeReader
 {
+    private static final String VOSPACE_SCHEMA_URL = "http://www.ivoa.net/xml/VOSpace/v2.0";
     private static final String VOSPACE_SCHEMA_RESOURCE = "VOSpace-2.0.xsd";
-
-    private static Logger log = Logger.getLogger(NodeReader.class);
-    private static String vospaceSchemaUrl;
+    private static final String UWS_SCHEMA_URL = "http://www.ivoa.net/xml/UWS/v1.0";
+    private static final String UWS_SCHEMA_RESOURCE = "UWS-v1.0.xsd";
+    private static final String XLINK_SCHEMA_URL = "http://www.w3.org/1999/xlink";
+    private static final String XLINK_SCHEMA_RESOURCE = "XLINK.xsd";
+    
+    private static final Logger log = Logger.getLogger(NodeReader.class);
+    
+    private static final String vospaceSchemaUrl;
+    private static final String uwsSchemaUrl;
+    private static final String xlinkSchemaUrl;
     static
     {
-        URL schemaURL = NodeReader.class.getClassLoader().getResource(VOSPACE_SCHEMA_RESOURCE);
-        if (schemaURL == null)
-            throw new MissingResourceException("Resource not found: " + VOSPACE_SCHEMA_RESOURCE,
-                                               "NodeReader", VOSPACE_SCHEMA_RESOURCE);
-        vospaceSchemaUrl = schemaURL.toString();
+        vospaceSchemaUrl = XmlUtil.getResourceUrlString(VOSPACE_SCHEMA_RESOURCE, NodeReader.class);
         log.debug("vospaceSchemaUrl: " + vospaceSchemaUrl);
+        
+        uwsSchemaUrl = XmlUtil.getResourceUrlString(UWS_SCHEMA_RESOURCE, NodeReader.class);
+        log.debug("uwsSchemaUrl: " + uwsSchemaUrl);
+        
+        xlinkSchemaUrl = XmlUtil.getResourceUrlString(XLINK_SCHEMA_RESOURCE, NodeReader.class);
+        log.debug("xlinkSchemaUrl: " + xlinkSchemaUrl);
     }
+
     
-    protected SAXBuilder parser;
+    protected Map<String, String> schemaMap;
     protected Namespace xsiNamespace;
 
     public NodeReader()
     {
-        parser = new SAXBuilder("org.apache.xerces.parsers.SAXParser", true);
-        parser.setFeature("http://xml.org/sax/features/validation", true);
-        parser.setFeature("http://apache.org/xml/features/validation/schema", true);
-        parser.setFeature("http://apache.org/xml/features/validation/schema-full-checking", true);
-        parser.setProperty("http://apache.org/xml/properties/schema/external-schemaLocation",
-                           "http://www.ivoa.net/xml/VOSpace/v2.0 " + getVOSpaceSchema());
+        schemaMap = new HashMap<String, String>();
+        schemaMap.put(VOSPACE_SCHEMA_URL, vospaceSchemaUrl);
+        schemaMap.put(UWS_SCHEMA_URL, uwsSchemaUrl);
+        schemaMap.put(XLINK_SCHEMA_URL, xlinkSchemaUrl);
 
         xsiNamespace = Namespace.getNamespace("http://www.w3.org/2001/XMLSchema-instance");
     }
@@ -182,7 +191,7 @@ public class NodeReader
         Document document;
         try
         {
-            document = parser.build(reader);
+            document = XmlUtil.validateXml(reader, schemaMap);
         }
         catch (JDOMException jde)
         {
@@ -242,10 +251,10 @@ public class NodeReader
      *
      * @return String of the VOSpace schema document URL
      */
-    protected String getVOSpaceSchema()
-    {
-        return vospaceSchemaUrl;
-    }
+//    protected String getVOSpaceSchema()
+//    {
+//        return vospaceSchemaUrl;
+//    }
 
     /**
      * Constructs a ContainerNode from the given root Element of the

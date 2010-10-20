@@ -104,7 +104,7 @@
 
     <property name="client.jars" value="cadcUtil.jar cadcRegistryClient.jar cadcUWS.jar ${ext.jdom} ${ext.xerces} ${ext.log4j} jdom.jar xerces.jar log4j.jar" />
 
-    <target name="build" depends="compile,compile-test,schema,manifest">
+    <target name="build" depends="compile,compile-test,resources,manifest">
 
         <jar jarfile="${build}/lib/${project}.jar"
             basedir="${build}/class"
@@ -138,10 +138,13 @@
         </jar>
     </target>
 
-    <target name="schema">
-        <copy file="src/resources/VOSpace-2.0.xsd" todir="${build}/class"/>
+    <target name="resources">
+        <copy todir="${build}/class">
+            <fileset dir="src/resources">
+                <include name="**.xsd" />
+            </fileset>
+        </copy>
     </target>
-
     <target name="manifest">
         <manifest file="${build}/tmp/${project}Client.mf" mode="replace">
             <attribute name="Main-Class" value="ca.nrc.cadc.vos.client.Main"/>
