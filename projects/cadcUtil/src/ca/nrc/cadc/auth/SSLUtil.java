@@ -638,7 +638,7 @@ public class SSLUtil
      * @throws IOException
      * @throws CertificateException
      */
-    static X509CertificateChain parsePEMCertificateAndKey(File pemFile) 
+    public static X509CertificateChain parsePEMCertificateAndKey(File pemFile) 
     throws InvalidKeySpecException, NoSuchAlgorithmException,
     IOException, CertificateException
     {
@@ -658,7 +658,7 @@ public class SSLUtil
      * @throws IOException
      * @throws CertificateException
      */
-    static X509CertificateChain parsePemCertificateAndKey(byte[] data) 
+    public static X509CertificateChain parsePemCertificateAndKey(byte[] data) 
     throws InvalidKeySpecException, NoSuchAlgorithmException,
     IOException, CertificateException
     {
