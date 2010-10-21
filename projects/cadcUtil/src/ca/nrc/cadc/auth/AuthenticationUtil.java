@@ -75,10 +75,13 @@ import java.security.AccessController;
 import java.security.Principal;
 import java.security.PrivateKey;
 import java.security.cert.X509Certificate;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
+import java.util.Collections;
 import java.util.HashSet;
 import java.util.Iterator;
+import java.util.List;
 import java.util.Set;
 
 import javax.security.auth.Subject;
@@ -97,6 +100,11 @@ import ca.nrc.cadc.net.NetUtil;
  */
 public class AuthenticationUtil
 {
+    
+    // Mandatory support list of RDN descriptors according to RFC 4512.
+    private static final String[] ORDERED_RDN_KEYS = new String[]
+        {"DC", "CN", "OU", "O", "STREET", "L", "ST", "C", "UID"};
+
     private static Logger log = Logger.getLogger(AuthenticationUtil.class);
 
     /**
@@ -324,35 +332,141 @@ public class AuthenticationUtil
         {
             if (p2 instanceof X500Principal)
             {
-
-                X500Principal x1 = (X500Principal) p1;
-                X500Principal x2 = (X500Principal) p2;
-                return x1.getName(X500Principal.CANONICAL).equals(x2.getName(X500Principal.CANONICAL));
+                String converted1 = canonizeDistinguishedName(p1.getName());
+                String converted2 = canonizeDistinguishedName(p2.getName());
+                return converted1.equals(converted2);
             }
             return false;
         }
-        else
+        if (p2 instanceof X500Principal)
         {
-            if (p2 instanceof X500Principal)
-            {
-                return false;
-            }
-            return p1.getName().equals(p2.getName());
+            return false;
         }
+        return p1.getName().equals(p2.getName());
     }
 
     /**
-     * Perform canonization operation on a distinguished name.
+     * Perform extended canonization operation on a distinguished name.
+     * 
+     * This method will convert the DN to a format that:
+     * <ul>
+     * <li>Is all lower case.</li>
+     * <li>RDNs are separated by commas and no spaces.</li>
+     * <li>RDNs are in the order specified by ORDERED_RDN_KEYS.  If more
+     *     than one RDN of the same key exists, these are ordered
+     *     among each other by their value by String.compareTo(String another).</li>
+     * <li>Will inherit the processing from X500Principal.CANONICAL<li>
+     * </ul>
+     * 
+     * The technique is:
+     * <ol>
+     * <li>Separate the RDNs within the DN, removing
+     *     separators ('/' and ',') and spaces.</li>
+     * <li>Put them back in the order specified by ORDERED_RDN_KEYS</li>
+     * <li>Use X500Principal.getName(X500Principal.CANONICAL)</li>
+     * </ol>
+     * 
+     * Please see RFC 4514 for more inforamation.
      * 
      * @param dnSrc
-     * @return canonized dn
+     * @return An extended canonized dn
      */
     public static String canonizeDistinguishedName(String dnSrc)
     {
-        String rtn = null;
-        X500Principal p = new X500Principal(dnSrc);
-        rtn = p.getName(X500Principal.CANONICAL);
-        return rtn;
+        if (dnSrc == null)
+        {
+            throw new IllegalArgumentException("Null DN provided.");
+        }
+        
+        log.debug("canonizeDistinguishedName: canonizing: " + dnSrc);
+        
+        // convert the entire DN to upper case
+        String original = dnSrc.toUpperCase();
+        
+        // Identify and collect the RDN (relative distinguished names).
+        List<String> rdns = new ArrayList<String>();
+        for (String rdnKey : ORDERED_RDN_KEYS)
+        {
+            // find the start of the RDN
+            int startIndex = original.indexOf(rdnKey.toUpperCase() + "=");
+            while (startIndex != -1)
+            {
+                // find the end of the RDN
+                int endIndex = -1;
+                for (String rdnKey2 : ORDERED_RDN_KEYS)
+                {
+                    int nextRdnStart = original.indexOf(rdnKey2.toUpperCase() + "=", startIndex + 1);
+                    if (nextRdnStart != -1)
+                    {
+                        if (endIndex == -1)
+                        {
+                            endIndex = nextRdnStart;
+                        }
+                        else if ((nextRdnStart) < endIndex)
+                        {
+                            endIndex = nextRdnStart;
+                        }
+                    }
+                }
+                
+                // check if this was the last RDN
+                if (endIndex == -1)
+                {
+                    endIndex = original.length();
+                }
+                
+                String rdn = original.substring(startIndex, endIndex);
+                
+                // remove any trailing spaces
+                rdn = rdn.trim();
+                
+                // Remove the last character of the RDN if it is a comma or a forward
+                // slash
+                if (rdn.endsWith(",") || rdn.endsWith("/"))
+                {
+                    rdn = rdn.substring(0, rdn.length() - 1);
+                }
+                
+                rdns.add(rdn);
+                
+                startIndex = original.indexOf(rdnKey.toUpperCase() + "=", endIndex);
+            }
+        }
+        
+        // put the RDNs back together separated by commas for a new DN
+        StringBuilder newDN = new StringBuilder();
+        List<String> rdnValues = null;
+        for (String rdnKey : ORDERED_RDN_KEYS)
+        {
+            rdnValues = new ArrayList<String>();
+            for (String rdn : rdns)
+            {
+                if (rdn.startsWith(rdnKey.toUpperCase() + "="))
+                {
+                    rdnValues.add(rdn);
+                }
+            }
+            Collections.sort(rdnValues);
+            for (String rdn : rdnValues)
+            {
+                if (newDN.length() != 0)
+                {
+                    newDN.append(",");
+                }
+                newDN.append(rdn);
+            }
+        }
+        
+        log.debug("canonizeDistinguishedName: new dn: " + newDN);
+        
+        // return the X500Principal canonized name for extended
+        // formatting and to ensure a valid DN has been created
+        X500Principal x500Principal = new X500Principal(newDN.toString());
+        String x500CanonicalDN = x500Principal.getName(X500Principal.CANONICAL);
+        
+        log.debug("canonizeDistinguishedName: final dn: " + x500CanonicalDN);
+        
+        return x500CanonicalDN;
     }
 
     /**
