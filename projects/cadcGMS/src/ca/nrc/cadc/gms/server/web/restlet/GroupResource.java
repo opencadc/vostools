@@ -81,11 +81,7 @@ import org.restlet.resource.Post;
 import org.restlet.resource.Put;
 import org.restlet.representation.Representation;
 
-import ca.nrc.cadc.gms.AuthorizationException;
-import ca.nrc.cadc.gms.Group;
-import ca.nrc.cadc.gms.GroupImpl;
-import ca.nrc.cadc.gms.GroupWriter;
-import ca.nrc.cadc.gms.InvalidGroupException;
+import ca.nrc.cadc.gms.*;
 import ca.nrc.cadc.gms.server.GroupService;
 
 public class GroupResource extends AbstractResource
@@ -194,10 +190,9 @@ public class GroupResource extends AbstractResource
         {
             String groupID = URLDecoder.decode(getGroupID(), "UTF-8");
             LOGGER.debug("Create a new group with ID." + groupID);
-            group = getGroupService().postGroup(
-                    new GroupImpl(new URI(groupService
-                            .getGroupUriPrefix()
-                            + groupID)));
+
+            final Group postedGroup = GroupReader.read(entity.getStream());
+            group = getGroupService().postGroup(postedGroup);
             LOGGER.debug(String.format("Created groupID: %s", group
                     .getID()));
             setLocationRef(group.getID().toString());
@@ -223,6 +218,16 @@ public class GroupResource extends AbstractResource
         catch (URISyntaxException e)
         {
             final String message = "Client encoding not supported in delete";
+            processError(e, Status.CLIENT_ERROR_BAD_REQUEST, message);
+        }
+        catch (ReaderException e)
+        {
+            final String message = "Unable to read POSTed Group.";
+            processError(e, Status.CLIENT_ERROR_BAD_REQUEST, message);
+        }
+        catch (IOException e)
+        {
+            final String message = "BUG *** Bad error with I/O";
             processError(e, Status.CLIENT_ERROR_BAD_REQUEST, message);
         }
     }
