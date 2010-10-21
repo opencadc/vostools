@@ -91,7 +91,7 @@ public abstract class DatabasePersistence implements JobPersistence
     private static final int ID_LENGTH = 16;
     private static final String ID_CHARS = "abcdefghijklmnopqrstuvwxyz0123456789";
     
-    // chared random number generator for jobID generation
+    // shared random number generator for jobID generation
     private Random rnd = new Random(System.currentTimeMillis());
 
     /**

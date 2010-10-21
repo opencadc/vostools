@@ -350,6 +350,7 @@ public class JobDAO
             if (transactionStatus != null)
                 try { rollbackTransaction(); }
                 catch(Throwable oops) { log.error("failed to rollback transaction", oops); }
+            throw new JobPersistenceException("failed to persist job " + ret.getID(), t);
         }
         finally
         {
@@ -361,7 +362,6 @@ public class JobDAO
                 }
                 catch(Throwable oops) { log.error("failed to rollback transaction in finally", oops); }
         }
-        return null;
     }
 
     /**

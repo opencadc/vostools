@@ -75,6 +75,7 @@ import ca.nrc.cadc.uws.Job;
 import ca.nrc.cadc.uws.JobAttribute;
 import ca.nrc.cadc.uws.JobManager;
 import ca.nrc.cadc.uws.JobPersistence;
+import ca.nrc.cadc.uws.JobPersistenceException;
 import ca.nrc.cadc.uws.JobRunner;
 import ca.nrc.cadc.uws.JobWriter;
 import ca.nrc.cadc.uws.Parameter;
@@ -323,9 +324,39 @@ public class SyncServlet extends HttpServlet
             }
             
         }
+        catch(JobPersistenceException pex)
+        {
+            String msg = "";
+            if (jobID == null)
+                msg = "failed to create new job";
+            else
+                msg = "failed to execute job + " + jobID;
+            log.error(msg, pex);
+
+            if (syncRunner != null)
+            {
+                SyncOutputImpl soi = syncRunner.getOut();
+                if ( soi.isOpen() )
+                {
+                    log.error("failure after OutputStream opened, cannot report error to user");
+                    return;
+                }
+            }
+            // OutputStream not open, write an error response
+            response.setStatus(HttpServletResponse.SC_INTERNAL_SERVER_ERROR);
+            response.setContentType("text/plain");
+            PrintWriter w = response.getWriter();
+            w.println(msg);
+            w.close();
+            return;
+
+        }
         catch(Throwable t)
         {
-            log.error("badness: ",  t); // TODO: change , to +
+            if (jobID == null)
+                log.error("create job failed", t);
+            else
+                log.error("execute job failed", t);
             if (syncRunner != null)
             {
                 SyncOutputImpl soi = syncRunner.getOut();
