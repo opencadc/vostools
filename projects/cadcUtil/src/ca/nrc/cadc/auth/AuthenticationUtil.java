@@ -398,11 +398,7 @@ public class AuthenticationUtil
                     int nextRdnStart = original.indexOf(rdnKey2.toUpperCase() + "=", startIndex + 1);
                     if (nextRdnStart != -1)
                     {
-                        if (endIndex == -1)
-                        {
-                            endIndex = nextRdnStart;
-                        }
-                        else if ((nextRdnStart) < endIndex)
+                        if (endIndex == -1 || (nextRdnStart < endIndex))
                         {
                             endIndex = nextRdnStart;
                         }
