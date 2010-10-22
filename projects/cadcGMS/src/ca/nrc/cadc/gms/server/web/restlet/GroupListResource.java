@@ -171,7 +171,7 @@ public class GroupListResource extends AbstractResource
         }
         catch (InvalidGroupException e)
         {
-            processError(e, Status.CLIENT_ERROR_UNPROCESSABLE_ENTITY,
+            processError(e, Status.CLIENT_ERROR_BAD_REQUEST,
                          "Unable to build Group from input.");            
         }
         catch (URISyntaxException e)

@@ -70,6 +70,7 @@ package ca.nrc.cadc.gms.client;
 import java.io.File;
 import java.net.URI;
 import java.net.URL;
+import java.net.URLEncoder;
 import java.security.AccessControlContext;
 import java.security.AccessController;
 import java.security.PrivilegedAction;
@@ -461,7 +462,8 @@ public class GmsClientMain implements PrivilegedAction<Boolean>
     {
         try
         {
-            Group group = client.getGroup(new URI(target));
+            Group group = client.getGroup(new URI(URLEncoder.encode(target,
+                                                                    "UTF-8")));
             displayGroup(group);
         }
         catch (Exception e)

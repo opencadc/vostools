@@ -77,6 +77,7 @@ import java.io.OutputStream;
 import java.net.HttpURLConnection;
 import java.net.URI;
 import java.net.URL;
+import java.net.URLEncoder;
 import java.security.cert.Certificate;
 
 import javax.net.ssl.HttpsURLConnection;
@@ -336,7 +337,8 @@ public class GmsClientTest extends GMSTest<GmsClient>
     public void getGroup() throws Exception
     {
         final String groupID = GMSTestSuite.CADC_GROUP_URI + getGrID;
-        final Group group = getTestSubject().getGroup(new URI(groupID));
+        final Group group = getTestSubject().getGroup(
+                new URI(URLEncoder.encode(groupID, "UTF-8")));
 
         assertNotNull("Group " + groupID, group);
         assertEquals("Group's ID is " + getGrID, new URI(groupID), group

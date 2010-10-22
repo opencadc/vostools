@@ -72,6 +72,7 @@ import java.io.UnsupportedEncodingException;
 import java.net.URI;
 import java.net.URISyntaxException;
 import java.net.URLDecoder;
+import java.net.URLEncoder;
 
 import org.apache.log4j.Logger;
 import org.jdom.Document;
@@ -127,7 +128,8 @@ public class GroupResource extends AbstractResource
 
         try
         {
-            groupID = URLDecoder.decode(getGroupID(), "UTF-8");
+//            groupID = URLDecoder.decode(getGroupID(), "UTF-8");
+            groupID = getGroupID();
             LOGGER.debug(String.format("groupID: %s", groupID));
 
             group = getGroupService().getGroup(
@@ -148,13 +150,13 @@ public class GroupResource extends AbstractResource
                     groupID);
             processError(e, Status.CLIENT_ERROR_UNAUTHORIZED, message);
         }
-        catch (UnsupportedEncodingException e)
-        {
-            final String message = String.format(
-                    "Could not URL decode groupMemberID (%s) or "
-                            + "groupID (%s).", groupMemberID, groupID);
-            processError(e, Status.CLIENT_ERROR_BAD_REQUEST, message);
-        }
+//        catch (UnsupportedEncodingException e)
+//        {
+//            final String message = String.format(
+//                    "Could not URL decode groupMemberID (%s) or "
+//                            + "groupID (%s).", groupMemberID, groupID);
+//            processError(e, Status.CLIENT_ERROR_BAD_REQUEST, message);
+//        }
         catch (URISyntaxException e)
         {
             final String message = "Client encoding not supported in delete";
@@ -254,7 +256,8 @@ public class GroupResource extends AbstractResource
         LOGGER.debug("Delete group.");
         try
         {
-            String groupID = URLDecoder.decode(getGroupID(), "UTF-8");
+//            String groupID = URLDecoder.decode(getGroupID(), "UTF-8");
+            final String groupID = getGroupID();
             LOGGER.debug(String.format("groupID: %s", groupID));
 
             getGroupService().deleteGroup(
@@ -272,11 +275,11 @@ public class GroupResource extends AbstractResource
             final String message = "Deletion of new groups not supported";
             processError(e, Status.CLIENT_ERROR_BAD_REQUEST, message);
         }
-        catch (UnsupportedEncodingException e)
-        {
-            final String message = "Client encoding not supported in delete";
-            processError(e, Status.CLIENT_ERROR_BAD_REQUEST, message);
-        }
+//        catch (UnsupportedEncodingException e)
+//        {
+//            final String message = "Client encoding not supported in delete";
+//            processError(e, Status.CLIENT_ERROR_BAD_REQUEST, message);
+//        }
         catch (URISyntaxException e)
         {
             final String message = "Client encoding not supported in delete";
