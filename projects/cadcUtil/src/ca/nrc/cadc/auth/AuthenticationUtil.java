@@ -355,18 +355,11 @@ public class AuthenticationUtil
      * <li>RDNs are in the order specified by ORDERED_RDN_KEYS.  If more
      *     than one RDN of the same key exists, these are ordered
      *     among each other by their value by String.compareTo(String another).</li>
-     * <li>Will inherit the processing from X500Principal.CANONICAL<li>
+     * <li>If other RDNs exist in that are not in ORDERED_RDN_KEYS, an
+     *     IllegalArgumentException is thrown.
      * </ul>
      * 
-     * The technique is:
-     * <ol>
-     * <li>Separate the RDNs within the DN, removing
-     *     separators ('/' and ',') and spaces.</li>
-     * <li>Put them back in the order specified by ORDERED_RDN_KEYS</li>
-     * <li>Use X500Principal.getName(X500Principal.CANONICAL)</li>
-     * </ol>
-     * 
-     * Please see RFC 4514 for more inforamation.
+     * Please see RFC#4514 for more inforamation.
      * 
      * @param dnSrc
      * @return An extended canonized dn
@@ -382,6 +375,29 @@ public class AuthenticationUtil
         
         // convert the entire DN to upper case
         String original = dnSrc.toUpperCase();
+        
+        // get a count of the number of RDN based on the number of
+        // non-escaped equal signs.  use this count to compare the
+        // results at the end
+        int equalsIndex = original.indexOf("=");
+        int rdnCount = 0;
+        while (equalsIndex != -1)
+        {
+            // make sure it isn't an espaced equals sign
+            if (equalsIndex == 0)
+            {
+                throw new IllegalArgumentException("Cannot start a DN with '=')");
+            }
+            if (equalsIndex == (original.length() - 1))
+            {
+                throw new IllegalArgumentException("Cannot end a DN with '=')");
+            }
+            if (original.charAt(equalsIndex - 1) != '\\')
+            {
+                rdnCount++;
+            }
+            equalsIndex = original.indexOf("=", equalsIndex + 1);
+        }
         
         // Identify and collect the RDN (relative distinguished names).
         List<String> rdns = new ArrayList<String>();
@@ -429,6 +445,13 @@ public class AuthenticationUtil
             }
         }
         
+        // ensure we have the right number of RDNs
+        if (rdns.size() != rdnCount)
+        {
+            throw new IllegalArgumentException(
+                    "Unexpected number of RDNs in DN.  At least one RDN is unrecognized.");
+        }
+        
         // put the RDNs back together separated by commas for a new DN
         StringBuilder newDN = new StringBuilder();
         List<String> rdnValues = null;
@@ -454,15 +477,7 @@ public class AuthenticationUtil
         }
         
         log.debug("canonizeDistinguishedName: new dn: " + newDN);
-        
-        // return the X500Principal canonized name for extended
-        // formatting and to ensure a valid DN has been created
-        X500Principal x500Principal = new X500Principal(newDN.toString());
-        String x500CanonicalDN = x500Principal.getName(X500Principal.CANONICAL);
-        
-        log.debug("canonizeDistinguishedName: final dn: " + x500CanonicalDN);
-        
-        return x500CanonicalDN;
+        return newDN.toString().toLowerCase();
     }
 
     /**

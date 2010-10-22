@@ -106,7 +106,7 @@ public class AuthenticationUtilTest
     {
         String[][] testSet = new String[][]
               {
-                  {"cadcregtest1", "cadcregtest1"}
+                  {"cadcregtest1", "cadcregtest1"} // same value
               };
         for (String[] userIdPair : testSet)
         {
@@ -124,8 +124,8 @@ public class AuthenticationUtilTest
     {
         String[][] testSet = new String[][]
         {
-            {"cadcregtest1", "cadcregtest2"},
-            {"cadcregtest1", "CADCREGTEST11"}
+            {"cadcregtest1", "cadcregtest2"}, // different values
+            {"cadcregtest1", "CADCREGTEST11"} // case should be sensitive
         };
         for (String[] userIdPair : testSet)
         {
@@ -201,13 +201,36 @@ public class AuthenticationUtilTest
     {
         for (String toBeConverted : conversions)
         {
-            assertEquals("[" + toBeConverted + "] should be coverted to expected.", expected,
-                    AuthenticationUtil.canonizeDistinguishedName(toBeConverted));
+            try
+            {
+                // convert the string
+                String converted = AuthenticationUtil.canonizeDistinguishedName(toBeConverted);
+                assertEquals("[" + toBeConverted + "] should be coverted to expected.",
+                        expected, converted);
+                
+                try
+                {
+                    // convert again to ensure no loss of data
+                    String convertedAgain = AuthenticationUtil.canonizeDistinguishedName(converted);
+                    assertEquals("[" + toBeConverted + "] should be coverted (second time) to expected.",
+                            converted, convertedAgain);
+                }
+                catch (IllegalArgumentException e)
+                {
+                    assertTrue("Converting [" + toBeConverted + "] threw IllegalArguementException on second conversion.",
+                            false);
+                }
+            }
+            catch (IllegalArgumentException e)
+            {
+                assertTrue("Converting [" + toBeConverted + "] threw IllegalArguementException on first conversion.",
+                        false);
+            }
         }
     }
     
     @Test
-    public void testCanonicalConversion()
+    public void testCanonicalConversionSuccess()
     {
         String expected = null;
         String[] conversions = null;
@@ -243,6 +266,18 @@ public class AuthenticationUtilTest
             };
         testCanonicalConversion(expected, conversions);
         
+        // DN with mutiples of RDNs
+        expected = "cn=a,cn=b,cn=c,ou=hia.nrc.ca,o=grid,c=ca";
+        conversions = new String[]
+             {
+                 "cn=a,cn=b,cn=c,ou=hia.nrc.ca,o=grid,c=ca",
+                 "cn=b,cn=c,cn=a,ou=hia.nrc.ca,o=grid,c=ca",
+                 "cn=c,cn=a,cn=b,ou=hia.nrc.ca,o=grid,c=ca",
+                 "cn=c,cn=b,cn=a,ou=hia.nrc.ca,o=grid,c=ca",
+                 "ou=hia.nrc.ca,o=grid,c=ca,cn=c,cn=b,cn=a",
+             };
+         testCanonicalConversion(expected, conversions);
+        
         // DN with comma in element
         expected = "cn=brian\\, major,ou=hia.nrc.ca,o=grid,c=ca";
         conversions = new String[]
@@ -252,23 +287,66 @@ public class AuthenticationUtilTest
          testCanonicalConversion(expected, conversions);
         
         // DN with equals sign in element
-        expected = "cn=brian=major,ou=hia.nrc.ca,o=grid,c=ca";
+        expected = "cn=brian\\=major,ou=hia.nrc.ca,o=grid,c=ca";
         conversions = new String[]
              {
                  "cn=brian\\=major,ou=hia.nrc.ca,o=grid,c=ca"
              };
          testCanonicalConversion(expected, conversions);
          
-         // DN with mutiples of RDNs
-         expected = "cn=a,cn=b,cn=c,ou=hia.nrc.ca,o=grid,c=ca";
+         // DN with double quote in element
+         expected = "cn=brian\"major,ou=hia.nrc.ca,o=grid,c=ca";
          conversions = new String[]
               {
-                  "cn=a,cn=b,cn=c,ou=hia.nrc.ca,o=grid,c=ca",
-                  "cn=b,cn=c,cn=a,ou=hia.nrc.ca,o=grid,c=ca",
-                  "cn=c,cn=a,cn=b,ou=hia.nrc.ca,o=grid,c=ca",
-                  "cn=c,cn=b,cn=a,ou=hia.nrc.ca,o=grid,c=ca",
+                  "cn=brian\"major,ou=hia.nrc.ca,o=grid,c=ca"
               };
-          testCanonicalConversion(expected, conversions);
+         testCanonicalConversion(expected, conversions);
+          
+         // DN with single quote in element
+         expected = "cn=brian'major,ou=hia.nrc.ca,o=grid,c=ca";
+         conversions = new String[]
+              {
+                  "cn=brian'major,ou=hia.nrc.ca,o=grid,c=ca"
+              };
+         testCanonicalConversion(expected, conversions);
+    
+         // DN with accented letters
+         expected = "cn=séverin gaudet,ou=hia.nrc.ca,o=grid,c=ca";
+         conversions = new String[]
+              {
+                  "cn=Séverin Gaudet,ou=hia.nrc.ca,o=grid,c=ca"
+              };
+         testCanonicalConversion(expected, conversions);
+
+    }
+    
+    @Test
+    public void testCanonicalConversionFailure()
+    {
+        String[] conversions = null;
+        
+        conversions = new String[]
+            {
+                "cn=cadc regtest1 10577,ou=cadc,o=hia,z=a",  // unrecognized element z at end
+                "cn=cadc regtest1 10577,z=a,ou=cadc,o=hia",  // unrecognized element z in middle
+                "z=a,cn=cadc regtest1 10577,ou=cadc,o=hia",  // unrecognized element z in front
+                "foo=cadc regtest1 10577,bar=cadc,o=hia,z=a",  // multiple unrecognized elements
+            };
+        
+        for (String toBeConverted : conversions)
+        {
+            try
+            {
+                AuthenticationUtil.canonizeDistinguishedName(toBeConverted);
+                assertTrue("[" + toBeConverted + "] should have thrown IllegalArguementException", false);
+            }
+            catch (IllegalArgumentException e)
+            {
+                // expected
+                log.debug(e);
+            }
+        }
+        
     }
     
 
