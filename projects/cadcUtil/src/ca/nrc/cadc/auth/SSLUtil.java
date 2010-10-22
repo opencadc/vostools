@@ -112,7 +112,6 @@ import javax.net.ssl.X509TrustManager;
 import javax.security.auth.Subject;
 
 import org.apache.log4j.Logger;
-import org.bouncycastle.jce.PKCS10CertificationRequest;
 
 import ca.nrc.cadc.util.Base64;
 import ca.nrc.cadc.util.FileUtil;
