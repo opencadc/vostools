@@ -168,7 +168,7 @@ public class SSLUtilTest
     {
         try
         {
-            X509CertificateChain chain = SSLUtil.parsePEMCertificateAndKey(SSL_PEM);
+            X509CertificateChain chain = SSLUtil.readPemCertificateAndKey(SSL_PEM);
             Assert.assertNotNull("Null chain", chain);
         }
         catch (Throwable t)

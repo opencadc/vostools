@@ -112,6 +112,7 @@ import javax.net.ssl.X509TrustManager;
 import javax.security.auth.Subject;
 
 import org.apache.log4j.Logger;
+import org.bouncycastle.jce.PKCS10CertificationRequest;
 
 import ca.nrc.cadc.util.Base64;
 import ca.nrc.cadc.util.FileUtil;
@@ -638,12 +639,12 @@ public class SSLUtil
      * @throws IOException
      * @throws CertificateException
      */
-    public static X509CertificateChain parsePEMCertificateAndKey(File pemFile) 
+    public static X509CertificateChain readPemCertificateAndKey(File pemFile) 
     throws InvalidKeySpecException, NoSuchAlgorithmException,
     IOException, CertificateException
     {
         byte[] data = FileUtil.readFile(pemFile);
-        return parsePemCertificateAndKey(data);
+        return readPemCertificateAndKey(data);
     }
     
     /**
@@ -658,7 +659,7 @@ public class SSLUtil
      * @throws IOException
      * @throws CertificateException
      */
-    public static X509CertificateChain parsePemCertificateAndKey(byte[] data) 
+    public static X509CertificateChain readPemCertificateAndKey(byte[] data) 
     throws InvalidKeySpecException, NoSuchAlgorithmException,
     IOException, CertificateException
     {
@@ -714,7 +715,9 @@ public class SSLUtil
         
         return new X509CertificateChain(chain, pk);
         
-    }    
+    }
+        
+
     
     /**
      * Parses a byte array and constructs the corresponding RSAPrivateCrtKeySpec.
