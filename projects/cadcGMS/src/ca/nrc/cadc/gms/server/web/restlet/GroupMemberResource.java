@@ -151,6 +151,7 @@ public class GroupMemberResource extends GroupResource
                 final String message = String.format(
                         "No such User with ID %s", groupMemberID);
                 processError(null, Status.CLIENT_ERROR_NOT_FOUND, message);
+                return false;
             }
             return true;
         }

@@ -355,7 +355,6 @@ public abstract class AbstractResource extends ServerResource
     protected void processError(final Throwable throwable,
                                 final Status status, final String message)
     {
-        LOGGER.error(message + throwable.getMessage());
         LOGGER.debug(message, throwable);
         if (getMethod().equals(Method.HEAD))
         {

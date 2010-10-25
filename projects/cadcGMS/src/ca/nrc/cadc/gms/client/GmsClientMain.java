@@ -109,6 +109,7 @@ public class GmsClientMain implements PrivilegedAction<Boolean>
     public static final String ARG_ADD_MEMBER = "add";
     public static final String ARG_MEMBER_NAME = "name";
     public static final String ARG_REMOVE_MEMBER = "remove";
+    public static final String ARG_CHECK_MEMBER = "check";
     public static final String ARG_LIST_MEMBER_GROUPS = "listMember";
     public static final String ARG_LIST_OWNER_GROUPS = "listOwner";
     public static final String ARG_CERT = "cert";
@@ -116,7 +117,7 @@ public class GmsClientMain implements PrivilegedAction<Boolean>
 
     // Operations on GMS client
     public enum Operation {
-        VIEW, CREATE, DELETE, ADD_MEMBER, REMOVE_MEMBER, LIST_MEMBER_GR, LIST_OWNER_GR
+        VIEW, CREATE, DELETE, ADD_MEMBER, REMOVE_MEMBER, CHECK_MEMBER, LIST_MEMBER_GR, LIST_OWNER_GR
     };
 
     private static final int INIT_STATUS = 1; // exit code for
@@ -309,6 +310,10 @@ public class GmsClientMain implements PrivilegedAction<Boolean>
         {
             doRemoveMember();
         }
+        else if (this.operation.equals(Operation.CHECK_MEMBER))
+        {
+            doCheckMember();
+        }
         else if (this.operation.equals(Operation.LIST_MEMBER_GR))
         {
             doListMemberGroups();
@@ -354,6 +359,11 @@ public class GmsClientMain implements PrivilegedAction<Boolean>
         {
             numOp++;
             this.operation = Operation.REMOVE_MEMBER;
+        }
+        if (argMap.isSet(ARG_CHECK_MEMBER))
+        {
+            numOp++;
+            this.operation = Operation.CHECK_MEMBER;
         }
         if (argMap.isSet(ARG_LIST_MEMBER_GROUPS))
         {
@@ -426,6 +436,18 @@ public class GmsClientMain implements PrivilegedAction<Boolean>
                                     + this.operation);
                 }
             }
+            
+            // check check argument
+            if (this.operation.equals(Operation.CHECK_MEMBER))
+            {
+                memberID = argMap.getValue(ARG_CHECK_MEMBER);
+                if (memberID == null)
+                {
+                    throw new IllegalArgumentException(
+                            "Argument check is required for "
+                                    + this.operation);
+                }
+            }
         }
     }
 
@@ -471,6 +493,7 @@ public class GmsClientMain implements PrivilegedAction<Boolean>
         }
 
     }
+       
 
     private void displayGroup(Group group)
     {
@@ -577,6 +600,33 @@ public class GmsClientMain implements PrivilegedAction<Boolean>
             logger.error("reason: " + e.getMessage());
             System.exit(NET_STATUS);
         }
+    }
+    
+    /**
+     * Executes user group membership check command
+     */
+    private void doCheckMember()
+    {
+        try
+        {
+            User user = client.getMember(new URI(target), new X500Principal(
+                    memberID));
+            if (user == null)
+            {
+                msg("User ID (" + memberID + ") IS NOT member of group " + target);
+            }
+            else
+            {
+                msg("User ID (" + memberID + ") IS member of group " + target);
+            }
+        }
+        catch (Exception e)
+        {
+            logger.error("failed to view group " + target);
+            logger.error("reason: " + e.getMessage());
+            System.exit(NET_STATUS);
+        }
+
     }
 
     /**
@@ -687,7 +737,7 @@ public class GmsClientMain implements PrivilegedAction<Boolean>
                 "java -jar cadcGMSClient.jar  [-v|--verbose|-d|--debug]                                            ",
                 "   --cert=<SSL certificate file> --key=<SSL key file>                                             ",
                 "   --target=<Group ID>                                                                            ",
-                "   [--add=<User ID> |--remove=<User ID>]                                ",
+                "   [--add=<User ID> |--remove=<User ID> | --check=<User ID>]                                ",
                 "                                                                                                  ",
                 "User operations:                                                                              ",
                 "java -jar cadcGMSClient.jar  [-v|--verbose|-d|--debug]                                            ",
