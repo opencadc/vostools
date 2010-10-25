@@ -70,10 +70,8 @@ package ca.nrc.cadc.gms.client;
 import java.io.File;
 import java.net.URI;
 import java.net.URL;
-import java.net.URLEncoder;
-import java.security.AccessControlContext;
-import java.security.AccessController;
 import java.security.PrivilegedAction;
+import java.util.Collection;
 
 import javax.security.auth.Subject;
 import javax.security.auth.x500.X500Principal;
@@ -462,8 +460,7 @@ public class GmsClientMain implements PrivilegedAction<Boolean>
     {
         try
         {
-            Group group = client.getGroup(new URI(URLEncoder.encode(target,
-                                                                    "UTF-8")));
+            Group group = client.getGroup(new URI(target));
             displayGroup(group);
         }
         catch (Exception e)
@@ -629,8 +626,40 @@ public class GmsClientMain implements PrivilegedAction<Boolean>
      */
     private void doListMyGroups()
     {
-        // TODO - when required
-        throw new UnsupportedOperationException("Not yet implemented");
+        try
+        {
+            Collection<Group> groups = client
+                    .getGroups(new X500Principal(target));
+            if ((groups == null) || groups.isEmpty())
+            {
+                msg("User: " + target + " owns 0 groups");
+                return;
+            }
+            msg("User ID: " + target);
+            msg("Group Membership (Group ID / Group Descripton):");
+            for (Group group : groups)
+            {
+                String description = "N/A";
+                for (ElemProperty prop : group.getProperties())
+                {
+                    if (GmsConsts.PROPERTY_GROUP_DESCRIPTION.equals(prop
+                            .getPropertyURI()))
+                    {
+                        description = prop.getPropertyValue();
+                        break;
+                    }
+                }
+                msg("     " + group.getID() + " / " + description);
+            }
+            msg("Total groups: " + groups.size());
+
+        }
+        catch (Exception e)
+        {
+            logger.error("failed to list groups of member " + target);
+            logger.error("reason: " + e.getMessage());
+            System.exit(NET_STATUS);
+        }
     }
 
     /**
