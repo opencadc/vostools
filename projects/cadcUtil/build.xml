@@ -113,6 +113,7 @@
             </classpath>
 
             <test name="ca.nrc.cadc.util.HexUtilTest"/>
+            <test name="ca.nrc.cadc.net.NetUtilTest"/>
             <formatter type="plain" usefile="false"/>
         </junit>
     </target>
