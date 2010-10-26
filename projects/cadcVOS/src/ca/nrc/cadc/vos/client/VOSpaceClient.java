@@ -70,6 +70,7 @@
 package ca.nrc.cadc.vos.client;
 
 import ca.nrc.cadc.auth.SSLUtil;
+import ca.nrc.cadc.net.NetUtil;
 import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStream;
@@ -921,10 +922,13 @@ public class VOSpaceClient
         List<Parameter> parameters = job.getParameterList();
         for (Parameter parameter : parameters)
         {
-            sb.append("&");
-            sb.append(parameter.getName());
-            sb.append("=");
-            sb.append(parameter.getValue());
+            if (parameter.getName() != null && parameter.getValue() != null)
+            {
+                sb.append("&");
+                sb.append(NetUtil.encode(parameter.getName()));
+                sb.append("=");
+                sb.append(NetUtil.encode(parameter.getValue()));
+            }
         }
         return sb.toString();
     }
