@@ -240,7 +240,6 @@ public abstract class NodeDAO implements NodePersistence
             }
             catch(Throwable t)
             {
-                log.error("getFromParent: " + name + "," + parent, t);
                 if (transactionStatus != null)
                     try { rollbackTransaction(); }
                     catch(Throwable oops) { log.error("failed to rollback transaction", oops); }
@@ -250,6 +249,7 @@ public abstract class NodeDAO implements NodePersistence
                 }
                 else
                 {
+                    log.error("getFromParent: " + name + "," + parent, t);
                     throw new IllegalStateException(t);
                 }
             }

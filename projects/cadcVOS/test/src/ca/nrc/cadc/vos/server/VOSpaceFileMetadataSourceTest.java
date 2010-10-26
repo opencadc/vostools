@@ -43,8 +43,6 @@ public abstract class VOSpaceFileMetadataSourceTest extends AbstractPersistenceT
         Long contentLength = 256L;
         String contentType = "text/xml";
         
-        //String md5SumSource = "valuetohashis a longer string now.";
-        
         String contentMD5 = HexUtil.toHex(new byte[] {0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15});
         
         FileMetadata metadata1 = new FileMetadata();

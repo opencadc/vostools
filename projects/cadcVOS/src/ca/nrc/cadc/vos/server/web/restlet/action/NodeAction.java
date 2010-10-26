@@ -276,7 +276,7 @@ public abstract class NodeAction implements PrivilegedAction<Object>
         catch (FileNotFoundException e)
         {
             String faultMessage = vosURI.toString();
-            log.debug("Could not find node with path: " + vosURI.getPath(), e);
+            log.debug("Could not find node with path: " + vosURI.getPath());
             return handleException(NodeFault.NodeNotFound, faultMessage);
         }
         catch (URISyntaxException e)

@@ -186,6 +186,8 @@ public class NodeResource extends BaseResource
         
         try
         {
+            log.info("START " + action.getClass().getSimpleName());
+            
             if (nodeFault != null)
             {
                 setStatus(nodeFault.getStatus());
@@ -243,7 +245,7 @@ public class NodeResource extends BaseResource
             {
                 end = System.currentTimeMillis();
             }
-            log.info("Node request " + NodeAction.class.getSimpleName()
+            log.info("END " + action.getClass().getSimpleName()
                     + " elapsed time (ms): " + (end - start));
         }
     }
