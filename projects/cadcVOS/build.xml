@@ -110,7 +110,7 @@
             basedir="${build}/class"
             update="no">
             <include name="ca/nrc/cadc/**" />
-            <include name="VOSpace-2.0.xsd" />
+            <include name="**.xsd" />
             <exclude name="**Test**" />
         </jar>
    
@@ -120,7 +120,7 @@
             manifest="${build}/tmp/${project}Client.mf">
             <include name="ca/nrc/cadc/vos/client/**" />
             <include name="ca/nrc/cadc/vos/**.class" />
-            <include name="VOSpace-2.0.xsd" />
+            <include name="**.xsd" />
             <exclude name="**Test**" />
         </jar>
 
