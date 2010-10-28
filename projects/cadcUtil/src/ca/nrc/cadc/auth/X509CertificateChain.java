@@ -71,6 +71,7 @@ package ca.nrc.cadc.auth;
 import java.security.PrivateKey;
 import java.security.cert.X509Certificate;
 import java.util.Collection;
+import java.util.Set;
 
 import javax.security.auth.x500.X500Principal;
 
@@ -135,5 +136,21 @@ public class X509CertificateChain
         }
         this.principal = new X500Principal(principal.getName());
         log.debug("principal: " + principal.getName(X500Principal.RFC1779));
+    }
+    
+    public static X509CertificateChain findPrivateKeyChain(Set<Object> publicCredentials)
+    {
+        for (Object credential : publicCredentials)
+        {
+            if (credential instanceof X509CertificateChain)
+            {
+                X509CertificateChain chain = (X509CertificateChain) credential;
+                if (chain.getPrivateKey() != null)
+                {
+                    return chain;
+                }
+            }
+        }
+        return null;
     }
 }
