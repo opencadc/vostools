@@ -75,7 +75,6 @@ import java.net.MalformedURLException;
 import java.net.URI;
 import java.net.URISyntaxException;
 import java.net.URL;
-import java.net.URLConnection;
 import java.net.URLEncoder;
 import java.security.AccessControlContext;
 import java.security.AccessControlException;
@@ -1051,12 +1050,6 @@ public class GmsClient
         con.setSSLSocketFactory(sf);
         return con;
     }
-    
-    protected URLConnection openConnectionOld(final URL url) throws IOException
-    {
-        return url.openConnection();
-    }
-
 
     public URL getBaseServiceURL()
     {
