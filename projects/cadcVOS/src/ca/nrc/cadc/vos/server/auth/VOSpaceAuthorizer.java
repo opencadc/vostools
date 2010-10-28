@@ -75,8 +75,10 @@ import java.security.AccessControlContext;
 import java.security.AccessControlException;
 import java.security.AccessController;
 import java.security.Principal;
+import java.security.cert.CertificateException;
 import java.util.Set;
 
+import javax.net.ssl.SSLSocketFactory;
 import javax.security.auth.Subject;
 import javax.security.auth.x500.X500Principal;
 
@@ -84,6 +86,10 @@ import org.apache.log4j.Logger;
 
 import ca.nrc.cadc.auth.AuthenticationUtil;
 import ca.nrc.cadc.auth.Authorizer;
+import ca.nrc.cadc.auth.SSLUtil;
+import ca.nrc.cadc.auth.X509CertificateChain;
+import ca.nrc.cadc.cred.AuthorizationException;
+import ca.nrc.cadc.cred.client.priv.CredPrivateClient;
 import ca.nrc.cadc.gms.client.GmsClient;
 import ca.nrc.cadc.reg.client.RegistryClient;
 import ca.nrc.cadc.vos.Node;
@@ -99,10 +105,19 @@ import ca.nrc.cadc.vos.server.util.NodeUtil;
 
 /**
  * Authorization implementation for VO Space. 
+ * 
+ * Important:  This class cannot be re-used between HTTP Requests--A new
+ * instance must be created each time.
+ * 
+ * The nodePersistence object must be set for every instance.
  */
 public class VOSpaceAuthorizer implements Authorizer
 {
     protected static final Logger LOG = Logger.getLogger(VOSpaceAuthorizer.class);
+    private static final String CRED_SERVICE_ID = "ivo://cadc.nrc.ca/cred";
+    
+    private SSLSocketFactory socketFactory;
+    private int subjectHashCode;
     
     private NodePersistence nodePersistence;
 
@@ -159,6 +174,7 @@ public class VOSpaceAuthorizer implements Authorizer
                 
                 AccessControlContext acContext = AccessController.getContext();
                 Subject subject = Subject.getSubject(acContext);
+                NodeProperty groupRead = node.findProperty(VOS.PROPERTY_URI_GROUPREAD);
                 
                 // return true if this is the owner of the node or if a member
                 // of the groupRead property
@@ -169,14 +185,11 @@ public class VOSpaceAuthorizer implements Authorizer
                     Set<Principal> principals = subject.getPrincipals();
                     for (Principal principal : principals)
                     {
-                        NodeProperty groupRead = node.findProperty(VOS.PROPERTY_URI_GROUPREAD);
-                        
                         if (LOG.isDebugEnabled())
                         {
                             String principalString = principal == null ? "null" : principal.getName();
-                            String groupReadString = groupRead == null ? "null" : groupRead.getPropertyValue();
-                            LOG.debug(String.format("Checking read permission on node \"%s\" (owner=\"%s\",groupRead=\"%s\") where user=\"%s\"",
-                                    node.getName(), node.getOwner(), groupReadString, principalString));
+                            LOG.debug(String.format("Checking owner read permission on node \"%s\" (owner=\"%s\") where user=\"%s\"",
+                                    node.getName(), node.getOwner(), principalString));
                         }
                         
                         // Check for ownership
@@ -185,15 +198,21 @@ public class VOSpaceAuthorizer implements Authorizer
                             // User is the owner
                             return;
                         }
+                    }
                         
-                        // Check for group membership
-                        if (principal != null && groupRead != null && groupRead.getPropertyValue() != null)
+                    // Check for group membership
+                    if (LOG.isDebugEnabled())
+                    {
+                        String groupReadString = groupRead == null ? "null" : groupRead.getPropertyValue();
+                        LOG.debug(String.format("Checking group read permission on node \"%s\" (groupRead=\"%s\")",
+                                node.getName(), groupReadString));
+                    }
+                    if (groupRead != null && groupRead.getPropertyValue() != null)
+                    {
+                        if (hasMembership(groupRead.getPropertyValue(), subject))
                         {
-                            if (hasMembership(groupRead.getPropertyValue(), principal))
-                            {
-                                // User is a member
-                                return;
-                            }
+                            // User is a member
+                            return;
                         }
                     }
                 }
@@ -256,6 +275,7 @@ public class VOSpaceAuthorizer implements Authorizer
             {
                 AccessControlContext acContext = AccessController.getContext();
                 Subject subject = Subject.getSubject(acContext);
+                NodeProperty groupWrite = node.findProperty(VOS.PROPERTY_URI_GROUPWRITE);
                 
                 // return true if this is the owner of the node
                 if (subject != null) {
@@ -266,14 +286,11 @@ public class VOSpaceAuthorizer implements Authorizer
                     for (Principal principal : principals)
                     {   
                         
-                        NodeProperty groupWrite = node.findProperty(VOS.PROPERTY_URI_GROUPWRITE);
-                        
                         if (LOG.isDebugEnabled())
                         {
                             String principalString = principal == null ? "null" : principal.getName();
-                            String groupWriteString = groupWrite == null ? "null" : groupWrite.getPropertyValue();
-                            LOG.debug(String.format("Checking write permission on node (owner=\"%s\",groupWrite=\"%s\") where user=\"%s\"",
-                                    node.getOwner(), groupWriteString, principalString));
+                            LOG.debug(String.format("Checking owner read permission on node \"%s\" (owner=\"%s\") where user=\"%s\"",
+                                    node.getName(), node.getOwner(), principalString));
                         }
                         
                         // Check for ownership
@@ -282,15 +299,21 @@ public class VOSpaceAuthorizer implements Authorizer
                             // User is the owner
                             return;
                         }
-                        
-                        // Check for group membership
-                        if (principal != null && groupWrite != null && groupWrite.getPropertyValue() != null)
+                    }
+                       
+                    // Check for group membership
+                    if (LOG.isDebugEnabled())
+                    {
+                        String groupWriteString = groupWrite == null ? "null" : groupWrite.getPropertyValue();
+                        LOG.debug(String.format("Checking group write permission on node \"%s\" (groupRead=\"%s\")",
+                                node.getName(), groupWriteString));
+                    }
+                    if (groupWrite != null && groupWrite.getPropertyValue() != null)
+                    {
+                        if (hasMembership(groupWrite.getPropertyValue(), subject))
                         {
-                            if (hasMembership(groupWrite.getPropertyValue(), principal))
-                            {
-                                // User is a member
-                                return;
-                            }
+                            // User is a member
+                            return;
                         }
                     }
                 }
@@ -313,18 +336,55 @@ public class VOSpaceAuthorizer implements Authorizer
     }
     
     /**
-     * Given the groupURI, determine if the user identified by 'principal'
+     * Given the groupURI, determine if the user identified by the subject
      * has membership.
      * @param groupURI The group
-     * @param principal The user identifier
+     * @param subject The user's subject
      * @return True if the user is a member
      */
-    private boolean hasMembership(String groupURI, Principal principal)
+    private boolean hasMembership(String groupURI, Subject subject)
     {
         try
         {
             RegistryClient registryClient = new RegistryClient();
+            
+            X509CertificateChain privateKeyChain = X509CertificateChain.findPrivateKeyChain(
+                    subject.getPublicCredentials());
+            
+            // If we don't have the private key chain, get it from the credential
+            // delegation service and add it to the subject's public credentials
+            // for use later.
+            if (privateKeyChain == null)
+            {
+                URL credBaseURL = registryClient.getServiceURL(new URI(CRED_SERVICE_ID), "https");
+                CredPrivateClient credentialPrivateClient = new CredPrivateClient(credBaseURL);
+                privateKeyChain = credentialPrivateClient.getCertificate();
+                subject.getPublicCredentials().add(privateKeyChain);
+            }
+            
+            if (socketFactory == null)
+            {
+                socketFactory = SSLUtil.getSocketFactory(privateKeyChain);
+                subjectHashCode = subject.hashCode();
+            }
+            else
+            {
+                // Ensure the subject hash code hasn't changed.  If it has, throw
+                // an exception indicating that the VOSpaceAuthorizer cannot be reused
+                // between HTTP requests.
+                if (subject.hashCode() != subjectHashCode)
+                {
+                    throw new IllegalStateException(
+                            "Illegal use of VOSpaceAuthorizer: Different subject detected.");
+                }
+            }
+            
             URI guri = new URI(groupURI);
+            if (guri.getFragment() == null)
+            {
+                LOG.warn("Invalid Group URI: " + groupURI);
+                return false;
+            }
             URI serviceURI = new URI(guri.getScheme(), guri.getSchemeSpecificPart(), null); // drop fragment
             URL gmsBaseURL = registryClient.getServiceURL(serviceURI, VOS.GMS_PROTOCOL);
 
@@ -335,10 +395,21 @@ public class VOSpaceAuthorizer implements Authorizer
                 return false;
             }
             GmsClient gms = new GmsClient(gmsBaseURL);
-
-            boolean ret = gms.isMember(guri, (X500Principal)principal);
-            LOG.debug("GmsClient.isMember(" + guri.getFragment() + "," + principal.getName() + " returned " + ret);
-            return ret;
+            gms.setSslSocketFactory(socketFactory);
+            
+            // check group membership for each x500 principal that exists
+            Set<X500Principal> x500Principals = subject.getPrincipals(X500Principal.class);
+            for (X500Principal x500Principal : x500Principals)
+            {
+                boolean isMember = gms.isMember(guri, x500Principal);
+                LOG.debug("GmsClient.isMember(" + guri.getFragment() + "," + x500Principal.getName() + " returned " + isMember);
+                if (isMember)
+                {
+                    return true;
+                }
+            }
+            
+            return false;
         }
         catch (MalformedURLException e)
         {
@@ -349,6 +420,31 @@ public class VOSpaceAuthorizer implements Authorizer
         {
             LOG.warn("Invalid Group URI: " + groupURI, e);
             return false;
+        }
+        catch (CertificateException e)
+        {
+            LOG.error("Error getting private certificate", e);
+            throw new IllegalStateException(e);
+        }
+        catch (AuthorizationException e)
+        {
+            LOG.error("Could't make credPrivateClientCall", e);
+            throw new IllegalStateException(e);
+        }
+        catch (InstantiationException e)
+        {
+            LOG.error("Could't construct CredentialPrivateClient", e);
+            throw new IllegalStateException(e);
+        }
+        catch (IllegalAccessException e)
+        {
+            LOG.error("Could't construct CredentialPrivateClient", e);
+            throw new IllegalStateException(e);
+        }
+        catch (ClassNotFoundException e)
+        {
+            LOG.error("No implementing CredentialPrivateClients", e);
+            throw new IllegalStateException(e);
         }
     }
 

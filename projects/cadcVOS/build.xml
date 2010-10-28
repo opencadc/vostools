@@ -90,7 +90,7 @@
     <property name="cadcRegistryClient" value="${lib}/cadcRegistryClient.jar" />
     <property name="cadcUWS" value="${lib}/cadcUWS.jar" />
     <property name="cadcGMS" value="${lib}/cadcGMSClient.jar" />
-    
+    <property name="cadcCDP" value="${lib}/cadcCDP.jar" />
 
     <property name="ext.restlet" value="${ext.lib}/org.restlet.jar" />
     <property name="ext.log4j" value="${ext.lib}/log4j.jar" />
@@ -100,9 +100,9 @@
     <property name="resources.dir" value="test/resources/" />    
     
 
-    <property name="jars" value="${ext.restlet}:${ext.log4j}:${ext.spring}:${ext.jdom}:${cadcUtil}:${cadcRegistryClient}:${cadcUWS}:${cadcGMS}" />
+    <property name="jars" value="${ext.restlet}:${ext.log4j}:${ext.spring}:${ext.jdom}:${cadcUtil}:${cadcRegistryClient}:${cadcUWS}:${cadcGMS}:${cadcCDP}" />
 
-    <property name="client.jars" value="cadcUtil.jar cadcRegistryClient.jar cadcUWS.jar ${ext.jdom} ${ext.xerces} ${ext.log4j} jdom.jar xerces.jar log4j.jar" />
+    <property name="client.jars" value="cadcUtil.jar cadcRegistryClient.jar cadcUWS.jar cadcCDP.jar ${ext.jdom} ${ext.xerces} ${ext.log4j} jdom.jar xerces.jar log4j.jar" />
 
     <target name="build" depends="compile,compile-test,resources,manifest">
 
@@ -163,7 +163,7 @@
     <property name="javaUtil" value="${lib}/javaUtil.jar" />
 
     <property name="testingJars"
-              value="${cadcVOS}:${cadcUtil}:${javaUtil}:${junit}:${xerces}:${dev.easyMock}:${dev.objenesis}:${dev.asm}:${dev.cglib}" />
+              value="${cadcVOS}:${credPrivateClient}:${cadcUtil}:${javaUtil}:${junit}:${xerces}:${dev.easyMock}:${dev.objenesis}:${dev.asm}:${dev.cglib}" />
 
     <!-- Run the test suite -->
     <target name="test" depends="compile,compile-test">
