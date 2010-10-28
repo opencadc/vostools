@@ -90,7 +90,15 @@ import javax.security.auth.x500.X500Principal;
 import org.apache.log4j.Logger;
 
 import ca.nrc.cadc.auth.SSLUtil;
-import ca.nrc.cadc.gms.*;
+import ca.nrc.cadc.gms.GmsConsts;
+import ca.nrc.cadc.gms.Group;
+import ca.nrc.cadc.gms.GroupImpl;
+import ca.nrc.cadc.gms.GroupReader;
+import ca.nrc.cadc.gms.GroupWriter;
+import ca.nrc.cadc.gms.GroupsReader;
+import ca.nrc.cadc.gms.ReaderException;
+import ca.nrc.cadc.gms.User;
+import ca.nrc.cadc.gms.UserReader;
 
 
 /**
@@ -1027,7 +1035,7 @@ public class GmsClient
     {
         if (!url.getProtocol().equals("https"))
         {
-            throw new IllegalArgumentException("Wrong protocol: "
+            throw new IllegalStateException("Wrong protocol: "
                     + url.getProtocol() + ". GMS works on https only");
         }
         if (sf == null)
