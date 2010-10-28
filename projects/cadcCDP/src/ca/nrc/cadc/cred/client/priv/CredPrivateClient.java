@@ -54,7 +54,7 @@ public class CredPrivateClient
     private static Logger LOGGER = Logger
             .getLogger(CredPrivateClient.class);
 
-    private URL baseServiceURL;
+    protected URL baseServiceURL;
 
     private CredPrivateClient instance;
 
