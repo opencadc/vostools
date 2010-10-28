@@ -12,12 +12,12 @@
 ************************************************************************
 ****  C A N A D I A N   A S T R O N O M Y   D A T A   C E N T R E  *****
 *
-*   System Name:	build.xml
+*   System Name:    build.xml
 *
 *   Purpose:
-*	Over-ride default ant behaviour.
+*   Over-ride default ant behaviour.
 *
-*   Date		: Nov 5, 2009
+*   Date        : Nov 5, 2009
 *
 ****  C A N A D I A N   A S T R O N O M Y   D A T A   C E N T R E  *****
 ************************************************************************
@@ -34,7 +34,12 @@
   <!-- JAR files to be included in classpath for compilation -->
   <property name="jars"
             value="${lib.cadcUtil}:${ext.log4j}" />
-            
-  <target name="build" depends="compile" />
+  
+  <target name="build" depends="compile">
+      <jar jarfile="${build}/lib/${project}.jar"
+                    basedir="${build}/class"
+                    update="no">
+      </jar>
+  </target>
 
 </project>
