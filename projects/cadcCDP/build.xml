@@ -1,0 +1,40 @@
+<!DOCTYPE project>
+<project default="build" basedir=".">
+
+<!-- Generic properties -->
+<property environment="env"/>
+<property file="local.build.properties" />
+<property file="${env.A}/compilers/setup.ant.java.properties" />
+<import file="${env.A}/compilers/setup.ant.java.targets.xml"/>
+<import file="extras.xml" optional="true" />
+
+<!--*+
+************************************************************************
+****  C A N A D I A N   A S T R O N O M Y   D A T A   C E N T R E  *****
+*
+*   System Name:	build.xml
+*
+*   Purpose:
+*	Over-ride default ant behaviour.
+*
+*   Date		: Nov 5, 2009
+*
+****  C A N A D I A N   A S T R O N O M Y   D A T A   C E N T R E  *****
+************************************************************************
+*-->
+
+<!-- project-specific properties -->
+  <property name="project" value="cadcCDP" />
+
+  <!-- JAR files to be included in classpath and war file -->
+  <property name="lib.cadcUtil" value="${lib}/cadcUtil.jar" />
+  <property name="ext.log4j"       value="${ext.lib}/log4j.jar" />
+  <!-- end of project properties -->
+
+  <!-- JAR files to be included in classpath for compilation -->
+  <property name="jars"
+            value="${lib.cadcUtil}:${ext.log4j}" />
+            
+  <target name="build" depends="compile" />
+
+</project>
