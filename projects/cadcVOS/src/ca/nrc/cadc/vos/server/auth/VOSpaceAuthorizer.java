@@ -303,7 +303,7 @@ public class VOSpaceAuthorizer implements Authorizer
                         if (LOG.isDebugEnabled())
                         {
                             String principalString = principal == null ? "null" : principal.getName();
-                            LOG.debug(String.format("Checking owner read permission on node \"%s\" (owner=\"%s\") where user=\"%s\"",
+                            LOG.debug(String.format("Checking owner write permission on node \"%s\" (owner=\"%s\") where user=\"%s\"",
                                     node.getName(), node.getOwner(), principalString));
                         }
                         
