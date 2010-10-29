@@ -306,7 +306,8 @@ public class GmsClient
         try
         {
             resourcePath.append("/groups/");
-            resourcePath.append(groupID.getRawFragment());
+            resourcePath.append(URLEncoder.encode(groupID.getFragment(),
+                                                  "UTF-8"));
 
             final URL resourceURL = new URL(getBaseServiceURL()
                     + resourcePath.toString());
@@ -476,10 +477,10 @@ public class GmsClient
 
         try
         {
-            String grID = group.getID().getRawFragment();
+            String groupID = group.getID().getFragment();
 
             resourcePath.append("/");
-            resourcePath.append(grID);
+            resourcePath.append(URLEncoder.encode(groupID, "UTF-8"));
 
             final URL resourceURL = new URL(getBaseServiceURL()
                     + resourcePath.toString());
@@ -562,7 +563,8 @@ public class GmsClient
         try
         {
             resourcePath.append("/groups/");
-            resourcePath.append(groupID.getRawFragment());
+            resourcePath.append(URLEncoder.encode(groupID.getFragment(),
+                                                  "UTF-8"));
 
             final URL resourceURL = new URL(getBaseServiceURL()
                     + resourcePath.toString());
@@ -638,7 +640,8 @@ public class GmsClient
         try
         {
             resourcePath.append("/groups/");
-            resourcePath.append(group.getID().getRawFragment());
+            resourcePath.append(URLEncoder.encode(group.getID().getFragment(),
+                                                  "UTF-8"));
 
             final URL resourceURL = new URL(getBaseServiceURL()
                     + resourcePath.toString());
@@ -790,7 +793,8 @@ public class GmsClient
         try
         {
             resourcePath.append("/groups/");
-            resourcePath.append(groupID.getRawFragment());
+            resourcePath.append(URLEncoder.encode(groupID.getFragment(),
+                    "UTF-8"));
             resourcePath.append("/");
             resourcePath.append(URLEncoder.encode(memberID.toString(),
                     "UTF-8"));
@@ -868,7 +872,8 @@ public class GmsClient
         try
         {
             resourcePath.append("/groups/");
-            resourcePath.append(groupID.getRawFragment());
+            resourcePath.append(URLEncoder.encode(groupID.getFragment(),
+                                                  "UTF-8"));
             resourcePath.append("/");
             resourcePath.append(URLEncoder.encode(memberID.toString(),
                     "UTF-8"));

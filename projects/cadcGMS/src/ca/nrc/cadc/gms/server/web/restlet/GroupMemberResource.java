@@ -139,7 +139,8 @@ public class GroupMemberResource extends GroupResource
         try
         {
             groupMemberID = URLDecoder.decode(getMemberID(), "UTF-8");
-            groupID = URLDecoder.decode(getGroupID(), "UTF-8");
+//            groupID = URLDecoder.decode(getGroupID(), "UTF-8");
+            groupID = getGroupID();
             LOGGER.debug(String.format("groupID: %s memberID: %s",
                     groupID, groupMemberID));
 
@@ -202,7 +203,8 @@ public class GroupMemberResource extends GroupResource
         try
         {
             URI grID = new URI(groupService.getGroupUriPrefix()
-                    + URLDecoder.decode(getGroupID(), "UTF-8"));
+                               + getGroupID());
+//                    + URLDecoder.decode(getGroupID(), "UTF-8"));
             X500Principal usrID = new X500Principal(URLDecoder.decode(
                     getMemberID(), "UTF-8"));
             Group group = getGroupService().addUserToGroup(grID,
@@ -256,7 +258,8 @@ public class GroupMemberResource extends GroupResource
         try
         {
             URI grID = new URI(groupService.getGroupUriPrefix()
-                    + URLDecoder.decode(getGroupID(), "UTF-8"));
+                               + getGroupID());
+//                    + URLDecoder.decode(getGroupID(), "UTF-8"));
             X500Principal usrID = new X500Principal(URLDecoder.decode(
                     getMemberID(), "UTF-8"));
             Group group = getGroupService().deleteUserFromGroup(grID, usrID);

@@ -66,13 +66,11 @@
  */
 package ca.nrc.cadc.gms.server.web.restlet;
 
-import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.UnsupportedEncodingException;
 import java.net.URI;
 import java.net.URISyntaxException;
 import java.net.URLDecoder;
-import java.net.URLEncoder;
 
 import org.apache.log4j.Logger;
 import org.jdom.Document;
@@ -84,6 +82,7 @@ import org.restlet.representation.Representation;
 
 import ca.nrc.cadc.gms.*;
 import ca.nrc.cadc.gms.server.GroupService;
+
 
 public class GroupResource extends AbstractResource
 {
@@ -115,9 +114,6 @@ public class GroupResource extends AbstractResource
 
     /**
      * Get a reference to the resource identified by the user.
-     * 
-     * @throws FileNotFoundException
-     *             If the resource doesn't exist.
      */
     @Override
     protected boolean obtainResource()
@@ -190,7 +186,8 @@ public class GroupResource extends AbstractResource
     {
         try
         {
-            String groupID = URLDecoder.decode(getGroupID(), "UTF-8");
+//            String groupID = URLDecoder.decode(getGroupID(), "UTF-8");
+            String groupID = getGroupID();
             LOGGER.debug("Create a new group with ID." + groupID);
 
             final Group postedGroup = GroupReader.read(entity.getStream());
