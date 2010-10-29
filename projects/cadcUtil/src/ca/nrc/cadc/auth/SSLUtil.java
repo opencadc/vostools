@@ -330,7 +330,6 @@ public class SSLUtil
                 {
                     String encoded = base64.toString();
                     log.debug("CERTIFICATE: " + encoded);
-                    System.out.println("CERTIFICATE: " + encoded);
                     byte[] tmp = Base64.decode(encoded);
                     byteSize += tmp.length;
                     certs.add(tmp);
