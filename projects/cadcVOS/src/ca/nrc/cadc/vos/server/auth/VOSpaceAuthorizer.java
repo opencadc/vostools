@@ -175,6 +175,7 @@ public class VOSpaceAuthorizer implements Authorizer
                 AccessControlContext acContext = AccessController.getContext();
                 Subject subject = Subject.getSubject(acContext);
                 NodeProperty groupRead = node.findProperty(VOS.PROPERTY_URI_GROUPREAD);
+                NodeProperty groupWrite = node.findProperty(VOS.PROPERTY_URI_GROUPWRITE);
                 
                 // return true if this is the owner of the node or if a member
                 // of the groupRead property
@@ -204,12 +205,25 @@ public class VOSpaceAuthorizer implements Authorizer
                     if (LOG.isDebugEnabled())
                     {
                         String groupReadString = groupRead == null ? "null" : groupRead.getPropertyValue();
-                        LOG.debug(String.format("Checking group read permission on node \"%s\" (groupRead=\"%s\")",
-                                node.getName(), groupReadString));
+                        String groupWriteString = groupWrite == null ? "null" : groupWrite.getPropertyValue();
+                        LOG.debug(String.format("Checking group read permission on node \"%s\" (groupRead=\"%s\", groupWrite=\"%s\")",
+                                node.getName(), groupReadString, groupWriteString));
                     }
+                    
+                    // Check group read
                     if (groupRead != null && groupRead.getPropertyValue() != null)
                     {
                         if (hasMembership(groupRead.getPropertyValue(), subject))
+                        {
+                            // User is a member
+                            return;
+                        }
+                    }
+                    
+                    // Check group write
+                    if (groupWrite != null && groupWrite.getPropertyValue() != null)
+                    {
+                        if (hasMembership(groupWrite.getPropertyValue(), subject))
                         {
                             // User is a member
                             return;

@@ -364,7 +364,7 @@ t.printStackTrace();
             msg("last modified: " + safePropertyRef(n, VOS.PROPERTY_URI_DATE));
             msg("readable by anyone: " + safePropertyRef(n, VOS.PROPERTY_URI_ISPUBLIC));
             msg("readable by: " + safePropertyRef(n, VOS.PROPERTY_URI_GROUPREAD));
-            msg("writable by: " + safePropertyRef(n, VOS.PROPERTY_URI_GROUPWRITE));
+            msg("readable and writable by: " + safePropertyRef(n, VOS.PROPERTY_URI_GROUPWRITE));
             if (n instanceof ContainerNode)
             {
                 ContainerNode cn = (ContainerNode) n;
