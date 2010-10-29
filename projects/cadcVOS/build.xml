@@ -202,12 +202,12 @@
 	<echo message="${ant.project.name}"/>
 	<antcall target="build_distribution">
 	    <param name="jarFiles" value="${client.jarfile}:${client.cadc.jars}:${client.external.jars}"/>
-	    <param name="scriptFiles" value="/usr/cadc/dev/cadc/current/scripts/createProxyCert"/>
+	    <param name="scriptFiles" value="${env.CADC_PREFIX}/scripts/createProxyCert"/>
 	    <param name="distName" value="cadcVOSClient"/> 
 	</antcall>
 	<antcall target="build_distribution">
 	    <param name="jarFiles" value="${client.jarfile}:${client.cadc.jars}"/>
-	    <param name="scriptFiles" value="/usr/cadc/dev/cadc/current/scripts/createProxyCert"/>
+	    <param name="scriptFiles" value="${env.CADC_PREFIX}/scripts/createProxyCert"/>
 	    <param name="distName" value="cadcVOSClient-minimal"/> 
 	</antcall>
     </target>
