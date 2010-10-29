@@ -102,7 +102,9 @@
 
     <property name="jars" value="${ext.restlet}:${ext.log4j}:${ext.spring}:${ext.jdom}:${cadcUtil}:${cadcRegistryClient}:${cadcUWS}:${cadcGMS}:${cadcCDP}" />
 
-    <property name="client.jars" value="cadcUtil.jar cadcRegistryClient.jar cadcUWS.jar cadcCDP.jar ${ext.jdom} ${ext.xerces} ${ext.log4j} jdom.jar xerces.jar log4j.jar" />
+    <property name="client.cadc.jars" value="${cadcUtil}:${cadcRegistryClient}:${cadcUWS}"/>
+    <property name="client.external.jars" value="${ext.jdom}:${ext.xerces}:${ext.log4j}" />
+    <property name="client.jarfile" value="${build}/lib/${project}Client.jar" />
 
     <target name="build" depends="compile,compile-test,resources,manifest">
 
@@ -114,7 +116,7 @@
             <exclude name="**Test**" />
         </jar>
    
-        <jar jarfile="${build}/lib/${project}Client.jar"
+        <jar jarfile="${client.jarfile}"
             basedir="${build}/class"
             update="no"
             manifest="${build}/tmp/${project}Client.mf">
@@ -146,9 +148,19 @@
         </copy>
     </target>
     <target name="manifest">
+	<pathconvert property="client.flat.manifest" pathsep=" ">
+	    <mapper type="flatten"/>
+	    <path> <pathelement path="${client.cadc.jars}"/> </path>
+	    <path> <pathelement path="${client.external.jars}"/> </path>
+	</pathconvert>
+	<pathconvert property="client.non-flat.manifest" pathsep=" ">
+	    <path> <pathelement path="${client.external.jars}"/> </path>
+	</pathconvert>
+
         <manifest file="${build}/tmp/${project}Client.mf" mode="replace">
             <attribute name="Main-Class" value="ca.nrc.cadc.vos.client.Main"/>
-            <attribute name="Class-Path" value="${client.jars}" />
+            <attribute name="Class-Path" value="${client.flat.manifest} ${client.non-flat.manifest}"/>
+
         </manifest>
     </target>
 
@@ -187,22 +199,16 @@
     
     <!-- create the client distribution tar file -->
     <target name="distribute" depends="build" >
-        <property name="tmpDir" value="${build}/tmp" />
-        <delete dir="${tmpDir}"/>
-        <mkdir dir="${tmpDir}"/>
-        <copy toDir="${tmpDir}" flatten="true">
-            <resources>
-                <file file="${build}/lib/${project}Client.jar"/>
-                <file file="${lib}/cadcUtil.jar"/>
-                <file file="${lib}/cadcRegistryClient.jar"/>
-                <file file="${lib}/cadcUWS.jar"/>
-                <file file="${ext.lib}/jdom.jar"/>
-                <file file="${ext.lib}/xerces.jar"/>
-                <file file="${ext.lib}/log4j.jar"/>
-            </resources>
-        </copy>
-        <tar destfile="${build}/cadcVOSClient.tar" basedir="${tmpDir}" />
-        <delete dir="${tmpDir}"/>
+	<echo message="${ant.project.name}"/>
+	<antcall target="build_distribution">
+	    <param name="jarFiles" value="${client.jarfile}:${client.cadc.jars}:${client.external.jars}"/>
+	    <param name="scriptFiles" value="/usr/cadc/dev/cadc/current/scripts/createProxyCert"/>
+	    <param name="distName" value="cadcVOSClient"/> 
+	</antcall>
+	<antcall target="build_distribution">
+	    <param name="jarFiles" value="${client.jarfile}:${client.cadc.jars}"/>
+	    <param name="scriptFiles" value="/usr/cadc/dev/cadc/current/scripts/createProxyCert"/>
+	    <param name="distName" value="cadcVOSClient-minimal"/> 
+	</antcall>
     </target>
-
 </project>
