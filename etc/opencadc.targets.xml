@@ -110,7 +110,7 @@
 		</javac>
 	</target>
         
-        <target name="compile-test" depends="build">
+        <target name="compile-test" depends="compile">
                 <echo message="java.source.version: ${java.source.version}" />
                 <echo message="java.target.version: ${java.target.version}" />
                 <javac destdir="${build}/test/class"
@@ -157,4 +157,32 @@
 	<target name="build" depends="compile">
 		<fail message="dummy build run from project base-build-script! should invoke 'build' target in actual project/module build.xml!"/>
 	</target>
+
+    <target name = "build_distribution">
+	<condition property="distName" value="${project}">
+	    <not> <isset property="distName"/> </not>
+	</condition>
+	<echo message="Building distribution containing jars: ${jarFiles}"/>
+	<echo message="Building distribution containing scripts: ${scriptFiles}"/>
+	<exec executable="date" outputproperty="today">
+	    <arg value="+%Y-%m-%d"/>
+	</exec>
+        <property name="tmpDir" value="${build}/tmp" />
+        <delete dir="${tmpDir}"/>
+        <mkdir dir="${tmpDir}/lib"/>
+        <copy toDir="${tmpDir}/lib" flatten="true">
+            <path path="${jarFiles}"/>
+	</copy>
+        <mkdir dir="${tmpDir}/scripts"/>
+        <copy toDir="${tmpDir}/scripts" flatten="true">
+            <path path="${scriptFiles}"/>
+	</copy>
+	<echo message="${tmpDir}"/>
+        <tar destfile="${build}/www/software/${distName}-${today}.tar">
+	    <tarfileset dir="${tmpDir}" filemode="755" includes="scripts/*"/>
+	    <tarfileset dir="${tmpDir}" includes="lib/*"/>
+	</tar>
+        <delete dir="${tmpDir}"/>
+	<symlink overwrite="true" link="${build}/www/software/${distName}.tar" resource="${build}/www/software/${distName}-${today}.tar"/>
+    </target>
 </project>
