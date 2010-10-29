@@ -488,10 +488,20 @@ t.printStackTrace();
             Map<String,NodeProperty> map = new HashMap<String,NodeProperty>();
             // copy current
             for (NodeProperty np : cur)
+            {
+                log.debug(String.format(
+                    "copyProperty--setting existing property [%s] to [%s].",
+                    np.getPropertyURI(), np.getPropertyValue()));
                 map.put(np.getPropertyURI(), np);
+            }
             // replace with specified values
             for (NodeProperty np : properties)
+            {
+                log.debug(String.format(
+                    "copyProperty--replacing property [%s] with value [%s].",
+                    np.getPropertyURI(), np.getPropertyValue()));
                 map.put(np.getPropertyURI(), np);
+            }
             cur.clear();
             cur.addAll(map.values());
         }
@@ -802,14 +812,24 @@ t.printStackTrace();
         String groupWrite = argMap.getValue(ARG_GROUP_WRITE);
 
         // support --public and --public=true; everything else sets it to false
-        boolean isPublic = argMap.isSet(ARG_PUBLIC);
-        if (isPublic)
+        boolean isPublicSet = argMap.isSet(ARG_PUBLIC);
+        boolean isPublicValue = true;
+        if (isPublicSet)
         {
             String s = argMap.getValue(ARG_PUBLIC);
-            if (s != null  && s.trim().length() > 0)
-                isPublic = Boolean.valueOf(s);
+            if (s != null  && s.trim().length() > 0 && !s.trim().equalsIgnoreCase("true"))
+            {
+                if (s.equalsIgnoreCase("false"))
+                {
+                    isPublicValue = false;
+                }
+                else
+                {
+                    isPublicSet = false;
+                    log.info("--public value not recognized: " + s.trim() + ".  Ignoring.");
+                }
+            }
         }
-
 
         if (contentType != null)
             properties.add(new NodeProperty(VOS.PROPERTY_URI_TYPE, contentType));
@@ -821,8 +841,8 @@ t.printStackTrace();
             properties.add(new NodeProperty(VOS.PROPERTY_URI_GROUPREAD, groupRead));
         if (groupWrite != null)
             properties.add(new NodeProperty(VOS.PROPERTY_URI_GROUPWRITE, groupWrite));
-        // always set this
-        properties.add(new NodeProperty(VOS.PROPERTY_URI_ISPUBLIC, Boolean.toString(isPublic)));
+        if (isPublicSet)
+            properties.add(new NodeProperty(VOS.PROPERTY_URI_ISPUBLIC, Boolean.toString(isPublicValue)));
     }
 
     /**
