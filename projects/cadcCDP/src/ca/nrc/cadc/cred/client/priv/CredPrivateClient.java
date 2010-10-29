@@ -56,10 +56,9 @@ public class CredPrivateClient
 
     protected URL baseServiceURL;
 
-    private CredPrivateClient instance;
-
     /**
-     * CredPrivateClient with baseServiceURL as constructor.
+     * Implementors must provide an extension of this class of the
+     * name ca.nrc.cadc.cred.client.priv.impl.CredPrivateClientImpl.
      * 
      * @param baseServiceURL
      * @throws ClassNotFoundException
@@ -79,15 +78,22 @@ public class CredPrivateClient
      *             no nullary constructor).
      * 
      */
-    public CredPrivateClient(URL baseServiceURL)
-            throws ClassNotFoundException, IllegalAccessException,
-            InstantiationException
+    public static CredPrivateClient getInstance(URL baseServiceURL)
+        throws ClassNotFoundException, IllegalAccessException,
+        InstantiationException
     {
-        this.baseServiceURL = baseServiceURL;
-
         Class<?> implClass = Class
                 .forName("ca.nrc.cadc.cred.client.priv.impl.CredPrivateClientImpl");
-        instance = (CredPrivateClient) implClass.newInstance();
+        CredPrivateClient client = (CredPrivateClient) implClass.newInstance();
+        client.setBaseServiceURL(baseServiceURL);
+        return client;
+    }
+    
+    /**
+     * Constructor.
+     */
+    protected CredPrivateClient()
+    {
     }
 
     /**
@@ -104,6 +110,16 @@ public class CredPrivateClient
     {
         throw new UnsupportedOperationException(
                 "To be implemented in the subclass");
+    }
+
+    protected URL getBaseServiceURL()
+    {
+        return baseServiceURL;
+    }
+
+    protected void setBaseServiceURL(URL baseServiceURL)
+    {
+        this.baseServiceURL = baseServiceURL;
     }
 
 }
