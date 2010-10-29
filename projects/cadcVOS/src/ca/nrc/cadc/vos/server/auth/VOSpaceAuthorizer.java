@@ -357,7 +357,7 @@ public class VOSpaceAuthorizer implements Authorizer
             if (privateKeyChain == null)
             {
                 URL credBaseURL = registryClient.getServiceURL(new URI(CRED_SERVICE_ID), "https");
-                CredPrivateClient credentialPrivateClient = new CredPrivateClient(credBaseURL);
+                CredPrivateClient credentialPrivateClient = CredPrivateClient.getInstance(credBaseURL);
                 privateKeyChain = credentialPrivateClient.getCertificate();
                 subject.getPublicCredentials().add(privateKeyChain);
             }
