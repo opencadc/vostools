@@ -83,6 +83,7 @@ import org.restlet.Request;
 import org.restlet.data.Status;
 import org.restlet.representation.Representation;
 
+import ca.nrc.cadc.auth.AuthenticationUtil;
 import ca.nrc.cadc.vos.ContainerNode;
 import ca.nrc.cadc.vos.Node;
 import ca.nrc.cadc.vos.NodeAlreadyExistsException;
@@ -177,7 +178,8 @@ public class CreateNodeAction extends NodeAction
             {
                 if (principal instanceof X500Principal)
                 {
-                    return principal.getName();
+                    return AuthenticationUtil.canonizeDistinguishedName(
+                            principal.getName());
                 }
             }
         }

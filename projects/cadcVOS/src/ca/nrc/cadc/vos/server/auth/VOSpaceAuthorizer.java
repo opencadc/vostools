@@ -110,6 +110,8 @@ import ca.nrc.cadc.vos.server.util.NodeUtil;
  * instance must be created each time.
  * 
  * The nodePersistence object must be set for every instance.
+ * 
+ * @author majorb
  */
 public class VOSpaceAuthorizer implements Authorizer
 {
@@ -159,83 +161,10 @@ public class VOSpaceAuthorizer implements Authorizer
     public Object getReadPermission(final Node node)
             throws AccessControlException, FileNotFoundException
     {        
-        NodeStackListener readPermissionAuthorizer = new NodeStackListener()
-        {
-            @Override
-            public void nodeVisited(Node node, int parentLevel)
-            {
-                
-                // Check if the node is public
-                if (node.isPublic())
-                {
-                    // Node is open for public reading
-                    return;
-                }
-                
-                AccessControlContext acContext = AccessController.getContext();
-                Subject subject = Subject.getSubject(acContext);
-                NodeProperty groupRead = node.findProperty(VOS.PROPERTY_URI_GROUPREAD);
-                NodeProperty groupWrite = node.findProperty(VOS.PROPERTY_URI_GROUPWRITE);
-                
-                // return true if this is the owner of the node or if a member
-                // of the groupRead property
-                if (subject != null) {
-                    
-                    X500Principal nodeOwner = new X500Principal(node.getOwner());
-                    
-                    Set<Principal> principals = subject.getPrincipals();
-                    for (Principal principal : principals)
-                    {
-                        if (LOG.isDebugEnabled())
-                        {
-                            String principalString = principal == null ? "null" : principal.getName();
-                            LOG.debug(String.format("Checking owner read permission on node \"%s\" (owner=\"%s\") where user=\"%s\"",
-                                    node.getName(), node.getOwner(), principalString));
-                        }
-                        
-                        // Check for ownership
-                        if (AuthenticationUtil.equals(nodeOwner, principal))
-                        {
-                            // User is the owner
-                            return;
-                        }
-                    }
-                        
-                    // Check for group membership
-                    if (LOG.isDebugEnabled())
-                    {
-                        String groupReadString = groupRead == null ? "null" : groupRead.getPropertyValue();
-                        String groupWriteString = groupWrite == null ? "null" : groupWrite.getPropertyValue();
-                        LOG.debug(String.format("Checking group read permission on node \"%s\" (groupRead=\"%s\", groupWrite=\"%s\")",
-                                node.getName(), groupReadString, groupWriteString));
-                    }
-                    
-                    // Check group read
-                    if (groupRead != null && groupRead.getPropertyValue() != null)
-                    {
-                        if (hasMembership(groupRead.getPropertyValue(), subject))
-                        {
-                            // User is a member
-                            return;
-                        }
-                    }
-                    
-                    // Check group write
-                    if (groupWrite != null && groupWrite.getPropertyValue() != null)
-                    {
-                        if (hasMembership(groupWrite.getPropertyValue(), subject))
-                        {
-                            // User is a member
-                            return;
-                        }
-                    }
-                }
-                
-                throw new AccessControlException("Read permission denied.");
-            }};
         try
         {
-            Node persistentNode = NodeUtil.iterateStack(node, readPermissionAuthorizer, getNodePersistence());
+            Node persistentNode = NodeUtil.iterateStack(
+                    node, readPermissionAuthorizer, getNodePersistence());
             if (persistentNode == null)
             {
                 throw new AccessControlException("Read permission on root denied.");
@@ -282,61 +211,10 @@ public class VOSpaceAuthorizer implements Authorizer
     public Object getWritePermission(final Node node)
             throws AccessControlException, FileNotFoundException
     {
-        NodeStackListener writePermissionAuthorizer = new NodeStackListener()
-        {
-            @Override
-            public void nodeVisited(Node node, int parentLevel)
-            {
-                AccessControlContext acContext = AccessController.getContext();
-                Subject subject = Subject.getSubject(acContext);
-                NodeProperty groupWrite = node.findProperty(VOS.PROPERTY_URI_GROUPWRITE);
-                
-                // return true if this is the owner of the node
-                if (subject != null) {
-                    
-                    X500Principal nodeOwner = new X500Principal(node.getOwner());
-                    
-                    Set<Principal> principals = subject.getPrincipals();
-                    for (Principal principal : principals)
-                    {   
-                        
-                        if (LOG.isDebugEnabled())
-                        {
-                            String principalString = principal == null ? "null" : principal.getName();
-                            LOG.debug(String.format("Checking owner write permission on node \"%s\" (owner=\"%s\") where user=\"%s\"",
-                                    node.getName(), node.getOwner(), principalString));
-                        }
-                        
-                        // Check for ownership
-                        if (AuthenticationUtil.equals(nodeOwner, principal))
-                        {
-                            // User is the owner
-                            return;
-                        }
-                    }
-                       
-                    // Check for group membership
-                    if (LOG.isDebugEnabled())
-                    {
-                        String groupWriteString = groupWrite == null ? "null" : groupWrite.getPropertyValue();
-                        LOG.debug(String.format("Checking group write permission on node \"%s\" (groupRead=\"%s\")",
-                                node.getName(), groupWriteString));
-                    }
-                    if (groupWrite != null && groupWrite.getPropertyValue() != null)
-                    {
-                        if (hasMembership(groupWrite.getPropertyValue(), subject))
-                        {
-                            // User is a member
-                            return;
-                        }
-                    }
-                }
-                throw new AccessControlException("Write permission denied.");
-                
-            }};
         try
         {
-            Node persistentNode = NodeUtil.iterateStack(node, writePermissionAuthorizer, getNodePersistence());
+            Node persistentNode = NodeUtil.iterateStack(
+                    node, writePermissionAuthorizer, getNodePersistence());
             if (persistentNode == null)
             {
                 throw new AccessControlException("Write permission to root denied.");
@@ -360,6 +238,12 @@ public class VOSpaceAuthorizer implements Authorizer
     {
         try
         {
+            // require identification for group membership
+            if (subject.getPrincipals().size() <= 0)
+            {
+                return false;
+            }
+            
             RegistryClient registryClient = new RegistryClient();
             
             X509CertificateChain privateKeyChain = X509CertificateChain.findPrivateKeyChain(
@@ -442,8 +326,8 @@ public class VOSpaceAuthorizer implements Authorizer
         }
         catch (AuthorizationException e)
         {
-            LOG.error("Could't make credPrivateClientCall", e);
-            throw new IllegalStateException(e);
+            LOG.debug("Could't make credPrivateClientCall", e);
+            return false;
         }
         catch (InstantiationException e)
         {
@@ -461,6 +345,167 @@ public class VOSpaceAuthorizer implements Authorizer
             throw new IllegalStateException(e);
         }
     }
+    
+    /**
+     * Anonymous class to handle read permission checks.
+     * 
+     * Check read permission by ensuring that the user is the owner of
+     * the node, a member of the groupRead property of the node, or that
+     * the node is public.
+     * 
+     * This applies to all node parentLevels.
+     */
+    NodeStackListener readPermissionAuthorizer = new NodeStackListener()
+    {
+        @Override
+        public void nodeVisited(Node nextNode, int parentLevel)
+        {
+            LOG.debug("Checking read permission of node " + nextNode.getName()
+                    + " at parent level " + parentLevel);
+            
+            // Check if the node is public
+            if (nextNode.isPublic())
+            {
+                // Node is open for public reading
+                return;
+            }
+            
+            AccessControlContext acContext = AccessController.getContext();
+            Subject subject = Subject.getSubject(acContext);
+            NodeProperty groupRead = nextNode.findProperty(VOS.PROPERTY_URI_GROUPREAD);
+            NodeProperty groupWrite = nextNode.findProperty(VOS.PROPERTY_URI_GROUPWRITE);
+            
+            // return true if this is the owner of the node or if a member
+            // of the groupRead or groupWrite property
+            if (subject != null)
+            {
+                X500Principal nodeOwner = new X500Principal(nextNode.getOwner());
+                
+                Set<Principal> principals = subject.getPrincipals();
+                for (Principal principal : principals)
+                {
+                    if (LOG.isDebugEnabled())
+                    {
+                        String principalString = principal == null ? "null" : principal.getName();
+                        LOG.debug(String.format(
+                                "Checking owner read permission on node \"%s\" (owner=\"%s\") where user=\"%s\"",
+                                nextNode.getName(), nextNode.getOwner(), principalString));
+                    }
+                    
+                    // Check for ownership
+                    if (AuthenticationUtil.equals(nodeOwner, principal))
+                    {
+                        // User is the owner
+                        return;
+                    }
+                }
+                    
+                // Check for group membership
+                if (LOG.isDebugEnabled())
+                {
+                    String groupReadString = groupRead == null ? "null" : groupRead.getPropertyValue();
+                    String groupWriteString = groupWrite == null ? "null" : groupWrite.getPropertyValue();
+                    LOG.debug(String.format(
+                            "Checking group read permission on node \"%s\" (groupRead=\"%s\", groupWrite=\"%s\")",
+                            nextNode.getName(), groupReadString, groupWriteString));
+                }
+                
+                // Check group read
+                if (groupRead != null && groupRead.getPropertyValue() != null)
+                {
+                    if (hasMembership(groupRead.getPropertyValue(), subject))
+                    {
+                        // User is a member
+                        return;
+                    }
+                }
+                
+                // Check group write
+                if (groupWrite != null && groupWrite.getPropertyValue() != null)
+                {
+                    if (hasMembership(groupWrite.getPropertyValue(), subject))
+                    {
+                        // User is a member
+                        return;
+                    }
+                }
+            }
+            
+            throw new AccessControlException("Read permission denied.");
+        }};
+    
+    /**
+     * Anonymous class to handle performing write permission checks.
+     * 
+     * If this is target (the parentLevel == 0), then check the write permissions
+     * for this node by ensuring the user is the owner or is a member of the groupWrite
+     * property.
+     * 
+     * For all other nodes in the heirarchy, ensure the user has read permisson by
+     * calling the readPermissionAuthorizer.
+     */
+    NodeStackListener writePermissionAuthorizer = new NodeStackListener()
+    {
+        @Override
+        public void nodeVisited(Node nextNode, int parentLevel)
+        {
+            if (parentLevel != 0)
+            {
+                readPermissionAuthorizer.nodeVisited(nextNode, parentLevel);
+            }
+            else
+            {
+                LOG.debug("Checking write permission of node " + nextNode.getName()
+                        + " at parent level " + parentLevel);
+                
+                AccessControlContext acContext = AccessController.getContext();
+                Subject subject = Subject.getSubject(acContext);
+                NodeProperty groupWrite = nextNode.findProperty(VOS.PROPERTY_URI_GROUPWRITE);
+
+                if (subject != null)
+                {
+                    X500Principal nodeOwner = new X500Principal(nextNode.getOwner());
+                    
+                    Set<Principal> principals = subject.getPrincipals();
+                    for (Principal principal : principals)
+                    {
+                        if (LOG.isDebugEnabled())
+                        {
+                            String principalString = principal == null ? "null" : principal.getName();
+                            LOG.debug(String.format(
+                                    "Checking owner write permission on node \"%s\" (owner=\"%s\") where user=\"%s\"",
+                                    nextNode.getName(), nextNode.getOwner(), principalString));
+                        }
+                        
+                        // Check for ownership
+                        if (AuthenticationUtil.equals(nodeOwner, principal))
+                        {
+                            // User is the owner
+                            return;
+                        }
+                    }
+                       
+                    // Check for group membership
+                    if (LOG.isDebugEnabled())
+                    {
+                        String groupWriteString = groupWrite == null ? "null" : groupWrite.getPropertyValue();
+                        LOG.debug(String.format(
+                                "Checking group write permission on node \"%s\" (groupRead=\"%s\")",
+                                nextNode.getName(), groupWriteString));
+                    }
+                    if (groupWrite != null && groupWrite.getPropertyValue() != null)
+                    {
+                        if (hasMembership(groupWrite.getPropertyValue(), subject))
+                        {
+                            // User is a member
+                            return;
+                        }
+                    }
+                }
+                throw new AccessControlException("Write permission denied.");
+            }
+        }};
+        
 
     /**
      * Node NodePersistence Getter.
