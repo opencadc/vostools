@@ -97,6 +97,7 @@ public class XmlUtil
 {
     private static Logger log = Logger.getLogger(XmlUtil.class);
     public static final String PARSER = "org.apache.xerces.parsers.SAXParser";
+    private static final String GRAMMAR_POOL = "org.apache.xerces.parsers.XMLGrammarCachingConfiguration";
     public static final Namespace XSI_NS = Namespace.getNamespace("xsi", "http://www.w3.org/2001/XMLSchema-instance");
 
     /**
@@ -148,8 +149,8 @@ public class XmlUtil
         log.debug("validateXml:\n" + xml);
         return validateXml(new StringReader(xml), schemaMap);
     }
-    
-    public static Document validateXml(Reader reader, Map<String, String> schemaMap) throws IOException, JDOMException
+
+    public static SAXBuilder createBuilder(Map<String, String> schemaMap)
     {
         String schemaResource;
         String space = " ";
@@ -162,14 +163,24 @@ public class XmlUtil
             sbSchemaLocations.append(schemaNSKey).append(space).append(schemaResource).append(space);
         }
 
+        // enable xerces grammar caching
+        System.setProperty("org.apache.xerces.xni.parser.XMLParserConfiguration", GRAMMAR_POOL);
+
         SAXBuilder schemaValidator;
         schemaValidator = new SAXBuilder(PARSER, true);
         schemaValidator.setFeature("http://xml.org/sax/features/validation", true);
         schemaValidator.setFeature("http://apache.org/xml/features/validation/schema", true);
-        schemaValidator.setProperty("http://apache.org/xml/properties/schema/external-schemaLocation",
+        if (schemaMap.size() > 0)
+            schemaValidator.setProperty("http://apache.org/xml/properties/schema/external-schemaLocation",
                 sbSchemaLocations.toString());
-        
-        return schemaValidator.build(reader);
+
+        return schemaValidator;
+    }
+
+    public static Document validateXml(Reader reader, Map<String, String> schemaMap) throws IOException, JDOMException
+    {
+        SAXBuilder builder = createBuilder(schemaMap);
+        return builder.build(reader);
     }
 
     /**

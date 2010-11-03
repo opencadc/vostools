@@ -73,6 +73,7 @@ import org.jdom.JDOMException;
 import java.util.HashMap;
 import java.util.Map;
 import ca.nrc.cadc.util.Log4jInit;
+import java.io.File;
 import org.apache.log4j.Logger;
 import org.junit.Test;
 import static org.junit.Assert.*;
@@ -89,29 +90,29 @@ public class XmlUtilTest
         Log4jInit.setLevel("ca.nrc.cadc", org.apache.log4j.Level.INFO);
     }
 
-    public XmlUtilTest() { }
+    String fooSchemaURL;
+    String barSchemaURL;
 
-    /**
-     * Test of validateXml method, of class XmlUtil.
-     */
-    @Test
-    public void testValidateXmlWithValidParser() throws Exception
+    public XmlUtilTest() 
     {
-        log.debug("testValidateXmlWithValidParser()...");
+        fooSchemaURL = XmlUtil.getResourceUrlString("foo.xsd", XmlUtilTest.class);
+        barSchemaURL = XmlUtil.getResourceUrlString("bar.xsd", XmlUtilTest.class);
+    }
+
+    @Test
+    public void testValidXml_ValidParser() throws Exception
+    {
+        log.debug("testValidXml_ValidParser");
         try
         {
             StringBuilder xml = new StringBuilder();
             xml.append("<?xml version=\"1.0\" ?>");
             xml.append("<foons:foo xmlns:xsi=\"http://www.w3.org/2001/XMLSchema-instance\"");
             xml.append("         xmlns:foons=\"http://localhost/foo.xsd\">");
-            xml.append("         xsi:schemaLocation=\"http://localhost/foo.xsd\">");
             xml.append("</foons:foo>");
 
             Map<String, String> map = new HashMap<String, String>();
-            map.put("http://localhost/foo.xsd", "foo.xsd");
-//            map.put("http://www.ivoa.net/xml/UWS/v1.0", "UWS-v1.0.xsd");
-//            map.put("http://www.w3.org/1999/xlink", "XLINK.xsd");
-            
+            map.put("http://localhost/foo.xsd", fooSchemaURL);
             XmlUtil.validateXml(xml.toString(), map);
         }
         catch (Throwable t)
@@ -119,27 +120,53 @@ public class XmlUtilTest
             log.error(t);
             fail(t.getMessage());
         }
-        log.info("testValidateXmlWithValidParser() passed.");
+            log.debug("testValidXml_ValidParser passed.");
     }
 
-    /**
-     * Test of validateXml method, of class XmlUtil.
-     */
     @Test
-    public void testValidateXmlWithInvalidParser() throws Exception
+    public void testInvalidXml_ValidParser() throws Exception
     {
-        log.debug("testValidateXmlWithInvalidParser()...");
+        log.debug("testInvalidXml_ValidParser");
         try
         {
             StringBuilder xml = new StringBuilder();
             xml.append("<?xml version=\"1.0\" ?>");
-            xml.append("<foons:foo xmlns:xsi=\"http://www.w3.org/2001/XMLSchema-instance\"");
+            xml.append("<foons:bar xmlns:xsi=\"http://www.w3.org/2001/XMLSchema-instance\"");
             xml.append("         xmlns:foons=\"http://localhost/foo.xsd\">");
-            xml.append("         xsi:schemaLocation=\"http://localhost/foo.xsd\">");
-            xml.append("</foons:foo>");
+            xml.append("</foons:bar>");
 
             Map<String, String> map = new HashMap<String, String>();
-            map.put("http://localhost/foo.xsd", "bar.xsd");
+            map.put("http://localhost/foo.xsd", fooSchemaURL);
+
+            try
+            {
+                XmlUtil.validateXml(xml.toString(), map);
+                fail("JDOM parsing exception should have been thrown");
+            }
+            catch (JDOMException ifnore) {}
+        }
+        catch (Throwable t)
+        {
+            log.error(t);
+            fail(t.getMessage());
+        }
+        log.debug("testInvalidXml_ValidParser passed.");
+    }
+
+    @Test
+    public void testValidXml_InvalidParser() throws Exception
+    {
+        log.debug("testValidXml_InvalidParser");
+        try
+        {
+            StringBuilder xml = new StringBuilder();
+            xml.append("<?xml version=\"1.0\" ?>");
+            xml.append("<foons:bar xmlns:xsi=\"http://www.w3.org/2001/XMLSchema-instance\"");
+            xml.append("         xmlns:foons=\"http://localhost/bar.xsd\">");
+            xml.append("</foons:bar>");
+
+            Map<String, String> map = new HashMap<String, String>();
+            map.put("http://localhost/bar.xsd", fooSchemaURL);
             
             try
             {
@@ -153,6 +180,36 @@ public class XmlUtilTest
             log.error(t);
             fail(t.getMessage());
         }
-        log.info("testValidateXmlWithInvalidParser() passed.");
+        log.debug("testValidXml_InvalidParser passed.");
+    }
+
+    @Test
+    public void testValidXml_NoSchemaLocation() throws Exception
+    {
+        log.debug("testValidXml_NoSchemaLocation");
+        try
+        {
+            StringBuilder xml = new StringBuilder();
+            xml.append("<?xml version=\"1.0\" ?>");
+            xml.append("<foons:bar xmlns:xsi=\"http://www.w3.org/2001/XMLSchema-instance\"");
+            xml.append("         xmlns:foons=\"http://localhost/bar.xsd\">");
+            xml.append("</foons:bar>");
+
+            Map<String, String> map = new HashMap<String, String>();
+            //map.put("http://localhost/bar.xsd", fooSchemaURL);
+
+            try
+            {
+                XmlUtil.validateXml(xml.toString(), map);
+                fail("JDOM parsing exception should have been thrown");
+            }
+            catch (JDOMException ifnore) {}
+        }
+        catch (Throwable t)
+        {
+            log.error(t);
+            fail(t.getMessage());
+        }
+        log.debug("testValidXml_NoSchemaLocation passed.");
     }
 }
