@@ -99,6 +99,7 @@ import java.util.HashSet;
 import java.util.Map;
 import java.util.Set;
 import javax.security.auth.x500.X500Principal;
+import org.jdom.input.SAXBuilder;
 
 /**
  * @author zhangsa
@@ -125,16 +126,15 @@ public class JobReader
         log.debug("xlinkSchemaUrl: " + xlinkSchemaUrl);
     }
 
-    private Document document;
     private DateFormat dateFormat;
-    protected Map<String, String> schemaMap;
+    private SAXBuilder docBuilder;
 
     public JobReader()
     {
-        schemaMap = new HashMap<String, String>();
+        Map<String, String> schemaMap = new HashMap<String, String>();
         schemaMap.put(UWS_SCHEMA_URL, uwsSchemaUrl);
         schemaMap.put(XLINK_SCHEMA_URL, xlinkSchemaUrl);
-
+        this.docBuilder = XmlUtil.createBuilder(schemaMap);
         this.dateFormat = DateUtil.getDateFormat(DateUtil.IVOA_DATE_FORMAT, DateUtil.UTC);
     }
 
@@ -152,8 +152,8 @@ public class JobReader
         {
             throw new RuntimeException("File not found " + file.getAbsoluteFile());
         }
-        this.document = XmlUtil.validateXml(reader, schemaMap);
-        return parseJob();
+        Document doc = docBuilder.build(reader);
+        return parseJob(doc);
     }
 
     public Job readFrom(InputStream in) 
@@ -170,15 +170,15 @@ public class JobReader
         {
             throw new RuntimeException("UTF-8 encoding not supported");
         }
-        this.document = XmlUtil.validateXml(reader, schemaMap);
-        return parseJob();
+        Document doc = docBuilder.build(reader);
+        return parseJob(doc);
     }
 
     public Job readFrom(Reader reader) 
         throws JDOMException, IOException, ParseException
     {
-        this.document = XmlUtil.validateXml(reader, schemaMap);
-        return parseJob();
+        Document doc = docBuilder.build(reader);
+        return parseJob(doc);
     }
 
     /**
@@ -201,37 +201,37 @@ public class JobReader
         {
             throw new RuntimeException("UTF-8 encoding not supported");
         }
-        this.document = XmlUtil.validateXml(reader, schemaMap);
-        return parseJob();
+        Document doc = docBuilder.build(reader);
+        return parseJob(doc);
     }
 
     public Job readFrom(String string)
         throws JDOMException, IOException, ParseException
     {
-        this.document = XmlUtil.validateXml(string, schemaMap);
-        return parseJob();
+        Document doc = docBuilder.build(string);
+        return parseJob(doc);
     }
 
-    private Job parseJob()
+    private Job parseJob(Document doc)
         throws ParseException
     {
-        Element root = this.document.getRootElement();
+        Element root = doc.getRootElement();
 
         String jobID = root.getChildText(JobAttribute.JOB_ID.getAttributeName(), UWS.NS);
         if (jobID != null && jobID.trim().length() == 0)
             jobID = null;
         String runID = root.getChildText(JobAttribute.RUN_ID.getAttributeName(), UWS.NS);
         Subject owner = createSubject(root.getChildText(JobAttribute.OWNER_ID.getAttributeName(), UWS.NS));
-        ExecutionPhase executionPhase = parseExecutionPhase();
+        ExecutionPhase executionPhase = parseExecutionPhase(doc);
         Date quote = parseDate(root.getChildText(JobAttribute.QUOTE.getAttributeName(), UWS.NS));
         Date startTime = parseDate(root.getChildText(JobAttribute.START_TIME.getAttributeName(), UWS.NS));
         Date endTime = parseDate(root.getChildText(JobAttribute.END_TIME.getAttributeName(), UWS.NS));
         Date destructionTime = parseDate(root.getChildText(JobAttribute.DESTRUCTION_TIME.getAttributeName(), UWS.NS));
         long executionDuration = Long.parseLong(root.getChildText(JobAttribute.EXECUTION_DURATION.getAttributeName(), UWS.NS));
         ErrorSummary errorSummary = null;
-        if (executionPhase.equals(ExecutionPhase.ERROR)) errorSummary = parseErrorSummary();
-        List<Result> resultsList = parseResultsList();
-        List<Parameter> parameterList = parseParametersList();
+        if (executionPhase.equals(ExecutionPhase.ERROR)) errorSummary = parseErrorSummary(doc);
+        List<Result> resultsList = parseResultsList(doc);
+        List<Parameter> parameterList = parseParametersList(doc);
         String requestPath = null; // not presented in XML text
 
         return new Job(jobID, executionPhase, executionDuration, destructionTime, quote, startTime, endTime, errorSummary, owner,
@@ -262,10 +262,10 @@ public class JobReader
         return dateFormat.parse(strDate);
     }
 
-    private ExecutionPhase parseExecutionPhase()
+    private ExecutionPhase parseExecutionPhase(Document doc)
     {
         ExecutionPhase rtn = null;
-        Element root = this.document.getRootElement();
+        Element root = doc.getRootElement();
         String strPhase = root.getChildText(JobAttribute.EXECUTION_PHASE.getAttributeName(), UWS.NS);
         if (strPhase.equalsIgnoreCase(ExecutionPhase.PENDING.toString()))
             rtn = ExecutionPhase.PENDING;
@@ -288,10 +288,10 @@ public class JobReader
         return rtn;
     }
 
-    private List<Parameter> parseParametersList()
+    private List<Parameter> parseParametersList(Document doc)
     {
         List<Parameter> rtn = null;
-        Element root = this.document.getRootElement();
+        Element root = doc.getRootElement();
         Element elementParameters = root.getChild(JobAttribute.PARAMETERS.getAttributeName(), UWS.NS);
         if (elementParameters != null)
         {
@@ -311,10 +311,10 @@ public class JobReader
         return rtn;
     }
 
-    private List<Result> parseResultsList()
+    private List<Result> parseResultsList(Document doc)
     {
         List<Result> rtn = null;
-        Element root = this.document.getRootElement();
+        Element root = doc.getRootElement();
         Element e = root.getChild(JobAttribute.RESULTS.getAttributeName(), UWS.NS);
         if (e != null)
         {
@@ -342,10 +342,10 @@ public class JobReader
         return rtn;
     }
 
-    private ErrorSummary parseErrorSummary()
+    private ErrorSummary parseErrorSummary(Document doc)
     {
         ErrorSummary rtn = null;
-        Element root = this.document.getRootElement();
+        Element root = doc.getRootElement();
         Element e = root.getChild(JobAttribute.ERROR_SUMMARY.getAttributeName(), UWS.NS);
         if (e != null)
         {
@@ -361,22 +361,6 @@ public class JobReader
             if (strDetail.equalsIgnoreCase("true"))
                 hasDetail = true;
             
-//            URL url = null;
-//            Element eDetail = e.getChild(JobAttribute.ERROR_SUMMARY_DETAIL_LINK.getAttributeName(), UWS.NS);
-//            if (eDetail != null)
-//            {
-//                String strDocUrl = eDetail.getAttributeValue("href", UWS.XLINK_NS);
-//                try
-//                {
-//                    url = new URL(strDocUrl);
-//                }
-//                catch (MalformedURLException ex)
-//                {
-                    // do nothing; use NULL value
-//                    log.debug(ex.getMessage());
-//                }
-//            }
-
             String summaryMessage = e.getChildText(JobAttribute.ERROR_SUMMARY_MESSAGE.getAttributeName(), UWS.NS);
             rtn = new ErrorSummary(summaryMessage, errorType, hasDetail);
         }
