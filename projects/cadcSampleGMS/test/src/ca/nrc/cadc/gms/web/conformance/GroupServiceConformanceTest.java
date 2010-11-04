@@ -66,7 +66,9 @@
  */
 package ca.nrc.cadc.gms.web.conformance;
 
+import ca.nrc.cadc.gms.GmsConsts;
 import org.apache.log4j.Logger;
+import org.junit.Ignore;
 import org.junit.Test;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertEquals;
@@ -76,19 +78,26 @@ import com.meterware.httpunit.*;
 
 import java.io.InputStream;
 import java.io.ByteArrayInputStream;
+import java.net.URLEncoder;
 
 
 public class GroupServiceConformanceTest extends AbstractConformanceTest
 {
     private final static Logger LOGGER =
             Logger.getLogger(GroupServiceConformanceTest.class);
+    protected final static String MEMBER_DN =
+            "CN=INT_TEST_USER, OU=CADC, O=CADC, C=CA";
+    protected final static String DEFAULT_ENCODING = "UTF-8";
 
+
+    @Ignore("Not a valid test.")
     @Test
     public void getMember() throws Exception
     {
         final String responsePayload =
-                get(getServiceURL() + "/groups/" + Long.toString(88l) + "/"
-                    + Long.toString(88l));
+                get(getServiceURL() + "/groups/"
+                    + URLEncoder.encode(MEMBER_DN, DEFAULT_ENCODING) + "/"
+                    + "TEST_GROUP");
 
         LOGGER.info("Response: \r\n" + responsePayload);
 
@@ -113,8 +122,8 @@ public class GroupServiceConformanceTest extends AbstractConformanceTest
         final WebConversation webConversation = new WebConversation();
         final WebRequest getRequest =
                 new GetMethodWebRequest(getServiceURL() + "/groups/"
-                                        + Long.toString(88l) + "/"
-                                        + Long.toString(99l));
+                                        + "TEST_GROUP" + "/"
+                                        + URLEncoder.encode(MEMBER_DN, DEFAULT_ENCODING));
         webConversation.clearContents();
 
         final WebResponse response = webConversation.getResource(getRequest);
@@ -126,22 +135,27 @@ public class GroupServiceConformanceTest extends AbstractConformanceTest
     public void getGroups() throws Exception
     {
         final WebConversation webConversation = new WebConversation();
-        final WebRequest getRequest = new GetMethodWebRequest(getServiceURL()
-                                                              + "/groups");
+        final WebRequest getRequest =
+                new GetMethodWebRequest(getServiceURL() + "/groups?"
+                                        + URLEncoder.encode(GmsConsts.PROPERTY_OWNER_DN,
+                                                            DEFAULT_ENCODING)
+                                        + "="
+                                        + URLEncoder.encode(MEMBER_DN,
+                                                            DEFAULT_ENCODING));
         webConversation.clearContents();
 
         final WebResponse response = webConversation.getResource(getRequest);
-        assertEquals("Should be a 501 Not Implemented.", 501,
-                     response.getResponseCode());        
+        assertEquals("Should be a 200 OK.", 200, response.getResponseCode());        
     }
 
+    @Ignore("Not a valid test.")
     @Test
     public void getGroupMembers() throws Exception
     {
         final WebConversation webConversation = new WebConversation();
         final WebRequest getRequest =
                 new GetMethodWebRequest(getServiceURL() + "/groups/"
-                                        + Long.toString(88l) + "/members");
+                                        + "TEST_GROUP/members");
         webConversation.clearContents();
 
         final WebResponse response = webConversation.getResource(getRequest);
@@ -149,13 +163,14 @@ public class GroupServiceConformanceTest extends AbstractConformanceTest
                      response.getResponseCode());
     }
 
+    @Ignore("Not a valid test.")
     @Test
     public void getGroupProperties() throws Exception
     {
         final WebConversation webConversation = new WebConversation();
         final WebRequest getRequest =
                 new GetMethodWebRequest(getServiceURL() + "/groups/"
-                                        + Long.toString(88l) + "/properties");
+                                        + "TEST_GROUP" + "/properties");
         webConversation.clearContents();
 
         final WebResponse response = webConversation.getResource(getRequest);
@@ -170,8 +185,8 @@ public class GroupServiceConformanceTest extends AbstractConformanceTest
 
         xml.append("<?xml version=\"1.0\" encoding=\"UTF-8\" ");
         xml.append("standalone=\"no\"?>\n");
-        xml.append("<group id=\"");
-        xml.append("TEST_GROUP_ID\" />");
+        xml.append("<group uri=\"");
+        xml.append("ivo://cadc.nrc.ca/gms/group#TESTGROUP\" />");
 
         final InputStream is =
                 new ByteArrayInputStream(xml.toString().getBytes());
@@ -183,7 +198,7 @@ public class GroupServiceConformanceTest extends AbstractConformanceTest
         webConversation.clearContents();
 
         final WebResponse response = webConversation.getResource(getRequest);
-        assertEquals("Should be a 501 Not Implemented.", 501,
+        assertEquals("Should be a 201 Created.", 201,
                      response.getResponseCode());
     }
 }

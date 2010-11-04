@@ -28,12 +28,14 @@
   <bean id="groupService" name="groupService"
         class="ca.nrc.cadc.gms.server.GroupServiceImpl">
     <property name="groupPersistence" ref="groupPersistence" />
+    <property name="groupUriPrefix" value="ivo://cadc.nrc.ca/gms/group#"/>
   </bean>
 
   <!-- Web Beans -->
 
   <!-- Main router -->
   <bean name="router" class="org.restlet.ext.spring.SpringBeanRouter" />
+
 
   <!--
     ** Security Filter **
@@ -112,7 +114,9 @@
 
   <bean name="/groups" id="groupListResource" scope="prototype"
         parent="baseResource"
-        class="ca.nrc.cadc.gms.server.web.restlet.GroupListResource" />
+        class="ca.nrc.cadc.gms.server.web.restlet.GroupListResource" >
+    <property name="groupService" ref="groupService" />
+  </bean>
 
   <bean name="/groups/{groupID}" id="groupResource" scope="prototype"
         parent="baseResource"
@@ -141,11 +145,11 @@
     <property name="userService" ref="userService" />
   </bean>
 
-  <!--<bean name="/members/{memberID}/{groupID}" id="memberGroupResource" scope="prototype"-->
-        <!--parent="baseResource"-->
-        <!--class="ca.nrc.cadc.gms.server.web.restlet.MemberGroupResource">-->
-    <!--<property name="userService" ref="userService" />-->
-    <!--<property name="groupService" ref="groupService" />-->
-  <!--</bean>-->
+  <bean name="/members/{memberID}/{groupID}" id="memberGroupResource" scope="prototype"
+        parent="baseResource"
+        class="ca.nrc.cadc.gms.server.web.restlet.GroupMemberResource">
+    <property name="userService" ref="userService" />
+    <property name="groupService" ref="groupService" />
+  </bean>
   
 </beans>

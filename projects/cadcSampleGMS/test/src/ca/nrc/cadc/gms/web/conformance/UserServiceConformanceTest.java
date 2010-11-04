@@ -67,6 +67,7 @@
 package ca.nrc.cadc.gms.web.conformance;
 
 import org.apache.log4j.Logger;
+import org.junit.Ignore;
 import org.junit.Test;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertEquals;
@@ -77,19 +78,27 @@ import com.meterware.httpunit.GetMethodWebRequest;
 import com.meterware.httpunit.WebResponse;
 import com.meterware.httpunit.WebConversation;
 
+import java.net.URLEncoder;
+
 
 public class UserServiceConformanceTest extends AbstractConformanceTest
 {
     private final static Logger LOGGER =
             Logger.getLogger(UserServiceConformanceTest.class);
 
+    protected final static String MEMBER_DN =
+            "CN=INT_TEST_USER, OU=CADC, O=CADC, C=CA";
+    protected final static String DEFAULT_ENCODING = "UTF-8";
+    
 
+    @Ignore("Not a valid test.")
     @Test
     public void getMember() throws Exception
     {
         final String responsePayload =
-                get(getServiceURL() + "/members/" + Long.toString(88l) + "/"
-                    + Long.toString(88l));
+                get(getServiceURL() + "/members/"
+                    + URLEncoder.encode(MEMBER_DN, DEFAULT_ENCODING) + "/"
+                    + "TEST_GROUP");
 
         LOGGER.info("Response: \r\n" + responsePayload);
 
@@ -114,8 +123,9 @@ public class UserServiceConformanceTest extends AbstractConformanceTest
         final WebConversation webConversation = new WebConversation();
         final WebRequest getRequest =
                 new GetMethodWebRequest(getServiceURL() + "/members/"
-                                        + Long.toString(99l) + "/"
-                                        + Long.toString(88l));
+                                        + URLEncoder.encode(MEMBER_DN,
+                                                            DEFAULT_ENCODING)
+                                        + "/TEST_GROUP");
         webConversation.clearContents();
 
         final WebResponse response = webConversation.getResource(getRequest);
@@ -128,12 +138,14 @@ public class UserServiceConformanceTest extends AbstractConformanceTest
     {
         final WebConversation webConversation = new WebConversation();
         final WebRequest getRequest =
-                new GetMethodWebRequest(getServiceURL() + "/members/"
-                                        + Long.toString(88l));
+                new GetMethodWebRequest(getServiceURL()
+                                        + "/members/"
+                                        + URLEncoder.encode(MEMBER_DN,
+                                                            DEFAULT_ENCODING));
         webConversation.clearContents();
 
         final WebResponse response = webConversation.getResource(getRequest);
-        assertEquals("Should be a 501 Not Implemented.", 501,
+        assertEquals("Should be a 404 Not Found.", 404,
                      response.getResponseCode());
     }
 }

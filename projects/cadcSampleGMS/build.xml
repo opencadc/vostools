@@ -93,6 +93,7 @@
   <property name="ext.log4j"        value="${ext.lib}/log4j.jar" />
   <property name="ext.servlet-api"  value="${ext.lib}/servlet-api.jar" />
   <property name="lib.cadcGMS"      value="${lib}/cadcGMS.jar" />
+  <property name="lib.cadcUtil"     value="${lib}/cadcUtil.jar" />
   <property name="lib.cadcVOSI"     value="${lib}/cadcVOSI.jar" />
   <property name="lib.cadcLog"      value="${lib}/cadcLog.jar" />
   <property name="restlet.lib.home" value="${ext.lib}" />
@@ -131,6 +132,7 @@
       <lib file="${lib.cadcGMS}" />
       <lib file="${lib.cadcVOSI}" />
       <lib file="${lib.cadcLog}" />
+      <lib file="${lib.cadcUtil}" />
       <lib file="${build}/tmp/cadcSampleGMS.jar" />
     </war>
   </target>
@@ -150,39 +152,43 @@
 <target name="test" depends="int-test">
 </target>
 
+
+    <target name="deploy" depends="webapp">
+
+        <!-- Delete old WAR file -->
+        <echo message="Deleting old WAR file ${deployDir}/${project}.war" />
+        <delete file="${deployDir}/${project}.war"/>
+
+        <!-- Delete old delployed directory -->
+        <echo message="Deleting old deployment directory ${deployDir}/${project}/" />
+        <delete dir="${deployDir}/${project}" includeEmptyDirs="true"/>
+
+        <!-- Copy new WAR file to /data/test/webapps -->
+        <echo message="Copying new WAR file to deployment directory..." />
+        <copy file="${build}/webapps/${project}.war" todir="${deployDir}"/>
+
+        <!-- Copy properties files from test/src/resources to ${build}/resources -->
+        <echo message="Copying resource to ${build}/resources..." />
+        <copy todir="${build}/resources">
+            <fileset dir="test/src/resources">
+                <exclude name="log4j.properties"/>
+            </fileset>
+        </copy>
+
+        <!-- wait for Tomcat to unpack the WAR file -->
+        <echo message="Waiting for Tomcat to unpack the WAR file..." />
+        <waitfor>
+            <available file="${deployDir}/${project}/WEB-INF/web.xml"/>
+        </waitfor>
+        <echo message="Deployment to Tomcat complete" />
+    </target>
+
   <!-- Run the Integration/Conformance test suite -->
-  <target name="int-test" depends="webapp,compile-test">
+  <target name="int-test" depends="compile-test, deploy">
     <echo message="Running Conformance/Integration tests" />
 
-    <!-- Delete old WAR file -->
-    <echo message="Deleting old WAR file ${deployDir}/${project}.war" />
-    <delete file="${deployDir}/${project}.war"/>
-
-    <!-- Delete old delployed directory -->
-    <echo message="Deleting old deployment directory ${deployDir}/${project}/" />
-    <delete dir="${deployDir}/${project}" includeEmptyDirs="true"/>
-
-    <!-- Copy new WAR file to /data/test/webapps -->
-    <echo message="Copying new WAR file to deployment directory..." />
-    <copy file="${build}/webapps/${project}.war" todir="${deployDir}"/>
-
-    <!-- Copy log4j properties file to ${build}/class -->
-    <echo message="Copying log4j.properties to ${build}/class..." />
-    <copy file="test/src/resources/log4j.properties" todir="${build}/class"/>
-
-    <!-- Copy properties files from test/src/resources to ${build}/resources -->
-    <echo message="Copying resource to ${build}/resources..." />
-    <copy todir="${build}/resources">
-      <fileset dir="test/src/resources">
-        <exclude name="log4j.properties"/>
-      </fileset>
-    </copy>
-
-    <!-- wait for Tomcat to unpack the WAR file -->
-    <echo message="Waiting for Tomcat to unpack the WAR file..." />
-    <waitfor>
-      <available file="${deployDir}/${project}/WEB-INF/web.xml"/>
-    </waitfor>
+    <!-- Deployment issues... -->
+    <sleep seconds="5" />
 
     <!-- Run the junit test suite -->
     <echo message="Running test suite..." />

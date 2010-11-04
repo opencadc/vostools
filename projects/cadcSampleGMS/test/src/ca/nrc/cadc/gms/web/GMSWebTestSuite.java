@@ -79,9 +79,9 @@ import ca.nrc.cadc.gms.web.integration.GroupServiceIntegrationTest;
 @Suite.SuiteClasses({
         ServiceAvailabilityIntegrationTest.class,
         ServiceAvailabilityConformanceTest.class,
-        GroupServiceIntegrationTest.class,
+//        GroupServiceIntegrationTest.class,
         GroupServiceConformanceTest.class,
-        UserServiceIntegrationTest.class,
+//        UserServiceIntegrationTest.class,
         UserServiceConformanceTest.class
 })
 public class GMSWebTestSuite
