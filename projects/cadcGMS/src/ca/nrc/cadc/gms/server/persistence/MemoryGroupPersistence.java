@@ -136,13 +136,14 @@ public class MemoryGroupPersistence implements GroupPersistence
     {
         synchronized (GROUP_MAP)
         {
-            if (GROUP_MAP.containsKey(groupID))
+            if (GROUP_MAP.containsKey(groupID.toString()))
             {
-                return GROUP_MAP.get(groupID);
+                return GROUP_MAP.get(groupID.toString());
             }
             else
             {
-                throw new InvalidGroupException("Group with ID " + groupID + " not found.");
+                throw new InvalidGroupException("Group with ID " + groupID
+                                                + " not found.");
             }
         }
     }
@@ -177,14 +178,14 @@ public class MemoryGroupPersistence implements GroupPersistence
         synchronized (GROUP_MAP)
         {
 
-            if (GROUP_MAP.containsKey(gr.getID()))
+            if (GROUP_MAP.containsKey(gr.getID().toString()))
             {
                 throw new InvalidGroupException("Group with ID " + gr.getID() + " already exists.");
             }
             else
             {
                 GROUP_MAP.put(gr.getID().toString(), gr);
-                return GROUP_MAP.get(gr.getID());
+                return GROUP_MAP.get(gr.getID().toString());
             }
         }
     }
@@ -198,13 +199,13 @@ public class MemoryGroupPersistence implements GroupPersistence
     public void deleteGroup(final URI groupID) throws InvalidGroupException
     {
 
-        if (!GROUP_MAP.containsKey(groupID))
+        if (!GROUP_MAP.containsKey(groupID.toString()))
         {
             throw new InvalidGroupException("Group with ID " + groupID + " doeas not exists so it cannot be deleted.");
         }
         else
         {
-            GROUP_MAP.remove(groupID);
+            GROUP_MAP.remove(groupID.toString());
         }
     }
 
@@ -235,7 +236,11 @@ public class MemoryGroupPersistence implements GroupPersistence
                 for (Group group : groups)
                 {
                     ElemProperty ep = group.getProperty(GmsConsts.PROPERTY_OWNER_DN);
-                    if (ep != null && dn.equals(ep.getPropertyValue())) groupRtn.add(group);
+                    
+                    if (ep != null && dn.equals(ep.getPropertyValue()))
+                    {
+                        groupRtn.add(group);
+                    }
                 }
             }
         }
