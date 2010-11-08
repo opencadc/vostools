@@ -391,13 +391,18 @@ public class SSLUtil
         return chain;
     }
 
-    public static PrivateKey readPrivateKey(File keyFile)
-            throws InvalidKeySpecException, NoSuchAlgorithmException,
-            IOException
+    public static PrivateKey readPrivateKey(File keyFile) 
+            throws InvalidKeySpecException, NoSuchAlgorithmException, IOException
     {
         byte[] priv = FileUtil.readFile(keyFile);
+        return readPrivateKey(priv);
+    }
+    
+    public static PrivateKey readPrivateKey(byte[] bytesPrivateKey) 
+            throws InvalidKeySpecException, NoSuchAlgorithmException, IOException
+    {
         KeyFactory kf = KeyFactory.getInstance("RSA");
-        PKCS8EncodedKeySpec spec = new PKCS8EncodedKeySpec(priv);
+        PKCS8EncodedKeySpec spec = new PKCS8EncodedKeySpec(bytesPrivateKey);
         PrivateKey pk = kf.generatePrivate(spec);
         return pk;
     }
