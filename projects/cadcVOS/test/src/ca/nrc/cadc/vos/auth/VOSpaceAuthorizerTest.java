@@ -67,11 +67,23 @@
 package ca.nrc.cadc.vos.auth;
 
 import static org.easymock.EasyMock.createMock;
+import static org.easymock.EasyMock.expect;
 import static org.easymock.EasyMock.replay;
+import static org.easymock.EasyMock.verify;
+
+import java.net.URI;
+import java.security.PrivilegedExceptionAction;
+import java.util.ArrayList;
+import java.util.List;
+
+import javax.security.auth.Subject;
+import javax.security.auth.x500.X500Principal;
 
 import org.junit.Before;
 import org.junit.Test;
 
+import ca.nrc.cadc.vos.ContainerNode;
+import ca.nrc.cadc.vos.NodeProperty;
 import ca.nrc.cadc.vos.server.NodeDAO;
 import ca.nrc.cadc.vos.server.auth.VOSpaceAuthorizer;
 
@@ -81,50 +93,55 @@ import ca.nrc.cadc.vos.server.auth.VOSpaceAuthorizer;
  */
 public class VOSpaceAuthorizerTest
 {
-    
-    private VOSpaceAuthorizer testSubject;
-    private NodeDAO mockNodeDAO;
-
 
     @Before
     public void setup() throws Exception
     {
-        setMockNodeDAO(createMock(NodeDAO.class));
-        VOSpaceAuthorizer vospaceAuthorizer = new VOSpaceAuthorizer();
-        vospaceAuthorizer.setNodePersistence(getMockNodeDAO());
-        setTestSubject(vospaceAuthorizer);
     }
-
-
+            
     @Test
-    public void getReadPermission() throws Exception
+    public void testReadPermissonOnRoot() throws Exception
     {
-        replay(getMockNodeDAO());
+        ContainerNode dbNode = new ContainerNode("CADCAuthtest1");
+        dbNode.setOwner("cn=cadc authtest1 10627,ou=cadc,o=hia");
+        dbNode.setPublic(false);
+        List<NodeProperty> properties = new ArrayList<NodeProperty>();
+        dbNode.setProperties(properties);
+        
+        NodeDAO nodeDAO = createMock(NodeDAO.class);
+        expect(nodeDAO.getFromParent("CADCAuthtest1", null)).andReturn(dbNode).once();
+        replay(nodeDAO);
+        
+        VOSpaceAuthorizer voSpaceAuthorizer = new VOSpaceAuthorizer();
+        voSpaceAuthorizer.setNodePersistence(nodeDAO);
+        
+        Subject subject = new Subject();
+        subject.getPrincipals().add(new X500Principal("cn=cadc authtest1 10627,ou=cadc,o=hia"));
+        
+        URI uri = new URI("vos://cadc.nrc.ca!vospace/CADCAuthtest1");
+        ReadPermissionAction action = new ReadPermissionAction( voSpaceAuthorizer, uri);
+        Subject.doAs(subject, action);
+        
+        verify(nodeDAO);
+    }
+    
+    private class ReadPermissionAction implements PrivilegedExceptionAction<Object>
+    {
+        private VOSpaceAuthorizer authorizer;
+        private URI uri;
+        
+        ReadPermissionAction(VOSpaceAuthorizer authorizer, URI uri)
+        {
+            this.authorizer = authorizer;
+            this.uri = uri;
+        }
+
+        @Override
+        public Object run() throws Exception
+        {
+            return authorizer.getReadPermission(uri);
+        }
+        
     }
 
-    @Test
-    public void getWritePermission() throws Exception
-    {
-        replay(getMockNodeDAO());
-    }
-
-    public VOSpaceAuthorizer getTestSubject()
-    {
-        return testSubject;
-    }
-
-    public void setTestSubject(VOSpaceAuthorizer testSubject)
-    {
-        this.testSubject = testSubject;
-    }
-
-    public NodeDAO getMockNodeDAO()
-    {
-        return mockNodeDAO;
-    }
-
-    public void setMockNodeDAO(NodeDAO mockNodeDAO)
-    {
-        this.mockNodeDAO = mockNodeDAO;
-    }
 }
