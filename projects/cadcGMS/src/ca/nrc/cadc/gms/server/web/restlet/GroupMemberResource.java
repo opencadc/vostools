@@ -228,7 +228,7 @@ public class GroupMemberResource extends GroupResource
         catch (InvalidGroupException e)
         {
             // this should not happen for a null group id
-            final String message = "Creation of new groups not supported";
+            final String message = "Invalid group: " + e.getMessage();
             processError(e, Status.CLIENT_ERROR_BAD_REQUEST, message);
         }
         catch (URISyntaxException e)
@@ -282,7 +282,7 @@ public class GroupMemberResource extends GroupResource
         catch (InvalidGroupException e)
         {
             // this should not happen for a null group id
-            final String message = "Creation of new groups not supported";
+            final String message = "Invalid group: " + e.getMessage();
             processError(e, Status.CLIENT_ERROR_BAD_REQUEST, message);
         }
         catch (URISyntaxException e)
