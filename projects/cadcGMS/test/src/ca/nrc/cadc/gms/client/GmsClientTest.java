@@ -137,7 +137,8 @@ public class GmsClientTest extends GMSTest<GmsClient>
                             return HttpURLConnection.HTTP_NOT_FOUND;
                         }
 
-                        if (getRequestMethod().equals("POST"))
+                        if (getRequestMethod().equals("POST") ||
+                                getRequestMethod().equals("PUT") )
                         {
                             return HttpURLConnection.HTTP_CREATED;
                         }
@@ -147,7 +148,7 @@ public class GmsClientTest extends GMSTest<GmsClient>
                     @Override
                     public String getHeaderField(String headerField)
                     {
-                        if (getRequestMethod().equals("POST"))
+                        if (getRequestMethod().equals("PUT"))
                         {
                             return GMSTestSuite.CADC_GROUP_URI
                                     + createPOSTGrID;
@@ -338,7 +339,7 @@ public class GmsClientTest extends GMSTest<GmsClient>
     {
         final String groupID = GMSTestSuite.CADC_GROUP_URI + getGrID;
         final Group group = getTestSubject().getGroup(
-                new URI(URLEncoder.encode(groupID, "UTF-8")));
+                new URI(groupID));
 
         assertNotNull("Group " + groupID, group);
         assertEquals("Group's ID is " + getGrID, new URI(groupID), group

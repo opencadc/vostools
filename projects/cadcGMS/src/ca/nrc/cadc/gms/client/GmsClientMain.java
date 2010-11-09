@@ -114,6 +114,7 @@ public class GmsClientMain implements PrivilegedAction<Boolean>
     public static final String ARG_LIST_OWNER_GROUPS = "listOwner";
     public static final String ARG_CERT = "cert";
     public static final String ARG_KEY = "key";
+    public static final String ARG_CERTKEY = "certkey";
 
     // Operations on GMS client
     public enum Operation {
@@ -133,7 +134,7 @@ public class GmsClientMain implements PrivilegedAction<Boolean>
     private String target; // group/user ID the operation is executed on
     private String memberID; // ID of a member to be added or removed
     // from a group
-    
+
     // authenticated subject
     private static Subject subject;
 
@@ -245,46 +246,71 @@ public class GmsClientMain implements PrivilegedAction<Boolean>
     {
         String strCert = argMap.getValue(ARG_CERT);
         String strKey = argMap.getValue(ARG_KEY);
-        if (strCert == null || strKey == null)
-            throw new IllegalArgumentException(
-                    "Argument cert and key are all required.");
+        String strCertKey = argMap.getValue(ARG_CERTKEY);
+        if (strCertKey != null)
+        {
+            File certKeyFile = new File(strCertKey);
+            if (!certKeyFile.exists())
+            {
+                throw new IllegalArgumentException(
+                        "Certificate-key file " + strCertKey
+                                + " does not exist. \n");
+            }
+            if (!certKeyFile.canRead())
+            {
+                throw new IllegalArgumentException(
+                        "Certificate-key file " + strCertKey
+                                + " cannot be read. \n");
+            }
+            subject = SSLUtil.createSubject(certKeyFile);
 
-        File certFile = new File(strCert);
-        File keyFile = new File(strKey);
+        }
+        else if (strCert != null && strKey != null)
+        {
+            File certFile = new File(strCert);
+            File keyFile = new File(strKey);
 
-        StringBuffer sbSslMsg = new StringBuffer();
-        boolean sslError = false;
-        if (!certFile.exists())
-        {
-            sbSslMsg.append("Certificate file " + strCert
-                    + " does not exist. \n");
-            sslError = true;
-        }
-        if (!keyFile.exists())
-        {
-            sbSslMsg.append("Key file " + strKey + " does not exist. \n");
-            sslError = true;
-        }
-        if (!sslError)
-        {
-            if (!certFile.canRead())
+            StringBuffer sbSslMsg = new StringBuffer();
+            boolean sslError = false;
+            if (!certFile.exists())
             {
                 sbSslMsg.append("Certificate file " + strCert
-                        + " cannot be read. \n");
+                        + " does not exist. \n");
                 sslError = true;
             }
-            if (!keyFile.canRead())
+            if (!keyFile.exists())
             {
                 sbSslMsg.append("Key file " + strKey
-                        + " cannot be read. \n");
+                        + " does not exist. \n");
                 sslError = true;
             }
+            if (!sslError)
+            {
+                if (!certFile.canRead())
+                {
+                    sbSslMsg.append("Certificate file " + strCert
+                            + " cannot be read. \n");
+                    sslError = true;
+                }
+                if (!keyFile.canRead())
+                {
+                    sbSslMsg.append("Key file " + strKey
+                            + " cannot be read. \n");
+                    sslError = true;
+                }
+            }
+            if (sslError)
+            {
+                throw new IllegalArgumentException(sbSslMsg.toString());
+            }
+            subject = SSLUtil.createSubject(certFile, keyFile);
         }
-        if (sslError)
+        else
         {
-            throw new IllegalArgumentException(sbSslMsg.toString());
+            throw new IllegalArgumentException(
+                    "Argument cert and key or certkey are required.");
         }
-        subject = SSLUtil.createSubject(certFile, keyFile);
+
     }
 
     public Boolean run()
@@ -436,7 +462,7 @@ public class GmsClientMain implements PrivilegedAction<Boolean>
                                     + this.operation);
                 }
             }
-            
+
             // check check argument
             if (this.operation.equals(Operation.CHECK_MEMBER))
             {
@@ -493,7 +519,6 @@ public class GmsClientMain implements PrivilegedAction<Boolean>
         }
 
     }
-       
 
     private void displayGroup(Group group)
     {
@@ -601,7 +626,7 @@ public class GmsClientMain implements PrivilegedAction<Boolean>
             System.exit(NET_STATUS);
         }
     }
-    
+
     /**
      * Executes user group membership check command
      */
@@ -609,15 +634,17 @@ public class GmsClientMain implements PrivilegedAction<Boolean>
     {
         try
         {
-            User user = client.getMember(new URI(target), new X500Principal(
-                    memberID));
+            User user = client.getMember(new URI(target),
+                    new X500Principal(memberID));
             if (user == null)
             {
-                msg("User ID (" + memberID + ") IS NOT member of group " + target);
+                msg("User ID (" + memberID + ") IS NOT member of group "
+                        + target);
             }
             else
             {
-                msg("User ID (" + memberID + ") IS member of group " + target);
+                msg("User ID (" + memberID + ") IS member of group "
+                        + target);
             }
         }
         catch (Exception e)
@@ -718,31 +745,31 @@ public class GmsClientMain implements PrivilegedAction<Boolean>
     public static void usage()
     {
         String[] um = {
-                "Usage: java -jar cadcGMSClient.jar [-v|--verbose|-d|--debug]  ...                                         ",
+                "Usage: java -jar cadcGMSClient.jar [-v|--verbose|-d|--debug]  ...                                 ",
                 "                                                                                                  ",
                 "Help:                                                                                             ",
                 "java -jar cadcGMSClient.jar <-h | --help>                                                         ",
                 "                                                                                                  ",
-                "Create a group with server generated ID:"
-                        + "java -jar cadcGMSClient.jar  [-v|--verbose|-d|--debug]                                            ",
-                "   --cert=<SSL certificate file> --key=<SSL key file> --create                                    ",
+                "Create a group with server generated ID:                                                          ",
+                "           java -jar cadcGMSClient.jar  [-v|--verbose|-d|--debug]                                 ",
+                "   [--cert=<SSL certificate file> --key=<SSL key file> | --certkey=<PEM cert-key file]            ",
                 "                                                                                                  ",
-                "Other group operations:                                                                              ",
+                "Other group operations:                                                                           ",
                 "java -jar cadcGMSClient.jar  [-v|--verbose|-d|--debug]                                            ",
-                "   --cert=<SSL certificate file> --key=<SSL key file>                                             ",
+                "   [--cert=<SSL certificate file> --key=<SSL key file> | --certkey=<PEM cert-key file]            ",
                 "   --target=<Group ID>                                                                            ",
-                "   [--create|--view|--delete]                                ",
+                "   [--create|--view|--delete]                                                                     ",
                 "                                                                                                  ",
-                "Group Membership operations:                                                                              ",
+                "Group Membership operations:                                                                      ",
                 "java -jar cadcGMSClient.jar  [-v|--verbose|-d|--debug]                                            ",
-                "   --cert=<SSL certificate file> --key=<SSL key file>                                             ",
+                "   [--cert=<SSL certificate file> --key=<SSL key file> | --certkey=<PEM cert-key file]            ",
                 "   --target=<Group ID>                                                                            ",
-                "   [--add=<User ID> |--remove=<User ID> | --check=<User ID>]                                ",
+                "   [--add=<User ID> |--remove=<User ID> | --check=<User ID>]                                      ",
                 "                                                                                                  ",
-                "User operations:                                                                              ",
+                "User operations:                                                                                  ",
                 "java -jar cadcGMSClient.jar  [-v|--verbose|-d|--debug]                                            ",
-                "   --cert=<SSL certificate file> --key=<SSL key file>                                             ",
-                "   [--listMember|--listOwner] [--target=<User ID>]                                                                           ",
+                "   [--cert=<SSL certificate file> --key=<SSL key file> | --certkey=<PEM cert-key file]            ",
+                "   [--listMember|--listOwner] [--target=<User ID>]                                                ",
                 "                                                                                                  ", };
 
         for (String line : um)
