@@ -193,7 +193,7 @@ public class AuthenticationUtil
     }
 
     @SuppressWarnings("unchecked")
-    private static Subject getSubject(String remoteUser, X509CertificateChain chain)
+    public static Subject getSubject(String remoteUser, X509CertificateChain chain)
     {
         Set<Principal> principals = new HashSet<Principal>();
         Set publicCred = new HashSet();

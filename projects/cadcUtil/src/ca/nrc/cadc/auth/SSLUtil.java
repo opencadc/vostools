@@ -245,6 +245,36 @@ public class SSLUtil
                     ex);
         }
     }
+    
+    public static Subject createSubject(File certKeyFile)
+    {
+        try
+        {
+            X509CertificateChain certKey = readPemCertificateAndKey(certKeyFile);
+            return AuthenticationUtil.getSubject(null, certKey);
+        }
+        catch (InvalidKeySpecException ex)
+        {
+            throw new RuntimeException(
+                    "failed to read RSA private key from " + certKeyFile, ex);
+        }
+        catch (NoSuchAlgorithmException ex)
+        {
+            throw new RuntimeException(
+                    "BUG: failed to create empty KeyStore", ex);
+        }
+        catch (IOException ex)
+        {
+            throw new RuntimeException("failed to read certificate file "
+                    + certKeyFile, ex);
+        }
+        catch (CertificateException ex)
+        {
+            throw new RuntimeException(
+                    "failed to load certificate from file " + certKeyFile,
+                    ex);
+        }
+    }
 
     // may in future try to support other KeyStore formats
     static SSLSocketFactory getSocketFactory(KeyStore keyStore,
@@ -304,7 +334,7 @@ public class SSLUtil
      * @return decoded certificate chain
      * @throws IOException
      */
-    static byte[] getCertificates(byte[] certBuf) throws IOException
+    public static byte[] getCertificates(byte[] certBuf) throws IOException
     {
         BufferedReader rdr = new BufferedReader(new InputStreamReader(
                 new ByteArrayInputStream(certBuf)));
