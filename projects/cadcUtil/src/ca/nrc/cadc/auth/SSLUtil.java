@@ -166,8 +166,7 @@ public class SSLUtil
      *            private key file in DER format
      * @return configured SSL socket factory
      */
-    public static SSLSocketFactory getSocketFactory(File certFile,
-            File keyFile)
+    public static SSLSocketFactory getSocketFactory(File certFile, File keyFile)
     {
         KeyStore ks = getKeyStore(certFile, keyFile);
         KeyStore ts = null;
@@ -189,22 +188,17 @@ public class SSLUtil
         X509CertificateChain chain = null;
         if (s != null)
         {
-            Set<X509CertificateChain> certs = s
-                    .getPublicCredentials(X509CertificateChain.class);
-            if (certs.size() > 0)
-                chain = certs.iterator().next();
+            Set<X509CertificateChain> certs = s.getPublicCredentials(X509CertificateChain.class);
+            if (certs.size() > 0) chain = certs.iterator().next();
         }
-        if (chain == null)
-            return null;
+        if (chain == null) return null;
         return getSocketFactory(chain);
     }
 
-    public static SSLSocketFactory getSocketFactory(
-            X509CertificateChain chain)
+    public static SSLSocketFactory getSocketFactory(X509CertificateChain chain)
     {
         KeyStore ks = null;
-        if (chain != null)
-            ks = getKeyStore(chain.getChain(), chain.getPrivateKey());
+        if (chain != null) ks = getKeyStore(chain.getChain(), chain.getPrivateKey());
         KeyStore ts = null;
         return getSocketFactory(ks, ts);
     }
@@ -219,33 +213,26 @@ public class SSLUtil
         }
         catch (InvalidKeySpecException ex)
         {
-            throw new RuntimeException(
-                    "failed to read RSA private key from " + keyFile, ex);
+            throw new RuntimeException("failed to read RSA private key from " + keyFile, ex);
         }
         catch (NoSuchAlgorithmException ex)
         {
-            throw new RuntimeException(
-                    "BUG: failed to create empty KeyStore", ex);
+            throw new RuntimeException("BUG: failed to create empty KeyStore", ex);
         }
         catch (FileNotFoundException ex)
         {
-            throw new RuntimeException(
-                    "failed to find certificate and/or key file "
-                            + certFile + "," + keyFile, ex);
+            throw new RuntimeException("failed to find certificate and/or key file " + certFile + "," + keyFile, ex);
         }
         catch (IOException ex)
         {
-            throw new RuntimeException("failed to read certificate file "
-                    + certFile, ex);
+            throw new RuntimeException("failed to read certificate file " + certFile, ex);
         }
         catch (CertificateException ex)
         {
-            throw new RuntimeException(
-                    "failed to load certificate from file " + certFile,
-                    ex);
+            throw new RuntimeException("failed to load certificate from file " + certFile, ex);
         }
     }
-    
+
     public static Subject createSubject(File certKeyFile)
     {
         try
@@ -255,30 +242,24 @@ public class SSLUtil
         }
         catch (InvalidKeySpecException ex)
         {
-            throw new RuntimeException(
-                    "failed to read RSA private key from " + certKeyFile, ex);
+            throw new RuntimeException("failed to read RSA private key from " + certKeyFile, ex);
         }
         catch (NoSuchAlgorithmException ex)
         {
-            throw new RuntimeException(
-                    "BUG: failed to create empty KeyStore", ex);
+            throw new RuntimeException("BUG: failed to create empty KeyStore", ex);
         }
         catch (IOException ex)
         {
-            throw new RuntimeException("failed to read certificate file "
-                    + certKeyFile, ex);
+            throw new RuntimeException("failed to read certificate file " + certKeyFile, ex);
         }
         catch (CertificateException ex)
         {
-            throw new RuntimeException(
-                    "failed to load certificate from file " + certKeyFile,
-                    ex);
+            throw new RuntimeException("failed to load certificate from file " + certKeyFile, ex);
         }
     }
 
     // may in future try to support other KeyStore formats
-    static SSLSocketFactory getSocketFactory(KeyStore keyStore,
-            KeyStore trustStore)
+    static SSLSocketFactory getSocketFactory(KeyStore keyStore, KeyStore trustStore)
     {
         KeyManagerFactory kmf = getKeyManagerFactory(keyStore);
         TrustManagerFactory tmf = getTrustManagerFactory(trustStore);
@@ -292,8 +273,7 @@ public class SSLUtil
 
     static byte[] getPrivateKey(byte[] certBuf) throws IOException
     {
-        BufferedReader rdr = new BufferedReader(new InputStreamReader(
-                new ByteArrayInputStream(certBuf)));
+        BufferedReader rdr = new BufferedReader(new InputStreamReader(new ByteArrayInputStream(certBuf)));
         String line = rdr.readLine();
         StringBuffer base64 = new StringBuffer();
         while (line != null)
@@ -302,8 +282,7 @@ public class SSLUtil
             {
                 log.debug(line);
                 line = rdr.readLine();
-                while (line != null
-                        && !line.startsWith("-----END RSA PRIVATE KEY-"))
+                while (line != null && !line.startsWith("-----END RSA PRIVATE KEY-"))
                 {
                     log.debug(line + " (" + line.length() + ")");
                     base64.append(line.trim());
@@ -325,7 +304,7 @@ public class SSLUtil
 
         return ret;
     }
-    
+
     /**
      * Extracts all the certificates from the argument, decodes them
      * from base64 to byte[] and concatenates all the certificates 
@@ -336,10 +315,9 @@ public class SSLUtil
      */
     public static byte[] getCertificates(byte[] certBuf) throws IOException
     {
-        BufferedReader rdr = new BufferedReader(new InputStreamReader(
-                new ByteArrayInputStream(certBuf)));
+        BufferedReader rdr = new BufferedReader(new InputStreamReader(new ByteArrayInputStream(certBuf)));
         String line = rdr.readLine();
-        
+
         List<byte[]> certs = new ArrayList<byte[]>(); //list of byte certificates
         int byteSize = 0;
         while (line != null)
@@ -349,8 +327,7 @@ public class SSLUtil
             {
                 log.debug(line);
                 line = rdr.readLine();
-                while (line != null
-                        && !line.startsWith("-----END CERTIFICATE-"))
+                while (line != null && !line.startsWith("-----END CERTIFICATE-"))
                 {
                     log.debug(line + " (" + line.length() + ")");
                     base64.append(line.trim());
@@ -370,11 +347,11 @@ public class SSLUtil
                 line = rdr.readLine();
         }
         rdr.close();
-        
+
         // flatten out the certificate bytes into one byte[]
         byte[] result = new byte[byteSize];
         byteSize = 0;
-        for( byte[] cert : certs)
+        for (byte[] cert : certs)
         {
             System.arraycopy(cert, 0, result, byteSize, cert.length);
             byteSize += cert.length;
@@ -384,12 +361,10 @@ public class SSLUtil
     }
 
     @SuppressWarnings("unchecked")
-    public static X509Certificate[] readCertificateChain(File certFile)
-            throws CertificateException, IOException
+    public static X509Certificate[] readCertificateChain(File certFile) throws CertificateException, IOException
     {
         byte[] certBuf = FileUtil.readFile(certFile);
-        BufferedInputStream istream = new BufferedInputStream(
-                new ByteArrayInputStream(certBuf));
+        BufferedInputStream istream = new BufferedInputStream(new ByteArrayInputStream(certBuf));
         CertificateFactory cf = CertificateFactory.getInstance("X.509");
         ArrayList certs = new ArrayList();
         while (istream.available() > 0)
@@ -413,23 +388,60 @@ public class SSLUtil
             }
             catch (CertificateException ex)
             {
-                throw new RuntimeException("certificate from file "
-                        + certFile + " is not valid", ex);
+                throw new RuntimeException("certificate from file " + certFile + " is not valid", ex);
             }
             log.debug("X509 certificate is valid");
         }
         return chain;
     }
 
-    public static PrivateKey readPrivateKey(File keyFile) 
-            throws InvalidKeySpecException, NoSuchAlgorithmException, IOException
+    /**
+     * @param certBuf
+     * @return
+     * @throws CertificateException
+     * @throws IOException
+     * @ref readCertificateChain(File certFile)
+     */
+    public static X509Certificate[] readCertificateChain(byte[] certBuf) throws CertificateException, IOException
+    {
+        BufferedInputStream istream = new BufferedInputStream(new ByteArrayInputStream(certBuf));
+        CertificateFactory cf = CertificateFactory.getInstance("X.509");
+        ArrayList<Certificate> certs = new ArrayList<Certificate>();
+        while (istream.available() > 0)
+        {
+            Certificate cert = cf.generateCertificate(istream);
+            log.debug("found: " + cert);
+            certs.add(cert);
+        }
+        istream.close();
+
+        X509Certificate[] chain = new X509Certificate[certs.size()];
+        Iterator<Certificate> i = certs.iterator();
+        int c = 0;
+        while (i.hasNext())
+        {
+            X509Certificate x509 = (X509Certificate) i.next();
+            chain[c++] = x509;
+            try
+            {
+                x509.checkValidity();
+            }
+            catch (CertificateException ex)
+            {
+                throw new RuntimeException("certificate byte array is not valid", ex);
+            }
+            log.debug("X509 certificate is valid");
+        }
+        return chain;
+    }
+
+    public static PrivateKey readPrivateKey(File keyFile) throws InvalidKeySpecException, NoSuchAlgorithmException, IOException
     {
         byte[] priv = FileUtil.readFile(keyFile);
         return readPrivateKey(priv);
     }
-    
-    public static PrivateKey readPrivateKey(byte[] bytesPrivateKey) 
-            throws InvalidKeySpecException, NoSuchAlgorithmException, IOException
+
+    public static PrivateKey readPrivateKey(byte[] bytesPrivateKey) throws InvalidKeySpecException, NoSuchAlgorithmException, IOException
     {
         KeyFactory kf = KeyFactory.getInstance("RSA");
         PKCS8EncodedKeySpec spec = new PKCS8EncodedKeySpec(bytesPrivateKey);
@@ -449,16 +461,13 @@ public class SSLUtil
             catch (Exception ignore)
             {
             }
-            @SuppressWarnings("unused")
-            KeyStore.Entry ke = new KeyStore.PrivateKeyEntry(pk, chain);
+            @SuppressWarnings("unused") KeyStore.Entry ke = new KeyStore.PrivateKeyEntry(pk, chain);
             ks.setKeyEntry(CERT_ALIAS, pk, THE_PASSWORD, chain);
             return ks;
         }
         catch (KeyStoreException ex)
         {
-            throw new RuntimeException(
-                    "failed to find/load KeyStore of type "
-                            + KEYSTORE_TYPE, ex);
+            throw new RuntimeException("failed to find/load KeyStore of type " + KEYSTORE_TYPE, ex);
         }
     }
 
@@ -472,30 +481,23 @@ public class SSLUtil
         }
         catch (InvalidKeySpecException ex)
         {
-            throw new RuntimeException(
-                    "failed to read RSA private key from " + keyFile, ex);
+            throw new RuntimeException("failed to read RSA private key from " + keyFile, ex);
         }
         catch (NoSuchAlgorithmException ex)
         {
-            throw new RuntimeException(
-                    "BUG: failed to create empty KeyStore", ex);
+            throw new RuntimeException("BUG: failed to create empty KeyStore", ex);
         }
         catch (FileNotFoundException ex)
         {
-            throw new RuntimeException(
-                    "failed to find certificate and/or key file "
-                            + certFile + "," + keyFile, ex);
+            throw new RuntimeException("failed to find certificate and/or key file " + certFile + "," + keyFile, ex);
         }
         catch (IOException ex)
         {
-            throw new RuntimeException("failed to read certificate file "
-                    + certFile, ex);
+            throw new RuntimeException("failed to read certificate file " + certFile, ex);
         }
         catch (CertificateException ex)
         {
-            throw new RuntimeException(
-                    "failed to load certificate from file " + certFile,
-                    ex);
+            throw new RuntimeException("failed to load certificate from file " + certFile, ex);
         }
     }
 
@@ -514,30 +516,23 @@ public class SSLUtil
         }
         catch (KeyStoreException ex)
         {
-            throw new RuntimeException("failed to find KeyStore for "
-                    + KEYSTORE_TYPE, ex);
+            throw new RuntimeException("failed to find KeyStore for " + KEYSTORE_TYPE, ex);
         }
         catch (FileNotFoundException ex)
         {
-            throw new RuntimeException("failed to find key store file "
-                    + f, ex);
+            throw new RuntimeException("failed to find key store file " + f, ex);
         }
         catch (IOException ex)
         {
-            throw new RuntimeException("failed to read key store file "
-                    + f, ex);
+            throw new RuntimeException("failed to read key store file " + f, ex);
         }
         catch (NoSuchAlgorithmException ex)
         {
-            throw new RuntimeException(
-                    "failed to check integtrity of key store file " + f,
-                    ex);
+            throw new RuntimeException("failed to check integtrity of key store file " + f, ex);
         }
         catch (CertificateException ex)
         {
-            throw new RuntimeException(
-                    "failed to load proxy certificate(s) from key store file "
-                            + f, ex);
+            throw new RuntimeException("failed to load proxy certificate(s) from key store file " + f, ex);
         }
         finally
         {
@@ -558,24 +553,21 @@ public class SSLUtil
         {
             KeyManagerFactory kmf = KeyManagerFactory.getInstance(da);
             kmf.init(keyStore, THE_PASSWORD); // assume a
-                                                // non-password-protected
-                                                // proxy cert
+                                              // non-password-protected
+                                              // proxy cert
             return kmf;
         }
         catch (NoSuchAlgorithmException ex)
         {
-            throw new RuntimeException(
-                    "failed to find KeyManagerFactory for " + da, ex);
+            throw new RuntimeException("failed to find KeyManagerFactory for " + da, ex);
         }
         catch (KeyStoreException ex)
         {
-            throw new RuntimeException(
-                    "failed to init KeyManagerFactory", ex);
+            throw new RuntimeException("failed to init KeyManagerFactory", ex);
         }
         catch (UnrecoverableKeyException ex)
         {
-            throw new RuntimeException(
-                    "failed to init KeyManagerFactory", ex);
+            throw new RuntimeException("failed to init KeyManagerFactory", ex);
         }
     }
 
@@ -583,32 +575,25 @@ public class SSLUtil
     {
         try
         {
-            TrustManagerFactory tmf = TrustManagerFactory.getInstance(
-                    "PKIX", "SunJSSE");
+            TrustManagerFactory tmf = TrustManagerFactory.getInstance("PKIX", "SunJSSE");
             tmf.init(trustStore);
             return tmf;
         }
         catch (NoSuchAlgorithmException ex)
         {
-            throw new RuntimeException(
-                    "BUG: failed to create TrustManagerFactory for algorithm=PKIX",
-                    ex);
+            throw new RuntimeException("BUG: failed to create TrustManagerFactory for algorithm=PKIX", ex);
         }
         catch (NoSuchProviderException ex)
         {
-            throw new RuntimeException(
-                    "BUG: failed to create TrustManagerFactory for provider=SunJSSE",
-                    ex);
+            throw new RuntimeException("BUG: failed to create TrustManagerFactory for provider=SunJSSE", ex);
         }
         catch (KeyStoreException ex)
         {
-            throw new RuntimeException(
-                    "failed to init trustManagerFactory", ex);
+            throw new RuntimeException("failed to init trustManagerFactory", ex);
         }
     }
 
-    static SSLContext getContext(KeyManagerFactory kmf,
-            TrustManagerFactory tmf, KeyStore ks)
+    static SSLContext getContext(KeyManagerFactory kmf, TrustManagerFactory tmf, KeyStore ks)
     {
         try
         {
@@ -617,16 +602,14 @@ public class SSLUtil
             {
                 // cast is safe since we used KEYMANAGER_ALGORITHM=SunX509
                 // above
-                BasicX509KeyManager wrapper = new BasicX509KeyManager(
-                        (X509KeyManager) kms[i], CERT_ALIAS);
+                BasicX509KeyManager wrapper = new BasicX509KeyManager((X509KeyManager) kms[i], CERT_ALIAS);
                 kms[i] = wrapper;
             }
             TrustManager[] tms = tmf.getTrustManagers();
             for (int i = 0; i < tms.length; i++)
             {
                 // safe cast since we used PKIX, SunJSSE above
-                BasicX509TrustManager wrapper = new BasicX509TrustManager(
-                        (X509TrustManager) tms[i]);
+                BasicX509TrustManager wrapper = new BasicX509TrustManager((X509TrustManager) tms[i]);
                 tms[i] = wrapper;
             }
             SSLContext ctx = SSLContext.getInstance(SSL_PROTOCOL);
@@ -637,8 +620,7 @@ public class SSLUtil
         }
         catch (NoSuchAlgorithmException ex)
         {
-            throw new RuntimeException("failed to find SSLContext for "
-                    + SSL_PROTOCOL, ex);
+            throw new RuntimeException("failed to find SSLContext for " + SSL_PROTOCOL, ex);
         }
         catch (KeyManagementException ex)
         {
@@ -647,8 +629,7 @@ public class SSLUtil
     }
 
     @SuppressWarnings("unchecked")
-    static void printKeyStoreInfo(KeyStore keystore)
-            throws KeyStoreException
+    static void printKeyStoreInfo(KeyStore keystore) throws KeyStoreException
     {
         log.debug("Provider : " + keystore.getProvider().getName());
         log.debug("Type : " + keystore.getType());
@@ -660,7 +641,7 @@ public class SSLUtil
             System.out.println("Alias: " + en.nextElement());
         }
     }
-    
+
     /**
      * Convenience method to parse a PEM encoded file and return the
      * corresponding X509 Certificate chain.
@@ -672,14 +653,12 @@ public class SSLUtil
      * @throws IOException
      * @throws CertificateException
      */
-    public static X509CertificateChain readPemCertificateAndKey(File pemFile) 
-    throws InvalidKeySpecException, NoSuchAlgorithmException,
-    IOException, CertificateException
+    public static X509CertificateChain readPemCertificateAndKey(File pemFile) throws InvalidKeySpecException, NoSuchAlgorithmException, IOException, CertificateException
     {
         byte[] data = FileUtil.readFile(pemFile);
         return readPemCertificateAndKey(data);
     }
-    
+
     /**
      * Parses PEM encoded data that contains certificates and a key and 
      * returns the corresponponding X509CertificateChain that can be used to
@@ -692,9 +671,7 @@ public class SSLUtil
      * @throws IOException
      * @throws CertificateException
      */
-    public static X509CertificateChain readPemCertificateAndKey(byte[] data) 
-    throws InvalidKeySpecException, NoSuchAlgorithmException,
-    IOException, CertificateException
+    public static X509CertificateChain readPemCertificateAndKey(byte[] data) throws InvalidKeySpecException, NoSuchAlgorithmException, IOException, CertificateException
     {
         // Currently only RSA keys are supported. If the need to support
         // other encoding algorithms arises in the future, then the
@@ -705,19 +682,16 @@ public class SSLUtil
         // use it if present, otherwise default to the RSA implementation
         // below. Clients that want to use other encoding schemas will
         // have to pass the PEMReader class into the class path themselves.
-        
-        
+
         byte[] key = getPrivateKey(data);
-        
+
         KeyFactory kf = KeyFactory.getInstance("RSA");
         RSAPrivateCrtKeySpec spec = parseKeySpec(key);
         PrivateKey pk = kf.generatePrivate(spec);
         log.debug("Private Key" + pk.toString());
-        
-        
+
         byte[] certificates = getCertificates(data);
-        BufferedInputStream istream = new BufferedInputStream(
-                new ByteArrayInputStream(certificates));
+        BufferedInputStream istream = new BufferedInputStream(new ByteArrayInputStream(certificates));
         CertificateFactory cf = CertificateFactory.getInstance("X.509");
         ArrayList<Certificate> certs = new ArrayList<Certificate>();
         while (istream.available() > 0)
@@ -745,13 +719,11 @@ public class SSLUtil
             }
             log.debug("X509 certificate is valid");
         }
-        
-        return new X509CertificateChain(chain, pk);
-        
-    }
-        
 
-    
+        return new X509CertificateChain(chain, pk);
+
+    }
+
     /**
      * Parses a byte array and constructs the corresponding RSAPrivateCrtKeySpec.
      * Adapted from the standard. Very cryptic, but it works - so do not touch!
@@ -765,57 +737,67 @@ public class SSLUtil
         int pos;
         BigInteger[] ints = new BigInteger[8];;
         pos = 0;
-        if (code[pos] == 0x30) {
+        if (code[pos] == 0x30)
+        {
             pos = 1;
             int nb = 0;
-            if ((code[pos] & 0x80) == 0x80) {
+            if ((code[pos] & 0x80) == 0x80)
+            {
                 int n = (int) code[pos] & 0x7f;
                 pos = pos + 1;
-                for (int i = 0; i < n; ++i) {
+                for (int i = 0; i < n; ++i)
+                {
                     nb = (nb << 8) | (code[pos] & 0xff);
                     pos = pos + 1;
                 }
-            } else {
+            }
+            else
+            {
                 nb = (int) code[pos];
                 pos = pos + 1;
             }
-            
+
             // skip the first version
             if (code[pos] != 2)
-                throw new IllegalArgumentException("encountered invalid integer tag "
-                    + ((int) code[pos]) + " at " + pos);
+                throw new IllegalArgumentException("encountered invalid integer tag " + ((int) code[pos]) + " at " + pos);
             pos = pos + 1;
             int len = 0;
-            if ((code[pos] & 0x80) == 0x80) {
+            if ((code[pos] & 0x80) == 0x80)
+            {
                 int n = (int) code[pos] & 0x7f;
                 pos = pos + 1;
-                for (int i = 0; i < n; ++i) {
+                for (int i = 0; i < n; ++i)
+                {
                     len = (len << 8) | (code[pos] & 0xff);
                     pos = pos + 1;
                 }
-            } else {
+            }
+            else
+            {
                 len = (int) code[pos];
                 pos = pos + 1;
             }
             pos = pos + len;
-            
+
             // read the keys
             for (int i = 0; i < 8; ++i)
             {
-                if (pos >= code.length)
-                    throw new IllegalArgumentException("end of file at " + pos);
+                if (pos >= code.length) throw new IllegalArgumentException("end of file at " + pos);
                 if (code[pos] != 2)
-                    throw new IllegalArgumentException("encountered invalid integer tag "
-                        + ((int) code[pos]) + " at " + pos);
+                    throw new IllegalArgumentException("encountered invalid integer tag " + ((int) code[pos]) + " at " + pos);
                 pos = pos + 1;
-                if ((code[pos] & 0x80) == 0x80) {
+                if ((code[pos] & 0x80) == 0x80)
+                {
                     int n = (int) code[pos] & 0x7f;
                     pos = pos + 1;
-                    for (i = 0; i < n; ++i) {
+                    for (i = 0; i < n; ++i)
+                    {
                         len = (len << 8) | (code[pos] & 0xff);
                         pos = pos + 1;
                     }
-                } else {
+                }
+                else
+                {
                     len = (int) code[pos];
                     pos = pos + 1;
                 }
@@ -824,19 +806,19 @@ public class SSLUtil
                 pos = pos + len;
                 ints[i] = new BigInteger(x);
             }
-            
-        } else
-            throw new IOException("invalid private key leading tag "
-                    + (int) code[pos]);
-        
+
+        }
+        else
+            throw new IOException("invalid private key leading tag " + (int) code[pos]);
+
         return new RSAPrivateCrtKeySpec(ints[0] // modulus
-                                             , ints[1]   // publicExponent
-                                             , ints[2]   // privateExponent
-                                             , ints[3]   // primeP
-                                             , ints[4]   // primeQ
-                                             , ints[5]   // primeExponentP
-                                             , ints[6]   // primeExponentQ
-                                             , ints[7]   // crtCoefficient
-                                             );
+                , ints[1] // publicExponent
+                , ints[2] // privateExponent
+                , ints[3] // primeP
+                , ints[4] // primeQ
+                , ints[5] // primeExponentP
+                , ints[6] // primeExponentQ
+                , ints[7] // crtCoefficient
+        );
     }
 }
