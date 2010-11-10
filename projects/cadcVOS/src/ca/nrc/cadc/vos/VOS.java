@@ -215,6 +215,9 @@ public class VOS
     
     // The size of the resource 
     public static final String PROPERTY_URI_CONTENTLENGTH = "ivo://ivoa.net/vospace/core#length";
+
+    // The quota of a Container Node.
+    public static final String PROPERTY_URI_QUOTA = "ivo://ivoa.net/vospace/core#quota";    
     
     // The content encoding of the resource
     public static final String PROPERTY_URI_CONTENTENCODING = "ivo://ivoa.net/vospace/core#encoding";
