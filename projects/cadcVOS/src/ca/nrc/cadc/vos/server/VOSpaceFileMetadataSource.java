@@ -75,17 +75,13 @@ import java.net.URISyntaxException;
 import java.text.DateFormat;
 import java.text.ParseException;
 
+import ca.nrc.cadc.uws.util.StringUtil;
+import ca.nrc.cadc.vos.*;
 import org.apache.log4j.Logger;
 
 import ca.nrc.cadc.date.DateUtil;
 import ca.nrc.cadc.util.FileMetadata;
 import ca.nrc.cadc.util.FileMetadataSource;
-import ca.nrc.cadc.vos.DataNode;
-import ca.nrc.cadc.vos.Node;
-import ca.nrc.cadc.vos.NodeNotFoundException;
-import ca.nrc.cadc.vos.NodeProperty;
-import ca.nrc.cadc.vos.VOS;
-import ca.nrc.cadc.vos.VOSURI;
 import ca.nrc.cadc.vos.server.util.NodeUtil;
 
 /**
@@ -117,7 +113,6 @@ public class VOSpaceFileMetadataSource implements FileMetadataSource
      * @throws FileNotFoundException if the specified resource is not found
      * @throws IllegalArgumentException if the specified resource is not a file
      */
-    @Override
     public FileMetadata get(URI resource) throws FileNotFoundException,
             IllegalArgumentException
     {
@@ -126,8 +121,6 @@ public class VOSpaceFileMetadataSource implements FileMetadataSource
         
         // fileName
         fileMetadata.setFileName(persistentNode.getName());
-        
-        int index;
         
         // contentEncoding
         String contentEncoding = getPropertyValue(persistentNode, VOS.PROPERTY_URI_CONTENTENCODING);
@@ -191,17 +184,46 @@ public class VOSpaceFileMetadataSource implements FileMetadataSource
      * @throws FileNotFoundException if the specified resource is not found
      * @throws IllegalArgumentException if the specified resource is not a file
      */
-    @Override
-    public void set(URI resource, FileMetadata meta)
+    public void set(final URI resource, final FileMetadata meta)
             throws FileNotFoundException, IllegalArgumentException
     {
         if (meta == null)
         {
             throw new IllegalArgumentException("FileMetadata is null.");
         }
-        
-        Node persistentNode = getPersistentNode(resource);
-        
+
+        // This is the persistent Node.  Bear that in mind.
+        final Node persistentNode = getPersistentNode(resource);
+
+        final String existingContentLengthString =
+                getPropertyValue(persistentNode,
+                                 VOS.PROPERTY_URI_CONTENTLENGTH);
+        final long contentLengthDifference;
+
+        if (StringUtil.hasText(existingContentLengthString))
+        {
+            final long existingContentLength =
+                    Long.parseLong(existingContentLengthString);
+
+            if (meta.getContentLength() != null)
+            {
+                contentLengthDifference =
+                        meta.getContentLength() - existingContentLength;
+            }
+            else
+            {
+                contentLengthDifference = 0;
+            }
+        }
+        else if (meta.getContentLength() != null)
+        {
+            contentLengthDifference = meta.getContentLength();
+        }
+        else
+        {
+            contentLengthDifference = 0;
+        }
+
         // fileName
         // Ignore file name property - this is the name of the node as specified
         // in the resource
@@ -241,21 +263,42 @@ public class VOSpaceFileMetadataSource implements FileMetadataSource
         try
         {
             nodePersistence.updateProperties(persistentNode);
+            
+            updateContentLengths(persistentNode, contentLengthDifference);
         }
         catch (NodeNotFoundException e)
         {
             throw new FileNotFoundException(e.getMessage());
         }
-        
+    }
+
+    /**
+     * Recursively update the parents of the given persistent node to update
+     * their respective content lengths.
+     *
+     * @param persistentNode            The node to start from in the stack.
+     * @param contentLengthDifference   The difference in length.
+     * @throws NodeNotFoundException    If a node along the path is expected to
+     *                                  be found but wasn't.
+     */
+    protected void updateContentLengths(final Node persistentNode,
+                                        final long contentLengthDifference)
+            throws NodeNotFoundException
+    {
+        final NodeUtil nodeUtil = new NodeUtil(getNodePersistence());
+        nodeUtil.updateStackContentLengths(persistentNode,
+                                           contentLengthDifference);
     }
     
     /**
      * Return the persistent node at the specified resource.
-     * @param resource
-     * @return
-     * @throws FileNotFoundException
+     * @param resource      The URI to search for.
+     * @return              Node at the given URI.
+     * @throws FileNotFoundException        If a node with the given URI does
+     *                                      not exist.
      */
-    protected Node getPersistentNode(URI resource) throws FileNotFoundException
+    protected Node getPersistentNode(final URI resource)
+            throws FileNotFoundException
     {
         if (nodePersistence == null)
         {
@@ -263,12 +306,14 @@ public class VOSpaceFileMetadataSource implements FileMetadataSource
         }
         try
         {
-            Node searchNode = new SearchNode(new VOSURI(resource));
-            Node persistentNode = NodeUtil.iterateStack(searchNode, null, nodePersistence);
+            final Node searchNode = new SearchNode(new VOSURI(resource));
+            final Node persistentNode = NodeUtil.iterateStack(searchNode, null,
+                                                              nodePersistence);
             
             if (! (persistentNode instanceof DataNode))
             {
-                throw new IllegalStateException("Node at " + resource + " is not a data node.");
+                throw new IllegalArgumentException("Node at " + resource
+                                                   + " is not a data node.");
             }
             return persistentNode;
         }
@@ -281,7 +326,15 @@ public class VOSpaceFileMetadataSource implements FileMetadataSource
             throw new FileNotFoundException(resource.toString());
         }
     }
-    
+
+    /**
+     * Obtain the property value for the given Node of the given propertyURI.
+     *
+     * @param node          The Node to look for the property in.
+     * @param propertyURI   The URI of the Property.
+     * @return              The String value of the property, or null if no
+     *                      property exists.
+     */
     protected String getPropertyValue(Node node, String propertyURI)
     {
         int index = node.getProperties().indexOf(new NodeProperty(propertyURI, null));

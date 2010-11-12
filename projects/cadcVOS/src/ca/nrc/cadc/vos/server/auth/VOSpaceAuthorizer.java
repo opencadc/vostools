@@ -203,7 +203,7 @@ public class VOSpaceAuthorizer implements Authorizer
     /**
      * Obtain the Write Permission for the given Node.
      *
-     * @param uri       The Node to check.
+     * @param node      The Node to check.
      * @return          The persistent version of the target node.
      * @throws AccessControlException If the user does not have write permission
      * @throws FileNotFoundException If the node could not be found
@@ -357,7 +357,6 @@ public class VOSpaceAuthorizer implements Authorizer
      */
     NodeStackListener readPermissionAuthorizer = new NodeStackListener()
     {
-        @Override
         public void nodeVisited(Node nextNode, int parentLevel)
         {
             LOG.debug("Checking read permission of node " + nextNode.getName()
@@ -446,7 +445,6 @@ public class VOSpaceAuthorizer implements Authorizer
      */
     NodeStackListener writePermissionAuthorizer = new NodeStackListener()
     {
-        @Override
         public void nodeVisited(Node nextNode, int parentLevel)
         {
             if (parentLevel != 0)
@@ -509,6 +507,8 @@ public class VOSpaceAuthorizer implements Authorizer
 
     /**
      * Node NodePersistence Getter.
+     *
+     * @return  NodePersistence instance.
      */
     public NodePersistence getNodePersistence()
     {
@@ -517,6 +517,8 @@ public class VOSpaceAuthorizer implements Authorizer
 
     /**
      * Node NodePersistence Setter.
+     *
+     * @param nodePersistence       NodePersistence instance.
      */
     public void setNodePersistence(final NodePersistence nodePersistence)
     {

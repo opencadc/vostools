@@ -69,17 +69,13 @@
 
 package ca.nrc.cadc.vos.server.util;
 
-import java.net.URISyntaxException;
+import java.util.List;
 import java.util.Stack;
 
+import ca.nrc.cadc.uws.util.StringUtil;
+import ca.nrc.cadc.vos.*;
 import org.apache.log4j.Logger;
 
-import ca.nrc.cadc.vos.ContainerNode;
-import ca.nrc.cadc.vos.DataNode;
-import ca.nrc.cadc.vos.Node;
-import ca.nrc.cadc.vos.NodeNotFoundException;
-import ca.nrc.cadc.vos.VOS;
-import ca.nrc.cadc.vos.VOSURI;
 import ca.nrc.cadc.vos.server.NodePersistence;
 
 /**
@@ -90,8 +86,22 @@ import ca.nrc.cadc.vos.server.NodePersistence;
  */
 public class NodeUtil
 {
-
     private static Logger log = Logger.getLogger(NodeUtil.class);
+
+    // Access to the persistence layer.
+    private NodePersistence nodePersistence;
+
+
+    /**
+     * Constructor.
+     *
+     * @param nodePersistence   Node Persistence layer access.
+     */
+    public NodeUtil(final NodePersistence nodePersistence)
+    {
+        this.nodePersistence = nodePersistence;
+    }
+    
 
     /**
      * Iterate the parental hierarchy of the node from root to self.
@@ -102,7 +112,9 @@ public class NodeUtil
      * @return The persistent version of the target node.
      * @throws NodeNotFoundException If the target node could not be found.
      */
-    public static Node iterateStack(Node targetNode, NodeStackListener listener, NodePersistence nodePersistence) throws NodeNotFoundException
+    public static Node iterateStack(Node targetNode, NodeStackListener listener,
+                                    NodePersistence nodePersistence)
+            throws NodeNotFoundException
     {
 
         if (targetNode == null)
@@ -115,14 +127,13 @@ public class NodeUtil
         int stackSize = nodeStack.size();
         int iteration = 0;
         Node persistentNode = null;
-        Node nextNode = null;
         ContainerNode parent = null;
 
         while (!nodeStack.isEmpty())
         {
             iteration++;
             
-            nextNode = nodeStack.pop();
+            final Node nextNode = nodeStack.pop();
             nextNode.setParent(parent);
             log.debug("Retrieving node with path: " + nextNode.getPath());
 
@@ -160,5 +171,105 @@ public class NodeUtil
             persistentNode.setParent(parent);
         }
         return persistentNode;
+    }
+
+    /**
+     * Update the size property for all of the Parent (Container) Nodes for
+     * the given Node.  This will iterate from the given Node's parent to the
+     * Root.
+     *
+     * The client MUST provide a Node whose parents are known and loaded,
+     * meaning a call to getParent() will return the object, or null if it is a
+     * top-level Container Node.
+     *
+     * @param persistentNode        The loaded Node to traverse.
+     * @param contentLengthDifference   The difference to calculate into the
+     *                                  new value.
+     * @throws NodeNotFoundException  If a Node along the path cannot be
+     *                                located in the persistence layer.
+     */
+    public void updateStackContentLengths(final Node persistentNode,
+                                          final long contentLengthDifference)
+            throws NodeNotFoundException
+    {
+        if (persistentNode == null)
+        {
+            throw new NodeNotFoundException("Provided Node is null.");
+        }
+
+        updateContentLengthProperties(persistentNode.getParent(),
+                                      contentLengthDifference);
+    }
+
+    /**
+     * Recursively set the content lengths for the parent nodes up the tree of
+     * the given Node.
+     *
+     * @param persistentParentNode      The Persistent Parent Node to start at.
+     * @param contentLengthDifference   The difference to calculate into the
+     *                                  new value.
+     * @throws NodeNotFoundException  If a Node along the path cannot be
+     *                                located in the persistence layer.
+     */
+    protected void updateContentLengthProperties(final Node persistentParentNode,
+                                                 final long contentLengthDifference)
+            throws NodeNotFoundException
+    {
+        if (persistentParentNode != null)
+        {
+            final long existingParentContentLength;
+            final String existingParentContentLengthString;
+            final List<NodeProperty> properties =
+                    persistentParentNode.getProperties();
+            final int index = properties.indexOf(
+                    new NodeProperty(VOS.PROPERTY_URI_CONTENTLENGTH, null));
+
+            if (index != -1)
+            {
+                existingParentContentLengthString =
+                        properties.get(index).getPropertyValue();
+            }
+            else
+            {
+                existingParentContentLengthString = null;
+            }
+
+            if (StringUtil.hasText(existingParentContentLengthString))
+            {
+                 existingParentContentLength =
+                        Long.parseLong(existingParentContentLengthString);
+            }
+            else
+            {
+                existingParentContentLength = 0;
+            }
+
+            // Only update if the existing length has been set.
+            if (existingParentContentLength > 0)
+            {
+                final NodeProperty contentLength =
+                        new NodeProperty(VOS.PROPERTY_URI_CONTENTLENGTH,
+                                         Long.toString(existingParentContentLength
+                                                       - contentLengthDifference));
+                properties.remove(contentLength);
+                properties.add(contentLength);
+
+                getNodePersistence().updateProperties(persistentParentNode);
+            }
+
+            updateContentLengthProperties(persistentParentNode.getParent(),
+                                          contentLengthDifference);
+        }
+    }
+
+
+    public NodePersistence getNodePersistence()
+    {
+        return nodePersistence;
+    }
+
+    public void setNodePersistence(final NodePersistence nodePersistence)
+    {
+        this.nodePersistence = nodePersistence;
     }
 }

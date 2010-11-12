@@ -43,7 +43,9 @@ public abstract class VOSpaceFileMetadataSourceTest extends AbstractPersistenceT
         Long contentLength = 256L;
         String contentType = "text/xml";
         
-        String contentMD5 = HexUtil.toHex(new byte[] {0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15});
+        String contentMD5 = HexUtil.toHex(new byte[] {0, 1, 2, 3, 4, 5, 6, 7,
+                                                      8, 9, 10, 11, 12, 13, 14,
+                                                      15});
         
         FileMetadata metadata1 = new FileMetadata();
         metadata1.setContentEncoding(contentEncoding);
@@ -58,7 +60,5 @@ public abstract class VOSpaceFileMetadataSourceTest extends AbstractPersistenceT
         assertEquals(contentLength, metadata2.getContentLength());
         assertEquals(contentType, metadata2.getContentType());
         assertEquals(contentMD5, metadata2.getMd5Sum());
-
     }
-
 }

@@ -166,7 +166,6 @@ public abstract class NodeDAOLoadTest extends AbstractPersistenceTest
             this.threadId = threadId;
         }
 
-        @Override
         public void run()
         {
             try
