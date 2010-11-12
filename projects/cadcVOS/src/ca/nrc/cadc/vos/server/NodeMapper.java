@@ -71,6 +71,8 @@ package ca.nrc.cadc.vos.server;
 
 import java.sql.ResultSet;
 import java.sql.SQLException;
+import java.text.DateFormat;
+import java.util.Calendar;
 import java.util.Date;
 
 import org.springframework.jdbc.core.RowMapper;
@@ -83,8 +85,6 @@ import ca.nrc.cadc.vos.Node;
 import ca.nrc.cadc.vos.NodeProperty;
 import ca.nrc.cadc.vos.VOS;
 import ca.nrc.cadc.vos.VOS.NodeBusyState;
-import java.text.DateFormat;
-import java.util.Calendar;
 
 /**
  * Class to map a result set into a Node object.

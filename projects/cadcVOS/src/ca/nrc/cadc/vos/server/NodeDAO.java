@@ -113,7 +113,7 @@ public abstract class NodeDAO implements NodePersistence
     private static final int MAX_TIMESTAMP_LENGTH = 30;
 
     // Database connection.
-    private JdbcTemplate jdbc;
+    protected JdbcTemplate jdbc;
     private DataSourceTransactionManager transactionManager;
     private DefaultTransactionDefinition defaultTransactionDef;
     private TransactionStatus transactionStatus;
@@ -151,12 +151,13 @@ public abstract class NodeDAO implements NodePersistence
      * before any DAO operations are used.
      */
     public void init()
-    {
+    {        
         this.defaultTransactionDef = new DefaultTransactionDefinition();
         defaultTransactionDef
                 .setIsolationLevel(DefaultTransactionDefinition.ISOLATION_REPEATABLE_READ);
         DataSource dataSource = getDataSource();
         this.jdbc = new JdbcTemplate(dataSource);
+        
         this.transactionManager = new DataSourceTransactionManager(dataSource);
     }
     
@@ -233,6 +234,7 @@ public abstract class NodeDAO implements NodePersistence
         {
             try
             {
+                
                 startTransaction();
                 Node ret = getFromParentImpl(name, parent);
                 commitTransaction();

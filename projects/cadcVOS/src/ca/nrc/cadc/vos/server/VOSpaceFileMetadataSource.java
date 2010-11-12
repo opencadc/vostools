@@ -72,6 +72,7 @@ package ca.nrc.cadc.vos.server;
 import java.io.FileNotFoundException;
 import java.net.URI;
 import java.net.URISyntaxException;
+import java.text.DateFormat;
 import java.text.ParseException;
 
 import org.apache.log4j.Logger;
@@ -86,7 +87,6 @@ import ca.nrc.cadc.vos.NodeProperty;
 import ca.nrc.cadc.vos.VOS;
 import ca.nrc.cadc.vos.VOSURI;
 import ca.nrc.cadc.vos.server.util.NodeUtil;
-import java.text.DateFormat;
 
 /**
  * Class to get and set the meta data of vospace data nodes.  This class
@@ -98,7 +98,7 @@ import java.text.DateFormat;
 public class VOSpaceFileMetadataSource implements FileMetadataSource
 {
     
-    private static Logger log = Logger.getLogger(VOSpaceFileMetadataSource.class);
+    protected static Logger log = Logger.getLogger(VOSpaceFileMetadataSource.class);
     
     private NodePersistence nodePersistence;
 
@@ -255,7 +255,7 @@ public class VOSpaceFileMetadataSource implements FileMetadataSource
      * @return
      * @throws FileNotFoundException
      */
-    private Node getPersistentNode(URI resource) throws FileNotFoundException
+    protected Node getPersistentNode(URI resource) throws FileNotFoundException
     {
         if (nodePersistence == null)
         {
@@ -268,7 +268,7 @@ public class VOSpaceFileMetadataSource implements FileMetadataSource
             
             if (! (persistentNode instanceof DataNode))
             {
-                throw new IllegalArgumentException("Node at " + resource + " is not a data node.");
+                throw new IllegalStateException("Node at " + resource + " is not a data node.");
             }
             return persistentNode;
         }
@@ -282,7 +282,7 @@ public class VOSpaceFileMetadataSource implements FileMetadataSource
         }
     }
     
-    private String getPropertyValue(Node node, String propertyURI)
+    protected String getPropertyValue(Node node, String propertyURI)
     {
         int index = node.getProperties().indexOf(new NodeProperty(propertyURI, null));
         if (index != -1)
