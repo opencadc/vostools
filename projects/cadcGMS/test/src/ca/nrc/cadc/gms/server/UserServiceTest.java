@@ -95,8 +95,11 @@ public abstract class UserServiceTest extends GMSTest<UserService>
     protected static URI NON_GROUP_ID = null;
     protected final static X500Principal MEMBER_USER_ID = new X500Principal(
             "CN=test user,OU=hia.nrc.ca,O=Grid,C=CA");
+    protected final static X500Principal NON_CANON_USER_ID = new X500Principal(
+    "C=CA, O=Grid, OU=hia.nrc.ca, CN=test user");
     protected final static X500Principal NON_MEMBER_USER_ID = new X500Principal(
             "CN=test user2,OU=hia.nrc.ca,O=Grid,C=CA");
+    
 
     // Ctor
     UserServiceTest()
@@ -151,5 +154,17 @@ public abstract class UserServiceTest extends GMSTest<UserService>
         {
             // Good!
         }
+    }
+    
+    @Test
+    public void getMemberNonCanonicalX500Principal() throws Exception
+    {
+        
+        final User member = getTestSubject().getMember(NON_CANON_USER_ID,
+                GROUP_ID);
+
+        assertNotNull("The member returned should be valid.", member);
+        assertEquals("The member is the wrong one.", MEMBER_USER_ID,
+                member.getID());
     }
 }

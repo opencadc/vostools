@@ -70,15 +70,14 @@ import java.net.URI;
 
 import javax.security.auth.x500.X500Principal;
 
+import ca.nrc.cadc.auth.AuthenticationUtil;
 import ca.nrc.cadc.gms.AuthorizationException;
 import ca.nrc.cadc.gms.Group;
 import ca.nrc.cadc.gms.InvalidGroupException;
 import ca.nrc.cadc.gms.InvalidMemberException;
 import ca.nrc.cadc.gms.User;
-import ca.nrc.cadc.gms.UserImpl;
 import ca.nrc.cadc.gms.server.persistence.GroupPersistence;
 import ca.nrc.cadc.gms.server.persistence.UserPersistence;
-
 
 /**
  * Default implementation for a UserService.
@@ -87,7 +86,6 @@ public class UserServiceImpl implements UserService
 {
     private UserPersistence userPersistence;
     private GroupPersistence groupPersistence;
-
 
     /**
      * Hidden no-arg constructor for Javabean tools like Reflection.
@@ -98,28 +96,31 @@ public class UserServiceImpl implements UserService
 
     /**
      * Constructor to populate the fields.
-     *
-     * @param userPersistence       The Persistence for User instances.
-     * @param groupPersistence      The Persistence for Group instances.
+     * 
+     * @param userPersistence
+     *            The Persistence for User instances.
+     * @param groupPersistence
+     *            The Persistence for Group instances.
      */
     public UserServiceImpl(final UserPersistence userPersistence,
-                           final GroupPersistence groupPersistence)
+            final GroupPersistence groupPersistence)
     {
         this.userPersistence = userPersistence;
         this.groupPersistence = groupPersistence;
     }
 
-
     /**
      * Obtain a User for the given ID.
-     *
-     * @param userID The unique User ID.
-     * @param withMembership  Whether to include membership info (true)
-     *                        or not (false).
+     * 
+     * @param userID
+     *            The unique User ID.
+     * @param withMembership
+     *            Whether to include membership info (true) or not
+     *            (false).
      * @return The User instance, or null if none found.
      */
     public User getUser(final X500Principal userID, boolean withMembership)
-    throws InvalidMemberException, AuthorizationException
+            throws InvalidMemberException, AuthorizationException
     {
         User user = getUserPersistence().getUser(userID, withMembership);
         if (user == null)
@@ -130,41 +131,46 @@ public class UserServiceImpl implements UserService
     }
 
     /**
-     * Obtain the Member with the given Member's User ID of the Group with the
-     * given Group ID.
-     *
-     * @param memberUserID The Member's User ID.
-     * @param groupID      The Group's ID.
-     * @return The User member of the given Group, or null if they
-     *         are not a member.
+     * Obtain the Member with the given Member's User ID of the Group with
+     * the given Group ID.
+     * 
+     * @param memberUserID
+     *            The Member's User ID.
+     * @param groupID
+     *            The Group's ID.
+     * @return The User member of the given Group, or null if they are not
+     *         a member.
      * @throws ca.nrc.cadc.gms.InvalidMemberException
-     *          If the given User ID does not exist.
+     *             If the given User ID does not exist.
      * @throws ca.nrc.cadc.gms.InvalidGroupException
-     *          If the given Group does not exist.
-     * @throws IllegalArgumentException  If the given member is not a member of
-     *                                 the given Group.
-     * @throws AuthorizationException  If the executing User is not authorized
-     *                                 to do so.
+     *             If the given Group does not exist.
+     * @throws IllegalArgumentException
+     *             If the given member is not a member of the given Group.
+     * @throws AuthorizationException
+     *             If the executing User is not authorized to do so.
      */
-    public User getMember(final X500Principal memberUserID, final URI groupID)
-            throws InvalidMemberException, InvalidGroupException,
-                   AuthorizationException
+    public User getMember(final X500Principal memberUserID,
+            final URI groupID) throws InvalidMemberException,
+            InvalidGroupException, AuthorizationException
     {
         final Group group = getGroupPersistence().getGroup(groupID);
 
         if (group == null)
         {
-            throw new InvalidGroupException(
-                    String.format("No such Group with ID %s", groupID));
+            throw new InvalidGroupException(String.format(
+                    "No such Group with ID %s", groupID));
         }
 
-        final User member = new UserImpl(memberUserID);
-        if (!group.getMembers().contains(member))
+        // compare member IDs in cannonical format!
+
+        for (User member : group.getMembers())
         {
-            return null;
+            if (AuthenticationUtil.equals(member.getID(), memberUserID))
+            {
+                return member;
+            }
         }
-
-        return member;
+        throw new InvalidMemberException(memberUserID + " not found");
     }
 
     public UserPersistence getUserPersistence()
