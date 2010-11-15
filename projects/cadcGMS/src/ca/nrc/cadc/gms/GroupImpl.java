@@ -75,6 +75,8 @@ import java.util.List;
 
 import javax.security.auth.x500.X500Principal;
 
+import ca.nrc.cadc.auth.AuthenticationUtil;
+
 /**
  * Default implementation of a Group.
  */
@@ -277,7 +279,7 @@ public class GroupImpl implements Group
         {
             for (User member : getMembers())
             {
-                if (member.getID().equals(memberID))
+                if (AuthenticationUtil.equals(memberID, member.getID()))
                 {
                     members.remove(member);
                     return;
@@ -308,7 +310,7 @@ public class GroupImpl implements Group
         {
             for (User member : getMembers())
             {
-                if (member.getID().equals(userID))
+                if (AuthenticationUtil.equals(userID, member.getID()))
                 {
                     return true;
                 }
