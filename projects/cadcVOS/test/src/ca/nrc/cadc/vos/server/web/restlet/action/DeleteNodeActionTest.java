@@ -64,112 +64,109 @@
  *
  ************************************************************************
  */
-
 package ca.nrc.cadc.vos.server.web.restlet.action;
 
-import java.io.FileNotFoundException;
-import java.io.IOException;
-import java.net.URISyntaxException;
-import java.security.AccessControlException;
-import java.util.List;
 
 import ca.nrc.cadc.vos.*;
-import ca.nrc.cadc.vos.server.util.NodeUtil;
-import org.apache.log4j.Logger;
-import org.restlet.Request;
-import org.restlet.representation.Representation;
 
 import ca.nrc.cadc.vos.server.NodePersistence;
-import ca.nrc.cadc.vos.server.SearchNode;
-import ca.nrc.cadc.vos.server.auth.VOSpaceAuthorizer;
+import ca.nrc.cadc.vos.server.util.NodeUtil;
+import org.junit.Test;
+import org.restlet.Request;
 
-/**
- * Class to perform the deletion of a Node.
- * 
- * @author majorb
- */
-public class DeleteNodeAction extends NodeAction
+import java.util.List;
+
+import static org.easymock.EasyMock.*;
+
+
+public class DeleteNodeActionTest extends AbstractCADCVOSTest<DeleteNodeAction>
 {
-    
-    private static Logger log = Logger.getLogger(DeleteNodeAction.class);
-    
-    /**
-     * Given the node URI and XML, return the Node object specified
-     * by the client.
-     */
-    @Override
-    public Node getClientNode(VOSURI vosURI, Representation nodeXML)
-            throws URISyntaxException, NodeParsingException, IOException 
-    {
-        return new SearchNode(vosURI);
-    }
-    
-    /**
-     * Perform an authorization check for the given node and return (if applicable)
-     * the persistent version of the Node.
-     */
-    @Override
-    public Node doAuthorizationCheck(VOSpaceAuthorizer voSpaceAuthorizer, Node clientNode)
-            throws AccessControlException, FileNotFoundException
-    {
-        ContainerNode parent = (ContainerNode) voSpaceAuthorizer.getWritePermission(clientNode.getParent());
-        clientNode.setParent(parent);
-        return clientNode;
-    }
+    private NodePersistence mockNodePersistence;
+
 
     /**
-     * Mark the node, and all child nodes, for deletion.
-     */
-    @Override
-    public NodeActionResult performNodeAction(final Node node,
-                                              final NodePersistence nodePersistence,
-                                              final Request request)
-            throws Exception
-    {
-        try
-        {
-            Node persistentNode = nodePersistence.getFromParent(node.getName(),
-                                                                node.getParent());
-            nodePersistence.markForDeletion(persistentNode, true);
-
-            final List<NodeProperty> properties =
-                    persistentNode.getProperties();
-            final int lengthPropertyIndex =
-                    properties.indexOf(
-                            new NodeProperty(VOS.PROPERTY_URI_CONTENTLENGTH,
-                                             null));
-
-            if (lengthPropertyIndex != -1)
-            {
-                final NodeProperty lengthProperty =
-                        properties.get(lengthPropertyIndex);
-
-                final long contentLength =
-                        Long.parseLong(lengthProperty.getPropertyValue());
-                final NodeUtil nodeUtil = createNodeUtil(nodePersistence);
-                nodeUtil.updateStackContentLengths(persistentNode,
-                                                   -contentLength);
-            }
-
-            return null;
-        }
-        catch (NodeNotFoundException e)
-        {
-            log.debug("Could not find node with path: " + node.getPath(), e);
-            NodeFault nodeFault = NodeFault.NodeNotFound;
-            nodeFault.setMessage(node.getUri().toString());
-            return new NodeActionResult(nodeFault);
-        }
-    }
-
-    /**
-     * Obtain an instance of a NodeUtil.
+     * Set and initialize the Test Subject.
      *
-     * @param nodePersistence   The Node Persistence instance to use.
-     * @return                  A Node Util instance.
+     * @throws Exception If anything goes awry.
      */
-    protected NodeUtil createNodeUtil(final NodePersistence nodePersistence)
+    @Override
+    protected void initializeTestSubject() throws Exception
     {
-        return new NodeUtil(nodePersistence);
+        setMockNodePersistence(createMock(NodePersistence.class));
+
+        setTestSubject(new DeleteNodeAction());
+    }
+
+
+    @Test
+    @SuppressWarnings("unchecked")
+    public void performNodeAction() throws Exception
+    {
+        final NodeUtil mockNodeUtil = createMock(NodeUtil.class);
+
+        setTestSubject(new DeleteNodeAction()
+        {
+            /**
+             * Obtain an instance of a NodeUtil.
+             *
+             * @param nodePersistence The Node Persistence instance to use.
+             * @return A Node Util instance.
+             */
+            @Override
+            protected NodeUtil createNodeUtil(NodePersistence nodePersistence)
+            {
+                return mockNodeUtil;
+            }
+        });
+
+        final Node mockNode = createMock(Node.class);
+        final Node mockPersistentNode = createMock(Node.class);
+        final ContainerNode mockParentNode = createMock(ContainerNode.class);
+        final Request mockRequest = createMock(Request.class);
+        final List<NodeProperty> mockNodeProperties = createMock(List.class);
+        final NodeProperty comparison =
+                new NodeProperty(VOS.PROPERTY_URI_CONTENTLENGTH, null);
+        final NodeProperty mockLengthProperty = createMock(NodeProperty.class);        
+
+        expect(mockNode.getName()).andReturn("MOCK_NODE_NAME").once();
+        expect(mockNode.getParent()).andReturn(mockParentNode).once();
+
+        expect(getMockNodePersistence().getFromParent("MOCK_NODE_NAME",
+                                                      mockParentNode)).
+                andReturn(mockPersistentNode).once();
+        getMockNodePersistence().markForDeletion(mockPersistentNode, true);
+        expectLastCall().once();
+
+        expect(mockPersistentNode.getProperties()).andReturn(
+                mockNodeProperties).once();
+        expect(mockNodeProperties.indexOf(comparison)).andReturn(3).once();
+        expect(mockNodeProperties.get(3)).andReturn(mockLengthProperty).once();
+
+        expect(mockLengthProperty.getPropertyValue()).andReturn("88").once();
+
+        mockNodeUtil.updateStackContentLengths(mockPersistentNode, -88l);
+        expectLastCall().once();
+
+        replay(getMockNodePersistence(), mockNode, mockPersistentNode,
+               mockParentNode, mockRequest, mockNodeUtil, mockNodeProperties,
+               mockLengthProperty);
+
+        getTestSubject().performNodeAction(mockNode, getMockNodePersistence(),
+                                           mockRequest);
+
+        verify(getMockNodePersistence(), mockNode, mockPersistentNode,
+               mockParentNode, mockRequest, mockNodeUtil, mockNodeProperties,
+               mockLengthProperty);
+    }
+
+
+    public NodePersistence getMockNodePersistence()
+    {
+        return mockNodePersistence;
+    }
+
+    public void setMockNodePersistence(NodePersistence mockNodePersistence)
+    {
+        this.mockNodePersistence = mockNodePersistence;
     }
 }
