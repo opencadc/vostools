@@ -98,6 +98,22 @@ public interface NodePersistence
     Node getFromParent(String name, ContainerNode parent) throws NodeNotFoundException;
     
     /**
+     * Find the node with the specified name and parent.  The parent must have been
+     * retrieved from the persistent layer.  A parent of 'null' indicates that
+     * the node to be returned is a root node.
+     * 
+     * This method differs from getFromParent in that:
+     * - Node properties not in the Node table are not retrieved
+     * - The children of the Node are not retrieved.
+     * 
+     * @param name The name of the node
+     * @param parent The persistent parent object, or null if a root node.
+     * @return The persistent object specified by name.
+     * @throws NodeNotFoundException If the node could not be found.
+     */
+    Node getFromParentLight(String name, ContainerNode parent) throws NodeNotFoundException;
+    
+    /**
      * Persist the node in the given container.  The container must have been retrieved
      * from the persistent layer.
      * 

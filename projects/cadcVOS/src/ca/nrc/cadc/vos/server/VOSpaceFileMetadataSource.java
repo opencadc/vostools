@@ -75,13 +75,18 @@ import java.net.URISyntaxException;
 import java.text.DateFormat;
 import java.text.ParseException;
 
-import ca.nrc.cadc.uws.util.StringUtil;
-import ca.nrc.cadc.vos.*;
 import org.apache.log4j.Logger;
 
 import ca.nrc.cadc.date.DateUtil;
 import ca.nrc.cadc.util.FileMetadata;
 import ca.nrc.cadc.util.FileMetadataSource;
+import ca.nrc.cadc.uws.util.StringUtil;
+import ca.nrc.cadc.vos.DataNode;
+import ca.nrc.cadc.vos.Node;
+import ca.nrc.cadc.vos.NodeNotFoundException;
+import ca.nrc.cadc.vos.NodeProperty;
+import ca.nrc.cadc.vos.VOS;
+import ca.nrc.cadc.vos.VOSURI;
 import ca.nrc.cadc.vos.server.util.NodeUtil;
 
 /**
@@ -308,7 +313,7 @@ public class VOSpaceFileMetadataSource implements FileMetadataSource
         {
             final Node searchNode = new SearchNode(new VOSURI(resource));
             final Node persistentNode = NodeUtil.iterateStack(searchNode, null,
-                                                              nodePersistence);
+                                                              nodePersistence, false);
             
             if (! (persistentNode instanceof DataNode))
             {

@@ -266,7 +266,7 @@ public class NodeResource extends BaseResource
      * @param entity        The Request payload.
      * @return Representation as a result of this PUT.
      */
-    @Put("xml")
+    @Put
     public Representation store(final Representation entity)
     {   
         log.debug("Enter NodeResource.store()");
@@ -279,7 +279,7 @@ public class NodeResource extends BaseResource
      * @param entity        The Request payload.
      * @return Representation as a result of this PUT.
      */
-    @Post("xml")
+    @Post
     public Representation accept(final Representation entity)
     {
         log.debug("Enter NodeResource.accept()");
@@ -295,7 +295,5 @@ public class NodeResource extends BaseResource
         log.debug("Enter NodeResource.remove()");
         return performNodeAction(new DeleteNodeAction());
     }
-    
-
     
 }

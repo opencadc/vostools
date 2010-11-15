@@ -164,7 +164,7 @@ public class VOSpaceAuthorizer implements Authorizer
         try
         {
             Node persistentNode = NodeUtil.iterateStack(
-                    node, readPermissionAuthorizer, getNodePersistence());
+                    node, readPermissionAuthorizer, getNodePersistence(), true);
             if (persistentNode == null)
             {
                 throw new AccessControlException("Read permission on root denied.");
@@ -214,7 +214,7 @@ public class VOSpaceAuthorizer implements Authorizer
         try
         {
             Node persistentNode = NodeUtil.iterateStack(
-                    node, writePermissionAuthorizer, getNodePersistence());
+                    node, writePermissionAuthorizer, getNodePersistence(), true);
             if (persistentNode == null)
             {
                 throw new AccessControlException("Write permission to root denied.");

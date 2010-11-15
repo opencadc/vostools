@@ -236,7 +236,7 @@ public abstract class NodeDAO implements NodePersistence
             {
                 
                 startTransaction();
-                Node ret = getFromParentImpl(name, parent);
+                Node ret = getFromParentImpl(name, parent, false);
                 commitTransaction();
                 return ret;
             }
@@ -264,6 +264,44 @@ public abstract class NodeDAO implements NodePersistence
                         rollbackTransaction();
                     }
                     catch(Throwable oops) { log.error("failed to rollback transaction in finally", oops); }
+            }
+        }
+    }
+    
+    /**
+     * Get the node from the parent.  This method assumes that the nodeID
+     * of the parent object is set.  If the parent object is null, it is
+     * assumed to be at the root level.
+     * 
+     * This method differs from getFromParent in that:
+     * - Node properties not in the Node table are not retrieved
+     * - The children of the Node are not retrieved.
+     * 
+     * @param name The node to get
+     * @param parent The parent of the node, or null if this is a root.  This object
+     * must have been retrived from the NodePersistence interface.
+     */
+    public Node getFromParentLight(String name, ContainerNode parent) throws NodeNotFoundException
+    {
+        if (name == null)
+        {
+            throw new NodeNotFoundException("Node parameter is null.");
+        }
+        
+        try
+        {
+            return getFromParentImpl(name, parent, true);
+        }
+        catch(Throwable t)
+        {
+            if (t instanceof NodeNotFoundException)
+            {
+                throw (NodeNotFoundException) t;
+            }
+            else
+            {
+                log.error("getFromParentLight: " + name + "," + parent, t);
+                throw new IllegalStateException(t);
             }
         }
     }
@@ -652,7 +690,7 @@ public abstract class NodeDAO implements NodePersistence
      * @return
      * @throws NodeNotFoundException
      */
-    protected Node getFromParentImpl(String name, ContainerNode parent) throws NodeNotFoundException
+    protected Node getFromParentImpl(String name, ContainerNode parent, boolean light) throws NodeNotFoundException
     {
         if (name == null)
         {
@@ -660,7 +698,15 @@ public abstract class NodeDAO implements NodePersistence
         }
         SearchNode node = new SearchNode(name);
         node.setParent(parent);
-        Node returnNode = getSingleNodeFromSelect(getSelectNodeByNameAndParentSQL(node));
+        Node returnNode = null;
+        if (light)
+        {
+            returnNode = getSingleNodeFromSelectLight(getSelectNodeByNameAndParentSQL(node));            
+        }
+        else
+        {
+            returnNode = getSingleNodeFromSelect(getSelectNodeByNameAndParentSQL(node));
+        }
         if (returnNode == null)
         {
             throw new NodeNotFoundException(node.getName());
@@ -704,6 +750,31 @@ public abstract class NodeDAO implements NodePersistence
             returnNode.getProperties().addAll(returnNodeProperties);
             
             return returnNode;
+        }
+        return null;
+    }
+    
+    /**
+     * Return the single node matching the select statement or null if none
+     * were found.
+     * 
+     * @param sql The SQL to execute
+     * @return The single node or null.
+     */
+    protected Node getSingleNodeFromSelectLight(String sql)
+    {
+        log.debug("getSingleNodeFromSelectLight SQL: " + sql);
+
+        List<Node> nodeList = jdbc.query(sql, new NodeMapper());
+
+        if (nodeList.size() > 1)
+        {
+            throw new IllegalStateException("More than one node returned for SQL: "
+                    + sql);
+        }
+        if (nodeList.size() == 1)
+        {
+            return (Node) nodeList.get(0);
         }
         return null;
     }

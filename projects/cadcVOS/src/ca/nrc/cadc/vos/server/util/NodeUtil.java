@@ -72,10 +72,15 @@ package ca.nrc.cadc.vos.server.util;
 import java.util.List;
 import java.util.Stack;
 
-import ca.nrc.cadc.uws.util.StringUtil;
-import ca.nrc.cadc.vos.*;
 import org.apache.log4j.Logger;
 
+import ca.nrc.cadc.uws.util.StringUtil;
+import ca.nrc.cadc.vos.ContainerNode;
+import ca.nrc.cadc.vos.DataNode;
+import ca.nrc.cadc.vos.Node;
+import ca.nrc.cadc.vos.NodeNotFoundException;
+import ca.nrc.cadc.vos.NodeProperty;
+import ca.nrc.cadc.vos.VOS;
 import ca.nrc.cadc.vos.server.NodePersistence;
 
 /**
@@ -109,11 +114,13 @@ public class NodeUtil
      * @param targetNode The node whos hierarchy is to be iterated
      * @param listener An optional listener notified at each stack level.
      * @param nodePersistence The node persistence implementation
+     * @param light Use the light implementation of getFromParent in
+     * NodeDAO that only retrieves the core Node attributes.
      * @return The persistent version of the target node.
      * @throws NodeNotFoundException If the target node could not be found.
      */
     public static Node iterateStack(Node targetNode, NodeStackListener listener,
-                                    NodePersistence nodePersistence)
+                                    NodePersistence nodePersistence, boolean light)
             throws NodeNotFoundException
     {
 
@@ -138,7 +145,14 @@ public class NodeUtil
             log.debug("Retrieving node with path: " + nextNode.getPath());
 
             // get the node from the persistence layer
-            persistentNode = nodePersistence.getFromParent(nextNode.getName(), parent);
+            if (light)
+            {
+                persistentNode = nodePersistence.getFromParentLight(nextNode.getName(), parent);
+            }
+            else
+            {
+                persistentNode = nodePersistence.getFromParent(nextNode.getName(), parent);
+            }
 
             // check if it is marked for deletion
             if (persistentNode.isMarkedForDeletion())
