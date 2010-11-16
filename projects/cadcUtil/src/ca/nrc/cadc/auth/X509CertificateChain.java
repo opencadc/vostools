@@ -83,6 +83,8 @@ import javax.security.auth.x500.X500Principal;
 
 import org.apache.log4j.Logger;
 
+import ca.nrc.cadc.util.Base64;
+
 /**
  * Class to store an X509Certificate chain.
  *
@@ -104,30 +106,6 @@ public class X509CertificateChain
     private String csrString;
     private String hashKey;
 
-    public String toString()
-    {
-        StringBuffer sb = new StringBuffer();
-        
-        for (X509Certificate cert : this.chain)
-        {
-            try
-            {
-                sb.append(CERT_BEGIN);
-                sb.append(NEW_LINE);
-                byte[] bytes = cert.getEncoded();
-                sb.append(new String(bytes));
-                sb.append(NEW_LINE);
-                sb.append(CERT_END);
-                sb.append(NEW_LINE);
-            }
-            catch (CertificateEncodingException e)
-            {
-                e.printStackTrace();
-                throw new RuntimeException("Cannot encode X509Certificate to byte[].",e);
-            }
-        }
-        return sb.toString();
-    }
     
     public X509CertificateChain(String csrString, PrivateKey key) {}
     
@@ -185,6 +163,31 @@ public class X509CertificateChain
             }
         }
         return null;
+    }
+
+    public String certificateString()
+    {
+        StringBuffer sb = new StringBuffer();
+        
+        for (X509Certificate cert : this.chain)
+        {
+            try
+            {
+                sb.append(CERT_BEGIN);
+                sb.append(NEW_LINE);
+                byte[] bytes = cert.getEncoded();
+                sb.append(Base64.encodeLines64(bytes));
+                sb.append(NEW_LINE);
+                sb.append(CERT_END);
+                sb.append(NEW_LINE);
+            }
+            catch (CertificateEncodingException e)
+            {
+                e.printStackTrace();
+                throw new RuntimeException("Cannot encode X509Certificate to byte[].",e);
+            }
+        }
+        return sb.toString();
     }
 
     /**

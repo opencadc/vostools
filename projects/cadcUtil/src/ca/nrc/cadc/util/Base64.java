@@ -74,6 +74,15 @@ public static String encodeLines (byte[] in) {
    return encodeLines(in, 0, in.length, 76, systemLineSeparator); }
 
 /**
+* Encodes a byte array into Base 64 format and breaks the output into lines of 64 characters.
+* This method is compatible with <code>sun.misc.BASE64Encoder.encodeBuffer(byte[])</code>.
+* @param in  An array containing the data bytes to be encoded.
+* @return    A String containing the Base64 encoded data, broken into lines.
+*/
+public static String encodeLines64 (byte[] in) {
+   return encodeLines(in, 0, in.length, 64, systemLineSeparator); }
+
+/**
 * Encodes a byte array into Base 64 format and breaks the output into lines.
 * @param in            An array containing the data bytes to be encoded.
 * @param iOff          Offset of the first byte in <code>in</code> to be processed.

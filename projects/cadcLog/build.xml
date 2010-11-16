@@ -111,7 +111,6 @@
 	<property name="dev.asm" value="${ext.dev}/asm.jar" />
 	<property name="testingJars" value="${dev.junit}:${dev.easyMock}:${dev.cglib}:${dev.asm}:${dev.objenesis}" />
 
-  <!-- compile the test classes -->
 
   <target name="test" depends="compile-test">
     <echo message="Running test" />
@@ -124,19 +123,9 @@
         <pathelement path="${build}/class" />
         <pathelement path="${jars}:${testingJars}" />
       </classpath>
-      <!--
-      <test name="${TEST_SUITE_CLASS}" />
-      -->
       <formatter type="plain" usefile="false" />
     </junit>
   </target>
-
-	<!-- Directory used to deploy the WAR file -->
-
-	<!-- compile the test classes -->
-
-	<!-- Run the test suite -->
-
 </project>
 
 
