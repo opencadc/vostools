@@ -68,9 +68,15 @@
  */
 package ca.nrc.cadc.auth;
 
+import java.io.BufferedReader;
+import java.io.ByteArrayInputStream;
+import java.io.IOException;
+import java.io.InputStreamReader;
 import java.security.PrivateKey;
+import java.security.cert.CertificateEncodingException;
 import java.security.cert.X509Certificate;
 import java.util.Collection;
+import java.util.Date;
 import java.util.Set;
 
 import javax.security.auth.x500.X500Principal;
@@ -84,13 +90,47 @@ import org.apache.log4j.Logger;
  */
 public class X509CertificateChain 
 {
+    public static final String CERT_BEGIN = "-----BEGIN CERTIFICATE-----";
+    public static final String CERT_END = "-----END CERTIFICATE-----";
+    public static final String NEW_LINE = System.getProperty("line.separator");
+    
     private static Logger log = Logger.getLogger(X509CertificateChain.class);
 
     private X500Principal principal;
     private X509Certificate[] chain;
     private PrivateKey key;
     private boolean isProxy;
+    private Date expiryDate;
+    private String csrString;
+    private String hashKey;
 
+    public String toString()
+    {
+        StringBuffer sb = new StringBuffer();
+        
+        for (X509Certificate cert : this.chain)
+        {
+            try
+            {
+                sb.append(CERT_BEGIN);
+                sb.append(NEW_LINE);
+                byte[] bytes = cert.getEncoded();
+                sb.append(new String(bytes));
+                sb.append(NEW_LINE);
+                sb.append(CERT_END);
+                sb.append(NEW_LINE);
+            }
+            catch (CertificateEncodingException e)
+            {
+                e.printStackTrace();
+                throw new RuntimeException("Cannot encode X509Certificate to byte[].",e);
+            }
+        }
+        return sb.toString();
+    }
+    
+    public X509CertificateChain(String csrString, PrivateKey key) {}
+    
     public X509CertificateChain(Collection<X509Certificate> certs)
     {
         if (certs == null || certs.size() == 0)
@@ -108,13 +148,6 @@ public class X509CertificateChain
         initPrincipal();
     }
 
-    public X500Principal getX500Principal() { return principal; }
-    
-    public X509Certificate[] getChain() { return chain; }
-
-    public PrivateKey getPrivateKey() { return key; }
-
-    public boolean isProxy() { return isProxy; }
     
     private void initPrincipal()
     {
@@ -153,4 +186,88 @@ public class X509CertificateChain
         }
         return null;
     }
+
+    /**
+     * @param expiryDate the expiryDate to set
+     */
+    public void setExpiryDate(Date expiryDate)
+    {
+        this.expiryDate = expiryDate;
+    }
+
+    /**
+     * @return the expiryDate
+     */
+    public Date getExpiryDate()
+    {
+        return expiryDate;
+    }
+
+    /**
+     * @param csrString the csrString to set
+     */
+    public void setCsrString(String csrString)
+    {
+        this.csrString = csrString;
+    }
+
+    /**
+     * @return the csrString
+     */
+    public String getCsrString()
+    {
+        return csrString;
+    }
+
+    public X500Principal getPrincipal()
+    {
+        return principal;
+    }
+
+    public void setPrincipal(X500Principal principal)
+    {
+        this.principal = principal;
+    }
+
+    public PrivateKey getKey()
+    {
+        return key;
+    }
+
+    public void setKey(PrivateKey key)
+    {
+        this.key = key;
+    }
+
+    public void setChain(X509Certificate[] chain)
+    {
+        this.chain = chain;
+    }
+
+
+    /**
+     * @param hashKey the hashKey to set
+     */
+    public void setHashKey(String hashKey)
+    {
+        this.hashKey = hashKey;
+    }
+
+
+    /**
+     * @return the hashKey
+     */
+    public String getHashKey()
+    {
+        return hashKey;
+    }
+
+    public X500Principal getX500Principal() { return principal; }
+    
+    public X509Certificate[] getChain() { return chain; }
+
+    public PrivateKey getPrivateKey() { return key; }
+
+    public boolean isProxy() { return isProxy; }
 }
+

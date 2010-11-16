@@ -323,17 +323,17 @@ public class SSLUtil
         while (line != null)
         {
             StringBuffer base64 = new StringBuffer();
-            if (line.startsWith("-----BEGIN CERTIFICATE-"))
+            if (line.startsWith(X509CertificateChain.CERT_BEGIN))
             {
                 log.debug(line);
                 line = rdr.readLine();
-                while (line != null && !line.startsWith("-----END CERTIFICATE-"))
+                while (line != null && !line.startsWith(X509CertificateChain.CERT_END))
                 {
                     log.debug(line + " (" + line.length() + ")");
                     base64.append(line.trim());
                     line = rdr.readLine();
                 }
-                if (line.startsWith("-----END CERTIFICATE-"))
+                if (line.startsWith(X509CertificateChain.CERT_END))
                 {
                     String encoded = base64.toString();
                     log.debug("CERTIFICATE: " + encoded);
