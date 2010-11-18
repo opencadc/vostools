@@ -154,7 +154,7 @@ public class VOS
     // Denotes a point or period of time associated with an event in the lifecycle of the resource
     public static final String PROPERTY_URI_DATE = "ivo://ivoa.net/vospace/core#date";
     
-    // SDenotes the nature or genre of the resource
+    // Denotes the nature or genre of the resource
     public static final String PROPERTY_URI_TYPE = "ivo://ivoa.net/vospace/core#type";
     
     // Denotes the file format, physical medium, or dimensions of the resource
@@ -235,11 +235,13 @@ public class VOS
     public static final String PROPERTY_URI_ISPUBLIC = "ivo://ivoa.net/vospace/core#ispublic";
     
     /*
-     * List of properties that are read-only
+     * List of properties that are read-only by the user
      */
     public static final String[] READ_ONLY_PROPERTIES = new String[]
         {
-            PROPERTY_URI_DATE
+            PROPERTY_URI_DATE,
+            PROPERTY_URI_CREATOR,
+            PROPERTY_URI_QUOTA
         };
 
 }

@@ -144,14 +144,16 @@ public class NodeUtil
             nextNode.setParent(parent);
             log.debug("Retrieving node with path: " + nextNode.getPath());
 
-            // get the node from the persistence layer
-            if (light)
+            // Get the node from the persistence layer.
+            // If it's the target Node, or if not using the light option, get the full version.
+            // If it's not the target Node, get the light version.
+            if (!light || ((stackSize - iteration) == 0))
             {
-                persistentNode = nodePersistence.getFromParentLight(nextNode.getName(), parent);
+                persistentNode = nodePersistence.getFromParent(nextNode.getName(), parent);
             }
             else
             {
-                persistentNode = nodePersistence.getFromParent(nextNode.getName(), parent);
+                persistentNode = nodePersistence.getFromParentLight(nextNode.getName(), parent);
             }
 
             // check if it is marked for deletion
