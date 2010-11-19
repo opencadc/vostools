@@ -192,7 +192,6 @@ public class X509CertificateChain
                 sb.append(NEW_LINE);
                 byte[] bytes = cert.getEncoded();
                 sb.append(Base64.encodeLines64(bytes));
-                //sb.append(NEW_LINE);
                 sb.append(CERT_END);
                 sb.append(NEW_LINE);
             }
@@ -202,6 +201,7 @@ public class X509CertificateChain
                 throw new RuntimeException("Cannot encode X509Certificate to byte[].",e);
             }
         }
+        sb.deleteCharAt(sb.length()-1); // remove the last new line
         return sb.toString();
     }
 
