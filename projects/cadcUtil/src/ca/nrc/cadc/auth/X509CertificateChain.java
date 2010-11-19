@@ -68,10 +68,6 @@
  */
 package ca.nrc.cadc.auth;
 
-import java.io.BufferedReader;
-import java.io.ByteArrayInputStream;
-import java.io.IOException;
-import java.io.InputStreamReader;
 import java.security.PrivateKey;
 import java.security.cert.CertificateEncodingException;
 import java.security.cert.X509Certificate;
@@ -105,16 +101,25 @@ public class X509CertificateChain
     private Date expiryDate;
     private String csrString;
     private String hashKey;
+    
+    public X509CertificateChain(X500Principal principal, PrivateKey privateKey, String csrString) 
+    {
+        this.principal = principal;
+        this.csrString = csrString;
+        this.key = privateKey;
+        this.hashKey = genHashKey(principal.getName());
+        this.chain = null;
+    }
 
-    
-    public X509CertificateChain(String csrString, PrivateKey key) {}
-    
     public X509CertificateChain(Collection<X509Certificate> certs)
     {
         if (certs == null || certs.size() == 0)
             throw new IllegalArgumentException("cannot create X509CertificateChain with no certficates");
         this.chain = certs.toArray(new X509Certificate[certs.size()]);
+        genExpiryDate();
+        
         initPrincipal();
+        this.hashKey = genHashKey(principal.getName());
     }
 
     public X509CertificateChain(X509Certificate[] chain, PrivateKey key)
@@ -122,8 +127,11 @@ public class X509CertificateChain
         if (chain == null || chain.length == 0)
             throw new IllegalArgumentException("cannot create X509CertificateChain with no certficates");
         this.chain = chain;
+        genExpiryDate();
+        
         this.key = key;
         initPrincipal();
+        this.hashKey = genHashKey(principal.getName());
     }
 
     
@@ -145,7 +153,9 @@ public class X509CertificateChain
                 this.principal = sp;
             
         }
-        this.principal = new X500Principal(principal.getName());
+        
+        String canonizedDn = AuthenticationUtil.canonizeDistinguishedName(principal.getName());
+        this.principal = new X500Principal(canonizedDn);
         log.debug("principal: " + principal.getName(X500Principal.RFC1779));
     }
     
@@ -167,6 +177,9 @@ public class X509CertificateChain
 
     public String certificateString()
     {
+        if (this.chain == null)
+            return null;
+        
         StringBuffer sb = new StringBuffer();
         
         for (X509Certificate cert : this.chain)
@@ -188,6 +201,36 @@ public class X509CertificateChain
             }
         }
         return sb.toString();
+    }
+
+    /**
+     * @param canonizedDn
+     * @return
+     */
+    private String genHashKey(String canonizedDn)
+    {
+        String dn1 = AuthenticationUtil.canonizeDistinguishedName(principal.getName());
+        X500Principal p = new X500Principal(dn1);
+        String hashKey = Integer.toString(p.hashCode());
+        return hashKey;
+    }
+
+    /**
+     * 
+     */
+    private void genExpiryDate()
+    {
+        Date expiryDate = null;
+        for (X509Certificate cert : this.chain)
+        {
+            Date notAfter = cert.getNotAfter();
+            if (notAfter != null)
+            {
+                if (expiryDate == null || notAfter.before(expiryDate)) 
+                    expiryDate = notAfter;
+            }
+        }
+        this.expiryDate = expiryDate;
     }
 
     /**
@@ -245,7 +288,11 @@ public class X509CertificateChain
     public void setChain(X509Certificate[] chain)
     {
         this.chain = chain;
+        genExpiryDate();
     }
+
+
+
 
 
     /**
