@@ -78,6 +78,7 @@ import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
+import java.io.StringReader;
 import java.math.BigInteger;
 import java.security.KeyFactory;
 import java.security.KeyManagementException;
@@ -820,5 +821,43 @@ public class SSLUtil
                 , ints[6] // primeExponentQ
                 , ints[7] // crtCoefficient
         );
+    }
+
+    /**
+     * Build a PEM string of certificates and private key.
+     * 
+     * @param certChainStr
+     * @param bytesPrivateKey
+     * @return
+     */
+    public static String buildPEM(String certChainStr, byte[] bytesPrivateKey)
+    {
+        if (certChainStr == null || bytesPrivateKey == null)
+            throw new RuntimeException("Cannot build PEM of cert & privateKey. An argument is null.");
+        
+        // locate the 2nd occurance of CERT_BEGIN string
+        int posCertEnd = certChainStr.indexOf(X509CertificateChain.CERT_END);
+        if (posCertEnd == -1)
+            throw new RuntimeException("Cannot find END mark of certificate.");
+        int insertPoint = posCertEnd + X509CertificateChain.CERT_END.length()
+                + X509CertificateChain.NEW_LINE.length();
+        
+        StringBuffer sb = new StringBuffer();
+        sb.append(X509CertificateChain.PRIVATE_KEY_BEGIN);
+        sb.append(X509CertificateChain.NEW_LINE);
+        sb.append(Base64.encodeLines64(bytesPrivateKey));
+        sb.append(X509CertificateChain.PRIVATE_KEY_END);
+        sb.append(X509CertificateChain.NEW_LINE);
+        String privateKeyStr = sb.toString();
+        
+        String certStrPart1 = certChainStr.substring(0, insertPoint);
+        String certStrPart2 = certChainStr.substring(insertPoint);
+        
+        sb = new StringBuffer();
+        sb.append(certStrPart1);
+        sb.append(privateKeyStr);
+        sb.append(certStrPart2);
+        
+        return sb.toString();
     }
 }

@@ -89,7 +89,9 @@ import ca.nrc.cadc.util.Base64;
 public class X509CertificateChain 
 {
     public static final String CERT_BEGIN = "-----BEGIN CERTIFICATE-----";
-    public static final String CERT_END = "-----END CERTIFICATE-----";
+    public static final String CERT_END   = "-----END CERTIFICATE-----";
+    public static final String PRIVATE_KEY_BEGIN = "-----BEGIN RSA PRIVATE KEY-----";
+    public static final String PRIVATE_KEY_END   = "-----END RSA PRIVATE KEY-----";
     public static final String NEW_LINE = System.getProperty("line.separator");
     
     private static Logger log = Logger.getLogger(X509CertificateChain.class);
@@ -190,7 +192,7 @@ public class X509CertificateChain
                 sb.append(NEW_LINE);
                 byte[] bytes = cert.getEncoded();
                 sb.append(Base64.encodeLines64(bytes));
-                sb.append(NEW_LINE);
+                //sb.append(NEW_LINE);
                 sb.append(CERT_END);
                 sb.append(NEW_LINE);
             }
