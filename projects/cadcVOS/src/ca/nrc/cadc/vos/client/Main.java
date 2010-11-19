@@ -319,14 +319,22 @@ public class Main implements Runnable
         }
         catch(Throwable t)
         {
-            msg("failed to copy: " + source + " -> " + destination);
-t.printStackTrace();
-            if (t.getMessage() != null)
-                msg("          reason: " + t.getMessage());
+            if (t.getCause() instanceof IOException)
+            {
+                msg(t.getCause().getMessage());
+            }
             else
-                msg("          reason: " + t);
-            if (t.getCause() != null)
-                msg("          reason: " + t.getCause());
+            {
+                msg("failed to copy: " + source + " -> " + destination);
+                t.printStackTrace();
+                if (t.getMessage() != null)
+                    msg("          reason: " + t.getMessage());
+                else
+                    msg("          reason: " + t);
+                if (t.getCause() != null)
+                    msg("          reason: " + t.getCause());
+            }
+
             System.exit(NET_STATUS);
         }
     }
