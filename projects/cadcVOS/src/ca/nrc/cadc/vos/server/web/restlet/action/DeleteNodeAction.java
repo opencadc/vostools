@@ -130,8 +130,6 @@ public class DeleteNodeAction extends NodeAction
         {
             Node persistentNode = nodePersistence.getFromParent(node.getName(),
                                                                 node.getParent());
-            nodePersistence.markForDeletion(persistentNode, true);
-
             final List<NodeProperty> properties =
                     persistentNode.getProperties();
             final int lengthPropertyIndex =
@@ -150,6 +148,8 @@ public class DeleteNodeAction extends NodeAction
                 nodeUtil.updateStackContentLengths(persistentNode,
                                                    -contentLength);
             }
+
+            nodePersistence.markForDeletion(persistentNode, true);
 
             return null;
         }

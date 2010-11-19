@@ -126,6 +126,8 @@ public class NodeUtilTest extends AbstractCADCVOSTest<NodeUtil>
                 new NodeProperty(VOS.PROPERTY_URI_CONTENTLENGTH, "72");
         final NodeProperty mockGrandParentNodeProperty =
                 createMock(NodeProperty.class);
+        final NodeProperty newGrandParentNodeProperty =
+                new NodeProperty(VOS.PROPERTY_URI_CONTENTLENGTH, "0");
         final NodeProperty mockGreatGrandParentNodeProperty =
                 createMock(NodeProperty.class);
         final NodeProperty newGreatGrandParentNodeProperty =
@@ -155,6 +157,12 @@ public class NodeUtilTest extends AbstractCADCVOSTest<NodeUtil>
                 mockGrandParentProperties).once();
         expect(mockGrandParentProperties.indexOf(comparison)).andReturn(-1).
                 once();
+        expect(mockGrandParentProperties.remove(newGrandParentNodeProperty)).
+                andReturn(true).once();
+        expect(mockGrandParentProperties.add(newGrandParentNodeProperty)).
+                andReturn(true).once();
+        expect(getMockNodePersistence().updateProperties(mockBaseGrandParentNode)).
+                andReturn(mockBaseGrandParentNode).once();
 
         expect(mockBaseGreatGrandParentNode.getParent()).andReturn(null).
                 once();
@@ -171,8 +179,8 @@ public class NodeUtilTest extends AbstractCADCVOSTest<NodeUtil>
         expect(mockGreatGrandParentProperties.add(
                 newGreatGrandParentNodeProperty)).andReturn(true).once();        
         expect(getMockNodePersistence().updateProperties(
-                mockBaseGreatGrandParentNode)).andReturn(mockBaseParentNode).
-                once();
+                mockBaseGreatGrandParentNode)).andReturn(
+                mockBaseGreatGrandParentNode).once();
 
         replay(mockBaseNode, mockBaseParentNode, mockParentProperties,
                mockParentNodeProperty, mockBaseGrandParentNode,

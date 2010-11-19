@@ -213,8 +213,10 @@ public class NodeUtil
             throw new NodeNotFoundException("Provided Node is null.");
         }
 
-        updateContentLengthProperties(persistentNode.getParent(),
-                                      contentLengthDifference);
+        final Node parentNode =
+                NodeUtil.iterateStack(persistentNode.getParent(), null,
+                                      getNodePersistence(), false);
+        updateContentLengthProperties(parentNode, contentLengthDifference);
     }
 
     /**
@@ -261,12 +263,12 @@ public class NodeUtil
             }
 
             // Only update if the existing length has been set.
-            if (existingParentContentLength > 0)
+            if (existingParentContentLength >= 0)
             {
                 final NodeProperty contentLength =
                         new NodeProperty(VOS.PROPERTY_URI_CONTENTLENGTH,
                                          Long.toString(existingParentContentLength
-                                                       - contentLengthDifference));
+                                                       + contentLengthDifference));
                 properties.remove(contentLength);
                 properties.add(contentLength);
 
