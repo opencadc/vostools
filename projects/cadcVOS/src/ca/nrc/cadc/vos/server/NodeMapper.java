@@ -146,7 +146,7 @@ public class NodeMapper implements RowMapper
 
         String typeString = rs.getString("type");
         char type = typeString.charAt(0);
-        Node node = null;
+        final Node node;
 
         if (ContainerNode.DB_TYPE == type)
         {
@@ -171,7 +171,7 @@ public class NodeMapper implements RowMapper
         node.setMarkedForDeletion(markedForDeletion);
         node.setPublic(isPublic);
         
-        node.getProperties().add(new NodeProperty(VOS.PROPERTY_URI_CONTENTLENGTH, new Long(contentLength).toString()));
+        node.getProperties().add(new NodeProperty(VOS.PROPERTY_URI_CONTENTLENGTH, Long.toString(contentLength)));
         
         if (contentType != null && contentType.trim().length() > 0)
         {
