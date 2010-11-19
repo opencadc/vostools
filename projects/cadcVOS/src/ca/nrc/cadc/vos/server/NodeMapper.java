@@ -171,10 +171,8 @@ public class NodeMapper implements RowMapper
         node.setMarkedForDeletion(markedForDeletion);
         node.setPublic(isPublic);
         
-        if (contentLength != 0)
-        {
-            node.getProperties().add(new NodeProperty(VOS.PROPERTY_URI_CONTENTLENGTH, new Long(contentLength).toString()));
-        }
+        node.getProperties().add(new NodeProperty(VOS.PROPERTY_URI_CONTENTLENGTH, new Long(contentLength).toString()));
+        
         if (contentType != null && contentType.trim().length() > 0)
         {
             node.getProperties().add(new NodeProperty(VOS.PROPERTY_URI_TYPE, contentType));
