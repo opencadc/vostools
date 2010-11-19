@@ -161,7 +161,6 @@ public class HttpUpload extends HttpTransfer
     @Override
     public String toString() { return "HttpUpload[" + remoteURL + "," + localFile + "]"; }
 
-    @Override
     public void run()
     {
         log.debug(this.toString());
@@ -250,6 +249,8 @@ public class HttpUpload extends HttpTransfer
                         throw new IOException("authorization failed " + msg);
                     case HttpURLConnection.HTTP_NOT_FOUND:
                         throw new IOException("resource not found " + msg);
+                    case HttpURLConnection.HTTP_ENTITY_TOO_LARGE:
+                        throw new IOException("No space left - " + msg);
                     default:
                         throw new IOException(msg);
 
@@ -299,12 +300,20 @@ public class HttpUpload extends HttpTransfer
             }
 
             if (!go)
+            {
+                log.debug("Cancelled.");
                 fireEvent(TransferEvent.CANCELLED);
+            }
             else if (failure != null)
+            {
+                log.debug("Failure!", failure);
                 fireEvent(failure);
+            }
             else
+            {
+                log.debug("Completed.");
                 fireEvent(TransferEvent.COMPLETED);
+            }
         }
-
     }
 }
