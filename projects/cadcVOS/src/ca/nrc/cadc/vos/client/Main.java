@@ -84,6 +84,7 @@ import java.util.Properties;
 
 import javax.security.auth.Subject;
 
+import ca.nrc.cadc.uws.util.StringUtil;
 import org.apache.log4j.Level;
 import org.apache.log4j.Logger;
 
@@ -111,8 +112,8 @@ import ca.nrc.cadc.vos.Transfer.Direction;
  */
 public class Main implements Runnable
 {
-    public static final String CR = System.getProperty("line.separator"); // OS independant new line
-    public static final String EL = " "; // empty line
+//    public static final String CR = System.getProperty("line.separator"); // OS independant new line
+//    public static final String EL = " "; // empty line
 
     public static final String ARG_HELP = "help";
     public static final String ARG_VERBOSE = "verbose";
@@ -150,9 +151,10 @@ public class Main implements Runnable
      * @author zhangsa
      *
      */
-    public enum Operation {
+    public enum Operation
+    {
         VIEW, CREATE, DELETE, SET, COPY
-    };
+    }
 
     Operation operation;
     VOSURI target;
@@ -165,7 +167,7 @@ public class Main implements Runnable
     private Subject subject;
 
     /**
-     * @param args
+     * @param args  The arguments passed into this command.
      */
     public static void main(String[] args)
     {
@@ -366,13 +368,21 @@ public class Main implements Runnable
     {
         try
         {
-            Node n = client.getNode(target.getPath());
+            final Node n = client.getNode(target.getPath());
+            final String contentLength =
+                    safePropertyRef(n, VOS.PROPERTY_URI_CONTENTLENGTH);
+
             msg(getType(n) + ": " + n.getUri());
             msg("creator: " + safePropertyRef(n, VOS.PROPERTY_URI_CREATOR));
             msg("last modified: " + safePropertyRef(n, VOS.PROPERTY_URI_DATE));
             msg("readable by anyone: " + safePropertyRef(n, VOS.PROPERTY_URI_ISPUBLIC));
             msg("readable by: " + safePropertyRef(n, VOS.PROPERTY_URI_GROUPREAD));
             msg("readable and writable by: " + safePropertyRef(n, VOS.PROPERTY_URI_GROUPWRITE));
+            msg("size: " + (!StringUtil.hasText(contentLength)
+                            ? "0"
+                            : FileSizeType.getHumanReadableSize(
+                    Long.parseLong(contentLength)) + " (" + contentLength
+                              + " bytes)"));
             if (n instanceof ContainerNode)
             {
                 ContainerNode cn = (ContainerNode) n;
@@ -385,7 +395,6 @@ public class Main implements Runnable
             }
             else if (n instanceof DataNode)
             {
-                msg("size: " + safePropertyRef(n, VOS.PROPERTY_URI_CONTENTLENGTH));
                 msg("type: " + safePropertyRef(n, VOS.PROPERTY_URI_TYPE));
                 msg("encoding: " + safePropertyRef(n, VOS.PROPERTY_URI_CONTENTENCODING));
                 msg("md5sum: " + safePropertyRef(n, VOS.PROPERTY_URI_CONTENTMD5));
@@ -411,7 +420,7 @@ public class Main implements Runnable
         if (n != null && !(n instanceof DataNode))
             throw new IllegalArgumentException("destination is an existing node of type " + getType(n));
 
-        DataNode dnode = null;
+        DataNode dnode;
         if (n != null)
         {
             log.info("overwriting existing data node: " + destination);
@@ -542,7 +551,7 @@ public class Main implements Runnable
     /**
      * Initialize command member variables based on arguments passed in.
      * 
-     * @param argMap
+     * @param argMap    The parsed arguments to this command.
      */
     private void init(ArgumentMap argMap)
     {
@@ -685,24 +694,26 @@ public class Main implements Runnable
         boolean sslError = false;
         if (!certFile.exists())
         {
-            sbSslMsg.append("Certificate file " + strCert + " does not exist. \n");
+            sbSslMsg.append("Certificate file ");
+            sbSslMsg.append(strCert);
+            sbSslMsg.append(" does not exist. \n");
             sslError = true;
         }
         if (!keyFile.exists())
         {
-            sbSslMsg.append("Key file " + strKey + " does not exist. \n");
+            sbSslMsg.append("Key file ").append(strKey).append(" does not exist. \n");
             sslError = true;
         }
         if (!sslError)
         {
             if (!certFile.canRead())
             {
-                sbSslMsg.append("Certificate file " + strCert + " cannot be read. \n");
+                sbSslMsg.append("Certificate file ").append(strCert).append(" cannot be read. \n");
                 sslError = true;
             }
             if (!keyFile.canRead())
             {
-                sbSslMsg.append("Key file " + strKey + " cannot be read. \n");
+                sbSslMsg.append("Key file ").append(strKey).append(" cannot be read. \n");
                 sslError = true;
             }
         }
@@ -714,9 +725,12 @@ public class Main implements Runnable
     }
 
     /**
-     * @param argMap
+     * @param argMap  The parsed arguments to this command.
+     * @throws IllegalArgumentException
+     *                  If more or less than one operation was requested.
      */
-    private void validateCommand(ArgumentMap argMap) throws IllegalArgumentException
+    private void validateCommand(ArgumentMap argMap)
+            throws IllegalArgumentException
     {
         int numOp = 0;
         if (argMap.isSet(ARG_VIEW))
@@ -746,14 +760,18 @@ public class Main implements Runnable
         }
 
         if (numOp == 0)
+        {
             throw new IllegalArgumentException("One operation should be defined.");
-        else if (numOp > 1) throw new IllegalArgumentException("Only one operation can be defined.");
-
-        return;
+        }
+        else if (numOp > 1)
+        {
+            throw new IllegalArgumentException("Only one operation can be defined.");
+        }
     }
 
     /**
-     * @param argMap
+     * @param argMap        The parsed out arguments to this command.
+     * @throws IllegalArgumentException  For any required missing arguments.
      */
     private void validateCommandArguments(ArgumentMap argMap)
         throws IllegalArgumentException
@@ -854,8 +872,8 @@ public class Main implements Runnable
     }
 
     /**
-         * @return The usage string
-         */
+     * Print the usage report for this command.
+     */
     public static void usage()
     {
         String[] um = {

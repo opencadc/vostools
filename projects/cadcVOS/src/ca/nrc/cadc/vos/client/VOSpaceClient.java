@@ -253,16 +253,15 @@ public class VOSpaceClient
     /**
      * Get Node.
      *  
-     * @param path
-     * @return
-     * @throws NodeParsingException
+     * @param path      The path to the Node.
+     * @return          The Node instance.
      * @throws NodeNotFoundException when the requested node does not exist on the server
      */
     public Node getNode(String path)
         throws NodeNotFoundException
     {
         int responseCode;
-        Node rtnNode = null;
+        final Node rtnNode;
 
         try
         {
