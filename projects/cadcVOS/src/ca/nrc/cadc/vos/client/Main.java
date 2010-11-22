@@ -383,8 +383,20 @@ public class Main implements Runnable
                             : FileSizeType.getHumanReadableSize(
                     Long.parseLong(contentLength)) + " (" + contentLength
                               + " bytes)"));
+
             if (n instanceof ContainerNode)
             {
+                final String quotaSize =
+                        safePropertyRef(n, VOS.PROPERTY_URI_QUOTA);
+
+                if (StringUtil.hasText(quotaSize))
+                {
+                    msg("quota size: "
+                        + FileSizeType.getHumanReadableSize(
+                            Long.parseLong(quotaSize)) + " (" + quotaSize
+                        + " bytes)");
+                }
+
                 ContainerNode cn = (ContainerNode) n;
                 msg("child nodes:");
                 for (Node child : cn.getNodes())
