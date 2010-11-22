@@ -66,6 +66,7 @@
  */
 package ca.nrc.cadc.vos;
 
+import ca.nrc.cadc.vos.client.FileSizeTypeTest;
 import org.junit.runner.RunWith;
 import org.junit.runners.Suite;
 
@@ -79,6 +80,7 @@ import ca.nrc.cadc.vos.server.ViewsTest;
                 NodeReaderTest.class,
                 NodeWriterTest.class,
                 VOSpaceAuthorizerTest.class,
+                FileSizeTypeTest.class,
                 ViewsTest.class
         })
 public class CADCVOSTestSuite
