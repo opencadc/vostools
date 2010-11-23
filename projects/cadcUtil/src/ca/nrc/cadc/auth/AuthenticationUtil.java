@@ -111,7 +111,8 @@ public class AuthenticationUtil
      * Method to extract Principals from a request. Two types of
      * principals are currently supported: X500Principal and
      * HttpPrincipal.
-     * 
+     *
+     * @see #getSubject(String, Collection<X509Certificate>)
      * @param request
      *            request that contains use authentication information
      * @return Set of Principals extracted from the request. The Set is
@@ -167,6 +168,19 @@ public class AuthenticationUtil
      * of the certficicate and using the issuer principal when the certificate is self-signed.
      * If the user has connected anonymously, the returned Subject will have no
      * principals and no credentials, but should be safe to use with Subject.doAs(...).
+     * </p><p>
+     * To get the collection of certficates in the servlet environment:
+     * <pre>
+     *   X509Certificate[] ca = (X509Certificate[]) request.getAttribute("javax.servlet.request.X509Certificate");
+     *   Collection<X509Certificate> certs = null;
+     *   if (ca != null && ca.length > 0) certs = Arrays.asList(ca);
+     * </pre>
+     * In Restlet:
+     * <pre>
+     *   Request request = getRequest();
+     *   Map<String, Object> requestAttributes = request.getAttributes();
+     *   Collection<X509Certificate> certs = (Collection<X509Certificate>) requestAttributes.get(CERTIFICATE_REQUEST_ATTRIBUTE_NAME);
+     * </pre>
      *
      * @param remoteUser the remote user id (e.g. from http authentication)
      * @param certs certificates extracted from the calling context/session
