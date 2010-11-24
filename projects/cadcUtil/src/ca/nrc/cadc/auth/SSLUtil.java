@@ -364,36 +364,18 @@ public class SSLUtil
     @SuppressWarnings("unchecked")
     public static X509Certificate[] readCertificateChain(File certFile) throws CertificateException, IOException
     {
-        byte[] certBuf = FileUtil.readFile(certFile);
-        BufferedInputStream istream = new BufferedInputStream(new ByteArrayInputStream(certBuf));
-        CertificateFactory cf = CertificateFactory.getInstance("X.509");
-        ArrayList certs = new ArrayList();
-        while (istream.available() > 0)
+        try
         {
-            Certificate cert = cf.generateCertificate(istream);
-            log.debug("found: " + cert);
-            certs.add(cert);
-        }
-        istream.close();
-
-        X509Certificate[] chain = new X509Certificate[certs.size()];
-        Iterator i = certs.iterator();
-        int c = 0;
-        while (i.hasNext())
-        {
-            X509Certificate x509 = (X509Certificate) i.next();
-            chain[c++] = x509;
-            try
-            {
-                x509.checkValidity();
-            }
+            X509Certificate[] chain = 
+                readCertificateChain(FileUtil.readFile(certFile));
+            log.debug("X509 certificate is valid");
+            return chain; 
+        }       
             catch (CertificateException ex)
             {
                 throw new RuntimeException("certificate from file " + certFile + " is not valid", ex);
             }
-            log.debug("X509 certificate is valid");
-        }
-        return chain;
+     
     }
 
     /**
@@ -692,35 +674,8 @@ public class SSLUtil
         log.debug("Private Key" + pk.toString());
 
         byte[] certificates = getCertificates(data);
-        BufferedInputStream istream = new BufferedInputStream(new ByteArrayInputStream(certificates));
-        CertificateFactory cf = CertificateFactory.getInstance("X.509");
-        ArrayList<Certificate> certs = new ArrayList<Certificate>();
-        while (istream.available() > 0)
-        {
-            Certificate cert = cf.generateCertificate(istream);
-            log.debug("found: " + cert);
-            certs.add(cert);
-        }
-        istream.close();
-
-        X509Certificate[] chain = new X509Certificate[certs.size()];
-        Iterator<Certificate> i = certs.iterator();
-        int c = 0;
-        while (i.hasNext())
-        {
-            X509Certificate x509 = (X509Certificate) i.next();
-            chain[c++] = x509;
-            try
-            {
-                x509.checkValidity();
-            }
-            catch (CertificateException ex)
-            {
-                throw new RuntimeException("certificate from file is not valid", ex);
-            }
-            log.debug("X509 certificate is valid");
-        }
-
+        X509Certificate[] chain = readCertificateChain(certificates);
+        
         return new X509CertificateChain(chain, pk);
 
     }
@@ -833,31 +788,41 @@ public class SSLUtil
     public static String buildPEM(String certChainStr, byte[] bytesPrivateKey)
     {
         if (certChainStr == null || bytesPrivateKey == null)
-            throw new RuntimeException("Cannot build PEM of cert & privateKey. An argument is null.");
-        
+            throw new RuntimeException(
+                    "Cannot build PEM of cert & privateKey. An argument is null.");
+
         // locate the 2nd occurance of CERT_BEGIN string
-        int posCertEnd = certChainStr.indexOf(X509CertificateChain.CERT_END);
+        int posCertEnd = certChainStr
+                .indexOf(X509CertificateChain.CERT_END);
         if (posCertEnd == -1)
-            throw new RuntimeException("Cannot find END mark of certificate.");
-        int insertPoint = posCertEnd + X509CertificateChain.CERT_END.length()
-                + X509CertificateChain.NEW_LINE.length();
-        
+            throw new RuntimeException(
+                    "Cannot find END mark of certificate.");
+
         StringBuffer sb = new StringBuffer();
         sb.append(X509CertificateChain.PRIVATE_KEY_BEGIN);
         sb.append(X509CertificateChain.NEW_LINE);
         sb.append(Base64.encodeLines64(bytesPrivateKey));
         sb.append(X509CertificateChain.PRIVATE_KEY_END);
-        sb.append(X509CertificateChain.NEW_LINE);
         String privateKeyStr = sb.toString();
-        
-        String certStrPart1 = certChainStr.substring(0, insertPoint);
-        String certStrPart2 = certChainStr.substring(insertPoint);
-        
-        sb = new StringBuffer();
-        sb.append(certStrPart1);
-        sb.append(privateKeyStr);
-        sb.append(certStrPart2);
-        
-        return sb.toString();
+
+        int posSecondCertStart = certChainStr.indexOf(
+                X509CertificateChain.CERT_BEGIN, posCertEnd);
+        if (posSecondCertStart == -1)
+        {
+            // this is an end user certificate, number of certificates==1
+            return (certChainStr + 
+                    X509CertificateChain.NEW_LINE + privateKeyStr);
+        }
+        else
+        {
+            // private key goes in between the first and second
+            // certificate in the chain
+            String certStrPart1 = certChainStr.substring(0,
+                    posSecondCertStart);
+            String certStrPart2 = certChainStr
+                    .substring(posSecondCertStart);
+            return (certStrPart1 + privateKeyStr
+                    + X509CertificateChain.NEW_LINE + certStrPart2);
+        }
     }
 }
