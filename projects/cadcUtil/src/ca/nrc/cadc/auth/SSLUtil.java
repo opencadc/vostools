@@ -825,4 +825,21 @@ public class SSLUtil
                     + X509CertificateChain.NEW_LINE + certStrPart2);
         }
     }
+
+    /**
+     * @param chain
+     * @return
+     */
+    public static String writePEMCertificateAndKey(X509CertificateChain chain)
+    {
+        if (chain == null) 
+            return null;
+        
+        String certChainStr = chain.certificateString();
+        byte[] bytesPrivateKey = chain.getPrivateKey().getEncoded();
+        if (certChainStr == null || bytesPrivateKey == null)
+            return null;
+        String pemStr = SSLUtil.buildPEM(certChainStr, bytesPrivateKey);
+        return pemStr;
+    }
 }
