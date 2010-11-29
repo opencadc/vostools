@@ -76,7 +76,7 @@ public abstract class AbstractPersistenceTest implements TestPersistence
         prepStmt = connection.prepareStatement(
             "delete from " + nodeDAO.getNodeTableName() + " where name like ?");
         prepStmt.setString(1, runId + "%");
-        //prepStmt.executeUpdate();
+        prepStmt.executeUpdate();
         
         prepStmt.close();
         

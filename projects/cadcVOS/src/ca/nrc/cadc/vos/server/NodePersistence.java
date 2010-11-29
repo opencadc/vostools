@@ -182,5 +182,14 @@ public interface NodePersistence
      * @param copyToPath
      */
     void copy(Node node, String copyToPath);
+    
+    /**
+     * Update the content length of the container node by adding the
+     * specified difference.
+     *  
+     * @param node
+     * @throws NodeNotFoundException
+     */
+    void updateContentLength(ContainerNode node, long difference) throws NodeNotFoundException;
 
 }

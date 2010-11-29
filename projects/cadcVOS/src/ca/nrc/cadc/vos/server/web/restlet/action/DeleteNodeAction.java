@@ -73,14 +73,21 @@ import java.net.URISyntaxException;
 import java.security.AccessControlException;
 import java.util.List;
 
-import ca.nrc.cadc.vos.*;
-import ca.nrc.cadc.vos.server.util.NodeUtil;
 import org.apache.log4j.Logger;
 import org.restlet.Request;
 import org.restlet.representation.Representation;
 
+import ca.nrc.cadc.vos.ContainerNode;
+import ca.nrc.cadc.vos.Node;
+import ca.nrc.cadc.vos.NodeFault;
+import ca.nrc.cadc.vos.NodeNotFoundException;
+import ca.nrc.cadc.vos.NodeParsingException;
+import ca.nrc.cadc.vos.NodeProperty;
+import ca.nrc.cadc.vos.VOS;
+import ca.nrc.cadc.vos.VOSURI;
 import ca.nrc.cadc.vos.server.NodePersistence;
 import ca.nrc.cadc.vos.server.SearchNode;
+import ca.nrc.cadc.vos.server.VOSpaceFileMetadataSource;
 import ca.nrc.cadc.vos.server.auth.VOSpaceAuthorizer;
 
 /**
@@ -118,7 +125,8 @@ public class DeleteNodeAction extends NodeAction
     }
 
     /**
-     * Mark the node, and all child nodes, for deletion.
+     * Mark the node, and all child nodes, for deletion.  Update the content
+     * length of the parent nodes.
      */
     @Override
     public NodeActionResult performNodeAction(final Node node,
@@ -128,28 +136,36 @@ public class DeleteNodeAction extends NodeAction
     {
         try
         {
-            Node persistentNode = nodePersistence.getFromParent(node.getName(),
-                                                                node.getParent());
+            Node persistentNode = nodePersistence.getFromParentLight(node.getName(),
+                                                                     node.getParent());
             final List<NodeProperty> properties =
                     persistentNode.getProperties();
             final int lengthPropertyIndex =
                     properties.indexOf(
                             new NodeProperty(VOS.PROPERTY_URI_CONTENTLENGTH,
                                              null));
+            
+            boolean contentLengthSet = false;
+            long contentLength = 0;
 
             if (lengthPropertyIndex != -1)
             {
                 final NodeProperty lengthProperty =
                         properties.get(lengthPropertyIndex);
-
-                final long contentLength =
+                contentLength =
                         Long.parseLong(lengthProperty.getPropertyValue());
-                final NodeUtil nodeUtil = createNodeUtil(nodePersistence);
-                nodeUtil.updateStackContentLengths(persistentNode,
-                                                   -contentLength);
+                contentLengthSet = true;
             }
 
             nodePersistence.markForDeletion(persistentNode, true);
+            
+            // Update the content length of the parent nodes if it was set
+            if (contentLengthSet)
+            {
+                VOSpaceFileMetadataSource fileMetadataSource = new VOSpaceFileMetadataSource();
+                fileMetadataSource.setNodePersistence(nodePersistence);
+                fileMetadataSource.updateContentLengths(persistentNode.getParent(), -contentLength);
+            }
 
             return null;
         }
@@ -162,14 +178,4 @@ public class DeleteNodeAction extends NodeAction
         }
     }
 
-    /**
-     * Obtain an instance of a NodeUtil.
-     *
-     * @param nodePersistence   The Node Persistence instance to use.
-     * @return                  A Node Util instance.
-     */
-    protected NodeUtil createNodeUtil(final NodePersistence nodePersistence)
-    {
-        return new NodeUtil(nodePersistence);
-    }
 }

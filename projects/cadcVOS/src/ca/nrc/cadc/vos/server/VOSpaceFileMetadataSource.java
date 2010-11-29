@@ -81,6 +81,7 @@ import ca.nrc.cadc.date.DateUtil;
 import ca.nrc.cadc.util.FileMetadata;
 import ca.nrc.cadc.util.FileMetadataSource;
 import ca.nrc.cadc.uws.util.StringUtil;
+import ca.nrc.cadc.vos.ContainerNode;
 import ca.nrc.cadc.vos.DataNode;
 import ca.nrc.cadc.vos.Node;
 import ca.nrc.cadc.vos.NodeNotFoundException;
@@ -121,7 +122,7 @@ public class VOSpaceFileMetadataSource implements FileMetadataSource
     public FileMetadata get(URI resource) throws FileNotFoundException,
             IllegalArgumentException
     {
-        Node persistentNode = getPersistentNode(resource);
+        Node persistentNode = getPersistentNode(resource, true);
         FileMetadata fileMetadata = new FileMetadata();
         
         // fileName
@@ -198,7 +199,7 @@ public class VOSpaceFileMetadataSource implements FileMetadataSource
         }
 
         // This is the persistent Node.  Bear that in mind.
-        final Node persistentNode = getPersistentNode(resource);
+        final Node persistentNode = getPersistentNode(resource, true);
 
         final String existingContentLengthString =
                 getPropertyValue(persistentNode,
@@ -269,7 +270,7 @@ public class VOSpaceFileMetadataSource implements FileMetadataSource
         {
             nodePersistence.updateProperties(persistentNode);
             
-            updateContentLengths(persistentNode, contentLengthDifference);
+            updateContentLengths(persistentNode.getParent(), contentLengthDifference);
         }
         catch (NodeNotFoundException e)
         {
@@ -286,13 +287,15 @@ public class VOSpaceFileMetadataSource implements FileMetadataSource
      * @throws NodeNotFoundException    If a node along the path is expected to
      *                                  be found but wasn't.
      */
-    protected void updateContentLengths(final Node persistentNode,
-                                        final long contentLengthDifference)
+    public void updateContentLengths(final ContainerNode persistentNode,
+                                     final long contentLengthDifference)
             throws NodeNotFoundException
     {
-        final NodeUtil nodeUtil = new NodeUtil(getNodePersistence());
-        nodeUtil.updateStackContentLengths(persistentNode,
-                                           contentLengthDifference);
+        if (persistentNode != null)
+        {
+            nodePersistence.updateContentLength(persistentNode, contentLengthDifference);
+            updateContentLengths(persistentNode.getParent(), contentLengthDifference);
+        }
     }
     
     /**
@@ -302,7 +305,7 @@ public class VOSpaceFileMetadataSource implements FileMetadataSource
      * @throws FileNotFoundException        If a node with the given URI does
      *                                      not exist.
      */
-    protected Node getPersistentNode(final URI resource)
+    protected Node getPersistentNode(final URI resource, boolean light)
             throws FileNotFoundException
     {
         if (nodePersistence == null)
@@ -313,7 +316,7 @@ public class VOSpaceFileMetadataSource implements FileMetadataSource
         {
             final Node searchNode = new SearchNode(new VOSURI(resource));
             final Node persistentNode = NodeUtil.iterateStack(searchNode, null,
-                                                              nodePersistence, false);
+                                                              nodePersistence, light);
             
             if (! (persistentNode instanceof DataNode))
             {

@@ -67,16 +67,24 @@
 package ca.nrc.cadc.vos.server.web.restlet.action;
 
 
-import ca.nrc.cadc.vos.*;
-
-import ca.nrc.cadc.vos.server.NodePersistence;
-import ca.nrc.cadc.vos.server.util.NodeUtil;
-import org.junit.Test;
-import org.restlet.Request;
+import static org.easymock.EasyMock.createMock;
+import static org.easymock.EasyMock.expect;
+import static org.easymock.EasyMock.expectLastCall;
+import static org.easymock.EasyMock.replay;
+import static org.easymock.EasyMock.verify;
 
 import java.util.List;
 
-import static org.easymock.EasyMock.*;
+import org.junit.Test;
+import org.restlet.Request;
+
+import ca.nrc.cadc.vos.AbstractCADCVOSTest;
+import ca.nrc.cadc.vos.ContainerNode;
+import ca.nrc.cadc.vos.Node;
+import ca.nrc.cadc.vos.NodeProperty;
+import ca.nrc.cadc.vos.VOS;
+import ca.nrc.cadc.vos.server.NodePersistence;
+import ca.nrc.cadc.vos.server.util.NodeUtil;
 
 
 public class DeleteNodeActionTest extends AbstractCADCVOSTest<DeleteNodeAction>
@@ -104,20 +112,7 @@ public class DeleteNodeActionTest extends AbstractCADCVOSTest<DeleteNodeAction>
     {
         final NodeUtil mockNodeUtil = createMock(NodeUtil.class);
 
-        setTestSubject(new DeleteNodeAction()
-        {
-            /**
-             * Obtain an instance of a NodeUtil.
-             *
-             * @param nodePersistence The Node Persistence instance to use.
-             * @return A Node Util instance.
-             */
-            @Override
-            protected NodeUtil createNodeUtil(NodePersistence nodePersistence)
-            {
-                return mockNodeUtil;
-            }
-        });
+        setTestSubject(new DeleteNodeAction());
 
         final Node mockNode = createMock(Node.class);
         final Node mockPersistentNode = createMock(Node.class);
@@ -144,7 +139,7 @@ public class DeleteNodeActionTest extends AbstractCADCVOSTest<DeleteNodeAction>
 
         expect(mockLengthProperty.getPropertyValue()).andReturn("88").once();
 
-        mockNodeUtil.updateStackContentLengths(mockPersistentNode, -88l);
+        //mockNodeUtil.updateStackContentLengths(mockPersistentNode, -88l);
         expectLastCall().once();
 
         replay(getMockNodePersistence(), mockNode, mockPersistentNode,

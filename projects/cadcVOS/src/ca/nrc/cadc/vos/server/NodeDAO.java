@@ -680,6 +680,34 @@ public abstract class NodeDAO implements NodePersistence
     {
         throw new UnsupportedOperationException("Copy not implemented.");
     }
+    
+    /**
+     * Update the content length of the container node by adding the
+     * specified difference.
+     *  
+     * @param node
+     * @throws NodeNotFoundException
+     */
+    public void updateContentLength(ContainerNode node, long difference) throws NodeNotFoundException
+    {
+        try
+        {
+            jdbc.update(getUpdateContentLengthSQL(node, difference));
+        }
+        catch(Throwable t)
+        {
+            if (t instanceof NodeNotFoundException)
+            {
+                throw (NodeNotFoundException) t;
+            }
+            else
+            {
+                log.error("updateContentLength: " + node + "," + difference, t);
+                throw new IllegalStateException(t);
+            }
+        }
+        
+    }
 
     /**
      * Implementation of getFromParent. Like all protected methods, the caller must
@@ -1397,6 +1425,18 @@ public abstract class NodeDAO implements NodePersistence
         sb.append(" set busyState=' ");
         sb.append(state.getValue());
         sb.append("' where nodeID = ");
+        sb.append(getNodeID(node));
+        return sb.toString();
+    }
+    
+    protected String getUpdateContentLengthSQL(Node node, long difference)
+    {
+        StringBuilder sb = new StringBuilder();
+        sb.append("update ");
+        sb.append(getNodeTableName());
+        sb.append(" set contentLength = (");
+        sb.append("contentLength + " + difference);
+        sb.append(") where nodeID = ");
         sb.append(getNodeID(node));
         return sb.toString();
     }

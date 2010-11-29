@@ -69,18 +69,14 @@
 
 package ca.nrc.cadc.vos.server.util;
 
-import java.util.List;
 import java.util.Stack;
 
 import org.apache.log4j.Logger;
 
-import ca.nrc.cadc.uws.util.StringUtil;
 import ca.nrc.cadc.vos.ContainerNode;
 import ca.nrc.cadc.vos.DataNode;
 import ca.nrc.cadc.vos.Node;
 import ca.nrc.cadc.vos.NodeNotFoundException;
-import ca.nrc.cadc.vos.NodeProperty;
-import ca.nrc.cadc.vos.VOS;
 import ca.nrc.cadc.vos.server.NodePersistence;
 
 /**
@@ -188,98 +184,6 @@ public class NodeUtil
         }
         return persistentNode;
     }
-
-    /**
-     * Update the size property for all of the Parent (Container) Nodes for
-     * the given Node.  This will iterate from the given Node's parent to the
-     * Root.
-     *
-     * The client MUST provide a Node whose parents are known and loaded,
-     * meaning a call to getParent() will return the object, or null if it is a
-     * top-level Container Node.
-     *
-     * @param persistentNode        The loaded Node to traverse.
-     * @param contentLengthDifference   The difference to calculate into the
-     *                                  new value.
-     * @throws NodeNotFoundException  If a Node along the path cannot be
-     *                                located in the persistence layer.
-     */
-    public void updateStackContentLengths(final Node persistentNode,
-                                          final long contentLengthDifference)
-            throws NodeNotFoundException
-    {
-        if (persistentNode == null)
-        {
-            throw new NodeNotFoundException("Provided Node is null.");
-        }
-
-        final Node parentNode =
-                NodeUtil.iterateStack(persistentNode.getParent(), null,
-                                      getNodePersistence(), false);
-        updateContentLengthProperties(parentNode, contentLengthDifference);
-    }
-
-    /**
-     * Recursively set the content lengths for the parent nodes up the tree of
-     * the given Node.
-     *
-     * @param persistentParentNode      The Persistent Parent Node to start at.
-     * @param contentLengthDifference   The difference to calculate into the
-     *                                  new value.
-     * @throws NodeNotFoundException  If a Node along the path cannot be
-     *                                located in the persistence layer.
-     */
-    protected void updateContentLengthProperties(final Node persistentParentNode,
-                                                 final long contentLengthDifference)
-            throws NodeNotFoundException
-    {
-        if (persistentParentNode != null)
-        {
-            final long existingParentContentLength;
-            final String existingParentContentLengthString;
-            final List<NodeProperty> properties =
-                    persistentParentNode.getProperties();
-            final int index = properties.indexOf(
-                    new NodeProperty(VOS.PROPERTY_URI_CONTENTLENGTH, null));
-
-            if (index != -1)
-            {
-                existingParentContentLengthString =
-                        properties.get(index).getPropertyValue();
-            }
-            else
-            {
-                existingParentContentLengthString = null;
-            }
-
-            if (StringUtil.hasText(existingParentContentLengthString))
-            {
-                 existingParentContentLength =
-                        Long.parseLong(existingParentContentLengthString);
-            }
-            else
-            {
-                existingParentContentLength = 0;
-            }
-
-            // Only update if the existing length has been set.
-            if (existingParentContentLength >= 0)
-            {
-                final NodeProperty contentLength =
-                        new NodeProperty(VOS.PROPERTY_URI_CONTENTLENGTH,
-                                         Long.toString(existingParentContentLength
-                                                       + contentLengthDifference));
-                properties.remove(contentLength);
-                properties.add(contentLength);
-
-                getNodePersistence().updateProperties(persistentParentNode);
-            }
-
-            updateContentLengthProperties(persistentParentNode.getParent(),
-                                          contentLengthDifference);
-        }
-    }
-
 
     public NodePersistence getNodePersistence()
     {
