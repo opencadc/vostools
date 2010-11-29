@@ -88,13 +88,6 @@ import org.jdom.input.SAXBuilder;
  */
 public class GroupReader
 {
-    private static SAXBuilder parser;
-    static
-    {
-        parser = new SAXBuilder("org.apache.xerces.parsers.SAXParser",
-                false);
-    }
-
     public GroupReader()
     {
     }
@@ -150,6 +143,8 @@ public class GroupReader
     {
         if (reader == null)
             throw new IllegalArgumentException("reader must not be null");
+
+        SAXBuilder parser = new SAXBuilder("org.apache.xerces.parsers.SAXParser", false);
 
         // Create a JDOM Document from the XML
         Document document;
