@@ -92,12 +92,6 @@ import org.jdom.input.SAXBuilder;
  */
 public class GroupsReader
 {
-    private static SAXBuilder parser;
-    static
-    {
-        parser = new SAXBuilder("org.apache.xerces.parsers.SAXParser", false);
-    }
-
     public GroupsReader()
     {
     }
@@ -150,9 +144,10 @@ public class GroupsReader
      */
     public static Collection<Group> read(Reader reader) throws ReaderException, IOException, URISyntaxException
     {
-        List<Group> groups = new ArrayList<Group>();
-
         if (reader == null) throw new IllegalArgumentException("reader must not be null");
+
+        List<Group> groups = new ArrayList<Group>();
+        SAXBuilder parser = new SAXBuilder("org.apache.xerces.parsers.SAXParser", false);
 
         // Create a JDOM Document from the XML
         Document document;

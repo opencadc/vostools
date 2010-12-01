@@ -89,13 +89,6 @@ import org.jdom.input.SAXBuilder;
  */
 public class UserReader
 {
-    private static SAXBuilder parser;
-    static
-    {
-        parser = new SAXBuilder("org.apache.xerces.parsers.SAXParser",
-                false);
-    }
-
     public UserReader()
     {
     }
@@ -157,6 +150,8 @@ public class UserReader
     {
         if (reader == null)
             throw new IllegalArgumentException("reader must not be null");
+
+        SAXBuilder parser = new SAXBuilder("org.apache.xerces.parsers.SAXParser", false);
 
         // Create a JDOM Document from the XML
         Document document;
