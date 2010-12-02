@@ -109,7 +109,7 @@ public class X509CertificateChain
         this.principal = principal;
         this.csrString = csrString;
         this.key = privateKey;
-        this.hashKey = genHashKey(principal.getName());
+        this.hashKey = genHashKey(principal);
         this.chain = null;
     }
 
@@ -121,7 +121,7 @@ public class X509CertificateChain
         genExpiryDate();
         
         initPrincipal();
-        this.hashKey = genHashKey(principal.getName());
+        this.hashKey = genHashKey(principal);
     }
 
     public X509CertificateChain(X509Certificate[] chain, PrivateKey key)
@@ -133,7 +133,7 @@ public class X509CertificateChain
         
         this.key = key;
         initPrincipal();
-        this.hashKey = genHashKey(principal.getName());
+        this.hashKey = genHashKey(principal);
     }
 
     
@@ -207,14 +207,13 @@ public class X509CertificateChain
 
     /**
      * @param canonizedDn
-     * @return
+     * @return hash code corresponding to the CADC canonized version of the DN
      */
-    private String genHashKey(String canonizedDn)
+    public static String genHashKey(X500Principal dn)
     {
-        String dn1 = AuthenticationUtil.canonizeDistinguishedName(principal.getName());
-        X500Principal p = new X500Principal(dn1);
-        String hashKey = Integer.toString(p.hashCode());
-        return hashKey;
+        String dn1 = AuthenticationUtil.canonizeDistinguishedName(dn
+                .getName());
+        return Integer.toString(dn1.hashCode());
     }
 
     /**
