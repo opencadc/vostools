@@ -1,0 +1,26 @@
+.TH createProxyCert 1 22 Sept 2010 "CADC"
+.SH NAME
+createProxyCert \- Creates proxy certificate for limited number of days to allow CADC users to access data and services without providing a user name and password
+.SH SYNOPSIS
+.B createProxyCert  <UserPublicCertificateFile>  <UserPrivateKeyFile> <DaysValid> <ProxyFileBasename>
+.SH DESCRIPTION
+.B createProxyCert
+This will create three files with the same base name:
+.TP
+.B .pem 
+file with both the certificate chain and a new private key)
+.TP
+.B .crt 
+file with just the certificate chain (PEM format)
+.TP
+.B .key 
+file with just the private key (DER format)
+.TP
+The PEM file is usable with ssl-enabled curl (--cert) while the .crt and .key files are usable with Java applications that use the SSLUtil class from OpenCADC (this library).
+.SH BUGS
+None known.
+.SH AUTHORS
+David Grundy
+.br
+Canadian Astronomy Data Centre
+
