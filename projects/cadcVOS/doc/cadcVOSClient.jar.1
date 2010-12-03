@@ -1,0 +1,79 @@
+.TH cadcVOSClient.jar 1 22 Sept 2010 "CADC"
+.SH NAME
+cadcVOSClient.jar \- is a Java program that allows users to put and access data in the VOSpace storage system.
+.SH SYNOPSIS
+.SS Help:
+.B java -jar cadcVOSClient.jar [-h|--help] 
+.SS Create Node:
+.B java -jar cadcVOSClient.jar [-v|--verbose|-d|­­debug]
+.RS
+.nf
+.B --cert=<\fISSL\ certificate\ file\fP> --key=<\fISSL\ key\ file\fP>
+.B --create --target=<\fItarget\ URI\fP>
+.B [--public=\fItrue\fP|\fIfalse\fP]
+.B [--group-read=<\fIgroup\ URI\fP>]
+.B [--group-write=<\fIgroup\ URI\fP>]
+.B [--prop=<\fIproperties\ file\fP>] 
+.fi
+.RE
+Note: \fB--create\fP defaults to creating a ContainerNode (directory).  Creating other types of nodes specifically is not supported at this time.
+.SS Copy File:
+.B java -jar cadcVOSClient.jar [-v|--verbose|-d|­­debug]
+.RS
+.nf
+.B --cert=<\fISSL\ certificate\ file\fP> --key=<\fISSL\ key\ file\fP>
+.B --copy --src=<\fIsource\ URI\fP> --dest=<\fIdestination\ URI\fP>
+.B [--content-type=\fImimetype\ of\ source\fP]
+.B [--content-encoding=<\fIencoding\ of\ source\fP>]
+.B [--public[=\fItrue\fP|\fIfalse\fP]
+.B [--group-read=<\fIgroup\ URI\fP>]
+.B [--group-write=<\fIgroup\ URI\fP>]
+.B [--prop=<\fIproperties\ file\fP>]
+.fi
+.RE
+Note: One of the \fB--src\fP and \fB--dest\fP may be a "vos" URI and the other may be an absolute or relative path to a file.  If the target does not exist, a DataNode is created and data copied.  If it does exist, the data (and properties?) are overwritten.
+.SS View Node:
+.B java -jar cadcVOSClient.jar [-v|--verbose|-d|­­debug]
+.RS
+.nf
+.B --cert=<\fISSL\ certificate\ file\fP> --key=<\fISSL\ key\ file\fP>
+.B --view --target=<\fItarget\ URI\fP>
+.B [--public[=\fItrue\fP|\fIfalse\fP]
+.B [--group-read=<\fIgroup\ URI\fP>]
+.B [--group-write=<\fIgroup\ URI\fP>]
+.SS Delete Node:
+.B java -jar cadcVOSClient.jar [-v|--verbose|-d|­­debug]
+.RS
+.nf
+.B --cert=<\fISSL\ certificate\ file\fP> --key=<\fISSL\ key\ file\fP>
+.B --delete --target=<\fItarget\ URI\fP>
+.B [--content-type=\fImimetype\ of\ source\fP]
+.B [--content-encoding=<\fIencoding\ of\ source\fP>]
+.B [--public[=\fItrue\fP|\fIfalse\fP]
+.B [--group-read=<\fIgroup\ URI\fP>]
+.B [--group-write=<\fIgroup\ URI\fP>]
+.fi
+.RE
+.SS Set Node:
+.B java -jar cadcVOSClient.jar [-v|--verbose|-d|­­debug]
+.RS
+.nf
+.B --cert=<\fISSL\ certificate\ file\fP> --key=<\fISSL\ key\ file\fP>
+.B --set --target=<\fItarget\ URI\fP>
+.B [--content-type=\fImimetype\ of\ source\fP]
+.B [--content-encoding=<\fIencoding\ of\ source\fP>]
+.B [--public=\fItrue\fP|\fIfalse\fP]
+.B [--group-read=<\fIgroup\ URI\fP>]
+.B [--group-write=<\fIgroup\ URI\fP>]
+.B [--prop=<\fIproperties\ file\fP>]
+.fi
+.RE
+
+.SH DESCRIPTION
+.B cadcVOSClient.jar allows users to put and access data on the VOSpace storage system.
+.SH BUGS
+None known.
+.SH AUTHORS
+David Grundy
+.br
+Canadian Astronomy Data Centre
