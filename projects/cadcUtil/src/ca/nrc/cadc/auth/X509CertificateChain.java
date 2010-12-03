@@ -157,6 +157,12 @@ public class X509CertificateChain
         }
         
         String canonizedDn = AuthenticationUtil.canonizeDistinguishedName(principal.getName());
+        //TODO
+        //AD: For some reason, tomcat only passes the first certificate in the
+        // chain which make this method fails if the proxy certificate has
+        // more than two certificates in the chain. This issue needs to be addressed.
+        // The following line is just a temporary solution
+        canonizedDn = canonizedDn.substring(canonizedDn.lastIndexOf("cn="));
         this.principal = new X500Principal(canonizedDn);
         log.debug("principal: " + principal.getName(X500Principal.RFC1779));
     }
