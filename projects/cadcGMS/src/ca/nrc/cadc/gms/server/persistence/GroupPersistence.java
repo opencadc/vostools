@@ -71,6 +71,7 @@ import java.util.Collection;
 import java.util.Map;
 
 import ca.nrc.cadc.gms.Group;
+import ca.nrc.cadc.gms.GroupNotExistsException;
 import ca.nrc.cadc.gms.InvalidGroupException;
 
 public interface GroupPersistence
@@ -116,4 +117,18 @@ public interface GroupPersistence
      * @see ca.nrc.cadc.gms.GmsConsts
      */
     Collection<Group> getGroups(final Map<String, String> criteria) throws InvalidGroupException;
+    
+    /**
+     * Obtain a GMS Group, through the basic GroupInfo from the persistence layer which:
+     * 1, The archive key matches provided groupName; and
+     * 2, the user referred to by provided memberDN is a member of this group.
+     * Such GMS group does not contain membership or permission information.
+     * 
+     * @param groupName Archive Key
+     * @param memberDN Distinguished Name of a user
+     * @return GroupInfo, or null if user is not member of this group
+     * @throws GroupNotExistsException, if group by this name does not exist
+     */
+    public Group getGroup(final URI groupID, final String memberDN) throws GroupNotExistsException;
+    
 }

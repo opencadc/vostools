@@ -137,8 +137,9 @@ public class GmsClient
      *             or any combination of them produces an error.
      * @throws AccessControlException
      *             If user not allow to access the resource
-     * 
+     * @deprecated, use isMember()
      */
+    @Deprecated
     public User getMember(final URI groupID, final X500Principal memberID)
             throws IllegalArgumentException
     {
@@ -204,6 +205,7 @@ public class GmsClient
             throw new IllegalArgumentException(message, e);
         }
     }
+
 
     /**
      * Returns true of the user identified by memberID is a member of the

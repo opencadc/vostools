@@ -85,6 +85,7 @@ import ca.nrc.cadc.gms.ElemPropertyImpl;
 import ca.nrc.cadc.gms.GmsConsts;
 import ca.nrc.cadc.gms.Group;
 import ca.nrc.cadc.gms.GroupImpl;
+import ca.nrc.cadc.gms.GroupNotExistsException;
 import ca.nrc.cadc.gms.InvalidGroupException;
 import ca.nrc.cadc.gms.UserImpl;
 
@@ -92,6 +93,7 @@ public class MemoryGroupPersistence implements GroupPersistence
 {
     // The Database.
     private final ConcurrentMap<String, Group> GROUP_MAP = new ConcurrentHashMap<String, Group>();
+    private String _groupName_;
 
     public MemoryGroupPersistence()
     {
@@ -250,5 +252,14 @@ public class MemoryGroupPersistence implements GroupPersistence
     protected Collection<Group> getAllGroups()
     {
         return GROUP_MAP.values();
+    }
+
+    /* (non-Javadoc)
+     * @see ca.nrc.cadc.gms.server.persistence.GroupPersistence#getGroup(java.lang.String, java.lang.String)
+     */
+    @Override
+    public Group getGroup(URI groupID, String memberDN) throws GroupNotExistsException
+    {
+        throw new RuntimeException("Not supported in MemoryGroupPersistence.");
     }
 }

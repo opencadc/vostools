@@ -1,14 +1,14 @@
-/**
+/*
 ************************************************************************
 *******************  CANADIAN ASTRONOMY DATA CENTRE  *******************
 **************  CENTRE CANADIEN DE DONNÉES ASTRONOMIQUES  **************
 *
-*  (c) 2010.                            (c) 2010.
+*  (c) 2009.                            (c) 2009.
 *  Government of Canada                 Gouvernement du Canada
 *  National Research Council            Conseil national de recherches
 *  Ottawa, Canada, K1A 0R6              Ottawa, Canada, K1A 0R6
 *  All rights reserved                  Tous droits réservés
-*
+*                                       
 *  NRC disclaims any warranties,        Le CNRC dénie toute garantie
 *  expressed, implied, or               énoncée, implicite ou légale,
 *  statutory, of any kind with          de quelque nature que ce
@@ -31,10 +31,10 @@
 *  software without specific prior      de ce logiciel sans autorisation
 *  written permission.                  préalable et particulière
 *                                       par écrit.
-*
+*                                       
 *  This file is part of the             Ce fichier fait partie du projet
 *  OpenCADC project.                    OpenCADC.
-*
+*                                       
 *  OpenCADC is free software:           OpenCADC est un logiciel libre ;
 *  you can redistribute it and/or       vous pouvez le redistribuer ou le
 *  modify it under the terms of         modifier suivant les termes de
@@ -44,7 +44,7 @@
 *  either version 3 of the              : soit la version 3 de cette
 *  License, or (at your option)         licence, soit (à votre gré)
 *  any later version.                   toute version ultérieure.
-*
+*                                       
 *  OpenCADC is distributed in the       OpenCADC est distribué
 *  hope that it will be useful,         dans l’espoir qu’il vous
 *  but WITHOUT ANY WARRANTY;            sera utile, mais SANS AUCUNE
@@ -54,7 +54,7 @@
 *  PURPOSE.  See the GNU Affero         PARTICULIER. Consultez la Licence
 *  General Public License for           Générale Publique GNU Affero
 *  more details.                        pour plus de détails.
-*
+*                                       
 *  You should have received             Vous devriez avoir reçu une
 *  a copy of the GNU Affero             copie de la Licence Générale
 *  General Public License along         Publique GNU Affero avec
@@ -62,133 +62,26 @@
 *  <http://www.gnu.org/licenses/>.      pas le cas, consultez :
 *                                       <http://www.gnu.org/licenses/>.
 *
+*  $Revision: 4 $
+*
 ************************************************************************
 */
+
 package ca.nrc.cadc.gms;
 
-import java.io.BufferedWriter;
-import java.io.IOException;
-import java.io.OutputStream;
-import java.io.OutputStreamWriter;
-import java.io.UnsupportedEncodingException;
-import java.io.Writer;
-
-import org.jdom.Attribute;
-import org.jdom.Document;
-import org.jdom.Element;
-import org.jdom.output.Format;
-import org.jdom.output.XMLOutputter;
-
-import ca.nrc.cadc.util.StringBuilderWriter;
-
 /**
+ * @author zhangsa
  *
- * @author jburke
  */
-public class UserWriter
+public class GroupNotExistsException extends Exception
 {
-    public UserWriter() {}
-
-    /**
-     * Write a User to a StringBuilder.
-     */
-    public static void write(User user, StringBuilder builder)
-        throws IOException
+    public GroupNotExistsException(String msg)
     {
-        write(user, new StringBuilderWriter(builder));
-    }
-
-    /**
-     * Write a User to an OutputStream.
-     *
-     * @param user User to write.
-     * @param out OutputStream to write to.
-     * @throws IOException if the writer fails to write.
-     */
-    public static void write(User user, OutputStream out)
-        throws IOException
-    {
-        OutputStreamWriter outWriter;
-        try
-        {
-            outWriter = new OutputStreamWriter(out, "UTF-8");
-        } catch (UnsupportedEncodingException e)
-        {
-            throw new RuntimeException("UTF-8 encoding not supported", e);
-        }
-        write(user, new BufferedWriter(outWriter));
-    }
-
-    /**
-     * Write a User to a Writer.
-     *
-     * @param user User to write.
-     * @param writer Writer to write to.
-     * @throws IOException if the writer fails to write.
-     */
-    public static void write(User user, Writer writer)
-        throws IOException
-    {
-        // write out the Document
-        write(getUserElement(user), writer);
-    }
-
-    /**
-     * Build the member Element of a User.
-     *
-     * @param user User.
-     * @return member Element.
-     */
-    public static Element getUserElement(User user)
-    {
-        // Create the user element Element.
-        Element userElement = new Element("member");
-        userElement.setAttribute("dn", user.getID().getName());
-
-        // Add the username Element.
-        for( ElemProperty property : user.getProperties() )
-        {
-            userElement.addContent(PropertyWriter.write(property));
-        }
-        
-        if( user.getGMSMemberships() != null )
-        {
-            Element membershipElem = new Element("membershipGroups");
-            for( Group group : user.getGMSMemberships() )
-            {
-                membershipElem.addContent(GroupWriter.getGroupElement(group));
-            }
-            userElement.addContent(membershipElem);
-        }
-        
-        return userElement;
-    }
-
-    /**
-     * Buil an element of a user but with DN info only.
-     * @param userDN
-     * @return
-     */
-    public static Element getUserElement(String userDN)
-    {
-        Element userElement = new Element("member");
-        userElement.setAttribute("dn", userDN);
-        return userElement;
+        super(msg);
     }
     
-    /**
-     * Write to root Element to a writer.
-     *
-     * @param root Root Element to write.
-     * @param writer Writer to write to.
-     * @throws IOException if the writer fails to write.
-     */
-    private static void write(Element root, Writer writer)
-        throws IOException
+    public GroupNotExistsException(String msg, Throwable t)
     {
-        XMLOutputter outputter = new XMLOutputter();
-        outputter.setFormat(Format.getPrettyFormat());
-        outputter.output(new Document(root), writer);
+        super(msg, t);
     }
-
 }

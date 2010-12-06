@@ -634,18 +634,14 @@ public class GmsClientMain implements PrivilegedAction<Boolean>
     {
         try
         {
-            User user = client.getMember(new URI(target),
+            boolean isMember = client.isMember(new URI(target),
                     new X500Principal(memberID));
-            if (user == null)
-            {
-                msg("User ID (" + memberID + ") IS NOT member of group "
-                        + target);
-            }
-            else
-            {
+            if (isMember)
                 msg("User ID (" + memberID + ") IS member of group "
                         + target);
-            }
+            else
+                msg("User ID (" + memberID + ") IS NOT member of group "
+                        + target);
         }
         catch (Exception e)
         {

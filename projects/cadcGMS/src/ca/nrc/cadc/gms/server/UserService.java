@@ -107,4 +107,22 @@ public interface UserService
     User getMember(final X500Principal memberUserID, final URI groupID)
             throws InvalidMemberException, InvalidGroupException,
                    IllegalArgumentException, AuthorizationException;
+    
+    /**
+     * Check whether the given User ID is a member of the
+     * given Group ID.
+     *
+     * @param memberUserID  The Member's User ID.
+     * @param groupID       The Group's ID.
+     * @return              The User member of the given Group, or null if they
+     *                      are not a member.
+     * @throws InvalidMemberException  If the given User ID does not exist.
+     * @throws InvalidGroupException   If the given Group does not exist.
+     * @throws IllegalArgumentException  If the given member is not a member of
+     *                                   the given Group.
+     * @throws AuthorizationException  If the executing User is not authorized
+     *                                 to do so.
+     */
+    boolean isMember(final X500Principal memberUserID, final URI groupID) 
+            throws InvalidMemberException, InvalidGroupException, IllegalArgumentException, AuthorizationException;
 }

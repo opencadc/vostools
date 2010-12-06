@@ -98,7 +98,7 @@ public class GroupMemberResource extends GroupResource
 
     private UserService userService;
 
-    private User groupMember;
+    private String userDN;
 
     /**
      * Hidden constructor for JavaBean tools.
@@ -139,22 +139,24 @@ public class GroupMemberResource extends GroupResource
         try
         {
             groupMemberID = URLDecoder.decode(getMemberID(), "UTF-8");
+            userDN = groupMemberID;
 //            groupID = URLDecoder.decode(getGroupID(), "UTF-8");
             groupID = getGroupID();
             LOGGER.debug(String.format("groupID: %s memberID: %s",
                     groupID, groupMemberID));
 
-            groupMember = getUserService().getMember(
+            boolean isMember = getUserService().isMember(
                     new X500Principal(groupMemberID),
                     new URI(groupService.getGroupUriPrefix() + groupID));
-            if (groupMember == null)
+            if (!isMember)
             {
                 final String message = String.format(
-                        "No such User with ID %s", groupMemberID);
+                        "User [%s] is not a member of Group [%s].", groupMemberID, groupID);
                 processError(null, Status.CLIENT_ERROR_NOT_FOUND, message);
                 return false;
             }
-            return true;
+            else
+                return true;
         }
         catch (final InvalidGroupException e)
         {
@@ -314,7 +316,8 @@ public class GroupMemberResource extends GroupResource
     protected void buildXML(final Document document) throws IOException
     {
         LOGGER.debug("Enter GroupMemberResource.buildXML()");
-        document.addContent(UserWriter.getUserElement(groupMember));
+  
+        document.addContent(UserWriter.getUserElement(userDN));
     }
 
     protected String getMemberID()
