@@ -41,5 +41,9 @@
                     update="no">
       </jar>
   </target>
+  
+	<target name="test">
+		<echo message="WARNING: no tests implemented" />
+	</target>
 
 </project>
