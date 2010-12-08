@@ -170,7 +170,8 @@ public class UserServiceImpl implements UserService
                 return member;
             }
         }
-        throw new InvalidMemberException(memberUserID + " not found");
+        
+        return getUser(memberUserID, false);
     }
 
     public UserPersistence getUserPersistence()
