@@ -237,7 +237,6 @@ public abstract class Node implements Comparable<Object>
     /**
      * Return an integer denoting the display order for two nodes.
      */
-    @Override
     public int compareTo(Object o1)
     {
         if (o1 == null)

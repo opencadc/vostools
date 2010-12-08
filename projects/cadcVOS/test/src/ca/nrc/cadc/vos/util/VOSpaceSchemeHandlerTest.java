@@ -64,83 +64,57 @@
  *
  ************************************************************************
  */
-package ca.nrc.cadc.vos.auth;
+package ca.nrc.cadc.vos.util;
 
-import static org.easymock.EasyMock.createMock;
-import static org.easymock.EasyMock.expect;
-import static org.easymock.EasyMock.replay;
-import static org.easymock.EasyMock.verify;
+
+import ca.nrc.cadc.vos.AbstractCADCVOSTest;
+
+import org.junit.Test;
+import static org.junit.Assert.*;
 
 import java.net.URI;
-import java.security.PrivilegedExceptionAction;
-import java.util.ArrayList;
+import java.net.URL;
 import java.util.List;
 
-import javax.security.auth.Subject;
-import javax.security.auth.x500.X500Principal;
 
-import org.junit.Before;
-import org.junit.Test;
-
-import ca.nrc.cadc.vos.ContainerNode;
-import ca.nrc.cadc.vos.NodeProperty;
-import ca.nrc.cadc.vos.server.NodeDAO;
-import ca.nrc.cadc.vos.server.auth.VOSpaceAuthorizer;
-
-
-/**
- * Test class for the VOSpaceAuthorizer.
- */
-public class VOSpaceAuthorizerTest
+public class VOSpaceSchemeHandlerTest
+        extends AbstractCADCVOSTest<VOSpaceSchemeHandler>
 {
-
-    @Before
-    public void setup() throws Exception
+    @Override
+    protected void initializeTestSubject() throws Exception
     {
+        setTestSubject(new VOSpaceSchemeHandler()
+        {
+            @Override
+            protected String getHostName()
+            {
+                return "testhost.cadc.dao.nrc.ca";
+            }
+        });
     }
-            
+
+
     @Test
-    public void testReadPermissonOnRoot() throws Exception
+    public void toURL() throws Exception
     {
-        ContainerNode dbNode = new ContainerNode("CADCAuthtest1");
-        dbNode.setOwner("cn=cadc authtest1 10627,ou=cadc,o=hia");
-        dbNode.setPublic(false);
-        List<NodeProperty> properties = new ArrayList<NodeProperty>();
-        dbNode.setProperties(properties);
-        
-        NodeDAO nodeDAO = createMock(NodeDAO.class);
-        expect(nodeDAO.getFromParent("CADCAuthtest1", null)).andReturn(dbNode).once();
-        replay(nodeDAO);
-        
-        VOSpaceAuthorizer voSpaceAuthorizer = new VOSpaceAuthorizer();
-        voSpaceAuthorizer.setNodePersistence(nodeDAO);
-        
-        Subject subject = new Subject();
-        subject.getPrincipals().add(new X500Principal("cn=cadc authtest1 10627,ou=cadc,o=hia"));
-        
-        URI uri = new URI("vos://cadc.nrc.ca!vospace/CADCAuthtest1");
-        ReadPermissionAction action = new ReadPermissionAction( voSpaceAuthorizer, uri);
-        Subject.doAs(subject, action);
-        
-        verify(nodeDAO);
-    }
-    
-    private class ReadPermissionAction implements PrivilegedExceptionAction<Object>
-    {
-        private VOSpaceAuthorizer authorizer;
-        private URI uri;
-        
-        ReadPermissionAction(VOSpaceAuthorizer authorizer, URI uri)
+        try
         {
-            this.authorizer = authorizer;
-            this.uri = uri;
+            getTestSubject().toURL(null);
+            fail("Should error out for null URIs.");
+        }
+        catch (IllegalArgumentException e)
+        {
+            // Good!
         }
 
-        public Object run() throws Exception
-        {
-            return authorizer.getReadPermission(uri);
-        }
-        
-    }
+        final URI testURI = new URI("vos://cadc.nrc.ca!vospace/mcflym/test");
 
+        final List<URL> urls = getTestSubject().toURL(testURI);
+
+        assertNotNull("URLs should not be null.", urls);
+        assertEquals("Should be a single URL.", 1, urls.size());
+        assertEquals("URL should be fine.",
+                     "https://testhost.cadc.dao.nrc.ca/vospace/nodes/mcflym/test?view=data",
+                     urls.get(0).toString());
+    }
 }

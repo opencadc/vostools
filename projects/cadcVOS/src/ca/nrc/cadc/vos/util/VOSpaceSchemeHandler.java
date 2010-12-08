@@ -64,83 +64,89 @@
  *
  ************************************************************************
  */
-package ca.nrc.cadc.vos.auth;
+package ca.nrc.cadc.vos.util;
 
-import static org.easymock.EasyMock.createMock;
-import static org.easymock.EasyMock.expect;
-import static org.easymock.EasyMock.replay;
-import static org.easymock.EasyMock.verify;
 
+import ca.nrc.cadc.net.NetUtil;
+import ca.nrc.cadc.net.SchemeHandler;
+
+import java.net.MalformedURLException;
 import java.net.URI;
-import java.security.PrivilegedExceptionAction;
+import java.net.URL;
 import java.util.ArrayList;
 import java.util.List;
 
-import javax.security.auth.Subject;
-import javax.security.auth.x500.X500Principal;
 
-import org.junit.Before;
-import org.junit.Test;
-
-import ca.nrc.cadc.vos.ContainerNode;
-import ca.nrc.cadc.vos.NodeProperty;
-import ca.nrc.cadc.vos.server.NodeDAO;
-import ca.nrc.cadc.vos.server.auth.VOSpaceAuthorizer;
-
-
-/**
- * Test class for the VOSpaceAuthorizer.
- */
-public class VOSpaceAuthorizerTest
+public class VOSpaceSchemeHandler implements SchemeHandler
 {
+    protected static final String SCHEME = "vos";
 
-    @Before
-    public void setup() throws Exception
+
+    private String baseURL;
+
+
+    public VOSpaceSchemeHandler()
     {
+        setBaseURL("https://" + getHostName() + "/vospace/nodes");
     }
+
+
+    /**
+     * Obtain the current host name.
+     *
+     * @return      The String host name.
+     */
+    protected String getHostName()
+    {
+        return NetUtil.getServerName(VOSpaceSchemeHandler.class);
+    }
+
+    /**
+     * Create URLs for the given URI.
+     *
+     * @param uri the URI to convert
+     * @return      List of URLs for the given URI.
+     * @throws IllegalArgumentException   If the given URI is not valid.
+     */
+    public List<URL> toURL(final URI uri) throws IllegalArgumentException
+    {
+        if (uri == null)
+        {
+            throw new IllegalArgumentException("Given URI cannot be null.");
+        }
+        else if (!uri.getScheme().equals(SCHEME))
+        {
+            throw new IllegalArgumentException("Given URI is not a VOS URI.");
+        }
+
+        final StringBuilder finalURL = new StringBuilder(256);
+
+        finalURL.append(getBaseURL());
+        finalURL.append(uri.getPath());
+        finalURL.append("?view=data");
+
+        try
+        {
+            final List<URL> ret = new ArrayList<URL>(1);
             
-    @Test
-    public void testReadPermissonOnRoot() throws Exception
-    {
-        ContainerNode dbNode = new ContainerNode("CADCAuthtest1");
-        dbNode.setOwner("cn=cadc authtest1 10627,ou=cadc,o=hia");
-        dbNode.setPublic(false);
-        List<NodeProperty> properties = new ArrayList<NodeProperty>();
-        dbNode.setProperties(properties);
-        
-        NodeDAO nodeDAO = createMock(NodeDAO.class);
-        expect(nodeDAO.getFromParent("CADCAuthtest1", null)).andReturn(dbNode).once();
-        replay(nodeDAO);
-        
-        VOSpaceAuthorizer voSpaceAuthorizer = new VOSpaceAuthorizer();
-        voSpaceAuthorizer.setNodePersistence(nodeDAO);
-        
-        Subject subject = new Subject();
-        subject.getPrincipals().add(new X500Principal("cn=cadc authtest1 10627,ou=cadc,o=hia"));
-        
-        URI uri = new URI("vos://cadc.nrc.ca!vospace/CADCAuthtest1");
-        ReadPermissionAction action = new ReadPermissionAction( voSpaceAuthorizer, uri);
-        Subject.doAs(subject, action);
-        
-        verify(nodeDAO);
-    }
-    
-    private class ReadPermissionAction implements PrivilegedExceptionAction<Object>
-    {
-        private VOSpaceAuthorizer authorizer;
-        private URI uri;
-        
-        ReadPermissionAction(VOSpaceAuthorizer authorizer, URI uri)
-        {
-            this.authorizer = authorizer;
-            this.uri = uri;
-        }
+            ret.add(new URL(finalURL.toString()));
 
-        public Object run() throws Exception
-        {
-            return authorizer.getReadPermission(uri);
+            return ret;
         }
-        
+        catch(MalformedURLException mex)
+        {
+            throw new RuntimeException("BUG", mex); 
+        }
     }
 
+
+    public String getBaseURL()
+    {
+        return baseURL;
+    }
+
+    protected void setBaseURL(final String baseURL)
+    {
+        this.baseURL = baseURL;
+    }
 }

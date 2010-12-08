@@ -914,8 +914,7 @@ public class VOSpaceClient
 
     private String getParameters(Job job)
     {
-        StringBuilder sb = new StringBuilder();
-        sb = new StringBuilder();
+        final StringBuilder sb = new StringBuilder();
         //sb.append("REQUEST=doQuery");
         sb.append("&RUNID=").append(job.getID());
         List<Parameter> parameters = job.getParameterList();
