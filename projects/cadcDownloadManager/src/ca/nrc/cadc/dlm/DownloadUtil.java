@@ -119,6 +119,7 @@ public class DownloadUtil
             String[] uris = new String[] 
             {
                 "ad:ca.nrc.cadc.ad.AdSchemeHandler",
+                "vos:ca.nrc.cadc.vos.util.VOSpaceSchemeHandler",
                 "plane:ca.nrc.cadc.caom.util.PlaneSchemeHandler"
             };
 
