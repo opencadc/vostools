@@ -184,13 +184,17 @@ public class HttpUpload extends HttpTransfer
             
             if (localFile != null)
             {
-                // TODO: Need to find a way of setting the file size properly
-                // as a long value.
                 if (localFile.length() > Integer.MAX_VALUE)
                 {
+                    // TODO: Need to find a way of setting the file size properly
+                    // as a long value.
                     log.warn("Content-length not correct due to conversion from long to int.");
+                    conn.setFixedLengthStreamingMode(Integer.MAX_VALUE);
                 }
-                conn.setFixedLengthStreamingMode((int) localFile.length());
+                else
+                {
+                    conn.setFixedLengthStreamingMode((int) localFile.length());
+                }
             }
             else
             {
