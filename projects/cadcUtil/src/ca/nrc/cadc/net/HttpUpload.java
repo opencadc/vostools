@@ -182,7 +182,20 @@ public class HttpUpload extends HttpTransfer
                 initHTTPS(sslConn);
             }
             
-            conn.setChunkedStreamingMode(bufferSize);
+            if (localFile != null)
+            {
+                // TODO: Need to find a way of setting the file size properly
+                // as a long value.
+                if (localFile.length() > Integer.MAX_VALUE)
+                {
+                    log.warn("Content-length not correct due to conversion from long to int.");
+                }
+                conn.setFixedLengthStreamingMode((int) localFile.length());
+            }
+            else
+            {
+                conn.setChunkedStreamingMode(bufferSize);
+            }
 
             conn.setRequestMethod("PUT");
             conn.setUseCaches(false);
