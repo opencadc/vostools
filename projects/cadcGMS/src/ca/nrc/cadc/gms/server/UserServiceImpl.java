@@ -112,14 +112,13 @@ public class UserServiceImpl implements UserService
     /**
      * Obtain a User for the given ID.
      * 
-     * @param userID
-     *            The unique User ID.
-     * @param withMembership
-     *            Whether to include membership info (true) or not
-     *            (false).
-     * @return The User instance, or null if none found.
+     * @param userID User's X500Principal
+     * @param withMembership Whether to include membership info.  It affects the performance.
+     * @return User object if the user exists.
+     * @throws InvalidMemberException if the user does not exist.
+     * @throws AuthorizationException
      */
-    public User getUser(final X500Principal userID, boolean withMembership)
+    public User getUser(final X500Principal userID, boolean withMembership) 
             throws InvalidMemberException, AuthorizationException
     {
         User user = getUserPersistence().getUser(userID, withMembership);
@@ -153,6 +152,8 @@ public class UserServiceImpl implements UserService
             final URI groupID) throws InvalidMemberException,
             InvalidGroupException, AuthorizationException
     {
+        User user = getUser(memberUserID, false); // if user does not exist, InvalidMemberException is thrown. 
+        
         final Group group = getGroupPersistence().getGroup(groupID);
 
         if (group == null)
@@ -170,8 +171,8 @@ public class UserServiceImpl implements UserService
                 return member;
             }
         }
-        
-        return getUser(memberUserID, false);
+        // User is not a member of the group.  return null.
+        return null;
     }
 
     public UserPersistence getUserPersistence()

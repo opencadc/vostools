@@ -69,6 +69,8 @@ package ca.nrc.cadc.gms.server;
 import static org.easymock.EasyMock.createMock;
 import static org.easymock.EasyMock.expect;
 import static org.easymock.EasyMock.replay;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertNotNull;
 
 import java.net.URISyntaxException;
 import java.util.Collection;
@@ -133,19 +135,19 @@ public class UserServiceImplTest extends UserServiceTest
         final Group mockNoMembershipGroup = createMock(Group.class);
         Set<User> members = new HashSet<User>();
         members.add(user);
+        
+        expect(mockUserPersistence.getUser(MEMBER_USER_ID, false)).andReturn(user).times(3);
+        expect(mockUserPersistence.getUser(NON_MEMBER_USER_ID, false)).andReturn(user).times(1);
 
-        expect(mockUserPersistence.getUser(NON_MEMBER_USER_ID, true))
-                .andReturn(null).once();
-        expect(mockUserPersistence.getUser(MEMBER_USER_ID, true))
-                .andReturn(user).times(3);
         expect(mockGroupPersistence.getGroup(NON_GROUP_ID)).andReturn(
                 null).once();
         expect(mockGroupPersistence.getGroup(GROUP_ID)).andReturn(
                 mockGroup).times(2);
+        
         expect(mockGroupPersistence.getGroup(NO_MEMBERSHIP_GROUP_ID))
                 .andReturn(mockNoMembershipGroup).once();
         expect(mockGroup.getMembers()).andReturn(members)
-                .times(2);
+                .times(14);
         expect(mockNoMembershipGroup.getMembers()).andReturn(new HashSet<User>())
                 .times(2);
 
@@ -153,5 +155,36 @@ public class UserServiceImplTest extends UserServiceTest
                 mockNoMembershipGroup);
 
         super.getMember();
+    }
+
+    @Override 
+    @Test 
+    public void getMemberNonCanonicalX500Principal() throws Exception
+    {
+        final User user = new UserImpl(MEMBER_USER_ID);
+        final Group mockGroup = createMock(Group.class);
+        final Group mockNoMembershipGroup = createMock(Group.class);
+        Set<User> members = new HashSet<User>();
+        members.add(user);
+        
+        expect(mockUserPersistence.getUser(MEMBER_USER_ID, false)).andReturn(user).times(3);
+        expect(mockUserPersistence.getUser(NON_CANON_USER_ID, false)).andReturn(user).times(1);
+
+        expect(mockGroupPersistence.getGroup(NON_GROUP_ID)).andReturn(
+                null).once();
+        expect(mockGroupPersistence.getGroup(GROUP_ID)).andReturn(
+                mockGroup).times(2);
+        
+        expect(mockGroupPersistence.getGroup(NO_MEMBERSHIP_GROUP_ID))
+                .andReturn(mockNoMembershipGroup).once();
+        expect(mockGroup.getMembers()).andReturn(members)
+                .times(14);
+        expect(mockNoMembershipGroup.getMembers()).andReturn(new HashSet<User>())
+                .times(2);
+
+        replay(mockUserPersistence, mockGroupPersistence, mockGroup,
+                mockNoMembershipGroup);
+        
+        super.getMemberNonCanonicalX500Principal();
     }
 }

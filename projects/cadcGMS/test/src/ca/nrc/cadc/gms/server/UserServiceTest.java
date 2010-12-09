@@ -156,7 +156,7 @@ public abstract class UserServiceTest extends GMSTest<UserService>
         }
     }
     
-    @Test
+    @Test 
     public void getMemberNonCanonicalX500Principal() throws Exception
     {
         
