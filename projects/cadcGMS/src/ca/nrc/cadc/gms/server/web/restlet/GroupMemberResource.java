@@ -133,48 +133,34 @@ public class GroupMemberResource extends GroupResource
     protected boolean obtainResource()
     {
         LOGGER.debug("Enter GroupMemberResource.obtainResource()");
-        String groupMemberID = null;
         String groupID = null;
 
         try
         {
-            groupMemberID = URLDecoder.decode(getMemberID(), "UTF-8");
-            userDN = groupMemberID;
+            userDN = URLDecoder.decode(getMemberID(), "UTF-8");
 //            groupID = URLDecoder.decode(getGroupID(), "UTF-8");
             groupID = getGroupID();
             LOGGER.debug(String.format("groupID: %s memberID: %s",
-                    groupID, groupMemberID));
+                    groupID, userDN));
 
             boolean isMember = getUserService().isMember(
-                    new X500Principal(groupMemberID),
+                    new X500Principal(userDN),
                     new URI(groupService.getGroupUriPrefix() + groupID));
             if (!isMember)
             {
                 final String message = String.format(
-                        "User [%s] is not a member of Group [%s].", groupMemberID, groupID);
+                        "User [%s] is not a member of Group [%s].", userDN, groupID);
                 processError(null, Status.CLIENT_ERROR_NOT_FOUND, message);
                 return false;
             }
             else
                 return true;
         }
-        catch (final InvalidGroupException e)
-        {
-            final String message = String.format(
-                    "No such Group with ID %s", groupID);
-            processError(e, Status.CLIENT_ERROR_NOT_FOUND, message);
-        }
-        catch (InvalidMemberException e)
-        {
-            final String message = String.format(
-                    "No such User with ID %s", groupMemberID);
-            processError(e, Status.CLIENT_ERROR_NOT_FOUND, message);
-        }
         catch (AuthorizationException e)
         {
             final String message = String.format(
-                    "You are not authorized to get Member ID "
-                            + "'%s' from Group ID '%s'.", groupMemberID,
+                    "You are not authorized to check membership info of user ID "
+                            + "'%s' with Group ID '%s'.", userDN,
                     groupID);
             processError(e, Status.CLIENT_ERROR_UNAUTHORIZED, message);
         }
@@ -182,7 +168,7 @@ public class GroupMemberResource extends GroupResource
         {
             final String message = String.format(
                     "Could not URL decode groupMemberID (%s) or "
-                            + "groupID (%s).", groupMemberID, groupID);
+                            + "groupID (%s).", userDN, groupID);
             processError(e, Status.CLIENT_ERROR_BAD_REQUEST, message);
         }
         catch (URISyntaxException e)

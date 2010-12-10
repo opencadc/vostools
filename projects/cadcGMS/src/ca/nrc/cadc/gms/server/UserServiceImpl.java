@@ -199,7 +199,8 @@ public class UserServiceImpl implements UserService
      * @see ca.nrc.cadc.gms.server.UserService#isMember(javax.security.auth.x500.X500Principal, java.net.URI)
      */
     @Override
-    public boolean isMember(X500Principal memberUserID, URI groupID) throws InvalidMemberException, InvalidGroupException, IllegalArgumentException, AuthorizationException
+    public boolean isMember(X500Principal memberUserID, URI groupID) 
+    throws AuthorizationException
     {
         throw new RuntimeException("isMember(X500Principal memberUserID, URI groupID) is not implemented in UserServiceImpl. It's in CADCUserServiceImpl.");
     }

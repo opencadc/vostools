@@ -110,20 +110,17 @@ public interface UserService
                    IllegalArgumentException, AuthorizationException;
     
     /**
-     * Check whether the given User ID is a member of the
-     * given Group ID.
-     *
-     * @param memberUserID  The Member's User ID.
-     * @param groupID       The Group's ID.
-     * @return              The User member of the given Group, or null if they
-     *                      are not a member.
-     * @throws InvalidMemberException  If the given User ID does not exist.
-     * @throws InvalidGroupException   If the given Group does not exist.
-     * @throws IllegalArgumentException  If the given member is not a member of
-     *                                   the given Group.
-     * @throws AuthorizationException  If the executing User is not authorized
-     *                                 to do so.
+     * Check whether given User ID is member of given group.
+     * This method does not carry extra feature, such as checking group or member is valid.
+     * 
+     * @param userID
+     *            User ID
+     * @param groupID
+     *            The Group's ID.
+     * @return true or false
+     * @throws AuthorizationException
+     *             If caller is not authorized for such operation.
      */
     boolean isMember(final X500Principal memberUserID, final URI groupID) 
-            throws InvalidMemberException, InvalidGroupException, IllegalArgumentException, AuthorizationException;
+            throws AuthorizationException;
 }

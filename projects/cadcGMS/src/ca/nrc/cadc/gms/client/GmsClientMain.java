@@ -645,7 +645,7 @@ public class GmsClientMain implements PrivilegedAction<Boolean>
         }
         catch (Exception e)
         {
-            logger.error("failed to view group " + target);
+            logger.error(String.format("failed to check member with user %s and group %s", memberID, target));
             logger.error("reason: " + e.getMessage());
             System.exit(NET_STATUS);
         }

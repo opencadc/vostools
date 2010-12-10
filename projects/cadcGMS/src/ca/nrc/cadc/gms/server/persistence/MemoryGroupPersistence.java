@@ -255,10 +255,19 @@ public class MemoryGroupPersistence implements GroupPersistence
     }
 
     /* (non-Javadoc)
-     * @see ca.nrc.cadc.gms.server.persistence.GroupPersistence#getGroup(java.lang.String, java.lang.String)
+     * @see ca.nrc.cadc.gms.server.persistence.GroupPersistence#getGroupInfo(java.net.URI)
      */
     @Override
-    public Group getGroup(URI groupID, String memberDN) throws GroupNotExistsException
+    public Group getGroupInfo(URI groupID) throws GroupNotExistsException
+    {
+        throw new RuntimeException("Not supported in MemoryGroupPersistence.");
+    }
+
+    /* (non-Javadoc)
+     * @see ca.nrc.cadc.gms.server.persistence.GroupPersistence#isMember(java.net.URI, java.lang.String)
+     */
+    @Override
+    public boolean isMember(URI groupID, String userDN)
     {
         throw new RuntimeException("Not supported in MemoryGroupPersistence.");
     }

@@ -119,16 +119,21 @@ public interface GroupPersistence
     Collection<Group> getGroups(final Map<String, String> criteria) throws InvalidGroupException;
     
     /**
-     * Obtain a GMS Group, through the basic GroupInfo from the persistence layer which:
-     * 1, The archive key matches provided groupName; and
-     * 2, the user referred to by provided memberDN is a member of this group.
-     * Such GMS group does not contain membership or permission information.
+     * Obtain a GMS Group, through the basic GroupInfo from the persistence layer.  
+     * GroupInfo does not contain member info or permission info. 
      * 
      * @param groupName Archive Key
-     * @param memberDN Distinguished Name of a user
-     * @return GroupInfo, or null if user is not member of this group
+     * @return GMS group based on GroupInfo
      * @throws GroupNotExistsException, if group by this name does not exist
      */
-    public Group getGroup(final URI groupID, final String memberDN) throws GroupNotExistsException;
+    public Group getGroupInfo(final URI groupID) throws GroupNotExistsException;
+
+    /**
+     * Check whether the provided user is a member of the provided group
+     * @param groupID  Archive Key of group
+     * @param userDN Distinguished Name of user
+     * @return true or false
+     */
+    public boolean isMember(final URI groupID, final String userDN);
     
 }
