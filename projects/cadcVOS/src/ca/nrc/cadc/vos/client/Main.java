@@ -84,7 +84,6 @@ import java.util.Properties;
 
 import javax.security.auth.Subject;
 
-import ca.nrc.cadc.uws.util.StringUtil;
 import org.apache.log4j.Level;
 import org.apache.log4j.Logger;
 
@@ -93,6 +92,7 @@ import ca.nrc.cadc.auth.SSLUtil;
 import ca.nrc.cadc.reg.client.RegistryClient;
 import ca.nrc.cadc.util.ArgumentMap;
 import ca.nrc.cadc.util.Log4jInit;
+import ca.nrc.cadc.uws.util.StringUtil;
 import ca.nrc.cadc.vos.ClientTransfer;
 import ca.nrc.cadc.vos.ContainerNode;
 import ca.nrc.cadc.vos.DataNode;
@@ -170,7 +170,7 @@ public class Main implements Runnable
      * @param args  The arguments passed into this command.
      */
     public static void main(String[] args)
-    {
+    {        
         ArgumentMap argMap = new ArgumentMap(args);
         Main command = new Main();
 
@@ -209,6 +209,12 @@ public class Main implements Runnable
         {
             command.init(argMap);
             Subject.doAs(command.subject, new RunnableAction(command));
+        }
+        catch (IllegalArgumentException ex)
+        {
+            msg("illegal arguments(s): " + ex.getMessage());
+            msg("");
+            System.exit(INIT_STATUS);
         }
         catch(Throwable t)
         {
