@@ -331,6 +331,10 @@ public class Main implements Runnable
             {
                 msg(t.getCause().getMessage());
             }
+            if (t instanceof IllegalArgumentException)
+            {
+                throw (IllegalArgumentException) t;
+            }
             else
             {
                 msg("failed to copy: " + source + " -> " + destination);

@@ -70,15 +70,16 @@
 package ca.nrc.cadc.vos;
 
 import java.io.File;
+import java.io.IOException;
 import java.net.MalformedURLException;
 import java.net.URL;
+
+import javax.net.ssl.SSLSocketFactory;
 
 import org.apache.log4j.Logger;
 
 import ca.nrc.cadc.net.HttpDownload;
 import ca.nrc.cadc.net.HttpUpload;
-import java.io.IOException;
-import javax.net.ssl.SSLSocketFactory;
 
 /**
  * @author zhangsa
@@ -145,7 +146,26 @@ public class ClientTransfer extends Transfer
         upload.setSSLSocketFactory(sslSocketFactory);
         upload.run();
         if (upload.getThrowable() != null)
-            throw new IOException("failed to upload file", upload.getThrowable());
+        {
+            // allow illegal arugment exceptions through
+            if (upload.getThrowable() instanceof IllegalArgumentException)
+            {
+                throw (IllegalArgumentException) upload.getThrowable();
+            }
+            else
+            {
+                try
+                {
+                    throw new IOException("failed to upload file", upload.getThrowable());
+                }
+                catch (NoSuchMethodError e)
+                {
+                    // Java5 does not have the above constructor.
+                    throw new IOException("failed to upload file: " + upload.getThrowable().getMessage());
+                }
+            }
+            
+        }
     }
 
     /**
