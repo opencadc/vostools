@@ -78,7 +78,6 @@ import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
-import java.io.StringReader;
 import java.math.BigInteger;
 import java.security.KeyFactory;
 import java.security.KeyManagementException;
@@ -450,6 +449,14 @@ public class SSLUtil
         }
         catch (KeyStoreException ex)
         {
+            if (ex.getCause() != null &&
+                ex.getCause() instanceof java.security.NoSuchAlgorithmException)
+            {
+                throw new IllegalArgumentException(
+                        "Sorry, this implementation of Java, issued by " +
+                        System.getProperty("java.vendor") +
+                        ", does not support CADC Certificates.");
+            }
             throw new RuntimeException("failed to find/load KeyStore of type " + KEYSTORE_TYPE, ex);
         }
     }
