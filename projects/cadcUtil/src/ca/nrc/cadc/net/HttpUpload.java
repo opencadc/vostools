@@ -76,6 +76,7 @@ import java.io.FileInputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
+import java.lang.reflect.Method;
 import java.net.HttpURLConnection;
 import java.net.URL;
 
@@ -184,16 +185,26 @@ public class HttpUpload extends HttpTransfer
             
             if (localFile != null)
             {
-                if (localFile.length() > Integer.MAX_VALUE)
+                try
                 {
-                    // TODO: Need to find a way of setting the file size properly
-                    // as a long value.
-                    log.warn("Content-length not correct due to conversion from long to int.");
-                    conn.setFixedLengthStreamingMode(Integer.MAX_VALUE);
+                    // Try using the setFixedLengthStreamingMode method that takes a long as a parameter.
+                    // (Only available in Java 7 and up)
+                    Method longContentLengthMethod = conn.getClass().getMethod("setFixedLengthStreamingMode", long.class);
+                    longContentLengthMethod.invoke(conn, new Long(localFile.length()));
                 }
-                else
+                catch (NoSuchMethodException e)
                 {
-                    conn.setFixedLengthStreamingMode((int) localFile.length());
+                    // Check if the file size is greater than Integer.MAX_VALUE
+                    if (localFile.length() > Integer.MAX_VALUE)
+                    {
+                        throw new IllegalArgumentException("For uploading files with size greater than 2 Gb, you" +
+                                " must be running version 7 of Java or above.");
+                    }
+                    else
+                    {
+                        // Set the file size with integer representation
+                        conn.setFixedLengthStreamingMode((int) localFile.length());
+                    }
                 }
             }
             else
