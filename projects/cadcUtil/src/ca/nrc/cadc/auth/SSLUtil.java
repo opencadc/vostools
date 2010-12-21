@@ -89,6 +89,7 @@ import java.security.PrivateKey;
 import java.security.UnrecoverableKeyException;
 import java.security.cert.Certificate;
 import java.security.cert.CertificateException;
+import java.security.cert.CertificateExpiredException;
 import java.security.cert.CertificateFactory;
 import java.security.cert.X509Certificate;
 import java.security.spec.InvalidKeySpecException;
@@ -407,12 +408,17 @@ public class SSLUtil
             try
             {
                 x509.checkValidity();
+                log.debug("X509 certificate is valid");
+            }
+            catch (CertificateExpiredException exp)
+            {
+                log.debug("X509 certificate is expired");
+                // nothing to be done here
             }
             catch (CertificateException ex)
             {
                 throw new RuntimeException("certificate byte array is not valid", ex);
             }
-            log.debug("X509 certificate is valid");
         }
         return chain;
     }
