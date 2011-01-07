@@ -139,7 +139,8 @@ public class SyncServlet extends HttpServlet
 {
     private static Logger log = Logger.getLogger(SyncServlet.class);
     private static final long serialVersionUID = 201009291100L;
-
+    private static final String JOB_EXEC = "run";
+    
     private JobManager jobManager;
     private JobPersistence jobPersistence;
     private Class jobRunnerClass;
@@ -242,7 +243,8 @@ public class SyncServlet extends HttpServlet
                 
                 // redirect
                 String jobURL = getJobURL(request, job.getID());
-                response.setHeader("Location", jobURL);
+                String execURL = jobURL + "/" + JOB_EXEC;
+                response.setHeader("Location", execURL);
                 response.setStatus(HttpServletResponse.SC_SEE_OTHER);
                 log.info("created job: " + jobURL);
                 return;
@@ -261,15 +263,25 @@ public class SyncServlet extends HttpServlet
             }
             log.debug("found: " + jobID);
 
-            // useful non-standard debugging option
-            String dump = request.getParameter("dump");
-            if (dump != null)
+            String action = getJobAction(request);
+
+            if (action == null)
             {
                 log.info("dumping job: " + jobID);
                 response.setStatus(HttpServletResponse.SC_OK);
                 response.setContentType("text/xml");
                 JobWriter w = new JobWriter(job);
                 w.writeTo(new SafeOutputStream(response.getOutputStream()));
+                return;
+            }
+
+            if ( !JOB_EXEC.equals(action) ) // this is the only valid action
+            {
+                response.setStatus(HttpServletResponse.SC_NOT_FOUND);
+                response.setContentType("text/plain");
+                PrintWriter w = response.getWriter();
+                w.println("not found: " + jobID + "/" + action);
+                w.close();
                 return;
             }
 
@@ -301,7 +313,7 @@ public class SyncServlet extends HttpServlet
                 response.setStatus(HttpServletResponse.SC_BAD_REQUEST);
                 response.setContentType("text/plain");
                 PrintWriter w = response.getWriter();
-                w.println("synchronous job " + jobID + " has already been run");
+                w.println("synchronous job " + jobID + " has already been started");
                 w.close();
                 return;
             }
@@ -490,14 +502,31 @@ public class SyncServlet extends HttpServlet
     {
         String path = request.getPathInfo();
         log.debug("path: " + path);
+        // path can be null, <jobID> or <jobID>/exec
         if (path == null)
             return null;
         if (path.startsWith("/"))
             path = path.substring(1);
-        if (path.length() == 0)
+        String[] parts = path.split("/");
+        log.debug("path: " + path + " jobID: " + parts[0]);
+        return parts[0];
+    }
+
+    private String getJobAction(HttpServletRequest request)
+    {
+        String path = request.getPathInfo();
+        log.debug("path: " + path);
+        // path can be null, <jobID> or <jobID>/exec
+        if (path == null)
             return null;
-        // assume the path is the jobID
-        return path;
+        if (path.startsWith("/"))
+            path = path.substring(1);
+        String[] parts = path.split("/");
+        String ret = null;
+        if (parts.length == 2)
+            ret = parts[1];
+        log.debug("path: " + path + " jobAction: " + ret);
+        return ret;
     }
 
     private Job create(HttpServletRequest request, Subject subject)
