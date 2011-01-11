@@ -80,8 +80,10 @@ import java.util.Collection;
  * must be configured as a context-param with key <code>ca.nrc.cadc.uws.JobManager</code>.
  *
  * It will also be the responsibility of the Job Manager to insert default
- * values, where necessary, during Job persistence. JobManager implementations are always
- * instantiated via their no-arg constructor.
+ * values into a job and to insure the startTime and endTime of the job are set
+ * when the phase changes: startTime must be set when phase goes to EXECUTING and endTime
+ * must be set when phase goes to a terminal phase (ABORTED, COMPLETED, ERROR).
+ * JobManager implementations are always instantiated via their no-arg constructor.
  */
 public interface JobManager
 {

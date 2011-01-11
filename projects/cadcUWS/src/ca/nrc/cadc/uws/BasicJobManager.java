@@ -126,7 +126,10 @@ public class BasicJobManager implements JobManager
 
 
     /**
-     * Persist the given Job.
+     * Persist the given Job. This method also inserts default values for Job control
+     * fields (phase, executionDuration, destruction, quote) and sets startTime (when
+     * the job phase is first set to EXECUTING) and endTime (when the phase is first
+     * set to ABORTED, COMPLETED, or ERROR).
      *
      * @param job The Job to persist.
      * @return The persisted Job, populated, as necessary, with a
@@ -134,7 +137,9 @@ public class BasicJobManager implements JobManager
      */
     public Job persist(final Job job)
     {
+        // TODO: verify that the phase change is permitted
         insertDefaultValues(job);
+        insertTimes(job);
         return getJobPersistence().persist(job);
     }
 
@@ -184,5 +189,20 @@ public class BasicJobManager implements JobManager
     public void setJobPersistence(final JobPersistence jobPersistence)
     {
         this.jobPersistence = jobPersistence;
+    }
+
+    protected void insertTimes(Job job)
+    {
+        ExecutionPhase phase = job.getExecutionPhase();
+
+        if ( job.getStartTime() == null &&
+                ExecutionPhase.EXECUTING.equals(phase) )
+            job.setStartTime(new Date());
+
+        if ( job.getEndTime() == null &&
+                ( ExecutionPhase.ABORTED.equals(phase)
+                    || ExecutionPhase.COMPLETED.equals(phase)
+                    || ExecutionPhase.ERROR.equals(phase) ) )
+            job.setEndTime(new Date());
     }
 }

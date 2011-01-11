@@ -76,6 +76,9 @@ import java.util.Date;
  * A wrapper class for starting job runners as privileged actions. Like the
  * TimeTrackingRunnable wrapper, this class sets the Job startTime, runs the job,
  * and then sets the endTime.
+ *
+ * @deprecated the functionaility here is no longer needed since JobManager sets times
+ * and we can use RunnableAction from cadcUtil.
  */
 public class PrivilegedActionJobRunner implements PrivilegedAction<Object>
 {

@@ -423,7 +423,6 @@ public class SyncServlet extends HttpServlet
             Job j = runner.getJob();
             String jobID = j.getID();
 
-            j.setStartTime(new Date());
             j.setExecutionPhase(ExecutionPhase.QUEUED);
             j = jobManager.persist(j);
 
@@ -442,17 +441,7 @@ public class SyncServlet extends HttpServlet
             // streaming
             runner.setOutput(syncOutput);
             runner.run();
-
-            // must get current job state from persistence layer
-            j = jobManager.getJob(jobID);
-            // TODO: only set endTime if !ExecutionPhase.QUEUED.equals(j.getExecutionPhase())
-            // to support teh runner only firing the job off to an external system and
-            // returning
-            if (j.getEndTime() == null)
-            {
-                j.setEndTime(new Date());
-                j = jobManager.persist(j);
-            }
+            
             return null;
         }
     }
@@ -542,6 +531,11 @@ public class SyncServlet extends HttpServlet
         {
             log.error("failed to get request path", oops);
         }
+        
+        // TODO: check content-type for params (www-urlencoded?) vs XML (text/xml)
+
+        // TODO: where to get Map of ns:<url to xsd file> for use with XmlUtil??
+
         Enumeration<String> paramNames = request.getParameterNames();
         while ( paramNames.hasMoreElements() )
         {
@@ -562,6 +556,7 @@ public class SyncServlet extends HttpServlet
                     }
             }
         }
+
         return job;
     }
 

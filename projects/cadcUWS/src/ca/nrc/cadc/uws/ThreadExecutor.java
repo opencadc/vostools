@@ -70,8 +70,7 @@
 
 package ca.nrc.cadc.uws;
 
-import java.security.AccessControlContext;
-import java.security.AccessController;
+import ca.nrc.cadc.auth.RunnableAction;
 import javax.security.auth.Subject;
 
 
@@ -114,20 +113,25 @@ public class ThreadExecutor implements JobExecutor
 
         Thread t = null;
 
+        job.setExecutionPhase(ExecutionPhase.QUEUED);
+        job = jobManager.persist(job);
+
+        jobRunner.setJobManager(jobManager);
+
         if (subject == null)
         {
-        	t = new Thread(new TimeTrackingRunnable(jobManager, jobRunner));
+        	t = new Thread(jobRunner);
         }
         else
         {
-        	t = new Thread(
-        		new Runnable()
+            t = new Thread( new Runnable()
         		{
 	        		public void run()
 	        		{
-	        			Subject.doAs(subject, new PrivilegedActionJobRunner(jobManager, jobRunner));
+	        			Subject.doAs(subject, new RunnableAction(jobRunner));
 	        		}
-        		});
+        		}
+            );
         }
 
         t.setDaemon(true); // so the thread will not block application shutdown

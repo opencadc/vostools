@@ -75,6 +75,7 @@ import java.util.Date;
  * Simple wrapper that sets the Job startTime, runs the job, and then sets
  * the endTime.
  *
+ * @deprecated the JobManager is responsible for setting start and end times
  * @author pdowler
  */
 public class TimeTrackingRunnable implements Runnable

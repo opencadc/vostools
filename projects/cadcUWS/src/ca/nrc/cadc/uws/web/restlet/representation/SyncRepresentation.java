@@ -69,12 +69,12 @@
 
 package ca.nrc.cadc.uws.web.restlet.representation;
 
+import ca.nrc.cadc.auth.RunnableAction;
 import ca.nrc.cadc.uws.ErrorSummary;
 import ca.nrc.cadc.uws.ErrorType;
 import ca.nrc.cadc.uws.ExecutionPhase;
 import ca.nrc.cadc.uws.Job;
 import ca.nrc.cadc.uws.JobManager;
-import ca.nrc.cadc.uws.PrivilegedActionJobRunner;
 import ca.nrc.cadc.uws.SyncJobRunner;
 import ca.nrc.cadc.uws.SyncOutput;
 import ca.nrc.cadc.uws.TimeTrackingRunnable;
@@ -112,17 +112,19 @@ public class SyncRepresentation extends OutputRepresentation
     {
         try
         {
+            job.setExecutionPhase(ExecutionPhase.QUEUED);
+            job = jobManager.persist(job);
+
             SyncOutputImpl syncOutput = new SyncOutputImpl(out);
             jobRunner.setOutput(syncOutput);
 
             if (job.getOwner() == null)
             {
-                Runnable r = new TimeTrackingRunnable(jobManager, jobRunner);
-                r.run();
+                jobRunner.run();
             }
             else
             {
-                Subject.doAs(job.getOwner(), new PrivilegedActionJobRunner(jobManager, jobRunner));
+                Subject.doAs(job.getOwner(), new RunnableAction(jobRunner));
             }
 
             // get current state

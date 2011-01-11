@@ -95,6 +95,7 @@ import java.util.HashSet;
 import java.util.Set;
 import javax.security.auth.Subject;
 import javax.security.auth.x500.X500Principal;
+import org.apache.log4j.Level;
 
 /**
  * @author zhangsa
@@ -117,9 +118,9 @@ public class JobReaderWriterTest
         throws Exception
     {
         if (DEBUG_OUTPUT_XML)
-            Log4jInit.setLevel("ca.nrc.cadc", org.apache.log4j.Level.DEBUG);
+            Log4jInit.setLevel("ca.nrc.cadc", Level.DEBUG);
         else
-            Log4jInit.setLevel("ca.nrc.cadc", org.apache.log4j.Level.INFO);
+            Log4jInit.setLevel("ca.nrc.cadc", Level.INFO);
     }
 
     @AfterClass
