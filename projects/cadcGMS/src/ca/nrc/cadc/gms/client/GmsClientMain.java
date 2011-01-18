@@ -79,6 +79,7 @@ import javax.security.auth.x500.X500Principal;
 import org.apache.log4j.Level;
 import org.apache.log4j.Logger;
 
+import ca.nrc.cadc.auth.CertificateUtil;
 import ca.nrc.cadc.auth.SSLUtil;
 import ca.nrc.cadc.gms.ElemProperty;
 import ca.nrc.cadc.gms.GmsConsts;
@@ -202,7 +203,7 @@ public class GmsClientMain implements PrivilegedAction<Boolean>
     {
         try
         {
-            validateInitSSL(argMap);
+            subject = CertificateUtil.initSubject(argMap);
         }
         catch (Exception ex)
         {
@@ -235,82 +236,6 @@ public class GmsClientMain implements PrivilegedAction<Boolean>
 
         logger.info("server uri: " + SERVICE_ID);
         logger.info("base url: " + this.baseURL);
-    }
-
-    /**
-     * Initializes of the SSL certificates
-     * 
-     * @param argMap
-     */
-    private void validateInitSSL(ArgumentMap argMap)
-    {
-        String strCert = argMap.getValue(ARG_CERT);
-        String strKey = argMap.getValue(ARG_KEY);
-        String strCertKey = argMap.getValue(ARG_CERTKEY);
-        if (strCertKey != null)
-        {
-            File certKeyFile = new File(strCertKey);
-            if (!certKeyFile.exists())
-            {
-                throw new IllegalArgumentException(
-                        "Certificate-key file " + strCertKey
-                                + " does not exist. \n");
-            }
-            if (!certKeyFile.canRead())
-            {
-                throw new IllegalArgumentException(
-                        "Certificate-key file " + strCertKey
-                                + " cannot be read. \n");
-            }
-            subject = SSLUtil.createSubject(certKeyFile);
-
-        }
-        else if (strCert != null && strKey != null)
-        {
-            File certFile = new File(strCert);
-            File keyFile = new File(strKey);
-
-            StringBuffer sbSslMsg = new StringBuffer();
-            boolean sslError = false;
-            if (!certFile.exists())
-            {
-                sbSslMsg.append("Certificate file " + strCert
-                        + " does not exist. \n");
-                sslError = true;
-            }
-            if (!keyFile.exists())
-            {
-                sbSslMsg.append("Key file " + strKey
-                        + " does not exist. \n");
-                sslError = true;
-            }
-            if (!sslError)
-            {
-                if (!certFile.canRead())
-                {
-                    sbSslMsg.append("Certificate file " + strCert
-                            + " cannot be read. \n");
-                    sslError = true;
-                }
-                if (!keyFile.canRead())
-                {
-                    sbSslMsg.append("Key file " + strKey
-                            + " cannot be read. \n");
-                    sslError = true;
-                }
-            }
-            if (sslError)
-            {
-                throw new IllegalArgumentException(sbSslMsg.toString());
-            }
-            subject = SSLUtil.createSubject(certFile, keyFile);
-        }
-        else
-        {
-            throw new IllegalArgumentException(
-                    "Argument cert and key or certkey are required.");
-        }
-
     }
 
     public Boolean run()
