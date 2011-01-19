@@ -14,8 +14,8 @@
   </vos:provides>
   <vos:capabilities/>
   <vos:nodes>
-    <vos:node uri="vos://cadc.nrc.ca!vospace/mydir/ngc4323"/>
-    <vos:node uri="vos://cadc.nrc.ca!vospace/mydir/ngc5796"/>
-    <vos:node uri="vos://cadc.nrc.ca!vospace/mydir/ngc6801"/>
+    <vos:node uri="vos://cadc.nrc.ca!vospace/mydir/ngc4323" xsi:type="vos:DataNode" />
+    <vos:node uri="vos://cadc.nrc.ca!vospace/mydir/ngc5796" xsi:type="vos:DataNode" />
+    <vos:node uri="vos://cadc.nrc.ca!vospace/mydir/ngc6801" xsi:type="vos:DataNode" />
   </vos:nodes>
 </vos:node>

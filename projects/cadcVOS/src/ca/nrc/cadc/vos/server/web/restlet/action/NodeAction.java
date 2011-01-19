@@ -73,6 +73,7 @@ import java.net.URISyntaxException;
 import java.security.AccessControlException;
 import java.security.PrivilegedAction;
 
+import ca.nrc.cadc.uws.util.StringUtil;
 import org.apache.log4j.Logger;
 import org.restlet.Request;
 import org.restlet.representation.Representation;
@@ -176,6 +177,9 @@ public abstract class NodeAction implements PrivilegedAction<Object>
     
     /**
      * Set the stylesheet reference.
+     *
+     * @param stylesheetReference  The URI reference string to the stylesheet
+     *                             location.
      */
     public void setStylesheetReference(String stylesheetReference)
     {
@@ -184,6 +188,8 @@ public abstract class NodeAction implements PrivilegedAction<Object>
     
     /**
      * Get the stylesheet reference.
+     *
+     * @return  String URI reference.
      */
     protected String getStylesheetReference()
     {
@@ -192,12 +198,16 @@ public abstract class NodeAction implements PrivilegedAction<Object>
     
     /**
      * Return the view requested by the client, or null if none specified.
-     * @throws IllegalAccessException 
-     * @throws InstantiationException 
+     *
+     * @return  Instance of an AbstractView.
+     *
+     * @throws InstantiationException If the object could not be constructed.
+     * @throws IllegalAccessException If a constructor could not be found.
      */
-    protected AbstractView getView() throws InstantiationException, IllegalAccessException
+    protected AbstractView getView() throws InstantiationException,
+                                            IllegalAccessException
     {
-        if (viewReference == null || viewReference.trim().length() == 0)
+        if (!StringUtil.hasText(viewReference))
         {
             return null;
         }
@@ -208,13 +218,15 @@ public abstract class NodeAction implements PrivilegedAction<Object>
             return null;
         }
         
-        Views views = new Views();
-        AbstractView view = views.getView(viewReference);
+        final Views views = new Views();
+        final AbstractView view = views.getView(viewReference);
+
         if (view == null)
         {
-            throw new UnsupportedOperationException("No view configured matching reference: "
-                    + viewReference);
+            throw new UnsupportedOperationException(
+                    "No view configured matching reference: " + viewReference);
         }
+
         return view;
     }
     
@@ -224,13 +236,17 @@ public abstract class NodeAction implements PrivilegedAction<Object>
      * The return object from this method (and from performNodeAction) must be an object
      * of type NodeActionResult.
      * 
-     * @param node
-     * @param nodePersistence
-     * @param request
+     * @param node              The Node involved in the action.
+     * @param nodePersistence   The NodePersistence instance for persistence
+     *                          layer access.
+     * @param request           The Restlet Request object.
      * @return The NodeAction result
      * @throws Exception If a problem occurs.
      */
-    abstract NodeActionResult performNodeAction(Node node, NodePersistence nodePersistence, Request request) throws Exception;
+    abstract NodeActionResult performNodeAction(Node node,
+                                                NodePersistence nodePersistence,
+                                                Request request)
+            throws Exception;
     
     /**
      * Given the node URI and XML, return the Node object specified

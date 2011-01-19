@@ -168,15 +168,16 @@
     <!-- JAR files needed to run the test suite -->
     <property name="cadcVOS" value="${build}/lib/${project}.jar" />
     <property name="junit" value="${ext.lib}/junit.jar" />
+    <property name="xmlunit" value="${ext.lib}/xmlunit.jar" />
     <property name="xerces" value="${ext.lib}/xerces.jar" />
     <property name="dev.easyMock" value="${ext.dev}/easymock.jar" />
-    <property name="dev.objenesis" value="${ext.dev}/objenesis.jar" />
     <property name="dev.asm" value="${ext.dev}/asm.jar" />
     <property name="dev.cglib" value="${ext.dev}/cglib.jar" />
+    <property name="dev.objenesis" value="${ext.dev}/objenesis.jar" />
     <property name="javaUtil" value="${lib}/javaUtil.jar" />
 
     <property name="testingJars"
-              value="${cadcVOS}:${credPrivateClient}:${cadcUtil}:${javaUtil}:${junit}:${xerces}:${dev.easyMock}:${dev.objenesis}:${dev.asm}:${dev.cglib}" />
+              value="${cadcVOS}:${credPrivateClient}:${cadcUtil}:${javaUtil}:${junit}:${xmlunit}:${xerces}:${dev.easyMock}:${dev.asm}:${dev.objenesis}:${dev.cglib}" />
 
     <!-- Run the test suite -->
     <target name="test" depends="compile,compile-test">

@@ -79,6 +79,7 @@ import java.net.URISyntaxException;
 import java.util.ArrayList;
 import java.util.List;
 
+import ca.nrc.cadc.uws.util.StringUtil;
 import org.apache.log4j.Logger;
 import org.jdom.Document;
 import org.jdom.Element;
@@ -97,28 +98,34 @@ import java.util.Map;
  */
 public class NodeReader
 {
-    private static final String VOSPACE_SCHEMA_URL = "http://www.ivoa.net/xml/VOSpace/v2.0";
+    private static final String VOSPACE_SCHEMA_URL =
+            "http://www.ivoa.net/xml/VOSpace/v2.0";
     private static final String VOSPACE_SCHEMA_RESOURCE = "VOSpace-2.0.xsd";
-    private static final String UWS_SCHEMA_URL = "http://www.ivoa.net/xml/UWS/v1.0";
+    private static final String UWS_SCHEMA_URL =
+            "http://www.ivoa.net/xml/UWS/v1.0";
     private static final String UWS_SCHEMA_RESOURCE = "UWS-v1.0.xsd";
-    private static final String XLINK_SCHEMA_URL = "http://www.w3.org/1999/xlink";
+    private static final String XLINK_SCHEMA_URL =
+            "http://www.w3.org/1999/xlink";
     private static final String XLINK_SCHEMA_RESOURCE = "XLINK.xsd";
     
-    private static final Logger log = Logger.getLogger(NodeReader.class);
+    private static final Logger LOGGER = Logger.getLogger(NodeReader.class);
     
     private static final String vospaceSchemaUrl;
     private static final String uwsSchemaUrl;
     private static final String xlinkSchemaUrl;
     static
     {
-        vospaceSchemaUrl = XmlUtil.getResourceUrlString(VOSPACE_SCHEMA_RESOURCE, NodeReader.class);
-        log.debug("vospaceSchemaUrl: " + vospaceSchemaUrl);
+        vospaceSchemaUrl = XmlUtil.getResourceUrlString(VOSPACE_SCHEMA_RESOURCE,
+                                                        NodeReader.class);
+        LOGGER.debug("vospaceSchemaUrl: " + vospaceSchemaUrl);
         
-        uwsSchemaUrl = XmlUtil.getResourceUrlString(UWS_SCHEMA_RESOURCE, NodeReader.class);
-        log.debug("uwsSchemaUrl: " + uwsSchemaUrl);
+        uwsSchemaUrl = XmlUtil.getResourceUrlString(UWS_SCHEMA_RESOURCE,
+                                                    NodeReader.class);
+        LOGGER.debug("uwsSchemaUrl: " + uwsSchemaUrl);
         
-        xlinkSchemaUrl = XmlUtil.getResourceUrlString(XLINK_SCHEMA_RESOURCE, NodeReader.class);
-        log.debug("xlinkSchemaUrl: " + xlinkSchemaUrl);
+        xlinkSchemaUrl = XmlUtil.getResourceUrlString(XLINK_SCHEMA_RESOURCE,
+                                                      NodeReader.class);
+        LOGGER.debug("xlinkSchemaUrl: " + xlinkSchemaUrl);
     }
 
     
@@ -132,7 +139,8 @@ public class NodeReader
         schemaMap.put(UWS_SCHEMA_URL, uwsSchemaUrl);
         schemaMap.put(XLINK_SCHEMA_URL, xlinkSchemaUrl);
 
-        xsiNamespace = Namespace.getNamespace("http://www.w3.org/2001/XMLSchema-instance");
+        xsiNamespace = Namespace.getNamespace(
+                "http://www.w3.org/2001/XMLSchema-instance");
     }
 
     /**
@@ -142,11 +150,15 @@ public class NodeReader
      * @return Node Node.
      * @throws NodeParsingException if there is an error parsing the XML.
      */
-    public Node read(String xml)
-        throws NodeParsingException
+    public Node read(final String xml) throws NodeParsingException
     {
         if (xml == null)
+        {
             throw new IllegalArgumentException("XML must not be null");
+        }
+
+        LOGGER.debug("Reading:\n" + xml);
+
         return read(new StringReader(xml));
     }
 
@@ -155,14 +167,20 @@ public class NodeReader
      *
      * @param in InputStream.
      * @return Node Node.
+     *
+     * @throws IOException          If the input stream is null or closed.
      * @throws NodeParsingException if there is an error parsing the XML.
      */
-    public Node read(InputStream in)
+    public Node read(final InputStream in)
         throws IOException, NodeParsingException
     {
         if (in == null)
+        {
             throw new IOException("stream closed");
+        }
+
         InputStreamReader reader;
+
         try
         {
             reader = new InputStreamReader(in, "UTF-8");
@@ -181,11 +199,12 @@ public class NodeReader
      * @return Node Node.
      * @throws NodeParsingException if there is an error parsing the XML.
      */
-    public Node read(Reader reader)
-        throws NodeParsingException
+    public Node read(final Reader reader) throws NodeParsingException
     {
         if (reader == null)
+        {
             throw new IllegalArgumentException("reader must not be null");
+        }
 
         // Create a JDOM Document from the XML
         Document document;
@@ -196,21 +215,21 @@ public class NodeReader
         catch (JDOMException jde)
         {
             String error = "XML failed schema validation: " + jde.getMessage();
-            log.error(error, jde);
+            LOGGER.error(error, jde);
             throw new NodeParsingException(error, jde);
         }
         catch (IOException ioe)
         {
             String error = "Error reading XML: " + ioe.getMessage();
-            log.error(error, ioe);
+            LOGGER.error(error, ioe);
             throw new NodeParsingException(error, ioe);
         }
 
         // Root element and namespace of the Document
         Element root = document.getRootElement();
         Namespace namespace = root.getNamespace();
-        log.debug("node namespace uri: " + namespace.getURI());
-        log.debug("node namespace prefix: " + namespace.getPrefix());
+        LOGGER.debug("node namespace uri: " + namespace.getURI());
+        LOGGER.debug("node namespace prefix: " + namespace.getPrefix());
 
         /* Node base elements */
         // uri attribute of the node element
@@ -218,24 +237,24 @@ public class NodeReader
         if (uri == null)
         {
             String error = "uri attribute not found in root element";
-            log.error(error);
+            LOGGER.error(error);
             throw new NodeParsingException(error);
         }
-        log.debug("node uri: " + uri);
+        LOGGER.debug("node uri: " + uri);
 
         // Get the xsi:type attribute which defines the Node class
         String xsiType = root.getAttributeValue("type", xsiNamespace);
         if (xsiType == null)
         {
             String error = "xsi:type attribute not found in node element " + uri;
-            log.error(error);
+            LOGGER.error(error);
             throw new NodeParsingException(error);
         }
 
         // Split the type attribute into namespace and Node type
         String[] types = xsiType.split(":");
         String type = types[1];
-        log.debug("node type: " + type);
+        LOGGER.debug("node type: " + type);
 
         if (type.equals(ContainerNode.class.getSimpleName()))
             return buildContainerNode(root, namespace, uri);
@@ -266,7 +285,10 @@ public class NodeReader
      * @return ContainerNode
      * @throws NodeParsingException if there is an error parsing the XML.
      */
-    protected Node buildContainerNode(Element root, Namespace namespace, String uri)
+    @SuppressWarnings("unchecked")
+    protected Node buildContainerNode(final Element root,
+                                      final Namespace namespace,
+                                      final String uri)
         throws NodeParsingException
     {
         // Instantiate a ContainerNode class
@@ -278,7 +300,7 @@ public class NodeReader
         catch (URISyntaxException e)
         {
             String error = "invalid node uri " + uri;
-            log.error(error, e);
+            LOGGER.error(error, e);
             throw new NodeParsingException(error, e);
         }
 
@@ -290,33 +312,112 @@ public class NodeReader
         if (nodes == null)
         {
             String error = "nodes element not found in node";
-            log.error(error);
+            LOGGER.error(error);
             throw new NodeParsingException(error);
         }
 
         // list of child nodes
-        List<Element> nodesList = nodes.getChildren("node", namespace);
-        for (Element childNode : nodesList)
+        final List<Element> nodesList = nodes.getChildren("node", namespace);
+
+        for (final Element childNode : nodesList)
         {
-            String childNodeUri = childNode.getAttributeValue("uri");
-            if (childNodeUri == null)
+            final String childNodeUri = childNode.getAttributeValue("uri");
+            final String childNodeType =
+                    childNode.getAttributeValue("type", xsiNamespace);
+
+            if (!StringUtil.hasLength(childNodeUri))
             {
-                String error = "uri attribute not found in nodes node element";
-                log.error(error);
+                final String error =
+                        "uri attribute not found in nodes node element";
+
+                LOGGER.error(error);
                 throw new NodeParsingException(error);
             }
-            // TODO: create DataNode for now, recurse later?
+            else if (!StringUtil.hasLength(childNodeType))
+            {
+                final String error =
+                        "type attribute not found in node element";
+
+                LOGGER.error(error);
+                throw new NodeParsingException(error);
+            }
+
             try
             {
-                node.getNodes().add(new DataNode(new VOSURI(childNodeUri)));
+                final String[] types = childNodeType.split(":");
+                final String type = types[1];
+                final Node n;
+
+                if (type.equals(ContainerNode.class.getSimpleName()))
+                {
+                    n = new ContainerNode(new VOSURI(childNodeUri));
+
+                    final Element grandChildNodes =
+                            childNode.getChild("nodes", namespace);
+
+                    if (grandChildNodes != null)
+                    {
+                        final List<Element> grandChildNodeList =
+                                grandChildNodes.getChildren("node", namespace);
+
+                        for (final Element grandChildNode : grandChildNodeList)
+                        {
+                            final String grandChildNodeType =
+                                    childNode.getAttributeValue("type",
+                                                                xsiNamespace);
+                            final String grandchildURI =
+                                    grandChildNode.getAttributeValue("uri");
+                            final Node g;
+                            final String[] gtypes =
+                                    grandChildNodeType.split(":");
+                            final String gtype = gtypes[1];
+
+                            if (gtype.equals(ContainerNode.class.getSimpleName()))
+                            {
+                                g = new ContainerNode(
+                                        new VOSURI(grandchildURI));
+                            }
+                            else if (gtype.equals(DataNode.class.getSimpleName()))
+                            {
+                                g = new DataNode(new VOSURI(grandchildURI));
+                            }
+                            else
+                            {
+                                continue;
+                            }
+
+                            ((ContainerNode) n).getNodes().add(g);
+                        }
+                    }
+                }
+                else if (type.equals(DataNode.class.getSimpleName()))
+                {
+                    n = new DataNode(new VOSURI(childNodeUri));
+                }
+                else
+                {
+                    LOGGER.warn("Unsupported Node Type: " + type + " (from "
+                                + childNodeType + ")");
+                    n = null;
+                }
+
+                if (n != null)
+                {
+                    if (childNode.getChild("properties", namespace) != null)
+                    {
+                        n.setProperties(getProperties(childNode, namespace));
+                    }
+
+                    node.getNodes().add(n);
+                }
             }
             catch (URISyntaxException e)
             {
                 String error = "invalid child node uri " + childNodeUri;
-                log.error(error, e);
+                LOGGER.error(error, e);
                 throw new NodeParsingException(error, e);
             }
-            log.debug("added child node: " + childNodeUri);
+            LOGGER.debug("added child node: " + childNodeUri);
         }
 
         return node;
@@ -344,7 +445,7 @@ public class NodeReader
         catch (URISyntaxException e)
         {
             String error = "invalid node uri " + uri;
-            log.error(error, e);
+            LOGGER.error(error, e);
             throw new NodeParsingException(error, e);
         }
 
@@ -353,10 +454,11 @@ public class NodeReader
         if (busy == null)
         {
             String error = "busy element not found in DataNode";
-            log.error(error);
+            LOGGER.error(error);
             throw new NodeParsingException(error);
         }
-        boolean isBusy = busy.equalsIgnoreCase("true") ? true : false;
+
+        final boolean isBusy = busy.equalsIgnoreCase("true");
         
         // TODO: BM: Change the XML schema to support the three possible
         // values for the busy state: not busy, busy with read, busy
@@ -370,7 +472,7 @@ public class NodeReader
         {
             node.setBusy(NodeBusyState.notBusy);
         }
-        log.debug("busy: " + isBusy);
+        LOGGER.debug("busy: " + isBusy);
 
         // properties element
         node.setProperties(getProperties(root, namespace));
@@ -394,7 +496,9 @@ public class NodeReader
      * @return List of NodeProperty objects.
      * @throws NodeParsingException if there is an error parsing the XML.
      */
-    protected List<NodeProperty> getProperties(Element root, Namespace namespace)
+    @SuppressWarnings("unchecked")
+    protected List<NodeProperty> getProperties(Element root,
+                                               Namespace namespace)
         throws NodeParsingException
     {
         // properties element
@@ -402,7 +506,7 @@ public class NodeReader
         if (properties == null)
         {
             String error = "properties element not found";
-            log.error(error);
+            LOGGER.error(error);
             throw new NodeParsingException(error);
         }
 
@@ -410,22 +514,27 @@ public class NodeReader
         List<NodeProperty> set = new ArrayList<NodeProperty>();
 
         // properties property elements
-        List<Element> propertyList = properties.getChildren("property", namespace);
+        List<Element> propertyList = properties.getChildren("property",
+                                                            namespace);
         for (Element property : propertyList)
         {
             String propertyUri = property.getAttributeValue("uri");
             if (propertyUri == null)
             {
-                String error = "uri attribute not found in property element " + property;
-                log.error(error);
+                String error = "uri attribute not found in property element "
+                               + property;
+                LOGGER.error(error);
                 throw new NodeParsingException(error);
             }
 
             // xsi:nil set to true indicates Property is to be deleted
             String xsiNil = property.getAttributeValue("xsi:nil");
             boolean markedForDeletion = false;
+
             if (xsiNil != null)
-                markedForDeletion = xsiNil.equalsIgnoreCase("true") ? true : false;
+            {
+                markedForDeletion = xsiNil.equalsIgnoreCase("true");
+            }
 
             // if marked for deletetion, property can not contain text content
             String text = property.getText();
@@ -438,7 +547,7 @@ public class NodeReader
             // set readOnly attribute
             String readOnly = property.getAttributeValue("readOnly");
             if (readOnly != null)
-                nodeProperty.setReadOnly((readOnly.equalsIgnoreCase("true") ? true : false));
+                nodeProperty.setReadOnly(readOnly.equalsIgnoreCase("true"));
 
             // markedForDeletion attribute
             nodeProperty.setMarkedForDeletion(markedForDeletion);
@@ -458,6 +567,7 @@ public class NodeReader
      * @return List of View objects.
      * @throws NodeParsingException if there is an error parsing the XML.
      */
+    @SuppressWarnings("unchecked")
     protected List<View> getViews(Element root, Namespace namespace, String parent)
         throws NodeParsingException
     {
@@ -466,7 +576,7 @@ public class NodeReader
         if (parentElement == null)
         {
             String error = parent + " element not found in node";
-            log.error(error);
+            LOGGER.error(error);
             throw new NodeParsingException(error);
         }
 
@@ -482,10 +592,10 @@ public class NodeReader
             if (viewUri == null)
             {
                 String error = "uri attribute not found in " + parent + " view element";
-                log.error(error);
+                LOGGER.error(error);
                 throw new NodeParsingException(error);
             }
-            log.debug(parent + "view uri: " + viewUri);
+            LOGGER.debug(parent + "view uri: " + viewUri);
 
             // new View
 //                View acceptsView = new View(viewUri, node);
@@ -494,9 +604,9 @@ public class NodeReader
             String original = view.getAttributeValue("original");
             if (original != null)
             {
-                boolean isOriginal = original.equalsIgnoreCase("true") ? true : false;
+                boolean isOriginal = original.equalsIgnoreCase("true");
 //                    view.setOriginal(isOriginal);
-                log.debug(parent + " view original: " + isOriginal);
+                LOGGER.debug(parent + " view original: " + isOriginal);
             }
 
             List<Element> paramList = view.getChildren("param", namespace);
@@ -506,10 +616,10 @@ public class NodeReader
                 if (paramUri == null)
                 {
                     String error = "param uri attribute not found in accepts view element";
-                    log.error(error);
+                    LOGGER.error(error);
                     throw new NodeParsingException(error);
                 }
-                log.debug("accepts view param uri: " + paramUri);
+                LOGGER.debug("accepts view param uri: " + paramUri);
                 // TODO: what are params???
             }
         }

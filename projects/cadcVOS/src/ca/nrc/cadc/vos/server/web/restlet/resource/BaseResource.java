@@ -90,7 +90,8 @@ public abstract class BaseResource extends ServerResource
 {
     private static Logger log = Logger.getLogger(BaseResource.class);
     
-    private static final String CERTIFICATE_REQUEST_ATTRIBUTE_NAME = "org.restlet.https.clientCertificates";
+    private static final String CERTIFICATE_REQUEST_ATTRIBUTE_NAME =
+            "org.restlet.https.clientCertificates";
     
     private String vosUriPrefix;
     private NodePersistence nodePersistence;
@@ -100,34 +101,37 @@ public abstract class BaseResource extends ServerResource
     protected BaseResource()
     {
         super();
+
+        final Map<String, Object> attributes =
+                getApplication().getContext().getAttributes();
+
+        vosUriPrefix = (String) attributes.get(BeanUtil.IVOA_VOS_URI);
         
-        vosUriPrefix =
-            (String) getApplication().getContext().getAttributes().
-                get(BeanUtil.IVOA_VOS_URI);
+        nodePersistence = (NodePersistence) attributes.get(
+                BeanUtil.VOS_NODE_PERSISTENCE);
         
-        nodePersistence =
-            (NodePersistence) getApplication().getContext().getAttributes().
-                get(BeanUtil.VOS_NODE_PERSISTENCE);
-        
-        stylesheetReference =
-            (String) getApplication().getContext().getAttributes().
-                get(BeanUtil.VOS_STYLESHEET_REFERENCE);
+        stylesheetReference = (String) attributes.get(
+                BeanUtil.VOS_STYLESHEET_REFERENCE);
     }
 
     @Override
+    @SuppressWarnings("unchecked")
     public void doInit()
     {
-        Set<Method> allowedMethods = new CopyOnWriteArraySet<Method>();
+        final Set<Method> allowedMethods = new CopyOnWriteArraySet<Method>();
         allowedMethods.add(Method.GET);
         allowedMethods.add(Method.PUT);
         allowedMethods.add(Method.DELETE);
         allowedMethods.add(Method.POST);
+
         setAllowedMethods(allowedMethods);
         
         // Create a subject for authentication
         Request request = getRequest();
         Map<String, Object> requestAttributes = request.getAttributes();
-        Collection<X509Certificate> certs = (Collection<X509Certificate>) requestAttributes.get(CERTIFICATE_REQUEST_ATTRIBUTE_NAME);
+        Collection<X509Certificate> certs =
+                (Collection<X509Certificate>) requestAttributes.get(
+                        CERTIFICATE_REQUEST_ATTRIBUTE_NAME);
         this.subject = AuthenticationUtil.getSubject(null, certs);
         log.debug(subject);
     }

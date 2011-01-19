@@ -72,13 +72,10 @@ import java.io.IOException;
 import java.net.URISyntaxException;
 import java.security.AccessControlException;
 
+import ca.nrc.cadc.vos.*;
 import org.restlet.Request;
 import org.restlet.representation.Representation;
 
-import ca.nrc.cadc.vos.Node;
-import ca.nrc.cadc.vos.NodeParsingException;
-import ca.nrc.cadc.vos.NodeWriter;
-import ca.nrc.cadc.vos.VOSURI;
 import ca.nrc.cadc.vos.server.AbstractView;
 import ca.nrc.cadc.vos.server.NodePersistence;
 import ca.nrc.cadc.vos.server.SearchNode;
@@ -93,6 +90,27 @@ import ca.nrc.cadc.vos.server.web.representation.ViewRepresentation;
  */
 public class GetNodeAction extends NodeAction
 {
+    private Search search;
+
+
+    /**
+     * Basic empty constructor.
+     */
+    public GetNodeAction()
+    {
+    }
+
+    /**
+     * Constructor with search parameters.  It is perfectly valid for the
+     * Search to be null.
+     *
+     * @param search    Search criteria.
+     */
+    public GetNodeAction(final Search search)
+    {
+        this.search = search;
+    }
+
 
     /**
      * Given the node URI and XML, return the Node object specified
@@ -110,29 +128,48 @@ public class GetNodeAction extends NodeAction
      * the persistent version of the Node.
      */
     @Override
-    public Node doAuthorizationCheck(VOSpaceAuthorizer voSpaceAuthorizer, Node clientNode)
+    public Node doAuthorizationCheck(final VOSpaceAuthorizer voSpaceAuthorizer,
+                                     final Node clientNode)
             throws AccessControlException, FileNotFoundException
     {   
         return (Node) voSpaceAuthorizer.getReadPermission(clientNode);
     }
     
     /**
-     * Return the correct representation for the node.
+     * Perform the action for which the subclass was designed.
+     *
+     * The return object from this method (and from performNodeAction) must be
+     * an object of type NodeActionResult.
+     *
+     * @param node              The Node involved in the action.
+     * @param nodePersistence   The NodePersistence instance for persistence
+     *                          layer access.
+     * @param request           The Restlet Request object.
+     * @return The NodeAction result
+     * @throws Exception If a problem occurs.
      */
     @Override
-    public NodeActionResult performNodeAction(Node node, NodePersistence nodePersistence, Request request) throws Exception
+    public NodeActionResult performNodeAction(
+            final Node node, final NodePersistence nodePersistence,
+            final Request request) throws Exception
     {
-        AbstractView view = getView();
+        final AbstractView view = getView();
+
         if (view == null)
         {
             // no view specified or found--return the xml representation
-            NodeWriter nodeWriter = new NodeWriter();
+            final NodeWriter nodeWriter = new NodeWriter();
             nodeWriter.setStylesheetURL(getStylesheetURL(request));
-            return new NodeActionResult(new NodeOutputRepresentation(node, nodeWriter));
+            nodeWriter.setResults(getSearch() == null
+                                  ? null : getSearch().getResults());
+
+            return new NodeActionResult(
+                    new NodeOutputRepresentation(node, nodeWriter));
         }
         else
         {
             view.setNode(node, request, getViewReference());
+
             if (view.getRedirectURL() != null)
             {
                 return new NodeActionResult(view.getRedirectURL());
@@ -140,7 +177,8 @@ public class GetNodeAction extends NodeAction
             else
             {
                 // return a representation for the view
-                ViewRepresentation viewRepresentation = new ViewRepresentation(view);
+                final ViewRepresentation viewRepresentation =
+                        new ViewRepresentation(view);
                 return new NodeActionResult(viewRepresentation);
             }
         }
@@ -148,8 +186,9 @@ public class GetNodeAction extends NodeAction
     
     /**
      * Look for the stylesheet URL in the request context.
-     * @param request
-     * @return
+     * @param request   The Request to piggy back from.
+     * @return      The String URL of the stylesheet for this action.
+     *              Null if no reference is provided.
      */
     public String getStylesheetURL(Request request)
     {
@@ -171,5 +210,15 @@ public class GetNodeAction extends NodeAction
         }
         return null;
     }
-    
+
+
+    public Search getSearch()
+    {
+        return search;
+    }
+
+    public void setSearch(final Search search)
+    {
+        this.search = search;
+    }
 }

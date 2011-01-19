@@ -71,9 +71,12 @@ package ca.nrc.cadc.vos.server.web.restlet.resource;
 
 import java.net.URISyntaxException;
 import java.security.AccessControlException;
+import java.util.Collection;
 
 import javax.security.auth.Subject;
 
+import ca.nrc.cadc.uws.util.StringUtil;
+import ca.nrc.cadc.vos.Search;
 import org.apache.log4j.Logger;
 import org.restlet.data.Form;
 import org.restlet.representation.Representation;
@@ -101,9 +104,8 @@ import ca.nrc.cadc.vos.server.web.restlet.action.UpdatePropertiesAction;
  */
 public class NodeResource extends BaseResource
 {
-    private static Logger log = Logger.getLogger(NodeResource.class);
-    
-    private String path;
+    private static Logger LOGGER = Logger.getLogger(NodeResource.class);
+
     private NodeFault nodeFault;
     private VOSURI vosURI;
     private String viewReference;
@@ -114,58 +116,60 @@ public class NodeResource extends BaseResource
     @Override
     public void doInit()
     {
-        log.debug("Enter NodeResource.doInit(): " + getMethod());
+        LOGGER.debug("Enter NodeResource.doInit(): " + getMethod());
 
         try
         {
             super.doInit();
+
+            final String path = (String) getRequest().getAttributes().
+                    get("nodePath");
+            LOGGER.debug("path = " + path);
             
-            path = (String) getRequest().getAttributes().get("nodePath");  
-            log.debug("path = " + path);
-            
-            if (path == null || path.trim().length() == 0)
+            if ((path == null) || (path.trim().length() == 0))
             {
-                throw new IllegalArgumentException("No node path information provided.");
+                throw new IllegalArgumentException(
+                        "No node path information provided.");
             }
             
             vosURI = new VOSURI(getVosUriPrefix() + "/" + path);
             
             Form form = getRequest().getResourceRef().getQueryAsForm();
             viewReference = form.getFirstValue("view");
-            log.debug("viewReference = " + viewReference);
+            LOGGER.debug("viewReference = " + viewReference);
         }
         catch (URISyntaxException e)
         {
             String message = "URI not well formed: " + vosURI;
-            log.debug(message, e);
+            LOGGER.debug(message, e);
             nodeFault = NodeFault.InvalidURI;
             nodeFault.setMessage(message);
         }
         catch (AccessControlException e)
         {
             String message = "Access Denied: " + e.getMessage();
-            log.debug(message, e);
+            LOGGER.debug(message, e);
             nodeFault = NodeFault.PermissionDenied;
             nodeFault.setMessage(message);
         }
         catch (UnsupportedOperationException e)
         {
             String message = "Not supported: " + e.getMessage();
-            log.debug(message, e);
+            LOGGER.debug(message, e);
             nodeFault = NodeFault.NotSupported;
             nodeFault.setMessage(message);
         }
         catch (IllegalArgumentException e)
         {
             String message = "Bad input: " + e.getMessage();
-            log.debug(message, e);
+            LOGGER.debug(message, e);
             nodeFault = NodeFault.BadRequest;
             nodeFault.setMessage(message);
         }
         catch (Throwable t)
         {
             String message = "Internal Error:" + t.getMessage();
-            log.debug(message, t);
+            LOGGER.debug(message, t);
             nodeFault = NodeFault.InternalFault;
             nodeFault.setMessage(message);
         }
@@ -179,14 +183,14 @@ public class NodeResource extends BaseResource
      */
     private Representation performNodeAction(NodeAction action)
     {
-        log.debug("Enter NodeResource.performNodeAction()");
+        LOGGER.debug("Enter NodeResource.performNodeAction()");
         
         long start = System.currentTimeMillis();
         long end = -1;
         
         try
         {
-            log.info("START " + action.getClass().getSimpleName());
+            LOGGER.info("START " + action.getClass().getSimpleName());
             
             if (nodeFault != null)
             {
@@ -205,7 +209,8 @@ public class NodeResource extends BaseResource
             action.setViewReference(viewReference);
             action.setStylesheetReference(getStylesheetReference());
 
-            NodeActionResult result = null;
+            final NodeActionResult result;
+
             if (getSubject() == null)
             {
                 result = (NodeActionResult) action.run();
@@ -235,7 +240,7 @@ public class NodeResource extends BaseResource
         }
         catch (Throwable t)
         {
-            log.debug(t);
+            LOGGER.debug(t);
             setStatus(NodeFault.InternalFault.getStatus());
             return new NodeErrorRepresentation(NodeFault.InternalFault);
         }
@@ -245,19 +250,80 @@ public class NodeResource extends BaseResource
             {
                 end = System.currentTimeMillis();
             }
-            log.info("END " + action.getClass().getSimpleName()
+            LOGGER.info("END " + action.getClass().getSimpleName()
                     + " elapsed time (ms): " + (end - start));
         }
     }
     
     /**
      * HTTP GET
+     *
+     * @return The Representation of the given Media Type for this GET.
      */
     @Get("xml")
     public Representation represent()
     {
-        log.debug("Enter NodeResource.represent()");
-        return performNodeAction(new GetNodeAction());
+        LOGGER.debug("Enter NodeResource.represent()");
+        return performNodeAction(new GetNodeAction(createSearchCriteria()));
+    }
+
+    /**
+     * Create the Search Criteria to be used with a GET call.
+     *
+     * @return  Search instance, or null if no search criteria provided.
+     */
+    protected Search createSearchCriteria()
+    {
+        final Form queryForm = getQuery();
+        final Search searchCriteria;
+
+        if (!hasSearchCriteria(queryForm))
+        {
+            searchCriteria = null;
+        }
+        else
+        {
+            searchCriteria = new Search();
+
+            final String detailLevel = queryForm.getFirstValue("detail");
+
+            if (StringUtil.hasLength(detailLevel))
+            {
+                searchCriteria.getResults().setDetail(
+                        Search.Results.Detail.valueOf(
+                                detailLevel.toUpperCase()));
+            }
+        }
+
+        return searchCriteria;
+    }
+
+    /**
+     * Obtain whether any supported search criteria have been provided.
+     *
+     * Please make sure the query parameter is registered with the
+     * <code>Search.SUPPORTED_PARAMETERS</code> field.
+     *
+     * @param queryForm     The query string as a Form.
+     * @return              True if any search criteria have been provided,
+     *                      false otherwise.
+     */
+    protected boolean hasSearchCriteria(final Form queryForm)
+    {
+        final Collection<String> givenQueryNames = queryForm.getNames();
+
+        for (final String givenQueryName : givenQueryNames)
+        {
+            for (final String supportedQueryName : Search.SUPPORTED_PARAMETERS)
+            {
+                if (givenQueryName.equals(supportedQueryName))
+                {
+                    return true;
+                }
+            }
+        }
+
+        return false;
     }
     
     /**
@@ -269,7 +335,7 @@ public class NodeResource extends BaseResource
     @Put
     public Representation store(final Representation entity)
     {   
-        log.debug("Enter NodeResource.store()");
+        LOGGER.debug("Enter NodeResource.store()");
         return performNodeAction(new CreateNodeAction());
     }
     
@@ -282,7 +348,7 @@ public class NodeResource extends BaseResource
     @Post
     public Representation accept(final Representation entity)
     {
-        log.debug("Enter NodeResource.accept()");
+        LOGGER.debug("Enter NodeResource.accept()");
         return performNodeAction(new UpdatePropertiesAction());
     }
     
@@ -292,7 +358,7 @@ public class NodeResource extends BaseResource
     @Delete
     public Representation remove()
     {
-        log.debug("Enter NodeResource.remove()");
+        LOGGER.debug("Enter NodeResource.remove()");
         return performNodeAction(new DeleteNodeAction());
     }
     

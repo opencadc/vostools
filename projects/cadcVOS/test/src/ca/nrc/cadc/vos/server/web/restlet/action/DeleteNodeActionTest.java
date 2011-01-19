@@ -75,21 +75,26 @@ import static org.easymock.EasyMock.verify;
 
 import java.util.List;
 
-import org.junit.Test;
-import org.restlet.Request;
 
-import ca.nrc.cadc.vos.AbstractCADCVOSTest;
 import ca.nrc.cadc.vos.ContainerNode;
 import ca.nrc.cadc.vos.Node;
 import ca.nrc.cadc.vos.NodeProperty;
 import ca.nrc.cadc.vos.VOS;
-import ca.nrc.cadc.vos.server.NodePersistence;
 import ca.nrc.cadc.vos.server.util.NodeUtil;
 
 
-public class DeleteNodeActionTest extends AbstractCADCVOSTest<DeleteNodeAction>
+public class DeleteNodeActionTest extends NodeActionTest<DeleteNodeAction>
 {
-    private NodePersistence mockNodePersistence;
+    private NodeUtil mockNodeUtil = createMock(NodeUtil.class);
+    private Node mockPersistentNode = createMock(Node.class);
+    private ContainerNode mockParentNode = createMock(ContainerNode.class);
+
+    @SuppressWarnings("unchecked")
+    private List<NodeProperty> mockNodeProperties = createMock(List.class);
+
+    private NodeProperty comparison =
+            new NodeProperty(VOS.PROPERTY_URI_CONTENTLENGTH, null);
+    private NodeProperty mockLengthProperty = createMock(NodeProperty.class);
 
 
     /**
@@ -98,70 +103,63 @@ public class DeleteNodeActionTest extends AbstractCADCVOSTest<DeleteNodeAction>
      * @throws Exception If anything goes awry.
      */
     @Override
+    @SuppressWarnings("unchecked")
     protected void initializeTestSubject() throws Exception
     {
-        setMockNodePersistence(createMock(NodePersistence.class));
-
         setTestSubject(new DeleteNodeAction());
     }
 
 
-    @Test
-    @SuppressWarnings("unchecked")
-    public void performNodeAction() throws Exception
+    /**
+     * Any necessary preface action before the performNodeAction method is
+     * called to be tested.  This is a good place for Mock expectations and/or
+     * replays to be set.
+     *
+     * @throws Exception If anything goes wrong, just pass it up.
+     */
+    @Override
+    protected void prePerformNodeAction() throws Exception
     {
-        final NodeUtil mockNodeUtil = createMock(NodeUtil.class);
+        expect(getMockNode().getName()).andReturn("MOCK_NODE_NAME").once();
+        expect(getMockNode().getParent()).andReturn(mockParentNode).once();
 
-        setTestSubject(new DeleteNodeAction());
+        getMockNodePersistence().updateContentLength(mockParentNode, -88);
+        expectLastCall().once();
 
-        final Node mockNode = createMock(Node.class);
-        final Node mockPersistentNode = createMock(Node.class);
-        final ContainerNode mockParentNode = createMock(ContainerNode.class);
-        final Request mockRequest = createMock(Request.class);
-        final List<NodeProperty> mockNodeProperties = createMock(List.class);
-        final NodeProperty comparison =
-                new NodeProperty(VOS.PROPERTY_URI_CONTENTLENGTH, null);
-        final NodeProperty mockLengthProperty = createMock(NodeProperty.class);        
-
-        expect(mockNode.getName()).andReturn("MOCK_NODE_NAME").once();
-        expect(mockNode.getParent()).andReturn(mockParentNode).once();
-
-        expect(getMockNodePersistence().getFromParent("MOCK_NODE_NAME",
+        expect(getMockNodePersistence().getFromParentLight("MOCK_NODE_NAME",
                                                       mockParentNode)).
                 andReturn(mockPersistentNode).once();
         getMockNodePersistence().markForDeletion(mockPersistentNode, true);
         expectLastCall().once();
 
+        expect(mockParentNode.getParent()).andReturn(null).once();
+
         expect(mockPersistentNode.getProperties()).andReturn(
                 mockNodeProperties).once();
+        expect(mockPersistentNode.getParent()).andReturn(mockParentNode).once();
         expect(mockNodeProperties.indexOf(comparison)).andReturn(3).once();
         expect(mockNodeProperties.get(3)).andReturn(mockLengthProperty).once();
 
         expect(mockLengthProperty.getPropertyValue()).andReturn("88").once();
 
-        //mockNodeUtil.updateStackContentLengths(mockPersistentNode, -88l);
-        expectLastCall().once();
-
-        replay(getMockNodePersistence(), mockNode, mockPersistentNode,
-               mockParentNode, mockRequest, mockNodeUtil, mockNodeProperties,
-               mockLengthProperty);
-
-        getTestSubject().performNodeAction(mockNode, getMockNodePersistence(),
-                                           mockRequest);
-
-        verify(getMockNodePersistence(), mockNode, mockPersistentNode,
-               mockParentNode, mockRequest, mockNodeUtil, mockNodeProperties,
-               mockLengthProperty);
+        replay(getMockNodePersistence(), getMockNode(), mockPersistentNode,
+               mockParentNode, getMockRequest(), mockNodeUtil,
+               mockNodeProperties, mockLengthProperty);
     }
 
-
-    public NodePersistence getMockNodePersistence()
+    /**
+     * Any necessary post method call result checking.  This is a good place
+     * for any Mock verifications to take place as well.
+     *
+     * @param result The result of the performNodeAction call.
+     * @throws Exception If anything goes wrong, just pass it up.
+     */
+    @Override
+    protected void postPerformNodeAction(final NodeActionResult result)
+            throws Exception
     {
-        return mockNodePersistence;
-    }
-
-    public void setMockNodePersistence(NodePersistence mockNodePersistence)
-    {
-        this.mockNodePersistence = mockNodePersistence;
+        verify(getMockNodePersistence(), getMockNode(), mockPersistentNode,
+               mockParentNode, getMockRequest(), mockNodeUtil,
+               mockNodeProperties, mockLengthProperty);
     }
 }

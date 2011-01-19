@@ -95,11 +95,13 @@ import java.text.DateFormat;
  */
 public class NodeOutputRepresentation extends OutputRepresentation
 {
-    protected static Logger log = Logger.getLogger(NodeOutputRepresentation.class);
+    protected static Logger LOGGER =
+            Logger.getLogger(NodeOutputRepresentation.class);
     
     private Node node;
     private NodeWriter nodeWriter;
-    
+
+
     public NodeOutputRepresentation(Node node, NodeWriter nodeWriter)
     {
         super(MediaType.TEXT_XML);
@@ -107,37 +109,55 @@ public class NodeOutputRepresentation extends OutputRepresentation
         this.nodeWriter = nodeWriter;
     }
 
+
     @Override
-    public void write(OutputStream outputStream) throws IOException
+    public void write(final OutputStream outputStream) throws IOException
     {
-        if (node instanceof DataNode)
+        final Node n = getNode();
+
+        if (n instanceof DataNode)
         {
-            nodeWriter.write((DataNode) node, outputStream);
+            getNodeWriter().write((DataNode) n, outputStream);
         }
-        if (node instanceof ContainerNode)
+        else if (n instanceof ContainerNode)
         {
-            nodeWriter.write((ContainerNode) node, outputStream);
+            getNodeWriter().write((ContainerNode) n, outputStream);
         }
     }
     
     @Override
     public Date getModificationDate()
     {
-        NodeProperty modificationDate = node.findProperty(VOS.PROPERTY_URI_DATE);
+        final NodeProperty modificationDate =
+                getNode().findProperty(VOS.PROPERTY_URI_DATE);
+
         if (modificationDate != null)
         {
             try
             {
-                DateFormat df = DateUtil.getDateFormat(DateUtil.IVOA_DATE_FORMAT, DateUtil.UTC);
+                final DateFormat df =
+                        DateUtil.getDateFormat(DateUtil.IVOA_DATE_FORMAT,
+                                               DateUtil.UTC);
                 return df.parse(modificationDate.getPropertyValue());
             }
             catch (ParseException e)
             {
-                log.warn("Date " + modificationDate.getPropertyValue()
-                        + " could not be parsed.");
+                LOGGER.warn("Date " + modificationDate.getPropertyValue()
+                            + " could not be parsed.");
             }
         }
+
         return null;
     }
 
+
+    public NodeWriter getNodeWriter()
+    {
+        return nodeWriter;
+    }
+
+    public Node getNode()
+    {
+        return node;
+    }
 }

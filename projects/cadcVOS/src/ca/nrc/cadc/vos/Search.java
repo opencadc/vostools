@@ -69,57 +69,175 @@
 
 package ca.nrc.cadc.vos;
 
+
+import java.util.Collection;
+import java.util.HashSet;
+
+
 /**
  * @author zhangsa
  *
+ * Please see the section 3.7 of the specification document here:
+ * http://www.ivoa.net/Documents/VOSpace/20101112/WD-VOSpace-2.0-20101112.html
+ *
+ * This will lay out details of the fields.
+ *
+ * Field names have been kept consistent with the document for simplicity and
+ * conformity.
  */
 public class Search
 {
-    protected String _uri;
-    protected int _limit;
-    protected String _detail;
-    protected String _matches;
-    protected Node _node;
-    
+    // Supported query parameters for a search.
+    public static final String[] SUPPORTED_PARAMETERS =
+            {
+                    "detail"
+            };
+
+    private String uri;
+    private Results results;
+    private String matches;
+    private Collection<VOSURI> node;
+
+
+    /**
+     * Basic empty constructor.
+     */
+    public Search()
+    {
+    }
+
+    /**
+     * Complete constructor.
+     *
+     * @param uri       An OPTIONAL identifier indicating from which item to
+     *                  continue a search.
+     * @param results   Search results configurations.
+     * @param matches   An OPTIONAL search string consisting of properties and
+*                  values to match against and joined in conjunction (and)
+*                  or disjunction (or).
+     * @param node      An OPTIONAL URI(s) identifying the target URIs to be
+     */
+    public Search(final String uri, final Results results,
+                  final String matches, final Collection<VOSURI> node)
+    {
+        this.uri = uri;
+        this.results = results;
+        this.matches = matches;
+        this.node = node;
+    }
+
+
     public String getUri()
     {
-        return _uri;
+        return uri;
     }
-    public void setUri(String uri)
+
+    public void setUri(final String uri)
     {
-        _uri = uri;
+        this.uri = uri;
     }
-    public int getLimit()
+
+    public Results getResults()
     {
-        return _limit;
+        if (results == null)
+        {
+            setResults(new Results());
+        }
+
+        return results;
     }
-    public void setLimit(int limit)
+
+    public void setResults(final Results results)
     {
-        _limit = limit;
+        this.results = results;
     }
-    public String getDetail()
-    {
-        return _detail;
-    }
-    public void setDetail(String detail)
-    {
-        _detail = detail;
-    }
+
     public String getMatches()
     {
-        return _matches;
+        return matches;
     }
-    public void setMatches(String matches)
+
+    public void setMatches(final String matches)
     {
-        _matches = matches;
+        this.matches = matches;
     }
-    public Node getNode()
+
+    /**
+     * An OPTIONAL URI(s) identifying the target URIs to be found.
+     *
+     * @return  Collection of Node URIs, or empty Collection.  Never null.
+     */
+    public Collection<VOSURI> getNode()
     {
-        return _node;
+        if (node == null)
+        {
+            setNode(new HashSet<VOSURI>());
+        }
+
+        return node;
     }
-    public void setNode(Node node)
+
+    public void setNode(final Collection<VOSURI> node)
     {
-        _node = node;
+        this.node = node;
     }
-    
+
+
+    /**
+     * Inner class for constraining/formatting search results.
+     */
+    public static class Results
+    {
+        private Integer limit;
+        private Detail detail;
+
+
+        public Results()
+        {
+        }
+
+        public Results(final Integer limit, final Detail detail)
+        {
+            this.limit = limit;
+            this.detail = detail;
+        }
+
+
+        public Results(final Integer limit)
+        {
+            this(limit, null);
+        }
+
+        public Results(final Detail detail)
+        {
+            this(null, detail);
+        }
+
+
+        public Integer getLimit()
+        {
+            return limit;
+        }
+
+        public void setLimit(final Integer limit)
+        {
+            this.limit = limit;
+        }
+
+        public Detail getDetail()
+        {
+            return detail;
+        }
+
+        public void setDetail(Detail detail)
+        {
+            this.detail = detail;
+        }
+
+
+        public enum Detail
+        {
+            MIN, MAX, PROPERTIES
+        }
+    }
 }
