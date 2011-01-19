@@ -120,7 +120,7 @@ public class NodeWriter
 
     public NodeWriter()
     {
-        this(new Search.Results(Search.Results.Detail.MIN));
+        this(new Search.Results(Search.Results.Detail.MAX));
     }
 
     public NodeWriter(Search.Results results)

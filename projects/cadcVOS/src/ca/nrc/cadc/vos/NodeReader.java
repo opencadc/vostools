@@ -246,7 +246,9 @@ public class NodeReader
         String xsiType = root.getAttributeValue("type", xsiNamespace);
         if (xsiType == null)
         {
-            String error = "xsi:type attribute not found in node element " + uri;
+            final String error =
+                    "xsi:type attribute not found in node element " + uri;
+
             LOGGER.error(error);
             throw new NodeParsingException(error);
         }
@@ -372,12 +374,14 @@ public class NodeReader
                                     grandChildNodeType.split(":");
                             final String gtype = gtypes[1];
 
-                            if (gtype.equals(ContainerNode.class.getSimpleName()))
+                            if (gtype.equals(
+                                    ContainerNode.class.getSimpleName()))
                             {
                                 g = new ContainerNode(
                                         new VOSURI(grandchildURI));
                             }
-                            else if (gtype.equals(DataNode.class.getSimpleName()))
+                            else if (gtype.equals(
+                                    DataNode.class.getSimpleName()))
                             {
                                 g = new DataNode(new VOSURI(grandchildURI));
                             }
@@ -505,7 +509,8 @@ public class NodeReader
         Element properties = root.getChild("properties", namespace);
         if (properties == null)
         {
-            String error = "properties element not found";
+            final String error = "properties element not found";
+
             LOGGER.error(error);
             throw new NodeParsingException(error);
         }
@@ -568,8 +573,9 @@ public class NodeReader
      * @throws NodeParsingException if there is an error parsing the XML.
      */
     @SuppressWarnings("unchecked")
-    protected List<View> getViews(Element root, Namespace namespace, String parent)
-        throws NodeParsingException
+    protected List<View> getViews(Element root, Namespace namespace,
+                                  String parent)
+            throws NodeParsingException
     {
         // view parent element
         Element parentElement = root.getChild(parent, namespace);
@@ -584,41 +590,46 @@ public class NodeReader
         List<View> list = new ArrayList<View>();
 
         // view elements
-        List<Element> viewList = parentElement.getChildren("view", namespace);
-        for (Element view : viewList)
+        final List<Element> viewList = parentElement.getChildren("view",
+                                                                 namespace);
+        for (final Element view : viewList)
         {
             // view uri attribute
-            String viewUri = view.getAttributeValue("uri");
+            final String viewUri = view.getAttributeValue("uri");
             if (viewUri == null)
             {
-                String error = "uri attribute not found in " + parent + " view element";
+                String error = "uri attribute not found in " + parent
+                               + " view element";
                 LOGGER.error(error);
                 throw new NodeParsingException(error);
             }
+
             LOGGER.debug(parent + "view uri: " + viewUri);
 
-            // new View
-//                View acceptsView = new View(viewUri, node);
-
             // view original attribute
-            String original = view.getAttributeValue("original");
+            final String original = view.getAttributeValue("original");
+
             if (original != null)
             {
-                boolean isOriginal = original.equalsIgnoreCase("true");
-//                    view.setOriginal(isOriginal);
+                final boolean isOriginal = original.equalsIgnoreCase("true");
                 LOGGER.debug(parent + " view original: " + isOriginal);
             }
 
-            List<Element> paramList = view.getChildren("param", namespace);
-            for (Element param : paramList)
+            final List<Element> paramList = view.getChildren("param",
+                                                             namespace);
+
+            for (final Element param : paramList)
             {
-                String paramUri = param.getAttributeValue("uri");
+                final String paramUri = param.getAttributeValue("uri");
+
                 if (paramUri == null)
                 {
-                    String error = "param uri attribute not found in accepts view element";
+                    final String error = "param uri attribute not found in "
+                                         + "accepts view element";
                     LOGGER.error(error);
                     throw new NodeParsingException(error);
                 }
+
                 LOGGER.debug("accepts view param uri: " + paramUri);
                 // TODO: what are params???
             }

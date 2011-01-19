@@ -103,8 +103,8 @@ import javax.net.ssl.SSLSocketFactory;
  * @author zhangsa
  *
  */
-@Ignore("Broken - Please fix soon.\n" +
-        "jenkinsd 2011.01.17")
+//@Ignore("Broken - Please fix soon.\n" +
+//        "jenkinsd 2011.01.17")
 public class VOSpaceClientTest
 {
     private static Logger log = Logger.getLogger(NodeWriterTest.class);
@@ -263,10 +263,13 @@ public class VOSpaceClientTest
     @Test
     public void testCreateContainerNode() throws Exception
     {
-        String slashPath1 = "/" + ROOT_NODE + TestUtil.uniqueStringOnTime();
-        ContainerNode cnode = new ContainerNode(new VOSURI(VOS_URI + slashPath1));
+        final String slashPath1 = "/" + ROOT_NODE
+                                  + TestUtil.uniqueStringOnTime();
+        final ContainerNode cnode =
+                new ContainerNode(new VOSURI(VOS_URI + slashPath1));
 
-        Node nodeRtn = client.createNode(cnode);
+        final Node nodeRtn = client.createNode(cnode);
+
         log.debug("Returned Node: " + nodeRtn);
         log.debug("XML of Returned Node: " + VOSClientUtil.xmlString(nodeRtn));
         Assert.assertEquals("/" + nodeRtn.getPath(), slashPath1);
