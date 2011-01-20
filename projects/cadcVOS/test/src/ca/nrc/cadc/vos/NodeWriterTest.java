@@ -180,21 +180,73 @@ public class NodeWriterTest extends AbstractCADCVOSTest<NodeWriter>
 
         log.debug(sb.toString());
 
-        final String XML = "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n"
-                           + "<node xmlns=\"http://www.ivoa"
-                           + ".net/xml/VOSpace/v2.0\" "
-                           + "xmlns:vos=\"http://www.ivoa"
-                           + ".net/xml/VOSpace/v2.0\" "
-                           + "xmlns:xsi=\"http://www.w3"
-                           + ".org/2001/XMLSchema-instance\" "
-                           + "uri=\"vos://cadc.nrc.ca!vospace/dir/subdir\" "
-                           + "xsi:type=\"vos:ContainerNode\">\n"
-                           + "  <nodes>\n"
-                           + "    <node uri=\"vos://cadc.nrc.ca!vospace/mydir/ngc4323\" xsi:type=\"vos:DataNode\" />\n"
-                           + "    <node uri=\"vos://cadc.nrc.ca!vospace/mydir/ngc5796\" xsi:type=\"vos:DataNode\" />\n"
-                           + "    <node uri=\"vos://cadc.nrc.ca!vospace/mydir/ngc6801\" xsi:type=\"vos:DataNode\" />\n"
-                           + "  </nodes>\n"
-                           + "</node>\n"
+        final String XML = "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n" +
+                           "<node xmlns=\"http://www.ivoa.net/xml/VOSpace/v2" +
+                           ".0\" xmlns:vos=\"http://www.ivoa" +
+                           ".net/xml/VOSpace/v2.0\" xmlns:xsi=\"http://www.w3" +
+                           ".org/2001/XMLSchema-instance\" uri=\"vos://cadc" +
+                           ".nrc.ca!vospace/dir/subdir\" " +
+                           "xsi:type=\"vos:ContainerNode\">\n" +
+                           "  <properties />\n" +
+                           "  <accepts>\n" +
+                           "    <view uri=\"ivo://ivoa" +
+                           ".net/vospace/core#defaultview\" />\n" +
+                           "  </accepts>\n" +
+                           "  <provides>\n" +
+                           "    <view uri=\"ivo://ivoa" +
+                           ".net/vospace/core#defaultview\" />\n" +
+                           "    <view uri=\"ivo://cadc.nrc" +
+                           ".ca/vospace/core#rssview\" />\n" +
+                           "  </provides>\n" +
+                           "  <capabilities />\n" +
+                           "  <nodes>\n" +
+                           "    <node uri=\"vos://cadc.nrc" +
+                           ".ca!vospace/mydir/ngc4323\" " +
+                           "xsi:type=\"vos:DataNode\">\n" +
+                           "      <properties />\n" +
+                           "      <accepts>\n" +
+                           "        <view uri=\"ivo://ivoa" +
+                           ".net/vospace/core#defaultview\" />\n" +
+                           "      </accepts>\n" +
+                           "      <provides>\n" +
+                           "        <view uri=\"ivo://ivoa" +
+                           ".net/vospace/core#defaultview\" />\n" +
+                           "        <view uri=\"ivo://cadc.nrc" +
+                           ".ca/vospace/core#dataview\" />\n" +
+                           "      </provides>\n" +
+                           "      <capabilities />\n" +
+                           "    </node>\n" +
+                           "    <node uri=\"vos://cadc.nrc" +
+                           ".ca!vospace/mydir/ngc5796\" " +
+                           "xsi:type=\"vos:DataNode\">\n" +
+                           "      <properties />\n" +
+                           "      <accepts>\n" +
+                           "        <view uri=\"ivo://ivoa" +
+                           ".net/vospace/core#defaultview\" />\n" +
+                           "      </accepts>\n" +
+                           "      <provides>\n" +
+                           "        <view uri=\"ivo://ivoa" +
+                           ".net/vospace/core#defaultview\" />\n" +
+                           "        <view uri=\"ivo://cadc.nrc" +
+                           ".ca/vospace/core#dataview\" />\n" +
+                           "      </provides>\n" +
+                           "      <capabilities />\n" +
+                           "    </node>\n" +
+                           "    <node uri=\"vos://cadc.nrc" +
+                           ".ca!vospace/mydir/ngc6801\" " +
+                           "xsi:type=\"vos:DataNode\">\n" +
+                           "      <properties />\n" +
+                           "      <accepts>\n" +
+                           "        <view uri=\"ivo://ivoa.net/vospace/core#defaultview\" />\n" +
+                           "      </accepts>\n" +
+                           "      <provides>\n" +
+                           "        <view uri=\"ivo://ivoa.net/vospace/core#defaultview\" />\n" +
+                           "        <view uri=\"ivo://cadc.nrc.ca/vospace/core#dataview\" />\n" +
+                           "      </provides>\n" +
+                           "      <capabilities />\n" +
+                           "    </node>\n" +
+                           "  </nodes>\n" +
+                           "</node>\n"
                            + "";
 
         final Diff diff = new Diff(XML, sb.toString());
@@ -210,14 +262,26 @@ public class NodeWriterTest extends AbstractCADCVOSTest<NodeWriter>
         instance.write(dataNode, sb);
         log.debug(sb.toString());
 
-        final String XML = "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n"
-                           + "<node xmlns=\"http://www.ivoa.net/xml/VOSpace/v2"
-                           + ".0\" xmlns:vos=\"http://www.ivoa"
-                           + ".net/xml/VOSpace/v2.0\" xmlns:xsi=\"http://www.w3"
-                           + ".org/2001/XMLSchema-instance\" uri=\"vos://cadc"
-                           + ".nrc.ca!vospace/dir/subdir\" "
-                           + "xsi:type=\"vos:DataNode\" busy=\"true\" />"
-                           + "";
+        final String XML = "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n" +
+                           "<node xmlns=\"http://www.ivoa.net/xml/VOSpace/v2" +
+                           ".0\" xmlns:vos=\"http://www.ivoa" +
+                           ".net/xml/VOSpace/v2.0\" xmlns:xsi=\"http://www.w3" +
+                           ".org/2001/XMLSchema-instance\" uri=\"vos://cadc" +
+                           ".nrc.ca!vospace/dir/subdir\" " +
+                           "xsi:type=\"vos:DataNode\" busy=\"true\">\n" +
+                           "  <properties />\n" +
+                           "  <accepts>\n" +
+                           "    <view uri=\"ivo://ivoa" +
+                           ".net/vospace/core#defaultview\" />\n" +
+                           "  </accepts>\n" +
+                           "  <provides>\n" +
+                           "    <view uri=\"ivo://ivoa" +
+                           ".net/vospace/core#defaultview\" />\n" +
+                           "    <view uri=\"ivo://cadc.nrc.ca/vospace/core#dataview\" />\n" +
+                           "  </provides>\n" +
+                           "  <capabilities />\n" +
+                           "</node>\n" +
+                           "";
 
         // validate the XML
         final Diff diff = new Diff(XML, sb.toString());
