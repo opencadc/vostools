@@ -87,6 +87,7 @@ import javax.security.auth.Subject;
 import org.apache.log4j.Level;
 import org.apache.log4j.Logger;
 
+import ca.nrc.cadc.auth.CertificateUtil;
 import ca.nrc.cadc.auth.RunnableAction;
 import ca.nrc.cadc.auth.SSLUtil;
 import ca.nrc.cadc.reg.client.RegistryClient;
@@ -580,7 +581,7 @@ public class Main implements Runnable
         URI serverUri = null;
         try
         {
-            initSubject(argMap);
+            this.subject = CertificateUtil.initSubject(argMap);
         }
         catch(Exception ex)
         {
@@ -702,48 +703,6 @@ public class Main implements Runnable
         this.client = new VOSpaceClient(baseUrl);
         log.info("server uri: " + serverUri);
         log.info("base url: " + this.baseUrl);
-    }
-
-    private void initSubject(ArgumentMap argMap)
-    {
-        String strCert = argMap.getValue(ARG_CERT);
-        String strKey = argMap.getValue(ARG_KEY);
-
-        File certFile = new File(strCert);
-        File keyFile = new File(strKey);
-
-        StringBuffer sbSslMsg = new StringBuffer();
-        boolean sslError = false;
-        if (!certFile.exists())
-        {
-            sbSslMsg.append("Certificate file ");
-            sbSslMsg.append(strCert);
-            sbSslMsg.append(" does not exist. \n");
-            sslError = true;
-        }
-        if (!keyFile.exists())
-        {
-            sbSslMsg.append("Key file ").append(strKey).append(" does not exist. \n");
-            sslError = true;
-        }
-        if (!sslError)
-        {
-            if (!certFile.canRead())
-            {
-                sbSslMsg.append("Certificate file ").append(strCert).append(" cannot be read. \n");
-                sslError = true;
-            }
-            if (!keyFile.canRead())
-            {
-                sbSslMsg.append("Key file ").append(strKey).append(" cannot be read. \n");
-                sslError = true;
-            }
-        }
-        if (sslError)
-        {
-            throw new IllegalArgumentException(sbSslMsg.toString());
-        }
-        this.subject = SSLUtil.createSubject(certFile, keyFile);
     }
 
     /**
