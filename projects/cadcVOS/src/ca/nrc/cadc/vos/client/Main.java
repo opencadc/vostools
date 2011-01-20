@@ -379,7 +379,7 @@ public class Main implements Runnable
     {
         try
         {
-            final Node n = client.getNode(target.getPath());
+            final Node n = client.getNode(target.getPath(), target.getQuery());
             final String contentLength =
                     safePropertyRef(n, VOS.PROPERTY_URI_CONTENTLENGTH);
 

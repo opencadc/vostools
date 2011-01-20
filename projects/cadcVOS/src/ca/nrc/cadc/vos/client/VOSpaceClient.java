@@ -260,12 +260,29 @@ public class VOSpaceClient
     public Node getNode(String path)
         throws NodeNotFoundException
     {
+        return getNode(path, null);
+    }
+
+    /**
+     * Get Node.
+     *
+     * @param path      The path to the Node.
+     * @param query     Optional query string
+     * @return          The Node instance.
+     * @throws NodeNotFoundException when the requested node does not exist on the server
+     */
+    public Node getNode(String path, String query)
+        throws NodeNotFoundException
+    {
         int responseCode;
         final Node rtnNode;
 
         try
         {
-            if (path.startsWith("/")) path = path.substring(1);
+            if (path.startsWith("/")) 
+                path = path.substring(1);
+            if (query != null)
+                path += "?" + query;
             URL url = new URL(this.baseUrl + "/nodes/" + path);
             log.debug("getNode(), URL=" + url);
             HttpURLConnection connection = (HttpURLConnection) url.openConnection();
