@@ -79,7 +79,7 @@ import javax.security.auth.x500.X500Principal;
 import org.apache.log4j.Level;
 import org.apache.log4j.Logger;
 
-import ca.nrc.cadc.auth.CertificateUtil;
+import ca.nrc.cadc.auth.CertCmdArgUtil;
 import ca.nrc.cadc.auth.SSLUtil;
 import ca.nrc.cadc.gms.ElemProperty;
 import ca.nrc.cadc.gms.GmsConsts;
@@ -113,9 +113,6 @@ public class GmsClientMain implements PrivilegedAction<Boolean>
     public static final String ARG_CHECK_MEMBER = "check";
     public static final String ARG_LIST_MEMBER_GROUPS = "listMember";
     public static final String ARG_LIST_OWNER_GROUPS = "listOwner";
-    public static final String ARG_CERT = "cert";
-    public static final String ARG_KEY = "key";
-    public static final String ARG_CERTKEY = "certkey";
 
     // Operations on GMS client
     public enum Operation {
@@ -203,7 +200,7 @@ public class GmsClientMain implements PrivilegedAction<Boolean>
     {
         try
         {
-            subject = CertificateUtil.initSubject(argMap);
+            subject = CertCmdArgUtil.initSubject(argMap);
         }
         catch (Exception ex)
         {
@@ -673,23 +670,23 @@ public class GmsClientMain implements PrivilegedAction<Boolean>
                 "                                                                                                  ",
                 "Create a group with server generated ID:                                                          ",
                 "           java -jar cadcGMSClient.jar  [-v|--verbose|-d|--debug]                                 ",
-                "   [--cert=<SSL certificate file> --key=<SSL key file> | --certkey=<PEM cert-key file]            ",
+                CertCmdArgUtil.getCertArgUsage(),
                 "                                                                                                  ",
                 "Other group operations:                                                                           ",
                 "java -jar cadcGMSClient.jar  [-v|--verbose|-d|--debug]                                            ",
-                "   [--cert=<SSL certificate file> --key=<SSL key file> | --certkey=<PEM cert-key file]            ",
+                CertCmdArgUtil.getCertArgUsage(),
                 "   --target=<Group ID>                                                                            ",
                 "   [--create|--view|--delete]                                                                     ",
                 "                                                                                                  ",
                 "Group Membership operations:                                                                      ",
                 "java -jar cadcGMSClient.jar  [-v|--verbose|-d|--debug]                                            ",
-                "   [--cert=<SSL certificate file> --key=<SSL key file> | --certkey=<PEM cert-key file]            ",
+                CertCmdArgUtil.getCertArgUsage(),
                 "   --target=<Group ID>                                                                            ",
                 "   [--add=<User ID> |--remove=<User ID> | --check=<User ID>]                                      ",
                 "                                                                                                  ",
                 "User operations:                                                                                  ",
                 "java -jar cadcGMSClient.jar  [-v|--verbose|-d|--debug]                                            ",
-                "   [--cert=<SSL certificate file> --key=<SSL key file> | --certkey=<PEM cert-key file]            ",
+                CertCmdArgUtil.getCertArgUsage(),
                 "   [--listMember|--listOwner] [--target=<User ID>]                                                ",
                 "                                                                                                  ", };
 
