@@ -87,7 +87,7 @@ import javax.security.auth.Subject;
 import org.apache.log4j.Level;
 import org.apache.log4j.Logger;
 
-import ca.nrc.cadc.auth.CertificateUtil;
+import ca.nrc.cadc.auth.CertCmdArgUtil;
 import ca.nrc.cadc.auth.RunnableAction;
 import ca.nrc.cadc.auth.SSLUtil;
 import ca.nrc.cadc.reg.client.RegistryClient;
@@ -137,8 +137,6 @@ public class Main implements Runnable
     public static final String ARG_CONTENT_TYPE = "content-type";
     public static final String ARG_CONTENT_ENCODING = "content-encoding";
     public static final String ARG_CONTENT_MD5 = "content-md5";
-    public static final String ARG_CERT = "cert";
-    public static final String ARG_KEY = "key";
 
     public static final String VOS_PREFIX = "vos://";
 
@@ -581,7 +579,7 @@ public class Main implements Runnable
         URI serverUri = null;
         try
         {
-            this.subject = CertificateUtil.initSubject(argMap);
+            this.subject = CertCmdArgUtil.initSubject(argMap);
         }
         catch(Exception ex)
         {
@@ -757,10 +755,6 @@ public class Main implements Runnable
     private void validateCommandArguments(ArgumentMap argMap)
         throws IllegalArgumentException
     {
-        String strCert = argMap.getValue(ARG_CERT);
-        String strKey = argMap.getValue(ARG_KEY);
-        if (strCert == null || strKey == null) throw new IllegalArgumentException("Argument cert and key are all required.");
-
         if (this.operation.equals(Operation.COPY))
         {
             String strSrc = argMap.getValue(ARG_SRC);
@@ -875,7 +869,7 @@ public class Main implements Runnable
                 "                                                                                                  ",
                 "Create node:                                                                                      ",
                 "java -jar VOSpaceClient.jar  [-v|--verbose|-d|--debug]                                            ",
-                "   --cert=<SSL certificate file> --key=<SSL key file>                                             ",
+                CertCmdArgUtil.getCertArgUsage(),
                 "   --create --target=<target URI>                                                                  ",
                 "   [--public[=true|false]                                                                         ",
                 "   [--group-read=<group URI>]                                                                      ",
@@ -887,7 +881,7 @@ public class Main implements Runnable
                 "                                                                                                  ",
                 "Copy file:                                                                                        ",
                 "java -jar VOSpaceClient.jar  [-v|--verbose|-d|--debug]                                            ",
-                "   --cert=<SSL certificate file> --key=<SSL key file>                                             ",
+                CertCmdArgUtil.getCertArgUsage(),
                 "   --copy --src=<source URI> --dest=<destination URI>                                            ",
                 "   [--content-type=<mimetype of source>]                                                           ",
                 "   [--content-encoding=<encoding of source>]                                                       ",
@@ -903,7 +897,7 @@ public class Main implements Runnable
                 "                                                                                                  ",
                 "View node:                                                                                        ",
                 "java -jar VOSpaceClient.jar  [-v|--verbose|-d|--debug]                                            ",
-                "   --cert=<SSL certificate file> --key=<SSL key file>                                             ",
+                CertCmdArgUtil.getCertArgUsage(),
                 "   --view --target=<target URI>                                                                    ",
                 "   [--public[=true|false]                                                                         ",
                 "   [--group-read=<group URI>]                                                                      ",
@@ -911,7 +905,7 @@ public class Main implements Runnable
                 "                                                                                                  ",
                 "Delete node:                                                                                      ",
                 "java -jar VOSpaceClient.jar  [-v|--verbose|-d|--debug]                                            ",
-                "   --cert=<SSL certificate file> --key=<SSL key file>                                             ",
+                CertCmdArgUtil.getCertArgUsage(),
                 "   --delete --target=<target URI>                                                                  ",
                 "   [--content-type=<mimetype of source>]                                                           ",
                 "   [--content-encoding=<encoding of source>]                                                       ",
@@ -921,7 +915,7 @@ public class Main implements Runnable
                 "                                                                                                  ",
                 "Set node:                                                                                         ",
                 "java -jar VOSpaceClient.jar  [-v|--verbose|-d|--debug]                                            ",
-                "   --cert=<SSL certificate file> --key=<SSL key file>                                             ",
+                CertCmdArgUtil.getCertArgUsage(),
                 "   --set --target=<target URI>                                                                     ",
                 "   [--content-type=<mimetype of source>]                                                           ",
                 "   [--content-encoding=<encoding of source>]                                                       ",
