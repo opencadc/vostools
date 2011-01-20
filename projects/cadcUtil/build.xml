@@ -127,7 +127,9 @@
             </classpath>
 
             <test name="ca.nrc.cadc.net.HttpDownloadTest"/>
+            <!-- this test has a lot of pre-conditions
             <test name="ca.nrc.cadc.net.HttpUploadTest"/>
+            -->
             <formatter type="plain" usefile="false"/>
         </junit>
     </target>
