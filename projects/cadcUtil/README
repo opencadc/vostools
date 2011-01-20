@@ -18,7 +18,7 @@ associated private key (proxy.key) and a file that contains both the certificate
 key (proxy.pem) in the classpath (e.g. in build/test/class). All three types of files 
 can be created with the script:
 
-./scripts/createProxyCert <your real cert> <your private key> <days> test/resources/proxy
+./scripts/createProxyCert <your real cert> <your private key> <days> build/test/class/proxy
 
 The test/resources/proxy.pem file can be used with curl, assuming your version of curl 
 is built with SSL support.
