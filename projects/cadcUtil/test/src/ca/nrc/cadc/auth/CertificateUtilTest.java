@@ -135,7 +135,7 @@ public class CertificateUtilTest
                 };
                 
         ArgumentMap aMap = new ArgumentMap(args);
-        Subject subject = CertificateUtil.initSubject(aMap);
+        Subject subject = CertCmdArgUtil.initSubject(aMap);
         
         boolean xpLoaded = false;
         for (Principal p : subject.getPrincipals() )
@@ -155,7 +155,7 @@ public class CertificateUtilTest
                 };
                 
         ArgumentMap aMap = new ArgumentMap(args);
-        Subject subject = CertificateUtil.initSubject(aMap);
+        Subject subject = CertCmdArgUtil.initSubject(aMap);
         
         boolean xpLoaded = false;
         for (Principal p : subject.getPrincipals() )
@@ -177,7 +177,7 @@ public class CertificateUtilTest
         ArgumentMap aMap = new ArgumentMap(args);
         boolean exThrown = false;
         try {
-            Subject subject = CertificateUtil.initSubject(aMap);
+            Subject subject = CertCmdArgUtil.initSubject(aMap);
         } catch (IllegalArgumentException ex)
         {
             exThrown = true;

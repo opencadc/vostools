@@ -79,7 +79,7 @@ import ca.nrc.cadc.util.ArgumentMap;
  * @author zhangsa
  *
  */
-public class CertificateUtil
+public class CertCmdArgUtil
 {
     public static final String NEW_LINE = System.getProperty("line.separator");
     public static final String ARG_CERT = "cert";
@@ -94,17 +94,7 @@ public class CertificateUtil
 
     public static String getCertArgUsage()
     {
-        String[] um = {
-                "Usage:                                                                                            ",
-                "     --certkey=<File of Certificate & Key>                                                          ", 
-                "  or:                                                                                             ",
-                "     --cert=<Certificate File> --key=<Key File>                                                       ",
-                "  or empty, which a default certkey file " + DFT_CERTKEY_FILE + " will be used.                   ",
-                "                                                                                                  "};
-        StringBuffer sb = new StringBuffer();
-        for (String line : um)
-            sb.append(line).append(NEW_LINE);
-        return sb.toString();
+        return "    [--certkey=<PEM File of Certificate & Key> | --cert=<Certificate File> --key=<Key File>]";
     }
     
     private static File loadFile(String fn)
