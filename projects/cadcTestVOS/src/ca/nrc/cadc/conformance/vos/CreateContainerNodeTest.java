@@ -69,7 +69,6 @@
 
 package ca.nrc.cadc.conformance.vos;
 
-import ca.nrc.cadc.vos.VOS;
 import ca.nrc.cadc.vos.ContainerNode;
 import ca.nrc.cadc.vos.NodeReader;
 import ca.nrc.cadc.vos.VOSURI;
@@ -81,6 +80,7 @@ import org.junit.Before;
 import org.junit.BeforeClass;
 import org.junit.Test;
 import static org.junit.Assert.*;
+
 
 /**
  * Test case for creating ContainerNodes.
@@ -189,8 +189,8 @@ public class CreateContainerNodeTest extends VOSNodeTest
             // Should get back a 409 status code.
             assertEquals("PUT response code should be 409 when creating a duplicate node", 409, response.getResponseCode());
 
-            // Response message body should be 'DuplicateNode'
-            assertEquals("Response message body should be 'DuplicateNode'", "DuplicateNode", response.getResponseMessage());
+            // Response message body should be 'Conflict'
+            assertEquals("Response message body should be 'Conflict'", "Conflict", response.getResponseMessage());
 
             // Delete the node
             response = delete(node);
@@ -257,14 +257,17 @@ public class CreateContainerNodeTest extends VOSNodeTest
 
             // Add ContainerNode to the VOSpace.
             WebResponse response = put(nodeAB);
-            assertEquals("PUT response code should be 400 for an invalid URI", 400, response.getResponseCode());
+            assertEquals("PUT response code should be 404 for a NodeNotFound",
+                         404, response.getResponseCode());
 
             // Response message body should be 'InvalidURI'
-            assertEquals("Response message body should be 'InvalidURI'", "InvalidURI", response.getResponseMessage());
+            assertEquals("Response message body should be 'Not Found'",
+                         "Not Found", response.getResponseMessage());
 
             // Check that the node wasn't created
             response = get(nodeAB);
-            assertEquals("GET response code should be 404", 404, response.getResponseCode());
+            assertEquals("GET response code should be 404", 404,
+                         response.getResponseCode());
 
             log.info("invalidURIPathFault passed.");
         }
@@ -291,14 +294,17 @@ public class CreateContainerNodeTest extends VOSNodeTest
 
             // Add ContainerNode to the VOSpace.
             WebResponse response = put(node, new InvalidTypeNodeWriter());
-            assertEquals("PUT response code should be 400 for an invalid Node xsi:type", 400, response.getResponseCode());
+            assertEquals("PUT response code should be 400 for an invalid Node xsi:type",
+                         400, response.getResponseCode());
 
             // Response message body should be 'TypeNotSupported'
-            assertEquals("Response message body should be 'TypeNotSupported'", "TypeNotSupported", response.getResponseMessage());
+            assertEquals("Response message body should be 'Bad Request'",
+                         "Bad Request", response.getResponseMessage());
 
             // Check that the node wasn't created
             response = get(node);
-            assertEquals("GET response code should be 404", 404, response.getResponseCode());
+            assertEquals("GET response code should be 404", 404,
+                         response.getResponseCode());
 
             log.info("typeNotSupportedFault passed.");
         }
@@ -363,10 +369,12 @@ public class CreateContainerNodeTest extends VOSNodeTest
 
             // Try and add the Node to the VOSpace.
             WebResponse response = put(nodeAB);
-            assertEquals("PUT response code should be 500 for a invalid Node path", 500, response.getResponseCode());
+            assertEquals("PUT response code should be 404 for a NodeNotFound",
+                         404, response.getResponseCode());
 
             // Response message body should be 'ContainerNotFound'
-            assertEquals("Response message body should be 'ContainerNotFound'", "ContainerNotFound", response.getResponseMessage());
+            assertEquals("Response message body should be 'Not Found'",
+                         "Not Found", response.getResponseMessage());
 
             // Check that the node wasn't created
             response = get(nodeAB);
