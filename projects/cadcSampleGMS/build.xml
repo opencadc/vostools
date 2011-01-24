@@ -148,43 +148,8 @@
   <!-- Directory used to deploy the WAR file -->
   <property name="deployDir" value="/data/test/webapps" />
 
-  <!-- compile the test classes -->
-<target name="test" depends="int-test">
-</target>
-
-
-    <target name="deploy" depends="webapp">
-
-        <!-- Delete old WAR file -->
-        <echo message="Deleting old WAR file ${deployDir}/${project}.war" />
-        <delete file="${deployDir}/${project}.war"/>
-
-        <!-- Delete old delployed directory -->
-        <echo message="Deleting old deployment directory ${deployDir}/${project}/" />
-        <delete dir="${deployDir}/${project}" includeEmptyDirs="true"/>
-
-        <!-- Copy new WAR file to /data/test/webapps -->
-        <echo message="Copying new WAR file to deployment directory..." />
-        <copy file="${build}/webapps/${project}.war" todir="${deployDir}"/>
-
-        <!-- Copy properties files from test/src/resources to ${build}/resources -->
-        <echo message="Copying resource to ${build}/resources..." />
-        <copy todir="${build}/resources">
-            <fileset dir="test/src/resources">
-                <exclude name="log4j.properties"/>
-            </fileset>
-        </copy>
-
-        <!-- wait for Tomcat to unpack the WAR file -->
-        <echo message="Waiting for Tomcat to unpack the WAR file..." />
-        <waitfor>
-            <available file="${deployDir}/${project}/WEB-INF/web.xml"/>
-        </waitfor>
-        <echo message="Deployment to Tomcat complete" />
-    </target>
-
   <!-- Run the Integration/Conformance test suite -->
-  <target name="int-test" depends="compile-test, deploy">
+  <target name="int-test" depends="compile-test,test-deploy">
     <echo message="Running Conformance/Integration tests" />
 
     <!-- Deployment issues... -->
