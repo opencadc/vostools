@@ -137,6 +137,10 @@
     </war>
   </target>
 
+  <target name="test">
+    <echo message="WARNING: no tests implemented." />
+  </target>
+
   <!-- JAR files needed to run the test suite -->
   <property name="lib.jdom" value="${ext.lib}/jdom.jar" />
   <property name="dev.junit" value="${ext.dev}/junit.jar" />
