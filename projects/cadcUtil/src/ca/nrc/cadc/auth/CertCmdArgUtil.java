@@ -76,6 +76,9 @@ import javax.security.auth.Subject;
 import ca.nrc.cadc.util.ArgumentMap;
 
 /**
+ * Certificate Command Line Argument Utility class.
+ * 
+ * 
  * @author zhangsa
  *
  */
@@ -92,6 +95,12 @@ public class CertCmdArgUtil
 
     private static String userHome = System.getProperty("user.home");
 
+    /**
+     * Return a string of the usage about certificate command line arguments.
+     * It's usually used by the usage of a command line client program.
+     * 
+     * @return A string.
+     */
     public static String getCertArgUsage()
     {
         return "    [--certkey=<PEM File of Certificate & Key> | --cert=<Certificate File> --key=<Key File>]";
@@ -120,6 +129,23 @@ public class CertCmdArgUtil
         return SSLUtil.createSubject(certFile, keyFile);
     }
 
+    /**
+     * Called by a commandline client program, it initializes and return a security subject.
+     * 
+     * Logic:
+     * if argument of  "--certkey" is provided, init subject from certkey PEM file;
+     * otherwise,
+     * if --cert --key are provided, init from cert and key files;
+     * otherwise,
+     * if default PEM file exists and is readable, init from it;
+     * otherwise,
+     * if default cert and key files exist and are readable, init from them;
+     * otherwise,
+     * throw IllegalArgumentException runtime exception.
+     * 
+     * @param a ArgumentMap object
+     * @return a Subject
+     */
     public static Subject initSubject(ArgumentMap argMap)
     {
         String strCertKey;
@@ -150,6 +176,7 @@ public class CertCmdArgUtil
             try {
                 subject = initSubjectByPem(strCertKey);
             } catch (IllegalArgumentException ex) {
+                // Default PEM file not exists or is not readable
                 subject = initSubjectByCertKey(strCert, strKey);
             }
         }
