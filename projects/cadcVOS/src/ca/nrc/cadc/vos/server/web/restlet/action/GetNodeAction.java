@@ -160,8 +160,8 @@ public class GetNodeAction extends NodeAction
             // no view specified or found--return the xml representation
             final NodeWriter nodeWriter = new NodeWriter();
             nodeWriter.setStylesheetURL(getStylesheetURL(request));
-            nodeWriter.setResults(getSearch() == null
-                                  ? null : getSearch().getResults());
+            //nodeWriter.setResults(getSearch() == null
+            //                      ? null : getSearch().getResults());
 
             return new NodeActionResult(
                     new NodeOutputRepresentation(node, nodeWriter));

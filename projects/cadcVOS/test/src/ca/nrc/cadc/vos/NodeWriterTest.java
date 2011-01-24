@@ -71,89 +71,45 @@ package ca.nrc.cadc.vos;
 
 import static org.junit.Assert.fail;
 
-import java.io.OutputStreamWriter;
-import java.net.URI;
 import java.util.ArrayList;
 import java.util.List;
 
 import org.apache.log4j.Level;
 import org.apache.log4j.Logger;
-import org.custommonkey.xmlunit.Diff;
-import org.jdom.Element;
-
-import org.jdom.Namespace;
-import org.junit.*;
-import static org.easymock.EasyMock.*;
-import static org.junit.Assert.*;
+import org.junit.After;
+import org.junit.AfterClass;
+import org.junit.Before;
+import org.junit.BeforeClass;
+import org.junit.Test;
 
 import ca.nrc.cadc.util.Log4jInit;
 import ca.nrc.cadc.vos.VOS.NodeBusyState;
+import java.io.ByteArrayInputStream;
+import java.io.ByteArrayOutputStream;
+import java.io.StringWriter;
+import org.junit.Assert;
 
 /**
  *
  * @author jburke
  */
-public class NodeWriterTest extends AbstractCADCVOSTest<NodeWriter>
+public class NodeWriterTest
 {
     private static Logger log = Logger.getLogger(NodeWriterTest.class);
-
-    static
     {
-        Log4jInit.setLevel("ca", Level.INFO);
+        Log4jInit.setLevel("ca.nrc.cadc.vos", Level.INFO);
     }
 
-    static ContainerNode containerNode;
-    static DataNode dataNode;
+    // TODO: make liosts of nodes for a variety of test scenarios
+    ContainerNode containerNode;
+    DataNode dataNode;
 
-
-    public NodeWriterTest()
-    {
-    }
-
-
-    /**
-     * Set and initialize the Test Subject.
-     *
-     * @throws Exception If anything goes awry.
-     */
-    @Override
-    protected void initializeTestSubject() throws Exception
-    {
-        setTestSubject(new NodeWriter());
-    }
-
+    public NodeWriterTest() { }
 
     @BeforeClass
     public static void setUpClass() throws Exception
     {
-        // List of NodeProperty
-        List<NodeProperty> properties = new ArrayList<NodeProperty>();
-        NodeProperty nodeProperty =
-                new NodeProperty("ivo://ivoa.net/vospace/core#description",
-                                 "My award winning images");
-        nodeProperty.setReadOnly(true);
-        properties.add(nodeProperty);
-
-        // List of Node
-        List<Node> nodes = new ArrayList<Node>();
-        nodes.add(new DataNode(
-                new VOSURI("vos://cadc.nrc.ca!vospace/mydir/ngc4323")));
-        nodes.add(new DataNode(
-                new VOSURI("vos://cadc.nrc.ca!vospace/mydir/ngc5796")));
-        nodes.add(new DataNode(
-                new VOSURI("vos://cadc.nrc.ca!vospace/mydir/ngc6801")));
-
-        // ContainerNode
-        containerNode = new ContainerNode(
-                new VOSURI("vos://cadc.nrc.ca!vospace/dir/subdir"));
-        containerNode.setProperties(properties);
-        containerNode.setNodes(nodes);
-
-        // DataNode
-        dataNode = new DataNode(
-                new VOSURI("vos://cadc.nrc.ca!vospace/dir/subdir"));
-        dataNode.setProperties(properties);
-        dataNode.setBusy(NodeBusyState.busyWithWrite);
+        
     }
 
     @AfterClass
@@ -161,147 +117,130 @@ public class NodeWriterTest extends AbstractCADCVOSTest<NodeWriter>
     {
     }
 
+    @Before
+    public void setUp() throws Exception
+    {
+        // List of NodeProperty
+        List<NodeProperty> properties = new ArrayList<NodeProperty>();
+        NodeProperty nodeProperty = new NodeProperty("ivo://ivoa.net/vospace/core#description", "My award winning images");
+        nodeProperty.setReadOnly(true);
+        properties.add(nodeProperty);
+
+        // List of Node
+        List<Node> nodes = new ArrayList<Node>();
+        nodes.add(new DataNode(new VOSURI("vos://cadc.nrc.ca!vospace/dir/ngc4323")));
+        nodes.add(new DataNode(new VOSURI("vos://cadc.nrc.ca!vospace/dir/ngc5796")));
+        nodes.add(new DataNode(new VOSURI("vos://cadc.nrc.ca!vospace/dir/ngc6801")));
+
+        // ContainerNode
+        containerNode = new ContainerNode(new VOSURI("vos://cadc.nrc.ca!vospace/dir"));
+        containerNode.setProperties(properties);
+        containerNode.setNodes(nodes);
+
+        // DataNode
+        dataNode = new DataNode(new VOSURI("vos://cadc.nrc.ca!vospace/dir/somefile"));
+        dataNode.setProperties(properties);
+        dataNode.setBusy(NodeBusyState.busyWithWrite);
+        // TODO: add some standard props here
+    }
+
     @After
     public void tearDown() {
     }
 
-    /**
-     * Test of write method, of class NodeWriter.
-     *
-     * @throws Exception    Any problems should be reported.
-     */
-    @Test
-    public void write_ContainerNode_StringBuilder() throws Exception
+    private void comparePropertyList(List<NodeProperty> p1, List<NodeProperty> p2)
     {
-        log.debug("write_ContainerNode_StringBuilder");
-        StringBuilder sb = new StringBuilder();
-        NodeWriter instance = new NodeWriter();
-        instance.write(containerNode, sb);
-
-        log.debug(sb.toString());
-
-        final String XML = "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n" +
-                           "<node xmlns=\"http://www.ivoa.net/xml/VOSpace/v2" +
-                           ".0\" xmlns:vos=\"http://www.ivoa" +
-                           ".net/xml/VOSpace/v2.0\" xmlns:xsi=\"http://www.w3" +
-                           ".org/2001/XMLSchema-instance\" uri=\"vos://cadc" +
-                           ".nrc.ca!vospace/dir/subdir\" " +
-                           "xsi:type=\"vos:ContainerNode\">\n" +
-                           "  <properties />\n" +
-                           "  <accepts>\n" +
-                           "    <view uri=\"ivo://ivoa" +
-                           ".net/vospace/core#defaultview\" />\n" +
-                           "  </accepts>\n" +
-                           "  <provides>\n" +
-                           "    <view uri=\"ivo://ivoa" +
-                           ".net/vospace/core#defaultview\" />\n" +
-                           "    <view uri=\"ivo://cadc.nrc" +
-                           ".ca/vospace/core#rssview\" />\n" +
-                           "  </provides>\n" +
-                           "  <capabilities />\n" +
-                           "  <nodes>\n" +
-                           "    <node uri=\"vos://cadc.nrc" +
-                           ".ca!vospace/mydir/ngc4323\" " +
-                           "xsi:type=\"vos:DataNode\">\n" +
-                           "      <properties />\n" +
-                           "      <accepts>\n" +
-                           "        <view uri=\"ivo://ivoa" +
-                           ".net/vospace/core#defaultview\" />\n" +
-                           "      </accepts>\n" +
-                           "      <provides>\n" +
-                           "        <view uri=\"ivo://ivoa" +
-                           ".net/vospace/core#defaultview\" />\n" +
-                           "        <view uri=\"ivo://cadc.nrc" +
-                           ".ca/vospace/core#dataview\" />\n" +
-                           "      </provides>\n" +
-                           "      <capabilities />\n" +
-                           "    </node>\n" +
-                           "    <node uri=\"vos://cadc.nrc" +
-                           ".ca!vospace/mydir/ngc5796\" " +
-                           "xsi:type=\"vos:DataNode\">\n" +
-                           "      <properties />\n" +
-                           "      <accepts>\n" +
-                           "        <view uri=\"ivo://ivoa" +
-                           ".net/vospace/core#defaultview\" />\n" +
-                           "      </accepts>\n" +
-                           "      <provides>\n" +
-                           "        <view uri=\"ivo://ivoa" +
-                           ".net/vospace/core#defaultview\" />\n" +
-                           "        <view uri=\"ivo://cadc.nrc" +
-                           ".ca/vospace/core#dataview\" />\n" +
-                           "      </provides>\n" +
-                           "      <capabilities />\n" +
-                           "    </node>\n" +
-                           "    <node uri=\"vos://cadc.nrc" +
-                           ".ca!vospace/mydir/ngc6801\" " +
-                           "xsi:type=\"vos:DataNode\">\n" +
-                           "      <properties />\n" +
-                           "      <accepts>\n" +
-                           "        <view uri=\"ivo://ivoa.net/vospace/core#defaultview\" />\n" +
-                           "      </accepts>\n" +
-                           "      <provides>\n" +
-                           "        <view uri=\"ivo://ivoa.net/vospace/core#defaultview\" />\n" +
-                           "        <view uri=\"ivo://cadc.nrc.ca/vospace/core#dataview\" />\n" +
-                           "      </provides>\n" +
-                           "      <capabilities />\n" +
-                           "    </node>\n" +
-                           "  </nodes>\n" +
-                           "</node>\n"
-                           + "";
-
-        final Diff diff = new Diff(XML, sb.toString());
-        assertTrue("Documents should be similar.", diff.similar());
+        Assert.assertEquals("properties.size()", p1.size(), p2.size());
+        for (NodeProperty np1 : p1)
+        {
+            boolean found = false;
+            for (NodeProperty np2 : p2)
+            {
+                log.debug("looking for " + np1);
+                if ( np1.getPropertyURI().equals(np2.getPropertyURI())
+                        && np1.getPropertyValue().equals(np2.getPropertyValue()) )
+                {
+                    found = true;
+                    break; // inner loop
+                }
+            }
+            Assert.assertTrue("found"+np1, found);
+        }
     }
 
-    @Test
-    public void write_DataNode_StringBuilder() throws Exception
+    private void compareContainerNodes(ContainerNode n1, ContainerNode n2)
     {
-        log.debug("write_DataNode_StringBuilder");
-        StringBuilder sb = new StringBuilder();
-        NodeWriter instance = new NodeWriter();
-        instance.write(dataNode, sb);
-        log.debug(sb.toString());
+        List<Node> cn1 = n1.getNodes();
+        List<Node> cn2 = n2.getNodes();
 
-        final String XML = "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n" +
-                           "<node xmlns=\"http://www.ivoa.net/xml/VOSpace/v2" +
-                           ".0\" xmlns:vos=\"http://www.ivoa" +
-                           ".net/xml/VOSpace/v2.0\" xmlns:xsi=\"http://www.w3" +
-                           ".org/2001/XMLSchema-instance\" uri=\"vos://cadc" +
-                           ".nrc.ca!vospace/dir/subdir\" " +
-                           "xsi:type=\"vos:DataNode\" busy=\"true\">\n" +
-                           "  <properties />\n" +
-                           "  <accepts>\n" +
-                           "    <view uri=\"ivo://ivoa" +
-                           ".net/vospace/core#defaultview\" />\n" +
-                           "  </accepts>\n" +
-                           "  <provides>\n" +
-                           "    <view uri=\"ivo://ivoa" +
-                           ".net/vospace/core#defaultview\" />\n" +
-                           "    <view uri=\"ivo://cadc.nrc.ca/vospace/core#dataview\" />\n" +
-                           "  </provides>\n" +
-                           "  <capabilities />\n" +
-                           "</node>\n" +
-                           "";
+        Assert.assertEquals("nodes.size()", cn1.size(), cn2.size());
+        for (int i=0; i < cn1.size(); i++) // order should be preserved since we use list
+            compareNodes(cn1.get(i), cn2.get(i));
+    }
+    
+    private void compareDataNodes(DataNode n1, DataNode n2)
+    {
+        Assert.assertEquals("busy", n1.getBusy(), n2.getBusy());
+    }
+    
+    private void compareNodes(Node n1, Node n2)
+    {
+        Assert.assertEquals("same class", n1.getClass(), n2.getClass());
+        Assert.assertEquals("VOSURI", n1.getUri(), n2.getUri());
+        Assert.assertEquals("owner", n1.getOwner(), n2.getOwner());
+        comparePropertyList(n1.getProperties(), n2.getProperties());
+        if (n1 instanceof ContainerNode)
+            compareContainerNodes((ContainerNode) n1, (ContainerNode) n2);
+        else if (n1 instanceof DataNode)
+            compareDataNodes((DataNode) n1, (DataNode) n2);
+        else
+            throw new UnsupportedOperationException("no test comparison for node type " + n1.getClass().getName());
 
-        // validate the XML
-        final Diff diff = new Diff(XML, sb.toString());
-        assertTrue("Documents should be similar.", diff.similar());
-
-        log.info("write_DataNode_StringBuilder passed");
     }
 
     /**
      * Test of write method, of class NodeWriter.
      */
     @Test
-    public void write_ContainerNode_OutputStream()
+    public void writeValidContainerNode()
     {
         try
         {
-            log.debug("write_ContainerNode_OutputStream");
+            log.debug("writeValidContainerNode");
+            StringBuilder sb = new StringBuilder();
             NodeWriter instance = new NodeWriter();
-            instance.write(containerNode, System.out);
-            log.info("write_ContainerNode_OutputStream passed");
+            instance.write(containerNode, sb);
+            log.debug(sb.toString());
+
+            // validate the XML
+            NodeReader reader = new NodeReader();
+            Node n2 = reader.read(sb.toString());
+
+            compareNodes(containerNode, n2);
+        }
+        catch (Throwable t)
+        {
+            log.error(t);
+            fail(t.getMessage());
+        }
+    }
+
+    @Test
+    public void writeValidDataNode()
+    {
+        try
+        {
+            log.debug("writeValidDataNode");
+            StringBuilder sb = new StringBuilder();
+            NodeWriter instance = new NodeWriter();
+            instance.write(dataNode, sb);
+            log.debug(sb.toString());
+
+            // validate the XML
+            NodeReader reader = new NodeReader();
+            Node n2 = reader.read(sb.toString());
+
+            compareNodes(dataNode, n2);
         }
         catch (Throwable t)
         {
@@ -314,14 +253,21 @@ public class NodeWriterTest extends AbstractCADCVOSTest<NodeWriter>
      * Test of write method, of class NodeWriter.
      */
     @Test
-    public void write_DataNode_OutputStream()
+    public void writeToOutputStream()
     {
         try
         {
-            log.debug("write_DataNode_OutputStream");
+            log.debug("writeToOutputStream");
             NodeWriter instance = new NodeWriter();
-            instance.write(dataNode, System.out);
-            log.info("write_DataNode_OutputStream passed");
+            ByteArrayOutputStream bos = new ByteArrayOutputStream();
+            instance.write(dataNode, bos);
+            bos.close();
+
+            // validate the XML
+            NodeReader reader = new NodeReader();
+            Node n2 = reader.read(new ByteArrayInputStream(bos.toByteArray()));
+
+            compareNodes(dataNode, n2);
         }
         catch (Throwable t)
         {
@@ -334,34 +280,21 @@ public class NodeWriterTest extends AbstractCADCVOSTest<NodeWriter>
      * Test of write method, of class NodeWriter.
      */
     @Test
-    public void write_ContainerNode_Writer()
+    public void writeToWriter()
     {
         try
         {
-            log.debug("write_ContainerNode_Writer");
+            log.debug("writeToWriter");
             NodeWriter instance = new NodeWriter();
-            instance.write(containerNode, new OutputStreamWriter(System.out, "UTF-8"));
-            log.info("write_ContainerNode_Writer passed");
-        }
-        catch (Throwable t)
-        {
-            log.error(t);
-            fail(t.getMessage());
-        }
-    }
+            StringWriter sw = new StringWriter();
+            instance.write(dataNode, sw);
+            sw.close();
 
-    /**
-     * Test of write method, of class NodeWriter.
-     */
-    @Test
-    public void write_DataNode_Writer()
-    {
-        try
-        {
-            log.debug("write_DataNode_Writer");
-            NodeWriter instance = new NodeWriter();
-            instance.write(dataNode, new OutputStreamWriter(System.out, "UTF-8"));
-            log.info("write_DataNode_Writer passed");
+            // validate the XML
+            NodeReader reader = new NodeReader();
+            Node n2 = reader.read(sw.toString());
+
+            compareNodes(dataNode, n2);
         }
         catch (Throwable t)
         {
@@ -371,314 +304,24 @@ public class NodeWriterTest extends AbstractCADCVOSTest<NodeWriter>
     }
 
     @Test
-    public void getPropertiesElement() throws Exception
+    public void writeMaxDetailContainerNode()
     {
-        final NodeProperty mockNodePropertyOne =
-                createMock(NodeProperty.class);
-        final NodeProperty mockNodePropertyTwo =
-                createMock(NodeProperty.class);
-        final NodeProperty mockNodePropertyThree =
-                createMock(NodeProperty.class);
-        final NodeProperty mockNodePropertyFour =
-                createMock(NodeProperty.class);
-
-        final List<NodeProperty> properties = new ArrayList<NodeProperty>();
-        final Node mockNode = createMock(Node.class);
-
-        properties.add(mockNodePropertyOne);
-        properties.add(mockNodePropertyTwo);
-        properties.add(mockNodePropertyThree);
-        properties.add(mockNodePropertyFour);
-
-        expect(mockNode.getProperties()).andReturn(properties).once();
-
-        expect(mockNodePropertyOne.getPropertyURI()).andReturn("vos:PROP_ONE").
-                once();
-        expect(mockNodePropertyOne.getPropertyValue()).andReturn(
-                "PROP_ONE_VAL").once();
-        expect(mockNodePropertyOne.isReadOnly()).andReturn(true).once();
-
-        expect(mockNodePropertyTwo.getPropertyURI()).andReturn("vos:PROP_TWO").
-                once();
-        expect(mockNodePropertyTwo.getPropertyValue()).andReturn(
-                "PROP_TWO_VAL").once();
-        expect(mockNodePropertyTwo.isReadOnly()).andReturn(false).once();
-
-        expect(mockNodePropertyThree.getPropertyURI()).
-                andReturn("vos:PROP_THREE").once();
-        expect(mockNodePropertyThree.getPropertyValue()).andReturn(
-                "PROP_THREE_VAL").once();
-        expect(mockNodePropertyThree.isReadOnly()).andReturn(true).once();
-
-        expect(mockNodePropertyFour.getPropertyURI()).andReturn("vos:PROP_FOUR").
-                once();
-        expect(mockNodePropertyFour.getPropertyValue()).andReturn(
-                "PROP_FOUR_VAL").once();
-        expect(mockNodePropertyFour.isReadOnly()).andReturn(true).once();
-
-        replay(mockNode, mockNodePropertyOne, mockNodePropertyTwo,
-               mockNodePropertyThree, mockNodePropertyFour);
-        final Element element = getTestSubject().getPropertiesElement(mockNode);
-        assertEquals("Should be four children.", 4,
-                     element.getChildren().size());
-        verify(mockNode, mockNodePropertyOne, mockNodePropertyTwo,
-               mockNodePropertyThree, mockNodePropertyFour);
-
-        // TEST 2
-        reset(mockNode, mockNodePropertyOne, mockNodePropertyTwo,
-              mockNodePropertyThree, mockNodePropertyFour);
-
-        expect(mockNode.getProperties()).andReturn(properties).once();
-
-        expect(mockNodePropertyOne.getPropertyURI()).andReturn("vos:PROP_ONE").
-                once();
-
-        expect(mockNodePropertyTwo.getPropertyURI()).andReturn("vos:PROP_TWO").
-                once();
-        expect(mockNodePropertyTwo.getPropertyValue()).andReturn(
-                "PROP_TWO_VAL").once();
-        expect(mockNodePropertyTwo.isReadOnly()).andReturn(false).once();
-
-        expect(mockNodePropertyThree.getPropertyURI()).
-                andReturn("vos:PROP_THREE").once();
-
-        expect(mockNodePropertyFour.getPropertyURI()).
-                andReturn("vos:PROP_FOUR").once();
-        expect(mockNodePropertyFour.getPropertyValue()).andReturn(
-                "PROP_FOUR_VAL").once();
-        expect(mockNodePropertyFour.isReadOnly()).andReturn(true).once();
-
-        replay(mockNode, mockNodePropertyOne, mockNodePropertyTwo,
-               mockNodePropertyThree, mockNodePropertyFour);
-
-        final Element element2 =
-                getTestSubject().getPropertiesElement(mockNode, "vos:PROP_TWO",
-                                                      "vos:PROP_FOUR");
-        assertEquals("Should be two children.", 2,
-                     element2.getChildren().size());
-        verify(mockNode, mockNodePropertyOne, mockNodePropertyTwo,
-               mockNodePropertyThree, mockNodePropertyFour);
-    }
-
-    @Test
-    public void getNodesElement() throws Exception
-    {
-        final Search.Results mockResults = createMock(Search.Results.class);
-        getTestSubject().setResults(mockResults);
-
-        @SuppressWarnings("unchecked")
-        final List<Node> childNodes = new ArrayList<Node>();
-        final VOSURI mockVOSURI1 = createMock(VOSURI.class);
-        final VOSURI mockVOSURI2 = createMock(VOSURI.class);
-        final VOSURI mockVOSURI3 = createMock(VOSURI.class);
-        final VOSURI mockVOSURI4 = createMock(VOSURI.class);
-        final VOSURI mockVOSURI5 = createMock(VOSURI.class);
-
-        final Node mockChildNode1 = createMock(Node.class);
-        expect(mockChildNode1.getUri()).andReturn(mockVOSURI1).once();
-
-        final Node mockChildNode2 = createMock(Node.class);
-        expect(mockChildNode2.getUri()).andReturn(mockVOSURI2).once();
-
-        final Node mockChildNode3 = createMock(Node.class);
-        expect(mockChildNode3.getUri()).andReturn(mockVOSURI3).once();
-
-        final Node mockChildNode4 = createMock(Node.class);
-        expect(mockChildNode4.getUri()).andReturn(mockVOSURI4).once();
-
-        final Node mockChildNode5 = createMock(Node.class);
-        expect(mockChildNode5.getUri()).andReturn(mockVOSURI5).once();
-
-        final Node mockChildNode6 = createMock(Node.class);
-        final Node mockChildNode7 = createMock(Node.class);
-        final Node mockChildNode8 = createMock(Node.class);
-
-        childNodes.add(mockChildNode1);
-        childNodes.add(mockChildNode2);
-        childNodes.add(mockChildNode3);
-        childNodes.add(mockChildNode4);
-        childNodes.add(mockChildNode5);
-        childNodes.add(mockChildNode6);
-        childNodes.add(mockChildNode7);
-        childNodes.add(mockChildNode8);
-
-        final ContainerNode mockContainerNode =
-                createMock(ContainerNode.class);
-
-        expect(mockContainerNode.getNodes()).andReturn(childNodes).once();
-        expect(mockResults.getLimit()).andReturn(5).times(3);
-        expect(mockResults.getDetail()).andReturn(Search.Results.Detail.MIN).
-                times(10);
-
-        replay(mockContainerNode, mockResults, mockChildNode1, mockVOSURI1,
-               mockChildNode2, mockVOSURI2, mockChildNode3, mockVOSURI3,
-               mockChildNode4, mockVOSURI4, mockChildNode5, mockVOSURI5,
-               mockChildNode6, mockChildNode7, mockChildNode8);
-        final Element element =
-                getTestSubject().getNodesElement(mockContainerNode);
-        verify(mockContainerNode, mockResults, mockChildNode1, mockVOSURI1,
-               mockChildNode2, mockVOSURI2, mockChildNode3, mockVOSURI3,
-               mockChildNode4, mockVOSURI4, mockChildNode5, mockVOSURI5,
-               mockChildNode6, mockChildNode7, mockChildNode8);
-
-        assertEquals("Should only be 5 child elements.", 5,
-                     element.getChildren().size());
-    }
-
-    @Test
-    public void testFormat() throws Exception
-    {
-        final Element mockAcceptsElement = createMock(Element.class);
-        final Element mockProvidesElement = createMock(Element.class);
-        final Element mockPropertiesElement = createMock(Element.class);
-        final Element mockChildNodesElement = createMock(Element.class);
-        final Element mockCapabilitiesElement = createMock(Element.class);
-
-        setTestSubject(new NodeWriter()
+        try
         {
-            /**
-             * Build the properties Element of a Node.
-             *
-             * @param node              Node.             The node to get
-             * properties for.
-             * @param propertyURIFilter URIs to filter on (inclusive).
-             * @return properties Element.
-             */
-            @Override
-            protected Element getPropertiesElement(Node node,
-                                                   String... propertyURIFilter)
-            {
-                return mockPropertiesElement;
-            }
+        
+        // ContainerNode
+        ContainerNode cn = new ContainerNode(new VOSURI("vos://cadc.nrc.ca!vospace/testContainer"));
 
-            /**
-             * Build the nodes Element of a ContainerNode.
-             *
-             * @param node Node.
-             * @return nodes Element.
-             */
-            @Override
-            protected Element getNodesElement(ContainerNode node)
-            {
-                return mockChildNodesElement;
-            }
+        // add mixed child node types
+        List<Node> nodes = new ArrayList<Node>();
+        nodes.add(new DataNode(new VOSURI("vos://cadc.nrc.ca!vospace/testContainer/ngc4323")));
 
-            /**
-             * Build the accepts Element of a Node.
-             *
-             * @param node Node.
-             * @return accepts Element.
-             */
-            @Override
-            protected Element getAcceptsElement(Node node)
-            {
-                return mockAcceptsElement;
-            }
-
-            /**
-             * Build the accepts Element of a Node.
-             *
-             * @param node Node.
-             * @return accepts Element.
-             */
-            @Override
-            protected Element getProvidesElement(Node node)
-            {
-                return mockProvidesElement;
-            }
-
-            /**
-             * Build the capabilities Element of a Node.
-             * <p/>
-             * This option is not supported, but is necessary to appear in
-             * some cases.
-             *
-             * @param node The node to build from.
-             * @return The resulting Element.
-             */
-            @Override
-            protected Element getCapabilitiesElement(Node node)
-            {
-                return mockCapabilitiesElement;
-            }
-        });
-
-        final Element mockNodeElement = createMock(Element.class);
-        Node mockNode = createMock(ContainerNode.class);
-        NodeWriter.NodeElementFormatter nodeElementFormatter =
-                getTestSubject().new NodeElementFormatter(mockNodeElement,
-                                                          mockNode, false);
-
-        final Search.Results mockResults = createMock(Search.Results.class);
-        VOSURI mockVOSURI = createMock(VOSURI.class);
-        String uriString = mockVOSURI.toString();
-        String typeString = mockNode.getClass().getSimpleName();
-        final Namespace namespace =
-                Namespace.getNamespace("xsi",
-                                       "http://www.w3.org/2001/XMLSchema-instance");
-
-        getTestSubject().setResults(mockResults);
-
-        // Expectations
-        expect(mockNode.getUri()).andReturn(mockVOSURI).once();
-        expect(mockResults.getDetail()).andReturn(Search.Results.Detail.MAX).
-                times(2);
-
-        expect(mockNodeElement.addContent(mockAcceptsElement)).andReturn(
-                mockNodeElement).once();
-        expect(mockNodeElement.addContent(mockProvidesElement)).andReturn(
-                mockNodeElement).once();
-        expect(mockNodeElement.addContent(mockCapabilitiesElement)).andReturn(
-                mockNodeElement).once();
-
-        expect(mockNodeElement.setAttribute("uri", uriString)).
-                andReturn(mockNodeElement).once();
-        expect(mockNodeElement.setAttribute("type", "vos:" + typeString,
-                                            namespace)).
-                andReturn(mockNodeElement).once();
-        expect(mockNodeElement.addContent(mockPropertiesElement)).
-                andReturn(mockNodeElement).once();
-        expect(mockNodeElement.addContent(mockChildNodesElement)).
-                andReturn(mockNodeElement).once();
-
-        replay(mockNodeElement, mockChildNodesElement, mockAcceptsElement,
-               mockProvidesElement, mockCapabilitiesElement, mockNode,
-               mockResults, mockVOSURI);
-        nodeElementFormatter.format();
-        verify(mockNodeElement, mockChildNodesElement, mockAcceptsElement,
-               mockProvidesElement, mockCapabilitiesElement, mockNode,
-               mockResults, mockVOSURI);
-
-
-        // TEST 2
-        reset(mockNodeElement, mockResults, mockNode);
-
-        final VOSURI mockDataNodeVOSURI = createMock(VOSURI.class);
-        final Node mockDataNode = createMock(DataNode.class);
-        nodeElementFormatter =
-                getTestSubject().new NodeElementFormatter(mockNodeElement,
-                                                          mockDataNode, false
-                                                          );
-        typeString = mockDataNode.getClass().getSimpleName();
-
-        uriString = mockDataNodeVOSURI.toString();
-        getTestSubject().setResults(mockResults);
-
-        // Expectations
-        expect(mockDataNode.getUri()).andReturn(mockDataNodeVOSURI).once();
-        expect(mockResults.getDetail()).andReturn(
-                Search.Results.Detail.PROPERTIES).times(2);
-
-        expect(mockNodeElement.setAttribute("uri", uriString)).
-                andReturn(mockNodeElement).once();
-        expect(mockNodeElement.setAttribute("type", "vos:" + typeString,
-                                            namespace)).
-                andReturn(mockNodeElement).once();
-        expect(mockNodeElement.addContent(mockPropertiesElement)).
-                andReturn(mockNodeElement).once();
-
-        replay(mockNodeElement, mockDataNode, mockResults, mockDataNodeVOSURI);
-        nodeElementFormatter.format();
-        verify(mockNodeElement, mockDataNode, mockResults, mockDataNodeVOSURI);
+        }
+        catch (Throwable t)
+        {
+            log.error(t);
+            fail(t.getMessage());
+        }
     }
+    
 }

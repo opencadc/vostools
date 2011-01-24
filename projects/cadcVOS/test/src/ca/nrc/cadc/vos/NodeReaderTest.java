@@ -114,16 +114,15 @@ public class NodeReaderTest
     public void tearDown() { }
 
     @Test
-    public void read_ContainerNode_String()
+    public void readContainerNode()
     {
         try
         {
-            log.debug("readContainerNodeString");
+            log.debug("readContainerNode");
             String xml = readFile("ContainerNode.xml");
             NodeReader reader = new NodeReader();
             Node node = reader.read(xml);
             log.debug(node);
-            log.info("readContainerNodeString passed");
         }
         catch (Throwable t)
         {
@@ -133,16 +132,15 @@ public class NodeReaderTest
     }
 
     @Test
-    public void read_DataNode_String()
+    public void readDataNode()
     {
         try
         {
-            log.debug("readDataNodeString");
+            log.debug("readDataNode");
             String xml = readFile("DataNode.xml");
             NodeReader reader = new NodeReader();
             Node node = reader.read(xml);
             log.debug(node);
-            log.info("readDataNodeString passed");
         }
         catch (Throwable t)
         {
@@ -161,7 +159,6 @@ public class NodeReaderTest
             NodeReader reader = new NodeReader();
             Node node = reader.read(new ByteArrayInputStream(xml.getBytes("UTF-8")));
             log.debug(node);
-            log.info("readContainerNodeInputStream passed");
         }
         catch (Throwable t)
         {
@@ -180,7 +177,6 @@ public class NodeReaderTest
             NodeReader reader = new NodeReader();
             Node node = reader.read(new ByteArrayInputStream(xml.getBytes("UTF-8")));
             log.debug(node);
-            log.info("readDataNodeInputStream passed");
         }
         catch (Throwable t)
         {
@@ -199,7 +195,6 @@ public class NodeReaderTest
             NodeReader reader = new NodeReader();
             Node node = reader.read(new StringReader(xml));
             log.debug(node);
-            log.info("readContainerNodeReader passed");
         }
         catch (Throwable t)
         {
@@ -218,7 +213,6 @@ public class NodeReaderTest
             NodeReader reader = new NodeReader();
             Node node = reader.read(new StringReader(xml));
             log.debug(node);
-            log.info("readDataNodeTestReader passed");
         }
         catch (Throwable t)
         {
