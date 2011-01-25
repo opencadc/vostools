@@ -117,12 +117,9 @@ import javax.security.auth.Subject;
 public class VOSpaceClient
 {
     private static Logger log = Logger.getLogger(VOSpaceClient.class);
-    private static final int MAX_FAST_READ = 10;
-    private static final int MAX_SLOW_READ = 15;
-    private static final long FAST_READ = 10L; // milliseconds
-    private static final long SLOW_READ = 100L; // milliseconds
     
     public static final String CR = System.getProperty("line.separator"); // OS independant new line
+    public static final String VOSPACE_SYNC_TRANSFER_ENDPOINT = "/synctrans";
 
     protected String baseUrl;
     private SSLSocketFactory sslSocketFactory;
@@ -179,20 +176,11 @@ public class VOSpaceClient
             switch (responseCode)
             {
             case 201: // valid
-
-                // WHY read into a string buffer and then read with NodeReader?
-                
-                StringBuffer sb = new StringBuffer();
                 InputStream in = connection.getInputStream();
-                BufferedReader br = new BufferedReader(new InputStreamReader(in));
-                String line;
-                while ((line = br.readLine()) != null)
-                {
-                    sb.append(line).append(CR);
-                }
-                in.close();
                 NodeReader nodeReader = new NodeReader();
-                rtnNode = nodeReader.read(sb.toString());
+                rtnNode = nodeReader.read(in);
+                in.close();
+                log.debug("createNode, created node: " + rtnNode);
                 break;
 
             case 500:
@@ -231,7 +219,8 @@ public class VOSpaceClient
                 // TODO: does this actually capture something useful? has it ever happened?
                 // don't we just say that the service responded in a non-compliant way and give up? 
                 InputStream errStrm = connection.getErrorStream();
-                br = new BufferedReader(new InputStreamReader(errStrm));
+                BufferedReader br = new BufferedReader(new InputStreamReader(errStrm));
+                String line;
                 while ((line = br.readLine()) != null)
                 {
                     log.debug(line);
@@ -309,17 +298,9 @@ public class VOSpaceClient
                 case 200: // TODO: check content-type for XML
                     // grab service response body
                     InputStream in = connection.getInputStream();
-                    BufferedReader br = new BufferedReader(new InputStreamReader(in));
-                    StringBuffer sb = new StringBuffer();
-                    String line;
-                    while ((line = br.readLine()) != null)
-                    {
-                        sb.append(line).append(CR);
-                    }
-                    in.close();
-                    log.debug("response from server: \n" + sb.toString());
                     NodeReader nodeReader = new NodeReader();
-                    rtnNode = nodeReader.read(sb.toString());
+                    rtnNode = nodeReader.read(in);
+                    in.close();
                     log.debug("getNode, returned node: " + rtnNode);
                     break;
                 case 500:
@@ -438,246 +419,6 @@ public class VOSpaceClient
         throw new UnsupportedOperationException("Feature under construction.");
     }
 
-    private Transfer createTransferPostXml(Transfer transfer, Transfer.Direction direction)
-    {
-        Transfer rtn = null;
-
-        Job job = new Job();
-        job.setExecutionDuration(0);
-        job.setExecutionPhase(ExecutionPhase.EXECUTING);
-        job.addParameter(new Parameter("target", transfer.getTarget().getUri().toString()));
-        job.addParameter(new Parameter("view", transfer.getView().getURI().toString()));
-
-        if (direction == Transfer.Direction.pushToVoSpace)
-        {
-            job.addParameter(new Parameter("direction", Transfer.Direction.pushToVoSpace.toString()));
-            job.addParameter(new Parameter("protocol", transfer.getProtocols().get(0).getUri()));
-        }
-        else if (direction == Transfer.Direction.pullFromVoSpace)
-        {
-            job.addParameter(new Parameter("direction", Transfer.Direction.pullFromVoSpace.toString()));
-            for (Protocol protocol : transfer.getProtocols())
-            {
-                job.addParameter(new Parameter("protocol", protocol.getUri()));
-            }
-        }
-
-        try
-        {
-            URL url = new URL(this.baseUrl + "/transfers");
-            log.debug(url);
-
-            HttpURLConnection connection = (HttpURLConnection) url.openConnection();
-            if (connection instanceof HttpsURLConnection)
-            {
-                HttpsURLConnection sslConn = (HttpsURLConnection) connection;
-                initHTTPS(sslConn);
-            }
-            connection.setDoOutput(true);
-            connection.setRequestMethod("POST");
-            connection.setRequestProperty("Content-Type", "application/x-www-form-urlencoded");
-            connection.setRequestProperty("Content-Language", "en-US");
-            connection.setUseCaches(false);
-            connection.setDoInput(true);
-            connection.setDoOutput(true);
-            connection.setInstanceFollowRedirects(false);
-
-            OutputStreamWriter out = new OutputStreamWriter(connection.getOutputStream());
-            JobWriter jobWriter = new JobWriter(job);
-            jobWriter.writeTo(out);
-            out.close();
-
-            log.debug(VOSClientUtil.xmlString(job));
-
-            String redirectLocation = getRedirectLocation(connection);
-
-            if (direction == Transfer.Direction.pushToVoSpace)
-            {
-                URL urlRedirect = new URL(redirectLocation);
-                JobReader jobReader = new JobReader();
-                connection = (HttpURLConnection) urlRedirect.openConnection();
-                if (connection instanceof HttpsURLConnection)
-                {
-                    HttpsURLConnection sslConn = (HttpsURLConnection) connection;
-                    initHTTPS(sslConn);
-                }
-                Job jobResult = jobReader.readFrom(connection.getInputStream());
-                log.debug(VOSClientUtil.xmlString(jobResult));
-
-                String strResultUrl = jobResult.getResultsList().get(0).getURL().toString();
-
-                URL urlTransferDetail = new URL(strResultUrl);
-                TransferReader txfReader = new TransferReader();
-                connection = (HttpURLConnection) urlTransferDetail.openConnection();
-                if (connection instanceof HttpsURLConnection)
-                {
-                    HttpsURLConnection sslConn = (HttpsURLConnection) connection;
-                    initHTTPS(sslConn);
-                }
-                rtn = txfReader.readFrom(connection.getInputStream());
-            }
-            else if (direction == Transfer.Direction.pullFromVoSpace)
-            {
-                URL urlRedirect = new URL(redirectLocation);
-                TransferReader txfReader = new TransferReader();connection = (HttpURLConnection) urlRedirect.openConnection();
-                if (connection instanceof HttpsURLConnection)
-                {
-                    HttpsURLConnection sslConn = (HttpsURLConnection) connection;
-                    initHTTPS(sslConn);
-                }
-                rtn = txfReader.readFrom(connection.getInputStream());
-            }
-        }
-        catch (IOException e)
-        {
-            log.debug("failed to read transfer", e);
-            throw new IllegalStateException(e);
-        }
-        catch (ParseException e)
-        {
-            log.debug("failed to read transfer", e);
-            throw new IllegalStateException(e);
-        }
-        catch (JDOMException e)
-        {
-            log.debug("failed to read transfer", e);
-            throw new IllegalStateException(e);
-        }
-        return rtn;
-    }
-
-    private Transfer createTransfer(Transfer transfer, Transfer.Direction direction)
-    {
-        Transfer rtn = null;
-        URL url = null;
-        String strJobUrl;
-        Job job = null;
-        Job jobRtn = null; // the Job returned from server
-        JobReader jobReader = null;
-        try
-        {
-            strJobUrl = postJob(this.baseUrl + "/transfers", "");
-            log.debug("Job URL is: " + strJobUrl);
-            jobReader = new JobReader();
-            URL jobUrl = new URL(strJobUrl);
-            HttpURLConnection conn = (HttpURLConnection) jobUrl.openConnection();
-            if (conn instanceof HttpsURLConnection)
-            {
-                HttpsURLConnection sslConn = (HttpsURLConnection) conn;
-                initHTTPS(sslConn);
-            }
-            job = jobReader.readFrom(conn.getInputStream());
-            log.debug(VOSClientUtil.xmlString(job));
-
-            job.setExecutionDuration(0);
-            job.addParameter(new Parameter("target", transfer.getTarget().getUri().toString()));
-            job.addParameter(new Parameter("view", transfer.getView().getURI().toString()));
-
-            if (direction == Transfer.Direction.pushToVoSpace)
-            {
-                job.addParameter(new Parameter("direction", Transfer.Direction.pushToVoSpace.toString()));
-                job.addParameter(new Parameter("protocol", transfer.getProtocols().get(0).getUri()));
-            }
-            else if (direction == Transfer.Direction.pullFromVoSpace)
-            {
-                job.addParameter(new Parameter("direction", Transfer.Direction.pullFromVoSpace.toString()));
-                for (Protocol protocol : transfer.getProtocols())
-                {
-                    job.addParameter(new Parameter("protocol", protocol.getUri()));
-                }
-            }
-
-            // POST the parameters to the Job.
-            String parameters = getParameters(job);
-            postJob(strJobUrl, parameters);
-            postJob(strJobUrl + "/phase", "PHASE=RUN");
-
-            conn = (HttpURLConnection) jobUrl.openConnection();
-            if (conn instanceof HttpsURLConnection)
-            {
-                HttpsURLConnection sslConn = (HttpsURLConnection) conn;
-                initHTTPS(sslConn);
-            }
-            int code = conn.getResponseCode();
-            if (code != 200)
-                throw new RuntimeException("failed to read transfer job (" + code + "): " + conn.getResponseMessage());
-            jobRtn = jobReader.readFrom(conn.getInputStream());
-            log.debug("current job state: " + jobRtn.getExecutionPhase());
-            int numTry = 0;
-            while (numTry++ < MAX_FAST_READ+MAX_SLOW_READ
-                    && !jobRtn.getExecutionPhase().equals(ExecutionPhase.COMPLETED)
-                    && !jobRtn.getExecutionPhase().equals(ExecutionPhase.ERROR)
-                    && !jobRtn.getExecutionPhase().equals(ExecutionPhase.ABORTED) )
-            {
-                try 
-                {
-                    if (numTry < MAX_FAST_READ)
-                        Thread.sleep(FAST_READ);
-                    else
-                        Thread.sleep(SLOW_READ);
-                }
-                catch(InterruptedException inter) { break; }
-                conn = (HttpURLConnection) jobUrl.openConnection();
-                if (conn instanceof HttpsURLConnection)
-                {
-                    HttpsURLConnection sslConn = (HttpsURLConnection) conn;
-                    initHTTPS(sslConn);
-                }
-                code = conn.getResponseCode();
-                if (code != 200)
-                    throw new RuntimeException("failed to read transfer job (" + code + "): " + conn.getResponseMessage());
-                jobRtn = jobReader.readFrom(conn.getInputStream());
-                log.debug("current job state: " + jobRtn.getExecutionPhase());
-            }
-
-            if (jobRtn != null && jobRtn.getExecutionPhase().equals(ExecutionPhase.COMPLETED))
-            {
-                String strResultUrl = jobRtn.getResultsList().get(0).getURL().toString();
-                log.debug("Result URL: " + strResultUrl);
-
-                URL urlTransferDetail = new URL(strResultUrl);
-                TransferReader txfReader = new TransferReader();
-                conn = (HttpURLConnection) urlTransferDetail.openConnection();
-                if (conn instanceof HttpsURLConnection)
-                {
-                    HttpsURLConnection sslConn = (HttpsURLConnection) conn;
-                    initHTTPS(sslConn);
-                }
-                code = conn.getResponseCode();
-                if (code != 200)
-                    throw new RuntimeException("failed to read transfer description (" + code + "): " + conn.getResponseMessage());
-                rtn = txfReader.readFrom(conn.getInputStream());
-                log.debug(rtn.toXmlString());
-            }
-            else if (jobRtn != null && jobRtn.getExecutionPhase().equals(ExecutionPhase.ERROR))
-            {
-                log.error(jobRtn.toString());
-                throw new RuntimeException("ERROR returned from server: " + jobRtn.getErrorSummary().getSummaryMessage());
-            }
-        }
-        catch (MalformedURLException e)
-        {
-            log.debug("failed to create transfer", e);
-            throw new RuntimeException(e);
-        }
-        catch (IOException e)
-        {
-            log.debug("failed to create transfer", e);
-            throw new RuntimeException(e);
-        }
-        catch (ParseException e)
-        {
-            log.debug("got bad XML from service", e);
-            throw new IllegalStateException(e);
-        }
-        catch (JDOMException e)
-        {
-            log.debug("got bad XML from service", e);
-            throw new RuntimeException(e);
-        }
-        return rtn;
-    }
-
     public Transfer pushToVoSpace(Transfer transfer)
     {
         return createTransfer(transfer, Transfer.Direction.pushToVoSpace);
@@ -686,44 +427,6 @@ public class VOSpaceClient
     public Transfer pullFromVoSpace(Transfer transfer)
     {
         return createTransfer(transfer, Transfer.Direction.pullFromVoSpace);
-    }
-
-    /**
-     * @param connection
-     * @return
-     * @throws IOException 
-     */
-    private String getRedirectLocation(HttpURLConnection connection) throws IOException
-    {
-        // Check response code from server, should be 303.
-        String responseMessage = connection.getResponseMessage();
-        int responseCode = connection.getResponseCode();
-        log.debug("responseCode: " + responseCode);
-        if (responseCode != HttpURLConnection.HTTP_SEE_OTHER)
-        {
-            log.error(responseMessage + ". HTTP Code: " + responseCode);
-            InputStream inStrm = connection.getInputStream();
-            BufferedReader br = new BufferedReader(new InputStreamReader(inStrm));
-            String line;
-            while ((line = br.readLine()) != null)
-            {
-                log.debug(line);
-            }
-            inStrm.close();
-
-            String error = "Request returned non 303 response code " + responseCode;
-            throw new IllegalStateException(error);
-        }
-
-        // Get the redirect Location header.
-        String location = connection.getHeaderField("Location");
-        log.debug("Location: " + location);
-        if (location == null || location.length() == 0)
-        {
-            String error = "Response missing Location header";
-            throw new IllegalStateException(error);
-        }
-        return location;
     }
 
     /**
@@ -914,9 +617,104 @@ public class VOSpaceClient
         this.baseUrl = baseUrl;
     }
 
+    private Transfer createTransfer(Transfer transfer, Transfer.Direction direction)
+    {
+        Transfer rtn = null;
+        try
+        {            
+            // Assemble the Job parameters from the Transfer.
+            StringBuilder sb = new StringBuilder();
+            sb.append("target=");
+            sb.append(NetUtil.encode(transfer.getTarget().getUri().toString()));
+            if (direction == Transfer.Direction.pushToVoSpace)
+            {
+                sb.append("&direction=");
+                sb.append(NetUtil.encode(Transfer.Direction.pushToVoSpace.toString()));
+                sb.append("&protocol=");
+                sb.append(NetUtil.encode(transfer.getProtocols().get(0).getUri()));
+            }
+            else if (direction == Transfer.Direction.pullFromVoSpace)
+            {
+                sb.append("&direction=");
+                sb.append(NetUtil.encode(Transfer.Direction.pullFromVoSpace.toString()));
+                for (Protocol protocol : transfer.getProtocols())
+                {
+                    sb.append("&protocol=");
+                    sb.append(NetUtil.encode(protocol.getUri()));
+                }
+            }
+            
+            // POST the Job and get the redirect location.
+            String strJobUrl = postJob(this.baseUrl + VOSPACE_SYNC_TRANSFER_ENDPOINT, sb.toString());
+            log.debug("Job URL is: " + strJobUrl);
+            
+            // GET the redirect, which runs the Job and returns the Job XML.
+            URL jobUrl = new URL(strJobUrl);
+            HttpURLConnection conn = (HttpURLConnection) jobUrl.openConnection();
+            if (conn instanceof HttpsURLConnection)
+            {
+                HttpsURLConnection sslConn = (HttpsURLConnection) conn;
+                initHTTPS(sslConn);
+            }
+            int code = conn.getResponseCode();
+            if (code != 200)
+                throw new RuntimeException("failed to read transfer job (" + code + "): " + conn.getResponseMessage());
+            
+            Job job = new JobReader().readFrom(conn.getInputStream());
+            log.debug("current job state: " + job.getExecutionPhase());
+            log.debug(VOSClientUtil.xmlString(job));
+
+            if (job != null && job.getExecutionPhase().equals(ExecutionPhase.COMPLETED))
+            {
+                String strResultUrl = job.getResultsList().get(0).getURL().toString();
+                log.debug("Result URL: " + strResultUrl);
+
+                URL urlTransferDetail = new URL(strResultUrl);
+                TransferReader txfReader = new TransferReader();
+                conn = (HttpURLConnection) urlTransferDetail.openConnection();
+                if (conn instanceof HttpsURLConnection)
+                {
+                    HttpsURLConnection sslConn = (HttpsURLConnection) conn;
+                    initHTTPS(sslConn);
+                }
+                code = conn.getResponseCode();
+                if (code != 200)
+                    throw new RuntimeException("failed to read transfer description (" + code + "): " + conn.getResponseMessage());
+                rtn = txfReader.readFrom(conn.getInputStream());
+                log.debug(rtn.toXmlString());
+            }
+            else if (job != null && job.getExecutionPhase().equals(ExecutionPhase.ERROR))
+            {
+                log.error(job.toString());
+                throw new RuntimeException("ERROR returned from server: " + job.getErrorSummary().getSummaryMessage());
+            }
+        }
+        catch (MalformedURLException e)
+        {
+            log.debug("failed to create transfer", e);
+            throw new RuntimeException(e);
+        }
+        catch (IOException e)
+        {
+            log.debug("failed to create transfer", e);
+            throw new RuntimeException(e);
+        }
+        catch (ParseException e)
+        {
+            log.debug("got bad XML from service", e);
+            throw new IllegalStateException(e);
+        }
+        catch (JDOMException e)
+        {
+            log.debug("got bad XML from service", e);
+            throw new RuntimeException(e);
+        }
+        return rtn;
+    }
+
     private String postJob(String strUrl, String strParam) throws MalformedURLException, IOException
     {
-        // Async connection to the tapServer.
+        // Connection to the tapServer.
         URL url = new URL(strUrl);
         HttpURLConnection connection = (HttpURLConnection) url.openConnection();
         if (connection instanceof HttpsURLConnection)
@@ -944,23 +742,42 @@ public class VOSpaceClient
         return redirectLocation;
     }
 
-    private String getParameters(Job job)
+    /**
+     * @param connection
+     * @return
+     * @throws IOException 
+     */
+    private String getRedirectLocation(HttpURLConnection connection) throws IOException
     {
-        final StringBuilder sb = new StringBuilder();
-        //sb.append("REQUEST=doQuery");
-        sb.append("&RUNID=").append(job.getID());
-        List<Parameter> parameters = job.getParameterList();
-        for (Parameter parameter : parameters)
+        // Check response code from server, should be 303.
+        String responseMessage = connection.getResponseMessage();
+        int responseCode = connection.getResponseCode();
+        log.debug("responseCode: " + responseCode);
+        if (responseCode != HttpURLConnection.HTTP_SEE_OTHER)
         {
-            if (parameter.getName() != null && parameter.getValue() != null)
+            log.error(responseMessage + ". HTTP Code: " + responseCode);
+            InputStream inStrm = connection.getInputStream();
+            BufferedReader br = new BufferedReader(new InputStreamReader(inStrm));
+            String line;
+            while ((line = br.readLine()) != null)
             {
-                sb.append("&");
-                sb.append(NetUtil.encode(parameter.getName()));
-                sb.append("=");
-                sb.append(NetUtil.encode(parameter.getValue()));
+                log.debug(line);
             }
+            inStrm.close();
+
+            String error = "Request returned non 303 response code " + responseCode;
+            throw new IllegalStateException(error);
         }
-        return sb.toString();
+
+        // Get the redirect Location header.
+        String location = connection.getHeaderField("Location");
+        log.debug("Location: " + location);
+        if (location == null || location.length() == 0)
+        {
+            String error = "Response missing Location header";
+            throw new IllegalStateException(error);
+        }
+        return location;
     }
 
     private void initHTTPS(HttpsURLConnection sslConn)
