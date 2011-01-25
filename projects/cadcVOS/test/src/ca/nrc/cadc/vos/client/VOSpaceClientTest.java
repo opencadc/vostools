@@ -98,8 +98,11 @@ import ca.nrc.cadc.vos.View;
 import java.net.URI;
 
 /**
+ * Base VOSpaceClient test code. This test code requires a running VOSpace service
+ * and (probably) valid X509 proxy certficates. TODO: provide this as an integration
+ * test  or rewrite it using a mock http layer (sounds hard).
+ * 
  * @author zhangsa
- *
  */
 //@Ignore("Broken - Please fix soon.\n" +
 //        "jenkinsd 2011.01.17")

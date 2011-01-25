@@ -193,7 +193,6 @@
           </classpath>
           <formatter type="plain" usefile="false"/>
           <test name="ca.nrc.cadc.vos.CADCVOSTestSuite"/>
-          <test name="ca.nrc.cadc.vos.client.VOSpaceClientTest"/>
         </junit>
     </target>
     
