@@ -87,15 +87,19 @@ import ca.nrc.cadc.vos.VOS.NodeBusyState;
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
 import java.io.StringWriter;
+import java.net.URISyntaxException;
 import org.junit.Assert;
 
 /**
- *
+ * Test read-write of Nodes using the NodeReader and NodeWriter. Every test here
+ * performs a round trip: create node, write as xml, read with xml schema
+ * validation enabled, compare to original node.
+ * 
  * @author jburke
  */
-public class NodeWriterTest
+public class NodeReaderWriterTest
 {
-    private static Logger log = Logger.getLogger(NodeWriterTest.class);
+    private static Logger log = Logger.getLogger(NodeReaderWriterTest.class);
     {
         Log4jInit.setLevel("ca.nrc.cadc.vos", Level.INFO);
     }
@@ -104,7 +108,7 @@ public class NodeWriterTest
     ContainerNode containerNode;
     DataNode dataNode;
 
-    public NodeWriterTest() { }
+    public NodeReaderWriterTest() { }
 
     @BeforeClass
     public static void setUpClass() throws Exception
@@ -290,6 +294,8 @@ public class NodeWriterTest
             instance.write(dataNode, sw);
             sw.close();
 
+            log.debug(sw.toString());
+
             // validate the XML
             NodeReader reader = new NodeReader();
             Node n2 = reader.read(sw.toString());
@@ -308,13 +314,23 @@ public class NodeWriterTest
     {
         try
         {
-        
-        // ContainerNode
-        ContainerNode cn = new ContainerNode(new VOSURI("vos://cadc.nrc.ca!vospace/testContainer"));
+            // ContainerNode
+            Node n = createDetailedNode();
 
-        // add mixed child node types
-        List<Node> nodes = new ArrayList<Node>();
-        nodes.add(new DataNode(new VOSURI("vos://cadc.nrc.ca!vospace/testContainer/ngc4323")));
+            // write it
+            NodeWriter instance = new NodeWriter();
+            StringWriter sw = new StringWriter();
+            instance.write(n, sw);
+            sw.close();
+
+            log.debug(sw.toString());
+
+            // validate the XML
+            NodeReader reader = new NodeReader();
+            Node n2 = reader.read(sw.toString());
+
+            compareNodes(n, n2);
+
 
         }
         catch (Throwable t)
@@ -323,5 +339,39 @@ public class NodeWriterTest
             fail(t.getMessage());
         }
     }
-    
+
+    // samle node with lots of detail in it
+    private ContainerNode createDetailedNode() throws URISyntaxException
+    {
+        // ContainerNode
+        ContainerNode cn = new ContainerNode(new VOSURI("vos://cadc.nrc.ca!vospace/testContainer"));
+
+        Node n;
+        List<NodeProperty> properties;
+
+        // add a DataNode with some props
+        n = new DataNode(new VOSURI("vos://cadc.nrc.ca!vospace/testContainer/ngc4323"));
+        properties = new ArrayList<NodeProperty>();
+        properties.add(new NodeProperty("ivo://ivoa.net/vospace/core#size", "123"));
+        properties.add(new NodeProperty("ivo://ivoa.net/vospace/core#content-type", "image/fits"));
+        n.setProperties(properties);
+        cn.getNodes().add(n);
+
+        // add a ContainerNode with some props
+        ContainerNode cn2 = new ContainerNode(new VOSURI("vos://cadc.nrc.ca!vospace/testContainer/foo"));
+        properties = new ArrayList<NodeProperty>();
+        properties.add(new NodeProperty("ivo://ivoa.net/vospace/core#read-group", "ivo://cadc.nrc.ca/gms/groups#bar"));
+        cn2.setProperties(properties);
+        cn.getNodes().add(cn2);
+
+        // add another DataNode below
+        n = new DataNode(new VOSURI("vos://cadc.nrc.ca!vospace/testContainer/baz"));
+        properties = new ArrayList<NodeProperty>();
+        properties.add(new NodeProperty("ivo://ivoa.net/vospace/core#size", "123"));
+        properties.add(new NodeProperty("ivo://ivoa.net/vospace/core#content-type", "text/plain"));
+        n.setProperties(properties);
+        cn2.getNodes().add(n);
+
+        return cn;
+    }
 }

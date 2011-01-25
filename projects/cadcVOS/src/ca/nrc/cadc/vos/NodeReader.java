@@ -257,16 +257,16 @@ public class NodeReader
 //    }
 
     /**
-     * Constructs a ContainerNode from the given root Element of the
+     * Constructs a ContainerNode from the given Element of the
      * Document, Document Namespace, and Node path.
      *
-     * @param root Root Element of the Document.
+     * @param el a node Element of the Document.
      * @param namespace Document Namespace.
      * @param uri Node uri attribute.
      * @return ContainerNode
      * @throws NodeParsingException if there is an error parsing the XML.
      */
-    protected Node buildContainerNode(Element root, Namespace namespace, String uri)
+    protected Node buildContainerNode(Element el, Namespace namespace, String uri)
         throws NodeParsingException
     {
         // Instantiate a ContainerNode class
@@ -283,10 +283,10 @@ public class NodeReader
         }
 
         // properties element
-        node.setProperties(getProperties(root, namespace));
+        node.setProperties(getProperties(el, namespace));
 
         // nodes element
-        Element nodes = root.getChild("nodes", namespace);
+        Element nodes = el.getChild("nodes", namespace);
         if (nodes == null)
         {
             String error = "nodes element not found in node";
@@ -305,17 +305,27 @@ public class NodeReader
                 log.error(error);
                 throw new NodeParsingException(error);
             }
-            // TODO: create DataNode for now, recurse later?
-            try
+            // Get the xsi:type attribute which defines the Node class
+            String xsiType = childNode.getAttributeValue("type", xsiNamespace);
+            if (xsiType == null)
             {
-                node.getNodes().add(new DataNode(new VOSURI(childNodeUri)));
+                String error = "xsi:type attribute not found in node element " + uri;
+                log.error(error);
+                throw new NodeParsingException(error);
             }
-            catch (URISyntaxException e)
-            {
-                String error = "invalid child node uri " + childNodeUri;
-                log.error(error, e);
-                throw new NodeParsingException(error, e);
-            }
+
+            // Split the type attribute into namespace and Node type
+            String[] types = xsiType.split(":");
+            String type = types[1];
+            log.debug("node type: " + type);
+
+            if (type.equals(ContainerNode.class.getSimpleName()))
+                node.getNodes().add( buildContainerNode(childNode, namespace, childNodeUri) );
+            else if (type.equals(DataNode.class.getSimpleName()))
+                node.getNodes().add( buildDataNode(childNode, namespace, childNodeUri) );
+            else
+                throw new NodeParsingException("unsupported node type " + type);
+            
             log.debug("added child node: " + childNodeUri);
         }
 
@@ -326,13 +336,13 @@ public class NodeReader
      * Constructs a DataNode from the given root Element of the
      * Document, Document Namespace, and Node path.
      *
-     * @param root Root Element of the Document.
+     * @param el a node Element in the Document.
      * @param namespace Document Namespace.
      * @param uri Node uri attribute.
      * @return DataNode.
      * @throws NodeParsingException if there is an error parsing the XML.
      */
-    protected Node buildDataNode(Element root, Namespace namespace, String uri)
+    protected Node buildDataNode(Element el, Namespace namespace, String uri)
         throws NodeParsingException
     {
         // Instantiate a DataNode class
@@ -349,7 +359,7 @@ public class NodeReader
         }
 
         // busy attribute
-        String busy = root.getAttributeValue("busy");
+        String busy = el.getAttributeValue("busy");
         if (busy == null)
         {
             String error = "busy element not found in DataNode";
@@ -373,7 +383,7 @@ public class NodeReader
         log.debug("busy: " + isBusy);
 
         // properties element
-        node.setProperties(getProperties(root, namespace));
+        node.setProperties(getProperties(el, namespace));
 
         // accepts element
 //        TODO: add accepts element
@@ -389,16 +399,16 @@ public class NodeReader
     /**
      * Builds a List of NodeProperty objects from the Document property Elements.
      *
-     * @param root Root Element of the Document.
+     * @param el a node Element of the Document.
      * @param namespace Document Namespace.
      * @return List of NodeProperty objects.
      * @throws NodeParsingException if there is an error parsing the XML.
      */
-    protected List<NodeProperty> getProperties(Element root, Namespace namespace)
+    protected List<NodeProperty> getProperties(Element el, Namespace namespace)
         throws NodeParsingException
     {
         // properties element
-        Element properties = root.getChild("properties", namespace);
+        Element properties = el.getChild("properties", namespace);
         if (properties == null)
         {
             String error = "properties element not found";

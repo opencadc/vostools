@@ -115,9 +115,8 @@ public class NodeWriter
     
     private String stylesheetURL = null;
 
-    public NodeWriter()
-    {}
-    
+    public NodeWriter() { }
+
     public void setStylesheetURL(String stylesheetURL)
     {
         this.stylesheetURL = stylesheetURL;
@@ -171,65 +170,12 @@ public class NodeWriter
      */
     public void write(Node node, Writer writer) throws IOException
     {
-        if (node instanceof ContainerNode)
-            write((ContainerNode)node, writer);
+        Element root = getRootElement(node);
         if (node instanceof DataNode)
-            write((DataNode)node, writer);
-    }
-    
-    /**
-     * Write a ContainerNode to a Writer.
-     *
-     * @param node Node to write.
-     * @param writer Writer to write to.
-     * @throws IOException if the writer fails to write.
-     */
-    protected void write(ContainerNode node, Writer writer) throws IOException
-    {
-        // Create the root node element
-        Element root = getRootElement(node);
-
-        // properties element
-        root.addContent(getPropertiesElement(node));
-        
-        // accepts element
-        root.addContent(getAcceptsElement(node));
-        
-        // provides element
-        root.addContent(getProvidesElement(node));
-        
-        // nodes element
-        root.addContent(getNodesElement(node));
-
-        // write out the Document
-        write(root, writer);
-    }
-
-    /**
-     * Write a DataNode to a Writer.
-     *
-     * @param node Node to write.
-     * @param writer Writer to write to.
-     * @throws IOException if the writer fails to write.
-     */
-    protected void write(DataNode node, Writer writer) throws IOException
-    {
-        // Create the root node element
-        Element root = getRootElement(node);
-
-        // busy attribute
-        root.setAttribute("busy", (node.getBusy().equals(NodeBusyState.notBusy) ? "false" : "true"));
-
-        // properties element
-        root.addContent(getPropertiesElement(node));
-        
-        // accepts element
-        root.addContent(getAcceptsElement(node));
-        
-        // provides element
-        root.addContent(getProvidesElement(node));
-
-        // write out the Document
+        {
+            DataNode dn = (DataNode) node;
+            root.setAttribute("busy", (dn.getBusy().equals(NodeBusyState.notBusy) ? "false" : "true"));
+        }
         write(root, writer);
     }
 
@@ -242,12 +188,36 @@ public class NodeWriter
     protected Element getRootElement(Node node)
     {
         // Create the root element (node).
-        Element root = new Element("node", defaultNamespace);
+        Element root = getNodeElement(node);
         root.addNamespaceDeclaration(vosNamespace);
         root.addNamespaceDeclaration(xsiNamespace);
-        root.setAttribute("uri", node.getUri().toString());
-        root.setAttribute("type", "vos:" + node.getClass().getSimpleName(), xsiNamespace);
         return root;
+    }
+
+    /**
+     * Builds a single node element.
+     *
+     * @param node
+     * @return
+     */
+    protected Element getNodeElement(Node node)
+    {
+        Element ret = new Element("node", defaultNamespace);
+        ret.setAttribute("uri", node.getUri().toString());
+        ret.setAttribute("type", "vos:" + node.getClass().getSimpleName(), xsiNamespace);
+
+        Element props = getPropertiesElement(node);
+        ret.addContent(props);
+
+        ret.addContent(getAcceptsElement(node));
+        ret.addContent(getProvidesElement(node));
+
+        if (node instanceof ContainerNode)
+        {
+            ContainerNode cn = (ContainerNode) node;
+            ret.addContent(getNodesElement(cn));
+        }
+        return ret;
     }
 
     /**
@@ -258,16 +228,16 @@ public class NodeWriter
      */
     protected Element getPropertiesElement(Node node)
     {
-        Element properties = new Element("properties", defaultNamespace);
+        Element ret = new Element("properties", defaultNamespace);
         for (NodeProperty nodeProperty : node.getProperties())
         {
             Element property = new Element("property", defaultNamespace);
             property.setAttribute("uri", nodeProperty.getPropertyURI());
             property.setText(nodeProperty.getPropertyValue());
             property.setAttribute("readOnly", (nodeProperty.isReadOnly() ? "true" : "false"));
-            properties.addContent(property);
+            ret.addContent(property);
         }
-        return properties;
+        return ret;
     }
     
     /**
@@ -306,6 +276,7 @@ public class NodeWriter
         return provides;
     }
 
+    
     /**
      * Build the nodes Element of a ContainerNode.
      * 
@@ -317,8 +288,7 @@ public class NodeWriter
         Element nodes = new Element("nodes", defaultNamespace);
         for (Node childNode : node.getNodes())
         {
-            Element nodeElement = new Element("node", defaultNamespace);
-            nodeElement.setAttribute("uri", childNode.getUri().toString());
+            Element nodeElement = getNodeElement(childNode);
             nodes.addContent(nodeElement);
         }
         return nodes;

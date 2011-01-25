@@ -89,7 +89,6 @@ import ca.nrc.cadc.vos.ContainerNode;
 import ca.nrc.cadc.vos.DataNode;
 import ca.nrc.cadc.vos.Node;
 import ca.nrc.cadc.vos.NodeProperty;
-import ca.nrc.cadc.vos.NodeWriterTest;
 import ca.nrc.cadc.vos.Protocol;
 import ca.nrc.cadc.vos.TestUtil;
 import ca.nrc.cadc.vos.Transfer;
@@ -97,7 +96,6 @@ import ca.nrc.cadc.vos.VOS;
 import ca.nrc.cadc.vos.VOSURI;
 import ca.nrc.cadc.vos.View;
 import java.net.URI;
-import javax.net.ssl.SSLSocketFactory;
 
 /**
  * @author zhangsa
@@ -107,7 +105,7 @@ import javax.net.ssl.SSLSocketFactory;
 //        "jenkinsd 2011.01.17")
 public class VOSpaceClientTest
 {
-    private static Logger log = Logger.getLogger(NodeWriterTest.class);
+    private static Logger log = Logger.getLogger(VOSpaceClientTest.class);
     private static String ROOT_NODE;
     private static String VOS_URI =  "vos://cadc.nrc.ca!vospace";
     private static String TEST_CERT ="proxy.crt";
@@ -122,7 +120,7 @@ public class VOSpaceClientTest
     @BeforeClass
     public static void setUpBeforeClass() throws Exception
     {
-        Log4jInit.setLevel("ca.nrc.cadc.vos.client", Level.DEBUG);
+        Log4jInit.setLevel("ca.nrc.cadc.vos.client", Level.INFO);
         System.setProperty(BasicX509TrustManager.class.getName() + ".trust",
                            "true");
 

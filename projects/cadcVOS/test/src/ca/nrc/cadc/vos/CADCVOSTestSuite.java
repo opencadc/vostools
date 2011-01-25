@@ -80,8 +80,7 @@ import ca.nrc.cadc.vos.server.ViewsTest;
 @RunWith(Suite.class)
 @Suite.SuiteClasses(
         {
-                NodeReaderTest.class,
-                NodeWriterTest.class,
+                NodeReaderWriterTest.class,
                 NodeResourceTest.class,
                 VOSpaceAuthorizerTest.class,
                 FileSizeTypeTest.class,

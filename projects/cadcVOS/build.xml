@@ -181,8 +181,6 @@
 
     <!-- Run the test suite -->
     <target name="test" depends="compile,compile-test">
-        <copy file="test/src/resources/ContainerNode.xml" todir="${build}/test/class"/>
-        <copy file="test/src/resources/DataNode.xml" todir="${build}/test/class"/>
         <copy file="test/src/resources/Views.properties" todir="${build}/test/class"/>
         <junit printsummary="yes" haltonfailure="yes" fork="yes">
           <classpath>
@@ -231,8 +229,7 @@
               <pathelement path="${jars}:${testingJars}"/>
           </classpath>
           <formatter type="plain" usefile="false"/>
-          <test name="ca.nrc.cadc.vos.NodeReaderTest"/>
-          <test name="ca.nrc.cadc.vos.NodeWriterTest"/>
+          <test name="ca.nrc.cadc.vos.NodeReaderWriterTest"/>
         </junit>
 
     </target>
