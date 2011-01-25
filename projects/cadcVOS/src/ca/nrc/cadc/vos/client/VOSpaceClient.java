@@ -218,7 +218,10 @@ public class VOSpaceClient
             case 401:
                 // The service SHALL throw a HTTP 401 status code including PermissionDenied fault in the entity body
                 // if the user does not have permissions to perform the operation
-                throw new AccessControlException(responseMessage);
+                String msg = responseMessage;
+                if (msg == null)
+                    msg = "permission denied";
+                throw new AccessControlException(msg);
 
             case 404:
                 // handle server response when parent (container) does not exist
@@ -299,36 +302,41 @@ public class VOSpaceClient
 
             String responseMessage = connection.getResponseMessage();
             responseCode = connection.getResponseCode();
+            
+
             switch (responseCode)
             {
-            case 200: // valid
-                InputStream in = connection.getInputStream();
-
-                BufferedReader br = new BufferedReader(new InputStreamReader(in));
-                StringBuffer sb = new StringBuffer();
-                String line;
-                while ((line = br.readLine()) != null)
-                {
-                    sb.append(line).append(CR);
-                }
-                in.close();
-
-                log.debug("response from server: \n" + sb.toString());
-
-                NodeReader nodeReader = new NodeReader();
-                rtnNode = nodeReader.read(sb.toString());
-                log.debug("getNode, returned node: " + rtnNode);
-                break;
-            case 500:
-                // The service SHALL throw a HTTP 500 status code including an InternalFault fault in the entity-body if the operation fails
-            case 401:
-                // The service SHALL throw a HTTP 401 status code including a PermissionDenied fault in the entity-body if the user does not have permissions to perform the operation
-            case 404:
-                // The service SHALL throw a HTTP 404 status code including a NodeNotFound fault in the entity-body if the target Node does not exist
-                throw new NodeNotFoundException("not found: " + path);
-            default:
-                log.error(responseMessage + ". HTTP Code: " + responseCode);
-                throw new IllegalArgumentException("Error returned.  HTTP Response Code: " + responseCode);
+                case 200: // TODO: check content-type for XML
+                    // grab service response body
+                    InputStream in = connection.getInputStream();
+                    BufferedReader br = new BufferedReader(new InputStreamReader(in));
+                    StringBuffer sb = new StringBuffer();
+                    String line;
+                    while ((line = br.readLine()) != null)
+                    {
+                        sb.append(line).append(CR);
+                    }
+                    in.close();
+                    log.debug("response from server: \n" + sb.toString());
+                    NodeReader nodeReader = new NodeReader();
+                    rtnNode = nodeReader.read(sb.toString());
+                    log.debug("getNode, returned node: " + rtnNode);
+                    break;
+                case 500:
+                    // The service SHALL throw a HTTP 500 status code including an InternalFault fault in the entity-body if the operation fails
+                    throw new RuntimeException("service failed: " + responseMessage);
+                case 401:
+                    // The service SHALL throw a HTTP 401 status code including a PermissionDenied fault in the entity-body if the user does not have permissions to perform the operation
+                    String msg = responseMessage;
+                    if (msg == null)
+                        msg = "permission denied";
+                    throw new AccessControlException(msg);
+                case 404:
+                    // The service SHALL throw a HTTP 404 status code including a NodeNotFound fault in the entity-body if the target Node does not exist
+                    throw new NodeNotFoundException("not found: " + path);
+                default:
+                    log.error(responseMessage + ". HTTP Code: " + responseCode);
+                    throw new IllegalArgumentException("Error returned.  HTTP Response Code: " + responseCode);
             }
         }
         catch (IOException ex)
@@ -353,7 +361,7 @@ public class VOSpaceClient
         try
         {
             URL url = new URL(this.baseUrl + "/nodes/" + node.getPath());
-            log.debug("setNode(), URL=" + url);
+            log.debug("setNode: " + node);
             HttpURLConnection connection = (HttpURLConnection) url.openConnection();
             if (connection instanceof HttpsURLConnection)
             {
@@ -378,36 +386,40 @@ public class VOSpaceClient
 
             switch (responseCode)
             {
-            case 200: // valid
-                InputStream in = connection.getInputStream();
-                NodeReader nodeReader = new NodeReader();
-                rtnNode = nodeReader.read(in);
-                in.close();
-                break;
-            case 500:
-                // The service SHALL throw a HTTP 500 status code including an InternalFault fault in the entity-body if the operation fails
-            case 409:
-            case 404:
-                // The service SHALL throw a HTTP 404 status code including a NodeNotFound fault in the entity-body if the target Node does not exist
-            case 400:
-                // The service SHALL throw a HTTP 400 status code including an InvalidArgument fault in the entity-body if a specified property value is invalid 
-            case 401:
-                // The service SHALL throw a HTTP 401 status code including a PermissionDenied fault in the entity-body 
-                // if the request attempts to modify a readonly Property
+                case 200: // valid
+                    InputStream in = connection.getInputStream();
+                    NodeReader nodeReader = new NodeReader();
+                    rtnNode = nodeReader.read(in);
+                    in.close();
+                    break;
+                case 500:
+                    // The service SHALL throw a HTTP 500 status code including an InternalFault fault in the entity-body if the operation fails
+                case 409:
+                case 404:
+                    // The service SHALL throw a HTTP 404 status code including a NodeNotFound fault in the entity-body if the target Node does not exist
+                case 400:
+                    // The service SHALL throw a HTTP 400 status code including an InvalidArgument fault in the entity-body if a specified property value is invalid
+                case 401:
+                    // The service SHALL throw a HTTP 401 status code including a PermissionDenied fault in the entity-body
+                    // if the request attempts to modify a readonly Property
 
-                // The service SHALL throw a HTTP 401 status code including a PermissionDenied fault in the entity-body 
-                // if the user does not have permissions to perform the operation
-            default:
-                log.error(responseMessage + ". HTTP Code: " + responseCode);
-                InputStream errStrm = connection.getErrorStream();
-                BufferedReader br = new BufferedReader(new InputStreamReader(errStrm));
-                String line;
-                while ((line = br.readLine()) != null)
-                {
-                    log.debug(line);
-                }
-                errStrm.close();
-                throw new IllegalArgumentException("Error returned.  HTTP Response Code: " + responseCode);
+                    // The service SHALL throw a HTTP 401 status code including a PermissionDenied fault in the entity-body
+                    // if the user does not have permissions to perform the operation
+                    String msg = responseMessage;
+                    if (msg == null)
+                        msg = "permission denied";
+                    throw new AccessControlException(msg);
+                default:
+                    log.error(responseMessage + ". HTTP Code: " + responseCode);
+                    InputStream errStrm = connection.getErrorStream();
+                    BufferedReader br = new BufferedReader(new InputStreamReader(errStrm));
+                    String line;
+                    while ((line = br.readLine()) != null)
+                    {
+                        log.debug(line);
+                    }
+                    errStrm.close();
+                    throw new IllegalArgumentException("Error returned.  HTTP Response Code: " + responseCode);
             }
         }
         catch (IOException e)
@@ -860,7 +872,10 @@ public class VOSpaceClient
                 /* The service SHALL throw a HTTP 401 status code including a PermissionDenied fault in the entity-body 
                  * if the user does not have permissions to perform the operation
                  */
-                throw new AccessControlException(responseMessage);
+                String msg = responseMessage;
+                if (msg == null)
+                    msg = "permission denied";
+                throw new AccessControlException(msg);
             case 404:
                 /*
                  * The service SHALL throw a HTTP 404 status code including a NodeNotFound fault in the entity-body 

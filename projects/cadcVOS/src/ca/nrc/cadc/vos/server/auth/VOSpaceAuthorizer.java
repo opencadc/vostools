@@ -257,6 +257,14 @@ public class VOSpaceAuthorizer implements Authorizer
                 URL credBaseURL = registryClient.getServiceURL(new URI(CRED_SERVICE_ID), "https");
                 CredPrivateClient credentialPrivateClient = CredPrivateClient.getInstance(credBaseURL);
                 privateKeyChain = credentialPrivateClient.getCertificate();
+                if (privateKeyChain == null)
+                {
+                    // no delegated credentials == cannot check membership == not a member
+                    // TODO: we could throw an exception with a useful message if that
+                    //       could be added to the response message, essentialyl a reason
+                    //       for the false
+                    return false;
+                }
                 subject.getPublicCredentials().add(privateKeyChain);
             }
             
@@ -343,6 +351,11 @@ public class VOSpaceAuthorizer implements Authorizer
         {
             LOG.error("No implementing CredentialPrivateClients", e);
             throw new IllegalStateException(e);
+        }
+        catch(Throwable t)
+        {
+            LOG.error("unexpected failure", t);
+            throw new IllegalStateException("unexpected failure", t);
         }
     }
     

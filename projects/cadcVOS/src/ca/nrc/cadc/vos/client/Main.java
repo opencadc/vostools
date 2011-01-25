@@ -106,6 +106,7 @@ import ca.nrc.cadc.vos.VOS;
 import ca.nrc.cadc.vos.VOSURI;
 import ca.nrc.cadc.vos.View;
 import ca.nrc.cadc.vos.Transfer.Direction;
+import java.security.AccessControlException;
 
 /**
  * @author zhangsa
@@ -424,6 +425,11 @@ public class Main implements Runnable
             {
                 log.debug("class of returned node: " + n.getClass().getName());
             }
+        }
+        catch(AccessControlException ex)
+        {
+            msg("permission denied: " + target);
+            System.exit(NET_STATUS);
         }
         catch(NodeNotFoundException ex)
         {
