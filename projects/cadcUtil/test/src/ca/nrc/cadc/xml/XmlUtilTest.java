@@ -195,6 +195,7 @@ public class XmlUtilTest
             xml.append("         xmlns:foons=\"http://localhost/bar.xsd\">");
             xml.append("</foons:bar>");
 
+            // MUST pass in an empty map of validation is turned off
             Map<String, String> map = new HashMap<String, String>();
             //map.put("http://localhost/bar.xsd", fooSchemaURL);
 
@@ -211,5 +212,35 @@ public class XmlUtilTest
             fail(t.getMessage());
         }
         log.debug("testValidXml_NoSchemaLocation passed.");
+    }
+
+    @Test
+    public void testParseWithoutSchemaValidation()
+    {
+        log.debug("testParseWithoutSchemaValidation");
+        try
+        {
+            StringBuilder xml = new StringBuilder();
+            xml.append("<?xml version=\"1.0\" ?>");
+            xml.append("<foons:bar xmlns:xsi=\"http://www.w3.org/2001/XMLSchema-instance\"");
+            xml.append("         xmlns:foons=\"http://localhost/bar.xsd\">");
+            xml.append("</foons:bar>");
+
+            // MUST pass null map to disable validation
+            Map<String, String> map = null;
+            try
+            {
+                XmlUtil.validateXml(xml.toString(), map);
+            }
+            catch (JDOMException ex)
+            {
+                fail("unexpected exception: " + ex);
+            }
+        }
+        catch (Throwable t)
+        {
+            log.error("test failure", t);
+            fail(t.getMessage());
+        }
     }
 }

@@ -300,6 +300,8 @@ public class HttpDownloadTest
             Subject s = SSLUtil.createSubject(SSL_CERT, SSL_KEY);
             Subject.doAs(s, new RunnableAction(dl));
 
+            Assert.assertNull("HttpDownload failed: " + dl.getThrowable(), dl.getThrowable());
+
             File out = dl.getFile();
             Assert.assertNotNull("result file", out);
             Assert.assertTrue("dest file exists after download", out.exists());

@@ -137,14 +137,16 @@ public class XmlUtil
         }
     }
 
-    public static Document validateXml(String xml, String schemaNSKey, String schemaResourceFileName) throws IOException, JDOMException
+    public static Document validateXml(String xml, String schemaNSKey, String schemaResourceFileName)
+        throws IOException, JDOMException
     {
         Map<String, String> map = new HashMap<String, String>();
         map.put(schemaNSKey, schemaResourceFileName);
         return validateXml(xml, map);
     }
 
-    public static Document validateXml(String xml, Map<String, String> schemaMap) throws IOException, JDOMException
+    public static Document validateXml(String xml, Map<String, String> schemaMap)
+        throws IOException, JDOMException
     {
         log.debug("validateXml:\n" + xml);
         return validateXml(new StringReader(xml), schemaMap);
@@ -152,29 +154,33 @@ public class XmlUtil
 
     public static SAXBuilder createBuilder(Map<String, String> schemaMap)
     {
+        boolean schemaVal = (schemaMap != null);
         String schemaResource;
         String space = " ";
         StringBuilder sbSchemaLocations = new StringBuilder();
-        log.debug("schemaMap.size(): " + schemaMap.size());
-
-        for (String schemaNSKey : schemaMap.keySet())
+        if (schemaVal) 
         {
-            schemaResource = (String) schemaMap.get(schemaNSKey);
-            sbSchemaLocations.append(schemaNSKey).append(space).append(schemaResource).append(space);
+            log.debug("schemaMap.size(): " + schemaMap.size());
+            for (String schemaNSKey : schemaMap.keySet())
+            {
+                schemaResource = (String) schemaMap.get(schemaNSKey);
+                sbSchemaLocations.append(schemaNSKey).append(space).append(schemaResource).append(space);
+            }
+            // enable xerces grammar caching
+            System.setProperty("org.apache.xerces.xni.parser.XMLParserConfiguration", GRAMMAR_POOL);
         }
 
-        // enable xerces grammar caching
-        System.setProperty("org.apache.xerces.xni.parser.XMLParserConfiguration", GRAMMAR_POOL);
-
-        SAXBuilder schemaValidator;
-        schemaValidator = new SAXBuilder(PARSER, true);
-        schemaValidator.setFeature("http://xml.org/sax/features/validation", true);
-        schemaValidator.setFeature("http://apache.org/xml/features/validation/schema", true);
-        if (schemaMap.size() > 0)
-            schemaValidator.setProperty("http://apache.org/xml/properties/schema/external-schemaLocation",
-                sbSchemaLocations.toString());
-
-        return schemaValidator;
+        SAXBuilder builder;
+        builder = new SAXBuilder(PARSER, schemaVal);
+        if (schemaVal)
+        {
+            builder.setFeature("http://xml.org/sax/features/validation", true);
+            builder.setFeature("http://apache.org/xml/features/validation/schema", true);
+            if (schemaMap.size() > 0)
+                builder.setProperty("http://apache.org/xml/properties/schema/external-schemaLocation",
+                    sbSchemaLocations.toString());
+        }
+        return builder;
     }
 
     public static Document validateXml(Reader reader, Map<String, String> schemaMap) throws IOException, JDOMException
@@ -207,7 +213,12 @@ public class XmlUtil
     }
 
     /**
-     * Get an URL to the schema in the jar.
+     * Get an URL to a schema file. This implementation finds the scheam file using the ClassLoader
+     * that loaded the argument class; this works best if the schema is in the same jar file as
+     * the class.
+     * 
+     * @param resourceFileName
+     * @param runningClass 
      * @return
      */
     public static String getResourceUrlString(String resourceFileName, Class runningClass)
