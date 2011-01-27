@@ -163,7 +163,7 @@ public class TransferReaderWriterTest
             transfer.setProtocols(protocols);
 
             StringWriter dest = new StringWriter();
-            TransferWriter writer = new TransferWriter(transfer);
+            TransferWriter writer = new TransferWriter();
             writer.write(transfer, dest);
             String xml = dest.toString();
 
@@ -192,7 +192,7 @@ public class TransferReaderWriterTest
             transfer.setProtocols(protocols);
             
             StringWriter dest = new StringWriter();
-            TransferWriter writer = new TransferWriter(transfer);
+            TransferWriter writer = new TransferWriter();
             writer.write(transfer, dest);
             String xml = dest.toString();
 

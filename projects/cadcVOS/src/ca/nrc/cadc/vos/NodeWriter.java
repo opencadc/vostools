@@ -171,11 +171,6 @@ public class NodeWriter
     public void write(Node node, Writer writer) throws IOException
     {
         Element root = getRootElement(node);
-        if (node instanceof DataNode)
-        {
-            DataNode dn = (DataNode) node;
-            root.setAttribute("busy", (dn.getBusy().equals(NodeBusyState.notBusy) ? "false" : "true"));
-        }
         write(root, writer);
     }
 
@@ -216,6 +211,11 @@ public class NodeWriter
         {
             ContainerNode cn = (ContainerNode) node;
             ret.addContent(getNodesElement(cn));
+        }
+        else if (node instanceof DataNode)
+        {
+            DataNode dn = (DataNode) node;
+            ret.setAttribute("busy", (dn.getBusy().equals(NodeBusyState.notBusy) ? "false" : "true"));
         }
         return ret;
     }

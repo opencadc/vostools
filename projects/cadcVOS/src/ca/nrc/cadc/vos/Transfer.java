@@ -157,7 +157,7 @@ public class Transfer implements Runnable
         String rtn = null;
         try
         {
-            TransferWriter writer = new TransferWriter(this);
+            TransferWriter writer = new TransferWriter();
             StringWriter sw = new StringWriter();
             writer.write(this, sw);
             rtn = sw.toString();

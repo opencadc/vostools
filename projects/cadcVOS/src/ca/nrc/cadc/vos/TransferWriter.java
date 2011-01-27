@@ -90,7 +90,7 @@ public class TransferWriter
     @SuppressWarnings("unused")
     private static Logger log = Logger.getLogger(TransferWriter.class);
 
-    public TransferWriter(Transfer transfer) { }
+    public TransferWriter() { }
 
     /**
      * Write the transfer to an OutputStream.
