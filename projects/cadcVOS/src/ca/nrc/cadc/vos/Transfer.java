@@ -69,23 +69,11 @@
 
 package ca.nrc.cadc.vos;
 
-import java.io.BufferedReader;
-import java.io.File;
 import java.io.IOException;
-import java.io.InputStream;
-import java.io.InputStreamReader;
-import java.io.OutputStreamWriter;
 import java.io.StringWriter;
-import java.net.MalformedURLException;
-import java.net.URL;
 import java.util.List;
 
-import javax.net.ssl.HttpsURLConnection;
-
 import org.apache.log4j.Logger;
-
-import ca.nrc.cadc.vos.client.VOSpaceClient;
-import ca.nrc.cadc.vos.server.util.NodeUtil;
 
 /**
  * @author zhangsa
@@ -171,7 +159,7 @@ public class Transfer implements Runnable
         {
             TransferWriter writer = new TransferWriter(this);
             StringWriter sw = new StringWriter();
-            writer.writeTo(sw);
+            writer.write(this, sw);
             rtn = sw.toString();
             sw.close();
         } catch (IOException e)

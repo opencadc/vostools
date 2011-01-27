@@ -81,6 +81,7 @@ import ca.nrc.cadc.vos.server.ViewsTest;
 @Suite.SuiteClasses(
         {
                 NodeReaderWriterTest.class,
+                TransferReaderWriterTest.class,
                 NodeResourceTest.class,
                 VOSpaceAuthorizerTest.class,
                 FileSizeTypeTest.class,

@@ -88,6 +88,7 @@ import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
 import java.io.StringWriter;
 import java.net.URISyntaxException;
+import org.jdom.JDOMException;
 import org.junit.Assert;
 
 /**
@@ -336,6 +337,45 @@ public class NodeReaderWriterTest
         catch (Throwable t)
         {
             log.error(t);
+            fail(t.getMessage());
+        }
+    }
+
+    @Test
+    public void testNoSchemaValidation()
+    {
+        try
+        {
+            StringBuffer sb = new StringBuffer();
+            
+            sb.append("<node xmlns=\"http://www.ivoa.net/xml/VOSpace/v2.0\" \n");
+            sb.append("      xmlns:vos=\"http://www.ivoa.net/xml/VOSpace/v2.0\" \n");
+            sb.append("      xmlns:xsi=\"http://www.w3.org/2001/XMLSchema-instance\" \n");
+            sb.append("      uri=\"vos://cadc.nrc.ca!vospace/dir/somefile\" \n");
+            sb.append("      xsi:type=\"vos:DataNode\" busy=\"true\"> \n");
+            sb.append("<accepts />\n"); // invalid in xsd sequence
+            sb.append("<properties />\n");
+            sb.append("</node>\n");
+            String xml = sb.toString();
+
+            log.debug(xml);
+
+            // make sure this is not valid
+            try
+            {
+                NodeReader reader = new NodeReader(true);
+                Node n = reader.read(xml);
+                fail("test XML is actually valid - test is broken");
+            }
+            catch(NodeParsingException expected) { }
+
+            // read without validation
+            NodeReader reader = new NodeReader(false);
+            Node n = reader.read(xml);
+        }
+        catch (Throwable t)
+        {
+            log.error("unexpected exception", t);
             fail(t.getMessage());
         }
     }

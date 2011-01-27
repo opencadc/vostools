@@ -69,13 +69,11 @@
 
 package ca.nrc.cadc.vos;
 
-import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.Reader;
 import java.io.StringReader;
 import java.net.URISyntaxException;
-import java.net.URL;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -83,85 +81,106 @@ import org.apache.log4j.Logger;
 import org.jdom.Document;
 import org.jdom.Element;
 import org.jdom.JDOMException;
-import org.jdom.input.SAXBuilder;
 
-import ca.nrc.cadc.vos.client.VOSClientUtil;
+import ca.nrc.cadc.xml.XmlUtil;
+import java.io.InputStreamReader;
 import java.net.URI;
+import java.util.Map;
 
 /**
- * @author zhangsa
+ * Constructs a Transfer from an XML source. This class is not thread safe but it is
+ * re-usable  so it can safely be used to sequentially parse multiple XML transfer
+ * documents.
  *
+ * @author pdowler
  */
 public class TransferReader
 {
-    @SuppressWarnings("unused")
+    private static final String VOSPACE_SCHEMA_URL = "http://www.ivoa.net/xml/VOSpace/v2.0";
+    private static final String VOSPACE_SCHEMA_RESOURCE = "VOSpace-2.0.xsd";
+
     private static Logger log = Logger.getLogger(TransferReader.class);
 
-    private Document document;
-    private SAXBuilder saxBuilder;
-
-    public TransferReader()
+    private static final String vospaceSchemaUrl;
+    static
     {
-        this.saxBuilder = new SAXBuilder("org.apache.xerces.parsers.SAXParser", false);
-        this.saxBuilder.setFeature("http://xml.org/sax/features/validation", true);
-        this.saxBuilder.setFeature("http://apache.org/xml/features/validation/schema", true);
-        this.saxBuilder.setFeature("http://apache.org/xml/features/validation/schema-full-checking", true);
-        this.saxBuilder.setProperty("http://apache.org/xml/properties/schema/external-schemaLocation", VOS.EXT_SCHEMA_LOCATION);
+        vospaceSchemaUrl = XmlUtil.getResourceUrlString(VOSPACE_SCHEMA_RESOURCE, NodeReader.class);
+        log.debug("vospaceSchemaUrl: " + vospaceSchemaUrl);
     }
-
-    public Transfer readFrom(Reader reader) throws JDOMException, IOException {
-        this.document = this.saxBuilder.build(reader);
-        return parseTransfer();
-    }
-
-    public Transfer readFrom(File file) throws JDOMException, IOException {
-        this.document = this.saxBuilder.build(file);
-        return parseTransfer();
-    }
-
-    public Transfer readFrom(InputStream in) throws JDOMException, IOException {
-        this.document = this.saxBuilder.build(in);
-        return parseTransfer();
-    }
+    
+    protected Map<String, String> schemaMap;
 
     /**
-     * @deprecated not plausible to implement with SSL
-     * @param url
-     * @return
-     * @throws JDOMException
-     * @throws IOException
+     * Constructor. XML Schema validation is enabled by default.
      */
-    public Transfer readFrom(URL url) throws JDOMException, IOException {
-        this.document = this.saxBuilder.build(url);
-        log.debug("Transfer XML read from URL: " + url + "\n" + VOSClientUtil.xmlString(this.document));
-        return parseTransfer();
+    public TransferReader() { this(true); }
+
+    /**
+     * Constructor. XML schema validation may be disabled, in which case the client
+     * is likely to fail in horrible ways (e.g. NullPointerException) if it receives
+     * invalid documents. However, performance may be improved.
+     *
+     * @param enableSchemaValidation
+     */
+    public TransferReader(boolean enableSchemaValidation)
+    {
+        /* HACK: schema validation is broken with current version of the schema
+        if (enableSchemaValidation)
+        {
+            this.schemaMap = new HashMap<String, String>();
+            schemaMap.put(VOSPACE_SCHEMA_URL, vospaceSchemaUrl);
+            log.debug("schema validation enabled");
+        }
+        else
+        */
+            log.debug("schema validation disabled");
     }
 
-    public Transfer readFrom(String string) throws JDOMException, IOException {
-        StringReader reader = new StringReader(string);
-        this.document = this.saxBuilder.build(reader);
-        return parseTransfer();
-    }
-
-    private Transfer parseTransfer() {
-        Element root = this.document.getRootElement();
-
-        Transfer.Direction direction = parseDirection();
-        // String serviceUrl; // not in XML yet
-        Node target = null;
-        View view = null;
+    public Transfer read(Reader reader)
+        throws IOException, TransferParsingException
+    {
         try
         {
-            target = new DataNode(new VOSURI(root.getChildText("target", VOS.NS)));
-            view = new View(new URI(root.getChildText("view", VOS.NS)));
+            // TODO: investigate creating a SAXBuilder once and re-using it
+            // as long as we can detect concurrent access (a la java collections)
+            Document doc = XmlUtil.validateXml(reader, schemaMap);
+            return parseTransfer(doc);
         }
-        catch (URISyntaxException e)
-        { 
-            log.debug(e.getMessage());
+        catch(JDOMException ex)
+        {
+            throw new TransferParsingException("failed to parse XML", ex);
         }
-        List<Protocol> protocols = parseProtocols();
+        catch(URISyntaxException ex)
+        {
+            throw new TransferParsingException("invalid URI in transfer document", ex);
+        }
+    }
+
+    public Transfer read(InputStream in)
+        throws IOException, TransferParsingException
+    {
+        InputStreamReader reader = new InputStreamReader(in);
+        return read(reader);
+    }
+
+    public Transfer read(String string)
+        throws IOException, TransferParsingException
+    {
+        StringReader reader = new StringReader(string);
+        return read(reader);
+    }
+
+    private Transfer parseTransfer(Document document)
+        throws URISyntaxException
+    {
+        Element root = document.getRootElement();
+
+        Transfer.Direction direction = parseDirection(root);
+        // String serviceUrl; // not in XML yet
+        Node target = new DataNode(new VOSURI(root.getChildText("target", VOS.NS)));
+        View view = new View(new URI(root.getChildText("view", VOS.NS)));
+        List<Protocol> protocols = parseProtocols(root);
         // boolean keepBytes; // not in XML yet
-        // String endpoint; // not in XML yet
 
         Transfer rtn = new Transfer();
         rtn.setDirection(direction);
@@ -171,9 +190,9 @@ public class TransferReader
         return rtn;
     }
 
-    private Transfer.Direction parseDirection() {
+    private Transfer.Direction parseDirection(Element root)
+    {
         Transfer.Direction rtn = null;
-        Element root = this.document.getRootElement();
         String strDirection = root.getChildText("direction", VOS.NS);
         if (strDirection.equalsIgnoreCase(Transfer.Direction.pullFromVoSpace.toString()))
             rtn = Transfer.Direction.pullFromVoSpace;
@@ -186,23 +205,19 @@ public class TransferReader
         return rtn;
     }
 
-    private List<Protocol> parseProtocols() {
-        List<Protocol> rtn = null;
-        Element root = this.document.getRootElement();
-        Element e = root.getChild("protocols", VOS.NS);
-        if (e != null)
+    private List<Protocol> parseProtocols(Element root)
+    {
+        List<Protocol> rtn = new ArrayList<Protocol>();
+        //Element e = root.getChild("protocols", VOS.NS);
+        List prots = root.getChildren("protocol", VOS.NS);
+        if (prots != null)
         {
-            rtn = new ArrayList<Protocol>();
-
-            Protocol rs = null;
-            List<?> listE = e.getChildren("protocol", VOS.NS);
-            for (Object obj : listE)
+            for (Object obj : prots)
             {
                 Element eProtocol = (Element) obj;
                 String uri = eProtocol.getAttributeValue("uri");
                 String endpoint = eProtocol.getChildText("endpoint", VOS.NS);
-                rs = new Protocol(uri, endpoint, null);
-                rtn.add(rs);
+                rtn.add(new Protocol(uri, endpoint, null));
             }
         }
         return rtn;

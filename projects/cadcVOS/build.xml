@@ -106,7 +106,7 @@
     <property name="client.external.jars" value="${ext.jdom}:${ext.xerces}:${ext.log4j}" />
     <property name="client.jarfile" value="${build}/lib/${project}Client.jar" />
 
-    <target name="build" depends="compile,compile-test,resources,manifest">
+    <target name="build" depends="compile,resources,manifest">
 
         <jar jarfile="${build}/lib/${project}.jar"
             basedir="${build}/class"
@@ -229,6 +229,7 @@
           </classpath>
           <formatter type="plain" usefile="false"/>
           <test name="ca.nrc.cadc.vos.NodeReaderWriterTest"/>
+          <test name="ca.nrc.cadc.vos.TransferReaderWriterTest"/>
         </junit>
 
     </target>

@@ -123,6 +123,7 @@ public class Main implements Runnable
     public static final String ARG_H = "h";
     public static final String ARG_V = "v";
     public static final String ARG_D = "d";
+    public static final String ARG_XSV = "xsv";
     public static final String ARG_VIEW = "view";
     public static final String ARG_CREATE = "create";
     public static final String ARG_DELETE = "delete";
@@ -338,7 +339,6 @@ public class Main implements Runnable
             else
             {
                 msg("failed to copy: " + source + " -> " + destination);
-                t.printStackTrace();
                 if (t.getMessage() != null)
                     msg("          reason: " + t.getMessage());
                 else
@@ -704,7 +704,17 @@ public class Main implements Runnable
             log.error("reason: " + e.getMessage());
             System.exit(INIT_STATUS);
         }
-        this.client = new VOSpaceClient(baseUrl);
+
+        // check if schema validation should be disabled
+        boolean doVal = true;
+        String schemaVal = argMap.getValue(ARG_XSV);
+        if (schemaVal != null && "off".equals(schemaVal))
+        {
+            doVal = false;
+            log.info("XML schema validation: disabled");
+        }
+
+        this.client = new VOSpaceClient(baseUrl, doVal);
         log.info("server uri: " + serverUri);
         log.info("base url: " + this.baseUrl);
     }
@@ -868,7 +878,9 @@ public class Main implements Runnable
          * In this way, it's still easy to read and edit and the formatting operation does not change it's layout.
          * 
          */
-        "Usage: java -jar VOSpaceClient.jar [-v|--verbose|-d|--debug]  ...                                 ",
+        "Usage: java -jar VOSpaceClient.jar [-v|--verbose|-d|--debug] [--xsv=off] ...",
+                "",
+                " --xsv=off disables XML schema validation; use at your own risk",
                 "                                                                                                  ",
                 "Help:                                                                                             ",
                 "java -jar VOSpaceClient.jar <-h | --help>                                                         ",

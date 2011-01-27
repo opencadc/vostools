@@ -71,6 +71,7 @@ package ca.nrc.cadc.vos;
 
 import java.io.IOException;
 import java.io.OutputStream;
+import java.io.OutputStreamWriter;
 import java.io.Writer;
 
 import org.apache.log4j.Logger;
@@ -89,86 +90,90 @@ public class TransferWriter
     @SuppressWarnings("unused")
     private static Logger log = Logger.getLogger(TransferWriter.class);
 
-    private Transfer transfer;
-    private Document document;
-    private XMLOutputter outputter;
-
-    public TransferWriter(Transfer transfer)
-    {
-        this.transfer = transfer;
-        buildDocument();
-        this.outputter = new XMLOutputter();
-        this.outputter.setFormat(Format.getPrettyFormat());
-    }
-
-    /**
-     * Write the transfer to a String.
-     */
-    public String toString() {
-        return this.outputter.outputString(this.document);
-    }
+    public TransferWriter(Transfer transfer) { }
 
     /**
      * Write the transfer to an OutputStream.
      *
+     * @param trans
      * @param out OutputStream to write to.
      * @throws IOException if the writer fails to write.
      */
-    public void writeTo(OutputStream out) throws IOException {
-        this.outputter.output(this.document, out);
+    public void write(Transfer trans, OutputStream out)
+        throws IOException
+    {
+        write(trans, new OutputStreamWriter(out));
     }
 
     /**
      * Write the transfer to a writer.
      *
+     * @param trans
      * @param writer Writer to write to.
      * @throws IOException if the writer fails to write.
      */
-    public void writeTo(Writer writer) throws IOException {
-        this.outputter.output(this.document, writer);
+    public void write(Transfer trans, Writer writer)
+        throws IOException
+    {
+        Element root = buildRoot(trans);
+        write(root, writer);
     }
 
     /**
-     * Build XML Document for the transfer
+     * Build root element for the transfer.
+     * @param transfer
+     * @return root element
      */
-    private void buildDocument() {
+    private Element buildRoot(Transfer transfer)
+    {
         Element root = new Element("transfer", VOS.NS);
         root.addNamespaceDeclaration(VOS.NS);
 
         Element e = null;
 
         e = new Element("target", VOS.NS);
-        e.addContent(this.transfer.getTarget().getUri().toString());
+        e.addContent(transfer.getTarget().getUri().toString());
         root.addContent(e);
 
         e = new Element("direction", VOS.NS);
-        e.addContent(this.transfer.getDirection().toString());
+        e.addContent(transfer.getDirection().toString());
         root.addContent(e);
 
         e = new Element("view", VOS.NS);
-        e.addContent(this.transfer.getView().getURI().toString());
+        e.addContent(transfer.getView().getURI().toString());
         root.addContent(e);
 
-        e = createProtocols();
-        root.addContent(e);
-
-        this.document = new Document();
-        this.document.addContent(root);
-    }
-
-    private Element createProtocols() {
-        Element rtn = new Element("protocols", VOS.NS);
-        Element e = null;
-        Element e2 = null;
-        for (Protocol protocol : this.transfer.getProtocols())
+        for (Protocol protocol : transfer.getProtocols())
         {
-            e = new Element("protocol", VOS.NS);
-            e.setAttribute("uri", protocol.getUri());
-            e2 = new Element("endpoint", VOS.NS);
-            e2.addContent(protocol.getEndpoint());
-            e.addContent(e2);
-            rtn.addContent(e);
+            Element pr = new Element("protocol", VOS.NS);
+            pr.setAttribute("uri", protocol.getUri());
+            if (protocol.getEndpoint() != null)
+            {
+                Element ep = new Element("endpoint", VOS.NS);
+                ep.addContent(protocol.getEndpoint());
+                pr.addContent(ep);
+            }
+            root.addContent(pr);
         }
-        return rtn;
+
+        return root;
     }
+
+    /**
+     * Write to root Element to a writer.
+     *
+     * @param root Root Element to write.
+     * @param writer Writer to write to.
+     * @throws IOException if the writer fails to write.
+     */
+    @SuppressWarnings("unchecked")
+    protected void write(Element root, Writer writer)
+        throws IOException
+    {
+        XMLOutputter outputter = new XMLOutputter();
+        outputter.setFormat(Format.getPrettyFormat());
+        Document document = new Document(root);
+        outputter.output(document, writer);
+    }
+
 }

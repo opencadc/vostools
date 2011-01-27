@@ -82,7 +82,17 @@ public class Protocol
     protected Map<String, String> param;
 
     /**
-     * @param uri
+     * Constructor for use in tranmsfer requests. In a transfer request, one only
+     * specifies the protocols.
+     *
+     * @param uri a VOSpace protocol URI
+     */
+    public Protocol(String uri)
+    {
+        this.uri = uri;
+    }
+    /**
+     * @param uri a VOSpace protocol URI
      * @param endpoint
      * @param param
      */
@@ -94,11 +104,46 @@ public class Protocol
         this.param = param;
     }
 
+    @Override
+    public boolean equals(Object obj)
+    {
+        if (this == obj)
+            return true;
+        if (obj.getClass() != this.getClass())
+            return false;
+        Protocol p = (Protocol) obj;
+
+        if (!this.uri.equals(p.uri))
+            return false;
+        if ( (this.endpoint != null && !this.endpoint.equals(p.endpoint))
+                || (p.endpoint != null && !p.endpoint.equals(this.endpoint)) )
+            return false;
+
+        if (this.param == p.param) // both null or same object
+            return true;
+
+        if ( (this.param != null && p.param == null )
+                || (this.param == null && p.param != null ) )
+            return false;
+
+        // neither param map null, nit sure if this compares
+        // keys and values or not
+        if ( !this.param.entrySet().containsAll(p.param.entrySet()) )
+            return false;
+        if ( !p.param.entrySet().containsAll(this.param.entrySet()) )
+            return false;
+        return true;
+    }
+
     public String getUri()
     {
         return this.uri;
     }
 
+    /**
+     * @deprecated uri field should be immutable
+     * @param uri
+     */
     public void setUri(String uri)
     {
         this.uri = uri;

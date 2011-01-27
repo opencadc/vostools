@@ -69,14 +69,10 @@
 
 package ca.nrc.cadc.vos;
 
-import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 
-import junit.framework.Assert;
-
 import org.apache.log4j.Logger;
-import org.jdom.JDOMException;
 import org.junit.After;
 import org.junit.AfterClass;
 import org.junit.Before;
@@ -84,22 +80,25 @@ import org.junit.BeforeClass;
 import org.junit.Test;
 
 import ca.nrc.cadc.util.Log4jInit;
+import java.io.StringWriter;
 import java.net.URI;
+import org.junit.Assert;
 
 /**
  * @author zhangsa
  *
  */
-public class TransferReaderTest
+public class TransferReaderWriterTest
 {
-    static Logger log = Logger.getLogger(TransferReaderTest.class);
+    static Logger log = Logger.getLogger(TransferReaderWriterTest.class);
 
     private Transfer transfer;
-    private String xmlString;
 
     @BeforeClass
-    public static void setUpBeforeClass() throws Exception {
-        Log4jInit.setLevel("ca.nrc.cadc", org.apache.log4j.Level.DEBUG);
+    public static void setUpBeforeClass() 
+        throws Exception
+    {
+        Log4jInit.setLevel("ca.nrc.cadc", org.apache.log4j.Level.INFO);
     }
 
     @AfterClass
@@ -109,27 +108,21 @@ public class TransferReaderTest
      * @throws java.lang.Exception
      */
     @Before
-    public void setUp() throws Exception {
-        List<Protocol> protocols = new ArrayList<Protocol>();
-        protocols.add(new Protocol("vos://uri1.of.protocol", "vos://endpoint1.of.protocol", null));
-        protocols.add(new Protocol("vos://uri2.of.protocol", "vos://endpoint2.of.protocol", null));
-        protocols.add(new Protocol("vos://uri3.of.protocol", "vos://endpoint3.of.protocol", null));
-        
-        Node target = new DataNode(new VOSURI("vos://nvo.caltech!vospace/mydir/ngc1111"));
-        Node dataNode = new DataNode(new VOSURI("vos://nvo.caltech!vospace/mydir/ngc2222"));
+    public void setUp() 
+        throws Exception
+    {
+        Node target = new DataNode(new VOSURI("vos://example.com!vospace/mydir/myfile"));
+        Node dataNode = new DataNode(new VOSURI("vos://example.com!vospace/mydir/myfile"));
         View view = new View(new URI(VOS.VIEW_DEFAULT));
 
         transfer = new Transfer();
-        transfer.setDirection(Transfer.Direction.pushToVoSpace);
+        transfer.setDirection(Transfer.Direction.pullFromVoSpace);
         transfer.setKeepBytes(true);
-        transfer.setProtocols(protocols);
+        
         transfer.setServiceUrl("http://service.url.for.transfer");
         transfer.setTarget(target);
         transfer.setView(view);
-
-        TransferWriter writer = new TransferWriter(transfer);
-        this.xmlString = writer.toString();
-}
+    }
 
     /**
      * @throws java.lang.Exception
@@ -137,13 +130,83 @@ public class TransferReaderTest
     @After
     public void tearDown() throws Exception {}
 
-    @Test
-    public void testReader() throws IOException, JDOMException {
-        log.debug(xmlString);
-        TransferReader reader = new TransferReader();
-        Transfer transfer2 = reader.readFrom(this.xmlString);
+    public void compareTransfers(Transfer transfer1, Transfer transfer2)
+    {
+        Assert.assertNotNull(transfer1);
+        Assert.assertNotNull(transfer2);
 
-        Assert.assertEquals(transfer2.getProtocols().size(), 3);
-        Assert.assertEquals(transfer2.getDirection(), Transfer.Direction.pushToVoSpace);
+        Assert.assertNotNull(transfer2.getDirection());
+        Assert.assertEquals(transfer1.getDirection(), transfer2.getDirection());
+
+        Assert.assertNotNull(transfer2.getTarget());
+        Assert.assertEquals(transfer1.getTarget(), transfer2.getTarget());
+
+        Assert.assertNotNull(transfer2.getView());
+        Assert.assertEquals(transfer1.getView().getURI(), transfer2.getView().getURI());
+        // TODO: compare view parameters
+
+        Assert.assertEquals(transfer1.getDirection(), transfer2.getDirection());
+
+        Assert.assertEquals(transfer1.getProtocols().size(), transfer2.getProtocols().size());
+        Assert.assertTrue( transfer1.getProtocols().containsAll(transfer2.getProtocols()));
+        Assert.assertTrue( transfer2.getProtocols().containsAll(transfer1.getProtocols()));
+    }
+
+    @Test
+    public void testTransferRequest() // no protocol endpoints
+    {
+        try
+        {
+            List<Protocol> protocols = new ArrayList<Protocol>();
+            protocols.add(new Protocol(VOS.PROTOCOL_HTTP_GET));
+            protocols.add(new Protocol(VOS.PROTOCOL_HTTPS_GET));
+            transfer.setProtocols(protocols);
+
+            StringWriter dest = new StringWriter();
+            TransferWriter writer = new TransferWriter(transfer);
+            writer.write(transfer, dest);
+            String xml = dest.toString();
+
+            log.debug(xml);
+
+            TransferReader reader = new TransferReader();
+            Transfer transfer2 = reader.read(xml);
+
+            compareTransfers(transfer, transfer2);
+        }
+        catch(Exception unexpected)
+        {
+            log.error("unexpected exception", unexpected);
+            Assert.fail("unexpected exception: " + unexpected);
+        }
+    }
+
+    @Test
+    public void testTransferWithProtocolEndpoints()
+    {
+        try
+        {
+            List<Protocol> protocols = new ArrayList<Protocol>();
+            protocols.add(new Protocol(VOS.PROTOCOL_HTTP_GET, "http://example.com/someplace/123", null));
+            protocols.add(new Protocol(VOS.PROTOCOL_HTTPS_GET, "https://example.com/otherplace/456", null));
+            transfer.setProtocols(protocols);
+            
+            StringWriter dest = new StringWriter();
+            TransferWriter writer = new TransferWriter(transfer);
+            writer.write(transfer, dest);
+            String xml = dest.toString();
+
+            log.debug(xml);
+
+            TransferReader reader = new TransferReader();
+            Transfer transfer2 = reader.read(xml);
+
+            compareTransfers(transfer, transfer2);
+        }
+        catch(Exception unexpected)
+        {
+            log.error("unexpected exception", unexpected);
+            Assert.fail("unexpected exception: " + unexpected);
+        }
     }
 }

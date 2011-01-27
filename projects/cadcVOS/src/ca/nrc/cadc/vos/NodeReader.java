@@ -91,7 +91,9 @@ import java.util.HashMap;
 import java.util.Map;
 
 /**
- * Constructs a Node from an XML source.
+ * Constructs a Node from an XML source. This class is not thread safe but it is
+ * re-usable  so it can safely be used to sequentially parse multiple XML node
+ * documents.
  *
  * @author jburke
  */
@@ -125,12 +127,30 @@ public class NodeReader
     protected Map<String, String> schemaMap;
     protected Namespace xsiNamespace;
 
-    public NodeReader()
+    /**
+     * Constructor. XML Schema validation is enabled by default.
+     */
+    public NodeReader() { this(true); }
+
+    /**
+     * Constructor. XML schema validation may be disabled, in which case the client
+     * is likely to fail in horrible ways (e.g. NullPointerException) if it receives
+     * invalid documents. However, performance may be improved.
+     *
+     * @param enableSchemaValidation
+     */
+    public NodeReader(boolean enableSchemaValidation)
     {
-        schemaMap = new HashMap<String, String>();
-        schemaMap.put(VOSPACE_SCHEMA_URL, vospaceSchemaUrl);
-        schemaMap.put(UWS_SCHEMA_URL, uwsSchemaUrl);
-        schemaMap.put(XLINK_SCHEMA_URL, xlinkSchemaUrl);
+        if (enableSchemaValidation)
+        {
+            schemaMap = new HashMap<String, String>();
+            schemaMap.put(VOSPACE_SCHEMA_URL, vospaceSchemaUrl);
+            schemaMap.put(UWS_SCHEMA_URL, uwsSchemaUrl);
+            schemaMap.put(XLINK_SCHEMA_URL, xlinkSchemaUrl);
+            log.debug("schema validation enabled");
+        }
+        else
+            log.debug("schema validation disabled");
 
         xsiNamespace = Namespace.getNamespace("http://www.w3.org/2001/XMLSchema-instance");
     }
@@ -162,16 +182,14 @@ public class NodeReader
     {
         if (in == null)
             throw new IOException("stream closed");
-        InputStreamReader reader;
         try
         {
-            reader = new InputStreamReader(in, "UTF-8");
+            return read(new InputStreamReader(in, "UTF-8"));
         }
         catch (UnsupportedEncodingException e)
         {
             throw new RuntimeException("UTF-8 encoding not supported");
         }
-        return read(reader);
     }
 
     /**
@@ -191,18 +209,18 @@ public class NodeReader
         Document document;
         try
         {
+            // TODO: investigate creating a SAXBuilder once and re-using it
+            // as long as we can detect concurrent access (a la java collections)
             document = XmlUtil.validateXml(reader, schemaMap);
         }
         catch (JDOMException jde)
         {
             String error = "XML failed schema validation: " + jde.getMessage();
-            log.error(error, jde);
             throw new NodeParsingException(error, jde);
         }
         catch (IOException ioe)
         {
             String error = "Error reading XML: " + ioe.getMessage();
-            log.error(error, ioe);
             throw new NodeParsingException(error, ioe);
         }
 
@@ -218,7 +236,6 @@ public class NodeReader
         if (uri == null)
         {
             String error = "uri attribute not found in root element";
-            log.error(error);
             throw new NodeParsingException(error);
         }
         log.debug("node uri: " + uri);
@@ -228,7 +245,6 @@ public class NodeReader
         if (xsiType == null)
         {
             String error = "xsi:type attribute not found in node element " + uri;
-            log.error(error);
             throw new NodeParsingException(error);
         }
 
@@ -278,7 +294,6 @@ public class NodeReader
         catch (URISyntaxException e)
         {
             String error = "invalid node uri " + uri;
-            log.error(error, e);
             throw new NodeParsingException(error, e);
         }
 
@@ -290,7 +305,6 @@ public class NodeReader
         if (nodes == null)
         {
             String error = "nodes element not found in node";
-            log.error(error);
             throw new NodeParsingException(error);
         }
 
@@ -302,7 +316,6 @@ public class NodeReader
             if (childNodeUri == null)
             {
                 String error = "uri attribute not found in nodes node element";
-                log.error(error);
                 throw new NodeParsingException(error);
             }
             // Get the xsi:type attribute which defines the Node class
@@ -310,7 +323,6 @@ public class NodeReader
             if (xsiType == null)
             {
                 String error = "xsi:type attribute not found in node element " + uri;
-                log.error(error);
                 throw new NodeParsingException(error);
             }
 
@@ -354,7 +366,6 @@ public class NodeReader
         catch (URISyntaxException e)
         {
             String error = "invalid node uri " + uri;
-            log.error(error, e);
             throw new NodeParsingException(error, e);
         }
 
@@ -363,7 +374,6 @@ public class NodeReader
         if (busy == null)
         {
             String error = "busy element not found in DataNode";
-            log.error(error);
             throw new NodeParsingException(error);
         }
         boolean isBusy = busy.equalsIgnoreCase("true") ? true : false;
@@ -412,7 +422,6 @@ public class NodeReader
         if (properties == null)
         {
             String error = "properties element not found";
-            log.error(error);
             throw new NodeParsingException(error);
         }
 
@@ -427,7 +436,6 @@ public class NodeReader
             if (propertyUri == null)
             {
                 String error = "uri attribute not found in property element " + property;
-                log.error(error);
                 throw new NodeParsingException(error);
             }
 
@@ -476,7 +484,6 @@ public class NodeReader
         if (parentElement == null)
         {
             String error = parent + " element not found in node";
-            log.error(error);
             throw new NodeParsingException(error);
         }
 
@@ -492,7 +499,6 @@ public class NodeReader
             if (viewUri == null)
             {
                 String error = "uri attribute not found in " + parent + " view element";
-                log.error(error);
                 throw new NodeParsingException(error);
             }
             log.debug(parent + "view uri: " + viewUri);
@@ -516,7 +522,6 @@ public class NodeReader
                 if (paramUri == null)
                 {
                     String error = "param uri attribute not found in accepts view element";
-                    log.error(error);
                     throw new NodeParsingException(error);
                 }
                 log.debug("accepts view param uri: " + paramUri);

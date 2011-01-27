@@ -88,8 +88,6 @@ import org.jdom.JDOMException;
 import ca.nrc.cadc.uws.ExecutionPhase;
 import ca.nrc.cadc.uws.Job;
 import ca.nrc.cadc.uws.JobReader;
-import ca.nrc.cadc.uws.JobWriter;
-import ca.nrc.cadc.uws.Parameter;
 import ca.nrc.cadc.vos.Node;
 import ca.nrc.cadc.vos.NodeNotFoundException;
 import ca.nrc.cadc.vos.NodeParsingException;
@@ -100,6 +98,7 @@ import ca.nrc.cadc.vos.Protocol;
 import ca.nrc.cadc.vos.Search;
 import ca.nrc.cadc.vos.ServerTransfer;
 import ca.nrc.cadc.vos.Transfer;
+import ca.nrc.cadc.vos.TransferParsingException;
 import ca.nrc.cadc.vos.TransferReader;
 import ca.nrc.cadc.vos.View;
 import java.security.AccessControlContext;
@@ -122,11 +121,32 @@ public class VOSpaceClient
     public static final String VOSPACE_SYNC_TRANSFER_ENDPOINT = "/synctrans";
 
     protected String baseUrl;
+    protected boolean schemaValidation;
     private SSLSocketFactory sslSocketFactory;
 
+    /**
+     * Constructor. XML Schema validation is enabled by default.
+     * 
+     * @param baseUrl
+     */
     public VOSpaceClient(String baseUrl)
     {
+        this(baseUrl, true);
+    }
+
+    /**
+     * Constructor. XML schema validation may be disabled, in which case the client
+     * is likely to fail in horrible ways (e.g. NullPointerException) if it receives
+     * invalid VOSpace (node or transfer) or UWS (job) documents. However, performance
+     * may be improved.
+     * 
+     * @param baseUrl
+     * @param enableSchemaValidation
+     */
+    public VOSpaceClient(String baseUrl, boolean enableSchemaValidation)
+    {
         this.baseUrl = baseUrl;
+        this.schemaValidation = enableSchemaValidation;
     }
 
     public void setSSLSocketFactory(SSLSocketFactory sslSocketFactory)
@@ -177,7 +197,7 @@ public class VOSpaceClient
             {
             case 201: // valid
                 InputStream in = connection.getInputStream();
-                NodeReader nodeReader = new NodeReader();
+                NodeReader nodeReader = new NodeReader(schemaValidation);
                 rtnNode = nodeReader.read(in);
                 in.close();
                 log.debug("createNode, created node: " + rtnNode);
@@ -298,7 +318,7 @@ public class VOSpaceClient
                 case 200: // TODO: check content-type for XML
                     // grab service response body
                     InputStream in = connection.getInputStream();
-                    NodeReader nodeReader = new NodeReader();
+                    NodeReader nodeReader = new NodeReader(schemaValidation);
                     rtnNode = nodeReader.read(in);
                     in.close();
                     log.debug("getNode, returned node: " + rtnNode);
@@ -369,7 +389,7 @@ public class VOSpaceClient
             {
                 case 200: // valid
                     InputStream in = connection.getInputStream();
-                    NodeReader nodeReader = new NodeReader();
+                    NodeReader nodeReader = new NodeReader(schemaValidation);
                     rtnNode = nodeReader.read(in);
                     in.close();
                     break;
@@ -670,7 +690,7 @@ public class VOSpaceClient
                 log.debug("Result URL: " + strResultUrl);
 
                 URL urlTransferDetail = new URL(strResultUrl);
-                TransferReader txfReader = new TransferReader();
+                TransferReader txfReader = new TransferReader(schemaValidation);
                 conn = (HttpURLConnection) urlTransferDetail.openConnection();
                 if (conn instanceof HttpsURLConnection)
                 {
@@ -680,7 +700,7 @@ public class VOSpaceClient
                 code = conn.getResponseCode();
                 if (code != 200)
                     throw new RuntimeException("failed to read transfer description (" + code + "): " + conn.getResponseMessage());
-                rtn = txfReader.readFrom(conn.getInputStream());
+                rtn = txfReader.read(conn.getInputStream());
                 log.debug(rtn.toXmlString());
             }
             else if (job != null && job.getExecutionPhase().equals(ExecutionPhase.ERROR))
@@ -699,14 +719,19 @@ public class VOSpaceClient
             log.debug("failed to create transfer", e);
             throw new RuntimeException(e);
         }
-        catch (ParseException e)
+        catch (JDOMException e) // from JobReader
         {
-            log.debug("got bad XML from service", e);
-            throw new IllegalStateException(e);
+            log.debug("got bad job XML from service", e);
+            throw new RuntimeException(e);
         }
-        catch (JDOMException e)
+        catch (ParseException e) // from JobReader
         {
-            log.debug("got bad XML from service", e);
+            log.debug("got bad job XML from service", e);
+            throw new RuntimeException(e);
+        }
+        catch (TransferParsingException e)
+        {
+            log.debug("got invalid XML from service", e);
             throw new RuntimeException(e);
         }
         return rtn;
