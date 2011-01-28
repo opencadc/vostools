@@ -232,10 +232,17 @@ public class JobReader
         if (executionPhase.equals(ExecutionPhase.ERROR)) errorSummary = parseErrorSummary(doc);
         List<Result> resultsList = parseResultsList(doc);
         List<Parameter> parameterList = parseParametersList(doc);
+        JobInfo jobInfo = parseJobInfo(doc);
         String requestPath = null; // not presented in XML text
 
-        return new Job(jobID, executionPhase, executionDuration, destructionTime, quote, startTime, endTime, errorSummary, owner,
-                runID, resultsList, parameterList, requestPath);
+        Job job;
+        if (parameterList != null)
+            job = new Job(jobID, executionPhase, executionDuration, destructionTime, quote, startTime, 
+                          endTime, errorSummary, owner, runID, resultsList, parameterList, requestPath);
+        else
+            job = new Job(jobID, executionPhase, executionDuration, destructionTime, quote, startTime, 
+                          endTime, errorSummary, owner, runID, resultsList, jobInfo, requestPath);
+        return job;
     }
 
     private Subject createSubject(String owner)
@@ -246,8 +253,8 @@ public class JobReader
         if (owner.length() == 0)
             return null;
         Set<X500Principal> principals = new HashSet<X500Principal>();
-        Set<Object> pub = new HashSet();
-        Set<Object> priv = new HashSet();
+        Set<Object> pub = new HashSet<Object>();
+        Set<Object> priv = new HashSet<Object>();
         principals.add(new X500Principal(owner));
         return new Subject(true, principals, pub, priv);
     }
@@ -363,6 +370,20 @@ public class JobReader
             
             String summaryMessage = e.getChildText(JobAttribute.ERROR_SUMMARY_MESSAGE.getAttributeName(), UWS.NS);
             rtn = new ErrorSummary(summaryMessage, errorType, hasDetail);
+        }
+        return rtn;
+    }
+    
+    private JobInfo parseJobInfo(Document doc)
+    {
+        JobInfo rtn = null;
+        Element root = doc.getRootElement();
+        Element e = root.getChild(JobAttribute.JOB_INFO.getAttributeName(), UWS.NS);
+        if (e != null)
+        {
+            String content = e.getText();
+            System.out.println("****************** jobInfo text: " + content);
+            rtn = new JobInfo(content, null, null);
         }
         return rtn;
     }

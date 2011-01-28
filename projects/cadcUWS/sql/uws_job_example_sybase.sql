@@ -22,7 +22,10 @@ create table uws_job
     owner                   varchar(512)    null,
     runID                   varchar(16)     null,
     requestPath             varchar(32)     null,
-    deletedByUser           tinyint         default 0
+    deletedByUser           tinyint         default 0,
+    jobInfo_content         text            null,
+    jobInfo_contentType     varchar(64)     null,
+    jobInfo_valid           tinyint         null
 
 --    primary key (jobID)
 );
@@ -59,7 +62,7 @@ create table uws_result
     jobID                   varchar(16)     not null,
     name                    varchar(32)     not null,
     url                     varchar(256)    null,
-    primary                 tinyint         default 0
+    primaryResult           tinyint         default 0,
 
     foreign key (jobID) references uws_job (jobID)
 );

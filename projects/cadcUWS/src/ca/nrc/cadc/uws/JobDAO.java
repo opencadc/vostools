@@ -211,7 +211,7 @@ public class JobDAO
             }
             else
              */
-            if (jobs.size() == 0)
+            if (jobs.isEmpty())
             {
                 commitTransaction();
                 return null;
@@ -387,7 +387,10 @@ public class JobDAO
         sb.append("error_documentURL,");
         sb.append("owner,");
         sb.append("runID,");
-        sb.append("requestPath");
+        sb.append("requestPath,");
+        sb.append("jobInfo_content,");
+        sb.append("jobInfo_contentType,");
+        sb.append("jobInfo_valid");
         sb.append(") values ('");
         sb.append(job.getID());
         sb.append("','");
@@ -499,6 +502,36 @@ public class JobDAO
             sb.append("'");
             sb.append(job.getRequestPath());
             sb.append("'");
+        }
+        sb.append(",");
+        if (job.getJobInfo() == null)
+            sb.append("NULL, NULL, NULL");
+        else
+        {
+            if (job.getJobInfo().getContent() == null)
+                sb.append("NULL");
+            else
+            {
+                sb.append("'");
+                sb.append(NetUtil.encode(job.getJobInfo().getContent()));
+                sb.append("'");
+            }
+            sb.append(",");
+            if (job.getJobInfo().getContentType() == null)
+                sb.append("NULL");
+            else
+            {
+                sb.append("'");                
+                sb.append(NetUtil.encode(job.getJobInfo().getContentType()));
+                sb.append("'");
+            }
+            sb.append(",");
+            if (job.getJobInfo().getValid() == null)
+                sb.append("NULL");
+            else
+            {
+                sb.append(job.getJobInfo().getValid() == true ? "1" : "0");
+            }
         }
         sb.append(")");
         return sb.toString();
@@ -654,6 +687,41 @@ public class JobDAO
             sb.append("'");
             sb.append(job.getRequestPath());
             sb.append("'");
+        }
+        sb.append(",");
+        if (job.getJobInfo() == null)
+        {
+            sb.append("jobInfo_content = NULL, ");
+            sb.append("jobInfo_contentType = NULL, ");
+            sb.append("jobInfo_valid = NULL");
+        }
+        else
+        {
+            sb.append("jobInfo_content = ");
+            if (job.getJobInfo().getContent() == null)
+                sb.append("NULL");
+            else
+            {
+                sb.append("'");
+                sb.append(NetUtil.encode(job.getJobInfo().getContent()));
+                sb.append("'");
+            }
+            sb.append(", jobInfo_contentType = ");
+            if (job.getJobInfo().getContentType() == null)
+                sb.append("NULL");
+            else
+            {
+                sb.append("'");                
+                sb.append(NetUtil.encode(job.getJobInfo().getContentType()));
+                sb.append("'");
+            }
+            sb.append(", jobInfo_valid = ");
+            if (job.getJobInfo().getValid() == null)
+                sb.append("NULL");
+            else
+            {
+                sb.append(job.getJobInfo().getValid() == true ? "1" : "0");
+            }
         }
         
         sb.append(" where jobID = '");
@@ -862,6 +930,7 @@ public class JobDAO
      */
     private static final class JobMapper implements RowMapper
     {
+        @Override
         public Object mapRow(ResultSet rs, int rowNum) throws SQLException
         {
             // jobID
@@ -913,11 +982,30 @@ public class JobDAO
 
             // request path
             String requestPath = NetUtil.decode(rs.getString("requestPath"));
-
+            
+            // JobInfo content
+            String content = NetUtil.decode(rs.getString("jobInfo_content"));
+            
+            // JobInfo ContentType
+            String contentType = NetUtil.decode(rs.getString("jobInfo_contentType"));
+            
+            // JobInfo valid
+            Boolean valid = null;
+            int i = rs.getInt("jobInfo_valid");
+            if (!rs.wasNull())
+                valid = i == 0 ? false : true;
+            
+            // JobInfo
+            JobInfo jobInfo;
+            if (content == null && contentType == null)
+                jobInfo = null;
+            else
+                jobInfo = new JobInfo(content, contentType, valid);
+            
             // Create the job
             Job job = new Job(jobID, executionPhase, executionDuration, destructionTime,
                               quote, startTime, endTime, errorSummary, owner, runID,
-                              null, null, requestPath);
+                              null, jobInfo, requestPath);
 
             return job;
         }
@@ -928,6 +1016,7 @@ public class JobDAO
      */
     private static final class ParameterMapper implements RowMapper
     {
+        @Override
         public Object mapRow(ResultSet rs, int rowNum) throws SQLException
         {
             return new Parameter(NetUtil.decode(rs.getString("name")), NetUtil.decode(rs.getString("value")));
@@ -939,6 +1028,7 @@ public class JobDAO
      */
     private static final class ResultMapper implements RowMapper
     {
+        @Override
         public Object mapRow(ResultSet rs, int rowNum) throws SQLException
         {
             URL url;

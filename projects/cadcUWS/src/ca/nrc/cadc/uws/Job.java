@@ -95,15 +95,15 @@ public class Job
     private String runID;
     private List<Result> resultsList;
     private List<Parameter> parameterList;
-    private Object any;
     private String requestPath;
+    private JobInfo jobInfo;
 
 
     public Job() { }
 
     /**
      * Copy constructor. Create a new job with the specified ID and content copied
-     * from the sepcified job.
+     * from the specified job.
      * 
      * @param jobID
      * @param job
@@ -129,7 +129,7 @@ public class Job
      * @param runID                 The specific running ID.
      * @param resultsList           The List of Results.
      * @param parameterList         The List of Parameters.
-     * @param requestPath           The http request path.
+     * @param requestPath           The HTTP request path.
      */
     public Job(final String jobID, final ExecutionPhase executionPhase,
                final long executionDuration, final Date destructionTime,
@@ -152,8 +152,48 @@ public class Job
         this.resultsList = resultsList;
         this.parameterList = parameterList;
         this.requestPath = requestPath;
+        this.jobInfo = null;
     }
 
+    /**
+     * Constructor.
+     *
+     * @param jobID                 The unique Job ID.
+     * @param executionPhase        The Execution Phase.
+     * @param executionDuration     The Duration in clock seconds.
+     * @param destructionTime       The date and time of destruction.
+     * @param quote                 The quoted date of completion.
+     * @param startTime             The start date of execution.
+     * @param endTime               The end date of execution.
+     * @param errorSummary          The error, if any.
+     * @param owner                 The Owner of this Job.
+     * @param runID                 The specific running ID.
+     * @param resultsList           The List of Results.
+     * @param requestPath           The HTTP request path.
+     * @param jobInfo               Content that describes the Job.
+     */
+    public Job(final String jobID, final ExecutionPhase executionPhase,
+               final long executionDuration, final Date destructionTime,
+               final Date quote, final Date startTime, final Date endTime,
+               final ErrorSummary errorSummary, final Subject owner,
+               final String runID, final List<Result> resultsList,
+               final JobInfo jobInfo, final String requestPath)
+    {
+        this.jobID = jobID;
+        this.executionPhase = executionPhase;
+        this.executionDuration = executionDuration;
+        this.destructionTime = destructionTime;
+        this.quote = quote;
+        this.startTime = startTime;
+        this.endTime = endTime;
+        this.errorSummary = errorSummary;
+        this.owner = owner;
+        this.runID = runID;
+        this.resultsList = resultsList;
+        this.jobInfo = jobInfo;
+        this.requestPath = requestPath;
+        this.parameterList = null;
+    }
     /**
      * Set all fields except ID from the specified job.
      * 
@@ -174,12 +214,13 @@ public class Job
         setParameterList(job.getParameterList());
         setOwner(job.getOwner());
         setRequestPath(job.getRequestPath());
+        setJobInfo(job.getJobInfo());
     }
 
     @Override
     public String toString()
     {
-        return "Job [any=" + any + ", destructionTime=" + destructionTime + ", endTime=" + endTime + ", errorSummary="
+        return "Job [jobInfo=" + jobInfo + " destructionTime=" + destructionTime + ", endTime=" + endTime + ", errorSummary="
                 + errorSummary + ", executionDuration=" + executionDuration + ", executionPhase=" + executionPhase + ", jobID="
                 + jobID + ", owner=" + owner + ", parameterList=" + parameterList + ", quote=" + quote + ", requestPath="
                 + requestPath + ", resultsList=" + resultsList + ", runID=" + runID + ", startTime=" + startTime + "]";
@@ -234,7 +275,7 @@ public class Job
      * <p/>
      * When a job is created, the service sets the initial execution duration.
      * The client may write to an Execution Duration to try to change the
-     * job's cpu time allocation.  The service may forbid changes, or may set
+     * job's CPU time allocation.  The service may forbid changes, or may set
      * limits on the allowed execution duration.
      *
      * @return long execution duration.
@@ -386,7 +427,7 @@ public class Job
      * no parsing or processing of the RunId, but merely pass back the value
      * (if it exists) as it was passed to the UWS at job creation time. In
      * particular it may be the case that multiple jobs have the same RunId, as
-     * this is a mechanism by which the calling process can identifiy jobs that
+     * this is a mechanism by which the calling process can identify jobs that
      * belong to a particular group. The exact mechanism of setting the RunId
      * is not specified here, but will be part of the specification of the
      * protocol using the UWS pattern.
@@ -435,7 +476,7 @@ public class Job
      * Reading the Results List itself enumerates the available or expected
      * result objects.
      * <p/>
-     * A particular imlementation of UWS may choose to allow the parameters to
+     * A particular implementation of UWS may choose to allow the parameters to
      * be updated after the initial job creation step, before the Phase is set
      * to the executing state. It is up to the individual implementation to
      * specify exactly how these parameters may be updated, but good practice
@@ -501,19 +542,19 @@ public class Job
     }
 
     /**
-     * The nebulous ANY object accomodates a domain object meaningful to
+     * The nebulous ANY object accommodates a domain object meaningful to
      * specific implementors of the UWS system.  The default implementation will
      * not make use of it at all.
      *
      * @return  An Object.  Anything in the world.
      */
-    public Object getAny()
+    public JobInfo getJobInfo()
     {
-        return any;
+        return jobInfo;
     }
 
-    public void setAny(final Object any)
+    public void setJobInfo(final JobInfo jobInfo)
     {
-        this.any = any;
+        this.jobInfo = jobInfo;
     }
 }

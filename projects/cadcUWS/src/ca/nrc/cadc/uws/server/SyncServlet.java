@@ -73,6 +73,7 @@ import ca.nrc.cadc.auth.AuthenticationUtil;
 import ca.nrc.cadc.uws.ExecutionPhase;
 import ca.nrc.cadc.uws.Job;
 import ca.nrc.cadc.uws.JobAttribute;
+import ca.nrc.cadc.uws.JobInfo;
 import ca.nrc.cadc.uws.JobManager;
 import ca.nrc.cadc.uws.JobPersistence;
 import ca.nrc.cadc.uws.JobPersistenceException;
@@ -81,18 +82,21 @@ import ca.nrc.cadc.uws.JobWriter;
 import ca.nrc.cadc.uws.Parameter;
 import ca.nrc.cadc.uws.SyncJobRunner;
 import ca.nrc.cadc.uws.SyncOutput;
+import java.io.BufferedReader;
 import java.io.FilterOutputStream;
 import java.io.IOException;
+import java.io.InputStreamReader;
 import java.io.OutputStream;
 import java.io.PrintWriter;
+import java.io.StringReader;
 import java.net.MalformedURLException;
 import java.net.URL;
 import java.security.Principal;
 import java.security.PrivilegedAction;
 import java.security.cert.X509Certificate;
+import java.text.ParseException;
 import java.util.Arrays;
 import java.util.Collection;
-import java.util.Date;
 import java.util.Enumeration;
 import javax.security.auth.Subject;
 import javax.servlet.ServletConfig;
@@ -103,6 +107,9 @@ import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 
 import org.apache.log4j.Logger;
+import org.jdom.Document;
+import org.jdom.JDOMException;
+import org.jdom.input.SAXBuilder;
 
 /**
  * Servlet that runs a SyncJobRunner for each request. This servlet supports both
@@ -140,6 +147,8 @@ public class SyncServlet extends HttpServlet
     private static Logger log = Logger.getLogger(SyncServlet.class);
     private static final long serialVersionUID = 201009291100L;
     private static final String JOB_EXEC = "run";
+    private static final String TEXT_XML = "text/xml";
+    private static final String FORM_URLENCODED = "application/x-www-form-urlencoded";
     
     private JobManager jobManager;
     private JobPersistence jobPersistence;
@@ -289,7 +298,7 @@ public class SyncServlet extends HttpServlet
             Subject owner = job.getOwner();
             if (false && owner != null)
             {
-                boolean ok = owner.getPrincipals().size() == 0; // empty Subject == no owner
+                boolean ok = owner.getPrincipals().isEmpty(); // empty Subject == no owner
                 if (subject != null)
                 {
                     for (Principal p1 : owner.getPrincipals())
@@ -418,6 +427,7 @@ public class SyncServlet extends HttpServlet
 
         SyncOutputImpl getOut() { return syncOutput; }
 
+        @Override
         public Object run()
         {
             Job j = runner.getJob();
@@ -458,6 +468,7 @@ public class SyncServlet extends HttpServlet
 
         public boolean isOpen() { return ostream != null; }
         
+        @Override
         public OutputStream getOutputStream()
             throws IOException
         {
@@ -469,6 +480,7 @@ public class SyncServlet extends HttpServlet
             return ostream;
         }
 
+        @Override
         public void setHeader(String key, String value)
         {
             if (ostream == null) // header not committed
@@ -519,8 +531,61 @@ public class SyncServlet extends HttpServlet
     }
 
     private Job create(HttpServletRequest request, Subject subject)
-    {
+        throws IOException, JDOMException, ParseException
+    {        
+        // TODO: check content-type for params (www-urlencoded?) vs XML (text/xml)
+        String contentType = request.getHeader("Content-Type");
+        if (contentType == null || !contentType.equals(TEXT_XML) && !contentType.equals(FORM_URLENCODED))
+            throw new IllegalArgumentException("Content-Types must be " + TEXT_XML + " or " + FORM_URLENCODED);
+
+        // Job from POSTed XML
         Job job = new Job();
+        if (contentType.equals(TEXT_XML))
+        {
+            // Read in the XML.
+            BufferedReader br = new BufferedReader(new InputStreamReader(request.getInputStream()));
+            StringBuilder sb = new StringBuilder();
+            String line;
+            while ((line = br.readLine()) != null)
+            {
+                sb.append(line);
+            }
+            
+            // Check that the XML is valid.
+            SAXBuilder builder = new SAXBuilder("org.apache.xerces.parsers.SAXParser", false);
+            builder.build(new StringReader(sb.toString()));
+            JobInfo jobInfo = new JobInfo(sb.toString(), TEXT_XML, true);
+            job.setJobInfo(jobInfo);
+            log.debug(jobInfo);
+        }
+                
+        // Job from POSTed parameters
+        else
+        {
+            Enumeration<String> paramNames = request.getParameterNames();
+            while ( paramNames.hasMoreElements() )
+            {
+                String p = paramNames.nextElement();
+
+                if (JobAttribute.isValue(p))
+                {
+                    if ( JobAttribute.RUN_ID.getAttributeName().equalsIgnoreCase(p) )
+                        job.setRunID(request.getParameter(p));
+                }
+                else
+                {
+                    String[] vals = request.getParameterValues(p);
+                    if (vals != null)
+                    {
+                        for (String v : vals)
+                        {
+                            job.addParameter(new Parameter(p, v));
+                        }
+                    }
+                }
+            }
+        }
+
         job.setOwner(subject);
         try
         {
@@ -531,31 +596,8 @@ public class SyncServlet extends HttpServlet
         {
             log.error("failed to get request path", oops);
         }
-        
-        // TODO: check content-type for params (www-urlencoded?) vs XML (text/xml)
 
         // TODO: where to get Map of ns:<url to xsd file> for use with XmlUtil??
-
-        Enumeration<String> paramNames = request.getParameterNames();
-        while ( paramNames.hasMoreElements() )
-        {
-            String p = paramNames.nextElement();
-
-            if (JobAttribute.isValue(p))
-            {
-                if ( JobAttribute.RUN_ID.getAttributeName().equalsIgnoreCase(p) )
-                    job.setRunID(request.getParameter(p));
-            }
-            else
-            {
-                String[] vals = request.getParameterValues(p);
-                if (vals != null)
-                    for (String v : vals)
-                    {
-                        job.addParameter(new Parameter(p, v));
-                    }
-            }
-        }
 
         return job;
     }

@@ -72,7 +72,6 @@ package ca.nrc.cadc.uws;
 import java.io.IOException;
 import java.io.OutputStream;
 import java.io.Writer;
-import java.net.URL;
 import java.security.Principal;
 import java.util.Set;
 
@@ -81,10 +80,15 @@ import javax.security.auth.Subject;
 import org.apache.log4j.Logger;
 import org.jdom.Document;
 import org.jdom.Element;
+import org.jdom.JDOMException;
 import org.jdom.output.Format;
 import org.jdom.output.XMLOutputter;
 
 import ca.nrc.cadc.xml.XmlUtil;
+import java.io.Reader;
+import java.io.StringReader;
+import java.util.List;
+import org.jdom.input.SAXBuilder;
 
 /**
  * Writes a Job as XML to an output.
@@ -381,6 +385,36 @@ public class JobWriter
         }
         return eleErrorSummary;
     }
+    
+    /**
+     * Get an Element representing the Job jobInfo.
+     *
+     * @return The Job jobInfo Element.
+     */
+    public Element getJobInfo()
+    {
+        Element element = null;
+        JobInfo jobInfo = job.getJobInfo();
+        if (jobInfo != null)
+        {
+            element = new Element(JobAttribute.JOB_INFO.getAttributeName(), UWS.NS);
+            if (jobInfo.getContent() != null)
+            {
+                try
+                {
+                    // The JobInfo content can't be validate since the schema(s) aren't known.
+                    SAXBuilder builder = new SAXBuilder("org.apache.xerces.parsers.SAXParser", false);
+                    Document doc = builder.build(new StringReader(jobInfo.getContent()));
+                    element.addContent(doc.getRootElement().detach()); 
+                }
+                catch (Exception e)
+                {
+                    log.error(e);
+                }                               
+            }                                   
+        }
+        return element;
+    }
 
     /**
      * Build XML Document for the job
@@ -402,8 +436,12 @@ public class JobWriter
         Element errorSummary = getErrorSummary();
         if (errorSummary != null)
             root.addContent(errorSummary);
+        Element jobInfo = getJobInfo();
+        if (jobInfo != null)
+            root.addContent(jobInfo);
 
         document = new Document(root);
     }
-
+    
 }
+    
