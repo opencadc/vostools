@@ -81,11 +81,12 @@ import ca.nrc.cadc.net.NetUtil;
 import ca.nrc.cadc.uws.ExecutionPhase;
 import ca.nrc.cadc.uws.Job;
 import ca.nrc.cadc.uws.ErrorSummary;
+import ca.nrc.cadc.uws.ErrorType;
+import ca.nrc.cadc.uws.JobWriter;
 import ca.nrc.cadc.uws.Parameter;
 import ca.nrc.cadc.uws.Result;
 import ca.nrc.cadc.uws.SyncJobRunner;
 import ca.nrc.cadc.uws.SyncOutput;
-import ca.nrc.cadc.uws.web.restlet.representation.SyncRepresentation;
 import java.io.PrintWriter;
 import java.net.MalformedURLException;
 
@@ -104,7 +105,7 @@ public class HelloWorld implements SyncJobRunner
 	public static String PASS   = "PASS";
     public static String RUNFOR = "RUNFOR";
     public static String SYNC   = "SYNC";
-    public static String STREAM   = "STREAM";
+    public static String STREAM = "STREAM";
     
     public static String ERROR = "Error\r\n";
     public static String RESULT = "Hello, World!\r\n";
@@ -117,8 +118,12 @@ public class HelloWorld implements SyncJobRunner
     private int runfor;
     private boolean sync;
     private boolean stream;
+    private boolean xml;
 
-    public HelloWorld() { }
+    public HelloWorld()
+    {
+        xml = false;
+    }
 
     public void setJob(final Job job)
     {
@@ -142,7 +147,8 @@ public class HelloWorld implements SyncJobRunner
                 logger.error("Unable to create ErrorSummary url ", e);
                 url = null;
             }
-            ErrorSummary error = new ErrorSummary("ERROR: No param list found in job", url);
+            ErrorSummary error = new ErrorSummary("ERROR: No param list found in job", ErrorType.FATAL, true);
+            error.setDocumentURL(url);
             job.setErrorSummary(error);
             job.setExecutionPhase(ExecutionPhase.ERROR);
             return;
@@ -227,6 +233,16 @@ public class HelloWorld implements SyncJobRunner
                         + ", expected " + Boolean.TRUE + " or " + Boolean.FALSE);
             }
         }
+        
+        // If no parameters set, assume posting xml and return the job xml.
+        if (passP == null && runforP == null && syncP == null && streamP == null)
+        {
+            pass = true;
+            runfor = 1;
+            sync = true;
+            stream = true;
+            xml = true;
+        }
     }
 
     public Job getJob()
@@ -280,7 +296,8 @@ public class HelloWorld implements SyncJobRunner
                 {
                     logger.debug("Negative run time: " + runfor);
                     url = new URL("http://" + server + "/cadcSampleUWS/error.txt");
-                    ErrorSummary error = new ErrorSummary("ERROR: RUNFOR param less than 0", url);
+                    ErrorSummary error = new ErrorSummary("ERROR: RUNFOR param less than 0", ErrorType.FATAL, true);
+                    error.setDocumentURL(url);
                     job.setErrorSummary(error);
                     job.setExecutionPhase(ExecutionPhase.ERROR);
                     if (sync && syncOutput != null)
@@ -303,13 +320,25 @@ public class HelloWorld implements SyncJobRunner
                         job.setResultsList(resultList);
                         job.setExecutionPhase(ExecutionPhase.COMPLETED);
                         if (sync && syncOutput != null)
-                            syncOutput.getOutputStream().write(RESULT.getBytes());
+                        {
+                            if (xml)
+                            {
+                                syncOutput.setHeader("Content-Type", "text/xml");
+                                JobWriter jobWriter = new JobWriter(job);                      
+                                jobWriter.writeTo(syncOutput.getOutputStream());
+                            }
+                            else
+                            {
+                                syncOutput.getOutputStream().write(RESULT.getBytes());
+                            }                            
+                        }
                     }
                     else
                     {
                         logger.debug("Having slept and being told to fail, setting error");
                         url = new URL("http://" + server + "/cadcSampleUWS/error.txt");
-                        ErrorSummary error = new ErrorSummary("error from PASS=false", url);
+                        ErrorSummary error = new ErrorSummary("error from PASS=false", ErrorType.FATAL, true);
+                        error.setDocumentURL(url);
                         job.setErrorSummary(error);
                         job.setExecutionPhase(ExecutionPhase.ERROR);
                         if (sync && syncOutput != null)
@@ -320,7 +349,7 @@ public class HelloWorld implements SyncJobRunner
 		}
         catch (Throwable t)
         {
-			ErrorSummary error = new ErrorSummary(t.getMessage(), null);
+			ErrorSummary error = new ErrorSummary(t.getMessage(), ErrorType.FATAL, false);
 			job.setErrorSummary(error);
             job.setExecutionPhase(ExecutionPhase.ERROR);
             if (sync && syncOutput != null)

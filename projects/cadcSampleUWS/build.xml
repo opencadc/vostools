@@ -193,6 +193,18 @@
         </junit>
     </target>
 
+    <target name="int-test-sync" depends="compile-test, deploy">
+        <junit printsummary="yes" haltonfailure="yes" fork="yes">
+            <classpath>
+                <pathelement path="${build}/class"/>
+                <pathelement path="${jars}:${testingJars}"/>
+            </classpath>
+            <sysproperty key="service.url" value="http://localhost/cadcSampleUWS/sync"/>
+            <test name="ca.nrc.cadc.conformance.uws.JobInfoTest"/>
+            <formatter type="plain" usefile="false"/>
+        </junit>
+    </target>
+    
     <target name="test">
         <echo message="WARNING: no tests implemented." />
     </target>
