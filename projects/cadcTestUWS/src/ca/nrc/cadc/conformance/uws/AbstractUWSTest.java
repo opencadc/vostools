@@ -277,6 +277,11 @@ public abstract class AbstractUWSTest
         String path = locationUrl.getPath();
         String[] paths = path.split("/");
         String jobId = paths[paths.length - 1];
+        
+        // Check for sync jobs since the SyncServlet currently redirects to jobId/run.
+        if (jobId.equals("run"))
+            jobId = paths[paths.length - 2];
+        
         log.debug("jobId: " + jobId);
         assertNotNull("jobId not found", jobId);
 

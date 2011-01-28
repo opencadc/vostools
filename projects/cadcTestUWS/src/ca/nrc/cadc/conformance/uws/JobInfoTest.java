@@ -69,94 +69,128 @@
 
 package ca.nrc.cadc.conformance.uws;
 
-import ca.nrc.cadc.date.DateUtil;
-import com.meterware.httpunit.PostMethodWebRequest;
+import java.io.StringWriter;
+import java.io.PrintWriter;
+import org.jdom.output.Format;
+import org.jdom.output.XMLOutputter;
 import com.meterware.httpunit.WebConversation;
-import com.meterware.httpunit.WebRequest;
 import com.meterware.httpunit.WebResponse;
-import java.util.Calendar;
-import java.util.Date;
 import org.apache.log4j.Logger;
 import org.jdom.Document;
 import org.jdom.Element;
+import org.jdom.Namespace;
 import org.junit.Test;
 import static org.junit.Assert.*;
 
-public class DestructionTest extends AbstractUWSTest
+public class JobInfoTest extends AbstractUWSTest
 {
-    private static Logger log = Logger.getLogger(DestructionTest.class);
+    private static Logger log = Logger.getLogger(JobInfoTest.class);
 
-    // Destruction date passed to UWS service.
-    private String destruction;
-
-    public DestructionTest()
+    public JobInfoTest()
     {
         super();
         setLoggingLevel(log);
-        Calendar cal = Calendar.getInstance();
-        cal.roll(Calendar.DATE, true);
-        Date date = cal.getTime();
-//        destruction = DateUtil.toString(date, DateUtil.IVOA_DATE_FORMAT, DateUtil.LOCAL);
-        destruction = DateUtil.toString(date, DateUtil.IVOA_DATE_FORMAT);
     }
 
-    /**
-     * Create a new Job, then update and verify the Destruction date.
-     */
     @Test
-    public void testDestruction()
+    public void testCreateJobInfo()
     {
         try
         {
+            // JobInfo XML
+            String xml = "<target><name>name</name><position>position</position></target>";
+            
             // Create a new Job.
             WebConversation conversation = new WebConversation();
-            String jobId = createJob(conversation);
+            String jobId = createJob(conversation, xml);
 
-            // POST request to the destruction resource.
-            String resourceUrl = serviceUrl + "/" + jobId + "/destruction";
-            WebRequest postRequest = new PostMethodWebRequest(resourceUrl);
-            postRequest.setParameter("DESTRUCTION", destruction);
-            postRequest.setHeaderField("Content-Type", "application/x-www-form-urlencoded");
-            WebResponse response = post(conversation, postRequest);
-
-            // Get the redirect.
-            String location = response.getHeaderField("Location");
-            log.debug("Location: " + location);
-            assertNotNull("POST response to " + resourceUrl + " location header not set", location);
-    //      assertEquals("POST response to " + resourceUrl + " location header incorrect", baseUrl + "/" + jobId, location);
-
-            // Follow the redirect.
-            response = get(conversation, location);
+            // GET request to the jobId resource.
+            String resourceUrl = serviceUrl + "/" + jobId;
+            WebResponse response = get(conversation, resourceUrl);
 
             // Validate the XML against the schema.
             log.debug("XML:\r\n" + response.getText());
-            buildDocument(response.getText(), true);
+            Document document = buildDocument(response.getText(), true);
 
-            // Get the destruction resource for this jobId.
-            response = get(conversation, resourceUrl);
-
-            // Create DOM document from XML.
-            log.debug("XML:\r\n" + response.getText());
-            Document document = buildDocument(response.getText(), false);
-
-            // Get the root of the document.
+            // Get the document root.
             Element root = document.getRootElement();
             assertNotNull("XML returned from GET of " + resourceUrl + " missing root element", root);
+            Namespace namespace = root.getNamespace();
+            log.debug("namespace: " + namespace);
 
-            // Validate the dstruction time.
-            log.debug("uws:destruction: " + root.getText());
-            assertEquals("Destruction element not updated in XML returned from GET of " + resourceUrl, destruction, root.getText());
+            // List of jobInfo elements.
+            Element jobInfo = root.getChild("jobInfo", namespace);
+            Element content = (Element) jobInfo.getChildren().get(0);
+            assertNotNull("XML returned from GET of " + resourceUrl + " missing uws:jobInfo element", jobInfo);
+
+            // Validate the jobInfo.        
+            XMLOutputter outputter = new XMLOutputter(Format.getCompactFormat());
+            StringWriter sw = new StringWriter();
+            PrintWriter pw = new PrintWriter(sw);
+            outputter.output(content, pw);            
+            log.debug("jobInfo: " + sw.toString());
+            assertEquals("Incorrect uws:jobInfo content in XML returned from GET of " + resourceUrl, xml, sw.toString());
 
             // Delete the job.
             deleteJob(conversation, jobId);
 
-            log.info("DestructionTest.testDestruction completed.");
+            log.info("JobTest.testCreateJobInfo completed.");
         }
-        catch(Throwable t)
+        catch (Throwable t)
         {
             log.error(t);
             fail(t.getMessage());
         }
     }
 
+    @Test
+    public void testCreateJobInfoWithNamespace()
+    {
+        try
+        {
+            // JobInfo XML
+            String xml = "<foo:target xmlns:foo=\"http://localhost/\"><foo:name>name</foo:name><foo:position>position</foo:position></foo:target>";
+            
+            // Create a new Job.
+            WebConversation conversation = new WebConversation();
+            String jobId = createJob(conversation, xml);
+
+            // GET request to the jobId resource.
+            String resourceUrl = serviceUrl + "/" + jobId;
+            WebResponse response = get(conversation, resourceUrl);
+
+            // Validate the XML against the schema.
+            log.debug("XML:\r\n" + response.getText());
+            Document document = buildDocument(response.getText(), true);
+
+            // Get the document root.
+            Element root = document.getRootElement();
+            assertNotNull("XML returned from GET of " + resourceUrl + " missing root element", root);
+            Namespace namespace = root.getNamespace();
+            log.debug("namespace: " + namespace);
+
+            // List of jobInfo elements.
+            Element jobInfo = root.getChild("jobInfo", namespace);
+            Element content = (Element) jobInfo.getChildren().get(0);
+            assertNotNull("XML returned from GET of " + resourceUrl + " missing uws:jobInfo element", jobInfo);
+
+            // Validate the jobInfo.        
+            XMLOutputter outputter = new XMLOutputter(Format.getCompactFormat());
+            StringWriter sw = new StringWriter();
+            PrintWriter pw = new PrintWriter(sw);
+            outputter.output(content, pw);            
+            log.debug("jobInfo: " + sw.toString());
+            assertEquals("Incorrect uws:jobInfo content in XML returned from GET of " + resourceUrl, xml, sw.toString());
+
+            // Delete the job.
+            deleteJob(conversation, jobId);
+
+            log.info("JobTest.testCreateJobInfoWithNamespace completed.");
+        }
+        catch (Throwable t)
+        {
+            log.error(t);
+            fail(t.getMessage());
+        }
+    }
 }

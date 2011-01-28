@@ -69,6 +69,7 @@
 
 package ca.nrc.cadc.conformance.uws;
 
+import java.util.ArrayList;
 import com.meterware.httpunit.PostMethodWebRequest;
 import com.meterware.httpunit.WebConversation;
 import com.meterware.httpunit.WebRequest;
@@ -76,7 +77,6 @@ import com.meterware.httpunit.WebResponse;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import org.apache.log4j.Level;
 import org.apache.log4j.Logger;
 import org.jdom.Document;
 import org.jdom.Element;
@@ -138,9 +138,13 @@ public class PhaseTest extends AbstractUWSTest
         {
             // Create a new Job.
             WebConversation conversation = new WebConversation();
-            Map parameters = new HashMap();
-            parameters.put("PASS", "FALSE");
-            parameters.put("RUNFOR", "10");
+            Map<String, List<String>> parameters = new HashMap<String, List<String>>();
+            List<String> pass = new ArrayList<String>();
+            pass.add("FALSE");
+            parameters.put("PASS", pass);
+            List<String> runfor = new ArrayList<String>();
+            runfor.add("10");
+            parameters.put("RUNFOR", runfor);
 
             // Create a new Job and get the jobId.
             String jobId = createJob(conversation, parameters);

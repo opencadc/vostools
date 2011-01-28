@@ -143,7 +143,7 @@ public class JobTest extends AbstractUWSTest
         {
             // Create Map of Job parameters.
             Map<String, List<String>> parameters = new HashMap<String, List<String>>();
-            List values = new ArrayList<String>();
+            List<String> values = new ArrayList<String>();
             values.add("runId value");
             parameters.put("runId", values);
 
@@ -186,7 +186,7 @@ public class JobTest extends AbstractUWSTest
         }
     }
 
-    @Test
+//    @Test
     public void testCreateJobViaXML()
     {
         try
