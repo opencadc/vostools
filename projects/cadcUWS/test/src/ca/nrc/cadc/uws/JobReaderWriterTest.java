@@ -86,11 +86,11 @@ import org.junit.BeforeClass;
 import org.junit.Test;
 
 import ca.nrc.cadc.util.Log4jInit;
-import java.io.ByteArrayInputStream;
-import java.io.ByteArrayOutputStream;
 import java.io.IOException;
+import java.io.StringReader;
 import java.io.StringWriter;
 import java.security.Principal;
+import java.text.DateFormat;
 import java.util.HashSet;
 import java.util.Set;
 import javax.security.auth.Subject;
@@ -107,20 +107,18 @@ public class JobReaderWriterTest
 
     private String JOB_ID = "someJobID";
     private String RUN_ID = "someRunID";
-    private String TEST_DATE = "2001-01-01T12:34:56";
+    private String TEST_DATE = "2001-01-01T12:34:56.000";
 
-    private Job testJob;
+    private DateFormat dateFormat;
+    private Date baseDate;
 
-    private static final boolean DEBUG_OUTPUT_XML = false;
 
     @BeforeClass
     public static void setUpBeforeClass() 
         throws Exception
     {
-        if (DEBUG_OUTPUT_XML)
-            Log4jInit.setLevel("ca.nrc.cadc", Level.DEBUG);
-        else
-            Log4jInit.setLevel("ca.nrc.cadc", Level.INFO);
+        Log4jInit.setLevel("ca.nrc.cadc", Level.INFO);
+
     }
 
     @AfterClass
@@ -130,7 +128,12 @@ public class JobReaderWriterTest
      * @throws java.lang.Exception
      */
     @Before
-    public void setUp() throws Exception { }
+    public void setUp()
+        throws Exception
+    {
+        this.dateFormat = DateUtil.getDateFormat(DateUtil.IVOA_DATE_FORMAT, DateUtil.UTC);
+        this.baseDate = dateFormat.parse(TEST_DATE);
+    }
 
     /**
      * @throws java.lang.Exception
@@ -142,16 +145,13 @@ public class JobReaderWriterTest
     Job createPendingJob()
         throws Exception
     {
-        Date now = DateUtil.toDate(TEST_DATE, DateUtil.IVOA_DATE_FORMAT, DateUtil.UTC);
-
         Job ret = new Job();
         ret.setExecutionPhase(ExecutionPhase.PENDING);
         ret.setID(JOB_ID);
         ret.setRunID(RUN_ID);
-        ret.setQuote(new Date(now.getTime() + 10000L));
+        ret.setQuote(new Date(baseDate.getTime() + 10000L));
         ret.setExecutionDuration(123L);
-        ret.setDestructionTime(new Date(now.getTime() + 300000L));
-        //ret.setOwner(AuthenticationUtil.getSubject(null, null));
+        ret.setDestructionTime(new Date(baseDate.getTime() + 300000L));
         ret.setOwner(null);
         return ret;
     }
@@ -171,6 +171,7 @@ public class JobReaderWriterTest
 
     void execute(Job j)
     {
+        j.setStartTime(new Date(baseDate.getTime() + 300L));
         j.setExecutionPhase(ExecutionPhase.EXECUTING);
     }
 
@@ -181,6 +182,8 @@ public class JobReaderWriterTest
         results.add(new Result("rsName1", new URL("http://www.ivoa.net/url1"), true));
         results.add(new Result("rsName2", new URL("http://www.ivoa.net/url2"), false));
         j.setResultsList(results);
+        j.setStartTime(new Date(baseDate.getTime() + 300L));
+        j.setEndTime(new Date(baseDate.getTime() + 500L));
         j.setExecutionPhase(ExecutionPhase.COMPLETED);
     }
 
@@ -190,29 +193,21 @@ public class JobReaderWriterTest
         ErrorSummary err = new ErrorSummary("oops", ErrorType.FATAL, true);
         err.setDocumentURL(new URL("http://www.ivoa.net/oops"));
         j.setErrorSummary(err);
+        j.setStartTime(new Date(baseDate.getTime() + 300L));
+        j.setEndTime(new Date(baseDate.getTime() + 400L));
         j.setExecutionPhase(ExecutionPhase.ERROR);
     }
 
-    private byte[] toXML(Job j)
+    private String toXML(Job j)
         throws IOException
     {
-        JobWriter w = new JobWriter(j);
-        ByteArrayOutputStream bos = new ByteArrayOutputStream(4096);
-        w.writeTo(bos);
-        return bos.toByteArray();
-    }
-
-
-    private void logXML(Job j)
-        throws IOException
-    {
-        if (!DEBUG_OUTPUT_XML)
-            return;
-        JobWriter w = new JobWriter(j);
+        JobWriter w = new JobWriter();
         StringWriter sw = new StringWriter();
-        w.writeTo(sw);
-        log.debug("\n"+sw.toString());
+        w.write(j, sw);
         sw.close();
+        String ret = sw.toString();
+        log.debug("\n"+ret);
+        return ret;
     }
 
     private void assertEquals(Job exp, Job act)
@@ -231,6 +226,22 @@ public class JobReaderWriterTest
         assertEqualResults(exp.getResultsList(), act.getResultsList());
 
         assertEqualError(exp.getErrorSummary(), act.getErrorSummary());
+
+        assertEqualJobInfo(exp.getJobInfo(), act.getJobInfo());
+    }
+
+    private void assertEqualJobInfo(JobInfo exp, JobInfo act)
+    {
+        log.debug("expect: " + exp);
+        log.debug("actual: " + act);
+        if (exp == null || !exp.getValid())
+        {
+            Assert.assertNull("expect null jobInfo", act);
+            return;
+        }
+
+        Assert.assertNotNull("expect non-null jobInfo", act);
+        Assert.assertEquals("jobInfo content", exp.getContent(), act.getContent());
     }
 
     private void assertEqualSubject(Subject exp, Subject act)
@@ -297,25 +308,23 @@ public class JobReaderWriterTest
     public void test(Job job)
         throws Exception
     {
-        logXML(job);
-        byte[] buf = toXML(job);
-
+        String xml = toXML(job);
         JobReader r = new JobReader();
-        Job job2 = r.readFrom(new ByteArrayInputStream(buf));
-
+        Job job2 = r.read(new StringReader(xml));
         assertEquals(job, job2);
     }
 
     @Test
     public void testPending()
     {
+        log.debug("testPending");
         try
         {
             Job job = createPendingJob();
             test(job);
 
         }
-        catch(Throwable unexpected)
+        catch(Exception unexpected)
         {
             log.debug("unexpected exception", unexpected);
             Assert.fail("unexpected exception: " + unexpected);
@@ -325,13 +334,14 @@ public class JobReaderWriterTest
     @Test
     public void testQueued()
     {
+        log.debug("testQueued");
         try
         {
             Job job = createPendingJob();
             queue(job);
             test(job);
         }
-        catch(Throwable unexpected)
+        catch(Exception unexpected)
         {
             log.debug("unexpected exception", unexpected);
             Assert.fail("unexpected exception: " + unexpected);
@@ -341,13 +351,14 @@ public class JobReaderWriterTest
     @Test
     public void testExecuting()
     {
+        log.debug("testExecuting");
         try
         {
             Job job = createPendingJob();
             execute(job);
             test(job);
         }
-        catch(Throwable unexpected)
+        catch(Exception unexpected)
         {
             log.debug("unexpected exception", unexpected);
             Assert.fail("unexpected exception: " + unexpected);
@@ -357,13 +368,14 @@ public class JobReaderWriterTest
     @Test
     public void testCompleted()
     {
+        log.debug("testCompleted");
         try
         {
             Job job = createPendingJob();
             complete(job);
             test(job);
         }
-        catch(Throwable unexpected)
+        catch(Exception unexpected)
         {
             log.debug("unexpected exception", unexpected);
             Assert.fail("unexpected exception: " + unexpected);
@@ -373,6 +385,7 @@ public class JobReaderWriterTest
     @Test
     public void testWithOwner()
     {
+        log.debug("testWithOwner");
         try
         {
             Set<X500Principal> principals = new HashSet<X500Principal>();
@@ -385,7 +398,7 @@ public class JobReaderWriterTest
             job.setOwner(s);
             test(job);
         }
-        catch(Throwable unexpected)
+        catch(Exception unexpected)
         {
             log.debug("unexpected exception", unexpected);
             Assert.fail("unexpected exception: " + unexpected);
@@ -395,13 +408,54 @@ public class JobReaderWriterTest
     @Test
     public void testFailed()
     {
+        log.debug("testFailed");
         try
         {
             Job job = createPendingJob();
             fail(job);
             test(job);
         }
-        catch(Throwable unexpected)
+        catch(Exception unexpected)
+        {
+            log.debug("unexpected exception", unexpected);
+            Assert.fail("unexpected exception: " + unexpected);
+        }
+    }
+
+    @Test
+    public void testWithValidJobInfo()
+    {
+        log.debug("testWithValidJobInfo");
+        try
+        {
+            Job job = createPendingJob();
+            String xml = "<foo />";
+            String type = "text/xml";
+            JobInfo info = new JobInfo(xml, type, true);
+            job.setJobInfo(info);
+            test(job);
+        }
+        catch(Exception unexpected)
+        {
+            log.debug("unexpected exception", unexpected);
+            Assert.fail("unexpected exception: " + unexpected);
+        }
+    }
+
+    @Test
+    public void testWithInvalidJobInfo()
+    {
+        log.debug("testWithInvalidJobInfo");
+        try
+        {
+            Job job = createPendingJob();
+            String xml = "<foo>";
+            String type = "text/xml";
+            JobInfo info = new JobInfo(xml, type, Boolean.FALSE);
+            job.setJobInfo(info);
+            test(job);
+        }
+        catch(Exception unexpected)
         {
             log.debug("unexpected exception", unexpected);
             Assert.fail("unexpected exception: " + unexpected);

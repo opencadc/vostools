@@ -69,7 +69,6 @@
 
 package ca.nrc.cadc.uws;
 
-import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.Reader;
@@ -89,9 +88,8 @@ import org.jdom.JDOMException;
 
 import ca.nrc.cadc.date.DateUtil;
 import ca.nrc.cadc.xml.XmlUtil;
-import java.io.FileNotFoundException;
-import java.io.FileReader;
 import java.io.InputStreamReader;
+import java.io.StringWriter;
 import java.io.UnsupportedEncodingException;
 import java.text.DateFormat;
 import java.util.HashMap;
@@ -100,10 +98,12 @@ import java.util.Map;
 import java.util.Set;
 import javax.security.auth.x500.X500Principal;
 import org.jdom.input.SAXBuilder;
+import org.jdom.output.XMLOutputter;
 
 /**
- * @author zhangsa
- *
+ * Constructs a Job from an XML source. This class is not thread safe but it is
+ * re-usable  so it can safely be used to sequentially parse multiple XML transfer
+ * documents.
  */
 public class JobReader
 {
@@ -126,89 +126,56 @@ public class JobReader
         log.debug("xlinkSchemaUrl: " + xlinkSchemaUrl);
     }
 
+    private Map<String, String> schemaMap;
     private DateFormat dateFormat;
     private SAXBuilder docBuilder;
 
-    public JobReader()
-    {
-        Map<String, String> schemaMap = new HashMap<String, String>();
-        schemaMap.put(UWS_SCHEMA_URL, uwsSchemaUrl);
-        schemaMap.put(XLINK_SCHEMA_URL, xlinkSchemaUrl);
-        this.docBuilder = XmlUtil.createBuilder(schemaMap);
-        this.dateFormat = DateUtil.getDateFormat(DateUtil.IVOA_DATE_FORMAT, DateUtil.UTC);
-    }
-
-    public Job readFrom(File file) 
-        throws JDOMException, IOException, ParseException
-    {
-        if (file == null)
-            throw new IOException("Null file reference");
-        FileReader reader;
-        try
-        {
-            reader = new FileReader(file);
-        }
-        catch (FileNotFoundException e)
-        {
-            throw new RuntimeException("File not found " + file.getAbsoluteFile());
-        }
-        Document doc = docBuilder.build(reader);
-        return parseJob(doc);
-    }
-
-    public Job readFrom(InputStream in) 
-        throws JDOMException, IOException, ParseException
-    {
-        if (in == null)
-            throw new IOException("InputStream is closed");
-        InputStreamReader reader;
-        try
-        {
-            reader = new InputStreamReader(in, "UTF-8");
-        }
-        catch (UnsupportedEncodingException e)
-        {
-            throw new RuntimeException("UTF-8 encoding not supported");
-        }
-        Document doc = docBuilder.build(reader);
-        return parseJob(doc);
-    }
-
-    public Job readFrom(Reader reader) 
-        throws JDOMException, IOException, ParseException
-    {
-        Document doc = docBuilder.build(reader);
-        return parseJob(doc);
-    }
+    /**
+     * Constructor. XML Schema validation is enabled by default.
+     */
+    public JobReader() { this(true); }
 
     /**
-     * @deprecated cannot be correctly initialized with SSL in all contexts
-     * @param url
-     * @return
-     * @throws JDOMException
-     * @throws IOException
-     * @throws ParseException
+     * Constructor. XML schema validation may be disabled, in which case the client
+     * is likely to fail in horrible ways (e.g. NullPointerException) if it receives
+     * invalid documents. However, performance may be improved.
+     *
+     * @param enableSchemaValidation
      */
-    public Job readFrom(URL url) 
+    public JobReader(boolean enableSchemaValidation)
+    {
+        if (enableSchemaValidation)
+        {
+            schemaMap = new HashMap<String, String>();
+            schemaMap.put(UWS_SCHEMA_URL, uwsSchemaUrl);
+            schemaMap.put(XLINK_SCHEMA_URL, xlinkSchemaUrl);
+            log.debug("schema validation enabled");
+        }
+        else
+            log.debug("schema validation disabled");
+
+        this.docBuilder = XmlUtil.createBuilder(schemaMap);
+        this.dateFormat = DateUtil.getDateFormat(DateUtil.IVOA_DATE_FORMAT, DateUtil.UTC);
+
+    }
+
+    public Job read(InputStream in) 
         throws JDOMException, IOException, ParseException
     {
-        InputStreamReader reader;
         try
         {
-            reader = new InputStreamReader(url.openConnection().getInputStream(), "UTF-8");
+            return read(new InputStreamReader(in, "UTF-8"));
         }
         catch (UnsupportedEncodingException e)
         {
             throw new RuntimeException("UTF-8 encoding not supported");
         }
-        Document doc = docBuilder.build(reader);
-        return parseJob(doc);
     }
 
-    public Job readFrom(String string)
+    public Job read(Reader reader) 
         throws JDOMException, IOException, ParseException
     {
-        Document doc = docBuilder.build(string);
+        Document doc = docBuilder.build(reader);
         return parseJob(doc);
     }
 
@@ -231,17 +198,16 @@ public class JobReader
         ErrorSummary errorSummary = null;
         if (executionPhase.equals(ExecutionPhase.ERROR)) errorSummary = parseErrorSummary(doc);
         List<Result> resultsList = parseResultsList(doc);
+
         List<Parameter> parameterList = parseParametersList(doc);
         JobInfo jobInfo = parseJobInfo(doc);
+
         String requestPath = null; // not presented in XML text
 
-        Job job;
-        if (parameterList != null)
-            job = new Job(jobID, executionPhase, executionDuration, destructionTime, quote, startTime, 
+        Job job = new Job(jobID, executionPhase, executionDuration, destructionTime, quote, startTime, 
                           endTime, errorSummary, owner, runID, resultsList, parameterList, requestPath);
-        else
-            job = new Job(jobID, executionPhase, executionDuration, destructionTime, quote, startTime, 
-                          endTime, errorSummary, owner, runID, resultsList, jobInfo, requestPath);
+        job.setJobInfo(jobInfo);
+        
         return job;
     }
 
@@ -381,10 +347,37 @@ public class JobReader
         Element e = root.getChild(JobAttribute.JOB_INFO.getAttributeName(), UWS.NS);
         if (e != null)
         {
+            log.debug("found jobInfo element");
             String content = e.getText();
-            System.out.println("****************** jobInfo text: " + content);
-            rtn = new JobInfo(content, null, null);
+            List children = e.getChildren();
+            if (content != null)
+                content = content.trim();
+            if (content.length() > 0) // it was text content
+            {
+                rtn = new JobInfo(content, null, null);
+            }
+            else if (children != null)
+            {
+                if (children.size() == 1)
+                {
+                    try
+                    {
+                        Element ce = (Element) children.get(0);
+                        XMLOutputter outputter = new XMLOutputter();
+                        StringWriter sw = new StringWriter();
+                        outputter.output(ce, sw);
+                        sw.close();
+                        rtn = new JobInfo(sw.toString(), null, null);
+                        
+                    }
+                    catch(IOException ex)
+                    {
+                        throw new RuntimeException("BUG while writing element to string", ex);
+                    }
+                }
+            }
         }
+        log.debug("parseJobInfo: " + rtn);
         return rtn;
     }
 

@@ -192,6 +192,8 @@ public class SynchResource extends UWSResource
                     throw new WebRepresentationException("Unable to create Job!", e);
                 }
             }
+            /*
+            // this is not legal UWS even is sync was part of uws
             else if (getRequestEntity().getMediaType().equals(MediaType.APPLICATION_XML)
                      || getRequestEntity().getMediaType().equals(MediaType.TEXT_XML))
             {
@@ -207,6 +209,7 @@ public class SynchResource extends UWSResource
                     throw new WebRepresentationException("Unable to create Job!", e);
                 }
             }
+             */
             else
             {
                 LOGGER.error("Unsupported POST request Content-Type: " + getRequestEntity().getMediaType().getName());

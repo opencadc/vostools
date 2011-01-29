@@ -114,8 +114,8 @@ public class ParameterListResource extends BaseJobResource
      */
     protected void buildXML(final Document document)
     {
-        JobWriter jobWriter = new JobWriter(job);
-        document.addContent(jobWriter.getParameters());
+        JobWriter jobWriter = new JobWriter();
+        document.addContent(jobWriter.getParameters(job));
     }
 
 }

@@ -279,8 +279,8 @@ public class SyncServlet extends HttpServlet
                 log.info("dumping job: " + jobID);
                 response.setStatus(HttpServletResponse.SC_OK);
                 response.setContentType("text/xml");
-                JobWriter w = new JobWriter(job);
-                w.writeTo(new SafeOutputStream(response.getOutputStream()));
+                JobWriter w = new JobWriter();
+                w.write(job, new SafeOutputStream(response.getOutputStream()));
                 return;
             }
 

@@ -73,10 +73,9 @@ package ca.nrc.cadc.uws;
 import ca.nrc.cadc.auth.RunnableAction;
 import javax.security.auth.Subject;
 
-
-
 /**
- * Default implementation of the JobExecutor Service.
+ * Default implementation of the JobExecutor Service. This implementation creates
+ * and starts a new Thread (daemon=true) for each job.
  */
 public class ThreadExecutor implements JobExecutor
 {

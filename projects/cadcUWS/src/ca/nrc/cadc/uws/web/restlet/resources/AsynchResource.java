@@ -138,13 +138,15 @@ public class AsynchResource extends UWSResource
                                                      e);
             }
         }
+        /*
+        // this is not legal UWS
         else if (entity.getMediaType().equals(MediaType.APPLICATION_XML)
                  || entity.getMediaType().equals(MediaType.TEXT_XML))
         {
             try
             {
                 JobReader jobReader = new JobReader();
-                job = jobReader.readFrom(entity.getText());
+                job = jobReader.read(entity.getText());
                 job.setOwner(subject);
             }
             catch (Exception e)
@@ -153,6 +155,7 @@ public class AsynchResource extends UWSResource
                 throw new WebRepresentationException("Unable to create Job!", e);
             }
         }
+         */
         else
         {
             LOGGER.error("Unsupported POST request Content-Type: " + entity.getMediaType());

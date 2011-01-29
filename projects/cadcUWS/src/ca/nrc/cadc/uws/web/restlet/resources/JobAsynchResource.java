@@ -297,8 +297,9 @@ public class JobAsynchResource extends BaseJobResource
      */
     protected void buildJobXML(final Document document) throws IOException
     {
-        JobWriter writer = new JobWriter(job);
-        document.setRootElement(writer.getDocument().detachRootElement());
+        JobWriter writer = new JobWriter();
+        Element root = writer.getRootElement(job);
+        document.setRootElement(root);
     }
 
     protected JobExecutor getJobExecutorService()
