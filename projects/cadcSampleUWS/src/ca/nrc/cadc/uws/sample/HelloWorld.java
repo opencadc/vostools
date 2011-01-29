@@ -83,6 +83,7 @@ import ca.nrc.cadc.uws.Job;
 import ca.nrc.cadc.uws.ErrorSummary;
 import ca.nrc.cadc.uws.ErrorType;
 import ca.nrc.cadc.uws.JobWriter;
+
 import ca.nrc.cadc.uws.Parameter;
 import ca.nrc.cadc.uws.Result;
 import ca.nrc.cadc.uws.SyncJobRunner;
@@ -324,8 +325,8 @@ public class HelloWorld implements SyncJobRunner
                             if (xml)
                             {
                                 syncOutput.setHeader("Content-Type", "text/xml");
-                                JobWriter jobWriter = new JobWriter(job);                      
-                                jobWriter.writeTo(syncOutput.getOutputStream());
+                                JobWriter jobWriter = new JobWriter();                      
+                                jobWriter.write(job, syncOutput.getOutputStream());
                             }
                             else
                             {
