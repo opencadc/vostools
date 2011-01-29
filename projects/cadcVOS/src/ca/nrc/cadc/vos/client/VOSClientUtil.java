@@ -102,8 +102,8 @@ public class VOSClientUtil
         StringWriter sw = new StringWriter();
         try
         {
-            JobWriter jobWriter = new JobWriter(job);
-            jobWriter.writeTo(sw);
+            JobWriter jobWriter = new JobWriter();
+            jobWriter.write(job, sw);
             xml = sw.toString();
             sw.close();
         }

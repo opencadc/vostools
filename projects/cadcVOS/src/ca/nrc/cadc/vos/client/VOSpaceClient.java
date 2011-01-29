@@ -680,7 +680,7 @@ public class VOSpaceClient
             if (code != 200)
                 throw new RuntimeException("failed to read transfer job (" + code + "): " + conn.getResponseMessage());
             
-            Job job = new JobReader().readFrom(conn.getInputStream());
+            Job job = new JobReader(schemaValidation).read(conn.getInputStream());
             log.debug("current job state: " + job.getExecutionPhase());
             log.debug(VOSClientUtil.xmlString(job));
 
