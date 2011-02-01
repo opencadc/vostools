@@ -535,12 +535,14 @@ public class SyncServlet extends HttpServlet
     {        
         // TODO: check content-type for params (www-urlencoded?) vs XML (text/xml)
         String contentType = request.getHeader("Content-Type");
-        if (contentType == null || !contentType.equals(TEXT_XML) && !contentType.equals(FORM_URLENCODED))
-            throw new IllegalArgumentException("Content-Types must be " + TEXT_XML + " or " + FORM_URLENCODED);
+        
+        // pdowler: assume FORM_URLENCODED if not specified to support HTTP GET
+        //if (contentType == null || !contentType.equals(TEXT_XML) && !contentType.equals(FORM_URLENCODED))
+        //    throw new IllegalArgumentException("Content-Types must be " + TEXT_XML + " or " + FORM_URLENCODED);
 
         // Job from POSTed XML
         Job job = new Job();
-        if (contentType.equals(TEXT_XML))
+        if (contentType != null && contentType.equals(TEXT_XML))
         {
             // Read in the XML.
             BufferedReader br = new BufferedReader(new InputStreamReader(request.getInputStream()));
@@ -559,7 +561,7 @@ public class SyncServlet extends HttpServlet
             log.debug(jobInfo);
         }
                 
-        // Job from POSTed parameters
+        // Job from GET or POST parameters
         else
         {
             Enumeration<String> paramNames = request.getParameterNames();
