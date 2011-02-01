@@ -69,6 +69,7 @@
 
 package ca.nrc.cadc.conformance.vos;
 
+import java.io.StringWriter;
 import ca.nrc.cadc.uws.ExecutionPhase;
 import ca.nrc.cadc.uws.Job;
 import ca.nrc.cadc.uws.JobWriter;
@@ -146,8 +147,10 @@ public class PullFromVOSpaceTest extends VOSTransferTest
             log.debug("pullJob");
 
             // POST parameters (UWS Job XML)
-            JobWriter jobWriter = new JobWriter(job);
-            String jobXML = jobWriter.toString();
+            JobWriter jobWriter = new JobWriter();
+            StringWriter sw = new StringWriter();
+            jobWriter.write(job, sw);
+            String jobXML = sw.toString();
             Map<String, String> parameters = new HashMap<String, String>();
             parameters.put("", jobXML);
 
