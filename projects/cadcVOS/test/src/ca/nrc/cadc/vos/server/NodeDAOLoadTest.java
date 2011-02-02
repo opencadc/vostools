@@ -99,7 +99,7 @@ public abstract class NodeDAOLoadTest extends AbstractPersistenceTest
     private static Logger log = Logger.getLogger(NodeDAOLoadTest.class);
     
     private static final int DAO_COUNT = 10;
-    private static final int THREAD_COUNT = 20;
+    private static final int THREAD_COUNT = 1;
     private static final int NODE_COUNT = 50;
     
     /**

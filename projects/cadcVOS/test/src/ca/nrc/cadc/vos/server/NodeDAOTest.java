@@ -87,6 +87,7 @@ import ca.nrc.cadc.vos.Node;
 import ca.nrc.cadc.vos.NodeProperty;
 import ca.nrc.cadc.vos.VOS;
 import ca.nrc.cadc.vos.VOSURI;
+import org.apache.log4j.Logger;
 
 
 /**
@@ -99,6 +100,7 @@ import ca.nrc.cadc.vos.VOSURI;
  */
 public abstract class NodeDAOTest extends AbstractPersistenceTest
 {   
+    private static Logger log = Logger.getLogger(NodeDAOTest.class);
 
     List<NodeProperty> propertyIgnoreList;
     
@@ -131,8 +133,8 @@ public abstract class NodeDAOTest extends AbstractPersistenceTest
         dataNode = getCommonDataNode(nodePath1, getCommonProperties());
         putNode = nodeDAO.putInContainer(dataNode, rootContainer);
         Node nodeA = nodeDAO.getFromParent(putNode.getName(), rootContainer);
-        System.out.println("PutNode: " + putNode);
-        System.out.println("GetNode: " + nodeA);
+        log.debug("PutNode: " + putNode);
+        log.debug("GetNode: " + nodeA);
         assertEquals("assert1", putNode, nodeA);
         compareProperties("assert2", putNode.getProperties(), nodeA.getProperties());
         
@@ -141,8 +143,8 @@ public abstract class NodeDAOTest extends AbstractPersistenceTest
         containerNode = getCommonContainerNode(nodePath2, getCommonProperties());
         putNode = nodeDAO.putInContainer(containerNode, rootContainer);
         Node nodeB = nodeDAO.getFromParent(putNode.getName(), rootContainer);
-        System.out.println("PutNode: " + putNode);
-        System.out.println("GetNode: " + nodeB);
+        log.debug("PutNode: " + putNode);
+        log.debug("GetNode: " + nodeB);
         assertEquals("assert3", putNode, nodeB);
         compareProperties("assert4", putNode.getProperties(), nodeB.getProperties());
         

@@ -106,7 +106,7 @@
     <property name="client.external.jars" value="${ext.jdom}:${ext.xerces}:${ext.log4j}" />
     <property name="client.jarfile" value="${build}/lib/${project}Client.jar" />
 
-    <target name="build" depends="compile,resources,manifest">
+    <target name="build" depends="compile,resources,manifest,daotest-jar">
 
         <jar jarfile="${build}/lib/${project}.jar"
             basedir="${build}/class"
@@ -126,6 +126,10 @@
             <exclude name="**Test**" />
         </jar>
 
+        
+    </target>
+
+    <target name="daotest-jar" depends="compile,compile-test">
         <!-- create jar file with test classes for clients to use -->
         <jar jarfile="${build}/lib/${project}-daotest.jar"
             basedir="${build}/test/class"
@@ -136,7 +140,6 @@
             <include name="**/server/NodeDAOTest.class" />
             <include name="**/server/NodeDAOLoadTest.class" />
             <include name="**/server/NodeDAOLoadTest$LoadTestRunner.class" />
-            <include name="**/server/web/restlet/action/DeleteNodeActionTest.class" />
             <include name="Views.properties" />
         </jar>
     </target>
