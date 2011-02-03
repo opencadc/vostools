@@ -140,7 +140,7 @@ public class TransferWriter
         root.addContent(e);
 
         e = new Element("view", VOS.NS);
-        e.addContent(transfer.getView().getURI().toString());
+        e.setAttribute("uri", transfer.getView().getURI().toString());
         root.addContent(e);
 
         for (Protocol protocol : transfer.getProtocols())

@@ -178,7 +178,15 @@ public class TransferReader
         Transfer.Direction direction = parseDirection(root);
         // String serviceUrl; // not in XML yet
         Node target = new DataNode(new VOSURI(root.getChildText("target", VOS.NS)));
-        View view = new View(new URI(root.getChildText("view", VOS.NS)));
+
+        // TODO: get view nodes and uri attribute
+        View view = null;
+        List views = root.getChildren("view", VOS.NS);
+        if (views != null && views.size() > 0)
+        {
+            Element v = (Element) views.get(0);
+            view = new View(new URI(v.getAttributeValue("uri")));
+        }
         List<Protocol> protocols = parseProtocols(root);
         // boolean keepBytes; // not in XML yet
 
