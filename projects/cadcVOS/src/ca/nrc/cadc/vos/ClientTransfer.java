@@ -80,6 +80,7 @@ import org.apache.log4j.Logger;
 
 import ca.nrc.cadc.net.HttpDownload;
 import ca.nrc.cadc.net.HttpUpload;
+import ca.nrc.cadc.net.OutputStreamWrapper;
 
 /**
  * @author zhangsa
@@ -90,6 +91,9 @@ public class ClientTransfer extends Transfer
     private static Logger log = Logger.getLogger(ClientTransfer.class);
 
     private SSLSocketFactory sslSocketFactory;
+
+    private File localFile;
+    private OutputStreamWrapper wrapper;
     
     /**
      * 
@@ -128,6 +132,30 @@ public class ClientTransfer extends Transfer
     public void doUpload(File file)
         throws IOException
     {
+        if (file == null)
+            throw new IllegalArgumentException("File argument cannot be null");
+        this.localFile = file;
+        doUpload();
+    }
+
+    /**
+     * Use the specified wrapper to send bytes via HttpUpload.
+     * 
+     * @param wrapper an object that writes the data (bytes)
+     * @throws IOException
+     */
+    public void doUpload(OutputStreamWrapper wrapper)
+        throws IOException
+    {
+        if (wrapper == null)
+            throw new IllegalArgumentException("OutputStreamWrapper argument cannot be null");
+        this.wrapper = wrapper;
+        doUpload();
+    }
+
+    private void doUpload()
+        throws IOException
+    {
         URL url;
         try
         {
@@ -141,8 +169,13 @@ public class ClientTransfer extends Transfer
             throw new IllegalArgumentException(e);
         }
         log.debug(url);
+
+        HttpUpload upload = null;
+        if (localFile != null)
+            upload = new HttpUpload(localFile, url);
+        else
+            upload = new HttpUpload(wrapper, url);
         
-        HttpUpload upload = new HttpUpload(file, url);
         upload.setSSLSocketFactory(sslSocketFactory);
         upload.run();
         if (upload.getThrowable() != null)
@@ -164,7 +197,7 @@ public class ClientTransfer extends Transfer
                     throw new IOException("failed to upload file: " + upload.getThrowable().getMessage());
                 }
             }
-            
+
         }
     }
 
