@@ -177,9 +177,17 @@ public class CertCmdArgUtil
             strKey = userHome + DFT_KEY_FILE;
             try {
                 subject = initSubjectByPem(strCertKey);
-            } catch (IllegalArgumentException ex) {
+            } catch (RuntimeException ex) {
                 // Default PEM file not exists or is not readable
-                subject = initSubjectByCertKey(strCert, strKey);
+		try
+		{
+                    subject = initSubjectByCertKey(strCert, strKey);
+		}
+		catch (RuntimeException ex1)
+		{
+		    throw new RuntimeException("Could not find valid certificate files", ex1);
+		}
+
             }
         }
         return subject;
