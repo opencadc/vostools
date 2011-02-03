@@ -87,7 +87,8 @@ import ca.nrc.cadc.vos.server.ViewsTest;
                 FileSizeTypeTest.class,
                 ViewsTest.class,
                 GetNodeActionTest.class,
-                DeleteNodeActionTest.class
+                DeleteNodeActionTest.class,
+                VOSURITest.class
         })
 public class CADCVOSTestSuite
 {

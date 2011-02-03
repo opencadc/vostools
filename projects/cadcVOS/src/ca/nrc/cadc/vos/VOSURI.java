@@ -121,9 +121,26 @@ public class VOSURI
             return false;
         if (this == rhs)
             return true;
+        if (rhs instanceof VOSURI)
+        {
+            VOSURI vu = (VOSURI) rhs;
+            String a1 = this.getAuthority();
+            String a2 = vu.getAuthority();
+            if ( a1.equals(a2) ) // using same separator
+                return vosURI.equals(vu.vosURI);
 
-        VOSURI vu = (VOSURI) rhs;
-        return vosURI.equals(vu.vosURI);
+            a1 = a1.replace('~', '!');
+            a2 = a2.replace('~', '!');
+            if ( a1.equals(a2) )
+            {
+                // only separator diff in prefix, strip it off
+                int n = a1.length() + 6; // vos://+<authority>
+                String s1 = vosURI.toString().substring(n);
+                String s2 = vu.toString().substring(n);
+                return s1.equals(s2);
+            }
+        }
+        return false;
     }
 
     /**
@@ -244,6 +261,7 @@ public class VOSURI
     {
         String authority = getAuthority();
         authority = authority.replace('!', '/');
+        authority = authority.replace('~', '/');
         String str = "ivo://" + authority; 
         return new URI(str);
     }
