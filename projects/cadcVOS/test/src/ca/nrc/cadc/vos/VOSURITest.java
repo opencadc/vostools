@@ -206,6 +206,43 @@ public class VOSURITest
     }
 
     @Test
+    public void testMultipleSeparators()
+    {
+        try
+        {
+            URI srvURI = new URI("ivo://cadc.nrc.ca/vospace/666");
+
+            String base;
+            String path = "/container/data";
+
+            base = "vos://cadc.nrc.ca!vospace!666";
+            VOSURI vos = new VOSURI(new URI(base + path));
+            Assert.assertEquals(srvURI, vos.getServiceURI());
+            Assert.assertEquals(path, vos.getPath());
+
+            base = "vos://cadc.nrc.ca~vospace~666";
+            vos = vos = new VOSURI(new URI(base + path));
+            Assert.assertEquals(srvURI, vos.getServiceURI());
+            Assert.assertEquals(path, vos.getPath());
+
+            base = "vos://cadc.nrc.ca!vospace~666";
+            vos = vos = new VOSURI(new URI(base + path));
+            Assert.assertEquals(srvURI, vos.getServiceURI());
+            Assert.assertEquals(path, vos.getPath());
+
+            base = "vos://cadc.nrc.ca~vospace!666";
+            vos = vos = new VOSURI(new URI(base + path));
+            Assert.assertEquals(srvURI, vos.getServiceURI());
+            Assert.assertEquals(path, vos.getPath());
+        }
+        catch(Exception unexpected)
+        {
+            log.error("unexpected exception", unexpected);
+            Assert.fail("unexpected exception: " + unexpected);
+        }
+    }
+
+    @Test
     public void testEquals()
     {
         try
@@ -246,22 +283,16 @@ public class VOSURITest
 
             VOSURI vosBang = new VOSURI(new URI(bang + path));
             VOSURI vosTilde = new VOSURI(new URI(tilde + path));
-            log.info("bang:  " + vosBang);
-            log.info("tilde: " + vosTilde);
             Assert.assertNotSame(bang, tilde);
             Assert.assertTrue("! and ~ are equivalent in uri", vosBang.equals(vosTilde));
 
             vosBang = new VOSURI(new URI(bang + path + "?foo"));
             vosTilde = new VOSURI(new URI(tilde + path + "?foo"));
-            log.info("bang:  " + vosBang);
-            log.info("tilde: " + vosTilde);
             Assert.assertNotSame(bang, tilde);
             Assert.assertTrue("! and ~ are equivalent in uri", vosBang.equals(vosTilde));
 
             vosBang = new VOSURI(new URI(bang + path + "#foo"));
             vosTilde = new VOSURI(new URI(tilde + path + "#foo"));
-            log.info("bang:  " + vosBang);
-            log.info("tilde: " + vosTilde);
             Assert.assertNotSame(bang, tilde);
             Assert.assertTrue("! and ~ are equivalent in uri", vosBang.equals(vosTilde));
         }
