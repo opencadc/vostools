@@ -215,7 +215,7 @@ public class X509CertificateChain
     }
 
     /**
-     * @param canonizedDn
+     * @param dn DN to generate the hash key
      * @return hash code corresponding to the CADC canonized version of the DN
      */
     public static String genHashKey(X500Principal dn)

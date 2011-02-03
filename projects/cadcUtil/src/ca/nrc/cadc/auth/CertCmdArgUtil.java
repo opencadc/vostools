@@ -87,11 +87,10 @@ public class CertCmdArgUtil
     public static final String NEW_LINE = System.getProperty("line.separator");
     public static final String ARG_CERT = "cert";
     public static final String ARG_KEY = "key";
-    public static final String ARG_CERTKEY = "certkey";
 
-    public static final String DFT_CERTKEY_FILE = "/.globus/cadcuser.pem";
-    public static final String DFT_CERT_FILE    = "/.globus/cadcuser.crt";
-    public static final String DFT_KEY_FILE     = "/.globus/cadcuser.key";
+    public static final String DFT_CERTKEY_FILE = "/.ssl/cadcproxy.pem";
+    public static final String DFT_CERT_FILE    = "/.ssl/cadcproxy.crt";
+    public static final String DFT_KEY_FILE     = "/.ssl/cadcproxy.key";
 
     private static String userHome = System.getProperty("user.home");
 
@@ -103,7 +102,7 @@ public class CertCmdArgUtil
      */
     public static String getCertArgUsage()
     {
-        return "    [--certkey=<PEM File of Certificate & Key> | --cert=<Certificate File> --key=<Key File>]";
+        return "    [--cert=<Cert File or Proxy Cert&Key PEM file> [--key=<Unencrypted Key File>]]";
     }
     
     private static File loadFile(String fn)
@@ -133,7 +132,7 @@ public class CertCmdArgUtil
      * Called by a commandline client program, it initializes and return a security subject.
      * 
      * Logic:
-     * if argument of  "--certkey" is provided, init subject from certkey PEM file;
+     * if argument of  "--key" is NOT provided, init subject from certkey PEM file;
      * otherwise,
      * if --cert --key are provided, init from cert and key files;
      * otherwise,
@@ -154,19 +153,22 @@ public class CertCmdArgUtil
 
         Subject subject = null;
 
-        if (argMap.isSet(ARG_CERTKEY))
-        {
-            // load from pem
-            strCertKey = argMap.getValue(ARG_CERTKEY);
-            subject = initSubjectByPem(strCertKey);
-        }
-        else if (argMap.isSet(ARG_CERT) && argMap.isSet(ARG_KEY))
-        {
-            // load from cert/key
-            strCert = argMap.getValue(ARG_CERT);
-            strKey = argMap.getValue(ARG_KEY);
-            subject = initSubjectByCertKey(strCert, strKey);
-        }
+	if (argMap.isSet(ARG_CERT))
+	{
+            if (argMap.isSet(ARG_KEY))
+            {
+                // load from cert/key
+                strCert = argMap.getValue(ARG_CERT);
+                strKey = argMap.getValue(ARG_KEY);
+                subject = initSubjectByCertKey(strCert, strKey);
+            }
+            else
+            {
+                // load from cert pem
+                strCertKey = argMap.getValue(ARG_CERT);
+                subject = initSubjectByPem(strCertKey);
+            }
+	}
         else
         {
             // load from default

@@ -151,7 +151,7 @@ public class CertificateUtilTest
     public void testInitSubject2() 
     {
         String[] args = {
-                "--certkey=/usr/cadc/dev/admin/test-certificates/x509_CADCAnontest1.pem"
+                "--cert=/usr/cadc/dev/admin/test-certificates/x509_CADCAnontest1.pem"
                 };
                 
         ArgumentMap aMap = new ArgumentMap(args);
@@ -171,7 +171,7 @@ public class CertificateUtilTest
     public void testInitSubject3() 
     {
         String[] args = {
-                "--certkey=/home/cadc/zhangsa/.globus/myproxy.pem.not.exist"
+                "--cert=/home/cadc/zhangsa/.globus/myproxy.pem.not.exist"
                 };
                 
         ArgumentMap aMap = new ArgumentMap(args);

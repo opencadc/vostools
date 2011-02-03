@@ -204,6 +204,15 @@ public class SSLUtil
         return getSocketFactory(ks, ts);
     }
 
+    public static SSLContext getSSLContext(X509CertificateChain chain)
+    {
+        if (chain == null) return null;
+        KeyStore ks = getKeyStore(chain.getChain(), chain.getPrivateKey());
+        KeyManagerFactory kmf = getKeyManagerFactory(ks);
+        TrustManagerFactory tmf = getTrustManagerFactory(null);
+        return getContext(kmf, tmf, ks);    
+    }
+    
     public static Subject createSubject(File certFile, File keyFile)
     {
         try
@@ -380,10 +389,9 @@ public class SSLUtil
 
     /**
      * @param certBuf
-     * @return
+     * @return certificate chain
      * @throws CertificateException
      * @throws IOException
-     * @ref readCertificateChain(File certFile)
      */
     public static X509Certificate[] readCertificateChain(byte[] certBuf) throws CertificateException, IOException
     {
@@ -643,7 +651,7 @@ public class SSLUtil
      * corresponding X509 Certificate chain.
      * 
      * @param pemFile
-     * @return
+     * @return certificate chain
      * @throws InvalidKeySpecException
      * @throws NoSuchAlgorithmException
      * @throws IOException
@@ -796,7 +804,7 @@ public class SSLUtil
      * 
      * @param certChainStr
      * @param bytesPrivateKey
-     * @return
+     * @return certificate chain and private key as a PEM encoded string
      */
     public static String buildPEM(String certChainStr, byte[] bytesPrivateKey)
     {
@@ -841,7 +849,7 @@ public class SSLUtil
 
     /**
      * @param chain
-     * @return
+     * @return certificate chain and private key as a PEM encoded string
      */
     public static String writePEMCertificateAndKey(X509CertificateChain chain)
     {
