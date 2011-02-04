@@ -119,6 +119,8 @@ public class HttpDownload extends HttpTransfer
     private File decompFile;
     private File removeFile;
     private int decompressor;
+
+    private OutputStream destStream;
     
     private File destFile;
     private boolean skipped = false;
@@ -139,6 +141,17 @@ public class HttpDownload extends HttpTransfer
     public HttpDownload(URL src, File dest)
     {
         this(null, src, dest);
+    }
+
+    /**
+     * Constructor with default user-agent string.
+     * @see HttpDownload(String,URL,OutputStream)
+     * @param src URL to read
+     * @param dest output stream to write to
+     */
+    public HttpDownload(URL src, OutputStream dest)
+    {
+        this(null,src,dest);
     }
 
     /**
@@ -185,6 +198,31 @@ public class HttpDownload extends HttpTransfer
         }
 
         this.remoteURL = src;
+    }
+
+    /**
+     * Constructor. If the user agent string is not supplied, a default value will be generated.
+     * </p><p>
+     * The src URL cannot be null. If the protocol is https, this class will get the current Subject from
+     * the AccessControlContext and use the Certificate(s) and PrivateKey(s) found there to set up an
+     * SSLSocketFactory. This is required if ther server requests that the client authenticate itself.
+     * </p><p>
+     * The dest output stream cannot be null.
+     *
+     * @param userAgent user-agent string to report in HTTP headers
+     * @param src URL to read
+     * @param dest output stream to write to
+     */
+    public  HttpDownload(String userAgent, URL src, OutputStream dest)
+    {
+        super();
+        setUserAgent(userAgent);
+        if (src == null)
+            throw new IllegalArgumentException("source URL cannot be null");
+        if (dest == null)
+            throw new IllegalArgumentException("destination stream cannot be null");
+        this.remoteURL = src;
+        this.destStream = dest;
     }
 
     // unused
@@ -279,12 +317,16 @@ public class HttpDownload extends HttpTransfer
                 throw new IllegalArgumentException("no URL");                
             
             fireEvent(TransferEvent.CONNECTING);
-            
-            doHead();
+
+            if (destStream == null) // downloading to a file
+                doHead();
 
             fireEvent(TransferEvent.CONNECTED);
             
-            boolean doDownload = doCheckDestination();
+            boolean doDownload = true;
+            if (destStream == null) // downloading to file
+                doDownload = doCheckDestination();
+
             if (skipped)
                 go = false;
             if (!go)
@@ -294,11 +336,18 @@ public class HttpDownload extends HttpTransfer
             {
                 fireEvent(origFile, TransferEvent.TRANSFERING);
                 File tmp = origFile;
-                origFile = new File(origFile.getAbsolutePath() + ".part");
+                if (destStream == null) // downloading to file
+                    origFile = new File(origFile.getAbsolutePath() + ".part");
+
                 doGet();
-                log.debug("download completed, renaming " + origFile +" to " + tmp);
-                origFile.renameTo(tmp);
-                origFile = tmp;
+
+                log.debug("download completed");
+                if (destStream == null) // downloading to file
+                {
+                    log.debug("renaming " + origFile +" to " + tmp);
+                    origFile.renameTo(tmp);
+                    origFile = tmp;
+                }
             }
             if (decompress && decompressor != NONE)
             {
@@ -321,8 +370,8 @@ public class HttpDownload extends HttpTransfer
         }
         finally
         {
-            //if (failure != null)
-            //    failure.printStackTrace();
+            if (failure != null && log.isDebugEnabled())
+                failure.printStackTrace();
             
             synchronized(this) // vs sync block in terminate() 
             {
@@ -579,7 +628,6 @@ public class HttpDownload extends HttpTransfer
         
         InputStream istream = null;
         OutputStream ostream = null;
-        //RandomAccessFile ostream = null;
         try
         {
             this.size = contentLength;
@@ -587,7 +635,7 @@ public class HttpDownload extends HttpTransfer
             String pvalue = null;
             boolean append = false;
             int startingPos = 0;
-            if (origFile.exists() && origFile.length() < contentLength) // partial file from previous download
+            if (destStream == null && origFile.exists() && origFile.length() < contentLength) // partial file from previous download
             {
                 pkey = "Range";
                 pvalue = "bytes=" + origFile.length() + "-"; // open ended
@@ -602,9 +650,7 @@ public class HttpDownload extends HttpTransfer
                 initHTTPS(sslConn);
             }
 
-            // TODO: maybe follow redirects manually so we can detect/handle a change from http to https?
             conn.setInstanceFollowRedirects(true);
-            
             conn.setRequestProperty("Accept", "*/*");
             conn.setRequestProperty("User-Agent", userAgent);
             
@@ -664,10 +710,20 @@ public class HttpDownload extends HttpTransfer
                 istream = new BufferedInputStream(istream, bufferSize);
             }
 
-            log.debug("output: " + origFile + " append: " + append);
-            ostream = new FileOutputStream(origFile, append);
-            log.debug("using BufferedOutputStream");
-            ostream = new BufferedOutputStream(ostream, bufferSize);
+            if (this.destStream != null)
+            {
+                log.debug("output: supplied OutputStream");
+                ostream = destStream;
+                log.debug("using BufferedOutputStream");
+                ostream = new BufferedOutputStream(ostream, bufferSize);
+            }
+            else
+            {
+                log.debug("output: " + origFile + " append: " + append);
+                ostream = new FileOutputStream(origFile, append);
+                log.debug("using BufferedOutputStream");
+                ostream = new BufferedOutputStream(ostream, bufferSize);
+            }
 
             if (use_nio)
                 nioLoop(istream, ostream, 2*bufferSize, startingPos);

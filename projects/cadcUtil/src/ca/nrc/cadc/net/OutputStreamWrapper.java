@@ -73,7 +73,14 @@ import java.io.IOException;
 import java.io.OutputStream;
 
 /**
- *
+ * Wrapper arround an OutputStream to allow the output to be generated.
+ * Generated output really just means that the loop that writes content to
+ * the OutputStream is in the custom code rather than the HttpTransfer
+ * implementation. This could be code that reads from some other source,
+ * such as read a ResultSet from a query and write to a servlet output
+ * (streaming output) or read from a servlet InputStream and write to an HttpUpload
+ * (proxying an upload).
+ * 
  * @author jburke
  */
 public interface OutputStreamWrapper

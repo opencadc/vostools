@@ -73,9 +73,9 @@ import ca.nrc.cadc.auth.RunnableAction;
 import ca.nrc.cadc.auth.SSLUtil;
 import ca.nrc.cadc.util.FileUtil;
 import ca.nrc.cadc.util.Log4jInit;
+import java.io.ByteArrayOutputStream;
 import java.io.File;
 import java.net.URL;
-import javax.net.ssl.SSLSocketFactory;
 import javax.security.auth.Subject;
 
 import org.apache.log4j.Level;
@@ -109,7 +109,7 @@ public class HttpDownloadTest
     @BeforeClass
     public static void setUpBeforeClass() throws Exception
     {
-        Log4jInit.setLevel("ca.nrc.cadc", Level.INFO);
+        Log4jInit.setLevel("ca.nrc.cadc.net", Level.DEBUG);
         SSL_CERT = FileUtil.getFileFromResource(TEST_CERT_FN, HttpDownloadTest.class);
         SSL_KEY = FileUtil.getFileFromResource(TEST_KEY_FN, HttpDownloadTest.class);
     }
@@ -280,6 +280,30 @@ public class HttpDownloadTest
         {
             t.printStackTrace();
             Assert.fail("unexpected exception: " + t);
+        }
+    }
+
+    @Test
+    public void testDownloadToOutputStream() throws Exception
+    {
+        log.debug("TEST: testDownloadToOutputStream");
+        
+        try
+        {
+            URL src = httpURL;
+            ByteArrayOutputStream dest = new ByteArrayOutputStream(8192);
+            HttpDownload dl = new HttpDownload(src, dest);
+            dl.run();
+            dest.close();
+            byte[] out = dest.toByteArray();
+            Assert.assertNull(dl.getFile());
+            Assert.assertNotNull("dest stream after download", out);
+            Assert.assertTrue("size > 0", out.length > 0);
+        }
+        catch (Exception unexpected)
+        {
+            log.error("unexpected exception", unexpected);
+            Assert.fail("unexpected exception: " + unexpected);
         }
     }
 
