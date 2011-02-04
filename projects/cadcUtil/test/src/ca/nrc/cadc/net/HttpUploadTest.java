@@ -148,7 +148,6 @@ public class HttpUploadTest
 
         InetAddress localhost = InetAddress.getLocalHost();
         String hostname = localhost.getCanonicalHostName();
-        hostname = "devtest.cadc-ccda.hia-iha.nrc-cnrc.gc.ca";
         this.httpsURL = new URL("https://"+hostname+"/data/pub/TEST/"+srcFile.getName());
     }
 
