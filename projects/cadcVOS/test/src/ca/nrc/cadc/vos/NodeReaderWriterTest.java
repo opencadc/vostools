@@ -103,19 +103,21 @@ public class NodeReaderWriterTest
     private static Logger log = Logger.getLogger(NodeReaderWriterTest.class);
     static
     {
-        Log4jInit.setLevel("ca.nrc.cadc.vos", Level.INFO);
+        Log4jInit.setLevel("ca.nrc.cadc.vos", Level.DEBUG);
     }
-    
+
     // TODO: make liosts of nodes for a variety of test scenarios
     ContainerNode containerNode;
     DataNode dataNode;
 
-    public NodeReaderWriterTest() { }
+    public NodeReaderWriterTest()
+    {
+    }
 
     @BeforeClass
     public static void setUpClass() throws Exception
     {
-        
+
     }
 
     @AfterClass
@@ -128,7 +130,8 @@ public class NodeReaderWriterTest
     {
         // List of NodeProperty
         List<NodeProperty> properties = new ArrayList<NodeProperty>();
-        NodeProperty nodeProperty = new NodeProperty("ivo://ivoa.net/vospace/core#description", "My award winning images");
+        NodeProperty nodeProperty = new NodeProperty("ivo://ivoa.net/vospace/core#description",
+                "My award winning images");
         nodeProperty.setReadOnly(true);
         properties.add(nodeProperty);
 
@@ -151,7 +154,8 @@ public class NodeReaderWriterTest
     }
 
     @After
-    public void tearDown() {
+    public void tearDown()
+    {
     }
 
     private void comparePropertyList(List<NodeProperty> p1, List<NodeProperty> p2)
@@ -163,14 +167,14 @@ public class NodeReaderWriterTest
             for (NodeProperty np2 : p2)
             {
                 log.debug("looking for " + np1);
-                if ( np1.getPropertyURI().equals(np2.getPropertyURI())
-                        && np1.getPropertyValue().equals(np2.getPropertyValue()) )
+                if (np1.getPropertyURI().equals(np2.getPropertyURI())
+                        && np1.getPropertyValue().equals(np2.getPropertyValue()))
                 {
                     found = true;
                     break; // inner loop
                 }
             }
-            Assert.assertTrue("found"+np1, found);
+            Assert.assertTrue("found" + np1, found);
         }
     }
 
@@ -180,15 +184,16 @@ public class NodeReaderWriterTest
         List<Node> cn2 = n2.getNodes();
 
         Assert.assertEquals("nodes.size()", cn1.size(), cn2.size());
-        for (int i=0; i < cn1.size(); i++) // order should be preserved since we use list
+        for (int i = 0; i < cn1.size(); i++)
+            // order should be preserved since we use list
             compareNodes(cn1.get(i), cn2.get(i));
     }
-    
+
     private void compareDataNodes(DataNode n1, DataNode n2)
     {
         Assert.assertEquals("busy", n1.getBusy(), n2.getBusy());
     }
-    
+
     private void compareNodes(Node n1, Node n2)
     {
         Assert.assertEquals("same class", n1.getClass(), n2.getClass());
@@ -200,7 +205,8 @@ public class NodeReaderWriterTest
         else if (n1 instanceof DataNode)
             compareDataNodes((DataNode) n1, (DataNode) n2);
         else
-            throw new UnsupportedOperationException("no test comparison for node type " + n1.getClass().getName());
+            throw new UnsupportedOperationException("no test comparison for node type "
+                    + n1.getClass().getName());
 
     }
 
@@ -333,7 +339,6 @@ public class NodeReaderWriterTest
 
             compareNodes(n, n2);
 
-
         }
         catch (Throwable t)
         {
@@ -348,7 +353,7 @@ public class NodeReaderWriterTest
         try
         {
             StringBuffer sb = new StringBuffer();
-            
+
             sb.append("<node xmlns=\"http://www.ivoa.net/xml/VOSpace/v2.0\" \n");
             sb.append("      xmlns:vos=\"http://www.ivoa.net/xml/VOSpace/v2.0\" \n");
             sb.append("      xmlns:xsi=\"http://www.w3.org/2001/XMLSchema-instance\" \n");
@@ -368,7 +373,9 @@ public class NodeReaderWriterTest
                 Node n = reader.read(xml);
                 fail("test XML is actually valid - test is broken");
             }
-            catch(NodeParsingException expected) { }
+            catch (NodeParsingException expected)
+            {
+            }
 
             // read without validation
             NodeReader reader = new NodeReader(false);
@@ -399,9 +406,11 @@ public class NodeReaderWriterTest
         cn.getNodes().add(n);
 
         // add a ContainerNode with some props
-        ContainerNode cn2 = new ContainerNode(new VOSURI("vos://cadc.nrc.ca!vospace/testContainer/foo"));
+        ContainerNode cn2 = new ContainerNode(new VOSURI(
+                "vos://cadc.nrc.ca!vospace/testContainer/foo"));
         properties = new ArrayList<NodeProperty>();
-        properties.add(new NodeProperty("ivo://ivoa.net/vospace/core#read-group", "ivo://cadc.nrc.ca/gms/groups#bar"));
+        properties.add(new NodeProperty("ivo://ivoa.net/vospace/core#read-group",
+                "ivo://cadc.nrc.ca/gms/groups#bar"));
         cn2.setProperties(properties);
         cn.getNodes().add(cn2);
 

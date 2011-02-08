@@ -75,6 +75,7 @@ import java.io.Reader;
 import java.io.StringReader;
 import java.net.URISyntaxException;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
 
 import org.apache.log4j.Logger;
@@ -124,7 +125,6 @@ public class TransferReader
      */
     public TransferReader(boolean enableSchemaValidation)
     {
-        /* HACK: schema validation is broken with current version of the schema
         if (enableSchemaValidation)
         {
             this.schemaMap = new HashMap<String, String>();
@@ -132,7 +132,6 @@ public class TransferReader
             log.debug("schema validation enabled");
         }
         else
-        */
             log.debug("schema validation disabled");
     }
 

@@ -209,4 +209,25 @@ public class TransferReaderWriterTest
             Assert.fail("unexpected exception: " + unexpected);
         }
     }
+    
+    @Test
+    public void testInvalidTransferXml()
+    {
+        StringBuffer sb = new StringBuffer();
+        sb.append("<?xml version=\"1.0\" encoding=\"UTF-8\"?>");
+        sb.append("<vos:transfer></vos:transfer>");
+        String xml = sb.toString();
+
+        log.debug(xml);
+
+        TransferReader reader = new TransferReader();
+        try {
+            Transfer transfer2 = reader.read(xml);
+            Assert.fail("Did not handle invalid Transfer XML properly");
+        }
+        catch(Exception expected)
+        {
+            // expected
+        }
+    }
 }
