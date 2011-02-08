@@ -70,7 +70,6 @@
 package ca.nrc.cadc.vos.client;
 
 import ca.nrc.cadc.auth.SSLUtil;
-import ca.nrc.cadc.net.NetUtil;
 import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStream;
@@ -100,7 +99,10 @@ import ca.nrc.cadc.vos.ServerTransfer;
 import ca.nrc.cadc.vos.Transfer;
 import ca.nrc.cadc.vos.TransferParsingException;
 import ca.nrc.cadc.vos.TransferReader;
+import ca.nrc.cadc.vos.TransferWriter;
 import ca.nrc.cadc.vos.View;
+import java.io.StringReader;
+import java.io.StringWriter;
 import java.security.AccessControlContext;
 import java.security.AccessControlException;
 import java.security.AccessController;
@@ -146,7 +148,7 @@ public class VOSpaceClient
     public VOSpaceClient(String baseUrl, boolean enableSchemaValidation)
     {
         this.baseUrl = baseUrl;
-        this.schemaValidation = enableSchemaValidation;
+        this.schemaValidation = false; //enableSchemaValidation;
     }
 
     public void setSSLSocketFactory(SSLSocketFactory sslSocketFactory)
@@ -641,31 +643,12 @@ public class VOSpaceClient
     {
         Transfer rtn = null;
         try
-        {            
-            // Assemble the Job parameters from the Transfer.
-            StringBuilder sb = new StringBuilder();
-            sb.append("target=");
-            sb.append(NetUtil.encode(transfer.getTarget().getUri().toString()));
-            if (direction == Transfer.Direction.pushToVoSpace)
-            {
-                sb.append("&direction=");
-                sb.append(NetUtil.encode(Transfer.Direction.pushToVoSpace.toString()));
-                sb.append("&protocol=");
-                sb.append(NetUtil.encode(transfer.getProtocols().get(0).getUri()));
-            }
-            else if (direction == Transfer.Direction.pullFromVoSpace)
-            {
-                sb.append("&direction=");
-                sb.append(NetUtil.encode(Transfer.Direction.pullFromVoSpace.toString()));
-                for (Protocol protocol : transfer.getProtocols())
-                {
-                    sb.append("&protocol=");
-                    sb.append(NetUtil.encode(protocol.getUri()));
-                }
-            }
-            
+        {                      
             // POST the Job and get the redirect location.
-            String strJobUrl = postJob(this.baseUrl + VOSPACE_SYNC_TRANSFER_ENDPOINT, sb.toString());
+            TransferWriter writer = new TransferWriter();
+            StringWriter sw = new StringWriter();
+            writer.write(transfer, sw);
+            String strJobUrl = postJob(this.baseUrl + VOSPACE_SYNC_TRANSFER_ENDPOINT, sw.toString());
             log.debug("Job URL is: " + strJobUrl);
             
             // GET the redirect, which runs the Job and returns the Job XML.
@@ -749,7 +732,8 @@ public class VOSpaceClient
         }
         connection.setRequestMethod("POST");
         connection.setRequestProperty("Content-Length", "" + Integer.toString(strParam.getBytes().length));
-        connection.setRequestProperty("Content-Type", "application/x-www-form-urlencoded");
+//        connection.setRequestProperty("Content-Type", "application/x-www-form-urlencoded");
+        connection.setRequestProperty("Content-Type", "text/xml");
         connection.setInstanceFollowRedirects(false);
         connection.setUseCaches(false);
         connection.setDoOutput(true);
@@ -760,7 +744,7 @@ public class VOSpaceClient
         outputStream.write(strParam.getBytes("UTF-8"));
         outputStream.flush();
         outputStream.close();
-        log.debug("POST " + url.toString() + " " + strParam);
+        log.debug("POST " + url.toString());// + " " + strParam);
 
         String redirectLocation = getRedirectLocation(connection);
 
