@@ -82,13 +82,11 @@ import ca.nrc.cadc.uws.JobWriter;
 import ca.nrc.cadc.uws.Parameter;
 import ca.nrc.cadc.uws.SyncJobRunner;
 import ca.nrc.cadc.uws.SyncOutput;
-import java.io.BufferedReader;
 import java.io.FilterOutputStream;
 import java.io.IOException;
-import java.io.InputStreamReader;
 import java.io.OutputStream;
 import java.io.PrintWriter;
-import java.io.StringReader;
+import java.io.StringWriter;
 import java.net.MalformedURLException;
 import java.net.URL;
 import java.security.Principal;
@@ -110,6 +108,8 @@ import org.apache.log4j.Logger;
 import org.jdom.Document;
 import org.jdom.JDOMException;
 import org.jdom.input.SAXBuilder;
+import org.jdom.output.Format;
+import org.jdom.output.XMLOutputter;
 
 /**
  * Servlet that runs a SyncJobRunner for each request. This servlet supports both
@@ -544,19 +544,14 @@ public class SyncServlet extends HttpServlet
         Job job = new Job();
         if (contentType != null && contentType.equals(TEXT_XML))
         {
-            // Read in the XML.
-            BufferedReader br = new BufferedReader(new InputStreamReader(request.getInputStream()));
-            StringBuilder sb = new StringBuilder();
-            String line;
-            while ((line = br.readLine()) != null)
-            {
-                sb.append(line);
-            }
-            
             // Check that the XML is valid.
             SAXBuilder builder = new SAXBuilder("org.apache.xerces.parsers.SAXParser", false);
-            builder.build(new StringReader(sb.toString()));
-            JobInfo jobInfo = new JobInfo(sb.toString(), TEXT_XML, true);
+            Document doc = builder.build(request.getInputStream());
+            StringWriter sw = new StringWriter();
+            XMLOutputter outputter = new XMLOutputter();
+            outputter.setFormat(Format.getCompactFormat());
+            outputter.output(doc.detachRootElement(), sw);
+            JobInfo jobInfo = new JobInfo(sw.toString(), TEXT_XML, true);
             job.setJobInfo(jobInfo);
             log.debug(jobInfo);
         }

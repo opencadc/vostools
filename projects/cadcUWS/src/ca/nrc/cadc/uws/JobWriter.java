@@ -424,7 +424,7 @@ public class JobWriter
         if (jobInfo != null)
         {
             
-            if (jobInfo.getContent() != null && jobInfo.getValid())
+            if (jobInfo.getContent() != null && jobInfo.getValid() != null && jobInfo.getValid())
             {
                 element = new Element(JobAttribute.JOB_INFO.getAttributeName(), UWS.NS);
                 try
