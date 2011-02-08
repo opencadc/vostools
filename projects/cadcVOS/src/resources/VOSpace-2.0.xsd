@@ -1,13 +1,6 @@
-<?xml version="1.0" encoding="UTF-8"?>
-<xs:schema targetNamespace="http://www.ivoa.net/xml/VOSpace/v2.0"
-           elementFormDefault="qualified"
-           attributeFormDefault="unqualified"
-           xmlns:xs="http://www.w3.org/2001/XMLSchema"
-           xmlns:vos="http://www.ivoa.net/xml/VOSpace/v2.0"
-           xmlns:uws="http://www.ivoa.net/xml/UWS/v1.0"
-           xmlns:xlink="http://www.w3.org/1999/xlink">
-               
-    <xs:import namespace="http://www.ivoa.net/xml/UWS/v1.0" schemaLocation="http://www.ivoa.net/xml/UWS/v1.0"/>
+<?xml version="1.0" encoding="utf-8"?>
+<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema" xmlns:vos="http://www.ivoa.net/xml/VOSpace/v2.0" xmlns:uws="http://www.ivoa.net/xml/UWS/v1.0" xmlns:xlink="http://www.w3.org/1999/xlink" targetNamespace="http://www.ivoa.net/xml/VOSpace/v2.0" elementFormDefault="qualified" attributeFormDefault="unqualified">
+  <xs:import namespace="http://www.ivoa.net/xml/UWS/v1.0" schemaLocation="http://www.ivoa.net/xml/UWS/v1.0"/>
 
     <!-- ======== Node types ======== -->
 
@@ -457,10 +450,71 @@
             </xs:element>
         </xs:sequence>
     </xs:complexType>
-
-    <!-- ======== Response representations ======== -->
-
-    <xs:element name="protocols" type="vos:ProtocolList"/>
+  
+  <!-- ======== Transfer type ======== -->
+  <xs:complexType name="Transfer">
+    <xs:annotation>
+      <xs:documentation>
+        A container element for transfer operations.
+      </xs:documentation>
+    </xs:annotation>
+    <xs:sequence>
+      <xs:element name="target" type="xs:anyURI" minOccurs="1" maxOccurs="1">
+        <xs:annotation>
+          <xs:documentation>
+            The target of a transfer operation - the node to/from which data is to be transferred.
+          </xs:documentation>
+        </xs:annotation>
+      </xs:element>
+      <xs:element name="direction" minOccurs="0" maxOccurs="1">
+        <xs:annotation>
+          <xs:documentation>
+            The direction of a data transfer - either a URI or one of the specified directions
+          </xs:documentation>
+        </xs:annotation>
+        <xs:simpleType>
+          <xs:union>
+            <xs:simpleType>
+              <xs:restriction base="xs:anyURI"/>
+            </xs:simpleType>
+            <xs:simpleType>
+              <xs:restriction base="xs:string">
+                <xs:enumeration value="pushToVoSpace"/>
+                <xs:enumeration value="pushFromVoSpace"/>
+                <xs:enumeration value="pullToVoSpace"/>
+                <xs:enumeration value="pullFromVoSpace"/>
+              </xs:restriction>
+            </xs:simpleType>
+          </xs:union>
+        </xs:simpleType>
+      </xs:element>
+      <xs:element name="view" type="vos:View" minOccurs="0" maxOccurs="1">
+        <xs:annotation>
+          <xs:documentation>
+            The requested view for the transfer.
+          </xs:documentation>
+        </xs:annotation>
+      </xs:element>
+      <xs:element name="protocol" type="vos:Protocol" minOccurs="0" maxOccurs="unbounded">
+        <xs:annotation>
+          <xs:documentation>
+            The transfer protocol(s) to use.
+          </xs:documentation>
+        </xs:annotation>
+      </xs:element>
+      <xs:element name="keepBytes" type="xs:boolean" minOccurs="0" maxOccurs="1">
+        <xs:annotation>
+          <xs:documentation>
+            Indicates whether the source object is to be kept in an internal transfer, 
+            i.e., distinguishes between a move and a copy.
+          </xs:documentation>
+        </xs:annotation>
+      </xs:element>
+    </xs:sequence>
+  </xs:complexType>
+  <!-- ======== Response representations ======== -->
+  
+      <xs:element name="protocols" type="vos:ProtocolList"/>
 
     <xs:element name="views" type="vos:ViewList"/>
 
@@ -476,6 +530,9 @@
         <xs:attribute name="readOnly" type="xs:boolean" use="required"></xs:attribute>
     </xs:attributeGroup>
 
-    <xs:complexType name="Transfer"></xs:complexType>
-    
+
+  <xs:element name="node" type="vos:Node"/>
+  
+  
 </xs:schema>
+
