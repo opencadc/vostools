@@ -101,6 +101,9 @@ import ca.nrc.cadc.vos.server.NodePersistence;
 import ca.nrc.cadc.vos.server.SearchNode;
 import ca.nrc.cadc.vos.server.util.NodeStackListener;
 import ca.nrc.cadc.vos.server.util.NodeUtil;
+import java.io.IOException;
+import java.security.cert.CertificateExpiredException;
+import javax.net.ssl.SSLHandshakeException;
 
 
 /**
@@ -261,10 +264,19 @@ public class VOSpaceAuthorizer implements Authorizer
                 {
                     // no delegated credentials == cannot check membership == not a member
                     // TODO: we could throw an exception with a useful message if that
-                    //       could be added to the response message, essentialyl a reason
+                    //       could be added to the response message, essentially a reason
                     //       for the false
                     return false;
                 }
+                
+                try { privateKeyChain.getChain()[0].checkValidity(); }
+                catch(CertificateException ex)
+                {
+                    // TODO: as above, try to respond with a reason for the false
+                    LOG.warn("invalid certificate for use in GMS calls for: " + privateKeyChain.getPrincipal());
+                    return false;
+                }
+
                 subject.getPublicCredentials().add(privateKeyChain);
             }
             
@@ -307,56 +319,69 @@ public class VOSpaceAuthorizer implements Authorizer
             Set<X500Principal> x500Principals = subject.getPrincipals(X500Principal.class);
             for (X500Principal x500Principal : x500Principals)
             {
-                boolean isMember = gms.isMember(guri, x500Principal);
-                LOG.debug("GmsClient.isMember(" + guri.getFragment() + "," + x500Principal.getName() + " returned " + isMember);
-                if (isMember)
+                try
                 {
-                    return true;
+                    boolean isMember = gms.isMember(guri, x500Principal);
+                    LOG.debug("GmsClient.isMember(" + guri.getFragment() + "," + x500Principal.getName() + " returned " + isMember);
+                    if (isMember)
+                        return true;
+                }
+                catch(IOException ex)
+                {
+                    LOG.error("failed to call GMS service: " + ex);
+                    Throwable cause = ex.getCause();
+                    while (cause != null)
+                    {
+                        LOG.error("                    reason: " + cause.getCause());
+                        cause = cause.getCause();
+                    }
+                    LOG.error("bailing out of membership checking", ex);
+                    return false;
                 }
             }
-            
             return false;
         }
         catch (MalformedURLException e)
         {
             LOG.error("GMSClient invalid URL", e);
-            throw new IllegalStateException(e);
+            //throw new IllegalStateException(e);
         }
         catch (URISyntaxException e)
         {
             LOG.warn("Invalid Group URI: " + groupURI, e);
-            return false;
+            //return false;
         }
         catch (CertificateException e)
         {
             LOG.error("Error getting private certificate", e);
-            throw new IllegalStateException(e);
+            //throw new IllegalStateException(e);
         }
         catch (AuthorizationException e)
         {
             LOG.debug("Could't make credPrivateClientCall", e);
-            return false;
+            //return false;
         }
         catch (InstantiationException e)
         {
             LOG.error("Could't construct CredentialPrivateClient", e);
-            throw new IllegalStateException(e);
+            //throw new IllegalStateException(e);
         }
         catch (IllegalAccessException e)
         {
             LOG.error("Could't construct CredentialPrivateClient", e);
-            throw new IllegalStateException(e);
+            //throw new IllegalStateException(e);
         }
         catch (ClassNotFoundException e)
         {
             LOG.error("No implementing CredentialPrivateClients", e);
-            throw new IllegalStateException(e);
+            //throw new IllegalStateException(e);
         }
         catch(Throwable t)
         {
             LOG.error("unexpected failure", t);
-            throw new IllegalStateException("unexpected failure", t);
+            //throw new IllegalStateException("unexpected failure", t);
         }
+        return false;
     }
     
     /**
