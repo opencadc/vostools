@@ -98,6 +98,7 @@ import ca.nrc.cadc.gms.GroupsReader;
 import ca.nrc.cadc.gms.ReaderException;
 import ca.nrc.cadc.gms.User;
 import ca.nrc.cadc.gms.UserReader;
+import javax.net.ssl.SSLHandshakeException;
 
 
 /**
@@ -219,10 +220,12 @@ public class GmsClient
      * @throws IllegalArgumentException
      *             If the Group ID, Member ID, or accepted baseServiceURL,
      *             or any combination of them produces an error.
-     * @throws AccessControlException
-     *             If user not allow to access the resource
+     * @throws AccessControlException if caller is not permitted access to the group
+     * @throws IOException if the call to the GMS service fails
+     *            
      */
     public boolean isMember(URI groupID, X500Principal memberID)
+        throws AccessControlException, IOException
     {
         final StringBuilder resourcePath = new StringBuilder(64);
         try
@@ -234,7 +237,7 @@ public class GmsClient
             resourcePath.append(URLEncoder.encode(memberID.toString(),
                     "UTF-8"));
 
-            final URL resourceURL = new URL(getBaseServiceURL()
+            URL resourceURL = new URL(getBaseServiceURL()
                     + resourcePath.toString());
             logger.debug("isMember(), URL=" + resourceURL);
             HttpURLConnection connection = openConnection(resourceURL);
@@ -266,22 +269,10 @@ public class GmsClient
         }
         catch (MalformedURLException e)
         {
-            final String message = String.format(
-                    "The supplied URL (%s) cannot be used.",
-                    getBaseServiceURL().toExternalForm()
-                            + resourcePath.toString());
-            logger.debug("Failed to check membership", e);
-            throw new IllegalArgumentException(message, e);
-        }
-        catch (IOException e)
-        {
-            final String message = String.format(
-                    "Client BUG: The supplied URL (%s) cannot "
-                            + "be hit.", getBaseServiceURL()
-                            .toExternalForm()
-                            + resourcePath.toString());
-            logger.debug("Failed to check membership", e);
-            throw new IllegalArgumentException(message, e);
+            // this is not possible without a serious bug in the above code
+            String msg = getBaseServiceURL().toExternalForm()
+                            + resourcePath.toString();
+            throw new RuntimeException("BUG: generated an illegal URL " + msg);
         }
     }
 
