@@ -70,6 +70,7 @@
 
 package ca.nrc.cadc.net.event;
 
+import ca.nrc.cadc.util.FileMetadata;
 import java.io.File;
 import java.net.URL;
 import java.util.EventObject;
@@ -104,6 +105,7 @@ public class TransferEvent extends EventObject
     
     private URL url;
     private File file;
+    private FileMetadata meta;
     private int state;
     private Throwable error;
     private String eventID;
@@ -197,6 +199,14 @@ public class TransferEvent extends EventObject
      * @return
      */
     public File getFile() { return file; }
+
+    /**
+     * Get metadata about the file acquired during or after the transfer.
+     * @return
+     */
+    public FileMetadata getFileMetadata() { return meta; }
+
+    public void setFileMetadata(FileMetadata meta) { this.meta = meta; }
     
     /**
      * Get associated error. This is null if the download completed successfully or was cancelled.

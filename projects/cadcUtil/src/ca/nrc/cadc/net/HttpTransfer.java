@@ -92,6 +92,7 @@ import ca.nrc.cadc.auth.SSLUtil;
 import ca.nrc.cadc.net.event.ProgressListener;
 import ca.nrc.cadc.net.event.TransferEvent;
 import ca.nrc.cadc.net.event.TransferListener;
+import ca.nrc.cadc.util.FileMetadata;
 
 /**
  *
@@ -227,9 +228,15 @@ public abstract class HttpTransfer implements Runnable
 
     protected void fireEvent(File file, int state)
     {
+        fireEvent(file, state, null);
+    }
+
+    protected void fireEvent(File file, int state, FileMetadata meta)
+    {
         if (fireEvents)
         {
             TransferEvent e = new TransferEvent(this, eventID, remoteURL, file, state);
+            e.setFileMetadata(meta);
             fireEvent(e);
         }
     }

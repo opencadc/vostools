@@ -89,6 +89,7 @@ import org.apache.log4j.Logger;
 
 import ca.nrc.cadc.net.event.TransferEvent;
 import ca.nrc.cadc.util.CaseInsensitiveStringComparator;
+import ca.nrc.cadc.util.FileMetadata;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
@@ -179,6 +180,7 @@ public class HttpDownload extends HttpTransfer
             throw new IllegalArgumentException("source URL cannot be null");
         if (dest == null)
             throw new IllegalArgumentException("destination File cannot be null");
+
         if (dest.exists() && dest.isDirectory())
         {
             this.destDir = dest;
@@ -188,14 +190,19 @@ public class HttpDownload extends HttpTransfer
             File parent = dest.getParentFile();
             if (parent == null) // relative path
                 throw new IllegalArgumentException("destination File cannot be relative");
-            if (parent.exists() && parent.isDirectory())
-            {
+            //if (parent.exists() && parent.isDirectory())
+            //{
                 this.destDir = parent;
                 this.localFile = dest;
-            }
-            else
-                throw new IllegalArgumentException("destination File parent must be a directory that exists");
+            //}
+            //else
+            //    throw new IllegalArgumentException("destination File parent must be a directory that exists");
         }
+
+        // dest does not exist == dest is the file to write
+        // dest exists and is a file = dest is the file to (over)write
+        // dest exists and it a directory == dest is the parent, we determine filename
+        // all other path components are directories, if the do not exist we create them
 
         this.remoteURL = src;
     }
@@ -313,9 +320,6 @@ public class HttpDownload extends HttpTransfer
             // Swing event thread) can terminate the Download
             this.thread = Thread.currentThread();
             
-            if (remoteURL == null)
-                throw new IllegalArgumentException("no URL");                
-            
             fireEvent(TransferEvent.CONNECTING);
 
             if (destStream == null) // downloading to a file
@@ -404,7 +408,12 @@ public class HttpDownload extends HttpTransfer
             else
             {
                 log.debug("completed");
-                fireEvent(destFile, TransferEvent.COMPLETED);
+                FileMetadata meta = new FileMetadata();
+                meta.setContentType(contentType);
+                meta.setContentEncoding(contentEncoding);
+                meta.setContentLength(contentLength);
+                // TODO: add last-modified and md5sum
+                fireEvent(destFile, TransferEvent.COMPLETED, meta);
             }
         }
     }
@@ -719,6 +728,12 @@ public class HttpDownload extends HttpTransfer
             }
             else
             {
+                // prepare to write to origFile
+                File parent = origFile.getParentFile();
+                parent.mkdirs();
+                if ( !parent.exists() )
+                    throw new IOException("failed to create one or more parent dir(s):" + parent);
+
                 log.debug("output: " + origFile + " append: " + append);
                 ostream = new FileOutputStream(origFile, append);
                 log.debug("using BufferedOutputStream");
@@ -747,7 +762,7 @@ public class HttpDownload extends HttpTransfer
             }
         }
     }
-    
+
     private void doDecompress()
         throws IOException, InterruptedException
     {

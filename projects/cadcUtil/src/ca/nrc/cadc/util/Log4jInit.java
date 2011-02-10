@@ -69,11 +69,13 @@
 
 package ca.nrc.cadc.util;
 
+import java.io.Writer;
 import org.apache.log4j.BasicConfigurator;
 import org.apache.log4j.ConsoleAppender;
 import org.apache.log4j.Level;
 import org.apache.log4j.Logger;
 import org.apache.log4j.PatternLayout;
+import org.apache.log4j.WriterAppender;
 import org.apache.log4j.varia.LevelRangeFilter;
 
 /**
@@ -134,6 +136,44 @@ public class Log4jInit
             // set specified package and level
             Logger.getLogger(pkg).setLevel(level);
             initialized = true;
+        }
+    }
+
+    /**
+     * Consigure log4j for use in a GUI. All output is done using the
+     * same format. This method sets up logging to the specified writer
+     * on every call, so should be called with a non-null writer only once
+     * (per writer). It may be called multiple times to set logging levels for
+     * different packages.
+     * 
+     * @param pkg package to configure logging for
+     * @param level log level for pkg
+     * @param dest destination writer to log to  (may be null)
+     */
+    public static void setLevel(String pkg, Level level, Writer dest)
+    {
+        synchronized (Log4jInit.class)
+        {
+            if (dest != null)
+            {
+                // set the overall logging level to ERROR
+                Logger.getRootLogger().setLevel(Level.ERROR);
+
+                // create an appender for WARN, ERROR and FATAL with LONG_FORMAT
+                // message prefix
+                WriterAppender app =
+                    new WriterAppender(new PatternLayout(LONG_FORMAT), dest);
+                LevelRangeFilter filter = new LevelRangeFilter();
+                filter.setLevelMax(Level.FATAL);
+                filter.setLevelMin(Level.DEBUG);
+                filter.setAcceptOnMatch(true);
+                app.clearFilters();
+                app.addFilter(filter);
+                BasicConfigurator.configure(app);
+            }
+
+            // set specified package and level
+            Logger.getLogger(pkg).setLevel(level);
         }
     }
 

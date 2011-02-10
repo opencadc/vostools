@@ -109,7 +109,7 @@ public class HttpDownloadTest
     @BeforeClass
     public static void setUpBeforeClass() throws Exception
     {
-        Log4jInit.setLevel("ca.nrc.cadc.net", Level.DEBUG);
+        Log4jInit.setLevel("ca.nrc.cadc.net", Level.INFO);
         SSL_CERT = FileUtil.getFileFromResource(TEST_CERT_FN, HttpDownloadTest.class);
         SSL_KEY = FileUtil.getFileFromResource(TEST_KEY_FN, HttpDownloadTest.class);
     }
@@ -219,6 +219,39 @@ public class HttpDownloadTest
         File dest = new File(System.getProperty("user.dir"));
         try
         {
+            HttpDownload dl = new HttpDownload(src, dest);
+            dl.setOverwrite(true);
+            dl.run();
+            File out = dl.getFile();
+            Assert.assertNotNull("result file", out);
+            Assert.assertTrue("dest file exists after download", out.exists());
+            Assert.assertTrue("dest file size > 0", out.length() > 0);
+        }
+        catch (Throwable t)
+        {
+            t.printStackTrace();
+            Assert.fail("unexpected exception: " + t);
+        }
+    }
+
+    @Test
+    public void testDownloadFileWithCreateDir() throws Exception
+    {
+        log.debug("TEST: testDownloadFileWithCreateDir");
+        URL src = httpURL;
+        File base = new File("/tmp/"+HttpDownloadTest.class.getSimpleName());
+        File dest = new File(base, "bar/baz/robots.txt");
+        try
+        {
+            File tmp = dest;
+            for (int i=0; i<4; i++)
+            {
+                File par = tmp.getParentFile();
+                if (tmp.exists())
+                    tmp.delete();
+                tmp = par;
+            }
+            Assert.assertTrue("base dir does not exist before download", !base.exists());
             HttpDownload dl = new HttpDownload(src, dest);
             dl.setOverwrite(true);
             dl.run();
