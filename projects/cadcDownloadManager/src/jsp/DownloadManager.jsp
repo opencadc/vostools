@@ -109,6 +109,7 @@
     </resources> 
 
     <application-desc main-class="ca.nrc.cadc.dlm.client.Main">
+        <argument>--verbose</argument>
         <argument>--uris=<%= uris %></argument>
         <argument>--fragment=<%= fragment %></argument>
     </application-desc>

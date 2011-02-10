@@ -80,6 +80,8 @@ import ca.nrc.cadc.net.HttpTransfer;
 import ca.nrc.cadc.net.event.TransferEvent;
 import ca.nrc.cadc.net.event.TransferListener;
 import ca.nrc.cadc.thread.ConditionVar;
+import ca.nrc.cadc.util.Log4jInit;
+import org.apache.log4j.Level;
 import org.apache.log4j.Logger;
 
 /**
@@ -102,8 +104,10 @@ public class ConsoleUI implements UserInterface, TransferListener
     private boolean decompress;
     private boolean overwrite;
     
-    public ConsoleUI(Integer threads, String dest, boolean decompress, boolean overwrite, ConditionVar downloadsCompleteCond)
+    public ConsoleUI(Level logLevel, Integer threads, String dest, boolean decompress, boolean overwrite, ConditionVar downloadsCompleteCond)
     {
+        Log4jInit.setLevel("ca.nrc.cadc", logLevel);
+        
         this.downloadsCompeleteCond = downloadsCompleteCond;
         this.userAgent = this.userAgent = "CADC DownloadManager(ConsoleUI) " + HttpTransfer.DEFAULT_USER_AGENT;
         this.decompress = decompress;

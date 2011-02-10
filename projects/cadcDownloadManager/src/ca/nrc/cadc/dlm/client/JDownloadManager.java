@@ -70,17 +70,24 @@
 
 package ca.nrc.cadc.dlm.client;
 
+import ca.nrc.cadc.dlm.DownloadDescriptor;
+import ca.nrc.cadc.dlm.ManifestReader;
 import ca.nrc.cadc.net.HttpDownload;
+import ca.nrc.cadc.net.HttpTransfer;
 import ca.nrc.cadc.net.event.TransferEvent;
 import ca.nrc.cadc.net.event.TransferListener;
+import ca.nrc.cadc.util.FileMetadata;
 import java.awt.BorderLayout;
 import java.awt.Color;
 import java.awt.Component;
 import java.awt.Dimension;
 import java.awt.event.ActionEvent;
 import java.io.File;
+import java.io.FileReader;
+import java.io.IOException;
 import java.net.Authenticator;
 import java.util.ArrayList;
+import java.util.Iterator;
 import java.util.List;
 
 import javax.swing.AbstractAction;
@@ -112,6 +119,8 @@ public class JDownloadManager extends JPanel implements TransferListener
 {
     private static final long serialVersionUID = 201008051500L;
     private static Logger log = Logger.getLogger(JDownloadManager.class);
+
+    private static String userAgent = "CADC DownloadManager(GraphicUI) " + HttpTransfer.DEFAULT_USER_AGENT;
 
     private static String COMPLETED = " Completed: ";
     private static String CANCELLED = " Cancelled: ";
@@ -213,6 +222,9 @@ public class JDownloadManager extends JPanel implements TransferListener
 
         setMinimumSize(new Dimension(300, 500));
         setInitialDir(initialDir);
+
+        // support recursive download via manifest file
+        addDownloadListener(new ManifestDownloadListener());
     }
 
     private class CancelAction extends AbstractAction
@@ -338,12 +350,12 @@ public class JDownloadManager extends JPanel implements TransferListener
     // DownloadListener
     public void transferEvent(TransferEvent e)
     {
-        log.debug("downloadEvent: " + e);
+        log.debug("transferEvent: " + e);
         switch(e.getState())
         {
-            case TransferEvent.FAILED:
             case TransferEvent.CANCELLED:
             case TransferEvent.COMPLETED:
+            case TransferEvent.FAILED:
                 if (SwingUtilities.isEventDispatchThread())
                     new UpdateUI(e).run();
                 else
@@ -352,7 +364,11 @@ public class JDownloadManager extends JPanel implements TransferListener
         
         // rebroadcast event to other listeners
         if (downloadListeners == null || downloadListeners.size() == 0)
+        {
+            log.debug("downloadListeners: none");
             return;
+        }
+        log.debug("downloadListeners: " + downloadListeners.size());
         for (int i=0; i<downloadListeners.size(); i++)
         {
             TransferListener tl = (TransferListener) downloadListeners.get(i);
@@ -452,12 +468,16 @@ public class JDownloadManager extends JPanel implements TransferListener
             switch(e.getState())
             {
                 case TransferEvent.FAILED:
+                    log.info(e.getStateLabel() + ": " + e.getURL() + " -> " + e.getFile());
+                    log.info("\treason: " + e.getError());
                     numFailed++;
                     break;
                 case TransferEvent.CANCELLED:
+                    log.info(e.getStateLabel() + ": " + e.getURL() + " -> " + e.getFile());
                     numCancelled++;
                     break;
                 case TransferEvent.COMPLETED:
+                    log.info(e.getStateLabel() + ": " + e.getURL() + " -> " + e.getFile());
                     numCompleted++;
                     break;
             }
@@ -479,13 +499,44 @@ public class JDownloadManager extends JPanel implements TransferListener
             cancelButton.setEnabled(true);
         repaint();
     }
-    
+
+    public void add(Iterator<DownloadDescriptor> downloads)
+    {
+        while ( downloads.hasNext() )
+        {
+            DownloadDescriptor dd = downloads.next();
+            if (DownloadDescriptor.OK.equals(dd.status))
+            {
+                File dest = downloadManager.getDestinationDir();
+                if (dd.destination != null)
+                    dest = new File(dest, dd.destination);
+                HttpDownload dl = new HttpDownload("userAgent", dd.url, dest);
+                this.add(dl);
+            }
+            else
+            {
+                StringBuffer sb = new StringBuffer();
+                sb.append("failed to setup download: ");
+                if (dd.uri != null)
+                    sb.append(dd.uri);
+                if (dd.destination != null)
+                {
+                    sb.append(" -> ");
+                    sb.append(dd.destination);
+                }
+                sb.append("\n\treason: ");
+                sb.append(dd.error);
+                log.error(sb.toString());
+            }
+        }
+    }
+
     /**
      * Add a new Download to the queue. This method will silently do nothing and return if the user
      * cancelled the selection of a destination directory.
      * @param dl
      */
-    public void add(final HttpDownload dl)
+    private void add(final HttpDownload dl)
     {
         if ( SwingUtilities.isEventDispatchThread())
             doAddDownload(dl);
@@ -517,4 +568,41 @@ public class JDownloadManager extends JPanel implements TransferListener
         updateStatus();
     }
 
+    private class ManifestDownloadListener implements TransferListener
+    {
+        public String getEventHeader()
+        {
+            return null;
+        }
+
+        public void transferEvent(TransferEvent e)
+        {
+            log.debug("ManifestDownloadListener.transferEvent: " + e);
+            // check for possible recursive download
+            if (e.getState() == TransferEvent.COMPLETED)
+            {
+                FileMetadata meta = e.getFileMetadata();
+                log.debug("file metadata: " + meta);
+                if (meta != null && ManifestReader.CONTENT_TYPE.equals(meta.getContentType()))
+                {
+                    // TODO: figure out which thread calls this...
+                    // should spawn a thread to do this or have one standing
+                    // by since the current thread is probably the one running the
+                    // download and we want to free it up asap
+                    log.debug("ManifestDownloadListener.transferEvent: current thread: " + Thread.currentThread().getName());
+                    try
+                    {
+                        log.debug("manifest download: " + e.getFile());
+                        Iterator<DownloadDescriptor> iter = new ManifestReader(new FileReader(e.getFile()));
+                        add(iter);
+                    }
+                    catch(IOException ex)
+                    {
+                        log.error("failed to read download manifest " + e.getFile(), ex);
+                    }
+                }
+            }
+        }
+
+    }
 }

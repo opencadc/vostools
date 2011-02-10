@@ -75,6 +75,7 @@ import ca.onfire.ak.BrowserApplet;
 
 import javax.swing.JApplet;
 import java.io.IOException;
+import org.apache.log4j.Level;
 
 /**
  * TODO
@@ -99,7 +100,7 @@ public class AppletWrapper extends JApplet
             String fragment = fixNull(getParameter("fragment"));
             String[] uris = uriStr.split(",");
             
-            this.ui = new GraphicUI();
+            this.ui = new GraphicUI(Level.INFO);
             ui.add(uris, fragment);
             
             BrowserApplet f = new BrowserApplet(Constants.name, ui, this);

@@ -95,9 +95,8 @@
     <jar jarfile="${build}/lib/${project}Client.jar"
         basedir="${build}/class"
         update="no">
-                <include name="**/client/**" />
-                <include name="**/DownloadUtil**" />
-                <include name="ca/onfire/**" />
+                <exclude name="**/server/**" />
+                <exclude name="**/test/**" />
     </jar>
 </target>
 
@@ -105,8 +104,8 @@
     <jar jarfile="${build}/lib/${project}Server.jar"
 		basedir="${build}/class" 
 		update="no">
-            <include name="ca/nrc/cadc/dlm/DownloadUtil**" />
-            <include name="ca/nrc/cadc/dlm/server/**" />
+            <exclude name="**/client/**" />
+            <exclude name="**/test/**" />
     </jar>
     
 </target>
@@ -117,10 +116,6 @@
             <include name="**.jsp" />
         </fileset>
     </copy>
-</target>
-
-<target name="test">
-	<echo message="WARNING: no tests implemented" />
 </target>
 
 <!-- 
@@ -161,4 +156,28 @@ note: client jars are not signed
     </war>
 </target>
 
+    <property name="testingJars" value="${jars}:${lib}/ad2.jar:${ext.dev}/junit.jar" />
+    
+    <target name="test" depends="compile-test">
+        <junit printsummary="yes" haltonfailure="yes" fork="yes">
+          <classpath>
+              <pathelement path="${build}/class"/>
+              <pathelement path="${build}/test/class"/>
+              <pathelement path="${jars}:${testingJars}"/>
+          </classpath>
+          <formatter type="plain" usefile="false"/>
+          <test name="ca.nrc.cadc.dlm.IteratorTest"/>
+          <test name="ca.nrc.cadc.dlm.ManifestReaderTest"/>
+        </junit>
+
+    </target>
+
+    <target name="ui-test" depends="build">
+        <java classname="ca.nrc.cadc.dlm.client.Main"
+            classpath="${build}/class:${testingJars}"
+            fork="yes">
+            <arg value="-v" />
+            <arg value="--uris=http://www.google.com/,ad:HST/U27R9G01B.2,ad:HST/U27R9G01B.3" />
+        </java>
+    </target>
 </project>

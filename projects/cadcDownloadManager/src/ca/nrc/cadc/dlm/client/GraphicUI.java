@@ -69,13 +69,12 @@
 
 package ca.nrc.cadc.dlm.client;
 
+import ca.nrc.cadc.dlm.DownloadDescriptor;
 import java.awt.BorderLayout;
 import java.awt.Color;
 import java.awt.Graphics;
 import java.io.File;
 import java.io.IOException;
-import java.util.ArrayList;
-import java.util.List;
 
 import javax.swing.BorderFactory;
 import javax.swing.SwingUtilities;
@@ -83,12 +82,18 @@ import javax.swing.event.ChangeEvent;
 import javax.swing.event.ChangeListener;
 
 import ca.nrc.cadc.dlm.DownloadUtil;
-import ca.nrc.cadc.net.HttpDownload;
-import ca.nrc.cadc.net.HttpTransfer;
 import ca.nrc.cadc.net.event.TransferListener;
 import ca.nrc.cadc.thread.ConditionVar;
+import ca.nrc.cadc.thread.Queue;
+import ca.nrc.cadc.util.Log4jInit;
 import ca.onfire.ak.AbstractApplication;
 import ca.onfire.ak.ApplicationConfig;
+import java.io.Writer;
+import java.util.Iterator;
+import javax.swing.JScrollPane;
+import javax.swing.JTabbedPane;
+import javax.swing.JTextArea;
+import org.apache.log4j.Level;
 import org.apache.log4j.Logger;
 
 /**
@@ -101,21 +106,21 @@ public class GraphicUI extends AbstractApplication implements ChangeListener, Us
     private static final long serialVersionUID = 201008051500L;
     private static Logger log = Logger.getLogger(GraphicUI.class);
 
+    private LogWriter writer = new LogWriter();
     private JDownloadManager downloadManager;
     private TransferListener downloadListener;
     
     private ConditionVar uiInitCond;
     private ConditionVar engineInitCond;
-    private final List<DownloadUtil.ParsedURI> uris = new ArrayList<DownloadUtil.ParsedURI>();
+    private Queue inputQueue = new Queue();
     private String fragment;
-    private String userAgent;
     
-    public GraphicUI() 
+    public GraphicUI(Level logLevel)
     {
         super(new BorderLayout());
+        Log4jInit.setLevel("ca.nrc.cadc", logLevel, writer);
+        
         this.downloadListener = initTransferLister();
-        this.userAgent = "CADC DownloadManager(GraphicUI) " + HttpTransfer.DEFAULT_USER_AGENT;
-
         this.uiInitCond = new ConditionVar();
         uiInitCond.set(false);
         this.engineInitCond = new ConditionVar();
@@ -124,18 +129,9 @@ public class GraphicUI extends AbstractApplication implements ChangeListener, Us
     
     public void add(String[] strs, String fragment)
     {
-        List<DownloadUtil.ParsedURI> parsed = DownloadUtil.parseURIs(strs, fragment);
-        this.uris.addAll(parsed);
+        Iterator<DownloadDescriptor> iter = DownloadUtil.iterateURLs(strs, fragment);
+        this.inputQueue.push(iter);
         this.fragment = fragment;
-    }
-    
-    private void logError(DownloadUtil.GeneratedURL gen)
-    {
-        // TODO: display in a window? create a Download in FAILED state?
-        String msg = "cannot download " + gen.str + ", cause: " + gen.error.getMessage();
-        if (gen.error.getCause() != null)
-            msg += ", " + gen.error.getCause().getMessage();
-        log.error(msg);
     }
 
     @Override
@@ -164,6 +160,10 @@ public class GraphicUI extends AbstractApplication implements ChangeListener, Us
     
     protected void makeUI()
     {
+        // create component to write log messages to
+        JTextArea jta = new JTextArea();
+        writer.setUI(jta);
+
         // try to restore previous settings
         int initialThreads = DownloadManager.DEFAULT_THREAD_COUNT;
         ApplicationConfig conf = getApplicationContainer().getConfig();
@@ -189,8 +189,13 @@ public class GraphicUI extends AbstractApplication implements ChangeListener, Us
         this.downloadManager = new JDownloadManager(initialThreads, downloadDir);
         downloadManager.addChangeListener(this);
         downloadManager.addDownloadListener(downloadListener);
+        //this.add(downloadManager, BorderLayout.CENTER);
+        JTabbedPane tabs = new JTabbedPane();
+        this.add(tabs, BorderLayout.CENTER);
+        tabs.addTab("Downloads", downloadManager);
 
-        this.add(downloadManager, BorderLayout.CENTER);
+        JScrollPane sp = new JScrollPane(jta);
+        tabs.addTab("Log Messages", sp);
         this.setBorder(BorderFactory.createEmptyBorder(4, 4, 4, 4));
         
         Util.recursiveSetBackground(this, Color.WHITE);
@@ -198,7 +203,40 @@ public class GraphicUI extends AbstractApplication implements ChangeListener, Us
         // fire off a thread to complete init once the app is displayed on screen
         new Thread(new DelayedInit()).start();
     }
-    
+
+    private class LogWriter extends Writer
+    {
+        StringBuffer sb = new StringBuffer();
+
+        private JTextArea jta;
+
+        LogWriter()
+        {
+            super();
+        }
+
+        public void setUI(JTextArea jta)
+        {
+            this.jta = jta;
+            jta.append(sb.toString()); // catch up
+        }
+        @Override
+        public void close() throws IOException { }
+
+        @Override
+        public void flush() throws IOException { }
+
+        @Override
+        public void write(char[] cbuf, int off, int len) throws IOException
+        {
+            String s = new String(cbuf, off, len);
+            sb.append(s);
+            if (jta != null)
+                jta.append(s);
+        }
+
+    }
+
     public void paint(Graphics g)
     {
         super.paint(g);
@@ -224,23 +262,23 @@ public class GraphicUI extends AbstractApplication implements ChangeListener, Us
                 });
                 
                 engineInitCond.waitForTrue();
-                // TODO: show the user we are busy with something...
-                synchronized (uris)
+
+                // TODO: if we wanted to continue to accept input from someplace,
+                // we would loop here and keep calling pop()
+                Object obj = inputQueue.pop();
+                if (obj != null)
                 {
-                    List<DownloadUtil.GeneratedURL> gus = DownloadUtil.generateURLs(uris, fragment);
-                    // TODO: stop showing busy since the first add will show action
-                    for (DownloadUtil.GeneratedURL g : gus)
+                    try
                     {
-                        if (g.error == null)
-                        {
-                            HttpDownload dl = new HttpDownload(userAgent, g.url, downloadManager.getDestinationDir());
-                            downloadManager.add(dl);
-                        }
-                        else
-                            logError(g);
+                        Iterator<DownloadDescriptor> iter = (Iterator<DownloadDescriptor>) obj;
+                        downloadManager.add(iter);
                     }
-                    uris.clear();
+                    catch(ClassCastException ex)
+                    {
+                        log.error("BUG: got unexpected object from input queue: " + obj.getClass().getName());
+                    }
                 }
+                
             }
             catch(Throwable t) 
             { 

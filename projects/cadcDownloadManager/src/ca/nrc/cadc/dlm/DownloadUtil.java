@@ -80,6 +80,7 @@ import java.util.List;
 
 import ca.nrc.cadc.net.MultiSchemeHandler;
 import ca.nrc.cadc.net.SchemeHandler;
+import java.util.NoSuchElementException;
 import org.apache.log4j.Logger;
 
 /**
@@ -179,17 +180,17 @@ public class DownloadUtil
         List<ParsedURI> uriList = parseURIs(uris, commonFragment);
         return generateURLs(uriList, commonFragment);
     }
-    
-    public static List<GeneratedURL> generateURLs(List<ParsedURI> uris, String commonFragment)
+
+    public static List<GeneratedURL> generateURLs(List<ParsedURI> uris, String x)
     {
         log.debug("[DownloadUtil] generateURLs: START");
         List ret = new ArrayList<GeneratedURL>();
-        
+
         Iterator<ParsedURI> i = uris.iterator();
         while ( i.hasNext() )
         {
             ParsedURI pu = i.next();
-            
+
             if (pu.error != null)
             {
                 GeneratedURL gu = new GeneratedURL();
@@ -224,7 +225,63 @@ public class DownloadUtil
         log.debug("[DownloadUtil] generateURLs: " + ret.size() + " URLs");
         return ret;
     }
-    
+
+    public static Iterator<DownloadDescriptor> iterateURLs(String[] uris, String commonFragment)
+    {
+        final List<ParsedURI> parsed = parseURIs(uris, commonFragment);
+        return new Iterator<DownloadDescriptor>()
+        {
+            boolean done = false;
+            Iterator<ParsedURI> outer = parsed.iterator();
+            Iterator<URL> inner = null;
+            ParsedURI cur;
+
+            public boolean hasNext()
+            {
+                return (inner != null || outer.hasNext());
+            }
+
+            public DownloadDescriptor next()
+            {
+                if (done || parsed.size() == 0)
+                    throw new NoSuchElementException();
+                if (inner != null)
+                {
+                    URL url = inner.next();
+                    if (!inner.hasNext())
+                        inner = null;
+                    DownloadDescriptor dd = new DownloadDescriptor(cur.uri.toString(), url);
+                    return dd;
+                }
+
+                cur = outer.next();
+
+                if (cur.error != null)
+                {
+                    DownloadDescriptor dd = new DownloadDescriptor(cur.uri.toString(), cur.error.toString());
+                    return dd;
+                }
+                try
+                {
+                    List<URL> urls = getSchemeHandler().toURL(cur.uri);
+                    inner = urls.iterator();
+                    return this.next();
+                }
+                catch(IllegalArgumentException iex)
+                {
+                    DownloadDescriptor dd = new DownloadDescriptor(cur.uri.toString(), iex.toString());
+                    return dd;
+                }
+            }
+
+            public void remove()
+            {
+                throw new UnsupportedOperationException();
+            }
+        };
+
+    }
+
     /**
      * Parse a comma separated list URIs into a single list of unique URI(s)
      *

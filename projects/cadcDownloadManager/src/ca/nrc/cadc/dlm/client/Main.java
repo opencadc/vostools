@@ -87,7 +87,7 @@ import org.apache.log4j.Logger;
  */
 public class Main
 {
-    private static Logger log = Logger.getLogger(Main.class);
+    //private static Logger log = Logger.getLogger(Main.class);
 
     public static void main(String[] args)
     {
@@ -99,14 +99,13 @@ public class Main
                 usage();
                 System.exit(0);
             }
+            Level level = Level.WARN;
             if ( am.isSet("d") || am.isSet("debug") )
-                Log4jInit.setLevel("ca.nrc.cadc", Level.DEBUG);
+                level = Level.DEBUG;
             else if ( am.isSet("v") || am.isSet("verbose") )
-                Log4jInit.setLevel("ca.nrc.cadc", Level.INFO);
+                level = Level.INFO;
             else if ( am.isSet("q") || am.isSet("quiet") )
-                Log4jInit.setLevel("ca.nrc.cadc", Level.OFF);
-            else
-                Log4jInit.setLevel("ca.nrc.cadc", Level.WARN);
+                level = Level.OFF;
 
             String uriStr = fixNull(am.getValue("uris"));
             String fragment = fixNull(am.getValue("fragment"));
@@ -132,11 +131,11 @@ public class Main
                         throw new IllegalArgumentException("failed to parse '" + thStr + "' as an integer");
                     }
                 downloadCompleteCond.set(false);
-                ui = new ConsoleUI(threads, dest, decompress, overwrite, downloadCompleteCond);
+                ui = new ConsoleUI(level, threads, dest, decompress, overwrite, downloadCompleteCond);
             }
             else
             {
-                ui = new GraphicUI();
+                ui = new GraphicUI(level);
                 ApplicationFrame frame  = new ApplicationFrame(Constants.name, (Application)ui);
                 frame.getContentPane().add((Component)ui);
                 frame.setVisible(true);
@@ -148,26 +147,25 @@ public class Main
                 ui.add(uris, fragment);
             }
 
-            log.debug("starting UI...");
             ui.start();
             
             // if running headless, don't exit
             // until the downloads have been completed.
             if (headless)
             {
-                log.debug("headless: waiting for downloads to complete");
                 downloadCompleteCond.waitForTrue();
-                log.debug("headless: downloads completed");
             }
         }
         catch(IllegalArgumentException ex)
         {
-            log.error(ex.toString());
+            System.err.println("fatal error during startup");
+            ex.printStackTrace();
             usage();
             System.exit(1);
         }
         catch(Throwable oops) 
         {
+            System.err.println("fatal error during startup");
             oops.printStackTrace();
             System.exit(2);
         }
