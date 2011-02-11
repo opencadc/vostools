@@ -88,13 +88,7 @@ import javax.net.ssl.HttpsURLConnection;
 import org.apache.log4j.Logger;
 
 import ca.nrc.cadc.net.event.TransferEvent;
-import ca.nrc.cadc.util.CaseInsensitiveStringComparator;
 import ca.nrc.cadc.util.FileMetadata;
-import java.util.Iterator;
-import java.util.List;
-import java.util.Map;
-import java.util.Map.Entry;
-import java.util.TreeMap;
 
 /**
  * Simple task to encapsulate a single download (GET). This class supports http and https
@@ -652,13 +646,11 @@ public class HttpDownload extends HttpTransfer
             
             HttpURLConnection conn = (HttpURLConnection) remoteURL.openConnection();
             log.debug("HttpURLConnection type: " + conn.getClass().getName() + " for GET " + remoteURL);
-
             if (conn instanceof HttpsURLConnection)
             {
                 HttpsURLConnection sslConn = (HttpsURLConnection) conn;
                 initHTTPS(sslConn);
             }
-
             conn.setInstanceFollowRedirects(true);
             conn.setRequestProperty("Accept", "*/*");
             conn.setRequestProperty("User-Agent", userAgent);
@@ -676,7 +668,15 @@ public class HttpDownload extends HttpTransfer
             if (pkey != null && code == 416) // server doesn't like range, retry without it
             {
                 conn = (HttpURLConnection) remoteURL.openConnection();
+                log.debug("HttpURLConnection type: " + conn.getClass().getName() + " for GET " + remoteURL);
+                if (conn instanceof HttpsURLConnection)
+                {
+                    HttpsURLConnection sslConn = (HttpsURLConnection) conn;
+                    initHTTPS(sslConn);
+                }
                 conn.setInstanceFollowRedirects(true);
+                conn.setRequestProperty("Accept", "*/*");
+                conn.setRequestProperty("User-Agent", userAgent);
                 conn.setRequestMethod("GET");
                 code = conn.getResponseCode();
                 log.debug("HTTP GET status: " + code + " for " + remoteURL);
