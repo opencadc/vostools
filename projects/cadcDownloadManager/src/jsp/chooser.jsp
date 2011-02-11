@@ -83,7 +83,6 @@
 <%
 String skin = (String) request.getParameter("skin");
 String skinParam = skin;
-System.out.println("download.jsp: skin = " + skin);
 if (skin == null || skin.trim().length() == 0)
     skin = "http://localhost/cadc/skin/";
 if (!skin.endsWith("/"))
@@ -94,7 +93,6 @@ if (!skin.startsWith("http://"))
         skin = "/" + skin;
     skin = "http://localhost" + skin;
 }
-System.out.println("download.jsp: skin = " + skin);
 String htmlHead = skin + "htmlHead";
 String bodyHeader = skin + "bodyHeader";
 String bodyFooter = skin + "bodyFooter";
@@ -121,14 +119,9 @@ String bodyFooter = skin + "bodyFooter";
         <table width="66%">
             <tbody>
                 <tr>
-                    <td valign="top"><input type="submit" name="method" value="<%= ServerUtil.APPLET %>" /></td>
-                    <td valign="top">The Java DownloadManager Applet is embedded in a web page in this browser window.  <span style="color:red;">WARNING: There currently exists a bug while running the Java Applet in Firefox 3.0.x and 3.5.x on Mac OS X only.  Please use either of the other two options if this is your environment, or use Safari 4.x instead.</span></td>
-                </tr>
-                <tr><td><br/></td></tr>
-                <tr>
                     <td valign="top"><input type="submit" name="method" value="<%= ServerUtil.WEBSTART %>" /></td>
-                    <td valign="top">The Java DownloadManager is launched as a desktop application via Java Webstart; the Java software is
-                        automatically cached on your computer, so application startup is generally faster than the applet method.
+                    <td valign="top">The Java DownloadManager is launched as a desktop application via Java Webstart; the software is
+                        automatically cached on your computer, so application startup is generally fast after the first time.
                     The browser window can be used for additional work.</td>
                 </tr>
                 <tr><td><br/></td></tr>
@@ -143,7 +136,7 @@ String bodyFooter = skin + "bodyFooter";
 
         <div width="66%">
             <p>
-                <input type="checkbox" name="remember" value="<%= ServerUtil.APPLET %>">Remember my choice of download method</input>
+                <input type="checkbox" name="remember" value="true">Remember my choice of download method</input>
                 (cookies required) 
             </p>
             <p style="color: #800; padding-left: 6em; padding-right: 6em">

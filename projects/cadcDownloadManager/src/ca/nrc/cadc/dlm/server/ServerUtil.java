@@ -135,9 +135,10 @@ public class ServerUtil
             method = ck.getValue();
         
         String target = null;
-        if (APPLET.equals(method))
-            target = "/applet.jsp";
-        else if (URLS.equals(method))
+        //if (APPLET.equals(method))
+        //    target = "/applet.jsp";
+        //else
+        if (URLS.equals(method))
             target = "/wget.jsp";
         else if (WEBSTART.equals(method))
             target = "/DownloadManager.jnlp";

@@ -53,6 +53,50 @@ public class IteratorTest
     }
 
     @Test
+    public void testIterateDuplicates()
+    {
+        try
+        {
+            String[] uris = new String[]
+            {
+                "http://www.google.com",
+                "http://www.google.com"
+            };
+
+            Iterator<DownloadDescriptor> iter = DownloadUtil.iterateURLs(uris, null);
+            long num = 0;
+            while ( iter.hasNext() )
+            {
+                DownloadDescriptor dd = iter.next();
+                num++;
+                log.debug("found: " + dd);
+                Assert.assertEquals(DownloadDescriptor.OK, dd.status);
+                Assert.assertEquals("http", dd.url.getProtocol());
+            }
+            Assert.assertEquals(2, num);
+
+            // now test with remvoeDuplicates==true
+            iter = DownloadUtil.iterateURLs(uris, null, true);
+            num = 0;
+            while ( iter.hasNext() )
+            {
+                DownloadDescriptor dd = iter.next();
+                num++;
+                log.debug("found: " + dd);
+                Assert.assertEquals(DownloadDescriptor.OK, dd.status);
+                Assert.assertEquals("http", dd.url.getProtocol());
+            }
+            Assert.assertEquals(1, num);
+
+        }
+        catch(Exception unexpected)
+        {
+            log.error("unexpected exception", unexpected);
+            Assert.fail("unexpected exception: " + unexpected);
+        }
+    }
+
+    @Test
     public void testIterateError()
     {
         try

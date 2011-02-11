@@ -80,7 +80,9 @@ import java.util.List;
 
 import ca.nrc.cadc.net.MultiSchemeHandler;
 import ca.nrc.cadc.net.SchemeHandler;
+import java.util.HashSet;
 import java.util.NoSuchElementException;
+import java.util.Set;
 import org.apache.log4j.Logger;
 
 /**
@@ -228,7 +230,15 @@ public class DownloadUtil
 
     public static Iterator<DownloadDescriptor> iterateURLs(String[] uris, String commonFragment)
     {
+        return iterateURLs(uris, commonFragment, false);
+    }
+
+    // removeDuplicates=true is intended for use by the urlList.jsp page
+    public static Iterator<DownloadDescriptor> iterateURLs(String[] uris, String commonFragment, final boolean removeDuplicates)
+    {
         final List<ParsedURI> parsed = parseURIs(uris, commonFragment);
+        final Set<URL> urls = new HashSet<URL>();
+
         return new Iterator<DownloadDescriptor>()
         {
             boolean done = false;
@@ -250,6 +260,12 @@ public class DownloadUtil
                     URL url = inner.next();
                     if (!inner.hasNext())
                         inner = null;
+                    if (removeDuplicates && urls.contains(url))
+                    {
+                        DownloadDescriptor dd = new DownloadDescriptor(cur.uri.toString(), "duplicate URL");
+                        return dd;
+                    }
+                    urls.add(url);
                     DownloadDescriptor dd = new DownloadDescriptor(cur.uri.toString(), url);
                     return dd;
                 }

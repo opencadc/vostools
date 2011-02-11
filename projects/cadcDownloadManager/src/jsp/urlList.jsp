@@ -83,7 +83,7 @@
 
 <ul>
 <%
-    Iterator<DownloadDescriptor> iter = DownloadUtil.iterateURLs(uris, fragment);
+    Iterator<DownloadDescriptor> iter = DownloadUtil.iterateURLs(uris, fragment, true);
     while ( iter.hasNext() )
     {
         DownloadDescriptor dd = iter.next();

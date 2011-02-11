@@ -86,9 +86,12 @@ import java.io.File;
 import java.io.FileReader;
 import java.io.IOException;
 import java.net.Authenticator;
+import java.net.URL;
 import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.Iterator;
 import java.util.List;
+import java.util.Set;
 
 import javax.swing.AbstractAction;
 import javax.swing.Action;
@@ -150,6 +153,7 @@ public class JDownloadManager extends JPanel implements TransferListener
     
     private List downloadListeners;
     private DownloadManager downloadManager;
+    private Set<URL> queuedURL = new HashSet<URL>();
     
     private File initialDir;
     
@@ -468,8 +472,7 @@ public class JDownloadManager extends JPanel implements TransferListener
             switch(e.getState())
             {
                 case TransferEvent.FAILED:
-                    log.info(e.getStateLabel() + ": " + e.getURL() + " -> " + e.getFile());
-                    log.info("\treason: " + e.getError());
+                    log.error(e.getStateLabel() + ": " + e.getURL() + " -> " + e.getFile(), e.getError());
                     numFailed++;
                     break;
                 case TransferEvent.CANCELLED:
@@ -511,7 +514,7 @@ public class JDownloadManager extends JPanel implements TransferListener
                 if (dd.destination != null)
                     dest = new File(dest, dd.destination);
                 HttpDownload dl = new HttpDownload("userAgent", dd.url, dest);
-                this.add(dl);
+                this.add(dd, dl);
             }
             else
             {
@@ -536,25 +539,43 @@ public class JDownloadManager extends JPanel implements TransferListener
      * cancelled the selection of a destination directory.
      * @param dl
      */
-    private void add(final HttpDownload dl)
+    private void add(final DownloadDescriptor dd, final HttpDownload dl)
     {
         if ( SwingUtilities.isEventDispatchThread())
-            doAddDownload(dl);
+            doAddDownload(dd, dl);
         else
             SwingUtilities.invokeLater(new Runnable()
             {
                public void run()
                {
-                   doAddDownload(dl);
+                   doAddDownload(dd, dl);
                }
             });
     }
     
     // implementation to be invoked in the UI event thread
-    private void doAddDownload(HttpDownload dl)
+    private void doAddDownload(DownloadDescriptor dd, HttpDownload dl)
     {
         if (downloadManager.getDestinationDir() == null)
             return; // user cancelled dest dir selection dialog, nothing to do
+
+        if ( queuedURL.contains(dd.url) )
+        {
+            StringBuffer sb = new StringBuffer();
+            sb.append("duplicate URL: ");
+            if (dd.uri != null)
+                sb.append(dd.uri);
+            sb.append(" -> ");
+                sb.append(dd.url);
+            if (dd.destination != null)
+            {
+                sb.append(" -> ");
+                sb.append(dd.destination);
+            }
+            log.warn(sb.toString());
+            return;
+        }
+        queuedURL.add(dd.url);
         dl.setOverwriteChooser(fod);
 
         log.debug("adding " + dl + " to queue");
