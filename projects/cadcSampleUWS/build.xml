@@ -89,6 +89,8 @@
     
     <property name="project" value="cadcSampleUWS" />
 
+    <property file="local.build.properties" />
+
     <!-- JAR files to be included in classpath and war file -->
     <property name="cadcUtil"           value="${lib}/cadcUtil.jar" />
     <property name="cadcLog"            value="${lib}/cadcLog.jar" />
