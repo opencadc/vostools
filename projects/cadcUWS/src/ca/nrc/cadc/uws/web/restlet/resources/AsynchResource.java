@@ -70,6 +70,7 @@
 package ca.nrc.cadc.uws.web.restlet.resources;
 
 import ca.nrc.cadc.uws.Job;
+import ca.nrc.cadc.uws.JobInfo;
 import ca.nrc.cadc.uws.JobReader;
 import ca.nrc.cadc.uws.web.restlet.JobAssembler;
 import ca.nrc.cadc.uws.web.WebRepresentationException;
@@ -80,6 +81,7 @@ import org.restlet.data.Form;
 import org.apache.log4j.Logger;
 
 import java.io.IOException;
+import java.io.StringWriter;
 import java.text.ParseException;
 import java.net.MalformedURLException;
 import java.security.AccessControlException;
@@ -88,6 +90,10 @@ import java.util.List;
 import java.util.Map;
 import javax.security.auth.Subject;
 import org.jdom.Document;
+import org.jdom.JDOMException;
+import org.jdom.input.SAXBuilder;
+import org.jdom.output.Format;
+import org.jdom.output.XMLOutputter;
 import org.restlet.data.MediaType;
 
 
@@ -138,6 +144,54 @@ public class AsynchResource extends UWSResource
                                                      e);
             }
         }
+        else if (entity.getMediaType().equals(MediaType.TEXT_XML))
+        {
+            // handles posted XML content
+
+            // Check that the XML is valid.
+            try
+            {
+                SAXBuilder builder = new SAXBuilder("org.apache.xerces.parsers.SAXParser", false);
+                Document doc = builder.build(entity.getStream());
+                StringWriter sw = new StringWriter();
+                XMLOutputter outputter = new XMLOutputter();
+                outputter.setFormat(Format.getCompactFormat());
+                outputter.output(doc.detachRootElement(), sw);
+                JobInfo jobInfo = new JobInfo(sw.toString(), MediaType.TEXT_XML.toString(), true);
+                job = new Job();
+                job.setJobInfo(jobInfo);
+            }
+            catch (IOException e)
+            {
+                LOGGER.error("Unable to create Job! ", e);
+                throw new WebRepresentationException("Unable to create Job!", e);
+            }
+            catch (JDOMException e)
+            {
+                LOGGER.error("Unable to create Job! ", e);
+                throw new WebRepresentationException("Unable to create Job!", e);
+            }
+        }
+        
+        /*
+        if (contentType != null && contentType.equals(TEXT_XML))
+        {
+            // Check that the XML is valid.
+            SAXBuilder builder = new SAXBuilder("org.apache.xerces.parsers.SAXParser", false);
+            Document doc = builder.build(request.getInputStream());
+            StringWriter sw = new StringWriter();
+            XMLOutputter outputter = new XMLOutputter();
+            outputter.setFormat(Format.getCompactFormat());
+            outputter.output(doc.detachRootElement(), sw);
+            JobInfo jobInfo = new JobInfo(sw.toString(), TEXT_XML, true);
+            job.setJobInfo(jobInfo);
+            log.debug(jobInfo);
+        }
+         * 
+         */
+        
+        
+        
         /*
         // this is not legal UWS
         else if (entity.getMediaType().equals(MediaType.APPLICATION_XML)
