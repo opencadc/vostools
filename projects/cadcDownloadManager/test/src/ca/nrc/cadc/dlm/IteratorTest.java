@@ -18,12 +18,13 @@ public class IteratorTest
     private static Logger log = Logger.getLogger(IteratorTest.class);
     static
     {
-        Log4jInit.setLevel("ca.nrc.cadc.dlm", Level.INFO);
+        Log4jInit.setLevel("ca.nrc.cadc.dlm", Level.DEBUG);
     }
 
     @Test
     public void testIterateOK()
     {
+        log.debug("testIterateOK");
         try
         {
             String[] uris = new String[]
@@ -55,6 +56,7 @@ public class IteratorTest
     @Test
     public void testIterateDuplicates()
     {
+        log.debug("testIterateDuplicates");
         try
         {
             String[] uris = new String[]
@@ -74,20 +76,21 @@ public class IteratorTest
                 Assert.assertEquals("http", dd.url.getProtocol());
             }
             Assert.assertEquals(2, num);
+            Assert.assertFalse(iter.hasNext());
 
             // now test with remvoeDuplicates==true
             iter = DownloadUtil.iterateURLs(uris, null, true);
-            num = 0;
-            while ( iter.hasNext() )
-            {
-                DownloadDescriptor dd = iter.next();
-                num++;
-                log.debug("found: " + dd);
-                Assert.assertEquals(DownloadDescriptor.OK, dd.status);
-                Assert.assertEquals("http", dd.url.getProtocol());
-            }
-            Assert.assertEquals(1, num);
+            DownloadDescriptor dd = iter.next();
+            log.debug("found: " + dd);
+            Assert.assertEquals(DownloadDescriptor.OK, dd.status);
+            Assert.assertEquals("http", dd.url.getProtocol());
 
+            dd = iter.next();
+            log.debug("found: " + dd);
+            Assert.assertEquals(DownloadDescriptor.ERROR, dd.status);
+            Assert.assertTrue(dd.error.contains("duplicate"));
+
+            Assert.assertFalse(iter.hasNext());
         }
         catch(Exception unexpected)
         {
@@ -99,6 +102,7 @@ public class IteratorTest
     @Test
     public void testIterateError()
     {
+        log.debug("testIterateError");
         try
         {
             String[] uris = new String[]
