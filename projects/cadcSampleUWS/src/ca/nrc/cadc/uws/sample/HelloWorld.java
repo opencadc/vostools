@@ -76,6 +76,9 @@ import java.util.Iterator;
 import java.util.List;
 
 import org.apache.log4j.Logger;
+import org.jdom.Document;
+import org.jdom.Element;
+import org.jdom.JDOMException;
 
 import ca.nrc.cadc.net.NetUtil;
 import ca.nrc.cadc.uws.ExecutionPhase;
@@ -88,6 +91,9 @@ import ca.nrc.cadc.uws.Parameter;
 import ca.nrc.cadc.uws.Result;
 import ca.nrc.cadc.uws.SyncJobRunner;
 import ca.nrc.cadc.uws.SyncOutput;
+import ca.nrc.cadc.xml.XmlUtil;
+
+import java.io.IOException;
 import java.io.PrintWriter;
 import java.net.MalformedURLException;
 
@@ -126,6 +132,25 @@ public class HelloWorld implements SyncJobRunner
         xml = false;
     }
 
+    private void handleJobError(String errorMessage)
+    {
+        URL url;
+        try
+        {
+            url = new URL("http://" + server + "/cadcSampleUWS/error.txt");
+        }
+        catch (MalformedURLException e)
+        {
+            logger.error("Unable to create ErrorSummary url ", e);
+            url = null;
+        }
+        ErrorSummary error = new ErrorSummary("ERROR: " + errorMessage, ErrorType.FATAL, true);
+        error.setDocumentURL(url);
+        this.job.setErrorSummary(error);
+        this.job.setExecutionPhase(ExecutionPhase.ERROR);
+        return;
+    }
+
     public void setJob(final Job job)
     {
         this.job = job;
@@ -138,112 +163,125 @@ public class HelloWorld implements SyncJobRunner
         if (params == null)
         {
             logger.error("Missing param list");
-            URL url;
-            try
-            {
-                url = new URL("http://" + server + "/cadcSampleUWS/error.txt");
-            }
-            catch (MalformedURLException e)
-            {
-                logger.error("Unable to create ErrorSummary url ", e);
-                url = null;
-            }
-            ErrorSummary error = new ErrorSummary("ERROR: No param list found in job", ErrorType.FATAL, true);
-            error.setDocumentURL(url);
-            job.setErrorSummary(error);
-            job.setExecutionPhase(ExecutionPhase.ERROR);
+            handleJobError("No param list found in job");
             return;
         }
-
-        Parameter passP = null;
-        Parameter runforP = null;
-        Parameter syncP = null;
-        Parameter streamP = null;
-        Iterator<Parameter> i = params.iterator();
-        while (i.hasNext())
+        
+        xml = (params.size() == 0);
+        
+        if (xml)
         {
-            Parameter p = i.next();
-            if (PASS.equalsIgnoreCase(p.getName()))
-                passP = p;
-            else if (RUNFOR.equalsIgnoreCase(p.getName()))
-                runforP = p;
-            else if (SYNC.equalsIgnoreCase(p.getName()))
-                syncP = p;
-            else if (STREAM.equalsIgnoreCase(p.getName()))
-                streamP = p;
-            else
-                logger.debug("ignoring unexepcted param: " + p);
-        }
-
-        pass = true;
-        if (passP != null)
-        {
+            stream = true;
+            
+            String xmlStr = job.getJobInfo().getContent();
+            
             try
             {
-                pass = Boolean.parseBoolean(passP.getValue());
+                Document document = XmlUtil.buildDocument(xmlStr);
+                Element root = document.getRootElement();
+                String passStr = root.getChildText("pass");
+                String runforStr = root.getChildText("runfor");
+                this.pass = Boolean.valueOf(passStr);
                 logger.debug("pass = " + pass);
-            }
-            catch(Throwable oops)
-            {
-                logger.warn("failed to parse PASS parameter, found " + passP.getValue()
-                        + ", expected " + Boolean.TRUE + " or " + Boolean.FALSE);
-            }
-        }
-
-        runfor = -1;
-        if (runforP != null)
-        {
-            try
-            {
-                runfor = Integer.parseInt(runforP.getValue());
+                this.runfor = Integer.parseInt(runforStr);
                 logger.debug("runfor = " + runfor);
             }
-            catch(Throwable oops)
+            catch (JDOMException  e2)
             {
-                logger.warn("failed to parse RUNFOR parameter, found " + runforP.getValue()
-                        + ", expected an integer");
+                String errorMessage = String.format("Failed to parse XML string of [%s]", xmlStr); 
+                logger.warn(errorMessage);
+                handleJobError(errorMessage);
+            }
+            catch (IOException e)
+            {
+                String errorMessage = String.format("IOException occurs when parsing XML string of [%s]", xmlStr); 
+                logger.warn(errorMessage);
+                handleJobError(errorMessage);
             }
         }
-
-        sync = false;
-        if (syncP != null)
+        else
         {
-            try
+            Parameter passP = null;
+            Parameter runforP = null;
+            Parameter syncP = null;
+            Parameter streamP = null;
+            Iterator<Parameter> i = params.iterator();
+            while (i.hasNext())
             {
-                sync = Boolean.parseBoolean(syncP.getValue());
-                logger.debug("sync = " + sync);
+                Parameter p = i.next();
+                if (PASS.equalsIgnoreCase(p.getName()))
+                    passP = p;
+                else if (RUNFOR.equalsIgnoreCase(p.getName()))
+                    runforP = p;
+                else if (SYNC.equalsIgnoreCase(p.getName()))
+                    syncP = p;
+                else if (STREAM.equalsIgnoreCase(p.getName()))
+                    streamP = p;
+                else
+                    logger.debug("ignoring unexepcted param: " + p);
             }
-            catch(Throwable oops)
+    
+            pass = true;
+            if (passP != null)
             {
-                logger.warn("failed to parse SYNC parameter, found " + syncP.getValue()
-                        + ", expected " + Boolean.TRUE + " or " + Boolean.FALSE);
+                try
+                {
+                    pass = Boolean.parseBoolean(passP.getValue());
+                    logger.debug("pass = " + pass);
+                }
+                catch(Throwable oops)
+                {
+                    logger.warn("failed to parse PASS parameter, found " + passP.getValue()
+                            + ", expected " + Boolean.TRUE + " or " + Boolean.FALSE);
+                }
             }
-        }
-
-        stream = false;
-        if (streamP != null)
-        {
-            try
+    
+            runfor = -1;
+            if (runforP != null)
             {
-                stream = Boolean.parseBoolean(streamP.getValue());
-                logger.debug("stream = " + stream);
+                try
+                {
+                    runfor = Integer.parseInt(runforP.getValue());
+                    logger.debug("runfor = " + runfor);
+                }
+                catch(Throwable oops)
+                {
+                    logger.warn("failed to parse RUNFOR parameter, found " + runforP.getValue()
+                            + ", expected an integer");
+                }
             }
-            catch(Throwable oops)
+    
+            sync = false;
+            if (syncP != null)
             {
-                logger.warn("failed to parse STREAM parameter, found " + streamP.getValue()
-                        + ", expected " + Boolean.TRUE + " or " + Boolean.FALSE);
+                try
+                {
+                    sync = Boolean.parseBoolean(syncP.getValue());
+                    logger.debug("sync = " + sync);
+                }
+                catch(Throwable oops)
+                {
+                    logger.warn("failed to parse SYNC parameter, found " + syncP.getValue()
+                            + ", expected " + Boolean.TRUE + " or " + Boolean.FALSE);
+                }
+            }
+    
+            stream = false;
+            if (streamP != null)
+            {
+                try
+                {
+                    stream = Boolean.parseBoolean(streamP.getValue());
+                    logger.debug("stream = " + stream);
+                }
+                catch(Throwable oops)
+                {
+                    logger.warn("failed to parse STREAM parameter, found " + streamP.getValue()
+                            + ", expected " + Boolean.TRUE + " or " + Boolean.FALSE);
+                }
             }
         }
         
-        // If no parameters set, assume posting xml and return the job xml.
-        if (passP == null && runforP == null && syncP == null && streamP == null)
-        {
-            pass = true;
-            runfor = 1;
-            sync = true;
-            stream = true;
-            xml = true;
-        }
     }
 
     public Job getJob()
