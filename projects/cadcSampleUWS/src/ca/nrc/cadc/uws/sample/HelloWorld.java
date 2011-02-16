@@ -125,11 +125,11 @@ public class HelloWorld implements SyncJobRunner
     private int runfor;
     private boolean sync;
     private boolean stream;
-    private boolean xml;
+    private boolean withXml;
 
     public HelloWorld()
     {
-        xml = false;
+        withXml = false;
     }
 
     private void handleJobError(String errorMessage)
@@ -154,7 +154,13 @@ public class HelloWorld implements SyncJobRunner
     public void setJob(final Job job)
     {
         this.job = job;
-
+    }
+    
+    /**
+     * Set status of pass, runfor... 
+     */
+    private void setStatus()
+    {
         server = NetUtil.getServerName(this.getClass());
         logger.debug("server = " + server);
 
@@ -167,9 +173,9 @@ public class HelloWorld implements SyncJobRunner
             return;
         }
         
-        xml = (params.size() == 0);
+        withXml = (params.size() == 0);
         
-        if (xml)
+        if (withXml)
         {
             stream = true;
             
@@ -195,6 +201,12 @@ public class HelloWorld implements SyncJobRunner
             catch (IOException e)
             {
                 String errorMessage = String.format("IOException occurs when parsing XML string of [%s]", xmlStr); 
+                logger.warn(errorMessage);
+                handleJobError(errorMessage);
+            }
+            catch (Throwable e)
+            {
+                String errorMessage = String.format("Throwable occurs when parsing XML string of [%s]", xmlStr); 
                 logger.warn(errorMessage);
                 handleJobError(errorMessage);
             }
@@ -299,16 +311,15 @@ public class HelloWorld implements SyncJobRunner
         this.syncOutput = syncOutput;
     }
 
+    /**
+     * Called in sync scenario.
+     * 
+     */
     public URL getRedirectURL()
     {
-        if (!stream && sync && syncOutput == null)
-        {
-            URL url = process();
-            logger.debug("getRedirectURL returning " + url);
-            return url;
-        }
-        logger.debug("getRedirectURL returning null");
-        return null;
+        URL url = process();
+        logger.debug("getRedirectURL returning " + url);
+        return url;
     }
     
     public void run()
@@ -322,6 +333,8 @@ public class HelloWorld implements SyncJobRunner
         URL url = null;
         try
         {
+            setStatus();
+            
             if (job.getExecutionPhase() == ExecutionPhase.ERROR)
             {
                 url = job.getErrorSummary().getDocumentURL();
@@ -360,7 +373,7 @@ public class HelloWorld implements SyncJobRunner
                         job.setExecutionPhase(ExecutionPhase.COMPLETED);
                         if (sync && syncOutput != null)
                         {
-                            if (xml)
+                            if (withXml)
                             {
                                 syncOutput.setHeader("Content-Type", "text/xml");
                                 JobWriter jobWriter = new JobWriter();                      

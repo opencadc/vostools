@@ -102,7 +102,7 @@
     <property name="servlet-api"        value="${ext.lib}/servlet-api.jar" />
     <property name="xerces"             value="${ext.lib}/xerces.jar" />
 
-    <property name="jars" value="${log4j}:${servlet-api}:${cadcUtil}:${cadcUWS}" />
+    <property name="jars" value="${jdom}:${log4j}:${servlet-api}:${cadcUtil}:${cadcUWS}" />
 
     <target name="build" depends="cadcSampleUWS-jar,webapp" />
 
