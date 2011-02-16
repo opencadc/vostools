@@ -102,16 +102,15 @@ public class ResultsXmlTest extends AbstractUWSXmlTest
     protected static Logger log = Logger.getLogger(ResultsXmlTest.class);
     protected static final String XML_TEST_FILE_PREFIX = "ResultsTest";
 
+    public ResultsXmlTest()
+    {
+        super(XML_TEST_FILE_PREFIX);
+    }
+    
     @Test
     public void testResults()
     {
         super.testFileList();
-    }
-
-    @Override
-    protected String getTestFilePrefix()
-    {
-        return XML_TEST_FILE_PREFIX;
     }
 
     /**

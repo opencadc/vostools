@@ -91,6 +91,10 @@ public class ErrorXmlTest extends AbstractUWSXmlTest
     protected static Logger log = Logger.getLogger(ErrorXmlTest.class);
     protected static final String XML_TEST_FILE_PREFIX = "ErrorTest";
 
+    public ErrorXmlTest()
+    {
+        super(XML_TEST_FILE_PREFIX);
+    }
     /*
      * Create a new Job with a RUNFOR parameter that will cause an
      * error state, then verify the error.
@@ -99,12 +103,6 @@ public class ErrorXmlTest extends AbstractUWSXmlTest
     public void testError()
     {
         super.testFileList();
-    }
-
-    @Override
-    protected String getTestFilePrefix()
-    {
-        return XML_TEST_FILE_PREFIX;
     }
 
     /**

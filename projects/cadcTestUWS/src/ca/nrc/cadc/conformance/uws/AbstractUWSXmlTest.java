@@ -88,25 +88,36 @@ import org.junit.Before;
 public abstract class AbstractUWSXmlTest extends AbstractUWSTest
 {
     protected static Logger log = Logger.getLogger(AbstractUWSXmlTest.class);
-    protected static String XML_TEST_FILE_PREFIX = ""; // Defined in implementation class
+    
+    protected List<File> testFileList;
+   
+    protected String xmlTestFilePrefix = null;
 
-    protected static List<File> testFileList;
-
-    public AbstractUWSXmlTest()
+    protected AbstractUWSXmlTest(String xslTestFilePrefix)
     {
         super();
+        this.xmlTestFilePrefix = xslTestFilePrefix;
         setLoggingLevel(log);
     }
+    
+//    public AbstractUWSXmlTest()
+//    {
+//        super();
+//        setLoggingLevel(log);
+//    }
     
     @Before
     public void before()
     {
         String directoryPath = System.getProperty("properties.directory");
         if (directoryPath == null) fail("properties.directory System property not set");
+        
+        if (xmlTestFilePrefix == null)
+            throw new RuntimeException("XML test file prefix must be specified.");
 
         try
         {
-            testFileList = Util.loadXmlFileList(directoryPath, getTestFilePrefix());
+            testFileList = Util.loadXmlFileList(directoryPath, xmlTestFilePrefix);
         }
         catch (IOException e1)
         {
@@ -147,5 +158,4 @@ public abstract class AbstractUWSXmlTest extends AbstractUWSTest
 
     abstract protected void testImpl(String xml) throws Exception;
 
-    abstract protected String getTestFilePrefix();
 }
