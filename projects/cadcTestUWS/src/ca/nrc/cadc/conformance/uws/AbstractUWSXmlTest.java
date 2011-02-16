@@ -69,143 +69,83 @@
 
 package ca.nrc.cadc.conformance.uws;
 
-import com.meterware.httpunit.WebRequest;
-import com.meterware.httpunit.WebResponse;
-import com.sun.xml.internal.bind.v2.runtime.unmarshaller.XsiNilLoader.Array;
+import static org.junit.Assert.fail;
 
-import java.io.BufferedReader;
 import java.io.File;
 import java.io.IOException;
-import java.io.InputStream;
-import java.io.InputStreamReader;
-import java.net.InetAddress;
-import java.net.UnknownHostException;
-import java.util.Arrays;
 import java.util.List;
 
-import org.jdom.Document;
-import org.jdom.output.XMLOutputter;
+import org.apache.log4j.Logger;
+import org.jdom.input.SAXBuilder;
+import org.junit.Before;
 
-public abstract class Util
+/**
+ * Abstract class for UWS XML job test.
+ * 
+ * @author zhangsa
+ *
+ */
+public abstract class AbstractUWSXmlTest extends AbstractUWSTest
 {
-    public static final String[] PHASES =
-    {
-        "PENDING", "QUEUED", "EXECUTING", "COMPLETED", "ERROR", "ABORTED"
-    };
+    protected static Logger log = Logger.getLogger(AbstractUWSXmlTest.class);
+    protected static String XML_TEST_FILE_PREFIX = ""; // Defined in implementation class
 
-    public static boolean validatePhase(String value)
-    {
-        for (int i = 0; i < PHASES.length; i++)
-        {
-            if (PHASES[i].equals(value))
-                return true;
-        }
-        return false;
-    }
+    protected static List<File> testFileList;
 
-    public static String getHostName()
+    public AbstractUWSXmlTest()
     {
-        try
-        {
-            return InetAddress.getLocalHost().getHostName();
-        }
-        catch (UnknownHostException e)
-        {
-            throw new RuntimeException("Unable to determine hostname for localhost: " + e.getMessage());
-        }
-    }
-
-    public static String getResponseHeaders(WebResponse response)
-    {
-        StringBuilder sb = new StringBuilder();
-        sb.append("Response headers:");
-        sb.append("\r\n");
-        String[] headers = response.getHeaderFieldNames();
-        for (int i = 0; i < headers.length; i++)
-        {
-            sb.append("\t");
-            sb.append(headers[i]);
-            sb.append("=");
-            sb.append(response.getHeaderField(headers[i]));
-            sb.append("\r\n");
-        }
-        return sb.toString();
-    }
-
-    public static String getRequestParameters(WebRequest request)
-    {
-        StringBuilder sb = new StringBuilder();
-        sb.append("Request parameters:");
-        sb.append("\r\n");
-        String[] headers = request.getRequestParameterNames();
-        for (int i = 0; i < headers.length; i++)
-        {
-            sb.append("\t");
-            sb.append(headers[i]);
-            sb.append("=");
-            sb.append(request.getParameter(headers[i]));
-            sb.append("\r\n");
-        }
-        return sb.toString();
-    }
-
-    public static String inputStreamToString(InputStream inputStream)
-        throws IOException
-    {
-        BufferedReader reader = new BufferedReader(new InputStreamReader(inputStream));
-        StringBuilder sb = new StringBuilder();
-        String line = null;
-        try
-        {
-            while ((line = reader.readLine()) != null)
-            {
-                sb.append(line);
-                sb.append("\n");
-            }
-        }
-        finally
-        {
-            try
-            {
-                inputStream.close();
-            }
-            catch (IOException e) {}
-        }
-        return sb.toString();
-    }
-
-    /**
-     * Get a list of XML file with the given filename prefix in the given directory.
-     * 
-     * @param directoryPath
-     * @param prefix, file name prefix
-     * @return
-     * @throws IOException
-     * @author zhangsa
-     */
-    public static List<File> loadXmlFileList(String directoryPath, String prefix) throws IOException
-    {
-        File directory = new File(directoryPath);
-        if (!directory.canRead())
-            throw new IOException(String.format("Cannot read directory: [%s]", directoryPath));
-        
-        XmlFilenameFilter filter = new XmlFilenameFilter(prefix);
-        File[] fileArray = directory.listFiles(filter);
-        return Arrays.asList(fileArray);
+        super();
+        setLoggingLevel(log);
     }
     
-    /**
-     * Get the XML string of an XML Document object.
-     *  
-     * @param document
-     * @return String
-     * @author zhangsa
-     */
-    public static String getXmlString(Document document)
+    @Before
+    public void before()
     {
-        XMLOutputter xmlOutputter = new XMLOutputter();
-        return xmlOutputter.outputString(document);
+        String directoryPath = System.getProperty("properties.directory");
+        if (directoryPath == null) fail("properties.directory System property not set");
+
+        try
+        {
+            testFileList = Util.loadXmlFileList(directoryPath, getTestFilePrefix());
+        }
+        catch (IOException e1)
+        {
+            e1.printStackTrace();
+            throw new RuntimeException("Cannot load test files.");
+        }
     }
 
+    /**
+     * Load a list of test XML files, for each of them, execute the testImpl(), which is implemented in child class.
+     * 
+     * @author zhangsa
+     */
+    public void testFileList()
+    {
+        try
+        {
+            SAXBuilder saxBuilder = new SAXBuilder();
 
+            for (File testFile : testFileList)
+            {
+                log.debug("**************************************************");
+                log.debug("processing xml test file: " + testFile.getName());
+                log.debug("**************************************************");
+
+                String xml = Util.getXmlString(saxBuilder.build(testFile));
+                log.debug(xml);
+
+                testImpl(xml);  // call the actual test implementation method for the given XML string in each file.
+            }
+        }
+        catch (Exception ex)
+        {
+            log.error(ex);
+            fail(ex.getMessage());
+        }
+    }
+
+    abstract protected void testImpl(String xml) throws Exception;
+
+    abstract protected String getTestFilePrefix();
 }

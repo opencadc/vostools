@@ -69,143 +69,33 @@
 
 package ca.nrc.cadc.conformance.uws;
 
-import com.meterware.httpunit.WebRequest;
-import com.meterware.httpunit.WebResponse;
-import com.sun.xml.internal.bind.v2.runtime.unmarshaller.XsiNilLoader.Array;
-
-import java.io.BufferedReader;
 import java.io.File;
-import java.io.IOException;
-import java.io.InputStream;
-import java.io.InputStreamReader;
-import java.net.InetAddress;
-import java.net.UnknownHostException;
-import java.util.Arrays;
-import java.util.List;
+import java.io.FilenameFilter;
 
-import org.jdom.Document;
-import org.jdom.output.XMLOutputter;
-
-public abstract class Util
+/**
+ * 
+ * @see FilenameFilter
+ * 
+ * @author zhangsa
+ *
+ */
+public class XmlFilenameFilter implements FilenameFilter
 {
-    public static final String[] PHASES =
-    {
-        "PENDING", "QUEUED", "EXECUTING", "COMPLETED", "ERROR", "ABORTED"
-    };
+    private static final String SUFFIX = ".XML"; 
+    private String prefix; 
 
-    public static boolean validatePhase(String value)
+    public XmlFilenameFilter(String prefixArg)
     {
-        for (int i = 0; i < PHASES.length; i++)
-        {
-            if (PHASES[i].equals(value))
-                return true;
-        }
-        return false;
+        this.prefix = prefixArg.toUpperCase();
     }
 
-    public static String getHostName()
+    public boolean accept(File dir, String name)
     {
-        try
-        {
-            return InetAddress.getLocalHost().getHostName();
-        }
-        catch (UnknownHostException e)
-        {
-            throw new RuntimeException("Unable to determine hostname for localhost: " + e.getMessage());
-        }
+        if (name.toUpperCase().startsWith(prefix.toUpperCase())
+                && name.toUpperCase().endsWith(SUFFIX))
+            return true;
+        else
+            return false;
     }
-
-    public static String getResponseHeaders(WebResponse response)
-    {
-        StringBuilder sb = new StringBuilder();
-        sb.append("Response headers:");
-        sb.append("\r\n");
-        String[] headers = response.getHeaderFieldNames();
-        for (int i = 0; i < headers.length; i++)
-        {
-            sb.append("\t");
-            sb.append(headers[i]);
-            sb.append("=");
-            sb.append(response.getHeaderField(headers[i]));
-            sb.append("\r\n");
-        }
-        return sb.toString();
-    }
-
-    public static String getRequestParameters(WebRequest request)
-    {
-        StringBuilder sb = new StringBuilder();
-        sb.append("Request parameters:");
-        sb.append("\r\n");
-        String[] headers = request.getRequestParameterNames();
-        for (int i = 0; i < headers.length; i++)
-        {
-            sb.append("\t");
-            sb.append(headers[i]);
-            sb.append("=");
-            sb.append(request.getParameter(headers[i]));
-            sb.append("\r\n");
-        }
-        return sb.toString();
-    }
-
-    public static String inputStreamToString(InputStream inputStream)
-        throws IOException
-    {
-        BufferedReader reader = new BufferedReader(new InputStreamReader(inputStream));
-        StringBuilder sb = new StringBuilder();
-        String line = null;
-        try
-        {
-            while ((line = reader.readLine()) != null)
-            {
-                sb.append(line);
-                sb.append("\n");
-            }
-        }
-        finally
-        {
-            try
-            {
-                inputStream.close();
-            }
-            catch (IOException e) {}
-        }
-        return sb.toString();
-    }
-
-    /**
-     * Get a list of XML file with the given filename prefix in the given directory.
-     * 
-     * @param directoryPath
-     * @param prefix, file name prefix
-     * @return
-     * @throws IOException
-     * @author zhangsa
-     */
-    public static List<File> loadXmlFileList(String directoryPath, String prefix) throws IOException
-    {
-        File directory = new File(directoryPath);
-        if (!directory.canRead())
-            throw new IOException(String.format("Cannot read directory: [%s]", directoryPath));
-        
-        XmlFilenameFilter filter = new XmlFilenameFilter(prefix);
-        File[] fileArray = directory.listFiles(filter);
-        return Arrays.asList(fileArray);
-    }
-    
-    /**
-     * Get the XML string of an XML Document object.
-     *  
-     * @param document
-     * @return String
-     * @author zhangsa
-     */
-    public static String getXmlString(Document document)
-    {
-        XMLOutputter xmlOutputter = new XMLOutputter();
-        return xmlOutputter.outputString(document);
-    }
-
 
 }

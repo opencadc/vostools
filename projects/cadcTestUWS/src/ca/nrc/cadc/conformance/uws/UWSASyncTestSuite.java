@@ -84,6 +84,8 @@ import org.junit.runners.Suite;
     ParametersTest.class,
     ErrorTest.class,
     ResultsTest.class,
+    ErrorXmlTest.class,
+    ResultsXmlTest.class,
     SchemaTest.class
 })
 

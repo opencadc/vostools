@@ -93,6 +93,26 @@ public class JobInfoTest extends AbstractUWSTest
     }
 
     @Test
+    public void testCreateJobInfoBadXml()
+    {
+        // JobInfo XML, wrong format with missing close tag for position
+        String xml = "<target><name>name</name><position>position</target>";
+
+        // Create a new Job.
+        WebConversation conversation = new WebConversation();
+        try
+        {
+            String jobId = createJob(conversation, xml);
+            fail("Bad XML format; expecting exception!");
+        }
+        catch (Throwable t)
+        {
+            //expected.
+            log.info(this.getClass().getSimpleName() + ".testCreateJobInfoBadXml completed.");
+        }
+    }
+
+    @Test
     public void testCreateJobInfo()
     {
         try
@@ -134,7 +154,7 @@ public class JobInfoTest extends AbstractUWSTest
             // Delete the job.
             deleteJob(conversation, jobId);
 
-            log.info("JobTest.testCreateJobInfo completed.");
+            log.info("JobInfoTest.testCreateJobInfo completed.");
         }
         catch (Throwable t)
         {
