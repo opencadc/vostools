@@ -1,0 +1,55 @@
+This is the openCADC cadcTestVOS library.
+
+The cadcTestVOS test suite is typically run by invoking an Apache Ant target.
+An sample test target could look like:
+
+<target name="test">
+    <!-- Copy proxy certificates into the classpath. -->
+    <copy overwrite="true" file="x509.crt" tofile="build/test/class/proxy.crt"/>
+    <copy overwrite="true" file="x509.key" tofile="build/test/class/proxy.key"/>
+
+    <!-- Runs test from the JUnit testing framework. -->
+    <junit printsummary="yes" haltonfailure="yes" fork="yes">
+
+        <!-- Set the classpath for files and jar files required to run the tests. -->
+        <classpath>
+            <pathelement path="build/class"/>
+            <pathelement path="build/test/class"/>
+            <pathelement path="${jar_files}"/>
+        </classpath>
+
+        <!-- JVM parameters required by the tests. -->
+        <jvmarg value="-Dca.nrc.cadc.auth.BasicX509TrustManager.trust=true" />
+        <jvmarg value="-Dca.nrc.cadc.reg.client.RegistryClient.local=true" />
+        <jvmarg value="-Dca.nrc.cadc.conformance.vos.VOSTestSuite.baseURI=vos://cadc.nrc.ca!vospace/testnode" />
+
+        <!-- Test file to run. -->
+        <test name="ca.nrc.cadc.conformance.vos.VOSTestSuite"/>
+        <formatter type="plain" usefile="false"/>
+    </junit>
+</target>
+
+The <copy> element copies the X509 certificates used for authentication to a directory in the classpath.
+cadcTestVOS assumes a valid proxy certificate named proxy.crt and a associated private key (proxy.key)
+are in the classpath.
+
+The Java Virtual Machine parameters are set using the <jvarg> element.
+Before running the cadcTestVOS test suite, the following JVM parameter must be set:
+
+<jvmarg value="-Dca.nrc.cadc.conformance.vos.VOSTestSuite.baseURI=vos://cadc.nrc.ca!vospace/testnode" />
+
+which defines the parent VOSpace Node used for the tests.
+
+The following are optional JVM parameters:
+
+<jvmarg value="-Dca.nrc.cadc.reg.client.RegistryClient.local=true" />
+
+When set to true uses localhost as the hostname in the service url.
+
+<jvmarg value="-Dca.nrc.cadc.reg.client.RegistryClient.host=hostname" />
+
+Uses hostname as the hostname in the service url.
+
+<jvmarg value="-Dca.nrc.cadc.auth.BasicX509TrustManager.trust=true" />
+
+When set to true, bypasses server validation.
