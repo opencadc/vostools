@@ -73,8 +73,10 @@ import com.meterware.httpunit.WebRequest;
 import com.meterware.httpunit.WebResponse;
 import com.sun.xml.internal.bind.v2.runtime.unmarshaller.XsiNilLoader.Array;
 
+import java.io.BufferedInputStream;
 import java.io.BufferedReader;
 import java.io.File;
+import java.io.FileInputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
@@ -207,5 +209,34 @@ public abstract class Util
         return xmlOutputter.outputString(document);
     }
 
+
+    /**
+     * Read File as String.
+     * 
+     * @param file
+     * @return
+     * @throws java.io.IOException
+     */
+    public static String readFileAsString(File file) throws java.io.IOException
+    {
+        byte[] buffer = new byte[(int) file.length()];
+        BufferedInputStream f = null;
+        try
+        {
+            f = new BufferedInputStream(new FileInputStream(file));
+            f.read(buffer);
+        }
+        finally
+        {
+            if (f != null) try
+            {
+                f.close();
+            }
+            catch (IOException ignored)
+            {
+            }
+        }
+        return new String(buffer);
+    }
 
 }
