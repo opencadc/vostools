@@ -69,10 +69,6 @@
 
 package ca.nrc.cadc.conformance.uws;
 
-import com.meterware.httpunit.WebRequest;
-import com.meterware.httpunit.WebResponse;
-import com.sun.xml.internal.bind.v2.runtime.unmarshaller.XsiNilLoader.Array;
-
 import java.io.BufferedInputStream;
 import java.io.BufferedReader;
 import java.io.File;
@@ -87,6 +83,9 @@ import java.util.List;
 
 import org.jdom.Document;
 import org.jdom.output.XMLOutputter;
+
+import com.meterware.httpunit.WebRequest;
+import com.meterware.httpunit.WebResponse;
 
 public abstract class Util
 {
