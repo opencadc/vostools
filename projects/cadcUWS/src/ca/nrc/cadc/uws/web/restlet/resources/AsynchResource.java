@@ -72,6 +72,7 @@ package ca.nrc.cadc.uws.web.restlet.resources;
 import ca.nrc.cadc.uws.Job;
 import ca.nrc.cadc.uws.JobInfo;
 import ca.nrc.cadc.uws.JobReader;
+import ca.nrc.cadc.uws.util.StringUtil;
 import ca.nrc.cadc.uws.web.restlet.JobAssembler;
 import ca.nrc.cadc.uws.web.WebRepresentationException;
 
@@ -81,6 +82,7 @@ import org.restlet.data.Form;
 import org.apache.log4j.Logger;
 
 import java.io.IOException;
+import java.io.StringBufferInputStream;
 import java.io.StringWriter;
 import java.text.ParseException;
 import java.net.MalformedURLException;
@@ -148,28 +150,31 @@ public class AsynchResource extends UWSResource
         {
             // handles posted XML content
 
-            // Check that the XML is valid.
+            
             try
             {
+                String postedString = StringUtil.readFromInputStream(entity.getStream());
+
+                boolean validXmlFormat = true;
                 SAXBuilder builder = new SAXBuilder("org.apache.xerces.parsers.SAXParser", false);
-                Document doc = builder.build(entity.getStream());
-                StringWriter sw = new StringWriter();
-                XMLOutputter outputter = new XMLOutputter();
-                outputter.setFormat(Format.getCompactFormat());
-                outputter.output(doc.detachRootElement(), sw);
-                JobInfo jobInfo = new JobInfo(sw.toString(), MediaType.TEXT_XML.toString(), true);
+                try
+                {
+                    Document doc = builder.build(new StringBufferInputStream(postedString));
+                }
+                catch (JDOMException e)
+                {
+                    validXmlFormat = false;
+                }
+
+                JobInfo jobInfo = new JobInfo(postedString, MediaType.TEXT_XML.toString(), validXmlFormat);
                 job = new Job();
                 job.setJobInfo(jobInfo);
+
             }
-            catch (IOException e)
+            catch (IOException e1)
             {
-                LOGGER.error("Unable to create Job! ", e);
-                throw new WebRepresentationException("Unable to create Job!", e);
-            }
-            catch (JDOMException e)
-            {
-                LOGGER.error("Unable to create Job! ", e);
-                throw new WebRepresentationException("Unable to create Job!", e);
+                LOGGER.error("Cannot read input stream from Representation! ", e1);
+                throw new WebRepresentationException("Cannot read input stream from Representation!", e1);
             }
         }
         

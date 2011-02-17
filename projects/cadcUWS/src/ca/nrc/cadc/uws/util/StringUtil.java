@@ -70,6 +70,11 @@
 
 package ca.nrc.cadc.uws.util;
 
+import java.io.BufferedInputStream;
+import java.io.FileInputStream;
+import java.io.IOException;
+import java.io.InputStream;
+
 
 /**
  * Useful utility methods dealing with Strings.  Not terribly Object Oriented
@@ -221,5 +226,47 @@ public class StringUtil
         }
 
         return false;
+    }
+    
+    /**
+     * Read an input stream into a string.  The input cannot be of binary contents.
+     * 
+     * @param inputStream
+     * @return String
+     * @throws IOException
+     * @author zhangsa
+     */
+    public static String readFromInputStream(InputStream inputStream) throws IOException
+    {
+        StringBuilder sb = new StringBuilder();
+        BufferedInputStream bufIS = null;
+        try
+        {
+            bufIS = new BufferedInputStream(inputStream);
+            int numBytes;
+            byte[] buffer;
+            
+            do {
+                buffer = new byte[1024];
+                numBytes = bufIS.read(buffer);
+                
+                if (numBytes > 0)
+                {
+                    String str = new String(buffer, 0, numBytes);
+                    sb.append(str);
+                }
+            } while (numBytes > 0);
+        }
+        finally
+        {
+            if (bufIS != null) try
+            {
+                bufIS.close();
+            }
+            catch (IOException ignored)
+            {
+            }
+        }
+        return sb.toString();
     }
 }
