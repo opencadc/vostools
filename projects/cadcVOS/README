@@ -1,0 +1,3 @@
+This is the OpenCADC cadcVOS library.
+
+The cadcVOS unit tests are run by invoking the ant test target.
