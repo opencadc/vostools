@@ -72,7 +72,9 @@ package ca.nrc.cadc.conformance.uws;
 import static org.junit.Assert.fail;
 
 import java.io.File;
+import java.io.FileReader;
 import java.io.IOException;
+import java.io.StringReader;
 import java.util.List;
 
 import org.apache.log4j.Logger;
@@ -143,7 +145,9 @@ public abstract class AbstractUWSXmlTest extends AbstractUWSTest
                 log.debug("processing xml test file: " + testFile.getName());
                 log.debug("**************************************************");
 
-                String xml = Util.getXmlString(saxBuilder.build(testFile));
+                //String xml = Util.getXmlString(saxBuilder.build(testFile));
+                String xml = Util.readFileAsString(testFile);
+                
                 log.debug(xml);
 
                 testImpl(xml);  // call the actual test implementation method for the given XML string in each file.
