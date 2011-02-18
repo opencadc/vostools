@@ -100,6 +100,21 @@ public class XmlUtil
     private static final String GRAMMAR_POOL = "org.apache.xerces.parsers.XMLGrammarCachingConfiguration";
     public static final Namespace XSI_NS = Namespace.getNamespace("xsi", "http://www.w3.org/2001/XMLSchema-instance");
 
+    
+    /**
+     * Build a XML Document from string, without schema validation
+     * 
+     * @param xml
+     * @return
+     * @throws IOException 
+     * @throws JDOMException 
+     */
+    public static Document buildDocument(String xml) throws JDOMException, IOException
+    {
+        SAXBuilder parser = new SAXBuilder(PARSER, false);
+        return parser.build(new StringReader(xml));
+    }
+    
     /**
      * WARNING: This method is not thread-safe!!!
      * @deprecated makes assumptions about format and time zone that are not true for every XML usage
