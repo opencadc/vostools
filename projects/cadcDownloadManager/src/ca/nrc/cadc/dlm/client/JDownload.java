@@ -324,7 +324,7 @@ public class JDownload extends JPanel implements ProgressListener, Runnable
     }
     
     // ProgressListener
-    public void update(int newBytes, int totalBytes)
+    public void update(long newBytes, long totalBytes)
     {
         this.totalBytes = totalBytes;
         if (startTime == 0)
@@ -369,6 +369,9 @@ public class JDownload extends JPanel implements ProgressListener, Runnable
         
         // instantaneous rate
         String rate = sizeToString(bytesSinceLastUpdate2, dtSinceLastUpdate2/1000.0);
+
+        if (totalBytes == totalSize) // complete
+            rate = sizeToString(totalBytes, dt);
         
         s += " (" + rate + ")";
         //status = s;
@@ -387,6 +390,8 @@ public class JDownload extends JPanel implements ProgressListener, Runnable
     // dt in seconds
     private String sizeToString(double val, double dt)
     {
+        if (dt > 0)
+            val /= dt;
         String units = b;
         if (val > 1024.0)
         {
@@ -408,7 +413,7 @@ public class JDownload extends JPanel implements ProgressListener, Runnable
         // convert to a rate
         if (dt > 0)
         {
-            val /= dt;
+            //val /= dt;
             units = units + "/sec";
         }
 
