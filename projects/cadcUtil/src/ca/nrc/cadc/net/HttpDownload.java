@@ -601,9 +601,16 @@ public class HttpDownload extends HttpTransfer
         this.contentType = conn.getContentType();
         
         // get content-length
-        this.contentLength = conn.getContentLength();
+        //this.contentLength = conn.getContentLength();
+        String s = conn.getHeaderField("Content-Length");
+        if (s != null)
+        {
+            try { this.contentLength = Long.parseLong(s); }
+            catch(NumberFormatException ignore) { }
+        }
+
         // get uncompressed content length
-        String s = conn.getHeaderField("X-Uncompressed-Length");
+        s = conn.getHeaderField("X-Uncompressed-Length");
         if (s != null)
         {
             try { this.decompSize = Long.parseLong(s); }
@@ -637,7 +644,7 @@ public class HttpDownload extends HttpTransfer
             String pkey = null;
             String pvalue = null;
             boolean append = false;
-            int startingPos = 0;
+            long startingPos = 0;
             if (destStream == null && origFile.exists() && origFile.length() < contentLength) // partial file from previous download
             {
                 pkey = "Range";
@@ -693,10 +700,10 @@ public class HttpDownload extends HttpTransfer
                     {
                         cr = cr.substring(6);
                         String[] parts = cr.split("-");
-                        startingPos = Integer.parseInt(parts[0]);
+                        startingPos = Long.parseLong(parts[0]);
                         log.debug("found startingPos = " + startingPos);
                         String[] ss = cr.split("/");
-                        this.size = Integer.parseInt(ss[1]);
+                        this.size = Long.parseLong(ss[1]);
                         log.debug("found real size = " + size);
                         append = true;
                     }

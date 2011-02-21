@@ -286,7 +286,7 @@ public abstract class HttpTransfer implements Runnable
      * @throws IOException
      * @throws InterruptedException
      */
-    protected void ioLoop(InputStream istream, OutputStream ostream, int sz, int startingPos)
+    protected void ioLoop(InputStream istream, OutputStream ostream, int sz, long startingPos)
         throws IOException, InterruptedException
     {
         log.debug("ioLoop: using java.io with byte[] buffer size " + sz);
@@ -294,7 +294,7 @@ public abstract class HttpTransfer implements Runnable
 
         int nb = 0;
         int nb2 = 0;
-        int tot = startingPos; // non-zero for resumed transfer
+        long tot = startingPos; // non-zero for resumed transfer
         int n = 0;
 
         if (progressListener != null)
@@ -337,7 +337,7 @@ public abstract class HttpTransfer implements Runnable
      * @throws IOException
      * @throws InterruptedException
      */
-    protected void nioLoop(InputStream istream, OutputStream ostream, int sz, int startingPos)
+    protected void nioLoop(InputStream istream, OutputStream ostream, int sz, long startingPos)
         throws IOException, InterruptedException
     {
         log.debug("[Download] nioLoop: using java.nio with ByteBuffer size " + sz);
@@ -348,7 +348,7 @@ public abstract class HttpTransfer implements Runnable
         ReadableByteChannel rbc = Channels.newChannel(istream);
         WritableByteChannel wbc = Channels.newChannel(ostream);
 
-        int tot = startingPos; // non-zero for resumed transfer
+        long tot = startingPos; // non-zero for resumed transfer
         int count = 0;
 
         ByteBuffer buffer = ByteBuffer.allocate(sz);

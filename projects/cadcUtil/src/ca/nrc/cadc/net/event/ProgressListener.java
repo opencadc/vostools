@@ -81,5 +81,5 @@ public interface ProgressListener extends TransferListener
      * @param newBytes number of bytes read/written since last update()
      * @param totalBytes total number of bytes read/written
      */
-    public void update(int newBytes, int totalBytes);
+    public void update(long newBytes, long totalBytes);
 }
