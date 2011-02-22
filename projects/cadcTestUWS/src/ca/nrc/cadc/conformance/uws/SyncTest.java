@@ -126,11 +126,13 @@ public class SyncTest extends AbstractUWSTest
     @Test
     public void testGET()
     {
+        if (testPropertiesList.propertiesList.isEmpty())
+        {
+            log.warn("no properties files for " + this.getClass().getSimpleName());
+            return;
+        }
         try
         {
-            if (testPropertiesList.propertiesList.isEmpty())
-                fail("missing properties file for " + CLASS_NAME);
-
             // For each properties file.
             for (TestProperties properties : testPropertiesList.propertiesList)
             {
@@ -176,10 +178,10 @@ public class SyncTest extends AbstractUWSTest
                 process(conversation, request, contentType);
             }
         }
-        catch (Throwable t)
+        catch (Exception unexpected)
         {
-            log.error(t);
-            fail(t.getMessage());
+            log.error("unexcpected exception", unexpected);
+            fail("unexcpected exception: " + unexpected);
         }
         log.info("SyncTest.getTest completed.");
     }
@@ -187,11 +189,13 @@ public class SyncTest extends AbstractUWSTest
     @Test
     public void testPOST()
     {
+        if (testPropertiesList.propertiesList.isEmpty())
+        {
+            log.warn("no properties files for " + this.getClass().getSimpleName());
+            return;
+        }
         try
         {
-            if (testPropertiesList.propertiesList.isEmpty())
-                fail("missing properties file for " + CLASS_NAME);
-
             // For each properties file.
             for (TestProperties properties : testPropertiesList.propertiesList)
             {
@@ -229,10 +233,10 @@ public class SyncTest extends AbstractUWSTest
                 process(conversation, request, contentType);
             }
         }
-        catch (Throwable t)
+        catch (Exception unexpected)
         {
-            log.error(t);
-            fail(t.getMessage());
+            log.error("unexcpected exception", unexpected);
+            fail("unexcpected exception: " + unexpected);
         }
         log.info("SyncTest.postTest completed.");
     }

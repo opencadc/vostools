@@ -73,71 +73,54 @@ import com.meterware.httpunit.HttpException;
 import com.meterware.httpunit.WebConversation;
 import com.meterware.httpunit.WebResponse;
 import org.apache.log4j.Logger;
-import org.jdom.Document;
-import org.jdom.Element;
+import org.junit.Assert;
 import org.junit.Test;
-import static org.junit.Assert.*;
 
-public class JobsTest extends AbstractUWSTest
+/**
+ * Test that the /joblist resource appears to be empty (no jobs).  This test is
+ * not part of the UWSASyncTestSuite since it is not applicable in all deployments.
+ *
+ * @author pdowler
+ */
+public class PrivateJobListTest extends AbstractUWSTest
 {
-    private static Logger log = Logger.getLogger(JobsTest.class);
+    private static Logger log = Logger.getLogger(PrivateJobListTest.class);
 
-    public JobsTest()
+    public PrivateJobListTest()
     {
         super();
         setLoggingLevel(log);
     }
 
-    /*
+    /**
      * This test should only be run after the Servlet container for the UWS service
      * has been restarted. It expects that the UWS service has no Jobs.
      */
     @Test
-    public void testEmptyJobs()
-        throws Exception
+    public void testForbidden()
     {
-        WebResponse response = null;
+        log.debug("testForbidden");
         try
         {
             // Request the UWS service.
             WebConversation conversation = new WebConversation();
-            response = get(conversation, serviceUrl);
-
-            if (response.getResponseCode() == 403) // forbidden: a plausible interpretation
-            {
-                
-                return;
-            }
-
-            // Validate the XML against the schema.
-            log.debug("XML:\r\n" + response.getText());
-            Document document = buildDocument(response.getText(), true);
-
-            Element root = document.getRootElement();
-            assertNotNull("XML returned from GET of " + serviceUrl + " missing uws:jobs element", root);
-
-            //NodeList list = root.getElementsByTagName("uws:jobref");
-            //assertEquals(propertiesFilename + " XML returned from GET of " + baseUrl + " contained uws:jobref elements", 0, list.getLength());
-
-            log.info("JobsTest.testEmptyJobs completed.");
+            WebResponse response = get(conversation, serviceUrl);
+            int code = response.getResponseCode();
+            Assert.assertEquals(code, 403);
+            
         }
-        catch(HttpException ex)
+        catch(HttpException expected)
         {
-            if (ex.getResponseCode() == 403)
-            {
-                log.warn("GET access to job-list was Forbidden (403) -- cannot test output");
-            }
-            else
-            {
-                log.error("unexpected exception", ex);
-                fail(ex.getMessage());
-            }
+            log.debug("caught expected exception: " + expected);
+            Assert.assertEquals(403, expected.getResponseCode());
         }
-        catch (Throwable t)
+        catch (Exception unexpected)
         {
-            log.error("unexpected exception", t);
-            fail(t.getMessage());
+            log.error("unexpected exception", unexpected);
+            Assert.fail("unexpected exception: " + unexpected);
         }
     }
-    
+
+
+
 }

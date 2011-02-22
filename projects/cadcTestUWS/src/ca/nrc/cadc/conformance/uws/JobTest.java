@@ -79,9 +79,15 @@ import org.apache.log4j.Logger;
 import org.jdom.Document;
 import org.jdom.Element;
 import org.jdom.Namespace;
+import org.junit.Assert;
 import org.junit.Test;
 import static org.junit.Assert.*;
 
+/**
+ * Test the /joblist/jobid resource.
+ * 
+ * @author pdowler
+ */
 public class JobTest extends AbstractUWSTest
 {
     private static Logger log = Logger.getLogger(JobTest.class);
@@ -95,6 +101,7 @@ public class JobTest extends AbstractUWSTest
     @Test
     public void testCreateDefaultJob()
     {
+        log.debug("testCreateDefaultJob");
         try
         {
             // Create a new Job.
@@ -124,28 +131,56 @@ public class JobTest extends AbstractUWSTest
             log.debug("uws:jobId: " + element.getText());
             assertEquals("Incorrect uws:jobId element in XML returned from GET of " + resourceUrl, jobId, element.getText());
 
-            // Delete the job.
-            deleteJob(conversation, jobId);
+            // TODO: verify that there is no JobInfo
 
-            log.info("JobTest.testCreateDefaultJob completed.");
+            // TODO: verify that there are no parameters
+
+            // TODO: verify there is no runID
+
+            deleteJob(conversation, jobId);
         }
-        catch (Throwable t)
+        catch(Exception unexpected)
         {
-            log.error(t);
-            fail(t.getMessage());
+            log.error("unexpected exception", unexpected);
+            Assert.fail("unexpected exception: " + unexpected);
         }
     }
 
+    /**
+     * Create a job and include parameters in the job-creation POST.
+     */
     @Test
-    public void testCreateJobViaParameters()
+    public void testDeleteJob()
+    {
+        try
+        {
+            // create default job
+
+            // delete job
+
+            // verify the job is really gone (404)
+
+        }
+        catch(Exception unexpected)
+        {
+            log.error("unexpected exception", unexpected);
+            Assert.fail("unexpected exception: " + unexpected);
+        }
+    }
+
+    /**
+     * Create a job with RUNID.
+     */
+    @Test
+    public void testCreateJobWithRunID()
     {
         try
         {
             // Create Map of Job parameters.
             Map<String, List<String>> parameters = new HashMap<String, List<String>>();
             List<String> values = new ArrayList<String>();
-            values.add("runId value");
-            parameters.put("runId", values);
+            values.add("123");
+            parameters.put("RUNID", values);
 
             // Create a new Job.
             WebConversation conversation = new WebConversation();
@@ -174,17 +209,18 @@ public class JobTest extends AbstractUWSTest
             log.debug("uws:jobId: " + element.getText());
             assertEquals("Incorrect uws:jobId element in XML returned from GET of " + resourceUrl, jobId, element.getText());
 
-            // Delete the job.
-            deleteJob(conversation, jobId);
+            // TODO: verify that there is no JobInfo
 
-            log.info("JobTest.testCreateJobViaParameters completed.");
+            // TODO: verify that there are no parameters
+
+            // TODO: verify the runID
+
+            deleteJob(conversation, jobId);
         }
-        catch (Throwable t)
+        catch(Exception unexpected)
         {
-            log.error(t);
-            fail(t.getMessage());
+            log.error("unexpected exception", unexpected);
+            Assert.fail("unexpected exception: " + unexpected);
         }
     }
-
-
 }

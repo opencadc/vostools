@@ -75,15 +75,20 @@ import com.meterware.httpunit.WebRequest;
 import com.meterware.httpunit.WebResponse;
 import java.util.Iterator;
 import java.util.List;
-import org.apache.log4j.Level;
 import org.apache.log4j.Logger;
 import org.jdom.Attribute;
 import org.jdom.Document;
 import org.jdom.Element;
 import org.jdom.Namespace;
+import org.junit.Assert;
 import org.junit.Test;
 import static org.junit.Assert.*;
 
+/**
+ * Test the /joblist/jobid/parameters resource.
+ * 
+ * @author pdowler
+ */
 public class ParametersTest extends AbstractUWSTest
 {
     private static Logger log = Logger.getLogger(ParametersTest.class);
@@ -97,8 +102,11 @@ public class ParametersTest extends AbstractUWSTest
         setLoggingLevel(log);
     }
 
+    /**
+     * Create a job and POST parameters to the /joblist/jobiud/parameters resource.
+     */
     @Test
-    public void testParameters()
+    public void testAddParametersToList()
     {
         try
         {
@@ -106,27 +114,30 @@ public class ParametersTest extends AbstractUWSTest
             WebConversation conversation = new WebConversation();
             String jobId = createJob(conversation);
 
+            String jobURL = serviceUrl + "/" + jobId;
+
             // POST request to the parameters resource.
-            String resourceUrl = serviceUrl + "/" + jobId + "/parameters";
+            String resourceUrl = jobURL + "/parameters";
             WebRequest postRequest = new PostMethodWebRequest(resourceUrl);
             postRequest.setParameter(PARAMETER_NAME, PARAMETER_VALUE);
             postRequest.setHeaderField("Content-Type", "application/x-www-form-urlencoded");
             WebResponse response = post(conversation, postRequest);
 
-            // Get the redirect.
+            // check redirect.
             String location = response.getHeaderField("Location");
-            log.debug("Location: " + location);
             assertNotNull("POST response to " + resourceUrl + " location header not set", location);
-    //      assertEquals("POST response to " + resourceUrl + " location header incorrect", baseUrl + "/" + jobId, location);
+            assertEquals(jobURL, location);
 
-            // Follow the redirect.
-            response = get(conversation, location);
+            // get job state
+            response = get(conversation, jobURL);
 
             // Validate the XML against the schema.
             log.debug("XML:\r\n" + response.getText());
-            buildDocument(response.getText(), true);
+            Document doc = buildDocument(response.getText(), true);
 
-            // Get the parameters resouce for this jobId.
+            // TODO: verify that the parameters are in the parameter list
+
+            // Get the parameters resource for this jobId.
             response = get(conversation, resourceUrl);
 
             // Create DOM document from XML.
@@ -156,15 +167,59 @@ public class ParametersTest extends AbstractUWSTest
             }
             assertTrue("parameter " + PARAMETER_NAME + "=" + PARAMETER_VALUE + " not found", found);
 
-            // Delete the job.
             deleteJob(conversation, jobId);
-
-            log.info("ParametersTest.testParameters completed.");
         }
-        catch (Throwable t)
+        catch(Exception unexpected)
         {
-            log.error(t);
-            fail(t.getMessage());
+            log.error("unexpected exception", unexpected);
+            Assert.fail("unexpected exception: " + unexpected);
+        }
+    }
+
+    /**
+     * Create a job and include parameters in the job-creation POST.
+     */
+    @Test
+    public void testCreateJobWithParams()
+    {
+        try
+        {
+            // create job
+
+            // verify jobInfo is null
+
+            // verify all the parameters are in the parameter list
+
+        }
+        catch(Exception unexpected)
+        {
+            log.error("unexpected exception", unexpected);
+            Assert.fail("unexpected exception: " + unexpected);
+        }
+    }
+
+
+    /**
+     * Create a job and then POST parameters to the job URL.
+     */
+    @Test
+    public void testAddParamsToJob()
+    {
+        try
+        {
+            // create default job
+
+            // post params to then job url
+
+            // verify jobInfo is null
+
+            // verify all the parameters are in the parameter list
+
+        }
+        catch(Exception unexpected)
+        {
+            log.error("unexpected exception", unexpected);
+            Assert.fail("unexpected exception: " + unexpected);
         }
     }
 

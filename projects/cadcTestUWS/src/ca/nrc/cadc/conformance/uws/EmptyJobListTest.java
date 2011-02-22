@@ -69,22 +69,62 @@
 
 package ca.nrc.cadc.conformance.uws;
 
-import org.junit.runner.RunWith;
-import org.junit.runners.Suite;
+import com.meterware.httpunit.WebConversation;
+import com.meterware.httpunit.WebResponse;
+import java.util.List;
+import org.apache.log4j.Logger;
+import org.jdom.Document;
+import org.jdom.Element;
+import org.junit.Assert;
+import org.junit.Test;
 
-@RunWith(Suite.class)
-@Suite.SuiteClasses
-({
-    JobTest.class,
-    JobIdTest.class,
-    ExecutionDurationTest.class,
-    DestructionTest.class,
-    QuoteTest.class,
-    ErrorTest.class,
-    ResultsTest.class,
-    ErrorXmlTest.class,
-    ResultsXmlTest.class,
-    SchemaTest.class
-})
+/**
+ * Test that the /joblist resource appears to be empty (no jobs). This test is
+ * not part of the UWSASyncTestSuite since it is not applicable in all deployments.
+ *
+ * @author pdowler
+ */
+public class EmptyJobListTest extends AbstractUWSTest
+{
+    private static Logger log = Logger.getLogger(EmptyJobListTest.class);
 
-public class UWSASyncTestSuite {}
+    public EmptyJobListTest()
+    {
+        super();
+        setLoggingLevel(log);
+    }
+
+    /**
+     * This test should only be run after the Servlet container for the UWS service
+     * has been restarted. It expects that the UWS service has no Jobs.
+     */
+    @Test
+    public void testEmptyJobs()
+    {
+        log.debug("testEmptyJobs");
+        try
+        {
+            // Request the UWS service.
+            WebConversation conversation = new WebConversation();
+            WebResponse response = get(conversation, serviceUrl);
+
+            // Validate the XML against the schema.
+            log.debug("XML:\r\n" + response.getText());
+            Document document = buildDocument(response.getText(), true);
+
+            Element root = document.getRootElement();
+            Assert.assertNotNull("XML returned from " + serviceUrl + " missing uws:jobs element", root);
+
+            List list = root.getChildren();
+            Assert.assertEquals(0, list.size()); // should be no child elements
+        }
+        catch (Exception unexpected)
+        {
+            log.error("unexpected exception", unexpected);
+            Assert.fail("unexpected exception: " + unexpected);
+        }
+    }
+
+    
+    
+}

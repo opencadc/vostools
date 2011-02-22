@@ -79,9 +79,15 @@ import org.apache.log4j.Logger;
 import org.jdom.Document;
 import org.jdom.Element;
 import org.jdom.Namespace;
+import org.junit.Assert;
 import org.junit.Test;
 import static org.junit.Assert.*;
 
+/**
+ * Test the /joblist and /joblist/jobid resources handling of POSTed XML into the JobInfo.
+ * 
+ * @author pdowler
+ */
 public class JobInfoTest extends AbstractUWSTest
 {
     private static Logger log = Logger.getLogger(JobInfoTest.class);
@@ -92,33 +98,18 @@ public class JobInfoTest extends AbstractUWSTest
         setLoggingLevel(log);
     }
 
+    /**
+     * Create a job and include XML in the job-creation POST.
+     */
     @Test
-    public void testCreateJobInfoBadXml()
-    {
-        // JobInfo XML, wrong format with missing close tag for position
-        String xml = "<target><name>name</name><position>position</target>";
-
-        // Create a new Job.
-        WebConversation conversation = new WebConversation();
-        try
-        {
-            String jobId = createJob(conversation, xml);
-            fail("Bad XML format; expecting exception!");
-        }
-        catch (Throwable t)
-        {
-            //expected.
-            log.info(this.getClass().getSimpleName() + ".testCreateJobInfoBadXml completed.");
-        }
-    }
-
-    @Test
-    public void testCreateJobInfo()
+    public void testCreateJobWithXML()
     {
         try
         {
             // JobInfo XML
-            String xml = "<target><name>name</name><position>position</position></target>";
+            String expectedJobInfo = "<target><name>name</name><position>position</position></target>";
+            String xml = // "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n" +
+                    expectedJobInfo;
             
             // Create a new Job.
             WebConversation conversation = new WebConversation();
@@ -149,27 +140,29 @@ public class JobInfoTest extends AbstractUWSTest
             PrintWriter pw = new PrintWriter(sw);
             outputter.output(content, pw);            
             log.debug("jobInfo: " + sw.toString());
-            assertEquals("Incorrect uws:jobInfo content in XML returned from GET of " + resourceUrl, xml, sw.toString());
+            assertEquals("Incorrect uws:jobInfo content in XML returned from GET of " + resourceUrl, expectedJobInfo, sw.toString());
 
             // Delete the job.
             deleteJob(conversation, jobId);
 
-            log.info("JobInfoTest.testCreateJobInfo completed.");
+            log.info("JobTest.testCreateJobInfo completed.");
         }
-        catch (Throwable t)
+        catch(Exception unexpected)
         {
-            log.error(t);
-            fail(t.getMessage());
+            log.error("unexpected exception", unexpected);
+            Assert.fail("unexpected exception: " + unexpected);
         }
     }
 
     @Test
-    public void testCreateJobInfoWithNamespace()
+    public void testCreateJobWithNamespaceXML()
     {
         try
         {
             // JobInfo XML
-            String xml = "<foo:target xmlns:foo=\"http://localhost/\"><foo:name>name</foo:name><foo:position>position</foo:position></foo:target>";
+            String expectedJobInfo = "<target><name>name</name><position>position</position></target>";
+            String xml = //"<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n" +
+                    expectedJobInfo;
             
             // Create a new Job.
             WebConversation conversation = new WebConversation();
@@ -200,7 +193,7 @@ public class JobInfoTest extends AbstractUWSTest
             PrintWriter pw = new PrintWriter(sw);
             outputter.output(content, pw);            
             log.debug("jobInfo: " + sw.toString());
-            assertEquals("Incorrect uws:jobInfo content in XML returned from GET of " + resourceUrl, xml, sw.toString());
+            assertEquals("Incorrect uws:jobInfo content in XML returned from GET of " + resourceUrl, expectedJobInfo, sw.toString());
 
             // Delete the job.
             deleteJob(conversation, jobId);
@@ -211,6 +204,60 @@ public class JobInfoTest extends AbstractUWSTest
         {
             log.error(t);
             fail(t.getMessage());
+        }
+    }
+
+    /**
+     * Create a job and then POST XML to the job URL.
+     */
+    @Test
+    public void testCreateJobAddXML()
+    {
+        try
+        {
+            // create default job
+
+            // post xml to the job url
+
+            // verify jobInfo equal to the XML
+
+            // verify that there are no parameters
+
+        }
+        catch(Exception unexpected)
+        {
+            log.error("unexpected exception", unexpected);
+            Assert.fail("unexpected exception: " + unexpected);
+        }
+    }
+
+    /**
+     * Create a job with XML, then replace it with different XML.
+     */
+    @Test
+    public void testReplaceJobInfoXML()
+    {
+        try
+        {
+            // create default job
+
+            // post XML to the job url
+
+            // verify jobInfo equal to the XML
+
+            // verify that there are no parameters
+
+            // post different xml to the job url
+
+            // verify jobInfo equal to the new XML
+
+            // verify that there are no parameters
+
+        }
+        catch(Exception unexpected)
+        {
+            log.error("unexpected exception", unexpected);
+            Assert.fail("unexpected exception: " + unexpected);
         }
     }
 }
