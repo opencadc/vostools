@@ -105,7 +105,7 @@ public class NodeReader
     private static final String UWS_SCHEMA_RESOURCE = "UWS-v1.0.xsd";
     private static final String XLINK_SCHEMA_URL = "http://www.w3.org/1999/xlink";
     private static final String XLINK_SCHEMA_RESOURCE = "XLINK.xsd";
-    
+
     private static final Logger log = Logger.getLogger(NodeReader.class);
     
     private static final String vospaceSchemaUrl;
@@ -440,7 +440,7 @@ public class NodeReader
             }
 
             // xsi:nil set to true indicates Property is to be deleted
-            String xsiNil = property.getAttributeValue("xsi:nil");
+            String xsiNil = property.getAttributeValue("nil", xsiNamespace);
             boolean markedForDeletion = false;
             if (xsiNil != null)
                 markedForDeletion = xsiNil.equalsIgnoreCase("true") ? true : false;

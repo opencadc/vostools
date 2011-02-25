@@ -69,7 +69,6 @@
 
 package ca.nrc.cadc.vos;
 
-import java.io.BufferedWriter;
 import java.io.IOException;
 import java.io.OutputStream;
 import java.io.OutputStreamWriter;
@@ -80,6 +79,7 @@ import java.util.HashMap;
 import java.util.Map;
 
 import org.apache.log4j.Logger;
+import org.jdom.Attribute;
 import org.jdom.Document;
 import org.jdom.Element;
 import org.jdom.Namespace;
@@ -232,8 +232,11 @@ public class NodeWriter
         for (NodeProperty nodeProperty : node.getProperties())
         {
             Element property = new Element("property", defaultNamespace);
-            property.setAttribute("uri", nodeProperty.getPropertyURI());
-            property.setText(nodeProperty.getPropertyValue());
+            if (nodeProperty.isMarkedForDeletion())
+                property.setAttribute(new Attribute("nil", "true", xsiNamespace));
+            else
+                property.setText(nodeProperty.getPropertyValue());
+            property.setAttribute("uri", nodeProperty.getPropertyURI()); 
             property.setAttribute("readOnly", (nodeProperty.isReadOnly() ? "true" : "false"));
             ret.addContent(property);
         }
