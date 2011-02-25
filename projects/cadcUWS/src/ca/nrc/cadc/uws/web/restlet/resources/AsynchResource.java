@@ -247,6 +247,7 @@ public class AsynchResource extends UWSResource
         }
         document.addContent(jobsElement);
         */
+
         throw new AccessControlException("permission denied: job list");
     }
     

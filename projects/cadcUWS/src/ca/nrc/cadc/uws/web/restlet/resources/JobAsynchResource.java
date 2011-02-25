@@ -70,6 +70,7 @@
 
 package ca.nrc.cadc.uws.web.restlet.resources;
 
+import org.restlet.resource.Delete;
 import org.restlet.resource.Post;
 import org.restlet.representation.Representation;
 import org.apache.log4j.Logger;
@@ -119,6 +120,14 @@ public class JobAsynchResource extends BaseJobResource
         this.dateFormat = DateUtil.getDateFormat(DateUtil.IVOA_DATE_FORMAT, DateUtil.UTC);
     }
 
+    @Delete
+    public void delete(final Representation entity)
+    {
+        LOGGER.debug("delete() called. for job: " + job);
+        getJobManager().delete(job.getID());
+        redirectSeeOther(getHostPart() + job.getRequestPath());
+    }
+    
     /**
      * Accept POST requests.
      *
@@ -138,6 +147,16 @@ public class JobAsynchResource extends BaseJobResource
                 message += " unless it is to abort it";
             }
             throw new InvalidActionException(message);
+        }
+        
+        
+        String actionStr = form.getFirstValue("ACTION");
+        if ("DELETE".equals(actionStr))
+        {
+            LOGGER.debug("DELETE job through POST request. job: " + job);
+            getJobManager().delete(job.getID());
+            redirectSeeOther(getHostPart() + job.getRequestPath());
+            return;
         }
 
         JobRunner jobRunner = null;
