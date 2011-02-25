@@ -15,13 +15,21 @@ create procedure updateNodeLength
 with recompile
 as
 begin
-  print 'Updating Node [%1!] with length [%2!]', @NODE_ID, @CONTENT_LENGTH
-
-  if (@DRY_RUN = 0)
+  declare @EXISTING_LENGTH bigint
+  set @EXISTING_LENGTH = (select contentLength from vospace..Node where nodeID = @NODE_ID)
+  if (@EXISTING_LENGTH != @CONTENT_LENGTH)
   begin
-    update vospace..Node
-    set contentLength = @CONTENT_LENGTH
-    where nodeID = @NODE_ID
+    print 'Updating Node [%1!] with length [%2!]', @NODE_ID, @CONTENT_LENGTH
+    if (@DRY_RUN = 0)
+    begin
+      update vospace..Node
+      set contentLength = @CONTENT_LENGTH
+      where nodeID = @NODE_ID
+    end
+  end
+  else
+  begin
+    print 'Length of Node [%1!] unchanged at [%2!]', @NODE_ID, @CONTENT_LENGTH
   end
   
 end
