@@ -78,20 +78,75 @@ import org.restlet.data.Status;
  */
 public enum NodeFault
 {
-
     // IVOA Standard Faults
-    InternalFault ( Status.SERVER_ERROR_INTERNAL ),
-    InvalidURI ( Status.CLIENT_ERROR_BAD_REQUEST ),
-    DuplicateNode ( Status.CLIENT_ERROR_CONFLICT ),
-    ContainerNotFound ( Status.SERVER_ERROR_INTERNAL ),
-    PermissionDenied ( Status.CLIENT_ERROR_UNAUTHORIZED ),
-    InvalidToken ( Status.CLIENT_ERROR_BAD_REQUEST ),
-    NodeNotFound ( Status.CLIENT_ERROR_NOT_FOUND ),
+    InternalFault
+    ( 
+        new Status(500, 
+                   "InternalFault", 
+                   "A HTTP 500 status code with an InternalFault fault in the body is thrown if the operation fails", 
+                   "http://www.ivoa.net/Documents/latest/VOSpace.html")
+    ),
+    PermissionDenied
+    (
+        new Status(401,
+                   "PermissionDenied",
+                   "A HTTP 401 status code with a PermissionDenied fault in the body is thrown if the user does not have permission to perform the operation",
+                   "http://www.ivoa.net/Documents/latest/VOSpace.html")
+    ),
+    InvalidURI
+    (
+        new Status(400, 
+                   "InvalidURI", 
+                   "A HTTP 400 status code with an InvalidURI fault in the body is thrown if the specified URI is invalid", 
+                   "http://www.ivoa.net/Documents/latest/VOSpace.html")
+    ),
+    NodeNotFound
+    (
+        new Status(404,
+                   "NodeNotFound",
+                   "A HTTP 404 status code with a NodeNotFound fault in the body is thrown if the specified node does not exist",
+                   "http://www.ivoa.net/Documents/latest/VOSpace.html")
+    ),
+    DuplicateNode
+    ( 
+        new Status(409,
+                   "DuplicateNode",
+                   "A HTTP 409 status code with a DuplicateFault fault in the body is thrown if the specified node already exists",
+                   "http://www.ivoa.net/Documents/latest/VOSpace.html")
+    ),
+    InvalidToken
+    (
+        new Status(400,
+                   "InvalidToken",
+                   "A HTTP 400 status code with a InvalidToken fault in the body is thrown if ?????",
+                   "http://www.ivoa.net/Documents/latest/VOSpace.html")
+    ),
+    InvalidArgument
+    (
+        new Status(400,
+                   "InvalidArgument",
+                   "A HTTP 400 status code with a InvalidArgument fault in the body is thrown if a specified value is invalid",
+                   "http://www.ivoa.net/Documents/latest/VOSpace.html")
+    ),
+    TypeNotSupported
+    (
+        new Status(400,
+                   "TypeNotSupported",
+                   "A HTTP 400 status code with a TypeNotSupported fault in the body is thrown if the type specified in xsi:type is not supported",
+                   "http://www.ivoa.net/Documents/latest/VOSpace.html")
+    ),
+    ContainerNotFound
+    ( 
+        new Status(500,
+                   "ContainerNotFound",
+                   "A HTTP 500 status code with a ContainerNotFound fault in the body is thrown if a container is not found",
+                   "http://www.ivoa.net/Documents/latest/VOSpace.html")
+    );
     
     // Other Faults
-    NotSupported ( Status.SERVER_ERROR_NOT_IMPLEMENTED ),
-    BadRequest ( Status.CLIENT_ERROR_BAD_REQUEST ),
-    NodeBusy ( Status.CLIENT_ERROR_CONFLICT );
+//    NotSupported ( Status.SERVER_ERROR_NOT_IMPLEMENTED ),
+//    BadRequest ( Status.CLIENT_ERROR_BAD_REQUEST ),
+//    NodeBusy ( Status.CLIENT_ERROR_CONFLICT );
 
     private Status status;
     private String message;
