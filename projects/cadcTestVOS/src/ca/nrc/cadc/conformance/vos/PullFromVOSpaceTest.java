@@ -69,19 +69,26 @@
 
 package ca.nrc.cadc.conformance.vos;
 
+import java.net.URL;
+import ca.nrc.cadc.vos.TransferReader;
+import ca.nrc.cadc.vos.NodeProperty;
+import ca.nrc.cadc.vos.NodeWriter;
+import java.util.HashMap;
+import java.util.Map;
 import java.io.StringWriter;
-import ca.nrc.cadc.uws.ExecutionPhase;
-import ca.nrc.cadc.uws.Job;
-import ca.nrc.cadc.uws.JobWriter;
-import ca.nrc.cadc.uws.Parameter;
-import ca.nrc.cadc.vos.Node;
-import ca.nrc.cadc.vos.NodeReader;
+import ca.nrc.cadc.vos.TransferWriter;
+import ca.nrc.cadc.vos.Protocol;
+import java.util.ArrayList;
+import java.util.List;
+import ca.nrc.cadc.vos.View;
+import java.net.URI;
+import ca.nrc.cadc.vos.DataNode;
+import org.junit.Ignore;
+import org.junit.Assert;
 import ca.nrc.cadc.vos.Transfer;
 import ca.nrc.cadc.vos.VOS;
 import ca.nrc.cadc.xml.XmlUtil;
 import com.meterware.httpunit.WebResponse;
-import java.util.HashMap;
-import java.util.Map;
 import org.apache.log4j.Logger;
 import org.jdom.Document;
 import org.jdom.Element;
@@ -103,8 +110,6 @@ public class PullFromVOSpaceTest extends VOSTransferTest
 {
     private static Logger log = Logger.getLogger(PullFromVOSpaceTest.class);
 
-    Job job;
-
     public PullFromVOSpaceTest()
     {
         super();
@@ -124,15 +129,6 @@ public class PullFromVOSpaceTest extends VOSTransferTest
     @Before
     public void setUp()
     {
-        job = new Job();
-        job.setID("job123");
-        job.setRunID("runid123");
-        job.setExecutionPhase(ExecutionPhase.PENDING);
-        job.addParameter(new Parameter("target", baseURI + "/A"));
-//        job.addParameter(new Parameter("target", getSampleDataNode().getUri().toString()));
-        job.addParameter(new Parameter("direction", Transfer.Direction.pullFromVoSpace.name()));
-        job.addParameter(new Parameter("view", VOS.VIEW_DEFAULT));
-        job.addParameter(new Parameter("protocol", VOS.PROTOCOL_HTTP_GET));
     }
 
     @After
@@ -145,23 +141,45 @@ public class PullFromVOSpaceTest extends VOSTransferTest
         try
         {
             log.debug("pullJob");
+            
+            // Get a DataNode.
+            DataNode dataNode = getSampleDataNode();
+            dataNode.getProperties().add(new NodeProperty(VOS.PROPERTY_URI_CONTENTLENGTH, new Long(1024).toString()));
+            WebResponse response = put(VOSBaseTest.NODE_ENDPOINT,dataNode, new NodeWriter());
+            assertEquals("PUT response code should be 201", 201, response.getResponseCode());
 
-            // POST parameters (UWS Job XML)
-            JobWriter jobWriter = new JobWriter();
+            // Create a Transfer.
+            Transfer transfer = new Transfer();
+            transfer.setDirection(Transfer.Direction.pullFromVoSpace);
+            transfer.setTarget(dataNode);
+            transfer.setView(new View(new URI(VOS.VIEW_DEFAULT)));
+            List<Protocol> protocols = new ArrayList<Protocol>();
+            protocols.add(new Protocol(VOS.PROTOCOL_HTTP_GET));
+            transfer.setProtocols(protocols);
+            
+            // Get the transfer XML.
+            TransferWriter writer = new TransferWriter();
             StringWriter sw = new StringWriter();
-            jobWriter.write(job, sw);
-            String jobXML = sw.toString();
-            Map<String, String> parameters = new HashMap<String, String>();
-            parameters.put("", jobXML);
-
-            // POST the Job to the transfer endpoint.
-            WebResponse response = post(parameters);
+            writer.write(transfer, sw);
+            
+            // POST the XML to the transfer endpoint.
+            response = post(sw.toString());
             assertEquals("POST response code should be 303", 303, response.getResponseCode());
 
             // Get the header Location.
             String location = response.getHeaderField("Location");
             assertNotNull("Location header not set", location);
-
+            
+            // Follow the redirect.
+            response = get(location);
+            assertEquals("POST response code should be 200", 200, response.getResponseCode());
+            
+            // Run the job.
+            Map<String, String> parameters = new HashMap<String, String>();
+            parameters.put("PHASE", "RUN");
+            response = post(location + "/phase", parameters);
+            assertEquals("POST response code should be 303", 303, response.getResponseCode());
+            
             // Wait until phase equals COMPLETED.
             int count = 0;
             boolean done = false;
@@ -183,34 +201,37 @@ public class PullFromVOSpaceTest extends VOSTransferTest
                 String phase = root.getChildText("phase", namespace);
                 if (phase.equals("COMPLETED"))
                 {
-                    // Get the result transferDetails
-                    Element result = root.getChild("result", namespace);
-                    assertNotNull("result element not found", result);
+                    // Get the results element
+                    Element results = root.getChild("results", namespace);
+                    assertNotNull("results element not found", results);
 
+                    // Get the result transferDetails
+                    Element result = results.getChild("result", namespace);
+                    assertNotNull("result element not found", result);
+                    
                     // id attribute should be transferDetails.
                     String id = result.getAttributeValue("id");
                     assertNotNull("id attribute not found", id);
                     assertEquals("id attribute should be 'transferDetails'", "transferDetails", id);
 
-                    // Url to the Transfer node
+                    // Url to the Transfer document.
                     String href = result.getAttributeValue("href", xlinkNamespace);
                     assertNotNull("xink:href attribute not found", href);
 
-                    // Get the node
+                    // Get the Transfer document.
                     response = get(href);
                     assertEquals("GET response code should be 200", 200, response.getResponseCode());
 
-                    // Get the response (an XML document)
+                    // Get the Transfer XML.
                     xml = response.getText();
                     log.debug("GET XML:\r\n" + xml);
 
-                    // Create a Node from XML and validate against the VOSPace schema.
-                    NodeReader reader = new NodeReader();
-                    Node node = reader.read(xml);
+                    // Create a Transfer from Transfer XML.
+                    TransferReader reader = new TransferReader();
+                    transfer = reader.read(xml);
 
-                    // Delete the node
-                    response = delete(node);
-                    assertEquals("DELETE response code should be 200", 200, response.getResponseCode());
+                    // Get the Transfer endpoint and make sure it's a valid URL. 
+                    new URL(transfer.getEndpoint(VOS.PROTOCOL_HTTP_GET));
 
                     break;
                 }
@@ -221,7 +242,7 @@ public class PullFromVOSpaceTest extends VOSTransferTest
                     break;
                 }
 
-                if (count++ > 10)
+                if (count++ > 1)//10)
                 {
                     fail("Job timeout");
                     break;
@@ -230,17 +251,22 @@ public class PullFromVOSpaceTest extends VOSTransferTest
                 // Sleep for a second.
                 Thread.sleep(1000);
             }
+            
+            // Delete the node
+            response = delete(VOSBaseTest.NODE_ENDPOINT, dataNode);
+            assertEquals("DELETE response code should be 200", 200, response.getResponseCode());
 
             log.info("pullJob passed.");
         }
-        catch (Throwable t)
+        catch (Exception unexpected)
         {
-            log.error(t);
-            fail(t.getMessage());
+            log.error("unexpected exception: " + unexpected);
+            Assert.fail("unexpected exception: " + unexpected);
         }
     }
 
-//    @Test
+    @Ignore("get view=data not implemented")
+    @Test
     public void getViewEqualsData()
     {
         try
@@ -251,14 +277,15 @@ public class PullFromVOSpaceTest extends VOSTransferTest
 
             log.info("getViewEqualsData passed.");
         }
-        catch (Throwable t)
+        catch (Exception unexpected)
         {
-            log.error(t);
-            fail(t.getMessage());
+            log.error("unexpected exception: " + unexpected);
+            Assert.fail("unexpected exception: " + unexpected);
         }
     }
 
-//    @Test
+    @Ignore("not implemented")
+    @Test
     public void permissionDeniedFault()
     {
         try
@@ -269,13 +296,14 @@ public class PullFromVOSpaceTest extends VOSTransferTest
 
             log.info("permissionDeniedFault passed.");
         }
-        catch (Throwable t)
+        catch (Exception unexpected)
         {
-            log.error(t);
-            fail(t.getMessage());
+            log.error("unexpected exception: " + unexpected);
+            Assert.fail("unexpected exception: " + unexpected);
         }
     }
 
+    @Ignore("node not found fault not implemented")
     @Test
     public void NodeNotFoundFault()
     {
@@ -287,13 +315,14 @@ public class PullFromVOSpaceTest extends VOSTransferTest
 
             log.info("NodeNotFoundFault passed.");
         }
-        catch (Throwable t)
+        catch (Exception unexpected)
         {
-            log.error(t);
-            fail(t.getMessage());
+            log.error("unexpected exception: " + unexpected);
+            Assert.fail("unexpected exception: " + unexpected);
         }
     }
 
+    @Ignore("accepts/provides views not implemented")
     @Test
     public void viewNotSupportedFault()
     {
@@ -305,13 +334,14 @@ public class PullFromVOSpaceTest extends VOSTransferTest
 
             log.info("viewNotSupportedFault passed.");
         }
-        catch (Throwable t)
+        catch (Exception unexpected)
         {
-            log.error(t);
-            fail(t.getMessage());
+            log.error("unexpected exception: " + unexpected);
+            Assert.fail("unexpected exception: " + unexpected);
         }
     }
 
+    @Ignore("accepts/provides views not implemented")
     @Test
     public void protocolNotSupportedFault()
     {
@@ -323,13 +353,14 @@ public class PullFromVOSpaceTest extends VOSTransferTest
 
             log.info("protocolNotSupportedFault passed.");
         }
-        catch (Throwable t)
+        catch (Exception unexpected)
         {
-            log.error(t);
-            fail(t.getMessage());
+            log.error("unexpected exception: " + unexpected);
+            Assert.fail("unexpected exception: " + unexpected);
         }
     }
 
+    @Ignore("accepts/provides views not implemented")
     @Test
     public void invalidViewParameterFault()
     {
@@ -341,13 +372,14 @@ public class PullFromVOSpaceTest extends VOSTransferTest
 
             log.info("invalidViewParameterFault passed.");
         }
-        catch (Throwable t)
+        catch (Exception unexpected)
         {
-            log.error(t);
-            fail(t.getMessage());
+            log.error("unexpected exception: " + unexpected);
+            Assert.fail("unexpected exception: " + unexpected);
         }
     }
 
+    @Ignore("accepts/provides views not implemented")
     @Test
     public void invalidProtocolParameterFault()
     {
@@ -359,10 +391,10 @@ public class PullFromVOSpaceTest extends VOSTransferTest
 
             log.info("invalidProtocolParameterFault passed.");
         }
-        catch (Throwable t)
+        catch (Exception unexpected)
         {
-            log.error(t);
-            fail(t.getMessage());
+            log.error("unexpected exception: " + unexpected);
+            Assert.fail("unexpected exception: " + unexpected);
         }
     }
 

@@ -76,6 +76,7 @@ import ca.nrc.cadc.vos.DataNode;
 import ca.nrc.cadc.vos.Node;
 import ca.nrc.cadc.vos.NodeProperty;
 import ca.nrc.cadc.vos.NodeWriter;
+import ca.nrc.cadc.vos.VOS;
 import ca.nrc.cadc.vos.VOS.NodeBusyState;
 import ca.nrc.cadc.vos.VOSException;
 import ca.nrc.cadc.vos.VOSURI;
@@ -88,6 +89,7 @@ import com.meterware.httpunit.WebResponse;
 import java.io.ByteArrayInputStream;
 import java.io.IOException;
 import java.io.InputStream;
+import java.net.MalformedURLException;
 import java.net.URISyntaxException;
 import java.net.URL;
 import java.text.DateFormat;
@@ -117,6 +119,9 @@ public abstract class VOSBaseTest
     protected VOSURI baseURI;
     protected URL resourceURL;
     protected URL serviceURL;
+    
+    public static final String NODE_ENDPOINT = "/nodes";
+    public static final String TRANSFER_ENDPOINT = "/transfers";
 
     /**
      * Constructor takes a path argument, which is the path to the resource
@@ -153,11 +158,21 @@ public abstract class VOSBaseTest
         log.debug("resourceURL: " + resourceURL);
     }
 
+    
     /**
      * 
      * @return a ContainerNode.
      */
     private ContainerNode getBaseTestNode()
+    {
+        return getBaseTestNode(null);
+    }
+    
+    /**
+     * @param service endpoint.
+     * @return a ContainerNode.
+     */
+    private ContainerNode getBaseTestNode(String endpoint)
     {
         if (baseTestNode == null)
         {
@@ -165,7 +180,7 @@ public abstract class VOSBaseTest
             try
             {
                 baseTestNode = new ContainerNode(new VOSURI(baseNodeName));
-                String resourceUrl = resourceURL + "/" + baseTestNode.getPath();
+                String resourceUrl = getResourceUrl(endpoint) + "/" + baseTestNode.getPath();;
                 log.debug("**************************************************");
                 log.debug("HTTP PUT: " + resourceUrl);
 
@@ -190,21 +205,20 @@ public abstract class VOSBaseTest
         log.debug("Created base test Node: " + baseTestNode);
         return baseTestNode;
     }
-
+    
     /**
-     *
+     * @param service endpoint.
      * @return a ContainerNode.
      */
-    private ContainerNode getTestSuiteNode()
+    private ContainerNode getTestSuiteNode(String endpoint)
     {
         if (testSuiteNode == null)
         {
-//            String testNodeName = baseURI + "/" + VOSTestSuite.baseTestNodeName + "/" + VOSTestSuite.testSuiteNodeName;
-            String testNodeName = baseURI + "/" + getBaseTestNode().getName() + "/" + VOSTestSuite.testSuiteNodeName;
+            String testNodeName = baseURI + "/" + getBaseTestNode(endpoint).getName() + "/" + VOSTestSuite.testSuiteNodeName;
             try
             {
                 testSuiteNode = new ContainerNode(new VOSURI(testNodeName));
-                String resourceUrl = resourceURL + "/" + testSuiteNode.getPath();
+                String resourceUrl = getResourceUrl(endpoint) + "/" + testSuiteNode.getPath();
                 log.debug("**************************************************");
                 log.debug("HTTP PUT: " + resourceUrl);
 
@@ -257,7 +271,7 @@ public abstract class VOSBaseTest
 
         // ContainerNode
         String date = dateFormat.format(Calendar.getInstance().getTime());
-        String nodeName = getTestSuiteNode().getUri() + "/" + VOSTestSuite.userName + "_sample_" + date + name;
+        String nodeName = getTestSuiteNode(NODE_ENDPOINT).getUri() + "/" + VOSTestSuite.userName + "_sample_" + date + name;
         ContainerNode node = new ContainerNode(new VOSURI(nodeName));
         node.getProperties().add(nodeProperty);
         //node.setNodes(nodes);
@@ -292,7 +306,8 @@ public abstract class VOSBaseTest
 
         // DataNode
         String date = dateFormat.format(Calendar.getInstance().getTime());
-        String nodeName = getTestSuiteNode().getUri() + "/" + VOSTestSuite.userName + "_sample_" + date + name;
+        String nodeName = getTestSuiteNode(NODE_ENDPOINT).getUri() + "/" + VOSTestSuite.userName + "_sample_" + date + name;
+        log.debug("data node name: " + nodeName);
         DataNode node = new DataNode(new VOSURI(nodeName));
         node.getProperties().add(nodeProperty);
         node.setBusy(NodeBusyState.notBusy);
@@ -310,7 +325,26 @@ public abstract class VOSBaseTest
     protected WebResponse delete(Node node)
         throws IOException, SAXException
     {
-        String resourceUrl = resourceURL + "/" + node.getPath();
+        return delete(null, node);
+    }
+
+    /**
+     * Delete a Node from the VOSpace.
+     *
+     * @param service endpoint.
+     * @param node to be deleted.
+     * @return a HttpUnit WebResponse.
+     * @throws IOException 
+     * @throws SAXException if there is an error parsing the retrieved page.
+     */
+    protected WebResponse delete(String endpoint, Node node)
+        throws IOException, SAXException
+    {
+        String resourceUrl;
+        if (endpoint == null)
+            resourceUrl = resourceURL + "/" + node.getPath();
+        else
+            resourceUrl = getResourceUrl(endpoint) + "/" + node.getPath();
         log.debug("**************************************************");
         log.debug("HTTP DELETE: " + resourceUrl);
         WebRequest request = new DeleteMethodWebRequest(resourceUrl);
@@ -328,7 +362,7 @@ public abstract class VOSBaseTest
 
         return response;
     }
-
+    
     /**
      * Gets a Node from the VOSpace.
      *
@@ -497,14 +531,14 @@ public abstract class VOSBaseTest
         WebConversation conversation = new WebConversation();
         conversation.setExceptionsThrownOnErrorStatus(false);
         WebResponse response = conversation.sendRequest(request);
-        assertNotNull("POST response to " + resourceUrl + " is null", response);
+        assertNotNull("PUT response to " + resourceUrl + " is null", response);
 
         log.debug(getResponseHeaders(response));
         log.debug("Response code: " + response.getResponseCode());
 
         return response;
     }
-
+    
     /**
      * Put a DataNode to the VOSpace.
      *
@@ -516,7 +550,7 @@ public abstract class VOSBaseTest
     protected WebResponse put(DataNode node)
         throws IOException, SAXException
     {
-        return put(node, new NodeWriter());
+        return put(null, node, new NodeWriter());
     }
 
     /**
@@ -532,7 +566,28 @@ public abstract class VOSBaseTest
     protected WebResponse put(DataNode node, NodeWriter writer)
         throws IOException, SAXException
     {
-        String resourceUrl = resourceURL + "/" + node.getPath();
+        return put(null, node, writer);
+    }
+
+    /**
+     * Put a DataNode to the VOSpace. Also takes a NodeWriter which
+     * allows customization of the XML output to testing purposes.
+     *
+     * @param service endpoint.
+     * @param node to put.
+     * @param writer to write Node XML.
+     * @return a HttpUnit WebResponse.
+     * @throws IOException
+     * @throws SAXException if there is an error parsing the retrieved page.
+     */
+    protected WebResponse put(String endpoint, DataNode node, NodeWriter writer)
+        throws IOException, SAXException
+    {
+        String resourceUrl;
+        if (endpoint == null)
+            resourceUrl = resourceURL + "/" + node.getPath();
+        else
+            resourceUrl = getResourceUrl(endpoint)  + "/" + node.getPath();
         log.debug("**************************************************");
         log.debug("HTTP PUT: " + resourceUrl);
         
@@ -553,7 +608,7 @@ public abstract class VOSBaseTest
 
         return response;
     }
-
+    
     /**
      * Get an URL.
      *
@@ -589,11 +644,31 @@ public abstract class VOSBaseTest
     protected WebResponse post(Map<String, String> parameters)
         throws IOException, SAXException
     {
+        return post(null, parameters);
+    }
+    
+    /**
+     * Post parameters to the service url.
+     *
+     * @param  endpoint Endpoint to POST to.
+     * @param  parameters Map of HTTP request parameters.
+     * @return a HttpUnit WebResponse.
+     * @throws IOException
+     * @throws SAXException if there is an error parsing the retrieved page.
+     */
+    protected WebResponse post(String url, Map<String, String> parameters)
+        throws IOException, SAXException
+    {
         // POST request to the phase resource.
+        String resourceUrl;
+        if (url == null)
+            resourceUrl = resourceURL.toExternalForm();
+        else
+            resourceUrl = url;
         log.debug("**************************************************");
-        log.debug("HTTP POST: " + resourceURL);
+        log.debug("HTTP POST: " + resourceUrl);
 
-        WebRequest request = new PostMethodWebRequest(resourceURL.toExternalForm());
+        WebRequest request = new PostMethodWebRequest(resourceUrl);
         request.setHeaderField("Content-Type", "multipart/form-data");
         if (parameters != null)
         {
@@ -608,13 +683,44 @@ public abstract class VOSBaseTest
 
         WebConversation conversation = new WebConversation();
         WebResponse response = conversation.getResponse(request);
-        assertNotNull("POST response to " + resourceURL + " is null", response);
+        assertNotNull("POST response to " + resourceUrl + " is null", response);
 
         log.debug(getResponseHeaders(response));
 
         return response;
     }
 
+    /**
+     * Post a Job to the VOSpace.
+     *
+     * @param xml Job XML.
+     * @return a HttpUnit WebResponse.
+     * @throws IOException
+     * @throws SAXException if there is an error parsing the retrieved page.
+     */
+    protected WebResponse post(String xml)
+        throws IOException, SAXException
+    {
+        log.debug("**************************************************");
+        log.debug("HTTP POST: " + resourceURL);
+        
+        ByteArrayInputStream in = new ByteArrayInputStream(xml.getBytes("UTF-8"));
+
+        WebRequest request = new PostMethodWebRequest(resourceURL.toExternalForm(), in, "text/xml");
+
+        log.debug(getRequestParameters(request));
+
+        WebConversation conversation = new WebConversation();
+        conversation.setExceptionsThrownOnErrorStatus(false);
+        WebResponse response = conversation.sendRequest(request);
+        assertNotNull("POST response to " + resourceURL + " is null", response);
+
+        log.debug(getResponseHeaders(response));
+        log.debug("Response code: " + response.getResponseCode());
+
+        return response;
+    }
+    
     /**
      * Build a String representation of the Request parameters.
      *
@@ -661,5 +767,12 @@ public abstract class VOSBaseTest
         return sb.toString();
     }
 
-
+    private String getResourceUrl(String endpoint) throws MalformedURLException
+    {
+        if (endpoint == null)
+            return resourceURL.toExternalForm();
+        else
+            return (new URL(serviceURL.getProtocol(), serviceURL.getHost(), serviceURL.getPath() + endpoint)).toExternalForm();
+    }
+    
 }

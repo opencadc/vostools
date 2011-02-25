@@ -69,9 +69,11 @@
 
 package ca.nrc.cadc.conformance.vos;
 
+import org.junit.Ignore;
+import org.junit.matchers.JUnitMatchers;
+import org.junit.Assert;
 import ca.nrc.cadc.vos.DataNode;
 import ca.nrc.cadc.vos.NodeReader;
-import ca.nrc.cadc.vos.VOSURI;
 import com.meterware.httpunit.WebResponse;
 import org.apache.log4j.Logger;
 import org.junit.After;
@@ -145,14 +147,14 @@ public class CreateDataNodeTest extends VOSNodeTest
 
             log.info("createDataNode passed.");
         }
-        catch (Throwable t)
+        catch (Exception unexpected)
         {
-            log.error(t);
-            fail(t.getMessage());
+            log.error("unexpected exception: " + unexpected);
+            Assert.fail("unexpected exception: " + unexpected);
         }
     }
 
-        /**
+    /**
      * The service SHALL throw a HTTP 409 status code including a DuplicateNode
      * fault in the entity body if a Node already exists with the same URI
      */
@@ -188,8 +190,8 @@ public class CreateDataNodeTest extends VOSNodeTest
             // Should get back a 409 status code.
             assertEquals("PUT response code should be 409 when creating a duplicate node", 409, response.getResponseCode());
 
-            // Response message body should be 'DuplicateNode'
-            assertEquals("Response message body should be 'DuplicateNode'", "DuplicateNode", response.getResponseMessage());
+            // Response entity body should contain 'DuplicateNode'
+            assertThat(response.getText().trim(), JUnitMatchers.containsString("DuplicateNode"));
 
             // Delete the node
             response = delete(node);
@@ -197,55 +199,21 @@ public class CreateDataNodeTest extends VOSNodeTest
 
             log.info("duplicateNodeFault passed.");
         }
-        catch (Throwable t)
+        catch (Exception unexpected)
         {
-            log.error(t);
-            fail(t.getMessage());
+            log.error("unexpected exception: " + unexpected);
+            Assert.fail("unexpected exception: " + unexpected);
         }
     }
 
     /**
      * The service SHALL throw a HTTP 400 status code including an InvalidURI
      * fault in the entity body if the requested URI is invalid
+     * 
+     * Disabled because VOSURI will throw an InvalidURIException, 
+     * so how to create an invalid URI for this test?
      */
-// Test disabled because VOSURI class throws exception if scheme isn't vos.
-//    @Test
-    public void invalidURIPrefixFault()
-    {
-        try
-        {
-            log.debug("invalidURIPrefixFault");
-
-            // Get a DataNode.
-            DataNode node = getSampleDataNode();
-
-            // Create node with an invalid URI
-            DataNode invalidNode = new DataNode(new VOSURI("zzz://cadc.nrc.ca!zzzspace/"));
-
-            // Add ContainerNode to the VOSpace.
-            WebResponse response = put(node);
-            assertEquals("PUT response code should be 400 for an invalid URI", 400, response.getResponseCode());
-
-            // Response message body should be 'InvalidURI'
-            assertEquals("Response message body should be 'InvalidURI'", "InvalidURI", response.getResponseMessage());
-
-            // Check that the node wasn't created
-            response = get(invalidNode);
-            assertEquals("GET response code should be 404", 404, response.getResponseCode());
-
-            log.info("invalidURIPrefixFault passed.");
-        }
-        catch (Throwable t)
-        {
-            log.error(t);
-            fail(t.getMessage());
-        }
-    }
-
-    /**
-     * The service SHALL throw a HTTP 400 status code including an InvalidURI
-     * fault in the entity body if the requested URI is invalid
-     */
+    @Ignore("Currently unable to test")
     @Test
     public void invalidURIPathFault()
     {
@@ -254,7 +222,6 @@ public class CreateDataNodeTest extends VOSNodeTest
             log.debug("invalidURIPathFault");
 
             // Create node with an invalid URI, node A doesn't exist.
-//            DataNode nodeAB = new DataNode(new VOSURI(baseURI + "/A/B"));
             DataNode nodeAB = getSampleDataNode("/A/B");
 
             // Add DataNode to the VOSpace.
@@ -270,13 +237,13 @@ public class CreateDataNodeTest extends VOSNodeTest
 
             log.info("invalidURIPathFault passed.");
         }
-        catch (Throwable t)
+        catch (Exception unexpected)
         {
-            log.error(t);
-            fail(t.getMessage());
+            log.error("unexpected exception: " + unexpected);
+            Assert.fail("unexpected exception: " + unexpected);
         }
     }
-
+    
     /**
      * The service SHALL throw a HTTP 400 status code including a TypeNotSupported
      * fault in the entity body if the type specified in xsi:type is not supported
@@ -295,8 +262,8 @@ public class CreateDataNodeTest extends VOSNodeTest
             WebResponse response = put(node, new InvalidTypeNodeWriter());
             assertEquals("PUT response code should be 400 for an invalid Node xsi:type", 400, response.getResponseCode());
 
-            // Response message body should be 'TypeNotSupported'
-            assertEquals("Response message body should be 'TypeNotSupported'", "TypeNotSupported", response.getResponseMessage());
+            // Response entity body should contain 'TypeNotSupported'
+            assertThat(response.getText().trim(), JUnitMatchers.containsString("TypeNotSupported"));
 
             // Check that the node wasn't created
             response = get(node);
@@ -304,10 +271,10 @@ public class CreateDataNodeTest extends VOSNodeTest
 
             log.info("typeNotSupportedFault passed.");
         }
-        catch (Throwable t)
+        catch (Exception unexpected)
         {
-            log.error(t);
-            fail(t.getMessage());
+            log.error("unexpected exception: " + unexpected);
+            Assert.fail("unexpected exception: " + unexpected);
         }
     }
 
@@ -315,7 +282,8 @@ public class CreateDataNodeTest extends VOSNodeTest
      * The service SHALL throw a HTTP 401 status code including PermissionDenied
      * fault in the entity body if the user does not have permissions to perform the operation
      */
-//    @Test
+    @Ignore("Currently unable to test")
+    @Test
     public void permissionDeniedFault()
     {
         try
@@ -338,10 +306,10 @@ public class CreateDataNodeTest extends VOSNodeTest
 
             log.info("permissionDeniedFault passed.");
         }
-        catch (Throwable t)
+        catch (Exception unexpected)
         {
-            log.error(t);
-            fail(t.getMessage());
+            log.error("unexpected exception: " + unexpected);
+            Assert.fail("unexpected exception: " + unexpected);
         }
     }
 
@@ -360,15 +328,14 @@ public class CreateDataNodeTest extends VOSNodeTest
             log.debug("containerNotFoundFault");
 
             // Create a Node path /A/B
-//            DataNode nodeAB = new DataNode(new VOSURI(baseURI + "/A/B"));
             DataNode nodeAB = getSampleDataNode("/A/B");
 
             // Try and add the Node to the VOSpace.
             WebResponse response = put(nodeAB);
             assertEquals("PUT response code should be 500 for a invalid Node path", 500, response.getResponseCode());
 
-            // Response message body should be 'ContainerNotFound'
-            assertEquals("Response message body should be 'ContainerNotFound'", "ContainerNotFound", response.getResponseMessage());
+            // Response entity body should contain 'ContainerNotFound'
+            assertThat(response.getText().trim(), JUnitMatchers.containsString("ContainerNotFound"));
 
             // Check that the node wasn't created
             response = get(nodeAB);
@@ -376,10 +343,10 @@ public class CreateDataNodeTest extends VOSNodeTest
 
             log.info("containerNotFoundFault passed.");
         }
-        catch (Throwable t)
+        catch (Exception unexpected)
         {
-            log.error(t);
-            fail(t.getMessage());
+            log.error("unexpected exception: " + unexpected);
+            Assert.fail("unexpected exception: " + unexpected);
         }
     }
 

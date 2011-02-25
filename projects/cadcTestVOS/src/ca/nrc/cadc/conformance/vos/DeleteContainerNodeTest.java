@@ -69,8 +69,10 @@
 
 package ca.nrc.cadc.conformance.vos;
 
+import org.junit.matchers.JUnitMatchers;
+import org.junit.Ignore;
+import org.junit.Assert;
 import ca.nrc.cadc.vos.ContainerNode;
-import ca.nrc.cadc.vos.VOSURI;
 import com.meterware.httpunit.WebResponse;
 import org.apache.log4j.Logger;
 import org.junit.After;
@@ -136,10 +138,10 @@ public class DeleteContainerNodeTest extends VOSNodeTest
             
             log.info("deleteContainerNode passed.");
         }
-        catch (Throwable t)
+        catch (Exception unexpected)
         {
-            log.error(t);
-            fail(t.getMessage());
+            log.error("unexpected exception: " + unexpected);
+            Assert.fail("unexpected exception: " + unexpected);
         }
     }
 
@@ -147,7 +149,8 @@ public class DeleteContainerNodeTest extends VOSNodeTest
      * The service SHALL throw a HTTP 401 status code including a PermissionDenied
      * fault in the entity-body if the user does not have permissions to perform the operation
      */
-//    @Test
+    @Ignore("Currently unable to test")
+    @Test
     public void permissionDeniedFault()
     {
         try
@@ -164,20 +167,20 @@ public class DeleteContainerNodeTest extends VOSNodeTest
             // TODO: how do you delete a node without permissions?
             response = delete(node);
             assertEquals("DELETE response code should be 401", 401, response.getResponseCode());
-
-            // Response message body should be 'PermissionDenied'
-            assertEquals("Response message body should be 'PermissionDenied'", "PermissionDenied", response.getResponseMessage());
-
+        
+            // Response entity body should contain 'PermissionDenied'
+            assertThat(response.getText().trim(), JUnitMatchers.containsString("PermissionDenied"));
+            
             // Check that the node wasn't created
             response = get(node);
             assertEquals("GET response code should be 404 for a deleted node", 404, response.getResponseCode());
 
             log.info("permissionDeniedFault passed.");
         }
-        catch (Throwable t)
+        catch (Exception unexpected)
         {
-            log.error(t);
-            fail(t.getMessage());
+            log.error("unexpected exception: " + unexpected);
+            Assert.fail("unexpected exception: " + unexpected);
         }
     }
 
@@ -193,22 +196,21 @@ public class DeleteContainerNodeTest extends VOSNodeTest
             log.debug("nodeNotFoundFault");
 
             // Create a Node that should not exist.
-//            ContainerNode nodeA = new ContainerNode(new VOSURI(baseURI + "/node_not_found"));
             ContainerNode nodeA = getSampleContainerNode();
 
             // Try and delete the Node from the VOSpace.
             WebResponse response = delete(nodeA);
             assertEquals("DELETE response code should be 404 for a node that doesn't exist", 404, response.getResponseCode());
 
-            // Response message body should be 'NodeNotFound'
-            assertEquals("Response message body should be 'NodeNotFound'", "NodeNotFound", response.getResponseMessage());
-
+            // Response entity body should contain 'NodeNotFound'
+            assertThat(response.getText().trim(), JUnitMatchers.containsString("NodeNotFound"));
+            
             log.info("nodeNotFoundFault passed.");
         }
-        catch (Throwable t)
+        catch (Exception unexpected)
         {
-            log.error(t);
-            fail(t.getMessage());
+            log.error("unexpected exception: " + unexpected);
+            Assert.fail("unexpected exception: " + unexpected);
         }
     }
 
@@ -227,22 +229,21 @@ public class DeleteContainerNodeTest extends VOSNodeTest
             log.debug("containerNotFoundFault");
 
             // Create a Node path /A/B
-//            ContainerNode nodeAB = new ContainerNode(new VOSURI(baseURI + "/A/B"));
             ContainerNode nodeAB = getSampleContainerNode("/A/B");
 
             // Try and delete the Node from the VOSpace.
             WebResponse response = delete(nodeAB);
             assertEquals("DELETE response code should be 500 for a invalid Node path", 500, response.getResponseCode());
 
-            // Response message body should be 'ContainerNotFound'
-            assertEquals("Response message body should be 'ContainerNotFound'", "ContainerNotFound", response.getResponseMessage());
-
+            // Response entity body should contain 'ContainerNotFound'
+            assertThat(response.getText().trim(), JUnitMatchers.containsString("ContainerNotFound"));
+            
             log.info("containerNotFoundFault passed.");
         }
-        catch (Throwable t)
+        catch (Exception unexpected)
         {
-            log.error(t);
-            fail(t.getMessage());
+            log.error("unexpected exception: " + unexpected);
+            Assert.fail("unexpected exception: " + unexpected);
         }
     }
 

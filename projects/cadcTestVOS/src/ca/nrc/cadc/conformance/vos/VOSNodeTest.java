@@ -78,7 +78,7 @@ public class VOSNodeTest extends VOSBaseTest
 {
     public VOSNodeTest()
     {
-        super("/nodes");
+        super(VOSBaseTest.NODE_ENDPOINT);
     }
     
 }

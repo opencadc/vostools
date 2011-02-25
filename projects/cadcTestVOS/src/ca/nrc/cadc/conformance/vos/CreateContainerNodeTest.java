@@ -69,9 +69,11 @@
 
 package ca.nrc.cadc.conformance.vos;
 
+import org.junit.Ignore;
+import org.junit.matchers.JUnitMatchers;
+import org.junit.Assert;
 import ca.nrc.cadc.vos.ContainerNode;
 import ca.nrc.cadc.vos.NodeReader;
-import ca.nrc.cadc.vos.VOSURI;
 import com.meterware.httpunit.WebResponse;
 import org.apache.log4j.Logger;
 import org.junit.After;
@@ -146,10 +148,10 @@ public class CreateContainerNodeTest extends VOSNodeTest
 
             log.info("createContainerNode passed.");
         }
-        catch (Throwable t)
+        catch (Exception unexpected)
         {
-            log.error(t);
-            fail(t.getMessage());
+            log.error("unexpected exception: " + unexpected);
+            Assert.fail("unexpected exception: " + unexpected);
         }
     }
 
@@ -189,61 +191,30 @@ public class CreateContainerNodeTest extends VOSNodeTest
             // Should get back a 409 status code.
             assertEquals("PUT response code should be 409 when creating a duplicate node", 409, response.getResponseCode());
 
-            // Response message body should be 'Conflict'
-            assertEquals("Response message body should be 'Conflict'", "Conflict", response.getResponseMessage());
-
+            // Response entity body should contain 'DuplicateNode'
+            assertThat(response.getText().trim(), JUnitMatchers.containsString("DuplicateNode"));
+            
             // Delete the node
             response = delete(node);
             assertEquals("DELETE response code should be 200", 200, response.getResponseCode());
 
             log.info("duplicateNodeFault passed.");
         }
-        catch (Throwable t)
+        catch (Exception unexpected)
         {
-            log.error(t);
-            fail(t.getMessage());
+            log.error("unexpected exception: " + unexpected);
+            Assert.fail("unexpected exception: " + unexpected);
         }
     }
 
     /**
      * The service SHALL throw a HTTP 400 status code including an InvalidURI
      * fault in the entity body if the requested URI is invalid.
+     * 
+     * Disabled because VOSURI will throw an InvalidURIException, 
+     * so how to create an invalid URI for this test?
      */
-// Test disabled because VOSURI class throws exception if scheme isn't vos.
-//    @Test
-    public void invalidURIPrefixFault()
-    {
-        try
-        {
-            log.debug("invalidURIPrefixFault");
-
-            // Create node with an invalid URI
-            ContainerNode invalidNode = new ContainerNode(new VOSURI("zzz://cadc.nrc.ca!zzzspace/"));
-
-            // Add ContainerNode to the VOSpace.
-            WebResponse response = put(invalidNode);
-            assertEquals("PUT response code should be 400 for an invalid URI", 400, response.getResponseCode());
-
-            // Response message body should be 'InvalidURI'
-            assertEquals("Response message body should be 'InvalidURI'", "InvalidURI", response.getResponseMessage());
-
-            // Check that the node wasn't created
-            response = get(invalidNode);
-            assertEquals("GET response code should be 404", 404, response.getResponseCode());
-
-            log.info("invalidURIPrefixFault passed.");
-        }
-        catch (Throwable t)
-        {
-            log.error(t);
-            fail(t.getMessage());
-        }
-    }
-
-    /**
-     * The service SHALL throw a HTTP 400 status code including an InvalidURI
-     * fault in the entity body if the requested URI is invalid
-     */
+    @Ignore("Currently unable to test")
     @Test
     public void invalidURIPathFault()
     {
@@ -252,32 +223,28 @@ public class CreateContainerNodeTest extends VOSNodeTest
             log.debug("invalidURIPathFault");
 
             // Create node with an invalid path, node A doesn't exist.
-//            ContainerNode nodeAB = new ContainerNode(new VOSURI(baseURI + "/A/B"));
             ContainerNode nodeAB = getSampleContainerNode("/A/B");
 
             // Add ContainerNode to the VOSpace.
             WebResponse response = put(nodeAB);
-            assertEquals("PUT response code should be 404 for a NodeNotFound",
-                         404, response.getResponseCode());
+            assertEquals("PUT response code should be 404 for a NodeNotFound", 404, response.getResponseCode());
 
-            // Response message body should be 'InvalidURI'
-            assertEquals("Response message body should be 'Not Found'",
-                         "Not Found", response.getResponseMessage());
-
+            // Response entity body should contain 'InvalidURI'
+            assertThat(response.getText().trim(), JUnitMatchers.containsString("InvalidURI"));
+            
             // Check that the node wasn't created
             response = get(nodeAB);
-            assertEquals("GET response code should be 404", 404,
-                         response.getResponseCode());
+            assertEquals("GET response code should be 404", 404, response.getResponseCode());
 
             log.info("invalidURIPathFault passed.");
         }
-        catch (Throwable t)
+        catch (Exception unexpected)
         {
-            log.error(t);
-            fail(t.getMessage());
+            log.error("unexpected exception: " + unexpected);
+            Assert.fail("unexpected exception: " + unexpected);
         }
     }
-
+    
     /**
      * The service SHALL throw a HTTP 400 status code including a TypeNotSupported
      * fault in the entity body if the type specified in xsi:type is not supported
@@ -294,24 +261,21 @@ public class CreateContainerNodeTest extends VOSNodeTest
 
             // Add ContainerNode to the VOSpace.
             WebResponse response = put(node, new InvalidTypeNodeWriter());
-            assertEquals("PUT response code should be 400 for an invalid Node xsi:type",
-                         400, response.getResponseCode());
+            assertEquals("PUT response code should be 400 for an invalid Node xsi:type", 400, response.getResponseCode());
 
-            // Response message body should be 'TypeNotSupported'
-            assertEquals("Response message body should be 'Bad Request'",
-                         "Bad Request", response.getResponseMessage());
-
+            // Response entity body should contain 'TypeNotSupported'
+            assertThat(response.getText().trim(), JUnitMatchers.containsString("TypeNotSupported"));
+            
             // Check that the node wasn't created
             response = get(node);
-            assertEquals("GET response code should be 404", 404,
-                         response.getResponseCode());
+            assertEquals("GET response code should be 404", 404, response.getResponseCode());
 
             log.info("typeNotSupportedFault passed.");
         }
-        catch (Throwable t)
+        catch (Exception unexpected)
         {
-            log.error(t);
-            fail(t.getMessage());
+            log.error("unexpected exception: " + unexpected);
+            Assert.fail("unexpected exception: " + unexpected);
         }
     }
 
@@ -319,7 +283,8 @@ public class CreateContainerNodeTest extends VOSNodeTest
      * The service SHALL throw a HTTP 401 status code including PermissionDenied
      * fault in the entity body if the user does not have permissions to perform the operation
      */
-//    @Test
+    @Ignore("Currently unable to test")
+    @Test
     public void permissionDeniedFault()
     {
         try
@@ -342,13 +307,13 @@ public class CreateContainerNodeTest extends VOSNodeTest
 
             log.info("permissionDeniedFault passed.");
         }
-        catch (Throwable t)
+        catch (Exception unexpected)
         {
-            log.error(t);
-            fail(t.getMessage());
+            log.error("unexpected exception: " + unexpected);
+            Assert.fail("unexpected exception: " + unexpected);
         }
     }
-
+    
     /**
      * If a parent node in the URI path does not exist then the service MUST
      * throw a HTTP 500 status code including a ContainerNotFound fault in the entity body.
@@ -364,17 +329,14 @@ public class CreateContainerNodeTest extends VOSNodeTest
             log.debug("containerNotFoundFault");
 
             // Create a Node path /A/B
-//            ContainerNode nodeAB = new ContainerNode(new VOSURI(baseURI + "/A/B"));
             ContainerNode nodeAB = getSampleContainerNode("/A/B");
 
             // Try and add the Node to the VOSpace.
             WebResponse response = put(nodeAB);
-            assertEquals("PUT response code should be 404 for a NodeNotFound",
-                         404, response.getResponseCode());
+            assertEquals("PUT response code should be 500 for a ContainerNotFound", 500, response.getResponseCode());
 
-            // Response message body should be 'ContainerNotFound'
-            assertEquals("Response message body should be 'Not Found'",
-                         "Not Found", response.getResponseMessage());
+            // Response entity body should contain 'ContainerNotFound'
+            assertThat(response.getText().trim(), JUnitMatchers.containsString("ContainerNotFound"));        
 
             // Check that the node wasn't created
             response = get(nodeAB);
@@ -382,10 +344,10 @@ public class CreateContainerNodeTest extends VOSNodeTest
 
             log.info("containerNotFoundFault passed.");
         }
-        catch (Throwable t)
+        catch (Exception unexpected)
         {
-            log.error(t);
-            fail(t.getMessage());
+            log.error("unexpected exception: " + unexpected);
+            Assert.fail("unexpected exception: " + unexpected);
         }
     }
 

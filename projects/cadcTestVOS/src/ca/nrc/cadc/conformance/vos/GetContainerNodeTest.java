@@ -69,10 +69,13 @@
 
 package ca.nrc.cadc.conformance.vos;
 
-import ca.nrc.cadc.vos.ContainerNode;
+import org.junit.matchers.JUnitMatchers;
 import ca.nrc.cadc.vos.Node;
-import ca.nrc.cadc.vos.NodeReader;
 import ca.nrc.cadc.vos.VOSURI;
+import org.junit.Ignore;
+import org.junit.Assert;
+import ca.nrc.cadc.vos.ContainerNode;
+import ca.nrc.cadc.vos.NodeReader;
 import com.meterware.httpunit.WebResponse;
 import java.util.HashMap;
 import java.util.Map;
@@ -148,10 +151,10 @@ public class GetContainerNodeTest extends VOSNodeTest
 
             log.info("getContainerNode passed.");
         }
-        catch (Throwable t)
+        catch (Exception unexpected)
         {
-            log.error(t);
-            fail(t.getMessage());
+            log.error("unexpected exception: " + unexpected);
+            Assert.fail("unexpected exception: " + unexpected);
         }
     }
 
@@ -159,7 +162,10 @@ public class GetContainerNodeTest extends VOSNodeTest
      * min: the returned record for the node contains minimum detail with all
      * optional parts removed - the node type should be returned
      * e.g. <Node uri="vos://service/name" xsi:type="Node"/>
+     * 
+     * Detail parameter not currently supported.
      */
+    @Ignore("min detail parameter not currently implemented")
     @Test
     public void getMinContainerNode()
     {
@@ -202,17 +208,20 @@ public class GetContainerNodeTest extends VOSNodeTest
 
             log.info("getMinContainerNode passed.");
         }
-        catch (Throwable t)
+        catch (Exception unexpected)
         {
-            log.error(t);
-            fail(t.getMessage());
+            log.error("unexpected exception: " + unexpected);
+            Assert.fail("unexpected exception: " + unexpected);
         }
-    }
+    } 
 
     /*
      * max: the returned record for the node contains the maximum detail, 
      * including any xsi:type specific extensions
+     * 
+     * Detail parameter not currently supported.
      */
+    @Ignore("max detail parameter not currently implemented")
     @Test
     public void getMaxContainerNode()
     {
@@ -255,10 +264,10 @@ public class GetContainerNodeTest extends VOSNodeTest
 
             log.info("getMaxContainerNode passed.");
         }
-        catch (Throwable t)
+        catch (Exception unexpected)
         {
-            log.error(t);
-            fail(t.getMessage());
+            log.error("unexpected exception: " + unexpected);
+            Assert.fail("unexpected exception: " + unexpected);
         }
     }
 
@@ -268,7 +277,10 @@ public class GetContainerNodeTest extends VOSNodeTest
      * the specified value of the "uri" parameter and with cardinality matching 
      * the specified value of the "offset" parameter drawn from an ordered sequence 
      * of all children.
+     * 
+     * Not currently supported.
      */
+    @Ignore("uri detail parameter not currently implemented")
     @Test
     public void getUriOffsetNode()
     {
@@ -277,7 +289,6 @@ public class GetContainerNodeTest extends VOSNodeTest
             log.debug("getUriOffsetNode");
 
             // Parent node.
-//            ContainerNode nodeA = new ContainerNode(new VOSURI(baseURI + "/A"));
             ContainerNode nodeA = getSampleContainerNode("/A");
 
             // Add ContainerNode to the VOSpace.
@@ -335,10 +346,10 @@ public class GetContainerNodeTest extends VOSNodeTest
 
             log.info("getUriOffsetNode passed.");
         }
-        catch (Throwable t)
+        catch (Exception unexpected)
         {
-            log.error(t);
-            fail(t.getMessage());
+            log.error("unexpected exception: " + unexpected);
+            Assert.fail("unexpected exception: " + unexpected);
         }
     }
 
@@ -346,7 +357,8 @@ public class GetContainerNodeTest extends VOSNodeTest
      * The service SHALL throw a HTTP 401 status code including a PermissionDenied 
      * fault in the entity-body if the user does not have permissions to perform the operation
      */
-//    @Test
+    @Ignore("Currently unable to test authorization")
+    @Test
     public void permissionDeniedFault()
     {
         try
@@ -369,13 +381,13 @@ public class GetContainerNodeTest extends VOSNodeTest
 
             log.info("permissionDeniedFault passed.");
         }
-        catch (Throwable t)
+        catch (Exception unexpected)
         {
-            log.error(t);
-            fail(t.getMessage());
+            log.error("unexpected exception: " + unexpected);
+            Assert.fail("unexpected exception: " + unexpected);
         }
     }
-
+    
     /**
      * The service SHALL throw a HTTP 404 status code including a NodeNotFound 
      * fault in the entity-body if the target Node does not exist
@@ -388,22 +400,21 @@ public class GetContainerNodeTest extends VOSNodeTest
             log.debug("nodeNotFoundFault");
 
             // Create a Node with a nonexistent parent node
-//            ContainerNode nodeAB = new ContainerNode(new VOSURI(baseURI + "/A/B"));
             ContainerNode nodeAB = getSampleContainerNode("/A/B");
 
             // Try and get the Node from the VOSpace.
             WebResponse response = get(nodeAB);
             assertEquals("GET response code should be 404 for a node that doesn't exist", 404, response.getResponseCode());
 
-            // Response message body should be 'NodeNotFound'
-            assertEquals("Response message body should be 'NodeNotFound'", "NodeNotFound", response.getResponseMessage());
+            // Response entity body should contain 'NodeNotFound'
+            assertThat(response.getText().trim(), JUnitMatchers.containsString("NodeNotFound"));
 
             log.info("nodeNotFoundFault passed.");
         }
-        catch (Throwable t)
+        catch (Exception unexpected)
         {
-            log.error(t);
-            fail(t.getMessage());
+            log.error("unexpected exception: " + unexpected);
+            Assert.fail("unexpected exception: " + unexpected);
         }
     }
     

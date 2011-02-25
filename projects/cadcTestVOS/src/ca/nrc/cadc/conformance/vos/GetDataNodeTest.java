@@ -69,9 +69,11 @@
 
 package ca.nrc.cadc.conformance.vos;
 
+import org.junit.matchers.JUnitMatchers;
+import org.junit.Ignore;
+import org.junit.Assert;
 import ca.nrc.cadc.vos.DataNode;
 import ca.nrc.cadc.vos.NodeReader;
-import ca.nrc.cadc.vos.VOSURI;
 import com.meterware.httpunit.WebResponse;
 import java.util.HashMap;
 import java.util.Map;
@@ -147,10 +149,10 @@ public class GetDataNodeTest extends VOSNodeTest
 
             log.info("getDataNode passed.");
         }
-        catch (Throwable t)
+        catch (Exception unexpected)
         {
-            log.error(t);
-            fail(t.getMessage());
+            log.error("unexpected exception: " + unexpected);
+            Assert.fail("unexpected exception: " + unexpected);
         }
     }
 
@@ -159,6 +161,7 @@ public class GetDataNodeTest extends VOSNodeTest
      * optional parts removed - the node type should be returned
      * e.g. <Node uri="vos://service/name" xsi:type="Node"/>
      */
+    @Ignore("min detail parameter not currently implemented")
     @Test
     public void getMinDataNode()
     {
@@ -198,10 +201,10 @@ public class GetDataNodeTest extends VOSNodeTest
 
             log.info("getMinDataNode passed.");
         }
-        catch (Throwable t)
+        catch (Exception unexpected)
         {
-            log.error(t);
-            fail(t.getMessage());
+            log.error("unexpected exception: " + unexpected);
+            Assert.fail("unexpected exception: " + unexpected);
         }
     }
 
@@ -209,6 +212,7 @@ public class GetDataNodeTest extends VOSNodeTest
      * max: the returned record for the node contains the maximum detail,
      * including any xsi:type specific extensions
      */
+    @Ignore("max detail parameter not currently implemented")
     @Test
     public void getMaxDataNode()
     {
@@ -248,10 +252,10 @@ public class GetDataNodeTest extends VOSNodeTest
 
             log.info("getMaxDataNode passed.");
         }
-        catch (Throwable t)
+        catch (Exception unexpected)
         {
-            log.error(t);
-            fail(t.getMessage());
+            log.error("unexpected exception: " + unexpected);
+            Assert.fail("unexpected exception: " + unexpected);
         }
     }
 
@@ -262,6 +266,7 @@ public class GetDataNodeTest extends VOSNodeTest
      * the specified value of the "offset" parameter drawn from an ordered sequence
      * of all children.
      */
+    @Ignore("uri detail parameter not currently implemented")
     @Test
     public void getUriOffsetNode()
     {
@@ -301,10 +306,10 @@ public class GetDataNodeTest extends VOSNodeTest
 
             log.info("getUriOffsetNode passed.");
         }
-        catch (Throwable t)
+        catch (Exception unexpected)
         {
-            log.error(t);
-            fail(t.getMessage());
+            log.error("unexpected exception: " + unexpected);
+            Assert.fail("unexpected exception: " + unexpected);
         }
     }
 
@@ -312,7 +317,8 @@ public class GetDataNodeTest extends VOSNodeTest
      * The service SHALL throw a HTTP 401 status code including a PermissionDenied
      * fault in the entity-body if the user does not have permissions to perform the operation
      */
-//    @Test
+    @Ignore("Currently unable to test authorization")
+    @Test
     public void permissionDeniedFault()
     {
         try
@@ -335,10 +341,10 @@ public class GetDataNodeTest extends VOSNodeTest
 
             log.info("permissionDeniedFault passed.");
         }
-        catch (Throwable t)
+        catch (Exception unexpected)
         {
-            log.error(t);
-            fail(t.getMessage());
+            log.error("unexpected exception: " + unexpected);
+            Assert.fail("unexpected exception: " + unexpected);
         }
     }
 
@@ -354,22 +360,21 @@ public class GetDataNodeTest extends VOSNodeTest
             log.debug("nodeNotFoundFault");
 
             // Create a Node with a nonexistent parent node
-//            DataNode nodeAB = new DataNode(new VOSURI(baseURI + "/A/B"));
             DataNode node = getSampleDataNode();
 
             // Try and get the Node from the VOSpace.
             WebResponse response = get(node);
             assertEquals("GET response code should be 404 for a node that doesn't exist", 404, response.getResponseCode());
 
-            // Response message body should be 'NodeNotFound'
-            assertEquals("Response message body should be 'NodeNotFound'", "NodeNotFound", response.getResponseMessage());
+            // Response entity body should contain 'NodeNotFound'
+            assertThat(response.getText().trim(), JUnitMatchers.containsString("NodeNotFound"));
 
             log.info("nodeNotFoundFault passed.");
         }
-        catch (Throwable t)
+        catch (Exception unexpected)
         {
-            log.error(t);
-            fail(t.getMessage());
+            log.error("unexpected exception: " + unexpected);
+            Assert.fail("unexpected exception: " + unexpected);
         }
     }
 

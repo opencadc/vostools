@@ -69,11 +69,15 @@
 
 package ca.nrc.cadc.conformance.vos;
 
+import java.io.StringWriter;
+import ca.nrc.cadc.vos.NodeWriter;
+import org.junit.matchers.JUnitMatchers;
+import org.junit.Ignore;
+import org.junit.Assert;
 import java.util.List;
 import ca.nrc.cadc.vos.DataNode;
 import ca.nrc.cadc.vos.NodeProperty;
 import ca.nrc.cadc.vos.NodeReader;
-import ca.nrc.cadc.vos.VOSURI;
 import com.meterware.httpunit.WebResponse;
 import org.apache.log4j.Logger;
 import org.junit.After;
@@ -144,8 +148,8 @@ public class UpdateDataNodeTest extends VOSNodeTest
             NodeReader reader = new NodeReader();
             DataNode updatedNode = (DataNode) reader.read(xml);
 
-            // Updated node should have 2 properties.
-            assertEquals("", 2, updatedNode.getProperties().size());
+            // Updated node should have 5 properties.
+            assertEquals("Node should have 5 properties", 5, updatedNode.getProperties().size());
 
             // Delete the node
             response = delete(node);
@@ -153,10 +157,10 @@ public class UpdateDataNodeTest extends VOSNodeTest
 
             log.info("updateDataNode passed.");
         }
-        catch (Throwable t)
+        catch (Exception unexpected)
         {
-            log.error(t);
-            fail(t.getMessage());
+            log.error("unexpected exception: " + unexpected);
+            Assert.fail("unexpected exception: " + unexpected);
         }
     }
 
@@ -171,41 +175,46 @@ public class UpdateDataNodeTest extends VOSNodeTest
             log.debug("updateDataNodeDeleteProperty");
 
             // Create a DataNode.
-//            DataNode node = new DataNode(new VOSURI(baseURI + "/A"));
             DataNode node = getSampleDataNode();
-//            NodeProperty nodeProperty = new NodeProperty("ivo://ivoa.net/vospace/core#description", "My award winning thing");
-//            nodeProperty.setReadOnly(true);
-//            node.getProperties().add(nodeProperty);
 
-            // Add ContainerNode to the VOSpace.
+            // Add DataNode to the VOSpace.
             WebResponse response = put(node);
             assertEquals("PUT response code should be 201", 201, response.getResponseCode());
 
             // Get the response (an XML document)
             String xml = response.getText();
-            log.debug("POST XML:\r\n" + xml);
+            log.debug("Node XML:\r\n" + xml);
 
-            // Validate against the VOSPace schema.
+            // Validate against the VOSpace schema.
             NodeReader reader = new NodeReader();
             DataNode updatedNode = (DataNode) reader.read(xml);
 
             // Mark the property as deleted.
             List<NodeProperty> properties = updatedNode.getProperties();
             for (NodeProperty property : properties)
+            {
+                log.debug("property marked for deletion: " + property.getPropertyURI());
                 property.setMarkedForDeletion(true);
+            }
 
+            NodeWriter writer = new NodeWriter();
+            StringWriter sw = new StringWriter();
+            writer.write(updatedNode, sw);
+            log.debug("updatedNode XML: " + sw.toString());
+
+            // Update the Node.
             response = post(updatedNode);
             assertEquals("POST response code should be 200", 200, response.getResponseCode());
 
             // Get the response (an XML document)
             xml = response.getText();
-            log.debug("POST XML:\r\n" + xml);
+            log.debug("Node after property deletion XML:\r\n" + xml);
 
             // Validate against the VOSPace schema.
-            reader.read(xml);
+            updatedNode = (DataNode) reader.read(xml);
 
             // Node properties should be empty.
-            assertEquals("Node proerties should be empty", 0, updatedNode.getProperties().size());
+            assertEquals("Should be 4 Node properties", 4, updatedNode.getProperties().size());
 
             // Delete the node
             response = delete(updatedNode);
@@ -213,10 +222,10 @@ public class UpdateDataNodeTest extends VOSNodeTest
 
             log.info("updateDataNodeDeleteProperty passed.");
         }
-        catch (Throwable t)
+        catch (Exception unexpected)
         {
-            log.error(t);
-            fail(t.getMessage());
+            log.error("unexpected exception: " + unexpected);
+            Assert.fail("unexpected exception: " + unexpected);
         }
     }
 
@@ -224,7 +233,8 @@ public class UpdateDataNodeTest extends VOSNodeTest
      * The service SHALL throw a HTTP 401 status code including a PermissionDenied
      * fault in the entity-body if the user does not have permissions to perform the operation
      */
-//    @Test
+    @Ignore("Currently unable to test")
+    @Test
     public void permissionDeniedFault()
     {
         try
@@ -247,8 +257,8 @@ public class UpdateDataNodeTest extends VOSNodeTest
             response = post(node);
             assertEquals("POST response code should be 401", 401, response.getResponseCode());
 
-            // Response message body should be 'PermissionDenied'
-            assertEquals("Response message body should be 'PermissionDenied'", "PermissionDenied", response.getResponseMessage());
+            // Response entity body should contain 'PermissionDenied'
+            assertThat(response.getText().trim(), JUnitMatchers.containsString("PermissionDenied"));  
 
             // Delete the node
             response = delete(node);
@@ -256,10 +266,10 @@ public class UpdateDataNodeTest extends VOSNodeTest
 
             log.info("permissionDeniedFault passed.");
         }
-        catch (Throwable t)
+        catch (Exception unexpected)
         {
-            log.error(t);
-            fail(t.getMessage());
+            log.error("unexpected exception: " + unexpected);
+            Assert.fail("unexpected exception: " + unexpected);
         }
     }
 
@@ -267,6 +277,7 @@ public class UpdateDataNodeTest extends VOSNodeTest
      * The service SHALL throw a HTTP 401 status code including a PermissionDenied
      * fault in the entity-body if the request attempts to modify a readonly Property
      */
+    @Ignore("Service PermissionDeniedFault not currently implemented")
     @Test
     public void updateReadOnlyPermissionDeniedFault()
     {
@@ -275,11 +286,7 @@ public class UpdateDataNodeTest extends VOSNodeTest
             log.debug("updateReadOnlyPermissionDeniedFault");
 
             // Create a ContainerNode.
-//            DataNode node = new DataNode(new VOSURI(baseURI + "/A"));
             DataNode node = getSampleDataNode();
-//            NodeProperty nodeProperty = new NodeProperty("ivo://ivoa.net/vospace/core#description", "My award winning thing");
-//            nodeProperty.setReadOnly(true);
-//            node.getProperties().add(nodeProperty);
 
             // Add ContainerNode to the VOSpace.
             WebResponse response = put(node);
@@ -296,14 +303,17 @@ public class UpdateDataNodeTest extends VOSNodeTest
             // Update the node by updating the read only property.
             List<NodeProperty> properties = updatedNode.getProperties();
             for (NodeProperty property : properties)
+            {
+                log.debug("property marked read only: " + property.getPropertyURI());
                 property.setReadOnly(false);
+            }
 
             // Update the node
             response = post(updatedNode);
             assertEquals("POST response code should be 401", 401, response.getResponseCode());
 
-            // Response message body should be 'PermissionDenied'
-            assertEquals("Response message body should be 'PermissionDenied'", "PermissionDenied", response.getResponseMessage());
+            // Response entity body should contain 'PermissionDenied'
+            assertThat(response.getText().trim(), JUnitMatchers.containsString("PermissionDenied"));  
 
             // Delete the node
             response = delete(updatedNode);
@@ -311,10 +321,10 @@ public class UpdateDataNodeTest extends VOSNodeTest
 
             log.info("updateReadOnlyPermissionDeniedFault passed.");
         }
-        catch (Throwable t)
+        catch (Exception unexpected)
         {
-            log.error(t);
-            fail(t.getMessage());
+            log.error("unexpected exception: " + unexpected);
+            Assert.fail("unexpected exception: " + unexpected);
         }
     }
 
@@ -330,15 +340,14 @@ public class UpdateDataNodeTest extends VOSNodeTest
             log.debug("nodeNotFoundFault");
 
             // Create a Node with a nonexistent parent node
-//            DataNode nodeAB = new DataNode(new VOSURI(baseURI + "/A/B"));
             DataNode node = getSampleDataNode("/A/B");
 
             // Try and get the Node from the VOSpace.
             WebResponse response = post(node);
             assertEquals("POST response code should be 404 for a node that doesn't exist", 404, response.getResponseCode());
 
-            // Response message body should be 'NodeNotFound'
-            assertEquals("Response message body should be 'NodeNotFound'", "NodeNotFound", response.getResponseMessage());
+            // Response entity body should contain 'NodeNotFound'
+            assertThat(response.getText().trim(), JUnitMatchers.containsString("NodeNotFound"));
 
             log.info("nodeNotFoundFault passed.");
         }
@@ -353,31 +362,28 @@ public class UpdateDataNodeTest extends VOSNodeTest
      * The service SHALL throw a HTTP 400 status code including an InvalidArgument fault
      * in the entity-body if a specified property value is invalid.
      */
+    @Ignore("Currently not checking for invalid properties")
     @Test
-    public void invalidArgumentFault()
+    public void invalidArgumentFault() throws Exception
     {
         try
         {
             log.debug("invalidArgumentFault");
 
-            // Get a ContainerNode.
+            // Get a DataNode.
             DataNode node = getSampleDataNode();
 
-            // Add ContainerNode to the VOSpace.
-            WebResponse response = put(node);
-            assertEquals("PUT response code should be 201", 201, response.getResponseCode());
-
-            // TODO: add an invalid Property
-            NodeProperty nodeProperty = new NodeProperty("zzz://aaa.bbb/ccc/ddd", "My invalid property");
+            // Add an invalid Property
+            NodeProperty nodeProperty = new NodeProperty("ivo://ivoa.net/vo space/core#length", "My invalid property");
             nodeProperty.setReadOnly(false);
             node.getProperties().add(nodeProperty);
 
-            // Update the node.
-            response = post(node);
-            assertEquals("POST response code should be 400 for a node with an invalid property", 400, response.getResponseCode());
+            // Add DataNode to the VOSpace.
+            WebResponse response = put(node);
+            assertEquals("PUT response code should be 400 for a node with an invalid property", 400, response.getResponseCode());
 
-            // Response message body should be 'NodeNotFound'
-            assertEquals("Response message body should be 'NodeNotFound'", "NodeNotFound", response.getResponseMessage());
+            // Response entity body should contain 'InvalidArgument'
+            assertThat(response.getText().trim(), JUnitMatchers.containsString("InvalidArgument"));
 
             // Delete the node
             response = delete(node);
@@ -385,10 +391,10 @@ public class UpdateDataNodeTest extends VOSNodeTest
 
             log.info("invalidArgumentFault passed.");
         }
-        catch (Throwable t)
+        catch (Exception unexpected)
         {
-            log.error(t);
-            fail(t.getMessage());
+            log.error("unexpected exception: " + unexpected);
+            Assert.fail("unexpected exception: " + unexpected);
         }
     }
 
