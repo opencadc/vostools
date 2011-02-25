@@ -90,12 +90,14 @@ import org.jdom.Element;
 import org.jdom.JDOMException;
 import org.jdom.Namespace;
 import org.jdom.input.SAXBuilder;
+import org.junit.Assert;
 import org.xml.sax.SAXException;
 
 import ca.nrc.cadc.util.Log4jInit;
 
 import com.meterware.httpunit.GetMethodWebRequest;
 import com.meterware.httpunit.HeadMethodWebRequest;
+import com.meterware.httpunit.HttpNotFoundException;
 import com.meterware.httpunit.PostMethodWebRequest;
 import com.meterware.httpunit.WebConversation;
 import com.meterware.httpunit.WebRequest;
@@ -106,6 +108,8 @@ public abstract class AbstractUWSTest
 {
     private static Logger log = Logger.getLogger(AbstractUWSTest.class);
     {
+        level = Level.DEBUG;
+        setLoggingLevel(log);
         Log4jInit.setLevel("ca", Level.DEBUG);
     }
 
@@ -407,7 +411,7 @@ public abstract class AbstractUWSTest
         String resourceUrl = serviceUrl + "/" + jobId;
         log.debug("**************************************************");
         log.debug("HTTP POST: " + resourceUrl);
-        WebRequest postRequest = new PostMethodWebRequest(serviceUrl + "/" + jobId);
+        WebRequest postRequest = new PostMethodWebRequest(resourceUrl);
         postRequest.setParameter("ACTION", "DELETE");
         return deleteJob(conversation, postRequest, resourceUrl);
     }
@@ -421,7 +425,7 @@ public abstract class AbstractUWSTest
         String resourceUrl = serviceUrl + "/" + jobId;
         log.debug("**************************************************");
         log.debug("HTTP DELETE: " + resourceUrl);
-        WebRequest deleteRequest = new DeleteMethodWebRequest(serviceUrl + "/" + jobId);
+        WebRequest deleteRequest = new DeleteMethodWebRequest(resourceUrl);
         return deleteJob(conversation, deleteRequest, resourceUrl);
     }
 
@@ -443,28 +447,8 @@ public abstract class AbstractUWSTest
         String location = response.getHeaderField("Location");
         log.debug("Location: " + location);
         assertNotNull("Response location header not set", location);
-        assertEquals("Response to location header incorrect", resourceUrl, location);
-
-        // Follow the redirect.
-        log.debug("**************************************************");
-        log.debug("HTTP GET: " + location);
-        WebRequest getRequest = new GetMethodWebRequest(location);
-        conversation.clearContents();
-        response = conversation.getResponse(getRequest);
-        assertNotNull("GET response to " + location + " is null", response);
-
-        log.debug(Util.getResponseHeaders(response));
-
-        log.debug("response code: " + response.getResponseCode());
-        assertEquals("Non-200 GET response code to " + location, 200, response.getResponseCode());
-
-        log.debug("Content-Type: " + response.getContentType());
-        assertEquals("GET response Content-Type header to " + location + " is incorrect", "text/xml", response.getContentType());
-
-        // Validate the XML against the schema.
-        log.debug("XML:\r\n" + response.getText());
-        buildDocument(response.getText(), true);
-
+        assertEquals("Response to location header incorrect", serviceUrl, location);
+        
         return response;
     }
 

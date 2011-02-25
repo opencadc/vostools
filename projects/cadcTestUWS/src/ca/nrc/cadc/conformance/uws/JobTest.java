@@ -69,18 +69,29 @@
 
 package ca.nrc.cadc.conformance.uws;
 
+import java.io.IOException;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Map;
+
+import ca.nrc.cadc.util.Log4jInit;
+
+import com.meterware.httpunit.GetMethodWebRequest;
+import com.meterware.httpunit.HttpNotFoundException;
 import com.meterware.httpunit.WebConversation;
+import com.meterware.httpunit.WebRequest;
 import com.meterware.httpunit.WebResponse;
 import java.util.List;
+
+import org.apache.log4j.Level;
 import org.apache.log4j.Logger;
 import org.jdom.Document;
 import org.jdom.Element;
 import org.jdom.Namespace;
 import org.junit.Assert;
 import org.junit.Test;
+import org.xml.sax.SAXException;
+
 import static org.junit.Assert.*;
 
 /**
@@ -95,7 +106,9 @@ public class JobTest extends AbstractUWSTest
     public JobTest()
     {
         super();
+        level = Level.DEBUG;
         setLoggingLevel(log);
+        Log4jInit.setLevel("ca", Level.DEBUG);
     }
 
     @Test
@@ -146,20 +159,40 @@ public class JobTest extends AbstractUWSTest
         }
     }
 
+    
+    private void verifyDeletedJob(WebConversation conversation, String jobId) throws IOException, SAXException
+    {
+        // Get the job again; it should return 404 since it's deleted already.
+        // GET request to the jobId resource.
+        String resourceUrl = serviceUrl + "/" + jobId;
+        conversation.clearContents();
+        WebRequest getRequest = new GetMethodWebRequest(resourceUrl) ;
+        try
+        {
+            conversation.getResponse(getRequest);
+            Assert.fail("404 error is expected for request to deleted job.");
+        }
+        catch (HttpNotFoundException e)
+        {
+            // expected.
+        }
+    }
+    
     /**
-     * Create a job and include parameters in the job-creation POST.
+     * Delete a job through HTTP DELETE.
+     * 
+     * @author zhangsa
      */
     @Test
     public void testDeleteJob()
     {
         try
         {
-            // create default job
-
-            // delete job
-
-            // verify the job is really gone (404)
-
+            // Create a new Job.
+            WebConversation conversation = new WebConversation();
+            String jobId = createJob(conversation);
+            deleteJobWithDeleteRequest(conversation, jobId);
+            verifyDeletedJob(conversation, jobId);
         }
         catch(Exception unexpected)
         {
@@ -168,6 +201,35 @@ public class JobTest extends AbstractUWSTest
         }
     }
 
+    
+    
+    /**
+     * Delete a job through POST.
+     * 
+     * @author zhangsa
+     */
+    @Test
+    public void testDeleteJobbyPost()
+    {
+        try
+        {
+            // Create a new Job.
+            WebConversation conversation = new WebConversation();
+
+            String jobId = createJob(conversation);
+            
+            deleteJobWithPostRequest(conversation, jobId);
+            verifyDeletedJob(conversation, jobId);
+        }
+        catch(Exception unexpected)
+        {
+            log.error("unexpected exception", unexpected);
+            Assert.fail("unexpected exception: " + unexpected);
+        }
+    }
+    
+    
+    
     /**
      * Create a job with RUNID.
      */
