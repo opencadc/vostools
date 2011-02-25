@@ -16,10 +16,14 @@ with recompile
 as
 begin
   declare @EXISTING_LENGTH bigint
+  declare @LENGTH_DELTA bigint
+  
   set @EXISTING_LENGTH = (select contentLength from vospace..Node where nodeID = @NODE_ID)
-  if (@EXISTING_LENGTH != @CONTENT_LENGTH)
+  set @LENGTH_DELTA = @CONTENT_LENGTH - @EXISTING_LENGTH
+  
+  if (@LENGTH_DELTA != 0)
   begin
-    print 'Updating Node [%1!] with length [%2!]', @NODE_ID, @CONTENT_LENGTH
+    print 'Updating Node [%1!] with length [%2!] (was [%3!] delta=[%4!])', @NODE_ID, @CONTENT_LENGTH, @EXISTING_LENGTH, @LENGTH_DELTA
     if (@DRY_RUN = 0)
     begin
       update vospace..Node
