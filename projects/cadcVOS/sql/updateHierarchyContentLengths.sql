@@ -153,3 +153,38 @@ end
 go
 
 
+-------------------------------------------------------------------------------
+--
+-- Call updateHeirarchyContentLengths for all root nodes.
+--
+-------------------------------------------------------------------------------
+drop procedure updateAllContentLengths
+go
+
+create procedure updateAllContentLengths
+(
+    @DRY_RUN bit
+)
+with recompile
+as
+begin
+
+  declare curs cursor for
+    select nodeID from Node where parentID is null
+
+  declare @NODE_ID bigint
+  
+  open curs
+  fetch curs into @NODE_ID
+
+  while (@@sqlstatus = 0)
+  begin
+    -- The 1 means execute a dry run.  To run the actual deal, use 0 instead.
+    exec updateHierarchyContentLengths @NODE_ID, @DRY_RUN
+    fetch curs into @NODE_ID
+  end
+
+  close curs
+end
+go
+
