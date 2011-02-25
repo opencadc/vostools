@@ -156,14 +156,14 @@ public class NodeResource extends BaseResource
         {
             String message = "Not supported: " + e.getMessage();
             LOGGER.debug(message, e);
-            nodeFault = NodeFault.NotSupported;
+            nodeFault = NodeFault.InvalidArgument;
             nodeFault.setMessage(message);
         }
         catch (IllegalArgumentException e)
         {
             String message = "Bad input: " + e.getMessage();
             LOGGER.debug(message, e);
-            nodeFault = NodeFault.BadRequest;
+            nodeFault = NodeFault.InvalidArgument;
             nodeFault.setMessage(message);
         }
         catch (Throwable t)

@@ -290,9 +290,14 @@ public abstract class NodeAction implements PrivilegedAction<Object>
         }
         catch (FileNotFoundException e)
         {
+            NodeFault nodeFault;
+            if (this instanceof CreateNodeAction || this instanceof DeleteNodeAction)
+                nodeFault = NodeFault.ContainerNotFound;
+            else
+                nodeFault = NodeFault.NodeNotFound;
             String faultMessage = vosURI.toString();
             log.debug("Could not find node with path: " + vosURI.getPath());
-            return handleException(NodeFault.NodeNotFound, faultMessage);
+            return handleException(nodeFault, faultMessage);
         }
         catch (URISyntaxException e)
         {
@@ -310,19 +315,19 @@ public abstract class NodeAction implements PrivilegedAction<Object>
         {
             String faultMessage = "Node XML not well formed: " + e.getMessage();
             log.debug(faultMessage, e);
-            return handleException(NodeFault.InvalidToken, faultMessage);
+            return handleException(NodeFault.TypeNotSupported, faultMessage);
         }
         catch (UnsupportedOperationException e)
         {
             String faultMessage = "Not supported: " + e.getMessage();
             log.debug(faultMessage, e);
-            return handleException(NodeFault.NotSupported, faultMessage);
+            return handleException(NodeFault.InvalidArgument, faultMessage);
         }
         catch (IllegalArgumentException e)
         {
             String faultMessage = "Bad input: " + e.getMessage();
             log.debug(faultMessage, e);
-            return handleException(NodeFault.BadRequest, faultMessage);
+            return handleException(NodeFault.InvalidArgument, faultMessage);
         }
         catch (Throwable t)
         {

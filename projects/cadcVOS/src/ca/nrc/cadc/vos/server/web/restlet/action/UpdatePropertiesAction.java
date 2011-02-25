@@ -139,8 +139,8 @@ public class UpdatePropertiesAction extends NodeAction
             if (((DataNode) node).isBusy())
             {
                 log.debug("Node is busy: " + node.getPath());
-                NodeFault nodeFault = NodeFault.NodeBusy;
-                nodeFault.setMessage(node.getUri().toString());
+                NodeFault nodeFault = NodeFault.InternalFault;
+                nodeFault.setMessage("Node is busy: " + node.getUri().toString());
                 return new NodeActionResult(nodeFault);
             }
         }

@@ -160,7 +160,9 @@ public class CreateNodeAction extends NodeAction
         catch (NodeNotFoundException e)
         {
             log.debug("Could not resolve part of path for node: " + node.getPath(), e);
-            return new NodeActionResult(NodeFault.ContainerNotFound);
+            NodeFault nodeFault = NodeFault.ContainerNotFound;
+            nodeFault.setMessage(node.getUri().toString());
+            return new NodeActionResult(nodeFault);
         }
     }
     
