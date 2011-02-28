@@ -261,10 +261,10 @@ public class ResultsTest extends AbstractUWSTest
                 log.debug("ResultsTest.testResults completed.");
             }
         }
-        catch (Throwable t)
+        catch (Exception unexpected)
         {
-            log.error(t);
-            fail(t.getMessage());
+            log.error("unexpected exception", unexpected);
+            fail("unexpected exception: " + unexpected);
         }
     }
 

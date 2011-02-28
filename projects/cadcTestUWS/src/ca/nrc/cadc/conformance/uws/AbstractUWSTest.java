@@ -302,6 +302,12 @@ public abstract class AbstractUWSTest
     protected WebResponse get(WebConversation conversation, String resourceUrl)
         throws IOException, SAXException
     {
+        return get(conversation, resourceUrl, "text/xml"); // for UWS job resources
+    }
+
+    protected WebResponse get(WebConversation conversation, String resourceUrl, String expectedContentType)
+        throws IOException, SAXException
+    {
         log.debug("**************************************************");
         log.debug("HTTP GET: " + resourceUrl);
         WebRequest getRequest = new GetMethodWebRequest(resourceUrl);
@@ -315,9 +321,7 @@ public abstract class AbstractUWSTest
         assertEquals("Non-200 GET response code to " + resourceUrl, 200, response.getResponseCode());
 
         log.debug("Content-Type: " + response.getContentType());
-        
-        // as of 2011-02-28, not all GET returns text/xml type.  Some are of text/plain. -sz 
-        // assertEquals("GET response Content-Type header to " + resourceUrl + " is incorrect", "text/xml", response.getContentType());
+        assertEquals("GET response Content-Type header to " + resourceUrl + " is incorrect", expectedContentType, response.getContentType());
 
         return response;
     }
