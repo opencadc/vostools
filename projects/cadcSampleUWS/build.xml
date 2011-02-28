@@ -162,7 +162,7 @@
                 <pathelement path="${jars}:${testingJars}"/>
             </classpath>
             <sysproperty key="service.url" value="http://localhost/cadcSampleUWS/async"/>
-            <sysproperty key="properties.directory" value="${build}/resources"/>
+            <sysproperty key="properties.directory" value="test/src/resources"/>
             <test name="ca.nrc.cadc.conformance.uws.UWSASyncTestSuite"/>
             <test name="ca.nrc.cadc.conformance.uws.ParametersTest"/>
             <test name="ca.nrc.cadc.conformance.uws.JobInfoTest"/>
@@ -178,9 +178,8 @@
                 <pathelement path="${jars}:${testingJars}"/>
             </classpath>
             <sysproperty key="service.url" value="http://localhost/cadcSampleUWS/sync"/>
-            <sysproperty key="properties.directory" value="${build}/resources"/>
+            <sysproperty key="properties.directory" value="test/src/resources"/>
             <test name="ca.nrc.cadc.conformance.uws.SyncTest"/>
-            <test name="ca.nrc.cadc.conformance.uws.JobInfoTest"/>
             <formatter type="plain" usefile="false"/>
         </junit>
     </target>
