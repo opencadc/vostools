@@ -103,12 +103,15 @@ public class JobTest extends AbstractUWSTest
 {
     private static Logger log = Logger.getLogger(JobTest.class);
 
+    static
+    {
+        Log4jInit.setLevel("ca.nrc.cadc", Level.INFO);
+    }
+
     public JobTest()
     {
         super();
         level = Level.DEBUG;
-        setLoggingLevel(log);
-        Log4jInit.setLevel("ca", Level.DEBUG);
     }
 
     @Test

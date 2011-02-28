@@ -69,9 +69,11 @@
 
 package ca.nrc.cadc.conformance.uws;
 
+import ca.nrc.cadc.util.Log4jInit;
 import com.meterware.httpunit.HttpException;
 import com.meterware.httpunit.WebConversation;
 import com.meterware.httpunit.WebResponse;
+import org.apache.log4j.Level;
 import org.apache.log4j.Logger;
 import org.junit.Assert;
 import org.junit.Test;
@@ -86,10 +88,14 @@ public class PrivateJobListTest extends AbstractUWSTest
 {
     private static Logger log = Logger.getLogger(PrivateJobListTest.class);
 
+    static
+    {
+        Log4jInit.setLevel("ca.nrc.cadc", Level.INFO);
+    }
+
     public PrivateJobListTest()
     {
         super();
-        setLoggingLevel(log);
     }
 
     /**

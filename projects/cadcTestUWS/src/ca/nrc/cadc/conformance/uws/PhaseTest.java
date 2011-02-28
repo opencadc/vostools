@@ -69,6 +69,7 @@
 
 package ca.nrc.cadc.conformance.uws;
 
+import ca.nrc.cadc.util.Log4jInit;
 import java.util.ArrayList;
 import com.meterware.httpunit.PostMethodWebRequest;
 import com.meterware.httpunit.WebConversation;
@@ -77,6 +78,7 @@ import com.meterware.httpunit.WebResponse;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import org.apache.log4j.Level;
 import org.apache.log4j.Logger;
 import org.jdom.Document;
 import org.jdom.Element;
@@ -88,10 +90,14 @@ public class PhaseTest extends AbstractUWSTest
 {
     private static Logger log = Logger.getLogger(PhaseTest.class);
 
+    static
+    {
+        Log4jInit.setLevel("ca.nrc.cadc", Level.INFO);
+    }
+
     public PhaseTest()
     {
         super();
-        setLoggingLevel(log);
     }
 
     @Test

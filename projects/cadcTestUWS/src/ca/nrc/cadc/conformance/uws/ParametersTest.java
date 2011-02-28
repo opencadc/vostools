@@ -69,12 +69,14 @@
 
 package ca.nrc.cadc.conformance.uws;
 
+import ca.nrc.cadc.util.Log4jInit;
 import com.meterware.httpunit.PostMethodWebRequest;
 import com.meterware.httpunit.WebConversation;
 import com.meterware.httpunit.WebRequest;
 import com.meterware.httpunit.WebResponse;
 import java.util.Iterator;
 import java.util.List;
+import org.apache.log4j.Level;
 import org.apache.log4j.Logger;
 import org.jdom.Attribute;
 import org.jdom.Document;
@@ -93,13 +95,17 @@ public class ParametersTest extends AbstractUWSTest
 {
     private static Logger log = Logger.getLogger(ParametersTest.class);
 
+    static
+    {
+        Log4jInit.setLevel("ca.nrc.cadc", Level.INFO);
+    }
+
     private static final String PARAMETER_NAME = "parameter name";
     private static final String PARAMETER_VALUE = "parameter value";
 
     public ParametersTest()
     {
         super();
-        setLoggingLevel(log);
     }
 
     /**

@@ -95,6 +95,11 @@ public class SyncTest extends AbstractUWSTest
 {
     protected static TestPropertiesList testPropertiesList;
 
+    static
+    {
+        Log4jInit.setLevel("ca.nrc.cadc.conformance.uws", Level.INFO);
+    }
+
     private static Logger log = Logger.getLogger(SyncTest.class);
 
     private static final String CLASS_NAME = SyncTest.class.getSimpleName();
@@ -102,8 +107,6 @@ public class SyncTest extends AbstractUWSTest
     public SyncTest()
     {
         super();
-        //setLoggingLevel(log);
-        Log4jInit.setLevel("ca.nrc.cadc.conformance.uws", Level.INFO);
     }
 
     @Before
@@ -183,7 +186,6 @@ public class SyncTest extends AbstractUWSTest
             log.error("unexcpected exception", unexpected);
             fail("unexcpected exception: " + unexpected);
         }
-        log.info("SyncTest.getTest completed.");
     }
 
     @Test
@@ -238,7 +240,6 @@ public class SyncTest extends AbstractUWSTest
             log.error("unexcpected exception", unexpected);
             fail("unexcpected exception: " + unexpected);
         }
-        log.info("SyncTest.postTest completed.");
     }
 
     protected void process(WebConversation conversation, WebRequest request,String expectedContentType)

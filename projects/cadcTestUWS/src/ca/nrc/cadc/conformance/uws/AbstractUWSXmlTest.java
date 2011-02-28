@@ -69,13 +69,13 @@
 
 package ca.nrc.cadc.conformance.uws;
 
+import ca.nrc.cadc.util.Log4jInit;
 import static org.junit.Assert.fail;
 
 import java.io.File;
-import java.io.FileReader;
 import java.io.IOException;
-import java.io.StringReader;
 import java.util.List;
+import org.apache.log4j.Level;
 
 import org.apache.log4j.Logger;
 import org.jdom.input.SAXBuilder;
@@ -90,7 +90,12 @@ import org.junit.Before;
 public abstract class AbstractUWSXmlTest extends AbstractUWSTest
 {
     protected static Logger log = Logger.getLogger(AbstractUWSXmlTest.class);
-    
+
+    static
+    {
+        Log4jInit.setLevel("ca.nrc.cadc", Level.INFO);
+    }
+
     protected List<File> testFileList;
    
     protected String xmlTestFilePrefix = null;
@@ -99,14 +104,7 @@ public abstract class AbstractUWSXmlTest extends AbstractUWSTest
     {
         super();
         this.xmlTestFilePrefix = xslTestFilePrefix;
-        setLoggingLevel(log);
     }
-    
-//    public AbstractUWSXmlTest()
-//    {
-//        super();
-//        setLoggingLevel(log);
-//    }
     
     @Before
     public void before()

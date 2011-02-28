@@ -69,6 +69,8 @@
 
 package ca.nrc.cadc.conformance.uws;
 
+import ca.nrc.cadc.util.Log4jInit;
+import org.apache.log4j.Level;
 import org.apache.log4j.Logger;
 import org.custommonkey.xmlunit.Diff;
 import org.custommonkey.xmlunit.XMLUnit;
@@ -82,10 +84,14 @@ public class SchemaTest extends AbstractUWSTest
 {
     private static Logger log = Logger.getLogger(SchemaTest.class);
 
+    static
+    {
+        Log4jInit.setLevel("ca.nrc.cadc", Level.INFO);
+    }
+
     public SchemaTest()
     {
         super();
-        setLoggingLevel(log);
     }
 
     @Test

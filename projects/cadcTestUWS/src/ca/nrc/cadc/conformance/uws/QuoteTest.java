@@ -70,6 +70,7 @@
 package ca.nrc.cadc.conformance.uws;
 
 import ca.nrc.cadc.date.DateUtil;
+import ca.nrc.cadc.util.Log4jInit;
 import com.meterware.httpunit.WebConversation;
 import com.meterware.httpunit.WebResponse;
 import java.util.Calendar;
@@ -85,12 +86,16 @@ public class QuoteTest extends AbstractUWSTest
 {
     private static Logger log = Logger.getLogger(QuoteTest.class);
 
+    static
+    {
+        Log4jInit.setLevel("ca.nrc.cadc", Level.INFO);
+    }
+
     private Date testStartDate;
 
     public QuoteTest()
     {
         super();
-        setLoggingLevel(log);
         Calendar cal = Calendar.getInstance();
         cal.setTimeZone(DateUtil.UTC);
         testStartDate = cal.getTime();

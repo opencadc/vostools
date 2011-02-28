@@ -90,14 +90,10 @@ import org.jdom.Element;
 import org.jdom.JDOMException;
 import org.jdom.Namespace;
 import org.jdom.input.SAXBuilder;
-import org.junit.Assert;
 import org.xml.sax.SAXException;
-
-import ca.nrc.cadc.util.Log4jInit;
 
 import com.meterware.httpunit.GetMethodWebRequest;
 import com.meterware.httpunit.HeadMethodWebRequest;
-import com.meterware.httpunit.HttpNotFoundException;
 import com.meterware.httpunit.PostMethodWebRequest;
 import com.meterware.httpunit.WebConversation;
 import com.meterware.httpunit.WebRequest;
@@ -107,20 +103,6 @@ import java.io.ByteArrayInputStream;
 public abstract class AbstractUWSTest
 {
     private static Logger log = Logger.getLogger(AbstractUWSTest.class);
-    {
-        level = Level.DEBUG;
-        setLoggingLevel(log);
-        Log4jInit.setLevel("ca", Level.DEBUG);
-    }
-
-    protected static final String[] LOGGING_STRING = new String[]
-    {
-        "ALL", "DEBUG", "ERROR", "FATAL", "INFO", "OFF", "TRACE", "WARN"
-    };
-    protected static final Level[] LOGGING_LEVEL = new Level[]
-    {
-        Level.ALL, Level.DEBUG, Level.ERROR, Level.FATAL, Level.INFO, Level.OFF, Level.TRACE, Level.WARN
-    };
 
     protected static final String UWS_SCHEMA_RESOURCE = "UWS-v1.0.xsd";
     protected static final String PARSER = "org.apache.xerces.parsers.SAXParser";
@@ -135,9 +117,6 @@ public abstract class AbstractUWSTest
 
     public AbstractUWSTest()
     {
-        // Set the logging level.
-        setLoggingLevel(log);
-
         // Base URL of the service to be tested.
         serviceUrl = System.getProperty("service.url");
         if (serviceUrl == null)
@@ -158,28 +137,6 @@ public abstract class AbstractUWSTest
         validatingParser.setFeature("http://apache.org/xml/features/validation/schema-full-checking", true);
         validatingParser.setProperty("http://apache.org/xml/properties/schema/external-schemaLocation",
                 "http://www.ivoa.net/xml/UWS/v1.0 " + serviceSchema);
-    }
-
-    protected void setLoggingLevel(Logger logger)
-    {
-        if (level == null)
-        {
-            String logLevel = System.getProperty("logging.level");
-            if (logLevel != null)
-            {
-                for (int i = 0; i < LOGGING_STRING.length; i++)
-                {
-                    if (logLevel.equalsIgnoreCase(LOGGING_STRING[i]))
-                    {
-                        level = LOGGING_LEVEL[i];
-                        break;
-                    }
-                }
-            }
-            if (level == null)
-                level = Level.INFO;
-        }
-        logger.setLevel(level);
     }
 
     protected Document buildDocument(String xml, boolean validate)
@@ -281,10 +238,6 @@ public abstract class AbstractUWSTest
         String path = locationUrl.getPath();
         String[] paths = path.split("/");
         String jobId = paths[paths.length - 1];
-        
-        // Check for sync jobs since the SyncServlet currently redirects to jobId/run.
-        if (jobId.equals("run"))
-            jobId = paths[paths.length - 2];
         
         log.debug("jobId: " + jobId);
         assertNotNull("jobId not found", jobId);
@@ -397,9 +350,9 @@ public abstract class AbstractUWSTest
      * Default Job deletion uses an HTTP POST request.
      */
     protected WebResponse deleteJob(WebConversation conversation, String jobId)
+        throws IOException, SAXException, JDOMException
     {
-        log.debug("Job deletion resource not available");
-        return null;
+        return deleteJobWithDeleteRequest(conversation, jobId);
     }
 
     /*

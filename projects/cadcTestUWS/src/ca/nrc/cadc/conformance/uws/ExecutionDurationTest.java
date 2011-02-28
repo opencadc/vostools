@@ -69,6 +69,7 @@
 
 package ca.nrc.cadc.conformance.uws;
 
+import ca.nrc.cadc.util.Log4jInit;
 import com.meterware.httpunit.PostMethodWebRequest;
 import com.meterware.httpunit.WebConversation;
 import com.meterware.httpunit.WebRequest;
@@ -84,12 +85,16 @@ public class ExecutionDurationTest extends AbstractUWSTest
 {
     private static Logger log = Logger.getLogger(ExecutionDurationTest.class);
 
+    static
+    {
+        Log4jInit.setLevel("ca.nrc.cadc", Level.INFO);
+    }
+
     private static final String EXECUTIONDURATION = "99999";
 
     public ExecutionDurationTest()
     {
         super();
-        setLoggingLevel(log);
     }
 
     /*

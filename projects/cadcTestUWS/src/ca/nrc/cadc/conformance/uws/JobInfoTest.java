@@ -69,12 +69,14 @@
 
 package ca.nrc.cadc.conformance.uws;
 
+import ca.nrc.cadc.util.Log4jInit;
 import java.io.StringWriter;
 import java.io.PrintWriter;
 import org.jdom.output.Format;
 import org.jdom.output.XMLOutputter;
 import com.meterware.httpunit.WebConversation;
 import com.meterware.httpunit.WebResponse;
+import org.apache.log4j.Level;
 import org.apache.log4j.Logger;
 import org.jdom.Document;
 import org.jdom.Element;
@@ -85,6 +87,7 @@ import static org.junit.Assert.*;
 
 /**
  * Test the /joblist and /joblist/jobid resources handling of POSTed XML into the JobInfo.
+ * This test is suitable for async job lists only.
  * 
  * @author pdowler
  */
@@ -92,10 +95,15 @@ public class JobInfoTest extends AbstractUWSTest
 {
     private static Logger log = Logger.getLogger(JobInfoTest.class);
 
+    static
+    {
+        Log4jInit.setLevel("ca.nrc.cadc", Level.INFO);
+    }
+    
     public JobInfoTest()
     {
         super();
-        setLoggingLevel(log);
+        
     }
 
     /**

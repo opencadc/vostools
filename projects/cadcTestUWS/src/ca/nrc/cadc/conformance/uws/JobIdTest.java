@@ -69,6 +69,7 @@
 
 package ca.nrc.cadc.conformance.uws;
 
+import ca.nrc.cadc.util.Log4jInit;
 import com.meterware.httpunit.WebConversation;
 import com.meterware.httpunit.WebResponse;
 import java.util.List;
@@ -84,10 +85,14 @@ public class JobIdTest extends AbstractUWSTest
 {
     private static Logger log = Logger.getLogger(JobIdTest.class);
 
+    static
+    {
+        Log4jInit.setLevel("ca.nrc.cadc", Level.INFO);
+    }
+
     public JobIdTest()
     {
         super();
-        setLoggingLevel(log);
     }
 
     @Test

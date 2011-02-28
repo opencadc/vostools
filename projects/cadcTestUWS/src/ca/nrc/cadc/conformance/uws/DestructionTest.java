@@ -70,12 +70,14 @@
 package ca.nrc.cadc.conformance.uws;
 
 import ca.nrc.cadc.date.DateUtil;
+import ca.nrc.cadc.util.Log4jInit;
 import com.meterware.httpunit.PostMethodWebRequest;
 import com.meterware.httpunit.WebConversation;
 import com.meterware.httpunit.WebRequest;
 import com.meterware.httpunit.WebResponse;
 import java.util.Calendar;
 import java.util.Date;
+import org.apache.log4j.Level;
 import org.apache.log4j.Logger;
 import org.jdom.Document;
 import org.jdom.Element;
@@ -86,17 +88,20 @@ public class DestructionTest extends AbstractUWSTest
 {
     private static Logger log = Logger.getLogger(DestructionTest.class);
 
+    static
+    {
+        Log4jInit.setLevel("ca.nrc.cadc", Level.INFO);
+    }
+
     // Destruction date passed to UWS service.
     private String destruction;
 
     public DestructionTest()
     {
         super();
-        setLoggingLevel(log);
         Calendar cal = Calendar.getInstance();
         cal.roll(Calendar.DATE, true);
         Date date = cal.getTime();
-//        destruction = DateUtil.toString(date, DateUtil.IVOA_DATE_FORMAT, DateUtil.LOCAL);
         destruction = DateUtil.toString(date, DateUtil.IVOA_DATE_FORMAT);
     }
 
