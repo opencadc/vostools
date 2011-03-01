@@ -69,18 +69,23 @@
 
 package ca.nrc.cadc.conformance.uws;
 
-import ca.nrc.cadc.date.DateUtil;
-import ca.nrc.cadc.util.Log4jInit;
-import com.meterware.httpunit.WebConversation;
-import com.meterware.httpunit.WebResponse;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertNotNull;
+import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.fail;
+
 import java.util.Calendar;
 import java.util.Date;
+
 import org.apache.log4j.Level;
 import org.apache.log4j.Logger;
-import org.jdom.Document;
-import org.jdom.Element;
 import org.junit.Test;
-import static org.junit.Assert.*;
+
+import ca.nrc.cadc.date.DateUtil;
+import ca.nrc.cadc.util.Log4jInit;
+
+import com.meterware.httpunit.WebConversation;
+import com.meterware.httpunit.WebResponse;
 
 public class QuoteTest extends AbstractUWSTest
 {
@@ -113,22 +118,21 @@ public class QuoteTest extends AbstractUWSTest
 
             // Get the quote resource.
             String resourceUrl = serviceUrl + "/" + jobId + "/quote";
-            WebResponse response = get(conversation, resourceUrl);
+            WebResponse response = get(conversation, resourceUrl, "text/plain");
 
-            // Create DOM document from XML.
-            log.debug("XML:\r\n" + response.getText());
-            Document document = buildDocument(response.getText(), false);
 
-            // Get the document root.
-            Element root = document.getRootElement();
-            assertNotNull("XML returned from GET of " + resourceUrl + " missing uws:quote element", root);
+            log.debug(Util.getResponseHeaders(response));
+            log.debug("Response.getText():\r\n" + response.getText());
 
-            // Get the Quote date.
-            String quote = root.getText();
-            log.debug("uws:quote: " + quote);
-            assertNotNull("XML returned from GET of " + resourceUrl + " missing uws:quote element", quote);
+            assertEquals("GET response Content-Type header to " + resourceUrl + " is incorrect",
+                    "text/plain", response.getContentType());
+
+            String quote = response.getText();
+
+            assertNotNull("Response quote should not be null.", quote);
 
             // Check Quote is after testStartDate.
+            @SuppressWarnings("deprecation")
             Date quoteDate = DateUtil.toDate(quote, DateUtil.IVOA_DATE_FORMAT);
             assertTrue("Quote date must be after startTime date", quoteDate.after(testStartDate));
 

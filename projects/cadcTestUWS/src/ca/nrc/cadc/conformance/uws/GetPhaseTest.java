@@ -135,7 +135,7 @@ public class GetPhaseTest extends AbstractUWSTest
     {
         // GET request to the phase resource.
         String resourceUrl = serviceUrl + "/" + jobId + "/phase";
-        WebResponse response = get(conversation, resourceUrl);
+        WebResponse response = get(conversation, resourceUrl, "text/plain");
 
         log.debug(Util.getResponseHeaders(response));
         log.debug("Response.getText():\r\n" + response.getText());

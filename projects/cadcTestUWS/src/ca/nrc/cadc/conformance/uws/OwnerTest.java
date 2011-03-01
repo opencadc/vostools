@@ -69,8 +69,6 @@
 
 package ca.nrc.cadc.conformance.uws;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.fail;
 
 import org.apache.log4j.Level;
@@ -79,32 +77,34 @@ import org.junit.Test;
 
 import ca.nrc.cadc.util.Log4jInit;
 
-import com.meterware.httpunit.PostMethodWebRequest;
 import com.meterware.httpunit.WebConversation;
-import com.meterware.httpunit.WebRequest;
 import com.meterware.httpunit.WebResponse;
 
-public class ExecutionDurationTest extends AbstractUWSTest
+/**
+ * Test owner of job.
+ * 
+ * @author zhangsa
+ *
+ */
+public class OwnerTest extends AbstractUWSTest
 {
-    private static Logger log = Logger.getLogger(ExecutionDurationTest.class);
+    private static Logger log = Logger.getLogger(OwnerTest.class);
 
     static
     {
         Log4jInit.setLevel("ca.nrc.cadc", Level.INFO);
     }
 
-    private static final String EXECUTIONDURATION = "99999";
-
-    public ExecutionDurationTest()
+    public OwnerTest()
     {
         super();
     }
 
-    /*
-     * Create a new Job, then update and verify the executionduration.
+    /**
+     * Create a new Job, then test the owner info from GET.
      */
     @Test
-    public void testExecutionDuration()
+    public void testOwner()
     {
         try
         {
@@ -112,46 +112,21 @@ public class ExecutionDurationTest extends AbstractUWSTest
             WebConversation conversation = new WebConversation();
             String jobId = createJob(conversation);
 
-            // POST request to the destruction resource.
-            String resourceUrl = serviceUrl + "/" + jobId + "/executionduration";
-            WebRequest postRequest = new PostMethodWebRequest(resourceUrl);
-            postRequest.setParameter("EXECUTIONDURATION", EXECUTIONDURATION);
-            postRequest.setHeaderField("Content-Type", "application/x-www-form-urlencoded");
-            WebResponse response = post(conversation, postRequest);
-
-            // Get the redirect.
-            String location = response.getHeaderField("Location");
-            log.debug("Location: " + location);
-            assertNotNull("POST response to " + resourceUrl + " location header not set", location);
-    //      assertEquals("POST response to " + resourceUrl + " location header incorrect", baseUrl + "/" + jobId, location);
-
-            // Follow the redirect.
-            response = get(conversation, location);
-
-            // Validate the XML against the schema.
-            log.debug("XML:\r\n" + response.getText());
-            buildDocument(response.getText(), true);
-
-            // Get the executionduration resouce for this jobId.
-            response = get(conversation, resourceUrl, "text/plain");
+            String resourceUrl = serviceUrl + "/" + jobId + "/owner";
+            WebResponse response = get(conversation, resourceUrl, "text/plain");
 
             log.debug(Util.getResponseHeaders(response));
             log.debug("Response.getText():\r\n" + response.getText());
 
-            assertEquals("GET response Content-Type header to " + resourceUrl + " is incorrect",
-                    "text/plain", response.getContentType());
-
-            assertEquals("response should return only Integer number of seconds.", EXECUTIONDURATION,
-                    response.getText());
-
             // Delete the job.
             deleteJob(conversation, jobId);
 
-            log.info("ExecutionDurationTest.testExecutionDuration completed.");
+            log.info("OwnerTest.testOwner completed.");
         }
         catch (Throwable t)
         {
             log.error(t);
+            t.printStackTrace();
             fail(t.getMessage());
         }
     }

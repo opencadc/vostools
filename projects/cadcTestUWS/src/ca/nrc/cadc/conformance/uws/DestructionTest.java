@@ -69,20 +69,24 @@
 
 package ca.nrc.cadc.conformance.uws;
 
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertNotNull;
+import static org.junit.Assert.fail;
+
+import java.util.Calendar;
+import java.util.Date;
+
+import org.apache.log4j.Level;
+import org.apache.log4j.Logger;
+import org.junit.Test;
+
 import ca.nrc.cadc.date.DateUtil;
 import ca.nrc.cadc.util.Log4jInit;
+
 import com.meterware.httpunit.PostMethodWebRequest;
 import com.meterware.httpunit.WebConversation;
 import com.meterware.httpunit.WebRequest;
 import com.meterware.httpunit.WebResponse;
-import java.util.Calendar;
-import java.util.Date;
-import org.apache.log4j.Level;
-import org.apache.log4j.Logger;
-import org.jdom.Document;
-import org.jdom.Element;
-import org.junit.Test;
-import static org.junit.Assert.*;
 
 public class DestructionTest extends AbstractUWSTest
 {
@@ -138,19 +142,14 @@ public class DestructionTest extends AbstractUWSTest
             buildDocument(response.getText(), true);
 
             // Get the destruction resource for this jobId.
-            response = get(conversation, resourceUrl);
+            response = get(conversation, resourceUrl, "text/plain");
 
-            // Create DOM document from XML.
-            log.debug("XML:\r\n" + response.getText());
-            Document document = buildDocument(response.getText(), false);
-
-            // Get the root of the document.
-            Element root = document.getRootElement();
-            assertNotNull("XML returned from GET of " + resourceUrl + " missing root element", root);
-
-            // Validate the dstruction time.
-            log.debug("uws:destruction: " + root.getText());
-            assertEquals("Destruction element not updated in XML returned from GET of " + resourceUrl, destruction, root.getText());
+            log.debug(Util.getResponseHeaders(response));
+            log.debug("Response.getText():\r\n" + response.getText());
+            assertEquals("GET response Content-Type header to " + resourceUrl + " is incorrect",
+                    "text/plain", response.getContentType());
+            assertEquals("response should return only a plain string.", destruction,
+                    response.getText());
 
             // Delete the job.
             deleteJob(conversation, jobId);

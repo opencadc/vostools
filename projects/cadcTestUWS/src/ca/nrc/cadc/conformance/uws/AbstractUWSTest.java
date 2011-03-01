@@ -90,6 +90,7 @@ import org.jdom.Element;
 import org.jdom.JDOMException;
 import org.jdom.Namespace;
 import org.jdom.input.SAXBuilder;
+import org.junit.Assert;
 import org.xml.sax.SAXException;
 
 import com.meterware.httpunit.GetMethodWebRequest;
@@ -317,8 +318,10 @@ public abstract class AbstractUWSTest
 
         log.debug(Util.getResponseHeaders(response));
 
-        log.debug("Response code: " + response.getResponseCode());
-        assertEquals("Non-200 GET response code to " + resourceUrl, 200, response.getResponseCode());
+        int rcode = response.getResponseCode();
+        log.debug("Response code: " + rcode);
+        if (rcode != 200 && rcode != 204)
+            Assert.fail(String.format("GET %s, Response code is expected to be 200 or 204, but %s", resourceUrl, rcode));
 
         log.debug("Content-Type: " + response.getContentType());
         assertEquals("GET response Content-Type header to " + resourceUrl + " is incorrect", expectedContentType, response.getContentType());
