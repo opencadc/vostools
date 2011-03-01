@@ -70,10 +70,10 @@
 
 package ca.nrc.cadc.uws.util;
 
-import java.io.BufferedInputStream;
-import java.io.FileInputStream;
+import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStream;
+import java.io.InputStreamReader;
 
 
 /**
@@ -144,7 +144,7 @@ public class StringUtil
      * @return the trimmed String
      * @see Character#isWhitespace
      */
-    public static String trimLeadingWhitespace(String str)
+    public static String trimLeadingWhitespaceX(String str)
     {
         if (str.length() == 0)
         {
@@ -167,7 +167,7 @@ public class StringUtil
      * @return the trimmed String
      * @see Character#isWhitespace
      */
-    public static String trimTrailingWhitespace(String str)
+    public static String trimTrailingWhitespaceX(String str)
     {
         if (str.length() == 0)
         {
@@ -184,7 +184,7 @@ public class StringUtil
         return buf.toString();
 	}
 
-    public static boolean contains(final String searchString, final String crit)
+    public static boolean containsX(final String searchString, final String crit)
     {
         if (hasLength(searchString) && hasLength(crit))
         {
@@ -194,7 +194,7 @@ public class StringUtil
         return false;
     }
 
-    public static boolean startsWith(final String searchString, final String crit)
+    public static boolean startsWithX(final String searchString, final String crit)
     {
         if (hasLength(searchString) && hasLength(crit))
         {
@@ -232,36 +232,31 @@ public class StringUtil
      * Read an input stream into a string.  The input cannot be of binary contents.
      * 
      * @param inputStream
+     * @param charsetName 
      * @return String
      * @throws IOException
      * @author zhangsa
      */
-    public static String readFromInputStream(InputStream inputStream) throws IOException
+    public static String readFromInputStream(InputStream inputStream, String charsetName) throws IOException
     {
-        StringBuilder sb = new StringBuilder();
-        BufferedInputStream bufIS = null;
+        StringBuffer sb = new StringBuffer();
+        BufferedReader buf = null;
         try
         {
-            bufIS = new BufferedInputStream(inputStream);
-            int numBytes;
-            byte[] buffer;
-            
-            do {
-                buffer = new byte[1024];
-                numBytes = bufIS.read(buffer);
-                
-                if (numBytes > 0)
-                {
-                    String str = new String(buffer, 0, numBytes);
-                    sb.append(str);
-                }
-            } while (numBytes > 0);
+            buf = new BufferedReader(new InputStreamReader(inputStream, charsetName));
+            String line = buf.readLine();
+            while(line != null)
+            {
+                sb.append(line);
+                sb.append("\n");
+                line = buf.readLine();
+            }
         }
         finally
         {
-            if (bufIS != null) try
+            if (buf != null) try
             {
-                bufIS.close();
+                buf.close();
             }
             catch (IOException ignored)
             {

@@ -70,14 +70,17 @@
 package ca.nrc.cadc.uws.util;
 
 
-import java.io.IOException;
-import java.io.InputStream;
-import java.io.StringBufferInputStream;
+import ca.nrc.cadc.util.Log4jInit;
+import java.io.ByteArrayInputStream;
+import java.io.ByteArrayOutputStream;
+import java.io.OutputStreamWriter;
 
-import junit.framework.Assert;
+import org.apache.log4j.Level;
+import org.apache.log4j.Logger;
 
 import org.junit.After;
 import org.junit.AfterClass;
+import org.junit.Assert;
 import org.junit.Before;
 import org.junit.BeforeClass;
 import org.junit.Test;
@@ -88,7 +91,13 @@ import org.junit.Test;
  */
 public class StringUtilTest
 {
+    private static Logger log = Logger.getLogger(StringUtilTest.class);
 
+    static
+    {
+        Log4jInit.setLevel("ca.nrc.cadc.uws", Level.INFO);
+    }
+    
     /**
      * @throws java.lang.Exception
      */
@@ -125,27 +134,23 @@ public class StringUtilTest
     public void testReadFromInputStream()
     {
         String src = "oaisufiosafu iaosufioiio iou ofias ifo";
-        String cr = "\n";
-        StringBuilder sb = new StringBuilder();
-        for (int i = 10000; i> 0; i--) 
-        {
-            sb.append(src).append(cr);
-        }
-        String srcString = sb.toString();
-        InputStream is = new StringBufferInputStream(srcString);
         
         try
         {
-            String rs = StringUtil.readFromInputStream(is);
-            Assert.assertEquals(srcString, rs);
+            ByteArrayOutputStream bos = new ByteArrayOutputStream();
+            OutputStreamWriter out = new OutputStreamWriter(bos, "UTF-8");
+            out.write(src);
+            out.close();
+
+            ByteArrayInputStream bis = new ByteArrayInputStream(bos.toByteArray());
+            String rs = StringUtil.readFromInputStream(bis, "UTF-8");
+
+            Assert.assertEquals(src, rs);
         }
-        catch (IOException e)
+        catch (Exception unexpected)
         {
-            // TODO Auto-generated catch block
-            e.printStackTrace();
+            log.error("unexpected exception", unexpected);
+            Assert.fail("unexpected exception: " + unexpected);
         }
-        
-        
-        
     }
 }

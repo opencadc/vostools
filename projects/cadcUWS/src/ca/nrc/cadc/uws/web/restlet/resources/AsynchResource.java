@@ -71,7 +71,6 @@ package ca.nrc.cadc.uws.web.restlet.resources;
 
 import ca.nrc.cadc.uws.Job;
 import ca.nrc.cadc.uws.JobInfo;
-import ca.nrc.cadc.uws.JobReader;
 import ca.nrc.cadc.uws.util.StringUtil;
 import ca.nrc.cadc.uws.web.restlet.JobAssembler;
 import ca.nrc.cadc.uws.web.WebRepresentationException;
@@ -82,8 +81,7 @@ import org.restlet.data.Form;
 import org.apache.log4j.Logger;
 
 import java.io.IOException;
-import java.io.StringBufferInputStream;
-import java.io.StringWriter;
+import java.io.StringReader;
 import java.text.ParseException;
 import java.net.MalformedURLException;
 import java.security.AccessControlException;
@@ -94,8 +92,6 @@ import javax.security.auth.Subject;
 import org.jdom.Document;
 import org.jdom.JDOMException;
 import org.jdom.input.SAXBuilder;
-import org.jdom.output.Format;
-import org.jdom.output.XMLOutputter;
 import org.restlet.data.MediaType;
 
 
@@ -149,17 +145,17 @@ public class AsynchResource extends UWSResource
         else if (entity.getMediaType().equals(MediaType.TEXT_XML))
         {
             // handles posted XML content
-
-            
             try
             {
-                String postedString = StringUtil.readFromInputStream(entity.getStream());
+                // TODO: check content-length and refuse if it exceeds some plausible limit?
+
+                String postedString = StringUtil.readFromInputStream(entity.getStream(), "UTF-8");
 
                 boolean validXmlFormat = true;
                 SAXBuilder builder = new SAXBuilder("org.apache.xerces.parsers.SAXParser", false);
                 try
                 {
-                    Document doc = builder.build(new StringBufferInputStream(postedString));
+                    Document doc = builder.build(new StringReader(postedString));
                 }
                 catch (JDOMException e)
                 {
@@ -177,44 +173,6 @@ public class AsynchResource extends UWSResource
                 throw new WebRepresentationException("Cannot read input stream from Representation!", e1);
             }
         }
-        
-        /*
-        if (contentType != null && contentType.equals(TEXT_XML))
-        {
-            // Check that the XML is valid.
-            SAXBuilder builder = new SAXBuilder("org.apache.xerces.parsers.SAXParser", false);
-            Document doc = builder.build(request.getInputStream());
-            StringWriter sw = new StringWriter();
-            XMLOutputter outputter = new XMLOutputter();
-            outputter.setFormat(Format.getCompactFormat());
-            outputter.output(doc.detachRootElement(), sw);
-            JobInfo jobInfo = new JobInfo(sw.toString(), TEXT_XML, true);
-            job.setJobInfo(jobInfo);
-            log.debug(jobInfo);
-        }
-         * 
-         */
-        
-        
-        
-        /*
-        // this is not legal UWS
-        else if (entity.getMediaType().equals(MediaType.APPLICATION_XML)
-                 || entity.getMediaType().equals(MediaType.TEXT_XML))
-        {
-            try
-            {
-                JobReader jobReader = new JobReader();
-                job = jobReader.read(entity.getText());
-                job.setOwner(subject);
-            }
-            catch (Exception e)
-            {
-                LOGGER.error("Unable to create Job! ", e);
-                throw new WebRepresentationException("Unable to create Job!", e);
-            }
-        }
-         */
         else
         {
             LOGGER.error("Unsupported POST request Content-Type: " + entity.getMediaType());
