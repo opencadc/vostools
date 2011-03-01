@@ -70,15 +70,25 @@
 
 package ca.nrc.cadc.uws.web.restlet.resources;
 
-import org.restlet.resource.Delete;
-import org.restlet.resource.Post;
-import org.restlet.representation.Representation;
-import org.apache.log4j.Logger;
-
 import java.io.IOException;
+import java.security.Principal;
+import java.text.DateFormat;
 import java.text.ParseException;
+import java.util.Date;
+import java.util.Set;
 
-import ca.nrc.cadc.uws.web.InvalidActionException;
+import javax.security.auth.Subject;
+
+import org.apache.log4j.Logger;
+import org.jdom.Document;
+import org.jdom.Element;
+import org.restlet.data.Form;
+import org.restlet.representation.Representation;
+import org.restlet.representation.StringRepresentation;
+import org.restlet.resource.Delete;
+import org.restlet.resource.Get;
+import org.restlet.resource.Post;
+
 import ca.nrc.cadc.date.DateUtil;
 import ca.nrc.cadc.uws.ExecutionPhase;
 import ca.nrc.cadc.uws.InvalidResourceException;
@@ -91,15 +101,7 @@ import ca.nrc.cadc.uws.Parameter;
 import ca.nrc.cadc.uws.UWS;
 import ca.nrc.cadc.uws.util.BeanUtil;
 import ca.nrc.cadc.uws.util.StringUtil;
-import java.security.Principal;
-
-import java.text.DateFormat;
-import java.util.Date;
-import java.util.Set;
-import javax.security.auth.Subject;
-import org.jdom.Document;
-import org.jdom.Element;
-import org.restlet.data.Form;
+import ca.nrc.cadc.uws.web.InvalidActionException;
 
 
 /**
@@ -118,6 +120,34 @@ public class JobAsynchResource extends BaseJobResource
     {
         super();
         this.dateFormat = DateUtil.getDateFormat(DateUtil.IVOA_DATE_FORMAT, DateUtil.UTC);
+    }
+
+    /**
+     * 
+     * @author zhangsa
+     */
+    @Get
+    @Override
+    public Representation represent()
+    {
+        StringRepresentation representation = null;
+        
+        final String pathInfo = getPathInfo();
+        if (pathInfo.endsWith("phase"))
+            representation = new StringRepresentation(job.getExecutionPhase().toString());
+        else if (pathInfo.endsWith("executionduration"))
+            representation = new StringRepresentation(Long.toString(job.getExecutionDuration()));
+        else if (pathInfo.endsWith("destruction"))
+            representation = new StringRepresentation(dateFormat.format(job.getDestructionTime()));
+        else if (pathInfo.endsWith("quote"))
+            representation = new StringRepresentation(dateFormat.format(job.getQuote()));
+        else if (pathInfo.endsWith("owner"))
+            representation = new StringRepresentation(format(job.getOwner()));
+        
+        if (representation != null)
+            return representation;
+        else
+            return super.represent();
     }
 
     @Delete
