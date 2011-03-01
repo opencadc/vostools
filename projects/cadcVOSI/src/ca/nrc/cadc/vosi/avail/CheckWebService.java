@@ -91,7 +91,7 @@ public class CheckWebService implements CheckResource
 {
     private static Logger log = Logger.getLogger(CheckWebService.class);
 
-    private String _url;
+    private String wsURL;
 
     private final String schemaResource = "VOSIAvailability-v1.0.xsd"; // local xsd file name
     private final String schemaNSKey = VOSI.AVAILABILITY_NS_URI;
@@ -101,7 +101,7 @@ public class CheckWebService implements CheckResource
      */
     public CheckWebService(String url)
     {
-        _url = url;
+        wsURL = url;
     }
 
     /* (non-Javadoc)
@@ -114,17 +114,20 @@ public class CheckWebService implements CheckResource
         String wgReturn = null;
         try
         {
-            WebGet webGet = new WebGet(_url);
+            WebGet webGet = new WebGet(wsURL);
             wgReturn = webGet.submit();
             checkReturnedXml(wgReturn);
+            log.info("test succeeded: " + wsURL);
         }
         catch (MalformedURLException e)
         {
-            throw new RuntimeException("test URL is malformed: " + _url, e);
+            log.warn("test failed: " + wsURL);
+            throw new RuntimeException("test URL is malformed: " + wsURL, e);
         }
         catch(IOException e)
         {
-            throw new CheckException("service not responding: " + _url, e);
+            log.warn("test failed: " + wsURL);
+            throw new CheckException("service not responding: " + wsURL, e);
         }
     }
 
@@ -152,7 +155,7 @@ public class CheckWebService implements CheckResource
 
             // TODO: is this is actually valid? is the content not constrained by the schema?
             if (textAvail == null)
-                throw new CheckException(_url + " output is invalid: no content in <available> element", null);
+                throw new CheckException(wsURL + " output is invalid: no content in <available> element", null);
 
             if ( !textAvail.equalsIgnoreCase("true") )
             {
@@ -160,17 +163,17 @@ public class CheckWebService implements CheckResource
                 xpath = XPath.newInstance(xpathStr);
                 Element eleNotes = (Element) xpath.selectSingleNode(doc);
                 String textNotes = eleNotes.getText();
-                throw new CheckException("service " + _url + " is not available, reported reason: " + textNotes, null);
+                throw new CheckException("service " + wsURL + " is not available, reported reason: " + textNotes, null);
             }
         }
         catch(IOException e)
         {
             // probably an incorrect setup or bug in the checks
-            throw new RuntimeException("failed to test " + _url, e);
+            throw new RuntimeException("failed to test " + wsURL, e);
         }
         catch(JDOMException e)
         {
-            throw new CheckException(_url + " output is invalid", e);
+            throw new CheckException(wsURL + " output is invalid", e);
         }
     }
 }

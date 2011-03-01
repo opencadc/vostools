@@ -38,10 +38,10 @@ public class CapabilitiesServlet extends HttpServlet
 	        String space = " ";
 	        String resourceName, paramValue, standardID, role;
 	        Capability capability;
-	        Enumeration<String> enumParam = this.getInitParameterNames();
+	        Enumeration enumParam = this.getInitParameterNames();
 	        while (enumParam.hasMoreElements())
 	        {
-	            resourceName = enumParam.nextElement();
+	            resourceName = (String) enumParam.nextElement();
 	            paramValue = this.getInitParameter(resourceName);
 	            standardID = Util.getStringPartBefore(paramValue, space);
 	            role = Util.getStringPartAfter(paramValue, space);

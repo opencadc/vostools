@@ -75,6 +75,7 @@ import org.jdom.Namespace;
 
 import ca.nrc.cadc.date.DateUtil;
 import ca.nrc.cadc.vosi.util.Util;
+import java.text.DateFormat;
 
 /**
  * @author zhangsa
@@ -101,20 +102,18 @@ public class Availability
 
     public Document toXmlDocument()
     {
+        DateFormat df = DateUtil.getDateFormat(DateUtil.IVOA_DATE_FORMAT, DateUtil.UTC);
         Namespace vosi = Namespace.getNamespace("vosi", VOSI.AVAILABILITY_NS_URI);
 
         Element eleAvailability = new Element("availability", vosi);
         
         Util.addChild(eleAvailability, vosi, "available", Boolean.toString(_status.isAvailable()));
         if (_status.getUpSince() != null)
-            Util.addChild(eleAvailability, vosi, "upSince", DateUtil.toString(_status.getUpSince(), DateUtil.IVOA_DATE_FORMAT,
-                    DateUtil.UTC));
+            Util.addChild(eleAvailability, vosi, "upSince", df.format(_status.getUpSince()));
         if (_status.getDownAt() != null)
-            Util.addChild(eleAvailability, vosi, "downAt", DateUtil
-                    .toString(_status.getDownAt(), DateUtil.IVOA_DATE_FORMAT, DateUtil.UTC));
+            Util.addChild(eleAvailability, vosi, "downAt", df.format(_status.getDownAt()));
         if (_status.getBackAt() != null)
-            Util.addChild(eleAvailability, vosi, "backAt", DateUtil
-                    .toString(_status.getBackAt(), DateUtil.IVOA_DATE_FORMAT, DateUtil.UTC));
+            Util.addChild(eleAvailability, vosi, "backAt", df.format(_status.getBackAt()));
         if (_status.getNote() != null)
             Util.addChild(eleAvailability, vosi, "note", _status.getNote());
 

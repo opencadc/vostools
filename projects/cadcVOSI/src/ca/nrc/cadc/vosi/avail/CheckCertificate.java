@@ -72,6 +72,7 @@ package ca.nrc.cadc.vosi.avail;
 import ca.nrc.cadc.auth.SSLUtil;
 import java.io.File;
 import javax.security.auth.Subject;
+import org.apache.log4j.Logger;
 
 /**
  * @author zhangsa
@@ -79,6 +80,8 @@ import javax.security.auth.Subject;
  */
 public class CheckCertificate implements CheckResource
 {
+    private static Logger log = Logger.getLogger(CheckCertificate.class);
+    
     private File cert;
     private File key;
 
@@ -87,8 +90,8 @@ public class CheckCertificate implements CheckResource
      * The test query should be something that always executes quickly and
      * returns a small result set, such as <code>select x from someTable limit 0</code>.
      *
-     * @param dataSource the DataSource to check
-     * @param testSQL test quiery that should work
+     * @param cert
+     * @param key
      */
     public CheckCertificate(File cert, File key)
     {
@@ -103,11 +106,11 @@ public class CheckCertificate implements CheckResource
         try
         {
             Subject s = SSLUtil.createSubject(cert, key);
-            // OK: certficate exists and is valid
-
+            log.info("test succeeded: " + cert.getAbsolutePath() + " " + key.getAbsolutePath());
         }
         catch(Throwable t)
         {
+            log.warn("test failed: " + cert.getAbsolutePath() + " " + key.getAbsolutePath());
             throw new CheckException("certificate check failed", t);
         }
     }

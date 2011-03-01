@@ -69,12 +69,16 @@
 
 package ca.nrc.cadc.vosi.avail;
 
-import java.sql.*;
+import java.sql.Connection;
+import java.sql.ResultSet;
+import java.sql.SQLException;
+import java.sql.Statement;
 import javax.naming.Context;
 import javax.naming.InitialContext;
 import javax.naming.NamingException;
+import javax.sql.DataSource;
 
-import javax.sql.*;
+import org.apache.log4j.Logger;
 
 /**
  * @author zhangsa
@@ -82,6 +86,8 @@ import javax.sql.*;
  */
 public class CheckDataSource implements CheckResource
 {
+    private static Logger log = Logger.getLogger(CheckDataSource.class);
+
     private String dataSourceName;
     private DataSource dataSource;
     private String testSQL;
@@ -133,13 +139,16 @@ public class CheckDataSource implements CheckResource
             st = con.createStatement();
             rs = st.executeQuery(testSQL);
             rs.next(); // just check the result set, but don't care if there are any rows
+            log.info("test succeeded: " + dataSourceName + " (" + testSQL + ")");
         }
         catch(NamingException e)
         {
+            log.warn("test failed: " + dataSourceName + " (" + testSQL + ")");
             throw new CheckException("failed to find " + dataSourceName + " via JNDI", e);
         }
         catch (SQLException e)
         {
+            log.warn("test failed: " + dataSourceName + " (" + testSQL + ")");
             throw new CheckException("DataSource is not usable", e);
         }
         finally
