@@ -94,7 +94,7 @@ public class DestructionTest extends AbstractUWSTest
 
     static
     {
-        Log4jInit.setLevel("ca.nrc.cadc", Level.INFO);
+        Log4jInit.setLevel("ca.nrc.cadc", Level.DEBUG);
     }
 
     // Destruction date passed to UWS service.
@@ -106,7 +106,11 @@ public class DestructionTest extends AbstractUWSTest
         Calendar cal = Calendar.getInstance();
         cal.roll(Calendar.DATE, true);
         Date date = cal.getTime();
+        
         destruction = DateUtil.toString(date, DateUtil.IVOA_DATE_FORMAT);
+        // round to seconds only. -sz
+        destruction = destruction.substring(0, 20) + "000";
+        
     }
 
     /**
@@ -148,8 +152,11 @@ public class DestructionTest extends AbstractUWSTest
             log.debug("Response.getText():\r\n" + response.getText());
             assertEquals("GET response Content-Type header to " + resourceUrl + " is incorrect",
                     "text/plain", response.getContentType());
-            assertEquals("response should return only a plain string.", destruction,
-                    response.getText());
+
+            Date oriDestr = DateUtil.toDate(destruction, DateUtil.IVOA_DATE_FORMAT);
+            Date rtnDestr = DateUtil.toDate(response.getText(), DateUtil.IVOA_DATE_FORMAT);
+            if ( rtnDestr.before(oriDestr))
+                fail(String.format("Returned destruction of [%s] must not be earlier than request destruction of [%s]", rtnDestr, oriDestr));
 
             // Delete the job.
             deleteJob(conversation, jobId);
