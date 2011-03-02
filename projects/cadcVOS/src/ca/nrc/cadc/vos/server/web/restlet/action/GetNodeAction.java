@@ -72,10 +72,14 @@ import java.io.IOException;
 import java.net.URISyntaxException;
 import java.security.AccessControlException;
 
-import ca.nrc.cadc.vos.*;
 import org.restlet.Request;
 import org.restlet.representation.Representation;
 
+import ca.nrc.cadc.vos.Node;
+import ca.nrc.cadc.vos.NodeParsingException;
+import ca.nrc.cadc.vos.NodeWriter;
+import ca.nrc.cadc.vos.Search;
+import ca.nrc.cadc.vos.VOSURI;
 import ca.nrc.cadc.vos.server.AbstractView;
 import ca.nrc.cadc.vos.server.NodePersistence;
 import ca.nrc.cadc.vos.server.SearchNode;

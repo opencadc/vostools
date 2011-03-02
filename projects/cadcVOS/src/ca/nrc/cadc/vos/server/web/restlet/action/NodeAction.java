@@ -73,11 +73,11 @@ import java.net.URISyntaxException;
 import java.security.AccessControlException;
 import java.security.PrivilegedAction;
 
-import ca.nrc.cadc.uws.util.StringUtil;
 import org.apache.log4j.Logger;
 import org.restlet.Request;
 import org.restlet.representation.Representation;
 
+import ca.nrc.cadc.uws.util.StringUtil;
 import ca.nrc.cadc.vos.ContainerNode;
 import ca.nrc.cadc.vos.Node;
 import ca.nrc.cadc.vos.NodeFault;
@@ -227,6 +227,9 @@ public abstract class NodeAction implements PrivilegedAction<Object>
                     "No view configured matching reference: " + viewReference);
         }
 
+        view.setNodePersistence(nodePersistence);
+        view.setVOSpaceAuthorizer(voSpaceAuthorizer);
+        
         return view;
     }
     

@@ -73,6 +73,7 @@ import java.io.IOException;
 import java.io.OutputStream;
 import java.net.URI;
 import java.net.URL;
+import java.text.DateFormat;
 import java.text.ParseException;
 import java.util.Date;
 import java.util.List;
@@ -87,7 +88,7 @@ import ca.nrc.cadc.vos.Node;
 import ca.nrc.cadc.vos.NodeProperty;
 import ca.nrc.cadc.vos.VOS;
 import ca.nrc.cadc.vos.View;
-import java.text.DateFormat;
+import ca.nrc.cadc.vos.server.auth.VOSpaceAuthorizer;
 
 /**
  * This abstract class defines the required behaviour of server side implementations
@@ -96,7 +97,9 @@ import java.text.DateFormat;
  * Generally, subclasses should implement setNode(Node, String) and either:
  * 
  * 1) For views that result in a redirect:
- *     - getRedirectURL() or, the set of:
+ *     - getRedirectURL()
+ *     
+ *     or, the set of:
  * 
  * 2) For views that result in data returned: 
  *     - write(OutputStream)
@@ -104,6 +107,11 @@ import java.text.DateFormat;
  *     - getMediaType()
  *     - getEncodings()
  *     - getContentMD5()
+ *     
+ * The VOSpaceAuthorizer and NodePersistence objects are available to view implementations.
+ * 
+ * Please note:  The node returned by getNode() has already gone through an authorization
+ * check using the VOSpaceAuthorizer.
  * 
  * @author majorb
  *
@@ -115,6 +123,12 @@ public abstract class AbstractView extends View
     
     // The node for which to create the view
     protected Node node;
+    
+    // The node authorizer available for use
+    protected VOSpaceAuthorizer voSpaceAuthorizer;
+    
+    // The node permisistence available for use
+    protected NodePersistence nodePersistence;
     
     /**
      * AbstractView constructor.
@@ -151,6 +165,25 @@ public abstract class AbstractView extends View
     protected Node getNode()
     {
         return node;
+    }
+    
+    /**
+     * Get the VOSpaceAuthorizer
+     * 
+     * Note: The node availabe in getNode() has already gone
+     * through an authorization check with this authorizer.
+     */
+    protected VOSpaceAuthorizer getVOSpaceAuthorizer()
+    {
+        return voSpaceAuthorizer;
+    }
+    
+    /**
+     * Get the NodePersistence
+     */
+    protected NodePersistence getNodePersistence()
+    {
+        return nodePersistence;
     }
     
     /**
@@ -239,6 +272,16 @@ public abstract class AbstractView extends View
             }
         }
         return null;
+    }
+
+    public void setVOSpaceAuthorizer(VOSpaceAuthorizer vospaceAuthorizer)
+    {
+        this.voSpaceAuthorizer = vospaceAuthorizer;
+    }
+
+    public void setNodePersistence(NodePersistence nodePersistence)
+    {
+        this.nodePersistence = nodePersistence;
     }
 
 }
