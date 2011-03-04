@@ -77,6 +77,8 @@ import java.security.AccessControlException;
 import java.security.AccessController;
 import java.security.Principal;
 import java.security.cert.CertificateException;
+import java.util.HashMap;
+import java.util.Map;
 import java.util.Set;
 
 import javax.net.ssl.SSLSocketFactory;
@@ -122,10 +124,14 @@ public class VOSpaceAuthorizer implements Authorizer
     private SSLSocketFactory socketFactory;
     private int subjectHashCode;
     
+    // cache of groupURI to isMember
+    private Map<String, Boolean> groupMembershipCache;
+    
     private NodePersistence nodePersistence;
 
     public VOSpaceAuthorizer()
     {
+        groupMembershipCache = new HashMap<String, Boolean>();
     }
 
     /**
@@ -239,6 +245,17 @@ public class VOSpaceAuthorizer implements Authorizer
     {
         try
         {
+            // check to see if we've cached the hasMembership result
+            // for this groupURI
+            if (groupMembershipCache.containsKey(groupURI))
+            {
+                boolean isMember = groupMembershipCache.get(groupURI);
+                LOG.debug(String.format(
+                        "Using cached groupMembership: Group: %s isMember: %s",
+                                groupURI, isMember));
+                return isMember;
+            }
+            
             // require identification for group membership
             if (subject.getPrincipals().size() <= 0)
             {
@@ -320,7 +337,15 @@ public class VOSpaceAuthorizer implements Authorizer
                 try
                 {
                     boolean isMember = gms.isMember(guri, x500Principal);
-                    LOG.debug("GmsClient.isMember(" + guri.getFragment() + "," + x500Principal.getName() + " returned " + isMember);
+                    LOG.debug("GmsClient.isMember(" + guri.getFragment() + ","
+                            + x500Principal.getName() + ") returned " + isMember);
+                    
+                    // cache this result for future queries
+                    LOG.debug(String.format(
+                            "Caching groupMembership: Group: %s isMember: %s",
+                                    groupURI, isMember));
+                    groupMembershipCache.put(groupURI, isMember);
+                    
                     if (isMember)
                         return true;
                 }
