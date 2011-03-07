@@ -513,7 +513,7 @@ public class JDownloadManager extends JPanel implements TransferListener
                 File dest = downloadManager.getDestinationDir();
                 if (dd.destination != null)
                     dest = new File(dest, dd.destination);
-                HttpDownload dl = new HttpDownload("userAgent", dd.url, dest);
+                HttpDownload dl = new HttpDownload(userAgent, dd.url, dest);
                 this.add(dd, dl);
             }
             else
