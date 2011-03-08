@@ -388,6 +388,7 @@ public class JobDAO
         sb.append("owner,");
         sb.append("runID,");
         sb.append("requestPath,");
+        sb.append("requesterIp,");
         sb.append("jobInfo_content,");
         sb.append("jobInfo_contentType,");
         sb.append("jobInfo_valid");
@@ -689,6 +690,16 @@ public class JobDAO
             sb.append("'");
         }
         sb.append(",");
+
+// * requester IP does not need to be updated. 2011-03-07, -sz
+//        
+//        sb.append("requesterIp = ");
+//        if (job.getRequesterIp() == null)
+//            sb.append("NULL");
+//        else
+//            sb.append("'").append(job.getRequesterIp()).append("'");
+//        sb.append(",");
+        
         if (job.getJobInfo() == null)
         {
             sb.append("jobInfo_content = NULL, ");
@@ -982,7 +993,10 @@ public class JobDAO
 
             // request path
             String requestPath = NetUtil.decode(rs.getString("requestPath"));
-            
+
+            // requester IP
+            String requesterIp = NetUtil.decode(rs.getString("requesterIp"));
+
             // JobInfo content
             String content = NetUtil.decode(rs.getString("jobInfo_content"));
             
@@ -1005,7 +1019,7 @@ public class JobDAO
             // Create the job
             Job job = new Job(jobID, executionPhase, executionDuration, destructionTime,
                               quote, startTime, endTime, errorSummary, owner, runID,
-                              null, jobInfo, requestPath);
+                              null, jobInfo, requestPath, requesterIp);
 
             return job;
         }

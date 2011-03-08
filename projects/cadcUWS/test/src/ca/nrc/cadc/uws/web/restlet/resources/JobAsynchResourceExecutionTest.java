@@ -109,7 +109,7 @@ public class JobAsynchResourceExecutionTest
         testJob =
                 new Job("88l", ExecutionPhase.QUEUED, 88l, cal.getTime(),
                         quoteCal.getTime(), cal.getTime(), cal.getTime(), null,
-                        null, "RUN_ID", results, parameters, null);
+                        null, "RUN_ID", results, parameters, null, null);
 
         testSubject = new JobAsynchResource()
         {
@@ -162,7 +162,7 @@ public class JobAsynchResourceExecutionTest
         testJob =
                 new Job("88l", ExecutionPhase.QUEUED, 88l, cal.getTime(),
                         quoteCal.getTime(), cal.getTime(), cal.getTime(), null,
-                        null, "RUN_ID", results, parameters, null);
+                        null, "RUN_ID", results, parameters, null, null);
 
         testSubject = new JobAsynchResource()
         {

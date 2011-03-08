@@ -25,6 +25,7 @@ create table uws.Job
     owner                   varchar,
     runID                   varchar,
     requestPath             varchar,
+    requesterIp				varchar,
     deletedByUser           integer         default 0,
     jobInfo_content         varchar,
     jobInfo_contentType     varchar,

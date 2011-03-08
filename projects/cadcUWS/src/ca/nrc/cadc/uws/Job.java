@@ -96,6 +96,7 @@ public class Job
     private List<Result> resultsList;
     private List<Parameter> parameterList;
     private String requestPath;
+    private String requesterIp;
     private JobInfo jobInfo;
 
 
@@ -130,6 +131,7 @@ public class Job
      * @param resultsList           The List of Results.
      * @param parameterList         The List of Parameters.
      * @param requestPath           The HTTP request path.
+     * @param requesterIp           The HTTP requester's IP address
      */
     public Job(final String jobID, final ExecutionPhase executionPhase,
                final long executionDuration, final Date destructionTime,
@@ -137,7 +139,7 @@ public class Job
                final ErrorSummary errorSummary, final Subject owner,
                final String runID, final List<Result> resultsList,
                final List<Parameter> parameterList,
-               final String requestPath)
+               final String requestPath, final String requesterIp)
     {
         this.jobID = jobID;
         this.executionPhase = executionPhase;
@@ -152,6 +154,7 @@ public class Job
         this.resultsList = resultsList;
         this.parameterList = parameterList;
         this.requestPath = requestPath;
+        this.requesterIp = requesterIp;
         this.jobInfo = null;
     }
 
@@ -170,6 +173,7 @@ public class Job
      * @param runID                 The specific running ID.
      * @param resultsList           The List of Results.
      * @param requestPath           The HTTP request path.
+     * @param requesterIp           The HTTP requester's IP address
      * @param jobInfo               Content that describes the Job.
      */
     public Job(final String jobID, final ExecutionPhase executionPhase,
@@ -177,7 +181,7 @@ public class Job
                final Date quote, final Date startTime, final Date endTime,
                final ErrorSummary errorSummary, final Subject owner,
                final String runID, final List<Result> resultsList,
-               final JobInfo jobInfo, final String requestPath)
+               final JobInfo jobInfo, final String requestPath, final String requesterIp)
     {
         this.jobID = jobID;
         this.executionPhase = executionPhase;
@@ -192,6 +196,7 @@ public class Job
         this.resultsList = resultsList;
         this.jobInfo = jobInfo;
         this.requestPath = requestPath;
+        this.requesterIp = requesterIp;
         this.parameterList = null;
     }
     /**
@@ -214,6 +219,7 @@ public class Job
         setParameterList(job.getParameterList());
         setOwner(job.getOwner());
         setRequestPath(job.getRequestPath());
+        setRequesterIp(job.getRequesterIp());
         setJobInfo(job.getJobInfo());
     }
 
@@ -223,7 +229,8 @@ public class Job
         return "Job [jobInfo=" + jobInfo + " destructionTime=" + destructionTime + ", endTime=" + endTime + ", errorSummary="
                 + errorSummary + ", executionDuration=" + executionDuration + ", executionPhase=" + executionPhase + ", jobID="
                 + jobID + ", owner=" + owner + ", parameterList=" + parameterList + ", quote=" + quote + ", requestPath="
-                + requestPath + ", resultsList=" + resultsList + ", runID=" + runID + ", startTime=" + startTime + "]";
+                + requestPath + ", requesterIp="
+                + requesterIp + ", resultsList=" + resultsList + ", runID=" + runID + ", startTime=" + startTime + "]";
     }
 
     public void setID(String jobID)
@@ -556,5 +563,21 @@ public class Job
     public void setJobInfo(final JobInfo jobInfo)
     {
         this.jobInfo = jobInfo;
+    }
+
+    /**
+     * @param requesterIp the requesterIp to set
+     */
+    public void setRequesterIp(String requesterIp)
+    {
+        this.requesterIp = requesterIp;
+    }
+
+    /**
+     * @return the requesterIp
+     */
+    public String getRequesterIp()
+    {
+        return requesterIp;
     }
 }

@@ -203,9 +203,10 @@ public class JobReader
         JobInfo jobInfo = parseJobInfo(doc);
 
         String requestPath = null; // not presented in XML text
+        String requesterIp = null; // not presented in XML text
 
         Job job = new Job(jobID, executionPhase, executionDuration, destructionTime, quote, startTime, 
-                          endTime, errorSummary, owner, runID, resultsList, parameterList, requestPath);
+                          endTime, errorSummary, owner, runID, resultsList, parameterList, requestPath, requesterIp);
         job.setJobInfo(jobInfo);
         
         return job;

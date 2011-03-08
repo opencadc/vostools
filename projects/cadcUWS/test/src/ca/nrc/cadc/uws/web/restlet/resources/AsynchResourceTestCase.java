@@ -142,7 +142,7 @@ public class AsynchResourceTestCase
         
         job = new Job("88l", ExecutionPhase.QUEUED, 88l, cal.getTime(),
                         quoteCal.getTime(), cal.getTime(), cal.getTime(), 
-                        errorSummary, null, "RUN_ID", results, parameters, null);
+                        errorSummary, null, "RUN_ID", results, parameters, null, null);
         job.setRequestPath("/async");
         asynchResource = new AsynchResource()
         {

@@ -22,6 +22,7 @@ create table uws_job
     owner                   varchar(512)    null,
     runID                   varchar(16)     null,
     requestPath             varchar(32)     null,
+    requesterIp				varchar(16)     null,
     deletedByUser           tinyint         default 0,
     jobInfo_content         text            null,
     jobInfo_contentType     varchar(64)     null,

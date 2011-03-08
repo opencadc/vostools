@@ -285,6 +285,17 @@ public abstract class UWSResource extends ServerResource
         }
         return path;
     }
+    
+    /**
+     * Return the IP address of the original HTTP requester.
+     * 
+     * @return String of requester IP
+     */
+    protected String getRequesterIp()
+    {
+        String ip = getRequest().getClientInfo().getAddress();
+        return ip;
+    }
 
     /**
      * Get a read-only subject object containing the principals found

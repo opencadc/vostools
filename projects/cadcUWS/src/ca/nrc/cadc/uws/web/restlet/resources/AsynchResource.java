@@ -180,6 +180,7 @@ public class AsynchResource extends UWSResource
         }
 
         job.setRequestPath(getRequestPath());
+        job.setRequesterIp(getRequesterIp());
         Job persistedJob = getJobManager().persist(job);
         redirectSeeOther(getHostPart() + getRequestPath() + "/" + persistedJob.getID());
     }
