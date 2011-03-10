@@ -197,8 +197,11 @@ public class HttpUpload extends HttpTransfer
                     // Check if the file size is greater than Integer.MAX_VALUE
                     if (localFile.length() > Integer.MAX_VALUE)
                     {
-                        throw new IllegalArgumentException("For uploading files with size greater than 2 Gb, you" +
-                                " must be running version 7 of Java or above.");
+                        // Cannot set the header length in the standard fashion, so
+                        // set it to chunked streaming mode and set a custom header
+                        // for use by servers that recognize this attribute
+                        conn.setChunkedStreamingMode(bufferSize);
+                        conn.setRequestProperty(CADC_CONTENT_LENGTH_HEADER, Long.toString(localFile.length()));
                     }
                     else
                     {
@@ -219,7 +222,9 @@ public class HttpUpload extends HttpTransfer
 
             // this seesm to fail, maybe not allowed with PUT
             //conn.setRequestProperty("User-Agent", userAgent);
-
+            
+            // Note: conn.setRequestProperty("Content-Length", value) has no effect.  Content
+            // length header is set by calling setFixedLengthStreamingMode() (done above)
             if (localFile != null)
                 conn.setRequestProperty("Content-Length", Long.toString(localFile.length()));
             if (contentType != null)

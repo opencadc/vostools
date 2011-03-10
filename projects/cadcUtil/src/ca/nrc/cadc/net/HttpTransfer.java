@@ -102,6 +102,7 @@ public abstract class HttpTransfer implements Runnable
 {
     private static Logger log = Logger.getLogger(HttpTransfer.class);
     public static String DEFAULT_USER_AGENT;
+    public static final String CADC_CONTENT_LENGTH_HEADER = "X-CADC-Content-Length";
 
     protected int bufferSize = 8192;
     protected OverwriteChooser overwriteChooser;
