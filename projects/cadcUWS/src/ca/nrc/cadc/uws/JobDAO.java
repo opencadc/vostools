@@ -504,6 +504,13 @@ public class JobDAO
             sb.append(job.getRequestPath());
             sb.append("'");
         }
+        
+        sb.append(",");
+        if (job.getRequesterIp() == null)
+            sb.append("NULL");
+        else
+            sb.append("'").append(job.getRequesterIp()).append("'");
+        
         sb.append(",");
         if (job.getJobInfo() == null)
             sb.append("NULL, NULL, NULL");
