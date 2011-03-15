@@ -75,6 +75,7 @@ import java.util.Date;
 import java.util.List;
 
 import org.restlet.data.Digest;
+import org.restlet.data.Disposition;
 import org.restlet.data.Encoding;
 import org.restlet.representation.OutputRepresentation;
 
@@ -119,6 +120,12 @@ public class ViewRepresentation extends OutputRepresentation
     public long getAvailableSize()
     {
         return view.getContentLength();
+    }
+    
+    @Override
+    public Disposition getDisposition()
+    {
+        return view.getDisposition();
     }
     
     /**

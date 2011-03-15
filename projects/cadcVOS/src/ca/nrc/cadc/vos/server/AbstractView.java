@@ -80,6 +80,7 @@ import java.util.List;
 
 import org.apache.log4j.Logger;
 import org.restlet.Request;
+import org.restlet.data.Disposition;
 import org.restlet.data.Encoding;
 import org.restlet.data.MediaType;
 
@@ -232,6 +233,14 @@ public abstract class AbstractView extends View
      * Return the content type of the data for the view.
      */
     public MediaType getMediaType()
+    {
+        return null;
+    }
+    
+    /**
+     * Return the content disposition of the data for the view.
+     */
+    public Disposition getDisposition()
     {
         return null;
     }
