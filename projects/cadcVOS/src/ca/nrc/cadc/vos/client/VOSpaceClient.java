@@ -170,7 +170,7 @@ public class VOSpaceClient
 
         try
         {
-            URL url = new URL(this.baseUrl + "/nodes/" + node.getPath());
+            URL url = new URL(this.baseUrl + "/nodes/" + node.getUri().getPath());
             log.debug("createNode(), URL=" + url);
             HttpURLConnection connection = (HttpURLConnection) url.openConnection();
             if (connection instanceof HttpsURLConnection)
@@ -363,7 +363,7 @@ public class VOSpaceClient
         Node rtnNode = null;
         try
         {
-            URL url = new URL(this.baseUrl + "/nodes/" + node.getPath());
+            URL url = new URL(this.baseUrl + "/nodes/" + node.getUri().getPath());
             log.debug("setNode: " + node);
             HttpURLConnection connection = (HttpURLConnection) url.openConnection();
             if (connection instanceof HttpsURLConnection)
@@ -648,12 +648,13 @@ public class VOSpaceClient
             TransferWriter writer = new TransferWriter();
             StringWriter sw = new StringWriter();
             writer.write(transfer, sw);
-            String strJobUrl = postJob(this.baseUrl + VOSPACE_SYNC_TRANSFER_ENDPOINT, sw.toString());
-            log.debug("Job URL is: " + strJobUrl);
+            log.debug("POST: " + sw.toString());
+            String transStr = postJob(this.baseUrl + VOSPACE_SYNC_TRANSFER_ENDPOINT, sw.toString());
+            log.debug("sync transfer url: " + transStr);
+            URL transURL = new URL(transStr);
             
-            // GET the redirect, which runs the Job and returns the Job XML.
-            URL jobUrl = new URL(strJobUrl);
-            HttpURLConnection conn = (HttpURLConnection) jobUrl.openConnection();
+            TransferReader txfReader = new TransferReader(schemaValidation);
+            HttpURLConnection conn = (HttpURLConnection) transURL.openConnection();
             if (conn instanceof HttpsURLConnection)
             {
                 HttpsURLConnection sslConn = (HttpsURLConnection) conn;
@@ -661,36 +662,13 @@ public class VOSpaceClient
             }
             int code = conn.getResponseCode();
             if (code != 200)
-                throw new RuntimeException("failed to read transfer job (" + code + "): " + conn.getResponseMessage());
+                throw new RuntimeException("failed to read transfer description (" + code + "): " + conn.getResponseMessage());
+
+            // TODO: handle errors by parsing url, getting job and looking at phase/error summary
+
+            rtn = txfReader.read(conn.getInputStream());
+            log.debug(rtn.toXmlString());
             
-            Job job = new JobReader(schemaValidation).read(conn.getInputStream());
-            log.debug("current job state: " + job.getExecutionPhase());
-            log.debug(VOSClientUtil.xmlString(job));
-
-            if (job != null && job.getExecutionPhase().equals(ExecutionPhase.COMPLETED))
-            {
-                String strResultUrl = job.getResultsList().get(0).getURL().toString();
-                log.debug("Result URL: " + strResultUrl);
-
-                URL urlTransferDetail = new URL(strResultUrl);
-                TransferReader txfReader = new TransferReader(schemaValidation);
-                conn = (HttpURLConnection) urlTransferDetail.openConnection();
-                if (conn instanceof HttpsURLConnection)
-                {
-                    HttpsURLConnection sslConn = (HttpsURLConnection) conn;
-                    initHTTPS(sslConn);
-                }
-                code = conn.getResponseCode();
-                if (code != 200)
-                    throw new RuntimeException("failed to read transfer description (" + code + "): " + conn.getResponseMessage());
-                rtn = txfReader.read(conn.getInputStream());
-                log.debug(rtn.toXmlString());
-            }
-            else if (job != null && job.getExecutionPhase().equals(ExecutionPhase.ERROR))
-            {
-                log.error(job.toString());
-                throw new RuntimeException("ERROR returned from server: " + job.getErrorSummary().getSummaryMessage());
-            }
         }
         catch (MalformedURLException e)
         {
@@ -702,6 +680,7 @@ public class VOSpaceClient
             log.debug("failed to create transfer", e);
             throw new RuntimeException(e);
         }
+        /*
         catch (JDOMException e) // from JobReader
         {
             log.debug("got bad job XML from service", e);
@@ -712,6 +691,7 @@ public class VOSpaceClient
             log.debug("got bad job XML from service", e);
             throw new RuntimeException(e);
         }
+        */
         catch (TransferParsingException e)
         {
             log.debug("got invalid XML from service", e);
