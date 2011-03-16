@@ -84,6 +84,8 @@
     <!-- developer convenience: place for extra targets and properties -->
     <import file="extras.xml" optional="true" />
 
+    <property file="local.build.properties" />
+
     <property name="project" value="cadcVOS" />
 
     <property name="cadcUtil" value="${lib}/cadcUtil.jar" />

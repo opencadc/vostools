@@ -201,6 +201,10 @@ public class TransferReader
     {
         Transfer.Direction rtn = null;
         String strDirection = root.getChildText("direction", VOS.NS);
+        
+        if (strDirection == null)
+            throw new RuntimeException("Did not find direction element in XML.");
+        
         if (strDirection.equalsIgnoreCase(Transfer.Direction.pullFromVoSpace.toString()))
             rtn = Transfer.Direction.pullFromVoSpace;
         else if (strDirection.equalsIgnoreCase(Transfer.Direction.pullToVoSpace.toString()))
