@@ -131,9 +131,13 @@ public class NodeResource extends BaseResource
                 throw new IllegalArgumentException(
                         "No node path information provided.");
             }
-            
-            vosURI = new VOSURI(getVosUriPrefix() + "/" + path);
-            
+            // HACK: on GET there is no / but on POST there is a /... what the ?
+            if (path.charAt(0) == '/')
+                vosURI = new VOSURI(getVosUriPrefix() + path);
+            else
+                vosURI = new VOSURI(getVosUriPrefix() + "/" + path);
+                
+            LOGGER.debug("vosURI = " + vosURI);
             Form form = getRequest().getResourceRef().getQueryAsForm();
             viewReference = form.getFirstValue("view");
             LOGGER.debug("viewReference = " + viewReference);
