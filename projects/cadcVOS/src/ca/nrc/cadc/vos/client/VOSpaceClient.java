@@ -358,7 +358,7 @@ public class VOSpaceClient
         Node rtnNode = null;
         try
         {
-            URL url = new URL(this.baseUrl + "/nodes/" + node.getUri().getPath());
+            URL url = new URL(this.baseUrl + "/nodes" + node.getUri().getPath());
             log.debug("setNode: " + node);
             HttpURLConnection connection = (HttpURLConnection) url.openConnection();
             if (connection instanceof HttpsURLConnection)
