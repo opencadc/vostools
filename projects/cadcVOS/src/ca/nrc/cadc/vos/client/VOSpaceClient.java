@@ -69,24 +69,28 @@
 
 package ca.nrc.cadc.vos.client;
 
-import ca.nrc.cadc.auth.SSLUtil;
 import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.io.OutputStream;
 import java.io.OutputStreamWriter;
+import java.io.StringWriter;
 import java.net.HttpURLConnection;
 import java.net.MalformedURLException;
 import java.net.URL;
+import java.security.AccessControlContext;
+import java.security.AccessControlException;
+import java.security.AccessController;
 import java.util.List;
 
-import org.apache.log4j.Logger;
-import org.jdom.JDOMException;
+import javax.net.ssl.HttpsURLConnection;
+import javax.net.ssl.SSLSocketFactory;
+import javax.security.auth.Subject;
 
-import ca.nrc.cadc.uws.ExecutionPhase;
-import ca.nrc.cadc.uws.Job;
-import ca.nrc.cadc.uws.JobReader;
+import org.apache.log4j.Logger;
+
+import ca.nrc.cadc.auth.SSLUtil;
 import ca.nrc.cadc.vos.Node;
 import ca.nrc.cadc.vos.NodeNotFoundException;
 import ca.nrc.cadc.vos.NodeParsingException;
@@ -101,15 +105,6 @@ import ca.nrc.cadc.vos.TransferParsingException;
 import ca.nrc.cadc.vos.TransferReader;
 import ca.nrc.cadc.vos.TransferWriter;
 import ca.nrc.cadc.vos.View;
-import java.io.StringReader;
-import java.io.StringWriter;
-import java.security.AccessControlContext;
-import java.security.AccessControlException;
-import java.security.AccessController;
-import java.text.ParseException;
-import javax.net.ssl.HttpsURLConnection;
-import javax.net.ssl.SSLSocketFactory;
-import javax.security.auth.Subject;
 
 /**
  * @author zhangsa
@@ -170,7 +165,7 @@ public class VOSpaceClient
 
         try
         {
-            URL url = new URL(this.baseUrl + "/nodes/" + node.getUri().getPath());
+            URL url = new URL(this.baseUrl + "/nodes" + node.getUri().getPath());
             log.debug("createNode(), URL=" + url);
             HttpURLConnection connection = (HttpURLConnection) url.openConnection();
             if (connection instanceof HttpsURLConnection)
