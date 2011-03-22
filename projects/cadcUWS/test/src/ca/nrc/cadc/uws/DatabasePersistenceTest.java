@@ -70,165 +70,128 @@
 package ca.nrc.cadc.uws;
 
 import ca.nrc.cadc.util.HexUtil;
+import ca.nrc.cadc.util.Log4jInit;
 import java.net.InetAddress;
-import java.net.UnknownHostException;
-import java.security.SecureRandom;
-import java.util.Collection;
+import java.util.HashSet;
 import java.util.List;
-
+import java.util.Set;
 import javax.sql.DataSource;
+import org.apache.log4j.Level;
+import org.apache.log4j.Logger;
+import org.junit.Assert;
+import org.junit.Test;
 
 /**
- * Class to provide database persistence of jobs through the use
- * of the JobDAO.
+ * Test the ID unique generation if the DatabasePersistence base class.
  * 
- * A new JobDAO object is instantiated upon each request to ensure
- * its thread safety.
- * 
- * @author majorb
- *
+ * @author pdowler
  */
-public abstract class DatabasePersistence implements JobPersistence
+public class DatabasePersistenceTest 
 {
-    // generate a random modest-length lower case string
-    private static final int ID_LENGTH = 16;
-    private static final String ID_CHARS = "abcdefghijklmnopqrstuvwxyz0123456789";
-    
-    // shared random number generator for jobID generation
-    private SecureRandom rnd;
+    private static Logger log = Logger.getLogger(DatabasePersistenceTest.class);
 
-    /**
-     * DatabasePersistence constructor.
-     */
-    public DatabasePersistence()
+    static
     {
-        // add extra seed info: clock
-        byte[] clock = HexUtil.toBytes(System.currentTimeMillis());
-        byte[] addr = null;
+        Log4jInit.setLevel("ca.nrc.cadc.uws", Level.INFO);
+    }
+
+    byte[] clock;
+    byte[] addr;
+
+    public DatabasePersistenceTest()
+        throws Exception
+    {
+        this.clock = HexUtil.toBytes(System.currentTimeMillis());
+        this.addr = InetAddress.getLocalHost().getAddress();
+    }
+
+    @Test
+    public void testGenerateID_NoSeed()
+    {
         try
         {
-            // add extra seed info: ip address
-            InetAddress inet = InetAddress.getLocalHost();
-            if ( !inet.isLoopbackAddress() )
-                addr = inet.getAddress();
+            DatabasePersistence dp1 = new MyDatabasePersistence();
+            dp1.initRNG(null, null);
+            DatabasePersistence dp2 = new MyDatabasePersistence();
+            dp2.initRNG(null, null);
+
+            Set<String> ids = new HashSet<String>();
+            for (int i=0; i<1000; i++)
+            {
+                ids.add(dp1.generateID());
+                ids.add(dp2.generateID());
+            }
+            log.debug("testGenerateID_NoSeed: generated " + ids.size() + " unique ID strings");
+            Assert.assertEquals(2000, ids.size());
         }
-        catch(UnknownHostException ignore) { }
-        initRNG(clock, addr);
-    }
-
-    // package access for test code
-    void initRNG(byte[] clock, byte[] addr)
-    {
-        this.rnd = new SecureRandom();
-        if (clock != null)
-            rnd.setSeed(clock);
-        if (addr != null)
-            rnd.setSeed(addr);
-    }
-    
-    /**
-     * Create a new JobDAO and set the appropriate resources.
-     * 
-     * TODO:  Refactor the relationship between DatabasePersistence
-     *        and JobDAO so that there isn't a circular dependency
-     *        (jobDAO.setDatabasePersistence(this))
-     * 
-     * @return A new JobDAO
-     */
-    private JobDAO createJobDAO()
-    {
-        JobDAO jobDAO = new JobDAO();
-        jobDAO.setDataSource(this.getDataSource());
-        jobDAO.setDatabasePersistence(this);
-        return jobDAO;
-    }
-
-    /**
-     * Delete the job.
-     */
-    @Override
-    public void delete(String jobID)
-    {
-        JobDAO jobDAO = createJobDAO();
-        jobDAO.delete(jobID);
-    }
-
-    /**
-     * Get the job.
-     */
-    @Override
-    public Job getJob(String jobID)
-    {
-        JobDAO jobDAO = createJobDAO();
-        return jobDAO.getJob(jobID);
-    }
-
-    /**
-     * Get all the jobs.
-     */
-    @Override
-    public Collection<Job> getJobs()
-    {
-        JobDAO jobDAO = createJobDAO();
-        return jobDAO.getJobs();
-    }
-
-    /**
-     * Save the job.
-     */
-    @Override
-    public Job persist(Job job)
-    {
-        JobDAO jobDAO = createJobDAO();
-        return jobDAO.persist(job);
-    }
-
-    // package access for use by JobDAO
-    String generateID()
-    {
-        synchronized(rnd)
+        catch(Exception unexpected)
         {
-            char[] c = new char[ID_LENGTH];
-            c[0] = ID_CHARS.charAt(rnd.nextInt(ID_CHARS.length() - 10)); // letters only
-            for (int i=1; i<ID_LENGTH; i++)
-                c[i] = ID_CHARS.charAt(rnd.nextInt(ID_CHARS.length()));
-            return new String(c);
+            log.error("unexpected exception", unexpected);
+            Assert.fail("unexpected exception: " + unexpected);
         }
     }
-    
-    /**
-     * Returns the name of the Job table.
-     *
-     * @return job table name.
-     */
-    protected abstract String getJobTable();
 
-    /**
-     * Returns the name of the Parameter table for the given Parameter name.
-     *
-     * @param name Parameter name.
-     * @return Parameter table name for this Parameter name.
-     */
-    protected abstract String getParameterTable(String name);
+    @Test
+    public void testGenerateID_SameSeed()
+    {
+        try
+        {
+            DatabasePersistence dp1 = new MyDatabasePersistence();
+            dp1.initRNG(clock, addr);
+            DatabasePersistence dp2 = new MyDatabasePersistence();
+            dp2.initRNG(clock, addr);
 
-    /**
-     * Returns the name of the Result table.
-     * 
-     * @return Result table name.
-     */
-    protected abstract String getResultTable();
+            Set<String> ids = new HashSet<String>();
+            for (int i=0; i<1000; i++)
+            {
+                ids.add(dp1.generateID());
+                ids.add(dp2.generateID());
+            }
+            log.debug("testGenerateID_SameSeed: generated " + ids.size() + " unique ID strings");
+            Assert.assertEquals(2000, ids.size());
+        }
+        catch(Exception unexpected)
+        {
+            log.error("unexpected exception", unexpected);
+            Assert.fail("unexpected exception: " + unexpected);
+        }
+    }
 
-    /**
-     * Returns a List containing the names of all Parameter tables.
-     *
-     * @return List of Parameter table names.
-     */
-    protected abstract List<String> getParameterTables();
-    
-    /**
-     * Returns the datasource to be used.
-     * @return
-     */
-    protected abstract DataSource getDataSource();
 
+    private class MyDatabasePersistence extends DatabasePersistence
+    {
+        public MyDatabasePersistence() { } // do not init
+
+        @Override
+        protected DataSource getDataSource()
+        {
+            throw new UnsupportedOperationException("Not supported yet.");
+        }
+
+        @Override
+        protected String getJobTable()
+        {
+            throw new UnsupportedOperationException("Not supported yet.");
+        }
+
+        @Override
+        protected String getParameterTable(String name)
+        {
+            throw new UnsupportedOperationException("Not supported yet.");
+        }
+
+        @Override
+        protected List<String> getParameterTables()
+        {
+            throw new UnsupportedOperationException("Not supported yet.");
+        }
+
+        @Override
+        protected String getResultTable()
+        {
+            throw new UnsupportedOperationException("Not supported yet.");
+        }
+
+
+    }
 }

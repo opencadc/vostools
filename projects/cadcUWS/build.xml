@@ -127,6 +127,7 @@
             
             <test name="ca.nrc.cadc.uws.web.CADCUWSTestSuite" />
             <test name="ca.nrc.cadc.uws.JobReaderWriterTest" />
+            <test name="ca.nrc.cadc.uws.DatabasePersistenceTest" />
             <formatter type="plain" usefile="false" />
         </junit>
     </target>
