@@ -70,10 +70,10 @@
 
 package ca.nrc.cadc.uws;
 
-import java.util.Date;
 import java.util.ArrayList;
-import java.util.List;
 import java.util.Collections;
+import java.util.Date;
+import java.util.List;
 
 import javax.security.auth.Subject;
 
