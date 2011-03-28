@@ -300,18 +300,4 @@ public class StringUtil
         
         return tokens.toArray(new String[tokens.size()]);
     }
-    
-    
-    public static void main(final String[] args)
-    {
-        String toParse = "ab 'c' d\\ e \\'f 'g h' 'i j''k' 'l m'\\'n";
-        System.out.println("String to parse: " + toParse);
-        String[] tokens = parseCmdLineStr(toParse);
-        System.out.println("Expected tokens: 7" + ", actual: " + tokens.length);
-        String[] expected = {"ab", "c", "d e", "'f", "g h", "i jk", "l m'n"};
-        for( int i=0; i<tokens.length; i++ )
-        {
-            System.out.println("Expected: " + expected[i] + ", actual: " + tokens[i]);
-        }
-    }
 }

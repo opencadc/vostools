@@ -98,31 +98,48 @@ public class DBUtil
      * @param config
      * @param test test the datasource before returnign it (might throw)
      * @return a connected single connection DataSource
-     * @throws ClassNotFoundException
+     */
+    public static DataSource getDataSource(ConnectionConfig config)
+    {
+        return getDataSource(config, false);
+    }
+    
+    /**
+     * Create a DataSource with a single connection to the server.
+     *
+     * @param config
+     * @param test test the datasource before returnign it (might throw)
+     * @return a connected single connection DataSource
      */
     public static DataSource getDataSource(ConnectionConfig config, boolean test)
-        throws ClassNotFoundException
     {
-        log.debug("server: " + config.getServer());
-        log.debug("driver: " + config.getDriver());
-        log.debug("url: " + config.getURL());
-        log.debug("database: " + config.getDatabase());
+        try
+        {
+            log.debug("server: " + config.getServer());
+            log.debug("driver: " + config.getDriver());
+            log.debug("url: " + config.getURL());
+            log.debug("database: " + config.getDatabase());
 
-        // load JDBC driver
-        Class.forName(config.getDriver());
+            // load JDBC driver
+            Class.forName(config.getDriver());
 
-        SingleConnectionDataSource ds = new SingleConnectionDataSource(config.getURL(),
-                config.getUsername(), config.getPassword(), false);
+            SingleConnectionDataSource ds = new SingleConnectionDataSource(config.getURL(),
+                    config.getUsername(), config.getPassword(), false);
 
-        Properties props = new Properties();
-        props.setProperty("APPLICATIONNAME", getMainClass());
-        ds.setConnectionProperties(props);
-        ds.setSuppressClose(test); // only need to suppress it if we test
+            Properties props = new Properties();
+            props.setProperty("APPLICATIONNAME", getMainClass());
+            ds.setConnectionProperties(props);
+            ds.setSuppressClose(test); // only need to suppress it if we test
 
-        if (test)
-            testDS(ds);
-        
-        return ds;
+            if (test)
+                testDS(ds);
+
+            return ds;
+        }
+        catch(ClassNotFoundException ex)
+        {
+            throw new RuntimeException("failed to load JDBC driver: " + config.getDriver(), ex);
+        }
 
     }
 

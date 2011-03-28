@@ -83,7 +83,6 @@ import java.util.Iterator;
 import java.util.ListIterator;
 import java.util.NoSuchElementException;
 import java.util.StringTokenizer;
-/*</Imports>*/
 
 /**
  * Reads username/password pairs and (optionally) JDBC driver and connection URL data
@@ -97,8 +96,7 @@ import java.util.StringTokenizer;
  * $server * $username $password $driver $url
  * </pre>
  *
- * @version $Revision: 310 $
- * @author $Author: jenkinsd $
+ * @author pdowler
  */
 public class DBConfig implements Serializable
 {
@@ -124,6 +122,7 @@ public class DBConfig implements Serializable
 	/**
 	 * Create a DBConfig object from the specified file.
      *
+     * @param dbrc
      * @throws FileNotFoundException if the .dbrc file cannot be found
      * @throws IOException if the .dbrc file cannot be read
 	 */
@@ -341,6 +340,3 @@ public class DBConfig implements Serializable
 		}
 	}
 }
-
-// end of DBConfig.java
-
