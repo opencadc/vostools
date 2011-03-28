@@ -93,25 +93,28 @@ public class DBUtil
     private static Logger log = Logger.getLogger(DBUtil.class);
 
     /**
-     * Create a DataSource with a single connection to the server.
+     * Create a DataSource with a single connection to the server. The DataSource
+     * is tested before return. All failures are thrown as RuntimeException
+     * with a Throwable (cause).
      *
      * @param config
-     * @param test test the datasource before returnign it (might throw)
      * @return a connected single connection DataSource
      */
     public static DataSource getDataSource(ConnectionConfig config)
     {
-        return getDataSource(config, false);
+        return getDataSource(config, false, true);
     }
     
     /**
-     * Create a DataSource with a single connection to the server.
+     * Create a DataSource with a single connection to the server.  All failures
+     * are thrown as RuntimeException with a Throwable (cause).
      *
      * @param config
-     * @param test test the datasource before returnign it (might throw)
+     * @param suppressClose suppress close calls on the underlying Connection
+     * @param test test the datasource before return (might throw)
      * @return a connected single connection DataSource
      */
-    public static DataSource getDataSource(ConnectionConfig config, boolean test)
+    public static DataSource getDataSource(ConnectionConfig config, boolean suppressClose, boolean test)
     {
         try
         {
@@ -124,15 +127,14 @@ public class DBUtil
             Class.forName(config.getDriver());
 
             SingleConnectionDataSource ds = new SingleConnectionDataSource(config.getURL(),
-                    config.getUsername(), config.getPassword(), false);
+                    config.getUsername(), config.getPassword(), suppressClose);
 
             Properties props = new Properties();
             props.setProperty("APPLICATIONNAME", getMainClass());
             ds.setConnectionProperties(props);
-            ds.setSuppressClose(test); // only need to suppress it if we test
 
             if (test)
-                testDS(ds);
+                testDS(ds, true);
 
             return ds;
         }
@@ -164,7 +166,7 @@ public class DBUtil
         return ds;
     }
 
-    private static void testDS(DataSource ds)
+    private static void testDS(DataSource ds, boolean keepOpen)
     {
         Connection con = null;
         try
@@ -185,11 +187,21 @@ public class DBUtil
         }
         finally
         {
-            try { con.close(); }
-            catch (Exception ignore) { }
+            if (!keepOpen && con != null)
+                try { con.close(); }
+                catch (Exception ignore) { }
         }
     }
 
+    // this code is used to set an application name property on the
+    // the data source so the dba can tell which app is connecting; it
+    // is currently simple: find the highest class in a stack trace
+    // below the ca.nrc.ca package and then shorten the name by stripping
+    // off the prefix and maybe some extra characters afterwards; the latter
+    // stripping is to fit something meaningful in the limit for application
+    // name in Sybase ASE
+    //
+    // TODO: make this config more generic and accessible to calling code
     private static String getMainClass()
     {
         String ret = "java";

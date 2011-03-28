@@ -105,29 +105,50 @@ public class CertCmdArgUtil
         return "    [--cert=<Cert File or Proxy Cert&Key PEM file> [--key=<Unencrypted Key File>]]";
     }
     
-    private static File loadFile(String fn)
+    private static File loadFile(String fn, boolean nullOnNotFound)
     {
         File f = new File(fn);
         if (!f.exists())
+        {
+            if (nullOnNotFound)
+                return null;
             throw new IllegalArgumentException(String.format("File %s does not exist.", fn));
+        }
         if (!f.canRead())
             throw new IllegalArgumentException(String.format("File %s cannot be read.", fn));
         return f;
     }
 
-    private static Subject initSubjectByPem(String fnPem)
+    private static Subject initSubjectByPem(String fnPem, boolean nullOnNotFound)
     {
-        File certKeyFile = loadFile(fnPem);
+        File certKeyFile = loadFile(fnPem, nullOnNotFound);
+        if (nullOnNotFound && certKeyFile == null)
+            return null;
         return SSLUtil.createSubject(certKeyFile);
     }
 
-    private static Subject initSubjectByCertKey(String fnCert, String fnKey)
+    private static Subject initSubjectByCertKey(String fnCert, String fnKey, boolean nullOnNotFound)
     {
-        File certFile = loadFile(fnCert);
-        File keyFile =  loadFile(fnKey);
+        File certFile = loadFile(fnCert, nullOnNotFound);
+        File keyFile =  loadFile(fnKey, nullOnNotFound);
+        if (nullOnNotFound && certFile == null && keyFile == null)
+            return null;
         return SSLUtil.createSubject(certFile, keyFile);
     }
 
+    /**
+     * Init a subject from the command line and throw an exception if not
+     * successful.
+     *
+     * @see initSubject(ArgumentMap)
+     * @param argMap
+     * @return
+     */
+    public static Subject initSubject(ArgumentMap argMap)
+    {
+        return initSubject(argMap, false);
+    }
+    
     /**
      * Called by a commandline client program, it initializes and return a security subject.
      * 
@@ -142,10 +163,12 @@ public class CertCmdArgUtil
      * otherwise,
      * throw IllegalArgumentException runtime exception.
      * 
-     * @param a ArgumentMap object
+     * @param argMap
+     * @param returnNullOnNotFound return null if certficate files are not found in
+     * the default locations
      * @return a Subject
      */
-    public static Subject initSubject(ArgumentMap argMap)
+    public static Subject initSubject(ArgumentMap argMap, boolean returnNullOnNotFound)
     {
         String strCertKey;
         String strCert;
@@ -153,42 +176,46 @@ public class CertCmdArgUtil
 
         Subject subject = null;
 
-	if (argMap.isSet(ARG_CERT))
-	{
+        if (argMap.isSet(ARG_CERT))
+        {
             if (argMap.isSet(ARG_KEY))
             {
                 // load from cert/key
                 strCert = argMap.getValue(ARG_CERT);
                 strKey = argMap.getValue(ARG_KEY);
-                subject = initSubjectByCertKey(strCert, strKey);
+                subject = initSubjectByCertKey(strCert, strKey, false);
             }
             else
             {
                 // load from cert pem
                 strCertKey = argMap.getValue(ARG_CERT);
-                subject = initSubjectByPem(strCertKey);
+                subject = initSubjectByPem(strCertKey, false);
             }
-	}
+        }
         else
         {
             // load from default
             strCertKey = userHome + DFT_CERTKEY_FILE;
             strCert = userHome + DFT_CERT_FILE;
             strKey = userHome + DFT_KEY_FILE;
-            try {
-                subject = initSubjectByPem(strCertKey);
-            } catch (RuntimeException ex) {
-                // Default PEM file not exists or is not readable
-		try
-		{
-                    subject = initSubjectByCertKey(strCert, strKey);
-		}
-		catch (RuntimeException ex1)
-		{
-		    throw new RuntimeException("Could not find valid certificate files", ex1);
-		}
-
+            RuntimeException ex1 = null;
+            RuntimeException ex2 = null;
+            try
+            {
+                subject = initSubjectByPem(strCertKey, returnNullOnNotFound);
             }
+            catch (RuntimeException ex) { ex1 = ex; }
+
+            // Default PEM file not exists or is not readable
+            if (subject == null)
+                try
+                {
+                    subject = initSubjectByCertKey(strCert, strKey, returnNullOnNotFound);
+                }
+                catch (RuntimeException ex) { ex2 = ex; }
+            if (!returnNullOnNotFound)
+                throw new RuntimeException("Could not find valid certificate files at "
+                        + strCertKey + " or " + strCert + "," + strKey, ex2);
         }
         return subject;
     }
