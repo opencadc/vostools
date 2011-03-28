@@ -99,8 +99,10 @@ public class DBUtil
      *
      * @param config
      * @return a connected single connection DataSource
+     * @throws DBConfigException
      */
     public static DataSource getDataSource(ConnectionConfig config)
+        throws DBConfigException
     {
         return getDataSource(config, false, true);
     }
@@ -113,8 +115,10 @@ public class DBUtil
      * @param suppressClose suppress close calls on the underlying Connection
      * @param test test the datasource before return (might throw)
      * @return a connected single connection DataSource
+     * @throws DBConfigException
      */
     public static DataSource getDataSource(ConnectionConfig config, boolean suppressClose, boolean test)
+        throws DBConfigException
     {
         try
         {
@@ -140,7 +144,11 @@ public class DBUtil
         }
         catch(ClassNotFoundException ex)
         {
-            throw new RuntimeException("failed to load JDBC driver: " + config.getDriver(), ex);
+            throw new DBConfigException("failed to load JDBC driver: " + config.getDriver(), ex);
+        }
+        catch(SQLException ex)
+        {
+            throw new DBConfigException("failed to open connection: " + config.getURL(), ex);
         }
 
     }
@@ -167,6 +175,7 @@ public class DBUtil
     }
 
     private static void testDS(DataSource ds, boolean keepOpen)
+        throws SQLException
     {
         Connection con = null;
         try
@@ -181,10 +190,6 @@ public class DBUtil
                 + " driver: " + meta.getDriverName()
                 + " " + meta.getDriverMajorVersion() + "." + meta.getDriverMinorVersion());
         }
-        catch (SQLException ex)
-        {
-            throw new RuntimeException("test: failed to get connection metadata", ex);
-        }
         finally
         {
             if (!keepOpen && con != null)
@@ -193,16 +198,14 @@ public class DBUtil
         }
     }
 
-    // this code is used to set an application name property on the
-    // the data source so the dba can tell which app is connecting; it
-    // is currently simple: find the highest class in a stack trace
-    // below the ca.nrc.ca package and then shorten the name by stripping
-    // off the prefix and maybe some extra characters afterwards; the latter
-    // stripping is to fit something meaningful in the limit for application
-    // name in Sybase ASE
-    //
-    // TODO: make this config more generic and accessible to calling code
-    private static String getMainClass()
+    /**
+     * Try to infer a suitable application name.
+     *
+     * TODO: make this config more generic and accessible to calling code
+     *
+     * @return
+     */
+    public static String getMainClass()
     {
         String ret = "java";
         try { throw new RuntimeException(); }
