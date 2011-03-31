@@ -84,9 +84,12 @@ public class VOSTransferTest extends VOSBaseTest
     protected String uwsSchemaUrl;
     protected Namespace xlinkNamespace;
 
-    public VOSTransferTest()
+    public static final String SYNC_TRANSFER_ENDPOINT = "/synctrans";
+    public static final String ASYNC_TRANSFER_ENDPOINT = "/transfers";
+
+    public VOSTransferTest(String jobResource)
     {
-        super(VOSBaseTest.TRANSFER_ENDPOINT);
+        super(jobResource);
         
         uwsSchemaUrl = XmlUtil.getResourceUrlString("UWS-v1.0.xsd", VOSTransferTest.class);
         xlinkNamespace = Namespace.getNamespace("http://www.w3.org/1999/xlink");

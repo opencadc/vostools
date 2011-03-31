@@ -112,7 +112,7 @@ public class VOSTestSuite
     {
         try
         {
-            Log4jInit.setLevel("ca.nrc.cadc", Level.DEBUG);
+            Log4jInit.setLevel("ca.nrc.cadc.vos", Level.DEBUG);
 
             File crt = FileUtil.getFileFromResource("proxy.crt", VOSTestSuite.class);
             File key = FileUtil.getFileFromResource("proxy.key", VOSTestSuite.class);
@@ -125,7 +125,6 @@ public class VOSTestSuite
         }
 
         DateFormat dateFormat = DateUtil.getDateFormat("yyyy-MM-dd.HH:mm:ss.SSS", DateUtil.LOCAL);
-//        userName = System.getProperty("user.name", "cadcTestVOS");
         userName = "CADCRegtest1";
         testSuiteNodeName = userName + "_int-test_" + dateFormat.format(Calendar.getInstance().getTime());
         log.debug("VOSTestSuite Node name: " + testSuiteNodeName);

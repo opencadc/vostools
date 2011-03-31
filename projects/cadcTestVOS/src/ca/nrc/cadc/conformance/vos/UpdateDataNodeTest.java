@@ -69,8 +69,7 @@
 
 package ca.nrc.cadc.conformance.vos;
 
-import java.io.StringWriter;
-import ca.nrc.cadc.vos.NodeWriter;
+import ca.nrc.cadc.util.Log4jInit;
 import org.junit.matchers.JUnitMatchers;
 import org.junit.Ignore;
 import org.junit.Assert;
@@ -78,7 +77,10 @@ import java.util.List;
 import ca.nrc.cadc.vos.DataNode;
 import ca.nrc.cadc.vos.NodeProperty;
 import ca.nrc.cadc.vos.NodeReader;
+import ca.nrc.cadc.vos.VOS;
 import com.meterware.httpunit.WebResponse;
+import java.util.ArrayList;
+import org.apache.log4j.Level;
 import org.apache.log4j.Logger;
 import org.junit.After;
 import org.junit.AfterClass;
@@ -96,6 +98,11 @@ public class UpdateDataNodeTest extends VOSNodeTest
 {
     private static Logger log = Logger.getLogger(UpdateDataNodeTest.class);
 
+    static
+    {
+        Log4jInit.setLevel("ca.nrc.cadc.conformance.vos", Level.DEBUG);
+    }
+    
     public UpdateDataNodeTest()
     {
         super();
@@ -132,24 +139,28 @@ public class UpdateDataNodeTest extends VOSNodeTest
              // Add DataNode to the VOSpace.
             WebResponse response = put(node);
             assertEquals("PUT response code should be 201", 201, response.getResponseCode());
-
-            // Update the node by adding new Property.
-            NodeProperty nodeProperty = new NodeProperty("ivo://ivoa.net/vospace/core#description", "My new award winning thing");
-            nodeProperty.setReadOnly(true);
-            node.getProperties().add(nodeProperty);
-            response = post(node);
-            assertEquals("POST response code should be 200", 200, response.getResponseCode());
-
             // Get the response (an XML document)
             String xml = response.getText();
+            log.debug("updateContainerNode: response from PUT:\r\n" + xml);
+            NodeReader reader = new NodeReader();
+            DataNode persistedNode = (DataNode) reader.read(xml);
+            int numDefaultProps = persistedNode.getProperties().size();
+
+            // Update the node by adding new Property.
+            NodeProperty nodeProperty = new NodeProperty(VOS.PROPERTY_URI_LANGUAGE, "English");
+            node.getProperties().add(nodeProperty);
+            response = post(node);
+            assertEquals("updateContainerNode: POST response code should be 200", 200, response.getResponseCode());
+
+            // Get the response (an XML document)
+            xml = response.getText();
             log.debug("POST XML:\r\n" + xml);
 
             // Validate against the VOSPace schema.
-            NodeReader reader = new NodeReader();
             DataNode updatedNode = (DataNode) reader.read(xml);
 
             // Updated node should have 5 properties.
-            assertEquals("Node should have 5 properties", 5, updatedNode.getProperties().size());
+            assertEquals("Node should have 5 properties", (numDefaultProps+1), updatedNode.getProperties().size());
 
             // Delete the node
             response = delete(node);
@@ -190,31 +201,25 @@ public class UpdateDataNodeTest extends VOSNodeTest
             DataNode updatedNode = (DataNode) reader.read(xml);
 
             // Mark the property as deleted.
-            List<NodeProperty> properties = updatedNode.getProperties();
-            for (NodeProperty property : properties)
-            {
-                log.debug("property marked for deletion: " + property.getPropertyURI());
-                property.setMarkedForDeletion(true);
-            }
+            int expectedNumProps = updatedNode.getProperties().size() - 1;
 
-            NodeWriter writer = new NodeWriter();
-            StringWriter sw = new StringWriter();
-            writer.write(updatedNode, sw);
-            log.debug("updatedNode XML: " + sw.toString());
+            List<NodeProperty> del = new ArrayList<NodeProperty>();
+            NodeProperty np = new NodeProperty(VOS.PROPERTY_URI_DESCRIPTION, null);
+            np.setMarkedForDeletion(true);
+            node.setProperties(del);
 
-            // Update the Node.
-            response = post(updatedNode);
-            assertEquals("POST response code should be 200", 200, response.getResponseCode());
+            response = post(node);
+            assertEquals("updateContainerNodeDeleteProperty: POST response code should be 200", 200, response.getResponseCode());
 
             // Get the response (an XML document)
             xml = response.getText();
-            log.debug("Node after property deletion XML:\r\n" + xml);
+            log.debug("updateContainerNodeDeleteProperty: response from POST:\r\n" + xml);
 
             // Validate against the VOSPace schema.
             updatedNode = (DataNode) reader.read(xml);
 
             // Node properties should be empty.
-            assertEquals("Should be 4 Node properties", 4, updatedNode.getProperties().size());
+            assertEquals("non-deleted properties", expectedNumProps, updatedNode.getProperties().size());
 
             // Delete the node
             response = delete(updatedNode);

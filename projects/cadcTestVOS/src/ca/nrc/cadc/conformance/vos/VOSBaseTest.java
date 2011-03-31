@@ -121,7 +121,7 @@ public abstract class VOSBaseTest
     protected URL serviceURL;
     
     public static final String NODE_ENDPOINT = "/nodes";
-    public static final String TRANSFER_ENDPOINT = "/transfers";
+    
 
     /**
      * Constructor takes a path argument, which is the path to the resource
@@ -180,7 +180,7 @@ public abstract class VOSBaseTest
             try
             {
                 baseTestNode = new ContainerNode(new VOSURI(baseNodeName));
-                String resourceUrl = getResourceUrl(endpoint) + "/" + baseTestNode.getPath();;
+                String resourceUrl = getResourceUrl(endpoint) + baseTestNode.getUri().getPath();
                 log.debug("**************************************************");
                 log.debug("HTTP PUT: " + resourceUrl);
 
@@ -218,7 +218,7 @@ public abstract class VOSBaseTest
             try
             {
                 testSuiteNode = new ContainerNode(new VOSURI(testNodeName));
-                String resourceUrl = getResourceUrl(endpoint) + "/" + testSuiteNode.getPath();
+                String resourceUrl = getResourceUrl(endpoint) + testSuiteNode.getUri().getPath();
                 log.debug("**************************************************");
                 log.debug("HTTP PUT: " + resourceUrl);
 
@@ -261,20 +261,12 @@ public abstract class VOSBaseTest
     {
          // List of NodeProperty
         NodeProperty nodeProperty = new NodeProperty("ivo://ivoa.net/vospace/core#description", "My award winning stuff");
-        nodeProperty.setReadOnly(true);
-
-        // List of Node
-        //List<Node> nodes = new ArrayList<Node>();
-        //nodes.add(new DataNode(new VOSURI("vos://cadc.nrc.ca!vospace/mydir/ngc4323")));
-        //nodes.add(new DataNode(new VOSURI("vos://cadc.nrc.ca!vospace/mydir/ngc5796")));
-        //nodes.add(new DataNode(new VOSURI("vos://cadc.nrc.ca!vospace/mydir/ngc6801")));
 
         // ContainerNode
         String date = dateFormat.format(Calendar.getInstance().getTime());
         String nodeName = getTestSuiteNode(NODE_ENDPOINT).getUri() + "/" + VOSTestSuite.userName + "_sample_" + date + name;
         ContainerNode node = new ContainerNode(new VOSURI(nodeName));
         node.getProperties().add(nodeProperty);
-        //node.setNodes(nodes);
         return node;
     }
 
@@ -342,9 +334,9 @@ public abstract class VOSBaseTest
     {
         String resourceUrl;
         if (endpoint == null)
-            resourceUrl = resourceURL + "/" + node.getPath();
+            resourceUrl = resourceURL + "/" + node.getUri().getPath();
         else
-            resourceUrl = getResourceUrl(endpoint) + "/" + node.getPath();
+            resourceUrl = getResourceUrl(endpoint) + node.getUri().getPath();
         log.debug("**************************************************");
         log.debug("HTTP DELETE: " + resourceUrl);
         WebRequest request = new DeleteMethodWebRequest(resourceUrl);
@@ -390,7 +382,7 @@ public abstract class VOSBaseTest
     protected WebResponse get(Node node, Map<String, String> parameters)
         throws IOException, SAXException
     {
-        String resourceUrl = resourceURL + "/" + node.getPath();
+        String resourceUrl = resourceURL + node.getUri().getPath();
         log.debug("**************************************************");
         log.debug("HTTP GET: " + resourceUrl);
         WebRequest request = new GetMethodWebRequest(resourceUrl);
@@ -429,7 +421,7 @@ public abstract class VOSBaseTest
     protected WebResponse post(ContainerNode node)
         throws IOException, SAXException
     {
-        String resourceUrl = resourceURL + "/" + node.getPath();
+        String resourceUrl = resourceURL + node.getUri().getPath();
         log.debug("**************************************************");
         log.debug("HTTP POST: " + resourceUrl);
 
@@ -465,7 +457,7 @@ public abstract class VOSBaseTest
     protected WebResponse post(DataNode node)
         throws IOException, SAXException
     {
-        String resourceUrl = resourceURL + "/" + node.getPath();
+        String resourceUrl = resourceURL + node.getUri().getPath();
         log.debug("**************************************************");
         log.debug("HTTP POST: " + resourceUrl);
         
@@ -517,7 +509,7 @@ public abstract class VOSBaseTest
     protected WebResponse put(ContainerNode node, NodeWriter writer)
         throws IOException, SAXException
     {
-        String resourceUrl = resourceURL + "/" + node.getPath();
+        String resourceUrl = resourceURL + node.getUri().getPath();
         log.debug("**************************************************");
         log.debug("HTTP PUT: " + resourceUrl);
 
@@ -585,9 +577,9 @@ public abstract class VOSBaseTest
     {
         String resourceUrl;
         if (endpoint == null)
-            resourceUrl = resourceURL + "/" + node.getPath();
+            resourceUrl = resourceURL + node.getUri().getPath();
         else
-            resourceUrl = getResourceUrl(endpoint)  + "/" + node.getPath();
+            resourceUrl = getResourceUrl(endpoint)  + node.getUri().getPath();
         log.debug("**************************************************");
         log.debug("HTTP PUT: " + resourceUrl);
         

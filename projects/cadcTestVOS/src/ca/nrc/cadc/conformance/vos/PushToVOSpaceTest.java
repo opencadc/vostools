@@ -114,7 +114,7 @@ public class PushToVOSpaceTest extends VOSTransferTest
 
     public PushToVOSpaceTest()
     {
-        super();
+        super(SYNC_TRANSFER_ENDPOINT);
     }
 
     @BeforeClass
@@ -138,11 +138,86 @@ public class PushToVOSpaceTest extends VOSTransferTest
     }
 
     @Test
-    public void pushNewJob()
+    public void testSyncPush()
     {
         try
         {
-            log.debug("pushNewJob");
+            log.debug("testSyncPush");
+
+            // Get a DataNode.
+            DataNode dataNode = getSampleDataNode();
+            dataNode.getProperties().add(new NodeProperty(VOS.PROPERTY_URI_CONTENTLENGTH, new Long(1024).toString()));
+            WebResponse response = put(VOSBaseTest.NODE_ENDPOINT,dataNode, new NodeWriter());
+            assertEquals("PUT response code should be 201", 201, response.getResponseCode());
+
+            // Create a Transfer.
+            Transfer transfer = new Transfer();
+            transfer.setDirection(Transfer.Direction.pushToVoSpace);
+            transfer.setTarget(dataNode);
+            transfer.setView(new View(new URI(VOS.VIEW_DEFAULT)));
+            List<Protocol> protocols = new ArrayList<Protocol>();
+            protocols.add(new Protocol(VOS.PROTOCOL_HTTP_GET));
+            protocols.add(new Protocol(VOS.PROTOCOL_HTTPS_GET));
+            protocols.add(new Protocol("some:unknown:proto"));
+            transfer.setProtocols(protocols);
+
+            // Get the transfer XML.
+            TransferWriter writer = new TransferWriter();
+            StringWriter sw = new StringWriter();
+            writer.write(transfer, sw);
+
+            // POST the XML to the transfer endpoint.
+            response = post(sw.toString());
+            assertEquals("POST response code should be 303", 303, response.getResponseCode());
+
+            // Get the header Location.
+            String location = response.getHeaderField("Location");
+            assertNotNull("Location header not set", location);
+
+            // Follow the redirect.
+            response = get(location);
+            assertEquals("POST response code should be 200", 200, response.getResponseCode());
+
+            
+            // Get the Transfer XML.
+            String xml = response.getText();
+            log.debug("GET XML:\r\n" + xml);
+
+            // Create a Transfer from Transfer XML.
+            TransferReader reader = new TransferReader();
+            transfer = reader.read(xml);
+
+            assertEquals("direction", Transfer.Direction.pushToVoSpace, transfer.getDirection());
+            
+            // that bogus one should not be here, so only 0 to 2 protocols
+            assertTrue(transfer.getProtocols().size() < 3);
+            for (Protocol p : transfer.getProtocols())
+            {
+                try { URL actualURL = new URL(p.getEndpoint()); }
+                catch(Exception unexpected)
+                {
+                    log.error("unexpected exception", unexpected);
+                    fail("unexpected exception creating endpoint URL: " + unexpected);
+                }
+            }
+
+            // Delete the node
+            response = delete(VOSBaseTest.NODE_ENDPOINT, dataNode);
+            assertEquals("DELETE response code should be 200", 200, response.getResponseCode());
+        }
+        catch (Exception unexpected)
+        {
+            log.error("unexpected exception: " + unexpected);
+            Assert.fail("unexpected exception: " + unexpected);
+        }
+    }
+
+    //@Test - needs to be refactored
+    public void testAsyncPush()
+    {
+        try
+        {
+            log.debug("testAsyncPush");
             
             // Get a DataNode.
             DataNode dataNode = getSampleDataNode();
