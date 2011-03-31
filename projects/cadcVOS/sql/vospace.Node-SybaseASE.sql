@@ -50,6 +50,7 @@ go
 
 alter table DeletedNode add
 constraint Node_pk primary key nonclustered (nodeID)
+go
 
 CREATE TRIGGER Node_delete_trig
     ON Node
