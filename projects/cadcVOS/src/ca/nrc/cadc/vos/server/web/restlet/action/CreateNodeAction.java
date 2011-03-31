@@ -79,9 +79,7 @@ import java.util.Set;
 import javax.security.auth.Subject;
 import javax.security.auth.x500.X500Principal;
 
-import org.restlet.Request;
 import org.restlet.data.Status;
-import org.restlet.representation.Representation;
 
 import ca.nrc.cadc.auth.AuthenticationUtil;
 import ca.nrc.cadc.vos.ContainerNode;
@@ -90,10 +88,10 @@ import ca.nrc.cadc.vos.NodeAlreadyExistsException;
 import ca.nrc.cadc.vos.NodeFault;
 import ca.nrc.cadc.vos.NodeNotFoundException;
 import ca.nrc.cadc.vos.NodeParsingException;
+import ca.nrc.cadc.vos.NodeProperty;
 import ca.nrc.cadc.vos.NodeWriter;
+import ca.nrc.cadc.vos.VOS;
 import ca.nrc.cadc.vos.VOSURI;
-import ca.nrc.cadc.vos.server.NodePersistence;
-import ca.nrc.cadc.vos.server.auth.VOSpaceAuthorizer;
 import ca.nrc.cadc.vos.server.web.representation.NodeInputRepresentation;
 import ca.nrc.cadc.vos.server.web.representation.NodeOutputRepresentation;
 
@@ -104,77 +102,91 @@ import ca.nrc.cadc.vos.server.web.representation.NodeOutputRepresentation;
  */
 public class CreateNodeAction extends NodeAction
 {
-    
-    /**
-     * Given the node URI and XML, return the Node object specified
-     * by the client.
-     */
     @Override
-    public Node getClientNode(VOSURI vosURI, Representation nodeXML)
-            throws URISyntaxException, NodeParsingException, IOException 
+    public Node getClientNode()
+        throws URISyntaxException, NodeParsingException, IOException 
     {
         NodeInputRepresentation nodeInputRepresentation =
             new NodeInputRepresentation(nodeXML, vosURI.getPath());
         return nodeInputRepresentation.getNode();
     }
     
-    /**
-     * Perform an authorization check for the given node and return (if applicable)
-     * the persistent version of the Node.
-     */
     @Override
-    public Node doAuthorizationCheck(VOSpaceAuthorizer voSpaceAuthorizer, Node clientNode)
+    public Node doAuthorizationCheck()
             throws AccessControlException, FileNotFoundException
-    {
-        ContainerNode parent = (ContainerNode) voSpaceAuthorizer.getWritePermission(clientNode.getParent());
-        clientNode.setParent(parent);
-        clientNode.setOwner(getOwnerDistinguishedName());
-        return clientNode;
-    }
-
-    /**
-     * Perform the Node creation.
-     */
-    @Override
-    public NodeActionResult performNodeAction(Node node, NodePersistence nodePersistence, Request request) throws Exception
     {
         try
         {
-            Node storedNode = nodePersistence.putInContainer(
-                    node, node.getParent());
-            storedNode.setUri(node.getUri());
+            VOSURI parentURI = vosURI.getParentURI();
+            Node node = (Node) nodePersistence.get(parentURI);
+            voSpaceAuthorizer.getWritePermission(node);
+            return node;
+        }
+        catch(NodeNotFoundException ex)
+        {
+            // parent does not exist: FAIL
+            throw new FileNotFoundException("not found: " + vosURI.getURIObject().toASCIIString());
+        }
+    }
+
+    @Override
+    public NodeActionResult performNodeAction(Node clientNode, Node serverNode)
+    {
+        try
+        {
+            if (serverNode instanceof ContainerNode)
+            {
+                ContainerNode parent = (ContainerNode) serverNode; // as per doAuthorizationCheck
+                
+                nodePersistence.getChild(parent, clientNode.getName()); // slightly better than getChildren
+                for (Node n : parent.getNodes())
+                {
+                    if (n.getName().equals(clientNode.getName()))
+                        throw new NodeAlreadyExistsException(vosURI.getURIObject().toASCIIString());
+                }
+                
+                clientNode.setParent(parent);
+                setOwner(clientNode);
+                Node storedNode = nodePersistence.put(clientNode);
             
-            // return the node in xml format
-            NodeWriter nodeWriter = new NodeWriter();
-            NodeOutputRepresentation nodeOutputRepresentation =
-                new NodeOutputRepresentation(storedNode, nodeWriter);
-            return new NodeActionResult(nodeOutputRepresentation, Status.SUCCESS_CREATED);
+                // return the node in xml format
+                NodeWriter nodeWriter = new NodeWriter();
+                NodeOutputRepresentation nodeOutputRepresentation =
+                    new NodeOutputRepresentation(storedNode, nodeWriter);
+                return new NodeActionResult(nodeOutputRepresentation, Status.SUCCESS_CREATED);
+            }
+            log.debug("parent is not a container: " + clientNode.getUri().getPath());
+            NodeFault nodeFault = NodeFault.ContainerNotFound;
+            nodeFault.setMessage(clientNode.getUri().toString());
+            return new NodeActionResult(nodeFault);
         }
         catch (NodeAlreadyExistsException e)
         {
-            log.debug("Node already exists: " + node.getPath(), e);
+            log.debug("Node already exists: " + clientNode.getUri().getPath(), e);
             NodeFault nodeFault = NodeFault.DuplicateNode;
-            nodeFault.setMessage(node.getUri().toString());
+            nodeFault.setMessage(clientNode.getUri().toString());
             return new NodeActionResult(nodeFault);
         }
-        catch (NodeNotFoundException e)
-        {
-            log.debug("Could not resolve part of path for node: " + node.getPath(), e);
-            NodeFault nodeFault = NodeFault.ContainerNotFound;
-            nodeFault.setMessage(node.getUri().toString());
-            return new NodeActionResult(nodeFault);
-        }
+        //catch (NodeNotFoundException e)
+        //{
+            // TODO: this fault occurs up in the doAuthorizationCheck call
+        //    log.debug("failed to get after put: " + clientNode.getUri().getPath(), e);
+        //    NodeFault nodeFault = NodeFault.InternalFault;
+        //    nodeFault.setMessage(clientNode.getUri().toString());
+        //    return new NodeActionResult(nodeFault);
+        //}
     }
     
     /**
      * @return The distinguished name of the owner for the new node.
      */
-    private String getOwnerDistinguishedName()
+    private String getOwner()
     {
         AccessControlContext acContext = AccessController.getContext();
         Subject subject = Subject.getSubject(acContext);
-        
-        if (subject != null) {
+
+        if (subject != null)
+        {
             Set<Principal> principals = subject.getPrincipals();
             for (Principal principal : principals)
             {
@@ -188,4 +200,17 @@ public class CreateNodeAction extends NodeAction
         return "";
     }
 
+    private void setOwner(Node node)
+    {
+        String owner = getOwner();
+        NodeProperty cur = node.findProperty(VOS.PROPERTY_URI_CREATOR);
+        if (cur == null)
+        {
+            cur = new NodeProperty(VOS.PROPERTY_URI_CREATOR, owner);
+            node.getProperties().add(cur);
+        }
+        else
+            cur.setValue(owner);
+        cur.setReadOnly(true);
+    }
 }

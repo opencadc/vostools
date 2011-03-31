@@ -104,13 +104,17 @@ public class Transfer implements Runnable
 
     public String getUploadEndpoint() 
     {
-        return getEndpoint(VOS.PROTOCOL_HTTPS_PUT);
+        String ret = getEndpoint(VOS.PROTOCOL_HTTP_PUT);
+        if (ret == null)
+            ret = getEndpoint(VOS.PROTOCOL_HTTPS_PUT);
+        return ret;
     }
 
     public String getDownloadEndpoint() 
     {
-        String rtn = null;
-        rtn = getEndpoint(VOS.PROTOCOL_HTTPS_GET);
+        String rtn = getEndpoint(VOS.PROTOCOL_HTTP_GET);
+        if (rtn == null)
+            rtn = getEndpoint(VOS.PROTOCOL_HTTPS_GET);
         return rtn;
     }
 

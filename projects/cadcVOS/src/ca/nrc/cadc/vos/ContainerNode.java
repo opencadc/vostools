@@ -86,53 +86,30 @@ import org.apache.log4j.Logger;
  */
 public class ContainerNode extends Node
 {
-    
     private static Logger log = Logger.getLogger(ContainerNode.class);
     
-    public static final char DB_TYPE = 'C';
-    
     // The list of contained nodes.
-    private List<Node> nodes;
+    protected List<Node> nodes;
     
     /**
-     * ContainerNode constructor.
+     * @param uri 
      */
-    public ContainerNode()
-    {
-        super();
-        nodes = new ArrayList<Node>();
-    }
-    
-    /**
-     * ContainerNode constructor.
-     * @param name
-     */
-    public ContainerNode(String name)
-    {
-        super(name);
-        nodes = new ArrayList<Node>();
-    }
-    
-    /**
-     * ContainerNode constructor.
-     * @throws URISyntaxException 
-     */
-    public ContainerNode(VOSURI uri) throws URISyntaxException
+    public ContainerNode(VOSURI uri)
     {
         super(uri);
-        nodes = new ArrayList<Node>();
+        this.nodes = new ArrayList<Node>();
     }
     
     /**
-     * ContainerNode constructor.
-     * @throws URISyntaxException 
+     * @param uri
+     * @param properties
      */
-    public ContainerNode(VOSURI uri, List<NodeProperty> properties) throws URISyntaxException
+    public ContainerNode(VOSURI uri, List<NodeProperty> properties)
     {
         super(uri, properties);
-        nodes = new ArrayList<Node>();
+        this.nodes = new ArrayList<Node>();
     }
-    
+
     /**
      * A container node is structured if all its
      * nodes within are structured.
@@ -152,8 +129,14 @@ public class ContainerNode extends Node
         }
         return structured;
     }
-    
-    public boolean heirarchyEquals(ContainerNode containerNode)
+
+    /**
+     *
+     * @param containerNode
+     * @return
+     * @deprecated
+     */
+    public boolean heirarchyEqualsX(ContainerNode containerNode)
     {
         if (containerNode == null)
         {
@@ -180,7 +163,7 @@ public class ContainerNode extends Node
                 }
                 else
                 {
-                    return this.parent.heirarchyEquals(containerNode.parent);
+                    return this.parent.heirarchyEqualsX(containerNode.parent);
                 }
             }
         }
@@ -237,26 +220,4 @@ public class ContainerNode extends Node
         }
         return provides;
     }
-    
-    /**
-     * @return The database respresentation of this node type
-     */
-    public char getDatabaseTypeRepresentation()
-    {
-        return DB_TYPE;
-    }
-
-    @Override
-    public String toString()
-    {
-        int children = 0;
-        if (nodes != null)
-        {
-            children = nodes.size();
-        }
-        return "ContainerNode [node count=" + children + ", appData=" + appData + ", markedForDeletion=" + markedForDeletion + ", name="
-                + name + ", owner=" + owner + ", parent=" + parent + ", path=" + path + ", properties=" + properties + ", uri="
-                + uri + "]";
-    }
-
 }

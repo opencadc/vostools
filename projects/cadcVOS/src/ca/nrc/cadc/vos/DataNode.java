@@ -88,8 +88,6 @@ public class DataNode extends Node
     
     private static Logger log = Logger.getLogger(DataNode.class);
     
-    public static final char DB_TYPE = 'D';
-    
     // Indicates if the node can be accessed.
     private NodeBusyState busy;
     
@@ -97,29 +95,11 @@ public class DataNode extends Node
     private boolean structured;
     
     /**
-     * DataNode constructor.
-     */
-    public DataNode()
-    {
-        super();
-    }
-    
-    /**
-     * DataNode constructor.
-     * @param name
-     */
-    public DataNode(String name)
-    {
-        super(name);
-        this.structured = false;
-        this.busy = NodeBusyState.notBusy;
-    }
-    
-    /**
      * Data node constructor.
+     * @param uri
      * @throws URISyntaxException 
      */
-    public DataNode(VOSURI uri) throws URISyntaxException
+    public DataNode(VOSURI uri)
     {
         super(uri);
         this.structured = false;
@@ -177,14 +157,6 @@ public class DataNode extends Node
             log.error(e);
         }
         return provides;
-    }
-    
-    /**
-     * @return The database respresentation of this node type
-     */
-    public char getDatabaseTypeRepresentation()
-    {
-        return DB_TYPE;
     }
 
     public NodeBusyState getBusy()

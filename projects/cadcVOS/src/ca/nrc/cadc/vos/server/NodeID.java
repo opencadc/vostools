@@ -97,5 +97,9 @@ public class NodeID
     {
         return id;
     }
-    
+
+    public String toString()
+    {
+        return "NodeID[" + id + "]";
+    }
 }

@@ -94,6 +94,7 @@ import ca.nrc.cadc.vos.Node;
 import ca.nrc.cadc.vos.NodeProperty;
 import ca.nrc.cadc.vos.VOS;
 import ca.nrc.cadc.vos.VOSURI;
+import java.text.DateFormat;
 
 /**
  *
@@ -106,6 +107,9 @@ public class RssFeedTest
 
     private static ContainerNode nodeA;
     private static Collection<Node> nodes;
+    private static String NODE_OWNER = "SampleOwner";
+
+    private static DateFormat dateFormat = DateUtil.getDateFormat(DateUtil.ISO_DATE_FORMAT, DateUtil.UTC);
 
     public RssFeedTest() {
     }
@@ -240,13 +244,13 @@ public class RssFeedTest
         VOSURI vosURI = new VOSURI(VOS_URI + path);
         ContainerNode cnode = new ContainerNode(vosURI);
         cnode.setParent(parent);
-        cnode.setOwner("jburke");
+        cnode.getProperties().add(new NodeProperty(VOS.PROPERTY_URI_CREATOR, NODE_OWNER));
         cnode.getProperties().add(new NodeProperty(VOS.PROPERTY_URI_TITLE, "Title of ContainerNode " + path));
         cnode.getProperties().add(new NodeProperty(VOS.PROPERTY_URI_DESCRIPTION, "Description of ContainerNode " + path));
         Calendar cal = Calendar.getInstance();
         cal.clear();
         cal.set(year, month, date);
-        String lastModified = DateUtil.toString(cal.getTime(), DateUtil.ISO_DATE_FORMAT, DateUtil.UTC);
+        String lastModified = dateFormat.format(cal.getTime());
         cnode.getProperties().add(new NodeProperty(VOS.PROPERTY_URI_DATE, lastModified));
         return cnode;
     }
@@ -257,13 +261,13 @@ public class RssFeedTest
         VOSURI vosURI = new VOSURI(VOS_URI + path);
         DataNode dnode = new DataNode(vosURI);
         dnode.setParent(parent);
-        dnode.setOwner("jburke");
+        dnode.getProperties().add(new NodeProperty(VOS.PROPERTY_URI_CREATOR, NODE_OWNER));
         dnode.getProperties().add(new NodeProperty(VOS.PROPERTY_URI_TITLE, "Title of DataNode " + path));
         dnode.getProperties().add(new NodeProperty(VOS.PROPERTY_URI_DESCRIPTION, "Description of DataNode " + path));
         Calendar cal = Calendar.getInstance();
         cal.clear();
         cal.set(year, month, date);
-        String lastModified = DateUtil.toString(cal.getTime(), DateUtil.ISO_DATE_FORMAT, DateUtil.UTC);
+        String lastModified = dateFormat.format(cal.getTime());
         dnode.getProperties().add(new NodeProperty(VOS.PROPERTY_URI_DATE, lastModified));
         return dnode;
     }

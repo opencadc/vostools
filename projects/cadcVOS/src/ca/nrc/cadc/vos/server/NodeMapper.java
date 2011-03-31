@@ -85,47 +85,47 @@ import ca.nrc.cadc.vos.Node;
 import ca.nrc.cadc.vos.NodeProperty;
 import ca.nrc.cadc.vos.VOS;
 import ca.nrc.cadc.vos.VOS.NodeBusyState;
+import ca.nrc.cadc.vos.VOSURI;
+import java.net.URI;
+import java.net.URISyntaxException;
+import org.apache.log4j.Logger;
 
 /**
  * Class to map a result set into a Node object.
  */
 public class NodeMapper implements RowMapper
 {
+    private static Logger log = Logger.getLogger(NodeMapper.class);
+    
     private DateFormat dateFormat;
     private Calendar cal;
 
-    public NodeMapper()
+    private String authority;
+    private String basePath;
+
+    public NodeMapper(String authority, String basePath)
     {
+        this.authority = authority;
+        this.basePath = basePath;
         this.dateFormat = DateUtil.getDateFormat(DateUtil.IVOA_DATE_FORMAT, DateUtil.UTC);
         this.cal = Calendar.getInstance(DateUtil.LOCAL);
     }
 
-    public static String getDatabaseTypeRepresentation(Node node)
-    {
-        if (node instanceof DataNode)
-        {
-            return "D";
-        }
-        if (node instanceof ContainerNode)
-        {
-            return "C";
-        }
-        throw new IllegalStateException("Unknown node type: " + node);
-    }
-
     /**
      * Map the row to the appropriate type of node object.
+     * @param rs
+     * @param row
+     * @throws SQLException
      */
-    public Object mapRow(ResultSet rs, int rowNum) throws SQLException
+    public Object mapRow(ResultSet rs, int row)
+        throws SQLException
     {
 
         long nodeID = rs.getLong("nodeID");
         String name = rs.getString("name");
-        long parentID = rs.getLong("parentID");
-        
+        String type = rs.getString("type");
         String busyString = rs.getString("busyState");
         boolean markedForDeletion = rs.getBoolean("markedForDeletion");
-        
         String groupRead = rs.getString("groupRead");
         String groupWrite = rs.getString("groupWrite");
         boolean isPublic = rs.getBoolean("isPublic");
@@ -137,24 +137,22 @@ public class NodeMapper implements RowMapper
         Object contentMD5 = rs.getObject("contentMD5");
         Date lastModified = rs.getTimestamp("lastModified", cal);
         
-        ContainerNode parent = null;
-        if (parentID != 0)
+        String path = basePath + "/" + name;
+        VOSURI vos;
+        try { vos = new VOSURI(new URI("vos", authority, path, null, null)); }
+        catch(URISyntaxException bug)
         {
-            parent = new ContainerNode();
-            parent.appData = new NodeID(parentID);
+            throw new RuntimeException("BUG - failed to create vos URI", bug);
         }
 
-        String typeString = rs.getString("type");
-        char type = typeString.charAt(0);
-        final Node node;
-
-        if (ContainerNode.DB_TYPE == type)
+        Node node;
+        if (NodeDAO.NODE_TYPE_CONTAINER.equals(type))
         {
-            node = new ContainerNode();
+            node = new ContainerNode(vos);
         }
-        else if (DataNode.DB_TYPE == type)
+        else if (NodeDAO.NODE_TYPE_DATA.equals(type))
         {
-            node = new DataNode();
+            node = new DataNode(vos);
             ((DataNode) node).setBusy(NodeBusyState.getStateFromValue(busyString));
         }
         else
@@ -165,11 +163,8 @@ public class NodeMapper implements RowMapper
         
         node.appData = new NodeID(nodeID);
 
-        node.setName(name);
-        node.setParent(parent);
-        node.setOwner(owner);
+        NodeDAO.setPropertyValue(node, VOS.PROPERTY_URI_CREATOR, owner, true);
         node.setMarkedForDeletion(markedForDeletion);
-        node.setPublic(isPublic);
         
         node.getProperties().add(new NodeProperty(VOS.PROPERTY_URI_CONTENTLENGTH, Long.toString(contentLength)));
         
@@ -213,7 +208,7 @@ public class NodeMapper implements RowMapper
                 node.getProperties().get(propertyIndex).setReadOnly(true);
             }
         }
-
+        log.debug("read: " + node.getUri() + "," + node.appData);
         return node;
     }
 

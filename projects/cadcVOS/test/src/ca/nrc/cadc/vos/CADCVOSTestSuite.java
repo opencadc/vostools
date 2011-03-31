@@ -74,22 +74,24 @@ import org.junit.runner.RunWith;
 import org.junit.runners.Suite;
 
 import ca.nrc.cadc.vos.auth.VOSpaceAuthorizerTest;
+import ca.nrc.cadc.vos.server.NodeDAOTest;
 import ca.nrc.cadc.vos.server.ViewsTest;
 
 
 @RunWith(Suite.class)
 @Suite.SuiteClasses(
-        {
-                NodeReaderWriterTest.class,
-                TransferReaderWriterTest.class,
-                NodeResourceTest.class,
-                VOSpaceAuthorizerTest.class,
-                FileSizeTypeTest.class,
-                ViewsTest.class,
-                GetNodeActionTest.class,
-                DeleteNodeActionTest.class,
-                VOSURITest.class
-        })
+{
+    NodeReaderWriterTest.class,
+    TransferReaderWriterTest.class,
+    NodeResourceTest.class,
+    VOSpaceAuthorizerTest.class,
+    FileSizeTypeTest.class,
+    ViewsTest.class,
+    GetNodeActionTest.class,
+    DeleteNodeActionTest.class,
+    VOSURITest.class,
+    NodeDAOTest.class
+})
 public class CADCVOSTestSuite
 {
 }

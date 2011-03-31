@@ -86,12 +86,12 @@ import ca.nrc.cadc.vos.VOSURI;
  */
 public class SearchNode extends Node
 {
-    
     public SearchNode(String name)
     {
-        super(name);
+        super(null);
+        throw new UnsupportedOperationException();
     }
-    
+
     public SearchNode(VOSURI uri) throws URISyntaxException
     {
         super(uri);

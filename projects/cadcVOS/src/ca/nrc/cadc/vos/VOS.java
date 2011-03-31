@@ -88,8 +88,6 @@ public class VOS
 
     public static String EXT_SCHEMA_LOCATION = XSD_KEY + " " + XmlUtil.getResourceUrlString(XSD_FILE_NAME, VOS.class);
     
-    //public static final String VOS_URI = "vos://cadc.nrc.ca!vospace";
-    
     public static final String GMS_PROTOCOL = "https";
     
     // Enumeration for Node busy states
@@ -238,10 +236,11 @@ public class VOS
      * List of properties that are read-only by the user
      */
     public static final String[] READ_ONLY_PROPERTIES = new String[]
-        {
-            PROPERTY_URI_DATE,
-            PROPERTY_URI_CREATOR,
-            PROPERTY_URI_QUOTA
-        };
+    {
+        PROPERTY_URI_DATE,
+        PROPERTY_URI_CREATOR,
+        PROPERTY_URI_QUOTA,
+        PROPERTY_URI_CONTENTLENGTH
+    };
 
 }

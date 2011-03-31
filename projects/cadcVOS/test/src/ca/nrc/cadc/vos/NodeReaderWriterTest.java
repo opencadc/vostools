@@ -103,7 +103,7 @@ public class NodeReaderWriterTest
     private static Logger log = Logger.getLogger(NodeReaderWriterTest.class);
     static
     {
-        Log4jInit.setLevel("ca.nrc.cadc.vos", Level.DEBUG);
+        Log4jInit.setLevel("ca.nrc.cadc.vos", Level.INFO);
     }
 
     // TODO: make liosts of nodes for a variety of test scenarios

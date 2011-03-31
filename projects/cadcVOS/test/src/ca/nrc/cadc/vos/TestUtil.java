@@ -76,6 +76,7 @@ import org.apache.log4j.Logger;
 
 import ca.nrc.cadc.date.DateUtil;
 import ca.nrc.cadc.xml.XmlUtil;
+import java.text.DateFormat;
 
 /**
  * @author zhangsa
@@ -85,14 +86,17 @@ public class TestUtil
 {
     private static Logger log = Logger.getLogger(TestUtil.class);
 
+    private static String STR_FORMAT = "MMMdd_HH.mm_";
+    private static DateFormat dateFormat = DateUtil.getDateFormat(STR_FORMAT, DateUtil.LOCAL);
+
     public static String uniqueStringOnTime()
     {
         double random = Math.random();
         String strR = Double.toString(random);
         int strLen = strR.length();
         String strR2 = strR.substring(strLen - 4);
-        String uniqueStringFormat = "MMMdd_HH.mm_";
-        String strD = DateUtil.toString(new Date(), uniqueStringFormat, DateUtil.LOCAL);
+        
+        String strD = dateFormat.format(new Date());
         return strD + strR2;
     }
 

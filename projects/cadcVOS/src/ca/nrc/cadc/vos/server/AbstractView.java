@@ -124,6 +124,8 @@ public abstract class AbstractView extends View
     
     // The node for which to create the view
     protected Node node;
+
+    protected URL requestURL;
     
     // The node authorizer available for use
     protected VOSpaceAuthorizer voSpaceAuthorizer;
@@ -192,17 +194,20 @@ public abstract class AbstractView extends View
      * 
      * @param node The node to be used.
      * @param viewReference The name used to reference this view.
+     * @param requestURL the original URL
      * @throws UnsupportedOperationException If this view cannot be created for the given node.
      */
-    public void setNode(Node node, Request request, String viewReference) throws UnsupportedOperationException
+    public void setNode(Node node, String viewReference, URL requestURL)
+        throws UnsupportedOperationException
     {
         if (node == null)
-        {
-            throw new UnsupportedOperationException("Node for view is null.");
-        }
+            throw new UnsupportedOperationException("BUG: node for view is null.");
+        if (node == null)
+            throw new UnsupportedOperationException("BUG: return requestURL for view is null.");
         this.node = node;
+        this.requestURL = requestURL;
     }
-    
+
     /**
      * Return the redirect URL for this view, or null if a redirect is not
      * a result of the view.

@@ -1,147 +1,125 @@
+/*
+************************************************************************
+*******************  CANADIAN ASTRONOMY DATA CENTRE  *******************
+**************  CENTRE CANADIEN DE DONNÉES ASTRONOMIQUES  **************
+*
+*  (c) 2009.                            (c) 2009.
+*  Government of Canada                 Gouvernement du Canada
+*  National Research Council            Conseil national de recherches
+*  Ottawa, Canada, K1A 0R6              Ottawa, Canada, K1A 0R6
+*  All rights reserved                  Tous droits réservés
+*
+*  NRC disclaims any warranties,        Le CNRC dénie toute garantie
+*  expressed, implied, or               énoncée, implicite ou légale,
+*  statutory, of any kind with          de quelque nature que ce
+*  respect to the software,             soit, concernant le logiciel,
+*  including without limitation         y compris sans restriction
+*  any warranty of merchantability      toute garantie de valeur
+*  or fitness for a particular          marchande ou de pertinence
+*  purpose. NRC shall not be            pour un usage particulier.
+*  liable in any event for any          Le CNRC ne pourra en aucun cas
+*  damages, whether direct or           être tenu responsable de tout
+*  indirect, special or general,        dommage, direct ou indirect,
+*  consequential or incidental,         particulier ou général,
+*  arising from the use of the          accessoire ou fortuit, résultant
+*  software.  Neither the name          de l'utilisation du logiciel. Ni
+*  of the National Research             le nom du Conseil National de
+*  Council of Canada nor the            Recherches du Canada ni les noms
+*  names of its contributors may        de ses  participants ne peuvent
+*  be used to endorse or promote        être utilisés pour approuver ou
+*  products derived from this           promouvoir les produits dérivés
+*  software without specific prior      de ce logiciel sans autorisation
+*  written permission.                  préalable et particulière
+*                                       par écrit.
+*
+*  This file is part of the             Ce fichier fait partie du projet
+*  OpenCADC project.                    OpenCADC.
+*
+*  OpenCADC is free software:           OpenCADC est un logiciel libre ;
+*  you can redistribute it and/or       vous pouvez le redistribuer ou le
+*  modify it under the terms of         modifier suivant les termes de
+*  the GNU Affero General Public        la “GNU Affero General Public
+*  License as published by the          License” telle que publiée
+*  Free Software Foundation,            par la Free Software Foundation
+*  either version 3 of the              : soit la version 3 de cette
+*  License, or (at your option)         licence, soit (à votre gré)
+*  any later version.                   toute version ultérieure.
+*
+*  OpenCADC is distributed in the       OpenCADC est distribué
+*  hope that it will be useful,         dans l’espoir qu’il vous
+*  but WITHOUT ANY WARRANTY;            sera utile, mais SANS AUCUNE
+*  without even the implied             GARANTIE : sans même la garantie
+*  warranty of MERCHANTABILITY          implicite de COMMERCIALISABILITÉ
+*  or FITNESS FOR A PARTICULAR          ni d’ADÉQUATION À UN OBJECTIF
+*  PURPOSE.  See the GNU Affero         PARTICULIER. Consultez la Licence
+*  General Public License for           Générale Publique GNU Affero
+*  more details.                        pour plus de détails.
+*
+*  You should have received             Vous devriez avoir reçu une
+*  a copy of the GNU Affero             copie de la Licence Générale
+*  General Public License along         Publique GNU Affero avec
+*  with OpenCADC.  If not, see          OpenCADC ; si ce n’est
+*  <http://www.gnu.org/licenses/>.      pas le cas, consultez :
+*                                       <http://www.gnu.org/licenses/>.
+*
+*  $Revision: 4 $
+*
+************************************************************************
+*/
+
 package ca.nrc.cadc.vos.server;
 
-import static org.junit.Assert.assertEquals;
 
-import org.junit.Before;
+import ca.nrc.cadc.util.Log4jInit;
 import org.junit.Test;
 
-import ca.nrc.cadc.util.FileMetadata;
-import ca.nrc.cadc.util.HexUtil;
-import ca.nrc.cadc.vos.ContainerNode;
-import ca.nrc.cadc.vos.DataNode;
 import ca.nrc.cadc.vos.Node;
 import ca.nrc.cadc.vos.NodeProperty;
 import ca.nrc.cadc.vos.VOS;
-import ca.nrc.cadc.vos.VOSURI;
+import org.apache.log4j.Level;
+import org.apache.log4j.Logger;
+import org.junit.Assert;
 
-public abstract class VOSpaceFileMetadataSourceTest extends AbstractPersistenceTest
+public abstract class VOSpaceFileMetadataSourceTest
 {
+    private static Logger log = Logger.getLogger(VOSpaceFileMetadataSourceTest.class);
+    static
+    {
+        Log4jInit.setLevel("ca.nrc.cadc.vos.server", Level.INFO);
+    }
+    
     private VOSpaceFileMetadataSource vospaceFileMetadataSource;
     
     public VOSpaceFileMetadataSourceTest()
     {
-        super();
-    }
-    
-    @Before
-    public void before() throws Exception
-    {
-        super.commonBefore();
-        vospaceFileMetadataSource = new VOSpaceFileMetadataSource();
-        vospaceFileMetadataSource.setNodePersistence(nodeDAO);
+        this.vospaceFileMetadataSource = new VOSpaceFileMetadataSource();
     }
     
     @Test
-    public void testMetadata() throws Exception
+    public void testGetMetadata()
     {
-        
-        ContainerNode rootContainer = (ContainerNode) nodeDAO.getFromParent(getRootContainerName(), null);
-        VOSURI testURI = new VOSURI(getVOSURIPrefix() + "/" + getRootContainerName() + "/" + getNodeName("testNode"));
-        DataNode testNode = new DataNode(testURI);
-        testNode.setOwner(getNodeOwner());
-        nodeDAO.putInContainer(testNode, rootContainer);
-        
-        
-        String contentEncoding = "gzip";
-        Long contentLength = 256L;
-        String contentType = "text/xml";
-        
-        String contentMD5 = HexUtil.toHex(new byte[] {0, 1, 2, 3, 4, 5, 6, 7,
-                                                      8, 9, 10, 11, 12, 13, 14,
-                                                      15});
-        
-        FileMetadata metadata1 = new FileMetadata();
-        metadata1.setContentEncoding(contentEncoding);
-        metadata1.setContentLength(contentLength);
-        metadata1.setContentType(contentType);
-        metadata1.setMd5Sum(contentMD5);
-        
-        vospaceFileMetadataSource.set(testURI.getURIObject(), metadata1);
-        FileMetadata metadata2 = vospaceFileMetadataSource.get(testURI.getURIObject());
-        
-        assertEquals(contentEncoding, metadata2.getContentEncoding());
-        assertEquals(contentLength, metadata2.getContentLength());
-        assertEquals(contentType, metadata2.getContentType());
-        assertEquals(contentMD5, metadata2.getMd5Sum());
+        try
+        {
+            // TODO: test getMetadata call
+        }
+        catch(Exception unexpected)
+        {
+            log.error("unexpected exception", unexpected);
+            Assert.fail("unexpected exception: " + unexpected);
+        }
     }
-    
+
     @Test
-    public void testUpdateContentLength() throws Exception
+    public void testSetMetadata()
     {
-        
-        // Setup a hierarchy of nodes:
-        
-        // TestRoot     +100  +500  -50  -210  +40 = +380
-        //     |_A      +100        -50        +40 = +90
-        //     | |_C    +100        -50        +40 = +90
-        //     |   |_E  +100                   +40 = +140
-        //     |_B            +500       -210      = +290
-        //       |_D          +500       -210      = +290
-        
-        Node rootContainer = (ContainerNode) nodeDAO.getFromParent(getRootContainerName(), null);
-        
-        VOSURI testRootURI = new VOSURI(getVOSURIPrefix() + "/" + getRootContainerName() + "/" + getNodeName("testRoot"));
-        Node testRoot = new ContainerNode(testRootURI);
-        testRoot.setOwner(getNodeOwner());
-        testRoot.setPublic(true);
-        testRoot = nodeDAO.putInContainer(testRoot, (ContainerNode) rootContainer);
-        
-        VOSURI nodeAURI = new VOSURI(getVOSURIPrefix() + "/" + getRootContainerName() + "/" + getNodeName("testRoot") + "/" + getNodeName("A"));
-        Node nodeA = new ContainerNode(nodeAURI);
-        nodeA.setOwner(getNodeOwner());
-        nodeA.setPublic(true);
-        nodeA = nodeDAO.putInContainer(nodeA, (ContainerNode) testRoot);
-        
-        VOSURI nodeBURI = new VOSURI(getVOSURIPrefix() + "/" + getRootContainerName() + "/" + getNodeName("testRoot") + "/" + getNodeName("B"));
-        Node nodeB = new ContainerNode(nodeBURI);
-        nodeB.setOwner(getNodeOwner());
-        nodeB.setPublic(true);
-        nodeB = nodeDAO.putInContainer(nodeB, (ContainerNode) testRoot);
-        
-        VOSURI nodeCURI = new VOSURI(getVOSURIPrefix() + "/" + getRootContainerName() + "/" + getNodeName("testRoot") + "/" + getNodeName("A") + "/" + getNodeName("C"));
-        Node nodeC = new ContainerNode(nodeCURI);
-        nodeC.setOwner(getNodeOwner());
-        nodeC.setPublic(true);
-        nodeC = nodeDAO.putInContainer(nodeC, (ContainerNode) nodeA);
-        
-        VOSURI nodeDURI = new VOSURI(getVOSURIPrefix() + "/" + getRootContainerName() + "/" + getNodeName("testRoot") + "/" + getNodeName("B") + "/" + getNodeName("D"));
-        Node nodeD = new ContainerNode(nodeDURI);
-        nodeD.setOwner(getNodeOwner());
-        nodeD.setPublic(true);
-        nodeD = nodeDAO.putInContainer(nodeD, (ContainerNode) nodeB);
-        
-        VOSURI nodeEURI = new VOSURI(getVOSURIPrefix() + "/" + getRootContainerName() + "/" + getNodeName("testRoot") + "/" + getNodeName("A") + "/" + getNodeName("C") + "/" + getNodeName("E"));
-        Node nodeE = new ContainerNode(nodeEURI);
-        nodeE.setOwner(getNodeOwner());
-        nodeE.setPublic(true);
-        nodeE = nodeDAO.putInContainer(nodeE, (ContainerNode) nodeC);
-        
-        // Perform metadata operations, checking results at the end
-        vospaceFileMetadataSource.updateContentLengths((ContainerNode) nodeE, +100);
-        vospaceFileMetadataSource.updateContentLengths((ContainerNode) nodeD, +500);
-        vospaceFileMetadataSource.updateContentLengths((ContainerNode) nodeC, -50);
-        vospaceFileMetadataSource.updateContentLengths((ContainerNode) nodeD, -210);
-        vospaceFileMetadataSource.updateContentLengths((ContainerNode) nodeE, +40);
-        
-        testRoot = nodeDAO.getFromParent(getNodeName("testRoot"), (ContainerNode) rootContainer);
-        nodeA = nodeDAO.getFromParent(getNodeName("A"), (ContainerNode) testRoot);
-        nodeB = nodeDAO.getFromParent(getNodeName("B"), (ContainerNode) testRoot);
-        nodeC = nodeDAO.getFromParent(getNodeName("C"), (ContainerNode) nodeA);
-        nodeD = nodeDAO.getFromParent(getNodeName("D"), (ContainerNode) nodeB);
-        nodeE = nodeDAO.getFromParent(getNodeName("E"), (ContainerNode) nodeC);
-        
-        assertEquals(380, getContentLength(testRoot));
-        assertEquals(90, getContentLength(nodeA));
-        assertEquals(290, getContentLength(nodeB));
-        assertEquals(90, getContentLength(nodeC));
-        assertEquals(290, getContentLength(nodeD));
-        assertEquals(140, getContentLength(nodeE));
-        
-    }
-    
-    private long getContentLength(Node node)
-    {
-        int index = node.getProperties().indexOf(new NodeProperty(VOS.PROPERTY_URI_CONTENTLENGTH, null));
-        return Long.parseLong(((NodeProperty) node.getProperties().get(index)).getPropertyValue()); 
+        try
+        {
+            // TODO: test setMetadata call
+        }
+        catch(Exception unexpected)
+        {
+            log.error("unexpected exception", unexpected);
+            Assert.fail("unexpected exception: " + unexpected);
+        }
     }
 }

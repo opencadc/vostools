@@ -44,7 +44,7 @@
 *  either version 3 of the              : soit la version 3 de cette
 *  License, or (at your option)         licence, soit (à votre gré)
 *  any later version.                   toute version ultérieure.
-*                                       
+*                                       Node
 *  OpenCADC is distributed in the       OpenCADC est distribué
 *  hope that it will be useful,         dans l’espoir qu’il vous
 *  but WITHOUT ANY WARRANTY;            sera utile, mais SANS AUCUNE
@@ -72,9 +72,11 @@ package ca.nrc.cadc.vos.server;
 import ca.nrc.cadc.vos.ContainerNode;
 import ca.nrc.cadc.vos.DataNode;
 import ca.nrc.cadc.vos.Node;
-import ca.nrc.cadc.vos.NodeAlreadyExistsException;
 import ca.nrc.cadc.vos.NodeNotFoundException;
+import ca.nrc.cadc.vos.NodeProperty;
 import ca.nrc.cadc.vos.VOS.NodeBusyState;
+import ca.nrc.cadc.vos.VOSURI;
+import java.util.List;
 
 /**
  * An interface defining the methods available for working with VOSpace
@@ -84,78 +86,84 @@ import ca.nrc.cadc.vos.VOS.NodeBusyState;
  */
 public interface NodePersistence
 {
-    
+
     /**
-     * Find the node with the specified name and parent.  The parent must have been
-     * retrieved from the persistent layer.  A parent of 'null' indicates that
-     * the node to be returned is a root node.
-     * 
-     * @param name The name of the node
-     * @param parent The persistent parent object, or null if a root node.
-     * @return The persistent object specified by name.
-     * @throws NodeNotFoundException If the node could not be found.
+     * Find the node with the specified path. The returned node(s) will include
+     * some properties (typically inherently single-valued properties like owner,
+     * content-length, content-type, content-encoding, content-MD5) plus all
+     * properties nedeed to make authorization checks (isPublic, group-read, and
+     * group-write). Remaining properties and child nodes can be filled in as
+     * needed with getProperties(Node) and getChildren(ContainerNode).
+     *
+     * @param vos a node identifier
+     * @return the specified node
+     * @throws NodeNotFoundException
      */
-    Node getFromParent(String name, ContainerNode parent) throws NodeNotFoundException;
-    
+    Node get(VOSURI vos)
+        throws NodeNotFoundException;
+
     /**
-     * Find the node with the specified name and parent.  The parent must have been
-     * retrieved from the persistent layer.  A parent of 'null' indicates that
-     * the node to be returned is a root node.
-     * 
-     * This method differs from getFromParent in that:
-     * - Node properties not in the Node table are not retrieved
-     * - The children of the Node are not retrieved.
-     * 
-     * @param name The name of the node
-     * @param parent The persistent parent object, or null if a root node.
-     * @return The persistent object specified by name.
-     * @throws NodeNotFoundException If the node could not be found.
+     * Load the children of a container.
+     *
+     * @param node
      */
-    Node getFromParentLight(String name, ContainerNode parent) throws NodeNotFoundException;
-    
+    void getChildren(ContainerNode node);
+
     /**
-     * Persist the node in the given container.  The container must have been retrieved
-     * from the persistent layer.
+     * Load a single child of a container.
      * 
-     * @param node The node to persist
-     * @param parent The persistent parent node of 'node'
-     * @return The persistent version of the node.
-     * @throws NodeNotFoundException If the parent node could not be found.
-     * @throws NodeAlreadyExistsException If a node with the same name already exists
-     * in the parent container.
+     * @param parent
+     * @param name
      */
-    Node putInContainer(Node node, ContainerNode parent) throws NodeNotFoundException, NodeAlreadyExistsException;
-    
+    void getChild(ContainerNode parent, String name);
+
     /**
-     * Delete the node.  This node must have been retrieved previously from the
-     * persistent layer.
+     * Load all the properties of a node.
      * 
-     * @param node The node to delete.
-     * @param deleteChildren If true, delete any children of this node.
-     * @throws NodeNotFoundException If the node could not be found.
+     * @param node
      */
-    void delete(Node node, boolean deleteChildren) throws NodeNotFoundException;
-    
+    void getProperties(Node node);
+
     /**
-     * Mark the node for deletion.  This node must have been retrieved previously
-     * from the persistent layer.
-     * 
-     * @param node The node to mark as deleted.
-     * @param markChildren If true, mark any children as deleted as well.
-     * @throws NodeNotFoundException If the node could not be found.
+     * Store the specified node.
+     *
+     * @param node
+     * @return the persisted node
      */
-    void markForDeletion(Node node, boolean markChildren) throws NodeNotFoundException;
-    
+    public Node put(Node node);
+
     /**
-     * Update the properties of the specified node.  The node must have been retrieved
-     * from the persistent layer.
+     * Update the properties of the specified node.  The node must have
+     * been retrieved from the persistent layer. Properties in the list are
+     * merged with existing properties following the semantics specified in
+     * the VOSpace 2.0 specification.
      * 
-     * @param node The node containing the properties to update.
-     * @return The persistent version of the updated node and properties.
-     * @throws NodeNotFoundException If the node could not be found.
+     * @param node
+     * @param properties
+     * @return the modified node
      */
-    Node updateProperties(Node node) throws NodeNotFoundException;
-    
+    Node updateProperties(Node node, List<NodeProperty> properties);
+
+    /**
+     * Delete the specified node.
+     * 
+     * @param node
+     */
+    void delete(Node node);
+   
+    /**
+     * Update the content length of the container node by adding the
+     * specified difference. A positive delta will increase the size
+     * and a negative delta will decrease it.
+     *
+     * @param node
+     * @param delta amount to add
+     */
+    void updateContentLength(ContainerNode node, long delta);
+
+    // TODO: this API call easier to optimise -- callback after the data transfer is complete
+    //void setFileMetadata(DataNode node, FileMetadata meta);
+
     /**
      * Set the busy state of the node.
      * 
@@ -163,7 +171,7 @@ public interface NodePersistence
      * @param state The new state for the node.
      * @throws NodeNotFoundException If the node could not be found.
      */
-    void setBusyState(DataNode node, NodeBusyState state) throws NodeNotFoundException;
+    void setBusyState(DataNode node, NodeBusyState state);
     
     /**
      * Move the specified node to the new path.  The node must have been retrieved
@@ -183,13 +191,6 @@ public interface NodePersistence
      */
     void copy(Node node, String copyToPath);
     
-    /**
-     * Update the content length of the container node by adding the
-     * specified difference.
-     *  
-     * @param node
-     * @throws NodeNotFoundException
-     */
-    void updateContentLength(ContainerNode node, long difference) throws NodeNotFoundException;
+    
 
 }

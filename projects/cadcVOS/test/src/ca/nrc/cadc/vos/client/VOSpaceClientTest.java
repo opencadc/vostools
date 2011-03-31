@@ -176,10 +176,10 @@ public class VOSpaceClientTest
         log.debug("Returned Node: " + nodeRtn);
         log.debug("XML of Returned Node: " + VOSClientUtil.xmlString(nodeRtn));
 
-        Node nodeRtn2 = client.getNode(nodeRtn.getPath());
+        Node nodeRtn2 = client.getNode(nodeRtn.getUri().getPath());
         log.debug("GetNode: " + nodeRtn2);
         log.debug("XML of GetNode: " + VOSClientUtil.xmlString(nodeRtn2));
-        Assert.assertEquals(nodeRtn.getPath(), nodeRtn2.getPath());
+        Assert.assertEquals(nodeRtn.getUri().getPath(), nodeRtn2.getUri().getPath());
 
         List<NodeProperty> properties = new ArrayList<NodeProperty>();
 
@@ -213,13 +213,13 @@ public class VOSpaceClientTest
         log.debug("Returned Node: " + nodeRtn);
         log.debug("XML of Returned Node: " + VOSClientUtil.xmlString(nodeRtn));
 
-        log.debug("getPath(): " + nodeRtn.getPath());
-        client.deleteNode(nodeRtn.getPath());
+        log.debug("getPath(): " + nodeRtn.getUri().getPath());
+        client.deleteNode(nodeRtn.getUri().getPath());
 
         boolean exceptionThrown = false;
         try
         {
-            client.getNode(nodeRtn.getPath());
+            client.getNode(nodeRtn.getUri().getPath());
         }
         catch (IllegalArgumentException ex)
         {
@@ -239,10 +239,10 @@ public class VOSpaceClientTest
         log.debug("Returned Node: " + nodeRtn);
         log.debug("XML of Returned Node: " + VOSClientUtil.xmlString(nodeRtn));
 
-        Node nodeRtn2 = client.getNode(nodeRtn.getPath());
+        Node nodeRtn2 = client.getNode(nodeRtn.getUri().getPath());
         log.debug("GetNode: " + nodeRtn2);
         log.debug("XML of GetNode: " + VOSClientUtil.xmlString(nodeRtn2));
-        Assert.assertEquals(nodeRtn.getPath(), nodeRtn2.getPath());
+        Assert.assertEquals(nodeRtn.getUri().getPath(), nodeRtn2.getUri().getPath());
     }
 
 
@@ -250,14 +250,12 @@ public class VOSpaceClientTest
     public void testGetRootNode() throws Exception
     {
         String slashPath1 = "/" + ROOT_NODE ;
-//        String slashPath1 = "/zhangsa/Jun15_09.25_0631";
-        
         ContainerNode cnode = new ContainerNode(new VOSURI(VOS_URI + slashPath1));
 
-        Node nodeRtn2 = client.getNode(cnode.getPath());
+        Node nodeRtn2 = client.getNode(cnode.getUri().getPath());
         log.debug("GetNode: " + nodeRtn2);
         log.debug("XML of GetNode: " + VOSClientUtil.xmlString(nodeRtn2));
-        //Assert.assertEquals(nodeRtn.getPath(), nodeRtn2.getPath());
+        //Assert.assertEquals(nodeRtn.getUri().getPath(), nodeRtn2.getUri().getPath());
     }
 
 
@@ -273,7 +271,7 @@ public class VOSpaceClientTest
 
         log.debug("Returned Node: " + nodeRtn);
         log.debug("XML of Returned Node: " + VOSClientUtil.xmlString(nodeRtn));
-        Assert.assertEquals("/" + nodeRtn.getPath(), slashPath1);
+        Assert.assertEquals(nodeRtn.getUri().getPath(), slashPath1);
     }
 
     //@Test
@@ -318,7 +316,7 @@ public class VOSpaceClientTest
         Node nodeRtn = client.createNode(dnode);
         log.debug("Returned Node: " + nodeRtn);
         log.debug("XML of Returned Node: " + VOSClientUtil.xmlString(nodeRtn));
-        Assert.assertEquals("/" + nodeRtn.getPath(), slashPath1);
+        Assert.assertEquals(nodeRtn.getUri().getPath(), slashPath1);
     }
 
     //@Test
@@ -329,8 +327,8 @@ public class VOSpaceClientTest
         DataNode dnode = new DataNode(new VOSURI(VOS_URI + slashPath1));
 
         Node nodeRtn = client.createNode(dnode);
-        Node nodeRtn2 = client.getNode(nodeRtn.getPath());
-        Assert.assertEquals(nodeRtn.getPath(), nodeRtn2.getPath());
+        Node nodeRtn2 = client.getNode(nodeRtn.getUri().getPath());
+        Assert.assertEquals(nodeRtn.getUri().getPath(), nodeRtn2.getUri().getPath());
 
         List<NodeProperty> properties = new ArrayList<NodeProperty>();
         properties.add(new NodeProperty(VOS.PROPERTY_URI_TITLE, "sz_title")); 
@@ -388,7 +386,7 @@ public class VOSpaceClientTest
         clientTransfer.doUpload(testFile);
         Node node = clientTransfer.getTarget();
         log.debug("clientTransfer getTarget: " + node);
-        Node nodeRtn = client.getNode(node.getPath());
+        Node nodeRtn = client.getNode(node.getUri().getPath());
         log.debug("Node returned from getNode, after doUpload: " + VOSClientUtil.xmlString(nodeRtn));
         return clientTransfer;
     }

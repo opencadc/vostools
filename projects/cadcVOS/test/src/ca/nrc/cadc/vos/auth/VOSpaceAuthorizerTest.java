@@ -84,16 +84,18 @@ import org.junit.Test;
 
 import ca.nrc.cadc.vos.ContainerNode;
 import ca.nrc.cadc.vos.NodeProperty;
-import ca.nrc.cadc.vos.server.NodeDAO;
+import ca.nrc.cadc.vos.VOS;
+import ca.nrc.cadc.vos.VOSURI;
+import ca.nrc.cadc.vos.server.NodePersistence;
 import ca.nrc.cadc.vos.server.auth.VOSpaceAuthorizer;
-
 
 /**
  * Test class for the VOSpaceAuthorizer.
  */
 public class VOSpaceAuthorizerTest
 {
-
+    private String NODE_OWNER = "cn=cadc authtest1 10627,ou=cadc,o=hia";
+    
     @Before
     public void setup() throws Exception
     {
@@ -102,27 +104,25 @@ public class VOSpaceAuthorizerTest
     @Test
     public void testReadPermissonOnRoot() throws Exception
     {
-        ContainerNode dbNode = new ContainerNode("CADCAuthtest1");
-        dbNode.setOwner("cn=cadc authtest1 10627,ou=cadc,o=hia");
-        dbNode.setPublic(false);
-        List<NodeProperty> properties = new ArrayList<NodeProperty>();
-        dbNode.setProperties(properties);
-        
-        NodeDAO nodeDAO = createMock(NodeDAO.class);
-        expect(nodeDAO.getFromParent("CADCAuthtest1", null)).andReturn(dbNode).once();
-        replay(nodeDAO);
+        VOSURI vos = new VOSURI(new URI("vos://cadc.nrc.ca!vospace/CADCAuthtest1"));
+        ContainerNode dbNode = new ContainerNode(vos);
+        dbNode.getProperties().add(new NodeProperty(VOS.PROPERTY_URI_CREATOR, NODE_OWNER));
+        dbNode.getProperties().add(new NodeProperty(VOS.PROPERTY_URI_ISPUBLIC, Boolean.TRUE.toString()));
+
+        NodePersistence np = createMock(NodePersistence.class);
+        expect(np.get(vos)).andReturn(dbNode).once();
+        replay(np);
         
         VOSpaceAuthorizer voSpaceAuthorizer = new VOSpaceAuthorizer();
-        voSpaceAuthorizer.setNodePersistence(nodeDAO);
+        voSpaceAuthorizer.setNodePersistence(np);
         
         Subject subject = new Subject();
-        subject.getPrincipals().add(new X500Principal("cn=cadc authtest1 10627,ou=cadc,o=hia"));
+        subject.getPrincipals().add(new X500Principal(NODE_OWNER));
         
-        URI uri = new URI("vos://cadc.nrc.ca!vospace/CADCAuthtest1");
-        ReadPermissionAction action = new ReadPermissionAction( voSpaceAuthorizer, uri);
+        ReadPermissionAction action = new ReadPermissionAction( voSpaceAuthorizer, vos.getURIObject());
         Subject.doAs(subject, action);
         
-        verify(nodeDAO);
+        verify(np);
     }
     
     private class ReadPermissionAction implements PrivilegedExceptionAction<Object>

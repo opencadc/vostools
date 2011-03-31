@@ -78,7 +78,6 @@ import org.restlet.Request;
 import org.restlet.representation.Representation;
 
 import ca.nrc.cadc.uws.util.StringUtil;
-import ca.nrc.cadc.vos.ContainerNode;
 import ca.nrc.cadc.vos.Node;
 import ca.nrc.cadc.vos.NodeFault;
 import ca.nrc.cadc.vos.NodeParsingException;
@@ -103,14 +102,16 @@ import ca.nrc.cadc.vos.server.auth.VOSpaceAuthorizer;
 public abstract class NodeAction implements PrivilegedAction<Object>
 {
     protected static Logger log = Logger.getLogger(NodeAction.class);
-    
-    private VOSpaceAuthorizer voSpaceAuthorizer;
-    private NodePersistence nodePersistence;
-    private VOSURI vosURI;
-    private Representation nodeXML;
-    private Request request;
-    private String viewReference; 
-    private String stylesheetReference;
+
+    // some subclasses may nede to determine hostname, request path, etc
+    protected Request request;
+
+    protected VOSpaceAuthorizer voSpaceAuthorizer;
+    protected NodePersistence nodePersistence;
+    protected VOSURI vosURI;
+    protected Representation nodeXML;
+    protected String viewReference;
+    protected String stylesheetReference;
     
     /**
      * Set the URI for this action.
@@ -167,15 +168,6 @@ public abstract class NodeAction implements PrivilegedAction<Object>
     }
     
     /**
-     * Return the view reference sent in by the client.
-     * @return
-     */
-    protected String getViewReference()
-    {
-        return viewReference;
-    }
-    
-    /**
      * Set the stylesheet reference.
      *
      * @param stylesheetReference  The URI reference string to the stylesheet
@@ -185,17 +177,7 @@ public abstract class NodeAction implements PrivilegedAction<Object>
     {
         this.stylesheetReference = stylesheetReference;
     }
-    
-    /**
-     * Get the stylesheet reference.
-     *
-     * @return  String URI reference.
-     */
-    protected String getStylesheetReference()
-    {
-        return stylesheetReference;
-    }
-    
+ 
     /**
      * Return the view requested by the client, or null if none specified.
      *
@@ -219,14 +201,13 @@ public abstract class NodeAction implements PrivilegedAction<Object>
         }
         
         final Views views = new Views();
-        final AbstractView view = views.getView(viewReference);
+        AbstractView view = views.getView(viewReference);
 
         if (view == null)
         {
             throw new UnsupportedOperationException(
                     "No view configured matching reference: " + viewReference);
         }
-
         view.setNodePersistence(nodePersistence);
         view.setVOSpaceAuthorizer(voSpaceAuthorizer);
         
@@ -239,29 +220,38 @@ public abstract class NodeAction implements PrivilegedAction<Object>
      * The return object from this method (and from performNodeAction) must be an object
      * of type NodeActionResult.
      * 
-     * @param node              The Node involved in the action.
-     * @param nodePersistence   The NodePersistence instance for persistence
-     *                          layer access.
-     * @param request           The Restlet Request object.
-     * @return The NodeAction result
-     * @throws Exception If a problem occurs.
+     * @param clientNode teh node supplied by the client (may be null)
+     * @param serverNode the persistent node returned from doAuthorizationCheck
+     * @return the appropriate NodeActionResult from which the response is constructed
      */
-    abstract NodeActionResult performNodeAction(Node node,
-                                                NodePersistence nodePersistence,
-                                                Request request)
-            throws Exception;
+    protected abstract NodeActionResult performNodeAction(Node clientNode, Node serverNode);
+        //throws IllegalAccessException, InstantiationException;
     
     /**
      * Given the node URI and XML, return the Node object specified
      * by the client.
+     *
+     * @return the deault implementation returns null
+     * @throws URISyntaxException
+     * @throws NodeParsingException
+     * @throws IOException
      */
-    abstract Node getClientNode(VOSURI vosURI, Representation nodeXML) throws URISyntaxException, NodeParsingException, IOException;
+    protected Node getClientNode()
+        throws URISyntaxException, NodeParsingException, IOException
+    {
+        return null;
+    }
     
     /**
      * Perform an authorization check for the given node and return (if applicable)
      * the persistent version of the Node.
+     *
+     * @return the applicable persistent (server) Node
+     * @throws AccessControlException if permission is denied
+     * @throws FileNotFoundException if the target node does not exist
      */
-    abstract Node doAuthorizationCheck(VOSpaceAuthorizer voSpaceAuthorizer, Node clientNode) throws AccessControlException, FileNotFoundException;
+    protected abstract Node doAuthorizationCheck()
+        throws AccessControlException, FileNotFoundException;
     
     /**
      * Entry point in performing the steps of a Node Action.  This includes:
@@ -279,16 +269,18 @@ public abstract class NodeAction implements PrivilegedAction<Object>
         try
         {
             // Create the client version of the node to be used for the operation
-            Node clientNode = getClientNode(vosURI, nodeXML);
-            log.debug("Client node is: " + clientNode);
-            
+            Node clientNode = getClientNode();
+            if (clientNode != null)
+                log.debug("client node: " + clientNode.getUri());
+            else
+                log.debug("no client node");
+
             // perform the authorization check
-            Node node = doAuthorizationCheck(voSpaceAuthorizer, clientNode);
-            setNodeURI(node, vosURI);
-            log.debug("doAuthorizationCheck() retrived node: " + node);
+            Node serverNode = doAuthorizationCheck();
+            log.debug("doAuthorizationCheck() returned server node: " + serverNode.getUri());
             
             // perform the node action
-            return performNodeAction(node, nodePersistence, request);
+            return performNodeAction(clientNode, serverNode);
             
         }
         catch (FileNotFoundException e)
@@ -351,25 +343,4 @@ public abstract class NodeAction implements PrivilegedAction<Object>
         nodeFault.setMessage(message);
         return new NodeActionResult(nodeFault);
     }
-    
-    /**
-     * Recursive method to set the URI of a node and its children.
-     * @param node
-     * @param uri
-     * @throws URISyntaxException
-     */
-    protected void setNodeURI(Node node, VOSURI uri) throws URISyntaxException
-    {
-        node.setUri(uri);
-        if (node instanceof ContainerNode)
-        {
-            ContainerNode containerNode = (ContainerNode) node;
-            for (Node child : containerNode.getNodes())
-            {
-                VOSURI childURI = new VOSURI(uri.toString() + "/" + child.getName());
-                setNodeURI(child, childURI);
-            }
-        }
-    }
-
 }

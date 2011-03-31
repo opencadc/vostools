@@ -58,7 +58,11 @@
 *  You should have received             Vous devriez avoir reçu une
 *  a copy of the GNU Affero             copie de la Licence Générale
 *  General Public License along         Publique GNU Affero avec
-*  with OpenCADC.  If not, see          OpenCADC ; si ce n’est
+*  with OpenCADC.  If not, see          OpenCADC ; si ce n’esties(serverNode);
+
+            // return the node in xml format
+            NodeWriter nodeWriter = new NodeWriter();
+            return new NodeActionResult(new N
 *  <http://www.gnu.org/licenses/>.      pas le cas, consultez :
 *                                       <http://www.gnu.org/licenses/>.
 *
@@ -88,14 +92,10 @@ import org.apache.log4j.Logger;
  */
 public abstract class Node implements Comparable<Object>
 {
-    
     private static Logger log = Logger.getLogger(Node.class);
 
     // The node uri
     protected VOSURI uri;
-
-    // The path (including the name) of the node
-    protected String path;
 
     // The name of the node
     protected String name;
@@ -106,9 +106,6 @@ public abstract class Node implements Comparable<Object>
     // The list of node properties
     protected List<NodeProperty> properties;
 
-    // The node owner
-    protected String owner;
-    
     // Flag indicating if the node is public
     protected boolean isPublic;
 
@@ -119,119 +116,45 @@ public abstract class Node implements Comparable<Object>
     public transient Object appData;
     
 
+    private Node() { }
+
     /**
-     * Node constructor.
+     * @param uri
      */
-    public Node()
+    public Node(VOSURI uri)
     {
-        this.path = "";
-        this.name = "";
-        properties = new ArrayList<NodeProperty>();
+        this(uri, new ArrayList<NodeProperty>());
     }
 
     /**
-     * Node constructor.
-     * 
-     * @param name The name of the node;
-     */
-    public Node(String name)
-    {
-        this.path = "";
-        this.name = name;
-        properties = new ArrayList<NodeProperty>();
-    }
-
-    /**
-     * Node constructor.
-     * 
-     * @param uri The uri of the node;
-     * @throws URISyntaxException 
-     */
-    public Node(VOSURI uri) throws URISyntaxException
-    {
-        this.uri = uri;
-        buildPath(uri);
-        properties = new ArrayList<NodeProperty>();
-    }
-
-    /**
-     * Node constructor.
-     * 
      * @param uri The uri of the node
      * @param properties The node's properties
-     * @throws URISyntaxException 
      */
-    public Node(VOSURI uri, List<NodeProperty> properties) throws URISyntaxException
+    public Node(VOSURI uri, List<NodeProperty> properties)
     {
         this.uri = uri;
-        buildPath(uri);
         this.properties = properties;
-    }
-
-    /**
-     * Given the uri, build the parent if one exists.
-     * Set the name of the node and path.
-     * @param uri
-     * @throws URISyntaxException 
-     */
-    void buildPath(VOSURI uri) throws URISyntaxException
-    {
-        if (uri == null)
-        {
-            throw new IllegalArgumentException("Node uri not provided");
-        }
-
-        path = uri.getPath();
-
-        if (path.startsWith("/"))
-        {
-            path = path.substring(1);
-        }
-        if (path.endsWith("/"))
-        {
-            path = path.substring(0, path.length() - 1);
-        }
-        String[] segments = path.split("/");
-
-        if (segments == null || segments.length == 0)
-        {
-            throw new IllegalArgumentException("Node path invalid.");
-        }
-
-        this.name = segments[segments.length - 1];
-        log.debug("Node name is: " + this.name);
-
-        if (segments.length == 1)
-        {
-            parent = null;
-        }
-        else
-        {
-            String uriString = uri.toString();
-            if (uriString.endsWith("/"))
-            {
-                uriString = uriString.substring(0, uriString.length() - 1);
-            }
-            String parentUriString = uriString.substring(0, uriString.lastIndexOf("/"));
-            VOSURI parentURI = new VOSURI(parentUriString);
-
-            // preserve the appData if it exists
-            Object parentAppData = null;
-            if (parent != null)
-            {
-                parentAppData = parent.appData;
-            }
-
-            parent = new ContainerNode(parentURI);
-            parent.appData = parentAppData;
-        }
+        
+        String[] comps = uri.getPath().split("/");
+        this.name = comps[comps.length - 1]; // last path component
     }
 
     @Override
     public String toString()
     {
-        return "Node [appData=" + appData + ", markedForDeletion=" + markedForDeletion + ", name=" + name + ", owner=" + owner
-                + ", parent=" + parent + ", path=" + path + ", properties=" + properties + ", uri=" + uri + "]";
+        String parentStr = null;
+        if (parent != null)
+        {
+            parentStr = parent.uri.toString() + " " + parent.appData;
+        }
+
+        return this.getClass().getSimpleName() 
+                + " [appData=" + appData
+                + ", markedForDeletion=" + markedForDeletion
+                + ", uri=" + uri.toString()
+                + ", owner=" + getOwner()
+                + ", parent=" + parentStr
+                + ", properties=" + properties + "]";
     }
     
     /**
@@ -244,61 +167,21 @@ public abstract class Node implements Comparable<Object>
             return -1;
         }
         if (! (o1 instanceof Node))
-        {
-            return -1;
-        }
-        if (this.equals(o1))
-        {
-            return 0;
-        }
-        return this.getName().compareTo(((Node) o1).getName());
+            throw new ClassCastException("compareTo requires a Node, got: " + o1.getClass().getName());
+        Node rhs = (Node) o1;
+        String s1 = this.getUri().getURIObject().toASCIIString();
+        String s2 = rhs.getUri().getURIObject().toASCIIString();
+
+        return s1.compareTo(s2);
     }
 
     /**
-     * Nodes are considered equal if their names, and their
-     * parents (and thus their parent names) are equal.
+     * Nodes are considered equal if their URIs are equal.
      */
     @Override
     public boolean equals(Object o)
     {
-        if (o instanceof Node)
-        {
-            Node n = (Node) o;
-            if (this.name.equals(n.name))
-            {
-                if (this.parent == null)
-                {
-                    return (n.parent == null);
-                }
-                else
-                {
-                    if (n.parent == null)
-                    {
-                        return false;
-                    }
-                    else
-                    {
-                        return this.parent.equals(n.parent);
-                    }
-                }
-            }
-        }
-        return false;
-    }
-
-    /**
-     * Creates a stack to the node's root.
-     */
-    public Stack<Node> stackToRoot()
-    {
-        Stack<Node> nodeStack = new Stack<Node>();
-        Node nextNode = this;
-        while (nextNode != null)
-        {
-            nodeStack.push(nextNode);
-            nextNode = nextNode.getParent();
-        }
-        return nodeStack;
+        return this.compareTo(o) == 0;
     }
 
     /**
@@ -321,36 +204,13 @@ public abstract class Node implements Comparable<Object>
         return uri;
     }
 
-    public void setUri(VOSURI uri) throws URISyntaxException
-    {
-        this.uri = uri;
-        this.buildPath(uri);
-    }
-
-    // TODO: confirm with BM about need for this method in NodeDAO
-    public void setPath(String path)
-    {
-        this.path = path;
-    }
-
-    public String getPath()
-    {
-        return path;
-    }
-
+    /**
+     * Convenience method to get the relative name of this node.
+     * @return
+     */
     public String getName()
     {
         return name;
-    }
-
-    public void setName(String name)
-    {
-        if (name == null || !name.equals(this.name))
-        {
-            // reset the path
-            this.path = "";
-        }
-        this.name = name;
     }
 
     public ContainerNode getParent()
@@ -361,6 +221,8 @@ public abstract class Node implements Comparable<Object>
     public void setParent(ContainerNode parent)
     {
         this.parent = parent;
+        // TODO: should verify that this.uri is a single path component
+        // extension of parent.uri
     }
 
     public List<NodeProperty> getProperties()
@@ -373,14 +235,17 @@ public abstract class Node implements Comparable<Object>
         this.properties = properties;
     }
 
+    /**
+     * Convenience method. This just calls
+     * <pre>
+     * Node.getPropertyValue(VOS.PROPERTY_URI_CREATOR)
+     * </pre>
+     *
+     * @return the owner
+     */
     public String getOwner()
     {
-        return owner;
-    }
-
-    public void setOwner(String owner)
-    {
-        this.owner = owner;
+        return getPropertyValue(VOS.PROPERTY_URI_CREATOR);
     }
 
     public boolean isMarkedForDeletion()
@@ -392,37 +257,48 @@ public abstract class Node implements Comparable<Object>
     {
         this.markedForDeletion = markedForDeletion;
     }
-    
+
+    /**
+     * Convenience method. This just calls
+     * <pre>
+     * Node.getPropertyValue(VOS.PROPERTY_URI_ISPUBLIC)
+     * </pre>
+     *
+     * @return true if the property is set to true, otherwise false
+     */
     public boolean isPublic()
     {
-        return isPublic;
-    }
-
-    public void setPublic(boolean isPublic)
-    {
-        this.isPublic = isPublic;
+        String val = getPropertyValue(VOS.PROPERTY_URI_ISPUBLIC);
+        return "true".equals(val);
     }
 
     /**
-     * Find a property by its key (propertyUri)
+     * Find a property by its key (propertyUri).
+     * TODO: this should return a List<NodeProperty>
      * 
-     * @param propertyUri
-     * @return
-     * 
-     * @author zhangsa
+     * @param propertyURI
+     * @return the node property object or null if not found
      */
-    public NodeProperty findProperty(String propertyUri)
+    public NodeProperty findProperty(String propertyURI)
     {
-        NodeProperty rtn = null;
         for (NodeProperty prop : this.properties)
         {
-            if (prop.getPropertyURI().equalsIgnoreCase(propertyUri))
-            {
-                rtn = prop;
-                break;
-            }
+            if (prop.getPropertyURI().equalsIgnoreCase(propertyURI))
+                return prop;
         }
-        return rtn;
+        return null;
     }
-
+    /**
+     * Return the value of the specified property.
+     *
+     * @param propertyURI
+     * @return the value or null if not found
+     */
+    public String getPropertyValue(String propertyURI)
+    {
+        NodeProperty prop = findProperty(propertyURI);
+        if (prop != null)
+            return prop.getPropertyValue();
+        return null;
+    }
 }

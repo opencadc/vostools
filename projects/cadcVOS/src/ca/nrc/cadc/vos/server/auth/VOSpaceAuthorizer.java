@@ -101,9 +101,9 @@ import ca.nrc.cadc.vos.NodeProperty;
 import ca.nrc.cadc.vos.VOS;
 import ca.nrc.cadc.vos.VOSURI;
 import ca.nrc.cadc.vos.server.NodePersistence;
-import ca.nrc.cadc.vos.server.SearchNode;
 import ca.nrc.cadc.vos.server.util.NodeStackListener;
-import ca.nrc.cadc.vos.server.util.NodeUtil;
+import java.util.Iterator;
+import java.util.LinkedList;
 
 
 /**
@@ -119,6 +119,9 @@ import ca.nrc.cadc.vos.server.util.NodeUtil;
 public class VOSpaceAuthorizer implements Authorizer
 {
     protected static final Logger LOG = Logger.getLogger(VOSpaceAuthorizer.class);
+
+    // TODO: dynamically find the cred service associated with this VOSpace service
+    // maybe from the capabilities?
     private static final String CRED_SERVICE_ID = "ivo://cadc.nrc.ca/cred";
     
     private SSLSocketFactory socketFactory;
@@ -134,6 +137,19 @@ public class VOSpaceAuthorizer implements Authorizer
         groupMembershipCache = new HashMap<String, Boolean>();
     }
 
+    // get a linked list of nodes from leaf to root
+    private LinkedList<Node> getNodeList(Node leaf)
+    {
+        LinkedList<Node> nodes = new LinkedList<Node>();
+        Node cur = leaf;
+        while (cur != null)
+        {
+            nodes.add(cur);
+            cur = cur.getParent();
+        }
+        return nodes;
+    }
+
     /**
      * Obtain the Read Permission for the given URI.
      *
@@ -143,17 +159,18 @@ public class VOSpaceAuthorizer implements Authorizer
      * @throws AccessControlException If the user does not have read permission
      * @throws FileNotFoundException If the node could not be found
      */
-    public Object getReadPermission(final URI uri)
+    public Object getReadPermission(URI uri)
         throws AccessControlException, FileNotFoundException
     {
         try
         {
-            Node searchNode = new SearchNode(new VOSURI(uri));
-            return getReadPermission(searchNode);
-            
-        } catch (URISyntaxException e)
+            VOSURI vos = new VOSURI(uri);
+            Node node = nodePersistence.get(vos);
+            return getReadPermission(node);
+        } 
+        catch(NodeNotFoundException ex)
         {
-            throw new IllegalArgumentException("URI not well formed.");
+            throw new FileNotFoundException("not found: " + uri);
         }
     }
     
@@ -165,23 +182,17 @@ public class VOSpaceAuthorizer implements Authorizer
      * @throws AccessControlException If the user does not have read permission
      * @throws FileNotFoundException If the node could not be found
      */
-    public Object getReadPermission(final Node node)
+    public Object getReadPermission(Node node)
             throws AccessControlException, FileNotFoundException
     {        
-        try
+        LinkedList<Node> nodes = getNodeList(node);
+        Iterator<Node> iter = nodes.descendingIterator(); // root at end
+        while (iter.hasNext())
         {
-            Node persistentNode = NodeUtil.iterateStack(
-                    node, readPermissionAuthorizer, getNodePersistence(), true);
-            if (persistentNode == null)
-            {
-                throw new AccessControlException("Read permission on root denied.");
-            }
-            return persistentNode;
+            Node n = iter.next();
+            checkSingleNodeReadPermission(n);
         }
-        catch (NodeNotFoundException e)
-        {
-            throw new FileNotFoundException(node.getPath());
-        }
+        return node;
     }
 
     /**
@@ -193,17 +204,18 @@ public class VOSpaceAuthorizer implements Authorizer
      * @throws AccessControlException If the user does not have write permission
      * @throws FileNotFoundException If the node could not be found
      */
-    public Object getWritePermission(final URI uri)
+    public Object getWritePermission(URI uri)
             throws AccessControlException, FileNotFoundException
     {
         try
         {
-            Node searchNode = new SearchNode(new VOSURI(uri));
-            return getWritePermission(searchNode);
-            
-        } catch (URISyntaxException e)
+            VOSURI vos = new VOSURI(uri);
+            Node node = nodePersistence.get(vos);
+            return getWritePermission(node);
+        }
+        catch(NodeNotFoundException ex)
         {
-            throw new IllegalArgumentException("URI not well formed.");
+            throw new FileNotFoundException("not found: " + uri);
         }
     }
 
@@ -213,25 +225,21 @@ public class VOSpaceAuthorizer implements Authorizer
      * @param node      The Node to check.
      * @return          The persistent version of the target node.
      * @throws AccessControlException If the user does not have write permission
-     * @throws FileNotFoundException If the node could not be found
      */
-    public Object getWritePermission(final Node node)
-            throws AccessControlException, FileNotFoundException
+    public Object getWritePermission(Node node)
+            throws AccessControlException
     {
-        try
+        LinkedList<Node> nodes = getNodeList(node);
+        Iterator<Node> iter = nodes.descendingIterator(); // root at end
+        while (iter.hasNext())
         {
-            Node persistentNode = NodeUtil.iterateStack(
-                    node, writePermissionAuthorizer, getNodePersistence(), true);
-            if (persistentNode == null)
-            {
-                throw new AccessControlException("Write permission to root denied.");
-            }
-            return persistentNode;
+            Node n = iter.next();
+            if (n == node) // target needs write
+                checkSingleNodeWritePermission(n);
+            else // part of path needs read
+                checkSingleNodeReadPermission(n);
         }
-        catch (NodeNotFoundException e)
-        {
-            throw new FileNotFoundException(node.getPath());
-        }
+        return node;
     }
     
     /**

@@ -67,25 +67,18 @@
 
 package ca.nrc.cadc.vos.server.web.restlet.action;
 
+import ca.nrc.cadc.vos.ContainerNode;
 import java.io.FileNotFoundException;
-import java.io.IOException;
-import java.net.URISyntaxException;
 import java.security.AccessControlException;
 
-import org.restlet.Request;
-import org.restlet.representation.Representation;
-
 import ca.nrc.cadc.vos.Node;
-import ca.nrc.cadc.vos.NodeParsingException;
 import ca.nrc.cadc.vos.NodeWriter;
 import ca.nrc.cadc.vos.Search;
-import ca.nrc.cadc.vos.VOSURI;
 import ca.nrc.cadc.vos.server.AbstractView;
-import ca.nrc.cadc.vos.server.NodePersistence;
-import ca.nrc.cadc.vos.server.SearchNode;
-import ca.nrc.cadc.vos.server.auth.VOSpaceAuthorizer;
 import ca.nrc.cadc.vos.server.web.representation.NodeOutputRepresentation;
 import ca.nrc.cadc.vos.server.web.representation.ViewRepresentation;
+import java.net.URL;
+import org.restlet.data.Reference;
 
 /**
  * Class to perform the retrieval of a Node.
@@ -95,7 +88,6 @@ import ca.nrc.cadc.vos.server.web.representation.ViewRepresentation;
 public class GetNodeAction extends NodeAction
 {
     private Search search;
-
 
     /**
      * Basic empty constructor.
@@ -115,89 +107,72 @@ public class GetNodeAction extends NodeAction
         this.search = search;
     }
 
-
-    /**
-     * Given the node URI and XML, return the Node object specified
-     * by the client.
-     */
     @Override
-    public Node getClientNode(VOSURI vosURI, Representation nodeXML)
-            throws URISyntaxException, NodeParsingException, IOException 
+    public Node doAuthorizationCheck()
+        throws AccessControlException, FileNotFoundException
     {
-        return new SearchNode(vosURI);
+        return (Node) voSpaceAuthorizer.getReadPermission(vosURI.getURIObject());
     }
     
-    /**
-     * Perform an authorization check for the given node and return (if applicable)
-     * the persistent version of the Node.
-     */
     @Override
-    public Node doAuthorizationCheck(final VOSpaceAuthorizer voSpaceAuthorizer,
-                                     final Node clientNode)
-            throws AccessControlException, FileNotFoundException
-    {   
-        return (Node) voSpaceAuthorizer.getReadPermission(clientNode);
-    }
-    
-    /**
-     * Perform the action for which the subclass was designed.
-     *
-     * The return object from this method (and from performNodeAction) must be
-     * an object of type NodeActionResult.
-     *
-     * @param node              The Node involved in the action.
-     * @param nodePersistence   The NodePersistence instance for persistence
-     *                          layer access.
-     * @param request           The Restlet Request object.
-     * @return The NodeAction result
-     * @throws Exception If a problem occurs.
-     */
-    @Override
-    public NodeActionResult performNodeAction(
-            final Node node, final NodePersistence nodePersistence,
-            final Request request) throws Exception
+    public NodeActionResult performNodeAction(Node clientNode, Node serverNode)
     {
-        final AbstractView view = getView();
+        if (serverNode instanceof ContainerNode)
+            nodePersistence.getChildren( (ContainerNode) serverNode);
+        nodePersistence.getProperties(serverNode);
+        
+        AbstractView view;
+        try
+        {
+            view = getView();
+        }
+        catch(InstantiationException ex)
+        {
+            log.error("failed to load view: " + this.viewReference, ex);
+            // this should generate an InternalFault in NodeAction
+            throw new RuntimeException("view was configured but failed to load: " + this.viewReference);
+        }
+        catch(IllegalAccessException ex)
+        {
+            log.error("failed to load view: " + this.viewReference, ex);
+            // this should generate an InternalFault in NodeAction
+            throw new RuntimeException("view was configured but failed to load: " + this.viewReference);
+        }
 
         if (view == null)
         {
             // no view specified or found--return the xml representation
             final NodeWriter nodeWriter = new NodeWriter();
-            nodeWriter.setStylesheetURL(getStylesheetURL(request));
-            //nodeWriter.setResults(getSearch() == null
-            //                      ? null : getSearch().getResults());
-
-            return new NodeActionResult(
-                    new NodeOutputRepresentation(node, nodeWriter));
+            nodeWriter.setStylesheetURL(getStylesheetURL());
+            return new NodeActionResult(new NodeOutputRepresentation(serverNode, nodeWriter));
         }
         else
         {
-            view.setNode(node, request, getViewReference());
-
-            if (view.getRedirectURL() != null)
+            Reference ref = request.getOriginalRef();
+            URL url = ref.toUrl();
+            view.setNode(serverNode, viewReference, url);
+            URL redirectURL = view.getRedirectURL();
+            if (redirectURL != null)
             {
-                return new NodeActionResult(view.getRedirectURL());
+                return new NodeActionResult(redirectURL);
             }
             else
             {
                 // return a representation for the view
-                final ViewRepresentation viewRepresentation =
-                        new ViewRepresentation(view);
-                return new NodeActionResult(viewRepresentation);
+                return new NodeActionResult(new ViewRepresentation(view));
             }
         }
     }
     
     /**
      * Look for the stylesheet URL in the request context.
-     * @param request   The Request to piggy back from.
      * @return      The String URL of the stylesheet for this action.
      *              Null if no reference is provided.
      */
-    public String getStylesheetURL(Request request)
+    public String getStylesheetURL()
     {
-        log.debug("Stylesheet Reference is: " + getStylesheetReference());
-        if (getStylesheetReference() != null)
+        log.debug("Stylesheet Reference is: " + stylesheetReference);
+        if (stylesheetReference != null)
         {
             String scheme = request.getHostRef().getScheme();
             String server = request.getHostRef().getHostDomain();
@@ -205,11 +180,11 @@ public class GetNodeAction extends NodeAction
             url.append(scheme);
             url.append("://");
             url.append(server);
-            if (!getStylesheetReference().startsWith("/"))
+            if (stylesheetReference.startsWith("/"))
             {
                 url.append("/");
             }
-            url.append(getStylesheetReference());
+            url.append(stylesheetReference);
             return url.toString();
         }
         return null;

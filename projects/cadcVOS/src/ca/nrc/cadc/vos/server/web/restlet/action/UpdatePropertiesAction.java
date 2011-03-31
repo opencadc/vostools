@@ -73,20 +73,14 @@ import java.net.URISyntaxException;
 import java.security.AccessControlException;
 
 import org.apache.log4j.Logger;
-import org.restlet.Request;
-import org.restlet.representation.Representation;
 
 import ca.nrc.cadc.vos.DataNode;
 import ca.nrc.cadc.vos.Node;
 import ca.nrc.cadc.vos.NodeFault;
-import ca.nrc.cadc.vos.NodeNotFoundException;
 import ca.nrc.cadc.vos.NodeParsingException;
 import ca.nrc.cadc.vos.NodeProperty;
 import ca.nrc.cadc.vos.NodeWriter;
 import ca.nrc.cadc.vos.VOS;
-import ca.nrc.cadc.vos.VOSURI;
-import ca.nrc.cadc.vos.server.NodePersistence;
-import ca.nrc.cadc.vos.server.auth.VOSpaceAuthorizer;
 import ca.nrc.cadc.vos.server.web.representation.NodeInputRepresentation;
 import ca.nrc.cadc.vos.server.web.representation.NodeOutputRepresentation;
 
@@ -100,73 +94,56 @@ public class UpdatePropertiesAction extends NodeAction
     
     private static Logger log = Logger.getLogger(UpdatePropertiesAction.class);
     
-    /**
-     * Given the node URI and XML, return the Node object specified
-     * by the client.
-     */
     @Override
-    public Node getClientNode(VOSURI vosURI, Representation nodeXML)
+    public Node getClientNode()
             throws URISyntaxException, NodeParsingException, IOException 
     {
         NodeInputRepresentation nodeInputRepresentation =
             new NodeInputRepresentation(nodeXML, vosURI.getPath());
         return nodeInputRepresentation.getNode();
     }
-    
-    /**
-     * Perform an authorization check for the given node and return (if applicable)
-     * the persistent version of the Node.
-     */
+
     @Override
-    public Node doAuthorizationCheck(VOSpaceAuthorizer voSpaceAuthorizer, Node clientNode)
+    public Node doAuthorizationCheck()
             throws AccessControlException, FileNotFoundException
     {
-        Node node = (Node) voSpaceAuthorizer.getWritePermission(clientNode);
-        node.setProperties(clientNode.getProperties());
+        Node node = (Node) voSpaceAuthorizer.getWritePermission(vosURI.getURIObject());
         return node;
     }
 
-    /**
-     * Perform the updating of the Node's properties.
-     */
     @Override
-    public NodeActionResult performNodeAction(Node node, NodePersistence nodePersistence, Request request) throws Exception
+    public NodeActionResult performNodeAction(Node clientNode, Node serverNode)
     {
-        
-        // check for a busy node
-        if (node instanceof DataNode)
-        {
-            if (((DataNode) node).isBusy())
-            {
-                log.debug("Node is busy: " + node.getPath());
-                NodeFault nodeFault = NodeFault.InternalFault;
-                nodeFault.setMessage("Node is busy: " + node.getUri().toString());
-                return new NodeActionResult(nodeFault);
-            }
-        }
-        
         try
         {
+            // TODO: check if client and server node types match?
+
+            // check for a busy node
+            if (serverNode instanceof DataNode)
+            {
+                if (((DataNode) serverNode).isBusy())
+                {
+                    log.debug("Node is busy: " + serverNode.getUri().getPath());
+                    NodeFault nodeFault = NodeFault.InternalFault;
+                    nodeFault.setMessage("Node is busy: " + serverNode.getUri().toString());
+                    return new NodeActionResult(nodeFault);
+                }
+            }
+
             // filter out any non-modifiable properties
-            filterPropertiesForUpdate(node);
-            
-            Node updatedNode = nodePersistence.updateProperties(node);
-            setNodeURI(updatedNode, node.getUri());
+            filterPropertiesForUpdate(clientNode);
+
+            Node out = nodePersistence.updateProperties(serverNode, clientNode.getProperties());
             
             // return the node in xml format
             NodeWriter nodeWriter = new NodeWriter();
-            return new NodeActionResult(new NodeOutputRepresentation(updatedNode, nodeWriter));
+            return new NodeActionResult(new NodeOutputRepresentation(out, nodeWriter));
         }
-        catch (NodeNotFoundException e)
+        finally
         {
-            log.debug("Could not resolve part of path for node: " + node.getPath());
-            NodeFault nodeFault = NodeFault.NodeNotFound;
-            nodeFault.setMessage(node.getUri().toString());
-            return new NodeActionResult(nodeFault);
+            
         }
     }
-    
-
     
     /**
      * Remove any properties from the Node that cannot be updated.

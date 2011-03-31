@@ -69,10 +69,11 @@
 
 package ca.nrc.cadc.vos.server;
 
+import ca.nrc.cadc.date.DateUtil;
+import ca.nrc.cadc.util.CaseInsensitiveStringComparator;
 import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.SQLException;
-import java.sql.Statement;
 import java.util.Date;
 import java.util.Iterator;
 import java.util.List;
@@ -92,90 +93,94 @@ import ca.nrc.cadc.util.HexUtil;
 import ca.nrc.cadc.vos.ContainerNode;
 import ca.nrc.cadc.vos.DataNode;
 import ca.nrc.cadc.vos.Node;
-import ca.nrc.cadc.vos.NodeAlreadyExistsException;
-import ca.nrc.cadc.vos.NodeNotFoundException;
 import ca.nrc.cadc.vos.NodeProperty;
 import ca.nrc.cadc.vos.VOS;
 import ca.nrc.cadc.vos.VOS.NodeBusyState;
+import ca.nrc.cadc.vos.VOSURI;
+import java.net.URI;
+import java.net.URISyntaxException;
+import java.sql.ResultSet;
+import java.sql.Statement;
+import java.sql.Types;
+import java.text.DateFormat;
+import java.util.Calendar;
+import java.util.Set;
+import java.util.TreeSet;
+import org.springframework.dao.DataAccessException;
+import org.springframework.jdbc.core.ResultSetExtractor;
 
 /**
- * Default implementation of the NodePersistence interface.
- * 
- * @author majorb
+ * Helper class for implementing NodePersistence with a
+ * relational database back end for metadata. This class is
+ * NOT thread-safe and ten caller must instantiate a new one
+ * in each thread (e.g. app-server request thread).
  *
+ * @author majorb
  */
-public abstract class NodeDAO implements NodePersistence
+public class NodeDAO
 {
-    
     private static Logger log = Logger.getLogger(NodeDAO.class);
+
+    // temporarily needed by NodeMapper
+    static final String NODE_TYPE_DATA = "D";
+    static final String NODE_TYPE_CONTAINER = "C";
     
     private static final int NODE_NAME_COLUMN_SIZE = 256;
     private static final int MAX_TIMESTAMP_LENGTH = 30;
 
     // Database connection.
+    protected DataSource dataSource;
+    protected NodeSchema nodeSchema;
+    protected String authority;
+
     protected JdbcTemplate jdbc;
     private DataSourceTransactionManager transactionManager;
     private DefaultTransactionDefinition defaultTransactionDef;
     private TransactionStatus transactionStatus;
-    
-    private boolean getNodesMarkedForDeletion = false;
 
-    /**
-     * NodeDAO Constructor.
-     */
-    public NodeDAO()
+    private DateFormat dateFormat;
+    private Calendar cal;
+
+    public static class NodeSchema
     {
+        public String nodeTable;
+        public String propertyTable;
+        public NodeSchema(String nodeTable, String propertyTable)
+        {
+            this.nodeTable = nodeTable;
+            this.propertyTable = propertyTable;
+        }
     }
     
     /**
-     * Returns true if nodes marked for deletion are
-     * returned by the DAO
+     * NodeDAO Constructor. Thos class veeb developed and only tested using a
+     * Sybase ASE RDBMS. Some SQL (update commands in particular) are non-standard.
+     *
+     * @param dataSource
+     * @param nodeSchema
+     * @param authority 
      */
-    public boolean getGetNodesMarkedForDeletion()
+    public NodeDAO(DataSource dataSource, NodeSchema nodeSchema, String authority)
     {
-        return getNodesMarkedForDeletion;
-    }
-    
-    /**
-     * If true, retrieve nodes in the database that have
-     * been marked for deletion
-     * @param value The new value.
-     */
-    public void setGetNodesMarkedForDeletion(boolean value)
-    {
-        getNodesMarkedForDeletion = value;
-    }
-    
-    /**
-     * Perform NodeDAO initialization.  This method must be called
-     * before any DAO operations are used.
-     */
-    public void init()
-    {        
+        this.dataSource = dataSource;
+        this.nodeSchema = nodeSchema;
+        this.authority = authority;
+
         this.defaultTransactionDef = new DefaultTransactionDefinition();
-        defaultTransactionDef
-                .setIsolationLevel(DefaultTransactionDefinition.ISOLATION_REPEATABLE_READ);
-        DataSource dataSource = getDataSource();
+        defaultTransactionDef.setIsolationLevel(DefaultTransactionDefinition.ISOLATION_REPEATABLE_READ);
         this.jdbc = new JdbcTemplate(dataSource);
-        
         this.transactionManager = new DataSourceTransactionManager(dataSource);
+
+        this.dateFormat = DateUtil.getDateFormat(DateUtil.IVOA_DATE_FORMAT, DateUtil.UTC);
+        this.cal = Calendar.getInstance(DateUtil.LOCAL);
     }
-    
-    /**
-     * @return The name of the table for persisting nodes.
-     */
-    public abstract String getNodeTableName();
 
-    /**
-     * @return The name of the table for storing node properties.
-     */
-    public abstract String getNodePropertyTableName();
-    
-    /**
-     * @return The node data source to use.
-     */
-    public abstract DataSource getDataSource();
+    // convenience during refactor
+    protected String getNodeTableName() { return nodeSchema.nodeTable; }
 
+    // convenience during refactor
+    protected String getNodePropertyTableName() { return nodeSchema.propertyTable; }
+    
     /**
      * Start a transaction to the data source.
      */
@@ -184,8 +189,7 @@ public abstract class NodeDAO implements NodePersistence
         if (transactionStatus != null)
             throw new IllegalStateException("transaction already in progress");
         log.debug("startTransaction");
-        this.transactionStatus = transactionManager
-                .getTransaction(defaultTransactionDef);
+        this.transactionStatus = transactionManager.getTransaction(defaultTransactionDef);
         log.debug("startTransaction: OK");
     }
 
@@ -214,645 +218,536 @@ public abstract class NodeDAO implements NodePersistence
         this.transactionStatus = null;
         log.debug("rollback: OK");
     }
-    
+
     /**
-     * Get the node from the parent.  This method assumes that the nodeID
-     * of the parent object is set.  If the parent object is null, it is
-     * assumed to be at the root level.
-     * @param name The node to get
-     * @param parent The parent of the node, or null if this is a root.  This object
-     * must have been retrived from the NodePersistence interface.
+     * Checks that the specified node has already been persisted. This will pass if this
+     * node was obtained from the getPath method.
+     * @param node
      */
-    public Node getFromParent(String name, ContainerNode parent) throws NodeNotFoundException
+    protected void expectPersistentNode(Node node)
     {
-        if (name == null)
+        if (node == null)
+            throw new IllegalArgumentException("node cannot be null");
+        if (node.appData == null)
+            throw new IllegalArgumentException("node is not a persistent node: " + node.getUri().getPath());
+    }
+
+    /**
+     * Get a complete path from the root container. For the container nodes in
+     * the returned node, only child nodes on the path will be included in the
+     * list of children; other children are not included. Nodes returned from
+     * this method will have some but not all properties set. Specifically, any
+     * properties that are inherently single-valued and stored in the Node table
+     * are included, as are the access-control properties (isPublic, group-read, 
+     * and group-write). The remaining properties for a node can be obtained by
+     * calling getProperties(Node).
+     *
+     * @see getProperties(Node)
+     * @param path
+     * @return the last node in the path, with all parents or null if not found
+     */
+    public Node getPath(String path)
+    {
+        log.debug("getPath: " + path);
+        if (path.charAt(0) == '/')
+            path = path.substring(1);
+        // generate single join query to extract path
+        NodePathStatementCreator npsc = new NodePathStatementCreator(
+                path.split("/"), getNodeTableName(), getNodePropertyTableName());
+
+        // execute query with NodePathExtractor
+        Node ret = (Node) jdbc.query(npsc, new NodePathExtractor());
+
+        return ret;
+    }
+
+    /**
+     * Load all the properties for the specified Node.
+     * 
+     * @param node
+     */
+    public void getProperties(Node node)
+    {
+        log.debug("getProperties: " + node.getUri().getPath() + ", " + node.getClass().getSimpleName());
+        expectPersistentNode(node);
+
+        log.debug("getProperties: " + node.getUri().getPath() + ", " + node.getClass().getSimpleName());
+        String sql = getSelectNodePropertiesByID(node);
+        log.debug("getProperties: " + sql);
+        List<NodeProperty> props = jdbc.query(sql, new NodePropertyMapper());
+        node.getProperties().addAll(props);
+    }
+
+    /**
+     * Load a single child node of the specified container.
+     * 
+     * @param parent
+     * @param name
+     */
+    public void getChild(ContainerNode parent, String name)
+    {
+        log.debug("getChild: " + parent.getUri().getPath() + ", " + name);
+        expectPersistentNode(parent);
+
+        String sql = getSelectChildNodeSQL(parent);
+        log.debug("getChild: " + sql);
+        List<Node> nodes = jdbc.query(sql, new Object[] { name }, new NodeMapper(authority, parent.getUri().getPath()));
+        if (nodes.size() > 1)
+            throw new IllegalStateException("BUG - found " + nodes.size() + " child nodes named " + name
+                    + " for container " + parent.getUri().getPath());
+        addChildNodes(parent, nodes);
+    }
+
+    /**
+     * Load all the child nodes of the specified container.
+     *
+     * @param parent
+     */
+    public void getChildren(ContainerNode parent)
+    {
+        log.debug("getChildren: " + parent.getUri().getPath() + ", " + parent.getClass().getSimpleName());
+        expectPersistentNode(parent);
+
+        // we must re-run the query in case server-side content changed since the argument node
+        // was called, e.g. from delete(node) or markForDeletion(node)
+        String sql = getSelectNodesByParentSQL(parent);
+        log.debug("getChildren: " + sql);
+        List<Node> nodes = jdbc.query(sql, new NodeMapper(authority, parent.getUri().getPath()));
+        addChildNodes(parent, nodes);
+    }
+
+    private void addChildNodes(ContainerNode parent, List<Node> nodes)
+    {
+        for (Node n : nodes)
         {
-            throw new NodeNotFoundException("Node parameter is null.");
-        }
-        
-        synchronized (this)
-        {
-            try
+            if (!parent.getNodes().contains(n))
             {
-                
-                startTransaction();
-                Node ret = getFromParentImpl(name, parent, false);
-                commitTransaction();
-                return ret;
+                log.debug("adding child to list: " + n.getUri().getPath());
+                n.setParent(parent);
+                parent.getNodes().add(n);
             }
-            catch(Throwable t)
-            {
-                if (transactionStatus != null)
-                    try { rollbackTransaction(); }
-                    catch(Throwable oops) { log.error("failed to rollback transaction", oops); }
-                if (t instanceof NodeNotFoundException)
-                {
-                    throw (NodeNotFoundException) t;
-                }
-                else
-                {
-                    log.error("getFromParent: " + name + "," + parent, t);
-                    throw new IllegalStateException(t);
-                }
-            }
-            finally
-            {
-                if (transactionStatus != null)
-                    try
-                    {
-                        log.warn("getFromParent - BUG - transaction still open in finally... calling rollback");
-                        rollbackTransaction();
-                    }
-                    catch(Throwable oops) { log.error("failed to rollback transaction in finally", oops); }
-            }
+            else
+                log.debug("child already in list, not adding: " + n.getUri().getPath());
         }
     }
-    
+
     /**
-     * Get the node from the parent.  This method assumes that the nodeID
-     * of the parent object is set.  If the parent object is null, it is
-     * assumed to be at the root level.
+     * Store the specified node. The node must be attached to a parent container and
+     * the parent container must have already been persisted.
      * 
-     * This method differs from getFromParent in that:
-     * - Node properties not in the Node table are not retrieved
-     * - The children of the Node are not retrieved.
-     * 
-     * @param name The node to get
-     * @param parent The parent of the node, or null if this is a root.  This object
-     * must have been retrived from the NodePersistence interface.
+     * @param node
+     * @return the same node but with generated internal ID set in the appData field
      */
-    public Node getFromParentLight(String name, ContainerNode parent) throws NodeNotFoundException
+    public Node put(Node node)
     {
-        if (name == null)
-        {
-            throw new NodeNotFoundException("Node parameter is null.");
-        }
-        
+        log.debug("put: " + node.getUri().getPath() + ", " + node.getClass().getSimpleName());
+
+        // if parent is null, this is just a new root-level node,
+        if (node.getParent() != null && node.getParent().appData == null)
+            throw new IllegalArgumentException("parent of node is not a persistent node: " + node.getUri().getPath());
+
+        if (node.appData != null) // persistent node == update == not supported
+            throw new UnsupportedOperationException("update of existing node not supported; try updateProperties");
+
+        if (node.getName().length() > NODE_NAME_COLUMN_SIZE)
+            throw new IllegalArgumentException("length of node name exceeds limit ("+NODE_NAME_COLUMN_SIZE+"): " + node.getName());
+
         try
         {
-            return getFromParentImpl(name, parent, true);
+            startTransaction();
+            NodePutStatementCreator npsc = new NodePutStatementCreator(nodeSchema, false);
+            npsc.setValues(node);
+            KeyHolder keyHolder = new GeneratedKeyHolder();
+            jdbc.update(npsc, keyHolder);
+            Long generatedID = new Long(keyHolder.getKey().longValue());
+            node.appData = new NodeID(generatedID);
+            NodeID nodeID = (NodeID) node.appData;
+            
+            Iterator<NodeProperty> propertyIterator = node.getProperties().iterator();
+            while (propertyIterator.hasNext())
+            {
+                NodeProperty prop = propertyIterator.next();
+                if ( usePropertyTable(prop.getPropertyURI()))
+                {
+                    PropertyStatementCreator ppsc = new PropertyStatementCreator(nodeSchema, nodeID, prop, false);
+                    jdbc.update(ppsc);
+                }
+                // else: already persisted by the NodePutStatementCreator above
+            }
+
+            commitTransaction();
+
+            return node;
         }
         catch(Throwable t)
         {
-            if (t instanceof NodeNotFoundException)
-            {
-                throw (NodeNotFoundException) t;
-            }
+            log.error("rollback for node: " + node.getUri().getPath(), t);
+            try { rollbackTransaction(); }
+            catch(Throwable oops) { log.error("failed to rollback transaction", oops); }
+            throw new RuntimeException("failed to persist node: " + node.getUri(), t);
+        }
+        finally
+        {
+            if (transactionStatus != null)
+                try
+                {
+                    log.warn("put: BUG - transaction still open in finally... calling rollback");
+                    rollbackTransaction();
+                }
+                catch(Throwable oops) { log.error("failed to rollback transaction in finally", oops); }
+        }
+    }
+
+    /**
+     * Recursive delete of a node. This method irrevocably deletes a node and all
+     * the child nodes below it.
+     * 
+     * @param node
+     */
+    public void delete(Node node)
+    {
+        log.debug("delete: " + node.getUri().getPath() + ", " + node.getClass().getSimpleName());
+        expectPersistentNode(node);
+
+        try
+        {
+            startTransaction();
+
+            deleteNode(node, false);
+            
+            // TODO: call updateContentLength() on parent here??
+
+            commitTransaction();
+            log.debug("Node deleted: " + node.getUri().getPath());
+        }
+        catch (Throwable t)
+        {
+            log.error("Delete rollback for node: " + node.getUri().getPath(), t);
+            if (transactionStatus != null)
+                try { rollbackTransaction(); }
+                catch(Throwable oops) { log.error("failed to rollback transaction", oops); }
+            throw new RuntimeException("failed to delete " + node.getUri().getPath(), t);
+        }
+        finally
+        {
+            if (transactionStatus != null)
+                try
+                {
+                    log.warn("delete - BUG - transaction still open in finally... calling rollback");
+                    rollbackTransaction();
+                }
+                catch(Throwable oops) { log.error("failed to rollback transaction in finally", oops); }
+        }
+    }
+
+
+    /**
+     * Mark a node as deleted. A new node with the same name may be created without
+     * colliding with the deleted node.
+     *
+     * @param node
+     */
+    public void markForDeletion(Node node)
+    {
+        log.debug("markForDeletion: " + node.getUri().getPath() + ", " + node.getClass().getSimpleName());
+        expectPersistentNode(node);
+
+        try
+        {
+            startTransaction();
+
+            deleteNode(node, true);
+
+            commitTransaction();
+            log.debug("Node marked for deletion: " + node.getUri().getPath());
+        }
+        catch (Throwable t)
+        {
+            if (transactionStatus != null)
+                try { rollbackTransaction(); }
+                catch(Throwable oops) { log.error("failed to rollback transaction", oops); }
+            throw new RuntimeException("failed to mark nodes as deleted", t);
+        }
+        finally
+        {
+            if (transactionStatus != null)
+                try
+                {
+                    log.warn("markForDeletion - BUG - transaction still open in finally... calling rollback");
+                    rollbackTransaction();
+                }
+                catch(Throwable oops) { log.error("failed to rollback transaction in finally", oops); }
+        }
+    }
+
+    // no transaction implementation of node marking or deletion
+    // the impl is depth-first so that child-parent constraints are
+    // never violated
+    private void deleteNode(Node node, boolean mark)
+    {
+        log.debug("deleteNode: " + node.getUri().getPath() + ", " + node.getClass().getSimpleName());
+        // delete children
+        if (node instanceof ContainerNode)
+        {
+            ContainerNode cn = (ContainerNode) node;
+            deleteChildren(cn, mark);
+        }
+
+        // delete properties, same for real delete and mark
+        String sql = getDeleteNodePropertiesSQL(node);
+        log.debug(sql);
+        jdbc.update(sql);
+
+        // never delete a "home" node
+        if (node.getParent() != null)
+        {
+            if (mark)
+                sql = getMarkNodeForDeletionSQL(node);
             else
-            {
-                log.error("getFromParentLight: " + name + "," + parent, t);
-                throw new IllegalStateException(t);
-            }
+                sql = getDeleteNodeSQL(node);
+            log.debug(sql);
+            jdbc.update(sql);
         }
     }
+
+    // no transaction implementation of recursively marking or deleting
+    // child nodes
+    private void deleteChildren(ContainerNode node, boolean mark)
+    {
+        log.debug("deleteChildren: " + node.getUri().getPath() + ", " + node.getClass().getSimpleName());
+        getChildren(node);
+        Iterator<Node> iter = node.getNodes().iterator();
+        while ( iter.hasNext() )
+        {
+            Node n = iter.next();
+            deleteNode(n, mark);
+        }
+    }
+
+    // custom update methods for performance reasons since a full
+    // put would be slow
 
     /**
-     * Put the node in the provided container.  This method assumes that the
-     * nodeID of the parent is set.  If the parent object is null, it is
-     * assumed to be at the root level.
-     * @param node The node to put
-     * @param parent The parent of the node.  This object must have been retrieved
-     * from the NodePersistence interface.
+     * Atomic update of the content length of the node by adding the
+     * specified difference.
+     *
+     * @param node
+     * @param delta amount to increment (+) or decrement (-)
      */
-    public Node putInContainer(Node node, ContainerNode parent) throws NodeNotFoundException, NodeAlreadyExistsException
+    public void updateContentLength(Node node, long delta)
     {
-        
-        log.debug("NodeDAO.putInContainer(): node is: " + node);
-        log.debug("NodeDAO.putInContainer(): node parent is: " + parent);
-        
-        if (node == null)
-        {
-            throw new NodeNotFoundException("Node parameter is null.");
-        }
-        
-        synchronized (this)
-        {
-            try
-            {
-                // Start the transaction.
-                startTransaction();
-                
-                // make sure the entire parent tree exists
-                node.setParent(parent);
-                
-                // make sure this leaf does not already exist
-                if (getSingleNodeFromSelect(getSelectNodeByNameAndParentSQL(node)) != null)
-                {
-                    throw new NodeAlreadyExistsException(node.getPath());
-                }
-                
-                KeyHolder keyHolder = new GeneratedKeyHolder();
-                
-                final String insertSQL = getInsertNodeSQL(node);
+        log.debug("updateContentLength: " + node.getUri().getPath() + ", " + node.getClass().getSimpleName() + ", " + delta);
+        expectPersistentNode(node);
 
-                jdbc.update(new PreparedStatementCreator() {
-                    public PreparedStatement createPreparedStatement(Connection connection)
-                        throws SQLException
-                    {
-                        PreparedStatement ps = connection.prepareStatement(insertSQL,
-                            Statement.RETURN_GENERATED_KEYS);
-                        return ps;
-                    }}, keyHolder);
-                
-                Long generatedID = new Long(keyHolder.getKey().longValue());
-                node.appData = new NodeID(generatedID);
-
-                // insert the node properties
-                Iterator<NodeProperty> propertyIterator = node.getProperties().iterator();
-                while (propertyIterator.hasNext())
-                {
-                    NodeProperty next = propertyIterator.next();
-                    if (!NodePropertyMapper.isNodeTableProperty(next))
-                    {
-                        jdbc.update(getInsertNodePropertySQL(node, next));
-                    }
-                }
-
-                // Commit the transaction.
-                commitTransaction();
-                
-                log.debug("Inserted new node: " + node);
-                
-                return node;
-                
-            }
-            catch (Throwable t)
-            {
-                log.error("Put rollback for node: " + node, t);
-                if (transactionStatus != null)
-                    try { rollbackTransaction(); }
-                    catch(Throwable oops) { log.error("failed to rollback transaction", oops); }
-                if (t instanceof NodeNotFoundException)
-                {
-                    throw (NodeNotFoundException) t;
-                }
-                else if (t instanceof NodeAlreadyExistsException)
-                {
-                    throw (NodeAlreadyExistsException) t;
-                }
-                else
-                {
-                    throw new IllegalStateException(t);
-                }
-            }
-            finally
-            {
-                if (transactionStatus != null)
-                    try
-                    {
-                        log.warn("putInContainer - BUG - transaction still open in finally... calling rollback");
-                        rollbackTransaction();
-                    }
-                    catch(Throwable oops) { log.error("failed to rollback transaction in finally", oops); }
-            }
-        }
-    }
-    
-    /**
-     * Delete the node.  If deleteChildren is true, also recursively delete
-     * any children of the node.
-     * @param persistentNode The node to delete.  This node must
-     * have been retrived by the NodePersistence interface.
-     */
-    public void delete(Node persistentNode, boolean deleteChildren) throws NodeNotFoundException
-    {
-        
-        if (persistentNode == null)
+        try
         {
-            throw new IllegalArgumentException("Cannot delete the root (null)");
+            // use autocommit txn
+            String sql = getUpdateContentLengthSQL(node, delta);
+            log.debug(sql);
+            int rc = jdbc.update(sql);
         }
-        
-        if (persistentNode.appData == null)
+        catch(Throwable t)
         {
-            throw new IllegalArgumentException("Node recevied on delete is not persistent.");
-        }
-        
-        synchronized (this)
-        {
-            try
-            {
-                startTransaction();
-                
-                // delete the node properties
-                jdbc.update(getDeleteNodePropertiesSQL(persistentNode));
-                
-                // delete the node
-                jdbc.update(getDeleteNodeSQL(persistentNode));
-                
-                if (deleteChildren)
-                {
-                    // collect and delete children of the node
-                    this.deleteChildrenOf(persistentNode);
-                }
-                commitTransaction();
-                log.debug("Node deleted: " + persistentNode);
-            }
-            catch (Throwable t)
-            {
-                log.error("Delete rollback for node: " + persistentNode, t);
-                if (transactionStatus != null)
-                    try { rollbackTransaction(); }
-                    catch(Throwable oops) { log.error("failed to rollback transaction", oops); }
-                if (t instanceof NodeNotFoundException)
-                {
-                    throw (NodeNotFoundException) t;
-                }
-                else
-                {
-                    throw new IllegalStateException(t);
-                }
-            }
-            finally
-            {
-                if (transactionStatus != null)
-                    try
-                    {
-                        log.warn("delete - BUG - transaction still open in finally... calling rollback");
-                        rollbackTransaction();
-                    }
-                    catch(Throwable oops) { log.error("failed to rollback transaction in finally", oops); }
-            }
-        }
-    }
-    
-    public void markForDeletion(Node persistentNode, boolean markChildren) throws NodeNotFoundException
-    {
-        
-        if (persistentNode == null)
-        {
-            throw new IllegalArgumentException("Cannot mark the root (null) as deleted");
-        }
-        
-        if (persistentNode.appData == null)
-        {
-            throw new IllegalArgumentException("Node recevied on markMarkForDeletion is not persistent.");
-        }
-        
-        synchronized (this)
-        {
-            try
-            {
-                startTransaction();
-                
-                // mark the node for deletion
-                jdbc.update(getMarkNodeForDeletionSQL(persistentNode));
-                
-                if (markChildren)
-                {
-                    // collect and delete children of the node
-                    this.markForDeletionChildrenOf(persistentNode, true);
-                }
-
-                commitTransaction();
-                log.debug("Node marked for deletion: " + persistentNode);
-            }
-            catch (Throwable t)
-            {
-                log.error("Mark for deletion rollback for node: " + persistentNode, t);
-                if (transactionStatus != null)
-                    try { rollbackTransaction(); }
-                    catch(Throwable oops) { log.error("failed to rollback transaction", oops); }
-                if (t instanceof NodeNotFoundException)
-                {
-                    throw (NodeNotFoundException) t;
-                }
-                else
-                {
-                    throw new IllegalStateException(t);
-                }
-            }
-            finally
-            {
-                if (transactionStatus != null)
-                    try
-                    {
-                        log.warn("markForDeletion - BUG - transaction still open in finally... calling rollback");
-                        rollbackTransaction();
-                    }
-                    catch(Throwable oops) { log.error("failed to rollback transaction in finally", oops); }
-            }
+            throw new RuntimeException("failed to delete " + node.getUri().getPath(), t);
         }
     }
     
     /**
      * Update the properties associated with this node.  New properties are added,
      * changed property values are updated, and properties marked for deletion are
-     * removed.
-     * @param updatedPersistentNode The node whos properties to update.  This node must
-     * have been retrived by the NodePersistence interface.
+     * removed. NOTE: support for multiple values not currently implemented.
+     *
+     * @param node the current persisted node
+     * @param properties the new properties
+     * @return the modified node
      */
-    public Node updateProperties(Node updatedPersistentNode) throws NodeNotFoundException
+    public Node updateProperties(Node node, List<NodeProperty> properties)
     {
-        Node currentDbNode = getFromParent(updatedPersistentNode.getName(), updatedPersistentNode.getParent());
-        
-        synchronized (this)
-        {
-            try
-            {
-                startTransaction();
-                
-                // Iterate through the user properties and the db properties,
-                // potentially updating, deleting or adding new ones
+        log.debug("updateProperties: " + node.getUri().getPath() + ", " + node.getClass().getSimpleName());
+        expectPersistentNode(node);
 
-                for (NodeProperty nextProperty : updatedPersistentNode.getProperties())
+        try
+        {
+            startTransaction();
+
+            NodeID nodeID = (NodeID) node.appData;
+            boolean doUpdateNode = false;         // check for props that are in the node table
+            boolean doUpdateLastModified = false; // check for actual updates to prop table
+            // Iterate through the user properties and the db properties,
+            // potentially updating, deleting or adding new ones
+            for (NodeProperty prop : properties)
+            {
+                boolean propTable = usePropertyTable(prop.getPropertyURI());
+                NodeProperty cur = node.findProperty(prop.getPropertyURI());
+                // Does this property exist already?
+                if (cur != null)
                 {
-                    
-                    // Does this property exist already?
-                    if (currentDbNode.getProperties().contains(nextProperty))
+                    if (prop.isMarkedForDeletion())
                     {
-                        if (nextProperty.isMarkedForDeletion())
+                        if (propTable)
                         {
-                            // delete the property
-                            log.debug("Deleting node property: " + nextProperty.getPropertyURI());
-                            jdbc.update(getDeleteNodePropertySQL(currentDbNode, nextProperty));
+                            PropertyStatementCreator ppsc = new PropertyStatementCreator(nodeSchema, nodeID, prop);
+                            jdbc.update(ppsc);
+                            doUpdateLastModified = true;
                         }
                         else
                         {
-                            // update the property value if it is different
-                            int propertyIndex = currentDbNode.getProperties().indexOf(nextProperty);
-                            String currentValue = currentDbNode.getProperties().get(propertyIndex).getPropertyValue();
-                            if (!currentValue.equals(nextProperty.getPropertyValue()))
+                            log.debug("doUpdateNode " + prop.getPropertyURI() + " to be deleted");
+                            doUpdateNode = true;
+                        }
+                        node.getProperties().remove(prop);
+                    }
+                    else // update
+                    {
+                        String currentValue = cur.getPropertyValue();
+                        if (!currentValue.equals(prop.getPropertyValue()))
+                        {
+                            if (propTable)
                             {
-                                log.debug("Updating node property: " + nextProperty.getPropertyURI());
-                                jdbc.update(getUpdateNodePropertySQL(currentDbNode, nextProperty));
+                                PropertyStatementCreator ppsc = new PropertyStatementCreator(nodeSchema, nodeID, prop, true);
+                                jdbc.update(ppsc);
+                                doUpdateLastModified = true;
                             }
                             else
                             {
-                                log.debug("Not updating node property: " + nextProperty.getPropertyURI());
+                                log.debug("doUpdateNode " + prop.getPropertyURI() + ": " + currentValue + " != " + prop.getPropertyValue());
+                                doUpdateNode = true;
                             }
+                            cur.setValue(prop.getPropertyValue());
                         }
+                        else
+                        {
+                            log.debug("Not updating node property: " + prop.getPropertyURI());
+                        }
+                    }
+                }
+                else
+                {
+                    if (propTable)
+                    {
+                        PropertyStatementCreator ppsc = new PropertyStatementCreator(nodeSchema, nodeID, prop);
+                        jdbc.update(ppsc);
+                        doUpdateLastModified = true;
                     }
                     else
                     {
-                        // insert the new property
-                        log.debug("Inserting node property: " + nextProperty.getPropertyURI());
-                        jdbc.update(getInsertNodePropertySQL(currentDbNode, nextProperty));
+                        log.debug("doUpdateNode " + prop.getPropertyURI() + " to be inserted");
+                        doUpdateNode = true;
                     }
+
+                    // insert the new property
+                    //log.debug("Inserting node property: " + prop.getPropertyURI());
+                    //String sql = getInsertNodePropertySQL(node, prop);
+                    //log.debug(sql);
+                    //jdbc.update(sql);
+                    node.getProperties().add(prop);
                 }
-                commitTransaction();
-                log.debug("Node updated: " + currentDbNode);
             }
-            catch (Throwable t)
+            if (doUpdateNode || doUpdateLastModified)
             {
-                log.error("Update rollback for node: " + updatedPersistentNode, t);
-                if (transactionStatus != null)
-                    try { rollbackTransaction(); }
-                    catch(Throwable oops) { log.error("failed to rollback transaction", oops); }
-                if (t instanceof NodeNotFoundException)
-                {
-                    throw (NodeNotFoundException) t;
-                }
-                else
-                {
-                    throw new IllegalStateException(t);
-                }
+                NodePutStatementCreator npsc = new NodePutStatementCreator(nodeSchema, true);
+                npsc.setValues(node);
+                jdbc.update(npsc);
             }
-            finally
-            {
-                if (transactionStatus != null)
-                    try
-                    {
-                        log.warn("updateProperties - BUG - transaction still open in finally... calling rollback");
-                        rollbackTransaction();
-                    }
-                    catch(Throwable oops) { log.error("failed to rollback transaction in finally", oops); }
-            }
-            
+
+            commitTransaction();
+            log.debug("Node updated: " + node);
+            return node;
         }
-        // return the new node from the database, in a new transaction?
-        return getFromParent(updatedPersistentNode.getName(), updatedPersistentNode.getParent());
-    }
-    
-    public void setBusyState(DataNode persistentNode, NodeBusyState state) throws NodeNotFoundException
-    {
-        synchronized (this)
+        catch (Throwable t)
         {
-            try
-            {
-                startTransaction();
-                jdbc.update(getSetBusyStateSQL(persistentNode, state));
-                commitTransaction();
-                log.debug("Node busy state updated for: " + persistentNode);
-            }
-            catch (Throwable t)
-            {
-                log.error("Set busy state rollback for node: " + persistentNode, t);
-                if (transactionStatus != null)
-                    try { rollbackTransaction(); }
-                    catch(Throwable oops) { log.error("failed to rollback transaction", oops); }
-                if (t instanceof NodeNotFoundException)
+            log.error("Update rollback for node: " + node.getUri().getPath(), t);
+            if (transactionStatus != null)
+                try { rollbackTransaction(); }
+                catch(Throwable oops) { log.error("failed to rollback transaction", oops); }
+            throw new RuntimeException("failed to update properties:  " + node.getUri().getPath(), t);
+        }
+        finally
+        {
+            if (transactionStatus != null)
+                try
                 {
-                    throw (NodeNotFoundException) t;
+                    log.warn("updateProperties - BUG - transaction still open in finally... calling rollback");
+                    rollbackTransaction();
                 }
-                else
-                {
-                    throw new IllegalStateException(t);
-                }
-            }
-            finally
-            {
-                if (transactionStatus != null)
-                    try
-                    {
-                        log.warn("setBusyState - BUG - transaction still open in finally... calling rollback");
-                        rollbackTransaction();
-                    }
-                    catch(Throwable oops) { log.error("failed to rollback transaction in finally", oops); }
-            }
+                catch(Throwable oops) { log.error("failed to rollback transaction in finally", oops); }
         }
     }
-    
+
     /**
-     * Move the node to the new path
-     * @throws UnsupporedOperationException Until implementation is complete.
+     * @param node
+     * @param state
      */
-    public void move(Node node, String newPath)
+    public void setBusyState(DataNode node, NodeBusyState state)
     {
+        log.debug("setBusyState: " + node.getUri().getPath() + ", " + node.getClass().getSimpleName() + ", " + state);
+        expectPersistentNode(node);
+        
+        try
+        {
+            startTransaction();
+            String sql = getSetBusyStateSQL(node, state);
+            log.debug(sql);
+            jdbc.update(sql);
+            commitTransaction();
+            log.debug("Node busy state updated for: " + node);
+        }
+        catch (Throwable t)
+        {
+            log.error("Set busy state rollback for node: " + node, t);
+            if (transactionStatus != null)
+                try { rollbackTransaction(); }
+                catch(Throwable oops) { log.error("failed to rollback transaction", oops); }
+            throw new RuntimeException("failed to set busy state: " + node.getUri().getPath(), t);
+        }
+        finally
+        {
+            if (transactionStatus != null)
+                try
+                {
+                    log.warn("setBusyState - BUG - transaction still open in finally... calling rollback");
+                    rollbackTransaction();
+                }
+                catch(Throwable oops) { log.error("failed to rollback transaction in finally", oops); }
+        }
+    }
+
+
+    /**
+     * Move the node to the new path.
+     *
+     * @param node
+     * @param destPath
+     * @throws UnsupportedOperationException Until implementation is complete.
+     */
+    public void move(Node node, String destPath)
+    {
+        log.debug("move: " + node.getUri().getPath() + ", " + node.getClass().getSimpleName() + ", " + destPath);
+        expectPersistentNode(node);
         throw new UnsupportedOperationException("Move not implemented.");
     }
     
 
     /**
-     * Copy the node to the new path
-     * @throws UnsupporedOperationException Until implementation is complete.
+     * Copy the node to the new path.
+     *
+     * @param node
+     * @param destPath
+     * @throws UnsupportedOperationException Until implementation is complete.
      */
-    public void copy(Node node, String copyToPath)
+    public void copy(Node node, String destPath)
     {
+        log.debug("copy: " + node.getUri().getPath() + ", " + node.getClass().getSimpleName() + ", " + destPath);
+        expectPersistentNode(node);
         throw new UnsupportedOperationException("Copy not implemented.");
     }
     
     /**
-     * Update the content length of the container node by adding the
-     * specified difference.
-     *  
+     * Extract the internal nodeID of the provided node from the appData field.
      * @param node
-     * @throws NodeNotFoundException
+     * @return a nodeID or null for a non-persisted node
      */
-    public void updateContentLength(ContainerNode node, long difference) throws NodeNotFoundException
-    {
-        try
-        {
-            jdbc.update(getUpdateContentLengthSQL(node, difference));
-        }
-        catch(Throwable t)
-        {
-            if (t instanceof NodeNotFoundException)
-            {
-                throw (NodeNotFoundException) t;
-            }
-            else
-            {
-                log.error("updateContentLength: " + node + "," + difference, t);
-                throw new IllegalStateException(t);
-            }
-        }
-        
-    }
-
-    /**
-     * Implementation of getFromParent. Like all protected methods, the caller must
-     * use a transaction if necessary and perform any required synchronization.
-     *
-     * @param name
-     * @param parent
-     * @return
-     * @throws NodeNotFoundException
-     */
-    protected Node getFromParentImpl(String name, ContainerNode parent, boolean light) throws NodeNotFoundException
-    {
-        if (name == null)
-        {
-            throw new NodeNotFoundException("Node parameter is null.");
-        }
-        SearchNode node = new SearchNode(name);
-        node.setParent(parent);
-        Node returnNode = null;
-        if (light)
-        {
-            returnNode = getSingleNodeFromSelectLight(getSelectNodeByNameAndParentSQL(node));            
-        }
-        else
-        {
-            returnNode = getSingleNodeFromSelect(getSelectNodeByNameAndParentSQL(node));
-        }
-        if (returnNode == null)
-        {
-            throw new NodeNotFoundException(node.getName());
-        }
-        returnNode.setPath( (parent == null) ? returnNode.getName() : parent.getPath() + "/" + returnNode.getName() );
-        returnNode.setParent(parent);
-        if (returnNode instanceof ContainerNode)
-        {
-            for (Node child : ((ContainerNode) returnNode).getNodes())
-            {
-                child.setPath(returnNode.getPath() + "/" + child.getName());
-                child.setParent((ContainerNode) returnNode);
-            }
-        }
-        return returnNode;
-    }
-    
-    /**
-     * Return the single node matching the select statement or null if none
-     * were found.
-     * 
-     * @param sql The SQL to execute
-     * @return The single node or null.
-     */
-    protected Node getSingleNodeFromSelect(String sql)
-    {
-        log.debug("getSingleNodeFromSelect SQL: " + sql);
-
-        List<Node> nodeList = jdbc.query(sql, new NodeMapper());
-
-        if (nodeList.size() > 1)
-        {
-            throw new IllegalStateException("More than one node returned for SQL: "
-                    + sql);
-        }
-        if (nodeList.size() == 1)
-        {
-            Node returnNode = (Node) nodeList.get(0);
-            
-            // get the children if this is a container node
-            if (returnNode instanceof ContainerNode)
-            {
-                List<Node> children = jdbc.query(getSelectNodesByParentSQL(returnNode), new NodeMapper());
-                ((ContainerNode) returnNode).setNodes(children);
-            }
-            
-            // get the properties for the node
-            List<NodeProperty> returnNodeProperties = jdbc.query(getSelectNodePropertiesByID(returnNode), new NodePropertyMapper());
-            returnNode.getProperties().addAll(returnNodeProperties);
-            
-            return returnNode;
-        }
-        return null;
-    }
-    
-    /**
-     * Return the single node matching the select statement or null if none
-     * were found.
-     * 
-     * @param sql The SQL to execute
-     * @return The single node or null.
-     */
-    protected Node getSingleNodeFromSelectLight(String sql)
-    {
-        log.debug("getSingleNodeFromSelectLight SQL: " + sql);
-
-        List<Node> nodeList = jdbc.query(sql, new NodeMapper());
-
-        if (nodeList.size() > 1)
-        {
-            throw new IllegalStateException("More than one node returned for SQL: "
-                    + sql);
-        }
-        if (nodeList.size() == 1)
-        {
-            return (Node) nodeList.get(0);
-        }
-        return null;
-    }
-    
-    /**
-     * Delete the children of the provided node.
-     * @param node
-     */
-    protected void deleteChildrenOf(Node node)
-    {
-        List<Node> children = jdbc.query(getSelectNodesByParentSQL(node), new NodeMapper());
-        for (Node next : children)
-        {
-            deleteChildrenOf(next);
-        }
-        jdbc.update(getDeleteNodePropertiesByParentSQL(node));
-        jdbc.update(getDeleteNodesByParentSQL(node));
-    }
-    
-    /**
-     * Mark the children of the provided node for deletion
-     * @param node
-     */
-    protected void markForDeletionChildrenOf(Node node, boolean root)
-    {
-        List<Node> children = jdbc.query(getSelectNodesByParentSQL(node), new NodeMapper());
-        for (Node next : children)
-        {
-            markForDeletionChildrenOf(next, false);
-        }
-        if (!root)
-        {
-            jdbc.update(getMarkNodeForDeletionSQL(node));
-        }
-    }
-    
-    /**
-     * The the nodeID of the provided node.
-     * @param node
-     * @return
-     */
-    protected Long getNodeID(Node node)
+    protected static Long getNodeID(Node node)
     {
         if (node == null || node.appData == null)
         {
@@ -866,295 +761,58 @@ public abstract class NodeDAO implements NodePersistence
     }
     
     /**
-     * Return the value of the specified property.
+     * The resulting SQL must use a PreparedStatement with one argument
+     * (child node name). The ResultSet can be processsed with a NodeMapper.
+     *
+     * @param parent
+     * @return SQL prepared statement string
      */
-    protected String getPropertyValue(Node node, String propertyURI)
-    {   
-        final NodeProperty searchProperty = new NodeProperty(propertyURI, null);
-        for (NodeProperty nodeProperty : node.getProperties())
-        {
-            if (nodeProperty.equals(searchProperty))
-            {
-                return nodeProperty.getPropertyValue();
-            }
-        }
-        return null;
-    }
-    
-    /**
-     * @param node The node to query for.
-     * @return The SQL string for finding the node in the database by
-     * name and parentID.
-     */
-    protected String getSelectNodeByNameAndParentSQL(Node node)
+    protected String getSelectChildNodeSQL(ContainerNode parent)
     {
-        String parentWhereClause = null;
-        Long parentNodeID =  getNodeID(node.getParent());
-        if (parentNodeID == null)
-        {
-            parentWhereClause = "(parentID is null or parentID = 0)";
-        }
-        else
-        {
-            parentWhereClause = "parentID = " + parentNodeID;
-        }
         StringBuilder sb = new StringBuilder();
-        sb.append("select nodeID, parentID, name, type, busyState, markedForDeletion, owner, isPublic, groupRead, groupWrite, ");
-        sb.append("contentLength, contentType, contentEncoding, contentMD5, createdOn, lastModified from ");
+        sb.append("SELECT nodeID, parentID, name, type, busyState, markedForDeletion, owner, isPublic, groupRead, groupWrite, ");
+        sb.append("contentLength, contentType, contentEncoding, contentMD5, lastModified FROM ");
         sb.append(getNodeTableName());
-        sb.append(" where name = '");
-        sb.append(node.getName());
-        sb.append("' and ");
-        sb.append(parentWhereClause);
-        if (!getNodesMarkedForDeletion)
-        {
-            sb.append(" and markedForDeletion = 0");
-        }
+        sb.append(" WHERE name = ?");
+        sb.append(" AND parentID = ");
+        sb.append(getNodeID(parent));
+        sb.append(" AND markedForDeletion = 0");
         return sb.toString();
     }
     
     /**
+     * The resulting SQL is a simple select statement. The ResultSet can be
+     * processsed with a NodeMapper.
+     *
      * @param parent The node to query for.
-     * @return The SQL string for finding nodes given the parent. 
+     * @return simple SQL statement select for use with NodeMapper
      */
     protected String getSelectNodesByParentSQL(Node parent)
     {
         StringBuilder sb = new StringBuilder();
-        sb.append("select nodeID, parentID, name, type, busyState, markedForDeletion, owner, isPublic, groupRead, groupWrite, ");
-        sb.append("contentLength, contentType, contentEncoding, contentMD5, createdOn, lastModified from ");
+        sb.append("SELECT nodeID, parentID, name, type, busyState, markedForDeletion, owner, isPublic, groupRead, groupWrite, ");
+        sb.append("contentLength, contentType, contentEncoding, contentMD5, lastModified FROM ");
         sb.append(getNodeTableName());
-        sb.append(" where parentID = ");
+        sb.append(" WHERE parentID = ");
         sb.append(getNodeID(parent));
-        if (!getNodesMarkedForDeletion)
-        {
-            sb.append(" and markedForDeletion = 0");
-        }
+        sb.append(" AND markedForDeletion = 0");
         return sb.toString();
     }
     
     /**
-     * @param parent The node for which properties are queried.
-     * @return The SQL string for finding the node properties. 
+     * The resulting SQL is a simple select statement. The ResultSet can be
+     * processsed with a NodePropertyMapper.
+     * 
+     * @param node the node for which properties are queried
+     * @return simple SQL string
      */
     protected String getSelectNodePropertiesByID(Node node)
     {
         StringBuilder sb = new StringBuilder();
-        sb.append("select nodePropertyID, propertyURI, propertyValue from ");
+        sb.append("SELECT nodePropertyID, propertyURI, propertyValue FROM ");
         sb.append(getNodePropertyTableName());
-        sb.append(" where nodeID = ");
+        sb.append(" WHERE nodeID = ");
         sb.append(getNodeID(node));
-        return sb.toString();
-    }
-    
-    /**
-     * @param node The node to insert
-     * @return The SQL string for inserting the node in the database.
-     */
-    protected String getInsertNodeSQL(Node node)
-    {
-        
-        long contentLength = 0;
-        String contentType = null;
-        String contentEncoding = null;
-        byte[] contentMD5 = null;
-        String groupRead = null;
-        String groupWrite = null;
-        boolean isPublic = false;
-        
-        String contentLengthString = getPropertyValue(node, VOS.PROPERTY_URI_CONTENTLENGTH);
-        contentType = getPropertyValue(node, VOS.PROPERTY_URI_TYPE);
-        contentEncoding = getPropertyValue(node, VOS.PROPERTY_URI_CONTENTENCODING);
-        String contentMD5String = getPropertyValue(node, VOS.PROPERTY_URI_CONTENTMD5);
-        groupRead = getPropertyValue(node, VOS.PROPERTY_URI_GROUPREAD);
-        groupWrite = getPropertyValue(node, VOS.PROPERTY_URI_GROUPWRITE);
-        String isPublicString = getPropertyValue(node, VOS.PROPERTY_URI_ISPUBLIC);
-        
-        if (contentLengthString != null)
-        {
-            try
-            {
-                contentLength = new Long(contentLengthString);
-            } catch (NumberFormatException e)
-            {
-                log.warn("Content length is not a number, continuing.");
-            }
-        }
-        
-        if (contentMD5String != null)
-        {
-            contentMD5 = HexUtil.toBytes(contentMD5String);
-        }
-        
-        if (isPublicString != null)
-        {
-            if (isPublicString.trim().equalsIgnoreCase("true"))
-            {
-                isPublic = true;
-            }
-        }
-        
-        if (node.getOwner() == null)
-        {
-            throw new IllegalArgumentException("Node owner cannot be null.");
-        }
-        
-        
-        
-        StringBuilder sb = new StringBuilder();
-        sb.append("insert into ");
-        sb.append(getNodeTableName());
-        sb.append(" (");
-        sb.append("parentID,");
-        sb.append("name,");
-        sb.append("type,");
-        sb.append("owner,");
-        sb.append("isPublic,");
-        sb.append("groupRead,");
-        sb.append("groupWrite,");
-        sb.append("contentLength,");
-        sb.append("contentType,");
-        sb.append("contentEncoding,");
-        sb.append("contentMD5");
-        sb.append(") values (");
-        sb.append(getNodeID(node.getParent()));
-        sb.append(",'");
-        sb.append(node.getName());
-        sb.append("','");
-        sb.append(NodeMapper.getDatabaseTypeRepresentation(node));
-        sb.append("','");
-        sb.append(node.getOwner());
-        sb.append("',");
-        sb.append((isPublic) ? "1" : "0");
-        sb.append(",");
-        sb.append((groupRead == null) ? null : "'" + groupRead + "'");
-        sb.append(",");
-        sb.append((groupWrite == null) ? null : "'" + groupWrite + "'");
-        sb.append(",");
-        sb.append(contentLength);
-        sb.append(",");
-        sb.append((contentType == null) ? null : "'" + contentType + "'");
-        sb.append(",");
-        sb.append((contentEncoding == null) ? null : "'" + contentEncoding + "'");
-        sb.append(",");
-        sb.append((contentMD5== null) ? null : "'" + contentMD5 + "'");
-        sb.append(")");
-        return sb.toString();
-    }
-    
-    /**
-     * @param node The node for the property
-     * @param nodeProperty  The property of the node
-     * @return The SQL string for inserting the node property in the database.
-     */
-    protected String getInsertNodePropertySQL(Node node,
-            NodeProperty nodeProperty)
-    {
-        StringBuilder sb = new StringBuilder();
-        String value = nodeProperty.getPropertyValue();
-        if (nodeProperty.getPropertyURI().equals(VOS.PROPERTY_URI_CONTENTENCODING))
-        {
-            sb.append("update ");
-            sb.append(getNodeTableName());
-            sb.append(" set contentEncoding = ");
-            sb.append((value == null) ? null : "'" + value + "'");
-            sb.append(" where nodeID = ");
-            sb.append(getNodeID(node));
-        }
-        else if (nodeProperty.getPropertyURI().equals(VOS.PROPERTY_URI_CONTENTLENGTH))
-        {
-            Long contentLength = new Long(value);
-            sb.append("update ");
-            sb.append(getNodeTableName());
-            sb.append(" set contentLength = ");
-            sb.append(contentLength);
-            sb.append(" where nodeID = ");
-            sb.append(getNodeID(node));
-        }
-        else if (nodeProperty.getPropertyURI().equals(VOS.PROPERTY_URI_CONTENTMD5))
-        {
-            sb.append("update ");
-            sb.append(getNodeTableName());
-            sb.append(" set contentMD5 = ");
-            sb.append((value == null) ? null : ("0x" + value));
-            sb.append(" where nodeID = ");
-            sb.append(getNodeID(node));
-        }
-        else if (nodeProperty.getPropertyURI().equals(VOS.PROPERTY_URI_TYPE))
-        {
-            sb.append("update ");
-            sb.append(getNodeTableName());
-            sb.append(" set contentType = ");
-            sb.append((value == null) ? null : "'" + value + "'");
-            sb.append(" where nodeID = ");
-            sb.append(getNodeID(node));
-        }
-        else if (nodeProperty.getPropertyURI().equals(VOS.PROPERTY_URI_GROUPREAD))
-        {
-            sb.append("update ");
-            sb.append(getNodeTableName());
-            sb.append(" set groupRead = ");
-            sb.append((value == null) ? null : "'" + value + "'");
-            sb.append(" where nodeID = ");
-            sb.append(getNodeID(node));
-        }
-        else if (nodeProperty.getPropertyURI().equals(VOS.PROPERTY_URI_GROUPWRITE))
-        {
-            sb.append("update ");
-            sb.append(getNodeTableName());
-            sb.append(" set groupWrite = ");
-            sb.append((value == null) ? null : "'" + value + "'");
-            sb.append(" where nodeID = ");
-            sb.append(getNodeID(node));
-        }
-        else if (nodeProperty.getPropertyURI().equals(VOS.PROPERTY_URI_ISPUBLIC))
-        {
-            int isPublic = -1;
-            if (value != null)
-            {
-                if (value.trim().equalsIgnoreCase("true"))
-                {
-                    isPublic = 1;
-                }
-                if (value.trim().equalsIgnoreCase("false"))
-                {
-                    isPublic = 0;
-                }
-            }
-            if (isPublic == -1)
-            {
-                log.warn("Unrecognized value for property " + VOS.PROPERTY_URI_ISPUBLIC);
-                sb.append("update ");
-                sb.append(getNodeTableName());
-                sb.append(" set isPublic=isPublic");
-                sb.append(" where nodeID = ");
-                sb.append(getNodeID(node));
-            }
-            else
-            {
-                sb.append("update ");
-                sb.append(getNodeTableName());
-                sb.append(" set isPublic = ");
-                sb.append(isPublic);
-                sb.append(" where nodeID = ");
-                sb.append(getNodeID(node));
-            }
-        }
-        else
-        {
-            sb.append("insert into ");
-            sb.append(getNodePropertyTableName());
-            sb.append(" (");
-            sb.append("nodeID,");
-            sb.append("propertyURI,");
-            sb.append("propertyValue");
-            sb.append(") values (");
-            sb.append(((NodeID) node.appData).getId());
-            sb.append(",'");
-            sb.append(nodeProperty.getPropertyURI());
-            sb.append("','");
-            sb.append(nodeProperty.getPropertyValue());
-            sb.append("')");
-        }
         return sb.toString();
     }
     
@@ -1165,9 +823,9 @@ public abstract class NodeDAO implements NodePersistence
     protected String getDeleteNodeSQL(Node node)
     {
         StringBuilder sb = new StringBuilder();
-        sb.append("delete from ");
+        sb.append("DELETE FROM ");
         sb.append(getNodeTableName());
-        sb.append(" where nodeID = ");
+        sb.append(" WHERE nodeID = ");
         sb.append(getNodeID(node));
         return sb.toString();
     }
@@ -1179,248 +837,26 @@ public abstract class NodeDAO implements NodePersistence
     protected String getDeleteNodePropertiesSQL(Node node)
     {
         StringBuilder sb = new StringBuilder();
-        sb.append("delete from ");
+        sb.append("DELETE FROM ");
         sb.append(getNodePropertyTableName());
-        sb.append(" where nodeID = ");
+        sb.append(" WHERE nodeID = ");
         sb.append(getNodeID(node));
-        return sb.toString();
-    }
-    
-    /**
-     * @param parent The parent who's children are to be deleted.
-     * @return The SQL string to perform this deletion.
-     */
-    protected String getDeleteNodesByParentSQL(Node parent)
-    {
-        StringBuilder sb = new StringBuilder();
-        sb.append("delete from ");
-        sb.append(getNodeTableName());
-        sb.append(" where parentID = ");
-        sb.append(getNodeID(parent));
-        return sb.toString();
-    }
-    
-    /**
-     * @param parent Delete the properties of the children of this parent.
-     * @return The SQL string for performing this deletion.
-     */
-    protected String getDeleteNodePropertiesByParentSQL(Node parent)
-    {
-        StringBuilder sb = new StringBuilder();
-        sb.append("delete from ");
-        sb.append(getNodePropertyTableName());
-        sb.append(" where nodeID in (select nodeID from ");
-        sb.append(getNodeTableName());
-        sb.append(" where parentID = ");
-        sb.append(getNodeID(parent));
-        sb.append(")");
-        return sb.toString();
-    }
-    
-    /**
-     * @param node The node for the properties.
-     * @param nodeProperty The property in question.
-     * @return The SQL string for performing this deletion.
-     */
-    protected String getDeleteNodePropertySQL(Node node, NodeProperty nodeProperty)
-    {
-        StringBuilder sb = new StringBuilder();
-        if (nodeProperty.getPropertyURI().equals(VOS.PROPERTY_URI_CONTENTENCODING))
-        {
-            sb.append("update ");
-            sb.append(getNodeTableName());
-            sb.append(" set contentEncoding = null where nodeID = ");
-            sb.append(getNodeID(node));
-        }
-        else if (nodeProperty.getPropertyURI().equals(VOS.PROPERTY_URI_CONTENTLENGTH))
-        {
-            sb.append("update ");
-            sb.append(getNodeTableName());
-            sb.append(" set contentLength = null where nodeID = ");
-            sb.append(getNodeID(node));
-        }
-        else if (nodeProperty.getPropertyURI().equals(VOS.PROPERTY_URI_CONTENTMD5))
-        {
-            sb.append("update ");
-            sb.append(getNodeTableName());
-            sb.append(" set contentMD5 = null where nodeID = ");
-            sb.append(getNodeID(node));
-        }
-        else if (nodeProperty.getPropertyURI().equals(VOS.PROPERTY_URI_TYPE))
-        {
-            sb.append("update ");
-            sb.append(getNodeTableName());
-            sb.append(" set contentType = null where nodeID = ");
-            sb.append(getNodeID(node));
-        }
-        else if (nodeProperty.getPropertyURI().equals(VOS.PROPERTY_URI_GROUPREAD))
-        {
-            sb.append("update ");
-            sb.append(getNodeTableName());
-            sb.append(" set groupRead = null where nodeID = ");
-            sb.append(getNodeID(node));
-        }
-        else if (nodeProperty.getPropertyURI().equals(VOS.PROPERTY_URI_GROUPWRITE))
-        {
-            sb.append("update ");
-            sb.append(getNodeTableName());
-            sb.append(" set groupWrite = null where nodeID = ");
-            sb.append(getNodeID(node));
-        }
-        else
-        {
-            sb.append("delete from ");
-            sb.append(getNodePropertyTableName());
-            sb.append(" where nodeID = ");
-            sb.append(getNodeID(node));
-            sb.append(" and propertyURI = '");
-            sb.append(nodeProperty.getPropertyURI());
-            sb.append("'");
-        }
-        return sb.toString();
-    }
-    
-    /**
-     * @param node The node for which the properties are to be updated.
-     * @param nodeProperty The node property in question.
-     * @return The SQL string for performing this update.
-     */
-    protected String getUpdateNodePropertySQL(Node node, NodeProperty nodeProperty)
-    {
-        StringBuilder sb = new StringBuilder();
-        String value = nodeProperty.getPropertyValue();
-        if (nodeProperty.getPropertyURI().equals(VOS.PROPERTY_URI_CONTENTENCODING))
-        {
-            sb.append("update ");
-            sb.append(getNodeTableName());
-            sb.append(" set contentEncoding = ");
-            sb.append((value == null) ? null : "'" + value + "'");
-            sb.append(" where nodeID = ");
-            sb.append(getNodeID(node));
-        }
-        else if (nodeProperty.getPropertyURI().equals(VOS.PROPERTY_URI_CONTENTLENGTH))
-        {
-            Long contentLength = new Long(value);
-            sb.append("update ");
-            sb.append(getNodeTableName());
-            sb.append(" set contentLength = ");
-            sb.append(contentLength);
-            sb.append(" where nodeID = ");
-            sb.append(getNodeID(node));
-        }
-        else if (nodeProperty.getPropertyURI().equals(VOS.PROPERTY_URI_CONTENTMD5))
-        {
-            sb.append("update ");
-            sb.append(getNodeTableName());
-            sb.append(" set contentMD5 = ");
-            sb.append((value == null) ? null : ("0x" + value));
-            sb.append(" where nodeID = ");
-            sb.append(getNodeID(node));
-        }
-        else if (nodeProperty.getPropertyURI().equals(VOS.PROPERTY_URI_TYPE))
-        {
-            sb.append("update ");
-            sb.append(getNodeTableName());
-            sb.append(" set contentType = ");
-            sb.append((value == null) ? null : "'" + value + "'");
-            sb.append(" where nodeID = ");
-            sb.append(getNodeID(node));
-        }
-        else if (nodeProperty.getPropertyURI().equals(VOS.PROPERTY_URI_GROUPREAD))
-        {
-            sb.append("update ");
-            sb.append(getNodeTableName());
-            sb.append(" set groupRead = ");
-            sb.append((value == null) ? null : "'" + value + "'");
-            sb.append(" where nodeID = ");
-            sb.append(getNodeID(node));
-        }
-        else if (nodeProperty.getPropertyURI().equals(VOS.PROPERTY_URI_GROUPWRITE))
-        {
-            sb.append("update ");
-            sb.append(getNodeTableName());
-            sb.append(" set groupWrite = ");
-            sb.append((value == null) ? null : "'" + value + "'");
-            sb.append(" where nodeID = ");
-            sb.append(getNodeID(node));
-        }
-        else if (nodeProperty.getPropertyURI().equals(VOS.PROPERTY_URI_DATE))
-        {
-            // let the trigger update the lastModified field
-            sb.append("update ");
-            sb.append(getNodeTableName());
-            sb.append(" set lastModified = lastModified");
-            sb.append(" where nodeID = ");
-            sb.append(getNodeID(node));
-        }
-        else if (nodeProperty.getPropertyURI().equals(VOS.PROPERTY_URI_ISPUBLIC))
-        {
-            int isPublic = -1;
-            if (value != null)
-            {
-                if (value.trim().equalsIgnoreCase("true"))
-                {
-                    isPublic = 1;
-                }
-                if (value.trim().equalsIgnoreCase("false"))
-                {
-                    isPublic = 0;
-                }
-            }
-            if (isPublic == -1)
-            {
-                log.warn("Unrecognized value for property " + VOS.PROPERTY_URI_ISPUBLIC);
-                sb.append("update ");
-                sb.append(getNodeTableName());
-                sb.append(" set isPublic=isPublic");
-                sb.append(" where nodeID = ");
-                sb.append(getNodeID(node));
-            }
-            else
-            {
-                sb.append("update ");
-                sb.append(getNodeTableName());
-                sb.append(" set isPublic = ");
-                sb.append(isPublic);
-                sb.append(" where nodeID = ");
-                sb.append(getNodeID(node));
-            }
-        }
-        else
-        {
-            sb.append("update ");
-            sb.append(getNodePropertyTableName());
-            sb.append(" set propertyValue = '");
-            sb.append(nodeProperty.getPropertyValue());
-            sb.append("' where nodeID = ");
-            sb.append(getNodeID(node));
-            sb.append(" and propertyURI = '");
-            sb.append(nodeProperty.getPropertyURI());
-            sb.append("'");
-        }
         return sb.toString();
     }
     
     protected String getMarkNodeForDeletionSQL(Node node)
     {
-        // since we're appending the timestamp to the name, ensure
-        // the combined length is ok
-        String newNodeName = node.getName();
-        int maximumNameLength = NODE_NAME_COLUMN_SIZE - MAX_TIMESTAMP_LENGTH;
-        if (newNodeName.length() > maximumNameLength)
-        {
-            newNodeName = newNodeName.substring(0, maximumNameLength - 1);
-        }
-        newNodeName += "-" + new Date().toString();
+        // need to rename as well so we don't get collisions later
+        String newNodeName = node.getName() + "_" + Long.toString(new Date().getTime());
 
         StringBuilder sb = new StringBuilder();
-        sb.append("update ");
+        sb.append("UPDATE ");
         sb.append(getNodeTableName());
-        sb.append(" set");
+        sb.append(" SET");
         sb.append(" name='");
         sb.append(newNodeName);
         sb.append("',");
-        sb.append(" markedForDeletion=1 where nodeID = ");
+        sb.append(" markedForDeletion=1 WHERE nodeID = ");
         sb.append(getNodeID(node));
         return sb.toString();
     }
@@ -1428,11 +864,11 @@ public abstract class NodeDAO implements NodePersistence
     protected String getSetBusyStateSQL(DataNode node, NodeBusyState state)
     {
         StringBuilder sb = new StringBuilder();
-        sb.append("update ");
+        sb.append("UPDATE ");
         sb.append(getNodeTableName());
-        sb.append(" set busyState=' ");
+        sb.append(" SET busyState='");
         sb.append(state.getValue());
-        sb.append("' where nodeID = ");
+        sb.append("' WHERE nodeID = ");
         sb.append(getNodeID(node));
         return sb.toString();
     }
@@ -1440,13 +876,705 @@ public abstract class NodeDAO implements NodePersistence
     protected String getUpdateContentLengthSQL(Node node, long difference)
     {
         StringBuilder sb = new StringBuilder();
-        sb.append("update ");
+        sb.append("UPDATE ");
         sb.append(getNodeTableName());
-        sb.append(" set contentLength = (");
+        sb.append(" SET contentLength = (");
         sb.append("contentLength + " + difference);
-        sb.append(") where nodeID = ");
+        sb.append(") WHERE nodeID = ");
         sb.append(getNodeID(node));
         return sb.toString();
     }
-    
+
+    private static String[] NODE_SELECT_COLUMNS = new String[]
+    {
+        "nodeID",
+        "name",
+        "type",
+        "busyState",
+        "markedForDeletion",
+        "isPublic",
+        "owner",
+        "contentLength",
+        "contentType",
+        "contentEncoding",
+        "contentMD5",
+        "lastModified",
+        "groupRead",
+        "groupWrite"
+    };
+
+    private static String[] NODE_PERSIST_COLUMNS = new String[]
+    {
+        "parentID",
+        "name",
+        "type",
+        "busyState",
+        "markedForDeletion",
+        "isPublic",        //
+        "owner",           //
+        "contentLength",   //
+        "contentType",
+        "contentEncoding",
+        "contentMD5",
+        "lastModified",    //
+        "groupRead",
+        "groupWrite"
+    };
+
+    private static String getNodeType(Node node)
+    {
+        if (node instanceof DataNode)
+            return NODE_TYPE_DATA;
+        if (node instanceof ContainerNode)
+            return NODE_TYPE_CONTAINER;
+        throw new UnsupportedOperationException("unable to persist node type: " + node.getClass().getName());
+
+    }
+    private static String getBusyState(Node node)
+    {
+        if (node instanceof DataNode)
+        {
+            DataNode dn = (DataNode) node;
+            if (dn.getBusy() != null)
+                return dn.getBusy().getValue();
+        }
+        return VOS.NodeBusyState.notBusy.getValue();
+    }
+   
+    // used by NodeMapper
+    static void setPropertyValue(Node node, String uri, String value, boolean readOnly)
+    {
+        NodeProperty cur = node.findProperty(uri);
+        if (cur == null)
+        {
+            cur = new NodeProperty(uri, value);
+            node.getProperties().add(cur);
+        }
+        else
+            cur.setValue(value);
+        cur.setReadOnly(readOnly);
+    }
+
+    private boolean usePropertyTable(String uri)
+    {
+        // TODO: do this once only
+        Set<String> core = new TreeSet<String>(new CaseInsensitiveStringComparator());
+
+        core.add(VOS.PROPERTY_URI_ISPUBLIC);
+        core.add(VOS.PROPERTY_URI_CREATOR);
+        
+        core.add(VOS.PROPERTY_URI_CONTENTLENGTH);
+        core.add(VOS.PROPERTY_URI_TYPE);
+        core.add(VOS.PROPERTY_URI_CONTENTENCODING);
+        core.add(VOS.PROPERTY_URI_CONTENTMD5);
+        
+        core.add(VOS.PROPERTY_URI_DATE);
+        core.add(VOS.PROPERTY_URI_GROUPREAD);
+        core.add(VOS.PROPERTY_URI_GROUPWRITE);
+        
+        return !core.contains(uri);
+    }
+
+    private class PropertyStatementCreator implements PreparedStatementCreator
+    {
+        private NodeSchema ns;
+        private boolean update;
+
+        private NodeID nodeID;
+        private NodeProperty prop;
+
+        public PropertyStatementCreator(NodeSchema ns, NodeID nodeID, NodeProperty prop)
+        {
+            this(ns, nodeID, prop, false);
+        }
+        public PropertyStatementCreator(NodeSchema ns, NodeID nodeID, NodeProperty prop, boolean update)
+        {
+            this.ns = ns;
+            this.nodeID = nodeID;
+            this.prop = prop;
+            this.update = update;
+        }
+
+        // if we care about caching the statement, we should look into prepared 
+        // statement caching by the driver
+        public PreparedStatement createPreparedStatement(Connection conn) throws SQLException
+        {
+            String sql;
+            PreparedStatement prep;
+            if (prop.isMarkedForDeletion())
+                sql = getDeleteSQL();
+            else if (update)
+                sql = getUpdateSQL();
+            else
+                sql = getInsertSQL();
+            log.debug(sql);
+            prep = conn.prepareStatement(sql);
+            setValues(prep);
+            return prep;
+        }
+
+        void setValues(PreparedStatement ps)
+            throws SQLException
+        {
+            int col = 1;
+            if (prop.isMarkedForDeletion())
+            {
+                ps.setLong(col++, nodeID.getId());
+                ps.setString(col++, prop.getPropertyURI());
+                log.debug("setValues: " + nodeID.getId() + "," + prop.getPropertyURI());
+            }
+            else if (update)
+            {
+                ps.setString(col++, prop.getPropertyValue());
+                ps.setLong(col++, nodeID.getId());
+                ps.setString(col++, prop.getPropertyURI());
+                log.debug("setValues: " + prop.getPropertyValue() + "," + nodeID.getId() + "," + prop.getPropertyURI());
+            }
+            else
+            {
+                ps.setLong(col++, nodeID.getId());
+                ps.setString(col++, prop.getPropertyURI());
+                ps.setString(col++, prop.getPropertyValue());
+                log.debug("setValues: " + nodeID.getId() + "," + prop.getPropertyURI() + "," + prop.getPropertyValue());
+            }
+        }
+
+        public String getSQL()
+        {
+            if (update)
+                return getUpdateSQL();
+            return getInsertSQL();
+        }
+
+        private String getInsertSQL()
+        {
+            StringBuilder sb = new StringBuilder();
+            sb.append("INSERT INTO ");
+            sb.append(ns.propertyTable);
+            sb.append(" (nodeID,propertyURI,propertyValue) VALUES (?, ?, ?)");
+            return sb.toString();
+        }
+        private String getUpdateSQL()
+        {
+            StringBuilder sb = new StringBuilder();
+            sb.append("UPDATE ");
+            sb.append(ns.propertyTable);
+            sb.append(" SET propertyValue = ?");
+            sb.append(" WHERE nodeID = ?");
+            sb.append(" AND propertyURI = ?");
+            return sb.toString();
+        }
+        private String getDeleteSQL()
+        {
+            StringBuilder sb = new StringBuilder();
+            sb.append("DELETE FROM ");
+            sb.append(ns.propertyTable);
+            sb.append(" WHERE nodeID = ?");
+            sb.append(" AND propertyURI = ?");
+            return sb.toString();
+        }
+    }
+
+    private class NodePutStatementCreator implements PreparedStatementCreator
+    {
+        private NodeSchema ns;
+        private boolean update;
+
+        private Node node;
+
+        public NodePutStatementCreator(NodeSchema ns, boolean update)
+        {
+            this.ns = ns;
+            this.update = update;
+        }
+
+        // if we care about caching the statement, we should look into prepared
+        // statement caching by the driver
+        public PreparedStatement createPreparedStatement(Connection conn) throws SQLException
+        {
+            PreparedStatement prep;
+            if (update)
+            {
+                String sql = getUpdateSQL();
+                log.debug(sql);
+                prep = conn.prepareStatement(sql);
+            }
+            else
+            {
+                String sql = getInsertSQL();
+                log.debug(sql);
+                prep = conn.prepareStatement(sql, Statement.RETURN_GENERATED_KEYS);
+            }
+            setValues(prep);
+            return prep;
+        }
+
+        public void setValues(Node node) { this.node = node; }
+        
+        void setValues(PreparedStatement ps)
+            throws SQLException
+        {
+            StringBuilder sb = new StringBuilder();
+
+            int col = 1;
+
+            if (node.getParent() != null)
+            {
+                long v = getNodeID(node.getParent());
+                ps.setLong(col, v);
+                sb.append(v);
+            }
+            else
+            {
+                ps.setNull(col, Types.BIGINT);
+                sb.append("null");
+            }
+            col++;
+            sb.append(",");
+            
+            ps.setString(col++, node.getName());
+            sb.append(node.getName());
+            sb.append(",");
+
+            ps.setString(col++, getNodeType(node));
+            sb.append(getNodeType(node));
+            sb.append(",");
+
+            ps.setString(col++, getBusyState(node));
+            sb.append(getBusyState(node));
+            sb.append(",");
+
+            ps.setBoolean(col++, node.isMarkedForDeletion());
+            sb.append(node.isMarkedForDeletion());
+            sb.append(",");
+
+            ps.setBoolean(col++, node.isPublic());
+            setPropertyValue(node, VOS.PROPERTY_URI_ISPUBLIC, Boolean.toString(node.isPublic()), false);
+            sb.append(node.isPublic());
+            sb.append(",");
+
+            String pval = node.getPropertyValue(VOS.PROPERTY_URI_CREATOR);
+            ps.setString(col++, pval);
+            sb.append(pval);
+            sb.append(",");
+
+            pval = node.getPropertyValue(VOS.PROPERTY_URI_CONTENTLENGTH);
+            if (pval != null)
+            {
+                ps.setLong(col, Long.valueOf(pval));
+                sb.append(pval);
+            }
+            else
+            {
+                setPropertyValue(node, VOS.PROPERTY_URI_CONTENTLENGTH, "0", true);
+                ps.setLong(col, 0);
+                sb.append(0);
+            }
+            col++;
+            sb.append(",");
+
+            pval = node.getPropertyValue(VOS.PROPERTY_URI_TYPE);
+            if (pval != null)
+                ps.setString(col, pval);
+            else
+                ps.setNull(col, Types.VARCHAR);
+            col++;
+            sb.append(pval);
+            sb.append(",");
+
+            pval = node.getPropertyValue(VOS.PROPERTY_URI_CONTENTENCODING);
+            if (pval != null)
+                ps.setString(col, pval);
+            else
+                ps.setNull(col, Types.VARCHAR);
+            col++;
+            sb.append(pval);
+            sb.append(",");
+
+            pval = node.getPropertyValue(VOS.PROPERTY_URI_CONTENTMD5);
+            if (pval != null)
+                ps.setBytes(col, HexUtil.toBytes(pval));
+            else
+                ps.setNull(col, Types.VARBINARY);
+            col++;
+            sb.append(pval);
+            sb.append(",");
+
+            // always tweak the date
+            Date now = new Date();
+            setPropertyValue(node, VOS.PROPERTY_URI_DATE, dateFormat.format(now), true);
+            java.sql.Date dval = new java.sql.Date(now.getTime());
+            ps.setDate(col, dval, cal);
+            col++;
+            sb.append(dateFormat.format(now));
+            sb.append(",");
+
+            pval = node.getPropertyValue(VOS.PROPERTY_URI_GROUPREAD);
+            if (pval != null)
+                ps.setString(col, pval);
+            else
+                ps.setNull(col, Types.VARCHAR);
+            col++;
+            sb.append(pval);
+            sb.append(",");
+
+            pval = node.getPropertyValue(VOS.PROPERTY_URI_GROUPWRITE);
+            if (pval != null)
+                ps.setString(col, pval);
+            else
+                ps.setNull(col, Types.VARCHAR);
+            col++;
+            sb.append(pval);
+            
+            if (update)
+            {
+                ps.setLong(col, getNodeID(node));
+                sb.append(",");
+                sb.append(getNodeID(node));
+            }
+            
+            log.debug("setValues: " + sb);
+        }
+
+        String getSQL()
+        {
+            if (update)
+                return getUpdateSQL();
+            return getInsertSQL();
+        }
+
+        private String getInsertSQL()
+        {
+            StringBuilder sb = new StringBuilder();
+            sb.append("INSERT INTO ");
+            sb.append(ns.nodeTable);
+            sb.append(" (");
+
+            for (int c=0; c<NODE_PERSIST_COLUMNS.length; c++)
+            {
+                if (c > 0)
+                    sb.append(",");
+                sb.append(NODE_PERSIST_COLUMNS[c]);
+            }
+            sb.append(") VALUES (");
+            for (int c=0; c<NODE_PERSIST_COLUMNS.length; c++)
+            {
+                if (c > 0)
+                    sb.append(",");
+                sb.append("?");
+            }
+            sb.append(")");
+            return sb.toString();
+        }
+        private String getUpdateSQL()
+        {
+            StringBuilder sb = new StringBuilder();
+            sb.append("UPDATE ");
+            sb.append(ns.nodeTable);
+
+            // TODO: this is a very sybase=specific syntax and different from
+            // postgresql, for example
+            
+            sb.append(" SET ");
+            for (int c=0; c<NODE_PERSIST_COLUMNS.length; c++)
+            {
+                if (c > 0)
+                    sb.append(",");
+                sb.append(NODE_PERSIST_COLUMNS[c]);
+                sb.append(" = ?");
+            }
+            sb.append(" WHERE nodeID = ?");
+            return sb.toString();
+        }
+    }
+
+    private class NodePathStatementCreator implements PreparedStatementCreator
+    {
+        private String[] path;
+        private String nodeTablename;
+        private String propTableName;
+
+        public NodePathStatementCreator(String[] path, String nodeTablename, String propTableName)
+        {
+            this.path = path;
+            this.nodeTablename = nodeTablename;
+            this.propTableName = propTableName;
+        }
+
+        public PreparedStatement createPreparedStatement(Connection conn) throws SQLException
+        {
+            String sql = getSQL();
+            log.debug("SQL: " + sql);
+
+            PreparedStatement ret = conn.prepareStatement(sql);
+            for (int i=0; i<path.length; i++)
+                ret.setString(i+1, path[i]);
+            return ret;
+        }
+
+        String getSQL()
+        {
+            StringBuffer sb = new StringBuffer();
+            String acur = null;
+            sb.append("SELECT ");
+            for (int i=0; i<path.length; i++)
+            {
+                acur = "a"+i;
+                if (i > 0)
+                    sb.append(",");
+                for (int c=0; c<NODE_SELECT_COLUMNS.length; c++)
+                {
+                    if (c > 0)
+                        sb.append(",");
+                    sb.append(acur);
+                    sb.append(".");
+                    sb.append(NODE_SELECT_COLUMNS[c]);
+                }
+                
+            }
+
+            // TODO: this part needs to be re-written when we move read props to
+            // the NodeProperty table
+            sb.append(" FROM ");
+            String aprev;
+            for (int i=0; i<path.length; i++)
+            {
+                aprev = acur;
+                acur = "a"+i;
+                if (i > 0)
+                    sb.append(" JOIN ");
+                sb.append(nodeTablename);
+                sb.append(" AS ");
+                sb.append(acur);
+                if (i > 0)
+                {
+                    sb.append(" ON ");
+                    sb.append(aprev);
+                    sb.append(".nodeID=");
+                    sb.append(acur);
+                    sb.append(".parentID");
+                }
+            }
+
+            sb.append(" WHERE ");
+            for (int i=0; i<path.length; i++)
+            {
+                acur = "a"+i;
+                if (i == 0) // root
+                {
+                    sb.append(acur);
+                    sb.append(".parentID IS NULL");
+                }
+                sb.append(" AND ");
+                sb.append(acur);
+                sb.append(".name = ?");
+                sb.append(" AND ");
+                sb.append(acur);
+                sb.append(".markedForDeletion = 0");
+            }
+            return sb.toString();
+        }
+    }
+
+    private class NodePathExtractor implements ResultSetExtractor
+    {
+        
+        private int columnsPerNode;
+
+        public NodePathExtractor()
+        {
+            this.columnsPerNode = NODE_SELECT_COLUMNS.length;
+        }
+
+        public Object extractData(ResultSet rs)
+            throws SQLException, DataAccessException
+        {
+            Node ret = null;
+            ContainerNode root = null;
+            String curPath = "";
+            int numColumns = rs.getMetaData().getColumnCount();
+
+            while ( rs.next() )
+            {
+                if (root == null) // reading first row completely
+                {
+                    log.debug("reading path from row 1");
+                    int col = 1;
+                    ContainerNode cur = null;
+                    while (col < numColumns)
+                    {
+                        log.debug("readNode at " + col + ", path="+curPath);
+                        Node n = readNode(rs, col, curPath);
+                        log.debug("readNode: " + n.getUri());
+                        curPath = n.getUri().getPath();
+                        col += columnsPerNode;
+                        ret = n; // always return the last node
+                        if (root == null) // root container
+                        {
+                            cur = (ContainerNode) n;
+                            root = cur;
+                        }
+                        else if (col < numColumns) // container in the path
+                        {
+                            ContainerNode cn = (ContainerNode) n;
+                            cur.getNodes().add(cn);
+                            cn.setParent(cur);
+                            cur = cn;
+                        }
+                        else // last data node
+                        {
+                            cur.getNodes().add(n);
+                            n.setParent(cur);
+                        }
+                    }
+                }
+                else
+                    log.warn("found extra rows, expected only 0 or 1");
+                /*
+                else // reading extra group-read and group-write properties from join
+                {
+                    // NOTE: currently not needed since groupread and groupwrite are in main table
+                    // and never multi-valued
+                    int col = 1;
+                    Node cur = root;
+                    boolean done = false;
+                    while (!done)
+                    {
+                        readProps(rs, col, cur);
+                        col += columnsPerNode;
+                        if (cur instanceof ContainerNode)
+                        {
+                            ContainerNode cn = (ContainerNode) cur;
+                            cur = cn.getNodes().get(0);
+                        }
+                        else
+                            done = true; // hit a non-container and col limit
+                    }
+                }
+                */
+            }
+            return ret;
+        }
+
+        private Node readNode(ResultSet rs, int col, String basePath)
+            throws SQLException
+        {
+            long nodeID = rs.getLong(col++);
+            String name = rs.getString(col++);
+            String type = rs.getString(col++);
+            String busyString = getString(rs, col++);
+            boolean markedForDeletion = rs.getBoolean(col++);
+            boolean isPublic = rs.getBoolean(col++);
+            String owner = getString(rs, col++);
+            long contentLength = rs.getLong(col++);
+            String contentType = getString(rs, col++);
+            String contentEncoding = getString(rs, col++);
+            Object contentMD5 = rs.getObject(col++);
+            Date lastModified = rs.getTimestamp(col++, cal);
+            String groupRead = getString(rs, col++);
+            String groupWrite = getString(rs, col++);
+            
+            String path = basePath + "/" + name;
+            VOSURI vos;
+            try { vos = new VOSURI(new URI("vos", authority, path, null, null)); }
+            catch(URISyntaxException bug)
+            {
+                throw new RuntimeException("BUG - failed to create vos URI", bug);
+            }
+
+            Node node;
+            if (NODE_TYPE_CONTAINER.equals(type))
+            {
+                node = new ContainerNode(vos);
+            }
+            else if (NODE_TYPE_DATA.equals(type))
+            {
+                node = new DataNode(vos);
+                ((DataNode) node).setBusy(NodeBusyState.getStateFromValue(busyString));
+            }
+            else
+            {
+                throw new IllegalStateException("Unknown node database type: " + type);
+            }
+
+            node.appData = new NodeID(nodeID);
+
+            node.setMarkedForDeletion(markedForDeletion);
+
+            node.getProperties().add(new NodeProperty(VOS.PROPERTY_URI_CONTENTLENGTH, Long.toString(contentLength)));
+
+            if (contentType != null)
+            {
+                node.getProperties().add(new NodeProperty(VOS.PROPERTY_URI_TYPE, contentType));
+            }
+            if (contentEncoding != null)
+            {
+                node.getProperties().add(new NodeProperty(VOS.PROPERTY_URI_CONTENTENCODING, contentEncoding));
+            }
+            if (contentMD5 != null && contentMD5 instanceof byte[])
+            {
+                String contentMD5String = HexUtil.toHex((byte[]) contentMD5);
+                node.getProperties().add(new NodeProperty(VOS.PROPERTY_URI_CONTENTMD5, contentMD5String));
+            }
+            if (lastModified != null)
+            {
+                node.getProperties().add(new NodeProperty(VOS.PROPERTY_URI_DATE, dateFormat.format(lastModified)));
+            }
+            if (groupRead != null)
+            {
+                node.getProperties().add(new NodeProperty(VOS.PROPERTY_URI_GROUPREAD, groupRead));
+            }
+            if (groupWrite != null)
+            {
+                node.getProperties().add(new NodeProperty(VOS.PROPERTY_URI_GROUPWRITE, groupWrite));
+            }
+            if (owner != null)
+            {
+                node.getProperties().add(new NodeProperty(VOS.PROPERTY_URI_CREATOR, owner));
+            }
+            node.getProperties().add(new NodeProperty(VOS.PROPERTY_URI_ISPUBLIC, Boolean.toString(isPublic)));
+
+            // set the read-only flag on the properties
+            for (String propertyURI : VOS.READ_ONLY_PROPERTIES)
+            {
+                int propertyIndex = node.getProperties().indexOf(new NodeProperty(propertyURI, null));
+                if (propertyIndex != -1)
+                {
+                    node.getProperties().get(propertyIndex).setReadOnly(true);
+                }
+            }
+
+            return node;
+        }
+
+        // pull out group-read and group-write props at the specified offset
+        private void readProps(ResultSet rs, int col, Node n)
+            throws SQLException
+        {
+            int c1 = col + NODE_SELECT_COLUMNS.length -3;
+            int c2 = col + NODE_SELECT_COLUMNS.length -2;
+            String gr = getString(rs, c1);
+            String gw = getString(rs, c2);
+            log.debug("column " + c1 + " group-read: " + gr);
+            log.debug("column " + c2 + " group-write: " + gw);
+            List<NodeProperty> props = n.getProperties();
+            if (gr != null)
+                props.add(new NodeProperty(VOS.PROPERTY_URI_GROUPREAD, gr));
+            if (gw != null)
+                props.add(new NodeProperty(VOS.PROPERTY_URI_GROUPWRITE, gw));
+        }
+
+        private String getString(ResultSet rs, int col)
+            throws SQLException
+        {
+            String ret = rs.getString(col);
+            if (ret != null)
+            {
+                ret = ret.trim();
+                if (ret.length() == 0)
+                ret = null;
+            }
+            return ret;
+        }
+    }
 }

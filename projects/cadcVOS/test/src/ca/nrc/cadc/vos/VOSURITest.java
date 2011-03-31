@@ -96,12 +96,32 @@ public class VOSURITest
     @Test
     public void testInvalidScheme()
     {
+        // VOSURI(URI)
+        try
+        {
+            URI abc = new URI("abc://" + AUTHORITY + "container/data");
+            VOSURI vos = new VOSURI(abc);
+            Assert.fail("expected IllegalArgumentException, created: " + vos);
+        }
+        catch(IllegalArgumentException expected) { }
+        catch(Exception unexpected)
+        {
+            log.error("unexpected exception", unexpected);
+            Assert.fail("unexpected exception: " + unexpected);
+        }
+
+        // VOSURI(String) convenience method
         try
         {
             VOSURI vos = new VOSURI("abc://" + AUTHORITY + "container/data");
-            Assert.fail("expected URISyntaxException, got: " + vos);
+            Assert.fail("expected IllegalArgumentException, created: " + vos);
         }
-        catch(URISyntaxException expected) { }
+        catch(IllegalArgumentException expected) { }
+        catch(Exception unexpected)
+        {
+            log.error("unexpected exception", unexpected);
+            Assert.fail("unexpected exception: " + unexpected);
+        }
     }
 
     @Test
@@ -295,6 +315,34 @@ public class VOSURITest
             vosTilde = new VOSURI(new URI(tilde + path + "#foo"));
             Assert.assertNotSame(bang, tilde);
             Assert.assertTrue("! and ~ are equivalent in uri", vosBang.equals(vosTilde));
+        }
+        catch(Exception unexpected)
+        {
+            log.error("unexpected exception", unexpected);
+            Assert.fail("unexpected exception: " + unexpected);
+        }
+    }
+
+    @Test
+    public void testGetParent()
+    {
+        try
+        {
+            String bang  = "vos://cadc.nrc.ca!vospace";
+            String tilde = "vos://cadc.nrc.ca~vospace";
+            String path = "/container/data";
+
+            VOSURI vosBang = new VOSURI(new URI(bang + path));
+            VOSURI vosTilde = new VOSURI(new URI(tilde + path));
+            Assert.assertNotSame(bang, tilde);
+
+            VOSURI parentBang = vosBang.getParentURI();
+            Assert.assertNotNull(parentBang);
+            Assert.assertEquals(bang + "/container", parentBang.getURIObject().toASCIIString());
+
+            VOSURI parentTilde = vosTilde.getParentURI();
+            Assert.assertNotNull(parentTilde);
+            Assert.assertEquals(tilde + "/container", parentTilde.getURIObject().toASCIIString());
         }
         catch(Exception unexpected)
         {

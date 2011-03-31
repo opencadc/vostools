@@ -86,15 +86,16 @@ public class VOSURI
      * is expected to be vos, else a URISyntaxException will be thrown.
      *
      * @param uri The URI to use.
-     * @throws URISyntaxException if uri violates RFC 2396, or if the URI scheme is not vos.
-     * @throws NullPointerException if uri is null.
+     * @throws IllegalArgumentException if the URI scheme is not vos
+     * @throws NullPointerException if uri is null
      */
-    public VOSURI(URI uri) throws URISyntaxException
+    public VOSURI(URI uri)
     {
         vosURI = uri;
 
         // Check the scheme is vos
-        if (!vosURI.getScheme().equalsIgnoreCase("vos")) throw new URISyntaxException(uri.toString(), "Scheme must be vos");
+        if (!vosURI.getScheme().equalsIgnoreCase("vos")) 
+            throw new IllegalArgumentException("URI scheme must be vos: " + uri.toString());
     }
 
     /**
@@ -102,16 +103,14 @@ public class VOSURI
      * is expected to be vos, else a URISyntaxException will be thrown.
      *
      * @param uri String representation of a URI to decode.
-     * @throws URISyntaxException if uri violates RFC 2396, or if the URI scheme is not vos.
-     * @throws NullPointerException if uri is null.
+     * @throws URISyntaxException if uri violates RFC 2396 
+     * @throws IllegalArgumentException if the URI scheme is not vos
+     * @throws NullPointerException if uri is null
      */
-    public VOSURI(String uri) throws URISyntaxException
+    public VOSURI(String uri)
+        throws URISyntaxException
     {
-        // Make sure it's a valid URI
-        vosURI = new URI(uri);
-
-        // Check the scheme is vos
-        if (!vosURI.getScheme().equalsIgnoreCase("vos")) throw new URISyntaxException(uri, "Scheme must be vos");
+        this(new URI(uri));
     }
 
     @Override
@@ -223,10 +222,28 @@ public class VOSURI
     public String getParent()
     {
         String path = vosURI.getPath();
-        if (path == null) return null;
+        if (path == null)
+            return null;
         int index = path.lastIndexOf('/');
-        if (index <= 0) return null;
-        return path.substring(1, index);
+        if (index > 0)
+            return path.substring(0, index);
+        return null;
+    }
+
+    public VOSURI getParentURI()
+    {
+        String path = getParent();
+        if (path == null)
+            return null;
+        try
+        {
+            URI uri = new URI("vos", getAuthority(), path, null, null);
+            return new VOSURI(uri);
+        }
+        catch(URISyntaxException bug)
+        {
+            throw new RuntimeException("BUG: failed to get parent uri from " + vosURI.toASCIIString(), bug);
+        }
     }
 
     @Override

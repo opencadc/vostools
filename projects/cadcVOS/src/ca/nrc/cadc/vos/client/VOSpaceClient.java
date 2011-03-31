@@ -69,29 +69,23 @@
 
 package ca.nrc.cadc.vos.client;
 
+import ca.nrc.cadc.auth.SSLUtil;
+import ca.nrc.cadc.vos.ContainerNode;
 import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.io.OutputStream;
 import java.io.OutputStreamWriter;
-import java.io.StringWriter;
 import java.net.HttpURLConnection;
 import java.net.MalformedURLException;
 import java.net.URL;
-import java.security.AccessControlContext;
-import java.security.AccessControlException;
-import java.security.AccessController;
 import java.util.List;
-
-import javax.net.ssl.HttpsURLConnection;
-import javax.net.ssl.SSLSocketFactory;
-import javax.security.auth.Subject;
 
 import org.apache.log4j.Logger;
 
-import ca.nrc.cadc.auth.SSLUtil;
 import ca.nrc.cadc.vos.Node;
+import ca.nrc.cadc.vos.NodeAlreadyExistsException;
 import ca.nrc.cadc.vos.NodeNotFoundException;
 import ca.nrc.cadc.vos.NodeParsingException;
 import ca.nrc.cadc.vos.NodeProperty;
@@ -104,7 +98,16 @@ import ca.nrc.cadc.vos.Transfer;
 import ca.nrc.cadc.vos.TransferParsingException;
 import ca.nrc.cadc.vos.TransferReader;
 import ca.nrc.cadc.vos.TransferWriter;
+import ca.nrc.cadc.vos.VOS;
+import ca.nrc.cadc.vos.VOSURI;
 import ca.nrc.cadc.vos.View;
+import java.io.StringWriter;
+import java.security.AccessControlContext;
+import java.security.AccessControlException;
+import java.security.AccessController;
+import javax.net.ssl.HttpsURLConnection;
+import javax.net.ssl.SSLSocketFactory;
+import javax.security.auth.Subject;
 
 /**
  * @author zhangsa
@@ -115,11 +118,15 @@ public class VOSpaceClient
     private static Logger log = Logger.getLogger(VOSpaceClient.class);
     
     public static final String CR = System.getProperty("line.separator"); // OS independant new line
+
+    // TODO: get this from capabilites obtained via registry lookup
     public static final String VOSPACE_SYNC_TRANSFER_ENDPOINT = "/synctrans";
 
     protected String baseUrl;
     protected boolean schemaValidation;
     private SSLSocketFactory sslSocketFactory;
+
+    private boolean inheritPermissions = false;
 
     /**
      * Constructor. XML Schema validation is enabled by default.
@@ -143,7 +150,19 @@ public class VOSpaceClient
     public VOSpaceClient(String baseUrl, boolean enableSchemaValidation)
     {
         this.baseUrl = baseUrl;
-        this.schemaValidation = false; //enableSchemaValidation;
+        this.schemaValidation = enableSchemaValidation;
+    }
+
+    /**
+     * Enabled poermission property inheritence. When enabled, the createNode and
+     * setNode methods will get the parent node from the service and copy all
+     * permission-related properties to the target node.
+     * 
+     * @param enabled
+     */
+    public void setInheritPermission(boolean enabled)
+    {
+        this.inheritPermissions = enabled;
     }
 
     public void setSSLSocketFactory(SSLSocketFactory sslSocketFactory)
@@ -158,6 +177,13 @@ public class VOSpaceClient
         return sslSocketFactory;
     }
 
+    /**
+     * Create the specified node. If the parent (container) nodes do not exist, they
+     * will also be created.
+     * 
+     * @param node
+     * @return the created node
+     */
     public Node createNode(Node node)
     {
         int responseCode;
@@ -165,6 +191,35 @@ public class VOSpaceClient
 
         try
         {
+            VOSURI parentURI = node.getUri().getParentURI();
+            ContainerNode parent = null;
+            if (parentURI == null)
+                throw new RuntimeException("parent (root node) not found and cannot create: " + node.getUri());
+            try
+            {
+                Node p = this.getNode(parentURI.getPath());
+                log.debug("found parent: " + parentURI);
+                if (p instanceof ContainerNode)
+                    parent = (ContainerNode) p;
+                else
+                    throw new IllegalArgumentException("cannot create a child, parent is a " + p.getClass().getSimpleName());
+            }
+            catch(NodeNotFoundException ex)
+            {
+                // if parent does not exist, just create it!!
+                log.info("creating parent: " + parentURI);
+                ContainerNode cn = new ContainerNode(parentURI);
+                parent = (ContainerNode) createNode(cn);
+            }
+
+            // check if already exists: also could fail like this below due to race condition
+            for (Node n : parent.getNodes())
+                if (n.getName().equals(node.getName()))
+                    throw new IllegalArgumentException("DuplicateNode: " + node.getUri().getURIObject().toASCIIString());
+
+            if (inheritPermissions)
+                copyPermissions(parent, node);
+
             URL url = new URL(this.baseUrl + "/nodes" + node.getUri().getPath());
             log.debug("createNode(), URL=" + url);
             HttpURLConnection connection = (HttpURLConnection) url.openConnection();
@@ -192,59 +247,59 @@ public class VOSpaceClient
             
             switch (responseCode)
             {
-            case 201: // valid
-                InputStream in = connection.getInputStream();
-                NodeReader nodeReader = new NodeReader(schemaValidation);
-                rtnNode = nodeReader.read(in);
-                in.close();
-                log.debug("createNode, created node: " + rtnNode);
-                break;
+                case 201: // valid
+                    InputStream in = connection.getInputStream();
+                    NodeReader nodeReader = new NodeReader(schemaValidation);
+                    rtnNode = nodeReader.read(in);
+                    in.close();
+                    log.debug("createNode, created node: " + rtnNode);
+                    break;
 
-            case 500:
-                // The service SHALL throw a HTTP 500 status code including an InternalFault fault in the entity body 
-                // if the operation fails
+                case 500:
+                    // The service SHALL throw a HTTP 500 status code including an InternalFault fault in the entity body
+                    // if the operation fails
 
-                // If a parent node in the URI path does not exist 
-                // then the service MUST throw a HTTP 500 status code including a ContainerNotFound fault in the entity body.
+                    // If a parent node in the URI path does not exist
+                    // then the service MUST throw a HTTP 500 status code including a ContainerNotFound fault in the entity body.
 
-                // If a parent node in the URI path is a LinkNode, 
-                // the service MUST throw a HTTP 500 status code including a LinkFound fault in the entity body.
-                throw new RuntimeException(responseMessage);
-            case 409:
-                // The service SHALL throw a HTTP 409 status code including a DuplicateNode fault in the entity body 
-                // if a Node already exists with the same URI
-                throw new IllegalArgumentException(responseMessage);
-            case 400:
-                // The service SHALL throw a HTTP 400 status code including an InvalidURI fault in the entity body 
-                // if the requested URI is invalid
-                // The service SHALL throw a HTTP 400 status code including a TypeNotSupported fault in the entity body 
-                // if the type specified in xsi:type is not supported
-                throw new IllegalArgumentException(responseMessage);
-            case 401:
-                // The service SHALL throw a HTTP 401 status code including PermissionDenied fault in the entity body
-                // if the user does not have permissions to perform the operation
-                String msg = responseMessage;
-                if (msg == null)
-                    msg = "permission denied";
-                throw new AccessControlException(msg);
+                    // If a parent node in the URI path is a LinkNode,
+                    // the service MUST throw a HTTP 500 status code including a LinkFound fault in the entity body.
+                    throw new RuntimeException(responseMessage);
+                case 409:
+                    // The service SHALL throw a HTTP 409 status code including a DuplicateNode fault in the entity body
+                    // if a Node already exists with the same URI
+                    throw new IllegalArgumentException(responseMessage);
+                case 400:
+                    // The service SHALL throw a HTTP 400 status code including an InvalidURI fault in the entity body
+                    // if the requested URI is invalid
+                    // The service SHALL throw a HTTP 400 status code including a TypeNotSupported fault in the entity body
+                    // if the type specified in xsi:type is not supported
+                    throw new IllegalArgumentException(responseMessage);
+                case 401:
+                    // The service SHALL throw a HTTP 401 status code including PermissionDenied fault in the entity body
+                    // if the user does not have permissions to perform the operation
+                    String msg = responseMessage;
+                    if (msg == null)
+                        msg = "permission denied";
+                    throw new AccessControlException(msg);
 
-            case 404:
-                // handle server response when parent (container) does not exist
-                throw new IllegalArgumentException(responseMessage);
-            default:
+                case 404:
+                    // handle server response when parent (container) does not exist
+                    throw new IllegalArgumentException(responseMessage);
+                default:
 
-                // TODO: does this actually capture something useful? has it ever happened?
-                // don't we just say that the service responded in a non-compliant way and give up? 
-                InputStream errStrm = connection.getErrorStream();
-                BufferedReader br = new BufferedReader(new InputStreamReader(errStrm));
-                String line;
-                while ((line = br.readLine()) != null)
-                {
-                    log.debug(line);
-                }
-                errStrm.close();
-                
-                throw new RuntimeException("unexpected failure mode: " + responseMessage + "(" + responseCode + ")");
+                    // TODO: does this actually capture something useful? has it ever happened?
+                    // don't we just say that the service responded in a non-compliant way and give up?
+                    InputStream errStrm = connection.getErrorStream();
+                    BufferedReader br = new BufferedReader(new InputStreamReader(errStrm));
+                    String line;
+                    while ((line = br.readLine()) != null)
+                    {
+                        log.debug(line);
+                    }
+                    errStrm.close();
+
+                    throw new RuntimeException("unexpected failure mode: " + responseMessage + "(" + responseCode + ")");
             }
         }
         catch (IOException e)
@@ -283,16 +338,18 @@ public class VOSpaceClient
     public Node getNode(String path, String query)
         throws NodeNotFoundException
     {
+        if (!path.startsWith("/"))
+            path = "/" + path; // must be absolute
+        if (query != null)
+            path += "?" + query;
+
         int responseCode;
         final Node rtnNode;
 
         try
         {
-            if (path.startsWith("/")) 
-                path = path.substring(1);
-            if (query != null)
-                path += "?" + query;
-            URL url = new URL(this.baseUrl + "/nodes/" + path);
+            
+            URL url = new URL(this.baseUrl + "/nodes" + path);
             log.debug("getNode(), URL=" + url);
             HttpURLConnection connection = (HttpURLConnection) url.openConnection();
             if (connection instanceof HttpsURLConnection)
@@ -358,8 +415,25 @@ public class VOSpaceClient
         Node rtnNode = null;
         try
         {
+            if (inheritPermissions)
+            {
+                VOSURI parentURI = node.getUri().getParentURI();
+                if (parentURI != null)
+                {
+                    try
+                    {
+                        ContainerNode parent = (ContainerNode) this.getNode(parentURI.getPath());
+                        copyPermissions(parent, node);
+                    }
+                    catch(NodeNotFoundException ex)
+                    {
+                        throw new RuntimeException("parent not found: " + parentURI);
+                    }
+                }
+            }
             URL url = new URL(this.baseUrl + "/nodes" + node.getUri().getPath());
-            log.debug("setNode: " + node);
+            log.debug("setNode: " + VOSClientUtil.xmlString(node));
+            log.debug("setNode: " + url);
             HttpURLConnection connection = (HttpURLConnection) url.openConnection();
             if (connection instanceof HttpsURLConnection)
             {
@@ -552,12 +626,13 @@ public class VOSpaceClient
 
     public void deleteNode(String path)
     {
+        if (!path.startsWith("/"))
+            path = "/" + path; // must be absolute
+
         int responseCode;
         try
         {
-            if (path.startsWith("/")) path = path.substring(1); // removed leading slash to avoid confusion
-
-            URL url = new URL(this.baseUrl + "/nodes/" + path);
+            URL url = new URL(this.baseUrl + "/nodes" + path);
             log.debug(url);
             HttpURLConnection connection = (HttpURLConnection) url.openConnection();
             if (connection instanceof HttpsURLConnection)
@@ -778,5 +853,42 @@ public class VOSpaceClient
             log.debug("setting SSLSocketFactory on " + sslConn.getClass().getName());
             sslConn.setSSLSocketFactory(sslSocketFactory);
         }
+    }
+
+    // copy permission properties, assuming replace rather than append
+    private void copyPermissions(Node src, Node dest)
+    {
+        List<NodeProperty> srcProps = src.getProperties();
+        List<NodeProperty> destProps = dest.getProperties();
+
+        for (NodeProperty s : srcProps)
+        {
+            if ( isPermissionProperty(s) )
+            {
+                boolean found = false;
+                for (NodeProperty d : destProps)
+                {
+                    if ( s.getPropertyURI().equals(d.getPropertyURI()) )
+                    {
+                        d.setValue(s.getPropertyValue());
+                        found = true;
+                    }
+                }
+                if (!found)
+                    destProps.add(s);
+                log.debug("set: " + s);
+            }
+        }
+    }
+
+    private boolean isPermissionProperty(NodeProperty p)
+    {
+        if ( VOS.PROPERTY_URI_ISPUBLIC.equals(p.getPropertyURI()) )
+            return true;
+        if ( VOS.PROPERTY_URI_GROUPREAD.equals(p.getPropertyURI()) )
+            return true;
+        if ( VOS.PROPERTY_URI_GROUPWRITE.equals(p.getPropertyURI()) )
+            return true;
+        return false;
     }
 }

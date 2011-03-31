@@ -47,7 +47,6 @@ public class GetNodeActionTest extends NodeActionTest<GetNodeAction>
     private Search mockSearch = createMock(Search.class);
     private AbstractView mockAbstractView = createMock(AbstractView.class);
 
-
     /**
      * Set and initialize the Test Subject.
      *
@@ -71,17 +70,6 @@ public class GetNodeActionTest extends NodeActionTest<GetNodeAction>
             {
                 return getMockAbstractView();
             }
-
-            /**
-             * Return the view reference sent in by the client.
-             *
-             * @return  String URI reference.
-             */
-            @Override
-            protected String getViewReference()
-            {
-                return "VIEW/REFERENCE";
-            }
         });
     }
 
@@ -96,14 +84,20 @@ public class GetNodeActionTest extends NodeActionTest<GetNodeAction>
     @Override
     protected void prePerformNodeAction() throws Exception
     {
-        getMockAbstractView().setNode(getMockNode(), getMockRequest(),
-                                      "VIEW/REFERENCE");
-        expectLastCall().once();
+        getTestSubject().setViewReference("VIEW/REFERENCE");
+        
+        expect(getMockRef().toUrl()).andReturn(getMockURL()).atLeastOnce();
+        expect(getMockRequest().getOriginalRef()).andReturn(getMockRef()).atLeastOnce();
 
+        getMockAbstractView().setNode(getMockNodeS(), "VIEW/REFERENCE", getMockURL());
+        expectLastCall().once();
+        
         expect(getMockAbstractView().getRedirectURL()).andReturn(null).once();
-        expect(getMockAbstractView().getMediaType()).andReturn(MediaType.ALL).
+        expect(getMockAbstractView().getMediaType()).andReturn(MediaType.TEXT_XML).
                 once();
 
+        replay(getMockRef());
+        replay(getMockRequest());
         replay(getMockAbstractView());
     }
 
@@ -118,6 +112,8 @@ public class GetNodeActionTest extends NodeActionTest<GetNodeAction>
     protected void postPerformNodeAction(final NodeActionResult result)
             throws Exception
     {
+        verify(getMockRef());
+        verify(getMockRequest());
         verify(getMockAbstractView());
     }
 

@@ -76,7 +76,6 @@ import java.net.MalformedURLException;
 import java.net.URI;
 import java.net.URISyntaxException;
 import java.net.URL;
-import java.security.AccessControlException;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -106,6 +105,7 @@ import ca.nrc.cadc.vos.VOS;
 import ca.nrc.cadc.vos.VOSURI;
 import ca.nrc.cadc.vos.View;
 import ca.nrc.cadc.vos.Transfer.Direction;
+import java.security.AccessControlException;
 
 /**
  * @author zhangsa
@@ -132,6 +132,7 @@ public class Main implements Runnable
     public static final String ARG_PUBLIC = "public";
     public static final String ARG_GROUP_READ = "group-read";
     public static final String ARG_GROUP_WRITE = "group-write";
+    public static final String ARG_INHERIT_PERM = "ip";
     public static final String ARG_PROP = "prop";
     public static final String ARG_SRC = "src";
     public static final String ARG_DEST = "dest";
@@ -208,7 +209,10 @@ public class Main implements Runnable
         try
         {
             command.init(argMap);
-            Subject.doAs(command.subject, new RunnableAction(command));
+            if (command.subject != null)
+                Subject.doAs(command.subject, new RunnableAction(command));
+            else
+                command.run(); // anon
         }
         catch (IllegalArgumentException ex)
         {
@@ -377,21 +381,15 @@ public class Main implements Runnable
     {
         try
         {
-            final Node n = client.getNode(target.getPath(), target.getQuery());
-            final String contentLength =
-                    safePropertyRef(n, VOS.PROPERTY_URI_CONTENTLENGTH);
+            Node n = client.getNode(target.getPath(), target.getQuery());
 
             msg(getType(n) + ": " + n.getUri());
             msg("creator: " + safePropertyRef(n, VOS.PROPERTY_URI_CREATOR));
-            msg("last modified: " + safePropertyRef(n, VOS.PROPERTY_URI_DATE));
+            msg("last modified: " + safePropertyRef(n, VOS.PROPERTY_URI_CREATOR));
             msg("readable by anyone: " + safePropertyRef(n, VOS.PROPERTY_URI_ISPUBLIC));
             msg("readable by: " + safePropertyRef(n, VOS.PROPERTY_URI_GROUPREAD));
             msg("readable and writable by: " + safePropertyRef(n, VOS.PROPERTY_URI_GROUPWRITE));
-            msg("size: " + (!StringUtil.hasText(contentLength)
-                            ? "0"
-                            : FileSizeType.getHumanReadableSize(
-                    Long.parseLong(contentLength)) + " (" + contentLength
-                              + " bytes)"));
+            msg("size: " + getContentLength(n,true));
 
             if (n instanceof ContainerNode)
             {
@@ -407,11 +405,25 @@ public class Main implements Runnable
                 }
 
                 ContainerNode cn = (ContainerNode) n;
-                msg("child nodes:");
+                StringBuilder sb = new StringBuilder();
+                sb.append(pad("child nodes: ", 32));
+                sb.append(pad("size",12));
+                sb.append(pad("public",8));
+                sb.append(pad("last modified",26));
+                sb.append("URI");
+                msg(sb.toString());
                 for (Node child : cn.getNodes())
                 {
-                    //msg("\tchild: " + child.getName() + "\t" + getType(child) + "\t" + child.getUri());
-                    msg("\t" + child.getUri());
+                    sb = new StringBuilder();
+                    String name = child.getName();
+                    if (child instanceof ContainerNode)
+                        name += "/";
+                    sb.append(pad(name,32));
+                    sb.append(pad(getContentLength(child,true),12));
+                    sb.append(pad(safePropertyRef(child, VOS.PROPERTY_URI_ISPUBLIC),8));
+                    sb.append(pad(safePropertyRef(n, VOS.PROPERTY_URI_DATE),26));
+                    sb.append(child.getUri().toString());
+                    msg(sb.toString());
                 }
             }
             else if (n instanceof DataNode)
@@ -435,6 +447,26 @@ public class Main implements Runnable
             msg("not found: " + target);
             System.exit(NET_STATUS);
         }
+    }
+
+    private String pad(String s, int len)
+    {
+        StringBuilder sb = new StringBuilder();
+        sb.append(s);
+        for (int i=s.length(); i<len; i++)
+            sb.append(" ");
+        return sb.toString();
+    }
+
+    private String getContentLength(Node n, boolean simple)
+    {
+        String contentLength = safePropertyRef(n, VOS.PROPERTY_URI_CONTENTLENGTH);
+        if (!StringUtil.hasText(contentLength) )
+            return "0";
+        if (simple)
+            return contentLength;
+        return FileSizeType.getHumanReadableSize(Long.parseLong(contentLength))
+                + " (" + contentLength + " bytes)";
     }
 
     private void copyToVOSpace()
@@ -471,7 +503,10 @@ public class Main implements Runnable
         View dview = new View(new URI(VOS.VIEW_DEFAULT));
 
         List<Protocol> protocols = new ArrayList<Protocol>();
-        protocols.add(new Protocol(VOS.PROTOCOL_HTTPS_PUT));
+        if (subject != null)
+            protocols.add(new Protocol(VOS.PROTOCOL_HTTPS_PUT));
+        else
+            protocols.add(new Protocol(VOS.PROTOCOL_HTTP_PUT));
 
         Transfer transfer = new Transfer();
         transfer.setTarget(dnode);
@@ -480,7 +515,6 @@ public class Main implements Runnable
         transfer.setDirection(this.transferDirection);
 
         ClientTransfer clientTransfer = new ClientTransfer(this.client.pushToVoSpace(transfer));
-        log.debug(clientTransfer.toXmlString());
 
         log.debug("this.source: " + source);
         File fileToUpload = new File(source);
@@ -488,7 +522,7 @@ public class Main implements Runnable
         clientTransfer.doUpload(fileToUpload);
         Node node = clientTransfer.getTarget();
         log.debug("clientTransfer getTarget: " + node);
-        Node nodeRtn = this.client.getNode(node.getPath());
+        Node nodeRtn = this.client.getNode(node.getUri().getPath());
         log.debug("Node returned from getNode, after doUpload: " + VOSClientUtil.xmlString(nodeRtn));
     }
 
@@ -499,7 +533,10 @@ public class Main implements Runnable
         View dview = new View(new URI(VOS.VIEW_DEFAULT));
 
         List<Protocol> protocols = new ArrayList<Protocol>();
-        protocols.add(new Protocol(VOS.PROTOCOL_HTTPS_GET, baseUrl, null));
+        if (subject != null)
+            protocols.add(new Protocol(VOS.PROTOCOL_HTTPS_GET));
+        else
+            protocols.add(new Protocol(VOS.PROTOCOL_HTTP_GET));
 
         Transfer transfer = new Transfer();
         transfer.setTarget(dnode);
@@ -584,13 +621,14 @@ public class Main implements Runnable
         URI serverUri = null;
         try
         {
-            this.subject = CertCmdArgUtil.initSubject(argMap);
+            this.subject = CertCmdArgUtil.initSubject(argMap, true);
         }
         catch(Exception ex)
         {
             log.error("failed to initialise SSL from certificates: " + ex.getMessage());
             System.exit(INIT_STATUS);
         }
+
 
         try
         {
@@ -689,7 +727,10 @@ public class Main implements Runnable
         try
         {
             RegistryClient reg = new RegistryClient();
-            URL baseURL = reg.getServiceURL(serverUri, "https");
+            String protocol = "https";
+            if (this.subject == null)
+                protocol = "http";
+            URL baseURL = reg.getServiceURL(serverUri, protocol);
             if (baseURL == null)
             {
                 log.error("failed to find service URL for " + serverUri);
@@ -714,6 +755,9 @@ public class Main implements Runnable
         }
 
         this.client = new VOSpaceClient(baseUrl, doVal);
+        if ( argMap.isSet(ARG_INHERIT_PERM) )
+            this.client.setInheritPermission(true);
+        
         log.info("server uri: " + serverUri);
         log.info("base url: " + this.baseUrl);
     }
@@ -888,13 +932,13 @@ public class Main implements Runnable
                 "java -jar VOSpaceClient.jar  [-v|--verbose|-d|--debug]                                            ",
                 CertCmdArgUtil.getCertArgUsage(),
                 "   --create --target=<target URI>                                                                  ",
-                "   [--public[=true|false]                                                                         ",
-                "   [--group-read=<group URI>]                                                                      ",
-                "   [--group-write=<group URI>]                                                                     ",
-                "   [--prop=<properties file>]                                                                      ",
+                "   [--prop=<properties file>]",
+                "   [--ip | [--public[=true|false]] [--group-read=<group URI>] [--group-write=<group URI>] ]",
+                " ",
+                "--ip : inherit permission properties from parent",
                 "                                                                                                  ",
                 "Note: --create defaults to creating a ContainerNode (directory). Creating                         ",
-                "other types of nodes specifically is not suppoerted at this time.                                 ",
+                "other types of nodes specifically is not supported at this time.                                 ",
                 "                                                                                                  ",
                 "Copy file:                                                                                        ",
                 "java -jar VOSpaceClient.jar  [-v|--verbose|-d|--debug]                                            ",
@@ -902,33 +946,25 @@ public class Main implements Runnable
                 "   --copy --src=<source URI> --dest=<destination URI>                                            ",
                 "   [--content-type=<mimetype of source>]                                                           ",
                 "   [--content-encoding=<encoding of source>]                                                       ",
-                "   [--public[=true|false]                                                                         ",
-                "   [--group-read=<group URI>]                                                                      ",
-                "   [--group-write=<group URI>]                                                                     ",
-                "   [--prop=<properties file>]                                                                      ",
-                "                                                                                                  ",
+                "   [--prop=<properties file>]",
+                "   [--ip | [--public[=true|false]] [--group-read=<group URI>] [--group-write=<group URI>] ]",
+                " ",
+                "--ip : inherit permission properties from parent",
+                " ",
                 "Note: One of --src and --target may be a \"vos\" URI and the other may be an                        ",
                 "absolute or relative path to a file. If the target node does not exist, a                         ",
-                "DataNode is created and data copied. If it does exist, the data (and                              ",
-                "properties?) are overwritten.                                                                     ",
+                "DataNode is created and data copied. If it does exist, the data and                              ",
+                "properties are overwritten.                                                                     ",
                 "                                                                                                  ",
                 "View node:                                                                                        ",
                 "java -jar VOSpaceClient.jar  [-v|--verbose|-d|--debug]                                            ",
                 CertCmdArgUtil.getCertArgUsage(),
                 "   --view --target=<target URI>                                                                    ",
-                "   [--public[=true|false]                                                                         ",
-                "   [--group-read=<group URI>]                                                                      ",
-                "   [--group-write=<group URI>]                                                                     ",
                 "                                                                                                  ",
                 "Delete node:                                                                                      ",
                 "java -jar VOSpaceClient.jar  [-v|--verbose|-d|--debug]                                            ",
                 CertCmdArgUtil.getCertArgUsage(),
                 "   --delete --target=<target URI>                                                                  ",
-                "   [--content-type=<mimetype of source>]                                                           ",
-                "   [--content-encoding=<encoding of source>]                                                       ",
-                "   [--public[=true|false]                                                                         ",
-                "   [--group-read=<group URI>]                                                                      ",
-                "   [--group-write=<group URI>]                                                                     ",
                 "                                                                                                  ",
                 "Set node:                                                                                         ",
                 "java -jar VOSpaceClient.jar  [-v|--verbose|-d|--debug]                                            ",
@@ -936,10 +972,11 @@ public class Main implements Runnable
                 "   --set --target=<target URI>                                                                     ",
                 "   [--content-type=<mimetype of source>]                                                           ",
                 "   [--content-encoding=<encoding of source>]                                                       ",
-                "   [--public[=true|false]                                                                         ",
-                "   [--group-read=<group URI>]                                                                      ",
-                "   [--group-write=<group URI>]                                                                     ",
-                "   [--prop=<properties file>]                                                                      ", "" };
+                "   [--prop=<properties file>]",
+                "   [--ip | [--public[=true|false]] [--group-read=<group URI>] [--group-write=<group URI>] ]",
+                " ",
+                "--ip : inherit permission properties from parent",
+                "" };
         for (String line : um)
             msg(line);
     }

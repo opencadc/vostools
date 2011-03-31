@@ -131,10 +131,10 @@ public class NodeResource extends BaseResource
                 throw new IllegalArgumentException(
                         "No node path information provided.");
             }
-
+            LOGGER.debug("prefix = " + getVosUriPrefix());
             vosURI = new VOSURI(getVosUriPrefix() + "/" + path);
-                
             LOGGER.debug("vosURI = " + vosURI);
+            
             Form form = getRequest().getResourceRef().getQueryAsForm();
             viewReference = form.getFirstValue("view");
             LOGGER.debug("viewReference = " + viewReference);
@@ -256,17 +256,34 @@ public class NodeResource extends BaseResource
         }
     }
     
-    /**
-     * HTTP GET
-     *
-     * @return The Representation of the given Media Type for this GET.
-     */
     @Get("xml")
     public Representation represent()
     {
         LOGGER.debug("Enter NodeResource.represent()");
         return performNodeAction(new GetNodeAction(createSearchCriteria()));
     }
+
+    @Put
+    public Representation create(final Representation entity)
+    {
+        LOGGER.debug("Enter NodeResource.store()");
+        return performNodeAction(new CreateNodeAction());
+    }
+
+    @Post
+    public Representation update(final Representation entity)
+    {
+        LOGGER.debug("Enter NodeResource.accept()");
+        return performNodeAction(new UpdatePropertiesAction());
+    }
+
+    @Delete
+    public Representation remove()
+    {
+        LOGGER.debug("Enter NodeResource.remove()");
+        return performNodeAction(new DeleteNodeAction());
+    }
+
 
     /**
      * Create the Search Criteria to be used with a GET call.
@@ -327,40 +344,6 @@ public class NodeResource extends BaseResource
         return false;
     }
     
-    /**
-     * HTTP PUT
-     *
-     * @param entity        The Request payload.
-     * @return Representation as a result of this PUT.
-     */
-    @Put
-    public Representation store(final Representation entity)
-    {   
-        LOGGER.debug("Enter NodeResource.store()");
-        return performNodeAction(new CreateNodeAction());
-    }
-    
-    /**
-     * HTTP POST
-     *
-     * @param entity        The Request payload.
-     * @return Representation as a result of this PUT.
-     */
-    @Post
-    public Representation accept(final Representation entity)
-    {
-        LOGGER.debug("Enter NodeResource.accept()");
-        return performNodeAction(new UpdatePropertiesAction());
-    }
-    
-    /**
-     * HTTP DELETE
-     */
-    @Delete
-    public Representation remove()
-    {
-        LOGGER.debug("Enter NodeResource.remove()");
-        return performNodeAction(new DeleteNodeAction());
-    }
+   
     
 }

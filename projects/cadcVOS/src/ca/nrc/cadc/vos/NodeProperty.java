@@ -139,6 +139,11 @@ public class NodeProperty
         return propertyValue;
     }
 
+    public void setValue(String value)
+    {
+        this.propertyValue = value;
+    }
+
     /**
      * @return True if the property cannot be modified.
      */

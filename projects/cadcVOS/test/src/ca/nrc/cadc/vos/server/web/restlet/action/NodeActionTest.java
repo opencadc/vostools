@@ -35,11 +35,16 @@ package ca.nrc.cadc.vos.server.web.restlet.action;
 
 
 import ca.nrc.cadc.vos.AbstractCADCVOSTest;
+import ca.nrc.cadc.vos.ContainerNode;
 import ca.nrc.cadc.vos.Node;
+import ca.nrc.cadc.vos.VOSURI;
 import ca.nrc.cadc.vos.server.NodePersistence;
+import ca.nrc.cadc.vos.server.auth.VOSpaceAuthorizer;
+import java.net.URL;
 
 import org.junit.Test;
 import org.restlet.Request;
+import org.restlet.data.Reference;
 
 import static org.easymock.EasyMock.*;
 
@@ -47,20 +52,35 @@ import static org.easymock.EasyMock.*;
 public abstract class NodeActionTest<N extends NodeAction>
         extends AbstractCADCVOSTest<N>
 {
-    private Node mockNode = createMock(Node.class);
+    private Node mockNodeC = createMock(Node.class);
+    private Node mockNodeS = createMock(Node.class);
+    
     private NodePersistence mockNodePersistence =
             createMock(NodePersistence.class);
     private Request mockRequest = createMock(Request.class);
+    private VOSpaceAuthorizer mockAuth = createMock(VOSpaceAuthorizer.class);
+    private Reference mockRef = createMock(Reference.class);
+    protected ContainerNode mockParentNode = createMock(ContainerNode.class);
+    protected VOSURI mockVOS = createMock(VOSURI.class);
+    private URL fakeURL;
 
+    protected String nodeName = "child";
+    protected String vosURI = "vos://example.com!vopsace/parent/" + nodeName;
 
     @Test
     public void performNodeAction() throws Exception
     {
+        fakeURL = new URL("http://example/com/foo");
+        
+        getTestSubject().setNodePersistence(mockNodePersistence);
+        getTestSubject().setRequest(mockRequest);
+        getTestSubject().setVOSpaceAuthorizer(mockAuth);
+        getTestSubject().setVosURI(mockVOS);
+        
         prePerformNodeAction();
-        final NodeActionResult result =
-                getTestSubject().performNodeAction(getMockNode(),
-                                                   getMockNodePersistence(),
-                                                   getMockRequest());
+        Node cnode = getTestSubject().doAuthorizationCheck();
+        NodeActionResult result =
+                getTestSubject().performNodeAction(cnode, getMockNodeS());
         postPerformNodeAction(result);
     }
 
@@ -84,10 +104,19 @@ public abstract class NodeActionTest<N extends NodeAction>
     protected abstract void postPerformNodeAction(
             final NodeActionResult result) throws Exception;
 
-
-    public Node getMockNode()
+    public VOSpaceAuthorizer getMockAuth()
     {
-        return mockNode;
+        return mockAuth;
+    }
+
+    public Node getMockNodeC()
+    {
+        return mockNodeC;
+    }
+
+    public Node getMockNodeS()
+    {
+        return mockNodeS;
     }
 
     public NodePersistence getMockNodePersistence()
@@ -98,5 +127,13 @@ public abstract class NodeActionTest<N extends NodeAction>
     public Request getMockRequest()
     {
         return mockRequest;
+    }
+    public Reference getMockRef()
+    {
+        return mockRef;
+    }
+    public URL getMockURL()
+    {
+        return fakeURL;
     }
 }

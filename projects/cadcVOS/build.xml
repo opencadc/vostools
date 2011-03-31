@@ -108,7 +108,7 @@
     <property name="client.external.jars" value="${ext.jdom}:${ext.xerces}:${ext.log4j}" />
     <property name="client.jarfile" value="${build}/lib/${project}Client.jar" />
 
-    <target name="build" depends="compile,resources,manifest,daotest-jar">
+    <target name="build" depends="compile,resources,manifest">
 
         <jar jarfile="${build}/lib/${project}.jar"
             basedir="${build}/class"
@@ -129,21 +129,6 @@
         </jar>
 
         
-    </target>
-
-    <target name="daotest-jar" depends="compile,compile-test">
-        <!-- create jar file with test classes for clients to use -->
-        <jar jarfile="${build}/lib/${project}-daotest.jar"
-            basedir="${build}/test/class"
-            update="no">
-            <include name="**/server/TestPersistence.class" />
-            <include name="**/server/AbstractPersistenceTest.class" />
-            <include name="**/server/VOSpaceFileMetadataSourceTest.class" />
-            <include name="**/server/NodeDAOTest.class" />
-            <include name="**/server/NodeDAOLoadTest.class" />
-            <include name="**/server/NodeDAOLoadTest$LoadTestRunner.class" />
-            <include name="Views.properties" />
-        </jar>
     </target>
 
     <target name="resources">
@@ -179,13 +164,12 @@
     <property name="dev.asm" value="${ext.dev}/asm.jar" />
     <property name="dev.cglib" value="${ext.dev}/cglib.jar" />
     <property name="dev.objenesis" value="${ext.dev}/objenesis.jar" />
-    <property name="javaUtil" value="${lib}/javaUtil.jar" />
-
+    <property name="commons-logging"    value="${ext.lib}/commons-logging.jar" />
     <property name="testingJars"
-              value="${cadcVOS}:${credPrivateClient}:${cadcUtil}:${javaUtil}:${junit}:${xmlunit}:${xerces}:${dev.easyMock}:${dev.asm}:${dev.objenesis}:${dev.cglib}" />
+              value="${cadcVOS}:${credPrivateClient}:${cadcUtil}:${test.jdbc.drivers}:${commons-logging}:${junit}:${xmlunit}:${xerces}:${dev.easyMock}:${dev.asm}:${dev.objenesis}:${dev.cglib}" />
 
     <!-- Run the test suite -->
-    <target name="test" depends="compile,compile-test">
+    <target name="test" depends="build,compile-test">
         <copy file="test/src/resources/Views.properties" todir="${build}/test/class"/>
         <junit printsummary="yes" haltonfailure="yes" fork="yes">
           <classpath>
@@ -216,7 +200,7 @@
 	</antcall>
     </target>
 
-
+    <!-- convenience test targets when developing -->
     <target name="xml-test" depends="compile-test">
         <copy  todir="${build}/test/class">
             <fileset dir="test/src/resources">
@@ -235,6 +219,27 @@
           <formatter type="plain" usefile="false"/>
           <test name="ca.nrc.cadc.vos.NodeReaderWriterTest"/>
           <test name="ca.nrc.cadc.vos.TransferReaderWriterTest"/>
+        </junit>
+
+    </target>
+
+    <target name="dao-test" depends="compile-test">
+        <copy  todir="${build}/test/class">
+            <fileset dir="test/src/resources">
+                <include name="**/*.xml" />
+            </fileset>
+        </copy>
+        <junit printsummary="yes" haltonfailure="yes" fork="yes">
+          <classpath>
+              <pathelement path="."/>
+              <pathelement path="src"/>
+              <pathelement path="test/src"/>
+              <pathelement path="${build}/class"/>
+              <pathelement path="${build}/test/class"/>
+              <pathelement path="${jars}:${testingJars}"/>
+          </classpath>
+          <formatter type="plain" usefile="false"/>
+          <test name="ca.nrc.cadc.vos.server.NodeDAOTest"/>
         </junit>
 
     </target>

@@ -67,17 +67,14 @@
 
 package ca.nrc.cadc.vos.server.web.restlet.action;
 
+import ca.nrc.cadc.vos.ContainerNode;
 import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.net.URISyntaxException;
 import java.security.AccessControlException;
-import java.util.List;
 
 import org.apache.log4j.Logger;
-import org.restlet.Request;
-import org.restlet.representation.Representation;
 
-import ca.nrc.cadc.vos.ContainerNode;
 import ca.nrc.cadc.vos.Node;
 import ca.nrc.cadc.vos.NodeFault;
 import ca.nrc.cadc.vos.NodeNotFoundException;
@@ -85,10 +82,6 @@ import ca.nrc.cadc.vos.NodeParsingException;
 import ca.nrc.cadc.vos.NodeProperty;
 import ca.nrc.cadc.vos.VOS;
 import ca.nrc.cadc.vos.VOSURI;
-import ca.nrc.cadc.vos.server.NodePersistence;
-import ca.nrc.cadc.vos.server.SearchNode;
-import ca.nrc.cadc.vos.server.VOSpaceFileMetadataSource;
-import ca.nrc.cadc.vos.server.auth.VOSpaceAuthorizer;
 
 /**
  * Class to perform the deletion of a Node.
@@ -97,85 +90,69 @@ import ca.nrc.cadc.vos.server.auth.VOSpaceAuthorizer;
  */
 public class DeleteNodeAction extends NodeAction
 {
+    private static final Logger log = Logger.getLogger(DeleteNodeAction.class);
+    private static final NodeProperty CONTENT_LENGTH_PROP
+            = new NodeProperty(VOS.PROPERTY_URI_CONTENTLENGTH, null);
     
-    private static Logger log = Logger.getLogger(DeleteNodeAction.class);
-    
-    /**
-     * Given the node URI and XML, return the Node object specified
-     * by the client.
-     */
     @Override
-    public Node getClientNode(VOSURI vosURI, Representation nodeXML)
+    public Node getClientNode()
             throws URISyntaxException, NodeParsingException, IOException 
     {
-        return new SearchNode(vosURI);
-    }
-    
-    /**
-     * Perform an authorization check for the given node and return (if applicable)
-     * the persistent version of the Node.
-     */
-    @Override
-    public Node doAuthorizationCheck(VOSpaceAuthorizer voSpaceAuthorizer, Node clientNode)
-            throws AccessControlException, FileNotFoundException
-    {
-        ContainerNode parent = (ContainerNode) voSpaceAuthorizer.getWritePermission(clientNode.getParent());
-        clientNode.setParent(parent);
-        return clientNode;
+        return null;
     }
 
-    /**
-     * Mark the node, and all child nodes, for deletion.  Update the content
-     * length of the parent nodes.
-     */
     @Override
-    public NodeActionResult performNodeAction(final Node node,
-                                              final NodePersistence nodePersistence,
-                                              final Request request)
-            throws Exception
+    public Node doAuthorizationCheck()
+            throws AccessControlException, FileNotFoundException
     {
         try
         {
-            Node persistentNode = nodePersistence.getFromParentLight(node.getName(),
-                                                                     node.getParent());
-            final List<NodeProperty> properties =
-                    persistentNode.getProperties();
-            final int lengthPropertyIndex =
-                    properties.indexOf(
-                            new NodeProperty(VOS.PROPERTY_URI_CONTENTLENGTH,
-                                             null));
-            
-            boolean contentLengthSet = false;
-            long contentLength = 0;
+            //Node node = (Node) nodePersistence.get(vosURI);
+            //voSpaceAuthorizer.getWritePermission(node.getParent());
+            //return node;
 
-            if (lengthPropertyIndex != -1)
-            {
-                final NodeProperty lengthProperty =
-                        properties.get(lengthPropertyIndex);
-                contentLength =
-                        Long.parseLong(lengthProperty.getPropertyValue());
-                contentLengthSet = true;
-            }
-
-            nodePersistence.markForDeletion(persistentNode, true);
-            
-            // Update the content length of the parent nodes if it was set
-            if (contentLengthSet)
-            {
-                VOSpaceFileMetadataSource fileMetadataSource = new VOSpaceFileMetadataSource();
-                fileMetadataSource.setNodePersistence(nodePersistence);
-                fileMetadataSource.updateContentLengths(persistentNode.getParent(), -contentLength);
-            }
-
-            return null;
+            // same as CreateNodeAction: return writable parent
+            VOSURI parentURI = vosURI.getParentURI();
+            Node node = (Node) nodePersistence.get(parentURI);
+            voSpaceAuthorizer.getWritePermission(node);
+            return node;
         }
-        catch (NodeNotFoundException e)
+        catch(NodeNotFoundException ex)
         {
-            log.debug("Could not find node with path: " + node.getPath(), e);
-            NodeFault nodeFault = NodeFault.NodeNotFound;
-            nodeFault.setMessage(node.getUri().toString());
-            return new NodeActionResult(nodeFault);
+            throw new FileNotFoundException("not found: " + vosURI.getURIObject().toASCIIString());
         }
     }
 
+    @Override
+    public NodeActionResult performNodeAction(Node clientNode, Node serverNode)
+    {
+        try
+        {
+            Node target = null;
+            if (serverNode instanceof ContainerNode)
+            {
+                ContainerNode parent = (ContainerNode) serverNode; // as per doAuthorizationCheck
+                nodePersistence.getChild(parent, vosURI.getName()); // slightly better than getChildren
+                for (Node n : parent.getNodes())
+                {
+                    if (n.getName().equals(vosURI.getName()))
+                        target = n;
+                }
+            }
+            if (target == null)
+            {
+                log.debug("Node not found: " + vosURI.getPath());
+                NodeFault nodeFault = NodeFault.NodeNotFound;
+                nodeFault.setMessage(vosURI.toString());
+                return new NodeActionResult(nodeFault);
+            }
+
+            nodePersistence.delete(target);
+            return null;
+        }
+        finally
+        {
+            
+        }
+    }
 }

@@ -85,7 +85,6 @@ import org.jdom.Document;
 import org.jdom.Element;
 import org.jdom.output.Format;
 import org.jdom.output.XMLOutputter;
-import org.restlet.Request;
 import org.restlet.data.Encoding;
 import org.restlet.data.MediaType;
 
@@ -94,6 +93,7 @@ import ca.nrc.cadc.util.StringBuilderWriter;
 import ca.nrc.cadc.vos.ContainerNode;
 import ca.nrc.cadc.vos.Node;
 import ca.nrc.cadc.vos.server.util.FixedSizeTreeSet;
+import java.net.URL;
 
 /**
  * Writes a RSS feed consisting of the late modified child nodes of the
@@ -138,13 +138,11 @@ public class RssView extends AbstractView
         maxNodes = DEFAULT_MAX_NUMBER_NODES;
     }
     
-    /**
-     * Setup the RRSView with the given node.
-     */
     @Override
-    public void setNode(Node node, Request request, String viewReference) throws UnsupportedOperationException
+    public void setNode(Node node, String viewReference, URL requestURL)
+        throws UnsupportedOperationException
     {
-        super.setNode(node, request, viewReference);
+        super.setNode(node, viewReference, requestURL);
         if (!(node instanceof ContainerNode))
         {
             throw new UnsupportedOperationException("RssView is only for container nodes.");
