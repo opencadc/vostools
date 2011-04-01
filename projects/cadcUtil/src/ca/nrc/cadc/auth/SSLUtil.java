@@ -851,7 +851,10 @@ public class SSLUtil
      * @param chain
      * @return certificate chain and private key as a PEM encoded string
      */
-    public static String writePEMCertificateAndKey(X509CertificateChain chain)
+    // THIS IS NOT WORKING. 
+    // getEncoded() in privateKey does not use the encoding expected by PEM.
+    
+/*    public static String writePEMCertificateAndKey(X509CertificateChain chain)
     {
         if (chain == null) 
             return null;
@@ -862,5 +865,5 @@ public class SSLUtil
             return null;
         String pemStr = SSLUtil.buildPEM(certChainStr, bytesPrivateKey);
         return pemStr;
-    }
+    }*/
 }
