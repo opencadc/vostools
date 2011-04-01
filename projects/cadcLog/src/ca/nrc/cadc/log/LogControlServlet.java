@@ -71,13 +71,11 @@
 package ca.nrc.cadc.log;
 
 
-import ca.nrc.cadc.auth.AuthenticationUtil;
 import java.io.IOException;
 import java.io.PrintWriter;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.StringTokenizer;
-import javax.security.auth.Subject;
 
 import javax.servlet.ServletConfig;
 import javax.servlet.ServletException;
@@ -123,8 +121,6 @@ public class LogControlServlet extends HttpServlet
 
 	private static final Level DEFAULT_LEVEL = Level.INFO;
 	
-	private static final String LONG_FORMAT = "%d{ABSOLUTE} [%t] %-5p %c{1} %x - %m\n";
-	
 	private static final String LOG_LEVEL_PARAM = "logLevel";
 	private static final String PACKAGES_PARAM  = "logLevelPackages";
 
@@ -145,11 +141,7 @@ public class LogControlServlet extends HttpServlet
     	super.init( config );
         packageNames = new String[0];
 
-        //System.out.println("effective level: " + logger.getEffectiveLevel());
-
-        //System.out.println("BasicConfigurator.resetConfiguration()");
         BasicConfigurator.resetConfiguration();
-        //System.out.println("effective level: " + logger.getEffectiveLevel());
 
 		//  Log all classes at this level except where a
     	//  different level is specified in the web.xml file.
@@ -173,14 +165,16 @@ public class LogControlServlet extends HttpServlet
     		level = Level.FATAL;
     	else
     		level = DEFAULT_LEVEL;
+    	
+    	String webapp = config.getServletContext().getServletContextName();
+    	if (webapp == null)
+    	{
+    	    webapp = "[?]";
+    	}
+    	String logFormat = "%d{ISO8601} %-5p " + webapp + " [%t] %c{1} %x - %m\n";
 
-        //System.out.println("new ConsoleAppender(new PatternLayout(...))");
-    	ConsoleAppender appender = new ConsoleAppender( new PatternLayout(LONG_FORMAT) );
-        //System.out.println("effective level: " + logger.getEffectiveLevel());
-
-        //System.out.println("BasicConfigurator.configure(appender)");
+    	ConsoleAppender appender = new ConsoleAppender( new PatternLayout(logFormat) );
 		BasicConfigurator.configure( appender );
-        //System.out.println("effective level: " + logger.getEffectiveLevel());
 
     	// Get the list of configured packages and
     	// set the log level on each.
