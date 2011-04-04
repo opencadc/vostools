@@ -122,7 +122,7 @@ public interface GroupPersistence
      * Obtain a GMS Group, through the basic GroupInfo from the persistence layer.  
      * GroupInfo does not contain member info or permission info. 
      * 
-     * @param groupName Archive Key
+     * @param groupID ID of the group 
      * @return GMS group based on GroupInfo
      * @throws GroupNotExistsException, if group by this name does not exist
      */

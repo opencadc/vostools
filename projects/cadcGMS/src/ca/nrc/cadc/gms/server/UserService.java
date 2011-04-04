@@ -113,8 +113,8 @@ public interface UserService
      * Check whether given User ID is member of given group.
      * This method does not carry extra feature, such as checking group or member is valid.
      * 
-     * @param userID
-     *            User ID
+     * @param memberUserID
+     *            ID of the member
      * @param groupID
      *            The Group's ID.
      * @return true or false

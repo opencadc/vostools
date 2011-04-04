@@ -165,9 +165,9 @@ public class UserWriter
     }
 
     /**
-     * Buil an element of a user but with DN info only.
+     * Build an element of a user but with DN info only.
      * @param userDN
-     * @return
+     * @return element 
      */
     public static Element getUserElement(String userDN)
     {
