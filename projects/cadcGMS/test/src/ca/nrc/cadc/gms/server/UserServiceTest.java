@@ -164,7 +164,5 @@ public abstract class UserServiceTest extends GMSTest<UserService>
                 GROUP_ID);
 
         assertNotNull("The member returned should be valid.", member);
-        assertEquals("The member is the wrong one.", MEMBER_USER_ID,
-                member.getID());
     }
 }

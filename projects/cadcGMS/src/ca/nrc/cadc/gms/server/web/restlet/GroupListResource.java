@@ -68,20 +68,26 @@ package ca.nrc.cadc.gms.server.web.restlet;
 
 import java.io.FileNotFoundException;
 import java.io.IOException;
+import java.net.URISyntaxException;
 import java.util.Collection;
 import java.util.HashMap;
 import java.util.Map;
-import java.net.URISyntaxException;
 
 import org.apache.log4j.Logger;
 import org.jdom.Document;
 import org.jdom.Element;
 import org.restlet.data.Form;
 import org.restlet.data.Status;
-import org.restlet.resource.Put;
 import org.restlet.representation.Representation;
+import org.restlet.resource.Put;
 
-import ca.nrc.cadc.gms.*;
+import ca.nrc.cadc.gms.AuthorizationException;
+import ca.nrc.cadc.gms.GmsConsts;
+import ca.nrc.cadc.gms.Group;
+import ca.nrc.cadc.gms.GroupReader;
+import ca.nrc.cadc.gms.GroupWriter;
+import ca.nrc.cadc.gms.InvalidGroupException;
+import ca.nrc.cadc.gms.ReaderException;
 import ca.nrc.cadc.gms.server.GroupService;
 
 
@@ -167,17 +173,17 @@ public class GroupListResource extends AbstractResource
         catch (IOException e)
         {
             processError(e, Status.CLIENT_ERROR_UNPROCESSABLE_ENTITY,
-                         "Unable to build Group from input.");
+                         "Unable to build Group from input: " + e.getMessage());
         }
         catch (InvalidGroupException e)
         {
             processError(e, Status.CLIENT_ERROR_BAD_REQUEST,
-                         "Unable to build Group from input.");            
+                         "Unable to build Group from input: " + e.getMessage());            
         }
         catch (URISyntaxException e)
         {
             processError(e, Status.CLIENT_ERROR_UNPROCESSABLE_ENTITY,
-                         "Unable to build Group from input.");
+                         "Unable to build Group from input: " + e.getMessage());
         }
     }
 

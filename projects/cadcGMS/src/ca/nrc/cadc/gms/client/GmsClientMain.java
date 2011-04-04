@@ -67,11 +67,11 @@
 
 package ca.nrc.cadc.gms.client;
 
-import java.io.File;
 import java.net.URI;
 import java.net.URL;
 import java.security.PrivilegedAction;
 import java.util.Collection;
+import java.util.Set;
 
 import javax.security.auth.Subject;
 import javax.security.auth.x500.X500Principal;
@@ -80,7 +80,6 @@ import org.apache.log4j.Level;
 import org.apache.log4j.Logger;
 
 import ca.nrc.cadc.auth.CertCmdArgUtil;
-import ca.nrc.cadc.auth.SSLUtil;
 import ca.nrc.cadc.gms.ElemProperty;
 import ca.nrc.cadc.gms.GmsConsts;
 import ca.nrc.cadc.gms.Group;
@@ -166,9 +165,9 @@ public class GmsClientMain implements PrivilegedAction<Boolean>
 
         try
         {
+            command.init(argMap);
             command.validateCommand(argMap);
             command.validateCommandArguments(argMap);
-
         }
         catch (IllegalArgumentException ex)
         {
@@ -180,7 +179,6 @@ public class GmsClientMain implements PrivilegedAction<Boolean>
 
         try
         {
-            command.init(argMap);
             Subject.doAs(subject, command);
         }
         catch (Throwable t)
@@ -206,6 +204,7 @@ public class GmsClientMain implements PrivilegedAction<Boolean>
         {
             logger.error("failed to initialise SSL from certificates: "
                     + ex.getMessage());
+            logger.debug("Details: ", ex);
             System.exit(INIT_STATUS);
         }
 
@@ -343,10 +342,9 @@ public class GmsClientMain implements PrivilegedAction<Boolean>
             throws IllegalArgumentException
     {
 
-        String strTarget = argMap.getValue(ARG_TARGET);
+        target = argMap.getValue(ARG_TARGET);
         if (this.operation.equals(Operation.ADD_MEMBER))
         {
-            target = strTarget;
             memberID = argMap.getValue(ARG_ADD_MEMBER);
             if (memberID == null)
             {
@@ -357,21 +355,25 @@ public class GmsClientMain implements PrivilegedAction<Boolean>
         }
         else
         {
+            if ((this.operation.equals(Operation.LIST_MEMBER_GR) ||
+                    (this.operation.equals(Operation.LIST_OWNER_GR)) )
+                    && (target == null))
+            {
+                // default target is the DN of the certificates used with the
+                // command
+                Set<X500Principal> principals = 
+                    subject.getPrincipals(X500Principal.class);
+                if ((principals != null) && principals.size() == 1)
+                {
+                    target = principals.iterator().next().getName();
+                }
+                
+            }
             if (!this.operation.equals(Operation.CREATE)
-                    && (strTarget == null))
+                    && (target == null))
                 throw new IllegalArgumentException(
                         "Argument target is required for "
                                 + this.operation);
-            else if (this.operation.equals(Operation.LIST_MEMBER_GR)
-                    && (strTarget == null))
-            {
-                // TODO target is the authenticated user.
-                // Read target from certificates
-                throw new UnsupportedOperationException(
-                        "Cannot determine target");
-            }
-
-            target = strTarget;
 
             // check remove argument
             if (this.operation.equals(Operation.REMOVE_MEMBER))
@@ -446,7 +448,6 @@ public class GmsClientMain implements PrivilegedAction<Boolean>
     {
         if (group == null)
         {
-            msg("Group: " + group.getID() + " not found");
             return;
         }
         msg("   Group ID: " + group.getID());
@@ -611,6 +612,7 @@ public class GmsClientMain implements PrivilegedAction<Boolean>
         {
             logger.error("failed to list groups of member " + target);
             logger.error("reason: " + e.getMessage());
+            logger.debug("details:" , e);
             System.exit(NET_STATUS);
         }
 
@@ -676,13 +678,13 @@ public class GmsClientMain implements PrivilegedAction<Boolean>
                 "java -jar cadcGMSClient.jar  [-v|--verbose|-d|--debug]                                            ",
                 CertCmdArgUtil.getCertArgUsage(),
                 "   --target=<Group ID>                                                                            ",
-                "   [--create|--view|--delete]                                                                     ",
+                "   --create|--view|--delete                                                                       ",
                 "                                                                                                  ",
                 "Group Membership operations:                                                                      ",
                 "java -jar cadcGMSClient.jar  [-v|--verbose|-d|--debug]                                            ",
                 CertCmdArgUtil.getCertArgUsage(),
                 "   --target=<Group ID>                                                                            ",
-                "   [--add=<User ID> |--remove=<User ID> | --check=<User ID>]                                      ",
+                "   --add=<User ID> |--remove=<User ID> | --check=<User ID>                                        ",
                 "                                                                                                  ",
                 "User operations:                                                                                  ",
                 "java -jar cadcGMSClient.jar  [-v|--verbose|-d|--debug]                                            ",

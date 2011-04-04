@@ -66,10 +66,16 @@
  */
 package ca.nrc.cadc.gms.client;
 
+import java.io.BufferedInputStream;
+import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStream;
+import java.io.InputStreamReader;
 import java.io.OutputStreamWriter;
+import java.io.Reader;
+import java.io.StringWriter;
 import java.io.UnsupportedEncodingException;
+import java.io.Writer;
 import java.net.HttpURLConnection;
 import java.net.MalformedURLException;
 import java.net.URI;
@@ -98,7 +104,6 @@ import ca.nrc.cadc.gms.GroupsReader;
 import ca.nrc.cadc.gms.ReaderException;
 import ca.nrc.cadc.gms.User;
 import ca.nrc.cadc.gms.UserReader;
-import javax.net.ssl.SSLHandshakeException;
 
 
 /**
@@ -323,6 +328,7 @@ public class GmsClient
                 case HttpURLConnection.HTTP_OK:
                     return constructGroup(connection);
                 case HttpURLConnection.HTTP_NOT_FOUND:
+                    logger.debug(getErrorMessage(connection));
                     return null;
                 case HttpURLConnection.HTTP_FORBIDDEN:
                     throw new AccessControlException(responseMessage);
@@ -424,7 +430,8 @@ public class GmsClient
                 case HttpURLConnection.HTTP_BAD_REQUEST:
                     // duplicate group
                     throw new IllegalArgumentException(
-                            responseMessage);
+                            responseMessage + ": " + getErrorMessage(connection));
+                    
                 case HttpURLConnection.HTTP_FORBIDDEN:
                     throw new AccessControlException(responseMessage);
                 default:
@@ -511,7 +518,8 @@ public class GmsClient
                 case HttpURLConnection.HTTP_BAD_REQUEST:
                     // duplicate group
                     throw new IllegalArgumentException(
-                            responseMessage);
+                            responseMessage
+                            + ": " + getErrorMessage(connection));
                 case HttpURLConnection.HTTP_FORBIDDEN:
                     throw new AccessControlException(responseMessage);
                 default:
@@ -586,7 +594,8 @@ public class GmsClient
                     // break intentionally left out
                 case HttpURLConnection.HTTP_BAD_REQUEST:
                     // duplicate group
-                    throw new IllegalArgumentException(responseMessage);
+                    throw new IllegalArgumentException(responseMessage
+                            + ": " + getErrorMessage(connection));
                 case HttpURLConnection.HTTP_FORBIDDEN:
                     throw new AccessControlException(responseMessage);
                 default:
@@ -668,7 +677,8 @@ public class GmsClient
                     // break intentionally left out
                 case HttpURLConnection.HTTP_BAD_REQUEST:
                     // duplicate group
-                    throw new IllegalArgumentException(responseMessage);
+                    throw new IllegalArgumentException(responseMessage + 
+                            ": " + getErrorMessage(connection));
                 case HttpURLConnection.HTTP_FORBIDDEN:
                     throw new AccessControlException(responseMessage);
                 default:
@@ -1155,6 +1165,40 @@ public class GmsClient
     public SSLSocketFactory getSslSocketFactory()
     {
         return sf;
+    }
+    
+    /**
+     * Returns the error message from connection.
+     * @param connection
+     * @return error message
+     */
+    private String getErrorMessage(HttpURLConnection connection)
+    {
+        String errorMsg = "No error message";
+        BufferedInputStream is = 
+            new BufferedInputStream(connection.getErrorStream());
+        Writer writer = new StringWriter();
+
+        char[] buffer = new char[1024];
+        try
+        {
+            Reader reader = new BufferedReader(
+                    new InputStreamReader(is, "UTF-8"));
+            int n;
+            while ((n = reader.read(buffer)) != -1)
+            {
+                writer.write(buffer, 0, n);
+            }
+            errorMsg = writer.toString();
+        }
+        catch (Exception ex)
+        {
+            errorMsg = "No error message found due: " + ex.getMessage();
+            logger.debug(errorMsg, ex);
+        }
+        // no need for finally since is is created locally
+        
+        return errorMsg;
     }
 
 }
