@@ -69,6 +69,7 @@
 
 package ca.nrc.cadc.vos.server;
 
+import ca.nrc.cadc.date.DateUtil;
 import ca.nrc.cadc.db.ConnectionConfig;
 import ca.nrc.cadc.db.DBConfig;
 import ca.nrc.cadc.db.DBUtil;
@@ -224,7 +225,13 @@ public class NodeDAOTest
             compareNodes("assert1", putNode, nodeA);
             compareProperties("assert2a", dataNode.getProperties(), putNode.getProperties());
             compareProperties("assert2b", putNode.getProperties(), nodeA.getProperties());
-
+            // test the timestamp on this one node
+            String dateStr = nodeA.getPropertyValue(VOS.PROPERTY_URI_DATE);
+            Date d = DateUtil.getDateFormat(DateUtil.IVOA_DATE_FORMAT, DateUtil.UTC).parse(dateStr);
+            Date now = new Date();
+            long delta = now.getTime() - d.getTime();
+            Assert.assertTrue("assert2c: timestamp delta", (delta < 1000L));
+            
             // /b
             String nodePath2 = basePath + getNodeName("b");
             containerNode = getCommonContainerNode(nodePath2, getCommonProperties());

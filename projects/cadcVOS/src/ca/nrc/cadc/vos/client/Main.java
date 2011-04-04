@@ -385,7 +385,7 @@ public class Main implements Runnable
 
             msg(getType(n) + ": " + n.getUri());
             msg("creator: " + safePropertyRef(n, VOS.PROPERTY_URI_CREATOR));
-            msg("last modified: " + safePropertyRef(n, VOS.PROPERTY_URI_CREATOR));
+            msg("last modified: " + safePropertyRef(n, VOS.PROPERTY_URI_DATE));
             msg("readable by anyone: " + safePropertyRef(n, VOS.PROPERTY_URI_ISPUBLIC));
             msg("readable by: " + safePropertyRef(n, VOS.PROPERTY_URI_GROUPREAD));
             msg("readable and writable by: " + safePropertyRef(n, VOS.PROPERTY_URI_GROUPWRITE));

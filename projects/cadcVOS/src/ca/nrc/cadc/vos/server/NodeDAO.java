@@ -101,6 +101,7 @@ import java.net.URI;
 import java.net.URISyntaxException;
 import java.sql.ResultSet;
 import java.sql.Statement;
+import java.sql.Timestamp;
 import java.sql.Types;
 import java.text.DateFormat;
 import java.util.Calendar;
@@ -172,7 +173,7 @@ public class NodeDAO
         this.transactionManager = new DataSourceTransactionManager(dataSource);
 
         this.dateFormat = DateUtil.getDateFormat(DateUtil.IVOA_DATE_FORMAT, DateUtil.UTC);
-        this.cal = Calendar.getInstance(DateUtil.LOCAL);
+        this.cal = Calendar.getInstance(DateUtil.UTC);
     }
 
     // convenience during refactor
@@ -1203,8 +1204,9 @@ public class NodeDAO
             // always tweak the date
             Date now = new Date();
             setPropertyValue(node, VOS.PROPERTY_URI_DATE, dateFormat.format(now), true);
-            java.sql.Date dval = new java.sql.Date(now.getTime());
-            ps.setDate(col, dval, cal);
+            //java.sql.Date dval = new java.sql.Date(now.getTime());
+            Timestamp ts = new Timestamp(now.getTime());
+            ps.setTimestamp(col, ts, cal);
             col++;
             sb.append(dateFormat.format(now));
             sb.append(",");
