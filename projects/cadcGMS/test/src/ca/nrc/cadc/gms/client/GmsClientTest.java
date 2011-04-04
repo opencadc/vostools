@@ -68,6 +68,7 @@ package ca.nrc.cadc.gms.client;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotNull;
+import static org.junit.Assert.assertTrue;
 
 import java.io.ByteArrayInputStream;
 import java.io.FileOutputStream;
@@ -137,8 +138,8 @@ public class GmsClientTest extends GMSTest<GmsClient>
                             return HttpURLConnection.HTTP_NOT_FOUND;
                         }
 
-                        if (getRequestMethod().equals("POST") ||
-                                getRequestMethod().equals("PUT") )
+                        if (getRequestMethod().equals("POST")
+                                || getRequestMethod().equals("PUT"))
                         {
                             return HttpURLConnection.HTTP_CREATED;
                         }
@@ -209,19 +210,19 @@ public class GmsClientTest extends GMSTest<GmsClient>
                     public void disconnect()
                     {
                     };
-                    
+
                     @Override
                     public String getCipherSuite()
                     {
                         return null;
                     }
-                    
+
                     @Override
                     public Certificate[] getServerCertificates()
                     {
                         return null;
                     }
-                    
+
                     @Override
                     public Certificate[] getLocalCertificates()
                     {
@@ -325,21 +326,17 @@ public class GmsClientTest extends GMSTest<GmsClient>
     {
         final String groupID = GMSTestSuite.CADC_GROUP_URI + getMemberID;
         final String memberID = setGrMemberID;
-        final User member = getTestSubject().getMember(new URI(groupID),
-                new X500Principal(memberID));
 
-        assertNotNull("Member with ID " + setGrMemberID
-                + " is a Member of Group getMember.", member);
-        assertEquals("Member's ID is " + setGrMemberID,
-                new X500Principal(setGrMemberID), member.getID());
+        assertTrue("Member with ID " + setGrMemberID
+                + " is a Member of Group getMember.", getTestSubject()
+                .isMember(new URI(groupID), new X500Principal(memberID)));
     }
 
     @Test
     public void getGroup() throws Exception
     {
         final String groupID = GMSTestSuite.CADC_GROUP_URI + getGrID;
-        final Group group = getTestSubject().getGroup(
-                new URI(groupID));
+        final Group group = getTestSubject().getGroup(new URI(groupID));
 
         assertNotNull("Group " + groupID, group);
         assertEquals("Group's ID is " + getGrID, new URI(groupID), group
