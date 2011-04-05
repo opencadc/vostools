@@ -139,7 +139,7 @@ public class RssFeed
 
         // channel link.
         Element link = new Element("link");
-        link.setText("http://" + NetUtil.getServerName(null) + "/vospace/nodes/" + parent.getUri().getPath() + "?view=rss");
+        link.setText("http://" + NetUtil.getServerName(null) + "/vospace/nodes" + parent.getUri().getPath() + "?view=rss");
         channel.addContent(link);
 
         // channel author
@@ -212,7 +212,7 @@ public class RssFeed
             // item link, comment
             Element itemLink = new Element("link");
             Element comments = new Element("comments");
-            String linkText = "http://" + NetUtil.getServerName(null) + "/vospace/nodes/" + node.getUri().getPath();
+            String linkText = "http://" + NetUtil.getServerName(null) + "/vospace/nodes" + node.getUri().getPath();
             if (node instanceof DataNode)
             {
                 linkText += "?view=data";
@@ -289,7 +289,7 @@ public class RssFeed
         }
         else
         {
-            link.setText("http://" + NetUtil.getServerName(null) + "/vospace/nodes/" + nodePath + "?view=rss");
+            link.setText("http://" + NetUtil.getServerName(null) + "/vospace/nodes" + nodePath + "?view=rss");
         }
         channel.addContent(link);
 
