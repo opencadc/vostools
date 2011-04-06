@@ -8,7 +8,7 @@
 *  National Research Council            Conseil national de recherches
 *  Ottawa, Canada, K1A 0R6              Ottawa, Canada, K1A 0R6
 *  All rights reserved                  Tous droits réservés
-*                                       
+*
 *  NRC disclaims any warranties,        Le CNRC dénie toute garantie
 *  expressed, implied, or               énoncée, implicite ou légale,
 *  statutory, of any kind with          de quelque nature que ce
@@ -31,10 +31,10 @@
 *  software without specific prior      de ce logiciel sans autorisation
 *  written permission.                  préalable et particulière
 *                                       par écrit.
-*                                       
+*
 *  This file is part of the             Ce fichier fait partie du projet
 *  OpenCADC project.                    OpenCADC.
-*                                       
+*
 *  OpenCADC is free software:           OpenCADC est un logiciel libre ;
 *  you can redistribute it and/or       vous pouvez le redistribuer ou le
 *  modify it under the terms of         modifier suivant les termes de
@@ -44,7 +44,7 @@
 *  either version 3 of the              : soit la version 3 de cette
 *  License, or (at your option)         licence, soit (à votre gré)
 *  any later version.                   toute version ultérieure.
-*                                       
+*
 *  OpenCADC is distributed in the       OpenCADC est distribué
 *  hope that it will be useful,         dans l’espoir qu’il vous
 *  but WITHOUT ANY WARRANTY;            sera utile, mais SANS AUCUNE
@@ -54,7 +54,7 @@
 *  PURPOSE.  See the GNU Affero         PARTICULIER. Consultez la Licence
 *  General Public License for           Générale Publique GNU Affero
 *  more details.                        pour plus de détails.
-*                                       
+*
 *  You should have received             Vous devriez avoir reçu une
 *  a copy of the GNU Affero             copie de la Licence Générale
 *  General Public License along         Publique GNU Affero avec
@@ -72,44 +72,53 @@ package ca.nrc.cadc.vos.server;
 import javax.security.auth.Subject;
 
 /**
- * Class used to hold server-side implementation objects.
- * 
- * @author majorb
+ * Simple interface to manage the persistence of owner identity. Implementations
+ * determine which part of the caller subject the NodeDAO class will store (typically
+ * which Principal) and are responsible for for recreating the Subject again to support
+ * authorization checks and output of owner metadata.
  *
+ * @author pdowler
  */
-public class NodeID
+public interface IdentityManager 
 {
-    private Long id;
-
-    private Subject owner;
-    
     /**
-     * NodeID constructor.
-     * 
-     * @param id
+     * Create a subject from the specified owner object. This is the reverse
+     * of toOwner(Subject). The returned subject must include at least one
+     * Principal but need not contain any credentials.
+     *
      * @param owner
+     * @return
      */
-    public NodeID(Long id, Subject owner)
-    {
-        this.id = id;
-        this.owner = owner;
-    }
-    
+    Subject toSubject(Object owner);
+
     /**
-     * @return The node ID.
+     * Convert the specified subject into an arbitrary object. This is the reverse
+     * of toSubject(owner). The persistable object must capture the identity (the
+     * principal from the subject) but generally does not capture the credentials.
+     *
+     * @param subject
+     * @return arbitary owner object to be persisted
      */
-    public Long getID()
-    {
-        return id;
-    }
+    Object toOwner(Subject subject);
 
-    public Subject getOwner()
-    {
-        return owner;
-    }
+    /**
+     * Get the SQL TYPE for the column that stores the owner object
+     * returned by toOwner(Subject);
+     *
+     * @see java.sql.Types
+     * @see java.sql.PreparedStatement.setObject(int,Object,int)
+     * @return a valid SQL type for use with a PreparedStatement
+     */
+    int getOwnerType();
 
-    public String toString()
-    {
-        return "NodeID[" + id + "]";
-    }
+    /**
+     * Convert the specified subject to a suitable string representation of the
+     * owner. This should normally be an X509 distinguished name if IVOA
+     * single-sign-on has been implemented.
+     *
+     * @see VOS.PROPERTY_URI_CREATOR
+     * @param subject
+     * @return string representation of the owner (principal)
+     */
+    String toOwnerString(Subject subject);
 }

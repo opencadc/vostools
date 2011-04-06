@@ -8,7 +8,7 @@
 *  National Research Council            Conseil national de recherches
 *  Ottawa, Canada, K1A 0R6              Ottawa, Canada, K1A 0R6
 *  All rights reserved                  Tous droits réservés
-*                                       
+*
 *  NRC disclaims any warranties,        Le CNRC dénie toute garantie
 *  expressed, implied, or               énoncée, implicite ou légale,
 *  statutory, of any kind with          de quelque nature que ce
@@ -31,10 +31,10 @@
 *  software without specific prior      de ce logiciel sans autorisation
 *  written permission.                  préalable et particulière
 *                                       par écrit.
-*                                       
+*
 *  This file is part of the             Ce fichier fait partie du projet
 *  OpenCADC project.                    OpenCADC.
-*                                       
+*
 *  OpenCADC is free software:           OpenCADC est un logiciel libre ;
 *  you can redistribute it and/or       vous pouvez le redistribuer ou le
 *  modify it under the terms of         modifier suivant les termes de
@@ -44,7 +44,7 @@
 *  either version 3 of the              : soit la version 3 de cette
 *  License, or (at your option)         licence, soit (à votre gré)
 *  any later version.                   toute version ultérieure.
-*                                       
+*
 *  OpenCADC is distributed in the       OpenCADC est distribué
 *  hope that it will be useful,         dans l’espoir qu’il vous
 *  but WITHOUT ANY WARRANTY;            sera utile, mais SANS AUCUNE
@@ -54,7 +54,7 @@
 *  PURPOSE.  See the GNU Affero         PARTICULIER. Consultez la Licence
 *  General Public License for           Générale Publique GNU Affero
 *  more details.                        pour plus de détails.
-*                                       
+*
 *  You should have received             Vous devriez avoir reçu une
 *  a copy of the GNU Affero             copie de la Licence Générale
 *  General Public License along         Publique GNU Affero avec
@@ -69,47 +69,75 @@
 
 package ca.nrc.cadc.vos.server;
 
+import ca.nrc.cadc.auth.AuthenticationUtil;
+import ca.nrc.cadc.util.Log4jInit;
+import java.security.Principal;
+import java.sql.Types;
+import java.util.HashSet;
+import java.util.Set;
 import javax.security.auth.Subject;
+import javax.security.auth.x500.X500Principal;
+import junit.framework.Assert;
+
+import org.apache.log4j.Level;
+import org.apache.log4j.Logger;
+import org.junit.Test;
 
 /**
- * Class used to hold server-side implementation objects.
- * 
- * @author majorb
  *
+ * @author pdowler
  */
-public class NodeID
+public class X500IdentityManagerTest 
 {
-    private Long id;
+    private static Logger log = Logger.getLogger(X500IdentityManagerTest.class);
 
-    private Subject owner;
-    
-    /**
-     * NodeID constructor.
-     * 
-     * @param id
-     * @param owner
-     */
-    public NodeID(Long id, Subject owner)
+    static final String X500_DN = "C=CA, O=Some Org, OU=some.org.unit, CN=Some User";
+    Principal callerP;
+    Subject callerS;
+
+    static
     {
-        this.id = id;
-        this.owner = owner;
-    }
-    
-    /**
-     * @return The node ID.
-     */
-    public Long getID()
-    {
-        return id;
+        Log4jInit.setLevel("ca.nrc.cadc.vos.server", Level.INFO);
     }
 
-    public Subject getOwner()
+    public X500IdentityManagerTest() 
     {
-        return owner;
+        this.callerP = new X500Principal(X500_DN);
+        Set<Principal> pset = new HashSet<Principal>();
+        pset.add(callerP);
+        this.callerS = new Subject(true,pset,new HashSet(), new HashSet());
     }
 
-    public String toString()
+    @Test
+    public void testRoundTrip()
     {
-        return "NodeID[" + id + "]";
+        log.debug("testRoundTrip - START");
+        try
+        {
+            X500IdentityManager im = new X500IdentityManager();
+
+            int sqlType = im.getOwnerType();
+            Assert.assertEquals("SQL TYPE", Types.VARCHAR, sqlType);
+
+            Object persist = im.toOwner(callerS);
+            Assert.assertNotNull("toOwner", persist);
+            Assert.assertEquals("persisted type", String.class, persist.getClass());
+
+            Subject owner = im.toSubject(persist);
+            Assert.assertNotNull("constructed ownerS", owner);
+            X500Principal ownerP = AuthenticationUtil.getX500Principal(owner);
+            Assert.assertNotNull("constructed ownerP", ownerP);
+            
+            Assert.assertTrue("callerP==ownerP", AuthenticationUtil.equals(callerP, ownerP));
+        }
+        catch(Exception unexpected)
+        {
+            log.error("unexpected exception", unexpected);
+            Assert.fail("unexpected exception: " + unexpected);
+        }
+        finally
+        {
+            log.debug("testGetRootNode - DONE");
+        }
     }
 }

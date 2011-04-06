@@ -70,27 +70,17 @@ package ca.nrc.cadc.vos.server.web.restlet.action;
 import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.net.URISyntaxException;
-import java.security.AccessControlContext;
 import java.security.AccessControlException;
-import java.security.AccessController;
-import java.security.Principal;
-import java.util.Set;
-
-import javax.security.auth.Subject;
-import javax.security.auth.x500.X500Principal;
 
 import org.restlet.data.Status;
 
-import ca.nrc.cadc.auth.AuthenticationUtil;
 import ca.nrc.cadc.vos.ContainerNode;
 import ca.nrc.cadc.vos.Node;
 import ca.nrc.cadc.vos.NodeAlreadyExistsException;
 import ca.nrc.cadc.vos.NodeFault;
 import ca.nrc.cadc.vos.NodeNotFoundException;
 import ca.nrc.cadc.vos.NodeParsingException;
-import ca.nrc.cadc.vos.NodeProperty;
 import ca.nrc.cadc.vos.NodeWriter;
-import ca.nrc.cadc.vos.VOS;
 import ca.nrc.cadc.vos.VOSURI;
 import ca.nrc.cadc.vos.server.web.representation.NodeInputRepresentation;
 import ca.nrc.cadc.vos.server.web.representation.NodeOutputRepresentation;
@@ -146,7 +136,6 @@ public class CreateNodeAction extends NodeAction
                 }
                 
                 clientNode.setParent(parent);
-                setOwner(clientNode);
                 Node storedNode = nodePersistence.put(clientNode);
             
                 // return the node in xml format
@@ -167,50 +156,5 @@ public class CreateNodeAction extends NodeAction
             nodeFault.setMessage(clientNode.getUri().toString());
             return new NodeActionResult(nodeFault);
         }
-        //catch (NodeNotFoundException e)
-        //{
-            // TODO: this fault occurs up in the doAuthorizationCheck call
-        //    log.debug("failed to get after put: " + clientNode.getUri().getPath(), e);
-        //    NodeFault nodeFault = NodeFault.InternalFault;
-        //    nodeFault.setMessage(clientNode.getUri().toString());
-        //    return new NodeActionResult(nodeFault);
-        //}
-    }
-    
-    /**
-     * @return The distinguished name of the owner for the new node.
-     */
-    private String getOwner()
-    {
-        AccessControlContext acContext = AccessController.getContext();
-        Subject subject = Subject.getSubject(acContext);
-
-        if (subject != null)
-        {
-            Set<Principal> principals = subject.getPrincipals();
-            for (Principal principal : principals)
-            {
-                if (principal instanceof X500Principal)
-                {
-                    return AuthenticationUtil.canonizeDistinguishedName(
-                            principal.getName());
-                }
-            }
-        }
-        return "";
-    }
-
-    private void setOwner(Node node)
-    {
-        String owner = getOwner();
-        NodeProperty cur = node.findProperty(VOS.PROPERTY_URI_CREATOR);
-        if (cur == null)
-        {
-            cur = new NodeProperty(VOS.PROPERTY_URI_CREATOR, owner);
-            node.getProperties().add(cur);
-        }
-        else
-            cur.setValue(owner);
-        cur.setReadOnly(true);
     }
 }

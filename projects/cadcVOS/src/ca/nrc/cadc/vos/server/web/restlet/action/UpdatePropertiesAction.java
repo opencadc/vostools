@@ -161,5 +161,4 @@ public class UpdatePropertiesAction extends NodeAction
         }
 
     }
-
 }

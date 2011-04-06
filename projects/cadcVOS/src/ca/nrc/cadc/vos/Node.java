@@ -74,10 +74,8 @@
 package ca.nrc.cadc.vos;
 
 import java.net.URI;
-import java.net.URISyntaxException;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Stack;
 
 import org.apache.log4j.Logger;
 

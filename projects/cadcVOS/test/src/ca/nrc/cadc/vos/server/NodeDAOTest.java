@@ -69,6 +69,7 @@
 
 package ca.nrc.cadc.vos.server;
 
+import ca.nrc.cadc.auth.AuthenticationUtil;
 import ca.nrc.cadc.date.DateUtil;
 import ca.nrc.cadc.db.ConnectionConfig;
 import ca.nrc.cadc.db.DBConfig;
@@ -91,7 +92,12 @@ import ca.nrc.cadc.vos.VOS.NodeBusyState;
 import ca.nrc.cadc.vos.VOSURI;
 import ca.nrc.cadc.vos.server.NodeDAO.NodeSchema;
 import java.net.URI;
+import java.security.Principal;
 import java.util.Date;
+import java.util.HashSet;
+import java.util.Set;
+import javax.security.auth.Subject;
+import javax.security.auth.x500.X500Principal;
 import javax.sql.DataSource;
 import org.apache.log4j.Level;
 import org.apache.log4j.Logger;
@@ -115,6 +121,9 @@ public class NodeDAOTest
     static final String ROOT_CONTAINER = "CADCRegtest1";
     static final String NODE_OWNER = "CN=CADC Regtest1 10577,OU=CADC,O=HIA";
 
+    protected Subject owner;
+    protected Principal principal;
+
     static
     {
         Log4jInit.setLevel("ca.nrc.cadc", Level.INFO);
@@ -128,6 +137,10 @@ public class NodeDAOTest
     {
         this.runID = "test"+ new Date().getTime();
         log.debug("runID = " + runID);
+        this.principal = new X500Principal(NODE_OWNER);
+        Set<Principal> pset = new HashSet<Principal>();
+        pset.add(principal);
+        this.owner = new Subject(true,pset,new HashSet(), new HashSet());
 
         try
         {
@@ -135,7 +148,7 @@ public class NodeDAOTest
             ConnectionConfig connConfig = dbConfig.getConnectionConfig(SERVER, DATABASE);
             this.dataSource = DBUtil.getDataSource(connConfig);
             NodeSchema ns = new NodeSchema("Node", "NodeProperty");
-            this.nodeDAO = new NodeDAO(dataSource, ns, VOS_AUTHORITY);
+            this.nodeDAO = new NodeDAO(dataSource, ns, VOS_AUTHORITY, new X500IdentityManager());
 
             ContainerNode root = (ContainerNode) nodeDAO.getPath(ROOT_CONTAINER);
             log.debug("found base node: " + root);
@@ -144,7 +157,7 @@ public class NodeDAOTest
                 VOSURI vos = new VOSURI(new URI("vos", VOS_AUTHORITY, "/"+ROOT_CONTAINER, null, null));
                 root = new ContainerNode(vos);
                 root.getProperties().add(new NodeProperty(VOS.PROPERTY_URI_CREATOR, NODE_OWNER));
-                root = (ContainerNode) nodeDAO.put(root);
+                root = (ContainerNode) nodeDAO.put(root, owner);
                 log.debug("created base node: " + root);
             }
         }
@@ -185,7 +198,6 @@ public class NodeDAOTest
             Assert.assertNotNull(root);
             Assert.assertEquals(ContainerNode.class, root.getClass());
             Assert.assertEquals(ROOT_CONTAINER, root.getName());
-            Assert.assertEquals(NODE_OWNER, root.getOwner());
         }
         catch(Exception unexpected)
         {
@@ -217,7 +229,7 @@ public class NodeDAOTest
             String nodePath1 = basePath + getNodeName("a");
             dataNode = getCommonDataNode(nodePath1, getCommonProperties());
             dataNode.setParent(rootContainer); // back link to persistent parent required
-            putNode = nodeDAO.put(dataNode);
+            putNode = nodeDAO.put(dataNode, owner);
             Node nodeA = nodeDAO.getPath(nodePath1);
             nodeDAO.getProperties(nodeA);
             log.debug("PutNode: " + putNode);
@@ -236,7 +248,7 @@ public class NodeDAOTest
             String nodePath2 = basePath + getNodeName("b");
             containerNode = getCommonContainerNode(nodePath2, getCommonProperties());
             containerNode.setParent(rootContainer); // back link to persistent parent required
-            putNode = nodeDAO.put(containerNode);
+            putNode = nodeDAO.put(containerNode, owner);
             ContainerNode nodeB = (ContainerNode) nodeDAO.getPath(nodePath2);
             nodeDAO.getProperties(nodeB);
             log.debug("PutNode: " + putNode);
@@ -248,7 +260,7 @@ public class NodeDAOTest
             String nodePath3 = basePath + getNodeName("c");
             containerNode = getCommonContainerNode(nodePath3, getCommonProperties());
             containerNode.setParent(rootContainer); // back link to persistent parent required
-            putNode = nodeDAO.put(containerNode);
+            putNode = nodeDAO.put(containerNode, owner);
             ContainerNode nodeC = (ContainerNode) nodeDAO.getPath(nodePath3);
             nodeDAO.getProperties(nodeC);
             compareNodes("assert5", putNode, nodeC);
@@ -258,7 +270,7 @@ public class NodeDAOTest
             String nodePath4 = basePath + getNodeName("b") + "/" + getNodeName("d");
             dataNode = getCommonDataNode(nodePath4, getCommonProperties());
             dataNode.setParent(nodeB); // back link to persistent parent required
-            putNode = nodeDAO.put(dataNode);
+            putNode = nodeDAO.put(dataNode, owner);
             Node nodeD = nodeDAO.getPath(nodePath4);
             nodeDAO.getProperties(nodeD);
             compareNodes("assert7", putNode, nodeD);
@@ -268,7 +280,7 @@ public class NodeDAOTest
             String nodePath5 = basePath + getNodeName("c") + "/" + getNodeName("e");
             containerNode = getCommonContainerNode(nodePath5, getCommonProperties());
             containerNode.setParent(nodeC); // back link to persistent parent required
-            putNode = nodeDAO.put(containerNode);
+            putNode = nodeDAO.put(containerNode, owner);
             ContainerNode nodeE = (ContainerNode) nodeDAO.getPath(nodePath5);
             nodeDAO.getProperties(nodeE);
             compareNodes("assert9", putNode, nodeE);
@@ -278,7 +290,7 @@ public class NodeDAOTest
             String nodePath6 = basePath + getNodeName("c") + "/" + getNodeName("e") + "/" + getNodeName("f");
             dataNode = getCommonDataNode(nodePath6, getCommonProperties());
             dataNode.setParent(nodeE); // back link to persistent parent required
-            putNode = nodeDAO.put(dataNode);
+            putNode = nodeDAO.put(dataNode, owner);
             Node nodeF = nodeDAO.getPath(nodePath6);
             nodeDAO.getProperties(nodeF);
             compareNodes("assert11", putNode, nodeF);
@@ -320,7 +332,7 @@ public class NodeDAOTest
             String path = basePath + getNodeName("dir");
             ContainerNode testNode = getCommonContainerNode(path);
             testNode.setParent(rootContainer);
-            ContainerNode cn = (ContainerNode) nodeDAO.put(testNode);
+            ContainerNode cn = (ContainerNode) nodeDAO.put(testNode, owner);
             
             ContainerNode cur = (ContainerNode) nodeDAO.getPath(path);
             Assert.assertNotNull(cur);
@@ -334,10 +346,10 @@ public class NodeDAOTest
             n2.setParent(cn);
             n3.setParent(cn);
             n4.setParent(cn);
-            nodeDAO.put(n1);
-            nodeDAO.put(n2);
-            nodeDAO.put(n3);
-            nodeDAO.put(n4);
+            nodeDAO.put(n1, owner);
+            nodeDAO.put(n2, owner);
+            nodeDAO.put(n3, owner);
+            nodeDAO.put(n4, owner);
 
             // get a vanilla container with no children
             cur = (ContainerNode) nodeDAO.getPath(path);
@@ -382,7 +394,7 @@ public class NodeDAOTest
             String path = basePath + getNodeName("dir");
             ContainerNode testNode = getCommonContainerNode(path);
             testNode.setParent(rootContainer);
-            ContainerNode cn = (ContainerNode) nodeDAO.put(testNode);
+            ContainerNode cn = (ContainerNode) nodeDAO.put(testNode, owner);
 
             ContainerNode cur = (ContainerNode) nodeDAO.getPath(path);
             Assert.assertNotNull(cur);
@@ -396,10 +408,10 @@ public class NodeDAOTest
             n2.setParent(cn);
             n3.setParent(cn);
             n4.setParent(cn);
-            nodeDAO.put(n1);
-            nodeDAO.put(n2);
-            nodeDAO.put(n3);
-            nodeDAO.put(n4);
+            nodeDAO.put(n1, owner);
+            nodeDAO.put(n2, owner);
+            nodeDAO.put(n3, owner);
+            nodeDAO.put(n4, owner);
 
             // get a vanilla container with no children
             cur = (ContainerNode) nodeDAO.getPath(path);
@@ -442,7 +454,7 @@ public class NodeDAOTest
             String path = basePath + getNodeName("dir");
             ContainerNode testNode = getCommonContainerNode(path);
             testNode.setParent(rootContainer);
-            ContainerNode cn = (ContainerNode) nodeDAO.put(testNode);
+            ContainerNode cn = (ContainerNode) nodeDAO.put(testNode, owner);
 
             ContainerNode cur = (ContainerNode) nodeDAO.getPath(path);
             Assert.assertNotNull(cur);
@@ -456,10 +468,10 @@ public class NodeDAOTest
             n2.setParent(cn);
             n3.setParent(cn);
             n4.setParent(cn);
-            nodeDAO.put(n1);
-            nodeDAO.put(n2);
-            nodeDAO.put(n3);
-            nodeDAO.put(n4);
+            nodeDAO.put(n1, owner);
+            nodeDAO.put(n2, owner);
+            nodeDAO.put(n3, owner);
+            nodeDAO.put(n4, owner);
 
             // get a vanilla container with no children
             cur = (ContainerNode) nodeDAO.getPath(path);
@@ -518,7 +530,7 @@ public class NodeDAOTest
             testNode.setParent(rootContainer);
 
             // put + get + compare
-            nodeDAO.put(testNode);
+            nodeDAO.put(testNode, owner);
             DataNode nodeFromGet = (DataNode) nodeDAO.getPath(path);
             Assert.assertNotNull(nodeFromGet);
             nodeDAO.getProperties(nodeFromGet);
@@ -614,7 +626,7 @@ public class NodeDAOTest
             testNode.setParent(rootContainer);
 
             // put + get + compare
-            nodeDAO.put(testNode);
+            nodeDAO.put(testNode, owner);
             Node persistNode = nodeDAO.getPath(path);
             Assert.assertNotNull(persistNode);
             //nodeDAO.getProperties(nodeFromGet1); // not needed for this impl
@@ -659,7 +671,7 @@ public class NodeDAOTest
             testNode.setParent(rootContainer);
 
             // put and check default
-            nodeDAO.put(testNode);
+            nodeDAO.put(testNode, owner);
             DataNode persistNode = (DataNode) nodeDAO.getPath(path);
             Assert.assertNotNull(persistNode);
             Assert.assertEquals("assert not busy", NodeBusyState.notBusy, persistNode.getBusy());
@@ -713,7 +725,7 @@ public class NodeDAOTest
     {
         VOSURI vosuri = new VOSURI(new URI("vos", VOS_AUTHORITY, path, null, null));
         DataNode dataNode = new DataNode(vosuri);
-        dataNode.getProperties().add(new NodeProperty(VOS.PROPERTY_URI_CREATOR, NODE_OWNER));
+        //dataNode.getProperties().add(new NodeProperty(VOS.PROPERTY_URI_CREATOR, NODE_OWNER));
         return dataNode;
     }
     
@@ -728,7 +740,7 @@ public class NodeDAOTest
     {
         VOSURI vosuri = new VOSURI(new URI("vos", VOS_AUTHORITY, path, null, null));
         ContainerNode containerNode = new ContainerNode(vosuri);
-        containerNode.getProperties().add(new NodeProperty(VOS.PROPERTY_URI_CREATOR, NODE_OWNER));
+        //containerNode.getProperties().add(new NodeProperty(VOS.PROPERTY_URI_CREATOR, NODE_OWNER));
         return containerNode;
     }
 
@@ -758,7 +770,10 @@ public class NodeDAOTest
         Assert.assertEquals(assertName+  "URI", a.getUri(), b.getUri());
         Assert.assertEquals(assertName + "type", a.getClass().getName(), b.getClass().getName());
         Assert.assertEquals(assertName + "name", a.getName(), b.getName());
-        Assert.assertEquals(assertName + "owner", a.getOwner(), b.getOwner());
+        String dn = b.getOwner();
+        Assert.assertNotNull(assertName+  " owner", owner);
+        X500Principal xp = new X500Principal(dn);
+        Assert.assertTrue("caller==owner", AuthenticationUtil.equals(principal, xp));
     }
 
     private void compareProperties(String assertName, List<NodeProperty> expected, List<NodeProperty> actual)
@@ -775,6 +790,7 @@ public class NodeDAOTest
                 Assert.fail(assertName + ": missing " + e);
             }
         }
+
     }
     
 }

@@ -77,7 +77,10 @@ import ca.nrc.cadc.vos.NodeProperty;
 import ca.nrc.cadc.vos.VOS;
 import ca.nrc.cadc.vos.VOS.NodeBusyState;
 import ca.nrc.cadc.vos.VOSURI;
+import java.security.AccessControlContext;
+import java.security.AccessController;
 import java.util.List;
+import javax.security.auth.Subject;
 import javax.sql.DataSource;
 import org.apache.log4j.Logger;
 
@@ -125,6 +128,16 @@ public abstract class DatabaseNodePersistence implements NodePersistence
     protected abstract DataSource getDataSource();
 
     /**
+     * Get the IdentityManager implementation to use to store/retrieve node owner.
+     * 
+     * @return
+     */
+    protected IdentityManager getIdentityManager()
+    {
+        return new X500IdentityManager();
+    }
+
+    /**
      * Since the NodeDAO is not thread safe, this method returns a new NodeDAO
      * for every call.
      * 
@@ -136,7 +149,7 @@ public abstract class DatabaseNodePersistence implements NodePersistence
         if (nodeSchema == null) // lazy
             this.nodeSchema = new NodeDAO.NodeSchema(getNodeTableName(),getPropertyTableName());
 
-        return new NodeDAO(getDataSource(), nodeSchema, authority);
+        return new NodeDAO(getDataSource(), nodeSchema, authority, getIdentityManager());
     }
 
     public Node get(VOSURI vos)
@@ -169,8 +182,10 @@ public abstract class DatabaseNodePersistence implements NodePersistence
 
     public Node put(Node node)
     {
+        AccessControlContext acContext = AccessController.getContext();
+        Subject owner = Subject.getSubject(acContext);
         NodeDAO dao = getDAO( node.getUri().getAuthority() );
-        return dao.put(node);
+        return dao.put(node, owner);
     }
 
     public Node updateProperties(Node node, List<NodeProperty> properties)
@@ -182,8 +197,8 @@ public abstract class DatabaseNodePersistence implements NodePersistence
     /**
      * Delete the node. For DataNodes, this <b>does not</b> do anything to delete
      * the stored file from any byte-storage location; it only removes the metadata
-     * from the database. Delete calls updateContentLength for the parent, if
-     * necesasry.
+     * from the database. Delete recursively calls updateContentLength for the 
+     * parent, if necesasry.
      *
      * @see NodeDAO.delete(Node)
      * @see NodeDAO.markForDeletion(Node)

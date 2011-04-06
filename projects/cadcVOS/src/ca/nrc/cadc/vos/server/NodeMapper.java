@@ -88,6 +88,7 @@ import ca.nrc.cadc.vos.VOS.NodeBusyState;
 import ca.nrc.cadc.vos.VOSURI;
 import java.net.URI;
 import java.net.URISyntaxException;
+import javax.security.auth.Subject;
 import org.apache.log4j.Logger;
 
 /**
@@ -102,11 +103,13 @@ public class NodeMapper implements RowMapper
 
     private String authority;
     private String basePath;
+    private IdentityManager identManager;
 
-    public NodeMapper(String authority, String basePath)
+    public NodeMapper(String authority, String basePath, IdentityManager identManager)
     {
         this.authority = authority;
         this.basePath = basePath;
+        this.identManager = identManager;
         this.dateFormat = DateUtil.getDateFormat(DateUtil.IVOA_DATE_FORMAT, DateUtil.UTC);
         this.cal = Calendar.getInstance(DateUtil.LOCAL);
     }
@@ -115,6 +118,7 @@ public class NodeMapper implements RowMapper
      * Map the row to the appropriate type of node object.
      * @param rs
      * @param row
+     * @return a Node
      * @throws SQLException
      */
     public Object mapRow(ResultSet rs, int row)
@@ -129,7 +133,11 @@ public class NodeMapper implements RowMapper
         String groupRead = rs.getString("groupRead");
         String groupWrite = rs.getString("groupWrite");
         boolean isPublic = rs.getBoolean("isPublic");
-        String owner = rs.getString("owner");
+
+        //String owner = getString(rs, col++);
+        Object ownerObject = rs.getObject("owner");
+        Subject subject = identManager.toSubject(ownerObject);
+        String owner = identManager.toOwnerString(subject);
         
         long contentLength = rs.getLong("contentLength");
         String contentType = rs.getString("contentType");
@@ -161,7 +169,7 @@ public class NodeMapper implements RowMapper
                     + type);
         }
         
-        node.appData = new NodeID(nodeID);
+        node.appData = new NodeID(nodeID, subject);
 
         NodeDAO.setPropertyValue(node, VOS.PROPERTY_URI_CREATOR, owner, true);
         node.setMarkedForDeletion(markedForDeletion);

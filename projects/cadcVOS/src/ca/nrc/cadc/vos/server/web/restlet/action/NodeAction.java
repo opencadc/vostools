@@ -297,37 +297,37 @@ public abstract class NodeAction implements PrivilegedAction<Object>
         catch (URISyntaxException e)
         {
             String faultMessage = "URI not well formed: " + vosURI;
-            log.debug(faultMessage, e);
+            log.debug(faultMessage);
             return handleException(NodeFault.InvalidURI, faultMessage);
         }
         catch (AccessControlException e)
         {
             String faultMessage = "Access Denied: " + e.getMessage();
-            log.debug(faultMessage, e);
+            log.debug(faultMessage);
             return handleException(NodeFault.PermissionDenied, faultMessage);
         }
         catch (NodeParsingException e)
         {
             String faultMessage = "Node XML not well formed: " + e.getMessage();
-            log.debug(faultMessage, e);
+            log.debug(faultMessage);
             return handleException(NodeFault.TypeNotSupported, faultMessage);
         }
         catch (UnsupportedOperationException e)
         {
             String faultMessage = "Not supported: " + e.getMessage();
-            log.debug(faultMessage, e);
+            log.debug(faultMessage);
             return handleException(NodeFault.InvalidArgument, faultMessage);
         }
         catch (IllegalArgumentException e)
         {
             String faultMessage = "Bad input: " + e.getMessage();
-            log.debug(faultMessage, e);
+            log.debug(faultMessage);
             return handleException(NodeFault.InvalidArgument, faultMessage);
         }
         catch (Throwable t)
         {
             String faultMessage = "Internal Error:" + t.getMessage();
-            log.debug(faultMessage, t);
+            log.debug("BUG: " + faultMessage, t);
             return handleException(NodeFault.InternalFault, faultMessage);
         }
     }

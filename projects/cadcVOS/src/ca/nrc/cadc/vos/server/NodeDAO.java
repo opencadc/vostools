@@ -107,6 +107,7 @@ import java.text.DateFormat;
 import java.util.Calendar;
 import java.util.Set;
 import java.util.TreeSet;
+import javax.security.auth.Subject;
 import org.springframework.dao.DataAccessException;
 import org.springframework.jdbc.core.ResultSetExtractor;
 
@@ -133,6 +134,7 @@ public class NodeDAO
     protected DataSource dataSource;
     protected NodeSchema nodeSchema;
     protected String authority;
+    protected IdentityManager identManager;
 
     protected JdbcTemplate jdbc;
     private DataSourceTransactionManager transactionManager;
@@ -154,18 +156,20 @@ public class NodeDAO
     }
     
     /**
-     * NodeDAO Constructor. Thos class veeb developed and only tested using a
-     * Sybase ASE RDBMS. Some SQL (update commands in particular) are non-standard.
+     * NodeDAO Constructor. This class was developed and tested using a
+     * Sybase ASE RDBMS. Some SQL (update commands in particular) may be non-standard.
      *
      * @param dataSource
      * @param nodeSchema
-     * @param authority 
+     * @param authority
+     * @param identManager 
      */
-    public NodeDAO(DataSource dataSource, NodeSchema nodeSchema, String authority)
+    public NodeDAO(DataSource dataSource, NodeSchema nodeSchema, String authority, IdentityManager identManager)
     {
         this.dataSource = dataSource;
         this.nodeSchema = nodeSchema;
         this.authority = authority;
+        this.identManager = identManager;
 
         this.defaultTransactionDef = new DefaultTransactionDefinition();
         defaultTransactionDef.setIsolationLevel(DefaultTransactionDefinition.ISOLATION_REPEATABLE_READ);
@@ -292,7 +296,8 @@ public class NodeDAO
 
         String sql = getSelectChildNodeSQL(parent);
         log.debug("getChild: " + sql);
-        List<Node> nodes = jdbc.query(sql, new Object[] { name }, new NodeMapper(authority, parent.getUri().getPath()));
+        List<Node> nodes = jdbc.query(sql, new Object[] { name }, 
+                new NodeMapper(authority, parent.getUri().getPath(), identManager));
         if (nodes.size() > 1)
             throw new IllegalStateException("BUG - found " + nodes.size() + " child nodes named " + name
                     + " for container " + parent.getUri().getPath());
@@ -313,7 +318,8 @@ public class NodeDAO
         // was called, e.g. from delete(node) or markForDeletion(node)
         String sql = getSelectNodesByParentSQL(parent);
         log.debug("getChildren: " + sql);
-        List<Node> nodes = jdbc.query(sql, new NodeMapper(authority, parent.getUri().getPath()));
+        List<Node> nodes = jdbc.query(sql,
+                new NodeMapper(authority, parent.getUri().getPath(), identManager));
         addChildNodes(parent, nodes);
     }
 
@@ -339,7 +345,7 @@ public class NodeDAO
      * @param node
      * @return the same node but with generated internal ID set in the appData field
      */
-    public Node put(Node node)
+    public Node put(Node node, Subject owner)
     {
         log.debug("put: " + node.getUri().getPath() + ", " + node.getClass().getSimpleName());
 
@@ -355,25 +361,30 @@ public class NodeDAO
 
         try
         {
+            
+
             startTransaction();
             NodePutStatementCreator npsc = new NodePutStatementCreator(nodeSchema, false);
-            npsc.setValues(node);
+            npsc.setValues(node, owner);
             KeyHolder keyHolder = new GeneratedKeyHolder();
             jdbc.update(npsc, keyHolder);
             Long generatedID = new Long(keyHolder.getKey().longValue());
-            node.appData = new NodeID(generatedID);
+
+            node.appData = new NodeID(generatedID, owner);
             NodeID nodeID = (NodeID) node.appData;
             
             Iterator<NodeProperty> propertyIterator = node.getProperties().iterator();
             while (propertyIterator.hasNext())
             {
                 NodeProperty prop = propertyIterator.next();
-                if ( usePropertyTable(prop.getPropertyURI()))
+                if ( usePropertyTable(prop.getPropertyURI()) )
                 {
                     PropertyStatementCreator ppsc = new PropertyStatementCreator(nodeSchema, nodeID, prop, false);
                     jdbc.update(ppsc);
                 }
                 // else: already persisted by the NodePutStatementCreator above
+                // note: very important that the node owner (creator property) is excluded
+                // by the above usePropertyTable returning false
             }
 
             commitTransaction();
@@ -581,19 +592,21 @@ public class NodeDAO
                 boolean propTable = usePropertyTable(prop.getPropertyURI());
                 NodeProperty cur = node.findProperty(prop.getPropertyURI());
                 // Does this property exist already?
+                log.debug("updateProperties: " + prop + " vs." + cur);
                 if (cur != null)
                 {
                     if (prop.isMarkedForDeletion())
                     {
                         if (propTable)
                         {
+                            log.debug("doUpdateNode " + prop.getPropertyURI() + " to be deleted NodeProperty");
                             PropertyStatementCreator ppsc = new PropertyStatementCreator(nodeSchema, nodeID, prop);
                             jdbc.update(ppsc);
                             doUpdateLastModified = true;
                         }
                         else
                         {
-                            log.debug("doUpdateNode " + prop.getPropertyURI() + " to be deleted");
+                            log.debug("doUpdateNode " + prop.getPropertyURI() + " to be deleted in Node");
                             doUpdateNode = true;
                         }
                         node.getProperties().remove(prop);
@@ -601,17 +614,19 @@ public class NodeDAO
                     else // update
                     {
                         String currentValue = cur.getPropertyValue();
+                        log.debug("doUpdateNode " + prop.getPropertyURI() + ": " + currentValue + " != " + prop.getPropertyValue());
                         if (!currentValue.equals(prop.getPropertyValue()))
                         {
                             if (propTable)
                             {
+                                log.debug("doUpdateNode " + prop.getPropertyURI() + " to be updated in NodeProperty");
                                 PropertyStatementCreator ppsc = new PropertyStatementCreator(nodeSchema, nodeID, prop, true);
                                 jdbc.update(ppsc);
                                 doUpdateLastModified = true;
                             }
                             else
                             {
-                                log.debug("doUpdateNode " + prop.getPropertyURI() + ": " + currentValue + " != " + prop.getPropertyValue());
+                                log.debug("doUpdateNode " + prop.getPropertyURI() + " to be updated in Node");
                                 doUpdateNode = true;
                             }
                             cur.setValue(prop.getPropertyValue());
@@ -626,28 +641,24 @@ public class NodeDAO
                 {
                     if (propTable)
                     {
+                        log.debug("doUpdateNode " + prop.getPropertyURI() + " to be inserted into NodeProperty");
                         PropertyStatementCreator ppsc = new PropertyStatementCreator(nodeSchema, nodeID, prop);
                         jdbc.update(ppsc);
                         doUpdateLastModified = true;
                     }
                     else
                     {
-                        log.debug("doUpdateNode " + prop.getPropertyURI() + " to be inserted");
+                        log.debug("doUpdateNode " + prop.getPropertyURI() + " to be inserted into Node");
                         doUpdateNode = true;
                     }
-
-                    // insert the new property
-                    //log.debug("Inserting node property: " + prop.getPropertyURI());
-                    //String sql = getInsertNodePropertySQL(node, prop);
-                    //log.debug(sql);
-                    //jdbc.update(sql);
                     node.getProperties().add(prop);
                 }
             }
             if (doUpdateNode || doUpdateLastModified)
             {
+                log.debug("doUpdateNode: " + doUpdateNode + " doUpdateLastModified: " + doUpdateLastModified);
                 NodePutStatementCreator npsc = new NodePutStatementCreator(nodeSchema, true);
-                npsc.setValues(node);
+                npsc.setValues(node,null);
                 jdbc.update(npsc);
             }
 
@@ -756,7 +767,7 @@ public class NodeDAO
         }
         if (node.appData instanceof NodeID)
         {
-            return ((NodeID) node.appData).getId();
+            return ((NodeID) node.appData).getID();
         }
         return null;
     }
@@ -911,13 +922,13 @@ public class NodeDAO
         "type",
         "busyState",
         "markedForDeletion",
-        "isPublic",        //
-        "owner",           //
-        "contentLength",   //
+        "isPublic",
+        "owner",
+        "contentLength",
         "contentType",
         "contentEncoding",
         "contentMD5",
-        "lastModified",    //
+        "lastModified",
         "groupRead",
         "groupWrite"
     };
@@ -956,24 +967,31 @@ public class NodeDAO
         cur.setReadOnly(readOnly);
     }
 
+    private static Set<String> coreProps;
     private boolean usePropertyTable(String uri)
     {
-        // TODO: do this once only
-        Set<String> core = new TreeSet<String>(new CaseInsensitiveStringComparator());
+        if (coreProps == null)
+        {
+            // lazy init of the static set: thread-safe enough by
+            // doing the assignment to the static last
+            Set<String> core = new TreeSet<String>(new CaseInsensitiveStringComparator());
 
-        core.add(VOS.PROPERTY_URI_ISPUBLIC);
-        core.add(VOS.PROPERTY_URI_CREATOR);
-        
-        core.add(VOS.PROPERTY_URI_CONTENTLENGTH);
-        core.add(VOS.PROPERTY_URI_TYPE);
-        core.add(VOS.PROPERTY_URI_CONTENTENCODING);
-        core.add(VOS.PROPERTY_URI_CONTENTMD5);
-        
-        core.add(VOS.PROPERTY_URI_DATE);
-        core.add(VOS.PROPERTY_URI_GROUPREAD);
-        core.add(VOS.PROPERTY_URI_GROUPWRITE);
-        
-        return !core.contains(uri);
+            core.add(VOS.PROPERTY_URI_ISPUBLIC);
+
+            // note: very important that the node owner (creator property) is here
+            core.add(VOS.PROPERTY_URI_CREATOR);
+
+            core.add(VOS.PROPERTY_URI_CONTENTLENGTH);
+            core.add(VOS.PROPERTY_URI_TYPE);
+            core.add(VOS.PROPERTY_URI_CONTENTENCODING);
+            core.add(VOS.PROPERTY_URI_CONTENTMD5);
+
+            core.add(VOS.PROPERTY_URI_DATE);
+            core.add(VOS.PROPERTY_URI_GROUPREAD);
+            core.add(VOS.PROPERTY_URI_GROUPWRITE);
+            coreProps = core;
+        }
+        return !coreProps.contains(uri);
     }
 
     private class PropertyStatementCreator implements PreparedStatementCreator
@@ -1020,23 +1038,23 @@ public class NodeDAO
             int col = 1;
             if (prop.isMarkedForDeletion())
             {
-                ps.setLong(col++, nodeID.getId());
+                ps.setLong(col++, nodeID.getID());
                 ps.setString(col++, prop.getPropertyURI());
-                log.debug("setValues: " + nodeID.getId() + "," + prop.getPropertyURI());
+                log.debug("setValues: " + nodeID.getID() + "," + prop.getPropertyURI());
             }
             else if (update)
             {
                 ps.setString(col++, prop.getPropertyValue());
-                ps.setLong(col++, nodeID.getId());
+                ps.setLong(col++, nodeID.getID());
                 ps.setString(col++, prop.getPropertyURI());
-                log.debug("setValues: " + prop.getPropertyValue() + "," + nodeID.getId() + "," + prop.getPropertyURI());
+                log.debug("setValues: " + prop.getPropertyValue() + "," + nodeID.getID() + "," + prop.getPropertyURI());
             }
             else
             {
-                ps.setLong(col++, nodeID.getId());
+                ps.setLong(col++, nodeID.getID());
                 ps.setString(col++, prop.getPropertyURI());
                 ps.setString(col++, prop.getPropertyValue());
-                log.debug("setValues: " + nodeID.getId() + "," + prop.getPropertyURI() + "," + prop.getPropertyValue());
+                log.debug("setValues: " + nodeID.getID() + "," + prop.getPropertyURI() + "," + prop.getPropertyValue());
             }
         }
 
@@ -1082,6 +1100,7 @@ public class NodeDAO
         private boolean update;
 
         private Node node;
+        private Subject owner;
 
         public NodePutStatementCreator(NodeSchema ns, boolean update)
         {
@@ -1094,7 +1113,7 @@ public class NodeDAO
         public PreparedStatement createPreparedStatement(Connection conn) throws SQLException
         {
             PreparedStatement prep;
-            if (update)
+            if (owner == null)
             {
                 String sql = getUpdateSQL();
                 log.debug(sql);
@@ -1110,7 +1129,11 @@ public class NodeDAO
             return prep;
         }
 
-        public void setValues(Node node) { this.node = node; }
+        public void setValues(Node node, Subject owner)
+        {
+            this.node = node;
+            this.owner = owner;
+        }
         
         void setValues(PreparedStatement ps)
             throws SQLException
@@ -1154,9 +1177,24 @@ public class NodeDAO
             sb.append(node.isPublic());
             sb.append(",");
 
-            String pval = node.getPropertyValue(VOS.PROPERTY_URI_CREATOR);
-            ps.setString(col++, pval);
-            sb.append(pval);
+            String pval;
+
+            //String pval = node.getPropertyValue(VOS.PROPERTY_URI_CREATOR);
+            //ps.setString(col++, pval);
+            Subject theOwner = this.owner;
+            if (theOwner == null && node.appData != null)
+            {
+                // get owner from NodeID
+                NodeID nodeID = (NodeID) node.appData;
+                theOwner = nodeID.getOwner();
+            }
+            if (theOwner == null)
+                throw new IllegalStateException("cannot persist node without an owner");
+
+            Object ownerObject  = identManager.toOwner(theOwner);
+            int type = identManager.getOwnerType();
+            ps.setObject(col++, ownerObject, type);
+            sb.append(ownerObject);
             sb.append(",");
 
             pval = node.getPropertyValue(VOS.PROPERTY_URI_CONTENTLENGTH);
@@ -1240,7 +1278,7 @@ public class NodeDAO
 
         String getSQL()
         {
-            if (update)
+            if (owner == null)
                 return getUpdateSQL();
             return getInsertSQL();
         }
@@ -1467,7 +1505,12 @@ public class NodeDAO
             String busyString = getString(rs, col++);
             boolean markedForDeletion = rs.getBoolean(col++);
             boolean isPublic = rs.getBoolean(col++);
-            String owner = getString(rs, col++);
+
+            //String owner = getString(rs, col++);
+            Object ownerObject = rs.getObject(col++);
+            Subject subject = identManager.toSubject(ownerObject);
+            String owner = identManager.toOwnerString(subject);
+
             long contentLength = rs.getLong(col++);
             String contentType = getString(rs, col++);
             String contentEncoding = getString(rs, col++);
@@ -1499,7 +1542,7 @@ public class NodeDAO
                 throw new IllegalStateException("Unknown node database type: " + type);
             }
 
-            node.appData = new NodeID(nodeID);
+            node.appData = new NodeID(nodeID, subject);
 
             node.setMarkedForDeletion(markedForDeletion);
 

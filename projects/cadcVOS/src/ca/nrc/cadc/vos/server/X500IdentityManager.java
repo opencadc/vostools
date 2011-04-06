@@ -8,7 +8,7 @@
 *  National Research Council            Conseil national de recherches
 *  Ottawa, Canada, K1A 0R6              Ottawa, Canada, K1A 0R6
 *  All rights reserved                  Tous droits réservés
-*                                       
+*
 *  NRC disclaims any warranties,        Le CNRC dénie toute garantie
 *  expressed, implied, or               énoncée, implicite ou légale,
 *  statutory, of any kind with          de quelque nature que ce
@@ -31,10 +31,10 @@
 *  software without specific prior      de ce logiciel sans autorisation
 *  written permission.                  préalable et particulière
 *                                       par écrit.
-*                                       
+*
 *  This file is part of the             Ce fichier fait partie du projet
 *  OpenCADC project.                    OpenCADC.
-*                                       
+*
 *  OpenCADC is free software:           OpenCADC est un logiciel libre ;
 *  you can redistribute it and/or       vous pouvez le redistribuer ou le
 *  modify it under the terms of         modifier suivant les termes de
@@ -44,7 +44,7 @@
 *  either version 3 of the              : soit la version 3 de cette
 *  License, or (at your option)         licence, soit (à votre gré)
 *  any later version.                   toute version ultérieure.
-*                                       
+*
 *  OpenCADC is distributed in the       OpenCADC est distribué
 *  hope that it will be useful,         dans l’espoir qu’il vous
 *  but WITHOUT ANY WARRANTY;            sera utile, mais SANS AUCUNE
@@ -54,7 +54,7 @@
 *  PURPOSE.  See the GNU Affero         PARTICULIER. Consultez la Licence
 *  General Public License for           Générale Publique GNU Affero
 *  more details.                        pour plus de détails.
-*                                       
+*
 *  You should have received             Vous devriez avoir reçu une
 *  a copy of the GNU Affero             copie de la Licence Générale
 *  General Public License along         Publique GNU Affero avec
@@ -69,47 +69,90 @@
 
 package ca.nrc.cadc.vos.server;
 
+import ca.nrc.cadc.auth.AuthenticationUtil;
+import java.security.Principal;
+import java.sql.Types;
+import java.util.HashSet;
+import java.util.Set;
 import javax.security.auth.Subject;
+import javax.security.auth.x500.X500Principal;
 
 /**
- * Class used to hold server-side implementation objects.
+ * Implementation of IdentityManager that uses the X500Principal as the
+ * definitive identifying object in a subject. Use this class if you
+ * want to store the X509 distinguished name in the owner field. Other
+ * principals and credentials in the callers Subject will not be saved
+ * and restored: only a single (the first) X500Principal (the first one
+ * found).
  * 
- * @author majorb
- *
+ * @author pdowler
  */
-public class NodeID
+public class X500IdentityManager implements IdentityManager
 {
-    private Long id;
 
-    private Subject owner;
-    
     /**
-     * NodeID constructor.
+     * @return VARCHAR
+     */
+    public int getOwnerType()
+    {
+        return Types.VARCHAR;
+    }
+
+    /**
+     * This method gets the distinguished name from toOwnerString and massages it
+     * for persistence: canonical form and convert to lower case.
+     *
+     * @param subject
+     * @return persistable distinguished name or null if there is no
+     *         X500Principal in the subject
+     */
+    public Object toOwner(Subject subject)
+    {
+        String dn = toOwnerString(subject);
+        if (dn != null)
+            return AuthenticationUtil.canonizeDistinguishedName(dn);
+        return dn;
+    }
+
+    /**
+     * This implementation finds the distinguished name from the first X500Principal.
      * 
-     * @param id
-     * @param owner
+     * @param subject
+     * @return distinguished name or null if there is no X500Principal in the subject
      */
-    public NodeID(Long id, Subject owner)
+    public String toOwnerString(Subject subject)
     {
-        this.id = id;
-        this.owner = owner;
+        if (subject != null)
+        {
+            Set<Principal> principals = subject.getPrincipals();
+            for (Principal principal : principals)
+            {
+                if (principal instanceof X500Principal)
+                {
+                    return principal.getName();
+                }
+            }
+        }
+        return null;
     }
-    
+
     /**
-     * @return The node ID.
+     * Create a subject from the specified owner object. It is assumed the owner
+     * object is a  string form of an X500 distinguished name.
+     * @param owner
+     * @return a subject with an X500Principal inside
      */
-    public Long getID()
+    public Subject toSubject(Object owner)
     {
-        return id;
+        try
+        {
+            String str = (String) owner;
+            X500Principal p = new X500Principal(str);
+            Set<Principal> pset = new HashSet<Principal>();
+            pset.add(p);
+            return new Subject(false,pset,new HashSet(), new HashSet());
+        }
+        finally { }
     }
 
-    public Subject getOwner()
-    {
-        return owner;
-    }
-
-    public String toString()
-    {
-        return "NodeID[" + id + "]";
-    }
 }
