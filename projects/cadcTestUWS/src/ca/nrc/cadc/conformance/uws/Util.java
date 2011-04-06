@@ -86,6 +86,8 @@ import org.jdom.output.XMLOutputter;
 
 import com.meterware.httpunit.WebRequest;
 import com.meterware.httpunit.WebResponse;
+import java.util.Dictionary;
+import java.util.Enumeration;
 
 public abstract class Util
 {
@@ -133,6 +135,26 @@ public abstract class Util
         return sb.toString();
     }
 
+    public static String getRequestHeaders(WebRequest request)
+    {
+        StringBuilder sb = new StringBuilder();
+        sb.append("Request headers:");
+        sb.append("\r\n");
+        Dictionary headers = request.getHeaders();
+        Enumeration keys = headers.keys();
+        while (keys.hasMoreElements())
+        {
+            String key = (String) keys.nextElement();
+            String value = (String) headers.get(key);
+            sb.append("\t");
+            sb.append(key);
+            sb.append(" = ");
+            sb.append(value);
+            sb.append("\r\n");
+        }
+        return sb.toString();
+    }
+    
     public static String getRequestParameters(WebRequest request)
     {
         StringBuilder sb = new StringBuilder();
