@@ -112,7 +112,7 @@ public class GmsClientMain implements PrivilegedAction<Boolean>
     public static final String ARG_CHECK_MEMBER = "check";
     public static final String ARG_LIST_MEMBER_GROUPS = "listMember";
     public static final String ARG_LIST_OWNER_GROUPS = "listOwner";
-    public static final String ARG_SERVICE_URL = "serviceURL";
+    public static final String ARG_SERVICE_URI = "serviceURI";
 
     // Operations on GMS client
     public enum Operation {
@@ -345,29 +345,29 @@ public class GmsClientMain implements PrivilegedAction<Boolean>
                         target = principals.iterator().next().getName();
                     }
                 }
-                String serviceURLStr = argMap.getValue(ARG_SERVICE_URL);
-                if (serviceURL == null)
+                String serviceURIStr = argMap.getValue(ARG_SERVICE_URI);
+                if (serviceURIStr == null)
                 {
                     throw new IllegalArgumentException(
-                            "Argument serviceURL is required for "
+                            "Argument serviceURI is required for "
                                     + this.operation);
                 }
                 try
                 {
                     RegistryClient registryClient = new RegistryClient();
                     serviceURL = registryClient.getServiceURL(new URI(
-                            serviceURLStr), "https");
+                            serviceURIStr), "https");
                     if (serviceURL == null)
                     {
                         logger.error("failed to find service URL for "
-                                + serviceURLStr);
+                                + serviceURIStr);
                         System.exit(INIT_STATUS);
                     }
                 }
                 catch (Exception e)
                 {
                     logger.error("failed to find service URL for "
-                            + serviceURLStr);
+                            + serviceURIStr);
                     logger.error("reason: " + e.getMessage());
                     System.exit(INIT_STATUS);
                 }
@@ -690,7 +690,7 @@ public class GmsClientMain implements PrivilegedAction<Boolean>
                 "User operations:                                                                                  ",
                 "java -jar cadcGMSClient.jar  [-v|--verbose|-d|--debug]                                            ",
                 CertCmdArgUtil.getCertArgUsage(),
-                "   [--listMember|--listOwner] [--target=<User ID>] --serviceURL=<group service URL>               ",
+                "   [--listMember|--listOwner] [--target=<User ID>] --serviceURI=<group service URI>               ",
                 "                                                                                                  ", };
 
         for (String line : um)
