@@ -168,7 +168,7 @@ public class GroupWriter
     {
         // Create the root group element.
         Element groupElement = new Element("group");
-        String groupID = group.getID() == null ? "" : group
+        String groupID = group.getID().getFragment() == null ? "" : group
                 .getID().toString();
         groupElement.setAttribute(new Attribute("uri", groupID));
         for( ElemProperty property : group.getProperties())
