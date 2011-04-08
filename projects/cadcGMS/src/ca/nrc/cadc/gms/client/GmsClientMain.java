@@ -112,6 +112,7 @@ public class GmsClientMain implements PrivilegedAction<Boolean>
     public static final String ARG_CHECK_MEMBER = "check";
     public static final String ARG_LIST_MEMBER_GROUPS = "listMember";
     public static final String ARG_LIST_OWNER_GROUPS = "listOwner";
+    public static final String ARG_SERVICE_URL = "serviceURL";
 
     // Operations on GMS client
     public enum Operation {
@@ -123,19 +124,17 @@ public class GmsClientMain implements PrivilegedAction<Boolean>
     private static final int NET_STATUS = 2; // exit code for
     // client-server failures
 
-    private String baseURL;
-    private RegistryClient registryClient = new RegistryClient();
     private GmsClient client;
 
     private Operation operation; // current operation on GMS client
     private String target; // group/user ID the operation is executed on
     private String memberID; // ID of a member to be added or removed
     // from a group
+    private URL serviceURL; // the URL of a gms service used for list
+    // member/owner
 
     // authenticated subject
     private static Subject subject;
-
-    private static final String SERVICE_ID = "ivo://cadc.nrc.ca/gms";
 
     /**
      * @param args
@@ -207,31 +206,7 @@ public class GmsClientMain implements PrivilegedAction<Boolean>
             logger.debug("Details: ", ex);
             System.exit(INIT_STATUS);
         }
-
-        try
-        {
-            // TODO pass the https protocol to this method when ready for
-            // use
-            URL baseURL = registryClient.getServiceURL(
-                    new URI(SERVICE_ID), "https");
-            if (baseURL == null)
-            {
-                logger.error("failed to find service URL for "
-                        + SERVICE_ID);
-                System.exit(INIT_STATUS);
-            }
-            this.baseURL = baseURL.toString();
-            this.client = new GmsClient(new URL(this.baseURL));
-        }
-        catch (Exception e)
-        {
-            logger.error("failed to find service URL for " + SERVICE_ID);
-            logger.error("reason: " + e.getMessage());
-            System.exit(INIT_STATUS);
-        }
-
-        logger.info("server uri: " + SERVICE_ID);
-        logger.info("base url: " + this.baseURL);
+        this.client = new GmsClient();
     }
 
     public Boolean run()
@@ -355,19 +330,48 @@ public class GmsClientMain implements PrivilegedAction<Boolean>
         }
         else
         {
-            if ((this.operation.equals(Operation.LIST_MEMBER_GR) ||
-                    (this.operation.equals(Operation.LIST_OWNER_GR)) )
-                    && (target == null))
+            if (this.operation.equals(Operation.LIST_MEMBER_GR)
+                    || (this.operation.equals(Operation.LIST_OWNER_GR)))
             {
-                // default target is the DN of the certificates used with the
-                // command
-                Set<X500Principal> principals = 
-                    subject.getPrincipals(X500Principal.class);
-                if ((principals != null) && principals.size() == 1)
+                if (target == null)
                 {
-                    target = principals.iterator().next().getName();
+                    // default target is the DN of the certificates used
+                    // with the
+                    // command
+                    Set<X500Principal> principals = subject
+                            .getPrincipals(X500Principal.class);
+                    if ((principals != null) && principals.size() == 1)
+                    {
+                        target = principals.iterator().next().getName();
+                    }
                 }
-                
+                String serviceURLStr = argMap.getValue(ARG_SERVICE_URL);
+                if (serviceURL == null)
+                {
+                    throw new IllegalArgumentException(
+                            "Argument serviceURL is required for "
+                                    + this.operation);
+                }
+                try
+                {
+                    RegistryClient registryClient = new RegistryClient();
+                    serviceURL = registryClient.getServiceURL(new URI(
+                            serviceURLStr), "https");
+                    if (serviceURL == null)
+                    {
+                        logger.error("failed to find service URL for "
+                                + serviceURLStr);
+                        System.exit(INIT_STATUS);
+                    }
+                }
+                catch (Exception e)
+                {
+                    logger.error("failed to find service URL for "
+                            + serviceURLStr);
+                    logger.error("reason: " + e.getMessage());
+                    System.exit(INIT_STATUS);
+                }
+
             }
             if (!this.operation.equals(Operation.CREATE)
                     && (target == null))
@@ -568,7 +572,9 @@ public class GmsClientMain implements PrivilegedAction<Boolean>
         }
         catch (Exception e)
         {
-            logger.error(String.format("failed to check member with user %s and group %s", memberID, target));
+            logger.error(String.format(
+                    "failed to check member with user %s and group %s",
+                    memberID, target));
             logger.error("reason: " + e.getMessage());
             System.exit(NET_STATUS);
         }
@@ -583,7 +589,7 @@ public class GmsClientMain implements PrivilegedAction<Boolean>
         try
         {
             User user = client
-                    .getGMSMembership(new X500Principal(target));
+                    .getGMSMembership(new X500Principal(target), serviceURL);
             if (user == null)
             {
                 msg("User: " + target + " not found");
@@ -612,7 +618,7 @@ public class GmsClientMain implements PrivilegedAction<Boolean>
         {
             logger.error("failed to list groups of member " + target);
             logger.error("reason: " + e.getMessage());
-            logger.debug("details:" , e);
+            logger.debug("details:", e);
             System.exit(NET_STATUS);
         }
 
@@ -626,7 +632,7 @@ public class GmsClientMain implements PrivilegedAction<Boolean>
         try
         {
             Collection<Group> groups = client
-                    .getGroups(new X500Principal(target));
+                    .getGroups(new X500Principal(target), serviceURL);
             if ((groups == null) || groups.isEmpty())
             {
                 msg("User: " + target + " owns 0 groups");
@@ -689,7 +695,7 @@ public class GmsClientMain implements PrivilegedAction<Boolean>
                 "User operations:                                                                                  ",
                 "java -jar cadcGMSClient.jar  [-v|--verbose|-d|--debug]                                            ",
                 CertCmdArgUtil.getCertArgUsage(),
-                "   [--listMember|--listOwner] [--target=<User ID>]                                                ",
+                "   [--listMember|--listOwner] [--target=<User ID>] --serviceURL=<group service URL>               ",
                 "                                                                                                  ", };
 
         for (String line : um)

@@ -107,6 +107,7 @@ public class GmsClientIntTest
     private static Logger log = Logger.getLogger(GmsClientIntTest.class);
     private static String TEST_CERT = "proxy.crt";
     private static String TEST_KEY = "proxy.key";
+    private URL localURL;
 
     private static Subject subject;
     GmsClient client;
@@ -143,8 +144,8 @@ public class GmsClientIntTest
         InetAddress localhost = InetAddress.getLocalHost();
         String hostname = localhost.getCanonicalHostName();
         log.debug("hostname=" + hostname);
-        URL url = new URL("https://" + hostname + "/gms");
-        client = new GmsClient(url);
+        localURL = new URL("https://" + hostname + "/gms");
+        client = new GmsClient();
     }
 
     /**
@@ -168,7 +169,7 @@ public class GmsClientIntTest
         X500Principal x500Principal;
         boolean passed = false;
         try {
-            groups = client.getGroups(null);
+            groups = client.getGroups(null, null);
         } catch (RuntimeException e) {
             //expected.  NULL parameter should cause a RuntimeException
             passed = true;
@@ -181,7 +182,7 @@ public class GmsClientIntTest
 //        Assert.assertNotNull(groups);
         
         x500Principal = new X500Principal("CN=Dustin Jenkins,OU=hia.nrc.ca,O=Grid,C=CA");
-        groups = client.getGroups(x500Principal);
+        groups = client.getGroups(x500Principal, localURL);
         Assert.assertNotNull(groups);
     }
 

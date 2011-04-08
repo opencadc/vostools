@@ -115,8 +115,7 @@ public class GmsClientTest extends GMSTest<GmsClient>
     public void initializeTestSubject() throws Exception
     {
 
-        setTestSubject(new GmsClient(
-                new URL("http://localhost/myservice"))
+        setTestSubject(new GmsClient()
         {
             protected HttpsURLConnection openConnection(final URL url)
                     throws IOException
@@ -359,7 +358,8 @@ public class GmsClientTest extends GMSTest<GmsClient>
     @Test
     public void createPOSTGroup() throws Exception
     {
-        final Group group = getTestSubject().createGroup(null);
+        final Group group = getTestSubject().createGroup(
+                new GroupImpl(new URI(GMSTestSuite.CADC_GROUP_URI)));
 
         assertNotNull("Group createPOSTGroup.", group);
         assertEquals("Group's ID is " + GMSTestSuite.CADC_GROUP_URI
