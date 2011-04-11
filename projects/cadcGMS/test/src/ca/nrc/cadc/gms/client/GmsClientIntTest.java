@@ -69,14 +69,12 @@
 
 package ca.nrc.cadc.gms.client;
 
-import static org.junit.Assert.fail;
 
+import ca.nrc.cadc.auth.AuthenticationUtil;
 import java.io.File;
 import java.net.InetAddress;
 import java.net.URL;
-import java.security.Principal;
 import java.util.Collection;
-import java.util.Set;
 
 import javax.security.auth.Subject;
 import javax.security.auth.x500.X500Principal;
@@ -91,12 +89,13 @@ import org.junit.Before;
 import org.junit.BeforeClass;
 import org.junit.Test;
 
-import ca.nrc.cadc.auth.AuthenticationUtil;
 import ca.nrc.cadc.auth.BasicX509TrustManager;
 import ca.nrc.cadc.auth.SSLUtil;
 import ca.nrc.cadc.gms.Group;
+import ca.nrc.cadc.reg.client.RegistryClient;
 import ca.nrc.cadc.util.FileUtil;
 import ca.nrc.cadc.util.Log4jInit;
+import java.net.URI;
 
 /**
  * @author zhangsa
@@ -107,10 +106,15 @@ public class GmsClientIntTest
     private static Logger log = Logger.getLogger(GmsClientIntTest.class);
     private static String TEST_CERT = "proxy.crt";
     private static String TEST_KEY = "proxy.key";
-    private URL localURL;
-
     private static Subject subject;
-    GmsClient client;
+    
+    static
+    {
+        Log4jInit.setLevel("ca.nrc.cadc.gms.client", Level.DEBUG);
+    }
+    
+    private URL localURL;
+    private GmsClient client;
 
     /**
      * @throws java.lang.Exception
@@ -118,9 +122,8 @@ public class GmsClientIntTest
     @BeforeClass
     public static void setUpBeforeClass() throws Exception
     {
-        Log4jInit.setLevel("ca.nrc.cadc.gms.client", Level.DEBUG);
         System.setProperty(BasicX509TrustManager.class.getName() + ".trust", "true");
-
+        System.setProperty(RegistryClient.class.getName() + ".local", "true");
         File cert = FileUtil.getFileFromResource(TEST_CERT, GmsClientIntTest.class);
         File key = FileUtil.getFileFromResource(TEST_KEY, GmsClientIntTest.class);
         SSLUtil.initSSL(cert, key);
@@ -156,34 +159,46 @@ public class GmsClientIntTest
     {
     }
 
-    /**
-     * Test method for {@link ca.nrc.cadc.gms.client.GmsClient#getGroups(javax.security.auth.Subject)}.
-     *
-     *
-     * TODO - FIX COMPILATION OF THIS METHOD.
-     */
     @Test
+    public void testIsMember()
+    {
+        try
+        {
+            X500Principal x500Principal = AuthenticationUtil.getX500Principal(subject);
+            URI guri = new URI("ivo://cadc.nrc.ca/gms#CADC_TEST1-Staff");
+            boolean mem = client.isMember(guri, x500Principal);
+            Assert.assertTrue(mem);
+        } 
+        catch (Exception unexpected)
+        {
+            log.error("unexpected exception", unexpected);
+            Assert.fail("unexpected exception: " + unexpected);
+        }
+    }
+  
+    //@Test
     public void testGetGroups()
     {
         Collection<Group> groups;
-        X500Principal x500Principal;
+        X500Principal x500Principal = null;
+        URI uri = null;
         boolean passed = false;
-        try {
-            groups = client.getGroups(null, null);
-        } catch (RuntimeException e) {
-            //expected.  NULL parameter should cause a RuntimeException
-            passed = true;
+        try
+        {
+            groups = client.getGroups(x500Principal, uri);
+            Assert.fail("expected RuntimeException, got nothing");
+        } 
+        catch (IllegalArgumentException expected)
+        {
+            log.debug("caught expected: " + expected);
         }
-        Assert.assertTrue(passed);
 
-        // TODO - Compilation Error Here (Lines 179-181).
-//        x500Principal = AuthenticationUtil.getX500Principal(subject);
-//        groups = client.getGroups(x500Principal);
-//        Assert.assertNotNull(groups);
-        
-        x500Principal = new X500Principal("CN=Dustin Jenkins,OU=hia.nrc.ca,O=Grid,C=CA");
+        x500Principal = AuthenticationUtil.getX500Principal(subject);
         groups = client.getGroups(x500Principal, localURL);
         Assert.assertNotNull(groups);
+        log.debug("found groups: " + groups.size());
+        for (Group g : groups)
+            log.debug("group: " + g.getID());
     }
 
 }

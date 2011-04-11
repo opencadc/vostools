@@ -252,6 +252,7 @@ public class GmsClient
         final StringBuilder resourcePath = new StringBuilder(64);
         try
         {
+            resourcePath.append("/");
             resourcePath.append(URLEncoder.encode(groupID.getFragment(),
                     "UTF-8"));
             resourcePath.append("/");
@@ -292,8 +293,7 @@ public class GmsClient
         {
             // this is not possible without a serious bug in the above
             // code
-            String msg = getServiceURL(groupID).toExternalForm()
-                    + resourcePath.toString();
+            String msg = getServiceURL(groupID) + resourcePath.toString();
             throw new RuntimeException("BUG: generated an illegal URL "
                     + msg);
         }
@@ -307,14 +307,12 @@ public class GmsClient
             // create the URI for the service, e.g. drop the fragment
             URI serviceURI = new URI(groupID.getScheme(), groupID
                     .getSchemeSpecificPart(), null); // drop fragment
-            URL baseURL = registryClient.getServiceURL(serviceURI,
-                    "https");
+            URL baseURL = registryClient.getServiceURL(serviceURI, "https");
             return baseURL;
         }
         catch (Exception ex)
         {
-            throw new IllegalArgumentException("Invalid URI: " + groupID,
-                    ex);
+            throw new IllegalArgumentException("Invalid URI: " + groupID, ex);
         }
     }
 
