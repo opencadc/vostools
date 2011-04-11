@@ -70,6 +70,7 @@
 package ca.nrc.cadc.tap;
 
 import ca.nrc.cadc.tap.writer.VOTableWriter;
+import ca.nrc.cadc.uws.Job;
 import java.io.IOException;
 import java.net.URL;
 import java.sql.ResultSet;
@@ -81,6 +82,14 @@ import java.sql.ResultSet;
  */
 public interface ResultStore
 {
+    /**
+     * Set the job performing the store operation. The implementation
+     * may use this to perform custom actions, logging, etc.
+     * 
+     * @param job
+     */
+    void setJob(Job job);
+
     /**
      * Store the ResultSet and returns an
      * URL to the stored file.

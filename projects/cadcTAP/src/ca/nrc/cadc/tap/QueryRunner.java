@@ -401,6 +401,7 @@ public class QueryRunner implements SyncJobRunner
                     if (rs != null)
                     {
                         logger.debug("setting ResultStore filename: " + filename);
+                        rs.setJob(job);
                         rs.setFilename(filename);
                         rs.setContentType(tableWriter.getContentType());
                         url = rs.put(resultSet, tableWriter);
@@ -503,6 +504,7 @@ public class QueryRunner implements SyncJobRunner
                     String filename = "error_" + job.getID() + "." + ewriter.getExtension();
                     if (rs != null)
                     {
+                        rs.setJob(job);
                         rs.setFilename(filename);
                         rs.setContentType(ewriter.getContentType());
                         errorURL = rs.put(t, ewriter);
@@ -520,7 +522,7 @@ public class QueryRunner implements SyncJobRunner
 
                         tList.add(System.currentTimeMillis());
                         sList.add("write error to tmp file: ");
-
+                        fs.setJobID(jobID);
                         errorURL = fs.put(errorFile);
 
                         tList.add(System.currentTimeMillis());
