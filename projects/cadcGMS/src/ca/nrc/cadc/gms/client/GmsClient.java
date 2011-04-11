@@ -742,6 +742,28 @@ public class GmsClient
      * 
      * @param userID
      *            Identifies the user.
+     * @param serviceURI
+     *            the URI of the service
+     * @return The User with all the groups he's member of, or null if not
+     *         found. *
+     * @throws IllegalArgumentException
+     *             If the User ID, or accepted baseServiceURL, or any
+     *             combination of them produces an error.
+     * @throws AccessControlException
+     *             If user not allow to access the resource
+     * 
+     */
+    public User getGMSMembership(X500Principal userID, URI serviceURI)
+    {
+       return getGMSMembership(userID, getServiceURL(serviceURI)); 
+    }
+
+
+    /**
+     * Get groups the the user is member of.
+     * 
+     * @param userID
+     *            Identifies the user.
      * @param baseURL
      *            the base URL of the service that host the groups
      * @return The User with all the groups he's member of, or null if not
@@ -1102,6 +1124,23 @@ public class GmsClient
             con.setSSLSocketFactory(sf);
         return con;
     }
+
+
+    /**
+     * Get groups owned by a user.
+     * 
+     * @param x500Principal
+     *            The principal of the owner
+     * @param serviceURI
+     *            The URI of the service that hosts the groups
+     * @return Collection of Group object
+     */
+    public Collection<Group> getGroups(final X500Principal x500Principal,
+            URI serviceURI)
+    {
+         return getGroups(x500Principal, getServiceURL(serviceURI));
+    }
+
 
     /**
      * Get groups owned by a user.
