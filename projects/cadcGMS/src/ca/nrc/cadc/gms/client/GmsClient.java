@@ -252,7 +252,7 @@ public class GmsClient
         final StringBuilder resourcePath = new StringBuilder(64);
         try
         {
-            resourcePath.append("/");
+            resourcePath.append("/groups/");
             resourcePath.append(URLEncoder.encode(groupID.getFragment(),
                     "UTF-8"));
             resourcePath.append("/");
