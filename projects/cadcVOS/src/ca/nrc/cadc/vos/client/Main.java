@@ -89,6 +89,8 @@ import org.apache.log4j.Logger;
 
 import ca.nrc.cadc.auth.CertCmdArgUtil;
 import ca.nrc.cadc.auth.RunnableAction;
+import ca.nrc.cadc.auth.X509CertificateChain;
+import ca.nrc.cadc.date.DateUtil;
 import ca.nrc.cadc.reg.client.RegistryClient;
 import ca.nrc.cadc.util.ArgumentMap;
 import ca.nrc.cadc.util.Log4jInit;
@@ -106,6 +108,11 @@ import ca.nrc.cadc.vos.VOSURI;
 import ca.nrc.cadc.vos.View;
 import ca.nrc.cadc.vos.Transfer.Direction;
 import java.security.AccessControlException;
+import java.security.cert.CertificateExpiredException;
+import java.security.cert.X509Certificate;
+import java.text.DateFormat;
+import java.util.Date;
+import java.util.Set;
 
 /**
  * @author zhangsa
@@ -622,10 +629,41 @@ public class Main implements Runnable
         try
         {
             this.subject = CertCmdArgUtil.initSubject(argMap, true);
+            
+            // check that loaded certficate chain is valid right now
+            // TODO: should this be moved into CertCmdArgUtil?
+            if (subject != null)
+            {
+                Set<X509CertificateChain> certs = subject.getPublicCredentials(X509CertificateChain.class);
+                if (certs.size() == 0)
+                {
+                    // subject without certs means something went wrong above
+                    throw new RuntimeException("BUG: failed to load certficate");
+                }
+                DateFormat df = DateUtil.getDateFormat(DateUtil.ISO_DATE_FORMAT, DateUtil.LOCAL);
+                X509CertificateChain chain = certs.iterator().next(); // the first one
+                Date start = null;
+                Date end = null;
+                for (X509Certificate c : chain.getChain())
+                {
+                    try
+                    {
+                        start = c.getNotBefore();
+                        end = c.getNotAfter();
+                        c.checkValidity();
+
+                    }
+                    catch (CertificateExpiredException exp)
+                    {
+                        log.error("certificate has expired (valid from " + df.format(start) + " to " + df.format(end) + ")");
+                        System.exit(INIT_STATUS);
+                    }
+                }
+            }
         }
         catch(Exception ex)
         {
-            log.error("failed to initialise SSL from certificates: " + ex.getMessage());
+            log.error("failed to load certificates: " + ex.getMessage());
             System.exit(INIT_STATUS);
         }
 
