@@ -89,6 +89,8 @@ import javax.security.auth.x500.X500Principal;
 import org.apache.log4j.Logger;
 
 import ca.nrc.cadc.net.NetUtil;
+import java.util.Arrays;
+import javax.servlet.http.HttpServletRequest;
 
 /**
  * Security utility.
@@ -168,14 +170,13 @@ public class AuthenticationUtil
     /**
      * Create a complete Subject with principal(s) and possibly X509 credentials.
      * This is a convenience method that gets the remote user and/or client
-     * certficate from the request and calls
+     * certficate(s) from the request and calls
      * getSubject(String, Collection<X509Certificate>).
      *
      * @see #getSubject(String, Collection<X509Certificate>)
      * @param request
      * @return a Subject with all available request content
      */
-    /*
     public static Subject getSubject(HttpServletRequest request)
     {
         String remoteUser = request.getRemoteUser();
@@ -185,7 +186,6 @@ public class AuthenticationUtil
             certs = Arrays.asList(ca);
         return getSubject(remoteUser, certs);
     }
-    */
     
     /**
      * Create a complete Subject with principal(s) and credentials (X509Certificate).
