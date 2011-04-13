@@ -119,6 +119,7 @@ public class AuthenticationUtil
             Class c = Class.forName(cname);
             Object o = c.newInstance();
             Authenticator ret = (Authenticator) o;
+            log.debug("Authenticator: " + cname);
             return ret;
         }
         catch(Throwable t)
@@ -126,6 +127,7 @@ public class AuthenticationUtil
             if ( !DEFAULT_AUTH.equals(cname) )
                 log.error("failed to load Authenticator: " + cname);
         }
+        log.debug("Authenticator: null");
         return null;
     }
     
@@ -229,10 +231,18 @@ public class AuthenticationUtil
         if (certs != null && certs.size() > 0)
             chain = new X509CertificateChain(certs);
         Subject ret = getSubject(remoteUser, chain);
+        
         // try to use an Authenticator
-        Authenticator auth = getAuthenticator();
-        if (auth != null)
-            ret = auth.getSubject(ret);
+        try
+        {
+            Authenticator auth = getAuthenticator();
+            if (auth != null)
+                ret = auth.getSubject(ret);
+        }
+        catch(Throwable t)
+        {
+            log.error("failed to invoke Authenticator", t);
+        }
         return ret;
     }
 
