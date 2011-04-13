@@ -83,6 +83,11 @@ import org.junit.BeforeClass;
 import org.junit.Test;
 
 import ca.nrc.cadc.util.Log4jInit;
+import java.security.cert.X509Certificate;
+import java.util.Collection;
+import java.util.Set;
+import javax.security.auth.Subject;
+import org.junit.Assert;
 
 /**
  * Tests the methods in AuthenticationUtil
@@ -338,7 +343,7 @@ public class AuthenticationUtilTest
             try
             {
                 AuthenticationUtil.canonizeDistinguishedName(toBeConverted);
-                assertTrue("[" + toBeConverted + "] should have thrown IllegalArguementException", false);
+                assertTrue("[" + toBeConverted + "] should have thrown IllegalArgumentException", false);
             }
             catch (IllegalArgumentException e)
             {
@@ -347,6 +352,39 @@ public class AuthenticationUtilTest
             }
         }
         
+    }
+
+    @Test
+    public void testGetSubjectHttpLogin()
+    {
+        log.debug("testGetSubjectHttpLogin - START");
+        try
+        {
+            Collection<X509Certificate> certs = null;
+            X509CertificateChain chain = null;
+
+            Subject s;
+            Set<Principal> prin;
+            Principal p;
+
+            // http login
+            s = AuthenticationUtil.getSubject("foo", certs);
+            prin = s.getPrincipals();
+            Assert.assertNotNull(prin);
+            Assert.assertTrue("num principals", (prin.size() == 1));
+            p = prin.iterator().next();
+            Assert.assertNotNull(p);
+            Assert.assertEquals(p.getName(), "foo");
+        }
+        catch(Exception unexpected)
+        {
+            log.error("unexpected exception", unexpected);
+            Assert.fail("unexpected exception: " + unexpected);
+        }
+        finally
+        {
+            log.debug("testGetSubjectHttpLogin - DONE");
+        }
     }
     
 

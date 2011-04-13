@@ -87,7 +87,7 @@
 
     <property name="project" value="cadcUtil" />
 
-    <property name="jars" value="${ext.lib}/servlet-api.jar:${ext.lib}/log4j.jar:${ext.lib}/jdom.jar:${ext.lib}/spring.jar" />
+    <property name="jars" value="${ext.lib}/log4j.jar:${ext.lib}/jdom.jar:${ext.lib}/spring.jar" />
     <property name="resources.dir" value="test/resources/" />
 
     <target name="build" depends="compile">

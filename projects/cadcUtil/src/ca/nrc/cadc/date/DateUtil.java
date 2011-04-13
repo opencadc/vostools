@@ -282,6 +282,7 @@ public class DateUtil
      * @param d
      * @param format
      * @return Formatted Date in String format.
+     * @deprecated
      */
     public static String toString(Date d, String format)
     {

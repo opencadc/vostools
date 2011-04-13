@@ -76,7 +76,6 @@ import java.security.Principal;
 import java.security.PrivateKey;
 import java.security.cert.X509Certificate;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.HashSet;
@@ -86,7 +85,6 @@ import java.util.Set;
 
 import javax.security.auth.Subject;
 import javax.security.auth.x500.X500Principal;
-import javax.servlet.http.HttpServletRequest;
 
 import org.apache.log4j.Logger;
 
@@ -105,8 +103,30 @@ public class AuthenticationUtil
     private static final String[] ORDERED_RDN_KEYS = new String[]
         {"DC", "CN", "OU", "O", "STREET", "L", "ST", "C", "UID"};
 
+    private static final String DEFAULT_AUTH = Authenticator.class.getName() + "Impl";
+    
     private static Logger log = Logger.getLogger(AuthenticationUtil.class);
 
+    private static Authenticator getAuthenticator()
+    {
+        String cname = System.getProperty(Authenticator.class.getName());
+        if (cname == null)
+            cname = DEFAULT_AUTH;
+        try
+        {
+            Class c = Class.forName(cname);
+            Object o = c.newInstance();
+            Authenticator ret = (Authenticator) o;
+            return ret;
+        }
+        catch(Throwable t)
+        {
+            if ( !DEFAULT_AUTH.equals(cname) )
+                log.error("failed to load Authenticator: " + cname);
+        }
+        return null;
+    }
+    
     /**
      * Method to extract Principals from a request. Two types of
      * principals are currently supported: X500Principal and
@@ -117,9 +137,9 @@ public class AuthenticationUtil
      *            request that contains use authentication information
      * @return Set of Principals extracted from the request. The Set is
      *         empty if no Principals have been extracted.
-     * @deprecated use getSubject(HttpServletRequest) instead
      */
-    public static Set<Principal> getPrincipals(HttpServletRequest request)
+    /*
+    private static Set<Principal> getPrincipals(HttpServletRequest request)
     {
         Set<Principal> principals = new HashSet<Principal>();
 
@@ -143,24 +163,30 @@ public class AuthenticationUtil
 
         return principals;
     }
-
+    */
+    
     /**
      * Create a complete Subject with principal(s) and possibly X509 credentials.
+     * This is a convenience method that gets the remote user and/or client
+     * certficate from the request and calls
+     * getSubject(String, Collection<X509Certificate>).
      *
      * @see #getSubject(String, Collection<X509Certificate>)
      * @param request
      * @return a Subject with all available request content
-     * @deprecated use getSubject(String,Collection<X509Certificate>)
      */
+    /*
     public static Subject getSubject(HttpServletRequest request)
     {
         String remoteUser = request.getRemoteUser();
         X509Certificate[] ca = (X509Certificate[]) request.getAttribute("javax.servlet.request.X509Certificate");
         Collection<X509Certificate> certs = null;
-        if (ca != null && ca.length > 0) certs = Arrays.asList(ca);
+        if (ca != null && ca.length > 0)
+            certs = Arrays.asList(ca);
         return getSubject(remoteUser, certs);
     }
-
+    */
+    
     /**
      * Create a complete Subject with principal(s) and credentials (X509Certificate).
      * This method tries to detect the use of a proxy certificate and add the Principal
@@ -169,17 +195,28 @@ public class AuthenticationUtil
      * If the user has connected anonymously, the returned Subject will have no
      * principals and no credentials, but should be safe to use with Subject.doAs(...).
      * </p><p>
+     * This method will also try to load an implementation of the Authenticator interface
+     * and use it to process the Subject before return. By default, it will try to load a
+     * class named <code>ca.nrc.cadc.auth.AuthenticatorImpl</code>. Applications may override
+     * this default class name by setting the <em>ca.nrc.cadc.auth.Authenticator</em> system
+     * property to the class name of their implementation. Note that the default implementation
+     * class does not exist in this library  so implementors can provide that exact class and
+     * then not need the system property.
+     * </p><p>
      * To get the collection of certficates in the servlet environment:
      * <pre>
-     *   X509Certificate[] ca = (X509Certificate[]) request.getAttribute("javax.servlet.request.X509Certificate");
+     *   X509Certificate[] ca =
+     *       (X509Certificate[]) request.getAttribute("javax.servlet.request.X509Certificate");
      *   Collection<X509Certificate> certs = null;
-     *   if (ca != null && ca.length > 0) certs = Arrays.asList(ca);
+     *   if (ca != null && ca.length > 0)
+     *       certs = Arrays.asList(ca);
      * </pre>
      * In Restlet:
      * <pre>
      *   Request request = getRequest();
      *   Map<String, Object> requestAttributes = request.getAttributes();
-     *   Collection<X509Certificate> certs = (Collection<X509Certificate>) requestAttributes.get(CERTIFICATE_REQUEST_ATTRIBUTE_NAME);
+     *   Collection<X509Certificate> certs = 
+     *       (Collection<X509Certificate>) requestAttributes.get("org.restlet.https.clientCertificates");
      * </pre>
      *
      * @param remoteUser the remote user id (e.g. from http authentication)
@@ -189,8 +226,14 @@ public class AuthenticationUtil
     public static Subject getSubject(String remoteUser, Collection<X509Certificate> certs)
     {
         X509CertificateChain chain = null;
-        if (certs != null && certs.size() > 0) chain = new X509CertificateChain(certs);
-        return getSubject(remoteUser, chain);
+        if (certs != null && certs.size() > 0)
+            chain = new X509CertificateChain(certs);
+        Subject ret = getSubject(remoteUser, chain);
+        // try to use an Authenticator
+        Authenticator auth = getAuthenticator();
+        if (auth != null)
+            ret = auth.getSubject(ret);
+        return ret;
     }
 
     /**
@@ -206,11 +249,17 @@ public class AuthenticationUtil
         return getSubject(null, chain);
     }
 
-    @SuppressWarnings("unchecked")
+    /**
+     * Create a subject from the specified user name and certficate chain.
+     * 
+     * @param remoteUser
+     * @param chain
+     * @return
+     */
     public static Subject getSubject(String remoteUser, X509CertificateChain chain)
     {
         Set<Principal> principals = new HashSet<Principal>();
-        Set publicCred = new HashSet();
+        Set<Object> publicCred = new HashSet<Object>();
         Set privateCred = new HashSet();
 
         // basic authentication
@@ -229,8 +278,8 @@ public class AuthenticationUtil
             // than extracting and putting it into the privateCred set... TBD
         }
 
-        // put the certficates into pubCredentials?
-        return new Subject(false, principals, publicCred, privateCred);
+        Subject ret = new Subject(false, principals, publicCred, privateCred);
+        return ret;
     }
 
     // Encode a Subject in the format:

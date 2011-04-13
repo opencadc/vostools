@@ -140,7 +140,7 @@ public class Log4jInit
     }
 
     /**
-     * Consigure log4j for use in a GUI. All output is done using the
+     * Configure log4j for use in a GUI. All output is done using the
      * same format. This method sets up logging to the specified writer
      * on every call, so should be called with a non-null writer only once
      * (per writer). It may be called multiple times to set logging levels for
@@ -159,8 +159,6 @@ public class Log4jInit
                 // set the overall logging level to ERROR
                 Logger.getRootLogger().setLevel(Level.ERROR);
 
-                // create an appender for WARN, ERROR and FATAL with LONG_FORMAT
-                // message prefix
                 WriterAppender app =
                     new WriterAppender(new PatternLayout(LONG_FORMAT), dest);
                 LevelRangeFilter filter = new LevelRangeFilter();
