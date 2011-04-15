@@ -102,13 +102,6 @@ public class TransferReader
 
     private static Logger log = Logger.getLogger(TransferReader.class);
 
-    private static final String vospaceSchemaUrl;
-    static
-    {
-        vospaceSchemaUrl = XmlUtil.getResourceUrlString(VOSPACE_SCHEMA_RESOURCE, NodeReader.class);
-        log.debug("vospaceSchemaUrl: " + vospaceSchemaUrl);
-    }
-    
     protected Map<String, String> schemaMap;
 
     /**
@@ -127,6 +120,9 @@ public class TransferReader
     {
         if (enableSchemaValidation)
         {
+            String vospaceSchemaUrl = XmlUtil.getResourceUrlString(VOSPACE_SCHEMA_RESOURCE, TransferReader.class);
+            if (vospaceSchemaUrl == null)
+                throw new RuntimeException("failed to find " + VOSPACE_SCHEMA_RESOURCE + " in classpath");
             this.schemaMap = new HashMap<String, String>();
             schemaMap.put(VOSPACE_SCHEMA_URL, vospaceSchemaUrl);
             log.debug("schema validation enabled");

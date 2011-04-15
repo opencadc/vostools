@@ -101,28 +101,10 @@ public class NodeReader
 {
     private static final String VOSPACE_SCHEMA_URL = "http://www.ivoa.net/xml/VOSpace/v2.0";
     private static final String VOSPACE_SCHEMA_RESOURCE = "VOSpace-2.0.xsd";
-    private static final String UWS_SCHEMA_URL = "http://www.ivoa.net/xml/UWS/v1.0";
-    private static final String UWS_SCHEMA_RESOURCE = "UWS-v1.0.xsd";
     private static final String XLINK_SCHEMA_URL = "http://www.w3.org/1999/xlink";
     private static final String XLINK_SCHEMA_RESOURCE = "XLINK.xsd";
 
     private static final Logger log = Logger.getLogger(NodeReader.class);
-    
-    private static final String vospaceSchemaUrl;
-    private static final String uwsSchemaUrl;
-    private static final String xlinkSchemaUrl;
-    static
-    {
-        vospaceSchemaUrl = XmlUtil.getResourceUrlString(VOSPACE_SCHEMA_RESOURCE, NodeReader.class);
-        log.debug("vospaceSchemaUrl: " + vospaceSchemaUrl);
-        
-        uwsSchemaUrl = XmlUtil.getResourceUrlString(UWS_SCHEMA_RESOURCE, NodeReader.class);
-        log.debug("uwsSchemaUrl: " + uwsSchemaUrl);
-        
-        xlinkSchemaUrl = XmlUtil.getResourceUrlString(XLINK_SCHEMA_RESOURCE, NodeReader.class);
-        log.debug("xlinkSchemaUrl: " + xlinkSchemaUrl);
-    }
-
     
     protected Map<String, String> schemaMap;
     protected Namespace xsiNamespace;
@@ -143,9 +125,19 @@ public class NodeReader
     {
         if (enableSchemaValidation)
         {
+            String vospaceSchemaUrl = XmlUtil.getResourceUrlString(VOSPACE_SCHEMA_RESOURCE, NodeReader.class);
+            log.debug("vospaceSchemaUrl: " + vospaceSchemaUrl);
+
+            String xlinkSchemaUrl = XmlUtil.getResourceUrlString(XLINK_SCHEMA_RESOURCE, NodeReader.class);
+            log.debug("xlinkSchemaUrl: " + xlinkSchemaUrl);
+
+            if (vospaceSchemaUrl == null)
+                throw new RuntimeException("failed to load " + VOSPACE_SCHEMA_RESOURCE + " from classpath");
+            if (vospaceSchemaUrl == null)
+                throw new RuntimeException("failed to load " + XLINK_SCHEMA_RESOURCE + " from classpath");
+
             schemaMap = new HashMap<String, String>();
             schemaMap.put(VOSPACE_SCHEMA_URL, vospaceSchemaUrl);
-            schemaMap.put(UWS_SCHEMA_URL, uwsSchemaUrl);
             schemaMap.put(XLINK_SCHEMA_URL, xlinkSchemaUrl);
             log.debug("schema validation enabled");
         }
