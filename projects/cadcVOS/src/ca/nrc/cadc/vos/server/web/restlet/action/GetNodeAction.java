@@ -180,10 +180,8 @@ public class GetNodeAction extends NodeAction
             url.append(scheme);
             url.append("://");
             url.append(server);
-            if (stylesheetReference.startsWith("/"))
-            {
+            if (!stylesheetReference.startsWith("/"))
                 url.append("/");
-            }
             url.append(stylesheetReference);
             return url.toString();
         }
