@@ -8,7 +8,7 @@
 *  National Research Council            Conseil national de recherches
 *  Ottawa, Canada, K1A 0R6              Ottawa, Canada, K1A 0R6
 *  All rights reserved                  Tous droits réservés
-*                                       
+*
 *  NRC disclaims any warranties,        Le CNRC dénie toute garantie
 *  expressed, implied, or               énoncée, implicite ou légale,
 *  statutory, of any kind with          de quelque nature que ce
@@ -31,10 +31,10 @@
 *  software without specific prior      de ce logiciel sans autorisation
 *  written permission.                  préalable et particulière
 *                                       par écrit.
-*                                       
+*
 *  This file is part of the             Ce fichier fait partie du projet
 *  OpenCADC project.                    OpenCADC.
-*                                       
+*
 *  OpenCADC is free software:           OpenCADC est un logiciel libre ;
 *  you can redistribute it and/or       vous pouvez le redistribuer ou le
 *  modify it under the terms of         modifier suivant les termes de
@@ -44,7 +44,7 @@
 *  either version 3 of the              : soit la version 3 de cette
 *  License, or (at your option)         licence, soit (à votre gré)
 *  any later version.                   toute version ultérieure.
-*                                       
+*
 *  OpenCADC is distributed in the       OpenCADC est distribué
 *  hope that it will be useful,         dans l’espoir qu’il vous
 *  but WITHOUT ANY WARRANTY;            sera utile, mais SANS AUCUNE
@@ -54,7 +54,7 @@
 *  PURPOSE.  See the GNU Affero         PARTICULIER. Consultez la Licence
 *  General Public License for           Générale Publique GNU Affero
 *  more details.                        pour plus de détails.
-*                                       
+*
 *  You should have received             Vous devriez avoir reçu une
 *  a copy of the GNU Affero             copie de la Licence Générale
 *  General Public License along         Publique GNU Affero avec
@@ -69,85 +69,47 @@
 
 package ca.nrc.cadc.vos.server.web.restlet;
 
+import ca.nrc.cadc.vos.server.web.restlet.resource.ViewsResource;
 import org.apache.log4j.Logger;
 import org.restlet.Application;
 import org.restlet.Context;
-import org.restlet.Restlet;
 
-import ca.nrc.cadc.vos.InvalidServiceException;
-import ca.nrc.cadc.vos.server.util.BeanUtil;
+import org.restlet.Restlet;
+import org.restlet.routing.Router;
+import org.restlet.routing.TemplateRoute;
 
 /**
- * Application for handling Node routing and resources.
- * 
- * @author majorb
+ * Simple restlet application to output all the views supported by this VOSpace.
  *
+ * @author pdowler
  */
-public class VOSpaceApplication extends Application
+public class ViewsApplication  extends Application
 {
-    
-    private static final Logger log = Logger.getLogger(VOSpaceApplication.class);
+    private static final Logger log = Logger.getLogger(ViewsApplication.class);
 
-    public VOSpaceApplication()
+    public ViewsApplication()
     {
     }
 
-    public VOSpaceApplication(final Context context)
+    public ViewsApplication(final Context context)
     {
         super(context);
     }
 
+    private class ViewsRouter extends Router
+    {
+        public ViewsRouter(final Context context)
+        {
+            super(context);
+            log.debug("attaching ViewsResource");
+            TemplateRoute nodeRoute = attach("", ViewsResource.class);
+            log.debug("attaching ViewsResource - DONE");
+        }
+    }
+    
     @Override
     public Restlet createInboundRoot()
     {
-        
-        Context context = getContext();
-        
-        // Get and save the vospace uri in the input representation
-        // for later use
-        final String vosURI = context.getParameters().
-                getFirstValue(BeanUtil.IVOA_VOS_URI);
-        if (vosURI == null || vosURI.trim().length() == 0)
-        {
-            final String message = "Context parameter not set: " + BeanUtil.IVOA_VOS_URI;
-            log.error(message);
-            throw new RuntimeException(message);
-        }
-        
-        // save the vospace uri in the application context
-        context.getAttributes().put(BeanUtil.IVOA_VOS_URI, vosURI);
-        
-        // stylesheet reference
-        String stylesheetReference = context.getParameters().getFirstValue(BeanUtil.VOS_STYLESHEET_REFERENCE);
-        context.getAttributes().put(BeanUtil.VOS_STYLESHEET_REFERENCE, stylesheetReference);
-        
-        // Create the configured NodePersistence bean
-        createContextBean(context, ca.nrc.cadc.vos.server.NodePersistence.class, BeanUtil.VOS_NODE_PERSISTENCE);
-        
-        return new VOSpaceRouter(context);
+        return new ViewsRouter(getContext());
     }
-    
-    private void createContextBean(Context context, Class<?> beanInterface, String contextParam)
-    {
-        try
-        {
-            final String className = context.getParameters().
-                    getFirstValue(contextParam);
-            final BeanUtil beanUtil = new BeanUtil(className);
-            Object bean = beanUtil.createBean();
-            if ((beanInterface != null) && !beanInterface.isInstance(bean))
-            {
-                throw new InvalidServiceException("Bean does not implement interface: " + beanInterface.getName());
-            }
-            context.getAttributes().put(contextParam, bean);
-            log.debug("Added " + contextParam + " bean to application context: " + className);
-        }
-        catch (InvalidServiceException e)
-        {
-            final String message = "Could not create bean: " + contextParam + ": " + e.getMessage();
-            log.error(message, e);
-            throw new RuntimeException(message, e);
-        }
-    }
-    
 }
