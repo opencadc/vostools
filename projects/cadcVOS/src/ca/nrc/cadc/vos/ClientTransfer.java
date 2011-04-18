@@ -79,8 +79,11 @@ import javax.net.ssl.SSLSocketFactory;
 import org.apache.log4j.Logger;
 
 import ca.nrc.cadc.net.HttpDownload;
+import ca.nrc.cadc.net.HttpRequestProperty;
 import ca.nrc.cadc.net.HttpUpload;
 import ca.nrc.cadc.net.OutputStreamWrapper;
+import java.util.ArrayList;
+import java.util.List;
 
 /**
  * @author zhangsa
@@ -94,6 +97,7 @@ public class ClientTransfer extends Transfer
 
     private File localFile;
     private OutputStreamWrapper wrapper;
+    private List<HttpRequestProperty> httpRequestProperties;
     
     /**
      * 
@@ -101,6 +105,7 @@ public class ClientTransfer extends Transfer
     public ClientTransfer()
     {
         super();
+        this.httpRequestProperties = new ArrayList<HttpRequestProperty>();
     }
 
     /**
@@ -116,6 +121,17 @@ public class ClientTransfer extends Transfer
         super.setView(transfer.getView());
         super.setProtocols(transfer.getProtocols());
         super.setKeepBytes(transfer.isKeepBytes());
+    }
+
+    /**
+     * Set additional request headers.
+     *
+     * @param header
+     * @param value
+     */
+    public void setRequestProperty(String header, String value)
+    {
+        httpRequestProperties.add(new HttpRequestProperty(header,value));
     }
 
     public void setSSLSocketFactory(SSLSocketFactory sslSocketFactory)
@@ -164,9 +180,7 @@ public class ClientTransfer extends Transfer
         }
         catch (MalformedURLException e)
         {
-            log.error("get putEndpoint");
-            e.printStackTrace();
-            throw new IllegalArgumentException(e);
+            throw new IllegalArgumentException("failed to create upload endpoint url", e);
         }
         log.debug(url);
 
@@ -217,9 +231,7 @@ public class ClientTransfer extends Transfer
         }
         catch (MalformedURLException e)
         {
-            log.error("get putEndpoint");
-            e.printStackTrace();
-            throw new IllegalArgumentException(e);
+            throw new IllegalArgumentException("failed to create download endpoint url", e);
         }
         log.debug(url);
 
