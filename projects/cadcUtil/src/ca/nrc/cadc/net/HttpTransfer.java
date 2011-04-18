@@ -93,6 +93,8 @@ import ca.nrc.cadc.net.event.ProgressListener;
 import ca.nrc.cadc.net.event.TransferEvent;
 import ca.nrc.cadc.net.event.TransferListener;
 import ca.nrc.cadc.util.FileMetadata;
+import java.util.ArrayList;
+import java.util.List;
 
 /**
  *
@@ -111,6 +113,7 @@ public abstract class HttpTransfer implements Runnable
     protected boolean fireEvents = false;
     protected boolean fireCancelOnce = true;
 
+    protected List<RequestProperty> requestProperties;
     protected String userAgent;
     protected boolean use_nio = false; // throughput not great, needs work before use
 
@@ -134,10 +137,22 @@ public abstract class HttpTransfer implements Runnable
         DEFAULT_USER_AGENT = "OpenCADC/" + HttpTransfer.class.getName() + "/" + jv + "/" + os;
     }
     
+    protected class RequestProperty
+    {
+        String property;
+        String value;
 
+        public RequestProperty(String property, String value)
+        {
+            this.property = property;
+            this.value = value;
+        }
+
+    }
     protected HttpTransfer() 
     {
         this.go = true;
+        this.requestProperties = new ArrayList<RequestProperty>();
     }
 
     public URL getURL() { return remoteURL; }
@@ -152,6 +167,19 @@ public abstract class HttpTransfer implements Runnable
         this.userAgent = userAgent;
         if (userAgent == null)
             this.userAgent = DEFAULT_USER_AGENT;
+    }
+
+    /**
+     * Set additional request headers. Do not set the same value twice by using this
+     * method and the specific set methods (like setUserAgent, setContentType, etc) in this
+     * class or subclasses.
+     * 
+     * @param header
+     * @param value
+     */
+    public void setRequestHeader(String header, String value)
+    {
+        requestProperties.add(new RequestProperty(header, value));
     }
 
     public void setSSLSocketFactory(SSLSocketFactory sslSocketFactory)

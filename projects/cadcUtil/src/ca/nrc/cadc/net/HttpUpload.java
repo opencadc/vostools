@@ -176,7 +176,7 @@ public class HttpUpload extends HttpTransfer
             fireEvent(TransferEvent.CONNECTING);
 
             HttpURLConnection conn = (HttpURLConnection) this.remoteURL.openConnection();
-            
+
             if (conn instanceof HttpsURLConnection)
             {
                 HttpsURLConnection sslConn = (HttpsURLConnection) conn;
@@ -233,7 +233,10 @@ public class HttpUpload extends HttpTransfer
                 conn.setRequestProperty("Content-Encoding", contentEncoding);
             if (contentMD5 != null)
                 conn.setRequestProperty("Content-MD5", contentMD5);
-            
+
+            for (RequestProperty rp : requestProperties)
+                conn.setRequestProperty(rp.property, rp.value);
+
             int bSize = bufferSize;
             if (localFile != null && localFile.length() < bSize)
                 bSize = (int) localFile.length();

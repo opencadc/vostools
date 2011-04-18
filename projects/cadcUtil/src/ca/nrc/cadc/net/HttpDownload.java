@@ -661,6 +661,8 @@ public class HttpDownload extends HttpTransfer
             conn.setInstanceFollowRedirects(true);
             conn.setRequestProperty("Accept", "*/*");
             conn.setRequestProperty("User-Agent", userAgent);
+            for (RequestProperty rp : requestProperties)
+                conn.setRequestProperty(rp.property, rp.value);
             
             if (pkey != null)
             {
