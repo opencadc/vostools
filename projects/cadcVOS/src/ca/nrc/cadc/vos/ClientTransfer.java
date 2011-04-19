@@ -121,6 +121,7 @@ public class ClientTransfer extends Transfer
         super.setView(transfer.getView());
         super.setProtocols(transfer.getProtocols());
         super.setKeepBytes(transfer.isKeepBytes());
+        this.httpRequestProperties = new ArrayList<HttpRequestProperty>();
     }
 
     /**
@@ -189,6 +190,7 @@ public class ClientTransfer extends Transfer
             upload = new HttpUpload(localFile, url);
         else
             upload = new HttpUpload(wrapper, url);
+        upload.setRequestProperties(httpRequestProperties);
         
         upload.setSSLSocketFactory(sslSocketFactory);
         upload.run();
@@ -237,6 +239,7 @@ public class ClientTransfer extends Transfer
 
         HttpDownload download = new HttpDownload(url, file);
         download.setOverwrite(true);
+        download.setRequestProperties(httpRequestProperties);
         download.setSSLSocketFactory(sslSocketFactory);
         download.run();
         if (download.getThrowable() != null)
