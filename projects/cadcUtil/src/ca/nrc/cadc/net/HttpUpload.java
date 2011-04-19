@@ -234,8 +234,8 @@ public class HttpUpload extends HttpTransfer
             if (contentMD5 != null)
                 conn.setRequestProperty("Content-MD5", contentMD5);
 
-            for (RequestProperty rp : requestProperties)
-                conn.setRequestProperty(rp.property, rp.value);
+            for (HttpRequestProperty rp : requestProperties)
+                conn.setRequestProperty(rp.getProperty(), rp.getValue());
 
             int bSize = bufferSize;
             if (localFile != null && localFile.length() < bSize)

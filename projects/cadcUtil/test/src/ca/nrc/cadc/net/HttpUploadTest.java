@@ -312,4 +312,60 @@ public class HttpUploadTest
                 tmp.delete();
         }
     }
+
+    @Test
+    public void testUploadWithCustomRequestProperty() throws Exception
+    {
+        log.debug("TEST: testUploadWithCustomRequestProperty");
+        URL dest = httpsURL;
+        File src = srcFile;
+        File tmp = null;
+        String contentType = "application/octet-stream";
+        try
+        {
+            Subject s = SSLUtil.createSubject(SSL_CERT, SSL_KEY);
+
+            HttpUpload up = new HttpUpload(new FileInputStream(src), dest);
+            up.setContentType(contentType);
+            up.setRequestProperty("X-Custom-Prop", "hello");
+
+            Subject.doAs(s, new RunnableAction(up));
+            if (up.getThrowable() != null)
+                log.error("run failed", up.getThrowable());
+            Assert.assertNull("upload failure", up.getThrowable());
+
+            //URL check = new URL("http", dest.getHost(), dest.getPath());
+            URL check = dest;
+
+            tmp = File.createTempFile("public"+HttpUploadTest.class.getSimpleName(), ".out");
+
+            HttpDownload down = new HttpDownload(HttpUploadTest.class.getSimpleName(), check, tmp);
+            down.setOverwrite(true);
+
+            Subject.doAs(s, new RunnableAction(down));
+            Assert.assertNull("download failure", down.getThrowable());
+
+            Assert.assertEquals("content-length header", src.length(), down.getContentLength());
+
+            // this really tests server-side functionality, so disable it for now
+            //Assert.assertEquals("content-type header", contentType, down.getContentType());
+
+            File out = down.getFile();
+            Assert.assertNotNull("result file", out);
+            Assert.assertEquals("file sizes", srcFile.length(), out.length());
+
+            byte[] resultBytes = FileUtil.readFile(tmp);
+            Assert.assertArrayEquals("bytes", origBytes, resultBytes);
+        }
+        catch (Throwable t)
+        {
+            t.printStackTrace();
+            Assert.fail("unexpected exception: " + t);
+        }
+        finally
+        {
+            if (tmp != null && tmp.exists())
+                tmp.delete();
+        }
+    }
 }

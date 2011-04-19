@@ -118,7 +118,7 @@ public class HttpDownload extends HttpTransfer
     private OutputStream destStream;
     
     private File destFile;
-    private boolean skipped = false;
+    //private boolean skipped = false;
     private String contentType;
     private String contentEncoding;
     private long contentLength = -1;
@@ -316,37 +316,8 @@ public class HttpDownload extends HttpTransfer
             
             fireEvent(TransferEvent.CONNECTING);
 
-            if (destStream == null) // downloading to a file
-                doHead();
-
-            fireEvent(TransferEvent.CONNECTED);
+            doGet();
             
-            boolean doDownload = true;
-            if (destStream == null) // downloading to file
-                doDownload = doCheckDestination();
-
-            if (skipped)
-                go = false;
-            if (!go)
-                return; // jump to finally
-            
-            if (doDownload)
-            {
-                fireEvent(origFile, TransferEvent.TRANSFERING);
-                File tmp = origFile;
-                if (destStream == null) // downloading to file
-                    origFile = new File(origFile.getAbsolutePath() + ".part");
-
-                doGet();
-
-                log.debug("download completed");
-                if (destStream == null) // downloading to file
-                {
-                    log.debug("renaming " + origFile +" to " + tmp);
-                    origFile.renameTo(tmp);
-                    origFile = tmp;
-                }
-            }
             if (decompress && decompressor != NONE)
             {
                 fireEvent(decompFile, TransferEvent.DECOMPRESSING);
@@ -457,7 +428,7 @@ public class HttpDownload extends HttpTransfer
                 else
                 {
                     doDownload = false;
-                    this.skipped = true;
+                    //this.skipped = true;
                 }
             }
         }
@@ -480,7 +451,7 @@ public class HttpDownload extends HttpTransfer
                 this.destFile = decompFile;
                 this.removeFile = null;
                 doDownload = false;
-                this.skipped = true;
+                //this.skipped = true;
             }
         }
         else
@@ -497,6 +468,7 @@ public class HttpDownload extends HttpTransfer
     }
     
     // perform http head, capture all header fields, and init output File vars
+    // NOTE: no longer used -- run() calls doGet directly
     private void doHead()
         throws IOException, InterruptedException
     {
@@ -537,7 +509,13 @@ public class HttpDownload extends HttpTransfer
                     
             }
         }
+        processHeader(conn);
+    }
 
+    // called from doHead and doGet to capture HTTP standard header values
+    private void processHeader(HttpURLConnection conn)
+        throws IOException, InterruptedException
+    {
         // determine filename and use destDir
         String origFilename = null;
 
@@ -628,7 +606,7 @@ public class HttpDownload extends HttpTransfer
         log.debug("    decompressor: " + decompressor);
         log.debug("    lastModified: " + lastModified);
     }
-    
+
     private void doGet()
         throws IOException, InterruptedException
     {
@@ -640,17 +618,7 @@ public class HttpDownload extends HttpTransfer
         OutputStream ostream = null;
         try
         {
-            this.size = contentLength;
-            String pkey = null;
-            String pvalue = null;
-            boolean append = false;
-            long startingPos = 0;
-            if (destStream == null && origFile.exists() && origFile.length() < contentLength) // partial file from previous download
-            {
-                pkey = "Range";
-                pvalue = "bytes=" + origFile.length() + "-"; // open ended
-            }
-            
+            // open connection
             HttpURLConnection conn = (HttpURLConnection) remoteURL.openConnection();
             log.debug("HttpURLConnection type: " + conn.getClass().getName() + " for GET " + remoteURL);
             if (conn instanceof HttpsURLConnection)
@@ -661,34 +629,81 @@ public class HttpDownload extends HttpTransfer
             conn.setInstanceFollowRedirects(true);
             conn.setRequestProperty("Accept", "*/*");
             conn.setRequestProperty("User-Agent", userAgent);
-            for (RequestProperty rp : requestProperties)
-                conn.setRequestProperty(rp.property, rp.value);
-            
-            if (pkey != null)
-            {
-                log.debug("trying: " + pkey + " = " + pvalue);
-                conn.setRequestProperty(pkey, pvalue);
-            }
-            
+            for (HttpRequestProperty rp : requestProperties)
+                conn.setRequestProperty(rp.getProperty(), rp.getValue());
+
             conn.setRequestMethod("GET");
             int code = conn.getResponseCode();
             log.debug("HTTP GET status: " + code + " for " + remoteURL);
 
-            if (pkey != null && code == 416) // server doesn't like range, retry without it
+            if (destStream == null) // downloading to a file
+                processHeader(conn); // TODO: we may want some of this in streaming mode
+
+            // evaulate overwrite of complete file
+            boolean doDownload = true;
+            if (destStream == null)
+                doDownload = doCheckDestination();
+
+            // go=false means cancelled, doDownload==false means skipped
+            this.go = go && doDownload;
+            if (!go)
+                return;
+
+            // evaluate possible resume?
+            File tmp = origFile;
+            if (destStream == null) // downloading to file
+                origFile = new File(origFile.getAbsolutePath() + ".part");
+            this.size = contentLength;
+            String pkey = null;
+            String pvalue = null;
+            boolean append = false;
+            long startingPos = 0;
+            if (destStream == null && origFile.exists() && origFile.length() < contentLength) // partial file from previous download
             {
-                conn = (HttpURLConnection) remoteURL.openConnection();
+                pkey = "Range";
+                pvalue = "bytes=" + origFile.length() + "-"; // open ended
+            }
+
+            if (pkey != null) // open 2nd connection with a range request
+            {
+                HttpURLConnection rconn = (HttpURLConnection) remoteURL.openConnection();
                 log.debug("HttpURLConnection type: " + conn.getClass().getName() + " for GET " + remoteURL);
-                if (conn instanceof HttpsURLConnection)
+                if (rconn instanceof HttpsURLConnection)
                 {
-                    HttpsURLConnection sslConn = (HttpsURLConnection) conn;
+                    HttpsURLConnection sslConn = (HttpsURLConnection) rconn;
                     initHTTPS(sslConn);
                 }
-                conn.setInstanceFollowRedirects(true);
-                conn.setRequestProperty("Accept", "*/*");
-                conn.setRequestProperty("User-Agent", userAgent);
-                conn.setRequestMethod("GET");
-                code = conn.getResponseCode();
-                log.debug("HTTP GET status: " + code + " for " + remoteURL);
+                rconn.setInstanceFollowRedirects(true);
+                rconn.setRequestProperty("Accept", "*/*");
+                rconn.setRequestProperty("User-Agent", userAgent);
+                for (HttpRequestProperty rp : requestProperties)
+                    rconn.setRequestProperty(rp.getProperty(), rp.getValue());
+                log.debug("trying: " + pkey + " = " + pvalue);
+                rconn.setRequestProperty(pkey, pvalue);
+                rconn.setRequestMethod("GET");
+                int rcode = rconn.getResponseCode();
+                log.debug("HTTP GET status: " + rcode + " for range request to " + remoteURL);
+                if (pkey != null && code == 416) // server doesn't like range, retry without it
+                {
+                    try 
+                    {
+                        log.debug("cannot resume: closing second connection");
+                        rconn.disconnect();
+                    }
+                    catch(Exception ignore) { }
+                    // proceed with original connection
+                }
+                else
+                {
+                    try 
+                    {
+                        log.debug("can resume: closing first connection");
+                        conn.disconnect();
+                    }
+                    catch(Exception ignore) { }
+                    conn = rconn; // use the second connection with partial
+                    code = rcode;
+                }
             }
             
             if (pkey != null && code == HttpURLConnection.HTTP_PARTIAL)
@@ -717,8 +732,12 @@ public class HttpDownload extends HttpTransfer
             else if (code != HttpURLConnection.HTTP_OK)
                 throw new IOException(conn.getResponseMessage());
 
+            fireEvent(TransferEvent.CONNECTED);
+
             // check eventID hook
             findEventID(conn);
+
+            fireEvent(origFile, TransferEvent.TRANSFERING);
 
             boolean wrap = false;
             istream = conn.getInputStream();
@@ -754,6 +773,15 @@ public class HttpDownload extends HttpTransfer
             else
                 ioLoop(istream, ostream, 2*bufferSize, startingPos);
             ostream.flush();
+
+            log.debug("download completed");
+            if (destStream == null) // downloading to file
+            {
+                log.debug("renaming " + origFile +" to " + tmp);
+                origFile.renameTo(tmp);
+                origFile = tmp;
+                destFile = tmp;
+            }
         }
         finally
         {

@@ -75,6 +75,7 @@ import ca.nrc.cadc.util.FileUtil;
 import ca.nrc.cadc.util.Log4jInit;
 import java.io.ByteArrayOutputStream;
 import java.io.File;
+import java.io.FileOutputStream;
 import java.net.URL;
 import javax.security.auth.Subject;
 
@@ -197,7 +198,55 @@ public class HttpDownloadTest
                 dest.delete();
             Assert.assertTrue("dest file does not exist before download", !dest.exists());
             HttpDownload dl = new HttpDownload(src, dest);
-            dl.setOverwrite(false);
+            dl.setOverwrite(true);
+            dl.run();
+            File out = dl.getFile();
+            Assert.assertNotNull("result file", out);
+            Assert.assertTrue("dest file exists after download", out.exists());
+            Assert.assertTrue("dest file size > 0", out.length() > 0);
+        }
+        catch (Throwable t)
+        {
+            t.printStackTrace();
+            Assert.fail("unexpected exception: " + t);
+        }
+    }
+
+    @Test
+    public void testResumeDownload() throws Exception
+    {
+        log.debug("TEST: testResumeDownload");
+        URL src = httpURL;
+        File part = new File(tmpDir, "robots.txt.part");
+        File dest = new File(tmpDir, "robots.txt");
+        try
+        {
+            if (part.exists())
+                part.delete();
+            Assert.assertTrue("part file does not exist before download", !part.exists());
+
+            if (dest.exists())
+                dest.delete();
+            Assert.assertTrue("dest file does not exist before download", !dest.exists());
+
+            // get the whole file and keep part of it
+            ByteArrayOutputStream bos = new ByteArrayOutputStream(8192);
+            HttpDownload dl = new HttpDownload(src, bos);
+            dl.run();
+            bos.close();
+            byte[] data = bos.toByteArray();
+            int len = data.length/2;
+            Assert.assertTrue("partial bytes", (len > 0));
+            Assert.assertNotNull("dest stream after download", data);
+            Assert.assertTrue("size > 0", data.length > 0);
+            FileOutputStream fos = new FileOutputStream(part);
+            fos.write(data, 0, len); // write half of it
+            fos.close();
+            log.debug("part file length: " + part.length());
+            Assert.assertTrue("part file exist after partial download", part.exists());
+            Assert.assertTrue("part file has right number of bytes", (part.length() == len));
+
+            dl = new HttpDownload(src, dest);
             dl.run();
             File out = dl.getFile();
             Assert.assertNotNull("result file", out);
@@ -326,6 +375,31 @@ public class HttpDownloadTest
             URL src = httpURL;
             ByteArrayOutputStream dest = new ByteArrayOutputStream(8192);
             HttpDownload dl = new HttpDownload(src, dest);
+            dl.run();
+            dest.close();
+            byte[] out = dest.toByteArray();
+            Assert.assertNull(dl.getFile());
+            Assert.assertNotNull("dest stream after download", out);
+            Assert.assertTrue("size > 0", out.length > 0);
+        }
+        catch (Exception unexpected)
+        {
+            log.error("unexpected exception", unexpected);
+            Assert.fail("unexpected exception: " + unexpected);
+        }
+    }
+
+    @Test
+    public void testDownloadWithCustomRequestProperty() throws Exception
+    {
+        log.debug("TEST: testCustomRequestProperty");
+
+        try
+        {
+            URL src = httpURL;
+            ByteArrayOutputStream dest = new ByteArrayOutputStream(8192);
+            HttpDownload dl = new HttpDownload(src, dest);
+            dl.setRequestProperty("X-Custom-Prop", "hello");
             dl.run();
             dest.close();
             byte[] out = dest.toByteArray();

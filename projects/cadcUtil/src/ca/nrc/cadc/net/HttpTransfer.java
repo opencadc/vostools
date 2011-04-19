@@ -113,7 +113,7 @@ public abstract class HttpTransfer implements Runnable
     protected boolean fireEvents = false;
     protected boolean fireCancelOnce = true;
 
-    protected List<RequestProperty> requestProperties;
+    protected List<HttpRequestProperty> requestProperties;
     protected String userAgent;
     protected boolean use_nio = false; // throughput not great, needs work before use
 
@@ -137,22 +137,10 @@ public abstract class HttpTransfer implements Runnable
         DEFAULT_USER_AGENT = "OpenCADC/" + HttpTransfer.class.getName() + "/" + jv + "/" + os;
     }
     
-    protected class RequestProperty
-    {
-        String property;
-        String value;
-
-        public RequestProperty(String property, String value)
-        {
-            this.property = property;
-            this.value = value;
-        }
-
-    }
     protected HttpTransfer() 
     {
         this.go = true;
-        this.requestProperties = new ArrayList<RequestProperty>();
+        this.requestProperties = new ArrayList<HttpRequestProperty>();
     }
 
     public URL getURL() { return remoteURL; }
@@ -177,9 +165,22 @@ public abstract class HttpTransfer implements Runnable
      * @param header
      * @param value
      */
-    public void setRequestHeader(String header, String value)
+    public void setRequestProperty(String header, String value)
     {
-        requestProperties.add(new RequestProperty(header, value));
+        requestProperties.add(new HttpRequestProperty(header, value));
+    }
+
+    /**
+     * Set additional request properties. Adds all the specified properties to
+     * those set with setRequestProperty (if any).
+     *
+     * @see setRequestProperty
+     * @param props
+     */
+    public void setRequestProperties(List<HttpRequestProperty> props)
+    {
+        if (props != null)
+            this.requestProperties.addAll(props);
     }
 
     public void setSSLSocketFactory(SSLSocketFactory sslSocketFactory)
@@ -318,7 +319,7 @@ public abstract class HttpTransfer implements Runnable
     protected void ioLoop(InputStream istream, OutputStream ostream, int sz, long startingPos)
         throws IOException, InterruptedException
     {
-        log.debug("ioLoop: using java.io with byte[] buffer size " + sz);
+        log.debug("ioLoop: using java.io with byte[] buffer size " + sz + " startingPos " + startingPos);
         byte[] buf = new byte[sz];
 
         int nb = 0;
