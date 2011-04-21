@@ -99,17 +99,16 @@ public class SelectListExpressionExtractor extends ExpressionNavigator
 {
     protected List<TapSelectItem> tapSelectItemList = new ArrayList<TapSelectItem>();
     protected TapSchema tapSchema;
-    protected Map<String, TableDesc> extraTablesMap;
+//    protected Map<String, TableDesc> extraTablesMap;
 
     /**
      * @param tapSchema
-     * @param extraTablesMap
      */
-    public SelectListExpressionExtractor(TapSchema tapSchema, Map<String, TableDesc> extraTablesMap)
+    public SelectListExpressionExtractor(TapSchema tapSchema)
     {
         super();
         this.tapSchema = tapSchema;
-        this.extraTablesMap = extraTablesMap;
+//        this.extraTablesMap = extraTablesMap;
     }
 
     /* (non-Javadoc)
@@ -262,13 +261,13 @@ public class SelectListExpressionExtractor extends ExpressionNavigator
         this.tapSchema = tapSchema;
     }
 
-    public Map<String, ca.nrc.cadc.tap.schema.TableDesc> getExtraTablesMap()
-    {
-        return this.extraTablesMap;
-    }
+//    public Map<String, ca.nrc.cadc.tap.schema.TableDesc> getExtraTablesMap()
+//    {
+//        return this.extraTablesMap;
+//    }
 
-    public void setExtraTablesMap(Map<String, ca.nrc.cadc.tap.schema.TableDesc> extraTablesMap)
-    {
-        this.extraTablesMap = extraTablesMap;
-    }
+//    public void setExtraTablesMap(Map<String, ca.nrc.cadc.tap.schema.TableDesc> extraTablesMap)
+//    {
+//        this.extraTablesMap = extraTablesMap;
+//    }
 }
