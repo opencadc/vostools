@@ -90,6 +90,7 @@ import javax.sql.DataSource;
 import org.apache.log4j.Logger;
 
 import ca.nrc.cadc.tap.parser.TapSelectItem;
+import ca.nrc.cadc.tap.schema.SchemaDesc;
 import ca.nrc.cadc.tap.schema.TableDesc;
 import ca.nrc.cadc.tap.schema.TapSchema;
 import ca.nrc.cadc.tap.schema.TapSchemaDAO;
@@ -308,6 +309,12 @@ public class QueryRunner implements SyncJobRunner
             uploadManager.setDataSource(uploadDataSource);
             logger.debug("invoking UploadManager for UPLOAD...");
             Map<String, TableDesc> tableDescs = uploadManager.upload(paramList, job.getID());
+            
+            logger.debug("adding TAP_UPLOAD SchemaDesc to TapSchema...");
+            SchemaDesc tapUploadSchema = new SchemaDesc();
+            tapUploadSchema.setSchemaName("TAP_UPLOAD");
+            tapUploadSchema.setTableDescs(new ArrayList(tableDescs.values()));
+            tapSchema.schemaDescs.add(tapUploadSchema);
 
             logger.debug("invoking MaxRecValidator...");
             MaxRecValidator maxRecValidator = new MaxRecValidator();

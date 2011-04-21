@@ -8,7 +8,7 @@
 *  National Research Council            Conseil national de recherches
 *  Ottawa, Canada, K1A 0R6              Ottawa, Canada, K1A 0R6
 *  All rights reserved                  Tous droits réservés
-*                                       
+*
 *  NRC disclaims any warranties,        Le CNRC dénie toute garantie
 *  expressed, implied, or               énoncée, implicite ou légale,
 *  statutory, of any kind with          de quelque nature que ce
@@ -31,10 +31,10 @@
 *  software without specific prior      de ce logiciel sans autorisation
 *  written permission.                  préalable et particulière
 *                                       par écrit.
-*                                       
+*
 *  This file is part of the             Ce fichier fait partie du projet
 *  OpenCADC project.                    OpenCADC.
-*                                       
+*
 *  OpenCADC is free software:           OpenCADC est un logiciel libre ;
 *  you can redistribute it and/or       vous pouvez le redistribuer ou le
 *  modify it under the terms of         modifier suivant les termes de
@@ -44,7 +44,7 @@
 *  either version 3 of the              : soit la version 3 de cette
 *  License, or (at your option)         licence, soit (à votre gré)
 *  any later version.                   toute version ultérieure.
-*                                       
+*
 *  OpenCADC is distributed in the       OpenCADC est distribué
 *  hope that it will be useful,         dans l’espoir qu’il vous
 *  but WITHOUT ANY WARRANTY;            sera utile, mais SANS AUCUNE
@@ -54,7 +54,7 @@
 *  PURPOSE.  See the GNU Affero         PARTICULIER. Consultez la Licence
 *  General Public License for           Générale Publique GNU Affero
 *  more details.                        pour plus de détails.
-*                                       
+*
 *  You should have received             Vous devriez avoir reçu une
 *  a copy of the GNU Affero             copie de la Licence Générale
 *  General Public License along         Publique GNU Affero avec
@@ -66,420 +66,394 @@
 *
 ************************************************************************
 */
-
 package ca.nrc.cadc.tap;
-
-import java.io.IOException;
-import java.net.MalformedURLException;
-import java.net.URI;
-import java.net.URISyntaxException;
-import java.net.URL;
-import java.sql.Connection;
-import java.sql.SQLException;
-import java.sql.Statement;
-import java.text.ParseException;
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.Iterator;
-import java.util.List;
-import java.util.Map;
-
-import javax.sql.DataSource;
-
-import org.apache.log4j.Logger;
-import org.jdom.Document;
-import org.jdom.Element;
-import org.jdom.JDOMException;
-import org.jdom.input.SAXBuilder;
 
 import ca.nrc.cadc.date.DateUtil;
 import ca.nrc.cadc.tap.schema.ColumnDesc;
 import ca.nrc.cadc.tap.schema.TableDesc;
+import ca.nrc.cadc.tap.upload.DatabaseDataTypeFactory;
+import ca.nrc.cadc.tap.upload.JDOMVOTableParser;
+import ca.nrc.cadc.tap.upload.UploadParameters;
+import ca.nrc.cadc.tap.upload.UploadTable;
+import ca.nrc.cadc.tap.upload.VOTableParser;
+import ca.nrc.cadc.tap.upload.datatype.ADQLDataType;
+import ca.nrc.cadc.tap.upload.datatype.DatabaseDataType;
 import ca.nrc.cadc.uws.Parameter;
-import ca.nrc.cadc.uws.util.ParameterUtil;
+import java.io.IOException;
+import java.sql.Connection;
+import java.sql.PreparedStatement;
+import java.sql.SQLException;
+import java.sql.Statement;
+import java.sql.Timestamp;
 import java.text.DateFormat;
+import java.text.ParseException;
+import java.util.Date;
+import java.util.HashMap;
+import java.util.Iterator;
+import java.util.List;
+import java.util.Map;
+import javax.sql.DataSource;
+import org.apache.log4j.Logger;
 
 /**
- * Implements the upload of VOTable files into a database.
- * </p><p>
- * <b>WARNING: This class is not complete and tested and is not safe for use until 
- * this warning has been removed.</b>
- * 
- * @author pdowler
+ *
+ * @author jburke
  */
-public class BasicUploadManager implements UploadManager 
+public class BasicUploadManager implements UploadManager
 {
-    private static final Logger log = Logger.getLogger( BasicUploadManager.class  );
-
-    private static final String BOOL   = "boolean";
-    private static final String SHORT  = "short";
-    private static final String INT    = "int";
-    private static final String LONG   = "long";
-    private static final String FLOAT  = "float";
-    private static final String DOUBLE = "double";
-    private static final String CHAR   = "char";
-    private static final String UBYTE  = "unsignedByte";
-
-    private static final String BLOB      = "adql:BLOB";
-    private static final String CLOB      = "adql:CLOB";
-    private static final String TIMESTAMP = "adql:TIMESTAMP";
-    private static final String POINT     = "adql:POINT";
-    private static final String REGION    = "adql:REGION";
+    private static final Logger log = Logger.getLogger(BasicUploadManager.class);
+    
+    // Number of rows to insert per commit.
+    private static final int NUM_ROWS_PER_COMMIT = 100;
     
     /**
-     * The schema where uploaded tables are created as specified in the
-     * TAP 1.0 specification.
+     * DataSource for the DB.
      */
-    public static final String SCHEMA = "TAP_UPLOAD";
-    
-    private Map<String,TableDesc>          metadata;
-    private Map<String,List<String[]>> dataRows;
-    
     protected DataSource dataSource;
-    private Connection conn;
     
-    public BasicUploadManager() { }
+    /**
+     * IVOA DateFormat
+     */
+    protected DateFormat dateFormat;
+    
+    /**
+     * Maximum number of rows allowed in the UPLOAD VOTable.
+     */
+    protected int maxUploadRows;
 
-    public void setDataSource(DataSource dataSource) 
-    {
-        this.dataSource = dataSource;
-    }
+    /**
+     * Default constructor.
+     */
+    private BasicUploadManager() { }
     
-    public Map<String,TableDesc> upload( List<Parameter> paramList, String jobID )
+    protected BasicUploadManager(int maxUploadRows)
     {
-        log.debug("START upload: "+jobID);
+        this.maxUploadRows = maxUploadRows;
+        dateFormat = DateUtil.getDateFormat(DateUtil.IVOA_DATE_FORMAT, DateUtil.UTC);
+    }
+
+    /**
+     * Set the DataSource used for creating and populating tables.
+     * @param ds
+     */
+    public void setDataSource(DataSource ds)
+    {
+        this.dataSource = ds;
+    }
+
+    /**
+     * Find and process all UPLOAD requests.
+     *
+     * @param paramList list of all parameters passed to the service.
+     * @param jobID the UWS jobID.
+     * @return map of service generated upload table name to user-specified table metadata
+     */
+    public Map<String, TableDesc> upload(List<Parameter> paramList, String jobID)
+    {
+        log.debug("upload jobID " + jobID);
+
+        // Get the datasource.
+        Connection con;
+        if (dataSource == null)
+            throw new IllegalStateException("failed to get DataSource");
         try
         {
-            return doit(paramList, jobID);
+            con = dataSource.getConnection();
+            con.setAutoCommit(false);
         }
-        catch(IOException ioex)
+        catch (SQLException e)
         {
-            throw new IllegalArgumentException("failed to read uploaded table", ioex);
+            throw new IllegalStateException("failed to get connection from DataSource", e);
         }
-        catch(JDOMException jdex)
+
+        // Map of database table name to table descriptions.
+        Map<String, TableDesc> metadata = new HashMap<String, TableDesc>();
+
+        // Statements
+        Statement stmt = null;
+        PreparedStatement ps = null;
+
+        try
         {
-            throw new IllegalArgumentException("failed to parse uploaded VOTable", jdex);
+            // DataType containing mapping of java.sql.Types
+            // to database data type names.
+            DatabaseDataType databaseDataType = DatabaseDataTypeFactory.getDatabaseDataType(con);
+
+            // Get upload table names and URI's from the request parameters.
+            UploadParameters uploadParameters = new UploadParameters(paramList, jobID);
+
+            // Process each table.
+            for (UploadTable uploadTable : uploadParameters.uploadTables)
+            {
+                // XML parser
+                // TODO: make configurable.
+                log.debug(uploadTable);
+                VOTableParser parser = getVOTableParser(uploadTable);
+
+                // Get the Table description.
+                TableDesc tableDesc = parser.getTableDesc();
+
+                // Fully qualified name of the table in the database.
+                String databaseTableName = getDatabaseTableName(uploadTable);
+                
+                // Update the returned Metadata.
+                metadata.put(databaseTableName, tableDesc);
+
+                // Build the SQL to create the table.
+                String tableSQL = getCreateTableSQL(tableDesc, databaseTableName, databaseDataType);
+                log.debug("Create table SQL: " + tableSQL);
+
+                // Create the table.
+                stmt = con.createStatement();
+                stmt.executeUpdate(tableSQL);
+                
+                // Grant select access for others to query.
+                String grantSQL = getGrantSelectTableSQL(databaseTableName);
+                if (grantSQL != null && !grantSQL.isEmpty())
+                {
+                    log.debug("Grant select SQL: " + grantSQL);
+                    stmt.executeUpdate(grantSQL);
+                }
+                
+                // commit the create and grant
+                con.commit();
+
+                // Get a PreparedStatement that populates the table.
+                String insertSQL = getInsertTableSQL(tableDesc, databaseTableName); 
+                ps = con.prepareStatement(insertSQL);
+                log.debug("Insert table SQL: " + insertSQL);
+
+                // Populate the table from the VOTable tabledata rows.
+                int numRows = 0;
+                Iterator it = parser.iterator();
+                while (it.hasNext())
+                {
+                    // Get the data for the next row.
+                    String[] row = (String[]) it.next();
+
+                    // Update the PreparedStatement with the row data.
+                    updatePreparedStatement(ps, tableDesc.columnDescs, row);
+
+                    // Execute the update.
+                    ps.executeUpdate();
+                    
+                    // commit every NUM_ROWS_PER_COMMIT rows
+                    if ((numRows % NUM_ROWS_PER_COMMIT) == 0)
+                    {
+                        log.debug(NUM_ROWS_PER_COMMIT + " rows committed");
+                        con.commit();
+                    }
+                    
+                    // Check if we've reached exceeded the max number of rows.\
+                    numRows++;
+                    if (numRows == maxUploadRows)
+                        throw new UnsupportedOperationException("Exceded maximum number of allowed rows: " + maxUploadRows);
+                }
+                
+                // Commit remaining rows.
+                con.commit();
+                log.debug(numRows + " rows inserted into " + databaseTableName);
+            }
+        }
+        catch (Throwable t)
+        {
+            try
+            {
+                con.rollback();
+            }
+            catch (SQLException e)
+            {
+                log.error("failed to rollback transaction", e);
+            }
+            throw new RuntimeException("failed to upload table", t);
         }
         finally
         {
-            log.debug("END upload: "+jobID);
-        }
-    }
-    
-    private Map<String,TableDesc> doit( List<Parameter> paramList, String jobID )
-        throws IOException, JDOMException
-    {
-        metadata = new HashMap<String,TableDesc>();
-        dataRows = new HashMap<String,List<String[]>>();
-
-        //  Extract and validate the UPLOAD parameters
-        //  from the full parameter list.
-        Map<String,URI> uploadParamPairs = getUploadParams( paramList );
-        if ( uploadParamPairs == null || uploadParamPairs.size() == 0)
-            return null;
-        
-        if (dataSource == null)
-            throw new IllegalStateException("failed to get DataSource");
-        try 
-        {
-            this.conn = dataSource.getConnection();
-        }
-        catch (SQLException e) 
-        {
-            throw new IllegalStateException( "failed to get connection from DataSource" );
-        }
-        
-        //  Read (into memory) the column names and values
-        //  of tables named by the UPLOAD parameter(s).
-        Iterator<String> uploadParamsIt = uploadParamPairs.keySet().iterator(); 
-        try {
-            while ( uploadParamsIt.hasNext() ) {
-                String shortName = uploadParamsIt.next();
-                String baseName  = ( shortName.toLowerCase().startsWith(SCHEMA.toLowerCase()+".") ) ? shortName : SCHEMA+"."+shortName;
-                String tableName = baseName+"_"+jobID;
-                URI    tableURI  = uploadParamPairs.get(shortName);
-                
-                SAXBuilder sb      = new SAXBuilder("org.apache.xerces.parsers.SAXParser", false);
-                // TODO: use internal copy of VOTable 1.2 XML schema
-                URL        url     = tableURI.toURL();
-                Document   doc     = sb.build(url);
-                Element    voTable = doc.getRootElement();
-                
-                metadata.put( baseName, new TableDesc() );
-                dataRows.put( baseName, new ArrayList<String[]>() );
-                
-                metadata.get( baseName ).tableName = tableName;
-                
-                readMetadata( baseName, tableName, voTable );
-                readDataRows( baseName, tableName, voTable );
-            }
-        }
-        catch ( MalformedURLException mue ) {
-            throw ( new IllegalArgumentException( mue.getMessage() ) );
-        }
-
-        //  Create (in the database) the tables named in the parameter
-        //  list and described in the URI-referenced XML files.
-        Iterator<String> baseNamesIt = metadata.keySet().iterator();
-        try {
-            while ( baseNamesIt.hasNext() ) {
-                String baseName = baseNamesIt.next();
-                String tableName = metadata.get(baseName).getTableName();
-                String sql = "create table "+tableName+" ( ";
-                List<ColumnDesc> columnDescs = metadata.get(baseName).getColumnDescs();
-                for ( int i=0; i<columnDescs.size(); i++ ) {
-                    ColumnDesc col = columnDescs.get(i);
-                    sql += col.columnName+" ";
-                    sql += localDbType(col);
-                    if ( i+1<columnDescs.size() )
-                        sql += ", ";
+            if (stmt != null)
+            {
+                try
+                {
+                    stmt.close();
                 }
-                sql += " )";
-                Statement  stmt = conn.createStatement();
-                log.debug( "About to execute DDL: "+sql );
-                stmt.executeUpdate(sql);
+                catch (SQLException ignore) { }
             }
-        }
-        catch ( Exception sqle ) {
-            throw ( new IllegalStateException( sqle.getMessage() ) );
-        }
-        
-        //  Populate the newly created database tables with
-        //  values from the URI-referenced XML files.
-        baseNamesIt = metadata.keySet().iterator();
-        try {
-            while ( baseNamesIt.hasNext() ) {
-                String baseName = baseNamesIt.next();
-                String tableName = metadata.get(baseName).getTableName();
-                List<String[]> tableRows = dataRows.get(baseName);
-                for ( int i=0; i<tableRows.size(); i++ ) {
-                    String sql = "insert into "+tableName+" ( ";
-                    List<ColumnDesc> columnDescs = metadata.get(baseName).getColumnDescs();
-                    for ( int j=0; j<columnDescs.size(); j++ ) {
-                        ColumnDesc col = columnDescs.get(j);
-                        sql += col.columnName;
-                        if ( j+1<columnDescs.size() )
-                            sql += ", ";
-                    }
-                    sql += " ) values ( ";
-                    String [] dataCols = tableRows.get(i);
-                    int numDataCols = dataCols.length;
-                    for ( int j=0; j<numDataCols; j++ ) {
-                        String value = dataCols[j];
-                        sql += formatValue( value, columnDescs.get(j).datatype );
-                        if ( j+1 < numDataCols )
-                            sql += ", ";
-                    }
-                    sql += " )";
-                    Statement stmt = conn.createStatement();
-                    log.debug( "About to execute DML: "+sql );
-                    int n = stmt.executeUpdate(sql);
-                    log.debug( n+" record(s) inserted" );
+            if (ps != null)
+            {
+                try
+                {
+                    ps.close();
                 }
+                catch (SQLException ignore) { }
+            }
+            if (con != null)
+            {
+                try
+                {
+                    con.close();
+                }
+                catch (SQLException ignore) { }
             }
         }
-        catch ( Exception sqle ) {
-            throw ( new IllegalStateException( sqle.getMessage() ) );
-        }
-        
-        if ( false )  //  Toggle this as required until UPLOAD is here to stay
-            throw new UnsupportedOperationException( UPLOAD+" parameter not supported" );
-
-        log.debug( "Finished loading "+metadata.size()+" table(s) for jobID: "+jobID );
-
         return metadata;
     }
-    
-    /*  
-     * Extract the UPLOAD parameters from the full parameter list.
+
+    /**
+     * Create the SQL to grant select privileges for the UPLOAD table.
+     * 
+     * @param databaseTableName fully qualified table name.
+     * @return 
      */
-    private Map<String,URI> getUploadParams(List<Parameter> paramList) {
-
-        List<String> uploadParamPairs  = ParameterUtil.findParameterValues( UPLOAD, paramList );
-        Map<String,URI> uniqueTableParams = new HashMap<String,URI>();
-
-        if ( uploadParamPairs != null ) {
-            if ( uploadParamPairs.size() == 0 )
-                throw new IllegalStateException( "Missing UPLOAD values" );
-            else {
-                for ( String pairStr : uploadParamPairs ) {
-                    log.debug( "UPLOAD parameter name,value pair: "+pairStr );
-                    if ( pairStr==null || pairStr.trim().length()==0 )
-                        throw new IllegalStateException( "Name-value pair missing from UPLOAD parameter list: "+paramList );
-                    String [] pair = pairStr.split(",");
-                    String tableName  = null;
-                    URI    tableURI   = null;
-                    try {
-                        tableName = pair[0];
-                    }
-                    catch ( IndexOutOfBoundsException iobe ) {
-                        throw new IllegalStateException( "Table name missing from UPLOAD parameter: "+pairStr );
-                    }
-                    try {
-                        tableURI = new URI(pair[1]);
-                    }
-                    catch ( IndexOutOfBoundsException iobe ) {
-                        throw new IllegalStateException( "URI missing from UPLOAD parameter: "+pairStr );
-                    }
-                    catch ( URISyntaxException use ) {
-                        throw new IllegalStateException( "UPLOAD parameter has invalid URI: "+tableURI );
-                    }
-                    if ( tableName==null || tableName.trim().length()==0 )
-                        throw new IllegalStateException( "Table name missing from UPLOAD parameter: "+pairStr );
-                    if ( tableName.startsWith(" ") || tableName.contains("  ") || tableName.endsWith(" ") )
-                        throw new IllegalStateException( "Table tableName from UPLOAD parameter has invalid blanks: "+tableName );
-                    if ( !tableURI.getScheme().equals("http") )
-                        throw new IllegalStateException( "Table URI has unsupported protocol in UPLOAD parameter: "+tableURI );
-                    if ( !tableURI.getHost().equals("localhost") )
-                        throw new IllegalStateException( "Table URI points to an unsupported host: "+tableURI.getHost() );
-                    if ( uniqueTableParams.containsKey(tableName) )
-                        throw new IllegalStateException( "Duplicate table name in UPLOAD parameter: "+paramList );
-                    uniqueTableParams.put( tableName, tableURI );
-                } // end-for each upload param name-uri pair
-            }
-        } // end-if UPLOAD param found
-
-        if ( uniqueTableParams.size() > 0 )
-            return uniqueTableParams;
-        else
-            return null;
-    }
-    
-    private void readMetadata( String baseName, String tableName, Element el ) {       
-        List<Element> els = el.getChildren();
-        if ( els.size() < 1 )
-            return;
-        Iterator<Element> elsIt = els.iterator();
-        while ( elsIt.hasNext() ) {
-            Element inner = elsIt.next();
-            ColumnDesc col = new ColumnDesc();
-            col.tableName = tableName;
-            if ( inner.getName().equals("FIELD") ) {
-                col.columnName = inner.getAttributeValue("name");
-                String xtype = inner.getAttributeValue("xtype");
-                if ( xtype == null )
-                    col.datatype = inner.getAttributeValue("datatype");
-                else
-                    col.datatype = xtype;
-                String sizeAttr = inner.getAttributeValue("width");
-                if ( sizeAttr==null || sizeAttr.length()==0 )
-                    col.size = 1;
-                else if ( sizeAttr.equals("*") )
-                    col.size = 512;
-                else if ( sizeAttr.endsWith("*") )
-                    col.size = Integer.parseInt( sizeAttr.substring( 0, sizeAttr.lastIndexOf("*") ) );
-                else
-                    col.size = Integer.parseInt(sizeAttr);
-                TableDesc tableDesc = metadata.get(baseName);
-                if ( tableDesc.columnDescs == null )
-                    tableDesc.columnDescs = new ArrayList<ColumnDesc>();
-                tableDesc.columnDescs.add(col);
-                log.debug( "Finished reading column metadata: "+col.toString() );
-            }
-            else
-                readMetadata( baseName, tableName, inner );
-        }
-    }
-    
-    private void readDataRows( String baseName, String tableName, Element el ) 
+    protected String getGrantSelectTableSQL(String databaseTableName)
     {
-        DateFormat df = DateUtil.getDateFormat(DateUtil.IVOA_DATE_FORMAT, DateUtil.UTC);
-        List<Element> els = el.getChildren();
-        if ( els.size() < 1 )
-            return;
-        Iterator<Element> elsIt = els.iterator();
-        while ( elsIt.hasNext() ) {
-            Element inner = elsIt.next();
-            if ( inner.getName().equals("TR") ) {
-                List<Element> colVals = inner.getChildren();
-                int numCols = metadata.get(baseName).columnDescs.size();
-                String [] row = new String[numCols];
-                for ( int i=0; i<numCols; i++ ) {
-                    String value = colVals.get(i).getValue();
-                    if ( metadata.get(baseName).columnDescs.get(i).datatype.equals(TIMESTAMP) )
-                        try
-                        {
-                            row[i] = df.format( df.parse(value) );
-                        }
-                        catch ( ParseException pe ) {
-                            throw new IllegalStateException( "UPLOAD parameter value for table: "+baseName+
-                                                             " is in an invalid datetime format: "+value );
-                        }
-                    else
-                        row[i] = value;
-                    log.debug( "Finished reading value: "+row[i] );
+        return null;
+    }
+    
+    /**
+     * Get a VOTableParser for an UploadTable.
+     * 
+     * @param uploadTable containing the table name and URI.
+     * @return VOTableParser for the UploadTable.
+     * @throws IOException 
+     */
+    protected VOTableParser getVOTableParser(UploadTable uploadTable)
+        throws IOException
+    {
+        VOTableParser parser = new JDOMVOTableParser();
+        parser.setTableName(SCHEMA + "." + uploadTable.tableName);
+        parser.setInputStream(uploadTable.uri.toURL().openStream());
+        return parser;
+    }
+    
+    /**
+     * Constructs the database table name from the schema, upload table name,
+     * and the jobID.
+     * 
+     * @return the database table name.
+     */
+    public String getDatabaseTableName(UploadTable uploadTable)
+    {
+        StringBuilder sb = new StringBuilder();
+        sb.append(uploadTable.tableName);
+        sb.append("_");
+        sb.append(uploadTable.jobID);
+        if (!uploadTable.tableName.toUpperCase().startsWith(SCHEMA + "."))
+        {
+            sb.insert(0, ".");
+            sb.insert(0, SCHEMA);
+        }
+        return sb.toString();
+    }
+    
+    /**
+     * Create the SQL required to create a table described by the TableDesc.
+     *
+     * @param tableDesc describes the table.
+     * @param databaseTableName fully qualified table name.
+     * @param databaseDataType map of SQL types to database specific data types.
+     * @return SQL to create the table.
+     * @throws SQLException
+     */
+    protected String getCreateTableSQL(TableDesc tableDesc, String databaseTableName, DatabaseDataType databaseDataType)
+        throws SQLException
+    {
+        StringBuilder sb = new StringBuilder();
+        sb.append("create table ");
+        sb.append(databaseTableName);
+        sb.append(" ( ");
+        for (int i = 0; i < tableDesc.columnDescs.size(); i++)
+        {
+            ColumnDesc columnDesc = tableDesc.columnDescs.get(i);
+            sb.append(columnDesc.columnName);
+            sb.append(" ");
+            sb.append(databaseDataType.getDataType(columnDesc));
+            sb.append(" null ");
+            if (i + 1 < tableDesc.columnDescs.size())
+                sb.append(", ");
+        }
+        sb.append(" ) ");
+        return sb.toString();
+    }
+    
+    /**
+     * Create the SQL required to create a PreparedStatement
+     * to insert into the table described by the TableDesc.
+     * 
+     * @param tableDesc describes the table.
+     * @return SQL to create the table.
+     */
+    protected String getInsertTableSQL(TableDesc tableDesc, String databaseTableName)
+    {
+        StringBuilder sb = new StringBuilder();
+        sb.append("insert into ");
+        sb.append(databaseTableName);
+        sb.append(" ( ");
+        for (int i = 0; i < tableDesc.columnDescs.size(); i++)
+        {
+            ColumnDesc columnDesc = tableDesc.columnDescs.get(i);
+            sb.append(columnDesc.columnName);
+            if (i + 1 < tableDesc.columnDescs.size())
+                sb.append(", ");
+        }
+        sb.append(" ) values ( ");
+        for (int i = 0; i < tableDesc.columnDescs.size(); i++)
+        {
+            sb.append("?");
+            if (i + 1 < tableDesc.columnDescs.size())
+                sb.append(", ");
+        }
+        sb.append(" ) ");
+        return sb.toString();
+    }
+
+    /**
+     * Updated the PreparedStatement with the row data using the ColumnDesc to
+     * determine each column data type.
+     *
+     * @param ps the prepared statement.
+     * @param columnDescs List of ColumnDesc for this table.
+     * @param row Array containing the data to be inserted into the database.
+     * @throws SQLException if the statement is closed or if the parameter index type doesn't match.
+     */
+    protected void updatePreparedStatement(PreparedStatement ps, List<ColumnDesc> columnDescs, String[] row)
+        throws SQLException
+    {
+        for (int i = 0; i < row.length; i++)
+        {
+            ColumnDesc columnDesc = columnDescs.get(i);
+            log.debug("update ps: " + columnDesc.columnName + "[" + columnDesc.datatype + "] = " + row[i]);
+
+            String value = row[i];
+            if (value == null)
+                ps.setNull(i + 1, ADQLDataType.getSQLType(columnDesc.datatype));
+            else if (columnDesc.datatype.equals(ADQLDataType.ADQL_SMALLINT))
+                ps.setShort(i + 1, Short.parseShort(value));
+            else if (columnDesc.datatype.equals(ADQLDataType.ADQL_INTEGER))
+                ps.setInt(i + 1, Integer.parseInt(value));
+            else if (columnDesc.datatype.equals(ADQLDataType.ADQL_BIGINT))
+                ps.setLong(i + 1, Long.parseLong(value));
+            else if (columnDesc.datatype.equals(ADQLDataType.ADQL_REAL))
+                ps.setFloat(i + 1, Float.parseFloat(value));
+            else if (columnDesc.datatype.equals(ADQLDataType.ADQL_DOUBLE))
+                ps.setDouble(i + 1, Double.parseDouble(value));
+            else if (columnDesc.datatype.equals(ADQLDataType.ADQL_CHAR))
+                ps.setString(i + 1, value);
+            else if (columnDesc.datatype.equals(ADQLDataType.ADQL_VARCHAR))
+                ps.setString(i + 1, value);
+            else if (columnDesc.datatype.equals(ADQLDataType.ADQL_TIMESTAMP))
+            {
+                try
+                {
+                    Date date = dateFormat.parse(value);
+                    ps.setTimestamp(i + 1, new Timestamp(date.getTime()));
                 }
-                dataRows.get(baseName).add(row);
-                log.debug( "Finished reading row of data" );
+                catch (ParseException e)
+                {
+                    throw new SQLException("failed to parse timestamp " + value, e);
+                }
             }
             else
-                readDataRows( baseName, tableName, inner );
+                throw new SQLException("Unsupported ADQL data type " + columnDesc.datatype);
         }
-    }
-    
-    private String localDbType( ColumnDesc col ) {
-        
-        HashMap<String,String> typeMap  = new HashMap<String,String>();
-        
-        typeMap.put( BOOL,    BOOL );
-        typeMap.put( SHORT,  "smallint" );
-        typeMap.put( INT,    "integer" );
-        typeMap.put( LONG,   "bigint" );
-        typeMap.put( FLOAT,  "real" );
-        typeMap.put( DOUBLE, "double precision" );
-        //
-        typeMap.put( CHAR,       CHAR );
-        typeMap.put( UBYTE,     "byta" );
-        typeMap.put( BLOB,      "TODO: unknown" );
-        typeMap.put( CLOB,      "TODO: unknown" );
-        typeMap.put( TIMESTAMP, "timestamp" );
-        typeMap.put( POINT,     "spoint" );
-        typeMap.put( REGION,    "spoly" );
-        
-        String  type  = col.datatype;
-        Integer width = col.size;
-        
-        if ( width == 1 )
-            return typeMap.get(type);
-
-        if ( type.equals(SHORT)  ||
-             type.equals(INT)    ||
-             type.equals(LONG)   ||
-             type.equals(FLOAT)  ||
-             type.equals(DOUBLE) ) {
-            //  Numeric type with size > 1
-            return "bytea";
-        }
-
-        if ( type.equals(CHAR) )
-            return "varchar("+width+")";
-
-        throw new IllegalStateException( "Could not determine local DB datatype for: datatype="+type+", width="+width );
-    }
-    
-    private String formatValue( String value, String datatype ) {
-        if ( datatype.equals(CHAR) )
-            return "'"+escapeTicks(value)+"'";
-        else if ( datatype.equals(TIMESTAMP) )
-            return "'"+value+"'";
-        else
-            return value;
-    }
-    
-    private String escapeTicks( String value ) {
-        if ( value.contains("'") ) {
-            String [] allParts = value.split("'");
-            StringBuffer escapedValue = new StringBuffer();
-            for ( int partNum=0; partNum<allParts.length; partNum++ ) {
-                String part = allParts[partNum];
-                escapedValue.append(part);
-                if ( partNum+1 < allParts.length )
-                    escapedValue.append("\"'\"");
-            }
-            return escapedValue.toString();
-        }
-        else
-            return value;
     }
 
 }

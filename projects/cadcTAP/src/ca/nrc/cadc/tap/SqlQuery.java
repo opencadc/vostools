@@ -141,7 +141,7 @@ public class SqlQuery implements TapQuery
         sn = new AllColumnConverter(tapSchema);
         navigatorList.add(sn);
 
-        en = new SelectListExpressionExtractor(tapSchema, extraTables);
+        en = new SelectListExpressionExtractor(tapSchema);
         rn = null;
         fn = null;
         sn = new SelectListExtractor(en, rn, fn);

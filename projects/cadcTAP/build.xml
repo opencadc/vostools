@@ -122,7 +122,7 @@
     <!-- compile the test classes -->
 
     <!-- Run the test suite -->
-    <target name="test" depends="parser-tests,stc-tests,vosi-tests,writer-tests" />
+    <target name="test" depends="parser-tests,stc-tests,vosi-tests,writer-tests,upload-tests" />
 
     <target name="writer-tests" depends="compile,compile-test">
         <copy file="test/src/resources/VOTable-1.2.xsd" todir="${build}/class"/>
@@ -203,6 +203,19 @@
             </classpath>
             <formatter type="plain" usefile="false"/>
             <test name="ca.nrc.cadc.vosi.TableSetTest" />
+        </junit>
+    </target>
+    
+    <target name="upload-tests" depends="compile,compile-test">
+        <junit printsummary="yes" haltonfailure="yes" fork="yes">
+            <classpath>
+                <pathelement path="${resources.dir}"/>
+                <pathelement path="${build}/class"/>
+                <pathelement path="${build}/test/class"/>
+                <pathelement path="${jars}:${testingJars}"/>
+            </classpath>
+            <formatter type="plain" usefile="false"/>
+            <test name="ca.nrc.cadc.tap.upload.UploadUtilTest" />
         </junit>
     </target>
 

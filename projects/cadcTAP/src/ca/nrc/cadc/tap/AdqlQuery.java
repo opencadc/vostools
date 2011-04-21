@@ -85,6 +85,7 @@ import org.apache.log4j.Logger;
 import ca.nrc.cadc.tap.parser.ParserUtil;
 import ca.nrc.cadc.tap.parser.TapSelectItem;
 import ca.nrc.cadc.tap.parser.converter.AllColumnConverter;
+import ca.nrc.cadc.tap.parser.converter.TableNameConverter;
 import ca.nrc.cadc.tap.parser.extractor.SelectListExpressionExtractor;
 import ca.nrc.cadc.tap.parser.extractor.SelectListExtractor;
 import ca.nrc.cadc.tap.parser.navigator.ExpressionNavigator;
@@ -97,6 +98,7 @@ import ca.nrc.cadc.tap.schema.TableDesc;
 import ca.nrc.cadc.tap.schema.TapSchema;
 import ca.nrc.cadc.uws.Parameter;
 import ca.nrc.cadc.uws.util.ParameterUtil;
+import java.util.Set;
 
 /**
  * TapQuery implementation for LANG=ADQL.
@@ -147,11 +149,27 @@ public class AdqlQuery implements TapQuery
         sn = new AllColumnConverter(tapSchema);
         navigatorList.add(sn);
 
-        en = new SelectListExpressionExtractor(tapSchema, extraTables);
+        en = new SelectListExpressionExtractor(tapSchema);
         rn = null;
         fn = null;
         sn = new SelectListExtractor(en, rn, fn);
         navigatorList.add(sn);
+        
+        if (extraTables != null && !extraTables.isEmpty())
+        {
+            TableNameConverter tnc = new TableNameConverter(true);
+            Set<Map.Entry<String, TableDesc>> entries = extraTables.entrySet();
+            for (Map.Entry entry : entries)
+            {
+                String newName = (String) entry.getKey();
+                TableDesc tableDesc = (TableDesc) entry.getValue();
+                tnc.put(tableDesc.tableName, newName);
+                log.debug("TableNameConverter " + tableDesc.tableName + " -> " + newName);
+            }
+            en = new ExpressionNavigator();
+            sn = new SelectNavigator(en, new ReferenceNavigator(), tnc);
+            navigatorList.add(sn);
+        }
     }
 
     protected void doNavigate()
@@ -231,6 +249,10 @@ public class AdqlQuery implements TapQuery
         this.tapSchema = tapSchema;
     }
 
+    /**
+     * 
+//     * @deprecated 
+     */
     public void setExtraTables(Map<String, TableDesc> extraTables)
     {
         this.extraTables = extraTables;

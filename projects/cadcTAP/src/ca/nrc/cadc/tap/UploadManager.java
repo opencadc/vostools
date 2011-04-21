@@ -91,6 +91,12 @@ public interface UploadManager
     public static final String UPLOAD = "UPLOAD";
     
     /**
+     * The schema where uploaded tables are created as specified in the
+     * TAP 1.0 specification.
+     */
+    public static final String SCHEMA = "TAP_UPLOAD";
+    
+    /**
      * The caller specifies the datasource to use for creating tables.
      * @param ds
      */
@@ -101,7 +107,7 @@ public interface UploadManager
      * 
      * @param paramList list of all parameters passed to the service
      * @param jobID the UWS jobID
-     * @return map of user-specified table name:uploaded table metadata
+     * @return map of service generated upload table name to user-specified table metadata
      */
     public Map<String, TableDesc> upload(List<Parameter> paramList, String jobID);
 }
