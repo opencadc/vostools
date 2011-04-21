@@ -85,7 +85,6 @@ import java.util.List;
 import org.apache.log4j.Logger;
 
 import ca.nrc.cadc.vos.Node;
-import ca.nrc.cadc.vos.NodeAlreadyExistsException;
 import ca.nrc.cadc.vos.NodeNotFoundException;
 import ca.nrc.cadc.vos.NodeParsingException;
 import ca.nrc.cadc.vos.NodeProperty;

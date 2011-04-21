@@ -82,6 +82,7 @@ import ca.nrc.cadc.net.HttpDownload;
 import ca.nrc.cadc.net.HttpRequestProperty;
 import ca.nrc.cadc.net.HttpUpload;
 import ca.nrc.cadc.net.OutputStreamWrapper;
+import ca.nrc.cadc.net.event.TransferListener;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -98,6 +99,8 @@ public class ClientTransfer extends Transfer
     private File localFile;
     private OutputStreamWrapper wrapper;
     private List<HttpRequestProperty> httpRequestProperties;
+    private int maxRetries;
+    private TransferListener transListener;
     
     /**
      * 
@@ -122,6 +125,29 @@ public class ClientTransfer extends Transfer
         super.setProtocols(transfer.getProtocols());
         super.setKeepBytes(transfer.isKeepBytes());
         this.httpRequestProperties = new ArrayList<HttpRequestProperty>();
+    }
+
+    /**
+     * Set an optional listener to get events from the underying HttpTransfer.
+     * 
+     * @param transListener
+     */
+    public void setTransferListener(TransferListener transListener)
+    {
+        this.transListener = transListener;
+    }
+
+    /**
+     * Set the maximum number of retries when the server is busy. This value is
+     * passed to the underlying HttpTransfer.
+     * </p><p>
+     * Set this to Integer.MAX_VALUE to retry indefinitely.
+     * 
+     * @param maxRetries
+     */
+    public void setMaxRetries(int maxRetries)
+    {
+        this.maxRetries = maxRetries;
     }
 
     /**
@@ -191,7 +217,9 @@ public class ClientTransfer extends Transfer
         else
             upload = new HttpUpload(wrapper, url);
         upload.setRequestProperties(httpRequestProperties);
-        
+        upload.setMaxRetries(maxRetries);
+        if (transListener != null)
+            upload.setTransferListener(transListener);
         upload.setSSLSocketFactory(sslSocketFactory);
         upload.run();
         if (upload.getThrowable() != null)
@@ -240,6 +268,9 @@ public class ClientTransfer extends Transfer
         HttpDownload download = new HttpDownload(url, file);
         download.setOverwrite(true);
         download.setRequestProperties(httpRequestProperties);
+        download.setMaxRetries(maxRetries);
+        if (transListener != null)
+            download.setTransferListener(transListener);
         download.setSSLSocketFactory(sslSocketFactory);
         download.run();
         if (download.getThrowable() != null)

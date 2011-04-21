@@ -130,6 +130,7 @@ public class Main implements Runnable
     public static final String ARG_V = "v";
     public static final String ARG_D = "d";
     public static final String ARG_XSV = "xsv";
+    public static final String ARG_NO_RETRY = "noretry";
     public static final String ARG_VIEW = "view";
     public static final String ARG_CREATE = "create";
     public static final String ARG_DELETE = "delete";
@@ -164,15 +165,16 @@ public class Main implements Runnable
         VIEW, CREATE, DELETE, SET, COPY
     }
 
-    Operation operation;
-    VOSURI target;
-    List<NodeProperty> properties;
-    URI source;
-    URI destination;
-    Direction transferDirection = null;
-    String baseUrl = null;
-    VOSpaceClient client = null;
+    private Operation operation;
+    private VOSURI target;
+    private List<NodeProperty> properties;
+    private URI source;
+    private URI destination;
+    private Direction transferDirection = null;
+    private String baseUrl = null;
+    private VOSpaceClient client = null;
     private Subject subject;
+    private boolean retryEnabled = false;
 
     /**
      * @param args  The arguments passed into this command.
@@ -338,10 +340,6 @@ public class Main implements Runnable
         }
         catch(Throwable t)
         {
-            if (t.getCause() instanceof IOException)
-            {
-                msg(t.getCause().getMessage());
-            }
             if (t instanceof IllegalArgumentException)
             {
                 throw (IllegalArgumentException) t;
@@ -349,12 +347,20 @@ public class Main implements Runnable
             else
             {
                 msg("failed to copy: " + source + " -> " + destination);
-                if (t.getMessage() != null)
-                    msg("          reason: " + t.getMessage());
-                else
-                    msg("          reason: " + t);
                 if (t.getCause() != null)
-                    msg("          reason: " + t.getCause());
+                {
+                    if (t.getCause().getMessage() != null)
+                        msg("          reason: " + t.getCause().getMessage());
+                    else
+                        msg("          reason: " + t.getCause());
+                }
+                else
+                {
+                    if (t.getMessage() != null)
+                        msg("          reason: " + t.getMessage());
+                    else
+                        msg("          reason: " + t);
+                }
             }
 
             System.exit(NET_STATUS);
@@ -525,12 +531,19 @@ public class Main implements Runnable
 
         log.debug("this.source: " + source);
         File fileToUpload = new File(source);
+        
+        if (retryEnabled)
+            clientTransfer.setMaxRetries(Integer.MAX_VALUE);
+        clientTransfer.setTransferListener(new VOSpaceTransferListener());
         clientTransfer.setSSLSocketFactory(client.getSslSocketFactory());
         clientTransfer.doUpload(fileToUpload);
         Node node = clientTransfer.getTarget();
-        log.debug("clientTransfer getTarget: " + node);
-        Node nodeRtn = this.client.getNode(node.getUri().getPath());
-        log.debug("Node returned from getNode, after doUpload: " + VOSClientUtil.xmlString(nodeRtn));
+        if (log.isDebugEnabled())
+        {
+            log.debug("clientTransfer getTarget: " + node);
+            Node nodeRtn = this.client.getNode(node.getUri().getPath());
+            log.debug("Node returned from getNode, after doUpload: " + VOSClientUtil.xmlString(nodeRtn));
+        }
     }
 
     private void copyFromVOSpace()
@@ -552,12 +565,15 @@ public class Main implements Runnable
         transfer.setDirection(transferDirection);
 
         ClientTransfer clientTransfer = new ClientTransfer(client.pullFromVoSpace(transfer));
-        log.debug(clientTransfer.toXmlString());
 
         log.debug("this.source: " + source);
         File fileToSave = new File(destination);
         if (fileToSave.exists())
             log.info("overwriting existing file: " + destination);
+        
+        if (retryEnabled)
+            clientTransfer.setMaxRetries(Integer.MAX_VALUE);
+        clientTransfer.setTransferListener(new VOSpaceTransferListener());
         clientTransfer.setSSLSocketFactory(client.getSslSocketFactory());
         clientTransfer.doDownload(fileToSave);
         Node node = clientTransfer.getTarget();
@@ -795,7 +811,9 @@ public class Main implements Runnable
         this.client = new VOSpaceClient(baseUrl, doVal);
         if ( argMap.isSet(ARG_INHERIT_PERM) )
             this.client.setInheritPermission(true);
-        
+
+        this.retryEnabled = !argMap.isSet(ARG_NO_RETRY);
+
         log.info("server uri: " + serverUri);
         log.info("base url: " + this.baseUrl);
     }
@@ -979,15 +997,18 @@ public class Main implements Runnable
                 "other types of nodes specifically is not supported at this time.                                 ",
                 "                                                                                                  ",
                 "Copy file:                                                                                        ",
-                "java -jar VOSpaceClient.jar  [-v|--verbose|-d|--debug]                                            ",
+                "java -jar VOSpaceClient.jar  [-v|--verbose|-d|--debug]                                  ",
                 CertCmdArgUtil.getCertArgUsage(),
                 "   --copy --src=<source URI> --dest=<destination URI>                                            ",
                 "   [--content-type=<mimetype of source>]                                                           ",
                 "   [--content-encoding=<encoding of source>]                                                       ",
                 "   [--prop=<properties file>]",
                 "   [--ip | [--public[=true|false]] [--group-read=<group URI>] [--group-write=<group URI>] ]",
+                "   [--noretry]",
+
                 " ",
                 "--ip : inherit permission properties from parent",
+                "--noretry :  disable retry of failed transfers (when the server indicates it was temporary)",
                 " ",
                 "Note: One of --src and --target may be a \"vos\" URI and the other may be an                        ",
                 "absolute or relative path to a file. If the target node does not exist, a                         ",
