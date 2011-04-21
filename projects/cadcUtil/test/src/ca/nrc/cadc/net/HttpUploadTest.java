@@ -77,7 +77,9 @@ import ca.nrc.cadc.util.Log4jInit;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileOutputStream;
-import java.net.HttpURLConnection;
+import java.io.FileWriter;
+import java.io.IOException;
+import java.io.OutputStream;
 import java.net.InetAddress;
 import java.net.URL;
 import java.util.Random;
@@ -367,5 +369,66 @@ public class HttpUploadTest
             if (tmp != null && tmp.exists())
                 tmp.delete();
         }
+    }
+
+    //@Test
+    public void testRetryUpload() throws Exception
+    {
+        log.debug("TEST: testRetryUpload");
+
+        try
+        {
+            // TODO: for this test to work,
+            //       we need a URL which will respond with a 503 and
+            //       Retry-After header a few times before succeeding
+            // this url is my temporary hack which gives a couple of 503s
+            // and then responds with a 200 :)
+            File rnd = File.createTempFile("foo",".txt");
+            URL dest = new URL("http://localhost:8080/pdowler/test/"+rnd.getName());
+            log.debug("src file length: " + srcFile.length());
+            HttpUpload up = new HttpUpload(srcFile, dest);
+
+            // this is not supported in HttpUpload due to behaviour of
+            // HttpURLConnection and tomcat 5.x
+            //MyOutputStreamWrapper o = new MyOutputStreamWrapper();
+            //o.src = srcFile;
+            //HttpUpload up = new HttpUpload(o, dest);
+            
+            up.setMaxRetries(5); // more than above test url
+            up.run();
+            if (up.getThrowable() != null)
+                log.error("run failed", up.getThrowable());
+            Assert.assertNull("upload failure", up.getThrowable());
+        }
+        catch (Exception unexpected)
+        {
+            log.error("unexpected exception", unexpected);
+            Assert.fail("unexpected exception: " + unexpected);
+        }
+    }
+
+    class MyOutputStreamWrapper implements OutputStreamWrapper
+    {
+
+        File src;
+        byte[] buf;
+
+        public void write(OutputStream out)
+            throws IOException
+        {
+            if (buf == null)
+                buf = FileUtil.readFile(src);
+            FileWriter fw = new FileWriter("MyOutputStreamWrapper.log");
+            int tot = 0;
+            while(tot < 32*srcFile.length())
+            //while(true)
+            {
+                out.write(buf);
+                tot += buf.length;
+                fw.write("wrote " + tot + " bytes\n");
+                fw.flush();
+            }
+        }
+
     }
 }

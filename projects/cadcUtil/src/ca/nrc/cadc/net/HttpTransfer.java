@@ -106,6 +106,16 @@ public abstract class HttpTransfer implements Runnable
     public static String DEFAULT_USER_AGENT;
     public static final String CADC_CONTENT_LENGTH_HEADER = "X-CADC-Content-Length";
 
+    public static final String SERVICE_RETRY = "Retry-After";
+
+    /**
+     * The maximum retry delay (120 seconds).
+     */
+    public static final int MAX_RETRY_DELAY = 120;
+
+    protected int maxRetries = 0;
+
+    
     protected int bufferSize = 8192;
     protected OverwriteChooser overwriteChooser;
     protected ProgressListener progressListener;
@@ -143,6 +153,20 @@ public abstract class HttpTransfer implements Runnable
         this.requestProperties = new ArrayList<HttpRequestProperty>();
     }
 
+    /**
+     * Enable retry (maxRetries > 0) and set the maximum numbr of times
+     * to retry before failing. Retry will only be attempted if the server
+     * responds with a 503 and a usable Retry-After header value.
+     * </p><p>
+     * Set this to Integer.MAX_VALUE to retry indefinitely.
+     * 
+     * @param maxRetries
+     */
+    public void setMaxRetries(int maxRetries)
+    {
+        this.maxRetries = maxRetries;
+    }
+    
     public URL getURL() { return remoteURL; }
 
     public void setBufferSize(int bufferSize)
@@ -224,6 +248,27 @@ public abstract class HttpTransfer implements Runnable
         fireCancelledEvent();
         this.fireCancelOnce = false;
     }
+
+    protected class TransientException extends Exception
+    {
+        String msg;
+        long retryDelay;
+
+        public TransientException(String msg, long retryDelay)
+        {
+            this(msg, null, retryDelay);
+        }
+
+        TransientException(String msg, Throwable cause, long retryDelay)
+        {
+            super(msg, cause);
+            this.msg = msg;
+            this.retryDelay = retryDelay;
+        }
+        @Override
+        public String toString() { return "TransientException["+msg+","+retryDelay+"]"; }
+    }
+
 
     protected void findEventID(HttpURLConnection conn)
     {

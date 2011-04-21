@@ -85,6 +85,7 @@ import javax.net.ssl.HttpsURLConnection;
 import org.apache.log4j.Logger;
 
 import ca.nrc.cadc.net.event.TransferEvent;
+import ca.nrc.cadc.util.StringUtil;
 
 /**
  * Perform an upload (PUT).
@@ -106,6 +107,8 @@ public class HttpUpload extends HttpTransfer
 
     private InputStream istream;
     private OutputStreamWrapper wrapper;
+
+    private int numRetries = 0;
 
     public HttpUpload(File src, URL dest)
     {
@@ -164,11 +167,54 @@ public class HttpUpload extends HttpTransfer
 
     public void run()
     {
+        // currently not feasible since we would have to be able to rewind the
+        // stream (istream) or the wrapper impl would have to be idempotent
+        // and invokable multiple times... but with some servers (tomcat 5) that
+        // will be bad because it accepts the entire stream before we can check
+        // the retry response code
+        if (istream != null || wrapper != null)
+        {
+            log.debug("input comes from a stream, disabling retries");
+            this.maxRetries = 0;
+        }
+
+        boolean done = false;
+        while (!done)
+        {
+            try
+            {
+                runX();
+                done = true;
+            }
+            catch(TransientException ex)
+            {
+                try
+                {
+                    int num = numRetries;
+                    long dt = 1000L*ex.retryDelay;
+                    log.debug("retry "+num+" sleeping  for " + dt);
+                    Thread.sleep(dt);
+                }
+                catch(InterruptedException iex)
+                {
+                    log.debug("retry interrupted");
+                    this.go = false;
+                    done = true;
+                }
+            }
+        }
+    }
+
+    private void runX()
+        throws TransientException
+    {
         log.debug(this.toString());
         if (!go)
             return; // cancelled while queued, event notification handled in terminate()
+
         
-        OutputStream ostream = null;
+
+        boolean throwTE = false;
         try
         {
             this.thread = Thread.currentThread();
@@ -182,121 +228,21 @@ public class HttpUpload extends HttpTransfer
                 HttpsURLConnection sslConn = (HttpsURLConnection) conn;
                 initHTTPS(sslConn);
             }
+
+            doPut(conn);
             
-            if (localFile != null)
-            {
-                try
-                {
-                    // Try using the setFixedLengthStreamingMode method that takes a long as a parameter.
-                    // (Only available in Java 7 and up)
-                    Method longContentLengthMethod = conn.getClass().getMethod("setFixedLengthStreamingMode", long.class);
-                    longContentLengthMethod.invoke(conn, new Long(localFile.length()));
-                }
-                catch (NoSuchMethodException e)
-                {
-                    // Check if the file size is greater than Integer.MAX_VALUE
-                    if (localFile.length() > Integer.MAX_VALUE)
-                    {
-                        // Cannot set the header length in the standard fashion, so
-                        // set it to chunked streaming mode and set a custom header
-                        // for use by servers that recognize this attribute
-                        conn.setChunkedStreamingMode(bufferSize);
-                        conn.setRequestProperty(CADC_CONTENT_LENGTH_HEADER, Long.toString(localFile.length()));
-                    }
-                    else
-                    {
-                        // Set the file size with integer representation
-                        conn.setFixedLengthStreamingMode((int) localFile.length());
-                    }
-                }
-            }
-            else
-            {
-                conn.setChunkedStreamingMode(bufferSize);
-            }
-
-            conn.setRequestMethod("PUT");
-            conn.setUseCaches(false);
-            conn.setDoInput(true);
-            conn.setDoOutput(true);
-
-            // this seesm to fail, maybe not allowed with PUT
-            //conn.setRequestProperty("User-Agent", userAgent);
-            
-            // Note: conn.setRequestProperty("Content-Length", value) has no effect.  Content
-            // length header is set by calling setFixedLengthStreamingMode() (done above)
-            if (localFile != null)
-                conn.setRequestProperty("Content-Length", Long.toString(localFile.length()));
-            if (contentType != null)
-                conn.setRequestProperty("Content-Type", contentType);
-            if (contentEncoding != null)
-                conn.setRequestProperty("Content-Encoding", contentEncoding);
-            if (contentMD5 != null)
-                conn.setRequestProperty("Content-MD5", contentMD5);
-
-            for (HttpRequestProperty rp : requestProperties)
-                conn.setRequestProperty(rp.getProperty(), rp.getValue());
-
-            int bSize = bufferSize;
-            if (localFile != null && localFile.length() < bSize)
-                bSize = (int) localFile.length();
-
-            ostream = conn.getOutputStream();
-            
-            if (localFile != null && istream == null)
-                istream = new FileInputStream(localFile);
-            if ( !(ostream instanceof BufferedOutputStream) )
-            {
-                log.debug("using BufferedOutputStream");
-                ostream = new BufferedOutputStream(ostream, bufferSize);
-            }
-            
-            if (localFile != null)
-            {
-                log.debug("using BufferedInputStream");
-                istream = new BufferedInputStream(istream, bufferSize);
-            }
-
-            fireEvent(TransferEvent.TRANSFERING);
-
-            if (istream != null)
-                ioLoop(istream, ostream, 2*this.bufferSize, 0);
-            else
-                 wrapper.write(ostream);
-
-            ostream.flush();
-            log.debug("flushing and closing OutputStream");
-            try { ostream.close(); }
-            catch(IOException ignore) { }
-            finally { ostream = null; }
-
-            String responseMessage = conn.getResponseMessage();
-            int code = conn.getResponseCode();
-            log.debug("code: " + code);
-            log.debug("responseMessage: " + responseMessage);
-            if (code != HttpURLConnection.HTTP_OK)
-            {
-                String msg = "(" + code + ") " + conn.getResponseMessage();
-                switch(code)
-                {
-                    case HttpURLConnection.HTTP_UNAUTHORIZED:
-                        throw new IOException("authentication failed " + msg);
-                    case HttpURLConnection.HTTP_FORBIDDEN:
-                        throw new IOException("authorization failed " + msg);
-                    case HttpURLConnection.HTTP_NOT_FOUND:
-                        throw new IOException("resource not found " + msg);
-                    case HttpURLConnection.HTTP_ENTITY_TOO_LARGE:
-                        throw new IOException("No space left - " + msg);
-                    default:
-                        throw new IOException(msg);
-
-                }
-            }
         }
         catch(InterruptedException iex)
         {
             // need to catch this or it looks like a failure instead of a cancel
             this.go = false;
+        }
+        catch(TransientException tex)
+        {
+            log.debug("caught: " + tex);
+            fireEvent(TransferEvent.RETRYING);
+            throwTE = true;
+            throw tex;
         }
         catch (IOException ioex)
         {
@@ -314,15 +260,6 @@ public class HttpUpload extends HttpTransfer
                 try { istream.close(); }
                 catch(Exception ignore) { }
             }
-            if (ostream != null)
-            {
-                log.debug("closing OutputStream");
-                try { ostream.close(); }
-                catch(Exception ignore) { }
-            }
-
-            //if (failure != null)
-            //    failure.printStackTrace();
 
             synchronized(this) // vs sync block in terminate()
             {
@@ -337,19 +274,190 @@ public class HttpUpload extends HttpTransfer
 
             if (!go)
             {
-                log.debug("Cancelled.");
+                log.debug("cancelled");
                 fireEvent(TransferEvent.CANCELLED);
             }
             else if (failure != null)
             {
-                log.debug("Failure!", failure);
+                log.debug("failed", failure);
                 fireEvent(failure);
             }
-            else
+            else if (!throwTE)
             {
-                log.debug("Completed.");
+                log.debug("completed");
                 fireEvent(TransferEvent.COMPLETED);
             }
         }
+    }
+
+    private void doPut(HttpURLConnection conn)
+        throws IOException, InterruptedException, TransientException
+    {
+        OutputStream ostream = null;
+
+        if (localFile != null)
+        {
+            try
+            {
+                // Try using the setFixedLengthStreamingMode method that takes a long as a parameter.
+                // (Only available in Java 7 and up)
+                Method longContentLengthMethod = conn.getClass().getMethod("setFixedLengthStreamingMode", long.class);
+                longContentLengthMethod.invoke(conn, new Long(localFile.length()));
+                log.debug("invoked setFixedLengthStreamingMode(long)");
+            }
+            catch (Exception noCanDo)
+            {
+                // Check if the file size is greater than Integer.MAX_VALUE
+                if (localFile.length() > Integer.MAX_VALUE)
+                {
+                    // Cannot set the header length in the standard fashion, so
+                    // set it to chunked streaming mode and set a custom header
+                    // for use by servers that recognize this attribute
+                    conn.setChunkedStreamingMode(bufferSize);
+                    conn.setRequestProperty(CADC_CONTENT_LENGTH_HEADER, Long.toString(localFile.length()));
+                    log.debug("invoked setChunkedStreamingMode");
+                }
+                else
+                {
+                    // Set the file size with integer representation
+                    conn.setFixedLengthStreamingMode((int) localFile.length());
+                    log.debug("invoked setFixedLengthStreamingMode(int)");
+                }
+            }
+        }
+        else
+        {
+            conn.setChunkedStreamingMode(bufferSize);
+            log.debug("invoked setChunkedStreamingMode");
+        }
+
+        conn.setRequestMethod("PUT");
+        conn.setUseCaches(false);
+        conn.setDoInput(true);
+        conn.setDoOutput(true);
+
+        // this seems to fail, maybe not allowed with PUT
+        //conn.setRequestProperty("User-Agent", userAgent);
+
+        // Note: conn.setRequestProperty("Content-Length", value) has no effect.  Content
+        // length header is set by calling setFixedLengthStreamingMode() (done above)
+        if (localFile != null)
+            conn.setRequestProperty("Content-Length", Long.toString(localFile.length()));
+        if (contentType != null)
+            conn.setRequestProperty("Content-Type", contentType);
+        if (contentEncoding != null)
+            conn.setRequestProperty("Content-Encoding", contentEncoding);
+        if (contentMD5 != null)
+            conn.setRequestProperty("Content-MD5", contentMD5);
+
+        for (HttpRequestProperty rp : requestProperties)
+            conn.setRequestProperty(rp.getProperty(), rp.getValue());
+
+        int bSize = bufferSize;
+        if (localFile != null && localFile.length() < bSize)
+            bSize = (int) localFile.length();
+
+        IOException ioex = null;
+        FileInputStream fin = null;
+        InputStream in = null;
+        try
+        {
+            ostream = conn.getOutputStream();
+
+            if (localFile != null)
+            {
+                fin = new FileInputStream(localFile);
+                in = fin;
+            }
+            else if (istream != null)
+                in = istream;
+            
+            if ( !(ostream instanceof BufferedOutputStream) )
+            {
+                log.debug("using BufferedOutputStream");
+                ostream = new BufferedOutputStream(ostream, bufferSize);
+            }
+
+            if (in != null)
+            {
+                log.debug("using BufferedInputStream");
+                in = new BufferedInputStream(in, bufferSize);
+            }
+
+            fireEvent(TransferEvent.TRANSFERING);
+
+            if (in != null)
+                ioLoop(in, ostream, 2*this.bufferSize, 0);
+            else
+                 wrapper.write(ostream);
+
+            ostream.flush();
+            log.debug("flushing and closing OutputStream");
+        }
+        catch(IOException ex)
+        {
+            ioex = ex;
+            // dealt with below
+        }
+        finally
+        {
+            try
+            {
+                if (ostream != null)
+                    ostream.close();
+            }
+            catch(IOException ignore) { }
+            
+            try
+            {
+                if (fin != null)
+                    fin.close();
+            }
+            catch(IOException ignore) { }
+        }
+
+        String responseMessage = conn.getResponseMessage();
+        int code = conn.getResponseCode();
+        log.debug("code: " + code);
+        log.debug("responseMessage: " + responseMessage);
+        if (code != HttpURLConnection.HTTP_OK)
+        {
+            String msg = "(" + code + ") " + conn.getResponseMessage();
+            switch(code)
+            {
+                case HttpURLConnection.HTTP_UNAUTHORIZED:
+                    throw new IOException("authentication failed " + msg);
+                case HttpURLConnection.HTTP_FORBIDDEN:
+                    throw new IOException("authorization failed " + msg);
+                case HttpURLConnection.HTTP_NOT_FOUND:
+                    throw new IOException("resource not found " + msg);
+                case HttpURLConnection.HTTP_ENTITY_TOO_LARGE:
+                    throw new IOException("No space left - " + msg);
+
+                case HttpURLConnection.HTTP_UNAVAILABLE:
+                    String retryAfter = conn.getHeaderField(SERVICE_RETRY);
+                    log.debug("got " + HttpURLConnection.HTTP_UNAVAILABLE + " with " + SERVICE_RETRY + ": " + retryAfter);
+                    if (StringUtil.hasText(retryAfter))
+                    {
+                        try
+                        {
+                            long dt = Long.parseLong(retryAfter);
+                            if (dt > 0 && dt < MAX_RETRY_DELAY && numRetries < maxRetries)
+                                {
+                                    numRetries++;
+                                    throw new TransientException(msg, dt);
+                                }
+                        }
+                        catch(NumberFormatException nex)
+                        {
+                            log.warn(SERVICE_RETRY + " after a 503 was not a number: " + retryAfter + ", ignoring");
+                        }
+                    }
+                default:
+                    throw new IOException(msg);
+            }
+        }
+        if (ioex != null) // an error writing that was not detected via response code
+            throw ioex;
     }
 }

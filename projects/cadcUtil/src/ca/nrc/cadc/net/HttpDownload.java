@@ -89,12 +89,15 @@ import org.apache.log4j.Logger;
 
 import ca.nrc.cadc.net.event.TransferEvent;
 import ca.nrc.cadc.util.FileMetadata;
+import ca.nrc.cadc.util.StringUtil;
 
 /**
  * Simple task to encapsulate a single download (GET). This class supports http and https
  * (SSL) using the specified SSLSocketFactory (or by creating one from the current Subject);
  * the SSLSocketFactory and/or Subject are only really needed if the server the client to have
- * an X509 certificate.
+ * an X509 certificate. This class also supports retrying downloads if the server responds
+ * with a 503 and a valid Retry-After header, where valid means an integer (number of seconds)
+ * that is between 0 and HttpTransfer.MAX_RETRY_DELAY.
  *
  * @author pdowler
  */
@@ -125,6 +128,8 @@ public class HttpDownload extends HttpTransfer
     private long decompSize = -1;
     private long size = -1;
     private long lastModified = -1;
+
+    private int numRetries = 0;
 
     /**
      * Constructor with default user-agent string.
@@ -304,10 +309,41 @@ public class HttpDownload extends HttpTransfer
      */
     public void run()
     {
+        boolean done = false;
+        while (!done)
+        {
+            try
+            {
+                runX();
+                done = true;
+            }
+            catch(TransientException ex)
+            {
+                try
+                {
+                    int num = numRetries;
+                    long dt = 1000L*ex.retryDelay;
+                    log.debug("retry "+num+" sleeping  for " + dt);
+                    Thread.sleep(dt);
+                }
+                catch(InterruptedException iex)
+                {
+                    log.debug("retry interrupted");
+                    this.go = false;
+                    done = true;
+                }
+            }
+        }
+    }
+
+    private void runX()
+        throws TransientException
+    {
         log.debug(this.toString());
         if (!go)
             return; // cancelled while queued, event notification handled in terminate()
         
+        boolean throwTE = false;
         try
         {
             // store the thread so that other threads (typically the
@@ -329,6 +365,12 @@ public class HttpDownload extends HttpTransfer
             // need to catch this or it looks like a failure instead of a cancel
             this.go = false;
         }
+        catch(TransientException tex)
+        {
+            log.debug("caught: " + tex);
+            throwTE = true;
+            throw tex;
+        }
         catch (IOException ioex)
         {
             failure = ioex;
@@ -336,12 +378,11 @@ public class HttpDownload extends HttpTransfer
         catch(Throwable t)
         {
             failure = t;
+            if (log.isDebugEnabled())
+                t.printStackTrace();
         }
         finally
         {
-            if (failure != null && log.isDebugEnabled())
-                failure.printStackTrace();
-            
             synchronized(this) // vs sync block in terminate() 
             {
                 if (thread != null)
@@ -367,10 +408,10 @@ public class HttpDownload extends HttpTransfer
             }
             else if (failure != null)
             {
-                log.debug("failed");
+                log.debug("failed: " + failure);
                 fireEvent(failure);
             }
-            else
+            else if (!throwTE)
             {
                 log.debug("completed");
                 FileMetadata meta = new FileMetadata();
@@ -492,18 +533,17 @@ public class HttpDownload extends HttpTransfer
         
         int code = conn.getResponseCode();
         log.debug("HTTP HEAD status: " + code);
-        log.debug("HTTP Location header: " + conn.getHeaderField("Location"));
         if (code != HttpURLConnection.HTTP_OK)
         {
             String msg = "(" + code + ") " + conn.getResponseMessage();
             switch(code)
             {
                 case HttpURLConnection.HTTP_UNAUTHORIZED:
-                    throw new IOException("authentication failed " + msg);
+                    throw new IOException("authentication failed: " + msg);
                 case HttpURLConnection.HTTP_FORBIDDEN:
-                    throw new IOException("authorization failed " + msg);
+                    throw new IOException("authorization failed: " + msg);
                 case HttpURLConnection.HTTP_NOT_FOUND:
-                    throw new IOException("resource not found " + msg);
+                    throw new IOException("resource not found: " + msg);
                 default:
                     throw new IOException(msg);
                     
@@ -607,8 +647,55 @@ public class HttpDownload extends HttpTransfer
         log.debug("    lastModified: " + lastModified);
     }
 
+    private int checkStatusCode(HttpURLConnection conn)
+        throws IOException, TransientException
+    {
+        int code = conn.getResponseCode();
+        log.debug("HTTP GET status: " + code + " for " + remoteURL);
+
+        if (code != HttpURLConnection.HTTP_OK)
+        {
+            String msg = "(" + code + ") " + conn.getResponseMessage();
+            switch(code)
+            {
+                case HttpURLConnection.HTTP_UNAUTHORIZED:
+                    throw new IOException("authentication failed " + msg);
+                case HttpURLConnection.HTTP_FORBIDDEN:
+                    throw new IOException("authorization failed " + msg);
+                case HttpURLConnection.HTTP_NOT_FOUND:
+                    throw new IOException("resource not found " + msg);
+
+                case HttpURLConnection.HTTP_UNAVAILABLE:
+                    
+                    String retryAfter = conn.getHeaderField(SERVICE_RETRY);
+                    log.debug("got " + HttpURLConnection.HTTP_UNAVAILABLE + " with " + SERVICE_RETRY + ": " + retryAfter);
+                    if (StringUtil.hasText(retryAfter))
+                    {
+                        try
+                        {
+                            long dt = Long.parseLong(retryAfter);
+                            if (dt > 0 && dt < MAX_RETRY_DELAY && numRetries < maxRetries)
+                                {
+                                    numRetries++;
+                                    throw new TransientException("server busy", dt);
+                                }
+                        }
+                        catch(NumberFormatException nex)
+                        {
+                            log.warn(SERVICE_RETRY + " after a 503 was not a number: " + retryAfter + ", ignoring");
+                        }
+                    }
+
+                default:
+                    throw new IOException(msg);
+
+            }
+        }
+        return code;
+    }
+
     private void doGet()
-        throws IOException, InterruptedException
+        throws IOException, InterruptedException, TransientException
     {
         // check/clear interrupted flag and throw if necessary
         if ( Thread.interrupted() )
@@ -633,8 +720,7 @@ public class HttpDownload extends HttpTransfer
                 conn.setRequestProperty(rp.getProperty(), rp.getValue());
 
             conn.setRequestMethod("GET");
-            int code = conn.getResponseCode();
-            log.debug("HTTP GET status: " + code + " for " + remoteURL);
+            int code = checkStatusCode(conn);
 
             if (destStream == null) // downloading to a file
                 processHeader(conn); // TODO: we may want some of this in streaming mode
@@ -645,7 +731,8 @@ public class HttpDownload extends HttpTransfer
                 doDownload = doCheckDestination();
 
             // go=false means cancelled, doDownload==false means skipped
-            this.go = go && doDownload;
+            if (!doDownload)
+                return;
             if (!go)
                 return;
 
@@ -683,7 +770,7 @@ public class HttpDownload extends HttpTransfer
                 rconn.setRequestMethod("GET");
                 int rcode = rconn.getResponseCode();
                 log.debug("HTTP GET status: " + rcode + " for range request to " + remoteURL);
-                if (pkey != null && code == 416) // server doesn't like range, retry without it
+                if (pkey != null && code == 416) // server doesn't like range
                 {
                     try 
                     {

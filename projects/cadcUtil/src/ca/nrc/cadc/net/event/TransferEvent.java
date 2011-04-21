@@ -94,12 +94,13 @@ public class TransferEvent extends EventObject
     public static final int CANCELLED  = 6;
     public static final int FAILED     = 7;
     public static final int DELETED = 8;
-    private static int MAX_STATE = 9;
+    public static final int RETRYING = 9;
+    private static int MAX_STATE = 10;
     private String[] states = new String[]
     {
         "min", 
         "CONNECTING", "CONNECTED", "TRANSFERING", "DECOMPRESSING",
-        "COMPLETED", "CANCELLED", "FAILED", "DELETED",
+        "COMPLETED", "CANCELLED", "FAILED", "DELETED", "RETRYING",
         "max"
     };
     
