@@ -136,7 +136,7 @@ public class ExtractorTest
     public void setUp() throws Exception
     {
 
-        _en = new SelectListExpressionExtractor(TAP_SCHEMA, null);
+        _en = new SelectListExpressionExtractor(TAP_SCHEMA);
         _rn = null;
         _fn = null;
         _sn = new SelectListExtractor(_en, _rn, _fn);
