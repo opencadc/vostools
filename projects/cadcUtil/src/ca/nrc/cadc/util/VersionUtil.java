@@ -32,6 +32,8 @@ package ca.nrc.cadc.util;
 
 import java.io.File;
 import java.io.IOException;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.StringTokenizer;
 import java.util.jar.JarFile;
 import java.util.jar.Manifest;
@@ -41,10 +43,176 @@ import java.util.jar.Manifest;
  * packages. The version is determined based on the Implementation-Version
  * and Implementation-Vendor fields of the jars' manifest files.
  *
+ * Changed 2011-04-21, -sz:
+ * New methods added to retrieve version information of all JAR files in the 
+ * system class path.
  */
 public class VersionUtil
 {
-	/**
+    public static final String PATH_SEPARATOR =  System.getProperty("path.separator");
+    public static final String CLASS_PATH =  System.getProperty("java.class.path");
+    public static final String NL =  System.getProperty("line.separator");
+    public static final String ATT_VERSION =  "Implementation-Version";
+    public static final String ATT_VENDOR =  "Implementation-Vendor";
+    public static final String ATT_CLASS_PATH =  "Class-Path";
+
+    /**
+     * Return version of all JAR files in the system class path.
+     * 2011-04-21
+     * 
+     * @return String of version information.
+     * @author zhangsa
+     */
+    public static String allJarVersion()
+    {
+        StringBuilder sb = new StringBuilder();
+        List<String> jarPaths = getAllJars();
+        JarFile jf;
+        for (String jarPath : jarPaths)
+        {
+            try
+            {
+                jf = new JarFile(jarPath);
+                sb.append(jarCompleteVersion(jf));
+            }
+            catch (IOException e)
+            {
+                sb.append(String.format("Can not open JAR file of [%s].", jarPath)).append(NL);
+                e.printStackTrace();
+            }
+        }
+        return sb.toString();
+    }
+
+    /**
+     * Return version information of a JAR file.
+     * 
+     * @param jarFile JAR file object.
+     * @return String of version information.
+     */
+    public static String jarVersion(JarFile jarFile)
+    {
+        String rtn = "";
+        try
+        {
+            Manifest mf = jarFile.getManifest();
+            if (mf == null)
+                rtn = jarFile.getName() + " does not have manifest file." + NL;
+            else
+                rtn = formatDisplay(jarFile.getName(), mf);
+        }
+        catch (IOException e)
+        {
+            rtn = jarFile.getName() + " cannot open manifest file." + NL;
+            e.printStackTrace();
+        }
+        return rtn;
+    }
+    
+    /**
+     * Return version information of a JAR file,
+     * as well as all included JAR files in its manifest class path.
+     * 
+     * @param jarFile
+     * @return String of version information.
+     */
+    public static String jarCompleteVersion(JarFile jarFile)
+    {
+        StringBuilder sb = new StringBuilder();
+
+        sb.append(NL);
+        Manifest mf;
+        try
+        {
+            mf = jarFile.getManifest();
+            if (mf == null)
+                throw new IOException(String.format("No mafifest file is defined in %s.",
+                        jarFile.getName()));
+
+            sb.append("JAR: ");
+            sb.append(formatDisplay(jarFile.getName(), mf));
+            sb.append("-------------------------------------").append(NL);
+
+            List<String> allIncludedJars = getAllJars(jarFile);
+
+            JarFile ijf; // included JAR file
+            for (String jar : allIncludedJars)
+            {
+                ijf = new JarFile(jar);
+                sb.append(jarVersion(ijf));
+            }
+            sb.append("-------------------------------------").append(NL);
+        }
+        catch (IOException e)
+        {
+            sb.append(String.format("Can not open manifest in JAR file [%s].", jarFile.getName()))
+            .append(NL);
+            e.printStackTrace();
+        }
+        return sb.toString();
+    }
+    
+    /**
+     * Get all JAR files needed, based on the current class path.
+     * 
+     * @return a list of JAR file paths, as string.
+     */
+    public static List<String> getAllJars()
+    {
+        List<String> jars = new ArrayList<String>();
+        
+        String[] cpItems = CLASS_PATH.split(PATH_SEPARATOR);
+        for (String cpItem : cpItems)
+        {
+            if (cpItem.endsWith(".jar"))
+            {
+                jars.add(cpItem);
+            }
+        }
+        return jars;
+    }
+
+    /**
+     * Return a list of all included JAR files of a JAR file.
+     * 
+     * @param jarFile The JAR file
+     * @return List of JAR file paths
+     * @throws IOException
+     */
+    public static List<String> getAllJars(JarFile jarFile) throws IOException
+    {
+        List<String> jars = new ArrayList<String>();
+
+        String jarPath = jarFile.getName();
+
+        String jarDir = jarPath.substring(0, jarPath.lastIndexOf(File.separatorChar) + 1);
+        Manifest mf = jarFile.getManifest();
+
+        String classPath = mf.getMainAttributes().getValue(ATT_CLASS_PATH);
+        if (classPath == null) return jars;  //empty list
+
+        String[] cpItems = classPath.split(" ");
+        String jarItem;
+        for (String cpItem : cpItems)
+        {
+            if (cpItem.endsWith(".jar"))
+            {
+                if (cpItem.indexOf(File.separatorChar) == -1)
+                    jarItem = jarDir + cpItem; // cpItem is a relative path.
+                else
+                    jarItem = cpItem;
+
+                jars.add(jarItem);
+            }
+        }
+        return jars;
+    }
+
+
+    
+    
+    
+    /**
 	 * Determines the version of a package an object belongs to. The version
 	 * and vendor are specified in the jar file of the package.
 	 * @param o an object belonging to the package for which the version is
@@ -121,6 +289,11 @@ public class VersionUtil
 			result += formatDisplay(jarFile, manifest);
 			String classPath =
 				manifest.getMainAttributes().getValue("Class-Path");
+			
+			// bug fixing, 2011-04-20, -sz
+			if (classPath == null)
+			    return "No Class-Path defined in JAR: " + jarFile;
+			
 			StringTokenizer jarFiles = new StringTokenizer(classPath, " ");
 			String jarPath =
 				jarFile.substring(
@@ -172,9 +345,9 @@ public class VersionUtil
 	private static String formatDisplay(String src, Manifest manifest)
 	{
 		String version =
-			manifest.getMainAttributes().getValue("Implementation-Version");
+			manifest.getMainAttributes().getValue(ATT_VERSION);
 		String vendor =
-			manifest.getMainAttributes().getValue("Implementation-Vendor");
+			manifest.getMainAttributes().getValue(ATT_VENDOR);
 
 		if (version == null)
 			version = "NA";
@@ -185,4 +358,14 @@ public class VersionUtil
 		return (src + ": " + version + " (c) " + vendor + "\n");
 	}
 
+    /**
+     * @param args
+     * @throws IOException 
+     */
+    public static void main(String[] args) throws IOException
+    {
+        System.out.print(allJarVersion());
+    }
+
+	
 }
