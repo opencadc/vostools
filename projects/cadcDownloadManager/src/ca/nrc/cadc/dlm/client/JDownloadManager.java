@@ -81,6 +81,7 @@ import java.awt.BorderLayout;
 import java.awt.Color;
 import java.awt.Component;
 import java.awt.Dimension;
+import java.awt.FlowLayout;
 import java.awt.event.ActionEvent;
 import java.io.File;
 import java.io.FileReader;
@@ -99,6 +100,7 @@ import javax.swing.BorderFactory;
 import javax.swing.Box;
 import javax.swing.BoxLayout;
 import javax.swing.JButton;
+import javax.swing.JCheckBox;
 import javax.swing.JFileChooser;
 import javax.swing.JFormattedTextField;
 import javax.swing.JLabel;
@@ -108,6 +110,7 @@ import javax.swing.JProgressBar;
 import javax.swing.JScrollPane;
 import javax.swing.JSpinner;
 import javax.swing.SwingUtilities;
+import javax.swing.event.ChangeEvent;
 import javax.swing.event.ChangeListener;
 import org.apache.log4j.Logger;
 
@@ -118,7 +121,7 @@ import org.apache.log4j.Logger;
  * @version $Version$
  * @author pdowler
  */
-public class JDownloadManager extends JPanel implements TransferListener
+public class JDownloadManager extends JPanel implements ChangeListener, TransferListener
 {
     private static final long serialVersionUID = 201008051500L;
     private static Logger log = Logger.getLogger(JDownloadManager.class);
@@ -129,7 +132,7 @@ public class JDownloadManager extends JPanel implements TransferListener
     private static String CANCELLED = " Cancelled: ";
     private static String FAILED = " Failed: ";
     private static String TOTAL = " Total: ";
-    
+
     private boolean autoRemove = false;
     private boolean autoDecompress = false;
     private JPanel tc;
@@ -144,6 +147,7 @@ public class JDownloadManager extends JPanel implements TransferListener
     private JLabel failLabel;
     private JLabel totalLabel;
     private JProgressBar progress;
+    private JCheckBox retryControl;
     private int numTotal = 0;
     private int numCompleted = 0;
     private int numCancelled = 0;
@@ -157,11 +161,17 @@ public class JDownloadManager extends JPanel implements TransferListener
     
     private File initialDir;
     
-    public JDownloadManager() { this(DownloadManager.DEFAULT_THREAD_COUNT, null); }
+    public JDownloadManager()
+    {
+        this(DownloadManager.DEFAULT_THREAD_COUNT, false, null);
+    }
     
-    public JDownloadManager(int initialThreadCount) { this(initialThreadCount, null); }
+    public JDownloadManager(int initialThreadCount, boolean retryEnabled)
+    {
+        this(initialThreadCount, retryEnabled, null);
+    }
     
-    public JDownloadManager(int initialThreadCount, File initialDir)
+    public JDownloadManager(int initialThreadCount, boolean retryEnabled, File initialDir)
     {
         super(new BorderLayout());
         if (initialThreadCount < 1)
@@ -170,13 +180,13 @@ public class JDownloadManager extends JPanel implements TransferListener
             initialThreadCount = DownloadManager.MAX_THREAD_COUNT;
 
         SpinnerThreadControl threadControl = new SpinnerThreadControl(new Integer(initialThreadCount), DownloadManager.MAX_THREAD_COUNT);
-        downloadManager = new DownloadManager(threadControl, initialThreadCount, initialDir);
+        downloadManager = new DownloadManager(threadControl, retryEnabled, initialThreadCount, initialDir);
         downloadManager.addDownloadListener(this);
 
         // configure custom authentication
         Authenticator.setDefault(new HttpAuthenticator(this));
         
-        // use a singe shared FOD so that global decisions stick
+        // use a single shared FOD so that global decisions stick
         this.fod = new FileOverwriteDecider(this);
         
         JPanel scrollable = new JPanel(new BorderLayout());
@@ -186,12 +196,20 @@ public class JDownloadManager extends JPanel implements TransferListener
         extraSpace.setBackground(Color.WHITE);
         scrollable.add(extraSpace, BorderLayout.CENTER); // take up all extra space
         
-        this.tc = new JPanel();        
-        
+        this.tc = new JPanel();
+        //FlowLayout flo = (FlowLayout) this.tc.getLayout();
+        //flo.setHgap(30);
+
+        //JPanel jtc = new JPanel();
         JFormattedTextField tf = ((JSpinner.DefaultEditor)threadControl.getEditor()).getTextField();
         tf.setEditable(false);
         tc.add(new JLabel("max simultaneous downloads:"));
         tc.add(threadControl);
+        //tc.add(jtc);
+
+        //this.retryControl = new JCheckBox("retry when server is busy",retryEnabled);
+        //retryControl.addChangeListener(this);
+        //tc.add(retryControl);
         
         this.status = new Box(BoxLayout.Y_AXIS);
         this.completeLabel = new JLabel(COMPLETED + "0");
@@ -229,6 +247,16 @@ public class JDownloadManager extends JPanel implements TransferListener
 
         // support recursive download via manifest file
         addDownloadListener(new ManifestDownloadListener());
+    }
+
+    public void stateChanged(ChangeEvent e)
+    {
+        if (e.getSource() != null && e.getSource() == retryControl)
+        {
+            boolean enabled = (retryControl.getSelectedObjects() != null);
+            log.debug("stateChanged: retry -> " + enabled);
+            this.downloadManager.setRetryEnabled(enabled);
+        }
     }
 
     private class CancelAction extends AbstractAction
@@ -305,6 +333,10 @@ public class JDownloadManager extends JPanel implements TransferListener
     {
         return downloadManager.getThreadCount();
     }
+    public boolean getRetryEnabled()
+    {
+        return true; //(retryControl.getSelectedObjects() != null);
+    }
     
     public void setThreadCount(int tc) 
     {
@@ -357,6 +389,7 @@ public class JDownloadManager extends JPanel implements TransferListener
         log.debug("transferEvent: " + e);
         switch(e.getState())
         {
+            case TransferEvent.RETRYING:
             case TransferEvent.CANCELLED:
             case TransferEvent.COMPLETED:
             case TransferEvent.FAILED:
@@ -395,7 +428,8 @@ public class JDownloadManager extends JPanel implements TransferListener
             int returnVal = chooser.showDialog(parent, "Select");
             if (returnVal == JFileChooser.APPROVE_OPTION)
             {
-                downloadManager.setDestinationDir(chooser.getSelectedFile());
+                File dest = chooser.getSelectedFile();
+                downloadManager.setDestinationDir(dest);
                 String estr = null;
                 if (!downloadManager.getDestinationDir().isDirectory()) // in case the user types something in
                     estr = "'" + downloadManager.getDestinationDir().getAbsolutePath() + "' is not a directory";
@@ -409,13 +443,16 @@ public class JDownloadManager extends JPanel implements TransferListener
                 }
                 else
                 {
+                    log.info("destination directory: " + dest.getAbsolutePath());
                     downloadManager.fireChangeEvent();
                 }
             }
+            else
+                downloadManager.setDestinationDir(null);
         }
         catch(RuntimeException rex)
         {
-            rex.printStackTrace();
+            log.error("failed to determine destination dir", rex);
         }
         log.debug("destDir: " + downloadManager.getDestinationDir());
     }
@@ -471,8 +508,15 @@ public class JDownloadManager extends JPanel implements TransferListener
         {
             switch(e.getState())
             {
+                case TransferEvent.RETRYING:
+                    log.info(e.getStateLabel() + ": " + e.getURL());
+                    break;
+                    
                 case TransferEvent.FAILED:
-                    log.error(e.getStateLabel() + ": " + e.getURL() + " -> " + e.getFile(), e.getError());
+                    if (e.getFile() == null)
+                        log.error(e.getStateLabel() + ": " + e.getURL() + " -- " + e.getError().getMessage());
+                    else
+                        log.error(e.getStateLabel() + ": " + e.getURL() + " -> " + e.getFile() + " -- " + e.getError().getMessage());
                     numFailed++;
                     break;
                 case TransferEvent.CANCELLED:

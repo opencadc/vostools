@@ -276,7 +276,7 @@ public class NetrcFile extends File
         }
         catch(IOException ex)
         {
-            // alwasy clean up fully on failure
+            // always clean up fully on failure
             clearCache();
         }
         finally

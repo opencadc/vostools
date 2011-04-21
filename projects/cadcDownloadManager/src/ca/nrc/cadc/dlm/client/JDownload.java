@@ -217,7 +217,11 @@ public class JDownload extends JPanel implements ProgressListener, Runnable
                     //status = "Connected";
                     transLabel.setText("Connected");
                     break;
-                    
+
+                case TransferEvent.RETRYING:
+                    transLabel.setText("Server busy, sleeping...");
+                    break;
+
                 case TransferEvent.TRANSFERING:
                 case TransferEvent.DECOMPRESSING:
                     JDownload.this.startingPos = e.getStartingPosition();

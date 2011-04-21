@@ -101,9 +101,9 @@
 
     <resources> 
         <j2se version="1.4+" initial-heap-size="64m" max-heap-size="128m" 
-            href="http://java.sun.com/products/autodl/j2se"/> 
-        <jar href="cadcUtil.jar"/> 
+            href="http://java.sun.com/products/autodl/j2se"/>
         <jar href="cadcDownloadManagerClient.jar"/>
+        <jar href="cadcUtil.jar"/> 
         <jar href="log4j.jar"/>
         <property name="ca.nrc.cadc.net.serverName" value="<%= serverName %>" />
     </resources> 

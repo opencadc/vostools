@@ -82,6 +82,7 @@ import javax.swing.event.ChangeListener;
 
 import ca.nrc.cadc.thread.Queue;
 import ca.nrc.cadc.thread.QueueUpdater;
+import javax.swing.SpinnerModel;
 import org.apache.log4j.Logger;
 
 /**
@@ -90,7 +91,7 @@ import org.apache.log4j.Logger;
  * @author majorb
  *
  */
-public class DownloadManager implements TransferListener
+public class DownloadManager implements ChangeListener, TransferListener
 {
     private static Logger log = Logger.getLogger(DownloadManager.class);
 
@@ -102,25 +103,39 @@ public class DownloadManager implements TransferListener
 
     private ThreadPool pool;
     private ThreadControl threadControl;
+    private boolean retryEnabled;
     
     private List changeListeners;
     private List downloadListeners;
     
     private File destDir;
     
-    public DownloadManager(ThreadControl threadControl, int initialThreadCount, File destinationDir)
+    public DownloadManager(ThreadControl threadControl, boolean retryEnabled, int initialThreadCount, File destinationDir)
     {
         this.threadControl = threadControl;
+        this.retryEnabled = retryEnabled;
+        log.debug("threads: " + getThreadCount());
+        log.debug("  retry: " + getRetryEnabled());
         setDestinationDir(destinationDir);
     }
 
     public void setDebug(boolean debug) { this.debug = debug; }
+
+    public boolean getRetryEnabled()
+    {
+        return retryEnabled;
+    }
+
+    public void setRetryEnabled(boolean retryEnabled)
+    {
+        this.retryEnabled = retryEnabled;
+    }
     
     public int getThreadCount() 
     {
         return ((Integer)threadControl.getValue()).intValue(); 
     }
-    
+
     public void setThreadCount(int tc) 
     {
         threadControl.setValue(new Integer(tc));
@@ -180,6 +195,11 @@ public class DownloadManager implements TransferListener
         if (changeListeners == null)
             return;
         changeListeners.remove(cl);
+    }
+
+    public void stateChanged(ChangeEvent e)
+    {
+        fireChangeEvent();
     }
     
     void fireChangeEvent()
@@ -382,6 +402,10 @@ public class DownloadManager implements TransferListener
                             log.debug(workerBasename + "still part of pool");
                             // set thread name so thread dumps are intelligible
                             setName(workerBasename + currentTask);
+                            int mr = 0;
+                            if (getRetryEnabled())
+                                mr = Integer.MAX_VALUE;
+                            currentTask.setMaxRetries(mr);
                             currentTask.run();
                         }
                         else

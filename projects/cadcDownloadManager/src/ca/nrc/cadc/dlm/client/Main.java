@@ -73,11 +73,9 @@ import java.awt.Component;
 
 import ca.nrc.cadc.thread.ConditionVar;
 import ca.nrc.cadc.util.ArgumentMap;
-import ca.nrc.cadc.util.Log4jInit;
 import ca.onfire.ak.Application;
 import ca.onfire.ak.ApplicationFrame;
 import org.apache.log4j.Level;
-import org.apache.log4j.Logger;
 
 /**
  * TODO
@@ -120,6 +118,7 @@ public class Main
                 boolean overwrite = am.isSet("overwrite");
                 String dest = am.getValue("dest");
                 String thStr = am.getValue("threads");
+                boolean retry = am.isSet("retry");
                 Integer threads = null;
                 if (thStr != null)
                     try
@@ -131,7 +130,7 @@ public class Main
                         throw new IllegalArgumentException("failed to parse '" + thStr + "' as an integer");
                     }
                 downloadCompleteCond.set(false);
-                ui = new ConsoleUI(level, threads, dest, decompress, overwrite, downloadCompleteCond);
+                ui = new ConsoleUI(level, threads, retry, dest, decompress, overwrite, downloadCompleteCond);
             }
             else
             {
@@ -195,5 +194,6 @@ public class Main
         System.out.println("        --decompress : decompress files after download (gzip,zip supported)");
         System.out.println("        --overwrite : overwrite existing files with the same name");
         System.out.println("        --threads=<number of threads> : allowed range is [1,11]");
+        System.out.println("        --retry : retry (loop) when server reports it is too busy");
     }
 }

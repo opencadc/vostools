@@ -81,6 +81,8 @@ import ca.nrc.cadc.net.event.TransferEvent;
 import ca.nrc.cadc.net.event.TransferListener;
 import ca.nrc.cadc.thread.ConditionVar;
 import ca.nrc.cadc.util.Log4jInit;
+import javax.swing.SpinnerModel;
+import javax.swing.SpinnerNumberModel;
 import org.apache.log4j.Level;
 import org.apache.log4j.Logger;
 
@@ -104,7 +106,7 @@ public class ConsoleUI implements UserInterface, TransferListener
     private boolean decompress;
     private boolean overwrite;
     
-    public ConsoleUI(Level logLevel, Integer threads, String dest, boolean decompress, boolean overwrite, ConditionVar downloadsCompleteCond)
+    public ConsoleUI(Level logLevel, Integer threads, Boolean retry, String dest, boolean decompress, boolean overwrite, ConditionVar downloadsCompleteCond)
     {
         Log4jInit.setLevel("ca.nrc.cadc", logLevel);
         
@@ -120,6 +122,12 @@ public class ConsoleUI implements UserInterface, TransferListener
                 throw new IllegalArgumentException("number of threads is out of allowed range [1,"
                         + DownloadManager.MAX_THREAD_COUNT + "]");
             initialThreads = threads.intValue();
+        }
+
+        boolean initialRetryEnabled = false;
+        if (retry != null)
+        {
+            initialRetryEnabled = retry.booleanValue();
         }
                 
         if (dest != null)
@@ -137,10 +145,10 @@ public class ConsoleUI implements UserInterface, TransferListener
             if ( !downloadDir.exists() || !downloadDir.isDirectory() || !downloadDir.canWrite())
                 throw new RuntimeException("Cannot write to directory " + currentDir);
         }
-        
+
         ThreadControl threadControl = new StaticThreadControl(initialThreads);
         log.debug("creating Downloadmanager: " + initialThreads + "," + downloadDir);
-        this.downloadManager = new DownloadManager(threadControl, initialThreads, downloadDir);
+        this.downloadManager = new DownloadManager(threadControl, initialRetryEnabled, initialThreads, downloadDir);
         downloadManager.addDownloadListener(this);
         
         this.engineInitCond = new ConditionVar();

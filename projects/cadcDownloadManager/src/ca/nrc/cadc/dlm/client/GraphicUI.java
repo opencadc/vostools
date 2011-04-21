@@ -165,9 +165,9 @@ public class GraphicUI extends AbstractApplication implements ChangeListener, Us
         writer.setUI(jta);
 
         // try to restore previous settings
-        int initialThreads = DownloadManager.DEFAULT_THREAD_COUNT;
         ApplicationConfig conf = getApplicationContainer().getConfig();
-        try 
+        int initialThreads = DownloadManager.DEFAULT_THREAD_COUNT;
+        try
         { 
             conf.setSection(configSection, true);
             String value = conf.getValue(threadCountConfigKey);
@@ -175,6 +175,17 @@ public class GraphicUI extends AbstractApplication implements ChangeListener, Us
                 initialThreads = Integer.parseInt(value);
         }
         catch(Exception notConfiguredYet) { }
+
+        boolean initialRetryEnabled = true;
+        try
+        {
+            conf.setSection(configSection, true);
+            String value = conf.getValue(retryConfigKey);
+            if (value != null)
+                initialRetryEnabled = Boolean.parseBoolean(value);
+        }
+        catch(Exception notConfiguredYet) { }
+
         File downloadDir = null;
         try 
         { 
@@ -186,7 +197,7 @@ public class GraphicUI extends AbstractApplication implements ChangeListener, Us
         }
         catch(Exception notConfiguredYet) { }
 
-        this.downloadManager = new JDownloadManager(initialThreads, downloadDir);
+        this.downloadManager = new JDownloadManager(initialThreads, initialRetryEnabled, downloadDir);
         downloadManager.addChangeListener(this);
         downloadManager.addDownloadListener(downloadListener);
         //this.add(downloadManager, BorderLayout.CENTER);
@@ -237,13 +248,11 @@ public class GraphicUI extends AbstractApplication implements ChangeListener, Us
 
     }
 
+    @Override
     public void paint(Graphics g)
     {
         super.paint(g);
-        if (uiInitCond != null)
-        {
-            uiInitCond.setNotifyAll();
-        }
+        uiInitCond.setNotifyAll();
     }
     
     private class DelayedInit implements Runnable
@@ -262,6 +271,10 @@ public class GraphicUI extends AbstractApplication implements ChangeListener, Us
                 });
                 
                 engineInitCond.waitForTrue();
+
+                log.info("destination dir: " + downloadManager.getDestinationDir());
+                if (downloadManager.getDestinationDir() == null)
+                    return; // cancelled
 
                 // TODO: if we wanted to continue to accept input from someplace,
                 // we would loop here and keep calling pop()
@@ -296,14 +309,16 @@ public class GraphicUI extends AbstractApplication implements ChangeListener, Us
     {
         ApplicationConfig conf = getApplicationContainer().getConfig();
 
+        boolean retryEnabled = downloadManager.getRetryEnabled();
         int threadCount = downloadManager.getThreadCount();
         File destDir = downloadManager.getDestinationDir();
 
         try 
         {
-            log.debug("updating configuration...");
+            log.debug("updating configuration: " + retryEnabled + "," + threadCount + "," + destDir);
             conf.setSection(configSection, true);
-            conf.putValue(threadCountConfigKey, Integer.toString(threadCount)); 
+            conf.putValue(threadCountConfigKey, Integer.toString(threadCount));
+            conf.putValue(retryConfigKey, Boolean.toString(retryEnabled));
             if (destDir != null)
                 conf.putValue(downloadDirConfigKey, destDir.getAbsolutePath()); 
             log.debug("updating configuration... done");

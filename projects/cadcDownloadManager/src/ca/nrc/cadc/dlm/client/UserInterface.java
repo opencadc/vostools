@@ -80,6 +80,7 @@ public interface UserInterface
     
     String configSection = "downloads";
     String threadCountConfigKey = "downloadManager.threadCount";
+    String retryConfigKey = "downloadManager.retryWhenServerBusy";
     String downloadDirConfigKey = "downloadManager.downloadDir";
     String debugKey = "downloadManager.debug";
     
