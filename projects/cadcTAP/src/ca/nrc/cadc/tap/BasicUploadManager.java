@@ -151,20 +151,9 @@ public class BasicUploadManager implements UploadManager
     public Map<String, TableDesc> upload(List<Parameter> paramList, String jobID)
     {
         log.debug("upload jobID " + jobID);
-
-        // Get the datasource.
-        Connection con;
+        
         if (dataSource == null)
             throw new IllegalStateException("failed to get DataSource");
-        try
-        {
-            con = dataSource.getConnection();
-            con.setAutoCommit(false);
-        }
-        catch (SQLException e)
-        {
-            throw new IllegalStateException("failed to get connection from DataSource", e);
-        }
 
         // Map of database table name to table descriptions.
         Map<String, TableDesc> metadata = new HashMap<String, TableDesc>();
@@ -172,15 +161,23 @@ public class BasicUploadManager implements UploadManager
         // Statements
         Statement stmt = null;
         PreparedStatement ps = null;
-
+        Connection con = null;
         try
         {
+            // Get upload table names and URI's from the request parameters.
+            UploadParameters uploadParameters = new UploadParameters(paramList, jobID);
+            if (uploadParameters.uploadTables.size() == 0)
+                return metadata;
+
+            // acquire connection
+            con = dataSource.getConnection();
+            con.setAutoCommit(false);
+
             // DataType containing mapping of java.sql.Types
             // to database data type names.
             DatabaseDataType databaseDataType = DatabaseDataTypeFactory.getDatabaseDataType(con);
 
-            // Get upload table names and URI's from the request parameters.
-            UploadParameters uploadParameters = new UploadParameters(paramList, jobID);
+            
 
             // Process each table.
             for (UploadTable uploadTable : uploadParameters.uploadTables)
@@ -259,7 +256,8 @@ public class BasicUploadManager implements UploadManager
         {
             try
             {
-                con.rollback();
+                if (con != null)
+                    con.rollback();
             }
             catch (SQLException e)
             {
