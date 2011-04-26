@@ -71,6 +71,7 @@
 package ca.nrc.cadc.log;
 
 
+import ca.nrc.cadc.util.Log4jInit;
 import java.io.IOException;
 import java.io.PrintWriter;
 import java.util.ArrayList;
@@ -219,15 +220,67 @@ public class LogControlServlet extends HttpServlet
         //Subject subject = AuthenticationUtil.getSubject(request);
         //logger.debug(subject.toString());
 
+        response.setStatus(HttpServletResponse.SC_OK);
         response.setContentType("text/plain");
         PrintWriter writer = response.getWriter();
 
         writer.println("Logging level " + level + " set on " + packageNames.length + " packages:");
-        for ( int i=0; i<packageNames.length; i++ )
-        	writer.println(packageNames[i]);
+        for (String pkg : packageNames)
+        	writer.println(pkg);
         
         writer.close();
 	}
 	
-    
+    /**
+     * Allows the caller to set the log level (e.g. with the level=DEBUG parameter).
+     * @param request
+     * @param response
+     * @throws ServletException
+     * @throws IOException
+     */
+    @Override
+    public void doPost(HttpServletRequest request, HttpServletResponse response)
+        throws ServletException, IOException
+	{
+        //Subject subject = AuthenticationUtil.getSubject(request);
+        //logger.debug(subject.toString());
+
+        String[] params = request.getParameterValues("level");
+        String levelVal = null;
+        if (params != null && params.length > 0)
+            levelVal = params[0];
+        if (levelVal != null)
+        {
+            if ( levelVal == null )
+                level = DEFAULT_LEVEL;
+            else if ( levelVal.equalsIgnoreCase(Level.TRACE.toString()) )
+                level = Level.TRACE;
+            else if ( levelVal.equalsIgnoreCase(Level.DEBUG.toString()) )
+                level = Level.DEBUG;
+            else if ( levelVal.equalsIgnoreCase(Level.INFO.toString()) )
+                level = Level.INFO;
+            else if ( levelVal.equalsIgnoreCase(Level.WARN.toString()) )
+                level = Level.WARN;
+            else if ( levelVal.equalsIgnoreCase(Level.ERROR.toString()) )
+                level = Level.ERROR;
+            else if ( levelVal.equalsIgnoreCase(Level.FATAL.toString()) )
+                level = Level.FATAL;
+            else
+            {
+                response.setStatus(HttpServletResponse.SC_BAD_REQUEST);
+                response.setContentType("text/plain");
+                PrintWriter writer = response.getWriter();
+                writer.println("unrecognised value for level: " + levelVal);
+                writer.close();
+            }
+        }
+        // modify log level on current packages
+        for (String pkg : packageNames)
+        	Logger.getLogger(pkg).setLevel(level);
+
+        // redirect the caller to the resulting settings
+        response.setStatus(HttpServletResponse.SC_SEE_OTHER);
+        String url = request.getRequestURL().toString();
+        response.setHeader("Location", url);
+    }
 }
