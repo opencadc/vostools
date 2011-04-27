@@ -72,12 +72,13 @@ package ca.nrc.cadc.tap.writer;
 import ca.nrc.cadc.tap.parser.TapSelectItem;
 import ca.nrc.cadc.tap.schema.TapSchema;
 import ca.nrc.cadc.util.Log4jInit;
+import ca.nrc.cadc.xml.XmlUtil;
 import java.io.ByteArrayOutputStream;
 import java.io.StringReader;
-import java.net.URL;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
-import java.util.MissingResourceException;
+import java.util.Map;
 import org.apache.log4j.Level;
 import org.apache.log4j.Logger;
 import org.jdom.Attribute;
@@ -85,10 +86,6 @@ import org.jdom.Document;
 import org.jdom.Element;
 import org.jdom.Namespace;
 import org.jdom.input.SAXBuilder;
-import org.junit.After;
-import org.junit.AfterClass;
-import org.junit.Before;
-import org.junit.BeforeClass;
 import org.junit.Test;
 import static org.junit.Assert.*;
 
@@ -98,40 +95,17 @@ import static org.junit.Assert.*;
  */
 public class VOTableWriterTest
 {
-    private static final String VOTABLE_SCHEMA_RESOURCE = "VOTable-1.2.xsd";
+    private static final String VOTABLE_SCHEMA_RESOURCE = "VOTable-v1.2.xsd";
     private static final String INFO_ATTRIBUTE_NAME = "QUERY_STATUS";
     private static final String INFO_ATTRIBUTE_VALUE = "ERROR";
 
-    private static String votableSchema;
-    
     private static final Logger LOG = Logger.getLogger(VOTableWriterTest.class);
     static
     {
-        Log4jInit.setLevel("ca", Level.INFO);
+        Log4jInit.setLevel("ca.nrc.cadc.tap.writer", Level.INFO);
     }
 
     public VOTableWriterTest() { }
-
-    @BeforeClass
-    public static void setUpClass() throws Exception
-    {
-        // Get an URL to the VOTable schema in the jar.
-        URL url = VOTableWriterTest.class.getClassLoader().getResource(VOTABLE_SCHEMA_RESOURCE);
-        if (url == null)
-            throw new MissingResourceException("Resource not found: " + VOTABLE_SCHEMA_RESOURCE,
-                                               "VOTableWriterTest", VOTABLE_SCHEMA_RESOURCE);
-        votableSchema = url.toString();
-        LOG.debug("VOTable schema url: " + votableSchema);
-    }
-
-    @AfterClass
-    public static void tearDownClass() throws Exception { }
-
-    @Before
-    public void setUp() { }
-
-    @After
-    public void tearDown() { }
 
     /**
      * Test of getExtension method, of class VOTableWriter.
@@ -194,7 +168,8 @@ public class VOTableWriterTest
         // Write out the VOTABLE.
         VOTableWriter writer = new VOTableWriter();
         writer.write(top, output);
-
+        output.close();
+        
         // Validate the xml against the VOTABLE XSD.
         String xml = output.toString();
         LOG.debug("XML: \n" + xml);
@@ -225,14 +200,25 @@ public class VOTableWriterTest
         LOG.info("testWriteThrowableOutputStream passed");
     }
 
+    private Map<String,String> schemaMap;
+    
     private Document validate(String xml) throws Exception
     {
-        SAXBuilder builder = new SAXBuilder("org.apache.xerces.parsers.SAXParser", true);
-        builder.setFeature("http://xml.org/sax/features/validation", true);
-        builder.setFeature("http://apache.org/xml/features/validation/schema", true);
-        builder.setFeature("http://apache.org/xml/features/validation/schema-full-checking", true);
-        builder.setProperty("http://apache.org/xml/properties/schema/external-schemaLocation",
-                            "http://www.ivoa.net/xml/VOTable/v1.2 " + votableSchema);
+        if (schemaMap == null)
+        {
+            this.schemaMap = new HashMap<String,String>();
+            String url = XmlUtil.getResourceUrlString(VOTABLE_SCHEMA_RESOURCE, VOTableWriter.class);
+            LOG.debug("VOTable-1.2 schema location: " + url);
+            schemaMap.put(VOTableWriter.VOTABLE_12_NS_URI, url);
+
+        }
+        SAXBuilder builder = XmlUtil.createBuilder(schemaMap);
+                //new SAXBuilder("org.apache.xerces.parsers.SAXParser", true);
+        //builder.setFeature("http://xml.org/sax/features/validation", true);
+        //builder.setFeature("http://apache.org/xml/features/validation/schema", true);
+        //builder.setFeature("http://apache.org/xml/features/validation/schema-full-checking", true);
+        //builder.setProperty("http://apache.org/xml/properties/schema/external-schemaLocation",
+        //                    "http://www.ivoa.net/xml/VOTable/v1.2 " + votableSchema);
         return builder.build(new StringReader(xml));
     }
 

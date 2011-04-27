@@ -101,11 +101,20 @@
 
 	<property name="resources.dir" value="test/resources/" />    
 
-    <target name="build" depends="compile">
-	    <jar jarfile="${build}/lib/${project}.jar"
-		    basedir="${build}/class" 
-		    update="no">
+    <target name="build" depends="compile,xsd">
+        
+        <jar jarfile="${build}/lib/${project}.jar"
+            basedir="${build}/class"
+            update="no">
         </jar>
+    </target>
+
+    <target name="xsd">
+        <copy  todir="${build}/class">
+            <fileset dir="src/resources">
+                <include name="**.xsd" />
+            </fileset>
+        </copy>
     </target>
 
     <!-- JAR files needed to run the test suite -->
@@ -124,11 +133,9 @@
     <!-- Run the test suite -->
     <target name="test" depends="parser-tests,stc-tests,vosi-tests,writer-tests,upload-tests" />
 
-    <target name="writer-tests" depends="compile,compile-test">
-        <copy file="test/src/resources/VOTable-1.2.xsd" todir="${build}/class"/>
+    <target name="writer-tests" depends="compile,compile-test,xsd">
         <junit printsummary="yes" haltonfailure="yes" fork="yes">
             <classpath>
-                <pathelement path="${resources.dir}"/>
                 <pathelement path="${build}/class"/>
                 <pathelement path="${build}/test/class"/>
                 <pathelement path="${jars}:${testingJars}"/>

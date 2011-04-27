@@ -81,6 +81,9 @@ import java.util.Iterator;
  */
 public interface VOTableParser
 {
+    static final String VOTABLE_11_SCHEMA = "VOTable-v1.1.xsd";
+    static final String VOTABLE_12_SCHEMA = "VOTable-v1.2.xsd";
+
     /**
      * Set the name of the VOTable.
      *

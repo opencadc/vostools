@@ -73,11 +73,15 @@ import ca.nrc.cadc.tap.BasicUploadManager;
 import ca.nrc.cadc.tap.schema.ColumnDesc;
 import ca.nrc.cadc.tap.schema.TableDesc;
 import ca.nrc.cadc.tap.upload.datatype.ADQLDataType;
+import ca.nrc.cadc.tap.writer.VOTableWriter;
+import ca.nrc.cadc.xml.XmlUtil;
 import java.io.IOException;
 import java.io.InputStream;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
+import java.util.Map;
 import org.apache.log4j.Logger;
 import org.jdom.Document;
 import org.jdom.Element;
@@ -103,6 +107,8 @@ public class JDOMVOTableParser implements VOTableParser
     protected InputStream in;
     protected Document document;
 
+    private Map<String,String> schemaMap;
+
     /**
      *
      */
@@ -111,6 +117,19 @@ public class JDOMVOTableParser implements VOTableParser
         tableName = null;
         in = null;
         hasTableRows = false;
+        initSchemaMap();
+    }
+
+    private void initSchemaMap()
+    {
+        schemaMap = new HashMap<String,String>();
+        String url;
+
+        url = XmlUtil.getResourceUrlString(VOTABLE_11_SCHEMA, JDOMVOTableParser.class);
+        schemaMap.put(VOTableWriter.VOTABLE_11_NS_URI, url);
+        
+        url = XmlUtil.getResourceUrlString(VOTABLE_12_SCHEMA, JDOMVOTableParser.class);
+        schemaMap.put(VOTableWriter.VOTABLE_12_NS_URI, url);
     }
 
     /**
@@ -145,8 +164,7 @@ public class JDOMVOTableParser implements VOTableParser
         if (in == null)
             throw new IllegalStateException("Inputstream to the VOTable must be set before calling getMetaData()");
 
-        // TODO: validating parser using VOTable 1.2 schema.
-        SAXBuilder parser = new SAXBuilder("org.apache.xerces.parsers.SAXParser", false);
+        SAXBuilder parser = XmlUtil.createBuilder(schemaMap);
         List<ColumnDesc> columns = new ArrayList<ColumnDesc>();
         
         try

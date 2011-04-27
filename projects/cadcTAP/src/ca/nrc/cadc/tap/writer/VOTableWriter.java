@@ -108,7 +108,8 @@ public class VOTableWriter implements TableWriter
     public static final String XSI_NS_URI = "http://www.w3.org/2001/XMLSchema-instance";
 
     // Uri to the VOTable schema.
-    public static final String VOTABLE_NS_URI = "http://www.ivoa.net/xml/VOTable/v1.2";
+    public static final String VOTABLE_11_NS_URI = "http://www.ivoa.net/xml/VOTable/v1.1";
+    public static final String VOTABLE_12_NS_URI = "http://www.ivoa.net/xml/VOTable/v1.2";
 
     // Uri to the STC schema.
     public static final String STC_NS_URI = "http://www.ivoa.net/xml/STC/v1.30";
@@ -261,7 +262,7 @@ public class VOTableWriter implements TableWriter
     private Document createDocument()
     {
         // the root VOTABLE element
-        Namespace vot = Namespace.getNamespace(VOTABLE_NS_URI);
+        Namespace vot = Namespace.getNamespace(VOTABLE_12_NS_URI);
         Namespace xsi = Namespace.getNamespace("xsi", XSI_NS_URI);
         Element votable = new Element("VOTABLE", vot);
         votable.setAttribute("version", VOTABLE_VERSION);
