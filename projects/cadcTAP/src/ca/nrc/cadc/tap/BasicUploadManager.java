@@ -76,6 +76,7 @@ import ca.nrc.cadc.tap.upload.JDOMVOTableParser;
 import ca.nrc.cadc.tap.upload.UploadParameters;
 import ca.nrc.cadc.tap.upload.UploadTable;
 import ca.nrc.cadc.tap.upload.VOTableParser;
+import ca.nrc.cadc.tap.upload.VOTableParserException;
 import ca.nrc.cadc.tap.upload.datatype.ADQLDataType;
 import ca.nrc.cadc.tap.upload.datatype.DatabaseDataType;
 import ca.nrc.cadc.uws.Parameter;
@@ -162,6 +163,8 @@ public class BasicUploadManager implements UploadManager
         Statement stmt = null;
         PreparedStatement ps = null;
         Connection con = null;
+        boolean txn = false;
+        UploadTable cur = null;
         try
         {
             // Get upload table names and URI's from the request parameters.
@@ -171,17 +174,19 @@ public class BasicUploadManager implements UploadManager
 
             // acquire connection
             con = dataSource.getConnection();
-            con.setAutoCommit(false);
-
+            
             // DataType containing mapping of java.sql.Types
             // to database data type names.
             DatabaseDataType databaseDataType = DatabaseDataTypeFactory.getDatabaseDataType(con);
 
-            
+            con.setAutoCommit(false);
+            txn = true;
 
             // Process each table.
             for (UploadTable uploadTable : uploadParameters.uploadTables)
             {
+                cur = uploadTable;
+                
                 // XML parser
                 // TODO: make configurable.
                 log.debug(uploadTable);
@@ -241,7 +246,7 @@ public class BasicUploadManager implements UploadManager
                         con.commit();
                     }
                     
-                    // Check if we've reached exceeded the max number of rows.\
+                    // Check if we've reached exceeded the max number of rows.
                     numRows++;
                     if (numRows == maxUploadRows)
                         throw new UnsupportedOperationException("Exceded maximum number of allowed rows: " + maxUploadRows);
@@ -249,24 +254,33 @@ public class BasicUploadManager implements UploadManager
                 
                 // Commit remaining rows.
                 con.commit();
+                
                 log.debug(numRows + " rows inserted into " + databaseTableName);
             }
+            txn = false;
         }
-        catch (Throwable t)
+        catch(VOTableParserException ex)
+        {
+            throw new RuntimeException("failed to parse table " + cur.tableName + " from " + cur.uri, ex);
+        }
+        catch(IOException ex)
+        {
+
+            throw new RuntimeException("failed to read table " + cur.tableName + " from " + cur.uri, ex);
+        }
+        catch (SQLException e)
+        {
+            
+            throw new RuntimeException("failed to create and load table in DB", e);
+        }
+        finally
         {
             try
             {
                 if (con != null)
                     con.rollback();
             }
-            catch (SQLException e)
-            {
-                log.error("failed to rollback transaction", e);
-            }
-            throw new RuntimeException("failed to upload table", t);
-        }
-        finally
-        {
+            catch (SQLException ignore) { }
             if (stmt != null)
             {
                 try

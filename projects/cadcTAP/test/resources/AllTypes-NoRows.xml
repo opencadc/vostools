@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<VOTABLE xmlns="http://www.ivoa.net/xml/VOTable/v1.2" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" version="1.2">
+  <RESOURCE type="results">
+    <INFO name="QUERY_STATUS" value="OK" />
+    <TABLE>
+      <FIELD name="short_datatype"  datatype="short"                         />
+      <FIELD name="smallint_xtype"  datatype="short"  xtype="adql:SMALLINT"  />
+      <FIELD name="int_datatype"    datatype="int"                           />
+      <FIELD name="integer_xtype"   datatype="int"    xtype="adql:INTEGER"   />
+      <FIELD name="long_datatype"   datatype="long"                          />
+      <FIELD name="bigint_xtype"    datatype="long"   xtype="adql:BIGINT"    />
+      <FIELD name="float_datatype"  datatype="float"                         />
+      <FIELD name="real_xtype"      datatype="float"  xtype="adql:REAL"      />
+      <FIELD name="double_datatype" datatype="double"                        />
+      <FIELD name="double_xtype"    datatype="double" xtype="adql:DOUBLE"    />
+      <FIELD name="char_datatype"   datatype="char"                          />
+      <FIELD name="char_xtype"      datatype="char"   xtype="adql:CHAR"      />
+      <FIELD name="varchar_xtype"   datatype="char"   xtype="adql:VARCHAR"   />
+      <FIELD name="timestamp_xtype" datatype="char"   xtype="adql:TIMESTAMP" />
+    </TABLE>
+  </RESOURCE>
+</VOTABLE>

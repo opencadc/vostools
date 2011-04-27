@@ -99,7 +99,7 @@
 
     <property name="jars" value="${cadc}:${extlib}" />
 
-	<property name="resources.dir" value="test/resources/" />    
+    <property name="resources.dir" value="test/resources/" />
 
     <target name="build" depends="compile,xsd">
         
@@ -214,6 +214,11 @@
     </target>
     
     <target name="upload-tests" depends="compile,compile-test">
+        <copy todir="${build}/test/class">
+            <fileset dir="test/resources">
+                <include name="**.xml"/>
+            </fileset>
+        </copy>
         <junit printsummary="yes" haltonfailure="yes" fork="yes">
             <classpath>
                 <pathelement path="${resources.dir}"/>
@@ -223,6 +228,7 @@
             </classpath>
             <formatter type="plain" usefile="false"/>
             <test name="ca.nrc.cadc.tap.upload.UploadUtilTest" />
+            <test name="ca.nrc.cadc.tap.BasicUploadManagerTest"/>
         </junit>
     </target>
 

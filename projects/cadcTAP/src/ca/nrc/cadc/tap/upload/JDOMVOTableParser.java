@@ -185,13 +185,16 @@ public class JDOMVOTableParser implements VOTableParser
                         if (datatype == null)
                             datatype = field.getAttributeValue("datatype");
                         String width = field.getAttributeValue("width");
-                        UploadUtil.isValidateIdentifier(field.getAttributeValue("name"));
+                        String name = field.getAttributeValue("name");
+                        log.debug("column: '"+name+"'");
+                        UploadUtil.isValidateIdentifier(name);
                         ColumnDesc columnDesc = new ColumnDesc();
                         columnDesc.tableName = tableName;
-                        columnDesc.columnName = field.getAttributeValue("name");
+                        columnDesc.columnName = name;
                         columnDesc.datatype = ADQLDataType.getDataType(datatype, width);
                         columnDesc.size = ADQLDataType.getWidth(width);
                         columns.add(columnDesc);
+                        log.debug("column: " + columnDesc);
                     }
                 }
             }
@@ -213,6 +216,7 @@ public class JDOMVOTableParser implements VOTableParser
         tableDesc.schemaName = BasicUploadManager.SCHEMA;
         tableDesc.tableName = tableName;
         tableDesc.columnDescs = columns;
+        log.debug("table: " + tableDesc);
         return tableDesc;
     }
 

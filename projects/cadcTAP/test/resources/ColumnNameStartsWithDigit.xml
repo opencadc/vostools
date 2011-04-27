@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<VOTABLE xmlns="http://www.ivoa.net/xml/VOTable/v1.2" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" version="1.2">
+  <RESOURCE type="results">
+    <INFO name="QUERY_STATUS" value="OK" />
+    <TABLE>
+      <FIELD name="1colum_name"  datatype="int" xtype="adql:INTEGER" />
+    </TABLE>
+  </RESOURCE>
+</VOTABLE>
