@@ -732,8 +732,7 @@ public class HttpDownload extends HttpTransfer
                 doDownload = doCheckDestination();
 
             // go=false means cancelled, doDownload==false means skipped
-            if (!doDownload)
-                return;
+            go = go && doDownload;
             if (!go)
                 return;
 
