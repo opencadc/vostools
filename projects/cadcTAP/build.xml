@@ -227,8 +227,9 @@
                 <pathelement path="${jars}:${testingJars}"/>
             </classpath>
             <formatter type="plain" usefile="false"/>
-            <test name="ca.nrc.cadc.tap.upload.UploadUtilTest" />
             <test name="ca.nrc.cadc.tap.BasicUploadManagerTest"/>
+            <test name="ca.nrc.cadc.tap.upload.UploadUtilTest" />
+            <test name="ca.nrc.cadc.tap.upload.DatabaseDataTypeFactoryTest"/>
         </junit>
     </target>
 
