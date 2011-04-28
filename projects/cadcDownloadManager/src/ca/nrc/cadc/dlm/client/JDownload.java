@@ -227,7 +227,12 @@ public class JDownload extends JPanel implements ProgressListener, Runnable
                     JDownload.this.startingPos = e.getStartingPosition();
                     if (e.getState() == TransferEvent.TRANSFERING)
                     {
-                        textPane.setText("downloading -> " + e.getFile().getAbsolutePath());
+                        StringBuffer sb = new StringBuffer();
+                        sb.append("downloading");
+                        //sb.append(dl.getURL().toString());
+                        sb.append(" -> ");
+                        sb.append(e.getFile().getAbsolutePath());
+                        textPane.setText(sb.toString());
                         totalSize = dl.getContentLength();
                     }
                     else

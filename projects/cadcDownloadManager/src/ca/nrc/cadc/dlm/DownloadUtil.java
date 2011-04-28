@@ -122,7 +122,6 @@ public class DownloadUtil
             String[] uris = new String[] 
             {
                 "ad:ca.nrc.cadc.ad.AdSchemeHandler",
-                "vos:ca.nrc.cadc.vos.util.VOSpaceSchemeHandler",
                 "plane:ca.nrc.cadc.caom.util.PlaneSchemeHandler"
             };
 
@@ -130,21 +129,21 @@ public class DownloadUtil
             {
                 try
                 {
-                    log.debug("[DownloadUtil] configuring: " + uris[i]);
+                    log.debug("configuring: " + uris[i]);
                     URI u = new URI(uris[i]);
                     String scheme = u.getScheme();
                     String cname = u.getSchemeSpecificPart();
-                    log.debug("[DownloadUtil] loading: " + cname);
+                    log.debug("loading: " + cname);
                     Class c = Class.forName(cname);
-                    log.debug("[DownloadUtil] instantiating: " + c);
+                    log.debug("instantiating: " + c);
                     SchemeHandler handler = (SchemeHandler) c.newInstance();
-                    log.debug("[DownloadUtil] adding: " + scheme + "," + handler);
+                    log.debug("adding: " + scheme + "," + handler);
                     schemeHandler.addSchemeHandler(scheme, handler);
-                    log.debug("[DownloadUtil] success: " + scheme + " is supported");
+                    log.debug("success: " + scheme + " is supported");
                 }
                 catch(Throwable oops)
                 {
-                    log.warn("[DownloadUtil] failed to create SchemeHandler: " + oops);
+                    log.warn("failed to create SchemeHandler: " + oops);
                 }
             }
         }
@@ -185,7 +184,7 @@ public class DownloadUtil
 
     public static List<GeneratedURL> generateURLs(List<ParsedURI> uris, String x)
     {
-        log.debug("[DownloadUtil] generateURLs: START");
+        log.debug("generateURLs: START");
         List ret = new ArrayList<GeneratedURL>();
 
         Iterator<ParsedURI> i = uris.iterator();
@@ -224,7 +223,7 @@ public class DownloadUtil
                 }
             }
         }
-        log.debug("[DownloadUtil] generateURLs: " + ret.size() + " URLs");
+        log.debug("generateURLs: " + ret.size() + " URLs");
         return ret;
     }
 
@@ -356,7 +355,7 @@ public class DownloadUtil
     // generate a List of URIs from the comma-separated list of URIs
     private static void parseURIs(String uris, String commonFragment, List<ParsedURI> ret)
     {
-        log.debug("[DownloadUtil] parseURIs: " + uris + " commonFragment: " + commonFragment);
+        log.debug("parseURIs: " + uris + " commonFragment: " + commonFragment);
         if (uris != null)
         {
             if (commonFragment != null)
@@ -406,23 +405,23 @@ public class DownloadUtil
 
     public static void debug(String key, String value)
     {
-        log.debug("[DownloadUtil] " + key + " = " + value);
+        log.debug("" + key + " = " + value);
     }
     public static void debug(String key, String[] value)
     {
         try
         {
-            log.debug("[DownloadUtil] " + key + " START");
+            log.debug("" + key + " START");
     
             if (value == null)
                 return;
-            log.debug("[DownloadUtil] " + key + " = " + value.length);
+            log.debug("" + key + " = " + value.length);
             for (int i=0; i<value.length; i++)
                 debug("\t"+key, value[i]);
         }
         finally
         {
-            log.debug("[DownloadUtil] " + key + " DONE");
+            log.debug("" + key + " DONE");
         }
     }
 }
