@@ -534,7 +534,7 @@ public class Main implements Runnable
         
         if (retryEnabled)
             clientTransfer.setMaxRetries(Integer.MAX_VALUE);
-        clientTransfer.setTransferListener(new VOSpaceTransferListener());
+        clientTransfer.setTransferListener(new VOSpaceTransferListener(false));
         clientTransfer.setSSLSocketFactory(client.getSslSocketFactory());
         clientTransfer.doUpload(fileToUpload);
         Node node = clientTransfer.getTarget();
@@ -573,7 +573,7 @@ public class Main implements Runnable
         
         if (retryEnabled)
             clientTransfer.setMaxRetries(Integer.MAX_VALUE);
-        clientTransfer.setTransferListener(new VOSpaceTransferListener());
+        clientTransfer.setTransferListener(new VOSpaceTransferListener(true));
         clientTransfer.setSSLSocketFactory(client.getSslSocketFactory());
         clientTransfer.doDownload(fileToSave);
         Node node = clientTransfer.getTarget();

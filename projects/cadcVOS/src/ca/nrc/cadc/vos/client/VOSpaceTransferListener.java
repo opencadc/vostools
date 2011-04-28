@@ -82,7 +82,12 @@ public class VOSpaceTransferListener implements TransferListener
 {
     private static Logger log = Logger.getLogger(VOSpaceTransferListener.class);
 
-    public VOSpaceTransferListener() { }
+    private boolean download;
+    
+    public VOSpaceTransferListener(boolean download)
+    {
+        this.download = download;
+    }
 
     public String getEventHeader()
     {
@@ -105,16 +110,18 @@ public class VOSpaceTransferListener implements TransferListener
             case TransferEvent.FAILED:
                 if (e.getFile() == null)
                     log.info(e.getStateLabel() + ": " + e.getURL() + " -- " + e.getError().getMessage());
-                else
+                else if (download)
                     log.info(e.getStateLabel() + ": " + e.getURL() + " -> " + e.getFile() + " -- " + e.getError().getMessage());
+                else
+                    log.info(e.getStateLabel() + ": " + e.getFile() + " -> " + e.getURL() + " -- " + e.getError().getMessage());
                 break;
                 
             case TransferEvent.CANCELLED:
-                log.info(e.getStateLabel() + ": " + e.getURL() + " -> " + e.getFile());
-                break;
-                
             case TransferEvent.COMPLETED:
-                log.info(e.getStateLabel() + ": " + e.getURL() + " -> " + e.getFile());
+                if (download)
+                    log.info(e.getStateLabel() + ": " + e.getURL() + " -> " + e.getFile());
+                else
+                    log.info(e.getStateLabel() + ": " + e.getFile() + " -> " +  e.getURL());
                 break;
 
             default:
