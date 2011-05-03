@@ -953,8 +953,7 @@ public class NodeDAO
         return VOS.NodeBusyState.notBusy.getValue();
     }
    
-    // used by NodeMapper
-    static void setPropertyValue(Node node, String uri, String value, boolean readOnly)
+    private static void setPropertyValue(Node node, String uri, String value, boolean readOnly)
     {
         NodeProperty cur = node.findProperty(uri);
         if (cur == null)

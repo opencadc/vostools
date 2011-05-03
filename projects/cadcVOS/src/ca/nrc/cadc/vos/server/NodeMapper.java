@@ -171,7 +171,6 @@ public class NodeMapper implements RowMapper
         
         node.appData = new NodeID(nodeID, subject);
 
-        NodeDAO.setPropertyValue(node, VOS.PROPERTY_URI_CREATOR, owner, true);
         node.setMarkedForDeletion(markedForDeletion);
         
         node.getProperties().add(new NodeProperty(VOS.PROPERTY_URI_CONTENTLENGTH, Long.toString(contentLength)));
