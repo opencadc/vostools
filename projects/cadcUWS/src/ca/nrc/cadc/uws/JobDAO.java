@@ -92,7 +92,11 @@ import org.springframework.transaction.support.DefaultTransactionDefinition;
 import ca.nrc.cadc.auth.AuthenticationUtil;
 import ca.nrc.cadc.date.DateUtil;
 import ca.nrc.cadc.net.NetUtil;
+import java.security.Principal;
 import java.text.DateFormat;
+import java.util.HashSet;
+import java.util.Set;
+import javax.security.auth.x500.X500Principal;
 
 /**
  * JobDAO class that stores the jobs in a RDBMS. This is an abstract class;
@@ -472,20 +476,19 @@ public class JobDAO
             }
         }
         sb.append(",");
-        if (job.getOwner() == null)
+        
+        // TODO: treat as arbitrary object once we switch to IdentityManager
+        String owner = getOwner(job.getOwner());
+        if (owner == null)
             sb.append("NULL");
         else
         {
-            String owner = AuthenticationUtil.encodeSubject(job.getOwner());
-            if (owner.length() == 0)
-                sb.append("NULL");
-            else
-            {
-                sb.append("'");
-                sb.append(owner);
-                sb.append("'");
-            }
+            
+            sb.append("'");
+            sb.append(owner);
+            sb.append("'");
         }
+        
         sb.append(",");
         if (job.getRunID() == null)
             sb.append("NULL");
@@ -544,7 +547,48 @@ public class JobDAO
         sb.append(")");
         return sb.toString();
     }
-    
+
+    // TODO: use an IdentityManager once extracted from cadcVOS -> cadcUtil
+    private static String getOwner(Subject s)
+    {
+        if (s != null && s.getPrincipals().size() > 0)
+        {
+            for (Principal p : s.getPrincipals())
+            {
+                // look for the X500Principal and make it suitable for storage
+                if (p instanceof X500Principal)
+                {
+                    String ret = AuthenticationUtil.canonizeDistinguishedName(p.getName());
+                    log.debug("found X500Principal in Subject: " + ret);
+                    return ret;
+                }
+            }
+        }
+        log.debug("did not find X500Principal in Subject: null");
+        return null;
+    }
+    private static Subject getSubject(Object owner)
+    {
+        if (owner != null)
+            try
+            {
+
+                String str = (String) owner;
+
+                // backwards compatibility with old stored identity
+                if (str.indexOf('[') > 0 && str.indexOf(']') == str.length()-1)
+                    return AuthenticationUtil.decodeSubject(str);
+
+                // reverse of what happens in getOwner(Subject) above
+                X500Principal p = new X500Principal(str);
+                Set<Principal> pset = new HashSet<Principal>();
+                pset.add(p);
+                return new Subject(false,pset,new HashSet(), new HashSet());
+            }
+            finally { }
+        return null;
+    }
+
     /**
      * Builds the SQL to update the specified Job.
      *
@@ -664,7 +708,7 @@ public class JobDAO
             sb.append("NULL");
         else
         {
-            String owner = AuthenticationUtil.encodeSubject(job.getOwner());
+            String owner = getOwner(job.getOwner());
             if (owner.length() == 0)
                 sb.append("NULL");
             else
@@ -993,7 +1037,7 @@ public class JobDAO
             }
 
             // owner
-            Subject owner = AuthenticationUtil.decodeSubject(rs.getString("owner"));
+            Subject owner = getSubject(rs.getObject("owner"));
             
             // runID
             String runID = NetUtil.decode(rs.getString("runID"));
