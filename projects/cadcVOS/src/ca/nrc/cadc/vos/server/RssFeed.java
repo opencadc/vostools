@@ -92,9 +92,10 @@ public class RssFeed
      *
      * @param parent The parent Node of all other Nodes in the feed.
      * @param nodes Collection of nodes to display in the feed.
+     * @param baseURL base url for the nodes resource
      * @return JDOM Element representing the RRS feed.
      */
-    public static Element createFeed(Node parent, Collection<Node> nodes)
+    public static Element createFeed(Node parent, Collection<Node> nodes, String baseURL)
     {
         // Get the title and description from the parent properties.
         String parentTitle = null;
@@ -139,7 +140,7 @@ public class RssFeed
 
         // channel link.
         Element link = new Element("link");
-        link.setText("http://" + NetUtil.getServerName(null) + "/vospace/nodes" + parent.getUri().getPath() + "?view=rss");
+        link.setText(baseURL + parent.getUri().getPath() + "?view=rss");
         channel.addContent(link);
 
         // channel author
@@ -212,7 +213,7 @@ public class RssFeed
             // item link, comment
             Element itemLink = new Element("link");
             Element comments = new Element("comments");
-            String linkText = "http://" + NetUtil.getServerName(null) + "/vospace/nodes" + node.getUri().getPath();
+            String linkText = baseURL + node.getUri().getPath();
             if (node instanceof DataNode)
             {
                 linkText += "?view=data";
@@ -246,11 +247,12 @@ public class RssFeed
      *
      * @param node The Node causing the error.
      * @param throwable The Throwable containing the message to display.
+     * @param baseURL base url for the nodes resource
      * @return JDOM Element representing the RRS feed.
      */
-    public static Element createErrorFeed(Node node, Throwable throwable)
+    public static Element createErrorFeed(Node node, Throwable throwable, String baseURL)
     {
-        return createErrorFeed(node, throwable.getMessage());
+        return createErrorFeed(node, throwable.getMessage(), baseURL);
     }
 
     /**
@@ -258,9 +260,10 @@ public class RssFeed
      *
      * @param node The Node causing the error.
      * @param message The message to display.
+     * @param baseURL base url for the nodes resource
      * @return JDOM Element representing the RRS feed.
      */
-    public static Element createErrorFeed(Node node, String message)
+    public static Element createErrorFeed(Node node, String message, String baseURL)
     {
         // Root element.
         Element rss = new Element("rss");
@@ -289,7 +292,7 @@ public class RssFeed
         }
         else
         {
-            link.setText("http://" + NetUtil.getServerName(null) + "/vospace/nodes" + nodePath + "?view=rss");
+            link.setText(baseURL + nodePath + "?view=rss");
         }
         channel.addContent(link);
 

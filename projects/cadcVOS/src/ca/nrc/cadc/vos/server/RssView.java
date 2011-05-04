@@ -110,6 +110,7 @@ public class RssView extends AbstractView
     
     // The RSS Feed element
     private Element feed;
+    private String baseURL;
     
     // A String version of the XML
     StringBuilder xmlString;
@@ -147,6 +148,8 @@ public class RssView extends AbstractView
         {
             throw new UnsupportedOperationException("RssView is only for container nodes.");
         }
+
+        baseURL = getBaseURL(node, requestURL);
         
         // TreeSet to hold the Nodes sorted by their date property.
         FixedSizeTreeSet<Node> nodeSet = new FixedSizeTreeSet<Node>();
@@ -154,7 +157,7 @@ public class RssView extends AbstractView
         nodeSet.addAll(((ContainerNode) node).getNodes());
 
         // Build the RSS feed XML.
-        feed = RssFeed.createFeed(node, nodeSet);
+        feed = RssFeed.createFeed(node, nodeSet, baseURL);
         
         // Create a string version of the XML for metadata calculations
         xmlString = new StringBuilder();
@@ -166,6 +169,26 @@ public class RssView extends AbstractView
         {
             throw new IllegalStateException(e);
         }
+    }
+
+    // determine the base URL to the nodes resource
+    String getBaseURL(Node n, URL r)
+    {
+        String nPath = n.getUri().getPath();
+        StringBuilder sb = new StringBuilder();
+        sb.append(r.getProtocol());
+        sb.append("://");
+        sb.append(r.getHost());
+        if (r.getPort() > 0)
+        {
+            sb.append(":");
+            sb.append(Integer.toString(r.getPort()));
+        }
+        String uPath = r.getPath();
+        int i = uPath.indexOf(nPath);
+        String basePath = uPath.substring(0, i);
+        sb.append(basePath);
+        return sb.toString();
     }
 
     /**
@@ -222,8 +245,8 @@ public class RssView extends AbstractView
         catch (Exception e)
         {
             log.debug(e);
-            Element feed = RssFeed.createErrorFeed(node, e.getMessage());
-            write(feed, writer);
+            Element ef = RssFeed.createErrorFeed(node, e.getMessage(), baseURL);
+            write(ef, writer);
         }
     }
     

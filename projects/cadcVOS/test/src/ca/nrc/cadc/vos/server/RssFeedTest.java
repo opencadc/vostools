@@ -103,8 +103,9 @@ import java.text.DateFormat;
 public class RssFeedTest
 {
     private static Logger log = Logger.getLogger(RssFeedTest.class);
-    private static String VOS_URI =  "vos://cadc.nrc.ca!vospace";
-
+    private static String VOS_URI =  "vos://example.com!vospace";
+    private static String BASE_URL = "http://example.com/vospace/nodes";
+    
     private static ContainerNode nodeA;
     private static Collection<Node> nodes;
     private static String NODE_OWNER = "SampleOwner";
@@ -200,7 +201,8 @@ public class RssFeedTest
     {
         log.debug("createFeed");
 
-        Element feed = RssFeed.createFeed(nodeA, nodes);
+        Element feed = RssFeed.createFeed(nodeA, nodes, BASE_URL);
+        //TODO: assert something?
         write(feed, System.out);
         
         log.info("createFeed passed");
@@ -216,7 +218,8 @@ public class RssFeedTest
         log.debug("createErrorFeed_Node_Throwable");
 
         Throwable t = new Throwable("throwable error message");
-        Element feed = RssFeed.createErrorFeed(nodeA, t);
+        Element feed = RssFeed.createErrorFeed(nodeA, t, BASE_URL);
+        //TODO: assert something?
         write(feed, System.out);
         
         log.info("createErrorFeed_Node_Throwable passed");
@@ -232,7 +235,8 @@ public class RssFeedTest
         log.debug("createErrorFeed_Node_String");
 
         String message = "Error message";
-        Element feed = RssFeed.createErrorFeed(nodeA, message);
+        Element feed = RssFeed.createErrorFeed(nodeA, message, BASE_URL);
+        //TODO: assert something?
         write(feed, System.out);
 
         log.info("createErrorFeed_Node_String passed");

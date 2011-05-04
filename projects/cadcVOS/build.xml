@@ -245,4 +245,26 @@
         </junit>
 
     </target>
+
+    <target name="rss-test" depends="compile-test">
+        <copy  todir="${build}/test/class">
+            <fileset dir="test/src/resources">
+                <include name="**/*.xml" />
+            </fileset>
+        </copy>
+        <junit printsummary="yes" haltonfailure="yes" fork="yes">
+          <classpath>
+              <pathelement path="."/>
+              <pathelement path="src"/>
+              <pathelement path="test/src"/>
+              <pathelement path="${build}/class"/>
+              <pathelement path="${build}/test/class"/>
+              <pathelement path="${jars}:${testingJars}"/>
+          </classpath>
+          <formatter type="plain" usefile="false"/>
+          <test name="ca.nrc.cadc.vos.server.RssViewTest"/>
+          <test name="ca.nrc.cadc.vos.server.RssFeedTest"/>
+        </junit>
+
+    </target>
 </project>

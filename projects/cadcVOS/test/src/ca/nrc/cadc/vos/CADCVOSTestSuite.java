@@ -75,6 +75,8 @@ import org.junit.runners.Suite;
 
 import ca.nrc.cadc.vos.auth.VOSpaceAuthorizerTest;
 import ca.nrc.cadc.vos.server.NodeDAOTest;
+import ca.nrc.cadc.vos.server.RssFeedTest;
+import ca.nrc.cadc.vos.server.RssViewTest;
 import ca.nrc.cadc.vos.server.ViewsTest;
 
 
@@ -90,7 +92,9 @@ import ca.nrc.cadc.vos.server.ViewsTest;
     GetNodeActionTest.class,
     DeleteNodeActionTest.class,
     VOSURITest.class,
-    NodeDAOTest.class
+    NodeDAOTest.class,
+    RssViewTest.class,
+    RssFeedTest.class
 })
 public class CADCVOSTestSuite
 {
