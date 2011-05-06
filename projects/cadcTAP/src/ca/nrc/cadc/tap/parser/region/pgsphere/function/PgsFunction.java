@@ -100,15 +100,12 @@ public abstract class PgsFunction extends Function
         // at the point this object is created,
         // parameters have already been converted to implemented version.
         ExpressionList adqlExprList = adqlFunction.getParameters();
-        ExpressionList pgsExprList = toDegreeExpressionList(adqlExprList);
-        setParameters(pgsExprList); // method in Function
-
+        //ExpressionList pgsExprList = toDegreeExpressionList(adqlExprList);
+        //setParameters(pgsExprList); // method in Function
+        setParameters(adqlExprList);
     }
 
-    /**
-     * @param adqlExprList
-     * @return
-     */
+    /*
     public ExpressionList toDegreeExpressionList(ExpressionList adqlExprList)
     {
         Expression e1 = null;
@@ -139,6 +136,7 @@ public abstract class PgsFunction extends Function
             rtn = expr;
         return rtn;
     }
+    */
 
     protected abstract void convertParameters();
 

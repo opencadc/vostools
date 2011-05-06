@@ -57,6 +57,8 @@ public class TableNameConverter extends FromItemNavigator
         Table ntab = map.get(tabName);
         if (ntab != null)
         {
+            log.debug("convert: " + table.getSchemaName() + "." + table.getName()
+                    + " -> " + ntab.getSchemaName() + "." + ntab.getName());
             table.setName(ntab.getName());
             table.setSchemaName(ntab.getSchemaName());
             // leave alias intact

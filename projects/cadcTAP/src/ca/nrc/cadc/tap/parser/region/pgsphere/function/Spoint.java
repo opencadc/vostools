@@ -79,7 +79,9 @@ import net.sf.jsqlparser.expression.operators.relational.ExpressionList;
 import ca.nrc.cadc.stc.CoordPair;
 import ca.nrc.cadc.stc.Position;
 import ca.nrc.cadc.tap.parser.RegionFinder;
-import ca.nrc.cadc.tap.parser.region.pgsphere.expression.DegreeDouble;
+import net.sf.jsqlparser.expression.DoubleValue;
+import net.sf.jsqlparser.expression.LongValue;
+import org.apache.log4j.Logger;
 
 /**
  * the PgSphere implementation of ADQL function
@@ -90,6 +92,8 @@ import ca.nrc.cadc.tap.parser.region.pgsphere.expression.DegreeDouble;
  */
 public class Spoint extends PgsFunction
 {
+    private static final Logger log = Logger.getLogger(Spoint.class);
+    
     private Expression longitude;
     private Expression latitude;
 
@@ -116,8 +120,8 @@ public class Spoint extends PgsFunction
         CoordPair cp = position.getCoordPair();
         ra = cp.getX();
         dec = cp.getY();
-        expressions.add(new DegreeDouble(ra));
-        expressions.add(new DegreeDouble(dec));
+        expressions.add(new DoubleValue(Double.toString(ra)));
+        expressions.add(new DoubleValue(Double.toString(dec)));
         ExpressionList el = new ExpressionList(expressions);
         this.setParameters(el);
         convertParameters();
@@ -145,13 +149,19 @@ public class Spoint extends PgsFunction
     @Override
     public String toString()
     {
-        String ret = "spoint '(" + longitude + "," + latitude + ")'";
+        //String ret = "spoint '(" + longitude + "," + latitude + ")'";
+        String ret = "spoint(radians(" + longitude + "),radians(" + latitude + "))";
         if (isOperand) ret = "cast(" + ret + " as scircle)";
         return ret;
     }
 
-    public String valueString()
+    String toVertex()
     {
-        return "(" + longitude + "," + latitude + ")";
+        log.debug("logitude type: " + longitude.getClass().getName());
+        log.debug("latitude type: " + latitude.getClass().getName());
+        if ( (longitude instanceof DoubleValue || longitude instanceof LongValue)
+                || (latitude instanceof DoubleValue && latitude instanceof LongValue) )
+            return "(" + longitude + "d," + latitude + "d)"; // force interpetation in degrees
+        throw new UnsupportedOperationException("cannot use non-constant coordinates in polygon");
     }
 }

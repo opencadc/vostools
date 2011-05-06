@@ -79,7 +79,7 @@ import net.sf.jsqlparser.expression.operators.relational.ExpressionList;
 import ca.nrc.cadc.stc.Circle;
 import ca.nrc.cadc.stc.CoordPair;
 import ca.nrc.cadc.tap.parser.RegionFinder;
-import ca.nrc.cadc.tap.parser.region.pgsphere.expression.DegreeDouble;
+import net.sf.jsqlparser.expression.DoubleValue;
 
 /**
  * the PgSphere implementation of ADQL function
@@ -108,16 +108,16 @@ public class Scircle extends PgsFunction
     {
         double ra;
         double dec;
-        double radius;
+        double rad;
         List<Expression> expressions = new ArrayList<Expression>();
         expressions.add(new StringValue(RegionFinder.ICRS));
         CoordPair cp = circle.getCoordPair();
         ra = cp.getX();
         dec = cp.getY();
-        radius = circle.getRadius();
-        expressions.add(new DegreeDouble(ra));
-        expressions.add(new DegreeDouble(dec));
-        expressions.add(new DegreeDouble(radius));
+        rad = circle.getRadius();
+        expressions.add(new DoubleValue(Double.toString(ra)));
+        expressions.add(new DoubleValue(Double.toString(dec)));
+        expressions.add(new DoubleValue(Double.toString(rad)));
         ExpressionList el = new ExpressionList(expressions);
         this.setParameters(el);
         convertParameters();
@@ -140,12 +140,13 @@ public class Scircle extends PgsFunction
     @Override
     public String toString()
     {
-        return "scircle '<" + point.valueString() + "," + radius + ">'";
+        //return "scircle '<" + point.valueString() + "," + radius + ">'";
+        return "scircle(" + point.toString() + ",radians(" + radius + "))";
     }
 
-    public String valueString()
-    {
-        return "<" + point.valueString() + "," + radius + ">";
-    }
+    //public String valueString()
+    //{
+    //    return "<" + point.valueString() + "," + radius + ">";
+    //}
 
 }

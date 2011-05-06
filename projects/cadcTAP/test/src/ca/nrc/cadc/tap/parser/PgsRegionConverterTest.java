@@ -110,7 +110,7 @@ public class PgsRegionConverterTest
     @BeforeClass
     public static void setUpBeforeClass() throws Exception
     {
-        Log4jInit.setLevel("ca.nrc.cadc", Level.INFO);
+        Log4jInit.setLevel("ca.nrc.cadc", Level.DEBUG);
     }
 
     /**
@@ -219,7 +219,7 @@ public class PgsRegionConverterTest
     public void testIntersectsValue()
     {
         _query = "select * from someTable where INTERSECTS(some_col, CIRCLE('',1,2,3)) = 1";
-        _expected = "select * from someTable where some_col && scircle '<(1d,2d),3d>'";
+        _expected = "select * from someTable where some_col && scircle(spoint(radians(1),radians(2)),radians(3))";
         doit();
     }
 
@@ -227,11 +227,11 @@ public class PgsRegionConverterTest
     public void testNotIntersectsValue()
     {
         _query = "select * from someTable where INTERSECTS(some_col, CIRCLE('',1,2,3)) = 0";
-        _expected = "select * from someTable where some_col !&& scircle '<(1d,2d),3d>'";
+        _expected = "select * from someTable where some_col !&& scircle(spoint(radians(1),radians(2)),radians(3))";
         doit();
 
         _query = "select * from someTable where NOT (INTERSECTS(some_col, CIRCLE('',1,2,3)) = 1)";
-        _expected = "select * from someTable where not (some_col && scircle '<(1d,2d),3d>')";
+        _expected = "select * from someTable where not (some_col && scircle(spoint(radians(1),radians(2)),radians(3)))";
         doit();
     }
 
@@ -239,7 +239,7 @@ public class PgsRegionConverterTest
     public void testIntersectsRegion()
     {
         _query = "select * from someTable where INTERSECTS(some_col, REGION('CIRCLE 1.0 1.0 2.0')) = 1";
-        _expected = "select * from someTable where some_col && scircle '<(1.0d,1.0d),2.0d>'";
+        _expected = "select * from someTable where some_col && scircle(spoint(radians(1.0),radians(1.0)),radians(2.0))";
         doit();
     }
 
@@ -247,7 +247,7 @@ public class PgsRegionConverterTest
     public void testNotIntersectsRegion()
     {
         _query = "select * from someTable where INTERSECTS(some_col, REGION('CIRCLE 1.0 1.0 2.0')) = 0";
-        _expected = "select * from someTable where some_col !&& scircle '<(1.0d,1.0d),2.0d>'";
+        _expected = "select * from someTable where some_col !&& scircle(spoint(radians(1.0),radians(1.0)),radians(2.0))";
         doit();
     }
 
@@ -256,7 +256,7 @@ public class PgsRegionConverterTest
     {
         // spoint has special handling in a predicate
         _query = "select * from someTable where INTERSECTS(some_col, REGION('POSITION 1.0 2.0')) = 1";
-        _expected = "select * from someTable where some_col && cast(spoint '(1.0d,2.0d)' as scircle)";
+        _expected = "select * from someTable where some_col && cast(spoint(radians(1.0),radians(2.0)) as scircle)";
         doit();
     }
 
@@ -265,7 +265,7 @@ public class PgsRegionConverterTest
     {
         // spoint has special handling in a predicate
         _query = "select * from someTable where INTERSECTS(some_col, REGION('POSITION 1.0 2.0')) = 0";
-        _expected = "select * from someTable where some_col !&& cast(spoint '(1.0d,2.0d)' as scircle)";
+        _expected = "select * from someTable where some_col !&& cast(spoint(radians(1.0),radians(2.0)) as scircle)";
         doit();
     }
 
@@ -274,7 +274,7 @@ public class PgsRegionConverterTest
     {
         // spoint has special handling in a predicate
         _query = "select * from someTable where INTERSECTS(POINT('',1,2), other_col) = 1";
-        _expected = "select * from someTable where cast(spoint '(1d,2d)' as scircle) && other_col";
+        _expected = "select * from someTable where cast(spoint(radians(1),radians(2)) as scircle) && other_col";
         doit();
     }
 
@@ -283,7 +283,7 @@ public class PgsRegionConverterTest
     {
         // spoint has special handling in a predicate
         _query = "select * from someTable where INTERSECTS(POINT('',1,2), other_col) = 0";
-        _expected = "select * from someTable where cast(spoint '(1d,2d)' as scircle) !&& other_col";
+        _expected = "select * from someTable where cast(spoint(radians(1),radians(2)) as scircle) !&& other_col";
         doit();
     }
 
@@ -311,7 +311,7 @@ public class PgsRegionConverterTest
     {
 
         _query = "select * from someTable where CONTAINS(CIRCLE('',1,2,3), other_col) = 1";
-        _expected = "select * from someTable where scircle '<(1d,2d),3d>' @ other_col";
+        _expected = "select * from someTable where scircle(spoint(radians(1),radians(2)),radians(3)) @ other_col";
         doit();
     }
 
@@ -320,11 +320,11 @@ public class PgsRegionConverterTest
     {
 
         _query = "select * from someTable where CONTAINS(CIRCLE('',1,2,3), other_col) = 0";
-        _expected = "select * from someTable where scircle '<(1d,2d),3d>' !@ other_col";
+        _expected = "select * from someTable where scircle(spoint(radians(1),radians(2)),radians(3)) !@ other_col";
         doit();
 
         _query = "select * from someTable where NOT (CONTAINS(CIRCLE('',1,2,3), other_col) = 0)";
-        _expected = "select * from someTable where not (scircle '<(1d,2d),3d>' !@ other_col)";
+        _expected = "select * from someTable where not (scircle(spoint(radians(1),radians(2)),radians(3)) !@ other_col)";
         doit();
     }
 
@@ -333,10 +333,10 @@ public class PgsRegionConverterTest
     {
         // spoint has special handling in a predicate
         _query = "select * from someTable where CONTAINS(POINT('',1,2), other_col) = 1";
-        _expected = "select * from someTable where cast(spoint '(1d,2d)' as scircle) @ other_col";
+        _expected = "select * from someTable where cast(spoint(radians(1),radians(2)) as scircle) @ other_col";
         doit();
         _query = "select * from someTable where CONTAINS(other_col, POINT('',1,2)) = 1";
-        _expected = "select * from someTable where other_col @ cast(spoint '(1d,2d)' as scircle)";
+        _expected = "select * from someTable where other_col @ cast(spoint(radians(1),radians(2)) as scircle)";
         doit();
     }
 
@@ -345,7 +345,7 @@ public class PgsRegionConverterTest
     {
         // spoint has special handling in a predicate
         _query = "select * from someTable where CONTAINS(POINT('',1,2), other_col) = 0";
-        _expected = "select * from someTable where cast(spoint '(1d,2d)' as scircle) !@ other_col";
+        _expected = "select * from someTable where cast(spoint(radians(1),radians(2)) as scircle) !@ other_col";
         doit();
     }
 

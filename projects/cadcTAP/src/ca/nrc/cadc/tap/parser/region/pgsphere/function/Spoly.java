@@ -75,7 +75,7 @@ import java.util.List;
 import ca.nrc.cadc.stc.CoordPair;
 import ca.nrc.cadc.stc.Polygon;
 import ca.nrc.cadc.tap.parser.RegionFinder;
-import ca.nrc.cadc.tap.parser.region.pgsphere.expression.DegreeDouble;
+import net.sf.jsqlparser.expression.DoubleValue;
 
 import net.sf.jsqlparser.expression.Expression;
 import net.sf.jsqlparser.expression.Function;
@@ -112,8 +112,8 @@ public class Spoly extends PgsFunction
         {
             ra = cp.getX();
             dec = cp.getY();
-            expressions.add(new DegreeDouble(ra));
-            expressions.add(new DegreeDouble(dec));
+            expressions.add(new DoubleValue(Double.toString(ra)));
+            expressions.add(new DoubleValue(Double.toString(dec)));
         }
         ExpressionList el = new ExpressionList(expressions);
         this.setParameters(el);
@@ -148,7 +148,7 @@ public class Spoly extends PgsFunction
         return sb.toString();
     }
 
-    public String valueString()
+    private String valueString()
     {
         StringBuffer sb = new StringBuffer();
         sb.append("{");
@@ -160,7 +160,7 @@ public class Spoly extends PgsFunction
             sb.append(deli);
             deli = ",";
             Spoint spoint = (Spoint) param;
-            sb.append(spoint.valueString());
+            sb.append(spoint.toVertex());
         }
         sb.append("}");
         return sb.toString();
