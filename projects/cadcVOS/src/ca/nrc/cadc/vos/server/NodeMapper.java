@@ -111,7 +111,7 @@ public class NodeMapper implements RowMapper
         this.basePath = basePath;
         this.identManager = identManager;
         this.dateFormat = DateUtil.getDateFormat(DateUtil.IVOA_DATE_FORMAT, DateUtil.UTC);
-        this.cal = Calendar.getInstance(DateUtil.LOCAL);
+        this.cal = Calendar.getInstance(DateUtil.UTC);
     }
 
     /**
