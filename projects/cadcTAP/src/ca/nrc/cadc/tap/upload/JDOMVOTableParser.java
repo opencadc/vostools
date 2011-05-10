@@ -276,7 +276,10 @@ public class JDOMVOTableParser implements VOTableParser
             List<Element> tableDatas = tableRow.getChildren("TD", namespace);
             for (Element tableData : tableDatas)
             {
-                rowData.add(tableData.getText());
+                String s = tableData.getTextTrim();
+                if (s.length() == 0)
+                    s = null;
+                rowData.add(s);
             }
             return (String[]) rowData.toArray(new String[0]);
         }

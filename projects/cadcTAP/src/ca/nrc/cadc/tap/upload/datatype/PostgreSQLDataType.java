@@ -72,6 +72,7 @@ package ca.nrc.cadc.tap.upload.datatype;
 import ca.nrc.cadc.tap.schema.ColumnDesc;
 import java.util.HashMap;
 import java.util.Map;
+import org.apache.log4j.Logger;
 
 /**
  *
@@ -79,10 +80,13 @@ import java.util.Map;
  */
 public class PostgreSQLDataType implements DatabaseDataType
 {
+    private static Logger log = Logger.getLogger(PostgreSQLDataType.class);
+    
     /**
-     * Mapping of ADQL data types to PostgreSQL data types.
+     * Mapping of ADQL data types to PostgreSQL data types. Subclasses can (must)
+     * add a mapping for ADQL_POINT and ADQL_REGION if they support this use.
      */
-    public static Map<String, String> dataTypes;
+    protected static Map<String, String> dataTypes;
     static
     {
         dataTypes = new HashMap<String, String>();
@@ -94,12 +98,27 @@ public class PostgreSQLDataType implements DatabaseDataType
         dataTypes.put(ADQLDataType.ADQL_CHAR, "CHAR");
         dataTypes.put(ADQLDataType.ADQL_VARCHAR, "VARCHAR");
         dataTypes.put(ADQLDataType.ADQL_TIMESTAMP, "TIMESTAMP");
+        dataTypes.put(ADQLDataType.ADQL_CLOB, "VARCHAR");
+        
+        // HACK: this is temporary until codebase is refactored to allow for
+        // easier customisation of these oplugins; for now we just list
+        // the pg_sphere types explicitly... 
+        
+        // DOWNSIDE: if someone has postgresql and does not have pg_sphere an
+        // uploaded table with a point or region will cause the create table
+        // to fail, which looks like an internal error rather than an
+        // unsupported operation
+        dataTypes.put(ADQLDataType.ADQL_POINT, "spoint");
+        dataTypes.put(ADQLDataType.ADQL_REGION, "spoly");
     }
     
     /**
      *
      */
-    public PostgreSQLDataType() { }
+    public PostgreSQLDataType() 
+    {
+
+    }
 
     /**
      * Given a ADQL data type, return the database
@@ -110,6 +129,7 @@ public class PostgreSQLDataType implements DatabaseDataType
      */
     public String getDataType(ColumnDesc columnDesc)
     {
+        log.debug("getDataType: " + columnDesc);
         String dataType = dataTypes.get(columnDesc.datatype);
         if (dataType.equals("CHAR") || dataType.equals("VARCHAR"))
         {

@@ -137,6 +137,8 @@ public class DefaultFormatterFactory implements FormatterFactory
         return formatters;
     }
 
+    
+
     /**
      * Finds a ColumnDesc in the TapSchema that matches the argument selectItem and returns the
      * right Formatter. This method  finds the ColumnDesc and then calls getFormatter(ColumnDesc).
@@ -170,9 +172,19 @@ public class DefaultFormatterFactory implements FormatterFactory
         }
 
         // Custom formatter not found, return the default Formatter.
-        return new DefaultFormatter();
+        return getDefaultFormatter();
     }
     
+    /**
+     * Return the default formatter when no type-pecific one is found.
+     * 
+     * @return a DefaultFormatter
+     */
+    protected Formatter getDefaultFormatter()
+    {
+        return new DefaultFormatter();
+    }
+
     /**
      * Create a formatter for the specified column. The default implementation simply checks the 
      * datatype in the argument ColumnDesc and then calls the appropriate (public) get<type>Formatter
@@ -218,7 +230,7 @@ public class DefaultFormatterFactory implements FormatterFactory
         if (datatype.equalsIgnoreCase("adql:CLOB"))
             return getClobFormatter(desc);
         
-        return new DefaultFormatter();
+        return getDefaultFormatter();
     }
 
     /**
@@ -227,7 +239,7 @@ public class DefaultFormatterFactory implements FormatterFactory
      */
     public Formatter getIntegerFormatter(ColumnDesc columnDesc)
     {
-        return new DefaultFormatter();
+        return getDefaultFormatter();
     }
 
     /**
@@ -236,7 +248,7 @@ public class DefaultFormatterFactory implements FormatterFactory
      */
     public Formatter getDoubleFormatter(ColumnDesc columnDesc)
     {
-        return new DefaultFormatter();
+        return getDefaultFormatter();
     }
 
     /**
@@ -245,7 +257,7 @@ public class DefaultFormatterFactory implements FormatterFactory
      */
     public Formatter getLongFormatter(ColumnDesc columnDesc)
     {
-        return new DefaultFormatter();
+        return getDefaultFormatter();
     }
 
     /**
@@ -254,7 +266,7 @@ public class DefaultFormatterFactory implements FormatterFactory
      */
     public Formatter getStringFormatter(ColumnDesc columnDesc)
     {
-        return new DefaultFormatter();
+        return getDefaultFormatter();
     }
 
     /**
@@ -321,7 +333,7 @@ public class DefaultFormatterFactory implements FormatterFactory
      */
     public Formatter getClobFormatter(ColumnDesc columnDesc)
     {
-        return new DefaultFormatter();
+        return getDefaultFormatter();
     }
 
 }

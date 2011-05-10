@@ -98,6 +98,7 @@ public class BasicUploadManagerTest
     static
     {
         Log4jInit.setLevel("ca.nrc.cadc.tap", org.apache.log4j.Level.INFO);
+        Log4jInit.setLevel("ca.nrc.cadc.tap.upload", org.apache.log4j.Level.DEBUG);
     }
     
     public BasicUploadManagerTest() { }
@@ -123,9 +124,11 @@ public class BasicUploadManagerTest
         types.put("double_xtype", "float8");
         types.put("char_datatype", "varchar");
         types.put("char_xtype", "bpchar");
+        types.put("varchar_datatype", "varchar");
         types.put("varchar_xtype", "varchar");
         types.put("timestamp_xtype", "timestamp");
-        
+        types.put("point_xtype", "spoint");
+        types.put("region_xtype", "spoly");
         
         date = DateUtil.flexToDate("2011-01-01T00:00:00.000", DateUtil.getDateFormat(DateUtil.IVOA_DATE_FORMAT, DateUtil.UTC));
     }
@@ -159,6 +162,7 @@ public class BasicUploadManagerTest
 
             // Create a JobID
             String jobID = Long.toString(System.currentTimeMillis());
+            log.info("testUploadEmptyTable jobID: " + jobID);
 
             // Upload the VOTable.
             Map<String, TableDesc> tableDescs = uploadManager.upload(paramList, jobID);
@@ -202,6 +206,7 @@ public class BasicUploadManagerTest
 
             // Create a JobID
             String jobID = Long.toString(System.currentTimeMillis());
+            log.info("testURIUploadAllTypesNoRows jobID: " + jobID);
 
             // Upload the VOTable.
             Map<String, TableDesc> tableDescs = uploadManager.upload(paramList, jobID);
@@ -271,6 +276,7 @@ public class BasicUploadManagerTest
 
             // Create a JobID
             String jobID = Long.toString(System.currentTimeMillis());
+            log.info("testURIUploadAllTypes jobID: " + jobID);
 
             // Upload the VOTable.
             Map<String, TableDesc> tableDescs = uploadManager.upload(paramList, jobID);

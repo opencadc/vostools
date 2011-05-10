@@ -143,12 +143,12 @@ public class Spoly extends PgsFunction
     {
         StringBuffer sb = new StringBuffer();
         sb.append("spoly '");
-        sb.append(valueString());
+        sb.append(toVertexList());
         sb.append("'");
         return sb.toString();
     }
 
-    private String valueString()
+    public String toVertexList()
     {
         StringBuffer sb = new StringBuffer();
         sb.append("{");

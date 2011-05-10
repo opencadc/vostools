@@ -17,6 +17,10 @@
       <FIELD name="char_xtype"      datatype="char"   xtype="adql:CHAR"      />
       <FIELD name="varchar_xtype"   datatype="char"   xtype="adql:VARCHAR"   />
       <FIELD name="timestamp_xtype" datatype="char"   xtype="adql:TIMESTAMP" />
+      <!--
+      <FIELD name="point_xtype"     datatype="char"   xtype="adql:POINT"     />
+      <FIELD name="region_xtype"    datatype="char"   xtype="adql:REGION"    />
+      -->
       <DATA>
         <TABLEDATA>
           <TR>
@@ -34,6 +38,10 @@
             <TD>char_xtype</TD>
             <TD>varchar_xtype</TD>
             <TD>2011-01-01T00:00:00.000</TD>
+	    <!--
+            <TD>POSITION ICRS GEOCENTER 12.3 34.5</TD>
+            <TD>POLYGON ICRS GEOCENTER 10.0 10.0 11.0 10.0 11.0 11.0 10.0 11.0</TD>
+	    -->
           </TR>
         </TABLEDATA>
       </DATA>

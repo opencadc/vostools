@@ -98,6 +98,10 @@ public class ADQLDataType
     public static final String ADQL_CHAR = "adql:CHAR";
     public static final String ADQL_VARCHAR = "adql:VARCHAR";
     public static final String ADQL_TIMESTAMP = "adql:TIMESTAMP";
+    public static final String ADQL_CLOB = "adql:CLOB";
+    public static final String ADQL_POINT = "adql:POINT";
+    public static final String ADQL_REGION = "adql:REGION";
+
     
     private static Map<String, String> adqlTypes;
     static
@@ -123,6 +127,9 @@ public class ADQLDataType
         adqlTypes.put(ADQL_CHAR, ADQL_CHAR);
         adqlTypes.put(ADQL_VARCHAR, ADQL_VARCHAR);
         adqlTypes.put(ADQL_TIMESTAMP, ADQL_TIMESTAMP);
+        adqlTypes.put(ADQL_CLOB, ADQL_CLOB);
+        adqlTypes.put(ADQL_POINT, ADQL_POINT);
+        adqlTypes.put(ADQL_REGION, ADQL_REGION);
     }
     
     private static Map<String, Integer> sqlTypes;
@@ -142,9 +149,10 @@ public class ADQLDataType
     /**
      * Returns the ADQL data type for given a VOTable data type.
      * 
-     * @param dataType the data type.
+     * @param datatype the data type.
      * @param width the width of the data type.
      * @return ADQL data type for the VOTable data type.
+     * @throws VOTableParserException
      */
     public static String getDataType(String datatype, String width)
         throws VOTableParserException

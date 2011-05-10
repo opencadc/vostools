@@ -144,6 +144,8 @@ public class TapSchemaUtil
      */
     public static TableDesc findTableDesc(TapSchema tapSchema, Table table)
     {
+        if (table == null)
+            return null;
         for (SchemaDesc sd : tapSchema.getSchemaDescs())
         {
             if ((sd.getSchemaName() == null && table.getSchemaName() == null)

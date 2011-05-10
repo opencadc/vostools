@@ -155,9 +155,9 @@ public class Spoint extends PgsFunction
         return ret;
     }
 
-    String toVertex()
+    public String toVertex()
     {
-        log.debug("logitude type: " + longitude.getClass().getName());
+        log.debug("longitude type: " + longitude.getClass().getName());
         log.debug("latitude type: " + latitude.getClass().getName());
         if ( (longitude instanceof DoubleValue || longitude instanceof LongValue)
                 || (latitude instanceof DoubleValue && latitude instanceof LongValue) )

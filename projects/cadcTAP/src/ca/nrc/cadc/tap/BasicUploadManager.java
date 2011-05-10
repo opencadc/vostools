@@ -69,6 +69,13 @@
 package ca.nrc.cadc.tap;
 
 import ca.nrc.cadc.date.DateUtil;
+import ca.nrc.cadc.stc.Polygon;
+import ca.nrc.cadc.stc.Position;
+import ca.nrc.cadc.stc.Region;
+import ca.nrc.cadc.stc.STC;
+import ca.nrc.cadc.stc.StcsParsingException;
+import ca.nrc.cadc.tap.parser.region.pgsphere.function.Spoint;
+import ca.nrc.cadc.tap.parser.region.pgsphere.function.Spoly;
 import ca.nrc.cadc.tap.schema.ColumnDesc;
 import ca.nrc.cadc.tap.schema.TableDesc;
 import ca.nrc.cadc.tap.upload.DatabaseDataTypeFactory;
@@ -165,6 +172,11 @@ public class BasicUploadManager implements UploadManager
         Connection con = null;
         boolean txn = false;
         UploadTable cur = null;
+
+        //FormatterFactory factory = DefaultFormatterFactory.getFormatterFactory();
+        //factory.setJobID(jobID);
+        //factory.setParamList(params);
+
         try
         {
             // Get upload table names and URI's from the request parameters.
@@ -259,6 +271,10 @@ public class BasicUploadManager implements UploadManager
             }
             txn = false;
         }
+        catch(StcsParsingException ex)
+        {
+            throw new RuntimeException("failed to parse table " + cur.tableName + " from " + cur.uri, ex);
+        }
         catch(VOTableParserException ex)
         {
             throw new RuntimeException("failed to parse table " + cur.tableName + " from " + cur.uri, ex);
@@ -270,7 +286,6 @@ public class BasicUploadManager implements UploadManager
         }
         catch (SQLException e)
         {
-            
             throw new RuntimeException("failed to create and load table in DB", e);
         }
         finally
@@ -427,7 +442,7 @@ public class BasicUploadManager implements UploadManager
      * @throws SQLException if the statement is closed or if the parameter index type doesn't match.
      */
     protected void updatePreparedStatement(PreparedStatement ps, List<ColumnDesc> columnDescs, String[] row)
-        throws SQLException
+        throws SQLException, StcsParsingException
     {
         for (int i = 0; i < row.length; i++)
         {
@@ -463,9 +478,53 @@ public class BasicUploadManager implements UploadManager
                     throw new SQLException("failed to parse timestamp " + value, e);
                 }
             }
+            else if (columnDesc.datatype.equals(ADQLDataType.ADQL_POINT))
+            {
+                Region r = STC.parse(value);
+                if (r instanceof Position)
+                {
+                    Position pos = (Position) r;
+                    Object o = getPointObject(pos);
+                    ps.setObject(i+1, o);
+                }
+                else
+                    throw new IllegalArgumentException("failed to parse " + value + " as an " + ADQLDataType.ADQL_POINT);
+            }
+            else if (columnDesc.datatype.equals(ADQLDataType.ADQL_REGION))
+            {
+                Region reg = STC.parse(value);
+                Object o = getRegionObject(reg);
+                ps.setObject(i+1, o);
+            }
             else
                 throw new SQLException("Unsupported ADQL data type " + columnDesc.datatype);
         }
+    }
+
+    /**
+     * Convert the string representation of the specified ADQL POINT into an object.
+     *
+     * @param pos
+     * @throws SQLException
+     * @return an object suitable for use with PreparedStatement.setObject(int,Object)
+     */
+    protected Object getPointObject(Position pos)
+        throws SQLException
+    {
+        throw new UnsupportedOperationException("cannot convert ADQL POINT (STC-S Position) -> internal database type");
+    }
+
+    /**
+     * Convert the string representation of the specified ADQL POINT into an object.
+     *
+     * @param reg
+     * @throws SQLException
+     * @return an object suitable for use with PreparedStatement.setObject(int,Object)
+     */
+    protected Object getRegionObject(Region reg)
+        throws SQLException
+    {
+        throw new UnsupportedOperationException("cannot convert ADQL REGION (STC-S Region) -> internal database type");
     }
 
 }
