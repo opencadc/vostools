@@ -584,7 +584,7 @@ public class NodeDAO
 
             NodeID nodeID = (NodeID) node.appData;
             boolean doUpdateNode = false;         // check for props that are in the node table
-            boolean doUpdateLastModified = false; // check for actual updates to prop table
+            boolean doUpdateLastModified = true;  // true: always touch, false: check for actual updates to prop table
             // Iterate through the user properties and the db properties,
             // potentially updating, deleting or adding new ones
             for (NodeProperty prop : properties)
