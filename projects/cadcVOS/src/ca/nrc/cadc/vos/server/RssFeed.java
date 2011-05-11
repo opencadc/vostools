@@ -191,11 +191,11 @@ public class RssFeed
             {
                 if (node instanceof DataNode)
                 {
-                    nodeDescription = "Data Node";
+                    nodeDescription = "File";
                 }
                 else
                 {
-                    nodeDescription = "Container Node";
+                    nodeDescription = "Directory";
                 }
             }
             Element itemDescription = new Element("description");
@@ -217,12 +217,12 @@ public class RssFeed
             if (node instanceof DataNode)
             {
                 linkText += "?view=data";
-                comments.setText("Click to download this data node.");
+                comments.setText("Click to download this file.");
             }
             else
             {
                 linkText += "?view=rss";
-                comments.setText("Click to see the last modified nodes within this container node.");
+                comments.setText("Click to see the last modified nodes within this directory.");
             }
             itemLink.setText(linkText);
             item.addContent(itemLink);
