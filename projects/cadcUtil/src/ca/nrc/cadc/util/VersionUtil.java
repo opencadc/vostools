@@ -75,10 +75,10 @@ public class VersionUtil
                 jf = new JarFile(jarPath);
                 sb.append(jarCompleteVersion(jf));
             }
-            catch (IOException e)
+            catch (Exception e)
             {
                 sb.append(String.format("Can not open JAR file of [%s].", jarPath)).append(NL);
-                e.printStackTrace();
+                //e.printStackTrace();
             }
         }
         return sb.toString();
@@ -104,7 +104,7 @@ public class VersionUtil
         catch (IOException e)
         {
             rtn = jarFile.getName() + " cannot open manifest file." + NL;
-            e.printStackTrace();
+            //e.printStackTrace();
         }
         return rtn;
     }
@@ -143,11 +143,11 @@ public class VersionUtil
             }
             sb.append("-------------------------------------").append(NL);
         }
-        catch (IOException e)
+        catch (Exception e)
         {
             sb.append(String.format("Can not open manifest in JAR file [%s].", jarFile.getName()))
             .append(NL);
-            e.printStackTrace();
+            //e.printStackTrace();
         }
         return sb.toString();
     }
