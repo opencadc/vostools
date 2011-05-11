@@ -94,6 +94,7 @@ import ca.nrc.cadc.vos.ContainerNode;
 import ca.nrc.cadc.vos.Node;
 import ca.nrc.cadc.vos.server.util.FixedSizeTreeSet;
 import java.net.URL;
+import java.util.Date;
 
 /**
  * Writes a RSS feed consisting of the late modified child nodes of the
@@ -170,6 +171,14 @@ public class RssView extends AbstractView
             throw new IllegalStateException(e);
         }
     }
+
+    @Override
+    public Date getLastModified()
+    {
+        // must return the date from the first nodwe in the list (most recent)
+        return null; // for now, this forces client to read the feed
+    }
+
 
     // determine the base URL to the nodes resource
     String getBaseURL(Node n, URL r)
