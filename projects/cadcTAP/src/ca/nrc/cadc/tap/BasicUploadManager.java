@@ -466,7 +466,9 @@ public class BasicUploadManager implements UploadManager
                 ps.setString(i + 1, value);
             else if (columnDesc.datatype.equals(ADQLDataType.ADQL_VARCHAR))
                 ps.setString(i + 1, value);
-            else if (columnDesc.datatype.equals(ADQLDataType.ADQL_TIMESTAMP))
+            else if (columnDesc.datatype.equals(ADQLDataType.ADQL_CLOB))
+	        ps.setString(i + 1, value);
+	    else if (columnDesc.datatype.equals(ADQLDataType.ADQL_TIMESTAMP))
             {
                 try
                 {

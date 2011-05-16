@@ -205,8 +205,8 @@ public class Polygon extends SpatialSubphrase implements Region
         }
 
         // Should be a even multiple of dimensions values.
-        if (coordPairs.size() % dimensions != 0)
-            throw new StcsParsingException("Invalid number of coordpair values " + coordPairs.size());
+        //if (coordPairs.size() % dimensions != 0)
+        //    throw new StcsParsingException("Invalid number of coordpair values " + coordPairs.size());
 
         currentWord = null;
     }

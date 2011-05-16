@@ -73,6 +73,7 @@ import ca.nrc.cadc.tap.upload.VOTableParserException;
 import java.sql.Types;
 import java.util.HashMap;
 import java.util.Map;
+import org.apache.log4j.Logger;
 
 /**
  * Provides a mapping of VOTable data types to ADQL data types.
@@ -81,7 +82,9 @@ import java.util.Map;
  */
 public class ADQLDataType
 {
-    public static final Integer MAX_WIDTH = 32;
+    private static final Logger log = Logger.getLogger(ADQLDataType.class);
+
+    public static final Integer MAX_WIDTH = 4096;
     
     public static final String SHORT = "SHORT";
     public static final String INT = "INT";
@@ -146,6 +149,12 @@ public class ADQLDataType
         sqlTypes.put(ADQL_TIMESTAMP, Types.TIMESTAMP);
     }
 
+    public static class XType
+    {
+        public String xtype;
+	public Integer size;
+    }
+
     /**
      * Returns the ADQL data type for given a VOTable data type.
      * 
@@ -180,6 +189,7 @@ public class ADQLDataType
         }
         if (adqlType == null)
             throw new VOTableParserException("unknown data type " + datatype);
+	log.debug("getDataType: " + datatype + "," + width + " -> " + adqlType);
         return adqlType;
     }
     
@@ -205,14 +215,20 @@ public class ADQLDataType
     public static Integer getWidth(String width)
     {
         Integer size = null;
-        if (width == null || width.isEmpty() || width.equals("*"))
-            size = MAX_WIDTH;
-        else if (width.endsWith("*"))
+        if (width == null)
+            size = null;
+	else if (width.trim().length() == 0)
+	    size = null;
+	else if (width.equals("*"))
+	    size = Integer.MAX_VALUE;
+	else if (width.endsWith("*"))
             size = Integer.parseInt(width.substring(0, width.lastIndexOf("*")));
         else
             size = Integer.parseInt(width);
-        if (size > MAX_WIDTH)
+        
+	if (size != null && size > MAX_WIDTH)
             size = MAX_WIDTH;
+	log.debug("getWidth: " + width + " -> " + size);
         return size;
     }
     

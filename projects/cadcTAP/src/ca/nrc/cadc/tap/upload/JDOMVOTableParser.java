@@ -184,7 +184,7 @@ public class JDOMVOTableParser implements VOTableParser
                         String datatype = field.getAttributeValue("xtype");
                         if (datatype == null)
                             datatype = field.getAttributeValue("datatype");
-                        String width = field.getAttributeValue("width");
+                        String width = field.getAttributeValue("arraysize");
                         String name = field.getAttributeValue("name");
                         log.debug("column: '"+name+"'");
                         UploadUtil.isValidateIdentifier(name);
