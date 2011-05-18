@@ -92,7 +92,8 @@ public class FieldElement extends Element
             setFieldAttribute("utype", columnDesc.utype);
             setFieldAttribute("ucd", columnDesc.ucd);
             setFieldAttribute("unit", columnDesc.unit);
-            setFieldAttribute("xtype", columnDesc.datatype);
+            if (columnDesc.datatype != null && columnDesc.datatype.startsWith("adql:"))
+	    	setFieldAttribute("xtype", columnDesc.datatype);
             setDescription(columnDesc.description, namespace);
             setDatatypeAndWidth(columnDesc.datatype, columnDesc.size);
         }
@@ -237,6 +238,7 @@ public class FieldElement extends Element
         else if (datatype.equals("double[]"))
         {
             setAttribute("datatype", "double");
+	    setAttribute("arraysize", length == null ? "*" : length);
         }
 
     }
