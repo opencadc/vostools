@@ -164,6 +164,14 @@ public class VOSpaceClient
         this.inheritPermissions = enabled;
     }
 
+    /**
+     * Get the current value of inheritPermissions
+     */
+    public boolean isInheritPermissions()
+    {
+        return this.inheritPermissions;
+    }
+
     public void setSSLSocketFactory(SSLSocketFactory sslSocketFactory)
     {
         this.sslSocketFactory = sslSocketFactory;

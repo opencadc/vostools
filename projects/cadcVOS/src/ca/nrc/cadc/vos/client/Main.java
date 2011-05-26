@@ -608,8 +608,9 @@ public class Main implements Runnable
             cur.clear();
             cur.addAll(map.values());
         }
-        // return true if some props were set
-        return (properties.size() > 0);
+        // return true if some props were set or if the node
+        // is inheriting permissions
+        return (properties.size() > 0 || client.isInheritPermissions());
     }
 
     private static String ZERO_LENGTH = "";
