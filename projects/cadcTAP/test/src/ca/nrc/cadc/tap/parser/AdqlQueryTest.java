@@ -185,8 +185,8 @@ public class AdqlQueryTest
     @Test
     public void testColumnAlias()
     {
-        _expected = "SELECT t_string AS xx, t_bytes AS yy FROM tap_schema.alldatatypes";
-        _query = "select  t_string as xx, t_bytes as yy from tap_schema.alldatatypes";
+        _expected = "SELECT t_complete AS xx, t_bytes AS yy FROM tap_schema.alldatatypes";
+        _query = "select  t_complete as xx, t_bytes as yy from tap_schema.alldatatypes";
         doit();
     }
 
@@ -200,17 +200,17 @@ public class AdqlQueryTest
     //@Test
     public void testCorrelatedSubselect()
     {
-        _query = "select  t_string, aa.t_bytes, bb.* from tap_schema.alldatatypes as aa, tap_schema.tables as bb " +
-                " where aa.t_string = bb.utype " +
-                "and aa.t_string in (select utype from bb)";
+        _query = "select  t_complete, aa.t_bytes, bb.* from tap_schema.alldatatypes as aa, tap_schema.tables as bb " +
+                " where aa.t_complete = bb.utype " +
+                "and aa.t_complete in (select utype from bb)";
         doit();
     }
     //@Test
     public void testUncorrelatedSubselect()
     {
-        _query = "select t_string, aa.t_bytes, bb.* from tap_schema.alldatatypes as aa, tap_schema.tables as bb " +
-                " where aa.t_string = bb.utype " +
-                "and aa.t_string in (select t_string from tap_schema.alldatatypes)";
+        _query = "select t_complete, aa.t_bytes, bb.* from tap_schema.alldatatypes as aa, tap_schema.tables as bb " +
+                " where aa.t_complete = bb.utype " +
+                "and aa.t_complete in (select t_complete from tap_schema.alldatatypes)";
         doit();
     }
 

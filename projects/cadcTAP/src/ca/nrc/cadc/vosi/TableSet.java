@@ -89,6 +89,9 @@ public class TableSet
     @SuppressWarnings("unused")
     private static Logger log = Logger.getLogger(TableSet.class);
 
+    private static final String ADQL_PREFIX = "adql";
+    private static final String VOTABLE_PREFIX = "votable";
+
     private static final String DEFAULT_SCHEMA = "default";
 
     private TapSchema tapSchema;
@@ -171,7 +174,9 @@ public class TableSet
 
         if (td.getColumnDescs() != null) for (ColumnDesc cd : td.getColumnDescs())
         {
-            eleTable.addContent(toXmlElement(cd));
+            Element e = toXmlElement(cd);
+            if (e != null)
+                eleTable.addContent(e);
         }
 
         return eleTable;
@@ -184,23 +189,58 @@ public class TableSet
     private Element toXmlElement(ColumnDesc cd)
     {
         Element eleColumn = new Element("column");
-
         addChild(eleColumn, "name", cd.getColumnName());
         addChild(eleColumn, "description", cd.getDescription());
         addChild(eleColumn, "unit", cd.getUnit());
         addChild(eleColumn, "ucd", cd.getUcd());
         addChild(eleColumn, "utype", cd.getUtype());
 
-        Element eleDt = addChild(eleColumn, "dataType", cd.getDatatype());
-        if (eleDt != null)
+        String datatype = cd.getDatatype();
+        String[] parts = datatype.split(":");
+        if (isTapType(parts))
         {
-            Attribute attType = new Attribute("type", vod.getPrefix() + ":TAP", xsi);
-            eleDt.setAttribute(attType);
-
-            if (cd.getSize() != null && cd.getSize() > 0) eleDt.setAttribute("size", cd.getSize().toString());
+            Element eleDt = addChild(eleColumn, "dataType", parts[1]);
+            if (eleDt != null)
+            {
+                Attribute attType = new Attribute("type", vod.getPrefix() + ":TAPType", xsi);
+                eleDt.setAttribute(attType);
+                if (cd.getSize() != null && cd.getSize() > 0)
+                    eleDt.setAttribute("size", cd.getSize().toString());
+            }
+        }
+        else if (isVOTableType(parts))
+        {
+            Element eleDt = addChild(eleColumn, "dataType", parts[1]);
+            if (eleDt != null)
+            {
+                Attribute attType = new Attribute("type", vod.getPrefix() + ":VOTableType", xsi);
+                eleDt.setAttribute(attType);
+                if (cd.getSize() != null && cd.getSize() > 0)
+                    eleDt.setAttribute("arraysize", cd.getSize().toString());
+            }
+        }
+        else // custom type
+        {
+            log.warn("cannot convert " + cd + " to a legal VODataService column element, skipping");
+            return null;
         }
 
         return eleColumn;
+    }
+
+    private boolean isTapType(String[] parts)
+    {
+        
+        if (parts.length == 2 && ADQL_PREFIX.equalsIgnoreCase(parts[0]))
+            return true;
+        return false;
+    }
+    private boolean isVOTableType(String[] parts)
+    {
+
+        if (parts.length == 2 && VOTABLE_PREFIX.equalsIgnoreCase(parts[0]))
+            return true;
+        return false;
     }
 
     private Element addChild(Element eleParent, String chdName, String chdText)

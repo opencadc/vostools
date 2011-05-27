@@ -175,22 +175,22 @@ public class TableSetTest
             TestUtil.assertXmlNode(doc, "/vosi:tableset");
             TestUtil.assertXmlNode(doc, "/vosi:tableset/schema[name='tap_schema']");
             TestUtil.assertXmlNode(doc, "/vosi:tableset/schema/table[name='alldatatypes']");
-            TestUtil.assertXmlNode(doc,
-                    "/vosi:tableset/schema/table[name='alldatatypes']/column[name='t_string']/description");
-            TestUtil.assertXmlNode(doc, "/vosi:tableset/schema/table[name='alldatatypes']/column[name='t_string']/unit");
-            TestUtil.assertXmlNode(doc, "/vosi:tableset/schema/table[name='alldatatypes']/column[name='t_string']/ucd");
-            TestUtil.assertXmlNode(doc, "/vosi:tableset/schema/table[name='alldatatypes']/column[name='t_string']/utype");
-            TestUtil.assertXmlNode(doc, "/vosi:tableset/schema/table[name='alldatatypes']/column[name='t_string']/dataType");
+            TestUtil.assertXmlNode(doc, "/vosi:tableset/schema/table[name='alldatatypes']/column[name='t_complete']/description");
+            TestUtil.assertXmlNode(doc, "/vosi:tableset/schema/table[name='alldatatypes']/column[name='t_complete']/unit");
+            TestUtil.assertXmlNode(doc, "/vosi:tableset/schema/table[name='alldatatypes']/column[name='t_complete']/ucd");
+            TestUtil.assertXmlNode(doc, "/vosi:tableset/schema/table[name='alldatatypes']/column[name='t_complete']/utype");
+            TestUtil.assertXmlNode(doc, "/vosi:tableset/schema/table[name='alldatatypes']/column[name='t_complete']/dataType");
 
             checkRootElement(doc);
 
             for (SchemaDesc sd : ts.schemaDescs)
                 checkSchema(doc, sd);
 
-        } catch (Throwable t)
+        } 
+        catch (Exception unexpected)
         {
-            t.printStackTrace(System.out);
-            Assert.fail(t.toString());
+            log.error("unexpected exception", unexpected);
+            Assert.fail("unexpected exception: "  + unexpected);
         }
     }
 
@@ -221,10 +221,11 @@ public class TableSetTest
             for (SchemaDesc sd : ts.schemaDescs)
                 checkSchema(doc, sd);
 
-        } catch (Throwable t)
+        }
+        catch (Exception unexpected)
         {
-            t.printStackTrace(System.out);
-            Assert.fail(t.toString());
+            log.error("unexpected exception", unexpected);
+            Assert.fail("unexpected exception: "  + unexpected);
         }
     }
 
@@ -241,12 +242,14 @@ public class TableSetTest
             TableSet vods = new TableSet(ts);
             vods.getDocument();
         }
-        catch (Throwable t)
+        catch(IllegalArgumentException expected)
         {
-            if (t instanceof IllegalArgumentException)
-                assert (true); //expected because schema is empty
-            else
-                Assert.fail(t.toString());
+            log.debug("caught expected exception: " + expected);
+        }
+        catch (Exception unexpected)
+        {
+            log.error("unexpected exception", unexpected);
+            Assert.fail("unexpected exception: "  + unexpected);
         }
     }
 

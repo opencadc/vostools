@@ -87,6 +87,7 @@ import ca.nrc.cadc.tap.TapQuery;
 import ca.nrc.cadc.tap.schema.TapSchema;
 import ca.nrc.cadc.util.Log4jInit;
 import ca.nrc.cadc.uws.Parameter;
+import org.apache.log4j.Logger;
 
 /**
  * test whether BLOB/CLOB type appears only in the select item part of query
@@ -96,6 +97,8 @@ import ca.nrc.cadc.uws.Parameter;
  */
 public class BlobClobValidatorTest
 {
+    private static final Logger log = Logger.getLogger(BlobClobValidatorTest.class);
+    
     public String _query;
 
     static TapSchema TAP_SCHEMA;
@@ -106,7 +109,7 @@ public class BlobClobValidatorTest
     @BeforeClass
     public static void setUpBeforeClass() throws Exception
     {
-        Log4jInit.setLevel("ca.nrc.cadc", org.apache.log4j.Level.INFO);
+        Log4jInit.setLevel("ca.nrc.cadc.tap.parser", org.apache.log4j.Level.INFO);
         TAP_SCHEMA = TestUtil.loadDefaultTapSchema();
     }
 
@@ -134,9 +137,9 @@ public class BlobClobValidatorTest
     {
     }
 
-    private void doit(boolean expectValid) {
-        System.out.println(_query);
-        boolean exceptionHappens = false;
+    private void doit(boolean expectValid)
+    {
+        log.debug(_query);
         try {
             Parameter para;
             para = new Parameter("QUERY", _query);
@@ -148,31 +151,39 @@ public class BlobClobValidatorTest
             tapQuery.setExtraTables(null);
             tapQuery.setParameterList(paramList);
             String sql = tapQuery.getSQL();
-        } catch (Exception ae) {
-            exceptionHappens = true;
-            System.out.println(ae.toString());
+        } 
+        catch (Exception ae)
+        {
+            if (expectValid)
+            {
+                log.error("unexpected exception", ae);
+                Assert.fail("unexpected exception: " + ae);
+            }
+            log.debug("caught expected exception: "+  ae);
         }
-        Assert.assertTrue(expectValid != exceptionHappens);
     }
 
     @Test
-    public void testGood() {
+    public void testGood()
+    {
         boolean expectValid = true;
-        _query = "select t_bytes, t_array_int from tap_schema.alldatatypes where t_string = 'abc'";
+        _query = "select t_bytes, t_text from tap_schema.alldatatypes";
         doit(expectValid);
     }
 
     @Test
-    public void testBad() {
+    public void testBad()
+    {
         boolean expectValid = false;
-        _query = "select t_bytes, t_array_int from tap_schema.alldatatypes where t_bytes = 'abc'";
+        _query = "select * from tap_schema.alldatatypes where t_bytes = 'abc'";
         doit(expectValid);
     }
 
     @Test
-    public void testBad2() {
+    public void testBad2()
+    {
         boolean expectValid = false;
-        _query = "select t_bytes, t_array_int from tap_schema.alldatatypes where t_array_int = 'abc'";
+        _query = "select * from tap_schema.alldatatypes where t_text = 'abc'";
         doit(expectValid);
     }
 }
