@@ -83,6 +83,8 @@ public class TestProperties
 
     public String filename;
     public Map<String, List<String>> parameters;
+    public Map<String, List<String>> preconditions;
+    public Map<String, List<String>> expectations;
 
     public TestProperties()
     {
@@ -94,15 +96,20 @@ public class TestProperties
         String strLine, key, value;
         char firstChar;
         List<String> valueList;
-        int idxColon, lineLength;
+        int idxColon, idxEquals, lineLength;
+        Map<String, List<String>> targetMap = null;
 
         parameters = new HashMap<String, List<String>>();
+        preconditions = new HashMap<String, List<String>>();
+        expectations = new HashMap<String, List<String>>();
 
         BufferedReader br = new BufferedReader(reader);
         //Read File Line By Line
         while ((strLine = br.readLine()) != null)
         {
             strLine = strLine.trim();
+            targetMap = parameters;
+            
             lineLength = strLine.length();
             if (lineLength == 0)
                 continue;
@@ -110,19 +117,30 @@ public class TestProperties
             firstChar = strLine.charAt(0);
             if (firstChar == '#' || firstChar == '!') //comment line
                 continue;
-
-            idxColon = strLine.indexOf('=');
-            if (idxColon == 0) // "=foo"
+            
+            idxEquals = strLine.indexOf('=');
+            idxColon = strLine.indexOf(':');
+            if (idxColon != -1 && idxColon < idxEquals) // precondition or expectation
+            {
+                if (strLine.startsWith("expect"))
+                    targetMap = expectations;
+                else if (strLine.startsWith("precond"))
+                    targetMap = preconditions;
+                strLine = strLine.substring(idxColon + 1);
+                idxEquals = strLine.indexOf('=');
+            }
+            
+            if (idxEquals == 0) // "=foo"
                 continue;
 
-            key = strLine.substring(0, idxColon).trim();
-            value = strLine.substring(idxColon + 1).trim();
+            key = strLine.substring(0, idxEquals).trim();
+            value = strLine.substring(idxEquals + 1).trim();
 
-            valueList = parameters.get(key);
+            valueList = targetMap.get(key);
             if (valueList == null) // the key is not in parameters yet 
             {
                 valueList = new ArrayList<String>();
-                parameters.put(key, valueList);
+                targetMap.put(key, valueList);
             }
             valueList.add(value);
         }

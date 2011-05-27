@@ -69,23 +69,29 @@
 
 package ca.nrc.cadc.conformance.uws;
 
-import ca.nrc.cadc.util.Log4jInit;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertNotNull;
+import static org.junit.Assert.fail;
+
+import java.io.IOException;
 import java.net.URLEncoder;
-import org.xml.sax.SAXException;
-import com.meterware.httpunit.GetMethodWebRequest;
-import java.util.Map;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
+
+import org.apache.log4j.Level;
+import org.apache.log4j.Logger;
 import org.junit.Before;
+import org.junit.Test;
+import org.xml.sax.SAXException;
+
+import ca.nrc.cadc.util.Log4jInit;
+
+import com.meterware.httpunit.GetMethodWebRequest;
 import com.meterware.httpunit.PostMethodWebRequest;
 import com.meterware.httpunit.WebConversation;
 import com.meterware.httpunit.WebRequest;
 import com.meterware.httpunit.WebResponse;
-import org.junit.Test;
-import java.io.IOException;
-import org.apache.log4j.Level;
-import org.apache.log4j.Logger;
-import static org.junit.Assert.*;
 
 /**
  *
@@ -147,7 +153,6 @@ public class SyncTest extends AbstractUWSTest
                 // Build the POST request.
                 StringBuilder sb = new StringBuilder();
 
-                String contentType = null;
                 // Add parameters if available.
                 if (properties.parameters != null)
                 {
@@ -157,21 +162,40 @@ public class SyncTest extends AbstractUWSTest
                     for (String key : keyList)
                     {
                         valueList = parameters.get(key);
-                        if (key.equalsIgnoreCase("Content-Type"))
-                            contentType = valueList.get(0);
-                        else
-                            for (String value : valueList)
-                            {
-                                sb.append(key);
-                                sb.append("=");
-                                sb.append(URLEncoder.encode(value, "UTF-8"));
-                                sb.append("&");
-                            }
+                        for (String value : valueList)
+                        {
+                            sb.append(key);
+                            sb.append("=");
+                            sb.append(URLEncoder.encode(value, "UTF-8"));
+                            sb.append("&");
+                        }
                     }
                 }
-
+                
+                // see if there is a Content-Type expectation
+                String contentType = null;
+                if (properties.expectations != null)
+                    if (properties.expectations.containsKey("Content-Type"))
+                        contentType = properties.expectations.get("Content-Type").get(0);
+                
+                // see if there are realm/userid/password preconditions
+                String realm = null;
+                String userid = null;
+                String password = null;
+                if (properties.preconditions != null)
+                    if (properties.preconditions.containsKey("Realm"))
+                        realm = properties.preconditions.get("Realm").get(0);
+                if (properties.preconditions != null)
+                    if (properties.preconditions.containsKey("Userid"))
+                        userid = properties.preconditions.get("Userid").get(0);
+                if (properties.preconditions != null)
+                    if (properties.preconditions.containsKey("Password"))
+                        password = properties.preconditions.get("Password").get(0);
+                
                 String getUrl = serviceUrl + "?" + sb.substring(0, sb.length()-1); // strip trailing &
                 WebConversation conversation = new WebConversation();
+                if (userid != null && password != null)
+                    conversation.setAuthentication(realm, userid, password);
                 WebRequest request = new GetMethodWebRequest(getUrl);
 
                 // GET request to the sync resource.
@@ -205,12 +229,27 @@ public class SyncTest extends AbstractUWSTest
                 log.debug("processing properties file: " + properties.filename);
                 log.debug("\r\n" + properties);
                 log.debug("**************************************************");
+                
+                // see if there are realm/userid/password preconditions
+                String realm = null;
+                String userid = null;
+                String password = null;
+                if (properties.preconditions != null)
+                    if (properties.preconditions.containsKey("Realm"))
+                        realm = properties.preconditions.get("Realm").get(0);
+                if (properties.preconditions != null)
+                    if (properties.preconditions.containsKey("Userid"))
+                        userid = properties.preconditions.get("Userid").get(0);
+                if (properties.preconditions != null)
+                    if (properties.preconditions.containsKey("Password"))
+                        password = properties.preconditions.get("Password").get(0);
 
                 // Build the POST request.
                 WebConversation conversation = new WebConversation();
+                if (userid != null && password != null)
+                    conversation.setAuthentication(realm, userid, password);
                 WebRequest request = new PostMethodWebRequest(serviceUrl);
 
-                String contentType = null;
                 // Add parameters if available.
                 if (properties.parameters != null)
                 {
@@ -220,12 +259,15 @@ public class SyncTest extends AbstractUWSTest
                     for (String key : keyList)
                     {
                         valueList = parameters.get(key);
-                        if (key.equalsIgnoreCase("Content-Type"))
-                            contentType = valueList.get(0);
-                        else
-                            request.setParameter(key, valueList.toArray(new String[0]));
+                        request.setParameter(key, valueList.toArray(new String[0]));
                     }
                 }
+                
+                // see if there is a Content-Type expectation
+                String contentType = null;
+                if (properties.expectations != null)
+                    if (properties.expectations.containsKey("Content-Type"))
+                        contentType = properties.expectations.get("Content-Type").get(0);
 
                 // POST request to the sync resource.
                 log.debug("**************************************************");
@@ -309,7 +351,7 @@ public class SyncTest extends AbstractUWSTest
         {
             fail("Non-200 or 303 POST response code to " + serviceUrl);
         }
-
+        
         String contentType = response.getHeaderField("Content-Type");
         assertEquals("Content-Type", expectedContentType, contentType);
         
