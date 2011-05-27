@@ -121,6 +121,7 @@ public class ResultsXmlTest extends AbstractUWSXmlTest
      */
     protected void testImpl(String xml) throws Exception
     {
+        
         WebConversation conversation = new WebConversation();
         String jobId = createJob(conversation, xml);
 

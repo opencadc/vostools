@@ -69,14 +69,15 @@
 
 package ca.nrc.cadc.conformance.uws;
 
-import ca.nrc.cadc.util.Log4jInit;
-import com.meterware.httpunit.PostMethodWebRequest;
-import com.meterware.httpunit.WebConversation;
-import com.meterware.httpunit.WebRequest;
-import com.meterware.httpunit.WebResponse;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertNotNull;
+import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.fail;
+
 import java.io.IOException;
 import java.util.Iterator;
 import java.util.List;
+
 import org.apache.log4j.Level;
 import org.apache.log4j.Logger;
 import org.jdom.Attribute;
@@ -85,7 +86,13 @@ import org.jdom.Element;
 import org.jdom.Namespace;
 import org.junit.BeforeClass;
 import org.junit.Test;
-import static org.junit.Assert.*;
+
+import ca.nrc.cadc.util.Log4jInit;
+
+import com.meterware.httpunit.PostMethodWebRequest;
+import com.meterware.httpunit.WebConversation;
+import com.meterware.httpunit.WebRequest;
+import com.meterware.httpunit.WebResponse;
 
 public class ErrorTest extends AbstractUWSTest
 {
@@ -141,9 +148,25 @@ public class ErrorTest extends AbstractUWSTest
                 log.debug("processing properties file: " + properties.filename);
                 log.debug(properties);
                 log.debug("**************************************************");
+                
+                // see if there are realm/userid/password preconditions
+                String realm = null;
+                String userid = null;
+                String password = null;
+                if (properties.preconditions != null)
+                {
+                    if (properties.preconditions.containsKey("Realm"))
+                        realm = properties.preconditions.get("Realm").get(0);
+                    if (properties.preconditions.containsKey("Userid"))
+                        userid = properties.preconditions.get("Userid").get(0);
+                    if (properties.preconditions.containsKey("Password"))
+                        password = properties.preconditions.get("Password").get(0);
+                }
 
                 // Create a new Job.
                 WebConversation conversation = new WebConversation();
+                if (userid != null && password != null && realm != null)
+                    conversation.setAuthentication(realm, userid, password);
                 String jobId = createJob(conversation, properties.parameters);
 
                 // POST request to the phase resource.

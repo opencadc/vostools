@@ -183,18 +183,18 @@ public class SyncTest extends AbstractUWSTest
                 String userid = null;
                 String password = null;
                 if (properties.preconditions != null)
+                {
                     if (properties.preconditions.containsKey("Realm"))
                         realm = properties.preconditions.get("Realm").get(0);
-                if (properties.preconditions != null)
                     if (properties.preconditions.containsKey("Userid"))
                         userid = properties.preconditions.get("Userid").get(0);
-                if (properties.preconditions != null)
                     if (properties.preconditions.containsKey("Password"))
                         password = properties.preconditions.get("Password").get(0);
+                }
                 
                 String getUrl = serviceUrl + "?" + sb.substring(0, sb.length()-1); // strip trailing &
                 WebConversation conversation = new WebConversation();
-                if (userid != null && password != null)
+                if (userid != null && password != null && realm != null)
                     conversation.setAuthentication(realm, userid, password);
                 WebRequest request = new GetMethodWebRequest(getUrl);
 
@@ -235,18 +235,18 @@ public class SyncTest extends AbstractUWSTest
                 String userid = null;
                 String password = null;
                 if (properties.preconditions != null)
+                {
                     if (properties.preconditions.containsKey("Realm"))
                         realm = properties.preconditions.get("Realm").get(0);
-                if (properties.preconditions != null)
                     if (properties.preconditions.containsKey("Userid"))
                         userid = properties.preconditions.get("Userid").get(0);
-                if (properties.preconditions != null)
                     if (properties.preconditions.containsKey("Password"))
                         password = properties.preconditions.get("Password").get(0);
+                }
 
                 // Build the POST request.
                 WebConversation conversation = new WebConversation();
-                if (userid != null && password != null)
+                if (userid != null && password != null && realm != null)
                     conversation.setAuthentication(realm, userid, password);
                 WebRequest request = new PostMethodWebRequest(serviceUrl);
 
@@ -352,11 +352,13 @@ public class SyncTest extends AbstractUWSTest
             fail("Non-200 or 303 POST response code to " + serviceUrl);
         }
         
+        // Get the response text.
+        log.debug("Response text:\r\n" + response.getText());
+
         String contentType = response.getHeaderField("Content-Type");
         assertEquals("Content-Type", expectedContentType, contentType);
         
-        // Get the response text.
-        log.debug("Response text:\r\n" + response.getText());
+
     }
 
 }

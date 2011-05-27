@@ -74,6 +74,7 @@ import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertTrue;
 
 import java.io.BufferedReader;
+import java.io.ByteArrayInputStream;
 import java.io.IOException;
 import java.io.InputStreamReader;
 import java.io.StringReader;
@@ -99,7 +100,6 @@ import com.meterware.httpunit.PostMethodWebRequest;
 import com.meterware.httpunit.WebConversation;
 import com.meterware.httpunit.WebRequest;
 import com.meterware.httpunit.WebResponse;
-import java.io.ByteArrayInputStream;
 
 public abstract class AbstractUWSTest
 {
@@ -118,6 +118,7 @@ public abstract class AbstractUWSTest
 
     public AbstractUWSTest()
     {
+                
         // Base URL of the service to be tested.
         serviceUrl = System.getProperty("service.url");
         if (serviceUrl == null)
