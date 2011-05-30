@@ -300,4 +300,28 @@ public class StringUtil
         
         return tokens.toArray(new String[tokens.size()]);
     }
+    
+    /**
+     * List elements of a string array.
+     * 
+     * @param strArr String array.
+     * @return all elements in the format as ["str1", "str2", ...]
+     * @author zhangsa
+     */
+    public static String toString(String[] strArr)
+    {
+        if (strArr == null)
+            return "";
+        
+        String deli = "";
+        StringBuilder sb = new StringBuilder();
+        sb.append("[");
+        for (String str : strArr)
+        {
+            sb.append(deli).append("\"").append(str).append("\"");
+            if ("".equals(deli)) deli = ", ";
+        }
+        sb.append("]");
+        return sb.toString();
+    }
 }
