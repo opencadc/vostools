@@ -87,12 +87,14 @@ public class Log4jInit
 {
     // true after calling initialize
     private static boolean initialized = false;
+    
+    private static boolean consoleAppendersCreated = false;
 
     // SHORT_FORMAT applies to DEBUG and INFO logging levels
-    private static final String SHORT_FORMAT = "%r [%t] %-5p %c{1} %x - %m\n";
+    private static final String SHORT_FORMAT = "%-4r [%t] %-5p %c{1} %x - %m\n";
 
     // LONG_FORMAT applies to WARN, ERROR and FATAL logging levels
-    private static final String LONG_FORMAT = "%d{ABSOLUTE} [%t] %-5p %c{1} %x - %m\n";
+    private static final String LONG_FORMAT = "%d{ISO8601} [%t] %-5p %c{1} %x - %m\n";
 
     /**
      * Initializes logging to the console.
@@ -108,29 +110,8 @@ public class Log4jInit
             {
                 // set the overall logging level to ERROR
                 Logger.getRootLogger().setLevel(Level.ERROR);
-
-                // create an appender for WARN, ERROR and FATAL with LONG_FORMAT
-                // message prefix
-                ConsoleAppender consoleApp =
-                    new ConsoleAppender(new PatternLayout(LONG_FORMAT));
-                LevelRangeFilter errorFilter = new LevelRangeFilter();
-                errorFilter.setLevelMax(Level.FATAL);
-                errorFilter.setLevelMin(Level.WARN);
-                errorFilter.setAcceptOnMatch(true);
-                consoleApp.clearFilters();
-                consoleApp.addFilter(errorFilter);
-                BasicConfigurator.configure(consoleApp);
-
-                // create a second appender for DEBUG and INFO with SHORT_FORMAT
-                // message prefix
-                consoleApp = new ConsoleAppender(new PatternLayout(SHORT_FORMAT));
-                LevelRangeFilter infoFilter = new LevelRangeFilter();
-                infoFilter.setLevelMax(Level.INFO);
-                infoFilter.setLevelMin(Level.DEBUG);
-                infoFilter.setAcceptOnMatch(true);
-                consoleApp.clearFilters();
-                consoleApp.addFilter(infoFilter);
-                BasicConfigurator.configure(consoleApp);
+                
+                createLog4jConsoleAppenders();
             }
 
             // set specified package and level
@@ -154,25 +135,73 @@ public class Log4jInit
     {
         synchronized (Log4jInit.class)
         {
-            if (dest != null)
-            {
-                // set the overall logging level to ERROR
-                Logger.getRootLogger().setLevel(Level.ERROR);
+            // set the overall logging level to ERROR
+            Logger.getRootLogger().setLevel(Level.ERROR);
 
-                WriterAppender app =
-                    new WriterAppender(new PatternLayout(LONG_FORMAT), dest);
-                LevelRangeFilter filter = new LevelRangeFilter();
-                filter.setLevelMax(Level.FATAL);
-                filter.setLevelMin(Level.DEBUG);
-                filter.setAcceptOnMatch(true);
-                app.clearFilters();
-                app.addFilter(filter);
-                BasicConfigurator.configure(app);
-            }
-
+            createLog4jWriterAppender(dest);
+            
             // set specified package and level
             Logger.getLogger(pkg).setLevel(level);
         }
     }
 
+    /**
+     * Clear all existing appenders, then create default console appenders for Log4j.
+     * Any other extra file appender has to be initialized AFTER this method is called,
+     * otherwise they would be cleared.
+     * 
+     */
+    public static synchronized void createLog4jConsoleAppenders()
+    {
+        if (!consoleAppendersCreated)
+        {
+            BasicConfigurator.resetConfiguration();
+            
+            // create an appender for WARN, ERROR and FATAL with LONG_FORMAT
+            // message prefix
+            ConsoleAppender consoleApp =
+                new ConsoleAppender(new PatternLayout(LONG_FORMAT));
+            LevelRangeFilter errorFilter = new LevelRangeFilter();
+            errorFilter.setLevelMax(Level.FATAL);
+            errorFilter.setLevelMin(Level.WARN);
+            errorFilter.setAcceptOnMatch(true);
+            consoleApp.clearFilters();
+            consoleApp.addFilter(errorFilter);
+            BasicConfigurator.configure(consoleApp);
+    
+            // create a second appender for DEBUG and INFO with SHORT_FORMAT
+            // message prefix
+            consoleApp = new ConsoleAppender(new PatternLayout(SHORT_FORMAT));
+            LevelRangeFilter infoFilter = new LevelRangeFilter();
+            infoFilter.setLevelMax(Level.INFO);
+            infoFilter.setLevelMin(Level.DEBUG);
+            infoFilter.setAcceptOnMatch(true);
+            consoleApp.clearFilters();
+            consoleApp.addFilter(infoFilter);
+            BasicConfigurator.configure(consoleApp);
+            
+            consoleAppendersCreated = true;
+        }
+    }
+    
+    /**
+     * Create a Log4j appender which writes logs into a writer, i.e. a FileWriter.
+     * 
+     * @param writer
+     */
+    public static void createLog4jWriterAppender(Writer writer)
+    {
+        if (writer != null)
+        {
+            WriterAppender app = new WriterAppender(new PatternLayout(LONG_FORMAT), writer);
+            LevelRangeFilter filter = new LevelRangeFilter();
+            filter.setLevelMax(Level.FATAL);
+            filter.setLevelMin(Level.DEBUG);
+            filter.setAcceptOnMatch(true);
+            app.clearFilters();
+            app.addFilter(filter);
+            BasicConfigurator.configure(app);
+        }
+    }
+    
 }
