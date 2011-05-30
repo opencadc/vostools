@@ -96,28 +96,32 @@ public class Log4jInit
     // LONG_FORMAT applies to WARN, ERROR and FATAL logging levels
     private static final String LONG_FORMAT = "%d{ISO8601} [%t] %-5p %c{1} %x - %m\n";
 
+    // Appender for DEBUG and INFO with SHORT_FORMAT message prefix
+    private static ConsoleAppender conAppenderLow = 
+            new ConsoleAppender(new PatternLayout(SHORT_FORMAT));
+
+    // Appender for WARN, ERROR and FATAL with LONG_FORMAT message prefix
+    private static ConsoleAppender conAppenderHigh =
+        new ConsoleAppender(new PatternLayout(LONG_FORMAT));
+
+    static {
+        // set the overall logging level to ERROR
+        Logger.getRootLogger().setLevel(Level.ERROR);
+    }
     /**
      * Initializes logging to the console.
      * 
      * @param pkg the name of package or ancestors of package or classes. Can't be null.
      * @param level the logging level.
      */
-    public static void setLevel(String pkg, Level level)
+    public static synchronized void setLevel(String pkg, Level level)
     {
-        synchronized (Log4jInit.class)
-        {
-            if (!initialized)
-            {
-                // set the overall logging level to ERROR
-                Logger.getRootLogger().setLevel(Level.ERROR);
-                
-                createLog4jConsoleAppenders();
-            }
+        if (!initialized)
+            createLog4jConsoleAppenders();
 
-            // set specified package and level
-            Logger.getLogger(pkg).setLevel(level);
-            initialized = true;
-        }
+        // set specified package and level
+        Logger.getLogger(pkg).setLevel(level);
+        initialized = true;
     }
 
     /**
@@ -131,18 +135,12 @@ public class Log4jInit
      * @param level log level for pkg
      * @param dest destination writer to log to  (may be null)
      */
-    public static void setLevel(String pkg, Level level, Writer dest)
+    public static synchronized void setLevel(String pkg, Level level, Writer dest)
     {
-        synchronized (Log4jInit.class)
-        {
-            // set the overall logging level to ERROR
-            Logger.getRootLogger().setLevel(Level.ERROR);
+        createLog4jWriterAppender(dest);
 
-            createLog4jWriterAppender(dest);
-            
-            // set specified package and level
-            Logger.getLogger(pkg).setLevel(level);
-        }
+        // set specified package and level
+        Logger.getLogger(pkg).setLevel(level);
     }
 
     /**
@@ -157,28 +155,21 @@ public class Log4jInit
         {
             BasicConfigurator.resetConfiguration();
             
-            // create an appender for WARN, ERROR and FATAL with LONG_FORMAT
-            // message prefix
-            ConsoleAppender consoleApp =
-                new ConsoleAppender(new PatternLayout(LONG_FORMAT));
             LevelRangeFilter errorFilter = new LevelRangeFilter();
             errorFilter.setLevelMax(Level.FATAL);
             errorFilter.setLevelMin(Level.WARN);
             errorFilter.setAcceptOnMatch(true);
-            consoleApp.clearFilters();
-            consoleApp.addFilter(errorFilter);
-            BasicConfigurator.configure(consoleApp);
+            conAppenderHigh.clearFilters();
+            conAppenderHigh.addFilter(errorFilter);
+            BasicConfigurator.configure(conAppenderHigh);
     
-            // create a second appender for DEBUG and INFO with SHORT_FORMAT
-            // message prefix
-            consoleApp = new ConsoleAppender(new PatternLayout(SHORT_FORMAT));
             LevelRangeFilter infoFilter = new LevelRangeFilter();
             infoFilter.setLevelMax(Level.INFO);
             infoFilter.setLevelMin(Level.DEBUG);
             infoFilter.setAcceptOnMatch(true);
-            consoleApp.clearFilters();
-            consoleApp.addFilter(infoFilter);
-            BasicConfigurator.configure(consoleApp);
+            conAppenderLow.clearFilters();
+            conAppenderLow.addFilter(infoFilter);
+            BasicConfigurator.configure(conAppenderLow);
             
             consoleAppendersCreated = true;
         }
@@ -204,4 +195,24 @@ public class Log4jInit
         }
     }
     
+    /**
+     * Set the layout format of console log for levels of WARN, ERROR, and FATAL.
+     * 
+     * @param formatString refer to org.apache.log4j.PatternLayout for usage. 
+     */
+    public static synchronized void setConsoleErrorLogLayoutFormat(String formatString)
+    {
+        conAppenderHigh.setLayout(new PatternLayout(formatString));
+    }
+
+    /**
+     * Set the layout format of console log for levels of DEBUG and INFO.
+     * 
+     * @param formatString refer to org.apache.log4j.PatternLayout for usage. 
+     */
+    public static synchronized void setConsoleInfoLogLayoutFormat(String formatString)
+    {
+        conAppenderLow.setLayout(new PatternLayout(formatString));
+    }
+
 }
