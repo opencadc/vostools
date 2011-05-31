@@ -75,9 +75,11 @@ import java.io.OutputStreamWriter;
 import java.io.UnsupportedEncodingException;
 import java.io.Writer;
 import java.net.URI;
+import java.net.URL;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 import java.util.ArrayList;
+import java.util.Date;
 import java.util.List;
 
 import org.apache.log4j.Logger;
@@ -93,8 +95,6 @@ import ca.nrc.cadc.util.StringBuilderWriter;
 import ca.nrc.cadc.vos.ContainerNode;
 import ca.nrc.cadc.vos.Node;
 import ca.nrc.cadc.vos.server.util.FixedSizeTreeSet;
-import java.net.URL;
-import java.util.Date;
 
 /**
  * Writes a RSS feed consisting of the late modified child nodes of the
@@ -104,6 +104,9 @@ import java.util.Date;
  */
 public class RssView extends AbstractView
 {
+    
+    public static final String RSS_VIEW_URI = "ivo://cadc.nrc.ca/vospace/view#rss";
+    
     private static Logger log = Logger.getLogger(RssView.class);
 
     // Default maximum number of nodes to display in the feed.

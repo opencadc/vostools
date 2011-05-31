@@ -70,6 +70,7 @@
 package ca.nrc.cadc.vos;
 
 import java.net.URI;
+import java.util.ArrayList;
 import java.util.List;
 
 /**
@@ -87,7 +88,7 @@ public class View
     private boolean original;
     
     // The list of name value pair parameters for this view.
-    private List<Parameter> param;
+    private List<Parameter> params;
     
     /**
      * View constructor.
@@ -116,6 +117,7 @@ public class View
     {
         this.uri = uri;
         this.original = original;
+        params = new ArrayList<Parameter>();
     }
     
     /**
@@ -140,7 +142,7 @@ public class View
      */
     public List<Parameter> getParameters()
     {
-        return param;
+        return params;
     }
 
     /**
@@ -148,9 +150,9 @@ public class View
      * 
      * @param param
      */
-    public void setParameters(List<Parameter> param)
+    public void setParameters(List<Parameter> params)
     {
-        this.param = param;
+        this.params = params;
     }
 
     /**
@@ -168,8 +170,8 @@ public class View
      */
     public static class Parameter
     {
-        // The name of the parameter
-        private String name;
+        // The URI of the parameter
+        private URI uri;
         
         // The value of the parameter
         private String value;
@@ -177,29 +179,38 @@ public class View
         /**
          * Param constructor.
          * 
-         * @param name The param name.
+         * @param name The param URI.
          * @param value The param value.
          */
-        public Parameter(String name, String value)
+        public Parameter(URI uri, String value)
         {
-            this.name = name;
+            this.uri = uri;
             this.value = value;
         }
-        
-        /**
-         * @return The param name.
-         */
-        public String getName()
+
+        public URI getUri()
         {
-            return name;
+            return uri;
         }
-        
-        /**
-         * @return The param value.
-         */
+
         public String getValue()
         {
             return value;
+        }
+        
+        /**
+         * Compare this object to o.
+         */
+        public boolean equals(Object o)
+        {
+            if (o != null && o instanceof Parameter)
+            {
+                Parameter p = (Parameter) o;
+                return p.getUri().toString().equals(uri.toString()) &&
+                    p.getValue().equals(value);
+                    
+            }
+            return false;
         }
         
     }

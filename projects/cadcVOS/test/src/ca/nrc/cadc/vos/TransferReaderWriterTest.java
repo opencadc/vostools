@@ -69,20 +69,21 @@
 
 package ca.nrc.cadc.vos;
 
+import java.io.StringWriter;
+import java.net.URI;
 import java.util.ArrayList;
 import java.util.List;
 
 import org.apache.log4j.Logger;
 import org.junit.After;
 import org.junit.AfterClass;
+import org.junit.Assert;
 import org.junit.Before;
 import org.junit.BeforeClass;
 import org.junit.Test;
 
 import ca.nrc.cadc.util.Log4jInit;
-import java.io.StringWriter;
-import java.net.URI;
-import org.junit.Assert;
+import ca.nrc.cadc.vos.View.Parameter;
 
 /**
  * @author zhangsa
@@ -143,13 +144,15 @@ public class TransferReaderWriterTest
 
         Assert.assertNotNull(transfer2.getView());
         Assert.assertEquals(transfer1.getView().getURI(), transfer2.getView().getURI());
-        // TODO: compare view parameters
+        Assert.assertEquals(transfer1.getView().getParameters().size(), transfer2.getView().getParameters().size());
+        Assert.assertTrue(transfer1.getView().getParameters().containsAll(transfer2.getView().getParameters()));
+        Assert.assertTrue(transfer2.getView().getParameters().containsAll(transfer1.getView().getParameters()));
 
         Assert.assertEquals(transfer1.getDirection(), transfer2.getDirection());
 
         Assert.assertEquals(transfer1.getProtocols().size(), transfer2.getProtocols().size());
-        Assert.assertTrue( transfer1.getProtocols().containsAll(transfer2.getProtocols()));
-        Assert.assertTrue( transfer2.getProtocols().containsAll(transfer1.getProtocols()));
+        Assert.assertTrue(transfer1.getProtocols().containsAll(transfer2.getProtocols()));
+        Assert.assertTrue(transfer2.getProtocols().containsAll(transfer1.getProtocols()));
     }
 
     @Test
@@ -181,6 +184,44 @@ public class TransferReaderWriterTest
         }
     }
 
+    @Test
+    public void testTransferWithViewParameters()
+    {
+        try
+        {
+            List<Protocol> protocols = new ArrayList<Protocol>();
+            protocols.add(new Protocol(VOS.PROTOCOL_HTTP_GET));
+            protocols.add(new Protocol(VOS.PROTOCOL_HTTPS_GET));
+            transfer.setProtocols(protocols);
+            
+            View view = new View(new URI(VOS.VIEW_ANY));
+            List<Parameter> params = new ArrayList<Parameter>();
+            params.add(new Parameter(new URI(VOS.VIEW_ANY), "cutoutParameter1"));
+            params.add(new Parameter(new URI(VOS.VIEW_BINARY), "cutoutParameter2"));
+            params.add(new Parameter(new URI("ivo://cadc.nrc.ca/vospace/viewparam#someotherparam"),
+                    "[]{}/;,+=-'\"@#$%^"));
+            view.setParameters(params);
+            transfer.setView(view);
+            
+            StringWriter dest = new StringWriter();
+            TransferWriter writer = new TransferWriter();
+            writer.write(transfer, dest);
+            String xml = dest.toString();
+
+            log.debug(xml);
+
+            TransferReader reader = new TransferReader();
+            Transfer transfer2 = reader.read(xml);
+
+            compareTransfers(transfer, transfer2);
+        }
+        catch(Exception unexpected)
+        {
+            log.error("unexpected exception", unexpected);
+            Assert.fail("unexpected exception: " + unexpected);
+        }
+    }
+    
     @Test
     public void testTransferWithProtocolEndpoints()
     {

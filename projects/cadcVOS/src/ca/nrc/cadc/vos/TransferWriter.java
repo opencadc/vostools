@@ -141,6 +141,13 @@ public class TransferWriter
 
         e = new Element("view", VOS.NS);
         e.setAttribute("uri", transfer.getView().getURI().toString());
+        for (View.Parameter param : transfer.getView().getParameters())
+        {
+            Element pm = new Element("param", VOS.NS);
+            pm.setAttribute("uri", param.getUri().toString());
+            pm.setText(param.getValue());
+            e.addContent(pm);
+        }
         root.addContent(e);
 
         for (Protocol protocol : transfer.getProtocols())

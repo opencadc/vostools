@@ -71,22 +71,23 @@ package ca.nrc.cadc.vos;
 
 import java.io.IOException;
 import java.io.InputStream;
+import java.io.InputStreamReader;
 import java.io.Reader;
 import java.io.StringReader;
+import java.net.URI;
 import java.net.URISyntaxException;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 import org.apache.log4j.Logger;
 import org.jdom.Document;
 import org.jdom.Element;
 import org.jdom.JDOMException;
 
+import ca.nrc.cadc.vos.View.Parameter;
 import ca.nrc.cadc.xml.XmlUtil;
-import java.io.InputStreamReader;
-import java.net.URI;
-import java.util.Map;
 
 /**
  * Constructs a Transfer from an XML source. This class is not thread safe but it is
@@ -176,11 +177,22 @@ public class TransferReader
 
         // TODO: get view nodes and uri attribute
         View view = null;
+        Parameter param = null;
         List views = root.getChildren("view", VOS.NS);
         if (views != null && views.size() > 0)
         {
             Element v = (Element) views.get(0);
             view = new View(new URI(v.getAttributeValue("uri")));
+            List params = v.getChildren("param", VOS.NS);
+            if (params != null)
+            {
+                for (Object o : params)
+                {
+                    Element p = (Element) o;
+                    param = new Parameter(new URI(p.getAttributeValue("uri")), p.getText());
+                    view.getParameters().add(param);
+                }
+            }
         }
         List<Protocol> protocols = parseProtocols(root);
         // boolean keepBytes; // not in XML yet

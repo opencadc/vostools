@@ -200,12 +200,6 @@ public class VOS
     // SHALL be used by a client to indicate that the service should choose the most appropriate view for a data export
     public static final String VIEW_DEFAULT = "ivo://ivoa.net/vospace/core#defaultview";
 
-    /*
-     * CADC VIEW properties
-     */
-
-    // Used as the view URI to import or export data as a RSS feed
-    public static final String VIEW_RSS = "ivo://ivoa.net/vospace/core#rssview";
 
     /*
      * Standard Node Properties defined by the CADC
