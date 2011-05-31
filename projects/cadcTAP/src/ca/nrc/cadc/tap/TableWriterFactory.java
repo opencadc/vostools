@@ -71,6 +71,7 @@ package ca.nrc.cadc.tap;
 
 import ca.nrc.cadc.tap.writer.VOTableWriter;
 import ca.nrc.cadc.tap.writer.AsciiTableWriter;
+import ca.nrc.cadc.tap.writer.RssTableWriter;
 import java.util.List;
 
 import ca.nrc.cadc.uws.Parameter;
@@ -99,10 +100,12 @@ public class TableWriterFactory
     public static final String TEXT = "text";
     public static final String TSV = "tsv";
     public static final String VOTABLE = "votable";
+    public static final String RSS = "rss";
 
     // content-type
     private static final String APPLICATION_FITS = "application/fits";
     private static final String APPLICATION_VOTABLE_XML = "application/x-votable+xml";
+    private static final String APPLICATION_RSS = "application/rss+xml";
     private static final String TEXT_XML_VOTABLE = "text/xml;content=x-votable"; // the SIAv1 mimetype
     private static final String TEXT_CSV = "text/csv";
     private static final String TEXT_HTML = "text/html";
@@ -131,6 +134,8 @@ public class TableWriterFactory
 //        knownFormats.put(FITS, FITS);
 //        knownFormats.put(TEXT, TEXT);
 //        knownFormats.put(HTML, HTML);
+        knownFormats.put(RSS, RSS);
+        knownFormats.put(APPLICATION_RSS, RSS);
     }
 
     /**
@@ -160,6 +165,8 @@ public class TableWriterFactory
             return new AsciiTableWriter(CSV);
         if (type.equals(TSV))
             return new AsciiTableWriter(TSV);
+        if (type.equals(RSS))
+            return new RssTableWriter();
 
         // legal format but we don't have a table writer for it
         throw new UnsupportedOperationException("unsupported format: " + type);
