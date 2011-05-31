@@ -168,7 +168,7 @@ public class RssTableWriter implements TableWriter
         }
         qp.insert(0, "/annotations/auth/sync?");
         qp.insert(0, NetUtil.getServerName(null));
-        qp.insert(0, "https://");
+        qp.insert(0, "http://");
         Element link = new Element("link");
         link.setText(qp.toString());
         channel.addContent(link);
