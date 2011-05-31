@@ -71,6 +71,7 @@ package ca.nrc.cadc.tap.schema;
 
 import java.io.PrintWriter;
 import java.io.StringWriter;
+import java.util.ArrayList;
 import java.util.List;
 
 /**
@@ -79,11 +80,7 @@ import java.util.List;
  */
 public class TapSchema
 {
-    // List of Schemas belonging to this TAP_SCHEMA.
-    public List<SchemaDesc> schemaDescs;
-
-    // List of Keys belonging to this TAP_SCHEMA.
-    public List<KeyDesc> keyDescs;
+    public List<SchemaDesc> schemaDescs = new ArrayList<SchemaDesc>();
 
     /**
      * Default no-arg constructor.
@@ -98,10 +95,9 @@ public class TapSchema
      * @param schemaDescs List of Schemas belonging to this TAP_SCHEMA.
      * @param keyDescs List of Keys belonging to this TAP_SCHEMA.
      */
-    public TapSchema(List<SchemaDesc> schemaDescs, List<KeyDesc> keyDescs)
+    public TapSchema(List<SchemaDesc> schemaDescs)
     {
         this.schemaDescs = schemaDescs;
-        this.keyDescs = keyDescs;
     }
 
     /**
@@ -118,16 +114,6 @@ public class TapSchema
         this.schemaDescs = schemaDescs;
     }
 
-    public final List<KeyDesc> getKeyDescs()
-    {
-        return keyDescs;
-    }
-
-    public final void setKeyDescs(List<KeyDesc> keyDescs)
-    {
-        this.keyDescs = keyDescs;
-    }
-
     /**
      * @return String representation of the TapSchema.
      */
@@ -141,11 +127,11 @@ public class TapSchema
             pw.print("\t");
             pw.println(schemaDesc.toString());
         }
-        for (KeyDesc keyDesc : keyDescs)
-        {
-            pw.print("\t");
-            pw.println(keyDesc.toString());
-        }
+        //for (KeyDesc keyDesc : keyDescs)
+        //{
+        //    pw.print("\t");
+        //    pw.println(keyDesc.toString());
+        //}
         pw.print("]");
         return sw.toString();
     }

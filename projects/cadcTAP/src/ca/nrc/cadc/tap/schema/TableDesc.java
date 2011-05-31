@@ -69,6 +69,7 @@
 
 package ca.nrc.cadc.tap.schema;
 
+import java.util.ArrayList;
 import java.util.List;
 
 /**
@@ -100,7 +101,12 @@ public class TableDesc
     /**
      * List of columns belonging to this Table.
      */
-    public List<ColumnDesc> columnDescs;
+    public List<ColumnDesc> columnDescs = new ArrayList<ColumnDesc>();
+
+    /**
+     * List of keys where this table is the <em>fromTable</em>.
+     */
+    public List<KeyDesc> keyDescs = new ArrayList<KeyDesc>();
 
     /**
      * Default no-arg constructor.
@@ -188,6 +194,16 @@ public class TableDesc
     public final void setColumnDescs(List<ColumnDesc> columnDescs)
     {
         this.columnDescs = columnDescs;
+    }
+
+    public List<KeyDesc> getKeyDescs()
+    {
+        return keyDescs;
+    }
+
+    public void setKeyDescs(List<KeyDesc> keyDescs)
+    {
+        this.keyDescs = keyDescs;
     }
 
     /**

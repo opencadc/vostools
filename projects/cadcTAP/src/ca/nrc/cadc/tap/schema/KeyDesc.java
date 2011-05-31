@@ -69,6 +69,7 @@
 
 package ca.nrc.cadc.tap.schema;
 
+import java.util.ArrayList;
 import java.util.List;
 
 /**
@@ -92,10 +93,14 @@ public class KeyDesc
      */
     public String targetTable;
 
+    public String description;
+
+    public String utype;
+
     /**
      * List of KeyColumns belonging to this Key.
      */
-    public List<KeyColumnDesc> keyColumnDescs;
+    public List<KeyColumnDesc> keyColumnDescs = new ArrayList<KeyColumnDesc>();
 
     /**
      * Default no-arg constructor.

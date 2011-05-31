@@ -91,6 +91,7 @@ import org.junit.BeforeClass;
 import org.junit.Test;
 
 import ca.nrc.cadc.tap.schema.ColumnDesc;
+import ca.nrc.cadc.tap.schema.KeyColumnDesc;
 import ca.nrc.cadc.tap.schema.KeyDesc;
 import ca.nrc.cadc.tap.schema.SchemaDesc;
 import ca.nrc.cadc.tap.schema.TableDesc;
@@ -116,12 +117,6 @@ public class TableSetTest
     String schemaResource2 = "VODataService-v1.1.xsd";
 
     String DEFAULT_SCHEMA = "default";
-
-    //String schemaNSKey2 = "http://www.ivoa.net/xml/RegistryInterface/v1.0";
-    //String schemaResource2 = "RI-v1.0.xsd";
-
-    //String schemaNSKey3 = "http://www.ivoa.net/xml/VODataService/v1.1";
-    //String schemaResource3 = "VS-v1.1.xsd";
 
     Map<String, String> schemaNSMap;
 
@@ -201,8 +196,7 @@ public class TableSetTest
         try
         {
             TapSchema ts = new TapSchema();
-            ts.schemaDescs = new ArrayList<SchemaDesc>();
-            ts.schemaDescs.add(new SchemaDesc()); // empty default schema
+            ts.schemaDescs.add(new SchemaDesc(null, "default schema", null));
 
             TableSet tableSet = new TableSet(ts);
             Document doc = tableSet.getDocument();
@@ -238,7 +232,7 @@ public class TableSetTest
         log.debug("testEmpty");
         try
         {
-            TapSchema ts = new TapSchema(new ArrayList<SchemaDesc>(), new ArrayList<KeyDesc>());
+            TapSchema ts = new TapSchema(new ArrayList<SchemaDesc>());
             TableSet vods = new TableSet(ts);
             vods.getDocument();
         }
@@ -271,6 +265,7 @@ public class TableSetTest
                 rs = xpath.selectNodes(doc);
                 Assert.assertTrue(rs.size() == 1);
                 checkColumns(doc, td);
+                checkKeys(doc, td);
             }
     }
 
@@ -294,6 +289,36 @@ public class TableSetTest
                         + "']/column[name='" + cd.getColumnName() + "']");
                 rs = xpath.selectNodes(doc);
                 Assert.assertTrue(rs.size() == 1);
+            }
+    }
+
+    private void checkKeys(Document doc, TableDesc td) throws JDOMException
+    {
+        XPath xpath;
+        List<?> rs;
+        String schemaName = td.getSchemaName();
+
+        if (td.getKeyDescs() != null)
+            for (KeyDesc kd : td.getKeyDescs())
+            {
+                for (KeyColumnDesc kcd : kd.keyColumnDescs)
+                {
+                    log.debug(td.tableName + " -- " + kd.targetTable + " -- from: " + kcd.fromColumn);
+                    xpath = XPath.newInstance("/vosi:tableset/schema[name='" + schemaName + "']/table[name='" + td.getTableName()
+                            + "']/foreignKey[targetTable='" + kd.targetTable + "']" +
+                            "/fkColumn[fromColumn='"+kcd.fromColumn+"']");
+                    rs = xpath.selectNodes(doc);
+                    Assert.assertTrue(rs.size() > 0);
+                    log.debug(td.tableName + " -- " + kd.targetTable + " -- from: " + kcd.fromColumn + " OK");
+
+                    log.debug(td.tableName + " -- " + kd.targetTable + " -- target: " + kcd.targetColumn);
+                    xpath = XPath.newInstance("/vosi:tableset/schema[name='" + schemaName + "']/table[name='" + td.getTableName()
+                            + "']/foreignKey[targetTable='" + kd.targetTable + "']" +
+                            "/fkColumn[targetColumn='"+kcd.targetColumn+"']");
+                    rs = xpath.selectNodes(doc);
+                    Assert.assertTrue(rs.size() > 0);
+                    log.debug(td.tableName + " -- " + kd.targetTable + " -- target: " + kcd.targetColumn + " OK");
+                }
             }
     }
 }

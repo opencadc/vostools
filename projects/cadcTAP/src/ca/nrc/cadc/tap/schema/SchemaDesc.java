@@ -69,6 +69,7 @@
 
 package ca.nrc.cadc.tap.schema;
 
+import java.util.ArrayList;
 import java.util.List;
 
 /**
@@ -95,7 +96,7 @@ public class SchemaDesc
     /**
      * List of tables belonging to this Schema.
      */
-    public List<TableDesc> tableDescs;
+    public List<TableDesc> tableDescs = new ArrayList<TableDesc>();
 
     /**
      * Default no-arg constructor.
@@ -152,12 +153,12 @@ public class SchemaDesc
         this.utype = utype;
     }
 
-    public final List<TableDesc> getTableDescs()
+    public List<TableDesc> getTableDescs()
     {
         return tableDescs;
     }
 
-    public final void setTableDescs(List<TableDesc> tableDescs)
+    public void setTableDescs(List<TableDesc> tableDescs)
     {
         this.tableDescs = tableDescs;
     }

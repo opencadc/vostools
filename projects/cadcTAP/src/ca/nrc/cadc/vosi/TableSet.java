@@ -76,6 +76,8 @@ import org.jdom.Element;
 import org.jdom.Namespace;
 
 import ca.nrc.cadc.tap.schema.ColumnDesc;
+import ca.nrc.cadc.tap.schema.KeyColumnDesc;
+import ca.nrc.cadc.tap.schema.KeyDesc;
 import ca.nrc.cadc.tap.schema.SchemaDesc;
 import ca.nrc.cadc.tap.schema.TableDesc;
 import ca.nrc.cadc.tap.schema.TapSchema;
@@ -178,7 +180,12 @@ public class TableSet
             if (e != null)
                 eleTable.addContent(e);
         }
-
+        if (td.getKeyDescs() != null) for (KeyDesc kd : td.getKeyDescs())
+        {
+            Element e = toXmlElement(kd);
+            if (e != null)
+                eleTable.addContent(e);
+        }
         return eleTable;
     }
 
@@ -226,6 +233,22 @@ public class TableSet
         }
 
         return eleColumn;
+    }
+
+    private Element toXmlElement(KeyDesc kd)
+    {
+        Element ret = new Element("foreignKey");
+        addChild(ret, "targetTable", kd.targetTable);
+        for (KeyColumnDesc kc : kd.keyColumnDescs)
+        {
+            Element fkc = new Element("fkColumn");
+            addChild(fkc, "fromColumn", kc.fromColumn);
+            addChild(fkc, "targetColumn", kc.targetColumn);
+            ret.addContent(fkc);
+        }
+        //addChild(eleColumn, "description", kd.);
+        //addChild(eleColumn, "utype",
+        return ret;
     }
 
     private boolean isTapType(String[] parts)

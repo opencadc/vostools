@@ -109,7 +109,7 @@ public class TapSchemaDAO
 
     // SQL to select all rows from TAP_SCHEMA.keys.
     private static final String SELECT_KEYS =
-            "select key_id, from_table, target_table " +
+            "select key_id, from_table, target_table,description,utype " +
             "from tap_schema.keys ";
 
     // SQL to select all rows from TAP_SCHEMA.key_columns.
@@ -155,13 +155,17 @@ public class TapSchemaDAO
         addColumnsToTables(tableDescs, columnDescs);
 
         // List of TAP_SCHEMA.keys
-        tapSchema.keyDescs = jdbc.query(SELECT_KEYS, new KeyMapper());
+        //tapSchema.keyDescs = jdbc.query(SELECT_KEYS, new KeyMapper());
+        List<KeyDesc> keyDescs = jdbc.query(SELECT_KEYS, new KeyMapper());;
 
         // List of TAP_SCHEMA.key_columns
         List<KeyColumnDesc> keyColumnDescs = jdbc.query(SELECT_KEY_COLUMNS, new KeyColumnMapper());
 
         // Add the KeyColumns to the Keys.
-        addKeyColumnsToKeys(tapSchema.keyDescs, keyColumnDescs);
+        addKeyColumnsToKeys(keyDescs, keyColumnDescs);
+
+        // connect foreign keys to the fromTable
+        addForeignKeys(tapSchema, keyDescs);
 
         for (SchemaDesc s : tapSchema.schemaDescs) 
         {
@@ -188,8 +192,6 @@ public class TapSchemaDAO
             {
                 if (tableDesc.schemaName.equals(schemaDesc.schemaName))
                 {
-                    if (schemaDesc.tableDescs == null)
-                        schemaDesc.tableDescs = new ArrayList<TableDesc>();
                     schemaDesc.tableDescs.add(tableDesc);
                     break;
                 }
@@ -211,8 +213,6 @@ public class TapSchemaDAO
             {
                 if (col.tableName.equals(tableDesc.tableName))
                 {
-                    if (tableDesc.columnDescs == null)
-                        tableDesc.columnDescs = new ArrayList<ColumnDesc>();
                     tableDesc.columnDescs.add(col);
                     break;
                 }
@@ -234,10 +234,31 @@ public class TapSchemaDAO
             {
                 if (keyColumnDesc.keyId.equals(keyDesc.keyId))
                 {
-                    if (keyDesc.keyColumnDescs == null)
-                        keyDesc.keyColumnDescs = new ArrayList<KeyColumnDesc>();
                     keyDesc.keyColumnDescs.add(keyColumnDesc);
                     break;
+                }
+            }
+        }
+    }
+
+    /**
+     * Adds foreign keys (KeyDesc) to the from table.
+     * 
+     * @param ts
+     */
+    private void addForeignKeys(TapSchema ts, List<KeyDesc> keyDescs)
+    {
+        for (KeyDesc key : keyDescs)
+        {
+            for (SchemaDesc sd : ts.schemaDescs)
+            {
+                for (TableDesc td : sd.tableDescs)
+                {
+                    if ( key.fromTable.equals(td.tableName))
+                    {
+                        td.keyDescs.add(key);
+                        break;
+                    }
                 }
             }
         }
@@ -254,6 +275,7 @@ public class TapSchemaDAO
             schemaDesc.schemaName = rs.getString("schema_name");
             schemaDesc.description = rs.getString("description");
             schemaDesc.utype = rs.getString("utype");
+            schemaDesc.tableDescs = new ArrayList<TableDesc>();
             log.debug("found: " + schemaDesc);
             return schemaDesc;
         }
@@ -271,6 +293,8 @@ public class TapSchemaDAO
             tableDesc.tableName = rs.getString("table_name");
             tableDesc.description = rs.getString("description");
             tableDesc.utype = rs.getString("utype");
+            tableDesc.columnDescs = new ArrayList<ColumnDesc>();
+            tableDesc.keyDescs = new ArrayList<KeyDesc>();
             log.debug("found: " + tableDesc);
             return tableDesc;
         }
@@ -308,6 +332,9 @@ public class TapSchemaDAO
             keyDesc.keyId = rs.getString("key_id");
             keyDesc.fromTable = rs.getString("from_table");
             keyDesc.targetTable = rs.getString("target_table");
+            keyDesc.description = rs.getString("description");
+            keyDesc.utype = rs.getString("utype");
+            keyDesc.keyColumnDescs = new ArrayList<KeyColumnDesc>();
             log.debug("found: " + keyDesc);
             return keyDesc;
         }
