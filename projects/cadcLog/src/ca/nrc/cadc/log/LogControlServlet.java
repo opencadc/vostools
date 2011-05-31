@@ -71,7 +71,6 @@
 package ca.nrc.cadc.log;
 
 
-import ca.nrc.cadc.util.Log4jInit;
 import java.io.IOException;
 import java.io.PrintWriter;
 import java.util.ArrayList;
@@ -84,11 +83,10 @@ import javax.servlet.http.HttpServlet;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 
-import org.apache.log4j.BasicConfigurator;
-import org.apache.log4j.ConsoleAppender;
 import org.apache.log4j.Level;
 import org.apache.log4j.Logger;
-import org.apache.log4j.PatternLayout;
+
+import ca.nrc.cadc.util.Log4jInit;
 
 
 /**
@@ -142,12 +140,6 @@ public class LogControlServlet extends HttpServlet
     	super.init( config );
         packageNames = new String[0];
 
-        BasicConfigurator.resetConfiguration();
-
-		//  Log all classes at this level except where a
-    	//  different level is specified in the web.xml file.
-    	Logger.getRootLogger().setLevel( Level.WARN );
-
     	//  Determine the desired logging level.
     	String levelVal = config.getInitParameter( LOG_LEVEL_PARAM );
     	if ( levelVal == null )
@@ -168,15 +160,8 @@ public class LogControlServlet extends HttpServlet
     		level = DEFAULT_LEVEL;
     	
     	String webapp = config.getServletContext().getServletContextName();
-    	if (webapp == null)
-    	{
-    	    webapp = "[?]";
-    	}
-    	String logFormat = "%d{ISO8601} %-5p " + webapp + " [%t] %c{1} %x - %m\n";
-
-    	ConsoleAppender appender = new ConsoleAppender( new PatternLayout(logFormat) );
-		BasicConfigurator.configure( appender );
-
+    	if (webapp == null) webapp = "[?]";
+    	    
     	// Get the list of configured packages and
     	// set the log level on each.
         logger.setLevel(DEFAULT_LEVEL);
@@ -191,8 +176,8 @@ public class LogControlServlet extends HttpServlet
                 String pkg = stringTokenizer.nextToken();
                 if ( pkg.length() > 0 )
                 {
+                    Log4jInit.setLevel(webapp, pkg, level);  // 2011-05-31, -sz
                     logger.info("log level: " + pkg + " =  " + level);
-                    Logger.getLogger(pkg).setLevel( level );
                     tokens.add(pkg);
                 }
             }
@@ -276,7 +261,7 @@ public class LogControlServlet extends HttpServlet
         }
         // modify log level on current packages
         for (String pkg : packageNames)
-        	Logger.getLogger(pkg).setLevel(level);
+            Log4jInit.setLevel(pkg, level);  // 2011-05-30, -sz
 
         // redirect the caller to the resulting settings
         response.setStatus(HttpServletResponse.SC_SEE_OTHER);
