@@ -246,8 +246,8 @@ public class TableSet
             addChild(fkc, "targetColumn", kc.targetColumn);
             ret.addContent(fkc);
         }
-        //addChild(eleColumn, "description", kd.);
-        //addChild(eleColumn, "utype",
+        addChild(ret, "description", kd.description);
+        addChild(ret, "utype", kd.utype);
         return ret;
     }
 
