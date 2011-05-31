@@ -146,6 +146,7 @@ public class QueryRunner implements SyncJobRunner
     private static String uploadManagerClassName = "ca.nrc.cadc.tap.impl.UploadManagerImpl";
     private static String sqlParserClassName = "ca.nrc.cadc.tap.impl.SqlQueryImpl";
     private static String adqlParserClassName = "ca.nrc.cadc.tap.impl.AdqlQueryImpl";
+    private static String pqlParserClassName = "ca.nrc.cadc.tap.impl.PqlQueryImpl";
 
     // optional plugin classes that may be provided to override default behaviour
     private static String maxrecValidatorClassName = "ca.nrc.cadc.tap.impl.MaxRecValidatorImpl";
@@ -154,6 +155,7 @@ public class QueryRunner implements SyncJobRunner
     {
         langQueries.put("ADQL", adqlParserClassName);
         langQueries.put("SQL", sqlParserClassName);
+        langQueries.put("PQL", pqlParserClassName);
     }
 
     private String jobID;
@@ -309,12 +311,15 @@ public class QueryRunner implements SyncJobRunner
             uploadManager.setDataSource(uploadDataSource);
             logger.debug("invoking UploadManager for UPLOAD...");
             Map<String, TableDesc> tableDescs = uploadManager.upload(paramList, job.getID());
-            
-            logger.debug("adding TAP_UPLOAD SchemaDesc to TapSchema...");
-            SchemaDesc tapUploadSchema = new SchemaDesc();
-            tapUploadSchema.setSchemaName("TAP_UPLOAD");
-            tapUploadSchema.setTableDescs(new ArrayList(tableDescs.values()));
-            tapSchema.schemaDescs.add(tapUploadSchema);
+
+            if (tableDescs != null)
+            {
+                logger.debug("adding TAP_UPLOAD SchemaDesc to TapSchema...");
+                SchemaDesc tapUploadSchema = new SchemaDesc();
+                tapUploadSchema.setSchemaName("TAP_UPLOAD");
+                tapUploadSchema.setTableDescs(new ArrayList(tableDescs.values()));
+                tapSchema.schemaDescs.add(tapUploadSchema);
+            }
 
             logger.debug("invoking MaxRecValidator...");
             MaxRecValidator maxRecValidator = new MaxRecValidator();
