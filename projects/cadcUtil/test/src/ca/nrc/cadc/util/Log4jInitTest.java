@@ -16,7 +16,6 @@ public class Log4jInitTest
     @BeforeClass
     public static void setUpBeforeClass() throws Exception
     {
-        Log4jInit.setLevel("ca.nrc.cadc", Level.DEBUG);
     }
 
     @AfterClass
@@ -37,21 +36,17 @@ public class Log4jInitTest
     @Test
     public void changeLayoutFormatTest()
     {
+        LOG.error("error msg 2.");
+        Log4jInit.setLevel("APP1", "ca.nrc.cadc", Level.DEBUG);
         LOG.debug("debug msg1.");
         LOG.debug("debug msg2.");
         LOG.debug("debug msg3.");
-        Log4jInit.setConsoleInfoLogLayoutFormat("CHANGED %-4r [%t] %-5p %c{1} %x - %m\n");
         LOG.debug("debug msg11.");
         LOG.debug("debug msg12.");
         LOG.debug("debug msg13.");
         
-        LOG.error("error msg 1.");
         LOG.error("error msg 2.");
         LOG.error("error msg 3.");
-        Log4jInit.setConsoleErrorLogLayoutFormat("CHANGED AGAIN. %-4r [%t] %-5p %c{1} %x - %m\n");
-        LOG.error("error msg 11.");
-        LOG.error("error msg 12.");
-        LOG.error("error msg 13.");
     }
 
 }
