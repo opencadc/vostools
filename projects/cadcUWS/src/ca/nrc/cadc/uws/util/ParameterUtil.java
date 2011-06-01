@@ -112,7 +112,7 @@ public class ParameterUtil
             {
                 String namedParamStr = parameter.getValue();
                 if (namedParamStr == null || namedParamStr.length() == 0)
-                    throw new IllegalStateException("Missing " + name + " values");
+                    namedParamList.add("");
                 else
                 {
                     String[] namedParams = namedParamStr.split(";");

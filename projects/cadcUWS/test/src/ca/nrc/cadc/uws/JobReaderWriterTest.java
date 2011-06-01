@@ -461,4 +461,28 @@ public class JobReaderWriterTest
             Assert.fail("unexpected exception: " + unexpected);
         }
     }
+
+    @Test
+    public void testWithEmptyJobParameter()
+    {
+        log.debug("testWithEmptyJobParameter");
+        try
+        {
+            Job job = new Job();
+            job.setExecutionPhase(ExecutionPhase.PENDING);
+            job.setID(JOB_ID);
+            job.setRunID(RUN_ID);
+            job.setQuote(new Date(baseDate.getTime() + 10000L));
+            job.setExecutionDuration(123L);
+            job.setDestructionTime(new Date(baseDate.getTime() + 300000L));
+            job.addParameter(new Parameter("empty parameter", ""));
+            job.setOwner(null);
+            test(job);
+        }
+        catch(Exception unexpected)
+        {
+            log.debug("unexpected exception", unexpected);
+            Assert.fail("unexpected exception: " + unexpected);
+        }
+    }
 }
