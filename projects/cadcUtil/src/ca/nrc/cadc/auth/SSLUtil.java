@@ -190,7 +190,14 @@ public class SSLUtil
         if (s != null)
         {
             Set<X509CertificateChain> certs = s.getPublicCredentials(X509CertificateChain.class);
-            if (certs.size() > 0) chain = certs.iterator().next();
+            for (X509CertificateChain cc : certs)
+            {
+                if (cc.getKey() != null)
+                {
+                    chain = cc;
+                    break;
+                }
+            }
         }
         if (chain == null) return null;
         return getSocketFactory(chain);
