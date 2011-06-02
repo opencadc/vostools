@@ -68,6 +68,7 @@
 */
 package ca.nrc.cadc.vos.server;
 
+import ca.nrc.cadc.date.DateUtil;
 import java.io.BufferedWriter;
 import java.io.IOException;
 import java.io.OutputStream;
@@ -75,11 +76,9 @@ import java.io.OutputStreamWriter;
 import java.io.UnsupportedEncodingException;
 import java.io.Writer;
 import java.net.URI;
-import java.net.URL;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 import java.util.ArrayList;
-import java.util.Date;
 import java.util.List;
 
 import org.apache.log4j.Logger;
@@ -94,7 +93,13 @@ import ca.nrc.cadc.util.HexUtil;
 import ca.nrc.cadc.util.StringBuilderWriter;
 import ca.nrc.cadc.vos.ContainerNode;
 import ca.nrc.cadc.vos.Node;
+import ca.nrc.cadc.vos.NodeProperty;
+import ca.nrc.cadc.vos.VOS;
 import ca.nrc.cadc.vos.server.util.FixedSizeTreeSet;
+import java.net.URL;
+import java.text.DateFormat;
+import java.text.ParseException;
+import java.util.Date;
 
 /**
  * Writes a RSS feed consisting of the late modified child nodes of the
@@ -106,6 +111,8 @@ public class RssView extends AbstractView
 {
     
     private static Logger log = Logger.getLogger(RssView.class);
+
+    private DateFormat dateFormat = DateUtil.getDateFormat(DateUtil.IVOA_DATE_FORMAT, DateUtil.UTC);
 
     // Default maximum number of nodes to display in the feed.
     private static final int DEFAULT_MAX_NUMBER_NODES = 10;
@@ -151,12 +158,17 @@ public class RssView extends AbstractView
             throw new UnsupportedOperationException("RssView is only for container nodes.");
         }
 
+        if (nodePersistence == null)
+        {
+            throw new IllegalStateException("NodePersistence must be set.");
+        }
+
         baseURL = getBaseURL(node, requestURL);
         
         // TreeSet to hold the Nodes sorted by their date property.
-        FixedSizeTreeSet<Node> nodeSet = new FixedSizeTreeSet<Node>();
+        FixedSizeTreeSet<RssFeedItem> nodeSet = new FixedSizeTreeSet<RssFeedItem>();
         nodeSet.setMaxSize(maxNodes);
-        nodeSet.addAll(((ContainerNode) node).getNodes());
+        addNodeToFeed((ContainerNode) node, nodeSet);
 
         // Build the RSS feed XML.
         feed = RssFeed.createFeed(node, nodeSet, baseURL);
@@ -176,10 +188,41 @@ public class RssView extends AbstractView
     @Override
     public Date getLastModified()
     {
-        // must return the date from the first nodwe in the list (most recent)
+        // must return the date from the first node in the list (most recent)
         return null; // for now, this forces client to read the feed
     }
 
+    protected void addNodeToFeed(ContainerNode node, FixedSizeTreeSet set)
+    {
+        // Add Node to set if it has a valid last modified date.
+        try
+        {
+            set.add(new RssFeedItem(getLastModifiedDate(node), node));
+            log.debug("added container node to feed: " + node.getName());
+        }
+        catch (ParseException ignore) {}
+
+        // Process all the child Nodes.
+        nodePersistence.getChildren((ContainerNode) node);
+        List<Node> children = ((ContainerNode) node).getNodes();
+        for (Node child : children)
+        {
+            if (child instanceof ContainerNode)
+            {
+                addNodeToFeed((ContainerNode) child, set);
+            }
+            else
+            {
+                // Add Node to set if it has a valid last modified date.
+                try
+                {
+                    set.add(new RssFeedItem(getLastModifiedDate(child), child));
+                    log.debug("added data node to feed: " + child.getName());
+                }
+                catch (ParseException ignore) {}
+            }
+        }
+    }
 
     // determine the base URL to the nodes resource
     String getBaseURL(Node n, URL r)
@@ -347,4 +390,20 @@ public class RssView extends AbstractView
         return null;
     }
 
+    private Date getLastModifiedDate(Node node)
+        throws ParseException
+    {
+        // Get the Nodes lastModified date.
+        List<NodeProperty> nodeProperties = node.getProperties();
+        String uriDate = null;
+        for (NodeProperty nodeProperty : nodeProperties)
+        {
+            if (nodeProperty.getPropertyURI().equals(VOS.PROPERTY_URI_DATE))
+                uriDate = nodeProperty.getPropertyValue();
+        }
+
+        // Try and parse uriDate into a Date.
+        return dateFormat.parse(uriDate);
+    }
+    
 }

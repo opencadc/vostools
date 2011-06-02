@@ -263,7 +263,9 @@
           </classpath>
           <formatter type="plain" usefile="false"/>
           <test name="ca.nrc.cadc.vos.server.RssViewTest"/>
-          <test name="ca.nrc.cadc.vos.server.RssFeedTest"/>
+          <test name="ca.nrc.cadc.vos.server.RssFeedTest"/>   
+          <test name="ca.nrc.cadc.vos.server.RssFeedItemTest"/>
+          <test name="ca.nrc.cadc.vos.server.util.FixedSizeTreeSetTest"/>
         </junit>
 
     </target>

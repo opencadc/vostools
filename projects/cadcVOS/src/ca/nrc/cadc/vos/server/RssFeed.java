@@ -95,7 +95,7 @@ public class RssFeed
      * @param baseURL base url for the nodes resource
      * @return JDOM Element representing the RRS feed.
      */
-    public static Element createFeed(Node parent, Collection<Node> nodes, String baseURL)
+    public static Element createFeed(Node parent, Collection<RssFeedItem> nodes, String baseURL)
     {
         // Get the title and description from the parent properties.
         String parentTitle = null;
@@ -152,13 +152,13 @@ public class RssFeed
         }
         log.debug("num nodes: " + nodes.size());
         // Create an item for each Node and add to channel.
-        for (Node node : nodes)
+        for (RssFeedItem rssFeedItem : nodes)
         {
             // Get the title, description, and date from the node properties.
             String nodeTitle = null;
             String nodeDescription = null;
             String nodeDate = null;
-            for (NodeProperty nodeProperty : node.getProperties())
+            for (NodeProperty nodeProperty : rssFeedItem.node.getProperties())
             {
                 if (nodeProperty.getPropertyURI().equals(VOS.PROPERTY_URI_TITLE))
                 {
@@ -180,7 +180,7 @@ public class RssFeed
             // item title.
             if (nodeTitle == null)
             {
-                nodeTitle = node.getName();
+                nodeTitle = rssFeedItem.node.getName();
             }
             Element itemTitle = new Element("title");
             itemTitle.setText(nodeTitle);
@@ -189,7 +189,7 @@ public class RssFeed
             // item description.
             if (nodeDescription == null)
             {
-                if (node instanceof DataNode)
+                if (rssFeedItem.node instanceof DataNode)
                 {
                     nodeDescription = "File";
                 }
@@ -213,8 +213,8 @@ public class RssFeed
             // item link, comment
             Element itemLink = new Element("link");
             Element comments = new Element("comments");
-            String linkText = baseURL + node.getUri().getPath();
-            if (node instanceof DataNode)
+            String linkText = baseURL + rssFeedItem.node.getUri().getPath();
+            if (rssFeedItem.node instanceof DataNode)
             {
                 linkText += "?view=data";
                 comments.setText("Click to download this file.");
@@ -229,10 +229,10 @@ public class RssFeed
             item.addContent(comments);
 
             // item author
-            if (node.getOwner() != null)
+            if (rssFeedItem.node.getOwner() != null)
             {
                 Element author = new Element("author");
-                author.setText(node.getOwner());
+                author.setText(rssFeedItem.node.getOwner());
                 item.addContent(author);
             }
 

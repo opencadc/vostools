@@ -88,13 +88,19 @@ import org.junit.BeforeClass;
 import org.junit.Test;
 
 import ca.nrc.cadc.date.DateUtil;
+import ca.nrc.cadc.util.Log4jInit;
 import ca.nrc.cadc.vos.ContainerNode;
 import ca.nrc.cadc.vos.DataNode;
-import ca.nrc.cadc.vos.Node;
 import ca.nrc.cadc.vos.NodeProperty;
 import ca.nrc.cadc.vos.VOS;
 import ca.nrc.cadc.vos.VOSURI;
+import ca.nrc.cadc.vos.server.util.FixedSizeTreeSet;
 import java.text.DateFormat;
+import java.util.Date;
+import java.util.Iterator;
+import java.util.List;
+import org.apache.log4j.Level;
+import org.junit.Assert;
 
 /**
  *
@@ -103,59 +109,63 @@ import java.text.DateFormat;
 public class RssFeedTest
 {
     private static Logger log = Logger.getLogger(RssFeedTest.class);
+    static
+    {
+        Log4jInit.setLevel("ca.nrc.cadc.vos.server", Level.INFO);
+    }
+    
     private static String VOS_URI =  "vos://example.com!vospace";
     private static String BASE_URL = "http://example.com/vospace/nodes";
     
     private static ContainerNode nodeA;
-    private static Collection<Node> nodes;
+    private static Collection<RssFeedItem> nodes;
     private static String NODE_OWNER = "SampleOwner";
 
     private static DateFormat dateFormat = DateUtil.getDateFormat(DateUtil.ISO_DATE_FORMAT, DateUtil.UTC);
 
-    public RssFeedTest() {
-    }
+    public RssFeedTest() { }
 
     @BeforeClass
     public static void setUpClass() throws Exception
     {
         // container node /A
-        nodeA = createContainerNode("/A", null, 2010, Calendar.MAY, 15);
+        nodeA = createContainerNode("/A", null, 2010, Calendar.MAY, 1);
 
         // container node /A/B1
-        ContainerNode nodeAB1 = createContainerNode("/A/B1", nodeA, 2010, Calendar.MAY, 15);
+        ContainerNode nodeAB1 = createContainerNode("/A/B1", nodeA, 2010, Calendar.MAY, 2);
 
         // container node /A/B2
-        ContainerNode nodeAB2 = createContainerNode("/A/B2", nodeA, 2010, Calendar.MAY, 15);
+        ContainerNode nodeAB2 = createContainerNode("/A/B2", nodeA, 2010, Calendar.MAY, 2);
 
         // data node /A/B3
-        DataNode nodeAB3 = createDataNode("/A/B3", nodeA, 2010, Calendar.MAY, 15);
+        DataNode nodeAB3 = createDataNode("/A/B3", nodeA, 2010, Calendar.MAY, 3);
 
         // data node /A/B4
-        DataNode nodeAB4 = createDataNode("/A/B4", nodeA, 2010, Calendar.MAY, 15);
+        DataNode nodeAB4 = createDataNode("/A/B4", nodeA, 2010, Calendar.MAY, 3);
 
         // container node /A/B1/C1
-        ContainerNode nodeAB1C1 = createContainerNode("/A/B1/C1", nodeAB1, 2010, Calendar.MAY, 15);
+        ContainerNode nodeAB1C1 = createContainerNode("/A/B1/C1", nodeAB1, 2010, Calendar.MAY, 4);
 
         // container node /A/B1/C2
-        ContainerNode nodeAB1C2 = createContainerNode("/A/B1/C2", nodeAB1, 2010, Calendar.MAY, 15);
+        ContainerNode nodeAB1C2 = createContainerNode("/A/B1/C2", nodeAB1, 2010, Calendar.MAY, 5);
 
         // data node /A/B1/C3
-        DataNode nodeAB1C3 = createDataNode("/A/B1/C3", nodeAB1, 2010, Calendar.MAY, 15);
+        DataNode nodeAB1C3 = createDataNode("/A/B1/C3", nodeAB1, 2010, Calendar.MAY, 6);
 
         // data node /A/B1/C4
-        DataNode nodeAB1C4 = createDataNode("/A/B1/C4", nodeAB1, 2010, Calendar.MAY, 15);
+        DataNode nodeAB1C4 = createDataNode("/A/B1/C4", nodeAB1, 2010, Calendar.MAY, 7);
 
         // data node /A/B2/C1
-        DataNode nodeAB2C1 = createDataNode("/A/B2/C1", nodeAB2, 2010, Calendar.MAY, 15);
+        DataNode nodeAB2C1 = createDataNode("/A/B2/C1", nodeAB2, 2010, Calendar.MAY, 8);
 
         // data node /A/B2/C2
-        DataNode nodeAB2C2 = createDataNode("/A/B2/C2", nodeAB2, 2010, Calendar.MAY, 15);
+        DataNode nodeAB2C2 = createDataNode("/A/B2/C2", nodeAB2, 2010, Calendar.MAY, 9);
 
         // container node /A/B1/C2/D1
-        ContainerNode nodeAB1C2D1 = createContainerNode("/A/B1/C2/D1", nodeAB1C2, 2010, Calendar.MAY, 15);
+        ContainerNode nodeAB1C2D1 = createContainerNode("/A/B1/C2/D1", nodeAB1C2, 2010, Calendar.MAY, 10);
 
         // data node /A/B1/C2/D1/E1
-        DataNode nodeAB1C2D1E1 = createDataNode("/A/B2/C2/D1/E1", nodeAB1C2D1, 2010, Calendar.MAY, 15);
+        DataNode nodeAB1C2D1E1 = createDataNode("/A/B2/C2/D1/E1", nodeAB1C2D1, 2010, Calendar.MAY, 10);
 
         // build node hierarchy
         // nodeAB1C2D1.setNodes(Arrays.asList((Node) nodeAB1C2D1E1));
@@ -164,19 +174,19 @@ public class RssFeedTest
         // nodeAB1.setNodes(Arrays.asList((Node) nodeAB1C1, (Node) nodeAB1C2, (Node) nodeAB1C3, (Node) nodeAB1C4));
         // nodeA.setNodes(Arrays.asList((Node) nodeAB1, (Node) nodeAB2, (Node) nodeAB3, (Node) nodeAB4));
 
-        nodes = new ArrayList<Node>();
-        nodes.add(nodeAB1);
-        nodes.add(nodeAB2);
-        nodes.add(nodeAB3);
-        nodes.add(nodeAB4);
-        nodes.add(nodeAB1C1);
-        nodes.add(nodeAB1C2);
-        nodes.add(nodeAB1C3);
-        nodes.add(nodeAB1C4);
-        nodes.add(nodeAB2C1);
-        nodes.add(nodeAB2C2);
-        nodes.add(nodeAB1C2D1);
-        nodes.add(nodeAB1C2D1E1);
+        nodes = new ArrayList<RssFeedItem>();
+        nodes.add(new RssFeedItem(null, nodeAB1));
+        nodes.add(new RssFeedItem(null, nodeAB2));
+        nodes.add(new RssFeedItem(null, nodeAB3));
+        nodes.add(new RssFeedItem(null, nodeAB4));
+        nodes.add(new RssFeedItem(null, nodeAB1C1));
+        nodes.add(new RssFeedItem(null, nodeAB1C2));
+        nodes.add(new RssFeedItem(null, nodeAB1C3));
+        nodes.add(new RssFeedItem(null, nodeAB1C4));
+        nodes.add(new RssFeedItem(null, nodeAB2C1));
+        nodes.add(new RssFeedItem(null, nodeAB2C2));
+        nodes.add(new RssFeedItem(null, nodeAB1C2D1));
+        nodes.add(new RssFeedItem(null, nodeAB1C2D1E1));
     }
 
     @AfterClass
@@ -242,7 +252,65 @@ public class RssFeedTest
         log.info("createErrorFeed_Node_String passed");
     }
 
-    protected static ContainerNode createContainerNode(String path, ContainerNode parent, int year, int month, int date)
+    /**
+     * Test of createFeed method, of class RssFeed.
+     */
+    @Test
+    public void testCreateFeedByDate()
+        throws Exception
+    {
+        log.debug("testCreateFeedByDate");
+
+        ContainerNode parent = createContainerNode("/parent", null, 2010, 0, 1);
+        DataNode child1 = createDataNode("/parent/child1", parent, 2010, 1, 1);
+        DataNode child2 = createDataNode("/parent/child2", parent, 2010, 2, 1);
+        DataNode child3 = createDataNode("/parent/child3", parent, 2010, 3, 1);
+
+        FixedSizeTreeSet set = new FixedSizeTreeSet();
+        set.setMaxSize(4);
+
+        set.add(new RssFeedItem(new Date(0L), parent));
+        set.add(new RssFeedItem(new Date(1000000000L), child1));
+        set.add(new RssFeedItem(new Date(3000000000L), child3));
+        set.add(new RssFeedItem(new Date(2000000000L), child2));
+        
+        Element feed = RssFeed.createFeed(nodeA, set, BASE_URL);
+        write(feed, System.out);
+
+        Element channel = feed.getChild("channel");
+        List<Element> items = channel.getChildren("item");
+        Iterator<Element> it = items.iterator();
+
+        DateFormat localFormat = DateUtil.getDateFormat(DateUtil.ISO_DATE_FORMAT, DateUtil.LOCAL);
+
+        Element item1 = it.next();
+        Element pubDate1 = item1.getChild("pubDate");
+        Date expected1 = localFormat.parse("2010-04-01 00:00:00.000");
+        Date actual1 = dateFormat.parse(pubDate1.getText());
+        Assert.assertEquals(expected1, actual1);
+
+        Element item2 = it.next();
+        Element pubDate2 = item2.getChild("pubDate");
+        Date expected2 = localFormat.parse("2010-03-01 00:00:00.000");
+        Date actual2 = dateFormat.parse(pubDate2.getText());
+        Assert.assertEquals(expected2, actual2);
+
+        Element item3 = it.next();
+        Element pubDate3 = item3.getChild("pubDate");
+        Date expected3 = localFormat.parse("2010-02-01 00:00:00.000");
+        Date actual3 = dateFormat.parse(pubDate3.getText());
+        Assert.assertEquals(expected3, actual3);
+
+        Element item4 = it.next();
+        Element pubDate4 = item4.getChild("pubDate");
+        Date expected4 = localFormat.parse("2010-01-01 00:00:00.000");
+        Date actual4 = dateFormat.parse(pubDate4.getText());
+        Assert.assertEquals(expected4, actual4);
+
+        log.info("testCreateFeedByDate passed");
+    }
+
+    static ContainerNode createContainerNode(String path, ContainerNode parent, int year, int month, int date)
         throws URISyntaxException
     {
         VOSURI vosURI = new VOSURI(VOS_URI + path);
@@ -259,7 +327,7 @@ public class RssFeedTest
         return cnode;
     }
 
-    protected static DataNode createDataNode(String path, ContainerNode parent, int year, int month, int date)
+    static DataNode createDataNode(String path, ContainerNode parent, int year, int month, int date)
         throws URISyntaxException
     {
         VOSURI vosURI = new VOSURI(VOS_URI + path);
