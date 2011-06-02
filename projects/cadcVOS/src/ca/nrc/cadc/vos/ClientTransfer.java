@@ -73,6 +73,8 @@ import java.io.File;
 import java.io.IOException;
 import java.net.MalformedURLException;
 import java.net.URL;
+import java.util.ArrayList;
+import java.util.List;
 
 import javax.net.ssl.SSLSocketFactory;
 
@@ -83,8 +85,6 @@ import ca.nrc.cadc.net.HttpRequestProperty;
 import ca.nrc.cadc.net.HttpUpload;
 import ca.nrc.cadc.net.OutputStreamWrapper;
 import ca.nrc.cadc.net.event.TransferListener;
-import java.util.ArrayList;
-import java.util.List;
 
 /**
  * @author zhangsa
@@ -274,7 +274,9 @@ public class ClientTransfer extends Transfer
         download.setSSLSocketFactory(sslSocketFactory);
         download.run();
         if (download.getThrowable() != null)
+        {
             throw new IOException("failed to download file", download.getThrowable());
+        }
     }
 
 }
