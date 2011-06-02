@@ -189,40 +189,50 @@ public class RssViewTest
 
             Iterator<Element> it = items.iterator();
 
-            Element item1 = it.next();
-            Element pubDate1 = item1.getChild("pubDate");
-            Assert.assertNotNull(pubDate1);
-            Date date1 = dateFormat.parse(pubDate1.getText());
-            log.debug("Date 1: " + date1);
-
-            Element item2 = it.next();
-            Element pubDate2 = item2.getChild("pubDate");
-            Assert.assertNotNull(pubDate2);
-            Date date2 = dateFormat.parse(pubDate2.getText());
-            log.debug("Date 2: " + date2);
-
-            Element item3 = it.next();
-            Element pubDate3 = item3.getChild("pubDate");
-            Assert.assertNotNull(pubDate3);
-            Date date3 = dateFormat.parse(pubDate3.getText());
-            log.debug("Date 3: " + date3);
-
             Element item4 = it.next();
+            Element title4 = item4.getChild("title");
+            Assert.assertNotNull(title4);
+            Assert.assertEquals("child4", title4.getText());
             Element pubDate4 = item4.getChild("pubDate");
             Assert.assertNotNull(pubDate4);
             Date date4 = dateFormat.parse(pubDate4.getText());
-            log.debug("Date 4: " + date4);
 
-            Element item5 = it.next();
-            Element pubDate5 = item5.getChild("pubDate");
-            Assert.assertNotNull(pubDate5);
-            Date date5 = dateFormat.parse(pubDate5.getText());
-            log.debug("Date 5: " + date5);
+            Element item3 = it.next();
+            Element title3 = item3.getChild("title");
+            Assert.assertNotNull(title3);
+            Assert.assertEquals("child3", title3.getText());
+            Element pubDate3 = item3.getChild("pubDate");
+            Assert.assertNotNull(pubDate3);
+            Date date3 = dateFormat.parse(pubDate3.getText());
 
-            Assert.assertTrue(date1.after(date2));
-            Assert.assertTrue(date2.after(date3));
-            Assert.assertTrue(date3.after(date4));
-            Assert.assertTrue(date4.after(date5));
+            Element item2 = it.next();
+            Element title2 = item2.getChild("title");
+            Assert.assertNotNull(title2);
+            Assert.assertEquals("child2", title2.getText());
+            Element pubDate2 = item2.getChild("pubDate");
+            Assert.assertNotNull(pubDate2);
+            Date date2 = dateFormat.parse(pubDate2.getText());
+
+            Element item1 = it.next();
+            Element title1 = item1.getChild("title");
+            Assert.assertNotNull(title1);
+            Assert.assertEquals("child1", title1.getText());
+            Element pubDate1 = item1.getChild("pubDate");
+            Assert.assertNotNull(pubDate1);
+            Date date1 = dateFormat.parse(pubDate1.getText());
+
+            Element rootItem = it.next();
+            Element rootTitle = rootItem.getChild("title");
+            Assert.assertNotNull(rootTitle);
+            Assert.assertEquals("CADCRsstest1", rootTitle.getText());
+            Element rootPubDate = rootItem.getChild("pubDate");
+            Assert.assertNotNull(rootPubDate);
+            Date rootDate = dateFormat.parse(rootPubDate.getText());
+
+            Assert.assertTrue(date4.after(date3));
+            Assert.assertTrue(date3.after(date2));
+            Assert.assertTrue(date2.after(date1));
+            Assert.assertTrue(date1.after(rootDate));
         }
         catch(Exception unexpected)
         {

@@ -126,7 +126,6 @@ public class FixedSizeTreeSetTest
 
         String s1 = "a";
         boolean changed = set.add(s1);
-        System.out.println("added 1 size: " + set.size() + " , " + changed);
         assertEquals(1, set.size());
 
         String s2 = "b";
