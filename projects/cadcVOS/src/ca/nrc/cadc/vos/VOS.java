@@ -199,8 +199,7 @@ public class VOS
 
     // SHALL be used by a client to indicate that the service should choose the most appropriate view for a data export
     public static final String VIEW_DEFAULT = "ivo://ivoa.net/vospace/core#defaultview";
-
-
+    
     /*
      * Standard Node Properties defined by the CADC
      */

@@ -183,11 +183,9 @@ public abstract class NodeAction implements PrivilegedAction<Object>
      *
      * @return  Instance of an AbstractView.
      *
-     * @throws InstantiationException If the object could not be constructed.
-     * @throws IllegalAccessException If a constructor could not be found.
+     * @throws Exception If the object could not be constructed.
      */
-    protected AbstractView getView() throws InstantiationException,
-                                            IllegalAccessException
+    protected AbstractView getView() throws Exception
     {
         if (!StringUtil.hasText(viewReference))
         {

@@ -76,11 +76,17 @@ import java.net.MalformedURLException;
 import java.net.URI;
 import java.net.URISyntaxException;
 import java.net.URL;
+import java.security.AccessControlException;
+import java.security.cert.CertificateExpiredException;
+import java.security.cert.X509Certificate;
+import java.text.DateFormat;
 import java.util.ArrayList;
+import java.util.Date;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Properties;
+import java.util.Set;
 
 import javax.security.auth.Subject;
 
@@ -107,12 +113,7 @@ import ca.nrc.cadc.vos.VOS;
 import ca.nrc.cadc.vos.VOSURI;
 import ca.nrc.cadc.vos.View;
 import ca.nrc.cadc.vos.Transfer.Direction;
-import java.security.AccessControlException;
-import java.security.cert.CertificateExpiredException;
-import java.security.cert.X509Certificate;
-import java.text.DateFormat;
-import java.util.Date;
-import java.util.Set;
+import ca.nrc.cadc.vos.View.Parameter;
 
 /**
  * @author zhangsa
@@ -486,6 +487,12 @@ public class Main implements Runnable
         throws Exception
     {
         Node n = null;
+        URI originalDestination = null;
+        if (StringUtil.hasText(destination.getQuery()))
+        {
+            originalDestination = new URI(destination.toString());
+            destination = new URI(destination.toString().replace("?" + destination.getQuery(), ""));
+        }
         try { n = client.getNode(destination.getPath()); }
         catch(NodeNotFoundException ignore) { }
         if (n != null && !(n instanceof DataNode))
@@ -511,9 +518,15 @@ public class Main implements Runnable
             dnode = (DataNode) client.createNode(dnode);
         }
 
-
-
-        View dview = new View(new URI(VOS.VIEW_DEFAULT));
+        View dview = null;
+        if (originalDestination != null)
+        {
+            dview = createAcceptsView(new VOSURI(originalDestination), n);
+        }
+        if (dview == null)
+        {
+            dview = new View(new URI(VOS.VIEW_DEFAULT));
+        }
 
         List<Protocol> protocols = new ArrayList<Protocol>();
         if (subject != null)
@@ -549,8 +562,17 @@ public class Main implements Runnable
     private void copyFromVOSpace()
         throws Exception
     {
+        View dview = null;
+        if (StringUtil.hasText(source.getQuery()))
+        {
+            dview = createProvidesView(new VOSURI(source), null);
+            source = new URI(source.toString().replace("?" + source.getQuery(), ""));
+        }
+        if (dview == null)
+        {
+            dview = new View(new URI(VOS.VIEW_DEFAULT));
+        }
         DataNode dnode = new DataNode(new VOSURI(source));
-        View dview = new View(new URI(VOS.VIEW_DEFAULT));
 
         List<Protocol> protocols = new ArrayList<Protocol>();
         if (subject != null)
@@ -578,6 +600,134 @@ public class Main implements Runnable
         clientTransfer.doDownload(fileToSave);
         Node node = clientTransfer.getTarget();
         log.debug("clientTransfer getTarget: " + node);
+    }
+    
+    /**
+     * Create a view used in node.accepts based on the query string in the vosuri.
+     * 
+     * @param vosuri
+     * @param node The node object if available.
+     * @return
+     * @throws NodeNotFoundException
+     * @throws URISyntaxException
+     */
+    private View createAcceptsView(VOSURI vosuri, Node node) throws URISyntaxException
+    {
+        AcceptsProvidesAbstraction nodeViewWrapper = new AcceptsProvidesAbstraction()
+        {
+            public List<URI> getViews(Node node) { return node.accepts(); }
+        };
+        return createView(vosuri, nodeViewWrapper, node);
+    }
+    
+    /**
+     * Create a view used in node.provides based on the query string in the vosuri.
+     * 
+     * @param vosuri
+     * @param node The node object if available.
+     * @return
+     * @throws NodeNotFoundException
+     * @throws URISyntaxException
+     */
+    private View createProvidesView(VOSURI vosuri, Node node) throws URISyntaxException
+    {
+        AcceptsProvidesAbstraction nodeViewWrapper = new AcceptsProvidesAbstraction()
+        {
+            public List<URI> getViews(Node node) { return node.provides(); }
+        };
+        return createView(vosuri, nodeViewWrapper, node);
+    }
+    
+    /**
+     * Createa a view based on the query string in the vosuri.
+     * 
+     * @param vosuri
+     * @param acceptsOrProvides
+     * @param node The node object if available.
+     * @return
+     * @throws NodeNotFoundException
+     * @throws URISyntaxException
+     */
+    private View createView(VOSURI vosuri, AcceptsProvidesAbstraction acceptsOrProvides, Node node)
+            throws URISyntaxException
+    {
+        // parse the query string
+        String queryString = vosuri.getQuery();
+        final String viewKey = "view="; 
+        String[] queries = queryString.split("&");
+        String viewRef = null;
+        List<String> params = new ArrayList<String>();
+        for (String query : queries)
+        {
+            if (query.startsWith(viewKey))
+            {
+                if (viewRef != null)
+                {
+                    throw new IllegalArgumentException("Too many view references.");
+                }
+                viewRef = query.substring(viewKey.length());
+            }
+            else
+            {
+                params.add(query);
+            }
+        }
+        if (viewRef == null)
+        {
+            log.debug("View not found in query string, using default view");
+            return null;
+        }
+        
+        // get the node object if necessary
+        if (node == null)
+        {
+            try
+            {
+                node = client.getNode(vosuri.getPath());
+            }
+            catch (NodeNotFoundException e)
+            {
+                throw new IllegalArgumentException(
+                        "Node " + vosuri.getPath() + " not found.");
+            }
+        }
+        
+        // determine if the view is supported
+        URI viewURI = null;
+        for (URI uri : acceptsOrProvides.getViews(node))
+        {
+            if (viewRef.equals(uri.getFragment()))
+            {
+                viewURI = uri;
+            }
+        }
+        
+        if (viewURI == null)
+        {
+            throw new IllegalArgumentException(
+                    "View '" + viewRef + "' not supported by node " +
+                    node.getUri().toString());
+        }
+        
+        // add the view parameters
+        View view = new View(viewURI);
+        if (params.size() > 0)
+        {
+            String viewURIFragment = viewURI.getFragment();
+            String paramURIBase = viewURI.toString().replace("#" + viewURIFragment, "");
+            for (String param : params)
+            {
+                int eqIndex = param.indexOf('=');
+                if (eqIndex > 0)
+                {
+                    String key = param.substring(0, eqIndex);
+                    URI paramURI = new URI(paramURIBase + "#" + key);
+                    Parameter viewParam = new Parameter(paramURI, param.substring(eqIndex + 1));
+                    view.getParameters().add(viewParam);
+                }
+            }
+        }
+        return view;
     }
 
     // copy properties specified on command-line to the specified node
@@ -1039,5 +1189,13 @@ public class Main implements Runnable
                 "" };
         for (String line : um)
             msg(line);
+    }
+    
+    /**
+     * Interface to allow abstraction between accepts and provides views.
+     */
+    private interface AcceptsProvidesAbstraction
+    {
+        List<URI> getViews(Node node);
     }
 }

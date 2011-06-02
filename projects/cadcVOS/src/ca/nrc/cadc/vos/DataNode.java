@@ -69,9 +69,7 @@
 
 package ca.nrc.cadc.vos;
 
-import java.net.URI;
 import java.net.URISyntaxException;
-import java.util.ArrayList;
 import java.util.List;
 
 import org.apache.log4j.Logger;
@@ -124,39 +122,6 @@ public class DataNode extends Node
     public boolean isStructured()
     {
         return structured;
-    }
-    
-    /**
-     * @return A list of views which the node can use for importing.
-     */
-    public List<URI> accepts()
-    {
-        List<URI> accepts = new ArrayList<URI>(1);
-        try
-        {
-            accepts.add(new URI(VOS.VIEW_DEFAULT));
-        } catch (URISyntaxException e)
-        {
-            log.error(e);
-        }
-        return accepts;
-    }
-    
-    /**
-     * @return A list of views which the node can use for exporting.
-     */
-    public List<URI> provides()
-    {
-        List<URI> provides = new ArrayList<URI>(2);
-        try
-        {
-            provides.add(new URI(VOS.VIEW_DEFAULT));
-            provides.add(new URI("ivo://cadc.nrc.ca/vospace/core#dataview"));
-        } catch (URISyntaxException e)
-        {
-            log.error(e);
-        }
-        return provides;
     }
 
     public NodeBusyState getBusy()

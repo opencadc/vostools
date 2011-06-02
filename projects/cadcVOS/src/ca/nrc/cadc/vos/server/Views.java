@@ -69,7 +69,11 @@
 
 package ca.nrc.cadc.vos.server;
 
+import java.lang.reflect.Constructor;
+import java.net.URI;
+import java.net.URISyntaxException;
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -111,8 +115,9 @@ public class Views
         loadConfiguredViews();
     }
     
-    // The map of configured view classes
-    private static Map<String, Class<AbstractView>> viewMap;
+    // The maps of configured view classes
+    private static Map<String, Class<AbstractView>> uriViewMap;
+    private static Map<String, Class<AbstractView>> aliasViewMap;
     
     // The list of accepting views
     private static List<String> accepts;
@@ -122,7 +127,7 @@ public class Views
     
     /**
      * Given a viewReference, return a new instance of the associated view or
-     * null of no mapping exists for the viewReference.
+     * null if no mapping exists for the viewReference.
      * 
      * @param viewReference  Either the alias or URI of a configured view.
      * If no class exists for the given reference, this method returns null.
@@ -130,16 +135,85 @@ public class Views
      * @throws InstantiationException If the object could not be constructed.
      * @throws IllegalAccessException If a constructor could not be found.
      */
-    public AbstractView getView(String viewReference) throws InstantiationException, IllegalAccessException
+    public AbstractView getView(String viewReference) throws Exception
     {
-        Class<AbstractView> viewClass = viewMap.get(viewReference);
+        Class<AbstractView> viewClass = aliasViewMap.get(viewReference);
+        URI viewURI = null;
         if (viewClass == null)
         {
-            log.debug("No view found for reference: " + viewReference);
-            return null;
+            // try the URI map
+            viewClass = uriViewMap.get(viewReference);
+            if (viewClass == null)
+            {
+                log.debug("No view found for reference: " + viewReference);
+                return null;
+            }
+            viewURI = new URI(viewReference);
         }
         log.debug("Returning new view of type " + viewClass + " for reference " + viewReference);
-        return (AbstractView) viewClass.newInstance();
+        return createAbstractView(viewClass, viewURI);
+    }
+    
+    /**
+     * Given a view URI, return a new instance of the associated view or null if
+     * no mapping exists for the view URI.
+     * @param viewURI
+     * @return A new instance of the view object.
+     * @throws InstantiationException If the object could not be constructed.
+     * @throws IllegalAccessException If a constructor could not be found.
+     */
+    public AbstractView getView(URI viewURI) throws Exception
+    {
+        Class<AbstractView> viewClass = uriViewMap.get(viewURI.toString());
+        if (viewClass == null)
+        {
+            log.debug("No view found for reference: " + viewURI.toString());
+            return null;
+        }
+        log.debug("Returning new view of type " + viewClass + " for reference " + viewURI.toString());
+        return (AbstractView) createAbstractView(viewClass, viewURI);
+    }
+    
+    /**
+     * Get a list of all unique view objects configured.
+     * 
+     * @return
+     * @throws Exception
+     */
+    public List<AbstractView> getViews() throws Exception
+    {
+        Collection<String> viewURIs = uriViewMap.keySet();
+        Class<AbstractView> nextViewClass = null;
+        AbstractView nextView = null;
+        List<AbstractView> viewList = new ArrayList<AbstractView>();
+        for (String viewURI : viewURIs)
+        {
+            nextViewClass = uriViewMap.get(viewURI);
+            nextView = createAbstractView(nextViewClass, new URI(viewURI));
+            viewList.add(nextView);
+        }
+        return viewList;
+    }
+    
+    /**
+     * Instantiate the view with the URI if it's available.
+     * @param clazz
+     * @param uri
+     * @return
+     * @throws Exception
+     */
+    private AbstractView createAbstractView(Class<AbstractView> clazz, URI uri)
+        throws Exception
+    {
+        if (uri == null)
+        {
+            return clazz.newInstance();
+        }
+        else
+        {
+            Constructor<AbstractView> constructor = clazz.getConstructor(URI.class);
+            return constructor.newInstance(uri);
+        }
     }
     
     /**
@@ -175,7 +249,8 @@ public class Views
                     + VIEWS_PROPERTY_FILE + ".properties: " + e.getMessage());
         }
         
-        viewMap = new HashMap<String, Class<AbstractView>>();
+        uriViewMap = new HashMap<String, Class<AbstractView>>();
+        aliasViewMap = new HashMap<String, Class<AbstractView>>();
         accepts = new ArrayList<String>();
         provides = new ArrayList<String>();
         
@@ -197,25 +272,39 @@ public class Views
                 String viewClassName = rb.getString(viewName + "." + KEY_VIEW_CLASS);
                 Class<?> configClass = Class.forName(viewClassName);
                 Object configObject = configClass.newInstance();
+                
+                // check to ensure subclass of AbstractView
                 if (!(configObject instanceof AbstractView))
                 {
-                    throw new ExceptionInInitializerError(configClass
+                    throw new ExceptionInInitializerError(configClass.getName()
                             + " is not an instance of " + AbstractView.class);
                 }
+                
+                // check for a valid URI
+                try
+                {
+                    new URI(viewURI);
+                }
+                catch (URISyntaxException e)
+                {
+                    throw new ExceptionInInitializerError("URI reference for "
+                            + configClass.getName() + " has an invalid syntax.");
+                }
+                
                 Class<AbstractView> viewClass = (Class<AbstractView>) configClass;
-                if (viewMap.containsKey(viewAlias))
+                if (aliasViewMap.containsKey(viewAlias))
                 {
                     throw new ExceptionInInitializerError("Duplicate view reference " + viewAlias
                             + " in file " + VIEWS_PROPERTY_FILE + ".properties");
                 }
-                if (viewMap.containsKey(viewURI))
+                if (uriViewMap.containsKey(viewURI))
                 {
                     throw new ExceptionInInitializerError("Duplicate view reference " + viewURI
                             + " in file " + VIEWS_PROPERTY_FILE + ".properties");
                 }
-                viewMap.put(viewAlias, viewClass);
+                aliasViewMap.put(viewAlias, viewClass);
                 log.debug("Mapped alias '" + viewAlias + "' to class " + viewClass);
-                viewMap.put(viewURI, viewClass);
+                uriViewMap.put(viewURI, viewClass);
                 log.debug("Mapped URI '" + viewURI + "' to class " + viewClass);
                 
                 // see if this view 'accepts'

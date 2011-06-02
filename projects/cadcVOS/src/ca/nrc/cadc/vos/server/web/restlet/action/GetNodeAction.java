@@ -67,18 +67,19 @@
 
 package ca.nrc.cadc.vos.server.web.restlet.action;
 
-import ca.nrc.cadc.vos.ContainerNode;
 import java.io.FileNotFoundException;
+import java.net.URL;
 import java.security.AccessControlException;
 
+import org.restlet.data.Reference;
+
+import ca.nrc.cadc.vos.ContainerNode;
 import ca.nrc.cadc.vos.Node;
 import ca.nrc.cadc.vos.NodeWriter;
 import ca.nrc.cadc.vos.Search;
 import ca.nrc.cadc.vos.server.AbstractView;
 import ca.nrc.cadc.vos.server.web.representation.NodeOutputRepresentation;
 import ca.nrc.cadc.vos.server.web.representation.ViewRepresentation;
-import java.net.URL;
-import org.restlet.data.Reference;
 
 /**
  * Class to perform the retrieval of a Node.
@@ -126,13 +127,7 @@ public class GetNodeAction extends NodeAction
         {
             view = getView();
         }
-        catch(InstantiationException ex)
-        {
-            log.error("failed to load view: " + this.viewReference, ex);
-            // this should generate an InternalFault in NodeAction
-            throw new RuntimeException("view was configured but failed to load: " + this.viewReference);
-        }
-        catch(IllegalAccessException ex)
+        catch (Exception ex)
         {
             log.error("failed to load view: " + this.viewReference, ex);
             // this should generate an InternalFault in NodeAction

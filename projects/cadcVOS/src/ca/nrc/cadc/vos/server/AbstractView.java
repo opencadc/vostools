@@ -79,7 +79,6 @@ import java.util.Date;
 import java.util.List;
 
 import org.apache.log4j.Logger;
-import org.restlet.Request;
 import org.restlet.data.Disposition;
 import org.restlet.data.Encoding;
 import org.restlet.data.MediaType;
@@ -87,6 +86,8 @@ import org.restlet.data.MediaType;
 import ca.nrc.cadc.date.DateUtil;
 import ca.nrc.cadc.vos.Node;
 import ca.nrc.cadc.vos.NodeProperty;
+import ca.nrc.cadc.vos.Protocol;
+import ca.nrc.cadc.vos.Transfer;
 import ca.nrc.cadc.vos.VOS;
 import ca.nrc.cadc.vos.View;
 import ca.nrc.cadc.vos.server.auth.VOSpaceAuthorizer;
@@ -206,6 +207,43 @@ public abstract class AbstractView extends View
             throw new UnsupportedOperationException("BUG: return requestURL for view is null.");
         this.node = node;
         this.requestURL = requestURL;
+    }
+    
+    /**
+     * Return true if the supplied node accepts this view.
+     * The default implementation here always returns false.
+     * @param node
+     * @return
+     */
+    public boolean canAccept(Node node)
+    {
+        return false;
+    }
+    
+    /**
+     * Return true if the supplied node provides this view.
+     * The default implementation here always returns false.
+     * @param node
+     * @return
+     */
+    public boolean canProvide(Node node)
+    {
+        return false;
+    }
+    
+    /**
+     * Return the list of protocols with the endpoints using information
+     * in the parameters.
+     * @param node The node for the transfer.
+     * @param transfer The transfer document.
+     * @param serverName The target server.
+     * @param port The target server port.
+     * @param queryString The query string to be included on the endpoints.
+     * @return
+     */
+    public List<Protocol> getTransferEndpoints(Node node, Transfer transfer, String serverName, int port, String queryString)
+    {
+        return null;
     }
 
     /**

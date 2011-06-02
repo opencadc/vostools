@@ -105,8 +105,6 @@ import ca.nrc.cadc.vos.server.util.FixedSizeTreeSet;
 public class RssView extends AbstractView
 {
     
-    public static final String RSS_VIEW_URI = "ivo://cadc.nrc.ca/vospace/view#rss";
-    
     private static Logger log = Logger.getLogger(RssView.class);
 
     // Default maximum number of nodes to display in the feed.
@@ -277,6 +275,24 @@ public class RssView extends AbstractView
         root.detach();
         document.setRootElement(root);
         outputter.output(document, writer);
+    }
+    
+    /**
+     * RSSView not accepted for any nodes.
+     */
+    @Override
+    public boolean canAccept(Node node)
+    {
+        return false;
+    }
+    
+    /**
+     * RSSView is provided for all container nodes.
+     */
+    @Override
+    public boolean canProvide(Node node)
+    {
+        return (node instanceof ContainerNode);
     }
     
     /**

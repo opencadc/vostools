@@ -113,6 +113,12 @@ public abstract class Node implements Comparable<Object>
     // To be used by controlling applications as they wish
     public transient Object appData;
     
+    // List of views which this node accepts
+    protected List<URI> accepts;
+    
+    // List of views which this node provides
+    protected List<URI> provides;
+    
 
     private Node() { }
 
@@ -135,6 +141,9 @@ public abstract class Node implements Comparable<Object>
         
         String[] comps = uri.getPath().split("/");
         this.name = comps[comps.length - 1]; // last path component
+        
+        accepts = new ArrayList<URI>();
+        provides = new ArrayList<URI>();
     }
 
     @Override
@@ -190,12 +199,36 @@ public abstract class Node implements Comparable<Object>
     /**
      * @return A list of view uris which the node can use for importing.
      */
-    public abstract List<URI> accepts();
+    public List<URI> accepts()
+    {
+        return accepts;
+    }
 
     /**
      * @return A list of view uris which the node can use for exporting.
      */
-    public abstract List<URI> provides();
+    public List<URI> provides()
+    {
+        return provides;
+    }
+    
+    /**
+     * Set the accepts list.
+     * @param accepts
+     */
+    public void setAccepts(List<URI> accepts)
+    {
+        this.accepts = accepts;
+    }
+    
+    /**
+     * Set the provides list.
+     * @param provides
+     */
+    public void setProvides(List<URI> provides)
+    {
+        this.provides = provides;
+    }
 
     public VOSURI getUri()
     {

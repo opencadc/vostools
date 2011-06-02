@@ -71,6 +71,11 @@ package ca.nrc.cadc.vos;
 
 import static org.junit.Assert.fail;
 
+import java.io.ByteArrayInputStream;
+import java.io.ByteArrayOutputStream;
+import java.io.StringWriter;
+import java.net.URI;
+import java.net.URISyntaxException;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -78,18 +83,13 @@ import org.apache.log4j.Level;
 import org.apache.log4j.Logger;
 import org.junit.After;
 import org.junit.AfterClass;
+import org.junit.Assert;
 import org.junit.Before;
 import org.junit.BeforeClass;
 import org.junit.Test;
 
 import ca.nrc.cadc.util.Log4jInit;
 import ca.nrc.cadc.vos.VOS.NodeBusyState;
-import java.io.ByteArrayInputStream;
-import java.io.ByteArrayOutputStream;
-import java.io.StringWriter;
-import java.net.URISyntaxException;
-import org.jdom.JDOMException;
-import org.junit.Assert;
 
 /**
  * Test read-write of Nodes using the NodeReader and NodeWriter. Every test here
@@ -193,6 +193,12 @@ public class NodeReaderWriterTest
     {
         Assert.assertEquals("busy", n1.getBusy(), n2.getBusy());
     }
+    
+    private void compareURIList(List<URI> l1, List<URI> l2)
+    {
+        Assert.assertTrue(l1.containsAll(l2));
+        Assert.assertTrue(l2.containsAll(l1));
+    }
 
     private void compareNodes(Node n1, Node n2)
     {
@@ -200,6 +206,8 @@ public class NodeReaderWriterTest
         Assert.assertEquals("VOSURI", n1.getUri(), n2.getUri());
         Assert.assertEquals("owner", n1.getOwner(), n2.getOwner());
         comparePropertyList(n1.getProperties(), n2.getProperties());
+        compareURIList(n1.accepts, n2.accepts);
+        compareURIList(n1.provides, n2.provides);
         if (n1 instanceof ContainerNode)
             compareContainerNodes((ContainerNode) n1, (ContainerNode) n2);
         else if (n1 instanceof DataNode)
@@ -383,6 +391,7 @@ public class NodeReaderWriterTest
         }
         catch (Throwable t)
         {
+            t.printStackTrace();
             log.error("unexpected exception", t);
             fail(t.getMessage());
         }
@@ -403,6 +412,15 @@ public class NodeReaderWriterTest
         properties.add(new NodeProperty("ivo://ivoa.net/vospace/core#size", "123"));
         properties.add(new NodeProperty("ivo://ivoa.net/vospace/core#content-type", "image/fits"));
         n.setProperties(properties);
+        List<URI> accepts = new ArrayList<URI>();
+        List<URI> provides = new ArrayList<URI>();
+        accepts.add(new URI("ivo://cadc.nrc.ca/vospace/view#view1"));
+        accepts.add(new URI("ivo://cadc.nrc.ca/vospace/view#view2"));
+        provides.add(new URI("ivo://cadc.nrc.ca/vospace/view#something"));
+        provides.add(new URI("ivo://cadc.nrc.ca/vospace/view#anotherthing"));
+        n.setAccepts(accepts);
+        n.setProvides(provides);
+        
         cn.getNodes().add(n);
 
         // add a ContainerNode with some props

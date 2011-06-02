@@ -75,9 +75,12 @@ import java.io.InputStreamReader;
 import java.io.Reader;
 import java.io.StringReader;
 import java.io.UnsupportedEncodingException;
+import java.net.URI;
 import java.net.URISyntaxException;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 import org.apache.log4j.Logger;
 import org.jdom.Document;
@@ -87,8 +90,6 @@ import org.jdom.Namespace;
 
 import ca.nrc.cadc.vos.VOS.NodeBusyState;
 import ca.nrc.cadc.xml.XmlUtil;
-import java.util.HashMap;
-import java.util.Map;
 
 /**
  * Constructs a Node from an XML source. This class is not thread safe but it is
@@ -245,12 +246,19 @@ public class NodeReader
         String type = types[1];
         log.debug("node type: " + type);
 
-        if (type.equals(ContainerNode.class.getSimpleName()))
-            return buildContainerNode(root, namespace, uri);
-        else if (type.equals(DataNode.class.getSimpleName()))
-            return buildDataNode(root, namespace, uri);
-        else
-            throw new NodeParsingException("unsupported node type " + type);
+        try
+        {
+            if (type.equals(ContainerNode.class.getSimpleName()))
+                return buildContainerNode(root, namespace, uri);
+            else if (type.equals(DataNode.class.getSimpleName()))
+                return buildDataNode(root, namespace, uri);
+            else
+                throw new NodeParsingException("unsupported node type " + type);
+        }
+        catch (URISyntaxException e)
+        {
+            throw new NodeParsingException("invalid uri in xml: " + e.getMessage());
+        }
     }
 
     /**
@@ -273,9 +281,10 @@ public class NodeReader
      * @param uri Node uri attribute.
      * @return ContainerNode
      * @throws NodeParsingException if there is an error parsing the XML.
+     * @throws URISyntaxException 
      */
     protected Node buildContainerNode(Element el, Namespace namespace, String uri)
-        throws NodeParsingException
+        throws NodeParsingException, URISyntaxException
     {
         // Instantiate a ContainerNode class
         ContainerNode node;
@@ -345,9 +354,10 @@ public class NodeReader
      * @param uri Node uri attribute.
      * @return DataNode.
      * @throws NodeParsingException if there is an error parsing the XML.
+     * @throws URISyntaxException 
      */
     protected Node buildDataNode(Element el, Namespace namespace, String uri)
-        throws NodeParsingException
+        throws NodeParsingException, URISyntaxException
     {
         // Instantiate a DataNode class
         DataNode node;
@@ -388,12 +398,10 @@ public class NodeReader
         node.setProperties(getProperties(el, namespace));
 
         // accepts element
-//        TODO: add accepts element
-//        node.accepts().addAll(getViews(root, namespace, "accepts"));
+        node.accepts().addAll(getViewURIs(el, namespace, "accepts"));
 
         // provides element
-//        TODO: add provides element
-//        node.provides().addAll(getViews(root, namespace, "provides"));
+        node.provides().addAll(getViewURIs(el, namespace, "provides"));
 
         return node;
     }
@@ -456,6 +464,38 @@ public class NodeReader
         }
 
         return set;
+    }
+    
+    protected List<URI> getViewURIs(Element root, Namespace namespace, String parent)
+        throws NodeParsingException, URISyntaxException
+    {
+        
+        // new View List
+        List<URI> list = new ArrayList<URI>();
+        
+        // view parent element
+        Element parentElement = root.getChild(parent, namespace);
+        if (parentElement == null)
+        {
+            return list;
+        }
+
+        // view elements
+        List<Element> uriList = parentElement.getChildren("view", namespace);
+        for (Element view : uriList)
+        {
+            // view uri attribute
+            String viewUri = view.getAttributeValue("uri");
+            if (viewUri == null)
+            {
+                String error = "uri attribute not found in " + parent + " view element";
+                throw new NodeParsingException(error);
+            }
+            log.debug(parent + "view uri: " + viewUri);
+            list.add(new URI(viewUri));
+        }
+
+        return list;
     }
 
     /**

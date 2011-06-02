@@ -183,6 +183,38 @@ public class TransferReaderWriterTest
             Assert.fail("unexpected exception: " + unexpected);
         }
     }
+    
+    @Test
+    public void testTransferWithViewAndNoParameters()
+    {
+        try
+        {
+            List<Protocol> protocols = new ArrayList<Protocol>();
+            protocols.add(new Protocol(VOS.PROTOCOL_HTTP_GET));
+            protocols.add(new Protocol(VOS.PROTOCOL_HTTPS_GET));
+            transfer.setProtocols(protocols);
+            
+            View view = new View(new URI(VOS.VIEW_ANY));
+            transfer.setView(view);
+            
+            StringWriter dest = new StringWriter();
+            TransferWriter writer = new TransferWriter();
+            writer.write(transfer, dest);
+            String xml = dest.toString();
+
+            log.debug(xml);
+
+            TransferReader reader = new TransferReader();
+            Transfer transfer2 = reader.read(xml);
+
+            compareTransfers(transfer, transfer2);
+        }
+        catch(Exception unexpected)
+        {
+            log.error("unexpected exception", unexpected);
+            Assert.fail("unexpected exception: " + unexpected);
+        }
+    }
 
     @Test
     public void testTransferWithViewParameters()

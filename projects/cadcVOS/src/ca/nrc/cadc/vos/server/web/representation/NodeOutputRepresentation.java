@@ -71,8 +71,12 @@ package ca.nrc.cadc.vos.server.web.representation;
 
 import java.io.IOException;
 import java.io.OutputStream;
+import java.net.URI;
+import java.text.DateFormat;
 import java.text.ParseException;
+import java.util.ArrayList;
 import java.util.Date;
+import java.util.List;
 
 import org.apache.log4j.Logger;
 import org.restlet.data.MediaType;
@@ -85,7 +89,8 @@ import ca.nrc.cadc.vos.Node;
 import ca.nrc.cadc.vos.NodeProperty;
 import ca.nrc.cadc.vos.NodeWriter;
 import ca.nrc.cadc.vos.VOS;
-import java.text.DateFormat;
+import ca.nrc.cadc.vos.server.AbstractView;
+import ca.nrc.cadc.vos.server.Views;
 
 /**
  * Creates an XML representation of a Node
@@ -114,6 +119,8 @@ public class NodeOutputRepresentation extends OutputRepresentation
     public void write(final OutputStream outputStream) throws IOException
     {
         final Node n = getNode();
+        
+        fillAcceptsAndProvides(node);
 
         if (n instanceof DataNode)
         {
@@ -148,6 +155,39 @@ public class NodeOutputRepresentation extends OutputRepresentation
         }
 
         return null;
+    }
+    
+    /**
+     * For the given node, fill in the accepts and provides lists
+     * by consulting each configured view.
+     * 
+     * @param node
+     */
+    private void fillAcceptsAndProvides(Node node)
+    {
+        Views views = new Views();
+        try
+        {
+            List<URI> accepts = new ArrayList<URI>();
+            List<URI> provides = new ArrayList<URI>();
+            List<AbstractView> viewList = views.getViews();
+            for (AbstractView view : viewList)
+            {
+                if (view.canAccept(node))
+                {
+                    accepts.add(view.getURI());
+                }
+                if (view.canProvide(node))
+                {               
+                    provides.add(view.getURI());
+                }
+                node.setAccepts(accepts);
+                node.setProvides(provides);
+            }
+        } catch (Exception e)
+        {
+            LOGGER.error("Could not get view list: " + e.getMessage());
+        }
     }
 
 
