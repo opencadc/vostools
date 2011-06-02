@@ -72,6 +72,7 @@ package ca.nrc.cadc.net;
 
 import java.io.BufferedInputStream;
 import java.io.BufferedOutputStream;
+import java.io.ByteArrayOutputStream;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileOutputStream;
@@ -657,6 +658,11 @@ public class HttpDownload extends HttpTransfer
         if (code != HttpURLConnection.HTTP_OK)
         {
             String msg = "(" + code + ") " + conn.getResponseMessage();
+            String body = getErrorBody(conn);
+            if (StringUtil.hasText(body))
+            {
+                msg = msg + ": " + body;
+            }
             switch(code)
             {
                 case HttpURLConnection.HTTP_UNAUTHORIZED:
@@ -693,6 +699,28 @@ public class HttpDownload extends HttpTransfer
             }
         }
         return code;
+    }
+    
+    private String getErrorBody(HttpURLConnection conn)
+    {
+        // try to get the error message from the body
+        ByteArrayOutputStream out = new ByteArrayOutputStream();
+        try
+        {
+            InputStream in = conn.getErrorStream();
+            byte[] buffer = new byte[512];
+            int bytesRead = -1;
+            while ((bytesRead = in.read(buffer)) > 0)
+            {
+                out.write(buffer, 0, bytesRead);
+            }
+            return out.toString("UTF-8");
+        }
+        catch (Exception e)
+        {
+            log.warn("Could not read error message from body: " + e.getMessage());
+            return null;
+        }
     }
 
     private void doGet()
@@ -817,7 +845,13 @@ public class HttpDownload extends HttpTransfer
                 throw new IOException("permission denied");
             // TODO: add custom handling for other failures here
             else if (code != HttpURLConnection.HTTP_OK)
-                throw new IOException(conn.getResponseMessage());
+            {
+                String body = getErrorBody(conn);
+                if (StringUtil.hasText(body))
+                    throw new IOException(conn.getResponseMessage() + ":" + body);
+                else
+                    throw new IOException(conn.getResponseMessage());
+            }
 
             fireEvent(TransferEvent.CONNECTED);
 
