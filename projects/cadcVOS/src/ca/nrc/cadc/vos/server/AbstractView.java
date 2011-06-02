@@ -174,7 +174,7 @@ public abstract class AbstractView extends View
     /**
      * Get the VOSpaceAuthorizer
      * 
-     * Note: The node availabe in getNode() has already gone
+     * Note: The node available in getNode() has already gone
      * through an authorization check with this authorizer.
      */
     protected VOSpaceAuthorizer getVOSpaceAuthorizer()
@@ -203,7 +203,7 @@ public abstract class AbstractView extends View
     {
         if (node == null)
             throw new UnsupportedOperationException("BUG: node for view is null.");
-        if (node == null)
+        if (requestURL == null)
             throw new UnsupportedOperationException("BUG: return requestURL for view is null.");
         this.node = node;
         this.requestURL = requestURL;
