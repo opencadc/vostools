@@ -122,6 +122,17 @@ public interface TapQuery
     List<TapSelectItem> getSelectList();
 
     /**
+     * Provide a text description of the relevant part of the query. This should
+     * be the main parameters that define the query. For example, for an ADQL query
+     * this would be just the ADQL text (the value of the QUERY parameters), while
+     * for a PQL query this would be all the parameters (param and value) actually used
+     * to generate the query.
+     * 
+     * @return
+     */
+    String getInfo();
+
+    /**
      * Limit number of table rows.
      *
      * @param count

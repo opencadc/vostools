@@ -356,13 +356,14 @@ public class QueryRunner implements SyncJobRunner
             logger.debug("invoking TapQuery...");
             String sql = tapQuery.getSQL();
             List<TapSelectItem> selectList = tapQuery.getSelectList();
+            String queryInfo = tapQuery.getInfo();
 
             logger.debug("invoking TableWriterFactory for FORMAT...");
             TableWriter tableWriter = TableWriterFactory.getWriter(job.getParameterList());
+            tableWriter.setJob(job);
             tableWriter.setTapSchema(tapSchema);
             tableWriter.setSelectList(selectList);
-            tableWriter.setJobID(jobID);
-            tableWriter.setParameterList(paramList);
+            tableWriter.setQueryInfo(queryInfo);
             if (maxRows != null)
                 tableWriter.setMaxRowCount(maxRows);
 
@@ -505,7 +506,7 @@ public class QueryRunner implements SyncJobRunner
                 logger.debug("BADNESS", t);
                 logger.debug("Error message: " + errorMessage);
                 VOTableWriter ewriter = new VOTableWriter();
-                ewriter.setParameterList(job.getParameterList()); // to check custom xml format
+                ewriter.setJob(job);
                 if (syncOutput != null)
                 {
                     syncOutput.setHeader("Content-Type", ewriter.getContentType());

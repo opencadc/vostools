@@ -90,6 +90,7 @@ import ca.nrc.cadc.tap.writer.formatter.DefaultFormatterFactory;
 import ca.nrc.cadc.tap.writer.votable.FieldElement;
 import ca.nrc.cadc.tap.writer.formatter.Formatter;
 import ca.nrc.cadc.tap.writer.formatter.FormatterFactory;
+import ca.nrc.cadc.uws.Job;
 import ca.nrc.cadc.uws.Parameter;
 import ca.nrc.cadc.uws.util.ParameterUtil;
 import org.apache.log4j.Logger;
@@ -122,9 +123,12 @@ public class VOTableWriter implements TableWriter
     // List of column names used in the select statement.
     protected List<TapSelectItem> selectList;
 
-    protected String jobID;
-    
-    protected List<Parameter> params;
+    //protected String jobID;
+    //protected List<Parameter> params;
+
+    protected Job job;
+
+    protected String info;
 
     // Maximum number of rows to write.
     protected int maxRows;
@@ -135,14 +139,30 @@ public class VOTableWriter implements TableWriter
         maxRows = Integer.MAX_VALUE;
     }
 
-    public void setJobID(String jobID)
+   public void setJobID(String jobID)
     {
-        this.jobID = jobID;
+        //this.jobID = jobID;
     }
+
 
     public void setParameterList(List<Parameter> params)
     {
-        this.params = params;
+        //this.params = params;
+    }
+
+    public void setJob(Job job)
+    {
+        this.job = job;
+    }
+
+    /**
+     * The info is currently not used by this class. TODO: add an INFO element to the VOTable.
+     *
+     * @param info
+     */
+    public void setQueryInfo(String info)
+    {
+        this.info = info;
     }
 
     public String getExtension()
@@ -153,7 +173,7 @@ public class VOTableWriter implements TableWriter
     public String getContentType()
     {
         // if caller requested a custom format that is a valid mimetype, use that
-        String fmt = ParameterUtil.findParameterValue("FORMAT", params);
+        String fmt = ParameterUtil.findParameterValue("FORMAT", job.getParameterList());
         if (fmt != null && fmt.startsWith("text/xml")) // HACK: good enough for now
             return fmt;
         return "application/x-votable+xml";
@@ -184,8 +204,8 @@ public class VOTableWriter implements TableWriter
             throw new IllegalStateException("TapSchema cannot be null, set using setTapSchema()");
 
         FormatterFactory factory = DefaultFormatterFactory.getFormatterFactory();
-        factory.setJobID(jobID);
-        factory.setParamList(params);
+        factory.setJobID(job.getID());
+        factory.setParamList(job.getParameterList());
         List<Formatter> formatters = factory.getFormatters(tapSchema, selectList);
 
         if (resultSet != null)

@@ -76,6 +76,7 @@ import java.util.List;
 
 import ca.nrc.cadc.tap.parser.TapSelectItem;
 import ca.nrc.cadc.tap.schema.TapSchema;
+import ca.nrc.cadc.uws.Job;
 import ca.nrc.cadc.uws.Parameter;
 
 /**
@@ -90,6 +91,7 @@ public interface TableWriter
      * Provide the jobID to the TableWriter so it can include it with the output.
      * 
      * @param jobID
+     * @deprecated since setJob(Job) was added
      */
     public void setJobID(String jobID);
 
@@ -98,8 +100,16 @@ public interface TableWriter
      * provide custom extensions such as client control of the output.
      *
      * @param params
+     * @deprecated since setJob(Job) was added
      */
     public void setParameterList(List<Parameter> params);
+
+    /**
+     * Provide the job to the TableWriter.
+     *
+     * @param job
+     */
+    public void setJob(Job job);
     
     /**
      * Get the usual filename extension for this format.
@@ -129,6 +139,15 @@ public interface TableWriter
      */
     void setTapSchema(TapSchema schema);
     
+    /**
+     * Set additional information or descritpino of the result. The implementation may
+     * include this text in the output (as a comment or wherever such descritpive text
+     * is permitted by the format).
+     * 
+     * @see TapQuery.getInfo()
+     * @param info
+     */
+    void setQueryInfo(String info);
 
     /**
      * Write ResultSet to the OutputStream.

@@ -108,10 +108,14 @@ public class RssTableWriter implements TableWriter
     // List of column names used in the select statement.
     protected List<TapSelectItem> selectList;
 
-    protected String jobID;
+    //protected String jobID;
     
-    protected List<Parameter> params;
+    //protected List<Parameter> params;
 
+    protected Job job;
+
+    protected String info;
+    
     // Maximum number of rows to write.
     protected int maxRows;
 
@@ -124,16 +128,16 @@ public class RssTableWriter implements TableWriter
     public void write(ResultSet resultSet, OutputStream output)
         throws IOException
     {
-        if (params == null)
-            throw new IllegalStateException("ParameterList cannot be null, set using setParameterList()");
+        if (job == null)
+            throw new IllegalStateException("Job cannot be null, set using setJob()");
         if (selectList == null)
             throw new IllegalStateException("SelectList cannot be null, set using setSelectList()");
         if (tapSchema == null)
             throw new IllegalStateException("TapSchema cannot be null, set using setTapSchema()");
 
         FormatterFactory factory = DefaultFormatterFactory.getFormatterFactory();
-        factory.setJobID(jobID);
-        factory.setParamList(params);
+        factory.setJobID(job.getID());
+        factory.setParamList(job.getParameterList());
         List<Formatter> formatters = factory.getFormatters(tapSchema, selectList);
 
         if (resultSet != null)
@@ -154,23 +158,24 @@ public class RssTableWriter implements TableWriter
 
         // channel title.
         Element channelTitle = new Element("title");
-        channelTitle.setText("Annotations TAP Service");
+        channelTitle.setText(info);
         channel.addContent(channelTitle);
 
         StringBuilder qp = new StringBuilder();
-        for (Parameter parameter : params)
+        qp.append("http://");
+        qp.append(NetUtil.getServerName(null));
+        qp.append(job.getRequestPath());
+        qp.append("?");
+        for (Parameter parameter : job.getParameterList())
         {
-            if (qp.length() > 0)
-                qp.append("&");
             qp.append(parameter.getName());
             qp.append("=");
             qp.append(parameter.getValue());
+            qp.append("&");
         }
-        qp.insert(0, "/annotations/auth/sync?");
-        qp.insert(0, NetUtil.getServerName(null));
-        qp.insert(0, "http://");
+        String queryString = qp.substring(0, qp.length() - 1); // strip trailing &
         Element link = new Element("link");
-        link.setText(qp.toString());
+        link.setText(queryString);
         channel.addContent(link);
  
         // items.
@@ -244,7 +249,7 @@ public class RssTableWriter implements TableWriter
 
         // channel description.
         Element channelDescription = new Element("description");
-        channelDescription.setText("The " + itemCount + " latest TAP Annotations");
+        channelDescription.setText("The " + itemCount + " most recent from " + info);
         channel.addContent(channelDescription);
 
         // Write out the VOTABLE.
@@ -254,12 +259,28 @@ public class RssTableWriter implements TableWriter
     
     public void setJobID(String jobID)
     {
-        this.jobID = jobID;
+        //this.jobID = jobID;
     }
+
 
     public void setParameterList(List<Parameter> params)
     {
-        this.params = params;
+        //this.params = params;
+    }
+
+    public void setJob(Job job)
+    {
+        this.job = job;
+    }
+
+    /**
+     * The info is used as the channel title and should be short.
+     * 
+     * @param info
+     */
+    public void setQueryInfo(String info)
+    {
+        this.info = info;
     }
 
     public String getExtension()

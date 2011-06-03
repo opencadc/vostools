@@ -228,4 +228,12 @@ public class SqlQuery implements TapQuery
         doNavigate();
         return tapSelectItemList;
     }
+
+    public String getInfo()
+    {
+        // TODO: format nicely?
+        return queryString;
+    }
+
+
 }

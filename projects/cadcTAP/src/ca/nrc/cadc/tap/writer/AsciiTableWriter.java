@@ -88,6 +88,7 @@ import ca.nrc.cadc.tap.writer.formatter.DefaultFormatterFactory;
 import ca.nrc.cadc.tap.writer.formatter.Formatter;
 import ca.nrc.cadc.tap.writer.formatter.FormatterFactory;
 import ca.nrc.cadc.tap.writer.formatter.ResultSetFormatter;
+import ca.nrc.cadc.uws.Job;
 import com.csvreader.CsvWriter;
 import org.apache.log4j.Logger;
 
@@ -122,9 +123,11 @@ public class AsciiTableWriter implements TableWriter
     // List of column names used in the select statement.
     protected List<TapSelectItem> selectList;
 
-    protected String jobID;
-    
-    protected List<Parameter> params;
+    //protected String jobID;
+    //protected List<Parameter> params;
+
+    protected Job job;
+    protected String info;
 
     // Maximum number of rows to write.
     protected int maxRows;
@@ -165,15 +168,28 @@ public class AsciiTableWriter implements TableWriter
 
     public void setJobID(String jobID)
     {
-        this.jobID = jobID;
+        //this.jobID = jobID;
     }
 
 
     public void setParameterList(List<Parameter> params)
     {
-        this.params = params;
+        //this.params = params;
     }
 
+    public void setJob(Job job)
+    {
+        this.job = job;
+    }
+
+    /**
+     * The info is ignored by this class.
+     * @param info
+     */
+    public void setQueryInfo(String info)
+    {
+        this.info = info;
+    }
 
     public String getExtension()
     {
