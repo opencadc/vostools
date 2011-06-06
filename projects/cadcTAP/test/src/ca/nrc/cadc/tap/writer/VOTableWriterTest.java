@@ -72,6 +72,7 @@ package ca.nrc.cadc.tap.writer;
 import ca.nrc.cadc.tap.parser.TapSelectItem;
 import ca.nrc.cadc.tap.schema.TapSchema;
 import ca.nrc.cadc.util.Log4jInit;
+import ca.nrc.cadc.uws.Job;
 import ca.nrc.cadc.xml.XmlUtil;
 import java.io.ByteArrayOutputStream;
 import java.io.StringReader;
@@ -153,51 +154,59 @@ public class VOTableWriterTest
      * Test of write method, of class VOTableWriter.
      */
     @Test
-    public final void testWriteThrowableOutputStream() throws Exception
+    public final void testWriteThrowableOutputStream()
     {
         LOG.debug("testWriteThrowableOutputStream");
+        try
+        {
+            // Create some nested exceptions.
+            Throwable root = new Throwable("root exception");
+            Throwable middle = new Throwable("middle exception", root);
+            Throwable top = new Throwable("top exception", middle);
 
-        // Create some nested exceptions.
-        Throwable root = new Throwable("root exception");
-        Throwable middle = new Throwable("middle exception", root);
-        Throwable top = new Throwable("top exception", middle);
+            // Capture the VOTableWriter output.
+            ByteArrayOutputStream output = new ByteArrayOutputStream();
 
-        // Capture the VOTableWriter output.
-        ByteArrayOutputStream output = new ByteArrayOutputStream();
+            // Write out the VOTABLE.
+            VOTableWriter writer = new VOTableWriter();
+            writer.setJob(new Job("abc123", null));
+            writer.write(top, output);
+            output.close();
 
-        // Write out the VOTABLE.
-        VOTableWriter writer = new VOTableWriter();
-        writer.write(top, output);
-        output.close();
-        
-        // Validate the xml against the VOTABLE XSD.
-        String xml = output.toString();
-        LOG.debug("XML: \n" + xml);
-        Document document = validate(xml);
+            // Validate the xml against the VOTABLE XSD.
+            String xml = output.toString();
+            LOG.debug("XML: \n" + xml);
+            Document document = validate(xml);
 
-        // Get the root VOTABLE element.
-        Element votable = document.getRootElement();
-        Namespace namespace = votable.getNamespace();
+            // Get the root VOTABLE element.
+            Element votable = document.getRootElement();
+            Namespace namespace = votable.getNamespace();
 
-        // Get the RESOURCE element.
-        Element resource = votable.getChild("RESOURCE", namespace);
-        assertNotNull("RESOURCE element is missing", resource);
+            // Get the RESOURCE element.
+            Element resource = votable.getChild("RESOURCE", namespace);
+            assertNotNull("RESOURCE element is missing", resource);
 
-        // Check INFO attributes.
-        Element info = resource.getChild("INFO", namespace);
-        assertNotNull("Child INFO elemet of RESOURCE is missing", info);
+            // Check INFO attributes.
+            Element info = resource.getChild("INFO", namespace);
+            assertNotNull("Child INFO elemet of RESOURCE is missing", info);
 
-        // Check the INFO attribute 'name'.
-        Attribute name = info.getAttribute("name");
-        assertNotNull("INFO attribute 'name' is missing", name);
-        assertEquals("INFO attribute 'name' is invalid", INFO_ATTRIBUTE_NAME, name.getValue());
+            // Check the INFO attribute 'name'.
+            Attribute name = info.getAttribute("name");
+            assertNotNull("INFO attribute 'name' is missing", name);
+            assertEquals("INFO attribute 'name' is invalid", INFO_ATTRIBUTE_NAME, name.getValue());
 
-        // Check the INFO attribute 'value'.
-        Attribute value = info.getAttribute("value");
-        assertNotNull("INFO attribute 'value' is missing", value);
-        assertEquals("INFO attribute 'value' is invalid", INFO_ATTRIBUTE_VALUE, value.getValue());
+            // Check the INFO attribute 'value'.
+            Attribute value = info.getAttribute("value");
+            assertNotNull("INFO attribute 'value' is missing", value);
+            assertEquals("INFO attribute 'value' is invalid", INFO_ATTRIBUTE_VALUE, value.getValue());
 
-        LOG.info("testWriteThrowableOutputStream passed");
+            LOG.info("testWriteThrowableOutputStream passed");
+        }
+        catch(Exception unexpected)
+        {
+            LOG.error("unexpected exception", unexpected);
+            fail("unexpected exception: " + unexpected);
+        }
     }
 
     private Map<String,String> schemaMap;
