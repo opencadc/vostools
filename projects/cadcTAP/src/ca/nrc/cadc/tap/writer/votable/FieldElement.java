@@ -100,6 +100,7 @@ public class FieldElement extends Element
         else
         {
             setFieldName(selectItem.getAlias(), null);
+            setDatatypeAndWidth("adql:VARCHAR", null); // must be set for VOTable schema, this is best default
             setDescription(selectItem.getExpression(), namespace);
         }
      }
@@ -212,10 +213,12 @@ public class FieldElement extends Element
         else if (datatype.equals("adql:CIRCLE"))
         {
             setAttribute("datatype", "char");
+            setAttribute("arraysize", "*");
         }
         else if (datatype.equals("adql:POLYGON"))
         {
             setAttribute("datatype", "char");
+            setAttribute("arraysize", "*");
         }
         else if (datatype.equals("adql:REGION"))
         {
@@ -230,6 +233,7 @@ public class FieldElement extends Element
         else if (datatype.equals("pg:box"))
         {
             setAttribute("datatype", "char");
+            setAttribute("arraysize", "*");
         }
         else if (datatype.equals("int"))
         {
@@ -238,7 +242,7 @@ public class FieldElement extends Element
         else if (datatype.equals("double[]"))
         {
             setAttribute("datatype", "double");
-	    setAttribute("arraysize", length == null ? "*" : length);
+            setAttribute("arraysize", length == null ? "*" : length);
         }
 
     }
