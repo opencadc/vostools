@@ -38,12 +38,12 @@ insert into TAP_SCHEMA.schemas (schema_name,description,utype) values
 ( 'TAP_SCHEMA', 'a special schema to describe a TAP tableset', NULL )
 ;
 
-insert into TAP_SCHEMA.tables (schema_name,table_name,description,utype) values
-( 'TAP_SCHEMA', 'TAP_SCHEMA.schemas', 'description of schemas in this tableset', NULL ),
-( 'TAP_SCHEMA', 'TAP_SCHEMA.tables', 'description of tables in this tableset', NULL ),
-( 'TAP_SCHEMA', 'TAP_SCHEMA.columns', 'description of columns in this tableset', NULL ),
-( 'TAP_SCHEMA', 'TAP_SCHEMA.keys', 'description of foreign keys in this tableset', NULL ),
-( 'TAP_SCHEMA', 'TAP_SCHEMA.key_columns', 'description of foreign key columns in this tableset', NULL )
+insert into TAP_SCHEMA.tables (schema_name,table_name,table_type,description,utype) values
+( 'TAP_SCHEMA', 'TAP_SCHEMA.schemas', 'table', 'description of schemas in this tableset', NULL ),
+( 'TAP_SCHEMA', 'TAP_SCHEMA.tables', 'table', 'description of tables in this tableset', NULL ),
+( 'TAP_SCHEMA', 'TAP_SCHEMA.columns', 'table', 'description of columns in this tableset', NULL ),
+( 'TAP_SCHEMA', 'TAP_SCHEMA.keys', 'table', 'description of foreign keys in this tableset', NULL ),
+( 'TAP_SCHEMA', 'TAP_SCHEMA.key_columns', 'table', 'description of foreign key columns in this tableset', NULL )
 ;
 
 insert into TAP_SCHEMA.columns (table_name,column_name,description,utype,ucd,unit,datatype,size,principal,indexed,std) values
@@ -71,6 +71,8 @@ insert into TAP_SCHEMA.columns (table_name,column_name,description,utype,ucd,uni
 ( 'TAP_SCHEMA.keys', 'key_id', 'unique key to join to TAP_SCHEMA.key_columns',            NULL, NULL, NULL, 'adql:VARCHAR', 64, 1,0,0 ),
 ( 'TAP_SCHEMA.keys', 'from_table', 'the table with the foreign key',                      NULL, NULL, NULL, 'adql:VARCHAR', 64, 1,0,0 ),
 ( 'TAP_SCHEMA.keys', 'target_table', 'the table with the primary key',                    NULL, NULL, NULL, 'adql:VARCHAR', 64, 1,0,0 ),
+( 'TAP_SCHEMA.keys', 'utype', 'lists the utype of keys in the tableset',              NULL, NULL, NULL, 'adql:VARCHAR', 512, 1,0,0 ),
+( 'TAP_SCHEMA.keys', 'description', 'describes keys in the tableset',                 NULL, NULL, NULL, 'adql:VARCHAR', 512, 1,0,0 ),
 
 ( 'TAP_SCHEMA.key_columns', 'key_id', 'key to join to TAP_SCHEMA.keys',                   NULL, NULL, NULL, 'adql:VARCHAR', 64, 1,0,0 ),
 ( 'TAP_SCHEMA.key_columns', 'from_column', 'column in the from_table',                    NULL, NULL, NULL, 'adql:VARCHAR', 64, 1,0,0 ),

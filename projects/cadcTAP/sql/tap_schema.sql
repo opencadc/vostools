@@ -23,6 +23,7 @@ create table TAP_SCHEMA.tables
 (
 	schema_name   varchar(64),
 	table_name    varchar(128),
+        table_type    varchar(8),
 	utype         varchar(512) NULL,
 	description   varchar(512) NULL,
 	
