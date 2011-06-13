@@ -116,8 +116,8 @@ public class RssViewTest
     private static DateFormat dateFormat = DateUtil.getDateFormat(DateUtil.IVOA_DATE_FORMAT, DateUtil.UTC);
 
     static final String SERVER = "VOSPACE_WS_TEST";
-    static final String DATABASE = "vospace";
-    static final String SCHEMA = "dbo";
+    static final String DATABASE = "cadctest";
+    static final String SCHEMA = "";
 
     static final String VOS_AUTHORITY = "cadc.nrc.ca!vospace";
     static final String ROOT_CONTAINER = "CADCRsstest1";
