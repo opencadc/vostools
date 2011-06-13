@@ -98,10 +98,11 @@ public class Log4jInit
 
     private static List<Writer> logWriters = new ArrayList<Writer>();
     
-    static {
-        // set the overall logging level to ERROR
+    static
+    {
         Logger.getRootLogger().setLevel(Level.ERROR);
     }
+    
     /**
      * Initializes logging to the console.
      * 
@@ -153,6 +154,7 @@ public class Log4jInit
         {
             // Clear all existing appenders, if there's any.
             BasicConfigurator.resetConfiguration();
+            Logger.getRootLogger().setLevel(Level.ERROR); // must redo after reset
 
             String errorLogFormat = LONG_FORMAT;
             String infoLogFormat = SHORT_FORMAT;
