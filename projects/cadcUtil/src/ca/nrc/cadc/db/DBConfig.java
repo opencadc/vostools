@@ -314,7 +314,14 @@ public class DBConfig implements Serializable
 		while ( i.hasNext() )
 		{
 			ConnectionConfig cc = (ConnectionConfig) i.next();
-			if ( cc.matches(s, d) )
+			if ( cc.matches(s, d, false) ) // look for explicit match
+				return cc;
+		}
+        i = lookup.iterator();
+		while ( i.hasNext() )
+		{
+			ConnectionConfig cc = (ConnectionConfig) i.next();
+			if ( cc.matches(s, d, true) ) // look for wildcard match
 				return cc;
 		}
 		return null;
