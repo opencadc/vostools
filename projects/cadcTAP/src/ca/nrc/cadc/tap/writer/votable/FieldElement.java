@@ -225,26 +225,30 @@ public class FieldElement extends Element
             setAttribute("datatype", "char");
             setAttribute("arraysize", "*");
         }
-        else if (datatype.equals("int[]"))
-        {
-            setAttribute("datatype", "int");
-            setAttribute("arraysize", length == null ? "*" : length);
-        }
-        else if (datatype.equals("pg:box"))
-        {
-            setAttribute("datatype", "char");
-            setAttribute("arraysize", "*");
-        }
-        else if (datatype.equals("int"))
-        {
-            setAttribute("datatype", "int");
-        }
-        else if (datatype.equals("double[]"))
+        else if (datatype.equals("votable:double"))
         {
             setAttribute("datatype", "double");
-            setAttribute("arraysize", length == null ? "*" : length);
+            if (length != null)
+                setAttribute("arraysize", length);
         }
-
+        else if (datatype.equals("votable:int"))
+        {
+            setAttribute("datatype", "int");
+            if (length != null)
+                setAttribute("arraysize", length);
+        }
+        else if (datatype.equals("votable:float"))
+        {
+            setAttribute("datatype", "float");
+            if (length != null)
+                setAttribute("arraysize", length);
+        }
+        else if (datatype.equals("votable:long"))
+        {
+            setAttribute("datatype", "long");
+            if (length != null)
+                setAttribute("arraysize", length);
+        }
     }
 
 }

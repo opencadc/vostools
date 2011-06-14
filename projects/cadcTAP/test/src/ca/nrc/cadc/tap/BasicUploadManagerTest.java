@@ -98,7 +98,7 @@ public class BasicUploadManagerTest
     static
     {
         Log4jInit.setLevel("ca.nrc.cadc.tap", org.apache.log4j.Level.INFO);
-        Log4jInit.setLevel("ca.nrc.cadc.tap.upload", org.apache.log4j.Level.DEBUG);
+        Log4jInit.setLevel("ca.nrc.cadc.tap.upload", org.apache.log4j.Level.INFO);
     }
     
     public BasicUploadManagerTest() { }

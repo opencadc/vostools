@@ -116,11 +116,29 @@ public class ColumnDesc
      */
     public Integer size;
 
+    public boolean principal;
+
+    public boolean indexed;
+
+    public boolean std;
+
     /**
      * Default no-arg constructor.
      */
     public ColumnDesc()
     {
+    }
+
+    public ColumnDesc(String tableName,
+                  String columnName,
+                  String description,
+                  String utype,
+                  String ucd,
+                  String unit,
+                  String datatype,
+                  Integer size)
+    {
+        this(tableName, columnName, description, utype, ucd, unit, datatype, size, false, false, false);
     }
 
     /**
@@ -134,6 +152,9 @@ public class ColumnDesc
      * @param unit The unit used for Column values.
      * @param datatype The ADQL datatype of Column.
      * @param size The Column datatype size (Column width).
+     * @param principal
+     * @param indexed
+     * @param std
      */
     public ColumnDesc(String tableName,
                   String columnName,
@@ -142,7 +163,8 @@ public class ColumnDesc
                   String ucd,
                   String unit,
                   String datatype,
-                  Integer size)
+                  Integer size,
+                  boolean principal, boolean indexed, boolean std)
     {
         this.tableName = tableName;
         this.columnName = columnName;
@@ -152,6 +174,9 @@ public class ColumnDesc
         this.unit = unit;
         this.datatype = datatype;
         this.size = size;
+        this.principal = principal;
+        this.indexed = indexed;
+        this.std = std;
     }
     
     /**
@@ -238,6 +263,23 @@ public class ColumnDesc
         this.size = size;
     }
 
+    public boolean isIndexed()
+    {
+        return indexed;
+    }
+
+    public boolean isPrincipal()
+    {
+        return principal;
+    }
+
+    public boolean isStd()
+    {
+        return std;
+    }
+
+    
+
     /**
      * @return String representation of the Column.
      */
@@ -252,7 +294,10 @@ public class ColumnDesc
         sb.append(ucd == null ? "" : ucd).append(",");
         sb.append(unit == null ? "" : unit).append(",");
         sb.append(datatype).append(",");
-        sb.append(size == null ? "" : size);
+        sb.append(size == null ? "" : size).append(",");
+        sb.append(Boolean.toString(principal)).append(",");
+        sb.append(Boolean.toString(indexed)).append(",");
+        sb.append(Boolean.toString(std)).append(",");
         sb.append("]");
         return sb.toString();
     }

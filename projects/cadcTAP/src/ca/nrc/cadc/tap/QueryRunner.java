@@ -381,6 +381,8 @@ public class QueryRunner implements SyncJobRunner
                 {
                     logger.debug("getting database connection...");
                     connection = queryDataSource.getConnection();
+                    tList.add(System.currentTimeMillis());
+                    sList.add("get connection from data source: ");
 
                     // manually control transaction, make fetch size (client batch size) small,
                     // and restrict to forward only so that client memory usage is minimal since

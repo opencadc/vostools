@@ -83,6 +83,7 @@ import java.io.IOException;
 import java.io.OutputStream;
 import java.sql.ResultSet;
 import java.sql.SQLException;
+import java.sql.Timestamp;
 import java.text.DateFormat;
 import java.util.List;
 import org.apache.log4j.Logger;
@@ -197,31 +198,36 @@ public class RssTableWriter implements TableWriter
                 {
                     String columnLabel = resultSet.getMetaData().getColumnLabel(columnIndex);
 
-                    if (columnLabel.equals("rss_title"))
-                    {log.debug("item title: " + resultSet.getString("rss_title"));
-                        // item title.
+                    if (columnLabel.equalsIgnoreCase("rss_title"))
+                    {
+                        String titleStr = resultSet.getString("rss_title");
+                        log.debug("item title: " + titleStr);
                         Element itemTitle = new Element("title");
-                        itemTitle.setText(resultSet.getString("rss_title"));
+                        itemTitle.setText(titleStr);
                         item.addContent(itemTitle);
                     }
-                    else if (columnLabel.equals("rss_link"))
+                    else if (columnLabel.equalsIgnoreCase("rss_link"))
                     {
-                        // item link.
+                        String linkStr = resultSet.getString("rss_link");
+                        log.debug("item link: " + linkStr);
                         Element itemLink = new Element("link");
-                        itemLink.setText(resultSet.getString("rss_link"));
+                        itemLink.setText(linkStr);
                         item.addContent(itemLink);
                     }
-                    else if (columnLabel.equals("rss_pubDate"))
-                    {log.debug("item pubDate: " + resultSet.getTimestamp("rss_pubDate"));
-                        // item pubDate
+                    else if (columnLabel.equalsIgnoreCase("rss_pubDate"))
+                    {
+                        Timestamp ts = resultSet.getTimestamp("rss_pubDate");
+                        String pubDateStr = dateFormat.format(ts);
+                        log.debug("item pubDate: " + pubDateStr);
                         Element itemPubDate = new Element("pubDate");
-                        itemPubDate.setText(dateFormat.format(resultSet.getTimestamp("rss_pubDate")));
+                        itemPubDate.setText(pubDateStr);
                         item.addContent(itemPubDate);
                     }
                     else
                     {
+                        TapSelectItem si = selectList.get(columnIndex - 1); // var is 1-based for result set
                         sb.append("<tr><td align=\"right\">");
-                        sb.append(columnLabel);
+                        sb.append(si.getColumnName());
                         sb.append("</td><td align=\"left\">");
                         Formatter formatter = formatters.get(columnIndex - 1);
                         if (formatter instanceof ResultSetFormatter)

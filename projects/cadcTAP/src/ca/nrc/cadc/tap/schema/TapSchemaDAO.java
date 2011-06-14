@@ -88,9 +88,6 @@ import org.springframework.jdbc.core.RowMapper;
 public class TapSchemaDAO
 {
     private static Logger log = Logger.getLogger(TapSchemaDAO.class);
-    static {
-        log.setLevel(Level.ERROR);
-    }
     
     // SQL to select all rows from TAP_SCHEMA.schemas.
     private static final String SELECT_SCHEMAS =
@@ -104,7 +101,7 @@ public class TapSchemaDAO
 
     // SQL to select all rows from TAP_SCHEMA.colums.
     private static final String SELECT_COLUMNS = 
-            "select table_name, column_name, description, utype, ucd, unit, datatype, size " +
+            "select table_name, column_name, description, utype, ucd, unit, datatype, size, principal, indexed, std " +
             "from tap_schema.columns ";
 
     // SQL to select all rows from TAP_SCHEMA.keys.
@@ -316,8 +313,18 @@ public class TapSchemaDAO
             col.unit = rs.getString("unit");
             col.datatype = rs.getString("datatype");
             col.size = rs.getObject("size") == null ? null : Integer.valueOf(rs.getInt("size"));
+            col.principal = intToBoolean(rs.getInt("principal"));
+            col.indexed = intToBoolean(rs.getInt("indexed"));
+            col.std = intToBoolean(rs.getInt("std"));
             log.debug("found: " + col);
             return col;
+        }
+
+        private boolean intToBoolean(Integer i)
+        {
+            if (i == null)
+                return false;
+            return (i.intValue() == 1);
         }
     }
 

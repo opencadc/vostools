@@ -152,6 +152,7 @@ public class DefaultFormatterFactory implements FormatterFactory
     public Formatter getFormatter(TapSchema tapSchema, TapSelectItem selectItem)
     {
         // Find the class name of the formatter for this colummn.
+        LOG.debug("getFormatter: " + selectItem);
         for (SchemaDesc schemaDesc : tapSchema.schemaDescs)
         {
         	if (schemaDesc.tableDescs == null)
@@ -164,14 +165,16 @@ public class DefaultFormatterFactory implements FormatterFactory
                     {
                         if (columnDesc.columnName.equals(selectItem.getColumnName()))
                         {
-                            return getFormatter(columnDesc);
+                            Formatter fmt = getFormatter(columnDesc);
+                            LOG.debug("found: " + fmt.getClass().getSimpleName() + " for " + columnDesc);
+                            return fmt;
                         }
                     }
                 }
             }
         }
 
-        // Custom formatter not found, return the default Formatter.
+        LOG.debug("Custom formatter not found, return the default Formatter");
         return getDefaultFormatter();
     }
     
@@ -212,14 +215,8 @@ public class DefaultFormatterFactory implements FormatterFactory
         if (datatype.equalsIgnoreCase("adql:TIMESTAMP"))
             return getTimestampFormatter(desc);
         
-        if (datatype.equalsIgnoreCase("adql:VARBINARY") || datatype.equalsIgnoreCase("byte[]"))
+        if (datatype.equalsIgnoreCase("adql:VARBINARY"))
             return getByteArrayFormatter(desc);
-        
-        if (datatype.equalsIgnoreCase("int[]"))
-            return getIntArrayFormatter(desc);
-
-        if (datatype.equalsIgnoreCase("double[]"))
-            return getDoubleArrayFormatter(desc);
         
         if (datatype.equalsIgnoreCase("adql:POINT"))
             return getPointFormatter(desc);
@@ -229,6 +226,33 @@ public class DefaultFormatterFactory implements FormatterFactory
 
         if (datatype.equalsIgnoreCase("adql:CLOB"))
             return getClobFormatter(desc);
+
+        // VOTable datatypes in the tap_schema.columns.datatype: legal?
+        // needed if the database has an array of numeric values since
+        // there is no adql equivalent
+        if (datatype.equalsIgnoreCase("votable:int"))
+            if (desc.size != null && desc.size > 1)
+                return getIntArrayFormatter(desc);
+            else
+                return getIntegerFormatter(desc);
+
+        if (datatype.equalsIgnoreCase("votable:long"))
+            if (desc.size != null && desc.size > 1)
+                return getLongArrayFormatter(desc);
+            else
+                return getLongFormatter(desc);
+
+        if (datatype.equalsIgnoreCase("votable:float"))
+            if (desc.size != null && desc.size > 1)
+                return getFloatArrayFormatter(desc);
+            else
+                return getRealFormatter(desc);
+
+        if (datatype.equalsIgnoreCase("votable:double"))
+            if (desc.size != null && desc.size > 1)
+                return getDoubleArrayFormatter(desc);
+            else
+                return getDoubleFormatter(desc);
         
         return getDefaultFormatter();
     }
@@ -246,10 +270,20 @@ public class DefaultFormatterFactory implements FormatterFactory
      * @param columnDesc
      * @return a DefaultFormatter
      */
+    public Formatter getRealFormatter(ColumnDesc columnDesc)
+    {
+        return getDefaultFormatter();
+    }
+
+    /**
+     * @param columnDesc
+     * @return a DefaultFormatter
+     */
     public Formatter getDoubleFormatter(ColumnDesc columnDesc)
     {
         return getDefaultFormatter();
     }
+
 
     /**
      * @param columnDesc
@@ -289,7 +323,25 @@ public class DefaultFormatterFactory implements FormatterFactory
 
     /**
      * @param columnDesc
-     * @return an IntArrayFormatter
+     * @return an LongArrayFormatter
+     */
+    public Formatter getLongArrayFormatter(ColumnDesc columnDesc)
+    {
+        return new LongArrayFormatter();
+    }
+
+    /**
+     * @param columnDesc
+     * @return an FloatArrayFormatter
+     */
+    public Formatter getFloatArrayFormatter(ColumnDesc columnDesc)
+    {
+        return new FloatArrayFormatter();
+    }
+
+    /**
+     * @param columnDesc
+     * @return an DoubleArrayFormatter
      */
     public Formatter getDoubleArrayFormatter(ColumnDesc columnDesc)
     {
