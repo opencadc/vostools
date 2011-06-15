@@ -248,7 +248,7 @@ public class SyncServlet extends HttpServlet
     private void doit(boolean execOnCreate, HttpServletRequest request, HttpServletResponse response)
         throws ServletException, IOException
     {
-        log.warn("doit: execOnCreate=" + execOnCreate);
+        log.debug("doit: execOnCreate=" + execOnCreate);
         SyncRunner syncRunner = null;
         Subject subject = null;
         String jobID = null;
@@ -271,13 +271,13 @@ public class SyncServlet extends HttpServlet
                 log.info("created job: " + jobURL);
                 if (execOnCreate)
                 {
-                    log.info("no redirect, action = " + JOB_EXEC);
+                    log.debug("no redirect, action = " + JOB_EXEC);
                     action = JOB_EXEC;
                 }
                 else // redirect
                 {
                     String execURL = jobURL + "/" + JOB_EXEC;
-                    log.info("redirect: " + execURL);
+                    log.debug("redirect: " + execURL);
                     response.setHeader("Location", execURL);
                     response.setStatus(HttpServletResponse.SC_SEE_OTHER);
                     return;
