@@ -709,7 +709,7 @@ public class JobDAO
         else
         {
             String owner = getOwner(job.getOwner());
-            if (owner.length() == 0)
+            if (owner == null || owner.length() == 0)
                 sb.append("NULL");
             else
             {

@@ -153,6 +153,8 @@ public class SyncServlet extends HttpServlet
     private JobManager jobManager;
     private JobPersistence jobPersistence;
     private Class jobRunnerClass;
+    private boolean execOnGET = false;
+    private boolean execOnPOST = false;
 
     @Override
     public void init(ServletConfig config) throws ServletException
@@ -164,6 +166,17 @@ public class SyncServlet extends HttpServlet
 
         try
         {
+            String str = config.getInitParameter(SyncServlet.class.getName() + ".execOnGET");
+            if (str !=null)
+                try { execOnGET = Boolean.parseBoolean(str); }
+                catch(Exception ignore) { }
+            str = config.getInitParameter(SyncServlet.class.getName() + ".execOnPOST");
+            if (str !=null)
+                try { execOnPOST = Boolean.parseBoolean(str); }
+                catch(Exception ignore) { }
+            log.info("execOnGET: " + execOnGET);
+            log.info("execOnPOST: " + execOnPOST);
+
             pname = JobManager.class.getName();
             //cname = config.getInitParameter(pname);
             cname = config.getServletContext().getInitParameter(pname);
@@ -219,7 +232,7 @@ public class SyncServlet extends HttpServlet
         throws ServletException, IOException
     {
         log.debug("doGet - START");
-        doit(request, response);
+        doit(execOnGET, request, response);
         log.debug("doGet - DONE");
     }
 
@@ -228,16 +241,19 @@ public class SyncServlet extends HttpServlet
         throws ServletException, IOException
     {
         log.debug("doPost - START");
-        doit(request, response);
+        doit(execOnPOST, request, response);
         log.debug("doPost - DONE");
     }
 
-    private void doit(HttpServletRequest request, HttpServletResponse response)
+    private void doit(boolean execOnCreate, HttpServletRequest request, HttpServletResponse response)
         throws ServletException, IOException
     {
+        log.warn("doit: execOnCreate=" + execOnCreate);
         SyncRunner syncRunner = null;
         Subject subject = null;
         String jobID = null;
+        Job job = null;
+        String action = null;
         try
         {
             subject = getSubject(request);
@@ -245,22 +261,32 @@ public class SyncServlet extends HttpServlet
             if (jobID == null)
             {
                 // create
-                Job job = create(request, subject);
+                job = create(request, subject);
                 log.debug(String.format("persisting job: ip:[%s] path:[%s]", job.getRequesterIp(), job.getRequestPath()));
                 job = jobManager.persist(job);
                 log.debug("persisted job: " + job);
-                
-                // redirect
-                String jobURL = getJobURL(request, job.getID());
-                String execURL = jobURL + "/" + JOB_EXEC;
-                response.setHeader("Location", execURL);
-                response.setStatus(HttpServletResponse.SC_SEE_OTHER);
-                log.info("created job: " + jobURL);
-                return;
-            }
+                jobID = job.getID();
 
-            // get job from persistence
-            Job job = jobManager.getJob(jobID);
+                String jobURL = getJobURL(request, job.getID());
+                log.info("created job: " + jobURL);
+                if (execOnCreate)
+                {
+                    log.info("no redirect, action = " + JOB_EXEC);
+                    action = JOB_EXEC;
+                }
+                else // redirect
+                {
+                    String execURL = jobURL + "/" + JOB_EXEC;
+                    log.info("redirect: " + execURL);
+                    response.setHeader("Location", execURL);
+                    response.setStatus(HttpServletResponse.SC_SEE_OTHER);
+                    return;
+                }
+            }
+            else
+                // get job from persistence
+                job = jobManager.getJob(jobID);
+            
             if (job == null)
             {
                 response.setStatus(HttpServletResponse.SC_NOT_FOUND);
@@ -272,7 +298,8 @@ public class SyncServlet extends HttpServlet
             }
             log.debug("found: " + jobID);
 
-            String action = getJobAction(request);
+            if (action == null)
+                action = getJobAction(request);
 
             if (action == null)
             {
@@ -517,7 +544,7 @@ public class SyncServlet extends HttpServlet
     {
         String path = request.getPathInfo();
         log.debug("path: " + path);
-        // path can be null, <jobID> or <jobID>/exec
+        // path can be null, <jobID> or <jobID>/<token>
         if (path == null)
             return null;
         if (path.startsWith("/"))
