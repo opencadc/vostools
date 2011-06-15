@@ -710,8 +710,10 @@ public class NodeDAOTest
 
     private long getContentLength(Node node)
     {
-        int index = node.getProperties().indexOf(new NodeProperty(VOS.PROPERTY_URI_CONTENTLENGTH, null));
-        return Long.parseLong(((NodeProperty) node.getProperties().get(index)).getPropertyValue());
+        String str = node.getPropertyValue(VOS.PROPERTY_URI_CONTENTLENGTH);
+        if (str != null)
+            return Long.parseLong(str);
+        return 0;
     }
     
     private DataNode getCommonDataNode(String path, List<NodeProperty> properties) throws Exception

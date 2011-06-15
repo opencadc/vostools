@@ -206,9 +206,12 @@ public abstract class DatabaseNodePersistence implements NodePersistence
      */
     public void delete(Node node)
     {
+        log.debug("delete: " + node.getUri());
         NodeDAO dao = getDAO( node.getUri().getAuthority() );
+        //dao.getProperties(node); // not needed to get content-length
 
         long contentLength = getContentLength(node);
+        log.debug("delete: contentLength = " + contentLength);
         //dao.delete(node);
         dao.markForDeletion(node);
         if (contentLength > 0)
@@ -217,7 +220,8 @@ public abstract class DatabaseNodePersistence implements NodePersistence
             ContainerNode parent = node.getParent();
             while (parent != null)
             {
-                dao.updateContentLength(node, delta);
+                log.debug("calling updateContentLength: " + parent.getUri() + "," + delta);
+                dao.updateContentLength(parent, delta);
                 parent = parent.getParent();
             }
         }
@@ -253,14 +257,9 @@ public abstract class DatabaseNodePersistence implements NodePersistence
      */
     protected long getContentLength(Node node)
     {
-        long ret = 0;
-        List<NodeProperty> properties = node.getProperties();
-        int lengthPropertyIndex = properties.indexOf(VOS.PROPERTY_URI_CONTENTLENGTH);
-        if (lengthPropertyIndex != -1)
-        {
-            NodeProperty lengthProperty = properties.get(lengthPropertyIndex);
-            ret = Long.parseLong(lengthProperty.getPropertyValue());
-        }
-        return ret;
+        String str = node.getPropertyValue(VOS.PROPERTY_URI_CONTENTLENGTH);
+        if (str != null)
+            return Long.parseLong(str);
+        return 0;
     }
 }
