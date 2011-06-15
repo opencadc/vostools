@@ -324,4 +324,21 @@ public class StringUtil
         sb.append("]");
         return sb.toString();
     }
+    
+    /**
+     * Get a string which is the N-time repeat of the input string, i.e. repeat("ab", 3) => "ababab".
+     * 
+     * @param str
+     * @param num
+     * @return
+     * @author zhangsa
+     */
+    public static String repeat(String str, int num)
+    {
+        if (num <= 0 || str == null) return "";
+        StringBuffer sb = new StringBuffer();
+        for (int i = num; i-- > 0;)
+            sb.append(str);
+        return sb.toString();
+    }
 }
