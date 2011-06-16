@@ -273,7 +273,7 @@ public class DownloadUtil
 
                 if (cur.error != null)
                 {
-                    DownloadDescriptor dd = new DownloadDescriptor(cur.uri.toString(), cur.error.toString());
+                    DownloadDescriptor dd = new DownloadDescriptor(cur.str, cur.error.toString());
                     return dd;
                 }
                 try
@@ -380,6 +380,7 @@ public class DownloadUtil
                     }
                     catch(URISyntaxException uex)
                     {
+                        pu.str = s;
                         pu.error = uex;
                     }
                     ret.add(pu);
