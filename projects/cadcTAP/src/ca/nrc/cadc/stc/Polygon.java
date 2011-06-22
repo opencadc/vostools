@@ -106,16 +106,19 @@ public class Polygon extends SpatialSubphrase implements Region
         double y = box.getCoordPair().getY();
         double hw = box.getWidth() / 2.0;
         double hh = box.getHeight() / 2.0;
+
+        double hwTop = hw / Math.cos(Math.toRadians(y+hh));
+        double hwBottom = hw / Math.cos(Math.toRadians(y-hh));
         
         CoordPair corner;
         List<CoordPair> corners = new ArrayList<CoordPair>(4);
-        corner = new CoordPair(x - hw/Math.cos(Math.toRadians(y)), y - hh);
+        corner = new CoordPair(x - hwBottom, y - hh);
         corners.add(corner);
-        corner = new CoordPair(x - hw/Math.cos(Math.toRadians(y)), y + hh);
+        corner = new CoordPair(x - hwTop, y + hh);
         corners.add(corner);
-        corner = new CoordPair(x + hw/Math.cos(Math.toRadians(y)), y + hh);
+        corner = new CoordPair(x + hwTop, y + hh);
         corners.add(corner);
-        corner = new CoordPair(x + hw/Math.cos(Math.toRadians(y)), y - hh);
+        corner = new CoordPair(x + hwBottom, y - hh);
         corners.add(corner);
         
         this.coordPairs = corners;
