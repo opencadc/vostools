@@ -226,6 +226,8 @@ public class AsciiTableWriter implements TableWriter
             throw new IllegalStateException("TapSchema cannot be null, set using setTapSchema()");
 
         FormatterFactory factory = DefaultFormatterFactory.getFormatterFactory();
+        factory.setJobID(job.getID());
+        factory.setParamList(job.getParameterList());
         List<Formatter> formatters = factory.getFormatters(tapSchema, selectList);
 
         LOG.debug("writing ResultSet, format: " + format);
