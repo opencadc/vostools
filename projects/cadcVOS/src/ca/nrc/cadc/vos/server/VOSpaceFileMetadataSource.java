@@ -71,9 +71,10 @@ package ca.nrc.cadc.vos.server;
 
 import java.io.FileNotFoundException;
 import java.net.URI;
-import java.net.URISyntaxException;
 import java.text.DateFormat;
 import java.text.ParseException;
+import java.util.ArrayList;
+import java.util.List;
 
 import org.apache.log4j.Logger;
 
@@ -88,8 +89,6 @@ import ca.nrc.cadc.vos.NodeNotFoundException;
 import ca.nrc.cadc.vos.NodeProperty;
 import ca.nrc.cadc.vos.VOS;
 import ca.nrc.cadc.vos.VOSURI;
-import java.util.ArrayList;
-import java.util.List;
 
 /**
  * Class to get and set the meta data of vospace data nodes.  This class
@@ -119,7 +118,20 @@ public class VOSpaceFileMetadataSource implements FileMetadataSource
     {
         VOSURI vos = new VOSURI(resource);
         Node persistentNode = getPersistentNode(vos);
-        
+        return get(persistentNode);
+    }
+    
+    /**
+     * Get the current file metadata for the specified resource.
+     * 
+     * @param resource identifier for the target resource
+     * @return a FileMetadata object, populated with available metadata
+     * @throws FileNotFoundException if the specified resource is not found
+     * @throws IllegalArgumentException if the specified resource is not a file
+     */
+    public FileMetadata get(Node persistentNode) 
+        throws FileNotFoundException, IllegalArgumentException
+    {
         // TODO: how to decide if we need to call NodePersistence.getProperties
         // except by knowing the props we want are already loaded by the impl?
 
@@ -145,7 +157,7 @@ public class VOSpaceFileMetadataSource implements FileMetadataSource
             }
             catch (NumberFormatException e)
             {
-                log.warn("Content Length is not a number for resource: " + resource);
+                log.warn("Content Length is not a number for resource: " + persistentNode.getUri());
             }
         }
         
