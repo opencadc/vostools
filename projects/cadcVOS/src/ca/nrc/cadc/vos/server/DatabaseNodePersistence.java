@@ -69,6 +69,8 @@
 
 package ca.nrc.cadc.vos.server;
 
+import ca.nrc.cadc.auth.IdentityManager;
+import ca.nrc.cadc.auth.X500IdentityManager;
 import ca.nrc.cadc.vos.ContainerNode;
 import ca.nrc.cadc.vos.DataNode;
 import ca.nrc.cadc.vos.Node;

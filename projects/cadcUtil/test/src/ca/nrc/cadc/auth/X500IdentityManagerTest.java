@@ -67,92 +67,76 @@
 ************************************************************************
 */
 
-package ca.nrc.cadc.vos.server;
+package ca.nrc.cadc.auth;
 
-import ca.nrc.cadc.auth.AuthenticationUtil;
+import ca.nrc.cadc.util.Log4jInit;
 import java.security.Principal;
 import java.sql.Types;
 import java.util.HashSet;
 import java.util.Set;
 import javax.security.auth.Subject;
 import javax.security.auth.x500.X500Principal;
+import junit.framework.Assert;
+
+import org.apache.log4j.Level;
+import org.apache.log4j.Logger;
+import org.junit.Test;
 
 /**
- * Implementation of IdentityManager that uses the X500Principal as the
- * definitive identifying object in a subject. Use this class if you
- * want to store the X509 distinguished name in the owner field. Other
- * principals and credentials in the callers Subject will not be saved
- * and restored: only a single (the first) X500Principal (the first one
- * found).
- * 
+ *
  * @author pdowler
  */
-public class X500IdentityManager implements IdentityManager
+public class X500IdentityManagerTest 
 {
+    private static Logger log = Logger.getLogger(X500IdentityManagerTest.class);
 
-    /**
-     * @return VARCHAR
-     */
-    public int getOwnerType()
+    static final String X500_DN = "C=CA, O=Some Org, OU=some.org.unit, CN=Some User";
+    Principal callerP;
+    Subject callerS;
+
+    static
     {
-        return Types.VARCHAR;
+        Log4jInit.setLevel("ca.nrc.cadc.vos.server", Level.INFO);
     }
 
-    /**
-     * This method gets the distinguished name from toOwnerString and massages it
-     * for persistence: canonical form and convert to lower case.
-     *
-     * @param subject
-     * @return persistable distinguished name or null if there is no
-     *         X500Principal in the subject
-     */
-    public Object toOwner(Subject subject)
+    public X500IdentityManagerTest() 
     {
-        String dn = toOwnerString(subject);
-        if (dn != null)
-            return AuthenticationUtil.canonizeDistinguishedName(dn);
-        return dn;
+        this.callerP = new X500Principal(X500_DN);
+        Set<Principal> pset = new HashSet<Principal>();
+        pset.add(callerP);
+        this.callerS = new Subject(true,pset,new HashSet(), new HashSet());
     }
 
-    /**
-     * This implementation finds the distinguished name from the first X500Principal.
-     * 
-     * @param subject
-     * @return distinguished name or null if there is no X500Principal in the subject
-     */
-    public String toOwnerString(Subject subject)
+    @Test
+    public void testRoundTrip()
     {
-        if (subject != null)
-        {
-            Set<Principal> principals = subject.getPrincipals();
-            for (Principal principal : principals)
-            {
-                if (principal instanceof X500Principal)
-                {
-                    return principal.getName();
-                }
-            }
-        }
-        return null;
-    }
-
-    /**
-     * Create a subject from the specified owner object. It is assumed the owner
-     * object is a  string form of an X500 distinguished name.
-     * @param owner
-     * @return a subject with an X500Principal inside
-     */
-    public Subject toSubject(Object owner)
-    {
+        log.debug("testRoundTrip - START");
         try
         {
-            String str = (String) owner;
-            X500Principal p = new X500Principal(str);
-            Set<Principal> pset = new HashSet<Principal>();
-            pset.add(p);
-            return new Subject(false,pset,new HashSet(), new HashSet());
-        }
-        finally { }
-    }
+            X500IdentityManager im = new X500IdentityManager();
 
+            int sqlType = im.getOwnerType();
+            Assert.assertEquals("SQL TYPE", Types.VARCHAR, sqlType);
+
+            Object persist = im.toOwner(callerS);
+            Assert.assertNotNull("toOwner", persist);
+            Assert.assertEquals("persisted type", String.class, persist.getClass());
+
+            Subject owner = im.toSubject(persist);
+            Assert.assertNotNull("constructed ownerS", owner);
+            X500Principal ownerP = AuthenticationUtil.getX500Principal(owner);
+            Assert.assertNotNull("constructed ownerP", ownerP);
+            
+            Assert.assertTrue("callerP==ownerP", AuthenticationUtil.equals(callerP, ownerP));
+        }
+        catch(Exception unexpected)
+        {
+            log.error("unexpected exception", unexpected);
+            Assert.fail("unexpected exception: " + unexpected);
+        }
+        finally
+        {
+            log.debug("testGetRootNode - DONE");
+        }
+    }
 }

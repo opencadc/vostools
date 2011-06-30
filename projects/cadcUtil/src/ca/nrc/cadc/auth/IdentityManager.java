@@ -67,7 +67,7 @@
 ************************************************************************
 */
 
-package ca.nrc.cadc.vos.server;
+package ca.nrc.cadc.auth;
 
 import javax.security.auth.Subject;
 
@@ -102,7 +102,7 @@ public interface IdentityManager
     Object toOwner(Subject subject);
 
     /**
-     * Get the SQL TYPE for the column that stores the owner object
+     * Get the SQL TYPE for the column that stores the object
      * returned by toOwner(Subject);
      *
      * @see java.sql.Types

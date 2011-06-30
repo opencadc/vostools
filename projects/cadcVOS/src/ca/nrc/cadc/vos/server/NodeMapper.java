@@ -74,9 +74,14 @@ import java.sql.SQLException;
 import java.text.DateFormat;
 import java.util.Calendar;
 import java.util.Date;
+import java.net.URI;
+import java.net.URISyntaxException;
+import javax.security.auth.Subject;
 
+import org.apache.log4j.Logger;
 import org.springframework.jdbc.core.RowMapper;
 
+import ca.nrc.cadc.auth.IdentityManager;
 import ca.nrc.cadc.date.DateUtil;
 import ca.nrc.cadc.util.HexUtil;
 import ca.nrc.cadc.vos.ContainerNode;
@@ -86,10 +91,6 @@ import ca.nrc.cadc.vos.NodeProperty;
 import ca.nrc.cadc.vos.VOS;
 import ca.nrc.cadc.vos.VOS.NodeBusyState;
 import ca.nrc.cadc.vos.VOSURI;
-import java.net.URI;
-import java.net.URISyntaxException;
-import javax.security.auth.Subject;
-import org.apache.log4j.Logger;
 
 /**
  * Class to map a result set into a Node object.
