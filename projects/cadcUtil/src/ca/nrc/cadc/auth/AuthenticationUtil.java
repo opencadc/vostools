@@ -378,9 +378,10 @@ public class AuthenticationUtil
      * Given two principal objects, return true if they represent
      * the same identity.
      * 
-     * If the principals are instances of X500Principal, the
-     * cannonical form of their names are compared.  Otherwise,
-     * their names are compared directly.
+     * The equality is defined by each principal type through the
+     * equal method, with the exception of X500Principals: if the 
+     * principals are instances of X500Principal, the
+     * cannonical form of their names are compared.
      * 
      * Two null principals are considered equal.
      * 
@@ -415,7 +416,7 @@ public class AuthenticationUtil
         {
             return false;
         }
-        return p1.getName().equals(p2.getName());
+        return p1.equals(p2);
     }
 
     /**
