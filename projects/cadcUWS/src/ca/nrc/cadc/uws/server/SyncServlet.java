@@ -262,7 +262,7 @@ public class SyncServlet extends HttpServlet
             {
                 // create
                 job = create(request, subject);
-                log.debug(String.format("persisting job: ip:[%s] path:[%s]", job.getRequesterIp(), job.getRequestPath()));
+                log.debug(String.format("persisting job: ip:[%s] path:[%s]", job.getRemoteIP(), job.getRequestPath()));
                 job = jobManager.persist(job);
                 log.debug("persisted job: " + job);
                 jobID = job.getID();
@@ -621,8 +621,7 @@ public class SyncServlet extends HttpServlet
             log.error("failed to get request path", oops);
         }
         
-        String requesterIp = request.getRemoteAddr();
-        job.setRequesterIp(requesterIp);
+        job.setRemoteIP(request.getRemoteAddr());
 
         // TODO: where to get Map of ns:<url to xsd file> for use with XmlUtil??
 

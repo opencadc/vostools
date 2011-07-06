@@ -71,7 +71,6 @@
 package ca.nrc.cadc.uws;
 
 import java.util.ArrayList;
-import java.util.Collections;
 import java.util.Date;
 import java.util.List;
 
@@ -96,8 +95,10 @@ public class Job
     private List<Result> resultsList;
     private List<Parameter> parameterList;
     private String requestPath;
-    private String requesterIp;
+    private String remoteIP;
     private JobInfo jobInfo;
+
+    private Date lastModified;
 
 
     public Job() { }
@@ -113,6 +114,17 @@ public class Job
     {
         this.jobID = jobID;
         setAll(job);
+    }
+
+    public Job(ExecutionPhase executionPhase, long executionDuration,
+            Date destructionTime, Date quote, String requestPath, String remoteIP)
+    {
+        this.executionPhase = executionPhase;
+        this.executionDuration = executionDuration;
+        this.destructionTime = destructionTime;
+        this.quote = quote;
+        this.requestPath = requestPath;
+        this.remoteIP = remoteIP;
     }
 
     /**
@@ -154,7 +166,7 @@ public class Job
         this.resultsList = resultsList;
         this.parameterList = parameterList;
         this.requestPath = requestPath;
-        this.requesterIp = requesterIp;
+        this.remoteIP = requesterIp;
         this.jobInfo = null;
     }
 
@@ -181,7 +193,7 @@ public class Job
                final Date quote, final Date startTime, final Date endTime,
                final ErrorSummary errorSummary, final Subject owner,
                final String runID, final List<Result> resultsList,
-               final JobInfo jobInfo, final String requestPath, final String requesterIp)
+               final JobInfo jobInfo, final String requestPath, final String remoteIP)
     {
         this.jobID = jobID;
         this.executionPhase = executionPhase;
@@ -196,7 +208,7 @@ public class Job
         this.resultsList = resultsList;
         this.jobInfo = jobInfo;
         this.requestPath = requestPath;
-        this.requesterIp = requesterIp;
+        this.remoteIP = remoteIP;
         this.parameterList = null;
     }
     /**
@@ -219,7 +231,7 @@ public class Job
         setParameterList(job.getParameterList());
         setOwner(job.getOwner());
         setRequestPath(job.getRequestPath());
-        setRequesterIp(job.getRequesterIp());
+        setRemoteIP(job.getRemoteIP());
         setJobInfo(job.getJobInfo());
     }
 
@@ -230,7 +242,12 @@ public class Job
                 + errorSummary + ", executionDuration=" + executionDuration + ", executionPhase=" + executionPhase + ", jobID="
                 + jobID + ", owner=" + owner + ", parameterList=" + parameterList + ", quote=" + quote + ", requestPath="
                 + requestPath + ", requesterIp="
-                + requesterIp + ", resultsList=" + resultsList + ", runID=" + runID + ", startTime=" + startTime + "]";
+                + remoteIP + ", resultsList=" + resultsList + ", runID=" + runID + ", startTime=" + startTime + "]";
+    }
+
+    public Date getLastModified()
+    {
+        return lastModified;
     }
 
     public void setID(String jobID)
@@ -450,14 +467,8 @@ public class Job
      * The Results List object is a container for formal results of the job.
      * Its children may be any objects resulting from the computation that may
      * be fetched from the service when the job has completed.
-     * <p/>
-     * Reading the Results List itself enumerates the available or expected
-     * result objects.
-     * <p/>
-     * The children of the Results List may be read but not updated or deleted.
-     * The client may not add anything to the Results List.
-     *
-     * @return ResultList instance.
+     * 
+     * @return list of results
      */
     public List<Result> getResultsList()
     {
@@ -466,7 +477,7 @@ public class Job
             setResultsList(new ArrayList<Result>());
         }
 
-        return Collections.unmodifiableList(resultsList);
+        return resultsList;
     }
 
     /**
@@ -548,6 +559,16 @@ public class Job
         this.requestPath = path;
     }
 
+    public String getRemoteIP()
+    {
+        return remoteIP;
+    }
+
+    public void setRemoteIP(String remoteIP)
+    {
+        this.remoteIP = remoteIP;
+    }
+
     /**
      * The nebulous ANY object accommodates a domain object meaningful to
      * specific implementors of the UWS system.  The default implementation will
@@ -565,19 +586,5 @@ public class Job
         this.jobInfo = jobInfo;
     }
 
-    /**
-     * @param requesterIp the requesterIp to set
-     */
-    public void setRequesterIp(String requesterIp)
-    {
-        this.requesterIp = requesterIp;
-    }
-
-    /**
-     * @return the requesterIp
-     */
-    public String getRequesterIp()
-    {
-        return requesterIp;
-    }
+    
 }

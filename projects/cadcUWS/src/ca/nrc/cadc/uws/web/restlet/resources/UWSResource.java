@@ -291,7 +291,7 @@ public abstract class UWSResource extends ServerResource
      * 
      * @return String of requester IP
      */
-    protected String getRequesterIp()
+    protected String getRemoteIP()
     {
         String ip = getRequest().getClientInfo().getAddress();
         return ip;

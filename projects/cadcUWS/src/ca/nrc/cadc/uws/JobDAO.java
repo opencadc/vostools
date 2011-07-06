@@ -509,10 +509,10 @@ public class JobDAO
         }
         
         sb.append(",");
-        if (job.getRequesterIp() == null)
+        if (job.getRemoteIP() == null)
             sb.append("NULL");
         else
-            sb.append("'").append(job.getRequesterIp()).append("'");
+            sb.append("'").append(job.getRemoteIP()).append("'");
         
         sb.append(",");
         if (job.getJobInfo() == null)
