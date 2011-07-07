@@ -136,7 +136,7 @@ public class NodeMapper implements RowMapper
         boolean isPublic = rs.getBoolean("isPublic");
 
         //String owner = getString(rs, col++);
-        Object ownerObject = rs.getObject("owner");
+        Object ownerObject = rs.getObject("ownerID");
         Subject subject = identManager.toSubject(ownerObject);
         String owner = identManager.toOwnerString(subject);
         

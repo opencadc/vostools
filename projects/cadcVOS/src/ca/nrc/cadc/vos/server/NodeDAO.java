@@ -782,7 +782,7 @@ public class NodeDAO
     protected String getSelectChildNodeSQL(ContainerNode parent)
     {
         StringBuilder sb = new StringBuilder();
-        sb.append("SELECT nodeID, parentID, name, type, busyState, markedForDeletion, owner, isPublic, groupRead, groupWrite, ");
+        sb.append("SELECT nodeID, parentID, name, type, busyState, markedForDeletion, ownerID, isPublic, groupRead, groupWrite, ");
         sb.append("contentLength, contentType, contentEncoding, contentMD5, lastModified FROM ");
         sb.append(getNodeTableName());
         sb.append(" WHERE name = ?");
@@ -802,7 +802,7 @@ public class NodeDAO
     protected String getSelectNodesByParentSQL(Node parent)
     {
         StringBuilder sb = new StringBuilder();
-        sb.append("SELECT nodeID, parentID, name, type, busyState, markedForDeletion, owner, isPublic, groupRead, groupWrite, ");
+        sb.append("SELECT nodeID, parentID, name, type, busyState, markedForDeletion, ownerID, isPublic, groupRead, groupWrite, ");
         sb.append("contentLength, contentType, contentEncoding, contentMD5, lastModified FROM ");
         sb.append(getNodeTableName());
         sb.append(" WHERE parentID = ");
@@ -905,7 +905,7 @@ public class NodeDAO
         "busyState",
         "markedForDeletion",
         "isPublic",
-        "owner",
+        "ownerID",
         "contentLength",
         "contentType",
         "contentEncoding",
@@ -923,7 +923,7 @@ public class NodeDAO
         "busyState",
         "markedForDeletion",
         "isPublic",
-        "owner",
+        "ownerID",
         "contentLength",
         "contentType",
         "contentEncoding",
