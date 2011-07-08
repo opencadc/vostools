@@ -171,7 +171,7 @@ public class TransferReader
     {
         Element root = document.getRootElement();
 
-        Transfer.Direction direction = parseDirection(root);
+        Direction direction = parseDirection(root);
         // String serviceUrl; // not in XML yet
         Node target = new DataNode(new VOSURI(root.getChildText("target", VOS.NS)));
 
@@ -205,22 +205,22 @@ public class TransferReader
         return rtn;
     }
 
-    private Transfer.Direction parseDirection(Element root)
+    private Direction parseDirection(Element root)
     {
-        Transfer.Direction rtn = null;
+        Direction rtn = null;
         String strDirection = root.getChildText("direction", VOS.NS);
         
         if (strDirection == null)
             throw new RuntimeException("Did not find direction element in XML.");
         
-        if (strDirection.equalsIgnoreCase(Transfer.Direction.pullFromVoSpace.toString()))
-            rtn = Transfer.Direction.pullFromVoSpace;
-        else if (strDirection.equalsIgnoreCase(Transfer.Direction.pullToVoSpace.toString()))
-            rtn = Transfer.Direction.pullToVoSpace;
-        else if (strDirection.equalsIgnoreCase(Transfer.Direction.pushFromVoSpace.toString()))
-            rtn = Transfer.Direction.pushFromVoSpace;
-        else if (strDirection.equalsIgnoreCase(Transfer.Direction.pushToVoSpace.toString()))
-            rtn = Transfer.Direction.pushToVoSpace;
+        if (strDirection.equalsIgnoreCase(Direction.pullFromVoSpace.toString()))
+            rtn = Direction.pullFromVoSpace;
+        else if (strDirection.equalsIgnoreCase(Direction.pullToVoSpace.toString()))
+            rtn = Direction.pullToVoSpace;
+        else if (strDirection.equalsIgnoreCase(Direction.pushFromVoSpace.toString()))
+            rtn = Direction.pushFromVoSpace;
+        else if (strDirection.equalsIgnoreCase(Direction.pushToVoSpace.toString()))
+            rtn = Direction.pushToVoSpace;
         return rtn;
     }
 

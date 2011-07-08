@@ -69,21 +69,30 @@
 
 package ca.nrc.cadc.vos.client;
 
-import ca.nrc.cadc.auth.SSLUtil;
-import ca.nrc.cadc.vos.ContainerNode;
 import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.io.OutputStream;
 import java.io.OutputStreamWriter;
+import java.io.StringWriter;
 import java.net.HttpURLConnection;
 import java.net.MalformedURLException;
 import java.net.URL;
+import java.security.AccessControlContext;
+import java.security.AccessControlException;
+import java.security.AccessController;
 import java.util.List;
+
+import javax.net.ssl.HttpsURLConnection;
+import javax.net.ssl.SSLSocketFactory;
+import javax.security.auth.Subject;
 
 import org.apache.log4j.Logger;
 
+import ca.nrc.cadc.auth.SSLUtil;
+import ca.nrc.cadc.vos.ContainerNode;
+import ca.nrc.cadc.vos.Direction;
 import ca.nrc.cadc.vos.Node;
 import ca.nrc.cadc.vos.NodeNotFoundException;
 import ca.nrc.cadc.vos.NodeParsingException;
@@ -100,13 +109,6 @@ import ca.nrc.cadc.vos.TransferWriter;
 import ca.nrc.cadc.vos.VOS;
 import ca.nrc.cadc.vos.VOSURI;
 import ca.nrc.cadc.vos.View;
-import java.io.StringWriter;
-import java.security.AccessControlContext;
-import java.security.AccessControlException;
-import java.security.AccessController;
-import javax.net.ssl.HttpsURLConnection;
-import javax.net.ssl.SSLSocketFactory;
-import javax.security.auth.Subject;
 
 /**
  * @author zhangsa
@@ -519,12 +521,14 @@ public class VOSpaceClient
 
     public Transfer pushToVoSpace(Transfer transfer)
     {
-        return createTransfer(transfer, Transfer.Direction.pushToVoSpace);
+        transfer.setDirection(Direction.pushToVoSpace);
+        return createTransfer(transfer);
     }
 
     public Transfer pullFromVoSpace(Transfer transfer)
     {
-        return createTransfer(transfer, Transfer.Direction.pullFromVoSpace);
+        transfer.setDirection(Direction.pullFromVoSpace);
+        return createTransfer(transfer);
     }
 
     /**
@@ -716,7 +720,7 @@ public class VOSpaceClient
         this.baseUrl = baseUrl;
     }
 
-    private Transfer createTransfer(Transfer transfer, Transfer.Direction direction)
+    private Transfer createTransfer(Transfer transfer)
     {
         Transfer rtn = null;
         try

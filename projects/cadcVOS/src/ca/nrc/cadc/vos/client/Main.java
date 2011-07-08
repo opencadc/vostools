@@ -104,6 +104,7 @@ import ca.nrc.cadc.uws.util.StringUtil;
 import ca.nrc.cadc.vos.ClientTransfer;
 import ca.nrc.cadc.vos.ContainerNode;
 import ca.nrc.cadc.vos.DataNode;
+import ca.nrc.cadc.vos.Direction;
 import ca.nrc.cadc.vos.Node;
 import ca.nrc.cadc.vos.NodeNotFoundException;
 import ca.nrc.cadc.vos.NodeProperty;
@@ -112,7 +113,6 @@ import ca.nrc.cadc.vos.Transfer;
 import ca.nrc.cadc.vos.VOS;
 import ca.nrc.cadc.vos.VOSURI;
 import ca.nrc.cadc.vos.View;
-import ca.nrc.cadc.vos.Transfer.Direction;
 import ca.nrc.cadc.vos.View.Parameter;
 
 /**
@@ -325,11 +325,11 @@ public class Main implements Runnable
         log.debug("doCopy");
         try
         {
-            if (this.transferDirection.equals(Transfer.Direction.pushToVoSpace))
+            if (this.transferDirection.equals(Direction.pushToVoSpace))
             {
                 copyToVOSpace();
             }
-            else if (this.transferDirection.equals(Transfer.Direction.pullFromVoSpace))
+            else if (this.transferDirection.equals(Direction.pullFromVoSpace))
             {
                 copyFromVOSpace();
             }
@@ -538,7 +538,7 @@ public class Main implements Runnable
         transfer.setTarget(dnode);
         transfer.setView(dview);
         transfer.setProtocols(protocols);
-        transfer.setDirection(this.transferDirection);
+        transfer.setDirection(transferDirection);
 
         ClientTransfer clientTransfer = new ClientTransfer(this.client.pushToVoSpace(transfer));
 

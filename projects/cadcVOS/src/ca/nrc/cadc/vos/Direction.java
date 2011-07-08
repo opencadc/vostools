@@ -1,4 +1,4 @@
-/*
+/**
 ************************************************************************
 *******************  CANADIAN ASTRONOMY DATA CENTRE  *******************
 **************  CENTRE CANADIEN DE DONNÉES ASTRONOMIQUES  **************
@@ -69,170 +69,63 @@
 
 package ca.nrc.cadc.vos;
 
-import java.io.IOException;
-import java.io.StringWriter;
-import java.util.List;
-
-import org.apache.log4j.Logger;
-
 /**
- * @author zhangsa
+ * Class to hold the direction information for a transfer.
+ * 
+ * @author majorb
  *
  */
-public class Transfer implements Runnable
+public class Direction
 {
-    private static Logger log = Logger.getLogger(Transfer.class);
+    
+    // predefined direction values
+    public static final String pushToVoSpaceValue = "pushToVoSpace";
+    public static final String pullToVoSpaceValue = "pullToVoSpace";
+    public static final String pushFromVoSpaceValue = "pushFromVoSpace";
+    public static final String pullFromVoSpaceValue = "pullFromVoSpace";
+    
+    // predefined directions
+    public static final Direction pushToVoSpace = new Direction(pushToVoSpaceValue);
+    public static final Direction pullToVoSpace = new Direction(pullToVoSpaceValue);
+    public static final Direction pushFromVoSpace = new Direction(pushFromVoSpaceValue);
+    public static final Direction pullFromVoSpace = new Direction(pullFromVoSpaceValue);
+    
+    private String value;
 
-    protected Direction direction;
-
-    // Reqeust member variables
-    protected String serviceUrl;
-    protected Node target;
-    protected View view;
-    protected List<Protocol> protocols;
-    protected boolean keepBytes;
-
-    public Transfer()
+    /**
+     * Direction constructor;
+     * @param value
+     */
+    public Direction(String value)
     {
+        this.value = value;
     }
 
-    public String getUploadEndpoint() 
+    /**
+     * Get the value of this direction.
+     * 
+     * @return
+     */
+    public String getValue()
     {
-        String ret = getEndpoint(VOS.PROTOCOL_HTTP_PUT);
-        if (ret == null)
-            ret = getEndpoint(VOS.PROTOCOL_HTTPS_PUT);
-        return ret;
+        return value;
     }
-
-    public String getDownloadEndpoint() 
+    
+    /**
+     * Return true if the values are equal, ignoring case.
+     */
+    @Override
+    public boolean equals(Object o)
     {
-        String rtn = getEndpoint(VOS.PROTOCOL_HTTP_GET);
-        if (rtn == null)
-            rtn = getEndpoint(VOS.PROTOCOL_HTTPS_GET);
-        return rtn;
-    }
-
-    public String getEndpoint(String strProtocol) 
-    {
-        String rtn = null;
-        if (this.protocols != null)
+        if (o != null && o instanceof Direction)
         {
-            for (Protocol p : this.protocols)
+            String oValue = ((Direction) o).getValue();
+            if (oValue != null)
             {
-                if (p.getUri().equalsIgnoreCase(strProtocol)) {
-                    rtn = p.getEndpoint();
-                    break;
-                }
+                return oValue.equalsIgnoreCase(value);
             }
         }
-        return rtn;
+        return false;
     }
-
-    public String getPhase()
-    {
-        throw new UnsupportedOperationException("Feature under construction.");
-    }
-
-    public String getResults()
-    {
-        //TODO
-        return null;
-        //throw new UnsupportedOperationException("Feature under construction.");
-    }
-
-    public String getErrors()
-    {
-        throw new UnsupportedOperationException("Feature under construction.");
-    }
-
-    public void run()
-    {
-        throw new UnsupportedOperationException("Feature under construction.");
-    }
-
-    public String toXmlString()
-    {
-        String rtn = null;
-        try
-        {
-            TransferWriter writer = new TransferWriter();
-            StringWriter sw = new StringWriter();
-            writer.write(this, sw);
-            rtn = sw.toString();
-            sw.close();
-        } catch (IOException e)
-        {
-            e.printStackTrace();
-            throw new RuntimeException(e);
-        }
-        return rtn;
-    }
-
-    public Direction getDirection()
-    {
-        return direction;
-    }
-
-    public void setDirection(Direction direction)
-    {
-        this.direction = direction;
-    }
-
-    public String getServiceUrl()
-    {
-        return serviceUrl;
-    }
-
-    public void setServiceUrl(String serviceUrl)
-    {
-        this.serviceUrl = serviceUrl;
-    }
-
-    public Node getTarget()
-    {
-        return target;
-    }
-
-    public void setTarget(Node target)
-    {
-        this.target = target;
-    }
-
-    public View getView()
-    {
-        return view;
-    }
-
-    public void setView(View view)
-    {
-        this.view = view;
-    }
-
-    public List<Protocol> getProtocols()
-    {
-        return protocols;
-    }
-
-    public void setProtocols(List<Protocol> protocols)
-    {
-        this.protocols = protocols;
-    }
-
-    public boolean isKeepBytes()
-    {
-        return keepBytes;
-    }
-
-    public void setKeepBytes(boolean keepBytes)
-    {
-        this.keepBytes = keepBytes;
-    }
-
-    @Override
-    public String toString()
-    {
-        return "Transfer [direction=" + direction + ", keepBytes=" + keepBytes + ", protocols=" + protocols + ", serviceUrl="
-                + serviceUrl + ", target=" + target + ", view=" + view + "]";
-    }
-
+    
 }

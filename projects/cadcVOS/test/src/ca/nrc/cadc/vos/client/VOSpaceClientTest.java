@@ -71,6 +71,7 @@ package ca.nrc.cadc.vos.client;
 
 import java.io.File;
 import java.net.InetAddress;
+import java.net.URI;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -78,7 +79,11 @@ import junit.framework.Assert;
 
 import org.apache.log4j.Level;
 import org.apache.log4j.Logger;
-import org.junit.*;
+import org.junit.After;
+import org.junit.AfterClass;
+import org.junit.Before;
+import org.junit.BeforeClass;
+import org.junit.Test;
 
 import ca.nrc.cadc.auth.BasicX509TrustManager;
 import ca.nrc.cadc.auth.SSLUtil;
@@ -87,6 +92,7 @@ import ca.nrc.cadc.util.Log4jInit;
 import ca.nrc.cadc.vos.ClientTransfer;
 import ca.nrc.cadc.vos.ContainerNode;
 import ca.nrc.cadc.vos.DataNode;
+import ca.nrc.cadc.vos.Direction;
 import ca.nrc.cadc.vos.Node;
 import ca.nrc.cadc.vos.NodeProperty;
 import ca.nrc.cadc.vos.Protocol;
@@ -95,7 +101,6 @@ import ca.nrc.cadc.vos.Transfer;
 import ca.nrc.cadc.vos.VOS;
 import ca.nrc.cadc.vos.VOSURI;
 import ca.nrc.cadc.vos.View;
-import java.net.URI;
 
 /**
  * Base VOSpaceClient test code. This test code requires a running VOSpace service
@@ -378,7 +383,7 @@ public class VOSpaceClientTest
         transfer.setTarget(dnode);
         transfer.setView(dview);
         transfer.setProtocols(protocols);
-        transfer.setDirection(Transfer.Direction.pushToVoSpace);
+        transfer.setDirection(Direction.pushToVoSpace);
 
         ClientTransfer clientTransfer = new ClientTransfer(client.pushToVoSpace(transfer));
         log.debug(clientTransfer.toXmlString());
@@ -407,7 +412,7 @@ public class VOSpaceClientTest
         
         Transfer txSent = new Transfer();
         txSent.setTarget(txUpload.getTarget());
-        txSent.setDirection(Transfer.Direction.pullFromVoSpace);
+        txSent.setDirection(Direction.pullFromVoSpace);
         txSent.setView(txUpload.getView());
         txSent.setProtocols(protocols);
         

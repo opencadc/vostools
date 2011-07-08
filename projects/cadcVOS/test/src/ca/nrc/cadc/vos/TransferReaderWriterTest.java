@@ -117,7 +117,7 @@ public class TransferReaderWriterTest
         View view = new View(new URI(VOS.VIEW_DEFAULT));
 
         transfer = new Transfer();
-        transfer.setDirection(Transfer.Direction.pullFromVoSpace);
+        transfer.setDirection(Direction.pullFromVoSpace);
         transfer.setKeepBytes(true);
         
         transfer.setServiceUrl("http://service.url.for.transfer");
