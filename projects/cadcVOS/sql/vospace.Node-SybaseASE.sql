@@ -83,7 +83,7 @@ CREATE TABLE Node (
 -- this is only used if using the NodeDAO.markForDeletion but needs to be here
    markedForDeletion BIT               NOT NULL,
 
-   owner             VARCHAR(256)      NOT NULL,
+   ownerID           VARCHAR(256)      NOT NULL,
    groupRead         VARCHAR(256)      NULL,
    groupWrite        VARCHAR(256)      NULL,
    isPublic          BIT               NOT NULL,
