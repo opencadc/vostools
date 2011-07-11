@@ -74,10 +74,16 @@ import java.security.AccessControlContext;
 import java.security.AccessController;
 import java.security.Principal;
 import java.security.PrivateKey;
+import java.security.cert.CertificateException;
+import java.security.cert.CertificateExpiredException;
+import java.security.cert.CertificateNotYetValidException;
 import java.security.cert.X509Certificate;
+import java.text.DateFormat;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
+import java.util.Date;
 import java.util.HashSet;
 import java.util.Iterator;
 import java.util.List;
@@ -85,12 +91,12 @@ import java.util.Set;
 
 import javax.security.auth.Subject;
 import javax.security.auth.x500.X500Principal;
+import javax.servlet.http.HttpServletRequest;
 
 import org.apache.log4j.Logger;
 
+import ca.nrc.cadc.date.DateUtil;
 import ca.nrc.cadc.net.NetUtil;
-import java.util.Arrays;
-import javax.servlet.http.HttpServletRequest;
 
 /**
  * Security utility.
@@ -569,6 +575,69 @@ public class AuthenticationUtil
                 x500Principal = (X500Principal) principal;
         }
         return x500Principal;
+    }
+    
+    /**
+     * This method checks the validity of X509Certificates associated with
+     * a subject.
+     * @param subject subject holding the certificates to be validated
+     * @throws CertificateException Null subject or no certificates found
+     * @throws CertificateNotYetValidException certificate not yet valid
+     * @throws CertificateExpiredException certificate is expired
+     */
+    public static void checkCertificates(final Subject subject)
+            throws CertificateException, CertificateNotYetValidException,
+            CertificateExpiredException
+    {
+        // check validity
+        if (subject != null)
+        {
+            Set<X509CertificateChain> certs = subject
+                    .getPublicCredentials(X509CertificateChain.class);
+            if (certs.size() == 0)
+            {
+                // subject without certs means something went wrong above
+                throw new CertificateException(
+                        "No certificates associated with the subject");
+            }
+            DateFormat df = DateUtil.getDateFormat(
+                    DateUtil.ISO_DATE_FORMAT, DateUtil.LOCAL);
+            X509CertificateChain chain = certs.iterator().next(); // the
+                                                                    // first
+                                                                    // one
+            Date start = null;
+            Date end = null;
+            for (X509Certificate c : chain.getChain())
+            {
+                try
+                {
+                    start = c.getNotBefore();
+                    end = c.getNotAfter();
+                    c.checkValidity();
+
+                }
+                catch (CertificateExpiredException exp)
+                {
+                    // improve the message
+                    String msg = "certificate has expired (valid from "
+                            + df.format(start) + " to " + df.format(end)
+                            + ")";
+                    throw new CertificateExpiredException(msg);
+                }
+                catch (CertificateNotYetValidException exp)
+                {
+                    // improve the message
+                    String msg = "certificate not yet valid (valid from "
+                            + df.format(start) + " to " + df.format(end)
+                            + ")";
+                    throw new CertificateNotYetValidException(msg);
+                }
+            }
+        }
+        else
+        {
+            throw new CertificateException("No certificates (Null subject)");
+        }
     }
 
 }
