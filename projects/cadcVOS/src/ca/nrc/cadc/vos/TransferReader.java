@@ -213,13 +213,13 @@ public class TransferReader
         if (strDirection == null)
             throw new RuntimeException("Did not find direction element in XML.");
         
-        if (strDirection.equalsIgnoreCase(Direction.pullFromVoSpace.toString()))
+        if (strDirection.equalsIgnoreCase(Direction.pullFromVoSpace.getValue()))
             rtn = Direction.pullFromVoSpace;
-        else if (strDirection.equalsIgnoreCase(Direction.pullToVoSpace.toString()))
+        else if (strDirection.equalsIgnoreCase(Direction.pullToVoSpace.getValue()))
             rtn = Direction.pullToVoSpace;
-        else if (strDirection.equalsIgnoreCase(Direction.pushFromVoSpace.toString()))
+        else if (strDirection.equalsIgnoreCase(Direction.pushFromVoSpace.getValue()))
             rtn = Direction.pushFromVoSpace;
-        else if (strDirection.equalsIgnoreCase(Direction.pushToVoSpace.toString()))
+        else if (strDirection.equalsIgnoreCase(Direction.pushToVoSpace.getValue()))
             rtn = Direction.pushToVoSpace;
         return rtn;
     }

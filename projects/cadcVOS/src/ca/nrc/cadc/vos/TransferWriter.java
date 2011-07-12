@@ -136,7 +136,7 @@ public class TransferWriter
         root.addContent(e);
 
         e = new Element("direction", VOS.NS);
-        e.addContent(transfer.getDirection().toString());
+        e.addContent(transfer.getDirection().getValue());
         root.addContent(e);
 
         e = new Element("view", VOS.NS);
