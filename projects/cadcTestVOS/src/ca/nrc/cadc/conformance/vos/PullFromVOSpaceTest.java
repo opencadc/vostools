@@ -83,6 +83,7 @@ import java.util.List;
 import ca.nrc.cadc.vos.View;
 import java.net.URI;
 import ca.nrc.cadc.vos.DataNode;
+import ca.nrc.cadc.vos.Direction;
 import org.junit.Ignore;
 import org.junit.Assert;
 import ca.nrc.cadc.vos.Transfer;
@@ -150,7 +151,7 @@ public class PullFromVOSpaceTest extends VOSTransferTest
 
             // Create a Transfer.
             Transfer transfer = new Transfer();
-            transfer.setDirection(Transfer.Direction.pullFromVoSpace);
+            transfer.setDirection(Direction.pullFromVoSpace);
             transfer.setTarget(dataNode);
             transfer.setView(new View(new URI(VOS.VIEW_DEFAULT)));
             List<Protocol> protocols = new ArrayList<Protocol>();
@@ -184,7 +185,7 @@ public class PullFromVOSpaceTest extends VOSTransferTest
             TransferReader reader = new TransferReader();
             transfer = reader.read(xml);
 
-            assertEquals("direction", Transfer.Direction.pullFromVoSpace, transfer.getDirection());
+            assertEquals("direction", Direction.pullFromVoSpace, transfer.getDirection());
 
             // that bogus one should not be here, so only 0 to 2 protocols
             assertTrue(transfer.getProtocols().size() < 3);
@@ -227,7 +228,7 @@ public class PullFromVOSpaceTest extends VOSTransferTest
 
             // Create a Transfer.
             Transfer transfer = new Transfer();
-            transfer.setDirection(Transfer.Direction.pullFromVoSpace);
+            transfer.setDirection(Direction.pullFromVoSpace);
             transfer.setTarget(dataNode);
             transfer.setView(new View(new URI(VOS.VIEW_DEFAULT)));
             List<Protocol> protocols = new ArrayList<Protocol>();
