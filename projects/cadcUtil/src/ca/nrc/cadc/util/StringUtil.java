@@ -69,6 +69,10 @@
 
 package ca.nrc.cadc.util;
 
+import java.io.BufferedReader;
+import java.io.IOException;
+import java.io.InputStream;
+import java.io.InputStreamReader;
 import java.util.ArrayList;
 
 /**
@@ -341,4 +345,43 @@ public class StringUtil
             sb.append(str);
         return sb.toString();
     }
+
+    /**
+     * Read an input stream into a string.  The input cannot be of binary contents.
+     *
+     * @param inputStream
+     * @param charsetName
+     * @return String
+     * @throws IOException
+     * @author zhangsa
+     */
+    public static String readFromInputStream(InputStream inputStream, String charsetName)
+        throws IOException
+    {
+        StringBuffer sb = new StringBuffer();
+        BufferedReader buf = null;
+        try
+        {
+            buf = new BufferedReader(new InputStreamReader(inputStream, charsetName));
+            String line = buf.readLine();
+            while(line != null)
+            {
+                sb.append(line);
+                sb.append("\n");
+                line = buf.readLine();
+            }
+        }
+        finally
+        {
+            if (buf != null) try
+            {
+                buf.close();
+            }
+            catch (IOException ignored)
+            {
+            }
+        }
+        return sb.toString();
+    }
+
 }
