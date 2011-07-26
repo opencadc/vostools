@@ -2,7 +2,7 @@
  ************************************************************************
  ****  C A N A D I A N   A S T R O N O M Y   D A T A   C E N T R E  *****
  *
- * (c) 2009.                            (c) 2009.
+ * (c) 2010.                         (c) 2010.
  * National Research Council            Conseil national de recherches
  * Ottawa, Canada, K1A 0R6              Ottawa, Canada, K1A 0R6
  * All rights reserved                  Tous droits reserves
@@ -24,41 +24,33 @@
  *
  *
  * @author jenkinsd
- * Dec 15, 2009 - 11:41:45 AM
+ * Jan 6, 2010 - 10:15:22 AM
  *
- * 
- * 
+ *
+ *
  ****  C A N A D I A N   A S T R O N O M Y   D A T A   C E N T R E  *****
  ************************************************************************
  */
-package ca.nrc.cadc.uws.web.restlet.resources;
+package ca.nrc.cadc.uws.web;
 
-import org.apache.log4j.Logger;
-import org.junit.Assert;
-import org.junit.Before;
-import org.junit.Test;
+import ca.nrc.cadc.uws.web.restlet.resources.AsynchResourceTest;
+import ca.nrc.cadc.uws.web.restlet.resources.ErrorResourceTest;
+import ca.nrc.cadc.uws.web.restlet.resources.ParameterListResourceTest;
+import ca.nrc.cadc.uws.web.restlet.resources.ResultListResourceTest;
+import ca.nrc.cadc.uws.web.restlet.resources.ResultResourceTest;
+import org.junit.runner.RunWith;
+import org.junit.runners.Suite;
 
-public class ResultResourceTest
+
+@RunWith(Suite.class)
+@Suite.SuiteClasses
+({
+        AsynchResourceTest.class,
+        ErrorResourceTest.class,
+        ResultResourceTest.class,
+        ResultListResourceTest.class,
+        ParameterListResourceTest.class
+})
+public class ResourceTestSuite
 {
-    private static Logger log = Logger.getLogger(ResultResourceTest.class);
-    
-    @Before
-    public void setup()
-    {
-        
-    }
-
-    @Test
-    public void represent() // GET
-    {
-        try
-        {
-
-        }
-        catch(Exception unexpected)
-        {
-            log.error("unexpected exception", unexpected);
-            Assert.fail("unexpected exception: " + unexpected);
-        }
-    }
 }

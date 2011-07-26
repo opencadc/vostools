@@ -86,6 +86,7 @@ import org.junit.BeforeClass;
 import org.junit.Test;
 
 import ca.nrc.cadc.util.Log4jInit;
+import ca.nrc.cadc.uws.server.JobPersistenceUtil;
 import java.io.IOException;
 import java.io.StringReader;
 import java.io.StringWriter;
@@ -93,6 +94,7 @@ import java.security.Principal;
 import java.text.DateFormat;
 import java.util.HashSet;
 import java.util.Set;
+import java.util.regex.Pattern;
 import javax.security.auth.Subject;
 import javax.security.auth.x500.X500Principal;
 import org.apache.log4j.Level;
@@ -147,12 +149,11 @@ public class JobReaderWriterTest
     {
         Job ret = new Job();
         ret.setExecutionPhase(ExecutionPhase.PENDING);
-        ret.setID(JOB_ID);
+        JobPersistenceUtil.assignID(ret, JOB_ID);
         ret.setRunID(RUN_ID);
         ret.setQuote(new Date(baseDate.getTime() + 10000L));
         ret.setExecutionDuration(123L);
         ret.setDestructionTime(new Date(baseDate.getTime() + 300000L));
-        ret.setOwner(null);
         return ret;
     }
 
@@ -178,24 +179,24 @@ public class JobReaderWriterTest
     void complete(Job j)
         throws Exception
     {
+        j.setExecutionPhase(ExecutionPhase.COMPLETED);
         List<Result> results = new ArrayList<Result>();
         results.add(new Result("rsName1", new URL("http://www.ivoa.net/url1"), true));
         results.add(new Result("rsName2", new URL("http://www.ivoa.net/url2"), false));
         j.setResultsList(results);
         j.setStartTime(new Date(baseDate.getTime() + 300L));
         j.setEndTime(new Date(baseDate.getTime() + 500L));
-        j.setExecutionPhase(ExecutionPhase.COMPLETED);
+        
     }
 
     void fail(Job j)
         throws Exception
     {
-        ErrorSummary err = new ErrorSummary("oops", ErrorType.FATAL, true);
-        err.setDocumentURL(new URL("http://www.ivoa.net/oops"));
-        j.setErrorSummary(err);
+        j.setExecutionPhase(ExecutionPhase.ERROR);
+        j.setErrorSummary(new ErrorSummary("oops", ErrorType.FATAL, new URL("http://www.ivoa.net/oops")));
         j.setStartTime(new Date(baseDate.getTime() + 300L));
         j.setEndTime(new Date(baseDate.getTime() + 400L));
-        j.setExecutionPhase(ExecutionPhase.ERROR);
+        
     }
 
     private String toXML(Job j)
@@ -212,17 +213,18 @@ public class JobReaderWriterTest
 
     private void assertEquals(Job exp, Job act)
     {
-        Assert.assertEquals(exp.getID(), act.getID());
-        Assert.assertEquals(exp.getRunID(), act.getRunID());
-        Assert.assertEquals(exp.getExecutionPhase(), act.getExecutionPhase());
-        Assert.assertEquals(exp.getExecutionDuration(), act.getExecutionDuration());
-        Assert.assertEquals(exp.getQuote(), act.getQuote());
-        Assert.assertEquals(exp.getDestructionTime(), act.getDestructionTime());
-        Assert.assertEquals(exp.getStartTime(), act.getStartTime());
-        Assert.assertEquals(exp.getEndTime(), act.getEndTime());
+        Assert.assertEquals("jobID", exp.getID(), act.getID());
+        Assert.assertEquals("runID", exp.getRunID(), act.getRunID());
+        Assert.assertEquals("phase", exp.getExecutionPhase(), act.getExecutionPhase());
+        Assert.assertEquals("duration", exp.getExecutionDuration(), act.getExecutionDuration());
+        Assert.assertEquals("quote", exp.getQuote(), act.getQuote());
+        Assert.assertEquals("destruction", exp.getDestructionTime(), act.getDestructionTime());
+        Assert.assertEquals("start", exp.getStartTime(), act.getStartTime());
+        Assert.assertEquals("end", exp.getEndTime(), act.getEndTime());
 
-        assertEqualSubject(exp.getOwner(), act.getOwner());
+        Assert.assertEquals("ownerID", exp.getOwnerID(), act.getOwnerID());
 
+        assertEqualParameters(exp.getParameterList(), act.getParameterList());
         assertEqualResults(exp.getResultsList(), act.getResultsList());
 
         assertEqualError(exp.getErrorSummary(), act.getErrorSummary());
@@ -241,7 +243,8 @@ public class JobReaderWriterTest
         }
 
         Assert.assertNotNull("expect non-null jobInfo", act);
-        Assert.assertEquals("jobInfo content", exp.getContent(), act.getContent());
+        // TODO: compare content for equivalence (XML)
+        //Assert.assertEquals("jobInfo content", exp.getContent(), act.getContent());
     }
 
     private void assertEqualSubject(Subject exp, Subject act)
@@ -291,9 +294,21 @@ public class JobReaderWriterTest
         }
 
         Assert.assertEquals(exp.getSummaryMessage(), act.getSummaryMessage());
-//        Assert.assertEquals(exp.getDocumentURL(), act.getDocumentURL());
+        Assert.assertEquals(exp.getHasDetail(), act.getHasDetail());
+        // although ErrorSummary has a getDocumentURL, it is not transferred via
+        // the XML serialisation
     }
 
+    private void assertEqualParameters(List<Parameter> exp, List<Parameter> act)
+    {
+        if (exp == null)
+        {
+            Assert.assertNull("parameters", act);
+            return;
+        }
+        Assert.assertEquals("number of parameters", exp.size(), act.size());
+
+    }
     private void assertEqualResults(List<Result> exp, List<Result> act)
     {
         if (exp == null)
@@ -301,7 +316,7 @@ public class JobReaderWriterTest
             Assert.assertNull("results", act);
             return;
         }
-        Assert.assertEquals(exp.size(), act.size());
+        Assert.assertEquals("number of results", exp.size(), act.size());
 
     }
 
@@ -326,7 +341,7 @@ public class JobReaderWriterTest
         }
         catch(Exception unexpected)
         {
-            log.debug("unexpected exception", unexpected);
+            log.error("unexpected exception", unexpected);
             Assert.fail("unexpected exception: " + unexpected);
         }
     }
@@ -343,7 +358,7 @@ public class JobReaderWriterTest
         }
         catch(Exception unexpected)
         {
-            log.debug("unexpected exception", unexpected);
+            log.error("unexpected exception", unexpected);
             Assert.fail("unexpected exception: " + unexpected);
         }
     }
@@ -360,7 +375,7 @@ public class JobReaderWriterTest
         }
         catch(Exception unexpected)
         {
-            log.debug("unexpected exception", unexpected);
+            log.error("unexpected exception", unexpected);
             Assert.fail("unexpected exception: " + unexpected);
         }
     }
@@ -377,30 +392,24 @@ public class JobReaderWriterTest
         }
         catch(Exception unexpected)
         {
-            log.debug("unexpected exception", unexpected);
+            log.error("unexpected exception", unexpected);
             Assert.fail("unexpected exception: " + unexpected);
         }
     }
 
     @Test
-    public void testWithOwner()
+    public void testWithOwnerID()
     {
         log.debug("testWithOwner");
         try
         {
-            Set<X500Principal> principals = new HashSet<X500Principal>();
-            Set<Object> pub = new HashSet();
-            Set<Object> priv = new HashSet();
-            principals.add(new X500Principal("CN=Duke, OU=JavaSoft, O=Sun Microsystems, C=US"));
-            Subject s = new Subject(true, principals, pub, priv);
-
             Job job = createPendingJob();
-            job.setOwner(s);
+            job.setOwnerID("CN=Duke, OU=JavaSoft, O=Sun Microsystems, C=US");
             test(job);
         }
         catch(Exception unexpected)
         {
-            log.debug("unexpected exception", unexpected);
+            log.error("unexpected exception", unexpected);
             Assert.fail("unexpected exception: " + unexpected);
         }
     }
@@ -417,7 +426,7 @@ public class JobReaderWriterTest
         }
         catch(Exception unexpected)
         {
-            log.debug("unexpected exception", unexpected);
+            log.error("unexpected exception", unexpected);
             Assert.fail("unexpected exception: " + unexpected);
         }
     }
@@ -429,7 +438,7 @@ public class JobReaderWriterTest
         try
         {
             Job job = createPendingJob();
-            String xml = "<foo />";
+            String xml = "<?xml version=\"1.0\" encoding=\"UTF-8\"?><foo />";
             String type = "text/xml";
             JobInfo info = new JobInfo(xml, type, true);
             job.setJobInfo(info);
@@ -437,7 +446,7 @@ public class JobReaderWriterTest
         }
         catch(Exception unexpected)
         {
-            log.debug("unexpected exception", unexpected);
+            log.error("unexpected exception", unexpected);
             Assert.fail("unexpected exception: " + unexpected);
         }
     }
@@ -449,7 +458,7 @@ public class JobReaderWriterTest
         try
         {
             Job job = createPendingJob();
-            String xml = "<foo>";
+            String xml = "<?xml version=\"1.0\" encoding=\"UTF-8\"?><foo>";
             String type = "text/xml";
             JobInfo info = new JobInfo(xml, type, Boolean.FALSE);
             job.setJobInfo(info);
@@ -457,7 +466,7 @@ public class JobReaderWriterTest
         }
         catch(Exception unexpected)
         {
-            log.debug("unexpected exception", unexpected);
+            log.error("unexpected exception", unexpected);
             Assert.fail("unexpected exception: " + unexpected);
         }
     }
@@ -470,18 +479,19 @@ public class JobReaderWriterTest
         {
             Job job = new Job();
             job.setExecutionPhase(ExecutionPhase.PENDING);
-            job.setID(JOB_ID);
+            JobPersistenceUtil.assignID(job, JOB_ID);
             job.setRunID(RUN_ID);
             job.setQuote(new Date(baseDate.getTime() + 10000L));
             job.setExecutionDuration(123L);
             job.setDestructionTime(new Date(baseDate.getTime() + 300000L));
-            job.addParameter(new Parameter("empty parameter", ""));
-            job.setOwner(null);
+            job.setParameterList(new ArrayList<Parameter>());
+            job.getParameterList().add(new Parameter("empty parameter", ""));
+            job.setOwnerID(null);
             test(job);
         }
         catch(Exception unexpected)
         {
-            log.debug("unexpected exception", unexpected);
+            log.error("unexpected exception", unexpected);
             Assert.fail("unexpected exception: " + unexpected);
         }
     }

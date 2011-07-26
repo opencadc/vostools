@@ -1,4 +1,4 @@
-<!--
+/*
 ************************************************************************
 *******************  CANADIAN ASTRONOMY DATA CENTRE  *******************
 **************  CENTRE CANADIEN DE DONNÉES ASTRONOMIQUES  **************
@@ -65,101 +65,62 @@
 *  $Revision: 4 $
 *
 ************************************************************************
--->
+*/
 
-	
-<project default="build" basedir=".">
-  <property environment="env"/>
 
-    <!-- site-specific build properties or overrides of values in opencadc.properties -->
-    <property file="${env.CADC_PREFIX}/etc/local.properties" />
+package ca.nrc.cadc.uws.web.restlet.resources;
 
-    <!-- site-specific targets, e.g. install, cannot duplicate those in opencadc.targets.xml -->
-    <import file="${env.CADC_PREFIX}/etc/local.targets.xml" optional="true" />
 
-    <!-- default properties and targets -->
-    <property file="${env.CADC_PREFIX}/etc/opencadc.properties" />
-    <import file="${env.CADC_PREFIX}/etc/opencadc.targets.xml"/>
+import org.apache.log4j.Logger;
+import org.junit.Before;
+import org.junit.After;
+import org.junit.Assert;
+import org.junit.Test;
 
-    <!-- developer convenience: place for extra targets and properties -->
-    <import file="extras.xml" optional="true" />
 
-    <property name="project" value="cadcUWS" />
 
-    <property name="cadc" value="${lib}/cadcUtil.jar" />
-    <property name="external" value="${ext.lib}/log4j.jar:${ext.lib}/org.restlet.jar:${ext.lib}/spring.jar:${ext.lib}/jdom.jar:${ext.lib}/servlet-api.jar" />
-
-    <property name="jars" value="${cadc}:${external}" />
-
-    <target name="build" depends="compile,resources">
-        <jar jarfile="${build}/lib/${project}.jar"
-            basedir="${build}/class" update="no">
-                <exclude name="test/**" />
-        </jar>
-    </target>
-
-    <target name="resources">
-        <copy todir="${build}/class">
-            <fileset dir="src/resources">
-                <include name="**.xsd" />
-            </fileset>
-        </copy>
-    </target>
-
-    <!-- JAR files needed to run the test suite -->
-    <property name="dev.junit" value="${ext.dev}/junit.jar" />
-    <property name="dev.easyMock" value="${ext.dev}/easymock.jar" />
-    <property name="lib.cglib" value="${ext.lib}/cglib.jar" />
-    <property name="commons-logging"    value="${ext.lib}/commons-logging.jar" />
-    <property name="testingJars" value="${test.jdbc.drivers}:${commons-logging}:${dev.junit}:${dev.easyMock}:${lib.cglib}:${ext.lib}/asm-attrs.jar:${ext.lib}/asm.jar:${ext.lib}/xerces.jar" />
+/**
+ * TestCase for the Asynchronous Resource.
+ */
+public class AsynchResourceTest
+{
+    private static Logger log = Logger.getLogger(AsynchResourceTest.class);
     
-    <target name="test" depends="xml-test,dao-test">
-        <junit printsummary="yes" haltonfailure="yes" fork="yes">
-            <classpath>
-                <pathelement path="${build}/class"/>
-                <pathelement path="${build}/test/class"/>
-                <pathelement path="${build}/test/src"/>
-                <pathelement path="${jars}:${testingJars}"/>
-            </classpath>
+    /**
+     * Sets up the fixture, for example, open a network connection.
+     * This method is called before a test is executed.
+     *
+     * @throws Exception for anything that goes wrong.
+     */
+    @Before
+    public void setUp()
+    {
+             
+    }
 
-            <test name="ca.nrc.cadc.uws.server.RandomStringGeneratorTest" />
-            <test name="ca.nrc.cadc.uws.web.ResourceTestSuite" />
+    /**
+     * Tears down the fixture, for example, close a network connection.
+     * This method is called after a test is executed.
+     */
+    @After
+    public void tearDown()
+    {
+        
+    }
 
-            <formatter type="plain" usefile="false" />
-        </junit>
+    @Test
+    public void accept()
+    {
+        try
+        {
+            
+        }
+        catch(Exception unexpected)
+        {
+            log.error("unexpected exception", unexpected);
+            Assert.fail("unexpected exception: " + unexpected);
+        }
+    }
 
-    </target>
-
-    <target name="xml-test" depends="compile-test">
-        <junit printsummary="yes" haltonfailure="yes" fork="yes">
-            <classpath>
-                <pathelement path="${build}/class"/>
-                <pathelement path="${build}/test/class"/>
-                <pathelement path="${build}/test/src"/>
-                <pathelement path="${jars}:${testingJars}"/>
-            </classpath>
-
-            <test name="ca.nrc.cadc.uws.JobReaderWriterTest" />
-
-            <formatter type="plain" usefile="false" />
-        </junit>
-    </target>
-
-    <target name="dao-test" depends="build,compile-test">
-        <junit printsummary="yes" haltonfailure="yes" fork="yes">
-            <classpath>
-                <pathelement path="${build}/class"/>
-                <pathelement path="${build}/test/class"/>
-                <pathelement path="${build}/test/src"/>
-                <pathelement path="${jars}:${testingJars}"/>
-            </classpath>
-
-            <test name="ca.nrc.cadc.uws.server.JobDAOTest_Sybase" />
-	    <!-- code works but we have no test server setup yet
-            <test name="ca.nrc.cadc.uws.server.JobDAOTest_PostgreSQL" />
-            -->
-            <formatter type="plain" usefile="false" />
-        </junit>
-    </target>
-
-</project>
+    
+}

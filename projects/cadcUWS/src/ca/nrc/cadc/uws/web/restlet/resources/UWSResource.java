@@ -71,16 +71,16 @@
 package ca.nrc.cadc.uws.web.restlet.resources;
 
 import ca.nrc.cadc.auth.AuthenticationUtil;
+import ca.nrc.cadc.uws.server.JobManager;
 import org.restlet.resource.ServerResource;
 import org.restlet.resource.Get;
 import org.restlet.representation.Representation;
 import org.restlet.representation.StringRepresentation;
 import org.apache.log4j.Logger;
 
-import ca.nrc.cadc.uws.JobManager;
-import ca.nrc.cadc.uws.util.BeanUtil;
 import ca.nrc.cadc.uws.web.validators.FormValidator;
-import ca.nrc.cadc.uws.web.WebRepresentationException;
+import ca.nrc.cadc.uws.web.restlet.WebRepresentationException;
+import ca.nrc.cadc.uws.web.restlet.UWSAsyncApplication;
 import ca.nrc.cadc.uws.web.restlet.representation.JDOMRepresentation;
 import ca.nrc.cadc.uws.web.restlet.validators.JobFormValidatorImpl;
 
@@ -315,8 +315,7 @@ public abstract class UWSResource extends ServerResource
      */
     protected JobManager getJobManager()
     {
-        return (JobManager) getContextAttribute(
-                BeanUtil.UWS_JOB_MANAGER_SERVICE);
+        return (JobManager) getContextAttribute(UWSAsyncApplication.UWS_JOB_MANAGER);
     }
 
     protected Object getContextAttribute(final String key)

@@ -70,32 +70,15 @@
 package ca.nrc.cadc.uws.server;
 
 import ca.nrc.cadc.auth.AuthenticationUtil;
-import ca.nrc.cadc.uws.ExecutionPhase;
 import ca.nrc.cadc.uws.Job;
-import ca.nrc.cadc.uws.JobAttribute;
-import ca.nrc.cadc.uws.JobInfo;
-import ca.nrc.cadc.uws.JobManager;
-import ca.nrc.cadc.uws.JobPersistence;
-import ca.nrc.cadc.uws.JobPersistenceException;
-import ca.nrc.cadc.uws.JobRunner;
 import ca.nrc.cadc.uws.JobWriter;
-import ca.nrc.cadc.uws.Parameter;
-import ca.nrc.cadc.uws.SyncJobRunner;
-import ca.nrc.cadc.uws.SyncOutput;
 import java.io.FilterOutputStream;
 import java.io.IOException;
 import java.io.OutputStream;
 import java.io.PrintWriter;
-import java.io.StringWriter;
-import java.net.MalformedURLException;
-import java.net.URL;
-import java.security.Principal;
 import java.security.PrivilegedAction;
-import java.security.cert.X509Certificate;
-import java.text.ParseException;
-import java.util.Arrays;
-import java.util.Collection;
-import java.util.Enumeration;
+import java.security.PrivilegedActionException;
+import java.security.PrivilegedExceptionAction;
 import javax.security.auth.Subject;
 import javax.servlet.ServletConfig;
 
@@ -105,11 +88,6 @@ import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 
 import org.apache.log4j.Logger;
-import org.jdom.Document;
-import org.jdom.JDOMException;
-import org.jdom.input.SAXBuilder;
-import org.jdom.output.Format;
-import org.jdom.output.XMLOutputter;
 
 /**
  * Servlet that runs a SyncJobRunner for each request. This servlet supports both
@@ -147,12 +125,8 @@ public class SyncServlet extends HttpServlet
     private static Logger log = Logger.getLogger(SyncServlet.class);
     private static final long serialVersionUID = 201009291100L;
     private static final String JOB_EXEC = "run";
-    private static final String TEXT_XML = "text/xml";
-    private static final String FORM_URLENCODED = "application/x-www-form-urlencoded";
     
     private JobManager jobManager;
-    private JobPersistence jobPersistence;
-    private Class jobRunnerClass;
     private boolean execOnGET = false;
     private boolean execOnPOST = false;
 
@@ -160,9 +134,6 @@ public class SyncServlet extends HttpServlet
     public void init(ServletConfig config) throws ServletException
     {
         super.init(config);
-
-        String pname = null;
-        String cname;
 
         try
         {
@@ -177,53 +148,57 @@ public class SyncServlet extends HttpServlet
             log.info("execOnGET: " + execOnGET);
             log.info("execOnPOST: " + execOnPOST);
 
-            pname = JobManager.class.getName();
-            //cname = config.getInitParameter(pname);
-            cname = config.getServletContext().getInitParameter(pname);
-            if (cname != null && cname.trim().length() > 0)
-            {
-                Class c = Class.forName(cname);
-                this.jobManager = (JobManager) c.newInstance();
-                log.info("created JobManager: " + jobManager.getClass().getName());
-            }
-            else
-                log.error("required init-param not found: " + pname);
-
-            pname = JobPersistence.class.getName();
-            //cname = config.getInitParameter(pname);
-            cname = config.getServletContext().getInitParameter(pname);
-            if (cname != null )
-            {
-                Class c = Class.forName(cname);
-                this.jobPersistence = (JobPersistence) c.newInstance();
-                log.info("created JobPersistence: " + jobPersistence.getClass().getName());
-                if (jobManager != null)
-                    jobManager.setJobPersistence(jobPersistence);
-            }
-            else
-                log.error("required init-param not found: " + pname);
-
-            pname = JobRunner.class.getName();
-            //cname = config.getInitParameter(pname);
-            cname = config.getServletContext().getInitParameter(pname);
-            if (cname != null )
-            {
-                Class c = Class.forName(cname);
-                if (SyncJobRunner.class.isAssignableFrom(c))
-                {
-                    this.jobRunnerClass = c;
-                    log.info("loaded JobRunner class: " + jobRunnerClass.getName());
-                }
-                else
-                    log.error(cname + " does not implement " + SyncJobRunner.class.getName());
-            }
-            else
-                log.error("required init-param not found: " + pname);
+            this.jobManager = createJobManager(config);
         }
         catch(Exception ex)
         {
-            log.error("failed to create: " + pname +": " + ex);
+            log.error("failed to init: " + ex);
         }
+    }
+
+    /**
+     * Instantiate a JobManager. The default implementation simply loosk for a
+     * servlet init-param with name <code>ca.nrc.cadc.uws.server.JobManager</code>
+     * and value equal to the class name of the implementation, loads the class
+     * with <code>Class.forName</code> (assuming no-arg constructor), and uses it
+     * as-is.
+     * </p>
+     * <p>
+     * To create the JobManager in some other fashion (e.g. dependency injection or
+     * some pre-configured IoC container) simply override this method to return a
+     * ready-to-use JobManager.
+     *
+     * @param config
+     * @return
+     */
+    protected JobManager createJobManager(ServletConfig config)
+    {
+        String pname = JobManager.class.getName();
+        try
+        {
+            String cname = config.getInitParameter(pname);
+            //if (cname == null) // try a context param
+            //    cname = config.getServletContext().getInitParameter(pname);
+            if (cname != null && cname.trim().length() > 0)
+            {
+                Class c = Class.forName(cname);
+                JobManager ret = (JobManager) c.newInstance();
+                log.info("created JobManager: " + ret.getClass().getName());
+                return ret;
+            }
+            else
+                log.error("CONFIGURATION ERROR: required init-param not found: " + pname + " = <class name of JobManager implementation>");
+        }
+        catch(Exception ex)
+        {
+            log.error("failed to create JobManager", ex);
+        }
+        return null;
+    }
+
+    protected JobCreator getJobCreator()
+    {
+        return new JobCreator();
     }
 
 
@@ -245,30 +220,83 @@ public class SyncServlet extends HttpServlet
         log.debug("doPost - DONE");
     }
 
-    private void doit(boolean execOnCreate, HttpServletRequest request, HttpServletResponse response)
+    private void doit(final boolean execOnCreate, final HttpServletRequest request, final HttpServletResponse response)
         throws ServletException, IOException
     {
         log.debug("doit: execOnCreate=" + execOnCreate);
-        SyncRunner syncRunner = null;
-        Subject subject = null;
+        if (jobManager == null)
+        {
+            // config error
+            response.setStatus(HttpServletResponse.SC_INTERNAL_SERVER_ERROR);
+            response.setContentType("text/plain");
+            PrintWriter w = response.getWriter();
+            w.println("servlet is not configured to accept jobs");
+            w.close();
+            return;
+        }
+
+        Subject subject = AuthenticationUtil.getSubject(request);
+        if (subject == null)
+        {
+            processRequest(execOnCreate, request, response);
+        }
+        else
+        {
+            try
+            {
+                Subject.doAs(subject, new PrivilegedExceptionAction<Object>()
+                {
+                    public Object run()
+                        throws PrivilegedActionException
+                    {
+                        try
+                        {
+                            processRequest(execOnCreate, request, response);
+                            return null;
+                        }
+                        catch(Exception ex)
+                        {
+                            throw new PrivilegedActionException(ex);
+                        }
+                    }
+                } );
+            }
+            catch(PrivilegedActionException pex)
+            {
+                if (pex.getCause() instanceof ServletException)
+                    throw (ServletException) pex.getCause();
+                else if (pex.getCause() instanceof IOException)
+                    throw (IOException) pex.getCause();
+                else if (pex.getCause() instanceof RuntimeException)
+                    throw (RuntimeException) pex.getCause();
+                else
+                    throw new RuntimeException(pex.getCause());
+            }
+        }
+    }
+
+    private void processRequest(boolean execOnCreate, HttpServletRequest request, HttpServletResponse response)
+        throws ServletException, IOException
+    {
+        log.debug("doit: execOnCreate=" + execOnCreate);
+        SyncOutputImpl syncOutput = null;
+        
         String jobID = null;
         Job job = null;
         String action = null;
         try
         {
-            subject = getSubject(request);
             jobID = getJobID(request);
             if (jobID == null)
             {
                 // create
-                job = create(request, subject);
-                log.debug(String.format("persisting job: ip:[%s] path:[%s]", job.getRemoteIP(), job.getRequestPath()));
-                job = jobManager.persist(job);
+                job = getJobCreator().create(request);
+                job = jobManager.create(job);
                 log.debug("persisted job: " + job);
                 jobID = job.getID();
 
-                String jobURL = getJobURL(request, job.getID());
-                log.info("created job: " + jobURL);
+                
+                log.info("created job: " + jobID);
                 if (execOnCreate)
                 {
                     log.debug("no redirect, action = " + JOB_EXEC);
@@ -276,6 +304,7 @@ public class SyncServlet extends HttpServlet
                 }
                 else // redirect
                 {
+                    String jobURL = getJobURL(request, job.getID());
                     String execURL = jobURL + "/" + JOB_EXEC;
                     log.debug("redirect: " + execURL);
                     response.setHeader("Location", execURL);
@@ -285,17 +314,8 @@ public class SyncServlet extends HttpServlet
             }
             else
                 // get job from persistence
-                job = jobManager.getJob(jobID);
-            
-            if (job == null)
-            {
-                response.setStatus(HttpServletResponse.SC_NOT_FOUND);
-                response.setContentType("text/plain");
-                PrintWriter w = response.getWriter();
-                w.println("failed to find " + jobID);
-                w.close();
-                return;
-            }
+                job = jobManager.get(jobID);
+
             log.debug("found: " + jobID);
 
             if (action == null)
@@ -321,74 +341,69 @@ public class SyncServlet extends HttpServlet
                 return;
             }
 
-            // authorization check: subject == owner (creator)
-            Subject owner = job.getOwner();
-            if (false && owner != null)
+            log.info("executing job: " + jobID);
+            jobManager.execute(job, new SyncOutputImpl(response));
+        }
+        catch(JobNotFoundException ex)
+        {
+            if (syncOutput != null && syncOutput.isOpen())
             {
-                boolean ok = owner.getPrincipals().isEmpty(); // empty Subject == no owner
-                if (subject != null)
-                {
-                    for (Principal p1 : owner.getPrincipals())
-                       for (Principal p2 : subject.getPrincipals())
-                           ok = ok || AuthenticationUtil.equals(p1, p2);
-                }
-                if (!ok)
-                {
-                    response.setStatus(HttpServletResponse.SC_FORBIDDEN);
-                    response.setContentType("text/plain");
-                    PrintWriter w = response.getWriter();
-                    w.println("access denied: job " + jobID);
-                    w.close();
-                    return;
-                }
-            }
-
-            // check phase==PENDING
-            if (!ExecutionPhase.PENDING.equals(job.getExecutionPhase()))
-            {
-                response.setStatus(HttpServletResponse.SC_BAD_REQUEST);
-                response.setContentType("text/plain");
-                PrintWriter w = response.getWriter();
-                w.println("synchronous job " + jobID + " has already been started");
-                w.close();
+                log.error("failure after OutputStream opened, cannot report error to user");
                 return;
             }
-
-            log.info("executing job: " + jobID);
-            
-            // execute job
-            SyncJobRunner jobRunner = (SyncJobRunner) jobRunnerClass.newInstance();
-            jobRunner.setJob(job);
-            jobRunner.setJobManager(jobManager);
-
-            syncRunner = new SyncRunner(jobRunner, response);
-            if (subject == null)
-            {
-                syncRunner.run();
-            }
-            else
-            {
-                Subject.doAs(subject, syncRunner);
-            }
-            
+            // OutputStream not open, write an error response
+            response.setStatus(HttpServletResponse.SC_NOT_FOUND);
+            response.setContentType("text/plain");
+            PrintWriter w = response.getWriter();
+            w.println("failed to find " + jobID);
+            w.close();
+            return;
         }
-        catch(JobPersistenceException pex)
+        catch(JobPersistenceException ex)
+        {
+            if (syncOutput != null && syncOutput.isOpen())
+            {
+                log.error("failure after OutputStream opened, cannot report error to user");
+                return;
+            }
+            // OutputStream not open, write an error response
+            response.setStatus(HttpServletResponse.SC_INTERNAL_SERVER_ERROR);
+            response.setContentType("text/plain");
+            PrintWriter w = response.getWriter();
+            w.println("failed to get or persist job state: " + jobID);
+            w.println("   reason: " + ex.getMessage());
+            w.close();
+            return;
+        }
+        catch(IllegalArgumentException ex)
+        {
+            if (syncOutput != null && syncOutput.isOpen())
+            {
+                log.error("failure after OutputStream opened, cannot report error to user");
+                return;
+            }
+            // OutputStream not open, write an error response
+            response.setStatus(HttpServletResponse.SC_BAD_REQUEST);
+            response.setContentType("text/plain");
+            PrintWriter w = response.getWriter();
+            w.println("failed to execute job " + jobID);
+            w.println("   reason: " + ex.getMessage());
+            w.close();
+            return;
+        }
+        catch(Exception pex)
         {
             String msg = "";
             if (jobID == null)
                 msg = "failed to create new job";
             else
-                msg = "failed to execute job + " + jobID;
+                msg = "failed to execute job: " + jobID;
             log.error(msg, pex);
 
-            if (syncRunner != null)
+            if (syncOutput != null && syncOutput.isOpen())
             {
-                SyncOutputImpl soi = syncRunner.getOut();
-                if ( soi.isOpen() )
-                {
-                    log.error("failure after OutputStream opened, cannot report error to user");
-                    return;
-                }
+                log.error("failure after OutputStream opened, cannot report error to user");
+                return;
             }
             // OutputStream not open, write an error response
             response.setStatus(HttpServletResponse.SC_INTERNAL_SERVER_ERROR);
@@ -397,7 +412,6 @@ public class SyncServlet extends HttpServlet
             w.println(msg);
             w.close();
             return;
-
         }
         catch(Throwable t)
         {
@@ -405,14 +419,10 @@ public class SyncServlet extends HttpServlet
                 log.error("create job failed", t);
             else
                 log.error("execute job failed", t);
-            if (syncRunner != null)
+            if (syncOutput != null && syncOutput.isOpen() )
             {
-                SyncOutputImpl soi = syncRunner.getOut();
-                if ( soi.isOpen() )
-                {
-                    log.error("unexpected failure after OutputStream opened", t);
-                    return;
-                }
+                log.error("unexpected failure after OutputStream opened", t);
+                return;
             }
             // OutputStream not open, write an error response
             response.setStatus(HttpServletResponse.SC_INTERNAL_SERVER_ERROR);
@@ -425,61 +435,13 @@ public class SyncServlet extends HttpServlet
         }
         finally
         {
-            if (syncRunner != null)
-            {
-                SyncOutputImpl soi = syncRunner.getOut();
-                if (soi.isOpen())
-                    try 
-                    {
-                        OutputStream ostream = soi.getOutputStream();
-                        ostream.flush();
-                    }
-                    catch(Throwable ignore) { }
-            }
-        }
-    }
-
-    private class SyncRunner implements PrivilegedAction<Object>
-    {
-        SyncJobRunner runner;
-        HttpServletResponse response;
-        SyncOutputImpl syncOutput;
-        
-        SyncRunner(SyncJobRunner runner, HttpServletResponse response)
-        {
-            this.runner = runner;
-            this.response = response;
-            this.syncOutput = new SyncOutputImpl(response);
-        }
-
-        SyncOutputImpl getOut() { return syncOutput; }
-
-        @Override
-        public Object run()
-        {
-            Job j = runner.getJob();
-            String jobID = j.getID();
-
-            j.setExecutionPhase(ExecutionPhase.QUEUED);
-            j = jobManager.persist(j);
-
-            runner.setJob(j);
-
-            URL redirectURL = runner.getRedirectURL();
-            if (redirectURL != null)
-            {
-                String loc = redirectURL.toExternalForm();
-                log.debug("redirect from JobRunner: "+ loc);
-                response.setHeader("Location", loc);
-                response.setStatus(HttpServletResponse.SC_SEE_OTHER);
-                return null;
-            }
-
-            // streaming
-            runner.setOutput(syncOutput);
-            runner.run();
-            
-            return null;
+            if (syncOutput != null && syncOutput.isOpen())
+                try
+                {
+                    OutputStream ostream = syncOutput.getOutputStream();
+                    ostream.flush();
+                }
+                catch(Throwable ignore) { }
         }
     }
 
@@ -495,7 +457,6 @@ public class SyncServlet extends HttpServlet
 
         public boolean isOpen() { return ostream != null; }
         
-        @Override
         public OutputStream getOutputStream()
             throws IOException
         {
@@ -507,7 +468,13 @@ public class SyncServlet extends HttpServlet
             return ostream;
         }
 
-        @Override
+        public void setResponseCode(int code)
+        {
+            if (ostream == null) // header not committed
+                response.setStatus(code);
+            else
+                log.warn("setResponseCode: " + code + " AFTER OutputStream opened, ignoring");
+        }
         public void setHeader(String key, String value)
         {
             if (ostream == null) // header not committed
@@ -515,15 +482,6 @@ public class SyncServlet extends HttpServlet
             else
                 log.warn("setHeader: " + key + " = " + value + " AFTER OutputStream opened, ignoring");
         }
-    }
-
-    private Subject getSubject(HttpServletRequest request)
-    {
-        String remoteUser = request.getRemoteUser();
-        X509Certificate[] ca = (X509Certificate[]) request.getAttribute("javax.servlet.request.X509Certificate");
-        Collection<X509Certificate> certs = null;
-        if (ca != null && ca.length > 0) certs = Arrays.asList(ca);
-        return AuthenticationUtil.getSubject(remoteUser, certs);
     }
 
     private String getJobID(HttpServletRequest request)
@@ -555,77 +513,6 @@ public class SyncServlet extends HttpServlet
             ret = parts[1];
         log.debug("path: " + path + " jobAction: " + ret);
         return ret;
-    }
-
-    private Job create(HttpServletRequest request, Subject subject)
-        throws IOException, JDOMException, ParseException
-    {        
-        // TODO: check content-type for params (www-urlencoded?) vs XML (text/xml)
-        String contentType = request.getHeader("Content-Type");
-        
-        // pdowler: assume FORM_URLENCODED if not specified to support HTTP GET
-        //if (contentType == null || !contentType.equals(TEXT_XML) && !contentType.equals(FORM_URLENCODED))
-        //    throw new IllegalArgumentException("Content-Types must be " + TEXT_XML + " or " + FORM_URLENCODED);
-
-        // Job from POSTed XML
-        Job job = new Job();
-        if (contentType != null && contentType.equals(TEXT_XML))
-        {
-            // Check that the XML is valid.
-            SAXBuilder builder = new SAXBuilder("org.apache.xerces.parsers.SAXParser", false);
-            Document doc = builder.build(request.getInputStream());
-            StringWriter sw = new StringWriter();
-            XMLOutputter outputter = new XMLOutputter();
-            outputter.setFormat(Format.getCompactFormat());
-            outputter.output(doc.detachRootElement(), sw);
-            JobInfo jobInfo = new JobInfo(sw.toString(), TEXT_XML, true);
-            job.setJobInfo(jobInfo);
-            log.debug(jobInfo);
-        }
-                
-        // Job from GET or POST parameters
-        else
-        {
-            Enumeration<String> paramNames = request.getParameterNames();
-            while ( paramNames.hasMoreElements() )
-            {
-                String p = paramNames.nextElement();
-
-                if (JobAttribute.isValue(p))
-                {
-                    if ( JobAttribute.RUN_ID.getAttributeName().equalsIgnoreCase(p) )
-                        job.setRunID(request.getParameter(p));
-                }
-                else
-                {
-                    String[] vals = request.getParameterValues(p);
-                    if (vals != null)
-                    {
-                        for (String v : vals)
-                        {
-                            job.addParameter(new Parameter(p, v));
-                        }
-                    }
-                }
-            }
-        }
-
-        job.setOwner(subject);
-        try
-        {
-            URL u = new URL(request.getRequestURL().toString());
-            job.setRequestPath(u.getPath());
-        }
-        catch(MalformedURLException oops)
-        {
-            log.error("failed to get request path", oops);
-        }
-        
-        job.setRemoteIP(request.getRemoteAddr());
-
-        // TODO: where to get Map of ns:<url to xsd file> for use with XmlUtil??
-
-        return job;
     }
 
     private String getJobURL(HttpServletRequest request, String jobID)

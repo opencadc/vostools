@@ -70,14 +70,17 @@
 
 package ca.nrc.cadc.uws.web.restlet.resources;
 
+import ca.nrc.cadc.util.StringUtil;
 import ca.nrc.cadc.uws.ExecutionPhase;
-import ca.nrc.cadc.uws.InvalidResourceException;
 import ca.nrc.cadc.uws.Job;
 import ca.nrc.cadc.uws.JobAttribute;
-import ca.nrc.cadc.uws.util.StringUtil;
+import ca.nrc.cadc.uws.server.JobNotFoundException;
+import ca.nrc.cadc.uws.server.JobPersistenceException;
 
 import org.apache.log4j.Logger;
 import org.restlet.data.Form;
+import org.restlet.representation.Representation;
+import org.restlet.resource.Get;
 
 
 /**
@@ -86,68 +89,81 @@ import org.restlet.data.Form;
 public abstract class BaseJobResource extends UWSResource
 {
     private static final Logger LOGGER = Logger.getLogger(UWSResource.class);
-    
+
+    protected String jobID;
+    protected String jobList;
     protected Job job;
 
     @Override
     protected void doInit()
     {
         super.doInit();
-        String jobID = (String) getRequest().getAttributes().get("jobID");
-        this.job = getJobManager().getJob(jobID);
-        if (job == null)
-            throw new InvalidResourceException("No such Job: " + jobID);
-        LOGGER.debug("doInit: found job " + jobID);
+        this.jobID = (String) getRequest().getAttributes().get("jobID");
+        String path = getRequestPath();
+        int i = path.indexOf(jobID);
+        this.jobList = path.substring(0,i-1);
+        LOGGER.debug("doInit: jobID=" + jobID + ", jobList="+jobList);
     }
 
-    /**
-     * Obtain whether this job is active.
-     *
-     * @return  True if active, false otherwise.
-     */
-    protected boolean jobIsActive()
+    @Get
+    @Override
+    public Representation represent()
     {
-        final ExecutionPhase executionPhase = job.getExecutionPhase();
+        try
+        {
+            if (job == null)
+                job = getJobManager().get(jobID);
+            return super.represent();
+        }
+        catch(JobPersistenceException ex)
+        {
+            throw new RuntimeException(ex);
+        }
+        catch(JobNotFoundException ex)
+        {
+            throw new RuntimeException(ex);
+        }
+    }
+
+    protected void redirectToJobList()
+    {
+        String url = getHostPart() + jobList;
+        LOGGER.debug("redirectToJobList: " + url);
+        redirectSeeOther(url);
+    }
+    
+    protected void redirectToJob()
+    {
+        String url = getHostPart() + jobList + "/" + jobID;
+        LOGGER.debug("redirectToJob: " + url);
+        redirectSeeOther(url);
+    }
+
+    protected boolean jobIsActive(ExecutionPhase executionPhase)
+    {
         return (executionPhase.equals(ExecutionPhase.QUEUED))
                || (executionPhase.equals(ExecutionPhase.EXECUTING));
     }
 
-    /**
-     * Obtain whether this job has successfully completed execution.
-     *
-     * @return  True if COMPLETE, false otherwise.
-     */
-    protected boolean jobHasRun()
+    protected boolean jobHasRun(ExecutionPhase executionPhase)
     {
-        final ExecutionPhase executionPhase = job.getExecutionPhase();
         return executionPhase.equals(ExecutionPhase.COMPLETED)
-               || executionPhase.equals(ExecutionPhase.ERROR);
+               || executionPhase.equals(ExecutionPhase.ERROR)
+               || executionPhase.equals(ExecutionPhase.ABORTED);
     }
 
-    /**
-     * Obtain whether this Job is awaiting execution.
-     *
-     * @return      True if job is waiting, False otherwise.
-     */
-    protected boolean jobIsPending()
+    protected boolean jobIsPending(ExecutionPhase executionPhase)
     {
-        final ExecutionPhase executionPhase = job.getExecutionPhase();
         return executionPhase.equals(ExecutionPhase.PENDING);
     }
 
-    /**
-     * Obtain whether this Job can still have POSTs made to it to modify it.
-     *
-     * @param form
-     * @return  True if it can be modified, False otherwise.
-     */
-    protected boolean jobModificationAllowed(Form form)
+    protected boolean jobModificationAllowed(Form form, ExecutionPhase executionPhase)
     {
         final String phase =
                 form.getFirstValue(JobAttribute.EXECUTION_PHASE.
                         getAttributeName().toUpperCase());
 
-        return jobIsPending() || ((getPathInfo().endsWith("phase")
+        return jobIsPending(executionPhase) || ((getPathInfo().endsWith("phase")
                                    && StringUtil.hasLength(phase)
                                    && phase.equals("ABORT")));
     }

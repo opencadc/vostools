@@ -69,11 +69,12 @@
 
 package ca.nrc.cadc.uws.web.restlet.resources;
 
+import ca.nrc.cadc.util.StringUtil;
 import ca.nrc.cadc.uws.Job;
 import ca.nrc.cadc.uws.JobInfo;
-import ca.nrc.cadc.uws.util.StringUtil;
+import ca.nrc.cadc.uws.server.JobPersistenceException;
 import ca.nrc.cadc.uws.web.restlet.JobAssembler;
-import ca.nrc.cadc.uws.web.WebRepresentationException;
+import ca.nrc.cadc.uws.web.restlet.WebRepresentationException;
 
 import org.restlet.resource.Post;
 import org.restlet.representation.Representation;
@@ -85,8 +86,6 @@ import java.io.StringReader;
 import java.text.ParseException;
 import java.net.MalformedURLException;
 import java.security.AccessControlException;
-import java.util.ArrayList;
-import java.util.List;
 import java.util.Map;
 import javax.security.auth.Subject;
 import org.jdom.Document;
@@ -181,8 +180,16 @@ public class AsynchResource extends UWSResource
 
         job.setRequestPath(getRequestPath());
         job.setRemoteIP(getRemoteIP());
-        Job persistedJob = getJobManager().persist(job);
-        redirectSeeOther(getHostPart() + getRequestPath() + "/" + persistedJob.getID());
+
+        try
+        {
+            Job persistedJob = getJobManager().create(job);
+            redirectSeeOther(getHostPart() + getRequestPath() + "/" + persistedJob.getID());
+        }
+        catch(JobPersistenceException ex)
+        {
+            // TODO: 5xx
+        }
     }
 
     /**
@@ -196,28 +203,6 @@ public class AsynchResource extends UWSResource
     
     protected void buildXML(final Document document) throws IOException
     {
-        /*
-        Element jobsElement = JobWriter.getJobs();
-        for (Job job : getJobs())
-        {
-            JobWriter jobWriter = new JobWriter(job);
-            jobsElement.addContent(jobWriter.getJobRef(getHostPart()));
-            jobsElement.addContent(jobWriter.getPhase());
-        }
-        document.addContent(jobsElement);
-        */
-
         throw new AccessControlException("permission denied: job list");
     }
-    
-    /**
-     * Obtain all of the Jobs available to list to the client.
-     *
-     * @return      List of Job objects.
-     */
-    protected List<Job> getJobs()
-    {
-        return new ArrayList<Job>(getJobManager().getJobs());
-    }
-
 }

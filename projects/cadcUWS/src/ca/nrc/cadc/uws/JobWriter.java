@@ -246,19 +246,9 @@ public class JobWriter
     public Element getOwnerId(Job job)
     {
         Element element = new Element(JobAttribute.OWNER_ID.getAttributeName(), UWS.NS);
-        Subject subjectOwner = job.getOwner();
-        boolean nil = true;
-        if (subjectOwner != null)
-        {
-            Set<Principal> setPrincipal = subjectOwner.getPrincipals();
-            for (Principal prc : setPrincipal)
-            {
-                element.addContent(prc.getName());
-                nil = false;
-                break; // a convenient way to get the first principal in the set ONLY.
-            }
-        }
-        if (nil)
+        if (job.getOwnerID() != null)
+            element.addContent(job.getOwnerID());
+        else
             element.setAttribute("nil", "true", UWS.XSI_NS);
         return element;
     }
@@ -400,10 +390,7 @@ public class JobWriter
         {
             eleErrorSummary = new Element(JobAttribute.ERROR_SUMMARY.getAttributeName(), UWS.NS);
             eleErrorSummary.setAttribute("type", es.getErrorType().toString().toLowerCase());
-            String hasDetail = "false";
-            if (job.getErrorSummary().getDocumentURL() != null)
-                hasDetail = "true";
-            eleErrorSummary.setAttribute("hasDetail", hasDetail);
+            eleErrorSummary.setAttribute("hasDetail", Boolean.toString(es.getHasDetail()));
 
             Element eleMessage = new Element(JobAttribute.ERROR_SUMMARY_MESSAGE.getAttributeName(), UWS.NS);
             eleMessage.addContent(job.getErrorSummary().getSummaryMessage());
@@ -429,9 +416,9 @@ public class JobWriter
                 element = new Element(JobAttribute.JOB_INFO.getAttributeName(), UWS.NS);
                 try
                 {
-                    // The JobInfo content can't be validate since the schema(s) aren't known.
-                    SAXBuilder builder = new SAXBuilder("org.apache.xerces.parsers.SAXParser", false);
-                    Document doc = builder.build(new StringReader(jobInfo.getContent()));
+                    // The JobInfo content can't be validated since the schema(s) aren't known
+                    // butw e still need to parse and extract the root/document element
+                    Document doc = XmlUtil.validateXml(jobInfo.getContent(), null);
                     element.addContent(doc.getRootElement().detach()); 
                 }
                 catch (Exception e)

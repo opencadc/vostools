@@ -1,4 +1,4 @@
-<!--
+/*
 ************************************************************************
 *******************  CANADIAN ASTRONOMY DATA CENTRE  *******************
 **************  CENTRE CANADIEN DE DONNÉES ASTRONOMIQUES  **************
@@ -65,101 +65,45 @@
 *  $Revision: 4 $
 *
 ************************************************************************
--->
+*/
 
-	
-<project default="build" basedir=".">
-  <property environment="env"/>
 
-    <!-- site-specific build properties or overrides of values in opencadc.properties -->
-    <property file="${env.CADC_PREFIX}/etc/local.properties" />
+package ca.nrc.cadc.uws.web.restlet;
 
-    <!-- site-specific targets, e.g. install, cannot duplicate those in opencadc.targets.xml -->
-    <import file="${env.CADC_PREFIX}/etc/local.targets.xml" optional="true" />
+/**
+ * An exception in a Resource that matches nothing.
+ */
+public class InvalidResourceException extends RuntimeException
+{
+    /**
+     * Constructs a new runtime exception with the specified detail message and
+     * cause.  <p>Note that the detail message associated with
+     * <code>cause</code> is <i>not</i> automatically incorporated in
+     * this runtime exception's detail message.
+     *
+     * @param message the detail message (which is saved for later retrieval
+     *                by the {@link #getMessage()} method).
+     * @param cause   the cause (which is saved for later retrieval by the
+     *                {@link #getCause()} method).  (A <tt>null</tt> value is
+     *                permitted, and indicates that the cause is nonexistent or
+     *                unknown.)
+     * @since 1.4
+     */
+    public InvalidResourceException(String message, Throwable cause)
+    {
+        super(message, cause);
+    }
 
-    <!-- default properties and targets -->
-    <property file="${env.CADC_PREFIX}/etc/opencadc.properties" />
-    <import file="${env.CADC_PREFIX}/etc/opencadc.targets.xml"/>
-
-    <!-- developer convenience: place for extra targets and properties -->
-    <import file="extras.xml" optional="true" />
-
-    <property name="project" value="cadcUWS" />
-
-    <property name="cadc" value="${lib}/cadcUtil.jar" />
-    <property name="external" value="${ext.lib}/log4j.jar:${ext.lib}/org.restlet.jar:${ext.lib}/spring.jar:${ext.lib}/jdom.jar:${ext.lib}/servlet-api.jar" />
-
-    <property name="jars" value="${cadc}:${external}" />
-
-    <target name="build" depends="compile,resources">
-        <jar jarfile="${build}/lib/${project}.jar"
-            basedir="${build}/class" update="no">
-                <exclude name="test/**" />
-        </jar>
-    </target>
-
-    <target name="resources">
-        <copy todir="${build}/class">
-            <fileset dir="src/resources">
-                <include name="**.xsd" />
-            </fileset>
-        </copy>
-    </target>
-
-    <!-- JAR files needed to run the test suite -->
-    <property name="dev.junit" value="${ext.dev}/junit.jar" />
-    <property name="dev.easyMock" value="${ext.dev}/easymock.jar" />
-    <property name="lib.cglib" value="${ext.lib}/cglib.jar" />
-    <property name="commons-logging"    value="${ext.lib}/commons-logging.jar" />
-    <property name="testingJars" value="${test.jdbc.drivers}:${commons-logging}:${dev.junit}:${dev.easyMock}:${lib.cglib}:${ext.lib}/asm-attrs.jar:${ext.lib}/asm.jar:${ext.lib}/xerces.jar" />
-    
-    <target name="test" depends="xml-test,dao-test">
-        <junit printsummary="yes" haltonfailure="yes" fork="yes">
-            <classpath>
-                <pathelement path="${build}/class"/>
-                <pathelement path="${build}/test/class"/>
-                <pathelement path="${build}/test/src"/>
-                <pathelement path="${jars}:${testingJars}"/>
-            </classpath>
-
-            <test name="ca.nrc.cadc.uws.server.RandomStringGeneratorTest" />
-            <test name="ca.nrc.cadc.uws.web.ResourceTestSuite" />
-
-            <formatter type="plain" usefile="false" />
-        </junit>
-
-    </target>
-
-    <target name="xml-test" depends="compile-test">
-        <junit printsummary="yes" haltonfailure="yes" fork="yes">
-            <classpath>
-                <pathelement path="${build}/class"/>
-                <pathelement path="${build}/test/class"/>
-                <pathelement path="${build}/test/src"/>
-                <pathelement path="${jars}:${testingJars}"/>
-            </classpath>
-
-            <test name="ca.nrc.cadc.uws.JobReaderWriterTest" />
-
-            <formatter type="plain" usefile="false" />
-        </junit>
-    </target>
-
-    <target name="dao-test" depends="build,compile-test">
-        <junit printsummary="yes" haltonfailure="yes" fork="yes">
-            <classpath>
-                <pathelement path="${build}/class"/>
-                <pathelement path="${build}/test/class"/>
-                <pathelement path="${build}/test/src"/>
-                <pathelement path="${jars}:${testingJars}"/>
-            </classpath>
-
-            <test name="ca.nrc.cadc.uws.server.JobDAOTest_Sybase" />
-	    <!-- code works but we have no test server setup yet
-            <test name="ca.nrc.cadc.uws.server.JobDAOTest_PostgreSQL" />
-            -->
-            <formatter type="plain" usefile="false" />
-        </junit>
-    </target>
-
-</project>
+    /**
+     * Constructs a new runtime exception with the specified detail message.
+     * The cause is not initialized, and may subsequently be initialized by a
+     * call to {@link #initCause}.
+     *
+     * @param message the detail message. The detail message is saved for
+     *                later retrieval by the {@link #getMessage()} method.
+     */
+    public InvalidResourceException(String message)
+    {
+        super(message);
+    }
+}

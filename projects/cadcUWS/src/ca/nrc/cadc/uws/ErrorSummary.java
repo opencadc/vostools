@@ -82,72 +82,61 @@ import java.net.URL;
  */
 public class ErrorSummary
 {
-    private String summaryMessage;
+    private String message;
     private ErrorType errorType;
     private boolean hasDetail;
 
-    /*
-     * Used in the CADC implementation.
-     */
+    // implementation
     private URL documentURL;
 
+    private ErrorSummary() { }
+
     /**
-     * Public no-arg constructor.
+     * Constructor.
+     *
+     * @param message        The summary of the error.
+     * @param type             The type of the error.
      */
-    public ErrorSummary()
+    public ErrorSummary(String message, ErrorType type)
     {
+        this(message, type, null);
     }
 
     /**
-     * Complete constructor.
-     *
-     * @param summaryMessage        The summary of the error.
-     * @param errorType             The type of the error.
-     * @param hasDetail             Does the summary contain a error message.
+     * Constructor used on server side when a detailed error message should be
+     * delivered from the /joblist/jobid/error resource.
+     * 
+     * @param message
+     * @param type
+     * @param documentURL
      */
-    public ErrorSummary(final String summaryMessage, final ErrorType errorType, final boolean hasDetail)
+    public ErrorSummary(String message, ErrorType type, URL documentURL)
     {
-        this.summaryMessage = summaryMessage;
-        this.errorType = errorType;
-        this.hasDetail = hasDetail;
-        this.documentURL = null;
-    }
-
-    /**
-     * Complete constructor.
-     *
-     * @param summaryMessage        The summary of the error.
-     * @param documentURI           The URI to the actual Document.
-     * @deprecated
-     */
-    public ErrorSummary(final String summaryMessage, final URL documentURL)
-    {
-        this(summaryMessage, documentURL, ErrorType.FATAL);
-    }
-
-    /**
-     * Complete constructor.
-     *
-     * @param summaryMessage        The summary of the error.
-     * @param documentURI           The URI to the actual Document.
-     * @param errorType             The type of the error.
-     * @deprecated
-     */
-    public ErrorSummary(final String summaryMessage, final URL documentURL, final ErrorType errorType)
-    {
-        this.summaryMessage = summaryMessage;
+        this.message = message;
+        this.errorType = type;
         this.documentURL = documentURL;
-        this.errorType = errorType;
+        this.hasDetail = (documentURL != null);
+    }
+
+    /**
+     * Constructor used on the client side when creating a job from the XML
+     * representation.
+     * 
+     * @param message
+     * @param type
+     * @param hasDetail
+     */
+    ErrorSummary(String message, ErrorType type, boolean hasDetail)
+    {
+        this.message = message;
+        this.errorType = type;
+        this.documentURL = null;
+        this.hasDetail = hasDetail;
     }
 
     public String getSummaryMessage()
     {
-        return summaryMessage;
-    }
-
-    public void setDocumentURL(URL url)
-    {
-        documentURL = url;
+        return message;
     }
 
     public URL getDocumentURL()
@@ -160,9 +149,18 @@ public class ErrorSummary
         return errorType;
     }
 
+    public boolean getHasDetail()
+    {
+        return hasDetail;
+    }
+
     @Override
     public String toString()
     {
-        return "ErrorSummary [documentURL=" + documentURL + ", errorType=" + errorType + ", summaryMessage=" + summaryMessage + "]";
+        if (documentURL != null)
+            return "ErrorSummary["+message + "," + errorType + "," + documentURL + "]";
+        if (hasDetail)
+            return "ErrorSummary["+message + "," + errorType + "," + hasDetail + "]";
+        return "ErrorSummary["+message + "," + errorType + "]";
     }
 }

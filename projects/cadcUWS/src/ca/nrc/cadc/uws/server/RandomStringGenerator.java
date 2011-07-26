@@ -8,7 +8,7 @@
 *  National Research Council            Conseil national de recherches
 *  Ottawa, Canada, K1A 0R6              Ottawa, Canada, K1A 0R6
 *  All rights reserved                  Tous droits réservés
-*                                       
+*
 *  NRC disclaims any warranties,        Le CNRC dénie toute garantie
 *  expressed, implied, or               énoncée, implicite ou légale,
 *  statutory, of any kind with          de quelque nature que ce
@@ -31,10 +31,10 @@
 *  software without specific prior      de ce logiciel sans autorisation
 *  written permission.                  préalable et particulière
 *                                       par écrit.
-*                                       
+*
 *  This file is part of the             Ce fichier fait partie du projet
 *  OpenCADC project.                    OpenCADC.
-*                                       
+*
 *  OpenCADC is free software:           OpenCADC est un logiciel libre ;
 *  you can redistribute it and/or       vous pouvez le redistribuer ou le
 *  modify it under the terms of         modifier suivant les termes de
@@ -44,7 +44,7 @@
 *  either version 3 of the              : soit la version 3 de cette
 *  License, or (at your option)         licence, soit (à votre gré)
 *  any later version.                   toute version ultérieure.
-*                                       
+*
 *  OpenCADC is distributed in the       OpenCADC est distribué
 *  hope that it will be useful,         dans l’espoir qu’il vous
 *  but WITHOUT ANY WARRANTY;            sera utile, mais SANS AUCUNE
@@ -54,7 +54,7 @@
 *  PURPOSE.  See the GNU Affero         PARTICULIER. Consultez la Licence
 *  General Public License for           Générale Publique GNU Affero
 *  more details.                        pour plus de détails.
-*                                       
+*
 *  You should have received             Vous devriez avoir reçu une
 *  a copy of the GNU Affero             copie de la Licence Générale
 *  General Public License along         Publique GNU Affero avec
@@ -67,72 +67,120 @@
 ************************************************************************
 */
 
+package ca.nrc.cadc.uws.server;
 
-package ca.nrc.cadc.uws.web.restlet.resources;
-
-import ca.nrc.cadc.uws.Job;
-import ca.nrc.cadc.uws.JobWriter;
-import org.restlet.resource.Post;
-import org.restlet.representation.Representation;
-import org.restlet.data.Form;
-
-import ca.nrc.cadc.uws.Parameter;
-import ca.nrc.cadc.uws.server.JobNotFoundException;
-import ca.nrc.cadc.uws.server.JobPersistenceException;
-import ca.nrc.cadc.uws.server.JobPhaseException;
-import java.util.ArrayList;
-import java.util.List;
-
-import java.util.Map;
-import org.jdom.Document;
+import ca.nrc.cadc.util.HexUtil;
+import java.net.InetAddress;
+import java.net.UnknownHostException;
+import java.security.SecureRandom;
+import org.apache.log4j.Logger;
 
 /**
- * Resource to handle the Parameter List.
+ * String identifier generator. This class uses the <code>java.security.SecureRandom</code>
+ * class to generater random identifiers from a set of characters (typically alphanumeric).
+ * It always makes sure the first character is an alphabetic letter.
+ * 
+ * @author pdowler
  */
-public class ParameterListResource extends BaseJobResource
+public class RandomStringGenerator implements StringIDGenerator
 {
+    private static Logger log = Logger.getLogger(RandomStringGenerator.class);
+
+    // generate a random modest-length lower case string
+    private static final String DEFAULT_CHARS = "abcdefghijklmnopqrstuvwxyz0123456789";
+
+    // shared random number generator for jobID generation
+    private final SecureRandom rnd = new SecureRandom();
+    private int length;
+    private char[] characters;
+    private int numLetters;
+
     /**
-     * POST Parameter data to this Job.
+     * Constructor. Generates identifiers with the specified number of characters and
+     * the default set of allowed characters: lower case letters [a-z] and digits [0-9].
      *
-     * @param entity    The Representation Entity.
+     * @param length
      */
-    @Post
-    public void accept(Representation entity)
+    public RandomStringGenerator(int length)
     {
-        final Form form = new Form(entity);
-        Map<String, String> valuesMap = form.getValuesMap();
-        List<Parameter> params = new ArrayList<Parameter>();
-        for (Map.Entry<String, String> entry : valuesMap.entrySet())
-            params.add(new Parameter(entry.getKey(), entry.getValue()));
+        this(length, DEFAULT_CHARS);
+    }
+
+    /**
+     * Constructor. Generates identifiers with the specified number of characters and
+     * the specified set of allowed characters.
+     * 
+     * @param length
+     * @param allowedChars
+     */
+    public RandomStringGenerator(int length, String allowedChars)
+    {
+        this.length = length;
+        this.characters = new char[ allowedChars.length() ];
+
+        // find/add all the letters first
+        this.numLetters = 0;
+        for (int i=0; i<allowedChars.length(); i++)
+        {
+            char c = allowedChars.charAt(i);
+            if ( Character.isLetter(c) )
+            {
+                characters[i] = c;
+                numLetters++;
+            }
+        }
+        // find/add all the non-letters (presumably digits)
+        int n = 0;
+        for (int i=0; i<allowedChars.length(); i++)
+        {
+            char c = allowedChars.charAt(i);
+            if ( !Character.isLetter(c) )
+            {
+                characters[numLetters + n] = c;
+                n++;
+            }
+        }
+        log.debug("allowed characters: " + new String(characters));
+        log.debug("number of letters: " + numLetters);
+        initRNG();
+    }
+
+    /**
+     * Generate a new ID. This method is thread-safe.
+     *
+     * @return a new ID
+     */
+    public String getID()
+    {
+        synchronized(rnd)
+        {
+            char[] c = new char[length];
+            c[0] = characters[ rnd.nextInt(numLetters) ];
+            for (int i=1; i<length; i++)
+                c[i] = characters[ rnd.nextInt(characters.length) ];
+            return new String(c);
+        }
+    }
+
+    // package access for test code
+    void initRNG()
+    {
+        // add extra seed info: clock
+        byte[] clock = HexUtil.toBytes(System.currentTimeMillis());
+        byte[] addr = null;
         try
         {
-            // TODO: only allow in PENDING phase, but optimal
-            getJobManager().update(jobID, params);
-            redirectToJob();
+            // add extra seed info: ip address
+            InetAddress inet = InetAddress.getLocalHost();
+            if ( !inet.isLoopbackAddress() )
+                addr = inet.getAddress();
         }
-        catch(JobNotFoundException ex)
-        {
-            throw new RuntimeException(ex);
-        }
-        catch(JobPersistenceException ex)
-        {
-            throw new RuntimeException(ex);
-        }
-        catch(JobPhaseException ex)
-        {
-            throw new RuntimeException(ex);
-        }
-    }
+        catch(UnknownHostException ignore) { }
 
-    /**
-     * Assemble the appropriate XML and build the given Document.
-     *
-     * @param document      The Document to build.
-     */
-    protected void buildXML(Document document)
-    {
-        JobWriter jobWriter = new JobWriter();
-        document.addContent(jobWriter.getParameters(job));
+        
+        if (clock != null)
+            rnd.setSeed(clock);
+        if (addr != null)
+            rnd.setSeed(addr);
     }
-
 }

@@ -79,7 +79,6 @@ import java.util.ArrayList;
 import java.util.Date;
 import java.util.List;
 
-import javax.security.auth.Subject;
 
 import org.apache.log4j.Logger;
 import org.jdom.Document;
@@ -93,10 +92,9 @@ import java.io.StringWriter;
 import java.io.UnsupportedEncodingException;
 import java.text.DateFormat;
 import java.util.HashMap;
-import java.util.HashSet;
 import java.util.Map;
-import java.util.Set;
-import javax.security.auth.x500.X500Principal;
+import org.jdom.Attribute;
+import org.jdom.DataConversionException;
 import org.jdom.input.SAXBuilder;
 import org.jdom.output.XMLOutputter;
 
@@ -180,51 +178,39 @@ public class JobReader
     }
 
     private Job parseJob(Document doc)
-        throws ParseException
+        throws ParseException, DataConversionException
     {
         Element root = doc.getRootElement();
 
         String jobID = root.getChildText(JobAttribute.JOB_ID.getAttributeName(), UWS.NS);
         if (jobID != null && jobID.trim().length() == 0)
             jobID = null;
-        String runID = root.getChildText(JobAttribute.RUN_ID.getAttributeName(), UWS.NS);
-        Subject owner = createSubject(root.getChildText(JobAttribute.OWNER_ID.getAttributeName(), UWS.NS));
+        String runID = parseStringContent(root.getChild(JobAttribute.RUN_ID.getAttributeName(), UWS.NS));
+        String ownerID = parseStringContent(root.getChild(JobAttribute.OWNER_ID.getAttributeName(), UWS.NS));
+        Date quote = parseDate(parseStringContent(root.getChild(JobAttribute.QUOTE.getAttributeName(), UWS.NS)));
+        Date startTime = parseDate(parseStringContent(root.getChild(JobAttribute.START_TIME.getAttributeName(), UWS.NS)));
+        Date endTime = parseDate(parseStringContent(root.getChild(JobAttribute.END_TIME.getAttributeName(), UWS.NS)));
+        Date destructionTime = parseDate(parseStringContent(root.getChild(JobAttribute.DESTRUCTION_TIME.getAttributeName(), UWS.NS)));
+        Long executionDuration = new Long(parseStringContent(root.getChild(JobAttribute.EXECUTION_DURATION.getAttributeName(), UWS.NS)));
+
         ExecutionPhase executionPhase = parseExecutionPhase(doc);
-        Date quote = parseDate(root.getChildText(JobAttribute.QUOTE.getAttributeName(), UWS.NS));
-        Date startTime = parseDate(root.getChildText(JobAttribute.START_TIME.getAttributeName(), UWS.NS));
-        Date endTime = parseDate(root.getChildText(JobAttribute.END_TIME.getAttributeName(), UWS.NS));
-        Date destructionTime = parseDate(root.getChildText(JobAttribute.DESTRUCTION_TIME.getAttributeName(), UWS.NS));
-        long executionDuration = Long.parseLong(root.getChildText(JobAttribute.EXECUTION_DURATION.getAttributeName(), UWS.NS));
+
         ErrorSummary errorSummary = null;
         if (executionPhase.equals(ExecutionPhase.ERROR)) errorSummary = parseErrorSummary(doc);
+
         List<Result> resultsList = parseResultsList(doc);
 
         List<Parameter> parameterList = parseParametersList(doc);
+
         JobInfo jobInfo = parseJobInfo(doc);
 
-        String requestPath = null; // not presented in XML text
-        String requesterIp = null; // not presented in XML text
-
-        Job job = new Job(jobID, executionPhase, executionDuration, destructionTime, quote, startTime, 
-                          endTime, errorSummary, owner, runID, resultsList, parameterList, requestPath, requesterIp);
-        job.setJobInfo(jobInfo);
+        Job job = new Job(jobID, executionPhase, executionDuration, destructionTime, quote,
+                startTime, endTime, errorSummary, ownerID, runID,
+                null, null, jobInfo, parameterList, resultsList);
         
         return job;
     }
 
-    private Subject createSubject(String owner)
-    {
-        if (owner == null)
-            return null;
-        owner = owner.trim();
-        if (owner.length() == 0)
-            return null;
-        Set<X500Principal> principals = new HashSet<X500Principal>();
-        Set<Object> pub = new HashSet<Object>();
-        Set<Object> priv = new HashSet<Object>();
-        principals.add(new X500Principal(owner));
-        return new Subject(true, principals, pub, priv);
-    }
     private Date parseDate(String strDate)
         throws ParseException
     {
@@ -234,6 +220,17 @@ public class JobReader
         if (strDate.length() == 0)
             return null;
         return dateFormat.parse(strDate);
+    }
+
+    private String parseStringContent(Element e)
+        throws DataConversionException
+    {
+        if (e == null)
+            return null;
+        Attribute nil = e.getAttribute("nil", UWS.XSI_NS);
+        if (nil != null && nil.getBooleanValue())
+            return null;
+        return e.getTextTrim();
     }
 
     private ExecutionPhase parseExecutionPhase(Document doc)
@@ -364,9 +361,10 @@ public class JobReader
                     try
                     {
                         Element ce = (Element) children.get(0);
+                        Document jiDoc = new Document((Element) ce.detach());
                         XMLOutputter outputter = new XMLOutputter();
                         StringWriter sw = new StringWriter();
-                        outputter.output(ce, sw);
+                        outputter.output(jiDoc, sw);
                         sw.close();
                         rtn = new JobInfo(sw.toString(), null, null);
                         

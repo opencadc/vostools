@@ -1,4 +1,4 @@
-<!--
+/*
 ************************************************************************
 *******************  CANADIAN ASTRONOMY DATA CENTRE  *******************
 **************  CENTRE CANADIEN DE DONNÉES ASTRONOMIQUES  **************
@@ -65,101 +65,83 @@
 *  $Revision: 4 $
 *
 ************************************************************************
--->
+*/
 
-	
-<project default="build" basedir=".">
-  <property environment="env"/>
+package ca.nrc.cadc.uws.server;
 
-    <!-- site-specific build properties or overrides of values in opencadc.properties -->
-    <property file="${env.CADC_PREFIX}/etc/local.properties" />
+import ca.nrc.cadc.uws.Job;
+import ca.nrc.cadc.uws.Parameter;
+import java.util.Iterator;
+import java.util.List;
 
-    <!-- site-specific targets, e.g. install, cannot duplicate those in opencadc.targets.xml -->
-    <import file="${env.CADC_PREFIX}/etc/local.targets.xml" optional="true" />
+/**
+ * Service interface for job persistence.
+ */
+public interface JobPersistence
+{
+    /**
+     * Obtain a Job from the persistence layer. Normally the job has
+     * only the top-level job fields and the caller needs to call getDetails
+     * if the parameters and results are needed.
+     *
+     * @param jobID
+     * @return the job
+     * @throws JobNotFoundException
+     * @throws JobPersistenceException
+     */
+    public Job get(String jobID)
+        throws JobNotFoundException, JobPersistenceException;
 
-    <!-- default properties and targets -->
-    <property file="${env.CADC_PREFIX}/etc/opencadc.properties" />
-    <import file="${env.CADC_PREFIX}/etc/opencadc.targets.xml"/>
+    /**
+     * Get the details for the specified job. The details include all parameters
+     * and results.
+     * 
+     * @param job
+     * @throws JobPersistenceException
+     */
+    public void getDetails(Job job)
+        throws JobPersistenceException;
 
-    <!-- developer convenience: place for extra targets and properties -->
-    <import file="extras.xml" optional="true" />
+    /**
+     * Persist the given Job. The returned job will have a jobID value.
+     *
+     * @param job
+     * @return the persisted job
+     * @throws JobPersistenceException
+     */
+    public Job put(Job job)
+        throws JobPersistenceException;
 
-    <property name="project" value="cadcUWS" />
+    /**
+     * Delete the specified job.
+     *
+     * @param jobID
+     * @throws JobPersistenceException
+     */
+    public void delete(String jobID)
+        throws JobPersistenceException;
 
-    <property name="cadc" value="${lib}/cadcUtil.jar" />
-    <property name="external" value="${ext.lib}/log4j.jar:${ext.lib}/org.restlet.jar:${ext.lib}/spring.jar:${ext.lib}/jdom.jar:${ext.lib}/servlet-api.jar" />
+    /**
+     * Obtain a listing of Job instances.
+     *
+     * @return iterator over visible jobs
+     */
+    public Iterator<Job> iterator();
 
-    <property name="jars" value="${cadc}:${external}" />
+    // optimised access methods
 
-    <target name="build" depends="compile,resources">
-        <jar jarfile="${build}/lib/${project}.jar"
-            basedir="${build}/class" update="no">
-                <exclude name="test/**" />
-        </jar>
-    </target>
+    /**
+     * Add parameters to the specified job.
+     * 
+     * @param jobID
+     * @param params
+     * @throws JobNotFoundException
+     * @throws JobPersistenceException
+     */
+    public void addParameters(String jobID, List<Parameter> params)
+        throws JobNotFoundException, JobPersistenceException;
 
-    <target name="resources">
-        <copy todir="${build}/class">
-            <fileset dir="src/resources">
-                <include name="**.xsd" />
-            </fileset>
-        </copy>
-    </target>
-
-    <!-- JAR files needed to run the test suite -->
-    <property name="dev.junit" value="${ext.dev}/junit.jar" />
-    <property name="dev.easyMock" value="${ext.dev}/easymock.jar" />
-    <property name="lib.cglib" value="${ext.lib}/cglib.jar" />
-    <property name="commons-logging"    value="${ext.lib}/commons-logging.jar" />
-    <property name="testingJars" value="${test.jdbc.drivers}:${commons-logging}:${dev.junit}:${dev.easyMock}:${lib.cglib}:${ext.lib}/asm-attrs.jar:${ext.lib}/asm.jar:${ext.lib}/xerces.jar" />
-    
-    <target name="test" depends="xml-test,dao-test">
-        <junit printsummary="yes" haltonfailure="yes" fork="yes">
-            <classpath>
-                <pathelement path="${build}/class"/>
-                <pathelement path="${build}/test/class"/>
-                <pathelement path="${build}/test/src"/>
-                <pathelement path="${jars}:${testingJars}"/>
-            </classpath>
-
-            <test name="ca.nrc.cadc.uws.server.RandomStringGeneratorTest" />
-            <test name="ca.nrc.cadc.uws.web.ResourceTestSuite" />
-
-            <formatter type="plain" usefile="false" />
-        </junit>
-
-    </target>
-
-    <target name="xml-test" depends="compile-test">
-        <junit printsummary="yes" haltonfailure="yes" fork="yes">
-            <classpath>
-                <pathelement path="${build}/class"/>
-                <pathelement path="${build}/test/class"/>
-                <pathelement path="${build}/test/src"/>
-                <pathelement path="${jars}:${testingJars}"/>
-            </classpath>
-
-            <test name="ca.nrc.cadc.uws.JobReaderWriterTest" />
-
-            <formatter type="plain" usefile="false" />
-        </junit>
-    </target>
-
-    <target name="dao-test" depends="build,compile-test">
-        <junit printsummary="yes" haltonfailure="yes" fork="yes">
-            <classpath>
-                <pathelement path="${build}/class"/>
-                <pathelement path="${build}/test/class"/>
-                <pathelement path="${build}/test/src"/>
-                <pathelement path="${jars}:${testingJars}"/>
-            </classpath>
-
-            <test name="ca.nrc.cadc.uws.server.JobDAOTest_Sybase" />
-	    <!-- code works but we have no test server setup yet
-            <test name="ca.nrc.cadc.uws.server.JobDAOTest_PostgreSQL" />
-            -->
-            <formatter type="plain" usefile="false" />
-        </junit>
-    </target>
-
-</project>
+    // not needed by any current use cases
+    //public void setJobInfo(String jobID, JobInfo info)
+    //    throws JobNotFoundException;
+}

@@ -79,8 +79,8 @@ import java.text.ParseException;
 import ca.nrc.cadc.uws.web.validators.FormValidator;
 import ca.nrc.cadc.uws.JobAttribute;
 import ca.nrc.cadc.uws.ExecutionPhase;
-import ca.nrc.cadc.uws.util.StringUtil;
 import ca.nrc.cadc.date.DateUtil;
+import ca.nrc.cadc.util.StringUtil;
 
 import java.text.DateFormat;
 

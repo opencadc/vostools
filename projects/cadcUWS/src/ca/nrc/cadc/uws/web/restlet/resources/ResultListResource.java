@@ -71,7 +71,6 @@
 package ca.nrc.cadc.uws.web.restlet.resources;
 
 
-import ca.nrc.cadc.uws.JobAttribute;
 import ca.nrc.cadc.uws.JobWriter;
 import org.jdom.Document;
 
@@ -87,7 +86,7 @@ public class ResultListResource extends BaseJobResource
      *
      * @param document The Document to build up.
      */
-    protected void buildXML(final Document document)
+    protected void buildXML(Document document)
     {
         JobWriter jobWriter = new JobWriter();
         document.addContent(jobWriter.getResults(job));

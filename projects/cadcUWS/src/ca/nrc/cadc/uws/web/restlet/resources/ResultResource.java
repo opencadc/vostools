@@ -33,13 +33,16 @@
  */
 package ca.nrc.cadc.uws.web.restlet.resources;
 
+import ca.nrc.cadc.uws.web.restlet.InvalidResourceException;
+import ca.nrc.cadc.uws.Job;
 import org.restlet.resource.Get;
 import org.restlet.representation.Representation;
 
 import java.io.IOException;
 
 import ca.nrc.cadc.uws.Result;
-import ca.nrc.cadc.uws.InvalidResourceException;
+import ca.nrc.cadc.uws.server.JobNotFoundException;
+import ca.nrc.cadc.uws.server.JobPersistenceException;
 import org.jdom.Document;
 
 
@@ -53,53 +56,31 @@ public class ResultResource extends BaseJobResource
     @Override
     public Representation represent()
     {
-        if (getResult() != null)
+        try
         {
-            redirectSeeOther(getResult().getURL().toExternalForm());
+            String resultID = getRequestAttribute("resultID");
+            if (job == null)
+                this.job = getJobManager().get(jobID);
+            for (Result result : job.getResultsList())
+                if (result.getName().equals(resultID))
+                {
+                    redirectSeeOther(result.getURL().toExternalForm());
+                    return null;
+                }
+            throw new InvalidResourceException("not found: " + jobID + "/results/" + resultID);
         }
-
-        return null;
+        catch(JobNotFoundException ex)
+        {
+            throw new RuntimeException(ex);
+        }
+        catch(JobPersistenceException ex)
+        {
+            throw new RuntimeException(ex);
+        }
     }
 
-    /**
-     * Assemble the XML for this Resource's Representation into the given
-     * Document.
-     *
-     * @param document The Document to build up.
-     * @throws java.io.IOException If something went wrong or the XML cannot be
-     *                             built.
-     */
     protected void buildXML(final Document document) throws IOException
     {
         // Do nothing.
-    }
-
-    /**
-     * Obtain the current Result ID being requested.
-     *
-     * @return  String result ID.
-     */
-    protected String getResultID()
-    {
-        return getRequestAttribute("resultID");
-    }
-
-    /**
-     * Obtain the current requested Result.
-     *
-     * @return      Result instance, or null if none found.
-     */
-    protected Result getResult()
-    {
-        for (final Result result : job.getResultsList())
-        {
-            if (result.getName().equals(getResultID()))
-            {
-                return result;
-            }
-        }
-
-        throw new InvalidResourceException("No such Result " + getResultID()
-                                           + " for Job " + job.getID());
     }
 }

@@ -70,8 +70,8 @@
 package ca.nrc.cadc.uws.web.restlet;
 
 import org.restlet.data.Form;
-import ca.nrc.cadc.uws.util.StringUtil;
 import ca.nrc.cadc.date.DateUtil;
+import ca.nrc.cadc.util.StringUtil;
 import ca.nrc.cadc.uws.ExecutionPhase;
 import ca.nrc.cadc.uws.Job;
 import ca.nrc.cadc.uws.JobAttribute;
@@ -80,8 +80,8 @@ import ca.nrc.cadc.uws.Parameter;
 import java.net.MalformedURLException;
 import java.text.DateFormat;
 import java.text.ParseException;
+import java.util.ArrayList;
 import java.util.Date;
-import java.util.Map;
 import java.util.Set;
 
 import javax.security.auth.Subject;
@@ -113,20 +113,6 @@ public class JobAssembler
      */
     public Job assemble() throws MalformedURLException, ParseException
     {
-        final String phase = getForm().getFirstValue(
-                JobAttribute.EXECUTION_PHASE.getAttributeName(), true);
-
-        final ExecutionPhase executionPhase;
-
-        if (StringUtil.hasText(phase))
-        {
-            executionPhase = ExecutionPhase.valueOf(phase.toUpperCase());
-        }
-        else
-        {
-            executionPhase = null;
-        }
-
         final String duration = form.getFirstValue(
                 JobAttribute.EXECUTION_DURATION.getAttributeName(), true);
         final long durationTime;
@@ -175,23 +161,11 @@ public class JobAssembler
 
         Job job = new Job();
         job.setRunID(runID);
-        job.setExecutionPhase(executionPhase);
+        job.setExecutionPhase(ExecutionPhase.PENDING);
         job.setExecutionDuration(durationTime);
         job.setDestructionTime(destructionDate);
         job.setQuote(quoteDate);
-        job.setOwner(subject); 
-
-        //final Map<String, String> valuesMap =
-        //        new HashMap<String, String>(form.getValuesMap());
-        
-
-        // Clear out those Request parameters that are pre-defined.
-
-        //for (final JobAttribute jobAttribute : JobAttribute.values())
-        //{
-        //    paramNames.remove(jobAttribute.getAttributeName().toUpperCase());
-        //}
-
+        job.setParameterList(new ArrayList<Parameter>());
         Set<String> paramNames = form.getNames();
         for (String p : paramNames)
         {
@@ -199,7 +173,7 @@ public class JobAssembler
             {
                 String[] vals = form.getValuesArray(p, true);
                 for (String v : vals)
-                    job.addParameter(new Parameter(p, v));
+                    job.getParameterList().add(new Parameter(p, v));
             }
         }
 

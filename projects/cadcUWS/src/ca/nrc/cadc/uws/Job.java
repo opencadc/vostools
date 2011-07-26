@@ -73,9 +73,7 @@ package ca.nrc.cadc.uws;
 import java.util.ArrayList;
 import java.util.Date;
 import java.util.List;
-
 import javax.security.auth.Subject;
-
 
 /**
  * Default implementation of a Job.
@@ -84,13 +82,13 @@ public class Job
 {
     private String jobID;
     private ExecutionPhase executionPhase;
-    private long executionDuration;
+    private Long executionDuration;
     private Date destructionTime;
     private Date quote;
     private Date startTime;
     private Date endTime;    
     private ErrorSummary errorSummary;
-    private Subject owner;
+    private String ownerID;
     private String runID;
     private List<Result> resultsList;
     private List<Parameter> parameterList;
@@ -100,139 +98,125 @@ public class Job
 
     private Date lastModified;
 
+    // used on the server side only for authorization checks
+    public Subject ownerSubject;
 
     public Job() { }
 
-    /**
-     * Copy constructor. Create a new job with the specified ID and content copied
-     * from the specified job.
-     * 
-     * @param jobID
-     * @param job
-     */
-    public Job(String jobID, Job job)
+    // package access for use by JobReader
+    Job(String jobID,
+                ExecutionPhase executionPhase,
+                Long executionDuration,
+                Date destructionTime,
+                Date quote,
+                Date startTime,
+                Date endTime,
+                ErrorSummary errorSummary,
+                String ownerID,
+                String runID,
+                String requestPath,
+                String remoteIP,
+                JobInfo jobInfo,
+                List<Parameter> params,
+                List<Result> results)
     {
+        this(executionPhase, executionDuration, destructionTime, quote,
+                startTime, endTime, errorSummary, ownerID, runID,
+                requestPath, remoteIP, jobInfo, params, results);
         this.jobID = jobID;
-        setAll(job);
     }
-
-    public Job(ExecutionPhase executionPhase, long executionDuration,
-            Date destructionTime, Date quote, String requestPath, String remoteIP)
+    
+    /**
+     * Complete constructor for a new job.
+     * 
+     * @param executionPhase
+     * @param executionDuration
+     * @param destructionTime
+     * @param quote
+     * @param startTime
+     * @param endTime
+     * @param errorSummary
+     * @param ownerID
+     * @param runID
+     * @param requestPath
+     * @param remoteIP
+     * @param jobInfo
+     * @param params
+     * @param results
+     */
+    public Job(ExecutionPhase executionPhase,
+                Long executionDuration,
+                Date destructionTime,
+                Date quote,
+                Date startTime,
+                Date endTime,
+                ErrorSummary errorSummary,
+                String ownerID,
+                String runID,
+                String requestPath,
+                String remoteIP,
+                JobInfo jobInfo,
+                List<Parameter> params,
+                List<Result> results)
     {
         this.executionPhase = executionPhase;
         this.executionDuration = executionDuration;
         this.destructionTime = destructionTime;
         this.quote = quote;
+        this.startTime = startTime;
+        this.endTime = endTime;
+        this.errorSummary = errorSummary;
+        this.ownerID = ownerID;
+        this.runID = runID;
         this.requestPath = requestPath;
         this.remoteIP = remoteIP;
-    }
-
-    /**
-     * Constructor.
-     *
-     * @param jobID                 The unique Job ID.
-     * @param executionPhase        The Execution Phase.
-     * @param executionDuration     The Duration in clock seconds.
-     * @param destructionTime       The date and time of destruction.
-     * @param quote                 The quoted date of completion.
-     * @param startTime             The start date of execution.
-     * @param endTime               The end date of execution.
-     * @param errorSummary          The error, if any.
-     * @param owner                 The Owner of this Job.
-     * @param runID                 The specific running ID.
-     * @param resultsList           The List of Results.
-     * @param parameterList         The List of Parameters.
-     * @param requestPath           The HTTP request path.
-     * @param requesterIp           The HTTP requester's IP address
-     */
-    public Job(final String jobID, final ExecutionPhase executionPhase,
-               final long executionDuration, final Date destructionTime,
-               final Date quote, final Date startTime, final Date endTime,
-               final ErrorSummary errorSummary, final Subject owner,
-               final String runID, final List<Result> resultsList,
-               final List<Parameter> parameterList,
-               final String requestPath, final String requesterIp)
-    {
-        this.jobID = jobID;
-        this.executionPhase = executionPhase;
-        this.executionDuration = executionDuration;
-        this.destructionTime = destructionTime;
-        this.quote = quote;
-        this.startTime = startTime;
-        this.endTime = endTime;
-        this.errorSummary = errorSummary;
-        this.owner = owner;
-        this.runID = runID;
-        this.resultsList = resultsList;
-        this.parameterList = parameterList;
-        this.requestPath = requestPath;
-        this.remoteIP = requesterIp;
-        this.jobInfo = null;
-    }
-
-    /**
-     * Constructor.
-     *
-     * @param jobID                 The unique Job ID.
-     * @param executionPhase        The Execution Phase.
-     * @param executionDuration     The Duration in clock seconds.
-     * @param destructionTime       The date and time of destruction.
-     * @param quote                 The quoted date of completion.
-     * @param startTime             The start date of execution.
-     * @param endTime               The end date of execution.
-     * @param errorSummary          The error, if any.
-     * @param owner                 The Owner of this Job.
-     * @param runID                 The specific running ID.
-     * @param resultsList           The List of Results.
-     * @param requestPath           The HTTP request path.
-     * @param requesterIp           The HTTP requester's IP address
-     * @param jobInfo               Content that describes the Job.
-     */
-    public Job(final String jobID, final ExecutionPhase executionPhase,
-               final long executionDuration, final Date destructionTime,
-               final Date quote, final Date startTime, final Date endTime,
-               final ErrorSummary errorSummary, final Subject owner,
-               final String runID, final List<Result> resultsList,
-               final JobInfo jobInfo, final String requestPath, final String remoteIP)
-    {
-        this.jobID = jobID;
-        this.executionPhase = executionPhase;
-        this.executionDuration = executionDuration;
-        this.destructionTime = destructionTime;
-        this.quote = quote;
-        this.startTime = startTime;
-        this.endTime = endTime;
-        this.errorSummary = errorSummary;
-        this.owner = owner;
-        this.runID = runID;
-        this.resultsList = resultsList;
         this.jobInfo = jobInfo;
-        this.requestPath = requestPath;
-        this.remoteIP = remoteIP;
-        this.parameterList = null;
+        this.parameterList = params;
+        this.resultsList = results;
     }
+
     /**
-     * Set all fields except ID from the specified job.
+     * Copy constructor. This makes a deep copy so that any changes to the created 
+     * job will not effect the original job. The constructed job is a new job with
+     * no jobID (until assigned by a JobPersistence implementation).
      * 
      * @param job
      */
-    public void setAll(Job job)
+    public Job(Job job)
     {
-        setExecutionPhase(job.getExecutionPhase());
-        setExecutionDuration(job.getExecutionDuration());
-        setDestructionTime(job.getDestructionTime());
-        setQuote(job.getQuote());
-        setStartTime(job.getStartTime());
-        setEndTime(job.getEndTime());
-        setErrorSummary(job.getErrorSummary());
-        setOwner(job.getOwner());
-        setRunID(job.getRunID());
-        setResultsList(job.getResultsList());
-        setParameterList(job.getParameterList());
-        setOwner(job.getOwner());
-        setRequestPath(job.getRequestPath());
-        setRemoteIP(job.getRemoteIP());
-        setJobInfo(job.getJobInfo());
+        this.executionPhase = job.getExecutionPhase();
+        this.executionDuration = job.getExecutionDuration();
+        this.destructionTime = job.getDestructionTime();
+        this.quote = job.getQuote();
+        this.startTime = job.getStartTime();
+        this.endTime = job.getEndTime();
+
+        this.errorSummary = job.getErrorSummary();
+        this.ownerID = job.getOwnerID();
+        this.runID = job.getRunID();
+        this.requestPath = job.getRequestPath();
+        this.remoteIP = job.getRemoteIP();
+
+        // deep copy of the mutable fields
+        if (job.getParameterList() != null)
+        {
+            this.parameterList = new ArrayList<Parameter>();
+            for (Parameter p : job.getParameterList())
+                parameterList.add(new Parameter(p.getName(), p.getValue()));
+        }
+        if (job.getResultsList() != null)
+        {
+            this.resultsList = new ArrayList<Result>();
+            for (Result r : job.getResultsList())
+                resultsList.add(new Result(r.getName(), r.getURL()));
+        }
+        if (job.getJobInfo() != null)
+        {
+            this.jobInfo = new JobInfo(
+                    job.getJobInfo().getContent(),
+                    job.getJobInfo().getContentType(),
+                    job.getJobInfo().getValid() );
+        }
     }
 
     @Override
@@ -240,19 +224,14 @@ public class Job
     {
         return "Job [jobInfo=" + jobInfo + " destructionTime=" + destructionTime + ", endTime=" + endTime + ", errorSummary="
                 + errorSummary + ", executionDuration=" + executionDuration + ", executionPhase=" + executionPhase + ", jobID="
-                + jobID + ", owner=" + owner + ", parameterList=" + parameterList + ", quote=" + quote + ", requestPath="
-                + requestPath + ", requesterIp="
+                + jobID + ", ownerID=" + ownerID + ", parameterList=" + parameterList + ", quote=" + quote + ", requestPath="
+                + requestPath + ", remoteIP="
                 + remoteIP + ", resultsList=" + resultsList + ", runID=" + runID + ", startTime=" + startTime + "]";
     }
 
     public Date getLastModified()
     {
         return lastModified;
-    }
-
-    public void setID(String jobID)
-    {
-        this.jobID = jobID;
     }
 
     /**
@@ -263,6 +242,26 @@ public class Job
     public String getID()
     {
         return jobID;
+    }
+
+    /**
+     * Get the string representation of the ownerID.
+     *
+     * @return
+     */
+    public String getOwnerID()
+    {
+        return ownerID;
+    }
+
+    /**
+     * Set  the string representation of the ownerID.
+     *
+     * @param ownerID
+     */
+    public void setOwnerID(String ownerID)
+    {
+        this.ownerID = ownerID;
     }
 
     /**
@@ -304,7 +303,7 @@ public class Job
      *
      * @return long execution duration.
      */
-    public long getExecutionDuration()
+    public Long getExecutionDuration()
     {
         return executionDuration;
     }
@@ -314,7 +313,7 @@ public class Job
      *
      * @param executionDuration New execution duration value, in seconds.
      */
-    public void setExecutionDuration(final long executionDuration)
+    public void setExecutionDuration(Long executionDuration)
     {
         this.executionDuration = executionDuration;
     }
@@ -345,7 +344,7 @@ public class Job
      *
      * @param destructionTime Date of destruction.
      */
-    public void setDestructionTime(final Date destructionTime)
+    public void setDestructionTime(Date destructionTime)
     {
         this.destructionTime = destructionTime;
     }
@@ -367,27 +366,22 @@ public class Job
         return quote;
     }
 
-    public void setQuote(final Date quote)
+    public void setQuote(Date quote)
     {
         this.quote = quote;
     }
 
-    public void setStartTime(final Date startTime)
+    public void setStartTime(Date startTime)
     {
         this.startTime = startTime;
     }
 
-    public void setEndTime(final Date endTime)
+    public void setEndTime(Date endTime)
     {
         this.endTime = endTime;
     }
 
-    public void setOwner(final Subject owner)
-    {
-        this.owner = owner;
-    }
-
-    public void setRunID(final String runID)
+    public void setRunID(String runID)
     {
         this.runID = runID;
     }
@@ -426,22 +420,9 @@ public class Job
         return errorSummary;
     }
 
-    public void setErrorSummary(final ErrorSummary errorSummary)
+    public void setErrorSummary(ErrorSummary errorSummary)
     {
         this.errorSummary = errorSummary;
-    }
-
-    /**
-     * The owner object represents the identifier for the creator of the job.
-     * This object will not exist for all invocations of a UWS conformant
-     * protocol, but only in cases where the access to the service is
-     * authenticated.
-     *
-     * @return String Owner Name.
-     */
-    public Subject getOwner()
-    {
-        return owner;
     }
 
     /**
@@ -485,7 +466,7 @@ public class Job
      *
      * @param resultList List of Result instances, never null.
      */
-    public void setResultsList(final List<Result> resultList)
+    public void setResultsList(List<Result> resultList)
     {
         this.resultsList = resultList;
     }
@@ -520,23 +501,9 @@ public class Job
         return parameterList;
     }
 
-    public void setParameterList(final List<Parameter> parameterList)
+    public void setParameterList(List<Parameter> parameterList)
     {
         this.parameterList = parameterList;
-    }
-
-    /**
-     * Add a parameter to the Parameter List.
-     *
-     * @param parameter  A Parameter to add.  NULLs are not allowed, and
-     *                   duplicates will be discarded.
-     */
-    public void addParameter(final Parameter parameter)
-    {
-        if (!getParameterList().contains(parameter))
-        {
-            getParameterList().add(parameter);
-        }
     }
 
     /**

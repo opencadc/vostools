@@ -70,19 +70,31 @@
 
 package ca.nrc.cadc.uws.web.restlet;
 
-import ca.nrc.cadc.uws.JobExecutor;
+import ca.nrc.cadc.uws.server.JobManager;
 import org.restlet.Restlet;
 import org.restlet.Context;
-import ca.nrc.cadc.uws.util.BeanUtil;
-import ca.nrc.cadc.uws.JobManager;
-import ca.nrc.cadc.uws.JobPersistence;
+import org.apache.log4j.Logger;
+import org.restlet.Application;
+import org.restlet.data.MediaType;
+import org.restlet.routing.Router;
 
+import ca.nrc.cadc.uws.web.restlet.resources.AsynchResource;
+import ca.nrc.cadc.uws.web.restlet.resources.ErrorResource;
+import ca.nrc.cadc.uws.web.restlet.resources.JobAsynchResource;
+import ca.nrc.cadc.uws.web.restlet.resources.ParameterListResource;
+import ca.nrc.cadc.uws.web.restlet.resources.ResultListResource;
+import ca.nrc.cadc.uws.web.restlet.resources.ResultResource;
+import java.util.Map;
 
 /**
  * The UWS Restlet Application to handle Asynchronous calls.
  */
-public class UWSAsyncApplication extends AbstractUWSApplication
+public class UWSAsyncApplication extends Application
 {
+    private static final Logger log = Logger.getLogger(UWSAsyncApplication.class);
+
+    public final static String UWS_JOB_MANAGER = JobManager.class.getName();
+    
     /**
      * Constructor. Note this constructor is convenient because you don't have
      * to provide a context like for {@link #Application(org.restlet.Context)}.
@@ -109,11 +121,51 @@ public class UWSAsyncApplication extends AbstractUWSApplication
         init();
     }
 
+    /**
+     * Method to initialize this Application.
+     */
+    private void init()
+    {
+        setStatusService(new UWSStatusService(true));
+
+        // Make XML the preferred choice.
+        getMetadataService().addExtension(MediaType.TEXT_XML.getName(),
+                                          MediaType.TEXT_XML, true);
+    }
+
+    protected class JobRouter extends Router
+    {
+        public JobRouter(final Context context)
+        {
+            super(context);
+
+            log.debug("attaching / -> AsynchResource");
+            attach("", AsynchResource.class);
+            log.debug("attaching /{jobID} -> JobAsynchResource");
+            attach("/{jobID}", JobAsynchResource.class);
+            
+            //TemplateRoute jobRoute = attach("/{jobPath}", JobAsynchResource.class);
+            //Map<String, Variable> jobRouteVariables = nodeRoute.getTemplate().getVariables();
+            //jobRouteVariables.put("jobPath", new Variable(Variable.TYPE_ALL));
+            
+            attach("/{jobID}/phase", JobAsynchResource.class);
+            attach("/{jobID}/executionduration", JobAsynchResource.class);
+            attach("/{jobID}/destruction", JobAsynchResource.class);
+            attach("/{jobID}/quote", JobAsynchResource.class);
+            attach("/{jobID}/owner", JobAsynchResource.class);
+            
+            attach("/{jobID}/parameters", ParameterListResource.class);
+            attach("/{jobID}/error", ErrorResource.class);
+            attach("/{jobID}/results", ResultListResource.class);
+            attach("/{jobID}/results/{resultID}", ResultResource.class);
+        }
+    }
+
 
     /**
-     * Creates an inbound root Restlet that will receive all incoming calls. This
-     * method create a UWSSyncRouter and instantiates a JobExecutor, JobManager,
-     * and JobPersistence and adds them to the context.
+     * This method does the setup of the restlet application. It loads a JobManager
+     * implementation and stores it as a context attribute and then creates and
+     * returns a JobRouter.
      *
      * @return The root Restlet.
      */
@@ -122,16 +174,20 @@ public class UWSAsyncApplication extends AbstractUWSApplication
     {
         Context ctx = getContext();
 
-        JobExecutor je = (JobExecutor) createBean(BeanUtil.UWS_EXECUTOR_SERVICE, true);
-        
-        JobPersistence jp = (JobPersistence) createBean(BeanUtil.UWS_PERSISTENCE, true);
-        JobManager jm = (JobManager) createBean(BeanUtil.UWS_JOB_MANAGER_SERVICE, true);
-        jm.setJobPersistence(jp);
-        je.setJobManager(jm);
-        
-        ctx.getAttributes().put(BeanUtil.UWS_EXECUTOR_SERVICE, je);
-        ctx.getAttributes().put(BeanUtil.UWS_JOB_MANAGER_SERVICE, jm);
-
-        return new UWSAsyncRouter(ctx);
+        // load impl class and create the JobManager and attach to the context
+        String cname = null;
+        try
+        {
+            cname = getContext().getParameters().getFirstValue(UWS_JOB_MANAGER);
+            Class c = Class.forName(cname);
+            JobManager jm = (JobManager) c.newInstance();
+            ctx.getAttributes().put(UWS_JOB_MANAGER, jm);
+            log.info("created " + UWS_JOB_MANAGER + ": " + cname);
+        }
+        catch (Exception ex)
+        {
+            log.error("CONFIGURATION ERROR: failed to instantiate JobManager implementation: "+  cname);
+        }
+        return new JobRouter(ctx);
     }
 }

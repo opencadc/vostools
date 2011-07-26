@@ -74,7 +74,10 @@ import org.restlet.representation.Representation;
 import org.restlet.resource.Get;
 
 import ca.nrc.cadc.uws.ErrorSummary;
-import ca.nrc.cadc.uws.InvalidResourceException;
+import ca.nrc.cadc.uws.web.restlet.InvalidResourceException;
+import ca.nrc.cadc.uws.Job;
+import ca.nrc.cadc.uws.server.JobNotFoundException;
+import ca.nrc.cadc.uws.server.JobPersistenceException;
 
 import java.io.IOException;
 import org.jdom.Document;
@@ -94,10 +97,14 @@ public class ErrorResource extends BaseJobResource
     @Override
     public Representation represent()
     {
-        final ErrorSummary errorSummary = job.getErrorSummary();
-
-        if (errorSummary != null)
+        try
         {
+            job = getJobManager().get(jobID);
+            final ErrorSummary errorSummary = job.getErrorSummary();
+
+            if (errorSummary == null)
+                throw new InvalidResourceException("not found: " + jobID + "/error");
+            
             if (errorSummary.getDocumentURL() != null)
                 redirectSeeOther(errorSummary.getDocumentURL().toExternalForm());
             else
@@ -107,24 +114,20 @@ public class ErrorResource extends BaseJobResource
                 String path = getRequestPath();
                 path = path.replace("/error", "");
                 redirectSeeOther(getHostPart() + path);
+
             }
             return null;
         }
-        else
+        catch(JobPersistenceException ex)
         {
-            throw new InvalidResourceException("No such Error for Job "
-                                               + job.getID());
+            throw new RuntimeException(ex);
+        }
+        catch(JobNotFoundException ex)
+        {
+            throw new RuntimeException(ex);
         }
     }
 
-    /**
-     * Assemble the XML for this Resource's Representation into the given
-     * Document.
-     *
-     * @param document The Document to build up.
-     * @throws java.io.IOException If something went wrong or the XML cannot be
-     *                             built.
-     */
     protected void buildXML(final Document document) throws IOException
     {
         // Do Nothing.

@@ -38,14 +38,14 @@ import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
 
-public class ResultResourceTest
+public class ErrorResourceTest
 {
-    private static Logger log = Logger.getLogger(ResultResourceTest.class);
-    
+    private static Logger log = Logger.getLogger(ErrorResourceTest.class);
+
     @Before
     public void setup()
     {
-        
+
     }
 
     @Test

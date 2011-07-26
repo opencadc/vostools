@@ -71,13 +71,10 @@
 package ca.nrc.cadc.uws.web.restlet.resources;
 
 import java.io.IOException;
-import java.security.Principal;
 import java.text.DateFormat;
 import java.text.ParseException;
 import java.util.Date;
 import java.util.Set;
-
-import javax.security.auth.Subject;
 
 import org.apache.log4j.Logger;
 import org.jdom.Document;
@@ -90,18 +87,17 @@ import org.restlet.resource.Get;
 import org.restlet.resource.Post;
 
 import ca.nrc.cadc.date.DateUtil;
-import ca.nrc.cadc.uws.ExecutionPhase;
-import ca.nrc.cadc.uws.InvalidResourceException;
-import ca.nrc.cadc.uws.InvalidServiceException;
 import ca.nrc.cadc.uws.JobAttribute;
-import ca.nrc.cadc.uws.JobExecutor;
-import ca.nrc.cadc.uws.JobRunner;
 import ca.nrc.cadc.uws.JobWriter;
 import ca.nrc.cadc.uws.Parameter;
-import ca.nrc.cadc.uws.UWS;
-import ca.nrc.cadc.uws.util.BeanUtil;
-import ca.nrc.cadc.uws.util.StringUtil;
-import ca.nrc.cadc.uws.web.InvalidActionException;
+import ca.nrc.cadc.uws.server.JobNotFoundException;
+import ca.nrc.cadc.uws.server.JobPersistenceException;
+import ca.nrc.cadc.uws.server.JobPhaseException;
+import ca.nrc.cadc.uws.web.restlet.InvalidActionException;
+import java.security.PrivilegedAction;
+import java.util.ArrayList;
+import java.util.List;
+import javax.security.auth.Subject;
 
 
 /**
@@ -130,32 +126,56 @@ public class JobAsynchResource extends BaseJobResource
     @Override
     public Representation represent()
     {
-        StringRepresentation representation = null;
-        
-        final String pathInfo = getPathInfo();
-        if (pathInfo.endsWith("phase"))
-            representation = new StringRepresentation(job.getExecutionPhase().toString());
-        else if (pathInfo.endsWith("executionduration"))
-            representation = new StringRepresentation(Long.toString(job.getExecutionDuration()));
-        else if (pathInfo.endsWith("destruction"))
-            representation = new StringRepresentation(dateFormat.format(job.getDestructionTime()));
-        else if (pathInfo.endsWith("quote"))
-            representation = new StringRepresentation(dateFormat.format(job.getQuote()));
-        else if (pathInfo.endsWith("owner"))
-            representation = new StringRepresentation(format(job.getOwner()));
-        
-        if (representation != null)
-            return representation;
-        else
+        try
+        {
+            if (job == null)
+                job = getJobManager().get(jobID);
+            StringRepresentation representation = null;
+
+            final String pathInfo = getPathInfo();
+            if (pathInfo.endsWith("phase"))
+                representation = new StringRepresentation(job.getExecutionPhase().toString());
+            else if (pathInfo.endsWith("executionduration"))
+                representation = new StringRepresentation(Long.toString(job.getExecutionDuration()));
+            else if (pathInfo.endsWith("destruction"))
+                representation = new StringRepresentation(dateFormat.format(job.getDestructionTime()));
+            else if (pathInfo.endsWith("quote"))
+                representation = new StringRepresentation(dateFormat.format(job.getQuote()));
+            else if (pathInfo.endsWith("owner"))
+                representation = new StringRepresentation(job.getOwnerID());
+
+            if (representation != null)
+                return representation;
+            
             return super.represent();
+        }
+        catch(JobPersistenceException ex)
+        {
+            throw new RuntimeException(ex);
+        }
+        catch(JobNotFoundException ex)
+        {
+            throw new RuntimeException(ex);
+        }
     }
 
     @Delete
     public void delete(final Representation entity)
     {
-        LOGGER.debug("delete() called. for job: " + job);
-        getJobManager().delete(job.getID());
-        redirectSeeOther(getHostPart() + job.getRequestPath());
+        LOGGER.debug("delete() called. for job: " + jobID);
+        try
+        {   
+            getJobManager().delete(jobID);
+            redirectToJobList();
+        }
+        catch(JobPersistenceException ex)
+        {
+            throw new RuntimeException(ex);
+        }
+        catch(JobNotFoundException ex)
+        {
+            throw new RuntimeException(ex);
+        }
     }
     
     /**
@@ -167,153 +187,152 @@ public class JobAsynchResource extends BaseJobResource
     public void accept(final Representation entity)
     {
         final String pathInfo = getPathInfo();
-        Form form = new Form(entity);
-
-        if (!jobModificationAllowed(form))
+        final Form form = new Form(entity);
+        Subject subject = getSubject();
+        if (subject == null) // anon
         {
-            String message = "No further modifications are allowed for this Job";
-            if (jobIsActive())
-            {
-                message += " unless it is to abort it";
-            }
-            throw new InvalidActionException(message);
-        }
-        
-        
-        String actionStr = form.getFirstValue("ACTION");
-        if ("DELETE".equals(actionStr))
-        {
-            LOGGER.debug("DELETE job through POST request. job: " + job);
-            getJobManager().delete(job.getID());
-            redirectSeeOther(getHostPart() + job.getRequestPath());
-            return;
-        }
-
-        JobRunner jobRunner = null;
-
-        final String phase = form.getFirstValue(
-                JobAttribute.EXECUTION_PHASE.getAttributeName().toUpperCase());
-
-        if (pathInfo.endsWith("phase"))
-        {
-            if (RUN.equalsIgnoreCase(phase))
-            {
-                if (jobIsPending())
-                {
-                    jobRunner = createJobRunner();
-                    jobRunner.setJobManager(getJobManager());
-                    jobRunner.setJob(job);
-                }
-            }
-            else if (ABORT.equalsIgnoreCase(phase))
-            {
-                if (!jobHasRun())
-                    job.setExecutionPhase(ExecutionPhase.ABORTED);
-            }
-            else
-                throw new InvalidActionException("unexpected value for PHASE: " + phase);
-        }
-        else  if (pathInfo.endsWith("executionduration"))
-        {
-            String str = form.getFirstValue(JobAttribute.EXECUTION_DURATION.getAttributeName().toUpperCase());
-            try
-            {
-                Long val = Long.parseLong(str);
-                job.setExecutionDuration(val);
-            }
-            catch(NumberFormatException nex)
-            {
-                throw new InvalidActionException("failed to parse "
-                        + JobAttribute.EXECUTION_DURATION.getAttributeName() + ": "
-                        + str + " (expected a long integer)");
-            }
-                    
-        }
-        else if (pathInfo.endsWith("destruction"))
-        {
-            final String str =
-                    form.getFirstValue(JobAttribute.DESTRUCTION_TIME.
-                            getAttributeName().toUpperCase());
-            try
-            {
-                Date val = dateFormat.parse(str);
-                job.setDestructionTime(val);
-            }
-            catch (ParseException e)
-            {
-                throw new InvalidActionException("failed to parse "
-                        + JobAttribute.DESTRUCTION_TIME.getAttributeName() + ": "
-                        + str + " (expected format " + DateUtil.IVOA_DATE_FORMAT + ")");
-            }
+            doAccept(pathInfo, form);
         }
         else
         {
-            Set<String> paramNames = form.getNames();
-            for (String p : paramNames)
+            Subject.doAs(subject, new PrivilegedAction<Object>()
             {
-                if ( !JobAttribute.isValue(p))
+                public Object run()
                 {
-                    String[] vals = form.getValuesArray(p, true);
-                    for (String v : vals)
-                        job.addParameter(new Parameter(p, v));
+                    doAccept(pathInfo, form);
+                    return null;
                 }
-            }
+            } );
         }
-
-        this.job = getJobManager().persist(job);
-
-        if (jobRunner != null)
-            getJobExecutorService().execute(jobRunner, getSubject());
-
-        redirectSeeOther(getHostPart() + job.getRequestPath() + "/" + job.getID());
     }
 
-    /**
-     * Obtain the XML Representation of a particular Attribute of a Job.
-     *
-     * @param document      The Document to build up.
-     * @param pathInfo      Information on the current Path.
-     */
-    protected void buildAttributeXML(final Document document, final String pathInfo)
+    private void doAccept(String pathInfo, Form form)
     {
-        String text;
-        final JobAttribute jobAttribute;
+        LOGGER.debug("doAccept: pathInfo=" + pathInfo);
+        try
+        {
+            // phase changes
+            if (pathInfo.endsWith("phase"))
+            {
+                String phase = form.getFirstValue(
+                    JobAttribute.EXECUTION_PHASE.getAttributeName().toUpperCase());
+                LOGGER.debug("request: PHASE="+phase);
+                if (RUN.equalsIgnoreCase(phase))
+                    getJobManager().execute(jobID);
+                else if (ABORT.equalsIgnoreCase(phase))
+                    getJobManager().abort(jobID);
+                else
+                    throw new InvalidActionException("invalid phase request: " + phase);
+                redirectToJob();
+                return;
+            }
 
-        if (pathInfo.endsWith("phase"))
-        {
-            text = job.getExecutionPhase().name();
-            jobAttribute = JobAttribute.EXECUTION_PHASE;
-        }
-        else if (pathInfo.endsWith("executionduration"))
-        {
-            text = Long.toString(job.getExecutionDuration());
-            jobAttribute = JobAttribute.EXECUTION_DURATION;
-        }
-        else if (pathInfo.endsWith("destruction"))
-        {
-            text = dateFormat.format(job.getDestructionTime());
-            jobAttribute = JobAttribute.DESTRUCTION_TIME;
-        }
-        else if (pathInfo.endsWith("quote"))
-        {
-            text = dateFormat.format(job.getQuote());
-            jobAttribute = JobAttribute.QUOTE;
-        }
-        else if (pathInfo.endsWith("owner"))
-        {
-            text = format(job.getOwner());
-            jobAttribute = JobAttribute.OWNER_ID;
-        }
-        else
-        {
-            throw new InvalidResourceException("No such Resource > " + pathInfo);
-        }
+            // delete job hack
+            if (pathInfo.endsWith(jobID))
+            {
+                String actionStr = form.getFirstValue("ACTION");
+                LOGGER.debug("request: ACTION="+actionStr);
+                if ("DELETE".equals(actionStr))
+                {
+                    LOGGER.debug("DELETE job through POST request. job: " + jobID);
+                    getJobManager().delete(jobID);
+                    redirectToJobList();
+                    return;
+                }
+            }
 
-        Element element = new Element(jobAttribute.getAttributeName(), UWS.NS);
-        element.addContent(text);
-        document.addContent(element);
+            Long execDuration = null;
+            Date destruction = null;
+            Date quote = null;
+            if (pathInfo.endsWith("executionduration"))
+            {
+                String str = form.getFirstValue(
+                    JobAttribute.EXECUTION_DURATION.getAttributeName().toUpperCase());
+                try
+                {
+                    execDuration = Long.parseLong(str);
+                }
+                catch(NumberFormatException nex)
+                {
+                    throw new InvalidActionException("failed to parse "
+                            + JobAttribute.EXECUTION_DURATION.getAttributeName() + ": "
+                            + str + " (expected an integer)");
+                }
+            }
+            else if (pathInfo.endsWith("destruction"))
+            {
+                final String str =
+                        form.getFirstValue(JobAttribute.DESTRUCTION_TIME.
+                                getAttributeName().toUpperCase());
+                try
+                {
+                    destruction = dateFormat.parse(str);
+                }
+                catch (ParseException e)
+                {
+                    throw new InvalidActionException("failed to parse "
+                            + JobAttribute.DESTRUCTION_TIME.getAttributeName() + ": "
+                            + str + " (expected format " + DateUtil.IVOA_DATE_FORMAT + ")");
+                }
+            }
+            else if (pathInfo.endsWith("quote"))
+            {
+                final String str =
+                        form.getFirstValue(JobAttribute.QUOTE.
+                                getAttributeName().toUpperCase());
+                try
+                {
+                    quote = dateFormat.parse(str);
+                }
+                catch (ParseException e)
+                {
+                    throw new InvalidActionException("failed to parse "
+                            + JobAttribute.QUOTE.getAttributeName() + ": "
+                            + str + " (expected format " + DateUtil.IVOA_DATE_FORMAT + ")");
+                }
+            }
+
+            if (destruction != null || execDuration != null || quote != null)
+            {
+                LOGGER.debug("update " + jobID + ": " + destruction + "," + execDuration + "," + quote);
+                getJobManager().update(jobID, destruction, execDuration, quote);
+            }
+
+            if ( pathInfo.endsWith(jobID) )
+            {
+                Set<String> paramNames = form.getNames();
+                List<Parameter> params = new ArrayList<Parameter>();
+                for (String p : paramNames)
+                {
+                    if ( !JobAttribute.isValue(p))
+                    {
+                        String[] vals = form.getValuesArray(p, true);
+                        for (String v : vals)
+                            params.add(new Parameter(p, v));
+                    }
+                }
+                if (params.size() > 0)
+                {
+                    LOGGER.debug("update " + jobID + ": " + params.size() + " parameters");
+                    getJobManager().update(jobID, params);
+                }
+            }
+            redirectToJob();
+        }
+        catch(JobPersistenceException ex)
+        {
+            throw new RuntimeException(ex);
+        }
+        catch(JobPhaseException ex)
+        {
+            throw new RuntimeException(ex);
+        }
+        catch(JobNotFoundException ex)
+        {
+            throw new RuntimeException(ex);
+        }
+        finally { }
     }
-
 
     /**
      * Assemble the XML for this Resource's Representation into the given
@@ -325,82 +344,8 @@ public class JobAsynchResource extends BaseJobResource
      */
     protected void buildXML(final Document document) throws IOException
     {
-        final String pathInfo = getPathInfo();
-
-        if (!pathInfo.endsWith(job.getID()))
-        {
-            buildAttributeXML(document, pathInfo);
-        }
-        else
-        {
-            buildJobXML(document);
-        }
-    }
-
-    /**
-     * Build the XML for the entire Job.
-     * 
-     * @param document The Document to build up.
-     * @throws java.io.IOException If something went wrong or the XML cannot be
-     *                             built.
-     */
-    protected void buildJobXML(final Document document) throws IOException
-    {
         JobWriter writer = new JobWriter();
         Element root = writer.getRootElement(job);
         document.setRootElement(root);
-    }
-
-    protected JobExecutor getJobExecutorService()
-    {
-        return (JobExecutor) getContextAttribute(BeanUtil.UWS_EXECUTOR_SERVICE);
-    }
-
-    private String format(Subject s)
-    {
-        if (s != null)
-        {
-            Set<Principal> principals = s.getPrincipals();
-            if (principals.size() > 0)
-            {
-                Principal p = principals.iterator().next();
-                return p.getName();
-            }
-        }
-        return "";
-    }
-
-    /**
-     * Obtain a new instance of the Job Runner interface as defined in the
-     * Context
-     *
-     * @return  The JobRunner instance.
-     */
-    @SuppressWarnings("unchecked")
-    protected JobRunner createJobRunner()
-    {
-        if (!StringUtil.hasText(
-                getContext().getParameters().getFirstValue(
-                        BeanUtil.UWS_RUNNER)))
-        {
-            throw new InvalidServiceException(
-                    "The JobRunner is mandatory!\n\n Please set the "
-                    + BeanUtil.UWS_RUNNER + " context-param in the web.xml, "
-                    + "or insert it into the Context manually.");
-        }
-
-        final String jobRunnerClassName =
-                getContext().getParameters().getFirstValue(BeanUtil.UWS_RUNNER);
-        final BeanUtil beanUtil = new BeanUtil(jobRunnerClassName);
-
-        try
-        {
-            return (JobRunner) beanUtil.createBean();
-        }
-        catch(ClassCastException err)
-        {
-            throw new InvalidServiceException("invalid JobRunner: " + jobRunnerClassName
-                    + " must implement " + JobRunner.class.getName());
-        }
     }
 }

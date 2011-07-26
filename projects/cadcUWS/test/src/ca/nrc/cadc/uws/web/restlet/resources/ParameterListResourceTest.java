@@ -38,18 +38,32 @@ import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
 
-public class ResultResourceTest
+public class ParameterListResourceTest
 {
-    private static Logger log = Logger.getLogger(ResultResourceTest.class);
-    
+    private static Logger log = Logger.getLogger(ParameterListResourceTest.class);
+
     @Before
     public void setup()
     {
-        
+
     }
 
     @Test
     public void represent() // GET
+    {
+        try
+        {
+
+        }
+        catch(Exception unexpected)
+        {
+            log.error("unexpected exception", unexpected);
+            Assert.fail("unexpected exception: " + unexpected);
+        }
+    }
+
+    @Test
+    public void accept() // POST
     {
         try
         {

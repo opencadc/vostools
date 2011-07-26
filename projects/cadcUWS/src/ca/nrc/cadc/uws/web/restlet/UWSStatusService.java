@@ -76,8 +76,9 @@ import org.restlet.data.MediaType;
 import org.restlet.Request;
 import org.restlet.Response;
 import org.apache.log4j.Logger;
-import ca.nrc.cadc.uws.InvalidResourceException;
-import ca.nrc.cadc.uws.web.InvalidActionException;
+import ca.nrc.cadc.uws.server.JobNotFoundException;
+import ca.nrc.cadc.uws.server.JobPersistenceException;
+import ca.nrc.cadc.uws.server.JobPhaseException;
 import java.security.AccessControlException;
 import org.restlet.resource.ResourceException;
 
@@ -118,17 +119,36 @@ public class UWSStatusService extends StatusService
      * @return The representation of the given status.
      */
     @Override
-    public Status getStatus(final Throwable throwable, final Request request,
-                            final Response response)
+    public Status getStatus(Throwable throwable, Request request, Response response)
     {
-        
+        // unwrap checked exceptions from UWS library
+        if (RuntimeException.class.equals(throwable.getClass())
+                && throwable.getCause() != null)
+            throwable = throwable.getCause();
+
         response.setEntity("Unable to complete your request: "
                            + (throwable.getCause() == null
                               ? throwable : throwable.getCause()).getMessage()
                            + "\n",
                            MediaType.TEXT_PLAIN);
 
-        if (throwable instanceof InvalidResourceException ||
+        if (throwable instanceof JobNotFoundException)
+        {
+            return Status.CLIENT_ERROR_NOT_FOUND;
+        }
+        else if (throwable instanceof JobPersistenceException)
+        {
+            return Status.SERVER_ERROR_INTERNAL;
+        }
+        else if (throwable instanceof JobPhaseException)
+        {
+            return Status.CLIENT_ERROR_BAD_REQUEST;
+        }
+        else if (throwable instanceof AccessControlException)
+        {
+            return new Status(Status.CLIENT_ERROR_FORBIDDEN, throwable.getMessage());
+        }
+        else if (throwable instanceof InvalidResourceException ||
                 throwable.getCause() instanceof InvalidResourceException)
         {
             return Status.CLIENT_ERROR_NOT_FOUND;
@@ -138,13 +158,9 @@ public class UWSStatusService extends StatusService
         {
             return Status.CLIENT_ERROR_METHOD_NOT_ALLOWED;
         }
-        else if (throwable instanceof AccessControlException)
-        {
-            return new Status(Status.CLIENT_ERROR_FORBIDDEN, throwable.getMessage());
-        }
         else
         {
-            LOGGER.error("Unhandled exception or error intercepted", throwable);
+            LOGGER.error("unexpected Throwable", throwable);
             return super.getStatus(throwable, request, response);
         }
     }

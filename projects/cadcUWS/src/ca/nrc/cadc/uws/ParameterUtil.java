@@ -1,4 +1,4 @@
-<!--
+/*
 ************************************************************************
 *******************  CANADIAN ASTRONOMY DATA CENTRE  *******************
 **************  CENTRE CANADIEN DE DONNÉES ASTRONOMIQUES  **************
@@ -65,101 +65,65 @@
 *  $Revision: 4 $
 *
 ************************************************************************
--->
+*/
 
-	
-<project default="build" basedir=".">
-  <property environment="env"/>
+package ca.nrc.cadc.uws;
 
-    <!-- site-specific build properties or overrides of values in opencadc.properties -->
-    <property file="${env.CADC_PREFIX}/etc/local.properties" />
+import java.util.ArrayList;
+import java.util.List;
 
-    <!-- site-specific targets, e.g. install, cannot duplicate those in opencadc.targets.xml -->
-    <import file="${env.CADC_PREFIX}/etc/local.targets.xml" optional="true" />
+import ca.nrc.cadc.uws.Parameter;
 
-    <!-- default properties and targets -->
-    <property file="${env.CADC_PREFIX}/etc/opencadc.properties" />
-    <import file="${env.CADC_PREFIX}/etc/opencadc.targets.xml"/>
+/**
+ * Utility class related to Parameters.
+ * 
+ * @author zhangsa
+ *
+ */
+public class ParameterUtil
+{
+    /*
+     * Find String value from the Parameter List by its name.
+     */
+    public static String findParameterValue(String name, List<Parameter> paramList)
+    {
+        for (Parameter parameter : paramList)
+        {
+            if (name.equalsIgnoreCase(parameter.getName())) return parameter.getValue();
+        }
+        return null;
+    }
 
-    <!-- developer convenience: place for extra targets and properties -->
-    <import file="extras.xml" optional="true" />
+    /**
+     * From the supplied full parameter list, return a list of only those
+     * semicolon-separated values that correspond to the named parameter.
+     * 
+     * @param name
+     * @param paramList
+     * @return
+     */
+    public static List<String> findParameterValues(String name, List<Parameter> paramList)
+    {
+        List<String> namedParamList = new ArrayList<String>();
 
-    <property name="project" value="cadcUWS" />
-
-    <property name="cadc" value="${lib}/cadcUtil.jar" />
-    <property name="external" value="${ext.lib}/log4j.jar:${ext.lib}/org.restlet.jar:${ext.lib}/spring.jar:${ext.lib}/jdom.jar:${ext.lib}/servlet-api.jar" />
-
-    <property name="jars" value="${cadc}:${external}" />
-
-    <target name="build" depends="compile,resources">
-        <jar jarfile="${build}/lib/${project}.jar"
-            basedir="${build}/class" update="no">
-                <exclude name="test/**" />
-        </jar>
-    </target>
-
-    <target name="resources">
-        <copy todir="${build}/class">
-            <fileset dir="src/resources">
-                <include name="**.xsd" />
-            </fileset>
-        </copy>
-    </target>
-
-    <!-- JAR files needed to run the test suite -->
-    <property name="dev.junit" value="${ext.dev}/junit.jar" />
-    <property name="dev.easyMock" value="${ext.dev}/easymock.jar" />
-    <property name="lib.cglib" value="${ext.lib}/cglib.jar" />
-    <property name="commons-logging"    value="${ext.lib}/commons-logging.jar" />
-    <property name="testingJars" value="${test.jdbc.drivers}:${commons-logging}:${dev.junit}:${dev.easyMock}:${lib.cglib}:${ext.lib}/asm-attrs.jar:${ext.lib}/asm.jar:${ext.lib}/xerces.jar" />
-    
-    <target name="test" depends="xml-test,dao-test">
-        <junit printsummary="yes" haltonfailure="yes" fork="yes">
-            <classpath>
-                <pathelement path="${build}/class"/>
-                <pathelement path="${build}/test/class"/>
-                <pathelement path="${build}/test/src"/>
-                <pathelement path="${jars}:${testingJars}"/>
-            </classpath>
-
-            <test name="ca.nrc.cadc.uws.server.RandomStringGeneratorTest" />
-            <test name="ca.nrc.cadc.uws.web.ResourceTestSuite" />
-
-            <formatter type="plain" usefile="false" />
-        </junit>
-
-    </target>
-
-    <target name="xml-test" depends="compile-test">
-        <junit printsummary="yes" haltonfailure="yes" fork="yes">
-            <classpath>
-                <pathelement path="${build}/class"/>
-                <pathelement path="${build}/test/class"/>
-                <pathelement path="${build}/test/src"/>
-                <pathelement path="${jars}:${testingJars}"/>
-            </classpath>
-
-            <test name="ca.nrc.cadc.uws.JobReaderWriterTest" />
-
-            <formatter type="plain" usefile="false" />
-        </junit>
-    </target>
-
-    <target name="dao-test" depends="build,compile-test">
-        <junit printsummary="yes" haltonfailure="yes" fork="yes">
-            <classpath>
-                <pathelement path="${build}/class"/>
-                <pathelement path="${build}/test/class"/>
-                <pathelement path="${build}/test/src"/>
-                <pathelement path="${jars}:${testingJars}"/>
-            </classpath>
-
-            <test name="ca.nrc.cadc.uws.server.JobDAOTest_Sybase" />
-	    <!-- code works but we have no test server setup yet
-            <test name="ca.nrc.cadc.uws.server.JobDAOTest_PostgreSQL" />
-            -->
-            <formatter type="plain" usefile="false" />
-        </junit>
-    </target>
-
-</project>
+        for (Parameter parameter : paramList)
+        {
+            if (name.equalsIgnoreCase(parameter.getName()))
+            {
+                String namedParamStr = parameter.getValue();
+                if (namedParamStr == null || namedParamStr.length() == 0)
+                    namedParamList.add("");
+                else
+                {
+                    String[] namedParams = namedParamStr.split(";");
+                    for (String param : namedParams)
+                        namedParamList.add(param);
+                }
+            }
+        }
+        if (namedParamList.size() > 0)
+            return namedParamList;
+        else
+            return null;
+    }
+}
