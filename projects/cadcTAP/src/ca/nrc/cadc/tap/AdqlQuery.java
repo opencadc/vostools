@@ -97,7 +97,7 @@ import ca.nrc.cadc.tap.parser.schema.TapSchemaTableValidator;
 import ca.nrc.cadc.tap.schema.TableDesc;
 import ca.nrc.cadc.tap.schema.TapSchema;
 import ca.nrc.cadc.uws.Parameter;
-import ca.nrc.cadc.uws.util.ParameterUtil;
+import ca.nrc.cadc.uws.ParameterUtil;
 import java.util.Set;
 
 /**

@@ -72,7 +72,7 @@ package ca.nrc.cadc.tap;
 import java.util.List;
 
 import ca.nrc.cadc.uws.Parameter;
-import ca.nrc.cadc.uws.util.ParameterUtil;
+import ca.nrc.cadc.uws.ParameterUtil;
 
 /**
  * TAP Validator. 

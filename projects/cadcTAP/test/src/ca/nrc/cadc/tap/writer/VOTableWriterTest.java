@@ -74,12 +74,10 @@ import ca.nrc.cadc.tap.schema.TapSchema;
 import ca.nrc.cadc.util.Log4jInit;
 import ca.nrc.cadc.uws.ExecutionPhase;
 import ca.nrc.cadc.uws.Job;
-import ca.nrc.cadc.uws.Parameter;
 import ca.nrc.cadc.xml.XmlUtil;
 import java.io.ByteArrayOutputStream;
 import java.io.StringReader;
 import java.util.ArrayList;
-import java.util.Date;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -105,10 +103,13 @@ public class VOTableWriterTest
 
     private static final Logger LOG = Logger.getLogger(VOTableWriterTest.class);
 
-    Job job = new Job("123", ExecutionPhase.PENDING, 666L,
-                    new Date(), new Date(), new Date(), new Date(),
-                    null,
-                    null, null, null, new ArrayList<Parameter>(), null, null);
+    // just need a job with an ID
+    Job job = new Job()
+    {
+        @Override
+        public String getID() { return "123"; }
+    };
+
     static
     {
         Log4jInit.setLevel("ca.nrc.cadc.tap.writer", Level.INFO);

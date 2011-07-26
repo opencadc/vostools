@@ -73,7 +73,7 @@ import ca.nrc.cadc.tap.schema.TableDesc;
 import ca.nrc.cadc.tap.schema.TapSchema;
 import ca.nrc.cadc.uws.Job;
 import ca.nrc.cadc.uws.Parameter;
-import ca.nrc.cadc.uws.util.ParameterUtil;
+import ca.nrc.cadc.uws.ParameterUtil;
 import java.util.List;
 import java.util.Map;
 import org.apache.log4j.Logger;

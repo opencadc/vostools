@@ -75,7 +75,7 @@ import ca.nrc.cadc.tap.writer.RssTableWriter;
 import java.util.List;
 
 import ca.nrc.cadc.uws.Parameter;
-import ca.nrc.cadc.uws.util.ParameterUtil;
+import ca.nrc.cadc.uws.ParameterUtil;
 import java.util.Map;
 import java.util.TreeMap;
 import org.apache.log4j.Logger;

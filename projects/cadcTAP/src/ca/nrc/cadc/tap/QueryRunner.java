@@ -70,7 +70,6 @@
 package ca.nrc.cadc.tap;
 
 import ca.nrc.cadc.tap.writer.VOTableWriter;
-import ca.nrc.cadc.uws.SyncOutput;
 import java.io.File;
 import java.io.FileOutputStream;
 import java.io.OutputStream;
@@ -98,11 +97,14 @@ import ca.nrc.cadc.uws.ErrorSummary;
 import ca.nrc.cadc.uws.ErrorType;
 import ca.nrc.cadc.uws.ExecutionPhase;
 import ca.nrc.cadc.uws.Job;
-import ca.nrc.cadc.uws.JobManager;
 import ca.nrc.cadc.uws.Parameter;
 import ca.nrc.cadc.uws.Result;
-import ca.nrc.cadc.uws.SyncJobRunner;
+import ca.nrc.cadc.uws.server.JobNotFoundException;
+import ca.nrc.cadc.uws.server.JobRunner;
+import ca.nrc.cadc.uws.server.JobUpdater;
+import ca.nrc.cadc.uws.server.SyncOutput;
 import java.util.ArrayList;
+import java.util.Date;
 import javax.naming.NameNotFoundException;
 
 /**
@@ -131,9 +133,9 @@ import javax.naming.NameNotFoundException;
  * 
  * @author pdowler
  */
-public class QueryRunner implements SyncJobRunner
+public class QueryRunner implements JobRunner
 {
-    private static final Logger logger = Logger.getLogger(QueryRunner.class);
+    private static final Logger log = Logger.getLogger(QueryRunner.class);
 
     private static final HashMap<String, String> langQueries = new HashMap<String, String>();
 
@@ -141,7 +143,6 @@ public class QueryRunner implements SyncJobRunner
     private static String uploadDataSourceName = "jdbc/tapuploadadm";
 
     // names of plugin classes that must be provided by service implementation
-    private static String fileStoreClassName = "ca.nrc.cadc.tap.impl.FileStoreImpl";
     private static String resultStoreImplClassName = "ca.nrc.cadc.tap.impl.ResultStoreImpl";
     private static String uploadManagerClassName = "ca.nrc.cadc.tap.impl.UploadManagerImpl";
     private static String sqlParserClassName = "ca.nrc.cadc.tap.impl.SqlQueryImpl";
@@ -160,7 +161,7 @@ public class QueryRunner implements SyncJobRunner
 
     private String jobID;
     private Job job;
-    private JobManager manager;
+    private JobUpdater jobUpdater;
     private SyncOutput syncOutput;
 
     public QueryRunner()
@@ -174,100 +175,73 @@ public class QueryRunner implements SyncJobRunner
         jobID = job.getID();
     }
 
-    public Job getJob()
+    public void setJobUpdater(JobUpdater ju)
     {
-        return job;
+        this.jobUpdater = ju;
     }
 
-    public void setJobManager(JobManager jm)
+    public void setSyncOutput(SyncOutput so)
     {
-        this.manager = jm;
-    }
-
-    public URL getRedirectURL()
-    {
-        return null;
-    }
-
-    public void setOutput(SyncOutput syncOutput)
-    {
-        this.syncOutput = syncOutput;
+        this.syncOutput = so;
     }
 
     public void run()
     {
-        logger.debug("START");
+        log.debug("START");
         List<Long> tList = new ArrayList<Long>();
         List<String> sList = new ArrayList<String>();
 
         tList.add(System.currentTimeMillis());
         sList.add("start");
 
-        // check job state, TODO optimise this
-        this.job = manager.getJob(jobID);
-        if (job == null || job.getExecutionPhase().equals(ExecutionPhase.ABORTED))
-        {
-            logger.debug("job aborted");
-            return;
-        }
-        tList.add(System.currentTimeMillis());
-        sList.add("check if aborted: ");
+        log.debug("run: " + job.getID());
 
         
-        
-        FileStore fs = null;
         ResultStore rs = null;
         if (syncOutput == null)
         {
-            // try to instantiate a deprecated FileStore instance
-            try
-            {
-                logger.debug("loading " + fileStoreClassName);
-                fs = (FileStore) Class.forName(fileStoreClassName).newInstance();
-            }
-            catch (Throwable t)
-            {
-                logger.warn("Failed to instantiate FileStore class: " + fileStoreClassName);
-            }
-
             // try to instantiate a ResultStore instance
             try
             {
-                logger.debug("loading " + resultStoreImplClassName);
+                log.debug("loading " + resultStoreImplClassName);
                 rs = (ResultStore) Class.forName(resultStoreImplClassName).newInstance();
             }
             catch (Throwable t)
             {
-                logger.warn("Failed to instantiate ResultStore class: " + resultStoreImplClassName);
+                log.warn("Failed to instantiate ResultStore class: " + resultStoreImplClassName);
             }
         }
 
         // Check if a store or stream have been set for a context
-        if (fs == null && rs == null && syncOutput == null)
+        if (rs == null && syncOutput == null)
         {
-            throw new RuntimeException("async mode: Failed to instantiate a FileStore or ResultStore class");
+            throw new RuntimeException("async mode: Failed to instantiate ResultStore implementation: " + resultStoreImplClassName);
         }
 
         try
         {
-            logger.debug("setting/persisting ExecutionPhase = " + ExecutionPhase.EXECUTING);
-            job.setExecutionPhase(ExecutionPhase.EXECUTING);
-            this.job = manager.persist(job);
-
+            ExecutionPhase ep = jobUpdater.setPhase(job.getID(), ExecutionPhase.QUEUED, ExecutionPhase.EXECUTING, new Date());
+            if ( !ExecutionPhase.EXECUTING.equals(ep) )
+            {
+                ep = jobUpdater.getPhase(job.getID());
+                log.debug(job.getID() + ": QUEUED -> EXECUTING [FAILED] -- DONE");
+                return;
+            }
+            log.debug(job.getID() + ": QUEUED -> EXECUTING [OK]");
             tList.add(System.currentTimeMillis());
-            sList.add("set phase = EXECUTING: ");
+            sList.add("QUEUED -> EXECUTING: ");
 
             // start processing the job
             List<Parameter> paramList = job.getParameterList();
 
-            logger.debug("invoking TapValiator for REQUEST and VERSION...");
+            log.debug("invoking TapValiator for REQUEST and VERSION...");
             TapValidator tapValidator = new TapValidator();
             tapValidator.validate(paramList);
 
             tList.add(System.currentTimeMillis());
             sList.add("initialisation: ");
 
-            logger.debug("find DataSource via JNDI lookup...");
+            log.debug("find DataSource via JNDI lookup...");
             Context initContext = new InitialContext();
             Context envContext = (Context) initContext.lookup("java:/comp/env");
             DataSource queryDataSource = (DataSource) envContext.lookup(queryDataSourceName);
@@ -279,7 +253,7 @@ public class QueryRunner implements SyncJobRunner
             }
             catch (NameNotFoundException nex)
             {
-                logger.warn(nex.toString());
+                log.warn(nex.toString());
             }
 
             if (queryDataSource == null) // application server config issue
@@ -288,40 +262,30 @@ public class QueryRunner implements SyncJobRunner
             tList.add(System.currentTimeMillis());
             sList.add("find DataSources via JNDI: ");
 
-            // check job state, TODO optimise this
-            this.job = manager.getJob(jobID);
-            if (job == null || job.getExecutionPhase().equals(ExecutionPhase.ABORTED))
-            {
-                logger.debug("job aborted");
-                return;
-            }
-            tList.add(System.currentTimeMillis());
-            sList.add("check if aborted: ");
-
-            logger.debug("reading TapSchema...");
+            log.debug("reading TapSchema...");
             TapSchemaDAO dao = new TapSchemaDAO(queryDataSource);
             TapSchema tapSchema = dao.get();
 
             tList.add(System.currentTimeMillis());
             sList.add("read tap_schema: ");
 
-            logger.debug("loading " + uploadManagerClassName);
+            log.debug("loading " + uploadManagerClassName);
             Class umc = Class.forName(uploadManagerClassName);
             UploadManager uploadManager = (UploadManager) umc.newInstance();
             uploadManager.setDataSource(uploadDataSource);
-            logger.debug("invoking UploadManager for UPLOAD...");
+            log.debug("invoking UploadManager for UPLOAD...");
             Map<String, TableDesc> tableDescs = uploadManager.upload(paramList, job.getID());
 
             if (tableDescs != null)
             {
-                logger.debug("adding TAP_UPLOAD SchemaDesc to TapSchema...");
+                log.debug("adding TAP_UPLOAD SchemaDesc to TapSchema...");
                 SchemaDesc tapUploadSchema = new SchemaDesc();
                 tapUploadSchema.setSchemaName("TAP_UPLOAD");
                 tapUploadSchema.setTableDescs(new ArrayList(tableDescs.values()));
                 tapSchema.schemaDescs.add(tapUploadSchema);
             }
 
-            logger.debug("invoking MaxRecValidator...");
+            log.debug("invoking MaxRecValidator...");
             MaxRecValidator maxRecValidator = new MaxRecValidator();
             try
             {
@@ -331,20 +295,20 @@ public class QueryRunner implements SyncJobRunner
             catch (Throwable ignore)
             {
             }
-            logger.debug("using " + maxRecValidator.getClass().getName());
+            log.debug("using " + maxRecValidator.getClass().getName());
             maxRecValidator.setJob(job);
             maxRecValidator.setSynchronousMode(syncOutput != null);
             maxRecValidator.setTapSchema(tapSchema);
             maxRecValidator.setExtraTables(tableDescs);
             Integer maxRows = maxRecValidator.validate(paramList);
 
-            logger.debug("invoking TapValidator to get LANG...");
+            log.debug("invoking TapValidator to get LANG...");
             String lang = tapValidator.getLang();
             String cname = langQueries.get(lang);
             if (cname == null)
                 throw new UnsupportedOperationException("unknown LANG: " + lang);
 
-            logger.debug("loading TapQuery " + cname);
+            log.debug("loading TapQuery " + cname);
             Class tqc = Class.forName(cname);
             TapQuery tapQuery = (TapQuery) tqc.newInstance();
             tapQuery.setTapSchema(tapSchema);
@@ -353,12 +317,12 @@ public class QueryRunner implements SyncJobRunner
             if (maxRows != null)
                 tapQuery.setMaxRowCount(maxRows + 1); // +1 so the TableWriter can detect overflow
 
-            logger.debug("invoking TapQuery...");
+            log.debug("invoking TapQuery...");
             String sql = tapQuery.getSQL();
             List<TapSelectItem> selectList = tapQuery.getSelectList();
             String queryInfo = tapQuery.getInfo();
 
-            logger.debug("invoking TableWriterFactory for FORMAT...");
+            log.debug("invoking TableWriterFactory for FORMAT...");
             TableWriter tableWriter = TableWriterFactory.getWriter(job.getParameterList());
             tableWriter.setJob(job);
             tableWriter.setTapSchema(tapSchema);
@@ -379,7 +343,7 @@ public class QueryRunner implements SyncJobRunner
             {
                 if (maxRows == null || maxRows.intValue() > 0)
                 {
-                    logger.debug("getting database connection...");
+                    log.debug("getting database connection...");
                     connection = queryDataSource.getConnection();
                     tList.add(System.currentTimeMillis());
                     sList.add("get connection from data source: ");
@@ -392,18 +356,17 @@ public class QueryRunner implements SyncJobRunner
                     pstmt.setFetchSize(1000);
                     pstmt.setFetchDirection(ResultSet.FETCH_FORWARD);
                     
-                    logger.info("executing query: " + sql);
+                    log.info("executing query: " + sql);
                     resultSet = pstmt.executeQuery();
                 }
 
                 tList.add(System.currentTimeMillis());
                 sList.add("execute query and get ResultSet: ");
 
-                // TODO if checking for abort was fast, check it here and save writing and storing
                 if (syncOutput != null)
                 {
                     String contentType = tableWriter.getContentType();
-                    logger.debug("streaming output: " + contentType);
+                    log.debug("streaming output: " + contentType);
                     syncOutput.setHeader("Content-Type", contentType);
                     tableWriter.write(resultSet, syncOutput.getOutputStream());
                     tList.add(System.currentTimeMillis());
@@ -411,41 +374,26 @@ public class QueryRunner implements SyncJobRunner
                 }
                 else
                 {
+                    ep = jobUpdater.getPhase(job.getID());
+                    if (ExecutionPhase.ABORTED.equals(ep))
+                    {
+                        log.debug(job.getID() + ": found phase = ABORTED before writing results - DONE");
+                        return;
+                    }
                     String filename = "result_" + job.getID() + "." + tableWriter.getExtension();
-                    logger.debug("result filename: " + filename);
-                    if (rs != null)
-                    {
-                        logger.debug("setting ResultStore filename: " + filename);
-                        rs.setJob(job);
-                        rs.setFilename(filename);
-                        rs.setContentType(tableWriter.getContentType());
-                        url = rs.put(resultSet, tableWriter);
-                        tList.add(System.currentTimeMillis());
-                        sList.add("write ResultSet to ResultStore: ");
-                    }
-                    else
-                    {
-                        tmpFile = new File(fs.getStorageDir(), filename);
-                        logger.debug("writing ResultSet to " + tmpFile);
-                        OutputStream ostream = new FileOutputStream(tmpFile);
-                        tableWriter.write(resultSet, ostream);
-                        ostream.close();
-                        tList.add(System.currentTimeMillis());
-                        sList.add("write ResultSet to tmp file: ");
-
-                        logger.debug("storing results with FileStore...");
-                        fs.setJobID(jobID);
-                        fs.setParameterList(paramList);
-                        url = fs.put(tmpFile);
-                        tList.add(System.currentTimeMillis());
-                        sList.add("store tmp file with FileStore: ");
-                    }
+                    log.debug("result filename: " + filename);
+                    rs.setJob(job);
+                    rs.setFilename(filename);
+                    rs.setContentType(tableWriter.getContentType());
+                    url = rs.put(resultSet, tableWriter);
+                    tList.add(System.currentTimeMillis());
+                    sList.add("write ResultSet to ResultStore as " + tableWriter.getContentType() + ": ");
                 }
-                logger.debug("executing query... [OK]");
+                log.debug("executing query... [OK]");
             }
             catch (SQLException ex)
             {
-                logger.error("SQL Execution error.", ex);
+                log.error("SQL Execution error.", ex);
                 throw ex;
             }
             finally
@@ -475,25 +423,19 @@ public class QueryRunner implements SyncJobRunner
                 }
             }
 
-            // check job state, TODO optimise this
-            this.job = manager.getJob(jobID);
-            if (job == null || job.getExecutionPhase().equals(ExecutionPhase.ABORTED))
+            if (syncOutput != null)
             {
-                logger.debug("job aborted");
-                return;
+                log.debug("setting ExecutionPhase = " + ExecutionPhase.COMPLETED);
+                jobUpdater.setPhase(job.getID(), ExecutionPhase.EXECUTING, ExecutionPhase.COMPLETED, new Date());
             }
-
-            if (syncOutput == null)
+            else
             {
                 Result res = new Result("result", url);
                 List<Result> results = new ArrayList<Result>();
                 results.add(res);
-                job.setResultsList(results);
+                log.debug("setting ExecutionPhase = " + ExecutionPhase.COMPLETED + " with results");
+                jobUpdater.setPhase(job.getID(), ExecutionPhase.EXECUTING, ExecutionPhase.COMPLETED, results, new Date());
             }
-
-            logger.debug("setting ExecutionPhase = " + ExecutionPhase.COMPLETED);
-            job.setExecutionPhase(ExecutionPhase.COMPLETED);
-            this.job = manager.persist(job);
         }
         catch (Throwable t)
         {
@@ -505,8 +447,8 @@ public class QueryRunner implements SyncJobRunner
                 sList.add("encounter failure: ");
 
                 errorMessage = t.getClass().getSimpleName() + ":" + t.getMessage();
-                logger.debug("BADNESS", t);
-                logger.debug("Error message: " + errorMessage);
+                log.debug("BADNESS", t);
+                log.debug("Error message: " + errorMessage);
                 VOTableWriter ewriter = new VOTableWriter();
                 ewriter.setJob(job);
                 if (syncOutput != null)
@@ -517,58 +459,31 @@ public class QueryRunner implements SyncJobRunner
                 else
                 {
                     String filename = "error_" + job.getID() + "." + ewriter.getExtension();
-                    if (rs != null)
-                    {
-                        rs.setJob(job);
-                        rs.setFilename(filename);
-                        rs.setContentType(ewriter.getContentType());
-                        errorURL = rs.put(t, ewriter);
+                    rs.setJob(job);
+                    rs.setFilename(filename);
+                    rs.setContentType(ewriter.getContentType());
+                    errorURL = rs.put(t, ewriter);
 
-                        tList.add(System.currentTimeMillis());
-                        sList.add("store error with ResultStore ");
-                    }
-                    else
-                    {
-                        File errorFile = new File(fs.getStorageDir(), filename);
-                        logger.debug("Error file: " + errorFile.getAbsolutePath());
-                        FileOutputStream errorOutput = new FileOutputStream(errorFile);
-                        ewriter.write(t, errorOutput);
-                        errorOutput.close();
-
-                        tList.add(System.currentTimeMillis());
-                        sList.add("write error to tmp file: ");
-                        fs.setJobID(jobID);
-                        errorURL = fs.put(errorFile);
-
-                        tList.add(System.currentTimeMillis());
-                        sList.add("store error file with FileStore ");
-                    }
+                    tList.add(System.currentTimeMillis());
+                    sList.add("store error with ResultStore ");
                 }
                 
-                logger.debug("Error URL: " + errorURL);
-                // check job state, TODO optimise this
-                this.job = manager.getJob(jobID);
-                if (job == null || job.getExecutionPhase().equals(ExecutionPhase.ABORTED))
-                {
-                    logger.debug("job aborted");
-                    return;
-                }
-                logger.debug("setting ExecutionPhase = " + ExecutionPhase.ERROR);
-                job.setExecutionPhase(ExecutionPhase.ERROR);
-                ErrorSummary es = new ErrorSummary(errorMessage, ErrorType.FATAL, true);
-                es.setDocumentURL(errorURL);
-                job.setErrorSummary(es);
-                this.job = manager.persist(job);
+                log.debug("Error URL: " + errorURL);
+                ErrorSummary es = new ErrorSummary(errorMessage, ErrorType.FATAL, errorURL);
+                log.debug("setting ExecutionPhase = " + ExecutionPhase.ERROR);
+                jobUpdater.setPhase(job.getID(), ExecutionPhase.EXECUTING, ExecutionPhase.ERROR, es, new Date());
             }
             catch (Throwable t2)
             {
-                logger.error("failed to persist error", t2);
-                // this is really bad
-                logger.debug("setting ExecutionPhase = " + ExecutionPhase.ERROR);
-                job.setExecutionPhase(ExecutionPhase.ERROR);
-                ErrorSummary es = new ErrorSummary(errorMessage, ErrorType.FATAL, false);
-                job.setErrorSummary(es);
-                this.job = manager.persist(job);
+                log.error("failed to persist error", t2);
+                // this is really bad: try without the document
+                log.debug("setting ExecutionPhase = " + ExecutionPhase.ERROR);
+                ErrorSummary es = new ErrorSummary(errorMessage, ErrorType.FATAL);
+                try
+                {
+                    jobUpdater.setPhase(job.getID(), ExecutionPhase.EXECUTING, ExecutionPhase.ERROR, es, new Date());
+                }
+                catch(Throwable ignore) { }
             }
         }
         finally
@@ -579,10 +494,10 @@ public class QueryRunner implements SyncJobRunner
             for (int i = 1; i < tList.size(); i++)
             {
                 long dt = tList.get(i) - tList.get(i - 1);
-                logger.info(job.getID() + " -- " + sList.get(i) + dt + "ms");
+                log.info(job.getID() + " -- " + sList.get(i) + dt + "ms");
             }
 
-            logger.debug("DONE");
+            log.debug("DONE");
         }
     }
     

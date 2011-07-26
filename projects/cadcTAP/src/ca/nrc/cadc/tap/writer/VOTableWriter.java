@@ -92,7 +92,7 @@ import ca.nrc.cadc.tap.writer.formatter.Formatter;
 import ca.nrc.cadc.tap.writer.formatter.FormatterFactory;
 import ca.nrc.cadc.uws.Job;
 import ca.nrc.cadc.uws.Parameter;
-import ca.nrc.cadc.uws.util.ParameterUtil;
+import ca.nrc.cadc.uws.ParameterUtil;
 import org.apache.log4j.Logger;
 
 /**
