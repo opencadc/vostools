@@ -389,6 +389,7 @@ public class NodeDAO
 
             commitTransaction();
 
+            node.getProperties().add(new NodeProperty(VOS.PROPERTY_URI_CREATOR, identManager.toOwnerString(owner)));
             return node;
         }
         catch(Throwable t)

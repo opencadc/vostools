@@ -75,7 +75,7 @@ import java.util.Collection;
 
 import javax.security.auth.Subject;
 
-import ca.nrc.cadc.uws.util.StringUtil;
+import ca.nrc.cadc.util.StringUtil;
 import ca.nrc.cadc.vos.Search;
 import org.apache.log4j.Logger;
 import org.restlet.data.Form;
