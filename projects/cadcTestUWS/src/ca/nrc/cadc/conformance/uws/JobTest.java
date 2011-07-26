@@ -111,7 +111,6 @@ public class JobTest extends AbstractUWSTest
     public JobTest()
     {
         super();
-        level = Level.DEBUG;
     }
 
     @Test

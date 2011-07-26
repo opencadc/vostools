@@ -116,7 +116,7 @@ public class JobInfoTest extends AbstractUWSTest
         {
             // JobInfo XML
             String expectedJobInfo = "<target><name>name</name><position>position</position></target>";
-            String xml = // "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n" +
+            String xml = "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n" +
                     expectedJobInfo;
             
             // Create a new Job.
@@ -169,7 +169,7 @@ public class JobInfoTest extends AbstractUWSTest
         {
             // JobInfo XML
             String expectedJobInfo = "<target><name>name</name><position>position</position></target>";
-            String xml = //"<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n" +
+            String xml = "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n" +
                     expectedJobInfo;
             
             // Create a new Job.

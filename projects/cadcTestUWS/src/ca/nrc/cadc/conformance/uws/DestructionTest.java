@@ -58,7 +58,7 @@
 *  You should have received             Vous devriez avoir reçu une
 *  a copy of the GNU Affero             copie de la Licence Générale
 *  General Public License along         Publique GNU Affero avec
-*  with OpenCADC.  If not, see          OpenCADC ; si ce n’est
+*  with OpenCADC.  If not, see          OpenCADC ; si ce n’esttestDelete
 *  <http://www.gnu.org/licenses/>.      pas le cas, consultez :
 *                                       <http://www.gnu.org/licenses/>.
 *
@@ -69,11 +69,8 @@
 
 package ca.nrc.cadc.conformance.uws;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.fail;
+import org.junit.Assert;
 
-import java.util.Calendar;
 import java.util.Date;
 
 import org.apache.log4j.Level;
@@ -87,6 +84,7 @@ import com.meterware.httpunit.PostMethodWebRequest;
 import com.meterware.httpunit.WebConversation;
 import com.meterware.httpunit.WebRequest;
 import com.meterware.httpunit.WebResponse;
+import java.text.DateFormat;
 
 public class DestructionTest extends AbstractUWSTest
 {
@@ -94,23 +92,15 @@ public class DestructionTest extends AbstractUWSTest
 
     static
     {
-        Log4jInit.setLevel("ca.nrc.cadc", Level.DEBUG);
+        Log4jInit.setLevel("ca.nrc.cadc", Level.INFO);
     }
 
     // Destruction date passed to UWS service.
-    private String destruction;
+    DateFormat dateFormat = DateUtil.getDateFormat( DateUtil.IVOA_DATE_FORMAT, DateUtil.UTC);
 
     public DestructionTest()
     {
         super();
-        Calendar cal = Calendar.getInstance();
-        cal.roll(Calendar.DATE, true);
-        Date date = cal.getTime();
-        
-        destruction = DateUtil.toString(date, DateUtil.IVOA_DATE_FORMAT);
-        // round to seconds only. -sz
-        destruction = destruction.substring(0, 20) + "000";
-        
     }
 
     /**
@@ -123,22 +113,39 @@ public class DestructionTest extends AbstractUWSTest
         {
             // Create a new Job.
             WebConversation conversation = new WebConversation();
+            WebResponse response;
             String jobId = createJob(conversation);
+            String resourceUrl = serviceUrl + "/" + jobId + "/destruction";
+
+            // Get the destruction resource for this jobId.
+            response = get(conversation, resourceUrl, "text/plain");
+            log.debug(Util.getResponseHeaders(response));
+            log.debug("Response.getText():\r\n" + response.getText());
+            Assert.assertEquals("GET response Content-Type header to " + resourceUrl + " is incorrect",
+                    "text/plain", response.getContentType());
+            String str = response.getText();
+            if (str != null)
+                str = str.trim();
+            Date origDestruction = dateFormat.parse(str);
+
+
+            Date now = new Date();
+            long t1 = now.getTime();
+            long t2 = origDestruction.getTime();
+            Assert.assertTrue("default destruction in future", (t1 < t2));
+            Date destroy = new Date((t1 + t2)/2); // request mid way between
+            String destruction = dateFormat.format(destroy);
 
             // POST request to the destruction resource.
-            String resourceUrl = serviceUrl + "/" + jobId + "/destruction";
             WebRequest postRequest = new PostMethodWebRequest(resourceUrl);
             postRequest.setParameter("DESTRUCTION", destruction);
             postRequest.setHeaderField("Content-Type", "application/x-www-form-urlencoded");
-            WebResponse response = post(conversation, postRequest);
+            response = post(conversation, postRequest);
 
             // Get the redirect.
             String location = response.getHeaderField("Location");
             log.debug("Location: " + location);
-            assertNotNull("POST response to " + resourceUrl + " location header not set", location);
-    //      assertEquals("POST response to " + resourceUrl + " location header incorrect", baseUrl + "/" + jobId, location);
-
-            // Follow the redirect.
+            Assert.assertNotNull("POST response to " + resourceUrl + " location header not set", location);
             response = get(conversation, location);
 
             // Validate the XML against the schema.
@@ -147,26 +154,29 @@ public class DestructionTest extends AbstractUWSTest
 
             // Get the destruction resource for this jobId.
             response = get(conversation, resourceUrl, "text/plain");
-
             log.debug(Util.getResponseHeaders(response));
             log.debug("Response.getText():\r\n" + response.getText());
-            assertEquals("GET response Content-Type header to " + resourceUrl + " is incorrect",
+            Assert.assertEquals("GET response Content-Type header to " + resourceUrl + " is incorrect",
                     "text/plain", response.getContentType());
-
-            Date oriDestr = DateUtil.toDate(destruction, DateUtil.IVOA_DATE_FORMAT);
-            Date rtnDestr = DateUtil.toDate(response.getText(), DateUtil.IVOA_DATE_FORMAT);
-            if ( rtnDestr.before(oriDestr))
-                fail(String.format("Returned destruction of [%s] must not be earlier than request destruction of [%s]", rtnDestr, oriDestr));
-
+            str = response.getText();
+            if (str != null)
+                str = str.trim();
+            
+            Date rtnDestr = dateFormat.parse(str);
+            long dt = rtnDestr.getTime() - destroy.getTime();
+            if (dt < 0)
+                dt *= -1L;
+            Assert.assertTrue("result destruction is approx requested value", (dt < 2L));
+            
             // Delete the job.
             deleteJob(conversation, jobId);
 
             log.info("DestructionTest.testDestruction completed.");
         }
-        catch(Throwable t)
+        catch (Exception ex)
         {
-            log.error(t);
-            fail(t.getMessage());
+            log.error("unexpected exception", ex);
+            Assert.fail("unexpected exception: " + ex);
         }
     }
 

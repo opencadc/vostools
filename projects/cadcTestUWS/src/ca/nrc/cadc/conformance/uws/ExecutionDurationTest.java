@@ -69,9 +69,7 @@
 
 package ca.nrc.cadc.conformance.uws;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.fail;
+import org.junit.Assert;
 
 import org.apache.log4j.Level;
 import org.apache.log4j.Logger;
@@ -122,8 +120,7 @@ public class ExecutionDurationTest extends AbstractUWSTest
             // Get the redirect.
             String location = response.getHeaderField("Location");
             log.debug("Location: " + location);
-            assertNotNull("POST response to " + resourceUrl + " location header not set", location);
-    //      assertEquals("POST response to " + resourceUrl + " location header incorrect", baseUrl + "/" + jobId, location);
+            Assert.assertNotNull("POST response to " + resourceUrl + " location header not set", location);
 
             // Follow the redirect.
             response = get(conversation, location);
@@ -138,21 +135,29 @@ public class ExecutionDurationTest extends AbstractUWSTest
             log.debug(Util.getResponseHeaders(response));
             log.debug("Response.getText():\r\n" + response.getText());
 
-            assertEquals("GET response Content-Type header to " + resourceUrl + " is incorrect",
+            Assert.assertEquals("GET response Content-Type header to " + resourceUrl + " is incorrect",
                     "text/plain", response.getContentType());
 
-            assertEquals("response should return only Integer number of seconds.", EXECUTIONDURATION,
-                    response.getText());
+            String str = response.getText();
+            if (str != null)
+                str = str.trim();
+            try
+            {
+                Long dur = new Long(str);
+
+            }
+            catch(NumberFormatException ex)
+            {
+                Assert.fail("expected execution duration to be an integer value, got: " + str);
+            }
 
             // Delete the job.
             deleteJob(conversation, jobId);
-
-            log.info("ExecutionDurationTest.testExecutionDuration completed.");
         }
-        catch (Throwable t)
+        catch (Exception ex)
         {
-            log.error(t);
-            fail(t.getMessage());
+            log.error("unexpected exception", ex);
+            Assert.fail("unexpected exception: " + ex);
         }
     }
 
