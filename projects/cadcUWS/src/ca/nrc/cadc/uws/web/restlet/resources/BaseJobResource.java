@@ -76,6 +76,8 @@ import ca.nrc.cadc.uws.Job;
 import ca.nrc.cadc.uws.JobAttribute;
 import ca.nrc.cadc.uws.server.JobNotFoundException;
 import ca.nrc.cadc.uws.server.JobPersistenceException;
+import java.security.PrivilegedAction;
+import javax.security.auth.Subject;
 
 import org.apache.log4j.Logger;
 import org.restlet.data.Form;
@@ -108,6 +110,24 @@ public abstract class BaseJobResource extends UWSResource
     @Get
     @Override
     public Representation represent()
+    {
+        Subject subject = getSubject();
+        if (subject == null) // anon
+        {
+            return doRepresent();
+        }
+
+        return (Representation) Subject.doAs(subject,
+            new PrivilegedAction<Object>()
+            {
+                public Object run()
+                {
+                    return doRepresent();
+                }
+            } );
+    }
+
+    private Representation doRepresent()
     {
         try
         {

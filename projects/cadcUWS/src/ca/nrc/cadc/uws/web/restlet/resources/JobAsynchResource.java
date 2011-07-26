@@ -126,6 +126,24 @@ public class JobAsynchResource extends BaseJobResource
     @Override
     public Representation represent()
     {
+        Subject subject = getSubject();
+        if (subject == null) // anon
+        {
+            return doRepresent();
+        }
+
+        return (Representation) Subject.doAs(subject,
+            new PrivilegedAction<Object>()
+            {
+                public Object run()
+                {
+                    return doRepresent();
+                }
+            } );
+    }
+
+    private Representation doRepresent()
+    {
         try
         {
             if (job == null)
@@ -146,7 +164,7 @@ public class JobAsynchResource extends BaseJobResource
 
             if (representation != null)
                 return representation;
-            
+
             return super.represent();
         }
         catch(JobPersistenceException ex)
@@ -161,6 +179,26 @@ public class JobAsynchResource extends BaseJobResource
 
     @Delete
     public void delete(final Representation entity)
+    {
+        Subject subject = getSubject();
+        if (subject == null) // anon
+        {
+            doDelete(entity);
+        }
+        else
+        {
+            Subject.doAs(subject, new PrivilegedAction<Object>()
+            {
+                public Object run()
+                {
+                    doDelete(entity);
+                    return null;
+                }
+            } );
+        }
+    }
+
+    private void doDelete(final Representation entity)
     {
         LOGGER.debug("delete() called. for job: " + jobID);
         try

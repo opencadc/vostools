@@ -70,7 +70,6 @@
 
 package ca.nrc.cadc.uws.web.restlet.resources;
 
-import ca.nrc.cadc.uws.Job;
 import ca.nrc.cadc.uws.JobWriter;
 import org.restlet.resource.Post;
 import org.restlet.representation.Representation;
@@ -80,10 +79,12 @@ import ca.nrc.cadc.uws.Parameter;
 import ca.nrc.cadc.uws.server.JobNotFoundException;
 import ca.nrc.cadc.uws.server.JobPersistenceException;
 import ca.nrc.cadc.uws.server.JobPhaseException;
+import java.security.PrivilegedAction;
 import java.util.ArrayList;
 import java.util.List;
 
 import java.util.Map;
+import javax.security.auth.Subject;
 import org.jdom.Document;
 
 /**
@@ -97,9 +98,30 @@ public class ParameterListResource extends BaseJobResource
      * @param entity    The Representation Entity.
      */
     @Post
-    public void accept(Representation entity)
+    public void accept(final Representation entity)
     {
+        final String pathInfo = getPathInfo();
         final Form form = new Form(entity);
+        Subject subject = getSubject();
+        if (subject == null) // anon
+        {
+            doAccept(form);
+        }
+        else
+        {
+            Subject.doAs(subject, new PrivilegedAction<Object>()
+            {
+                public Object run()
+                {
+                    doAccept(form);
+                    return null;
+                }
+            } );
+        }
+    }
+
+    private void doAccept(final Form form)
+    {
         Map<String, String> valuesMap = form.getValuesMap();
         List<Parameter> params = new ArrayList<Parameter>();
         for (Map.Entry<String, String> entry : valuesMap.entrySet())

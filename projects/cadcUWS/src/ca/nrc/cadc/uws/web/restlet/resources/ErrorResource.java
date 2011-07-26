@@ -75,11 +75,12 @@ import org.restlet.resource.Get;
 
 import ca.nrc.cadc.uws.ErrorSummary;
 import ca.nrc.cadc.uws.web.restlet.InvalidResourceException;
-import ca.nrc.cadc.uws.Job;
 import ca.nrc.cadc.uws.server.JobNotFoundException;
 import ca.nrc.cadc.uws.server.JobPersistenceException;
 
 import java.io.IOException;
+import java.security.PrivilegedAction;
+import javax.security.auth.Subject;
 import org.jdom.Document;
 
 
@@ -96,6 +97,24 @@ public class ErrorResource extends BaseJobResource
     @Get
     @Override
     public Representation represent()
+    {
+        Subject subject = getSubject();
+        if (subject == null) // anon
+        {
+            return doRepresent();
+        }
+
+        return (Representation) Subject.doAs(subject,
+            new PrivilegedAction<Object>()
+            {
+                public Object run()
+                {
+                    return doRepresent();
+                }
+            } );
+    }
+
+    private Representation doRepresent()
     {
         try
         {

@@ -86,6 +86,7 @@ import java.io.StringReader;
 import java.text.ParseException;
 import java.net.MalformedURLException;
 import java.security.AccessControlException;
+import java.security.PrivilegedAction;
 import java.util.Map;
 import javax.security.auth.Subject;
 import org.jdom.Document;
@@ -109,6 +110,26 @@ public class AsynchResource extends UWSResource
      */
     @Post
     public void accept(final Representation entity)
+    {
+        Subject subject = getSubject();
+        if (subject == null) // anon
+        {
+            doAccept(entity);
+        }
+        else
+        {
+            Subject.doAs(subject, new PrivilegedAction<Object>()
+            {
+                public Object run()
+                {
+                    doAccept(entity);
+                    return null;
+                }
+            } );
+        }
+    }
+
+    private void doAccept(final Representation entity)
     {
         final Job job;
         final Subject subject = getSubject();
