@@ -107,6 +107,7 @@ public class MemoryJobPersistence implements JobPersistence, JobUpdater
     public MemoryJobPersistence(StringIDGenerator idGenerator, IdentityManager identityManager)
     {
         this.idGenerator = idGenerator;
+	this.identityManager = identityManager;
     }
 
     public void addParameters(String jobID, List<Parameter> params)
