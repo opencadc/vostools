@@ -102,6 +102,7 @@
     <property name="restlet.servlet"    value="${ext.lib}/org.restlet.ext.servlet.jar" />
     <property name="servlet-api"        value="${ext.lib}/servlet-api.jar" />
     <property name="xerces"             value="${ext.lib}/xerces.jar" />
+    <property name="spring"             value="${ext.lib}/spring.jar" />
 
     <property name="jars" value="${jdom}:${log4j}:${servlet-api}:${cadcUtil}:${cadcUWS}" />
 
@@ -131,12 +132,16 @@
             <lib file="${restlet}" />
             <lib file="${restlet.servlet}" />
             <lib file="${xerces}" />
+            <lib file="${spring}" />
             <fileset dir="src/text">
                 <include name="**/*.txt" />
             </fileset>
             <fileset dir="src/jsp">
                 <include name="**/*.jsp" />
             </fileset>
+            <metainf dir="src/xml">
+                <include name="context.xml"/>
+            </metainf>
         </war>
     </target>
 

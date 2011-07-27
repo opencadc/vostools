@@ -75,65 +75,14 @@
 
 <web-app>
 
-    <!-- use simplest implementations from cadcUWS -->
-    <context-param>
-        <param-name>ca.nrc.cadc.uws.JobExecutor</param-name>
-        <param-value>ca.nrc.cadc.uws.ThreadExecutor</param-value>
-    </context-param>
-    <context-param>
-        <param-name>ca.nrc.cadc.uws.JobManager</param-name>
-        <param-value>ca.nrc.cadc.uws.BasicJobManager</param-value>
-    </context-param>
-    <context-param>
-        <param-name>ca.nrc.cadc.uws.JobPersistence</param-name>
-        <param-value>ca.nrc.cadc.uws.InMemoryPersistence</param-value>
-    </context-param>
-    
-    <!-- the actual job code -->
-    <context-param>
-        <param-name>ca.nrc.cadc.uws.JobRunner</param-name>
-        <param-value>ca.nrc.cadc.uws.sample.HelloWorld</param-value>
-    </context-param>
+    <welcome-file-list>index.jsp</welcome-file-list>
 
-    <!--
-      Each of the Restlet servlets need to have their respective Restlet
-      attributes set properly.
-     -->
-    <servlet>
-         <load-on-startup>2</load-on-startup>
-      <servlet-name>AsyncServlet</servlet-name>
-      <servlet-class>org.restlet.ext.servlet.ServerServlet</servlet-class>
-
-      <init-param>
-        <param-name>org.restlet.application</param-name>
-        <param-value>ca.nrc.cadc.uws.web.restlet.UWSAsyncApplication</param-value>
-      </init-param>
-
-    </servlet>
-
-    <servlet>
-        <load-on-startup>2</load-on-startup>
-      <servlet-name>SyncServlet</servlet-name>
-      <servlet-class>ca.nrc.cadc.uws.server.SyncServlet</servlet-class>
-    </servlet>
-
-    <servlet>
-      <servlet-name>doc</servlet-name>
-      <jsp-file>doc.jsp</jsp-file>
-    </servlet>
-  
-    <servlet>
-        <!--
-            To make sure the logging level gets set before any
-            logging gets done, set load-on-startup to a smaller
-            whole number than is used for any other servlet
-            in this webapp.  This assumes Tomcat 5.5 or later.
-        -->
+     <servlet>
         <servlet-name>logControl</servlet-name>
         <servlet-class>ca.nrc.cadc.log.LogControlServlet</servlet-class>
         <init-param>
             <param-name>logLevel</param-name>
-            <param-value>debug</param-value>
+            <param-value>info</param-value>
         </init-param>
         <init-param>
             <param-name>logLevelPackages</param-name>
@@ -142,41 +91,55 @@
             </param-value>
         </init-param>
       <load-on-startup>1</load-on-startup>
-    </servlet>    
+    </servlet>
 
-  <!-- the UWS Endpoints -->
-	<servlet-mapping>
- 		<servlet-name>AsyncServlet</servlet-name>
- 		<url-pattern>/async/*</url-pattern>
-	</servlet-mapping>
+    <!-- synchronous access to JobManager service -->
+    <servlet>
+        <load-on-startup>2</load-on-startup>
+      <servlet-name>SyncServlet</servlet-name>
+      <servlet-class>ca.nrc.cadc.uws.server.SyncServlet</servlet-class>
+      <init-param>
+          <param-name>ca.nrc.cadc.uws.server.JobManager</param-name>
+          <param-value>ca.nrc.cadc.uws.sample.SampleJobManager</param-value>
+      </init-param>
+      <init-param>
+          <param-name>ca.nrc.cadc.uws.server.SyncServlet.execOnGET</param-name>
+          <param-value>true</param-value>
+      </init-param>
+      <init-param>
+          <param-name>ca.nrc.cadc.uws.server.SyncServlet.execOnPOST</param-name>
+          <param-value>false</param-value>
+      </init-param>
+    </servlet>
 
-	<servlet-mapping>
- 		<servlet-name>SyncServlet</servlet-name>
- 		<url-pattern>/sync/*</url-pattern>
-	</servlet-mapping>
+    <!-- asynchronous access to JobManager service -->
+    <servlet>
+        <load-on-startup>2</load-on-startup>
+        <servlet-name>AsyncServlet</servlet-name>
+        <servlet-class>org.restlet.ext.servlet.ServerServlet</servlet-class>
+        <init-param>
+            <param-name>org.restlet.application</param-name>
+            <param-value>ca.nrc.cadc.uws.web.restlet.UWSAsyncApplication</param-value>
+        </init-param>
+        <init-param>
+          <param-name>ca.nrc.cadc.uws.server.JobManager</param-name>
+          <param-value>ca.nrc.cadc.uws.sample.SampleJobManager</param-value>
+        </init-param>
+    </servlet>
+
+
+    <servlet-mapping>
+            <servlet-name>SyncServlet</servlet-name>
+            <url-pattern>/sync/*</url-pattern>
+    </servlet-mapping>
+    <servlet-mapping>
+            <servlet-name>AsyncServlet</servlet-name>
+            <url-pattern>/async/*</url-pattern>
+    </servlet-mapping>
 	
-	<servlet-mapping>
- 		<servlet-name>doc</servlet-name>
- 		<url-pattern>index.html</url-pattern>
-	</servlet-mapping>
+    <servlet-mapping>
+        <servlet-name>logControl</servlet-name>
+        <url-pattern>/logControl</url-pattern>
+    </servlet-mapping>
 
-  <servlet-mapping>
-      <servlet-name>doc</servlet-name>
-      <url-pattern>doc</url-pattern>
-  </servlet-mapping>
-  
-  <servlet-mapping>
-      <servlet-name>doc</servlet-name>
-      <url-pattern>doc.jsp</url-pattern>
-  </servlet-mapping>
-
-  <servlet-mapping>
-      <servlet-name>logControl</servlet-name>
-      <url-pattern>/logControl</url-pattern>
-  </servlet-mapping>
-
-  <welcome-file-list>
-    <welcome-file>doc.jsp</welcome-file>
-  </welcome-file-list>
-    
 </web-app>

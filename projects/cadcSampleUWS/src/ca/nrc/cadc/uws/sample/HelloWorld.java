@@ -69,33 +69,33 @@
 
 package ca.nrc.cadc.uws.sample;
 
-import ca.nrc.cadc.uws.JobManager;
 import java.net.URL;
 import java.util.ArrayList;
-import java.util.Iterator;
 import java.util.List;
 
 import org.apache.log4j.Logger;
-import org.jdom.Document;
-import org.jdom.Element;
-import org.jdom.JDOMException;
 
 import ca.nrc.cadc.net.NetUtil;
 import ca.nrc.cadc.uws.ExecutionPhase;
 import ca.nrc.cadc.uws.Job;
 import ca.nrc.cadc.uws.ErrorSummary;
 import ca.nrc.cadc.uws.ErrorType;
-import ca.nrc.cadc.uws.JobWriter;
+import ca.nrc.cadc.uws.JobInfo;
 
-import ca.nrc.cadc.uws.Parameter;
 import ca.nrc.cadc.uws.Result;
-import ca.nrc.cadc.uws.SyncJobRunner;
-import ca.nrc.cadc.uws.SyncOutput;
+import ca.nrc.cadc.uws.ParameterUtil;
+import ca.nrc.cadc.uws.server.JobRunner;
+import ca.nrc.cadc.uws.server.JobUpdater;
+
+import ca.nrc.cadc.uws.server.SyncOutput;
 import ca.nrc.cadc.xml.XmlUtil;
 
 import java.io.IOException;
 import java.io.PrintWriter;
 import java.net.MalformedURLException;
+import java.util.Date;
+import org.jdom.Document;
+import org.jdom.Element;
 
 /**
  * Basic Job Runner class. The sample job takes two params:</p>
@@ -105,323 +105,219 @@ import java.net.MalformedURLException;
  * <li>SYNC=<true|false> to control whether
  * </ul>
  */
-public class HelloWorld implements SyncJobRunner
+public class HelloWorld implements JobRunner
 {
-	private static final Logger logger = Logger.getLogger(HelloWorld.class);
-	
+	private static final Logger log = Logger.getLogger(HelloWorld.class);
+
+    public static long MIN_RUNFOR = 500L;   // milliseconds
+    public static long MAX_RUNFOR = 10000L; // milliseconds
+    
 	public static String PASS   = "PASS";
     public static String RUNFOR = "RUNFOR";
-    public static String SYNC   = "SYNC";
     public static String STREAM = "STREAM";
-    
-    public static String ERROR = "Error\r\n";
-    public static String RESULT = "Hello, World!\r\n";
 
-    private JobManager manager;
+    public static String RESULT = "HelloWorld -- OK";
+    public static String ERROR  = "HelloWorld -- FAIL";
+
 	private Job job;
+    private JobUpdater jobUpdater;
     private SyncOutput syncOutput;
-    private String server;
-    private boolean pass;
-    private int runfor;
-    private boolean sync;
-    private boolean stream;
-    private boolean withXml;
 
-    public HelloWorld()
-    {
-        withXml = false;
-    }
+    public HelloWorld() { }
 
-    private void handleJobError(String errorMessage)
-    {
-        URL url;
-        try
-        {
-            url = new URL("http://" + server + "/cadcSampleUWS/error.txt");
-        }
-        catch (MalformedURLException e)
-        {
-            logger.error("Unable to create ErrorSummary url ", e);
-            url = null;
-        }
-        ErrorSummary error = new ErrorSummary("ERROR: " + errorMessage, ErrorType.FATAL, true);
-        error.setDocumentURL(url);
-        this.job.setErrorSummary(error);
-        this.job.setExecutionPhase(ExecutionPhase.ERROR);
-        return;
-    }
-
-    public void setJob(final Job job)
+    public void setJob(Job job)
     {
         this.job = job;
     }
-    
-    /**
-     * Set status of pass, runfor... 
-     */
-    private void setStatus()
-    {
-        server = NetUtil.getServerName(this.getClass());
-        logger.debug("server = " + server);
 
-        // parse params
-        List<Parameter> params = this.job.getParameterList();
-        if (params == null)
-        {
-            logger.error("Missing param list");
-            handleJobError("No param list found in job");
-            return;
-        }
-        
-        withXml = (params.size() == 0);
-        
-        if (withXml)
-        {
-            stream = true;
-            
-            String xmlStr = job.getJobInfo().getContent();
-            
-            try
-            {
-                Document document = XmlUtil.buildDocument(xmlStr);
-                Element root = document.getRootElement();
-                String passStr = root.getChildText("pass");
-                String runforStr = root.getChildText("runfor");
-                this.pass = Boolean.valueOf(passStr);
-                logger.debug("pass = " + pass);
-                this.runfor = Integer.parseInt(runforStr);
-                logger.debug("runfor = " + runfor);
-            }
-            catch (JDOMException  e2)
-            {
-                String errorMessage = String.format("Failed to parse XML string of [%s]", xmlStr); 
-                logger.warn(errorMessage);
-                handleJobError(errorMessage);
-            }
-            catch (IOException e)
-            {
-                String errorMessage = String.format("IOException occurs when parsing XML string of [%s]", xmlStr); 
-                logger.warn(errorMessage);
-                handleJobError(errorMessage);
-            }
-            catch (Throwable e)
-            {
-                String errorMessage = String.format("Throwable occurs when parsing XML string of [%s]", xmlStr); 
-                logger.warn(errorMessage);
-                handleJobError(errorMessage);
-            }
-        }
-        else
-        {
-            Parameter passP = null;
-            Parameter runforP = null;
-            Parameter syncP = null;
-            Parameter streamP = null;
-            Iterator<Parameter> i = params.iterator();
-            while (i.hasNext())
-            {
-                Parameter p = i.next();
-                if (PASS.equalsIgnoreCase(p.getName()))
-                    passP = p;
-                else if (RUNFOR.equalsIgnoreCase(p.getName()))
-                    runforP = p;
-                else if (SYNC.equalsIgnoreCase(p.getName()))
-                    syncP = p;
-                else if (STREAM.equalsIgnoreCase(p.getName()))
-                    streamP = p;
-                else
-                    logger.debug("ignoring unexepcted param: " + p);
-            }
-    
-            pass = true;
-            if (passP != null)
-            {
-                try
-                {
-                    pass = Boolean.parseBoolean(passP.getValue());
-                    logger.debug("pass = " + pass);
-                }
-                catch(Throwable oops)
-                {
-                    logger.warn("failed to parse PASS parameter, found " + passP.getValue()
-                            + ", expected " + Boolean.TRUE + " or " + Boolean.FALSE);
-                }
-            }
-    
-            runfor = -1;
-            if (runforP != null)
-            {
-                try
-                {
-                    runfor = Integer.parseInt(runforP.getValue());
-                    logger.debug("runfor = " + runfor);
-                }
-                catch(Throwable oops)
-                {
-                    logger.warn("failed to parse RUNFOR parameter, found " + runforP.getValue()
-                            + ", expected an integer");
-                }
-            }
-    
-            sync = false;
-            if (syncP != null)
-            {
-                try
-                {
-                    sync = Boolean.parseBoolean(syncP.getValue());
-                    logger.debug("sync = " + sync);
-                }
-                catch(Throwable oops)
-                {
-                    logger.warn("failed to parse SYNC parameter, found " + syncP.getValue()
-                            + ", expected " + Boolean.TRUE + " or " + Boolean.FALSE);
-                }
-            }
-    
-            stream = false;
-            if (streamP != null)
-            {
-                try
-                {
-                    stream = Boolean.parseBoolean(streamP.getValue());
-                    logger.debug("stream = " + stream);
-                }
-                catch(Throwable oops)
-                {
-                    logger.warn("failed to parse STREAM parameter, found " + streamP.getValue()
-                            + ", expected " + Boolean.TRUE + " or " + Boolean.FALSE);
-                }
-            }
-        }
-        
+    public void setJobUpdater(JobUpdater ju)
+    {
+        this.jobUpdater = ju;
     }
 
-    public Job getJob()
+    public void setSyncOutput(SyncOutput so)
     {
-        return job;
+        this.syncOutput = so;
     }
 
-    public void setJobManager(JobManager jm)
+    private ErrorSummary generateError()
     {
-        this.manager = jm;
-    }
-
-    public void setOutput(SyncOutput syncOutput)
-    {
-        this.syncOutput = syncOutput;
-    }
-
-    /**
-     * Called in sync scenario.
-     * 
-     */
-    public URL getRedirectURL()
-    {
-        URL url = process();
-        logger.debug("getRedirectURL returning " + url);
-        return url;
-    }
-    
-    public void run()
-    {
-        process();
-    }
-
-    private URL process()
-    {
-        logger.debug("START");
-        URL url = null;
         try
         {
-            setStatus();
-            
-            if (job.getExecutionPhase() == ExecutionPhase.ERROR)
+            URL url = new URL("http://" + NetUtil.getServerName(HelloWorld.class) + "/cadcSampleUWS/error.txt");
+            return new ErrorSummary("job failed to say hello", ErrorType.FATAL, url);
+        }
+        catch (MalformedURLException ex)
+        {
+            throw new RuntimeException("BUG: failed to create error URL", ex);
+        }
+    }
+
+    private List<Result> generateResults()
+    {
+        try
+        {
+            URL url = new URL("http://" + NetUtil.getServerName(HelloWorld.class) + "/cadcSampleUWS/result.txt");
+            List<Result> ret = new ArrayList<Result>();
+            ret.add(new Result("result", url));
+            return ret;
+        }
+        catch (MalformedURLException ex)
+        {
+            throw new RuntimeException("BUG: failed to create result URL", ex);
+        }
+    }
+
+    public void run()
+    {
+        log.debug("run: " + job.getID());
+        try
+        {
+            ExecutionPhase ep = jobUpdater.setPhase(job.getID(), ExecutionPhase.QUEUED, ExecutionPhase.EXECUTING, new Date());
+            if ( !ExecutionPhase.EXECUTING.equals(ep) )
             {
-                url = job.getErrorSummary().getDocumentURL();
+                ep = jobUpdater.getPhase(job.getID());
+                log.debug(job.getID() + ": QUEUED -> EXECUTING [FAILED] -- DONE");
+                return;
             }
-            else
+            log.debug(job.getID() + ": QUEUED -> EXECUTING [OK]");
+
+            String passValue = null;
+            String streamValue = null;
+            String runforValue = null;
+
+            boolean pass = false;
+            boolean stream = false;
+            long runfor = 1;
+            
+            // JobInfo input (XML)
+            if (job.getJobInfo() != null)
             {
-                job.setExecutionPhase(ExecutionPhase.EXECUTING);
-                this.job = manager.persist(job);
-
-                if (runfor < 0)
+                // TODO: content type/error handling here
+                JobInfo ji = job.getJobInfo();
+                if (ji.getValid() != null && ji.getValid())
                 {
-                    logger.debug("Negative run time: " + runfor);
-                    url = new URL("http://" + server + "/cadcSampleUWS/error.txt");
-                    ErrorSummary error = new ErrorSummary("ERROR: RUNFOR param less than 0", ErrorType.FATAL, true);
-                    error.setDocumentURL(url);
-                    job.setErrorSummary(error);
-                    job.setExecutionPhase(ExecutionPhase.ERROR);
-                    if (sync && syncOutput != null)
-                    {
-                        syncOutput.getOutputStream().write(ERROR.getBytes());
-                    }
+                    Document document = XmlUtil.buildDocument(ji.getContent());
+                    Element root = document.getRootElement();
+                    passValue = root.getChildText("pass");
+                    streamValue = root.getChildText("stream");
+                    runforValue = root.getChildText("runfor");
                 }
-                else
-                {
-                    logger.debug("sleeping for " + runfor + " seconds");
-                    Thread.sleep(runfor * 1000L);
+            }
+            else // parameter list input
+            {
+                passValue = ParameterUtil.findParameterValue(PASS, job.getParameterList());
+                streamValue = ParameterUtil.findParameterValue(STREAM, job.getParameterList());
+                runforValue = ParameterUtil.findParameterValue(RUNFOR, job.getParameterList());
+            }
+            
+            if (passValue != null)
+                try { pass = Boolean.parseBoolean(passValue); }
+                catch(Exception ignore) { log.debug("invalid boolean value: " + PASS + "=" + passValue); }
+            if (streamValue != null)
+                try { stream = Boolean.parseBoolean(streamValue); }
+                catch(Exception ignore) { log.debug("invalid boolean value: " + STREAM + "=" + streamValue); }
+            if (runforValue != null)
+                try { runfor = Long.parseLong(runforValue); }
+                catch(Exception ignore) { log.debug("invalid long value: " + RUNFOR + "=" + runforValue); }
 
-                    if (pass)
+            // sanity check
+            runfor *= 1000L; // convert to milliseconds
+            if (runfor < MIN_RUNFOR)
+                runfor = MIN_RUNFOR;
+            else if (runfor > MAX_RUNFOR)
+                runfor = MAX_RUNFOR;
+
+            log.debug("pass: " + pass + ", stream: " + stream + ", duration: " + runfor);
+            Thread.sleep(runfor);
+
+            ExecutionPhase expected = null;
+            ep = null;
+            if (pass)
+            {
+                expected = ExecutionPhase.COMPLETED;
+                List<Result> results = generateResults();
+                if (syncOutput != null)
+                {
+                    if (stream)
                     {
-                        logger.debug("Having slept and being told to pass, setting result");
-                        url = new URL("http://" + server + "/cadcSampleUWS/result.txt");
-                        Result result = new Result("RESULT", url);
-                        ArrayList<Result> resultList = new ArrayList<Result>();
-                        resultList.add(result);
-                        job.setResultsList(resultList);
-                        job.setExecutionPhase(ExecutionPhase.COMPLETED);
-                        if (sync && syncOutput != null)
-                        {
-                            if (withXml)
-                            {
-                                syncOutput.setHeader("Content-Type", "text/xml");
-                                JobWriter jobWriter = new JobWriter();                      
-                                jobWriter.write(job, syncOutput.getOutputStream());
-                            }
-                            else
-                            {
-                                syncOutput.getOutputStream().write(RESULT.getBytes());
-                            }                            
-                        }
+                        syncOutput.setHeader("Content-Type", "text/plain");
+                        PrintWriter w = new PrintWriter(syncOutput.getOutputStream());
+                        w.println(RESULT);
+                        w.close();
+                        ep = jobUpdater.setPhase(job.getID(), ExecutionPhase.EXECUTING, ExecutionPhase.COMPLETED, new Date());
                     }
                     else
                     {
-                        logger.debug("Having slept and being told to fail, setting error");
-                        url = new URL("http://" + server + "/cadcSampleUWS/error.txt");
-                        ErrorSummary error = new ErrorSummary("error from PASS=false", ErrorType.FATAL, true);
-                        error.setDocumentURL(url);
-                        job.setErrorSummary(error);
-                        job.setExecutionPhase(ExecutionPhase.ERROR);
-                        if (sync && syncOutput != null)
-                            syncOutput.getOutputStream().write(ERROR.getBytes());
+                        syncOutput.setResponseCode(303);
+                        syncOutput.setHeader("Location", results.get(0).getURL().toExternalForm());
+                        ep = jobUpdater.setPhase(job.getID(), ExecutionPhase.EXECUTING, ExecutionPhase.COMPLETED, new Date());
                     }
                 }
-            }
-		}
-        catch (Throwable t)
-        {
-			ErrorSummary error = new ErrorSummary(t.getMessage(), ErrorType.FATAL, false);
-			job.setErrorSummary(error);
-            job.setExecutionPhase(ExecutionPhase.ERROR);
-            if (sync && syncOutput != null)
-            {
-                PrintWriter pw = new PrintWriter(syncOutput.getOutputStream());
-                pw.println(t.getMessage());
-                pw.flush();
-                pw.close();
+                else // async
+                {
+                    ep = jobUpdater.setPhase(job.getID(), ExecutionPhase.EXECUTING, ExecutionPhase.COMPLETED, results, new Date());
+                }
             }
             else
             {
-                logger.error("OutputStream closed writing throwable: " + t.getMessage());
+                expected = ExecutionPhase.ERROR;
+                ErrorSummary error = generateError();
+                if (syncOutput != null)
+                {
+                    if (stream)
+                    {
+                        syncOutput.setHeader("Content-Type", "text/plain");
+                        PrintWriter w = new PrintWriter(syncOutput.getOutputStream());
+                        w.println(ERROR);
+                        w.close();
+                        ep = jobUpdater.setPhase(job.getID(), ExecutionPhase.EXECUTING, ExecutionPhase.COMPLETED, new Date());
+                    }
+                    else
+                    {
+                        syncOutput.setResponseCode(303);
+                        syncOutput.setHeader("Location", error.getDocumentURL().toExternalForm());
+                        ep = jobUpdater.setPhase(job.getID(), ExecutionPhase.EXECUTING, ExecutionPhase.ERROR, error, new Date());
+                    }
+                }
+                else // async
+                {
+                    ep = jobUpdater.setPhase(job.getID(), ExecutionPhase.EXECUTING, ExecutionPhase.ERROR, error, new Date());
+                }
+            }
+            if (expected.equals(ep))
+                log.debug(job.getID() + ": EXECUTING -> "+ expected.name() + " [OK]");
+            else
+                log.debug(job.getID() + ": EXECUTING -> "+ expected.name() + " [FAILED]");
+		}
+        //catch(JobNotFoundException ex) { } // either a bug or someone deleted the job after executing it
+        //catch(JobPersistenceException ex) { } // back end persistence is failing
+        catch (Throwable t)
+        {
+            log.error("unexpected failure", t);
+			ErrorSummary error = new ErrorSummary(t.toString(), ErrorType.FATAL);
+            if (syncOutput != null)
+            {
+                try
+                {
+                    PrintWriter pw = new PrintWriter(syncOutput.getOutputStream());
+                    pw.println(t.getMessage());
+                    pw.close();
+                }
+                catch(IOException ex)
+                {
+                    log.error("failed to write unexpected failure message to output", ex);
+                }
+            }
+            try
+            {
+                jobUpdater.setPhase(job.getID(), ExecutionPhase.EXECUTING, ExecutionPhase.ERROR, error, new Date());
+            }
+            catch(Exception ex)
+            {
+                log.error("failed to set unexpected error state: " + ex);
             }
 		}
-        finally
-        {
-            this.job = manager.persist(job);
-            logger.debug("DONE");
-            return url;
-        }
     }
     
 }
