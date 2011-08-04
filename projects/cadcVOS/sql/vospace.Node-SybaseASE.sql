@@ -84,6 +84,8 @@ CREATE TABLE Node (
    markedForDeletion BIT               NOT NULL,
 
    ownerID           VARCHAR(256)      NOT NULL,
+   creatorID         VARCHAR(256)      NOT NULL,
+   
    groupRead         VARCHAR(256)      NULL,
    groupWrite        VARCHAR(256)      NULL,
    isPublic          BIT               NOT NULL,

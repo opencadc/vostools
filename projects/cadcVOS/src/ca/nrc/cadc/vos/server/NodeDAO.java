@@ -69,30 +69,31 @@
 
 package ca.nrc.cadc.vos.server;
 
-import java.sql.Connection;
-import java.sql.PreparedStatement;
-import java.sql.SQLException;
-import java.util.Date;
-import java.util.Iterator;
-import java.util.List;
-import javax.sql.DataSource;
 import java.net.URI;
 import java.net.URISyntaxException;
+import java.sql.Connection;
+import java.sql.PreparedStatement;
 import java.sql.ResultSet;
+import java.sql.SQLException;
 import java.sql.Statement;
 import java.sql.Timestamp;
 import java.sql.Types;
 import java.text.DateFormat;
 import java.util.Calendar;
+import java.util.Date;
+import java.util.Iterator;
+import java.util.List;
 import java.util.Set;
 import java.util.TreeSet;
-import javax.security.auth.Subject;
 
-import org.springframework.dao.DataAccessException;
-import org.springframework.jdbc.core.ResultSetExtractor;
+import javax.security.auth.Subject;
+import javax.sql.DataSource;
+
 import org.apache.log4j.Logger;
+import org.springframework.dao.DataAccessException;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.jdbc.core.PreparedStatementCreator;
+import org.springframework.jdbc.core.ResultSetExtractor;
 import org.springframework.jdbc.datasource.DataSourceTransactionManager;
 import org.springframework.jdbc.support.GeneratedKeyHolder;
 import org.springframework.jdbc.support.KeyHolder;
@@ -108,8 +109,8 @@ import ca.nrc.cadc.vos.DataNode;
 import ca.nrc.cadc.vos.Node;
 import ca.nrc.cadc.vos.NodeProperty;
 import ca.nrc.cadc.vos.VOS;
-import ca.nrc.cadc.vos.VOS.NodeBusyState;
 import ca.nrc.cadc.vos.VOSURI;
+import ca.nrc.cadc.vos.VOS.NodeBusyState;
 
 /**
  * Helper class for implementing NodePersistence with a
@@ -925,6 +926,7 @@ public class NodeDAO
         "markedForDeletion",
         "isPublic",
         "ownerID",
+        "creatorID",
         "contentLength",
         "contentType",
         "contentEncoding",
@@ -1193,6 +1195,13 @@ public class NodeDAO
 
             Object ownerObject  = identManager.toOwner(theOwner);
             int type = identManager.getOwnerType();
+            ps.setObject(col++, ownerObject, type);
+            sb.append(ownerObject);
+            sb.append(",");
+            
+            // new creator field is currently set to the value
+            // of the owner field.  owner will be only stored
+            // in the root node and set by the admin tool in the future
             ps.setObject(col++, ownerObject, type);
             sb.append(ownerObject);
             sb.append(",");
@@ -1508,6 +1517,7 @@ public class NodeDAO
 
             //String owner = getString(rs, col++);
             Object ownerObject = rs.getObject(col++);
+            
             Subject subject = identManager.toSubject(ownerObject);
             String owner = identManager.toOwnerString(subject);
 
