@@ -66,18 +66,19 @@
  */
 package ca.nrc.cadc.vos;
 
-import ca.nrc.cadc.vos.client.FileSizeTypeTest;
-import ca.nrc.cadc.vos.server.web.restlet.action.DeleteNodeActionTest;
-import ca.nrc.cadc.vos.server.web.restlet.action.GetNodeActionTest;
-import ca.nrc.cadc.vos.server.web.restlet.resource.NodeResourceTest;
 import org.junit.runner.RunWith;
 import org.junit.runners.Suite;
 
 import ca.nrc.cadc.vos.auth.VOSpaceAuthorizerTest;
+import ca.nrc.cadc.vos.client.FileSizeTypeTest;
+import ca.nrc.cadc.vos.server.DatabaseNodePersistenceTest;
 import ca.nrc.cadc.vos.server.NodeDAOTest;
 import ca.nrc.cadc.vos.server.RssFeedTest;
 import ca.nrc.cadc.vos.server.RssViewTest;
 import ca.nrc.cadc.vos.server.ViewsTest;
+import ca.nrc.cadc.vos.server.web.restlet.action.DeleteNodeActionTest;
+import ca.nrc.cadc.vos.server.web.restlet.action.GetNodeActionTest;
+import ca.nrc.cadc.vos.server.web.restlet.resource.NodeResourceTest;
 
 
 @RunWith(Suite.class)
@@ -93,6 +94,7 @@ import ca.nrc.cadc.vos.server.ViewsTest;
     DeleteNodeActionTest.class,
     VOSURITest.class,
     NodeDAOTest.class,
+    DatabaseNodePersistenceTest.class,
     RssViewTest.class,
     RssFeedTest.class
 })

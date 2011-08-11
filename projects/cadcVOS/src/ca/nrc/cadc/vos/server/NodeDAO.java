@@ -346,7 +346,7 @@ public class NodeDAO
      * @param node
      * @return the same node but with generated internal ID set in the appData field
      */
-    public Node put(Node node, Subject owner)
+    public Node put(Node node, Subject creator)
     {
         log.debug("put: " + node.getUri().getPath() + ", " + node.getClass().getSimpleName());
 
@@ -366,12 +366,12 @@ public class NodeDAO
 
             startTransaction();
             NodePutStatementCreator npsc = new NodePutStatementCreator(nodeSchema, false);
-            npsc.setValues(node, owner);
+            npsc.setValues(node, creator);
             KeyHolder keyHolder = new GeneratedKeyHolder();
             jdbc.update(npsc, keyHolder);
             Long generatedID = new Long(keyHolder.getKey().longValue());
 
-            node.appData = new NodeID(generatedID, owner);
+            node.appData = new NodeID(generatedID, creator);
             NodeID nodeID = (NodeID) node.appData;
             
             Iterator<NodeProperty> propertyIterator = node.getProperties().iterator();
@@ -390,7 +390,7 @@ public class NodeDAO
 
             commitTransaction();
 
-            node.getProperties().add(new NodeProperty(VOS.PROPERTY_URI_CREATOR, identManager.toOwnerString(owner)));
+            node.getProperties().add(new NodeProperty(VOS.PROPERTY_URI_CREATOR, identManager.toOwnerString(creator)));
             return node;
         }
         catch(Throwable t)
@@ -784,7 +784,7 @@ public class NodeDAO
     protected String getSelectChildNodeSQL(ContainerNode parent)
     {
         StringBuilder sb = new StringBuilder();
-        sb.append("SELECT nodeID, parentID, name, type, busyState, markedForDeletion, ownerID, isPublic, groupRead, groupWrite, ");
+        sb.append("SELECT nodeID, parentID, name, type, busyState, markedForDeletion, ownerID, creatorID, isPublic, groupRead, groupWrite, ");
         sb.append("contentLength, contentType, contentEncoding, contentMD5, lastModified FROM ");
         sb.append(getNodeTableName());
         sb.append(" WHERE name = ?");
@@ -804,7 +804,7 @@ public class NodeDAO
     protected String getSelectNodesByParentSQL(Node parent)
     {
         StringBuilder sb = new StringBuilder();
-        sb.append("SELECT nodeID, parentID, name, type, busyState, markedForDeletion, ownerID, isPublic, groupRead, groupWrite, ");
+        sb.append("SELECT nodeID, parentID, name, type, busyState, markedForDeletion, ownerID, creatorID, isPublic, groupRead, groupWrite, ");
         sb.append("contentLength, contentType, contentEncoding, contentMD5, lastModified FROM ");
         sb.append(getNodeTableName());
         sb.append(" WHERE parentID = ");
@@ -908,6 +908,7 @@ public class NodeDAO
         "markedForDeletion",
         "isPublic",
         "ownerID",
+        "creatorID",
         "contentLength",
         "contentType",
         "contentEncoding",
@@ -1102,7 +1103,7 @@ public class NodeDAO
         private boolean update;
 
         private Node node;
-        private Subject owner;
+        private Subject creator;
 
         public NodePutStatementCreator(NodeSchema ns, boolean update)
         {
@@ -1115,7 +1116,7 @@ public class NodeDAO
         public PreparedStatement createPreparedStatement(Connection conn) throws SQLException
         {
             PreparedStatement prep;
-            if (owner == null)
+            if (creator == null)
             {
                 String sql = getUpdateSQL();
                 log.debug(sql);
@@ -1131,10 +1132,10 @@ public class NodeDAO
             return prep;
         }
 
-        public void setValues(Node node, Subject owner)
+        public void setValues(Node node, Subject creator)
         {
             this.node = node;
-            this.owner = owner;
+            this.creator = creator;
         }
         
         void setValues(PreparedStatement ps)
@@ -1183,27 +1184,32 @@ public class NodeDAO
 
             //String pval = node.getPropertyValue(VOS.PROPERTY_URI_CREATOR);
             //ps.setString(col++, pval);
-            Subject theOwner = this.owner;
-            if (theOwner == null && node.appData != null)
+            Subject theCreator = this.creator;
+            if (theCreator == null && node.appData != null)
             {
                 // get owner from NodeID
                 NodeID nodeID = (NodeID) node.appData;
-                theOwner = nodeID.getOwner();
+                theCreator = nodeID.getCreator();
             }
-            if (theOwner == null)
-                throw new IllegalStateException("cannot persist node without an owner");
+            if (theCreator == null)
+                throw new IllegalStateException("cannot persist node without a creator");
 
-            Object ownerObject  = identManager.toOwner(theOwner);
+            Object creatorObject  = identManager.toOwner(theCreator);
             int type = identManager.getOwnerType();
-            ps.setObject(col++, ownerObject, type);
-            sb.append(ownerObject);
+            
+            // TEMP: owner field is set to the creator field
+            
+            // ownerID
+            ps.setObject(col++, creatorObject, type);
+            sb.append(creatorObject);
             sb.append(",");
             
-            // new creator field is currently set to the value
-            // of the owner field.  owner will be only stored
-            // in the root node and set by the admin tool in the future
-            ps.setObject(col++, ownerObject, type);
-            sb.append(ownerObject);
+            // new creator field takes the place of the owner field.
+            // owner will be only stored in the root node
+            
+            // creatorID
+            ps.setObject(col++, creatorObject, type);
+            sb.append(creatorObject);
             sb.append(",");
 
             pval = node.getPropertyValue(VOS.PROPERTY_URI_CONTENTLENGTH);
@@ -1287,7 +1293,7 @@ public class NodeDAO
 
         String getSQL()
         {
-            if (owner == null)
+            if (creator == null)
                 return getUpdateSQL();
             return getInsertSQL();
         }
@@ -1515,11 +1521,11 @@ public class NodeDAO
             boolean markedForDeletion = rs.getBoolean(col++);
             boolean isPublic = rs.getBoolean(col++);
 
-            //String owner = getString(rs, col++);
             Object ownerObject = rs.getObject(col++);
+            Object creatorObject = rs.getObject(col++);
             
-            Subject subject = identManager.toSubject(ownerObject);
-            String owner = identManager.toOwnerString(subject);
+            Subject creatorSubject = identManager.toSubject(creatorObject);
+            String creator = identManager.toOwnerString(creatorSubject);
 
             long contentLength = rs.getLong(col++);
             String contentType = getString(rs, col++);
@@ -1552,7 +1558,7 @@ public class NodeDAO
                 throw new IllegalStateException("Unknown node database type: " + type);
             }
 
-            node.appData = new NodeID(nodeID, subject);
+            node.appData = new NodeID(nodeID, creatorSubject);
 
             node.setMarkedForDeletion(markedForDeletion);
 
@@ -1583,9 +1589,9 @@ public class NodeDAO
             {
                 node.getProperties().add(new NodeProperty(VOS.PROPERTY_URI_GROUPWRITE, groupWrite));
             }
-            if (owner != null)
+            if (creator != null)
             {
-                node.getProperties().add(new NodeProperty(VOS.PROPERTY_URI_CREATOR, owner));
+                node.getProperties().add(new NodeProperty(VOS.PROPERTY_URI_CREATOR, creator));
             }
             node.getProperties().add(new NodeProperty(VOS.PROPERTY_URI_ISPUBLIC, Boolean.toString(isPublic)));
 

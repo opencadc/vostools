@@ -69,13 +69,14 @@
 
 package ca.nrc.cadc.vos.server;
 
+import java.net.URI;
+import java.net.URISyntaxException;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.text.DateFormat;
 import java.util.Calendar;
 import java.util.Date;
-import java.net.URI;
-import java.net.URISyntaxException;
+
 import javax.security.auth.Subject;
 
 import org.apache.log4j.Logger;
@@ -89,8 +90,8 @@ import ca.nrc.cadc.vos.DataNode;
 import ca.nrc.cadc.vos.Node;
 import ca.nrc.cadc.vos.NodeProperty;
 import ca.nrc.cadc.vos.VOS;
-import ca.nrc.cadc.vos.VOS.NodeBusyState;
 import ca.nrc.cadc.vos.VOSURI;
+import ca.nrc.cadc.vos.VOS.NodeBusyState;
 
 /**
  * Class to map a result set into a Node object.
@@ -135,10 +136,10 @@ public class NodeMapper implements RowMapper
         String groupWrite = rs.getString("groupWrite");
         boolean isPublic = rs.getBoolean("isPublic");
 
-        //String owner = getString(rs, col++);
         Object ownerObject = rs.getObject("ownerID");
-        Subject subject = identManager.toSubject(ownerObject);
-        String owner = identManager.toOwnerString(subject);
+        Object creatorObject = rs.getObject("creatorID"); 
+        Subject creatorSubject = identManager.toSubject(creatorObject);
+        String creator = identManager.toOwnerString(creatorSubject);
         
         long contentLength = rs.getLong("contentLength");
         String contentType = rs.getString("contentType");
@@ -170,7 +171,7 @@ public class NodeMapper implements RowMapper
                     + type);
         }
         
-        node.appData = new NodeID(nodeID, subject);
+        node.appData = new NodeID(nodeID, creatorSubject);
 
         node.setMarkedForDeletion(markedForDeletion);
         
@@ -201,9 +202,9 @@ public class NodeMapper implements RowMapper
         {
             node.getProperties().add(new NodeProperty(VOS.PROPERTY_URI_GROUPWRITE, groupWrite));
         }
-        if (owner != null && owner.trim().length() > 0)
+        if (creator != null && creator.trim().length() > 0)
         {
-            node.getProperties().add(new NodeProperty(VOS.PROPERTY_URI_CREATOR, owner));
+            node.getProperties().add(new NodeProperty(VOS.PROPERTY_URI_CREATOR, creator));
         }
         node.getProperties().add(new NodeProperty(VOS.PROPERTY_URI_ISPUBLIC, isPublic ? "true" : "false"));
         

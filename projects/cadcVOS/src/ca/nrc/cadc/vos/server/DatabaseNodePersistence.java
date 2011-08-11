@@ -69,22 +69,26 @@
 
 package ca.nrc.cadc.vos.server;
 
+import java.security.AccessControlContext;
+import java.security.AccessController;
+import java.util.List;
+
+import javax.security.auth.Subject;
+import javax.sql.DataSource;
+
+import org.apache.log4j.Logger;
+
 import ca.nrc.cadc.auth.IdentityManager;
 import ca.nrc.cadc.auth.X500IdentityManager;
+import ca.nrc.cadc.util.StringUtil;
 import ca.nrc.cadc.vos.ContainerNode;
 import ca.nrc.cadc.vos.DataNode;
 import ca.nrc.cadc.vos.Node;
 import ca.nrc.cadc.vos.NodeNotFoundException;
 import ca.nrc.cadc.vos.NodeProperty;
 import ca.nrc.cadc.vos.VOS;
-import ca.nrc.cadc.vos.VOS.NodeBusyState;
 import ca.nrc.cadc.vos.VOSURI;
-import java.security.AccessControlContext;
-import java.security.AccessController;
-import java.util.List;
-import javax.security.auth.Subject;
-import javax.sql.DataSource;
-import org.apache.log4j.Logger;
+import ca.nrc.cadc.vos.VOS.NodeBusyState;
 
 /**
  * Simple implementation of the NodePersistence interface that uses the NodeDAO
@@ -185,9 +189,16 @@ public abstract class DatabaseNodePersistence implements NodePersistence
     public Node put(Node node)
     {
         AccessControlContext acContext = AccessController.getContext();
-        Subject owner = Subject.getSubject(acContext);
+        Subject creator = Subject.getSubject(acContext);
         NodeDAO dao = getDAO( node.getUri().getAuthority() );
-        return dao.put(node, owner);
+        
+        // inherit the permissions of the parent if a new node
+        if (node.appData == null ||
+           ((NodeID) node.appData).getID() == null)
+        {
+            inheritParentPermissions(node);
+        }
+        return dao.put(node, creator);
     }
 
     public Node updateProperties(Node node, List<NodeProperty> properties)
@@ -263,5 +274,81 @@ public abstract class DatabaseNodePersistence implements NodePersistence
         if (str != null)
             return Long.parseLong(str);
         return 0;
+    }
+    
+    /**
+     * Inherit the permissions of the parent if:
+     * - the parent is not null
+     * - none have been explicity set in the node
+     * @param node
+     */
+    protected void inheritParentPermissions(Node node)
+    {
+        Node parent = node.getParent();
+        if (parent == null)
+        {
+            return;
+        }
+        
+        // check to see if a permission property has been
+        // explicitly set on the node
+        List<NodeProperty> nodeProperties = node.getProperties();
+        for (NodeProperty property : nodeProperties)
+        {
+            if (isPermissionProperty(property))
+            {
+                if (propertyExplicitlySet(property))
+                {
+                    log.debug("Node permission property explicitly set, "
+                            + "not inheriting parent permissions.");
+                    return;
+                }
+            }
+        }
+        
+        log.debug("Inheriting parent permissions...");
+        List<NodeProperty> parentProperties = parent.getProperties();
+        for (NodeProperty property : parentProperties)
+        {
+            if (isPermissionProperty(property))
+            {
+                // remove existing property if already there
+                // (searches based on URI, so can use variable
+                //  'property' for search.)
+                int propertyIndex = nodeProperties.indexOf(property);
+                if (propertyIndex != -1)
+                {
+                    nodeProperties.remove(propertyIndex);
+                }
+                nodeProperties.add(property);
+                log.debug("Inherited property: " + property);
+            }
+        }
+        
+    }
+    
+    /**
+     * Return true if this property is a permission property.
+     * @param property
+     * @return
+     */
+    private boolean isPermissionProperty(NodeProperty property)
+    {
+        return VOS.PROPERTY_URI_ISPUBLIC.equalsIgnoreCase(property.getPropertyURI())
+            || VOS.PROPERTY_URI_GROUPREAD.equalsIgnoreCase(property.getPropertyURI())
+            || VOS.PROPERTY_URI_GROUPWRITE.equalsIgnoreCase(property.getPropertyURI());
+    }
+    
+    /**
+     * Return true if this property has been set on the node.  This is
+     * true if the property has a value or if it has been marked for
+     * deletion.
+     * @param property
+     * @return
+     */
+    private boolean propertyExplicitlySet(NodeProperty property)
+    {
+        return StringUtil.hasText(property.getPropertyValue())
+                || property.isMarkedForDeletion();
     }
 }

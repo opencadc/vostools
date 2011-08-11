@@ -78,6 +78,8 @@ import java.security.AccessController;
 import java.security.Principal;
 import java.security.cert.CertificateException;
 import java.util.HashMap;
+import java.util.Iterator;
+import java.util.LinkedList;
 import java.util.Map;
 import java.util.Set;
 
@@ -102,8 +104,6 @@ import ca.nrc.cadc.vos.VOS;
 import ca.nrc.cadc.vos.VOSURI;
 import ca.nrc.cadc.vos.server.NodeID;
 import ca.nrc.cadc.vos.server.NodePersistence;
-import java.util.Iterator;
-import java.util.LinkedList;
 
 
 /**
@@ -425,7 +425,7 @@ public class VOSpaceAuthorizer implements Authorizer
     private boolean isOwner(Node node, Subject caller)
     {
         NodeID nodeID = (NodeID) node.appData;
-        Subject owner = nodeID.getOwner();
+        Subject owner = nodeID.getCreator();
 
         Set<Principal> ownerPrincipals = owner.getPrincipals();
         Set<Principal> callerPrincipals = caller.getPrincipals();
