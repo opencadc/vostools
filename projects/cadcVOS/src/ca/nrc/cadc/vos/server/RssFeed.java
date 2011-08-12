@@ -73,7 +73,7 @@ import java.util.Collection;
 import org.apache.log4j.Logger;
 import org.jdom.Element;
 
-import ca.nrc.cadc.net.NetUtil;
+import ca.nrc.cadc.util.StringUtil;
 import ca.nrc.cadc.vos.DataNode;
 import ca.nrc.cadc.vos.Node;
 import ca.nrc.cadc.vos.NodeProperty;
@@ -144,10 +144,11 @@ public class RssFeed
         channel.addContent(link);
 
         // channel author
-        if (parent.getOwner() != null)
+        NodeProperty creator = parent.findProperty(VOS.PROPERTY_URI_CREATOR);
+        if (creator != null && StringUtil.hasText(creator.getPropertyValue()))
         {
             Element author = new Element("author");
-            author.setText(parent.getOwner());
+            author.setText(creator.getPropertyValue());
             channel.addContent(author);
         }
         log.debug("num nodes: " + nodes.size());
@@ -229,10 +230,11 @@ public class RssFeed
             item.addContent(comments);
 
             // item author
-            if (rssFeedItem.node.getOwner() != null)
+            creator = rssFeedItem.node.findProperty(VOS.PROPERTY_URI_CREATOR);
+            if (creator != null && StringUtil.hasText(creator.getPropertyValue()))
             {
                 Element author = new Element("author");
-                author.setText(rssFeedItem.node.getOwner());
+                author.setText(creator.getPropertyValue());
                 item.addContent(author);
             }
 

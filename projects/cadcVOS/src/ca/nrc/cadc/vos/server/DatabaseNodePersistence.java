@@ -71,6 +71,7 @@ package ca.nrc.cadc.vos.server;
 
 import java.security.AccessControlContext;
 import java.security.AccessController;
+import java.util.Arrays;
 import java.util.List;
 
 import javax.security.auth.Subject;
@@ -103,6 +104,12 @@ import ca.nrc.cadc.vos.VOS.NodeBusyState;
 public abstract class DatabaseNodePersistence implements NodePersistence
 {
     private static Logger log = Logger.getLogger(DatabaseNodePersistence.class);
+    
+    private static List<NodeProperty> permissionProperties = Arrays.asList(
+        new NodeProperty[] {
+            new NodeProperty(VOS.PROPERTY_URI_ISPUBLIC, null),
+            new NodeProperty(VOS.PROPERTY_URI_GROUPREAD, null),
+            new NodeProperty(VOS.PROPERTY_URI_GROUPWRITE, null)});
 
     protected NodeDAO.NodeSchema nodeSchema;
 
@@ -290,53 +297,34 @@ public abstract class DatabaseNodePersistence implements NodePersistence
             return;
         }
         
-        // check to see if a permission property has been
-        // explicitly set on the node
         List<NodeProperty> nodeProperties = node.getProperties();
-        for (NodeProperty property : nodeProperties)
-        {
-            if (isPermissionProperty(property))
-            {
-                if (propertyExplicitlySet(property))
-                {
-                    log.debug("Node permission property explicitly set, "
-                            + "not inheriting parent permissions.");
-                    return;
-                }
-            }
-        }
-        
-        log.debug("Inheriting parent permissions...");
         List<NodeProperty> parentProperties = parent.getProperties();
-        for (NodeProperty property : parentProperties)
+        NodeProperty property = null;
+        int nodePropertyIndex;
+        int parentPropertyIndex;
+        
+        for (NodeProperty permissionProperty : permissionProperties)
         {
-            if (isPermissionProperty(property))
+            nodePropertyIndex = nodeProperties.indexOf(permissionProperty);
+            parentPropertyIndex = parentProperties.indexOf(permissionProperty);
+            
+            if (parentPropertyIndex >= 0)
             {
-                // remove existing property if already there
-                // (searches based on URI, so can use variable
-                //  'property' for search.)
-                int propertyIndex = nodeProperties.indexOf(property);
-                if (propertyIndex != -1)
+                if (nodePropertyIndex >= 0)
                 {
-                    nodeProperties.remove(propertyIndex);
+                    property = nodeProperties.get(nodePropertyIndex);
+                    if (propertyExplicitlySet(property))
+                    {
+                        log.debug("Keeping permission property: " + property);
+                        continue;
+                    }
+                    nodeProperties.remove(nodePropertyIndex);
                 }
+                property = parentProperties.get(parentPropertyIndex);
+                log.debug("Inheriting permission property: " + property);
                 nodeProperties.add(property);
-                log.debug("Inherited property: " + property);
             }
         }
-        
-    }
-    
-    /**
-     * Return true if this property is a permission property.
-     * @param property
-     * @return
-     */
-    private boolean isPermissionProperty(NodeProperty property)
-    {
-        return VOS.PROPERTY_URI_ISPUBLIC.equalsIgnoreCase(property.getPropertyURI())
-            || VOS.PROPERTY_URI_GROUPREAD.equalsIgnoreCase(property.getPropertyURI())
-            || VOS.PROPERTY_URI_GROUPWRITE.equalsIgnoreCase(property.getPropertyURI());
     }
     
     /**

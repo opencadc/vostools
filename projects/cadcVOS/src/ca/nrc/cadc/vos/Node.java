@@ -159,7 +159,6 @@ public abstract class Node implements Comparable<Object>
                 + " [appData=" + appData
                 + ", markedForDeletion=" + markedForDeletion
                 + ", uri=" + uri.toString()
-                + ", owner=" + getOwner()
                 + ", parent=" + parentStr
                 + ", properties=" + properties + "]";
     }
@@ -264,19 +263,6 @@ public abstract class Node implements Comparable<Object>
     public void setProperties(List<NodeProperty> properties)
     {
         this.properties = properties;
-    }
-
-    /**
-     * Convenience method. This just calls
-     * <pre>
-     * Node.getPropertyValue(VOS.PROPERTY_URI_CREATOR)
-     * </pre>
-     *
-     * @return the owner
-     */
-    public String getOwner()
-    {
-        return getPropertyValue(VOS.PROPERTY_URI_CREATOR);
     }
 
     public boolean isMarkedForDeletion()

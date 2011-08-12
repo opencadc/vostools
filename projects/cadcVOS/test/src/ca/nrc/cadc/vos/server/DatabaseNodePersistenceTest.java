@@ -114,24 +114,24 @@ public class DatabaseNodePersistenceTest
         child.setProperties(new ArrayList<NodeProperty>());
         parent.getProperties().add(new NodeProperty(VOS.PROPERTY_URI_ISPUBLIC, "true"));
         nodePersistence.inheritParentPermissions(child);
-        assertEquals("Wrong number of properties.", 1, child.getProperties().size());
-        assertTrue("Missing property.", containsProperty(child, VOS.PROPERTY_URI_ISPUBLIC, "true"));
+        assertEquals("1. Wrong number of properties.", 1, child.getProperties().size());
+        assertTrue("1. Missing property.", containsProperty(child, VOS.PROPERTY_URI_ISPUBLIC, "true"));
         
         // test group read property
         parent.setProperties(new ArrayList<NodeProperty>());
         child.setProperties(new ArrayList<NodeProperty>());
         parent.getProperties().add(new NodeProperty(VOS.PROPERTY_URI_GROUPREAD, "gr"));
         nodePersistence.inheritParentPermissions(child);
-        assertEquals("Wrong number of properties.", 1, child.getProperties().size());
-        assertTrue("Missing property.", containsProperty(child, VOS.PROPERTY_URI_GROUPREAD, "gr"));
+        assertEquals("2. Wrong number of properties.", 1, child.getProperties().size());
+        assertTrue("2. Missing property.", containsProperty(child, VOS.PROPERTY_URI_GROUPREAD, "gr"));
         
         // test group write property
         parent.setProperties(new ArrayList<NodeProperty>());
         child.setProperties(new ArrayList<NodeProperty>());
         parent.getProperties().add(new NodeProperty(VOS.PROPERTY_URI_GROUPWRITE, "gw"));
         nodePersistence.inheritParentPermissions(child);
-        assertEquals("Wrong number of properties.", 1, child.getProperties().size());
-        assertTrue("Missing property.", containsProperty(child, VOS.PROPERTY_URI_GROUPWRITE, "gw"));
+        assertEquals("3. Wrong number of properties.", 1, child.getProperties().size());
+        assertTrue("3. Missing property.", containsProperty(child, VOS.PROPERTY_URI_GROUPWRITE, "gw"));
         
         // test 2 properties
         parent.setProperties(new ArrayList<NodeProperty>());
@@ -139,9 +139,9 @@ public class DatabaseNodePersistenceTest
         parent.getProperties().add(new NodeProperty(VOS.PROPERTY_URI_GROUPREAD, "gr"));
         parent.getProperties().add(new NodeProperty(VOS.PROPERTY_URI_GROUPWRITE, "gw"));
         nodePersistence.inheritParentPermissions(child);
-        assertEquals("Wrong number of properties.", 2, child.getProperties().size());
-        assertTrue("Missing property.", containsProperty(child, VOS.PROPERTY_URI_GROUPREAD, "gr"));
-        assertTrue("Missing property.", containsProperty(child, VOS.PROPERTY_URI_GROUPWRITE, "gw"));
+        assertEquals("4. Wrong number of properties.", 2, child.getProperties().size());
+        assertTrue("4. Missing property.", containsProperty(child, VOS.PROPERTY_URI_GROUPREAD, "gr"));
+        assertTrue("4. Missing property.", containsProperty(child, VOS.PROPERTY_URI_GROUPWRITE, "gw"));
         
         // test 3 properties
         parent.setProperties(new ArrayList<NodeProperty>());
@@ -150,10 +150,10 @@ public class DatabaseNodePersistenceTest
         parent.getProperties().add(new NodeProperty(VOS.PROPERTY_URI_GROUPREAD, "gr"));
         parent.getProperties().add(new NodeProperty(VOS.PROPERTY_URI_GROUPWRITE, "gw"));
         nodePersistence.inheritParentPermissions(child);
-        assertEquals("Wrong number of properties.", 3, child.getProperties().size());
-        assertTrue("Missing property.", containsProperty(child, VOS.PROPERTY_URI_ISPUBLIC, "true"));
-        assertTrue("Missing property.", containsProperty(child, VOS.PROPERTY_URI_GROUPREAD, "gr"));
-        assertTrue("Missing property.", containsProperty(child, VOS.PROPERTY_URI_GROUPWRITE, "gw"));
+        assertEquals("5. Wrong number of properties.", 3, child.getProperties().size());
+        assertTrue("5. Missing property.", containsProperty(child, VOS.PROPERTY_URI_ISPUBLIC, "true"));
+        assertTrue("5. Missing property.", containsProperty(child, VOS.PROPERTY_URI_GROUPREAD, "gr"));
+        assertTrue("5. Missing property.", containsProperty(child, VOS.PROPERTY_URI_GROUPWRITE, "gw"));
         
         // test non-permission property
         parent.setProperties(new ArrayList<NodeProperty>());
@@ -161,9 +161,9 @@ public class DatabaseNodePersistenceTest
         parent.getProperties().add(new NodeProperty(VOS.PROPERTY_URI_ISPUBLIC, "true"));
         child.getProperties().add(new NodeProperty(VOS.PROPERTY_URI_CONTENTLENGTH, "55"));
         nodePersistence.inheritParentPermissions(child);
-        assertEquals("Wrong number of properties.", 2, child.getProperties().size());
-        assertTrue("Missing property.", containsProperty(child, VOS.PROPERTY_URI_ISPUBLIC, "true"));
-        assertTrue("Missing property.", containsProperty(child, VOS.PROPERTY_URI_CONTENTLENGTH, "55"));
+        assertEquals("6. Wrong number of properties.", 2, child.getProperties().size());
+        assertTrue("6. Missing property.", containsProperty(child, VOS.PROPERTY_URI_ISPUBLIC, "true"));
+        assertTrue("6. Missing property.", containsProperty(child, VOS.PROPERTY_URI_CONTENTLENGTH, "55"));
         
         // test parent is null
         parent.setProperties(new ArrayList<NodeProperty>());
@@ -171,7 +171,7 @@ public class DatabaseNodePersistenceTest
         child.setParent(null);
         parent.getProperties().add(new NodeProperty(VOS.PROPERTY_URI_ISPUBLIC, "true"));
         nodePersistence.inheritParentPermissions(child);
-        assertEquals("Wrong number of properties.", 0, child.getProperties().size());
+        assertEquals("7. Wrong number of properties.", 0, child.getProperties().size());
         child.setParent(parent);
         
         // test child has existing public property
@@ -180,8 +180,8 @@ public class DatabaseNodePersistenceTest
         parent.getProperties().add(new NodeProperty(VOS.PROPERTY_URI_ISPUBLIC, "true"));
         child.getProperties().add(new NodeProperty(VOS.PROPERTY_URI_ISPUBLIC, "false"));
         nodePersistence.inheritParentPermissions(child);
-        assertEquals("Wrong number of properties.", 1, child.getProperties().size());
-        assertTrue("Wrong property value.", containsProperty(child, VOS.PROPERTY_URI_ISPUBLIC, "false"));
+        assertEquals("8. Wrong number of properties.", 1, child.getProperties().size());
+        assertTrue("8. Wrong property value.", containsProperty(child, VOS.PROPERTY_URI_ISPUBLIC, "false"));
         
         // test child has existing properties
         parent.setProperties(new ArrayList<NodeProperty>());
@@ -190,20 +190,22 @@ public class DatabaseNodePersistenceTest
         child.getProperties().add(new NodeProperty(VOS.PROPERTY_URI_ISPUBLIC, "false"));
         child.getProperties().add(new NodeProperty(VOS.PROPERTY_URI_GROUPWRITE, "gw"));
         nodePersistence.inheritParentPermissions(child);
-        assertEquals("Wrong number of properties.", 2, child.getProperties().size());
-        assertTrue("Wrong property value.", containsProperty(child, VOS.PROPERTY_URI_ISPUBLIC, "false"));
-        assertTrue("Missing property.", containsProperty(child, VOS.PROPERTY_URI_GROUPWRITE, "gw"));
+        assertEquals("9. Wrong number of properties.", 2, child.getProperties().size());
+        assertTrue("9. Wrong property value.", containsProperty(child, VOS.PROPERTY_URI_ISPUBLIC, "false"));
+        assertTrue("9. Missing property.", containsProperty(child, VOS.PROPERTY_URI_GROUPWRITE, "gw"));
         
         // test child has property marked for deletion
         parent.setProperties(new ArrayList<NodeProperty>());
         child.setProperties(new ArrayList<NodeProperty>());
         parent.getProperties().add(new NodeProperty(VOS.PROPERTY_URI_ISPUBLIC, "true"));
+        parent.getProperties().add(new NodeProperty(VOS.PROPERTY_URI_GROUPWRITE, "ignored"));
         NodeProperty nodeProperty = new NodeProperty(VOS.PROPERTY_URI_GROUPWRITE, "");
         nodeProperty.setMarkedForDeletion(true);
         child.getProperties().add(nodeProperty);
         nodePersistence.inheritParentPermissions(child);
-        assertEquals("Wrong number of properties.", 1, child.getProperties().size());
-        assertTrue("Missing property.", containsProperty(child, VOS.PROPERTY_URI_GROUPWRITE, ""));
+        assertEquals("10. Wrong number of properties.", 2, child.getProperties().size());
+        assertTrue("10. Missing property.", containsProperty(child, VOS.PROPERTY_URI_ISPUBLIC, "true"));
+        assertTrue("10. Missing property.", containsProperty(child, VOS.PROPERTY_URI_GROUPWRITE, ""));
         
         // test replace null value property
         parent.setProperties(new ArrayList<NodeProperty>());
@@ -212,9 +214,9 @@ public class DatabaseNodePersistenceTest
         parent.getProperties().add(new NodeProperty(VOS.PROPERTY_URI_GROUPWRITE, "gw"));
         child.getProperties().add(new NodeProperty(VOS.PROPERTY_URI_ISPUBLIC, ""));
         nodePersistence.inheritParentPermissions(child);
-        assertEquals("Wrong number of properties.", 2, child.getProperties().size());
-        assertTrue("Wrong property value.", containsProperty(child, VOS.PROPERTY_URI_ISPUBLIC, "true"));
-        assertTrue("Missing property.", containsProperty(child, VOS.PROPERTY_URI_GROUPWRITE, "gw"));
+        assertEquals("11. Wrong number of properties.", 2, child.getProperties().size());
+        assertTrue("11. Wrong property value.", containsProperty(child, VOS.PROPERTY_URI_ISPUBLIC, "true"));
+        assertTrue("11. Missing property.", containsProperty(child, VOS.PROPERTY_URI_GROUPWRITE, "gw"));
         
     }
     

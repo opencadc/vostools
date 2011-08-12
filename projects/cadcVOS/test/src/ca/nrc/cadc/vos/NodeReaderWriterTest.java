@@ -204,7 +204,8 @@ public class NodeReaderWriterTest
     {
         Assert.assertEquals("same class", n1.getClass(), n2.getClass());
         Assert.assertEquals("VOSURI", n1.getUri(), n2.getUri());
-        Assert.assertEquals("owner", n1.getOwner(), n2.getOwner());
+        Assert.assertEquals("owner", n1.getPropertyValue(VOS.PROPERTY_URI_CREATOR),
+                n2.getPropertyValue(VOS.PROPERTY_URI_CREATOR));
         comparePropertyList(n1.getProperties(), n2.getProperties());
         compareURIList(n1.accepts, n2.accepts);
         compareURIList(n1.provides, n2.provides);

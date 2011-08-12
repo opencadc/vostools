@@ -69,19 +69,31 @@
 
 package ca.nrc.cadc.vos.server;
 
+import java.net.URI;
+import java.security.Principal;
+import java.sql.PreparedStatement;
+import java.sql.ResultSet;
+import java.util.ArrayList;
+import java.util.Date;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Set;
+
+import javax.security.auth.Subject;
+import javax.security.auth.x500.X500Principal;
+import javax.sql.DataSource;
+
+import org.apache.log4j.Level;
+import org.apache.log4j.Logger;
+import org.junit.Assert;
+import org.junit.Test;
+
 import ca.nrc.cadc.auth.AuthenticationUtil;
 import ca.nrc.cadc.auth.X500IdentityManager;
 import ca.nrc.cadc.date.DateUtil;
 import ca.nrc.cadc.db.ConnectionConfig;
 import ca.nrc.cadc.db.DBConfig;
 import ca.nrc.cadc.db.DBUtil;
-import java.sql.PreparedStatement;
-import java.sql.ResultSet;
-import java.util.ArrayList;
-import java.util.List;
-
-import org.junit.Test;
-
 import ca.nrc.cadc.util.HexUtil;
 import ca.nrc.cadc.util.Log4jInit;
 import ca.nrc.cadc.vos.ContainerNode;
@@ -89,20 +101,9 @@ import ca.nrc.cadc.vos.DataNode;
 import ca.nrc.cadc.vos.Node;
 import ca.nrc.cadc.vos.NodeProperty;
 import ca.nrc.cadc.vos.VOS;
-import ca.nrc.cadc.vos.VOS.NodeBusyState;
 import ca.nrc.cadc.vos.VOSURI;
+import ca.nrc.cadc.vos.VOS.NodeBusyState;
 import ca.nrc.cadc.vos.server.NodeDAO.NodeSchema;
-import java.net.URI;
-import java.security.Principal;
-import java.util.Date;
-import java.util.HashSet;
-import java.util.Set;
-import javax.security.auth.Subject;
-import javax.security.auth.x500.X500Principal;
-import javax.sql.DataSource;
-import org.apache.log4j.Level;
-import org.apache.log4j.Logger;
-import org.junit.Assert;
 
 
 /**
@@ -773,9 +774,18 @@ public class NodeDAOTest
         Assert.assertEquals(assertName+  "URI", a.getUri(), b.getUri());
         Assert.assertEquals(assertName + "type", a.getClass().getName(), b.getClass().getName());
         Assert.assertEquals(assertName + "name", a.getName(), b.getName());
-        String dn = b.getOwner();
+        Subject subject = ((NodeID)b.appData).getCreator();
         Assert.assertNotNull(assertName+  " owner", owner);
-        X500Principal xp = new X500Principal(dn);
+        Principal xp = null;
+        for (Principal principal : subject.getPrincipals())
+        {
+            if (principal instanceof X500Principal)
+            {
+                xp = principal;
+                break;
+            }
+        }
+        Assert.assertNotNull(xp);
         Assert.assertTrue("caller==owner", AuthenticationUtil.equals(principal, xp));
     }
 
