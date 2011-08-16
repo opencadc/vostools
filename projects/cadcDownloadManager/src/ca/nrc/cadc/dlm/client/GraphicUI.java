@@ -295,7 +295,10 @@ public class GraphicUI extends AbstractApplication implements ChangeListener, Us
             }
             catch(Throwable t) 
             { 
-                log.error("DelayedInit failed: " + t);
+                if (log.isDebugEnabled())
+                    log.error("DelayedInit failed", t);
+                else
+                    log.error("DelayedInit failed: " + t);
             }
             finally
             {
