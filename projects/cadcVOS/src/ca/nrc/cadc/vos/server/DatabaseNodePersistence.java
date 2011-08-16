@@ -105,11 +105,11 @@ public abstract class DatabaseNodePersistence implements NodePersistence
 {
     private static Logger log = Logger.getLogger(DatabaseNodePersistence.class);
     
-    private static List<NodeProperty> permissionProperties = Arrays.asList(
-        new NodeProperty[] {
-            new NodeProperty(VOS.PROPERTY_URI_ISPUBLIC, null),
-            new NodeProperty(VOS.PROPERTY_URI_GROUPREAD, null),
-            new NodeProperty(VOS.PROPERTY_URI_GROUPWRITE, null)});
+    private static List<String> permissionPropertyURIs = Arrays.asList(
+        new String[] {
+            VOS.PROPERTY_URI_ISPUBLIC,
+            VOS.PROPERTY_URI_GROUPREAD,
+            VOS.PROPERTY_URI_GROUPWRITE});
 
     protected NodeDAO.NodeSchema nodeSchema;
 
@@ -297,32 +297,33 @@ public abstract class DatabaseNodePersistence implements NodePersistence
             return;
         }
         
-        List<NodeProperty> nodeProperties = node.getProperties();
-        List<NodeProperty> parentProperties = parent.getProperties();
-        NodeProperty property = null;
-        int nodePropertyIndex;
-        int parentPropertyIndex;
-        
-        for (NodeProperty permissionProperty : permissionProperties)
+        for (String propertyURI : permissionPropertyURIs)
         {
-            nodePropertyIndex = nodeProperties.indexOf(permissionProperty);
-            parentPropertyIndex = parentProperties.indexOf(permissionProperty);
+            NodeProperty parentProperty = node.getParent().findProperty(propertyURI);
+            NodeProperty childProperty = null;
+            boolean inherit;
             
-            if (parentPropertyIndex >= 0)
+            if (parentProperty != null)
             {
-                if (nodePropertyIndex >= 0)
+                childProperty = node.findProperty(propertyURI);
+                inherit = true;
+                if (childProperty != null)
                 {
-                    property = nodeProperties.get(nodePropertyIndex);
-                    if (propertyExplicitlySet(property))
+                    if (propertyExplicitlySet(childProperty))
                     {
-                        log.debug("Keeping permission property: " + property);
-                        continue;
+                        log.debug("Keeping permission property: " + childProperty);
+                        inherit = false;
                     }
-                    nodeProperties.remove(nodePropertyIndex);
+                    else
+                    {
+                        node.getProperties().remove(childProperty);
+                    }
                 }
-                property = parentProperties.get(parentPropertyIndex);
-                log.debug("Inheriting permission property: " + property);
-                nodeProperties.add(property);
+                if (inherit)
+                {
+                    log.debug("Inheriting permission property: " + parentProperty);
+                    node.getProperties().add(parentProperty);
+                }
             }
         }
     }
