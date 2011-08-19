@@ -67,18 +67,15 @@
 package ca.nrc.cadc.vos.server.web.restlet.action;
 
 
-import static org.easymock.EasyMock.createMock;
 import static org.easymock.EasyMock.expect;
 import static org.easymock.EasyMock.expectLastCall;
 import static org.easymock.EasyMock.replay;
 import static org.easymock.EasyMock.verify;
 
+import java.util.ArrayList;
 import java.util.List;
 
-
-import ca.nrc.cadc.vos.ContainerNode;
-import ca.nrc.cadc.vos.NodeProperty;
-import ca.nrc.cadc.vos.VOS;
+import ca.nrc.cadc.vos.Node;
 import ca.nrc.cadc.vos.VOSURI;
 
 
@@ -92,7 +89,6 @@ public class DeleteNodeActionTest extends NodeActionTest<DeleteNodeAction>
      * @throws Exception If anything goes awry.
      */
     @Override
-    @SuppressWarnings("unchecked")
     protected void initializeTestSubject() throws Exception
     {
         setTestSubject(new DeleteNodeAction());
@@ -109,28 +105,28 @@ public class DeleteNodeActionTest extends NodeActionTest<DeleteNodeAction>
     @Override
     protected void prePerformNodeAction() throws Exception
     {
-        VOSURI par = createMock(VOSURI.class);
-        expect(mockVOS.getParentURI()).andReturn(par).once();
-
-        // get and authorization check
-        expect(getMockNodePersistence().get(par)).andReturn(mockParentNode).once();
+        
+        expect(getMockNodePersistence().get(mockVOS)).andReturn(getMockNodeS()).once();
+        expect(mockVOS.getParentURI()).andReturn(new VOSURI("vos://something")).once();
+        expect(getMockNodeS().getParent()).andReturn(mockParentNode).once();
         expect(getMockAuth().getWritePermission(mockParentNode)).andReturn(mockParentNode).once();
+        
+        // setup the children of the parent
+        
+        List<Node> childList = new ArrayList<Node>();
+        expect(mockParentNode.getNodes()).andReturn(childList).once();
+        expect(mockParentNode.getName()).andReturn("parentName").once();
+        
+        getMockNodePersistence().delete(getMockNodeS());
+        expectLastCall().once();
 
-        // delete node
-        //getMockNodePersistence().getChild(mockParentNode, "foo");
-        //expectLastCall().once();
-        //expect(mockParentNode.getNodes().add(getMockNodeS())).andReturn(true).once();
-
-        //getMockNodePersistence().delete(getMockNodeS());
-        //expectLastCall().once();
-
-        // TODO: this is the failure result when the child node is not found, due
-        // to incomplete expect calls... should be fixed
         expect(mockVOS.getPath()).andReturn("/parent/child").anyTimes();
         
+        replay(getMockNodeS());
         replay(mockVOS);
         replay(getMockNodePersistence());
         replay(getMockAuth());
+        replay(mockParentNode);
 
     }
 

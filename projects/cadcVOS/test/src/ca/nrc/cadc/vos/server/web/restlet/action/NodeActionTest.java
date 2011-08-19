@@ -34,19 +34,20 @@
 package ca.nrc.cadc.vos.server.web.restlet.action;
 
 
-import ca.nrc.cadc.vos.AbstractCADCVOSTest;
-import ca.nrc.cadc.vos.ContainerNode;
-import ca.nrc.cadc.vos.Node;
-import ca.nrc.cadc.vos.VOSURI;
-import ca.nrc.cadc.vos.server.NodePersistence;
-import ca.nrc.cadc.vos.server.auth.VOSpaceAuthorizer;
+import static org.easymock.EasyMock.createMock;
+
 import java.net.URL;
 
 import org.junit.Test;
 import org.restlet.Request;
 import org.restlet.data.Reference;
 
-import static org.easymock.EasyMock.*;
+import ca.nrc.cadc.vos.AbstractCADCVOSTest;
+import ca.nrc.cadc.vos.ContainerNode;
+import ca.nrc.cadc.vos.Node;
+import ca.nrc.cadc.vos.VOSURI;
+import ca.nrc.cadc.vos.server.NodePersistence;
+import ca.nrc.cadc.vos.server.auth.VOSpaceAuthorizer;
 
 
 public abstract class NodeActionTest<N extends NodeAction>

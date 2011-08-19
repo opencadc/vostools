@@ -774,7 +774,7 @@ public class NodeDAOTest
         Assert.assertEquals(assertName+  "URI", a.getUri(), b.getUri());
         Assert.assertEquals(assertName + "type", a.getClass().getName(), b.getClass().getName());
         Assert.assertEquals(assertName + "name", a.getName(), b.getName());
-        Subject subject = ((NodeID)b.appData).getCreator();
+        Subject subject = ((NodeID)b.appData).getOwner();
         Assert.assertNotNull(assertName+  " owner", owner);
         Principal xp = null;
         for (Principal principal : subject.getPrincipals())

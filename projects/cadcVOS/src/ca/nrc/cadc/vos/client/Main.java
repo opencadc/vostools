@@ -141,7 +141,6 @@ public class Main implements Runnable
     public static final String ARG_PUBLIC = "public";
     public static final String ARG_GROUP_READ = "group-read";
     public static final String ARG_GROUP_WRITE = "group-write";
-    public static final String ARG_INHERIT_PERM = "ip";
     public static final String ARG_PROP = "prop";
     public static final String ARG_SRC = "src";
     public static final String ARG_DEST = "dest";
@@ -760,7 +759,7 @@ public class Main implements Runnable
         }
         // return true if some props were set or if the node
         // is inheriting permissions
-        return (properties.size() > 0 || client.isInheritPermissions());
+        return (properties.size() > 0);
     }
 
     private static String ZERO_LENGTH = "";
@@ -960,8 +959,6 @@ public class Main implements Runnable
         }
 
         this.client = new VOSpaceClient(baseUrl, doVal);
-        if ( argMap.isSet(ARG_INHERIT_PERM) )
-            this.client.setInheritPermission(true);
 
         this.retryEnabled = !argMap.isSet(ARG_NO_RETRY);
 

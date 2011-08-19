@@ -67,21 +67,18 @@
 
 package ca.nrc.cadc.vos.server.web.restlet.action;
 
-import ca.nrc.cadc.vos.ContainerNode;
 import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.net.URISyntaxException;
 import java.security.AccessControlException;
+import java.util.ArrayList;
 
 import org.apache.log4j.Logger;
 
+import ca.nrc.cadc.vos.ContainerNode;
 import ca.nrc.cadc.vos.Node;
-import ca.nrc.cadc.vos.NodeFault;
 import ca.nrc.cadc.vos.NodeNotFoundException;
 import ca.nrc.cadc.vos.NodeParsingException;
-import ca.nrc.cadc.vos.NodeProperty;
-import ca.nrc.cadc.vos.VOS;
-import ca.nrc.cadc.vos.VOSURI;
 
 /**
  * Class to perform the deletion of a Node.
@@ -91,8 +88,6 @@ import ca.nrc.cadc.vos.VOSURI;
 public class DeleteNodeAction extends NodeAction
 {
     private static final Logger log = Logger.getLogger(DeleteNodeAction.class);
-    private static final NodeProperty CONTENT_LENGTH_PROP
-            = new NodeProperty(VOS.PROPERTY_URI_CONTENTLENGTH, null);
     
     @Override
     public Node getClientNode()
@@ -107,15 +102,31 @@ public class DeleteNodeAction extends NodeAction
     {
         try
         {
-            //Node node = (Node) nodePersistence.get(vosURI);
-            //voSpaceAuthorizer.getWritePermission(node.getParent());
-            //return node;
+            // get the target node
+            Node target = nodePersistence.get(vosURI);
+            
+            // check the permissions on parent
+            try
+            {
+                log.debug("Checking delete privilege on: " +
+                       vosURI.getParentURI().getURIObject().toASCIIString());
+                voSpaceAuthorizer.getWritePermission(target.getParent());
+            }
+            catch (AccessControlException e)
+            {
+                throw new AccessControlException("Delete permission denied on "
+                        + vosURI.getURIObject().toASCIIString());
+            }
+            
+            
+            if (target instanceof ContainerNode)
+            {
+                // check the permissions on the children
+                checkDeletePermission((ContainerNode) target);
+            }
+            
+            return target;
 
-            // same as CreateNodeAction: return writable parent
-            VOSURI parentURI = vosURI.getParentURI();
-            Node node = (Node) nodePersistence.get(parentURI);
-            voSpaceAuthorizer.getWritePermission(node);
-            return node;
         }
         catch(NodeNotFoundException ex)
         {
@@ -126,33 +137,48 @@ public class DeleteNodeAction extends NodeAction
     @Override
     public NodeActionResult performNodeAction(Node clientNode, Node serverNode)
     {
-        try
+        nodePersistence.delete(serverNode);
+        return null;
+    }
+    
+    /**
+     * Check the delete permission on the given parent.
+     * 
+     * Delete permission is granted if write permission is granted
+     * on all non-leaf nodes within this container.
+     * 
+     * @param container
+     * @throws AccessControlException
+     * @throws FileNotFoundException
+     */
+    private void checkDeletePermission(ContainerNode container)
+            throws AccessControlException, NodeNotFoundException
+    {
+        
+        nodePersistence.getChildren(container);
+        if (container.getNodes().size() > 0)
         {
-            Node target = null;
-            if (serverNode instanceof ContainerNode)
+            try
             {
-                ContainerNode parent = (ContainerNode) serverNode; // as per doAuthorizationCheck
-                nodePersistence.getChild(parent, vosURI.getName()); // slightly better than getChildren
-                for (Node n : parent.getNodes())
+                log.debug("Checking delete privilege on: " +
+                        container.getUri().getURIObject().toASCIIString());
+                voSpaceAuthorizer.getWritePermission(container);
+            }
+            catch (AccessControlException e)
+            {
+                throw new AccessControlException("Delete permission denied on "
+                        + container.getUri().getURIObject().toASCIIString());
+            }
+            for (Node child : container.getNodes())
+            {
+                if (child instanceof ContainerNode)
                 {
-                    if (n.getName().equals(vosURI.getName()))
-                        target = n;
+                    checkDeletePermission((ContainerNode) child);
                 }
             }
-            if (target == null)
-            {
-                log.debug("Node not found: " + vosURI.getPath());
-                NodeFault nodeFault = NodeFault.NodeNotFound;
-                nodeFault.setMessage(vosURI.toString());
-                return new NodeActionResult(nodeFault);
-            }
-
-            nodePersistence.delete(target);
-            return null;
         }
-        finally
-        {
-            
-        }
+        // clear the children for garbage collection
+        container.setNodes(new ArrayList<Node>());
     }
+
 }

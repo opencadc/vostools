@@ -81,7 +81,7 @@ public class NodeID
 {
     private Long id;
 
-    private Subject creator;
+    private Subject owner;
     
     /**
      * NodeID constructor.
@@ -89,10 +89,10 @@ public class NodeID
      * @param id
      * @param owner
      */
-    public NodeID(Long id, Subject creator)
+    public NodeID(Long id, Subject owner)
     {
         this.id = id;
-        this.creator = creator;
+        this.owner = owner;
     }
     
     /**
@@ -103,9 +103,9 @@ public class NodeID
         return id;
     }
 
-    public Subject getCreator()
+    public Subject getOwner()
     {
-        return creator;
+        return owner;
     }
 
     public String toString()

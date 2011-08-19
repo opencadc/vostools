@@ -137,9 +137,8 @@ public class NodeMapper implements RowMapper
         boolean isPublic = rs.getBoolean("isPublic");
 
         Object ownerObject = rs.getObject("ownerID");
-        Object creatorObject = rs.getObject("creatorID"); 
-        Subject creatorSubject = identManager.toSubject(creatorObject);
-        String creator = identManager.toOwnerString(creatorSubject);
+        Subject ownerSubject = identManager.toSubject(ownerObject);
+        String owner = identManager.toOwnerString(ownerSubject);
         
         long contentLength = rs.getLong("contentLength");
         String contentType = rs.getString("contentType");
@@ -171,7 +170,7 @@ public class NodeMapper implements RowMapper
                     + type);
         }
         
-        node.appData = new NodeID(nodeID, creatorSubject);
+        node.appData = new NodeID(nodeID, ownerSubject);
 
         node.setMarkedForDeletion(markedForDeletion);
         
@@ -202,9 +201,9 @@ public class NodeMapper implements RowMapper
         {
             node.getProperties().add(new NodeProperty(VOS.PROPERTY_URI_GROUPWRITE, groupWrite));
         }
-        if (creator != null && creator.trim().length() > 0)
+        if (owner != null && owner.trim().length() > 0)
         {
-            node.getProperties().add(new NodeProperty(VOS.PROPERTY_URI_CREATOR, creator));
+            node.getProperties().add(new NodeProperty(VOS.PROPERTY_URI_CREATOR, owner));
         }
         node.getProperties().add(new NodeProperty(VOS.PROPERTY_URI_ISPUBLIC, isPublic ? "true" : "false"));
         

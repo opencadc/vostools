@@ -908,7 +908,6 @@ public class NodeDAO
         "markedForDeletion",
         "isPublic",
         "ownerID",
-        "creatorID",
         "contentLength",
         "contentType",
         "contentEncoding",
@@ -1182,14 +1181,12 @@ public class NodeDAO
 
             String pval;
 
-            //String pval = node.getPropertyValue(VOS.PROPERTY_URI_CREATOR);
-            //ps.setString(col++, pval);
             Subject theCreator = this.creator;
             if (theCreator == null && node.appData != null)
             {
-                // get owner from NodeID
+                // get creator from NodeID
                 NodeID nodeID = (NodeID) node.appData;
-                theCreator = nodeID.getCreator();
+                theCreator = nodeID.getOwner();
             }
             if (theCreator == null)
                 throw new IllegalStateException("cannot persist node without a creator");
@@ -1197,15 +1194,10 @@ public class NodeDAO
             Object creatorObject  = identManager.toOwner(theCreator);
             int type = identManager.getOwnerType();
             
-            // TEMP: owner field is set to the creator field
-            
             // ownerID
             ps.setObject(col++, creatorObject, type);
             sb.append(creatorObject);
             sb.append(",");
-            
-            // new creator field takes the place of the owner field.
-            // owner will be only stored in the root node
             
             // creatorID
             ps.setObject(col++, creatorObject, type);
@@ -1522,10 +1514,8 @@ public class NodeDAO
             boolean isPublic = rs.getBoolean(col++);
 
             Object ownerObject = rs.getObject(col++);
-            Object creatorObject = rs.getObject(col++);
-            
-            Subject creatorSubject = identManager.toSubject(creatorObject);
-            String creator = identManager.toOwnerString(creatorSubject);
+            Subject ownerSubject = identManager.toSubject(ownerObject);
+            String owner = identManager.toOwnerString(ownerSubject);
 
             long contentLength = rs.getLong(col++);
             String contentType = getString(rs, col++);
@@ -1558,7 +1548,7 @@ public class NodeDAO
                 throw new IllegalStateException("Unknown node database type: " + type);
             }
 
-            node.appData = new NodeID(nodeID, creatorSubject);
+            node.appData = new NodeID(nodeID, ownerSubject);
 
             node.setMarkedForDeletion(markedForDeletion);
 
@@ -1589,9 +1579,9 @@ public class NodeDAO
             {
                 node.getProperties().add(new NodeProperty(VOS.PROPERTY_URI_GROUPWRITE, groupWrite));
             }
-            if (creator != null)
+            if (owner != null)
             {
-                node.getProperties().add(new NodeProperty(VOS.PROPERTY_URI_CREATOR, creator));
+                node.getProperties().add(new NodeProperty(VOS.PROPERTY_URI_CREATOR, owner));
             }
             node.getProperties().add(new NodeProperty(VOS.PROPERTY_URI_ISPUBLIC, Boolean.toString(isPublic)));
 

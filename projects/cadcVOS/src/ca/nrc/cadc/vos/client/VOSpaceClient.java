@@ -127,8 +127,6 @@ public class VOSpaceClient
     protected boolean schemaValidation;
     private SSLSocketFactory sslSocketFactory;
 
-    private boolean inheritPermissions = false;
-
     /**
      * Constructor. XML Schema validation is enabled by default.
      * 
@@ -152,26 +150,6 @@ public class VOSpaceClient
     {
         this.baseUrl = baseUrl;
         this.schemaValidation = enableSchemaValidation;
-    }
-
-    /**
-     * Enabled poermission property inheritence. When enabled, the createNode and
-     * setNode methods will get the parent node from the service and copy all
-     * permission-related properties to the target node.
-     * 
-     * @param enabled
-     */
-    public void setInheritPermission(boolean enabled)
-    {
-        this.inheritPermissions = enabled;
-    }
-
-    /**
-     * Get the current value of inheritPermissions
-     */
-    public boolean isInheritPermissions()
-    {
-        return this.inheritPermissions;
     }
 
     public void setSSLSocketFactory(SSLSocketFactory sslSocketFactory)
@@ -225,9 +203,6 @@ public class VOSpaceClient
             for (Node n : parent.getNodes())
                 if (n.getName().equals(node.getName()))
                     throw new IllegalArgumentException("DuplicateNode: " + node.getUri().getURIObject().toASCIIString());
-
-            if (inheritPermissions)
-                copyPermissions(parent, node);
 
             URL url = new URL(this.baseUrl + "/nodes" + node.getUri().getPath());
             log.debug("createNode(), URL=" + url);
@@ -424,22 +399,6 @@ public class VOSpaceClient
         Node rtnNode = null;
         try
         {
-            if (inheritPermissions)
-            {
-                VOSURI parentURI = node.getUri().getParentURI();
-                if (parentURI != null)
-                {
-                    try
-                    {
-                        ContainerNode parent = (ContainerNode) this.getNode(parentURI.getPath());
-                        copyPermissions(parent, node);
-                    }
-                    catch(NodeNotFoundException ex)
-                    {
-                        throw new RuntimeException("parent not found: " + parentURI);
-                    }
-                }
-            }
             URL url = new URL(this.baseUrl + "/nodes" + node.getUri().getPath());
             log.debug("setNode: " + VOSClientUtil.xmlString(node));
             log.debug("setNode: " + url);

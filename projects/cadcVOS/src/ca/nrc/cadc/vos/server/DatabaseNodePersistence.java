@@ -196,7 +196,7 @@ public abstract class DatabaseNodePersistence implements NodePersistence
     public Node put(Node node)
     {
         AccessControlContext acContext = AccessController.getContext();
-        Subject creator = Subject.getSubject(acContext);
+        Subject caller = Subject.getSubject(acContext);
         NodeDAO dao = getDAO( node.getUri().getAuthority() );
         
         // inherit the permissions of the parent if a new node
@@ -205,7 +205,7 @@ public abstract class DatabaseNodePersistence implements NodePersistence
         {
             inheritParentPermissions(node);
         }
-        return dao.put(node, creator);
+        return dao.put(node, caller);
     }
 
     public Node updateProperties(Node node, List<NodeProperty> properties)
