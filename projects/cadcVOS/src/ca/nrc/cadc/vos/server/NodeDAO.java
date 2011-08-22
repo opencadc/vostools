@@ -917,7 +917,7 @@ public class NodeDAO
         "groupWrite"
     };
 
-    private static String[] NODE_PERSIST_COLUMNS = new String[]
+    private static String[] NODE_INSERT_COLUMNS = new String[]
     {
         "parentID",
         "name",
@@ -927,6 +927,24 @@ public class NodeDAO
         "isPublic",
         "ownerID",
         "creatorID",
+        "contentLength",
+        "contentType",
+        "contentEncoding",
+        "contentMD5",
+        "lastModified",
+        "groupRead",
+        "groupWrite"
+    };
+    
+    private static String[] NODE_UPDATE_COLUMNS = new String[]
+    {
+        "parentID",
+        "name",
+        "type",
+        "busyState",
+        "markedForDeletion",
+        "isPublic",
+        "ownerID",
         "contentLength",
         "contentType",
         "contentEncoding",
@@ -1102,7 +1120,7 @@ public class NodeDAO
         private boolean update;
 
         private Node node;
-        private Subject creator;
+        private Subject caller;
 
         public NodePutStatementCreator(NodeSchema ns, boolean update)
         {
@@ -1115,7 +1133,7 @@ public class NodeDAO
         public PreparedStatement createPreparedStatement(Connection conn) throws SQLException
         {
             PreparedStatement prep;
-            if (creator == null)
+            if (update)
             {
                 String sql = getUpdateSQL();
                 log.debug(sql);
@@ -1131,10 +1149,10 @@ public class NodeDAO
             return prep;
         }
 
-        public void setValues(Node node, Subject creator)
+        public void setValues(Node node, Subject caller)
         {
             this.node = node;
-            this.creator = creator;
+            this.caller = caller;
         }
         
         void setValues(PreparedStatement ps)
@@ -1180,29 +1198,43 @@ public class NodeDAO
             sb.append(",");
 
             String pval;
-
-            Subject theCreator = this.creator;
-            if (theCreator == null && node.appData != null)
+            
+            // ownerID and creatorID
+            int subjectDataType = identManager.getOwnerType();
+            if (update)
             {
-                // get creator from NodeID
+                // update
                 NodeID nodeID = (NodeID) node.appData;
-                theCreator = nodeID.getOwner();
+                Subject theOwner = nodeID.getOwner();
+                if (theOwner == null)
+                    throw new IllegalStateException("cannot update a node without an owner.");
+                Object ownerObject = identManager.toOwner(theOwner);
+                
+                // ownerID
+                ps.setObject(col++, ownerObject, subjectDataType);
+                sb.append(ownerObject);
+                sb.append(",");
+                
+                // no creatorID reference on update
             }
-            if (theCreator == null)
-                throw new IllegalStateException("cannot persist node without a creator");
-
-            Object creatorObject  = identManager.toOwner(theCreator);
-            int type = identManager.getOwnerType();
-            
-            // ownerID
-            ps.setObject(col++, creatorObject, type);
-            sb.append(creatorObject);
-            sb.append(",");
-            
-            // creatorID
-            ps.setObject(col++, creatorObject, type);
-            sb.append(creatorObject);
-            sb.append(",");
+            else
+            {
+                // insert
+                Subject theCreator = this.caller;
+                if (theCreator == null)
+                    throw new IllegalStateException("cannot insert a node without a creator");
+                Object creatorObject  = identManager.toOwner(theCreator);
+                
+                // ownerID -- set to the creator on insert
+                ps.setObject(col++, creatorObject, subjectDataType);
+                sb.append(creatorObject);
+                sb.append(",");
+                
+                // creatorID
+                ps.setObject(col++, creatorObject, subjectDataType);
+                sb.append(creatorObject);
+                sb.append(",");
+            }
 
             pval = node.getPropertyValue(VOS.PROPERTY_URI_CONTENTLENGTH);
             if (pval != null)
@@ -1285,7 +1317,7 @@ public class NodeDAO
 
         String getSQL()
         {
-            if (creator == null)
+            if (caller == null)
                 return getUpdateSQL();
             return getInsertSQL();
         }
@@ -1297,14 +1329,14 @@ public class NodeDAO
             sb.append(ns.nodeTable);
             sb.append(" (");
 
-            for (int c=0; c<NODE_PERSIST_COLUMNS.length; c++)
+            for (int c=0; c<NODE_INSERT_COLUMNS.length; c++)
             {
                 if (c > 0)
                     sb.append(",");
-                sb.append(NODE_PERSIST_COLUMNS[c]);
+                sb.append(NODE_INSERT_COLUMNS[c]);
             }
             sb.append(") VALUES (");
-            for (int c=0; c<NODE_PERSIST_COLUMNS.length; c++)
+            for (int c=0; c<NODE_INSERT_COLUMNS.length; c++)
             {
                 if (c > 0)
                     sb.append(",");
@@ -1323,11 +1355,11 @@ public class NodeDAO
             // postgresql, for example
             
             sb.append(" SET ");
-            for (int c=0; c<NODE_PERSIST_COLUMNS.length; c++)
+            for (int c=0; c<NODE_UPDATE_COLUMNS.length; c++)
             {
                 if (c > 0)
                     sb.append(",");
-                sb.append(NODE_PERSIST_COLUMNS[c]);
+                sb.append(NODE_UPDATE_COLUMNS[c]);
                 sb.append(" = ?");
             }
             sb.append(" WHERE nodeID = ?");
