@@ -114,10 +114,9 @@ public class DeleteNodeAction extends NodeAction
             }
             catch (AccessControlException e)
             {
-                throw new AccessControlException("Delete permission denied on "
-                        + vosURI.getURIObject().toASCIIString());
+                throw new AccessControlException("Write permission denied on "
+                        + vosURI.getParentURI().getURIObject().toASCIIString());
             }
-            
             
             if (target instanceof ContainerNode)
             {
@@ -128,7 +127,7 @@ public class DeleteNodeAction extends NodeAction
             return target;
 
         }
-        catch(NodeNotFoundException ex)
+        catch (NodeNotFoundException ex)
         {
             throw new FileNotFoundException("not found: " + vosURI.getURIObject().toASCIIString());
         }
@@ -158,17 +157,9 @@ public class DeleteNodeAction extends NodeAction
         nodePersistence.getChildren(container);
         if (container.getNodes().size() > 0)
         {
-            try
-            {
-                log.debug("Checking delete privilege on: " +
-                        container.getUri().getURIObject().toASCIIString());
-                voSpaceAuthorizer.getWritePermission(container);
-            }
-            catch (AccessControlException e)
-            {
-                throw new AccessControlException("Delete permission denied on "
-                        + container.getUri().getURIObject().toASCIIString());
-            }
+            log.debug("Checking delete privilege on: " +
+                    container.getUri().getURIObject().toASCIIString());
+            voSpaceAuthorizer.getWritePermission(container);
             for (Node child : container.getNodes())
             {
                 if (child instanceof ContainerNode)
