@@ -72,7 +72,11 @@
 
 package ca.nrc.cadc.net;
 
+import java.io.ByteArrayOutputStream;
+import java.io.IOException;
+import java.io.InputStream;
 import java.io.UnsupportedEncodingException;
+import java.net.HttpURLConnection;
 import java.net.InetAddress;
 import java.net.URLDecoder;
 import java.net.URLEncoder;
@@ -86,6 +90,10 @@ import java.net.UnknownHostException;
  */
 public class NetUtil
 {
+    
+    private static final int ERROR_BUFFER_SIZE = 512;
+    private static final int MAX_ERROR_LENGTH  = 16384;
+    
     /**
      * Find the server name. The server name is for use in constructing URLs to other services
      * on the same or a configured host. It is intended to support SchemeHandler implementations, 
@@ -173,6 +181,60 @@ public class NetUtil
         catch (UnsupportedEncodingException e)
         {
             throw new RuntimeException("Unsupported decoding used", e);
+        }
+    }
+    
+    /**
+     * Return the error body of the response in the connection.
+     * @param conn
+     * @return
+     * @throws IOException 
+     */
+    public static String getErrorBody(HttpURLConnection conn)
+            throws IOException
+    {
+        // get the error message from the body
+        ByteArrayOutputStream out = null;
+        InputStream in = null;
+        try
+        {
+            out = new ByteArrayOutputStream();
+            in = conn.getErrorStream();
+            if (in == null)
+            {
+                return "";
+            }
+            byte[] buffer = new byte[ERROR_BUFFER_SIZE];
+            int bytesRead = -1;
+            // read until finished
+            while ((bytesRead = in.read(buffer)) > 0)
+            {
+                // throw bytes away if at the maximum
+                if (out.size() < MAX_ERROR_LENGTH)
+                {
+                    out.write(buffer, 0, bytesRead);
+                }
+            }
+            return out.toString("UTF-8");
+        }
+        catch (UnsupportedEncodingException e)
+        {
+            if (out != null && out.size() > 0)
+            {
+                return out.toString();
+            }
+            return "";
+        }
+        finally
+        {
+            if (out != null)
+            {
+                out.close();
+            }
+            if (in != null)
+            {
+                in.close();
+            }
         }
     }
 
