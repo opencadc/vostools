@@ -125,7 +125,6 @@ public class VOSpaceAuthorizer implements Authorizer
     private static final String CRED_SERVICE_ID = "ivo://cadc.nrc.ca/cred";
     
     private SSLSocketFactory socketFactory;
-    private Subject subjectCache;
     private int subjectHashCode;
     
     // cache of groupURI to isMember
@@ -186,11 +185,14 @@ public class VOSpaceAuthorizer implements Authorizer
     public Object getReadPermission(Node node)
             throws AccessControlException, FileNotFoundException
     {        
+        AccessControlContext acContext = AccessController.getContext();
+        Subject subject = Subject.getSubject(acContext);
+        
         LinkedList<Node> nodes = getNodeList(node);
         
         // check for root ownership
         Node rootNode = nodes.getLast();
-        if (isOwner(rootNode, getSubject()))
+        if (isOwner(rootNode, subject))
         {
             LOG.debug("Read permission granted to root user.");
             return node;
@@ -200,7 +202,8 @@ public class VOSpaceAuthorizer implements Authorizer
         while (iter.hasNext())
         {
             Node n = iter.next();
-            checkSingleNodeReadPermission(n, getSubject());
+            if (!hasSingleNodeReadPermission(n, subject))
+                throw new AccessControlException("Read permission denied on " + n.getUri().toString());
         }
         return node;
     }
@@ -239,11 +242,15 @@ public class VOSpaceAuthorizer implements Authorizer
     public Object getWritePermission(Node node)
             throws AccessControlException
     {
+        
+        AccessControlContext acContext = AccessController.getContext();
+        Subject subject = Subject.getSubject(acContext);
+        
         LinkedList<Node> nodes = getNodeList(node);
         
         // check for root ownership
         Node rootNode = nodes.getLast();
-        if (isOwner(rootNode, getSubject()))
+        if (isOwner(rootNode, subject))
         {
             LOG.debug("Write permission granted to root user.");
             return node;
@@ -254,26 +261,13 @@ public class VOSpaceAuthorizer implements Authorizer
         {
             Node n = iter.next();
             if (n == node) // target needs write
-                checkSingleNodeWritePermission(n, getSubject());
+                if (!hasSingleNodeWritePermission(n, subject))
+                    throw new AccessControlException("Write permission denied on " + n.getUri().toString());
             else // part of path needs read
-                checkSingleNodeReadPermission(n, getSubject());
+                if (!hasSingleNodeReadPermission(n, subject))
+                    throw new AccessControlException("Read permission denied on " + n.getUri().toString());
         }
         return node;
-    }
-    
-    /**
-     * Get the subject from Access Control Context or
-     * the cache if already retrieved.
-     * @return
-     */
-    private Subject getSubject()
-    {
-        if (subjectCache == null)
-        {
-            AccessControlContext acContext = AccessController.getContext();
-            subjectCache = Subject.getSubject(acContext);
-        }
-        return subjectCache;
     }
     
     /**
@@ -452,11 +446,11 @@ public class VOSpaceAuthorizer implements Authorizer
     /**
      * Check if the specified subject is the owner of the node.
      *
-     * @param caller
+     * @param subject
      * @param node
      * @return true of the current subject is the owner, otherwise false
      */
-    private boolean isOwner(Node node, Subject caller)
+    private boolean isOwner(Node node, Subject subject)
     {
         NodeID nodeID = (NodeID) node.appData;
         if (nodeID == null || nodeID.getOwner() == null)
@@ -467,7 +461,7 @@ public class VOSpaceAuthorizer implements Authorizer
         Subject owner = nodeID.getOwner();
         
         Set<Principal> ownerPrincipals = owner.getPrincipals();
-        Set<Principal> callerPrincipals = caller.getPrincipals();
+        Set<Principal> callerPrincipals = subject.getPrincipals();
         
         for (Principal oPrin : ownerPrincipals)
         {
@@ -494,11 +488,11 @@ public class VOSpaceAuthorizer implements Authorizer
      * @param node The node to check.
      * @throws AccessControlException If permission is denied.
      */
-    private void checkSingleNodeReadPermission(Node node, Subject subject)
+    private boolean hasSingleNodeReadPermission(Node node, Subject subject)
     {
         LOG.debug("checkSingleNodeReadPermission: " + node.getUri());
         if (node.isPublic())
-            return; // OK
+            return true; // OK
         
         // return true if this is the owner of the node or if a member
         // of the groupRead or groupWrite property
@@ -507,7 +501,7 @@ public class VOSpaceAuthorizer implements Authorizer
             if (isOwner(node, subject))
             {
                 LOG.debug("Node owner granted read permission.");
-                return; // OK
+                return true; // OK
             }
 
             // the GROUPREAD property means the user has read-only permission
@@ -522,7 +516,7 @@ public class VOSpaceAuthorizer implements Authorizer
             if (groupRead != null && groupRead.getPropertyValue() != null)
             {
                 if (hasMembership(groupRead.getPropertyValue(), subject))
-                    return; // OK
+                    return true; // OK
             }
             
             // the GROUPWRITE property means the user has read+write permission
@@ -538,11 +532,11 @@ public class VOSpaceAuthorizer implements Authorizer
             if (groupWrite != null && groupWrite.getPropertyValue() != null)
             {
                 if (hasMembership(groupWrite.getPropertyValue(), subject))
-                    return; // OK
+                    return true; // OK
             }
         }
         
-        throw new AccessControlException("Read permission denied.");
+        return false;
     }
     
     /**
@@ -553,7 +547,7 @@ public class VOSpaceAuthorizer implements Authorizer
      * @param node The node to check.
      * @throws AccessControlException If permission is denied.
      */
-    private void checkSingleNodeWritePermission(Node node, Subject subject)
+    private boolean hasSingleNodeWritePermission(Node node, Subject subject)
     {
 
         if (subject != null)
@@ -561,7 +555,7 @@ public class VOSpaceAuthorizer implements Authorizer
             if (isOwner(node, subject))
             {
                 LOG.debug("Node owner granted write permission.");
-                return; // OK
+                return true; // OK
             }
             
             NodeProperty groupWrite = node.findProperty(VOS.PROPERTY_URI_GROUPWRITE);
@@ -575,10 +569,10 @@ public class VOSpaceAuthorizer implements Authorizer
             if (groupWrite != null && groupWrite.getPropertyValue() != null)
             {
                 if (hasMembership(groupWrite.getPropertyValue(), subject))
-                    return; // OK
+                    return true; // OK
             }
         }
-        throw new AccessControlException("Write permission denied.");
+        return false;
     }
 
     /**
