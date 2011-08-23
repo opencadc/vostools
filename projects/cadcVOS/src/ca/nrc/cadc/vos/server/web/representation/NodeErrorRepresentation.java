@@ -92,7 +92,7 @@ public class NodeErrorRepresentation extends OutputRepresentation
         this.message = nodeFault.toString();
         if (nodeFault.getMessage() != null)
         {
-            this.message += " " + nodeFault.getMessage();
+            this.message += ": " + nodeFault.getMessage();
         }
     }
 

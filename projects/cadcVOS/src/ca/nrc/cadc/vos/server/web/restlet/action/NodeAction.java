@@ -300,7 +300,11 @@ public abstract class NodeAction implements PrivilegedAction<Object>
         }
         catch (AccessControlException e)
         {
-            String faultMessage = "Access Denied: " + e.getMessage();
+            String faultMessage = e.getMessage();
+            if (!StringUtil.hasText(e.getMessage()))
+            {
+                faultMessage = "Access Denied";
+            }
             log.debug(faultMessage);
             return handleException(NodeFault.PermissionDenied, faultMessage);
         }

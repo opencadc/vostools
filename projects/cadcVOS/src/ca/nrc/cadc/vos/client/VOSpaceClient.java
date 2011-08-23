@@ -91,6 +91,8 @@ import javax.security.auth.Subject;
 import org.apache.log4j.Logger;
 
 import ca.nrc.cadc.auth.SSLUtil;
+import ca.nrc.cadc.net.NetUtil;
+import ca.nrc.cadc.util.StringUtil;
 import ca.nrc.cadc.vos.ContainerNode;
 import ca.nrc.cadc.vos.Direction;
 import ca.nrc.cadc.vos.Node;
@@ -225,6 +227,11 @@ public class VOSpaceClient
             out.close();
 
             String responseMessage = connection.getResponseMessage();
+            String errorBody = NetUtil.getErrorBody(connection);
+            if (StringUtil.hasText(errorBody))
+            {
+                responseMessage += ": " + errorBody;
+            }
             responseCode = connection.getResponseCode();
             log.debug("createNode(), response code: " + responseCode);
             log.debug("createNode(), response message: " + responseMessage);
@@ -271,18 +278,6 @@ public class VOSpaceClient
                     // handle server response when parent (container) does not exist
                     throw new IllegalArgumentException(responseMessage);
                 default:
-
-                    // TODO: does this actually capture something useful? has it ever happened?
-                    // don't we just say that the service responded in a non-compliant way and give up?
-                    InputStream errStrm = connection.getErrorStream();
-                    BufferedReader br = new BufferedReader(new InputStreamReader(errStrm));
-                    String line;
-                    while ((line = br.readLine()) != null)
-                    {
-                        log.debug(line);
-                    }
-                    errStrm.close();
-
                     throw new RuntimeException("unexpected failure mode: " + responseMessage + "(" + responseCode + ")");
             }
         }
@@ -348,8 +343,12 @@ public class VOSpaceClient
             connection.setDoOutput(false);
 
             String responseMessage = connection.getResponseMessage();
+            String errorBody = NetUtil.getErrorBody(connection);
+            if (StringUtil.hasText(errorBody))
+            {
+                responseMessage += ": " + errorBody;
+            }
             responseCode = connection.getResponseCode();
-            
 
             switch (responseCode)
             {
@@ -422,6 +421,11 @@ public class VOSpaceClient
             out.close();
 
             String responseMessage = connection.getResponseMessage();
+            String errorBody = NetUtil.getErrorBody(connection);
+            if (StringUtil.hasText(errorBody))
+            {
+                responseMessage += ": " + errorBody;
+            }
             responseCode = connection.getResponseCode();
 
             switch (responseCode)
@@ -451,14 +455,6 @@ public class VOSpaceClient
                     throw new AccessControlException(msg);
                 default:
                     log.error(responseMessage + ". HTTP Code: " + responseCode);
-                    InputStream errStrm = connection.getErrorStream();
-                    BufferedReader br = new BufferedReader(new InputStreamReader(errStrm));
-                    String line;
-                    while ((line = br.readLine()) != null)
-                    {
-                        log.debug(line);
-                    }
-                    errStrm.close();
                     throw new IllegalArgumentException("Error returned.  HTTP Response Code: " + responseCode);
             }
         }
@@ -617,6 +613,12 @@ public class VOSpaceClient
             connection.setDoOutput(false);
 
             String responseMessage = connection.getResponseMessage();
+            String errorBody = NetUtil.getErrorBody(connection);
+            if (StringUtil.hasText(errorBody))
+            {
+                responseMessage += ": " + errorBody;
+            }
+            
             responseCode = connection.getResponseCode();
             switch (responseCode)
             {
@@ -652,14 +654,6 @@ public class VOSpaceClient
                 throw new IllegalArgumentException(responseMessage);
             default:
                 log.error(responseMessage + ". HTTP Code: " + responseCode);
-                InputStream errStrm = connection.getErrorStream();
-                BufferedReader br = new BufferedReader(new InputStreamReader(errStrm));
-                String line;
-                while ((line = br.readLine()) != null)
-                {
-                    log.debug(line);
-                }
-                errStrm.close();
                 throw new RuntimeException("unexpected failure mode: " + responseMessage + "(" + responseCode + ")");
             }
         }
@@ -701,8 +695,14 @@ public class VOSpaceClient
                 initHTTPS(sslConn);
             }
             int code = conn.getResponseCode();
+            String responseMessage = conn.getRequestMethod();
+            String errorBody = NetUtil.getErrorBody(conn);
+            if (StringUtil.hasText(errorBody))
+            {
+                responseMessage += ": " + errorBody;
+            }
             if (code != 200)
-                throw new RuntimeException("failed to read transfer description (" + code + "): " + conn.getResponseMessage());
+                throw new RuntimeException("failed to read transfer description (" + code + "): " + responseMessage);
 
             // TODO: handle errors by parsing url, getting job and looking at phase/error summary
 
@@ -780,6 +780,11 @@ public class VOSpaceClient
     {
         // Check response code from server, should be 303.
         String responseMessage = connection.getResponseMessage();
+        String errorBody = NetUtil.getErrorBody(connection);
+        if (StringUtil.hasText(errorBody))
+        {
+            responseMessage += ": " + errorBody;
+        }
         int responseCode = connection.getResponseCode();
         log.debug("responseCode: " + responseCode);
         if (responseCode != HttpURLConnection.HTTP_SEE_OTHER)
