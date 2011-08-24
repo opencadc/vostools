@@ -687,14 +687,14 @@ public class VOSpaceClient
             TransferWriter writer = new TransferWriter();
             StringWriter sw = new StringWriter();
             writer.write(transfer, sw);
-            log.debug("POST: " + sw.toString());
             String redirectLocation = postJob(this.baseUrl + VOSPACE_SYNC_TRANSFER_ENDPOINT, sw.toString());
             log.debug("sync transfer url: " + redirectLocation);
             if (!StringUtil.hasText(redirectLocation))
             {
                 throw new RuntimeException("Redirect not received from UWS.");
             }
-            
+
+            log.debug("GET - opening connection: " + redirectLocation);
             // follow the redirect to run the job
             URL redirectURL = new URL(redirectLocation);
             HttpURLConnection conn = (HttpURLConnection) redirectURL.openConnection();
@@ -720,7 +720,9 @@ public class VOSpaceClient
             }
             
             TransferReader txfReader = new TransferReader(schemaValidation);
+            log.debug("GET - reading content: " + redirectLocation);
             rtn = txfReader.read(conn.getInputStream());
+            log.debug("GET - done: " + redirectLocation);
             
             // Handle errors by parsing url, getting job and looking at phase/error summary.
             // Zero protocols in resulting transfer indicates that an error was encountered.
@@ -754,9 +756,7 @@ public class VOSpaceClient
                             + job.getID());
                 }
             }
-            
             log.debug(rtn.toXmlString());
-            
         }
         catch (MalformedURLException e)
         {
@@ -801,8 +801,8 @@ public class VOSpaceClient
 
     private String postJob(String strUrl, String strParam) throws MalformedURLException, IOException
     {
-        // Connection to the tapServer.
         URL url = new URL(strUrl);
+        log.debug("POST - open connection: " + url);
         HttpURLConnection connection = (HttpURLConnection) url.openConnection();
         if (connection instanceof HttpsURLConnection)
         {
@@ -811,7 +811,6 @@ public class VOSpaceClient
         }
         connection.setRequestMethod("POST");
         connection.setRequestProperty("Content-Length", "" + Integer.toString(strParam.getBytes().length));
-//        connection.setRequestProperty("Content-Type", "application/x-www-form-urlencoded");
         connection.setRequestProperty("Content-Type", "text/xml");
         connection.setInstanceFollowRedirects(false);
         connection.setUseCaches(false);
@@ -819,11 +818,12 @@ public class VOSpaceClient
         connection.setDoInput(true);
 
         // POST the parameters to the tapServer.
+        log.debug("POST - writing content: " + strParam);
         OutputStream outputStream = connection.getOutputStream();
         outputStream.write(strParam.getBytes("UTF-8"));
         outputStream.flush();
         outputStream.close();
-        log.debug("POST " + url.toString());// + " " + strParam);
+        log.debug("POST - done: " + url.toString());
 
         String redirectLocation = getRedirectLocation(connection);
 

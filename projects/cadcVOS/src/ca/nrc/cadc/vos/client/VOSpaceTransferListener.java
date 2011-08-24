@@ -96,13 +96,14 @@ public class VOSpaceTransferListener implements TransferListener
 
     public void transferEvent(TransferEvent e)
     {
-        log.debug("transferEvent: " + e);
         switch(e.getState())
         {
             case TransferEvent.CONNECTING:
+            case TransferEvent.CONNECTED:
                 log.info(e.getStateLabel() + ": " + e.getURL());
                 break;
-                
+
+
             case TransferEvent.RETRYING:
                 log.info(e.getStateLabel() + ": " + e.getURL() + " -- retrying...");
                 break;
@@ -115,7 +116,8 @@ public class VOSpaceTransferListener implements TransferListener
                 else
                     log.info(e.getStateLabel() + ": " + e.getFile() + " -> " + e.getURL() + " -- " + e.getError().getMessage());
                 break;
-                
+
+            case TransferEvent.TRANSFERING:
             case TransferEvent.CANCELLED:
             case TransferEvent.COMPLETED:
                 if (download)

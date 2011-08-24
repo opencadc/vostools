@@ -168,6 +168,9 @@ public class Main implements Runnable
     private Operation operation;
     private VOSURI target;
     private List<NodeProperty> properties;
+    private String contentType;
+    private String contentEncoding;
+    
     private URI source;
     private URI destination;
     private Direction transferDirection = null;
@@ -194,6 +197,7 @@ public class Main implements Runnable
         if (argMap.isSet(ARG_DEBUG) || argMap.isSet(ARG_D))
         {
             Log4jInit.setLevel("ca.nrc.cadc.vos.client", Level.DEBUG);
+            Log4jInit.setLevel("ca.nrc.cadc.net", Level.DEBUG);
         }
         else if (argMap.isSet(ARG_VERBOSE) || argMap.isSet(ARG_V))
         {
@@ -485,19 +489,123 @@ public class Main implements Runnable
     private void copyToVOSpace()
         throws Exception
     {
-        Node n = null;
         URI originalDestination = null;
         if (StringUtil.hasText(destination.getQuery()))
         {
             originalDestination = new URI(destination.toString());
             destination = new URI(destination.toString().replace("?" + destination.getQuery(), ""));
         }
-        try { n = client.getNode(destination.getPath()); }
+        DataNode dnode = new DataNode(new VOSURI(destination));
+
+        View view = null;
+        if (originalDestination != null)
+        {
+            view = createAcceptsView(new VOSURI(originalDestination), null);
+        }
+        if (view == null)
+        {
+            view = new View(new URI(VOS.VIEW_DEFAULT));
+        }
+
+        copyToVOSpaceFast(dnode, view);
+        //copyToVOSpaceFull(dnode, view);
+    }
+
+    // this does the transfer first and then updates properties is needed
+    private void copyToVOSpaceFast(DataNode dest, View view)
+        throws Exception
+    {
+        List<Protocol> protocols = new ArrayList<Protocol>();
+        if (subject != null)
+            protocols.add(new Protocol(VOS.PROTOCOL_HTTPS_PUT));
+        else
+            protocols.add(new Protocol(VOS.PROTOCOL_HTTP_PUT));
+
+        Transfer transfer = new Transfer();
+        transfer.setTarget(dest);
+        transfer.setView(view);
+        transfer.setProtocols(protocols);
+        transfer.setDirection(transferDirection);
+
+        ClientTransfer clientTransfer = new ClientTransfer(this.client.pushToVoSpace(transfer));
+
+        // set http headers for put
+        if (contentType != null)
+        {
+            log.debug("copyToVOSpaceFast: setting content-type = " + contentType);
+            clientTransfer.setRequestProperty("Content-Type", contentType);
+        }
+        if (contentEncoding != null)
+        {
+            log.debug("copyToVOSpaceFast: setting content-encoding = " + contentEncoding);
+            clientTransfer.setRequestProperty("Content-Encoding", contentEncoding);
+        }
+        
+        log.debug("this.source: " + source);
+        File fileToUpload = new File(source);
+        
+        if (retryEnabled)
+            clientTransfer.setMaxRetries(Integer.MAX_VALUE);
+        clientTransfer.setTransferListener(new VOSpaceTransferListener(false));
+        clientTransfer.setSSLSocketFactory(client.getSslSocketFactory());
+        clientTransfer.doUpload(fileToUpload);
+        Node node = clientTransfer.getTarget();
+
+        boolean checkProps = contentType != null || contentEncoding != null || properties.size() > 0;
+        if (checkProps || log.isDebugEnabled())
+        {
+            log.debug("clientTransfer getTarget: " + node);
+            Node cur = this.client.getNode(node.getUri().getPath());
+            log.debug("Node returned from getNode, after doUpload: " + VOSClientUtil.xmlString(cur));
+            if (checkProps)
+            {
+                log.debug("checking properties after put: " + cur.getUri());
+                boolean updateProps = false;
+                for (NodeProperty np : properties)
+                    updateProps = updateProps || updateProperty(cur, np.getPropertyURI(), np.getPropertyValue());
+                if (updateProps)
+                {
+                    log.debug("updating properties after put: " + cur.getUri());
+                    client.setNode(cur);
+                }
+            }
+        }
+    }
+    private boolean updateProperty(Node n, String propURI, String propValue)
+    {
+        log.debug("checking property: " + propURI + " vs " + propValue);
+        boolean ret = false;
+        if (propValue != null)
+        {
+            NodeProperty cur = n.findProperty(propURI);
+            if ( cur == null)
+            {
+                log.debug("adding property: " + propURI + " = " + propValue);
+                n.getProperties().add(new NodeProperty(propURI, propValue));
+                ret = true;
+            }
+            else if ( !propValue.equals(cur.getPropertyValue()) )
+            {
+                log.debug("setting property: " + propURI + " = '" + propValue + "', was '" + cur.getPropertyValue() + "'");
+                cur.setValue(propValue);
+                ret = true;
+            }
+        }
+        return ret;
+    }
+
+    // deprecated: this creates the destination node first, with properties, and then transfers the data
+    // advantages: it reports when a node is being overwritten, it detects if destination is a container
+    private void copyToVOSpaceFull(DataNode dest, View view)
+        throws Exception
+    {
+        Node n = null;
+        try { n = client.getNode(dest.getUri().getPath()); }
         catch(NodeNotFoundException ignore) { }
         if (n != null && !(n instanceof DataNode))
             throw new IllegalArgumentException("destination is an existing node of type " + getType(n));
 
-        DataNode dnode;
+        DataNode dnode = null;
         if (n != null)
         {
             log.info("overwriting existing data node: " + destination);
@@ -517,16 +625,6 @@ public class Main implements Runnable
             dnode = (DataNode) client.createNode(dnode);
         }
 
-        View dview = null;
-        if (originalDestination != null)
-        {
-            dview = createAcceptsView(new VOSURI(originalDestination), n);
-        }
-        if (dview == null)
-        {
-            dview = new View(new URI(VOS.VIEW_DEFAULT));
-        }
-
         List<Protocol> protocols = new ArrayList<Protocol>();
         if (subject != null)
             protocols.add(new Protocol(VOS.PROTOCOL_HTTPS_PUT));
@@ -535,7 +633,7 @@ public class Main implements Runnable
 
         Transfer transfer = new Transfer();
         transfer.setTarget(dnode);
-        transfer.setView(dview);
+        transfer.setView(view);
         transfer.setProtocols(protocols);
         transfer.setDirection(transferDirection);
 
@@ -543,7 +641,7 @@ public class Main implements Runnable
 
         log.debug("this.source: " + source);
         File fileToUpload = new File(source);
-        
+
         if (retryEnabled)
             clientTransfer.setMaxRetries(Integer.MAX_VALUE);
         clientTransfer.setTransferListener(new VOSpaceTransferListener(false));
@@ -1069,8 +1167,8 @@ public class Main implements Runnable
                         + f.getAbsolutePath() + " (does not exist, skipping)");
         }
 
-        String contentType = argMap.getValue(ARG_CONTENT_TYPE);
-        String contentEncoding = argMap.getValue(ARG_CONTENT_ENCODING);
+        this.contentType = argMap.getValue(ARG_CONTENT_TYPE);
+        this.contentEncoding = argMap.getValue(ARG_CONTENT_ENCODING);
         String contentMD5 = argMap.getValue(ARG_CONTENT_MD5);
         String groupRead = argMap.getValue(ARG_GROUP_READ);
         String groupWrite = argMap.getValue(ARG_GROUP_WRITE);
@@ -1099,8 +1197,10 @@ public class Main implements Runnable
             properties.add(new NodeProperty(VOS.PROPERTY_URI_TYPE, contentType));
         if (contentEncoding != null)
             properties.add(new NodeProperty(VOS.PROPERTY_URI_CONTENTENCODING, contentEncoding));
+
         if (contentMD5 != null)
             properties.add(new NodeProperty(VOS.PROPERTY_URI_CONTENTMD5, contentMD5));
+        
         if (groupRead != null)
             properties.add(new NodeProperty(VOS.PROPERTY_URI_GROUPREAD, groupRead));
         if (groupWrite != null)

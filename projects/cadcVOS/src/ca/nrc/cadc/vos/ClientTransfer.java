@@ -216,6 +216,7 @@ public class ClientTransfer extends Transfer
             upload = new HttpUpload(localFile, url);
         else
             upload = new HttpUpload(wrapper, url);
+        log.debug("calling HttpUpload.setRequestProperties with " + httpRequestProperties.size() + " props");
         upload.setRequestProperties(httpRequestProperties);
         upload.setMaxRetries(maxRetries);
         if (transListener != null)
