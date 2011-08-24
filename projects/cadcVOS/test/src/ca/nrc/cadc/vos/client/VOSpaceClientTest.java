@@ -433,7 +433,6 @@ public class VOSpaceClientTest
         // file.delete();
     }
 
-
     @Override
     public String toString()
     {

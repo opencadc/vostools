@@ -82,6 +82,7 @@ import java.net.URL;
 import java.security.AccessControlContext;
 import java.security.AccessControlException;
 import java.security.AccessController;
+import java.text.ParseException;
 import java.util.List;
 
 import javax.net.ssl.HttpsURLConnection;
@@ -89,10 +90,14 @@ import javax.net.ssl.SSLSocketFactory;
 import javax.security.auth.Subject;
 
 import org.apache.log4j.Logger;
+import org.jdom.JDOMException;
 
 import ca.nrc.cadc.auth.SSLUtil;
 import ca.nrc.cadc.net.NetUtil;
 import ca.nrc.cadc.util.StringUtil;
+import ca.nrc.cadc.uws.ExecutionPhase;
+import ca.nrc.cadc.uws.Job;
+import ca.nrc.cadc.uws.JobReader;
 import ca.nrc.cadc.vos.ContainerNode;
 import ca.nrc.cadc.vos.Direction;
 import ca.nrc.cadc.vos.Node;
@@ -683,30 +688,73 @@ public class VOSpaceClient
             StringWriter sw = new StringWriter();
             writer.write(transfer, sw);
             log.debug("POST: " + sw.toString());
-            String transStr = postJob(this.baseUrl + VOSPACE_SYNC_TRANSFER_ENDPOINT, sw.toString());
-            log.debug("sync transfer url: " + transStr);
-            URL transURL = new URL(transStr);
+            String redirectLocation = postJob(this.baseUrl + VOSPACE_SYNC_TRANSFER_ENDPOINT, sw.toString());
+            log.debug("sync transfer url: " + redirectLocation);
+            if (!StringUtil.hasText(redirectLocation))
+            {
+                throw new RuntimeException("Redirect not received from UWS.");
+            }
             
-            TransferReader txfReader = new TransferReader(schemaValidation);
-            HttpURLConnection conn = (HttpURLConnection) transURL.openConnection();
+            // follow the redirect to run the job
+            URL redirectURL = new URL(redirectLocation);
+            HttpURLConnection conn = (HttpURLConnection) redirectURL.openConnection();
             if (conn instanceof HttpsURLConnection)
             {
                 HttpsURLConnection sslConn = (HttpsURLConnection) conn;
                 initHTTPS(sslConn);
             }
+            conn.setRequestMethod("GET");
+            conn.setUseCaches(false);
+            conn.setDoInput(true);
+            conn.setDoOutput(false);
             int code = conn.getResponseCode();
-            String responseMessage = conn.getRequestMethod();
+            String responseMessage = conn.getResponseMessage();
             String errorBody = NetUtil.getErrorBody(conn);
             if (StringUtil.hasText(errorBody))
             {
                 responseMessage += ": " + errorBody;
             }
             if (code != 200)
+            {
                 throw new RuntimeException("failed to read transfer description (" + code + "): " + responseMessage);
-
-            // TODO: handle errors by parsing url, getting job and looking at phase/error summary
-
+            }
+            
+            TransferReader txfReader = new TransferReader(schemaValidation);
             rtn = txfReader.read(conn.getInputStream());
+            
+            // Handle errors by parsing url, getting job and looking at phase/error summary.
+            // Zero protocols in resulting transfer indicates that an error was encountered.
+            if (rtn.getProtocols() == null || rtn.getProtocols().size() == 0)
+            {
+                log.debug("Found zero protocols in returned transfer, checking "
+                        + "job for error details.");
+                URL jobURL = getJobURLFromJobRedirect(redirectURL);
+                log.debug("getJob(), URL=" + jobURL);
+                conn = (HttpURLConnection) jobURL.openConnection();
+                if (conn instanceof HttpsURLConnection)
+                {
+                    HttpsURLConnection sslConn = (HttpsURLConnection) conn;
+                    initHTTPS(sslConn);
+                }
+                conn.setRequestMethod("GET");
+                conn.setUseCaches(false);
+                conn.setDoInput(true);
+                conn.setDoOutput(false);
+                JobReader jobReader = new JobReader(schemaValidation);
+                Job job = jobReader.read(conn.getInputStream());
+                if (job.getExecutionPhase().equals(ExecutionPhase.ERROR) &&
+                        job.getErrorSummary() != null)
+                {
+                    throw new RuntimeException("Transfer Failure: " +
+                            job.getErrorSummary().getSummaryMessage());
+                }
+                else
+                {
+                    log.warn("Job with no protocol endpoints received for job "
+                            + job.getID());
+                }
+            }
+            
             log.debug(rtn.toXmlString());
             
         }
@@ -720,7 +768,6 @@ public class VOSpaceClient
             log.debug("failed to create transfer", e);
             throw new RuntimeException(e);
         }
-        /*
         catch (JDOMException e) // from JobReader
         {
             log.debug("got bad job XML from service", e);
@@ -731,13 +778,25 @@ public class VOSpaceClient
             log.debug("got bad job XML from service", e);
             throw new RuntimeException(e);
         }
-        */
         catch (TransferParsingException e)
         {
             log.debug("got invalid XML from service", e);
             throw new RuntimeException(e);
         }
         return rtn;
+    }
+    
+    private URL getJobURLFromJobRedirect(URL redirectURL) throws MalformedURLException
+    {
+        String redirect = redirectURL.toString();
+        // chop-off the '/run' at the end
+        int runIndex = redirect.indexOf("/run");
+        if (runIndex == -1)
+        {
+            throw new RuntimeException("Could not get job error details.");
+        }
+        String jobLocation = redirect.substring(0, runIndex);
+        return new URL(jobLocation);
     }
 
     private String postJob(String strUrl, String strParam) throws MalformedURLException, IOException
