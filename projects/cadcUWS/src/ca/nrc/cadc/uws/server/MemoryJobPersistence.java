@@ -158,16 +158,16 @@ public class MemoryJobPersistence implements JobPersistence, JobUpdater
     {
         AccessControlContext acContext = AccessController.getContext();
         Subject caller = Subject.getSubject(acContext);
+        String ownerID = null;
         if (caller != null)
-        {
-            String ownerID = identityManager.toOwnerString(caller);
-            job.setOwnerID(ownerID);
-        }
+            ownerID = identityManager.toOwnerString(caller);
+        job.setOwnerID(ownerID);
         expectNotNull("job", job);
         if (job.getID() == null)
             JobPersistenceUtil.assignID(job, idGenerator.getID());
         Job keep = JobPersistenceUtil.deepCopy(job);
-        keep.ownerSubject = caller;
+        if (ownerID != null)
+            keep.ownerSubject = caller;
         jobs.put(keep.getID(), keep);
         return job;
     }
