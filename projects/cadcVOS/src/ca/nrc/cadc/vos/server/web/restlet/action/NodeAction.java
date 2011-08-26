@@ -284,9 +284,10 @@ public abstract class NodeAction implements PrivilegedAction<Object>
         catch (FileNotFoundException e)
         {
             NodeFault nodeFault;
-            if (this instanceof CreateNodeAction || this instanceof DeleteNodeAction)
+            if (this instanceof CreateNodeAction)
                 nodeFault = NodeFault.ContainerNotFound;
             else
+                // TODO: if this is delete and it was a missing parent, should be ContainerNotFound
                 nodeFault = NodeFault.NodeNotFound;
             String faultMessage = vosURI.toString();
             log.debug("Could not find node with path: " + vosURI.getPath());
