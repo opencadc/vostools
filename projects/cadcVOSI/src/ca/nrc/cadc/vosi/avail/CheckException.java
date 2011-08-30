@@ -8,7 +8,11 @@ package ca.nrc.cadc.vosi.avail;
 public class CheckException extends Exception
 {
     private static final long serialVersionUID = 201003271230L;
-    
+
+    public CheckException(String msg)
+    {
+        this(msg, null);
+    }
     public CheckException(String msg, Throwable cause)
     {
         super(msg, cause);

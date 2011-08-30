@@ -70,7 +70,16 @@
 package ca.nrc.cadc.vosi.avail;
 
 import ca.nrc.cadc.auth.SSLUtil;
+import ca.nrc.cadc.auth.X509CertificateChain;
+import ca.nrc.cadc.date.DateUtil;
 import java.io.File;
+import java.security.Principal;
+import java.security.cert.CertificateExpiredException;
+import java.security.cert.CertificateNotYetValidException;
+import java.security.cert.X509Certificate;
+import java.text.DateFormat;
+import java.util.Date;
+import java.util.Set;
 import javax.security.auth.Subject;
 import org.apache.log4j.Logger;
 
@@ -103,15 +112,65 @@ public class CheckCertificate implements CheckResource
     public void check()
         throws CheckException
     {
+        Subject s = null;
         try
         {
-            Subject s = SSLUtil.createSubject(cert, key);
-            log.info("test succeeded: " + cert.getAbsolutePath() + " " + key.getAbsolutePath());
+            s = SSLUtil.createSubject(cert, key);
+        }
+        catch(Throwable t)
+        {
+            log.warn("test failed: " + cert.getAbsolutePath() + " " + key.getAbsolutePath());
+            throw new CheckException("internal certificate check failed");
+        }
+
+        try
+        {
+            Set<X509CertificateChain> certs = s.getPublicCredentials(X509CertificateChain.class);
+            if (certs.size() == 0)
+            {
+                // subject without certs means something went wrong above
+                throw new RuntimeException("failed to load X509 certficate from files");
+            }
+            X509CertificateChain chain = certs.iterator().next(); // the first one
+            checkValidity(chain);
         }
         catch(Throwable t)
         {
             log.warn("test failed: " + cert.getAbsolutePath() + " " + key.getAbsolutePath());
             throw new CheckException("certificate check failed", t);
+        }
+        log.info("test succeeded: " + cert.getAbsolutePath() + " " + key.getAbsolutePath());
+    }
+
+    private void checkValidity(X509CertificateChain chain)
+    {
+        DateFormat df = DateUtil.getDateFormat(DateUtil.ISO_DATE_FORMAT, DateUtil.LOCAL);
+        Date start = null;
+        Date end = null;
+        Principal principal = null;
+        for (X509Certificate c : chain.getChain())
+        {
+            try
+            {
+                start = c.getNotBefore();
+                end = c.getNotAfter();
+                principal = c.getSubjectX500Principal();
+                c.checkValidity();
+            }
+            catch(CertificateNotYetValidException exp)
+            {
+                log.error("certificate is not valid yet, DN: "
+                        + principal + ", valid from " + df.format(start) + " to " + df.format(end));
+                throw new RuntimeException("certificate is not valid yet, DN: "
+                        + principal + ", valid from " + df.format(start) + " to " + df.format(end));
+            }
+            catch (CertificateExpiredException exp)
+            {
+                log.error("certificate has expired, DN: "
+                        + principal + ", valid from " + df.format(start) + " to " + df.format(end));
+                throw new RuntimeException("certificate has expired, DN: "
+                        + principal + ", valid from " + df.format(start) + " to " + df.format(end));
+            }
         }
     }
 }
