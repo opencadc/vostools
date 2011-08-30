@@ -8,7 +8,6 @@ import tempfile
 from threading import Lock
 from errno import EACCES, EIO, ENOENT, EISDIR, ENOTDIR, ENOTEMPTY, EPERM, EEXIST
 import os
-#from os import statvfs, fsync, write, read, lseek, close
 import vos
 from os import O_RDONLY, O_WRONLY, O_RDWR, O_APPEND
 import logging
@@ -29,34 +28,51 @@ class VOFS(LoggingMixIn, Operations):
 
     To use this you will also need a VOSpace account from the CADC.
     """
-    ### Currently disabled operations
-
+    ### VOSpace doesn't support these so I've disabled these operations.
     chown = None
-    getxattr = None
+    getxattr = None   ### Actually VOSpace could do xattr if I did some work...
     link = None
-    listxattr = None
+    listxattr = None  ### see getxattr above
     mknode = None
     rename = None
     readlink = None
     rmdir = None
     symlink = None
 
-
     
     def __init__(self, root, cache_dir, conn=None, cache_limit=1024*1024*1024):
+        """Initialize the VOFS.  
+
+        The style here is to use dictionaries to contain information
+        about the Node.  The full VOSpace path is used as the Key for
+        most of these dictionaries."""
+
+        # This dictionary contains the Node data about the VOSpace node in question
         self.node = {}
+        # Standard attribtutes of the Node
         self.attr={}
+        # Where is the file system this Node is currently located
 	self.path={}
+
+        # These next dictionaries keep track of pointers 
+        # The fileObject pointing to the cache version of this file.
         self.fobj={}
+        # A dictionary or properties about the cached version of the
+        # file.  the name of the dictionary should be something else
+        # but I started calling this fh for other reasons.
+        # Refactoring would help here.
         self.fh={}
-        self.fhlist=[]
+
+        # What is the 'root' of the VOSpace? (eg vos:MyVOSpace) 
         self.root = root
+        # VOSpace is a bit slow so we do some cahcing.
         self.cache_limit=cache_limit
         self.cache_dir = os.path.normpath(os.path.join(cache_dir,root))
         if not os.access(self.cache_dir,os.F_OK):
             os.makedirs(self.cache_dir)
+
+        ## All communication with the VOSpace goes through this client connection.
         self.client = vos.Client(rootNode=root,conn=conn)
-        #self.rwlock=Lock()
 
     def __call__(self, op, path, *args):
         return super(VOFS, self).__call__(op, path, *args)
@@ -79,29 +95,66 @@ class VOFS(LoggingMixIn, Operations):
         self.getNode(path)
 
     def chmod(self, path, mode):
+        """Set the read/write groups on the VOSpace node based on chmod style modes.
+
+        This function is a bit funny as the VOSpace spec sets the name
+        of the read and write groups instead of having mode setting as
+        a separate action.  A chmod that adds group permission thus
+        becomes a chgrp action.  
+
+        Here I use the logic that the new group will be inherited from
+        the container group information.
+        """
         logging.info("Changing mode for %s to %d" % ( path, mode))
+
         node = self.getNode(path)
         parent = self.getNode(os.path.dirname(path))
-        if node.groupwrite == "NONE":
-            node.groupwrite=parent.groupwrite
+
         if node.groupread == "NONE":
             node.groupread=parent.groupread
+        if node.groupwrite == "NONE":
+            node.groupwrite=parent.groupwrite
+        # The 'node' object returned by getNode has a chmod method
+        # that we now call to set the mod, since we set the group(s)
+        # above.  NOTE: If the parrent doesn't have group then NONE is
+        # passed up and the groupwrite and groupread will be set to
+        # the string NONE.
+        if node.chmod(mode):
+            # Now set the time of change/modification on the path...
+            self.getattr(path)['st_ctime']=time.time()
+            ## if node.chmod returns false then no changes were made.
+            self.client.update(node)
+            self.getNode(path,force=True)
+
+        # Need to also update the cache properties.
         fname=os.path.normpath(self.cache_dir+path)
         if os.access(fname,os.F_OK):
             os.chmod(fname,mode)
-        if node.chmod(mode):
-            self.client.update(node)
+            
+
+
         
     def create(self, path, flags):
         """Create a node. Currently ignors the ownership mode"""
         logging.info("Creating a node: %s with mode %s" % (path, os.O_CREAT))
+
+        # Create is handle by the client. 
+        # This should fail if the basepath doesn't exist
         self.client.open(path,os.O_CREAT).close()
+
         node = self.getNode(path)
         parent=  self.getNode(os.path.dirname(path))
+
+        # Here I force inheritance of group settings. 
         node.groupread = parent.groupread
         node.groupwrite = parent.groupwrite
-        node.chmod(flags)
-        self.client.update(node)
+        if node.chmod(flags):
+            ## chmod returns True if the mode changed.
+            self.client.update(node)
+
+        ## Now create the cached version. Here we are kind and build
+        ## the full cache path since we only create cache sub-dirs
+        ## when a file is accessed here.
         fname=os.path.normpath(self.cache_dir+path)
         dirs=os.path.dirname(fname)
         if not os.path.exists(dirs):
@@ -117,9 +170,16 @@ class VOFS(LoggingMixIn, Operations):
         return fd
 
     def flushnode(self,path,fh):
-        """Flush the data associated with this fh to the Node at path."""
-        os.fsync(fh)
-        w=self.client.open(self.getNode(path).uri,'w')
+        """Flush the data associated with this fh to the Node at path
+        in VOSpace.
+        
+        Flushing the VOSpace object involves pushing the entire file
+        back over the network. This should only be done when really
+        needed as the network connection can be slow."""
+
+        self.fsync(path,False,fh)
+        node=self.getNode(path)
+        w=self.client.open(node.uri,'w')
         os.lseek(fh,0,0)
         bufsize=2**33
         while True:
@@ -130,18 +190,28 @@ class VOFS(LoggingMixIn, Operations):
             if w.write(buf)!=len(buf):
                 raise FuseOSError(EIO)
         w.close()
+        ## Now update our information about this VOSpace node...
+        self.getNode(path,force=True)
         return
 
-
     def flush(self,path,fh):
+        """Flush the cached version of the file.
+
+        This could be a problem since users expect the file in VOSpace
+        to be updated too.  But we only do that with a flushnode call
+        which we do on close of the file."""
+        
         self.fsync(path,False,fh)
   
     def fsync(self,path,datasync,fh):
-        if self.fh.get(fh,None):
+        if self.fh.get(fh,None) is not None:
             mode = flag2mode(self.fh[fh]['flags'])
         if 'w' in mode or 'a' in mode:
             try:
                 os.fsync(fh)
+                # set the modification time on this node..
+                # if the system asks for information about this node
+                # we need to know that this node was modified.
                 self.getattr(path)['st_mtime']=time.time()
             except:
                 logging.critical("Failed to sync fh %d?" % ( fh))
@@ -149,63 +219,86 @@ class VOFS(LoggingMixIn, Operations):
 
 
     def getNode(self,path,force=False):
-        logging.debug("requesting node %s" % ( path))
+        """Use the client and pull the node from VOSpace.  
+        
+        Currently force=False is the default... so we never check
+        VOSpace to see if the node metadata is different from what we
+        have.  This doesn't keep the node metadata current but is
+        faster if VOSpace is slow.
+        """
+
         if path in self.node and not force:
             logging.debug("Sending back chached node for %s" % ( path))
             return self.node[path]
+
+        ## Pull the node meta data from VOSpace.
         try:
+            logging.debug("requesting node %s from VOSpace" % ( path))
             node=self.client.getNode(path)
         except IOError:
             raise FuseOSError(ENOENT)
 
-        logging.debug("%s last modified at %s" % (path,time.ctime(node.attr.get('st_mtime'))))
-        if path in self.node and node.attr.get('st_mtime') <= self.node[path].attr.get('st_mtime') :
-                return self.node[path]
-        logging.debug("Updating directory contents")
         self.node[path]=node
-        for node in self.node[path].nodeList:
-            npath=os.path.join(path,node.name)
-            if node.isdir():
-                ## get the container node XML file, caches child DataNode infos
-                try:
-                    self.node[npath]=self.client.getNode(node.uri)
-                except IOError:
-                    pass
-            else:
+        self.attr[path]=node.attr
+        if self.node[path].isdir():
+            for node in self.node[path].nodeList:
+                npath=os.path.join(path,node.name)
                 self.node[npath]=node
         return self.node[path]
 
     def getPath(self,fh):
+        """Return the path element for a given cached filehandle"""
         return self.path.get(fh,None)
 
     def getattr(self, path, fh=None):
+        """Build some attributes for this file, we have to make-up some stuff"""
 	if not path in self.attr:
             node=self.getNode(path)
 	    self.attr[path]=node.attr
             logging.debug("Got %s for %s" % (node, path))
         atime=self.attr.get('st_atime',time.time())
-        mtime=self.attr.get('st_mtime',time.time())
-        if not atime > mtime:
+        mtime=self.attr.get('st_mtime',atime)
+        ctime=self.attr.get('st_ctime',atime)
+        if mtime > atime or ctime > atime:
+            ### the modification/change times are after the last access
+            ### so we should access this VOSpace node again.
             logging.debug("Getting node details from getattr for path %s" % ( path))
-	    self.attr[path].update(self.getNode(path).attr)
+            node=self.getNode(path,force=True)
+            self.attr[path]=node.attr
+	    #self.attr[path].update(self.getNode(path).attr)
         return self.attr[path]
 
     def mkdir(self, path, mode):
-        ### Need to implement the 'mode' part of this still...
+        """Create a container node in the VOSpace at the correct location.
+
+        set the mode after creation. """
         self.client.mkdir(path)
         self.chmod(path,mode)
 
     def open(self, path, flags, *mode):
+        """Open file with the desidred modes
+
+        Here we return a handle to the cached version of the file
+        which is updated if older than the one stored in VOSpace. 
+
+        If someone changes the VOSpace file while we are using the
+        cached one some confusion will occur.
+        """
 	logging.debug("Openning %s with flags %s" % ( path, flag2mode(flags)))
         if len(mode)>0:
             logging.debug("got mode %s" % ( mode))
         #    self.chmod(path,mode)
         node=self.getNode(path)
+
+        # Create the full path to the cached version.
         fname=os.path.normpath(self.cache_dir+path)
         dirs=os.path.dirname(fname)
         if not os.path.exists(dirs):
             os.makedirs(dirs)
         fobj=None
+
+        # if this file is already in the cache that version is
+        # not older than the VOSpace copy then work from the cached version
         if os.access(fname,os.R_OK):
             cache_stat=os.stat(fname)
             if not node.attr['st_mtime'] > cache_stat.st_mtime:
@@ -215,6 +308,10 @@ class VOFS(LoggingMixIn, Operations):
                 length=fobj.tell()
                 fobj.seek(0)
                 self.fh[fd]={'flags': flags, 'cached': length, 'name': fname}
+
+        # If we didn't get an fobj then we didn't get a cahced
+        # version, either it didn't exist or was out of date.  so open
+        # an empty file at the cache location.
         if fobj is None:
             fobj=open(fname,'w+b')
             fobj.truncate()
@@ -227,11 +324,16 @@ class VOFS(LoggingMixIn, Operations):
     
     def read(self, path, size, offset, fh):
         """Read the entire file from the VOSpace server, place in a temporary file and then offset
-        to the desired location"""
+        to the desired location
+
+        """
         ## Read from the requested filehandle, which the tempfile one sent from open
         logging.debug("Using fd %d",fh)
-        #load the file from VOSpace as we might be appending
         os.lseek(fh,0,0)
+
+        # load the file from VOSpace as we might be appending
+        # cached==0 means not yet cached... and check that the node mtime is not newer than the cache one.
+        # this routine needs good time sych between the OS and the VOSpace... 
         if self.fh[fh].get('cached',0)  < self.getattr(path)['st_size'] or os.stat(self.fh[fh]['name']).st_mtime < self.getattr(path)['st_mtime']:
           w=open(self.fh[fh]['name'],'wb')
           try:
@@ -261,6 +363,7 @@ class VOFS(LoggingMixIn, Operations):
         return os.read(fh,size)
 
     def readdir(self, path, fh):
+        """Send a list of entried in this directory"""
         return ['.','..'] + [e.name.encode('utf-8') for e in self.getNode(path,force=True).nodeList ]
 
     def release(self, path, fh):
