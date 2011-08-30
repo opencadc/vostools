@@ -213,14 +213,14 @@ class Node:
     ACCEPTS='{%s}accepts' % VOSNS
     PROVIDES='{%s}provides' % VOSNS
     
-    def __init__(self,node,nodeType="vos:DataNode",properties={},xml=None):
+    def __init__(self,node,nodeType="vos:DataNode",properties={},xml=None,subnodes=[]):
         """Create a Node object based on the DOM passed to the init method
 
         if node is a string then create a node named node of nodeType with properties
         """
 
         if type(node)==str:
-            node=self.create(node,nodeType,properties)
+            node=self.create(node,nodeType,properties,subnodes=subnodes)
 
         if node is None:
             raise LookupError("no node found or created?")
@@ -283,16 +283,16 @@ class Node:
         sdate = node.props.get('date',None)
         atime=time.time()
         if not sdate:
-            ctime = atime
+            mtime = atime
         else:
             ### mktime is expecting a localtime but we're sending a UT date, so some correction will be needed
-            ctime=time.mktime(time.strptime(sdate[0:-4],'%Y-%m-%dT%H:%M:%S'))
+            mtime=time.mktime(time.strptime(sdate[0:-4],'%Y-%m-%dT%H:%M:%S'))
             if time.daylight:
-                ctime=ctime-time.altzone
+                mtime=mtime-time.altzone
             else:
-                ctime=ctime-time.timezone
-        self.attr['st_ctime']=attr.get('st_ctime',ctime)
-        self.attr['st_mtime']=attr.get('st_mtime',ctime)
+                mtime=mtime-time.timezone
+        self.attr['st_ctime']=attr.get('st_ctime',mtime)
+        self.attr['st_mtime']=attr.get('st_mtime',mtime)
         self.attr['st_atime']=atime
         
         ## set the MODE by orring together all flags from stat
@@ -340,6 +340,7 @@ class Node:
 	return self.changeProp('groupread', group)
 
     def setPublic(self,value):
+        logging.debug("Setting value of ispublic to %s" % (str(value)))
 	return self.changeProp('ispublic', value)
  
     def changeProp(self,key,value):
@@ -386,12 +387,13 @@ class Node:
         from stat import S_IXUSR, S_IXGRP, S_IXOTH
         changed=0
 
-        if  mode & (S_IROTH | S_IWOTH | S_IXOTH) :   
+        logging.debug("Changing mode to %d" % ( mode))
+        if  mode & (S_IROTH ) :   
             changed += self.setPublic('true')
         else:
             changed += self.setPublic('false')
  
-	if  mode & (S_IRGRP | S_IXGRP):
+	if  mode & (S_IRGRP ):
             
             changed += self.chrgrp(self.groupread)
         else:
@@ -406,7 +408,7 @@ class Node:
         return changed>0
 
 
-    def create(self,uri,nodeType="vos:DataNode",properties={}):
+    def create(self,uri,nodeType="vos:DataNode",properties={},subnodes=[]):
         """Build the XML needed to represent a VOSpace node returns an ElementTree represenation of the XML
         
         nodeType   -- the VOSpace node type, likely one of vos:DataNode or vos:ContainerNode
@@ -454,8 +456,11 @@ class Node:
 
         ### if this is a container node then we need to add an empy directory contents area...
         if nodeType=="vos:ContainerNode":
-            ET.SubElement(node,Node.NODES)
-        logging.debug(ET.tostring(node,encoding="UTF-8"))
+            nodeList=ET.SubElement(node,Node.NODES)
+            for subnode in subnodes:
+                nodeList.append(subnode.node)
+                print subnode
+        #logging.debug(ET.tostring(node,encoding="UTF-8"))
 
         return node
 
