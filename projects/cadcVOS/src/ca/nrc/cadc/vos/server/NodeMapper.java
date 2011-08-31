@@ -137,8 +137,10 @@ public class NodeMapper implements RowMapper
         boolean isPublic = rs.getBoolean("isPublic");
 
         Object ownerObject = rs.getObject("ownerID");
-        Subject ownerSubject = identManager.toSubject(ownerObject);
-        String owner = identManager.toOwnerString(ownerSubject);
+        String owner = null;
+        // this is done outside in NodeDAO.loadSubjects
+        //Subject ownerSubject = identManager.toSubject(ownerObject);
+        //String owner = identManager.toOwnerString(ownerSubject);
         
         long contentLength = rs.getLong("contentLength");
         String contentType = rs.getString("contentType");
@@ -169,8 +171,10 @@ public class NodeMapper implements RowMapper
             throw new IllegalStateException("Unknown node database type: "
                     + type);
         }
-        
-        node.appData = new NodeID(nodeID, ownerSubject);
+
+        NodeID nid = new NodeID(nodeID, null);
+        nid.ownerObject = ownerObject;
+        node.appData = nid;
 
         node.setMarkedForDeletion(markedForDeletion);
         

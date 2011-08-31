@@ -114,6 +114,7 @@ import ca.nrc.cadc.vos.VOS;
 import ca.nrc.cadc.vos.VOSURI;
 import ca.nrc.cadc.vos.View;
 import ca.nrc.cadc.vos.View.Parameter;
+import java.security.cert.CertificateNotYetValidException;
 
 /**
  * @author zhangsa
@@ -916,6 +917,11 @@ public class Main implements Runnable
                         end = c.getNotAfter();
                         c.checkValidity();
 
+                    }
+                    catch(CertificateNotYetValidException exp)
+                    {
+                        log.error("certificate is not valid yet (valid from " + df.format(start) + " to " + df.format(end) + ")");
+                        System.exit(INIT_STATUS);
                     }
                     catch (CertificateExpiredException exp)
                     {

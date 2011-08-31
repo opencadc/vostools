@@ -81,7 +81,9 @@ public class NodeID
 {
     private Long id;
 
-    private Subject owner;
+    // package access work-around in NodeDAO usage
+    Subject owner;
+    Object ownerObject;
     
     /**
      * NodeID constructor.

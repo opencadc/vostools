@@ -263,6 +263,7 @@ public class NodeDAO
 
         // execute query with NodePathExtractor
         Node ret = (Node) jdbc.query(npsc, new NodePathExtractor());
+        loadSubjects(ret);
 
         return ret;
     }
@@ -302,6 +303,7 @@ public class NodeDAO
         if (nodes.size() > 1)
             throw new IllegalStateException("BUG - found " + nodes.size() + " child nodes named " + name
                     + " for container " + parent.getUri().getPath());
+        loadSubjects(nodes);
         addChildNodes(parent, nodes);
     }
 
@@ -321,6 +323,7 @@ public class NodeDAO
         log.debug("getChildren: " + sql);
         List<Node> nodes = jdbc.query(sql,
                 new NodeMapper(authority, parent.getUri().getPath(), identManager));
+        loadSubjects(nodes);
         addChildNodes(parent, nodes);
     }
 
@@ -338,12 +341,38 @@ public class NodeDAO
                 log.debug("child already in list, not adding: " + n.getUri().getPath());
         }
     }
+    private void loadSubjects(List<Node> nodes)
+    {
+        for (Node n : nodes)
+            loadSubjects(n);
+    }
+    private void loadSubjects(Node node)
+    {
+        if (node == null || node.appData == null)
+            return;
+
+        NodeID nid = (NodeID) node.appData;
+        if (nid.owner != null)
+            return; // already loaded (parent loop below)
+
+        nid.owner = identManager.toSubject(nid.ownerObject);
+        String owner = identManager.toOwnerString(nid.owner);
+        if (owner != null)
+            node.getProperties().add(new NodeProperty(VOS.PROPERTY_URI_CREATOR, owner));
+        Node parent = node.getParent();
+        while (parent != null)
+        {
+            loadSubjects(parent);
+            parent = parent.getParent();
+        }
+    }
 
     /**
      * Store the specified node. The node must be attached to a parent container and
      * the parent container must have already been persisted.
      * 
      * @param node
+     * @param creator
      * @return the same node but with generated internal ID set in the appData field
      */
     public Node put(Node node, Subject creator)
@@ -1546,9 +1575,8 @@ public class NodeDAO
             boolean isPublic = rs.getBoolean(col++);
 
             Object ownerObject = rs.getObject(col++);
-            Subject ownerSubject = identManager.toSubject(ownerObject);
-            String owner = identManager.toOwnerString(ownerSubject);
-
+            String owner = null;
+            
             long contentLength = rs.getLong(col++);
             String contentType = getString(rs, col++);
             String contentEncoding = getString(rs, col++);
@@ -1580,7 +1608,9 @@ public class NodeDAO
                 throw new IllegalStateException("Unknown node database type: " + type);
             }
 
-            node.appData = new NodeID(nodeID, ownerSubject);
+            NodeID nid = new NodeID(nodeID, null);
+            nid.ownerObject = ownerObject;
+            node.appData = nid;
 
             node.setMarkedForDeletion(markedForDeletion);
 
