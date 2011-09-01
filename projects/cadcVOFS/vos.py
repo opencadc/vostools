@@ -192,6 +192,7 @@ class Connection:
             else:
                 connection = httplib.HTTPConnection(parts.netloc,timeout=600)
         except httplib.NotConnected:
+	    logging.error("HTTP connection to %s failed " % (parts.netloc))
             raise IOError("Failed while trying to connect to the VOSpace service")
         return connection
 
@@ -237,7 +238,7 @@ class Node:
 
         self.type=self.node.get(Node.TYPE)
         if self.type == None:
-            logging.critical("Node type unknown, no node created")
+            logging.warning("Node type unknown, no node created")
             import xml.etree.ElementTree as ET
             logging.debug(ET.dump(self.node))
             return None
@@ -582,14 +583,14 @@ class VOFile:
         try:
             self.httpCon.connect()
         except ssl.SSLError as e:
-            logging.error("%s" % (e.strerror))
+            logging.critical("%s" % (e.strerror))
             if e.errno != 1:
                 raise
             self.connector.getCert()
 	    if time.time() - self.timeout  < 200:
                 return self.open(URL,method)
         except httplib.HTTPException as e:
-	    logging.error("%s" % ( e.strerror))
+	    logging.critical("%s" % ( e.strerror))
 	    if time.time() - self.timeout  < 1200:
 	        return self.open(URL,method)
             raise
@@ -616,13 +617,13 @@ class VOFile:
             return self.read(size)
         if self.resp.status == 503:
             ## try again in Retry-After seconds or fail
+            logging.warning("Server is too busy to send %s" % ( URL))
             ras=self.resp.getheader("Retry-After",None)
-            logging.info("Server is busy")
             if not ras:
-                logging.info("no retry-after in header, so raising error")
+                logging.warning("no retry-after in header, so raising error")
                 raise IOError("Server overloaded")
             ras=int(ras)
-            logging.info("Retrying in %d seconds" % (ras))
+            logging.warning("Retrying in %d seconds" % (int(ras)))
             time.sleep(int(ras))
             self.open(self.url,"GET")
             return self.read(size)
@@ -666,7 +667,7 @@ class Client:
             uri=self.rootNode+uri
         parts=urlparse(uri)
         if parts.scheme!="vos":
-            logging.error("%s This is not a valid vospace URI, no vos:" % (uri))
+            logging.critical("%s This is not a valid vospace URI, no vos:" % (uri))
             return None
         ## insert the default VOSpace server if none given
         host=parts.netloc
