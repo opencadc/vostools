@@ -493,8 +493,6 @@ class VOFS(LoggingMixIn, Operations):
             w.close()
         else:
             self.client.open(path,os.O_WRONLY).close()
-        #self.getattr(path)['st_size']=length
-        #self.utimens(path)
         logging.debug("Node has been truncated")
 	if fh is not None:
             os.ftruncate(fh,length)
@@ -508,12 +506,26 @@ class VOFS(LoggingMixIn, Operations):
         self.delNode(path)
 
     def utimens(self, path, times=None):
-        if not times:
-            t=time.time()
-            times = (t,t)
+	"""Set the access and modification times of path"""
+	logging.debug("Setting the access and modification times for %s " % ( path))
+	logging.debug("%s" % (str(times)))
+        if times is None:
+	  logging.debug("No times specified so using the current system time for access and modifcation")
+          t=time.time()
+          times = (t,t)
+	else:
+	  logging.debug("Setting the access and modification times of using times provided")
+	logging.debug("Getting cache file name")
         fname=os.path.normpath(self.cache_dir+path)
-        if os.access(fname,os.F_OK):
-            os.utime(path,times)
+	logging.debug("Setting access times on cached version at location %s" % ( fname))
+        if os.access(fname,os.W_OK):
+	    logging.debug("Setting access times on cached version at location %s" % ( fname))
+            try:
+              os.utime(fname,times)
+            except Exception as e:
+              logging.error("%s" % ( e)) 
+              raise e
+        logging.debug("Attempting to set the st_mtime and st_atime attributes")
         self.getattr(path)['st_mtime']=times[1]
         self.getattr(path)['st_atime']=times[0]
         return 
@@ -546,7 +558,7 @@ if __name__ == "__main__":
     elif opt.verbose:
         logging.basicConfig(level=logging.INFO,format="vofs:%(module)s.%(funcName)s %(message)s",filename='/tmp/vos.err')
     else:
-        logging.basicConfig(level=logging.ERROR,format="vofs:%(module)s.%(funcName)s %(message)s",filename='/tmp/vos.err')
+        logging.basicConfig(level=logging.WARNING,format="vofs:%(module)s.%(funcName)s %(message)s",filename='/tmp/vos.err')
 
     if len(args) != 2:
         parser.error("not enough arguments on the commnad line\n")
@@ -554,6 +566,7 @@ if __name__ == "__main__":
     logging.info("Checking for a VO x509 certificate")
     conn=vos.Connection()
     logging.info("Got a certificate")
+    logging.warning("Doing some logging")
 
     root = args[0]
     mount = args[1]
