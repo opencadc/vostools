@@ -70,7 +70,11 @@ package ca.nrc.cadc.gms.client;
 import java.net.URI;
 import java.net.URL;
 import java.security.PrivilegedAction;
+import java.util.ArrayList;
 import java.util.Collection;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
 import java.util.Set;
 
 import javax.security.auth.Subject;
@@ -81,6 +85,7 @@ import org.apache.log4j.Logger;
 
 import ca.nrc.cadc.auth.CertCmdArgUtil;
 import ca.nrc.cadc.gms.ElemProperty;
+import ca.nrc.cadc.gms.ElemPropertyImpl;
 import ca.nrc.cadc.gms.GmsConsts;
 import ca.nrc.cadc.gms.Group;
 import ca.nrc.cadc.gms.GroupImpl;
@@ -105,7 +110,12 @@ public class GmsClientMain implements PrivilegedAction<Boolean>
     public static final String ARG_VIEW = "view";
     public static final String ARG_CREATE = "create";
     public static final String ARG_DELETE = "delete";
+    public static final String ARG_SET = "set";
     public static final String ARG_TARGET = "target";
+    public static final String ARG_PUBLIC = "public";
+    public static final String ARG_GROUPS_WRITE = "groups-write";
+    public static final String ARG_GROUPS_READ = "groups-read";
+    public static final String ARG_DESCRIPTION = "description";
     public static final String ARG_ADD_MEMBER = "add";
     public static final String ARG_MEMBER_NAME = "name";
     public static final String ARG_REMOVE_MEMBER = "remove";
@@ -116,7 +126,7 @@ public class GmsClientMain implements PrivilegedAction<Boolean>
 
     // Operations on GMS client
     public enum Operation {
-        VIEW, CREATE, DELETE, ADD_MEMBER, REMOVE_MEMBER, CHECK_MEMBER, LIST_MEMBER_GR, LIST_OWNER_GR
+        VIEW, CREATE, DELETE, SET, ADD_MEMBER, REMOVE_MEMBER, CHECK_MEMBER, LIST_MEMBER_GR, LIST_OWNER_GR
     };
 
     private static final int INIT_STATUS = 1; // exit code for
@@ -131,7 +141,18 @@ public class GmsClientMain implements PrivilegedAction<Boolean>
     private String memberID; // ID of a member to be added or removed
     // from a group
     private URL serviceURL; // the URL of a gms service used for list
-    // member/owner
+
+    // public - group is publically readable
+    Boolean isPublic = null;
+
+    // URIs of groups that can modify the group
+    String groupsWrite;
+
+    // URIs of groups that can read the group
+    String groupsRead;
+
+    // Description of the group
+    String description;
 
     // authenticated subject
     private static Subject subject;
@@ -224,6 +245,10 @@ public class GmsClientMain implements PrivilegedAction<Boolean>
         {
             doView();
         }
+        else if (this.operation.equals(Operation.SET))
+        {
+            doSet();
+        }
         else if (this.operation.equals(Operation.ADD_MEMBER))
         {
             doAddMember();
@@ -271,6 +296,11 @@ public class GmsClientMain implements PrivilegedAction<Boolean>
         {
             numOp++;
             this.operation = Operation.DELETE;
+        }
+        if (argMap.isSet(ARG_SET))
+        {
+            numOp++;
+            this.operation = Operation.SET;
         }
         if (argMap.isSet(ARG_ADD_MEMBER))
         {
@@ -402,6 +432,34 @@ public class GmsClientMain implements PrivilegedAction<Boolean>
                                     + this.operation);
                 }
             }
+
+            description = argMap.getValue(ARG_DESCRIPTION);
+            String pubArg = argMap.getValue(ARG_PUBLIC);
+            if (pubArg != null)
+            {
+                if ("true".equals(pubArg))
+                {
+                    isPublic = true;
+                }
+                else if ("false".equals(pubArg))
+                {
+                    isPublic = false;
+                }
+                else
+                {
+                    throw new IllegalArgumentException(
+                            "Invalid value for public argument");
+                }
+            }
+            groupsWrite = argMap.getValue(ARG_GROUPS_WRITE);
+            groupsRead = argMap.getValue(ARG_GROUPS_READ);
+            if (this.operation.equals(ARG_SET) && (isPublic == null)
+                    && (description == null) && (groupsWrite == null)
+                    && (groupsRead == null))
+            {
+                throw new IllegalArgumentException(
+                        "Nothing to set in set operation");
+            }
         }
     }
 
@@ -418,8 +476,28 @@ public class GmsClientMain implements PrivilegedAction<Boolean>
                 // user specifies the group ID
                 group = new GroupImpl(new URI(target));
             }
+            updateGroup(group);
             displayGroup(client.createGroup(group));
 
+        }
+        catch (Exception e)
+        {
+            logger.error("failed to create group " + target);
+            logger.error("reason: " + e.getMessage());
+            System.exit(NET_STATUS);
+        }
+    }
+
+    /**
+     * Executes group set command
+     */
+    private void doSet()
+    {
+        try
+        {
+            Group group = client.getGroup(new URI(target));
+            updateGroup(group);
+            client.updateGroup(group);
         }
         catch (Exception e)
         {
@@ -446,6 +524,37 @@ public class GmsClientMain implements PrivilegedAction<Boolean>
             System.exit(NET_STATUS);
         }
 
+    }
+
+    private void updateGroup(Group group)
+    {
+        Map<String, ElemProperty> newProperties = new HashMap<String, ElemProperty>();
+        if (isPublic != null)
+        {
+            newProperties.put(GmsConsts.PROPERTY_PUBLIC, new ElemPropertyImpl(GmsConsts.PROPERTY_PUBLIC, isPublic.toString()));
+        }
+        if (description != null)
+        {
+            newProperties.put(GmsConsts.PROPERTY_GROUP_DESCRIPTION, new ElemPropertyImpl(GmsConsts.PROPERTY_GROUP_DESCRIPTION, description));
+        }
+        if (groupsWrite != null)
+        {
+            newProperties.put(GmsConsts.PROPERTY_GROUPS_WRITE, new ElemPropertyImpl(GmsConsts.PROPERTY_GROUPS_WRITE, groupsWrite));
+        }
+        if (groupsRead != null)
+        {
+            newProperties.put(GmsConsts.PROPERTY_GROUPS_READ, new ElemPropertyImpl(GmsConsts.PROPERTY_GROUPS_READ, groupsRead));
+        }
+        
+        List<ElemProperty> properties = group.getProperties();
+        for (ElemProperty prop : properties )
+        {
+            if (!newProperties.containsKey(prop.getPropertyURI()))
+            {
+                newProperties.put(prop.getPropertyURI(), prop);
+            }
+        }
+        group.setProperties(new ArrayList<ElemProperty>(newProperties.values()));
     }
 
     private void displayGroup(Group group)
@@ -588,8 +697,8 @@ public class GmsClientMain implements PrivilegedAction<Boolean>
     {
         try
         {
-            User user = client
-                    .getGMSMembership(new X500Principal(target), serviceURL);
+            User user = client.getGMSMembership(
+                    new X500Principal(target), serviceURL);
             if (user == null)
             {
                 msg("User: " + target + " not found");
@@ -631,8 +740,8 @@ public class GmsClientMain implements PrivilegedAction<Boolean>
     {
         try
         {
-            Collection<Group> groups = client
-                    .getGroups(new X500Principal(target), serviceURL);
+            Collection<Group> groups = client.getGroups(
+                    new X500Principal(target), serviceURL);
             if ((groups == null) || groups.isEmpty())
             {
                 msg("User: " + target + " owns 0 groups");
@@ -671,27 +780,30 @@ public class GmsClientMain implements PrivilegedAction<Boolean>
     public static void usage()
     {
         String[] um = {
-                "Usage: java -jar cadcGMSClient.jar [-v|--verbose|-d|--debug]  ...                                 ",
-                "                                                                                                  ",
-                "Help:                                                                                             ",
-                "java -jar cadcGMSClient.jar <-h | --help>                                                         ",
-                "                                                                                                  ",
-                "Group operations:                                                                                 ",
-                "java -jar cadcGMSClient.jar  [-v|--verbose|-d|--debug]                                            ",
-                CertCmdArgUtil.getCertArgUsage(),
-                "   --target=<Group ID>                                                                            ",
-                "   --create|--view|--delete                                                                       ",
-                "                                                                                                  ",
-                "Group Membership operations:                                                                      ",
-                "java -jar cadcGMSClient.jar  [-v|--verbose|-d|--debug]                                            ",
-                CertCmdArgUtil.getCertArgUsage(),               "   --target=<Group ID>                            ",
-                "   --add=<User ID> |--remove=<User ID> | --check=<User ID>                                        ",
-                "                                                                                                  ",
-                "User operations:                                                                                  ",
-                "java -jar cadcGMSClient.jar  [-v|--verbose|-d|--debug]                                            ",
-                CertCmdArgUtil.getCertArgUsage(),
-                "   [--listMember|--listOwner] [--target=<User ID>] --serviceURI=<group service URI>               ",
-                "                                                                                                  ", };
+                       "Usage: gmsClient [-v|--verbose|-d|--debug]  ...                                 ",
+                       "                                                                                                  ",
+                       "Help:                                                                                             ",
+                       "gmsClient <-h | --help>                                                         ",
+                       "                                                                                                  ",
+                       "Group operations:                                                                                 ",
+                       "gmsClient [-v|--verbose|-d|--debug]                                            ",
+                       CertCmdArgUtil.getCertArgUsage(),
+                       "   --target=<Group ID>                                                                            ",
+                       "   --create|--view|--delete|--set                                                                 ",
+                       "  [--public[=true|false]] [--groups-read=<group URI>] [--groups-write=<group URI>] ]              ",
+                       "  [--description=<group description> ]                                                           ",
+                       "                                                                                                  ",
+                       "Group Membership operations:                                                                      ",
+                       "gmsClient [-v|--verbose|-d|--debug]                                            ",
+                       CertCmdArgUtil.getCertArgUsage(),
+                       "   --target=<Group ID>                            ",
+                       "   --add=<User ID> |--remove=<User ID> | --check=<User ID>                                        ",
+                       "                                                                                                  ",
+                       "User operations:                                                                                  ",
+                       "gmsClient [-v|--verbose|-d|--debug]                                            ",
+                       CertCmdArgUtil.getCertArgUsage(),
+                       "   [--listMember|--listOwner] [--target=<User ID>] --serviceURI=<group service URI>               ",
+                       "                                                                                                  ", };
 
         for (String line : um)
             msg(line);

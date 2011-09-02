@@ -81,5 +81,14 @@ public class GmsConsts
 
     // Denotes the DN of a user
     public static final String PROPERTY_USER_DN = "ivo://ivoa.net/gms#user_dn"; 
+    
+    // URI of group with write access
+    public static final String PROPERTY_GROUPS_WRITE = "ivo://ivoa.net/gms#groups_write";
+    
+    // URI of group with read access
+    public static final String PROPERTY_GROUPS_READ = "ivo://ivoa.net/gms#groups_read";
+    
+    // Denotes a group readable by public
+    public static final String PROPERTY_PUBLIC = "ivo://ivoa.net/gms#public";
 
 }
