@@ -79,11 +79,11 @@ import javax.security.auth.Subject;
  */
 public class NodeID
 {
-    private Long id;
-
-    // package access work-around in NodeDAO usage
+    Long id;
     Subject owner;
     Object ownerObject;
+
+    public NodeID() { }
     
     /**
      * NodeID constructor.
@@ -91,10 +91,11 @@ public class NodeID
      * @param id
      * @param owner
      */
-    public NodeID(Long id, Subject owner)
+    public NodeID(Long id, Subject owner, Object ownerObject)
     {
         this.id = id;
         this.owner = owner;
+        this.ownerObject = ownerObject;
     }
     
     /**

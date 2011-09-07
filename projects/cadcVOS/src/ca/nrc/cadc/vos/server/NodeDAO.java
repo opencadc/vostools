@@ -299,7 +299,7 @@ public class NodeDAO
         String sql = getSelectChildNodeSQL(parent);
         log.debug("getChild: " + sql);
         List<Node> nodes = jdbc.query(sql, new Object[] { name }, 
-                new NodeMapper(authority, parent.getUri().getPath(), identManager));
+                new NodeMapper(authority, parent.getUri().getPath()));
         if (nodes.size() > 1)
             throw new IllegalStateException("BUG - found " + nodes.size() + " child nodes named " + name
                     + " for container " + parent.getUri().getPath());
@@ -322,7 +322,7 @@ public class NodeDAO
         String sql = getSelectNodesByParentSQL(parent);
         log.debug("getChildren: " + sql);
         List<Node> nodes = jdbc.query(sql,
-                new NodeMapper(authority, parent.getUri().getPath(), identManager));
+                new NodeMapper(authority, parent.getUri().getPath()));
         loadSubjects(nodes);
         addChildNodes(parent, nodes);
     }
@@ -391,17 +391,18 @@ public class NodeDAO
 
         try
         {
-            
+            // call IdentityManager outside resource lock to avoid deadlock
+            NodeID nodeID = new NodeID();
+            nodeID.owner = creator;
+            nodeID.ownerObject = identManager.toOwner(creator);
+            node.appData = nodeID;
 
             startTransaction();
             NodePutStatementCreator npsc = new NodePutStatementCreator(nodeSchema, false);
             npsc.setValues(node, creator);
             KeyHolder keyHolder = new GeneratedKeyHolder();
             jdbc.update(npsc, keyHolder);
-            Long generatedID = new Long(keyHolder.getKey().longValue());
-
-            node.appData = new NodeID(generatedID, creator);
-            NodeID nodeID = (NodeID) node.appData;
+            nodeID.id = new Long(keyHolder.getKey().longValue());
             
             Iterator<NodeProperty> propertyIterator = node.getProperties().iterator();
             while (propertyIterator.hasNext())
@@ -1229,39 +1230,30 @@ public class NodeDAO
             String pval;
             
             // ownerID and creatorID
-            int subjectDataType = identManager.getOwnerType();
+            int ownerDataType = identManager.getOwnerType();
+            // update
+            NodeID nodeID = (NodeID) node.appData;
+            if (nodeID.ownerObject == null)
+                throw new IllegalStateException("cannot update a node without an owner.");
             if (update)
             {
-                // update
-                NodeID nodeID = (NodeID) node.appData;
-                Subject theOwner = nodeID.getOwner();
-                if (theOwner == null)
-                    throw new IllegalStateException("cannot update a node without an owner.");
-                Object ownerObject = identManager.toOwner(theOwner);
-                
                 // ownerID
-                ps.setObject(col++, ownerObject, subjectDataType);
-                sb.append(ownerObject);
+                ps.setObject(col++, nodeID.ownerObject, ownerDataType);
+                sb.append(nodeID.ownerObject);
                 sb.append(",");
                 
                 // no creatorID reference on update
             }
             else
             {
-                // insert
-                Subject theCreator = this.caller;
-                if (theCreator == null)
-                    throw new IllegalStateException("cannot insert a node without a creator");
-                Object creatorObject  = identManager.toOwner(theCreator);
-                
-                // ownerID -- set to the creator on insert
-                ps.setObject(col++, creatorObject, subjectDataType);
-                sb.append(creatorObject);
+                // ownerID
+                ps.setObject(col++, nodeID.ownerObject, ownerDataType);
+                sb.append(nodeID.ownerObject);
                 sb.append(",");
                 
                 // creatorID
-                ps.setObject(col++, creatorObject, subjectDataType);
-                sb.append(creatorObject);
+                ps.setObject(col++, nodeID.ownerObject, ownerDataType);
+                sb.append(nodeID.ownerObject);
                 sb.append(",");
             }
 
@@ -1608,7 +1600,8 @@ public class NodeDAO
                 throw new IllegalStateException("Unknown node database type: " + type);
             }
 
-            NodeID nid = new NodeID(nodeID, null);
+            NodeID nid = new NodeID();
+            nid.id = nodeID;
             nid.ownerObject = ownerObject;
             node.appData = nid;
 

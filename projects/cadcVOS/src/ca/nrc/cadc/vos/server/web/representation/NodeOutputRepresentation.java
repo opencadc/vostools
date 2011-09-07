@@ -91,6 +91,7 @@ import ca.nrc.cadc.vos.NodeWriter;
 import ca.nrc.cadc.vos.VOS;
 import ca.nrc.cadc.vos.server.AbstractView;
 import ca.nrc.cadc.vos.server.Views;
+import java.io.OutputStreamWriter;
 
 /**
  * Creates an XML representation of a Node
@@ -102,9 +103,12 @@ public class NodeOutputRepresentation extends OutputRepresentation
 {
     protected static Logger LOGGER =
             Logger.getLogger(NodeOutputRepresentation.class);
-    
+
+    private static final int MAX_CHILD_BUFFER = 256;
+
     private Node node;
     private NodeWriter nodeWriter;
+    private StringBuilder buf;
 
 
     public NodeOutputRepresentation(Node node, NodeWriter nodeWriter)
@@ -112,31 +116,56 @@ public class NodeOutputRepresentation extends OutputRepresentation
         super(MediaType.TEXT_XML);
         this.node = node;
         this.nodeWriter = nodeWriter;
+        fillAcceptsAndProvides(node);
     }
 
 
     @Override
     public void write(final OutputStream outputStream) throws IOException
     {
-        final Node n = getNode();
+        if (buf != null)
+        {
+            OutputStreamWriter w = new OutputStreamWriter(outputStream);
+            w.write(buf.toString());
+            w.close();
+        }
+        else
+            nodeWriter.write(node, outputStream);
         
-        fillAcceptsAndProvides(node);
-
-        if (n instanceof DataNode)
-        {
-            getNodeWriter().write((DataNode) n, outputStream);
-        }
-        else if (n instanceof ContainerNode)
-        {
-            getNodeWriter().write((ContainerNode) n, outputStream);
-        }
     }
     
+    @Override
+    public long getSize()
+    {
+        // write the node to a buffer and report size aka Content-Length
+        // keep buffer for actual output
+        if (node instanceof ContainerNode)
+        {
+            ContainerNode cn = (ContainerNode) node;
+            if (cn.getNodes().size() > MAX_CHILD_BUFFER)
+                return -1; // too many children to buffer
+        }
+        if (buf != null) // this gets called multiple times
+            return (long) buf.length();
+        try
+        {
+            this.buf = new StringBuilder();
+            nodeWriter.write(node, buf);
+            LOGGER.info("buffered node, content-length = " + buf.length());
+            return (long) buf.length();
+        }
+        catch(IOException ex)
+        {
+            LOGGER.error("failed to buffer ");
+        }
+        return -1;
+    }
+
     @Override
     public Date getModificationDate()
     {
         final NodeProperty modificationDate =
-                getNode().findProperty(VOS.PROPERTY_URI_DATE);
+                node.findProperty(VOS.PROPERTY_URI_DATE);
 
         if (modificationDate != null)
         {
@@ -188,16 +217,5 @@ public class NodeOutputRepresentation extends OutputRepresentation
         {
             LOGGER.error("Could not get view list: " + e.getMessage());
         }
-    }
-
-
-    public NodeWriter getNodeWriter()
-    {
-        return nodeWriter;
-    }
-
-    public Node getNode()
-    {
-        return node;
     }
 }

@@ -105,13 +105,11 @@ public class NodeMapper implements RowMapper
 
     private String authority;
     private String basePath;
-    private IdentityManager identManager;
 
-    public NodeMapper(String authority, String basePath, IdentityManager identManager)
+    public NodeMapper(String authority, String basePath)
     {
         this.authority = authority;
         this.basePath = basePath;
-        this.identManager = identManager;
         this.dateFormat = DateUtil.getDateFormat(DateUtil.IVOA_DATE_FORMAT, DateUtil.UTC);
         this.cal = Calendar.getInstance(DateUtil.UTC);
     }
@@ -137,11 +135,6 @@ public class NodeMapper implements RowMapper
         boolean isPublic = rs.getBoolean("isPublic");
 
         Object ownerObject = rs.getObject("ownerID");
-        String owner = null;
-        // this is done outside in NodeDAO.loadSubjects
-        //Subject ownerSubject = identManager.toSubject(ownerObject);
-        //String owner = identManager.toOwnerString(ownerSubject);
-        
         long contentLength = rs.getLong("contentLength");
         String contentType = rs.getString("contentType");
         String contentEncoding = rs.getString("contentEncoding");
@@ -172,7 +165,8 @@ public class NodeMapper implements RowMapper
                     + type);
         }
 
-        NodeID nid = new NodeID(nodeID, null);
+        NodeID nid = new NodeID();
+        nid.id = nodeID;
         nid.ownerObject = ownerObject;
         node.appData = nid;
 
@@ -204,10 +198,6 @@ public class NodeMapper implements RowMapper
         if (groupWrite != null && groupWrite.trim().length() > 0)
         {
             node.getProperties().add(new NodeProperty(VOS.PROPERTY_URI_GROUPWRITE, groupWrite));
-        }
-        if (owner != null && owner.trim().length() > 0)
-        {
-            node.getProperties().add(new NodeProperty(VOS.PROPERTY_URI_CREATOR, owner));
         }
         node.getProperties().add(new NodeProperty(VOS.PROPERTY_URI_ISPUBLIC, isPublic ? "true" : "false"));
         
