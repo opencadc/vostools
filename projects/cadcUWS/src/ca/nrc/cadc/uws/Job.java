@@ -99,7 +99,10 @@ public class Job
     private Date lastModified;
 
     // used on the server side only for authorization checks
-    public Subject ownerSubject;
+    public transient Subject ownerSubject;
+
+    // usable for hooking app-specific value here temporarily
+    public transient Object appData;
 
     public Job() { }
 

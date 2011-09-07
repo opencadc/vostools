@@ -150,6 +150,7 @@ public class JobDAO
     private DataSourceTransactionManager transactionManager;
     private DefaultTransactionDefinition defaultTransactionDef;
     private TransactionStatus transactionStatus;
+    private boolean inTransaction = false;
 
     private static final DateFormat idFormat = DateUtil.getDateFormat("yyyy-MM-dd", DateUtil.UTC);
     private static final DateFormat dateFormat = DateUtil.getDateFormat(DateUtil.IVOA_DATE_FORMAT, DateUtil.UTC);
@@ -294,6 +295,7 @@ public class JobDAO
             throw new IllegalStateException("transaction already in progress");
         log.debug("startTransaction");
         this.transactionStatus = transactionManager.getTransaction(defaultTransactionDef);
+        this.inTransaction = true;
         log.debug("startTransaction: OK");
     }
 
@@ -307,6 +309,7 @@ public class JobDAO
         log.debug("commitTransaction");
         transactionManager.commit(transactionStatus);
         this.transactionStatus = null;
+        this.inTransaction = false;
         log.debug("commit: OK");
     }
 
@@ -315,11 +318,14 @@ public class JobDAO
      */
     protected void rollbackTransaction()
     {
-        if (transactionStatus == null)
+        if (!inTransaction)
             throw new IllegalStateException("no transaction in progress");
+        if (transactionStatus == null) // the startTransaction failed
+            return;
         log.debug("rollbackTransaction");
         transactionManager.rollback(transactionStatus);
         this.transactionStatus = null;
+        this.inTransaction = false;
         log.debug("rollback: OK");
     }
 
@@ -339,9 +345,19 @@ public class JobDAO
         {
             JobSelectStatementCreator sc = new JobSelectStatementCreator();
             sc.setJobID(jobID);
-            Job ret = (Job) jdbc.query(sc, new JobExtractor(identManager, jobSchema));
+            Job ret = (Job) jdbc.query(sc, new JobExtractor(jobSchema));
             if (ret != null)
+            {
+                // call IdentityManager outside the resource lock to avoid deadlock
+                if (ret.appData != null)
+                {
+                    Subject s = identManager.toSubject(ret.appData);
+                    ret.setOwnerID(identManager.toOwnerString(s));
+                    ret.ownerSubject = s; // for later authorization checks
+                    ret.appData = null;
+                }
                 return ret;
+            }
         }
         catch(Throwable t)
         {
@@ -585,10 +601,14 @@ public class JobDAO
                 JobPersistenceUtil.assignID(job, idGenerator.getID());
             log.debug("put: " + job.getID());
 
+            // call IdentityManager outside the resource lock to avoid deadlock
+            if (owner != null)
+                job.appData = identManager.toOwner(owner);
+
             startTransaction();
             
             JobPutStatementCreator npsc = new JobPutStatementCreator(update);
-            npsc.setValues(job, owner);
+            npsc.setValues(job);
             jdbc.update(npsc);
 
 
@@ -828,7 +848,6 @@ public class JobDAO
     {
         private boolean update;
         private Job job;
-        private Subject owner;
         private String sql;
 
         public JobPutStatementCreator(boolean update)
@@ -840,10 +859,9 @@ public class JobDAO
                 this.sql = getInsertSQL();
         }
 
-        public void setValues(Job job, Subject owner)
+        public void setValues(Job job)
         {
             this.job = job;
-            this.owner = owner;
         }
 
         public PreparedStatement createPreparedStatement(Connection conn) throws SQLException
@@ -952,9 +970,9 @@ public class JobDAO
                 
             log.debug("owner: " + col);
             int ownerType = identManager.getOwnerType();
-            if (owner != null)
+            if (job.appData != null)
             {
-                Object ownerObject  = identManager.toOwner(owner);
+                Object ownerObject  = job.appData;
                 ps.setObject(col++, ownerObject, ownerType);
                 sb.append(ownerObject);
                 sb.append(",");
@@ -1407,12 +1425,10 @@ public class JobDAO
     // extract a single job job from the result set
     private class JobExtractor implements ResultSetExtractor
     {
-        private IdentityManager im;
         private JobSchema js;
 
-        public JobExtractor(IdentityManager im, JobSchema js)
+        public JobExtractor(JobSchema js)
         {
-            this.im = im;
             this.js = js;
         }
 
@@ -1464,14 +1480,7 @@ public class JobDAO
                 }
 
                 // owner
-                Object oo = rs.getObject("ownerID");
-                String ownerID = null;
-                Subject ownerSubject = null;
-                if (oo != null)
-                {
-                    ownerSubject = im.toSubject(oo);
-                    ownerID = im.toOwnerString(ownerSubject);
-                }
+                Object appData = rs.getObject("ownerID");
 
                 // runID
                 String runID = getString(rs, jobSchema.jobTable, "runID");
@@ -1504,11 +1513,11 @@ public class JobDAO
                 Date lastModified = rs.getTimestamp("lastModified", cal);
 
                 Job job = new Job(executionPhase, executionDuration, destructionTime,
-                                  quote, startTime, endTime, errorSummary, ownerID, runID,
+                                  quote, startTime, endTime, errorSummary, null, runID,
                                   requestPath, remoteIP, jobInfo, null, null);
                 JobPersistenceUtil.assignID(job, jobID);
                 assignLastModified(job, lastModified);
-                job.ownerSubject = ownerSubject;
+                job.appData = appData;
                 return job;
             }
             return null;
