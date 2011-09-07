@@ -74,6 +74,7 @@ import ca.nrc.cadc.uws.Job;
 import java.lang.reflect.Field;
 import java.util.Date;
 import java.util.Iterator;
+import org.apache.log4j.Logger;
 
 /**
  * Static utility methods to help implement the JobPersistence interface.
@@ -82,6 +83,8 @@ import java.util.Iterator;
  */
 public class JobPersistenceUtil 
 {
+    private static Logger log = Logger.getLogger(JobPersistenceUtil.class);
+    
     /**
      * Assign a jobID to the job using the specified ID generator.
      * 
@@ -181,17 +184,20 @@ public class JobPersistenceUtil
      */
     public static void constrainDestruction(Job job, long minDestruction, long maxDestruction)
     {
-        Date d = job.getDestructionTime();
+        Date orig = job.getDestructionTime();
+        Date d = orig;
         Date now = new Date();
 
-        long min = now.getTime() + minDestruction;
-        long max = now.getTime() + maxDestruction;
+        long min = now.getTime() + 1000*minDestruction;
+        long max = now.getTime() + 1000*maxDestruction;
         if (d == null)
-            d = new Date(now.getTime() + maxDestruction);
+            d = new Date(now.getTime() + 1000* maxDestruction);
         else if (d.getTime() < min)
             d = new Date(min);
         else if (d.getTime() > max)
             d = new Date(max);
+        log.debug("constrainDestruction: " + minDestruction + "," + maxDestruction
+                + "," + orig + " -> " + d);
         job.setDestructionTime(d);
     }
 
@@ -204,14 +210,18 @@ public class JobPersistenceUtil
      */
     public static void constrainDuration(Job job, long minDuration, long maxDuration)
     {
-        Long dur = job.getExecutionDuration();
+        Long orig = job.getExecutionDuration();
+        Long dur = orig;
         if (dur == null)
             dur = maxDuration;
         else if ( dur < minDuration )
             dur = minDuration;
         else if (dur > maxDuration)
             dur = maxDuration;
+        log.debug("constrainDuration: " + minDuration + "," + maxDuration
+                + "," + orig + " -> " + dur);
         job.setExecutionDuration(dur);
+
     }
 
     /**
@@ -223,17 +233,20 @@ public class JobPersistenceUtil
      */
     public static void constrainQuote(Job job, long minQuote, long maxQuote)
     {
-        Date d = job.getQuote();
+        Date orig = job.getQuote();
+        Date d = orig;
         Date now = new Date();
 
-        long min = now.getTime() + minQuote;
-        long max = now.getTime() + maxQuote;
+        long min = now.getTime() + 1000*minQuote;
+        long max = now.getTime() + 1000*maxQuote;
         if (d == null)
-            d = new Date(now.getTime() + max); // TODO: use defaultQuote=unknown
+            d = new Date(max); // TODO: use defaultQuote=unknown
         else if (d.getTime() < min)
             d = new Date(min);
         else if (d.getTime() > max)
             d = new Date(max);
+        log.debug("constrainQuote: " + minQuote + "," + maxQuote
+                + "," + orig + " -> " + d);
         job.setQuote(d);
     }
 

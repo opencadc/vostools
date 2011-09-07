@@ -115,16 +115,13 @@ public class JobAssembler
     {
         final String duration = form.getFirstValue(
                 JobAttribute.EXECUTION_DURATION.getAttributeName(), true);
-        final long durationTime;
+        Long durationTime = null;
 
         if (StringUtil.hasText(duration))
         {
-            durationTime = Long.parseLong(duration);
+            durationTime = new Long(duration);
         }
-        else
-        {
-            durationTime = 0l;
-        }
+        
 
         final String runID = form.getFirstValue(
                 JobAttribute.RUN_ID.getAttributeName(), true);
