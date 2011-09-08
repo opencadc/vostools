@@ -71,6 +71,7 @@ package ca.nrc.cadc.vos.server.web.representation;
 
 import java.io.IOException;
 import java.io.OutputStream;
+import java.io.OutputStreamWriter;
 import java.net.URI;
 import java.text.DateFormat;
 import java.text.ParseException;
@@ -84,14 +85,12 @@ import org.restlet.representation.OutputRepresentation;
 
 import ca.nrc.cadc.date.DateUtil;
 import ca.nrc.cadc.vos.ContainerNode;
-import ca.nrc.cadc.vos.DataNode;
 import ca.nrc.cadc.vos.Node;
 import ca.nrc.cadc.vos.NodeProperty;
 import ca.nrc.cadc.vos.NodeWriter;
 import ca.nrc.cadc.vos.VOS;
 import ca.nrc.cadc.vos.server.AbstractView;
 import ca.nrc.cadc.vos.server.Views;
-import java.io.OutputStreamWriter;
 
 /**
  * Creates an XML representation of a Node
@@ -210,9 +209,9 @@ public class NodeOutputRepresentation extends OutputRepresentation
                 {               
                     provides.add(view.getURI());
                 }
-                node.setAccepts(accepts);
-                node.setProvides(provides);
             }
+            node.setAccepts(accepts);
+            node.setProvides(provides);
         } catch (Exception e)
         {
             LOGGER.error("Could not get view list: " + e.getMessage());
