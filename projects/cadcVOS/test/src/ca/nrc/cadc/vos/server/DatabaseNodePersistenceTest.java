@@ -86,6 +86,9 @@ import ca.nrc.cadc.vos.Node;
 import ca.nrc.cadc.vos.NodeProperty;
 import ca.nrc.cadc.vos.VOS;
 import ca.nrc.cadc.vos.VOSURI;
+import java.net.URI;
+import org.apache.log4j.Logger;
+import org.junit.Assert;
 
 /**
  * Class to test DatabaseNodePersistence in cadcVOS.
@@ -93,6 +96,7 @@ import ca.nrc.cadc.vos.VOSURI;
  */
 public class DatabaseNodePersistenceTest
 {
+    private static final Logger log = Logger.getLogger(DatabaseNodePersistenceTest.class);
     
     DatabaseNodePersistence nodePersistence;
     
@@ -231,6 +235,28 @@ public class DatabaseNodePersistenceTest
             }
         }
         return false;
+    }
+
+    @Test
+    public void testGetRootNode()
+    {
+        try
+        {
+            VOSURI vos = new VOSURI(new URI("vos", "cadc.nrc.ca!vospace", null, null, null));
+            Node root = nodePersistence.get(vos);
+            Assert.assertNotNull(root);
+            Assert.assertEquals("", root.getName());
+
+            vos = new VOSURI(new URI("vos", "cadc.nrc.ca!vospace", "", null, null));
+            root = nodePersistence.get(vos);
+            Assert.assertNotNull(root);
+            Assert.assertEquals("", root.getName());
+        }
+        catch(Exception unexpected)
+        {
+            log.error("unexpected exception", unexpected);
+            Assert.fail("unexpected exception: " + unexpected);
+        }
     }
     
     class DatabaseNodePersistenceStub extends DatabaseNodePersistence

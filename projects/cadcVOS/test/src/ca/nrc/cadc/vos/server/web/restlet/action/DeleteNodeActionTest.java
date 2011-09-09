@@ -107,8 +107,14 @@ public class DeleteNodeActionTest extends NodeActionTest<DeleteNodeAction>
     {
         
         expect(getMockNodePersistence().get(mockVOS)).andReturn(getMockNodeS()).once();
-        expect(mockVOS.getParentURI()).andReturn(new VOSURI("vos://something")).once();
+        expect(mockVOS.isRoot()).andReturn(false).once();
+        expect(mockVOS.getParentURI()).andReturn(mockParentVOS).once();
+        expect(mockParentVOS.isRoot()).andReturn(false).once();
         expect(getMockNodeS().getParent()).andReturn(mockParentNode).once();
+        //
+        //expect(mockParentNode.getUri()).andReturn(mockParentVOS).anyTimes();
+        //expect(mockParentVOS.getURIObject()).andStubReturn(new URI("vos://something")).anyTimes();
+
         expect(getMockAuth().getWritePermission(mockParentNode)).andReturn(mockParentNode).once();
         
         // setup the children of the parent
@@ -124,6 +130,7 @@ public class DeleteNodeActionTest extends NodeActionTest<DeleteNodeAction>
         
         replay(getMockNodeS());
         replay(mockVOS);
+        replay(mockParentVOS);
         replay(getMockNodePersistence());
         replay(getMockAuth());
         replay(mockParentNode);

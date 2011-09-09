@@ -138,10 +138,9 @@ public abstract class Node implements Comparable<Object>
     {
         this.uri = uri;
         this.properties = properties;
-        
-        String[] comps = uri.getPath().split("/");
-        this.name = comps[comps.length - 1]; // last path component
-        
+
+        this.name = uri.getName();
+        log.debug("uri: " + uri + " -> name: " + name);
         accepts = new ArrayList<URI>();
         provides = new ArrayList<URI>();
     }

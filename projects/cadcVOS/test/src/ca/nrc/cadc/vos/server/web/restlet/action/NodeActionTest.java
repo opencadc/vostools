@@ -63,6 +63,7 @@ public abstract class NodeActionTest<N extends NodeAction>
     private Reference mockRef = createMock(Reference.class);
     protected ContainerNode mockParentNode = createMock(ContainerNode.class);
     protected VOSURI mockVOS = createMock(VOSURI.class);
+    protected VOSURI mockParentVOS = createMock(VOSURI.class);
     private URL fakeURL;
 
     protected String nodeName = "child";

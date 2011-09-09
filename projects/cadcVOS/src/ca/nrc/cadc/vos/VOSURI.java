@@ -221,22 +221,21 @@ public class VOSURI
      */
     public String getParent()
     {
+        if ( isRoot() )
+            return null; // there is no parent of the root
         String path = vosURI.getPath();
-        if (path == null)
-            return null;
         int index = path.lastIndexOf('/');
-        if (index > 0)
-            return path.substring(0, index);
-        return null;
+        return path.substring(0, index);
     }
 
     public VOSURI getParentURI()
     {
-        String path = getParent();
-        if (path == null)
+        if ( isRoot() )
             return null;
+        
         try
         {
+            String path = getParent();
             URI uri = new URI("vos", getAuthority(), path, null, null);
             return new VOSURI(uri);
         }
@@ -254,14 +253,20 @@ public class VOSURI
 
     public String getName()
     {
-        String rtn = null;
+        if ( isRoot() )
+            return "";
+
         String path = vosURI.getPath();
-        if (path != null)
-        {
-            int index = path.lastIndexOf('/');
-            if (index > 0) rtn = path.substring(index + 1);
-        }
-        return rtn;
+        String[] comps = vosURI.getPath().split("/");
+        return comps[comps.length - 1]; // last path component
+    }
+
+    public boolean isRoot()
+    {
+        String path = vosURI.getPath();
+        if (path == null || path.length() == 0 || path.equals("/"))
+            return true;
+        return false;
     }
 
     /**

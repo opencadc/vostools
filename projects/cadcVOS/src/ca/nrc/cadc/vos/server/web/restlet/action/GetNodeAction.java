@@ -80,6 +80,7 @@ import ca.nrc.cadc.vos.Search;
 import ca.nrc.cadc.vos.server.AbstractView;
 import ca.nrc.cadc.vos.server.web.representation.NodeOutputRepresentation;
 import ca.nrc.cadc.vos.server.web.representation.ViewRepresentation;
+import java.util.ListIterator;
 
 /**
  * Class to perform the retrieval of a Node.
@@ -119,9 +120,15 @@ public class GetNodeAction extends NodeAction
     public NodeActionResult performNodeAction(Node clientNode, Node serverNode)
     {
         if (serverNode instanceof ContainerNode)
-            nodePersistence.getChildren( (ContainerNode) serverNode);
+        {
+            ContainerNode cn = (ContainerNode) serverNode;
+            nodePersistence.getChildren(cn);
+            doFilterChildren(cn);
+        }
         nodePersistence.getProperties(serverNode);
+
         
+
         AbstractView view;
         try
         {
@@ -192,5 +199,28 @@ public class GetNodeAction extends NodeAction
     public void setSearch(final Search search)
     {
         this.search = search;
+    }
+
+    // if this is the root node, we apply a privacy policy and filter out
+    // child nodes the caller is not allowed to read
+    private void doFilterChildren(ContainerNode node)
+    {
+        if ( !node.getUri().isRoot() )
+            return;
+
+        ListIterator<Node> iter = node.getNodes().listIterator();
+        while ( iter.hasNext() )
+        {
+            Node n = iter.next();
+            try
+            {
+                voSpaceAuthorizer.getReadPermission(n);
+            }
+            catch(AccessControlException ex)
+            {
+                log.debug("doFilterChildren: remove " + n);
+                iter.remove();
+            }
+        }
     }
 }

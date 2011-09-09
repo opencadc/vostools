@@ -73,8 +73,6 @@ import static org.easymock.EasyMock.verify;
 
 import java.net.URI;
 import java.security.PrivilegedExceptionAction;
-import java.util.ArrayList;
-import java.util.List;
 
 import javax.security.auth.Subject;
 import javax.security.auth.x500.X500Principal;
@@ -86,6 +84,7 @@ import ca.nrc.cadc.vos.ContainerNode;
 import ca.nrc.cadc.vos.NodeProperty;
 import ca.nrc.cadc.vos.VOS;
 import ca.nrc.cadc.vos.VOSURI;
+import ca.nrc.cadc.vos.server.NodeID;
 import ca.nrc.cadc.vos.server.NodePersistence;
 import ca.nrc.cadc.vos.server.auth.VOSpaceAuthorizer;
 
@@ -105,12 +104,12 @@ public class VOSpaceAuthorizerTest
     public void testReadPermissonOnRoot() throws Exception
     {
         VOSURI vos = new VOSURI(new URI("vos://cadc.nrc.ca!vospace/CADCAuthtest1"));
-        ContainerNode dbNode = new ContainerNode(vos);
-        dbNode.getProperties().add(new NodeProperty(VOS.PROPERTY_URI_CREATOR, NODE_OWNER));
-        dbNode.getProperties().add(new NodeProperty(VOS.PROPERTY_URI_ISPUBLIC, Boolean.TRUE.toString()));
+        ContainerNode node = new ContainerNode(vos);
+        node.getProperties().add(new NodeProperty(VOS.PROPERTY_URI_CREATOR, NODE_OWNER));
+        node.getProperties().add(new NodeProperty(VOS.PROPERTY_URI_ISPUBLIC, Boolean.TRUE.toString()));
 
         NodePersistence np = createMock(NodePersistence.class);
-        expect(np.get(vos)).andReturn(dbNode).once();
+        expect(np.get(vos)).andReturn(node).once();
         replay(np);
         
         VOSpaceAuthorizer voSpaceAuthorizer = new VOSpaceAuthorizer();
@@ -118,6 +117,9 @@ public class VOSpaceAuthorizerTest
         
         Subject subject = new Subject();
         subject.getPrincipals().add(new X500Principal(NODE_OWNER));
+
+        // fake persistent node
+        node.appData = new NodeID(new Long(123L), subject, NODE_OWNER);
         
         ReadPermissionAction action = new ReadPermissionAction( voSpaceAuthorizer, vos.getURIObject());
         Subject.doAs(subject, action);

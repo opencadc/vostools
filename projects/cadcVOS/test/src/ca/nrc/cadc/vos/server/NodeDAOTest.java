@@ -120,7 +120,7 @@ public class NodeDAOTest
     static final String DATABASE = "cadctest";
 
     static final String VOS_AUTHORITY = "cadc.nrc.ca!vospace";
-    static final String ROOT_CONTAINER = "CADCRegtest1";
+    static final String HOME_CONTAINER = "CADCRegtest1";
     static final String NODE_OWNER = "CN=CADC Regtest1 10577,OU=CADC,O=HIA";
 
     protected Subject owner;
@@ -152,11 +152,11 @@ public class NodeDAOTest
             NodeSchema ns = new NodeSchema("Node", "NodeProperty");
             this.nodeDAO = new NodeDAO(dataSource, ns, VOS_AUTHORITY, new X500IdentityManager());
 
-            ContainerNode root = (ContainerNode) nodeDAO.getPath(ROOT_CONTAINER);
+            ContainerNode root = (ContainerNode) nodeDAO.getPath(HOME_CONTAINER);
             log.debug("found base node: " + root);
             if (root == null)
             {
-                VOSURI vos = new VOSURI(new URI("vos", VOS_AUTHORITY, "/"+ROOT_CONTAINER, null, null));
+                VOSURI vos = new VOSURI(new URI("vos", VOS_AUTHORITY, "/"+HOME_CONTAINER, null, null));
                 root = new ContainerNode(vos);
                 root.getProperties().add(new NodeProperty(VOS.PROPERTY_URI_CREATOR, NODE_OWNER));
                 root = (ContainerNode) nodeDAO.put(root, owner);
@@ -191,15 +191,15 @@ public class NodeDAOTest
     }
 
     @Test
-    public void testGetRootNode()
+    public void testGetHome()
     {
-        log.debug("testGetRootNode - START");
+        log.debug("testGetHome - START");
         try
         {
-            Node root = nodeDAO.getPath(ROOT_CONTAINER);
+            Node root = nodeDAO.getPath(HOME_CONTAINER);
             Assert.assertNotNull(root);
             Assert.assertEquals(ContainerNode.class, root.getClass());
-            Assert.assertEquals(ROOT_CONTAINER, root.getName());
+            Assert.assertEquals(HOME_CONTAINER, root.getName());
         }
         catch(Exception unexpected)
         {
@@ -208,7 +208,7 @@ public class NodeDAOTest
         }
         finally
         {
-            log.debug("testGetRootNode - DONE");
+            log.debug("testGetHome - DONE");
         }
     }
 
@@ -222,10 +222,10 @@ public class NodeDAOTest
             ContainerNode containerNode = null;
             Node putNode = null;
 
-            ContainerNode rootContainer = (ContainerNode) nodeDAO.getPath(ROOT_CONTAINER);
+            ContainerNode rootContainer = (ContainerNode) nodeDAO.getPath(HOME_CONTAINER);
             log.debug("ROOT: " + rootContainer);
             Assert.assertNotNull(rootContainer);
-            String basePath = "/" + ROOT_CONTAINER + "/";
+            String basePath = "/" + HOME_CONTAINER + "/";
 
             // /a
             String nodePath1 = basePath + getNodeName("a");
@@ -324,11 +324,11 @@ public class NodeDAOTest
         log.debug("testGetChildren - START");
         try
         {
-            ContainerNode rootContainer = (ContainerNode) nodeDAO.getPath(ROOT_CONTAINER);
+            ContainerNode rootContainer = (ContainerNode) nodeDAO.getPath(HOME_CONTAINER);
             log.debug("ROOT: " + rootContainer);
             Assert.assertNotNull(rootContainer);
 
-            String basePath = "/" + ROOT_CONTAINER + "/";
+            String basePath = "/" + HOME_CONTAINER + "/";
 
             // create a container
             String path = basePath + getNodeName("dir");
@@ -386,11 +386,11 @@ public class NodeDAOTest
         log.debug("testMarkForDeletion - START");
         try
         {
-            ContainerNode rootContainer = (ContainerNode) nodeDAO.getPath(ROOT_CONTAINER);
+            ContainerNode rootContainer = (ContainerNode) nodeDAO.getPath(HOME_CONTAINER);
             log.debug("ROOT: " + rootContainer);
             Assert.assertNotNull(rootContainer);
 
-            String basePath = "/" + ROOT_CONTAINER + "/";
+            String basePath = "/" + HOME_CONTAINER + "/";
 
             // create a container
             String path = basePath + getNodeName("dir");
@@ -446,11 +446,11 @@ public class NodeDAOTest
         log.debug("testGetChild - START");
         try
         {
-            ContainerNode rootContainer = (ContainerNode) nodeDAO.getPath(ROOT_CONTAINER);
+            ContainerNode rootContainer = (ContainerNode) nodeDAO.getPath(HOME_CONTAINER);
             log.debug("ROOT: " + rootContainer);
             Assert.assertNotNull(rootContainer);
 
-            String basePath = "/" + ROOT_CONTAINER + "/";
+            String basePath = "/" + HOME_CONTAINER + "/";
 
             // create a container
             String path = basePath + getNodeName("dir");
@@ -517,11 +517,11 @@ public class NodeDAOTest
         log.debug("testUpdateProperties - START");
         try
         {
-            ContainerNode rootContainer = (ContainerNode) nodeDAO.getPath(ROOT_CONTAINER);
+            ContainerNode rootContainer = (ContainerNode) nodeDAO.getPath(HOME_CONTAINER);
             log.debug("ROOT: " + rootContainer);
             Assert.assertNotNull(rootContainer);
 
-            String basePath = "/" + ROOT_CONTAINER + "/";
+            String basePath = "/" + HOME_CONTAINER + "/";
 
             // Create a node with properties
             String path = basePath + getNodeName("g");
@@ -615,11 +615,11 @@ public class NodeDAOTest
         log.debug("testUpdateContentLength - START");
         try
         {
-            ContainerNode rootContainer = (ContainerNode) nodeDAO.getPath(ROOT_CONTAINER);
+            ContainerNode rootContainer = (ContainerNode) nodeDAO.getPath(HOME_CONTAINER);
             log.debug("ROOT: " + rootContainer);
             Assert.assertNotNull(rootContainer);
 
-            String basePath = "/" + ROOT_CONTAINER + "/";
+            String basePath = "/" + HOME_CONTAINER + "/";
 
             // Create a node with properties
             String path = basePath + getNodeName("cl-test");
@@ -661,11 +661,11 @@ public class NodeDAOTest
         log.debug("testUpdateBusyState - START");
         try
         {
-            ContainerNode rootContainer = (ContainerNode) nodeDAO.getPath(ROOT_CONTAINER);
+            ContainerNode rootContainer = (ContainerNode) nodeDAO.getPath(HOME_CONTAINER);
             log.debug("ROOT: " + rootContainer);
             Assert.assertNotNull(rootContainer);
 
-            String basePath = "/" + ROOT_CONTAINER + "/";
+            String basePath = "/" + HOME_CONTAINER + "/";
 
             // Create a node with properties
             String path = basePath + getNodeName("cl-test");
@@ -707,6 +707,39 @@ public class NodeDAOTest
         finally
         {
             log.debug("testUpdateBusyState - DONE");
+        }
+    }
+
+    @Test
+    public void testGetRoot()
+    {
+        log.debug("testGetRoot - START");
+        try
+        {
+
+            VOSURI vos = new VOSURI(new URI("vos", VOS_AUTHORITY, null, null, null));
+            log.debug("path with null: [" + vos.getPath() + "]");
+            ContainerNode root = new ContainerNode(vos);
+
+            vos = new VOSURI(new URI("vos", VOS_AUTHORITY, "", null, null));
+            log.debug("path with 0-length string: [" + vos.getPath() + "]");
+            root = new ContainerNode(vos);
+
+            root.appData = new NodeID(); // null internal ID means root
+            root.getProperties().add(new NodeProperty(VOS.PROPERTY_URI_ISPUBLIC, "true"));
+            nodeDAO.getChildren(root);
+            for (Node n : root.getNodes())
+                log.debug("found: " + n);
+
+        }
+        catch(Exception unexpected)
+        {
+            log.error("unexpected exception", unexpected);
+            Assert.fail("unexpected exception: " + unexpected);
+        }
+        finally
+        {
+            log.debug("testGetRoot - DONE");
         }
     }
 

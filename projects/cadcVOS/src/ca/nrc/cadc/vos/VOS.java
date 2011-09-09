@@ -149,7 +149,7 @@ public class VOS
     // Denotes an entity responsible for making contributions to this resource
     public static final String PROPERTY_URI_CONTRIBUTOR = "ivo://ivoa.net/vospace/core#contributor";
     
-    // Denotes a point or period of time associated with an event in the lifecycle of the resource
+    // timestamp of the last modification to the node metadata or stored bytes
     public static final String PROPERTY_URI_DATE = "ivo://ivoa.net/vospace/core#date";
     
     // Denotes the nature or genre of the resource
@@ -224,6 +224,9 @@ public class VOS
     
     // Flag indicating if the Node is public (true/false)
     public static final String PROPERTY_URI_ISPUBLIC = "ivo://ivoa.net/vospace/core#ispublic";
+    
+    // proposed to support vofs: timestamp of the last modification to the stored bytes (DataNode only)
+    public static final String PROPERTY_URI_CREATION_DATE = "ivo://ivoa.net/vospace/core#creationDate";
     
     /*
      * List of properties that are read-only by the user

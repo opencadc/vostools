@@ -350,4 +350,64 @@ public class VOSURITest
             Assert.fail("unexpected exception: " + unexpected);
         }
     }
+
+    @Test
+    public void testRoot()
+    {
+        try
+        {
+            String auth  = "cadc.nrc.ca!vospace";
+            URI uri;
+            VOSURI vos;
+
+            uri = new URI("vos", auth, null, null, null);
+            vos = new VOSURI(uri);
+            Assert.assertTrue("null path in URI is root", vos.isRoot());
+
+            uri = new URI("vos", auth, "", null, null);
+            vos = new VOSURI(uri);
+            Assert.assertTrue("0-length path in URI is root", vos.isRoot());
+
+            uri = new URI("vos", auth, "/", null, null);
+            vos = new VOSURI(uri);
+            Assert.assertTrue("/ path in URI is root", vos.isRoot());
+        }
+        catch(Exception unexpected)
+        {
+            log.error("unexpected exception", unexpected);
+            Assert.fail("unexpected exception: " + unexpected);
+        }
+    }
+
+    @Test
+    public void testGetParentRoot()
+    {
+        try
+        {
+            String bang  = "vos://cadc.nrc.ca!vospace";
+            String tilde = "vos://cadc.nrc.ca~vospace";
+            String path = "/path";
+
+            VOSURI vosBang = new VOSURI(new URI(bang + path));
+            VOSURI vosTilde = new VOSURI(new URI(tilde + path));
+            Assert.assertNotSame(bang, tilde);
+
+            VOSURI parentBang = vosBang.getParentURI();
+            Assert.assertNotNull(parentBang);
+            Assert.assertEquals(bang, parentBang.getURIObject().toASCIIString());
+
+            VOSURI parentTilde = vosTilde.getParentURI();
+            Assert.assertNotNull(parentTilde);
+            Assert.assertEquals(tilde, parentTilde.getURIObject().toASCIIString());
+
+            VOSURI root = new VOSURI(new URI(tilde));
+            VOSURI noParent = root.getParentURI();
+            Assert.assertNull(noParent);
+        }
+        catch(Exception unexpected)
+        {
+            log.error("unexpected exception", unexpected);
+            Assert.fail("unexpected exception: " + unexpected);
+        }
+    }
 }

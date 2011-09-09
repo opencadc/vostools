@@ -107,13 +107,17 @@ public class NodesApplication extends Application
         public NodesRouter(final Context context)
         {
             super(context);
-            log.debug("attaching /{nodePath} -> Noderesource");
+            attach("", NodeResource.class);
+            attach("/", NodeResource.class);
+
+            log.debug("attaching /{nodePath} -> NodeResource");
             TemplateRoute nodeRoute = attach("/{nodePath}", NodeResource.class);
             Map<String, Variable> nodeRouteVariables = nodeRoute.getTemplate().getVariables();
             nodeRouteVariables.put("nodePath", new Variable(Variable.TYPE_ALL));
-            log.debug("attaching /{nodePath} -> Noderesource - DONE");
+            log.debug("attaching /{nodePath} -> NodeResource - DONE");
         }
     }
+    
     @Override
     public Restlet createInboundRoot()
     {

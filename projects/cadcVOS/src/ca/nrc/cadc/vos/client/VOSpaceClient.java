@@ -322,7 +322,7 @@ public class VOSpaceClient
     public Node getNode(String path, String query)
         throws NodeNotFoundException
     {
-        if (!path.startsWith("/"))
+        if ( path.length() > 0 && !path.startsWith("/")) // length 0 is root: no /
             path = "/" + path; // must be absolute
         if (query != null)
             path += "?" + query;
@@ -597,7 +597,7 @@ public class VOSpaceClient
 
     public void deleteNode(String path)
     {
-        if (!path.startsWith("/"))
+        if ( path.length() > 0 && !path.startsWith("/")) // length 0 is root: no /
             path = "/" + path; // must be absolute
 
         int responseCode;

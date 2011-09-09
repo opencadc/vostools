@@ -183,7 +183,7 @@ public class VOSpaceAuthorizer implements Authorizer
      * @throws FileNotFoundException If the node could not be found
      */
     public Object getReadPermission(Node node)
-            throws AccessControlException, FileNotFoundException
+            throws AccessControlException
     {        
         AccessControlContext acContext = AccessController.getContext();
         Subject subject = Subject.getSubject(acContext);
@@ -242,7 +242,6 @@ public class VOSpaceAuthorizer implements Authorizer
     public Object getWritePermission(Node node)
             throws AccessControlException
     {
-        
         AccessControlContext acContext = AccessController.getContext();
         Subject subject = Subject.getSubject(acContext);
         
@@ -453,12 +452,18 @@ public class VOSpaceAuthorizer implements Authorizer
     private boolean isOwner(Node node, Subject subject)
     {
         NodeID nodeID = (NodeID) node.appData;
-        if (nodeID == null || nodeID.getOwner() == null)
+        if (nodeID == null)
         {
-            LOG.error("BUG: no owner found for node: " + node);
-            return false;
+            throw new IllegalStateException("BUG: no owner found for node: " + node);
         }
+        if (nodeID.getID() == null) // root node, no owner
+            return false;
+
         Subject owner = nodeID.getOwner();
+        if (owner == null)
+        {
+            throw new IllegalStateException("BUG: no owner found for node: " + node);
+        }
         
         Set<Principal> ownerPrincipals = owner.getPrincipals();
         Set<Principal> callerPrincipals = subject.getPrincipals();

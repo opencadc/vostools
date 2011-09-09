@@ -126,13 +126,16 @@ public class NodeResource extends BaseResource
                     get("nodePath");
             LOGGER.debug("path = " + path);
             
-            if ((path == null) || (path.trim().length() == 0))
-            {
-                throw new IllegalArgumentException(
-                        "No node path information provided.");
-            }
+            //if ((path == null) || (path.trim().length() == 0))
+            //{
+            //    throw new IllegalArgumentException(
+            //            "No node path information provided.");
+            //}
             LOGGER.debug("prefix = " + getVosUriPrefix());
-            vosURI = new VOSURI(getVosUriPrefix() + "/" + path);
+            if (path != null)
+                vosURI = new VOSURI(getVosUriPrefix() + "/" + path);
+            else
+                vosURI = new VOSURI(getVosUriPrefix()); // the root Container
             LOGGER.debug("vosURI = " + vosURI);
             
             Form form = getRequest().getResourceRef().getQueryAsForm();

@@ -90,6 +90,8 @@ import ca.nrc.cadc.vos.NodeProperty;
 import ca.nrc.cadc.vos.VOS;
 import ca.nrc.cadc.vos.VOSURI;
 import ca.nrc.cadc.vos.VOS.NodeBusyState;
+import java.net.URI;
+import java.net.URISyntaxException;
 
 /**
  * Simple implementation of the NodePersistence interface that uses the NodeDAO
@@ -104,6 +106,8 @@ import ca.nrc.cadc.vos.VOS.NodeBusyState;
 public abstract class DatabaseNodePersistence implements NodePersistence
 {
     private static Logger log = Logger.getLogger(DatabaseNodePersistence.class);
+
+    private static final String ROOT_NAME = "";
     
     private static List<String> permissionPropertyURIs = Arrays.asList(
         new String[] {
@@ -168,11 +172,38 @@ public abstract class DatabaseNodePersistence implements NodePersistence
     public Node get(VOSURI vos)
         throws NodeNotFoundException
     {
+        log.debug("get: " + vos + " -- " + vos.getName());
+        ContainerNode root = createRoot(vos.getAuthority());
+        if ( vos.isRoot() )
+            return root;
         NodeDAO dao = getDAO( vos.getAuthority() );
         Node ret = dao.getPath(vos.getPath());
         if (ret == null)
             throw new NodeNotFoundException("not found: " + vos.getURIObject().toASCIIString());
+        // attach root
+        //Node top = ret;
+        //while (top.getParent() != null)
+        //    top = top.getParent();
+        //top.setParent(root);
+        //root.getNodes().add(top);
         return ret;
+    }
+
+    private ContainerNode createRoot(String authority)
+    {
+        try
+        {
+            ContainerNode root = new ContainerNode(new VOSURI(new URI("vos", authority, ROOT_NAME, null, null)));
+            root.appData = new NodeID(); // null internal ID means root, no owner
+            // make it public so authorizer will permit get
+            root.getProperties().add(new NodeProperty(VOS.PROPERTY_URI_ISPUBLIC, "true"));
+            log.debug("created root: " + root);
+            return root;
+        }
+        catch(URISyntaxException bug)
+        {
+            throw new RuntimeException("BUG: failed to create VOSURI for root", bug);
+        }
     }
 
     public void getProperties(Node node)

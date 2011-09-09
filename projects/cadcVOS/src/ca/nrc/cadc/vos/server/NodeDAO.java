@@ -255,7 +255,7 @@ public class NodeDAO
     public Node getPath(String path)
     {
         log.debug("getPath: " + path);
-        if (path.charAt(0) == '/')
+        if (path.length() > 0 && path.charAt(0) == '/')
             path = path.substring(1);
         // generate single join query to extract path
         NodePathStatementCreator npsc = new NodePathStatementCreator(
@@ -818,8 +818,14 @@ public class NodeDAO
         sb.append("contentLength, contentType, contentEncoding, contentMD5, lastModified FROM ");
         sb.append(getNodeTableName());
         sb.append(" WHERE name = ?");
-        sb.append(" AND parentID = ");
-        sb.append(getNodeID(parent));
+        Long nid = getNodeID(parent);
+        if (nid != null)
+        {
+            sb.append(" AND parentID = ");
+            sb.append(getNodeID(parent));
+        }
+        else
+            sb.append(" AND parentID IS NULL");
         sb.append(" AND markedForDeletion = 0");
         return sb.toString();
     }
@@ -831,14 +837,20 @@ public class NodeDAO
      * @param parent The node to query for.
      * @return simple SQL statement select for use with NodeMapper
      */
-    protected String getSelectNodesByParentSQL(Node parent)
+    protected String getSelectNodesByParentSQL(ContainerNode parent)
     {
         StringBuilder sb = new StringBuilder();
         sb.append("SELECT nodeID, parentID, name, type, busyState, markedForDeletion, ownerID, creatorID, isPublic, groupRead, groupWrite, ");
         sb.append("contentLength, contentType, contentEncoding, contentMD5, lastModified FROM ");
         sb.append(getNodeTableName());
-        sb.append(" WHERE parentID = ");
-        sb.append(getNodeID(parent));
+        Long nid = getNodeID(parent);
+        if (nid != null)
+        {
+            sb.append(" WHERE parentID = ");
+            sb.append(getNodeID(parent));
+        }
+        else
+            sb.append(" WHERE parentID IS NULL");
         sb.append(" AND markedForDeletion = 0");
         return sb.toString();
     }

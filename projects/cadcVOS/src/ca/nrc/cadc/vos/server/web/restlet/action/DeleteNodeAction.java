@@ -79,6 +79,7 @@ import ca.nrc.cadc.vos.ContainerNode;
 import ca.nrc.cadc.vos.Node;
 import ca.nrc.cadc.vos.NodeNotFoundException;
 import ca.nrc.cadc.vos.NodeParsingException;
+import ca.nrc.cadc.vos.VOSURI;
 
 /**
  * Class to perform the deletion of a Node.
@@ -102,20 +103,22 @@ public class DeleteNodeAction extends NodeAction
     {
         try
         {
+            // no one can delete the root or something in the root
+            VOSURI parentURI = vosURI.getParentURI();
+            if (vosURI.isRoot() || parentURI.isRoot())
+                throw new AccessControlException("permission denied");
+            
             // get the target node
             Node target = nodePersistence.get(vosURI);
-            
             // check the permissions on parent
             try
             {
-                log.debug("Checking delete privilege on: " +
-                       vosURI.getParentURI().getURIObject().toASCIIString());
+                log.debug("Checking delete privilege on: " + parentURI);
                 voSpaceAuthorizer.getWritePermission(target.getParent());
             }
             catch (AccessControlException e)
             {
-                throw new AccessControlException("Write permission denied on "
-                        + vosURI.getParentURI().getURIObject().toASCIIString());
+                throw new AccessControlException("Write permission denied on " + parentURI);
             }
             
             if (target instanceof ContainerNode)
@@ -136,7 +139,7 @@ public class DeleteNodeAction extends NodeAction
     @Override
     public NodeActionResult performNodeAction(Node clientNode, Node serverNode)
     {
-        nodePersistence.delete(serverNode);
+        nodePersistence.delete(serverNode); // as per doAuthorizationCheck
         return null;
     }
     
