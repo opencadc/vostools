@@ -344,14 +344,23 @@ public class HttpUpload extends HttpTransfer
         if (localFile != null)
             conn.setRequestProperty("Content-Length", Long.toString(localFile.length()));
         if (contentType != null)
+        {
+            log.debug("set Content-Type="+contentType);
             conn.setRequestProperty("Content-Type", contentType);
+        }
         if (contentEncoding != null)
             conn.setRequestProperty("Content-Encoding", contentEncoding);
         if (contentMD5 != null)
             conn.setRequestProperty("Content-MD5", contentMD5);
 
+        log.debug("custom request properties: " + requestProperties.size());
         for (HttpRequestProperty rp : requestProperties)
-            conn.setRequestProperty(rp.getProperty(), rp.getValue());
+        {
+            String p = rp.getProperty();
+            String v = rp.getValue();
+            log.debug("set request property: "+p+"="+v);
+            conn.setRequestProperty(p, v);
+        }
 
         int bSize = bufferSize;
         if (localFile != null && localFile.length() < bSize)

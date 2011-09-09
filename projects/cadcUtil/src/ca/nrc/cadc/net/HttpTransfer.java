@@ -204,7 +204,10 @@ public abstract class HttpTransfer implements Runnable
     public void setRequestProperties(List<HttpRequestProperty> props)
     {
         if (props != null)
+        {
+            log.debug("add request properties: " + props.size());
             this.requestProperties.addAll(props);
+        }
     }
 
     public void setSSLSocketFactory(SSLSocketFactory sslSocketFactory)
