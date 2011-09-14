@@ -180,12 +180,6 @@ public abstract class DatabaseNodePersistence implements NodePersistence
         Node ret = dao.getPath(vos.getPath());
         if (ret == null)
             throw new NodeNotFoundException("not found: " + vos.getURIObject().toASCIIString());
-        // attach root
-        //Node top = ret;
-        //while (top.getParent() != null)
-        //    top = top.getParent();
-        //top.setParent(root);
-        //root.getNodes().add(top);
         return ret;
     }
 

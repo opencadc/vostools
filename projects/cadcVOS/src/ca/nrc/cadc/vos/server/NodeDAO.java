@@ -111,6 +111,8 @@ import ca.nrc.cadc.vos.NodeProperty;
 import ca.nrc.cadc.vos.VOS;
 import ca.nrc.cadc.vos.VOSURI;
 import ca.nrc.cadc.vos.VOS.NodeBusyState;
+import java.util.HashMap;
+import java.util.Map;
 
 /**
  * Helper class for implementing NodePersistence with a
@@ -144,6 +146,8 @@ public class NodeDAO
 
     private DateFormat dateFormat;
     private Calendar cal;
+
+    private Map<Object,Subject> identityCache = new HashMap<Object,Subject>();
 
     public static class NodeSchema
     {
@@ -355,7 +359,16 @@ public class NodeDAO
         if (nid.owner != null)
             return; // already loaded (parent loop below)
 
-        nid.owner = identManager.toSubject(nid.ownerObject);
+        Subject s = identityCache.get(nid.ownerObject);
+        if (s == null)
+        {
+            log.debug("lookup subject for owner=" + nid.ownerObject);
+            s = identManager.toSubject(nid.ownerObject);
+            identityCache.put(nid.ownerObject, s);
+        }
+        else
+            log.debug("found cached subject for owner=" + nid.ownerObject);
+        nid.owner = s;
         String owner = identManager.toOwnerString(nid.owner);
         if (owner != null)
             node.getProperties().add(new NodeProperty(VOS.PROPERTY_URI_CREATOR, owner));
