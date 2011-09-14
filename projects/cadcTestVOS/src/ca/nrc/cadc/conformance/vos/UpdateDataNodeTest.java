@@ -100,7 +100,7 @@ public class UpdateDataNodeTest extends VOSNodeTest
 
     static
     {
-        Log4jInit.setLevel("ca.nrc.cadc.conformance.vos", Level.DEBUG);
+        Log4jInit.setLevel("ca.nrc.cadc.conformance.vos", Level.INFO);
     }
     
     public UpdateDataNodeTest()

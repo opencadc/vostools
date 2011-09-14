@@ -112,7 +112,7 @@ public class VOSTestSuite
     {
         try
         {
-            Log4jInit.setLevel("ca.nrc.cadc.vos", Level.DEBUG);
+            Log4jInit.setLevel("ca.nrc.cadc.vos", Level.INFO);
 
             File crt = FileUtil.getFileFromResource("proxy.crt", VOSTestSuite.class);
             File key = FileUtil.getFileFromResource("proxy.key", VOSTestSuite.class);

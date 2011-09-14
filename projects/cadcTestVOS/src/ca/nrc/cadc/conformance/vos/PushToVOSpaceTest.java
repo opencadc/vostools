@@ -69,6 +69,7 @@
 
 package ca.nrc.cadc.conformance.vos;
 
+import ca.nrc.cadc.util.Log4jInit;
 import org.junit.Ignore;
 import ca.nrc.cadc.vos.TransferReader;
 import java.net.URL;
@@ -91,6 +92,7 @@ import ca.nrc.cadc.xml.XmlUtil;
 import com.meterware.httpunit.WebResponse;
 import java.util.HashMap;
 import java.util.Map;
+import org.apache.log4j.Level;
 import org.apache.log4j.Logger;
 import org.jdom.Document;
 import org.jdom.Element;
@@ -111,6 +113,11 @@ public class PushToVOSpaceTest extends VOSTransferTest
 {
     private static Logger log = Logger.getLogger(PushToVOSpaceTest.class);
 
+    static
+    {
+        Log4jInit.setLevel("ca.nrc.cadc.conformance.vos", Level.INFO);
+    }
+    
     Job job;
 
     public PushToVOSpaceTest()
