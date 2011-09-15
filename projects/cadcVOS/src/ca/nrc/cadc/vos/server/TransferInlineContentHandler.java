@@ -1,9 +1,9 @@
-/**
+/*
  ************************************************************************
  *******************  CANADIAN ASTRONOMY DATA CENTRE  *******************
  **************  CENTRE CANADIEN DE DONNÉES ASTRONOMIQUES  **************
  *
- *  (c) 2010.                            (c) 2010.
+ *  (c) 2009.                            (c) 2009.
  *  Government of Canada                 Gouvernement du Canada
  *  National Research Council            Conseil national de recherches
  *  Ottawa, Canada, K1A 0R6              Ottawa, Canada, K1A 0R6
@@ -62,44 +62,72 @@
  *  <http://www.gnu.org/licenses/>.      pas le cas, consultez :
  *                                       <http://www.gnu.org/licenses/>.
  *
+ *  $Revision: 4 $
+ *
  ************************************************************************
  */
-package ca.nrc.cadc.vos;
 
-import org.junit.runner.RunWith;
-import org.junit.runners.Suite;
+package ca.nrc.cadc.vos.server;
 
-import ca.nrc.cadc.vos.auth.VOSpaceAuthorizerTest;
-import ca.nrc.cadc.vos.client.FileSizeTypeTest;
-import ca.nrc.cadc.vos.server.DatabaseNodePersistenceTest;
-import ca.nrc.cadc.vos.server.NodeDAOTest;
-import ca.nrc.cadc.vos.server.RssFeedTest;
-import ca.nrc.cadc.vos.server.RssViewTest;
-import ca.nrc.cadc.vos.server.TransferInlineContentHandlerTest;
-import ca.nrc.cadc.vos.server.ViewsTest;
-import ca.nrc.cadc.vos.server.web.restlet.action.DeleteNodeActionTest;
-import ca.nrc.cadc.vos.server.web.restlet.action.GetNodeActionTest;
-import ca.nrc.cadc.vos.server.web.restlet.resource.NodeResourceTest;
+import ca.nrc.cadc.uws.JobInfo;
+import ca.nrc.cadc.uws.Parameter;
+import ca.nrc.cadc.uws.web.InlineContentException;
+import ca.nrc.cadc.uws.web.InlineContentHandler;
+import ca.nrc.cadc.vos.Transfer;
+import ca.nrc.cadc.vos.TransferParsingException;
+import ca.nrc.cadc.vos.TransferReader;
+import java.io.IOException;
+import java.io.InputStream;
+import java.net.URL;
+import java.util.ArrayList;
+import java.util.List;
 
-
-@RunWith(Suite.class)
-@Suite.SuiteClasses(
+public class TransferInlineContentHandler implements InlineContentHandler
 {
-    NodeReaderWriterTest.class,
-    TransferReaderWriterTest.class,
-    NodeResourceTest.class,
-    VOSpaceAuthorizerTest.class,
-    FileSizeTypeTest.class,
-    ViewsTest.class,
-    GetNodeActionTest.class,
-    DeleteNodeActionTest.class,
-    VOSURITest.class,
-    NodeDAOTest.class,
-    DatabaseNodePersistenceTest.class,
-    RssViewTest.class,
-    RssFeedTest.class,
-    TransferInlineContentHandlerTest.class
-})
-public class CADCVOSTestSuite
-{
+    private static final String TEXT_XML = "text/xml";
+
+    private List<Parameter> parameterList;
+    private JobInfo jobInfo;
+
+    public TransferInlineContentHandler() { }
+    
+    public void setParameterList(List<Parameter> parameterList)
+    {
+        this.parameterList = parameterList;
+    }
+
+    public List<Parameter> getParameterList()
+    {
+        if (parameterList == null)
+            parameterList = new ArrayList<Parameter>();
+        return parameterList;
+    }
+
+    public JobInfo getJobInfo()
+    {
+        return jobInfo;
+    }
+    
+    public URL accept(String name, String contentType, InputStream inputStream)
+        throws InlineContentException, IOException
+    {
+        if (!contentType.equals(TEXT_XML))
+            throw new IllegalArgumentException("Transfer document expected Content-Type is " + TEXT_XML + " not " + contentType);
+
+        if (inputStream == null)
+            throw new IOException("The InputStream is closed");
+
+        try
+        {
+            TransferReader reader = new TransferReader(true);
+            Transfer transfer = reader.read(inputStream);
+            jobInfo = new JobInfo(transfer.toXmlString(), contentType, true);
+        }
+        catch (TransferParsingException e)
+        {
+            throw new InlineContentException("Unable to create JobInfo from Transfer Document", e);
+        }
+        return null;
+    }
+    
 }
