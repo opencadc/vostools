@@ -82,9 +82,10 @@ import org.junit.runners.Suite;
     QuoteTest.class,
     ErrorTest.class,
     ResultsTest.class,
-    ErrorXmlTest.class,
-    ResultsXmlTest.class,
     SchemaTest.class
+// No longer assuming POSTed XML is added to JobInfo.
+//    ErrorXmlTest.class,
+//    ResultsXmlTest.class,
 })
 
 public class UWSASyncTestSuite {}

@@ -188,6 +188,21 @@ public abstract class AbstractUWSTest
 
         return createJob(conversation, postRequest);
     }
+
+    protected String createJob(WebConversation conversation, String contentType, String content)
+        throws IOException, SAXException, JDOMException
+    {
+        log.debug("**************************************************");
+        log.debug("HTTP POST: " + serviceUrl);
+
+        // Create a new Job.
+        ByteArrayInputStream in = new ByteArrayInputStream(content.getBytes());
+        WebRequest postRequest = new PostMethodWebRequest(serviceUrl, in, contentType);
+
+        log.debug("Posted content: " + content);
+
+        return createJob(conversation, postRequest);
+    }
     
     protected String createJob(WebConversation conversation, Map<String, List<String>> parameters)
         throws IOException, SAXException, JDOMException
