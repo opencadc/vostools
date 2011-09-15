@@ -1,6 +1,4 @@
-<?xml version="1.0" encoding="UTF-8"?>
-
-<!--
+/*
 ************************************************************************
 *******************  CANADIAN ASTRONOMY DATA CENTRE  *******************
 **************  CENTRE CANADIEN DE DONNÉES ASTRONOMIQUES  **************
@@ -10,7 +8,7 @@
 *  National Research Council            Conseil national de recherches
 *  Ottawa, Canada, K1A 0R6              Ottawa, Canada, K1A 0R6
 *  All rights reserved                  Tous droits réservés
-*                                       
+*
 *  NRC disclaims any warranties,        Le CNRC dénie toute garantie
 *  expressed, implied, or               énoncée, implicite ou légale,
 *  statutory, of any kind with          de quelque nature que ce
@@ -33,10 +31,10 @@
 *  software without specific prior      de ce logiciel sans autorisation
 *  written permission.                  préalable et particulière
 *                                       par écrit.
-*                                       
+*
 *  This file is part of the             Ce fichier fait partie du projet
 *  OpenCADC project.                    OpenCADC.
-*                                       
+*
 *  OpenCADC is free software:           OpenCADC est un logiciel libre ;
 *  you can redistribute it and/or       vous pouvez le redistribuer ou le
 *  modify it under the terms of         modifier suivant les termes de
@@ -46,7 +44,7 @@
 *  either version 3 of the              : soit la version 3 de cette
 *  License, or (at your option)         licence, soit (à votre gré)
 *  any later version.                   toute version ultérieure.
-*                                       
+*
 *  OpenCADC is distributed in the       OpenCADC est distribué
 *  hope that it will be useful,         dans l’espoir qu’il vous
 *  but WITHOUT ANY WARRANTY;            sera utile, mais SANS AUCUNE
@@ -56,7 +54,7 @@
 *  PURPOSE.  See the GNU Affero         PARTICULIER. Consultez la Licence
 *  General Public License for           Générale Publique GNU Affero
 *  more details.                        pour plus de détails.
-*                                       
+*
 *  You should have received             Vous devriez avoir reçu une
 *  a copy of the GNU Affero             copie de la Licence Générale
 *  General Public License along         Publique GNU Affero avec
@@ -67,87 +65,68 @@
 *  $Revision: 4 $
 *
 ************************************************************************
--->
-	
-<!DOCTYPE web-app
-    PUBLIC "-//Sun Microsystems, Inc.//DTD Web Application 2.2//EN"
-    "http://java.sun.com/j2ee/dtds/web-app_2_2.dtd">
+*/
 
-<web-app>
+package ca.nrc.cadc.uws.sample;
 
-    <welcome-file-list>index.jsp</welcome-file-list>
+import ca.nrc.cadc.uws.JobInfo;
+import ca.nrc.cadc.uws.Parameter;
+import ca.nrc.cadc.uws.web.InlineContentException;
+import ca.nrc.cadc.uws.web.InlineContentHandler;
+import java.io.BufferedReader;
+import java.io.IOException;
+import java.io.InputStream;
+import java.io.InputStreamReader;
+import java.net.URL;
+import java.util.ArrayList;
+import java.util.List;
+import org.apache.log4j.Logger;
 
-     <servlet>
-        <servlet-name>logControl</servlet-name>
-        <servlet-class>ca.nrc.cadc.log.LogControlServlet</servlet-class>
-        <init-param>
-            <param-name>logLevel</param-name>
-            <param-value>info</param-value>
-        </init-param>
-        <init-param>
-            <param-name>logLevelPackages</param-name>
-            <param-value>
-                ca.nrc.cadc.uws
-            </param-value>
-        </init-param>
-      <load-on-startup>1</load-on-startup>
-    </servlet>
+public class SampleInlineContentHandler implements InlineContentHandler
+{
+    private static Logger log = Logger.getLogger(SampleInlineContentHandler.class);
 
-    <!-- synchronous access to JobManager service -->
-    <servlet>
-        <load-on-startup>2</load-on-startup>
-      <servlet-name>SyncServlet</servlet-name>
-      <servlet-class>ca.nrc.cadc.uws.server.SyncServlet</servlet-class>
-      <init-param>
-          <param-name>ca.nrc.cadc.uws.server.JobManager</param-name>
-          <param-value>ca.nrc.cadc.uws.sample.SampleJobManager</param-value>
-      </init-param>
-      <init-param>
-          <param-name>ca.nrc.cadc.uws.server.SyncServlet.execOnGET</param-name>
-          <param-value>true</param-value>
-      </init-param>
-      <init-param>
-          <param-name>ca.nrc.cadc.uws.server.SyncServlet.execOnPOST</param-name>
-          <param-value>false</param-value>
-      </init-param>
-      <init-param>
-          <param-name>ca.nrc.cadc.uws.web.InlineContentHandler</param-name>
-          <param-value>ca.nrc.cadc.uws.sample.SampleInlineContentHandler</param-value>
-      </init-param>
-    </servlet>
+    private static final String TEXT_XML = "text/xml";
 
-    <!-- asynchronous access to JobManager service -->
-    <servlet>
-        <load-on-startup>2</load-on-startup>
-        <servlet-name>AsyncServlet</servlet-name>
-        <servlet-class>org.restlet.ext.servlet.ServerServlet</servlet-class>
-        <init-param>
-            <param-name>org.restlet.application</param-name>
-            <param-value>ca.nrc.cadc.uws.web.restlet.UWSAsyncApplication</param-value>
-        </init-param>
-        <init-param>
-            <param-name>ca.nrc.cadc.uws.server.JobManager</param-name>
-            <param-value>ca.nrc.cadc.uws.sample.SampleJobManager</param-value>
-        </init-param>
-        <init-param>
-            <param-name>ca.nrc.cadc.uws.web.InlineContentHandler</param-name>
-            <param-value>ca.nrc.cadc.uws.sample.SampleInlineContentHandler</param-value>
-      </init-param>
-    </servlet>
+    private List<Parameter> parameterList;
+    private JobInfo jobInfo;
 
+    public SampleInlineContentHandler() { }
 
-    <servlet-mapping>
-            <servlet-name>SyncServlet</servlet-name>
-            <url-pattern>/sync/*</url-pattern>
-    </servlet-mapping>
-    <servlet-mapping>
-            <servlet-name>AsyncServlet</servlet-name>
-            <url-pattern>/async/*</url-pattern>
-    </servlet-mapping>
-	
-    <servlet-mapping>
-        <servlet-name>logControl</servlet-name>
-        <url-pattern>/logControl</url-pattern>
-    </servlet-mapping>
+    public void setParameterList(List<Parameter> parameterList)
+    {
+        this.parameterList = parameterList;
+    }
 
-</web-app>
+    public List<Parameter> getParameterList()
+    {
+        if (parameterList == null)
+            parameterList = new ArrayList<Parameter>();
+        return parameterList;
+    }
+
+    public JobInfo getJobInfo()
+    {
+        return jobInfo;
+    }
+
+    public URL accept(String name, String contentType, InputStream inputStream)
+        throws InlineContentException, IOException
+    {
+        if (inputStream == null)
+            throw new IOException("The InputStream is closed");
+
+        log.debug("Content-Type: " + contentType);
+        if (contentType != null && contentType.equals(TEXT_XML))
+        {
+            BufferedReader reader = new BufferedReader(new InputStreamReader(inputStream));
+            StringBuilder sb = new StringBuilder();
+            String line = null;
+            while ((line = reader.readLine()) != null)
+                sb.append(line).append("\n");
+            jobInfo = new JobInfo(sb.toString(), contentType, true);
+        }
+        return null;
+    }
+
+}

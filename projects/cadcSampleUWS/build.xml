@@ -96,6 +96,7 @@
     <property name="cadcUtil"           value="${lib}/cadcUtil.jar" />
     <property name="cadcLog"            value="${lib}/cadcLog.jar" />
     <property name="cadcUWS"            value="${lib}/cadcUWS.jar" />
+    <property name="commons-fileupload" value="${ext.lib}/commons-fileupload.jar" />
     <property name="jdom"               value="${ext.lib}/jdom.jar" />
     <property name="log4j"              value="${ext.lib}/log4j.jar" />
     <property name="restlet"            value="${ext.lib}/org.restlet.jar" />
@@ -104,7 +105,7 @@
     <property name="xerces"             value="${ext.lib}/xerces.jar" />
     <property name="spring"             value="${ext.lib}/spring.jar" />
 
-    <property name="jars" value="${jdom}:${log4j}:${servlet-api}:${cadcUtil}:${cadcUWS}" />
+    <property name="jars" value="${commons-fileupload}:${jdom}:${log4j}:${servlet-api}:${cadcUtil}:${cadcUWS}" />
 
     <target name="build" depends="cadcSampleUWS-jar,webapp" />
 
@@ -127,6 +128,7 @@
             <lib file="${cadcLog}" />
             <lib file="${cadcUtil}" />
             <lib file="${cadcUWS}" />
+            <lib file="${commons-fileupload}" />
             <lib file="${jdom}" />
             <lib file="${log4j}" />
             <lib file="${restlet}" />
@@ -146,11 +148,11 @@
     </target>
 
     <!-- JAR files needed to run the test suite -->
-    <property name="cadcTestUWS"    value="${lib}/cadcTestUWS.jar" />
-    <property name="junit"          value="${ext.dev}/junit.jar" />
-    <property name="httpunit"       value="${ext.dev}/httpunit.jar:${ext.lib}/xerces.jar:${ext.lib}/js.jar:${ext.lib}/nekohtml.jar" />
-    <property name="xmlunit"        value="${ext.lib}/xmlunit.jar" />
-    <property name="testingJars"    value="${cadcTestUWS}:${jdom}:${junit}:${httpunit}:${xmlunit}" />
+    <property name="cadcTestUWS"        value="${lib}/cadcTestUWS.jar" />
+    <property name="junit"              value="${ext.dev}/junit.jar" />
+    <property name="httpunit"           value="${ext.dev}/httpunit.jar:${ext.lib}/xerces.jar:${ext.lib}/js.jar:${ext.lib}/nekohtml.jar" />
+    <property name="xmlunit"            value="${ext.lib}/xmlunit.jar" />
+    <property name="testingJars"        value="${cadcTestUWS}:${jdom}:${junit}:${httpunit}:${xmlunit}" />
 
     <!-- Directory used to deploy the WAR file -->
     <property name="deployDir" value="/data/test/webapps" />
