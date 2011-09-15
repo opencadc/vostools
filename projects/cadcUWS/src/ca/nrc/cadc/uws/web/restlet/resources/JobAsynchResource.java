@@ -74,7 +74,6 @@ import java.io.IOException;
 import java.text.DateFormat;
 import java.text.ParseException;
 import java.util.Date;
-import java.util.Set;
 
 import org.apache.log4j.Logger;
 import org.jdom.Document;
@@ -94,8 +93,8 @@ import ca.nrc.cadc.uws.server.JobNotFoundException;
 import ca.nrc.cadc.uws.server.JobPersistenceException;
 import ca.nrc.cadc.uws.server.JobPhaseException;
 import ca.nrc.cadc.uws.web.restlet.InvalidActionException;
+import ca.nrc.cadc.uws.web.restlet.RestletJobCreator;
 import java.security.PrivilegedAction;
-import java.util.ArrayList;
 import java.util.List;
 import javax.security.auth.Subject;
 
@@ -225,11 +224,10 @@ public class JobAsynchResource extends BaseJobResource
     public void accept(final Representation entity)
     {
         final String pathInfo = getPathInfo();
-        final Form form = new Form(entity);
         Subject subject = getSubject();
         if (subject == null) // anon
         {
-            doAccept(pathInfo, form);
+            doAccept(pathInfo, entity);
         }
         else
         {
@@ -237,18 +235,20 @@ public class JobAsynchResource extends BaseJobResource
             {
                 public Object run()
                 {
-                    doAccept(pathInfo, form);
+                    doAccept(pathInfo, entity);
                     return null;
                 }
             } );
         }
     }
 
-    private void doAccept(String pathInfo, Form form)
+    private void doAccept(final String pathInfo, final Representation entity)
     {
         LOGGER.debug("doAccept: pathInfo=" + pathInfo);
         try
         {
+            final Form form = new Form(entity);
+
             // phase changes
             if (pathInfo.endsWith("phase"))
             {
@@ -338,21 +338,12 @@ public class JobAsynchResource extends BaseJobResource
 
             if ( pathInfo.endsWith(jobID) )
             {
-                Set<String> paramNames = form.getNames();
-                List<Parameter> params = new ArrayList<Parameter>();
-                for (String p : paramNames)
+                RestletJobCreator jobCreator = new RestletJobCreator(null);
+                List<Parameter> parameters = jobCreator.getParameterList(form);
+                if (!parameters.isEmpty())
                 {
-                    if ( !JobAttribute.isValue(p))
-                    {
-                        String[] vals = form.getValuesArray(p, true);
-                        for (String v : vals)
-                            params.add(new Parameter(p, v));
-                    }
-                }
-                if (params.size() > 0)
-                {
-                    LOGGER.debug("update " + jobID + ": " + params.size() + " parameters");
-                    getJobManager().update(jobID, params);
+                    LOGGER.debug("update " + jobID + ": " + parameters.size() + " parameters");
+                    getJobManager().update(jobID, parameters);
                 }
             }
             redirectToJob();

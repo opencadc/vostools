@@ -71,6 +71,7 @@
 package ca.nrc.cadc.uws.web.restlet;
 
 import ca.nrc.cadc.uws.server.JobManager;
+import ca.nrc.cadc.uws.web.InlineContentHandler;
 import org.restlet.Restlet;
 import org.restlet.Context;
 import org.apache.log4j.Logger;
@@ -84,7 +85,6 @@ import ca.nrc.cadc.uws.web.restlet.resources.JobAsynchResource;
 import ca.nrc.cadc.uws.web.restlet.resources.ParameterListResource;
 import ca.nrc.cadc.uws.web.restlet.resources.ResultListResource;
 import ca.nrc.cadc.uws.web.restlet.resources.ResultResource;
-import java.util.Map;
 
 /**
  * The UWS Restlet Application to handle Asynchronous calls.
@@ -94,6 +94,7 @@ public class UWSAsyncApplication extends Application
     private static final Logger log = Logger.getLogger(UWSAsyncApplication.class);
 
     public final static String UWS_JOB_MANAGER = JobManager.class.getName();
+    public final static String UWS_INLINE_CONTENT_HANDLER = InlineContentHandler.class.getName();
     
     /**
      * Constructor. Note this constructor is convenient because you don't have
@@ -182,11 +183,30 @@ public class UWSAsyncApplication extends Application
             Class c = Class.forName(cname);
             JobManager jm = (JobManager) c.newInstance();
             ctx.getAttributes().put(UWS_JOB_MANAGER, jm);
-            log.info("created " + UWS_JOB_MANAGER + ": " + cname);
+            log.info("created " + UWS_JOB_MANAGER + ": " + cname);          
         }
         catch (Exception ex)
         {
             log.error("CONFIGURATION ERROR: failed to instantiate JobManager implementation: "+  cname);
+        }
+
+        try
+        {
+            cname = getContext().getParameters().getFirstValue(UWS_INLINE_CONTENT_HANDLER);
+            if (cname == null)
+            {
+                log.info("CONFIGURATION INFO: " + UWS_INLINE_CONTENT_HANDLER + " not configured in web.xml");
+            }
+            else
+            {
+                Class c = Class.forName(cname);
+                ctx.getAttributes().put(UWS_INLINE_CONTENT_HANDLER, c);
+                log.info("loaded " + UWS_INLINE_CONTENT_HANDLER + ": " + cname);
+            }
+        }
+        catch (Exception ex)
+        {
+            log.error("CONFIGURATION ERROR: failed to load InlineContentHandler class: " +  cname);
         }
         return new JobRouter(ctx);
     }

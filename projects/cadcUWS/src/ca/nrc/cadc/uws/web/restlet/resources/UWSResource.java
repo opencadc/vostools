@@ -71,6 +71,7 @@
 package ca.nrc.cadc.uws.web.restlet.resources;
 
 import ca.nrc.cadc.auth.AuthenticationUtil;
+import ca.nrc.cadc.uws.web.InlineContentHandler;
 import ca.nrc.cadc.uws.server.JobManager;
 import org.restlet.resource.ServerResource;
 import org.restlet.resource.Get;
@@ -158,7 +159,7 @@ public abstract class UWSResource extends ServerResource
     /**
      * Generate the error Representation.
      *
-     * @param errors        Errors in the form.
+     * @param errors Map of errors in the form.
      */
     protected void generateErrorRepresentation(final Map<String, String> errors)
     {
@@ -173,6 +174,23 @@ public abstract class UWSResource extends ServerResource
             errorMessage.append(": ");
             errorMessage.append(error.getValue());
         }
+
+        getResponse().setStatus(Status.CLIENT_ERROR_BAD_REQUEST);
+        getResponse().setEntity(
+                new StringRepresentation(errorMessage.toString()));
+    }
+
+    /**
+     * Generate the error Representation.
+     *
+     * @param error        Error in the form.
+     */
+    protected void generateErrorRepresentation(final String error)
+    {
+        final StringBuilder errorMessage = new StringBuilder(128);
+
+        errorMessage.append("Errors found during Job Creation: \n");
+        errorMessage.append(error);
 
         getResponse().setStatus(Status.CLIENT_ERROR_BAD_REQUEST);
         getResponse().setEntity(
@@ -316,6 +334,28 @@ public abstract class UWSResource extends ServerResource
     protected JobManager getJobManager()
     {
         return (JobManager) getContextAttribute(UWSAsyncApplication.UWS_JOB_MANAGER);
+    }
+
+    /*
+     *
+     */
+    protected InlineContentHandler getInlineContentHandler()
+    {
+        InlineContentHandler handler = null;
+        Class c = (Class) getContextAttribute(UWSAsyncApplication.UWS_INLINE_CONTENT_HANDLER);
+        if (c != null)
+        {
+            try
+            {
+                handler = (InlineContentHandler) c.newInstance();
+                LOGGER.debug("inline content handler: " + handler.getClass().getName());
+            }
+            catch (Throwable t)
+            {
+                LOGGER.error("Unable to create inline content handler ", t);
+            }
+        }
+        return handler;
     }
 
     protected Object getContextAttribute(final String key)

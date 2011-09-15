@@ -75,15 +75,12 @@ import org.restlet.resource.Post;
 import org.restlet.representation.Representation;
 import org.restlet.data.Form;
 
-import ca.nrc.cadc.uws.Parameter;
 import ca.nrc.cadc.uws.server.JobNotFoundException;
 import ca.nrc.cadc.uws.server.JobPersistenceException;
 import ca.nrc.cadc.uws.server.JobPhaseException;
+import ca.nrc.cadc.uws.web.restlet.RestletJobCreator;
 import java.security.PrivilegedAction;
-import java.util.ArrayList;
-import java.util.List;
 
-import java.util.Map;
 import javax.security.auth.Subject;
 import org.jdom.Document;
 
@@ -100,12 +97,10 @@ public class ParameterListResource extends BaseJobResource
     @Post
     public void accept(final Representation entity)
     {
-        final String pathInfo = getPathInfo();
-        final Form form = new Form(entity);
         Subject subject = getSubject();
         if (subject == null) // anon
         {
-            doAccept(form);
+            doAccept(entity);
         }
         else
         {
@@ -113,23 +108,20 @@ public class ParameterListResource extends BaseJobResource
             {
                 public Object run()
                 {
-                    doAccept(form);
+                    doAccept(entity);
                     return null;
                 }
             } );
         }
     }
 
-    private void doAccept(final Form form)
+    private void doAccept(final Representation entity)
     {
-        Map<String, String> valuesMap = form.getValuesMap();
-        List<Parameter> params = new ArrayList<Parameter>();
-        for (Map.Entry<String, String> entry : valuesMap.entrySet())
-            params.add(new Parameter(entry.getKey(), entry.getValue()));
         try
         {
             // TODO: only allow in PENDING phase, but optimal
-            getJobManager().update(jobID, params);
+            RestletJobCreator jobCreator = new RestletJobCreator(null);
+            getJobManager().update(jobID, jobCreator.getParameterList(new Form(entity)));
             redirectToJob();
         }
         catch(JobNotFoundException ex)

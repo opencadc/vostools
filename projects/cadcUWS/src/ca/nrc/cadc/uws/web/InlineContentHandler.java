@@ -67,124 +67,52 @@
 ************************************************************************
 */
 
-package ca.nrc.cadc.uws.server;
+package ca.nrc.cadc.uws.web;
 
-import ca.nrc.cadc.uws.Job;
+import ca.nrc.cadc.uws.JobInfo;
 import ca.nrc.cadc.uws.Parameter;
-import java.util.Date;
-import java.util.Iterator;
+import java.io.IOException;
+import java.io.InputStream;
+import java.net.URL;
 import java.util.List;
 
 /**
- * Service interface between the application and the Universal Worker Service
- * library components. Each application must provide an implementation that is fully
- * configured with a JobExecutor and JobPersistence. The provided
- * <code>ca.nrc.cadc.uws.server.SimpleJobManager</code> should suffice for most purposes.
  * 
- * @author pdowler
+ * @author jburke
  */
-public interface JobManager 
+public interface InlineContentHandler
 {
-    public void setJobExecutor(JobExecutor je);
-
-    public void setJobPersistence(JobPersistence jp);
-
     /**
-     * Create a new persisted job from the content of the specified job
-     * description.
+     * Sets the list of current Parameters.
      *
-     * @param job
-     * @return the created job
-     * @throws JobPersistenceException
+     * @param parameterlist
      */
-    public Job create(Job job)
-        throws JobPersistenceException;
+    void setParameterList(List<Parameter> parameterlist);
 
     /**
-     * Get the specified job.
      *
-     * @param jobID
-     * @return
-     * @throws JobNotFoundException
-     * @throws JobPersistenceException
+     * @return List of Parameters.
      */
-    public Job get(String jobID)
-        throws JobNotFoundException, JobPersistenceException;
+    List<Parameter> getParameterList();
 
     /**
-     * Get an iterator over the current jobs.
      * 
-     * @return
+     * @return JobInfo.
      */
-    public Iterator<Job> iterator();
+    JobInfo getJobInfo();
 
     /**
-     * Delete the specified job.
+     * Processes the data in the InputStream.
      *
-     * @param jobID
-     * @throws JobNotFoundException
-     * @throws JobPersistenceException
+     * @param name of the data header.
+     * @param contentType MIME type of the data.
+     * @param inputStream containing the data.
+     * @throws InlineContentException for errors storing the data.
+     * @throws IOException for errors reading the InputStream.
+     * @throws RuntimeException for processing errors.
+     * @return URL to the data, or null it the data is not stored.
      */
-    public void delete(String jobID)
-        throws JobNotFoundException, JobPersistenceException;
+    URL accept(String name, String contentType, InputStream inputStream)
+        throws InlineContentException, IOException;
 
-    /**
-     * Attempt to update the specified job with new job control settings. The
-     * implementation may or may not allow the changes, or may limit the values.
-     * Null values for job control parameters mean the caller did not specify.
-     *
-     * @param jobID
-     * @param destruction
-     * @param duration
-     * @param quote
-     * @throws JobNotFoundException
-     * @throws JobPersistenceException
-     * @throws JobPhaseException
-     */
-    public void update(String jobID, Date destruction, Long duration, Date quote)
-        throws JobNotFoundException, JobPersistenceException, JobPhaseException;
-
-    /**
-     * Add parameters to the the specified job.
-     *
-     * @param jobID
-     * @param params
-     * @throws JobNotFoundException
-     * @throws JobPersistenceException
-     */
-    public void update(String jobID, List<Parameter> params)
-        throws JobNotFoundException, JobPersistenceException, JobPhaseException;
-
-    // not currently needed by any use cases, but plausible
-    //public void update(String jobID, JobInfo info)
-    //    throws JobNotFoundException;
-
-    /**
-     * Execute the specified job asynchronously.
-     *
-     * @param jobID
-     * @throws JobNotFoundException
-     * @throws JobPersistenceException
-     * @throws JobPhaseException
-     */
-    public void execute(String jobID)
-        throws JobNotFoundException, JobPersistenceException, JobPhaseException;
-
-    public void execute(String jobID, SyncOutput output)
-        throws JobNotFoundException, JobPersistenceException, JobPhaseException;
-
-    public void execute(Job job, SyncOutput outout)
-        throws JobNotFoundException, JobPersistenceException, JobPhaseException;
-
-    /**
-     * Abort the specified job.
-     *
-     * @param jobID
-     * @throws JobNotFoundException
-     * @throws JobPersistenceException
-     * @throws JobPhaseException
-     * @throws IllegalStateException if the job is not in a state from which it can be aborted
-     */
-    public void abort(String jobID)
-        throws JobNotFoundException, JobPersistenceException, JobPhaseException;
 }

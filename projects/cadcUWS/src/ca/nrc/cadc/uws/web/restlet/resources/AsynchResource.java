@@ -69,30 +69,20 @@
 
 package ca.nrc.cadc.uws.web.restlet.resources;
 
-import ca.nrc.cadc.util.StringUtil;
 import ca.nrc.cadc.uws.Job;
-import ca.nrc.cadc.uws.JobInfo;
 import ca.nrc.cadc.uws.server.JobPersistenceException;
-import ca.nrc.cadc.uws.web.restlet.JobAssembler;
-import ca.nrc.cadc.uws.web.restlet.WebRepresentationException;
+import ca.nrc.cadc.uws.web.restlet.RestletJobCreator;
 
 import org.restlet.resource.Post;
 import org.restlet.representation.Representation;
-import org.restlet.data.Form;
 import org.apache.log4j.Logger;
 
 import java.io.IOException;
-import java.io.StringReader;
-import java.text.ParseException;
-import java.net.MalformedURLException;
 import java.security.AccessControlException;
 import java.security.PrivilegedAction;
-import java.util.Map;
 import javax.security.auth.Subject;
+import org.apache.commons.fileupload.FileUploadException;
 import org.jdom.Document;
-import org.jdom.JDOMException;
-import org.jdom.input.SAXBuilder;
-import org.restlet.data.MediaType;
 
 
 /**
@@ -131,85 +121,20 @@ public class AsynchResource extends UWSResource
 
     private void doAccept(final Representation entity)
     {
-        final Job job;
-        final Subject subject = getSubject();
-        if (entity == null
-            || entity.getMediaType().equals(MediaType.APPLICATION_WWW_FORM)
-            || entity.getMediaType().equals(MediaType.MULTIPART_FORM_DATA))
-        {
-            final Form form = new Form(entity);
-            final Map<String, String> errors = validate(form);
-            if (!errors.isEmpty())
-            {
-                generateErrorRepresentation(errors);
-                return;
-            }
-
-            try
-            {
-                final JobAssembler jobAssembler = new JobAssembler(form, subject);
-                job = jobAssembler.assemble();
-            }
-            catch (ParseException e)
-            {
-                LOGGER.error("Unable to create Job! ", e);
-                throw new WebRepresentationException("Unable to create Job!", e);
-            }
-            catch (MalformedURLException e)
-            {
-                LOGGER.error("The Error URL is invalid.", e);
-                throw new WebRepresentationException("The Error URL is invalid.",
-                                                     e);
-            }
-        }
-        else if (entity.getMediaType().equals(MediaType.TEXT_XML))
-        {
-            // handles posted XML content
-            try
-            {
-                // TODO: check content-length and refuse if it exceeds some plausible limit?
-
-                String postedString = StringUtil.readFromInputStream(entity.getStream(), "UTF-8");
-
-                boolean validXmlFormat = true;
-                SAXBuilder builder = new SAXBuilder("org.apache.xerces.parsers.SAXParser", false);
-                try
-                {
-                    Document doc = builder.build(new StringReader(postedString));
-                }
-                catch (JDOMException e)
-                {
-                    validXmlFormat = false;
-                }
-
-                JobInfo jobInfo = new JobInfo(postedString, MediaType.TEXT_XML.toString(), validXmlFormat);
-                job = new Job();
-                job.setJobInfo(jobInfo);
-
-            }
-            catch (IOException e1)
-            {
-                LOGGER.error("Cannot read input stream from Representation! ", e1);
-                throw new WebRepresentationException("Cannot read input stream from Representation!", e1);
-            }
-        }
-        else
-        {
-            LOGGER.error("Unsupported POST request Content-Type: " + entity.getMediaType());
-            throw new WebRepresentationException("Unsupported POST request Content-Type: " + entity.getMediaType());
-        }
-
-        job.setRequestPath(getRequestPath());
-        job.setRemoteIP(getRemoteIP());
-
         try
         {
+            final RestletJobCreator jobCreator = new RestletJobCreator(getInlineContentHandler());
+            final Job job = jobCreator.create(entity);
+
+            job.setRequestPath(getRequestPath());
+            job.setRemoteIP(getRemoteIP());
+
             Job persistedJob = getJobManager().create(job);
             redirectSeeOther(getHostPart() + getRequestPath() + "/" + persistedJob.getID());
         }
-        catch(JobPersistenceException ex)
+        catch(Exception ex)
         {
-            // TODO: 5xx
+            generateErrorRepresentation(ex.getMessage());
         }
     }
 
@@ -222,6 +147,7 @@ public class AsynchResource extends UWSResource
      *                             built.
      */
     
+    @Override
     protected void buildXML(final Document document) throws IOException
     {
         throw new AccessControlException("permission denied: job list");

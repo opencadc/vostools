@@ -69,6 +69,8 @@
 
 package ca.nrc.cadc.uws.server;
 
+import ca.nrc.cadc.uws.web.JobCreator;
+import ca.nrc.cadc.uws.web.InlineContentHandler;
 import ca.nrc.cadc.auth.AuthenticationUtil;
 import ca.nrc.cadc.uws.Job;
 import ca.nrc.cadc.uws.JobWriter;
@@ -91,7 +93,7 @@ import org.apache.log4j.Logger;
 
 /**
  * Servlet that runs a SyncJobRunner for each request. This servlet supports both
- * GET and POST, creates and persists a jobm and issues a redirect to cause execution.
+ * GET and POST, creates and persists a job and issues a redirect to cause execution.
  * </p><p>
  * This servlet requires 3 context params to be set to specify the class names that implement
  * the 3 required interfaces. The <code>param-name</code> specifies the interface and
@@ -127,9 +129,10 @@ public class SyncServlet extends HttpServlet
     private static final String JOB_EXEC = "run";
     
     private JobManager jobManager;
+    private Class inlineContentHandlerClass;
     private boolean execOnGET = false;
     private boolean execOnPOST = false;
-
+    
     @Override
     public void init(ServletConfig config) throws ServletException
     {
@@ -148,7 +151,25 @@ public class SyncServlet extends HttpServlet
             log.info("execOnGET: " + execOnGET);
             log.info("execOnPOST: " + execOnPOST);
 
-            this.jobManager = createJobManager(config);
+            jobManager = createJobManager(config);
+            
+            String cname = InlineContentHandler.class.getName();
+            String pname = config.getInitParameter(cname);
+            if (pname == null)
+                log.info("CONFIGURATION INFO: init-param not found: " + cname + " = <class name of InlineContentHandler implementation>");
+            else
+            {
+                try
+                {
+                    inlineContentHandlerClass = Class.forName(pname);
+                    InlineContentHandler ret = (InlineContentHandler) inlineContentHandlerClass.newInstance();
+                    log.info("created InlineContentHandler: " + ret.getClass().getName());
+                }
+                catch (Exception e)
+                {
+                    log.error("CONFIGURATION ERROR: error loading class: " + cname + " = <class name of InlineContentHandler implementation>", e);
+                }
+            }
         }
         catch(Exception ex)
         {
@@ -157,7 +178,7 @@ public class SyncServlet extends HttpServlet
     }
 
     /**
-     * Instantiate a JobManager. The default implementation simply loosk for a
+     * Instantiate a JobManager. The default implementation simply looks for a
      * servlet init-param with name <code>ca.nrc.cadc.uws.server.JobManager</code>
      * and value equal to the class name of the implementation, loads the class
      * with <code>Class.forName</code> (assuming no-arg constructor), and uses it
@@ -198,9 +219,25 @@ public class SyncServlet extends HttpServlet
 
     protected JobCreator getJobCreator()
     {
-        return new JobCreator();
+        return new JobCreator(getInlineContentHandler());
     }
 
+    protected InlineContentHandler getInlineContentHandler()
+    {
+        InlineContentHandler handler = null;
+        if (inlineContentHandlerClass != null)
+        {
+            try
+            {
+                handler = (InlineContentHandler) inlineContentHandlerClass.newInstance();
+            }
+            catch (Throwable t)
+            {
+                log.error("Unable to create inline content handler ", t);
+            }
+        }
+        return handler;
+    }
 
     @Override
     protected void doGet(HttpServletRequest request, HttpServletResponse response)

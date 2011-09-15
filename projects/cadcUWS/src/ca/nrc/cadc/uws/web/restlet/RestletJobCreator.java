@@ -69,116 +69,119 @@
 
 package ca.nrc.cadc.uws.web.restlet;
 
-import org.restlet.data.Form;
-import ca.nrc.cadc.date.DateUtil;
-import ca.nrc.cadc.util.StringUtil;
 import ca.nrc.cadc.uws.ExecutionPhase;
 import ca.nrc.cadc.uws.Job;
 import ca.nrc.cadc.uws.JobAttribute;
 import ca.nrc.cadc.uws.Parameter;
+import ca.nrc.cadc.uws.web.InlineContentHandler;
+import ca.nrc.cadc.uws.web.JobCreator;
+import ca.nrc.cadc.uws.web.restlet.validators.JobFormValidatorImpl;
+import ca.nrc.cadc.uws.web.validators.FormValidator;
+import java.io.IOException;
 
-import java.net.MalformedURLException;
-import java.text.DateFormat;
-import java.text.ParseException;
 import java.util.ArrayList;
-import java.util.Date;
+import java.util.List;
+import java.util.Map;
 import java.util.Set;
+import org.apache.commons.fileupload.FileItemIterator;
+import org.apache.commons.fileupload.FileUploadException;
+import org.apache.log4j.Logger;
+import org.restlet.data.Form;
+import org.restlet.data.MediaType;
+import org.restlet.ext.fileupload.RestletFileUpload;
 
-import javax.security.auth.Subject;
-
+import org.restlet.representation.Representation;
 
 /**
  * Simple class to assemble items from a Request into a job.
  */
-public class JobAssembler
+public class RestletJobCreator extends JobCreator
 {
-    private Form form;
-    private Subject subject;
+    private final static Logger log = Logger.getLogger(RestletJobCreator.class);
 
-    public JobAssembler(final Form form, final Subject subject)
+    public RestletJobCreator(InlineContentHandler inlineContentHandler)
     {
-        this.form = form;
-        this.subject = subject;
+        super(inlineContentHandler);
     }
 
-
-    /**
-     * Assemble the Job from this assembler's Form.
-     *
-     * @return      A new Job instance.
-     *
-     * @throws MalformedURLException   If a URL cannot be created from the given
-     *                              String.
-     * @throws ParseException       If the given Dates cannot be parsed.
-     */
-    public Job assemble() throws MalformedURLException, ParseException
+    public Job create(Representation entity)
+        throws FileUploadException, IOException
     {
-        final String duration = form.getFirstValue(
-                JobAttribute.EXECUTION_DURATION.getAttributeName(), true);
-        Long durationTime = null;
-
-        if (StringUtil.hasText(duration))
-        {
-            durationTime = new Long(duration);
-        }
-        
-
-        final String runID = form.getFirstValue(
-                JobAttribute.RUN_ID.getAttributeName(), true);
-
-        final DateFormat df =
-                DateUtil.getDateFormat(DateUtil.IVOA_DATE_FORMAT,
-                                       DateUtil.UTC);
-
-        final String destruction = form.getFirstValue(
-                JobAttribute.DESTRUCTION_TIME.getAttributeName(), true);
-        final Date destructionDate;
-
-        if (StringUtil.hasText(destruction))
-        {
-            destructionDate = df.parse(destruction);
-        }
-        else
-        {
-            destructionDate = null;
-        }
-
-        final String quote = form.getFirstValue(
-                JobAttribute.QUOTE.getAttributeName(), true);
-        final Date quoteDate;
-
-        if (StringUtil.hasText(quote))
-        {
-            quoteDate = df.parse(quote);
-        }
-        else
-        {
-            quoteDate = null;
-        }
-
         Job job = new Job();
-        job.setRunID(runID);
         job.setExecutionPhase(ExecutionPhase.PENDING);
-        job.setExecutionDuration(durationTime);
-        job.setDestructionTime(destructionDate);
-        job.setQuote(quoteDate);
         job.setParameterList(new ArrayList<Parameter>());
-        Set<String> paramNames = form.getNames();
-        for (String p : paramNames)
+
+        if (entity == null || entity.getMediaType().equals(MediaType.APPLICATION_WWW_FORM, true))
         {
-            if ( !JobAttribute.isValue(p))
+            Form form = new Form(entity);
+            FormValidator validator = new JobFormValidatorImpl(form);
+            Map<String, String> errors = validator.validate();
+            if (!errors.isEmpty())
             {
-                String[] vals = form.getValuesArray(p, true);
-                for (String v : vals)
-                    job.getParameterList().add(new Parameter(p, v));
+                String message = getErrorMessage(errors);
+                log.error(message);
+                throw new WebRepresentationException(message);
             }
+
+            Set<String> names = form.getNames();
+            for (String name : names)
+                processParameter(job, name, form.getValuesArray(name, true));
+        }
+        else if (inlineContentHandler != null)
+        {
+            if (entity.getMediaType().equals(MediaType.MULTIPART_FORM_DATA, true))
+            {
+                RestletFileUpload upload = new RestletFileUpload();
+                FileItemIterator itemIterator = upload.getItemIterator(entity);
+                processMultiPart(job, itemIterator);
+            }
+            else
+            {
+                processStream(null, entity.getMediaType().getName(), entity.getStream());
+            }
+            inlineContentHandler.setParameterList(job.getParameterList());
+            job.setParameterList(inlineContentHandler.getParameterList());
+            job.setJobInfo(inlineContentHandler.getJobInfo());
         }
 
         return job;
     }
 
-    public Form getForm()
+    public List<Parameter> getParameterList(Form form)
     {
-        return form;
+        Job job = new Job();
+        for (String name : form.getNames())
+            processParameter(job, name, form.getValuesArray(name, true));
+        return job.getParameterList();
+        /*
+        List<Parameter> parameters = new ArrayList<Parameter>();
+        Set<String> names = form.getNames();
+        for (String name : names)
+        {
+            if (!JobAttribute.isValue(name))
+            {
+                String[] vals = form.getValuesArray(name, true);
+                for (String v : vals)
+                    parameters.add(new Parameter(name, v));
+            }
+        }
+        return parameters;
+         * 
+         */
     }
+
+    private String getErrorMessage(Map<String, String> errors)
+    {
+        StringBuilder sb = new StringBuilder();
+        sb.append("Errors found during Job Creation: \n");
+        for (Map.Entry<String, String> error : errors.entrySet())
+        {
+            sb.append("\n");
+            sb.append(error.getKey());
+            sb.append(": ");
+            sb.append(error.getValue());
+        }
+        return sb.toString();
+    }
+    
 }
