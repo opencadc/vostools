@@ -279,7 +279,7 @@ public class VOTableWriter implements TableWriter
         outputter.output(document, output);
     }
     
-    private Document createDocument()
+    protected Document createDocument()
     {
         // the root VOTABLE element
         Namespace vot = Namespace.getNamespace(VOTABLE_12_NS_URI);

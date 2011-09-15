@@ -71,8 +71,6 @@ package ca.nrc.cadc.tap;
 
 import ca.nrc.cadc.tap.writer.VOTableWriter;
 import java.io.File;
-import java.io.FileOutputStream;
-import java.io.OutputStream;
 import java.net.URL;
 import java.sql.Connection;
 import java.sql.PreparedStatement;
@@ -99,7 +97,6 @@ import ca.nrc.cadc.uws.ExecutionPhase;
 import ca.nrc.cadc.uws.Job;
 import ca.nrc.cadc.uws.Parameter;
 import ca.nrc.cadc.uws.Result;
-import ca.nrc.cadc.uws.server.JobNotFoundException;
 import ca.nrc.cadc.uws.server.JobRunner;
 import ca.nrc.cadc.uws.server.JobUpdater;
 import ca.nrc.cadc.uws.server.SyncOutput;
@@ -139,15 +136,15 @@ public class QueryRunner implements JobRunner
 
     private static final HashMap<String, String> langQueries = new HashMap<String, String>();
 
-    private static String queryDataSourceName = "jdbc/tapuser";
-    private static String uploadDataSourceName = "jdbc/tapuploadadm";
+    private static final String queryDataSourceName = "jdbc/tapuser";
+    private static final String uploadDataSourceName = "jdbc/tapuploadadm";
 
     // names of plugin classes that must be provided by service implementation
-    private static String resultStoreImplClassName = "ca.nrc.cadc.tap.impl.ResultStoreImpl";
-    private static String uploadManagerClassName = "ca.nrc.cadc.tap.impl.UploadManagerImpl";
-    private static String sqlParserClassName = "ca.nrc.cadc.tap.impl.SqlQueryImpl";
-    private static String adqlParserClassName = "ca.nrc.cadc.tap.impl.AdqlQueryImpl";
-    private static String pqlParserClassName = "ca.nrc.cadc.tap.impl.PqlQueryImpl";
+    private static final String resultStoreImplClassName = "ca.nrc.cadc.tap.impl.ResultStoreImpl";
+    private static final String uploadManagerClassName = "ca.nrc.cadc.tap.impl.UploadManagerImpl";
+    private static final String sqlParserClassName = "ca.nrc.cadc.tap.impl.SqlQueryImpl";
+    private static final String adqlParserClassName = "ca.nrc.cadc.tap.impl.AdqlQueryImpl";
+    private static final String pqlParserClassName = "ca.nrc.cadc.tap.impl.PqlQueryImpl";
 
     // optional plugin classes that may be provided to override default behaviour
     private static String maxrecValidatorClassName = "ca.nrc.cadc.tap.impl.MaxRecValidatorImpl";
@@ -234,7 +231,7 @@ public class QueryRunner implements JobRunner
             // start processing the job
             List<Parameter> paramList = job.getParameterList();
 
-            log.debug("invoking TapValiator for REQUEST and VERSION...");
+            log.debug("invoking TapValidator for REQUEST and VERSION...");
             TapValidator tapValidator = new TapValidator();
             tapValidator.validate(paramList);
 

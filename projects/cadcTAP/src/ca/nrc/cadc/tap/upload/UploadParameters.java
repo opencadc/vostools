@@ -120,10 +120,10 @@ public class UploadParameters
         // Check each parameter in the list.
         for (Parameter parameter : parameters)
         {
+            log.debug("parameter: " + parameter);
             // Skip if parameter isn't named UPLOAD.
             if (parameter == null || !parameter.getName().equals(UploadManager.UPLOAD))
                 continue;
-            log.debug("UPLOAD parameter: " + parameter);
 
             // Throw an exception if a UPLOAD parameter doesn't have a value.
             if (parameter.getValue() == null || parameter.getValue().isEmpty())

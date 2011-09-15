@@ -181,8 +181,11 @@ public class BasicUploadManager implements UploadManager
         {
             // Get upload table names and URI's from the request parameters.
             UploadParameters uploadParameters = new UploadParameters(paramList, jobID);
-            if (uploadParameters.uploadTables.size() == 0)
+            if (uploadParameters.uploadTables.isEmpty())
+            {
+                log.debug("No upload tables found in paramList");
                 return metadata;
+            }
 
             // acquire connection
             con = dataSource.getConnection();
@@ -252,7 +255,7 @@ public class BasicUploadManager implements UploadManager
                     ps.executeUpdate();
                     
                     // commit every NUM_ROWS_PER_COMMIT rows
-                    if ((numRows % NUM_ROWS_PER_COMMIT) == 0)
+                    if (numRows != 0 && (numRows % NUM_ROWS_PER_COMMIT) == 0)
                     {
                         log.debug(NUM_ROWS_PER_COMMIT + " rows committed");
                         con.commit();
