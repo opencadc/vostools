@@ -119,6 +119,7 @@ public class AsynchResource extends UWSResource
         }
     }
 
+    @SuppressWarnings("CallToThreadDumpStack")
     private void doAccept(final Representation entity)
     {
         try
@@ -134,6 +135,8 @@ public class AsynchResource extends UWSResource
         }
         catch(Exception ex)
         {
+            LOGGER.error("Exception caught in doAccept: " + ex);
+            ex.printStackTrace();
             generateErrorRepresentation(ex.getMessage());
         }
     }
