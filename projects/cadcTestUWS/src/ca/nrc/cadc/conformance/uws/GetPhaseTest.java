@@ -99,7 +99,7 @@ public class GetPhaseTest extends AbstractUWSTest
     private static Logger log = Logger.getLogger(GetPhaseTest.class);
     static
     {
-        Log4jInit.setLevel("ca.nrc.cadc", Level.DEBUG);
+        Log4jInit.setLevel("ca.nrc.cadc", Level.INFO);
     }
 
     public GetPhaseTest()
