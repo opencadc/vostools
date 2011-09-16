@@ -241,6 +241,11 @@ public abstract class Node implements Comparable<Object>
     {
         return name;
     }
+    
+    public void setName(String name)
+    {
+        this.name = name;
+    }
 
     public ContainerNode getParent()
     {

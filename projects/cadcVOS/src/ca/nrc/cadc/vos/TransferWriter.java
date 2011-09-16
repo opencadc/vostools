@@ -140,15 +140,18 @@ public class TransferWriter
         root.addContent(e);
 
         e = new Element("view", VOS.NS);
-        e.setAttribute("uri", transfer.getView().getURI().toString());
-        for (View.Parameter param : transfer.getView().getParameters())
+        if (transfer.getView() != null)
         {
-            Element pm = new Element("param", VOS.NS);
-            pm.setAttribute("uri", param.getUri().toString());
-            pm.setText(param.getValue());
-            e.addContent(pm);
+            e.setAttribute("uri", transfer.getView().getURI().toString());
+            for (View.Parameter param : transfer.getView().getParameters())
+            {
+                Element pm = new Element("param", VOS.NS);
+                pm.setAttribute("uri", param.getUri().toString());
+                pm.setText(param.getValue());
+                e.addContent(pm);
+            }
+            root.addContent(e);
         }
-        root.addContent(e);
 
         for (Protocol protocol : transfer.getProtocols())
         {
@@ -162,6 +165,10 @@ public class TransferWriter
             }
             root.addContent(pr);
         }
+        
+        e = new Element("keepBytes", VOS.NS);
+        e.addContent(new Boolean(transfer.isKeepBytes()).toString());
+        root.addContent(e);
 
         return root;
     }

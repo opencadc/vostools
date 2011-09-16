@@ -69,6 +69,8 @@
 
 package ca.nrc.cadc.vos.server;
 
+import static org.junit.Assert.assertEquals;
+
 import java.net.URI;
 import java.security.Principal;
 import java.sql.PreparedStatement;
@@ -121,10 +123,13 @@ public class NodeDAOTest
 
     static final String VOS_AUTHORITY = "cadc.nrc.ca!vospace";
     static final String HOME_CONTAINER = "CADCRegtest1";
-    static final String NODE_OWNER = "CN=CADC Regtest1 10577,OU=CADC,O=HIA";
+    static final String NODE_OWNER =  "CN=CADC Regtest1 10577,OU=CADC,O=HIA";
+    static final String NODE_OWNER2 = "CN=CADC Authtest1 10627,OU=CADC,O=HIA";
 
     protected Subject owner;
+    protected Subject owner2;
     protected Principal principal;
+    protected Principal principal2;
 
     static
     {
@@ -140,9 +145,13 @@ public class NodeDAOTest
         this.runID = "test"+ new Date().getTime();
         log.debug("runID = " + runID);
         this.principal = new X500Principal(NODE_OWNER);
+        this.principal2 = new X500Principal(NODE_OWNER2);
         Set<Principal> pset = new HashSet<Principal>();
+        Set<Principal> pset2 = new HashSet<Principal>();
         pset.add(principal);
+        pset2.add(principal2);
         this.owner = new Subject(true,pset,new HashSet(), new HashSet());
+        this.owner2 = new Subject(true,pset2,new HashSet(), new HashSet());
 
         try
         {
@@ -740,6 +749,262 @@ public class NodeDAOTest
         finally
         {
             log.debug("testGetRoot - DONE");
+        }
+    }
+    
+    @Test
+    public void testMove()
+    {
+        log.debug("testMove - START");
+        try
+        {
+            ContainerNode rootContainer = (ContainerNode) nodeDAO.getPath(HOME_CONTAINER);
+            log.debug("ROOT: " + rootContainer);
+            Assert.assertNotNull(rootContainer);
+
+            String basePath = "/" + HOME_CONTAINER + "/";
+
+            // Create a new node tree
+            String moveRootPath = basePath + getNodeName("movetest");
+            String moveCont1Path = moveRootPath + "/" + getNodeName("movecont1");
+            String moveCont2Path = moveRootPath + "/" + getNodeName("movecont2");
+            String moveData1Path = moveRootPath + "/" + getNodeName("movedata1");
+            String moveCont3Path = moveCont1Path + "/" + getNodeName("movecont3");
+            String moveData2Path = moveCont1Path + "/" + getNodeName("movedata2");
+            String moveData3Path = moveCont2Path + "/" + getNodeName("movedata3");
+            String moveData4Path = moveCont3Path + "/" + getNodeName("movedata4");
+            
+            ContainerNode moveRoot = getCommonContainerNode(moveRootPath);
+            ContainerNode moveCont1 = getCommonContainerNode(moveCont1Path);
+            ContainerNode moveCont2 = getCommonContainerNode(moveCont2Path);
+            DataNode moveData1 = getCommonDataNode(moveData1Path);
+            ContainerNode moveCont3 = getCommonContainerNode(moveCont3Path);
+            DataNode moveData2 = getCommonDataNode(moveData2Path);
+            DataNode moveData3 = getCommonDataNode(moveData3Path);
+            DataNode moveData4 = getCommonDataNode(moveData4Path);
+            
+            moveRoot.setParent(rootContainer);
+            moveRoot = (ContainerNode) nodeDAO.put(moveRoot, owner);
+            moveCont1.setParent(moveRoot);
+            moveCont1 = (ContainerNode) nodeDAO.put(moveCont1, owner);
+            moveCont2.setParent(moveRoot);
+            moveCont2 = (ContainerNode) nodeDAO.put(moveCont2, owner);
+            moveData1.setParent(moveRoot);
+            moveData1 = (DataNode) nodeDAO.put(moveData1, owner);
+            moveCont3.setParent(moveCont1);
+            moveCont3 = (ContainerNode) nodeDAO.put(moveCont3, owner);
+            moveData2.setParent(moveCont1);
+            moveData2 = (DataNode) nodeDAO.put(moveData2, owner);
+            moveData3.setParent(moveCont2);
+            moveData3 = (DataNode) nodeDAO.put(moveData3, owner);
+            moveData4.setParent(moveCont3);
+            moveData4 = (DataNode) nodeDAO.put(moveData4, owner);
+            
+            // move cont2 to cont3
+            nodeDAO.move(moveCont2, moveCont3, moveCont2.getName(), owner);
+            
+            // check that cont2 no longer under moveRoot
+            moveRoot = (ContainerNode) nodeDAO.getPath(moveRootPath);
+            nodeDAO.getChildren(moveRoot);
+            for (Node child : moveRoot.getNodes())
+            {
+                if (child.getName().equals(moveCont2.getName()) ||
+                        ((NodeID) child.appData).equals(((NodeID) moveCont2.appData).getID()))
+                {
+                    Assert.fail("Failed to move container 2: still in old location.");
+                }
+            }
+            
+            // check that cont2 under cont3
+            moveCont3 = (ContainerNode) nodeDAO.getPath(moveCont3Path);
+            nodeDAO.getChildren(moveCont3);
+            boolean found = false;
+            for (Node child : moveCont3.getNodes())
+            {
+                if (child.getName().equals(moveCont2.getName()) &&
+                        ((NodeID) child.appData).getID().equals(((NodeID) moveCont2.appData).getID()))
+                {
+                    found = true;
+                }
+            }
+            if (!found)
+                Assert.fail("Failed to move container 2: not in new location.");
+            
+            // check that cont2 has parent cont3 and child data3
+            moveCont2 = (ContainerNode) nodeDAO.getPath(moveCont3Path + "/" + moveCont2.getName());
+            nodeDAO.getChildren(moveCont2);
+            assertEquals("Cont2 has wrong parent.", moveCont3.getName(), moveCont2.getParent().getName());
+            assertEquals("Cont2 has wrong parent.", ((NodeID) moveCont3.appData).getID(), ((NodeID) moveCont2.getParent().appData).getID());
+            found = false;
+            for (Node child : moveCont2.getNodes())
+            {
+                if (child.getName().equals(moveData3.getName()) &&
+                        ((NodeID) child.appData).getID().equals(((NodeID) moveData3.appData).getID()))
+                {
+                    found = true;
+                }
+            }
+            if (!found)
+                Assert.fail("Lost child movedata4 on move.");
+            
+            // move to a container underneath own tree (not allowed)
+            moveCont1 = (ContainerNode) nodeDAO.getPath(moveCont1Path);
+            moveCont2 = (ContainerNode) nodeDAO.getPath(moveCont3Path + "/" + moveCont2.getName());
+            try
+            {
+                nodeDAO.move(moveCont1, moveCont2, moveCont1.getName(), owner);
+                Assert.fail("Move should not have been allowed due to circular tree.");
+            }
+            catch (IllegalArgumentException e)
+            {
+                // expected
+            }
+            
+            // try to move root (not allowed)
+            try
+            {
+                Node root = new ContainerNode(new VOSURI("vos://cadc.nrc.ca~vospace/"));
+                nodeDAO.move(root, moveCont1, "name", owner);
+                Assert.fail("Should not have been allowed move root.");
+            }
+            catch (IllegalArgumentException e)
+            {
+                // expected
+            }
+            
+            // try to move root container (not allowed)
+            try
+            {
+                nodeDAO.move(rootContainer, moveCont1, "name", owner);
+                Assert.fail("Should not have been allowed move root container.");
+            }
+            catch (IllegalArgumentException e)
+            {
+                // expected
+            }
+            
+            // move with new owner, new name
+            moveCont1 = (ContainerNode) nodeDAO.getPath(moveCont1Path);
+            moveData3 = (DataNode) nodeDAO.getPath(moveCont3Path + "/" + moveCont2.getName() + "/" + moveData3.getName());
+            String newName = getNodeName("newName");
+            nodeDAO.move(moveData3, moveCont1, newName, owner2);
+            
+            // check that moveRoot now has moveData3
+            moveCont1 = (ContainerNode) nodeDAO.getPath(moveCont1Path);
+            nodeDAO.getChildren(moveCont1);
+            found = false;
+            for (Node child : moveCont1.getNodes())
+            {
+                String childOwner = child.getPropertyValue(VOS.PROPERTY_URI_CREATOR);
+                if (child.getName().equals(newName) &&
+                        (childOwner.equalsIgnoreCase(NODE_OWNER2)) &&
+                        ((NodeID) child.appData).getID().equals(((NodeID) moveData3.appData).getID()))
+                {
+                    found = true;
+                }
+            }
+            if (!found)
+                Assert.fail("moveData4 not under root after move (owner, id, name checked.)");
+            
+        }
+        catch(Exception unexpected)
+        {
+            log.error("unexpected exception", unexpected);
+            Assert.fail("unexpected exception: " + unexpected);
+        }
+        finally
+        {
+            log.debug("testMove - DONE");
+        }
+    }
+    
+    @Test
+    public void testChown()
+    {
+        log.debug("testChown - START");
+        try
+        {
+            ContainerNode rootContainer = (ContainerNode) nodeDAO.getPath(HOME_CONTAINER);
+            log.debug("ROOT: " + rootContainer);
+            Assert.assertNotNull(rootContainer);
+
+            String basePath = "/" + HOME_CONTAINER + "/";
+
+            // Create a new node tree with owner/creator NODE_OWNER
+            String chownRootPath = basePath + getNodeName("chowntest");
+            String chownSub1Path = chownRootPath + "/" + getNodeName("chownsub1");
+            String chownSub2Path = chownRootPath + "/" + getNodeName("chownsub2");
+            String chownSub3Path = chownRootPath + "/" + getNodeName("chownsub3");
+            String chownSub1Sub1Path = chownSub1Path + "/" + getNodeName("chownsub1sub1");
+            String chownSub1Sub2Path = chownSub1Path + "/" + getNodeName("chownsub1sub2");
+            String chownSub2Sub1Path = chownSub2Path + "/" + getNodeName("chownsub2sub1");
+            String chownSub1Sub1Sub1Path = chownSub1Sub1Path + "/" + getNodeName("chownsub1sub1sub1");
+            
+            ContainerNode chownRoot = getCommonContainerNode(chownRootPath);
+            ContainerNode chownSub1 = getCommonContainerNode(chownSub1Path);
+            ContainerNode chownSub2 = getCommonContainerNode(chownSub2Path);
+            DataNode chownSub3 = getCommonDataNode(chownSub3Path);
+            ContainerNode chownSub1Sub1 = getCommonContainerNode(chownSub1Sub1Path);
+            DataNode chownSub1Sub2 = getCommonDataNode(chownSub1Sub2Path);
+            DataNode chownSub2Sub1 = getCommonDataNode(chownSub2Sub1Path);
+            DataNode chownSub1Sub1Sub1 = getCommonDataNode(chownSub1Sub1Sub1Path);
+            
+            chownRoot.setParent(rootContainer);
+            chownRoot = (ContainerNode) nodeDAO.put(chownRoot, owner);
+            chownSub1.setParent(chownRoot);
+            chownSub1 = (ContainerNode) nodeDAO.put(chownSub1, owner);
+            chownSub2.setParent(chownRoot);
+            chownSub2 = (ContainerNode) nodeDAO.put(chownSub2, owner);
+            chownSub3.setParent(chownRoot);
+            chownSub3 = (DataNode) nodeDAO.put(chownSub3, owner);
+            chownSub1Sub1.setParent(chownSub1);
+            chownSub1Sub1 = (ContainerNode) nodeDAO.put(chownSub1Sub1, owner);
+            chownSub1Sub2.setParent(chownSub1);
+            chownSub1Sub2 = (DataNode) nodeDAO.put(chownSub1Sub2, owner);
+            chownSub2Sub1.setParent(chownSub2);
+            chownSub2Sub1 = (DataNode) nodeDAO.put(chownSub2Sub1, owner);
+            chownSub1Sub1Sub1.setParent(chownSub1Sub1);
+            chownSub1Sub1Sub1 = (DataNode) nodeDAO.put(chownSub1Sub1Sub1, owner);
+            
+            // get the root node
+            chownRoot = (ContainerNode) nodeDAO.getPath(chownRootPath);
+            
+            // change the ownership non recursively
+            nodeDAO.chown(chownRoot, owner2, false);
+            
+            // check the ownership change
+            chownRoot = (ContainerNode) nodeDAO.getPath(chownRootPath);
+            assertEquals("Non-recursive chown failed.",
+                    chownRoot.getPropertyValue(VOS.PROPERTY_URI_CREATOR).toLowerCase(),
+                    NODE_OWNER2.toLowerCase());
+            
+            // get a sub node
+            chownSub1 = (ContainerNode) nodeDAO.getPath(chownSub1Path);
+            
+            // check for no ownership change
+            assertEquals("Non-recursive chown failed.",
+                    chownSub1.getPropertyValue(VOS.PROPERTY_URI_CREATOR).toLowerCase(),
+                    NODE_OWNER.toLowerCase());
+            
+            // change the ownership recursively
+            nodeDAO.chown(chownRoot, owner2, true);
+            
+            // check for deep ownership change
+            chownSub1Sub1Sub1 = (DataNode) nodeDAO.getPath(chownSub1Sub1Sub1Path);
+            
+            assertEquals("Recursive chown failed.",
+                    chownSub1Sub1Sub1.getPropertyValue(VOS.PROPERTY_URI_CREATOR).toLowerCase(),
+                    NODE_OWNER2.toLowerCase());
+            
+        }
+        catch(Exception unexpected)
+        {
+            log.error("unexpected exception", unexpected);
+            Assert.fail("unexpected exception: " + unexpected);
+        }
+        finally
+        {
+            log.debug("testChown - DONE");
         }
     }
 

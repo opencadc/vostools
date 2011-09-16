@@ -69,6 +69,8 @@
 
 package ca.nrc.cadc.vos.server;
 
+import java.net.URI;
+import java.net.URISyntaxException;
 import java.security.AccessControlContext;
 import java.security.AccessController;
 import java.util.Arrays;
@@ -90,8 +92,6 @@ import ca.nrc.cadc.vos.NodeProperty;
 import ca.nrc.cadc.vos.VOS;
 import ca.nrc.cadc.vos.VOSURI;
 import ca.nrc.cadc.vos.VOS.NodeBusyState;
-import java.net.URI;
-import java.net.URISyntaxException;
 
 /**
  * Simple implementation of the NodePersistence interface that uses the NodeDAO
@@ -169,6 +169,7 @@ public abstract class DatabaseNodePersistence implements NodePersistence
         return new NodeDAO(getDataSource(), nodeSchema, authority, getIdentityManager());
     }
 
+    @Override
     public Node get(VOSURI vos)
         throws NodeNotFoundException
     {
@@ -200,24 +201,28 @@ public abstract class DatabaseNodePersistence implements NodePersistence
         }
     }
 
+    @Override
     public void getProperties(Node node)
     {
         NodeDAO dao = getDAO( node.getUri().getAuthority() );
         dao.getProperties(node);
     }
 
+    @Override
     public void getChildren(ContainerNode node)
     {
         NodeDAO dao = getDAO( node.getUri().getAuthority() );
         dao.getChildren(node);
     }
     
+    @Override
     public void getChild(ContainerNode node, String name)
     {
         NodeDAO dao = getDAO( node.getUri().getAuthority() );
         dao.getChild(node, name);
     }
 
+    @Override
     public Node put(Node node)
     {
         AccessControlContext acContext = AccessController.getContext();
@@ -233,6 +238,7 @@ public abstract class DatabaseNodePersistence implements NodePersistence
         return dao.put(node, caller);
     }
 
+    @Override
     public Node updateProperties(Node node, List<NodeProperty> properties)
     {
         NodeDAO dao = getDAO( node.getUri().getAuthority() );
@@ -249,6 +255,7 @@ public abstract class DatabaseNodePersistence implements NodePersistence
      * @see NodeDAO.markForDeletion(Node)
      * @param node the node to delete
      */
+    @Override
     public void delete(Node node)
     {
         log.debug("delete: " + node.getUri());
@@ -272,22 +279,47 @@ public abstract class DatabaseNodePersistence implements NodePersistence
         }
     }
 
-    public void copy(Node node, String copyToPath)
+    @Override
+    public void move(Node src, ContainerNode dest, String name)
+    {
+        log.debug("move: " + src.getUri() + " to " + dest.getUri() + " as " + name);
+        String srcAuthority = src.getUri().getAuthority();
+        String destAuthority = dest.getUri().getAuthority();
+        if (!srcAuthority.equals(destAuthority))
+        {
+            throw new RuntimeException("Cannot move nodes between authorities.");
+        }
+        NodeDAO dao = getDAO(srcAuthority);
+        AccessControlContext acContext = AccessController.getContext();
+        Subject caller = Subject.getSubject(acContext);
+        
+        // move the node
+        dao.move(src, dest, name, caller);
+    }
+
+    @Override
+    public void copy(Node src, ContainerNode destination, String name)
     {
         throw new UnsupportedOperationException("Not supported yet.");
     }
 
-    public void move(Node node, String newPath)
-    {
-        throw new UnsupportedOperationException("Not supported yet.");
-    }
-
+    @Override
     public void setBusyState(DataNode node, NodeBusyState state)
     {
         NodeDAO dao = getDAO( node.getUri().getAuthority() );
         dao.setBusyState(node, state);
     }
+    
+    @Override
+    public void chown(Node node, boolean recursive)
+    {
+        NodeDAO dao = getDAO( node.getUri().getAuthority() );
+        AccessControlContext acContext = AccessController.getContext();
+        Subject caller = Subject.getSubject(acContext);
+        dao.chown(node, caller, recursive);
+    }
 
+    @Override
     public void updateContentLength(ContainerNode node, long delta)
     {
         NodeDAO dao = getDAO( node.getUri().getAuthority() );

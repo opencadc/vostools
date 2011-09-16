@@ -195,13 +195,15 @@ public class TransferReader
             }
         }
         List<Protocol> protocols = parseProtocols(root);
-        // boolean keepBytes; // not in XML yet
+        String keepBytesStr = root.getChildText("direction", VOS.NS);
+        boolean keepBytes = keepBytesStr.equalsIgnoreCase("true");
 
         Transfer rtn = new Transfer();
         rtn.setDirection(direction);
         rtn.setProtocols(protocols);
         rtn.setTarget(target);
         rtn.setView(view);
+        rtn.setKeepBytes(keepBytes);
         return rtn;
     }
 
@@ -221,6 +223,8 @@ public class TransferReader
             rtn = Direction.pushFromVoSpace;
         else if (strDirection.equalsIgnoreCase(Direction.pushToVoSpace.getValue()))
             rtn = Direction.pushToVoSpace;
+        else
+            rtn = new Direction(strDirection);
         return rtn;
     }
 

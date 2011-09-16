@@ -69,14 +69,15 @@
 
 package ca.nrc.cadc.vos.server;
 
+import java.util.List;
+
 import ca.nrc.cadc.vos.ContainerNode;
 import ca.nrc.cadc.vos.DataNode;
 import ca.nrc.cadc.vos.Node;
 import ca.nrc.cadc.vos.NodeNotFoundException;
 import ca.nrc.cadc.vos.NodeProperty;
-import ca.nrc.cadc.vos.VOS.NodeBusyState;
 import ca.nrc.cadc.vos.VOSURI;
-import java.util.List;
+import ca.nrc.cadc.vos.VOS.NodeBusyState;
 
 /**
  * An interface defining the methods available for working with VOSpace
@@ -177,19 +178,30 @@ public interface NodePersistence
      * Move the specified node to the new path.  The node must have been retrieved
      * from the persistent layer.
      * 
-     * @param node
-     * @param newPath
+     * @param src The node to move.
+     * @param destination The destination container.
+     * @param name The name of the destination node.
      */
-    void move(Node node, String newPath);
+    void move(Node src, ContainerNode destination, String name);
     
     /**
      * Copy the specified node to the specified path.  The node must been retrieved
      * from the persistent layer.
      * 
-     * @param node
-     * @param copyToPath
+     * @param src The node to move.
+     * @param destination The destination container.
+     * @param name The name of the destination node.
      */
-    void copy(Node node, String copyToPath);
+    void copy(Node src, ContainerNode destination, String name);
+    
+    /**
+     * Change the ownership of the specified node to be that of the caller of
+     * this method.  If boolean recursive is true, change the ownership of all
+     * nodes under the specified node as well.
+     * @param node
+     * @param recursive
+     */
+    void chown(Node node, boolean recursive);
     
     
 

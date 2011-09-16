@@ -274,12 +274,18 @@ public abstract class NodeAction implements PrivilegedAction<Object>
                 log.debug("no client node");
 
             // perform the authorization check
+            long start = System.currentTimeMillis();
             Node serverNode = doAuthorizationCheck();
+            long end = System.currentTimeMillis();
+            log.debug("doAuthorizationCheck() elapsed time: " + (end - start) + "ms");
             log.debug("doAuthorizationCheck() returned server node: " + serverNode.getUri());
             
             // perform the node action
-            return performNodeAction(clientNode, serverNode);
-            
+            start = System.currentTimeMillis();
+            NodeActionResult result = performNodeAction(clientNode, serverNode);
+            end = System.currentTimeMillis();
+            log.debug("performNodeAction() elapsed time: " + (end - start) + "ms");
+            return result;
         }
         catch (FileNotFoundException e)
         {

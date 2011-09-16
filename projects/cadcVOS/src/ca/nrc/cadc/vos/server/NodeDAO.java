@@ -81,8 +81,10 @@ import java.sql.Types;
 import java.text.DateFormat;
 import java.util.Calendar;
 import java.util.Date;
+import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 import java.util.TreeSet;
 
@@ -104,6 +106,7 @@ import ca.nrc.cadc.auth.IdentityManager;
 import ca.nrc.cadc.date.DateUtil;
 import ca.nrc.cadc.util.CaseInsensitiveStringComparator;
 import ca.nrc.cadc.util.HexUtil;
+import ca.nrc.cadc.util.StringUtil;
 import ca.nrc.cadc.vos.ContainerNode;
 import ca.nrc.cadc.vos.DataNode;
 import ca.nrc.cadc.vos.Node;
@@ -111,8 +114,6 @@ import ca.nrc.cadc.vos.NodeProperty;
 import ca.nrc.cadc.vos.VOS;
 import ca.nrc.cadc.vos.VOSURI;
 import ca.nrc.cadc.vos.VOS.NodeBusyState;
-import java.util.HashMap;
-import java.util.Map;
 
 /**
  * Helper class for implementing NodePersistence with a
@@ -412,7 +413,7 @@ public class NodeDAO
 
             startTransaction();
             NodePutStatementCreator npsc = new NodePutStatementCreator(nodeSchema, false);
-            npsc.setValues(node, creator);
+            npsc.setValues(node, null);
             KeyHolder keyHolder = new GeneratedKeyHolder();
             jdbc.update(npsc, keyHolder);
             nodeID.id = new Long(keyHolder.getKey().longValue());
@@ -703,7 +704,7 @@ public class NodeDAO
             {
                 log.debug("doUpdateNode: " + doUpdateNode + " doUpdateLastModified: " + doUpdateLastModified);
                 NodePutStatementCreator npsc = new NodePutStatementCreator(nodeSchema, true);
-                npsc.setValues(node,null);
+                npsc.setValues(node, null);
                 jdbc.update(npsc);
             }
 
@@ -771,17 +772,80 @@ public class NodeDAO
 
 
     /**
-     * Move the node to the new path.
+     * Move the node to inside the destination container.
      *
-     * @param node
-     * @param destPath
-     * @throws UnsupportedOperationException Until implementation is complete.
+     * @param node The node to move
+     * @param dest The container in which to move the node.
+     * @param name The name of the node when moved.
+     * @param subject The new owner for the moved node.
      */
-    public void move(Node node, String destPath)
+    public void move(Node src, ContainerNode dest, String name, Subject subject)
     {
-        log.debug("move: " + node.getUri().getPath() + ", " + node.getClass().getSimpleName() + ", " + destPath);
-        expectPersistentNode(node);
-        throw new UnsupportedOperationException("Move not implemented.");
+        log.debug("move: " + src.getUri() + " to " + dest.getUri() + " as " + name);
+        expectPersistentNode(src);
+        expectPersistentNode(dest);
+        if (!StringUtil.hasText(name))
+            throw new IllegalArgumentException("parameter name must have text.");
+        
+        // move rule checking
+        if (src instanceof ContainerNode)
+        {
+            // check that we are not moving root or a root container
+            if (src.getParent() == null || src.getParent().getUri().isRoot())
+                throw new IllegalArgumentException("Cannot move a root container.");
+            
+            // check that 'src' is not in the path of 'dest' so that
+            // circular paths are not created
+            Node target = dest;
+            Long srcNodeID = getNodeID(src);
+            while (target != null)
+            {
+                if (getNodeID(target).equals(srcNodeID))
+                    throw new IllegalArgumentException("Cannot move to a contained sub-node.");
+                target = target.getParent();
+            }
+        }
+        
+        try
+        {    
+            startTransaction();
+            
+            // re-parent the node
+            src.setParent(dest);
+            // re-name the node
+            src.setName(name);
+            
+            NodePutStatementCreator putStatementCreator = new NodePutStatementCreator(nodeSchema, true);
+            
+            // update the node with the new parent and potentially new name.
+            putStatementCreator.setValues(src, null);
+            jdbc.update(putStatementCreator);
+            
+            // change the ownership recursively
+            chownInternal(src, subject, true);
+            
+            commitTransaction();
+        }
+        catch (Throwable t)
+        {
+            log.error("move rollback for node: " + src.getUri().getPath(), t);
+            if (transactionStatus != null)
+                try { rollbackTransaction(); }
+                catch(Throwable oops) { log.error("failed to rollback transaction", oops); }
+            throw new RuntimeException("failed to move:  " + src.getUri().getPath(), t);
+        }
+        finally
+        {
+            if (transactionStatus != null)
+            {
+                try
+                {
+                    log.warn("move - BUG - transaction still open in finally... calling rollback");
+                    rollbackTransaction();
+                }
+                catch(Throwable oops) { log.error("failed to rollback transaction in finally", oops); }
+            }
+        }
     }
     
 
@@ -792,11 +856,96 @@ public class NodeDAO
      * @param destPath
      * @throws UnsupportedOperationException Until implementation is complete.
      */
-    public void copy(Node node, String destPath)
+    public void copy(Node src, ContainerNode dest, String name)
     {
-        log.debug("copy: " + node.getUri().getPath() + ", " + node.getClass().getSimpleName() + ", " + destPath);
-        expectPersistentNode(node);
+        log.debug("copy: " + src.getUri() + " to " + dest.getUri() + " as " + name);
         throw new UnsupportedOperationException("Copy not implemented.");
+    }
+    
+    /**
+     * Change the ownership of the node.
+     * 
+     * @param node
+     * @param subject
+     * @param recursive
+     */
+    public void chown(Node node, Subject newOwner, boolean recursive)
+    {
+        log.debug("chown: " + node.getUri().getPath() + ", " + newOwner + ", " + recursive);
+        expectPersistentNode(node);
+        try
+        {
+            startTransaction();
+            chownInternal(node, newOwner, recursive);
+            commitTransaction();
+        }
+        catch (Throwable t)
+        {
+            log.error("chown rollback for node: " + node.getUri().getPath(), t);
+            if (transactionStatus != null)
+                try { rollbackTransaction(); }
+                catch(Throwable oops) { log.error("failed to rollback transaction", oops); }
+            throw new RuntimeException("failed to chown:  " + node.getUri().getPath(), t);
+        }
+        finally
+        {
+            if (transactionStatus != null)
+            {
+                try
+                {
+                    log.warn("chown - BUG - transaction still open in finally... calling rollback");
+                    rollbackTransaction();
+                }
+                catch(Throwable oops) { log.error("failed to rollback transaction in finally", oops); }
+            }
+        }
+    }
+    
+    /**
+     * Internal chown implementation that is not wrapped in a transaction.
+     * 
+     * @param node
+     * @param subject
+     * @param recursive
+     */
+    private void chownInternal(Node node, Subject newOwner, boolean recursive)
+    {
+        NodePutStatementCreator putStatementCreator = new NodePutStatementCreator(nodeSchema, true);
+        
+        // update the node with the specfied subject.
+        Object newOwnerObj = identManager.toOwner(newOwner);
+        
+        putStatementCreator.setValues(node, newOwnerObj);
+        jdbc.update(putStatementCreator);
+        
+        if (recursive && (node instanceof ContainerNode))
+        {
+            chownInternalRecursive((ContainerNode) node, newOwnerObj);
+        }
+    }
+    
+    /**
+     * Recursively change the ownership on the given container.
+     * 
+     * @param container
+     * @param newOwnerObj
+     */
+    private void chownInternalRecursive(ContainerNode container, Object newOwnerObj)
+    {
+        String sql = null;
+        sql = getSelectNodesByParentSQL(container);
+        List<Node> children = jdbc.query(sql, new NodeMapper(authority, container.getUri().getPath()));
+        NodePutStatementCreator putStatementCreator = new NodePutStatementCreator(nodeSchema, true);
+        for (Node child : children)
+        {
+            child.setParent(container);
+            putStatementCreator.setValues(child, newOwnerObj);
+            jdbc.update(putStatementCreator);
+            if (child instanceof ContainerNode)
+            {
+                chownInternalRecursive((ContainerNode) child, newOwnerObj);
+            }
+        }
     }
     
     /**
@@ -953,6 +1102,20 @@ public class NodeDAO
         sb.append(getNodeID(node));
         return sb.toString();
     }
+    
+    protected String getMoveNodeSQL(Node src, ContainerNode dest, String name)
+    {
+        StringBuilder sb = new StringBuilder();
+        sb.append("UPDATE ");
+        sb.append(getNodeTableName());
+        sb.append(" SET parentID = ");
+        sb.append(getNodeID(dest));
+        sb.append(", name = '");
+        sb.append(name);
+        sb.append("' WHERE nodeID = ");
+        sb.append(getNodeID(src));
+        return sb.toString();
+    }
 
     private static String[] NODE_SELECT_COLUMNS = new String[]
     {
@@ -1081,6 +1244,7 @@ public class NodeDAO
         {
             this(ns, nodeID, prop, false);
         }
+        
         public PropertyStatementCreator(NodeSchema ns, NodeID nodeID, NodeProperty prop, boolean update)
         {
             this.ns = ns;
@@ -1091,6 +1255,7 @@ public class NodeDAO
 
         // if we care about caching the statement, we should look into prepared 
         // statement caching by the driver
+        @Override
         public PreparedStatement createPreparedStatement(Connection conn) throws SQLException
         {
             String sql;
@@ -1174,8 +1339,8 @@ public class NodeDAO
         private NodeSchema ns;
         private boolean update;
 
-        private Node node;
-        private Subject caller;
+        private Node node = null;
+        private Object differentOwner = null;
 
         public NodePutStatementCreator(NodeSchema ns, boolean update)
         {
@@ -1185,6 +1350,7 @@ public class NodeDAO
 
         // if we care about caching the statement, we should look into prepared
         // statement caching by the driver
+        @Override
         public PreparedStatement createPreparedStatement(Connection conn) throws SQLException
         {
             PreparedStatement prep;
@@ -1204,10 +1370,10 @@ public class NodeDAO
             return prep;
         }
 
-        public void setValues(Node node, Subject caller)
+        public void setValues(Node node, Object differentOwner)
         {
             this.node = node;
-            this.caller = caller;
+            this.differentOwner = differentOwner;
         }
         
         void setValues(PreparedStatement ps)
@@ -1231,8 +1397,9 @@ public class NodeDAO
             col++;
             sb.append(",");
             
-            ps.setString(col++, node.getName());
-            sb.append(node.getName());
+            String name = node.getName();
+            ps.setString(col++, name);
+            sb.append(name);
             sb.append(",");
 
             ps.setString(col++, getNodeType(node));
@@ -1254,29 +1421,26 @@ public class NodeDAO
 
             String pval;
             
-            // ownerID and creatorID
+            // ownerID and creatorID data type
             int ownerDataType = identManager.getOwnerType();
-            // update
+
+            Object ownerObject = null;
             NodeID nodeID = (NodeID) node.appData;
-            if (nodeID.ownerObject == null)
+            ownerObject = nodeID.ownerObject;
+            if (differentOwner != null)
+                ownerObject = differentOwner;
+            if (ownerObject == null)
                 throw new IllegalStateException("cannot update a node without an owner.");
-            if (update)
+            
+            // ownerID
+            ps.setObject(col++, ownerObject, ownerDataType);
+            sb.append(ownerObject);
+            sb.append(",");
+            
+            if (!update)
             {
-                // ownerID
-                ps.setObject(col++, nodeID.ownerObject, ownerDataType);
-                sb.append(nodeID.ownerObject);
-                sb.append(",");
-                
-                // no creatorID reference on update
-            }
-            else
-            {
-                // ownerID
-                ps.setObject(col++, nodeID.ownerObject, ownerDataType);
-                sb.append(nodeID.ownerObject);
-                sb.append(",");
-                
-                // creatorID
+                // creatorID -- not referenced on updates
+                // always use the value in nodeID.ownerObject
                 ps.setObject(col++, nodeID.ownerObject, ownerDataType);
                 sb.append(nodeID.ownerObject);
                 sb.append(",");
@@ -1359,13 +1523,6 @@ public class NodeDAO
             }
             
             log.debug("setValues: " + sb);
-        }
-
-        String getSQL()
-        {
-            if (caller == null)
-                return getUpdateSQL();
-            return getInsertSQL();
         }
 
         private String getInsertSQL()

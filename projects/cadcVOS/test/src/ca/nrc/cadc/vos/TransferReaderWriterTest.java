@@ -179,6 +179,7 @@ public class TransferReaderWriterTest
         }
         catch(Exception unexpected)
         {
+            unexpected.printStackTrace();
             log.error("unexpected exception", unexpected);
             Assert.fail("unexpected exception: " + unexpected);
         }

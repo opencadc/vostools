@@ -70,6 +70,7 @@ package ca.nrc.cadc.vos.server.web.restlet.action;
 import java.io.FileNotFoundException;
 import java.net.URL;
 import java.security.AccessControlException;
+import java.util.ListIterator;
 
 import org.restlet.data.Reference;
 
@@ -80,7 +81,6 @@ import ca.nrc.cadc.vos.Search;
 import ca.nrc.cadc.vos.server.AbstractView;
 import ca.nrc.cadc.vos.server.web.representation.NodeOutputRepresentation;
 import ca.nrc.cadc.vos.server.web.representation.ViewRepresentation;
-import java.util.ListIterator;
 
 /**
  * Class to perform the retrieval of a Node.
@@ -119,15 +119,21 @@ public class GetNodeAction extends NodeAction
     @Override
     public NodeActionResult performNodeAction(Node clientNode, Node serverNode)
     {
+        long start;
+        long end;
         if (serverNode instanceof ContainerNode)
         {
             ContainerNode cn = (ContainerNode) serverNode;
+            start = System.currentTimeMillis();
             nodePersistence.getChildren(cn);
+            end = System.currentTimeMillis();
+            log.debug("nodePersistence.getChildren() elapsed time: " + (end - start) + "ms");
             doFilterChildren(cn);
         }
+        start = System.currentTimeMillis();
         nodePersistence.getProperties(serverNode);
-
-        
+        end = System.currentTimeMillis();
+        log.debug("nodePersistence.getProperties() elapsed time: " + (end - start) + "ms");
 
         AbstractView view;
         try

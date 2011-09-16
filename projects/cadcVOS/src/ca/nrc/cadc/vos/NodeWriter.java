@@ -162,16 +162,14 @@ public class NodeWriter
     /**
      * A wrapper to write node without specifying its type
      *
-     * @author Sailor Zhang
-     * @date May 13, 2010
-     * @param node
-     * @param writer
-     * @throws IOException
      */
     public void write(Node node, Writer writer) throws IOException
     {
+        long start = System.currentTimeMillis();
         Element root = getRootElement(node);
         write(root, writer);
+        long end = System.currentTimeMillis();
+        log.debug("Write elapsed time: " + (end - start) + "ms");
     }
 
     /**
