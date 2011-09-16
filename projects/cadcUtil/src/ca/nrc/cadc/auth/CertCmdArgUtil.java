@@ -104,7 +104,7 @@ public class CertCmdArgUtil
      */
     public static String getCertArgUsage()
     {
-        return "    [--cert=<Cert File or Proxy Cert&Key PEM file> [--key=<Unencrypted Key File>]]";
+        return "   [--cert=<Cert File or Proxy Cert&Key PEM file> [--key=<Unencrypted Key File>]]";
     }
 
     private static File loadFile(String fn, boolean nullOnNotFound)
