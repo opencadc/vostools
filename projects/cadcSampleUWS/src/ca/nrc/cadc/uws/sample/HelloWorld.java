@@ -69,33 +69,32 @@
 
 package ca.nrc.cadc.uws.sample;
 
-import java.net.URL;
-import java.util.ArrayList;
-import java.util.List;
-
-import org.apache.log4j.Logger;
-
-import ca.nrc.cadc.net.NetUtil;
-import ca.nrc.cadc.uws.ExecutionPhase;
-import ca.nrc.cadc.uws.Job;
-import ca.nrc.cadc.uws.ErrorSummary;
-import ca.nrc.cadc.uws.ErrorType;
-import ca.nrc.cadc.uws.JobInfo;
-
-import ca.nrc.cadc.uws.Result;
-import ca.nrc.cadc.uws.ParameterUtil;
-import ca.nrc.cadc.uws.server.JobRunner;
-import ca.nrc.cadc.uws.server.JobUpdater;
-
-import ca.nrc.cadc.uws.server.SyncOutput;
-import ca.nrc.cadc.xml.XmlUtil;
-
 import java.io.IOException;
 import java.io.PrintWriter;
 import java.net.MalformedURLException;
+import java.net.URI;
+import java.net.URISyntaxException;
+import java.net.URL;
+import java.util.ArrayList;
 import java.util.Date;
+import java.util.List;
+
+import org.apache.log4j.Logger;
 import org.jdom.Document;
 import org.jdom.Element;
+
+import ca.nrc.cadc.net.NetUtil;
+import ca.nrc.cadc.uws.ErrorSummary;
+import ca.nrc.cadc.uws.ErrorType;
+import ca.nrc.cadc.uws.ExecutionPhase;
+import ca.nrc.cadc.uws.Job;
+import ca.nrc.cadc.uws.JobInfo;
+import ca.nrc.cadc.uws.ParameterUtil;
+import ca.nrc.cadc.uws.Result;
+import ca.nrc.cadc.uws.server.JobRunner;
+import ca.nrc.cadc.uws.server.JobUpdater;
+import ca.nrc.cadc.uws.server.SyncOutput;
+import ca.nrc.cadc.xml.XmlUtil;
 
 /**
  * Basic Job Runner class. The sample job takes two params:</p>
@@ -157,14 +156,14 @@ public class HelloWorld implements JobRunner
     {
         try
         {
-            URL url = new URL("http://" + NetUtil.getServerName(HelloWorld.class) + "/cadcSampleUWS/result.txt");
+            URI uri = new URI("http://" + NetUtil.getServerName(HelloWorld.class) + "/cadcSampleUWS/result.txt");
             List<Result> ret = new ArrayList<Result>();
-            ret.add(new Result("result", url));
+            ret.add(new Result("result", uri));
             return ret;
         }
-        catch (MalformedURLException ex)
+        catch (URISyntaxException ex)
         {
-            throw new RuntimeException("BUG: failed to create result URL", ex);
+            throw new RuntimeException("BUG: failed to create result URI", ex);
         }
     }
 
@@ -250,7 +249,7 @@ public class HelloWorld implements JobRunner
                     else
                     {
                         syncOutput.setResponseCode(303);
-                        syncOutput.setHeader("Location", results.get(0).getURL().toExternalForm());
+                        syncOutput.setHeader("Location", results.get(0).getURI().toASCIIString());
                         ep = jobUpdater.setPhase(job.getID(), ExecutionPhase.EXECUTING, ExecutionPhase.COMPLETED, new Date());
                     }
                 }
