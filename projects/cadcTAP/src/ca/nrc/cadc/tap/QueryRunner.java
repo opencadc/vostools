@@ -69,19 +69,23 @@
 
 package ca.nrc.cadc.tap;
 
-import ca.nrc.cadc.tap.writer.VOTableWriter;
 import java.io.File;
+import java.net.URI;
+import java.net.URISyntaxException;
 import java.net.URL;
 import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
+import java.util.ArrayList;
+import java.util.Date;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
 import javax.naming.Context;
 import javax.naming.InitialContext;
+import javax.naming.NameNotFoundException;
 import javax.sql.DataSource;
 
 import org.apache.log4j.Logger;
@@ -91,6 +95,7 @@ import ca.nrc.cadc.tap.schema.SchemaDesc;
 import ca.nrc.cadc.tap.schema.TableDesc;
 import ca.nrc.cadc.tap.schema.TapSchema;
 import ca.nrc.cadc.tap.schema.TapSchemaDAO;
+import ca.nrc.cadc.tap.writer.VOTableWriter;
 import ca.nrc.cadc.uws.ErrorSummary;
 import ca.nrc.cadc.uws.ErrorType;
 import ca.nrc.cadc.uws.ExecutionPhase;
@@ -100,9 +105,6 @@ import ca.nrc.cadc.uws.Result;
 import ca.nrc.cadc.uws.server.JobRunner;
 import ca.nrc.cadc.uws.server.JobUpdater;
 import ca.nrc.cadc.uws.server.SyncOutput;
-import java.util.ArrayList;
-import java.util.Date;
-import javax.naming.NameNotFoundException;
 
 /**
  * Implementation of the JobRunner interface from the cadcUWS framework. This is the
@@ -427,11 +429,19 @@ public class QueryRunner implements JobRunner
             }
             else
             {
-                Result res = new Result("result", url);
-                List<Result> results = new ArrayList<Result>();
-                results.add(res);
-                log.debug("setting ExecutionPhase = " + ExecutionPhase.COMPLETED + " with results");
-                jobUpdater.setPhase(job.getID(), ExecutionPhase.EXECUTING, ExecutionPhase.COMPLETED, results, new Date());
+                try
+                {
+                    Result res = new Result("result", new URI(url.toExternalForm()));
+                    List<Result> results = new ArrayList<Result>();
+                    results.add(res);
+                    log.debug("setting ExecutionPhase = " + ExecutionPhase.COMPLETED + " with results");
+                    jobUpdater.setPhase(job.getID(), ExecutionPhase.EXECUTING, ExecutionPhase.COMPLETED, results, new Date());
+                }
+                catch (URISyntaxException e)
+                {
+                    log.error("BUG: URL is not a URI: " + url.toExternalForm(), e);
+                    throw e;
+                }
             }
         }
         catch (Throwable t)
