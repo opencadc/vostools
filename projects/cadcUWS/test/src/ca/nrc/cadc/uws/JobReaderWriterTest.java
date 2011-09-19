@@ -69,15 +69,23 @@
 
 package ca.nrc.cadc.uws;
 
-import ca.nrc.cadc.auth.AuthenticationUtil;
-import ca.nrc.cadc.date.DateUtil;
+import java.io.IOException;
+import java.io.StringReader;
+import java.io.StringWriter;
+import java.net.URI;
 import java.net.URL;
+import java.security.Principal;
+import java.text.DateFormat;
 import java.util.ArrayList;
 import java.util.Date;
 import java.util.List;
+import java.util.Set;
+
+import javax.security.auth.Subject;
 
 import junit.framework.Assert;
 
+import org.apache.log4j.Level;
 import org.apache.log4j.Logger;
 import org.junit.After;
 import org.junit.AfterClass;
@@ -85,19 +93,10 @@ import org.junit.Before;
 import org.junit.BeforeClass;
 import org.junit.Test;
 
+import ca.nrc.cadc.auth.AuthenticationUtil;
+import ca.nrc.cadc.date.DateUtil;
 import ca.nrc.cadc.util.Log4jInit;
 import ca.nrc.cadc.uws.server.JobPersistenceUtil;
-import java.io.IOException;
-import java.io.StringReader;
-import java.io.StringWriter;
-import java.security.Principal;
-import java.text.DateFormat;
-import java.util.HashSet;
-import java.util.Set;
-import java.util.regex.Pattern;
-import javax.security.auth.Subject;
-import javax.security.auth.x500.X500Principal;
-import org.apache.log4j.Level;
 
 /**
  * @author zhangsa
@@ -181,8 +180,8 @@ public class JobReaderWriterTest
     {
         j.setExecutionPhase(ExecutionPhase.COMPLETED);
         List<Result> results = new ArrayList<Result>();
-        results.add(new Result("rsName1", new URL("http://www.ivoa.net/url1"), true));
-        results.add(new Result("rsName2", new URL("http://www.ivoa.net/url2"), false));
+        results.add(new Result("rsName1", new URI("http://www.ivoa.net/url1"), true));
+        results.add(new Result("rsName2", new URI("http://www.ivoa.net/url2"), false));
         j.setResultsList(results);
         j.setStartTime(new Date(baseDate.getTime() + 300L));
         j.setEndTime(new Date(baseDate.getTime() + 500L));

@@ -33,18 +33,19 @@
  */
 package ca.nrc.cadc.uws.web.restlet.resources;
 
-import ca.nrc.cadc.uws.web.restlet.InvalidResourceException;
-import org.restlet.resource.Get;
-import org.restlet.representation.Representation;
-
 import java.io.IOException;
+import java.security.PrivilegedAction;
+
+import javax.security.auth.Subject;
+
+import org.jdom.Document;
+import org.restlet.representation.Representation;
+import org.restlet.resource.Get;
 
 import ca.nrc.cadc.uws.Result;
 import ca.nrc.cadc.uws.server.JobNotFoundException;
 import ca.nrc.cadc.uws.server.JobPersistenceException;
-import java.security.PrivilegedAction;
-import javax.security.auth.Subject;
-import org.jdom.Document;
+import ca.nrc.cadc.uws.web.restlet.InvalidResourceException;
 
 
 public class ResultResource extends BaseJobResource
@@ -83,7 +84,7 @@ public class ResultResource extends BaseJobResource
             for (Result result : job.getResultsList())
                 if (result.getName().equals(resultID))
                 {
-                    redirectSeeOther(result.getURL().toExternalForm());
+                    redirectSeeOther(result.getURI().toASCIIString());
                     return null;
                 }
             throw new InvalidResourceException("not found: " + jobID + "/results/" + resultID);

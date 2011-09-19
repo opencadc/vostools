@@ -69,14 +69,12 @@
 
 package ca.nrc.cadc.uws;
 
-import ca.nrc.cadc.date.DateUtil;
 import java.io.IOException;
 import java.io.OutputStream;
+import java.io.OutputStreamWriter;
 import java.io.Writer;
-import java.security.Principal;
-import java.util.Set;
-
-import javax.security.auth.Subject;
+import java.text.DateFormat;
+import java.util.Date;
 
 import org.apache.log4j.Logger;
 import org.jdom.Document;
@@ -84,12 +82,8 @@ import org.jdom.Element;
 import org.jdom.output.Format;
 import org.jdom.output.XMLOutputter;
 
+import ca.nrc.cadc.date.DateUtil;
 import ca.nrc.cadc.xml.XmlUtil;
-import java.io.OutputStreamWriter;
-import java.io.StringReader;
-import java.text.DateFormat;
-import java.util.Date;
-import org.jdom.input.SAXBuilder;
 
 /**
  * Writes a Job as XML to an output.
@@ -371,7 +365,7 @@ public class JobWriter
         {
             Element e = new Element(JobAttribute.RESULT.getAttributeName(), UWS.NS);
             e.setAttribute("id", result.getName());
-            e.setAttribute("href", result.getURL().toString(), UWS.XLINK_NS);
+            e.setAttribute("href", result.getURI().toASCIIString(), UWS.XLINK_NS);
             element.addContent(e);
         }
         return element;

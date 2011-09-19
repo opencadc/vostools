@@ -71,32 +71,31 @@ package ca.nrc.cadc.uws;
 
 import java.io.IOException;
 import java.io.InputStream;
+import java.io.InputStreamReader;
 import java.io.Reader;
-import java.net.MalformedURLException;
-import java.net.URL;
+import java.io.StringWriter;
+import java.io.UnsupportedEncodingException;
+import java.net.URI;
+import java.net.URISyntaxException;
+import java.text.DateFormat;
 import java.text.ParseException;
 import java.util.ArrayList;
 import java.util.Date;
+import java.util.HashMap;
 import java.util.List;
-
+import java.util.Map;
 
 import org.apache.log4j.Logger;
+import org.jdom.Attribute;
+import org.jdom.DataConversionException;
 import org.jdom.Document;
 import org.jdom.Element;
 import org.jdom.JDOMException;
+import org.jdom.input.SAXBuilder;
+import org.jdom.output.XMLOutputter;
 
 import ca.nrc.cadc.date.DateUtil;
 import ca.nrc.cadc.xml.XmlUtil;
-import java.io.InputStreamReader;
-import java.io.StringWriter;
-import java.io.UnsupportedEncodingException;
-import java.text.DateFormat;
-import java.util.HashMap;
-import java.util.Map;
-import org.jdom.Attribute;
-import org.jdom.DataConversionException;
-import org.jdom.input.SAXBuilder;
-import org.jdom.output.XMLOutputter;
 
 /**
  * Constructs a Job from an XML source. This class is not thread safe but it is
@@ -300,10 +299,10 @@ public class JobReader
                 String href = eRs.getAttributeValue("href", UWS.XLINK_NS);
                 try
                 {
-                    rs = new Result(id, new URL(href));
+                    rs = new Result(id, new URI(href));
                     rtn.add(rs);
                 }
-                catch (MalformedURLException ex)
+                catch (URISyntaxException ex)
                 {
                     // do nothing; just do not add rs to list
                     log.debug(ex.getMessage());

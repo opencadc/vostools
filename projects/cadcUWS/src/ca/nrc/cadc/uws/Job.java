@@ -73,6 +73,7 @@ package ca.nrc.cadc.uws;
 import java.util.ArrayList;
 import java.util.Date;
 import java.util.List;
+
 import javax.security.auth.Subject;
 
 /**
@@ -211,7 +212,7 @@ public class Job
         {
             this.resultsList = new ArrayList<Result>();
             for (Result r : job.getResultsList())
-                resultsList.add(new Result(r.getName(), r.getURL()));
+                resultsList.add(new Result(r.getName(), r.getURI()));
         }
         if (job.getJobInfo() != null)
         {

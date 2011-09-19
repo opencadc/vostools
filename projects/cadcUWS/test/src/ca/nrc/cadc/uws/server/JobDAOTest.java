@@ -69,6 +69,25 @@
 
 package ca.nrc.cadc.uws.server;
 
+import java.net.URI;
+import java.net.URL;
+import java.security.Principal;
+import java.text.DateFormat;
+import java.util.ArrayList;
+import java.util.Date;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Set;
+
+import javax.security.auth.Subject;
+import javax.security.auth.x500.X500Principal;
+import javax.sql.DataSource;
+
+import org.apache.log4j.Level;
+import org.apache.log4j.Logger;
+import org.junit.Assert;
+import org.junit.Test;
+
 import ca.nrc.cadc.auth.AuthenticationUtil;
 import ca.nrc.cadc.auth.IdentityManager;
 import ca.nrc.cadc.auth.X500IdentityManager;
@@ -81,21 +100,6 @@ import ca.nrc.cadc.uws.Job;
 import ca.nrc.cadc.uws.JobInfo;
 import ca.nrc.cadc.uws.Parameter;
 import ca.nrc.cadc.uws.Result;
-import java.net.URL;
-import java.security.Principal;
-import java.text.DateFormat;
-import java.util.ArrayList;
-import java.util.Date;
-import java.util.HashSet;
-import java.util.List;
-import java.util.Set;
-import javax.security.auth.Subject;
-import javax.security.auth.x500.X500Principal;
-import javax.sql.DataSource;
-import org.apache.log4j.Level;
-import org.apache.log4j.Logger;
-import org.junit.Assert;
-import org.junit.Test;
 
 /**
  * Subclasses must be created to setup the JOB_SCHEMA and dataSource.
@@ -421,8 +425,8 @@ public abstract class JobDAOTest
             log.debug("parameter list: different params");
             job = createJob();
             job.setResultsList(new ArrayList<Result>());
-            job.getResultsList().add(new Result("r1", new URL("http://www.example.com/path/to/result.txt")));
-            job.getResultsList().add(new Result("r2", new URL("http://www.example.com/path/to/other/result.txt")));
+            job.getResultsList().add(new Result("r1", new URI("http://www.example.com/path/to/result.txt")));
+            job.getResultsList().add(new Result("r2", new URI("http://www.example.com/path/to/other/result.txt")));
 
             after = dao.put(job, null);
             compareJobs("returned", job, after);
@@ -461,8 +465,8 @@ public abstract class JobDAOTest
             job.getParameterList().add(new Parameter("FOO", "bar"));
             job.getParameterList().add(new Parameter("BAR", "baz"));
             job.setResultsList(new ArrayList<Result>());
-            job.getResultsList().add(new Result("r1", new URL("http://www.example.com/path/to/result.txt")));
-            job.getResultsList().add(new Result("r2", new URL("http://www.example.com/path/to/other/result.txt")));
+            job.getResultsList().add(new Result("r1", new URI("http://www.example.com/path/to/result.txt")));
+            job.getResultsList().add(new Result("r2", new URI("http://www.example.com/path/to/other/result.txt")));
 
             after = dao.put(job, null);
             compareJobs("returned", job, after);
@@ -639,8 +643,8 @@ public abstract class JobDAOTest
             compareJobs("completed, 0 results", job, persisted);
 
             // again, but with some results this time
-            results.add(new Result("r1", new URL("http://www.example.com/path/to/something")));
-            results.add(new Result("r2", new URL("http://www.example.com/path/to/other/result.txt")));
+            results.add(new Result("r1", new URI("http://www.example.com/path/to/something")));
+            results.add(new Result("r2", new URI("http://www.example.com/path/to/other/result.txt")));
 
             dao.set(job.getID(), ExecutionPhase.EXECUTING);
             endTime = new Date();

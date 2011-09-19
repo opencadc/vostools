@@ -70,7 +70,7 @@
 
 package ca.nrc.cadc.uws;
 
-import java.net.URL;
+import java.net.URI;
 
 
 /**
@@ -79,19 +79,19 @@ import java.net.URL;
 public class Result
 {
     private String name;
-    private URL url;
+    private URI uri;
     private boolean primaryResult;
 
 
-    public Result(final String name, final URL url)
+    public Result(final String name, final URI url)
     {
         this(name, url, false);
     }
     
-    public Result(final String name, final URL url, boolean primaryResult)
+    public Result(final String name, final URI uri, boolean primaryResult)
     {
         this.name = name;
-        this.url = url;
+        this.uri = uri;
         this.primaryResult = primaryResult;
     }
 
@@ -105,14 +105,14 @@ public class Result
         this.name = name;
     }
 
-    public URL getURL()
+    public URI getURI()
     {
-        return url;
+        return uri;
     }
 
-    public void setURL(final URL url)
+    public void setURI(final URI url)
     {
-        this.url = url;
+        this.uri = url;
     }
 
     public boolean isPrimaryResult()
@@ -143,9 +143,9 @@ public class Result
         return !((name != null)
                  ? !name.equals(result.name)
                  : (result.name != null))
-               && !((url != null)
-                    ? !url.equals(result.url)
-                    : (result.url != null));
+               && !((uri != null)
+                    ? !uri.equals(result.uri)
+                    : (result.uri != null));
 
     }
 
@@ -153,7 +153,7 @@ public class Result
     public int hashCode()
     {
         int result = name != null ? name.hashCode() : 0;
-        result = 31 * result + (url != null ? url.hashCode() : 0);
+        result = 31 * result + (uri != null ? uri.hashCode() : 0);
         return result;
     }
 }

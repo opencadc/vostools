@@ -69,19 +69,35 @@
 
 package ca.nrc.cadc.uws.server;
 
+import java.lang.reflect.Field;
 import java.net.MalformedURLException;
+import java.net.URI;
+import java.net.URISyntaxException;
 import java.net.URL;
+import java.sql.Connection;
+import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
+import java.sql.Timestamp;
+import java.sql.Types;
+import java.text.DateFormat;
+import java.util.ArrayList;
 import java.util.Calendar;
 import java.util.Date;
+import java.util.HashMap;
+import java.util.Iterator;
+import java.util.List;
+import java.util.Map;
 
 import javax.security.auth.Subject;
 import javax.sql.DataSource;
 
 import org.apache.log4j.Logger;
 import org.springframework.dao.DataAccessException;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.jdbc.core.JdbcTemplate;
+import org.springframework.jdbc.core.PreparedStatementCreator;
+import org.springframework.jdbc.core.ResultSetExtractor;
 import org.springframework.jdbc.datasource.DataSourceTransactionManager;
 import org.springframework.transaction.TransactionStatus;
 import org.springframework.transaction.support.DefaultTransactionDefinition;
@@ -95,20 +111,6 @@ import ca.nrc.cadc.uws.Job;
 import ca.nrc.cadc.uws.JobInfo;
 import ca.nrc.cadc.uws.Parameter;
 import ca.nrc.cadc.uws.Result;
-import java.lang.reflect.Field;
-import java.sql.Connection;
-import java.sql.PreparedStatement;
-import java.sql.Timestamp;
-import java.sql.Types;
-import java.text.DateFormat;
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.Iterator;
-import java.util.List;
-import java.util.Map;
-import org.springframework.dao.DataIntegrityViolationException;
-import org.springframework.jdbc.core.PreparedStatementCreator;
-import org.springframework.jdbc.core.ResultSetExtractor;
 
 /**
  * JobDAO class that stores the jobs in a RDBMS. This is an abstract class;
@@ -1203,7 +1205,7 @@ public class JobDAO
                 sb.append(",");
                 sb.append(r.getName());
                 sb.append(",");
-                setString(ps, 4, jobSchema.detailTable, "value", r.getURL().toExternalForm(), sb);
+                setString(ps, 4, jobSchema.detailTable, "value", r.getURI().toASCIIString(), sb);
             }
             log.debug(sb);
             return ps;
@@ -1585,12 +1587,12 @@ public class JobDAO
             {
                 try
                 {
-                    URL url = new URL(value);
-                    job.getResultsList().add(new Result(name, url));
+                    URI uri = new URI(value);
+                    job.getResultsList().add(new Result(name, uri));
                 }
-                catch(MalformedURLException ex)
+                catch(URISyntaxException ex)
                 {
-                    throw new IllegalStateException("failed to convert " + value + " to a URL");
+                    throw new IllegalStateException("failed to convert " + value + " to a URI");
                 }
             }
             else
