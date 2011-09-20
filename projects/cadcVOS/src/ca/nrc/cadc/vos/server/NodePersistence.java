@@ -182,7 +182,7 @@ public interface NodePersistence
      * @param destination The destination container.
      * @param name The name of the destination node.
      */
-    void move(Node src, ContainerNode destination, String name);
+    void move(Node src, ContainerNode destination);
     
     /**
      * Copy the specified node to the specified path.  The node must been retrieved
@@ -192,7 +192,7 @@ public interface NodePersistence
      * @param destination The destination container.
      * @param name The name of the destination node.
      */
-    void copy(Node src, ContainerNode destination, String name);
+    void copy(Node src, ContainerNode destination);
     
     /**
      * Change the ownership of the specified node to be that of the caller of

@@ -280,9 +280,9 @@ public abstract class DatabaseNodePersistence implements NodePersistence
     }
 
     @Override
-    public void move(Node src, ContainerNode dest, String name)
+    public void move(Node src, ContainerNode dest)
     {
-        log.debug("move: " + src.getUri() + " to " + dest.getUri() + " as " + name);
+        log.debug("move: " + src.getUri() + " to " + dest.getUri() + " as " + src.getName());
         String srcAuthority = src.getUri().getAuthority();
         String destAuthority = dest.getUri().getAuthority();
         if (!srcAuthority.equals(destAuthority))
@@ -294,11 +294,11 @@ public abstract class DatabaseNodePersistence implements NodePersistence
         Subject caller = Subject.getSubject(acContext);
         
         // move the node
-        dao.move(src, dest, name, caller);
+        dao.move(src, dest, caller);
     }
 
     @Override
-    public void copy(Node src, ContainerNode destination, String name)
+    public void copy(Node src, ContainerNode destination)
     {
         throw new UnsupportedOperationException("Not supported yet.");
     }

@@ -106,7 +106,6 @@ import ca.nrc.cadc.auth.IdentityManager;
 import ca.nrc.cadc.date.DateUtil;
 import ca.nrc.cadc.util.CaseInsensitiveStringComparator;
 import ca.nrc.cadc.util.HexUtil;
-import ca.nrc.cadc.util.StringUtil;
 import ca.nrc.cadc.vos.ContainerNode;
 import ca.nrc.cadc.vos.DataNode;
 import ca.nrc.cadc.vos.Node;
@@ -776,16 +775,13 @@ public class NodeDAO
      *
      * @param node The node to move
      * @param dest The container in which to move the node.
-     * @param name The name of the node when moved.
      * @param subject The new owner for the moved node.
      */
-    public void move(Node src, ContainerNode dest, String name, Subject subject)
+    public void move(Node src, ContainerNode dest, Subject subject)
     {
-        log.debug("move: " + src.getUri() + " to " + dest.getUri() + " as " + name);
+        log.debug("move: " + src.getUri() + " to " + dest.getUri() + " as " + src.getName());
         expectPersistentNode(src);
         expectPersistentNode(dest);
-        if (!StringUtil.hasText(name))
-            throw new IllegalArgumentException("parameter name must have text.");
         
         // move rule checking
         if (src instanceof ContainerNode)
@@ -808,12 +804,12 @@ public class NodeDAO
         
         try
         {    
+            Object newOwnerObject = identManager.toOwner(subject);
+            
             startTransaction();
             
             // re-parent the node
             src.setParent(dest);
-            // re-name the node
-            src.setName(name);
             
             NodePutStatementCreator putStatementCreator = new NodePutStatementCreator(nodeSchema, true);
             
@@ -822,7 +818,7 @@ public class NodeDAO
             jdbc.update(putStatementCreator);
             
             // change the ownership recursively
-            chownInternal(src, subject, true);
+            chownInternal(src, newOwnerObject, true);
             
             commitTransaction();
         }
@@ -856,9 +852,9 @@ public class NodeDAO
      * @param destPath
      * @throws UnsupportedOperationException Until implementation is complete.
      */
-    public void copy(Node src, ContainerNode dest, String name)
+    public void copy(Node src, ContainerNode dest)
     {
-        log.debug("copy: " + src.getUri() + " to " + dest.getUri() + " as " + name);
+        log.debug("copy: " + src.getUri() + " to " + dest.getUri() + " as " + src.getName());
         throw new UnsupportedOperationException("Copy not implemented.");
     }
     
@@ -875,8 +871,9 @@ public class NodeDAO
         expectPersistentNode(node);
         try
         {
+            Object newOwnerObj = identManager.toOwner(newOwner);
             startTransaction();
-            chownInternal(node, newOwner, recursive);
+            chownInternal(node, newOwnerObj, recursive);
             commitTransaction();
         }
         catch (Throwable t)
@@ -908,19 +905,17 @@ public class NodeDAO
      * @param subject
      * @param recursive
      */
-    private void chownInternal(Node node, Subject newOwner, boolean recursive)
+    private void chownInternal(Node node, Object newOwnerObject, boolean recursive)
     {
         NodePutStatementCreator putStatementCreator = new NodePutStatementCreator(nodeSchema, true);
         
-        // update the node with the specfied subject.
-        Object newOwnerObj = identManager.toOwner(newOwner);
-        
-        putStatementCreator.setValues(node, newOwnerObj);
+        // update the node with the specfied owner.
+        putStatementCreator.setValues(node, newOwnerObject);
         jdbc.update(putStatementCreator);
         
         if (recursive && (node instanceof ContainerNode))
         {
-            chownInternalRecursive((ContainerNode) node, newOwnerObj);
+            chownInternalRecursive((ContainerNode) node, newOwnerObject);
         }
     }
     
