@@ -801,7 +801,7 @@ public class NodeDAOTest
             moveData4 = (DataNode) nodeDAO.put(moveData4, owner);
             
             // move cont2 to cont3
-            nodeDAO.move(moveCont2, moveCont3, moveCont2.getName(), owner);
+            nodeDAO.move(moveCont2, moveCont3, owner);
             
             // check that cont2 no longer under moveRoot
             moveRoot = (ContainerNode) nodeDAO.getPath(moveRootPath);
@@ -852,7 +852,7 @@ public class NodeDAOTest
             moveCont2 = (ContainerNode) nodeDAO.getPath(moveCont3Path + "/" + moveCont2.getName());
             try
             {
-                nodeDAO.move(moveCont1, moveCont2, moveCont1.getName(), owner);
+                nodeDAO.move(moveCont1, moveCont2, owner);
                 Assert.fail("Move should not have been allowed due to circular tree.");
             }
             catch (IllegalArgumentException e)
@@ -864,7 +864,7 @@ public class NodeDAOTest
             try
             {
                 Node root = new ContainerNode(new VOSURI("vos://cadc.nrc.ca~vospace/"));
-                nodeDAO.move(root, moveCont1, "name", owner);
+                nodeDAO.move(root, moveCont1, owner);
                 Assert.fail("Should not have been allowed move root.");
             }
             catch (IllegalArgumentException e)
@@ -875,7 +875,7 @@ public class NodeDAOTest
             // try to move root container (not allowed)
             try
             {
-                nodeDAO.move(rootContainer, moveCont1, "name", owner);
+                nodeDAO.move(rootContainer, moveCont1, owner);
                 Assert.fail("Should not have been allowed move root container.");
             }
             catch (IllegalArgumentException e)
@@ -887,7 +887,8 @@ public class NodeDAOTest
             moveCont1 = (ContainerNode) nodeDAO.getPath(moveCont1Path);
             moveData3 = (DataNode) nodeDAO.getPath(moveCont3Path + "/" + moveCont2.getName() + "/" + moveData3.getName());
             String newName = getNodeName("newName");
-            nodeDAO.move(moveData3, moveCont1, newName, owner2);
+            moveData3.setName(newName);
+            nodeDAO.move(moveData3, moveCont1, owner2);
             
             // check that moveRoot now has moveData3
             moveCont1 = (ContainerNode) nodeDAO.getPath(moveCont1Path);
