@@ -71,6 +71,7 @@ package ca.nrc.cadc.tap.parser.function;
 
 import java.util.Iterator;
 import java.util.List;
+import net.sf.jsqlparser.expression.Expression;
 import net.sf.jsqlparser.expression.Function;
 import net.sf.jsqlparser.expression.operators.relational.ExpressionList;
 import net.sf.jsqlparser.schema.Column;
@@ -138,21 +139,17 @@ public class Concatenate extends Function
         Iterator it = expressions.iterator();
         while (it.hasNext())
         {
-            Object object = it.next();
-            if (object instanceof Column)
+            Expression e = (Expression) it.next();
+            sb.append(e.toString());
+            if (it.hasNext())
             {
-                Column column = (Column) object;
-                sb.append(column.getWholeColumnName());
-                if (it.hasNext())
+                sb.append(operator);
+                if (separator != null && separator.length() > 0)
                 {
+                    sb.append(" '");
+                    sb.append(separator);
+                    sb.append("' ");
                     sb.append(operator);
-                    if (separator != null && separator.length() > 0)
-                    {
-                        sb.append(" '");
-                        sb.append(separator);
-                        sb.append("' ");
-                        sb.append(operator);
-                    }
                 }
             }
         }
