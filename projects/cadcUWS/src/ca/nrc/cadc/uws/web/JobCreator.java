@@ -69,6 +69,12 @@ public class JobCreator
         else
         {
             String contentType = request.getContentType();
+            if (contentType != null)
+            {
+                int i = contentType.indexOf(';');
+                if (i > 0)
+                    contentType = contentType.substring(0, i);
+            }
             log.debug("Content-Type: " + contentType);
             if (contentType != null && contentType.equalsIgnoreCase(URLENCODED))
             {
