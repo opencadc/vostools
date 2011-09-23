@@ -76,6 +76,7 @@ import java.io.InputStreamReader;
 import java.io.OutputStream;
 import java.io.OutputStreamWriter;
 import java.io.StringWriter;
+import java.io.Writer;
 import java.net.HttpURLConnection;
 import java.net.MalformedURLException;
 import java.net.URL;
@@ -125,10 +126,15 @@ public class VOSpaceClient
 {
     private static Logger log = Logger.getLogger(VOSpaceClient.class);
     
+    private static final int MAX_POLLS = 10;
+    private static final long INITIAL_SLEEP = 100L; // milliseconds
+    private static final float SLEEP_INCREMENT = 1.1F;
+    
     public static final String CR = System.getProperty("line.separator"); // OS independant new line
 
     // TODO: get this from capabilites obtained via registry lookup
     public static final String VOSPACE_SYNC_TRANSFER_ENDPOINT = "/synctrans";
+    public static final String VOSPACE_ASYNC_TRANSFER_ENDPOINT = "/transfers";
 
     protected String baseUrl;
     protected boolean schemaValidation;
@@ -490,6 +496,15 @@ public class VOSpaceClient
         transfer.setDirection(Direction.pullFromVoSpace);
         return createTransfer(transfer);
     }
+    
+    public Transfer moveWithinVOSpace(Transfer transfer)
+    {
+        if (!transfer.getDirection().getValue().startsWith(Main.VOS_PREFIX))
+        {
+            throw new IllegalStateException("Destination not a VOSpace node.");
+        }
+        return createAsyncTransfer(transfer);
+    }
 
     /**
      * Copy Node.
@@ -677,6 +692,103 @@ public class VOSpaceClient
     {
         this.baseUrl = baseUrl;
     }
+    
+    private Transfer createAsyncTransfer(Transfer transfer)
+    {
+        Transfer rtn = null;
+        String asyncTransUrl;
+        Job jobRtn = null; // the Job returned from server
+        JobReader jobReader = null;
+        try
+        {
+            asyncTransUrl = this.baseUrl + VOSPACE_ASYNC_TRANSFER_ENDPOINT;      
+            TransferWriter transferWriter = new TransferWriter();
+            Writer stringWriter = new StringWriter();
+            transferWriter.write(transfer, stringWriter);
+
+            // POST the parameters to the Job.
+            String jobUrlStr = postJob(asyncTransUrl, stringWriter.toString());
+            URL jobUrl = new URL(jobUrlStr);
+            log.debug("Job URL is: " + jobUrl.toString());
+            
+            // POST to /phase to run the Job
+            postJob(jobUrlStr + "/phase", "PHASE=RUN");
+
+            HttpURLConnection conn = (HttpURLConnection) jobUrl.openConnection();
+            if (conn instanceof HttpsURLConnection)
+            {
+                HttpsURLConnection sslConn = (HttpsURLConnection) conn;
+                initHTTPS(sslConn);
+            }
+            int code = conn.getResponseCode();
+            if (code != 200)
+                throw new RuntimeException("failed to read transfer job (" + code + "): " + conn.getResponseMessage());
+            
+            jobReader = new JobReader();
+            jobRtn = jobReader.read(conn.getInputStream());
+            log.debug("current job state: " + jobRtn.getExecutionPhase());
+            int numTry = 0;
+            long sleepPeriod = INITIAL_SLEEP;
+            while (numTry++ < MAX_POLLS
+                    && !jobRtn.getExecutionPhase().equals(ExecutionPhase.COMPLETED)
+                    && !jobRtn.getExecutionPhase().equals(ExecutionPhase.ERROR)
+                    && !jobRtn.getExecutionPhase().equals(ExecutionPhase.ABORTED) )
+            {
+                try 
+                {
+                    log.debug("waiting " + sleepPeriod + "ms before polling job.");
+                    Thread.sleep(sleepPeriod);
+                }
+                catch(InterruptedException inter) { break; }
+                
+                conn = (HttpURLConnection) jobUrl.openConnection();
+                if (conn instanceof HttpsURLConnection)
+                {
+                    HttpsURLConnection sslConn = (HttpsURLConnection) conn;
+                    initHTTPS(sslConn);
+                }
+                code = conn.getResponseCode();
+                if (code != 200)
+                    throw new RuntimeException("failed to read transfer job (" + code + "): " + conn.getResponseMessage());
+                jobRtn = jobReader.read(conn.getInputStream());
+                log.debug("current job state: " + jobRtn.getExecutionPhase());
+                
+                sleepPeriod = Math.round(sleepPeriod * SLEEP_INCREMENT);
+            }
+
+            if (jobRtn != null && jobRtn.getExecutionPhase().equals(ExecutionPhase.COMPLETED))
+            {
+                String strResultUrl = jobRtn.getResultsList().get(0).getURI().toASCIIString();
+                log.debug("Result URI: " + strResultUrl);
+            }
+            else if (jobRtn != null && jobRtn.getExecutionPhase().equals(ExecutionPhase.ERROR))
+            {
+                log.debug(jobRtn.toString());
+                throw new RuntimeException("ERROR returned from server: " + jobRtn.getErrorSummary().getSummaryMessage());
+            }
+        }
+        catch (MalformedURLException e)
+        {
+            log.debug("failed to create transfer", e);
+            throw new RuntimeException(e);
+        }
+        catch (IOException e)
+        {
+            log.debug("failed to create transfer", e);
+            throw new RuntimeException(e);
+        }
+        catch (ParseException e)
+        {
+            log.debug("got bad XML from service", e);
+            throw new IllegalStateException(e);
+        }
+        catch (JDOMException e)
+        {
+            log.debug("got bad XML from service", e);
+            throw new RuntimeException(e);
+        }
+        return rtn;
+    }
 
     private Transfer createTransfer(Transfer transfer)
     {
@@ -810,7 +922,7 @@ public class VOSpaceClient
             initHTTPS(sslConn);
         }
         connection.setRequestMethod("POST");
-        connection.setRequestProperty("Content-Length", "" + Integer.toString(strParam.getBytes().length));
+        connection.setRequestProperty("Content-Length", "" + Integer.toString(strParam.getBytes("UTF-8").length));
         connection.setRequestProperty("Content-Type", "text/xml");
         connection.setInstanceFollowRedirects(false);
         connection.setUseCaches(false);

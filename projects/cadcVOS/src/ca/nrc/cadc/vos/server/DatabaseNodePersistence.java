@@ -283,13 +283,21 @@ public abstract class DatabaseNodePersistence implements NodePersistence
     public void move(Node src, ContainerNode dest)
     {
         log.debug("move: " + src.getUri() + " to " + dest.getUri() + " as " + src.getName());
-        String srcAuthority = src.getUri().getAuthority();
-        String destAuthority = dest.getUri().getAuthority();
-        if (!srcAuthority.equals(destAuthority))
+        try
         {
-            throw new RuntimeException("Cannot move nodes between authorities.");
+            URI srcAuthority = src.getUri().getServiceURI();
+            URI destAuthority = dest.getUri().getServiceURI();
+            if (!srcAuthority.equals(destAuthority))
+            {
+                throw new RuntimeException("Cannot move nodes between authorities.");
+            }
         }
-        NodeDAO dao = getDAO(srcAuthority);
+        catch (URISyntaxException e)
+        {
+            throw new RuntimeException("BUG: Invalid node URI(s)", e);
+        }
+    
+        NodeDAO dao = getDAO(src.getUri().getAuthority());
         AccessControlContext acContext = AccessController.getContext();
         Subject caller = Subject.getSubject(acContext);
         

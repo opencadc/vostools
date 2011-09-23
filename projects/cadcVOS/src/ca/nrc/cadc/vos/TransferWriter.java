@@ -153,19 +153,22 @@ public class TransferWriter
             root.addContent(e);
         }
 
-        for (Protocol protocol : transfer.getProtocols())
+        if (transfer.getProtocols() != null)
         {
-            Element pr = new Element("protocol", VOS.NS);
-            pr.setAttribute("uri", protocol.getUri());
-            if (protocol.getEndpoint() != null)
+            for (Protocol protocol : transfer.getProtocols())
             {
-                Element ep = new Element("endpoint", VOS.NS);
-                ep.addContent(protocol.getEndpoint());
-                pr.addContent(ep);
+                Element pr = new Element("protocol", VOS.NS);
+                pr.setAttribute("uri", protocol.getUri());
+                if (protocol.getEndpoint() != null)
+                {
+                    Element ep = new Element("endpoint", VOS.NS);
+                    ep.addContent(protocol.getEndpoint());
+                    pr.addContent(ep);
+                }
+                root.addContent(pr);
             }
-            root.addContent(pr);
         }
-        
+            
         e = new Element("keepBytes", VOS.NS);
         e.addContent(new Boolean(transfer.isKeepBytes()).toString());
         root.addContent(e);

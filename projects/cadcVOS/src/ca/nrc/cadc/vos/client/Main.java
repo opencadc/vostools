@@ -78,6 +78,7 @@ import java.net.URISyntaxException;
 import java.net.URL;
 import java.security.AccessControlException;
 import java.security.cert.CertificateExpiredException;
+import java.security.cert.CertificateNotYetValidException;
 import java.security.cert.X509Certificate;
 import java.text.DateFormat;
 import java.util.ArrayList;
@@ -114,7 +115,6 @@ import ca.nrc.cadc.vos.VOS;
 import ca.nrc.cadc.vos.VOSURI;
 import ca.nrc.cadc.vos.View;
 import ca.nrc.cadc.vos.View.Parameter;
-import java.security.cert.CertificateNotYetValidException;
 
 /**
  * @author zhangsa
@@ -138,6 +138,7 @@ public class Main implements Runnable
     public static final String ARG_DELETE = "delete";
     public static final String ARG_SET = "set";
     public static final String ARG_COPY = "copy";
+    public static final String ARG_MOVE = "move";
     public static final String ARG_TARGET = "target";
     public static final String ARG_PUBLIC = "public";
     public static final String ARG_GROUP_READ = "group-read";
@@ -163,7 +164,7 @@ public class Main implements Runnable
      */
     public enum Operation
     {
-        VIEW, CREATE, DELETE, SET, COPY
+        VIEW, CREATE, DELETE, SET, COPY, MOVE
     }
 
     private Operation operation;
@@ -266,6 +267,10 @@ public class Main implements Runnable
         {
             doCopy();
         }
+        else if (this.operation.equals(Operation.MOVE))
+        {
+            doMove();
+        }
         else if (this.operation.equals(Operation.SET))
         {
             doSet();
@@ -352,6 +357,64 @@ public class Main implements Runnable
             else
             {
                 msg("failed to copy: " + source + " -> " + destination);
+                if (t.getCause() != null)
+                {
+                    if (t.getCause().getMessage() != null)
+                        msg("          reason: " + t.getCause().getMessage());
+                    else
+                        msg("          reason: " + t.getCause());
+                }
+                else
+                {
+                    if (t.getMessage() != null)
+                        msg("          reason: " + t.getMessage());
+                    else
+                        msg("          reason: " + t);
+                }
+            }
+
+            System.exit(NET_STATUS);
+        }
+    }
+    
+    private void doMove()
+    {
+        log.debug("doMove");
+        try
+        {
+            if (this.transferDirection.equals(Direction.pushToVoSpace))
+            {
+                moveToVOSpace();
+
+            }
+            else if (this.transferDirection.equals(Direction.pullFromVoSpace))
+            {
+                moveFromVOSpace();
+                // TODO: cofirm copy worked by checking MD5, length
+                // TODO: delete src file from VOSpace
+            }
+            else if (this.transferDirection.getValue().startsWith(VOS_PREFIX))
+            {
+                moveWithinVOSpace();
+            }
+        }
+        catch(NullPointerException ex)
+        {
+            log.error("BUG", ex);
+            System.exit(NET_STATUS);
+        }
+        catch(Throwable t)
+        {
+            if (t instanceof IllegalArgumentException)
+            {
+                throw (IllegalArgumentException) t;
+            }
+            else
+            {
+                if (destination == null)
+                    msg("failed to move: " + source + " -> " + transferDirection.getValue());
+                else
+                    msg("failed to move: " + source + " -> " + destination);
                 if (t.getCause() != null)
                 {
                     if (t.getCause().getMessage() != null)
@@ -486,6 +549,8 @@ public class Main implements Runnable
         return FileSizeType.getHumanReadableSize(Long.parseLong(contentLength))
                 + " (" + contentLength + " bytes)";
     }
+    
+
 
     private void copyToVOSpace()
         throws Exception
@@ -698,6 +763,75 @@ public class Main implements Runnable
         clientTransfer.doDownload(fileToSave);
         Node node = clientTransfer.getTarget();
         log.debug("clientTransfer getTarget: " + node);
+    }
+    
+    private void moveToVOSpace()
+    throws Exception
+    {
+        File sourceFile = new File(source);
+        if (!sourceFile.isFile())
+        {
+            msg("Cannot move local directories to VOSpace.");
+            System.exit(-1);
+        }
+        copyToVOSpace();
+        log.debug("copied local file " + source + " to " + this.destination.getPath());
+        Node uploadedNode = this.client.getNode(this.destination.getPath());
+        if (uploadedNode == null)
+        {
+            msg("Failed to upload, keeping local file.");
+            System.exit(-1);
+        }
+        NodeProperty uploadedSizeProp = uploadedNode.findProperty(VOS.PROPERTY_URI_CONTENTLENGTH);
+        long uploadedSize = Long.parseLong(uploadedSizeProp.getPropertyValue());
+        log.debug("uploaded size: " + uploadedSize);
+        log.debug("original size: " + sourceFile.length());
+        if (uploadedSize != sourceFile.length())
+        {
+            msg("Uploaded file size does not match that of local file, keeping local file.");
+            System.exit(-1);
+        }
+        sourceFile.delete();
+        log.debug("deleted local file: " + source);
+    }
+    
+    private void moveFromVOSpace()
+    throws Exception
+    {
+        Node sourceNode = this.client.getNode(this.source.getPath());
+        if (sourceNode instanceof ContainerNode)
+        {
+            msg("Cannot move containers from VOSpace to local file system.");
+            System.exit(-1);
+        }
+        copyFromVOSpace();
+        log.debug("copied " + this.destination.getPath() + " to local file " + source);
+        
+        NodeProperty downloadedSizeProp = sourceNode.findProperty(VOS.PROPERTY_URI_CONTENTLENGTH);
+        File destFile = new File(destination);
+        long downloadedSize = Long.parseLong(downloadedSizeProp.getPropertyValue());
+        log.debug("downloaded size: " + downloadedSize);
+        log.debug("original size: " + destFile.length());
+        if (downloadedSize != destFile.length())
+        {
+            msg("Downloaded file size does not match that of local file, keeping remote file.");
+            System.exit(-1);
+        }
+        this.client.deleteNode(this.source.getPath());
+        log.debug("deleted vos file: " + this.source);
+    }
+    
+    private void moveWithinVOSpace()
+        throws Exception
+    {
+        Node src = client.getNode(source.getPath());
+
+        Transfer transfer = new Transfer();
+        transfer.setTarget(src);
+        transfer.setDirection(transferDirection);
+        transfer.setKeepBytes(false);
+        
+        client.moveWithinVOSpace(transfer);
     }
     
     /**
@@ -916,7 +1050,6 @@ public class Main implements Runnable
                         start = c.getNotBefore();
                         end = c.getNotAfter();
                         c.checkValidity();
-
                     }
                     catch(CertificateNotYetValidException exp)
                     {
@@ -940,7 +1073,7 @@ public class Main implements Runnable
 
         try
         {
-            if (this.operation.equals(Operation.COPY))
+            if (this.operation.equals(Operation.COPY) || this.operation.equals(Operation.MOVE))
             {
                 String strSrc = argMap.getValue(ARG_SRC);
                 String strDest = argMap.getValue(ARG_DEST);
@@ -959,6 +1092,21 @@ public class Main implements Runnable
                     File f = new File(strSrc);
                     if (!f.exists() || !f.canRead())
                         throw new IllegalArgumentException("Source file " + strSrc + " does not exist or cannot be read.");
+                    
+                    // Predetermine delete permission on file -- fail on attempt for now
+                    // if (this.operation.equals(Operation.MOVE))
+                    // {
+                    //     try
+                    //     {
+                    //         SecurityManager sm = System.getSecurityManager();
+                    //         sm.checkDelete(strSrc);
+                    //     }
+                    //     catch (SecurityException secEx)
+                    //     {
+                    //         throw new IllegalArgumentException("Permission to remove source file " + strSrc + " denied.");
+                    //     }
+                    // }
+                    
                     try
                     {
                         this.source = new URI("file", f.getAbsolutePath(), null);
@@ -1004,8 +1152,40 @@ public class Main implements Runnable
                     }
                     this.destination = f.toURI();
                 }
+                else if (!strSrc.startsWith(VOS_PREFIX) && !strDest.startsWith(VOS_PREFIX))
+                {
+                    // local copy/move
+                    throw new IllegalArgumentException("Local copy and move operations not yet supported.");
+                }
                 else
-                    throw new UnsupportedOperationException("The type of your copy operation is not supported yet.");
+                {
+                    // server to server copy/move
+                    URI destServerUri = null;
+                    try
+                    {
+                        serverUri = new VOSURI(strSrc).getServiceURI();
+                        this.source = new URI(strSrc);
+                    }
+                    catch (URISyntaxException e)
+                    {
+                        throw new IllegalArgumentException("Invalid VOS URI: " + strSrc);
+                    }
+                    try
+                    {
+                        URI destURI = new URI(strDest);
+                        this.transferDirection = new Direction(strDest);
+                        destServerUri = new VOSURI(destURI).getServiceURI(); 
+                    }
+                    catch (URISyntaxException e)
+                    {
+                        throw new IllegalArgumentException("Invalid VOS URI: " + strDest);
+                    }
+                    
+                    if (!serverUri.equals(destServerUri))
+                    {
+                        throw new IllegalArgumentException("Move between two vospace services is not yet supported.");
+                    }
+                }
             }
             else
             {
@@ -1104,14 +1284,19 @@ public class Main implements Runnable
             numOp++;
             this.operation = Operation.COPY;
         }
+        if (argMap.isSet(ARG_MOVE))
+        {
+            numOp++;
+            this.operation = Operation.MOVE;
+        }
 
         if (numOp == 0)
         {
-            throw new IllegalArgumentException("One operation should be defined.");
+            throw new IllegalArgumentException("At least one operation must be defined.");
         }
         else if (numOp > 1)
         {
-            throw new IllegalArgumentException("Only one operation can be defined.");
+            throw new IllegalArgumentException("Only one operation may be defined.");
         }
     }
 
@@ -1122,7 +1307,7 @@ public class Main implements Runnable
     private void validateCommandArguments(ArgumentMap argMap)
         throws IllegalArgumentException
     {
-        if (this.operation.equals(Operation.COPY))
+        if (this.operation.equals(Operation.COPY) || this.operation.equals(Operation.MOVE))
         {
             String strSrc = argMap.getValue(ARG_SRC);
             if (strSrc == null) throw new IllegalArgumentException("Argument src is required for " + this.operation);
@@ -1231,68 +1416,84 @@ public class Main implements Runnable
          * In this way, it's still easy to read and edit and the formatting operation does not change it's layout.
          * 
          */
-        "Usage: java -jar VOSpaceClient.jar [-v|--verbose|-d|--debug] [--xsv=off] ...",
-                "",
-                " --xsv=off disables XML schema validation; use at your own risk",
-                "                                                                                                  ",
-                "Help:                                                                                             ",
-                "java -jar VOSpaceClient.jar <-h | --help>                                                         ",
-                "                                                                                                  ",
-                "Create node:                                                                                      ",
-                "java -jar VOSpaceClient.jar  [-v|--verbose|-d|--debug]                                            ",
-                CertCmdArgUtil.getCertArgUsage(),
-                "   --create --target=<target URI>                                                                  ",
-                "   [--prop=<properties file>]",
-                "   [--ip | [--public[=true|false]] [--group-read=<group URI>] [--group-write=<group URI>] ]",
-                " ",
-                "--ip : inherit permission properties from parent",
-                "                                                                                                  ",
-                "Note: --create defaults to creating a ContainerNode (directory). Creating                         ",
-                "other types of nodes specifically is not supported at this time.                                 ",
-                "                                                                                                  ",
-                "Copy file:                                                                                        ",
-                "java -jar VOSpaceClient.jar  [-v|--verbose|-d|--debug]                                  ",
-                CertCmdArgUtil.getCertArgUsage(),
-                "   --copy --src=<source URI> --dest=<destination URI>                                            ",
-                "   [--content-type=<mimetype of source>]                                                           ",
-                "   [--content-encoding=<encoding of source>]                                                       ",
-                "   [--prop=<properties file>]",
-                "   [--ip | [--public[=true|false]] [--group-read=<group URI>] [--group-write=<group URI>] ]",
-                "   [--noretry]",
-
-                " ",
-                "--ip : inherit permission properties from parent",
-                "--noretry :  disable retry of failed transfers (when the server indicates it was temporary)",
-                " ",
-                "Note: One of --src and --target may be a \"vos\" URI and the other may be an                        ",
-                "absolute or relative path to a file. If the target node does not exist, a                         ",
-                "DataNode is created and data copied. If it does exist, the data and                              ",
-                "properties are overwritten.                                                                     ",
-                " ",
-                "Note: source and destination URIs may include HTTP-like query parameters, some of which will      ",
-                "result in additional operations being performed on the associated URI.                            ",
-                "                                                                                                  ",
-                "View node:                                                                                        ",
-                "java -jar VOSpaceClient.jar  [-v|--verbose|-d|--debug]                                            ",
-                CertCmdArgUtil.getCertArgUsage(),
-                "   --view --target=<target URI>                                                                    ",
-                "                                                                                                  ",
-                "Delete node:                                                                                      ",
-                "java -jar VOSpaceClient.jar  [-v|--verbose|-d|--debug]                                            ",
-                CertCmdArgUtil.getCertArgUsage(),
-                "   --delete --target=<target URI>                                                                  ",
-                "                                                                                                  ",
-                "Set node:                                                                                         ",
-                "java -jar VOSpaceClient.jar  [-v|--verbose|-d|--debug]                                            ",
-                CertCmdArgUtil.getCertArgUsage(),
-                "   --set --target=<target URI>                                                                     ",
-                "   [--content-type=<mimetype of source>]                                                           ",
-                "   [--content-encoding=<encoding of source>]                                                       ",
-                "   [--prop=<properties file>]",
-                "   [--ip | [--public[=true|false]] [--group-read=<group URI>] [--group-write=<group URI>] ]",
-                " ",
-                "--ip : inherit permission properties from parent",
-                "" };
+            "Usage: java -jar VOSpaceClient.jar [-v|--verbose|-d|--debug] [--xsv=off] ...                      ",
+            "                                                                                                  ",
+            " --xsv=off disables XML schema validation; use at your own risk                                   ",
+            "                                                                                                  ",
+            "Help:                                                                                             ",
+            "java -jar VOSpaceClient.jar <-h | --help>                                                         ",
+            "                                                                                                  ",
+            "Create node:                                                                                      ",
+            "java -jar VOSpaceClient.jar  [-v|--verbose|-d|--debug]                                            ",
+            CertCmdArgUtil.getCertArgUsage(),
+            "   --create --target=<target URI>                                                                 ",
+            "   [--prop=<properties file>]                                                                     ",
+            "   [--ip | [--public[=true|false]] [--group-read=<group URI>] [--group-write=<group URI>] ]       ",
+            "                                                                                                  ",
+            "--ip : inherit permission properties from parent                                                  ",
+            "                                                                                                  ",
+            "Note: --create defaults to creating a ContainerNode (directory).  Creating                        ",
+            "other types of nodes specifically is not supported at this time.                                  ",
+            "                                                                                                  ",
+            "Copy file:                                                                                        ",
+            "java -jar VOSpaceClient.jar  [-v|--verbose|-d|--debug]                                            ",
+            CertCmdArgUtil.getCertArgUsage(),
+            "   --copy --src=<source URI> --dest=<destination URI>                                             ",
+            "   [--content-type=<mimetype of source>]                                                          ",
+            "   [--content-encoding=<encoding of source>]                                                      ",
+            "   [--prop=<properties file>]                                                                     ",
+            "   [--ip | [--public[=true|false]] [--group-read=<group URI>] [--group-write=<group URI>] ]       ",
+            "   [--noretry]                                                                                    ",
+            "                                                                                                  ",
+            "--ip : inherit permission properties from parent                                                  ",
+            "--noretry :  disable retry of failed transfers (when the server indicates it was temporary)       ",
+            "                                                                                                  ",
+            "Note: One of --src and --target may be a \"vos\" URI and the other may be an                      ",
+            "absolute or relative path to a file.  If the target node does not exist, a                        ",
+            "DataNode is created and data copied.  If it does exist, the data and                              ",
+            "properties are overwritten.                                                                       ",
+            "                                                                                                  ",
+            "Note: Source and destination URIs may include HTTP-like query parameters, some of which will      ",
+            "result in additional operations being performed on the associated URI.                            ",
+            "                                                                                                  ",
+            "View node:                                                                                        ",
+            "java -jar VOSpaceClient.jar  [-v|--verbose|-d|--debug]                                            ",
+            CertCmdArgUtil.getCertArgUsage(),
+            "   --view --target=<target URI>                                                                   ",
+            "                                                                                                  ",
+            "Move file/node:                                                                                   ",
+            "java -jar VOSpaceClient.jar  [-v|--verbose|-d|--debug]                                            ",
+            CertCmdArgUtil.getCertArgUsage(),
+            "   --move --src=<source URI> --dest=<destination URI>                                             ",
+            "                                                                                                  ",
+            "Note: If the source URI refers to a VOSpace node, then move is a recursive operation:  the source ",
+            "nodes, and all subnodes, are moved.                                                               ",
+            "                                                                                                  ",
+            "Note: Only files can be moved from the local file system to VOSpace.  Similarly, only files       ",
+            "can be moved from VOSpace to the local file system.                                               ",
+            "                                                                                                  ",
+            "Note: If the destination URI referes to a VOSpace node, that node must be a directory.  If the    ",
+            "directory exists, the source URI will be moved into that directory.  If the directory doesn't     ",
+            "exist, the source URI will be moved into the parent directory and will be renamed to the name     ",
+            "specified in destination URI.                                                                     ",
+            "                                                                                                  ",
+            "Delete node:                                                                                      ",
+            "java -jar VOSpaceClient.jar  [-v|--verbose|-d|--debug]                                            ",
+            CertCmdArgUtil.getCertArgUsage(),
+            "   --delete --target=<target URI>                                                                 ",
+            "                                                                                                  ",
+            "Set node:                                                                                         ",
+            "java -jar VOSpaceClient.jar  [-v|--verbose|-d|--debug]                                            ",
+            CertCmdArgUtil.getCertArgUsage(),
+            "   --set --target=<target URI>                                                                    ",
+            "   [--content-type=<mimetype of source>]                                                          ",
+            "   [--content-encoding=<encoding of source>]                                                      ",
+            "   [--prop=<properties file>]                                                                     ",
+            "   [--ip | [--public[=true|false]] [--group-read=<group URI>] [--group-write=<group URI>] ]       ",
+            "                                                                                                  ",
+            "--ip : inherit permission properties from parent                                                  ",
+            "                                                                                                  ",
+        };
         for (String line : um)
             msg(line);
     }
