@@ -8,7 +8,7 @@
 *  National Research Council            Conseil national de recherches
 *  Ottawa, Canada, K1A 0R6              Ottawa, Canada, K1A 0R6
 *  All rights reserved                  Tous droits réservés
-*                                       
+*
 *  NRC disclaims any warranties,        Le CNRC dénie toute garantie
 *  expressed, implied, or               énoncée, implicite ou légale,
 *  statutory, of any kind with          de quelque nature que ce
@@ -31,10 +31,10 @@
 *  software without specific prior      de ce logiciel sans autorisation
 *  written permission.                  préalable et particulière
 *                                       par écrit.
-*                                       
+*
 *  This file is part of the             Ce fichier fait partie du projet
 *  OpenCADC project.                    OpenCADC.
-*                                       
+*
 *  OpenCADC is free software:           OpenCADC est un logiciel libre ;
 *  you can redistribute it and/or       vous pouvez le redistribuer ou le
 *  modify it under the terms of         modifier suivant les termes de
@@ -44,7 +44,7 @@
 *  either version 3 of the              : soit la version 3 de cette
 *  License, or (at your option)         licence, soit (à votre gré)
 *  any later version.                   toute version ultérieure.
-*                                       
+*
 *  OpenCADC is distributed in the       OpenCADC est distribué
 *  hope that it will be useful,         dans l’espoir qu’il vous
 *  but WITHOUT ANY WARRANTY;            sera utile, mais SANS AUCUNE
@@ -54,7 +54,7 @@
 *  PURPOSE.  See the GNU Affero         PARTICULIER. Consultez la Licence
 *  General Public License for           Générale Publique GNU Affero
 *  more details.                        pour plus de détails.
-*                                       
+*
 *  You should have received             Vous devriez avoir reçu une
 *  a copy of the GNU Affero             copie de la Licence Générale
 *  General Public License along         Publique GNU Affero avec
@@ -69,73 +69,106 @@
 
 package ca.nrc.cadc.vosi;
 
+import ca.nrc.cadc.xml.XmlUtil;
 import java.io.IOException;
-import java.io.StringReader;
-import java.net.URL;
+import java.io.InputStream;
+import java.io.InputStreamReader;
+import java.io.Reader;
 import java.util.HashMap;
-import java.util.List;
 import java.util.Map;
 import org.apache.log4j.Logger;
-
 import org.jdom.Document;
 import org.jdom.JDOMException;
 import org.jdom.input.SAXBuilder;
-import org.jdom.xpath.XPath;
-import org.junit.Assert;
 
 /**
- * @author zhangsa
- *
+ * Simple parser that reads a TAP capabilities document with full schema validation enabled.
+ * Note: will probably add a reader class if/when it becomes useful to have an object model for
+ * the TAP capabilities.
+ * 
+ * @author pdowler
  */
-public class TestUtil
+public class TAPRegExtParser 
 {
-    private static Logger log = Logger.getLogger(TestUtil.class);
+    private static final Logger log = Logger.getLogger(TAPRegExtParser.class);
 
-    public static final String PARSER = "org.apache.xerces.parsers.SAXParser";
+    private static final String TAPREGEXT_SCHEMA = "TAPRegExt-v1.0.xsd";
+    private static final String TAPREGEXT_NAMESPACE = "http://www.ivoa.net/xml/TAPRegExt/v1.0";
 
-    /**
-     * assert one and only one node exists
-     * 
-     * @param document
-     * @param xpathString XPath to the node
-     */
-    public static void assertXmlNode(Document document, String xpathString)
+    private Map<String,String> schemaMap;
+
+    public TAPRegExtParser()
     {
-        Assert.assertTrue(getXmlNodeCount(document, xpathString) == 1);
+        this(true);
     }
 
-    /**
-     * assert no node exists by the xpath
-     * 
-     * @param document
-     * @param xpathString
-     */
-    public static void assertNoXmlNode(Document document, String xpathString)
+    public TAPRegExtParser(boolean enableSchemaValidation)
     {
-        Assert.assertTrue(getXmlNodeCount(document, xpathString) == 0);
-    }
+        if (enableSchemaValidation)
+        {
+            this.schemaMap = new HashMap<String,String>();
+            String url;
 
-    /**
-     * count how many nodes are represented by the xpath
-     * 
-     * @param doc
-     * @param xpathStr
-     * @return
-     */
-    @SuppressWarnings("unchecked")
-    public static int getXmlNodeCount(Document doc, String xpathStr)
-    {
-        int rtn = 0;
-        XPath xpath;
-        try
-        {
-            xpath = XPath.newInstance(xpathStr);
-            List rs = xpath.selectNodes(doc);
-            rtn = rs.size();
-        } catch (JDOMException e)
-        {
-            e.printStackTrace();
+            url = XmlUtil.getResourceUrlString(TAPREGEXT_SCHEMA, TAPRegExtParser.class);
+            if (url != null)
+            {
+                log.debug(TAPREGEXT_NAMESPACE + " -> " + url);
+                schemaMap.put(TAPREGEXT_NAMESPACE, url);
+            }
+            else
+                log.warn("failed to find resource: " + TAPREGEXT_SCHEMA);
+
+            url = XmlUtil.getResourceUrlString(VOSI.CAPABILITIES_SCHEMA, TAPRegExtParser.class);
+            if (url != null)
+            {
+                log.debug(VOSI.CAPABILITIES_NS_URI + " -> " + url);
+                schemaMap.put(VOSI.CAPABILITIES_NS_URI, url);
+            }
+            else
+                log.warn("failed to find resource: " + VOSI.CAPABILITIES_SCHEMA);
+
+            url = XmlUtil.getResourceUrlString(VOSI.VORESOURCE_SCHEMA, TAPRegExtParser.class);
+            if (url != null)
+            {
+                log.debug(VOSI.VORESOURCE_NS_URI + " -> " + url);
+                schemaMap.put(VOSI.VORESOURCE_NS_URI, url);
+            }
+            else
+                log.warn("failed to find resource: " + VOSI.VORESOURCE_SCHEMA);
+
+            url = XmlUtil.getResourceUrlString(VOSI.VODATASERVICE_SCHEMA, TAPRegExtParser.class);
+            if (url != null)
+            {
+                log.debug(VOSI.VODATASERVICE_NS_URI + " -> " + url);
+                schemaMap.put(VOSI.VODATASERVICE_NS_URI, url);
+            }
+            else
+                log.warn("failed to find resource: " + VOSI.VODATASERVICE_SCHEMA);
+
+            url = XmlUtil.getResourceUrlString(VOSI.XSI_SCHEMA, TAPRegExtParser.class);
+            if (url != null)
+            {
+                log.debug(VOSI.XSI_NS_URI + " -> " + url);
+                schemaMap.put(VOSI.XSI_NS_URI, url);
+            }
+            else
+                log.warn("failed to find resource: " + VOSI.XSI_SCHEMA);
         }
-        return rtn;
+    }
+
+    public Document parse(Reader rdr)
+        throws IOException, JDOMException
+    {
+        // and again with schema validation
+        SAXBuilder sb = XmlUtil.createBuilder(schemaMap);
+        return sb.build(rdr);
+    }
+
+    public Document parse(InputStream istream)
+        throws IOException, JDOMException
+    {
+        // and again with schema validation
+        SAXBuilder sb = XmlUtil.createBuilder(schemaMap);
+        return sb.build(istream);
     }
 }

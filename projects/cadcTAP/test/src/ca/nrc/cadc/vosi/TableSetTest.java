@@ -97,6 +97,7 @@ import ca.nrc.cadc.tap.schema.SchemaDesc;
 import ca.nrc.cadc.tap.schema.TableDesc;
 import ca.nrc.cadc.tap.schema.TapSchema;
 import ca.nrc.cadc.util.Log4jInit;
+import ca.nrc.cadc.xml.XmlUtil;
 
 /**
  *
@@ -107,14 +108,14 @@ public class TableSetTest
     private static final Logger log = Logger.getLogger(TableSetTest.class);
     static
     {
-        Log4jInit.setLevel("ca.nrc.cadc.vosi", Level.INFO);
+        Log4jInit.setLevel("ca.nrc.cadc.vosi", Level.DEBUG);
     }
 
     String schemaNSKey1 = VOSI.TABLES_NS_URI;
-    String schemaResource1 = "VOSITables-v1.0.xsd";
+    String schemaResource1 = VOSI.TABLES_SCHEMA;
 
     String schemaNSKey2 = VOSI.VODATASERVICE_NS_URI;
-    String schemaResource2 = "VODataService-v1.1.xsd";
+    String schemaResource2 = VOSI.VODATASERVICE_SCHEMA;
 
     String DEFAULT_SCHEMA = "default";
 
@@ -139,8 +140,8 @@ public class TableSetTest
     public void setUp()
     {
         schemaNSMap = new HashMap<String, String>();
-        schemaNSMap.put(schemaNSKey1, schemaResource1);
-        schemaNSMap.put(schemaNSKey2, schemaResource2);
+        schemaNSMap.put(schemaNSKey1, XmlUtil.getResourceUrlString(schemaResource1, TableSetTest.class));
+        schemaNSMap.put(schemaNSKey2, XmlUtil.getResourceUrlString(schemaResource2, TableSetTest.class));
     }
 
     @After
@@ -164,8 +165,9 @@ public class TableSetTest
             Writer stringWriter = new StringWriter();
             xop.output(doc, stringWriter);
             String xmlString = stringWriter.toString();
+            log.debug(xmlString);
 
-            TestUtil.validateXml(xmlString, schemaNSMap);
+            doc = XmlUtil.validateXml(xmlString, schemaNSMap);
 
             TestUtil.assertXmlNode(doc, "/vosi:tableset");
             TestUtil.assertXmlNode(doc, "/vosi:tableset/schema[name='tap_schema']");
@@ -204,8 +206,9 @@ public class TableSetTest
             Writer stringWriter = new StringWriter();
             xop.output(doc, stringWriter);
             String xmlString = stringWriter.toString();
-
-            TestUtil.validateXml(xmlString, schemaNSMap);
+            log.debug(xmlString);
+            
+            doc = XmlUtil.validateXml(xmlString, schemaNSMap);
 
             TestUtil.assertXmlNode(doc, "/vosi:tableset");
             TestUtil.assertXmlNode(doc, "/vosi:tableset/schema[name='default']");
