@@ -70,7 +70,7 @@
 package ca.nrc.cadc.vosi;
 
 import ca.nrc.cadc.util.Log4jInit;
-import ca.nrc.cadc.vosi.util.XmlUtil;
+import ca.nrc.cadc.xml.XmlUtil;
 
 import java.io.StringWriter;
 import java.io.Writer;
@@ -102,14 +102,14 @@ public class CapabilityTest
         Log4jInit.setLevel("ca.nrc.cadc.vosi", Level.INFO);
     }
 
-    String schemaResource1 = "VOSICapabilities-v1.0.xsd"; // local xsd file name
+    String schemaResource1 = VOSI.CAPABILITIES_SCHEMA;
     String schemaNSKey1 = VOSI.CAPABILITIES_NS_URI;
 
     String schemaNSKey2 = VOSI.VORESOURCE_NS_URI;
-    String schemaResource2 = "VOResource-v1.0.xsd";
+    String schemaResource2 =  VOSI.VORESOURCE_SCHEMA;
 
     String schemaNSKey3 = VOSI.VODATASERVICE_NS_URI;
-    String schemaResource3 = "VODataService-v1.1.xsd";
+    String schemaResource3 = VOSI.VODATASERVICE_SCHEMA;
 
     Map<String, String> schemaNSMap;
     
@@ -136,9 +136,9 @@ public class CapabilityTest
     public void setUp() throws Exception
     {
         schemaNSMap = new HashMap<String, String>();
-        schemaNSMap.put(schemaNSKey1, schemaResource1);
-        schemaNSMap.put(schemaNSKey2, schemaResource2);
-        schemaNSMap.put(schemaNSKey3, schemaResource3);
+        schemaNSMap.put(schemaNSKey1, XmlUtil.getResourceUrlString(schemaResource1, CapabilityTest.class));
+        schemaNSMap.put(schemaNSKey2, XmlUtil.getResourceUrlString(schemaResource2, CapabilityTest.class));
+        schemaNSMap.put(schemaNSKey3, XmlUtil.getResourceUrlString(schemaResource3, CapabilityTest.class));
     }
 
     /**

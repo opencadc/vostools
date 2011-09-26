@@ -85,7 +85,9 @@ import org.junit.Test;
 
 import ca.nrc.cadc.date.DateUtil;
 import ca.nrc.cadc.util.Log4jInit;
-import ca.nrc.cadc.vosi.util.XmlUtil;
+import ca.nrc.cadc.xml.XmlUtil;
+import java.util.HashMap;
+import java.util.Map;
 
 import org.apache.log4j.Level;
 import org.apache.log4j.Logger;
@@ -102,8 +104,8 @@ public class AvailabilityTest
         Log4jInit.setLevel("ca.nrc.cadc.vosi", Level.INFO);
     }
 
-    String schemaResource = "VOSIAvailability-v1.0.xsd"; // local xsd file name
-    String schemaNSKey = VOSI.AVAILABILITY_NS_URI;
+    Map<String,String> schemaMap = new HashMap<String,String>();
+    
 
     /**
      * @throws java.lang.Exception
@@ -127,6 +129,7 @@ public class AvailabilityTest
     @Before
     public void setUp() throws Exception
     {
+        this.schemaMap.put( VOSI.AVAILABILITY_NS_URI, XmlUtil.getResourceUrlString(VOSI.AVAILABILITY_SCHEMA, AvailabilityTest.class));
     }
 
     /**
@@ -159,7 +162,7 @@ public class AvailabilityTest
         xop.output(doc, stringWriter);
         String xmlString = stringWriter.toString();
         
-        XmlUtil.validateXml(xmlString, schemaNSKey, schemaResource);
+        XmlUtil.validateXml(xmlString, schemaMap);
 
         TestUtil.assertXmlNode(doc, "/vosi:availability");
         TestUtil.assertXmlNode(doc, "/vosi:availability/vosi:available");
@@ -182,7 +185,7 @@ public class AvailabilityTest
         xop.output(doc, stringWriter);
         String xmlString = stringWriter.toString();
 
-        XmlUtil.validateXml(xmlString, schemaNSKey, schemaResource);
+        XmlUtil.validateXml(xmlString, schemaMap);
         
         TestUtil.assertXmlNode(doc, "/vosi:availability");
         TestUtil.assertXmlNode(doc, "/vosi:availability/vosi:available[.='false']");

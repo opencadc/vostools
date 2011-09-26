@@ -69,11 +69,10 @@
 
 package ca.nrc.cadc.vosi;
 
+import ca.nrc.cadc.xml.XmlUtil;
 import org.apache.log4j.Logger;
 import org.jdom.Document;
 import org.junit.Assert;
-
-import ca.nrc.cadc.vosi.util.XmlUtil;
 
 /**
  * @author zhangsa

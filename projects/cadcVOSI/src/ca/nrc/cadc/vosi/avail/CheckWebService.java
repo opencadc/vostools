@@ -76,9 +76,11 @@ import org.jdom.xpath.XPath;
 
 import ca.nrc.cadc.vosi.VOSI;
 import ca.nrc.cadc.vosi.util.WebGet;
-import ca.nrc.cadc.vosi.util.XmlUtil;
+import ca.nrc.cadc.xml.XmlUtil;
 import java.io.IOException;
 import java.net.MalformedURLException;
+import java.util.HashMap;
+import java.util.Map;
 import org.jdom.JDOMException;
 
 /**
@@ -91,10 +93,8 @@ public class CheckWebService implements CheckResource
 {
     private static Logger log = Logger.getLogger(CheckWebService.class);
 
+    private Map<String,String> schemaMap = new HashMap<String,String>();
     private String wsURL;
-
-    private final String schemaResource = "VOSIAvailability-v1.0.xsd"; // local xsd file name
-    private final String schemaNSKey = VOSI.AVAILABILITY_NS_URI;
 
     /**
      * @param url the URL of availability checking, e.g. http://www.sample.com/myservice/availability
@@ -102,6 +102,7 @@ public class CheckWebService implements CheckResource
     public CheckWebService(String url)
     {
         wsURL = url;
+        this.schemaMap.put( VOSI.AVAILABILITY_NS_URI, XmlUtil.getResourceUrlString(VOSI.AVAILABILITY_SCHEMA, CheckWebService.class));
     }
 
     /* (non-Javadoc)
@@ -140,7 +141,7 @@ public class CheckWebService implements CheckResource
 
         try
         {
-            doc = XmlUtil.validateXml(strXml, schemaNSKey, schemaResource);
+            doc = XmlUtil.validateXml(strXml, schemaMap);
             //get namespace and/or prefix from Document, then create xpath based on the prefix
             String nsp = doc.getRootElement().getNamespacePrefix(); //Namespace Prefix
             if (nsp != null && nsp.length() > 0)

@@ -70,28 +70,42 @@
 package ca.nrc.cadc.vosi;
 
 /**
- * @author zhangsa
+ * VOSI constants. Actually, this class contains more than VOSI constants: it also
+ * includes other commonly used IVOA schema constants. For each schema, there is a
+ * costant for the namespace (SOMETHING_NS_URI) and a constant for the name of the
+ * schema (xsd) file (SOMETHING_SCHEMA) included in the cadcVOSI.jar during build.
+ * The name can be used with XmlUtil.getResourceUrlString to find a URL to the file
+ * in the classpath and then the namespace URI and URL can be used to set up the
+ * schema map to pass to XmlUtil to parse the document (or create a SAXBuilder).
  *
+ * @author pdowler
  */
 public class VOSI
 {
-    // Uri to the XML schema.
     public static final String XSI_NS_URI = "http://www.w3.org/2001/XMLSchema-instance";
     
-    // Uri to the VOSI schema.
     public static final String AVAILABILITY_NS_URI = "http://www.ivoa.net/xml/VOSIAvailability/v1.0";
 
-    // Uri to the VOSI schema.
     public static final String CAPABILITIES_NS_URI = "http://www.ivoa.net/xml/VOSICapabilities/v1.0";
 
-    // Uri to the VOSI schema.
     public static final String TABLES_NS_URI = "http://www.ivoa.net/xml/VOSITables/v1.0";
 
-    // Uri to the VS schema.
     public static final String VODATASERVICE_NS_URI = "http://www.ivoa.net/xml/VODataService/v1.1";
 
-    // Uri to the VS schema.
     public static final String VORESOURCE_NS_URI = "http://www.ivoa.net/xml/VOResource/v1.0";
+
+    
+    public static final String XSI_SCHEMA = "XMLSchema.xsd";
+
+    public static final String AVAILABILITY_SCHEMA = "VOSIAvailability-v1.0.xsd";
+
+    public static final String CAPABILITIES_SCHEMA = "VOSICapabilities-v1.0.xsd";
+
+    public static final String TABLES_SCHEMA = "VOSITables-v1.0.xsd";
+
+    public static final String VODATASERVICE_SCHEMA = "VODataService-v1.1.xsd";
+
+    public static final String VORESOURCE_SCHEMA = "VOResource-v1.0.xsd";
 
     // xsi schema location
     public static final String XSI_LOC = "http://www.ivoa.net/xml/VOSI/v1.0 http://www.ivoa.net/xml/VOSI/v1.0 "
