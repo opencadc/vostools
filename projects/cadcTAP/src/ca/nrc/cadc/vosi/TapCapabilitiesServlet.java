@@ -80,6 +80,7 @@ public class TapCapabilitiesServlet extends HttpServlet
             PrintWriter pw = response.getWriter();
             pw.println("resource incorrectly configured and not functional");
             pw.close();
+            return;
         }
 	    try
         {
