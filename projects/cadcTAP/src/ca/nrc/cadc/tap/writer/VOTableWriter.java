@@ -264,6 +264,7 @@ public class VOTableWriter implements TableWriter
         
         // Create the RESOURCE element and add to the VOTABLE element.
         Element resource = new Element("RESOURCE", namespace);
+        resource.setAttribute("type", "results");
         root.addContent(resource);
 
         // Create the INFO element and add to the RESOURCE element.
