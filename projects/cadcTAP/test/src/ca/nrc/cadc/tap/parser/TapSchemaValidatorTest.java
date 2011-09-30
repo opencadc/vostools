@@ -188,6 +188,27 @@ public class TapSchemaValidatorTest
         }
     }
 
+    @Test
+    public void testQuotesColumn()
+    {
+        try
+        {
+            String query = "select \"baz\" from foo.bar_from_foo";
+            log.debug("testQuotesColumn, before: " + query);
+            List<Parameter> params = new ArrayList<Parameter>();
+            params.add(new Parameter("QUERY", query));
+            TapQuery tq = new TestQuery();
+            tq.setParameterList(params);
+            String sql = tq.getSQL();
+            // valid
+        }
+        catch(Throwable unexpected)
+        {
+            log.debug("FAIL", unexpected);
+            Assert.fail("unexpected exception: " + unexpected);
+        }
+    }
+
     class TestQuery extends AdqlQuery
     {
         @Override

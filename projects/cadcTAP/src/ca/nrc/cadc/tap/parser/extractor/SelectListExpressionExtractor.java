@@ -178,7 +178,7 @@ public class SelectListExpressionExtractor extends ExpressionNavigator
                 Column column0 = (Column) expression;
                 Column column2 = new Column(column0.getTable(), column0.getColumnName());
 
-                columnName = column2.getColumnName();
+                columnName = TapSchemaUtil.stripQuotes(column2.getColumnName());
                 Table table = column2.getTable();
                 String schemaName = table.getSchemaName();
 

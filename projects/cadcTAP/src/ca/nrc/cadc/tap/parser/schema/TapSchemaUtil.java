@@ -129,7 +129,7 @@ public class TapSchemaUtil
         String schemaAndTableName = tableDesc.getTableName(); // getTableName() returns "schemaName.tableName"
         for (ColumnDesc cd : tableDesc.getColumnDescs())
         {
-            tsi = new TapSelectItem(schemaAndTableName, cd.getColumnName(), null);
+            tsi = new TapSelectItem(schemaAndTableName, stripQuotes(cd.getColumnName()), null);
             tsiList.add(tsi);
         }
         return tsiList;
@@ -173,7 +173,7 @@ public class TapSchemaUtil
     public static boolean isValidColumn(TapSchema tapSchema, Column column)
     {
         boolean rtn = false;
-        String cname = column.getColumnName();
+        String cname = stripQuotes(column.getColumnName());
         Table table = column.getTable();
         TableDesc td = findTableDesc(tapSchema, table);
         for (ColumnDesc cd : td.getColumnDescs())
@@ -198,6 +198,7 @@ public class TapSchemaUtil
      */
     public static Table findTableForColumnName(TapSchema tapSchema, PlainSelect plainSelect, String columnName)
     {
+        columnName = stripQuotes(columnName);
         TableDesc rtnTd = null;
         int matchCount = 0;
         TableDesc td;
@@ -256,6 +257,16 @@ public class TapSchemaUtil
         return rtn;
     }
 
+    public static String stripQuotes(String col)
+    {
+        if (col != null && col.length() > 1)
+        {
+            if (col.charAt(0) == '"' && col.charAt(col.length()-1) == '"')
+                return col.substring(1, col.length()-1);
+        }
+        return col;
+    }
+
     /**
      * Validate a column which is not an alias of selectItem.
      * 
@@ -272,10 +283,11 @@ public class TapSchemaUtil
         // columnName, table.columnName, tableAilas.columnName, or schema.table.ColumnName
 
         Table table = column.getTable();
+        String columnName = stripQuotes(column.getColumnName());
+        
         if (table == null || table.getName() == null || table.getName().equals(""))
         {
             // form: columnName
-            String columnName = column.getColumnName();
             Table fromTable = TapSchemaUtil.findTableForColumnName(tapSchema, plainSelect, columnName);
             if (fromTable == null) throw new IllegalArgumentException("Column: [" + columnName + "] does not exist.");
         }
@@ -293,7 +305,6 @@ public class TapSchemaUtil
                 else
                 {
                     TableDesc fromTableDesc = TapSchemaUtil.findTableDesc(tapSchema, fromTable);
-                    String columnName = column.getColumnName();
                     if (!TapSchemaUtil.isValidColumnName(fromTableDesc, columnName))
                         throw new IllegalArgumentException("Column: [" + columnName + "] does not exist.");
                 }
@@ -302,7 +313,7 @@ public class TapSchemaUtil
             {
                 // schema.table.ColumnName
                 TableDesc fromTableDesc = TapSchemaUtil.findTableDesc(tapSchema, table);
-                String columnName = column.getColumnName();
+                
                 if (!TapSchemaUtil.isValidColumnName(fromTableDesc, columnName))
                     throw new IllegalArgumentException("Column: [" + columnName + "] does not exist.");
             }
@@ -323,7 +334,7 @@ public class TapSchemaUtil
         TableDesc td = findTableDesc(tapSchema, table);
         for (ColumnDesc cd : td.getColumnDescs())
         {
-            SelectItem sei = TapSchemaUtil.newSelectExpressionItem(table, cd.getColumnName());
+            SelectItem sei = TapSchemaUtil.newSelectExpressionItem(table, stripQuotes(cd.getColumnName()));
             seiList.add(sei);
         }
         return seiList;
@@ -365,7 +376,7 @@ public class TapSchemaUtil
 
         ColumnDesc columnDesc = null;
 
-        String columnName = column.getColumnName();
+        String columnName = stripQuotes(column.getColumnName());
 
         Table qualifiedTable = getQualifiedTable(tapSchema, plainSelect, column);
 
@@ -390,7 +401,7 @@ public class TapSchemaUtil
 
         Table qTable = null;
 
-        String columnName = column.getColumnName();
+        String columnName = stripQuotes(column.getColumnName());
         Table table = column.getTable();
         if (table == null || table.getName() == null || table.getName().equals(""))
         {

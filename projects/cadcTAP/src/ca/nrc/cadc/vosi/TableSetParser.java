@@ -8,7 +8,7 @@
 *  National Research Council            Conseil national de recherches
 *  Ottawa, Canada, K1A 0R6              Ottawa, Canada, K1A 0R6
 *  All rights reserved                  Tous droits réservés
-*                                       
+*
 *  NRC disclaims any warranties,        Le CNRC dénie toute garantie
 *  expressed, implied, or               énoncée, implicite ou légale,
 *  statutory, of any kind with          de quelque nature que ce
@@ -31,10 +31,10 @@
 *  software without specific prior      de ce logiciel sans autorisation
 *  written permission.                  préalable et particulière
 *                                       par écrit.
-*                                       
+*
 *  This file is part of the             Ce fichier fait partie du projet
 *  OpenCADC project.                    OpenCADC.
-*                                       
+*
 *  OpenCADC is free software:           OpenCADC est un logiciel libre ;
 *  you can redistribute it and/or       vous pouvez le redistribuer ou le
 *  modify it under the terms of         modifier suivant les termes de
@@ -44,7 +44,7 @@
 *  either version 3 of the              : soit la version 3 de cette
 *  License, or (at your option)         licence, soit (à votre gré)
 *  any later version.                   toute version ultérieure.
-*                                       
+*
 *  OpenCADC is distributed in the       OpenCADC est distribué
 *  hope that it will be useful,         dans l’espoir qu’il vous
 *  but WITHOUT ANY WARRANTY;            sera utile, mais SANS AUCUNE
@@ -54,7 +54,7 @@
 *  PURPOSE.  See the GNU Affero         PARTICULIER. Consultez la Licence
 *  General Public License for           Générale Publique GNU Affero
 *  more details.                        pour plus de détails.
-*                                       
+*
 *  You should have received             Vous devriez avoir reçu une
 *  a copy of the GNU Affero             copie de la Licence Générale
 *  General Public License along         Publique GNU Affero avec
@@ -67,135 +67,96 @@
 ************************************************************************
 */
 
-/**
- * 
- */
-package ca.nrc.cadc.tap.parser;
+package ca.nrc.cadc.vosi;
 
-import static org.junit.Assert.fail;
-
-import java.util.ArrayList;
-import java.util.List;
-
-import net.sf.jsqlparser.statement.Statement;
-
-import org.junit.After;
-import org.junit.AfterClass;
-import org.junit.Before;
-import org.junit.BeforeClass;
-import org.junit.Test;
-
-import ca.nrc.cadc.tap.parser.extractor.SelectListExpressionExtractor;
-import ca.nrc.cadc.tap.parser.extractor.SelectListExtractor;
-import ca.nrc.cadc.tap.parser.navigator.FromItemNavigator;
-import ca.nrc.cadc.tap.parser.navigator.ReferenceNavigator;
-import ca.nrc.cadc.tap.parser.navigator.SelectNavigator;
-import ca.nrc.cadc.tap.schema.TapSchema;
-import ca.nrc.cadc.util.Log4jInit;
+import ca.nrc.cadc.xml.XmlUtil;
+import java.io.IOException;
+import java.io.InputStream;
+import java.io.Reader;
+import java.util.HashMap;
+import java.util.Map;
+import org.apache.log4j.Logger;
+import org.jdom.Document;
+import org.jdom.JDOMException;
+import org.jdom.input.SAXBuilder;
 
 /**
- * test the extraction of select list
+ * Simple class to parse a VOSI-tables document. When schema validation is enabled
+ * (it is the default), this class finds all the necessary schema files in the
+ * classpath (in cadcVOSI) and maps the current namespace URIs to those schema
+ * locations as required by the XmlUtil class (cadcUtil).
  * 
- * @author Sailor Zhang
- *
+ * @author pdowler
  */
-public class ExtractorTest
+public class TableSetParser 
 {
-    public String _query;
-    public List<TapSelectItem> _expected;
+    private static final Logger log = Logger.getLogger(TableSetParser.class);
 
-    SelectListExpressionExtractor _en;
-    ReferenceNavigator _rn;
-    FromItemNavigator _fn;
-    SelectNavigator _sn;
+    private Map<String,String> schemaMap;
 
-    static TapSchema TAP_SCHEMA;
-
-    /**
-     * @throws java.lang.Exception
-     */
-    @BeforeClass
-    public static void setUpBeforeClass() throws Exception
+    public TableSetParser()
     {
-        Log4jInit.setLevel("ca.nrc.cadc", org.apache.log4j.Level.INFO);
-        TAP_SCHEMA = TestUtil.loadDefaultTapSchema();
+        this(true);
     }
 
-    /**
-     * @throws java.lang.Exception
-     */
-    @AfterClass
-    public static void tearDownAfterClass() throws Exception
+    public TableSetParser(boolean enableSchemaValidation)
     {
-    }
-
-    /**
-     * @throws java.lang.Exception
-     */
-    @Before
-    public void setUp() throws Exception
-    {
-
-        _en = new SelectListExpressionExtractor(TAP_SCHEMA);
-        _rn = null;
-        _fn = null;
-        _sn = new SelectListExtractor(_en, _rn, _fn);
-    }
-
-    /**
-     * @throws java.lang.Exception
-     */
-    @After
-    public void tearDown() throws Exception
-    {
-    }
-
-    private void doit()
-    {
-        System.out.println(_query);
-        Statement s = null;
-        try
+        if (enableSchemaValidation)
         {
-            s = ParserUtil.receiveQuery(_query);
-            ParserUtil.parseStatement(s, _sn);
-            System.out.println(s);
-            List<TapSelectItem> tsiList = _en.getTapSelectItemList();
-            System.out.println(tsiList.toString());
-            org.junit.Assert.assertEquals(_expected, tsiList);
-        } catch (Exception ae)
-        {
-            ae.printStackTrace(System.out);
-            fail(ae.toString());
+            this.schemaMap = new HashMap<String,String>();
+            String url;
+
+            url = XmlUtil.getResourceUrlString(VOSI.TABLES_SCHEMA, TableSetParser.class);
+            if (url != null)
+            {
+                log.debug(VOSI.TABLES_NS_URI + " -> " + url);
+                schemaMap.put(VOSI.TABLES_NS_URI, url);
+            }
+            else
+                log.warn("failed to find resource: " + VOSI.TABLES_SCHEMA);
+
+            url = XmlUtil.getResourceUrlString(VOSI.VORESOURCE_SCHEMA, TableSetParser.class);
+            if (url != null)
+            {
+                log.debug(VOSI.VORESOURCE_NS_URI + " -> " + url);
+                schemaMap.put(VOSI.VORESOURCE_NS_URI, url);
+            }
+            else
+                log.warn("failed to find resource: " + VOSI.VORESOURCE_SCHEMA);
+
+            url = XmlUtil.getResourceUrlString(VOSI.VODATASERVICE_SCHEMA, TableSetParser.class);
+            if (url != null)
+            {
+                log.debug(VOSI.VODATASERVICE_NS_URI + " -> " + url);
+                schemaMap.put(VOSI.VODATASERVICE_NS_URI, url);
+            }
+            else
+                log.warn("failed to find resource: " + VOSI.VODATASERVICE_SCHEMA);
+
+            url = XmlUtil.getResourceUrlString(VOSI.XSI_SCHEMA, TableSetParser.class);
+            if (url != null)
+            {
+                log.debug(VOSI.XSI_NS_URI + " -> " + url);
+                schemaMap.put(VOSI.XSI_NS_URI, url);
+            }
+            else
+                log.warn("failed to find resource: " + VOSI.XSI_SCHEMA);
         }
     }
 
-    @Test
-    public void testAll()
+    public Document parse(Reader rdr)
+        throws IOException, JDOMException
     {
-        _query = "select t.table_name as tn, keys.from_table from tap_schema.tables t, tap_schema.keys where t.utype=keys.utype";
-
-        TapSelectItem tsi;
-        List<TapSelectItem> tsiList = new ArrayList<TapSelectItem>();
-        tsi = new TapSelectItem("tap_schema.tables","table_name","tn");
-        tsiList.add(tsi);
-        tsi = new TapSelectItem("tap_schema.keys","from_table",null);
-        tsiList.add(tsi);
-        _expected = tsiList;
-        
-        doit();
+        // and again with schema validation
+        SAXBuilder sb = XmlUtil.createBuilder(schemaMap);
+        return sb.build(rdr);
     }
 
-    @Test
-    public void testQuotedCol()
+    public Document parse(InputStream istream)
+        throws IOException, JDOMException
     {
-        _query = "select \"table_name\" from tap_schema.tables";
-
-        TapSelectItem tsi;
-        List<TapSelectItem> tsiList = new ArrayList<TapSelectItem>();
-        tsi = new TapSelectItem("tap_schema.tables","table_name",null);
-        tsiList.add(tsi);
-        _expected = tsiList;
-
-        doit();
+        // and again with schema validation
+        SAXBuilder sb = XmlUtil.createBuilder(schemaMap);
+        return sb.build(istream);
     }
 }
