@@ -154,6 +154,7 @@ public class QueryRunner implements JobRunner
     static
     {
         langQueries.put("ADQL", adqlParserClassName);
+        langQueries.put("ADQL-2.0", adqlParserClassName);
         langQueries.put("SQL", sqlParserClassName);
         langQueries.put("PQL", pqlParserClassName);
     }
