@@ -201,6 +201,9 @@ public class TableSet
         addChild(eleColumn, "unit", cd.getUnit());
         addChild(eleColumn, "ucd", cd.getUcd());
         addChild(eleColumn, "utype", cd.getUtype());
+        if (cd.indexed)
+            addChild(eleColumn, "flag", "indexed");
+        // TODO: flag=primary for primary keys? 
 
         String datatype = cd.getDatatype();
         String[] parts = datatype.split(":");
