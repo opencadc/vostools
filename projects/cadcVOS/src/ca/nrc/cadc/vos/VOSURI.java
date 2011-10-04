@@ -91,7 +91,21 @@ public class VOSURI
      */
     public VOSURI(URI uri)
     {
-        vosURI = uri;
+        String path = uri.getPath();
+        if (path.endsWith("/"))
+        {
+            path = path.substring(0, path.length() - 1);
+        }
+        
+        try
+        {
+            vosURI = new URI(uri.getScheme(), uri.getAuthority(),
+                    path, uri.getQuery(), uri.getFragment());
+        }
+        catch (URISyntaxException e)
+        {
+            throw new IllegalArgumentException("URI malformed: " + uri.toString());
+        }
 
         // Check the scheme is vos
         if (!vosURI.getScheme().equalsIgnoreCase("vos")) 

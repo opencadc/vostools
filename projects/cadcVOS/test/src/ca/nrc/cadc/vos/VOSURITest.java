@@ -69,13 +69,14 @@
 
 package ca.nrc.cadc.vos;
 
-import ca.nrc.cadc.util.Log4jInit;
 import java.net.URI;
-import java.net.URISyntaxException;
+
 import org.apache.log4j.Level;
 import org.apache.log4j.Logger;
 import org.junit.Assert;
 import org.junit.Test;
+
+import ca.nrc.cadc.util.Log4jInit;
 
 /**
  *
@@ -289,6 +290,26 @@ public class VOSURITest
             Assert.fail("unexpected exception: " + unexpected);
         }
     }
+    
+    @Test
+    public void testTrailingSlash()
+    {
+        try
+        {
+            VOSURI uri1 = new VOSURI("vos://cadc.nrc.ca!foo/bar");
+            VOSURI uri2 = new VOSURI("vos://cadc.nrc.ca!foo/bar/");
+            Assert.assertEquals("URIs should be equal", uri1, uri2);
+            Assert.assertEquals("Paths should be equal", uri1.getPath(), uri2.getPath());
+            Assert.assertEquals("Names should be equal", uri1.getName(), uri2.getName());
+            Assert.assertEquals("Parents should be equal", uri1.getParent(), uri2.getParent());
+        }
+        catch(Exception unexpected)
+        {
+            log.error("unexpected exception", unexpected);
+            Assert.fail("unexpected exception: " + unexpected);
+        }
+    }
+    
 
     @Test
     public void testBangTildeEquivalent()
