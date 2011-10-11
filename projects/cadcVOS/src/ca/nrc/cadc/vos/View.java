@@ -215,4 +215,9 @@ public class View
         
     }
 
+    @Override
+    public String toString()
+    {
+        return "View[" + uri + "," + original + "]";
+    }
 }

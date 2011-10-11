@@ -132,7 +132,7 @@ public class TransferWriter
         Element e = null;
 
         e = new Element("target", VOS.NS);
-        e.addContent(transfer.getTarget().getUri().toString());
+        e.addContent(transfer.getTarget().getURIObject().toASCIIString());
         root.addContent(e);
 
         e = new Element("direction", VOS.NS);

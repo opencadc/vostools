@@ -76,8 +76,10 @@ import ca.nrc.cadc.uws.web.InlineContentHandler;
 import ca.nrc.cadc.vos.Transfer;
 import ca.nrc.cadc.vos.TransferParsingException;
 import ca.nrc.cadc.vos.TransferReader;
+import ca.nrc.cadc.vos.TransferWriter;
 import java.io.IOException;
 import java.io.InputStream;
+import java.io.StringWriter;
 import java.net.URL;
 import java.util.ArrayList;
 import java.util.List;
@@ -121,7 +123,10 @@ public class TransferInlineContentHandler implements InlineContentHandler
         {
             TransferReader reader = new TransferReader(true);
             Transfer transfer = reader.read(inputStream);
-            jobInfo = new JobInfo(transfer.toXmlString(), contentType, true);
+            TransferWriter tw = new TransferWriter();
+            StringWriter sw = new StringWriter();
+            tw.write(transfer, sw);
+            jobInfo = new JobInfo(sw.toString(), contentType, true);
         }
         catch (TransferParsingException e)
         {

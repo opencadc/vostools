@@ -128,4 +128,9 @@ public class Direction
         return false;
     }
     
+    @Override
+    public String toString()
+    {
+        return "Direction[" + value+  "]";
+    }
 }

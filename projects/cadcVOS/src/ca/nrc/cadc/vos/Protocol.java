@@ -104,6 +104,7 @@ public class Protocol
         this.param = param;
     }
 
+
     @Override
     public boolean equals(Object obj)
     {
@@ -172,6 +173,6 @@ public class Protocol
     @Override
     public String toString()
     {
-        return "Protocol [endpoint=" + endpoint + ", param=" + param + ", uri=" + uri + "]";
+        return "Protocol[" + uri + "," + endpoint + "," + param + "]";
     }
 }

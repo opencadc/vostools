@@ -241,10 +241,10 @@ public abstract class AbstractView extends View
      * @param queryString The query string to be included on the endpoints.
      * @return
      */
-    public List<Protocol> getTransferEndpoints(Node node, Transfer transfer, String serverName, int port, String queryString)
-    {
-        return null;
-    }
+    //public List<Protocol> getTransferEndpointsX(Node node, Transfer transfer, String serverName, int port, String queryString)
+    //{
+    //    return null;
+    //}
 
     /**
      * Return the redirect URL for this view, or null if a redirect is not

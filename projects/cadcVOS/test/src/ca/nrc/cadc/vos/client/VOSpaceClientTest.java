@@ -89,7 +89,7 @@ import ca.nrc.cadc.auth.BasicX509TrustManager;
 import ca.nrc.cadc.auth.SSLUtil;
 import ca.nrc.cadc.util.FileUtil;
 import ca.nrc.cadc.util.Log4jInit;
-import ca.nrc.cadc.vos.ClientTransfer;
+import ca.nrc.cadc.uws.ExecutionPhase;
 import ca.nrc.cadc.vos.ContainerNode;
 import ca.nrc.cadc.vos.DataNode;
 import ca.nrc.cadc.vos.Direction;
@@ -363,7 +363,8 @@ public class VOSpaceClientTest
         }
     }
 
-    public ClientTransfer pushToVoSpace() throws Exception
+    //@Test
+    public void testPushPull() throws Exception
     {
         File testFile = TestUtil.getTestFile();
         Assert.assertNotNull(testFile);
@@ -372,57 +373,29 @@ public class VOSpaceClientTest
         log.debug("testfile Canonical path: " + testFile.getCanonicalPath());
 
         String slashPath1 = "/" + ROOT_NODE + TestUtil.uniqueStringOnTime();
-        DataNode dnode = new DataNode(new VOSURI(VOS_URI + slashPath1));
-        dnode = (DataNode) client.createNode(dnode);
+        VOSURI vosURI = new VOSURI(VOS_URI + slashPath1);
         View dview = new View(new URI(VOS.VIEW_DEFAULT));
 
         List<Protocol> protocols = new ArrayList<Protocol>();
-        protocols.add(new Protocol(VOS.PROTOCOL_HTTPS_PUT, endpoint, null));
+        protocols.add(new Protocol(VOS.PROTOCOL_HTTPS_PUT));
 
-        Transfer transfer = new Transfer();
-        transfer.setTarget(dnode);
-        transfer.setView(dview);
-        transfer.setProtocols(protocols);
-        transfer.setDirection(Direction.pushToVoSpace);
+        // upload
+        Transfer transfer = new Transfer(vosURI, Direction.pushToVoSpace, dview, protocols);
+        ClientTransfer clientTransfer = client.createTransfer(transfer);
+        clientTransfer.setFile(testFile);
+        clientTransfer.run();
+        Assert.assertEquals("final upload phase", ExecutionPhase.COMPLETED, clientTransfer.getPhase());
 
-        ClientTransfer clientTransfer = new ClientTransfer(client.pushToVoSpace(transfer));
-        log.debug(clientTransfer.toXmlString());
-        
-        clientTransfer.doUpload(testFile);
-        Node node = clientTransfer.getTarget();
-        log.debug("clientTransfer getTarget: " + node);
-        Node nodeRtn = client.getNode(node.getUri().getPath());
-        log.debug("Node returned from getNode, after doUpload: " + VOSClientUtil.xmlString(nodeRtn));
-        return clientTransfer;
-    }
-
-    //@Test
-    public void testPushToVoSpace() throws Exception
-    {
-        this.pushToVoSpace();
-    }
-
-    //@Test
-    public void testPullFromVoSpace() throws Exception
-    {
-        ClientTransfer txUpload = this.pushToVoSpace();
-        
-        List<Protocol> protocols = new ArrayList<Protocol>();
-        protocols.add(new Protocol(VOS.PROTOCOL_HTTPS_GET, endpoint, null));
-        
-        Transfer txSent = new Transfer();
-        txSent.setTarget(txUpload.getTarget());
-        txSent.setDirection(Direction.pullFromVoSpace);
-        txSent.setView(txUpload.getView());
-        txSent.setProtocols(protocols);
-        
-        ClientTransfer txRtn = new ClientTransfer(client.pullFromVoSpace(txSent));
-        log.debug(txRtn.toXmlString());
-        
         File file = new File("/tmp/" + TestUtil.uniqueStringOnTime());
         log.debug(file.getAbsolutePath());
         log.debug(file.getCanonicalPath());
-        txRtn.doDownload(file);
+
+        // download
+        Transfer trans2 = new Transfer(vosURI, Direction.pullFromVoSpace, dview, protocols);
+        ClientTransfer txRtn = client.createTransfer(trans2);
+        txRtn.setFile(file);
+        txRtn.run();
+        Assert.assertEquals("final download phase", ExecutionPhase.COMPLETED, txRtn.getPhase());
 
         File origFile = TestUtil.getTestFile();
         Assert.assertNotNull(origFile);

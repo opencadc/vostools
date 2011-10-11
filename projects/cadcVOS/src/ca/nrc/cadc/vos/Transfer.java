@@ -69,33 +69,84 @@
 
 package ca.nrc.cadc.vos;
 
-import java.io.IOException;
-import java.io.StringWriter;
 import java.util.List;
-
 import org.apache.log4j.Logger;
 
 /**
- * @author zhangsa
- *
+ * Data structure for the VOSpace transfer job description.
+ * 
+ * @author pdowler
  */
-public class Transfer implements Runnable
+public class Transfer
 {
     private static Logger log = Logger.getLogger(Transfer.class);
 
-    protected Direction direction;
+    private VOSURI target;
+    private Direction direction;
+    private View view;
+    private List<Protocol> protocols;
+    private boolean keepBytes = true;
 
-    // Reqeust member variables
-    protected String serviceUrl;
-    protected Node target;
-    protected View view;
-    protected List<Protocol> protocols;
-    protected boolean keepBytes;
+    protected Transfer() { }
 
-    public Transfer()
+    /**
+     * Constructor for copying a node. This is
+     * @param target
+     * @param direction
+     * @param protocols
+     */
+    public Transfer(VOSURI target, Direction direction, List<Protocol> protocols)
     {
+        this.target = target;
+        this.direction = direction;
+        this.protocols = protocols;
     }
 
+    /**
+     * Constructor for internal vospace move and copy operations.
+     * 
+     * @param target
+     * @param destination
+     * @param keepBytes true for copy, false for move
+     */
+    public Transfer(VOSURI target, VOSURI destination, boolean keepBytes)
+    {
+        this.target = target;
+        this.direction = new Direction(destination.getURIObject().toASCIIString());
+        this.keepBytes = keepBytes;
+    }
+
+    /**
+     * Constructor for copying a node with a specific view.
+     * 
+     * @param target
+     * @param direction
+     * @param view
+     * @param protocols
+     */
+    public Transfer(VOSURI target, Direction direction, View view, List<Protocol> protocols)
+    {
+        this.target = target;
+        this.direction = direction;
+        this.view = view;
+        this.protocols = protocols;
+    }
+
+    // complete ctor for use by TransferReader
+    Transfer(VOSURI target, Direction direction, View view,
+            List<Protocol> protocols, boolean keepBytes)
+    {
+        this.target = target;
+        this.direction = direction;
+        this.view = view;
+        this.protocols = protocols;
+        this.keepBytes = keepBytes;
+    }
+    
+    /**
+     * @return
+     * @deprecated
+     */
     public String getUploadEndpoint() 
     {
         String ret = getEndpoint(VOS.PROTOCOL_HTTP_PUT);
@@ -104,6 +155,10 @@ public class Transfer implements Runnable
         return ret;
     }
 
+    /**
+     * @return
+     * @deprecated
+     */
     public String getDownloadEndpoint() 
     {
         String rtn = getEndpoint(VOS.PROTOCOL_HTTP_GET);
@@ -128,74 +183,14 @@ public class Transfer implements Runnable
         return rtn;
     }
 
-    public String getPhase()
-    {
-        throw new UnsupportedOperationException("Feature under construction.");
-    }
-
-    public String getResults()
-    {
-        //TODO
-        return null;
-        //throw new UnsupportedOperationException("Feature under construction.");
-    }
-
-    public String getErrors()
-    {
-        throw new UnsupportedOperationException("Feature under construction.");
-    }
-
-    public void run()
-    {
-        throw new UnsupportedOperationException("Feature under construction.");
-    }
-
-    public String toXmlString()
-    {
-        String rtn = null;
-        try
-        {
-            TransferWriter writer = new TransferWriter();
-            StringWriter sw = new StringWriter();
-            writer.write(this, sw);
-            rtn = sw.toString();
-            sw.close();
-        } catch (IOException e)
-        {
-            e.printStackTrace();
-            throw new RuntimeException(e);
-        }
-        return rtn;
-    }
-
     public Direction getDirection()
     {
         return direction;
     }
 
-    public void setDirection(Direction direction)
-    {
-        this.direction = direction;
-    }
-
-    public String getServiceUrl()
-    {
-        return serviceUrl;
-    }
-
-    public void setServiceUrl(String serviceUrl)
-    {
-        this.serviceUrl = serviceUrl;
-    }
-
-    public Node getTarget()
+    public VOSURI getTarget()
     {
         return target;
-    }
-
-    public void setTarget(Node target)
-    {
-        this.target = target;
     }
 
     public View getView()
@@ -203,19 +198,9 @@ public class Transfer implements Runnable
         return view;
     }
 
-    public void setView(View view)
-    {
-        this.view = view;
-    }
-
     public List<Protocol> getProtocols()
     {
         return protocols;
-    }
-
-    public void setProtocols(List<Protocol> protocols)
-    {
-        this.protocols = protocols;
     }
 
     public boolean isKeepBytes()
@@ -223,16 +208,27 @@ public class Transfer implements Runnable
         return keepBytes;
     }
 
-    public void setKeepBytes(boolean keepBytes)
-    {
-        this.keepBytes = keepBytes;
-    }
-
     @Override
     public String toString()
     {
-        return "Transfer [direction=" + direction + ", keepBytes=" + keepBytes + ", protocols=" + protocols + ", serviceUrl="
-                + serviceUrl + ", target=" + target + ", view=" + view + "]";
+        StringBuilder sb = new StringBuilder();
+        sb.append("Transfer[");
+        sb.append(target);
+        sb.append(",");
+        sb.append(direction);
+        sb.append(",");
+        sb.append(view);
+
+        if (protocols != null)
+        {
+            for (Protocol p : protocols)
+            {
+                sb.append(",");
+                sb.append(p);
+            }
+        }
+        sb.append("]");
+        return sb.toString();
     }
 
 }

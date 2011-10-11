@@ -102,7 +102,8 @@ import ca.nrc.cadc.reg.client.RegistryClient;
 import ca.nrc.cadc.util.ArgumentMap;
 import ca.nrc.cadc.util.Log4jInit;
 import ca.nrc.cadc.util.StringUtil;
-import ca.nrc.cadc.vos.ClientTransfer;
+import ca.nrc.cadc.uws.ErrorSummary;
+import ca.nrc.cadc.uws.ExecutionPhase;
 import ca.nrc.cadc.vos.ContainerNode;
 import ca.nrc.cadc.vos.DataNode;
 import ca.nrc.cadc.vos.Direction;
@@ -382,18 +383,18 @@ public class Main implements Runnable
         log.debug("doMove");
         try
         {
-            if (this.transferDirection.equals(Direction.pushToVoSpace))
+            if (Direction.pushToVoSpace.equals(transferDirection))
             {
                 moveToVOSpace();
 
             }
-            else if (this.transferDirection.equals(Direction.pullFromVoSpace))
+            else if (Direction.pullFromVoSpace.equals(transferDirection))
             {
                 moveFromVOSpace();
                 // TODO: cofirm copy worked by checking MD5, length
                 // TODO: delete src file from VOSpace
             }
-            else if (this.transferDirection.getValue().startsWith(VOS_PREFIX))
+            else //if (this.transferDirection.getValue().startsWith(VOS_PREFIX))
             {
                 moveWithinVOSpace();
             }
@@ -550,10 +551,8 @@ public class Main implements Runnable
                 + " (" + contentLength + " bytes)";
     }
     
-
-
     private void copyToVOSpace()
-        throws Exception
+        throws Throwable
     {
         URI originalDestination = null;
         if (StringUtil.hasText(destination.getQuery()))
@@ -561,8 +560,9 @@ public class Main implements Runnable
             originalDestination = new URI(destination.toString());
             destination = new URI(destination.toString().replace("?" + destination.getQuery(), ""));
         }
-        DataNode dnode = new DataNode(new VOSURI(destination));
-
+        //DataNode dnode = new DataNode(new VOSURI(destination));
+        VOSURI dest = new VOSURI(destination);
+        
         View view = null;
         if (originalDestination != null)
         {
@@ -573,27 +573,15 @@ public class Main implements Runnable
             view = new View(new URI(VOS.VIEW_DEFAULT));
         }
 
-        copyToVOSpaceFast(dnode, view);
-        //copyToVOSpaceFull(dnode, view);
-    }
-
-    // this does the transfer first and then updates properties is needed
-    private void copyToVOSpaceFast(DataNode dest, View view)
-        throws Exception
-    {
+        
         List<Protocol> protocols = new ArrayList<Protocol>();
         if (subject != null)
             protocols.add(new Protocol(VOS.PROTOCOL_HTTPS_PUT));
         else
             protocols.add(new Protocol(VOS.PROTOCOL_HTTP_PUT));
 
-        Transfer transfer = new Transfer();
-        transfer.setTarget(dest);
-        transfer.setView(view);
-        transfer.setProtocols(protocols);
-        transfer.setDirection(transferDirection);
-
-        ClientTransfer clientTransfer = new ClientTransfer(this.client.pushToVoSpace(transfer));
+        Transfer transfer = new Transfer(dest, Direction.pushToVoSpace, view, protocols);
+        ClientTransfer clientTransfer = client.createTransfer(transfer);
 
         // set http headers for put
         if (contentType != null)
@@ -614,8 +602,14 @@ public class Main implements Runnable
             clientTransfer.setMaxRetries(Integer.MAX_VALUE);
         clientTransfer.setTransferListener(new VOSpaceTransferListener(false));
         clientTransfer.setSSLSocketFactory(client.getSslSocketFactory());
-        clientTransfer.doUpload(fileToUpload);
-        Node node = clientTransfer.getTarget();
+        clientTransfer.setFile(fileToUpload);
+        
+        clientTransfer.run();
+
+        if (clientTransfer.getThrowable() != null)
+            throw clientTransfer.getThrowable();
+        
+        Node node = client.getNode(dest.getPath());
 
         boolean checkProps = contentType != null || contentEncoding != null || properties.size() > 0;
         if (checkProps || log.isDebugEnabled())
@@ -637,6 +631,7 @@ public class Main implements Runnable
             }
         }
     }
+    
     private boolean updateProperty(Node n, String propURI, String propValue)
     {
         log.debug("checking property: " + propURI + " vs " + propValue);
@@ -660,82 +655,20 @@ public class Main implements Runnable
         return ret;
     }
 
-    // deprecated: this creates the destination node first, with properties, and then transfers the data
-    // advantages: it reports when a node is being overwritten, it detects if destination is a container
-    private void copyToVOSpaceFull(DataNode dest, View view)
-        throws Exception
-    {
-        Node n = null;
-        try { n = client.getNode(dest.getUri().getPath()); }
-        catch(NodeNotFoundException ignore) { }
-        if (n != null && !(n instanceof DataNode))
-            throw new IllegalArgumentException("destination is an existing node of type " + getType(n));
-
-        DataNode dnode = null;
-        if (n != null)
-        {
-            log.info("overwriting existing data node: " + destination);
-            dnode = (DataNode) n;
-            // update props if necessary
-            if (copyProperties(dnode))
-            {
-                log.info("updating node properties: " + destination);
-                dnode = (DataNode) client.setNode(dnode);
-            }
-        }
-        else
-        {
-            log.info("creating new data node: " + destination);
-            dnode = new DataNode(new VOSURI(this.destination));
-            copyProperties(dnode);
-            dnode = (DataNode) client.createNode(dnode);
-        }
-
-        List<Protocol> protocols = new ArrayList<Protocol>();
-        if (subject != null)
-            protocols.add(new Protocol(VOS.PROTOCOL_HTTPS_PUT));
-        else
-            protocols.add(new Protocol(VOS.PROTOCOL_HTTP_PUT));
-
-        Transfer transfer = new Transfer();
-        transfer.setTarget(dnode);
-        transfer.setView(view);
-        transfer.setProtocols(protocols);
-        transfer.setDirection(transferDirection);
-
-        ClientTransfer clientTransfer = new ClientTransfer(this.client.pushToVoSpace(transfer));
-
-        log.debug("this.source: " + source);
-        File fileToUpload = new File(source);
-
-        if (retryEnabled)
-            clientTransfer.setMaxRetries(Integer.MAX_VALUE);
-        clientTransfer.setTransferListener(new VOSpaceTransferListener(false));
-        clientTransfer.setSSLSocketFactory(client.getSslSocketFactory());
-        clientTransfer.doUpload(fileToUpload);
-        Node node = clientTransfer.getTarget();
-        if (log.isDebugEnabled())
-        {
-            log.debug("clientTransfer getTarget: " + node);
-            Node nodeRtn = this.client.getNode(node.getUri().getPath());
-            log.debug("Node returned from getNode, after doUpload: " + VOSClientUtil.xmlString(nodeRtn));
-        }
-    }
-
     private void copyFromVOSpace()
-        throws Exception
+        throws Throwable
     {
-        View dview = null;
+        View view = null;
         if (StringUtil.hasText(source.getQuery()))
         {
-            dview = createProvidesView(new VOSURI(source), null);
+            view = createProvidesView(new VOSURI(source), null);
             source = new URI(source.toString().replace("?" + source.getQuery(), ""));
         }
-        if (dview == null)
+        if (view == null)
         {
-            dview = new View(new URI(VOS.VIEW_DEFAULT));
+            view = new View(new URI(VOS.VIEW_DEFAULT));
         }
-        DataNode dnode = new DataNode(new VOSURI(source));
+        VOSURI src = new VOSURI(source);
 
         List<Protocol> protocols = new ArrayList<Protocol>();
         if (subject != null)
@@ -743,13 +676,8 @@ public class Main implements Runnable
         else
             protocols.add(new Protocol(VOS.PROTOCOL_HTTP_GET));
 
-        Transfer transfer = new Transfer();
-        transfer.setTarget(dnode);
-        transfer.setView(dview);
-        transfer.setProtocols(protocols);
-        transfer.setDirection(transferDirection);
-
-        ClientTransfer clientTransfer = new ClientTransfer(client.pullFromVoSpace(transfer));
+        Transfer transfer = new Transfer(src, Direction.pullFromVoSpace, view, protocols);
+        ClientTransfer clientTransfer = client.createTransfer(transfer);
 
         log.debug("this.source: " + source);
         File fileToSave = new File(destination);
@@ -760,13 +688,18 @@ public class Main implements Runnable
             clientTransfer.setMaxRetries(Integer.MAX_VALUE);
         clientTransfer.setTransferListener(new VOSpaceTransferListener(true));
         clientTransfer.setSSLSocketFactory(client.getSslSocketFactory());
-        clientTransfer.doDownload(fileToSave);
-        Node node = clientTransfer.getTarget();
-        log.debug("clientTransfer getTarget: " + node);
+        clientTransfer.setFile(fileToSave);
+        
+        clientTransfer.run();
+        
+        if (clientTransfer.getThrowable() != null)
+            throw clientTransfer.getThrowable();
+
+        // TODO: check phase and server error message
     }
     
     private void moveToVOSpace()
-    throws Exception
+        throws Throwable
     {
         File sourceFile = new File(source);
         if (!sourceFile.isFile())
@@ -796,7 +729,7 @@ public class Main implements Runnable
     }
     
     private void moveFromVOSpace()
-    throws Exception
+        throws Throwable
     {
         Node sourceNode = this.client.getNode(this.source.getPath());
         if (sourceNode instanceof ContainerNode)
@@ -822,16 +755,22 @@ public class Main implements Runnable
     }
     
     private void moveWithinVOSpace()
-        throws Exception
+        throws Throwable
     {
-        Node src = client.getNode(source.getPath());
+        VOSURI src = new VOSURI(source);
+        VOSURI dest = new VOSURI(destination);
+        Transfer transfer = new Transfer(src, dest, false);
+        ClientTransfer trans = client.createTransfer(transfer);
 
-        Transfer transfer = new Transfer();
-        transfer.setTarget(src);
-        transfer.setDirection(transferDirection);
-        transfer.setKeepBytes(false);
-        
-        client.moveWithinVOSpace(transfer);
+        trans.setMonitor(true);
+        trans.run();
+
+        if (trans.getThrowable() != null)
+            throw trans.getThrowable();
+        if ( !ExecutionPhase.COMPLETED.equals(trans.getPhase()) )
+        {
+            ErrorSummary es = trans.getServerError();
+        }
     }
     
     /**
@@ -1163,8 +1102,8 @@ public class Main implements Runnable
                     URI destServerUri = null;
                     try
                     {
-                        serverUri = new VOSURI(strSrc).getServiceURI();
                         this.source = new URI(strSrc);
+                        serverUri = new VOSURI(source).getServiceURI();
                     }
                     catch (URISyntaxException e)
                     {
@@ -1172,9 +1111,8 @@ public class Main implements Runnable
                     }
                     try
                     {
-                        URI destURI = new URI(strDest);
-                        this.transferDirection = new Direction(strDest);
-                        destServerUri = new VOSURI(destURI).getServiceURI(); 
+                        this.destination = new URI(strDest);
+                        destServerUri = new VOSURI(destination).getServiceURI();
                     }
                     catch (URISyntaxException e)
                     {

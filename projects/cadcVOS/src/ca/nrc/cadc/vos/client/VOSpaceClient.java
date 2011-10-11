@@ -83,7 +83,6 @@ import java.net.URL;
 import java.security.AccessControlContext;
 import java.security.AccessControlException;
 import java.security.AccessController;
-import java.text.ParseException;
 import java.util.List;
 
 import javax.net.ssl.HttpsURLConnection;
@@ -91,14 +90,10 @@ import javax.net.ssl.SSLSocketFactory;
 import javax.security.auth.Subject;
 
 import org.apache.log4j.Logger;
-import org.jdom.JDOMException;
 
 import ca.nrc.cadc.auth.SSLUtil;
 import ca.nrc.cadc.net.NetUtil;
 import ca.nrc.cadc.util.StringUtil;
-import ca.nrc.cadc.uws.ExecutionPhase;
-import ca.nrc.cadc.uws.Job;
-import ca.nrc.cadc.uws.JobReader;
 import ca.nrc.cadc.vos.ContainerNode;
 import ca.nrc.cadc.vos.Direction;
 import ca.nrc.cadc.vos.Node;
@@ -109,7 +104,6 @@ import ca.nrc.cadc.vos.NodeReader;
 import ca.nrc.cadc.vos.NodeWriter;
 import ca.nrc.cadc.vos.Protocol;
 import ca.nrc.cadc.vos.Search;
-import ca.nrc.cadc.vos.ServerTransfer;
 import ca.nrc.cadc.vos.Transfer;
 import ca.nrc.cadc.vos.TransferParsingException;
 import ca.nrc.cadc.vos.TransferReader;
@@ -119,8 +113,9 @@ import ca.nrc.cadc.vos.VOSURI;
 import ca.nrc.cadc.vos.View;
 
 /**
+ * VOSpace client library. This implementation 
+ * 
  * @author zhangsa
- *
  */
 public class VOSpaceClient
 {
@@ -137,7 +132,7 @@ public class VOSpaceClient
     public static final String VOSPACE_ASYNC_TRANSFER_ENDPOINT = "/transfers";
 
     protected String baseUrl;
-    protected boolean schemaValidation;
+    boolean schemaValidation;
     private SSLSocketFactory sslSocketFactory;
 
     /**
@@ -480,119 +475,49 @@ public class VOSpaceClient
         return rtnNode;
     }
 
-    public ServerTransfer createServerTransfer(ServerTransfer sTransfer)
-    {
-        throw new UnsupportedOperationException("Feature under construction.");
-    }
-
-    public Transfer pushToVoSpace(Transfer transfer)
-    {
-        transfer.setDirection(Direction.pushToVoSpace);
-        return createTransfer(transfer);
-    }
-
-    public Transfer pullFromVoSpace(Transfer transfer)
-    {
-        transfer.setDirection(Direction.pullFromVoSpace);
-        return createTransfer(transfer);
-    }
-    
-    public Transfer moveWithinVOSpace(Transfer transfer)
-    {
-        if (!transfer.getDirection().getValue().startsWith(Main.VOS_PREFIX))
-        {
-            throw new IllegalStateException("Destination not a VOSpace node.");
-        }
-        return createAsyncTransfer(transfer);
-    }
 
     /**
-     * Copy Node.
-     * 
-     * For all faults, the service shall set the PHASE to "ERROR" in the Job representation. 
-     * The <errorSummary> element in the Job representation shall be set to the appropriate value 
-     * for the fault type and the appropriate fault representation (see section 5.5) provided at 
-     * the error URI: http://rest-endpoint/transfers/{jobid}/error.
-    
-    
-    -Fault description   
-    --errorSummary    
-    ---Fault representation
-    
-    -Operation fails 
-    --Internal Fault  
-    ---InternalFault
-    
-    -User does not have permissions to perform the operation 
-    --Permission Denied   
-    ---PermissionDenied
-    
-    -Source node does not exist  
-    --Node Not Found  
-    ---NodeNotFound
-    
-    -Destination node already exists and it is not a ContainerNode   
-    --Duplicate Node  
-    ---DuplicateNode
-    
-    -A specified URI is invalid  
-    --Invalid URI 
-    ---InvalidURI
-    
-     * @param src
-     * @param dest
-     * @return
+     * Negotiate a transfer. The argument transfer specifies the target URI, the
+     * direction, the proposed protocols, and an optional view.
+     *
+     * @param trans
+     * @return a negotiated transfer
      */
-    public ServerTransfer copyNode(Node src, Node dest)
+    public ClientTransfer createTransfer(Transfer trans)
     {
-        throw new UnsupportedOperationException("Feature under construction.");
+        if (Direction.pushToVoSpace.equals(trans.getDirection()))
+            return createTransferSync(trans);
+
+        if (Direction.pullFromVoSpace.equals(trans.getDirection()))
+            return createTransferSync(trans);
+        
+        return createTransferASync(trans);
     }
 
-    /**
-     * Move Node.
-     * 
-     * For all faults, the service shall set the PHASE to "ERROR" in the Job representation. 
-     * The <errorSummary> element in the Job representation shall be set to the appropriate value 
-     * for the fault type and the appropriate fault representation (see section 5.5) provided at 
-     * the error URI: http://rest-endpoint/transfers/{jobid}/error.
-    
-    
-    -Fault description   
-    --errorSummary    
-    ---Fault representation
-    
-    -Operation fails 
-    --Internal Fault  
-    ---InternalFault
-    
-    -User does not have permissions to perform the operation 
-    --Permission Denied   
-    ---PermissionDenied
-    
-    -Source node does not exist  
-    --Node Not Found  
-    ---NodeNotFound
-    
-    -Destination node already exists and it is not a ContainerNode   
-    --Duplicate Node  
-    ---DuplicateNode
-    
-    -A specified URI is invalid  
-    --Invalid URI 
-    ---InvalidURI
+    //public Transfer pushToVoSpace(Transfer transfer)
+    //{
+    //    transfer.setDirection(Direction.pushToVoSpace);
+    //    return createTransfer(transfer);
+    //}
 
-     * @param src
-     * @param dest
-     * @return
-     */
-    public ServerTransfer moveNode(Node src, Node dest)
-    {
-        throw new UnsupportedOperationException("Feature under construction.");
-    }
+    //public Transfer pullFromVoSpace(Transfer transfer)
+    //{
+    //    transfer.setDirection(Direction.pullFromVoSpace);
+    //    return createTransfer(transfer);
+    //}
+    
+    //public ClientTransfer moveWithinVOSpace(Transfer transfer)
+    //{
+    //    if (!transfer.getDirection().getValue().startsWith(Main.VOS_PREFIX))
+    //    {
+    //        throw new IllegalStateException("Destination not a VOSpace node.");
+    //    }
+    //    return createTransferASync(transfer);
+    //}
 
     public Search createSearch(Search search)
     {
-        throw new UnsupportedOperationException("Feature under construction.");
+        throw new UnsupportedOperationException();
     }
 
     public List<NodeProperty> getProperties()
@@ -683,89 +608,33 @@ public class VOSpaceClient
         }
     }
 
-    public String getBaseUrl()
+    public String getBaseURL()
     {
         return baseUrl;
     }
 
-    public void setBaseUrl(String baseUrl)
+    //public void setBaseUrl(String baseUrl)
+    //{
+    //    this.baseUrl = baseUrl;
+    //}
+
+    // create an async transfer job
+    private ClientTransfer createTransferASync(Transfer transfer)
     {
-        this.baseUrl = baseUrl;
-    }
-    
-    private Transfer createAsyncTransfer(Transfer transfer)
-    {
-        Transfer rtn = null;
-        String asyncTransUrl;
-        Job jobRtn = null; // the Job returned from server
-        JobReader jobReader = null;
         try
         {
-            asyncTransUrl = this.baseUrl + VOSPACE_ASYNC_TRANSFER_ENDPOINT;      
+            String asyncTransUrl = this.baseUrl + VOSPACE_ASYNC_TRANSFER_ENDPOINT;
             TransferWriter transferWriter = new TransferWriter();
             Writer stringWriter = new StringWriter();
             transferWriter.write(transfer, stringWriter);
-
+            
             // POST the parameters to the Job.
             String jobUrlStr = postJob(asyncTransUrl, stringWriter.toString());
             URL jobUrl = new URL(jobUrlStr);
             log.debug("Job URL is: " + jobUrl.toString());
-            
-            // POST to /phase to run the Job
-            postJob(jobUrlStr + "/phase", "PHASE=RUN");
 
-            HttpURLConnection conn = (HttpURLConnection) jobUrl.openConnection();
-            if (conn instanceof HttpsURLConnection)
-            {
-                HttpsURLConnection sslConn = (HttpsURLConnection) conn;
-                initHTTPS(sslConn);
-            }
-            int code = conn.getResponseCode();
-            if (code != 200)
-                throw new RuntimeException("failed to read transfer job (" + code + "): " + conn.getResponseMessage());
-            
-            jobReader = new JobReader();
-            jobRtn = jobReader.read(conn.getInputStream());
-            log.debug("current job state: " + jobRtn.getExecutionPhase());
-            int numTry = 0;
-            long sleepPeriod = INITIAL_SLEEP;
-            while (numTry++ < MAX_POLLS
-                    && !jobRtn.getExecutionPhase().equals(ExecutionPhase.COMPLETED)
-                    && !jobRtn.getExecutionPhase().equals(ExecutionPhase.ERROR)
-                    && !jobRtn.getExecutionPhase().equals(ExecutionPhase.ABORTED) )
-            {
-                try 
-                {
-                    log.debug("waiting " + sleepPeriod + "ms before polling job.");
-                    Thread.sleep(sleepPeriod);
-                }
-                catch(InterruptedException inter) { break; }
-                
-                conn = (HttpURLConnection) jobUrl.openConnection();
-                if (conn instanceof HttpsURLConnection)
-                {
-                    HttpsURLConnection sslConn = (HttpsURLConnection) conn;
-                    initHTTPS(sslConn);
-                }
-                code = conn.getResponseCode();
-                if (code != 200)
-                    throw new RuntimeException("failed to read transfer job (" + code + "): " + conn.getResponseMessage());
-                jobRtn = jobReader.read(conn.getInputStream());
-                log.debug("current job state: " + jobRtn.getExecutionPhase());
-                
-                sleepPeriod = Math.round(sleepPeriod * SLEEP_INCREMENT);
-            }
-
-            if (jobRtn != null && jobRtn.getExecutionPhase().equals(ExecutionPhase.COMPLETED))
-            {
-                String strResultUrl = jobRtn.getResultsList().get(0).getURI().toASCIIString();
-                log.debug("Result URI: " + strResultUrl);
-            }
-            else if (jobRtn != null && jobRtn.getExecutionPhase().equals(ExecutionPhase.ERROR))
-            {
-                log.debug(jobRtn.toString());
-                throw new RuntimeException("ERROR returned from server: " + jobRtn.getErrorSummary().getSummaryMessage());
-            }
+            // we have only created the job, not run it
+            return new ClientTransfer(jobUrl, transfer, schemaValidation);
         }
         catch (MalformedURLException e)
         {
@@ -777,22 +646,11 @@ public class VOSpaceClient
             log.debug("failed to create transfer", e);
             throw new RuntimeException(e);
         }
-        catch (ParseException e)
-        {
-            log.debug("got bad XML from service", e);
-            throw new IllegalStateException(e);
-        }
-        catch (JDOMException e)
-        {
-            log.debug("got bad XML from service", e);
-            throw new RuntimeException(e);
-        }
-        return rtn;
     }
 
-    private Transfer createTransfer(Transfer transfer)
+    // create a transfer using the sync transfers job resource
+    private ClientTransfer createTransferSync(Transfer transfer)
     {
-        Transfer rtn = null;
         try
         {                      
             // POST the Job and get the redirect location.
@@ -800,7 +658,7 @@ public class VOSpaceClient
             StringWriter sw = new StringWriter();
             writer.write(transfer, sw);
             String redirectLocation = postJob(this.baseUrl + VOSPACE_SYNC_TRANSFER_ENDPOINT, sw.toString());
-            log.debug("sync transfer url: " + redirectLocation);
+            log.debug("POST: transfer jobURL: " + redirectLocation);
             if (!StringUtil.hasText(redirectLocation))
             {
                 throw new RuntimeException("Redirect not received from UWS.");
@@ -833,42 +691,11 @@ public class VOSpaceClient
             
             TransferReader txfReader = new TransferReader(schemaValidation);
             log.debug("GET - reading content: " + redirectLocation);
-            rtn = txfReader.read(conn.getInputStream());
+            Transfer trans = txfReader.read(conn.getInputStream());
             log.debug("GET - done: " + redirectLocation);
+            log.debug("negotiated transfer: " + trans);
             
-            // Handle errors by parsing url, getting job and looking at phase/error summary.
-            // Zero protocols in resulting transfer indicates that an error was encountered.
-            if (rtn.getProtocols() == null || rtn.getProtocols().size() == 0)
-            {
-                log.debug("Found zero protocols in returned transfer, checking "
-                        + "job for error details.");
-                URL jobURL = getJobURLFromJobRedirect(redirectURL);
-                log.debug("getJob(), URL=" + jobURL);
-                conn = (HttpURLConnection) jobURL.openConnection();
-                if (conn instanceof HttpsURLConnection)
-                {
-                    HttpsURLConnection sslConn = (HttpsURLConnection) conn;
-                    initHTTPS(sslConn);
-                }
-                conn.setRequestMethod("GET");
-                conn.setUseCaches(false);
-                conn.setDoInput(true);
-                conn.setDoOutput(false);
-                JobReader jobReader = new JobReader(schemaValidation);
-                Job job = jobReader.read(conn.getInputStream());
-                if (job.getExecutionPhase().equals(ExecutionPhase.ERROR) &&
-                        job.getErrorSummary() != null)
-                {
-                    throw new RuntimeException("Transfer Failure: " +
-                            job.getErrorSummary().getSummaryMessage());
-                }
-                else
-                {
-                    log.warn("Job with no protocol endpoints received for job "
-                            + job.getID());
-                }
-            }
-            log.debug(rtn.toXmlString());
+            return new ClientTransfer(redirectURL, trans, schemaValidation);
         }
         catch (MalformedURLException e)
         {
@@ -880,6 +707,7 @@ public class VOSpaceClient
             log.debug("failed to create transfer", e);
             throw new RuntimeException(e);
         }
+        /*
         catch (JDOMException e) // from JobReader
         {
             log.debug("got bad job XML from service", e);
@@ -890,12 +718,12 @@ public class VOSpaceClient
             log.debug("got bad job XML from service", e);
             throw new RuntimeException(e);
         }
+        */
         catch (TransferParsingException e)
         {
             log.debug("got invalid XML from service", e);
             throw new RuntimeException(e);
         }
-        return rtn;
     }
     
     private URL getJobURLFromJobRedirect(URL redirectURL) throws MalformedURLException

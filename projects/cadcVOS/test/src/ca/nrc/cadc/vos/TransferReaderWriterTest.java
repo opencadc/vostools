@@ -93,13 +93,15 @@ public class TransferReaderWriterTest
 {
     static Logger log = Logger.getLogger(TransferReaderWriterTest.class);
 
-    private Transfer transfer;
+    private String baseURI = "vos://example.com!vospace";
+    private List<Protocol> protocols;
+    private VOSURI target;
 
     @BeforeClass
     public static void setUpBeforeClass() 
         throws Exception
     {
-        Log4jInit.setLevel("ca.nrc.cadc", org.apache.log4j.Level.INFO);
+        Log4jInit.setLevel("ca.nrc.cadc", org.apache.log4j.Level.DEBUG);
     }
 
     @AfterClass
@@ -112,17 +114,10 @@ public class TransferReaderWriterTest
     public void setUp() 
         throws Exception
     {
-        Node target = new DataNode(new VOSURI("vos://example.com!vospace/mydir/myfile"));
-        Node dataNode = new DataNode(new VOSURI("vos://example.com!vospace/mydir/myfile"));
-        View view = new View(new URI(VOS.VIEW_DEFAULT));
-
-        transfer = new Transfer();
-        transfer.setDirection(Direction.pullFromVoSpace);
-        transfer.setKeepBytes(true);
-        
-        transfer.setServiceUrl("http://service.url.for.transfer");
-        transfer.setTarget(target);
-        transfer.setView(view);
+        target = new VOSURI(baseURI + "/mydir/myfile");
+        protocols = new ArrayList<Protocol>();
+        protocols.add(new Protocol(VOS.PROTOCOL_HTTP_GET));
+        protocols.add(new Protocol(VOS.PROTOCOL_HTTPS_GET));
     }
 
     /**
@@ -136,44 +131,63 @@ public class TransferReaderWriterTest
         Assert.assertNotNull(transfer1);
         Assert.assertNotNull(transfer2);
 
-        Assert.assertNotNull(transfer2.getDirection());
-        Assert.assertEquals(transfer1.getDirection(), transfer2.getDirection());
+        Assert.assertEquals("target", transfer1.getTarget(), transfer2.getTarget());
 
-        Assert.assertNotNull(transfer2.getTarget());
-        Assert.assertEquals(transfer1.getTarget(), transfer2.getTarget());
+        Assert.assertEquals("direction", transfer1.getDirection(), transfer2.getDirection());
 
-        Assert.assertNotNull(transfer2.getView());
-        Assert.assertEquals(transfer1.getView().getURI(), transfer2.getView().getURI());
-        Assert.assertEquals(transfer1.getView().getParameters().size(), transfer2.getView().getParameters().size());
-        Assert.assertTrue(transfer1.getView().getParameters().containsAll(transfer2.getView().getParameters()));
-        Assert.assertTrue(transfer2.getView().getParameters().containsAll(transfer1.getView().getParameters()));
+        if (transfer1.getView() != null)
+        {
+            Assert.assertNotNull("view", transfer2.getView());
+            Assert.assertEquals("view uri", transfer1.getView().getURI(), transfer2.getView().getURI());
+            Assert.assertEquals("view param size", transfer1.getView().getParameters().size(), transfer2.getView().getParameters().size());
+            Assert.assertTrue("view params", transfer1.getView().getParameters().containsAll(transfer2.getView().getParameters()));
+            Assert.assertTrue("view params", transfer2.getView().getParameters().containsAll(transfer1.getView().getParameters()));
+        }
+        else
+             Assert.assertNull("view", transfer2.getView());
 
-        Assert.assertEquals(transfer1.getDirection(), transfer2.getDirection());
-
-        Assert.assertEquals(transfer1.getProtocols().size(), transfer2.getProtocols().size());
-        Assert.assertTrue(transfer1.getProtocols().containsAll(transfer2.getProtocols()));
-        Assert.assertTrue(transfer2.getProtocols().containsAll(transfer1.getProtocols()));
+        if (transfer1.getProtocols() != null)
+        {
+            Assert.assertNotNull("protocols", transfer2.getProtocols());
+            Assert.assertEquals("protocols size", transfer1.getProtocols().size(), transfer2.getProtocols().size());
+            Assert.assertTrue("protocols content", transfer1.getProtocols().containsAll(transfer2.getProtocols()));
+            Assert.assertTrue("protocols content", transfer2.getProtocols().containsAll(transfer1.getProtocols()));
+        }
+        else
+            Assert.assertNull("protocols", transfer2.getProtocols());
     }
 
     @Test
-    public void testTransferRequest() // no protocol endpoints
+    public void testPushPullTransfer()
     {
         try
         {
-            List<Protocol> protocols = new ArrayList<Protocol>();
-            protocols.add(new Protocol(VOS.PROTOCOL_HTTP_GET));
-            protocols.add(new Protocol(VOS.PROTOCOL_HTTPS_GET));
-            transfer.setProtocols(protocols);
+            Transfer transfer = new Transfer(target, Direction.pullFromVoSpace, protocols);
+            log.debug("testPushPullTransfer: " + transfer);
 
             StringWriter dest = new StringWriter();
             TransferWriter writer = new TransferWriter();
             writer.write(transfer, dest);
             String xml = dest.toString();
 
-            log.debug(xml);
+            log.debug("testPushPullTransfer\n" + xml);
 
             TransferReader reader = new TransferReader();
             Transfer transfer2 = reader.read(xml);
+
+            compareTransfers(transfer, transfer2);
+
+
+            transfer = new Transfer(target, Direction.pushToVoSpace, protocols);
+            log.debug("testPushPullTransfer: " + transfer);
+
+            dest = new StringWriter();
+            writer.write(transfer, dest);
+            xml = dest.toString();
+
+            log.debug("testPushPullTransfer\n" + xml);
+
+            transfer2 = reader.read(xml);
 
             compareTransfers(transfer, transfer2);
         }
@@ -190,20 +204,16 @@ public class TransferReaderWriterTest
     {
         try
         {
-            List<Protocol> protocols = new ArrayList<Protocol>();
-            protocols.add(new Protocol(VOS.PROTOCOL_HTTP_GET));
-            protocols.add(new Protocol(VOS.PROTOCOL_HTTPS_GET));
-            transfer.setProtocols(protocols);
-            
             View view = new View(new URI(VOS.VIEW_ANY));
-            transfer.setView(view);
+            Transfer transfer = new Transfer(target, Direction.pullFromVoSpace, view, protocols);
+            log.debug("testTransferWithViewAndNoParameters: " + transfer);
             
             StringWriter dest = new StringWriter();
             TransferWriter writer = new TransferWriter();
             writer.write(transfer, dest);
             String xml = dest.toString();
 
-            log.debug(xml);
+            log.debug("testTransferWithViewAndNoParameters\n" + xml);
 
             TransferReader reader = new TransferReader();
             Transfer transfer2 = reader.read(xml);
@@ -222,11 +232,6 @@ public class TransferReaderWriterTest
     {
         try
         {
-            List<Protocol> protocols = new ArrayList<Protocol>();
-            protocols.add(new Protocol(VOS.PROTOCOL_HTTP_GET));
-            protocols.add(new Protocol(VOS.PROTOCOL_HTTPS_GET));
-            transfer.setProtocols(protocols);
-            
             View view = new View(new URI(VOS.VIEW_ANY));
             List<Parameter> params = new ArrayList<Parameter>();
             params.add(new Parameter(new URI(VOS.VIEW_ANY), "cutoutParameter1"));
@@ -234,14 +239,16 @@ public class TransferReaderWriterTest
             params.add(new Parameter(new URI("ivo://cadc.nrc.ca/vospace/viewparam#someotherparam"),
                     "[]{}/;,+=-'\"@#$%^"));
             view.setParameters(params);
-            transfer.setView(view);
-            
+
+            Transfer transfer = new Transfer(target, Direction.pullFromVoSpace, view, protocols);
+            log.debug("testTransferWithViewParameters: " + transfer);
+
             StringWriter dest = new StringWriter();
             TransferWriter writer = new TransferWriter();
             writer.write(transfer, dest);
             String xml = dest.toString();
 
-            log.debug(xml);
+            log.debug("testTransferWithViewParameters\n" + xml);
 
             TransferReader reader = new TransferReader();
             Transfer transfer2 = reader.read(xml);
@@ -260,17 +267,19 @@ public class TransferReaderWriterTest
     {
         try
         {
-            List<Protocol> protocols = new ArrayList<Protocol>();
-            protocols.add(new Protocol(VOS.PROTOCOL_HTTP_GET, "http://example.com/someplace/123", null));
-            protocols.add(new Protocol(VOS.PROTOCOL_HTTPS_GET, "https://example.com/otherplace/456", null));
-            transfer.setProtocols(protocols);
+            List<Protocol> pe = new ArrayList<Protocol>();
+            pe.add(new Protocol(VOS.PROTOCOL_HTTP_GET, "http://example.com/someplace/123", null));
+            pe.add(new Protocol(VOS.PROTOCOL_HTTPS_GET, "https://example.com/otherplace/456", null));
+
+            Transfer transfer = new Transfer(target, Direction.pullFromVoSpace, pe);
+            log.debug("testTransferWithProtocolEndpoints: " + transfer);
             
             StringWriter dest = new StringWriter();
             TransferWriter writer = new TransferWriter();
             writer.write(transfer, dest);
             String xml = dest.toString();
 
-            log.debug(xml);
+            log.debug("testTransferWithProtocolEndpoints\n" + xml);
 
             TransferReader reader = new TransferReader();
             Transfer transfer2 = reader.read(xml);
@@ -283,6 +292,69 @@ public class TransferReaderWriterTest
             Assert.fail("unexpected exception: " + unexpected);
         }
     }
+
+    @Test
+    public void testTransferMoveNode()
+    {
+        try
+        {
+            VOSURI dest = new VOSURI(baseURI + "/mydir/otherfile");
+            Transfer transfer = new Transfer(target, dest, false);
+            log.debug("testTransferMoveNode: " + transfer);
+
+            StringWriter sw = new StringWriter();
+            TransferWriter writer = new TransferWriter();
+            writer.write(transfer, sw);
+            String xml = sw.toString();
+
+            log.debug("testTransferMoveNode\n" + xml);
+
+            TransferReader reader = new TransferReader();
+            Transfer transfer2 = reader.read(xml);
+
+            compareTransfers(transfer, transfer2);
+        }
+        catch(Exception unexpected)
+        {
+            unexpected.printStackTrace();
+            log.error("unexpected exception", unexpected);
+            Assert.fail("unexpected exception: " + unexpected);
+        }
+        finally
+        {
+            log.debug("testTransferMoveNode - DONE");
+        }
+    }
+    
+    @Test
+    public void testTransferCopyNode()
+    {
+        try
+        {
+            VOSURI dest = new VOSURI(baseURI + "/mydir/otherfile");
+            Transfer transfer = new Transfer(target, dest, true);
+            log.debug("testTransferCopyNode: " + transfer);
+
+            StringWriter sw = new StringWriter();
+            TransferWriter writer = new TransferWriter();
+            writer.write(transfer, sw);
+            String xml = sw.toString();
+
+            log.debug("testTransferCopyNode\n" + xml);
+
+            TransferReader reader = new TransferReader();
+            Transfer transfer2 = reader.read(xml);
+
+            compareTransfers(transfer, transfer2);
+        }
+        catch(Exception unexpected)
+        {
+            unexpected.printStackTrace();
+            log.error("unexpected exception", unexpected);
+            Assert.fail("unexpected exception: " + unexpected);
+        }
+    }
+
     
     @Test
     public void testInvalidTransferXml()
@@ -295,7 +367,8 @@ public class TransferReaderWriterTest
         log.debug(xml);
 
         TransferReader reader = new TransferReader();
-        try {
+        try
+        {
             Transfer transfer2 = reader.read(xml);
             Assert.fail("Did not handle invalid Transfer XML properly");
         }

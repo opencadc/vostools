@@ -66,18 +66,12 @@ public class TransferInlineContentHandlerTest
         dateFormat = DateUtil.getDateFormat(DateUtil.IVOA_DATE_FORMAT, DateUtil.UTC);
         baseDate = dateFormat.parse(TEST_DATE);
 
-        Node target = new DataNode(new VOSURI("vos://cadc.nrc.ca!vospace/mydata"));
+        VOSURI target = new VOSURI("vos://cadc.nrc.ca!vospace/mydata");
         View view = new View(new URI(VOS.VIEW_DEFAULT));
-
-        transfer = new Transfer();
-        transfer.setTarget(target);
-        transfer.setView(view);
-        transfer.setDirection(Direction.pullFromVoSpace);
-        transfer.setKeepBytes(true);
 
         List<Protocol> protocols = new ArrayList<Protocol>();
         protocols.add(new Protocol(VOS.PROTOCOL_HTTP_GET));
-        transfer.setProtocols(protocols);
+        transfer = new Transfer(target, Direction.pullFromVoSpace, protocols);
     }
 
     @Test
@@ -86,6 +80,7 @@ public class TransferInlineContentHandlerTest
         try
         {
             InlineContentHandler handler = new TransferInlineContentHandler();
+
             TransferWriter writer = new TransferWriter();
             ByteArrayOutputStream out = new ByteArrayOutputStream();
             writer.write(transfer, out);
@@ -122,10 +117,10 @@ public class TransferInlineContentHandlerTest
             TransferReader reader = new TransferReader();
             Transfer newTransfer = reader.read(jobInfo.getContent());
 
-            Assert.assertEquals("mydata", newTransfer.getTarget().getName());
-            Assert.assertEquals(Direction.pullFromVoSpace, newTransfer.getDirection());
-            Assert.assertEquals(VOS.VIEW_DEFAULT, newTransfer.getView().getURI().toString());
-            Assert.assertEquals(VOS.PROTOCOL_HTTP_GET, newTransfer.getProtocols().get(0).getUri().toString());
+            Assert.assertEquals("vos uri", transfer.getTarget(), newTransfer.getTarget());
+            Assert.assertEquals("dirdction", transfer.getDirection(), newTransfer.getDirection());
+            Assert.assertEquals("view", transfer.getView(), newTransfer.getView());
+            Assert.assertEquals("protocol uri", transfer.getProtocols().get(0).getUri(), newTransfer.getProtocols().get(0).getUri());
         }
         catch(Exception unexpected)
         {

@@ -173,7 +173,7 @@ public class TransferReader
 
         Direction direction = parseDirection(root);
         // String serviceUrl; // not in XML yet
-        Node target = new DataNode(new VOSURI(root.getChildText("target", VOS.NS)));
+        VOSURI target = new VOSURI(root.getChildText("target", VOS.NS));
 
         // TODO: get view nodes and uri attribute
         View view = null;
@@ -195,16 +195,16 @@ public class TransferReader
             }
         }
         List<Protocol> protocols = parseProtocols(root);
-        String keepBytesStr = root.getChildText("direction", VOS.NS);
-        boolean keepBytes = keepBytesStr.equalsIgnoreCase("true");
+        String keepBytesStr = root.getChildText("keepBytes", VOS.NS);
 
-        Transfer rtn = new Transfer();
-        rtn.setDirection(direction);
-        rtn.setProtocols(protocols);
-        rtn.setTarget(target);
-        rtn.setView(view);
-        rtn.setKeepBytes(keepBytes);
-        return rtn;
+        
+        if (keepBytesStr != null)
+        {
+            boolean keepBytes = true;
+            keepBytes = keepBytesStr.equalsIgnoreCase("true");
+            return new Transfer(target, direction, view, protocols, keepBytes);
+        }
+        return new Transfer(target, direction, view, protocols);
     }
 
     private Direction parseDirection(Element root)
@@ -230,11 +230,12 @@ public class TransferReader
 
     private List<Protocol> parseProtocols(Element root)
     {
-        List<Protocol> rtn = new ArrayList<Protocol>();
+        List<Protocol> rtn = null;
         //Element e = root.getChild("protocols", VOS.NS);
         List prots = root.getChildren("protocol", VOS.NS);
-        if (prots != null)
+        if (prots != null && prots.size() > 0)
         {
+            rtn = new ArrayList<Protocol>(prots.size());
             for (Object obj : prots)
             {
                 Element eProtocol = (Element) obj;
