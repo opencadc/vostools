@@ -143,6 +143,7 @@ note: client jars are not signed
         </lib>
         <lib dir="${lib}">
             <include name="cadcUtil.jar" />
+            <include name="cadcLog.jar" />
         </lib>
         
         <lib dir="${ext.lib}">
