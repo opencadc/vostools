@@ -157,15 +157,11 @@ public class PullFromVOSpaceTest extends VOSTransferTest
             assertEquals("PUT response code should be 201", 201, response.getResponseCode());
 
             // Create a Transfer.
-            Transfer transfer = new Transfer();
-            transfer.setDirection(Direction.pullFromVoSpace);
-            transfer.setTarget(dataNode);
-            transfer.setView(new View(new URI(VOS.VIEW_DEFAULT)));
             List<Protocol> protocols = new ArrayList<Protocol>();
             protocols.add(new Protocol(VOS.PROTOCOL_HTTP_GET));
             protocols.add(new Protocol(VOS.PROTOCOL_HTTPS_GET));
             protocols.add(new Protocol("some:unknown:proto"));
-            transfer.setProtocols(protocols);
+            Transfer transfer = new Transfer(dataNode.getUri(), Direction.pullFromVoSpace,protocols);
 
             // Get the transfer XML.
             TransferWriter writer = new TransferWriter();
@@ -234,13 +230,9 @@ public class PullFromVOSpaceTest extends VOSTransferTest
             assertEquals("PUT response code should be 201", 201, response.getResponseCode());
 
             // Create a Transfer.
-            Transfer transfer = new Transfer();
-            transfer.setDirection(Direction.pullFromVoSpace);
-            transfer.setTarget(dataNode);
-            transfer.setView(new View(new URI(VOS.VIEW_DEFAULT)));
             List<Protocol> protocols = new ArrayList<Protocol>();
             protocols.add(new Protocol(VOS.PROTOCOL_HTTP_GET));
-            transfer.setProtocols(protocols);
+            Transfer transfer = new Transfer(dataNode.getUri(), Direction.pullFromVoSpace,protocols);
             
             // Get the transfer XML.
             TransferWriter writer = new TransferWriter();

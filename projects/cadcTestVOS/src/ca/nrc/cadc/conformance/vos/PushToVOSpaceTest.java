@@ -159,15 +159,12 @@ public class PushToVOSpaceTest extends VOSTransferTest
             assertEquals("PUT response code should be 201", 201, response.getResponseCode());
 
             // Create a Transfer.
-            Transfer transfer = new Transfer();
-            transfer.setDirection(Direction.pushToVoSpace);
-            transfer.setTarget(dataNode);
-            transfer.setView(new View(new URI(VOS.VIEW_DEFAULT)));
             List<Protocol> protocols = new ArrayList<Protocol>();
-            protocols.add(new Protocol(VOS.PROTOCOL_HTTP_GET));
-            protocols.add(new Protocol(VOS.PROTOCOL_HTTPS_GET));
+            protocols.add(new Protocol(VOS.PROTOCOL_HTTP_PUT));
+            protocols.add(new Protocol(VOS.PROTOCOL_HTTPS_PUT));
             protocols.add(new Protocol("some:unknown:proto"));
-            transfer.setProtocols(protocols);
+            Transfer transfer = new Transfer(dataNode.getUri(), Direction.pushToVoSpace,protocols);
+            
 
             // Get the transfer XML.
             TransferWriter writer = new TransferWriter();
@@ -215,7 +212,7 @@ public class PushToVOSpaceTest extends VOSTransferTest
         }
         catch (Exception unexpected)
         {
-            log.error("unexpected exception: " + unexpected);
+            log.error("unexpected exception", unexpected);
             Assert.fail("unexpected exception: " + unexpected);
         }
     }
@@ -234,13 +231,11 @@ public class PushToVOSpaceTest extends VOSTransferTest
             assertEquals("PUT response code should be 201", 201, response.getResponseCode());
 
             // Create a Transfer.
-            Transfer transfer = new Transfer();
-            transfer.setDirection(Direction.pushToVoSpace);
-            transfer.setTarget(dataNode);
-            transfer.setView(new View(new URI(VOS.VIEW_DEFAULT)));
             List<Protocol> protocols = new ArrayList<Protocol>();
-            protocols.add(new Protocol(VOS.PROTOCOL_HTTP_GET));
-            transfer.setProtocols(protocols);
+            protocols.add(new Protocol(VOS.PROTOCOL_HTTP_PUT));
+            protocols.add(new Protocol(VOS.PROTOCOL_HTTPS_PUT));
+            protocols.add(new Protocol("some:unknown:proto"));
+            Transfer transfer = new Transfer(dataNode.getUri(), Direction.pushToVoSpace,protocols);
             
             // Get the transfer XML.
             TransferWriter writer = new TransferWriter();
@@ -348,7 +343,7 @@ public class PushToVOSpaceTest extends VOSTransferTest
         }
         catch (Exception unexpected)
         {
-            log.error("unexpected exception: " + unexpected);
+            log.error("unexpected exception", unexpected);
             Assert.fail("unexpected exception: " + unexpected);
         }
     }
