@@ -494,27 +494,6 @@ public class VOSpaceClient
         return createTransferASync(trans);
     }
 
-    //public Transfer pushToVoSpace(Transfer transfer)
-    //{
-    //    transfer.setDirection(Direction.pushToVoSpace);
-    //    return createTransfer(transfer);
-    //}
-
-    //public Transfer pullFromVoSpace(Transfer transfer)
-    //{
-    //    transfer.setDirection(Direction.pullFromVoSpace);
-    //    return createTransfer(transfer);
-    //}
-    
-    //public ClientTransfer moveWithinVOSpace(Transfer transfer)
-    //{
-    //    if (!transfer.getDirection().getValue().startsWith(Main.VOS_PREFIX))
-    //    {
-    //        throw new IllegalStateException("Destination not a VOSpace node.");
-    //    }
-    //    return createTransferASync(transfer);
-    //}
-
     public Search createSearch(Search search)
     {
         throw new UnsupportedOperationException();
@@ -694,8 +673,9 @@ public class VOSpaceClient
             Transfer trans = txfReader.read(conn.getInputStream());
             log.debug("GET - done: " + redirectLocation);
             log.debug("negotiated transfer: " + trans);
-            
-            return new ClientTransfer(redirectURL, trans, schemaValidation);
+
+            URL jobURL = extractJobURL(this.baseUrl, redirectURL);
+            return new ClientTransfer(jobURL, trans, schemaValidation);
         }
         catch (MalformedURLException e)
         {
@@ -724,6 +704,32 @@ public class VOSpaceClient
             log.debug("got invalid XML from service", e);
             throw new RuntimeException(e);
         }
+    }
+
+    // determine the jobURL from the service base URL and the URL to
+    // transfer details... makes assumptions about paths structure that
+    // can be simplified once we comply to spec
+    private URL extractJobURL(String baseURL, URL transferDetailsURL)
+        throws MalformedURLException
+    {
+        //log.warn("baseURL: " + baseURL);
+        URL u = new URL(baseURL);
+        String bp = u.getPath();
+        //log.warn("bp: " + bp);
+        String tu = transferDetailsURL.toExternalForm();
+        //log.warn("tu: " + tu);
+        int i = tu.indexOf(bp);
+        String jp = tu.substring(i + bp.length() + 1); // strip /
+        //log.warn("jp: " + jp);
+        String[] parts = jp.split("/");
+        // part[0] is the joblist
+        // part[1] is the jobID
+        // part[2-] is either run (current impl) or results/transferDetails (spec)
+        String jobList = parts[0];
+        String jobID = parts[1];
+        //log.warn("jobList: " + jobList);
+        //log.warn("jobID: " + jobID);
+        return new URL(baseURL + "/" + jobList + "/" + jobID);
     }
     
     private URL getJobURLFromJobRedirect(URL redirectURL) throws MalformedURLException

@@ -118,14 +118,12 @@ import ca.nrc.cadc.vos.View;
 import ca.nrc.cadc.vos.View.Parameter;
 
 /**
- * @author zhangsa
- *
+ * Main method for the command-line VOSpace client.
+ * 
+ * @author pdowler, zhangsa
  */
 public class Main implements Runnable
 {
-//    public static final String CR = System.getProperty("line.separator"); // OS independant new line
-//    public static final String EL = " "; // empty line
-
     public static final String ARG_HELP = "help";
     public static final String ARG_VERBOSE = "verbose";
     public static final String ARG_DEBUG = "debug";
@@ -604,10 +602,8 @@ public class Main implements Runnable
         clientTransfer.setSSLSocketFactory(client.getSslSocketFactory());
         clientTransfer.setFile(fileToUpload);
         
-        clientTransfer.run();
-
-        if (clientTransfer.getThrowable() != null)
-            throw clientTransfer.getThrowable();
+        clientTransfer.runTransfer();
+        checkPhase(clientTransfer);
         
         Node node = client.getNode(dest.getPath());
 
@@ -690,12 +686,8 @@ public class Main implements Runnable
         clientTransfer.setSSLSocketFactory(client.getSslSocketFactory());
         clientTransfer.setFile(fileToSave);
         
-        clientTransfer.run();
-        
-        if (clientTransfer.getThrowable() != null)
-            throw clientTransfer.getThrowable();
-
-        // TODO: check phase and server error message
+        clientTransfer.runTransfer();
+        checkPhase(clientTransfer);
     }
     
     private void moveToVOSpace()
@@ -763,14 +755,23 @@ public class Main implements Runnable
         ClientTransfer trans = client.createTransfer(transfer);
 
         trans.setMonitor(true);
-        trans.run();
+        trans.runTransfer();
+        checkPhase(trans);
+    }
 
-        if (trans.getThrowable() != null)
-            throw trans.getThrowable();
-        if ( !ExecutionPhase.COMPLETED.equals(trans.getPhase()) )
+    private void checkPhase(ClientTransfer trans)
+        throws IOException, RuntimeException
+    {
+        ExecutionPhase ep = trans.getPhase();
+        if ( ExecutionPhase.ERROR.equals(ep) )
         {
             ErrorSummary es = trans.getServerError();
+            throw new RuntimeException(es.getSummaryMessage());
         }
+        else if ( ExecutionPhase.ABORTED.equals(ep) )
+            throw new RuntimeException("transfer aborted by service");
+        else if ( !ExecutionPhase.COMPLETED.equals(ep) )
+            throw new RuntimeException("unexpected job state: " + ep.name());
     }
     
     /**
