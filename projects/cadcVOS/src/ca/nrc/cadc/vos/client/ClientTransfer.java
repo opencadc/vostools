@@ -362,19 +362,7 @@ public class ClientTransfer implements Runnable
         {
             log.debug("Found zero protocols in returned transfer, checking "
                     + "job for error details.");
-            log.debug("jobURL: " + jobURL);
-            HttpURLConnection conn = (HttpURLConnection) jobURL.openConnection();
-            if (conn instanceof HttpsURLConnection)
-            {
-                HttpsURLConnection sslConn = (HttpsURLConnection) conn;
-                initHTTPS(sslConn);
-            }
-            conn.setRequestMethod("GET");
-            conn.setUseCaches(false);
-            conn.setDoInput(true);
-            conn.setDoOutput(false);
-            JobReader jobReader = new JobReader(schemaValidation);
-            Job job = jobReader.read(conn.getInputStream());
+            Job job = getJob();
             if (job.getExecutionPhase().equals(ExecutionPhase.ERROR) &&
                     job.getErrorSummary() != null)
             {
