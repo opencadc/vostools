@@ -72,6 +72,7 @@ import java.util.Collection;
 import java.util.Collections;
 import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
 
 import javax.security.auth.x500.X500Principal;
 
@@ -90,6 +91,12 @@ public class GroupImpl implements Group
 
     // group's members
     private Collection<User> members;
+
+    // groups with read access to this group
+    private Set<URI> groupsRead = new HashSet<URI>();
+
+    // groups with read and write access to this group
+    private Set<URI> groupsWrite = new HashSet<URI>();;
 
     /**
      * Default empty constructor.
@@ -144,17 +151,19 @@ public class GroupImpl implements Group
 
     /**
      * Add the given property to this Group's properties.
-     *
-     * @param property The Property to add.  Null is not acceptable.
-     * @throws InvalidPropertyException  If the given property is null or does
-     *                                  not conform.
+     * 
+     * @param property
+     *            The Property to add. Null is not acceptable.
+     * @throws InvalidPropertyException
+     *             If the given property is null or does not conform.
      */
     public void addProperty(final ElemProperty property)
             throws InvalidPropertyException
     {
         if (property == null)
         {
-            throw new InvalidPropertyException("No null properties allowed.");
+            throw new InvalidPropertyException(
+                    "No null properties allowed.");
         }
 
         getProperties().add(property);
@@ -162,9 +171,9 @@ public class GroupImpl implements Group
 
     /**
      * Obtain a Property by its unique property URI.
-     *
-     * @param propertyURI       The URI key to search on.  Null values will
-     *                          return null.
+     * 
+     * @param propertyURI
+     *            The URI key to search on. Null values will return null.
      * @return The ElemProperty found, or null if none found.
      */
     public ElemProperty getProperty(String propertyURI)
@@ -190,18 +199,20 @@ public class GroupImpl implements Group
 
     /**
      * Add the given property to this Group's properties.
-     *
-     * @param property The Property to add.  Null is not acceptable.
+     * 
+     * @param property
+     *            The Property to add. Null is not acceptable.
      * @throws ca.nrc.cadc.gms.InvalidPropertyException
-     *          If the given property is null or does
-     *          not exist in this Group.
+     *             If the given property is null or does not exist in this
+     *             Group.
      */
     public void removeProperty(final ElemProperty property)
             throws InvalidPropertyException
     {
         if ((property == null) || !getProperties().contains(property))
         {
-            throw new InvalidPropertyException("No null properties allowed.");
+            throw new InvalidPropertyException(
+                    "No null properties allowed.");
         }
 
         getProperties().remove(property);
@@ -209,19 +220,21 @@ public class GroupImpl implements Group
 
     /**
      * Add the given property to this Group's properties.
-     *
-     * @param propertyURI  The URI (name) of the property to look for.
-     * @return      True if the property with the given URI exists, false
-     *              otherwise.
-     * @throws InvalidPropertyException  If the given property URI is null or
-     *                                   does not conform.
+     * 
+     * @param propertyURI
+     *            The URI (name) of the property to look for.
+     * @return True if the property with the given URI exists, false
+     *         otherwise.
+     * @throws InvalidPropertyException
+     *             If the given property URI is null or does not conform.
      */
     public boolean hasProperty(final String propertyURI)
             throws InvalidPropertyException
     {
         if (propertyURI == null)
         {
-            throw new InvalidPropertyException("No null properties allowed.");
+            throw new InvalidPropertyException(
+                    "No null properties allowed.");
         }
 
         for (final ElemProperty property : getProperties())
@@ -244,7 +257,8 @@ public class GroupImpl implements Group
      * @throws ca.nrc.cadc.gms.InvalidMemberException
      *             If the given Member cannot be added.
      */
-    public void addMember(final User newMember) throws InvalidMemberException
+    public void addMember(final User newMember)
+            throws InvalidMemberException
     {
         if (newMember == null)
         {
@@ -252,7 +266,8 @@ public class GroupImpl implements Group
         }
         else if (getMembers().contains((newMember)))
         {
-            throw new InvalidMemberException(String.format("Member %s already exists.", newMember.getID()));
+            throw new InvalidMemberException(String.format(
+                    "Member %s already exists.", newMember.getID()));
         }
         else
         {
@@ -269,11 +284,13 @@ public class GroupImpl implements Group
      * @throws InvalidMemberException
      *             If the given Member cannot be removed.
      */
-    public void removeMember(final X500Principal memberID) throws InvalidMemberException
+    public void removeMember(final X500Principal memberID)
+            throws InvalidMemberException
     {
         if (memberID == null)
         {
-            throw new InvalidMemberException("Unable to remove NULL Member");
+            throw new InvalidMemberException(
+                    "Unable to remove NULL Member");
         }
         else
         {
@@ -286,7 +303,8 @@ public class GroupImpl implements Group
                 }
             }
             // member not found
-            throw new InvalidMemberException(String.format("Member %s does not exist.", memberID));
+            throw new InvalidMemberException(String.format(
+                    "Member %s does not exist.", memberID));
         }
     }
 
@@ -300,11 +318,13 @@ public class GroupImpl implements Group
      * @throws ca.nrc.cadc.gms.InvalidMemberException
      *             If the given User cannot be used to check (i.e. null).
      */
-    public boolean hasMember(final X500Principal userID) throws InvalidMemberException
+    public boolean hasMember(final X500Principal userID)
+            throws InvalidMemberException
     {
         if (userID == null)
         {
-            throw new InvalidMemberException("Unable to check NULL Member");
+            throw new InvalidMemberException(
+                    "Unable to check NULL Member");
         }
         else
         {
@@ -351,12 +371,99 @@ public class GroupImpl implements Group
 
         final GroupImpl group = (GroupImpl) o;
 
-        return !(groupID != null ? !groupID.equals(group.groupID) : group.groupID != null);
+        return !(groupID != null ? !groupID.equals(group.groupID)
+                : group.groupID != null);
     }
 
     @Override
     public int hashCode()
     {
         return groupID != null ? groupID.hashCode() : 0;
+    }
+
+    /*
+     * (non-Javadoc)
+     * 
+     * @see ca.nrc.cadc.gms.Group#getGroupsRead()
+     */
+    @Override
+    public Set<URI> getGroupsRead()
+    {
+        return Collections.unmodifiableSet(groupsRead);
+    }
+
+    /*
+     * (non-Javadoc)
+     * 
+     * @see ca.nrc.cadc.gms.Group#addGroupRead(java.net.URI)
+     */
+    @Override
+    public void addGroupRead(URI groupID)
+    {
+        groupsRead.add(groupID);
+    }
+
+    /*
+     * (non-Javadoc)
+     * 
+     * @see ca.nrc.cadc.gms.Group#removeGroupRead(java.net.URI)
+     */
+    @Override
+    public void removeGroupRead(URI groupID)
+    {
+        groupsRead.remove(groupID);
+    }
+
+    /*
+     * (non-Javadoc)
+     * 
+     * @see ca.nrc.cadc.gms.Group#clearGroupsRead()
+     */
+    @Override
+    public void clearGroupsRead()
+    {
+        groupsRead.clear();
+    }
+
+    /*
+     * (non-Javadoc)
+     * 
+     * @see ca.nrc.cadc.gms.Group#getGroupsWrite()
+     */
+    @Override
+    public Set<URI> getGroupsWrite()
+    {
+        return Collections.unmodifiableSet(groupsWrite);
+    }
+
+    /*
+     * (non-Javadoc)
+     * 
+     * @see ca.nrc.cadc.gms.Group#addGroupWrite(java.net.URI)
+     */
+    @Override
+    public void addGroupWrite(URI groupID)
+    {
+        groupsWrite.add(groupID);
+    }
+
+    /*
+     * (non-Javadoc)
+     * 
+     * @see ca.nrc.cadc.gms.Group#removeGroupWrite(java.net.URI)
+     */
+    @Override
+    public void removeGroupWrite(URI groupID)
+    {
+        groupsWrite.remove(groupID);
+    }
+
+    /*
+     * @see ca.nrc.cadc.gms.Group#clearGroupsWrite()
+     */
+    @Override
+    public void clearGroupsWrite()
+    {
+        groupsWrite.clear();
     }
 }

@@ -66,8 +66,19 @@
  */
 package ca.nrc.cadc.gms;
 
-import static org.easymock.EasyMock.*;
-import static org.junit.Assert.*;
+import static org.easymock.EasyMock.createMock;
+import static org.easymock.EasyMock.expect;
+import static org.easymock.EasyMock.replay;
+import static org.easymock.EasyMock.reset;
+import static org.easymock.EasyMock.verify;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertNotNull;
+import static org.junit.Assert.assertNull;
+import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.fail;
+
+import java.net.URI;
 
 import javax.security.auth.x500.X500Principal;
 
@@ -247,28 +258,28 @@ public abstract class GroupTest extends GMSTest<Group>
 
         getTestSubject().removeMember(mockUserTwo.getID());
         assertFalse("User Two should no longer be a member.",
-                getTestSubject()
-                        .hasMember(mockUserTwo.getID()));
+                getTestSubject().hasMember(mockUserTwo.getID()));
     }
 
     @Test
     public void getProperty() throws Exception
     {
         assertNull("Passing in null should return null.",
-                   getTestSubject().getProperty(null));
+                getTestSubject().getProperty(null));
 
         final ElemProperty mockProperty = createMock(ElemProperty.class);
-        expect(mockProperty.getPropertyURI()).andReturn("PROPERTY1").once();
+        expect(mockProperty.getPropertyURI()).andReturn("PROPERTY1")
+                .once();
 
         replay(mockProperty);
 
         getTestSubject().getProperties().add(mockProperty);
 
-        final ElemProperty foundProperty =
-                getTestSubject().getProperty("PROPERTY1");
+        final ElemProperty foundProperty = getTestSubject().getProperty(
+                "PROPERTY1");
         assertNotNull("Property should exist.", foundProperty);
         assertEquals("Property should be PROPERTY1.", mockProperty,
-                     foundProperty);
+                foundProperty);
 
         verify(mockProperty);
     }
@@ -292,8 +303,8 @@ public abstract class GroupTest extends GMSTest<Group>
 
         getTestSubject().addProperty(mockPropertyOne);
 
-        assertEquals("Property size should be one.", 1,
-                     getTestSubject().getProperties().size());
+        assertEquals("Property size should be one.", 1, getTestSubject()
+                .getProperties().size());
 
         verify(mockPropertyOne);
     }
@@ -319,7 +330,7 @@ public abstract class GroupTest extends GMSTest<Group>
         {
             getTestSubject().removeProperty(mockPropertyOne);
             fail("Should throw InvalidPropertyException for non-existant "
-                 + "entry.");
+                    + "entry.");
         }
         catch (InvalidPropertyException e)
         {
@@ -341,8 +352,8 @@ public abstract class GroupTest extends GMSTest<Group>
 
         verify(mockPropertyOne, mockPropertyTwo);
 
-        assertEquals("Size should be one.", 1,
-                     getTestSubject().getProperties().size());
+        assertEquals("Size should be one.", 1, getTestSubject()
+                .getProperties().size());
     }
 
     @Test
@@ -362,21 +373,101 @@ public abstract class GroupTest extends GMSTest<Group>
         final ElemProperty mockPropertyTwo = createMock(ElemProperty.class);
         final ElemProperty mockPropertyThree = createMock(ElemProperty.class);
 
-        expect(mockPropertyOne.getPropertyURI()).andReturn("URI_ONE").times(3);
-        expect(mockPropertyTwo.getPropertyURI()).andReturn("URI_TWO").times(2);
+        expect(mockPropertyOne.getPropertyURI()).andReturn("URI_ONE")
+                .times(3);
+        expect(mockPropertyTwo.getPropertyURI()).andReturn("URI_TWO")
+                .times(2);
 
         getTestSubject().addProperty(mockPropertyOne);
         getTestSubject().addProperty(mockPropertyTwo);
 
         replay(mockPropertyOne, mockPropertyTwo, mockPropertyThree);
 
-        assertFalse("Property three should not exist.",
-                    getTestSubject().hasProperty("URI_THREE"));
-        assertTrue("Property one should exist.",
-                   getTestSubject().hasProperty("URI_ONE"));
-        assertTrue("Property two should exist.",
-                   getTestSubject().hasProperty("URI_TWO"));
+        assertFalse("Property three should not exist.", getTestSubject()
+                .hasProperty("URI_THREE"));
+        assertTrue("Property one should exist.", getTestSubject()
+                .hasProperty("URI_ONE"));
+        assertTrue("Property two should exist.", getTestSubject()
+                .hasProperty("URI_TWO"));
 
         verify(mockPropertyOne, mockPropertyTwo, mockPropertyThree);
+    }
+
+    @Test
+    public void testGroupWrite() throws Exception
+    {
+        String groupWriteStr1 = "ivo://cadc.nrc.ca/gms#test";
+        String groupWriteStr2 = "ivo://cadc.nrc.ca/gms#test2";
+
+        getTestSubject().addGroupWrite(new URI(groupWriteStr1));
+
+        assertEquals("Group write list size should be one.", 1,
+                getTestSubject().getGroupsWrite().size());
+
+        assertTrue(getTestSubject().getGroupsWrite().contains(
+                new URI(groupWriteStr1)));
+        
+        // add a second group
+        getTestSubject().addGroupWrite(new URI(groupWriteStr2));
+
+        assertEquals("Group write list size should be 2.", 2,
+                getTestSubject().getGroupsWrite().size());
+
+        assertTrue(getTestSubject().getGroupsWrite().contains(
+                new URI(groupWriteStr1)));
+        assertTrue(getTestSubject().getGroupsWrite().contains(
+                new URI(groupWriteStr2)));
+        
+        // delete a group now
+        getTestSubject().removeGroupWrite(new URI(groupWriteStr1));
+        assertEquals("Group write list size should be one.", 1,
+                getTestSubject().getGroupsWrite().size());
+
+        assertTrue(getTestSubject().getGroupsWrite().contains(
+                new URI(groupWriteStr2)));
+
+        // clear the write group list
+        getTestSubject().clearGroupsWrite();
+        assertEquals("Group write list size should be zero.", 0,
+                getTestSubject().getGroupsWrite().size());
+    }
+    
+    @Test
+    public void testGroupRead() throws Exception
+    {
+        String groupReadStr1 = "ivo://cadc.nrc.ca/gms#test";
+        String groupReadStr2 = "ivo://cadc.nrc.ca/gms#test2";
+
+        getTestSubject().addGroupRead(new URI(groupReadStr1));
+
+        assertEquals("Group read list size should be one.", 1,
+                getTestSubject().getGroupsRead().size());
+
+        assertTrue(getTestSubject().getGroupsRead().contains(
+                new URI(groupReadStr1)));
+        
+        // add a second group
+        getTestSubject().addGroupRead(new URI(groupReadStr2));
+
+        assertEquals("Group read list size should be 2.", 2,
+                getTestSubject().getGroupsRead().size());
+
+        assertTrue(getTestSubject().getGroupsRead().contains(
+                new URI(groupReadStr1)));
+        assertTrue(getTestSubject().getGroupsRead().contains(
+                new URI(groupReadStr2)));
+        
+        // delete a group now
+        getTestSubject().removeGroupRead(new URI(groupReadStr1));
+        assertEquals("Group read list size should be one.", 1,
+                getTestSubject().getGroupsRead().size());
+
+        assertTrue(getTestSubject().getGroupsRead().contains(
+                new URI(groupReadStr2)));
+
+        // clear the read group list
+        getTestSubject().clearGroupsRead();
+        assertEquals("Group read list size should be zero.", 0,
+                getTestSubject().getGroupsRead().size());
     }
 }

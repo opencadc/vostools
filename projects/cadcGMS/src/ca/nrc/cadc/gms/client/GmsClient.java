@@ -86,6 +86,8 @@ import java.security.AccessControlContext;
 import java.security.AccessControlException;
 import java.security.AccessController;
 import java.util.Collection;
+import java.util.HashSet;
+import java.util.Set;
 
 import javax.net.ssl.HttpsURLConnection;
 import javax.net.ssl.SSLSocketFactory;
@@ -97,7 +99,6 @@ import org.apache.log4j.Logger;
 import ca.nrc.cadc.auth.SSLUtil;
 import ca.nrc.cadc.gms.GmsConsts;
 import ca.nrc.cadc.gms.Group;
-import ca.nrc.cadc.gms.GroupImpl;
 import ca.nrc.cadc.gms.GroupReader;
 import ca.nrc.cadc.gms.GroupWriter;
 import ca.nrc.cadc.gms.GroupsReader;
@@ -1251,6 +1252,41 @@ public class GmsClient
     public SSLSocketFactory getSslSocketFactory()
     {
         return sf;
+    }
+    
+    /**
+     * Utility method to extract a set of group URIs from a comma separated
+     * list of group URIs
+     * @param groupList comma-separated list of group URIs
+     * @return Corrresponding set of group URIs
+     * @throws IllegalArgumentException if the group list contains invalid
+     * group URIs
+     */
+    public static Set<URI> extractGroupSet(String groupList)
+    {
+        Set<URI> groupSet = null;
+        if (groupList != null)
+        {
+            groupSet = new HashSet<URI>(); // signals group read
+                                                // update
+            if (!groupList.isEmpty())
+            {
+                String[] groups = groupList.split(",");
+                for (String gr : groups)
+                {
+                    try
+                    {
+                        groupSet.add(new URI(gr));
+                    }
+                    catch (URISyntaxException e)
+                    {
+                        throw new IllegalArgumentException(
+                                "Invalid group URI in groupsRead list");
+                    }
+                }
+            }
+        }
+        return groupSet;
     }
 
     /**

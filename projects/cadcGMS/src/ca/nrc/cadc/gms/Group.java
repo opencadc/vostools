@@ -69,6 +69,7 @@ package ca.nrc.cadc.gms;
 import java.net.URI;
 import java.util.Collection;
 import java.util.List;
+import java.util.Set;
 
 import javax.security.auth.x500.X500Principal;
 
@@ -127,7 +128,58 @@ public interface Group
      *         will never return null.
      */
     Collection<User> getMembers();
-
+    
+    /**
+     * Obtain all of the Groups with read permission to this Group.
+     * 
+     * @return Set of group URIs or empty Collection. This
+     *         will never return null.
+     */
+    Set<URI> getGroupsRead();
+    
+    /**
+     * Add a new group to the groups with read permissions
+     * @param groupID
+     */
+    void addGroupRead(URI groupID);
+    
+    /**
+     * Remove a group from the groups with read permissions
+     * @param groupID
+     */
+    void removeGroupRead(URI groupID);
+    
+    /**
+     * Clear the groups read list
+     */    
+    void clearGroupsRead();
+    
+    
+    /**
+     * Obtain all of the Groups with read and write permissions to this Group.
+     * 
+     * @return Set of group URIs or empty Collection. This
+     *         will never return null.
+     */
+    Set<URI> getGroupsWrite();
+    
+    /**
+     * Add a new group to the groups with write permissions
+     * @param groupID
+     */
+    void addGroupWrite(URI groupID);
+    
+    /**
+     * Remove a group from the groups with write permissions
+     * @param groupID
+     */
+    void removeGroupWrite(URI groupID);
+    
+    /**
+     * Clear the groups write list
+     */    
+    void clearGroupsWrite();
+    
     /**
      * 
      * @return properties associated with a group such as description or

@@ -72,6 +72,7 @@ import java.io.OutputStream;
 import java.io.OutputStreamWriter;
 import java.io.UnsupportedEncodingException;
 import java.io.Writer;
+import java.net.URI;
 import java.util.Collection;
 
 import org.jdom.Attribute;
@@ -171,7 +172,7 @@ public class GroupWriter
         String groupID = group.getID().getFragment() == null ? "" : group
                 .getID().toString();
         groupElement.setAttribute(new Attribute("uri", groupID));
-        for( ElemProperty property : group.getProperties())
+        for (ElemProperty property : group.getProperties())
         {
             groupElement.addContent(PropertyWriter.write(property));
         }
@@ -186,6 +187,34 @@ public class GroupWriter
                         .addContent(UserWriter.getUserElement(user));
             }
             groupElement.addContent(membersElement);
+        }
+
+        // Add the Group's Read Access Groups.
+        if ((group.getGroupsRead() != null)
+                && (group.getGroupsRead().size() > 0))
+        {
+            Element groupsReadElement = new Element("groupsRead");
+            for (URI groupURI : group.getGroupsRead())
+            {
+                Element groupUriElement = new Element("group");
+                groupUriElement.setAttribute("uri", groupURI.toString());
+                groupsReadElement.addContent(groupUriElement);
+            }
+            groupElement.addContent(groupsReadElement);
+        }
+
+        // Add the Group's Read and Write Access Groups.
+        if ((group.getGroupsWrite() != null)
+                && (group.getGroupsWrite().size() > 0))
+        {
+            Element groupsWriteElement = new Element("groupsWrite");
+            for (URI groupURI : group.getGroupsWrite())
+            {
+                Element groupUriElement = new Element("group");
+                groupUriElement.setAttribute("uri", groupURI.toString());
+                groupsWriteElement.addContent(groupUriElement);
+            }
+            groupElement.addContent(groupsWriteElement);
         }
 
         return groupElement;

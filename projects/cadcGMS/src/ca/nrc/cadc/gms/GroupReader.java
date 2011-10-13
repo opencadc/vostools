@@ -144,7 +144,8 @@ public class GroupReader
         if (reader == null)
             throw new IllegalArgumentException("reader must not be null");
 
-        SAXBuilder parser = new SAXBuilder("org.apache.xerces.parsers.SAXParser", false);
+        SAXBuilder parser = new SAXBuilder(
+                "org.apache.xerces.parsers.SAXParser", false);
 
         // Create a JDOM Document from the XML
         Document document;
@@ -181,7 +182,7 @@ public class GroupReader
         String id = root.getAttributeValue("uri");
 
         URI uri = null;
-        if (id != null && (id.length() > 0) )
+        if (id != null && (id.length() > 0))
         {
             uri = new URI(id);
         }
@@ -219,6 +220,44 @@ public class GroupReader
                 catch (InvalidMemberException e)
                 {
                     throw new ReaderException("Invalid member", e);
+                }
+            }
+        }
+
+        // List of Groups with read permissions.
+        Element groupsReadElem = root.getChild("groupsRead", namespace);
+        if (groupsReadElem != null)
+        {
+            List<Element> groups = groupsReadElem.getChildren("group");
+            for (Element elem : groups)
+            {
+                try
+                {
+                    group.addGroupRead(new URI(elem
+                            .getAttributeValue("uri")));
+                }
+                catch (URISyntaxException e)
+                {
+                    throw new ReaderException("Invalid group read", e);
+                }
+            }
+        }
+
+        // List of Groups with read and write permissions.
+        Element groupsWriteElem = root.getChild("groupsWrite", namespace);
+        if (groupsWriteElem != null)
+        {
+            List<Element> groups = groupsWriteElem.getChildren("group");
+            for (Element elem : groups)
+            {
+                try
+                {
+                    group.addGroupWrite(new URI(elem
+                            .getAttributeValue("uri")));
+                }
+                catch (URISyntaxException e)
+                {
+                    throw new ReaderException("Invalid group write", e);
                 }
             }
         }

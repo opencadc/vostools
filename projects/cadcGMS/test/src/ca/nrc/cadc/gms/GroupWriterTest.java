@@ -116,6 +116,9 @@ public class GroupWriterTest
     final static String MEMBER_ID = "CN=test user,OU=hia.nrc.ca,O=Grid,C=CA";
     final static String OWNER_ID = "CN=owner user,OU=hia.nrc.ca,O=Grid,C=CA";
     static String description = "This is my test group";
+    static final String groupRead1 = "ivo://cadc.nrc.ca/gms#test1";
+    static final String groupRead2 = "ivo://cadc.nrc.ca/gms#test2";
+    static final String groupWrite = "ivo://cadc.nrc.ca/gms#test3";
 
     public GroupWriterTest()
     {
@@ -138,6 +141,11 @@ public class GroupWriterTest
         eProp.setReadOnly(true);
         user.getProperties().add(eProp);
         group.addMember(user);
+        group.addGroupRead(new URI(groupRead1));
+        group.addGroupRead(new URI(groupRead2));
+        group.addGroupWrite(new URI(groupWrite));
+        
+        
 
         StringBuilder sb = new StringBuilder();
         sb.append("<group uri=\"" + groupURI + "\" >\n");
@@ -154,6 +162,13 @@ public class GroupWriterTest
         sb.append("<membershipGroups/>");
         sb.append("</member>\n");
         sb.append("</members>\n");
+        sb.append("<groupsRead>\n");
+        sb.append("<group uri=\"" + groupRead1 + "\" />\n");
+        sb.append("<group uri=\"" + groupRead2 + "\" />\n");
+        sb.append("</groupsRead>\n");
+        sb.append("<groupsWrite>\n");
+        sb.append("<group uri=\"" + groupWrite + "\" />\n");
+        sb.append("</groupsWrite>\n");
         sb.append("</group>");
         groupXML = sb.toString();
     }
@@ -248,6 +263,9 @@ public class GroupWriterTest
             assertNotNull(memberNameElem.getAttribute("name"));
             assertTrue(memberNameElem.getAttributeValue("value")
                     .equals(userName));
+            
+            Element groupReadElement = groupElement.getChild("groupsRead");
+            assertNotNull(groupReadElement);
 
             log.info("testGetGroupElement passed");
         }

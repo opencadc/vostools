@@ -68,11 +68,14 @@
 package ca.nrc.cadc.gms.client;
 
 import java.net.URI;
+import java.net.URISyntaxException;
 import java.net.URL;
 import java.security.PrivilegedAction;
 import java.util.ArrayList;
 import java.util.Collection;
+import java.util.Collections;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -145,11 +148,11 @@ public class GmsClientMain implements PrivilegedAction<Boolean>
     // public - group is publically readable
     Boolean isPublic = null;
 
-    // URIs of groups that can modify the group
-    String groupsWrite;
+    // comma-separated list of URIs of groups that can modify the group
+    String groupsWriteStr;
 
-    // URIs of groups that can read the group
-    String groupsRead;
+    // comma-separated list of URIs of URIs of groups that can read the group
+    String groupsReadStr;
 
     // Description of the group
     String description;
@@ -451,11 +454,13 @@ public class GmsClientMain implements PrivilegedAction<Boolean>
                             "Invalid value for public argument");
                 }
             }
-            groupsWrite = argMap.getValue(ARG_GROUPS_WRITE);
-            groupsRead = argMap.getValue(ARG_GROUPS_READ);
+            groupsWriteStr = argMap.getValue(ARG_GROUPS_WRITE);
+            groupsReadStr = argMap.getValue(ARG_GROUPS_READ);
+
+
             if (this.operation.equals(ARG_SET) && (isPublic == null)
-                    && (description == null) && (groupsWrite == null)
-                    && (groupsRead == null))
+                    && (description == null) && (groupsWriteStr == null)
+                    && (groupsReadStr == null))
             {
                 throw new IllegalArgumentException(
                         "Nothing to set in set operation");
@@ -531,30 +536,48 @@ public class GmsClientMain implements PrivilegedAction<Boolean>
         Map<String, ElemProperty> newProperties = new HashMap<String, ElemProperty>();
         if (isPublic != null)
         {
-            newProperties.put(GmsConsts.PROPERTY_PUBLIC, new ElemPropertyImpl(GmsConsts.PROPERTY_PUBLIC, isPublic.toString()));
+            newProperties.put(GmsConsts.PROPERTY_PUBLIC,
+                    new ElemPropertyImpl(GmsConsts.PROPERTY_PUBLIC,
+                            isPublic.toString()));
         }
         if (description != null)
         {
-            newProperties.put(GmsConsts.PROPERTY_GROUP_DESCRIPTION, new ElemPropertyImpl(GmsConsts.PROPERTY_GROUP_DESCRIPTION, description));
+            newProperties.put(GmsConsts.PROPERTY_GROUP_DESCRIPTION,
+                    new ElemPropertyImpl(
+                            GmsConsts.PROPERTY_GROUP_DESCRIPTION,
+                            description));
         }
-        if (groupsWrite != null)
-        {
-            newProperties.put(GmsConsts.PROPERTY_GROUPS_WRITE, new ElemPropertyImpl(GmsConsts.PROPERTY_GROUPS_WRITE, groupsWrite));
-        }
+        Set<URI> groupsRead = GmsClient.extractGroupSet(groupsReadStr);
         if (groupsRead != null)
         {
-            newProperties.put(GmsConsts.PROPERTY_GROUPS_READ, new ElemPropertyImpl(GmsConsts.PROPERTY_GROUPS_READ, groupsRead));
+            group.clearGroupsRead();
+            for (URI gr : groupsRead)
+            {
+                group.addGroupRead(gr);
+            }
+
         }
-        
+        Set<URI> groupsWrite = GmsClient.extractGroupSet(groupsWriteStr);
+        if (groupsWrite != null)
+        {
+            group.clearGroupsWrite();
+            for (URI gr : groupsWrite)
+            {
+                group.addGroupWrite(gr);
+            }
+
+        }
+
         List<ElemProperty> properties = group.getProperties();
-        for (ElemProperty prop : properties )
+        for (ElemProperty prop : properties)
         {
             if (!newProperties.containsKey(prop.getPropertyURI()))
             {
                 newProperties.put(prop.getPropertyURI(), prop);
             }
         }
-        group.setProperties(new ArrayList<ElemProperty>(newProperties.values()));
+        group.setProperties(new ArrayList<ElemProperty>(newProperties
+                .values()));
     }
 
     private void displayGroup(Group group)
@@ -566,13 +589,41 @@ public class GmsClientMain implements PrivilegedAction<Boolean>
         msg("   Group ID: " + group.getID());
         if (group.getProperties().size() > 0)
         {
-            msg("   Properties:");
+            msg("Properties:");
             for (ElemProperty prop : group.getProperties())
             {
-                msg(prop.getPropertyURI() + ": "
+                msg("\t" + prop.getPropertyURI() + ": "
                         + prop.getPropertyValue());
             }
         }
+        msg("Groups read:");
+        String tmp = null;
+        for (URI gr : group.getGroupsRead())
+        {
+            if (tmp == null)
+            {
+                tmp = gr.toString();
+            }
+            else
+            {
+                tmp += "," + gr;
+            }
+        }
+        msg("\t" + tmp);
+        msg("Groups write:");
+        tmp = null;
+        for (URI gr : group.getGroupsWrite())
+        {
+            if (tmp == null)
+            {
+                tmp = gr.toString();
+            }
+            else
+            {
+                tmp += "," + gr;
+            }
+        }
+        msg("\t" + tmp);
         msg("Members:");
         int count = 0;
         for (User user : group.getMembers())
