@@ -301,8 +301,35 @@ public abstract class DatabaseNodePersistence implements NodePersistence
         AccessControlContext acContext = AccessController.getContext();
         Subject caller = Subject.getSubject(acContext);
         
+        // save the src parent for content-length adjustment later
+        ContainerNode sourceParent = src.getParent();
+        
         // move the node
         dao.move(src, dest, caller);
+        
+        // adjust the content lengths
+        long moveDiff = getContentLength(src);
+        if (moveDiff > 0)
+        {
+            ContainerNode parent = sourceParent;
+            // subtract from the src side
+            while (parent != null)
+            {
+                log.debug("calling updateContentLength: " + parent.getUri() + "," + (-1*moveDiff));
+                dao.updateContentLength(parent, -1*moveDiff);
+                parent = parent.getParent();
+            }
+            // add to the dest side
+            parent = dest;
+            while (parent != null)
+            {
+                log.debug("calling updateContentLength: " + parent.getUri() + "," + moveDiff);
+                dao.updateContentLength(parent, moveDiff);
+                parent = parent.getParent();
+            }
+        }
+        
+        
     }
 
     @Override
