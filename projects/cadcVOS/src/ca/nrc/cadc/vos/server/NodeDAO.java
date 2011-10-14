@@ -794,9 +794,11 @@ public class NodeDAO
             // circular paths are not created
             Node target = dest;
             Long srcNodeID = getNodeID(src);
-            while (target != null)
+            Long targetNodeID = null;
+            while (target != null && !target.getUri().isRoot())
             {
-                if (getNodeID(target).equals(srcNodeID))
+                targetNodeID = getNodeID(target);
+                if (targetNodeID.equals(srcNodeID))
                     throw new IllegalArgumentException("Cannot move to a contained sub-node.");
                 target = target.getParent();
             }
