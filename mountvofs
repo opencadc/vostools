@@ -574,9 +574,12 @@ if __name__ == "__main__":
 	os.makedirs(mount)
     if platform=="darwin":
         fuse = FUSE(VOFS(root,opt.cache_dir,conn=conn,cache_limit=opt.cache_limit), mount, fsname=root,
-                volname=root,
-                foreground=opt.foreground,
-                noappledouble=True,
-                noapplexattr=True)
+                    volname=root,
+                    daemon_timeout=600,
+                    foreground=opt.foreground,
+                    noappledouble=True,
+                    noapplexattr=True)
     else:
-        fuse = FUSE(VOFS(root,opt.cache_dir,conn=conn,cache_limit=opt.cache_limit), mount, fsname=root, foreground=opt.foreground)
+        fuse = FUSE(VOFS(root,opt.cache_dir,conn=conn,cache_limit=opt.cache_limit), mount, fsname=root, 
+                    foreground=opt.foreground,
+                    daemon_timeout=600)
