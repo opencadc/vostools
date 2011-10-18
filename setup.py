@@ -9,5 +9,5 @@ setup(name="vofs",
       author="JJ Kavelaars",
       author_email="jj.kavelaars@nrc.gc.ca",
       py_modules=[],
-      scripts=['mountvofs','fuse.py','vos.py']
+      scripts=['vcp','vrm','vls','vmkdir','mountvofs','fuse.py','vos.py']
 )
