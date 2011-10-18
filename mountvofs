@@ -581,5 +581,4 @@ if __name__ == "__main__":
                     noapplexattr=True)
     else:
         fuse = FUSE(VOFS(root,opt.cache_dir,conn=conn,cache_limit=opt.cache_limit), mount, fsname=root, 
-                    foreground=opt.foreground,
-                    daemon_timeout=600)
+                    foreground=opt.foreground)
