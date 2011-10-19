@@ -100,6 +100,7 @@ class Connection:
             certfile = os.path.join(certDir,"cadcproxy.pem")
             logging.debug("looking for certificate in %s" % ( certfile))
         if not os.access(certfile,os.F_OK):
+            logging.debug("didn't find a certificate file")
             overwrite=True
 
         logging.debug("requesting password")
@@ -109,7 +110,7 @@ class Connection:
         if overwrite:
             self.getCert()
 
-	logging.info("Using certificate file %s" % (self.certfile))
+	logging.debug("Using certificate file %s" % (self.certfile))
 
 
     def getUserPassword(self,host='www.cadc-ccda.hia-iha.nrc-cnrc.gc.ca'):
@@ -132,7 +133,7 @@ class Connection:
         return (username,password)
 
     def getCert(self,certHost='www.cadc-ccda.hia-iha.nrc-cnrc.gc.ca',
-                certQuery="/cred/proxyCert?daysValid=1"):
+                certQuery="/cred/proxyCert?daysValid=2"):
         """Access the cadc certificate server"""
 
         import urllib2
@@ -177,7 +178,7 @@ class Connection:
         parts=urlparse(url)
         ports={"http": 80, "https": 443}
         certfile=self.certfile
-        logging.info("Connecting to %s://%s using %s" % (parts.scheme,parts.netloc,certfile))
+        logging.debug("Connecting to %s://%s using %s" % (parts.scheme,parts.netloc,certfile))
         
         import httplib
         try:
@@ -454,7 +455,7 @@ class Node:
             nodeList=ET.SubElement(node,Node.NODES)
             for subnode in subnodes:
                 nodeList.append(subnode.node)
-                print subnode
+                #print subnode
         #logging.debug(ET.tostring(node,encoding="UTF-8"))
 
         return node
@@ -556,20 +557,20 @@ class VOFile:
         self.resp=self.httpCon.getresponse()
         self.httpCon.close()
         self.closed=True
-        logging.info("Connection closed")
+        logging.debug("Connection closed")
         self.checkstatus()
 
     def checkstatus(self):
         """check the response status"""
-        logging.info("status %d for URL %s" % ( self.resp.status,self.url))
+        logging.debug("status %d for URL %s" % ( self.resp.status,self.url))
         if self.resp.status not in (200, 201, 202, 303, 503):
-            logging.debug(self.resp.read())
+            logging.error(self.resp.read())
             raise IOError(self.resp.status,"unexpected server response %s (%d) for URL %s" % ( self.resp.reason, self.resp.status, self.url))
 
     def open(self,URL,method):
         """Open a connection to the given URL"""
         import ssl
-        logging.info("Connecting to %s for (%s)" % (URL, method))
+        logging.debug("Connecting to %s for (%s)" % (URL, method))
         self.url=URL
         self.httpCon = self.connector.getConnection(URL)
         if self.timeout < 0 : 
@@ -611,7 +612,7 @@ class VOFile:
             return self.read(size)
         if self.resp.status == 503:
             ## try again in Retry-After seconds or fail
-            logging.warning("Server is too busy to send %s" % ( URL))
+            logging.warning("Server is too busy to send %s" % (self.url))
             ras=self.resp.getheader("Retry-After",None)
             if not ras:
                 logging.warning("no retry-after in header, so raising error")
@@ -653,6 +654,31 @@ class Client:
         #self.urlopener=MyFancyURLopener(None,cert_file=self.cert.getFilename(),key_file=self.cert.getFilename())
         self.rootNode=rootNode
         return
+
+    def copy(self,src,dest):
+        """copy to/from vospace"""
+        import os
+    
+        if src[0:4]=="vos:":
+            fin=self.open(src,os.O_RDONLY,view='data')
+            fout=open(dest,'w')
+        else:
+            fin=open(src,'r')
+            fout=self.open(dest,os.O_WRONLY)
+    
+        totalBytes=0
+        while True:
+            buf=fin.read()
+            logging.debug("Read %d bytes from %s" % ( len(buf),src))
+            if len(buf)==0:
+                break
+            fout.write(buf)
+            logging.debug("Wrote %d bytes to %s" % ( len(buf),dest))            
+            totalBytes+=len(buf)
+        fout.close()
+        fin.close()
+        return totalBytes
+
 
     def fixURI(self,uri):
         """given a uri check if the server part is there and if it isn't update that"""
@@ -698,14 +724,14 @@ class Client:
             return "%s://%s/data/pub/vospace/%s" % (protocol, server,parts.path.strip('/'))
 
         ### this is a GET so we might have to stick some data onto the URL...
-        if view and method=='GET':
+        if view is not None:
             import urllib
             data="?"+urllib.urlencode({'view': view})
         else:
             data=''
         return "%s://%s/vospace/nodes/%s%s" % ( protocol, server, parts.path.strip('/'), data)
                     
-    def open(self, uri, mode, view=None):
+    def open(self, uri, mode=os.O_RDONLY, view=None, head=False):
         """Connect to URL and PUT contents of src to that connection return transfer status"""
 
         # the URL of the connection depends if we are 'getting', 'putting' or 'posting'  data
@@ -718,6 +744,8 @@ class Client:
             method="POST"
         elif mode & os.O_TRUNC: 
             method="DELETE"
+        if head:
+            method="HEAD"
         if not method:
             raise IOError("Invalid mode (%X) for open" % ( mode))
         URL=self.getNodeURL(uri, method=method, view=view)
@@ -737,26 +765,42 @@ class Client:
         f=VOFile(URL,self.conn,method="PUT")
         f.write(str(node))
         f.close()
-
+    
     def delete(self,uri):
         """Delete the node"""
         logging.debug("%s" % (uri))
         self.open(uri,mode=os.O_TRUNC).close()
 
+    def listdir(self,uri):
+        """Walk through the directory structure a al os.walk"""
+        logging.debug("getting a listing of %s " % ( uri))
+        names=[]
+        for node in self.getNode(uri).nodeList:
+            names.append(node.name)
+        return names
+
+    def isdir(self,uri):
+        """Check to see if this given uri points at a containerNode."""
+        return self.status(uri,code=[400])
+
+    def isfile(self,uri):
+        return self.status(uri,code=[200,303,503])
+
+    def access(self,uri,mode=os.O_RDONLY):
+        """Test for existance"""
+        return not self.status(uri,code=[404])
 
 
+    def status(self,uri,code=[200,303,503]):
+        """Check to see if this given uri points at a containerNode.
 
-
-
-                          
-
-
-
-
-
-                           
-
-
-
-    
+        This is done by checking the view=data header and seeing if you get an error.
+        """
+        file=self.open(uri,view='data',head=True)
+        res=file.httpCon.getresponse()
+        file.httpCon.close()
+        if res.status in code:
+            return True
+        return False
+        
 
