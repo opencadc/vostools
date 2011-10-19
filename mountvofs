@@ -92,7 +92,7 @@ class VOFS(LoggingMixIn, Operations):
         self.attr.pop(path,None)
 
     def access(self, path, mode):
-        self.client.access(path)
+        return self.client.access(path)
 
     def chmod(self, path, mode):
         """Set the read/write groups on the VOSpace node based on chmod style modes.
@@ -297,7 +297,7 @@ class VOFS(LoggingMixIn, Operations):
             os.makedirs(dirs)
         fobj=None
 
-        # if this file is already in the cache that version is
+        # if this file is already in the cache then check that version is
         # not older than the VOSpace copy then work from the cached version
         if os.access(fname,os.R_OK):
             cache_stat=os.stat(fname)
@@ -358,7 +358,7 @@ class VOFS(LoggingMixIn, Operations):
           finally:
             w.close()
             r.close()
-        logging.debug("sending data from %d" % ( fh))
+        logging.debug("sending bytes %d to %d from %d" % (offset,offset+size,fh))
         os.lseek(fh,offset,0)
         return os.read(fh,size)
 
