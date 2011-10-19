@@ -92,7 +92,7 @@ class VOFS(LoggingMixIn, Operations):
         self.attr.pop(path,None)
 
     def access(self, path, mode):
-        self.getNode(path)
+        self.client.access(path)
 
     def chmod(self, path, mode):
         """Set the read/write groups on the VOSpace node based on chmod style modes.
