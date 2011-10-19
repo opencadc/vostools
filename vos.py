@@ -1,11 +1,5 @@
 """A set of Python Classes for connecting to and interacting with a VOSpace service.
 
-   list     : provides a the contents of a VOSpace ContainerNode or information about a DataNode
-   create   : new VOSpace ContainerNode
-   delete   : removes a VOSpace [Container|Data]Node
-   retrieve : pull a VOSpace DataNode
-   push     : push a file to a VOSpace DataNode
-
    Connections to VOSpace are made using a SSL X509 certificat which is stored in a .pem file.  
    The certificate is supplied by the user or by the CADC credential server
 
