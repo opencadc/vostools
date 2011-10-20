@@ -79,6 +79,7 @@ import java.sql.Statement;
 import java.sql.Timestamp;
 import java.sql.Types;
 import java.text.DateFormat;
+import java.util.ArrayList;
 import java.util.Calendar;
 import java.util.Date;
 import java.util.HashMap;
@@ -331,25 +332,46 @@ public class NodeDAO
         addChildNodes(parent, nodes);
     }
 
+    /**
+     * Add the provided children to the parent.
+     */
     private void addChildNodes(ContainerNode parent, List<Node> nodes)
     {
-        for (Node n : nodes)
+        if (parent.getNodes().isEmpty())
         {
-            if (!parent.getNodes().contains(n))
+            for (Node n : nodes)
             {
                 log.debug("adding child to list: " + n.getUri().getPath());
-                n.setParent(parent);
                 parent.getNodes().add(n);
+                n.setParent(parent);
             }
-            else
-                log.debug("child already in list, not adding: " + n.getUri().getPath());
+        }
+        else
+        {
+            // 'nodes' will not have duplicates, but 'parent.getNodes()' may
+            // already contain some of 'nodes'.
+            List<Node> existingChildren = new ArrayList<Node>(parent.getNodes().size());
+            existingChildren.addAll(parent.getNodes());
+            for (Node n : nodes)
+            {
+                if (!existingChildren.contains(n))
+                {
+                    log.debug("adding child to list: " + n.getUri().getPath());
+                    n.setParent(parent);
+                    parent.getNodes().add(n);
+                }
+                else
+                    log.debug("child already in list, not adding: " + n.getUri().getPath());
+            }
         }
     }
+    
     private void loadSubjects(List<Node> nodes)
     {
         for (Node n : nodes)
             loadSubjects(n);
     }
+    
     private void loadSubjects(Node node)
     {
         if (node == null || node.appData == null)
