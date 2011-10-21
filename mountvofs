@@ -385,28 +385,29 @@ class VOFS(LoggingMixIn, Operations):
                         raise FuseOSError(EIO)
                 w.close()
 
-            ### remove the staging file from disk
-            if self.fh[fh].get('name',None):
+            ### remove file name from the fh map
+            #if self.fh[fh].get('name',None):
                 #logging.debug("deleting the tmpfile %s" % (self.fh[fh]['name']))
                 #os.unlink(self.fh[fh]['name'])
-                self.fh.pop(fh,None)
+            self.fh.pop(fh,None)
 
         ## if we have an active file object then 
         ## close this file and forget about the pointer.
-        if fh in self.fobj:
+        fobj=self.fobj.pop(fh,None)
+        if fobj is not None:
             logging.debug("checking if fh %d  is closed" % ( fh))
-            if not self.fobj[fh].closed:
+            if not fobj.closed:
                 logging.debug("Closing fh %d" % ( fh))
                 ### Closing a bad handle doesn't hurt....
                 try:
-                    self.fobj[fh].close()
+                    fobj.close()
                 except:
                     pass
-            self.fobj.pop(fh,None)
+
         logging.debug("removing reference to %d" % ( fh) ) 
         self.delPath(fh)
-        logging.debug("Deleting the Node from the lookup table")
-        self.delNode(path)
+        #logging.debug("Deleting the Node from the lookup table")
+        #self.delNode(path)
         self.clear_cache()
 
     def cache_size(self):
