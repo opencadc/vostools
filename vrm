@@ -1,4 +1,4 @@
-#!pyython
+#!python
 """Create a directory (ContainerNode) in the VOSpace repositotry"""
 
 
