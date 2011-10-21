@@ -31,7 +31,6 @@ def mkdir(filename):
 def copy(source,dest):    
 
     ## determine if this is a directory we are copying so need to be recursive
-
     if isdir(source):
         ## make sure the destination exists...
         if not access(dest,os.F_OK):
@@ -84,7 +83,7 @@ if __name__=='__main__':
     for source in args:
 
         ### the source must exist, of course...
-        if not access(source,os.R_OK):
+        if not access(source,os.R_OK)==0:
             logging.error("Can't open file %s for read" % ( source))
             sys.exit(errno.EACCES)
 
