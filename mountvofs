@@ -92,6 +92,8 @@ class VOFS(LoggingMixIn, Operations):
         self.attr.pop(path,None)
 
     def access(self, path, mode):
+        if path in self.node:
+	   return 0
 	if self.client.access(path):
 	   return 0
 	return -1
@@ -246,6 +248,7 @@ class VOFS(LoggingMixIn, Operations):
             for node in self.node[path].nodeList:
                 npath=os.path.join(path,node.name)
                 self.node[npath]=node
+                self.attr[npath]=node.attr
         return self.node[path]
 
     def getPath(self,fh):
