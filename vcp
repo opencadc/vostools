@@ -83,7 +83,7 @@ if __name__=='__main__':
     for source in args:
 
         ### the source must exist, of course...
-        if not access(source,os.R_OK)==0:
+        if not access(source,os.R_OK):
             logging.error("Can't open file %s for read" % ( source))
             sys.exit(errno.EACCES)
 
