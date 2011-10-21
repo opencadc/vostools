@@ -31,7 +31,7 @@ if len(args)>1:
 
 logging.info("Creating ContainerNode (directory) %s" % ( args[0]))
 client=vos.Client(certFile=opt.certfile,overwrite=opt.overwrite)
-if not client.access(args[0]):
+if not client.access(args[0])==0:
    client.mkdir(args[0])	
 elif client.isdir(args[0]):
    logging.error("(%s) directory exists." % ( args[0]))
