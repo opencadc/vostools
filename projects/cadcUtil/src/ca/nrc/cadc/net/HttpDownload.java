@@ -124,7 +124,6 @@ public class HttpDownload extends HttpTransfer
     //private boolean skipped = false;
     private String contentType;
     private String contentEncoding;
-    private String contentRange;
     private long contentLength = -1;
     private long decompSize = -1;
     private long size = -1;
@@ -286,15 +285,6 @@ public class HttpDownload extends HttpTransfer
     public String getContentEncoding()
     {
         return contentEncoding;
-    }
-    
-    /**
-     * Get the content-range returned by the server.
-     * @return
-     */
-    public String getContentRange()
-    {
-        return contentRange;
     }
 
     /**
@@ -637,11 +627,6 @@ public class HttpDownload extends HttpTransfer
             try { this.contentLength = Long.parseLong(s); }
             catch(NumberFormatException ignore) { }
         }
-        
-        // get content-range
-        s = conn.getHeaderField("Content-Range");
-        if (s != null)
-            contentRange = s;
 
         // get uncompressed content length
         s = conn.getHeaderField("X-Uncompressed-Length");
@@ -669,7 +654,7 @@ public class HttpDownload extends HttpTransfer
         int code = conn.getResponseCode();
         log.debug("HTTP GET status: " + code + " for " + remoteURL);
 
-        if (code != HttpURLConnection.HTTP_OK && code != HttpURLConnection.HTTP_PARTIAL)
+        if (code != HttpURLConnection.HTTP_OK)
         {
             String msg = "(" + code + ") " + conn.getResponseMessage();
             String body = NetUtil.getErrorBody(conn);
@@ -836,7 +821,7 @@ public class HttpDownload extends HttpTransfer
             else if (code == HttpURLConnection.HTTP_FORBIDDEN)
                 throw new IOException("permission denied");
             // TODO: add custom handling for other failures here
-            else if (code != HttpURLConnection.HTTP_OK && code != HttpURLConnection.HTTP_PARTIAL)
+            else if (code != HttpURLConnection.HTTP_OK)
             {
                 String body = NetUtil.getErrorBody(conn);
                 if (StringUtil.hasText(body))
