@@ -97,6 +97,7 @@ import ca.nrc.cadc.vos.NodeProperty;
 import ca.nrc.cadc.vos.VOS;
 import ca.nrc.cadc.vos.server.util.FixedSizeTreeSet;
 import java.net.URL;
+import java.security.AccessControlException;
 import java.text.DateFormat;
 import java.text.ParseException;
 import java.util.Date;
@@ -163,7 +164,31 @@ public class RssView extends AbstractView
             throw new IllegalStateException("NodePersistence must be set.");
         }
 
+        if (voSpaceAuthorizer == null)
+        {
+            throw new IllegalStateException("VOSpaceAuthorizer must be set.");
+        }
+
+        // Check we have Node read permissions.
         baseURL = getBaseURL(node, requestURL);
+        xmlString = new StringBuilder();
+        try
+        {
+            voSpaceAuthorizer.getReadPermission(node);
+        }
+        catch (AccessControlException e)
+        {
+            Element ef = RssFeed.createErrorFeed(node, e.getMessage(), baseURL);
+            try
+            {
+                write(ef, new StringBuilderWriter(xmlString));
+                return;
+            }
+            catch (IOException ioe)
+            {
+                throw new IllegalStateException(ioe);
+            }
+        }
         
         // TreeSet to hold the Nodes sorted by their date property.
         FixedSizeTreeSet<RssFeedItem> nodeSet = new FixedSizeTreeSet<RssFeedItem>();
@@ -174,7 +199,6 @@ public class RssView extends AbstractView
         feed = RssFeed.createFeed(node, nodeSet, baseURL);
         
         // Create a string version of the XML for metadata calculations
-        xmlString = new StringBuilder();
         try
         {
             write(xmlString);
@@ -209,7 +233,12 @@ public class RssView extends AbstractView
         {
             if (child instanceof ContainerNode)
             {
-                addNodeToFeed((ContainerNode) child, set);
+                try
+                {
+                    voSpaceAuthorizer.getReadPermission(child);
+                    addNodeToFeed((ContainerNode) child, set);
+                }
+                catch(AccessControlException ignore) {  }
             }
             else
             {

@@ -81,6 +81,7 @@ import ca.nrc.cadc.vos.NodeNotFoundException;
 import ca.nrc.cadc.vos.NodeProperty;
 import ca.nrc.cadc.vos.VOS;
 import ca.nrc.cadc.vos.VOSURI;
+import ca.nrc.cadc.vos.server.auth.VOSpaceAuthorizer;
 import ca.nrc.cadc.xml.XmlUtil;
 import java.net.URI;
 import java.net.URL;
@@ -97,6 +98,7 @@ import org.apache.log4j.Level;
 import org.apache.log4j.Logger;
 import org.jdom.Document;
 import org.jdom.Element;
+import org.junit.AfterClass;
 import org.junit.Assert;
 import org.junit.BeforeClass;
 import org.junit.Test;
@@ -121,15 +123,18 @@ public class RssViewTest
 
     static final String VOS_AUTHORITY = "cadc.nrc.ca!vospace";
     static final String ROOT_CONTAINER = "CADCRsstest1";
-    static final String NODE_OWNER = "CN=CADC Regtest1 10577,OU=CADC,O=HIA";
+    static final String REGTEST_NODE_OWNER = "CN=CADC Regtest1 10577,OU=CADC,O=HIA";
+    static final String AUTHTEST_NODE_OWNER = "CN=CADC Authtest1 10627,OU=CADC,O=HIA";
 
     protected Subject owner;
     protected Principal principal;
     protected NodePersistence nodePersistence;
+    protected VOSpaceAuthorizer voSpaceAuthorizer;
     
     public RssViewTest()
     {
         nodePersistence = new TestNodePersistence(SERVER, DATABASE, SCHEMA);
+        voSpaceAuthorizer = new VOSpaceAuthorizer();
     }
 
     @BeforeClass
@@ -159,14 +164,14 @@ public class RssViewTest
             Assert.fail("unexpected exception: " + unexpected);
         }
     }
-
+    
     @Test
-    public void testSetNode()
+    public void testSetNodeReturnsDenied()
     {
         try
         {
             Subject subject = new Subject();
-            subject.getPrincipals().add(new X500Principal(NODE_OWNER));
+            subject.getPrincipals().add(new X500Principal(REGTEST_NODE_OWNER));
 
             // Get the root container node for the test.
             GetRootNodeAction getRootNodeAction = new GetRootNodeAction(nodePersistence);
@@ -174,7 +179,48 @@ public class RssViewTest
             log.debug("root node: " + root);
 
             // Get the RSS XML from the view.
-            SetNodeAction setNodeAction = new SetNodeAction(nodePersistence, root);
+            Subject deniedSubject = new Subject();
+            deniedSubject.getPrincipals().add(new X500Principal(AUTHTEST_NODE_OWNER));
+
+            SetNodeAction setNodeAction = new SetNodeAction(nodePersistence, voSpaceAuthorizer, root);
+            StringBuilder rssXml = (StringBuilder) Subject.doAs(deniedSubject, setNodeAction);
+
+            Document doc = XmlUtil.buildDocument(rssXml.toString());
+            Element rss = doc.getRootElement();
+            Assert.assertNotNull(rss);
+
+            Element channel = rss.getChild("channel");
+            Assert.assertNotNull(channel);
+
+            Element description = channel.getChild("description");
+            Assert.assertNotNull(description);
+            Assert.assertTrue(description.getText().startsWith("Read permission denied"));
+
+            List<Element> items = channel.getChildren("item");
+            Assert.assertEquals(0, items.size());
+        }
+        catch(Exception unexpected)
+        {
+            log.error("unexpected exception", unexpected);
+            Assert.fail("unexpected exception: " + unexpected);
+        }
+    }
+
+    @Test
+    public void testSetNode()
+    {
+        try
+        {
+            Subject subject = new Subject();
+            subject.getPrincipals().add(new X500Principal(REGTEST_NODE_OWNER));
+
+            // Get the root container node for the test.
+            GetRootNodeAction getRootNodeAction = new GetRootNodeAction(nodePersistence);
+            ContainerNode root = (ContainerNode) Subject.doAs(subject, getRootNodeAction);
+            log.debug("root node: " + root);
+
+            // Get the RSS XML from the view.
+            SetNodeAction setNodeAction = new SetNodeAction(nodePersistence, voSpaceAuthorizer, root);
             StringBuilder rssXml = (StringBuilder) Subject.doAs(subject, setNodeAction);
 
             Document doc = XmlUtil.buildDocument(rssXml.toString());
@@ -185,9 +231,41 @@ public class RssViewTest
             Assert.assertNotNull(channel);
 
             List<Element> items = channel.getChildren("item");
-            Assert.assertEquals(5, items.size());
+            Assert.assertEquals(9, items.size());
 
             Iterator<Element> it = items.iterator();
+
+            Element item8 = it.next();
+            Element title8 = item8.getChild("title");
+            Assert.assertNotNull(title8);
+            Assert.assertEquals("child8", title8.getText());
+            Element pubDate8 = item8.getChild("pubDate");
+            Assert.assertNotNull(pubDate8);
+            Date date8 = dateFormat.parse(pubDate8.getText());
+
+            Element item7 = it.next();
+            Element title7 = item7.getChild("title");
+            Assert.assertNotNull(title7);
+            Assert.assertEquals("child7", title7.getText());
+            Element pubDate7 = item7.getChild("pubDate");
+            Assert.assertNotNull(pubDate7);
+            Date date7 = dateFormat.parse(pubDate7.getText());
+
+            Element item6 = it.next();
+            Element title6 = item6.getChild("title");
+            Assert.assertNotNull(title6);
+            Assert.assertEquals("child6", title6.getText());
+            Element pubDate6 = item6.getChild("pubDate");
+            Assert.assertNotNull(pubDate6);
+            Date date6 = dateFormat.parse(pubDate6.getText());
+
+            Element item5 = it.next();
+            Element title5 = item5.getChild("title");
+            Assert.assertNotNull(title5);
+            Assert.assertEquals("child5", title5.getText());
+            Element pubDate5 = item5.getChild("pubDate");
+            Assert.assertNotNull(pubDate5);
+            Date date5 = dateFormat.parse(pubDate5.getText());
 
             Element item4 = it.next();
             Element title4 = item4.getChild("title");
@@ -229,6 +307,10 @@ public class RssViewTest
             Assert.assertNotNull(rootPubDate);
             Date rootDate = dateFormat.parse(rootPubDate.getText());
 
+            Assert.assertTrue(date8.after(date7));
+            Assert.assertTrue(date7.after(date6));
+            Assert.assertTrue(date6.after(date5));
+            Assert.assertTrue(date5.after(date4));
             Assert.assertTrue(date4.after(date3));
             Assert.assertTrue(date3.after(date2));
             Assert.assertTrue(date2.after(date1));
@@ -304,7 +386,7 @@ public class RssViewTest
             // Root container.
             VOSURI vos = new VOSURI(new URI("vos", VOS_AUTHORITY, "/" + ROOT_CONTAINER, null, null));
             ContainerNode root = new ContainerNode(vos);
-            root.getProperties().add(new NodeProperty(VOS.PROPERTY_URI_CREATOR, NODE_OWNER));
+            root.getProperties().add(new NodeProperty(VOS.PROPERTY_URI_CREATOR, REGTEST_NODE_OWNER));
             root.getProperties().add(new NodeProperty(VOS.PROPERTY_URI_ISPUBLIC, Boolean.TRUE.toString()));
             root = (ContainerNode) getNode(vos, root);
 
@@ -312,7 +394,7 @@ public class RssViewTest
             VOSURI child1Uri = new VOSURI(new URI("vos", VOS_AUTHORITY, "/" + ROOT_CONTAINER + "/child1", null, null));
             ContainerNode child1 = new ContainerNode(child1Uri);
             child1.setParent(root);
-            child1.getProperties().add(new NodeProperty(VOS.PROPERTY_URI_CREATOR, NODE_OWNER));
+            child1.getProperties().add(new NodeProperty(VOS.PROPERTY_URI_CREATOR, REGTEST_NODE_OWNER));
             child1.getProperties().add(new NodeProperty(VOS.PROPERTY_URI_ISPUBLIC, Boolean.TRUE.toString()));
             child1 = (ContainerNode) getNode(child1Uri, child1);
 
@@ -320,7 +402,7 @@ public class RssViewTest
             VOSURI child2Uri = new VOSURI(new URI("vos", VOS_AUTHORITY, "/" + ROOT_CONTAINER + "/child2", null, null));
             DataNode child2 = new DataNode(child2Uri);
             child2.setParent(root);
-            child2.getProperties().add(new NodeProperty(VOS.PROPERTY_URI_CREATOR, NODE_OWNER));
+            child2.getProperties().add(new NodeProperty(VOS.PROPERTY_URI_CREATOR, REGTEST_NODE_OWNER));
             child2.getProperties().add(new NodeProperty(VOS.PROPERTY_URI_ISPUBLIC, Boolean.TRUE.toString()));
             child2 = (DataNode) getNode(child2Uri, child2);
 
@@ -328,7 +410,7 @@ public class RssViewTest
             VOSURI child3Uri = new VOSURI(new URI("vos", VOS_AUTHORITY, "/" + ROOT_CONTAINER + "/child1/child3", null, null));
             DataNode child3 = new DataNode(child3Uri);
             child3.setParent(child1);
-            child3.getProperties().add(new NodeProperty(VOS.PROPERTY_URI_CREATOR, NODE_OWNER));
+            child3.getProperties().add(new NodeProperty(VOS.PROPERTY_URI_CREATOR, REGTEST_NODE_OWNER));
             child3.getProperties().add(new NodeProperty(VOS.PROPERTY_URI_ISPUBLIC, Boolean.TRUE.toString()));
             child3 = (DataNode) getNode(child3Uri, child3);
 
@@ -336,9 +418,41 @@ public class RssViewTest
             VOSURI child4Uri = new VOSURI(new URI("vos", VOS_AUTHORITY, "/" + ROOT_CONTAINER + "/child1/child4", null, null));
             DataNode child4 = new DataNode(child4Uri);
             child4.setParent(child1);
-            child4.getProperties().add(new NodeProperty(VOS.PROPERTY_URI_CREATOR, NODE_OWNER));
+            child4.getProperties().add(new NodeProperty(VOS.PROPERTY_URI_CREATOR, REGTEST_NODE_OWNER));
             child4.getProperties().add(new NodeProperty(VOS.PROPERTY_URI_ISPUBLIC, Boolean.TRUE.toString()));
             child4 = (DataNode) getNode(child4Uri, child4);
+
+             // Private child container node of root.
+            VOSURI child5Uri = new VOSURI(new URI("vos", VOS_AUTHORITY, "/" + ROOT_CONTAINER + "/child5", null, null));
+            ContainerNode child5 = new ContainerNode(child5Uri);
+            child5.setParent(root);
+            child5.getProperties().add(new NodeProperty(VOS.PROPERTY_URI_CREATOR, REGTEST_NODE_OWNER));
+            child5.getProperties().add(new NodeProperty(VOS.PROPERTY_URI_ISPUBLIC, Boolean.FALSE.toString()));
+            child5 = (ContainerNode) getNode(child5Uri, child5);
+
+            // Private data node of private child5.
+            VOSURI child6Uri = new VOSURI(new URI("vos", VOS_AUTHORITY, "/" + ROOT_CONTAINER + "/child5/child6", null, null));
+            DataNode child6 = new DataNode(child6Uri);
+            child6.setParent(child5);
+            child6.getProperties().add(new NodeProperty(VOS.PROPERTY_URI_CREATOR, REGTEST_NODE_OWNER));
+            child6.getProperties().add(new NodeProperty(VOS.PROPERTY_URI_ISPUBLIC, Boolean.FALSE.toString()));
+            child6 = (DataNode) getNode(child6Uri, child6);
+
+            // Public data node of private child5.
+            VOSURI child7Uri = new VOSURI(new URI("vos", VOS_AUTHORITY, "/" + ROOT_CONTAINER + "/child5/child7", null, null));
+            DataNode child7 = new DataNode(child7Uri);
+            child7.setParent(child5);
+            child7.getProperties().add(new NodeProperty(VOS.PROPERTY_URI_CREATOR, REGTEST_NODE_OWNER));
+            child7.getProperties().add(new NodeProperty(VOS.PROPERTY_URI_ISPUBLIC, Boolean.TRUE.toString()));
+            child7 = (DataNode) getNode(child7Uri, child7);
+
+            // Private data node of root.
+            VOSURI child8Uri = new VOSURI(new URI("vos", VOS_AUTHORITY, "/" + ROOT_CONTAINER + "/child8", null, null));
+            DataNode child8 = new DataNode(child8Uri);
+            child8.setParent(root);
+            child8.getProperties().add(new NodeProperty(VOS.PROPERTY_URI_CREATOR, REGTEST_NODE_OWNER));
+            child8.getProperties().add(new NodeProperty(VOS.PROPERTY_URI_ISPUBLIC, Boolean.TRUE.toString()));
+            child8 = (DataNode) getNode(child8Uri, child8);
 
             return root;
         }
@@ -363,11 +477,13 @@ public class RssViewTest
     private class SetNodeAction implements PrivilegedExceptionAction<Object>
     {
         private NodePersistence nodePersistence;
+        private VOSpaceAuthorizer voSpaceAuthorizer;
         private ContainerNode root;
 
-        SetNodeAction(NodePersistence nodePersistence, ContainerNode root)
+        SetNodeAction(NodePersistence nodePersistence, VOSpaceAuthorizer voSpaceAuthorizer, ContainerNode root)
         {
             this.nodePersistence = nodePersistence;
+            this.voSpaceAuthorizer = voSpaceAuthorizer;
             this.root = root;
         }
 
@@ -375,6 +491,7 @@ public class RssViewTest
         {
             RssView view = new RssView();
             view.setNodePersistence(nodePersistence);
+            view.setVOSpaceAuthorizer(voSpaceAuthorizer);
             view.setNode(root, "", new URL("http://" + VOS_AUTHORITY + "/" + ROOT_CONTAINER));
 
             log.debug("xml: " + view.xmlString);
