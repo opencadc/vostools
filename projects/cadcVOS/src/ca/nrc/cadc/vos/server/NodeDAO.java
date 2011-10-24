@@ -126,6 +126,7 @@ import ca.nrc.cadc.vos.VOS.NodeBusyState;
 public class NodeDAO
 {
     private static Logger log = Logger.getLogger(NodeDAO.class);
+    private static final int CHILD_BATCH_SIZE = 1000;
 
     // temporarily needed by NodeMapper
     static final String NODE_TYPE_DATA = "D";
@@ -154,10 +155,12 @@ public class NodeDAO
     {
         public String nodeTable;
         public String propertyTable;
-        public NodeSchema(String nodeTable, String propertyTable)
+        boolean limitWithTop;
+        public NodeSchema(String nodeTable, String propertyTable, boolean limitWithTop)
         {
             this.nodeTable = nodeTable;
             this.propertyTable = propertyTable;
+            this.limitWithTop = limitWithTop;
         }
     }
     
@@ -320,11 +323,27 @@ public class NodeDAO
     public void getChildren(ContainerNode parent)
     {
         log.debug("getChildren: " + parent.getUri().getPath() + ", " + parent.getClass().getSimpleName());
+        getChildren(parent, null, null);
+    }
+    
+    /**
+     * Loads some of thre child nodes of the specified container.
+     * @param parent
+     * @param start
+     * @param limit
+     */
+    public void getChildren(ContainerNode parent, VOSURI start, Integer limit)
+    {
+        log.debug("getChildren: " + parent.getUri().getPath() + ", " + parent.getClass().getSimpleName());
         expectPersistentNode(parent);
+
+        String startName = null;
+        if (start != null)
+            startName = start.getName();
 
         // we must re-run the query in case server-side content changed since the argument node
         // was called, e.g. from delete(node) or markForDeletion(node)
-        String sql = getSelectNodesByParentSQL(parent);
+        String sql = getSelectNodesByParentSQL(parent, startName, limit);
         log.debug("getChildren: " + sql);
         List<Node> nodes = jdbc.query(sql,
                 new NodeMapper(authority, parent.getUri().getPath()));
@@ -795,7 +814,7 @@ public class NodeDAO
     /**
      * Move the node to inside the destination container.
      *
-     * @param node The node to move
+     * @param src The node to move
      * @param dest The container in which to move the node.
      * @param subject The new owner for the moved node.
      */
@@ -886,7 +905,7 @@ public class NodeDAO
      * Change the ownership of the node.
      * 
      * @param node
-     * @param subject
+     * @param newOwner
      * @param recursive
      */
     public void chown(Node node, Subject newOwner, boolean recursive)
@@ -952,19 +971,29 @@ public class NodeDAO
     private void chownInternalRecursive(ContainerNode container, Object newOwnerObj)
     {
         String sql = null;
-        sql = getSelectNodesByParentSQL(container);
-        List<Node> children = jdbc.query(sql, new NodeMapper(authority, container.getUri().getPath()));
+        sql = getSelectNodesByParentSQL(container, null, CHILD_BATCH_SIZE);
         NodePutStatementCreator putStatementCreator = new NodePutStatementCreator(nodeSchema, true);
-        for (Node child : children)
+        NodeMapper mapper = new NodeMapper(authority, container.getUri().getPath());
+        List<Node> children = jdbc.query(sql, mapper);
+        while (children.size() > 0)
         {
-            child.setParent(container);
-            putStatementCreator.setValues(child, newOwnerObj);
-            jdbc.update(putStatementCreator);
-            if (child instanceof ContainerNode)
+            Node cur = null;
+            for (Node child : children)
             {
-                chownInternalRecursive((ContainerNode) child, newOwnerObj);
+                cur = child;
+                child.setParent(container);
+                putStatementCreator.setValues(child, newOwnerObj);
+                jdbc.update(putStatementCreator);
+                if (child instanceof ContainerNode)
+                {
+                    chownInternalRecursive((ContainerNode) child, newOwnerObj);
+                }
             }
+            sql = getSelectNodesByParentSQL(container, cur.getName(), CHILD_BATCH_SIZE);
+            children = jdbc.query(sql, mapper);
+            children.remove(cur); // the query is name >= cur and we already processed cur
         }
+
     }
     
     /**
@@ -1016,9 +1045,11 @@ public class NodeDAO
      * processsed with a NodeMapper.
      *
      * @param parent The node to query for.
+     * @param start
+     * @param limit
      * @return simple SQL statement select for use with NodeMapper
      */
-    protected String getSelectNodesByParentSQL(ContainerNode parent)
+    protected String getSelectNodesByParentSQL(ContainerNode parent, String start, Integer limit)
     {
         StringBuilder sb = new StringBuilder();
         sb.append("SELECT nodeID, parentID, name, type, busyState, markedForDeletion, ownerID, creatorID, isPublic, groupRead, groupWrite, ");
@@ -1032,7 +1063,20 @@ public class NodeDAO
         }
         else
             sb.append(" WHERE parentID IS NULL");
+        if (start != null)
+            sb.append(" AND name >= '" + start + "'"); // safe since it came from a VOSURI
         sb.append(" AND markedForDeletion = 0");
+
+        if (start != null || limit != null)
+            sb.append(" ORDER BY name");
+        if (limit != null)
+        {
+
+            if (nodeSchema.limitWithTop) // TOP, eg sybase
+                sb.replace(0, 6, "SELECT TOP " + limit);
+            else // LIMIT, eg postgresql
+                sb.append(" LIMIT " + limit);
+        }
         return sb.toString();
     }
     

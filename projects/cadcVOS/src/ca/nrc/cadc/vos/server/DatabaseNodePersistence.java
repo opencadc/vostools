@@ -117,25 +117,14 @@ public abstract class DatabaseNodePersistence implements NodePersistence
 
     protected NodeDAO.NodeSchema nodeSchema;
 
-    public DatabaseNodePersistence() { }
+    protected Integer maxChildLimit = new Integer(1000);
 
-    /**
-     * Subclass must implement this to return the fully-qualified table name for the
-     * nodes table.
-     *
-     * @see NodeDAO
-     * @return
-     */
-    protected abstract String getNodeTableName();
+    private DatabaseNodePersistence() { }
 
-    /**
-     * Subclass must implement this to return the fully-qualified table name for the
-     * node properties table.
-     *
-     * @see NodeDAO
-     * @return
-     */
-    protected abstract String getPropertyTableName();
+    protected DatabaseNodePersistence(NodeDAO.NodeSchema nodeSchema)
+    {
+        this.nodeSchema = nodeSchema;
+    }
 
     /**
      * Subclasses must implement this to find or create a usable DataSource. This is
@@ -163,9 +152,8 @@ public abstract class DatabaseNodePersistence implements NodePersistence
      */
     protected NodeDAO getDAO(String authority)
     {
-        if (nodeSchema == null) // lazy
-            this.nodeSchema = new NodeDAO.NodeSchema(getNodeTableName(),getPropertyTableName());
-
+        //if (nodeSchema == null) // lazy
+        //    this.nodeSchema = new NodeDAO.NodeSchema(getNodeTableName(),getPropertyTableName());
         return new NodeDAO(getDataSource(), nodeSchema, authority, getIdentityManager());
     }
 
@@ -213,6 +201,18 @@ public abstract class DatabaseNodePersistence implements NodePersistence
     {
         NodeDAO dao = getDAO( node.getUri().getAuthority() );
         dao.getChildren(node);
+    }
+
+    public void getChildren(ContainerNode parent, VOSURI start, Integer limit)
+    {
+        NodeDAO dao = getDAO( parent.getUri().getAuthority() );
+
+        // enforce max limit
+        Integer actualLimit = limit;
+        if (limit == null || limit.intValue() > maxChildLimit.intValue())
+            actualLimit = maxChildLimit;
+
+        dao.getChildren(parent, start, actualLimit);
     }
     
     @Override

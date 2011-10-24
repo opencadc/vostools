@@ -126,6 +126,36 @@ public class VOS
             return null;
         }
     }
+
+    public static enum Detail
+    {
+        min("min"),
+        max("max"),
+        properties("proeprties");
+
+        private String value;
+
+        private Detail(String value) { this.value = value; }
+
+        public String getValue() { return value; }
+
+        public static Detail getValue(String value)
+        {
+            if (value.equals(min.getValue()))
+            {
+                return min;
+            }
+            else if (value.equals(max.getValue()))
+            {
+                return max;
+            }
+            else if (value.equals(properties.getValue()))
+            {
+                return properties;
+            }
+            return null;
+        }
+    }
     
     /*
      * Standard Node Properties defined by the IVOA

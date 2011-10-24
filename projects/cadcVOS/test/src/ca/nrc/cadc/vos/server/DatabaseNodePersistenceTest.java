@@ -261,20 +261,14 @@ public class DatabaseNodePersistenceTest
     
     class DatabaseNodePersistenceStub extends DatabaseNodePersistence
     {
+
+        public DatabaseNodePersistenceStub()
+        {
+            super(new NodeDAO.NodeSchema("Node", "NodeProperty", true));
+        }
+
         @Override
         protected DataSource getDataSource()
-        {
-            return null;
-        }
-
-        @Override
-        protected String getNodeTableName()
-        {
-            return null;
-        }
-
-        @Override
-        protected String getPropertyTableName()
         {
             return null;
         }

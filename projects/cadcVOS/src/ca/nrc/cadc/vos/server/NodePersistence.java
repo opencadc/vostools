@@ -77,6 +77,7 @@ import ca.nrc.cadc.vos.Node;
 import ca.nrc.cadc.vos.NodeNotFoundException;
 import ca.nrc.cadc.vos.NodeProperty;
 import ca.nrc.cadc.vos.VOSURI;
+import ca.nrc.cadc.vos.VOS.Detail;
 import ca.nrc.cadc.vos.VOS.NodeBusyState;
 
 /**
@@ -92,7 +93,7 @@ public interface NodePersistence
      * Find the node with the specified path. The returned node(s) will include
      * some properties (typically inherently single-valued properties like owner,
      * content-length, content-type, content-encoding, content-MD5) plus all
-     * properties nedeed to make authorization checks (isPublic, group-read, and
+     * properties needed to make authorization checks (isPublic, group-read, and
      * group-write). Remaining properties and child nodes can be filled in as
      * needed with getProperties(Node) and getChildren(ContainerNode).
      *
@@ -104,11 +105,22 @@ public interface NodePersistence
         throws NodeNotFoundException;
 
     /**
-     * Load the children of a container.
+     * Load all the children of a container.
      *
      * @param node
      */
     void getChildren(ContainerNode node);
+
+    /**
+     * Load some of the children of a container. If <code>uri</code> is null, a
+     * server-selected fitrst node is used. If <code>limit</code> is null or
+     * exceeds an arbitrary internal value, the internal value is used.
+     * 
+     * @param parent
+     * @param start
+     * @param limit
+     */
+    void getChildren(ContainerNode parent, VOSURI start, Integer limit);
 
     /**
      * Load a single child of a container.

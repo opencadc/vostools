@@ -112,7 +112,7 @@ public class RssViewTest
     private static final Logger log = Logger.getLogger(RssViewTest.class);
     static
     {
-        Log4jInit.setLevel("ca.nrc.cadc.vos.server", Level.INFO);
+        Log4jInit.setLevel("ca.nrc.cadc.vos.server", Level.DEBUG);
     }
 
     private static DateFormat dateFormat = DateUtil.getDateFormat(DateUtil.IVOA_DATE_FORMAT, DateUtil.UTC);
@@ -146,6 +146,7 @@ public class RssViewTest
     @Test
     public void testGetBaseURL()
     {
+        log.debug("testGetBaseURL - START");
         try
         {
             RssView v = new RssView();
@@ -163,11 +164,16 @@ public class RssViewTest
             log.error("unexpected exception", unexpected);
             Assert.fail("unexpected exception: " + unexpected);
         }
+        finally
+        {
+            log.debug("testGetBaseURL - DONE");
+        }
     }
     
     @Test
     public void testSetNodeReturnsDenied()
     {
+        log.debug("testSetNodeReturnsDenied - START");
         try
         {
             Subject subject = new Subject();
@@ -203,6 +209,10 @@ public class RssViewTest
         {
             log.error("unexpected exception", unexpected);
             Assert.fail("unexpected exception: " + unexpected);
+        }
+        finally
+        {
+            log.debug("testSetNodeReturnsDenied - DONE");
         }
     }
 
@@ -332,22 +342,14 @@ public class RssViewTest
 
         public TestNodePersistence(String server, String database, String schema)
         {
-            super();
+            super(new NodeDAO.NodeSchema(
+                    database + "." + schema + ".Node", 
+                    database + "." + schema + ".NodeProperty",
+                    true)
+                );
             this.server = server;
             this.database = database;
             this.schema = schema;
-        }
-
-        @Override
-        public String getPropertyTableName()
-        {
-            return database + "." + schema + ".NodeProperty";
-        }
-
-        @Override
-        public String getNodeTableName()
-        {
-            return database + "." + schema + ".Node";
         }
 
         @Override

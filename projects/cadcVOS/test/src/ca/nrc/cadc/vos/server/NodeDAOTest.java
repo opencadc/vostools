@@ -158,7 +158,7 @@ public class NodeDAOTest
             DBConfig dbConfig = new DBConfig();
             ConnectionConfig connConfig = dbConfig.getConnectionConfig(SERVER, DATABASE);
             this.dataSource = DBUtil.getDataSource(connConfig);
-            NodeSchema ns = new NodeSchema("Node", "NodeProperty");
+            NodeSchema ns = new NodeSchema("Node", "NodeProperty", true); // limit with TOP
             this.nodeDAO = new NodeDAO(dataSource, ns, VOS_AUTHORITY, new X500IdentityManager());
 
             ContainerNode root = (ContainerNode) nodeDAO.getPath(HOME_CONTAINER);
@@ -372,6 +372,74 @@ public class NodeDAOTest
             // rely on implementation of Node.equals
             Assert.assertTrue(cur.getNodes().contains(n1));
             Assert.assertTrue(cur.getNodes().contains(n2));
+            Assert.assertTrue(cur.getNodes().contains(n3));
+            Assert.assertTrue(cur.getNodes().contains(n4));
+
+            nodeDAO.delete(cur);
+            assertRecursiveDelete();
+        }
+        catch(Exception unexpected)
+        {
+            log.error("unexpected exception", unexpected);
+            Assert.fail("unexpected exception: " + unexpected);
+        }
+        finally
+        {
+            log.debug("testGetChildren - DONE");
+        }
+    }
+
+    @Test
+    public void testGetChildrenLimit()
+    {
+        log.debug("testGetChildren - START");
+        try
+        {
+            ContainerNode rootContainer = (ContainerNode) nodeDAO.getPath(HOME_CONTAINER);
+            log.debug("ROOT: " + rootContainer);
+            Assert.assertNotNull(rootContainer);
+
+            String basePath = "/" + HOME_CONTAINER + "/";
+
+            // create a container
+            String path = basePath + getNodeName("dir");
+            ContainerNode testNode = getCommonContainerNode(path);
+            testNode.setParent(rootContainer);
+            ContainerNode cn = (ContainerNode) nodeDAO.put(testNode, owner);
+
+            ContainerNode cur = (ContainerNode) nodeDAO.getPath(path);
+            Assert.assertNotNull(cur);
+
+            // make 4 nodes in predictable alpha-order == NodeDAO ordering
+            DataNode n1 = getCommonDataNode(path + "/abc");
+            ContainerNode n2 = getCommonContainerNode(path + "/bcd");
+            DataNode n3 = getCommonDataNode(path + "/cde");
+            ContainerNode n4 = getCommonContainerNode(path + "/def");
+
+            n1.setParent(cn);
+            n2.setParent(cn);
+            n3.setParent(cn);
+            n4.setParent(cn);
+            nodeDAO.put(n1, owner);
+            nodeDAO.put(n2, owner);
+            nodeDAO.put(n3, owner);
+            nodeDAO.put(n4, owner);
+
+            // get a vanilla container with no children
+            cur = (ContainerNode) nodeDAO.getPath(path);
+            Assert.assertNotNull(cur);
+            Assert.assertEquals("empty child list", 0, cur.getNodes().size());
+            // load 2 child nodes
+            nodeDAO.getChildren(cur, null, new Integer(2));
+            Assert.assertEquals("leading partial child list", 2, cur.getNodes().size());
+            // rely on implementation of Node.equals
+            Assert.assertTrue(cur.getNodes().contains(n1));
+            Assert.assertTrue(cur.getNodes().contains(n2));
+
+            // get a trailing batch
+            cur.getNodes().clear();
+            nodeDAO.getChildren(cur, n3.getUri(), new Integer(100));
+            Assert.assertEquals("trailing partial child list", 2, cur.getNodes().size());
             Assert.assertTrue(cur.getNodes().contains(n3));
             Assert.assertTrue(cur.getNodes().contains(n4));
 
