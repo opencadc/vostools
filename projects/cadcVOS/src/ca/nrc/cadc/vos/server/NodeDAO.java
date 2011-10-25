@@ -337,15 +337,18 @@ public class NodeDAO
         log.debug("getChildren: " + parent.getUri().getPath() + ", " + parent.getClass().getSimpleName());
         expectPersistentNode(parent);
 
+        Object[] args = null;
         String startName = null;
         if (start != null)
-            startName = start.getName();
-
+            args = new Object[] { start.getName() };
+        else
+            args = new Object[0];
+        
         // we must re-run the query in case server-side content changed since the argument node
         // was called, e.g. from delete(node) or markForDeletion(node)
-        String sql = getSelectNodesByParentSQL(parent, startName, limit);
+        String sql = getSelectNodesByParentSQL(parent, limit, (start!=null));
         log.debug("getChildren: " + sql);
-        List<Node> nodes = jdbc.query(sql,
+        List<Node> nodes = jdbc.query(sql,  args,
                 new NodeMapper(authority, parent.getUri().getPath()));
         loadSubjects(nodes);
         addChildNodes(parent, nodes);
@@ -971,10 +974,11 @@ public class NodeDAO
     private void chownInternalRecursive(ContainerNode container, Object newOwnerObj)
     {
         String sql = null;
-        sql = getSelectNodesByParentSQL(container, null, CHILD_BATCH_SIZE);
+        sql = getSelectNodesByParentSQL(container, CHILD_BATCH_SIZE, false);
         NodePutStatementCreator putStatementCreator = new NodePutStatementCreator(nodeSchema, true);
         NodeMapper mapper = new NodeMapper(authority, container.getUri().getPath());
-        List<Node> children = jdbc.query(sql, mapper);
+        List<Node> children = jdbc.query(sql, new Object[0], mapper);
+        Object[] args = new Object[1];
         while (children.size() > 0)
         {
             Node cur = null;
@@ -989,8 +993,9 @@ public class NodeDAO
                     chownInternalRecursive((ContainerNode) child, newOwnerObj);
                 }
             }
-            sql = getSelectNodesByParentSQL(container, cur.getName(), CHILD_BATCH_SIZE);
-            children = jdbc.query(sql, mapper);
+            sql = getSelectNodesByParentSQL(container,CHILD_BATCH_SIZE, true);
+            args[0] = cur.getName();
+            children = jdbc.query(sql, args, mapper);
             children.remove(cur); // the query is name >= cur and we already processed cur
         }
 
@@ -1045,11 +1050,11 @@ public class NodeDAO
      * processsed with a NodeMapper.
      *
      * @param parent The node to query for.
-     * @param start
      * @param limit
+     * @param withStart
      * @return simple SQL statement select for use with NodeMapper
      */
-    protected String getSelectNodesByParentSQL(ContainerNode parent, String start, Integer limit)
+    protected String getSelectNodesByParentSQL(ContainerNode parent, Integer limit, boolean withStart)
     {
         StringBuilder sb = new StringBuilder();
         sb.append("SELECT nodeID, parentID, name, type, busyState, markedForDeletion, ownerID, creatorID, isPublic, groupRead, groupWrite, ");
@@ -1063,11 +1068,11 @@ public class NodeDAO
         }
         else
             sb.append(" WHERE parentID IS NULL");
-        if (start != null)
-            sb.append(" AND name >= '" + start + "'"); // safe since it came from a VOSURI
+        if (withStart)
+            sb.append(" AND name >= ?");
         sb.append(" AND markedForDeletion = 0");
 
-        if (start != null || limit != null)
+        if (withStart || limit != null)
             sb.append(" ORDER BY name");
         if (limit != null)
         {
