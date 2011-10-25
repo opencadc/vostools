@@ -71,14 +71,10 @@ package ca.nrc.cadc.vos.server.web.restlet.resource;
 
 import java.net.URISyntaxException;
 import java.security.AccessControlException;
-import java.util.Collection;
 
 import javax.security.auth.Subject;
 
-import ca.nrc.cadc.util.StringUtil;
-import ca.nrc.cadc.vos.Search;
 import org.apache.log4j.Logger;
-import org.restlet.data.Form;
 import org.restlet.representation.Representation;
 import org.restlet.resource.Delete;
 import org.restlet.resource.Get;
@@ -108,7 +104,6 @@ public class NodeResource extends BaseResource
 
     private NodeFault nodeFault;
     private VOSURI vosURI;
-    private String viewReference;
     
     /**
      * Called after object instantiation.
@@ -126,21 +121,12 @@ public class NodeResource extends BaseResource
                     get("nodePath");
             LOGGER.debug("path = " + path);
             
-            //if ((path == null) || (path.trim().length() == 0))
-            //{
-            //    throw new IllegalArgumentException(
-            //            "No node path information provided.");
-            //}
             LOGGER.debug("prefix = " + getVosUriPrefix());
             if (path != null)
                 vosURI = new VOSURI(getVosUriPrefix() + "/" + path);
             else
                 vosURI = new VOSURI(getVosUriPrefix()); // the root Container
             LOGGER.debug("vosURI = " + vosURI);
-            
-            Form form = getRequest().getResourceRef().getQueryAsForm();
-            viewReference = form.getFirstValue("view");
-            LOGGER.debug("viewReference = " + viewReference);
         }
         catch (URISyntaxException e)
         {
@@ -210,7 +196,7 @@ public class NodeResource extends BaseResource
             action.setVosURI(vosURI);
             action.setNodeXML(getRequestEntity());
             action.setRequest(getRequest());
-            action.setViewReference(viewReference);
+            action.setQueryForm(getQueryForm());
             action.setStylesheetReference(getStylesheetReference());
 
             final NodeActionResult result;
@@ -263,7 +249,7 @@ public class NodeResource extends BaseResource
     public Representation represent()
     {
         LOGGER.debug("Enter NodeResource.represent()");
-        return performNodeAction(new GetNodeAction(createSearchCriteria()));
+        return performNodeAction(new GetNodeAction());
     }
 
     @Put
@@ -285,68 +271,6 @@ public class NodeResource extends BaseResource
     {
         LOGGER.debug("Enter NodeResource.remove()");
         return performNodeAction(new DeleteNodeAction());
-    }
-
-
-    /**
-     * Create the Search Criteria to be used with a GET call.
-     *
-     * @return  Search instance, or null if no search criteria provided.
-     */
-    protected Search createSearchCriteria()
-    {
-        final Form queryForm = getQuery();
-        final Search searchCriteria;
-
-        if (!hasSearchCriteria(queryForm))
-        {
-            searchCriteria = null;
-        }
-        else
-        {
-            searchCriteria = new Search();
-
-            final String detailLevel = queryForm.getFirstValue("detail");
-
-            if (StringUtil.hasLength(detailLevel))
-            {
-                searchCriteria.getResults().setDetail(
-                        Search.Results.Detail.valueOf(
-                                detailLevel.toUpperCase()));
-            }
-        }
-
-        return searchCriteria;
-    }
-
-    /**
-     * Obtain whether any supported search criteria have been provided.
-     *
-     * Please make sure the query parameter is registered with the
-     * <code>Search.SUPPORTED_PARAMETERS</code> field.
-     *
-     * @param queryForm     The query string as a Form.
-     * @return              True if any search criteria have been provided,
-     *                      false otherwise.
-     */
-    protected boolean hasSearchCriteria(final Form queryForm)
-    {
-        final Collection<String> givenQueryNames = queryForm.getNames();
-
-        for (final String givenQueryName : givenQueryNames)
-        {
-            for (final String supportedQueryName : Search.SUPPORTED_PARAMETERS)
-            {
-                if (givenQueryName.equals(supportedQueryName))
-                {
-                    return true;
-                }
-            }
-        }
-
-        return false;
-    }
-    
-   
+    }   
     
 }

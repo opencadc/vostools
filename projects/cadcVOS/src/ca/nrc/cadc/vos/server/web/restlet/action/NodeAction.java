@@ -75,6 +75,7 @@ import java.security.PrivilegedAction;
 
 import org.apache.log4j.Logger;
 import org.restlet.Request;
+import org.restlet.data.Form;
 import org.restlet.representation.Representation;
 
 import ca.nrc.cadc.util.StringUtil;
@@ -102,15 +103,20 @@ import ca.nrc.cadc.vos.server.auth.VOSpaceAuthorizer;
 public abstract class NodeAction implements PrivilegedAction<Object>
 {
     protected static Logger log = Logger.getLogger(NodeAction.class);
+    
+    // query form parameter names
+    protected static final String QUERY_PARAM_VIEW = "view";
+    protected static final String QUERY_PARAM_DETAIL = "detail";
+    protected static final String QUERY_PARAM_URI = "uri";
+    protected static final String QUERY_PARAM_OFFSET = "offset";
 
     // some subclasses may nede to determine hostname, request path, etc
     protected Request request;
-
+    protected Form queryForm;
     protected VOSpaceAuthorizer voSpaceAuthorizer;
     protected NodePersistence nodePersistence;
     protected VOSURI vosURI;
     protected Representation nodeXML;
-    protected String viewReference;
     protected String stylesheetReference;
     
     /**
@@ -159,17 +165,16 @@ public abstract class NodeAction implements PrivilegedAction<Object>
     }
     
     /**
-     * Set the view reference sent in by the client.
-     * @param viewReference
+     * Set the form object.
+     * @param form
      */
-    public void setViewReference(String viewReference)
+    public void setQueryForm(Form form)
     {
-        this.viewReference = viewReference;
+        this.queryForm = form;
     }
     
     /**
      * Set the stylesheet reference.
-     *
      * @param stylesheetReference  The URI reference string to the stylesheet
      *                             location.
      */
@@ -187,6 +192,8 @@ public abstract class NodeAction implements PrivilegedAction<Object>
      */
     protected AbstractView getView() throws Exception
     {
+        String viewReference = queryForm.getFirstValue(QUERY_PARAM_VIEW);
+        
         if (!StringUtil.hasText(viewReference))
         {
             return null;

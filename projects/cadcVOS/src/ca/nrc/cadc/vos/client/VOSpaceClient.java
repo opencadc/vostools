@@ -103,7 +103,6 @@ import ca.nrc.cadc.vos.NodeProperty;
 import ca.nrc.cadc.vos.NodeReader;
 import ca.nrc.cadc.vos.NodeWriter;
 import ca.nrc.cadc.vos.Protocol;
-import ca.nrc.cadc.vos.Search;
 import ca.nrc.cadc.vos.Transfer;
 import ca.nrc.cadc.vos.TransferParsingException;
 import ca.nrc.cadc.vos.TransferReader;
@@ -492,11 +491,6 @@ public class VOSpaceClient
             return createTransferSync(trans);
         
         return createTransferASync(trans);
-    }
-
-    public Search createSearch(Search search)
-    {
-        throw new UnsupportedOperationException();
     }
 
     public List<NodeProperty> getProperties()

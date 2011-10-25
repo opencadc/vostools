@@ -34,19 +34,19 @@
 package ca.nrc.cadc.vos.server.web.restlet.resource;
 
 
-import ca.nrc.cadc.vos.Search;
+import static org.easymock.EasyMock.createMock;
+import static org.easymock.EasyMock.expect;
+import static org.easymock.EasyMock.replay;
+import static org.easymock.EasyMock.reset;
+import static org.easymock.EasyMock.verify;
+
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ConcurrentMap;
+
 import org.junit.Test;
 import org.restlet.Application;
 import org.restlet.Context;
 import org.restlet.data.Form;
-
-import java.util.HashSet;
-import java.util.Set;
-import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.ConcurrentMap;
-
-import static org.easymock.EasyMock.*;
-import static org.junit.Assert.*;
 
 
 public class NodeResourceTest extends BaseResourceTest<NodeResource>
@@ -105,79 +105,11 @@ public class NodeResourceTest extends BaseResourceTest<NodeResource>
         verify(getMockApplication(), getMockContext());
         reset(getMockApplication(), getMockContext());
     }
-
-
+    
     @Test
-    public void hasSearchCriteria() throws Exception
+    public void testPerformNodeAction()
     {
-        expect(getMockForm().getNames()).andReturn(
-                new HashSet<String>()).once();
-
-        replay(getMockForm());
-        assertFalse("No criteria given.", getTestSubject().hasSearchCriteria(
-                getMockForm()));
-        verify(getMockForm());
-
-        // TEST 2
-        final Set<String> queryParameterNames = new HashSet<String>();
-        queryParameterNames.add("Detail");
-        queryParameterNames.add("Bogus");
-
-        reset(getMockForm());
-
-        expect(getMockForm().getNames()).andReturn(queryParameterNames).once();
-
-        replay(getMockForm());
-        assertFalse("No criteria given.", getTestSubject().hasSearchCriteria(
-                getMockForm()));
-        verify(getMockForm());
-
-        // TEST 3
-        queryParameterNames.clear();
-        reset(getMockForm());
-
-        queryParameterNames.add("detail");
-        queryParameterNames.add("boGUs");
-
-        expect(getMockForm().getNames()).andReturn(queryParameterNames).once();
-
-        replay(getMockForm());
-        assertTrue("Detail param given.", getTestSubject().hasSearchCriteria(
-                getMockForm()));
-        verify(getMockForm());
-    }
-
-    @Test
-    public void createSearchCriteria() throws Exception
-    {
-        final Set<String> queryParameterNames = new HashSet<String>();
-
-        expect(getMockForm().getNames()).andReturn(queryParameterNames).once();
-
-        replay(getMockForm());
-
-        assertNull("Search should be null with no items.",
-                   getTestSubject().createSearchCriteria());
-
-        verify(getMockForm());
-
-
-        // TEST 2
-        reset(getMockForm());
-
-        queryParameterNames.add("detail");
-        queryParameterNames.add("bogus");
-
-        expect(getMockForm().getNames()).andReturn(queryParameterNames).once();
-        expect(getMockForm().getFirstValue("detail")).andReturn("min").once();
-
-        replay(getMockForm());
-        final Search search = getTestSubject().createSearchCriteria();
-        assertNotNull("Search should not be null detail item.", search);
-        assertEquals("Detail should be set.", Search.Results.Detail.MIN,
-                     search.getResults().getDetail());
-
-        verify(getMockForm());
+        // TODO: Write unit tests for perform node action
     }
 
 

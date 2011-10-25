@@ -69,6 +69,7 @@
 
 package ca.nrc.cadc.vos.server.web.restlet.resource;
 
+import java.security.Principal;
 import java.security.cert.X509Certificate;
 import java.util.Collection;
 import java.util.Map;
@@ -79,14 +80,14 @@ import javax.security.auth.Subject;
 
 import org.apache.log4j.Logger;
 import org.restlet.Request;
+import org.restlet.data.ChallengeResponse;
+import org.restlet.data.Form;
 import org.restlet.data.Method;
 import org.restlet.resource.ServerResource;
 
 import ca.nrc.cadc.auth.AuthenticationUtil;
 import ca.nrc.cadc.vos.server.NodePersistence;
 import ca.nrc.cadc.vos.server.util.BeanUtil;
-import java.security.Principal;
-import org.restlet.data.ChallengeResponse;
 
 public abstract class BaseResource extends ServerResource
 {
@@ -144,6 +145,11 @@ public abstract class BaseResource extends ServerResource
                         CERTIFICATE_REQUEST_ATTRIBUTE_NAME);
         this.subject = AuthenticationUtil.getSubject(user, certs);
         log.debug(subject);
+    }
+    
+    public Form getQueryForm()
+    {
+        return getRequest().getResourceRef().getQueryAsForm();
     }
     
     public final String getVosUriPrefix()

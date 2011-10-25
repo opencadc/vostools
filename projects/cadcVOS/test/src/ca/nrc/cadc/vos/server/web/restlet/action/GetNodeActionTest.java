@@ -33,18 +33,21 @@
  */
 package ca.nrc.cadc.vos.server.web.restlet.action;
 
+import static org.easymock.EasyMock.createMock;
+import static org.easymock.EasyMock.expect;
+import static org.easymock.EasyMock.expectLastCall;
+import static org.easymock.EasyMock.replay;
+import static org.easymock.EasyMock.verify;
 
-import ca.nrc.cadc.vos.Search;
-import ca.nrc.cadc.vos.server.AbstractView;
-import org.junit.Test;
+import org.easymock.EasyMock;
+import org.restlet.data.Form;
 import org.restlet.data.MediaType;
 
-import static org.easymock.EasyMock.*;
+import ca.nrc.cadc.vos.server.AbstractView;
 
 
 public class GetNodeActionTest extends NodeActionTest<GetNodeAction>
 {
-    private Search mockSearch = createMock(Search.class);
     private AbstractView mockAbstractView = createMock(AbstractView.class);
 
     /**
@@ -84,7 +87,11 @@ public class GetNodeActionTest extends NodeActionTest<GetNodeAction>
     @Override
     protected void prePerformNodeAction() throws Exception
     {
-        getTestSubject().setViewReference("VIEW/REFERENCE");
+        
+        Form queryForm = EasyMock.createMock(Form.class);
+        expect(queryForm.getFirstValue("view")).andReturn("VIEW/REFERENCE").once();
+        
+        getTestSubject().setQueryForm(queryForm);
         
         expect(getMockRef().toUrl()).andReturn(getMockURL()).atLeastOnce();
         expect(getMockRequest().getOriginalRef()).andReturn(getMockRef()).atLeastOnce();
@@ -96,11 +103,12 @@ public class GetNodeActionTest extends NodeActionTest<GetNodeAction>
         expect(getMockAbstractView().getMediaType()).andReturn(MediaType.TEXT_XML).
                 once();
 
+        replay(queryForm);
         replay(getMockRef());
         replay(getMockRequest());
         replay(getMockAbstractView());
     }
-
+   
     /**
      * Any necessary post method call result checking.  This is a good place
      * for any Mock verifications to take place as well.
@@ -117,20 +125,6 @@ public class GetNodeActionTest extends NodeActionTest<GetNodeAction>
         verify(getMockAbstractView());
     }
 
-
-    @Test
-    public void performNodeActionSearch() throws Exception
-    {
-        getTestSubject().setSearch(getMockSearch());
-
-
-    }
-
-
-    public Search getMockSearch()
-    {
-        return mockSearch;
-    }
 
     public AbstractView getMockAbstractView()
     {
