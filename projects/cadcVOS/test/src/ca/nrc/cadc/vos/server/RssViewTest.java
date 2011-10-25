@@ -184,11 +184,16 @@ public class RssViewTest
             ContainerNode root = (ContainerNode) Subject.doAs(subject, getRootNodeAction);
             log.debug("root node: " + root);
 
+            // Get the private child container node for the test.
+            GetChildNodeAction getChildNodeAction = new GetChildNodeAction(nodePersistence);
+            ContainerNode child = (ContainerNode) Subject.doAs(subject, getChildNodeAction);
+            log.debug("child node: " + child);
+
             // Get the RSS XML from the view.
             Subject deniedSubject = new Subject();
             deniedSubject.getPrincipals().add(new X500Principal(AUTHTEST_NODE_OWNER));
 
-            SetNodeAction setNodeAction = new SetNodeAction(nodePersistence, voSpaceAuthorizer, root);
+            SetNodeAction setNodeAction = new SetNodeAction(nodePersistence, voSpaceAuthorizer, child, getChildNodeAction.getPath());
             StringBuilder rssXml = (StringBuilder) Subject.doAs(deniedSubject, setNodeAction);
 
             Document doc = XmlUtil.buildDocument(rssXml.toString());
@@ -230,7 +235,8 @@ public class RssViewTest
             log.debug("root node: " + root);
 
             // Get the RSS XML from the view.
-            SetNodeAction setNodeAction = new SetNodeAction(nodePersistence, voSpaceAuthorizer, root);
+            String path = "http://" + VOS_AUTHORITY + "/" + ROOT_CONTAINER;
+            SetNodeAction setNodeAction = new SetNodeAction(nodePersistence, voSpaceAuthorizer, root, path);
             StringBuilder rssXml = (StringBuilder) Subject.doAs(subject, setNodeAction);
 
             Document doc = XmlUtil.buildDocument(rssXml.toString());
@@ -432,13 +438,13 @@ public class RssViewTest
             child5.getProperties().add(new NodeProperty(VOS.PROPERTY_URI_ISPUBLIC, Boolean.FALSE.toString()));
             child5 = (ContainerNode) getNode(child5Uri, child5);
 
-            // Private data node of private child5.
+            // Private container node of private child5.
             VOSURI child6Uri = new VOSURI(new URI("vos", VOS_AUTHORITY, "/" + ROOT_CONTAINER + "/child5/child6", null, null));
-            DataNode child6 = new DataNode(child6Uri);
+            ContainerNode child6 = new ContainerNode(child6Uri);
             child6.setParent(child5);
             child6.getProperties().add(new NodeProperty(VOS.PROPERTY_URI_CREATOR, REGTEST_NODE_OWNER));
             child6.getProperties().add(new NodeProperty(VOS.PROPERTY_URI_ISPUBLIC, Boolean.FALSE.toString()));
-            child6 = (DataNode) getNode(child6Uri, child6);
+            child6 = (ContainerNode) getNode(child6Uri, child6);
 
             // Public data node of private child5.
             VOSURI child7Uri = new VOSURI(new URI("vos", VOS_AUTHORITY, "/" + ROOT_CONTAINER + "/child5/child7", null, null));
@@ -476,17 +482,58 @@ public class RssViewTest
 
     }
 
+    private class GetChildNodeAction implements PrivilegedExceptionAction<Object>
+    {
+        private NodePersistence nodePersistence;
+
+        GetChildNodeAction(NodePersistence nodePersistence)
+        {
+            this.nodePersistence = nodePersistence;
+        }
+
+        public Object run() throws Exception
+        {
+            // Private container node of private child5.
+            VOSURI childUri = new VOSURI(new URI("vos", VOS_AUTHORITY, "/" + ROOT_CONTAINER + "/child5/child6", null, null));
+            ContainerNode child = new ContainerNode(childUri);
+            return (ContainerNode) getNode(childUri, child);
+        }
+
+        public String getPath()
+        {
+            return "http://" + VOS_AUTHORITY + "/" + ROOT_CONTAINER + "/child5/child6";
+        }
+
+        private Node getNode(VOSURI vos, Node node)
+        {
+            try
+            {
+                node = nodePersistence.get(vos);
+                log.debug("found root node: " + node.getName());
+            }
+            catch (NodeNotFoundException e)
+            {
+                node = nodePersistence.put(node);
+                log.debug("put root node: " + node.getName());
+            }
+            return node;
+        }
+
+    }
+
     private class SetNodeAction implements PrivilegedExceptionAction<Object>
     {
         private NodePersistence nodePersistence;
         private VOSpaceAuthorizer voSpaceAuthorizer;
         private ContainerNode root;
+        private String path;
 
-        SetNodeAction(NodePersistence nodePersistence, VOSpaceAuthorizer voSpaceAuthorizer, ContainerNode root)
+        SetNodeAction(NodePersistence nodePersistence, VOSpaceAuthorizer voSpaceAuthorizer, ContainerNode root, String path)
         {
             this.nodePersistence = nodePersistence;
             this.voSpaceAuthorizer = voSpaceAuthorizer;
             this.root = root;
+            this.path = path;
         }
 
         public Object run() throws Exception
@@ -494,7 +541,7 @@ public class RssViewTest
             RssView view = new RssView();
             view.setNodePersistence(nodePersistence);
             view.setVOSpaceAuthorizer(voSpaceAuthorizer);
-            view.setNode(root, "", new URL("http://" + VOS_AUTHORITY + "/" + ROOT_CONTAINER));
+            view.setNode(root, "", new URL(path));
 
             log.debug("xml: " + view.xmlString);
 
