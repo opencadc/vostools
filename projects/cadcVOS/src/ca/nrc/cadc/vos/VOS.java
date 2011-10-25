@@ -131,7 +131,7 @@ public class VOS
     {
         min("min"),
         max("max"),
-        properties("proeprties");
+        properties("properties");
 
         private String value;
 
