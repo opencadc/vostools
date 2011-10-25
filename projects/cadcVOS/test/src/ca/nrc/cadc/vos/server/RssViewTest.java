@@ -112,7 +112,7 @@ public class RssViewTest
     private static final Logger log = Logger.getLogger(RssViewTest.class);
     static
     {
-        Log4jInit.setLevel("ca.nrc.cadc.vos.server", Level.DEBUG);
+        Log4jInit.setLevel("ca.nrc.cadc.vos.server", Level.INFO);
     }
 
     private static DateFormat dateFormat = DateUtil.getDateFormat(DateUtil.IVOA_DATE_FORMAT, DateUtil.UTC);

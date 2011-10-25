@@ -95,6 +95,7 @@ import ca.nrc.cadc.vos.NodeProperty;
 import ca.nrc.cadc.vos.VOS;
 import ca.nrc.cadc.vos.VOSURI;
 import ca.nrc.cadc.vos.server.util.FixedSizeTreeSet;
+import java.io.ByteArrayOutputStream;
 import java.text.DateFormat;
 import java.util.Date;
 import java.util.Iterator;
@@ -213,7 +214,9 @@ public class RssFeedTest
 
         Element feed = RssFeed.createFeed(nodeA, nodes, BASE_URL);
         //TODO: assert something?
-        write(feed, System.out);
+        ByteArrayOutputStream out = new ByteArrayOutputStream();
+        write(feed, out);
+        log.debug(out.toString());
         
         log.info("createFeed passed");
     }
@@ -230,7 +233,9 @@ public class RssFeedTest
         Throwable t = new Throwable("throwable error message");
         Element feed = RssFeed.createErrorFeed(nodeA, t, BASE_URL);
         //TODO: assert something?
-        write(feed, System.out);
+        ByteArrayOutputStream out = new ByteArrayOutputStream();
+        write(feed, out);
+        log.debug(out.toString());
         
         log.info("createErrorFeed_Node_Throwable passed");
     }
@@ -247,7 +252,9 @@ public class RssFeedTest
         String message = "Error message";
         Element feed = RssFeed.createErrorFeed(nodeA, message, BASE_URL);
         //TODO: assert something?
-        write(feed, System.out);
+        ByteArrayOutputStream out = new ByteArrayOutputStream();
+        write(feed, out);
+        log.debug(out.toString());
 
         log.info("createErrorFeed_Node_String passed");
     }
@@ -275,7 +282,9 @@ public class RssFeedTest
         set.add(new RssFeedItem(new Date(2000000000L), child2));
         
         Element feed = RssFeed.createFeed(nodeA, set, BASE_URL);
-        write(feed, System.out);
+        ByteArrayOutputStream out = new ByteArrayOutputStream();
+        write(feed, out);
+        log.debug(out.toString());
 
         Element channel = feed.getChild("channel");
         List<Element> items = channel.getChildren("item");
