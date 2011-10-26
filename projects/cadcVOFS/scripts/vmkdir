@@ -1,0 +1,39 @@
+#!python
+"""Create a directory (ContainerNode) in the VOSpace repositotry"""
+
+
+import vos
+import time
+import optparse, os, sys, logging
+
+usage="""
+	vmkdir vos:/root/node   -- creates a new directory (ContainerNode) called node at vospace root 
+"""
+
+
+parser=optparse.OptionParser(usage)
+parser.add_option("-v","--verbose",action="store_true")
+parser.add_option("-d","--debug",action="store_true")
+parser.add_option("--certfile",help="location of your CADC security certificate file",default=os.path.join(os.getenv("HOME","."),".ssl/cadcproxy.pem"))
+parser.add_option("--overwrite",help="Overwrite the existing certificate with a new one?",action="store_true")
+
+(opt,args)=parser.parse_args()
+
+
+if opt.verbose:
+    logging.basicConfig(level=logging.INFO,format="vmkdir: %(message)s")
+if opt.debug:
+    logging.basicConfig(level=logging.DEBUG,format="vcp:%(module)s.%(funcName)s %(message)s")
+
+
+if len(args)>1:
+   parser.error("Only one directory can be built per call")
+
+logging.info("Creating ContainerNode (directory) %s" % ( args[0]))
+client=vos.Client(certFile=opt.certfile,overwrite=opt.overwrite)
+if not client.access(args[0]):
+   client.mkdir(args[0])	
+elif client.isdir(args[0]):
+   logging.error("(%s) directory exists." % ( args[0]))
+else:
+   logging.error("(%s) File exists." % ( args[0]))
