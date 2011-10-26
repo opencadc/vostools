@@ -158,6 +158,8 @@ public class RssViewTest
             String actual = v.getBaseURL(n, req);
             log.debug("request: " + req);
             Assert.assertEquals(expected, actual);
+
+            log.info("testGetBaseURL passed");
         }
         catch(Exception unexpected)
         {
@@ -169,7 +171,36 @@ public class RssViewTest
             log.debug("testGetBaseURL - DONE");
         }
     }
-    
+
+    @Test
+    public void rebuildTestNode()
+    {
+        log.debug("rebuildTestNode - START");
+        try
+        {
+            Subject subject = new Subject();
+            subject.getPrincipals().add(new X500Principal(REGTEST_NODE_OWNER));
+
+            // Get the root container node for the test.
+            GetRootNodeAction getRootNodeAction = new GetRootNodeAction(nodePersistence);
+            ContainerNode root = (ContainerNode) Subject.doAs(subject, getRootNodeAction);
+            log.debug("root node: " + root);
+
+            nodePersistence.delete(root);
+
+            log.info("rebuildTestNode passed");
+        }
+        catch(Exception unexpected)
+        {
+            log.error("unexpected exception", unexpected);
+            Assert.fail("unexpected exception: " + unexpected);
+        }
+        finally
+        {
+            log.debug("rebuildTestNode - DONE");
+        }
+    }
+
     @Test
     public void testSetNodeReturnsDenied()
     {
@@ -209,6 +240,8 @@ public class RssViewTest
 
             List<Element> items = channel.getChildren("item");
             Assert.assertEquals(0, items.size());
+
+            log.info("testSetNodeReturnsDenied passed");
         }
         catch(Exception unexpected)
         {
@@ -331,6 +364,8 @@ public class RssViewTest
             Assert.assertTrue(date3.after(date2));
             Assert.assertTrue(date2.after(date1));
             Assert.assertTrue(date1.after(rootDate));
+
+            log.info("testSetNode passed");
         }
         catch(Exception unexpected)
         {
