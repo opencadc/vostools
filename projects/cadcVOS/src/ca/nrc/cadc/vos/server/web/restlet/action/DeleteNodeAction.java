@@ -94,6 +94,7 @@ public class DeleteNodeAction extends NodeAction
     public Node getClientNode()
             throws URISyntaxException, NodeParsingException, IOException 
     {
+        // No client node in a DELETE
         return null;
     }
 

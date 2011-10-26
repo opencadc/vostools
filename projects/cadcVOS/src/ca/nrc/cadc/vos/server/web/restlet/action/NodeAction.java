@@ -229,8 +229,8 @@ public abstract class NodeAction implements PrivilegedAction<Object>
      * @param serverNode the persistent node returned from doAuthorizationCheck
      * @return the appropriate NodeActionResult from which the response is constructed
      */
-    protected abstract NodeActionResult performNodeAction(Node clientNode, Node serverNode);
-        //throws IllegalAccessException, InstantiationException;
+    protected abstract NodeActionResult performNodeAction(Node clientNode, Node serverNode)
+        throws URISyntaxException, NodeParsingException, FileNotFoundException;
     
     /**
      * Given the node URI and XML, return the Node object specified
@@ -241,11 +241,8 @@ public abstract class NodeAction implements PrivilegedAction<Object>
      * @throws NodeParsingException
      * @throws IOException
      */
-    protected Node getClientNode()
-        throws URISyntaxException, NodeParsingException, IOException
-    {
-        return null;
-    }
+    protected abstract Node getClientNode()
+        throws URISyntaxException, NodeParsingException, IOException;
     
     /**
      * Perform an authorization check for the given node and return (if applicable)

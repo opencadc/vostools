@@ -68,15 +68,22 @@
 package ca.nrc.cadc.vos.server.web.restlet.action;
 
 import java.io.FileNotFoundException;
+import java.io.IOException;
+import java.net.URISyntaxException;
 import java.net.URL;
 import java.security.AccessControlException;
 import java.util.ListIterator;
 
+import org.apache.log4j.Logger;
 import org.restlet.data.Reference;
 
+import ca.nrc.cadc.util.StringUtil;
 import ca.nrc.cadc.vos.ContainerNode;
 import ca.nrc.cadc.vos.Node;
+import ca.nrc.cadc.vos.NodeParsingException;
 import ca.nrc.cadc.vos.NodeWriter;
+import ca.nrc.cadc.vos.VOS;
+import ca.nrc.cadc.vos.VOSURI;
 import ca.nrc.cadc.vos.server.AbstractView;
 import ca.nrc.cadc.vos.server.web.representation.NodeOutputRepresentation;
 import ca.nrc.cadc.vos.server.web.representation.ViewRepresentation;
@@ -88,12 +95,26 @@ import ca.nrc.cadc.vos.server.web.representation.ViewRepresentation;
  */
 public class GetNodeAction extends NodeAction
 {
+    
+    protected static Logger log = Logger.getLogger(GetNodeAction.class);
+    
+    private static final String DETAIL_MIN = "min";
+    private static final String DETAIL_MAX = "max";
+    private static final String DETAIL_PROPERTIES = "properties";
 
     /**
      * Basic empty constructor.
      */
     public GetNodeAction()
     {
+    }
+    
+    @Override
+    protected Node getClientNode() throws URISyntaxException,
+            NodeParsingException, IOException
+    {
+        // No client node in a GET
+        return null;
     }
 
     @Override
@@ -105,20 +126,91 @@ public class GetNodeAction extends NodeAction
     
     @Override
     public NodeActionResult performNodeAction(Node clientNode, Node serverNode)
-    {
+        throws URISyntaxException, FileNotFoundException
+    {        
         long start;
         long end;
         if (serverNode instanceof ContainerNode)
         {
+            // Paging parameters
+            String startURI = queryForm.getFirstValue(QUERY_PARAM_URI);
+            String pageOffsetString = queryForm.getFirstValue(QUERY_PARAM_OFFSET);
+            
             ContainerNode cn = (ContainerNode) serverNode;
+            boolean paginate = false;
+            VOSURI startURIObject = null;
+            
+            // parse the pageOffset
+            Integer pageOffset = null;
+            if (pageOffsetString != null)
+            {
+                try
+                {
+                    pageOffset = new Integer(pageOffsetString);
+                    paginate = true;
+                }
+                catch (NumberFormatException e)
+                {
+                    throw new IllegalArgumentException("Page offset must be an integer.");
+                }
+            }
+            
+            // validate startURI
+            if (StringUtil.hasText(startURI))
+            {
+                startURIObject = new VOSURI(startURI);
+                nodePersistence.getChild(cn, startURIObject.getName());
+                if (cn.getNodes().size() != 1)
+                {
+                    throw new FileNotFoundException(startURIObject.getURIObject().toASCIIString());
+                }
+                // reset the child list and get all the children
+                cn.getNodes().clear();
+                paginate = true;
+            }
+            
+            // get the children as requested
             start = System.currentTimeMillis();
-            nodePersistence.getChildren(cn);
+            if (cn.getUri().isRoot())
+            {
+                // if this is the root node, ignore user requested offset
+                // for the time being (see method doFilterChildren below)
+                nodePersistence.getChildren(cn, startURIObject, null);
+                log.debug(String.format(
+                    "Get children on root returned [%s] nodes with startURI=[%s], pageOffset=[%s].",
+                        cn.getNodes().size(), startURI, null));
+            }
+            else if (paginate)
+            {
+                // request for a subset of children
+                nodePersistence.getChildren(cn, startURIObject, pageOffset);
+                log.debug(String.format(
+                    "Get children returned [%s] nodes with startURI=[%s], pageOffset=[%s].",
+                        cn.getNodes().size(), startURI, pageOffset));
+            }
+            else
+            {
+                // get as many children as allowed
+                nodePersistence.getChildren(cn);
+                log.debug(String.format(
+                    "Get children returned [%s] nodes.", cn.getNodes().size()));
+            }
+
             end = System.currentTimeMillis();
             log.debug("nodePersistence.getChildren() elapsed time: " + (end - start) + "ms");
-            doFilterChildren(cn);
+            doFilterChildren(cn, pageOffset);
         }
+        
+        // Detail level parameter
+        String detailLevel = queryForm.getFirstValue(QUERY_PARAM_DETAIL);
+        
         start = System.currentTimeMillis();
-        nodePersistence.getProperties(serverNode);
+        
+        // get the properties if no detail level is specified (null) or if the
+        // detail level is something other than 'min'.
+        if (!VOS.Detail.min.getValue().equals(detailLevel))
+            nodePersistence.getProperties(serverNode);
+        
         end = System.currentTimeMillis();
         log.debug("nodePersistence.getProperties() elapsed time: " + (end - start) + "ms");
 
@@ -140,6 +232,12 @@ public class GetNodeAction extends NodeAction
             // no view specified or found--return the xml representation
             final NodeWriter nodeWriter = new NodeWriter();
             nodeWriter.setStylesheetURL(getStylesheetURL());
+            
+            // clear the properties from server node if the detail
+            // level is set to 'min'
+            if (VOS.Detail.min.getValue().equals(detailLevel))
+                serverNode.getProperties().clear();
+            
             return new NodeActionResult(new NodeOutputRepresentation(serverNode, nodeWriter));
         }
         else
@@ -184,20 +282,36 @@ public class GetNodeAction extends NodeAction
         return null;
     }
 
-    // if this is the root node, we apply a privacy policy and filter out
-    // child nodes the caller is not allowed to read
-    private void doFilterChildren(ContainerNode node)
+    /**
+     * If this is the root node, we apply a privacy policy and filter out
+     * child nodes the caller is not allowed to read
+     * 
+     * TODO: The approach to manually trimming to the pageOffset size for
+     * the root container will cease to work when the number of root
+     * container nodes exceeds the upper limit of children returned as
+     * defined in the node persistence.  Instead, a loop should be implemented,
+     * as it is in the client, to manually retrieve more children if
+     * necessary if some have been filtered out due to lack of read permission. 
+     */
+    private void doFilterChildren(ContainerNode node, Integer pageOffset)
     {
         if ( !node.getUri().isRoot() )
             return;
 
         ListIterator<Node> iter = node.getNodes().listIterator();
-        while ( iter.hasNext() )
+        int nodeCount = 0;
+        boolean metOffset = false;
+        while ( iter.hasNext() && !metOffset)
         {
             Node n = iter.next();
             try
             {
                 voSpaceAuthorizer.getReadPermission(n);
+                nodeCount++;
+                
+                // stop iterating if we've met a specified offset
+                if (pageOffset != null && nodeCount >= pageOffset)
+                    metOffset = true;
             }
             catch(AccessControlException ex)
             {
@@ -205,5 +319,15 @@ public class GetNodeAction extends NodeAction
                 iter.remove();
             }
         }
+        
+        // since an offset isn't supplied to node persistence when getting
+        // the children of the root node, apply the offset value now.
+        if (pageOffset != null && node.getNodes().size() > pageOffset)
+        {
+            log.debug("Reducing child list size from " + node.getNodes().size() +
+                    " to " + pageOffset + " to meet offset request on root node.");
+            node.setNodes(node.getNodes().subList(0, pageOffset));
+        }
     }
+
 }

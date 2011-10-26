@@ -72,6 +72,7 @@ import java.io.IOException;
 import java.net.URISyntaxException;
 import java.security.AccessControlException;
 
+import org.apache.log4j.Logger;
 import org.restlet.data.Status;
 
 import ca.nrc.cadc.vos.ContainerNode;
@@ -92,6 +93,9 @@ import ca.nrc.cadc.vos.server.web.representation.NodeOutputRepresentation;
  */
 public class CreateNodeAction extends NodeAction
 {
+    
+    protected static Logger log = Logger.getLogger(CreateNodeAction.class);
+    
     @Override
     public Node getClientNode()
         throws URISyntaxException, NodeParsingException, IOException 
