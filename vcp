@@ -31,7 +31,6 @@ def mkdir(filename):
 def copy(source,dest):    
 
     ## determine if this is a directory we are copying so need to be recursive
-
     if isdir(source):
         ## make sure the destination exists...
         if not access(dest,os.F_OK):

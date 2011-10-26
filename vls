@@ -88,10 +88,13 @@ formats={'permisions': lambda value: "%-11s" % (value),
 for node in args:
     if node[0:4]!="vos:":
         parser.error("Improper vospace spefication: %s " % ( node))
-    infoList= vos.getNode(node).getInfoList()
+    try:
+       infoList= vos.getNode(node).getInfoList()
+    except:
+       sys.exit(0)
         
     if not len(infoList)>0:
-        logging.critical("Failed to get listing for %s " % ( node ))
+        #logging.critical("Failed to get listing for %s " % ( node ))
         sys.exit(-1)
 
     if sortKey:

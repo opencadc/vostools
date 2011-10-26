@@ -808,9 +808,7 @@ class Client:
 
     def access(self,uri,mode=os.O_RDONLY):
         """Test for existance"""
-        if not self.status(uri,code=[404]):
-	    return 0
-        return -1
+        return not self.status(uri,code=[404])
 
 
     def status(self,uri,code=[200,303,503]):
