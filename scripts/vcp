@@ -1,0 +1,114 @@
+#!python
+"""copy files from / to vospace directly without using the FUSE layer"""
+
+def isdir(filename):
+    if filename[0:4]=="vos:":
+        return client.isdir(filename)
+    else:
+        return os.path.isdir(filename)
+
+def access(filename,mode):
+    if filename[0:4]=="vos:":
+        return client.access(filename,mode)
+    else:
+        return os.access(filename,mode)
+
+def listdir(filename):
+    if filename[0:4]=="vos:":
+        return client.listdir(filename)
+    else:
+        return os.listdir(filename)
+
+def mkdir(filename):
+    logging.debug("Making directory %s " % ( filename))
+    if filename[0:4]=='vos:':
+        logging.debug("In VOSpace")
+        return client.mkdir(filename)
+    else:
+        logging.debug("On the filesystem")
+        return os.mkdir(filename)
+
+def copy(source,dest):    
+
+    ## determine if this is a directory we are copying so need to be recursive
+    if isdir(source):
+        ## make sure the destination exists...
+        if not access(dest,os.F_OK):
+            mkdir(dest)
+        ## for all files in the current source directory copy them to the destination directory
+        for filename in listdir(source):
+            copy(os.path.join(source,filename),os.path.join(dest,filename))
+    else:
+        if opt.interrogate:
+            if access(dest,os.F_OK):
+                sys.stderr.write("File %s exists.  Overwrite? (y/n): " % (dest))
+                ans=sys.stdin.readline().strip()
+                if ans!='y':
+                    sys.exit(errno.EEXIST)
+        logging.info("%s -> %s " % ( source, dest))
+        client.copy(source,dest)
+
+                
+
+
+
+
+if __name__=='__main__':
+
+    from optparse import OptionParser
+    import logging, sys
+    import vos, errno, os
+    
+    parser=OptionParser()
+    parser.add_option("-i","--interrogate",action="store_true",help="Ask before overwriting files")
+    parser.add_option("-v","--verbose",action="store_true",help="Verbose output")
+    parser.add_option("-d","--debug",action="store_true",help="set this option to get help solving connection issues")
+    name=sys.argv[0]
+
+    (opt,args)=parser.parse_args()
+
+    if opt.verbose:
+        logLevel=logging.INFO
+    elif opt.debug:
+        logLevel=logging.DEBUG
+    else:
+        logLevel=logging.ERROR
+        
+    logging.basicConfig(level=logLevel,format="%(module)s: %(message)s")
+
+    client=vos.Client()
+    
+    dest=args.pop()
+
+    for source in args:
+
+        ### the source must exist, of course...
+        if not access(source,os.R_OK):
+            logging.error("Can't open file %s for read" % ( source))
+            sys.exit(errno.EACCES)
+
+
+        ## copying inside VOSpace not yet implemented
+        if source[0:4]=='vos:' and dest[0:4]=='vos:' :
+            logging.error("Can't copy from VOSpace to VOSpace")
+            sys.exit(errno.EOPNOTSUPP)
+
+
+        if isdir(source):
+            ## To mimic unix fs behaviours if copying a directory and
+            ## the destination directory exists then the actual
+            ## destination in a recursive copy is the destination +
+            ## source basename.  This has an odd behaviour if more than one directory is given as a source and the copy is recursive.
+            if access(dest,os.F_OK):
+                if not isdir(dest):
+                    logging.error("Can't write a directory (%s) to a file (%s)" % (source,dest))
+                    sys.exit(errno.ENOTDIR)
+                else:
+                    dest=os.path.normpath(os.path.join(dest,os.path.basename(source)))
+            elif len(args) > 1:
+                logging.error("I don't now how to copy multiple things into a non-existant location (%s)" % (dest))
+                sys.exit(errno.ENOTSUPP)
+        elif access(dest,os.F_OK) and isdir(dest):
+            ### we're copying into a directory
+            dest=os.path.join(dest,os.path.basename(source))
+        copy(source,dest)
