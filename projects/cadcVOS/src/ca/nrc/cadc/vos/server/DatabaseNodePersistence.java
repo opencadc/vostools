@@ -199,8 +199,7 @@ public abstract class DatabaseNodePersistence implements NodePersistence
     @Override
     public void getChildren(ContainerNode node)
     {
-        NodeDAO dao = getDAO( node.getUri().getAuthority() );
-        dao.getChildren(node);
+        getChildren(node, null, null);
     }
 
     public void getChildren(ContainerNode parent, VOSURI start, Integer limit)
