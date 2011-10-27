@@ -74,6 +74,24 @@ class Connection:
 	logging.debug("Using certificate file %s" % (self.certfile))
 
 
+    def getUserPassword(self,host='www.cadc-ccda.hia-iha.nrc-cnrc.gc.ca'):
+        import netrc,getpass,os
+        logging.debug("Getting the username/password for host (%s) from your .netrc filie " % ( host))
+        if os.access(os.path.join(os.environ.get('HOME','/'),".netrc"),os.R_OK):
+            auth=netrc.netrc().authenticators(host)
+        else:
+            auth=False
+        if not auth:
+            logging.debug("Didn't get username and password from .netrc so prompting" )
+            # Get info from commandline
+            sys.stdout.write("CADC Username: ")
+            username=sys.stdin.readline().strip('\n')
+            password=getpass.getpass().strip('\n')
+        else:
+            username=auth[0]
+            password=auth[2]
+        logging.debug("Using username %s and password '%d'" % ( username, hash(password)))
+        return (username,password)
 
 
     def getConnection(self,url):
