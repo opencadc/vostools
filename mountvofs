@@ -34,7 +34,6 @@ class VOFS(LoggingMixIn, Operations):
     link = None
     listxattr = None  ### see getxattr above
     mknode = None
-    rename = None
     readlink = None
     rmdir = None
     symlink = None
@@ -414,6 +413,24 @@ class VOFS(LoggingMixIn, Operations):
         #logging.debug("Deleting the Node from the lookup table")
         #self.delNode(path)
         self.clear_cache()
+
+    def rename(self,src,dest):
+	"""Rename a data node into a new container"""
+        logging.debug("Original %s -> %s" % ( src,dest))
+	if not self.client.isfile(src):
+	   return -1
+        if os.path.basename(dest)==os.path.basename(src):
+	   dest=os.path.dirname(dest)
+        if not self.client.isdir(dest):
+	   return -1
+        logging.debug("Moving %s to %s" % ( src,dest))
+        if self.client.move(src,dest):
+           fname=os.path.normpath(self.cache_dir+src)
+           if os.access(fname,os.W_OK):
+	      os.unlink(fname)
+	   return 0
+        return -1
+        
 
     def cache_size(self):
         """Determine how much disk space is being used by the local cache"""

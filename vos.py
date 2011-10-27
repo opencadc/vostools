@@ -359,7 +359,6 @@ class Node:
             nodeList=ET.SubElement(node,Node.NODES)
             for subnode in subnodes:
                 nodeList.append(subnode.node)
-                #print subnode
         #logging.debug(ET.tostring(node,encoding="UTF-8"))
 
         return node
@@ -499,7 +498,7 @@ class VOFile:
             raise
         self.closed=False
         self.httpCon.putrequest(method,URL)
-        
+        self.httpCon.putheader("Content-Type","text/xml")
         self.httpCon.putheader("Transfer-Encoding",'chunked')
         self.httpCon.putheader("Accept", "*/*")
         self.httpCon.endheaders()
@@ -547,6 +546,8 @@ class Client:
 
     VOServers={'cadc.nrc.ca!vospace': "www.cadc-ccda.hia-iha.nrc-cnrc.gc.ca",
                'cadc.nrc.ca~vospace': "www.cadc-ccda.hia-iha.nrc-cnrc.gc.ca"}
+
+    VOTransfer='https://www.cadc.hia.nrc.gc.ca/vospace/synctrans'
 
     vosProperties=["description", "type", "encoding", "MD5",
                    "groupread", "groupwrite", "ispublic"]
@@ -637,8 +638,26 @@ class Client:
         else:
             data=''
         return "%s://%s/vospace/nodes/%s%s" % ( protocol, server, parts.path.strip('/'), data)
+
+    def move(self,srcURI,destURI):
+        """Move srcUri to targetUri"""
+        transfer=ET.Element("transfer")
+        transfer.attrib['xmlns']=Node.VOSNS
+        transfer.attrib['xmlns:vos']=Node.VOSNS
+        ET.SubElement(transfer,"target").text=self.fixURI(srcURI)
+        ET.SubElement(transfer,"direction").text=self.fixURI(destURI)
+        ET.SubElement(transfer,"keepBytes").text="false"
+        logging.debug(ET.dump(transfer))
+
+        con=self.open(srcURI,URL=Client.VOTransfer,mode=os.O_APPEND)
+        con.write(ET.tostring(transfer))
+	con.read()
+        if  con.resp.status==200:
+	   return True
+        return  False
+
                     
-    def open(self, uri, mode=os.O_RDONLY, view=None, head=False):
+    def open(self, uri, mode=os.O_RDONLY, view=None, head=False, URL=None):
         """Connect to URL and PUT contents of src to that connection return transfer status"""
 
         # the URL of the connection depends if we are 'getting', 'putting' or 'posting'  data
@@ -655,7 +674,8 @@ class Client:
             method="HEAD"
         if not method:
             raise IOError("Invalid mode (%X) for open" % ( mode))
-        URL=self.getNodeURL(uri, method=method, view=view)
+        if URL is None:
+            URL=self.getNodeURL(uri, method=method, view=view)
         logging.debug(URL)
         return VOFile(URL,self.conn,method=method)
 
