@@ -173,35 +173,6 @@ public class RssViewTest
     }
 
     @Test
-    public void rebuildTestNode()
-    {
-        log.debug("rebuildTestNode - START");
-        try
-        {
-            Subject subject = new Subject();
-            subject.getPrincipals().add(new X500Principal(REGTEST_NODE_OWNER));
-
-            // Get the root container node for the test.
-            GetRootNodeAction getRootNodeAction = new GetRootNodeAction(nodePersistence);
-            ContainerNode root = (ContainerNode) Subject.doAs(subject, getRootNodeAction);
-            log.debug("root node: " + root);
-
-            nodePersistence.delete(root);
-
-            log.info("rebuildTestNode passed");
-        }
-        catch(Exception unexpected)
-        {
-            log.error("unexpected exception", unexpected);
-            Assert.fail("unexpected exception: " + unexpected);
-        }
-        finally
-        {
-            log.debug("rebuildTestNode - DONE");
-        }
-    }
-
-    @Test
     public void testSetNodeReturnsDenied()
     {
         log.debug("testSetNodeReturnsDenied - START");
@@ -280,9 +251,16 @@ public class RssViewTest
             Assert.assertNotNull(channel);
 
             List<Element> items = channel.getChildren("item");
-            Assert.assertEquals(9, items.size());
+            Assert.assertEquals(10, items.size());
 
             Iterator<Element> it = items.iterator();
+            Element item9 = it.next();
+            Element title9 = item9.getChild("title");
+            Assert.assertNotNull(title9);
+            Assert.assertEquals("child9", title9.getText());
+            Element pubDate9 = item9.getChild("pubDate");
+            Assert.assertNotNull(pubDate9);
+            Date date9 = dateFormat.parse(pubDate9.getText());
 
             Element item8 = it.next();
             Element title8 = item8.getChild("title");
@@ -356,6 +334,7 @@ public class RssViewTest
             Assert.assertNotNull(rootPubDate);
             Date rootDate = dateFormat.parse(rootPubDate.getText());
 
+            Assert.assertTrue(date9.after(date8));
             Assert.assertTrue(date8.after(date7));
             Assert.assertTrue(date7.after(date6));
             Assert.assertTrue(date6.after(date5));
@@ -473,13 +452,13 @@ public class RssViewTest
             child5.getProperties().add(new NodeProperty(VOS.PROPERTY_URI_ISPUBLIC, Boolean.FALSE.toString()));
             child5 = (ContainerNode) getNode(child5Uri, child5);
 
-            // Private container node of private child5.
+            // Private data node of private child5.
             VOSURI child6Uri = new VOSURI(new URI("vos", VOS_AUTHORITY, "/" + ROOT_CONTAINER + "/child5/child6", null, null));
-            ContainerNode child6 = new ContainerNode(child6Uri);
+            DataNode child6 = new DataNode(child6Uri);
             child6.setParent(child5);
             child6.getProperties().add(new NodeProperty(VOS.PROPERTY_URI_CREATOR, REGTEST_NODE_OWNER));
             child6.getProperties().add(new NodeProperty(VOS.PROPERTY_URI_ISPUBLIC, Boolean.FALSE.toString()));
-            child6 = (ContainerNode) getNode(child6Uri, child6);
+            child6 = (DataNode) getNode(child6Uri, child6);
 
             // Public data node of private child5.
             VOSURI child7Uri = new VOSURI(new URI("vos", VOS_AUTHORITY, "/" + ROOT_CONTAINER + "/child5/child7", null, null));
@@ -496,6 +475,14 @@ public class RssViewTest
             child8.getProperties().add(new NodeProperty(VOS.PROPERTY_URI_CREATOR, REGTEST_NODE_OWNER));
             child8.getProperties().add(new NodeProperty(VOS.PROPERTY_URI_ISPUBLIC, Boolean.TRUE.toString()));
             child8 = (DataNode) getNode(child8Uri, child8);
+
+            // Private container node of private child5.
+            VOSURI child9Uri = new VOSURI(new URI("vos", VOS_AUTHORITY, "/" + ROOT_CONTAINER + "/child5/child9", null, null));
+            ContainerNode child9 = new ContainerNode(child9Uri);
+            child9.setParent(child5);
+            child9.getProperties().add(new NodeProperty(VOS.PROPERTY_URI_CREATOR, REGTEST_NODE_OWNER));
+            child9.getProperties().add(new NodeProperty(VOS.PROPERTY_URI_ISPUBLIC, Boolean.FALSE.toString()));
+            child9 = (ContainerNode) getNode(child9Uri, child9);
 
             return root;
         }
@@ -529,14 +516,14 @@ public class RssViewTest
         public Object run() throws Exception
         {
             // Private container node of private child5.
-            VOSURI childUri = new VOSURI(new URI("vos", VOS_AUTHORITY, "/" + ROOT_CONTAINER + "/child5/child6", null, null));
+            VOSURI childUri = new VOSURI(new URI("vos", VOS_AUTHORITY, "/" + ROOT_CONTAINER + "/child5/child9", null, null));
             ContainerNode child = new ContainerNode(childUri);
             return (ContainerNode) getNode(childUri, child);
         }
 
         public String getPath()
         {
-            return "http://" + VOS_AUTHORITY + "/" + ROOT_CONTAINER + "/child5/child6";
+            return "http://" + VOS_AUTHORITY + "/" + ROOT_CONTAINER + "/child5/child9";
         }
 
         private Node getNode(VOSURI vos, Node node)
