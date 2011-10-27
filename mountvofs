@@ -109,7 +109,7 @@ class VOFS(LoggingMixIn, Operations):
         Here I use the logic that the new group will be inherited from
         the container group information.
         """
-        logging.info("Changing mode for %s to %d" % ( path, mode))
+        logging.debug("Changing mode for %s to %d" % ( path, mode))
 
         node = self.getNode(path)
         parent = self.getNode(os.path.dirname(path))
@@ -140,7 +140,7 @@ class VOFS(LoggingMixIn, Operations):
         
     def create(self, path, flags):
         """Create a node. Currently ignors the ownership mode"""
-        logging.info("Creating a node: %s with mode %s" % (path, os.O_CREAT))
+        logging.debug("Creating a node: %s with mode %s" % (path, os.O_CREAT))
 
         # Create is handle by the client. 
         # This should fail if the basepath doesn't exist
@@ -170,7 +170,7 @@ class VOFS(LoggingMixIn, Operations):
         self.fobj[fd]=fobj
 	self.fh[fd]={'cached': 0, 'flags': O_RDWR, 'name': fname}
 	self.setPath(fd, path)
-        logging.info("Created node at %s and returning handle %d" % ( path, fd))
+        logging.debug("Created node at %s and returning handle %d" % ( path, fd))
         return fd
 
     def flushnode(self,path,fh):
@@ -434,7 +434,7 @@ class VOFS(LoggingMixIn, Operations):
     def clear_cache(self):
         """Clear the oldest files until cache_size < cache_limit"""
         while ( self.cache_size() > self.cache_limit) :
-            logging.info("Removing file %s from the local cache" % ( self.oldest_file))
+            logging.debug("Removing file %s from the local cache" % ( self.oldest_file))
             os.unlink(self.oldest_file)
             self.oldest_file=None
 
@@ -569,10 +569,9 @@ if __name__ == "__main__":
     if len(args) != 2:
         parser.error("not enough arguments on the commnad line\n")
 
-    logging.info("Checking for a VO x509 certificate")
+    logging.debug("Checking connetion to VOSpace ")
     conn=vos.Connection()
-    logging.info("Got a certificate")
-    logging.warning("Doing some logging")
+    logging.debug("Got a certificate, connections should work")
 
     root = args[0]
     mount = args[1]
