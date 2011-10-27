@@ -155,6 +155,8 @@ public class Main implements Runnable
     private static final int INIT_STATUS = 1; // exit code for initialisation failure
     private static final int NET_STATUS = 2;  // exit code for client-server failures
     
+    private static final int SERVER_CHILD_MAX = 1000;
+    
     /**
      * Operations of VoSpace Client.
      * 
@@ -459,8 +461,24 @@ public class Main implements Runnable
 
     private void doView()
     {
+        boolean explicitPaging = false;
+        if (target.getQuery() != null)
+        {
+            String queryString = target.getQuery();
+            String[] queries = queryString.split("&");
+            for (String query : queries)
+            {
+                if (query.startsWith("uri=") ||
+                    query.startsWith("limit="))
+                {
+                    explicitPaging = true;
+                }
+            }
+        }
+        
         try
         {
+            
             Node n = client.getNode(target.getPath(), target.getQuery());
 
             msg(getType(n) + ": " + n.getUri());
@@ -492,18 +510,29 @@ public class Main implements Runnable
                 sb.append(pad("last modified",26));
                 sb.append("URI");
                 msg(sb.toString());
-                for (Node child : cn.getNodes())
+                
+                printChildList(n, cn.getNodes());
+                log.debug("container node has : " + cn.getNodes().size() + " children.");
+                
+                // get remaining children if the user isn't explicitly controlling paging
+                if (!explicitPaging)
                 {
-                    sb = new StringBuilder();
-                    String name = child.getName();
-                    if (child instanceof ContainerNode)
-                        name += "/";
-                    sb.append(pad(name,32));
-                    sb.append(pad(getContentLength(child,true),12));
-                    sb.append(pad(safePropertyRef(child, VOS.PROPERTY_URI_ISPUBLIC),8));
-                    sb.append(pad(safePropertyRef(n, VOS.PROPERTY_URI_DATE),26));
-                    sb.append(child.getUri().toString());
-                    msg(sb.toString());
+                    String originalQuery = target.getQuery();
+                    String uriQueryParam = null;
+                    while (cn.getNodes().size() == SERVER_CHILD_MAX)
+                    {
+                        log.debug("Getting next set of children.");
+                        uriQueryParam = "uri=" + cn.getNodes().get(SERVER_CHILD_MAX - 1).getUri().toString();
+                        cn = null;
+                        if (StringUtil.hasText(originalQuery))
+                            n = client.getNode(target.getPath(), target.getQuery() + "&" + uriQueryParam);
+                        else
+                            n = client.getNode(target.getPath(), uriQueryParam);
+                        cn = (ContainerNode) n;
+                        log.debug("next set has : " + cn.getNodes().size() + " children.");
+                        if (cn.getNodes().size() > 1)
+                            printChildList(n, cn.getNodes().subList(1, cn.getNodes().size()));
+                    }
                 }
             }
             else if (n instanceof DataNode)
@@ -526,6 +555,24 @@ public class Main implements Runnable
         {
             msg("not found: " + target);
             System.exit(NET_STATUS);
+        }
+    }
+    
+    private void printChildList(Node n, List<Node> children)
+    {
+        StringBuilder sb = null;
+        for (Node child : children)
+        {
+            sb = new StringBuilder();
+            String name = child.getName();
+            if (child instanceof ContainerNode)
+                name += "/";
+            sb.append(pad(name,32));
+            sb.append(pad(getContentLength(child,true),12));
+            sb.append(pad(safePropertyRef(child, VOS.PROPERTY_URI_ISPUBLIC),8));
+            sb.append(pad(safePropertyRef(n, VOS.PROPERTY_URI_DATE),26));
+            sb.append(child.getUri().toString());
+            msg(sb.toString());
         }
     }
 
@@ -1388,7 +1435,7 @@ public class Main implements Runnable
             "properties are overwritten.                                                                       ",
             "                                                                                                  ",
             "Note: Source and destination URIs may include HTTP-like query parameters, some of which will      ",
-            "result in additional operations being performed on the associated URI.                            ",
+            "result in additional operations being performed.                                                  ",
             "                                                                                                  ",
             "View node:                                                                                        ",
             "java -jar VOSpaceClient.jar  [-v|--verbose|-d|--debug]                                            ",

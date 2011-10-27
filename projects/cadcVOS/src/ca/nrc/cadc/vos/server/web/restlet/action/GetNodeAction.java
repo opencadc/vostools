@@ -97,10 +97,6 @@ public class GetNodeAction extends NodeAction
 {
     
     protected static Logger log = Logger.getLogger(GetNodeAction.class);
-    
-    private static final String DETAIL_MIN = "min";
-    private static final String DETAIL_MAX = "max";
-    private static final String DETAIL_PROPERTIES = "properties";
 
     /**
      * Basic empty constructor.
@@ -134,24 +130,24 @@ public class GetNodeAction extends NodeAction
         {
             // Paging parameters
             String startURI = queryForm.getFirstValue(QUERY_PARAM_URI);
-            String pageOffsetString = queryForm.getFirstValue(QUERY_PARAM_OFFSET);
+            String pageLimitString = queryForm.getFirstValue(QUERY_PARAM_LIMIT);
             
             ContainerNode cn = (ContainerNode) serverNode;
             boolean paginate = false;
             VOSURI startURIObject = null;
             
-            // parse the pageOffset
-            Integer pageOffset = null;
-            if (pageOffsetString != null)
+            // parse the pageLimit
+            Integer pageLimit = null;
+            if (pageLimitString != null)
             {
                 try
                 {
-                    pageOffset = new Integer(pageOffsetString);
+                    pageLimit = new Integer(pageLimitString);
                     paginate = true;
                 }
                 catch (NumberFormatException e)
                 {
-                    throw new IllegalArgumentException("Page offset must be an integer.");
+                    throw new IllegalArgumentException("Value for limit must be an integer.");
                 }
             }
             
@@ -173,20 +169,20 @@ public class GetNodeAction extends NodeAction
             start = System.currentTimeMillis();
             if (cn.getUri().isRoot())
             {
-                // if this is the root node, ignore user requested offset
+                // if this is the root node, ignore user requested limit
                 // for the time being (see method doFilterChildren below)
                 nodePersistence.getChildren(cn, startURIObject, null);
                 log.debug(String.format(
-                    "Get children on root returned [%s] nodes with startURI=[%s], pageOffset=[%s].",
+                    "Get children on root returned [%s] nodes with startURI=[%s], pageLimit=[%s].",
                         cn.getNodes().size(), startURI, null));
             }
             else if (paginate)
             {
                 // request for a subset of children
-                nodePersistence.getChildren(cn, startURIObject, pageOffset);
+                nodePersistence.getChildren(cn, startURIObject, pageLimit);
                 log.debug(String.format(
-                    "Get children returned [%s] nodes with startURI=[%s], pageOffset=[%s].",
-                        cn.getNodes().size(), startURI, pageOffset));
+                    "Get children returned [%s] nodes with startURI=[%s], pageLimit=[%s].",
+                        cn.getNodes().size(), startURI, pageLimit));
             }
             else
             {
@@ -198,7 +194,7 @@ public class GetNodeAction extends NodeAction
 
             end = System.currentTimeMillis();
             log.debug("nodePersistence.getChildren() elapsed time: " + (end - start) + "ms");
-            doFilterChildren(cn, pageOffset);
+            doFilterChildren(cn, pageLimit);
         }
         
         // Detail level parameter
@@ -286,22 +282,22 @@ public class GetNodeAction extends NodeAction
      * If this is the root node, we apply a privacy policy and filter out
      * child nodes the caller is not allowed to read
      * 
-     * TODO: The approach to manually trimming to the pageOffset size for
+     * TODO: The approach to manually trimming to the pageLimit size for
      * the root container will cease to work when the number of root
      * container nodes exceeds the upper limit of children returned as
      * defined in the node persistence.  Instead, a loop should be implemented,
      * as it is in the client, to manually retrieve more children if
      * necessary if some have been filtered out due to lack of read permission. 
      */
-    private void doFilterChildren(ContainerNode node, Integer pageOffset)
+    private void doFilterChildren(ContainerNode node, Integer pageLimit)
     {
         if ( !node.getUri().isRoot() )
             return;
 
         ListIterator<Node> iter = node.getNodes().listIterator();
         int nodeCount = 0;
-        boolean metOffset = false;
-        while ( iter.hasNext() && !metOffset)
+        boolean metLimit = false;
+        while ( iter.hasNext() && !metLimit)
         {
             Node n = iter.next();
             try
@@ -309,9 +305,9 @@ public class GetNodeAction extends NodeAction
                 voSpaceAuthorizer.getReadPermission(n);
                 nodeCount++;
                 
-                // stop iterating if we've met a specified offset
-                if (pageOffset != null && nodeCount >= pageOffset)
-                    metOffset = true;
+                // stop iterating if we've met a specified limit
+                if (pageLimit != null && nodeCount >= pageLimit)
+                    metLimit = true;
             }
             catch(AccessControlException ex)
             {
@@ -320,13 +316,13 @@ public class GetNodeAction extends NodeAction
             }
         }
         
-        // since an offset isn't supplied to node persistence when getting
-        // the children of the root node, apply the offset value now.
-        if (pageOffset != null && node.getNodes().size() > pageOffset)
+        // since a limit isn't supplied to node persistence when getting
+        // the children of the root node, apply the limit value now.
+        if (pageLimit != null && node.getNodes().size() > pageLimit)
         {
             log.debug("Reducing child list size from " + node.getNodes().size() +
-                    " to " + pageOffset + " to meet offset request on root node.");
-            node.setNodes(node.getNodes().subList(0, pageOffset));
+                    " to " + pageLimit + " to meet limit request on root node.");
+            node.setNodes(node.getNodes().subList(0, pageLimit));
         }
     }
 

@@ -108,7 +108,7 @@ public abstract class NodeAction implements PrivilegedAction<Object>
     protected static final String QUERY_PARAM_VIEW = "view";
     protected static final String QUERY_PARAM_DETAIL = "detail";
     protected static final String QUERY_PARAM_URI = "uri";
-    protected static final String QUERY_PARAM_OFFSET = "offset";
+    protected static final String QUERY_PARAM_LIMIT = "limit";
 
     // some subclasses may nede to determine hostname, request path, etc
     protected Request request;

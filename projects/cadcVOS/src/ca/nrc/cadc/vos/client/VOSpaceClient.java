@@ -107,7 +107,6 @@ import ca.nrc.cadc.vos.Transfer;
 import ca.nrc.cadc.vos.TransferParsingException;
 import ca.nrc.cadc.vos.TransferReader;
 import ca.nrc.cadc.vos.TransferWriter;
-import ca.nrc.cadc.vos.VOS;
 import ca.nrc.cadc.vos.VOSURI;
 import ca.nrc.cadc.vos.View;
 
@@ -119,10 +118,6 @@ import ca.nrc.cadc.vos.View;
 public class VOSpaceClient
 {
     private static Logger log = Logger.getLogger(VOSpaceClient.class);
-    
-    private static final int MAX_POLLS = 10;
-    private static final long INITIAL_SLEEP = 100L; // milliseconds
-    private static final float SLEEP_INCREMENT = 1.1F;
     
     public static final String CR = System.getProperty("line.separator"); // OS independant new line
 
@@ -725,19 +720,6 @@ public class VOSpaceClient
         //log.warn("jobID: " + jobID);
         return new URL(baseURL + "/" + jobList + "/" + jobID);
     }
-    
-    private URL getJobURLFromJobRedirect(URL redirectURL) throws MalformedURLException
-    {
-        String redirect = redirectURL.toString();
-        // chop-off the '/run' at the end
-        int runIndex = redirect.indexOf("/run");
-        if (runIndex == -1)
-        {
-            throw new RuntimeException("Could not get job error details.");
-        }
-        String jobLocation = redirect.substring(0, runIndex);
-        return new URL(jobLocation);
-    }
 
     private String postJob(String strUrl, String strParam) throws MalformedURLException, IOException
     {
@@ -827,42 +809,5 @@ public class VOSpaceClient
             log.debug("setting SSLSocketFactory on " + sslConn.getClass().getName());
             sslConn.setSSLSocketFactory(sslSocketFactory);
         }
-    }
-
-    // copy permission properties, assuming replace rather than append
-    private void copyPermissions(Node src, Node dest)
-    {
-        List<NodeProperty> srcProps = src.getProperties();
-        List<NodeProperty> destProps = dest.getProperties();
-
-        for (NodeProperty s : srcProps)
-        {
-            if ( isPermissionProperty(s) )
-            {
-                boolean found = false;
-                for (NodeProperty d : destProps)
-                {
-                    if ( s.getPropertyURI().equals(d.getPropertyURI()) )
-                    {
-                        d.setValue(s.getPropertyValue());
-                        found = true;
-                    }
-                }
-                if (!found)
-                    destProps.add(s);
-                log.debug("set: " + s);
-            }
-        }
-    }
-
-    private boolean isPermissionProperty(NodeProperty p)
-    {
-        if ( VOS.PROPERTY_URI_ISPUBLIC.equals(p.getPropertyURI()) )
-            return true;
-        if ( VOS.PROPERTY_URI_GROUPREAD.equals(p.getPropertyURI()) )
-            return true;
-        if ( VOS.PROPERTY_URI_GROUPWRITE.equals(p.getPropertyURI()) )
-            return true;
-        return false;
     }
 }
