@@ -458,6 +458,26 @@ public class Main implements Runnable
 
     private void doView()
     {
+        // This check is here for client/server compatibility
+        // TODO: Remove this variable when the cadcVOSClient tar
+        // file with this compatibility support has been distributed
+        // to all users.
+        boolean serverSupportsPaging = false;
+        // check for paging support by seeing if the limit parameter
+        // has effect when querying the root node
+        try
+        {
+            Node root = client.getNode("/", "limit=0");
+            if (((ContainerNode) root).getNodes().size() == 0)
+                serverSupportsPaging = true;
+        }
+        catch (NodeNotFoundException e)
+        {
+            log.warn("Root node not found!: " + e.getMessage());
+        }
+        log.debug("server supports node paging: " + serverSupportsPaging);
+        
+        
         boolean explicitPaging = false;
         if (target.getQuery() != null)
         {
@@ -511,37 +531,41 @@ public class Main implements Runnable
                 printChildList(n, cn.getNodes());
                 log.debug("container node has : " + cn.getNodes().size() + " children.");
                 
-                // get remaining children if the user isn't explicitly controlling paging
-                if (!explicitPaging)
+                
+                if (serverSupportsPaging)
                 {
-                    String originalQuery = target.getQuery();
-                    VOSURI uriQueryObj = null;
-                    String uriQueryParam = null;
-                    while (cn.getNodes().size() == SERVER_CHILD_MAX)
+                    // get remaining children if the user isn't explicitly controlling paging
+                    if (!explicitPaging)
                     {
-                        log.debug("Getting next set of children.");
-                        uriQueryObj = cn.getNodes().get(SERVER_CHILD_MAX - 1).getUri();
-                        uriQueryParam = "uri=" + uriQueryObj.toString();
-                        cn = null;
-                        if (StringUtil.hasText(originalQuery))
-                            n = client.getNode(target.getPath(), target.getQuery() + "&" + uriQueryParam);
-                        else
-                            n = client.getNode(target.getPath(), uriQueryParam);
-                        cn = (ContainerNode) n;
-                        log.debug("next set has : " + cn.getNodes().size() + " children.");
-                        
-                        if (cn.getNodes().size() > 0 &&
-                                !cn.getNodes().get(0).getUri().equals(uriQueryObj))
+                        String originalQuery = target.getQuery();
+                        VOSURI uriQueryObj = null;
+                        String uriQueryParam = null;
+                        while (cn.getNodes().size() == SERVER_CHILD_MAX)
                         {
-                            // if the first element isn't equal to the uri parameter,
-                            // print all children.
-                            printChildList(n, cn.getNodes());
-                        }
-                        else if (cn.getNodes().size() > 1)
-                        {
-                            // otherwise, print all but the first
-                            // (note: subList() doesn't create a new list object)
-                            printChildList(n, cn.getNodes().subList(1, cn.getNodes().size()));
+                            log.debug("Getting next set of children.");
+                            uriQueryObj = cn.getNodes().get(SERVER_CHILD_MAX - 1).getUri();
+                            uriQueryParam = "uri=" + uriQueryObj.toString();
+                            cn = null;
+                            if (StringUtil.hasText(originalQuery))
+                                n = client.getNode(target.getPath(), target.getQuery() + "&" + uriQueryParam);
+                            else
+                                n = client.getNode(target.getPath(), uriQueryParam);
+                            cn = (ContainerNode) n;
+                            log.debug("next set has : " + cn.getNodes().size() + " children.");
+                            
+                            if (cn.getNodes().size() > 0 &&
+                                    !cn.getNodes().get(0).getUri().equals(uriQueryObj))
+                            {
+                                // if the first element isn't equal to the uri parameter,
+                                // print all children.
+                                printChildList(n, cn.getNodes());
+                            }
+                            else if (cn.getNodes().size() > 1)
+                            {
+                                // otherwise, print all but the first
+                                // (note: subList() doesn't create a new list object)
+                                printChildList(n, cn.getNodes().subList(1, cn.getNodes().size()));
+                            }
                         }
                     }
                 }
