@@ -57,12 +57,14 @@ def getUserPassword(host='www.cadc-ccda.hia-iha.nrc-cnrc.gc.ca'):
     return (username,password)
 
 
-import argparse
+import argparse,os
 
 parser = argparse.ArgumentParser(description='Get CADC proxy certificate')
 parser.add_argument('daysValid', type=int, nargs='+', default=10,
                    help='Number of days the cetificate should be valid (default: 10)')
+parser.add_argument('--dest', default=os.path.join(os.getenv('HOME','/tmp'),".ssl/cadcproxy.pem"),
+                    help="Location to store the proxy certifacte")
 args = parser.parse_args()
 
 if __name__=='__main__':
-    getCert(daysValid=args.daysValid[0])
+    getCert(daysValid=args.daysValid[0],certfile=args.dest)
