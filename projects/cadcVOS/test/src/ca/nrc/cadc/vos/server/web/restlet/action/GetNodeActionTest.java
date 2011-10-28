@@ -90,6 +90,7 @@ public class GetNodeActionTest extends NodeActionTest<GetNodeAction>
         
         Form queryForm = EasyMock.createMock(Form.class);
         expect(queryForm.getFirstValue("view")).andReturn("VIEW/REFERENCE").once();
+        expect(queryForm.getFirstValue("detail")).andReturn("VIEW/REFERENCE").once();
         
         getTestSubject().setQueryForm(queryForm);
         

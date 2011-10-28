@@ -159,9 +159,6 @@ public class Main implements Runnable
     
     /**
      * Operations of VoSpace Client.
-     * 
-     * @author zhangsa
-     *
      */
     public enum Operation
     {
@@ -518,11 +515,13 @@ public class Main implements Runnable
                 if (!explicitPaging)
                 {
                     String originalQuery = target.getQuery();
+                    VOSURI uriQueryObj = null;
                     String uriQueryParam = null;
                     while (cn.getNodes().size() == SERVER_CHILD_MAX)
                     {
                         log.debug("Getting next set of children.");
-                        uriQueryParam = "uri=" + cn.getNodes().get(SERVER_CHILD_MAX - 1).getUri().toString();
+                        uriQueryObj = cn.getNodes().get(SERVER_CHILD_MAX - 1).getUri();
+                        uriQueryParam = "uri=" + uriQueryObj.toString();
                         cn = null;
                         if (StringUtil.hasText(originalQuery))
                             n = client.getNode(target.getPath(), target.getQuery() + "&" + uriQueryParam);
@@ -530,8 +529,20 @@ public class Main implements Runnable
                             n = client.getNode(target.getPath(), uriQueryParam);
                         cn = (ContainerNode) n;
                         log.debug("next set has : " + cn.getNodes().size() + " children.");
-                        if (cn.getNodes().size() > 1)
+                        
+                        if (cn.getNodes().size() > 0 &&
+                                !cn.getNodes().get(0).getUri().equals(uriQueryObj))
+                        {
+                            // if the first element isn't equal to the uri parameter,
+                            // print all children.
+                            printChildList(n, cn.getNodes());
+                        }
+                        else if (cn.getNodes().size() > 1)
+                        {
+                            // otherwise, print all but the first
+                            // (note: subList() doesn't create a new list object)
                             printChildList(n, cn.getNodes().subList(1, cn.getNodes().size()));
+                        }
                     }
                 }
             }

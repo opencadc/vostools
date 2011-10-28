@@ -119,8 +119,6 @@ public abstract class DatabaseNodePersistence implements NodePersistence
 
     protected Integer maxChildLimit = new Integer(1000);
 
-    private DatabaseNodePersistence() { }
-
     protected DatabaseNodePersistence(NodeDAO.NodeSchema nodeSchema)
     {
         this.nodeSchema = nodeSchema;

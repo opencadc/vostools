@@ -103,7 +103,7 @@ public class NodeOutputRepresentation extends OutputRepresentation
     protected static Logger LOGGER =
             Logger.getLogger(NodeOutputRepresentation.class);
 
-    private static final int MAX_CHILD_BUFFER = 256;
+    private static final int MAX_CHILD_BUFFER = 1000;
 
     private Node node;
     private NodeWriter nodeWriter;
@@ -150,7 +150,7 @@ public class NodeOutputRepresentation extends OutputRepresentation
         {
             this.buf = new StringBuilder();
             nodeWriter.write(node, buf);
-            LOGGER.info("buffered node, content-length = " + buf.length());
+            LOGGER.debug("buffered node, content-length = " + buf.length());
             return (long) buf.length();
         }
         catch(IOException ex)

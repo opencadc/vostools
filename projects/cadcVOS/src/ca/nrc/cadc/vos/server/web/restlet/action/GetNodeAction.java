@@ -147,7 +147,7 @@ public class GetNodeAction extends NodeAction
                 }
                 catch (NumberFormatException e)
                 {
-                    throw new IllegalArgumentException("Value for limit must be an integer.");
+                    throw new IllegalArgumentException("value for limit must be an integer.");
                 }
             }
             
@@ -155,13 +155,10 @@ public class GetNodeAction extends NodeAction
             if (StringUtil.hasText(startURI))
             {
                 startURIObject = new VOSURI(startURI);
-                nodePersistence.getChild(cn, startURIObject.getName());
-                if (cn.getNodes().size() != 1)
+                if (!vosURI.equals(startURIObject.getParentURI()))
                 {
-                    throw new FileNotFoundException(startURIObject.getURIObject().toASCIIString());
+                    throw new IllegalArgumentException("uri parameter not a child of target uri.");
                 }
-                // reset the child list and get all the children
-                cn.getNodes().clear();
                 paginate = true;
             }
             
@@ -178,11 +175,18 @@ public class GetNodeAction extends NodeAction
             }
             else if (paginate)
             {
-                // request for a subset of children
-                nodePersistence.getChildren(cn, startURIObject, pageLimit);
-                log.debug(String.format(
-                    "Get children returned [%s] nodes with startURI=[%s], pageLimit=[%s].",
-                        cn.getNodes().size(), startURI, pageLimit));
+                if (pageLimit != null && pageLimit < 1)
+                {
+                    log.debug("Get children not called becauase pageLimit < 1");
+                }
+                else
+                {
+                    // request for a subset of children
+                    nodePersistence.getChildren(cn, startURIObject, pageLimit);
+                    log.debug(String.format(
+                        "Get children returned [%s] nodes with startURI=[%s], pageLimit=[%s].",
+                            cn.getNodes().size(), startURI, pageLimit));
+                }
             }
             else
             {

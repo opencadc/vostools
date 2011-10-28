@@ -77,7 +77,6 @@ import ca.nrc.cadc.vos.Node;
 import ca.nrc.cadc.vos.NodeNotFoundException;
 import ca.nrc.cadc.vos.NodeProperty;
 import ca.nrc.cadc.vos.VOSURI;
-import ca.nrc.cadc.vos.VOS.Detail;
 import ca.nrc.cadc.vos.VOS.NodeBusyState;
 
 /**
