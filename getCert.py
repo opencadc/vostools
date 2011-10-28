@@ -1,6 +1,10 @@
-def getCert(certHost='www.cadc-ccda.hia-iha.nrc-cnrc.gc.ca',
-            certQuery="/cred/proxyCert?daysValid=2"):
+def getCert(certHost='www.cadc-ccda.hia-iha.nrc-cnrc.gc.ca',certfile=None,
+            certQuery="/cred/proxyCert?daysValid=",daysValid=2):
     """Access the cadc certificate server"""
+    if certfile is None:
+	import os
+	certfile=os.path.join(os.getenv("HOME","/tmp"),".ssl/cadcproxy.pem")
+	
     
     import urllib2
     
@@ -24,8 +28,8 @@ def getCert(certHost='www.cadc-ccda.hia-iha.nrc-cnrc.gc.ca',
     urllib2.install_opener(opener)
 
     # Now all calls to urllib2.urlopen use our opener.
-
-    r= urllib2.urlopen("http://"+certHost+certQuery)
+    url="http://"+certHost+certQuery+str(daysValid)
+    r= urllib2.urlopen(url)
     w= file(certfile,'w')
     while True:
         buf=r.read()
@@ -36,7 +40,7 @@ def getCert(certHost='www.cadc-ccda.hia-iha.nrc-cnrc.gc.ca',
     r.close()
     return 
 
-def getUserPassword(self,host='www.cadc-ccda.hia-iha.nrc-cnrc.gc.ca'):
+def getUserPassword(host='www.cadc-ccda.hia-iha.nrc-cnrc.gc.ca'):
     import netrc,getpass,os
     """"Getting the username/password for host from .netrc filie """
     if os.access(os.path.join(os.environ.get('HOME','/'),".netrc"),os.R_OK):
@@ -53,6 +57,12 @@ def getUserPassword(self,host='www.cadc-ccda.hia-iha.nrc-cnrc.gc.ca'):
     return (username,password)
 
 
+import argparse
+
+parser = argparse.ArgumentParser(description='Get CADC proxy certificate')
+parser.add_argument('daysValid', type=int, nargs='+', default=10,
+                   help='Number of days the cetificate should be valid (default: 10)')
+args = parser.parse_args()
 
 if __name__=='__main__':
-    getCert()
+    getCert(daysValid=args.daysValid[0])
