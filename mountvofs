@@ -424,10 +424,18 @@ class VOFS(LoggingMixIn, Operations):
         if not self.client.isdir(dest):
 	   return -1
         logging.debug("Moving %s to %s" % ( src,dest))
-        if self.client.move(src,dest):
-           fname=os.path.normpath(self.cache_dir+src)
-           if os.access(fname,os.W_OK):
-	      os.unlink(fname)
+        result=self.client.move(src,dest)
+        logging.critical(str(result))
+        if result:
+           srcPath=os.path.normpath(self.cache_dir+src)
+           destPath=os.path.normpath(self.cache_dir+dest)
+	   destDir=os.path.basename(destPath)
+           if os.access(srcPath,os.W_OK):
+	      # only rename if the destination exists and is a directory
+	      if not os.access(destDir,os.F_OK):
+	          os.rename(srcPath,destPath)
+              else:
+	          os.unlink(srcPath)
 	   return 0
         return -1
         
