@@ -201,9 +201,6 @@ public class TableSet
         addChild(eleColumn, "unit", cd.getUnit());
         addChild(eleColumn, "ucd", cd.getUcd());
         addChild(eleColumn, "utype", cd.getUtype());
-        if (cd.indexed)
-            addChild(eleColumn, "flag", "indexed");
-        // TODO: flag=primary for primary keys? 
 
         String datatype = cd.getDatatype();
         String[] parts = datatype.split(":");
@@ -234,6 +231,9 @@ public class TableSet
             log.warn("cannot convert " + cd + " to a legal VODataService column element, skipping");
             return null;
         }
+        if (cd.indexed)
+            addChild(eleColumn, "flag", "indexed");
+        // TODO: flag=primary for primary keys? 
 
         return eleColumn;
     }
