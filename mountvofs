@@ -338,7 +338,7 @@ class VOFS(LoggingMixIn, Operations):
 	self.setPath(fd,path)
         return fd
     
-    def read(self, path, size=0, offset=0, fh):
+    def read(self, path, size=0, offset=0, fh=None):
         """Read the entire file from the VOSpace server, place in a temporary file and then offset
         to the desired location
 
@@ -355,7 +355,6 @@ class VOFS(LoggingMixIn, Operations):
           try:
             r=self.client.open(path,mode=os.O_RDONLY,view="data")
             fpos=0
-            bufsize=2**33
             while True:
                 buf=r.read(2**(10+10))
                 logging.debug("Read buffer length %s from %s" % ( len(buf), self.getNode(self.getPath(fh)).name)) 
