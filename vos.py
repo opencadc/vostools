@@ -130,6 +130,7 @@ class Node:
         self.type=None
         self.props={}
         self.attr={}
+        self.xattr={}
         self.update()
         
     def update(self):
@@ -153,6 +154,7 @@ class Node:
         self.groupwrite = self.props.get('groupwrite','NONE')
         self.groupread = self.props.get('groupread','NONE')
         self.setattr()
+        self.setxattr()
 
     def __str__(self):
         import xml.etree.ElementTree as ET
@@ -229,6 +231,14 @@ class Node:
         self.attr['st_gid']=attr.get('st_uid',getgid())
         self.attr['st_size']=attr.get('st_size',int(node.props.get('length',0)))
 
+    def setxattr(self, attrs={}):
+        """Initialize the attributes using the properties sent with the node"""
+        for key in self.props:
+            if key in Client.vosProperties:
+                continue
+            self.xattr[key]=self.props[key]
+        return 
+
     def chwgrp(self,group):
 	"""Set the groupwrite value for this node"""
         self.groupwrite=group
@@ -254,9 +264,12 @@ class Node:
                   uri=prop.attrib.get('uri',None)
                   propName=urllib.splittag(uri)[1]
                   if propName != key:
-                      continue
+                      continue 
                   if prop.text != value:
-                      prop.text=value
+                      if value is None:
+                          props.remove(prop)
+                      else:
+                          prop.text=value
 	              changed=1
                   logging.debug("After change node is : %s" %( self))
 		  return changed
@@ -467,7 +480,7 @@ class VOFile:
         """check the response status"""
         logging.debug("status %d for URL %s" % ( self.resp.status,self.url))
         if self.resp.status not in (200, 201, 202, 303, 503):
-            logging.error(self.resp.read())
+            logging.debug(self.resp.read())
             raise IOError(self.resp.status,"unexpected server response %s (%d) for URL %s" % ( self.resp.reason, self.resp.status, self.url))
 
     def open(self,URL,method):
@@ -549,7 +562,8 @@ class Client:
 
     VOTransfer='https://www.cadc.hia.nrc.gc.ca/vospace/synctrans'
 
-    vosProperties=["description", "type", "encoding", "MD5",
+    ### reservered vospace properties, not to be used for extended property setting
+    vosProperties=["description", "type", "encoding", "MD5", "length", "creator","date",
                    "groupread", "groupwrite", "ispublic"]
 
 

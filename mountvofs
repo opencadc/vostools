@@ -6,7 +6,8 @@ import time
 from fuse import FUSE, Operations, FuseOSError, LoggingMixIn
 import tempfile
 from threading import Lock
-from errno import EACCES, EIO, ENOENT, EISDIR, ENOTDIR, ENOTEMPTY, EPERM, EEXIST
+from errno import EACCES, EIO, ENOENT, EISDIR, ENOTDIR, ENOTEMPTY, EPERM, EEXIST, ENODATA
+ENOATTR=93
 import os
 import vos
 from os import O_RDONLY, O_WRONLY, O_RDWR, O_APPEND
@@ -30,9 +31,7 @@ class VOFS(LoggingMixIn, Operations):
     """
     ### VOSpace doesn't support these so I've disabled these operations.
     chown = None
-    getxattr = None   ### Actually VOSpace could do xattr if I did some work...
     link = None
-    listxattr = None  ### see getxattr above
     mknode = None
     readlink = None
     rmdir = None
@@ -272,6 +271,19 @@ class VOFS(LoggingMixIn, Operations):
 	    #self.attr[path].update(self.getNode(path).attr)
         return self.attr[path]
 
+    def getxattr(self, path, name, position=0):
+        """Get the value of an extended attribute"""
+        value=self.getNode(path).xattr.get(name,None)
+        if value is None:
+            raise FuseOSError(ENOATTR)
+        import binascii
+        return binascii.a2b_base64(value)
+
+    def listxattr(self, path):
+        """Send back the list of extended attributes"""
+        return self.getNode(path).xattr.keys()
+        
+
     def mkdir(self, path, mode):
         """Create a container node in the VOSpace at the correct location.
 
@@ -326,7 +338,7 @@ class VOFS(LoggingMixIn, Operations):
 	self.setPath(fd,path)
         return fd
     
-    def read(self, path, size, offset, fh):
+    def read(self, path, size=0, offset=0, fh):
         """Read the entire file from the VOSpace server, place in a temporary file and then offset
         to the desired location
 
@@ -414,6 +426,16 @@ class VOFS(LoggingMixIn, Operations):
         #self.delNode(path)
         self.clear_cache()
 
+    def removexattr(self, path, name):
+        """Remove the named attribute from the xattr dictionary"""
+        node=self.getNode(path)
+        node.changeProp(name,None)
+        try:
+            del self.getNode(path).attr[name]
+        except KeyError:
+            raise FuseOSError(ENOATTR)
+        return 0
+
     def rename(self,src,dest):
 	"""Rename a data node into a new container"""
         logging.debug("Original %s -> %s" % ( src,dest))
@@ -438,6 +460,18 @@ class VOFS(LoggingMixIn, Operations):
 	          os.unlink(srcPath)
 	   return 0
         return -1
+    
+    def setxattr(self, path, name, value, size, options, *args):
+        """Simple xattr setting, ignorring options for now"""
+        node=self.getNode(path)
+        ### call changeProp on the node so that the XML is updated
+        import binascii
+        value=binascii.b2a_base64(value)
+        if node.changeProp(name,value)==1:
+            """The node properties changed so force node update back to VOSpace"""
+            self.client.update(node)
+        return 0
+
         
 
     def cache_size(self):
@@ -584,12 +618,12 @@ if __name__ == "__main__":
     (opt,args)=parser.parse_args()
 
     if opt.debug:
-        logging.basicConfig(level=logging.DEBUG,format="vofs:%(module)s.%(funcName)s %(message)s",filename='/tmp/vos.err')
+        logging.basicConfig(level=logging.DEBUG,format="vofs:%(module)s.%(funcName)s %(message)s",filename=opt.log)
         forground=True
     elif opt.verbose:
-        logging.basicConfig(level=logging.INFO,format="vofs:%(module)s.%(funcName)s %(message)s",filename='/tmp/vos.err')
+        logging.basicConfig(level=logging.INFO,format="vofs:%(module)s.%(funcName)s %(message)s",filename=opt.log)
     else:
-        logging.basicConfig(level=logging.WARNING,format="vofs:%(module)s.%(funcName)s %(message)s",filename='/tmp/vos.err')
+        logging.basicConfig(level=logging.WARNING,format="vofs:%(module)s.%(funcName)s %(message)s",filename=opt.log)
 
     if len(args) != 2:
         parser.error("not enough arguments on the commnad line\n")
@@ -605,10 +639,9 @@ if __name__ == "__main__":
     if platform=="darwin":
         fuse = FUSE(VOFS(root,opt.cache_dir,conn=conn,cache_limit=opt.cache_limit), mount, fsname=root,
                     volname=root,
-                    daemon_timeout=600,
-                    foreground=opt.foreground,
-                    noappledouble=True,
-                    noapplexattr=True)
+                    daemon_timeout=6000,
+                    auto_cache=True,
+                    foreground=opt.foreground)
     else:
         fuse = FUSE(VOFS(root,opt.cache_dir,conn=conn,cache_limit=opt.cache_limit), mount, fsname=root, 
                     foreground=opt.foreground)
