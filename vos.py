@@ -485,7 +485,7 @@ class VOFile:
 
     def open(self,URL,method):
         """Open a connection to the given URL"""
-        import ssl
+        import ssl,httplib
         logging.debug("Connecting to %s for (%s)" % (URL, method))
         self.url=URL
         self.httpCon = self.connector.getConnection(URL)
