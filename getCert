@@ -1,3 +1,4 @@
+#!python
 def getCert(certHost='www.cadc-ccda.hia-iha.nrc-cnrc.gc.ca',certfile=None,
             certQuery="/cred/proxyCert?daysValid=",daysValid=2):
     """Access the cadc certificate server"""
