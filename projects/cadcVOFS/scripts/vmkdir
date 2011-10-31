@@ -15,7 +15,6 @@ parser=optparse.OptionParser(usage)
 parser.add_option("-v","--verbose",action="store_true")
 parser.add_option("-d","--debug",action="store_true")
 parser.add_option("--certfile",help="location of your CADC security certificate file",default=os.path.join(os.getenv("HOME","."),".ssl/cadcproxy.pem"))
-parser.add_option("--overwrite",help="Overwrite the existing certificate with a new one?",action="store_true")
 
 (opt,args)=parser.parse_args()
 
@@ -30,7 +29,7 @@ if len(args)>1:
    parser.error("Only one directory can be built per call")
 
 logging.info("Creating ContainerNode (directory) %s" % ( args[0]))
-client=vos.Client(certFile=opt.certfile,overwrite=opt.overwrite)
+client=vos.Client(certFile=opt.certfile)
 if not client.access(args[0]):
    client.mkdir(args[0])	
 elif client.isdir(args[0]):

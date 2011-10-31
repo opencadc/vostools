@@ -34,56 +34,20 @@ class urlparse:
     def __str__(self):
         return "[scheme: %s, netloc: %s, path: %s, frag: %s, query: %s]" % ( self.scheme, self.netloc, self.path,self.frag,self.query)
 
-
     
-
-from urllib import FancyURLopener
-class MyFancyURLopener(FancyURLopener):
-    """A sub-class of FancyURLopenr that oeverwrides the password method 
-
-    get_user_passwd()  -- check the .netrc file for users password, prompt if none
-    """
-
-
-    def get_user_passwd(self,host,realm,clear_cache=0):
-        """retrieve user/password for ~/.netrc or prompt. Return (username,password)"""
-
-        # Check if credentials are in credential cache... they can be added programmatically else where.
-        key = realm + '@' + host.lower()
-        if key in self.auth_cache:
-            if clear_cache:
-                del self.auth_cache[key]
-            else:
-                return self.auth_cache[key]
-
-        # Look in the users .netrc file.
-        import netrc,os
-        netrcFilename=os.path.join(os.getenv('HOME'),'.netrc')
-        if os.access(netrcFilename,os.R_OK):    
-            auth=netrc.netrc().authenticators(host)
-            user, passwd = auth[0],auth[2]
-        # prompt the user, if need be.
-        if not user or not passwd:
-            user, passwd = self.prompt_user_passwd(host, realm)
-        if user or passwd: self.auth_cache[key] = (user, passwd)
-
-        # send back what we got.
-        return user, passwd
 
 class Connection:
     """Class to hold and act on the X509 certificate"""
 
     def __init__(self,credServerURL="http://www.cadc.hia.nrc.gc.ca/cred/proxyCert",
-                 certfile=None,overwrite=False,save=True,data={'daysValid': 1}):
+                 certfile=None,save=True,data={'daysValid': 1}):
         """Setup the Certificate for later usage
 
         cerdServerURL --- the location of the cadc proxy certificate server
         certfile      --- where to store the certificate, if None then ${HOME}/.ssl or a temporary filename
-        overwrite     --- overwrite an existing and valid certificate?
         save          --- save the certificate for later use? if not then use a tempfilename.
 
-        If the user would like to use an existing certificate that is valid then overwrite should be set to False and the 
-        name of the valid certificate sent as certFileName.
+        The user must supply a valid certificate. 
         """
 
         ## figure out a filename and open that file for writing
@@ -100,74 +64,14 @@ class Connection:
             certfile = os.path.join(certDir,"cadcproxy.pem")
             logging.debug("looking for certificate in %s" % ( certfile))
         if not os.access(certfile,os.F_OK):
-            logging.debug("didn't find a certificate file")
-            overwrite=True
+            raise EnvironmentError(errno.EACCES,"No certifacte file found at %s " %(certfile))
 
         logging.debug("requesting password")
-        (self.username,self.passwd)=self.getUserPassword()
 
         self.certfile=certfile
-        if overwrite:
-            self.getCert()
 
 	logging.debug("Using certificate file %s" % (self.certfile))
 
-
-    def getUserPassword(self,host='www.cadc-ccda.hia-iha.nrc-cnrc.gc.ca'):
-        import netrc,getpass,os
-        logging.debug("Getting the username/password for host (%s) from your .netrc filie " % ( host))
-        if os.access(os.path.join(os.environ.get('HOME','/'),".netrc"),os.R_OK):
-            auth=netrc.netrc().authenticators(host)
-        else:
-            auth=False
-        if not auth:
-            logging.debug("Didn't get username and password from .netrc so prompting" )
-            # Get info from commandline
-            sys.stdout.write("CADC Username: ")
-            username=sys.stdin.readline().strip('\n')
-            password=getpass.getpass().strip('\n')
-        else:
-            username=auth[0]
-            password=auth[2]
-        logging.debug("Using username %s and password '%d'" % ( username, hash(password)))
-        return (username,password)
-
-    def getCert(self,certHost='www.cadc-ccda.hia-iha.nrc-cnrc.gc.ca',
-                certQuery="/cred/proxyCert?daysValid=2"):
-        """Access the cadc certificate server"""
-
-        import urllib2
-
-        logging.debug("Pulling a short lived proxy certificate using your username and password")
-        ## Example taken from voidspace.org.uk
-        # create a password manager
-        password_mgr = urllib2.HTTPPasswordMgrWithDefaultRealm()
-
-        # Add the username and password.
-        # If we knew the realm, we could use it instead of ``None``.
-        top_level_url = "http://"+certHost
-        password_mgr.add_password(None, top_level_url, self.username, self.passwd)
-
-        handler = urllib2.HTTPBasicAuthHandler(password_mgr)
-
-        # create "opener" (OpenerDirector instance)
-        opener = urllib2.build_opener(handler)
-
-        # Install the opener.   
-        urllib2.install_opener(opener)
-
-        # Now all calls to urllib2.urlopen use our opener.
-
-        r= urllib2.urlopen("http://"+certHost+certQuery)
-        w= file(self.certfile,'w')
-        while True:
-            buf=r.read()
-            if not buf:
-                break
-            w.write(buf)
-        w.close()
-        r.close()
-        return 
 
     def getConnection(self,url):
         """Create an HTTPSConnection object and return.  Uses the client certificate if None given.
@@ -226,6 +130,7 @@ class Node:
         self.type=None
         self.props={}
         self.attr={}
+        self.xattr={}
         self.update()
         
     def update(self):
@@ -249,6 +154,7 @@ class Node:
         self.groupwrite = self.props.get('groupwrite','NONE')
         self.groupread = self.props.get('groupread','NONE')
         self.setattr()
+        self.setxattr()
 
     def __str__(self):
         import xml.etree.ElementTree as ET
@@ -325,6 +231,14 @@ class Node:
         self.attr['st_gid']=attr.get('st_uid',getgid())
         self.attr['st_size']=attr.get('st_size',int(node.props.get('length',0)))
 
+    def setxattr(self, attrs={}):
+        """Initialize the attributes using the properties sent with the node"""
+        for key in self.props:
+            if key in Client.vosProperties:
+                continue
+            self.xattr[key]=self.props[key]
+        return 
+
     def chwgrp(self,group):
 	"""Set the groupwrite value for this node"""
         self.groupwrite=group
@@ -350,9 +264,12 @@ class Node:
                   uri=prop.attrib.get('uri',None)
                   propName=urllib.splittag(uri)[1]
                   if propName != key:
-                      continue
+                      continue 
                   if prop.text != value:
-                      prop.text=value
+                      if value is None:
+                          props.remove(prop)
+                      else:
+                          prop.text=value
 	              changed=1
                   logging.debug("After change node is : %s" %( self))
 		  return changed
@@ -455,7 +372,6 @@ class Node:
             nodeList=ET.SubElement(node,Node.NODES)
             for subnode in subnodes:
                 nodeList.append(subnode.node)
-                #print subnode
         #logging.debug(ET.tostring(node,encoding="UTF-8"))
 
         return node
@@ -564,12 +480,12 @@ class VOFile:
         """check the response status"""
         logging.debug("status %d for URL %s" % ( self.resp.status,self.url))
         if self.resp.status not in (200, 201, 202, 303, 503):
-            logging.error(self.resp.read())
+            logging.debug(self.resp.read())
             raise IOError(self.resp.status,"unexpected server response %s (%d) for URL %s" % ( self.resp.reason, self.resp.status, self.url))
 
     def open(self,URL,method):
         """Open a connection to the given URL"""
-        import ssl
+        import ssl,httplib
         logging.debug("Connecting to %s for (%s)" % (URL, method))
         self.url=URL
         self.httpCon = self.connector.getConnection(URL)
@@ -577,21 +493,25 @@ class VOFile:
 	    self.timeout=time.time()
         try:
             self.httpCon.connect()
-        except ssl.SSLError as e:
-            logging.critical("%s" % (e.strerror))
-            if e.errno != 1:
-                raise
-            self.connector.getCert()
-	    if time.time() - self.timeout  < 200:
-                return self.open(URL,method)
+        #except ssl.SSLError as e:
+            ### Catching this allowed re-acquire of a  certificate.
+            ### this behaviour has been removed. 
+        #    logging.critical("%s" % (e.strerror))
+        #    if e.errno != 1:
+        #        raise
+        #    
+        #    self.connector.getCert()
+	#    if time.time() - self.timeout  < 200:
+        #        return self.open(URL,method)
         except httplib.HTTPException as e:
 	    logging.critical("%s" % ( e.strerror))
+            ### we only retry for 1200 seconds, regardless
 	    if time.time() - self.timeout  < 1200:
 	        return self.open(URL,method)
             raise
         self.closed=False
         self.httpCon.putrequest(method,URL)
-        
+        self.httpCon.putheader("Content-Type","text/xml")
         self.httpCon.putheader("Transfer-Encoding",'chunked')
         self.httpCon.putheader("Accept", "*/*")
         self.httpCon.endheaders()
@@ -640,18 +560,20 @@ class Client:
     VOServers={'cadc.nrc.ca!vospace': "www.cadc-ccda.hia-iha.nrc-cnrc.gc.ca",
                'cadc.nrc.ca~vospace': "www.cadc-ccda.hia-iha.nrc-cnrc.gc.ca"}
 
-    vosProperties=["description", "type", "encoding", "MD5",
+    VOTransfer='https://www.cadc.hia.nrc.gc.ca/vospace/synctrans'
+
+    ### reservered vospace properties, not to be used for extended property setting
+    vosProperties=["description", "type", "encoding", "MD5", "length", "creator","date",
                    "groupread", "groupwrite", "ispublic"]
 
 
     def __init__(self,certFile=os.path.join(os.getenv('HOME'),'.ssl/cadcproxy.pem'),
-                 overwrite=False,rootNode=None,conn=None):
+                 rootNode=None,conn=None):
         """This could/should be expanded to set various defaults"""
         if not conn:
-            conn=Connection(certfile=certFile,overwrite=overwrite)
+            conn=Connection(certfile=certFile)
         self.conn=conn
         self.VOSpaceServer="cadc.nrc.ca!vospace"
-        #self.urlopener=MyFancyURLopener(None,cert_file=self.cert.getFilename(),key_file=self.cert.getFilename())
         self.rootNode=rootNode
         return
 
@@ -730,8 +652,26 @@ class Client:
         else:
             data=''
         return "%s://%s/vospace/nodes/%s%s" % ( protocol, server, parts.path.strip('/'), data)
+
+    def move(self,srcURI,destURI):
+        """Move srcUri to targetUri"""
+        transfer=ET.Element("transfer")
+        transfer.attrib['xmlns']=Node.VOSNS
+        transfer.attrib['xmlns:vos']=Node.VOSNS
+        ET.SubElement(transfer,"target").text=self.fixURI(srcURI)
+        ET.SubElement(transfer,"direction").text=self.fixURI(destURI)
+        ET.SubElement(transfer,"keepBytes").text="false"
+        logging.debug(ET.dump(transfer))
+
+        con=self.open(srcURI,URL=Client.VOTransfer,mode=os.O_APPEND)
+        con.write(ET.tostring(transfer))
+	con.read()
+        if  con.resp.status==200:
+	   return True
+        return  False
+
                     
-    def open(self, uri, mode=os.O_RDONLY, view=None, head=False):
+    def open(self, uri, mode=os.O_RDONLY, view=None, head=False, URL=None):
         """Connect to URL and PUT contents of src to that connection return transfer status"""
 
         # the URL of the connection depends if we are 'getting', 'putting' or 'posting'  data
@@ -748,7 +688,8 @@ class Client:
             method="HEAD"
         if not method:
             raise IOError("Invalid mode (%X) for open" % ( mode))
-        URL=self.getNodeURL(uri, method=method, view=view)
+        if URL is None:
+            URL=self.getNodeURL(uri, method=method, view=view)
         logging.debug(URL)
         return VOFile(URL,self.conn,method=method)
 

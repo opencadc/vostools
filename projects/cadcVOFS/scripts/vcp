@@ -93,7 +93,7 @@ if __name__=='__main__':
             logging.error("Can't copy from VOSpace to VOSpace")
             sys.exit(errno.EOPNOTSUPP)
 
-
+	thisDest=dest
         if isdir(source):
             ## To mimic unix fs behaviours if copying a directory and
             ## the destination directory exists then the actual
@@ -110,5 +110,5 @@ if __name__=='__main__':
                 sys.exit(errno.ENOTSUPP)
         elif access(dest,os.F_OK) and isdir(dest):
             ### we're copying into a directory
-            dest=os.path.join(dest,os.path.basename(source))
-        copy(source,dest)
+            thisDest=os.path.join(dest,os.path.basename(source))
+        copy(source,thisDest)

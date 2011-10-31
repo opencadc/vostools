@@ -48,7 +48,7 @@ if len(args) < 1  :
 
 logging.debug("Connecting to vospace using certificate %s" % (opt.certfile))
 
-vos=vos.Client(certFile=opt.certfile,overwrite=opt.overwrite)
+vos=vos.Client(certFile=opt.certfile)
 
 def sizeFormat(size):
     """Format a size value for listing"""
