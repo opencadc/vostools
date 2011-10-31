@@ -601,20 +601,23 @@ class VOFS(LoggingMixIn, Operations):
 
 if __name__ == "__main__":
 
-    import optparse
+    import argparse
 
-    usage="%prog <root> <mountpoint>"
+    #usage="%prog <root> <mountpoint>"
 
-    parser=optparse.OptionParser(usage)
 
-    parser.add_option("-d","--debug",action="store_true")
-    parser.add_option("-v","--verbose",action="store_true")
-    parser.add_option("-f","--foreground",action="store_true",help="Mount the filesystem as a foreground opperation and produce copious amounts of debuging information")
-    parser.add_option("--log",action="store",help="File to store debug log to",default="/tmp/vos.err")
-    parser.add_option("--cache_limit",action="store",type="int",help="upper limit on local diskspace to use for file caching",default=50*2**(10+10+10))
-    parser.add_option("--cache_dir",action="store",type="str",help="local directory to use for file caching",default=os.getenv('HOME',default='.'))
+    parser = argparse.ArgumentParser(description='mount vospace as a filesystem.')
 
-    (opt,args)=parser.parse_args()
+    parser.add_argument("--vospace",help="the VOSpace to mount",default="vos:")
+    parser.add_argument("--mountpoint",help="the mountpoint on the local filesystem",default="/Volumes/vospace")
+    parser.add_argument("-d","--debug",action="store_true")
+    parser.add_argument("-v","--verbose",action="store_true")
+    parser.add_argument("-f","--foreground",action="store_true",help="Mount the filesystem as a foreground opperation and produce copious amounts of debuging information")
+    parser.add_argument("--log",action="store",help="File to store debug log to",default="/tmp/vos.err")
+    parser.add_argument("--cache_limit",action="store",type=int,help="upper limit on local diskspace to use for file caching",default=50*2**(10+10+10))
+    parser.add_argument("--cache_dir",action="store",help="local directory to use for file caching",default=os.getenv('HOME',default='.'))
+
+    opt=parser.parse_args()
 
     if opt.debug:
         logging.basicConfig(level=logging.DEBUG,format="vofs:%(module)s.%(funcName)s %(message)s",filename=opt.log)
@@ -624,15 +627,12 @@ if __name__ == "__main__":
     else:
         logging.basicConfig(level=logging.WARNING,format="vofs:%(module)s.%(funcName)s %(message)s",filename=opt.log)
 
-    if len(args) != 2:
-        parser.error("not enough arguments on the commnad line\n")
-
     logging.debug("Checking connetion to VOSpace ")
     conn=vos.Connection()
     logging.debug("Got a certificate, connections should work")
 
-    root = args[0]
-    mount = args[1]
+    root = opt.vospace
+    mount = opt.mountpoint
     if not os.access(mount,os.F_OK):
 	os.makedirs(mount)
     if platform=="darwin":
