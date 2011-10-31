@@ -110,5 +110,5 @@ if __name__=='__main__':
                 sys.exit(errno.ENOTSUPP)
         elif access(dest,os.F_OK) and isdir(dest):
             ### we're copying into a directory
-            thisDestest=os.path.join(dest,os.path.basename(source))
+            thisDest=os.path.join(dest,os.path.basename(source))
         copy(source,thisDest)
