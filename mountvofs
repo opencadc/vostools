@@ -609,7 +609,7 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser(description='mount vospace as a filesystem.')
 
     parser.add_argument("--vospace",help="the VOSpace to mount",default="vos:")
-    parser.add_argument("--mountpoint",help="the mountpoint on the local filesystem",default="/Volumes/vospace")
+    parser.add_argument("--mountpoint",help="the mountpoint on the local filesystem",default="/tmp/vospace")
     parser.add_argument("-d","--debug",action="store_true")
     parser.add_argument("-v","--verbose",action="store_true")
     parser.add_argument("-f","--foreground",action="store_true",help="Mount the filesystem as a foreground opperation and produce copious amounts of debuging information")
