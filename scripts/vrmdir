@@ -7,7 +7,7 @@ import time
 import optparse, os, sys, logging
 
 usage="""
-	vrm vos:/root/node   -- deletes a data node
+	vrmdir vos:/root/node   -- deletes a container node
 """
 
 
@@ -30,10 +30,10 @@ client=vos.Client(certFile=opt.certfile)
 for arg in args:
     if arg[0:4]!="vos:":
        logging.error("%s is not a valid VOSpace handle" % (arg))
-    if client.isfile(arg):
+    if client.isdir(arg):
        logging.info("deleting %s" %(arg))
        client.delete(arg)
-    elif client.isdir(arg):
-       logging.error("%s is a directory" % (arg))
+    elif client.isfile(arg):
+       logging.error("%s is a file" % (arg))
     else:
        logging.error("%s file not found" % (arg))
