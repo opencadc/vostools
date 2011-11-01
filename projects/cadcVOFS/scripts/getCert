@@ -42,7 +42,7 @@ def getCert(certHost='www.cadc-ccda.hia-iha.nrc-cnrc.gc.ca',certfile=None,
     return 
 
 def getUserPassword(host='www.cadc-ccda.hia-iha.nrc-cnrc.gc.ca'):
-    import netrc,getpass,os
+    import netrc,getpass,os,sys
     """"Getting the username/password for host from .netrc filie """
     if os.access(os.path.join(os.environ.get('HOME','/'),".netrc"),os.R_OK):
         auth=netrc.netrc().authenticators(host)
