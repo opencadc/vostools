@@ -615,23 +615,23 @@ class VOFS(LoggingMixIn, Operations):
 
 if __name__ == "__main__":
 
-    import argparse
+    import optparse
 
     #usage="%prog <root> <mountpoint>"
 
 
-    parser = argparse.ArgumentParser(description='mount vospace as a filesystem.')
+    parser = optparse.OptionParser(description='mount vospace as a filesystem.')
 
-    parser.add_argument("--vospace",help="the VOSpace to mount",default="vos:")
-    parser.add_argument("--mountpoint",help="the mountpoint on the local filesystem",default="/tmp/vospace")
-    parser.add_argument("-d","--debug",action="store_true")
-    parser.add_argument("-v","--verbose",action="store_true")
-    parser.add_argument("-f","--foreground",action="store_true",help="Mount the filesystem as a foreground opperation and produce copious amounts of debuging information")
-    parser.add_argument("--log",action="store",help="File to store debug log to",default="/tmp/vos.err")
-    parser.add_argument("--cache_limit",action="store",type=int,help="upper limit on local diskspace to use for file caching",default=50*2**(10+10+10))
-    parser.add_argument("--cache_dir",action="store",help="local directory to use for file caching",default=os.getenv('HOME',default='.'))
+    parser.add_option("--vospace",help="the VOSpace to mount",default="vos:")
+    parser.add_option("--mountpoint",help="the mountpoint on the local filesystem",default="/tmp/vospace")
+    parser.add_option("-d","--debug",action="store_true")
+    parser.add_option("-v","--verbose",action="store_true")
+    parser.add_option("-f","--foreground",action="store_true",help="Mount the filesystem as a foreground opperation and produce copious amounts of debuging information")
+    parser.add_option("--log",action="store",help="File to store debug log to",default="/tmp/vos.err")
+    parser.add_option("--cache_limit",action="store",type=int,help="upper limit on local diskspace to use for file caching",default=50*2**(10+10+10))
+    parser.add_option("--cache_dir",action="store",help="local directory to use for file caching",default=os.getenv('HOME',default='.'))
 
-    opt=parser.parse_args()
+    (opt,args)=parser.parse_args()
     formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
     
     if opt.debug:
