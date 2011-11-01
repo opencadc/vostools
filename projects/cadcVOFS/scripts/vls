@@ -1,4 +1,4 @@
-#!python
+#!/data/local/adriand/Python-2.7.2/python
 
 """vls:  list the contents of a voSpace"""
 import vos
