@@ -1,4 +1,4 @@
-#!python
+#!/data/local/adriand/Python-2.7.2/python
 """Create a directory (ContainerNode) in the VOSpace repositotry"""
 
 
