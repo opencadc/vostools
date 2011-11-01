@@ -56,7 +56,7 @@ class Connection:
             dirName=os.getenv('HOME')
             logging.debug("looking for certificate in %s" % ( dirName))
             if not dirName:
-                raise IOError("Can't find location for certificate file")
+                raise IOError(errno.EEXIST,"HOME is not defined for your environment")
             certDir=os.path.join(dirName,'.ssl')
             logging.debug("looking for certificate in %s" % ( certDir))
             if not os.access(certDir,os.F_OK):
@@ -91,8 +91,8 @@ class Connection:
             else:
                 connection = httplib.HTTPConnection(parts.netloc,timeout=600)
         except httplib.NotConnected:
-	    logging.error("HTTP connection to %s failed " % (parts.netloc))
-            raise IOError("Failed while trying to connect to the VOSpace service")
+	    logging.debug("HTTP connection to %s failed " % (parts.netloc))
+            raise IOError(errno.ENTCONN,"VOSpace connection failed",parts.netloc)
         return connection
 
 
@@ -138,7 +138,7 @@ class Node:
 
         self.type=self.node.get(Node.TYPE)
         if self.type == None:
-            logging.warning("Node type unknown, no node created")
+            logging.debug("Node type unknown, no node created")
             import xml.etree.ElementTree as ET
             logging.debug(ET.dump(self.node))
             return None
@@ -481,7 +481,7 @@ class VOFile:
         logging.debug("status %d for URL %s" % ( self.resp.status,self.url))
         if self.resp.status not in (200, 201, 202, 303, 503):
             logging.debug(self.resp.read())
-            raise IOError(self.resp.status,"unexpected server response %s (%d) for URL %s" % ( self.resp.reason, self.resp.status, self.url))
+            raise IOError(self.resp.status,"unexpected server response %s (%d)" % ( self.resp.reason, self.resp.status),self.url)
 
     def open(self,URL,method):
         """Open a connection to the given URL"""
@@ -527,18 +527,18 @@ class VOFile:
         if self.resp.status == 303:
             URL = self.resp.getheader('Location',None)
             if not URL:
-                raise IOError("Page appears to be missing...")
+                raise IOError(ENOENT,"No Location on redirect",self.url)
             self.open(URL,"GET")
             return self.read(size)
         if self.resp.status == 503:
             ## try again in Retry-After seconds or fail
-            logging.warning("Server is too busy to send %s" % (self.url))
+            logging.debug("Server is too busy to send %s" % (self.url))
             ras=self.resp.getheader("Retry-After",None)
             if not ras:
-                logging.warning("no retry-after in header, so raising error")
-                raise IOError("Server overloaded")
+                logging.debug("no retry-after in header, so raising error")
+                raise IOError(EBUSY,"Server overloaded",self.url)
             ras=int(ras)
-            logging.warning("Retrying in %d seconds" % (int(ras)))
+            logging.debug("Retrying in %d seconds" % (int(ras)))
             time.sleep(int(ras))
             self.open(self.url,"GET")
             return self.read(size)
@@ -548,7 +548,7 @@ class VOFile:
     def write(self,buf):
         """write buffer to the connection"""
         if not self.httpCon or self.closed:
-            raise IOError("no connection to write too")
+            raise IOError(ENOTCONN,"no connection for write",self.url)
         self.httpCon.send('%X\r\n' % len(buf))
         self.httpCon.send(buf+'\r\n')
         return len(buf)
@@ -604,13 +604,19 @@ class Client:
 
     def fixURI(self,uri):
         """given a uri check if the server part is there and if it isn't update that"""
+        from errno import EINVAL
         logging.debug("trying to fix URL: %s" % ( uri))
         if uri[0:4] != "vos:":
             uri=self.rootNode+uri
         parts=urlparse(uri)
         if parts.scheme!="vos":
-            logging.critical("%s This is not a valid vospace URI, no vos:" % (uri))
-            return None
+            raise IOError(EINVAL,"Invalid vospace URI",uri)
+        import re
+        ## Check that path name compiles with the standard
+        filename=os.path.basename(parts.path)
+        if not re.match("^[\_\-\(\)\=\+\!\,\;\:\@\&\*\$\.\w]*$",filename):
+            raise IOError(EINVAL,"Illegal vospace container name",filename)
+
         ## insert the default VOSpace server if none given
         host=parts.netloc
         if not host or host=='':
@@ -687,7 +693,7 @@ class Client:
         if head:
             method="HEAD"
         if not method:
-            raise IOError("Invalid mode (%X) for open" % ( mode))
+            raise IOError(errno.EOPNOTSUPP,"Invalid access mode", mode)
         if URL is None:
             URL=self.getNodeURL(uri, method=method, view=view)
         logging.debug(URL)
