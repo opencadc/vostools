@@ -1,0 +1,32 @@
+cadcVOFS is filesystem client for access the CADC VOSpace webservice.  
+
+This client uses the python binders on the FUSE library.
+
+Requirements: 
+	       A CADC VOSpace account
+	       fuse (likely fuse-devel) installed 
+	       fuse kernel bindings (part of Linux 2.4 and newer)
+	       python2.6 or newer.
+
+There isn't much in here that depends on 2.6.
+
+
+Install:
+
+
+sudo python setup.py install
+
+Usage:
+
+mountvofs vos:VOSPACE /mountPoint
+
+Help:
+mountvofs --help 
+
+options like -v and -d provide lots of feedback.
+
+--- Note: by default mountvofs will create a cache of your VOSpace at
+    the location ${HOME}/vos:VOSPACE where VOSPACE is the name of your
+    VOSpace. You can change this default location and the size of the
+    cache from the command line.
+
