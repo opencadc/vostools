@@ -108,7 +108,7 @@ class Node:
     TYPE  ='{%s}type' % XSINS
     NODES ='{%s}nodes' % VOSNS
     NODE  ='{%s}node' % VOSNS
-    PROPERTIES='{%s}properties' % VOSNS
+    PROPERTIES='{%s}properties' % VOSNS 
     PROPERTY='{%s}property' % VOSNS
     ACCEPTS='{%s}accepts' % VOSNS
     PROVIDES='{%s}provides' % VOSNS
@@ -131,6 +131,7 @@ class Node:
         self.props={}
         self.attr={}
         self.xattr={}
+	self._nodeList = None
         self.update()
         
     def update(self):
@@ -143,7 +144,6 @@ class Node:
             logging.debug(ET.dump(self.node))
             return None
 
-        self.nodeList=self.getNodeList()
         self.uri=self.node.get('uri')
         self.name=os.path.basename(self.uri)
         for propertiesNode in self.node.findall(Node.PROPERTIES):
@@ -201,7 +201,7 @@ class Node:
         st_mode=0
         if node.type=='vos:ContainerNode':
             st_mode |= S_IFDIR
-            self.attr['st_nlink']=len(node.nodeList)+2
+            self.attr['st_nlink']=len(node.getNodeList())+2
         else:
             self.attr['st_nlink']=1
             st_mode |= S_IFREG
@@ -417,16 +417,22 @@ class Node:
 
     def getNodeList(self):
         """Get a list of all the nodes held to by a ContainerNode return a list of Node objects"""
-        nodeList=[]
-        for nodesNode in self.node.findall(Node.NODES):
-            for nodeNode in nodesNode.findall(Node.NODE):
-                nodeList.append(Node(nodeNode))
-        return nodeList
+	if (self._nodeList is None):
+	    self._nodeList=[]
+	    for nodesNode in self.node.findall(Node.NODES):
+		for nodeNode in nodesNode.findall(Node.NODE):
+		    self.addChild(nodeNode)
+        return self._nodeList
+
+    def addChild(self,childEt):
+	childNode = Node(childEt)
+	self._nodeList.append(childNode)
+	return(childNode)
 
     def getInfoList(self,longList=True):
         """Retrieve a list of tupples of (NodeName, Info dict)"""
         infoList={}
-        for node in self.nodeList:
+        for node in self.getNodeList():
             infoList[node.name]=node.getInfo()
         if self.type=="vos:DataNode":
             infoList[self.name]=self.getInfo()
@@ -565,8 +571,8 @@ class VOFile:
 class Client:
     """The Client object does the work"""
 
-    VOServers={'cadc.nrc.ca!vospace': "www.cadc-ccda.hia-iha.nrc-cnrc.gc.ca",
-               'cadc.nrc.ca~vospace': "www.cadc-ccda.hia-iha.nrc-cnrc.gc.ca"}
+    VOServers={'cadc.nrc.ca!vospace': "www.cadc.hia.nrc.gc.ca",
+               'cadc.nrc.ca~vospace': "www.cadc.hia.nrc.gc.ca"}
 
     VOTransfer='https://www.cadc.hia.nrc.gc.ca/vospace/synctrans'
 
@@ -638,14 +644,34 @@ class Client:
 
         target --- a voSpace node in the format vos:/vospaceName/nodeName
         """
-        xmlObj=self.open(uri,os.O_RDONLY)
+        xmlObj=self.open(uri,os.O_RDONLY, limit=0)
         dom=ET.parse(xmlObj)
         logging.debug("%s" %( str(dom)))
-        return Node(dom.getroot())
+        node = Node(dom.getroot())
+	# If this is a container node and the nodlist has not already been set, try to load the children.
+	# this would be better deferred until the children are actually needed, however that would require
+	# access to a connection when the children are accessed, and thats not easy.
+	if (node.isdir() and len(node.getNodeList()) == 0):
+	    logging.debug("Loading children")
+	    nextURI = None
+	    again = True
+	    while again:
+		again = False
+		getChildrenXMLDoc=self.open(uri,os.O_RDONLY, limit=500,nextURI=nextURI)
+		getChildrenDOM = ET.parse(getChildrenXMLDoc)
+		for nodesNode in getChildrenDOM.findall(Node.NODES):
+		    for child in nodesNode.findall(Node.NODE):
+			if child.get('uri') != nextURI:
+			    childNode = node.addChild(child)
+			    nextURI = childNode.uri
+			    logging.debug("added child %s" % childNode.uri)
+			    again = True
+	return(node)
                     
 
-    def getNodeURL(self,uri,protocol="https", method='GET', view=None):            
+    def getNodeURL(self,uri,protocol="https", method='GET', view=None, limit=0, nextURI=None):            
         """Split apart the node string into parts and return the correct URL for this node"""
+	import urllib
 
         uri   = self.fixURI(uri)
         parts = urlparse(uri)
@@ -660,12 +686,18 @@ class Client:
             return "%s://%s/data/pub/vospace/%s" % (protocol, server,parts.path.strip('/'))
 
         ### this is a GET so we might have to stick some data onto the URL...
+	fields = {'limit': limit}
         if view is not None:
-            import urllib
-            data="?"+urllib.urlencode({'view': view})
-        else:
-            data=''
-        return "%s://%s/vospace/nodes/%s%s" % ( protocol, server, parts.path.strip('/'), data)
+	    fields['view'] = view
+        if nextURI is not None:
+	    fields['uri'] = nextURI
+        logging.debug("method %s " % method)
+	data="?"+urllib.urlencode(fields)
+        logging.debug("method %s " % method)
+	URL = "%s://%s/vospace/nodes/%s%s" % ( protocol, server, parts.path.strip('/'), data)
+        logging.debug("method %s " % method)
+        logging.debug("Accessing URL %s" % URL)
+	return URL
 
     def move(self,srcURI,destURI):
         """Move srcUri to targetUri"""
@@ -685,7 +717,7 @@ class Client:
         return  False
 
                     
-    def open(self, uri, mode=os.O_RDONLY, view=None, head=False, URL=None):
+    def open(self, uri, mode=os.O_RDONLY, view=None, head=False, URL=None, limit=0, nextURI=None):
         """Connect to URL and PUT contents of src to that connection return transfer status"""
 
         # the URL of the connection depends if we are 'getting', 'putting' or 'posting'  data
@@ -703,7 +735,7 @@ class Client:
         if not method:
             raise IOError(errno.EOPNOTSUPP,"Invalid access mode", mode)
         if URL is None:
-            URL=self.getNodeURL(uri, method=method, view=view)
+            URL=self.getNodeURL(uri, method=method, view=view,limit=limit,nextURI=nextURI)
         logging.debug(URL)
         return VOFile(URL,self.conn,method=method)
 
@@ -730,7 +762,7 @@ class Client:
         """Walk through the directory structure a al os.walk"""
         logging.debug("getting a listing of %s " % ( uri))
         names=[]
-        for node in self.getNode(uri).nodeList:
+        for node in self.getNode(uri).getNodeList():
             names.append(node.name)
         return names
 
