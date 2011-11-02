@@ -63,6 +63,8 @@ if __name__=='__main__':
     parser.add_option("-i","--interrogate",action="store_true",help="Ask before overwriting files")
     parser.add_option("-v","--verbose",action="store_true",help="Verbose output")
     parser.add_option("-d","--debug",action="store_true",help="set this option to get help solving connection issues")
+    parser.add_option("--certfile",help="location of your CADC security certificate file",default=os.path.join(os.getenv("HOME","."),".ssl/cadcproxy.pem"))
+
     name=sys.argv[0]
 
     (opt,args)=parser.parse_args()
@@ -76,7 +78,7 @@ if __name__=='__main__':
         
     logging.basicConfig(level=logLevel,format="%(module)s: %(message)s")
 
-    client=vos.Client()
+    client=vos.Client(certFile=opt.certfile)
     
     dest=args.pop()
 

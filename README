@@ -13,19 +13,8 @@ There isn't much in here that depends on 2.6.
 
 Install:
 
+
 sudo python setup.py install
-
-CERTIFICATES:
-
-The CADC uses certificates for authentication.  For mountvofs to work
-you must have a valid certificate.  There is a convenience routine
-called 'getCert.py' supplied with this package which you can use to
-get a new proxy certificate for use with mountvofs and the other
-commandline tools.  
-
-usage:  getCert.py 10
-
-will retrieve a certificate with a 10 day validity period.  If you don't supply a number a 2 day certificate is pulled.  By default this certiciate is writen to ${HOME}/.ssl/cadcproxy.pem.
 
 Usage:
 
