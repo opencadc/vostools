@@ -491,7 +491,6 @@ class VOFile:
         self.httpCon = self.connector.getConnection(URL)
         if self.timeout < 0 : 
 	    self.timeout=time.time()
-	    import httplib
         try:
             self.httpCon.connect()
         #except ssl.SSLError as e:

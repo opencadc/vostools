@@ -1,4 +1,4 @@
-#!/data/local/adriand/Python-2.7.2/python
+#!python
 """copy files from / to vospace directly without using the FUSE layer"""
 
 def isdir(filename):
