@@ -257,7 +257,7 @@ class VOFS(LoggingMixIn, Operations):
         self.node[path]=node
         self.attr[path]=node.attr
         if self.node[path].isdir():
-            for node in self.node[path].nodeList:
+            for node in self.node[path].getNodeList():
                 npath=os.path.join(path,node.name)
                 self.node[npath]=node
                 self.attr[npath]=node.attr
@@ -394,7 +394,7 @@ class VOFS(LoggingMixIn, Operations):
 
     def readdir(self, path, fh):
         """Send a list of entried in this directory"""
-        return ['.','..'] + [e.name.encode('utf-8') for e in self.getNode(path,force=True).nodeList ]
+        return ['.','..'] + [e.name.encode('utf-8') for e in self.getNode(path,force=True).getNodeList() ]
 
     def release(self, path, fh):
         """Close the file, but if this was a holding spot for writes, then write the file to the node"""
@@ -515,7 +515,7 @@ class VOFS(LoggingMixIn, Operations):
         node=self.getNode(path,force=True)
         #if not node.isdir():
         #    raise FuseOSError(ENOTDIR)
-        #if len(node.nodeList)>0:
+        #if len(node.getNodeList())>0:
         #    raise FuseOSError(ENOTEMPTY)
         fname=os.path.normpath(self.cache_dir+path)
         if os.access(fname,os.F_OK):
@@ -540,7 +540,7 @@ class VOFS(LoggingMixIn, Operations):
         sfs['f_blocks']=int(bytes/block_size)
         sfs['f_bfree']=int(free/block_size)
         sfs['f_bavail']=int(free/block_size)
-        sfs['f_files']=len(node.nodeList)
+        sfs['f_files']=len(node.getNodeList())
         sfs['f_ffree']=2*10
         sfs['f_favail']=2*10
         sfs['f_flags']=0
@@ -630,6 +630,7 @@ if __name__ == "__main__":
     parser.add_option("--log",action="store",help="File to store debug log to",default="/tmp/vos.err")
     parser.add_option("--cache_limit",action="store",type=int,help="upper limit on local diskspace to use for file caching",default=50*2**(10+10+10))
     parser.add_option("--cache_dir",action="store",help="local directory to use for file caching",default=os.getenv('HOME',default='.'))
+    parser.add_argument("--certfile",help="location of your CADC security certificate file",default=os.path.join(os.getenv("HOME","."),".ssl/cadcproxy.pem"))
 
     (opt,args)=parser.parse_args()
     formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
@@ -643,7 +644,7 @@ if __name__ == "__main__":
         logging.basicConfig(level=logging.ERROR,format="vofs:%(module)s.%(funcName)s %(message)s",filename=opt.log)
 
     logging.debug("Checking connetion to VOSpace ")
-    conn=vos.Connection()
+    conn=vos.Connection(certfile=opt.certfile)
     logging.debug("Got a certificate, connections should work")
 
     root = opt.vospace
