@@ -344,7 +344,7 @@ class Node:
         if not properties.has_key('type'):
             import mimetypes
             properties['type']=mimetypes.guess_type(uri)[0]
-            logger.debug("set type to %s" % (properties['type']))
+            logging.debug("set type to %s" % (properties['type']))
         propertiesNode=ET.SubElement(node,Node.PROPERTIES)
         for property in properties.keys():
             if not properties[property]==None :
