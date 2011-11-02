@@ -1,4 +1,4 @@
-#!python
+#!/usr/bin/env python
 
 """vls:  list the contents of a voSpace"""
 import vos
