@@ -1,4 +1,4 @@
-#!python
+#!/usr/bin/env python
 """copy files from / to vospace directly without using the FUSE layer"""
 
 def isdir(filename):

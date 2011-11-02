@@ -1,4 +1,4 @@
-#!python
+#!/usr/bin/env python
 
 """vls:  list the contents of a voSpace"""
 import vos
@@ -91,6 +91,7 @@ for node in args:
     try:
        infoList= vos.getNode(node).getInfoList()
     except:
+       raise
        sys.exit(0)
         
     if not len(infoList)>0:
