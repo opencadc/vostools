@@ -13,6 +13,7 @@ import os
 import vos
 from os import O_RDONLY, O_WRONLY, O_RDWR, O_APPEND
 import logging
+READBUF=8192
 
 def flag2mode(flags):
     md = {O_RDONLY: 'r', O_WRONLY: 'w', O_RDWR: 'w+'}
@@ -193,9 +194,8 @@ class VOFS(LoggingMixIn, Operations):
         node=self.getNode(path)
         w=self.client.open(node.uri,'w')
         os.lseek(fh,0,0)
-        bufsize=2**33
         while True:
-            buf=os.read(fh,bufsize)
+            buf=os.read(fh,READBUF)
             logging.debug("Writing %d bytes to %s" % (len(buf), path))
             if not buf:
                 break
@@ -270,7 +270,10 @@ class VOFS(LoggingMixIn, Operations):
     def getattr(self, path, fh=None):
         """Build some attributes for this file, we have to make-up some stuff"""
 	if not path in self.attr:
-            node=self.getNode(path)
+            try:
+                node=self.client.getNode(path,limit=0)
+            except IOError as e:
+                raise FuseOSError(e.errno)
 	    self.attr[path]=node.attr
             logging.debug("Got %s for %s" % (node, path))
         atime=self.attr.get('st_atime',time.time())
@@ -280,7 +283,10 @@ class VOFS(LoggingMixIn, Operations):
             ### the modification/change times are after the last access
             ### so we should access this VOSpace node again.
             logging.debug("Getting node details from getattr for path %s" % ( path))
-            node=self.getNode(path,force=True)
+	    try:
+               node=self.client.getNode(path,limit=0)
+	    except IOError as e:
+               raise FuseOSError(e.errno)
             self.attr[path]=node.attr
 	    #self.attr[path].update(self.getNode(path).attr)
         return self.attr[path]
@@ -370,7 +376,7 @@ class VOFS(LoggingMixIn, Operations):
             r=self.client.open(path,mode=os.O_RDONLY,view="data")
             fpos=0
             while True:
-                buf=r.read(2**(10+10))
+                buf=r.read(READBUF)
                 logging.debug("Read buffer length %s from %s" % ( len(buf), self.getNode(self.getPath(fh)).name)) 
                 if not buf:
                     break
@@ -407,7 +413,7 @@ class VOFS(LoggingMixIn, Operations):
                 w=self.client.open(path,os.O_WRONLY)
                 os.lseek(fh,0,0)
                 while True:
-                    buf=os.read(fh,2**(10+10))
+                    buf=os.read(fh,READBUF)
                     logging.debug("Writing %d bytes to %s" % (len(buf), path))
                     if not buf:
                         break
@@ -557,9 +563,8 @@ class VOFS(LoggingMixIn, Operations):
             except:
                 raise FuseOSError(EIO)
             fpos=0
-            bufsize=4096
             while True:
-                buf=r.read(bufsize)
+                buf=r.read(READBUF)
                 if not buf:
                     break
                 chunk=min(length-fpos,bufsize) 
@@ -630,7 +635,7 @@ if __name__ == "__main__":
     parser.add_option("--log",action="store",help="File to store debug log to",default="/tmp/vos.err")
     parser.add_option("--cache_limit",action="store",type=int,help="upper limit on local diskspace to use for file caching",default=50*2**(10+10+10))
     parser.add_option("--cache_dir",action="store",help="local directory to use for file caching",default=os.getenv('HOME',default='.'))
-    parser.add_argument("--certfile",help="location of your CADC security certificate file",default=os.path.join(os.getenv("HOME","."),".ssl/cadcproxy.pem"))
+    parser.add_option("--certfile",help="location of your CADC security certificate file",default=os.path.join(os.getenv("HOME","."),".ssl/cadcproxy.pem"))
 
     (opt,args)=parser.parse_args()
     formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
