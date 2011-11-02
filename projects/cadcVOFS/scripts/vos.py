@@ -12,7 +12,10 @@ import sys
 import os
 import errno
 import xml.etree.ElementTree as ET
+BUFSIZE=8192
 
+SERVER="www.cadc.hia.nrc.gc.ca"
+### SERVER="scapa.cadc.dao.nrc.ca"
 
 class urlparse:
     """Break the URL into parts.
@@ -39,13 +42,11 @@ class urlparse:
 class Connection:
     """Class to hold and act on the X509 certificate"""
 
-    def __init__(self,credServerURL="http://www.cadc.hia.nrc.gc.ca/cred/proxyCert",
-                 certfile=None,save=True,data={'daysValid': 1}):
+    def __init__(self, certfile=None):
         """Setup the Certificate for later usage
 
         cerdServerURL --- the location of the cadc proxy certificate server
         certfile      --- where to store the certificate, if None then ${HOME}/.ssl or a temporary filename
-        save          --- save the certificate for later use? if not then use a tempfilename.
 
         The user must supply a valid certificate. 
         """
@@ -343,6 +344,7 @@ class Node:
         if not properties.has_key('type'):
             import mimetypes
             properties['type']=mimetypes.guess_type(uri)[0]
+            logger.debug("set type to %s" % (properties['type']))
         propertiesNode=ET.SubElement(node,Node.PROPERTIES)
         for property in properties.keys():
             if not properties[property]==None :
@@ -489,6 +491,8 @@ class VOFile:
             if self.resp.status == 404:
                 ### file not found
                 raise IOError(errno.ENOENT,"Node not found",self.url)
+            if self.resp.status == 401:
+	        raise IOError(errno.EACCES,"Not authorized",self.url)
             logging.debug(self.resp.read())
             raise IOError(self.resp.status,"unexpected server response %s (%d)" % ( self.resp.reason, self.resp.status),self.url)
 
@@ -571,10 +575,10 @@ class VOFile:
 class Client:
     """The Client object does the work"""
 
-    VOServers={'cadc.nrc.ca!vospace': "www.cadc.hia.nrc.gc.ca",
-               'cadc.nrc.ca~vospace': "www.cadc.hia.nrc.gc.ca"}
+    VOServers={'cadc.nrc.ca!vospace': SERVER,
+               'cadc.nrc.ca~vospace': SERVER}
 
-    VOTransfer='https://www.cadc.hia.nrc.gc.ca/vospace/synctrans'
+    VOTransfer='https://%s/vospace/synctrans' % ( SERVER)
 
     ### reservered vospace properties, not to be used for extended property setting
     vosProperties=["description", "type", "encoding", "MD5", "length", "creator","date",
@@ -604,7 +608,7 @@ class Client:
     
         totalBytes=0
         while True:
-            buf=fin.read()
+            buf=fin.read(BUFSIZE)
             logging.debug("Read %d bytes from %s" % ( len(buf),src))
             if len(buf)==0:
                 break
@@ -639,10 +643,11 @@ class Client:
         return "%s://%s/%s" % (parts.scheme, host, path)
 
     
-    def getNode(self,uri):
+    def getNode(self,uri,limit=500):
         """connect to VOSpace and download the definition of vospace node
 
-        target --- a voSpace node in the format vos:/vospaceName/nodeName
+        uri   --- a voSpace node in the format vos:/vospaceName/nodeName
+        limit --- load children nodes in batches of limit
         """
         xmlObj=self.open(uri,os.O_RDONLY, limit=0)
         dom=ET.parse(xmlObj)
@@ -657,7 +662,7 @@ class Client:
 	    again = True
 	    while again:
 		again = False
-		getChildrenXMLDoc=self.open(uri,os.O_RDONLY, limit=500,nextURI=nextURI)
+		getChildrenXMLDoc=self.open(uri,os.O_RDONLY, limit=limit,nextURI=nextURI)
 		getChildrenDOM = ET.parse(getChildrenXMLDoc)
 		for nodesNode in getChildrenDOM.findall(Node.NODES):
 		    for child in nodesNode.findall(Node.NODE):
@@ -718,7 +723,7 @@ class Client:
 
                     
     def open(self, uri, mode=os.O_RDONLY, view=None, head=False, URL=None, limit=0, nextURI=None):
-        """Connect to URL and PUT contents of src to that connection return transfer status"""
+        """Connect to the uri as a VOFile object"""
 
         # the URL of the connection depends if we are 'getting', 'putting' or 'posting'  data
         method=None
