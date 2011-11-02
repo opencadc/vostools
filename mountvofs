@@ -4,6 +4,7 @@
 from sys import argv, exit, platform
 import time
 from fuse import FUSE, Operations, FuseOSError, LoggingMixIn
+import fuse
 import tempfile
 from threading import Lock
 from errno import EACCES, EIO, ENOENT, EISDIR, ENOTDIR, ENOTEMPTY, EPERM, EEXIST, ENODATA
@@ -138,11 +139,20 @@ class VOFS(LoggingMixIn, Operations):
         
     def create(self, path, flags):
         """Create a node. Currently ignors the ownership mode"""
+        import re,os
+
         logging.debug("Creating a node: %s with mode %s" % (path, os.O_CREAT))
 
         # Create is handle by the client. 
         # This should fail if the basepath doesn't exist
-        self.client.open(path,os.O_CREAT).close()
+        try:
+            self.client.open(path,os.O_CREAT).close()
+        except IOError as e:
+            loggin.debug(str(e))
+            f=FuseOSError(e.errno)
+            f.strerror=e.strerror
+            f.message=e.strerror
+            raise f
 
         node = self.getNode(path)
         parent=  self.getNode(os.path.dirname(path))
@@ -237,8 +247,12 @@ class VOFS(LoggingMixIn, Operations):
         try:
             logging.debug("requesting node %s from VOSpace" % ( path))
             node=self.client.getNode(path)
-        except IOError:
-            raise FuseOSError(ENOENT)
+        except IOError as e:
+            logging.debug(str(e))
+            f = FuseOSError(e.errno)
+            f.strerror=e.strerror
+            f.message=e.strerror
+            raise f
 
         self.node[path]=node
         self.attr[path]=node.attr
@@ -368,8 +382,9 @@ class VOFS(LoggingMixIn, Operations):
             self.fh[fh]['cached']=fpos
             w.flush()
           except IOError as e:
-            logging.error("%s" % ( e)) 
-            raise FuseOSError(EACCES)
+	    f=FuseOSError(e.errno)
+	    f.strerror=e.strerror
+            raise f
           finally:
             w.close()
             r.close()
@@ -587,7 +602,6 @@ class VOFS(LoggingMixIn, Operations):
             try:
               os.utime(fname,times)
             except Exception as e:
-              logging.error("%s" % ( e)) 
               raise e
         logging.debug("Attempting to set the st_mtime and st_atime attributes")
         self.getattr(path)['st_mtime']=times[1]
@@ -601,31 +615,32 @@ class VOFS(LoggingMixIn, Operations):
 
 if __name__ == "__main__":
 
-    import argparse
+    import optparse
 
     #usage="%prog <root> <mountpoint>"
 
 
-    parser = argparse.ArgumentParser(description='mount vospace as a filesystem.')
+    parser = optparse.OptionParser(description='mount vospace as a filesystem.')
 
-    parser.add_argument("--vospace",help="the VOSpace to mount",default="vos:")
-    parser.add_argument("--mountpoint",help="the mountpoint on the local filesystem",default="/tmp/vospace")
-    parser.add_argument("-d","--debug",action="store_true")
-    parser.add_argument("-v","--verbose",action="store_true")
-    parser.add_argument("-f","--foreground",action="store_true",help="Mount the filesystem as a foreground opperation and produce copious amounts of debuging information")
-    parser.add_argument("--log",action="store",help="File to store debug log to",default="/tmp/vos.err")
-    parser.add_argument("--cache_limit",action="store",type=int,help="upper limit on local diskspace to use for file caching",default=50*2**(10+10+10))
-    parser.add_argument("--cache_dir",action="store",help="local directory to use for file caching",default=os.getenv('HOME',default='.'))
+    parser.add_option("--vospace",help="the VOSpace to mount",default="vos:")
+    parser.add_option("--mountpoint",help="the mountpoint on the local filesystem",default="/tmp/vospace")
+    parser.add_option("-d","--debug",action="store_true")
+    parser.add_option("-v","--verbose",action="store_true")
+    parser.add_option("-f","--foreground",action="store_true",help="Mount the filesystem as a foreground opperation and produce copious amounts of debuging information")
+    parser.add_option("--log",action="store",help="File to store debug log to",default="/tmp/vos.err")
+    parser.add_option("--cache_limit",action="store",type=int,help="upper limit on local diskspace to use for file caching",default=50*2**(10+10+10))
+    parser.add_option("--cache_dir",action="store",help="local directory to use for file caching",default=os.getenv('HOME',default='.'))
 
-    opt=parser.parse_args()
-
+    (opt,args)=parser.parse_args()
+    formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
+    
     if opt.debug:
         logging.basicConfig(level=logging.DEBUG,format="vofs:%(module)s.%(funcName)s %(message)s",filename=opt.log)
         forground=True
     elif opt.verbose:
         logging.basicConfig(level=logging.INFO,format="vofs:%(module)s.%(funcName)s %(message)s",filename=opt.log)
     else:
-        logging.basicConfig(level=logging.WARNING,format="vofs:%(module)s.%(funcName)s %(message)s",filename=opt.log)
+        logging.basicConfig(level=logging.ERROR,format="vofs:%(module)s.%(funcName)s %(message)s",filename=opt.log)
 
     logging.debug("Checking connetion to VOSpace ")
     conn=vos.Connection()
