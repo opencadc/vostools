@@ -480,6 +480,9 @@ class VOFile:
         """check the response status"""
         logging.debug("status %d for URL %s" % ( self.resp.status,self.url))
         if self.resp.status not in (200, 201, 202, 303, 503):
+            if self.resp.status == 404:
+                ### file not found
+                raise IOError(errno.ENOENT,"Node not found",self.url)
             logging.debug(self.resp.read())
             raise IOError(self.resp.status,"unexpected server response %s (%d)" % ( self.resp.reason, self.resp.status),self.url)
 
@@ -511,7 +514,12 @@ class VOFile:
             raise
         self.closed=False
         self.httpCon.putrequest(method,URL)
-        self.httpCon.putheader("Content-Type","text/xml")
+        if method in ["PUT", "POST", "DELETE"]:
+            contentType="text/xml"
+            if method=="PUT":
+                import mimetypes
+                contentType=mimetypes.guess_type(URL)[0]
+            self.httpCon.putheader("Content-Type",contentType)
         self.httpCon.putheader("Transfer-Encoding",'chunked')
         self.httpCon.putheader("Accept", "*/*")
         self.httpCon.endheaders()
@@ -527,7 +535,7 @@ class VOFile:
         if self.resp.status == 303:
             URL = self.resp.getheader('Location',None)
             if not URL:
-                raise IOError(ENOENT,"No Location on redirect",self.url)
+                raise IOError(errno.ENOENT,"No Location on redirect",self.url)
             self.open(URL,"GET")
             return self.read(size)
         if self.resp.status == 503:
@@ -536,7 +544,7 @@ class VOFile:
             ras=self.resp.getheader("Retry-After",None)
             if not ras:
                 logging.debug("no retry-after in header, so raising error")
-                raise IOError(EBUSY,"Server overloaded",self.url)
+                raise IOError(errno.EBUSY,"Server overloaded",self.url)
             ras=int(ras)
             logging.debug("Retrying in %d seconds" % (int(ras)))
             time.sleep(int(ras))
@@ -548,7 +556,7 @@ class VOFile:
     def write(self,buf):
         """write buffer to the connection"""
         if not self.httpCon or self.closed:
-            raise IOError(ENOTCONN,"no connection for write",self.url)
+            raise IOError(errno.ENOTCONN,"no connection for write",self.url)
         self.httpCon.send('%X\r\n' % len(buf))
         self.httpCon.send(buf+'\r\n')
         return len(buf)
@@ -610,12 +618,12 @@ class Client:
             uri=self.rootNode+uri
         parts=urlparse(uri)
         if parts.scheme!="vos":
-            raise IOError(EINVAL,"Invalid vospace URI",uri)
+            raise IOError(errno.EINVAL,"Invalid vospace URI",uri)
         import re
         ## Check that path name compiles with the standard
         filename=os.path.basename(parts.path)
         if not re.match("^[\_\-\(\)\=\+\!\,\;\:\@\&\*\$\.\w]*$",filename):
-            raise IOError(EINVAL,"Illegal vospace container name",filename)
+            raise IOError(errno.EINVAL,"Illegal vospace container name",filename)
 
         ## insert the default VOSpace server if none given
         host=parts.netloc
