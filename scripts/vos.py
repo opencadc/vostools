@@ -595,9 +595,9 @@ class Client:
         self.rootNode=rootNode
         return
 
-    def copy(self,src,dest):
+    def copy(self,src,dest,sendMD5=False):
         """copy to/from vospace"""
-        import os
+        import os,hashlib
     
         if src[0:4]=="vos:":
             fin=self.open(src,os.O_RDONLY,view='data')
@@ -607,16 +607,20 @@ class Client:
             fout=self.open(dest,os.O_WRONLY)
     
         totalBytes=0
+        md5=hashlib.md5()
         while True:
             buf=fin.read(BUFSIZE)
             logging.debug("Read %d bytes from %s" % ( len(buf),src))
             if len(buf)==0:
                 break
             fout.write(buf)
+            md5.update(buf)
             logging.debug("Wrote %d bytes to %s" % ( len(buf),dest))            
             totalBytes+=len(buf)
         fout.close()
         fin.close()
+        if sendMD5:
+            return md5.hexdigest()
         return totalBytes
 
 
