@@ -1,5 +1,5 @@
 #!/usr/bin/env python
-"""A script for sending files to VOSpace via multiple connection threads."""
+"""A script for sending files to VOSpace via multiple connection streams."""
 
 import vos, sys
 import threading, Queue
@@ -53,8 +53,8 @@ class ThreadCopy(threading.Thread):
         self.queue.put((src,dest))
 
 import os
-def main(srcFiles,destDir,nthreads):
-  for i in range(nthreads):
+def main(srcFiles,destDir,nstreams):
+  for i in range(nstreams):
     t=ThreadCopy(queue)
     t.setDaemon(True)
     t.start()
@@ -73,15 +73,15 @@ if __name__=='__main__':
   parser=optparse.OptionParser(usage=usage)
   parser.add_option('--verbose','-v',action="store_true",help='run in verbose mode')
   parser.add_option('--ignore-checksum',action="store_true",help='dont check MD5 sum, forces transfer')
-  parser.add_option('--threads',type=int,help="Number of threads to run (MAX: 10)",default=1)
+  parser.add_option('--streams',type=int,help="Number of streams to run (MAX: 10)",default=1)
   (opt,args)=parser.parse_args()
   if len(args)<2:
     parser.error("requires one or more source files and a single destination directory")
 
-  if opt.threads>10:
-    parser.error("Maximum of 10 threads exceeded")
+  if opt.streams>10:
+    parser.error("Maximum of 10 streams exceeded")
 
   destDir=args.pop()
   if not vos.Client().isdir(destDir):
     parser.error("Desitnation must be an existing VOSpace directory")
-  main(args,destDir,opt.threads)
+  main(args,destDir,opt.streams)

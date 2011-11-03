@@ -67,7 +67,7 @@ class VOFS(LoggingMixIn, Operations):
         self.root = root
         # VOSpace is a bit slow so we do some cahcing.
         self.cache_limit=cache_limit
-        self.cache_dir = os.path.normpath(os.path.join(cache_dir,root))
+        self.cache_dir = os.path.normpath(os.path.join(cache_dir))
         if not os.access(self.cache_dir,os.F_OK):
             os.makedirs(self.cache_dir)
 
@@ -634,9 +634,8 @@ if __name__ == "__main__":
     parser.add_option("-f","--foreground",action="store_true",help="Mount the filesystem as a foreground opperation and produce copious amounts of debuging information")
     parser.add_option("--log",action="store",help="File to store debug log to",default="/tmp/vos.err")
     parser.add_option("--cache_limit",action="store",type=int,help="upper limit on local diskspace to use for file caching",default=50*2**(10+10+10))
-    parser.add_option("--cache_dir",action="store",help="local directory to use for file caching",default=os.getenv('HOME',default='.'))
+    parser.add_option("--cache_dir",action="store",help="local directory to use for file caching",default=None)
     parser.add_option("--certfile",help="location of your CADC security certificate file",default=os.path.join(os.getenv("HOME","."),".ssl/cadcproxy.pem"))
-
     (opt,args)=parser.parse_args()
     formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
     
@@ -654,6 +653,8 @@ if __name__ == "__main__":
 
     root = opt.vospace
     mount = opt.mountpoint
+    if opt.cache_dir is None:
+	opt.cache_dir=os.path.normpath(os.path.join(os.getenv('HOME',default='.'),root.replace(":","_")))
     if not os.access(mount,os.F_OK):
 	os.makedirs(mount)
     if platform=="darwin":
