@@ -30,7 +30,7 @@ class ThreadCopy(threading.Thread):
       (src,dest)=self.queue.get()
       now = datetime.datetime.now()
       if self.client.isdir(dest):
-        sys.stderr.wirte("Attempting to overwrite directory at %s, skipping\n" %src)
+        sys.stderr.write("Attempting to overwrite directory at %s, skipping\n" %src)
         self.queue.task_done()
         continue
       if self.client.isfile(dest):
