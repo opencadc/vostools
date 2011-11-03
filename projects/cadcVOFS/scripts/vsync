@@ -1,0 +1,85 @@
+#!/usr/bin/env python
+"""A script for sending files to VOSpace via multiple connection threads."""
+
+import vos, sys
+import threading, Queue
+import datetime, optparse
+
+queue=Queue.Queue()
+        
+class ThreadCopy(threading.Thread):
+  def __init__(self,queue):
+    super( ThreadCopy, self ).__init__()
+    self.client=vos.Client()
+    self.queue=queue
+
+  def fileMD5(self,filename,block_size=8192):
+    import hashlib
+    md5 = hashlib.md5()
+    f=open(filename)
+    while True:
+      data = f.read(block_size)
+      if not data:
+        break
+      md5.update(data)
+    f.close()
+    return md5.hexdigest()   
+
+  def run(self):
+    while True:
+      (src,dest)=self.queue.get()
+      now = datetime.datetime.now()
+      if self.client.isdir(dest):
+        sys.stderr.wirte("Attempting to overwrite directory at %s, skipping\n" %src)
+        self.queue.task_done()
+        continue
+      if self.client.isfile(dest):
+        """Check if the file is the same"""
+        if not opt.ignore_checksum:
+          srcMD5=self.fileMD5(src)
+          node=self.client.getNode(dest)
+          destMD5=node.props.get('MD5',None)
+          if srcMD5==destMD5:
+            if opt.verbose:
+              print "skipping file (matches server copy): %s" % (src) 
+            self.queue.task_done()
+            continue
+      if opt.verbose:
+        print "%s -> %s" % (src,dest)
+      self.client.copy(src,dest)
+      self.queue.task_done()
+ 
+
+import os
+def main(srcFiles,destDir,nthreads):
+  for i in range(nthreads):
+    t=ThreadCopy(queue)
+    t.setDaemon(True)
+    t.start()
+
+  for src in srcFiles:
+    if not os.path.isfile(src):
+      continue
+    
+    dest=os.path.normpath(os.path.join(destDir,src))
+    queue.put((src,dest))
+
+  queue.join()
+
+if __name__=='__main__':
+  usage = "%prog [options] files vos:Destination/"
+  parser=optparse.OptionParser(usage=usage)
+  parser.add_option('--verbose','-v',action="store_true",help='run in verbose mode')
+  parser.add_option('--ignore-checksum',action="store_true",help='dont check MD5 sum, forces transfer')
+  parser.add_option('--threads',type=int,help="Number of threads to run (MAX: 10)",default=1)
+  (opt,args)=parser.parse_args()
+  if len(args)<2:
+    parser.error("requires one or more source files and a single destination directory")
+
+  if opt.threads>10:
+    parser.error("Maximum of 10 threads exceeded")
+
+  destDir=args.pop()
+  if not vos.Client().isdir(destDir):
+    parser.error("Desitnation must be an existing VOSpace directory")
+  main(args,destDir,opt.threads)
