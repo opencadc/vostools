@@ -33,9 +33,9 @@ class ThreadCopy(threading.Thread):
         sys.stderr.write("Attempting to overwrite directory at %s, skipping\n" %src)
         self.queue.task_done()
         continue
+      srcMD5=self.fileMD5(src)
       if self.client.isfile(dest):
         """Check if the file is the same"""
-        srcMD5=self.fileMD5(src)
         if not opt.ignore_checksum:
           node=self.client.getNode(dest)
           destMD5=node.props.get('MD5',None)
@@ -46,8 +46,9 @@ class ThreadCopy(threading.Thread):
             continue
       if opt.verbose:
         print "%s -> %s" % (src,dest)
-      destMD5=self.client.copy(src,dest,sendMD5=True)
+      self.client.copy(src,dest)
       self.queue.task_done()
+      destMD5=self.client.getNode(dest).props.get('MD5',None)
       if destMD5!=srcMD5:
         sys.stderr.write("Problem writing to vospace. requeuing: %s" % (src))
         self.queue.put((src,dest))
@@ -82,6 +83,14 @@ if __name__=='__main__':
     parser.error("Maximum of 10 streams exceeded")
 
   destDir=args.pop()
+  ## Currently we don't create nodes in sync and we don't sync onto files
   if not vos.Client().isdir(destDir):
     parser.error("Desitnation must be an existing VOSpace directory")
-  main(args,destDir,opt.streams)
+
+  filelist=[]
+  for filename in args:
+    if os.path.isdir(filename):
+      filelist.extend(os.listdir(filename))
+    elif os.path.isfile(filename):
+      filelist.append(filename)
+  main(filelist,destDir,opt.streams)
