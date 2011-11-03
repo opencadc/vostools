@@ -35,8 +35,8 @@ class ThreadCopy(threading.Thread):
         continue
       if self.client.isfile(dest):
         """Check if the file is the same"""
+        srcMD5=self.fileMD5(src)
         if not opt.ignore_checksum:
-          srcMD5=self.fileMD5(src)
           node=self.client.getNode(dest)
           destMD5=node.props.get('MD5',None)
           if srcMD5==destMD5:
@@ -46,9 +46,11 @@ class ThreadCopy(threading.Thread):
             continue
       if opt.verbose:
         print "%s -> %s" % (src,dest)
-      self.client.copy(src,dest)
+      destMD5=self.client.copy(src,dest,sendMD5=True)
       self.queue.task_done()
- 
+      if destMD5!=srcMD5:
+        sys.stderr.write("Problem writing to vospace. requeuing: %s" % (src))
+        self.queue.put((src,dest))
 
 import os
 def main(srcFiles,destDir,nthreads):
