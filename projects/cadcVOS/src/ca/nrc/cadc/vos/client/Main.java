@@ -282,7 +282,7 @@ public class Main implements Runnable
         try
         {
             log.debug("target.getPath()" + this.target.getPath());
-            Node n = this.client.getNode(this.target.getPath());
+            Node n = this.client.getNode(this.target.getPath(), "limit=0");
             copyProperties(n);
             this.client.setNode(n);
             log.info("updated properties: " + this.target);
@@ -467,7 +467,7 @@ public class Main implements Runnable
         // has effect when querying the root node
         try
         {
-            Node root = client.getNode("/", "limit=0");
+            Node root = client.getNode("/", "detail=min&limit=0");
             if (((ContainerNode) root).getNodes().size() == 0)
                 serverSupportsPaging = true;
         }
@@ -783,7 +783,7 @@ public class Main implements Runnable
         }
         copyToVOSpace();
         log.debug("copied local file " + source + " to " + this.destination.getPath());
-        Node uploadedNode = this.client.getNode(this.destination.getPath());
+        Node uploadedNode = this.client.getNode(this.destination.getPath(), "limit=0");
         if (uploadedNode == null)
         {
             msg("Failed to upload, keeping local file.");
@@ -805,7 +805,7 @@ public class Main implements Runnable
     private void moveFromVOSpace()
         throws Throwable
     {
-        Node sourceNode = this.client.getNode(this.source.getPath());
+        Node sourceNode = this.client.getNode(this.source.getPath(), "limit=0");
         if (sourceNode instanceof ContainerNode)
         {
             msg("Cannot move containers from VOSpace to local file system.");
@@ -937,7 +937,7 @@ public class Main implements Runnable
         {
             try
             {
-                node = client.getNode(vosuri.getPath());
+                node = client.getNode(vosuri.getPath(), "detail=min&limit=0");
             }
             catch (NodeNotFoundException e)
             {

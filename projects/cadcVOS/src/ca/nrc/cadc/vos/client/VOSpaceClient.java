@@ -165,7 +165,7 @@ public class VOSpaceClient
         initHTTPS(null);
         return sslSocketFactory;
     }
-
+    
     /**
      * Create the specified node. If the parent (container) nodes do not exist, they
      * will also be created.
@@ -174,6 +174,20 @@ public class VOSpaceClient
      * @return the created node
      */
     public Node createNode(Node node)
+    {
+        return this.createNode(node, true);
+    }
+
+    /**
+     * Create the specified node. If the parent (container) nodes do not exist, they
+     * will also be created.
+     * 
+     * @param node
+     * @param checkForDuplicate If true, throw duplicate node exception if node
+     * already exists.
+     * @return the created node
+     */
+    private Node createNode(Node node, boolean checkForDuplicate)
     {
         int responseCode;
         Node rtnNode = null;
@@ -186,7 +200,14 @@ public class VOSpaceClient
                 throw new RuntimeException("parent (root node) not found and cannot create: " + node.getUri());
             try
             {
-                Node p = this.getNode(parentURI.getPath());
+                // check for existence--get the node with minimal content.  get the target child
+                // if we need to check for duplicates.
+                Node p = null;
+                if (checkForDuplicate)
+                    p = this.getNode(parentURI.getPath(), "detail=min&limit=1&uri=" + node.getUri().toString());
+                else
+                    p = this.getNode(parentURI.getPath(), "detail=min&limit=0");
+                
                 log.debug("found parent: " + parentURI);
                 if (p instanceof ContainerNode)
                     parent = (ContainerNode) p;
@@ -198,13 +219,14 @@ public class VOSpaceClient
                 // if parent does not exist, just create it!!
                 log.info("creating parent: " + parentURI);
                 ContainerNode cn = new ContainerNode(parentURI);
-                parent = (ContainerNode) createNode(cn);
+                parent = (ContainerNode) createNode(cn, false);
             }
 
-            // check if already exists: also could fail like this below due to race condition
-            for (Node n : parent.getNodes())
-                if (n.getName().equals(node.getName()))
-                    throw new IllegalArgumentException("DuplicateNode: " + node.getUri().getURIObject().toASCIIString());
+            // check if target already exists: also could fail like this below due to race condition
+            if (checkForDuplicate)
+                for (Node n : parent.getNodes())
+                    if (n.getName().equals(node.getName()))
+                        throw new IllegalArgumentException("DuplicateNode: " + node.getUri().getURIObject().toASCIIString());
 
             URL url = new URL(this.baseUrl + "/nodes" + node.getUri().getPath());
             log.debug("createNode(), URL=" + url);
