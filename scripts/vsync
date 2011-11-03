@@ -41,11 +41,11 @@ class ThreadCopy(threading.Thread):
           destMD5=node.props.get('MD5',None)
           if srcMD5==destMD5:
             if opt.verbose:
-              print "skipping file (matches server copy): %s" % (src) 
+              sys.stdout.write( "skipping file (matches server copy): %s\n" % (src) )
             self.queue.task_done()
             continue
       if opt.verbose:
-        print "%s -> %s" % (src,dest)
+        sys.stdout.write("%s -> %s\n" % (src,dest))
       self.client.copy(src,dest)
       self.queue.task_done()
       destMD5=self.client.getNode(dest).props.get('MD5',None)
@@ -53,44 +53,83 @@ class ThreadCopy(threading.Thread):
         sys.stderr.write("Problem writing to vospace. requeuing: %s" % (src))
         self.queue.put((src,dest))
 
+def mkdirs(dirs):
+  if c.isdir(dirs):
+    return
+
+  (dir,subdir) = os.path.split(dirs)
+
+  if not c.access(dir):
+    mkdirs(dir)
+  if not c.isdir(dir):
+    sys.exit("Part of the path isn't a directy? (%s)" % ( dir))
+  if c.isfile(dirs):
+    sys.exit("Destination has directory where file expected (%s)" % (subdir))
+
+  c.mkdir(dirs)
+
 import os
-def main(srcFiles,destDir,nstreams):
+def copy(source,dest):
+  ## strip down dest until we find a part that exists
+  ## and then build up the path.  Dest should include the filename
+  
+  basename=os.path.dirname(dest)
+  if not c.isdir(basename):
+    mkdirs(basename)
+  queue.put((source,dest))
+                              
+def startStreams(nstreams):
   for i in range(nstreams):
     t=ThreadCopy(queue)
     t.setDaemon(True)
     t.start()
 
-  for src in srcFiles:
-    if not os.path.isfile(src):
-      continue
-    
-    dest=os.path.normpath(os.path.join(destDir,src))
-    queue.put((src,dest))
-
-  queue.join()
+def buildFileList(args):
+  """Build a list of files that should be copied into VOSpace"""
+  filelist=[]
+  for filename in args:
+    if os.path.isdir(filename):
+      for (root,dirs,filenames) in os.walk(filename):
+        for filename in filenames:
+          filelist.append(os.path.join(root,filename))
+        for dirname in dirs:
+          filelist.extend(buildFileList(os.path.join(root,dirname)))
+    elif os.path.isfile(filename):
+      filelist.append(filename)
+  return filelist
 
 if __name__=='__main__':
   usage = "%prog [options] files vos:Destination/"
   parser=optparse.OptionParser(usage=usage)
   parser.add_option('--verbose','-v',action="store_true",help='run in verbose mode')
   parser.add_option('--ignore-checksum',action="store_true",help='dont check MD5 sum, forces transfer')
-  parser.add_option('--streams',type=int,help="Number of streams to run (MAX: 10)",default=1)
+  parser.add_option('--nstreams',type=int,help="Number of streams to run (MAX: 10)",default=1)
   (opt,args)=parser.parse_args()
   if len(args)<2:
     parser.error("requires one or more source files and a single destination directory")
 
-  if opt.streams>10:
+  if opt.nstreams>10:
     parser.error("Maximum of 10 streams exceeded")
 
-  destDir=args.pop()
+  dest=args.pop()
+  if dest[0:4]!="vos:":
+    parser.error("Only allows sync FROM local copy TO VOSpace")
   ## Currently we don't create nodes in sync and we don't sync onto files
-  if not vos.Client().isdir(destDir):
-    parser.error("Desitnation must be an existing VOSpace directory")
+  c=vos.Client()
 
-  filelist=[]
-  for filename in args:
-    if os.path.isdir(filename):
-      filelist.extend(os.listdir(filename))
-    elif os.path.isfile(filename):
-      filelist.append(filename)
-  main(filelist,destDir,opt.streams)
+  filelist=buildFileList(args)
+  destIsFile=c.isfile(dest)
+  destIsDir=c.isdir(dest)
+
+  if len(filelist)>1 :
+    if destIsFile:
+      parser.error("Desitnation for multiple files must be a direcotry")
+    if not destIsDir:
+      parser.error("Destination directory must already exist in VOSpace")
+
+  for filename in filelist:
+    if destIsDir:
+      thisDest=os.path.join(dest,filename)
+    copy(filename,thisDest)
+  startStreams(opt.nstreams)
+  queue.join()
