@@ -65,17 +65,16 @@ def mkdirs(dirs):
     sys.exit("Part of the path isn't a directy? (%s)" % ( dir))
   if c.isfile(dirs):
     sys.exit("Destination has directory where file expected (%s)" % (subdir))
-
+  print dirs
   c.mkdir(dirs)
 
 import os
 def copy(source,dest):
   ## strip down dest until we find a part that exists
   ## and then build up the path.  Dest should include the filename
-  
-  basename=os.path.dirname(dest)
-  if not c.isdir(basename):
-    mkdirs(basename)
+  dirname=os.path.dirname(dest)
+  if not c.isdir(dirname):
+    mkdirs(dirname)
   queue.put((source,dest))
                               
 def startStreams(nstreams):
@@ -84,18 +83,14 @@ def startStreams(nstreams):
     t.setDaemon(True)
     t.start()
 
-def buildFileList(args):
+def buildFileList(filename,destRoot=''):
   """Build a list of files that should be copied into VOSpace"""
   filelist=[]
-  for filename in args:
-    if os.path.isdir(filename):
-      for (root,dirs,filenames) in os.walk(filename):
-        for filename in filenames:
-          filelist.append(os.path.join(root,filename))
-        for dirname in dirs:
-          filelist.extend(buildFileList(os.path.join(root,dirname)))
-    elif os.path.isfile(filename):
-      filelist.append(filename)
+  for (root,dirs,filenames) in os.walk(filename):
+    for thisfilename in filenames:
+      filelist.append((os.path.join(root,thisfilename),os.path.join(destRoot,thisfilename)))
+    for dirname in dirs:
+      filelist.extend(buildFileList(os.path.join(root,dirname),destRoot=os.path.join(thisRoot,dirname)))
   return filelist
 
 if __name__=='__main__':
@@ -117,7 +112,19 @@ if __name__=='__main__':
   ## Currently we don't create nodes in sync and we don't sync onto files
   c=vos.Client()
 
-  filelist=buildFileList(args)
+  ### build a complete file list given all the things on the command line
+  filelist=[]
+  for filename in args:
+    if dest[-1]=="/" :
+      thisRoot=os.path.join(dest,filename)
+    if os.path.isdir(filename):
+      filelist.extend(buildFileList(filename,destRoot=thisRoot))
+    elif os.path.isfile(filename):
+      if c.isdir(thisRoot):
+        thisRoot=os.path.join(thisRoot,os.path.basename(filename))
+      filelist.append((filename,thisRoot))
+    else:
+      sys.stderr.write("%s: No such file or directory.\n" % ( filename))
   destIsFile=c.isfile(dest)
   destIsDir=c.isdir(dest)
 
@@ -127,9 +134,7 @@ if __name__=='__main__':
     if not destIsDir:
       parser.error("Destination directory must already exist in VOSpace")
 
-  for filename in filelist:
-    if destIsDir:
-      thisDest=os.path.join(dest,filename)
-    copy(filename,thisDest)
+  for (src,dest) in filelist:
+    copy(src,dest)
   startStreams(opt.nstreams)
   queue.join()
