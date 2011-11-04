@@ -73,8 +73,10 @@ set VCP_CMD = "$CADC_ROOT/scripts/vcp"
 set VLS_CMD = "$CADC_ROOT/scripts/vls"
 set VMKDIR_CMD = "$CADC_ROOT/scripts/vmkdir"
 set VRM_CMD = "$CADC_ROOT/scripts/vrm"
+set VSYNC_CMD = "$CADC_ROOT/scripts/vsync"
 set TEST1_CERT = "--certfile=/usr/cadc/dev/admin/test-certificates/x509_CADCRegtest1.pem"
 set TEST2_CERT = "--certfile=/usr/cadc/dev/admin/test-certificates/x509_CADCAuthtest1.pem"
+set DATA = "$CADC_ROOT/test/data"
 
 set TRUST = "-Dca.nrc.cadc.auth.BasicX509TrustManager.trust=true"
 set LOCAL = ""
@@ -99,7 +101,7 @@ set ALTBASE = "vos://cadc.nrc.ca~vospace/CADCRegtest1"
 
 set TIMESTAMP=`date +%Y-%m-%dT%H-%M-%S`
 set CONTAINER = $BASE/$TIMESTAMP
-
+chmod 775 $DATA
 # for use with user/password
 #set USER1 = "cadcregtest1"
 #set PASSWD1 = `sqsh -h -SSYBASE -U$sybase_login[1] -P$sybase_login[2] -C"select pswd from archive..users where user_id='cadcregtest1'" -w1024 | awk 'END{print}'`
@@ -139,7 +141,7 @@ echo " [OK]"
 #echo " [OK]"
 
 echo -n "copy file to existing container and non-existent data node "
-$VCP_CMD  $TEST1_CERT something.png $CONTAINER/ || echo " [FAIL]" && exit -1
+$VCP_CMD  $TEST1_CERT $DATA/something.png $CONTAINER/ || echo " [FAIL]" && exit -1
 echo " [OK]"
 
 echo -n "view existing data node "
@@ -147,13 +149,13 @@ $VLS_CMD $TEST1_CERT $CONTAINER/something.png > /dev/null || echo " [FAIL]" && e
 echo " [OK]"
 
 echo -n "copy data node to local filesystem "
-$VCP_CMD $TEST1_CERT $CONTAINER/something.png something.png.2 || echo " [FAIL]" && exit -1
-cmp something.png something.png.2 || echo " [FAIL]" && exit -1
-\rm -f something.png.2
+$VCP_CMD $TEST1_CERT $CONTAINER/something.png $DATA/something.png.2 || echo " [FAIL]" && exit -1
+cmp $DATA/something.png $DATA/something.png.2 || echo " [FAIL]" && exit -1
+\rm -f $DATA/something.png.2
 echo " [OK]"
 
 echo -n "copy/overwrite existing data node "
-$VCP_CMD $TEST1_CERT something.png $CONTAINER/something.png || echo " [FAIL]" && exit -1
+$VCP_CMD $TEST1_CERT $DATA/something.png $CONTAINER/something.png || echo " [FAIL]" && exit -1
 echo " [OK]"
 
 echo "\!\!\! tests with 10G files fail due to memory problems. change to seek=10G when problems fixed \!\!\!"
@@ -179,18 +181,18 @@ echo " [OK]"
 
 echo -n "failure to copy a file from vospace because local directory permissions"
 mkdir readonly
-chmod 400 readonly
-$VCP_CMD $TEST1_CERT $CONTAINER/something.png readonly/something.png >& /dev/null && echo " [FAIL]" && exit -1
+chmod 400 $DATA
+$VCP_CMD $TEST1_CERT $CONTAINER/something.png $DATA/something.png >& /dev/null && echo " [FAIL]" && exit -1
 echo " [OK]"
 
 echo -n "failure to copy a file to vospace because permissions in vospace"
 #different user
-$VCP_CMD $TEST2_CERT something.png $CONTAINER/something.png >& /dev/null && echo " [FAIL]" && exit -1
+$VCP_CMD $TEST2_CERT $DATA/something.png $CONTAINER/something.png >& /dev/null && echo " [FAIL]" && exit -1
 echo " [OK]"
 
 echo -n "failure to copy a file to vospace because local directory permissions"
-$VCP_CMD $TEST1_CERT readonly/something.png $CONTAINER/something.png >& /dev/null && echo " [FAIL]" && exit -1
-rmdir readonly
+$VCP_CMD $TEST1_CERT $DATA/something.png $CONTAINER/something.png >& /dev/null && echo " [FAIL]" && exit -1
+chmod 775 $DATA 
 echo " [OK]"
 
 echo "\!\!\! TODO: set the appropriate environment variable \!\!\!"
@@ -202,5 +204,17 @@ echo "\!\!\! TODO: set the appropriate environment variable \!\!\!"
 
 echo -n "failure to copy because bad certificate"
 $VCP_CMD --certfile=something.png $CONTAINER/something.png something.png >& /dev/null && echo " [FAIL]" && exit -1
-$VLS_CMD --certfile=something.png $CONTAINER > /dev/null && echo " [FAIL]" && exit -1
+$VLS_CMD --certfile=something.png $CONTAINER >& /dev/null && echo " [FAIL]" && exit -1
+echo " [OK]"
+
+echo -n "vsync directory"
+cp $DATA/something.png $DATA/something.2.png
+$VSYNC_CMD $TEST1_CERT $DATA $CONTAINER/ >& /dev/null || echo " [FAIL]" && exit -1
+$VLS_CMD $TEST1_CERT $CONTAINER/data/something.2.png > /dev/null || echo " [FAIL]" && exit -1
+echo " [OK]"
+
+echo -n "vsync directory with modified file"
+cat $DATA/something.png >> $DATA/something.2.png
+$VSYNC_CMD $TEST1_CERT $DATA $CONTAINER/ >& /dev/null || echo " [FAIL]" && exit -1
+$VLS_CMD $TEST1_CERT $CONTAINER//data/something.2.png > /dev/null || echo " [FAIL]" && exit -1 #check the size
 echo " [OK]"
