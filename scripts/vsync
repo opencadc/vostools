@@ -78,6 +78,8 @@ def copy(source,dest):
                               
 def startStreams(nstreams):
   for i in range(nstreams):
+    if opt.verbose:
+      sys.stdout.write("Launching vospace connection stream %d\n" % ( i ))
     t=ThreadCopy(queue)
     t.setDaemon(True)
     t.start()
@@ -85,6 +87,8 @@ def startStreams(nstreams):
 def buildFileList(filename,destRoot=''):
   """Build a list of files that should be copied into VOSpace"""
   filelist=[]
+  if opt.verbose:
+    sys.stdout.write("Looking for files in directory %s\n" % (filename))
   for (root,dirs,filenames) in os.walk(filename):
     for thisfilename in filenames:
       filelist.append((os.path.join(root,thisfilename),os.path.join(destRoot,thisfilename)))
@@ -109,11 +113,15 @@ if __name__=='__main__':
   if dest[0:4]!="vos:":
     parser.error("Only allows sync FROM local copy TO VOSpace")
   ## Currently we don't create nodes in sync and we don't sync onto files
+  if opt.verbose:
+    sys.stdout.write("Establishing a query connection to VOSpace\n")
   c=vos.Client()
 
   ### build a complete file list given all the things on the command line
   filelist=[]
   for filename in args:
+    if opt.verbose:
+      sys.stdout.write("Adding %s to transfer list\n" % (filename))
     if dest[-1]=="/" :
       thisRoot=os.path.join(dest,filename)
     if os.path.isdir(filename):
