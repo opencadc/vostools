@@ -457,46 +457,28 @@ public class Main implements Runnable
     }
 
     private void doView()
-    {
-        // This check is here for client/server compatibility
-        // TODO: Remove this variable when the cadcVOSClient tar
-        // file with this compatibility support has been distributed
-        // to all users.
-        boolean serverSupportsPaging = false;
-        // check for paging support by seeing if the limit parameter
-        // has effect when querying the root node
-        try
-        {
-            Node root = client.getNode("/", "detail=min&limit=0");
-            if (((ContainerNode) root).getNodes().size() == 0)
-                serverSupportsPaging = true;
-        }
-        catch (NodeNotFoundException e)
-        {
-            log.warn("Root node not found!: " + e.getMessage());
-        }
-        log.debug("server supports node paging: " + serverSupportsPaging);
-        
-        
+    {   
+        // if the user isn't controlling paging, add a child
+        // limit of 1000
         boolean explicitPaging = false;
-        if (target.getQuery() != null)
+        String queryString = target.getQuery();
+        if (StringUtil.hasText(queryString))
         {
-            String queryString = target.getQuery();
             String[] queries = queryString.split("&");
             for (String query : queries)
-            {
-                if (query.startsWith("uri=") ||
-                    query.startsWith("limit="))
-                {
+                if (query.startsWith("limit=") || query.startsWith("uri="))
                     explicitPaging = true;
-                }
-            }
+            if (!explicitPaging)
+                queryString += "&limit=" + SERVER_CHILD_MAX;
         }
+        else
+            queryString = "limit=" + SERVER_CHILD_MAX;
+        log.debug("explicit paging control: " + explicitPaging);
+        log.debug("view query string: " + queryString);
         
         try
         {
-            
-            Node n = client.getNode(target.getPath(), target.getQuery());
+            Node n = client.getNode(target.getPath(), queryString);
 
             msg(getType(n) + ": " + n.getUri());
             msg("creator: " + safePropertyRef(n, VOS.PROPERTY_URI_CREATOR));
@@ -529,43 +511,40 @@ public class Main implements Runnable
                 msg(sb.toString());
                 
                 printChildList(n, cn.getNodes());
-                log.debug("container node has : " + cn.getNodes().size() + " children.");
+                log.debug("get container node returned : " + cn.getNodes().size() + " children.");
                 
-                
-                if (serverSupportsPaging)
+                // get remaining children if the user isn't explicitly controlling paging
+                if (!explicitPaging)
                 {
-                    // get remaining children if the user isn't explicitly controlling paging
-                    if (!explicitPaging)
+                    VOSURI uriQueryObj = null;
+                    String uriQueryParam = null;
+                    while (cn.getNodes().size() == SERVER_CHILD_MAX)
                     {
-                        String originalQuery = target.getQuery();
-                        VOSURI uriQueryObj = null;
-                        String uriQueryParam = null;
-                        while (cn.getNodes().size() == SERVER_CHILD_MAX)
+                        log.debug("Getting next set of children.");
+                        uriQueryObj = cn.getNodes().get(SERVER_CHILD_MAX - 1).getUri();
+                        uriQueryParam = "uri=" + uriQueryObj.toString();
+                        cn = null;
+                        if (StringUtil.hasText(queryString))
+                            n = client.getNode(target.getPath(), queryString + "&" + uriQueryParam);
+                        else
+                            n = client.getNode(target.getPath(), uriQueryParam);
+                        if (!(n instanceof ContainerNode))
+                            throw new IllegalStateException("inconsistent node state.");
+                        cn = (ContainerNode) n;
+                        log.debug("next set has : " + cn.getNodes().size() + " children.");
+                        
+                        if (cn.getNodes().size() > 0 &&
+                                !cn.getNodes().get(0).getUri().equals(uriQueryObj))
                         {
-                            log.debug("Getting next set of children.");
-                            uriQueryObj = cn.getNodes().get(SERVER_CHILD_MAX - 1).getUri();
-                            uriQueryParam = "uri=" + uriQueryObj.toString();
-                            cn = null;
-                            if (StringUtil.hasText(originalQuery))
-                                n = client.getNode(target.getPath(), target.getQuery() + "&" + uriQueryParam);
-                            else
-                                n = client.getNode(target.getPath(), uriQueryParam);
-                            cn = (ContainerNode) n;
-                            log.debug("next set has : " + cn.getNodes().size() + " children.");
-                            
-                            if (cn.getNodes().size() > 0 &&
-                                    !cn.getNodes().get(0).getUri().equals(uriQueryObj))
-                            {
-                                // if the first element isn't equal to the uri parameter,
-                                // print all children.
-                                printChildList(n, cn.getNodes());
-                            }
-                            else if (cn.getNodes().size() > 1)
-                            {
-                                // otherwise, print all but the first
-                                // (note: subList() doesn't create a new list object)
-                                printChildList(n, cn.getNodes().subList(1, cn.getNodes().size()));
-                            }
+                            // if the first element isn't equal to the uri parameter,
+                            // print all children.
+                            printChildList(n, cn.getNodes());
+                        }
+                        else if (cn.getNodes().size() > 1)
+                        {
+                            // otherwise, print all but the first
+                            // (note: subList() doesn't create a new list object)
+                            printChildList(n, cn.getNodes().subList(1, cn.getNodes().size()));
                         }
                     }
                 }
@@ -937,7 +916,7 @@ public class Main implements Runnable
         {
             try
             {
-                node = client.getNode(vosuri.getPath(), "detail=min&limit=0");
+                node = client.getNode(vosuri.getPath(), "limit=0");
             }
             catch (NodeNotFoundException e)
             {
