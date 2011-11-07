@@ -108,7 +108,7 @@ public class VOSURI
         }
 
         // Check the scheme is vos
-        if (!vosURI.getScheme().equalsIgnoreCase("vos")) 
+        if (vosURI.getScheme() == null || !vosURI.getScheme().equalsIgnoreCase("vos")) 
             throw new IllegalArgumentException("URI scheme must be vos: " + uri.toString());
     }
 
