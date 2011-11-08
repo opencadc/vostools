@@ -72,27 +72,78 @@ package ca.nrc.cadc.io;
 import java.io.IOException;
 import java.io.OutputStream;
 
+import javax.servlet.http.HttpServletResponse;
+
 /**
  * Simple OutputStream wrapper that keeps track of bytes written.
  * 
+ * Alternate constructors allow for byte limits to be set and for
+ * the lazy retrieval of the output stream from an HttpServletResponse object.
+ * 
  * @author pdowler
  */
-public class ByteCountOutputStream extends OutputStream
+public class ByteCountOutputStream extends OutputStream implements ByteCounter
 {
-    private OutputStream ostream;
-
-    private long byteCount;
+    private OutputStream outputStream;
+    private HttpServletResponse response;
+    
+    private long byteCount = 0L;
+    private Long byteLimit = null;
 
     /**
      * Constructor.
      *
-     * @param ostream
+     * @param outputStream
      */
-    public ByteCountOutputStream(OutputStream ostream)
+    public ByteCountOutputStream(OutputStream outputStream)
     {
         super();
-        this.ostream = ostream;
-        this.byteCount = 0;
+        this.outputStream = outputStream;
+    }
+    
+    /**
+     * Constructor that takes the target output stream and a byte limit.
+     * 
+     * @param outputStream       The OutputStream to wrap.
+     * @param byteLimit    The quota space left to be written to, in bytes.
+     */
+    public ByteCountOutputStream(OutputStream outputStream,
+                                long byteLimit)
+    {
+        this.outputStream = outputStream;
+        if (byteLimit > 0)
+            this.byteLimit = byteLimit;
+    }
+    
+    /**
+     * Constructor that takes the http servlet response.
+     * 
+     * he output stream is retrieved from the response at the last possible
+     * moment so as to not commit the state of the response.
+     * 
+     * @param outputStream       The OutputStream to wrap.
+     * @param byteLimit    The quota space left to be written to, in bytes.
+     */
+    public ByteCountOutputStream(HttpServletResponse response)
+    {
+        this.response = response;
+    }
+    
+    /**
+     * Constructor that takes the http servlet response and a byte limit.
+     * 
+     * The output stream is retrieved from the response at the last possible
+     * moment so as to not commit the state of the response.
+     * 
+     * @param response     The HttpServletResponse holding the output stream.
+     * @param byteLimit    The quota space left to be written to, in bytes.
+     */
+    public ByteCountOutputStream(HttpServletResponse response,
+                                long byteLimit)
+    {
+        this.response = response;
+        if (byteLimit > 0)
+            this.byteLimit = byteLimit;
     }
 
     /**
@@ -103,6 +154,7 @@ public class ByteCountOutputStream extends OutputStream
      *
      * @return number of bytes written to underlying output stream
      */
+    @Override
     public long getByteCount()
     {
         return byteCount;
@@ -112,21 +164,23 @@ public class ByteCountOutputStream extends OutputStream
     public void close()
         throws IOException
     {
-        ostream.close();
+        getOutputStream().close();
     }
 
     @Override
     public void flush()
         throws IOException
     {
-        ostream.flush();
+        getOutputStream().flush();
     }
 
     @Override
     public void write(int b)
         throws IOException
     {
-        ostream.write(b);
+        if (hasReachedLimit())
+            throw new ByteLimitExceededException(byteLimit);
+        getOutputStream().write(b);
         byteCount++;
     }
 
@@ -134,7 +188,9 @@ public class ByteCountOutputStream extends OutputStream
     public void write(byte[] b)
         throws IOException
     {
-        ostream.write(b);
+        if (hasReachedLimit())
+            throw new ByteLimitExceededException(byteLimit);
+        getOutputStream().write(b);
         byteCount += b.length;
     }
 
@@ -142,7 +198,32 @@ public class ByteCountOutputStream extends OutputStream
     public void write(byte[] b, int offset, int num)
         throws IOException
     {
-        ostream.write(b, offset, num);
+        if (hasReachedLimit())
+            throw new ByteLimitExceededException(byteLimit);
+        getOutputStream().write(b, offset, num);
         byteCount += num;
+    }
+    
+    /**
+     * Return the local output stream or get it from the
+     * response object.
+     */
+    private OutputStream getOutputStream() throws IOException
+    {
+        if (outputStream != null)
+            return outputStream;
+        
+        outputStream = response.getOutputStream();
+        return outputStream;
+    }
+    
+    /**
+     * Obtain whether the byte limit has been reached.
+     */
+    private boolean hasReachedLimit()
+    {
+        if (byteLimit == null)
+            return false;
+        return byteCount >= byteLimit;
     }
 }

@@ -99,10 +99,10 @@
     </target>
 
     <!-- JAR files needed to run the test suite -->
-    <property name="testingJars" value="${build}/class:${jars}:${ext.lib}/junit.jar:${ext.lib}/xerces.jar" />
+    <property name="testingJars" value="${build}/class:${jars}:${ext.lib}/junit.jar:${ext.lib}/xerces.jar:${ext.dev}/easymock.jar:${ext.dev}/cglib.jar:${ext.dev}/objenesis.jar:${ext.dev}/asm.jar" />
 
     <!-- Run the test suite -->
-    <target name="test" depends="util-test,xml-test,auth-test,net-test" />
+    <target name="test" depends="util-test,xml-test,auth-test,net-test,io-test" />
 
     <target name="util-test" depends="compile-test">
         <junit printsummary="yes" haltonfailure="yes" fork="yes">
@@ -162,6 +162,21 @@
             </classpath>
 
             <test name="ca.nrc.cadc.xml.XmlUtilTest"/>
+            <formatter type="plain" usefile="false"/>
+        </junit>
+    </target>
+    
+    <target name="io-test" depends="compile-test">
+    
+        <junit printsummary="yes" haltonfailure="yes" fork="yes">
+            <classpath>
+                <pathelement path="${build}/class"/>
+                <pathelement path="${build}/test/class"/>
+                <pathelement path="${testingJars}"/>
+            </classpath>
+
+            <test name="ca.nrc.cadc.io.ByteCountInputStreamTest"/>
+            <test name="ca.nrc.cadc.io.ByteCountOutputStreamTest"/>
             <formatter type="plain" usefile="false"/>
         </junit>
     </target>
