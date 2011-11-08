@@ -155,7 +155,7 @@ public class Main implements Runnable
     private static final int INIT_STATUS = 1; // exit code for initialisation failure
     private static final int NET_STATUS = 2;  // exit code for client-server failures
     
-    private static final int SERVER_CHILD_MAX = 1000;
+    private static final int MAX_CHILD_SIZE = 1000;
     
     /**
      * Operations of VoSpace Client.
@@ -459,7 +459,7 @@ public class Main implements Runnable
     private void doView()
     {   
         // if the user isn't controlling paging, add a child
-        // limit of 1000
+        // limit of MAX_CHILD_SIZE (1000)
         boolean explicitPaging = false;
         String queryString = target.getQuery();
         if (StringUtil.hasText(queryString))
@@ -469,10 +469,10 @@ public class Main implements Runnable
                 if (query.startsWith("limit=") || query.startsWith("uri="))
                     explicitPaging = true;
             if (!explicitPaging)
-                queryString += "&limit=" + SERVER_CHILD_MAX;
+                queryString += "&limit=" + MAX_CHILD_SIZE;
         }
         else
-            queryString = "limit=" + SERVER_CHILD_MAX;
+            queryString = "limit=" + MAX_CHILD_SIZE;
         log.debug("explicit paging control: " + explicitPaging);
         log.debug("view query string: " + queryString);
         
@@ -510,20 +510,21 @@ public class Main implements Runnable
                 sb.append("URI");
                 msg(sb.toString());
                 
-                printChildList(n, cn.getNodes());
                 log.debug("get container node returned : " + cn.getNodes().size() + " children.");
+                printChildList(n, cn.getNodes());
                 
                 // get remaining children if the user isn't explicitly controlling paging
                 if (!explicitPaging)
                 {
                     VOSURI uriQueryObj = null;
                     String uriQueryParam = null;
-                    while (cn.getNodes().size() == SERVER_CHILD_MAX)
+                    while (cn.getNodes().size() > 0)
                     {
                         log.debug("Getting next set of children.");
-                        uriQueryObj = cn.getNodes().get(SERVER_CHILD_MAX - 1).getUri();
+                        uriQueryObj = cn.getNodes().get(cn.getNodes().size() - 1).getUri();
                         uriQueryParam = "uri=" + uriQueryObj.toString();
                         cn = null;
+                        
                         if (StringUtil.hasText(queryString))
                             n = client.getNode(target.getPath(), queryString + "&" + uriQueryParam);
                         else
@@ -531,21 +532,15 @@ public class Main implements Runnable
                         if (!(n instanceof ContainerNode))
                             throw new IllegalStateException("inconsistent node state.");
                         cn = (ContainerNode) n;
+                        
                         log.debug("next set has : " + cn.getNodes().size() + " children.");
                         
-                        if (cn.getNodes().size() > 0 &&
-                                !cn.getNodes().get(0).getUri().equals(uriQueryObj))
+                        // remove the first child if it is the one matching the uri parameter
+                        if (cn.getNodes().size() > 0 && cn.getNodes().get(0).getUri().equals(uriQueryObj))
                         {
-                            // if the first element isn't equal to the uri parameter,
-                            // print all children.
-                            printChildList(n, cn.getNodes());
+                            cn.getNodes().remove(0);
                         }
-                        else if (cn.getNodes().size() > 1)
-                        {
-                            // otherwise, print all but the first
-                            // (note: subList() doesn't create a new list object)
-                            printChildList(n, cn.getNodes().subList(1, cn.getNodes().size()));
-                        }
+                        printChildList(n, cn.getNodes());
                     }
                 }
             }
