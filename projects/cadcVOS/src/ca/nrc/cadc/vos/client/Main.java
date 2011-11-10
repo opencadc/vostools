@@ -502,13 +502,16 @@ public class Main implements Runnable
                 }
 
                 ContainerNode cn = (ContainerNode) n;
-                StringBuilder sb = new StringBuilder();
-                sb.append(pad("child nodes: ", 32));
-                sb.append(pad("size",12));
-                sb.append(pad("public",8));
-                sb.append(pad("last modified",26));
-                sb.append("URI");
-                msg(sb.toString());
+                if (cn.getNodes().size() > 0)
+                {
+                    StringBuilder sb = new StringBuilder();
+                    sb.append(pad("child nodes: ", 32));
+                    sb.append(pad("size",12));
+                    sb.append(pad("public",8));
+                    sb.append(pad("last modified",26));
+                    sb.append("URI");
+                    msg(sb.toString());
+                }
                 
                 log.debug("get container node returned : " + cn.getNodes().size() + " children.");
                 printChildList(n, cn.getNodes());
