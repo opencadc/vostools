@@ -78,6 +78,7 @@ import org.restlet.Request;
 import org.restlet.data.Form;
 import org.restlet.representation.Representation;
 
+import ca.nrc.cadc.io.ByteLimitExceededException;
 import ca.nrc.cadc.util.StringUtil;
 import ca.nrc.cadc.vos.Node;
 import ca.nrc.cadc.vos.NodeFault;
@@ -290,6 +291,12 @@ public abstract class NodeAction implements PrivilegedAction<Object>
             end = System.currentTimeMillis();
             log.debug("performNodeAction() elapsed time: " + (end - start) + "ms");
             return result;
+        }
+        catch (ByteLimitExceededException e)
+        {
+            String faultMessage = "XML document exceeds " + e.getLimit() + " bytes";
+            log.debug(faultMessage);
+            return handleException(NodeFault.RequestEntityTooLarge, faultMessage);
         }
         catch (FileNotFoundException e)
         {

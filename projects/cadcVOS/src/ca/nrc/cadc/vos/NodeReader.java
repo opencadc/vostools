@@ -160,7 +160,15 @@ public class NodeReader
     {
         if (xml == null)
             throw new IllegalArgumentException("XML must not be null");
-        return read(new StringReader(xml));
+        try
+        {
+            return read(new StringReader(xml));
+        }
+        catch (IOException ioe)
+        {
+            String error = "Error reading XML: " + ioe.getMessage();
+            throw new NodeParsingException(error, ioe);
+        }
     }
 
     /**
@@ -193,7 +201,7 @@ public class NodeReader
      * @throws NodeParsingException if there is an error parsing the XML.
      */
     public Node read(Reader reader)
-        throws NodeParsingException
+        throws NodeParsingException, IOException
     {
         if (reader == null)
             throw new IllegalArgumentException("reader must not be null");
@@ -210,11 +218,6 @@ public class NodeReader
         {
             String error = "XML failed schema validation: " + jde.getMessage();
             throw new NodeParsingException(error, jde);
-        }
-        catch (IOException ioe)
-        {
-            String error = "Error reading XML: " + ioe.getMessage();
-            throw new NodeParsingException(error, ioe);
         }
 
         // Root element and namespace of the Document

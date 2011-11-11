@@ -72,8 +72,11 @@ package ca.nrc.cadc.vos.server.web.representation;
 import java.io.IOException;
 import java.net.URISyntaxException;
 
+import org.apache.log4j.Logger;
 import org.restlet.representation.Representation;
 
+import ca.nrc.cadc.io.ByteCountInputStream;
+import ca.nrc.cadc.io.ByteLimitExceededException;
 import ca.nrc.cadc.vos.Node;
 import ca.nrc.cadc.vos.NodeParsingException;
 import ca.nrc.cadc.vos.NodeReader;
@@ -87,6 +90,11 @@ import ca.nrc.cadc.vos.NodeReader;
 public class NodeInputRepresentation
 {
     
+    protected static Logger log = Logger.getLogger(NodeInputRepresentation.class);
+    
+    // 12Kb XML Doc size limit
+    private static final long DOCUMENT_SIZE_MAX = 12288L;
+    
     private Representation xmlValue;
     private String expectedPath;
     
@@ -96,10 +104,15 @@ public class NodeInputRepresentation
         this.expectedPath = expectedPath;
     }
     
-    public Node getNode() throws IOException, NodeParsingException, URISyntaxException
+    public Node getNode() throws IOException, NodeParsingException,
+            URISyntaxException, ByteLimitExceededException
     {
-        Node node = new NodeReader().read(xmlValue.getStream());
+        ByteCountInputStream sizeLimitInputStream =
+            new ByteCountInputStream(xmlValue.getStream(), DOCUMENT_SIZE_MAX);
         
+        Node node = new NodeReader().read(sizeLimitInputStream);
+        
+        log.debug("Node input representation read " + sizeLimitInputStream.getByteCount() + " bytes.");
         
         // ensure the path in the XML URI matches the path in the URL
         if (!node.getUri().getPath().equals(expectedPath))

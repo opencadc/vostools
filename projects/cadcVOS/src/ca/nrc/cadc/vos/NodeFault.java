@@ -141,9 +141,16 @@ public enum NodeFault
                    "ContainerNotFound",
                    "A HTTP 500 status code with a ContainerNotFound fault in the body is thrown if a container is not found",
                    "http://www.ivoa.net/Documents/latest/VOSpace.html")
-    );
+    ),
     
     // Other Faults
+    RequestEntityTooLarge
+    (
+        new Status(413,
+                   "InvalidArgument",
+                   "A HTTP 413 status code with a InvalidArgument fault in the body is thrown if the XML document on the input stream is too large.",
+                   "http://www.ivoa.net/Documents/latest/VOSpace.html")
+    );
 //    NotSupported ( Status.SERVER_ERROR_NOT_IMPLEMENTED ),
 //    BadRequest ( Status.CLIENT_ERROR_BAD_REQUEST ),
 //    NodeBusy ( Status.CLIENT_ERROR_CONFLICT );
