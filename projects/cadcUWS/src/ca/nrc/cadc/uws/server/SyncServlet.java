@@ -69,27 +69,28 @@
 
 package ca.nrc.cadc.uws.server;
 
-import ca.nrc.cadc.uws.web.JobCreator;
-import ca.nrc.cadc.uws.web.InlineContentHandler;
-import ca.nrc.cadc.auth.AuthenticationUtil;
-import ca.nrc.cadc.uws.Job;
-import ca.nrc.cadc.uws.JobWriter;
 import java.io.FilterOutputStream;
 import java.io.IOException;
 import java.io.OutputStream;
 import java.io.PrintWriter;
-import java.security.PrivilegedAction;
 import java.security.PrivilegedActionException;
 import java.security.PrivilegedExceptionAction;
+
 import javax.security.auth.Subject;
 import javax.servlet.ServletConfig;
-
 import javax.servlet.ServletException;
 import javax.servlet.http.HttpServlet;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 
 import org.apache.log4j.Logger;
+
+import ca.nrc.cadc.auth.AuthenticationUtil;
+import ca.nrc.cadc.io.ByteLimitExceededException;
+import ca.nrc.cadc.uws.Job;
+import ca.nrc.cadc.uws.JobWriter;
+import ca.nrc.cadc.uws.web.InlineContentHandler;
+import ca.nrc.cadc.uws.web.JobCreator;
 
 /**
  * Servlet that runs a SyncJobRunner for each request. This servlet supports both
@@ -409,6 +410,22 @@ public class SyncServlet extends HttpServlet
             PrintWriter w = response.getWriter();
             w.println("failed to get or persist job state: " + jobID);
             w.println("   reason: " + ex.getMessage());
+            w.close();
+            return;
+        }
+        catch(ByteLimitExceededException ex)
+        {
+            if (syncOutput != null && syncOutput.isOpen())
+            {
+                log.error("failure after OutputStream opened, cannot report error to user");
+                return;
+            }
+            // OutputStream not open, write an error response
+            response.setStatus(HttpServletResponse.SC_REQUEST_ENTITY_TOO_LARGE);
+            response.setContentType("text/plain");
+            PrintWriter w = response.getWriter();
+            w.println("failed to execute job " + jobID);
+            w.println("   reason: XML document exceeds " + ex.getLimit() + " bytes");
             w.close();
             return;
         }

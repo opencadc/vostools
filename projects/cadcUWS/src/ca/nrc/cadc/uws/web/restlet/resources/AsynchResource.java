@@ -69,20 +69,21 @@
 
 package ca.nrc.cadc.uws.web.restlet.resources;
 
-import ca.nrc.cadc.uws.Job;
-import ca.nrc.cadc.uws.server.JobPersistenceException;
-import ca.nrc.cadc.uws.web.restlet.RestletJobCreator;
-
-import org.restlet.resource.Post;
-import org.restlet.representation.Representation;
-import org.apache.log4j.Logger;
-
 import java.io.IOException;
 import java.security.AccessControlException;
 import java.security.PrivilegedAction;
+
 import javax.security.auth.Subject;
-import org.apache.commons.fileupload.FileUploadException;
+
+import org.apache.log4j.Logger;
 import org.jdom.Document;
+import org.restlet.data.Status;
+import org.restlet.representation.Representation;
+import org.restlet.resource.Post;
+
+import ca.nrc.cadc.io.ByteLimitExceededException;
+import ca.nrc.cadc.uws.Job;
+import ca.nrc.cadc.uws.web.restlet.RestletJobCreator;
 
 
 /**
@@ -133,11 +134,18 @@ public class AsynchResource extends UWSResource
             Job persistedJob = getJobManager().create(job);
             redirectSeeOther(getHostPart() + getRequestPath() + "/" + persistedJob.getID());
         }
+        catch (ByteLimitExceededException ex)
+        {
+            String errorMessage = "XML document exceeds " + ex.getLimit() + " bytes";
+            LOGGER.info("Exception caught in doAccept: " + errorMessage);
+            ex.printStackTrace();
+            generateErrorRepresentation(Status.CLIENT_ERROR_REQUEST_ENTITY_TOO_LARGE, errorMessage);
+        }
         catch(Exception ex)
         {
             LOGGER.error("Exception caught in doAccept: " + ex);
             ex.printStackTrace();
-            generateErrorRepresentation(ex.getMessage());
+            generateErrorRepresentation(Status.CLIENT_ERROR_BAD_REQUEST, ex.getMessage());
         }
     }
 

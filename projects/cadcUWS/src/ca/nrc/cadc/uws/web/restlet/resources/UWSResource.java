@@ -70,32 +70,33 @@
 
 package ca.nrc.cadc.uws.web.restlet.resources;
 
-import ca.nrc.cadc.auth.AuthenticationUtil;
-import ca.nrc.cadc.uws.web.InlineContentHandler;
-import ca.nrc.cadc.uws.server.JobManager;
-import org.restlet.resource.ServerResource;
-import org.restlet.resource.Get;
-import org.restlet.representation.Representation;
-import org.restlet.representation.StringRepresentation;
-import org.apache.log4j.Logger;
-
-import ca.nrc.cadc.uws.web.validators.FormValidator;
-import ca.nrc.cadc.uws.web.restlet.WebRepresentationException;
-import ca.nrc.cadc.uws.web.restlet.UWSAsyncApplication;
-import ca.nrc.cadc.uws.web.restlet.representation.JDOMRepresentation;
-import ca.nrc.cadc.uws.web.restlet.validators.JobFormValidatorImpl;
-
-import javax.security.auth.Subject;
 import java.io.IOException;
 import java.security.cert.X509Certificate;
 import java.util.Collection;
 import java.util.Map;
+
+import javax.security.auth.Subject;
+
+import org.apache.log4j.Logger;
 import org.jdom.Document;
 import org.restlet.Request;
 import org.restlet.data.Form;
 import org.restlet.data.MediaType;
 import org.restlet.data.Reference;
 import org.restlet.data.Status;
+import org.restlet.representation.Representation;
+import org.restlet.representation.StringRepresentation;
+import org.restlet.resource.Get;
+import org.restlet.resource.ServerResource;
+
+import ca.nrc.cadc.auth.AuthenticationUtil;
+import ca.nrc.cadc.uws.server.JobManager;
+import ca.nrc.cadc.uws.web.InlineContentHandler;
+import ca.nrc.cadc.uws.web.restlet.UWSAsyncApplication;
+import ca.nrc.cadc.uws.web.restlet.WebRepresentationException;
+import ca.nrc.cadc.uws.web.restlet.representation.JDOMRepresentation;
+import ca.nrc.cadc.uws.web.restlet.validators.JobFormValidatorImpl;
+import ca.nrc.cadc.uws.web.validators.FormValidator;
 
 
 /**
@@ -185,14 +186,14 @@ public abstract class UWSResource extends ServerResource
      *
      * @param error        Error in the form.
      */
-    protected void generateErrorRepresentation(final String error)
+    protected void generateErrorRepresentation(final Status status, final String error)
     {
         final StringBuilder errorMessage = new StringBuilder(128);
 
         errorMessage.append("Errors found during Job Creation: \n");
         errorMessage.append(error);
 
-        getResponse().setStatus(Status.CLIENT_ERROR_BAD_REQUEST);
+        getResponse().setStatus(status);
         getResponse().setEntity(
                 new StringRepresentation(errorMessage.toString()));
     }
