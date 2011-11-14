@@ -69,6 +69,16 @@
 
 package ca.nrc.cadc.vos.server;
 
+import java.io.IOException;
+import java.io.InputStream;
+import java.io.StringWriter;
+import java.net.URL;
+import java.util.ArrayList;
+import java.util.List;
+
+import org.apache.log4j.Logger;
+
+import ca.nrc.cadc.io.ByteCountInputStream;
 import ca.nrc.cadc.uws.JobInfo;
 import ca.nrc.cadc.uws.Parameter;
 import ca.nrc.cadc.uws.web.InlineContentException;
@@ -77,15 +87,14 @@ import ca.nrc.cadc.vos.Transfer;
 import ca.nrc.cadc.vos.TransferParsingException;
 import ca.nrc.cadc.vos.TransferReader;
 import ca.nrc.cadc.vos.TransferWriter;
-import java.io.IOException;
-import java.io.InputStream;
-import java.io.StringWriter;
-import java.net.URL;
-import java.util.ArrayList;
-import java.util.List;
 
 public class TransferInlineContentHandler implements InlineContentHandler
 {
+    private static Logger log = Logger.getLogger(TransferInlineContentHandler.class);
+    
+    // 6Kb XML Doc size limit
+    private static final long DOCUMENT_SIZE_MAX = 6144L;
+    
     private static final String TEXT_XML = "text/xml";
 
     private List<Parameter> parameterList;
@@ -118,11 +127,16 @@ public class TransferInlineContentHandler implements InlineContentHandler
 
         if (inputStream == null)
             throw new IOException("The InputStream is closed");
+        
+        // wrap the input stream in a byte counter to limit bytes read
+        ByteCountInputStream sizeLimitInputStream =
+            new ByteCountInputStream(inputStream, DOCUMENT_SIZE_MAX);
 
         try
         {
             TransferReader reader = new TransferReader(true);
-            Transfer transfer = reader.read(inputStream);
+            Transfer transfer = reader.read(sizeLimitInputStream);
+            log.debug("Transfer: read " + sizeLimitInputStream.getByteCount() + " bytes.");
             TransferWriter tw = new TransferWriter();
             StringWriter sw = new StringWriter();
             tw.write(transfer, sw);
