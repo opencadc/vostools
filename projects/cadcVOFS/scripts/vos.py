@@ -25,7 +25,7 @@ class urlparse:
     def __init__(self,url):
         import re
 
-        m=re.match("((?P<scheme>\S*):)?(//(?P<netloc>[^/]*))?(?P<path>/?[^#?]*)(#(?P<frag>[^?]*))?(\?(?P<query>.*))?",url)
+        m=re.match("(^(?P<scheme>[a-zA-Z]*):)?(//(?P<netloc>[^/]*))?(?P<path>/?[^#?]*)(#(?P<frag>[^?]*))?(\?(?P<query>.*))?",url)
         if not m.group:
             return None
         self.scheme=m.group('scheme')
