@@ -53,7 +53,10 @@ class ThreadCopy(threading.Thread):
         sys.stderr.write("Problem writing to vospace. requeuing: %s" % (src))
         self.queue.put((src,dest))
 
+goodDirs=[]
 def mkdirs(dirs):
+  if dirs in goodDirs:
+    return
   if c.isdir(dirs):
     return
 
@@ -66,13 +69,14 @@ def mkdirs(dirs):
   if c.isfile(dirs):
     sys.exit("Destination has directory where file expected (%s)" % (subdir))
   c.mkdir(dirs)
+  goodDirs.append(dirs)
 
 import os
 def copy(source,dest):
   ## strip down dest until we find a part that exists
   ## and then build up the path.  Dest should include the filename
   dirname=os.path.dirname(dest)
-  if not c.isdir(dirname):
+  if not dirname in goodDirs:
     mkdirs(dirname)
   queue.put((source,dest))
                               
@@ -84,16 +88,18 @@ def startStreams(nstreams):
     t.setDaemon(True)
     t.start()
 
-def buildFileList(filename,destRoot=''):
+def buildFileList(basePath,destRoot='',recursive=False,ignore=None):
   """Build a list of files that should be copied into VOSpace"""
   filelist=[]
-  if opt.verbose:
-    sys.stdout.write("Looking for files in directory %s\n" % (filename))
-  for (root,dirs,filenames) in os.walk(filename):
+  for (root,dirs,filenames) in os.walk(basePath):
     for thisfilename in filenames:
-      filelist.append((os.path.join(root,thisfilename),os.path.join(destRoot,thisfilename)))
-    for dirname in dirs:
-      filelist.extend(buildFileList(os.path.join(root,dirname),destRoot=os.path.join(thisRoot,dirname)))
+      if ignore is not None and ignore in thisfilename:
+        continue
+      srcfilename=os.path.normpath(os.path.join(root,thisfilename))
+      destfilename=os.path.normpath(destRoot+"/"+srcfilename[len(basePath):])
+      filelist.append((srcfilename,destfilename))
+    if not recursive:
+      return filelist
   return filelist
 
 if __name__=='__main__':
@@ -101,7 +107,9 @@ if __name__=='__main__':
   parser=optparse.OptionParser(usage=usage)
   parser.add_option('--verbose','-v',action="store_true",help='run in verbose mode')
   parser.add_option('--ignore-checksum',action="store_true",help='dont check MD5 sum, forces transfer')
+  parser.add_option('--recursive','-r',help="Do a recursive sync",action="store_true")
   parser.add_option('--nstreams',type=int,help="Number of streams to run (MAX: 10)",default=1)
+  parser.add_option('--ignore',help="ignore directories or files containing this pattern",default=None)
   (opt,args)=parser.parse_args()
   if len(args)<2:
     parser.error("requires one or more source files and a single destination directory")
@@ -122,10 +130,10 @@ if __name__=='__main__':
   for filename in args:
     if opt.verbose:
       sys.stdout.write("Adding %s to transfer list\n" % (filename))
-    if dest[-1]=="/" :
-      thisRoot=os.path.join(dest,filename)
     if os.path.isdir(filename):
-      filelist.extend(buildFileList(filename,destRoot=thisRoot))
+      if filename[-1]!="/" :
+        thisRoot=os.path.join(dest,os.path.basename(filename))
+      filelist.extend(buildFileList(filename,destRoot=thisRoot,recursive=opt.recursive,ignore=opt.ignore))
     elif os.path.isfile(filename):
       if c.isdir(thisRoot):
         thisRoot=os.path.join(thisRoot,os.path.basename(filename))
@@ -142,6 +150,17 @@ if __name__=='__main__':
       parser.error("Destination directory must already exist in VOSpace")
 
   for (src,dest) in filelist:
-    copy(src,dest)
+    if os.path.islink(src):
+       sys.stderr.write("%s is a link, skipping\n" % ( src))
+       continue
+    if not os.access(src,os.R_OK):
+       sys.stderr.write("Failed to open file %s, skipping\n" % ( src))
+       continue
+    import re
+    if re.match('^[A-Za-z0-9\\._\\-\\(\\);:&\\*\\$@!+=\\/]*$',src) is None:
+       sys.stderr.write("filename %s contains illegal characters, skipping\n" % ( src))
+       continue
+    copy(src,dest)	
+       
   startStreams(opt.nstreams)
   queue.join()
