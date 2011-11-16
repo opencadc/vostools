@@ -29,10 +29,10 @@ class ThreadCopy(threading.Thread):
     while True:
       (src,dest)=self.queue.get()
       now = datetime.datetime.now()
-      if self.client.isdir(dest):
-        sys.stderr.write("Attempting to overwrite directory at %s, skipping\n" %src)
-        self.queue.task_done()
-        continue
+      #if self.client.isdir(dest):
+      #  sys.stderr.write("Attempting to overwrite directory at %s, skipping\n" %src)
+      #  self.queue.task_done()
+      #  continue
       srcMD5=self.fileMD5(src)
       if self.client.isfile(dest):
         """Check if the file is the same"""
@@ -55,6 +55,7 @@ class ThreadCopy(threading.Thread):
 
 goodDirs=[]
 def mkdirs(dirs):
+  print dirs
   if dirs in goodDirs:
     return
   if c.isdir(dirs):
@@ -67,7 +68,7 @@ def mkdirs(dirs):
   if not c.isdir(dir):
     sys.exit("Part of the path isn't a directy? (%s)" % ( dir))
   if c.isfile(dirs):
-    sys.exit("Destination has directory where file expected (%s)" % (subdir))
+    sys.exit("Destination location a file when directory expected (%s)" % (subdir))
   c.mkdir(dirs)
   goodDirs.append(dirs)
 
@@ -97,6 +98,8 @@ def buildFileList(basePath,destRoot='',recursive=False,ignore=None):
         continue
       srcfilename=os.path.normpath(os.path.join(root,thisfilename))
       destfilename=os.path.normpath(destRoot+"/"+srcfilename[len(basePath):])
+      mkdirs(os.path.dirname(destfilename))
+      print srcfilename,destfilename
       filelist.append((srcfilename,destfilename))
     if not recursive:
       return filelist
@@ -124,6 +127,7 @@ if __name__=='__main__':
   if opt.verbose:
     sys.stdout.write("Establishing a query connection to VOSpace\n")
   c=vos.Client()
+  distIsDir=c.isdir(dest)
 
   ### build a complete file list given all the things on the command line
   filelist=[]
@@ -135,15 +139,17 @@ if __name__=='__main__':
         thisRoot=os.path.join(dest,os.path.basename(filename))
       filelist.extend(buildFileList(filename,destRoot=thisRoot,recursive=opt.recursive,ignore=opt.ignore))
     elif os.path.isfile(filename):
-      if c.isdir(thisRoot):
-        thisRoot=os.path.join(thisRoot,os.path.basename(filename))
+      if destIsDir:
+        thisRoot=os.path.join(dest,os.path.basename(filename))
       filelist.append((filename,thisRoot))
     else:
       sys.stderr.write("%s: No such file or directory.\n" % ( filename))
-  destIsFile=c.isfile(dest)
-  destIsDir=c.isdir(dest)
 
-  if len(filelist)>1 :
+  if 1==2:
+   destIsFile=c.isfile(dest)
+   destIsDir=c.isdir(dest)
+
+   if len(filelist)>1 :
     if destIsFile:
       parser.error("Desitnation for multiple files must be a direcotry")
     if not destIsDir:
