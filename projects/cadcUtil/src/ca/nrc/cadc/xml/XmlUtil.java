@@ -156,7 +156,7 @@ public class XmlUtil
         throws IOException, JDOMException
     {
         Map<String, String> map = new HashMap<String, String>();
-        map.put(schemaNSKey, schemaResourceFileName);
+        map.put(schemaNSKey, getResourceUrlString(schemaResourceFileName, XmlUtil.class));
         return validateXml(xml, map);
     }
 

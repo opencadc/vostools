@@ -51,7 +51,6 @@ public class ByteCountInputStream extends InputStream implements ByteCounter
      * Constructor that takes the target input stream..
      * 
      * @param inputStream  The InputStream to wrap.
-     * @param byteLimit    The quota space left to be written to, in bytes.
      */
     public ByteCountInputStream(final InputStream inputStream)
     {

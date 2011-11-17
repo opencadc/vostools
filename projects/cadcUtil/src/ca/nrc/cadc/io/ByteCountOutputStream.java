@@ -72,8 +72,6 @@ package ca.nrc.cadc.io;
 import java.io.IOException;
 import java.io.OutputStream;
 
-import javax.servlet.http.HttpServletResponse;
-
 /**
  * Simple OutputStream wrapper that keeps track of bytes written.
  * 
@@ -84,8 +82,7 @@ import javax.servlet.http.HttpServletResponse;
  */
 public class ByteCountOutputStream extends OutputStream implements ByteCounter
 {
-    private OutputStream outputStream;
-    private HttpServletResponse response;
+    private OutputStream ostream;
     
     private long byteCount = 0L;
     private Long byteLimit = null;
@@ -98,7 +95,7 @@ public class ByteCountOutputStream extends OutputStream implements ByteCounter
     public ByteCountOutputStream(OutputStream outputStream)
     {
         super();
-        this.outputStream = outputStream;
+        this.ostream = outputStream;
     }
     
     /**
@@ -110,42 +107,11 @@ public class ByteCountOutputStream extends OutputStream implements ByteCounter
     public ByteCountOutputStream(OutputStream outputStream,
                                 long byteLimit)
     {
-        this.outputStream = outputStream;
+        this.ostream = outputStream;
         if (byteLimit > 0)
             this.byteLimit = byteLimit;
     }
     
-    /**
-     * Constructor that takes the http servlet response.
-     * 
-     * he output stream is retrieved from the response at the last possible
-     * moment so as to not commit the state of the response.
-     * 
-     * @param outputStream       The OutputStream to wrap.
-     * @param byteLimit    The quota space left to be written to, in bytes.
-     */
-    public ByteCountOutputStream(HttpServletResponse response)
-    {
-        this.response = response;
-    }
-    
-    /**
-     * Constructor that takes the http servlet response and a byte limit.
-     * 
-     * The output stream is retrieved from the response at the last possible
-     * moment so as to not commit the state of the response.
-     * 
-     * @param response     The HttpServletResponse holding the output stream.
-     * @param byteLimit    The quota space left to be written to, in bytes.
-     */
-    public ByteCountOutputStream(HttpServletResponse response,
-                                long byteLimit)
-    {
-        this.response = response;
-        if (byteLimit > 0)
-            this.byteLimit = byteLimit;
-    }
-
     /**
      * Get the number of bytes written to the underlying output stream to far.
      * This value is up to date right after flush() is called; otherwise, it may
@@ -164,14 +130,14 @@ public class ByteCountOutputStream extends OutputStream implements ByteCounter
     public void close()
         throws IOException
     {
-        getOutputStream().close();
+        ostream.close();
     }
 
     @Override
     public void flush()
         throws IOException
     {
-        getOutputStream().flush();
+        ostream.flush();
     }
 
     @Override
@@ -180,7 +146,7 @@ public class ByteCountOutputStream extends OutputStream implements ByteCounter
     {
         if (hasReachedLimit())
             throw new ByteLimitExceededException(byteLimit);
-        getOutputStream().write(b);
+        ostream.write(b);
         byteCount++;
     }
 
@@ -190,7 +156,7 @@ public class ByteCountOutputStream extends OutputStream implements ByteCounter
     {
         if (hasReachedLimit())
             throw new ByteLimitExceededException(byteLimit);
-        getOutputStream().write(b);
+        ostream.write(b);
         byteCount += b.length;
     }
 
@@ -200,21 +166,8 @@ public class ByteCountOutputStream extends OutputStream implements ByteCounter
     {
         if (hasReachedLimit())
             throw new ByteLimitExceededException(byteLimit);
-        getOutputStream().write(b, offset, num);
+        ostream.write(b, offset, num);
         byteCount += num;
-    }
-    
-    /**
-     * Return the local output stream or get it from the
-     * response object.
-     */
-    private OutputStream getOutputStream() throws IOException
-    {
-        if (outputStream != null)
-            return outputStream;
-        
-        outputStream = response.getOutputStream();
-        return outputStream;
     }
     
     /**
