@@ -282,9 +282,17 @@ public class Main implements Runnable
         try
         {
             log.debug("target.getPath()" + this.target.getPath());
+            // TODO: here we get the node in order to figure out the type, but
+            // maybe we could just POST a vanilla Node object?
             Node n = this.client.getNode(this.target.getPath(), "limit=0");
-            copyProperties(n);
-            this.client.setNode(n);
+            Node up = null;
+            if (n instanceof ContainerNode)
+                up = new ContainerNode(target, properties);
+            else if (n instanceof DataNode)
+                up = new DataNode(target, properties);
+            else
+                throw new UnsupportedOperationException("unexpected node type: " + n.getClass().getName());
+            this.client.setNode(up);
             log.info("updated properties: " + this.target);
         }
         catch(NodeNotFoundException ex)
@@ -438,8 +446,7 @@ public class Main implements Runnable
     {
         try
         {
-            ContainerNode cnode = new ContainerNode(target);
-            copyProperties(cnode);
+            ContainerNode cnode = new ContainerNode(target, properties);
             Node nodeRtn = client.createNode(cnode);
             log.info("created: " + nodeRtn.getUri());
         }
@@ -961,39 +968,6 @@ public class Main implements Runnable
             }
         }
         return view;
-    }
-
-    // copy properties specified on command-line to the specified node
-    private boolean copyProperties(Node n)
-    {
-        List<NodeProperty> cur = n.getProperties();
-        if (cur == null)
-            n.setProperties(properties);
-        else
-        {
-            Map<String,NodeProperty> map = new HashMap<String,NodeProperty>();
-            // copy current
-            for (NodeProperty np : cur)
-            {
-                log.debug(String.format(
-                    "copyProperty--setting existing property [%s] to [%s].",
-                    np.getPropertyURI(), np.getPropertyValue()));
-                map.put(np.getPropertyURI(), np);
-            }
-            // replace with specified values
-            for (NodeProperty np : properties)
-            {
-                log.debug(String.format(
-                    "copyProperty--replacing property [%s] with value [%s].",
-                    np.getPropertyURI(), np.getPropertyValue()));
-                map.put(np.getPropertyURI(), np);
-            }
-            cur.clear();
-            cur.addAll(map.values());
-        }
-        // return true if some props were set or if the node
-        // is inheriting permissions
-        return (properties.size() > 0);
     }
 
     private static String ZERO_LENGTH = "";
