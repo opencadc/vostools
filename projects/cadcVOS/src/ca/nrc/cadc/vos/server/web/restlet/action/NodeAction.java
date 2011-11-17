@@ -300,14 +300,9 @@ public abstract class NodeAction implements PrivilegedAction<Object>
         }
         catch (FileNotFoundException e)
         {
-            NodeFault nodeFault;
-            if (this instanceof CreateNodeAction)
-                nodeFault = NodeFault.ContainerNotFound;
-            else
-                // TODO: if this is delete and it was a missing parent, should be ContainerNotFound
-                nodeFault = NodeFault.NodeNotFound;
-            String faultMessage = vosURI.toString();
             log.debug("Could not find node with path: " + vosURI.getPath());
+            NodeFault nodeFault = handleException(e);
+            String faultMessage = vosURI.toString();
             return handleException(nodeFault, faultMessage);
         }
         catch (URISyntaxException e)
@@ -350,6 +345,14 @@ public abstract class NodeAction implements PrivilegedAction<Object>
             log.debug("BUG: " + faultMessage, t);
             return handleException(NodeFault.InternalFault, faultMessage);
         }
+    }
+
+    protected NodeFault handleException(FileNotFoundException ex)
+    {
+        if (this instanceof CreateNodeAction)
+            return NodeFault.ContainerNotFound;
+
+        return NodeFault.NodeNotFound;
     }
     
     /**

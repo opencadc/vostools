@@ -77,6 +77,7 @@ import org.apache.log4j.Logger;
 
 import ca.nrc.cadc.vos.ContainerNode;
 import ca.nrc.cadc.vos.Node;
+import ca.nrc.cadc.vos.NodeFault;
 import ca.nrc.cadc.vos.NodeNotFoundException;
 import ca.nrc.cadc.vos.NodeParsingException;
 import ca.nrc.cadc.vos.VOSURI;
@@ -142,6 +143,36 @@ public class DeleteNodeAction extends NodeAction
     {
         nodePersistence.delete(serverNode); // as per doAuthorizationCheck
         return null;
+    }
+
+    @Override
+    protected NodeFault handleException(FileNotFoundException fnf)
+    {
+        // need to determine if the parent container exists
+        if (vosURI.isRoot())
+            return NodeFault.NodeNotFound;
+
+        VOSURI parentURI = vosURI.getParentURI();
+        if (parentURI.isRoot())
+            return NodeFault.NodeNotFound;
+
+        try
+        {
+            Node target = nodePersistence.get(parentURI);
+            // check read permission so we do not leak info about the existence
+            voSpaceAuthorizer.getReadPermission(target);
+        }
+        catch(NodeNotFoundException nnf)
+        {
+            return NodeFault.ContainerNotFound;
+        }
+        catch(AccessControlException ac)
+        {
+            return NodeFault.PermissionDenied;
+        }
+        finally { }
+
+        return NodeFault.NodeNotFound;
     }
     
     /**

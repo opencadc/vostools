@@ -260,7 +260,8 @@ public class VOSpaceClient
             
             switch (responseCode)
             {
-                case 201: // valid
+                case 200: // valid re spec
+                case 201: // valid re previous spec
                     InputStream in = connection.getInputStream();
                     NodeReader nodeReader = new NodeReader(schemaValidation);
                     rtnNode = nodeReader.read(in);
