@@ -93,7 +93,11 @@ public class NodeInputRepresentation
     protected static Logger log = Logger.getLogger(NodeInputRepresentation.class);
     
     // 12Kb XML Doc size limit
-    private static final long DOCUMENT_SIZE_MAX = 12288L;
+    //private static final long DOCUMENT_SIZE_MAX = 12288L;
+
+    // temporary: 100MB ~ 125k child nodes to accomodate current usage while
+    // we release a client that doesn't do this (POST update with complete child list)
+    private static final long DOCUMENT_SIZE_MAX = 1024*1024*4L; 
     
     private Representation xmlValue;
     private String expectedPath;
