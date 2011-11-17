@@ -29,34 +29,44 @@ class ThreadCopy(threading.Thread):
     while True:
       (src,dest)=self.queue.get()
       now = datetime.datetime.now()
-      #if self.client.isdir(dest):
-      #  sys.stderr.write("Attempting to overwrite directory at %s, skipping\n" %src)
-      #  self.queue.task_done()
-      #  continue
       srcMD5=None
       if not opt.ignore_checksum:
          srcMD5=self.fileMD5(src)
-      if self.client.isfile(dest):
-         """Check if the file is the same"""
-         node=self.client.getNode(dest)
-         info=node.getInfo()
-         destMD5=node.props.get('MD5',None)
-         destLength=node.attr['st_size']
-         destTime=node.attr['st_ctime']
-         stat=os.stat(src)
-         if (not opt.ignore_checksum and srcMD5==destMD5) or ( opt.ignore_checksum and destTime >= stat.st_ctime and destLength==stat.st_size) :
-           if opt.verbose:
-             sys.stdout.write( "skipping file (matches server copy): %s\n" % (src) )
-           self.queue.task_done()
-           continue
+      if not opt.overwrite:
+       try:
+        node=self.client.getNode(dest)
+        """Check if the file is the same"""
+        info=node.getInfo()
+        destMD5=node.props.get('MD5',None)
+        destLength=node.attr['st_size']
+        destTime=node.attr['st_ctime']
+        stat=os.stat(src)
+        if (not opt.ignore_checksum and srcMD5==destMD5) or ( opt.ignore_checksum and destTime >= stat.st_ctime and destLength==stat.st_size) :
+          if opt.verbose:
+            sys.stdout.write( "skipping: %s  matches %s\n" % (src,dest) )
+          self.queue.task_done()
+          continue
+       except IOError as e:
+        """Ignore the erorr"""
+        pass
       if opt.verbose:
         sys.stdout.write("%s -> %s\n" % (src,dest))
-      self.client.copy(src,dest)
+      try:
+        self.client.copy(src,dest)
+      except IOError as e:
+        sys.stderr.write(str(e))
+        pass
       self.queue.task_done()
-      destMD5=self.client.getNode(dest).props.get('MD5',None)
-      if not opt.ignore_checksum and destMD5!=srcMD5:
-        sys.stderr.write("Problem writing to vospace. requeuing: %s" % (src))
-        self.queue.put((src,dest))
+      if not opt.ignore_checksum:
+        destMD5=None
+        try:
+          destMD5=self.client.getNode(dest).props.get('MD5',None)
+        except IOError as e:
+          sys.stderr.write(str(e))
+          pass
+        if destMD5!=srcMD5:
+          sys.stderr.write("Problem writing to vospace. requeuing: %s" % (src))
+          #self.queue.put((src,dest))
 
 goodDirs=[]
 def mkdirs(dirs):
@@ -118,7 +128,8 @@ if __name__=='__main__':
   parser.add_option('--ignore-checksum',action="store_true",help='dont check MD5 sum, forces transfer')
   parser.add_option('--recursive','-r',help="Do a recursive sync",action="store_true")
   parser.add_option('--nstreams',type=int,help="Number of streams to run (MAX: 10)",default=1)
-  parser.add_option('--ignore',help="ignore directories or files containing this pattern",default=None)
+  parser.add_option('--ignore-pattern',help="ignore directories or files containing this pattern",default=None)
+  parser.add_option('--overwrite',help="overwrite copy on server regardless of modification/size/md5 checks",action="store_true")
   (opt,args)=parser.parse_args()
   if len(args)<2:
     parser.error("requires one or more source files and a single destination directory")
@@ -144,7 +155,7 @@ if __name__=='__main__':
       thisRoot=dest
       if filename[-1]!="/" :
         thisRoot=os.path.join(dest,os.path.basename(filename))
-      filelist.extend(buildFileList(filename,destRoot=thisRoot,recursive=opt.recursive,ignore=opt.ignore))
+      filelist.extend(buildFileList(filename,destRoot=thisRoot,recursive=opt.recursive,ignore=opt.ignore_pattern))
     elif os.path.isfile(filename):
       if destIsDir:
         thisRoot=os.path.join(dest,os.path.basename(filename))
