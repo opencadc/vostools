@@ -33,32 +33,37 @@ class ThreadCopy(threading.Thread):
       #  sys.stderr.write("Attempting to overwrite directory at %s, skipping\n" %src)
       #  self.queue.task_done()
       #  continue
-      srcMD5=self.fileMD5(src)
+      srcMD5=None
+      if not opt.ignore_checksum:
+         srcMD5=self.fileMD5(src)
       if self.client.isfile(dest):
-        """Check if the file is the same"""
-        if not opt.ignore_checksum:
-          node=self.client.getNode(dest)
-          destMD5=node.props.get('MD5',None)
-          if srcMD5==destMD5:
-            if opt.verbose:
-              sys.stdout.write( "skipping file (matches server copy): %s\n" % (src) )
-            self.queue.task_done()
-            continue
+         """Check if the file is the same"""
+         node=self.client.getNode(dest)
+         info=node.getInfo()
+         destMD5=node.props.get('MD5',None)
+         destLength=node.attr['st_size']
+         destTime=node.attr['st_ctime']
+         stat=os.stat(src)
+         if (not opt.ignore_checksum and srcMD5==destMD5) or ( opt.ignore_checksum and destTime >= stat.st_ctime and destLength==stat.st_size) :
+           if opt.verbose:
+             sys.stdout.write( "skipping file (matches server copy): %s\n" % (src) )
+           self.queue.task_done()
+           continue
       if opt.verbose:
         sys.stdout.write("%s -> %s\n" % (src,dest))
       self.client.copy(src,dest)
       self.queue.task_done()
       destMD5=self.client.getNode(dest).props.get('MD5',None)
-      if destMD5!=srcMD5:
+      if not opt.ignore_checksum and destMD5!=srcMD5:
         sys.stderr.write("Problem writing to vospace. requeuing: %s" % (src))
         self.queue.put((src,dest))
 
 goodDirs=[]
 def mkdirs(dirs):
-  print dirs
   if dirs in goodDirs:
     return
   if c.isdir(dirs):
+    goodDirs.append(dirs)
     return
 
   (dir,subdir) = os.path.split(dirs)
@@ -92,14 +97,15 @@ def startStreams(nstreams):
 def buildFileList(basePath,destRoot='',recursive=False,ignore=None):
   """Build a list of files that should be copied into VOSpace"""
   filelist=[]
+  import re
   for (root,dirs,filenames) in os.walk(basePath):
     for thisfilename in filenames:
       if ignore is not None and ignore in thisfilename:
         continue
       srcfilename=os.path.normpath(os.path.join(root,thisfilename))
-      destfilename=os.path.normpath(destRoot+"/"+srcfilename[len(basePath):])
+      cprefix=os.path.commonprefix((basePath,srcfilename))
+      destfilename=os.path.normpath(destRoot+"/"+srcfilename[len(cprefix):])
       mkdirs(os.path.dirname(destfilename))
-      print srcfilename,destfilename
       filelist.append((srcfilename,destfilename))
     if not recursive:
       return filelist
@@ -132,9 +138,10 @@ if __name__=='__main__':
   ### build a complete file list given all the things on the command line
   filelist=[]
   for filename in args:
-    if opt.verbose:
-      sys.stdout.write("Adding %s to transfer list\n" % (filename))
+    #if opt.verbose:
+    #  sys.stdout.write("Adding %s to transfer list\n" % (filename))
     if os.path.isdir(filename):
+      thisRoot=dest
       if filename[-1]!="/" :
         thisRoot=os.path.join(dest,os.path.basename(filename))
       filelist.extend(buildFileList(filename,destRoot=thisRoot,recursive=opt.recursive,ignore=opt.ignore))
