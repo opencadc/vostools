@@ -116,12 +116,30 @@ public abstract class DatabaseNodePersistence implements NodePersistence
             VOS.PROPERTY_URI_GROUPWRITE});
 
     protected NodeDAO.NodeSchema nodeSchema;
+    protected boolean markDeleted;
 
     protected Integer maxChildLimit = new Integer(1000000);
 
+    /**
+     * Constructor. This uses the default behaviour of deleting rows from the
+     * node tables immediately.
+     * 
+     * @param nodeSchema node schema config
+     */
     protected DatabaseNodePersistence(NodeDAO.NodeSchema nodeSchema)
     {
         this.nodeSchema = nodeSchema;
+        this.markDeleted = false;
+    }
+
+    /**
+     * @param nodeSchema node schema config
+     * @param markDeleted true to mark deleted nodes, false to delete them immediately
+     */
+    protected DatabaseNodePersistence(NodeDAO.NodeSchema nodeSchema, boolean markDeleted)
+    {
+        this.nodeSchema = nodeSchema;
+        this.markDeleted = markDeleted;
     }
 
     /**
@@ -246,7 +264,7 @@ public abstract class DatabaseNodePersistence implements NodePersistence
      * Delete the node. For DataNodes, this <b>does not</b> do anything to delete
      * the stored file from any byte-storage location; it only removes the metadata
      * from the database. Delete recursively calls updateContentLength for the 
-     * parent, if necesasry.
+     * parent, if necessary.
      *
      * @see NodeDAO.delete(Node)
      * @see NodeDAO.markForDeletion(Node)
@@ -261,8 +279,10 @@ public abstract class DatabaseNodePersistence implements NodePersistence
 
         long contentLength = getContentLength(node);
         log.debug("delete: contentLength = " + contentLength);
-        //dao.delete(node);
-        dao.markForDeletion(node);
+        if (markDeleted)
+            dao.markForDeletion(node);
+        else
+            dao.delete(node);
         if (contentLength > 0)
         {
             long delta = -1*contentLength;
