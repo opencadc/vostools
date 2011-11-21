@@ -76,11 +76,15 @@ import java.awt.Component;
 import java.awt.Font;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
+import java.lang.reflect.InvocationTargetException;
 import java.net.Authenticator;
 import java.net.PasswordAuthentication;
+import java.net.URL;
 import java.util.HashMap;
+import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
+import java.util.WeakHashMap;
 import javax.swing.BorderFactory;
 import javax.swing.Box;
 import javax.swing.BoxLayout;
@@ -92,6 +96,8 @@ import javax.swing.JLabel;
 import javax.swing.JPanel;
 import javax.swing.JPasswordField;
 import javax.swing.JTextField;
+import javax.swing.SwingUtilities;
+import org.apache.log4j.Logger;
 
 /**
  * Simple Authenticator that pops up a custom dialog to get a username/password.
@@ -102,15 +108,24 @@ import javax.swing.JTextField;
  *
  * @author pdowler
  */
-public class HttpAuthenticator extends Authenticator
+public class HttpAuthenticator extends Authenticator implements Runnable
 {
+    private static final Logger log = Logger.getLogger(HttpAuthenticator.class);
+
     private boolean debug = false;
     private Component parent;
     private MyAuthDialog mad;
 
-    // TODO: this is bad to store password(s) in memory...
+    // some recent JRE impls have tightened up the sync block so they can call
+    // getPasswordAuthentication from multiple threads and we want to show the
+    // minimal number of GUI dialogs: so we have to cache the uname/pword combo
+    // inside a synchronized block as multiple threads doing http could be blocked
+    // inside the getPasswordAuthentication method
     private Map<RequestingApp,PasswordAuthentication> authMap = new HashMap<RequestingApp,PasswordAuthentication>();
-    
+
+    // cache previous url -> credential look ups to detect when the creds were bad
+    // weak: entries can be removed by the GC when the app is done with the URL
+    private Map<URL,RequestingApp> prevAttempts = new WeakHashMap<URL,RequestingApp>();
     
     public HttpAuthenticator(Component parent) 
     { 
@@ -122,34 +137,98 @@ public class HttpAuthenticator extends Authenticator
     @Override
     protected PasswordAuthentication getPasswordAuthentication()
     {
-        RequestingApp ra = new RequestingApp();
-        ra.host = getRequestingHost();
-        ra.port = getRequestingPort();
-        ra.prompt = getRequestingPrompt();
-        ra.protocol = getRequestingProtocol();
-        ra.scheme = getRequestingScheme();
-        msg("getPasswordAuthentication: " + ra);
-        PasswordAuthentication pa = authMap.get(ra);
-        if (pa == null)
+        synchronized(this) // http library does not have to synchronize usage
         {
-            pa = getCredentials();
-            if (pa != null)
-                authMap.put(ra, pa);
+            RequestingApp ra = new RequestingApp();
+            ra.host = getRequestingHost();
+            ra.port = getRequestingPort();
+            ra.prompt = getRequestingPrompt();
+            ra.protocol = getRequestingProtocol();
+            ra.scheme = getRequestingScheme();
+            ra.url = getRequestingURL();
+            log.warn("getPasswordAuthentication: " + ra);
+
+            boolean retry = false;
+            RequestingApp prev = prevAttempts.get(ra.url);
+            if (prev != null) // already tried: assume creds were bad and clear cache
+            {
+                authMap.remove(prev);
+                retry = true;
+            }
+            PasswordAuthentication pa = authMap.get(ra);
+            if (pa == null)
+            {
+                pa = getCredentials(retry);
+                if (pa != null)
+                {
+                    authMap.put(ra, pa);
+                    // remove all old prevAttempts that refer to this RA
+                    Iterator<Map.Entry<URL,RequestingApp>> iter = prevAttempts.entrySet().iterator();
+                    while ( iter.hasNext() )
+                    {
+                        Map.Entry<URL,RequestingApp> me = iter.next();
+                        if (me.getValue().equals(ra))
+                        {
+                            log.warn("getPasswordAuthentication: removing " + me.getKey() + " , " + me.getValue());
+                            iter.remove();
+                        }
+                    }
+                }
+            }
+            if (pa == null)
+                return null;
+
+            prevAttempts.put(ra.url, ra);
+
+            // return a deep copy in case the caller tries to clean up
+            char[] pw = pa.getPassword();
+            char[] pwcp = new char[pw.length];
+            System.arraycopy(pw, 0, pwcp, 0, pw.length);
+            log.warn("getPasswordAuthentication: ret = " + pa);
+            return new PasswordAuthentication(pa.getUserName(), pwcp);
         }
-        if (pa == null)
-            return null;
-        // return a deep copy in case the caller tried to clean up
-        char[] pw = pa.getPassword();
-        char[] pwcp = new char[pw.length];
-        System.arraycopy(pw, 0, pwcp, 0, pw.length);
-        return new PasswordAuthentication(pa.getUserName(), pwcp);
     }
- 
-    private PasswordAuthentication getCredentials()
+
+    private PasswordAuthentication lastResponse;
+    private boolean doRetry;
+    private PasswordAuthentication getCredentials(boolean retry)
+    {
+        this.doRetry = retry;
+        if ( SwingUtilities.isEventDispatchThread() )
+        {
+            log.warn("getCredentials runs in the swing event thread");
+            run();
+        }
+        else
+            try
+            {
+                log.warn("getCredentials invokeAndWait in swing event thread");
+                SwingUtilities.invokeAndWait(this);
+            }
+            catch(InterruptedException killed)
+            {
+                log.debug("getCredentials: interrupted");
+                lastResponse = null;
+            }
+        catch(InvocationTargetException bug)
+        {
+            log.error("BUG: unexpected exception", bug);
+            lastResponse = null;
+        }
+
+        PasswordAuthentication ret = lastResponse;
+        this.lastResponse = null;
+        this.doRetry = false;
+        return ret;
+    }
+
+    public void run()
     {
         if (mad == null) // lazy init in case we never need it
             mad = new MyAuthDialog();
-        return mad.getPasswordAuthentication(getRequestingHost(), getRequestingPrompt());
+        mad.setRetry(doRetry);
+        lastResponse = mad.getPasswordAuthentication(getRequestingHost(), getRequestingPrompt());
+        mad.setRetry(false);
     }
 
     private void msg(String s)
@@ -161,18 +240,21 @@ public class HttpAuthenticator extends Authenticator
     {
         private int CANCEL = 1;
         private int OK = 2;
+        private String RETRY_TEXT = "Credentials rejected by server, please try again";
         private String OK_TEXT = "OK";
         private String CANCEL_TEXT = "Cancel";
         private String NETRC_TEXT = "Read credentials from .netrc file";
         
         private int retval;
         private String host;
-        private JLabel hostLabel, promptLabel, iconLabel;
+        private JLabel hostLabel, promptLabel, iconLabel, retryLabel;
         private JDialog dialog;
         private JTextField unField;
         private JPasswordField pwField;
         private JCheckBox netrcBox1, netrcBox2;
         private JButton okButton, cancelButton;
+
+        private boolean retry;
                 
         private List netrc;
         
@@ -180,6 +262,8 @@ public class HttpAuthenticator extends Authenticator
         {
             msg("constrcutor: MyAuthDialog");
         }
+
+        public void setRetry(boolean retry) { this.retry = retry; }
         
         public PasswordAuthentication getPasswordAuthentication(String host, String prompt)
         {
@@ -223,6 +307,9 @@ public class HttpAuthenticator extends Authenticator
                 this.iconLabel = new JLabel();
                 this.hostLabel = new JLabel();
                 this.promptLabel = new JLabel();
+                this.retryLabel = new JLabel(RETRY_TEXT);
+                retryLabel.setForeground(Color.red);
+
                 // rescale font for prompt
                 Font f = promptLabel.getFont();
                 float sz = f.getSize2D(); 
@@ -256,6 +343,7 @@ public class HttpAuthenticator extends Authenticator
                 b.add(Box.createGlue());
                 b.add(promptLabel);
                 b.add(hostLabel);
+                b.add(retryLabel);
                 b.add(Box.createGlue());
                 b.setBorder(BorderFactory.createEmptyBorder(4,4,4,4));
                 info.add(b, BorderLayout.CENTER);
@@ -308,9 +396,14 @@ public class HttpAuthenticator extends Authenticator
             
             promptLabel.setText(prompt);
             hostLabel.setText("server: " + host);
+            if (retry)
+                retryLabel.setText(RETRY_TEXT);
+            else
+                retryLabel.setText(" ");
            
             // prepare to show dialog
             this.retval = CANCEL;
+
             Util.setPositionRelativeToParent(dialog, parent, 20, 20);
 	}
         
@@ -369,6 +462,9 @@ public class HttpAuthenticator extends Authenticator
         String prompt;
         String scheme;
 
+        URL url;
+
+        // gunk is the equality comparison part
         String gunk;
 
         RequestingApp() { }
@@ -376,7 +472,7 @@ public class HttpAuthenticator extends Authenticator
         public String toString()
         {
             init();
-            return "RequestingApp[" + gunk + "]";
+            return "RequestingApp[" + gunk + "," + url + "]";
         }
         private void init()
         {
