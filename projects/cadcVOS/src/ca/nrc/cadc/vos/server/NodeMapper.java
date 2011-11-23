@@ -184,7 +184,15 @@ public class NodeMapper implements RowMapper
         }
         if (contentMD5 != null && contentMD5 instanceof byte[])
         {
-            String contentMD5String = HexUtil.toHex((byte[]) contentMD5);
+            byte[] md5 = (byte[]) contentMD5;
+            if (md5.length < 16)
+            {
+                byte[] tmp = md5;
+                md5 = new byte[16];
+                System.arraycopy(tmp, 0, md5, 0, tmp.length);
+                // extra space is init with 0
+            }
+            String contentMD5String = HexUtil.toHex(md5);
             node.getProperties().add(new NodeProperty(VOS.PROPERTY_URI_CONTENTMD5, contentMD5String));
         }
         if (lastModified != null)

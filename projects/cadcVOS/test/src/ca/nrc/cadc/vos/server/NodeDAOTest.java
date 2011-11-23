@@ -1077,6 +1077,50 @@ public class NodeDAOTest
         }
     }
 
+    @Test
+    public void testMD5()
+    {
+        // md5 is stored as a binary(16) which is sometimes tricky with trailing zero(s)
+        log.debug("testMD5 - START");
+        try
+        {
+            DataNode dataNode = null;
+            ContainerNode containerNode = null;
+            Node putNode = null;
+
+            ContainerNode rootContainer = (ContainerNode) nodeDAO.getPath(HOME_CONTAINER);
+            log.debug("ROOT: " + rootContainer);
+            Assert.assertNotNull(rootContainer);
+            String basePath = "/" + HOME_CONTAINER + "/";
+
+            NodeProperty md5 = new NodeProperty(VOS.PROPERTY_URI_CONTENTMD5, HexUtil.toHex(new byte[] {1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 0, 0}));
+            log.debug("md5: " + md5.getPropertyValue());
+            // /a
+            String nodePath1 = basePath + getNodeName("a");
+            List<NodeProperty> props = new ArrayList<NodeProperty>();
+            props.add(md5);
+            dataNode = getCommonDataNode(nodePath1, props);
+            dataNode.setParent(rootContainer); // back link to persistent parent required
+            putNode = nodeDAO.put(dataNode, owner);
+            Node nodeA = nodeDAO.getPath(nodePath1);
+            nodeDAO.getProperties(nodeA);
+            log.debug("PutNode: " + putNode);
+            log.debug("GetNode: " + nodeA);
+            compareNodes("assert1", putNode, nodeA);
+            compareProperties("assert2a", dataNode.getProperties(), putNode.getProperties());
+            compareProperties("assert2b", putNode.getProperties(), nodeA.getProperties());
+        }
+        catch(Exception unexpected)
+        {
+            log.error("unexpected exception", unexpected);
+            Assert.fail("unexpected exception: " + unexpected);
+        }
+        finally
+        {
+            log.debug("testMD5 - DONE");
+        }
+    }
+
     private long getContentLength(Node node)
     {
         String str = node.getPropertyValue(VOS.PROPERTY_URI_CONTENTLENGTH);
@@ -1165,13 +1209,42 @@ public class NodeDAOTest
         boolean match = true;
         for (NodeProperty e : expected)
         {
-            if (!actual.contains(e))
+            boolean found = false;
+            for (NodeProperty a : actual)
             {
-                Assert.fail(assertName + ": missing " + e);
+                if ( e.getPropertyURI().equals(a.getPropertyURI()))
+                {
+                    if ( isDN(e.getPropertyURI()) )
+                        Assert.assertTrue(
+                                AuthenticationUtil.equals(
+                                    new X500Principal(e.getPropertyValue()),
+                                    new X500Principal(a.getPropertyValue()
+                                    )
+                                ));
+                    else if ( isDate(e.getPropertyURI()))
+                        // TODO: some sort of sensible comparison?
+                        Assert.assertNotNull("date prop", a.getPropertyValue());
+                    else
+                        Assert.assertEquals(e.getPropertyURI(), e.getPropertyValue(), a.getPropertyValue());
+                    found = true;
+                }
             }
+            Assert.assertTrue("found "+e.getPropertyURI(), found);
         }
-
     }
-    
+
+    private boolean isDate(String uri)
+    {
+        if ( VOS.PROPERTY_URI_DATE.equals(uri))
+            return true;
+        return false;
+    }
+
+    private boolean isDN(String uri)
+    {
+        if ( VOS.PROPERTY_URI_CREATOR.equals(uri))
+            return true;
+        return false;
+    }
 }
 
