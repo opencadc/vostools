@@ -162,7 +162,7 @@ if __name__=='__main__':
   if opt.verbose:
     sys.stdout.write("Connecting to VOSpace\n")
   c=vos.Client()
-  distIsDir=c.isdir(dest)
+  destIsDir=c.isdir(dest)
 
   ### build a complete file list given all the things on the command line
   filelist=[]
