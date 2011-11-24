@@ -256,11 +256,11 @@ class VOFS(LoggingMixIn, Operations):
 
         self.node[path]=node
         self.attr[path]=node.attr
-        if self.node[path].isdir():
-            for node in self.node[path].getNodeList():
-                npath=os.path.join(path,node.name)
-                self.node[npath]=node
-                self.attr[npath]=node.attr
+        #if self.node[path].isdir():
+        #    for node in self.node[path].getNodeList():
+        #        npath=os.path.join(path,node.name)
+        #        self.node[npath]=node
+        #        self.attr[npath]=node.attr
         return self.node[path]
 
     def getPath(self,fh):
