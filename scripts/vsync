@@ -7,11 +7,18 @@ import datetime, optparse
 
 queue=Queue.Queue()
         
+
 class ThreadCopy(threading.Thread):
   def __init__(self,queue):
     super( ThreadCopy, self ).__init__()
     self.client=vos.Client()
     self.queue=queue
+    self.filesSent=0
+    self.filesSkipped=0
+    self.bytesSent=0
+    self.bytesSkipped=0
+    self.filesErrored=0
+
 
   def fileMD5(self,filename,block_size=8192):
     import hashlib
@@ -30,6 +37,7 @@ class ThreadCopy(threading.Thread):
       (src,dest)=self.queue.get()
       now = datetime.datetime.now()
       srcMD5=None
+      stat=os.stat(src)
       if not opt.ignore_checksum:
          srcMD5=self.fileMD5(src)
       if not opt.overwrite:
@@ -40,10 +48,11 @@ class ThreadCopy(threading.Thread):
         destMD5=node.props.get('MD5',None)
         destLength=node.attr['st_size']
         destTime=node.attr['st_ctime']
-        stat=os.stat(src)
         if (not opt.ignore_checksum and srcMD5==destMD5) or ( opt.ignore_checksum and destTime >= stat.st_ctime and destLength==stat.st_size) :
           if opt.verbose:
             sys.stdout.write( "skipping: %s  matches %s\n" % (src,dest) )
+          self.filesSkipped+=1
+          self.bytesSkipped+=stat.st_size
           self.queue.task_done()
           continue
        except IOError as e:
@@ -53,8 +62,12 @@ class ThreadCopy(threading.Thread):
         sys.stdout.write("%s -> %s\n" % (src,dest))
       try:
         self.client.copy(src,dest)
+        self.filesSent+=1
+        self.bytesSent+=stat.st_size
       except IOError as e:
+        sys.stderr.write("Error writing %s to server, skipping\n" % ( src))
         sys.stderr.write(str(e))
+        self.filesErrored+=1
         pass
       self.queue.task_done()
       if not opt.ignore_checksum:
@@ -97,12 +110,15 @@ def copy(source,dest):
   queue.put((source,dest))
                               
 def startStreams(nstreams):
+  streams=[]
   for i in range(nstreams):
     if opt.verbose:
       sys.stdout.write("Launching vospace connection stream %d\n" % ( i ))
     t=ThreadCopy(queue)
     t.setDaemon(True)
     t.start()
+    streams.append(t)
+  return streams
 
 def buildFileList(basePath,destRoot='',recursive=False,ignore=None):
   """Build a list of files that should be copied into VOSpace"""
@@ -122,13 +138,15 @@ def buildFileList(basePath,destRoot='',recursive=False,ignore=None):
   return filelist
 
 if __name__=='__main__':
+  import time
+  startTime=time.time()
   usage = "%prog [options] files vos:Destination/"
   parser=optparse.OptionParser(usage=usage)
   parser.add_option('--verbose','-v',action="store_true",help='run in verbose mode')
   parser.add_option('--ignore-checksum',action="store_true",help='dont check MD5 sum, forces transfer')
   parser.add_option('--recursive','-r',help="Do a recursive sync",action="store_true")
   parser.add_option('--nstreams',type=int,help="Number of streams to run (MAX: 10)",default=1)
-  parser.add_option('--ignore-pattern',help="ignore directories or files containing this pattern",default=None)
+  parser.add_option('--exclude',help="ignore directories or files containing this pattern",default=None)
   parser.add_option('--overwrite',help="overwrite copy on server regardless of modification/size/md5 checks",action="store_true")
   (opt,args)=parser.parse_args()
   if len(args)<2:
@@ -142,7 +160,7 @@ if __name__=='__main__':
     parser.error("Only allows sync FROM local copy TO VOSpace")
   ## Currently we don't create nodes in sync and we don't sync onto files
   if opt.verbose:
-    sys.stdout.write("Establishing a query connection to VOSpace\n")
+    sys.stdout.write("Connecting to VOSpace\n")
   c=vos.Client()
   distIsDir=c.isdir(dest)
 
@@ -155,7 +173,7 @@ if __name__=='__main__':
       thisRoot=dest
       if filename[-1]!="/" :
         thisRoot=os.path.join(dest,os.path.basename(filename))
-      filelist.extend(buildFileList(filename,destRoot=thisRoot,recursive=opt.recursive,ignore=opt.ignore_pattern))
+      filelist.extend(buildFileList(filename,destRoot=thisRoot,recursive=opt.recursive,ignore=opt.exclude))
     elif os.path.isfile(filename):
       if destIsDir:
         thisRoot=os.path.join(dest,os.path.basename(filename))
@@ -186,5 +204,33 @@ if __name__=='__main__':
        continue
     copy(src,dest)	
        
-  startStreams(opt.nstreams)
+  streams=startStreams(opt.nstreams)
   queue.join()
+  endTime=time.time()
+  bytesSent=0
+  filesSent=0
+  bytesSkipped=0
+  filesSkipped=0
+  filesErrored=0
+  for stream in streams:
+    bytesSent+=stream.bytesSent
+    bytesSkipped+=stream.bytesSkipped
+    filesSent+=stream.filesSent
+    filesSkipped+=stream.filesSkipped
+    filesErrored+=stream.filesErrored
+
+  sys.stdout.write("\n\n==== TRANFER REPORT ====\n\n")
+
+  if bytesSent>0:
+    rate=bytesSent/(endTime-startTime)/1024.0
+    sys.stdout.write("Sent %d files (%8.1f kbytes @ %8.3f kBytes/s)\n" %(filesSent,bytesSent/1024.0,rate))
+    speedUp=(bytesSkipped+bytesSent)/bytesSent
+    sys.stdout.write("Speedup:  %f (skipped %d files)\n" % (speedUp,filesSkipped))
+
+  if bytesSent==0:
+    sys.stdout.write("No files needed sending \n")
+
+  if filesErrored > 0:
+    sys.stdout.write("Error transferring %d files, please try again\n" % ( filesErrored))
+
+
