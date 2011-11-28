@@ -118,7 +118,7 @@ public abstract class DatabaseNodePersistence implements NodePersistence
     protected NodeDAO.NodeSchema nodeSchema;
     protected boolean markDeleted;
 
-    protected Integer maxChildLimit = new Integer(1000000);
+    protected Integer maxChildLimit = new Integer(1000);
 
     /**
      * Constructor. This uses the default behaviour of deleting rows from the
