@@ -88,8 +88,9 @@ def mkdirs(dirs):
     return
   if c.isdir(dirs):
     goodDirs.append(dirs) 
-    for node in c.getNode(dirs).getNodeList():
-      nodeDict[os.path.join(dirs,node.name)]=node
+    if opt.cache_nodes:
+      for node in c.getNode(dirs).getNodeList():
+        nodeDict[os.path.join(dirs,node.name)]=node
     return
 
   (dir,subdir) = os.path.split(dirs)
@@ -103,8 +104,9 @@ def mkdirs(dirs):
   c.mkdir(dirs)
 
   goodDirs.append(dirs)
-  for node in c.getNode(dirs).getNodeList():
-    nodeDict[os.path.join(dirs,node.name)]=node
+  if opt.cache_nodes:
+    for node in c.getNode(dirs).getNodeList():
+      nodeDict[os.path.join(dirs,node.name)]=node
   return
 
 import os
@@ -149,6 +151,7 @@ if __name__=='__main__':
   usage = "%prog [options] files vos:Destination/"
   parser=optparse.OptionParser(usage=usage)
   parser.add_option('--verbose','-v',action="store_true",help='run in verbose mode')
+  parser.add_option('--cache_nodes',action="store_true",help='caches the contents of the vospace at the start of transfer, not safe in running multiple instances of vsync, but safe for multiple streams in one instance')
   parser.add_option('--ignore-checksum',action="store_true",help='dont check MD5 sum, forces transfer')
   parser.add_option('--recursive','-r',help="Do a recursive sync",action="store_true")
   parser.add_option('--nstreams',type=int,help="Number of streams to run (MAX: 10)",default=1)
@@ -226,7 +229,7 @@ if __name__=='__main__':
     filesSkipped+=stream.filesSkipped
     filesErrored+=stream.filesErrored
 
-  sys.stdout.write("\n\n==== TRANFER REPORT ====\n\n")
+  sys.stdout.write("\n\n==== TRANSFER REPORT ====\n\n")
 
   if bytesSent>0:
     rate=bytesSent/(endTime-startTime)/1024.0
