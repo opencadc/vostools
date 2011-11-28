@@ -6,6 +6,8 @@ import threading, Queue
 import datetime, optparse
 
 queue=Queue.Queue()
+goodDirs=[]
+nodeDict={}
         
 
 class ThreadCopy(threading.Thread):
@@ -42,7 +44,7 @@ class ThreadCopy(threading.Thread):
          srcMD5=self.fileMD5(src)
       if not opt.overwrite:
        try:
-        node=self.client.getNode(dest)
+        node=nodeDict.get(dest,self.client.getNode(dest))
         """Check if the file is the same"""
         info=node.getInfo()
         destMD5=node.props.get('MD5',None)
@@ -81,12 +83,13 @@ class ThreadCopy(threading.Thread):
           sys.stderr.write("Problem writing to vospace. requeuing: %s" % (src))
           #self.queue.put((src,dest))
 
-goodDirs=[]
 def mkdirs(dirs):
   if dirs in goodDirs:
     return
   if c.isdir(dirs):
-    goodDirs.append(dirs)
+    goodDirs.append(dirs) 
+    for node in c.getNode(dirs).getNodeList():
+      nodeDict[os.path.join(dirs,node.name)]=node
     return
 
   (dir,subdir) = os.path.split(dirs)
@@ -98,15 +101,18 @@ def mkdirs(dirs):
   if c.isfile(dirs):
     sys.exit("Destination location a file when directory expected (%s)" % (subdir))
   c.mkdir(dirs)
+
   goodDirs.append(dirs)
+  for node in c.getNode(dirs).getNodeList():
+    nodeDict[os.path.join(dirs,node.name)]=node
+  return
 
 import os
 def copy(source,dest):
   ## strip down dest until we find a part that exists
   ## and then build up the path.  Dest should include the filename
   dirname=os.path.dirname(dest)
-  if not dirname in goodDirs:
-    mkdirs(dirname)
+  mkdirs(dirname)
   queue.put((source,dest))
                               
 def startStreams(nstreams):
@@ -169,8 +175,8 @@ if __name__=='__main__':
   for filename in args:
     #if opt.verbose:
     #  sys.stdout.write("Adding %s to transfer list\n" % (filename))
+    thisRoot=dest
     if os.path.isdir(filename):
-      thisRoot=dest
       if filename[-1]!="/" :
         thisRoot=os.path.join(dest,os.path.basename(filename))
       filelist.extend(buildFileList(filename,destRoot=thisRoot,recursive=opt.recursive,ignore=opt.exclude))
@@ -204,6 +210,7 @@ if __name__=='__main__':
        continue
     copy(src,dest)	
        
+
   streams=startStreams(opt.nstreams)
   queue.join()
   endTime=time.time()
