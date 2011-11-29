@@ -84,6 +84,8 @@ public class FileMetadata
     private String md5Sum;
     private String fileName;
     private Date lastModified;
+    private Long uncompressedLength;
+    private String uncompressedMd5Sum;
 
     public FileMetadata() { }
 
@@ -94,6 +96,8 @@ public class FileMetadata
                 + "," + contentLength
                 + "," + md5Sum
                 + "," + lastModified
+                + "," + uncompressedLength
+                + "," + uncompressedMd5Sum
                 + "]";
     }
 
@@ -155,5 +159,25 @@ public class FileMetadata
     public void setLastModified(Date lastModified)
     {
         this.lastModified = lastModified;
+    }
+
+    public Long getUncompressedLength()
+    {
+        return uncompressedLength;
+    }
+
+    public void setUncompressedLength(Long uncompressedLength)
+    {
+        this.uncompressedLength = uncompressedLength;
+    }
+
+    public String getUncompressedMd5Sum()
+    {
+        return uncompressedMd5Sum;
+    }
+
+    public void setUncompressedMd5Sum(String uncompressedMd5Sum)
+    {
+        this.uncompressedMd5Sum = uncompressedMd5Sum;
     }
 }
