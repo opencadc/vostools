@@ -87,6 +87,16 @@ public class FileMetadata
 
     public FileMetadata() { }
 
+    @Override
+    public String toString()
+    {
+        return "FileMetadata[" + fileName + "," + contentType + "," + contentEncoding
+                + "," + contentLength
+                + "," + md5Sum
+                + "," + lastModified
+                + "]";
+    }
+
     public String getContentEncoding()
     {
         return contentEncoding;
