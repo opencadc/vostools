@@ -69,10 +69,9 @@
 
 package ca.nrc.cadc.uws;
 
+import ca.nrc.cadc.util.StringUtil;
 import java.util.ArrayList;
 import java.util.List;
-
-import ca.nrc.cadc.uws.Parameter;
 
 /**
  * Utility class related to Parameters.
@@ -95,35 +94,25 @@ public class ParameterUtil
     }
 
     /**
-     * From the supplied full parameter list, return a list of only those
-     * semicolon-separated values that correspond to the named parameter.
+     * Find all values for the specified parameter.
      * 
      * @param name
      * @param paramList
-     * @return
+     * @return List of values, possibly empty
      */
     public static List<String> findParameterValues(String name, List<Parameter> paramList)
     {
-        List<String> namedParamList = new ArrayList<String>();
-
+        List<String> ret = new ArrayList<String>();
         for (Parameter parameter : paramList)
         {
             if (name.equalsIgnoreCase(parameter.getName()))
             {
-                String namedParamStr = parameter.getValue();
-                if (namedParamStr == null || namedParamStr.length() == 0)
-                    namedParamList.add("");
-                else
-                {
-                    String[] namedParams = namedParamStr.split(";");
-                    for (String param : namedParams)
-                        namedParamList.add(param);
-                }
+                String str = parameter.getValue();
+                if ( !StringUtil.hasText(str) )
+                    str = "";
+                ret.add(str);
             }
         }
-        if (namedParamList.size() > 0)
-            return namedParamList;
-        else
-            return null;
+        return ret;
     }
 }
