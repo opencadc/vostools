@@ -8,7 +8,7 @@
 *  National Research Council            Conseil national de recherches
 *  Ottawa, Canada, K1A 0R6              Ottawa, Canada, K1A 0R6
 *  All rights reserved                  Tous droits réservés
-*                                       
+*
 *  NRC disclaims any warranties,        Le CNRC dénie toute garantie
 *  expressed, implied, or               énoncée, implicite ou légale,
 *  statutory, of any kind with          de quelque nature que ce
@@ -31,10 +31,10 @@
 *  software without specific prior      de ce logiciel sans autorisation
 *  written permission.                  préalable et particulière
 *                                       par écrit.
-*                                       
+*
 *  This file is part of the             Ce fichier fait partie du projet
 *  OpenCADC project.                    OpenCADC.
-*                                       
+*
 *  OpenCADC is free software:           OpenCADC est un logiciel libre ;
 *  you can redistribute it and/or       vous pouvez le redistribuer ou le
 *  modify it under the terms of         modifier suivant les termes de
@@ -44,7 +44,7 @@
 *  either version 3 of the              : soit la version 3 de cette
 *  License, or (at your option)         licence, soit (à votre gré)
 *  any later version.                   toute version ultérieure.
-*                                       
+*
 *  OpenCADC is distributed in the       OpenCADC est distribué
 *  hope that it will be useful,         dans l’espoir qu’il vous
 *  but WITHOUT ANY WARRANTY;            sera utile, mais SANS AUCUNE
@@ -54,7 +54,7 @@
 *  PURPOSE.  See the GNU Affero         PARTICULIER. Consultez la Licence
 *  General Public License for           Générale Publique GNU Affero
 *  more details.                        pour plus de détails.
-*                                       
+*
 *  You should have received             Vous devriez avoir reçu une
 *  a copy of the GNU Affero             copie de la Licence Générale
 *  General Public License along         Publique GNU Affero avec
@@ -67,90 +67,111 @@
 ************************************************************************
 */
 
-package ca.nrc.cadc.tap.parser.region.pgsphere.function;
+package ca.nrc.cadc.tap.parser.converter.postgresql;
 
+import ca.nrc.cadc.tap.parser.navigator.ExpressionNavigator;
+import ca.nrc.cadc.util.CaseInsensitiveStringComparator;
 import java.util.ArrayList;
 import java.util.List;
-
-import net.sf.jsqlparser.expression.DoubleValue;
+import java.util.Map;
+import java.util.TreeMap;
 import net.sf.jsqlparser.expression.Expression;
 import net.sf.jsqlparser.expression.Function;
-import net.sf.jsqlparser.expression.LongValue;
 import net.sf.jsqlparser.expression.operators.relational.ExpressionList;
-import ca.nrc.cadc.tap.parser.region.pgsphere.expression.DegreeDouble;
-import ca.nrc.cadc.tap.parser.region.pgsphere.expression.DegreeLong;
+import org.apache.log4j.Logger;
 
 /**
- * super class of all PgSphere function implemention.
- * 
- * @author zhangsa
+ * Simple class to map function name(s) used in the query to function name(s) used
+ * in the database.
  *
+ * @author jburke
  */
-public abstract class PgsFunction extends Function
+public class PgFunctionNameConverter extends ExpressionNavigator
 {
-    protected Function adqlFunction;
+    protected static Logger log = Logger.getLogger(PgFunctionNameConverter.class);
 
-    public PgsFunction()
+    protected Map<String, String> map;
+
+    public PgFunctionNameConverter()
     {
+        super();
+        map = new TreeMap<String, String>(new CaseInsensitiveStringComparator());
+        map.put("distance", "DIST");
+        map.put("log", "LN");
+        map.put("log10", "LOG");
+//        map.put("rand", "RANDOM");
+//        map.put("pi", "PI");
+//        map.put("truncate", "TRUNC");
     }
 
-    public PgsFunction(Function adqlFunction)
+    /**
+     * Add new entries to the function name map.
+     *
+     * @param originalName a function name that should be replaced
+     * @param newName the value that originalName should be replaced with
+     */
+    public void put(String originalName, String newName)
     {
-        this.adqlFunction = adqlFunction;
-        // at the point this object is created,
-        // parameters have already been converted to implemented version.
-        ExpressionList adqlExprList = adqlFunction.getParameters();
-        //ExpressionList pgsExprList = toDegreeExpressionList(adqlExprList);
-        //setParameters(pgsExprList); // method in Function
-        setParameters(adqlExprList);
+        map.put(originalName, newName);
     }
 
-    /*
-    public ExpressionList toDegreeExpressionList(ExpressionList adqlExprList)
+    /* (non-Javadoc)
+     * @see net.sf.jsqlparser.expression.ExpressionVisitor#visit(net.sf.jsqlparser.expression.Function)
+     */
+    @Override
+    public void visit(Function function)
     {
-        Expression e1 = null;
-        Expression e2 = null;
-        List<Expression> adqlParams = adqlExprList.getExpressions();
-        int size = adqlParams.size();
-        List<Expression> pgsParams = new ArrayList<Expression>(size);
-        for (int i = 0; i < size; i++)
+        log.debug("visit(function)" + function);
+
+        String functionName = function.getName();
+        String newName = map.get(functionName);
+        if (newName != null)
+            function.setName(newName);
+
+        // DIST returns radians, we want degrees.
+        if (function.getName().equals("DIST"))
         {
-            e1 = adqlParams.get(i);
-            e2 = toDegreeExpression(e1);
-            pgsParams.add(e2);
+            Function dist = new Function();
+            dist.setName("dist");
+            dist.setParameters(function.getParameters());
+
+            List<Expression> list = new ArrayList<Expression>();
+            list.add(dist);
+            ExpressionList parameters = new ExpressionList();
+            parameters.setExpressions(list);
+
+            function.setName("degrees");
+            function.setParameters(parameters);
+        }
+        else if (function.getName().equalsIgnoreCase("COORD1"))
+        {
+            Function longitude = new Function();
+            longitude.setName("long");
+            longitude.setParameters(function.getParameters());
+
+            List<Expression> list = new ArrayList<Expression>();
+            list.add(longitude);
+            ExpressionList parameters = new ExpressionList();
+            parameters.setExpressions(list);
+
+            function.setName("degrees");
+            function.setParameters(parameters);
+        }
+        else if (function.getName().equalsIgnoreCase("COORD2"))
+        {
+            Function longitude = new Function();
+            longitude.setName("lat");
+            longitude.setParameters(function.getParameters());
+
+            List<Expression> list = new ArrayList<Expression>();
+            list.add(longitude);
+            ExpressionList parameters = new ExpressionList();
+            parameters.setExpressions(list);
+
+            function.setName("degrees");
+            function.setParameters(parameters);
         }
 
-        ExpressionList pgsExprList = new ExpressionList(pgsParams);
-        // TODO...
-        return pgsExprList;
     }
-
-    public Expression toDegreeExpression(Expression expr)
-    {
-        Expression rtn = null;
-        if (expr instanceof LongValue)
-            rtn = new DegreeLong((LongValue) expr);
-        else if (expr instanceof DoubleValue)
-            rtn = new DegreeDouble((DoubleValue) expr);
-        else
-            rtn = expr;
-        return rtn;
-    }
-    */
-
-    protected abstract void convertParameters();
-
-    @Override
-    public abstract String toString();
-
-    public Function getAdqlFunction()
-    {
-        return adqlFunction;
-    }
-
-    public void setAdqlFunction(Function adqlFunction)
-    {
-        this.adqlFunction = adqlFunction;
-    }
-
+    
 }

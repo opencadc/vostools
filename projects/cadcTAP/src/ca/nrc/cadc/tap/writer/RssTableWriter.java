@@ -71,7 +71,7 @@ package ca.nrc.cadc.tap.writer;
 import ca.nrc.cadc.date.DateUtil;
 import ca.nrc.cadc.net.NetUtil;
 import ca.nrc.cadc.tap.TableWriter;
-import ca.nrc.cadc.tap.parser.TapSelectItem;
+import ca.nrc.cadc.tap.schema.ParamDesc;
 import ca.nrc.cadc.tap.schema.TapSchema;
 import ca.nrc.cadc.tap.writer.formatter.DefaultFormatterFactory;
 import ca.nrc.cadc.tap.writer.formatter.Formatter;
@@ -103,15 +103,8 @@ public class RssTableWriter implements TableWriter
     public static final String RFC_822__DATE_FORMAT = "EEE', 'dd' 'MMM' 'yyyy' 'HH:mm:ss' 'z";
     private DateFormat dateFormat = DateUtil.getDateFormat(RFC_822__DATE_FORMAT, DateUtil.LOCAL);
 
-    // TapSchema containing table metadata.
-    protected TapSchema tapSchema;
-
     // List of column names used in the select statement.
-    protected List<TapSelectItem> selectList;
-
-    //protected String jobID;
-    
-    //protected List<Parameter> params;
+    protected List<ParamDesc> selectList;
 
     protected Job job;
 
@@ -119,13 +112,63 @@ public class RssTableWriter implements TableWriter
     
     // Maximum number of rows to write.
     protected int maxRows;
-
-    //
+    
     public RssTableWriter()
     {
         maxRows = Integer.MAX_VALUE;
     }
-    
+
+    /**
+     * @deprecated
+     */
+    public void setJobID(String jobID) { }
+
+    /**
+     * @deprecated
+     */
+    public void setParameterList(List<Parameter> params) { }
+
+    /**
+     * @deprecated
+     */
+    public void setTapSchema(TapSchema schema) { }
+
+    public void setJob(Job job)
+    {
+        this.job = job;
+    }
+
+    /**
+     * The info is used as the channel title and should be short.
+     *
+     * @param info
+     */
+    public void setQueryInfo(String info)
+    {
+        this.info = info;
+    }
+
+    public String getExtension()
+    {
+        return "xml";
+    }
+
+    public String getContentType()
+    {
+        return "application/rss+xml";
+    }
+
+    public void setSelectList(List<ParamDesc> selectList)
+    {
+        this.selectList = selectList;
+    }
+
+    public void setMaxRowCount(int count)
+    {
+        this.maxRows = count;
+        log.debug("maxRows: " + maxRows);
+    }
+
     public void write(ResultSet resultSet, OutputStream output)
         throws IOException
     {
@@ -133,13 +176,10 @@ public class RssTableWriter implements TableWriter
             throw new IllegalStateException("Job cannot be null, set using setJob()");
         if (selectList == null)
             throw new IllegalStateException("SelectList cannot be null, set using setSelectList()");
-        if (tapSchema == null)
-            throw new IllegalStateException("TapSchema cannot be null, set using setTapSchema()");
 
         FormatterFactory factory = DefaultFormatterFactory.getFormatterFactory();
-        factory.setJobID(job.getID());
         factory.setParamList(job.getParameterList());
-        List<Formatter> formatters = factory.getFormatters(tapSchema, selectList);
+        List<Formatter> formatters = factory.getFormatters(selectList);
 
         if (resultSet != null)
             try { log.debug("resultSet column count: " + resultSet.getMetaData().getColumnCount()); }
@@ -225,9 +265,9 @@ public class RssTableWriter implements TableWriter
                     }
                     else
                     {
-                        TapSelectItem si = selectList.get(columnIndex - 1); // var is 1-based for result set
+                        ParamDesc paramDesc = selectList.get(columnIndex - 1);
                         sb.append("<tr><td align=\"right\">");
-                        sb.append(si.getColumnName());
+                        sb.append(paramDesc.name);
                         sb.append("</td><td align=\"left\">");
                         Formatter formatter = formatters.get(columnIndex - 1);
                         if (formatter instanceof ResultSetFormatter)
@@ -261,58 +301,6 @@ public class RssTableWriter implements TableWriter
         // Write out the VOTABLE.
         XMLOutputter outputter = new XMLOutputter(Format.getPrettyFormat());
         outputter.output(document, output);
-    }
-    
-    public void setJobID(String jobID)
-    {
-        //this.jobID = jobID;
-    }
-
-
-    public void setParameterList(List<Parameter> params)
-    {
-        //this.params = params;
-    }
-
-    public void setJob(Job job)
-    {
-        this.job = job;
-    }
-
-    /**
-     * The info is used as the channel title and should be short.
-     * 
-     * @param info
-     */
-    public void setQueryInfo(String info)
-    {
-        this.info = info;
-    }
-
-    public String getExtension()
-    {
-        return "xml";
-    }
-
-    public String getContentType()
-    {
-        return "application/rss+xml";
-    }
-
-    public void setSelectList(List<TapSelectItem> items)
-    {
-        this.selectList = items;
-    }
-
-    public void setTapSchema(TapSchema schema)
-    {
-        this.tapSchema = schema;
-    }
-
-    public void setMaxRowCount(int count)
-    {
-        this.maxRows = count;
-        log.debug("maxRows: " + maxRows);
     }
 
 }

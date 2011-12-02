@@ -162,7 +162,7 @@ public class BasicUploadManagerTest
 
             // Create a JobID
             String jobID = Long.toString(System.currentTimeMillis());
-            log.info("testUploadEmptyTable jobID: " + jobID);
+            log.debug("testUploadEmptyTable jobID: " + jobID);
 
             // Upload the VOTable.
             Map<String, TableDesc> tableDescs = uploadManager.upload(paramList, jobID);
@@ -206,7 +206,7 @@ public class BasicUploadManagerTest
 
             // Create a JobID
             String jobID = Long.toString(System.currentTimeMillis());
-            log.info("testURIUploadAllTypesNoRows jobID: " + jobID);
+            log.debug("testURIUploadAllTypesNoRows jobID: " + jobID);
 
             // Upload the VOTable.
             Map<String, TableDesc> tableDescs = uploadManager.upload(paramList, jobID);
@@ -276,7 +276,7 @@ public class BasicUploadManagerTest
 
             // Create a JobID
             String jobID = Long.toString(System.currentTimeMillis());
-            log.info("testURIUploadAllTypes jobID: " + jobID);
+            log.debug("testURIUploadAllTypes jobID: " + jobID);
 
             // Upload the VOTable.
             Map<String, TableDesc> tableDescs = uploadManager.upload(paramList, jobID);

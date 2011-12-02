@@ -71,23 +71,22 @@ package ca.nrc.cadc.tap.parser.extractor;
 
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Map;
 
 import net.sf.jsqlparser.expression.Expression;
 import net.sf.jsqlparser.schema.Column;
-import net.sf.jsqlparser.schema.Table;
 import net.sf.jsqlparser.statement.select.AllColumns;
 import net.sf.jsqlparser.statement.select.AllTableColumns;
 import net.sf.jsqlparser.statement.select.PlainSelect;
 import net.sf.jsqlparser.statement.select.SelectExpressionItem;
-import ca.nrc.cadc.tap.parser.ParserUtil;
-import ca.nrc.cadc.tap.parser.TapSelectItem;
-import ca.nrc.cadc.tap.parser.exception.TapParserException;
 import ca.nrc.cadc.tap.parser.navigator.ExpressionNavigator;
-import ca.nrc.cadc.tap.schema.TableDesc;
 import ca.nrc.cadc.tap.schema.TapSchema;
 import ca.nrc.cadc.tap.parser.schema.TapSchemaUtil;
+import ca.nrc.cadc.tap.schema.ColumnDesc;
+import ca.nrc.cadc.tap.schema.FunctionDesc;
+import ca.nrc.cadc.tap.schema.ParamDesc;
+import ca.nrc.cadc.tap.schema.TapSchemaDAO;
 import net.sf.jsqlparser.expression.Function;
+import net.sf.jsqlparser.expression.operators.relational.ExpressionList;
 
 /**
  * Extract a list of TapSelectItem from query.
@@ -97,9 +96,8 @@ import net.sf.jsqlparser.expression.Function;
  */
 public class SelectListExpressionExtractor extends ExpressionNavigator
 {
-    protected List<TapSelectItem> tapSelectItemList = new ArrayList<TapSelectItem>();
     protected TapSchema tapSchema;
-//    protected Map<String, TableDesc> extraTablesMap;
+    protected List<ParamDesc> selectList;
 
     /**
      * @param tapSchema
@@ -108,7 +106,7 @@ public class SelectListExpressionExtractor extends ExpressionNavigator
     {
         super();
         this.tapSchema = tapSchema;
-//        this.extraTablesMap = extraTablesMap;
+        this.selectList = new ArrayList<ParamDesc>();
     }
 
     /* (non-Javadoc)
@@ -117,22 +115,23 @@ public class SelectListExpressionExtractor extends ExpressionNavigator
     @Override
     public void visit(AllColumns allColumns)
     {
-        PlainSelect ps = selectNavigator.getPlainSelect();
-        List<Table> fromTableList = ParserUtil.getFromTableList(ps);
-
-        try
-        {
-            List<TapSelectItem> tableTsiList;
-            for (Table table : fromTableList)
-            {
-                tableTsiList = TapSchemaUtil.getTapSelectItemList(this.tapSchema, table);
-                this.tapSelectItemList.addAll(tableTsiList);
-            }
-        }
-        catch (TapParserException ex)
-        {
-            throw new UnsupportedOperationException(ex);
-        }
+        throw new UnsupportedOperationException("AllColumns must have previously been visited");
+//        PlainSelect ps = selectNavigator.getPlainSelect();
+//        List<Table> fromTableList = ParserUtil.getFromTableList(ps);
+//
+//        try
+//        {
+//            List<TapSelectItem> tableTsiList;
+//            for (Table table : fromTableList)
+//            {
+//                tableTsiList = TapSchemaUtil.getTapSelectItemList(this.tapSchema, table);
+//                this.tapSelectItemList.addAll(tableTsiList);
+//            }
+//        }
+//        catch (TapParserException ex)
+//        {
+//            throw new UnsupportedOperationException(ex);
+//        }
     }
 
     /* (non-Javadoc)
@@ -141,20 +140,21 @@ public class SelectListExpressionExtractor extends ExpressionNavigator
     @Override
     public void visit(AllTableColumns allTableColumns)
     {
-        PlainSelect ps = selectNavigator.getPlainSelect();
-        String tableNameOrAlias = allTableColumns.getTable().getName();
-        Table table = ParserUtil.findFromTable(ps, tableNameOrAlias);
-        log.debug(table);
-
-        try
-        {
-            List<TapSelectItem> tableTsiList = TapSchemaUtil.getTapSelectItemList(this.tapSchema, table);
-            this.tapSelectItemList.addAll(tableTsiList);
-        }
-        catch (TapParserException ex)
-        {
-            throw new UnsupportedOperationException(ex);
-        }
+        throw new UnsupportedOperationException("AllTableColumns must have previously been visited");
+//        PlainSelect ps = selectNavigator.getPlainSelect();
+//        String tableNameOrAlias = allTableColumns.getTable().getName();
+//        Table table = ParserUtil.findFromTable(ps, tableNameOrAlias);
+//        log.debug(table);
+//
+//        try
+//        {
+//            List<TapSelectItem> tableTsiList = TapSchemaUtil.getTapSelectItemList(this.tapSchema, table);
+//            this.tapSelectItemList.addAll(tableTsiList);
+//        }
+//        catch (TapParserException ex)
+//        {
+//            throw new UnsupportedOperationException(ex);
+//        }
     }
 
     /* (non-Javadoc)
@@ -164,91 +164,47 @@ public class SelectListExpressionExtractor extends ExpressionNavigator
     public void visit(SelectExpressionItem selectExpressionItem)
     {
         log.debug("visit(selectExpressionItem)" + selectExpressionItem);
+        
+        ParamDesc paramDesc = null;
+        PlainSelect plainSelect = selectNavigator.getPlainSelect();
         String alias = selectExpressionItem.getAlias();
-        String columnName = null;
-        String schemaAndTableName = null;
 
-        TapSelectItem tapSelectItem = null;
-
-        try
+        Expression expression = selectExpressionItem.getExpression();
+        if (expression instanceof Column)
         {
-            Expression expression = selectExpressionItem.getExpression();
-            if (expression instanceof Column)
-            {
-                Column column0 = (Column) expression;
-                Column column2 = new Column(column0.getTable(), column0.getColumnName());
+            Column column = (Column) expression;
+            log.debug("visit(column) " + column);
 
-                columnName = TapSchemaUtil.stripQuotes(column2.getColumnName());
-                Table table = column2.getTable();
-                String schemaName = table.getSchemaName();
+            ColumnDesc columnDesc = TapSchemaUtil.findColumnDesc(tapSchema, plainSelect, column);
+            paramDesc = new ParamDesc(columnDesc, alias);
+        }
+        else if (expression instanceof Function)
+        {
+            Function function = (Function) expression;
+            log.debug("visit(function) " + function);
 
-                if (schemaName != null && !schemaName.equals(""))
-                {
-                    // schema name presented in the column expression. e.g. schemaA.tableA.columnA
-                    schemaAndTableName = schemaName + "." + table.getName();
-                    tapSelectItem = new TapSelectItem(schemaAndTableName, columnName, alias);
-                }
-                else
-                {
-                    // No schema name presented in the column expression. 
-                    // e.g. tableA.columnA, aliasA.columnA, columnB
-                    String tableNameOrAlias = table.getName();
-                    if (tableNameOrAlias != null)
-                    {
-                        // table name or alias presented. e.g. tableA.columnA, aliasA.columnA
-                        Table fromTable = ParserUtil.findFromTable(selectNavigator.getPlainSelect(), tableNameOrAlias);
-                        if (fromTable != null)
-                        {
-                            column2.setTable(fromTable);
-                            if (TapSchemaUtil.isValidColumn(this.tapSchema, column2))
-                            {
-                                schemaAndTableName = fromTable.getSchemaName() + "." + fromTable.getName();
-                                tapSelectItem = new TapSelectItem(schemaAndTableName, columnName, alias); // all valid
-                            }
-                            else
-                                throw new TapParserException("Column [ " + columnName + " ] does not exist.");
-                        }
-                        else
-                            throw new TapParserException("Table name/alias: [ " + tableNameOrAlias + " ] does not exist.");
-                    }
-                    else
-                    {
-                        // only column name is presented. e.g. columnB, 
-                        // as sub-select is not supported, does not consider columnAliasC (refer to column alias in subselect)
-                        table = TapSchemaUtil.findTableForColumnName(this.tapSchema, selectNavigator.getPlainSelect(), columnName);
-                        if (table != null)
-                        {
-                            schemaAndTableName = table.getSchemaName() + "." + table.getName();
-                            tapSelectItem = new TapSelectItem(schemaAndTableName, columnName, alias);
-                        }
-                        else
-                            throw new TapParserException("Column [ " + columnName + " ] does not exist.");
-                    }
-                }
-            }
+            FunctionDesc functionDesc = getFunctionDesc(function, plainSelect);
+            paramDesc = new ParamDesc(functionDesc, alias);
+        }
+        else
+        {
+            String datatype = getDatatypeFromExpression(expression);
+            if (alias == null || alias.isEmpty())
+                paramDesc = new ParamDesc(expression.toString(), expression.toString(), datatype);
             else
-            {
-                if (alias != null && !alias.equals(""))
-                    tapSelectItem = new TapSelectItem(expression.toString(), alias);
-                else
-                    tapSelectItem = new TapSelectItem(expression.toString(), expression.toString());
-            }
-            this.tapSelectItemList.add(tapSelectItem);
+                paramDesc = new ParamDesc(expression.toString(), alias, datatype);
         }
-        catch (TapParserException ex)
-        {
-            throw new UnsupportedOperationException(ex);
-        }
+        selectList.add(paramDesc);
     }
 
-    public List<TapSelectItem> getTapSelectItemList()
+    public List<ParamDesc> getSelectList()
     {
-        return this.tapSelectItemList;
+        return selectList;
     }
 
-    public void setTapSelectItemList(List<TapSelectItem> tapSelectItemList)
+    public void setSelectList(List<ParamDesc> selectList)
     {
-        this.tapSelectItemList = tapSelectItemList;
+        this.selectList = selectList;
     }
 
     public TapSchema getTapSchema()
@@ -261,13 +217,55 @@ public class SelectListExpressionExtractor extends ExpressionNavigator
         this.tapSchema = tapSchema;
     }
 
-//    public Map<String, ca.nrc.cadc.tap.schema.TableDesc> getExtraTablesMap()
-//    {
-//        return this.extraTablesMap;
-//    }
+    private FunctionDesc getFunctionDesc(Function function, PlainSelect plainSelect)
+    {
+        FunctionDesc functionDesc = TapSchemaUtil.findFunctionDesc(tapSchema, function);
+        if (functionDesc.datatype.equals(TapSchemaDAO.ARGUMENT_DATATYPE))
+        {
+            String datatype = null;
+            ExpressionList parameters = function.getParameters();
+            for (Object parameter : parameters.getExpressions())
+            {
+                if (parameter instanceof Column)
+                {
+                    ColumnDesc columnDesc = TapSchemaUtil.findColumnDesc(tapSchema, plainSelect, (Column) parameter);
+                    if (columnDesc != null)
+                        datatype = columnDesc.datatype;
+                }
+                else if (parameter instanceof Function)
+                {
+                    Function nestedFunction = (Function) parameter;
+                    log.debug("vist(nested Function " + nestedFunction);
+                    FunctionDesc nestedFunctionDesc = TapSchemaUtil.findFunctionDesc(tapSchema, (Function) parameter);
+                    if (nestedFunctionDesc.datatype.equals(TapSchemaDAO.ARGUMENT_DATATYPE))
+                    {
+                        FunctionDesc recursiveFunctionDesc = getFunctionDesc(nestedFunction, plainSelect);
+                        if (recursiveFunctionDesc != null)
+                            datatype = recursiveFunctionDesc.datatype;
+                    }
+                    else
+                    {
+                        datatype = nestedFunctionDesc.datatype;
+                    }
+                }
+                else
+                {
+                    datatype = getDatatypeFromExpression((Expression) parameter);
+                }
 
-//    public void setExtraTablesMap(Map<String, ca.nrc.cadc.tap.schema.TableDesc> extraTablesMap)
-//    {
-//        this.extraTablesMap = extraTablesMap;
-//    }
+                if (datatype != null)
+                {
+                    functionDesc.datatype = datatype;
+                    break;
+                }
+            }
+        }
+        return functionDesc;
+    }
+
+    private String getDatatypeFromExpression(Expression expression)
+    {
+        return "adql:VARCHAR";
+    }
+    
 }

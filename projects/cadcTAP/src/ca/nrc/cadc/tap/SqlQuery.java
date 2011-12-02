@@ -79,7 +79,6 @@ import net.sf.jsqlparser.statement.Statement;
 import org.apache.log4j.Logger;
 
 import ca.nrc.cadc.tap.parser.ParserUtil;
-import ca.nrc.cadc.tap.parser.TapSelectItem;
 import ca.nrc.cadc.tap.parser.converter.AllColumnConverter;
 import ca.nrc.cadc.tap.parser.extractor.SelectListExpressionExtractor;
 import ca.nrc.cadc.tap.parser.extractor.SelectListExtractor;
@@ -89,6 +88,7 @@ import ca.nrc.cadc.tap.parser.navigator.ReferenceNavigator;
 import ca.nrc.cadc.tap.parser.navigator.SelectNavigator;
 import ca.nrc.cadc.tap.parser.schema.TapSchemaColumnValidator;
 import ca.nrc.cadc.tap.parser.schema.TapSchemaTableValidator;
+import ca.nrc.cadc.tap.schema.ParamDesc;
 import ca.nrc.cadc.tap.schema.TableDesc;
 import ca.nrc.cadc.tap.schema.TapSchema;
 import ca.nrc.cadc.uws.Parameter;
@@ -111,7 +111,7 @@ public class SqlQuery implements TapQuery
     protected Integer maxRows;
 
     protected Statement statement;
-    protected List<TapSelectItem> tapSelectItemList;
+    protected List<ParamDesc> selectList;
     protected List<SelectNavigator> navigatorList = new ArrayList<SelectNavigator>();
 
     protected transient boolean navigated = false;
@@ -176,7 +176,7 @@ public class SqlQuery implements TapQuery
             if (sn instanceof SelectListExtractor)
             {
                 SelectListExpressionExtractor slen = (SelectListExpressionExtractor) sn.getExpressionNavigator();
-                tapSelectItemList = slen.getTapSelectItemList();
+                selectList = slen.getSelectList();
             }
         }
         navigated = true;
@@ -221,12 +221,12 @@ public class SqlQuery implements TapQuery
         return statement.toString();
     }
 
-    public List<TapSelectItem> getSelectList()
+    public List<ParamDesc> getSelectList()
     {
         if (queryString == null) throw new IllegalStateException();
 
         doNavigate();
-        return tapSelectItemList;
+        return selectList;
     }
 
     public String getInfo()

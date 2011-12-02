@@ -73,9 +73,9 @@
 package ca.nrc.cadc.tap.parser;
 
 import java.util.ArrayList;
-import java.util.List;
 
 import ca.nrc.cadc.tap.schema.ColumnDesc;
+import ca.nrc.cadc.tap.schema.FunctionDesc;
 import ca.nrc.cadc.tap.schema.KeyColumnDesc;
 import ca.nrc.cadc.tap.schema.KeyDesc;
 import ca.nrc.cadc.tap.schema.SchemaDesc;
@@ -211,6 +211,26 @@ public class TestUtil
         k.keyColumnDescs = new ArrayList<KeyColumnDesc>();
         k.keyColumnDescs.add(new KeyColumnDesc("k5", "key_id", "key_id"));
         td.keyDescs.add(k);
+
+        schemaName = "caom";
+        sd = new SchemaDesc(schemaName, "description", "utype");
+        ts.schemaDescs.add(sd);
+
+        tn = "siav1";
+        td = new TableDesc(schemaName, tn, "description", "utype");
+        sd.tableDescs.add(td);
+        td.columnDescs.add( new ColumnDesc(tn, "position_center_ra", null, null, null, null, "adql:DOUBLE", null) );
+
+        ts.functionDescs = new ArrayList<FunctionDesc>();
+        ts.functionDescs.add(new FunctionDesc("AREA", null, "adql:DOUBLE"));
+        ts.functionDescs.add(new FunctionDesc("AVG", null, "ARGUMENT_DATATYPE"));
+        ts.functionDescs.add(new FunctionDesc("CIRCLE", null, "adql:DOUBLE"));
+        ts.functionDescs.add(new FunctionDesc("COUNT", null, "adql:INTEGER"));
+        ts.functionDescs.add(new FunctionDesc("MAX", null, "ARGUMENT_DATATYPE"));
+        ts.functionDescs.add(new FunctionDesc("MIN", null, "ARGUMENT_DATATYPE"));
+        ts.functionDescs.add(new FunctionDesc("STDDEV", null, "adql:DOUBLE"));
+        ts.functionDescs.add(new FunctionDesc("SUM", null, "ARGUMENT_DATATYPE"));
+        ts.functionDescs.add(new FunctionDesc("VARIANCE", null, "adql:DOUBLE"));
 
         return ts;
     }

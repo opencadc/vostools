@@ -141,7 +141,6 @@
                 <pathelement path="${jars}:${testingJars}"/>
             </classpath>
             <formatter type="plain" usefile="false"/>
-            
             <test name="ca.nrc.cadc.tap.writer.formatter.ByteArrayFormatterTest"/>
             <test name="ca.nrc.cadc.tap.writer.formatter.DefaultFormatterTest"/>
             <test name="ca.nrc.cadc.tap.writer.formatter.DoubleArrayFormatterTest"/>
@@ -150,6 +149,7 @@
             <test name="ca.nrc.cadc.tap.writer.formatter.UTCTimestampFormatterTest"/>
             <test name="ca.nrc.cadc.tap.writer.formatter.SPointFormatterTest"/>
             <test name="ca.nrc.cadc.tap.writer.formatter.SPolyFormatterTest"/>
+            <test name="ca.nrc.cadc.tap.writer.formatter.SCircleFormatterTest"/>
             <test name="ca.nrc.cadc.tap.writer.AsciiTableWriterTest"/>
             <test name="ca.nrc.cadc.tap.writer.VOTableWriterTest"/>
             <test name="ca.nrc.cadc.tap.writer.FieldElementTest"/>
@@ -172,12 +172,15 @@
             <test name="ca.nrc.cadc.tap.parser.BlobClobValidatorTest"/>
             <test name="ca.nrc.cadc.tap.parser.ValidatorTest"/>
             <test name="ca.nrc.cadc.tap.parser.NavigatorTest"/>
-            <test name="ca.nrc.cadc.tap.parser.ExtractorTest"/>
             <test name="ca.nrc.cadc.tap.parser.AllColumnConverterTest"/>
-	    <test name="ca.nrc.cadc.tap.parser.TopConverterTest"/>
+            <test name="ca.nrc.cadc.tap.parser.TopConverterTest"/>
             <test name="ca.nrc.cadc.tap.parser.ParserUtilTest"/>
             <test name="ca.nrc.cadc.tap.parser.TapSchemaValidatorTest"/>
             <test name="ca.nrc.cadc.tap.parser.PgsRegionConverterTest"/>
+            <test name="ca.nrc.cadc.tap.parser.extractor.ExtractorTest"/>
+            <test name="ca.nrc.cadc.tap.parser.extractor.SelectListExpressionExtractorTest"/>
+            <test name="ca.nrc.cadc.tap.parser.schema.ExpressionValidatorTest"/>
+            <test name="ca.nrc.cadc.tap.parser.ConcatenateTest"/>
         </junit>
     </target>
 

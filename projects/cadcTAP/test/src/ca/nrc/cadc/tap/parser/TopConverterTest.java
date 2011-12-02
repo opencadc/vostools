@@ -88,6 +88,7 @@ import ca.nrc.cadc.tap.parser.navigator.ReferenceNavigator;
 import ca.nrc.cadc.tap.parser.navigator.SelectNavigator;
 import ca.nrc.cadc.tap.schema.TapSchema;
 import ca.nrc.cadc.util.Log4jInit;
+import org.apache.log4j.Logger;
 
 /**
  * test the convertion from TOP to LIMIT
@@ -97,6 +98,8 @@ import ca.nrc.cadc.util.Log4jInit;
  */
 public class TopConverterTest
 {
+    private static final Logger log = Logger.getLogger(TopConverterTest.class);
+
     public String _query;
 
     SelectListExtractor _en;
@@ -148,13 +151,15 @@ public class TopConverterTest
         try
         {
             s = ParserUtil.receiveQuery(_query);
+            log.debug("query: " + _query);
             ParserUtil.parseStatement(s, _sn);
-        } catch (Exception ae)
+        }
+        catch (Exception ae)
         {
             ae.printStackTrace(System.out);
             fail(ae.toString());
         }
-        System.out.println(s);
+        log.debug("statement: " + s);
         String sql = s.toString().toLowerCase();
         if (sql.indexOf("top") >= 0)
             fail("TOP is not converted.");

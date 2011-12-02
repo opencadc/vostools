@@ -6,81 +6,91 @@
 package ca.nrc.cadc.tap.parser;
 
 import ca.nrc.cadc.tap.parser.function.Concatenate;
+import ca.nrc.cadc.util.Log4jInit;
 import java.util.ArrayList;
 import java.util.List;
-import net.sf.jsqlparser.expression.operators.relational.ExpressionList;
+import net.sf.jsqlparser.expression.Expression;
 import net.sf.jsqlparser.schema.Column;
 import net.sf.jsqlparser.schema.Table;
-import org.junit.After;
-import org.junit.AfterClass;
-import org.junit.Before;
-import org.junit.BeforeClass;
+import net.sf.jsqlparser.statement.select.PlainSelect;
+import net.sf.jsqlparser.statement.select.SelectExpressionItem;
+import net.sf.jsqlparser.util.deparser.ExpressionDeParser;
+import net.sf.jsqlparser.util.deparser.SelectDeParser;
+import org.apache.log4j.Level;
+import org.apache.log4j.Logger;
+import org.junit.Assert;
 import org.junit.Test;
-import static org.junit.Assert.*;
 
 /**
  *
  * @author jburke
  */
-public class ConcatenateTest {
-
-    public ConcatenateTest() {
-    }
-
-    @BeforeClass
-    public static void setUpClass() throws Exception
+public class ConcatenateTest
+{
+    private static Logger log = Logger.getLogger(ConcatenateTest.class);
+    static
     {
+        Log4jInit.setLevel("ca.nrc.cadc.tap.parser", Level.INFO);
     }
 
-    @AfterClass
-    public static void tearDownClass() throws Exception
-    {
-    }
-
-    @Before
-    public void setUp() {
-    }
-
-    @After
-    public void tearDown() {
-    }
+    public ConcatenateTest() { }
 
     /**
-     * Test of toString method, of class Concatenate.
+     * Test of concatenation using Operator.
      */
     @Test
-    public void testToString()
+    public void test()
     {
-        System.out.println("toString");
         Table table = new Table("schema", "table");
         Column columnA = new Column(table, "A");
         Column columnB = new Column(table, "B");
         Column columnC = new Column(table, "C");
 
-        List expressions = new ArrayList();
+        List<Expression> expressions = new ArrayList<Expression>();
         expressions.add(columnA);
         expressions.add(columnB);
         expressions.add(columnC);
-        ExpressionList list = new ExpressionList(expressions);
 
-        String separator = "+";
+        Concatenate concatenate = new Concatenate("||", expressions, "/");
+
         StringBuilder sb = new StringBuilder();
+        sb.append("select ");
         sb.append(columnA.getWholeColumnName());
-        sb.append(Concatenate.DEFAULT_OPERATOR);
-        sb.append(separator);
-        sb.append(Concatenate.DEFAULT_OPERATOR);
+        sb.append(concatenate.getOperator());
+        sb.append("'");
+        sb.append(concatenate.getSeparator());
+        sb.append("'");
+        sb.append(concatenate.getOperator());
         sb.append(columnB.getWholeColumnName());
-        sb.append(Concatenate.DEFAULT_OPERATOR);
-        sb.append(separator);
-        sb.append(Concatenate.DEFAULT_OPERATOR);
+        sb.append(concatenate.getOperator());
+        sb.append("'");
+        sb.append(concatenate.getSeparator());
+        sb.append("'");
+        sb.append(concatenate.getOperator());
         sb.append(columnC.getWholeColumnName());
-        String expResult = sb.toString();;
+        String expResult = sb.toString();
 
-        Concatenate instance = new Concatenate();
-        instance.setParameters(list);
-        instance.setSeparator(separator);
-        String result = instance.toString();
-        assertEquals(expResult, result);
+        SelectExpressionItem expressionItem = new SelectExpressionItem();
+        expressionItem.setExpression(concatenate);
+
+        List<SelectExpressionItem> selectItems = new ArrayList<SelectExpressionItem>();
+        selectItems.add(expressionItem);
+
+        PlainSelect plainSelect = new PlainSelect();
+        plainSelect.setSelectItems(selectItems);
+
+        StringBuffer buffer = new StringBuffer();
+        SelectDeParser deParser = new SelectDeParser();
+        deParser.setBuffer(buffer);
+        ExpressionDeParser expressionDeParser = new QueryDeParser(deParser, buffer);
+        deParser.setExpressionVisitor(expressionDeParser);
+
+        plainSelect.accept(deParser);
+        String actual = deParser.getBuffer().toString().trim();
+
+        log.debug("expected: [" + expResult + "]");
+        log.debug("actual: [" + actual + "]");
+        Assert.assertEquals(expResult.toLowerCase(), actual.toLowerCase());
     }
 
 }

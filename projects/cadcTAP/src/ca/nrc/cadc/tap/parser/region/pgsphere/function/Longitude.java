@@ -69,10 +69,11 @@
 
 package ca.nrc.cadc.tap.parser.region.pgsphere.function;
 
+import java.util.ArrayList;
 import java.util.List;
-
 import net.sf.jsqlparser.expression.Expression;
 import net.sf.jsqlparser.expression.Function;
+import net.sf.jsqlparser.expression.operators.relational.ExpressionList;
 
 /**
  * the PgSphere implementation of ADQL function
@@ -81,32 +82,24 @@ import net.sf.jsqlparser.expression.Function;
  * @author zhangsa
  * 
  */
-public class Longitude extends PgsFunction
+public class Longitude extends Function
 {
-    protected Expression object;
-
     public Longitude(Function adqlFunction)
     {
-        super(adqlFunction);
-        convertParameters();
-    }
+        super();
+        
+        Function longFunction = new Function();
+        longFunction.setName("long");
+        longFunction.setParameters(adqlFunction.getParameters());
 
-    @SuppressWarnings("unchecked")
-    protected void convertParameters()
-    {
-        List<Expression> params = this.getParameters().getExpressions();
-        object = params.get(0);
-    }
+        List<Expression> expressions = new ArrayList<Expression>();
+        expressions.add(longFunction);
 
-    @Override
-    public String toString()
-    {
-        return "degrees(long(" + object.toString() + "))";
-    }
+        ExpressionList expressionList = new ExpressionList();
+        expressionList.setExpressions(expressions);
 
-    public String valueString()
-    {
-        return toString();
+        setName("degrees");
+        setParameters(expressionList);
     }
 
 }

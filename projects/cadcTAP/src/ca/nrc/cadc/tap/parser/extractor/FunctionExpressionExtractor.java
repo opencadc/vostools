@@ -8,7 +8,7 @@
  *  National Research Council            Conseil national de recherches
  *  Ottawa, Canada, K1A 0R6              Ottawa, Canada, K1A 0R6
  *  All rights reserved                  Tous droits réservés
- *                                       
+ *
  *  NRC disclaims any warranties,        Le CNRC dénie toute garantie
  *  expressed, implied, or               énoncée, implicite ou légale,
  *  statutory, of any kind with          de quelque nature que ce
@@ -31,10 +31,10 @@
  *  software without specific prior      de ce logiciel sans autorisation
  *  written permission.                  préalable et particulière
  *                                       par écrit.
- *                                       
+ *
  *  This file is part of the             Ce fichier fait partie du projet
  *  OpenCADC project.                    OpenCADC.
- *                                       
+ *
  *  OpenCADC is free software:           OpenCADC est un logiciel libre ;
  *  you can redistribute it and/or       vous pouvez le redistribuer ou le
  *  modify it under the terms of         modifier suivant les termes de
@@ -44,7 +44,7 @@
  *  either version 3 of the              : soit la version 3 de cette
  *  License, or (at your option)         licence, soit (à votre gré)
  *  any later version.                   toute version ultérieure.
- *                                       
+ *
  *  OpenCADC is distributed in the       OpenCADC est distribué
  *  hope that it will be useful,         dans l’espoir qu’il vous
  *  but WITHOUT ANY WARRANTY;            sera utile, mais SANS AUCUNE
@@ -54,7 +54,7 @@
  *  PURPOSE.  See the GNU Affero         PARTICULIER. Consultez la Licence
  *  General Public License for           Générale Publique GNU Affero
  *  more details.                        pour plus de détails.
- *                                       
+ *
  *  You should have received             Vous devriez avoir reçu une
  *  a copy of the GNU Affero             copie de la Licence Générale
  *  General Public License along         Publique GNU Affero avec
@@ -67,124 +67,58 @@
  ************************************************************************
  */
 
-package ca.nrc.cadc.tap.parser;
+package ca.nrc.cadc.tap.parser.extractor;
+
+import java.util.List;
+
+import net.sf.jsqlparser.statement.select.PlainSelect;
+import net.sf.jsqlparser.statement.select.SelectItem;
+
+import ca.nrc.cadc.tap.parser.navigator.ExpressionNavigator;
+import ca.nrc.cadc.tap.parser.navigator.FromItemNavigator;
+import ca.nrc.cadc.tap.parser.navigator.ReferenceNavigator;
+import ca.nrc.cadc.tap.parser.navigator.SelectNavigator;
+import org.apache.log4j.Logger;
 
 /**
- * TAP Select Item, contains table name, column name and select item alias for the interests of TAP.
- * 
- * @author zhangsa
- * 
+ * Basic SelectVisitor implementation used for extracting parts of the
+ * query to be passed to the ExpressionValidator.
+ *
+ *
+ * @author jburke
  */
-public class TapSelectItem
+public class FunctionExpressionExtractor extends SelectNavigator
 {
-    private String tableName;
-    private String columnName;
-    private String alias;
-    private String expression;
+    private static Logger log = Logger.getLogger(FunctionExpressionExtractor.class);
 
-    public TapSelectItem(String expression, String alias)
+    /**
+     * @param en
+     * @param rn
+     * @param fn
+     */
+    public FunctionExpressionExtractor(ExpressionNavigator en, ReferenceNavigator rn, FromItemNavigator fn)
     {
-        this.expression = expression;
-        this.alias = alias;
-    }
-
-    public TapSelectItem(String tableName, String columnName, String alias)
-    {
-        this.tableName = tableName;
-        this.columnName = columnName;
-        this.alias = alias;
-    }
-
-    public String getTableName()
-    {
-        return this.tableName;
-    }
-
-    public void setTableName(String tableName)
-    {
-        this.tableName = tableName;
-    }
-
-    public String getColumnName()
-    {
-        return this.columnName;
-    }
-
-    public void setColumnName(String columnName)
-    {
-        this.columnName = columnName;
-    }
-
-    public String getExpression()
-    {
-        return expression;
-    }
-
-    public void setExpression(String expression)
-    {
-        this.expression = expression;
-    }
-
-    public String getAlias()
-    {
-        return this.alias;
-    }
-
-    public void setAlias(String alias)
-    {
-        this.alias = alias;
+        super(en, rn, fn);
     }
 
     @Override
-    public String toString()
+    public void visit(PlainSelect plainSelect)
     {
-        return "\r\n\tTapSelectItem [this.alias=" + this.alias + ", this.columnName=" + this.columnName + ", this.tableName="
-                + this.tableName + "]";
+        log.debug("visit(PlainSelect) " + plainSelect);
+        enterPlainSelect(plainSelect);
+
+        this.visitingPart = VisitingPart.SELECT_ITEM;
+        List<SelectItem> selectItems = plainSelect.getSelectItems();
+        if (selectItems != null)
+            for (SelectItem s : selectItems)
+                s.accept(this.expressionNavigator);
+
+        this.visitingPart = VisitingPart.WHERE;
+        if (this.plainSelect.getWhere() != null)
+            this.plainSelect.getWhere().accept(this.expressionNavigator);
+
+        log.debug("visit(PlainSelect) done");
+        leavePlainSelect();
     }
 
-    @Override
-    public int hashCode()
-    {
-        final int prime = 31;
-        int result = 1;
-
-        result = prime * result;
-        if (this.alias != null) result += this.alias.hashCode();
-
-        result = prime * result;
-        if (this.columnName != null) result += this.columnName.hashCode();
-
-        result = prime * result;
-        if (this.tableName != null) result += this.tableName.hashCode();
-
-        return result;
-    }
-
-    @Override
-    public boolean equals(Object obj)
-    {
-        if (this == obj)
-            return true;
-        else if (obj == null)
-            return false;
-        else if (getClass() != obj.getClass())
-            return false;
-        else
-        {
-            TapSelectItem other = (TapSelectItem) obj;
-            if (this.alias == null && other.alias != null)
-                return false;
-            else if (this.alias != null && !this.alias.equals(other.alias))
-                return false;
-            else if (this.columnName == null && other.columnName != null)
-                return false;
-            else if (!this.columnName.equals(other.columnName))
-                return false;
-            else if (this.tableName == null && other.tableName != null)
-                return false;
-            else if (!this.tableName.equals(other.tableName)) return false;
-
-        }
-        return true;
-    }
 }

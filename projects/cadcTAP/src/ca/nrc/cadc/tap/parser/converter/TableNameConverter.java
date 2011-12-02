@@ -2,6 +2,7 @@
 package ca.nrc.cadc.tap.parser.converter;
 
 import ca.nrc.cadc.tap.parser.navigator.FromItemNavigator;
+import ca.nrc.cadc.util.CaseInsensitiveStringComparator;
 import java.util.Map;
 import java.util.TreeMap;
 import net.sf.jsqlparser.schema.Table;
@@ -21,7 +22,7 @@ public class TableNameConverter extends FromItemNavigator
     public TableNameConverter(boolean ignoreCase)
     {
         if (ignoreCase)
-            this.map = new TreeMap<String,Table>(new IgnoreCaseComparator());
+            this.map = new TreeMap<String,Table>(new CaseInsensitiveStringComparator());
         else
             this.map = new TreeMap<String,Table>();
     }

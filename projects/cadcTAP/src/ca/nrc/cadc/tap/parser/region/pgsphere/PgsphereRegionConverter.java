@@ -88,17 +88,19 @@ import ca.nrc.cadc.stc.STC;
 import ca.nrc.cadc.stc.StcsParsingException;
 import ca.nrc.cadc.tap.parser.ParserUtil;
 import ca.nrc.cadc.tap.parser.RegionFinder;
-import ca.nrc.cadc.tap.parser.region.PredicateFunction;
+import ca.nrc.cadc.tap.parser.function.Operator;
 import ca.nrc.cadc.tap.parser.region.pgsphere.function.Center;
-import ca.nrc.cadc.tap.parser.region.pgsphere.function.Contains;
-import ca.nrc.cadc.tap.parser.region.pgsphere.function.Coordsys;
-import ca.nrc.cadc.tap.parser.region.pgsphere.function.Intersects;
 import ca.nrc.cadc.tap.parser.region.pgsphere.function.Lat;
 import ca.nrc.cadc.tap.parser.region.pgsphere.function.Longitude;
-import ca.nrc.cadc.tap.parser.region.pgsphere.function.PgsFunction;
 import ca.nrc.cadc.tap.parser.region.pgsphere.function.Scircle;
 import ca.nrc.cadc.tap.parser.region.pgsphere.function.Spoint;
 import ca.nrc.cadc.tap.parser.region.pgsphere.function.Spoly;
+import net.sf.jsqlparser.expression.NullValue;
+import net.sf.jsqlparser.expression.operators.relational.GreaterThan;
+import net.sf.jsqlparser.expression.operators.relational.GreaterThanEquals;
+import net.sf.jsqlparser.expression.operators.relational.MinorThan;
+import net.sf.jsqlparser.expression.operators.relational.MinorThanEquals;
+import net.sf.jsqlparser.expression.operators.relational.NotEqualsTo;
 
 /**
  * Convert ADQL functions into PgSphere implementation.
@@ -116,157 +118,156 @@ public class PgsphereRegionConverter extends RegionFinder
 
     /**
      * This method is called when a REGION PREDICATE function is one of the arguments in a binary expression, 
-     * and after the direct function convertion.
+     * and after the direct function conversion.
      * 
-     * Supported functions: CINTAINS, INTERSECTS
+     * Supported functions: CONTAINS, INTERSECTS
      * 
      * Examples:
      * 
-      * CONTAINS() = 0 
-      * CONTAINS() = 1 
-      * 1 = CONTAINS() 
-      * 0 = CONTAINS()
-      * 
+     * CONTAINS() = 0 
+     * CONTAINS() = 1 
+     * 1 = CONTAINS() 
+     * 0 = CONTAINS()
+     *
+     * Supported comparison operators are =, !=, <, >, <=, >=
      */
+    @Override
     protected Expression handleRegionPredicate(BinaryExpression binaryExpression)
     {
-        Expression rtn = binaryExpression;
+        log.debug("handleRegionPredicate(" + binaryExpression.getClass().getSimpleName() + "): " + binaryExpression);
+
+        if (!(binaryExpression instanceof EqualsTo ||
+            binaryExpression instanceof NotEqualsTo ||
+            binaryExpression instanceof MinorThan ||
+            binaryExpression instanceof GreaterThan ||
+            binaryExpression instanceof MinorThanEquals ||
+            binaryExpression instanceof GreaterThanEquals))
+            return binaryExpression;
+
         Expression left = binaryExpression.getLeftExpression();
         Expression right = binaryExpression.getRightExpression();
 
-        boolean proceed = false;
+        Operator operator = null;
         long value = 0;
-        PredicateFunction predicateFunc = null;
-        if ((binaryExpression instanceof EqualsTo))
+        if (isOperator(left) && ParserUtil.isBinaryValue(right))
         {
-            if (isPredicate(left) && ParserUtil.isBinaryValue(right))
-            {
-                proceed = true;
-                value = ((LongValue) right).getValue();
-                predicateFunc = (PredicateFunction) left;
-            }
-            else if (ParserUtil.isBinaryValue(left) && isPredicate(right))
-            {
-                proceed = true;
-                value = ((LongValue) left).getValue();
-                predicateFunc = (PredicateFunction) right;
-            }
+            operator = (Operator) left;
+            value = ((LongValue) right).getValue();
+        }
+        else if (ParserUtil.isBinaryValue(left) && isOperator(right))
+        {
+            operator = (Operator) right;
+            value = ((LongValue) left).getValue();
+        }
+        else
+        {
+            return binaryExpression;
         }
 
-        if (proceed)
-        {
-            if (value == 1)
-                rtn = (Expression) predicateFunc;
-            else
-                rtn = (Expression) predicateFunc.negate();
-        }
-        return rtn;
+        if (value == 0)
+            operator.negate();
+        return operator;
     }
 
     /**
      * This method is called when a CONTAINS is found outside of a predicate.
-     * This could occurr if the query had CONTAINS(...) in the select list or as
+     * This could occur if the query had CONTAINS(...) in the select list or as
      * part of an arithmetic expression or aggregate function (since CONTAINS 
      * returns a numeric value). 
      * 
      */
-    protected Expression handleContains(Function adqlFunction)
+    @Override
+    protected Expression handleContains(Expression left, Expression right)
     {
-        Contains pgsFunc = new Contains(adqlFunction);
-        return pgsFunc;
+        return new Operator("@", "!@", left, right);
     }
 
     /**
      * This method is called when a INTERSECTS is found outside of a predicate.
-     * This could occurr if the query had INTERSECTS(...) in the select list or as
+     * This could occur if the query had INTERSECTS(...) in the select list or as
      * part of an arithmetic expression or aggregate function (since INTERSECTS 
      * returns a numeric value). 
      * 
      */
-    protected Expression handleIntersects(Function adqlFunction)
+    @Override
+    protected Expression handleIntersects(Expression left, Expression right)
     {
-        Intersects pgsFunc = new Intersects(adqlFunction);
-        return pgsFunc;
+        return new Operator("&&", "!&&", left, right);
     }
 
     /**
      * This method is called when a POINT geometry value is found.
      * 
      */
-    protected Expression handlePoint(Function adqlFunction)
+    @Override
+    protected Expression handlePoint(Expression coordsys, Expression ra, Expression dec)
     {
-        Spoint pgsFunc = new Spoint(adqlFunction);
-        return pgsFunc;
+        return new Spoint(coordsys, ra, dec);
     }
 
     /**
      * This method is called when a CIRCLE geometry value is found.
      * 
      */
-    protected Expression handleCircle(Function adqlFunction)
+    @Override
+    protected Expression handleCircle(Expression coordsys, Expression ra, Expression dec, Expression radius)
     {
-        Scircle pgsFunc = new Scircle(adqlFunction);
-        return pgsFunc;
+        return new Scircle(coordsys, ra, dec, radius);
     }
 
     /**
      * This method is called when a POLYGON geometry value is found.
      * 
      */
-    protected Expression handlePolygon(Function adqlFunction)
+    @Override
+    protected Expression handlePolygon(List<Expression> expressions)
     {
-        Spoly pgsFunc = new Spoly(adqlFunction);
-        return pgsFunc;
+        return new Spoly(expressions);
     }
 
     /**
      * This method is called when the CENTROID function is found.
      * 
      */
+    @Override
     protected Expression handleCentroid(Function adqlFunction)
     {
-        Center pgsFunc = new Center(adqlFunction);
-        return pgsFunc;
+        return new Center(adqlFunction);
     }
 
     /**
      * This method is called when COORD1 function is found.
      * 
      */
+    @Override
     protected Expression handleCoord1(Function adqlFunction)
     {
-        Longitude pgsFunc = new Longitude(adqlFunction);
-        return pgsFunc;
+        return new Longitude(adqlFunction);
     }
 
     /**
      * This method is called when COORD2 function is found.
      * 
      */
+    @Override
     protected Expression handleCoord2(Function adqlFunction)
     {
-        Lat pgsFunc = new Lat(adqlFunction);
-        return pgsFunc;
+        return new Lat(adqlFunction);
     }
 
     /**
      * This method is called when COORDSYS function is found.
      */
+    @Override
     protected Expression handleCoordSys(Function adqlFunction)
     {
-        Coordsys pgsFunc = new Coordsys(adqlFunction);
-        return pgsFunc;
+        return new NullValue();
     }
 
-    /**
-     * Check whether the parameter is a predicate function.
-     * 
-     */
-    protected boolean isPredicate(Expression expr)
+    protected boolean isOperator(Expression expression)
     {
-        return (expr instanceof PredicateFunction);
+        return (expression instanceof Operator);
     }
-
     /**
      * Convert ADQL BOX to PGS spoly.
      * 
@@ -276,24 +277,19 @@ public class PgsphereRegionConverter extends RegionFinder
     @Override
     protected Expression handleBox(Function adqlFunction)
     {
-        Spoly pgsFunc = null;
         Box box = ParserUtil.convertToStcBox(adqlFunction);
         Polygon polygon = new Polygon(box);
-        pgsFunc = new Spoly(polygon);
-        return pgsFunc;
+        return new Spoly(polygon);
     }
 
     @Override
     protected Expression handleRegion(Function adqlFunction)
     {
-        PgsFunction pgsFunc = null;
         List<Expression> params = adqlFunction.getParameters().getExpressions();
         StringValue strV = (StringValue) params.get(0);
         String regionParamStr = strV.getValue();
         String[] tokens = regionParamStr.split(" ");
         String fname = tokens[0].toUpperCase();
-
-        //BOX", "CIRCLE", "POLYGON", "POSITION", "UNION", "NOT", "INTERSECTION"
 
         if (Box.NAME.equalsIgnoreCase(fname))
         {
@@ -307,7 +303,7 @@ public class PgsphereRegionConverter extends RegionFinder
                 throw new IllegalArgumentException(e);
             }
             Polygon polygon = new Polygon(box);
-            pgsFunc = new Spoly(polygon);
+            return new Spoly(polygon);
         }
         else if (Polygon.NAME.equalsIgnoreCase(fname))
         {
@@ -320,7 +316,7 @@ public class PgsphereRegionConverter extends RegionFinder
             {
                 throw new IllegalArgumentException(e);
             }
-            pgsFunc = new Spoly(polygon);
+            return new Spoly(polygon);
         }
         else if (Circle.NAME.equalsIgnoreCase(fname))
         {
@@ -333,7 +329,7 @@ public class PgsphereRegionConverter extends RegionFinder
             {
                 throw new IllegalArgumentException(e);
             }
-            pgsFunc = new Scircle(circle);
+            return new Scircle(circle);
         }
         else if (Position.NAME.equalsIgnoreCase(fname))
         {
@@ -346,11 +342,12 @@ public class PgsphereRegionConverter extends RegionFinder
             {
                 throw new IllegalArgumentException(e);
             }
-            pgsFunc = new Spoint(position);
+            return new Spoint(position);
         }
         else
+        {
             return super.handleRegion(adqlFunction);
+        }
 
-        return pgsFunc;
     }
 }

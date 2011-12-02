@@ -69,9 +69,9 @@
 
 package ca.nrc.cadc.tap;
 
+import ca.nrc.cadc.tap.schema.ParamDesc;
 import java.util.List;
 
-import ca.nrc.cadc.tap.parser.TapSelectItem;
 import ca.nrc.cadc.tap.schema.TableDesc;
 import ca.nrc.cadc.tap.schema.TapSchema;
 import ca.nrc.cadc.uws.Parameter;
@@ -119,7 +119,7 @@ public interface TapQuery
     /**
      * @return the metadata for columns in the result set
      */
-    List<TapSelectItem> getSelectList();
+    List<ParamDesc> getSelectList();
 
     /**
      * Provide a text description of the relevant part of the query. This should

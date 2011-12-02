@@ -69,6 +69,8 @@
 
 package ca.nrc.cadc.tap.writer.formatter;
 
+import ca.nrc.cadc.stc.Circle;
+import ca.nrc.cadc.stc.STC;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 
@@ -77,17 +79,76 @@ import java.sql.SQLException;
  * 
  * @author pdowler
  */
-public class SCircleFormatter  implements ResultSetFormatter
+public class SCircleFormatter implements ResultSetFormatter
 {
 
-    public String format(ResultSet resultSet, int columnIndex) throws SQLException
+    public String format(ResultSet resultSet, int columnIndex)
+        throws SQLException
     {
-        throw new UnsupportedOperationException("Not supported yet.");
+        String object = resultSet.getString(columnIndex);
+        return format(object);
     }
 
     public String format(Object object)
     {
-        throw new UnsupportedOperationException("Not supported yet.");
+        Circle circle = getCircle(object);
+        if (circle == null)
+            return "";
+        return STC.format(circle);
     }
-    
+
+    public Circle getCircle(Object object)
+    {
+         if (object == null)
+            return null;
+        if (!(object instanceof String))
+            throw new IllegalArgumentException("Expected String, was " + object.getClass().getName());
+        String s = (String) object;
+
+        // scircle format: <(coordinates), radius>
+        // <(0.0174532925199433 , 0.0349065850398866) , 0.0523598775598299>
+        // Get the string inside the enclosing angle brackets.
+        int open = s.indexOf("<");
+        int close = s.indexOf(">");
+        if (open == -1 || close == -1)
+            throw new IllegalArgumentException("Missing opening or closing angle brackets " + s);
+
+        s = s.substring(open + 1, close);
+
+        // Get the string inside the enclosing parentheses.
+        open = s.indexOf("(");
+        close = s.indexOf(")");
+        if (open == -1 || close == -1)
+            throw new IllegalArgumentException("Missing opening or closing parentheses " + s);
+
+        // Should be 2 values separated by a comma.
+        String coordinates = s.substring(open + 1, close);
+        String[] points = coordinates.split(",");
+        if (points.length != 2)
+            throw new IllegalArgumentException("SCirlce coordinates must have only 2 values " + coordinates);
+
+        // Radius
+        s = s.substring (close + 1);
+        open = s.indexOf(",");
+        if (open == -1)
+            throw new IllegalArgumentException("Missing radius after coordinates " + s);
+        s = s.substring(open + 1);
+
+        // Coordinates.
+        Double x = Double.valueOf(points[0]);
+        Double y = Double.valueOf(points[1]);
+        Double r = Double.valueOf(s);
+
+        // convert to radians
+        x = x * (180/Math.PI);
+        y = y * (180/Math.PI);
+        r = r * (180/Math.PI);
+
+
+        // Create STC Cirlce.
+        Circle circle = new Circle("ICRS", x, y, r);
+
+        return circle;
+    }
+
 }

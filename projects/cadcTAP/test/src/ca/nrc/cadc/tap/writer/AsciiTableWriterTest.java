@@ -69,11 +69,9 @@
 
 package ca.nrc.cadc.tap.writer;
 
-import ca.nrc.cadc.tap.parser.TapSelectItem;
+import ca.nrc.cadc.tap.schema.ParamDesc;
 import ca.nrc.cadc.tap.schema.TapSchema;
 import ca.nrc.cadc.util.Log4jInit;
-import java.io.OutputStream;
-import java.sql.ResultSet;
 import java.util.ArrayList;
 import java.util.List;
 import org.apache.log4j.Level;
@@ -139,25 +137,11 @@ public class AsciiTableWriterTest
     public void testSetSelectList()
     {
         LOG.debug("setSelectList");
-        List<TapSelectItem> items = new ArrayList<TapSelectItem>();
+        List<ParamDesc> items = new ArrayList<ParamDesc>();
         AsciiTableWriter instance = new AsciiTableWriter(CSV);
         instance.setSelectList(items);
         assertNotNull(instance.selectList);
         LOG.info("testSetSelectList passed");
-    }
-
-    /**
-     * Test of setTapSchema method, of class AsciiTableWriter.
-     */
-    @Test
-    public void testSetTapSchema()
-    {
-        LOG.debug("setTapSchema");
-        TapSchema schema = new TapSchema();
-        AsciiTableWriter instance = new AsciiTableWriter(CSV);
-        instance.setTapSchema(schema);
-        assertNotNull(instance.tapSchema);
-        LOG.info("testSetTapSchema passed");
     }
 
 }

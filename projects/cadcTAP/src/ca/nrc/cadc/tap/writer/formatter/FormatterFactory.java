@@ -69,9 +69,7 @@
 
 package ca.nrc.cadc.tap.writer.formatter;
 
-import ca.nrc.cadc.tap.parser.TapSelectItem;
-import ca.nrc.cadc.tap.schema.ColumnDesc;
-import ca.nrc.cadc.tap.schema.TapSchema;
+import ca.nrc.cadc.tap.schema.ParamDesc;
 import ca.nrc.cadc.uws.Parameter;
 import java.util.List;
 
@@ -85,28 +83,28 @@ public interface FormatterFactory
     
     void setParamList(List<Parameter> params);
     
-    List<Formatter> getFormatters(TapSchema tapSchema, List<TapSelectItem> selectList);
+    List<Formatter> getFormatters(List<ParamDesc> selectList);
 
-    Formatter getFormatter(TapSchema tapSchema, TapSelectItem selectItem);
+//    Formatter getFormatter(ColumnDesc columnDesc);
 
-    Formatter getIntegerFormatter(ColumnDesc columnDesc);
-
-    Formatter getDoubleFormatter(ColumnDesc columnDesc);
-
-    Formatter getLongFormatter(ColumnDesc columnDesc);
-
-    Formatter getStringFormatter(ColumnDesc columnDesc);
-
-    Formatter getByteArrayFormatter(ColumnDesc columnDesc);
-
-    Formatter getIntArrayFormatter(ColumnDesc columnDesc);
-
-    Formatter getDoubleArrayFormatter(ColumnDesc columnDesc);
-
-    Formatter getTimestampFormatter(ColumnDesc columnDesc);
-
-    Formatter getPointFormatter(ColumnDesc columnDesc);
-
-    Formatter getRegionFormatter(ColumnDesc columnDesc);
+//    Formatter getIntegerFormatter(ColumnDesc columnDesc);
+//
+//    Formatter getDoubleFormatter(ColumnDesc columnDesc);
+//
+//    Formatter getLongFormatter(ColumnDesc columnDesc);
+//
+//    Formatter getStringFormatter(ColumnDesc columnDesc);
+//
+//    Formatter getByteArrayFormatter(ColumnDesc columnDesc);
+//
+//    Formatter getIntArrayFormatter(ColumnDesc columnDesc);
+//
+//    Formatter getDoubleArrayFormatter(ColumnDesc columnDesc);
+//
+//    Formatter getTimestampFormatter(ColumnDesc columnDesc);
+//
+//    Formatter getPointFormatter(ColumnDesc columnDesc);
+//
+//    Formatter getRegionFormatter(ColumnDesc columnDesc);
     
 }

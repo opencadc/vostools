@@ -78,10 +78,7 @@ import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.util.List;
 
-import ca.nrc.cadc.tap.parser.TapSelectItem;
-import ca.nrc.cadc.tap.schema.ColumnDesc;
-import ca.nrc.cadc.tap.schema.SchemaDesc;
-import ca.nrc.cadc.tap.schema.TableDesc;
+import ca.nrc.cadc.tap.schema.ParamDesc;
 import ca.nrc.cadc.tap.schema.TapSchema;
 
 import ca.nrc.cadc.tap.writer.formatter.DefaultFormatterFactory;
@@ -117,14 +114,8 @@ public class AsciiTableWriter implements TableWriter
 
     private static final Logger LOG = Logger.getLogger(AsciiTableWriter.class);
 
-    // TapSchema containing table metadata.
-    protected TapSchema tapSchema;
-
     // List of column names used in the select statement.
-    protected List<TapSelectItem> selectList;
-
-    //protected String jobID;
-    //protected List<Parameter> params;
+    protected List<ParamDesc> selectList;
 
     protected Job job;
     protected String info;
@@ -166,16 +157,20 @@ public class AsciiTableWriter implements TableWriter
             throw new IllegalArgumentException("illegal format: " + format);
     }
 
-    public void setJobID(String jobID)
-    {
-        //this.jobID = jobID;
-    }
+    /**
+     * @deprecated
+     */
+    public void setJobID(String jobID) { }
 
+    /**
+     * @deprecated
+     */
+    public void setParameterList(List<Parameter> params) { }
 
-    public void setParameterList(List<Parameter> params)
-    {
-        //this.params = params;
-    }
+    /**
+     * @deprecated
+     */
+    public void setTapSchema(TapSchema schema) { }
 
     public void setJob(Job job)
     {
@@ -203,14 +198,9 @@ public class AsciiTableWriter implements TableWriter
         return "text/tab-separated-values";
     }
 
-    public void setSelectList(List<TapSelectItem> items)
+    public void setSelectList(List<ParamDesc> items)
     {
         this.selectList = items;
-    }
-
-    public void setTapSchema(TapSchema schema)
-    {
-        this.tapSchema = schema;
     }
 
     public void setMaxRowCount(int count)
@@ -222,13 +212,12 @@ public class AsciiTableWriter implements TableWriter
     {
         if (selectList == null)
             throw new IllegalStateException("SelectList cannot be null, set using setSelectList()");
-        if (tapSchema == null)
-            throw new IllegalStateException("TapSchema cannot be null, set using setTapSchema()");
 
         FormatterFactory factory = DefaultFormatterFactory.getFormatterFactory();
         factory.setJobID(job.getID());
+        LOG.debug("parameterList: " + job.getParameterList());
         factory.setParamList(job.getParameterList());
-        List<Formatter> formatters = factory.getFormatters(tapSchema, selectList);
+        List<Formatter> formatters = factory.getFormatters(selectList);
 
         LOG.debug("writing ResultSet, format: " + format);
         int numRows = 0;
@@ -237,8 +226,8 @@ public class AsciiTableWriter implements TableWriter
         try
         {
             // Add the metadata elements.
-            for (TapSelectItem selectItem : selectList)
-                writer.write(getColumnName(selectItem));
+            for (ParamDesc paramDesc : selectList)
+                writer.write(paramDesc.name);
             writer.endRecord();
 
             if (rs != null)
@@ -273,36 +262,6 @@ public class AsciiTableWriter implements TableWriter
                     + " [FAILED]");
             throw new IOException(ex);
         }
-    }
-
-    // Get the column name for the column specified by the TapSelectItem.
-    private String getColumnName(TapSelectItem selectItem)
-    {
-        for (SchemaDesc schemaDesc : tapSchema.schemaDescs)
-        {
-            for (TableDesc tableDesc : schemaDesc.tableDescs)
-            {
-                if (tableDesc.tableName.equals(selectItem.getTableName()))
-                {
-                    for (ColumnDesc columnDesc : tableDesc.columnDescs)
-                    {
-                        if (columnDesc.columnName.equals(selectItem.getColumnName()))
-                        {
-                            if (selectItem.getAlias() != null)
-                                return selectItem.getAlias();
-                            else if (selectItem.getColumnName() != null)
-                                return selectItem.getColumnName();
-                        }
-                    }
-                }
-            }
-        }
-
-        // select item did not match a column, must be a function call or expression
-        String name = selectItem.getAlias();
-        if (name == null)
-            name = selectItem.getColumnName();
-        return name;
     }
 
 }

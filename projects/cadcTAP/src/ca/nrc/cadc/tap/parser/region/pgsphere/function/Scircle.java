@@ -69,17 +69,18 @@
 
 package ca.nrc.cadc.tap.parser.region.pgsphere.function;
 
-import java.util.ArrayList;
-import java.util.List;
 
 import net.sf.jsqlparser.expression.Expression;
 import net.sf.jsqlparser.expression.Function;
 import net.sf.jsqlparser.expression.StringValue;
-import net.sf.jsqlparser.expression.operators.relational.ExpressionList;
 import ca.nrc.cadc.stc.Circle;
 import ca.nrc.cadc.stc.CoordPair;
 import ca.nrc.cadc.tap.parser.RegionFinder;
+import java.util.ArrayList;
+import java.util.List;
 import net.sf.jsqlparser.expression.DoubleValue;
+import net.sf.jsqlparser.expression.operators.relational.ExpressionList;
+import org.apache.log4j.Logger;
 
 /**
  * the PgSphere implementation of ADQL function
@@ -88,65 +89,62 @@ import net.sf.jsqlparser.expression.DoubleValue;
  * @author zhangsa
  * 
  */
-public class Scircle extends PgsFunction
+public class Scircle extends Function
 {
-    private Spoint point;
+    private static final Logger log = Logger.getLogger(Scircle.class);
+
+    private Expression coordsys;
+    private Expression ra;
+    private Expression dec;
     private Expression radius;
 
-    public Scircle(Function adqlFunction)
+    public Scircle(Expression coordsys, Expression ra, Expression dec, Expression radius)
     {
-        super(adqlFunction);
+        super();
+        this.coordsys = coordsys;
+        this.ra = ra;
+        this.dec = dec;
+        this.radius = radius;
         convertParameters();
     }
 
-    /**
-     * Create Scircle from STC CIRCLE.
-     * 
-     * @param circle
-     */
     public Scircle(Circle circle)
     {
-        double ra;
-        double dec;
-        double rad;
-        List<Expression> expressions = new ArrayList<Expression>();
-        expressions.add(new StringValue(RegionFinder.ICRS));
-        CoordPair cp = circle.getCoordPair();
-        ra = cp.getX();
-        dec = cp.getY();
-        rad = circle.getRadius();
-        expressions.add(new DoubleValue(Double.toString(ra)));
-        expressions.add(new DoubleValue(Double.toString(dec)));
-        expressions.add(new DoubleValue(Double.toString(rad)));
-        ExpressionList el = new ExpressionList(expressions);
-        this.setParameters(el);
+        super();
+        coordsys = new StringValue(RegionFinder.ICRS);
+        CoordPair coordPair = circle.getCoordPair();
+        ra = new DoubleValue(Double.toString(coordPair.getX()));
+        dec = new DoubleValue(Double.toString(coordPair.getY()));
+        radius = new DoubleValue(Double.toString(circle.getRadius()));
         convertParameters();
     }
 
-    @SuppressWarnings("unchecked")
     protected void convertParameters()
     {
-        List<Expression> params = this.getParameters().getExpressions();
-        point = new Spoint(params.get(1), params.get(2));
-        radius = params.get(3);
+        // Spoint
+        Spoint spoint = new Spoint(coordsys, ra, dec);
 
-        List<Expression> pgsParams = new ArrayList<Expression>(2);
-        pgsParams.add(point);
-        pgsParams.add(radius);
-        ExpressionList pgsParamExprList = new ExpressionList(pgsParams);
-        setParameters(pgsParamExprList);
+        List<Expression> radiusExp = new ArrayList<Expression>();
+        radiusExp.add(radius);
+
+        ExpressionList radiusParams = new ExpressionList();
+        radiusParams.setExpressions(radiusExp);
+
+        // Radius
+        Function radiusFunc = new Function();
+        radiusFunc.setName("radians");
+        radiusFunc.setParameters(radiusParams);
+
+        // Scircle
+        List<Expression> expressions = new ArrayList<Expression>();
+        expressions.add(spoint);
+        expressions.add(radiusFunc);
+
+        ExpressionList parameters = new ExpressionList();
+        parameters.setExpressions(expressions);
+
+        setName("scircle");
+        setParameters(parameters);
     }
-
-    @Override
-    public String toString()
-    {
-        //return "scircle '<" + point.valueString() + "," + radius + ">'";
-        return "scircle(" + point.toString() + ",radians(" + radius + "))";
-    }
-
-    //public String valueString()
-    //{
-    //    return "<" + point.valueString() + "," + radius + ">";
-    //}
 
 }

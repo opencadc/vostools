@@ -150,11 +150,11 @@ public class ParserUtilTest
     private Function createFunction(String frame, String refpos, String flavor,
             double x, double y, double w, double h)
     {
-        StringBuffer sb = new StringBuffer("'");
+        StringBuilder sb = new StringBuilder("'");
         if (frame != null)
-            sb.append(frame + " ");
+            sb.append(frame).append(" ");
         if (refpos != null)
-            sb.append(refpos+  " ");
+            sb.append(refpos).append(" ");
         if (flavor != null)
             sb.append(flavor);
         sb.append("'");

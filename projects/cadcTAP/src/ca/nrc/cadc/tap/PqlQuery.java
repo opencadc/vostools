@@ -68,8 +68,8 @@
  */
 package ca.nrc.cadc.tap;
 
-import ca.nrc.cadc.tap.parser.TapSelectItem;
 import ca.nrc.cadc.tap.schema.ColumnDesc;
+import ca.nrc.cadc.tap.schema.ParamDesc;
 import ca.nrc.cadc.tap.schema.SchemaDesc;
 import ca.nrc.cadc.tap.schema.TableDesc;
 import ca.nrc.cadc.tap.schema.TapSchema;
@@ -161,7 +161,7 @@ public abstract class PqlQuery implements TapQuery
     /**
      * @return the metadata for columns in the result set
      */
-    public abstract List<TapSelectItem> getSelectList();
+    public abstract List<ParamDesc> getSelectList();
 
     /**
      * Limit number of table rows.

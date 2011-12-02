@@ -166,6 +166,7 @@ public class SchemaDesc
     /**
      * @return String representation of the Schema.
      */
+    @Override
     public String toString()
     {
         StringBuilder sb = new StringBuilder();

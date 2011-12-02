@@ -81,6 +81,7 @@ import java.util.List;
 public class TapSchema
 {
     public List<SchemaDesc> schemaDescs = new ArrayList<SchemaDesc>();
+    public List<FunctionDesc> functionDescs = new ArrayList<FunctionDesc>();
 
     /**
      * Default no-arg constructor.
@@ -114,9 +115,20 @@ public class TapSchema
         this.schemaDescs = schemaDescs;
     }
 
+    public final List<FunctionDesc> getFunctionDescs()
+    {
+        return functionDescs;
+    }
+
+    public final void setFunctionDescs(List<FunctionDesc> functionDescs)
+    {
+        this.functionDescs = functionDescs;
+    }
+    
     /**
      * @return String representation of the TapSchema.
      */
+    @Override
     public String toString()
     {
         StringWriter sw = new StringWriter();
@@ -125,13 +137,13 @@ public class TapSchema
         for (SchemaDesc schemaDesc : schemaDescs)
         {
             pw.print("\t");
-            pw.println(schemaDesc.toString());
+            pw.println(schemaDesc);
         }
-        //for (KeyDesc keyDesc : keyDescs)
-        //{
-        //    pw.print("\t");
-        //    pw.println(keyDesc.toString());
-        //}
+        for (FunctionDesc functionDesc : functionDescs)
+        {
+            pw.print("\t");
+            pw.println(functionDesc);
+        }
         pw.print("]");
         return sw.toString();
     }

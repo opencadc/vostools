@@ -69,8 +69,8 @@
 
 package ca.nrc.cadc.tap.writer;
 
-import ca.nrc.cadc.tap.parser.TapSelectItem;
 import ca.nrc.cadc.tap.schema.ColumnDesc;
+import ca.nrc.cadc.tap.schema.ParamDesc;
 import ca.nrc.cadc.tap.writer.votable.FieldElement;
 import ca.nrc.cadc.util.Log4jInit;
 import org.apache.log4j.Level;
@@ -89,7 +89,7 @@ public class FieldElementTest
 
     static
     {
-        Log4jInit.setLevel("ca.nrc.cadc.tap.writer", Level.DEBUG);
+        Log4jInit.setLevel("ca.nrc.cadc.tap.writer", Level.INFO);
     }
 
     public FieldElementTest()
@@ -102,9 +102,9 @@ public class FieldElementTest
     {
         try
         {
-            TapSelectItem si = new TapSelectItem("someTable", "someColumn", null);
-            ColumnDesc cd = new ColumnDesc("someTable", "someColumn", "description", null, null, null, "adql:VARCHAR", null);
-            FieldElement e = new FieldElement(si, cd, Namespace.NO_NAMESPACE);
+            ColumnDesc columnDesc = new ColumnDesc("someTable", "someColumn", "description", null, null, null, "adql:VARCHAR", null);
+            ParamDesc paramDesc = new ParamDesc(columnDesc, null);
+            FieldElement e = new FieldElement(paramDesc, Namespace.NO_NAMESPACE);
             Assert.assertEquals("someColumn", e.getAttribute("name", Namespace.NO_NAMESPACE).getValue());
         }
         catch(Throwable unexpected)
@@ -118,9 +118,9 @@ public class FieldElementTest
     {
         try
         {
-            TapSelectItem si = new TapSelectItem("someTable", "someColumn", "someAlias");
-            ColumnDesc cd = new ColumnDesc("someTable", "someColumn", "description", null, null, null, "adql:VARCHAR", null);
-            FieldElement e = new FieldElement(si, cd, Namespace.NO_NAMESPACE);
+            ColumnDesc columnDesc = new ColumnDesc("someTable", "someColumn", "description", null, null, null, "adql:VARCHAR", null);
+            ParamDesc paramDesc = new ParamDesc(columnDesc, "someAlias");
+            FieldElement e = new FieldElement(paramDesc, Namespace.NO_NAMESPACE);
             Assert.assertEquals("someAlias", e.getAttribute("name", Namespace.NO_NAMESPACE).getValue());
         }
         catch(Throwable unexpected)
@@ -134,9 +134,9 @@ public class FieldElementTest
     {
         try
         {
-            TapSelectItem si = new TapSelectItem("someTable", "someColumn", "\"some alias\"");
-            ColumnDesc cd = new ColumnDesc("someTable", "someColumn", "description", null, null, null, "adql:VARCHAR", null);
-            FieldElement e = new FieldElement(si, cd, Namespace.NO_NAMESPACE);
+            ColumnDesc columnDesc = new ColumnDesc("someTable", "someColumn", "description", null, null, null, "adql:VARCHAR", null);
+            ParamDesc paramDesc = new ParamDesc(columnDesc, "\"some alias\"");
+            FieldElement e = new FieldElement(paramDesc, Namespace.NO_NAMESPACE);
             Assert.assertEquals("some alias", e.getAttribute("name", Namespace.NO_NAMESPACE).getValue());
         }
         catch(Throwable unexpected)

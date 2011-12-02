@@ -76,7 +76,6 @@ package ca.nrc.cadc.tap.parser;
 import net.sf.jsqlparser.statement.Statement;
 
 import org.junit.After;
-import org.junit.AfterClass;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.BeforeClass;
@@ -87,6 +86,7 @@ import ca.nrc.cadc.tap.parser.navigator.FromItemNavigator;
 import ca.nrc.cadc.tap.parser.navigator.ReferenceNavigator;
 import ca.nrc.cadc.tap.parser.navigator.SelectNavigator;
 import ca.nrc.cadc.util.Log4jInit;
+import org.apache.log4j.Logger;
 
 /**
  * general test of navigator
@@ -94,7 +94,10 @@ import ca.nrc.cadc.util.Log4jInit;
  * @author Sailor Zhang
  *
  */
-public class NavigatorTest {
+public class NavigatorTest
+{
+    private static final Logger log = Logger.getLogger(NavigatorTest.class);
+
 	public String _query;
 
     ExpressionNavigator _en;
@@ -106,28 +109,21 @@ public class NavigatorTest {
 	 * @throws java.lang.Exception
 	 */
 	@BeforeClass
-	public static void setUpBeforeClass() throws Exception {
-	}
-
-	/**
-	 * @throws java.lang.Exception
-	 */
-	@AfterClass
-	public static void tearDownAfterClass() throws Exception {
+	public static void setUpBeforeClass() throws Exception
+    {
+        Log4jInit.setLevel("ca.nrc.cadc.tap.parser", org.apache.log4j.Level.INFO);
 	}
 
 	/**
 	 * @throws java.lang.Exception
 	 */
 	@Before
-	public void setUp() throws Exception {
-        Log4jInit.setLevel("ca.nrc.cadc", org.apache.log4j.Level.INFO);
-        
+	public void setUp() throws Exception
+    {
         _en = new ExpressionNavigator();
         _rn = new ReferenceNavigator();
         _fn = new FromItemNavigator();
         _sn = new SelectNavigator(_en, _rn, _fn);
-        
 	}
 
 	/**
@@ -140,14 +136,18 @@ public class NavigatorTest {
 	private void doNavigate(boolean expectValid) {
 		Statement s = null;
 		boolean exceptionHappens = false;
-		try {
+		try
+        {
+            log.debug("query: " + _query);
 		    s = ParserUtil.receiveQuery(_query);
 		    ParserUtil.parseStatement(s, _sn);
-		} catch (Exception ae) {
-            exceptionHappens = true;
-            System.out.println(ae.toString());
 		}
-		System.out.println(s);
+        catch (Exception ae)
+        {
+            exceptionHappens = true;
+            log.debug("exception: " + ae.getMessage());
+        }
+        log.debug("statement: " + s);
         Assert.assertTrue(expectValid != exceptionHappens);
 	}
 

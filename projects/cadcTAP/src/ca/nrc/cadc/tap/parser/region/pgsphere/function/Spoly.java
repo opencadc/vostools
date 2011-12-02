@@ -69,88 +69,54 @@
 
 package ca.nrc.cadc.tap.parser.region.pgsphere.function;
 
-import java.util.ArrayList;
 import java.util.List;
 
 import ca.nrc.cadc.stc.CoordPair;
 import ca.nrc.cadc.stc.Polygon;
 import ca.nrc.cadc.tap.parser.RegionFinder;
+import java.util.ArrayList;
 import net.sf.jsqlparser.expression.DoubleValue;
 
 import net.sf.jsqlparser.expression.Expression;
 import net.sf.jsqlparser.expression.Function;
+import net.sf.jsqlparser.expression.LongValue;
 import net.sf.jsqlparser.expression.StringValue;
 import net.sf.jsqlparser.expression.operators.relational.ExpressionList;
 
 /**
- * the PgSphere implementation of ADQL function 
- * POLYGON.
+ * the PgSphere implementation of ADQL function POLYGON.
  * 
  * @author zhangsa
  * 
  */
-public class Spoly extends PgsFunction
+public class Spoly extends Function
 {
-    public Spoly(Function adqlFunction)
+    private List<Expression> expressions;
+
+    public Spoly(List<Expression> expressions)
     {
-        super(adqlFunction);
+        super();
+        this.expressions = expressions;
         convertParameters();
     }
 
-    /**
-     * create from STC Polygon object.
-     * 
-     * @param polygon
-     */
     public Spoly(Polygon polygon)
     {
-        double ra;
-        double dec;
-        List<Expression> expressions = new ArrayList<Expression>();
+        super();
+        expressions = new ArrayList<Expression>();
         expressions.add(new StringValue(RegionFinder.ICRS));
-        for (CoordPair cp : polygon.getCoordPairs())
+        
+        for (CoordPair coordPair : polygon.getCoordPairs())
         {
-            ra = cp.getX();
-            dec = cp.getY();
-            expressions.add(new DoubleValue(Double.toString(ra)));
-            expressions.add(new DoubleValue(Double.toString(dec)));
+            expressions.add(new DoubleValue(Double.toString(coordPair.getX())));
+            expressions.add(new DoubleValue(Double.toString(coordPair.getY())));
         }
-        ExpressionList el = new ExpressionList(expressions);
-        this.setParameters(el);
         convertParameters();
-    }
-
-    @SuppressWarnings("unchecked")
-    protected void convertParameters()
-    {
-        List<Expression> pgsParams = new ArrayList<Expression>();
-
-        List<Expression> params = this.getParameters().getExpressions();
-        int size = params.size();
-
-        Spoint spoint = null;
-        for (int i = 1; i < size; i = i + 2)
-        {
-            spoint = new Spoint(params.get(i), params.get(i + 1));
-            pgsParams.add(spoint);
-        }
-        ExpressionList pgsParamExprList = new ExpressionList(pgsParams);
-        setParameters(pgsParamExprList);
-    }
-
-    @Override
-    public String toString()
-    {
-        StringBuffer sb = new StringBuffer();
-        sb.append("spoly '");
-        sb.append(toVertexList());
-        sb.append("'");
-        return sb.toString();
     }
 
     public String toVertexList()
     {
-        StringBuffer sb = new StringBuffer();
+        StringBuilder sb = new StringBuilder();
         sb.append("{");
 
         List<Expression> params = this.getParameters().getExpressions();
@@ -164,6 +130,29 @@ public class Spoly extends PgsFunction
         }
         sb.append("}");
         return sb.toString();
+    }
+
+    @SuppressWarnings("unchecked")
+    protected void convertParameters()
+    {
+        List<Expression> expressionList = new ArrayList<Expression>();
+        Expression coordsys = expressions.get(0);
+
+        for (int i = 1; i < expressions.size(); i = i + 2)
+        {
+            Expression ra = expressions.get(i);
+            Expression dec = expressions.get(i + 1);
+            if (!(ra instanceof DoubleValue || ra instanceof LongValue) ||
+                !(dec instanceof DoubleValue || dec instanceof LongValue))
+                throw new UnsupportedOperationException("cannot use non-constant coordinates in polygon");
+            expressionList.add(new Spoint(coordsys, ra, dec));
+        }
+
+        ExpressionList parameters = new ExpressionList();
+        parameters.setExpressions(expressionList);
+
+        setName("spoly");
+        setParameters(parameters);
     }
 
 }

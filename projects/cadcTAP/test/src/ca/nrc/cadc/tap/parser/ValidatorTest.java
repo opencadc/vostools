@@ -89,6 +89,7 @@ import ca.nrc.cadc.tap.parser.schema.TapSchemaColumnValidator;
 import ca.nrc.cadc.tap.parser.schema.TapSchemaTableValidator;
 import ca.nrc.cadc.tap.schema.TapSchema;
 import ca.nrc.cadc.util.Log4jInit;
+import org.apache.log4j.Logger;
 
 /**
  * test query validator
@@ -98,6 +99,8 @@ import ca.nrc.cadc.util.Log4jInit;
  */
 public class ValidatorTest
 {
+    private static final Logger log = Logger.getLogger(ValidatorTest.class);
+
     public String _query;
 
     ExpressionNavigator _en;
@@ -149,13 +152,14 @@ public class ValidatorTest
         Statement s = null;
         boolean exceptionHappens = false;
         try {
+            log.debug("query: " + _query);
             s = ParserUtil.receiveQuery(_query);
+            log.debug("statement: " + s);
             ParserUtil.parseStatement(s, _sn);
         } catch (Exception ae) {
             exceptionHappens = true;
-            System.out.println(ae.toString());
+            log.debug("exception: " + ae.getMessage());
         }
-        System.out.println(s);
         Assert.assertTrue(expectValid != exceptionHappens);
     }
 

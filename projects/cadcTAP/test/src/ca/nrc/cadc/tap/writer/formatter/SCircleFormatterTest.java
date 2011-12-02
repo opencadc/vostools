@@ -8,7 +8,7 @@
 *  National Research Council            Conseil national de recherches
 *  Ottawa, Canada, K1A 0R6              Ottawa, Canada, K1A 0R6
 *  All rights reserved                  Tous droits réservés
-*                                       
+*
 *  NRC disclaims any warranties,        Le CNRC dénie toute garantie
 *  expressed, implied, or               énoncée, implicite ou légale,
 *  statutory, of any kind with          de quelque nature que ce
@@ -31,10 +31,10 @@
 *  software without specific prior      de ce logiciel sans autorisation
 *  written permission.                  préalable et particulière
 *                                       par écrit.
-*                                       
+*
 *  This file is part of the             Ce fichier fait partie du projet
 *  OpenCADC project.                    OpenCADC.
-*                                       
+*
 *  OpenCADC is free software:           OpenCADC est un logiciel libre ;
 *  you can redistribute it and/or       vous pouvez le redistribuer ou le
 *  modify it under the terms of         modifier suivant les termes de
@@ -44,7 +44,7 @@
 *  either version 3 of the              : soit la version 3 de cette
 *  License, or (at your option)         licence, soit (à votre gré)
 *  any later version.                   toute version ultérieure.
-*                                       
+*
 *  OpenCADC is distributed in the       OpenCADC est distribué
 *  hope that it will be useful,         dans l’espoir qu’il vous
 *  but WITHOUT ANY WARRANTY;            sera utile, mais SANS AUCUNE
@@ -54,7 +54,7 @@
 *  PURPOSE.  See the GNU Affero         PARTICULIER. Consultez la Licence
 *  General Public License for           Générale Publique GNU Affero
 *  more details.                        pour plus de détails.
-*                                       
+*
 *  You should have received             Vous devriez avoir reçu une
 *  a copy of the GNU Affero             copie de la Licence Générale
 *  General Public License along         Publique GNU Affero avec
@@ -67,135 +67,62 @@
 ************************************************************************
 */
 
-/**
- * 
- */
-package ca.nrc.cadc.tap.parser;
+package ca.nrc.cadc.tap.writer.formatter;
 
-import static org.junit.Assert.fail;
-
-import java.util.ArrayList;
-import java.util.List;
-
-import net.sf.jsqlparser.statement.Statement;
-
-import org.junit.After;
-import org.junit.AfterClass;
-import org.junit.Before;
-import org.junit.BeforeClass;
-import org.junit.Test;
-
-import ca.nrc.cadc.tap.parser.extractor.SelectListExpressionExtractor;
-import ca.nrc.cadc.tap.parser.extractor.SelectListExtractor;
-import ca.nrc.cadc.tap.parser.navigator.FromItemNavigator;
-import ca.nrc.cadc.tap.parser.navigator.ReferenceNavigator;
-import ca.nrc.cadc.tap.parser.navigator.SelectNavigator;
-import ca.nrc.cadc.tap.schema.TapSchema;
+import ca.nrc.cadc.stc.Circle;
 import ca.nrc.cadc.util.Log4jInit;
+import org.apache.log4j.Level;
+import org.apache.log4j.Logger;
+import org.junit.Test;
+import static org.junit.Assert.*;
 
 /**
- * test the extraction of select list
- * 
- * @author Sailor Zhang
  *
+ * @author jburke
  */
-public class ExtractorTest
+public class SCircleFormatterTest
 {
-    public String _query;
-    public List<TapSelectItem> _expected;
+    private static final Logger log = Logger.getLogger(SCircleFormatterTest.class);
+    static
+    {
+        Log4jInit.setLevel("ca", Level.INFO);
+    }
+    private static final String SCIRCLE = "<(0.174532925199433 , 0.174532925199433), 0.174532925199433>";
+    private static final String STCS_CIRCLE = "CIRCLE ICRS 10.000000000000004 10.000000000000004 10.000000000000004";
 
-    SelectListExpressionExtractor _en;
-    ReferenceNavigator _rn;
-    FromItemNavigator _fn;
-    SelectNavigator _sn;
-
-    static TapSchema TAP_SCHEMA;
+    public SCircleFormatterTest() { }
 
     /**
-     * @throws java.lang.Exception
+     * Test of format method, of class SCircleFormatter.
      */
-    @BeforeClass
-    public static void setUpBeforeClass() throws Exception
-    {
-        Log4jInit.setLevel("ca.nrc.cadc", org.apache.log4j.Level.INFO);
-        TAP_SCHEMA = TestUtil.loadDefaultTapSchema();
-    }
-
-    /**
-     * @throws java.lang.Exception
-     */
-    @AfterClass
-    public static void tearDownAfterClass() throws Exception
-    {
-    }
-
-    /**
-     * @throws java.lang.Exception
-     */
-    @Before
-    public void setUp() throws Exception
-    {
-
-        _en = new SelectListExpressionExtractor(TAP_SCHEMA);
-        _rn = null;
-        _fn = null;
-        _sn = new SelectListExtractor(_en, _rn, _fn);
-    }
-
-    /**
-     * @throws java.lang.Exception
-     */
-    @After
-    public void tearDown() throws Exception
-    {
-    }
-
-    private void doit()
-    {
-        System.out.println(_query);
-        Statement s = null;
-        try
-        {
-            s = ParserUtil.receiveQuery(_query);
-            ParserUtil.parseStatement(s, _sn);
-            System.out.println(s);
-            List<TapSelectItem> tsiList = _en.getTapSelectItemList();
-            System.out.println(tsiList.toString());
-            org.junit.Assert.assertEquals(_expected, tsiList);
-        } catch (Exception ae)
-        {
-            ae.printStackTrace(System.out);
-            fail(ae.toString());
-        }
-    }
-
     @Test
-    public void testAll()
+    public void testFormat()
     {
-        _query = "select t.table_name as tn, keys.from_table from tap_schema.tables t, tap_schema.keys where t.utype=keys.utype";
+        log.debug("testFormat");
 
-        TapSelectItem tsi;
-        List<TapSelectItem> tsiList = new ArrayList<TapSelectItem>();
-        tsi = new TapSelectItem("tap_schema.tables","table_name","tn");
-        tsiList.add(tsi);
-        tsi = new TapSelectItem("tap_schema.keys","from_table",null);
-        tsiList.add(tsi);
-        _expected = tsiList;
-        
-        doit();
+        SCircleFormatter formatter = new SCircleFormatter();
+        String expResult = STCS_CIRCLE;
+        String result = formatter.format(SCIRCLE);
+        assertEquals(expResult, result);
+        log.info("testFormat passed");
     }
 
+    /**
+     * Test of testGetCircle method, of class SCircleFormatter.
+     */
     @Test
-    public void testQuotedCol()
+    public void testGetCircle()
     {
-        _query = "select \"table_name\" from tap_schema.tables";
+        log.debug("testGetCircle");
 
-        TapSelectItem tsi;
-        List<TapSelectItem> tsiList = new ArrayList<TapSelectItem>();
-        tsi = new TapSelectItem("tap_schema.tables","table_name",null);
-        tsiList.add(tsi);
-        _expected = tsiList;
-
-        doit();
+        SCircleFormatter formatter = new SCircleFormatter();
+        Circle circle = formatter.getCircle(SCIRCLE);
+        assertEquals("CIRCLE", Circle.NAME);
+        assertEquals("ICRS", circle.getFrame());
+        assertEquals(10.0, circle.getCoordPair().getX(), 0.1);
+        assertEquals(10.0, circle.getCoordPair().getY(), 0.1);
+        assertEquals(10.0, circle.getRadius(), 0.1);
+        log.info("testGetCircle passed");
     }
+
 }

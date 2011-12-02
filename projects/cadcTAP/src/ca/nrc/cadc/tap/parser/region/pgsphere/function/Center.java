@@ -8,7 +8,7 @@
  *  National Research Council            Conseil national de recherches
  *  Ottawa, Canada, K1A 0R6              Ottawa, Canada, K1A 0R6
  *  All rights reserved                  Tous droits réservés
- *                                       
+ *
  *  NRC disclaims any warranties,        Le CNRC dénie toute garantie
  *  expressed, implied, or               énoncée, implicite ou légale,
  *  statutory, of any kind with          de quelque nature que ce
@@ -31,10 +31,10 @@
  *  software without specific prior      de ce logiciel sans autorisation
  *  written permission.                  préalable et particulière
  *                                       par écrit.
- *                                       
+ *
  *  This file is part of the             Ce fichier fait partie du projet
  *  OpenCADC project.                    OpenCADC.
- *                                       
+ *
  *  OpenCADC is free software:           OpenCADC est un logiciel libre ;
  *  you can redistribute it and/or       vous pouvez le redistribuer ou le
  *  modify it under the terms of         modifier suivant les termes de
@@ -44,7 +44,7 @@
  *  either version 3 of the              : soit la version 3 de cette
  *  License, or (at your option)         licence, soit (à votre gré)
  *  any later version.                   toute version ultérieure.
- *                                       
+ *
  *  OpenCADC is distributed in the       OpenCADC est distribué
  *  hope that it will be useful,         dans l’espoir qu’il vous
  *  but WITHOUT ANY WARRANTY;            sera utile, mais SANS AUCUNE
@@ -54,7 +54,7 @@
  *  PURPOSE.  See the GNU Affero         PARTICULIER. Consultez la Licence
  *  General Public License for           Générale Publique GNU Affero
  *  more details.                        pour plus de détails.
- *                                       
+ *
  *  You should have received             Vous devriez avoir reçu une
  *  a copy of the GNU Affero             copie de la Licence Générale
  *  General Public License along         Publique GNU Affero avec
@@ -69,44 +69,23 @@
 
 package ca.nrc.cadc.tap.parser.region.pgsphere.function;
 
-import java.util.List;
-
-import net.sf.jsqlparser.expression.Expression;
 import net.sf.jsqlparser.expression.Function;
 
 /**
  * the PgSphere implementation of ADQL function
  * CENTER.
- * 
+ *
  * @author zhangsa
- * 
+ *
  */
-public class Center extends PgsFunction
+public class Center extends Function
 {
-    protected Expression object;
-
     public Center(Function adqlFunction)
     {
-        super(adqlFunction);
-        convertParameters();
-    }
+        super();
 
-    @SuppressWarnings("unchecked")
-    protected void convertParameters()
-    {
-        List<Expression> params = this.getParameters().getExpressions();
-        object = params.get(0);
-    }
-
-    @Override
-    public String toString()
-    {
-        return "center(" + object.toString() + ")";
-    }
-    
-    public String valueString()
-    {
-        return toString();
+        setName("center");
+        setParameters(adqlFunction.getParameters());
     }
 
 }

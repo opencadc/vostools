@@ -90,7 +90,7 @@ import org.apache.log4j.Logger;
 import ca.nrc.cadc.tap.parser.navigator.SelectNavigator;
 
 /**
- * This visitor finds all occurances of ADQL geometry constructs. The default
+ * This visitor finds all occurrences of ADQL geometry constructs. The default
  * implementations of the protected <code>handle</code> methods throw an
  * UnsupportedOperationException so this visitor can be used as-is to detect
  * the presence of ADQL geometry constructs in the query.
@@ -125,10 +125,11 @@ public class RegionFinder extends SelectNavigator
     /**
      * Overwrite method in super class SelectNavigator.  
      * It navigates all parts of the select statement,
-     * trying to locate all occurance of region functions.
+     * trying to locate all occurrence of region functions.
      * 
      */
     @SuppressWarnings("unchecked")
+    @Override
     public void visit(PlainSelect plainSelect)
     {
         log.debug("visit(PlainSelect): " + plainSelect);
@@ -180,7 +181,7 @@ public class RegionFinder extends SelectNavigator
             plainSelect.setHaving(implExpression);
         }
 
-        log.debug("visit(PlainSelect) done");
+        log.debug("visit(PlainSelect) done: " + plainSelect);
         super.leavePlainSelect();
     }
 
@@ -193,7 +194,7 @@ public class RegionFinder extends SelectNavigator
      */
     public Expression convertToImplementation(Expression adqlExpr)
     {
-        log.debug("convertToImplementation(Expression): " + adqlExpr);
+        log.debug("convertToImplementation(" + adqlExpr.getClass().getSimpleName() + "): " + adqlExpr);
 
         Expression implExpr = adqlExpr;
 
@@ -211,6 +212,7 @@ public class RegionFinder extends SelectNavigator
         else if (adqlExpr instanceof BinaryExpression)
         {
             BinaryExpression expr1 = (BinaryExpression) adqlExpr;
+
             Expression left = expr1.getLeftExpression();
             Expression right = expr1.getRightExpression();
 
@@ -252,6 +254,7 @@ public class RegionFinder extends SelectNavigator
     @SuppressWarnings("unchecked")
     public ExpressionList convertToImplementation(ExpressionList adqlExprList)
     {
+        log.debug("convertToImplementation(ExpressionList): " + adqlExprList);
         if (adqlExprList == null || adqlExprList.getExpressions() == null) return adqlExprList;
         List<Expression> adqlExprs = adqlExprList.getExpressions();
         List<Expression> implExprs = new ArrayList<Expression>();
@@ -276,7 +279,7 @@ public class RegionFinder extends SelectNavigator
      */
     public Expression convertToImplementation(Function adqlFunction)
     {
-        log.debug("convertToImplementation(Function): " + adqlFunction);
+        log.debug("convertToImplementation(adqlFunction): " + adqlFunction);
 
         Expression implExpr = adqlFunction;
         String fname = adqlFunction.getName().toUpperCase();
@@ -297,11 +300,17 @@ public class RegionFinder extends SelectNavigator
         else if (CIRCLE.equalsIgnoreCase(fname))
         {
             validateCoordSys(adqlFunction);
-            implExpr = handleCircle(adqlFunction);
+            List<Expression> expressions = adqlFunction.getParameters().getExpressions();
+            if (expressions.size() != 4)
+                throw new IllegalStateException("CIRCLE requires coordsys, RA, DEC, radius");
+            implExpr = handleCircle(expressions.get(0), expressions.get(1), expressions.get(2), expressions.get(3));
         }
         else if (CONTAINS.equalsIgnoreCase(fname))
         {
-            implExpr = handleContains(adqlFunction);
+            List<Expression> expressions = adqlFunction.getParameters().getExpressions();
+            if (expressions.size() != 2)
+                throw new IllegalStateException("CONTAINS requires 2 expressions, found " + expressions.size());
+            implExpr = handleContains(expressions.get(0), expressions.get(1));
         }
         else if (COORD1.equalsIgnoreCase(fname))
         {
@@ -317,17 +326,26 @@ public class RegionFinder extends SelectNavigator
         }
         else if (INTERSECTS.equalsIgnoreCase(fname))
         {
-            implExpr = handleIntersects(adqlFunction);
+            List<Expression> expressions = adqlFunction.getParameters().getExpressions();
+            if (expressions.size() != 2)
+                throw new IllegalStateException("INTERSECTS requires 2 expressions, found " + expressions.size());
+            implExpr = handleIntersects(expressions.get(0), expressions.get(1));
         }
         else if (POINT.equalsIgnoreCase(fname))
         {
             validateCoordSys(adqlFunction);
-            implExpr = handlePoint(adqlFunction);
+            List<Expression> expressions = adqlFunction.getParameters().getExpressions();
+            if (expressions.size() != 3)
+                throw new IllegalStateException("POINT requires coordsys, RA, DEC");
+            implExpr = handlePoint(expressions.get(0), expressions.get(1), expressions.get(2));
         }
         else if (POLYGON.equalsIgnoreCase(fname))
         {
             validateCoordSys(adqlFunction);
-            implExpr = handlePolygon(adqlFunction);
+            List<Expression> expressions = adqlFunction.getParameters().getExpressions();
+            if ((expressions.size() % 2) != 1)
+                throw new IllegalStateException("{POLYGON requires coordsys and even number of vertices");
+            implExpr = handlePolygon(expressions);
         }
         else if (REGION.equalsIgnoreCase(fname))
         {
@@ -352,7 +370,8 @@ public class RegionFinder extends SelectNavigator
         else if (firstPara instanceof StringValue)
         {
             StringValue sv = (StringValue) firstPara;
-            if (sv == null || sv.getValue().equals("") || sv.getValue().startsWith(RegionFinder.ICRS_PREFIX)) valid = true;
+            if (sv == null || sv.getValue().isEmpty() || sv.getValue().startsWith(RegionFinder.ICRS_PREFIX))
+                valid = true;
         }
 
         if (!valid) throw new UnsupportedOperationException(firstPara.toString() + " is not a supported coordinate system.");
@@ -360,7 +379,7 @@ public class RegionFinder extends SelectNavigator
 
     /**
     * This method is called when a REGION PREDICATE function is one of the arguments in a binary expression, 
-    * and after the direct function convertion.
+    * and after the direct function conversion.
     * 
     * Supported functions: CINTAINS, INTERSECTS
     * 
@@ -380,22 +399,22 @@ public class RegionFinder extends SelectNavigator
 
     /**
      * This method is called when a CONTAINS is found outside of a predicate.
-     * This could occurr if the query had CONTAINS(...) in the select list or as
+     * This could occur if the query had CONTAINS(...) in the select list or as
      * part of an arithmetic expression or aggregate function (since CONTAINS 
      * returns a numeric value). 
      */
-    protected Expression handleContains(Function adqlFunction)
+    protected Expression handleContains(Expression left, Expression right)
     {
         throw new UnsupportedOperationException("CONTAINS not supported");
     }
 
     /**
      * This method is called when a INTERSECTS is found outside of a predicate.
-     * This could occurr if the query had INTERSECTS(...) in the select list or as
+     * This could occur if the query had INTERSECTS(...) in the select list or as
      * part of an arithmetic expression or aggregate function (since INTERSECTS 
      * returns a numeric value). 
      */
-    protected Expression handleIntersects(Function adqlFunction)
+    protected Expression handleIntersects(Expression left, Expression right)
     {
         throw new UnsupportedOperationException("INTERSECTS not supported");
     }
@@ -403,7 +422,7 @@ public class RegionFinder extends SelectNavigator
     /**
      * This method is called when a POINT geometry value is found.
      */
-    protected Expression handlePoint(Function adqlFunction)
+    protected Expression handlePoint(Expression coordsys, Expression longitude, Expression latitude)
     {
         throw new UnsupportedOperationException("POINT not supported");
     }
@@ -411,7 +430,7 @@ public class RegionFinder extends SelectNavigator
     /**
      * This method is called when a CIRCLE geometry value is found.
      */
-    protected Expression handleCircle(Function adqlFunction)
+    protected Expression handleCircle(Expression coordsys, Expression ra, Expression dec, Expression radius)
     {
         throw new UnsupportedOperationException("CIRCLE not supported");
     }
@@ -427,7 +446,7 @@ public class RegionFinder extends SelectNavigator
     /**
      * This method is called when a POLYGON geometry value is found.
      */
-    protected Expression handlePolygon(Function adqlFunction)
+    protected Expression handlePolygon(List<Expression> expressions)
     {
         throw new UnsupportedOperationException("POLYGON not supported");
     }

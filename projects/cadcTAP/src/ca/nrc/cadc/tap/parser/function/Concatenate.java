@@ -69,91 +69,116 @@
 
 package ca.nrc.cadc.tap.parser.function;
 
-import java.util.Iterator;
+import ca.nrc.cadc.tap.parser.QueryDeParser;
+import ca.nrc.cadc.tap.parser.region.pgsphere.function.Spoint;
 import java.util.List;
+import net.sf.jsqlparser.expression.BinaryExpression;
 import net.sf.jsqlparser.expression.Expression;
-import net.sf.jsqlparser.expression.Function;
-import net.sf.jsqlparser.expression.operators.relational.ExpressionList;
-import net.sf.jsqlparser.schema.Column;
+import net.sf.jsqlparser.expression.ExpressionVisitor;
+import org.apache.log4j.Logger;
 
 /**
- * Function for a SELECT to concatenate multiple columns into a single column.
+ * Expression for a SELECT to concatenate multiple columns into a single column.
  *
  * @author jburke
  */
-public class Concatenate extends Function
+public class Concatenate extends BinaryExpression
 {
-    public static final String DEFAULT_OPERATOR = "||";
-    public static final String DEFAULT_SEPARATOR = "";
+    private static Logger log = Logger.getLogger(Concatenate.class);
 
-    private ExpressionList parameters;
-    private String operator;
-    private String separator;
+    private static final String DEFAULT_SEPARATOR = "";
+
+    protected String operator;
+    protected String separator;
 
     /**
-     * Initialize with default values.
+     * Concatenate the list of expressions with the operator
+     * and use the default separator between the operator and the expressions.
+     *
+     * @param operator The operator between expressions.
+     * @param expressions The expressions to concatenate togeather.
      */
-    public Concatenate()
+    public Concatenate(String operator, List<Expression> expressions)
     {
-        operator = DEFAULT_OPERATOR;
-        separator = DEFAULT_SEPARATOR;
+        this(operator, expressions, DEFAULT_SEPARATOR);
     }
 
     /**
-     * Set the SQL concatenate operator. The default operator used is ||.
-     * @param operator
+     * Concatenate the list of expressions with the operator
+     * and the separator between the operator and the expressions.
+     *
+     * @param operator The operator between expressions.
+     * @param expressions The expressions to concatenate togeather.
+     * @param separator The separator between the operator and the expressions.
      */
-    public void setOperator(String operator)
+    public Concatenate(String operator, List<Expression> expressions, String separator)
     {
+        super();
+
+        // Must be more than one expression in the List.
+        if (expressions.size() < 2)
+            throw new IllegalArgumentException("Operator requires 2 expressions, found " + expressions.size());
+
         this.operator = operator;
-    }
-
-    /**
-     * Set the separator between concatenated columns. The default is no
-     * separation between columns.
-     * 
-     * @param separator
-     */
-    public void setSeparator(String separator)
-    {
         this.separator = separator;
-    }
 
-    /**
-     * @see net.sf.jsqlparser.expression.Function
-     */
-    @Override
-    public void setParameters(ExpressionList list)
-    {
-        this.parameters = list;
-    }
+        // If an expression is an Spoint, flag the Spoint as an operand.
+        Expression left = expressions.get(0);
+        if (left instanceof Spoint)
+            ((Spoint) left).setOperand(true);
+        setLeftExpression(left);
 
-    /**
-     * @see net.sf.jsqlparser.expression.Function
-     */
-    @Override
-    public String toString()
-    {
-        StringBuilder sb = new StringBuilder();
-        List expressions = parameters.getExpressions();
-        Iterator it = expressions.iterator();
-        while (it.hasNext())
+        if(expressions.size() == 2)
         {
-            Expression e = (Expression) it.next();
-            sb.append(e.toString());
-            if (it.hasNext())
-            {
-                sb.append(operator);
-                if (separator != null && separator.length() > 0)
-                {
-                    sb.append(" '");
-                    sb.append(separator);
-                    sb.append("' ");
-                    sb.append(operator);
-                }
-            }
+            Expression right = expressions.get(1);
+            if (right instanceof Spoint)
+                ((Spoint) right).setOperand(true);
+            setRightExpression(right);
         }
-        return sb.toString();
+        else
+        {
+            setRightExpression(new Concatenate(operator, expressions.subList(1, expressions.size()), separator));
+        }
     }
 
+    /**
+     *
+     * @return The operator between expressions.
+     */
+    public String getOperator()
+    {
+        return operator;
+    }
+
+    /**
+     *
+     * @return The separator used between the operator and the expressions.
+     */
+    public String getSeparator()
+    {
+        return separator;
+    }
+
+    /**
+     *
+     * @return The operator.
+     */
+    @Override
+    public String getStringExpression()
+    {
+        return getOperator();
+    }
+
+    /**
+     * Concatenate can only accept a QueryParser or one of its sub-classes.
+     *
+     * @param expressionVisitor
+     */
+    public void accept(ExpressionVisitor expressionVisitor)
+    {
+        log.debug("accept(" + expressionVisitor.getClass().getSimpleName() + ")");
+        if (expressionVisitor instanceof QueryDeParser)
+            ((QueryDeParser) expressionVisitor).visit(this);
+    }
+    
 }

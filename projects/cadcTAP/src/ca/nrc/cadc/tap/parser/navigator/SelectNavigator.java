@@ -99,7 +99,7 @@ import org.apache.log4j.Logger;
 // Prototype: AdqlSelectVisitorProto
 public class SelectNavigator implements SelectVisitor
 {
-    protected static Logger log = Logger.getLogger(SelectNavigator.class);
+    private static Logger log = Logger.getLogger(SelectNavigator.class);
 
     /**
      * Type of plainSelect.
@@ -199,7 +199,7 @@ public class SelectNavigator implements SelectVisitor
         // other SELECT options
         navigateOthers();
 
-        log.debug("visit(PlainSelect) done");
+        log.debug("visit(PlainSelect) done "  + plainSelect);
 
         leavePlainSelect();
     }

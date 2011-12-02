@@ -83,22 +83,29 @@ import net.sf.jsqlparser.statement.select.Top;
 import org.apache.log4j.Logger;
 
 import ca.nrc.cadc.tap.parser.ParserUtil;
-import ca.nrc.cadc.tap.parser.TapSelectItem;
+import ca.nrc.cadc.tap.parser.PgsphereDeParser;
 import ca.nrc.cadc.tap.parser.converter.AllColumnConverter;
 import ca.nrc.cadc.tap.parser.converter.TableNameConverter;
+import ca.nrc.cadc.tap.parser.converter.postgresql.PgFunctionNameConverter;
+import ca.nrc.cadc.tap.parser.extractor.FunctionExpressionExtractor;
 import ca.nrc.cadc.tap.parser.extractor.SelectListExpressionExtractor;
 import ca.nrc.cadc.tap.parser.extractor.SelectListExtractor;
+import ca.nrc.cadc.tap.parser.QuerySelectDeParser;
 import ca.nrc.cadc.tap.parser.navigator.ExpressionNavigator;
 import ca.nrc.cadc.tap.parser.navigator.FromItemNavigator;
 import ca.nrc.cadc.tap.parser.navigator.ReferenceNavigator;
 import ca.nrc.cadc.tap.parser.navigator.SelectNavigator;
 import ca.nrc.cadc.tap.parser.schema.BlobClobColumnValidator;
+import ca.nrc.cadc.tap.parser.schema.ExpressionValidator;
 import ca.nrc.cadc.tap.parser.schema.TapSchemaTableValidator;
+import ca.nrc.cadc.tap.schema.ParamDesc;
 import ca.nrc.cadc.tap.schema.TableDesc;
 import ca.nrc.cadc.tap.schema.TapSchema;
 import ca.nrc.cadc.uws.Parameter;
 import ca.nrc.cadc.uws.ParameterUtil;
 import java.util.Set;
+import net.sf.jsqlparser.util.deparser.ExpressionDeParser;
+import net.sf.jsqlparser.util.deparser.SelectDeParser;
 
 /**
  * TapQuery implementation for LANG=ADQL.
@@ -118,7 +125,7 @@ public class AdqlQuery implements TapQuery
     protected Integer maxRows;
 
     protected Statement statement;
-    protected List<TapSelectItem> tapSelectItemList = null;
+    protected List<ParamDesc> selectList = null;
     protected List<SelectNavigator> navigatorList = new ArrayList<SelectNavigator>();
 
     protected transient boolean navigated = false;
@@ -140,7 +147,7 @@ public class AdqlQuery implements TapQuery
         SelectNavigator sn;
 
         // Blob,Clob plus Default Validator
-        en = new ExpressionNavigator();
+        en = new ExpressionValidator(tapSchema);
         rn = new BlobClobColumnValidator(tapSchema);
         fn = new TapSchemaTableValidator(tapSchema);
         sn = new SelectNavigator(en, rn, fn);
@@ -154,7 +161,14 @@ public class AdqlQuery implements TapQuery
         fn = null;
         sn = new SelectListExtractor(en, rn, fn);
         navigatorList.add(sn);
-        
+
+        en = new PgFunctionNameConverter();
+        rn = new ReferenceNavigator();
+        fn = null;
+        sn = new FunctionExpressionExtractor(en, rn, fn);
+        navigatorList.add(sn);
+
+        // Used for file uploads to map the upload table name to the query table name.
         if (extraTables != null && !extraTables.isEmpty())
         {
             TableNameConverter tnc = new TableNameConverter(true);
@@ -239,7 +253,7 @@ public class AdqlQuery implements TapQuery
             if (sn instanceof SelectListExtractor)
             {
                 SelectListExpressionExtractor slen = (SelectListExpressionExtractor) sn.getExpressionNavigator();
-                tapSelectItemList = slen.getTapSelectItemList();
+                selectList = slen.getSelectList();
             }
         }
     }
@@ -280,18 +294,29 @@ public class AdqlQuery implements TapQuery
 
     public String getSQL()
     {
-        if (queryString == null) throw new IllegalStateException();
-
+        if (queryString == null)
+            throw new IllegalStateException();
+        
         doNavigate();
-        return statement.toString();
+        log.debug("getSQL statement: " + statement);
+
+        StringBuffer sb = new StringBuffer();
+        SelectDeParser deParser = new QuerySelectDeParser();
+        deParser.setBuffer(sb);
+        ExpressionDeParser expressionDeParser = new PgsphereDeParser(deParser, sb);
+        deParser.setExpressionVisitor(expressionDeParser);
+        Select select = (Select) statement;
+        select.getSelectBody().accept(deParser);
+        return deParser.getBuffer().toString();
     }
 
-    public List<TapSelectItem> getSelectList()
+    public List<ParamDesc> getSelectList()
     {
-        if (queryString == null) throw new IllegalStateException();
+        if (queryString == null)
+            throw new IllegalStateException();
 
         doNavigate();
-        return tapSelectItemList;
+        return selectList;
     }
 
     public String getInfo()

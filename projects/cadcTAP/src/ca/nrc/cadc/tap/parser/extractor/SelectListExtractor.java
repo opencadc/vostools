@@ -78,6 +78,7 @@ import ca.nrc.cadc.tap.parser.navigator.ExpressionNavigator;
 import ca.nrc.cadc.tap.parser.navigator.FromItemNavigator;
 import ca.nrc.cadc.tap.parser.navigator.ReferenceNavigator;
 import ca.nrc.cadc.tap.parser.navigator.SelectNavigator;
+import org.apache.log4j.Logger;
 
 /**
  * Basic SelectVisitor implementation. It's used for extracting SelectList
@@ -88,6 +89,8 @@ import ca.nrc.cadc.tap.parser.navigator.SelectNavigator;
 // Prototype: AdqlSelectVisitorProto
 public class SelectListExtractor extends SelectNavigator
 {
+    private static Logger log = Logger.getLogger(SelectListExtractor.class);
+
     /**
      * @param en
      * @param rn
@@ -98,6 +101,7 @@ public class SelectListExtractor extends SelectNavigator
         super(en, rn, fn);
     }
 
+    @Override
     public void visit(PlainSelect plainSelect)
     {
         log.debug("visit(PlainSelect) " + plainSelect);

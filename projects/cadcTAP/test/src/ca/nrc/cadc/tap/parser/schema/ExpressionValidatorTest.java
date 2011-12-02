@@ -8,7 +8,7 @@
 *  National Research Council            Conseil national de recherches
 *  Ottawa, Canada, K1A 0R6              Ottawa, Canada, K1A 0R6
 *  All rights reserved                  Tous droits réservés
-*                                       
+*
 *  NRC disclaims any warranties,        Le CNRC dénie toute garantie
 *  expressed, implied, or               énoncée, implicite ou légale,
 *  statutory, of any kind with          de quelque nature que ce
@@ -31,10 +31,10 @@
 *  software without specific prior      de ce logiciel sans autorisation
 *  written permission.                  préalable et particulière
 *                                       par écrit.
-*                                       
+*
 *  This file is part of the             Ce fichier fait partie du projet
 *  OpenCADC project.                    OpenCADC.
-*                                       
+*
 *  OpenCADC is free software:           OpenCADC est un logiciel libre ;
 *  you can redistribute it and/or       vous pouvez le redistribuer ou le
 *  modify it under the terms of         modifier suivant les termes de
@@ -44,7 +44,7 @@
 *  either version 3 of the              : soit la version 3 de cette
 *  License, or (at your option)         licence, soit (à votre gré)
 *  any later version.                   toute version ultérieure.
-*                                       
+*
 *  OpenCADC is distributed in the       OpenCADC est distribué
 *  hope that it will be useful,         dans l’espoir qu’il vous
 *  but WITHOUT ANY WARRANTY;            sera utile, mais SANS AUCUNE
@@ -54,7 +54,7 @@
 *  PURPOSE.  See the GNU Affero         PARTICULIER. Consultez la Licence
 *  General Public License for           Générale Publique GNU Affero
 *  more details.                        pour plus de détails.
-*                                       
+*
 *  You should have received             Vous devriez avoir reçu une
 *  a copy of the GNU Affero             copie de la Licence Générale
 *  General Public License along         Publique GNU Affero avec
@@ -67,160 +67,154 @@
 ************************************************************************
 */
 
-/**
- * 
- */
-package ca.nrc.cadc.tap.parser;
+package ca.nrc.cadc.tap.parser.schema;
 
-import static org.junit.Assert.assertEquals;
-
+import org.apache.log4j.Level;
+import ca.nrc.cadc.tap.schema.TapSchema;
+import ca.nrc.cadc.tap.parser.TestUtil;
+import ca.nrc.cadc.util.Log4jInit;
 import java.util.ArrayList;
 import java.util.List;
-
-import org.junit.After;
-import org.junit.AfterClass;
+import net.sf.jsqlparser.expression.Expression;
+import org.apache.log4j.Logger;
+import net.sf.jsqlparser.expression.Function;
+import net.sf.jsqlparser.expression.operators.relational.ExpressionList;
+import org.junit.Assert;
 import org.junit.Before;
 import org.junit.BeforeClass;
 import org.junit.Test;
 
-import ca.nrc.cadc.tap.AdqlQuery;
-import ca.nrc.cadc.tap.TapQuery;
-import ca.nrc.cadc.tap.parser.extractor.SelectListExtractor;
-import ca.nrc.cadc.tap.parser.navigator.FromItemNavigator;
-import ca.nrc.cadc.tap.parser.navigator.ReferenceNavigator;
-import ca.nrc.cadc.tap.parser.navigator.SelectNavigator;
-import ca.nrc.cadc.tap.schema.ParamDesc;
-import ca.nrc.cadc.tap.schema.TapSchema;
-import ca.nrc.cadc.util.Log4jInit;
-import ca.nrc.cadc.uws.Parameter;
-import org.apache.log4j.Logger;
-
-
 /**
- * A general test of AdqlQuery with no optional stuff enabled.
- * 
- * @author Sailor Zhang
  *
+ * @author jburke
  */
-public class AdqlQueryTest
+public class ExpressionValidatorTest
 {
-    private static Logger log = Logger.getLogger(AdqlQueryTest.class);
-
-    public String _query;
-    public String _expected = "";
-
-    SelectListExtractor _en;
-    ReferenceNavigator _rn;
-    FromItemNavigator _fn;
-    SelectNavigator _sn;
+    private static final Logger log = Logger.getLogger(ExpressionValidatorTest.class);
 
     static TapSchema TAP_SCHEMA;
+    ExpressionValidator validator;
+    
+    public ExpressionValidatorTest() { }
 
-    /**
-     * @throws java.lang.Exception
-     */
     @BeforeClass
-    public static void setUpBeforeClass() throws Exception
+    public static void setUpClass() throws Exception
     {
-        Log4jInit.setLevel("ca.nrc.cadc", org.apache.log4j.Level.INFO);
+        Log4jInit.setLevel("ca.nrc.cadc.tap.parser.schema", Level.INFO);
         TAP_SCHEMA = TestUtil.loadDefaultTapSchema();
     }
 
-    /**
-     * @throws java.lang.Exception
-     */
-    @AfterClass
-    public static void tearDownAfterClass() throws Exception
-    {
-    }
-
-    /**
-     * @throws java.lang.Exception
-     */
     @Before
     public void setUp() throws Exception
     {
+        validator = new ExpressionValidator(TAP_SCHEMA);
     }
 
     /**
-     * @throws java.lang.Exception
+     * Test of visit method, of class ExpressionValidator.
      */
-    @After
-    public void tearDown() throws Exception
+    @Test
+    public void testVisitValidFunction()
     {
-    }
-
-    private void doit()
-    {
-        Parameter para;
-        para = new Parameter("QUERY", _query);
-        List<Parameter> paramList = new ArrayList<Parameter>();
-        paramList.add(para);
-        
-        TapQuery tapQuery = new AdqlQuery();
-        tapQuery.setTapSchema(TAP_SCHEMA);
-        tapQuery.setParameterList(paramList);
-        String sql = tapQuery.getSQL();
-        List<ParamDesc> selectList = tapQuery.getSelectList();
-        log.debug("QUERY: \r\n" + _query);
-        log.debug("SQL: \r\n" + sql);
-        assertEquals(_expected.toLowerCase().trim(), sql.toLowerCase().trim());
+        try
+        {
+            Function function = new Function();
+            function.setName("area");            
+            try
+            {
+                validator.visit(function);
+            }
+            catch (Exception e)
+            {
+                Assert.fail("" + e.getMessage());
+            }
+        }
+        catch (Exception unexpected)
+        {
+            log.error("unexpected exception", unexpected);
+            Assert.fail("unexpected exception: " + unexpected);
+        }
     }
 
     @Test
-    public void testBasic()
+    public void testVisitInvalidFunction()
     {
-        _query = "select t_integer from tap_schema.alldatatypes";
-        _expected = "select t_integer from tap_schema.alldatatypes";
-        doit();
+        try
+        {
+            Function function = new Function();
+            function.setName("foo");
+            try
+            {
+                validator.visit(function);
+                Assert.fail("select is not a valid function name");
+            }
+            catch (Exception ignore) { }
+        }
+        catch (Exception unexpected)
+        {
+            log.error("unexpected exception", unexpected);
+            Assert.fail("unexpected exception: " + unexpected);
+        }
     }
 
     @Test
-    public void testTableAlias()
+    public void testVisitValidSubFunction()
     {
-        _query = "select aa.t_integer from tap_schema.alldatatypes as aa";
-        _expected = "select aa.t_integer from tap_schema.alldatatypes as aa";
-        doit();
+        try
+        {
+            Function function = new Function();
+            function.setName("sum");
+            function.setParameters(new ExpressionList());
+
+            List<Expression> list = new ArrayList<Expression>();
+            Function parameter = new Function();
+            parameter.setName("min");
+            list.add(parameter);
+            function.getParameters().setExpressions(list);
+
+            try
+            {
+                validator.visit(function);
+            }
+            catch (Exception e)
+            {
+                Assert.fail("" + e.getMessage());
+            }
+        }
+        catch (Exception unexpected)
+        {
+            log.error("unexpected exception", unexpected);
+            Assert.fail("unexpected exception: " + unexpected);
+        }
     }
 
     @Test
-    public void testColumnAlias()
+    public void testVisitInvalidSubFunction()
     {
-        _expected = "SELECT t_complete AS xx, t_bytes AS yy FROM tap_schema.alldatatypes";
-        _query = "select  t_complete as xx, t_bytes as yy from tap_schema.alldatatypes";
-        doit();
-    }
+        try
+        {
+            Function function = new Function();
+            function.setName("area");
+            function.setParameters(new ExpressionList());
 
-    //@Test
-    public void testJoin()
-    {
-        // TODO
-        doit();
-    }
+            List<Expression> list = new ArrayList<Expression>();
+            Function parameter = new Function();
+            parameter.setName("foo");
+            list.add(parameter);
+            function.getParameters().setExpressions(list);
 
-    //@Test
-    public void testCorrelatedSubselect()
-    {
-        _query = "select  t_complete, aa.t_bytes, bb.* from tap_schema.alldatatypes as aa, tap_schema.tables as bb " +
-                " where aa.t_complete = bb.utype " +
-                "and aa.t_complete in (select utype from bb)";
-        doit();
-    }
-    //@Test
-    public void testUncorrelatedSubselect()
-    {
-        _query = "select t_complete, aa.t_bytes, bb.* from tap_schema.alldatatypes as aa, tap_schema.tables as bb " +
-                " where aa.t_complete = bb.utype " +
-                "and aa.t_complete in (select t_complete from tap_schema.alldatatypes)";
-        doit();
-    }
-
-    @Test
-    public void testTopSelect()
-    {
-        _query = "select top 25 t_integer from tap_schema.alldatatypes";
-        _expected = "select top 25 t_integer from tap_schema.alldatatypes";
-        doit();
+            try
+            {
+                validator.visit(function);
+                Assert.fail("select is not a valid function name");
+            }
+            catch (Exception ignore) { }
+        }
+        catch (Exception unexpected)
+        {
+            log.error("unexpected exception", unexpected);
+            Assert.fail("unexpected exception: " + unexpected);
+        }
     }
 
 }

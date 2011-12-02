@@ -69,12 +69,12 @@
 
 package ca.nrc.cadc.tap;
 
+import ca.nrc.cadc.tap.schema.ParamDesc;
 import java.io.IOException;
 import java.io.OutputStream;
 import java.sql.ResultSet;
 import java.util.List;
 
-import ca.nrc.cadc.tap.parser.TapSelectItem;
 import ca.nrc.cadc.tap.schema.TapSchema;
 import ca.nrc.cadc.uws.Job;
 import ca.nrc.cadc.uws.Parameter;
@@ -130,18 +130,19 @@ public interface TableWriter
      * 
      * @param items
      */
-    void setSelectList(List<TapSelectItem> items);
+    void setSelectList(List<ParamDesc> items);
     
     /**
      * The TapSchema for the target database.
      * 
      * @param schema
+     * @deprecated not used since ParamDesc now contains the datatype.
      */
     void setTapSchema(TapSchema schema);
     
     /**
-     * Set additional information or descritpino of the result. The implementation may
-     * include this text in the output (as a comment or wherever such descritpive text
+     * Set additional information or description of the result. The implementation may
+     * include this text in the output (as a comment or wherever such descriptive text
      * is permitted by the format).
      * 
      * @see TapQuery.getInfo()

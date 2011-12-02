@@ -117,6 +117,9 @@ public class TapSchemaDAO
     // Database connection.
     private JdbcTemplate jdbc;
 
+    // Indicates function return datatype matches argument datatype.
+    public static final String ARGUMENT_DATATYPE = "ARGUMENT_DATATYPE";
+
     /**
      * Construct a new TapSchemaDAO using the specified DataSource.
      * 
@@ -153,7 +156,7 @@ public class TapSchemaDAO
 
         // List of TAP_SCHEMA.keys
         //tapSchema.keyDescs = jdbc.query(SELECT_KEYS, new KeyMapper());
-        List<KeyDesc> keyDescs = jdbc.query(SELECT_KEYS, new KeyMapper());;
+        List<KeyDesc> keyDescs = jdbc.query(SELECT_KEYS, new KeyMapper());
 
         // List of TAP_SCHEMA.key_columns
         List<KeyColumnDesc> keyColumnDescs = jdbc.query(SELECT_KEY_COLUMNS, new KeyColumnMapper());
@@ -164,6 +167,9 @@ public class TapSchemaDAO
         // connect foreign keys to the fromTable
         addForeignKeys(tapSchema, keyDescs);
 
+        // Add the List of FunctionDescs.
+        tapSchema.functionDescs = getFunctionDescs();
+
         for (SchemaDesc s : tapSchema.schemaDescs) 
         {
             int num = 0;
@@ -171,7 +177,7 @@ public class TapSchemaDAO
                 num = s.tableDescs.size();
             log.debug("schema " + s.schemaName + " has " + num + " tables");
         }
-        
+
         return tapSchema;
     }
 
@@ -259,6 +265,112 @@ public class TapSchemaDAO
                 }
             }
         }
+    }
+
+    List<FunctionDesc> getFunctionDescs()
+    {
+        List<FunctionDesc> functionDescs = new ArrayList<FunctionDesc>();
+
+        // ADQL functions.
+        functionDescs.add(new FunctionDesc("AREA", "deg", "adql:DOUBLE"));
+        functionDescs.add(new FunctionDesc("BOX", "", "adql:DOUBLE"));
+        functionDescs.add(new FunctionDesc("CENTROID", "", "adql:POINT"));
+        functionDescs.add(new FunctionDesc("CIRCLE", "", "adql:DOUBLE"));
+        functionDescs.add(new FunctionDesc("CONTAINS", "", "adql:INTEGER"));
+        functionDescs.add(new FunctionDesc("COORD1", "deg", "adql:DOUBLE"));
+        functionDescs.add(new FunctionDesc("COORD2", "deg", "adql:DOUBLE"));
+        functionDescs.add(new FunctionDesc("COORDSYS", "", "adql:VARCHAR"));
+        functionDescs.add(new FunctionDesc("DISTANCE", "deg", "adql:DOUBLE"));
+        functionDescs.add(new FunctionDesc("INTERSECTS", "", "adql:INTEGER"));
+        functionDescs.add(new FunctionDesc("POINT", "", "adql:POINT"));
+        functionDescs.add(new FunctionDesc("POLYGON", "", "adql:DOUBLE"));
+        functionDescs.add(new FunctionDesc("REGION", "", "adql:REGION"));
+
+        // ADQL reserved keywords that are functions.
+        functionDescs.add(new FunctionDesc("ABS", ""));
+        functionDescs.add(new FunctionDesc("ACOS", "radians", "adql:DOUBLE"));
+        functionDescs.add(new FunctionDesc("ASIN", "radians", "adql:DOUBLE"));
+        functionDescs.add(new FunctionDesc("ATAN", "radians", "adql:DOUBLE"));
+        functionDescs.add(new FunctionDesc("ATAN2", "radians", "adql:DOUBLE"));
+        functionDescs.add(new FunctionDesc("CEILING", "", "adql:INTEGER"));
+        functionDescs.add(new FunctionDesc("COS", "radians", "adql:DOUBLE"));
+        functionDescs.add(new FunctionDesc("COT", "radians", "adql:DOUBLE"));
+        functionDescs.add(new FunctionDesc("DEGREES", "deg", "adql:DOUBLE"));
+        functionDescs.add(new FunctionDesc("EXP", "", "adql:DOUBLE"));
+        functionDescs.add(new FunctionDesc("FLOOR", "", "adql:INTEGER"));
+        functionDescs.add(new FunctionDesc("LN", "", "adql:DOUBLE"));
+        functionDescs.add(new FunctionDesc("LOG", "", "adql:DOUBLE"));
+        functionDescs.add(new FunctionDesc("LOG10", "", "adql:DOUBLE"));
+        functionDescs.add(new FunctionDesc("MOD", ""));
+        /*
+         * Part of the ADQL BNF, but currently not parseable pending bug
+         * fix in the jsqlparser.
+         *
+         * functionDescs.add(new FunctionDesc("PI", "", "adql:DOUBLE"));
+         */
+        functionDescs.add(new FunctionDesc("POWER", ""));
+        functionDescs.add(new FunctionDesc("RADIANS", "radians", "adql:DOUBLE"));
+        /*
+         * Part of the ADQL BNF, but currently not parseable pending bug
+         * fix in the jsqlparser.
+         *
+         * functionDescs.add(new FunctionDesc("RAND", "", "adql:DOUBLE"));
+         */
+        functionDescs.add(new FunctionDesc("ROUND", ""));
+        functionDescs.add(new FunctionDesc("SIN", "radians", "adql:DOUBLE"));
+        functionDescs.add(new FunctionDesc("SQRT", ""));
+        functionDescs.add(new FunctionDesc("TAN", "radians", "adql:DOUBLE"));
+        /*
+         * Part of the ADQL BNF, but currently not parseable.
+         *
+         * functionDescs.add(new FunctionDesc("TRUNCATE", "", "adql:DOUBLE"));
+         */
+
+        // SQL Aggregate functions.
+        functionDescs.add(new FunctionDesc("AVG", ""));
+        functionDescs.add(new FunctionDesc("COUNT", "", "adql:INTEGER"));
+        functionDescs.add(new FunctionDesc("MAX", ""));
+        functionDescs.add(new FunctionDesc("MIN", ""));
+        functionDescs.add(new FunctionDesc("STDDEV", "", "adql:DOUBLE"));
+        functionDescs.add(new FunctionDesc("SUM", ""));
+        functionDescs.add(new FunctionDesc("VARIANCE", "", "adql:DOUBLE"));
+        
+        // SQL String functions.
+//        functionDescs.add(new FunctionDesc("BIT_LENGTH", "", "adql:INTEGER"));
+//        functionDescs.add(new FunctionDesc("CHARACTER_LENGTH", "", "adql:INTEGER"));
+//        functionDescs.add(new FunctionDesc("LOWER", "", "adql:VARCHAR"));
+//        functionDescs.add(new FunctionDesc("OCTET_LENGTH", "", "adql:INTEGER"));
+//        functionDescs.add(new FunctionDesc("OVERLAY", "", "adql:VARCHAR")); //SQL92???
+//        functionDescs.add(new FunctionDesc("POSITION", "", "adql:INTEGER"));
+//        functionDescs.add(new FunctionDesc("SUBSTRING", "", "adql:VARCHAR"));
+//        functionDescs.add(new FunctionDesc("TRIM", "", "adql:VARCHAR"));
+//        functionDescs.add(new FunctionDesc("UPPER", "", "adql:VARCHAR"));
+
+        // SQL Date functions.
+//        functionDescs.add(new FunctionDesc("CURRENT_DATE", "", "adql:TIMESTAMP"));
+//        functionDescs.add(new FunctionDesc("CURRENT_TIME", "", "adql:TIMESTAMP"));
+//        functionDescs.add(new FunctionDesc("CURRENT_TIMESTAMP", "", "adql:TIMESTAMP"));
+//        functionDescs.add(new FunctionDesc("EXTRACT", "", "adql:TIMESTAMPs"));
+//        functionDescs.add(new FunctionDesc("LOCAL_DATE", "", "adql:TIMESTAMP"));   //SQL92???
+//        functionDescs.add(new FunctionDesc("LOCAL_TIME", "", "adql:TIMESTAMP"));   //SQL92???
+//        functionDescs.add(new FunctionDesc("LOCAL_TIMESTAMP", "", "adql:TIMESTAMP"));  //SQL92???
+
+        
+
+//        functionDescs.add(new FunctionDesc("BETWEEN", ""));
+//        functionDescs.add(new FunctionDesc("CASE", ""));
+//        functionDescs.add(new FunctionDesc("CAST", ""));
+//        functionDescs.add(new FunctionDesc("COALESCE", ""));
+//        functionDescs.add(new FunctionDesc("CONVERT", ""));
+//        functionDescs.add(new FunctionDesc("TRANSLATE", ""));
+        
+        // Sub-selects
+//        functionDescs.add(new FunctionDesc("ALL", ""));
+//        functionDescs.add(new FunctionDesc("ANY", ""));
+//        functionDescs.add(new FunctionDesc("EXISTS", ""));
+//        functionDescs.add(new FunctionDesc("IN", ""));
+
+        return functionDescs;
     }
 
     /**

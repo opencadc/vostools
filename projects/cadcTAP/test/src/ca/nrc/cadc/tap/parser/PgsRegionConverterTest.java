@@ -86,6 +86,9 @@ import org.junit.Test;
 
 import ca.nrc.cadc.tap.AdqlQuery;
 import ca.nrc.cadc.tap.TapQuery;
+import ca.nrc.cadc.tap.parser.converter.postgresql.PgFunctionNameConverter;
+import ca.nrc.cadc.tap.parser.extractor.FunctionExpressionExtractor;
+import ca.nrc.cadc.tap.parser.navigator.ReferenceNavigator;
 import ca.nrc.cadc.tap.parser.region.pgsphere.PgsphereRegionConverter;
 import ca.nrc.cadc.util.Log4jInit;
 import ca.nrc.cadc.uws.Parameter;
@@ -93,49 +96,20 @@ import org.apache.log4j.Level;
 import org.apache.log4j.Logger;
 
 /**
- * test convertion of ADQL function to pgsphere implementation 
+ * test conversion of ADQL function to pgsphere implementation
  * @author Sailor Zhang
  *
  */
 public class PgsRegionConverterTest
 {
     private static Logger log = Logger.getLogger(PgsRegionConverterTest.class);
+    static
+    {
+        Log4jInit.setLevel("ca.nrc.cadc", Level.INFO);
+    }
 
     public String _query;
     public String _expected = "";
-
-    /**
-     * @throws java.lang.Exception
-     */
-    @BeforeClass
-    public static void setUpBeforeClass() throws Exception
-    {
-        Log4jInit.setLevel("ca.nrc.cadc", Level.DEBUG);
-    }
-
-    /**
-     * @throws java.lang.Exception
-     */
-    @AfterClass
-    public static void tearDownAfterClass() throws Exception
-    {
-    }
-
-    /**
-     * @throws java.lang.Exception
-     */
-    @Before
-    public void setUp() throws Exception
-    {
-    }
-
-    /**
-     * @throws java.lang.Exception
-     */
-    @After
-    public void tearDown() throws Exception
-    {
-    }
 
     private void doit() { doit(true); }
     
@@ -147,13 +121,13 @@ public class PgsRegionConverterTest
             para = new Parameter("QUERY", _query);
             List<Parameter> paramList = new ArrayList<Parameter>();
             paramList.add(para);
-            log.info("input query: " + _query);
+            log.debug("input query: " + _query);
 
             TapQuery tapQuery = new AdqlPgsRegionQuery(); // inner class in this file
             tapQuery.setParameterList(paramList);
             String sql = tapQuery.getSQL();
-            log.info("actual: " + sql);
-            log.info("expected: " + _expected);
+            log.debug("actual: " + sql);
+            log.debug("expected: " + _expected);
             
             if (eq) // sql equals expected
                 assertEquals(_expected.toLowerCase(), sql.toLowerCase());
@@ -167,14 +141,14 @@ public class PgsRegionConverterTest
         }
     }
 
-     @Test
+    @Test
     public void testNone()
     {
         _query = "select a, b, c from someSchema.someTable where a = b and c is not null";
         _expected = _query;
         doit();
     }
-     
+
     @Test
     public void testFunctionCoordsys()
     {
@@ -219,7 +193,7 @@ public class PgsRegionConverterTest
     public void testIntersectsValue()
     {
         _query = "select * from someTable where INTERSECTS(some_col, CIRCLE('',1,2,3)) = 1";
-        _expected = "select * from someTable where some_col && scircle(spoint(radians(1),radians(2)),radians(3))";
+        _expected = "select * from someTable where some_col && scircle(spoint(radians(1), radians(2)), radians(3))";
         doit();
     }
 
@@ -227,11 +201,11 @@ public class PgsRegionConverterTest
     public void testNotIntersectsValue()
     {
         _query = "select * from someTable where INTERSECTS(some_col, CIRCLE('',1,2,3)) = 0";
-        _expected = "select * from someTable where some_col !&& scircle(spoint(radians(1),radians(2)),radians(3))";
+        _expected = "select * from someTable where some_col !&& scircle(spoint(radians(1), radians(2)), radians(3))";
         doit();
 
         _query = "select * from someTable where NOT (INTERSECTS(some_col, CIRCLE('',1,2,3)) = 1)";
-        _expected = "select * from someTable where not (some_col && scircle(spoint(radians(1),radians(2)),radians(3)))";
+        _expected = "select * from someTable where not (some_col && scircle(spoint(radians(1), radians(2)), radians(3)))";
         doit();
     }
 
@@ -239,7 +213,7 @@ public class PgsRegionConverterTest
     public void testIntersectsRegion()
     {
         _query = "select * from someTable where INTERSECTS(some_col, REGION('CIRCLE 1.0 1.0 2.0')) = 1";
-        _expected = "select * from someTable where some_col && scircle(spoint(radians(1.0),radians(1.0)),radians(2.0))";
+        _expected = "select * from someTable where some_col && scircle(spoint(radians(1.0), radians(1.0)), radians(2.0))";
         doit();
     }
 
@@ -247,7 +221,7 @@ public class PgsRegionConverterTest
     public void testNotIntersectsRegion()
     {
         _query = "select * from someTable where INTERSECTS(some_col, REGION('CIRCLE 1.0 1.0 2.0')) = 0";
-        _expected = "select * from someTable where some_col !&& scircle(spoint(radians(1.0),radians(1.0)),radians(2.0))";
+        _expected = "select * from someTable where some_col !&& scircle(spoint(radians(1.0), radians(1.0)), radians(2.0))";
         doit();
     }
 
@@ -256,7 +230,7 @@ public class PgsRegionConverterTest
     {
         // spoint has special handling in a predicate
         _query = "select * from someTable where INTERSECTS(some_col, REGION('POSITION 1.0 2.0')) = 1";
-        _expected = "select * from someTable where some_col && cast(spoint(radians(1.0),radians(2.0)) as scircle)";
+        _expected = "select * from someTable where some_col && cast(spoint(radians(1.0), radians(2.0)) as scircle)";
         doit();
     }
 
@@ -265,7 +239,7 @@ public class PgsRegionConverterTest
     {
         // spoint has special handling in a predicate
         _query = "select * from someTable where INTERSECTS(some_col, REGION('POSITION 1.0 2.0')) = 0";
-        _expected = "select * from someTable where some_col !&& cast(spoint(radians(1.0),radians(2.0)) as scircle)";
+        _expected = "select * from someTable where some_col !&& cast(spoint(radians(1.0), radians(2.0)) as scircle)";
         doit();
     }
 
@@ -274,7 +248,7 @@ public class PgsRegionConverterTest
     {
         // spoint has special handling in a predicate
         _query = "select * from someTable where INTERSECTS(POINT('',1,2), other_col) = 1";
-        _expected = "select * from someTable where cast(spoint(radians(1),radians(2)) as scircle) && other_col";
+        _expected = "select * from someTable where cast(spoint(radians(1), radians(2)) as scircle) && other_col";
         doit();
     }
 
@@ -283,15 +257,13 @@ public class PgsRegionConverterTest
     {
         // spoint has special handling in a predicate
         _query = "select * from someTable where INTERSECTS(POINT('',1,2), other_col) = 0";
-        _expected = "select * from someTable where cast(spoint(radians(1),radians(2)) as scircle) !&& other_col";
+        _expected = "select * from someTable where cast(spoint(radians(1), radians(2)) as scircle) !&& other_col";
         doit();
     }
-
 
     @Test
     public void testContainsColumn()
     {
-
         _query = "select * from someTable where CONTAINS(some_col, other_col) = 1";
         _expected = "select * from someTable where some_col @ other_col";
         doit();
@@ -300,7 +272,6 @@ public class PgsRegionConverterTest
     @Test
     public void testNotContainsColumn()
     {
-
         _query = "select * from someTable where CONTAINS(some_col, other_col) = 0";
         _expected = "select * from someTable where some_col !@ other_col";
         doit();
@@ -309,22 +280,20 @@ public class PgsRegionConverterTest
      @Test
     public void testContainsValue()
     {
-
         _query = "select * from someTable where CONTAINS(CIRCLE('',1,2,3), other_col) = 1";
-        _expected = "select * from someTable where scircle(spoint(radians(1),radians(2)),radians(3)) @ other_col";
+        _expected = "select * from someTable where scircle(spoint(radians(1), radians(2)), radians(3)) @ other_col";
         doit();
     }
 
      @Test
     public void testNotContainsValue()
     {
-
         _query = "select * from someTable where CONTAINS(CIRCLE('',1,2,3), other_col) = 0";
-        _expected = "select * from someTable where scircle(spoint(radians(1),radians(2)),radians(3)) !@ other_col";
+        _expected = "select * from someTable where scircle(spoint(radians(1), radians(2)), radians(3)) !@ other_col";
         doit();
 
         _query = "select * from someTable where NOT (CONTAINS(CIRCLE('',1,2,3), other_col) = 0)";
-        _expected = "select * from someTable where not (scircle(spoint(radians(1),radians(2)),radians(3)) !@ other_col)";
+        _expected = "select * from someTable where not (scircle(spoint(radians(1), radians(2)), radians(3)) !@ other_col)";
         doit();
     }
 
@@ -333,10 +302,10 @@ public class PgsRegionConverterTest
     {
         // spoint has special handling in a predicate
         _query = "select * from someTable where CONTAINS(POINT('',1,2), other_col) = 1";
-        _expected = "select * from someTable where cast(spoint(radians(1),radians(2)) as scircle) @ other_col";
+        _expected = "select * from someTable where cast(spoint(radians(1), radians(2)) as scircle) @ other_col";
         doit();
         _query = "select * from someTable where CONTAINS(other_col, POINT('',1,2)) = 1";
-        _expected = "select * from someTable where other_col @ cast(spoint(radians(1),radians(2)) as scircle)";
+        _expected = "select * from someTable where other_col @ cast(spoint(radians(1), radians(2)) as scircle)";
         doit();
     }
 
@@ -345,14 +314,13 @@ public class PgsRegionConverterTest
     {
         // spoint has special handling in a predicate
         _query = "select * from someTable where CONTAINS(POINT('',1,2), other_col) = 0";
-        _expected = "select * from someTable where cast(spoint(radians(1),radians(2)) as scircle) !@ other_col";
+        _expected = "select * from someTable where cast(spoint(radians(1), radians(2)) as scircle) !@ other_col";
         doit();
     }
 
     @Test
     public void testJoinAliasIntersects()
     {
-        
         _query = "select * from someTable as t1 join otherTable as t2 on INTERSECTS(t1.someCol, t2.otherCol) = 1";
         _expected = "select * from someTable as t1 join otherTable as t2 on t1.someCol && t2.otherCol";
         doit();
@@ -365,6 +333,7 @@ public class PgsRegionConverterTest
         _expected = "spoint";
         doit(false);
     }
+
     @Test
     public void testCircle()
     {
@@ -420,10 +389,12 @@ public class PgsRegionConverterTest
         _expected = "spoint";
         doit(false);
     }
+    
 }
 
 class AdqlPgsRegionQuery extends AdqlQuery
 {
+    @Override
     protected void init()
     {
         //super.init();

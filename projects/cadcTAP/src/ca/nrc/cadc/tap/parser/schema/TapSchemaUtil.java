@@ -81,12 +81,14 @@ import net.sf.jsqlparser.statement.select.SelectItem;
 import org.apache.log4j.Logger;
 
 import ca.nrc.cadc.tap.parser.ParserUtil;
-import ca.nrc.cadc.tap.parser.TapSelectItem;
 import ca.nrc.cadc.tap.parser.exception.TapParserException;
 import ca.nrc.cadc.tap.schema.ColumnDesc;
+import ca.nrc.cadc.tap.schema.FunctionDesc;
+import ca.nrc.cadc.tap.schema.ParamDesc;
 import ca.nrc.cadc.tap.schema.SchemaDesc;
 import ca.nrc.cadc.tap.schema.TableDesc;
 import ca.nrc.cadc.tap.schema.TapSchema;
+import net.sf.jsqlparser.expression.Function;
 
 /**
  * Utility class related to TAP Schema.
@@ -100,39 +102,36 @@ public class TapSchemaUtil
 
 
     /**
-     * For a given Table, find it in TAP Schema, and returns a list of TapSelectItem of that Table.
+     * For a given Table, find it in TAP Schema, and returns a list of ParamDesc of that Table.
      * 
      * @param tapSchema
      * @param table
      * @return
      * @throws TapParserException when the parse fails
      */
-    public static List<TapSelectItem> getTapSelectItemList(TapSchema tapSchema, Table table) throws TapParserException
+    public static List<ParamDesc> getParamDescList(TapSchema tapSchema, Table table) throws TapParserException
     {
         TableDesc tableDesc = findTableDesc(tapSchema, table);
         if (tableDesc != null)
-            return getTapSelectItemList(tableDesc);
+            return getParamDescList(tableDesc);
         else
             throw new TapParserException("Table: [" + table + "] does not exist.");
     }
 
     /**
-     * Return the TapSelectItem List of a given tableDesc.
+     * Return the ParamDesc List of a given tableDesc.
      * 
      * @param tableDesc
      * @return
      */
-    public static List<TapSelectItem> getTapSelectItemList(TableDesc tableDesc)
+    public static List<ParamDesc> getParamDescList(TableDesc tableDesc)
     {
-        List<TapSelectItem> tsiList = new ArrayList<TapSelectItem>();
-        TapSelectItem tsi = null;
-        String schemaAndTableName = tableDesc.getTableName(); // getTableName() returns "schemaName.tableName"
+        List<ParamDesc> list = new ArrayList<ParamDesc>();
         for (ColumnDesc cd : tableDesc.getColumnDescs())
         {
-            tsi = new TapSelectItem(schemaAndTableName, stripQuotes(cd.getColumnName()), null);
-            tsiList.add(tsi);
+            list.add(new ParamDesc(cd, null));
         }
-        return tsiList;
+        return list;
     }
 
     /**
@@ -446,4 +445,23 @@ public class TapSchemaUtil
         }
         return rtn;
     }
+
+    /**
+     * Find the FunctionDesc for a given Function.
+     *
+     * @param tapSchema
+     * @param function
+     * @return FunctionDesc
+     */
+    public static FunctionDesc findFunctionDesc(TapSchema tapSchema, Function function)
+    {
+        if (function == null || function.getName() == null || function.getName().isEmpty())
+            return null;
+
+        for (FunctionDesc functionDesc : tapSchema.functionDescs)
+            if (functionDesc.name.equalsIgnoreCase(function.getName()))
+                return new FunctionDesc(functionDesc.name, functionDesc.unit, functionDesc.datatype);
+        return null;
+    }
+    
 }

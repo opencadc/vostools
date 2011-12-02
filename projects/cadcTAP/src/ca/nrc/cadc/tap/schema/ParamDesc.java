@@ -8,7 +8,7 @@
  *  National Research Council            Conseil national de recherches
  *  Ottawa, Canada, K1A 0R6              Ottawa, Canada, K1A 0R6
  *  All rights reserved                  Tous droits réservés
- *                                       
+ *
  *  NRC disclaims any warranties,        Le CNRC dénie toute garantie
  *  expressed, implied, or               énoncée, implicite ou légale,
  *  statutory, of any kind with          de quelque nature que ce
@@ -31,10 +31,10 @@
  *  software without specific prior      de ce logiciel sans autorisation
  *  written permission.                  préalable et particulière
  *                                       par écrit.
- *                                       
+ *
  *  This file is part of the             Ce fichier fait partie du projet
  *  OpenCADC project.                    OpenCADC.
- *                                       
+ *
  *  OpenCADC is free software:           OpenCADC est un logiciel libre ;
  *  you can redistribute it and/or       vous pouvez le redistribuer ou le
  *  modify it under the terms of         modifier suivant les termes de
@@ -44,7 +44,7 @@
  *  either version 3 of the              : soit la version 3 de cette
  *  License, or (at your option)         licence, soit (à votre gré)
  *  any later version.                   toute version ultérieure.
- *                                       
+ *
  *  OpenCADC is distributed in the       OpenCADC est distribué
  *  hope that it will be useful,         dans l’espoir qu’il vous
  *  but WITHOUT ANY WARRANTY;            sera utile, mais SANS AUCUNE
@@ -54,7 +54,7 @@
  *  PURPOSE.  See the GNU Affero         PARTICULIER. Consultez la Licence
  *  General Public License for           Générale Publique GNU Affero
  *  more details.                        pour plus de détails.
- *                                       
+ *
  *  You should have received             Vous devriez avoir reçu une
  *  a copy of the GNU Affero             copie de la Licence Générale
  *  General Public License along         Publique GNU Affero avec
@@ -66,40 +66,107 @@
  *
  ************************************************************************
  */
+package ca.nrc.cadc.tap.schema;
 
-package ca.nrc.cadc.tap.parser.region.pgsphere.function;
-
-import net.sf.jsqlparser.expression.Function;
-
-/**
- * the PgSphere implementation of ADQL function
- * COORDSYS.
- * 
- * @author zhangsa
- * 
- */
-public class Coordsys extends PgsFunction
+public class ParamDesc
 {
-    public Coordsys(Function adqlFunction)
+    public ColumnDesc columnDesc;
+
+     /**
+     * The name (not null).
+     */
+    public String name;
+
+    /**
+     * The alias of the param (can be null).
+     */
+    public String alias;
+
+    /**
+     * Describes the param (can be null).
+     */
+    public String description;
+
+    /**
+     * The utype of the param (can be null).
+     */
+    public String utype;
+
+    /**
+     * The UCD of param (can be null).
+     */
+    public String ucd;
+
+    /**
+     * The unit used for param values (can be null).
+     */
+    public String unit;
+
+    /**
+     * The ADQL datatype of param (not null).
+     */
+    public String datatype;
+
+    /**
+     * The param datatype size (Column width) (not null).
+     */
+    public Integer size;
+
+    public ParamDesc(ColumnDesc columnDesc, String alias)
     {
-        super(adqlFunction);
-        convertParameters();
+        this.columnDesc = columnDesc;
+        this.name = columnDesc.columnName;
+        this.description = columnDesc.description;
+        this.utype = columnDesc.utype;
+        this.ucd = columnDesc.ucd;
+        this.unit = columnDesc.unit;
+        this.datatype = columnDesc.datatype;
+        this.size = columnDesc.size;
+        this.alias = alias;
     }
 
-    protected void convertParameters()
+    public ParamDesc(FunctionDesc functionDesc, String alias)
     {
+        this.columnDesc = null;
+        this.name = functionDesc.name;
+        this.description = null;
+        this.utype = null;
+        this.ucd = null;
+        this.unit = functionDesc.unit;
+        this.datatype = functionDesc.datatype;
+        this.size = null;
+        this.alias = alias;
+    }
+
+    public ParamDesc(String name, String alias, String datatype)
+    {
+        this.columnDesc = null;
+        this.name = name;
+        this.alias = alias;
+        this.datatype = null;
+        this.size = null;
+        this.description = null;
+        this.utype = null;
+        this.ucd = null;
+        this.unit = null;
+        
     }
 
     @Override
     public String toString()
     {
-        //return "'" + RegionFinder.ICRS + "'";
-        return "NULL";
+        StringBuilder sb = new StringBuilder();
+        sb.append("ParamDesc[");
+        sb.append(name).append(",");
+        sb.append(alias == null ? "" : alias).append(",");
+        sb.append(description == null ? "" : description).append(",");
+        sb.append(utype == null ? "" : utype).append(",");
+        sb.append(ucd == null ? "" : ucd).append(",");
+        sb.append(unit == null ? "" : unit).append(",");
+        sb.append(datatype).append(",");
+        sb.append(size == null ? "" : size);
+        sb.append("]");
+        return sb.toString();
     }
     
-    public String valueString()
-    {
-        return toString();
-    }
-
 }

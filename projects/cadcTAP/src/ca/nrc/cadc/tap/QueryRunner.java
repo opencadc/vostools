@@ -69,6 +69,7 @@
 
 package ca.nrc.cadc.tap;
 
+import ca.nrc.cadc.tap.schema.ParamDesc;
 import java.io.File;
 import java.net.URI;
 import java.net.URISyntaxException;
@@ -90,7 +91,6 @@ import javax.sql.DataSource;
 
 import org.apache.log4j.Logger;
 
-import ca.nrc.cadc.tap.parser.TapSelectItem;
 import ca.nrc.cadc.tap.schema.SchemaDesc;
 import ca.nrc.cadc.tap.schema.TableDesc;
 import ca.nrc.cadc.tap.schema.TapSchema;
@@ -319,13 +319,12 @@ public class QueryRunner implements JobRunner
 
             log.debug("invoking TapQuery...");
             String sql = tapQuery.getSQL();
-            List<TapSelectItem> selectList = tapQuery.getSelectList();
+            List<ParamDesc> selectList = tapQuery.getSelectList();
             String queryInfo = tapQuery.getInfo();
 
             log.debug("invoking TableWriterFactory for FORMAT...");
             TableWriter tableWriter = TableWriterFactory.getWriter(job.getParameterList());
             tableWriter.setJob(job);
-            tableWriter.setTapSchema(tapSchema);
             tableWriter.setSelectList(selectList);
             tableWriter.setQueryInfo(queryInfo);
             if (maxRows != null)

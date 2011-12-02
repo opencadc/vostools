@@ -77,6 +77,7 @@ import net.sf.jsqlparser.schema.Column;
 import org.apache.log4j.Logger;
 
 import ca.nrc.cadc.tap.parser.navigator.ReferenceNavigator;
+import ca.nrc.cadc.util.CaseInsensitiveStringComparator;
 
 /**
  * Simple class to map columns name(s) used in the query to column name(s) used
@@ -93,7 +94,7 @@ public class ColumnNameConverter extends ReferenceNavigator
     public ColumnNameConverter(boolean ignoreCase)
     {
         if (ignoreCase)
-            this.map = new TreeMap<String, String>(new IgnoreCaseComparator());
+            this.map = new TreeMap<String, String>(new CaseInsensitiveStringComparator());
         else
             this.map = new TreeMap<String, String>();
     }

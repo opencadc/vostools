@@ -69,41 +69,33 @@
 
 package ca.nrc.cadc.tap.writer.votable;
 
-import ca.nrc.cadc.tap.parser.TapSelectItem;
-import ca.nrc.cadc.tap.schema.ColumnDesc;
+import ca.nrc.cadc.tap.schema.ParamDesc;
 import org.jdom.Element;
 import org.jdom.Namespace;
 
 public class FieldElement extends Element
 {
     /**
-     * Builds a FIELD Element from a Column.
+     * Builds a FIELD Element from a Parameter Description.
      *
-     * @param selectItem
-     * @param columnDesc
+     * @param paramDesc
      * @param namespace 
      */
-    public FieldElement(TapSelectItem selectItem, ColumnDesc columnDesc, Namespace namespace)
+    public FieldElement(ParamDesc paramDesc, Namespace namespace)
     {
         super("FIELD", namespace);
-        if (columnDesc != null)
+        if (paramDesc != null)
         {
-            setFieldName(selectItem.getAlias(), columnDesc.columnName);
-            setFieldAttribute("utype", columnDesc.utype);
-            setFieldAttribute("ucd", columnDesc.ucd);
-            setFieldAttribute("unit", columnDesc.unit);
-            if (columnDesc.datatype != null && columnDesc.datatype.startsWith("adql:"))
-	    	setFieldAttribute("xtype", columnDesc.datatype);
-            setDescription(columnDesc.description, namespace);
-            setDatatypeAndWidth(columnDesc.datatype, columnDesc.size);
+            setFieldName(paramDesc.alias, paramDesc.name);
+            setFieldAttribute("utype", paramDesc.utype);
+            setFieldAttribute("ucd", paramDesc.ucd);
+            setFieldAttribute("unit", paramDesc.unit);
+            if (paramDesc.datatype != null && paramDesc.datatype.startsWith("adql:"))
+                setFieldAttribute("xtype", paramDesc.datatype);
+            setDescription(paramDesc.description, namespace);
+            setDatatypeAndWidth(paramDesc.datatype, paramDesc.size);
         }
-        else
-        {
-            setFieldName(selectItem.getAlias(), null);
-            setDatatypeAndWidth("adql:VARCHAR", null); // must be set for VOTable schema, this is best default
-            setDescription(selectItem.getExpression(), namespace);
-        }
-     }
+    }
 
     // Set the name using the alias first, then the column name.
     private void setFieldName(String alias, String name)

@@ -70,9 +70,6 @@
 package ca.nrc.cadc.tap.writer;
 
 import ca.nrc.cadc.tap.TableWriter;
-import ca.nrc.cadc.tap.schema.ColumnDesc;
-import ca.nrc.cadc.tap.schema.SchemaDesc;
-import ca.nrc.cadc.tap.schema.TableDesc;
 import ca.nrc.cadc.tap.writer.votable.TableDataElement;
 import ca.nrc.cadc.tap.writer.votable.TableDataXMLOutputter;
 import java.io.IOException;
@@ -84,7 +81,7 @@ import org.jdom.Element;
 import org.jdom.Namespace;
 import org.jdom.output.Format;
 import org.jdom.output.XMLOutputter;
-import ca.nrc.cadc.tap.parser.TapSelectItem;
+import ca.nrc.cadc.tap.schema.ParamDesc;
 import ca.nrc.cadc.tap.schema.TapSchema;
 import ca.nrc.cadc.tap.writer.formatter.DefaultFormatterFactory;
 import ca.nrc.cadc.tap.writer.votable.FieldElement;
@@ -117,14 +114,8 @@ public class VOTableWriter implements TableWriter
 
     private static Logger log = Logger.getLogger(VOTableWriter.class);
 
-    // TapSchema containing table metadata.
-    protected TapSchema tapSchema;
-
-    // List of column names used in the select statement.
-    protected List<TapSelectItem> selectList;
-
-    //protected String jobID;
-    //protected List<Parameter> params;
+    // List of names used in the select statement.
+    protected List<ParamDesc> selectList;
 
     protected Job job;
 
@@ -139,16 +130,20 @@ public class VOTableWriter implements TableWriter
         maxRows = Integer.MAX_VALUE;
     }
 
-   public void setJobID(String jobID)
-    {
-        //this.jobID = jobID;
-    }
+   /**
+     * @deprecated
+     */
+    public void setJobID(String jobID) { }
 
+    /**
+     * @deprecated
+     */
+    public void setParameterList(List<Parameter> params) { }
 
-    public void setParameterList(List<Parameter> params)
-    {
-        //this.params = params;
-    }
+    /**
+     * @deprecated
+     */
+    public void setTapSchema(TapSchema schema) { }
 
     public void setJob(Job job)
     {
@@ -179,14 +174,9 @@ public class VOTableWriter implements TableWriter
         return "application/x-votable+xml";
     }
 
-    public void setSelectList(List<TapSelectItem> items)
+    public void setSelectList(List<ParamDesc> items)
     {
         this.selectList = items;
-    }
-
-    public void setTapSchema(TapSchema schema)
-    {
-        this.tapSchema = schema;
     }
 
     public void setMaxRowCount(int count)
@@ -200,13 +190,10 @@ public class VOTableWriter implements TableWriter
     {
         if (selectList == null)
             throw new IllegalStateException("SelectList cannot be null, set using setSelectList()");
-        if (tapSchema == null)
-            throw new IllegalStateException("TapSchema cannot be null, set using setTapSchema()");
 
         FormatterFactory factory = DefaultFormatterFactory.getFormatterFactory();
-        factory.setJobID(job.getID());
         factory.setParamList(job.getParameterList());
-        List<Formatter> formatters = factory.getFormatters(tapSchema, selectList);
+        List<Formatter> formatters = factory.getFormatters(selectList);
 
         if (resultSet != null)
             try { log.debug("resultSet column count: " + resultSet.getMetaData().getColumnCount()); }
@@ -232,8 +219,8 @@ public class VOTableWriter implements TableWriter
         resource.addContent(table);
 
         // Add the metadata elements.
-        for (TapSelectItem selectItem : selectList)
-            table.addContent(getMetaDataElement(selectItem, namespace));
+        for (ParamDesc paramDesc : selectList)
+            table.addContent(new FieldElement(paramDesc, namespace));
 
         // Create the DATA element and add to the TABLE element.
         Element data = new Element("DATA", namespace);
@@ -244,7 +231,7 @@ public class VOTableWriter implements TableWriter
         data.addContent(tableData);
 
         // Write out the VOTABLE.
-        XMLOutputter outputter = new TableDataXMLOutputter(tapSchema, maxRows);
+        XMLOutputter outputter = new TableDataXMLOutputter(maxRows);
         outputter.setFormat(Format.getPrettyFormat());
         outputter.output(document, output);
     }
@@ -293,38 +280,6 @@ public class VOTableWriter implements TableWriter
         document.addContent(votable);
         
         return document;
-    }
-
-    // Build a FIELD Element for the column specified by the TapSelectItem.
-    private Element getMetaDataElement(TapSelectItem selectItem, Namespace namespace)
-    {
-        for (SchemaDesc schemaDesc : tapSchema.schemaDescs)
-        {
-        	if (schemaDesc.tableDescs == null)
-        		continue;
-            for (TableDesc tableDesc : schemaDesc.tableDescs)
-            {
-                if (tableDesc.tableName.equalsIgnoreCase(selectItem.getTableName()))
-                {
-                    for (ColumnDesc columnDesc : tableDesc.columnDescs)
-                    {
-                        if (columnDesc.columnName.equalsIgnoreCase(selectItem.getColumnName()))
-                        {
-                            return new FieldElement(selectItem, columnDesc, namespace);
-                        }
-                    }
-                }
-            }
-        }
-        log.debug(selectItem + " did not match any ColumnDesc, defaulting to no metadata");
-        // select item did not match a column, must be a function call or expression
-        //Element e = new Element("FIELD", namespace);
-        //String name = selectItem.getAlias();
-        //if (name == null)
-        //    name = selectItem.getColumnName();
-        //e.setAttribute("name", name);
-        //return e;
-        return new FieldElement(selectItem, null, namespace);
     }
 
     // Build a String containing the nested Exception messages.

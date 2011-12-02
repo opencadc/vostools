@@ -102,9 +102,6 @@ public class TableDataXMLOutputter extends XMLOutputter
     // Number of TableData rows written;
     private int rowCount;
 
-    // TapSchema
-    protected TapSchema tapSchema;
-
     // Max number of rows to write.
     protected int maxRows;
 
@@ -114,16 +111,15 @@ public class TableDataXMLOutputter extends XMLOutputter
     /**
      * Default Constructor.
      */
-    public TableDataXMLOutputter(TapSchema tapSchema, int maxRows)
+    public TableDataXMLOutputter(int maxRows)
     {
         super();
-        this.tapSchema = tapSchema;
         this.maxRows = maxRows;
         this.rowCount = 0;
     }
 
     /**
-     * Writes the Document. First writes the XML Declartion, then
+     * Writes the Document. First writes the XML Declaration, then
      * iterates through the document content calling the appropriate
      * print method for the content type.
      *

@@ -78,90 +78,96 @@ import net.sf.jsqlparser.expression.StringValue;
 import net.sf.jsqlparser.expression.operators.relational.ExpressionList;
 import ca.nrc.cadc.stc.CoordPair;
 import ca.nrc.cadc.stc.Position;
-import ca.nrc.cadc.tap.parser.RegionFinder;
 import net.sf.jsqlparser.expression.DoubleValue;
 import net.sf.jsqlparser.expression.LongValue;
+import net.sf.jsqlparser.expression.NullValue;
+import net.sf.jsqlparser.expression.Parenthesis;
 import org.apache.log4j.Logger;
 
 /**
- * the PgSphere implementation of ADQL function
- * POINT.
+ * the PgSphere implementation of ADQL function POINT.
  * 
  * @author zhangsa
  * 
  */
-public class Spoint extends PgsFunction
+public class Spoint extends Function
 {
     private static final Logger log = Logger.getLogger(Spoint.class);
-    
-    private Expression longitude;
-    private Expression latitude;
 
+    private Expression coordsys;
+    private Expression ra;
+    private Expression dec;
     private boolean isOperand;
 
-    public Spoint(Function adqlFunction)
+    public Spoint(Expression coordsys, Expression ra, Expression dec)
     {
-        super(adqlFunction);
+        super();
+        this.coordsys = coordsys;
+        this.ra = ra;
+        this.dec = dec;
         convertParameters();
-    }
-
-    public Spoint(Expression longitude, Expression latitude)
-    {
-        this.longitude = longitude;
-        this.latitude = latitude;
     }
 
     public Spoint(Position position)
     {
-        double ra;
-        double dec;
-        List<Expression> expressions = new ArrayList<Expression>();
-        expressions.add(new StringValue(RegionFinder.ICRS));
-        CoordPair cp = position.getCoordPair();
-        ra = cp.getX();
-        dec = cp.getY();
-        expressions.add(new DoubleValue(Double.toString(ra)));
-        expressions.add(new DoubleValue(Double.toString(dec)));
-        ExpressionList el = new ExpressionList(expressions);
-        this.setParameters(el);
+        super();
+        CoordPair coordPair = position.getCoordPair();
+        ra = new DoubleValue(Double.toString(coordPair.getX()));
+        dec = new DoubleValue(Double.toString(coordPair.getY()));
         convertParameters();
     }
 
-    @SuppressWarnings("unchecked")
-    protected void convertParameters()
+    public void setOperand(boolean isOperand)
     {
-        List<Expression> params = this.getParameters().getExpressions();
-        longitude = params.get(1);
-        latitude = params.get(2);
-
-        List<Expression> pgsParams = new ArrayList<Expression>(2);
-        pgsParams.add(longitude);
-        pgsParams.add(latitude);
-        ExpressionList pgsParamExprList = new ExpressionList(pgsParams);
-        setParameters(pgsParamExprList);
+        this.isOperand = isOperand;
     }
 
-    public void setIsOperand(boolean isOp)
+    public boolean isOperand()
     {
-        this.isOperand = isOp;
-    }
-
-    @Override
-    public String toString()
-    {
-        //String ret = "spoint '(" + longitude + "," + latitude + ")'";
-        String ret = "spoint(radians(" + longitude + "),radians(" + latitude + "))";
-        if (isOperand) ret = "cast(" + ret + " as scircle)";
-        return ret;
+        return isOperand;
     }
 
     public String toVertex()
     {
-        log.debug("longitude type: " + longitude.getClass().getName());
-        log.debug("latitude type: " + latitude.getClass().getName());
-        if ( (longitude instanceof DoubleValue || longitude instanceof LongValue)
-                || (latitude instanceof DoubleValue && latitude instanceof LongValue) )
-            return "(" + longitude + "d," + latitude + "d)"; // force interpetation in degrees
-        throw new UnsupportedOperationException("cannot use non-constant coordinates in polygon");
+         // force interpetation in degrees
+        return "(" + ra + "d," + dec + "d)";
     }
+
+    protected void convertParameters()
+    {
+        // RA
+        List<Expression> longExp = new ArrayList<Expression>();
+        longExp.add(ra);
+
+        ExpressionList longParams = new ExpressionList();
+        longParams.setExpressions(longExp);
+
+        Function longFunc = new Function();
+        longFunc.setName("radians");
+        longFunc.setParameters(longParams);
+
+        // DEC
+        List<Expression> latExp = new ArrayList<Expression>();
+        latExp.add(dec);
+
+        ExpressionList latParams = new ExpressionList();
+        latParams.setExpressions(latExp);
+
+        // Radius
+        Function latFunc = new Function();
+        latFunc.setName("radians");
+        latFunc.setParameters(latParams);
+
+        // Spoint
+        List<Expression> expressions = new ArrayList<Expression>();
+        expressions.add(longFunc);
+        expressions.add(latFunc);
+
+        ExpressionList parameters = new ExpressionList();
+        parameters.setExpressions(expressions);
+
+        setName("spoint");
+        setParameters(parameters);
+    }
+
 }

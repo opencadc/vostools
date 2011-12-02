@@ -85,6 +85,7 @@ import org.junit.Test;
 import ca.nrc.cadc.tap.parser.converter.AllColumnConverter;
 import ca.nrc.cadc.tap.schema.TapSchema;
 import ca.nrc.cadc.util.Log4jInit;
+import org.apache.log4j.Logger;
 
 /**
  * Test all column converter.
@@ -94,6 +95,8 @@ import ca.nrc.cadc.util.Log4jInit;
  */
 public class AllColumnConverterTest
 {
+    private static final Logger log = Logger.getLogger(AllColumnConverterTest.class);
+
     public String _query;
     public String _expected = "";
 
@@ -143,16 +146,17 @@ public class AllColumnConverterTest
         try
         {
             s = ParserUtil.receiveQuery(_query);
+            log.debug("query: " + _query);
             ParserUtil.parseStatement(s, _sn);
-        } catch (Exception ae)
+        }
+        catch (Exception ae)
         {
             ae.printStackTrace(System.out);
             fail(ae.toString());
         }
         String sql = s.toString();
-        System.out.println(_query);
-        System.out.println(_expected);
-        System.out.println(sql);
+        log.debug("expected: " + _expected);
+        log.debug("actual: " + sql);
         assertEquals(_expected.toLowerCase(), sql.toLowerCase());
     }
 

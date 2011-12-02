@@ -69,7 +69,9 @@
 
 package ca.nrc.cadc.tap.writer;
 
-import ca.nrc.cadc.tap.parser.TapSelectItem;
+import ca.nrc.cadc.tap.schema.ParamDesc;
+import ca.nrc.cadc.tap.parser.TestUtil;
+import org.junit.BeforeClass;
 import ca.nrc.cadc.tap.schema.TapSchema;
 import ca.nrc.cadc.util.Log4jInit;
 import ca.nrc.cadc.uws.ExecutionPhase;
@@ -81,7 +83,6 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import org.apache.log4j.Level;
 import org.apache.log4j.Logger;
 import org.jdom.Attribute;
 import org.jdom.Document;
@@ -103,17 +104,21 @@ public class VOTableWriterTest
 
     private static final Logger LOG = Logger.getLogger(VOTableWriterTest.class);
 
+    static TapSchema TAP_SCHEMA;
+
+    @BeforeClass
+    public static void setUpClass() throws Exception
+    {
+        Log4jInit.setLevel("ca.nrc.cadc.tap", org.apache.log4j.Level.INFO);
+        TAP_SCHEMA = TestUtil.loadDefaultTapSchema();
+    }
+
     // just need a job with an ID
     Job job = new Job()
     {
         @Override
         public String getID() { return "123"; }
     };
-
-    static
-    {
-        Log4jInit.setLevel("ca.nrc.cadc.tap.writer", Level.INFO);
-    }
 
     public VOTableWriterTest() { }
 
@@ -138,25 +143,11 @@ public class VOTableWriterTest
     public final void testSetSelectList()
     {
         LOG.debug("setSelectList");
-        List<TapSelectItem> items = new ArrayList<TapSelectItem>();
+        List<ParamDesc> items = new ArrayList<ParamDesc>();
         VOTableWriter instance = new VOTableWriter();
         instance.setSelectList(items);
         assertNotNull(instance.selectList);
         LOG.info("testSetSelectList passed");
-    }
-
-    /**
-     * Test of setTapSchema method, of class VOTableWriter.
-     */
-    @Test
-    public final void testSetTapSchema()
-    {
-        LOG.debug("setTapSchema");
-        TapSchema schema = new TapSchema();
-        VOTableWriter instance = new VOTableWriter();
-        instance.setTapSchema(schema);
-        assertNotNull(instance.tapSchema);
-        LOG.info("testSetTapSchema passed");
     }
 
     /**
@@ -222,6 +213,46 @@ public class VOTableWriterTest
             job.setExecutionPhase(ExecutionPhase.PENDING);
         }
     }
+
+//
+//    @Test
+//    public void testGetFunctionMetaDataElement()
+//    {
+//        LOG.debug("testGetFunctionMetaDataElement");
+//        try
+//        {
+//            VOTableWriter writer = new VOTableWriter();
+//
+//            ByteArrayOutputStream output = new ByteArrayOutputStream();
+//            XMLOutputter outputter = new XMLOutputter();
+//            outputter.setFormat(Format.getPrettyFormat());
+//            outputter.output(element, output);
+//            output.close();
+//            String xml = output.toString();
+//            LOG.debug("XML: \n" + xml);
+//
+//            int start = xml.indexOf("xtype=\"");
+//            int end = xml.indexOf("\"", start + "xtype\"".length() + 1);
+//            if (start == -1 || end == -1)
+//                fail("xtype attribute not found in FIELD element");
+//            String xtype = xml.substring(start + 7, end);
+//            assertEquals("adql:DOUBLE", xtype);
+//
+//            start = xml.indexOf("datatype=\"");
+//            end = xml.indexOf("\"", start + "datatype\"".length() + 1);
+//            if (start == -1 || end == -1)
+//                fail("datatype attribute not found in FIELD element");
+//            String datatype = xml.substring(start + 10, end);
+//            assertEquals("double", datatype);
+//
+//            LOG.info("testGetFunctionMetaDataElement passed");
+//        }
+//        catch(Exception unexpected)
+//        {
+//            LOG.error("unexpected exception", unexpected);
+//            fail("unexpected exception: " + unexpected);
+//        }
+//    }
 
     private Map<String,String> schemaMap;
     
