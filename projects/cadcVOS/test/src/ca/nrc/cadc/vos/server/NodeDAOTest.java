@@ -754,12 +754,6 @@ public class NodeDAOTest
             DataNode persistNode = (DataNode) nodeDAO.getPath(path);
             Assert.assertNotNull(persistNode);
             Assert.assertEquals("assert not busy", NodeBusyState.notBusy, persistNode.getBusy());
-
-            // -> read
-            nodeDAO.setBusyState(persistNode, NodeBusyState.busyWithRead);
-            persistNode = (DataNode) nodeDAO.getPath(path);
-            Assert.assertNotNull(persistNode);
-            Assert.assertEquals("assert not busy", NodeBusyState.busyWithRead, persistNode.getBusy());
             
             // -> write
             nodeDAO.setBusyState(persistNode, NodeBusyState.busyWithWrite);

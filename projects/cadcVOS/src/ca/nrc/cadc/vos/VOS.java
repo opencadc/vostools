@@ -94,7 +94,6 @@ public class VOS
     public static enum NodeBusyState
     {
         notBusy ("N"),
-        busyWithRead ("R"),
         busyWithWrite ("W");
         
         private String value;
@@ -114,10 +113,6 @@ public class VOS
             if (value.equals(notBusy.getValue()))
             {
                 return notBusy;
-            }
-            else if (value.equals(busyWithRead.getValue()))
-            {
-                return busyWithRead;
             }
             else if (value.equals(busyWithWrite.getValue()))
             {
