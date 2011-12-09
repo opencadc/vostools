@@ -83,9 +83,7 @@ import java.security.cert.X509Certificate;
 import java.text.DateFormat;
 import java.util.ArrayList;
 import java.util.Date;
-import java.util.HashMap;
 import java.util.List;
-import java.util.Map;
 import java.util.Properties;
 import java.util.Set;
 
@@ -98,6 +96,7 @@ import ca.nrc.cadc.auth.CertCmdArgUtil;
 import ca.nrc.cadc.auth.RunnableAction;
 import ca.nrc.cadc.auth.X509CertificateChain;
 import ca.nrc.cadc.date.DateUtil;
+import ca.nrc.cadc.net.NetUtil;
 import ca.nrc.cadc.reg.client.RegistryClient;
 import ca.nrc.cadc.util.ArgumentMap;
 import ca.nrc.cadc.util.Log4jInit;
@@ -532,7 +531,7 @@ public class Main implements Runnable
                     {
                         log.debug("Getting next set of children.");
                         uriQueryObj = cn.getNodes().get(cn.getNodes().size() - 1).getUri();
-                        uriQueryParam = "uri=" + uriQueryObj.toString();
+                        uriQueryParam = "uri=" + NetUtil.encode(uriQueryObj.toString());
                         cn = null;
                         
                         if (StringUtil.hasText(queryString))

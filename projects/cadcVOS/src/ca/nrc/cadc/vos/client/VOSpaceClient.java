@@ -204,7 +204,7 @@ public class VOSpaceClient
                 // if we need to check for duplicates.
                 Node p = null;
                 if (checkForDuplicate)
-                    p = this.getNode(parentURI.getPath(), "detail=min&limit=1&uri=" + node.getUri().toString());
+                    p = this.getNode(parentURI.getPath(), "detail=min&limit=1&uri=" + NetUtil.encode(node.getUri().toString()));
                 else
                     p = this.getNode(parentURI.getPath(), "detail=min&limit=0");
                 
