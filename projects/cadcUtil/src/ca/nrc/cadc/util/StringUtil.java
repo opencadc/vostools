@@ -74,6 +74,9 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.util.ArrayList;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
+
 
 /**
  * Useful utility methods dealing with Strings.  Not terribly Object Oriented
@@ -384,4 +387,29 @@ public class StringUtil
         return sb.toString();
     }
 
+    /**
+     * Obtain whether the input matches the given regexp.
+     *
+     * @param input             The String to match against.
+     * @param regexp            The regexp to calculate the match.
+     * @param caseInsensitive   Whether it's a case insensitive match or not.
+     * @return                  True if it matches, false otherwise.
+     */
+    public static boolean matches(final String input, final String regexp,
+                                  final boolean caseInsensitive)
+    {
+        final Pattern p;
+
+        if (caseInsensitive)
+        {
+            p = Pattern.compile(".*" + regexp + ".*", Pattern.CASE_INSENSITIVE);
+        }
+        else
+        {
+            p = Pattern.compile(".*" + regexp + ".*");
+        }
+
+        final Matcher m = p.matcher(input);
+        return m.matches();
+    }
 }
