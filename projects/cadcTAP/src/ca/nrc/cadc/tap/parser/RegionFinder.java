@@ -189,29 +189,28 @@ public class RegionFinder extends SelectNavigator
      * Convert an expression and all parameters of it, 
      * using provided implementation in the sub-class.
      * 
-     * @param Expression
+     * @param expr
      * @return Expression converted by implementation 
      */
-    public Expression convertToImplementation(Expression adqlExpr)
+    public Expression convertToImplementation(Expression expr)
     {
-        log.debug("convertToImplementation(" + adqlExpr.getClass().getSimpleName() + "): " + adqlExpr);
+        log.debug("convertToImplementation(Expression):" + expr);
 
-        Expression implExpr = adqlExpr;
+        Expression implExpr = expr;
 
-        if (adqlExpr instanceof Function)
+        if (expr instanceof Function)
         {
-            Function adqlFunction = (Function) adqlExpr;
+            Function f = (Function) expr;
 
             // Convert parameters of the function first.
-            ExpressionList adqlExprList = adqlFunction.getParameters();
-            ExpressionList implExprList = convertToImplementation(adqlExprList);
-            adqlFunction.setParameters(implExprList); // method in Function
-
-            implExpr = convertToImplementation(adqlFunction);
+            ExpressionList exprList = f.getParameters();
+            ExpressionList implExprList = convertToImplementation(exprList);
+            f.setParameters(implExprList);
+            implExpr = convertToImplementation(f);
         }
-        else if (adqlExpr instanceof BinaryExpression)
+        else if (expr instanceof BinaryExpression)
         {
-            BinaryExpression expr1 = (BinaryExpression) adqlExpr;
+            BinaryExpression expr1 = (BinaryExpression) expr;
 
             Expression left = expr1.getLeftExpression();
             Expression right = expr1.getRightExpression();
@@ -225,17 +224,17 @@ public class RegionFinder extends SelectNavigator
 
             implExpr = handleRegionPredicate((BinaryExpression) implExpr);
         }
-        else if (adqlExpr instanceof InverseExpression)
+        else if (expr instanceof InverseExpression)
         {
-            InverseExpression expr1 = (InverseExpression) adqlExpr;
+            InverseExpression expr1 = (InverseExpression) expr;
             Expression child = expr1.getExpression();
             Expression child2 = convertToImplementation(child);
             expr1.setExpression(child2);
             implExpr = expr1;
         }
-        else if (adqlExpr instanceof Parenthesis)
+        else if (expr instanceof Parenthesis)
         {
-            Parenthesis expr1 = (Parenthesis) adqlExpr;
+            Parenthesis expr1 = (Parenthesis) expr;
             Expression child = expr1.getExpression();
             Expression child2 = convertToImplementation(child);
             expr1.setExpression(child2);
@@ -252,11 +251,11 @@ public class RegionFinder extends SelectNavigator
      * @return converted expression list
      */
     @SuppressWarnings("unchecked")
-    public ExpressionList convertToImplementation(ExpressionList adqlExprList)
+    public ExpressionList convertToImplementation(ExpressionList exprList)
     {
-        log.debug("convertToImplementation(ExpressionList): " + adqlExprList);
-        if (adqlExprList == null || adqlExprList.getExpressions() == null) return adqlExprList;
-        List<Expression> adqlExprs = adqlExprList.getExpressions();
+        log.debug("convertToImplementation(ExpressionList): " + exprList);
+        if (exprList == null || exprList.getExpressions() == null) return exprList;
+        List<Expression> adqlExprs = exprList.getExpressions();
         List<Expression> implExprs = new ArrayList<Expression>();
         Expression e1 = null;
         Expression e2 = null;
@@ -277,79 +276,79 @@ public class RegionFinder extends SelectNavigator
      * @param adqlFunction
      * @return converted expression
      */
-    public Expression convertToImplementation(Function adqlFunction)
+    public Expression convertToImplementation(Function func)
     {
-        log.debug("convertToImplementation(adqlFunction): " + adqlFunction);
+        log.debug("convertToImplementation(Function): " + func);
 
-        Expression implExpr = adqlFunction;
-        String fname = adqlFunction.getName().toUpperCase();
+        Expression implExpr = func;
+        String fname = func.getName().toUpperCase();
 
         if (AREA.equalsIgnoreCase(fname))
         {
-            implExpr = handleArea(adqlFunction);
+            implExpr = handleArea(func);
         }
         else if (BOX.equalsIgnoreCase(fname))
         {
-            validateCoordSys(adqlFunction);
-            implExpr = handleBox(adqlFunction);
+            validateCoordSys(func);
+            implExpr = handleBox(func);
         }
         else if (CENTROID.equalsIgnoreCase(fname))
         {
-            implExpr = handleCentroid(adqlFunction);
+            implExpr = handleCentroid(func);
         }
         else if (CIRCLE.equalsIgnoreCase(fname))
         {
-            validateCoordSys(adqlFunction);
-            List<Expression> expressions = adqlFunction.getParameters().getExpressions();
+            validateCoordSys(func);
+            List<Expression> expressions = func.getParameters().getExpressions();
             if (expressions.size() != 4)
                 throw new IllegalStateException("CIRCLE requires coordsys, RA, DEC, radius");
             implExpr = handleCircle(expressions.get(0), expressions.get(1), expressions.get(2), expressions.get(3));
         }
         else if (CONTAINS.equalsIgnoreCase(fname))
         {
-            List<Expression> expressions = adqlFunction.getParameters().getExpressions();
+            List<Expression> expressions = func.getParameters().getExpressions();
             if (expressions.size() != 2)
                 throw new IllegalStateException("CONTAINS requires 2 expressions, found " + expressions.size());
             implExpr = handleContains(expressions.get(0), expressions.get(1));
         }
         else if (COORD1.equalsIgnoreCase(fname))
         {
-            implExpr = handleCoord1(adqlFunction);
+            implExpr = handleCoord1(func);
         }
         else if (COORD2.equalsIgnoreCase(fname))
         {
-            implExpr = handleCoord2(adqlFunction);
+            implExpr = handleCoord2(func);
         }
         else if (COORDSYS.equalsIgnoreCase(fname))
         {
-            implExpr = handleCoordSys(adqlFunction);
+            implExpr = handleCoordSys(func);
         }
         else if (INTERSECTS.equalsIgnoreCase(fname))
         {
-            List<Expression> expressions = adqlFunction.getParameters().getExpressions();
+            List<Expression> expressions = func.getParameters().getExpressions();
             if (expressions.size() != 2)
                 throw new IllegalStateException("INTERSECTS requires 2 expressions, found " + expressions.size());
             implExpr = handleIntersects(expressions.get(0), expressions.get(1));
         }
         else if (POINT.equalsIgnoreCase(fname))
         {
-            validateCoordSys(adqlFunction);
-            List<Expression> expressions = adqlFunction.getParameters().getExpressions();
+            validateCoordSys(func);
+            List<Expression> expressions = func.getParameters().getExpressions();
             if (expressions.size() != 3)
                 throw new IllegalStateException("POINT requires coordsys, RA, DEC");
             implExpr = handlePoint(expressions.get(0), expressions.get(1), expressions.get(2));
         }
         else if (POLYGON.equalsIgnoreCase(fname))
         {
-            validateCoordSys(adqlFunction);
-            List<Expression> expressions = adqlFunction.getParameters().getExpressions();
+            validateCoordSys(func);
+            List<Expression> expressions = func.getParameters().getExpressions();
             if ((expressions.size() % 2) != 1)
                 throw new IllegalStateException("{POLYGON requires coordsys and even number of vertices");
             implExpr = handlePolygon(expressions);
         }
         else if (REGION.equalsIgnoreCase(fname))
         {
-            implExpr = handleRegion(adqlFunction);
+            implExpr = handleRegion(func);
         }
         return implExpr;
     }
