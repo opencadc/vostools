@@ -9,8 +9,10 @@ import net.sf.jsqlparser.schema.Table;
 import org.apache.log4j.Logger;
 
 /**
- *  Simple class to map table name(s) used in the query to table name(s) used
- * in the database.
+ * Simple class to map table name(s) used in the query to table name(s) used
+ * in the database. You need to use both this and the TableNameReferenceConverter
+ * with the same underlying map to convert all places a table name can be used.
+ * 
  * @author pdowler
  */
 public class TableNameConverter extends FromItemNavigator
@@ -25,6 +27,11 @@ public class TableNameConverter extends FromItemNavigator
             this.map = new TreeMap<String,Table>(new CaseInsensitiveStringComparator());
         else
             this.map = new TreeMap<String,Table>();
+    }
+
+    public TableNameConverter(Map<String, Table> map)
+    {
+        this.map = map;
     }
 
     /**
@@ -55,7 +62,9 @@ public class TableNameConverter extends FromItemNavigator
     {
         log.debug("visit(table)" + table);
         String tabName = table.getWholeTableName();
+        log.debug("looking for " + tabName + " in conversion map...");
         Table ntab = map.get(tabName);
+        log.debug("found: " + ntab);
         if (ntab != null)
         {
             log.debug("convert: " + table.getSchemaName() + "." + table.getName()
