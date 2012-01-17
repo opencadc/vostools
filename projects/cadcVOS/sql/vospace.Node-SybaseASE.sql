@@ -151,4 +151,31 @@ CREATE TRIGGER NodeProperty_update_trigger
     END
 go
 
+print "create table DeletedNode ..."
+go
+create table DeletedNode
+(
+    nodeID        BIGINT       NOT NULL,
+    name              VARCHAR(276)      NOT NULL,
+    ownerID           VARCHAR(256)      NOT NULL,
+    contentLength     BIGINT            NOT NULL,
+    lastModified  DATETIME     NOT NULL
+)
+lock datarows
+go
+
+alter table DeletedNode add
+constraint DeletedNode_pk primary key clustered (nodeID)
+go
+
+CREATE TRIGGER Node_delete_trig
+    ON Node
+    FOR DELETE
+    AS
+    BEGIN
+        INSERT INTO DeletedNode (nodeID,name,ownerID,contentLength,lastModified)
+        (SELECT nodeID,name,ownerID,contentLength,getdate() FROM deleted where type='D')
+    END
+go
+
 -- TODO: grant permissions to read and write to these tables

@@ -365,7 +365,7 @@ public class RssViewTest
             super(new NodeDAO.NodeSchema(
                     database + "." + schema + ".Node", 
                     database + "." + schema + ".NodeProperty",
-                    true)
+                    true), false
                 );
             this.server = server;
             this.database = database;

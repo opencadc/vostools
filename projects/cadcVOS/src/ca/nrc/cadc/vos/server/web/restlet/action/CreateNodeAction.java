@@ -146,7 +146,7 @@ public class CreateNodeAction extends NodeAction
                 NodeWriter nodeWriter = new NodeWriter();
                 NodeOutputRepresentation nodeOutputRepresentation =
                     new NodeOutputRepresentation(storedNode, nodeWriter);
-                return new NodeActionResult(nodeOutputRepresentation, Status.SUCCESS_CREATED);
+                return new NodeActionResult(nodeOutputRepresentation, Status.SUCCESS_OK);
             }
             log.debug("parent is not a container: " + clientNode.getUri().getPath());
             NodeFault nodeFault = NodeFault.ContainerNotFound;
