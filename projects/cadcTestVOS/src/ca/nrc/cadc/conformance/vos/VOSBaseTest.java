@@ -194,7 +194,7 @@ public abstract class VOSBaseTest
                 WebResponse response = conversation.sendRequest(request);
                 log.debug(getResponseHeaders(response));
                 log.debug("Response code: " + response.getResponseCode());
-                if (response.getResponseCode() != 201 && response.getResponseCode() != 409)
+                if (response.getResponseCode() != 200 && response.getResponseCode() != 409)
                     throw new VOSException(response.getResponseMessage());
             }
             catch (Throwable t)
@@ -232,7 +232,7 @@ public abstract class VOSBaseTest
                 WebResponse response = conversation.sendRequest(request);
                 log.debug(getResponseHeaders(response));
                 log.debug("Response code: " + response.getResponseCode());
-                if (response.getResponseCode() != 201 && response.getResponseCode() != 409)
+                if (response.getResponseCode() != 200 && response.getResponseCode() != 409)
                     throw new VOSException(response.getResponseMessage());
             }
             catch (Throwable t)

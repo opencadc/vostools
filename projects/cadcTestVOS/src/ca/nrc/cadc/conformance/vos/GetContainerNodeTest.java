@@ -131,7 +131,7 @@ public class GetContainerNodeTest extends VOSNodeTest
 
             // Add ContainerNode to the VOSpace.
             WebResponse response = put(node);
-            assertEquals("PUT response code should be 201", 201, response.getResponseCode());
+            assertEquals("PUT response code should be 200", 200, response.getResponseCode());
 
             // Get the node from vospace
             response = get(node);
@@ -178,7 +178,7 @@ public class GetContainerNodeTest extends VOSNodeTest
 
             // Add ContainerNode to the VOSpace.
             WebResponse response = put(node);
-            assertEquals("PUT response code should be 201", 201, response.getResponseCode());
+            assertEquals("PUT response code should be 200", 200, response.getResponseCode());
 
             // Request Parameters
             Map<String, String> parameters = new HashMap<String, String>();
@@ -234,7 +234,7 @@ public class GetContainerNodeTest extends VOSNodeTest
 
             // Add ContainerNode to the VOSpace.
             WebResponse response = put(node);
-            assertEquals("PUT response code should be 201", 201, response.getResponseCode());
+            assertEquals("PUT response code should be 200", 200, response.getResponseCode());
 
             // Request Parameters
             Map<String, String> parameters = new HashMap<String, String>();
@@ -293,22 +293,22 @@ public class GetContainerNodeTest extends VOSNodeTest
 
             // Add ContainerNode to the VOSpace.
             WebResponse response = put(nodeA);
-            assertEquals("PUT response code should be 201", 201, response.getResponseCode());
+            assertEquals("PUT response code should be 200", 200, response.getResponseCode());
 
             // Child node B.
             ContainerNode nodeAB = new ContainerNode(new VOSURI(nodeA.getUri() + "/B"));
             response = put(nodeAB);
-            assertEquals("PUT response code should be 201", 201, response.getResponseCode());
+            assertEquals("PUT response code should be 200", 200, response.getResponseCode());
 
             // Child node C.
             ContainerNode nodeABC = new ContainerNode(new VOSURI(nodeAB.getUri() + "/C"));
             response = put(nodeABC);
-            assertEquals("PUT response code should be 201", 201, response.getResponseCode());
+            assertEquals("PUT response code should be 200", 200, response.getResponseCode());
 
             // Child node D.
             ContainerNode nodeABCD = new ContainerNode(new VOSURI(nodeABC.getUri() + "/D"));
             response = put(nodeABCD);
-            assertEquals("PUT response code should be 201", 201, response.getResponseCode());
+            assertEquals("PUT response code should be 200", 200, response.getResponseCode());
 
             // Request Parameters to get child nodes B & C only
             Map<String, String> parameters = new HashMap<String, String>();
@@ -370,7 +370,7 @@ public class GetContainerNodeTest extends VOSNodeTest
             
             // Add ContainerNode to the VOSpace.
             WebResponse response = put(node);
-            assertEquals("PUT response code should be 201", 201, response.getResponseCode());
+            assertEquals("PUT response code should be 200", 200, response.getResponseCode());
 
             // TODO: how to get the node without permission to do so?
             response = get(node);

@@ -154,7 +154,7 @@ public class PullFromVOSpaceTest extends VOSTransferTest
             DataNode dataNode = getSampleDataNode();
             dataNode.getProperties().add(new NodeProperty(VOS.PROPERTY_URI_CONTENTLENGTH, new Long(1024).toString()));
             WebResponse response = put(VOSBaseTest.NODE_ENDPOINT,dataNode, new NodeWriter());
-            assertEquals("PUT response code should be 201", 201, response.getResponseCode());
+            assertEquals("PUT response code should be 200", 200, response.getResponseCode());
 
             // Create a Transfer.
             List<Protocol> protocols = new ArrayList<Protocol>();
@@ -227,7 +227,7 @@ public class PullFromVOSpaceTest extends VOSTransferTest
             DataNode dataNode = getSampleDataNode();
             dataNode.getProperties().add(new NodeProperty(VOS.PROPERTY_URI_CONTENTLENGTH, new Long(1024).toString()));
             WebResponse response = put(VOSBaseTest.NODE_ENDPOINT,dataNode, new NodeWriter());
-            assertEquals("PUT response code should be 201", 201, response.getResponseCode());
+            assertEquals("PUT response code should be 200", 200, response.getResponseCode());
 
             // Create a Transfer.
             List<Protocol> protocols = new ArrayList<Protocol>();

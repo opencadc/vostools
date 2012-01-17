@@ -129,7 +129,7 @@ public class GetDataNodeTest extends VOSNodeTest
 
             // Add DataNode to the VOSpace.
             WebResponse response = put(node);
-            assertEquals("PUT response code should be 201", 201, response.getResponseCode());
+            assertEquals("PUT response code should be 200", 200, response.getResponseCode());
 
             // Get the node from vospace
             response = get(node);
@@ -174,7 +174,7 @@ public class GetDataNodeTest extends VOSNodeTest
 
             // Add DataNode to the VOSpace.
             WebResponse response = put(node);
-            assertEquals("PUT response code should be 201", 201, response.getResponseCode());
+            assertEquals("PUT response code should be 200", 200, response.getResponseCode());
 
             // Request Parameters
             Map<String, String> parameters = new HashMap<String, String>();
@@ -225,7 +225,7 @@ public class GetDataNodeTest extends VOSNodeTest
 
             // Add DataNode to the VOSpace.
             WebResponse response = put(node);
-            assertEquals("PUT response code should be 201", 201, response.getResponseCode());
+            assertEquals("PUT response code should be 200", 200, response.getResponseCode());
 
             // Request Parameters
             Map<String, String> parameters = new HashMap<String, String>();
@@ -279,7 +279,7 @@ public class GetDataNodeTest extends VOSNodeTest
 
             // Add DataNode to the VOSpace.
             WebResponse response = put(node);
-            assertEquals("PUT response code should be 201", 201, response.getResponseCode());
+            assertEquals("PUT response code should be 200", 200, response.getResponseCode());
 
             // Request Parameters to get the node plus an offset
             Map<String, String> parameters = new HashMap<String, String>();
@@ -330,7 +330,7 @@ public class GetDataNodeTest extends VOSNodeTest
             
             // Add ContainerNode to the VOSpace.
             WebResponse response = put(node);
-            assertEquals("PUT response code should be 201", 201, response.getResponseCode());
+            assertEquals("PUT response code should be 200", 200, response.getResponseCode());
 
             // TODO: how to get the node without permission to do so?
             response = get(node);

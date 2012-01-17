@@ -116,7 +116,7 @@ public class UpdateContainerNodeTest extends VOSNodeTest
             
             // Add ContainerNode to the VOSpace.
             WebResponse response = put(node);
-            assertEquals("updateContainerNode: PUT response code should be 201", 201, response.getResponseCode());
+            assertEquals("updateContainerNode: PUT response code should be 200", 200, response.getResponseCode());
 
             // Get the response (an XML document)
             String xml = response.getText();
@@ -165,7 +165,7 @@ public class UpdateContainerNodeTest extends VOSNodeTest
 
             // Add ContainerNode to the VOSpace.
             WebResponse response = put(node);
-            assertEquals("updateContainerNodeDeleteProperty: PUT response code should be 201", 201, response.getResponseCode());
+            assertEquals("updateContainerNodeDeleteProperty: PUT response code should be 200", 200, response.getResponseCode());
 
             // Get the response (an XML document)
             String xml = response.getText();
@@ -224,7 +224,7 @@ public class UpdateContainerNodeTest extends VOSNodeTest
 
             // Add ContainerNode to the VOSpace.
             WebResponse response = put(node);
-            assertEquals("PUT response code should be 201", 201, response.getResponseCode());
+            assertEquals("PUT response code should be 200", 200, response.getResponseCode());
 
             // Update the node by adding new Property.
             NodeProperty nodeProperty = new NodeProperty("ivo://ivoa.net/vospace/core#description", "My new award winning thing");
@@ -268,7 +268,7 @@ public class UpdateContainerNodeTest extends VOSNodeTest
 
             // Add ContainerNode to the VOSpace.
             WebResponse response = put(node);
-            assertEquals("PUT response code should be 201", 201, response.getResponseCode());
+            assertEquals("PUT response code should be 200", 200, response.getResponseCode());
 
             // Get the response (an XML document)
             String xml = response.getText();
@@ -353,7 +353,7 @@ public class UpdateContainerNodeTest extends VOSNodeTest
 
             // Add ContainerNode to the VOSpace.
             WebResponse response = put(node);
-            assertEquals("PUT response code should be 201", 201, response.getResponseCode());
+            assertEquals("PUT response code should be 200", 200, response.getResponseCode());
 
             // TODO: add an invalid Property
             NodeProperty nodeProperty = new NodeProperty("ivo://ivoa.net/vo space/core#length", "My invalid property");

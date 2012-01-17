@@ -127,7 +127,7 @@ public class CreateDataNodeTest extends VOSNodeTest
 
             // Add ContainerNode to the VOSpace.
             WebResponse response = put(node);
-            assertEquals("PUT response code should be 201", 201, response.getResponseCode());
+            assertEquals("PUT response code should be 200", 200, response.getResponseCode());
 
             // Get the response (an XML document)
             String xml = response.getText();
@@ -170,7 +170,7 @@ public class CreateDataNodeTest extends VOSNodeTest
 
             // Add DataNode to the VOSpace.
             WebResponse response = put(node);
-            assertEquals("PUT response code should be 201", 201, response.getResponseCode());
+            assertEquals("PUT response code should be 200", 200, response.getResponseCode());
 
             // Get the response (an XML document)
             String xml = response.getText();

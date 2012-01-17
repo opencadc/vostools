@@ -126,7 +126,7 @@ public class DeleteDataNodeTest extends VOSNodeTest
 
             // Add DataNode to the VOSpace.
             WebResponse response = put(node);
-            assertEquals("PUT response code should be 201", 201, response.getResponseCode());
+            assertEquals("PUT response code should be 200", 200, response.getResponseCode());
 
             // Delete the node.
             response = delete(node);
@@ -162,7 +162,7 @@ public class DeleteDataNodeTest extends VOSNodeTest
             
             // Add DataNode to the VOSpace.
             WebResponse response = put(node);
-            assertEquals("PUT response code should be 201", 201, response.getResponseCode());
+            assertEquals("PUT response code should be 200", 200, response.getResponseCode());
 
             // TODO: how do you delete a node without permissions?
             response = delete(node);
@@ -233,7 +233,10 @@ public class DeleteDataNodeTest extends VOSNodeTest
 
             // Try and delete the Node from the VOSpace.
             WebResponse response = delete(nodeAB);
+            // current draft spec says 500:
             assertEquals("DELETE response code should be 500 for a invalid Node path", 500, response.getResponseCode());
+            // arguably correct is 404:
+            //assertEquals("DELETE response code should be 404 for a invalid Node path", 404, response.getResponseCode());
 
             // Response entity body should contain 'ContainerNotFound'
             assertThat(response.getText().trim(), JUnitMatchers.containsString("ContainerNotFound"));
