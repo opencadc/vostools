@@ -1,4 +1,3 @@
-#!/usr/bin/env python
 
 from distutils.core import setup
 
@@ -9,5 +8,5 @@ setup(name="vofs",
       author="JJ Kavelaars",
       author_email="jj.kavelaars@nrc.gc.ca",
       py_modules=['fuse','vos'],
-      scripts=['getCert','vcp','vrm','vls','vmkdir','mountvofs','vrmdir']
+      scripts=['getCert','vsync','vcp','vrm','vls','vmkdir','mountvofs','vrmdir']
 )
