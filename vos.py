@@ -25,7 +25,7 @@ class urlparse:
     def __init__(self,url):
         import re
 
-        m=re.match("((?P<scheme>\S*):)?(//(?P<netloc>[^/]*))?(?P<path>/?[^#?]*)(#(?P<frag>[^?]*))?(\?(?P<query>.*))?",url)
+        m=re.match("(^(?P<scheme>[a-zA-Z]*):)?(//(?P<netloc>[^/]*))?(?P<path>/?[^#?]*)(#(?P<frag>[^?]*))?(\?(?P<query>.*))?",url)
         if not m.group:
             return None
         self.scheme=m.group('scheme')
@@ -461,13 +461,13 @@ class Node:
 class VOFile:
     """A class for managing http connecctions"""
     
-    def __init__(self,URL,connector,method):
-
+    def __init__(self,URL,connector,method,size=None):
         self.closed=True
         self.resp=503
         self.connector=connector
         self.httpCon=None
 	self.timeout=-1
+	self.size=size
         self.open(URL,method)
 	
 
@@ -525,6 +525,8 @@ class VOFile:
         self.closed=False
         self.httpCon.putrequest(method,URL)
         if method in ["PUT", "POST", "DELETE"]:
+	    if self.size is not None and type(self.size)==int:
+	        self.httpCon.putheader("Content-Length",self.size)
             contentType="text/xml"
             if method=="PUT":
                 import mimetypes
@@ -595,28 +597,33 @@ class Client:
         self.rootNode=rootNode
         return
 
-    def copy(self,src,dest):
+    def copy(self,src,dest,sendMD5=False):
         """copy to/from vospace"""
-        import os
+        import os,hashlib
     
         if src[0:4]=="vos:":
             fin=self.open(src,os.O_RDONLY,view='data')
             fout=open(dest,'w')
         else:
+            size=os.lstat(src).st_size
             fin=open(src,'r')
-            fout=self.open(dest,os.O_WRONLY)
+            fout=self.open(dest,os.O_WRONLY,size=size)
     
         totalBytes=0
+        md5=hashlib.md5()
         while True:
             buf=fin.read(BUFSIZE)
             logging.debug("Read %d bytes from %s" % ( len(buf),src))
             if len(buf)==0:
                 break
             fout.write(buf)
+            md5.update(buf)
             logging.debug("Wrote %d bytes to %s" % ( len(buf),dest))            
             totalBytes+=len(buf)
         fout.close()
         fin.close()
+        if sendMD5:
+            return md5.hexdigest()
         return totalBytes
 
 
@@ -722,7 +729,7 @@ class Client:
         return  False
 
                     
-    def open(self, uri, mode=os.O_RDONLY, view=None, head=False, URL=None, limit=0, nextURI=None):
+    def open(self, uri, mode=os.O_RDONLY, view=None, head=False, URL=None, limit=0, nextURI=None,size=None):
         """Connect to the uri as a VOFile object"""
 
         # the URL of the connection depends if we are 'getting', 'putting' or 'posting'  data
@@ -742,7 +749,7 @@ class Client:
         if URL is None:
             URL=self.getNodeURL(uri, method=method, view=view,limit=limit,nextURI=nextURI)
         logging.debug(URL)
-        return VOFile(URL,self.conn,method=method)
+        return VOFile(URL,self.conn,method=method,size=size)
 
     def update(self,node):
         """Given a node structure do a POST of the XML to the VOSpace to update the node properties"""
