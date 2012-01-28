@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!python
 """A FUSE based filesystem view of VOSpace."""
 
 from sys import argv, exit, platform
@@ -38,7 +38,8 @@ class VOFS(LoggingMixIn, Operations):
     readlink = None
     rmdir = None
     symlink = None
-
+    listxattr = None
+    getxattr = None
     
     def __init__(self, root, cache_dir, conn=None, cache_limit=1024*1024*1024):
         """Initialize the VOFS.  
@@ -94,7 +95,9 @@ class VOFS(LoggingMixIn, Operations):
     def access(self, path, mode):
         if path in self.node:
 	   return 0
-	if self.client.access(path):
+	#if self.client.access(path):
+	#   return 0
+        if self.getNode(path):
 	   return 0
 	return -1
 
@@ -230,7 +233,7 @@ class VOFS(LoggingMixIn, Operations):
                 pass
 
 
-    def getNode(self,path,force=False):
+    def getNode(self,path,force=False,limit=0):
         """Use the client and pull the node from VOSpace.  
         
         Currently force=False is the default... so we never check
@@ -239,6 +242,8 @@ class VOFS(LoggingMixIn, Operations):
         faster if VOSpace is slow.
         """
 
+        logging.debug("force? -> %s path -> %s" % ( force, path))
+
         if path in self.node and not force:
             logging.debug("Sending back chached node for %s" % ( path))
             return self.node[path]
@@ -246,7 +251,7 @@ class VOFS(LoggingMixIn, Operations):
         ## Pull the node meta data from VOSpace.
         try:
             logging.debug("requesting node %s from VOSpace" % ( path))
-            node=self.client.getNode(path)
+            node=self.client.getNode(path,limit=limit)
         except IOError as e:
             logging.debug(str(e))
             f = FuseOSError(e.errno)
@@ -256,11 +261,15 @@ class VOFS(LoggingMixIn, Operations):
 
         self.node[path]=node
         self.attr[path]=node.attr
-        if self.node[path].isdir():
-            for node in self.node[path].getNodeList():
-                npath=os.path.join(path,node.name)
-                self.node[npath]=node
-                self.attr[npath]=node.attr
+        for node in self.node[path]._nodeList:
+            subPath=os.path.join(path,node.name)
+            self.node[subPath]=node
+            self.attr[subPath]=node.attr
+        #if self.node[path].isdir():
+        #    for node in self.node[path].getNodeList():
+        #        npath=os.path.join(path,node.name)
+        #        self.node[npath]=node
+        #        self.attr[npath]=node.attr
         return self.node[path]
 
     def getPath(self,fh):
@@ -270,6 +279,7 @@ class VOFS(LoggingMixIn, Operations):
     def getattr(self, path, fh=None):
         """Build some attributes for this file, we have to make-up some stuff"""
 	if not path in self.attr:
+            logging.debug("Node %s not already in attribute list, so retrieving." % ( path))
             try:
                 node=self.client.getNode(path,limit=0)
             except IOError as e:
@@ -282,7 +292,7 @@ class VOFS(LoggingMixIn, Operations):
         if mtime > atime or ctime > atime:
             ### the modification/change times are after the last access
             ### so we should access this VOSpace node again.
-            logging.debug("Getting node details from getattr for path %s" % ( path))
+            logging.debug("Getting node details for stale node %s" % ( path))
 	    try:
                node=self.client.getNode(path,limit=0)
 	    except IOError as e:
@@ -291,7 +301,7 @@ class VOFS(LoggingMixIn, Operations):
 	    #self.attr[path].update(self.getNode(path).attr)
         return self.attr[path]
 
-    def getxattr(self, path, name, position=0):
+    def OFF_getxattr(self, path, name, position=0):
         """Get the value of an extended attribute"""
         value=self.getNode(path).xattr.get(name,None)
         if value is None:
@@ -299,7 +309,7 @@ class VOFS(LoggingMixIn, Operations):
         import binascii
         return binascii.a2b_base64(value)
 
-    def listxattr(self, path):
+    def OFF_listxattr(self, path):
         """Send back the list of extended attributes"""
         return self.getNode(path).xattr.keys()
         
@@ -400,7 +410,8 @@ class VOFS(LoggingMixIn, Operations):
 
     def readdir(self, path, fh):
         """Send a list of entried in this directory"""
-        return ['.','..'] + [e.name.encode('utf-8') for e in self.getNode(path,force=True).getNodeList() ]
+        logging.debug("Getting direcotry list for %s " % ( path))
+        return ['.','..'] + [e.name.encode('utf-8') for e in self.getNode(path,force=True,limit=500).getNodeList() ]
 
     def release(self, path, fh):
         """Close the file, but if this was a holding spot for writes, then write the file to the node"""
@@ -634,9 +645,8 @@ if __name__ == "__main__":
     parser.add_option("-f","--foreground",action="store_true",help="Mount the filesystem as a foreground opperation and produce copious amounts of debuging information")
     parser.add_option("--log",action="store",help="File to store debug log to",default="/tmp/vos.err")
     parser.add_option("--cache_limit",action="store",type=int,help="upper limit on local diskspace to use for file caching",default=50*2**(10+10+10))
-    parser.add_option("--cache_dir",action="store",help="local directory to use for file caching",default=os.getenv('HOME',default='.'))
+    parser.add_option("--cache_dir",action="store",help="local directory to use for file caching",default=None)
     parser.add_option("--certfile",help="location of your CADC security certificate file",default=os.path.join(os.getenv("HOME","."),".ssl/cadcproxy.pem"))
-
     (opt,args)=parser.parse_args()
     formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
     
@@ -654,6 +664,8 @@ if __name__ == "__main__":
 
     root = opt.vospace
     mount = opt.mountpoint
+    if opt.cache_dir is None:
+	opt.cache_dir=os.path.normpath(os.path.join(os.getenv('HOME',default='.'),root.replace(":","_")))
     if not os.access(mount,os.F_OK):
 	os.makedirs(mount)
     if platform=="darwin":
@@ -661,6 +673,8 @@ if __name__ == "__main__":
                     volname=root,
                     daemon_timeout=6000,
                     auto_cache=True,
+		    noapplexattr=True,
+	            noappledouble=True,
                     foreground=opt.foreground)
     else:
         fuse = FUSE(VOFS(root,opt.cache_dir,conn=conn,cache_limit=opt.cache_limit), mount, fsname=root, 
