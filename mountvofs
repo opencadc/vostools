@@ -261,15 +261,11 @@ class VOFS(LoggingMixIn, Operations):
 
         self.node[path]=node
         self.attr[path]=node.attr
-        for node in self.node[path]._nodeList:
-            subPath=os.path.join(path,node.name)
-            self.node[subPath]=node
-            self.attr[subPath]=node.attr
-        #if self.node[path].isdir():
-        #    for node in self.node[path].getNodeList():
-        #        npath=os.path.join(path,node.name)
-        #        self.node[npath]=node
-        #        self.attr[npath]=node.attr
+        if self.node[path].isdir() and self.node[path]._nodeList is not None:
+            for node in self.node[path]._nodeList:
+               subPath=os.path.join(path,node.name)
+               self.node[subPath]=node
+               self.attr[subPath]=node.attr
         return self.node[path]
 
     def getPath(self,fh):
@@ -671,6 +667,7 @@ if __name__ == "__main__":
     if platform=="darwin":
         fuse = FUSE(VOFS(root,opt.cache_dir,conn=conn,cache_limit=opt.cache_limit), mount, fsname=root,
                     volname=root,
+                    defer_permissions=True,
                     daemon_timeout=6000,
                     auto_cache=True,
 		    noapplexattr=True,
