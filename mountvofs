@@ -151,8 +151,9 @@ class VOFS(LoggingMixIn, Operations):
         # This should fail if the basepath doesn't exist
         try:
             self.client.open(path,os.O_CREAT).close()
-        except IOError as e:
-            loggin.debug(str(e))
+        except Exception as e:
+            logging.debug(str(e))
+            logging.debug("Error trying to create Node %s" %(path))
             f=FuseOSError(e.errno)
             f.strerror=e.strerror
             f.message=e.strerror
