@@ -86,18 +86,22 @@ public class FileMetadata
     private Date lastModified;
     private Long uncompressedLength;
     private String uncompressedMd5Sum;
+    private String fileCRC;
+    private String uncompressedFileCRC;
 
     public FileMetadata() { }
 
     @Override
     public String toString()
     {
-        return "FileMetadata[" + fileName + "," + contentType + "," + contentEncoding
+        return "FileMetadata["+ fileName + "," + contentType + "," + contentEncoding
                 + "," + contentLength
                 + "," + md5Sum
                 + "," + lastModified
                 + "," + uncompressedLength
                 + "," + uncompressedMd5Sum
+                + "," + fileCRC
+                + "," + uncompressedFileCRC
                 + "]";
     }
 
@@ -179,5 +183,25 @@ public class FileMetadata
     public void setUncompressedMd5Sum(String uncompressedMd5Sum)
     {
         this.uncompressedMd5Sum = uncompressedMd5Sum;
+    }
+
+    public String getFileCRC()
+    {
+        return fileCRC;
+    }
+
+    public void setFileCRC(String fileCRC)
+    {
+        this.fileCRC = fileCRC;
+    }
+
+    public String getUncompressedFileCRC()
+    {
+        return uncompressedFileCRC;
+    }
+
+    public void setUncompressedFileCRC(String uncompressedFileCRC)
+    {
+        this.uncompressedFileCRC = uncompressedFileCRC;
     }
 }
