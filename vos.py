@@ -25,17 +25,19 @@ class urlparse:
     def __init__(self,url):
         import re
 
-        m=re.match("(^(?P<scheme>[a-zA-Z]*):)?(//(?P<netloc>[^/]*))?(?P<path>/?[^#?]*)(#(?P<frag>[^?]*))?(\?(?P<query>.*))?",url)
+        #m=re.match("(^(?P<scheme>[a-zA-Z]*):)?(//(?P<netloc>[^/]*))?(?P<path>/?[^#?]*)(#(?P<frag>[^?]*))?(\?(?P<query>.*))?",url)
+        m=re.match("(^(?P<scheme>[a-zA-Z]*):)?(//(?P<netloc>[^/]*))?(?P<path>/?.*)?",url)
         if not m.group:
             return None
         self.scheme=m.group('scheme')
         self.netloc=m.group('netloc')
         self.path=m.group('path')
-        self.frag=m.group('frag')
-        self.query=m.group('query')
+        #self.frag=m.group('frag')
+        #self.query=m.group('query')
         
     def __str__(self):
-        return "[scheme: %s, netloc: %s, path: %s, frag: %s, query: %s]" % ( self.scheme, self.netloc, self.path,self.frag,self.query)
+        #return "[scheme: %s, netloc: %s, path: %s, frag: %s, query: %s]" % ( self.scheme, self.netloc, self.path,self.frag,self.query)
+        return "[scheme: %s, netloc: %s, path: %s]" % ( self.scheme, self.netloc, self.path)
 
     
 
@@ -639,6 +641,8 @@ class Client:
         import re
         ## Check that path name compiles with the standard
         filename=os.path.basename(parts.path)
+        logging.debug("Checking file name: %s" %( filename))
+	logging.debug("Result: %s" % (re.match("^[\_\-\(\)\=\+\!\,\;\:\@\&\*\$\.\w]*$",filename)))
         if not re.match("^[\_\-\(\)\=\+\!\,\;\:\@\&\*\$\.\w]*$",filename):
             raise IOError(errno.EINVAL,"Illegal vospace container name",filename)
 
