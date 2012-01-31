@@ -13,6 +13,34 @@ usage="""
 eg:  vls vos:jkavelaars
 If no 'host' information is given, then vos: implies the CADC voSpace server."""
 
+
+def getTerminalSize():
+    def ioctl_GWINSZ(fd):
+        try:
+            import fcntl, termios, struct, os
+            cr = struct.unpack('hh', fcntl.ioctl(fd, termios.TIOCGWINSZ,
+        '1234'))
+        except:
+            return None
+        return cr
+    cr = ioctl_GWINSZ(0) or ioctl_GWINSZ(1) or ioctl_GWINSZ(2)
+    if not cr:
+        try:
+            fd = os.open(os.ctermid(), os.O_RDONLY)
+            cr = ioctl_GWINSZ(fd)
+            os.close(fd)
+        except:
+            pass
+    if not cr:
+        try:
+            cr = (env['LINES'], env['COLUMNS'])
+        except:
+            cr = (25, 80)
+    return int(cr[1]), int(cr[0])
+
+
+
+
 parser=optparse.OptionParser(usage,add_help_option=False)
 
 parser.add_option("-l","--long",action="store_true",help="verbose listing sorted by name")
@@ -35,9 +63,12 @@ if opt.Size:
     sortKey="size"
 
 if opt.verbose:
-    logging.basicConfig(level=logging.INFO)
-if opt.debug:
-    logging.basicConfig(level=logging.DEBUG)
+    logging.basicConfig(level=logging.INFO,format="%(module)s.%(funcName)s %(message)s")
+elif opt.debug:
+    logging.basicConfig(level=logging.DEBUG,format="%(module)s.%(funcName)s %(message)s")
+else:
+    logging.basicConfig(level=logging.ERROR,format="%(module)s.%(funcName)s %(message)s")
+
 if len(args) < 1:
     parser.error("You must specifiy a VOSpace to list")
     sys.exit(-1)
@@ -63,14 +94,14 @@ def sizeFormat(size):
             length=str(size)
     else:
         length=str(size)
-    return "%9s " % ( length)
+    return "%12s " % ( length)
 
 def dateFormat(Epoch):
     """given a time object return a nicely formated string"""
-    import time
+    import time, math
     timeTup=time.localtime(Epoch)
-    if timeTup.tm_year - time.localtime().tm_year > 0:
-        return time.strftime('%b %d  %Y',timeTup)
+    if time.localtime().tm_year != timeTup.tm_year:
+        return time.strftime('%b %d  %Y ',timeTup)
     return time.strftime('%b %d %H:%S ',timeTup)
 
 columns=['permisions','creator']
@@ -89,17 +120,17 @@ for node in args:
     if node[0:4]!="vos:":
         parser.error("Improper vospace spefication: %s " % ( node))
     try:
-       infoList= vos.getNode(node).getInfoList()
-    except:
-       raise
-       sys.exit(0)
+        infoList= vos.getNode(node).getInfoList()
+    except Exception as e:
+        logging.error("%s" % ( e.strerror))
+        sys.exit(e.errno)
         
     if not len(infoList)>0:
         #logging.critical("Failed to get listing for %s " % ( node ))
         sys.exit(-1)
 
     if sortKey:
-        infoList=sorted(infoList, key=lambda name: name[1][sortKey], reverse=opt.reverse)
+        infoList=sorted(infoList, key=lambda name: name[1][sortKey], reverse=not opt.reverse)
 
 
     for item in infoList:

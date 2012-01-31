@@ -25,14 +25,14 @@ class urlparse:
     def __init__(self,url):
         import re
 
-        m=re.match("(^(?P<scheme>[a-zA-Z]*):)?(//(?P<netloc>[^/]*))?(?P<path>/?[^#?]*)(#(?P<frag>[^?]*))?(\?(?P<query>.*))?",url)
+        ## moded so that '#' is not fragmented...
+        #m=re.match("(^(?P<scheme>[a-zA-Z]*):)?(//(?P<netloc>[^/]*))?(?P<path>/?[^#?]*)(#(?P<frag>[^?]*))?(\?(?P<query>.*))?",url)
+        m=re.match("(^(?P<scheme>[a-zA-Z]*):)?(//(?P<netloc>[^/]*))?(?P<path>/?.*)",url)
         if not m.group:
             return None
         self.scheme=m.group('scheme')
         self.netloc=m.group('netloc')
         self.path=m.group('path')
-        self.frag=m.group('frag')
-        self.query=m.group('query')
         
     def __str__(self):
         return "[scheme: %s, netloc: %s, path: %s, frag: %s, query: %s]" % ( self.scheme, self.netloc, self.path,self.frag,self.query)
@@ -190,10 +190,7 @@ class Node:
         else:
             ### mktime is expecting a localtime but we're sending a UT date, so some correction will be needed
             mtime=time.mktime(time.strptime(sdate[0:-4],'%Y-%m-%dT%H:%M:%S'))
-            if time.daylight:
-                mtime=mtime-time.altzone
-            else:
-                mtime=mtime-time.timezone
+            mtime=mtime - time.mktime(time.gmtime()) + time.mktime(time.localtime())
         self.attr['st_ctime']=attr.get('st_ctime',mtime)
         self.attr['st_mtime']=attr.get('st_mtime',mtime)
         self.attr['st_atime']=atime
@@ -639,7 +636,7 @@ class Client:
         import re
         ## Check that path name compiles with the standard
         filename=os.path.basename(parts.path)
-        if not re.match("^[\_\-\(\)\=\+\!\,\;\:\@\&\*\$\.\w]*$",filename):
+        if not re.match("^[\_\-\(\)\=\+\!\,\;\:\@\&\*\$\.\w\~\%]*$",filename):
             raise IOError(errno.EINVAL,"Illegal vospace container name",filename)
 
         ## insert the default VOSpace server if none given
