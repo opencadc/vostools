@@ -208,6 +208,7 @@ class VOFS(LoggingMixIn, Operations):
         w.close()
         ## Now update our information about this VOSpace node...
         self.getNode(path,force=True)
+        ## Now update the utimes for the parrent.
         return
 
     def flush(self,path,fh):
@@ -234,7 +235,7 @@ class VOFS(LoggingMixIn, Operations):
                 pass
 
 
-    def getNode(self,path,force=False,limit=0):
+    def getNode(self,path,force=True,limit=0):
         """Use the client and pull the node from VOSpace.  
         
         Currently force=False is the default... so we never check
@@ -275,6 +276,7 @@ class VOFS(LoggingMixIn, Operations):
 
     def getattr(self, path, fh=None):
         """Build some attributes for this file, we have to make-up some stuff"""
+        logging.debug("getting attributes of %s" % ( path))
 	if not path in self.attr:
             logging.debug("Node %s not already in attribute list, so retrieving." % ( path))
             try:
@@ -283,9 +285,10 @@ class VOFS(LoggingMixIn, Operations):
                 raise FuseOSError(e.errno)
 	    self.attr[path]=node.attr
             logging.debug("Got %s for %s" % (node, path))
-        atime=self.attr.get('st_atime',time.time())
-        mtime=self.attr.get('st_mtime',atime)
-        ctime=self.attr.get('st_ctime',atime)
+        atime=self.attr[path].get('st_atime',time.time())
+        mtime=self.attr[path].get('st_mtime',atime)
+        ctime=self.attr[path].get('st_ctime',atime)
+        logging.debug("Got times atime: %d mtime: %d ctime: %d" % ( atime,mtime,ctime))
         if mtime > atime or ctime > atime:
             ### the modification/change times are after the last access
             ### so we should access this VOSpace node again.
@@ -412,6 +415,7 @@ class VOFS(LoggingMixIn, Operations):
 
     def release(self, path, fh):
         """Close the file, but if this was a holding spot for writes, then write the file to the node"""
+        import os
         if self.fh.get(fh,None):
             mode = self.fh[fh]['flags']
             ### copy the staging file to VOSpace if needed
@@ -448,8 +452,8 @@ class VOFS(LoggingMixIn, Operations):
                 except:
                     pass
 
-        logging.debug("removing reference to %d" % ( fh) ) 
-        self.delPath(fh)
+        logging.debug("removing reference to %d" % ( fh) )
+        ## Update the parent node access time
         #logging.debug("Deleting the Node from the lookup table")
         #self.delNode(path)
         self.clear_cache()
@@ -539,7 +543,7 @@ class VOFS(LoggingMixIn, Operations):
 
         
     def statfs(self, path):
-        node=self.getNode(path,force=False)
+        node=self.getNode(path)
         block_size=512
         bytes=2**33
         free=2**33
@@ -596,6 +600,8 @@ class VOFS(LoggingMixIn, Operations):
             os.unlink(fname)
         self.client.delete(path)
         self.delNode(path)
+        ## update the access times on the parrent node
+
 
     def utimens(self, path, times=None):
 	"""Set the access and modification times of path"""
@@ -606,7 +612,7 @@ class VOFS(LoggingMixIn, Operations):
           t=time.time()
           times = (t,t)
 	else:
-	  logging.debug("Setting the access and modification times of using times provided")
+	  logging.debug("Setting the access and modification times using times provided")
 	logging.debug("Getting cache file name")
         fname=os.path.normpath(self.cache_dir+path)
 	logging.debug("Setting access times on cached version at location %s" % ( fname))
