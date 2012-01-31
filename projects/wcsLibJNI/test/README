@@ -1,0 +1,19 @@
+To run the test code.
+
+Build the wcsLib library.
+
+cd wcsLibJNI/trunk/
+make
+
+Compile the C test code.
+
+cd test/src/
+./compile.sh
+
+Compile the Java test code.
+
+javac ca/nrc/cadc/wcs/WCSLibTest.java
+
+Run the Java test code.
+
+java -Djava.library.path=./ca/nrc/cadc/wcs ca.nrc.cadc.wcs.WCSLibTest
