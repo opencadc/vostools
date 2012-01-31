@@ -93,6 +93,7 @@ class Connection:
         except httplib.NotConnected:
 	    logging.debug("HTTP connection to %s failed " % (parts.netloc))
             raise IOError(errno.ENTCONN,"VOSpace connection failed",parts.netloc)
+        logging.debug("Returning connection " )
         return connection
 
 
@@ -648,12 +649,13 @@ class Client:
         return "%s://%s/%s" % (parts.scheme, host, path)
 
     
-    def getNode(self,uri,limit=500):
+    def getNode(self,uri,limit=0):
         """connect to VOSpace and download the definition of vospace node
 
         uri   --- a voSpace node in the format vos:/vospaceName/nodeName
         limit --- load children nodes in batches of limit
         """
+        logging.debug("Getting node %s" % ( uri))
         xmlObj=self.open(uri,os.O_RDONLY, limit=0)
         dom=ET.parse(xmlObj)
         logging.debug("%s" %( str(dom)))
@@ -689,9 +691,9 @@ class Client:
         server= Client.VOServers.get(parts.netloc)        
 
         logging.debug("URI for node: %s" %( uri))
-        logging.debug("structure hardcoded for CADC vospace" )
 
         if method in ('PUT'):
+            logging.debug("PUT structure hardcoded for CADC vospace" )
             ### This part is hard coded for CADC VOSpace...
             return "%s://%s/data/pub/vospace/%s" % (protocol, server,parts.path.strip('/'))
 
@@ -701,9 +703,7 @@ class Client:
 	    fields['view'] = view
         if nextURI is not None:
 	    fields['uri'] = nextURI
-        logging.debug("method %s " % method)
 	data="?"+urllib.urlencode(fields)
-        logging.debug("method %s " % method)
 	URL = "%s://%s/vospace/nodes/%s%s" % ( protocol, server, parts.path.strip('/'), data)
         logging.debug("method %s " % method)
         logging.debug("Accessing URL %s" % URL)

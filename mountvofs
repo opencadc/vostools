@@ -131,7 +131,7 @@ class VOFS(LoggingMixIn, Operations):
             self.getattr(path)['st_ctime']=time.time()
             ## if node.chmod returns false then no changes were made.
             self.client.update(node)
-            self.getNode(path,force=True)
+            self.getNode(path)
 
         # Need to also update the cache properties.
         fname=os.path.normpath(self.cache_dir+path)
@@ -207,7 +207,7 @@ class VOFS(LoggingMixIn, Operations):
                 raise FuseOSError(EIO)
         w.close()
         ## Now update our information about this VOSpace node...
-        self.getNode(path,force=True)
+        self.getNode(path)
         ## Now update the utimes for the parrent.
         return
 
@@ -235,7 +235,7 @@ class VOFS(LoggingMixIn, Operations):
                 pass
 
 
-    def getNode(self,path,force=True,limit=0):
+    def getNode(self,path,force=False,limit=0):
         """Use the client and pull the node from VOSpace.  
         
         Currently force=False is the default... so we never check
@@ -530,7 +530,7 @@ class VOFS(LoggingMixIn, Operations):
             self.oldest_file=None
 
     def rmdir(self,path):
-        node=self.getNode(path,force=True)
+        node=self.getNode(path)
         #if not node.isdir():
         #    raise FuseOSError(ENOTDIR)
         #if len(node.getNodeList())>0:
@@ -654,7 +654,7 @@ if __name__ == "__main__":
     formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
     
     if opt.debug:
-        logging.basicConfig(level=logging.DEBUG,format="vofs:%(module)s.%(funcName)s %(message)s",filename=opt.log)
+        logging.basicConfig(level=logging.DEBUG,format="%(asctime)s %(module)s.%(funcName)s %(message)s",filename=opt.log)
         forground=True
     elif opt.verbose:
         logging.basicConfig(level=logging.INFO,format="vofs:%(module)s.%(funcName)s %(message)s",filename=opt.log)
