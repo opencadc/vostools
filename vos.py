@@ -663,13 +663,14 @@ class Client:
 	# If this is a container node and the nodlist has not already been set, try to load the children.
 	# this would be better deferred until the children are actually needed, however that would require
 	# access to a connection when the children are accessed, and thats not easy.
-	if (node.isdir() and len(node.getNodeList()) == 0):
+	if node.isdir() and limit>0:
+            node._nodeList=[]
 	    logging.debug("Loading children")
 	    nextURI = None
 	    again = True
 	    while again:
 		again = False
-		getChildrenXMLDoc=self.open(uri,os.O_RDONLY, limit=limit,nextURI=nextURI)
+		getChildrenXMLDoc=self.open(uri,os.O_RDONLY, nextURI=nextURI)
 		getChildrenDOM = ET.parse(getChildrenXMLDoc)
 		for nodesNode in getChildrenDOM.findall(Node.NODES):
 		    for child in nodesNode.findall(Node.NODE):
@@ -698,12 +699,16 @@ class Client:
             return "%s://%s/data/pub/vospace/%s" % (protocol, server,parts.path.strip('/'))
 
         ### this is a GET so we might have to stick some data onto the URL...
-	fields = {'limit': limit}
+	fields={}
+        if limit is not None:
+	    fields['limit']=limit
         if view is not None:
 	    fields['view'] = view
         if nextURI is not None:
 	    fields['uri'] = nextURI
-	data="?"+urllib.urlencode(fields)
+        data=""
+        if len(fields) >0 : 
+   	    data="?"+urllib.urlencode(fields)
 	URL = "%s://%s/vospace/nodes/%s%s" % ( protocol, server, parts.path.strip('/'), data)
         logging.debug("method %s " % method)
         logging.debug("Accessing URL %s" % URL)
@@ -727,7 +732,7 @@ class Client:
         return  False
 
                     
-    def open(self, uri, mode=os.O_RDONLY, view=None, head=False, URL=None, limit=0, nextURI=None,size=None):
+    def open(self, uri, mode=os.O_RDONLY, view=None, head=False, URL=None, limit=None, nextURI=None,size=None):
         """Connect to the uri as a VOFile object"""
 
         # the URL of the connection depends if we are 'getting', 'putting' or 'posting'  data
@@ -772,7 +777,7 @@ class Client:
         """Walk through the directory structure a al os.walk"""
         logging.debug("getting a listing of %s " % ( uri))
         names=[]
-        for node in self.getNode(uri).getNodeList():
+        for node in self.getNode(uri,limit=1).getNodeList():
             names.append(node.name)
         return names
 
