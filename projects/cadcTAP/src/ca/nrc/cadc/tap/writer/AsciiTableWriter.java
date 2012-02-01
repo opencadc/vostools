@@ -215,7 +215,6 @@ public class AsciiTableWriter implements TableWriter
 
         FormatterFactory factory = DefaultFormatterFactory.getFormatterFactory();
         factory.setJobID(job.getID());
-        LOG.debug("parameterList: " + job.getParameterList());
         factory.setParamList(job.getParameterList());
         List<Formatter> formatters = factory.getFormatters(selectList);
 

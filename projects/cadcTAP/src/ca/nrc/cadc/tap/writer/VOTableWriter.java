@@ -192,6 +192,7 @@ public class VOTableWriter implements TableWriter
             throw new IllegalStateException("SelectList cannot be null, set using setSelectList()");
 
         FormatterFactory factory = DefaultFormatterFactory.getFormatterFactory();
+        //factory.setJobID(job.getID());
         factory.setParamList(job.getParameterList());
         List<Formatter> formatters = factory.getFormatters(selectList);
 
