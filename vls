@@ -120,7 +120,7 @@ for node in args:
     if node[0:4]!="vos:":
         parser.error("Improper vospace spefication: %s " % ( node))
     try:
-        infoList= vos.getNode(node).getInfoList()
+        infoList= vos.getNode(node,limit=500).getInfoList()
     except Exception as e:
         logging.error("%s" % ( e.strerror))
         sys.exit(e.errno)
