@@ -484,7 +484,7 @@ class VOFile:
     def checkstatus(self):
         """check the response status"""
         logging.debug("status %d for URL %s" % ( self.resp.status,self.url))
-        if self.resp.status not in (200, 201, 202, 303, 503):
+        if self.resp.status not in (200, 201, 202, 302, 303, 503):
             if self.resp.status == 404:
                 ### file not found
                 raise IOError(errno.ENOENT,"Node not found",self.url)
@@ -541,7 +541,7 @@ class VOFile:
             self.close()
         if self.resp.status == 404:
             return None
-        if self.resp.status == 303:
+        if self.resp.status == 303 or self.resp.status == 302:
             URL = self.resp.getheader('Location',None)
             if not URL:
                 raise IOError(errno.ENOENT,"No Location on redirect",self.url)
@@ -786,14 +786,14 @@ class Client:
         return self.status(uri,code=[400])
 
     def isfile(self,uri):
-        return self.status(uri,code=[200,303,503])
+        return self.status(uri,code=[200,303,503,302])
 
     def access(self,uri,mode=os.O_RDONLY):
         """Test for existance"""
         return not self.status(uri,code=[404])
 
 
-    def status(self,uri,code=[200,303,503]):
+    def status(self,uri,code=[200,303,503,302]):
         """Check to see if this given uri points at a containerNode.
 
         This is done by checking the view=data header and seeing if you get an error.
