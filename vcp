@@ -113,4 +113,9 @@ if __name__=='__main__':
         elif access(dest,os.F_OK) and isdir(dest):
             ### we're copying into a directory
             thisDest=os.path.join(dest,os.path.basename(source))
-        copy(source,thisDest)
+
+        try: 
+            copy(source,thisDest)
+        except Exception as e:
+            logging.error("Failed to copy %s to %s:  %s (%d)" %(source, thisDest, e.strerror, e.errno))
+            sys.exit(e.errno)

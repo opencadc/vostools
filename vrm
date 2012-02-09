@@ -30,10 +30,14 @@ client=vos.Client(certFile=opt.certfile)
 for arg in args:
     if arg[0:4]!="vos:":
        logging.error("%s is not a valid VOSpace handle" % (arg))
-    if client.isfile(arg):
-       logging.info("deleting %s" %(arg))
-       client.delete(arg)
-    elif client.isdir(arg):
-       logging.error("%s is a directory" % (arg))
-    else:
-       logging.error("%s file not found" % (arg))
+    try:
+        if client.isfile(arg):
+            logging.info("deleting %s" %(arg))
+            client.delete(arg)
+        elif client.isdir(arg):
+            logging.error("%s is a directory" % (arg))
+        else:
+            logging.error("%s file not found" % (arg))
+    except Exception as e:
+        loggin.error("Failed trying to delete %s: %s (%d)" %(arg,e.strerror,e.errno))
+        sys.exit(e.errno)
