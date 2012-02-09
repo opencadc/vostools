@@ -161,7 +161,7 @@ public class Log4jInit
             
             if (appName != null)
             {
-                errorLogFormat = "%d{ISO8601} " + appName + " [%t] %-5p %c{1} %x - %m\n";
+                errorLogFormat = "%d{yyyy-MM-dd HH:mm:ss.SSS} " + appName + " [%t] %-5p %c{1} %x - %m\n";
                 infoLogFormat =  "%-4r " + appName + " [%t] %-5p %c{1} %x - %m\n";
             }
             

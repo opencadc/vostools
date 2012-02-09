@@ -114,6 +114,7 @@
 
             <test name="ca.nrc.cadc.util.HexUtilTest"/>
             <test name="ca.nrc.cadc.net.NetUtilTest"/>
+            <test name="ca.nrc.cadc.util.Log4jInitTest" />
             <formatter type="plain" usefile="false"/>
         </junit>
     </target>
