@@ -637,8 +637,8 @@ class Client:
         ## Check that path name compiles with the standard
         filename=os.path.basename(parts.path)
         logging.debug("Checking file name: %s" %( filename))
-	logging.debug("Result: %s" % (re.match("^[\_\-\(\)\=\+\!\,\;\:\@\&\*\$\.\w]*$",filename)))
-        if not re.match("^[\_\-\(\)\=\+\!\,\;\:\@\&\*\$\.\w]*$",filename):
+	logging.debug("Result: %s" % (re.match("^[\_\-\(\)\=\+\!\,\;\:\@\&\*\$\.\w\~]*$",filename)))
+        if not re.match("^[\_\-\(\)\=\+\!\,\;\:\@\&\*\$\.\w\~]*$",filename):
             raise IOError(errno.EINVAL,"Illegal vospace container name",filename)
 
         ## insert the default VOSpace server if none given
