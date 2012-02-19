@@ -272,7 +272,7 @@ class Node:
                   logging.debug("After change node is : %s" %( self))
 		  return changed
         ### must not have had this kind of property already, so set value
-        propertyNode=ET.SubElement(properties[0],Node.PROPERTY)
+        propertyNode=ET.SubElement(props,Node.PROPERTY)
         propertyNode.attrib['readOnly']="false"
         ### There should be a '#' in there someplace...
         propertyNode.attrib["uri"]="%s#%s" % (Node.IVOAURL,key)

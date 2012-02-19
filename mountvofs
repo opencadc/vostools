@@ -38,8 +38,6 @@ class VOFS(LoggingMixIn, Operations):
     readlink = None
     rmdir = None
     symlink = None
-    listxattr = None
-    getxattr = None
     
     def __init__(self, root, cache_dir, conn=None, cache_limit=1024*1024*1024):
         """Initialize the VOFS.  
@@ -301,7 +299,7 @@ class VOFS(LoggingMixIn, Operations):
 	    #self.attr[path].update(self.getNode(path).attr)
         return self.attr[path]
 
-    def OFF_getxattr(self, path, name, position=0):
+    def getxattr(self, path, name, position=0):
         """Get the value of an extended attribute"""
         value=self.getNode(path).xattr.get(name,None)
         if value is None:
@@ -309,7 +307,7 @@ class VOFS(LoggingMixIn, Operations):
         import binascii
         return binascii.a2b_base64(value)
 
-    def OFF_listxattr(self, path):
+    def listxattr(self, path):
         """Send back the list of extended attributes"""
         return self.getNode(path).xattr.keys()
         
@@ -598,7 +596,8 @@ class VOFS(LoggingMixIn, Operations):
         fname=os.path.normpath(self.cache_dir+path)
         if os.access(fname,os.F_OK):
             os.unlink(fname)
-        self.client.delete(path)
+        if self.getNode(path):
+            self.client.delete(path)
         self.delNode(path)
         ## update the access times on the parrent node
 
