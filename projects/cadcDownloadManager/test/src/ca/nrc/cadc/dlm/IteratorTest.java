@@ -139,7 +139,7 @@ public class IteratorTest
                 "ad:foo/bar",
                 "ad:foo/baz"
             };
-            String frag = "asf=true";
+            String frag = "runid=123";
             Iterator<DownloadDescriptor> iter = DownloadUtil.iterateURLs(uris, frag);
             long num = 0;
             while ( iter.hasNext() )
