@@ -128,7 +128,7 @@ emailAddress_default =
 
 [ v3_proxy ]
 proxyCertInfo=critical,language:id-ppl-inheritAll
-keyUsage=digitalSignature,keyEncipherment,dataEncipherment
+keyUsage=digitalSignature,keyEncipherment
 " > $tmpdir/csr.conf
 
 openssl req -new -config $tmpdir/csr.conf -out $tmpdir/proxyreq$cnf.csr -keyout $tmpdir/proxy$cnf.key -subj "$subj/CN=$$"
