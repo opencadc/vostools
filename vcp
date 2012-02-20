@@ -76,7 +76,7 @@ if __name__=='__main__':
     else:
         logLevel=logging.ERROR
         
-    logging.basicConfig(level=logLevel,format="%(module)s: %(message)s")
+    logging.basicConfig(level=logLevel,format="%(asctime)s - %(module)s.%(funcName)s: %(message)s")
 
     client=vos.Client(certFile=opt.certfile)
     

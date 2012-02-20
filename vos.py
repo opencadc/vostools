@@ -90,8 +90,9 @@ class Connection:
                 connection = httplib.HTTPSConnection(parts.netloc,key_file=certfile,cert_file=certfile,timeout=600)
             else:
                 connection = httplib.HTTPConnection(parts.netloc,timeout=600)
-        except httplib.NotConnected:
-	    logging.debug("HTTP connection to %s failed " % (parts.netloc))
+        except httplib.NotConnected as e:
+	    logging.error("HTTP connection to %s failed \n" % (parts.netloc))
+            logging.error("%s \n" % ( str(e)))
             raise IOError(errno.ENTCONN,"VOSpace connection failed",parts.netloc)
         logging.debug("Returning connection " )
         return connection
@@ -474,9 +475,12 @@ class VOFile:
         if self.closed:
             return
         logging.debug("Closing connection")
-        self.httpCon.send('0\r\n\r\n')
-        self.resp=self.httpCon.getresponse()
-        self.httpCon.close()
+        try:
+           self.httpCon.send('0\r\n\r\n')
+           self.resp=self.httpCon.getresponse()
+           self.httpCon.close()
+        except Exception as e:
+           logging.error("%s \n" %  str(e))
         self.closed=True
         logging.debug("Connection closed")
         self.checkstatus()
@@ -549,13 +553,13 @@ class VOFile:
             return self.read(size)
         if self.resp.status == 503:
             ## try again in Retry-After seconds or fail
-            logging.debug("Server is too busy to send %s" % (self.url))
+            logging.error("Server is too busy to send %s" % (self.url))
             ras=self.resp.getheader("Retry-After",None)
             if not ras:
-                logging.debug("no retry-after in header, so raising error")
+                logging.error("no retry-after in header, so raising error")
                 raise IOError(errno.EBUSY,"Server overloaded",self.url)
             ras=int(ras)
-            logging.debug("Retrying in %d seconds" % (int(ras)))
+            logging.error("Server loaded, retrying in %d seconds" % (int(ras)))
             time.sleep(int(ras))
             self.open(self.url,"GET")
             return self.read(size)
