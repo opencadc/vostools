@@ -602,9 +602,11 @@ class Client:
         """copy to/from vospace"""
         import os,hashlib
     
+        checkSource=False
         if src[0:4]=="vos:":
             fin=self.open(src,os.O_RDONLY,view='data')
             fout=open(dest,'w')
+            checkSource=True
         else:
             size=os.lstat(src).st_size
             fin=open(src,'r')
@@ -623,7 +625,15 @@ class Client:
             totalBytes+=len(buf)
         fout.close()
         fin.close()
+
+	if checkSource:
+	    checkMD5=self.getNode(src).props.get('MD5',0)
+        else:
+	    checkMD5=self.getNode(dest).props.get('MD5',0)
+        
         if sendMD5:
+	    if checkMD5 != md5.hexdigest():
+		raise IOError(errno.EIO,"MD5s don't match",src)
             return md5.hexdigest()
         return totalBytes
 

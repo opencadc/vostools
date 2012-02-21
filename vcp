@@ -46,7 +46,7 @@ def copy(source,dest):
                 if ans!='y':
                     sys.exit(errno.EEXIST)
         logging.info("%s -> %s " % ( source, dest))
-        client.copy(source,dest)
+        client.copy(source,dest,sendMD5=True)
 
                 
 
