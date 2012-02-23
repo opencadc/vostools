@@ -103,11 +103,11 @@ tmpdir="/tmp/$randomdirname/$cnf"
 /bin/mkdir -p $tmpdir
 
 echo "[ req ]
-default_bits       = 512
+default_bits       = 2048
 #default_keyfile    = proxykey.pem
 distinguished_name = req_distinguished_name
 encrypt_rsa_key    = no
-default_md         = md5
+default_md         = sha256
 
 
 [ req_distinguished_name ]
@@ -141,7 +141,7 @@ fi
 # make sure the key is PKCS#1
 openssl rsa -in $tmpdir/proxy$cnf.key -out  $tmpdir/proxy$cnf.key
 
-openssl x509 -req -md5 -CAcreateserial -in $tmpdir/proxyreq$cnf.csr -days $days -CA $userpubcert -CAkey $userprivcert -extfile $tmpdir/csr.conf -extensions v3_proxy -out $tmpdir/proxyclient$cnf.pem
+openssl x509 -req -sha256 -CAcreateserial -in $tmpdir/proxyreq$cnf.csr -days $days -CA $userpubcert -CAkey $userprivcert -extfile $tmpdir/csr.conf -extensions v3_proxy -out $tmpdir/proxyclient$cnf.pem
 
 if [ $? != 0 ]; then
     echo "Errors signing the proxy certificate"

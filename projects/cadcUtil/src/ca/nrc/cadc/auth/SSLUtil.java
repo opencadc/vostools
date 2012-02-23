@@ -710,100 +710,38 @@ public class SSLUtil
 
     /**
      * Parses a byte array and constructs the corresponding RSAPrivateCrtKeySpec.
-     * Adapted from the standard. Very cryptic, but it works - so do not touch!
      * 
      * @param code byte array containing the key
      * @return RSAPrivateCrtKeySpec
      * @throws IOException
      */
-    private static RSAPrivateCrtKeySpec parseKeySpec(byte[] code) throws IOException
+    public static RSAPrivateCrtKeySpec parseKeySpec(byte[] code) throws IOException
     {
-        int pos;
-        BigInteger[] ints = new BigInteger[8];;
-        pos = 0;
-        if (code[pos] == 0x30)
-        {
-            pos = 1;
-            int nb = 0;
-            if ((code[pos] & 0x80) == 0x80)
-            {
-                int n = (int) code[pos] & 0x7f;
-                pos = pos + 1;
-                for (int i = 0; i < n; ++i)
-                {
-                    nb = (nb << 8) | (code[pos] & 0xff);
-                    pos = pos + 1;
-                }
-            }
-            else
-            {
-                nb = (int) code[pos];
-                pos = pos + 1;
-            }
+        DerParser parser = new DerParser(code);
+        
+        Asn1Object sequence = parser.read();
+        if (sequence.getType() != DerParser.SEQUENCE)
+            throw new IOException("Invalid DER: not a sequence"); //$NON-NLS-1$
+        
+        // Parse inside the sequence
+        parser = sequence.getParser();
+        
+        parser.read(); // Skip version
+        BigInteger modulus = parser.read().getInteger();
+        BigInteger publicExp = parser.read().getInteger();
+        BigInteger privateExp = parser.read().getInteger();
+        BigInteger prime1 = parser.read().getInteger();
+        BigInteger prime2 = parser.read().getInteger();
+        BigInteger exp1 = parser.read().getInteger();
+        BigInteger exp2 = parser.read().getInteger();
+        BigInteger crtCoef = parser.read().getInteger();
+            
+        RSAPrivateCrtKeySpec keySpec = new RSAPrivateCrtKeySpec(
+                modulus, publicExp, privateExp, prime1, prime2,
+                exp1, exp2, crtCoef);
+        
+        return keySpec;
 
-            // skip the first version
-            if (code[pos] != 2)
-                throw new IllegalArgumentException("encountered invalid integer tag " + ((int) code[pos]) + " at " + pos);
-            pos = pos + 1;
-            int len = 0;
-            if ((code[pos] & 0x80) == 0x80)
-            {
-                int n = (int) code[pos] & 0x7f;
-                pos = pos + 1;
-                for (int i = 0; i < n; ++i)
-                {
-                    len = (len << 8) | (code[pos] & 0xff);
-                    pos = pos + 1;
-                }
-            }
-            else
-            {
-                len = (int) code[pos];
-                pos = pos + 1;
-            }
-            pos = pos + len;
-
-            // read the keys
-            for (int i = 0; i < 8; ++i)
-            {
-                if (pos >= code.length) throw new IllegalArgumentException("end of file at " + pos);
-                if (code[pos] != 2)
-                    throw new IllegalArgumentException("encountered invalid integer tag " + ((int) code[pos]) + " at " + pos);
-                pos = pos + 1;
-                if ((code[pos] & 0x80) == 0x80)
-                {
-                    int n = (int) code[pos] & 0x7f;
-                    pos = pos + 1;
-                    for (i = 0; i < n; ++i)
-                    {
-                        len = (len << 8) | (code[pos] & 0xff);
-                        pos = pos + 1;
-                    }
-                }
-                else
-                {
-                    len = (int) code[pos];
-                    pos = pos + 1;
-                }
-                byte[] x = new byte[len];
-                System.arraycopy(code, pos, x, 0, len);
-                pos = pos + len;
-                ints[i] = new BigInteger(x);
-            }
-
-        }
-        else
-            throw new IOException("invalid private key leading tag " + (int) code[pos]);
-
-        return new RSAPrivateCrtKeySpec(ints[0] // modulus
-                , ints[1] // publicExponent
-                , ints[2] // privateExponent
-                , ints[3] // primeP
-                , ints[4] // primeQ
-                , ints[5] // primeExponentP
-                , ints[6] // primeExponentQ
-                , ints[7] // crtCoefficient
-        );
     }
 
     /**

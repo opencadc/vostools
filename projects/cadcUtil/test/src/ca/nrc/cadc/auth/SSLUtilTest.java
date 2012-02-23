@@ -112,6 +112,62 @@ public class SSLUtilTest
     private static File SSL_KEY;
     private static File SSL_PEM;
 
+    private static final String KEY_512 =
+        "-----BEGIN RSA PRIVATE KEY-----\n" +
+        "MIIBOgIBAAJBAOvm3yk/tr7/8ZaT584T54tOviYIpoWWRfwDgd176c0kTfTj43+C\n" +
+        "BgxFcequf5mY51mgD7v38krRA3+xXi/igfsCAwEAAQJBAMqVrQXGcpDaScVPZV1j\n" +
+        "WJAY4lDVUvQb1iQTev4SwPjqUy8H/f0Zt+Bezwf1LaxcHcCFA6QnDxHw6l99/5zw\n" +
+        "p7kCIQD+4rfjcZyYUKwF0C2deKEgvZUjpiLYVyh/G4qKfT2sPwIhAOzu598CHLLn\n" +
+        "LSZoBRJtjuhAr1zUrfkoBsNHQwTKi6tFAiBOpKtyXPKhOHrrTEFWzgqBLJ2gozkr\n" +
+        "ITFYjqnfcycdRwIgbMW1L31hvYRCBxrEEVS4wclIeJ6vC+6jRC1ICEAQZN0CIFe+\n" +
+        "Az22zN/URBRVBK32tI2axHy/j80Asysh+hxalp1F\n" +
+        "-----END RSA PRIVATE KEY-----\n";
+    private static final String KEY_1024 =
+        "-----BEGIN RSA PRIVATE KEY-----\n" +
+        "MIICXQIBAAKBgQDIcNIXiBAPuOjTNWJUbsI+TR1FSXNGM2bv2naU7pKQ0OWI+DDs\n" +
+        "K1xlctgTi5WrfsMjPKoM+0zpVT5qjUrHyFatbTu9tYjLblPmi/yzOEOIloqZ8lF1\n" +
+        "hrkUG98f8IBbgx4BbkXscVKdP9awngEpIYrZt3QXLUwUP+oF2PCGH5f+nwIDAQAB\n" +
+        "AoGBAI5gVVuRspb4aaldSjNfWWqXrCsDOXasHHpTW9f+fu2O9PyOD3Iyerc1FHcN\n" +
+        "t4rRyBrHhKMj/kXf3y4gnvW6QJY8MM+lHx7oubS8O5aqVexKa8dawQNHvMfLz9PU\n" +
+        "OuN7X2+rvLS3+qPUtL2LiklCSsrr137M4OBNdfTcZKqAEaLBAkEA/QWsVzhx526D\n" +
+        "HCBaJ6cgfo6Ravqjg17DDe/yt5iC+dQzGMozWJdHjOS/066aZNF4Els4iSVWdIT5\n" +
+        "KqBmgjBFZQJBAMrMub59uqqHFGQzWgtOdQamiyeEwr48+a3xHUYy5p+1h7TWetHR\n" +
+        "OQTFOwGfpv8h7RGd2TS3fxzK+G5LKIUChbMCQQDF+rpvROtbe017pJTmkg8K9+Mx\n" +
+        "IgzvriZRsX7pyZwyf6e7rfufRj/mLtcqe2SznnOlaVtDdMPBSIrun7OWCs9BAkB6\n" +
+        "V2b2dALYPQUgLZp0l7AhgvcPsBeLjF1TgdGXN73JO0nS3lDZos4zAojGQfoMj/rk\n" +
+        "VcVi+A/G3utgHhcjppHhAkBpxQmU1fAB2wKVNtTh2puPmKt+g1wob1yZASRJEadZ\n" +
+        "5QR7EgNAJtdlouvJcdnTXHJS9JazpcS3061+u2TfgIvx\n" +
+        "-----END RSA PRIVATE KEY-----\n";
+    private static final String KEY_2048 = 
+        "-----BEGIN RSA PRIVATE KEY-----\n" +
+        "MIIEpgIBAAKCAQEA4Sa+glBzaztCbgZ90uFm5sfjSWUtZCGTw1UwcIFsQtkBa1ut\n" +
+        "gn1b2LtGevctPoXMreMq4f/5TNAtJuBOHP+2Xv+mIBBbm+zJwTAfk9I0/6wcNlkS\n" +
+        "FKhSqkpvwSv6+ecQ6R5zUrQv1aMwI392GyAiY8Jo4J6UVGKe7+YY1yvWraVFZYzB\n" +
+        "FeCNb9Qlo4X+uyZRjz0JJmJZE8H6USmrAa1DPQoWRBpJPJ/sIM1ejTz6lLyC3A54\n" +
+        "e0Nh+z8dPfUVzBySOgPzypPbuyEaVEFlmm+PqyrfoSIgNQNeOY0SbyhN374xpSHz\n" +
+        "PBPUPgy5qwidQB4+XN6YQlumz/i4+UnPdvR8jwIDAQABAoIBAQCmGGn0QptS4O2Z\n" +
+        "s0pBNq0t1QoUTAKXWrniIMdSR/fwvJvycjhnCkmmckmFTzFebWBYazxoauijxPN6\n" +
+        "OYEGnZIRNPF9t/OM7LrNvM2exDT65CIP6dePy7joDW+yBtroXpC4GRGkUm7zYKaT\n" +
+        "mWUsj6EvDO1Hv1TXh8WOXqW2no2JnP7OgCcVCGSR4/o6vBaDlUUBSiA3HIG7LWwW\n" +
+        "uin3LdZ8Z6CuwwlSdc758LIRlE5cGwU4Q4GH34KsMHJU0xkTaeSoYWFWo9xBTlQ1\n" +
+        "KuLgrYHeomKItiQTeXmuD8hepqhBkrH7tgfPcDrwmOlgarrJ1YK5Ve+i2nyHWVlP\n" +
+        "/g8DyrgxAoGBAP+08fzjxht5P7wW1E3QY+79NG5vO9uc+joG5X2U0Yu/98UWa1P5\n" +
+        "d6cbHQQuML0g7MfgRK52h80x+0xPcNewOmCX8vkYLpOqW++UOxH0Czam6igxeprV\n" +
+        "5WIYg5RB1QhbhQ5rRc4O+l61Yi9hdQBnJNfFbSqU373JLZpD6T5wdCXnAoGBAOFo\n" +
+        "1I8PEZaxiNz3qGb5LHEeSHRqQHKBQMoUcjAThA8T/Dx7uo3EkrKptyxJdpNeJbnE\n" +
+        "/GJsjXrElAHJqST1wmQzC3KLhgmKZliB4Ewk1foIfid36T0w/+RrlW2kwqinkr+H\n" +
+        "UOCSKnsQE8+xeGZ68WxmrBDmGnf5AtS9dfa6cc8ZAoGBAItxhoFNSSyUS3Br1qz0\n" +
+        "lnqutBgBKthRW5enSSDZtggK0Lg2yKLLqTeErqcn9UY+HUHGiE3Hr7jzp8HulG/a\n" +
+        "14rzcfnq+QNn5Kja4fehaTgNgCYZDW5AdM2w5phD6kObfQzm7PM48coSChAiimaE\n" +
+        "2O+d5zFQbE8X1XmJzTlSo9RDAoGBAKA/BXXasZdfCTyF+DuUgwq8C6hvbPe6edPv\n" +
+        "6ynQhf6uJ5DcKUjl6aCIVQdwBpNHyCwkJYTXRVF09P+8XLpA2Pyg6U96b0TTFmVv\n" +
+        "l4SqX1CMvxrR/YeaESFTdnznN9fsob/1tAKjBv5L9LmfokfAuWdmKocs/r4x0dhq\n" +
+        "BLXt4EDpAoGBAKN61XJ+kwO6FkxuyTlbv458Bc9toFyPqSaafJeEp/p3KdLMlphr\n" +
+        "0GzdeGNkrNfseVbSAjnlO2zmmhVe6Oz3oIR4d/5Hb8QEZi8f7nOZboufITyGTtYG\n" +
+        "LfVRkN/AuTrxRxWQDbZOo55ACoJA3DH7/BMOXhf9RikjrvESLtCWzsf2\n" +
+        "-----END RSA PRIVATE KEY-----\n";
+
+    
     /**
      * @throws java.lang.Exception
      */
@@ -346,6 +402,51 @@ public class SSLUtilTest
             t.printStackTrace();
             Assert.fail("unexpected exception: " + t);
         }
+    }
+    
+    @Test
+    public void testPrivateKeyParser() throws Exception
+    {
+        // tests the parser with different size keys
+        // 512 bit
+        byte[] privateKey = SSLUtil.getPrivateKey(KEY_512.getBytes());
+        try
+        {
+            log.debug("test parsing of RSA 512 bit key: ");
+            SSLUtil.parseKeySpec(privateKey);
+        }
+        catch (Throwable t)
+        {
+            t.printStackTrace();
+            Assert.fail("unexpected exception: " + t);
+        }
+        
+        // 1024 bit
+        privateKey = SSLUtil.getPrivateKey(KEY_1024.getBytes());
+        try
+        {
+            log.debug("test parsing of RSA 1024 bit key: ");
+            SSLUtil.parseKeySpec(privateKey);
+        }
+        catch (Throwable t)
+        {
+            t.printStackTrace();
+            Assert.fail("unexpected exception: " + t);
+        }
+        
+        // 2048 bit
+        privateKey = SSLUtil.getPrivateKey(KEY_2048.getBytes());
+        try
+        {
+            log.debug("test parsing of RSA 2048 bit key: ");
+            SSLUtil.parseKeySpec(privateKey);
+        }
+        catch (Throwable t)
+        {
+            t.printStackTrace();
+            Assert.fail("unexpected exception: " + t);
+        }
+        
     }
 
 }
