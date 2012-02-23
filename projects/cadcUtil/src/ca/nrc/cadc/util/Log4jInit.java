@@ -190,6 +190,7 @@ public class Log4jInit
                     new ConsoleAppender(new PatternLayout(infoLogFormat));
             LevelRangeFilter infoFilter = new LevelRangeFilter();
             infoFilter.setLevelMax(Level.INFO);
+            infoFilter.setLevelMin(Level.INFO);
             infoFilter.setAcceptOnMatch(true);
             conAppenderInfo.clearFilters();
             conAppenderInfo.addFilter(infoFilter);
@@ -199,8 +200,8 @@ public class Log4jInit
             ConsoleAppender conAppenderDebug =
                     new ConsoleAppender(new PatternLayout(debugLogFormat));
             LevelRangeFilter debugFilter = new LevelRangeFilter();
-            debugFilter.setLevelMax(Level.TRACE);
-            debugFilter.setLevelMin(Level.DEBUG);
+            debugFilter.setLevelMax(Level.DEBUG);
+            debugFilter.setLevelMin(Level.TRACE);
             debugFilter.setAcceptOnMatch(true);
             conAppenderDebug.clearFilters();
             conAppenderDebug.addFilter(debugFilter);
