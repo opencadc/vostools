@@ -73,6 +73,7 @@ import java.io.Writer;
 import java.util.ArrayList;
 import java.util.List;
 
+import ca.nrc.cadc.date.DateUtil;
 import org.apache.log4j.BasicConfigurator;
 import org.apache.log4j.ConsoleAppender;
 import org.apache.log4j.Level;
@@ -90,11 +91,12 @@ public class Log4jInit
 {
     private static boolean consoleAppendersCreated = false;
 
-    // SHORT_FORMAT applies to DEBUG and INFO logging levels
+    // SHORT_FORMAT applies to DEBUG and TRACE logging levels
     private static final String SHORT_FORMAT = "%-4r [%t] %-5p %c{1} %x - %m\n";
 
-    // LONG_FORMAT applies to WARN, ERROR and FATAL logging levels
-    private static final String LONG_FORMAT = "%d{ISO8601} [%t] %-5p %c{1} %x - %m\n";
+    // LONG_FORMAT applies to INFO, WARN, ERROR and FATAL logging levels
+    private static final String LONG_FORMAT = "%d{" + DateUtil.ISO_DATE_FORMAT
+                                              + "} [%t] %-5p %c{1} %x - %m\n";
 
     private static List<Writer> logWriters = new ArrayList<Writer>();
     
@@ -143,10 +145,12 @@ public class Log4jInit
     }
 
     /**
-     * Clear all existing appenders, then create default console appenders for Log4j.
-     * Any other extra file appender has to be initialized AFTER this method is called,
-     * otherwise they would be cleared.
-     * 
+     * Clear all existing appenders, then create default console appenders for
+     * Log4j.  Any other extra file appender has to be initialized AFTER this
+     * method is called, otherwise they would be cleared.
+     *
+     * @param appName       The name of the application that is calling this
+     *                      method.
      */
     private static synchronized void createLog4jConsoleAppenders(String appName)
     {
@@ -157,16 +161,22 @@ public class Log4jInit
             Logger.getRootLogger().setLevel(Level.ERROR); // must redo after reset
 
             String errorLogFormat = LONG_FORMAT;
-            String infoLogFormat = SHORT_FORMAT;
+            String infoLogFormat = LONG_FORMAT;
+            String debugLogFormat = SHORT_FORMAT;
             
             if (appName != null)
             {
-                errorLogFormat = "%d{yyyy-MM-dd HH:mm:ss.SSS} " + appName + " [%t] %-5p %c{1} %x - %m\n";
-                infoLogFormat =  "%-4r " + appName + " [%t] %-5p %c{1} %x - %m\n";
+                errorLogFormat = "%d{" + DateUtil.ISO_DATE_FORMAT + "} "
+                                 + appName + " [%t] %-5p %c{1} %x - %m\n";
+                infoLogFormat =  "%d{" + DateUtil.ISO_DATE_FORMAT + "} "
+                                 + appName + " [%t] %-5p %c{1} %x - %m\n";
+                debugLogFormat = "%-4r " + appName
+                                 + " [%t] %-5p %c{1} %x - %m\n";
             }
             
             // Appender for WARN, ERROR and FATAL with LONG_FORMAT message prefix
-            ConsoleAppender conAppenderHigh = new ConsoleAppender(new PatternLayout(errorLogFormat));
+            ConsoleAppender conAppenderHigh =
+                    new ConsoleAppender(new PatternLayout(errorLogFormat));
             LevelRangeFilter errorFilter = new LevelRangeFilter();
             errorFilter.setLevelMax(Level.FATAL);
             errorFilter.setLevelMin(Level.WARN);
@@ -175,24 +185,36 @@ public class Log4jInit
             conAppenderHigh.addFilter(errorFilter);
             BasicConfigurator.configure(conAppenderHigh);
 
-            // Appender for DEBUG and INFO with SHORT_FORMAT message prefix
-            ConsoleAppender conAppenderLow = new ConsoleAppender(new PatternLayout(infoLogFormat));
+            // Appender for INFO with LONG_FORMAT message prefix
+            ConsoleAppender conAppenderInfo =
+                    new ConsoleAppender(new PatternLayout(infoLogFormat));
             LevelRangeFilter infoFilter = new LevelRangeFilter();
             infoFilter.setLevelMax(Level.INFO);
-            infoFilter.setLevelMin(Level.DEBUG);
             infoFilter.setAcceptOnMatch(true);
-            conAppenderLow.clearFilters();
-            conAppenderLow.addFilter(infoFilter);
-            BasicConfigurator.configure(conAppenderLow);
+            conAppenderInfo.clearFilters();
+            conAppenderInfo.addFilter(infoFilter);
+            BasicConfigurator.configure(conAppenderInfo);
+
+            // Appender for DEBUG and TRACE with LONG_FORMAT message prefix
+            ConsoleAppender conAppenderDebug =
+                    new ConsoleAppender(new PatternLayout(debugLogFormat));
+            LevelRangeFilter debugFilter = new LevelRangeFilter();
+            debugFilter.setLevelMax(Level.TRACE);
+            debugFilter.setLevelMin(Level.DEBUG);
+            debugFilter.setAcceptOnMatch(true);
+            conAppenderDebug.clearFilters();
+            conAppenderDebug.addFilter(debugFilter);
+            BasicConfigurator.configure(conAppenderDebug);
             
             consoleAppendersCreated = true;
         }
     }
     
     /**
-     * Create a Log4j appender which writes logs into a writer, i.e. a FileWriter.
+     * Create a Log4j appender which writes logs into a writer, i.e. a
+     * FileWriter.
      * 
-     * @param writer
+     * @param writer        The Writer to write to for the new appenders.
      */
     private static synchronized void createLog4jWriterAppender(Writer writer)
     {
