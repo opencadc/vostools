@@ -70,7 +70,7 @@ class Connection:
 
         self.certfile=certfile
 
-	logging.debug("Using certificate file %s" % (self.certfile))
+        logging.debug("Using certificate file %s" % (self.certfile))
 
 
     def getConnection(self,url):
@@ -91,7 +91,7 @@ class Connection:
             else:
                 connection = httplib.HTTPConnection(parts.netloc,timeout=600)
         except httplib.NotConnected as e:
-	    logging.error("HTTP connection to %s failed \n" % (parts.netloc))
+            logging.error("HTTP connection to %s failed \n" % (parts.netloc))
             logging.error("%s \n" % ( str(e)))
             raise IOError(errno.ENTCONN,"VOSpace connection failed",parts.netloc)
         logging.debug("Returning connection " )
@@ -133,7 +133,7 @@ class Node:
         self.props={}
         self.attr={}
         self.xattr={}
-	self._nodeList = None
+        self._nodeList = None
         self.update()
         
     def update(self):
@@ -239,27 +239,27 @@ class Node:
         return 
 
     def chwgrp(self,group):
-	"""Set the groupwrite value for this node"""
+        """Set the groupwrite value for this node"""
         self.groupwrite=group
         return self.changeProp('groupwrite',group)
 
     def chrgrp(self,group):
-	"""Set the groupread value for this node"""
+        """Set the groupread value for this node"""
         self.groupread=group
-	return self.changeProp('groupread', group)
+        return self.changeProp('groupread', group)
 
     def setPublic(self,value):
         logging.debug("Setting value of ispublic to %s" % (str(value)))
-	return self.changeProp('ispublic', value)
+        return self.changeProp('ispublic', value)
  
     def changeProp(self,key,value):
-	"""Change the node property 'key' to 'value'.  Return 1 if changed."""
+        """Change the node property 'key' to 'value'.  Return 1 if changed."""
         import urllib
         logging.debug("Before change node is : %s" % ( self))
         changed=0
-	properties = self.node.findall(Node.PROPERTIES)
-	for props in properties:
-	    for prop in props.findall(Node.PROPERTY):
+        properties = self.node.findall(Node.PROPERTIES)
+        for props in properties:
+            for prop in props.findall(Node.PROPERTY):
                   uri=prop.attrib.get('uri',None)
                   propName=urllib.splittag(uri)[1]
                   if propName != key:
@@ -269,9 +269,9 @@ class Node:
                           props.remove(prop)
                       else:
                           prop.text=value
-	              changed=1
+                      changed=1
                   logging.debug("After change node is : %s" %( self))
-		  return changed
+                  return changed
         ### must not have had this kind of property already, so set value
         propertyNode=ET.SubElement(properties[0],Node.PROPERTY)
         propertyNode.attrib['readOnly']="false"
@@ -279,7 +279,7 @@ class Node:
         propertyNode.attrib["uri"]="%s#%s" % (Node.IVOAURL,key)
         propertyNode.text=value
         logging.debug("After change node is : %s" %( self))
-	return 1
+        return 1
 
 
     def chmod(self,mode):
@@ -305,16 +305,16 @@ class Node:
         else:
             changed += self.setPublic('false')
  
-	if  mode & (S_IRGRP ):
+        if  mode & (S_IRGRP ):
             
             changed += self.chrgrp(self.groupread)
         else:
             changed += self.chrgrp('NONE')
 
-	if  mode & S_IWGRP :
-	   changed += self.chwgrp(self.groupwrite)
+        if  mode & S_IWGRP :
+           changed += self.chwgrp(self.groupwrite)
         else:
-	   changed += self.chwgrp('NONE')  
+           changed += self.chwgrp('NONE')  
 
         logging.debug("%d -> %s" % ( changed, changed>0))
         return changed>0
@@ -417,17 +417,17 @@ class Node:
 
     def getNodeList(self):
         """Get a list of all the nodes held to by a ContainerNode return a list of Node objects"""
-	if (self._nodeList is None):
-	    self._nodeList=[]
-	    for nodesNode in self.node.findall(Node.NODES):
-		for nodeNode in nodesNode.findall(Node.NODE):
-		    self.addChild(nodeNode)
+        if (self._nodeList is None):
+            self._nodeList=[]
+            for nodesNode in self.node.findall(Node.NODES):
+                for nodeNode in nodesNode.findall(Node.NODE):
+                    self.addChild(nodeNode)
         return self._nodeList
 
     def addChild(self,childEt):
-	childNode = Node(childEt)
-	self._nodeList.append(childNode)
-	return(childNode)
+        childNode = Node(childEt)
+        self._nodeList.append(childNode)
+        return(childNode)
 
     def getInfoList(self,longList=True):
         """Retrieve a list of tupples of (NodeName, Info dict)"""
@@ -464,10 +464,10 @@ class VOFile:
         self.resp=503
         self.connector=connector
         self.httpCon=None
-	self.timeout=-1
-	self.size=size
+        self.timeout=-1
+        self.size=size
         self.open(URL,method)
-	
+        
 
         
     def close(self):
@@ -493,7 +493,7 @@ class VOFile:
                 ### file not found
                 raise IOError(errno.ENOENT,"Node not found",self.url)
             if self.resp.status == 401:
-	        raise IOError(errno.EACCES,"Not authorized",self.url)
+                raise IOError(errno.EACCES,"Not authorized",self.url)
             logging.debug(self.resp.read())
             raise IOError(self.resp.status,"unexpected server response %s (%d)" % ( self.resp.reason, self.resp.status),self.url)
 
@@ -504,7 +504,7 @@ class VOFile:
         self.url=URL
         self.httpCon = self.connector.getConnection(URL)
         if self.timeout < 0 : 
-	    self.timeout=time.time()
+            self.timeout=time.time()
         try:
             self.httpCon.connect()
         #except ssl.SSLError as e:
@@ -515,19 +515,19 @@ class VOFile:
         #        raise
         #    
         #    self.connector.getCert()
-	#    if time.time() - self.timeout  < 200:
+        #    if time.time() - self.timeout  < 200:
         #        return self.open(URL,method)
         except httplib.HTTPException as e:
-	    logging.critical("%s" % ( e.strerror))
+            logging.critical("%s" % ( e.strerror))
             ### we only retry for 1200 seconds, regardless
-	    if time.time() - self.timeout  < 1200:
-	        return self.open(URL,method)
+            if time.time() - self.timeout  < 1200:
+                return self.open(URL,method)
             raise
         self.closed=False
         self.httpCon.putrequest(method,URL)
         if method in ["PUT", "POST", "DELETE"]:
-	    if self.size is not None and type(self.size)==int:
-	        self.httpCon.putheader("Content-Length",self.size)
+            if self.size is not None and type(self.size)==int:
+                self.httpCon.putheader("Content-Length",self.size)
             contentType="text/xml"
             if method=="PUT":
                 import mimetypes
@@ -536,7 +536,7 @@ class VOFile:
         self.httpCon.putheader("Transfer-Encoding",'chunked')
         self.httpCon.putheader("Accept", "*/*")
         self.httpCon.endheaders()
-	self.timeout = -1
+        self.timeout = -1
 
 
     def read(self,size=None):
@@ -626,14 +626,14 @@ class Client:
         fout.close()
         fin.close()
 
-	if checkSource:
-	    checkMD5=self.getNode(src).props.get('MD5',0)
+        if checkSource:
+            checkMD5=self.getNode(src).props.get('MD5',0)
         else:
-	    checkMD5=self.getNode(dest).props.get('MD5',0)
+            checkMD5=self.getNode(dest).props.get('MD5',0)
         
         if sendMD5:
-	    if checkMD5 != md5.hexdigest():
-		raise IOError(errno.EIO,"MD5s don't match",src)
+            if checkMD5 != md5.hexdigest():
+                raise IOError(errno.EIO,"MD5s don't match",src)
             return md5.hexdigest()
         return totalBytes
 
@@ -651,7 +651,7 @@ class Client:
         ## Check that path name compiles with the standard
         filename=os.path.basename(parts.path)
         logging.debug("Checking file name: %s" %( filename))
-	logging.debug("Result: %s" % (re.match("^[\_\-\(\)\=\+\!\,\;\:\@\&\*\$\.\w\~]*$",filename)))
+        logging.debug("Result: %s" % (re.match("^[\_\-\(\)\=\+\!\,\;\:\@\&\*\$\.\w\~]*$",filename)))
         if not re.match("^[\_\-\(\)\=\+\!\,\;\:\@\&\*\$\.\w\~]*$",filename):
             raise IOError(errno.EINVAL,"Illegal vospace container name",filename)
 
@@ -674,31 +674,31 @@ class Client:
         dom=ET.parse(xmlObj)
         logging.debug("%s" %( str(dom)))
         node = Node(dom.getroot())
-	# If this is a container node and the nodlist has not already been set, try to load the children.
-	# this would be better deferred until the children are actually needed, however that would require
-	# access to a connection when the children are accessed, and thats not easy.
-	if node.isdir() and limit>0:
+        # If this is a container node and the nodlist has not already been set, try to load the children.
+        # this would be better deferred until the children are actually needed, however that would require
+        # access to a connection when the children are accessed, and thats not easy.
+        if node.isdir() and limit>0:
             node._nodeList=[]
-	    logging.debug("Loading children")
-	    nextURI = None
-	    again = True
-	    while again:
-		again = False
-		getChildrenXMLDoc=self.open(uri,os.O_RDONLY, nextURI=nextURI)
-		getChildrenDOM = ET.parse(getChildrenXMLDoc)
-		for nodesNode in getChildrenDOM.findall(Node.NODES):
-		    for child in nodesNode.findall(Node.NODE):
-			if child.get('uri') != nextURI:
-			    childNode = node.addChild(child)
-			    nextURI = childNode.uri
-			    logging.debug("added child %s" % childNode.uri)
-			    again = True
-	return(node)
+            logging.debug("Loading children")
+            nextURI = None
+            again = True
+            while again:
+                again = False
+                getChildrenXMLDoc=self.open(uri,os.O_RDONLY, nextURI=nextURI)
+                getChildrenDOM = ET.parse(getChildrenXMLDoc)
+                for nodesNode in getChildrenDOM.findall(Node.NODES):
+                    for child in nodesNode.findall(Node.NODE):
+                        if child.get('uri') != nextURI:
+                            childNode = node.addChild(child)
+                            nextURI = childNode.uri
+                            logging.debug("added child %s" % childNode.uri)
+                            again = True
+        return(node)
                     
 
     def getNodeURL(self,uri,protocol="https", method='GET', view=None, limit=0, nextURI=None):            
         """Split apart the node string into parts and return the correct URL for this node"""
-	import urllib
+        import urllib
 
         uri   = self.fixURI(uri)
         parts = urlparse(uri)
@@ -713,20 +713,20 @@ class Client:
             return "%s://%s/data/pub/vospace/%s" % (protocol, server,parts.path.strip('/'))
 
         ### this is a GET so we might have to stick some data onto the URL...
-	fields={}
+        fields={}
         if limit is not None:
-	    fields['limit']=limit
+            fields['limit']=limit
         if view is not None:
-	    fields['view'] = view
+            fields['view'] = view
         if nextURI is not None:
-	    fields['uri'] = nextURI
+            fields['uri'] = nextURI
         data=""
         if len(fields) >0 : 
-   	    data="?"+urllib.urlencode(fields)
-	URL = "%s://%s/vospace/nodes/%s%s" % ( protocol, server, parts.path.strip('/'), data)
+               data="?"+urllib.urlencode(fields)
+        URL = "%s://%s/vospace/nodes/%s%s" % ( protocol, server, parts.path.strip('/'), data)
         logging.debug("method %s " % method)
         logging.debug("Accessing URL %s" % URL)
-	return URL
+        return URL
 
     def move(self,srcURI,destURI):
         """Move srcUri to targetUri"""
@@ -740,9 +740,9 @@ class Client:
 
         con=self.open(srcURI,URL=Client.VOTransfer,mode=os.O_APPEND)
         con.write(ET.tostring(transfer))
-	con.read()
+        con.read()
         if  con.resp.status==200:
-	   return True
+           return True
         return  False
 
                     
