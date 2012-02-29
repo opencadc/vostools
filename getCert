@@ -2,10 +2,25 @@
 def getCert(certHost='www.cadc-ccda.hia-iha.nrc-cnrc.gc.ca',certfile=None,
             certQuery="/cred/proxyCert?daysValid=",daysValid=2):
     """Access the cadc certificate server"""
+
+    import os
+
     if certfile is None:
-	import os
 	certfile=os.path.join(os.getenv("HOME","/tmp"),".ssl/cadcproxy.pem")
-	
+
+    dirname=os.path.dirname(certfile)
+    try:
+        os.makedirs(dirname)
+    except OSError as e:
+        if os.path.isdir(dirname):
+            pass
+        elif e.errno==20 or e.errno==17:
+            import sys
+            sys.stderr.write(e.strerror+": %s \n" %(dirname))
+            sys.stderr.write("Expected %s to be a directory.\n" % ( dirname))
+            sys.exit(e.errno)
+        else:
+            raise e
     
     import urllib2
     
