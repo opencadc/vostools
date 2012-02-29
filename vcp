@@ -29,7 +29,7 @@ def mkdir(filename):
         return os.mkdir(filename)
 
 def copy(source,dest):    
-
+    
     ## determine if this is a directory we are copying so need to be recursive
     if isdir(source):
         ## make sure the destination exists...
@@ -46,7 +46,22 @@ def copy(source,dest):
                 if ans!='y':
                     sys.exit(errno.EEXIST)
         logging.info("%s -> %s " % ( source, dest))
-        client.copy(source,dest,sendMD5=True)
+        loopCount=0
+	waitTime=1
+        while True:
+            try:
+                client.copy(source,dest,sendMD5=True)
+	        break
+            except Exception as e:
+		logging.critical("ERROR: %s" %(e.strerror))
+                if loopCount > 10 :
+                    raise e
+	        logging.critical("Retrying in %d seconds\n" %(waitTime))
+                loopCount+=1
+                time.sleep(waitTime)
+                waitTime=2*waitTime
+                
+	
 
                 
 
