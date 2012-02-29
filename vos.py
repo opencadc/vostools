@@ -12,7 +12,12 @@ import sys
 import os
 import errno
 import xml.etree.ElementTree as ET
-BUFSIZE=8192
+
+# set a 1 MB buffer to keep the number of trips
+# around the IO loop small
+
+BUFSIZE=8388608
+#BUFSIZE=8192
 
 SERVER="www.cadc.hia.nrc.gc.ca"
 ### SERVER="scapa.cadc.dao.nrc.ca"
@@ -616,12 +621,12 @@ class Client:
         md5=hashlib.md5()
         while True:
             buf=fin.read(BUFSIZE)
-            logging.debug("Read %d bytes from %s" % ( len(buf),src))
+            # In this tight loop I don't think you want logging
+            #logging.debug("Read %d bytes from %s" % ( len(buf),src))
             if len(buf)==0:
                 break
             fout.write(buf)
             md5.update(buf)
-            logging.debug("Wrote %d bytes to %s" % ( len(buf),dest))            
             totalBytes+=len(buf)
         fout.close()
         fin.close()
