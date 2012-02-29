@@ -39,5 +39,5 @@ for arg in args:
         else:
             logging.error("%s file not found" % (arg))
     except Exception as e:
-        loggin.error("Failed trying to delete %s: %s (%d)" %(arg,e.strerror,e.errno))
+        logging.error("Failed trying to delete %s: %s (%d)" %(arg,e.strerror,e.errno))
         sys.exit(e.errno)

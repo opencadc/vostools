@@ -157,11 +157,12 @@ if __name__=='__main__':
   parser.add_option('--nstreams',type=int,help="Number of streams to run (MAX: 10)",default=1)
   parser.add_option('--exclude',help="ignore directories or files containing this pattern",default=None)
   parser.add_option('--overwrite',help="overwrite copy on server regardless of modification/size/md5 checks",action="store_true")
+  parser.add_option('--load_test',action="store_true",help="Used to stress test the VOServer, also set --nstreams to a large value")
   (opt,args)=parser.parse_args()
   if len(args)<2:
     parser.error("requires one or more source files and a single destination directory")
 
-  if opt.nstreams>10:
+  if opt.nstreams>10 and not opt.load_test:
     parser.error("Maximum of 10 streams exceeded")
 
   dest=args.pop()
