@@ -467,6 +467,40 @@ public class HttpDownloadTest
             Assert.assertNotNull(t);
             log.debug("found expected exception: " + t.toString());
             Assert.assertTrue(t.getMessage().startsWith("resource not found"));
+            Assert.assertEquals("number of retries", 0, dl.getRetriesPerformed());
+        }
+        catch (Exception unexpected)
+        {
+            log.error("unexpected exception", unexpected);
+            Assert.fail("unexpected exception: " + unexpected);
+        }
+    }
+
+    @Test
+    public void testForceRetry() throws Exception
+    {
+        log.debug("TEST: testForceRetry");
+
+        try
+        {
+            URL src = notFoundURL;
+            ByteArrayOutputStream dest = new ByteArrayOutputStream(8192);
+            HttpDownload dl = new HttpDownload(src, dest);
+            dl.setRetry(2, 1, HttpTransfer.RetryReason.ALL);
+            long t1 = System.currentTimeMillis();
+            dl.run();
+            dest.close();
+            long dt = System.currentTimeMillis() - t1;
+            Throwable t = dl.getThrowable();
+            Assert.assertNotNull(t);
+            log.debug("found expected exception: " + t.toString());
+            Assert.assertTrue(t.getMessage().startsWith("resource not found"));
+
+            Assert.assertEquals("number of retries", 2, dl.getRetriesPerformed());
+
+            // should be 1 + 2 = 3 seconds of sleeping in there, plus 3 connection attempts
+            Assert.assertTrue("total time spent ~ 3", dt > 3000);
+            Assert.assertTrue("total time spent ~ 3", dt < 4000);
         }
         catch (Exception unexpected)
         {

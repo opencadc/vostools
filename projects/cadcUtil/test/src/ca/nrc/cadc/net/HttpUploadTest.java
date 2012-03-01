@@ -108,6 +108,7 @@ public class HttpUploadTest
     private static File SSL_CERT;
     private static File SSL_KEY;
 
+    private URL brokenHttpURL;
     private URL httpsURL;
     private File srcFile;
     private byte[] origBytes;
@@ -151,6 +152,7 @@ public class HttpUploadTest
         InetAddress localhost = InetAddress.getLocalHost();
         String hostname = localhost.getCanonicalHostName();
         this.httpsURL = new URL("https://"+hostname+"/data/pub/TEST/"+srcFile.getName());
+        this.brokenHttpURL = new URL("http://"+hostname+"/data/pub/NoSuchThing/"+srcFile.getName());
     }
 
     /**
@@ -176,10 +178,10 @@ public class HttpUploadTest
         {
             log.debug("caught expected: " + expected);
         }
-        catch (Throwable t)
+        catch (Exception unexpected)
         {
-            t.printStackTrace();
-            Assert.fail("unexpected exception: " + t);
+            log.error("unexpected exception", unexpected);
+            Assert.fail("unexpected exception: " + unexpected);
         }
     }
 
@@ -198,10 +200,50 @@ public class HttpUploadTest
         {
             log.debug("caught expected: " + expected);
         }
-        catch (Throwable t)
+        catch (Exception unexpected)
         {
-            t.printStackTrace();
-            Assert.fail("unexpected exception: " + t);
+            log.error("unexpected exception", unexpected);
+            Assert.fail("unexpected exception: " + unexpected);
+        }
+    }
+
+    @Test
+    public void testForceRetry() throws Exception
+    {
+        log.debug("TEST: testForceRetry");
+        URL dest = brokenHttpURL;
+        File src = srcFile;
+        File tmp = null;
+        try
+        {
+            HttpUpload up = new HttpUpload(src, dest);
+            up.setRetry(2, 1, HttpTransfer.RetryReason.ALL);
+
+            long t1 = System.currentTimeMillis();
+            up.run();
+            long dt = System.currentTimeMillis() - t1;
+            
+            Throwable t = up.getThrowable();
+            Assert.assertNotNull(t);
+            log.debug("found expected exception: " + t.toString());
+            Assert.assertTrue("response code", t.getMessage().contains("401"));
+            Assert.assertTrue(t.getMessage().toLowerCase().contains("unauthorized"));
+
+            Assert.assertEquals("number of retries", 2, up.getRetriesPerformed());
+
+            // should be 1 + 2 = 3 seconds of sleeping in there, plus 3 connection attempts
+            Assert.assertTrue("total time spent ~ 3", dt > 3000);
+            Assert.assertTrue("total time spent ~ 3", dt < 4000);
+        }
+        catch (Exception unexpected)
+        {
+            log.error("unexpected exception", unexpected);
+            Assert.fail("unexpected exception: " + unexpected);
+        }
+        finally
+        {
+            if (tmp != null && tmp.exists())
+                tmp.delete();
         }
     }
 
@@ -248,10 +290,10 @@ public class HttpUploadTest
             byte[] resultBytes = FileUtil.readFile(tmp);
             Assert.assertArrayEquals("bytes", origBytes, resultBytes);
         }
-        catch (Throwable t)
+        catch (Exception unexpected)
         {
-            t.printStackTrace();
-            Assert.fail("unexpected exception: " + t);
+            log.error("unexpected exception", unexpected);
+            Assert.fail("unexpected exception: " + unexpected);
         }
         finally
         {
@@ -303,10 +345,10 @@ public class HttpUploadTest
             byte[] resultBytes = FileUtil.readFile(tmp);
             Assert.assertArrayEquals("bytes", origBytes, resultBytes);
         }
-        catch (Throwable t)
+        catch (Exception unexpected)
         {
-            t.printStackTrace();
-            Assert.fail("unexpected exception: " + t);
+            log.error("unexpected exception", unexpected);
+            Assert.fail("unexpected exception: " + unexpected);
         }
         finally
         {
@@ -359,10 +401,10 @@ public class HttpUploadTest
             byte[] resultBytes = FileUtil.readFile(tmp);
             Assert.assertArrayEquals("bytes", origBytes, resultBytes);
         }
-        catch (Throwable t)
+        catch (Exception unexpected)
         {
-            t.printStackTrace();
-            Assert.fail("unexpected exception: " + t);
+            log.error("unexpected exception", unexpected);
+            Assert.fail("unexpected exception: " + unexpected);
         }
         finally
         {

@@ -95,6 +95,7 @@ import ca.nrc.cadc.net.event.ProgressListener;
 import ca.nrc.cadc.net.event.TransferEvent;
 import ca.nrc.cadc.net.event.TransferListener;
 import ca.nrc.cadc.util.FileMetadata;
+import ca.nrc.cadc.util.StringUtil;
 
 /**
  *
@@ -108,13 +109,47 @@ public abstract class HttpTransfer implements Runnable
 
     public static final String SERVICE_RETRY = "Retry-After";
 
+    public static enum RetryReason
+    {
+        /**
+         * Never retry.
+         */
+        NONE(0),
+
+        /**
+         * Retry when the server says to do so (503 + Retry-After).
+         */
+        SERVER(1),
+
+        /**
+         * Retry for all failures deemed transient (undocumented). This option
+         * includes the SERVER reasons.
+         */
+        TRANSIENT(2),
+
+        /**
+         * Retry for all failures (yes, even 4xx failures). This option includes
+         * the TRANSIENT reasons.
+         */
+        ALL(3);
+
+        private int value;
+        
+        private RetryReason(int val) { this.value = val; }
+    }
+    
     /**
-     * The maximum retry delay (120 seconds).
+     * The maximum retry delay (128 seconds).
      */
-    public static final int MAX_RETRY_DELAY = 120;
+    public static final int MAX_RETRY_DELAY = 128;
+    public static final int DEFAULT_RETRY_DELAY = 30;
 
     protected int maxRetries = 0;
+    protected int retryDelay = 0;
+    protected RetryReason retryReason = RetryReason.SERVER;
 
+    protected int numRetries = 0;
+    protected int curRetryDelay = 0; // scaled after each retry
     
     protected int bufferSize = 8192;
     protected OverwriteChooser overwriteChooser;
@@ -154,17 +189,35 @@ public abstract class HttpTransfer implements Runnable
     }
 
     /**
-     * Enable retry (maxRetries > 0) and set the maximum numbr of times
-     * to retry before failing. Retry will only be attempted if the server
-     * responds with a 503 and a usable Retry-After header value.
-     * </p><p>
-     * Set this to Integer.MAX_VALUE to retry indefinitely.
+     * Enable retry (maxRetries > 0) and set the maximum number of times
+     * to retry before failing. The default is to retry only when the server
+     * says to do so (e.g. 503 + Retry-After).
      * 
      * @param maxRetries
      */
     public void setMaxRetries(int maxRetries)
     {
         this.maxRetries = maxRetries;
+    }
+
+    /**
+     * Configure retry of failed transfers. If configured to retry, transfers will
+     * be retried when failing for the reason which match the specified reason up
+     * to maxRetries times. The retryDelay (in seconds) is scaled by a factor of two
+     * for each subsequent retry (eg, 2, 4, 8, ...) in cases where the server response
+     * does not provide a retry delay.
+     * </p><p>
+     * The default reason is RetryReason.SERVER.
+     *
+     * @param maxRetries number of times to retry, 0 or negative to disable retry
+     * @param retryDelay delay in seconds before retry
+     * @param reason
+     */
+    public void setRetry(int maxRetries, int retryDelay, RetryReason reason)
+    {
+        this.maxRetries = maxRetries;
+        this.retryDelay = retryDelay;
+        this.retryReason = reason;
     }
     
     public URL getURL() { return remoteURL; }
@@ -229,6 +282,21 @@ public abstract class HttpTransfer implements Runnable
         fireEvents = (progressListener != null || transferListener != null);
     }
 
+    /**
+     * Get the total number of retries performed.
+     *
+     * @return number of retries performed
+     */
+    public int getRetriesPerformed()
+    {
+        return numRetries;
+    }
+
+    /**
+     * If the transfer ultimately failed, this will return the last failure.
+
+     * @return the last failure, or null if successful
+     */
     public Throwable getThrowable() { return failure; }
     
     public void terminate()
@@ -272,6 +340,77 @@ public abstract class HttpTransfer implements Runnable
         public String toString() { return "TransientException["+msg+","+retryDelay+"]"; }
     }
 
+    /**
+     *  Determine if the failure was transient according to the config options.
+     * @throws TransietnExceptuion to cause retry
+     */
+    protected void checkTransient(int code, String msg, HttpURLConnection conn)
+        throws TransientException
+    {
+        if (RetryReason.NONE.equals(retryReason))
+            return;
+        
+        boolean trans = false;
+        long dt = 0;
+
+        // try to get the retry delay from the response
+        if (code == HttpURLConnection.HTTP_UNAVAILABLE)
+        {
+            msg = "server busy";
+            String retryAfter = conn.getHeaderField(SERVICE_RETRY);
+            log.debug("got " + HttpURLConnection.HTTP_UNAVAILABLE + " with " + SERVICE_RETRY + ": " + retryAfter);
+            if (StringUtil.hasText(retryAfter))
+            {
+                try
+                {
+                    dt = Long.parseLong(retryAfter);
+                    trans = true; // retryReason==SERVER satisfied
+                    if (dt > MAX_RETRY_DELAY)
+                        dt = MAX_RETRY_DELAY;
+                }
+                catch(NumberFormatException nex)
+                {
+                    log.warn(SERVICE_RETRY + " after a 503 was not a number: " + retryAfter + ", ignoring");
+                }
+            }
+        }
+        
+        if (RetryReason.TRANSIENT.equals(retryReason))
+        {
+            switch(code)
+            {
+                case HttpURLConnection.HTTP_UNAVAILABLE:
+                case HttpURLConnection.HTTP_CLIENT_TIMEOUT:
+                case HttpURLConnection.HTTP_GATEWAY_TIMEOUT:
+                case HttpURLConnection.HTTP_INTERNAL_ERROR:     // use larger delays for this?
+                case HttpURLConnection.HTTP_PRECON_FAILED:      // ??
+                case HttpURLConnection.HTTP_PAYMENT_REQUIRED:   // maybe it will become free :-)
+                    trans = true;
+            }
+        }
+        if (RetryReason.ALL.equals(retryReason))
+        {
+            trans = true;
+        }
+
+        if (trans && numRetries < maxRetries)
+        {
+            if (dt == 0)
+            {
+                if (curRetryDelay == 0)
+                    curRetryDelay = retryDelay;
+                if (curRetryDelay > 0)
+                {
+                    dt = curRetryDelay;
+                    curRetryDelay *= 2;
+                }
+                else
+                    dt = DEFAULT_RETRY_DELAY;
+            }
+            numRetries++;
+            throw new TransientException(msg, dt);
+        }
+    }
 
     protected void findEventID(HttpURLConnection conn)
     {

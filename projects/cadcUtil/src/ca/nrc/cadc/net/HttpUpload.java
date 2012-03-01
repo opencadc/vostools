@@ -190,9 +190,8 @@ public class HttpUpload extends HttpTransfer
             {
                 try
                 {
-                    int num = numRetries;
                     long dt = 1000L*ex.retryDelay;
-                    log.debug("retry "+num+" sleeping  for " + dt);
+                    log.debug("retry "+numRetries+" sleeping  for " + dt);
                     fireEvent(TransferEvent.RETRYING);
                     Thread.sleep(dt);
                 }
@@ -279,7 +278,7 @@ public class HttpUpload extends HttpTransfer
             }
             else if (failure != null)
             {
-                log.debug("failed", failure);
+                log.debug("failed: " + failure);
                 fireEvent(failure);
             }
             else if (!throwTE)
@@ -432,6 +431,7 @@ public class HttpUpload extends HttpTransfer
         if (code != HttpURLConnection.HTTP_OK)
         {
             String msg = "(" + code + ") " + conn.getResponseMessage();
+            checkTransient(code, msg, conn);
             switch(code)
             {
                 case HttpURLConnection.HTTP_UNAUTHORIZED:
@@ -442,26 +442,6 @@ public class HttpUpload extends HttpTransfer
                     throw new IOException("resource not found " + msg);
                 case HttpURLConnection.HTTP_ENTITY_TOO_LARGE:
                     throw new IOException("No space left - " + msg);
-
-                case HttpURLConnection.HTTP_UNAVAILABLE:
-                    String retryAfter = conn.getHeaderField(SERVICE_RETRY);
-                    log.debug("got " + HttpURLConnection.HTTP_UNAVAILABLE + " with " + SERVICE_RETRY + ": " + retryAfter);
-                    if (StringUtil.hasText(retryAfter))
-                    {
-                        try
-                        {
-                            long dt = Long.parseLong(retryAfter);
-                            if (dt > 0 && dt < MAX_RETRY_DELAY && numRetries < maxRetries)
-                                {
-                                    numRetries++;
-                                    throw new TransientException(msg, dt);
-                                }
-                        }
-                        catch(NumberFormatException nex)
-                        {
-                            log.warn(SERVICE_RETRY + " after a 503 was not a number: " + retryAfter + ", ignoring");
-                        }
-                    }
                 default:
                     throw new IOException(msg);
             }

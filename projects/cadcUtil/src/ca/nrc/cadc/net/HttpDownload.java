@@ -129,8 +129,6 @@ public class HttpDownload extends HttpTransfer
     private long size = -1;
     private long lastModified = -1;
 
-    private int numRetries = 0;
-
     /**
      * Constructor with default user-agent string.
      * 
@@ -321,9 +319,8 @@ public class HttpDownload extends HttpTransfer
             {
                 try
                 {
-                    int num = numRetries;
-                    long dt = 1000L*ex.retryDelay;
-                    log.debug("retry "+num+" sleeping  for " + dt);
+                    long dt = 1000L * ex.retryDelay; // to milliseconds
+                    log.debug("retry "+numRetries+" sleeping  for " + dt);
                     fireEvent(TransferEvent.RETRYING);
                     Thread.sleep(dt);
                 }
@@ -380,7 +377,7 @@ public class HttpDownload extends HttpTransfer
         {
             failure = t;
             if (log.isDebugEnabled())
-                t.printStackTrace();
+                log.debug("unexpected transfer failure", t);
         }
         finally
         {
@@ -662,6 +659,7 @@ public class HttpDownload extends HttpTransfer
             {
                 msg = msg + ": " + body;
             }
+            checkTransient(code, msg, conn);
             switch(code)
             {
                 case HttpURLConnection.HTTP_UNAUTHORIZED:
@@ -670,31 +668,8 @@ public class HttpDownload extends HttpTransfer
                     throw new IOException("authorization failed " + msg);
                 case HttpURLConnection.HTTP_NOT_FOUND:
                     throw new IOException("resource not found " + msg);
-
-                case HttpURLConnection.HTTP_UNAVAILABLE:
-                    
-                    String retryAfter = conn.getHeaderField(SERVICE_RETRY);
-                    log.debug("got " + HttpURLConnection.HTTP_UNAVAILABLE + " with " + SERVICE_RETRY + ": " + retryAfter);
-                    if (StringUtil.hasText(retryAfter))
-                    {
-                        try
-                        {
-                            long dt = Long.parseLong(retryAfter);
-                            if (dt > 0 && dt < MAX_RETRY_DELAY && numRetries < maxRetries)
-                                {
-                                    numRetries++;
-                                    throw new TransientException("server busy", dt);
-                                }
-                        }
-                        catch(NumberFormatException nex)
-                        {
-                            log.warn(SERVICE_RETRY + " after a 503 was not a number: " + retryAfter + ", ignoring");
-                        }
-                    }
-
                 default:
                     throw new IOException(msg);
-
             }
         }
         return code;

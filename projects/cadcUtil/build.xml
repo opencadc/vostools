@@ -126,7 +126,7 @@
                 <pathelement path="${build}/test/class"/>
                 <pathelement path="${testingJars}"/>
             </classpath>
-
+            
             <test name="ca.nrc.cadc.net.HttpDownloadTest"/>
             <!-- upload test has a lot of pre-conditions
             <test name="ca.nrc.cadc.net.HttpUploadTest"/>
