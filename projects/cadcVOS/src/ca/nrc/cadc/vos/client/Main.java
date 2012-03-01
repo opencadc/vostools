@@ -588,7 +588,7 @@ public class Main implements Runnable
             sb.append(pad(name,32));
             sb.append(pad(getContentLength(child,true),12));
             sb.append(pad(safePropertyRef(child, VOS.PROPERTY_URI_ISPUBLIC),8));
-            sb.append(pad(safePropertyRef(n, VOS.PROPERTY_URI_DATE),26));
+            sb.append(pad(safePropertyRef(child, VOS.PROPERTY_URI_DATE),26));
             sb.append(child.getUri().toString());
             msg(sb.toString());
         }
