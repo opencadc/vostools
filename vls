@@ -122,7 +122,7 @@ for node in args:
     try:
         infoList= vos.getNode(node,limit=500).getInfoList()
     except Exception as e:
-        logging.error("Error getting listing of %s: %s (%d)" % (node,e.strerror,e.errno))
+        logging.error("Error getting listing of %s: %s (%d)" % (node,str(e),e.errno))
         sys.exit(e.errno)
         
     if not len(infoList)>0:

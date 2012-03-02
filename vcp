@@ -53,7 +53,7 @@ def copy(source,dest):
                 client.copy(source,dest,sendMD5=True)
 	        break
             except Exception as e:
-		logging.critical("ERROR: %s" %(e.strerror))
+		logging.critical("ERROR: %s" %str(e))
                 if loopCount > 10 :
                     raise e
 	        logging.critical("Retrying in %d seconds\n" %(waitTime))
