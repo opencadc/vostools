@@ -523,8 +523,7 @@ class VOFile:
         #    if time.time() - self.timeout  < 200:
         #        return self.open(URL,method)
         except httplib.HTTPException as e:
-            logging.critical("%s" % ( str(e))
-            ### we only retry for 1200 seconds, regardless
+            logging.critical("%s" % ( str(e)))
             if time.time() - self.timeout  < 1200:
                 return self.open(URL,method)
             raise
