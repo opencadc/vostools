@@ -75,6 +75,11 @@ import java.net.InetAddress;
 import java.net.URL;
 import java.net.URLConnection;
 import java.security.KeyStore;
+import java.security.cert.CertificateException;
+import java.security.cert.CertificateExpiredException;
+import java.security.cert.CertificateNotYetValidException;
+import java.util.Calendar;
+import java.util.GregorianCalendar;
 
 import javax.net.SocketFactory;
 import javax.net.ssl.HttpsURLConnection;
@@ -447,6 +452,60 @@ public class SSLUtilTest
             Assert.fail("unexpected exception: " + t);
         }
         
+    }
+    
+    @Test
+    public void testValidSubject() throws Exception
+    {
+        boolean thrown = false;
+        
+        // subject with no credentials
+        Subject subject = new Subject();
+        try
+        {
+            SSLUtil.validateSubject(subject, null);
+        }
+        catch(CertificateException ex)
+        {
+            thrown = true;
+        }
+        Assert.assertTrue("CertificateException expected", thrown);
+        
+        subject = SSLUtil.createSubject(SSL_CERT, SSL_KEY);
+        
+        // subject with valid credentials
+        SSLUtil.validateSubject(subject, null);
+        
+        GregorianCalendar date = new GregorianCalendar();
+        
+        thrown = false;
+        // Move the date way in the past so the certificate should
+        // not be valid yet
+        date.add(Calendar.YEAR, -15);
+        try
+        {
+            SSLUtil.validateSubject(subject, date.getTime());
+        }
+        catch(CertificateNotYetValidException ex)
+        {
+            thrown = true;
+        }
+        Assert.assertTrue("CertificateNotYetValidException expected", thrown);
+        
+        thrown = false;
+        // Move the date way in the future so the certificate should
+        // not be valid anymore (double the number of years we moved
+        // back in the previous step
+        date.add(Calendar.YEAR, 30);
+        try
+        {
+            SSLUtil.validateSubject(subject, date.getTime());
+        }
+        catch(CertificateExpiredException ex)
+        {
+            thrown = true;
+        }
+        Assert.assertTrue("CertificateExpiredException expected", thrown);
     }
 
 }

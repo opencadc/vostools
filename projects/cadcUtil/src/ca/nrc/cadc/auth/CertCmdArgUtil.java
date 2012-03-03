@@ -70,6 +70,7 @@
 package ca.nrc.cadc.auth;
 
 import java.io.File;
+import java.security.cert.CertificateException;
 import java.security.cert.CertificateExpiredException;
 import java.security.cert.CertificateNotYetValidException;
 import java.security.cert.X509Certificate;
@@ -176,6 +177,10 @@ public class CertCmdArgUtil
      * exist and are readable, init from them; otherwise, throw
      * IllegalArgumentException runtime exception.
      * 
+     * Note: the returned subject's credentials might be not valid. Use
+     * ca.nrc.cadc.auth.validateSubject() method to check the validity of
+     * the Subject's credentials.
+     * 
      * @param argMap
      * @param returnNullOnNotFound
      *            return null if certficate files are not found in the
@@ -238,58 +243,7 @@ public class CertCmdArgUtil
                     }
             }
         }
-        // check validity
-        if (subject != null)
-        {
-            Set<X509CertificateChain> certs = subject.getPublicCredentials(X509CertificateChain.class);
-            if (certs.size() == 0)
-            {
-                // subject without certs means something went wrong above
-                throw new RuntimeException("BUG: failed to load certficate");
-            }
-            DateFormat df = DateUtil.getDateFormat(DateUtil.ISO_DATE_FORMAT, DateUtil.LOCAL);
-            X509CertificateChain chain = certs.iterator().next(); // the first one
-            Date start = null;
-            Date end = null;
-            for (X509Certificate c : chain.getChain())
-            {
-                try
-                {
-                    start = c.getNotBefore();
-                    end = c.getNotAfter();
-                    c.checkValidity();
-
-                }
-                catch (CertificateExpiredException exp)
-                {
-		    String msg = "certificate has expired (valid from " + 
-		                 df.format(start) + " to " + df.format(end) + ")";
-		    if (!returnNullOnNotFound)
-		    {
-		        throw new RuntimeException(msg);
-		    }
-		    else
-		    {
-                        log.error(msg);
-			return null;
-		    }
-                }
-                catch (CertificateNotYetValidException exp)
-                {
-                    String msg = "certificate not valid yet (valid from " + 
-		       df.format(start) + " to " + df.format(end) + ")";
-		    if (!returnNullOnNotFound)
-		    {
-		        throw new RuntimeException(msg);
-		    }
-		    else
-		    {
-                        log.error(msg);
-			return null;
-		    }
-                }
-            }
-        }
         return subject;
     }
+
 }

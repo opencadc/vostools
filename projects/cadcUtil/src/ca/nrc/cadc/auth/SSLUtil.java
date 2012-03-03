@@ -91,11 +91,14 @@ import java.security.cert.Certificate;
 import java.security.cert.CertificateException;
 import java.security.cert.CertificateExpiredException;
 import java.security.cert.CertificateFactory;
+import java.security.cert.CertificateNotYetValidException;
 import java.security.cert.X509Certificate;
 import java.security.spec.InvalidKeySpecException;
 import java.security.spec.PKCS8EncodedKeySpec;
 import java.security.spec.RSAPrivateCrtKeySpec;
+import java.text.DateFormat;
 import java.util.ArrayList;
+import java.util.Date;
 import java.util.Enumeration;
 import java.util.Iterator;
 import java.util.List;
@@ -114,6 +117,7 @@ import javax.security.auth.Subject;
 
 import org.apache.log4j.Logger;
 
+import ca.nrc.cadc.date.DateUtil;
 import ca.nrc.cadc.util.Base64;
 import ca.nrc.cadc.util.FileUtil;
 
@@ -811,4 +815,47 @@ public class SSLUtil
         String pemStr = SSLUtil.buildPEM(certChainStr, bytesPrivateKey);
         return pemStr;
     }*/
+    
+
+    /**
+     * Checks whether the subject's certificate credentials are valid
+     * at a given date. If date is missing, current time is used as 
+     * reference. 
+     * @param subject Subject to check
+     * @param date Date the certificate is verified against. If null,
+     * the credentials are verified against current time.
+     * @throws CertificateExpired Subject has no associated certificate
+     * credentials or there is a problem with the existing certificate.
+     * @throws CertificateExpiredException Certificate is expired.
+     * @throws CertificateNotYetValidException Certificate not valid yet.
+     */
+    public static void validateSubject(Subject subject, Date date)
+            throws CertificateException,
+            CertificateExpiredException,
+            CertificateNotYetValidException
+    {
+        if (subject != null)
+        {
+            Set<X509CertificateChain> certs = subject
+                    .getPublicCredentials(X509CertificateChain.class);
+            if (certs.size() == 0)
+            {
+                // subject without certs
+                throw new CertificateException(
+                        "No certificates associated with subject");
+            }
+            X509CertificateChain chain = certs.iterator().next();
+            for (X509Certificate c : chain.getChain())
+            {
+                if (date != null)
+                {
+                    c.checkValidity(date);
+                }
+                else
+                {
+                    c.checkValidity();
+                }
+            }
+        }
+    }
 }
