@@ -69,7 +69,7 @@ class Connection:
             certfile = os.path.join(certDir,"cadcproxy.pem")
             logging.debug("looking for certificate in %s" % ( certfile))
         if not os.access(certfile,os.F_OK):
-            raise EnvironmentError(errno.EACCES,"No certifacte file found at %s " %(certfile))
+            raise EnvironmentError(errno.EACCES,"No certifacte file found at %s\n (Perhaps use getCert to pull one)" %(certfile))
 
         logging.debug("requesting password")
 
@@ -89,7 +89,7 @@ class Connection:
         certfile=self.certfile
         logging.debug("Connecting to %s://%s using %s" % (parts.scheme,parts.netloc,certfile))
         
-        import httplib
+        import httplib, ssl
         try:
             if parts.scheme=="https":
                 connection = httplib.HTTPSConnection(parts.netloc,key_file=certfile,cert_file=certfile,timeout=600)
@@ -98,6 +98,10 @@ class Connection:
         except httplib.NotConnected as e:
             logging.error("HTTP connection to %s failed \n" % (parts.netloc))
             logging.error("%s \n" % ( str(e)))
+            raise IOError(errno.ENTCONN,"VOSpace connection failed",parts.netloc)
+        except ssl.SSLError as e:
+            logging.error(str(e))
+            logging.error("Please update your certificate, perhaps using the getCert utility program that is part of the cadcVOFS distribution.")
             raise IOError(errno.ENTCONN,"VOSpace connection failed",parts.netloc)
         logging.debug("Returning connection " )
         return connection

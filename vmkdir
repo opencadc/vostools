@@ -29,7 +29,14 @@ if len(args)>1:
    parser.error("Only one directory can be built per call")
 
 logging.info("Creating ContainerNode (directory) %s" % ( args[0]))
-client=vos.Client(certFile=opt.certfile)
+
+try:
+    client=vos.Client(certFile=opt.certfile)
+except Exception as e:
+    logging.error("Conneciton failed:  %s" %  (str(e)))
+    sys.exit(e.errno)
+
+
 if not client.access(args[0]):
    client.mkdir(args[0])	
 elif client.isdir(args[0]):

@@ -13,7 +13,12 @@ nodeDict={}
 class ThreadCopy(threading.Thread):
   def __init__(self,queue):
     super( ThreadCopy, self ).__init__()
-    self.client=vos.Client()
+
+    try:
+      self.client=vos.Client()
+    except Exception as e:
+      logging.error("Conneciton failed:  %s" %  (str(e)))
+      sys.exit(e.errno)
     self.queue=queue
     self.filesSent=0
     self.filesSkipped=0
