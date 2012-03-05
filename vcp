@@ -72,7 +72,7 @@ if __name__=='__main__':
 
     from optparse import OptionParser
     import logging, sys
-    import vofs, errno, os
+    import vos, errno, os
     
     parser=OptionParser()
     parser.add_option("-i","--interrogate",action="store_true",help="Ask before overwriting files")
@@ -95,7 +95,7 @@ if __name__=='__main__':
 
 
     try:
-        client=vofs.Client(certFile=opt.certfile)
+        client=vos.Client(certFile=opt.certfile)
     except Exception as e:
         logging.error("Conneciton failed:  %s" %  (str(e)))
         sys.exit(e.errno)

@@ -1,7 +1,7 @@
 #!python
 
 """vls:  list the contents of a voSpace"""
-import vofs
+import vos
 import optparse
 import logging
 import os,sys
@@ -80,7 +80,7 @@ if len(args) < 1  :
 logging.debug("Connecting to vospace using certificate %s" % (opt.certfile))
 
 try:
-    vos=vofs.Client(certFile=opt.certfile)
+    vos=vos.Client(certFile=opt.certfile)
 except Exception as e:
     logging.error("Conneciton failed:  %s" %  (str(e)))
     sys.exit(e.errno)

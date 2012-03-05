@@ -2,7 +2,7 @@
 """Create a directory (ContainerNode) in the VOSpace repositotry"""
 
 
-import vofs
+import vos
 import time
 import optparse, os, sys, logging
 
@@ -26,7 +26,7 @@ if opt.debug:
 
 
 try:
-    client=vofs.Client(certFile=opt.certfile)
+    client=vos.Client(certFile=opt.certfile)
 except Exception as e:
     logging.error("Conneciton failed:  %s" %  (str(e)))
     sys.exit(e.errno)
