@@ -1,7 +1,7 @@
 #!python
 """A script for sending files to VOSpace via multiple connection streams."""
 
-import vos, sys
+import vofs, sys
 import threading, Queue
 import datetime, optparse
 
@@ -13,7 +13,7 @@ nodeDict={}
 class ThreadCopy(threading.Thread):
   def __init__(self,queue):
     super( ThreadCopy, self ).__init__()
-    self.client=vos.Client()
+    self.client=vofs.Client()
     self.queue=queue
     self.filesSent=0
     self.filesSkipped=0
@@ -171,7 +171,7 @@ if __name__=='__main__':
   ## Currently we don't create nodes in sync and we don't sync onto files
   if opt.verbose:
     sys.stdout.write("Connecting to VOSpace\n")
-  c=vos.Client()
+  c=vofs.Client()
   destIsDir=c.isdir(dest)
 
   ### build a complete file list given all the things on the command line

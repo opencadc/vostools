@@ -72,7 +72,7 @@ if __name__=='__main__':
 
     from optparse import OptionParser
     import logging, sys
-    import vos, errno, os
+    import vofs, errno, os
     
     parser=OptionParser()
     parser.add_option("-i","--interrogate",action="store_true",help="Ask before overwriting files")
@@ -93,7 +93,7 @@ if __name__=='__main__':
         
     logging.basicConfig(level=logLevel,format="%(asctime)s - %(module)s.%(funcName)s: %(message)s")
 
-    client=vos.Client(certFile=opt.certfile)
+    client=vofs.Client(certFile=opt.certfile)
     
     dest=args.pop()
 
