@@ -25,7 +25,11 @@ if opt.debug:
     logging.basicConfig(level=logging.DEBUG,format="vcp:%(module)s.%(funcName)s %(message)s")
 
 
-client=vofs.Client(certFile=opt.certfile)
+try:
+    client=vofs.Client(certFile=opt.certfile)
+except Exception as e:
+    logging.error("Conneciton failed:  %s" %  (str(e)))
+    sys.exit(e.errno)
 
 for arg in args:
     if arg[0:4]!="vos:":

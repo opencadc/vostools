@@ -93,8 +93,13 @@ if __name__=='__main__':
         
     logging.basicConfig(level=logLevel,format="%(asctime)s - %(module)s.%(funcName)s: %(message)s")
 
-    client=vofs.Client(certFile=opt.certfile)
-    
+
+    try:
+        client=vofs.Client(certFile=opt.certfile)
+    except Exception as e:
+        logging.error("Conneciton failed:  %s" %  (str(e)))
+        sys.exit(e.errno)
+
     dest=args.pop()
 
     for source in args:
