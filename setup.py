@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 
-from __version__ import version
+from vofs.__version__ import version
 try:
     from setuptools import setup, find_packages
 except ImportError:
@@ -14,7 +14,7 @@ setup(name="vofs",
       description="CADC VOSpace Filesystem",
       author="JJ Kavelaars",
       author_email="jj.kavelaars@nrc.gc.ca",
-      py_modules=['fuse','vos'],
+      packages=['vofs'],
       scripts=['getCert','vsync','vcp','vrm','vls','vmkdir','mountvofs','vrmdir'],
       classifiers=[
         'Development Status :: 4 - Beta',
