@@ -158,8 +158,8 @@ class Node:
         self.isPublic=False
         if self.props.get('ispublic','false')=='true':
             self.isPublic=True
-        self.groupwrite = self.props.get('groupwrite','NONE')
-        self.groupread = self.props.get('groupread','NONE')
+        self.groupwrite = self.props.get('groupwrite','')
+        self.groupread = self.props.get('groupread','')
         self.setattr()
         self.setxattr()
 
@@ -314,12 +314,12 @@ class Node:
             
             changed += self.chrgrp(self.groupread)
         else:
-            changed += self.chrgrp('NONE')
+            changed += self.chrgrp('')
 
         if  mode & S_IWGRP :
            changed += self.chwgrp(self.groupwrite)
         else:
-           changed += self.chwgrp('NONE')  
+           changed += self.chwgrp('')  
 
         logging.debug("%d -> %s" % ( changed, changed>0))
         return changed>0
@@ -410,8 +410,8 @@ class Node:
         writeGroup = self.props.get('groupwrite','NONE')
         if writeGroup != 'NONE':
             perm[5]='w'
-        readGroup = self.props.get('groupread',"NONE")
-        if readGroup != "NONE":
+        readGroup = self.props.get('groupread','NONE')
+        if readGroup != 'NONE':
             perm[4]='r'
         return {"permisions": string.join(perm,''),
                 "creator": creator,
