@@ -3,14 +3,14 @@
 
 from sys import argv, exit, platform
 import time
-from vofs.fuse import FUSE, Operations, FuseOSError, LoggingMixIn
-import vofs.fuse
+from vos.fuse import FUSE, Operations, FuseOSError, LoggingMixIn
+import vos.fuse
 import tempfile
 from threading import Lock
 from errno import EACCES, EIO, ENOENT, EISDIR, ENOTDIR, ENOTEMPTY, EPERM, EEXIST, ENODATA
 ENOATTR=93
 import os
-import vofs
+import vos
 from os import O_RDONLY, O_WRONLY, O_RDWR, O_APPEND
 import logging
 READBUF=8192
@@ -71,7 +71,7 @@ class VOFS(LoggingMixIn, Operations):
             os.makedirs(self.cache_dir)
 
         ## All communication with the VOSpace goes through this client connection.
-        self.client = vofs.Client(rootNode=root,conn=conn)
+        self.client = vos.Client(rootNode=root,conn=conn)
 
     def __call__(self, op, path, *args):
         return super(VOFS, self).__call__(op, path, *args)
@@ -656,12 +656,12 @@ if __name__ == "__main__":
         logging.basicConfig(level=logging.DEBUG,format="%(asctime)s %(module)s.%(funcName)s %(message)s",filename=opt.log)
         forground=True
     elif opt.verbose:
-        logging.basicConfig(level=logging.INFO,format="vofs:%(module)s.%(funcName)s %(message)s",filename=opt.log)
+        logging.basicConfig(level=logging.INFO,format="vos:%(module)s.%(funcName)s %(message)s",filename=opt.log)
     else:
-        logging.basicConfig(level=logging.ERROR,format="vofs:%(module)s.%(funcName)s %(message)s",filename=opt.log)
+        logging.basicConfig(level=logging.ERROR,format="vos:%(module)s.%(funcName)s %(message)s",filename=opt.log)
 
     logging.debug("Checking connetion to VOSpace ")
-    conn=vofs.Connection(certfile=opt.certfile)
+    conn=vos.Connection(certfile=opt.certfile)
     logging.debug("Got a certificate, connections should work")
 
     root = opt.vospace
