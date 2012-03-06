@@ -137,5 +137,5 @@ if __name__=='__main__':
         try: 
             copy(source,thisDest)
         except Exception as e:
-            logging.error("Failed to copy %s to %s:  %s (%d)" %(source, thisDest, e.strerror, e.errno))
+            logging.error("Failed to copy %s to %s:  %s (%d)" %(source, thisDest, str(e), e.errno))
             sys.exit(e.errno)
