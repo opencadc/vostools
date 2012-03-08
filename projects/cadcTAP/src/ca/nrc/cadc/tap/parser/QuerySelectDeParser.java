@@ -6,25 +6,15 @@
 package ca.nrc.cadc.tap.parser;
 
 import java.util.Iterator;
-import java.util.List;
 import net.sf.jsqlparser.expression.ExpressionVisitor;
 import net.sf.jsqlparser.schema.Column;
 import net.sf.jsqlparser.schema.Table;
-import net.sf.jsqlparser.statement.select.AllColumns;
-import net.sf.jsqlparser.statement.select.AllTableColumns;
-import net.sf.jsqlparser.statement.select.ColumnIndex;
 import net.sf.jsqlparser.statement.select.ColumnReference;
 import net.sf.jsqlparser.statement.select.FromItem;
 import net.sf.jsqlparser.statement.select.Join;
-import net.sf.jsqlparser.statement.select.Limit;
-import net.sf.jsqlparser.statement.select.OrderByElement;
 import net.sf.jsqlparser.statement.select.PlainSelect;
-import net.sf.jsqlparser.statement.select.SelectExpressionItem;
 import net.sf.jsqlparser.statement.select.SelectItem;
-import net.sf.jsqlparser.statement.select.SubJoin;
-import net.sf.jsqlparser.statement.select.SubSelect;
 import net.sf.jsqlparser.statement.select.Top;
-import net.sf.jsqlparser.statement.select.Union;
 import net.sf.jsqlparser.util.deparser.SelectDeParser;
 import org.apache.log4j.Logger;
 
@@ -73,24 +63,25 @@ public class QuerySelectDeParser extends SelectDeParser
      * @param join
      */
     @Override
-    public void deparseJoin(Join join) {
+    public void deparseJoin(Join join)
+    {
 		if (join.isSimple())
 			buffer.append(", ");
 		else
 		{
 			if (join.isRight())
-				buffer.append("RIGHT");
+				buffer.append(" RIGHT");
 			else if (join.isNatural())
-				buffer.append("NATURAL");
+				buffer.append(" NATURAL");
 			else if (join.isFull())
-				buffer.append("FULL");
+				buffer.append(" FULL");
 			else if (join.isLeft())
-				buffer.append("LEFT");
+				buffer.append(" LEFT");
 
 			if (join.isOuter())
-				buffer.append("OUTER");
+				buffer.append(" OUTER");
 			else if (join.isInner())
-				buffer.append("INNER");
+				buffer.append(" INNER");
 
 			buffer.append(" JOIN ");
 		}
