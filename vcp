@@ -53,13 +53,13 @@ def copy(source,dest):
                 client.copy(source,dest,sendMD5=True)
 	        break
             except Exception as e:
-		logging.critical("ERROR: %s" %str(e))
+		logging.critical("ERROR: %s on try %d" %str(e, loopCount))
                 if loopCount > 10 :
                     raise e
 	        logging.critical("Retrying in %d seconds\n" %(waitTime))
                 loopCount+=1
                 time.sleep(waitTime)
-                waitTime=2*waitTime
+                waitTime=1.5*waitTime
                 
 	
 
@@ -137,5 +137,5 @@ if __name__=='__main__':
         try: 
             copy(source,thisDest)
         except Exception as e:
-            logging.error("Failed to copy %s to %s:  %s (%d)" %(source, thisDest, str(e), e.errno))
-            sys.exit(e.errno)
+            logging.error("Failed to copy %s to %s:  %s" %(source, thisDest, str(e)))
+            sys.exit(-1)
