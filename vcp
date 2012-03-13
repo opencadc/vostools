@@ -1,6 +1,6 @@
 #!python
 """copy files from / to vospace directly without using the FUSE layer"""
-
+import time
 def isdir(filename):
     if filename[0:4]=="vos:":
         return client.isdir(filename)
