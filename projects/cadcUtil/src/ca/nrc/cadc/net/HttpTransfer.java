@@ -98,7 +98,7 @@ import ca.nrc.cadc.util.FileMetadata;
 import ca.nrc.cadc.util.StringUtil;
 
 /**
- *
+ * Base class for HTTP transfers.
  * @author pdowler
  */
 public abstract class HttpTransfer implements Runnable
@@ -108,6 +108,8 @@ public abstract class HttpTransfer implements Runnable
     public static final String CADC_CONTENT_LENGTH_HEADER = "X-CADC-Content-Length";
 
     public static final String SERVICE_RETRY = "Retry-After";
+
+    public static final int DEFAULT_BUFFER_SIZE = 64*1024; // 64KB
 
     public static enum RetryReason
     {
@@ -151,7 +153,7 @@ public abstract class HttpTransfer implements Runnable
     protected int numRetries = 0;
     protected int curRetryDelay = 0; // scaled after each retry
     
-    protected int bufferSize = 8192;
+    protected int bufferSize = DEFAULT_BUFFER_SIZE;
     protected OverwriteChooser overwriteChooser;
     protected ProgressListener progressListener;
     protected TransferListener transferListener;
@@ -186,6 +188,36 @@ public abstract class HttpTransfer implements Runnable
     {
         this.go = true;
         this.requestProperties = new ArrayList<HttpRequestProperty>();
+        this.userAgent = DEFAULT_USER_AGENT;
+
+        String bsize = null;
+        try
+        {
+            bsize = System.getProperty(HttpTransfer.class.getName() + ".bufferSize");
+            if (bsize != null)
+            {
+                int mult = 1;
+                String sz = bsize;
+                bsize = bsize.trim();
+                if (bsize.endsWith("k"))
+                {
+                    mult = 1024;
+                    sz = bsize.substring(0, bsize.length() - 1);
+                }
+                else if (bsize.endsWith("m"))
+                {
+                    mult = 1024*1024;
+                    sz = bsize.substring(0, bsize.length() - 1);
+                }
+                this.bufferSize = mult * Integer.parseInt(sz);
+            }
+        }
+        catch(NumberFormatException warn)
+        {
+            log.warn("invalid buffer size: " + bsize + ", using default " + DEFAULT_BUFFER_SIZE);
+            this.bufferSize = DEFAULT_BUFFER_SIZE;
+        }
+        log.debug("bufferSize: " + bufferSize);
     }
 
     /**
@@ -222,10 +254,29 @@ public abstract class HttpTransfer implements Runnable
     
     public URL getURL() { return remoteURL; }
 
+    /**
+     * Set the buffer size in bytes. Transfers allocate a buffer to use in
+     * the IO loop and also wrap BufferedInputStream and BufferedOutputStream
+     * around the underlying InputStream and OutputStream (if they are not already
+     * buffered).
+     * </p><p>
+     * Note: The buffer size can also be set with the system property
+     * <code>ca.nrc.cadc.net.HttpTransfer.bufferSize</code> which is an integer
+     * number of bytes. The value may be specified in KB by appending 'k' or MB by
+     * appending 'm' (e.g. 16k or 2m).
+     *
+     * @param bufferSize
+     */
     public void setBufferSize(int bufferSize)
     {
         this.bufferSize = bufferSize;
     }
+
+    public int getBufferSize()
+    {
+        return bufferSize;
+    }
+    
 
     public void setUserAgent(String userAgent) 
     {
