@@ -552,15 +552,18 @@ class VOFile:
         """return size bytes from the connection response"""
         if not self.closed:
             self.close()
-        if self.resp.status == 404:
+        # check the most likely response first
+        if self.resp.status == 200:
+            return self.resp.read(size)
+        elif self.resp.status == 404:
             return None
-        if self.resp.status == 303 or self.resp.status == 302:
+        elif self.resp.status == 303 or self.resp.status == 302:
             URL = self.resp.getheader('Location',None)
             if not URL:
                 raise IOError(errno.ENOENT,"No Location on redirect",self.url)
             self.open(URL,"GET")
             return self.read(size)
-        if self.resp.status == 503:
+        elif self.resp.status == 503:
             ## try again in Retry-After seconds or fail
             logging.error("Server is too busy to send %s" % (self.url))
             ras=self.resp.getheader("Retry-After",None)
@@ -572,6 +575,8 @@ class VOFile:
             time.sleep(int(ras))
             self.open(self.url,"GET")
             return self.read(size)
+        # line below can be removed after we are sure all codes
+        # are caught
         return self.resp.read(size)
 
 
