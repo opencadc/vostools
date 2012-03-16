@@ -83,7 +83,7 @@ try:
     vos=vos.Client(certFile=opt.certfile)
 except Exception as e:
     logging.error("Conneciton failed:  %s" %  (str(e)))
-    sys.exit(e.errno)
+    sys.exit(-1)
 
 def sizeFormat(size):
     """Format a size value for listing"""
@@ -126,8 +126,8 @@ for node in args:
     try:
         infoList= vos.getNode(node,limit=500).getInfoList()
     except Exception as e:
-        logging.error("Error getting listing of %s: %s (%d)" % (node,str(e),e.errno))
-        sys.exit(e.errno)
+        logging.error("Error getting listing of %s: %s " % (node,str(e)))
+        sys.exit(e)
         
     if not len(infoList)>0:
         #logging.critical("Failed to get listing for %s " % ( node ))

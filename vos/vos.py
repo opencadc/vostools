@@ -12,7 +12,7 @@ import sys
 import os
 import errno
 import xml.etree.ElementTree as ET
-
+from __version__ import version
 # set a 1 MB buffer to keep the number of trips
 # around the IO loop small
 
@@ -533,6 +533,7 @@ class VOFile:
             raise
         self.closed=False
         self.httpCon.putrequest(method,URL)
+        self.httpCon.putheader("User-Agent", "vos "+version)
         if method in ["PUT", "POST", "DELETE"]:
             if self.size is not None and type(self.size)==int:
                 self.httpCon.putheader("Content-Length",self.size)
