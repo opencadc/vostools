@@ -4,9 +4,12 @@ from vos.__version__ import version
 try:
     from setuptools import setup, find_packages
 except ImportError:
-    from ez_setup import use_setuptools
-    use_setuptools()
-    from setuptools import setup, find_packages
+    try:
+      from ez_setup import use_setuptools
+      use_setuptools()
+      from setuptools import setup, find_packages
+    except ImportError:
+      from distutils import setup
 
 setup(name="vos",
       version=version,
