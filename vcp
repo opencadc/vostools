@@ -1,6 +1,7 @@
 #!python
 """copy files from / to vospace directly without using the FUSE layer"""
 import time
+import errno
 def isdir(filename):
     if filename[0:4]=="vos:":
         return client.isdir(filename)
@@ -28,23 +29,46 @@ def mkdir(filename):
         logging.debug("On the filesystem")
         return os.mkdir(filename)
 
+def getMD5(filename):
+    if filename[0:4]=='vos:':
+        md5=client.getNode(filename).props.get('MD5',0)
+    else:
+        import hashlib
+        md5=hashlib.md5()
+        fin = file(filename,'r')
+        while True:
+            buff=fin.read()
+            if len(buff)==0:
+                break
+            md5.update(buff)
+        md5=md5.hexdigest()
+    logging.debug("%s md5: %s" % (filename, md5))
+    return md5
+
+
 def copy(source,dest):    
     
     ## determine if this is a directory we are copying so need to be recursive
-    if isdir(source):
+    try:
+      if isdir(source):
         ## make sure the destination exists...
         if not access(dest,os.F_OK):
             mkdir(dest)
         ## for all files in the current source directory copy them to the destination directory
         for filename in listdir(source):
             copy(os.path.join(source,filename),os.path.join(dest,filename))
-    else:
+      else:
         if opt.interrogate:
             if access(dest,os.F_OK):
                 sys.stderr.write("File %s exists.  Overwrite? (y/n): " % (dest))
                 ans=sys.stdin.readline().strip()
                 if ans!='y':
                     sys.exit(errno.EEXIST)
+        if access(dest,os.F_OK) and not opt.overwrite:
+            ### check if the MD5 of dest and source mathc, if they do then skip
+            if getMD5(dest)==getMD5(source):
+                logging.info("%s matches %s, skipping" % ( source, dest))
+                return 
         logging.info("%s -> %s " % ( source, dest))
         loopCount=0
 	waitTime=1
@@ -61,9 +85,11 @@ def copy(source,dest):
                 time.sleep(waitTime)
                 waitTime=1.5*waitTime
                 
-	
-
-                
+    except IOError as e:
+        if e.errno==errno.EINVAL:
+            logging.error("%s: Skipping" % ( str(e)))
+        else:
+            raise e
 
 
 
@@ -76,6 +102,7 @@ if __name__=='__main__':
     
     parser=OptionParser()
     parser.add_option("-i","--interrogate",action="store_true",help="Ask before overwriting files")
+    parser.add_option("--overwrite",action="store_true",help="don't check dest MD5, just overwrite even if source matches destination")
     parser.add_option("-v","--verbose",action="store_true",help="Verbose output")
     parser.add_option("-d","--debug",action="store_true",help="set this option to get help solving connection issues")
     parser.add_option("--certfile",help="location of your CADC security certificate file",default=os.path.join(os.getenv("HOME","."),".ssl/cadcproxy.pem"))
@@ -107,13 +134,12 @@ if __name__=='__main__':
         ### the source must exist, of course...
         if not access(source,os.R_OK):
             logging.error("Can't open file %s for read" % ( source))
-            sys.exit(errno.EACCES)
-
+            sys.exit(-1)
 
         ## copying inside VOSpace not yet implemented
         if source[0:4]=='vos:' and dest[0:4]=='vos:' :
             logging.error("Can't copy from VOSpace to VOSpace")
-            sys.exit(errno.EOPNOTSUPP)
+            sys.exit(-1)
 
 	thisDest=dest
         if isdir(source):
@@ -124,12 +150,12 @@ if __name__=='__main__':
             if access(dest,os.F_OK):
                 if not isdir(dest):
                     logging.error("Can't write a directory (%s) to a file (%s)" % (source,dest))
-                    sys.exit(errno.ENOTDIR)
+                    sys.exit(-1)
                 else:
                     dest=os.path.normpath(os.path.join(dest,os.path.basename(source)))
             elif len(args) > 1:
                 logging.error("I don't now how to copy multiple things into a non-existant location (%s)" % (dest))
-                sys.exit(errno.ENOTSUPP)
+                sys.exit(-1)
         elif access(dest,os.F_OK) and isdir(dest):
             ### we're copying into a directory
             thisDest=os.path.join(dest,os.path.basename(source))
