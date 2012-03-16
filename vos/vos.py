@@ -533,7 +533,7 @@ class VOFile:
             raise
         self.closed=False
         self.httpCon.putrequest(method,URL)
-        self.httpCon.putheader("User-Agent", "vos "+version)
+        self.httpCon.putheader("User-Agent", sys.argv[0]+" "+version)
         if method in ["PUT", "POST", "DELETE"]:
             if self.size is not None and type(self.size)==int:
                 self.httpCon.putheader("Content-Length",self.size)
