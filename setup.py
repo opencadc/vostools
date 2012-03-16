@@ -9,7 +9,7 @@ except ImportError:
         use_setuptools()
         from setuptools import setup, find_packages
     except ImportError :
-	from distutils import setup
+        from distutils import setup
 
 setup(name="vos",
       version=version,
