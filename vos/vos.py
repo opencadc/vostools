@@ -509,23 +509,13 @@ class VOFile:
     def open(self,URL,method):
         """Open a connection to the given URL"""
         import ssl,httplib
-        logging.debug("Connecting to %s for (%s)" % (URL, method))
+        logging.debug("Opening %s (%s)" % (URL, method))
         self.url=URL
         self.httpCon = self.connector.getConnection(URL)
         if self.timeout < 0 : 
             self.timeout=time.time()
         try:
             self.httpCon.connect()
-        #except ssl.SSLError as e:
-            ### Catching this allowed re-acquire of a  certificate.
-            ### this behaviour has been removed. 
-        #    logging.critical("%s" % (e.strerror))
-        #    if e.errno != 1:
-        #        raise
-        #    
-        #    self.connector.getCert()
-        #    if time.time() - self.timeout  < 200:
-        #        return self.open(URL,method)
         except httplib.HTTPException as e:
             logging.critical("%s" % ( str(e)))
             if time.time() - self.timeout  < 1200:
@@ -618,15 +608,16 @@ class Client:
     
         checkSource=False
         if src[0:4]=="vos:":
+            srcSize=self.getNode(src).attr['st_size']
             fin=self.open(src,os.O_RDONLY,view='data')
             fout=open(dest,'w')
             checkSource=True
         else:
-            size=os.lstat(src).st_size
+            srcSize=os.lstat(src).st_size
             fin=open(src,'r')
-            fout=self.open(dest,os.O_WRONLY,size=size)
+            fout=self.open(dest,os.O_WRONLY,size=srcSize)
     
-        totalBytes=0
+        destSize=0
         md5=hashlib.md5()
         while True:
             buf=fin.read(BUFSIZE)
@@ -636,7 +627,7 @@ class Client:
                 break
             fout.write(buf)
             md5.update(buf)
-            totalBytes+=len(buf)
+            destSize+=len(buf)
         fout.close()
         fin.close()
 
@@ -649,7 +640,9 @@ class Client:
             if checkMD5 != md5.hexdigest():
                 raise IOError(errno.EIO,"MD5s don't match",src)
             return md5.hexdigest()
-        return totalBytes
+        if destSize != srcSize:
+            raise IOError(errno.EIO,"sizes don't match",src)
+        return destSize
 
 
     def fixURI(self,uri):
@@ -719,7 +712,7 @@ class Client:
         path  = parts.path.strip('/')
         server= Client.VOServers.get(parts.netloc)        
 
-        logging.debug("URI for node: %s" %( uri))
+        logging.debug("Node URI: %s" %( uri))
 
         if method in ('PUT'):
             logging.debug("PUT structure hardcoded for CADC vospace" )
@@ -738,8 +731,7 @@ class Client:
         if len(fields) >0 : 
                data="?"+urllib.urlencode(fields)
         URL = "%s://%s/vospace/nodes/%s%s" % ( protocol, server, parts.path.strip('/'), data)
-        logging.debug("method %s " % method)
-        logging.debug("Accessing URL %s" % URL)
+        logging.debug("Node URL %s (%s)" % (URL, method))
         return URL
 
     def move(self,srcURI,destURI):
