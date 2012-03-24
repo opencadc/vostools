@@ -103,6 +103,20 @@ class Connection:
             logging.error(str(e))
             logging.error("Please update your certificate, perhaps using the getCert utility program that is part of the cadcVOFS distribution.")
             raise IOError(errno.ENTCONN,"VOSpace connection failed",parts.netloc)
+
+
+        ## Try to open this connection. 
+        timestart = time.time() 
+        while True:
+            try:
+                connection.connect()
+            except httplib.HTTPException as e:
+                logging.critical("%s" % ( str(e)))
+                logggin.critical("Retrying connection for 1200 seconds") 
+                if time.time() - timestart  > 1200:
+                    raise e
+            break
+
         logging.debug("Returning connection " )
         return connection
 
@@ -492,7 +506,7 @@ class VOFile:
            logging.error("%s \n" %  str(e))
         self.closed=True
         logging.debug("Connection closed")
-        self.checkstatus()
+        return self.checkstatus()
 
     def checkstatus(self):
         """check the response status"""
@@ -505,22 +519,14 @@ class VOFile:
                 raise IOError(errno.EACCES,"Not authorized",self.url)
             logging.debug(self.resp.read())
             raise IOError(self.resp.status,"unexpected server response %s (%d)" % ( self.resp.reason, self.resp.status),self.url)
+        return True
 
     def open(self,URL,method):
         """Open a connection to the given URL"""
-        import ssl,httplib
+        import ssl,httplib, sys, mimetypes
         logging.debug("Opening %s (%s)" % (URL, method))
         self.url=URL
         self.httpCon = self.connector.getConnection(URL)
-        if self.timeout < 0 : 
-            self.timeout=time.time()
-        try:
-            self.httpCon.connect()
-        except httplib.HTTPException as e:
-            logging.critical("%s" % ( str(e)))
-            if time.time() - self.timeout  < 1200:
-                return self.open(URL,method)
-            raise
         self.closed=False
         self.httpCon.putrequest(method,URL)
         self.httpCon.putheader("User-Agent", sys.argv[0]+" "+version)
@@ -529,13 +535,11 @@ class VOFile:
                 self.httpCon.putheader("Content-Length",self.size)
             contentType="text/xml"
             if method=="PUT":
-                import mimetypes
                 contentType=mimetypes.guess_type(URL)[0]
             self.httpCon.putheader("Content-Type",contentType)
         self.httpCon.putheader("Transfer-Encoding",'chunked')
         self.httpCon.putheader("Accept", "*/*")
         self.httpCon.endheaders()
-        self.timeout = -1
 
 
     def read(self,size=None):
@@ -786,12 +790,12 @@ class Client:
         URL=self.getNodeURL(uri)
         f=VOFile(URL,self.conn,method="PUT")
         f.write(str(node))
-        f.close()
+        return f.close()
     
     def delete(self,uri):
         """Delete the node"""
         logging.debug("%s" % (uri))
-        self.open(uri,mode=os.O_TRUNC).close()
+        return self.open(uri,mode=os.O_TRUNC).close()
 
     def listdir(self,uri):
         """Walk through the directory structure a al os.walk"""
