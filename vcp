@@ -76,7 +76,7 @@ def copy(source,dest):
             try:
                 client.copy(source,dest,sendMD5=True)
 	        break
-            except Exception as e:
+            except OSError as e:
 		logging.critical("ERROR: %s while copying %s -> %s (attempt %d)" % (str(e), source, dest, loopCount+1))
                 if loopCount > 10 :
                     raise e
@@ -163,5 +163,5 @@ if __name__=='__main__':
         try: 
             copy(source,thisDest)
         except Exception as e:
-            logging.error("Failed to copy %s to %s:  %s" %(source, thisDest, str(e)))
+            logging.error("Failed to copy %s to %s\n  %s" %(source, thisDest, str(e)))
             sys.exit(-1)
