@@ -86,7 +86,7 @@ def copy(source,dest):
                 waitTime=1.5*waitTime
             except Exception as e:
 	        if hasattr(e,'errno'):
-		   if e.errno=104:
+		   if e.errno==104:
                        logging.critical(str(e))
 	               continue
 	        raise e
