@@ -84,6 +84,7 @@ def copy(source,dest):
                 loopCount+=1
                 time.sleep(waitTime)
                 waitTime=1.5*waitTime
+            
                 
     except IOError as e:
         if e.errno==errno.EINVAL:
@@ -163,5 +164,6 @@ if __name__=='__main__':
         try: 
             copy(source,thisDest)
         except Exception as e:
+	    logging.error(str(type(e)))
             logging.error("Failed to copy %s to %s\n  %s" %(source, thisDest, str(e)))
             sys.exit(-1)
