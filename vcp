@@ -84,6 +84,13 @@ def copy(source,dest):
                 loopCount+=1
                 time.sleep(waitTime)
                 waitTime=1.5*waitTime
+            except Exception as e:
+	        if hasattr(e,'errno'):
+		   if e.errno=104:
+                       logging.critical(str(e))
+	               continue
+	        raise e
+			 
             
                 
     except IOError as e:
