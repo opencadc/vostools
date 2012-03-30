@@ -138,13 +138,11 @@ public class AsynchResource extends UWSResource
         {
             String errorMessage = "XML document exceeds " + ex.getLimit() + " bytes";
             LOGGER.info("Exception caught in doAccept: " + errorMessage);
-            ex.printStackTrace();
             generateErrorRepresentation(Status.CLIENT_ERROR_REQUEST_ENTITY_TOO_LARGE, errorMessage);
         }
         catch(Exception ex)
         {
             LOGGER.error("Exception caught in doAccept: " + ex);
-            ex.printStackTrace();
             generateErrorRepresentation(Status.CLIENT_ERROR_BAD_REQUEST, ex.getMessage());
         }
     }
