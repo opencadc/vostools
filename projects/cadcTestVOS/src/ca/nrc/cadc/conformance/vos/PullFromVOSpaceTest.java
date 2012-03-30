@@ -69,6 +69,7 @@
 
 package ca.nrc.cadc.conformance.vos;
 
+import java.net.MalformedURLException;
 import ca.nrc.cadc.util.Log4jInit;
 import java.net.URL;
 import ca.nrc.cadc.vos.TransferReader;
@@ -81,8 +82,6 @@ import ca.nrc.cadc.vos.TransferWriter;
 import ca.nrc.cadc.vos.Protocol;
 import java.util.ArrayList;
 import java.util.List;
-import ca.nrc.cadc.vos.View;
-import java.net.URI;
 import ca.nrc.cadc.vos.DataNode;
 import ca.nrc.cadc.vos.Direction;
 import org.junit.Ignore;
@@ -189,16 +188,19 @@ public class PullFromVOSpaceTest extends VOSTransferTest
             transfer = reader.read(xml);
 
             assertEquals("direction", Direction.pullFromVoSpace, transfer.getDirection());
-
+            assertNotNull("protocols", transfer.getProtocols());
             // that bogus one should not be here, so only 0 to 2 protocols
-            assertTrue(transfer.getProtocols().size() < 3);
+            assertTrue("has some protocols", !transfer.getProtocols().isEmpty());
             for (Protocol p : transfer.getProtocols())
             {
-                try { URL actualURL = new URL(p.getEndpoint()); }
-                catch(Exception unexpected)
+                try 
                 {
-                    log.error("unexpected exception", unexpected);
-                    fail("unexpected exception creating endpoint URL: " + unexpected);
+                    URL actualURL = new URL(p.getEndpoint());
+                    log.debug("endpoint url: " + actualURL);
+                }
+                catch(MalformedURLException mex)
+                {
+                    fail("malformed endpoint URL: " + p.getEndpoint() + ", " + mex);
                 }
             }
 
@@ -210,7 +212,7 @@ public class PullFromVOSpaceTest extends VOSTransferTest
         }
         catch (Exception unexpected)
         {
-            log.error("unexpected exception: " + unexpected);
+            log.error("unexpected exception", unexpected);
             Assert.fail("unexpected exception: " + unexpected);
         }
     }
