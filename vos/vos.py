@@ -98,7 +98,7 @@ class Connection:
         except httplib.NotConnected as e:
             logging.error("HTTP connection to %s failed \n" % (parts.netloc))
             logging.error("%s \n" % ( str(e)))
-            raise IOError(errno.ENTCONN,"VOSpace connection failed",parts.netloc)
+            raise OSError(errno.ENTCONN,"VOSpace connection failed",parts.netloc)
         except ssl.SSLError as e:
             logging.error(str(e))
             logging.error("Please update your certificate, perhaps using the getCert utility program that is part of the cadcVOFS distribution.")
@@ -563,7 +563,7 @@ class VOFile:
             ras=self.resp.getheader("Retry-After",None)
             if not ras:
                 logging.error("no retry-after in header, so raising error")
-                raise IOError(errno.EBUSY,"Server overloaded",self.url)
+                raise OSError(errno.EBUSY,"Server overloaded",self.url)
             ras=int(ras)
             logging.error("Server loaded, retrying in %d seconds" % (int(ras)))
             time.sleep(int(ras))
@@ -577,7 +577,7 @@ class VOFile:
     def write(self,buf):
         """write buffer to the connection"""
         if not self.httpCon or self.closed:
-            raise IOError(errno.ENOTCONN,"no connection for write",self.url)
+            raise OSError(errno.ENOTCONN,"no connection for write",self.url)
         self.httpCon.send('%X\r\n' % len(buf))
         self.httpCon.send(buf+'\r\n')
         return len(buf)
@@ -642,7 +642,7 @@ class Client:
         
         if sendMD5:
             if checkMD5 != md5.hexdigest():
-                raise IOError(errno.EIO,"MD5s don't match",src)
+                raise OSError(errno.EIO,"MD5s don't match",src)
             return md5.hexdigest()
         if destSize != srcSize:
             raise IOError(errno.EIO,"sizes don't match",src)
