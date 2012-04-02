@@ -13,7 +13,8 @@ import os
 import vos
 from os import O_RDONLY, O_WRONLY, O_RDWR, O_APPEND
 import logging
-READBUF=8192
+READBUF=2**20
+
 
 def flag2mode(flags):
     md = {O_RDONLY: 'r', O_WRONLY: 'w', O_RDWR: 'w+'}
@@ -38,6 +39,10 @@ class VOFS(LoggingMixIn, Operations):
     readlink = None
     rmdir = None
     symlink = None
+    getxattr = None
+    listxattr = None
+    removexattr = None
+    setxattr = None
     
     def __init__(self, root, cache_dir, conn=None, cache_limit=1024*1024*1024):
         """Initialize the VOFS.  
@@ -180,6 +185,7 @@ class VOFS(LoggingMixIn, Operations):
         fd=fobj.fileno()
         self.fobj[fd]=fobj
 	self.fh[fd]={'cached': 0, 'flags': O_RDWR, 'name': fname}
+        self.fh[path]=fd
 	self.setPath(fd, path)
         logging.debug("Created node at %s and returning handle %d" % ( path, fd))
         return fd
@@ -219,6 +225,7 @@ class VOFS(LoggingMixIn, Operations):
         self.fsync(path,False,fh)
   
     def fsync(self,path,datasync,fh):
+        mode=''
         if self.fh.get(fh,None) is not None:
             mode = flag2mode(self.fh[fh]['flags'])
         if 'w' in mode or 'a' in mode:
@@ -299,7 +306,7 @@ class VOFS(LoggingMixIn, Operations):
 	    #self.attr[path].update(self.getNode(path).attr)
         return self.attr[path]
 
-    def getxattr(self, path, name, position=0):
+    def dead_getxattr(self, path, name, position=0):
         """Get the value of an extended attribute"""
         value=self.getNode(path).xattr.get(name,None)
         if value is None:
@@ -307,7 +314,7 @@ class VOFS(LoggingMixIn, Operations):
         import binascii
         return binascii.a2b_base64(value)
 
-    def listxattr(self, path):
+    def dead_listxattr(self, path):
         """Send back the list of extended attributes"""
         return self.getNode(path).xattr.keys()
         
@@ -436,7 +443,7 @@ class VOFS(LoggingMixIn, Operations):
                 #logging.debug("deleting the tmpfile %s" % (self.fh[fh]['name']))
                 #os.unlink(self.fh[fh]['name'])
             self.fh.pop(fh,None)
-
+            self.fh.pop(path,None)
         ## if we have an active file object then 
         ## close this file and forget about the pointer.
         fobj=self.fobj.pop(fh,None)
@@ -456,7 +463,7 @@ class VOFS(LoggingMixIn, Operations):
         #self.delNode(path)
         self.clear_cache()
 
-    def removexattr(self, path, name):
+    def dead_removexattr(self, path, name):
         """Remove the named attribute from the xattr dictionary"""
         node=self.getNode(path)
         node.changeProp(name,None)
@@ -491,7 +498,7 @@ class VOFS(LoggingMixIn, Operations):
 	   return 0
         return -1
     
-    def setxattr(self, path, name, value, size, options, *args):
+    def dead_setxattr(self, path, name, value, size, options, *args):
         """Simple xattr setting, ignorring options for now"""
         node=self.getNode(path)
         ### call changeProp on the node so that the XML is updated
@@ -566,31 +573,31 @@ class VOFS(LoggingMixIn, Operations):
     
     def truncate(self, path, length, fh=None):
         logging.debug("Attempting to truncate %s (%d)" % ( path,length))
-	if length>0:
+        if fh is None:
+            fh = self.fh.get(path,None)
+	if fh is not None:
+            os.ftruncate(fh,length)
+            logging.debug("cache file has been truncated")
+	if length>0 and fh is None:
+            """Were trying to do a truncate right of the VOSpace node"""
             try:
                 r = self.client.open(path,mode=os.O_RDONLY,view='data')
                 w = self.client.open(path,os.O_WRONLY)
+                fpos=0
+                while True:
+                    buf=r.read(READBUF)
+                    if not buf:
+                        break
+                    chunk=min(length-fpos,READBUF) 
+                    w.write(buf[:chunk])
+                    fpos=fpos+chunk
+                r.close()
+                w.close()
             except:
                 raise FuseOSError(EIO)
-            fpos=0
-            while True:
-                buf=r.read(READBUF)
-                if not buf:
-                    break
-                chunk=min(length-fpos,bufsize) 
-                try: 
-                    f.write(buf[:chunk])
-                except:
-                    raise FuseOSError(EIO)
-                fpos=fpos+chunk
-            r.close()
-            w.close()
         else:
             self.client.open(path,os.O_WRONLY).close()
         logging.debug("Node has been truncated")
-	if fh is not None:
-            os.ftruncate(fh,length)
-        logging.debug("cache file has been truncated")
 
     def unlink(self,path):
         fname=os.path.normpath(self.cache_dir+path)
