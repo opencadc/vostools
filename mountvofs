@@ -391,37 +391,42 @@ class VOFS(LoggingMixIn, Operations):
         if self.fh.get(fh,None) is not None:
             mode = self.fh[fh]['flags']
 
-        ##  close the fh
-        try:
-            os.close(fh)
-        except Exception as e:
-            logging.debug(str(e))
-
         ## On close, if this was a WRITE opperation then update VOSpace
         ## unless the VOSpace is actually newer than this cache file.
         ### copy the staging file to VOSpace if needed
         logging.debug("node %s currently open with mode %s, releasing" % ( path, mode))
         if mode & ( os.O_RDWR | os.O_WRONLY | os.O_APPEND | os.O_CREAT ) and os.stat(self.fh[fh]['name']).st_mtime > self.getattr(path)['st_mtime']:
-            r=os.open(self.fh[fh]['name'],os.O_RDONLY)
-            os.lseek(r,0,os.SEEK_SET)
+            os.lseek(fh,0,os.SEEK_SET)
             w=self.client.open(path,os.O_WRONLY)
             logging.debug("Writing to %s" % (path))
             while True:
-                buf=os.read(r,READBUF)
+                buf=os.read(fh,READBUF)
                 logging.debug(buf)
                 if not buf:
                     break
                 if w.write(buf)!=len(buf):
                     raise FuseOSError(EIO)
             logging.debug("Closing connection to vospace")
-            os.close(r)
             w.close()
 
+
+        ## remove references to this file handle.
         self.fh.pop(fh,None)
         self.fh.pop(path,None)
-
         self.delNode(path)
+
+        
+        ##  now close the fh
+        try:
+            os.close(fh)
+        except Exception as e:
+            logging.debug(str(e))
+
+        ## clear up the cache
         self.clear_cache()
+        return 
+
+
 
     def dead_removexattr(self, path, name):
         """Remove the named attribute from the xattr dictionary"""
