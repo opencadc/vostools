@@ -597,13 +597,14 @@ class Client:
 
 
     def __init__(self,certFile=os.path.join(os.getenv('HOME'),'.ssl/cadcproxy.pem'),
-                 rootNode=None,conn=None):
+                 rootNode=None,conn=None,archive='vospace'):
         """This could/should be expanded to set various defaults"""
         if not conn:
             conn=Connection(certfile=certFile)
         self.conn=conn
         self.VOSpaceServer="cadc.nrc.ca!vospace"
         self.rootNode=rootNode
+        self.archive=archive
         return
 
     def copy(self,src,dest,sendMD5=False):
@@ -721,7 +722,7 @@ class Client:
         if method in ('PUT'):
             logging.debug("PUT structure hardcoded for CADC vospace" )
             ### This part is hard coded for CADC VOSpace...
-            return "%s://%s/data/pub/vospace/%s" % (protocol, server,parts.path.strip('/'))
+            return "%s://%s/data/pub/%s/%s" % (protocol, server,self.archive,parts.path.strip('/'))
 
         ### this is a GET so we might have to stick some data onto the URL...
         fields={}
