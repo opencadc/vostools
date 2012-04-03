@@ -84,6 +84,7 @@ import java.util.Calendar;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.Iterator;
+import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -115,7 +116,6 @@ import ca.nrc.cadc.vos.NodeProperty;
 import ca.nrc.cadc.vos.VOS;
 import ca.nrc.cadc.vos.VOSURI;
 import ca.nrc.cadc.vos.VOS.NodeBusyState;
-import java.util.LinkedList;
 
 /**
  * Helper class for implementing NodePersistence with a
@@ -804,7 +804,7 @@ public class NodeDAO
     // create new prop with value
     private NodeProperty findOrCreate(Node node, String uri, String value)
     {
-        NodeProperty np = node.findProperty(VOS.PROPERTY_URI_CONTENTLENGTH);
+        NodeProperty np = node.findProperty(uri);
         if (np == null && value == null)
             return null;
 
@@ -1580,7 +1580,7 @@ public class NodeDAO
             sb.append(getNodeType(node));
             sb.append(",");
 
-            ps.setString(col++, getBusyState(node));
+            ps.setString(col++, NodeBusyState.notBusy.getValue());
             sb.append(getBusyState(node));
             sb.append(",");
 

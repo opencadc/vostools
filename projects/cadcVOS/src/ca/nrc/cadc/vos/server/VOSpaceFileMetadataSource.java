@@ -73,20 +73,15 @@ import java.io.FileNotFoundException;
 import java.net.URI;
 import java.text.DateFormat;
 import java.text.ParseException;
-import java.util.ArrayList;
-import java.util.List;
 
 import org.apache.log4j.Logger;
 
 import ca.nrc.cadc.date.DateUtil;
 import ca.nrc.cadc.util.FileMetadata;
 import ca.nrc.cadc.util.FileMetadataSource;
-import ca.nrc.cadc.util.StringUtil;
-import ca.nrc.cadc.vos.ContainerNode;
 import ca.nrc.cadc.vos.DataNode;
 import ca.nrc.cadc.vos.Node;
 import ca.nrc.cadc.vos.NodeNotFoundException;
-import ca.nrc.cadc.vos.NodeProperty;
 import ca.nrc.cadc.vos.VOS;
 import ca.nrc.cadc.vos.VOSURI;
 
@@ -194,6 +189,14 @@ public class VOSpaceFileMetadataSource implements FileMetadataSource
 
         return fileMetadata;
     }
+    
+    public void set(final URI resource, final FileMetadata meta)
+            throws FileNotFoundException, IllegalArgumentException
+    {
+        VOSURI vos = new VOSURI(resource);
+        Node persistentNode = getPersistentNode(vos);
+        set(persistentNode, meta);
+    }
 
     /** 
      * Set the current file metadata for the specified resource. 
@@ -203,13 +206,11 @@ public class VOSpaceFileMetadataSource implements FileMetadataSource
      * @throws FileNotFoundException if the specified resource is not found
      * @throws IllegalArgumentException if the specified resource is not a file
      */
-    public void set(final URI resource, final FileMetadata meta)
+    public void set(final Node persistentNode, final FileMetadata meta)
             throws FileNotFoundException, IllegalArgumentException
     {
         if (meta == null)
             throw new IllegalArgumentException("FileMetadata is null.");
-        VOSURI uri = new VOSURI(resource);
-        Node persistentNode = getPersistentNode(uri);
         if (persistentNode instanceof DataNode)
         {
             DataNode dn = (DataNode) persistentNode;
