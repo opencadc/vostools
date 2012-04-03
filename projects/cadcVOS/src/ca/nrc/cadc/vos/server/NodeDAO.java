@@ -639,23 +639,46 @@ public class NodeDAO
      * @param node
      * @param state
      */
-    public VOS.NodeBusyState setBusyState(DataNode node, NodeBusyState curState, NodeBusyState newState)
+    public void setBusyState(DataNode node, NodeBusyState curState, NodeBusyState newState)
     {
         log.debug("setBusyState: " + node.getUri().getPath() + ", " + curState + " -> " + newState);
         expectPersistentNode(node);
 
         try
         {
+            startTransaction();
             String sql = getSetBusyStateSQL(node, curState, newState);
             log.debug(sql);
             int num = jdbc.update(sql);
-            if (num == 1)
-                return newState;
-            return null;
+            if (num != 1)
+                throw new IllegalStateException("setBusyState " + curState + " -> " + newState + " failed: " + node.getUri());
+            commitTransaction();
+        }
+        catch(IllegalStateException ex)
+        {
+            log.debug("updateNodeMetadata rollback for node (!busy): " + node.getUri().getPath());
+            if (transactionStatus != null)
+                try { rollbackTransaction(); }
+                catch(Throwable oops) { log.error("failed to rollback transaction", oops); }
+            throw ex;
         }
         catch (Throwable t)
         {
-            throw new RuntimeException("failed to set busy state: " + node.getUri().getPath(), t);
+            log.error("Delete rollback for node: " + node.getUri().getPath(), t);
+            if (transactionStatus != null)
+                try { rollbackTransaction(); }
+                catch(Throwable oops) { log.error("failed to rollback transaction", oops); }
+            throw new RuntimeException("failed to updateNodeMetadata " + node.getUri().getPath(), t);
+        }
+        finally
+        {
+            if (transactionStatus != null)
+                try
+                {
+                    log.warn("delete - BUG - transaction still open in finally... calling rollback");
+                    rollbackTransaction();
+                }
+                catch(Throwable oops) { log.error("failed to rollback transaction in finally", oops); }
         }
     }
 

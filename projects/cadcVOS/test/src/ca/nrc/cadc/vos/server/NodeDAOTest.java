@@ -601,17 +601,13 @@ public class NodeDAOTest
             Assert.assertEquals("assert not busy", NodeBusyState.notBusy, persistNode.getBusy());
 
             // -> write
-            NodeBusyState b = nodeDAO.setBusyState(persistNode, NodeBusyState.notBusy, NodeBusyState.busyWithWrite);
-            Assert.assertNotNull(b);
-            Assert.assertEquals(NodeBusyState.busyWithWrite, b);
+            nodeDAO.setBusyState(persistNode, NodeBusyState.notBusy, NodeBusyState.busyWithWrite);
             persistNode = (DataNode) nodeDAO.getPath(path);
             Assert.assertNotNull(persistNode);
             Assert.assertEquals("assert not busy", NodeBusyState.busyWithWrite, persistNode.getBusy());
 
             // -> not busy
-            NodeBusyState nb = nodeDAO.setBusyState(persistNode, NodeBusyState.busyWithWrite, NodeBusyState.notBusy);
-            Assert.assertNotNull(nb);
-            Assert.assertEquals(NodeBusyState.notBusy, nb);
+            nodeDAO.setBusyState(persistNode, NodeBusyState.busyWithWrite, NodeBusyState.notBusy);
             persistNode = (DataNode) nodeDAO.getPath(path);
             Assert.assertNotNull(persistNode);
             Assert.assertEquals("assert not busy", NodeBusyState.notBusy, persistNode.getBusy());
@@ -668,8 +664,7 @@ public class NodeDAOTest
             }
 
             // set busy state correctly and redo
-            NodeBusyState state = nodeDAO.setBusyState(persistNode, NodeBusyState.notBusy, NodeBusyState.busyWithWrite);
-            Assert.assertNotNull("setBusyState", state);
+            nodeDAO.setBusyState(persistNode, NodeBusyState.notBusy, NodeBusyState.busyWithWrite);
 
             nodeDAO.updateNodeMetadata(persistNode, meta);
 

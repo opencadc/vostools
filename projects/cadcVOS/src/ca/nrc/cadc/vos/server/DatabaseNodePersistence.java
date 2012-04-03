@@ -287,10 +287,10 @@ public abstract class DatabaseNodePersistence implements NodePersistence
         throw new UnsupportedOperationException("Not supported yet.");
     }
 
-    public NodeBusyState setBusyState(DataNode node, NodeBusyState curState, NodeBusyState newState)
+    public void setBusyState(DataNode node, NodeBusyState curState, NodeBusyState newState)
     {
         NodeDAO dao = getDAO( node.getUri().getAuthority() );
-        return dao.setBusyState(node, curState, newState);
+        dao.setBusyState(node, curState, newState);
     }
 
     public void setFileMetadata(DataNode node, FileMetadata meta)

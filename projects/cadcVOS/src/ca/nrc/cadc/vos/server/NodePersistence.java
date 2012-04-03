@@ -180,7 +180,7 @@ public interface NodePersistence
      * @return the new state or null if the transition failed
      * @throws NodeNotFoundException If the node could not be found.
      */
-    NodeBusyState setBusyState(DataNode node, NodeBusyState curState, NodeBusyState newState);
+    void setBusyState(DataNode node, NodeBusyState curState, NodeBusyState newState);
     
     /**
      * Move the specified node to the new path.  The node must have been retrieved
