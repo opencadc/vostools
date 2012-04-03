@@ -59,8 +59,7 @@ class VOFS(LoggingMixIn, Operations):
 	self.path={}
 
         # These next dictionaries keep track of pointers 
-        # The fileObject pointing to the cache version of this file.
-        self.fobj={}
+
         # A dictionary or properties about the cached version of the
         # file.  the name of the dictionary should be something else
         # but I started calling this fh for other reasons.
@@ -98,11 +97,9 @@ class VOFS(LoggingMixIn, Operations):
     def access(self, path, mode):
         if path in self.node:
 	   return 0
-	#if self.client.access(path):
-	#   return 0
-        if self.getNode(path):
-	   return 0
-	return -1
+        if self.client.access(path,mode):
+            return 0
+        return -1
 
     def chmod(self, path, mode):
         """Set the read/write groups on the VOSpace node based on chmod style modes.
@@ -152,43 +149,30 @@ class VOFS(LoggingMixIn, Operations):
 
         # Create is handle by the client. 
         # This should fail if the basepath doesn't exist
-        try:
-            self.client.open(path,os.O_CREAT).close()
-        except Exception as e:
-            logging.debug(str(e))
-            logging.debug("Error trying to create Node %s" %(path))
-            f=FuseOSError(e.errno)
-            f.strerror=e.strerror
-            f.message=e.strerror
-            raise f
+        if self.access(path,os.F_OK) < 0:
+            try: 
+                self.client.open(path,os.O_CREAT).close()
 
-        node = self.getNode(path)
-        parent=  self.getNode(os.path.dirname(path))
+                node = self.getNode(path)
+                parent=  self.getNode(os.path.dirname(path))
 
-        # Here I force inheritance of group settings. 
-        node.groupread = parent.groupread
-        node.groupwrite = parent.groupwrite
-        if node.chmod(flags):
-            ## chmod returns True if the mode changed.
-            self.client.update(node)
+                # Here I force inheritance of group settings. 
+                node.groupread = parent.groupread
+                node.groupwrite = parent.groupwrite
+                if node.chmod(flags):
+                    ## chmod returns True if the mode changed but doesn't do update.
+                    self.client.update(node)
 
-        ## Now create the cached version. Here we are kind and build
-        ## the full cache path since we only create cache sub-dirs
-        ## when a file is accessed here.
-        fname=os.path.normpath(self.cache_dir+path)
-        dirs=os.path.dirname(fname)
-        if not os.path.exists(dirs):
-            os.makedirs(dirs)
-        fobj=open(fname,'w+b')
-        fobj.truncate()
-        os.chmod(fobj.name,flags)
-        fd=fobj.fileno()
-        self.fobj[fd]=fobj
-	self.fh[fd]={'cached': 0, 'flags': O_RDWR, 'name': fname}
-        self.fh[path]=fd
-	self.setPath(fd, path)
-        logging.debug("Created node at %s and returning handle %d" % ( path, fd))
-        return fd
+            except Exception as e:
+                logging.debug(str(e))
+                logging.debug("Error trying to create Node %s" %(path))
+                f=FuseOSError(e.errno)
+                f.strerror=e.strerror
+                f.message=e.strerror
+                raise f
+
+        ## now we can just open the file in the usual way and return the handle
+        return self.open(path,flags)
 
     def flushnode(self,path,fh):
         """Flush the data associated with this fh to the Node at path
@@ -332,85 +316,64 @@ class VOFS(LoggingMixIn, Operations):
         Here we return a handle to the cached version of the file
         which is updated if older than the one stored in VOSpace. 
 
-        If someone changes the VOSpace file while we are using the
-        cached one some confusion will occur.
+        If someone changes the VOSpace file while we are updating the
+        cached one some confusion will occur as the cache can be newer 
+        than the vospace stored version..
         """
+
 	logging.debug("Openning %s with flags %s" % ( path, flag2mode(flags)))
-        if len(mode)>0:
-            logging.debug("got mode %s" % ( mode))
+        # if len(mode)>0:
+        #    logging.debug("got mode %s" % ( mode))
         #    self.chmod(path,mode)
-        node=self.getNode(path)
 
         # Create the full path to the cached version.
         fname=os.path.normpath(self.cache_dir+path)
         dirs=os.path.dirname(fname)
         if not os.path.exists(dirs):
             os.makedirs(dirs)
-        fobj=None
 
-        # if this file is already in the cache then check that version is
-        # not older than the VOSpace copy then work from the cached version
-        if os.access(fname,os.R_OK):
-            cache_stat=os.stat(fname)
-            if not node.attr['st_mtime'] > cache_stat.st_mtime:
-                fobj=open(fname,flag2mode(flags))
-                fd=fobj.fileno()
-                fobj.seek(0,os.SEEK_END)
-                length=fobj.tell()
-                fobj.seek(0)
-                self.fh[fd]={'flags': flags, 'cached': length, 'name': fname}
-
-        # If we didn't get an fobj then we didn't get a cahced
-        # version, either it didn't exist or was out of date.  so open
-        # an empty file at the cache location.
-        if fobj is None:
-            fobj=open(fname,'w+b')
-            fobj.truncate()
-            fd=fobj.fileno()
-            self.fh[fd]={'flags': flags, 'cached': 0, 'name': fname}
-        self.fobj[fd]=fobj
-        logging.debug("opened file %s and sent fd %d" % ( fname, fd))
-	self.setPath(fd,path)
-        return fd
+        cached=False
+        if os.access(fname,os.F_OK) and os.stat(fname).st_mtime >= self.getattr(path)['st_mtime']:
+            cached=True
+        fh = os.open(fname,os.O_CREAT | os.O_RDWR )
+        self.fh[fh]={'flags': flags, 'cached': cached, 'name':fname}
+	self.setPath(fh,path)
+        return fh
     
     def read(self, path, size=0, offset=0, fh=None):
-        """Read the entire file from the VOSpace server, place in a temporary file and then offset
-        to the desired location
+        """ Read the entire file from the VOSpace server, place in a temporary file and then offset
+        to the desired location.  
 
         """
         ## Read from the requested filehandle, which the tempfile one sent from open
-        logging.debug("Using fd %d",fh)
-        os.lseek(fh,0,0)
+        if fh is None:
+            raise FuseOSError(EIO)
+        logging.debug("Using fh %d",fh)
 
         # load the file from VOSpace as we might be appending
         # cached==0 means not yet cached... and check that the node mtime is not newer than the cache one.
         # this routine needs good time sych between the OS and the VOSpace... 
-        if self.fh[fh].get('cached',0)  < self.getattr(path)['st_size'] or os.stat(self.fh[fh]['name']).st_mtime < self.getattr(path)['st_mtime']:
-          w=open(self.fh[fh]['name'],'wb')
-          try:
-            r=self.client.open(path,mode=os.O_RDONLY,view="data")
-            fpos=0
-            while True:
-                buf=r.read(READBUF)
-                logging.debug("Read buffer length %s from %s" % ( len(buf), self.getNode(self.getPath(fh)).name)) 
-                if not buf:
-                    break
-                w.write(buf)
+        if not self.fh[fh].get('cached',False) or os.stat(self.fh[fh]['name']).st_mtime < self.getattr(path)['st_mtime']:
+            os.ftruncate(fh,0)
+            try:
+                r=self.client.open(path,mode=os.O_RDONLY,view="data")
+                fpos=0
+                while True:
+                    buf=r.read(READBUF)
+                    if not buf:
+                        break
+                    if os.write(fh,buf)!=len(buf):
+                        raise FuseOSError(EIO)
                 logging.debug("wrote buffer to %s " % ( self.fh[fh]['name']))
-                fpos=fpos+len(buf)
-                #if fpos >= size+offset and size>0:
-                #    break
-            self.fh[fh]['cached']=fpos
-            w.flush()
-          except IOError as e:
-	    f=FuseOSError(e.errno)
-	    f.strerror=e.strerror
-            raise f
-          finally:
-            w.close()
+                os.fsync(fh)
+            except IOError as e:
+                f=FuseOSError(e.errno)
+                f.strerror=e.strerror
+                raise f
             r.close()
-        logging.debug("sending bytes %d to %d from %d" % (offset,offset+size,fh))
-        os.lseek(fh,offset,0)
+            self.fh[fh]['cached']=True
+            logging.debug("cached %s to %s" % ( path,self.fh[fh]['name']))
+        os.lseek(fh,offset,os.SEEK_SET)
         return os.read(fh,size)
 
     def readdir(self, path, fh):
@@ -421,46 +384,43 @@ class VOFS(LoggingMixIn, Operations):
     def release(self, path, fh):
         """Close the file, but if this was a holding spot for writes, then write the file to the node"""
         import os
-        if self.fh.get(fh,None):
+
+        ## get the MODE of the oringal open, if 'w/a/w+/a+' we should write to VOSpace
+        ## we do that here before closing the filehandle since we delete the reference to 
+        ## the file handle at this point.
+        if self.fh.get(fh,None) is not None:
             mode = self.fh[fh]['flags']
-            ### copy the staging file to VOSpace if needed
-            logging.debug("node %s currently open with mode %s, releasing %d (%s)" % ( path, mode,fh, self.getPath(fh)))
-            if mode & ( os.O_RDWR | os.O_WRONLY | os.O_APPEND | os.O_CREAT ):
-                os.fsync(fh)
-                w=self.client.open(path,os.O_WRONLY)
-                os.lseek(fh,0,0)
-                while True:
-                    buf=os.read(fh,READBUF)
-                    logging.debug("Writing %d bytes to %s" % (len(buf), path))
-                    if not buf:
-                        break
-                    if w.write(buf)!=len(buf):
-                        raise FuseOSError(EIO)
-                w.close()
 
-            ### remove file name from the fh map
-            #if self.fh[fh].get('name',None):
-                #logging.debug("deleting the tmpfile %s" % (self.fh[fh]['name']))
-                #os.unlink(self.fh[fh]['name'])
-            self.fh.pop(fh,None)
-            self.fh.pop(path,None)
-        ## if we have an active file object then 
-        ## close this file and forget about the pointer.
-        fobj=self.fobj.pop(fh,None)
-        if fobj is not None:
-            logging.debug("checking if fh %d  is closed" % ( fh))
-            if not fobj.closed:
-                logging.debug("Closing fh %d" % ( fh))
-                ### Closing a bad handle doesn't hurt....
-                try:
-                    fobj.close()
-                except:
-                    pass
+        ##  close the fh
+        try:
+            os.close(fh)
+        except Exception as e:
+            logging.debug(str(e))
 
-        logging.debug("removing reference to %d" % ( fh) )
-        ## Update the parent node access time
-        #logging.debug("Deleting the Node from the lookup table")
-        #self.delNode(path)
+        ## On close, if this was a WRITE opperation then update VOSpace
+        ## unless the VOSpace is actually newer than this cache file.
+        ### copy the staging file to VOSpace if needed
+        logging.debug("node %s currently open with mode %s, releasing" % ( path, mode))
+        if mode & ( os.O_RDWR | os.O_WRONLY | os.O_APPEND | os.O_CREAT ) and os.stat(self.fh[fh]['name']).st_mtime > self.getattr(path)['st_mtime']:
+            r=os.open(self.fh[fh]['name'],os.O_RDONLY)
+            os.lseek(r,0,os.SEEK_SET)
+            w=self.client.open(path,os.O_WRONLY)
+            logging.debug("Writing to %s" % (path))
+            while True:
+                buf=os.read(r,READBUF)
+                logging.debug(buf)
+                if not buf:
+                    break
+                if w.write(buf)!=len(buf):
+                    raise FuseOSError(EIO)
+            logging.debug("Closing connection to vospace")
+            os.close(r)
+            w.close()
+
+        self.fh.pop(fh,None)
+        self.fh.pop(path,None)
+
+        self.delNode(path)
         self.clear_cache()
 
     def dead_removexattr(self, path, name):
@@ -478,25 +438,21 @@ class VOFS(LoggingMixIn, Operations):
         logging.debug("Original %s -> %s" % ( src,dest))
 	if not self.client.isfile(src):
 	   return -1
-        if os.path.basename(dest)==os.path.basename(src):
-	   dest=os.path.dirname(dest)
-        if not self.client.isdir(dest):
-	   return -1
+        if not self.client.isdir(os.path.dirname(dest)):
+            return -1
         logging.debug("Moving %s to %s" % ( src,dest))
         result=self.client.move(src,dest)
-        logging.critical(str(result))
+        logging.debug(str(result))
         if result:
            srcPath=os.path.normpath(self.cache_dir+src)
            destPath=os.path.normpath(self.cache_dir+dest)
-	   destDir=os.path.basename(destPath)
-           if os.access(srcPath,os.W_OK):
+           if os.access(srcPath,os.F_OK):
 	      # only rename if the destination exists and is a directory
-	      if not os.access(destDir,os.F_OK):
-	          os.rename(srcPath,destPath)
-              else:
-	          os.unlink(srcPath)
-	   return 0
-        return -1
+               dirs=os.path.dirname(destPath)
+               if not os.path.exists(dirs):
+                   os.makedirs(dirs)
+               os.rename(srcPath,destPath)
+        return 0
     
     def dead_setxattr(self, path, name, value, size, options, *args):
         """Simple xattr setting, ignorring options for now"""
@@ -573,31 +529,44 @@ class VOFS(LoggingMixIn, Operations):
     
     def truncate(self, path, length, fh=None):
         logging.debug("Attempting to truncate %s (%d)" % ( path,length))
+        ## check if we have an active fildes for this path
         if fh is None:
             fh = self.fh.get(path,None)
-	if fh is not None:
-            os.ftruncate(fh,length)
-            logging.debug("cache file has been truncated")
-	if length>0 and fh is None:
-            """Were trying to do a truncate right of the VOSpace node"""
+        ## if length is '0' then truncate.
+        if length==0:
+            if fh is not None:
+                os.ftruncate(fh,length)
+            ## DELETE the node and replace vospace node 
+            self.client.delete(path)
+            self.client.open(path,os.O_CREAT).close()
+            return
+        
+        ## do we have a cache file handle? If not then we need to open one
+        if not fh:
+            fh=self.open(path,os.O_RDWR)
+
+        ## length wasn't 0, first check if we have a valid cached version of this file.
+        if not self.fh[fh].get('cached',False) or os.stat(self.fh[fh]['name']).st_mtime < self.getattr(path)['st_mtime']:
+            ## (re)cache file  (really we don't need the entire file, just upto length
             try:
                 r = self.client.open(path,mode=os.O_RDONLY,view='data')
-                w = self.client.open(path,os.O_WRONLY)
                 fpos=0
                 while True:
                     buf=r.read(READBUF)
                     if not buf:
                         break
                     chunk=min(length-fpos,READBUF) 
-                    w.write(buf[:chunk])
+                    if os.write(fh,buf[:chunk])!=chunk:
+                        raise FuseOSError(EIO)
                     fpos=fpos+chunk
                 r.close()
-                w.close()
             except:
                 raise FuseOSError(EIO)
-        else:
-            self.client.open(path,os.O_WRONLY).close()
-        logging.debug("Node has been truncated")
+
+        ## now we can truncate the file.
+        os.ftruncate(fh,length)
+        logging.debug("cache file has been truncated")
+        return
 
     def unlink(self,path):
         fname=os.path.normpath(self.cache_dir+path)
@@ -634,6 +603,15 @@ class VOFS(LoggingMixIn, Operations):
         return 
 
     def write(self, path, data, offset, fh):
+        if not self.fh[fh].get('cached',False) :
+            ## we are writing but never cached the original file, do that now
+            try:
+                logging.debug("Getting data from VOSpace cause the cache is empty")
+                self.read(path,fh=fh)
+            except IOError as e:
+                f=FuseOSError(e.errno)
+                f.strerror=e.strerror
+                raise f
         os.lseek(fh, offset, 0)
         return os.write(fh, data)
 
