@@ -264,7 +264,7 @@ public class DatabaseNodePersistenceTest
 
         public DatabaseNodePersistenceStub()
         {
-            super(new NodeDAO.NodeSchema("Node", "NodeProperty", true), false);
+            super(new NodeDAO.NodeSchema("Node", "NodeProperty", true, true));
         }
 
         @Override

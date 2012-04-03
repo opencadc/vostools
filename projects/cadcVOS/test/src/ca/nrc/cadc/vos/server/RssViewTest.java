@@ -98,7 +98,6 @@ import org.apache.log4j.Level;
 import org.apache.log4j.Logger;
 import org.jdom.Document;
 import org.jdom.Element;
-import org.junit.AfterClass;
 import org.junit.Assert;
 import org.junit.BeforeClass;
 import org.junit.Test;
@@ -365,7 +364,7 @@ public class RssViewTest
             super(new NodeDAO.NodeSchema(
                     database + "." + schema + ".Node", 
                     database + "." + schema + ".NodeProperty",
-                    true), false
+                    true, true)
                 );
             this.server = server;
             this.database = database;

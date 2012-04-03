@@ -137,19 +137,6 @@ public class VOSpaceAuthorizer implements Authorizer
         groupMembershipCache = new HashMap<String, Boolean>();
     }
 
-    // get a linked list of nodes from leaf to root
-    private LinkedList<Node> getNodeList(Node leaf)
-    {
-        LinkedList<Node> nodes = new LinkedList<Node>();
-        Node cur = leaf;
-        while (cur != null)
-        {
-            nodes.add(cur);
-            cur = cur.getParent();
-        }
-        return nodes;
-    }
-
     /**
      * Obtain the Read Permission for the given URI.
      *
@@ -188,7 +175,7 @@ public class VOSpaceAuthorizer implements Authorizer
         AccessControlContext acContext = AccessController.getContext();
         Subject subject = Subject.getSubject(acContext);
         
-        LinkedList<Node> nodes = getNodeList(node);
+        LinkedList<Node> nodes = Node.getNodeList(node);
         
         // check for root ownership
         Node rootNode = nodes.getLast();
@@ -245,7 +232,7 @@ public class VOSpaceAuthorizer implements Authorizer
         AccessControlContext acContext = AccessController.getContext();
         Subject subject = Subject.getSubject(acContext);
         
-        LinkedList<Node> nodes = getNodeList(node);
+        LinkedList<Node> nodes = Node.getNodeList(node);
         
         // check for root ownership
         Node rootNode = nodes.getLast();

@@ -77,12 +77,10 @@ import java.text.DateFormat;
 import java.util.Calendar;
 import java.util.Date;
 
-import javax.security.auth.Subject;
 
 import org.apache.log4j.Logger;
 import org.springframework.jdbc.core.RowMapper;
 
-import ca.nrc.cadc.auth.IdentityManager;
 import ca.nrc.cadc.date.DateUtil;
 import ca.nrc.cadc.util.HexUtil;
 import ca.nrc.cadc.vos.ContainerNode;
@@ -129,15 +127,30 @@ public class NodeMapper implements RowMapper
         String name = rs.getString("name");
         String type = rs.getString("type");
         String busyString = rs.getString("busyState");
-        boolean markedForDeletion = rs.getBoolean("markedForDeletion");
         String groupRead = rs.getString("groupRead");
         String groupWrite = rs.getString("groupWrite");
         boolean isPublic = rs.getBoolean("isPublic");
 
         Object ownerObject = rs.getObject("ownerID");
-        long contentLength = rs.getLong("contentLength");
         String contentType = rs.getString("contentType");
         String contentEncoding = rs.getString("contentEncoding");
+
+        Long nodeSize = null;
+        Object o = rs.getObject("nodeSize");
+        if (o != null)
+        {
+            Number n = (Number) o;
+            nodeSize = new Long(n.longValue());
+        }
+        Long contentLength = null;
+        o = rs.getObject("contentLength");
+        if (o != null)
+        {
+            Number n = (Number) o;
+            contentLength = new Long(n.longValue());
+        }
+        log.debug("readNode: nodeSize = " + nodeSize + ", contentLength = " + contentLength);
+
         Object contentMD5 = rs.getObject("contentMD5");
         Date lastModified = rs.getTimestamp("lastModified", cal);
         
@@ -170,18 +183,25 @@ public class NodeMapper implements RowMapper
         nid.ownerObject = ownerObject;
         node.appData = nid;
 
-        node.setMarkedForDeletion(markedForDeletion);
-        
-        node.getProperties().add(new NodeProperty(VOS.PROPERTY_URI_CONTENTLENGTH, Long.toString(contentLength)));
-        
         if (contentType != null && contentType.trim().length() > 0)
         {
             node.getProperties().add(new NodeProperty(VOS.PROPERTY_URI_TYPE, contentType));
         }
+
         if (contentEncoding != null && contentEncoding.trim().length() > 0)
         {
             node.getProperties().add(new NodeProperty(VOS.PROPERTY_URI_CONTENTENCODING, contentEncoding));
         }
+
+        if (node instanceof DataNode && contentLength != null)
+        {
+            node.getProperties().add(new NodeProperty(VOS.PROPERTY_URI_CONTENTLENGTH, contentLength.toString()));
+        }
+        else if (node instanceof ContainerNode && nodeSize != null)
+        {
+            node.getProperties().add(new NodeProperty(VOS.PROPERTY_URI_CONTENTLENGTH, nodeSize.toString()));
+        }
+
         if (contentMD5 != null && contentMD5 instanceof byte[])
         {
             byte[] md5 = (byte[]) contentMD5;

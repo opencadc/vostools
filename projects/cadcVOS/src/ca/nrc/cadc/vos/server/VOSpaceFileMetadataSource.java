@@ -210,87 +210,12 @@ public class VOSpaceFileMetadataSource implements FileMetadataSource
             throw new IllegalArgumentException("FileMetadata is null.");
         VOSURI uri = new VOSURI(resource);
         Node persistentNode = getPersistentNode(uri);
-        List<NodeProperty> props = new ArrayList<NodeProperty>();
-        
-
-        String existingContentLengthString = 
-            persistentNode.getPropertyValue(VOS.PROPERTY_URI_CONTENTLENGTH);
-        long contentLengthDifference;
-
-        if (StringUtil.hasText(existingContentLengthString))
+        if (persistentNode instanceof DataNode)
         {
-            long existingContentLength =
-                    Long.parseLong(existingContentLengthString);
-
-            if (meta.getContentLength() != null)
-            {
-                contentLengthDifference =
-                        meta.getContentLength() - existingContentLength;
-            }
-            else
-            {
-                contentLengthDifference = 0;
-            }
+            DataNode dn = (DataNode) persistentNode;
+            nodePersistence.setFileMetadata(dn, meta);
         }
-        else if (meta.getContentLength() != null)
-        {
-            contentLengthDifference = meta.getContentLength();
-        }
-        else
-        {
-            contentLengthDifference = 0;
-        }
-
-        // fileName
-        // Ignore file name property - this is the name of the node as specified
-        // in the resource
-        
-        // contentEncoding
-        if (meta.getContentEncoding() != null)
-        {
-            NodeProperty contentEncoding = new NodeProperty(VOS.PROPERTY_URI_CONTENTENCODING, meta.getContentEncoding());
-            //persistentNode.getProperties().remove(contentEncoding);
-            props.add(contentEncoding);
-        }
-        
-        // contentLength
-        if (meta.getContentLength() != null)
-        {
-            NodeProperty contentLength = new NodeProperty(VOS.PROPERTY_URI_CONTENTLENGTH, meta.getContentLength().toString());
-            //persistentNode.getProperties().remove(contentLength);
-            props.add(contentLength);
-        }
-        
-        // contentType
-        if (meta.getContentType() != null)
-        {
-            NodeProperty contentType = new NodeProperty(VOS.PROPERTY_URI_TYPE, meta.getContentType());
-            //persistentNode.getProperties().remove(contentType);
-            props.add(contentType);
-        }
-        
-        // md5Sum
-        if (meta.getMd5Sum() != null)
-        {
-            NodeProperty md5Sum = new NodeProperty(VOS.PROPERTY_URI_CONTENTMD5, meta.getMd5Sum());
-            //persistentNode.getProperties().remove(md5Sum);
-            props.add(md5Sum);
-        }
-        
-        nodePersistence.updateProperties(persistentNode, props);
-        
-        // TODO: this API call easier to optimise
-        //nodePersistence.setFileMetadata(persistentNode, meta);
-
-        if (contentLengthDifference != 0)
-        {
-            ContainerNode parent = persistentNode.getParent();
-            while (parent != null)
-            {
-                nodePersistence.updateContentLength(parent, contentLengthDifference);
-                parent = parent.getParent();
-            }
-        }
+        // ignore other node types
     }
 
     /**

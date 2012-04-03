@@ -91,7 +91,7 @@ public class VOSURITest
 
     static
     {
-        Log4jInit.setLevel("ca.nrc.cadc.vos", Level.INFO);
+        Log4jInit.setLevel("ca.nrc.cadc.vos", Level.DEBUG);
     }
 
     @Test

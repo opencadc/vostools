@@ -96,6 +96,7 @@ import ca.nrc.cadc.date.DateUtil;
 import ca.nrc.cadc.db.ConnectionConfig;
 import ca.nrc.cadc.db.DBConfig;
 import ca.nrc.cadc.db.DBUtil;
+import ca.nrc.cadc.util.FileMetadata;
 import ca.nrc.cadc.util.HexUtil;
 import ca.nrc.cadc.util.Log4jInit;
 import ca.nrc.cadc.vos.ContainerNode;
@@ -158,7 +159,7 @@ public class NodeDAOTest
             DBConfig dbConfig = new DBConfig();
             ConnectionConfig connConfig = dbConfig.getConnectionConfig(SERVER, DATABASE);
             this.dataSource = DBUtil.getDataSource(connConfig);
-            NodeSchema ns = new NodeSchema("Node", "NodeProperty", true); // limit with TOP
+            NodeSchema ns = new NodeSchema("Node", "NodeProperty", true, true); // TOP, writable
             this.nodeDAO = new NodeDAO(dataSource, ns, VOS_AUTHORITY, new X500IdentityManager());
 
             ContainerNode root = (ContainerNode) nodeDAO.getPath(HOME_CONTAINER);
@@ -175,7 +176,7 @@ public class NodeDAOTest
         catch(Exception ex)
         {
             // make sure it gets fully dumped
-            ex.printStackTrace();
+            log.error("SETUP FAILED", ex);
             throw ex;
         }
     }
@@ -236,83 +237,33 @@ public class NodeDAOTest
             Assert.assertNotNull(rootContainer);
             String basePath = "/" + HOME_CONTAINER + "/";
 
-            // /a
-            String nodePath1 = basePath + getNodeName("a");
-            dataNode = getCommonDataNode(nodePath1, getCommonProperties());
-            dataNode.setParent(rootContainer); // back link to persistent parent required
-            putNode = nodeDAO.put(dataNode, owner);
-            Node nodeA = nodeDAO.getPath(nodePath1);
-            nodeDAO.getProperties(nodeA);
-            log.debug("PutNode: " + putNode);
-            log.debug("GetNode: " + nodeA);
-            compareNodes("assert1", putNode, nodeA);
-            compareProperties("assert2a", dataNode.getProperties(), putNode.getProperties());
-            compareProperties("assert2b", putNode.getProperties(), nodeA.getProperties());
-            // test the timestamp on this one node
-            String dateStr = nodeA.getPropertyValue(VOS.PROPERTY_URI_DATE);
-            Date d = DateUtil.getDateFormat(DateUtil.IVOA_DATE_FORMAT, DateUtil.UTC).parse(dateStr);
-            Date now = new Date();
-            long delta = now.getTime() - d.getTime();
-            Assert.assertTrue("assert2c: timestamp delta", (delta < 1000L));
-            
-            // /b
-            String nodePath2 = basePath + getNodeName("b");
+            String nodePath2 = basePath + getNodeName("adir");
             containerNode = getCommonContainerNode(nodePath2, getCommonProperties());
             containerNode.setParent(rootContainer); // back link to persistent parent required
             putNode = nodeDAO.put(containerNode, owner);
-            ContainerNode nodeB = (ContainerNode) nodeDAO.getPath(nodePath2);
-            nodeDAO.getProperties(nodeB);
+            ContainerNode adir = (ContainerNode) nodeDAO.getPath(nodePath2);
+            Assert.assertNotNull(adir);
+            nodeDAO.getProperties(adir);
             log.debug("PutNode: " + putNode);
-            log.debug("GetNode: " + nodeB);
-            compareNodes("assert3", putNode, nodeB);
-            compareProperties("assert4", putNode.getProperties(), nodeB.getProperties());
+            log.debug("GetNode: " + adir);
+            compareNodes("assert3", putNode, adir);
+            compareProperties("assert4", putNode.getProperties(), adir.getProperties());
 
-            // /c
-            String nodePath3 = basePath + getNodeName("c");
-            containerNode = getCommonContainerNode(nodePath3, getCommonProperties());
-            containerNode.setParent(rootContainer); // back link to persistent parent required
-            putNode = nodeDAO.put(containerNode, owner);
-            ContainerNode nodeC = (ContainerNode) nodeDAO.getPath(nodePath3);
-            nodeDAO.getProperties(nodeC);
-            compareNodes("assert5", putNode, nodeC);
-            compareProperties("assert6", putNode.getProperties(), nodeC.getProperties());
-
-            // /b/d
-            String nodePath4 = basePath + getNodeName("b") + "/" + getNodeName("d");
-            dataNode = getCommonDataNode(nodePath4, getCommonProperties());
-            dataNode.setParent(nodeB); // back link to persistent parent required
+            // /adir/afile
+            String nodePath4 = basePath + getNodeName("adir") + "/" + getNodeName("afile");
+            dataNode = getCommonDataNode(nodePath4, getDataNodeProperties());
+            dataNode.setParent(adir); // back link to persistent parent required
             putNode = nodeDAO.put(dataNode, owner);
-            Node nodeD = nodeDAO.getPath(nodePath4);
-            nodeDAO.getProperties(nodeD);
-            compareNodes("assert7", putNode, nodeD);
-            compareProperties("assert8", putNode.getProperties(), nodeD.getProperties());
-
-            // /c/e
-            String nodePath5 = basePath + getNodeName("c") + "/" + getNodeName("e");
-            containerNode = getCommonContainerNode(nodePath5, getCommonProperties());
-            containerNode.setParent(nodeC); // back link to persistent parent required
-            putNode = nodeDAO.put(containerNode, owner);
-            ContainerNode nodeE = (ContainerNode) nodeDAO.getPath(nodePath5);
-            nodeDAO.getProperties(nodeE);
-            compareNodes("assert9", putNode, nodeE);
-            compareProperties("assert10", putNode.getProperties(), nodeE.getProperties());
-
-            // /c/e/f
-            String nodePath6 = basePath + getNodeName("c") + "/" + getNodeName("e") + "/" + getNodeName("f");
-            dataNode = getCommonDataNode(nodePath6, getCommonProperties());
-            dataNode.setParent(nodeE); // back link to persistent parent required
-            putNode = nodeDAO.put(dataNode, owner);
-            Node nodeF = nodeDAO.getPath(nodePath6);
-            nodeDAO.getProperties(nodeF);
-            compareNodes("assert11", putNode, nodeF);
-            compareProperties("assert12", putNode.getProperties(), nodeF.getProperties());
+            Node afile = nodeDAO.getPath(nodePath4);
+            Assert.assertNotNull(afile);
+            nodeDAO.getProperties(afile);
+            compareNodes("assert7", putNode, afile);
+            compareProperties("assert8", putNode.getProperties(), afile.getProperties());
 
             log.debug("testPutGetDeleteNodes - CLEANUP");
 
             // delete the three roots
-            nodeDAO.delete(nodeA);
-            nodeDAO.delete(nodeB);
-            nodeDAO.delete(nodeC);
+            nodeDAO.delete(adir);
 
             assertRecursiveDelete();
         }
@@ -454,66 +405,6 @@ public class NodeDAOTest
         finally
         {
             log.debug("testGetChildren - DONE");
-        }
-    }
-
-    @Test
-    public void testMarkForDeletion()
-    {
-        log.debug("testMarkForDeletion - START");
-        try
-        {
-            ContainerNode rootContainer = (ContainerNode) nodeDAO.getPath(HOME_CONTAINER);
-            log.debug("ROOT: " + rootContainer);
-            Assert.assertNotNull(rootContainer);
-
-            String basePath = "/" + HOME_CONTAINER + "/";
-
-            // create a container
-            String path = basePath + getNodeName("dir");
-            ContainerNode testNode = getCommonContainerNode(path);
-            testNode.setParent(rootContainer);
-            ContainerNode cn = (ContainerNode) nodeDAO.put(testNode, owner);
-
-            ContainerNode cur = (ContainerNode) nodeDAO.getPath(path);
-            Assert.assertNotNull(cur);
-
-            DataNode n1 = getCommonDataNode(path + "/one");
-            ContainerNode n2 = getCommonContainerNode(path + "/two");
-            DataNode n3 = getCommonDataNode(path + "/three");
-            ContainerNode n4 = getCommonContainerNode(path + "/four");
-
-            n1.setParent(cn);
-            n2.setParent(cn);
-            n3.setParent(cn);
-            n4.setParent(cn);
-            nodeDAO.put(n1, owner);
-            nodeDAO.put(n2, owner);
-            nodeDAO.put(n3, owner);
-            nodeDAO.put(n4, owner);
-
-            // get a vanilla container with no children
-            cur = (ContainerNode) nodeDAO.getPath(path);
-            Assert.assertNotNull(cur);
-            Assert.assertEquals("empty child list", 0, cur.getNodes().size());
-            nodeDAO.getChildren(cur);
-            Assert.assertEquals("full child list", 4, cur.getNodes().size());
-
-            nodeDAO.markForDeletion(cur);
-            Node gone = nodeDAO.getPath(path);
-            Assert.assertNull(gone);
-
-            nodeDAO.delete(cur);
-            assertRecursiveDelete();
-        }
-        catch(Exception unexpected)
-        {
-            log.error("unexpected exception", unexpected);
-            Assert.fail("unexpected exception: " + unexpected);
-        }
-        finally
-        {
-            log.debug("testMarkForDeletion - DONE");
         }
     }
 
@@ -687,55 +578,9 @@ public class NodeDAOTest
     }
 
     @Test
-    public void testUpdateContentLength()
+    public void testSetBusyState()
     {
-        log.debug("testUpdateContentLength - START");
-        try
-        {
-            ContainerNode rootContainer = (ContainerNode) nodeDAO.getPath(HOME_CONTAINER);
-            log.debug("ROOT: " + rootContainer);
-            Assert.assertNotNull(rootContainer);
-
-            String basePath = "/" + HOME_CONTAINER + "/";
-
-            // Create a node with properties
-            String path = basePath + getNodeName("cl-test");
-            DataNode testNode = getCommonDataNode(path);
-            testNode.getProperties().add(new NodeProperty(VOS.PROPERTY_URI_CONTENTLENGTH, Long.toString(1024)));
-            testNode.setParent(rootContainer);
-
-            // put + get + compare
-            nodeDAO.put(testNode, owner);
-            Node persistNode = nodeDAO.getPath(path);
-            Assert.assertNotNull(persistNode);
-            //nodeDAO.getProperties(nodeFromGet1); // not needed for this impl
-            Assert.assertEquals("assert1024", 1024, getContentLength(persistNode));
-
-            // update the quick way
-            nodeDAO.updateContentLength(persistNode, 1024);
-
-            Node nodeFromGet2 = nodeDAO.getPath(path);
-            Assert.assertNotNull(nodeFromGet2);
-            Assert.assertEquals("assert2048", 2048, getContentLength(nodeFromGet2));
-
-            nodeDAO.delete(persistNode);
-            assertRecursiveDelete();
-        }
-        catch(Exception unexpected)
-        {
-            log.error("unexpected exception", unexpected);
-            Assert.fail("unexpected exception: " + unexpected);
-        }
-        finally
-        {
-            log.debug("testUpdateContentLength - DONE");
-        }
-    }
-
-    @Test
-    public void testUpdateBusyState()
-    {
-        log.debug("testUpdateBusyState - START");
+        log.debug("testSetBusyState - START");
         try
         {
             ContainerNode rootContainer = (ContainerNode) nodeDAO.getPath(HOME_CONTAINER);
@@ -754,15 +599,19 @@ public class NodeDAOTest
             DataNode persistNode = (DataNode) nodeDAO.getPath(path);
             Assert.assertNotNull(persistNode);
             Assert.assertEquals("assert not busy", NodeBusyState.notBusy, persistNode.getBusy());
-            
+
             // -> write
-            nodeDAO.setBusyState(persistNode, NodeBusyState.busyWithWrite);
+            NodeBusyState b = nodeDAO.setBusyState(persistNode, NodeBusyState.notBusy, NodeBusyState.busyWithWrite);
+            Assert.assertNotNull(b);
+            Assert.assertEquals(NodeBusyState.busyWithWrite, b);
             persistNode = (DataNode) nodeDAO.getPath(path);
             Assert.assertNotNull(persistNode);
             Assert.assertEquals("assert not busy", NodeBusyState.busyWithWrite, persistNode.getBusy());
 
             // -> not busy
-            nodeDAO.setBusyState(persistNode, NodeBusyState.notBusy);
+            NodeBusyState nb = nodeDAO.setBusyState(persistNode, NodeBusyState.busyWithWrite, NodeBusyState.notBusy);
+            Assert.assertNotNull(nb);
+            Assert.assertEquals(NodeBusyState.notBusy, nb);
             persistNode = (DataNode) nodeDAO.getPath(path);
             Assert.assertNotNull(persistNode);
             Assert.assertEquals("assert not busy", NodeBusyState.notBusy, persistNode.getBusy());
@@ -777,9 +626,89 @@ public class NodeDAOTest
         }
         finally
         {
-            log.debug("testUpdateBusyState - DONE");
+            log.debug("testSetBusyState - DONE");
         }
     }
+
+    @Test
+    public void testUpdateFileMetadata()
+    {
+        log.debug("testUpdateFileMetadata - START");
+        try
+        {
+            ContainerNode rootContainer = (ContainerNode) nodeDAO.getPath(HOME_CONTAINER);
+            log.debug("ROOT: " + rootContainer);
+            Assert.assertNotNull(rootContainer);
+
+            String basePath = "/" + HOME_CONTAINER + "/";
+
+            // Create a node with properties
+            String path = basePath + getNodeName("ufm-test");
+            DataNode testNode = getCommonDataNode(path);
+            testNode.setParent(rootContainer);
+            nodeDAO.put(testNode, owner);
+            DataNode persistNode = (DataNode) nodeDAO.getPath(path);
+            Assert.assertNotNull(persistNode);
+
+            // update the quick way
+            FileMetadata meta = new FileMetadata();
+            meta.setContentLength(new Long(2048L));
+            meta.setContentEncoding("gzip");
+            meta.setContentType("text/plain");
+            meta.setMd5Sum(HexUtil.toHex(new byte[] {1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16}));
+
+            try
+            {
+                nodeDAO.updateNodeMetadata(persistNode, meta);
+                Assert.fail("expected IllegalStateException calling updateNodeMetadata with busy=N");
+            }
+            catch(IllegalStateException expected)
+            {
+                log.debug("caught expected exception: " + expected);
+            }
+
+            // set busy state correctly and redo
+            NodeBusyState state = nodeDAO.setBusyState(persistNode, NodeBusyState.notBusy, NodeBusyState.busyWithWrite);
+            Assert.assertNotNull("setBusyState", state);
+
+            nodeDAO.updateNodeMetadata(persistNode, meta);
+
+            Node nodeFromGet2 = nodeDAO.getPath(path);
+            Assert.assertNotNull(nodeFromGet2);
+            Assert.assertEquals("assert2048", 2048, getContentLength(nodeFromGet2));
+            NodeProperty np;
+            
+            np = nodeFromGet2.findProperty(VOS.PROPERTY_URI_CONTENTLENGTH);
+            Assert.assertNotNull("contentLength NP", np);
+            Assert.assertEquals(meta.getContentLength().longValue(), Long.parseLong(np.getPropertyValue()));
+            
+            np = nodeFromGet2.findProperty(VOS.PROPERTY_URI_TYPE);
+            Assert.assertNotNull("contentType NP", np);
+            Assert.assertEquals(meta.getContentType(), np.getPropertyValue());
+            
+            np = nodeFromGet2.findProperty(VOS.PROPERTY_URI_CONTENTENCODING);
+            Assert.assertNotNull("contentEncoding NP", np);
+            Assert.assertEquals(meta.getContentEncoding(), np.getPropertyValue());
+            
+            np = nodeFromGet2.findProperty(VOS.PROPERTY_URI_CONTENTMD5);
+            Assert.assertNotNull("contentMD5 NP", np);
+            Assert.assertEquals(meta.getMd5Sum(), np.getPropertyValue());
+
+            nodeDAO.delete(persistNode);
+            assertRecursiveDelete();
+        }
+        catch(Exception unexpected)
+        {
+            log.error("unexpected exception", unexpected);
+            Assert.fail("unexpected exception: " + unexpected);
+        }
+        finally
+        {
+            log.debug("testUpdateFileMetadata - DONE");
+        }
+    }
+
+    
 
     @Test
     public void testGetRoot()
@@ -867,6 +796,7 @@ public class NodeDAOTest
             
             // check that cont2 no longer under moveRoot
             moveRoot = (ContainerNode) nodeDAO.getPath(moveRootPath);
+            Assert.assertNotNull(moveRoot);
             nodeDAO.getChildren(moveRoot);
             for (Node child : moveRoot.getNodes())
             {
@@ -879,6 +809,7 @@ public class NodeDAOTest
             
             // check that cont2 under cont3
             moveCont3 = (ContainerNode) nodeDAO.getPath(moveCont3Path);
+            Assert.assertNotNull(moveCont3);
             nodeDAO.getChildren(moveCont3);
             boolean found = false;
             for (Node child : moveCont3.getNodes())
@@ -894,6 +825,7 @@ public class NodeDAOTest
             
             // check that cont2 has parent cont3 and child data3
             moveCont2 = (ContainerNode) nodeDAO.getPath(moveCont3Path + "/" + moveCont2.getName());
+            Assert.assertNotNull(moveCont2);
             nodeDAO.getChildren(moveCont2);
             assertEquals("Cont2 has wrong parent.", moveCont3.getName(), moveCont2.getParent().getName());
             assertEquals("Cont2 has wrong parent.", ((NodeID) moveCont3.appData).getID(), ((NodeID) moveCont2.getParent().appData).getID());
@@ -911,7 +843,9 @@ public class NodeDAOTest
             
             // move to a container underneath own tree (not allowed)
             moveCont1 = (ContainerNode) nodeDAO.getPath(moveCont1Path);
+            Assert.assertNotNull(moveCont1);
             moveCont2 = (ContainerNode) nodeDAO.getPath(moveCont3Path + "/" + moveCont2.getName());
+            Assert.assertNotNull(moveCont2);
             try
             {
                 nodeDAO.move(moveCont1, moveCont2, owner);
@@ -1031,7 +965,8 @@ public class NodeDAOTest
             
             // get the root node
             chownRoot = (ContainerNode) nodeDAO.getPath(chownRootPath);
-            
+            Assert.assertNotNull(chownRoot);
+
             // change the ownership non recursively
             nodeDAO.chown(chownRoot, owner2, false);
             
@@ -1097,6 +1032,7 @@ public class NodeDAOTest
             dataNode.setParent(rootContainer); // back link to persistent parent required
             putNode = nodeDAO.put(dataNode, owner);
             Node nodeA = nodeDAO.getPath(nodePath1);
+            Assert.assertNotNull(nodeA);
             nodeDAO.getProperties(nodeA);
             log.debug("PutNode: " + putNode);
             log.debug("GetNode: " + nodeA);
@@ -1114,6 +1050,65 @@ public class NodeDAOTest
             log.debug("testMD5 - DONE");
         }
     }
+
+    @Test
+    public void testReadOnlyFileMetadata()
+    {
+        // md5 is stored as a binary(16) which is sometimes tricky with trailing zero(s)
+        log.debug("testReadOnlyFileMetadata - START");
+        try
+        {
+            DBConfig dbConfig = new DBConfig();
+            ConnectionConfig connConfig = dbConfig.getConnectionConfig(SERVER, DATABASE);
+            this.dataSource = DBUtil.getDataSource(connConfig);
+            NodeSchema ns = new NodeSchema("Node", "NodeProperty", true, false); // TOP, read-only
+            this.nodeDAO = new NodeDAO(dataSource, ns, VOS_AUTHORITY, new X500IdentityManager());
+            
+            DataNode dataNode = null;
+            ContainerNode containerNode = null;
+            Node putNode = null;
+
+            ContainerNode rootContainer = (ContainerNode) nodeDAO.getPath(HOME_CONTAINER);
+            log.debug("ROOT: " + rootContainer);
+            Assert.assertNotNull(rootContainer);
+            String basePath = "/" + HOME_CONTAINER + "/";
+
+            NodeProperty len = new NodeProperty(VOS.PROPERTY_URI_CONTENTLENGTH, "123");
+            NodeProperty md5 = new NodeProperty(VOS.PROPERTY_URI_CONTENTMD5, HexUtil.toHex(new byte[] {1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 0, 0}));
+            log.debug("len: " + len.getPropertyValue());
+            log.debug("md5: " + md5.getPropertyValue());
+            // /a
+            String nodePath1 = basePath + getNodeName("a");
+            List<NodeProperty> props = new ArrayList<NodeProperty>();
+            props.add(len);
+            props.add(md5);
+            dataNode = getCommonDataNode(nodePath1, props);
+            dataNode.setParent(rootContainer); // back link to persistent parent required
+            putNode = nodeDAO.put(dataNode, owner);
+            Node nodeA = nodeDAO.getPath(nodePath1);
+            Assert.assertNotNull(nodeA);
+            nodeDAO.getProperties(nodeA);
+            log.debug("PutNode: " + putNode);
+            log.debug("GetNode: " + nodeA);
+            
+            // we tried to set the props, but they are not writable
+            NodeProperty lenActual = nodeA.findProperty(VOS.PROPERTY_URI_CONTENTLENGTH);
+            NodeProperty md5Actual = nodeA.findProperty(VOS.PROPERTY_URI_CONTENTMD5);
+            Assert.assertNull("persisted contentLength", lenActual);
+            Assert.assertNull("persisted contentMD5", lenActual);
+        }
+        catch(Exception unexpected)
+        {
+            log.error("unexpected exception", unexpected);
+            Assert.fail("unexpected exception: " + unexpected);
+        }
+        finally
+        {
+            log.debug("testReadOnlyFileMetadata - DONE");
+        }
+    }
+
+
 
     private long getContentLength(Node node)
     {
@@ -1149,7 +1144,6 @@ public class NodeDAOTest
     {
         VOSURI vosuri = new VOSURI(new URI("vos", VOS_AUTHORITY, path, null, null));
         ContainerNode containerNode = new ContainerNode(vosuri);
-        //containerNode.getProperties().add(new NodeProperty(VOS.PROPERTY_URI_CREATOR, NODE_OWNER));
         return containerNode;
     }
 
@@ -1158,13 +1152,20 @@ public class NodeDAOTest
         List<NodeProperty> properties = new ArrayList<NodeProperty>();
         NodeProperty prop1 = new NodeProperty("uri1", "value1");
         NodeProperty prop2 = new NodeProperty("uri2", "value2");
+
+        properties.add(prop1);
+        properties.add(prop2);
+
+        return properties;
+    }
+    private List<NodeProperty> getDataNodeProperties()
+    {
+        List<NodeProperty> properties = getCommonProperties();
         NodeProperty prop3 = new NodeProperty(VOS.PROPERTY_URI_CONTENTLENGTH, new Long(1024).toString());
         NodeProperty prop4 = new NodeProperty(VOS.PROPERTY_URI_TYPE, "text/plain");
         NodeProperty prop5 = new NodeProperty(VOS.PROPERTY_URI_CONTENTENCODING, "gzip");
         NodeProperty prop6 = new NodeProperty(VOS.PROPERTY_URI_CONTENTMD5, HexUtil.toHex(new byte[] {1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16}));
 
-        properties.add(prop1);
-        properties.add(prop2);
         properties.add(prop3);
         properties.add(prop4);
         properties.add(prop5);

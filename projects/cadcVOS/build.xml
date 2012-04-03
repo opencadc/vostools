@@ -221,7 +221,6 @@
           <test name="ca.nrc.cadc.vos.NodeReaderWriterTest"/>
           <test name="ca.nrc.cadc.vos.TransferReaderWriterTest"/>
         </junit>
-
     </target>
 
     <target name="dao-test" depends="compile-test">
@@ -242,7 +241,6 @@
           <formatter type="plain" usefile="false"/>
           <test name="ca.nrc.cadc.vos.server.NodeDAOTest"/>
         </junit>
-
     </target>
 
     <target name="rss-test" depends="compile-test">
@@ -266,6 +264,6 @@
           <test name="ca.nrc.cadc.vos.server.RssFeedItemTest"/>
           <test name="ca.nrc.cadc.vos.server.util.FixedSizeTreeSetTest"/>
         </junit>
-
     </target>
+
 </project>

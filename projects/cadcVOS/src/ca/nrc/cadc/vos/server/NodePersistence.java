@@ -69,6 +69,7 @@
 
 package ca.nrc.cadc.vos.server;
 
+import ca.nrc.cadc.util.FileMetadata;
 import java.util.List;
 
 import ca.nrc.cadc.vos.ContainerNode;
@@ -164,26 +165,22 @@ public interface NodePersistence
     void delete(Node node);
    
     /**
-     * Update the content length of the container node by adding the
-     * specified difference. A positive delta will increase the size
-     * and a negative delta will decrease it.
+     * Update the node metadata after a transfer (put) is complete.
      *
      * @param node
-     * @param delta amount to add
+     * @param meta metadata from the successful put
      */
-    void updateContentLength(ContainerNode node, long delta);
-
-    // TODO: this API call easier to optimise -- callback after the data transfer is complete
-    //void setFileMetadata(DataNode node, FileMetadata meta);
+    void setFileMetadata(DataNode node, FileMetadata meta);
 
     /**
-     * Set the busy state of the node.
+     * Set the busy state of the node from curState to newState.
      * 
      * @param node The node on which to alter the busy state.
      * @param state The new state for the node.
+     * @return the new state or null if the transition failed
      * @throws NodeNotFoundException If the node could not be found.
      */
-    void setBusyState(DataNode node, NodeBusyState state);
+    NodeBusyState setBusyState(DataNode node, NodeBusyState curState, NodeBusyState newState);
     
     /**
      * Move the specified node to the new path.  The node must have been retrieved

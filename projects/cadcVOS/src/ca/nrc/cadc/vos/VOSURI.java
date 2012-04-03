@@ -293,12 +293,19 @@ public class VOSURI
      * @throws URISyntaxException
      * @author Sailor Zhang, 2010-07-15
      */
-    public URI getServiceURI() throws URISyntaxException
+    public URI getServiceURI()
     {
         String authority = getAuthority();
         authority = authority.replace('!', '/');
         authority = authority.replace('~', '/');
-        String str = "ivo://" + authority; 
-        return new URI(str);
+        String str = "ivo://" + authority;
+        try
+        {
+            return new URI(str);
+        }
+        catch(URISyntaxException bug)
+        {
+            throw new RuntimeException("BUG: failed to create service URI from VOSURI: " + vosURI);
+        }
     }
 }

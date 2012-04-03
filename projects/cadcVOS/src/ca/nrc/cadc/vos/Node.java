@@ -75,6 +75,7 @@ package ca.nrc.cadc.vos;
 
 import java.net.URI;
 import java.util.ArrayList;
+import java.util.LinkedList;
 import java.util.List;
 
 import org.apache.log4j.Logger;
@@ -108,7 +109,7 @@ public abstract class Node implements Comparable<Object>
     protected boolean isPublic;
 
     // True if marked for deletion
-    protected boolean markedForDeletion;
+    //protected boolean markedForDeletion;
 
     // To be used by controlling applications as they wish
     public transient Object appData;
@@ -156,7 +157,7 @@ public abstract class Node implements Comparable<Object>
 
         return this.getClass().getSimpleName() 
                 + " [appData=" + appData
-                + ", markedForDeletion=" + markedForDeletion
+                //+ ", markedForDeletion=" + markedForDeletion
                 + ", uri=" + uri.toString()
                 + ", parent=" + parentStr
                 + ", properties=" + properties + "]";
@@ -269,6 +270,7 @@ public abstract class Node implements Comparable<Object>
         this.properties = properties;
     }
 
+    /*
     public boolean isMarkedForDeletion()
     {
         return markedForDeletion;
@@ -278,7 +280,8 @@ public abstract class Node implements Comparable<Object>
     {
         this.markedForDeletion = markedForDeletion;
     }
-
+    */
+    
     /**
      * Convenience method. This just calls
      * <pre>
@@ -321,5 +324,22 @@ public abstract class Node implements Comparable<Object>
         if (prop != null)
             return prop.getPropertyValue();
         return null;
+    }
+
+    /**
+     * Get a linked list of nodes from leaf to root.
+     *
+     * @return list of nodes, with leaf first and root last
+     */
+    public static LinkedList<Node> getNodeList(Node leaf)
+    {
+        LinkedList<Node> nodes = new LinkedList<Node>();
+        Node cur = leaf;
+        while (cur != null)
+        {
+            nodes.add(cur);
+            cur = cur.getParent();
+        }
+        return nodes;
     }
 }

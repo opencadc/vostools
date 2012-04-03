@@ -233,7 +233,10 @@ public class VOS
     public static final String PROPERTY_URI_CONTENTLENGTH = "ivo://ivoa.net/vospace/core#length";
 
     // The quota of a Container Node.
-    public static final String PROPERTY_URI_QUOTA = "ivo://ivoa.net/vospace/core#quota";    
+    public static final String PROPERTY_URI_QUOTA = "ivo://ivoa.net/vospace/core#quota";
+
+    // the space used in a container node
+    public static final String PROPERTY_URI_SPACEUSED = "ivo://ivoa.net/vospace/core#spaceused";
     
     // The content encoding of the resource
     public static final String PROPERTY_URI_CONTENTENCODING = "ivo://ivoa.net/vospace/core#encoding";
@@ -261,6 +264,7 @@ public class VOS
         PROPERTY_URI_DATE,
         PROPERTY_URI_CREATOR,
         PROPERTY_URI_QUOTA,
+        PROPERTY_URI_SPACEUSED,
         PROPERTY_URI_CONTENTLENGTH,
         PROPERTY_URI_CONTENTMD5
     };

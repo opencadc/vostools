@@ -75,13 +75,10 @@ go
 CREATE TABLE Node (
    nodeID            BIGINT            IDENTITY,
    parentID          BIGINT            NULL,
--- max node name length==256, + 20 for timestamp in nodes marked for delete
+-- max node name length==256, plus space to stick a timestamp on the end
    name              VARCHAR(276)      NOT NULL,
    type              CHAR(1)           NOT NULL,
    busyState         CHAR(1)           NOT NULL,
-
--- this is only used if using the NodeDAO.markForDeletion but needs to be here
-   markedForDeletion BIT               NOT NULL,
 
    ownerID           VARCHAR(256)      NOT NULL,
    creatorID         VARCHAR(256)      NOT NULL,
@@ -89,11 +86,13 @@ CREATE TABLE Node (
    groupRead         VARCHAR(256)      NULL,
    groupWrite        VARCHAR(256)      NULL,
    isPublic          BIT               NOT NULL,
--- NodeDAO stores length for both data and container nodes (aggregate for the latter)
-   contentLength     BIGINT            NOT NULL,
+   
    contentType       VARCHAR(100)      NULL,
    contentEncoding   VARCHAR(50)       NULL,
+   nodeSize          BIGINT            NULL,
+   contentLength     BIGINT            NULL,
    contentMD5        BINARY(16)        NULL,
+
 -- createdOn: internal column not referenced in NodeDAO
    createdOn         DATETIME          DEFAULT getDate(),
    lastModified      DATETIME          NOT NULL
@@ -151,6 +150,12 @@ CREATE TRIGGER NodeProperty_update_trigger
     END
 go
 
+--
+-- The DeletedNode table contains all deleted DataNodes. This can be used to
+-- delete files from wherever they are stored and assumes that containers only
+-- exist in the Node table and not in the file storage system.
+--
+
 print "create table DeletedNode ..."
 go
 create table DeletedNode
@@ -158,7 +163,6 @@ create table DeletedNode
     nodeID        BIGINT       NOT NULL,
     name              VARCHAR(276)      NOT NULL,
     ownerID           VARCHAR(256)      NOT NULL,
-    contentLength     BIGINT            NOT NULL,
     lastModified  DATETIME     NOT NULL
 )
 lock datarows
@@ -173,8 +177,9 @@ CREATE TRIGGER Node_delete_trig
     FOR DELETE
     AS
     BEGIN
-        INSERT INTO DeletedNode (nodeID,name,ownerID,contentLength,lastModified)
-        (SELECT nodeID,name,ownerID,contentLength,getdate() FROM deleted where type='D')
+        INSERT INTO DeletedNode (nodeID,name,ownerID,lastModified)
+        (SELECT nodeID,name,ownerID,getdate() FROM deleted
+		WHERE type='D' and contentLength IS NOT NULL)
     END
 go
 

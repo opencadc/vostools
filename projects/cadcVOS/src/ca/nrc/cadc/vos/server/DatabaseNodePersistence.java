@@ -69,6 +69,7 @@
 
 package ca.nrc.cadc.vos.server;
 
+import ca.nrc.cadc.util.FileMetadata;
 import java.net.URI;
 import java.net.URISyntaxException;
 import java.security.AccessControlContext;
@@ -116,7 +117,6 @@ public abstract class DatabaseNodePersistence implements NodePersistence
             VOS.PROPERTY_URI_GROUPWRITE});
 
     protected NodeDAO.NodeSchema nodeSchema;
-    protected boolean markDeleted;
 
     protected Integer maxChildLimit = new Integer(1000);
 
@@ -129,17 +129,6 @@ public abstract class DatabaseNodePersistence implements NodePersistence
     protected DatabaseNodePersistence(NodeDAO.NodeSchema nodeSchema)
     {
         this.nodeSchema = nodeSchema;
-        this.markDeleted = false;
-    }
-
-    /**
-     * @param nodeSchema node schema config
-     * @param markDeleted true to mark deleted nodes, false to delete them immediately
-     */
-    protected DatabaseNodePersistence(NodeDAO.NodeSchema nodeSchema, boolean markDeleted)
-    {
-        this.nodeSchema = nodeSchema;
-        this.markDeleted = markDeleted;
     }
 
     /**
@@ -168,8 +157,6 @@ public abstract class DatabaseNodePersistence implements NodePersistence
      */
     protected NodeDAO getDAO(String authority)
     {
-        //if (nodeSchema == null) // lazy
-        //    this.nodeSchema = new NodeDAO.NodeSchema(getNodeTableName(),getPropertyTableName());
         return new NodeDAO(getDataSource(), nodeSchema, authority, getIdentityManager());
     }
 
@@ -273,80 +260,25 @@ public abstract class DatabaseNodePersistence implements NodePersistence
     @Override
     public void delete(Node node)
     {
-        log.debug("delete: " + node.getUri());
         NodeDAO dao = getDAO( node.getUri().getAuthority() );
-        //dao.getProperties(node); // not needed to get content-length
-
-        long contentLength = getContentLength(node);
-        log.debug("delete: contentLength = " + contentLength);
-        if (markDeleted)
-            dao.markForDeletion(node);
-        else
-            dao.delete(node);
-        if (contentLength > 0)
-        {
-            long delta = -1*contentLength;
-            ContainerNode parent = node.getParent();
-            while (parent != null)
-            {
-                log.debug("calling updateContentLength: " + parent.getUri() + "," + delta);
-                dao.updateContentLength(parent, delta);
-                parent = parent.getParent();
-            }
-        }
+        dao.delete(node);
     }
 
     @Override
     public void move(Node src, ContainerNode dest)
     {
         log.debug("move: " + src.getUri() + " to " + dest.getUri() + " as " + src.getName());
-        try
+        URI srcAuthority = src.getUri().getServiceURI(); // this removes the ! vs ~ issue
+        URI destAuthority = dest.getUri().getServiceURI();
+        if (!srcAuthority.equals(destAuthority))
         {
-            URI srcAuthority = src.getUri().getServiceURI();
-            URI destAuthority = dest.getUri().getServiceURI();
-            if (!srcAuthority.equals(destAuthority))
-            {
-                throw new RuntimeException("Cannot move nodes between authorities.");
-            }
-        }
-        catch (URISyntaxException e)
-        {
-            throw new RuntimeException("BUG: Invalid node URI(s)", e);
+            throw new RuntimeException("Cannot move nodes between authorities.");
         }
     
         NodeDAO dao = getDAO(src.getUri().getAuthority());
         AccessControlContext acContext = AccessController.getContext();
         Subject caller = Subject.getSubject(acContext);
-        
-        // save the src parent for content-length adjustment later
-        ContainerNode sourceParent = src.getParent();
-        
-        // move the node
         dao.move(src, dest, caller);
-        
-        // adjust the content lengths
-        long moveDiff = getContentLength(src);
-        if (moveDiff > 0)
-        {
-            ContainerNode parent = sourceParent;
-            // subtract from the src side
-            while (parent != null)
-            {
-                log.debug("calling updateContentLength: " + parent.getUri() + "," + (-1*moveDiff));
-                dao.updateContentLength(parent, -1*moveDiff);
-                parent = parent.getParent();
-            }
-            // add to the dest side
-            parent = dest;
-            while (parent != null)
-            {
-                log.debug("calling updateContentLength: " + parent.getUri() + "," + moveDiff);
-                dao.updateContentLength(parent, moveDiff);
-                parent = parent.getParent();
-            }
-        }
-        
-        
     }
 
     @Override
@@ -355,11 +287,16 @@ public abstract class DatabaseNodePersistence implements NodePersistence
         throw new UnsupportedOperationException("Not supported yet.");
     }
 
-    @Override
-    public void setBusyState(DataNode node, NodeBusyState state)
+    public NodeBusyState setBusyState(DataNode node, NodeBusyState curState, NodeBusyState newState)
     {
         NodeDAO dao = getDAO( node.getUri().getAuthority() );
-        dao.setBusyState(node, state);
+        return dao.setBusyState(node, curState, newState);
+    }
+
+    public void setFileMetadata(DataNode node, FileMetadata meta)
+    {
+        NodeDAO dao = getDAO( node.getUri().getAuthority() );
+        dao.updateNodeMetadata(node, meta);
     }
     
     @Override
@@ -370,14 +307,7 @@ public abstract class DatabaseNodePersistence implements NodePersistence
         Subject caller = Subject.getSubject(acContext);
         dao.chown(node, caller, recursive);
     }
-
-    @Override
-    public void updateContentLength(ContainerNode node, long delta)
-    {
-        NodeDAO dao = getDAO( node.getUri().getAuthority() );
-        dao.updateContentLength(node, delta);
-    }
-
+   
     /**
      * Get the current contentLength. If the property is not set, 0 is returned.
      * 
