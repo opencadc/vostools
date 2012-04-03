@@ -172,7 +172,7 @@ class VOFS(LoggingMixIn, Operations):
                 raise f
 
         ## now we can just open the file in the usual way and return the handle
-        return self.open(path,flags)
+        return self.open(path,os.O_WRONLY)
 
     def flushnode(self,path,fh):
         """Flush the data associated with this fh to the Node at path
