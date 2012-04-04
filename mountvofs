@@ -1,4 +1,4 @@
-#!python
+#!/Library/Frameworks/EPD64.framework/Versions/7.1/bin/python
 """A FUSE based filesystem view of VOSpace."""
 
 from sys import argv, exit, platform
@@ -196,7 +196,6 @@ class VOFS(LoggingMixIn, Operations):
         w.close()
         ## Now update our information about this VOSpace node...
         self.getNode(path)
-        ## Now update the utimes for the parrent.
         return
 
     def flush(self,path,fh):
@@ -333,8 +332,8 @@ class VOFS(LoggingMixIn, Operations):
             os.makedirs(dirs)
 
         cached=False
-        if os.access(fname,os.F_OK) and os.stat(fname).st_mtime >= self.getattr(path)['st_mtime']:
-            cached=True
+        #if os.access(fname,os.F_OK) and os.stat(fname).st_mtime >= self.getattr(path)['st_mtime']:
+        #    cached=True
         fh = os.open(fname,os.O_CREAT | os.O_RDWR )
         self.fh[fh]={'flags': flags, 'cached': cached, 'name':fname}
 	self.setPath(fh,path)
@@ -353,7 +352,21 @@ class VOFS(LoggingMixIn, Operations):
         # load the file from VOSpace as we might be appending
         # cached==0 means not yet cached... and check that the node mtime is not newer than the cache one.
         # this routine needs good time sych between the OS and the VOSpace... 
-        if not self.fh[fh].get('cached',False) or os.stat(self.fh[fh]['name']).st_mtime < self.getattr(path)['st_mtime']:
+        if not self.fh[fh]['cached']:
+           import hashlib
+           md5=hashlib.md5()
+           while True:
+               buf=os.read(fh,READBUF)
+               # In this tight loop I don't think you want logging
+               #logging.debug("Read %d bytes from %s" % ( len(buf),src))
+               if len(buf)==0:
+                   break
+               md5.update(buf)
+           if md5.hexdigest()==self.getNode(path).props.get('MD5',0):
+	       self.fh[fh]['cached']=True
+               os.utime(self.fh[fh]['name'],(self.getattr(path)['st_atime'],self.getattr(path)['st_mtime']))
+
+        if not self.fh[fh]['cached'] or os.stat(self.fh[fh]['name']).st_mtime < self.getattr(path)['st_mtime']:
             os.ftruncate(fh,0)
             try:
                 r=self.client.open(path,mode=os.O_RDONLY,view="data")
