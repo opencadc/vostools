@@ -563,7 +563,8 @@ class VOFile:
             ras=self.resp.getheader("Retry-After",None)
             if not ras:
                 logging.error("no retry-after in header, so raising error")
-                raise OSError(errno.EBUSY,"Server overloaded",self.url)
+                ras=5
+                #raise OSError(errno.EBUSY,"Server overloaded",self.url)
             ras=int(ras)
             logging.error("Server loaded, retrying in %d seconds" % (int(ras)))
             time.sleep(int(ras))
