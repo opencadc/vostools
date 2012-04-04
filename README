@@ -29,7 +29,7 @@ mountvofs --help
 options like -v and -d provide lots of feedback.
 
 --- Note: by default mountvofs will create a cache of your VOSpace at
-    the location ${HOME}/vos:VOSPACE where VOSPACE is the name of your
+    the location ${HOME}/vos_/vos:VOSPACE where VOSPACE is the name of your
     VOSpace. You can change this default location and the size of the
     cache from the command line.
 
