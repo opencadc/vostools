@@ -529,7 +529,10 @@ class VOFile:
         self.httpCon = self.connector.getConnection(URL)
         self.closed=False
         self.httpCon.putrequest(method,URL)
-        self.httpCon.putheader("User-Agent", sys.argv[0]+" "+version)
+        userAgent='vos '+version
+        if "mountvofs" in sys.argv[0]:
+            userAgent='vofs '+version
+        self.httpCon.putheader("User-Agent", userAgent)
         if method in ["PUT", "POST", "DELETE"]:
             if self.size is not None and type(self.size)==int:
                 self.httpCon.putheader("Content-Length",self.size)
@@ -559,14 +562,12 @@ class VOFile:
             return self.read(size)
         elif self.resp.status == 503:
             ## try again in Retry-After seconds or fail
-            logging.error("Server is too busy to send %s" % (self.url))
-            ras=self.resp.getheader("Retry-After",None)
-            if not ras:
-                logging.error("no retry-after in header, so raising error")
-                ras=5
-                #raise OSError(errno.EBUSY,"Server overloaded",self.url)
-            ras=int(ras)
-            logging.error("Server loaded, retrying in %d seconds" % (int(ras)))
+            logging.error("Got 503: server busy on %s" % (self.url))
+            try:
+              ras=int(self.resp.getheader("Retry-After",5))
+	    except:
+	      ras=5
+            logging.error("retrying in %d seconds" % (ras))
             time.sleep(int(ras))
             self.open(self.url,"GET")
             return self.read(size)
