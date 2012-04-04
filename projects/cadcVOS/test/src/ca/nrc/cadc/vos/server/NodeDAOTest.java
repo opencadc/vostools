@@ -257,6 +257,8 @@ public class NodeDAOTest
             Node afile = nodeDAO.getPath(nodePath4);
             Assert.assertNotNull(afile);
             nodeDAO.getProperties(afile);
+            Assert.assertNull(afile.findProperty(VOS.PROPERTY_URI_CONTENTLENGTH));
+            Assert.assertNull(afile.findProperty(VOS.PROPERTY_URI_CONTENTMD5));
             compareNodes("assert7", putNode, afile);
             compareProperties("assert8", putNode.getProperties(), afile.getProperties());
 
@@ -495,7 +497,6 @@ public class NodeDAOTest
             String path = basePath + getNodeName("g");
             DataNode testNode = getCommonDataNode(path);
             testNode.getProperties().add(new NodeProperty("uri1", "value1"));
-            testNode.getProperties().add(new NodeProperty(VOS.PROPERTY_URI_CONTENTLENGTH, new Long(1024).toString()));
             testNode.getProperties().add(new NodeProperty(VOS.PROPERTY_URI_TYPE, "text/plain"));
             testNode.setParent(rootContainer);
 
@@ -510,7 +511,6 @@ public class NodeDAOTest
             List<NodeProperty> props = new ArrayList<NodeProperty>();
             props.add(new NodeProperty("uri2", "value1"));
             props.add(new NodeProperty(VOS.PROPERTY_URI_CONTENTENCODING, "gzip"));
-            props.add(new NodeProperty(VOS.PROPERTY_URI_CONTENTMD5, HexUtil.toHex(new byte[] {1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16})));
             testNode.getProperties().addAll(props); // for comparison below
 
             DataNode nodeFromUpdate1 = (DataNode) nodeDAO.updateProperties(nodeFromGet, props);
@@ -525,8 +525,6 @@ public class NodeDAOTest
             // replace values
             testNode.getProperties().remove(new NodeProperty("uri1", null));
             testNode.getProperties().add(new NodeProperty("uri1", "value2"));
-            testNode.getProperties().remove(new NodeProperty(VOS.PROPERTY_URI_CONTENTLENGTH, null));
-            testNode.getProperties().add(new NodeProperty(VOS.PROPERTY_URI_CONTENTLENGTH, new Long(2048).toString()));
             testNode.getProperties().remove(new NodeProperty(VOS.PROPERTY_URI_TYPE, null));
             testNode.getProperties().add(new NodeProperty(VOS.PROPERTY_URI_TYPE, "application/pdf"));
 
@@ -539,6 +537,19 @@ public class NodeDAOTest
             Assert.assertNotNull(reGet2);
             compareProperties("assert5", testNode.getProperties(), nodeFromUpdate2.getProperties());
 
+            // non-settable (note: updateProperties modified the passed in node even though it does not
+            // actually set these in the DB... in general the side-effects are a bad idea
+            List<NodeProperty> expected = new ArrayList<NodeProperty>();
+            expected.addAll(reGet2.getProperties());
+            props.clear();
+            props.addAll(expected);
+            props.add(new NodeProperty(VOS.PROPERTY_URI_CONTENTLENGTH, new Long(1024).toString()));
+            props.add(new NodeProperty(VOS.PROPERTY_URI_CONTENTMD5, HexUtil.toHex(new byte[] {1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16})));
+            nodeDAO.updateProperties(reGet2, props);
+            Node same = nodeDAO.getPath(path);
+            Assert.assertNotNull(same);
+            nodeDAO.getProperties(same);
+            compareProperties("assert non-settable", expected, same.getProperties());
 
             // remove
             props = new ArrayList<NodeProperty>();
@@ -548,9 +559,6 @@ public class NodeDAOTest
             NodeProperty newEncoding = new NodeProperty(VOS.PROPERTY_URI_CONTENTENCODING, "gzip");
             newEncoding.setMarkedForDeletion(true);
             props.add(newEncoding);
-            NodeProperty newMD5 = new NodeProperty(VOS.PROPERTY_URI_CONTENTMD5, HexUtil.toHex(new byte[] {1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16}));
-            newMD5.setMarkedForDeletion(true);
-            props.add(newMD5);
 
             testNode.getProperties().removeAll(props); // remove from client side
 
@@ -637,14 +645,27 @@ public class NodeDAOTest
             Assert.assertNotNull(rootContainer);
 
             String basePath = "/" + HOME_CONTAINER + "/";
+            NodeProperty np;
+
 
             // Create a node with properties
-            String path = basePath + getNodeName("ufm-test");
-            DataNode testNode = getCommonDataNode(path);
-            testNode.setParent(rootContainer);
-            nodeDAO.put(testNode, owner);
-            DataNode persistNode = (DataNode) nodeDAO.getPath(path);
-            Assert.assertNotNull(persistNode);
+            String cPath = basePath + getNodeName("ufm-test");
+            ContainerNode cNode = getCommonContainerNode(cPath);
+            cNode.setParent(rootContainer);
+            nodeDAO.put(cNode, owner);
+            cNode = (ContainerNode) nodeDAO.getPath(cPath);
+            Assert.assertNotNull(cNode);
+            np = cNode.findProperty(VOS.PROPERTY_URI_CONTENTLENGTH);
+            Assert.assertNotNull(np); // containers always have length
+            Assert.assertEquals("new container length", 0, Long.parseLong(np.getPropertyValue()));
+
+            String dPath = cPath + "/" + getNodeName("ufm-test");
+            DataNode dNode = getCommonDataNode(dPath);
+            dNode.setParent(cNode);
+            nodeDAO.put(dNode, owner);
+            dNode = (DataNode) nodeDAO.getPath(dPath);
+            Assert.assertNotNull(dNode);
+            Assert.assertNull(dNode.getPropertyValue(VOS.PROPERTY_URI_CONTENTLENGTH));
 
             // update the quick way
             FileMetadata meta = new FileMetadata();
@@ -655,7 +676,7 @@ public class NodeDAOTest
 
             try
             {
-                nodeDAO.updateNodeMetadata(persistNode, meta);
+                nodeDAO.updateNodeMetadata(dNode, meta);
                 Assert.fail("expected IllegalStateException calling updateNodeMetadata with busy=N");
             }
             catch(IllegalStateException expected)
@@ -663,33 +684,48 @@ public class NodeDAOTest
                 log.debug("caught expected exception: " + expected);
             }
 
+            // get and store size of root container
+            np = rootContainer.findProperty(VOS.PROPERTY_URI_CONTENTLENGTH);
+            long rootContentLength = Long.parseLong(np.getPropertyValue());
+
             // set busy state correctly and redo
-            nodeDAO.setBusyState(persistNode, NodeBusyState.notBusy, NodeBusyState.busyWithWrite);
+            nodeDAO.setBusyState(dNode, NodeBusyState.notBusy, NodeBusyState.busyWithWrite);
+            nodeDAO.updateNodeMetadata(dNode, meta);
 
-            nodeDAO.updateNodeMetadata(persistNode, meta);
-
-            Node nodeFromGet2 = nodeDAO.getPath(path);
-            Assert.assertNotNull(nodeFromGet2);
-            Assert.assertEquals("assert2048", 2048, getContentLength(nodeFromGet2));
-            NodeProperty np;
-            
-            np = nodeFromGet2.findProperty(VOS.PROPERTY_URI_CONTENTLENGTH);
+            // check size on root container
+            Node n = nodeDAO.getPath(HOME_CONTAINER);
+            np = n.findProperty(VOS.PROPERTY_URI_CONTENTLENGTH);
             Assert.assertNotNull("contentLength NP", np);
-            Assert.assertEquals(meta.getContentLength().longValue(), Long.parseLong(np.getPropertyValue()));
+            long modRootLen = Long.parseLong(np.getPropertyValue());
+            Assert.assertEquals("root length", rootContentLength+2048, modRootLen);
+
+            // check size on container node
+            n = nodeDAO.getPath(cPath);
+            Assert.assertNotNull(n);
+            np = n.findProperty(VOS.PROPERTY_URI_CONTENTLENGTH);
+            Assert.assertNotNull("contentLength NP", np);
+            Assert.assertEquals(2048, Long.parseLong(np.getPropertyValue()));
+
+            // check all metadata on data node
+            n = nodeDAO.getPath(dPath);
+            Assert.assertNotNull(n);
+            np = n.findProperty(VOS.PROPERTY_URI_CONTENTLENGTH);
+            Assert.assertNotNull("contentLength NP", np);
+            Assert.assertEquals(2048, Long.parseLong(np.getPropertyValue()));
             
-            np = nodeFromGet2.findProperty(VOS.PROPERTY_URI_TYPE);
+            np = n.findProperty(VOS.PROPERTY_URI_TYPE);
             Assert.assertNotNull("contentType NP", np);
             Assert.assertEquals(meta.getContentType(), np.getPropertyValue());
             
-            np = nodeFromGet2.findProperty(VOS.PROPERTY_URI_CONTENTENCODING);
+            np = n.findProperty(VOS.PROPERTY_URI_CONTENTENCODING);
             Assert.assertNotNull("contentEncoding NP", np);
             Assert.assertEquals(meta.getContentEncoding(), np.getPropertyValue());
             
-            np = nodeFromGet2.findProperty(VOS.PROPERTY_URI_CONTENTMD5);
+            np = n.findProperty(VOS.PROPERTY_URI_CONTENTMD5);
             Assert.assertNotNull("contentMD5 NP", np);
             Assert.assertEquals(meta.getMd5Sum(), np.getPropertyValue());
 
-            nodeDAO.delete(persistNode);
+            nodeDAO.delete(cNode);
             assertRecursiveDelete();
         }
         catch(Exception unexpected)
@@ -1001,50 +1037,7 @@ public class NodeDAOTest
         }
     }
 
-    @Test
-    public void testMD5()
-    {
-        // md5 is stored as a binary(16) which is sometimes tricky with trailing zero(s)
-        log.debug("testMD5 - START");
-        try
-        {
-            DataNode dataNode = null;
-            ContainerNode containerNode = null;
-            Node putNode = null;
-
-            ContainerNode rootContainer = (ContainerNode) nodeDAO.getPath(HOME_CONTAINER);
-            log.debug("ROOT: " + rootContainer);
-            Assert.assertNotNull(rootContainer);
-            String basePath = "/" + HOME_CONTAINER + "/";
-
-            NodeProperty md5 = new NodeProperty(VOS.PROPERTY_URI_CONTENTMD5, HexUtil.toHex(new byte[] {1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 0, 0}));
-            log.debug("md5: " + md5.getPropertyValue());
-            // /a
-            String nodePath1 = basePath + getNodeName("a");
-            List<NodeProperty> props = new ArrayList<NodeProperty>();
-            props.add(md5);
-            dataNode = getCommonDataNode(nodePath1, props);
-            dataNode.setParent(rootContainer); // back link to persistent parent required
-            putNode = nodeDAO.put(dataNode, owner);
-            Node nodeA = nodeDAO.getPath(nodePath1);
-            Assert.assertNotNull(nodeA);
-            nodeDAO.getProperties(nodeA);
-            log.debug("PutNode: " + putNode);
-            log.debug("GetNode: " + nodeA);
-            compareNodes("assert1", putNode, nodeA);
-            compareProperties("assert2a", dataNode.getProperties(), putNode.getProperties());
-            compareProperties("assert2b", putNode.getProperties(), nodeA.getProperties());
-        }
-        catch(Exception unexpected)
-        {
-            log.error("unexpected exception", unexpected);
-            Assert.fail("unexpected exception: " + unexpected);
-        }
-        finally
-        {
-            log.debug("testMD5 - DONE");
-        }
-    }
+    // testMD5 removed since it is only settable and tested in testUpdateFileMetadata()
 
     @Test
     public void testReadOnlyFileMetadata()
@@ -1080,7 +1073,7 @@ public class NodeDAOTest
             dataNode = getCommonDataNode(nodePath1, props);
             dataNode.setParent(rootContainer); // back link to persistent parent required
             putNode = nodeDAO.put(dataNode, owner);
-            Node nodeA = nodeDAO.getPath(nodePath1);
+            DataNode nodeA = (DataNode) nodeDAO.getPath(nodePath1);
             Assert.assertNotNull(nodeA);
             nodeDAO.getProperties(nodeA);
             log.debug("PutNode: " + putNode);
@@ -1091,6 +1084,22 @@ public class NodeDAOTest
             NodeProperty md5Actual = nodeA.findProperty(VOS.PROPERTY_URI_CONTENTMD5);
             Assert.assertNull("persisted contentLength", lenActual);
             Assert.assertNull("persisted contentMD5", lenActual);
+
+            // now try to update them via updateFileMetadata
+            FileMetadata meta = new FileMetadata();
+            meta.setContentLength(new Long(2048L));
+            meta.setMd5Sum(HexUtil.toHex(new byte[] {1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16}));
+            
+            // set busy state correctly and update
+            nodeDAO.setBusyState(nodeA, NodeBusyState.notBusy, NodeBusyState.busyWithWrite);
+            nodeDAO.updateNodeMetadata(nodeA, meta);
+
+            nodeA = (DataNode) nodeDAO.getPath(nodePath1);
+            lenActual = nodeA.findProperty(VOS.PROPERTY_URI_CONTENTLENGTH);
+            md5Actual = nodeA.findProperty(VOS.PROPERTY_URI_CONTENTMD5);
+            Assert.assertNull("persisted contentLength", lenActual);
+            Assert.assertNull("persisted contentMD5", lenActual);
+
         }
         catch(Exception unexpected)
         {
@@ -1156,15 +1165,11 @@ public class NodeDAOTest
     private List<NodeProperty> getDataNodeProperties()
     {
         List<NodeProperty> properties = getCommonProperties();
-        NodeProperty prop3 = new NodeProperty(VOS.PROPERTY_URI_CONTENTLENGTH, new Long(1024).toString());
-        NodeProperty prop4 = new NodeProperty(VOS.PROPERTY_URI_TYPE, "text/plain");
-        NodeProperty prop5 = new NodeProperty(VOS.PROPERTY_URI_CONTENTENCODING, "gzip");
-        NodeProperty prop6 = new NodeProperty(VOS.PROPERTY_URI_CONTENTMD5, HexUtil.toHex(new byte[] {1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16}));
+        NodeProperty prop1 = new NodeProperty(VOS.PROPERTY_URI_TYPE, "text/plain");
+        NodeProperty prop2 = new NodeProperty(VOS.PROPERTY_URI_CONTENTENCODING, "gzip");
 
-        properties.add(prop3);
-        properties.add(prop4);
-        properties.add(prop5);
-        properties.add(prop6);
+        properties.add(prop1);
+        properties.add(prop2);
 
         return properties;
     }

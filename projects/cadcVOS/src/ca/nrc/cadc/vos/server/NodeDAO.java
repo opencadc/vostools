@@ -521,6 +521,8 @@ public class NodeDAO
             commitTransaction();
 
             node.getProperties().add(new NodeProperty(VOS.PROPERTY_URI_CREATOR, identManager.toOwnerString(creator)));
+            if (node instanceof ContainerNode)
+                node.getProperties().add(new NodeProperty(VOS.PROPERTY_URI_CONTENTLENGTH, Long.toString(0)));
             return node;
         }
         catch(Throwable t)
@@ -720,10 +722,8 @@ public class NodeDAO
         Long len = sizes[0];
         Long nodeSize = sizes[1];
         if ( nodeSchema.fileMetadataWritable)
-            len = meta.getContentLength();
-        long delta = delta = nodeSize - len;
-
-        String contentLength = Long.toString(len);
+            len = meta.getContentLength(); // otherwise: the value from above query is correct
+        long delta = len - nodeSize;
 
         try
         {
@@ -743,6 +743,11 @@ public class NodeDAO
                 }
             }
 
+            // update nodeSize and maybe contentLength
+            DataNodeUpdateStatementCreator dnup = new DataNodeUpdateStatementCreator(
+                    getNodeID(node), len.longValue(), HexUtil.toBytes(meta.getMd5Sum()));
+            jdbc.update(dnup);
+
             // last, update the busy state of the target node
             String trans = getSetBusyStateSQL(node, NodeBusyState.busyWithWrite, NodeBusyState.notBusy);
             log.debug(trans);
@@ -754,17 +759,10 @@ public class NodeDAO
             List<NodeProperty> props = new ArrayList<NodeProperty>();
             NodeProperty np;
 
-            np = findOrCreate(node, VOS.PROPERTY_URI_CONTENTLENGTH, contentLength);
-            if (np != null)
-                props.add(np);
-
             np = findOrCreate(node, VOS.PROPERTY_URI_CONTENTENCODING, meta.getContentEncoding());
             if (np != null)
                 props.add(np);
             np = findOrCreate(node, VOS.PROPERTY_URI_TYPE, meta.getContentType());
-            if (np != null)
-                props.add(np);
-            np = findOrCreate(node, VOS.PROPERTY_URI_CONTENTMD5, meta.getMd5Sum());
             if (np != null)
                 props.add(np);
 
@@ -1247,7 +1245,10 @@ public class NodeDAO
             if (nodeSchema.limitWithTop) // TOP, eg sybase
                 sb.replace(0, 6, "SELECT TOP " + limit);
             else // LIMIT, eg postgresql
-                sb.append(" LIMIT " + limit);
+            {
+                sb.append(" LIMIT ");
+                sb.append(limit);
+            }
         }
         return sb.toString();
     }
@@ -1318,20 +1319,24 @@ public class NodeDAO
         sb.append("'");
         return sb.toString();
     }
-    
+
+    // apply delta to Node.nodeSize (set if NULL)
     protected String getUpdateNodeSizeSQL(Node node, long difference)
     {
+        // update Node set nodeSize=(case when nodeSize is null then diff else nodeSize+diff end) where nodeID=?
         StringBuilder sb = new StringBuilder();
         sb.append("UPDATE ");
         sb.append(getNodeTableName());
-        sb.append(" SET nodeSize = (");
+        sb.append(" SET nodeSize = (CASE WHEN nodeSize IS NULL THEN ");
+        sb.append(Long.toString(difference));
+        sb.append(" ELSE ");
         sb.append("nodeSize + ");
         sb.append(Long.toString(difference));
-        sb.append(") WHERE nodeID = ");
+        sb.append(" END) WHERE nodeID = ");
         sb.append(getNodeID(node));
         return sb.toString();
     }
-    
+
     protected String getMoveNodeSQL(Node src, ContainerNode dest, String name)
     {
         StringBuilder sb = new StringBuilder();
@@ -1404,6 +1409,55 @@ public class NodeDAO
             coreProps = core;
         }
         return !coreProps.contains(uri);
+    }
+
+    private class DataNodeUpdateStatementCreator implements PreparedStatementCreator
+    {
+        private Long len;
+        private byte[] md5;
+        private Long nodeID;
+
+        public DataNodeUpdateStatementCreator(Long nodeID, Long len, byte[] md5)
+        {
+            this.nodeID = nodeID;
+            this.len = len;
+            this.md5 = md5;
+        }
+        public PreparedStatement createPreparedStatement(Connection conn)
+            throws SQLException
+        {
+            StringBuilder sb = new StringBuilder();
+            sb.append("UPDATE ");
+            sb.append(getNodeTableName());
+            sb.append(" SET nodeSize = ?");
+            if (nodeSchema.fileMetadataWritable)
+            {
+                sb.append(", contentLength = ?");
+                sb.append(", contentMD5 = ?");
+            }
+            sb.append(" WHERE nodeID = ?");
+            String sql = sb.toString();
+            log.debug(sql);
+            sb = new StringBuilder("values: ");
+            PreparedStatement prep = conn.prepareStatement(sql);
+            int col = 1;
+            prep.setLong(col++, len);
+            sb.append(len);
+            sb.append(",");
+            if (nodeSchema.fileMetadataWritable)
+            {
+                prep.setLong(col++, len);
+                sb.append(len);
+                sb.append(",");
+                prep.setBytes(col++, md5);
+                sb.append(HexUtil.toHex(md5));
+                sb.append(",");
+            }
+            prep.setLong(col++, nodeID);
+            sb.append(nodeID);
+            log.debug(sb.toString());
+            return prep;
+        }
     }
 
     private class PropertyStatementCreator implements PreparedStatementCreator
@@ -1666,50 +1720,6 @@ public class NodeDAO
             sb.append(pval);
             sb.append(",");
 
-            // nodeSize contains content-length for all node types
-            pval = node.getPropertyValue(VOS.PROPERTY_URI_CONTENTLENGTH);
-            if (pval != null)
-            {
-                ps.setLong(col, Long.valueOf(pval));
-                sb.append(pval);
-            }
-            else
-            {
-                ps.setNull(col, Types.BIGINT);
-                sb.append("null");
-            }
-            col++;
-            sb.append(",");
-
-            // contentLength and contentMD5 are for DataNode(s) only
-            if (ns.fileMetadataWritable)
-            {
-                pval = node.getPropertyValue(VOS.PROPERTY_URI_CONTENTLENGTH);
-                if (pval != null && node instanceof DataNode)
-                {
-                    ps.setLong(col, Long.valueOf(pval));
-                    sb.append(pval);
-                }
-                else
-                {
-                    ps.setNull(col, Types.BIGINT);
-                    sb.append("null");
-                }
-                col++;
-                sb.append(",");
-
-                pval = node.getPropertyValue(VOS.PROPERTY_URI_CONTENTMD5);
-                if (pval != null && node instanceof DataNode)
-                    ps.setBytes(col, HexUtil.toBytes(pval));
-                else
-                    ps.setNull(col, Types.VARBINARY);
-                col++;
-                sb.append(pval);
-                sb.append(",");
-
-                //log.debug("setValues: " + sb);
-            }
-            
             if (update)
             {
                 ps.setLong(col, getNodeID(node));
@@ -1727,10 +1737,9 @@ public class NodeDAO
             sb.append(ns.nodeTable);
             sb.append(" (");
 
-            int numCols = NODE_COLUMNS.length;
-            if ( !ns.fileMetadataWritable )
-                numCols = numCols - 2;
-
+            // we never insert or update physical file (DataNode) metadata here
+            int numCols = NODE_COLUMNS.length - 3;
+            
             for (int c=0; c<numCols; c++)
             {
                 if (c > 0)
@@ -1753,9 +1762,8 @@ public class NodeDAO
             sb.append("UPDATE ");
             sb.append(ns.nodeTable);
 
-            int numCols = NODE_COLUMNS.length;
-            if ( !ns.fileMetadataWritable )
-                numCols = numCols - 2;
+            // we never insert or update physical file (DataNode) metadata here
+            int numCols = NODE_COLUMNS.length - 3;
 
             sb.append(" SET ");
             for (int c=0; c<numCols; c++)
@@ -2011,9 +2019,12 @@ public class NodeDAO
             {
                 node.getProperties().add(new NodeProperty(VOS.PROPERTY_URI_CONTENTLENGTH, contentLength.toString()));
             }
-            else if (node instanceof ContainerNode && nodeSize != null)
+            else if (node instanceof ContainerNode)
             {
-                node.getProperties().add(new NodeProperty(VOS.PROPERTY_URI_CONTENTLENGTH, nodeSize.toString()));
+                if (nodeSize != null)
+                    node.getProperties().add(new NodeProperty(VOS.PROPERTY_URI_CONTENTLENGTH, nodeSize.toString()));
+                else
+                    node.getProperties().add(new NodeProperty(VOS.PROPERTY_URI_CONTENTLENGTH, "0"));
             }
 
             if (contentMD5 != null && contentMD5 instanceof byte[])
