@@ -3,18 +3,21 @@
 import time
 import errno
 def isdir(filename):
+    logging.debug("Doing an isdir on %s" %(filename))
     if filename[0:4]=="vos:":
         return client.isdir(filename)
     else:
         return os.path.isdir(filename)
 
 def access(filename,mode):
+    logging.debug("checking for access %s " %(filename))
     if filename[0:4]=="vos:":
         return client.access(filename,mode)
     else:
         return os.access(filename,mode)
 
 def listdir(filename):
+    logging.debug("getting a dirlist %s " %(filename))
     if filename[0:4]=="vos:":
         return client.listdir(filename)
     else:
@@ -30,6 +33,7 @@ def mkdir(filename):
         return os.mkdir(filename)
 
 def getMD5(filename):
+    logging.debug("getting the MD5")
     if filename[0:4]=='vos:':
         md5=client.getNode(filename).props.get('MD5',0)
     else:
