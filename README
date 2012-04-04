@@ -18,7 +18,10 @@ sudo python setup.py install
 
 Usage:
 
-mountvofs vos:VOSPACE /mountPoint
+mountvofs 
+
+will mount the CADC VOSpace root Container Node at /tmp/vospace 
+and create a 5GB cache in the executing users home directory
 
 Help:
 mountvofs --help 
