@@ -1,6 +1,9 @@
 package ca.nrc.cadc.vosi;
 
+import ca.nrc.cadc.auth.AuthenticationUtil;
 import java.io.IOException;
+import java.security.PrivilegedExceptionAction;
+import javax.security.auth.Subject;
 
 import javax.servlet.ServletException;
 import javax.servlet.http.HttpServlet;
@@ -50,4 +53,52 @@ public class AvailabilityServlet extends HttpServlet
 
         }
 	}
+
+    protected void doPost(HttpServletRequest request, HttpServletResponse response)
+        throws ServletException, IOException
+	{
+        boolean started = false;
+	    try
+        {
+            Subject subject = AuthenticationUtil.getSubject(request);
+
+	        String wsClassName = getInitParameter("ca.nrc.cadc.vosi.WebService");
+	        Class wsClass = Class.forName(wsClassName);
+	        WebService ws = (WebService) wsClass.newInstance();
+
+            Subject.doAs(subject, new ChangeServiceState(ws, request));
+
+            response.sendRedirect(request.getRequestURL().toString());
+	    }
+        catch (Throwable t)
+        {
+            log.error("BUG", t);
+            if (!started)
+                response.sendError(HttpServletResponse.SC_SERVICE_UNAVAILABLE, t.getMessage());
+        }
+        finally
+        {
+
+        }
+	}
+
+    private class ChangeServiceState implements PrivilegedExceptionAction
+    {
+        private WebService ws;
+        private HttpServletRequest req;
+        ChangeServiceState(WebService ws, HttpServletRequest req)
+        {
+            this.ws = ws;
+            this.req = req;
+        }
+
+        public Object run() throws Exception
+        {
+            String state = req.getParameter("state");
+            ws.setState(state);
+            return null;
+        }
+
+
+    }
 }

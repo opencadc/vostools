@@ -76,4 +76,11 @@ package ca.nrc.cadc.vosi;
 public interface WebService
 {
     public AvailabilityStatus getStatus();
+
+    /**
+     * The AvailabilitySerlet supports a POST with state=??? that it will pass
+     * on to the WebService. This can be used to implement state-changes in the
+     * service, eg disabling or enabling features.
+     */
+    public void setState(String state);
 }
