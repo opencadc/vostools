@@ -123,7 +123,16 @@ public class VOSpaceAuthorizer implements Authorizer
     // TODO: dynamically find the cred service associated with this VOSpace service
     // maybe from the capabilities?
     private static final String CRED_SERVICE_ID = "ivo://cadc.nrc.ca/cred";
-    
+
+    public static final String MODE_KEY = VOSpaceAuthorizer.class.getName() + ".state";
+    public static final String OFFLINE = "Offline";
+    public static final String OFFLINE_MSG = "System is offline for maintainence";
+    public static final String READ_ONLY = "ReadOnly";
+    public static final String READ_ONLY_MSG = "System is in read-only mode for maintainence";
+    public static final String READ_WRITE = "ReadWrite";
+    private boolean readable = true;
+    private boolean writable  = true;
+
     private SSLSocketFactory socketFactory;
     private int subjectHashCode;
     
@@ -135,6 +144,24 @@ public class VOSpaceAuthorizer implements Authorizer
     public VOSpaceAuthorizer()
     {
         groupMembershipCache = new HashMap<String, Boolean>();
+        initState();
+    }
+
+    // this method will only downgrade the state to !readbler and !writable
+    // and will never restore them to true - that is intentional
+    private void initState()
+    {
+        String key = VOSpaceAuthorizer.MODE_KEY;
+        String val = System.getProperty(key);
+        if (OFFLINE.equals(val))
+        {
+            readable = false;
+            writable = false;
+        }
+        else if (READ_ONLY.equals(val))
+        {
+            writable = false;
+        }
     }
 
     /**
@@ -149,6 +176,13 @@ public class VOSpaceAuthorizer implements Authorizer
     public Object getReadPermission(URI uri)
         throws AccessControlException, FileNotFoundException
     {
+        initState();
+        if (!readable)
+        {
+            if (!writable)
+                throw new AccessControlException(OFFLINE_MSG);
+            throw new AccessControlException(READ_ONLY_MSG);
+        }
         try
         {
             VOSURI vos = new VOSURI(uri);
@@ -171,7 +205,15 @@ public class VOSpaceAuthorizer implements Authorizer
      */
     public Object getReadPermission(Node node)
             throws AccessControlException
-    {        
+    {
+        initState();
+        if (!readable)
+        {
+            if (!writable)
+                throw new AccessControlException(OFFLINE_MSG);
+            throw new AccessControlException(READ_ONLY_MSG);
+        }
+
         AccessControlContext acContext = AccessController.getContext();
         Subject subject = Subject.getSubject(acContext);
         
@@ -207,6 +249,14 @@ public class VOSpaceAuthorizer implements Authorizer
     public Object getWritePermission(URI uri)
             throws AccessControlException, FileNotFoundException
     {
+        initState();
+        if (!writable)
+        {
+            if (readable)
+                throw new AccessControlException(READ_ONLY_MSG);
+            throw new AccessControlException(OFFLINE_MSG);
+        }
+            
         try
         {
             VOSURI vos = new VOSURI(uri);
@@ -229,6 +279,14 @@ public class VOSpaceAuthorizer implements Authorizer
     public Object getWritePermission(Node node)
             throws AccessControlException
     {
+        initState();
+        if (!writable)
+        {
+            if (readable)
+                throw new AccessControlException(READ_ONLY_MSG);
+            throw new AccessControlException(OFFLINE_MSG);
+        }
+        
         AccessControlContext acContext = AccessController.getContext();
         Subject subject = Subject.getSubject(acContext);
         
