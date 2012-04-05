@@ -745,7 +745,7 @@ public class NodeDAO
 
             // update nodeSize and maybe contentLength
             DataNodeUpdateStatementCreator dnup = new DataNodeUpdateStatementCreator(
-                    getNodeID(node), len.longValue(), HexUtil.toBytes(meta.getMd5Sum()));
+                    getNodeID(node), len.longValue(), meta.getMd5Sum());
             jdbc.update(dnup);
 
             // last, update the busy state of the target node
@@ -1414,10 +1414,10 @@ public class NodeDAO
     private class DataNodeUpdateStatementCreator implements PreparedStatementCreator
     {
         private Long len;
-        private byte[] md5;
+        private String md5;
         private Long nodeID;
 
-        public DataNodeUpdateStatementCreator(Long nodeID, Long len, byte[] md5)
+        public DataNodeUpdateStatementCreator(Long nodeID, Long len, String md5)
         {
             this.nodeID = nodeID;
             this.len = len;
@@ -1446,11 +1446,17 @@ public class NodeDAO
             sb.append(",");
             if (nodeSchema.fileMetadataWritable)
             {
-                prep.setLong(col++, len);
+                if (len == null)
+                    prep.setNull(col++, Types.BIGINT);
+                else
+                    prep.setLong(col++, len);
                 sb.append(len);
                 sb.append(",");
-                prep.setBytes(col++, md5);
-                sb.append(HexUtil.toHex(md5));
+                if (md5 == null)
+                    prep.setNull(col++, Types.VARBINARY);
+                else
+                    prep.setBytes(col++, HexUtil.toBytes(md5));
+                sb.append(md5);
                 sb.append(",");
             }
             prep.setLong(col++, nodeID);
