@@ -244,10 +244,7 @@ class VOFS(LoggingMixIn, Operations):
             node=self.client.getNode(path,limit=limit)
         except IOError as e:
             logging.debug(str(e))
-            f = FuseOSError(e.errno)
-            f.strerror=e.strerror
-            f.message=e.strerror
-            raise f
+            return self.getNode(path.force,limit)
 
         self.node[path]=node
         self.attr[path]=node.attr
@@ -363,27 +360,29 @@ class VOFS(LoggingMixIn, Operations):
                    break
                md5.update(buf)
            if md5.hexdigest()==self.getNode(path).props.get('MD5',0):
-	       self.fh[fh]['cached']=True
+               self.fh[fh]['cached']=True
                os.utime(self.fh[fh]['name'],(self.getattr(path)['st_atime'],self.getattr(path)['st_mtime']))
-
+               
         if not self.fh[fh]['cached'] or os.stat(self.fh[fh]['name']).st_mtime < self.getattr(path)['st_mtime']:
-            os.ftruncate(fh,0)
-            try:
-                r=self.client.open(path,mode=os.O_RDONLY,view="data")
-                fpos=0
-                while True:
-                    buf=r.read(READBUF)
-                    if not buf:
-                        break
-                    if os.write(fh,buf)!=len(buf):
-                        raise FuseOSError(EIO)
-                logging.debug("wrote buffer to %s " % ( self.fh[fh]['name']))
-                os.fsync(fh)
-            except IOError as e:
-                f=FuseOSError(e.errno)
-                f.strerror=e.strerror
-                raise f
-            r.close()
+            success=False
+            while not success:
+                os.ftruncate(fh,0)
+                try:
+                    r=self.client.open(path,mode=os.O_RDONLY,view="data")
+                    fpos=0
+                    logging.debug("writing to %s " % ( self.fh[fh]['name']))
+                    while True:
+                        buf=r.read(READBUF)
+                        if not buf:
+                            success=True
+                            break
+                        if os.write(fh,buf)!=len(buf):
+                            raise FuseOSError(EIO)
+                    os.fsync(fh)
+                except Exception as e:
+                    logging.error(str(e))
+                finally :
+                    r.close()
             self.fh[fh]['cached']=True
             logging.debug("cached %s to %s" % ( path,self.fh[fh]['name']))
         os.lseek(fh,offset,os.SEEK_SET)
@@ -409,18 +408,25 @@ class VOFS(LoggingMixIn, Operations):
         ### copy the staging file to VOSpace if needed
         logging.debug("node %s currently open with mode %s, releasing" % ( path, mode))
         if mode & ( os.O_RDWR | os.O_WRONLY | os.O_APPEND | os.O_CREAT ) and os.stat(self.fh[fh]['name']).st_mtime > self.getattr(path)['st_mtime']:
-            os.lseek(fh,0,os.SEEK_SET)
-            w=self.client.open(path,os.O_WRONLY)
-            logging.debug("Writing to %s" % (path))
-            while True:
-                buf=os.read(fh,READBUF)
-                logging.debug(buf)
-                if not buf:
-                    break
-                if w.write(buf)!=len(buf):
-                    raise FuseOSError(EIO)
+            success=False
+            while not success:
+                os.lseek(fh,0,os.SEEK_SET)
+                try:
+                    w=self.client.open(path,os.O_WRONLY)
+                    logging.debug("Writing to %s" % (path))
+                    while not success:
+                        buf=os.read(fh,READBUF)
+                        logging.debug(buf)
+                        if not buf:
+                            success=True
+                            break
+                        if w.write(buf)!=len(buf):
+                            raise FuseOSError(EIO)
+                except:
+                    logging.error("Failed during VOSpace copy, retrying")
+                finally:
+                    w.close()
             logging.debug("Closing connection to vospace")
-            w.close()
 
 
         ## remove references to this file handle.
@@ -566,21 +572,25 @@ class VOFS(LoggingMixIn, Operations):
         ## length wasn't 0, first check if we have a valid cached version of this file.
         if not self.fh[fh].get('cached',False) or os.stat(self.fh[fh]['name']).st_mtime < self.getattr(path)['st_mtime']:
             ## (re)cache file  (really we don't need the entire file, just upto length
-            try:
-                r = self.client.open(path,mode=os.O_RDONLY,view='data')
-                fpos=0
-                while True:
-                    buf=r.read(READBUF)
-                    if not buf:
-                        break
-                    chunk=min(length-fpos,READBUF) 
-                    if os.write(fh,buf[:chunk])!=chunk:
-                        raise FuseOSError(EIO)
-                    fpos=fpos+chunk
-                r.close()
-            except:
-                raise FuseOSError(EIO)
-
+            success=False
+            while not success:
+                os.lseek(fh,0,os.SEEK_SET)
+                try:
+                    r = self.client.open(path,mode=os.O_RDONLY,view='data')
+                    fpos=0
+                    while True:
+                        buf=r.read(READBUF)
+                        if not buf or fpos > length:
+                            success=True
+                            break
+                        chunk=min(length-fpos,READBUF) 
+                        if os.write(fh,buf[:chunk])!=chunk:
+                            raise FuseOSError(EIO)
+                        fpos=fpos+chunk
+                except:
+                    logging.error("Failed during truncate read, try again")
+                finally: 
+                    r.close()
         ## now we can truncate the file.
         os.ftruncate(fh,length)
         logging.debug("cache file has been truncated")
