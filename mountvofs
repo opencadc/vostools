@@ -694,4 +694,5 @@ if __name__ == "__main__":
                     foreground=opt.foreground)
     else:
         fuse = FUSE(VOFS(root,opt.cache_dir,conn=conn,cache_limit=opt.cache_limit), mount, fsname=root, 
+		    auto_cache=True,
                     foreground=opt.foreground)
