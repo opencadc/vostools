@@ -204,8 +204,8 @@ class VOFS(LoggingMixIn, Operations):
         This could be a problem since users expect the file in VOSpace
         to be updated too.  But we only do that with a flushnode call
         which we do on close of the file."""
-        
-        self.fsync(path,False,fh)
+        return os.fsync(fh) 
+        #self.fsync(path,False,fh)
   
     def fsync(self,path,datasync,fh):
         mode=''
@@ -329,9 +329,29 @@ class VOFS(LoggingMixIn, Operations):
             os.makedirs(dirs)
 
         cached=False
+        ## Check if the disk cache matches the vospace copy
+        import hashlib
+        md5=hashlib.md5()
+
+        r=open(fname,'r')
+        while True:
+            buf=r.read(READBUF)
+            # In this tight loop I don't think you want logging
+            #logging.debug("Read %d bytes from %s" % ( len(buf),src))
+            if len(buf)==0:
+                break
+            md5.update(buf)
+        logging.debug(str(md5.hexdigest()))
+        logging.debug(self.getNode(path).props.get('MD5',0))
+        r.close()
+        if md5.hexdigest()==self.getNode(path).props.get('MD5',0):
+            cached=True
+        else:
+            os.unlink(fname)
         #if os.access(fname,os.F_OK) and os.stat(fname).st_mtime >= self.getattr(path)['st_mtime']:
         #    cached=True
         fh = os.open(fname,os.O_CREAT | os.O_RDWR )
+	os.lseek(fh,0,os.SEEK_SET)
         self.fh[fh]={'flags': flags, 'cached': cached, 'name':fname}
 	self.setPath(fh,path)
         return fh
@@ -349,24 +369,13 @@ class VOFS(LoggingMixIn, Operations):
         # load the file from VOSpace as we might be appending
         # cached==0 means not yet cached... and check that the node mtime is not newer than the cache one.
         # this routine needs good time sych between the OS and the VOSpace... 
-        if not self.fh[fh]['cached']:
-           import hashlib
-           md5=hashlib.md5()
-           while True:
-               buf=os.read(fh,READBUF)
-               # In this tight loop I don't think you want logging
-               #logging.debug("Read %d bytes from %s" % ( len(buf),src))
-               if len(buf)==0:
-                   break
-               md5.update(buf)
-           if md5.hexdigest()==self.getNode(path).props.get('MD5',0):
-               self.fh[fh]['cached']=True
-               os.utime(self.fh[fh]['name'],(self.getattr(path)['st_atime'],self.getattr(path)['st_mtime']))
+        logging.debug("cache "+str(self.fh[fh]['cached']))
                
         if not self.fh[fh]['cached'] or os.stat(self.fh[fh]['name']).st_mtime < self.getattr(path)['st_mtime']:
             success=False
             while not success:
                 os.ftruncate(fh,0)
+		os.fsync(fh)
                 try:
                     r=self.client.open(path,mode=os.O_RDONLY,view="data")
                     fpos=0
@@ -378,15 +387,21 @@ class VOFS(LoggingMixIn, Operations):
                             break
                         if os.write(fh,buf)!=len(buf):
                             raise FuseOSError(EIO)
-                    os.fsync(fh)
+                        os.fsync(fh)
                 except Exception as e:
-                    logging.error(str(e))
+                    logging.debug(str(e))
                 finally :
                     r.close()
             self.fh[fh]['cached']=True
             logging.debug("cached %s to %s" % ( path,self.fh[fh]['name']))
+	os.fsync(fh)
         os.lseek(fh,offset,os.SEEK_SET)
-        return os.read(fh,size)
+	r=open(self.fh[fh]['name'],'r')
+	r.seek(offset,os.SEEK_SET)
+	buff=r.read(size)
+	r.close()
+	logging.debug(self.fh[fh]['name'])
+        return buff
 
     def readdir(self, path, fh):
         """Send a list of entried in this directory"""
