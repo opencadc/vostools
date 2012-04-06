@@ -13,6 +13,7 @@ import os
 import vos
 from os import O_RDONLY, O_WRONLY, O_RDWR, O_APPEND
 import logging
+import sqlite3
 READBUF=2**20
 
 
@@ -71,6 +72,14 @@ class VOFS(LoggingMixIn, Operations):
         # VOSpace is a bit slow so we do some cahcing.
         self.cache_limit=cache_limit
         self.cache_dir = os.path.normpath(os.path.join(cache_dir,root))
+        self.cache_db = os.path.normpath(os.path.join(cache_dir,"#vofs_cache.db#"))
+        ## initialize the md5Cache db
+        sqlConn = sqlite3.connect(self.cache_db)
+        sqlConn.execute("create table if not exists md5_cache (fname text, md5 text, st_mtime int)")
+        sqlConn.commit()
+        sqlConn.close()
+        ## build cache lookup if doesn't already exists
+        
         if not os.access(self.cache_dir,os.F_OK):
             os.makedirs(self.cache_dir)
 
@@ -329,27 +338,60 @@ class VOFS(LoggingMixIn, Operations):
             os.makedirs(dirs)
 
         cached=False
-        ## Check if the disk cache matches the vospace copy
-        import hashlib
-        md5=hashlib.md5()
 
-        r=open(fname,'r')
-        while True:
-            buf=r.read(READBUF)
-            # In this tight loop I don't think you want logging
-            #logging.debug("Read %d bytes from %s" % ( len(buf),src))
-            if len(buf)==0:
-                break
-            md5.update(buf)
-        logging.debug(str(md5.hexdigest()))
-        logging.debug(self.getNode(path).props.get('MD5',0))
-        r.close()
-        if md5.hexdigest()==self.getNode(path).props.get('MD5',0):
+        ## Create the cache file, if it doesn't already exist
+        if not os.access(fname,os.O_RDWR):
+            try:
+                th=os.open(fname,os.O_CREAT | os.O_RDWR)
+            except OSError as e:
+                e=FuseOSError(e.errno)
+                e.strerror=e.strerror
+                e.message="Not able to write cache (Permission denied: %s)" % ( fname) 
+                raise e
+            os.close(th)
+
+
+        ## check that internally stored md5 is recent enough
+        sqlConn=sqlite3.connect(self.cache_db)
+        sqlConn.row_factory = sqlite3.Row
+        cursor=sqlConn.cursor()
+
+        upDateMD5=False
+        cursor.execute("SELECT * FROM md5_cache WHERE fname = ?", (fname, ))
+        md5Row=cursor.fetchone()
+        if md5Row is None or md5Row['st_mtime'] < os.stat(fname).st_mtime:
+            upDateMD5=True
+
+
+        ## Check if the disk cache matches the vospace copy
+        if upDateMD5:
+            import hashlib
+            md5=hashlib.md5()
+            r=open(fname,'r')
+            while True:
+                buf=r.read(READBUF)
+                if len(buf)==0:
+                    break
+                md5.update(buf)
+            r.close()
+            cursor.execute("DELETE FROM md5_cache WHERE fname = ?" , (fname,))
+            cursor.execute("INSERT INTO md5_cache (fname, md5, st_mtime) VALUES( ?, ?, ?)",(fname, md5.hexdigest(),os.stat(fname).st_mtime))
+            sqlConn.commit()
+            
+
+        cursor.execute("SELECT * FROM md5_cache WHERE fname=?", (fname,))
+        md5Row=cursor.fetchone()
+        cursor.close()
+        sqlConn.close()
+
+        if md5Row['md5']==self.getNode(path).props.get('MD5',0):
             cached=True
         else:
             os.unlink(fname)
-        #if os.access(fname,os.F_OK) and os.stat(fname).st_mtime >= self.getattr(path)['st_mtime']:
-        #    cached=True
+
+        ## OK, we've cleared the cache if need be, so now open the file as needed
+        ## we don't pull a copy into the cache here, that's done only if a read or write
+        ## is called.
         fh = os.open(fname,os.O_CREAT | os.O_RDWR )
 	os.lseek(fh,0,os.SEEK_SET)
         self.fh[fh]={'flags': flags, 'cached': cached, 'name':fname}
@@ -608,6 +650,8 @@ class VOFS(LoggingMixIn, Operations):
                     r.close()
         ## now we can truncate the file.
         os.ftruncate(fh,length)
+        ## Update the access/mod times 
+        self.utimes(path)
         logging.debug("cache file has been truncated")
         return
 
@@ -655,6 +699,8 @@ class VOFS(LoggingMixIn, Operations):
                 f=FuseOSError(e.errno)
                 f.strerror=e.strerror
                 raise f
+        ## Update the access/mod times 
+        self.utimes(path)
         os.lseek(fh, offset, 0)
         return os.write(fh, data)
 
