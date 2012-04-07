@@ -149,7 +149,11 @@ if __name__=='__main__':
 
     dest=args.pop()
 
-    for source in args:
+
+    import ssl
+    try: 
+
+      for source in args:
 
         ### the source must exist, of course...
         if not access(source,os.R_OK):
@@ -180,9 +184,14 @@ if __name__=='__main__':
             ### we're copying into a directory
             thisDest=os.path.join(dest,os.path.basename(source))
 
-        try: 
-            copy(source,thisDest)
-        except Exception as e:
-	    logging.error(str(type(e)))
-            logging.error("Failed to copy %s to %s\n  %s" %(source, thisDest, str(e)))
-            sys.exit(-1)
+        copy(source,thisDest)
+
+    except ssl.SSLError as e:
+        logging.error("SSL Access error, key %s rejected" % ( opt.certfile))
+        sys.exit(-2)
+    except Exception as e:
+        logging.error(str(type(e)))
+        logging.error(str(e))
+        logging.error("Failed while copying %s" %(source))
+        sys.exit(-1)
+    sys.exit(0)
