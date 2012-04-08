@@ -73,15 +73,17 @@ class VOFS(LoggingMixIn, Operations):
         self.cache_limit=cache_limit
         self.cache_dir = os.path.normpath(os.path.join(cache_dir,root))
         self.cache_db = os.path.normpath(os.path.join(cache_dir,"#vofs_cache.db#"))
+        
+        if not os.access(self.cache_dir,os.F_OK):
+            os.makedirs(self.cache_dir)
+
         ## initialize the md5Cache db
         sqlConn = sqlite3.connect(self.cache_db)
         sqlConn.execute("create table if not exists md5_cache (fname text, md5 text, st_mtime int)")
         sqlConn.commit()
         sqlConn.close()
         ## build cache lookup if doesn't already exists
-        
-        if not os.access(self.cache_dir,os.F_OK):
-            os.makedirs(self.cache_dir)
+
 
         ## All communication with the VOSpace goes through this client connection.
         self.client = vos.Client(rootNode=root,conn=conn)
@@ -463,7 +465,8 @@ class VOFS(LoggingMixIn, Operations):
         sqlConn.row_factory = sqlite3.Row
         cursor=sqlConn.cursor()
         cursor.execute("DELETE FROM md5_cache WHERE fname = ?", (fname,))
-        cursor.execute("INSERT INTO md5_cache (fname, md5, st_mtime) VALUES ( ?, ?, ?)", (fname, md5, os.stat(fname).st_mtime))
+        if md5 is not None:
+            cursor.execute("INSERT INTO md5_cache (fname, md5, st_mtime) VALUES ( ?, ?, ?)", (fname, md5, os.stat(fname).st_mtime))
         sqlConn.commit()
         cursor.close()
         sqlConn.close()
@@ -722,20 +725,21 @@ class VOFS(LoggingMixIn, Operations):
         self.getattr(path)['st_atime']=times[0]
         return 
 
-    def write(self, path, data, offset, fh):
+    def write(self, path, data, offset, fh=None):
+        logging.debug("%s -> %d" % ( path,fh))
         if not self.fh[fh].get('cached',False) :
             ## we are writing but never cached the original file, do that now
             try:
                 logging.debug("Getting data from VOSpace cause the cache is empty")
                 self.read(path,fh=fh)
-            except IOEror as e:
+            except IOError as e:
                 f=FuseOSError(e.errno)
                 f.strerror=e.strerror
                 raise f
         ## Update the access/mod times 
         self.utimens(path)
-        os.lseek(fh, offset, 0)
-        self.update_md5_db(self.fh[fh]['name'],0)
+        logging.debug("%d --> %d" % ( offset, offset+len(data)))
+        os.lseek(fh, offset, os.SEEK_SET)
         return os.write(fh, data)
 
 
@@ -783,11 +787,11 @@ if __name__ == "__main__":
                     volname=root,
                     defer_permissions=True,
                     daemon_timeout=6000,
-                    auto_cache=True,
+                    #auto_cache=True,
 		    noapplexattr=True,
 	            noappledouble=True,
                     foreground=opt.foreground)
     else:
         fuse = FUSE(VOFS(root,opt.cache_dir,conn=conn,cache_limit=opt.cache_limit), mount, fsname=root, 
-		    auto_cache=True,
+		    #auto_cache=True,
                     foreground=opt.foreground)
