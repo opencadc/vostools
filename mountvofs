@@ -440,7 +440,7 @@ class VOFS(LoggingMixIn, Operations):
                     logging.debug(str(e))
                 finally :
                     r.close()
-                if d5.hexdigest()==self.getNode(path).props.get('MD5',0):
+                if md5.hexdigest()==self.getNode(path).props.get('MD5',0):
                     success=True
                 elif loopCount > 3 :
                     raise FuseOSError(EIO)
@@ -737,7 +737,7 @@ class VOFS(LoggingMixIn, Operations):
                 f.strerror=e.strerror
                 raise f
         ## Update the access/mod times 
-        self.utimens(path)
+        ##self.utimens(path)
         logging.debug("%d --> %d" % ( offset, offset+len(data)))
         os.lseek(fh, offset, os.SEEK_SET)
         return os.write(fh, data)
