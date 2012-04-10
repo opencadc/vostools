@@ -976,7 +976,6 @@ public class NodeDAO
         
         try
         {    
-            Object newOwnerObject = identManager.toOwner(subject);
             long delta = getContentLength(src);
 
             startTransaction();
@@ -1011,8 +1010,7 @@ public class NodeDAO
             putStatementCreator.setValues(src, null);
             jdbc.update(putStatementCreator);
             
-            // change the ownership recursively
-            chownInternal(src, newOwnerObject, true);
+            // recursive chown removed since it is costly and nominally incorrect
             
             commitTransaction();
         }

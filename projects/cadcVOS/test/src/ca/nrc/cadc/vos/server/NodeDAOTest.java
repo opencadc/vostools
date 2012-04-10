@@ -923,16 +923,14 @@ public class NodeDAOTest
             found = false;
             for (Node child : moveCont1.getNodes())
             {
-                String childOwner = child.getPropertyValue(VOS.PROPERTY_URI_CREATOR);
                 if (child.getName().equals(newName) &&
-                        (childOwner.equalsIgnoreCase(NODE_OWNER2)) &&
                         ((NodeID) child.appData).getID().equals(((NodeID) moveData3.appData).getID()))
                 {
                     found = true;
                 }
             }
             if (!found)
-                Assert.fail("moveData4 not under root after move (owner, id, name checked.)");
+                Assert.fail("moveData4 not under root after move (name, id check)");
             
         }
         catch(Exception unexpected)
