@@ -78,4 +78,9 @@ public class ServiceAvailability implements WebService
         return new AvailabilityStatus(true, null, null, null,
                                       "Service is available.");
     }
+
+    public void setState(String state)
+    {
+        // no-op
+    }
 }
