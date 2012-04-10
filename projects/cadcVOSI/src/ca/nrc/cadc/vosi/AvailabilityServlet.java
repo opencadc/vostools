@@ -2,8 +2,13 @@ package ca.nrc.cadc.vosi;
 
 import ca.nrc.cadc.auth.AuthenticationUtil;
 import java.io.IOException;
+import java.security.AccessControlContext;
+import java.security.AccessController;
+import java.security.Principal;
 import java.security.PrivilegedExceptionAction;
 import javax.security.auth.Subject;
+import javax.security.auth.x500.X500Principal;
+import javax.servlet.ServletConfig;
 
 import javax.servlet.ServletException;
 import javax.servlet.http.HttpServlet;
@@ -22,7 +27,17 @@ public class AvailabilityServlet extends HttpServlet
 {
 	private static Logger log = Logger.getLogger(AvailabilityServlet.class);
     private static final long serialVersionUID = 201003131300L;
-       
+
+    private String wsClassName;
+    
+    @Override
+    public void init(ServletConfig config)
+        throws ServletException
+    {
+        this.wsClassName = config.getInitParameter("ca.nrc.cadc.vosi.WebService");
+        log.info("WebService class name: " + wsClassName);
+    }
+
     @Override
     protected void doGet(HttpServletRequest request, HttpServletResponse response)
         throws ServletException, IOException
@@ -30,9 +45,9 @@ public class AvailabilityServlet extends HttpServlet
         boolean started = false;
 	    try
         {
-	        String wsClassName = getInitParameter("ca.nrc.cadc.vosi.WebService");
 	        Class wsClass = Class.forName(wsClassName);
 	        WebService ws = (WebService) wsClass.newInstance();
+
 	        AvailabilityStatus status = ws.getStatus();
 	        Availability availability = new Availability(status);
 
@@ -54,6 +69,7 @@ public class AvailabilityServlet extends HttpServlet
         }
 	}
 
+    @Override
     protected void doPost(HttpServletRequest request, HttpServletResponse response)
         throws ServletException, IOException
 	{
@@ -62,7 +78,6 @@ public class AvailabilityServlet extends HttpServlet
         {
             Subject subject = AuthenticationUtil.getSubject(request);
 
-	        String wsClassName = getInitParameter("ca.nrc.cadc.vosi.WebService");
 	        Class wsClass = Class.forName(wsClassName);
 	        WebService ws = (WebService) wsClass.newInstance();
 
@@ -86,6 +101,7 @@ public class AvailabilityServlet extends HttpServlet
     {
         private WebService ws;
         private HttpServletRequest req;
+
         ChangeServiceState(WebService ws, HttpServletRequest req)
         {
             this.ws = ws;
