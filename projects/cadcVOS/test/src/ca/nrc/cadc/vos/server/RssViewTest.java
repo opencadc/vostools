@@ -119,6 +119,7 @@ public class RssViewTest
     static final String SERVER = "VOSPACE_WS_TEST";
     static final String DATABASE = "cadctest";
     static final String SCHEMA = "";
+    static final String DELETED_NODES = "/DeletedNodes";
 
     static final String VOS_AUTHORITY = "cadc.nrc.ca!vospace";
     static final String ROOT_CONTAINER = "CADCRsstest1";
@@ -364,7 +365,7 @@ public class RssViewTest
             super(new NodeDAO.NodeSchema(
                     database + "." + schema + ".Node", 
                     database + "." + schema + ".NodeProperty",
-                    true, true)
+                    true, true), DELETED_NODES
                 );
             this.server = server;
             this.database = database;

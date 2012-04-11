@@ -88,7 +88,7 @@ public class FixedSizeTreeSetTest
 {
     private static Logger log = Logger.getLogger(FixedSizeTreeSetTest.class);
     {
-        Log4jInit.setLevel("ca", Level.DEBUG);
+        Log4jInit.setLevel("ca.nrc.cadc.vos.server.util", Level.INFO);
     }
 
     public FixedSizeTreeSetTest() {

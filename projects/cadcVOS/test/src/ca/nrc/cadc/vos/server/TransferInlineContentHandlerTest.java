@@ -45,7 +45,7 @@ public class TransferInlineContentHandlerTest
     private static Logger log = Logger.getLogger(TransferInlineContentHandlerTest.class);
     static
     {
-        Log4jInit.setLevel("ca.nrc.cadc.vos", Level.DEBUG);
+        Log4jInit.setLevel("ca.nrc.cadc.vos", Level.INFO);
     }
 
     private static final String JOB_ID = "someJobID";
