@@ -92,7 +92,6 @@ import org.junit.Test;
 
 import ca.nrc.cadc.auth.AuthenticationUtil;
 import ca.nrc.cadc.auth.X500IdentityManager;
-import ca.nrc.cadc.date.DateUtil;
 import ca.nrc.cadc.db.ConnectionConfig;
 import ca.nrc.cadc.db.DBConfig;
 import ca.nrc.cadc.db.DBUtil;
@@ -107,6 +106,7 @@ import ca.nrc.cadc.vos.VOS;
 import ca.nrc.cadc.vos.VOSURI;
 import ca.nrc.cadc.vos.VOS.NodeBusyState;
 import ca.nrc.cadc.vos.server.NodeDAO.NodeSchema;
+import org.springframework.jdbc.core.JdbcTemplate;
 
 
 /**
@@ -126,6 +126,9 @@ public class NodeDAOTest
     static final String HOME_CONTAINER = "CADCRegtest1";
     static final String NODE_OWNER =  "CN=CADC Regtest1 10577,OU=CADC,O=HIA";
     static final String NODE_OWNER2 = "CN=CADC Authtest1 10627,OU=CADC,O=HIA";
+    static final String DELETED_OWNER = "CN=CADC admin,OU=CADC,O=HIA";
+
+    static final String DELETED_NODES = "DeletedNodes";
 
     protected Subject owner;
     protected Subject owner2;
@@ -139,6 +142,7 @@ public class NodeDAOTest
     
     DataSource dataSource;
     NodeDAO nodeDAO;
+    NodeSchema nodeSchema;
     String runID;
 
     public NodeDAOTest() throws Exception
@@ -159,19 +163,39 @@ public class NodeDAOTest
             DBConfig dbConfig = new DBConfig();
             ConnectionConfig connConfig = dbConfig.getConnectionConfig(SERVER, DATABASE);
             this.dataSource = DBUtil.getDataSource(connConfig);
-            NodeSchema ns = new NodeSchema("Node", "NodeProperty", true, true); // TOP, writable
-            this.nodeDAO = new NodeDAO(dataSource, ns, VOS_AUTHORITY, new X500IdentityManager());
+
+            this.nodeSchema = new NodeSchema("Node", "NodeProperty", true, true); // TOP, writable
+
+            // cleanup from old runs
+            JdbcTemplate jdbc = new JdbcTemplate(dataSource);
+            jdbc.update("DELETE FROM " + nodeSchema.propertyTable);
+            jdbc.update("DELETE FROM " + nodeSchema.nodeTable);
+
+            this.nodeDAO = new NodeDAO(dataSource, nodeSchema, VOS_AUTHORITY, new X500IdentityManager(), DELETED_NODES);
 
             ContainerNode root = (ContainerNode) nodeDAO.getPath(HOME_CONTAINER);
-            log.debug("found base node: " + root);
             if (root == null)
             {
                 VOSURI vos = new VOSURI(new URI("vos", VOS_AUTHORITY, "/"+HOME_CONTAINER, null, null));
                 root = new ContainerNode(vos);
                 root.getProperties().add(new NodeProperty(VOS.PROPERTY_URI_CREATOR, NODE_OWNER));
                 root = (ContainerNode) nodeDAO.put(root, owner);
-                log.debug("created base node: " + root);
+                log.debug("created base node: " + root.getUri());
             }
+            else
+                log.debug("found base node: " + root.getUri());
+
+            ContainerNode deleted = (ContainerNode) nodeDAO.getPath(DELETED_NODES);
+            if (deleted == null)
+            {
+                VOSURI vos = new VOSURI(new URI("vos", VOS_AUTHORITY, "/" + DELETED_NODES, null, null));
+                deleted = new ContainerNode(vos);
+                deleted.getProperties().add(new NodeProperty(VOS.PROPERTY_URI_CREATOR, DELETED_OWNER));
+                deleted = (ContainerNode) nodeDAO.put(deleted, owner);
+                log.debug("created base node: " + deleted);
+            }
+            else
+                log.debug("found deleted node: " + deleted.getUri());
         }
         catch(Exception ex)
         {
@@ -189,15 +213,22 @@ public class NodeDAOTest
     private void assertRecursiveDelete()
         throws Exception
     {
-        // ensure deleting the roots deleted all children
-        PreparedStatement prepStmt = dataSource.getConnection().prepareStatement(
-            "select count(*) from Node where name like ?");
-        prepStmt.setString(1, runID + "%");
-        ResultSet rs = prepStmt.executeQuery();
-        rs.next();
-        int remainingNodes = rs.getInt(1);
-        Assert.assertEquals("recursive delete", 0, remainingNodes);
-        prepStmt.close();
+        ContainerNode top = (ContainerNode) nodeDAO.getPath(HOME_CONTAINER);
+        Assert.assertNotNull(top);
+
+        JdbcTemplate jdbc = new JdbcTemplate(dataSource);
+
+        String sql = "select count(*) from "+nodeSchema.nodeTable+" where parentID IS NULL";
+        int topLevel = jdbc.queryForInt(sql);
+        Assert.assertEquals("number of top-level nodes", 2, topLevel);
+
+        sql = "select count(*) from "+nodeSchema.nodeTable+" where parentID = " + ((NodeID)top.appData).id;
+        int accessible = jdbc.queryForInt(sql);
+        Assert.assertEquals("number of directly accessible childen ", 0, accessible);
+
+        sql = "select count(*) from "+nodeSchema.nodeTable+" where parentID is not null and parentID not in (select nodeID from "+nodeSchema.nodeTable+")" ;
+        int orphans = jdbc.queryForInt(sql);
+        Assert.assertEquals("number of orphans", 0, orphans);
     }
 
     @Test
@@ -266,7 +297,6 @@ public class NodeDAOTest
 
             // delete the three roots
             nodeDAO.delete(adir);
-
             assertRecursiveDelete();
         }
         catch(Exception unexpected)
@@ -647,9 +677,8 @@ public class NodeDAOTest
             String basePath = "/" + HOME_CONTAINER + "/";
             NodeProperty np;
 
-
             // Create a node with properties
-            String cPath = basePath + getNodeName("ufm-test");
+            String cPath = basePath + getNodeName("ufm-dir");
             ContainerNode cNode = getCommonContainerNode(cPath);
             cNode.setParent(rootContainer);
             nodeDAO.put(cNode, owner);
@@ -659,7 +688,7 @@ public class NodeDAOTest
             Assert.assertNotNull(np); // containers always have length
             Assert.assertEquals("new container length", 0, Long.parseLong(np.getPropertyValue()));
 
-            String dPath = cPath + "/" + getNodeName("ufm-test");
+            String dPath = cPath + "/" + getNodeName("ufm-file");
             DataNode dNode = getCommonDataNode(dPath);
             dNode.setParent(cNode);
             nodeDAO.put(dNode, owner);
@@ -674,6 +703,7 @@ public class NodeDAOTest
             meta.setContentType("text/plain");
             meta.setMd5Sum(HexUtil.toHex(new byte[] {1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16}));
 
+            log.debug("** update without settign busy state **");
             try
             {
                 nodeDAO.updateNodeMetadata(dNode, meta);
@@ -688,7 +718,7 @@ public class NodeDAOTest
             np = rootContainer.findProperty(VOS.PROPERTY_URI_CONTENTLENGTH);
             long rootContentLength = Long.parseLong(np.getPropertyValue());
 
-            // set busy state correctly and redo
+            log.debug("** set busy state correctly and redo **");
             nodeDAO.setBusyState(dNode, NodeBusyState.notBusy, NodeBusyState.busyWithWrite);
             nodeDAO.updateNodeMetadata(dNode, meta);
 
@@ -727,6 +757,98 @@ public class NodeDAOTest
 
             nodeDAO.delete(cNode);
             assertRecursiveDelete();
+
+            log.debug("** now test that it fails when the c is moved mid-call **");
+            String oPath = cPath+"-other";
+            ContainerNode oNode = getCommonContainerNode(oPath);
+            oNode.setParent(rootContainer);
+            nodeDAO.put(oNode, owner);
+            oNode = (ContainerNode) nodeDAO.getPath(oPath);
+            Assert.assertNotNull(oNode);
+
+            cNode = getCommonContainerNode(cPath);
+            cNode.setParent(rootContainer);
+            nodeDAO.put(cNode, owner);
+            cNode = (ContainerNode) nodeDAO.getPath(cPath);
+            Assert.assertNotNull(cNode);
+            np = cNode.findProperty(VOS.PROPERTY_URI_CONTENTLENGTH);
+            Assert.assertNotNull(np); // containers always have length
+            Assert.assertEquals("new container length", 0, Long.parseLong(np.getPropertyValue()));
+
+            dPath = cPath + "/" + getNodeName("ufm-test");
+            dNode = getCommonDataNode(dPath);
+            dNode.setParent(cNode);
+            nodeDAO.put(dNode, owner);
+            dNode = (DataNode) nodeDAO.getPath(dPath);
+            Assert.assertNotNull(dNode);
+            Assert.assertNull(dNode.getPropertyValue(VOS.PROPERTY_URI_CONTENTLENGTH));
+
+            // alter path but leave dNode object alone
+            Node srcNode = (DataNode) nodeDAO.getPath(dPath);
+            nodeDAO.move(srcNode, oNode);
+            Node movedNode = nodeDAO.getPath(oNode.getUri().getPath() + "/" + dNode.getName());
+            Assert.assertNotNull(movedNode);
+            log.debug("movedNode: " + movedNode.getUri());
+
+            // set busy state
+            nodeDAO.setBusyState(dNode, NodeBusyState.notBusy, NodeBusyState.busyWithWrite);
+            
+            try
+            {
+                nodeDAO.updateNodeMetadata(dNode, meta);
+                Assert.fail("expected IllegalStateException calling updateNodeMetadata with altered path");
+            }
+            catch(IllegalStateException expected)
+            {
+                log.debug("caught expected exception: " + expected);
+            }
+
+            nodeDAO.delete(cNode);
+            nodeDAO.delete(oNode);
+            assertRecursiveDelete();
+
+            log.debug("** now test that it fails when the data node is busy during put **");
+            oNode = getCommonContainerNode(oPath);
+            oNode.setParent(rootContainer);
+            nodeDAO.put(oNode, owner);
+            oNode = (ContainerNode) nodeDAO.getPath(oPath);
+            Assert.assertNotNull(oNode);
+
+            cNode = getCommonContainerNode(cPath);
+            cNode.setParent(rootContainer);
+            nodeDAO.put(cNode, owner);
+            cNode = (ContainerNode) nodeDAO.getPath(cPath);
+            Assert.assertNotNull(cNode);
+            np = cNode.findProperty(VOS.PROPERTY_URI_CONTENTLENGTH);
+            Assert.assertNotNull(np); // containers always have length
+            Assert.assertEquals("new container length", 0, Long.parseLong(np.getPropertyValue()));
+
+            dPath = cPath + "/" + getNodeName("ufm-test");
+            dNode = getCommonDataNode(dPath);
+            dNode.setParent(cNode);
+            nodeDAO.put(dNode, owner);
+            dNode = (DataNode) nodeDAO.getPath(dPath);
+            Assert.assertNotNull(dNode);
+            Assert.assertNull(dNode.getPropertyValue(VOS.PROPERTY_URI_CONTENTLENGTH));
+
+            // set busy state
+            nodeDAO.setBusyState(dNode, NodeBusyState.notBusy, NodeBusyState.busyWithWrite);
+
+            // alter path but leave dNode object alone
+            srcNode = (DataNode) nodeDAO.getPath(dPath);
+            try
+            {
+                nodeDAO.move(srcNode, oNode);
+                Assert.fail("expected IllegalStateException calling move of busy DataNode");
+            }
+            catch(IllegalStateException expected)
+            {
+                log.debug("caught expected exception: " + expected);
+            }
+
+            nodeDAO.delete(cNode);
+            nodeDAO.delete(oNode);
+            assertRecursiveDelete();
         }
         catch(Exception unexpected)
         {
@@ -738,8 +860,6 @@ public class NodeDAOTest
             log.debug("testUpdateFileMetadata - DONE");
         }
     }
-
-    
 
     @Test
     public void testGetRoot()
@@ -823,7 +943,7 @@ public class NodeDAOTest
             moveData4 = (DataNode) nodeDAO.put(moveData4, owner);
             
             // move cont2 to cont3
-            nodeDAO.move(moveCont2, moveCont3, owner);
+            nodeDAO.move(moveCont2, moveCont3);
             
             // check that cont2 no longer under moveRoot
             moveRoot = (ContainerNode) nodeDAO.getPath(moveRootPath);
@@ -879,7 +999,7 @@ public class NodeDAOTest
             Assert.assertNotNull(moveCont2);
             try
             {
-                nodeDAO.move(moveCont1, moveCont2, owner);
+                nodeDAO.move(moveCont1, moveCont2);
                 Assert.fail("Move should not have been allowed due to circular tree.");
             }
             catch (IllegalArgumentException e)
@@ -891,7 +1011,7 @@ public class NodeDAOTest
             try
             {
                 Node root = new ContainerNode(new VOSURI("vos://cadc.nrc.ca~vospace/"));
-                nodeDAO.move(root, moveCont1, owner);
+                nodeDAO.move(root, moveCont1);
                 Assert.fail("Should not have been allowed move root.");
             }
             catch (IllegalArgumentException e)
@@ -902,7 +1022,7 @@ public class NodeDAOTest
             // try to move root container (not allowed)
             try
             {
-                nodeDAO.move(rootContainer, moveCont1, owner);
+                nodeDAO.move(rootContainer, moveCont1);
                 Assert.fail("Should not have been allowed move root container.");
             }
             catch (IllegalArgumentException e)
@@ -915,7 +1035,7 @@ public class NodeDAOTest
             moveData3 = (DataNode) nodeDAO.getPath(moveCont3Path + "/" + moveCont2.getName() + "/" + moveData3.getName());
             String newName = getNodeName("newName");
             moveData3.setName(newName);
-            nodeDAO.move(moveData3, moveCont1, owner2);
+            nodeDAO.move(moveData3, moveCont1);
             
             // check that moveRoot now has moveData3
             moveCont1 = (ContainerNode) nodeDAO.getPath(moveCont1Path);
@@ -931,7 +1051,9 @@ public class NodeDAOTest
             }
             if (!found)
                 Assert.fail("moveData4 not under root after move (name, id check)");
-            
+
+            nodeDAO.delete(moveRoot);
+            assertRecursiveDelete();
         }
         catch(Exception unexpected)
         {
@@ -943,7 +1065,7 @@ public class NodeDAOTest
             log.debug("testMove - DONE");
         }
     }
-    
+
     @Test
     public void testChown()
     {
@@ -1023,6 +1145,8 @@ public class NodeDAOTest
                     chownSub1Sub1Sub1.getPropertyValue(VOS.PROPERTY_URI_CREATOR).toLowerCase(),
                     NODE_OWNER2.toLowerCase());
             
+            nodeDAO.delete(chownRoot);
+            assertRecursiveDelete();
         }
         catch(Exception unexpected)
         {
@@ -1035,7 +1159,6 @@ public class NodeDAOTest
         }
     }
 
-    // testMD5 removed since it is only settable and tested in testUpdateFileMetadata()
 
     @Test
     public void testReadOnlyFileMetadata()
@@ -1048,7 +1171,7 @@ public class NodeDAOTest
             ConnectionConfig connConfig = dbConfig.getConnectionConfig(SERVER, DATABASE);
             this.dataSource = DBUtil.getDataSource(connConfig);
             NodeSchema ns = new NodeSchema("Node", "NodeProperty", true, false); // TOP, read-only
-            this.nodeDAO = new NodeDAO(dataSource, ns, VOS_AUTHORITY, new X500IdentityManager());
+            this.nodeDAO = new NodeDAO(dataSource, ns, VOS_AUTHORITY, new X500IdentityManager(), DELETED_NODES);
             
             DataNode dataNode = null;
             ContainerNode containerNode = null;
@@ -1098,6 +1221,9 @@ public class NodeDAOTest
             Assert.assertNull("persisted contentLength", lenActual);
             Assert.assertNull("persisted contentMD5", lenActual);
 
+            nodeDAO.delete(nodeA);
+            assertRecursiveDelete();
+
         }
         catch(Exception unexpected)
         {
@@ -1110,7 +1236,112 @@ public class NodeDAOTest
         }
     }
 
+    @Test
+    public void testDelete()
+    {
+        log.debug("testDelete - START");
+        try
+        {
+            ContainerNode rootContainer = (ContainerNode) nodeDAO.getPath(HOME_CONTAINER);
+            log.debug("ROOT: " + rootContainer);
+            Assert.assertNotNull(rootContainer);
 
+            String basePath = "/" + HOME_CONTAINER + "/";
+            NodeProperty np;
+
+
+            // Create a node with properties
+            String cPath = basePath + getNodeName("del-test");
+            ContainerNode cNode = getCommonContainerNode(cPath);
+            cNode.setParent(rootContainer);
+            nodeDAO.put(cNode, owner);
+            cNode = (ContainerNode) nodeDAO.getPath(cPath);
+            Assert.assertNotNull(cNode);
+            np = cNode.findProperty(VOS.PROPERTY_URI_CONTENTLENGTH);
+            Assert.assertNotNull(np); // containers always have length
+            Assert.assertEquals("new container length", 0, Long.parseLong(np.getPropertyValue()));
+
+            String dPath = cPath + "/" + getNodeName("del-test");
+            DataNode dNode = getCommonDataNode(dPath);
+            dNode.setParent(cNode);
+            nodeDAO.put(dNode, owner);
+            dNode = (DataNode) nodeDAO.getPath(dPath);
+            Assert.assertNotNull(dNode);
+            Assert.assertNull(dNode.getPropertyValue(VOS.PROPERTY_URI_CONTENTLENGTH));
+
+            // update the quick way
+            FileMetadata meta = new FileMetadata();
+            meta.setContentLength(new Long(2048L));
+            meta.setContentEncoding("gzip");
+            meta.setContentType("text/plain");
+            meta.setMd5Sum(HexUtil.toHex(new byte[] {1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16}));
+
+            try
+            {
+                nodeDAO.updateNodeMetadata(dNode, meta);
+                Assert.fail("expected IllegalStateException calling updateNodeMetadata with busy=N");
+            }
+            catch(IllegalStateException expected)
+            {
+                log.debug("caught expected exception: " + expected);
+            }
+
+            // get and store size of root container
+            np = rootContainer.findProperty(VOS.PROPERTY_URI_CONTENTLENGTH);
+            long rootContentLength = Long.parseLong(np.getPropertyValue());
+
+            // set busy state correctly and redo
+            nodeDAO.setBusyState(dNode, NodeBusyState.notBusy, NodeBusyState.busyWithWrite);
+            nodeDAO.updateNodeMetadata(dNode, meta);
+
+            // check size on root container
+            Node n = nodeDAO.getPath(HOME_CONTAINER);
+            np = n.findProperty(VOS.PROPERTY_URI_CONTENTLENGTH);
+            Assert.assertNotNull("contentLength NP", np);
+            long modRootLen = Long.parseLong(np.getPropertyValue());
+            Assert.assertEquals("root length", rootContentLength+2048, modRootLen);
+
+            // check size on container node
+            n = nodeDAO.getPath(cPath);
+            Assert.assertNotNull(n);
+            np = n.findProperty(VOS.PROPERTY_URI_CONTENTLENGTH);
+            Assert.assertNotNull("contentLength NP", np);
+            Assert.assertEquals(2048, Long.parseLong(np.getPropertyValue()));
+
+            Node target = n;
+            nodeDAO.delete(n);
+
+            // check size on root container
+            n = nodeDAO.getPath(HOME_CONTAINER);
+            np = n.findProperty(VOS.PROPERTY_URI_CONTENTLENGTH);
+            Assert.assertNotNull("contentLength NP", np);
+            modRootLen = Long.parseLong(np.getPropertyValue());
+            Assert.assertEquals("root length", rootContentLength, modRootLen);
+
+            // check that cNode is now under /DeletedNodes
+            ContainerNode deleted = (ContainerNode) nodeDAO.getPath(DELETED_NODES);
+            nodeDAO.getChildren(deleted);
+            boolean found = false;
+            for (Node child : deleted.getNodes())
+            {
+                if (((NodeID) child.appData).getID().equals(((NodeID) target.appData).getID()))
+                {
+                    found = true;
+                }
+            }
+            if (!found)
+                Assert.fail("delete: node not found under /DeletedNodes after delete");
+        }
+        catch(Exception unexpected)
+        {
+            log.error("unexpected exception", unexpected);
+            Assert.fail("unexpected exception: " + unexpected);
+        }
+        finally
+        {
+            log.debug("testDelete - DONE");
+        }
+    }
 
     private long getContentLength(Node node)
     {

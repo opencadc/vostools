@@ -99,6 +99,7 @@ public class DatabaseNodePersistenceTest
     private static final Logger log = Logger.getLogger(DatabaseNodePersistenceTest.class);
     
     DatabaseNodePersistence nodePersistence;
+    static final String DELETED_NODES = "/DeletedNodes";
     
     @Before
     public void before()
@@ -264,7 +265,7 @@ public class DatabaseNodePersistenceTest
 
         public DatabaseNodePersistenceStub()
         {
-            super(new NodeDAO.NodeSchema("Node", "NodeProperty", true, true));
+            super(new NodeDAO.NodeSchema("Node", "NodeProperty", true, true), DELETED_NODES);
         }
 
         @Override

@@ -142,6 +142,7 @@ public class NodeDAO
     protected NodeSchema nodeSchema;
     protected String authority;
     protected IdentityManager identManager;
+    protected String deletedNodePath;
 
     protected JdbcTemplate jdbc;
     private DataSourceTransactionManager transactionManager;
@@ -210,12 +211,14 @@ public class NodeDAO
      * @param authority
      * @param identManager 
      */
-    public NodeDAO(DataSource dataSource, NodeSchema nodeSchema, String authority, IdentityManager identManager)
+    public NodeDAO(DataSource dataSource, NodeSchema nodeSchema, 
+            String authority, IdentityManager identManager, String deletedNodePath)
     {
         this.dataSource = dataSource;
         this.nodeSchema = nodeSchema;
         this.authority = authority;
         this.identManager = identManager;
+        this.deletedNodePath = deletedNodePath;
 
         this.defaultTransactionDef = new DefaultTransactionDefinition();
         defaultTransactionDef.setIsolationLevel(DefaultTransactionDefinition.ISOLATION_REPEATABLE_READ);
@@ -557,26 +560,52 @@ public class NodeDAO
 
         try
         {
-            startTransaction();
-
-            // update nodeSize(s) from top down to node
-            long delta = getContentLength(node);
-            if (delta > 0)
+            if (node instanceof ContainerNode)
             {
-                delta = -1*delta;
-                LinkedList<Node> nodes = Node.getNodeList(node.getParent());
-                Iterator<Node> i = nodes.descendingIterator();
-                while ( i.hasNext() )
-                {
-                    Node n = i.next();
-                    String sql = getUpdateNodeSizeSQL(n, delta);
-                    log.debug(sql);
-                    jdbc.update(sql);
-                }
+                String timestampName = System.currentTimeMillis() + "-" + node.getName();
+                ContainerNode dest = (ContainerNode) getPath(deletedNodePath);
+                node.setName(timestampName);
+                // move handles the transaction, container size changes, rename, and reparent
+                move(node, dest);
             }
-            deleteNode(node);
-            
-            commitTransaction();
+            else
+            {
+                startTransaction();
+
+                // acquire lock to root
+                String[] rlock = getRootUpdateLockSQL(node, null);
+                log.debug(rlock[0]);
+                jdbc.update(rlock[0]);
+
+                // get current size of src node, should be safe now that we have above lock
+                String select = "SELECT nodeSize FROM " + getNodeTableName()
+                    + " WHERE nodeID = " + getNodeID(node);
+                log.debug(select);
+                long delta = jdbc.queryForLong(select);
+
+                log.debug("delete: " + node.getUri().getAuthority() + ", delta="+delta);
+                if (delta > 0)
+                {
+                    delta = -1*delta;
+                    LinkedList<Node> nodes = Node.getNodeList(node.getParent());
+                    Iterator<Node> i = nodes.descendingIterator();
+                    while ( i.hasNext() )
+                    {
+                        Node n = i.next();
+                        String sql = getUpdateNodeSizeSQL(n, delta);
+                        log.debug(sql);
+                        int count = jdbc.update(sql);
+                        if (count == 0)
+                        {
+                            // node in the path was moved or deleted since getPath
+                            throw new IllegalStateException("node path changed during update: "+n.getUri());
+                        }
+                    }
+                }
+                deleteNode(node);
+
+                commitTransaction();
+            }
             log.debug("Node deleted: " + node.getUri().getPath());
         }
         catch (Throwable t)
@@ -701,35 +730,43 @@ public class NodeDAO
         // new size is in meta.getContentLength() (NodeSchema.fileMetaWritable)
         // or already in contentLength column (!NodeSchema.fileMetaWritable)
         
-        String select = "SELECT contentLength, nodeSize FROM " + getNodeTableName()
-                + " WHERE nodeID = " + getNodeID(node);
-        log.debug(select);
-        Long[] sizes = (Long[]) jdbc.query(select, new ResultSetExtractor()
-            {
-
-                public Object extractData(ResultSet rs) throws SQLException, DataAccessException
-                {
-                    if ( rs.next() )
-                    {
-                        Long cl = rs.getLong("contentLength"); // JDBC: NULL -> 0
-                        Long ns = rs.getLong("nodeSize");      // JDBC: NULL -> 0
-                        return new Long[] { cl, ns };
-                    }
-                    return null;
-                }
-            } );
-
-        Long len = sizes[0];
-        Long nodeSize = sizes[1];
-        if ( nodeSchema.fileMetadataWritable)
-            len = meta.getContentLength(); // otherwise: the value from above query is correct
-        long delta = len - nodeSize;
+        
 
         try
         {
             startTransaction();
 
-            // first, update nodes from the top down the path
+            // acquire lock to root
+            String[] rlock = getRootUpdateLockSQL(node, null);
+            log.debug(rlock[0]);
+                jdbc.update(rlock[0]);
+
+            // determine delta to apply
+            String select = "SELECT contentLength, nodeSize FROM " + getNodeTableName()
+                + " WHERE nodeID = " + getNodeID(node);
+            log.debug(select);
+            Long[] sizes = (Long[]) jdbc.query(select, new ResultSetExtractor()
+                {
+
+                    public Object extractData(ResultSet rs) throws SQLException, DataAccessException
+                    {
+                        if ( rs.next() )
+                        {
+                            Long cl = rs.getLong("contentLength"); // JDBC: NULL -> 0
+                            Long ns = rs.getLong("nodeSize");      // JDBC: NULL -> 0
+                            return new Long[] { cl, ns };
+                        }
+                        return null;
+                    }
+                } );
+
+            Long len = sizes[0];
+            Long nodeSize = sizes[1];
+            if ( nodeSchema.fileMetadataWritable)
+                len = meta.getContentLength(); // otherwise: the value from above query is correct
+            long delta = len - nodeSize;
+
+            // update nodes from the top down the path
             if (delta != 0)
             {
                 LinkedList<Node> nodes = Node.getNodeList(node);
@@ -739,11 +776,16 @@ public class NodeDAO
                     Node n = i.next();
                     String sql = getUpdateNodeSizeSQL(n, delta);
                     log.debug(sql);
-                    jdbc.update(sql);
+                    int count = jdbc.update(sql);
+                    if (count == 0)
+                    {
+                        // node in the path was moved or deleted
+                        throw new IllegalStateException("node path changed during update: "+node.getUri());
+                    }
                 }
             }
 
-            // update nodeSize and maybe contentLength
+            // update nodeSize, maybe contentLength and md5
             DataNodeUpdateStatementCreator dnup = new DataNodeUpdateStatementCreator(
                     getNodeID(node), len.longValue(), meta.getMd5Sum());
             jdbc.update(dnup);
@@ -772,7 +814,7 @@ public class NodeDAO
         }
         catch(IllegalStateException ex)
         {
-            log.debug("updateNodeMetadata rollback for node (!busy): " + node.getUri().getPath());
+            log.debug("updateNodeMetadata rollback: " + ex.toString());
             if (transactionStatus != null)
                 try { rollbackTransaction(); }
                 catch(Throwable oops) { log.error("failed to rollback transaction", oops); }
@@ -947,7 +989,7 @@ public class NodeDAO
      * @param dest The container in which to move the node.
      * @param subject The new owner for the moved node.
      */
-    public void move(Node src, ContainerNode dest, Subject subject)
+    public void move(Node src, ContainerNode dest)
     {
         log.debug("move: " + src.getUri() + " to " + dest.getUri() + " as " + src.getName());
         expectPersistentNode(src);
@@ -976,43 +1018,82 @@ public class NodeDAO
         
         try
         {    
-            long delta = getContentLength(src);
-
             startTransaction();
-            
-            // decrement nodeSize(s) above src
-            LinkedList<Node> nodes = Node.getNodeList(src.getParent());
-            Iterator<Node> i = nodes.descendingIterator();
-            while ( i.hasNext() )
+
+            // acquire locks to all roots in controlled order
+            String[] rlock = getRootUpdateLockSQL(src, dest);
+            for (String r : rlock)
             {
-                Node n = i.next();
-                String sql = getUpdateNodeSizeSQL(n, -1*delta);
-                log.debug(sql);
-                jdbc.update(sql);
+                log.debug(r);
+                jdbc.update(r);
             }
-            // increment node sizes at dest
-            nodes = Node.getNodeList(dest);
-            i = nodes.descendingIterator();
-            while ( i.hasNext() )
+
+            // get current size of src node
+            String select = "SELECT nodeSize FROM " + getNodeTableName()
+                + " WHERE nodeID = " + getNodeID(src);
+            log.debug(select);
+            long delta = jdbc.queryForLong(select);
+
+            if (delta > 0)
             {
-                Node n = i.next();
-                String sql = getUpdateNodeSizeSQL(n, delta);
-                log.debug(sql);
-                jdbc.update(sql);
+                // decrement nodeSize(s) above src
+                LinkedList<Node> nodes = Node.getNodeList(src.getParent());
+                Iterator<Node> i = nodes.descendingIterator();
+                while ( i.hasNext() )
+                {
+                    Node n = i.next();
+                    String sql = getUpdateNodeSizeSQL(n, -1*delta);
+                    log.debug(sql);
+                    int count = jdbc.update(sql);
+                    if (count == 0)
+                    {
+                        // node in the path was moved or deleted
+                        throw new IllegalStateException("src path changed during update: "+n.getUri());
+                    }
+                }
+                // increment node sizes at dest
+                nodes = Node.getNodeList(dest);
+                i = nodes.descendingIterator();
+                while ( i.hasNext() )
+                {
+                    Node n = i.next();
+                    String sql = getUpdateNodeSizeSQL(n, delta);
+                    log.debug(sql);
+                    int count = jdbc.update(sql);
+                    if (count == 0)
+                    {
+                        // node in the path was moved or deleted
+                        throw new IllegalStateException("destination path changed during update: "+n.getUri());
+                    }
+                }
             }
+            else
+                log.debug("src node " + src.getUri().getPath() + ", delta = 0: skipping path updates");
 
             // re-parent the node
             src.setParent(dest);
-            
+
+            // update the node with the new parent and potentially new name
             NodePutStatementCreator putStatementCreator = new NodePutStatementCreator(nodeSchema, true);
-            
-            // update the node with the new parent and potentially new name.
             putStatementCreator.setValues(src, null);
-            jdbc.update(putStatementCreator);
+            int count = jdbc.update(putStatementCreator);
+            if (count == 0)
+            {
+                // tried to move a busy data node
+                throw new IllegalStateException("src node busy: "+src.getUri());
+            }
             
             // recursive chown removed since it is costly and nominally incorrect
             
             commitTransaction();
+        }
+        catch(IllegalStateException ex)
+        {
+            log.debug("move rollback: " + ex.toString());
+            if (transactionStatus != null)
+                try { rollbackTransaction(); }
+                catch(Throwable oops) { log.error("failed to rollback transaction", oops); }
+            throw ex;
         }
         catch (Throwable t)
         {
@@ -1318,20 +1399,67 @@ public class NodeDAO
         return sb.toString();
     }
 
+    protected String[] getRootUpdateLockSQL(Node n1, Node n2)
+    {
+        Long id1 = null;
+        Long id2 = null;
+        Node root1 = n1;
+        while (root1.getParent() != null)
+            root1 = root1.getParent();
+        id1 = getNodeID(root1);
+        if (n2 != null)
+        {
+            Node root2 = n2;
+            while (root2.getParent() != null)
+                root2 = root2.getParent();
+            id2 = getNodeID(root2);
+        }
+        
+        Long[] ids = null;
+        if ( id2 == null || id1.compareTo(id2) == 0 ) // same root
+            ids = new Long[] { id1 };
+        else if (id1.compareTo(id2) < 0)
+            ids = new Long[] { id1, id2 };
+        else
+            ids = new Long[] { id2, id1 };
+
+        String[] ret = new String[ids.length];
+        for (int i=0; i<ids.length; i++)
+        {
+            StringBuilder sb = new StringBuilder();
+            sb.append("UPDATE ");
+            sb.append(getNodeTableName());
+            sb.append(" SET type='C' WHERE nodeID = ");
+            sb.append(ids[i]);
+            ret[i] = sb.toString();
+        }
+        return ret;
+    }
+    
     // apply delta to Node.nodeSize (set if NULL)
-    protected String getUpdateNodeSizeSQL(Node node, long difference)
+    protected String getUpdateNodeSizeSQL(Node node, long delta)
     {
         // update Node set nodeSize=(case when nodeSize is null then diff else nodeSize+diff end) where nodeID=?
         StringBuilder sb = new StringBuilder();
         sb.append("UPDATE ");
         sb.append(getNodeTableName());
-        sb.append(" SET nodeSize = (CASE WHEN nodeSize IS NULL THEN ");
-        sb.append(Long.toString(difference));
+        sb.append(" SET nodeSize = ");
+        sb.append("(CASE WHEN nodeSize IS NULL THEN ");
+        sb.append(Long.toString(delta));
         sb.append(" ELSE ");
         sb.append("nodeSize + ");
-        sb.append(Long.toString(difference));
+        sb.append(Long.toString(delta));
         sb.append(" END) WHERE nodeID = ");
         sb.append(getNodeID(node));
+        // force check of parent to detect path changes
+        if (node.getParent() != null)
+        {
+            sb.append(" AND parentID = ");
+            sb.append(getNodeID(node.getParent()));
+        }
+        else
+            sb.append(" AND parentID IS NULL");
+
         return sb.toString();
     }
 

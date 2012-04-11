@@ -109,7 +109,7 @@ public abstract class DatabaseNodePersistence implements NodePersistence
     private static Logger log = Logger.getLogger(DatabaseNodePersistence.class);
 
     private static final String ROOT_NAME = "";
-    
+
     private static List<String> permissionPropertyURIs = Arrays.asList(
         new String[] {
             VOS.PROPERTY_URI_ISPUBLIC,
@@ -117,6 +117,7 @@ public abstract class DatabaseNodePersistence implements NodePersistence
             VOS.PROPERTY_URI_GROUPWRITE});
 
     protected NodeDAO.NodeSchema nodeSchema;
+    protected String deletedNodePath;
 
     protected Integer maxChildLimit = new Integer(1000);
 
@@ -126,9 +127,10 @@ public abstract class DatabaseNodePersistence implements NodePersistence
      * 
      * @param nodeSchema node schema config
      */
-    protected DatabaseNodePersistence(NodeDAO.NodeSchema nodeSchema)
+    protected DatabaseNodePersistence(NodeDAO.NodeSchema nodeSchema, String deletedNodePath)
     {
         this.nodeSchema = nodeSchema;
+        this.deletedNodePath = deletedNodePath;
     }
 
     /**
@@ -157,7 +159,7 @@ public abstract class DatabaseNodePersistence implements NodePersistence
      */
     protected NodeDAO getDAO(String authority)
     {
-        return new NodeDAO(getDataSource(), nodeSchema, authority, getIdentityManager());
+        return new NodeDAO(getDataSource(), nodeSchema, authority, getIdentityManager(), deletedNodePath);
     }
 
     @Override
@@ -165,9 +167,8 @@ public abstract class DatabaseNodePersistence implements NodePersistence
         throws NodeNotFoundException
     {
         log.debug("get: " + vos + " -- " + vos.getName());
-        ContainerNode root = createRoot(vos.getAuthority());
         if ( vos.isRoot() )
-            return root;
+            return createRoot(vos.getAuthority());
         NodeDAO dao = getDAO( vos.getAuthority() );
         Node ret = dao.getPath(vos.getPath());
         if (ret == null)
@@ -274,11 +275,8 @@ public abstract class DatabaseNodePersistence implements NodePersistence
         {
             throw new RuntimeException("Cannot move nodes between authorities.");
         }
-    
         NodeDAO dao = getDAO(src.getUri().getAuthority());
-        AccessControlContext acContext = AccessController.getContext();
-        Subject caller = Subject.getSubject(acContext);
-        dao.move(src, dest, caller);
+        dao.move(src, dest);
     }
 
     @Override
