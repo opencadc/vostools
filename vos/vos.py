@@ -813,21 +813,24 @@ class Client:
         return self.status(uri,code=[400])
 
     def isfile(self,uri):
-        return self.status(uri,code=[200,303,503,302])
+        return self.status(uri,code=[200,303,302])
 
     def access(self,uri,mode=os.O_RDONLY):
         """Test for existance"""
         return not self.status(uri,code=[404])
 
 
-    def status(self,uri,code=[200,303,503,302]):
+    def status(self,uri,code=[200,303,302]):
         """Check to see if this given uri points at a containerNode.
 
         This is done by checking the view=data header and seeing if you get an error.
         """
-        file=self.open(uri,view='data',head=True)
-        res=file.httpCon.getresponse()
-        file.httpCon.close()
+        while True:
+            file=self.open(uri,view='data',head=True)
+            res=file.httpCon.getresponse()
+            file.httpCon.close()
+            if res.status != 503:
+                break
         if res.status in code:
             return True
         return False
