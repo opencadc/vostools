@@ -224,7 +224,7 @@ public class NodeDAOTest
 
         sql = "select count(*) from "+nodeSchema.nodeTable+" where parentID = " + ((NodeID)top.appData).id;
         int accessible = jdbc.queryForInt(sql);
-        Assert.assertEquals("number of directly accessible childen ", 0, accessible);
+        Assert.assertEquals("number of directly accessible children ", 0, accessible);
 
         sql = "select count(*) from "+nodeSchema.nodeTable+" where parentID is not null and parentID not in (select nodeID from "+nodeSchema.nodeTable+")" ;
         int orphans = jdbc.queryForInt(sql);
@@ -1251,7 +1251,7 @@ public class NodeDAOTest
 
 
             // Create a node with properties
-            String cPath = basePath + getNodeName("del-test");
+            String cPath = basePath + getNodeName("del-test-dir");
             ContainerNode cNode = getCommonContainerNode(cPath);
             cNode.setParent(rootContainer);
             nodeDAO.put(cNode, owner);
@@ -1261,7 +1261,7 @@ public class NodeDAOTest
             Assert.assertNotNull(np); // containers always have length
             Assert.assertEquals("new container length", 0, Long.parseLong(np.getPropertyValue()));
 
-            String dPath = cPath + "/" + getNodeName("del-test");
+            String dPath = cPath + "/" + getNodeName("del-test-file");
             DataNode dNode = getCommonDataNode(dPath);
             dNode.setParent(cNode);
             nodeDAO.put(dNode, owner);
@@ -1276,22 +1276,25 @@ public class NodeDAOTest
             meta.setContentType("text/plain");
             meta.setMd5Sum(HexUtil.toHex(new byte[] {1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16}));
 
+            // get and store size of root container
+            np = rootContainer.findProperty(VOS.PROPERTY_URI_CONTENTLENGTH);
+            long rootContentLength = Long.parseLong(np.getPropertyValue());
+
+            // set busy state and set data node size
+            nodeDAO.setBusyState(dNode, NodeBusyState.notBusy, NodeBusyState.busyWithWrite);
+
+            // test that busy node cannot be deleted directly
             try
             {
-                nodeDAO.updateNodeMetadata(dNode, meta);
-                Assert.fail("expected IllegalStateException calling updateNodeMetadata with busy=N");
+                // thread 1: do the delete
+                log.debug("** trying to delete busy " +dNode.getUri().getPath());
+                nodeDAO.delete(dNode);
+                Assert.fail("expected IllegalStateException but delete returned");
             }
             catch(IllegalStateException expected)
             {
                 log.debug("caught expected exception: " + expected);
             }
-
-            // get and store size of root container
-            np = rootContainer.findProperty(VOS.PROPERTY_URI_CONTENTLENGTH);
-            long rootContentLength = Long.parseLong(np.getPropertyValue());
-
-            // set busy state correctly and redo
-            nodeDAO.setBusyState(dNode, NodeBusyState.notBusy, NodeBusyState.busyWithWrite);
             nodeDAO.updateNodeMetadata(dNode, meta);
 
             // check size on root container
@@ -1331,6 +1334,52 @@ public class NodeDAOTest
             }
             if (!found)
                 Assert.fail("delete: node not found under /DeletedNodes after delete");
+
+            log.debug("** test failed delete if path changed **");
+            cNode = getCommonContainerNode(cPath);
+            cNode.setParent(rootContainer);
+            nodeDAO.put(cNode, owner);
+            cNode = (ContainerNode) nodeDAO.getPath(cPath);
+            Assert.assertNotNull(cNode);
+
+            dNode = getCommonDataNode(dPath);
+            dNode.setParent(cNode);
+            nodeDAO.put(dNode, owner);
+            dNode = (DataNode) nodeDAO.getPath(dPath);
+            Assert.assertNotNull(dNode);
+            Assert.assertNull(dNode.getPropertyValue(VOS.PROPERTY_URI_CONTENTLENGTH));
+
+            String oPath = cPath+"-other";
+            ContainerNode oNode = getCommonContainerNode(oPath);
+            oNode.setParent(rootContainer);
+            nodeDAO.put(oNode, owner);
+            oNode = (ContainerNode) nodeDAO.getPath(oPath);
+            Assert.assertNotNull(oNode);
+
+            // thread 1: select indepedent object to delete later
+            Node deletedNode = nodeDAO.getPath(dPath);
+            Assert.assertNotNull(deletedNode);
+
+            // thread 2: move
+            nodeDAO.move(dNode, oNode);
+            Node actual = nodeDAO.getPath(oPath + "/" + dNode.getName());
+            Assert.assertNotNull(actual);
+
+            try
+            {
+                // thread 1: do the delete
+                log.debug("** trying to delete " + deletedNode.getUri().getPath());
+                nodeDAO.delete(deletedNode);
+                Assert.fail("expected IllegalStateException but delete returned");
+            }
+            catch(IllegalStateException expected)
+            {
+                log.debug("caught expected exception: " + expected);
+            }
+
+            nodeDAO.delete(oNode);
+            nodeDAO.delete(cNode);
+            assertRecursiveDelete();
         }
         catch(Exception unexpected)
         {

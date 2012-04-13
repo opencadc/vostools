@@ -608,9 +608,17 @@ public class NodeDAO
             }
             log.debug("Node deleted: " + node.getUri().getPath());
         }
+        catch(IllegalStateException ex)
+        {
+            log.debug("delete rollback: " + ex.toString());
+            if (transactionStatus != null)
+                try { rollbackTransaction(); }
+                catch(Throwable oops) { log.error("failed to rollback transaction", oops); }
+            throw ex;
+        }
         catch (Throwable t)
         {
-            log.error("Delete rollback for node: " + node.getUri().getPath(), t);
+            log.error("delete rollback for node: " + node.getUri().getPath(), t);
             if (transactionStatus != null)
                 try { rollbackTransaction(); }
                 catch(Throwable oops) { log.error("failed to rollback transaction", oops); }
@@ -648,7 +656,9 @@ public class NodeDAO
         {
             sql = getDeleteNodeSQL(node);
             log.debug(sql);
-            jdbc.update(sql);
+            int count = jdbc.update(sql);
+            if (count == 0) // node did not exist or was moved
+                throw new IllegalStateException("node busy or path changed during delete: "+node.getUri());
         }
     }
 
@@ -729,8 +739,6 @@ public class NodeDAO
         // old size is in the nodeSize column
         // new size is in meta.getContentLength() (NodeSchema.fileMetaWritable)
         // or already in contentLength column (!NodeSchema.fileMetaWritable)
-        
-        
 
         try
         {
@@ -1360,6 +1368,11 @@ public class NodeDAO
         sb.append(getNodeTableName());
         sb.append(" WHERE nodeID = ");
         sb.append(getNodeID(node));
+        sb.append(" AND parentID = ");
+        sb.append(getNodeID(node.getParent()));
+        sb.append(" AND busyState = '");
+        sb.append(VOS.NodeBusyState.notBusy.getValue());
+        sb.append("'");
         return sb.toString();
     }
     
