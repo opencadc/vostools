@@ -139,16 +139,6 @@ constraint NodeProperty_fk foreign key (nodeID)
 references Node(nodeID)
 go
 
-CREATE TRIGGER NodeProperty_update_trigger
-    ON NodeProperty
-    FOR UPDATE
-    AS
-    BEGIN
-        UPDATE NodeProperty SET lastModified=getDate()
-        FROM inserted i
-        WHERE i.nodePropertyID = NodeProperty.nodePropertyID
-    END
-go
 
 --
 -- The DeletedNode table contains all deleted DataNodes. This can be used to
@@ -158,6 +148,7 @@ go
 
 print "create table DeletedNode ..."
 go
+
 create table DeletedNode
 (
     nodeID        BIGINT       NOT NULL,

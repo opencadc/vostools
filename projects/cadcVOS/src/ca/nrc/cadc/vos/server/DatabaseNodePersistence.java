@@ -297,15 +297,6 @@ public abstract class DatabaseNodePersistence implements NodePersistence
         dao.updateNodeMetadata(node, meta);
     }
     
-    @Override
-    public void chown(Node node, boolean recursive)
-    {
-        NodeDAO dao = getDAO( node.getUri().getAuthority() );
-        AccessControlContext acContext = AccessController.getContext();
-        Subject caller = Subject.getSubject(acContext);
-        dao.chown(node, caller, recursive);
-    }
-   
     /**
      * Get the current contentLength. If the property is not set, 0 is returned.
      * 
@@ -376,5 +367,36 @@ public abstract class DatabaseNodePersistence implements NodePersistence
     {
         return StringUtil.hasText(property.getPropertyValue())
                 || property.isMarkedForDeletion();
+    }
+
+
+    /**
+     * Admin method: change ownership of a node. The new owner is the Subject
+     * in the current AccessControlContext.
+     *
+     * @param node target node to change
+     * @param recursive also change obership of child nodes
+     * @param batchSize number of updates per transaction
+     */
+    public void chown(Node node, boolean recursive, int batchSize, boolean dryrun)
+    {
+        NodeDAO dao = getDAO( node.getUri().getAuthority() );
+        AccessControlContext acContext = AccessController.getContext();
+        Subject caller = Subject.getSubject(acContext);
+        dao.chown(node, caller, recursive, batchSize, dryrun);
+    }
+
+    /**
+     * Admin method: delete a container. This method is intended to be used
+     * to cleanup any containers that were moved to the special "deleted nodes"
+     * container by a normal delete operation.
+     *
+     * @param node target node to delete
+     * @param batchSize number of updates per transaction
+     */
+    public void delete(Node node, int batchSize, boolean dryrun)
+    {
+        NodeDAO dao = getDAO( node.getUri().getAuthority() );
+        dao.delete(node, batchSize, dryrun);
     }
 }

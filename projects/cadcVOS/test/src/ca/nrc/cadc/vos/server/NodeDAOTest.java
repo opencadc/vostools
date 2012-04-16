@@ -73,8 +73,6 @@ import static org.junit.Assert.assertEquals;
 
 import java.net.URI;
 import java.security.Principal;
-import java.sql.PreparedStatement;
-import java.sql.ResultSet;
 import java.util.ArrayList;
 import java.util.Date;
 import java.util.HashSet;
@@ -167,9 +165,9 @@ public class NodeDAOTest
             this.nodeSchema = new NodeSchema("Node", "NodeProperty", true, true); // TOP, writable
 
             // cleanup from old runs
-            JdbcTemplate jdbc = new JdbcTemplate(dataSource);
-            jdbc.update("DELETE FROM " + nodeSchema.propertyTable);
-            jdbc.update("DELETE FROM " + nodeSchema.nodeTable);
+            //JdbcTemplate jdbc = new JdbcTemplate(dataSource);
+            //jdbc.update("DELETE FROM " + nodeSchema.propertyTable);
+            //jdbc.update("DELETE FROM " + nodeSchema.nodeTable);
 
             this.nodeDAO = new NodeDAO(dataSource, nodeSchema, VOS_AUTHORITY, new X500IdentityManager(), DELETED_NODES);
 
@@ -296,7 +294,7 @@ public class NodeDAOTest
             log.debug("testPutGetDeleteNodes - CLEANUP");
 
             // delete the three roots
-            nodeDAO.delete(adir);
+            nodeDAO.delete(adir, 10, false); // cleanup
             assertRecursiveDelete();
         }
         catch(Exception unexpected)
@@ -358,7 +356,7 @@ public class NodeDAOTest
             Assert.assertTrue(cur.getNodes().contains(n3));
             Assert.assertTrue(cur.getNodes().contains(n4));
 
-            nodeDAO.delete(cur);
+            nodeDAO.delete(cur, 10, false); // cleanup
             assertRecursiveDelete();
         }
         catch(Exception unexpected)
@@ -426,7 +424,7 @@ public class NodeDAOTest
             Assert.assertTrue(cur.getNodes().contains(n3));
             Assert.assertTrue(cur.getNodes().contains(n4));
 
-            nodeDAO.delete(cur);
+            nodeDAO.delete(cur, 10, false); // cleanup
             assertRecursiveDelete();
         }
         catch(Exception unexpected)
@@ -479,24 +477,25 @@ public class NodeDAOTest
             cur = (ContainerNode) nodeDAO.getPath(path);
             Assert.assertNotNull(cur);
             Assert.assertEquals("empty child list", 0, cur.getNodes().size());
+            
             // load the child nodes one at a time
             nodeDAO.getChild(cur, n1.getName());
             Assert.assertEquals("contains 1", 1, cur.getNodes().size());
             Assert.assertTrue("contains n1", cur.getNodes().contains(n1));
             
-             nodeDAO.getChild(cur, n4.getName());
+            nodeDAO.getChild(cur, n4.getName());
             Assert.assertEquals("contains 2", 2, cur.getNodes().size());
             Assert.assertTrue("contains n4", cur.getNodes().contains(n4));
 
-             nodeDAO.getChild(cur, n2.getName());
+            nodeDAO.getChild(cur, n2.getName());
             Assert.assertEquals("contains 3", 3, cur.getNodes().size());
             Assert.assertTrue("contains n2", cur.getNodes().contains(n2));
 
-             nodeDAO.getChild(cur, n3.getName());
+            nodeDAO.getChild(cur, n3.getName());
             Assert.assertEquals("contains 4", 4, cur.getNodes().size());
             Assert.assertTrue("contains n3", cur.getNodes().contains(n3));
 
-            nodeDAO.delete(cur);
+            nodeDAO.delete(cur, 10, false); // cleanup
             assertRecursiveDelete();
         }
         catch(Exception unexpected)
@@ -509,7 +508,6 @@ public class NodeDAOTest
             log.debug("testGetChild - DONE");
         }
     }
-
 
     @Test
     public void testUpdateProperties()
@@ -601,7 +599,7 @@ public class NodeDAOTest
             Assert.assertNotNull(reGet3);
             compareProperties("assert7", testNode.getProperties(), reGet3.getProperties());
 
-            nodeDAO.delete(nodeFromGet);
+            nodeDAO.delete(nodeFromGet, 10, false); // cleanup
             assertRecursiveDelete();
         }
         catch(Exception unexpected)
@@ -650,7 +648,7 @@ public class NodeDAOTest
             Assert.assertNotNull(persistNode);
             Assert.assertEquals("assert not busy", NodeBusyState.notBusy, persistNode.getBusy());
 
-            nodeDAO.delete(persistNode);
+            nodeDAO.delete(persistNode, 10, false); // cleanup
             assertRecursiveDelete();
         }
         catch(Exception unexpected)
@@ -703,7 +701,7 @@ public class NodeDAOTest
             meta.setContentType("text/plain");
             meta.setMd5Sum(HexUtil.toHex(new byte[] {1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16}));
 
-            log.debug("** update without settign busy state **");
+            log.debug("** update without setting busy state **");
             try
             {
                 nodeDAO.updateNodeMetadata(dNode, meta);
@@ -755,7 +753,7 @@ public class NodeDAOTest
             Assert.assertNotNull("contentMD5 NP", np);
             Assert.assertEquals(meta.getMd5Sum(), np.getPropertyValue());
 
-            nodeDAO.delete(cNode);
+            nodeDAO.delete(cNode, 10, false); // cleanup
             assertRecursiveDelete();
 
             log.debug("** now test that it fails when the c is moved mid-call **");
@@ -803,8 +801,10 @@ public class NodeDAOTest
                 log.debug("caught expected exception: " + expected);
             }
 
-            nodeDAO.delete(cNode);
-            nodeDAO.delete(oNode);
+            // reset to enable cleanup
+            nodeDAO.setBusyState(dNode, NodeBusyState.busyWithWrite, NodeBusyState.notBusy);
+            nodeDAO.delete(cNode, 10, false); // cleanup
+            nodeDAO.delete(oNode, 10, false); // cleanup
             assertRecursiveDelete();
 
             log.debug("** now test that it fails when the data node is busy during put **");
@@ -846,8 +846,10 @@ public class NodeDAOTest
                 log.debug("caught expected exception: " + expected);
             }
 
-            nodeDAO.delete(cNode);
-            nodeDAO.delete(oNode);
+            // reset to enable cleanup
+            nodeDAO.setBusyState(dNode, NodeBusyState.busyWithWrite, NodeBusyState.notBusy);
+            nodeDAO.delete(cNode, 10, false); // cleanup
+            nodeDAO.delete(oNode, 10, false); // cleanup
             assertRecursiveDelete();
         }
         catch(Exception unexpected)
@@ -1052,7 +1054,7 @@ public class NodeDAOTest
             if (!found)
                 Assert.fail("moveData4 not under root after move (name, id check)");
 
-            nodeDAO.delete(moveRoot);
+            nodeDAO.delete(moveRoot, 10, false); // cleanup
             assertRecursiveDelete();
         }
         catch(Exception unexpected)
@@ -1065,100 +1067,6 @@ public class NodeDAOTest
             log.debug("testMove - DONE");
         }
     }
-
-    @Test
-    public void testChown()
-    {
-        log.debug("testChown - START");
-        try
-        {
-            ContainerNode rootContainer = (ContainerNode) nodeDAO.getPath(HOME_CONTAINER);
-            log.debug("ROOT: " + rootContainer);
-            Assert.assertNotNull(rootContainer);
-
-            String basePath = "/" + HOME_CONTAINER + "/";
-
-            // Create a new node tree with owner/creator NODE_OWNER
-            String chownRootPath = basePath + getNodeName("chowntest");
-            String chownSub1Path = chownRootPath + "/" + getNodeName("chownsub1");
-            String chownSub2Path = chownRootPath + "/" + getNodeName("chownsub2");
-            String chownSub3Path = chownRootPath + "/" + getNodeName("chownsub3");
-            String chownSub1Sub1Path = chownSub1Path + "/" + getNodeName("chownsub1sub1");
-            String chownSub1Sub2Path = chownSub1Path + "/" + getNodeName("chownsub1sub2");
-            String chownSub2Sub1Path = chownSub2Path + "/" + getNodeName("chownsub2sub1");
-            String chownSub1Sub1Sub1Path = chownSub1Sub1Path + "/" + getNodeName("chownsub1sub1sub1");
-            
-            ContainerNode chownRoot = getCommonContainerNode(chownRootPath);
-            ContainerNode chownSub1 = getCommonContainerNode(chownSub1Path);
-            ContainerNode chownSub2 = getCommonContainerNode(chownSub2Path);
-            DataNode chownSub3 = getCommonDataNode(chownSub3Path);
-            ContainerNode chownSub1Sub1 = getCommonContainerNode(chownSub1Sub1Path);
-            DataNode chownSub1Sub2 = getCommonDataNode(chownSub1Sub2Path);
-            DataNode chownSub2Sub1 = getCommonDataNode(chownSub2Sub1Path);
-            DataNode chownSub1Sub1Sub1 = getCommonDataNode(chownSub1Sub1Sub1Path);
-            
-            chownRoot.setParent(rootContainer);
-            chownRoot = (ContainerNode) nodeDAO.put(chownRoot, owner);
-            chownSub1.setParent(chownRoot);
-            chownSub1 = (ContainerNode) nodeDAO.put(chownSub1, owner);
-            chownSub2.setParent(chownRoot);
-            chownSub2 = (ContainerNode) nodeDAO.put(chownSub2, owner);
-            chownSub3.setParent(chownRoot);
-            chownSub3 = (DataNode) nodeDAO.put(chownSub3, owner);
-            chownSub1Sub1.setParent(chownSub1);
-            chownSub1Sub1 = (ContainerNode) nodeDAO.put(chownSub1Sub1, owner);
-            chownSub1Sub2.setParent(chownSub1);
-            chownSub1Sub2 = (DataNode) nodeDAO.put(chownSub1Sub2, owner);
-            chownSub2Sub1.setParent(chownSub2);
-            chownSub2Sub1 = (DataNode) nodeDAO.put(chownSub2Sub1, owner);
-            chownSub1Sub1Sub1.setParent(chownSub1Sub1);
-            chownSub1Sub1Sub1 = (DataNode) nodeDAO.put(chownSub1Sub1Sub1, owner);
-            
-            // get the root node
-            chownRoot = (ContainerNode) nodeDAO.getPath(chownRootPath);
-            Assert.assertNotNull(chownRoot);
-
-            // change the ownership non recursively
-            nodeDAO.chown(chownRoot, owner2, false);
-            
-            // check the ownership change
-            chownRoot = (ContainerNode) nodeDAO.getPath(chownRootPath);
-            assertEquals("Non-recursive chown failed.",
-                    chownRoot.getPropertyValue(VOS.PROPERTY_URI_CREATOR).toLowerCase(),
-                    NODE_OWNER2.toLowerCase());
-            
-            // get a sub node
-            chownSub1 = (ContainerNode) nodeDAO.getPath(chownSub1Path);
-            
-            // check for no ownership change
-            assertEquals("Non-recursive chown failed.",
-                    chownSub1.getPropertyValue(VOS.PROPERTY_URI_CREATOR).toLowerCase(),
-                    NODE_OWNER.toLowerCase());
-            
-            // change the ownership recursively
-            nodeDAO.chown(chownRoot, owner2, true);
-            
-            // check for deep ownership change
-            chownSub1Sub1Sub1 = (DataNode) nodeDAO.getPath(chownSub1Sub1Sub1Path);
-            
-            assertEquals("Recursive chown failed.",
-                    chownSub1Sub1Sub1.getPropertyValue(VOS.PROPERTY_URI_CREATOR).toLowerCase(),
-                    NODE_OWNER2.toLowerCase());
-            
-            nodeDAO.delete(chownRoot);
-            assertRecursiveDelete();
-        }
-        catch(Exception unexpected)
-        {
-            log.error("unexpected exception", unexpected);
-            Assert.fail("unexpected exception: " + unexpected);
-        }
-        finally
-        {
-            log.debug("testChown - DONE");
-        }
-    }
-
 
     @Test
     public void testReadOnlyFileMetadata()
@@ -1221,7 +1129,7 @@ public class NodeDAOTest
             Assert.assertNull("persisted contentLength", lenActual);
             Assert.assertNull("persisted contentMD5", lenActual);
 
-            nodeDAO.delete(nodeA);
+            nodeDAO.delete(nodeA, 10, false); // cleanup
             assertRecursiveDelete();
 
         }
@@ -1356,7 +1264,7 @@ public class NodeDAOTest
             oNode = (ContainerNode) nodeDAO.getPath(oPath);
             Assert.assertNotNull(oNode);
 
-            // thread 1: select indepedent object to delete later
+            // thread 1: select independent object to delete later
             Node deletedNode = nodeDAO.getPath(dPath);
             Assert.assertNotNull(deletedNode);
 
@@ -1377,8 +1285,8 @@ public class NodeDAOTest
                 log.debug("caught expected exception: " + expected);
             }
 
-            nodeDAO.delete(oNode);
-            nodeDAO.delete(cNode);
+            nodeDAO.delete(oNode, 10, false); // cleanup
+            nodeDAO.delete(cNode, 10, false); // cleanup
             assertRecursiveDelete();
         }
         catch(Exception unexpected)
@@ -1391,6 +1299,361 @@ public class NodeDAOTest
             log.debug("testDelete - DONE");
         }
     }
+
+    @Test
+    public void testBatchChown()
+    {
+        log.debug("testBatchChown - START");
+        try
+        {
+            ContainerNode rootContainer = (ContainerNode) nodeDAO.getPath(HOME_CONTAINER);
+            log.debug("ROOT: " + rootContainer);
+            Assert.assertNotNull(rootContainer);
+
+            String basePath = "/" + HOME_CONTAINER + "/";
+
+            // Create a new node tree with owner/creator NODE_OWNER
+            String chownRootPath = basePath + getNodeName("chowntest");
+            String chownSub1Path = chownRootPath + "/" + getNodeName("chownsub1");
+            String chownSub2Path = chownRootPath + "/" + getNodeName("chownsub2");
+            String chownSub3Path = chownRootPath + "/" + getNodeName("chownsub3");
+            String chownSub1Sub1Path = chownSub1Path + "/" + getNodeName("chownsub1sub1");
+            String chownSub1Sub2Path = chownSub1Path + "/" + getNodeName("chownsub1sub2");
+            String chownSub2Sub1Path = chownSub2Path + "/" + getNodeName("chownsub2sub1");
+            String chownSub1Sub1Sub1Path = chownSub1Sub1Path + "/" + getNodeName("chownsub1sub1sub1");
+
+            ContainerNode chownRoot = getCommonContainerNode(chownRootPath);
+            ContainerNode chownSub1 = getCommonContainerNode(chownSub1Path);
+            ContainerNode chownSub2 = getCommonContainerNode(chownSub2Path);
+            DataNode chownSub3 = getCommonDataNode(chownSub3Path);
+            ContainerNode chownSub1Sub1 = getCommonContainerNode(chownSub1Sub1Path);
+            DataNode chownSub1Sub2 = getCommonDataNode(chownSub1Sub2Path);
+            DataNode chownSub2Sub1 = getCommonDataNode(chownSub2Sub1Path);
+            DataNode chownSub1Sub1Sub1 = getCommonDataNode(chownSub1Sub1Sub1Path);
+
+            chownRoot.setParent(rootContainer);
+            chownRoot = (ContainerNode) nodeDAO.put(chownRoot, owner);
+            chownSub1.setParent(chownRoot);
+            chownSub1 = (ContainerNode) nodeDAO.put(chownSub1, owner);
+            chownSub2.setParent(chownRoot);
+            chownSub2 = (ContainerNode) nodeDAO.put(chownSub2, owner);
+            chownSub3.setParent(chownRoot);
+            chownSub3 = (DataNode) nodeDAO.put(chownSub3, owner);
+            chownSub1Sub1.setParent(chownSub1);
+            chownSub1Sub1 = (ContainerNode) nodeDAO.put(chownSub1Sub1, owner);
+            chownSub1Sub2.setParent(chownSub1);
+            chownSub1Sub2 = (DataNode) nodeDAO.put(chownSub1Sub2, owner);
+            chownSub2Sub1.setParent(chownSub2);
+            chownSub2Sub1 = (DataNode) nodeDAO.put(chownSub2Sub1, owner);
+            chownSub1Sub1Sub1.setParent(chownSub1Sub1);
+            chownSub1Sub1Sub1 = (DataNode) nodeDAO.put(chownSub1Sub1Sub1, owner);
+
+            // get the root node
+            chownRoot = (ContainerNode) nodeDAO.getPath(chownRootPath);
+            Assert.assertNotNull(chownRoot);
+
+            int numS = nodeDAO.numTxnStarted;
+            int numC = nodeDAO.numTxnCommitted;
+
+            // change the ownership non recursively
+            nodeDAO.chown(chownRoot, owner2, false, 1000, false);
+
+            Assert.assertEquals("batch start", numS+1, nodeDAO.numTxnStarted);
+            Assert.assertEquals("batch commit", numC+1, nodeDAO.numTxnCommitted);
+
+            // check the ownership change
+            chownRoot = (ContainerNode) nodeDAO.getPath(chownRootPath);
+            assertEquals("Non-recursive chown failed.",
+                    chownRoot.getPropertyValue(VOS.PROPERTY_URI_CREATOR).toLowerCase(),
+                    NODE_OWNER2.toLowerCase());
+
+            // get a sub node
+            chownSub1 = (ContainerNode) nodeDAO.getPath(chownSub1Path);
+
+            // check for no ownership change
+            assertEquals("Non-recursive chown failed.",
+                    chownSub1.getPropertyValue(VOS.PROPERTY_URI_CREATOR).toLowerCase(),
+                    NODE_OWNER.toLowerCase());
+
+            // change the ownership recursively in one large batch
+
+            numS = nodeDAO.numTxnStarted;
+            numC = nodeDAO.numTxnCommitted;
+            
+            nodeDAO.chown(chownRoot, owner2, true, 2, false);
+            // 8 nodes = 4 batches in total, plus one extra empty txn at the end
+            Assert.assertEquals("batch start", numS+5, nodeDAO.numTxnStarted);
+            Assert.assertEquals("batch commit", numC+5, nodeDAO.numTxnCommitted);
+
+            // check for deep ownership change
+            chownSub1Sub1Sub1 = (DataNode) nodeDAO.getPath(chownSub1Sub1Sub1Path);
+
+            assertEquals("Recursive chown failed.",
+                    chownSub1Sub1Sub1.getPropertyValue(VOS.PROPERTY_URI_CREATOR).toLowerCase(),
+                    NODE_OWNER2.toLowerCase());
+
+            nodeDAO.delete(chownRoot, 10, false); // cleanup
+            assertRecursiveDelete();
+        }
+        catch(Exception unexpected)
+        {
+            log.error("unexpected exception", unexpected);
+            Assert.fail("unexpected exception: " + unexpected);
+        }
+        finally
+        {
+            log.debug("testBatchChown - DONE");
+        }
+    }
+
+    @Test
+    public void testBatchChownDryrun()
+    {
+        log.debug("testBatchChownDryrun - START");
+        try
+        {
+            ContainerNode rootContainer = (ContainerNode) nodeDAO.getPath(HOME_CONTAINER);
+            log.debug("ROOT: " + rootContainer);
+            Assert.assertNotNull(rootContainer);
+
+            String basePath = "/" + HOME_CONTAINER + "/";
+
+            // Create a new node tree with owner/creator NODE_OWNER
+            String chownRootPath = basePath + getNodeName("chowntest");
+            String chownSub1Path = chownRootPath + "/" + getNodeName("chownsub1");
+            String chownSub2Path = chownRootPath + "/" + getNodeName("chownsub2");
+            String chownSub3Path = chownRootPath + "/" + getNodeName("chownsub3");
+            String chownSub1Sub1Path = chownSub1Path + "/" + getNodeName("chownsub1sub1");
+            String chownSub1Sub2Path = chownSub1Path + "/" + getNodeName("chownsub1sub2");
+            String chownSub2Sub1Path = chownSub2Path + "/" + getNodeName("chownsub2sub1");
+            String chownSub1Sub1Sub1Path = chownSub1Sub1Path + "/" + getNodeName("chownsub1sub1sub1");
+
+            ContainerNode chownRoot = getCommonContainerNode(chownRootPath);
+            ContainerNode chownSub1 = getCommonContainerNode(chownSub1Path);
+            ContainerNode chownSub2 = getCommonContainerNode(chownSub2Path);
+            DataNode chownSub3 = getCommonDataNode(chownSub3Path);
+            ContainerNode chownSub1Sub1 = getCommonContainerNode(chownSub1Sub1Path);
+            DataNode chownSub1Sub2 = getCommonDataNode(chownSub1Sub2Path);
+            DataNode chownSub2Sub1 = getCommonDataNode(chownSub2Sub1Path);
+            DataNode chownSub1Sub1Sub1 = getCommonDataNode(chownSub1Sub1Sub1Path);
+
+            chownRoot.setParent(rootContainer);
+            chownRoot = (ContainerNode) nodeDAO.put(chownRoot, owner);
+            chownSub1.setParent(chownRoot);
+            chownSub1 = (ContainerNode) nodeDAO.put(chownSub1, owner);
+            chownSub2.setParent(chownRoot);
+            chownSub2 = (ContainerNode) nodeDAO.put(chownSub2, owner);
+            chownSub3.setParent(chownRoot);
+            chownSub3 = (DataNode) nodeDAO.put(chownSub3, owner);
+            chownSub1Sub1.setParent(chownSub1);
+            chownSub1Sub1 = (ContainerNode) nodeDAO.put(chownSub1Sub1, owner);
+            chownSub1Sub2.setParent(chownSub1);
+            chownSub1Sub2 = (DataNode) nodeDAO.put(chownSub1Sub2, owner);
+            chownSub2Sub1.setParent(chownSub2);
+            chownSub2Sub1 = (DataNode) nodeDAO.put(chownSub2Sub1, owner);
+            chownSub1Sub1Sub1.setParent(chownSub1Sub1);
+            chownSub1Sub1Sub1 = (DataNode) nodeDAO.put(chownSub1Sub1Sub1, owner);
+
+            // get the root node
+            chownRoot = (ContainerNode) nodeDAO.getPath(chownRootPath);
+            Assert.assertNotNull(chownRoot);
+
+            int numS = nodeDAO.numTxnStarted;
+            int numC = nodeDAO.numTxnCommitted;
+
+            // change the ownership non recursively, dryrun == no actual change
+            nodeDAO.chown(chownRoot, owner2, false, 1000, true);
+
+            // no new txns
+            Assert.assertEquals("batch start", numS, nodeDAO.numTxnStarted);
+            Assert.assertEquals("batch commit", numC, nodeDAO.numTxnCommitted);
+
+            // check the ownership change
+            chownRoot = (ContainerNode) nodeDAO.getPath(chownRootPath);
+            assertEquals("Non-recursive chown failed.",
+                    chownRoot.getPropertyValue(VOS.PROPERTY_URI_CREATOR).toLowerCase(),
+                    NODE_OWNER.toLowerCase());
+
+            // get a sub node
+            chownSub1 = (ContainerNode) nodeDAO.getPath(chownSub1Path);
+
+            // check for no ownership change
+            assertEquals("Non-recursive chown failed.",
+                    chownSub1.getPropertyValue(VOS.PROPERTY_URI_CREATOR).toLowerCase(),
+                    NODE_OWNER.toLowerCase());
+
+            // change the ownership recursively in one large batch
+
+            numS = nodeDAO.numTxnStarted;
+            numC = nodeDAO.numTxnCommitted;
+
+            nodeDAO.chown(chownRoot, owner2, true, 2, true);
+
+            // dryrun: no txns
+            Assert.assertEquals("batch start", numS, nodeDAO.numTxnStarted);
+            Assert.assertEquals("batch commit", numC, nodeDAO.numTxnCommitted);
+
+            // check for deep ownership change
+            chownSub1Sub1Sub1 = (DataNode) nodeDAO.getPath(chownSub1Sub1Sub1Path);
+
+            assertEquals("Recursive chown failed.",
+                    chownSub1Sub1Sub1.getPropertyValue(VOS.PROPERTY_URI_CREATOR).toLowerCase(),
+                    NODE_OWNER.toLowerCase());
+
+            nodeDAO.delete(chownRoot, 10, false); // cleanup
+            assertRecursiveDelete();
+        }
+        catch(Exception unexpected)
+        {
+            log.error("unexpected exception", unexpected);
+            Assert.fail("unexpected exception: " + unexpected);
+        }
+        finally
+        {
+            log.debug("testBatchChownDryrun - DONE");
+        }
+    }
+
+    @Test
+    public void testBatchDelete()
+    {
+        log.debug("testBatchDelete - START");
+        try
+        {
+            ContainerNode rootContainer = (ContainerNode) nodeDAO.getPath(HOME_CONTAINER);
+            log.debug("ROOT: " + rootContainer);
+            Assert.assertNotNull(rootContainer);
+
+            String basePath = "/" + HOME_CONTAINER + "/";
+            NodeProperty np;
+
+
+            // Create a node with properties
+            String cPath = basePath + getNodeName("del-test-dir");
+            ContainerNode cNode = getCommonContainerNode(cPath);
+            cNode.setParent(rootContainer);
+            nodeDAO.put(cNode, owner);
+            cNode = (ContainerNode) nodeDAO.getPath(cPath);
+            Assert.assertNotNull(cNode);
+
+            String dPath1 = cPath + "/" + getNodeName("del-test-file1");
+            Node dNode1 = getCommonDataNode(dPath1);
+            dNode1.setParent(cNode);
+            nodeDAO.put(dNode1, owner);
+            dNode1 = nodeDAO.getPath(dPath1);
+            Assert.assertNotNull(dNode1);
+
+            String dPath2 = cPath + "/" + getNodeName("del-test-file2");
+            Node dNode2 = getCommonDataNode(dPath2);
+            dNode2.setParent(cNode);
+            nodeDAO.put(dNode2, owner);
+            dNode2 = nodeDAO.getPath(dPath2);
+            Assert.assertNotNull(dNode2);
+
+            String cPath2 = cPath + "/" + getNodeName("del-test-dir2");
+            Node cNode2 = getCommonContainerNode(cPath2);
+            cNode2.setParent(cNode);
+            nodeDAO.put(cNode2, owner);
+            cNode2 = nodeDAO.getPath(cPath2);
+            Assert.assertNotNull(cNode2);
+
+            int numS = nodeDAO.numTxnStarted;
+            int numC = nodeDAO.numTxnCommitted;
+
+            nodeDAO.delete(cNode, 2, false);
+
+            // 4 nodes = 2 batches + 1 empty txn
+            Assert.assertEquals("batch start", numS+3, nodeDAO.numTxnStarted);
+            Assert.assertEquals("batch commit", numC+3, nodeDAO.numTxnCommitted);
+            
+
+            Node notFound = nodeDAO.getPath(cPath);
+            Assert.assertNull(notFound);
+            
+            assertRecursiveDelete();
+        }
+        catch(Exception unexpected)
+        {
+            log.error("unexpected exception", unexpected);
+            Assert.fail("unexpected exception: " + unexpected);
+        }
+        finally
+        {
+            log.debug("testBatchDelete - DONE");
+        }
+    }
+
+    @Test
+    public void testBatchDeleteDryrun()
+    {
+        log.debug("testBatchDeleteDryrun - START");
+        try
+        {
+            ContainerNode rootContainer = (ContainerNode) nodeDAO.getPath(HOME_CONTAINER);
+            log.debug("ROOT: " + rootContainer);
+            Assert.assertNotNull(rootContainer);
+
+            String basePath = "/" + HOME_CONTAINER + "/";
+            NodeProperty np;
+
+
+            // Create a node with properties
+            String cPath = basePath + getNodeName("del-test-dir");
+            ContainerNode cNode = getCommonContainerNode(cPath);
+            cNode.setParent(rootContainer);
+            nodeDAO.put(cNode, owner);
+            cNode = (ContainerNode) nodeDAO.getPath(cPath);
+            Assert.assertNotNull(cNode);
+
+            String dPath1 = cPath + "/" + getNodeName("del-test-file1");
+            Node dNode1 = getCommonDataNode(dPath1);
+            dNode1.setParent(cNode);
+            nodeDAO.put(dNode1, owner);
+            dNode1 = nodeDAO.getPath(dPath1);
+            Assert.assertNotNull(dNode1);
+
+            String dPath2 = cPath + "/" + getNodeName("del-test-file2");
+            Node dNode2 = getCommonDataNode(dPath2);
+            dNode2.setParent(cNode);
+            nodeDAO.put(dNode2, owner);
+            dNode2 = nodeDAO.getPath(dPath2);
+            Assert.assertNotNull(dNode2);
+
+            String cPath2 = cPath + "/" + getNodeName("del-test-dir2");
+            Node cNode2 = getCommonContainerNode(cPath2);
+            cNode2.setParent(cNode);
+            nodeDAO.put(cNode2, owner);
+            cNode2 = nodeDAO.getPath(cPath2);
+            Assert.assertNotNull(cNode2);
+
+            int numS = nodeDAO.numTxnStarted;
+            int numC = nodeDAO.numTxnCommitted;
+
+            nodeDAO.delete(cNode, 2, true);
+
+            // dryrun - no extra txns
+            Assert.assertEquals("batch start", numS, nodeDAO.numTxnStarted);
+            Assert.assertEquals("batch commit", numC, nodeDAO.numTxnCommitted);
+
+
+            Node notDeleted = nodeDAO.getPath(cPath);
+            Assert.assertNotNull(notDeleted);
+
+            // actual delete
+            nodeDAO.delete(cNode, 10, false); // cleanup
+            assertRecursiveDelete();
+        }
+        catch(Exception unexpected)
+        {
+            log.error("unexpected exception", unexpected);
+            Assert.fail("unexpected exception: " + unexpected);
+        }
+        finally
+        {
+            log.debug("testBatchDeleteDryrun - DONE");
+        }
+    }
+
 
     private long getContentLength(Node node)
     {

@@ -202,15 +202,4 @@ public interface NodePersistence
      */
     void copy(Node src, ContainerNode destination);
     
-    /**
-     * Change the ownership of the specified node to be that of the caller of
-     * this method.  If boolean recursive is true, change the ownership of all
-     * nodes under the specified node as well.
-     * @param node
-     * @param recursive
-     */
-    void chown(Node node, boolean recursive);
-    
-    
-
 }

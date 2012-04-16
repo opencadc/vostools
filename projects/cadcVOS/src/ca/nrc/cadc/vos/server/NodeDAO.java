@@ -149,6 +149,13 @@ public class NodeDAO
     private DefaultTransactionDefinition defaultTransactionDef;
     private TransactionStatus transactionStatus;
 
+    // reusable object for recursive admin methods
+    private NodePutStatementCreator adminStatementCreator;
+    
+    // instrument for unit tests of admin methods
+    int numTxnStarted = 0;
+    int numTxnCommitted = 0;
+
     private DateFormat dateFormat;
     private Calendar cal;
 
@@ -251,6 +258,7 @@ public class NodeDAO
         log.debug("startTransaction");
         this.transactionStatus = transactionManager.getTransaction(defaultTransactionDef);
         log.debug("startTransaction: OK");
+        numTxnStarted++;
     }
 
     /**
@@ -264,6 +272,7 @@ public class NodeDAO
         transactionManager.commit(transactionStatus);
         this.transactionStatus = null;
         log.debug("commit: OK");
+        numTxnCommitted++;
     }
 
     /**
@@ -562,9 +571,10 @@ public class NodeDAO
         {
             if (node instanceof ContainerNode)
             {
-                String timestampName = System.currentTimeMillis() + "-" + node.getName();
                 ContainerNode dest = (ContainerNode) getPath(deletedNodePath);
-                node.setName(timestampName);
+                // need a unique name under /deletedPath
+                String idName = getNodeID(node) + "-" + node.getName();
+                node.setName(idName);
                 // move handles the transaction, container size changes, rename, and reparent
                 move(node, dest);
             }
@@ -602,7 +612,10 @@ public class NodeDAO
                         }
                     }
                 }
-                deleteNode(node);
+                // note: the following delete(s) can be large if the node has a large number of
+                // properties, but we don't constraint it because we never want to commit the
+                // above nodeSize update without deleting the DataNode itself
+                deleteNode((DataNode) node);
 
                 commitTransaction();
             }
@@ -636,42 +649,18 @@ public class NodeDAO
         }
     }
 
-    private void deleteNode(Node node)
+    private void deleteNode(DataNode node)
     {
-        log.debug("deleteNode: " + node.getUri().getPath() + ", " + node.getClass().getSimpleName());
-        // depth-first: delete children
-        if (node instanceof ContainerNode)
-        {
-            ContainerNode cn = (ContainerNode) node;
-            deleteChildren(cn);
-        }
-
         // delete properties: FK constraint -> node
         String sql = getDeleteNodePropertiesSQL(node);
         log.debug(sql);
         jdbc.update(sql);
 
-        // never delete a top-level node?
-        if (node.getParent() != null)
-        {
-            sql = getDeleteNodeSQL(node);
-            log.debug(sql);
-            int count = jdbc.update(sql);
-            if (count == 0) // node did not exist or was moved
-                throw new IllegalStateException("node busy or path changed during delete: "+node.getUri());
-        }
-    }
-
-    private void deleteChildren(ContainerNode node)
-    {
-        log.debug("deleteChildren: " + node.getUri().getPath() + ", " + node.getClass().getSimpleName());
-        getChildren(node);
-        Iterator<Node> iter = node.getNodes().iterator();
-        while ( iter.hasNext() )
-        {
-            Node n = iter.next();
-            deleteNode(n);
-        }
+        sql = getDeleteNodeSQL(node);
+        log.debug(sql);
+        int count = jdbc.update(sql);
+        if (count == 0)
+            throw new IllegalStateException("node busy or path changed during delete: "+node.getUri());
     }
 
     /**
@@ -1139,23 +1128,153 @@ public class NodeDAO
         throw new UnsupportedOperationException("Copy not implemented.");
     }
     
+    // admin functions
+
+    private int commitBatch(String name, int batchSize, int count, boolean dryrun)
+    {
+        if (!dryrun && count >= batchSize)
+        {
+            commitTransaction();
+            log.info(name + " batch committed: " + count);
+            count = 0;
+            startTransaction();
+        }
+        return count;
+    }
+
     /**
-     * Change the ownership of the node.
+     * Recursively delete a container in one or more batchSize-d transactions. The
+     * actual number of rows deleted per transaction is not exact since deletion of
+     * node properties is done via a single delete statement.
+     * </p><p>
+     * Note: this method <b>does not</b> update parent container node sizes while
+     * deleting nodes and should not be used on actual user content. It can also
+     * fail at some point and have committed some deletions due to the batching;
+     * the caller should resolve the issue and then call it again to continue
+     * (delete is bottom up so there are never any orphans).
+     * 
+     * @param node
+     * @param batchSize
+     */
+    void delete(Node node, int batchSize, boolean dryrun)
+    {
+        log.debug("delete: " + node.getUri().getPath() + "," + batchSize);
+        expectPersistentNode(node);
+        if (batchSize < 1)
+            throw new IllegalArgumentException("batchSize must be positive");
+        try
+        {
+            this.adminStatementCreator = new NodePutStatementCreator(nodeSchema, true);
+            if (!dryrun)
+                startTransaction();
+            int count = deleteNode(node, batchSize, 0, dryrun);
+            if (!dryrun)
+            {
+                commitTransaction();
+                log.info("delete batch committed: " + count);
+            }
+        }
+        catch (Throwable t)
+        {
+            log.error("chown rollback for node: " + node.getUri().getPath(), t);
+            if (transactionStatus != null)
+                try { rollbackTransaction(); }
+                catch(Throwable oops) { log.error("failed to rollback transaction", oops); }
+            throw new RuntimeException("failed to delete:  " + node.getUri().getPath(), t);
+        }
+        finally
+        {
+            if (transactionStatus != null)
+            {
+                try
+                {
+                    log.warn("chown - BUG - transaction still open in finally... calling rollback");
+                    rollbackTransaction();
+                }
+                catch(Throwable oops) { log.error("failed to rollback transaction in finally", oops); }
+            }
+        }
+    }
+
+    private int deleteNode(Node node, int batchSize, int count, boolean dryrun)
+    {
+        log.info("deleteNode: " + node.getClass().getSimpleName() + " " + node.getUri().getPath());
+        // delete children: depth first so we don't leave orphans
+        if (node instanceof ContainerNode)
+        {
+            ContainerNode cn = (ContainerNode) node;
+            count = deleteChildren(cn, batchSize, count, dryrun);
+        }
+
+        // delete properties: so we don't violate FK constraint -> node
+        String sql = getDeleteNodePropertiesSQL(node);
+        log.debug(sql);
+        if (!dryrun)
+            count += jdbc.update(sql);
+
+        // delete the node itself
+        sql = getDeleteNodeSQL(node);
+        log.debug(sql);
+        if (!dryrun)
+        {
+            int num = jdbc.update(sql);
+            if (num == 0)
+                throw new IllegalStateException("node busy or path changed during delete: "+node.getUri());
+            count += num;
+        }
+        count = commitBatch("delete", batchSize, count, dryrun);
+        return count;
+    }
+    
+    private int deleteChildren(ContainerNode container, int batchSize, int count, boolean dryrun)
+    {
+        String sql = getSelectNodesByParentSQL(container, CHILD_BATCH_SIZE, false);
+        NodeMapper mapper = new NodeMapper(authority, container.getUri().getPath());
+        List<Node> children = jdbc.query(sql, new Object[0], mapper);
+        Object[] args = new Object[1];
+        while (children.size() > 0)
+        {
+            Node cur = null;
+            for (Node child : children)
+            {
+                cur = child;
+                child.setParent(container);
+                count = deleteNode(child, batchSize, count, dryrun);
+                count = commitBatch("delete", batchSize, count, dryrun);
+            }
+            sql = getSelectNodesByParentSQL(container,CHILD_BATCH_SIZE, true);
+            args[0] = cur.getName();
+            children = jdbc.query(sql, args, mapper);
+            children.remove(cur); // the query is name >= cur and we already processed cur
+        }
+        return count;
+    }
+
+    /**
+     * Change ownership of a Node (optionally recursive) in one or more
+     * batchSize-d transactions.
      * 
      * @param node
      * @param newOwner
      * @param recursive
+     * @param batchSize
      */
-    public void chown(Node node, Subject newOwner, boolean recursive)
+    void chown(Node node, Subject newOwner, boolean recursive, int batchSize, boolean dryrun)
     {
-        log.debug("chown: " + node.getUri().getPath() + ", " + newOwner + ", " + recursive);
+        log.debug("chown: " + node.getUri().getPath() + ", " + newOwner + ", " + recursive + "," + batchSize);
         expectPersistentNode(node);
+        if (batchSize < 1)
+            throw new IllegalArgumentException("batchSize must be positive");
         try
         {
             Object newOwnerObj = identManager.toOwner(newOwner);
-            startTransaction();
-            chownInternal(node, newOwnerObj, recursive);
-            commitTransaction();
+            this.adminStatementCreator = new NodePutStatementCreator(nodeSchema, true);
+            if (!dryrun)
+                startTransaction();
+            int count = chownNode(node, newOwnerObj, recursive, batchSize, 0, dryrun);
+            if (!dryrun)
+                commitTransaction();
+            log.info("chown batch committed: " + count);
         }
         catch (Throwable t)
         {
@@ -1178,39 +1297,24 @@ public class NodeDAO
             }
         }
     }
+
     
-    /**
-     * Internal chown implementation that is not wrapped in a transaction.
-     * 
-     * @param node
-     * @param subject
-     * @param recursive
-     */
-    private void chownInternal(Node node, Object newOwnerObject, boolean recursive)
+    private int chownNode(Node node, Object newOwnerObject, boolean recursive, int batchSize, int count, boolean dryrun)
     {
-        NodePutStatementCreator putStatementCreator = new NodePutStatementCreator(nodeSchema, true);
-        
         // update the node with the specfied owner.
-        putStatementCreator.setValues(node, newOwnerObject);
-        jdbc.update(putStatementCreator);
-        
+        adminStatementCreator.setValues(node, newOwnerObject);
+        if (!dryrun)
+            count += jdbc.update(adminStatementCreator);
+        count = commitBatch("chown", batchSize, count, dryrun);
         if (recursive && (node instanceof ContainerNode))
-        {
-            chownInternalRecursive((ContainerNode) node, newOwnerObject);
-        }
+            count = chownChildren((ContainerNode) node, newOwnerObject, batchSize, count, dryrun);
+        return count;
     }
-    
-    /**
-     * Recursively change the ownership on the given container.
-     * 
-     * @param container
-     * @param newOwnerObj
-     */
-    private void chownInternalRecursive(ContainerNode container, Object newOwnerObj)
+
+    private int chownChildren(ContainerNode container, Object newOwnerObj, int batchSize, int count, boolean dryrun)
     {
         String sql = null;
         sql = getSelectNodesByParentSQL(container, CHILD_BATCH_SIZE, false);
-        NodePutStatementCreator putStatementCreator = new NodePutStatementCreator(nodeSchema, true);
         NodeMapper mapper = new NodeMapper(authority, container.getUri().getPath());
         List<Node> children = jdbc.query(sql, new Object[0], mapper);
         Object[] args = new Object[1];
@@ -1221,21 +1325,17 @@ public class NodeDAO
             {
                 cur = child;
                 child.setParent(container);
-                putStatementCreator.setValues(child, newOwnerObj);
-                jdbc.update(putStatementCreator);
-                if (child instanceof ContainerNode)
-                {
-                    chownInternalRecursive((ContainerNode) child, newOwnerObj);
-                }
+                count = chownNode(child, newOwnerObj, true, batchSize, count, dryrun);
             }
             sql = getSelectNodesByParentSQL(container,CHILD_BATCH_SIZE, true);
             args[0] = cur.getName();
             children = jdbc.query(sql, args, mapper);
             children.remove(cur); // the query is name >= cur and we already processed cur
         }
-
+        return count;
     }
-    
+
+
     /**
      * Extract the internal nodeID of the provided node from the appData field.
      * @param node
