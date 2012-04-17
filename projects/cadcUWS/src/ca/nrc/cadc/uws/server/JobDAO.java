@@ -546,7 +546,11 @@ public class JobDAO
         catch(Throwable t)
         {
             log.error("rollback for job: " + jobID, t);
-            try { rollbackTransaction(); }
+            try
+            { 
+                if (txn)
+                    rollbackTransaction();
+            }
             catch(Throwable oops) { log.error("failed to rollback transaction", oops); }
             throw new JobPersistenceException("failed to persist job: " + jobID, t);
         }
@@ -556,7 +560,8 @@ public class JobDAO
                 try
                 {
                     log.warn("put: BUG - transaction still open in finally... calling rollback");
-                    rollbackTransaction();
+                    if (txn)
+                        rollbackTransaction();
                 }
                 catch(Throwable oops) { log.error("failed to rollback transaction in finally", oops); }
         }
