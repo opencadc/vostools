@@ -272,7 +272,8 @@ public class AuthenticationUtil
      * @param chain
      * @return
      */
-    public static Subject getSubject(String remoteUser, X509CertificateChain chain)
+    public static Subject getSubject(final String remoteUser,
+                                     final X509CertificateChain chain)
     {
         Set<Principal> principals = new HashSet<Principal>();
         Set<Object> publicCred = new HashSet<Object>();
@@ -294,8 +295,7 @@ public class AuthenticationUtil
             // than extracting and putting it into the privateCred set... TBD
         }
 
-        Subject ret = new Subject(false, principals, publicCred, privateCred);
-        return ret;
+        return new Subject(false, principals, publicCred, privateCred);
     }
 
     // Encode a Subject in the format:
@@ -328,10 +328,11 @@ public class AuthenticationUtil
         Set<String> userids = new HashSet<String>();
         if (subject != null)
         {
-            Set<HttpPrincipal> principals = subject.getPrincipals(HttpPrincipal.class);
-            String userId = null;
+            Set<HttpPrincipal> httpPrincipals =
+                    subject.getPrincipals(HttpPrincipal.class);
+            String userId;
 
-            for (HttpPrincipal principal : principals)
+            for (final HttpPrincipal principal : httpPrincipals)
             {
                 userId = principal.getName();
                 userids.add(userId);
