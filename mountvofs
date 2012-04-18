@@ -214,24 +214,35 @@ class VOFS(LoggingMixIn, Operations):
 
         self.fsync(path,False,fh)
         node=self.getNode(path)
-        try:
-          w=self.client.open(node.uri,'w')
-          os.lseek(fh,0,0)
-          while True:
-            buf=os.read(fh,READBUF)
-            logging.debug("Writing %d bytes to %s" % (len(buf), path))
-            if not buf:
-                break
-            if w.write(buf)!=len(buf):
+        import hashlib
+        loopCount=0
+        success=False
+        while not success:
+            size=os.fstat(fh).st_size
+            logging.debug("Writing %d bytes to %s, attempt: %d" % (size, path,loopCount+1))
+            md5=hashlib.md5()
+            try:
+                w=self.client.open(node.uri,os.O_WRONLY,size=size)
+                os.lseek(fh,0,0)
+                while True:
+                    buf=os.read(fh,READBUF)
+                    if not buf:
+                        break
+                    if w.write(buf)!=len(buf):
+                        raise FuseOSError(EIO)
+                    md5.update(buf)
+            except Exception as e:
+                logging.error(str(e))
+                logging.error("Failed during VOSpace copy, retrying")
+            finally:                
+                w.close()
+            if md5.hexdigest()==self.getNode(path,force=True).props.get('MD5',0):
+                success=True
+            elif loopCount > 3:
                 raise FuseOSError(EIO)
-          w.close()
+            else:
+                loopCount += 1
         ## Now update our information about this VOSpace node...
-          self.getNode(path)
-        except Exception as e:
-          e=FuseOSError(e.errno)
-          e.filename=path
-          e.strerror=e.strerror
-          raise e
         return
 
     def flush(self,path,fh):
@@ -535,36 +546,8 @@ class VOFS(LoggingMixIn, Operations):
         ### copy the staging file to VOSpace if needed
         logging.debug("node %s currently open with mode %s, releasing" % ( path, mode))
         if mode & ( os.O_RDWR | os.O_WRONLY | os.O_APPEND | os.O_CREAT ) and os.stat(self.fh[fh]['name']).st_mtime > self.getattr(path)['st_mtime']:
-            import hashlib
-            loopCount=0
-            success=False
-            while not success:
-	        logging.debug("Putting %s to VOSpace" % ( path))
-                os.lseek(fh,0,os.SEEK_SET)
-                md5=hashlib.md5()
-                try:
-                    w=self.client.open(path,os.O_WRONLY)
-                    logging.debug("Writing to %s" % (path))
-                    while not success:
-                        buf=os.read(fh,READBUF)
-                        if not buf:
-                            break
-                        if w.write(buf)!=len(buf):
-                            raise FuseOSError(EIO)
-                        md5.update(buf)
-                except:
-                    logging.error("Failed during VOSpace copy, retrying")
-                finally:
-                    w.close()
-                if md5.hexdigest()==self.getNode(path,force=True).props.get('MD5',0):
-                    success=True
-                elif loopCount > 3 :
-                    raise FuseOSError(EIO)
-                else:
-                    loopCount += 1
-            logging.debug("Closing connection to vospace")
-
-            self.update_md5_db(self.fh[fh]['name'],md5.hexdigest())
+            self.flushnode(path,fh)
+            self.update_md5_db(self.fh[fh]['name'],self.getNode(path,force=True).props.get('MD5',0))
         ## remove references to this file handle.
         self.fh.pop(fh,None)
         self.fh.pop(path,None)
