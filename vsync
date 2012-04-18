@@ -17,7 +17,6 @@ class ThreadCopy(threading.Thread):
     try:
       self.client=vos.Client()
     except Exception as e:
-      logging.error("Conneciton failed:  %s" %  (str(e)))
       sys.exit(e.errno)
     self.queue=queue
     self.filesSent=0
@@ -184,10 +183,12 @@ if __name__=='__main__':
   for filename in args:
     #if opt.verbose:
     #  sys.stdout.write("Adding %s to transfer list\n" % (filename))
+    filename=os.path.abspath(filename)
     thisRoot=dest
     if os.path.isdir(filename):
       if filename[-1]!="/" :
-        thisRoot=os.path.join(dest,os.path.basename(filename))
+	 if os.path.basename(filename)!=os.path.basename(dest):
+             thisRoot=os.path.join(dest,os.path.basename(filename))
       filelist.extend(buildFileList(filename,destRoot=thisRoot,recursive=opt.recursive,ignore=opt.exclude))
     elif os.path.isfile(filename):
       if destIsDir:
