@@ -596,10 +596,10 @@ class VOFS(LoggingMixIn, Operations):
     def rename(self,src,dest):
 	"""Rename a data node into a new container"""
         logging.debug("Original %s -> %s" % ( src,dest))
-	if not self.client.isfile(src):
-	   return -1
-        if not self.client.isdir(os.path.dirname(dest)):
-            return -1
+	#if not self.client.isfile(src):
+	#   return -1
+        #if not self.client.isdir(os.path.dirname(dest)):
+        #    return -1
         logging.debug("Moving %s to %s" % ( src,dest))
         result=self.client.move(src,dest)
         logging.debug(str(result))
