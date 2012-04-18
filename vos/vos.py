@@ -87,7 +87,7 @@ class Connection:
         parts=urlparse(url)
         ports={"http": 80, "https": 443}
         certfile=self.certfile
-        logging.debug("Connecting to %s://%s using %s" % (parts.scheme,parts.netloc,certfile))
+        logging.debug("Trying to connect to %s://%s using %s" % (parts.scheme,parts.netloc,certfile))
         
         import httplib, ssl
         try:
@@ -99,10 +99,6 @@ class Connection:
             logging.error("HTTP connection to %s failed \n" % (parts.netloc))
             logging.error("%s \n" % ( str(e)))
             raise OSError(errno.ENTCONN,"VOSpace connection failed",parts.netloc)
-        except ssl.SSLError as e:
-            logging.error(str(e))
-            logging.error("Please update your certificate, perhaps using the getCert utility program that is part of the cadcVOFS distribution.")
-            raise IOError(errno.ENTCONN,"VOSpace connection failed",parts.netloc)
 
 
         ## Try to open this connection. 
@@ -115,6 +111,14 @@ class Connection:
                 logggin.critical("Retrying connection for 1200 seconds") 
                 if time.time() - timestart  > 1200:
                     raise e
+            except Exception as e:
+                logging.error(str(e))
+                logging.error("Perhaps your proxy certificate is expired?")
+                ex=IOError()
+                ex.errno=errno.ECONNREFUSED
+                ex.strerror="VOSpace connection failed"
+                ex.filename=parts.netloc
+                raise ex
             break
 
         logging.debug("Returning connection " )
@@ -528,6 +532,7 @@ class VOFile:
         self.url=URL
         self.httpCon = self.connector.getConnection(URL)
         self.closed=False
+        logging.debug("putting request")
         self.httpCon.putrequest(method,URL)
         userAgent='vos '+version
         if "mountvofs" in sys.argv[0]:
@@ -543,6 +548,7 @@ class VOFile:
         self.httpCon.putheader("Transfer-Encoding",'chunked')
         self.httpCon.putheader("Accept", "*/*")
         self.httpCon.endheaders()
+        logging.debug("Done setting headers")
 
 
     def read(self,size=None):

@@ -7,7 +7,7 @@ from vos.fuse import FUSE, Operations, FuseOSError, LoggingMixIn
 import vos.fuse
 import tempfile
 from threading import Lock
-from errno import EACCES, EIO, ENOENT, EISDIR, ENOTDIR, ENOTEMPTY, EPERM, EEXIST, ENODATA
+from errno import EACCES, EIO, ENOENT, EISDIR, ENOTDIR, ENOTEMPTY, EPERM, EEXIST, ENODATA, ECONNREFUSED
 ENOATTR=93
 import os
 import vos
@@ -86,7 +86,14 @@ class VOFS(LoggingMixIn, Operations):
 
 
         ## All communication with the VOSpace goes through this client connection.
-        self.client = vos.Client(rootNode=root,conn=conn)
+	try:
+           self.client = vos.Client(rootNode=root,conn=conn)
+        except Exception as e:
+           e=FuseOSError(e.errno)
+           e.filename=path
+           e.strerror=e.strerror
+           raise e
+
 
     def __call__(self, op, path, *args):
         return super(VOFS, self).__call__(op, path, *args)
@@ -108,8 +115,14 @@ class VOFS(LoggingMixIn, Operations):
     def access(self, path, mode):
         if path in self.node:
 	   return 0
-        if self.client.access(path,mode):
-            return 0
+	try:
+           if self.client.access(path,mode):
+              return 0
+        except Exception as e:
+           e=FuseOSError(e.errno)
+           e.filename=path
+           e.strerror=e.strerror
+           raise e
         return -1
 
     def chmod(self, path, mode):
@@ -141,8 +154,14 @@ class VOFS(LoggingMixIn, Operations):
             # Now set the time of change/modification on the path...
             self.getattr(path)['st_ctime']=time.time()
             ## if node.chmod returns false then no changes were made.
-            self.client.update(node)
-            self.getNode(path)
+	    try:
+               self.client.update(node)
+               self.getNode(path)
+            except Exception as e:
+               e=FuseOSError(e.errno)
+               e.filename=path
+               e.strerror=e.strerror
+               raise e
 
         # Need to also update the cache properties.
         fname=os.path.normpath(self.cache_dir+path)
@@ -195,18 +214,24 @@ class VOFS(LoggingMixIn, Operations):
 
         self.fsync(path,False,fh)
         node=self.getNode(path)
-        w=self.client.open(node.uri,'w')
-        os.lseek(fh,0,0)
-        while True:
+        try:
+          w=self.client.open(node.uri,'w')
+          os.lseek(fh,0,0)
+          while True:
             buf=os.read(fh,READBUF)
             logging.debug("Writing %d bytes to %s" % (len(buf), path))
             if not buf:
                 break
             if w.write(buf)!=len(buf):
                 raise FuseOSError(EIO)
-        w.close()
+          w.close()
         ## Now update our information about this VOSpace node...
-        self.getNode(path)
+          self.getNode(path)
+        except Exception as e:
+          e=FuseOSError(e.errno)
+          e.filename=path
+          e.strerror=e.strerror
+          raise e
         return
 
     def flush(self,path,fh):
@@ -253,9 +278,16 @@ class VOFS(LoggingMixIn, Operations):
         try:
             logging.debug("requesting node %s from VOSpace" % ( path))
             node=self.client.getNode(path,limit=limit)
-        except IOError as e:
+        except OSError as e:
             logging.debug(str(e))
             return self.getNode(path.force,limit)
+        except Exception as e:
+	    logging.debug(str(e))
+	    logging.debug(type(e))
+            ex=FuseOSError(e.errno)
+	    ex.filename=path
+            ex.strerror=e.strerror
+            raise ex
 
         self.node[path]=node
         self.attr[path]=node.attr
@@ -278,7 +310,10 @@ class VOFS(LoggingMixIn, Operations):
             try:
                 node=self.client.getNode(path,limit=0)
             except IOError as e:
-                raise FuseOSError(e.errno)
+                ex=FuseOSError(e.errno)
+                ex.strerror=e.strerror
+                ex.filename=path
+                raise ex
 	    self.attr[path]=node.attr
             logging.debug("Got %s for %s" % (node, path))
         atime=self.attr[path].get('st_atime',time.time())
@@ -314,8 +349,16 @@ class VOFS(LoggingMixIn, Operations):
         """Create a container node in the VOSpace at the correct location.
 
         set the mode after creation. """
-        self.client.mkdir(path)
-        self.chmod(path,mode)
+        try:
+           self.client.mkdir(path)
+           self.chmod(path,mode)
+        except Exception as e:
+           ex=FuseOSError(e.errno)
+           ex.filename=path
+           ex.strerror=e.strerror
+           raise ex
+        return
+
 
     def open(self, path, flags, *mode):
         """Open file with the desidred modes
@@ -795,3 +838,4 @@ if __name__ == "__main__":
         fuse = FUSE(VOFS(root,opt.cache_dir,conn=conn,cache_limit=opt.cache_limit), mount, fsname=root, 
 		    #auto_cache=True,
                     foreground=opt.foreground)
+
