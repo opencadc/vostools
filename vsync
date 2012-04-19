@@ -162,6 +162,8 @@ if __name__=='__main__':
   parser.add_option('--exclude',help="ignore directories or files containing this pattern",default=None)
   parser.add_option('--overwrite',help="overwrite copy on server regardless of modification/size/md5 checks",action="store_true")
   parser.add_option('--load_test',action="store_true",help="Used to stress test the VOServer, also set --nstreams to a large value")
+  parser.add_option("--certfile",help="location of your CADC security certificate file",default=os.path.join(os.getenv("HOME","."),".ssl/cadcproxy.pem"))
+
   (opt,args)=parser.parse_args()
   if len(args)<2:
     parser.error("requires one or more source files and a single destination directory")
@@ -175,7 +177,7 @@ if __name__=='__main__':
   ## Currently we don't create nodes in sync and we don't sync onto files
   if opt.verbose:
     sys.stdout.write("Connecting to VOSpace\n")
-  c=vos.Client()
+  c=vos.Client(certFile=opt.certfile)
   destIsDir=c.isdir(dest)
 
   ### build a complete file list given all the things on the command line
