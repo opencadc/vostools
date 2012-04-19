@@ -132,8 +132,11 @@ def startStreams(nstreams):
     streams.append(t)
   return streams
 
+
 def buildFileList(basePath,destRoot='',recursive=False,ignore=None):
   """Build a list of files that should be copied into VOSpace"""
+  spinner=['-','\\','|','/','-','\\','|','/']
+  count=0
   filelist=[]
   import re
   for (root,dirs,filenames) in os.walk(basePath):
@@ -144,13 +147,29 @@ def buildFileList(basePath,destRoot='',recursive=False,ignore=None):
       cprefix=os.path.commonprefix((basePath,srcfilename))
       destfilename=os.path.normpath(destRoot+"/"+srcfilename[len(cprefix):])
       mkdirs(os.path.dirname(destfilename))
+      count += 1
+      if opt.verbose :
+         sys.stderr.write("Building list of files to transfer %s\r" %(spinner[count % len(spinner)]))
       filelist.append((srcfilename,destfilename))
     if not recursive:
       return filelist
   return filelist
 
+
+
+def signal_handler(signal, frame):
+    sys.stderr.write("Interupt\n")
+    sys.exit(-1)
+
+
+
 if __name__=='__main__':
   import time
+  
+  ## handle interupts nicely                                                                                                                                                     
+  import signal
+  signal.signal(signal.SIGINT, signal_handler)
+
   startTime=time.time()
   usage = "%prog [options] files vos:Destination/"
   parser=optparse.OptionParser(usage=usage)
@@ -178,6 +197,8 @@ if __name__=='__main__':
   if opt.verbose:
     sys.stdout.write("Connecting to VOSpace\n")
   c=vos.Client(certFile=opt.certfile)
+  if opt.verbose:
+    sys.stdout.write("Confirming Destination is a directory\n")
   destIsDir=c.isdir(dest)
 
   ### build a complete file list given all the things on the command line
@@ -224,6 +245,9 @@ if __name__=='__main__':
        
 
   streams=startStreams(opt.nstreams)
+  import time
+  sys.stderr.write("\n\nLaunching multistreamed transfer\n CTRL-C disabled \n\n use CTRL-\ to interrupt\n\n")
+  time.sleep(5)
   queue.join()
   endTime=time.time()
   bytesSent=0
