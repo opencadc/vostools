@@ -114,7 +114,7 @@ public class SSOCookieManagerImplTest
 
         replay(getMockRequest(), mockCookie);
 
-        setTestSubject(new SSOCookieManagerImpl(getMockRequest())
+        setTestSubject(new SSOCookieManagerImpl(getMockRequest(), null)
         {
             /**
              * Read in the pertinent cookie for this authentication.

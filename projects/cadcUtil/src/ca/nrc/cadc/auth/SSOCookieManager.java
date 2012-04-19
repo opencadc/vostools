@@ -81,4 +81,9 @@ public interface SSOCookieManager
      * @return      True if has data, false otherwise.
      */
     boolean hasData();
+
+    /**
+     * Expire this cookie manager's cookie.
+     */
+    void expire();
 }

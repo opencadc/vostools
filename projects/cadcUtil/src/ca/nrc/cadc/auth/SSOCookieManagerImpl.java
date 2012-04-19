@@ -38,12 +38,14 @@ import ca.nrc.cadc.util.StringUtil;
 
 import javax.servlet.http.Cookie;
 import javax.servlet.http.HttpServletRequest;
+import javax.servlet.http.HttpServletResponse;
 
 
 public class SSOCookieManagerImpl implements SSOCookieManager
 {
     private String username;
     private char[] token;
+    private HttpServletResponse response;
 
 
     protected SSOCookieManagerImpl()
@@ -51,8 +53,11 @@ public class SSOCookieManagerImpl implements SSOCookieManager
 
     }
 
-    public SSOCookieManagerImpl(final HttpServletRequest request)
+    public SSOCookieManagerImpl(final HttpServletRequest request,
+                                final HttpServletResponse response)
     {
+        this.response = response;
+
         parseCookieValue(request);
     }
 
@@ -97,6 +102,12 @@ public class SSOCookieManagerImpl implements SSOCookieManager
         this.token = tok;
     }
 
+
+    public HttpServletResponse getResponse()
+    {
+        return response;
+    }
+
     /**
      * Obtain the SSO CADC Cookie for this manager.
      *
@@ -139,6 +150,18 @@ public class SSOCookieManagerImpl implements SSOCookieManager
     {
         return StringUtil.hasText(getUsername())
                && !ArrayUtil.isEmpty(getToken());
+    }
+
+    /**
+     * Expire this cookie manager's cookie.
+     */
+    @Override
+    public void expire()
+    {
+        if ((getResponse() != null) && hasData())
+        {
+            getResponse().addCookie(createSSOCookie("/", 0));
+        }
     }
 
     /**

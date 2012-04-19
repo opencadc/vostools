@@ -85,7 +85,6 @@ import java.util.Collection;
 import java.util.Collections;
 import java.util.Date;
 import java.util.HashSet;
-import java.util.Iterator;
 import java.util.List;
 import java.util.Set;
 
@@ -190,7 +189,7 @@ public class AuthenticationUtil
     {
         final String remoteUser = request.getRemoteUser();
         final SSOCookieManager ssoCookieManager =
-                new SSOCookieManagerImpl(request);
+                new SSOCookieManagerImpl(request, null);
         final X509Certificate[] ca =
                 (X509Certificate[]) request.getAttribute(
                         "javax.servlet.request.X509Certificate");
