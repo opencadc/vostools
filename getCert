@@ -72,8 +72,15 @@ def getUserPassword(host='www.cadc-ccda.hia-iha.nrc-cnrc.gc.ca'):
         password=auth[2]
     return (username,password)
 
+def signal_handler(signal, frame):
+    sys.stderr.write("\n")
+    sys.exit(-1)
 
 import optparse,os
+
+import signal
+signal.signal(signal.SIGINT, signal_handler)
+
 
 parser = optparse.OptionParser(description='Get CADC proxy certificate')
 parser.add_option('--daysValid', type=int, default=10,
@@ -82,5 +89,16 @@ parser.add_option('--dest', default=os.path.join(os.getenv('HOME','/tmp'),".ssl/
                     help="Location to store the proxy certifacte")
 (opt,args) = parser.parse_args()
 
+import urllib2,sys
+
 if __name__=='__main__':
-    getCert(daysValid=opt.daysValid,certfile=opt.dest)
+    retry=True
+    while retry:
+        try:
+            getCert(daysValid=opt.daysValid,certfile=opt.dest)
+	    retry=False
+        except urllib2.HTTPError as e:
+	    sys.stderr.write(str(e)+"\n")
+	    if "basic auth failed" not in str(e):
+	       sys.exit(1)
+    sys.exit(0)
