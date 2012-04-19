@@ -46,6 +46,11 @@ public class SSOCookieManagerImpl implements SSOCookieManager
     private char[] token;
 
 
+    protected SSOCookieManagerImpl()
+    {
+
+    }
+
     public SSOCookieManagerImpl(final HttpServletRequest request)
     {
         parseCookieValue(request);
@@ -180,24 +185,34 @@ public class SSOCookieManagerImpl implements SSOCookieManager
     {
         if (cookie != null)
         {
-            final String[] items = cookie.getValue().split("\\|");
-            final StringBuilder username = new StringBuilder();
-            final StringBuilder token = new StringBuilder();
-
-            for (final String item : items)
-            {
-                if (item.startsWith("username="))
-                {
-                    username.append(item.split("=")[1]);
-                }
-                else if (item.startsWith("token="))
-                {
-                    token.append(item.split("=")[1]);
-                }
-            }
-
-            setUsername(username.toString());
-            setToken(token.toString().toCharArray());
+            parseValue(cookie.getValue());
         }
+    }
+
+    /**
+     * Parse the value from a cookie.
+     *
+     * @param value     The String value.
+     */
+    protected void parseValue(final String value)
+    {
+        final String[] items = value.split("\\|");
+        final StringBuilder username = new StringBuilder();
+        final StringBuilder token = new StringBuilder();
+
+        for (final String item : items)
+        {
+            if (item.startsWith("username="))
+            {
+                username.append(item.split("=")[1]);
+            }
+            else if (item.startsWith("token="))
+            {
+                token.append(item.split("=")[1]);
+            }
+        }
+
+        setUsername(username.toString());
+        setToken(token.toString().toCharArray());
     }
 }
