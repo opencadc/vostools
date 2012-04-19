@@ -93,6 +93,7 @@ import javax.security.auth.Subject;
 import javax.security.auth.x500.X500Principal;
 import javax.servlet.http.HttpServletRequest;
 
+import ca.nrc.cadc.util.ArrayUtil;
 import org.apache.log4j.Logger;
 
 import ca.nrc.cadc.date.DateUtil;
@@ -142,7 +143,7 @@ public class AuthenticationUtil
      * principals are currently supported: X500Principal and
      * HttpPrincipal.
      *
-     * @see #getSubject(String, Collection<X509Certificate>)
+     * @see #getSubject(String, java.util.Collection <X509Certificate>)
      * @param request
      *            request that contains use authentication information
      * @return Set of Principals extracted from the request. The Set is
@@ -181,18 +182,30 @@ public class AuthenticationUtil
      * certficate(s) from the request and calls
      * getSubject(String, Collection<X509Certificate>).
      *
-     * @see #getSubject(String, Collection<X509Certificate>)
-     * @param request
+     * @see #getSubject(String, java.util.Collection, SSOCookieManager)
+     * @param request       The HTTP Request.
      * @return a Subject with all available request content
      */
-    public static Subject getSubject(HttpServletRequest request)
+    public static Subject getSubject(final HttpServletRequest request)
     {
-        String remoteUser = request.getRemoteUser();
-        X509Certificate[] ca = (X509Certificate[]) request.getAttribute("javax.servlet.request.X509Certificate");
-        Collection<X509Certificate> certs = null;
-        if (ca != null && ca.length > 0)
+        final String remoteUser = request.getRemoteUser();
+        final SSOCookieManager ssoCookieManager =
+                new SSOCookieManagerImpl(request);
+        final X509Certificate[] ca =
+                (X509Certificate[]) request.getAttribute(
+                        "javax.servlet.request.X509Certificate");
+        final Collection<X509Certificate> certs;
+
+        if (!ArrayUtil.isEmpty(ca))
+        {
             certs = Arrays.asList(ca);
-        return getSubject(remoteUser, certs);
+        }
+        else
+        {
+            certs = null;
+        }
+
+        return getSubject(remoteUser, certs, ssoCookieManager);
     }
     
     /**
@@ -227,23 +240,36 @@ public class AuthenticationUtil
      *       (Collection<X509Certificate>) requestAttributes.get("org.restlet.https.clientCertificates");
      * </pre>
      *
+     *
      * @param remoteUser the remote user id (e.g. from http authentication)
      * @param certs certificates extracted from the calling context/session
+     * @param ssoCookieManager  The SSO Cookie Manager, if it exists.
      * @return a Subject
      */
-    public static Subject getSubject(String remoteUser, Collection<X509Certificate> certs)
+    public static Subject getSubject(final String remoteUser,
+                                     final Collection<X509Certificate> certs,
+                                     final SSOCookieManager ssoCookieManager)
     {
-        X509CertificateChain chain = null;
-        if (certs != null && certs.size() > 0)
+        final X509CertificateChain chain;
+        if ((certs != null) && !certs.isEmpty())
+        {
             chain = new X509CertificateChain(certs);
-        Subject ret = getSubject(remoteUser, chain);
+        }
+        else
+        {
+            chain = null;
+        }
+
+        Subject ret = getSubject(remoteUser, chain, ssoCookieManager);
         
         // try to use an Authenticator
         try
         {
-            Authenticator auth = getAuthenticator();
+            final Authenticator auth = getAuthenticator();
             if (auth != null)
+            {
                 ret = auth.getSubject(ret);
+            }
         }
         catch(Throwable t)
         {
@@ -262,18 +288,22 @@ public class AuthenticationUtil
     public static Subject getSubject(X509Certificate[] certs, PrivateKey key)
     {
         X509CertificateChain chain = new X509CertificateChain(certs, key);
-        return getSubject(null, chain);
+        return getSubject(null, chain, null);
     }
 
     /**
      * Create a subject from the specified user name and certficate chain.
      * 
-     * @param remoteUser
-     * @param chain
-     * @return
+     *
+     * @param remoteUser            The HTTP Authenticated user, if any.
+     * @param chain                 The X509Certificate chain of certificates,
+     *                              if any.
+     * @param ssoCookieManager      The SSO Cookie Manager, if available.
+     * @return                      An augmented Subject.
      */
     public static Subject getSubject(final String remoteUser,
-                                     final X509CertificateChain chain)
+                                     final X509CertificateChain chain,
+                                     final SSOCookieManager ssoCookieManager)
     {
         Set<Principal> principals = new HashSet<Principal>();
         Set<Object> publicCred = new HashSet<Object>();
@@ -284,6 +314,11 @@ public class AuthenticationUtil
         {
             // user logged in. Create corresponding Principal
             principals.add(new HttpPrincipal(remoteUser));
+        }
+
+        if ((ssoCookieManager != null) && ssoCookieManager.hasData())
+        {
+            principals.add(ssoCookieManager.createCookiePrincipal());
         }
 
         // SSL authentication
@@ -304,10 +339,9 @@ public class AuthenticationUtil
     {
         if (subject == null) return null;
         StringBuilder sb = new StringBuilder();
-        Iterator<Principal> it = subject.getPrincipals().iterator();
-        while (it.hasNext())
+
+        for (final Principal principal : subject.getPrincipals())
         {
-            Principal principal = (Principal) it.next();
             sb.append(principal.getClass().getName());
             sb.append("[");
             sb.append(NetUtil.encode(principal.getName()));
@@ -328,13 +362,21 @@ public class AuthenticationUtil
         Set<String> userids = new HashSet<String>();
         if (subject != null)
         {
-            Set<HttpPrincipal> httpPrincipals =
+            final Set<HttpPrincipal> httpPrincipals =
                     subject.getPrincipals(HttpPrincipal.class);
+            final Set<CookiePrincipal> cookiePrincipals =
+                    subject.getPrincipals(CookiePrincipal.class);
             String userId;
 
             for (final HttpPrincipal principal : httpPrincipals)
             {
                 userId = principal.getName();
+                userids.add(userId);
+            }
+
+            for (final CookiePrincipal cookiePrincipal : cookiePrincipals)
+            {
+                userId = cookiePrincipal.getUsername();
                 userids.add(userId);
             }
         }
@@ -419,11 +461,8 @@ public class AuthenticationUtil
             }
             return false;
         }
-        if (p2 instanceof X500Principal)
-        {
-            return false;
-        }
-        return p1.equals(p2);
+
+        return !(p2 instanceof X500Principal) && p1.equals(p2);
     }
 
     /**

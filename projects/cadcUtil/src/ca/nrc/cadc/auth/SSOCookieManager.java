@@ -24,7 +24,7 @@
  *
  *
  * @author jenkinsd
- * 4/10/12 - 3:10 PM
+ * 4/17/12 - 10:42 AM
  *
  *
  *
@@ -33,77 +33,52 @@
  */
 package ca.nrc.cadc.auth;
 
-import ca.nrc.cadc.util.ArrayUtil;
-
-import java.io.Serializable;
-import java.security.Principal;
-import java.util.Arrays;
+import javax.servlet.http.Cookie;
 
 
 /**
- * Represents the value of a Cookie as part of the Single Sign-On Cookie
- * based authentication.
+ * Manage cookies.
  */
-public class CookiePrincipal implements Principal, Serializable
+public interface SSOCookieManager
 {
-    private static final long serialVersionUID = 20120410151134l;
-
-    private final String username;
-    private final char[] token;
-
-
-    public CookiePrincipal(final String username, final char[] token)
-    {
-        this.username = username;
-        this.token = token;
-    }
+    String COOKIE_NAME = "CADC_Login";
 
 
     /**
-     * Returns the name of this principal.
+     * Obtain the username from this manager's cookie.
      *
-     * @return the name of this principal.
+     * @return  String username, or null if none found.
      */
-    @Override
-    public String getName()
-    {
-        return getUsername() + "|" + (ArrayUtil.isEmpty(getToken())
-                                      ? null : Arrays.toString(getToken()));
-    }
+    String getUsername();
 
-    public String getUsername()
-    {
-        return username;
-    }
+    /**
+     * Obtain the unique token from the Cookie.
+     *
+     * @return  The unqiue token.  Could be null if something wrong with the
+     *          state of the cookie.
+     */
+    char[] getToken();
 
-    public char[] getToken()
-    {
-        return token;
-    }
+    /**
+     * Obtain the SSO CADC Cookie for this manager.
+     *
+     * @param   path        The path for this cookie.
+     * @param   maxDays     The maximum number of days until expiry.
+     * @return  Cookie instance, or null if unable to get the Cookie.
+     */
+    Cookie createSSOCookie(final String path, final int maxDays);
 
+    /**
+     * Obtain the CookiePrincipal for this cookie manager.
+     *
+     * @return  CookiePrincipal instance.
+     */
+    CookiePrincipal createCookiePrincipal();
 
-    @Override
-    public boolean equals(Object o)
-    {
-        if (this == o)
-        {
-            return true;
-        }
-        else if ((o == null) || (getClass() != o.getClass()))
-        {
-            return false;
-        }
-
-        final CookiePrincipal that = (CookiePrincipal) o;
-
-        return Arrays.equals(token, that.token)
-               && username.equals(that.username);
-    }
-
-    @Override
-    public int hashCode()
-    {
-        int result = username.hashCode();
-        return 31 * result + Arrays.hashCode(token);
-    }
+    /**
+     * Obtain whether this has any cookie data.
+     *
+     * @return      True if has data, false otherwise.
+     */
+    boolean hasData();
 }

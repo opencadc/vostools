@@ -96,7 +96,6 @@ import java.security.cert.X509Certificate;
 import java.security.spec.InvalidKeySpecException;
 import java.security.spec.PKCS8EncodedKeySpec;
 import java.security.spec.RSAPrivateCrtKeySpec;
-import java.text.DateFormat;
 import java.util.ArrayList;
 import java.util.Date;
 import java.util.Enumeration;
@@ -117,7 +116,6 @@ import javax.security.auth.Subject;
 
 import org.apache.log4j.Logger;
 
-import ca.nrc.cadc.date.DateUtil;
 import ca.nrc.cadc.util.Base64;
 import ca.nrc.cadc.util.FileUtil;
 
@@ -259,7 +257,7 @@ public class SSLUtil
         try
         {
             X509CertificateChain certKey = readPemCertificateAndKey(certKeyFile);
-            return AuthenticationUtil.getSubject(null, certKey);
+            return AuthenticationUtil.getSubject(null, certKey, null);
         }
         catch (InvalidKeySpecException ex)
         {

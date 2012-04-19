@@ -69,25 +69,25 @@
 
 package ca.nrc.cadc.auth;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertTrue;
-
-import java.security.Principal;
-
-import javax.security.auth.x500.X500Principal;
-
 import org.apache.log4j.Level;
 import org.apache.log4j.Logger;
-import org.junit.BeforeClass;
-import org.junit.Test;
 
-import ca.nrc.cadc.util.Log4jInit;
+import java.security.Principal;
+import javax.security.auth.x500.X500Principal;
 import java.security.cert.X509Certificate;
 import java.util.Collection;
 import java.util.Set;
 import javax.security.auth.Subject;
-import org.junit.Assert;
+import javax.servlet.http.Cookie;
+import javax.servlet.http.HttpServletRequest;
+
+import static org.junit.Assert.*;
+import static org.easymock.EasyMock.*;
+import org.junit.BeforeClass;
+import org.junit.Test;
+
+import ca.nrc.cadc.util.Log4jInit;
+
 
 /**
  * Tests the methods in AuthenticationUtil
@@ -368,18 +368,18 @@ public class AuthenticationUtilTest
             Principal p;
 
             // http login
-            s = AuthenticationUtil.getSubject("foo", certs);
+            s = AuthenticationUtil.getSubject("foo", certs, null);
             prin = s.getPrincipals();
-            Assert.assertNotNull(prin);
-            Assert.assertTrue("num principals", (prin.size() == 1));
+            assertNotNull(prin);
+            assertTrue("num principals", (prin.size() == 1));
             p = prin.iterator().next();
-            Assert.assertNotNull(p);
-            Assert.assertEquals(p.getName(), "foo");
+            assertNotNull(p);
+            assertEquals(p.getName(), "foo");
         }
         catch(Exception unexpected)
         {
             log.error("unexpected exception", unexpected);
-            Assert.fail("unexpected exception: " + unexpected);
+            fail("unexpected exception: " + unexpected);
         }
         finally
         {
@@ -387,5 +387,37 @@ public class AuthenticationUtilTest
         }
     }
     
+    @Test
+    public void getSubjectFromHTTPCookie() throws Exception
+    {
+        log.debug("getSubjectFromHTTPCookie - START");
 
+        final Cookie[] cookies = new Cookie[]
+                {
+                        new Cookie("SOMECOOKIE", "SOMEVALUE"),
+                        new Cookie(SSOCookieManager.COOKIE_NAME,
+                                   "username=TESTUSER|token=AAABBB")
+                };
+        final HttpServletRequest mockRequest =
+                createMock(HttpServletRequest.class);
+
+        expect(mockRequest.getRemoteUser()).andReturn(null).once();
+        expect(mockRequest.getCookies()).andReturn(cookies).once();
+        expect(mockRequest.getAttribute(
+                "javax.servlet.request.X509Certificate")).andReturn(null).
+                once();
+
+        replay(mockRequest);
+        final Subject subject1 = AuthenticationUtil.getSubject(mockRequest);
+
+        assertEquals("Should only have one principal.", 1,
+                     subject1.getPrincipals().size());
+        assertTrue("Should have a cookie principal",
+                   subject1.getPrincipals().toArray(
+                           new Principal[1])[0] instanceof CookiePrincipal);
+
+        verify(mockRequest);
+
+        log.debug("getSubjectFromHTTPCookie - DONE");
+    }
 }
