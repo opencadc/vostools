@@ -77,13 +77,11 @@ import java.util.Map;
 
 import javax.security.auth.Subject;
 
+import ca.nrc.cadc.uws.web.SSORestletCookieManagerImpl;
 import org.apache.log4j.Logger;
 import org.jdom.Document;
 import org.restlet.Request;
-import org.restlet.data.Form;
-import org.restlet.data.MediaType;
-import org.restlet.data.Reference;
-import org.restlet.data.Status;
+import org.restlet.data.*;
 import org.restlet.representation.Representation;
 import org.restlet.representation.StringRepresentation;
 import org.restlet.resource.Get;
@@ -127,8 +125,16 @@ public abstract class UWSResource extends ServerResource
         // Create a subject for authentication
         Request request = getRequest();
         Map<String, Object> requestAttributes = request.getAttributes();
-        Collection<X509Certificate> certs = (Collection<X509Certificate>) requestAttributes.get(CERTIFICATE_REQUEST_ATTRIBUTE_NAME);
-        this.subject = AuthenticationUtil.getSubject(null, certs);
+
+        @SuppressWarnings("unchecked")
+        Collection<X509Certificate> certs =
+                (Collection<X509Certificate>) requestAttributes.get(
+                        CERTIFICATE_REQUEST_ATTRIBUTE_NAME);
+
+        this.subject =
+                AuthenticationUtil.getSubject(null, certs,
+                                              new SSORestletCookieManagerImpl(
+                                                      request));
         LOGGER.debug(subject);
     }
 

@@ -259,8 +259,9 @@ public class SimpleJobManager implements JobManager
     /**
      * Checks that the current caller is equivalent to the job owner.
      * 
-     * @param job
-     * @throws AccessControlException
+     * @param job                       The Job to check authorization to.
+     * @throws AccessControlException   If the current subject is not
+     *                                  authorized.
      */
     protected void doAuthorizationCheck(Job job)
         throws AccessControlException
