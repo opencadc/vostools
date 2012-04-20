@@ -395,7 +395,7 @@ public class AuthenticationUtilTest
         final Cookie[] cookies = new Cookie[]
                 {
                         new Cookie("SOMECOOKIE", "SOMEVALUE"),
-                        new Cookie(SSOCookieManager.COOKIE_NAME,
+                        new Cookie(SSOCookiePrincipalExtractor.COOKIE_NAME,
                                    "username=TESTUSER|sessionID=88|token=AAABBB")
                 };
         final HttpServletRequest mockRequest =
