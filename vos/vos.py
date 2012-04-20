@@ -185,6 +185,14 @@ class Node:
         self.setattr()
         self.setxattr()
 
+    def setProperty(self,key,value):
+        """Given a dictionary of props build a properies subelement"""
+        properties=self.node.find(Node.PROPERTIES)
+        uri="%s#%s" %(Node.IVOAURL,key)
+        ET.SubElement(properties,Node.PROPERTY,
+                      attrib={'uri': uri,'readOnly': 'false'}).text=value
+
+
     def __str__(self):
         import xml.etree.ElementTree as ET
         class dummy:
@@ -278,34 +286,47 @@ class Node:
     def setPublic(self,value):
         logging.debug("Setting value of ispublic to %s" % (str(value)))
         return self.changeProp('ispublic', value)
+
  
     def changeProp(self,key,value):
-        """Change the node property 'key' to 'value'.  Return 1 if changed."""
+        """Change the node property 'key' to 'value'. 
+
+        Return 1 if changed.
+
+        This function should be split into 'set' and 'delete'
+        """
         import urllib
-        logging.debug("Before change node is : %s" % ( self))
+        logging.debug("Before change node XML\n %s" % ( self))
         changed=0
+        found=False
         properties = self.node.findall(Node.PROPERTIES)
         for props in properties:
             for prop in props.findall(Node.PROPERTY):
                   uri=prop.attrib.get('uri',None)
                   propName=urllib.splittag(uri)[1]
+                  logging.debug("got key -->%s<-- looking for -->%s<--  set to ->%s<-" % ( propName, key,str(value)))
                   if propName != key:
                       continue 
-                  if prop.text != value:
-                      if value is None:
-                          props.remove(prop)
-                      else:
-                          prop.text=value
+                  found=True
+                  if value is None:
+                      ## this is actually a delete property
+                      prop.attrib['xsi:nil']='true'
+                      prop.text = ""
+                      self.props[propName]=None
+                  else:
+                      prop.text=value
                       changed=1
-                  logging.debug("After change node is : %s" %( self))
-                  return changed
+                  logging.debug("After change node XML\n : %s" %( self))
+        if found or value is None:
+            return changed
         ### must not have had this kind of property already, so set value
+        logging.debug("Adding a property: %s" %(key))
         propertyNode=ET.SubElement(props,Node.PROPERTY)
         propertyNode.attrib['readOnly']="false"
         ### There should be a '#' in there someplace...
         propertyNode.attrib["uri"]="%s#%s" % (Node.IVOAURL,key)
         propertyNode.text=value
-        logging.debug("After change node is : %s" %( self))
+        logging.debug("After change node XML\n %s" %( self))
         return 1
 
 
@@ -787,9 +808,51 @@ class Client:
         logging.debug(URL)
         return VOFile(URL,self.conn,method=method,size=size)
 
-    def update(self,node):
+
+    def addProps(self,node):
         """Given a node structure do a POST of the XML to the VOSpace to update the node properties"""
-        logging.debug("%s" % ( node.name))
+        logging.debug("Updating %s" % ( node.name))
+        logging.debug(node.props)
+        ## Get a copy of what's on the server
+        storedNode=self.getNode(node.uri)
+        for prop in storedNode.props:
+            if prop in node.props and storedNode.props[prop]==node.props[prop] and node.props[prop] is not None:
+                del(node.props[prop])
+        for properties in node.node.findall(Node.PROPERTIES):
+            node.node.remove(properties)
+        logging.debug(str(node))
+        properties=ET.Element(Node.PROPERTIES)
+        logging.debug(node.props)
+        for prop in node.props:
+            property=ET.SubElement(properties,Node.PROPERTY,attrib={'readOnly': 'false', 'uri': "%s#%s" % (Node.IVOAURL, prop)})
+            if node.props[prop] is None:
+                property.attrib['xsi:nil']='true'
+                property.text=""
+            else:
+                property.text=node.props[prop]
+        node.node.insert(0,properties)
+        logging.debug(str(node))
+        f=self.open(node.uri,mode=os.O_APPEND)
+        f.write(str(node))
+        f.close()
+        return 
+
+    def update(self,node):
+        logging.debug(str(node))
+        ## Now, remove from the node.node properties those entries that
+        ## match the stored values
+        if 1==2:
+          for properties in storedNode.node.findall(Node.PROPERTIES):
+            for prop in properties.findall(Node.PROPERTY):
+                propName = prop.get('uri',None)
+                if propName is not None:
+                    for properties2 in node.node.findall(Node.PROPERTIES):
+                        for prop2 in properties2.findall(Node.PROPERTY):
+                            propName2=prop2.get('uri',None)
+                            if propName == propName2:
+                                if prop2.text==prop.text:
+                                    properties2.remove(prop2)
+        #logging.debug(str(node))
         f=self.open(node.uri,mode=os.O_APPEND)
         f.write(str(node))
         f.close()
