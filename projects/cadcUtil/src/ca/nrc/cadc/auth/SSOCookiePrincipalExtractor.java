@@ -146,29 +146,11 @@ public class SSOCookiePrincipalExtractor implements PrincipalExtractor
 
     protected void parseValue(final String value)
     {
-        final String[] items = value.split("\\|");
-        final StringBuilder usernameBuilder = new StringBuilder();
-        final StringBuilder tokenBuilder = new StringBuilder();
-        final StringBuilder sessionIDBuilder = new StringBuilder();
+        final SSOCookieManager ssoCookieManager =
+                new SSOCookieManagerImpl(value);
 
-        for (final String item : items)
-        {
-            if (item.startsWith("username="))
-            {
-                usernameBuilder.append(item.split("=")[1]);
-            }
-            else if (item.startsWith("sessionID="))
-            {
-                sessionIDBuilder.append(item.split("=")[1]);
-            }
-            else if (item.startsWith("token="))
-            {
-                tokenBuilder.append(item.split("=")[1]);
-            }
-        }
-
-        setUsername(usernameBuilder.toString());
-        setToken(tokenBuilder.toString().toCharArray());
-        setSessionID(Long.parseLong(sessionIDBuilder.toString()));
+        setUsername(ssoCookieManager.getUsername());
+        setSessionID(ssoCookieManager.getSessionID());
+        setToken(ssoCookieManager.getToken());
     }
 }

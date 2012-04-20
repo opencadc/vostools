@@ -36,11 +36,6 @@ package ca.nrc.cadc.auth;
 import ca.nrc.cadc.util.ArrayUtil;
 import ca.nrc.cadc.util.StringUtil;
 
-import javax.servlet.http.Cookie;
-import javax.servlet.http.HttpServletRequest;
-import javax.servlet.http.HttpServletResponse;
-import java.util.UUID;
-
 
 public class SSOCookieManagerImpl implements SSOCookieManager
 {
@@ -48,27 +43,15 @@ public class SSOCookieManagerImpl implements SSOCookieManager
     private char[] token;
     private long sessionID;
 
-    // For exirations.
-    private HttpServletResponse response;
-
 
     protected SSOCookieManagerImpl()
     {
 
     }
 
-    public SSOCookieManagerImpl(final HttpServletRequest request,
-                                final HttpServletResponse response)
+    public SSOCookieManagerImpl(final String value)
     {
-        this.response = response;
-        parseCookieValue(request);
-    }
-
-    public SSOCookieManagerImpl(final String username, final long sessionID)
-    {
-        this.username = username;
-        this.sessionID = sessionID;
-        this.token = generateToken();
+        parseValue(value);
     }
 
 
@@ -121,45 +104,6 @@ public class SSOCookieManagerImpl implements SSOCookieManager
         this.token = tok;
     }
 
-
-    public HttpServletResponse getResponse()
-    {
-        return response;
-    }
-
-    /**
-     * Obtain the SSO CADC Cookie for this manager.
-     *
-     * @param path    The path for this cookie.
-     * @param maxDays The maximum number of days until expiry.
-     * @return Cookie instance, or null if unable to get the Cookie.
-     */
-    @Override
-    public Cookie createSSOCookie(final String path, final int maxDays)
-    {
-        final Cookie cookie = new Cookie(SSOCookieManager.COOKIE_NAME,
-                                         "username=" + getUsername() + "|"
-                                         + "sessionID=" + getSessionID() + "|"
-                                         + "token="
-                                         + String.valueOf(getToken()));
-
-        cookie.setPath(path);
-        cookie.setMaxAge(maxDays * 60 * 60 * 24);
-
-        return cookie;
-    }
-
-    /**
-     * Obtain the CookiePrincipal for this cookie manager.
-     *
-     * @return CookiePrincipal instance.
-     */
-    @Override
-    public CookiePrincipal createCookiePrincipal()
-    {
-        return new CookiePrincipal(getUsername(), getToken());
-    }
-
     /**
      * Obtain whether this has any cookie data.
      *
@@ -171,81 +115,6 @@ public class SSOCookieManagerImpl implements SSOCookieManager
         return StringUtil.hasText(getUsername())
                && !ArrayUtil.isEmpty(getToken())
                && (getSessionID() > 0);
-    }
-
-    /**
-     * Expire this cookie manager's cookie.
-     */
-    @Override
-    public void expire() throws IllegalStateException
-    {
-        if ((getResponse() == null) || !hasData())
-        {
-            throw new IllegalStateException("No HTTP Response set, or no data "
-                                            + "to expire.");
-        }
-        else
-        {
-            getResponse().addCookie(createSSOCookie("/", 0));
-        }
-    }
-
-    /**
-     * Read in the pertinent cookie for this authentication.
-     *
-     * @param request       The HTTP Servlet request.
-     * @return              Cookie, if present, or null if not.
-     */
-    protected Cookie getCookie(final HttpServletRequest request)
-    {
-        final Cookie[] cookies = request.getCookies();
-        if (!ArrayUtil.isEmpty(cookies))
-        {
-            for (final Cookie cookie : cookies)
-            {
-                if (cookie.getName().equals(
-                        SSOCookieManager.COOKIE_NAME))
-                {
-                    return cookie;
-                }
-            }
-        }
-
-        return null;
-    }
-
-    /**
-     * Parse the username from the cookie value.
-     *
-     * @param request       The HTTP Servlet request.
-     */
-    private void parseCookieValue(final HttpServletRequest request)
-    {
-        final Cookie cookie = getCookie(request);
-        parseCookieValue(cookie);
-    }
-
-    /**
-     * Parse the username from the cookie value.
-     *
-     * @param cookie        The SSO CADC Cookie.
-     */
-    private void parseCookieValue(final Cookie cookie)
-    {
-        if (cookie != null)
-        {
-            parseValue(cookie.getValue());
-        }
-    }
-
-    /**
-     * Generate a unique token to put into the cookie.
-     *
-     * @return  An array of a universally unique set of characters.
-     */
-    protected char[] generateToken()
-    {
-        return UUID.randomUUID().toString().toCharArray();
     }
 
     /**

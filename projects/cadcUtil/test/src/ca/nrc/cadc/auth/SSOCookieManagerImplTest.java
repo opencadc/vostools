@@ -34,99 +34,22 @@
 package ca.nrc.cadc.auth;
 
 
-import javax.servlet.http.Cookie;
-import javax.servlet.http.HttpServletRequest;
-
-import org.junit.Test;
 
 import java.util.Arrays;
 
-import static org.easymock.EasyMock.*;
+import org.junit.Test;
 import static org.junit.Assert.*;
 
 
 public class SSOCookieManagerImplTest
 {
     private SSOCookieManagerImpl testSubject;
-    private HttpServletRequest mockRequest =
-            createMock(HttpServletRequest.class);
-
-
-    @Test
-    public void readCookie() throws Exception
-    {
-        setTestSubject(new SSOCookieManagerImpl("TESTUSER", 88l));
-
-        expect(getMockRequest().getCookies()).andReturn(null).once();
-
-        replay(getMockRequest());
-        final Cookie cookie1 = getTestSubject().getCookie(getMockRequest());
-
-        assertNull("Cookie should be null.", cookie1);
-
-        verify(getMockRequest());
-
-
-        //
-        // TEST 2
-        reset(getMockRequest());
-        expect(getMockRequest().getCookies()).andReturn(
-                new Cookie[]
-                {
-                        new Cookie("CADC", "MYVALUE")
-                }).times(2);
-
-        replay(getMockRequest());
-        final Cookie cookie2 = getTestSubject().getCookie(getMockRequest());
-
-        assertNull("Cookie should be null.", cookie2);
-
-        verify(getMockRequest());
-
-
-        //
-        // TEST 3
-        reset(getMockRequest());
-        expect(getMockRequest().getCookies()).andReturn(
-                new Cookie[]
-                {
-                        new Cookie("CADC", "MYVALUE"),
-                        new Cookie("CADC_Login",
-                                   "username=TESTUSER|sessionID=88|token=AAABBB")
-                }).times(2);
-
-        replay(getMockRequest());
-        final Cookie cookie3 = getTestSubject().getCookie(getMockRequest());
-
-        assertNotNull("Cookie should not be null.", cookie3);
-
-        verify(getMockRequest());
-    }
 
     @Test
     public void parseCookieValue() throws Exception
     {
-        final Cookie mockCookie = createMock(Cookie.class);
-
-        expect(mockCookie.getValue()).andReturn(
-                "username=TESTUSER|sessionID=88|token=AAABBB").once();
-
-        replay(getMockRequest(), mockCookie);
-
-        setTestSubject(new SSOCookieManagerImpl(getMockRequest(), null)
-        {
-            /**
-             * Read in the pertinent cookie for this authentication.
-             *
-             * @param request The HTTP Servlet request.
-             * @return Cookie, if present, or null if not.
-             */
-            @Override
-            protected Cookie getCookie(final HttpServletRequest request)
-            {
-                return mockCookie;
-            }
-        });
+        setTestSubject(new SSOCookieManagerImpl(
+                "username=TESTUSER|sessionID=88|token=AAABBB"));
 
         assertEquals("Username should be TESTUSER", "TESTUSER",
                      getTestSubject().getUsername());
@@ -135,8 +58,6 @@ public class SSOCookieManagerImplTest
                                  getTestSubject().getToken()));
         assertEquals("Session ID should be 88.", 88l,
                      getTestSubject().getSessionID());
-
-        verify(getMockRequest(), mockCookie);
     }
 
 
@@ -148,10 +69,5 @@ public class SSOCookieManagerImplTest
     public void setTestSubject(final SSOCookieManagerImpl testSubject)
     {
         this.testSubject = testSubject;
-    }
-
-    public HttpServletRequest getMockRequest()
-    {
-        return mockRequest;
     }
 }

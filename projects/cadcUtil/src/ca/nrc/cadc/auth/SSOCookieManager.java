@@ -33,17 +33,12 @@
  */
 package ca.nrc.cadc.auth;
 
-import javax.servlet.http.Cookie;
-
 
 /**
- * Manage cookies.
+ * Manage cookie reading.
  */
 public interface SSOCookieManager
 {
-    String COOKIE_NAME = "CADC_SSO";
-
-
     /**
      * Obtain the username from this manager's cookie.
      *
@@ -67,32 +62,9 @@ public interface SSOCookieManager
     long getSessionID();
 
     /**
-     * Obtain the SSO CADC Cookie for this manager.
-     *
-     * @param   path        The path for this cookie.
-     * @param   maxDays     The maximum number of days until expiry.
-     * @return  Cookie instance, or null if unable to get the Cookie.
-     */
-    Cookie createSSOCookie(final String path, final int maxDays);
-
-    /**
-     * Obtain the CookiePrincipal for this cookie manager.
-     *
-     * @return  CookiePrincipal instance.
-     */
-    CookiePrincipal createCookiePrincipal();
-
-    /**
      * Obtain whether this has any cookie data.
      *
      * @return      True if has data, false otherwise.
      */
     boolean hasData();
-
-    /**
-     * Expire this cookie manager's cookie.
-     *
-     * @throws IllegalStateException    If there is no HTTP Resonse set.
-     */
-    void expire() throws IllegalStateException;
 }
