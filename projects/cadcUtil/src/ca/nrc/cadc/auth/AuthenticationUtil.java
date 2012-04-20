@@ -174,37 +174,71 @@ public class AuthenticationUtil
         return principals;
     }
     */
-    
+
+    /**
+     * Create a Subject from the given X509 Certificate Chain, and the given
+     * Principal Extractor.  The Chain exists to provide Public Credentials.
+     *
+     * @param chain                 The X509 Certificate Chain for public
+     *                              credentials.
+     * @param principalExtractor    The PrincipalExtractor to provide
+     *                              Principals.
+     * @return                      A new Subject.
+     */
+    public static Subject getSubject(
+            final X509CertificateChain chain,
+            final PrincipalExtractor principalExtractor)
+    {
+        final Set<Object> publicCred = new HashSet<Object>();
+        final Set<Object> privateCred = new HashSet<Object>();
+
+        publicCred.add(chain);
+
+        return new Subject(false, principalExtractor.getPrincipals(),
+                           publicCred, privateCred);
+    }
+
     /**
      * Create a complete Subject with principal(s) and possibly X509 credentials.
      * This is a convenience method that gets the remote user and/or client
      * certficate(s) from the request and calls
      * getSubject(String, Collection<X509Certificate>).
      *
-     * @see #getSubject(String, java.util.Collection, SSOCookieManager)
+     * @see #getSubject(String, java.util.Collection
      * @param request       The HTTP Request.
      * @return a Subject with all available request content
      */
     public static Subject getSubject(final HttpServletRequest request)
     {
-        final String remoteUser = request.getRemoteUser();
-        final SSOCookieManager ssoCookieManager =
-                new SSOCookieManagerImpl(request, null);
         final X509Certificate[] ca =
                 (X509Certificate[]) request.getAttribute(
                         "javax.servlet.request.X509Certificate");
-        final Collection<X509Certificate> certs;
+        final X509CertificateChain chain;
 
         if (!ArrayUtil.isEmpty(ca))
         {
-            certs = Arrays.asList(ca);
+            chain = new X509CertificateChain(Arrays.asList(ca));
         }
         else
         {
-            certs = null;
+            chain = null;
         }
 
-        return getSubject(remoteUser, certs, ssoCookieManager);
+        final Subject subject =
+                getSubject(chain, new ServletPrincipalExtractor(request));
+        final Authenticator auth = getAuthenticator();
+        final Subject ret;
+
+        if (auth != null)
+        {
+            ret = auth.getSubject(subject);
+        }
+        else
+        {
+            ret = subject;
+        }
+
+        return ret;
     }
     
     /**
@@ -240,14 +274,14 @@ public class AuthenticationUtil
      * </pre>
      *
      *
+     *
      * @param remoteUser the remote user id (e.g. from http authentication)
      * @param certs certificates extracted from the calling context/session
-     * @param ssoCookieManager  The SSO Cookie Manager, if it exists.
      * @return a Subject
+     * @deprecated      Use #getSubject(X509CertificateChain, PrincipalExtractor)
      */
     public static Subject getSubject(final String remoteUser,
-                                     final Collection<X509Certificate> certs,
-                                     final SSOCookieManager ssoCookieManager)
+                                     final Collection<X509Certificate> certs)
     {
         final X509CertificateChain chain;
         if ((certs != null) && !certs.isEmpty())
@@ -259,7 +293,7 @@ public class AuthenticationUtil
             chain = null;
         }
 
-        Subject ret = getSubject(remoteUser, chain, ssoCookieManager);
+        Subject ret = getSubject(remoteUser, chain);
         
         // try to use an Authenticator
         try
@@ -286,23 +320,24 @@ public class AuthenticationUtil
      */
     public static Subject getSubject(X509Certificate[] certs, PrivateKey key)
     {
-        X509CertificateChain chain = new X509CertificateChain(certs, key);
-        return getSubject(null, chain, null);
+        final X509CertificateChain chain =
+                new X509CertificateChain(certs, key);
+        return getSubject(chain, new X500PrincipalExtractor(certs));
     }
 
     /**
      * Create a subject from the specified user name and certficate chain.
      * 
      *
+     *
      * @param remoteUser            The HTTP Authenticated user, if any.
      * @param chain                 The X509Certificate chain of certificates,
      *                              if any.
-     * @param ssoCookieManager      The SSO Cookie Manager, if available.
      * @return                      An augmented Subject.
+     * @deprecated      Use #getSubject(X509CertificateChain, PrincipalExtractor)
      */
     public static Subject getSubject(final String remoteUser,
-                                     final X509CertificateChain chain,
-                                     final SSOCookieManager ssoCookieManager)
+                                     final X509CertificateChain chain)
     {
         Set<Principal> principals = new HashSet<Principal>();
         Set<Object> publicCred = new HashSet<Object>();
@@ -313,11 +348,6 @@ public class AuthenticationUtil
         {
             // user logged in. Create corresponding Principal
             principals.add(new HttpPrincipal(remoteUser));
-        }
-
-        if ((ssoCookieManager != null) && ssoCookieManager.hasData())
-        {
-            principals.add(ssoCookieManager.createCookiePrincipal());
         }
 
         // SSL authentication

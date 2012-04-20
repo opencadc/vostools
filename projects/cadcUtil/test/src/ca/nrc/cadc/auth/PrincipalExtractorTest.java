@@ -24,7 +24,7 @@
  *
  *
  * @author jenkinsd
- * 4/17/12 - 10:42 AM
+ * 4/20/12 - 12:07 PM
  *
  *
  *
@@ -33,66 +33,18 @@
  */
 package ca.nrc.cadc.auth;
 
-import javax.servlet.http.Cookie;
-
-
-/**
- * Manage cookies.
- */
-public interface SSOCookieManager
+public abstract class PrincipalExtractorTest<P extends PrincipalExtractor>
 {
-    String COOKIE_NAME = "CADC_SSO";
+    private P testSubject;
 
 
-    /**
-     * Obtain the username from this manager's cookie.
-     *
-     * @return  String username, or null if none found.
-     */
-    String getUsername();
+    protected P getTestSubject()
+    {
+        return testSubject;
+    }
 
-    /**
-     * Obtain the unique token from the Cookie.
-     *
-     * @return  The unqiue token.  Could be null if something wrong with the
-     *          state of the cookie.
-     */
-    char[] getToken();
-
-    /**
-     * Obtain the unique session ID.
-     *
-     * @return      long Session ID.
-     */
-    long getSessionID();
-
-    /**
-     * Obtain the SSO CADC Cookie for this manager.
-     *
-     * @param   path        The path for this cookie.
-     * @param   maxDays     The maximum number of days until expiry.
-     * @return  Cookie instance, or null if unable to get the Cookie.
-     */
-    Cookie createSSOCookie(final String path, final int maxDays);
-
-    /**
-     * Obtain the CookiePrincipal for this cookie manager.
-     *
-     * @return  CookiePrincipal instance.
-     */
-    CookiePrincipal createCookiePrincipal();
-
-    /**
-     * Obtain whether this has any cookie data.
-     *
-     * @return      True if has data, false otherwise.
-     */
-    boolean hasData();
-
-    /**
-     * Expire this cookie manager's cookie.
-     *
-     * @throws IllegalStateException    If there is no HTTP Resonse set.
-     */
-    void expire() throws IllegalStateException;
+    protected void setTestSubject(final P testSubject)
+    {
+        this.testSubject = testSubject;
+    }
 }

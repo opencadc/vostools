@@ -24,7 +24,7 @@
  *
  *
  * @author jenkinsd
- * 4/17/12 - 10:42 AM
+ * 4/20/12 - 11:30 AM
  *
  *
  *
@@ -33,66 +33,70 @@
  */
 package ca.nrc.cadc.auth;
 
-import javax.servlet.http.Cookie;
+import ca.nrc.cadc.util.StringUtil;
+
+import java.util.Collections;
+import java.util.HashSet;
+import java.util.Set;
 
 
 /**
- * Manage cookies.
+ * Extract an HttpPrincipal for this extractor's HTTP User.
  */
-public interface SSOCookieManager
+public class HTTPPrincipalExtractor implements PrincipalExtractor
 {
-    String COOKIE_NAME = "CADC_SSO";
+    private final String httpUser;
+
+
+    public HTTPPrincipalExtractor(final String httpUser)
+    {
+        this.httpUser = httpUser;
+    }
 
 
     /**
-     * Obtain the username from this manager's cookie.
+     * Obtain a Collection of Principals from this extractor.
      *
-     * @return  String username, or null if none found.
+     * @return Collection of Principal instances, or empty Collection.
+     *         Never null.
      */
-    String getUsername();
+    @Override
+    public Set<HttpPrincipal> getPrincipals()
+    {
+        final Set<HttpPrincipal> principalSet = new HashSet<HttpPrincipal>();
+        final HttpPrincipal httpPrincipal = createHTTPPrincipal();
+
+        if (httpPrincipal != null)
+        {
+            principalSet.add(httpPrincipal);
+        }
+
+        return Collections.unmodifiableSet(principalSet);
+    }
 
     /**
-     * Obtain the unique token from the Cookie.
+     * Create a new HTTP Principal.
      *
-     * @return  The unqiue token.  Could be null if something wrong with the
-     *          state of the cookie.
+     * @return  HttpPrincipal instance.
      */
-    char[] getToken();
+    protected HttpPrincipal createHTTPPrincipal()
+    {
+        final HttpPrincipal httpPrincipal;
 
-    /**
-     * Obtain the unique session ID.
-     *
-     * @return      long Session ID.
-     */
-    long getSessionID();
+        if (StringUtil.hasText(getHttpUser()))
+        {
+            httpPrincipal = new HttpPrincipal(getHttpUser());
+        }
+        else
+        {
+            httpPrincipal = null;
+        }
 
-    /**
-     * Obtain the SSO CADC Cookie for this manager.
-     *
-     * @param   path        The path for this cookie.
-     * @param   maxDays     The maximum number of days until expiry.
-     * @return  Cookie instance, or null if unable to get the Cookie.
-     */
-    Cookie createSSOCookie(final String path, final int maxDays);
+        return httpPrincipal;
+    }
 
-    /**
-     * Obtain the CookiePrincipal for this cookie manager.
-     *
-     * @return  CookiePrincipal instance.
-     */
-    CookiePrincipal createCookiePrincipal();
-
-    /**
-     * Obtain whether this has any cookie data.
-     *
-     * @return      True if has data, false otherwise.
-     */
-    boolean hasData();
-
-    /**
-     * Expire this cookie manager's cookie.
-     *
-     * @throws IllegalStateException    If there is no HTTP Resonse set.
-     */
-    void expire() throws IllegalStateException;
+    public String getHttpUser()
+    {
+        return httpUser;
+    }
 }

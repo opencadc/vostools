@@ -24,7 +24,7 @@
  *
  *
  * @author jenkinsd
- * 4/17/12 - 10:42 AM
+ * 4/20/12 - 1:28 PM
  *
  *
  *
@@ -33,66 +33,34 @@
  */
 package ca.nrc.cadc.auth;
 
-import javax.servlet.http.Cookie;
+import org.junit.Test;
+import static org.junit.Assert.*;
 
 
-/**
- * Manage cookies.
- */
-public interface SSOCookieManager
+public class HttpPrincipalExtractorTest
+        extends PrincipalExtractorTest<HTTPPrincipalExtractor>
 {
-    String COOKIE_NAME = "CADC_SSO";
+    @Test
+    public void createNullHTTPPrincipal() throws Exception
+    {
+        setTestSubject(new HTTPPrincipalExtractor(""));
 
+        assertNull("Should be null.", getTestSubject().createHTTPPrincipal());
 
-    /**
-     * Obtain the username from this manager's cookie.
-     *
-     * @return  String username, or null if none found.
-     */
-    String getUsername();
+        setTestSubject(new HTTPPrincipalExtractor(null));
 
-    /**
-     * Obtain the unique token from the Cookie.
-     *
-     * @return  The unqiue token.  Could be null if something wrong with the
-     *          state of the cookie.
-     */
-    char[] getToken();
+        assertNull("Should be null.", getTestSubject().createHTTPPrincipal());
+    }
 
-    /**
-     * Obtain the unique session ID.
-     *
-     * @return      long Session ID.
-     */
-    long getSessionID();
+    @Test
+    public void createGoodHTTPPrincipal() throws Exception
+    {
+        setTestSubject(new HTTPPrincipalExtractor("TESTUSER"));
 
-    /**
-     * Obtain the SSO CADC Cookie for this manager.
-     *
-     * @param   path        The path for this cookie.
-     * @param   maxDays     The maximum number of days until expiry.
-     * @return  Cookie instance, or null if unable to get the Cookie.
-     */
-    Cookie createSSOCookie(final String path, final int maxDays);
+        final HttpPrincipal httpPrincipal =
+                getTestSubject().createHTTPPrincipal();
 
-    /**
-     * Obtain the CookiePrincipal for this cookie manager.
-     *
-     * @return  CookiePrincipal instance.
-     */
-    CookiePrincipal createCookiePrincipal();
-
-    /**
-     * Obtain whether this has any cookie data.
-     *
-     * @return      True if has data, false otherwise.
-     */
-    boolean hasData();
-
-    /**
-     * Expire this cookie manager's cookie.
-     *
-     * @throws IllegalStateException    If there is no HTTP Resonse set.
-     */
-    void expire() throws IllegalStateException;
+        assertEquals("Principal username should be TESTUSER", "TESTUSER",
+                     httpPrincipal.getName());
+    }
 }

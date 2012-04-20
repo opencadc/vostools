@@ -24,7 +24,7 @@
  *
  *
  * @author jenkinsd
- * 4/17/12 - 10:42 AM
+ * 4/20/12 - 11:05 AM
  *
  *
  *
@@ -33,66 +33,23 @@
  */
 package ca.nrc.cadc.auth;
 
-import javax.servlet.http.Cookie;
+import java.security.Principal;
+import java.util.Set;
 
 
 /**
- * Manage cookies.
+ * Object to extract principals from a given source.  Implementors are expected
+ * to know how to pull Principals from their context, and provide them to the
+ * caller.
  */
-public interface SSOCookieManager
+public interface PrincipalExtractor
 {
-    String COOKIE_NAME = "CADC_SSO";
-
-
     /**
-     * Obtain the username from this manager's cookie.
+     * Obtain a Collection of Principals from this extractor.  This should be
+     * immutable.
      *
-     * @return  String username, or null if none found.
+     * @return      Collection of Principal instances, or empty Collection.
+     *              Never null.
      */
-    String getUsername();
-
-    /**
-     * Obtain the unique token from the Cookie.
-     *
-     * @return  The unqiue token.  Could be null if something wrong with the
-     *          state of the cookie.
-     */
-    char[] getToken();
-
-    /**
-     * Obtain the unique session ID.
-     *
-     * @return      long Session ID.
-     */
-    long getSessionID();
-
-    /**
-     * Obtain the SSO CADC Cookie for this manager.
-     *
-     * @param   path        The path for this cookie.
-     * @param   maxDays     The maximum number of days until expiry.
-     * @return  Cookie instance, or null if unable to get the Cookie.
-     */
-    Cookie createSSOCookie(final String path, final int maxDays);
-
-    /**
-     * Obtain the CookiePrincipal for this cookie manager.
-     *
-     * @return  CookiePrincipal instance.
-     */
-    CookiePrincipal createCookiePrincipal();
-
-    /**
-     * Obtain whether this has any cookie data.
-     *
-     * @return      True if has data, false otherwise.
-     */
-    boolean hasData();
-
-    /**
-     * Expire this cookie manager's cookie.
-     *
-     * @throws IllegalStateException    If there is no HTTP Resonse set.
-     */
-    void expire() throws IllegalStateException;
+    Set<? extends Principal> getPrincipals();
 }

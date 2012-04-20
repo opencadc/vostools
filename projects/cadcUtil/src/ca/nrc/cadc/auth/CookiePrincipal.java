@@ -51,6 +51,9 @@ public class CookiePrincipal implements Principal, Serializable
     private final String username;
     private final char[] token;
 
+    // Initially set by the persistence layer.
+    private long sessionID;
+
 
     public CookiePrincipal(final String username, final char[] token)
     {
@@ -81,6 +84,15 @@ public class CookiePrincipal implements Principal, Serializable
         return token;
     }
 
+    public long getSessionID()
+    {
+        return sessionID;
+    }
+
+    public void setSessionID(final long sessionID)
+    {
+        this.sessionID = sessionID;
+    }
 
     @Override
     public boolean equals(Object o)
@@ -89,14 +101,16 @@ public class CookiePrincipal implements Principal, Serializable
         {
             return true;
         }
-        else if ((o == null) || (getClass() != o.getClass()))
+
+        if ((o == null) || (getClass() != o.getClass()))
         {
             return false;
         }
 
         final CookiePrincipal that = (CookiePrincipal) o;
 
-        return Arrays.equals(token, that.token)
+        return (sessionID == that.sessionID)
+               && Arrays.equals(token, that.token)
                && username.equals(that.username);
     }
 
@@ -104,6 +118,7 @@ public class CookiePrincipal implements Principal, Serializable
     public int hashCode()
     {
         int result = username.hashCode();
-        return 31 * result + Arrays.hashCode(token);
+        result = 31 * result + Arrays.hashCode(token);
+        return 31 * result + (int) (sessionID ^ (sessionID >>> 32));
     }
 }

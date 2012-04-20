@@ -39,12 +39,16 @@ import ca.nrc.cadc.util.StringUtil;
 import javax.servlet.http.Cookie;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
+import java.util.UUID;
 
 
 public class SSOCookieManagerImpl implements SSOCookieManager
 {
     private String username;
     private char[] token;
+    private long sessionID;
+
+    // For exirations.
     private HttpServletResponse response;
 
 
@@ -57,14 +61,14 @@ public class SSOCookieManagerImpl implements SSOCookieManager
                                 final HttpServletResponse response)
     {
         this.response = response;
-
         parseCookieValue(request);
     }
 
-    public SSOCookieManagerImpl(final String username, final char[] token)
+    public SSOCookieManagerImpl(final String username, final long sessionID)
     {
         this.username = username;
-        this.token = token;
+        this.sessionID = sessionID;
+        this.token = generateToken();
     }
 
 
@@ -84,6 +88,21 @@ public class SSOCookieManagerImpl implements SSOCookieManager
         this.username = uname;
     }
 
+    /**
+     * Obtain the unique session ID.
+     *
+     * @return long Session ID.
+     */
+    @Override
+    public long getSessionID()
+    {
+        return sessionID;
+    }
+
+    protected void setSessionID(final long sID)
+    {
+        this.sessionID = sID;
+    }
 
     /**
      * Obtain the unique token from the Cookie.
@@ -120,6 +139,7 @@ public class SSOCookieManagerImpl implements SSOCookieManager
     {
         final Cookie cookie = new Cookie(SSOCookieManager.COOKIE_NAME,
                                          "username=" + getUsername() + "|"
+                                         + "sessionID=" + getSessionID() + "|"
                                          + "token="
                                          + String.valueOf(getToken()));
 
@@ -149,16 +169,22 @@ public class SSOCookieManagerImpl implements SSOCookieManager
     public boolean hasData()
     {
         return StringUtil.hasText(getUsername())
-               && !ArrayUtil.isEmpty(getToken());
+               && !ArrayUtil.isEmpty(getToken())
+               && (getSessionID() > 0);
     }
 
     /**
      * Expire this cookie manager's cookie.
      */
     @Override
-    public void expire()
+    public void expire() throws IllegalStateException
     {
-        if ((getResponse() != null) && hasData())
+        if ((getResponse() == null) || !hasData())
+        {
+            throw new IllegalStateException("No HTTP Response set, or no data "
+                                            + "to expire.");
+        }
+        else
         {
             getResponse().addCookie(createSSOCookie("/", 0));
         }
@@ -213,6 +239,16 @@ public class SSOCookieManagerImpl implements SSOCookieManager
     }
 
     /**
+     * Generate a unique token to put into the cookie.
+     *
+     * @return  An array of a universally unique set of characters.
+     */
+    protected char[] generateToken()
+    {
+        return UUID.randomUUID().toString().toCharArray();
+    }
+
+    /**
      * Parse the value from a cookie.
      *
      * @param value     The String value.
@@ -220,22 +256,28 @@ public class SSOCookieManagerImpl implements SSOCookieManager
     protected void parseValue(final String value)
     {
         final String[] items = value.split("\\|");
-        final StringBuilder username = new StringBuilder();
-        final StringBuilder token = new StringBuilder();
+        final StringBuilder usernameBuilder = new StringBuilder();
+        final StringBuilder tokenBuilder = new StringBuilder();
+        final StringBuilder sessionIDBuilder = new StringBuilder();
 
         for (final String item : items)
         {
             if (item.startsWith("username="))
             {
-                username.append(item.split("=")[1]);
+                usernameBuilder.append(item.split("=")[1]);
             }
             else if (item.startsWith("token="))
             {
-                token.append(item.split("=")[1]);
+                tokenBuilder.append(item.split("=")[1]);
+            }
+            else if (item.startsWith("sessionID="))
+            {
+                sessionIDBuilder.append(item.split("=")[1]);
             }
         }
 
-        setUsername(username.toString());
-        setToken(token.toString().toCharArray());
+        setUsername(usernameBuilder.toString());
+        setToken(tokenBuilder.toString().toCharArray());
+        setSessionID(Long.parseLong(sessionIDBuilder.toString()));
     }
 }

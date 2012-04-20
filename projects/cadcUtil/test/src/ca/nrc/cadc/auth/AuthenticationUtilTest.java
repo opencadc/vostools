@@ -368,7 +368,7 @@ public class AuthenticationUtilTest
             Principal p;
 
             // http login
-            s = AuthenticationUtil.getSubject("foo", certs, null);
+            s = AuthenticationUtil.getSubject("foo", certs);
             prin = s.getPrincipals();
             assertNotNull(prin);
             assertTrue("num principals", (prin.size() == 1));
@@ -396,7 +396,7 @@ public class AuthenticationUtilTest
                 {
                         new Cookie("SOMECOOKIE", "SOMEVALUE"),
                         new Cookie(SSOCookieManager.COOKIE_NAME,
-                                   "username=TESTUSER|token=AAABBB")
+                                   "username=TESTUSER|sessionID=88|token=AAABBB")
                 };
         final HttpServletRequest mockRequest =
                 createMock(HttpServletRequest.class);
@@ -405,7 +405,7 @@ public class AuthenticationUtilTest
         expect(mockRequest.getCookies()).andReturn(cookies).once();
         expect(mockRequest.getAttribute(
                 "javax.servlet.request.X509Certificate")).andReturn(null).
-                once();
+                times(2);
 
         replay(mockRequest);
         final Subject subject1 = AuthenticationUtil.getSubject(mockRequest);

@@ -55,8 +55,7 @@ public class SSOCookieManagerImplTest
     @Test
     public void readCookie() throws Exception
     {
-        setTestSubject(new SSOCookieManagerImpl("TESTUSER",
-                                                "TOKEN".toCharArray()));
+        setTestSubject(new SSOCookieManagerImpl("TESTUSER", 88l));
 
         expect(getMockRequest().getCookies()).andReturn(null).once();
 
@@ -93,7 +92,7 @@ public class SSOCookieManagerImplTest
                 {
                         new Cookie("CADC", "MYVALUE"),
                         new Cookie("CADC_Login",
-                                   "username=TESTUSER|token=AAABBB")
+                                   "username=TESTUSER|sessionID=88|token=AAABBB")
                 }).times(2);
 
         replay(getMockRequest());
@@ -110,7 +109,7 @@ public class SSOCookieManagerImplTest
         final Cookie mockCookie = createMock(Cookie.class);
 
         expect(mockCookie.getValue()).andReturn(
-                "username=TESTUSER|token=AAABBB").once();
+                "username=TESTUSER|sessionID=88|token=AAABBB").once();
 
         replay(getMockRequest(), mockCookie);
 
@@ -134,6 +133,8 @@ public class SSOCookieManagerImplTest
         assertTrue("Token should be AAABBB",
                    Arrays.equals("AAABBB".toCharArray(),
                                  getTestSubject().getToken()));
+        assertEquals("Session ID should be 88.", 88l,
+                     getTestSubject().getSessionID());
 
         verify(getMockRequest(), mockCookie);
     }
