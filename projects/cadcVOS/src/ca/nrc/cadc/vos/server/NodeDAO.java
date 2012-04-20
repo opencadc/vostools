@@ -911,7 +911,7 @@ public class NodeDAO
             boolean propTable = usePropertyTable(prop.getPropertyURI());
             NodeProperty cur = node.findProperty(prop.getPropertyURI());
             // Does this property exist already?
-            log.debug("updateProperties: " + prop + " vs." + cur);
+            log.debug("updateProperties: " + prop + " vs. " + cur);
 
             if (cur != null)
             {
@@ -919,22 +919,24 @@ public class NodeDAO
                 {
                     if (propTable)
                     {
-                        log.debug("doUpdateNode " + prop.getPropertyURI() + " to be deleted NodeProperty");
+                        log.debug("doUpdateNode " + prop.getPropertyURI() + " to be deleted from NodeProperty");
                         PropertyStatementCreator ppsc = new PropertyStatementCreator(nodeSchema, nodeID, prop);
                         updates.add(ppsc);
                     }
                     else
                     {
-                        log.debug("doUpdateNode " + prop.getPropertyURI() + " to be deleted in Node");
+                        log.debug("doUpdateNode " + prop.getPropertyURI() + " to be set to null in Node");
                     }
-                    node.getProperties().remove(prop);
+                    boolean rm = node.getProperties().remove(prop);
+                    log.debug("removed " + prop.getPropertyURI() + " from node: " + rm);
                 }
                 else // update
                 {
                     String currentValue = cur.getPropertyValue();
-                    log.debug("doUpdateNode " + prop.getPropertyURI() + ": " + currentValue + " != " + prop.getPropertyValue());
                     if (!currentValue.equals(prop.getPropertyValue()))
                     {
+                        log.debug("doUpdateNode " + prop.getPropertyURI() + ": "
+                                + currentValue + " != " + prop.getPropertyValue());
                         if (propTable)
                         {
                             log.debug("doUpdateNode " + prop.getPropertyURI() + " to be updated in NodeProperty");
@@ -949,7 +951,7 @@ public class NodeDAO
                     }
                     else
                     {
-                        log.debug("Not updating node property: " + prop.getPropertyURI());
+                        log.debug("Value unchanged, not updating node property: " + prop.getPropertyURI());
                     }
                 }
             }
@@ -1767,7 +1769,12 @@ public class NodeDAO
                 ps.setLong(col++, nodeID.getID());
                 ps.setString(col++, prop.getPropertyURI());
                 ps.setString(col++, prop.getPropertyValue());
-                log.debug("setValues: " + nodeID.getID() + "," + prop.getPropertyURI() + "," + prop.getPropertyValue());
+                ps.setLong(col++, nodeID.getID());
+                ps.setString(col++, prop.getPropertyURI());
+                log.debug("setValues: " + nodeID.getID() + "," 
+                        + prop.getPropertyURI() + "," + prop.getPropertyValue() + ","
+                        + nodeID.getID() + ","
+                        + prop.getPropertyURI());
             }
         }
 
@@ -1783,7 +1790,10 @@ public class NodeDAO
             StringBuilder sb = new StringBuilder();
             sb.append("INSERT INTO ");
             sb.append(ns.propertyTable);
-            sb.append(" (nodeID,propertyURI,propertyValue) VALUES (?, ?, ?)");
+            sb.append(" (nodeID,propertyURI,propertyValue) SELECT ?, ?, ?");
+            sb.append(" WHERE NOT EXISTS (SELECT * FROM ");
+            sb.append(ns.propertyTable);
+            sb.append(" WHERE nodeID=? and propertyURI=?)");
             return sb.toString();
         }
         private String getUpdateSQL()

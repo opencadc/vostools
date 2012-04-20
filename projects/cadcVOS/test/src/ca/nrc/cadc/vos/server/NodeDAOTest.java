@@ -104,6 +104,8 @@ import ca.nrc.cadc.vos.VOS;
 import ca.nrc.cadc.vos.VOSURI;
 import ca.nrc.cadc.vos.VOS.NodeBusyState;
 import ca.nrc.cadc.vos.server.NodeDAO.NodeSchema;
+import org.junit.After;
+import org.junit.Before;
 import org.springframework.jdbc.core.JdbcTemplate;
 
 
@@ -162,7 +164,7 @@ public class NodeDAOTest
             ConnectionConfig connConfig = dbConfig.getConnectionConfig(SERVER, DATABASE);
             this.dataSource = DBUtil.getDataSource(connConfig);
 
-            this.nodeSchema = new NodeSchema("Node", "NodeProperty", true, true); // TOP, writable
+            this.nodeSchema = new NodeSchema("Node", "NodeProperty", true, true); // TOP, writable file meta
 
             // cleanup from old runs
             //JdbcTemplate jdbc = new JdbcTemplate(dataSource);
@@ -170,30 +172,6 @@ public class NodeDAOTest
             //jdbc.update("DELETE FROM " + nodeSchema.nodeTable);
 
             this.nodeDAO = new NodeDAO(dataSource, nodeSchema, VOS_AUTHORITY, new X500IdentityManager(), DELETED_NODES);
-
-            ContainerNode root = (ContainerNode) nodeDAO.getPath(HOME_CONTAINER);
-            if (root == null)
-            {
-                VOSURI vos = new VOSURI(new URI("vos", VOS_AUTHORITY, "/"+HOME_CONTAINER, null, null));
-                root = new ContainerNode(vos);
-                root.getProperties().add(new NodeProperty(VOS.PROPERTY_URI_CREATOR, NODE_OWNER));
-                root = (ContainerNode) nodeDAO.put(root, owner);
-                log.debug("created base node: " + root.getUri());
-            }
-            else
-                log.debug("found base node: " + root.getUri());
-
-            ContainerNode deleted = (ContainerNode) nodeDAO.getPath(DELETED_NODES);
-            if (deleted == null)
-            {
-                VOSURI vos = new VOSURI(new URI("vos", VOS_AUTHORITY, "/" + DELETED_NODES, null, null));
-                deleted = new ContainerNode(vos);
-                deleted.getProperties().add(new NodeProperty(VOS.PROPERTY_URI_CREATOR, DELETED_OWNER));
-                deleted = (ContainerNode) nodeDAO.put(deleted, owner);
-                log.debug("created base node: " + deleted);
-            }
-            else
-                log.debug("found deleted node: " + deleted.getUri());
         }
         catch(Exception ex)
         {
@@ -201,6 +179,39 @@ public class NodeDAOTest
             log.error("SETUP FAILED", ex);
             throw ex;
         }
+    }
+
+    @Before
+    public void setup()
+        throws Exception
+    {
+        JdbcTemplate jdbc = new JdbcTemplate(dataSource);
+        jdbc.update("delete from " + nodeSchema.propertyTable);
+        jdbc.update("delete from " + nodeSchema.nodeTable);
+        
+        ContainerNode root = (ContainerNode) nodeDAO.getPath(HOME_CONTAINER);
+        if (root == null)
+        {
+            VOSURI vos = new VOSURI(new URI("vos", VOS_AUTHORITY, "/"+HOME_CONTAINER, null, null));
+            root = new ContainerNode(vos);
+            root.getProperties().add(new NodeProperty(VOS.PROPERTY_URI_CREATOR, NODE_OWNER));
+            root = (ContainerNode) nodeDAO.put(root, owner);
+            log.debug("created base node: " + root.getUri());
+        }
+        else
+            log.debug("found base node: " + root.getUri());
+
+        ContainerNode deleted = (ContainerNode) nodeDAO.getPath(DELETED_NODES);
+        if (deleted == null)
+        {
+            VOSURI vos = new VOSURI(new URI("vos", VOS_AUTHORITY, "/" + DELETED_NODES, null, null));
+            deleted = new ContainerNode(vos);
+            deleted.getProperties().add(new NodeProperty(VOS.PROPERTY_URI_CREATOR, DELETED_OWNER));
+            deleted = (ContainerNode) nodeDAO.put(deleted, owner);
+            log.debug("created base node: " + deleted);
+        }
+        else
+            log.debug("found deleted node: " + deleted.getUri());
     }
 
     private String getNodeName(String s)
@@ -524,82 +535,159 @@ public class NodeDAOTest
             // Create a node with properties
             String path = basePath + getNodeName("g");
             DataNode testNode = getCommonDataNode(path);
-            testNode.getProperties().add(new NodeProperty("uri1", "value1"));
-            testNode.getProperties().add(new NodeProperty(VOS.PROPERTY_URI_TYPE, "text/plain"));
+            testNode.getProperties().add(new NodeProperty(VOS.PROPERTY_URI_DESCRIPTION, "stuff")); // NP table
+            testNode.getProperties().add(new NodeProperty(VOS.PROPERTY_URI_TYPE, "text/plain"));   // N table
             testNode.setParent(rootContainer);
 
             // put + get + compare
             nodeDAO.put(testNode, owner);
-            DataNode nodeFromGet = (DataNode) nodeDAO.getPath(path);
-            Assert.assertNotNull(nodeFromGet);
-            nodeDAO.getProperties(nodeFromGet);
-            compareProperties("assert1", testNode.getProperties(), nodeFromGet.getProperties());
+            Node pNode = nodeDAO.getPath(path);
+            Assert.assertNotNull(pNode);
+            nodeDAO.getProperties(pNode);
+            compareProperties("assert1", testNode.getProperties(), pNode.getProperties());
 
-            // add
+            // add a property
             List<NodeProperty> props = new ArrayList<NodeProperty>();
-            props.add(new NodeProperty("uri2", "value1"));
-            props.add(new NodeProperty(VOS.PROPERTY_URI_CONTENTENCODING, "gzip"));
+            props.add(new NodeProperty("some:thing", "value1"));                   // NP table
+            props.add(new NodeProperty(VOS.PROPERTY_URI_CONTENTENCODING, "gzip")); // N table
             testNode.getProperties().addAll(props); // for comparison below
 
-            DataNode nodeFromUpdate1 = (DataNode) nodeDAO.updateProperties(nodeFromGet, props);
-            Assert.assertNotNull(nodeFromUpdate1);
-            compareProperties("assert2", testNode.getProperties(), nodeFromUpdate1.getProperties());
+            // check that return value is right
+            pNode = nodeDAO.updateProperties(pNode, props);
+            Assert.assertNotNull(pNode);
+            compareProperties("assert2", testNode.getProperties(), pNode.getProperties());
 
-            DataNode reGet1 = (DataNode) nodeDAO.getPath(path);
-            nodeDAO.getProperties(reGet1);
-            Assert.assertNotNull(reGet1);
-            compareProperties("assert3", testNode.getProperties(), reGet1.getProperties());
+            // check that persisted value is right
+            pNode = nodeDAO.getPath(path);
+            nodeDAO.getProperties(pNode);
+            Assert.assertNotNull(pNode);
+            compareProperties("assert3", testNode.getProperties(), pNode.getProperties());
 
             // replace values
-            testNode.getProperties().remove(new NodeProperty("uri1", null));
-            testNode.getProperties().add(new NodeProperty("uri1", "value2"));
+            testNode.getProperties().remove(new NodeProperty("some:thing", null));
             testNode.getProperties().remove(new NodeProperty(VOS.PROPERTY_URI_TYPE, null));
-            testNode.getProperties().add(new NodeProperty(VOS.PROPERTY_URI_TYPE, "application/pdf"));
 
-            DataNode nodeFromUpdate2 = (DataNode) nodeDAO.updateProperties(nodeFromUpdate1, testNode.getProperties());
-            Assert.assertNotNull(nodeFromUpdate2);
-            compareProperties("assert4", testNode.getProperties(), nodeFromUpdate2.getProperties());
-
-            DataNode reGet2 = (DataNode) nodeDAO.getPath(path);
-            nodeDAO.getProperties(reGet2);
-            Assert.assertNotNull(reGet2);
-            compareProperties("assert5", testNode.getProperties(), nodeFromUpdate2.getProperties());
-
-            // non-settable (note: updateProperties modified the passed in node even though it does not
-            // actually set these in the DB... in general the side-effects are a bad idea
-            List<NodeProperty> expected = new ArrayList<NodeProperty>();
-            expected.addAll(reGet2.getProperties());
             props.clear();
-            props.addAll(expected);
+            props.add(new NodeProperty("some:thing", "value2"));
+            props.add(new NodeProperty(VOS.PROPERTY_URI_TYPE, "application/pdf"));
+            testNode.getProperties().addAll(props); // for comparison
+
+            // check that return value is right
+            pNode = nodeDAO.updateProperties(pNode, testNode.getProperties());
+            Assert.assertNotNull(pNode);
+            compareProperties("assert4", testNode.getProperties(), pNode.getProperties());
+
+            // check that persisted value is right
+            pNode = nodeDAO.getPath(path);
+            nodeDAO.getProperties(pNode);
+            Assert.assertNotNull(pNode);
+            compareProperties("assert5", testNode.getProperties(), pNode.getProperties());
+
+            // test that we cannot update some read-only props
+            props.clear();
             props.add(new NodeProperty(VOS.PROPERTY_URI_CONTENTLENGTH, new Long(1024).toString()));
             props.add(new NodeProperty(VOS.PROPERTY_URI_CONTENTMD5, HexUtil.toHex(new byte[] {1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16})));
-            nodeDAO.updateProperties(reGet2, props);
-            Node same = nodeDAO.getPath(path);
-            Assert.assertNotNull(same);
-            nodeDAO.getProperties(same);
-            compareProperties("assert non-settable", expected, same.getProperties());
+            // do not add to testNode since these props cannot be updated by user
+            
+            // check that return value is right
+            pNode = nodeDAO.updateProperties(pNode, props);
+            Assert.assertNotNull(pNode);
+            compareProperties("assert6", testNode.getProperties(), pNode.getProperties());
 
-            // remove
-            props = new ArrayList<NodeProperty>();
-            NodeProperty newURI2 = new NodeProperty("uri2", "value1");
+            // check persisted value
+            pNode = nodeDAO.getPath(path);
+            Assert.assertNotNull(pNode);
+            nodeDAO.getProperties(pNode);
+            compareProperties("assert7", testNode.getProperties(), pNode.getProperties());
+
+            // remove properties
+            props.clear();
+            NodeProperty newURI2 = new NodeProperty(VOS.PROPERTY_URI_DESCRIPTION, null); // NP table
             newURI2.setMarkedForDeletion(true);
             props.add(newURI2);
-            NodeProperty newEncoding = new NodeProperty(VOS.PROPERTY_URI_CONTENTENCODING, "gzip");
+            NodeProperty newEncoding = new NodeProperty(VOS.PROPERTY_URI_CONTENTENCODING, null); // N table
             newEncoding.setMarkedForDeletion(true);
             props.add(newEncoding);
 
-            testNode.getProperties().removeAll(props); // remove from client side
+            testNode.getProperties().removeAll(props); // for future tests
 
-            DataNode nodeFromUpdate3 = (DataNode) nodeDAO.updateProperties(nodeFromUpdate2, props); // remove from server
-            Assert.assertNotNull(nodeFromUpdate3);
-            compareProperties("assert6", testNode.getProperties(), nodeFromUpdate3.getProperties());
+            // check that return value is right
+            pNode = nodeDAO.updateProperties(pNode, props);
+            Assert.assertNotNull(pNode);
+            Assert.assertNull("assert8", pNode.findProperty(VOS.PROPERTY_URI_DESCRIPTION));
+            Assert.assertNull("assert8", pNode.findProperty(VOS.PROPERTY_URI_CONTENTENCODING));
 
-            DataNode reGet3 = (DataNode) nodeDAO.getPath(path);
-            nodeDAO.getProperties(reGet3);
-            Assert.assertNotNull(reGet3);
-            compareProperties("assert7", testNode.getProperties(), reGet3.getProperties());
+            // check persisted value
+            pNode = nodeDAO.getPath(path);
+            Assert.assertNotNull(pNode);
+            nodeDAO.getProperties(pNode);
+            Assert.assertNull("assert9", pNode.findProperty(VOS.PROPERTY_URI_DESCRIPTION));
+            Assert.assertNull("assert9", pNode.findProperty(VOS.PROPERTY_URI_CONTENTENCODING));
 
-            nodeDAO.delete(nodeFromGet, 10, false); // cleanup
+            log.debug("** test client adding props with duplicate in list **");
+            props.clear();
+            props.add(new NodeProperty(VOS.PROPERTY_URI_DESCRIPTION, "desc1"));
+            props.add(new NodeProperty(VOS.PROPERTY_URI_DESCRIPTION, "desc1"));
+            props.add(new NodeProperty(VOS.PROPERTY_URI_DESCRIPTION, "desc2"));
+            props.add(new NodeProperty(VOS.PROPERTY_URI_DESCRIPTION, "desc2"));
+            props.add(new NodeProperty(VOS.PROPERTY_URI_DESCRIPTION, "desc1"));
+            props.add(new NodeProperty(VOS.PROPERTY_URI_DESCRIPTION, "desc2"));
+
+            // expect the last one to win since we use List
+            testNode.getProperties().add(new NodeProperty(VOS.PROPERTY_URI_DESCRIPTION, "desc2"));
+            
+            // check that return value is right
+            pNode = nodeDAO.updateProperties(pNode, props);
+            Assert.assertNotNull(pNode);
+            compareProperties("assert10", testNode.getProperties(), pNode.getProperties());
+
+            // check persisted value
+            pNode = nodeDAO.getPath(path);
+            Assert.assertNotNull(pNode);
+            nodeDAO.getProperties(pNode);
+            compareProperties("assert11", testNode.getProperties(), pNode.getProperties());
+
+            log.debug("** test client updating existing properties with duplicates in list **");
+            // check that return value is right
+            pNode = nodeDAO.updateProperties(pNode, props);
+            Assert.assertNotNull(pNode);
+            compareProperties("assert12", testNode.getProperties(), pNode.getProperties());
+
+            pNode = nodeDAO.getPath(path);
+            Assert.assertNotNull(pNode);
+            nodeDAO.getProperties(pNode);
+            compareProperties("assert13", testNode.getProperties(), pNode.getProperties());
+
+            log.debug("** test race condition on two clients adding the same new property **");
+            props.clear();
+            props.add(new NodeProperty(VOS.PROPERTY_URI_TITLE, "My Stuff"));
+            testNode.getProperties().add(new NodeProperty(VOS.PROPERTY_URI_TITLE, "My Stuff"));
+
+            // now interleave the gets and upates
+            Node pNode1 = nodeDAO.getPath(path);
+            Assert.assertNotNull(pNode1);
+            nodeDAO.getProperties(pNode1);
+            
+            Node pNode2 = nodeDAO.getPath(path);
+            Assert.assertNotNull(pNode2);
+            nodeDAO.getProperties(pNode2);
+
+            // update and check return values
+            pNode1 = nodeDAO.updateProperties(pNode1, props);
+            Assert.assertNotNull(pNode1);
+            compareProperties("assert14", testNode.getProperties(), pNode1.getProperties());
+            
+            pNode2 = nodeDAO.updateProperties(pNode2, props);
+            Assert.assertNotNull(pNode2);
+            compareProperties("assert15", testNode.getProperties(), pNode2.getProperties());
+
+            // check persisted value
+            pNode = nodeDAO.getPath(path);
+            Assert.assertNotNull(pNode);
+            nodeDAO.getProperties(pNode);
+            compareProperties("assert16", testNode.getProperties(), pNode.getProperties());
+            
+            nodeDAO.delete(pNode, 10, false); // cleanup
             assertRecursiveDelete();
         }
         catch(Exception unexpected)
@@ -1724,11 +1812,11 @@ public class NodeDAOTest
         Subject subject = ((NodeID)b.appData).getOwner();
         Assert.assertNotNull(assertName+  " owner", owner);
         Principal xp = null;
-        for (Principal principal : subject.getPrincipals())
+        for (Principal p : subject.getPrincipals())
         {
-            if (principal instanceof X500Principal)
+            if (p instanceof X500Principal)
             {
-                xp = principal;
+                xp = p;
                 break;
             }
         }
@@ -1742,10 +1830,9 @@ public class NodeDAOTest
             log.debug(assertName+".expected: " + np);
         for (NodeProperty np : actual)
             log.debug(assertName+".actual: " + np);
-        boolean match = true;
         for (NodeProperty e : expected)
         {
-            boolean found = false;
+            int found = 0;
             for (NodeProperty a : actual)
             {
                 if ( e.getPropertyURI().equals(a.getPropertyURI()))
@@ -1762,10 +1849,19 @@ public class NodeDAOTest
                         Assert.assertNotNull("date prop", a.getPropertyValue());
                     else
                         Assert.assertEquals(e.getPropertyURI(), e.getPropertyValue(), a.getPropertyValue());
-                    found = true;
+                    found++;
                 }
             }
-            Assert.assertTrue("found "+e.getPropertyURI(), found);
+            Assert.assertEquals(assertName + ": " + e.getPropertyURI() + "=" + e.getPropertyValue(), 1, found);
+        }
+        // look for duplicates in actual
+        for (NodeProperty a1 : actual)
+        {
+            int found = 0;
+            for (NodeProperty a2 : actual)
+                if ( a1.getPropertyURI().equals(a2.getPropertyURI()))
+                    found++;
+            Assert.assertEquals(assertName + " duplciates: " + a1.getPropertyURI(), 1, found);
         }
     }
 
