@@ -120,10 +120,11 @@
     <property name="cglib"              value="${ext.lib}/cglib.jar" />
     <property name="commons-logging"    value="${ext.lib}/commons-logging.jar" />
     <property name="easyMock"           value="${ext.dev}/easymock.jar" />
+    <property name="easyMock"           value="${ext.dev}/easymock.jar" />
     <property name="junit"              value="${ext.dev}/junit.jar" />
     <property name="xerces"             value="${ext.lib}/xerces.jar" />
 
-    <property name="testingJars"        value="${test.jdbc.drivers}:${asm}:${asm-attrs}:${cglib}:${commons-logging}:${easymock}:${junit}:${xerces}" />
+    <property name="testingJars"        value="${test.jdbc.drivers}:${asm}:${asm-attrs}:${cglib}:${commons-logging}:${easyMock}:${ext.dev}/objenesis.jar:${junit}:${xerces}" />
     
     <target name="test" depends="xml-test,dao-test">
         <junit printsummary="yes" haltonfailure="yes" fork="yes">
@@ -135,6 +136,7 @@
             </classpath>
 
             <test name="ca.nrc.cadc.uws.server.RandomStringGeneratorTest" />
+            <test name="ca.nrc.cadc.uws.web.restlet.RestletPrincipalExtractorTest" />
             <test name="ca.nrc.cadc.uws.web.ResourceTestSuite" />
 
             <formatter type="plain" usefile="false" />

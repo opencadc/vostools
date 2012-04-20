@@ -77,7 +77,8 @@ import java.util.Map;
 
 import javax.security.auth.Subject;
 
-import ca.nrc.cadc.uws.web.SSORestletCookieManagerImpl;
+import ca.nrc.cadc.auth.X509CertificateChain;
+import ca.nrc.cadc.uws.web.restlet.RestletPrincipalExtractor;
 import org.apache.log4j.Logger;
 import org.jdom.Document;
 import org.restlet.Request;
@@ -123,18 +124,26 @@ public abstract class UWSResource extends ServerResource
         super.doInit();
 
         // Create a subject for authentication
-        Request request = getRequest();
+        final Request request = getRequest();
         Map<String, Object> requestAttributes = request.getAttributes();
 
         @SuppressWarnings("unchecked")
-        Collection<X509Certificate> certs =
+        final Collection<X509Certificate> certs =
                 (Collection<X509Certificate>) requestAttributes.get(
                         CERTIFICATE_REQUEST_ATTRIBUTE_NAME);
+        final X509CertificateChain x509CertificateChain;
 
-        this.subject =
-                AuthenticationUtil.getSubject(null, certs,
-                                              new SSORestletCookieManagerImpl(
-                                                      request));
+        if ((certs != null) && !certs.isEmpty())
+        {
+            x509CertificateChain = new X509CertificateChain(certs);
+        }
+        else
+        {
+            x509CertificateChain = null;
+        }
+
+        this.subject = AuthenticationUtil.getSubject(x509CertificateChain,
+                                                     new RestletPrincipalExtractor(request));
         LOGGER.debug(subject);
     }
 
@@ -151,14 +160,14 @@ public abstract class UWSResource extends ServerResource
         {
             Document document = new Document();
             buildXML(document);
-            JDOMRepresentation representation = new JDOMRepresentation(MediaType.TEXT_XML, document);
-            return representation;
+            return new JDOMRepresentation(MediaType.TEXT_XML, document);
         }
         catch (final IOException e)
         {
             setExisting(false);
             LOGGER.error("Unable to create XML Document.");
-            throw new WebRepresentationException("Unable to create XML Document.", e);
+            throw new WebRepresentationException(
+                    "Unable to create XML Document.", e);
         }
 
     }
@@ -318,8 +327,7 @@ public abstract class UWSResource extends ServerResource
      */
     protected String getRemoteIP()
     {
-        String ip = getRequest().getClientInfo().getAddress();
-        return ip;
+        return getRequest().getClientInfo().getAddress();
     }
 
     /**
