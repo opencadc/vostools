@@ -70,8 +70,9 @@ public class CookiePrincipal implements Principal, Serializable
     @Override
     public String getName()
     {
-        return getUsername() + "|" + (ArrayUtil.isEmpty(getToken())
-                                      ? null : Arrays.toString(getToken()));
+        return getUsername() + "|" + getSessionID()
+               + "|" + (ArrayUtil.isEmpty(getToken())
+                        ? null : Arrays.toString(getToken()));
     }
 
     public String getUsername()

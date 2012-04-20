@@ -192,7 +192,10 @@ public class AuthenticationUtil
         final Set<Object> publicCred = new HashSet<Object>();
         final Set<Object> privateCred = new HashSet<Object>();
 
-        publicCred.add(chain);
+        if (chain != null)
+        {
+            publicCred.add(chain);
+        }
 
         return new Subject(false, principalExtractor.getPrincipals(),
                            publicCred, privateCred);

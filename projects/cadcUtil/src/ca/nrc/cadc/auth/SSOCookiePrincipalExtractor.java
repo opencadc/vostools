@@ -84,8 +84,7 @@ public class SSOCookiePrincipalExtractor implements PrincipalExtractor
 
         if (cookiePrincipal != null)
         {
-            cookiePrincipal.setSessionID(getSessionID());
-            principalSet.add(createCookiePrincipal());
+            principalSet.add(cookiePrincipal);
         }
 
         return Collections.unmodifiableSet(principalSet);
@@ -104,6 +103,7 @@ public class SSOCookiePrincipalExtractor implements PrincipalExtractor
             && !ArrayUtil.isEmpty(getToken()))
         {
             cookiePrincipal = new CookiePrincipal(getUsername(), getToken());
+            cookiePrincipal.setSessionID(getSessionID());
         }
         else
         {
