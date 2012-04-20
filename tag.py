@@ -25,38 +25,54 @@ if __name__=='__main__':
     
     parser=argparse.ArgumentParser(description="List the tags on a file")
 
-    parser.add_argument("--certfile",help="location of your CADC security certificate file",default=os.path.join(os.getenv("HOME","."),".ssl/cadcproxy.pem"))
-                      
+    parser.add_argument("--certfile",help="location of your CADC security certificate file",default=os.path.join(os.getenv("HOME","."),".ssl/cadcproxy.pem"))                      
     parser.add_argument("node",action='store',help="The VOSpace node with the tag")
-    parser.add_argument("key",action='store',help="The keyword for this tag",default=None,nargs='?')
-    parser.add_argument("value",action='store',help="Value to assign",default=None,nargs='?')
+    parser.add_argument("key_value",action='store',help="The keyword for this tag",default=None,nargs='*',metavar="key [value]")
+    #parser.add_argument("value",action='store',help="Value to assign",default=None,nargs='*')
                       
     opt=parser.parse_args()
 
+
+
+    if len(opt.key_value) % 2 != 0 and len(opt.key_value) > 1:
+        parser.print_help()
+        sys.stderr.write("\n\nRequire either just one key to look-up or a set of  key/value pairs\n\n")
+        sys.exit(-1)
+
+
     logLevel=logging.INFO
-                      
     logging.basicConfig(level=logLevel,
                         format="%(asctime)s - %(module)s.%(funcName)s: %(message)s")
 
+
+    while True:
     
-    try:
+      try:
         client=vos.Client(certFile=opt.certfile)
-    except Exception as e:
-        logging.error("Conneciton failed:  %s" %  (str(e)))
-        sys.exit(e.errno)
+        node=client.getNode(opt.node)
 
-    import ssl
-
-    node=client.getNode(opt.node)
-    if opt.key is None:
-        for key in node.props:
-            if key not in ['date','MD5','type','length','ispublic','quota','creator','readgroup','writegroup']:
-                print "%s -> %s" %(key,node.props[key])
-    elif opt.value is None:
-        print node.props[opt.key]
-    else:
-        node.changeProp(opt.key,opt.value)
-        client.update(node)
-        print client.getNode(opt.node).props[opt.key]
-        
+        if len(opt.key_value) == 0:
+            for key in node.props:
+                if key not in ['date','MD5','type','length','ispublic','quota','creator','readgroup','writegroup']:
+                    print "%s -> %s" %(key,node.props[key])
+        elif len(opt.key_value) == 1:
+            print node.props.get(opt.key_value.pop(),"")
+        else:
+            ### Delete all properties that have name 'key'
+            for i in range(0,len(opt.key_value),2):
+                key=opt.key_value[i]
+                if key in node.props:
+                    changed=node.changeProp(key,None)
+            client.addProps(node)
+            node=client.getNode(opt.node)
+            logging.debug(str(node))
+            ### Insert all properties
+            for i in range(0,len(opt.key_value),2):
+                node.props[opt.key_value[i]]=opt.key_value[i+1]
+            logging.debug("Calling AddPROPS with "+str(node))
+            client.addProps(node)
+        break
+      except Exception as e:
+        sys.stderr.write(str(e))
+        sys.exit(-1)
     sys.exit(0)
