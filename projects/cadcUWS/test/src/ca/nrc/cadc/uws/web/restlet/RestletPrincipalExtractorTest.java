@@ -43,7 +43,9 @@ import org.restlet.util.Series;
 
 import javax.security.auth.x500.X500Principal;
 import java.security.cert.X509Certificate;
+import java.util.ArrayList;
 import java.util.Calendar;
+import java.util.Collection;
 import java.util.Date;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
@@ -194,11 +196,10 @@ public class RestletPrincipalExtractorTest
         final X509Certificate mockCertificate =
                 createMock(X509Certificate.class);
 
-        final X509Certificate[] certificates1 =
-                new X509Certificate[]
-                        {
-                                mockCertificate
-                        };
+        final Collection<X509Certificate> certificates1 =
+                new ArrayList<X509Certificate>();
+
+        certificates1.add(mockCertificate);
 
         attributes.put("org.restlet.https.clientCertificates", certificates1);
         expect(getMockRequest().getAttributes()).andReturn(attributes).once();

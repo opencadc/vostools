@@ -45,6 +45,7 @@ import org.restlet.data.Cookie;
 
 import java.security.Principal;
 import java.security.cert.X509Certificate;
+import java.util.Collection;
 import java.util.Collections;
 import java.util.HashSet;
 import java.util.Set;
@@ -129,14 +130,16 @@ public class RestletPrincipalExtractor implements PrincipalExtractor
      */
     protected void addX500Principal()
     {
-        final X509Certificate[] requestCertificates =
-                (X509Certificate[]) getRequest().getAttributes().get(
+        @SuppressWarnings("unchecked")
+        final Collection<X509Certificate> requestCertificates =
+                (Collection<X509Certificate>) getRequest().getAttributes().get(
                         "org.restlet.https.clientCertificates");
 
-        if (!ArrayUtil.isEmpty(requestCertificates))
+        if ((requestCertificates != null) && (!requestCertificates.isEmpty()))
         {
             final X500PrincipalExtractor x500PrincipalExtractor =
-                    new X500PrincipalExtractor(requestCertificates);
+                    new X500PrincipalExtractor(requestCertificates.toArray(
+                            new X509Certificate[requestCertificates.size()]));
 
             principals.addAll(x500PrincipalExtractor.getPrincipals());
         }
