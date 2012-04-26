@@ -236,7 +236,7 @@ class VOFS(LoggingMixIn, Operations):
                 logging.error("Failed during VOSpace copy, retrying")
             finally:                
                 w.close()
-            if md5.hexdigest()==self.getNode(path,force=True).props.get('MD5',0):
+            if md5.hexdigest()==self.getNode(path,force=True).props.get('MD5','d41d8cd98f00b204e9800998ecf8427e'):
                 success=True
             elif loopCount > 3:
                 raise FuseOSError(EIO)
@@ -440,7 +440,7 @@ class VOFS(LoggingMixIn, Operations):
         cursor.close()
         sqlConn.close()
 
-        if md5Row['md5']==self.getNode(path).props.get('MD5',0):
+        if md5Row['md5']==self.getNode(path).props.get('MD5','d41d8cd98f00b204e9800998ecf8427e'):
             cached=True
         else:
             os.unlink(fname)
@@ -494,7 +494,7 @@ class VOFS(LoggingMixIn, Operations):
                     logging.debug(str(e))
                 finally :
                     r.close()
-                if md5.hexdigest()==self.getNode(path).props.get('MD5',0):
+                if md5.hexdigest()==self.getNode(path).props.get('MD5','d41d8cd98f00b204e9800998ecf8427e'):
                     success=True
                 elif loopCount > 3 :
                     raise FuseOSError(EIO)
@@ -547,7 +547,7 @@ class VOFS(LoggingMixIn, Operations):
         logging.debug("node %s currently open with mode %s, releasing" % ( path, mode))
         if mode & ( os.O_RDWR | os.O_WRONLY | os.O_APPEND | os.O_CREAT ) and os.stat(self.fh[fh]['name']).st_mtime > self.getattr(path)['st_mtime']:
             self.flushnode(path,fh)
-            self.update_md5_db(self.fh[fh]['name'],self.getNode(path,force=True).props.get('MD5',0))
+            self.update_md5_db(self.fh[fh]['name'],self.getNode(path,force=True).props.get('MD5','d41d8cd98f00b204e9800998ecf8427e'))
         ## remove references to this file handle.
         self.fh.pop(fh,None)
         self.fh.pop(path,None)

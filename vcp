@@ -35,7 +35,7 @@ def mkdir(filename):
 def getMD5(filename):
     logging.debug("getting the MD5")
     if filename[0:4]=='vos:':
-        md5=client.getNode(filename).props.get('MD5',0)
+        md5=client.getNode(filename).props.get('MD5','d41d8cd98f00b204e9800998ecf8427e')
     else:
         import hashlib
         md5=hashlib.md5()
@@ -138,7 +138,7 @@ if __name__=='__main__':
     else:
         logLevel=logging.ERROR
         
-    logging.basicConfig(level=logLevel,format="%(asctime)s - %(module)s.%(funcName)s: %(message)s")
+    logging.basicConfig(level=logLevel,format="%(asctime)s - %(module)s.%(funcName)s %(lineno)d: %(message)s")
 
     
     try:

@@ -426,6 +426,7 @@ class Node:
 
     def isdir(self):
         """Check if target is a container Node"""
+        logging.debug(self.type)
         if self.type=="vos:ContainerNode":
             return True
         return False
@@ -456,11 +457,12 @@ class Node:
         readGroup = self.props.get('groupread','NONE')
         if readGroup != 'NONE':
             perm[4]='r'
+        logging.debug("%s: %s" %( self.name,self.props))
         return {"permisions": string.join(perm,''),
                 "creator": creator,
                 "readGroup": readGroup,
                 "writeGroup": writeGroup,
-                "size": float(self.props['length']),
+                "size": float(self.props.get('length',0)),
                 "date": date}
 
     def getNodeList(self):
@@ -514,29 +516,42 @@ class VOFile:
         self.httpCon=None
         self.timeout=-1
         self.size=size
+	self.name=os.path.basename(URL)
+        self._fpos=0
         self.open(URL,method)
         
+    def tell(self):
+	return self._fpos
 
+    def seek(self,offset,loc=os.SEEK_SET):
+	if loc == os.SEEK_CUR:
+	   self._fpos += offset
+        elif loc == os.SEEK_SET:
+	   self._fpos = offset
+        elif loc == os.SEEK_END:
+	   self._fpos = self.size-offset
+	return 
         
-    def close(self):
+    def close(self,code=(200, 201, 202, 206, 302, 303, 503)):
         """close the connection"""
+        logging.debug("inside the close")
         if self.closed:
             return
         logging.debug("Closing connection")
         try:
-           self.httpCon.send('0\r\n\r\n')
-           self.resp=self.httpCon.getresponse()
-           self.httpCon.close()
+            self.httpCon.send('0\r\n\r\n')
+            self.resp=self.httpCon.getresponse()
+            self.httpCon.close()
         except Exception as e:
-           logging.error("%s \n" %  str(e))
+            logging.error("%s \n" %  str(e))
         self.closed=True
         logging.debug("Connection closed")
-        return self.checkstatus()
+        return self.checkstatus(codes=code)
 
-    def checkstatus(self):
+    def checkstatus(self, codes=(200, 201, 202, 206, 302, 303, 503, 416)):
         """check the response status"""
         logging.debug("status %d for URL %s" % ( self.resp.status,self.url))
-        if self.resp.status not in (200, 201, 202, 302, 303, 503):
+        if self.resp.status not in codes:
             if self.resp.status == 404:
                 ### file not found
                 raise IOError(errno.ENOENT,"Node not found",self.url)
@@ -544,14 +559,16 @@ class VOFile:
                 raise IOError(errno.EACCES,"Not authorized",self.url)
             logging.debug(self.resp.read())
             raise IOError(self.resp.status,"unexpected server response %s (%d)" % ( self.resp.reason, self.resp.status),self.url)
+        self.size=self.resp.getheader("Content-Length",0)
         return True
 
-    def open(self,URL,method):
+    def open(self,URL,method="GET", bytes=None):
         """Open a connection to the given URL"""
         import ssl,httplib, sys, mimetypes
         logging.debug("Opening %s (%s)" % (URL, method))
         self.url=URL
         self.httpCon = self.connector.getConnection(URL)
+        #self.httpCon.set_debuglevel(2)
         self.closed=False
         logging.debug("putting request")
         self.httpCon.putrequest(method,URL)
@@ -566,6 +583,9 @@ class VOFile:
             if method=="PUT":
                 contentType=mimetypes.guess_type(URL)[0]
             self.httpCon.putheader("Content-Type",contentType)
+        if bytes is not None and method=="GET" :
+            logging.debug("Range: %s" %(bytes))
+            self.httpCon.putheader("Range",bytes)
         self.httpCon.putheader("Transfer-Encoding",'chunked')
         self.httpCon.putheader("Accept", "*/*")
         self.httpCon.endheaders()
@@ -574,13 +594,29 @@ class VOFile:
 
     def read(self,size=None):
         """return size bytes from the connection response"""
+	logging.debug("Starting to read file")
         if not self.closed:
             self.close()
+        bytes=None
+        #if size != None:
+        #    bytes = "bytes=%d-" % ( self._fpos)
+        #    bytes = "%s%d" % (bytes,self._fpos+size)
+        #self.open(self.url,bytes=bytes,method="GET")
+        #self.close(code=[200,206,303,302,503,404,416])
+        if self.resp.status == 416:
+            return ""
         # check the most likely response first
         if self.resp.status == 200:
-            return self.resp.read(size)
+            buff=self.resp.read(size)
+            logging.debug(buff)
+            return buff
+        if self.resp.status == 206:
+            buff=self.resp.read(size)
+            self._fpos += len(buff)
+            logging.debug("left file pointer at: %d" %(self._fpos))
+            return buff
         elif self.resp.status == 404:
-            return None
+            raise IOError(errno.ENFILE)
         elif self.resp.status == 303 or self.resp.status == 302:
             URL = self.resp.getheader('Location',None)
             if not URL:
@@ -600,7 +636,7 @@ class VOFile:
             return self.read(size)
         # line below can be removed after we are sure all codes
         # are caught
-        return self.resp.read(size)
+        raise IOError(self.resp.status,"unexpected server response %s (%d)" % ( self.resp.reason, self.resp.status),self.url)
 
 
     def write(self,buf):
@@ -666,9 +702,9 @@ class Client:
         fin.close()
 
         if checkSource:
-            checkMD5=self.getNode(src).props.get('MD5',0)
+            checkMD5=self.getNode(src).props.get('MD5','d41d8cd98f00b204e9800998ecf8427e')
         else:
-            checkMD5=self.getNode(dest).props.get('MD5',0)
+            checkMD5=self.getNode(dest).props.get('MD5','d41d8cd98f00b204e9800998ecf8427e')
         
         if sendMD5:
             if checkMD5 != md5.hexdigest():
@@ -788,6 +824,10 @@ class Client:
                     
     def open(self, uri, mode=os.O_RDONLY, view=None, head=False, URL=None, limit=None, nextURI=None,size=None):
         """Connect to the uri as a VOFile object"""
+	
+	### sometimes this is called with mode from ['w', 'r']
+	if type(mode)==str:
+	   mode=os.O_RDONLY
 
         # the URL of the connection depends if we are 'getting', 'putting' or 'posting'  data
         method=None
@@ -879,29 +919,32 @@ class Client:
 
     def isdir(self,uri):
         """Check to see if this given uri points at a containerNode."""
-        return self.status(uri,code=[400])
+	try:
+	    return self.getNode(uri,limit=0).isdir()
+	except:
+	    return False
 
     def isfile(self,uri):
-        return self.status(uri,code=[200,303,302])
+        try:
+	    return self.status(uri)
+	except:
+	    return False
 
     def access(self,uri,mode=os.O_RDONLY):
         """Test for existance"""
-        return not self.status(uri,code=[404])
-
+	try:
+            return self.status(uri)
+        except Exception as e:
+	    if e.errno == errno.ENOENT:
+		return False
+	    else:
+	       raise e
 
     def status(self,uri,code=[200,303,302]):
         """Check to see if this given uri points at a containerNode.
 
         This is done by checking the view=data header and seeing if you get an error.
         """
-        while True:
-            file=self.open(uri,view='data',head=True)
-            res=file.httpCon.getresponse()
-            file.httpCon.close()
-            if res.status != 503:
-                break
-        if res.status in code:
-            return True
-        return False
+        return self.open(uri,view='data',head=True).close(code=code)
         
 
