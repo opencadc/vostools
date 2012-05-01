@@ -179,7 +179,7 @@ public class HelloWorld implements JobRunner
                 log.debug(job.getID() + ": QUEUED -> EXECUTING [FAILED] -- DONE");
                 return;
             }
-            log.debug(job.getID() + ": QUEUED -> EXECUTING [OK]");
+            log.info(job.getID() + ": QUEUED -> EXECUTING [OK]");
 
             String passValue = null;
             String streamValue = null;
@@ -285,9 +285,9 @@ public class HelloWorld implements JobRunner
                 }
             }
             if (expected.equals(ep))
-                log.debug(job.getID() + ": EXECUTING -> "+ expected.name() + " [OK]");
+                log.info(job.getID() + ": EXECUTING -> "+ expected.name() + " [OK]");
             else
-                log.debug(job.getID() + ": EXECUTING -> "+ expected.name() + " [FAILED]");
+                log.info(job.getID() + ": EXECUTING -> "+ expected.name() + " [FAILED]");
 		}
         //catch(JobNotFoundException ex) { } // either a bug or someone deleted the job after executing it
         //catch(JobPersistenceException ex) { } // back end persistence is failing

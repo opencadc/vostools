@@ -74,7 +74,8 @@
     "http://java.sun.com/j2ee/dtds/web-app_2_2.dtd">
 
 <web-app>
-
+    <display-name>cadcSampleUWS</display-name>
+    
     <welcome-file-list>index.jsp</welcome-file-list>
 
      <servlet>

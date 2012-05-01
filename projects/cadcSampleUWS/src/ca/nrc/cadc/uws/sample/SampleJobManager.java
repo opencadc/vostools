@@ -2,10 +2,9 @@
 package ca.nrc.cadc.uws.sample;
 
 import ca.nrc.cadc.uws.server.JobExecutor;
-import ca.nrc.cadc.uws.server.JobPersistence;
 import ca.nrc.cadc.uws.server.MemoryJobPersistence;
-import ca.nrc.cadc.uws.server.ThreadExecutor;
 import ca.nrc.cadc.uws.server.SimpleJobManager;
+import ca.nrc.cadc.uws.server.ThreadPoolExecutor;
 import org.apache.log4j.Logger;
 
 /**
@@ -26,7 +25,13 @@ public class SampleJobManager extends SimpleJobManager
     {
         super();
         MemoryJobPersistence jobPersist = new MemoryJobPersistence();
-        JobExecutor jobExec = new ThreadExecutor(jobPersist, HelloWorld.class);
+
+        // this implementation spawns a new thread for every job:
+        //JobExecutor jobExec = new ThreadExecutor(jobPersist, HelloWorld.class);
+
+        // this implementation uses a thread pool (with 2 threads)
+        JobExecutor jobExec = new ThreadPoolExecutor(jobPersist, HelloWorld.class, 2);
+
         super.setJobPersistence(jobPersist);
         super.setJobExecutor(jobExec);
     }
