@@ -69,9 +69,7 @@
 
 package ca.nrc.cadc.uws.server;
 
-import ca.nrc.cadc.uws.ExecutionPhase;
 import ca.nrc.cadc.uws.Job;
-import java.util.Date;
 import java.util.HashMap;
 import java.util.Map;
 import org.apache.log4j.Logger;
@@ -84,16 +82,14 @@ import org.apache.log4j.Logger;
  *
  * @author pdowler
  */
-public class ThreadExecutor implements JobExecutor
+public class ThreadExecutor extends AbstractExecutor
 {
     private static final Logger log = Logger.getLogger(ThreadExecutor.class);
 
-    protected JobUpdater jobUpdater;
-    protected Class<JobRunner> jobRunnerClass;
     private final Map<String,Thread> currentJobs = new HashMap<String,Thread>();
-
-    public ThreadExecutor() { }
-
+    private String threadBaseName;
+    private int num = 0;
+    
     /**
      * Constructor when using constructor dependency injection.
      *
@@ -102,108 +98,49 @@ public class ThreadExecutor implements JobExecutor
      */
     public ThreadExecutor(JobUpdater jobUpdater, Class jobRunnerClass)
     {
-        this.jobUpdater = jobUpdater;
-        this.jobRunnerClass = jobRunnerClass;
+        this(jobUpdater, jobRunnerClass, ThreadExecutor.class.getSimpleName());
     }
 
-    public void setJobUpdater(JobUpdater jobUpdater)
+    /**
+     * Constructor when using constructor dependency injection.
+     *
+     * @param jobUpdater
+     * @param jobRunnerClass
+     * @param threadBaseName base name for spawned threads
+     */
+    public ThreadExecutor(JobUpdater jobUpdater, Class jobRunnerClass, String threadBaseName)
     {
-        this.jobUpdater = jobUpdater;
+        super(jobUpdater, jobRunnerClass);
+        if (threadBaseName == null)
+            throw new IllegalArgumentException("threadBaseName cannot be null");
+        this.threadBaseName = threadBaseName + "-";
     }
 
-    public void setJobRunnerClass(Class<JobRunner> jobRunnerClass)
+    /**
+     * Abort the job. This implementation finds the job thread and if found,
+     * calls the interrupt() method. Subclasses should override this if they have
+     * also overriden syncExecute or asyncExecute.
+     * 
+     * @param jobID
+     */
+    protected void abortJob(String jobID)
     {
-        this.jobRunnerClass = jobRunnerClass;
-    }
-
-    public void execute(Job job)
-        throws JobNotFoundException, JobPersistenceException, JobPhaseException
-    {
-        execute(job, null);
-    }
-
-    public void execute(Job job, SyncOutput sync)
-        throws JobNotFoundException, JobPersistenceException, JobPhaseException
-    {
-        if (job == null)
-            throw new IllegalArgumentException("BUG: Job cannot be null");
-        log.debug("execute: " + job.getID() + " sync=" + (sync != null));
-        log.debug(job.getID() + ": PENDING -> QUEUED");
-        ExecutionPhase ep = jobUpdater.setPhase(job.getID(), ExecutionPhase.PENDING, ExecutionPhase.QUEUED);
-        if (!ExecutionPhase.QUEUED.equals(ep))
-        {
-            ExecutionPhase actual = jobUpdater.getPhase(job.getID());
-            log.debug(job.getID() + ": PENDING -> QUEUED [FAILED] -- was " + actual);
-            throw new JobPhaseException("cannot execute job " + job.getID() + " when phase = " + actual);
-        }
-        job.setExecutionPhase(ep);
-        log.debug(job.getID() + ": PENDING -> QUEUED [OK]");
-
-        try
-        {
-            log.debug(job.getID() + ": creating " + jobRunnerClass.getName());
-            final JobRunner jobRunner = jobRunnerClass.newInstance();
-            jobRunner.setJobUpdater(jobUpdater);
-            jobRunner.setJob(job);
-            jobRunner.setSyncOutput(sync);
-            
-            if (sync != null)
-            {
-                executeSync(jobRunner);
-            }
-            else
-            {
-                executeAsync(job.getID(), jobRunner);
-            }
-        }
-        catch(InstantiationException ex)
-        {
-            throw new RuntimeException("configuration error: failed to load " + jobRunnerClass.getName(), ex);
-        }
-        catch(IllegalAccessException ex)
-        {
-            throw new RuntimeException("configuration error: failed to load " + jobRunnerClass.getName(), ex);
-        }
-        finally
-        {
-
-        }
-    }
-
-    public void abort(Job job)
-        throws JobNotFoundException, JobPersistenceException, JobPhaseException
-    {
-        log.debug("abort: " + job.getID());
-        // can plausibly go from PENDING, QUEUED, EXECUTING -> ABORTED
-        ExecutionPhase ep = jobUpdater.setPhase(job.getID(), ExecutionPhase.EXECUTING, ExecutionPhase.ABORTED, new Date());
-        if (!ExecutionPhase.ABORTED.equals(ep))
-        {
-            ep = jobUpdater.setPhase(job.getID(), ExecutionPhase.QUEUED, ExecutionPhase.ABORTED, new Date());
-            if (!ExecutionPhase.ABORTED.equals(ep))
-            {
-                ep = jobUpdater.setPhase(job.getID(), ExecutionPhase.PENDING, ExecutionPhase.ABORTED, new Date());
-            }
-        }
-        job.setExecutionPhase(ep);
-        
         synchronized(currentJobs)
         {
-            Thread t = currentJobs.get(job.getID());
-            if (t != null)
-            {
-                if  (t.isAlive())
-                    t.interrupt();
-                currentJobs.remove(job.getID());
-            }
+            Thread t = currentJobs.remove(jobID);
+            if (t != null && t.isAlive())
+                t.interrupt();
         }
     }
 
-    private void executeSync(JobRunner jobRunner)
-    {
-        jobRunner.run();
-    }
-    
-    private void executeAsync(final String jobID, final JobRunner jobRunner)
+    /**
+     * Execute the job asynchronously. This method spawns a new thread for every job.
+     * The thread is marked as a daemon thread so it will not block application shutdown.
+     * 
+     * @param job
+     * @param jobRunner
+     */
+    protected void executeAsync(final Job job, final JobRunner jobRunner)
     {
         Runnable r = new Runnable()
         {
@@ -212,18 +149,18 @@ public class ThreadExecutor implements JobExecutor
                 jobRunner.run();
                 synchronized(currentJobs)
                 {
-                    currentJobs.remove(jobID);
+                    currentJobs.remove(job.getID());
                 }
-
             }
         };
         
         Thread t = new Thread(r);
+        t.setName(threadBaseName + Integer.toString(num++));
         t.setDaemon(true); // so the thread will not block application shutdown
         t.start();
         synchronized(currentJobs)
         {
-            currentJobs.put(jobID, t);
+            currentJobs.put(job.getID(), t);
         }
     }
 }
