@@ -111,7 +111,7 @@ public abstract class AbstractUWSTest
     private static SAXBuilder parser;
     private static SAXBuilder validatingParser;
 
-    protected static final int REQUEST_TIMEOUT = 30;
+    protected static final int REQUEST_TIMEOUT = 300; // 5 minutes
     protected static String serviceUrl;
     protected static String serviceSchema;
     protected static Level level;
@@ -334,10 +334,17 @@ public abstract class AbstractUWSTest
 
         log.debug(Util.getResponseHeaders(response));
 
+        int numRedir = 0;
         int rcode = response.getResponseCode();
-        log.debug("Response code: " + rcode);
-        if (rcode != 200 && rcode != 204)
-            Assert.fail(String.format("GET %s, Response code is expected to be 200 or 204, but %s", resourceUrl, rcode));
+        while (rcode == 302 || rcode == 303)
+        {
+            log.debug("Response code: " + rcode);
+            String loc = response.getHeaderField("Location");
+            Assert.assertNotNull("Location", loc);
+            getRequest = new GetMethodWebRequest(loc);
+            response = conversation.getResponse(getRequest);
+            rcode = response.getResponseCode();
+        }
 
         log.debug("Content-Type: " + response.getContentType());
         assertEquals("GET response Content-Type header to " + resourceUrl + " is incorrect", expectedContentType, response.getContentType());

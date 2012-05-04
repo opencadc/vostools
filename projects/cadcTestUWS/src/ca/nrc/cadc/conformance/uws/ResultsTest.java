@@ -195,10 +195,11 @@ public class ResultsTest extends AbstractUWSTest
                 Namespace namespace = null;
                 boolean done = false;
                 Long start = System.currentTimeMillis();
+                long dt = 2000L;
                 while (!done)
                 {
-                    // Wait for 1 second.
-                    Thread.sleep(1000);
+                    // Wait
+                    Thread.sleep(dt);
 
                     // GET the resource.
                     response = get(conversation, resourceUrl);
