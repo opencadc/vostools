@@ -103,6 +103,7 @@
 </li>
 <%
         }
+        out.flush();
     }
     out.flush();
 %>

@@ -140,7 +140,8 @@ Please report any problems downloading your files to <a href="mailto:cadc@nrc.ca
 
   
 <p>
-    <c:import url="urlList.jsp" />
+    <jsp:include page="urlList.jsp" flush="true" />
+    <%-- c:import url="urlList.jsp" --%>
 </p>
 <div style="padding-left: 2em; padding-right: 2em">
     <form action="/downloadManager/download" method="POST">
