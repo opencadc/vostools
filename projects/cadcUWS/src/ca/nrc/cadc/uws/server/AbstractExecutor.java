@@ -217,6 +217,8 @@ public abstract class AbstractExecutor  implements JobExecutor
             if (!ExecutionPhase.ABORTED.equals(ep))
             {
                 ep = jobUpdater.setPhase(job.getID(), ExecutionPhase.PENDING, ExecutionPhase.ABORTED, new Date());
+                if (!ExecutionPhase.ABORTED.equals(ep))
+                    return; // no phase change - do nothing
             }
         }
         job.setExecutionPhase(ep);

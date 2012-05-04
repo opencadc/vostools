@@ -153,10 +153,10 @@ public class ThreadPoolExecutor extends AbstractExecutor
         this.poolName = poolName + "-";
 
         Comparator<Runnable> cr = new WrapperPriorityComparator(priorityComparator);
-        // note: PriorityBlockngQueue is unbounded so maxPoolSize is ignored
+        // note: PriorityBlockingQueue is unbounded so maxPoolSize is ignored (=poolSize)
         // note: core threads are kept alive unless we want to also enable allowCoreThreadTimeOut
         this.threadPool =
-            new java.util.concurrent.ThreadPoolExecutor(poolSize, Integer.MAX_VALUE,
+            new java.util.concurrent.ThreadPoolExecutor(poolSize, poolSize,
                 Long.MAX_VALUE, TimeUnit.MILLISECONDS,
                 new PriorityBlockingQueue<Runnable>(INITIAL_QUEUE_SIZE, cr));
         threadPool.setThreadFactory(new DaemonThreadFactory());
@@ -187,8 +187,10 @@ public class ThreadPoolExecutor extends AbstractExecutor
     protected final void executeAsync(Job job, JobRunner jobRunner)
     {
         CurrentJob cj = new CurrentJob(job, jobRunner, System.currentTimeMillis());
-        this.currentJobs.put(job.getID(), cj);
-        //this.threadPool.execute(cj);
+        synchronized(currentJobs)
+        {
+            this.currentJobs.put(job.getID(), cj);
+        }
         cj.future = this.threadPool.submit(cj);
     }
 
