@@ -200,7 +200,7 @@ public class AdqlQuery implements TapQuery
         }
         catch (JSQLParserException e)
         {
-            e.printStackTrace();
+            log.debug("parse failed", e);
             throw new IllegalArgumentException(e);
         }
 
