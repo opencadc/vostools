@@ -109,7 +109,10 @@ public abstract class HttpTransfer implements Runnable
 
     public static final String SERVICE_RETRY = "Retry-After";
 
-    public static final int DEFAULT_BUFFER_SIZE = 64*1024; // 64KB
+    public static final int DEFAULT_BUFFER_SIZE = 8*1024; // 8KB
+    // note: thecombiantion of a large buffer, small-ish streamed put w/ no
+    // content-length, and tomcat6 fails, plus apache+tomcat seem to have some
+    // limits at 8k anyway
 
     public static enum RetryReason
     {

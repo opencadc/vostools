@@ -108,8 +108,6 @@ public class HttpUpload extends HttpTransfer
     private InputStream istream;
     private OutputStreamWrapper wrapper;
 
-    private int numRetries = 0;
-
     public HttpUpload(File src, URL dest)
     {
         super();
@@ -326,7 +324,10 @@ public class HttpUpload extends HttpTransfer
         }
         else
         {
-            conn.setChunkedStreamingMode(bufferSize);
+            // note: settig the bufferSize to be larger than 8k without a content-length
+            // seems to cause troble with apache+ajp+tomcat6 in cases where the actual
+            // payload is bigger than 8k but smaller than the buffer: avoid it for now (pdd)
+            conn.setChunkedStreamingMode(8192);
             log.debug("invoked setChunkedStreamingMode");
         }
 
@@ -399,8 +400,9 @@ public class HttpUpload extends HttpTransfer
             else
                  wrapper.write(ostream);
 
+            log.debug("OutputStream.flush");
             ostream.flush();
-            log.debug("flushing and closing OutputStream");
+            log.debug("OutputStream.flush OK");
         }
         catch(IOException ex)
         {
@@ -412,9 +414,16 @@ public class HttpUpload extends HttpTransfer
             try
             {
                 if (ostream != null)
+                {
+                    log.debug("OutputStream.close");
                     ostream.close();
+                    log.debug("OutputStream.close OK");
+                }
             }
-            catch(IOException ignore) { }
+            catch(IOException ignore) 
+            {
+                log.debug("OutputStream.close FAIL", ignore);
+            }
             
             try
             {
