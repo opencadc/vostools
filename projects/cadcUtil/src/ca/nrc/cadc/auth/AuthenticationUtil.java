@@ -627,9 +627,10 @@ public class AuthenticationUtil
                 newDN.append(rdn);
             }
         }
-        
-        log.debug("canonizeDistinguishedName: new dn: " + newDN);
-        return newDN.toString().toLowerCase();
+
+        String ret = newDN.toString().toLowerCase();
+        log.debug("canonizeDistinguishedName returning: " + ret);
+        return ret;
     }
 
     /**
