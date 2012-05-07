@@ -1,0 +1,9 @@
+JAR files required for the OpenCADC cadcLog project
+===================================================
+
+Name in build.xml    Versioned Name          Project URL
+-----------------    --------------          -----------
+cadcUtil.jar                                 http://code.google.com/p/opencadc
+log4j.jar            log4j-1.2.15            http://logging.apache.org
+servlet-api.jar      apache-tomcat-5.5.20    http://tomcat.apache.org
+jstl.jar             jstl-1.1                http://jstl.java.net
