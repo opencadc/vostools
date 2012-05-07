@@ -297,7 +297,8 @@ public class NodeDAOTest
             Node afile = nodeDAO.getPath(nodePath4);
             Assert.assertNotNull(afile);
             nodeDAO.getProperties(afile);
-            Assert.assertNull(afile.findProperty(VOS.PROPERTY_URI_CONTENTLENGTH));
+            Assert.assertNotNull(afile.findProperty(VOS.PROPERTY_URI_CONTENTLENGTH));
+            Assert.assertEquals("0", afile.getPropertyValue(VOS.PROPERTY_URI_CONTENTLENGTH));
             Assert.assertNull(afile.findProperty(VOS.PROPERTY_URI_CONTENTMD5));
             compareNodes("assert7", putNode, afile);
             compareProperties("assert8", putNode.getProperties(), afile.getProperties());
@@ -780,7 +781,8 @@ public class NodeDAOTest
             nodeDAO.put(dNode, owner);
             dNode = (DataNode) nodeDAO.getPath(dPath);
             Assert.assertNotNull(dNode);
-            Assert.assertNull(dNode.getPropertyValue(VOS.PROPERTY_URI_CONTENTLENGTH));
+            Assert.assertNotNull(dNode.findProperty(VOS.PROPERTY_URI_CONTENTLENGTH));
+            Assert.assertEquals("0", dNode.getPropertyValue(VOS.PROPERTY_URI_CONTENTLENGTH));
 
             // update the quick way
             FileMetadata meta = new FileMetadata();
@@ -867,7 +869,8 @@ public class NodeDAOTest
             nodeDAO.put(dNode, owner);
             dNode = (DataNode) nodeDAO.getPath(dPath);
             Assert.assertNotNull(dNode);
-            Assert.assertNull(dNode.getPropertyValue(VOS.PROPERTY_URI_CONTENTLENGTH));
+            Assert.assertNotNull(dNode.findProperty(VOS.PROPERTY_URI_CONTENTLENGTH));
+            Assert.assertEquals("0", dNode.getPropertyValue(VOS.PROPERTY_URI_CONTENTLENGTH));
 
             // alter path but leave dNode object alone
             Node srcNode = (DataNode) nodeDAO.getPath(dPath);
@@ -917,7 +920,8 @@ public class NodeDAOTest
             nodeDAO.put(dNode, owner);
             dNode = (DataNode) nodeDAO.getPath(dPath);
             Assert.assertNotNull(dNode);
-            Assert.assertNull(dNode.getPropertyValue(VOS.PROPERTY_URI_CONTENTLENGTH));
+            Assert.assertNotNull(dNode.findProperty(VOS.PROPERTY_URI_CONTENTLENGTH));
+            Assert.assertEquals("0", dNode.getPropertyValue(VOS.PROPERTY_URI_CONTENTLENGTH));
 
             // set busy state
             nodeDAO.setBusyState(dNode, NodeBusyState.notBusy, NodeBusyState.busyWithWrite);
@@ -1199,8 +1203,9 @@ public class NodeDAOTest
             // we tried to set the props, but they are not writable
             NodeProperty lenActual = nodeA.findProperty(VOS.PROPERTY_URI_CONTENTLENGTH);
             NodeProperty md5Actual = nodeA.findProperty(VOS.PROPERTY_URI_CONTENTMD5);
-            Assert.assertNull("persisted contentLength", lenActual);
-            Assert.assertNull("persisted contentMD5", lenActual);
+            Assert.assertNotNull("persisted contentLength", lenActual);
+            Assert.assertEquals("0", lenActual.getPropertyValue()); // unchanged by update
+            Assert.assertNull("persisted contentMD5", md5Actual);
 
             // now try to update them via updateFileMetadata
             FileMetadata meta = new FileMetadata();
@@ -1214,8 +1219,9 @@ public class NodeDAOTest
             nodeA = (DataNode) nodeDAO.getPath(nodePath1);
             lenActual = nodeA.findProperty(VOS.PROPERTY_URI_CONTENTLENGTH);
             md5Actual = nodeA.findProperty(VOS.PROPERTY_URI_CONTENTMD5);
-            Assert.assertNull("persisted contentLength", lenActual);
-            Assert.assertNull("persisted contentMD5", lenActual);
+            Assert.assertNotNull("persisted contentLength", lenActual);
+            Assert.assertEquals("0", lenActual.getPropertyValue()); // unchanged by update
+            Assert.assertNull("persisted contentMD5", md5Actual);
 
             nodeDAO.delete(nodeA, 10, false); // cleanup
             assertRecursiveDelete();
@@ -1263,7 +1269,8 @@ public class NodeDAOTest
             nodeDAO.put(dNode, owner);
             dNode = (DataNode) nodeDAO.getPath(dPath);
             Assert.assertNotNull(dNode);
-            Assert.assertNull(dNode.getPropertyValue(VOS.PROPERTY_URI_CONTENTLENGTH));
+            Assert.assertNotNull(dNode.findProperty(VOS.PROPERTY_URI_CONTENTLENGTH));
+            Assert.assertEquals("0", dNode.getPropertyValue(VOS.PROPERTY_URI_CONTENTLENGTH));
 
             // update the quick way
             FileMetadata meta = new FileMetadata();
@@ -1343,7 +1350,8 @@ public class NodeDAOTest
             nodeDAO.put(dNode, owner);
             dNode = (DataNode) nodeDAO.getPath(dPath);
             Assert.assertNotNull(dNode);
-            Assert.assertNull(dNode.getPropertyValue(VOS.PROPERTY_URI_CONTENTLENGTH));
+            Assert.assertNotNull(dNode.getPropertyValue(VOS.PROPERTY_URI_CONTENTLENGTH));
+            Assert.assertEquals("0", dNode.getPropertyValue(VOS.PROPERTY_URI_CONTENTLENGTH));
 
             String oPath = cPath+"-other";
             ContainerNode oNode = getCommonContainerNode(oPath);

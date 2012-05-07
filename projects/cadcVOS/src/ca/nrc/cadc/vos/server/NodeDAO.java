@@ -2270,9 +2270,12 @@ public class NodeDAO
                 node.getProperties().add(new NodeProperty(VOS.PROPERTY_URI_CONTENTENCODING, contentEncoding));
             }
             
-            if (node instanceof DataNode && contentLength != null)
+            if (node instanceof DataNode)
             {
-                node.getProperties().add(new NodeProperty(VOS.PROPERTY_URI_CONTENTLENGTH, contentLength.toString()));
+                if (contentLength != null)
+                    node.getProperties().add(new NodeProperty(VOS.PROPERTY_URI_CONTENTLENGTH, contentLength.toString()));
+                else
+                    node.getProperties().add(new NodeProperty(VOS.PROPERTY_URI_CONTENTLENGTH, "0"));
             }
             else if (node instanceof ContainerNode)
             {
