@@ -125,25 +125,7 @@ public abstract class UWSResource extends ServerResource
 
         // Create a subject for authentication
         final Request request = getRequest();
-        Map<String, Object> requestAttributes = request.getAttributes();
-
-        @SuppressWarnings("unchecked")
-        final Collection<X509Certificate> certs =
-                (Collection<X509Certificate>) requestAttributes.get(
-                        CERTIFICATE_REQUEST_ATTRIBUTE_NAME);
-        final X509CertificateChain x509CertificateChain;
-
-        if ((certs != null) && !certs.isEmpty())
-        {
-            x509CertificateChain = new X509CertificateChain(certs);
-        }
-        else
-        {
-            x509CertificateChain = null;
-        }
-
-        this.subject = AuthenticationUtil.getSubject(x509CertificateChain,
-                                                     new RestletPrincipalExtractor(request));
+        this.subject = AuthenticationUtil.getSubject(new RestletPrincipalExtractor(request));
         LOGGER.debug(subject);
     }
 

@@ -69,7 +69,13 @@
 
 package ca.nrc.cadc.uws.server;
 
+import ca.nrc.cadc.auth.AnonPrincipalExtractor;
+import ca.nrc.cadc.auth.AuthenticationUtil;
+import ca.nrc.cadc.auth.RunnableAction;
 import ca.nrc.cadc.uws.Job;
+import java.security.AccessControlContext;
+import java.security.AccessController;
+import java.security.PrivilegedAction;
 import java.util.Comparator;
 import java.util.HashMap;
 import java.util.Map;
@@ -77,6 +83,7 @@ import java.util.concurrent.Future;
 import java.util.concurrent.PriorityBlockingQueue;
 import java.util.concurrent.ThreadFactory;
 import java.util.concurrent.TimeUnit;
+import javax.security.auth.Subject;
 import org.apache.log4j.Logger;
 
 /**
@@ -96,6 +103,7 @@ public class ThreadPoolExecutor extends AbstractExecutor
     
     private java.util.concurrent.ThreadPoolExecutor threadPool;
     private String poolName;
+    private Subject poolSubject;
 
     /**
      * Constructor. Uses a default priority comparator (FIFO) and default poolName.
@@ -161,6 +169,8 @@ public class ThreadPoolExecutor extends AbstractExecutor
                 new PriorityBlockingQueue<Runnable>(INITIAL_QUEUE_SIZE, cr));
         threadPool.setThreadFactory(new DaemonThreadFactory());
         //threadPool.allowCoreThreadTimeOut(true);
+
+        this.poolSubject = AuthenticationUtil.getSubject(new AnonPrincipalExtractor());
     }
 
     private class DaemonThreadFactory implements ThreadFactory
@@ -186,12 +196,23 @@ public class ThreadPoolExecutor extends AbstractExecutor
     @Override
     protected final void executeAsync(Job job, JobRunner jobRunner)
     {
-        CurrentJob cj = new CurrentJob(job, jobRunner, System.currentTimeMillis());
+        AccessControlContext acContext = AccessController.getContext();
+        Subject caller = Subject.getSubject(acContext);
+
+        final CurrentJob cj = new CurrentJob(job, jobRunner, System.currentTimeMillis(), caller);
         synchronized(currentJobs)
         {
             this.currentJobs.put(job.getID(), cj);
         }
-        cj.future = this.threadPool.submit(cj);
+        // IMPORTANT: run the submit using an internal poolSubject so lazily
+        // spawned threads do not inherit the AccessControlContext of the caller
+        Subject.doAs(poolSubject, new PrivilegedAction<Future>()
+            {
+                public Future run()
+                {
+                    return threadPool.submit(cj);
+                }
+            });
     }
 
     /**
@@ -225,12 +246,14 @@ public class ThreadPoolExecutor extends AbstractExecutor
         public JobRunner runnable;
         public Long queuedTime;
         private Future future;
+        private Subject subject;
         
-        CurrentJob(Job job, JobRunner runnable, long queuedTime)
+        CurrentJob(Job job, JobRunner runnable, long queuedTime, Subject subject)
         {
             this.job = job;
             this.runnable = runnable;
             this.queuedTime = new Long(queuedTime);
+            this.subject = subject;
         }
 
         @Override
@@ -249,7 +272,10 @@ public class ThreadPoolExecutor extends AbstractExecutor
 
         public void run()
         {
-            runnable.run();
+            if (subject == null)
+                runnable.run();
+            else
+                Subject.doAs(subject, new RunnableAction(runnable));
             synchronized(currentJobs)
             {
                 currentJobs.remove(job.getID());

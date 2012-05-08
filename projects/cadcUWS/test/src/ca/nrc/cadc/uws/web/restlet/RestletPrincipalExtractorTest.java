@@ -33,6 +33,9 @@
  */
 package ca.nrc.cadc.uws.web.restlet;
 
+import java.security.Principal;
+import java.util.HashSet;
+import java.util.Set;
 import org.restlet.Request;
 import org.restlet.data.ChallengeResponse;
 import org.restlet.data.ChallengeScheme;
@@ -79,10 +82,10 @@ public class RestletPrincipalExtractorTest
 
         replay(getMockRequest());
 
-        getTestSubject().addCookiePrincipal();
+        Set<Principal> ps = new HashSet<Principal>();
+        getTestSubject().addCookiePrincipal(ps);
 
-        assertTrue("Should have no principals.",
-                   getTestSubject().getPrincipals().isEmpty());
+        assertTrue("Should have no principals.", ps.isEmpty());
 
         verify(getMockRequest());
 
@@ -98,10 +101,10 @@ public class RestletPrincipalExtractorTest
 
         replay(getMockRequest());
 
-        getTestSubject().addCookiePrincipal();
+        getTestSubject().addCookiePrincipal(ps);
 
         assertEquals("Should have one cookie principal.", 1,
-                     getTestSubject().getPrincipals().size());
+                     ps.size());
 
         verify(getMockRequest());
     }
@@ -125,10 +128,11 @@ public class RestletPrincipalExtractorTest
 
         replay(getMockRequest());
 
-        getTestSubject().addHTTPPrincipal();
+        Set<Principal> ps = new HashSet<Principal>();
 
-        assertTrue("Should have no principals.",
-                   getTestSubject().getPrincipals().isEmpty());
+        getTestSubject().addHTTPPrincipal(ps);
+
+        assertTrue("Should have no principals.", ps.isEmpty());
 
         verify(getMockRequest());
 
@@ -145,10 +149,9 @@ public class RestletPrincipalExtractorTest
 
         replay(getMockRequest());
 
-        getTestSubject().addHTTPPrincipal();
+        getTestSubject().addHTTPPrincipal(ps);
 
-        assertEquals("Should have one HTTP principal.", 1,
-                     getTestSubject().getPrincipals().size());
+        assertEquals("Should have one HTTP principal.", 1, ps.size());
 
         verify(getMockRequest());
     }
@@ -172,10 +175,11 @@ public class RestletPrincipalExtractorTest
 
         replay(getMockRequest());
 
-        getTestSubject().addX500Principal();
+        Set<Principal> ps = new HashSet<Principal>();
 
-        assertTrue("Should have no principals.",
-                   getTestSubject().getPrincipals().isEmpty());
+        getTestSubject().addX500Principal(ps);
+
+        assertTrue("Should have no principals.", ps.isEmpty());
 
         verify(getMockRequest());
 
@@ -212,10 +216,9 @@ public class RestletPrincipalExtractorTest
 
         replay(getMockRequest(), mockCertificate);
 
-        getTestSubject().addX500Principal();
+        getTestSubject().addX500Principal(ps);
 
-        assertEquals("Should have one HTTP principal.", 1,
-                     getTestSubject().getPrincipals().size());
+        assertEquals("Should have one HTTP principal.", 1, ps.size());
 
         verify(getMockRequest(), mockCertificate);
     }

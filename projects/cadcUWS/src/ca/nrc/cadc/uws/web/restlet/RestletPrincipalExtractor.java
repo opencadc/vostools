@@ -33,11 +33,11 @@
  */
 package ca.nrc.cadc.uws.web.restlet;
 
-import ca.nrc.cadc.auth.HTTPPrincipalExtractor;
+import ca.nrc.cadc.auth.CookiePrincipal;
+import ca.nrc.cadc.auth.HttpPrincipal;
 import ca.nrc.cadc.auth.PrincipalExtractor;
-import ca.nrc.cadc.auth.SSOCookiePrincipalExtractor;
-import ca.nrc.cadc.auth.X500PrincipalExtractor;
-import ca.nrc.cadc.util.ArrayUtil;
+import ca.nrc.cadc.auth.SSOCookieManager;
+import ca.nrc.cadc.auth.X509CertificateChain;
 
 import ca.nrc.cadc.util.StringUtil;
 import org.restlet.Request;
@@ -57,8 +57,7 @@ import java.util.Set;
 public class RestletPrincipalExtractor implements PrincipalExtractor
 {
     private final Request request;
-    private final Set<Principal> principals;
-
+    private X509CertificateChain chain;
 
     /**
      * Hidden no-arg constructor for testing.
@@ -66,7 +65,6 @@ public class RestletPrincipalExtractor implements PrincipalExtractor
     RestletPrincipalExtractor()
     {
         this.request = null;
-        this.principals = new HashSet<Principal>();
     }
 
     /**
@@ -77,86 +75,81 @@ public class RestletPrincipalExtractor implements PrincipalExtractor
     public RestletPrincipalExtractor(final Request req)
     {
         this.request = req;
-        this.principals = new HashSet<Principal>();
+    }
 
-        addPrincipals();
+    private void init()
+    {
+        if (chain == null)
+        {
+            final Collection<X509Certificate> requestCertificates =
+                (Collection<X509Certificate>) getRequest().getAttributes().get(
+                        "org.restlet.https.clientCertificates");
+            if ((requestCertificates != null) && (!requestCertificates.isEmpty()))
+                chain = new X509CertificateChain(requestCertificates);
+        }
+    }
+    public X509CertificateChain getCertificateChain()
+    {
+        init();
+        return chain;
+    }
+
+    public Set<Principal> getPrincipals()
+    {
+        init();
+        Set<Principal> principals = new HashSet<Principal>();
+        addPrincipals(principals);
+        return principals;
     }
 
 
     /**
      * Add known principals.
      */
-    protected void addPrincipals()
+    protected void addPrincipals(Set<Principal> principals)
     {
-        addCookiePrincipal();
-        addHTTPPrincipal();
-        addX500Principal();
+        addCookiePrincipal(principals);
+        addHTTPPrincipal(principals);
+        addX500Principal(principals);
     }
 
     /**
      * Add the cookie principal, if it exists.
      */
-    protected void addCookiePrincipal()
+    protected void addCookiePrincipal(Set<Principal> principals)
     {
         final Cookie cookie = getCookie();
 
         if (cookie != null)
         {
-            final SSOCookiePrincipalExtractor ssoCookiePrincipalExtractor =
-                    new SSOCookiePrincipalExtractor(cookie.getValue());
-
-            principals.addAll(ssoCookiePrincipalExtractor.getPrincipals());
+            SSOCookieManager ssoCookieManager = new SSOCookieManager(cookie.getValue());
+            CookiePrincipal cp = new CookiePrincipal(
+                ssoCookieManager.getUsername(), ssoCookieManager.getToken());
+            cp.setSessionID(ssoCookieManager.getSessionID());
+            principals.add(cp);
         }
     }
 
     /**
      * Add the HTTP Principal, if it exists.
      */
-    protected void addHTTPPrincipal()
+    protected void addHTTPPrincipal(Set<Principal> principals)
     {
         final String httpUser = getAuthenticatedUsername();
-
         if (StringUtil.hasText(httpUser))
-        {
-            final HTTPPrincipalExtractor httpPrincipalExtractor =
-                    new HTTPPrincipalExtractor(httpUser);
-
-            principals.addAll(httpPrincipalExtractor.getPrincipals());
-        }
+            principals.add(new HttpPrincipal(httpUser));
     }
 
     /**
      * Add the X500 Principal, if it exists.
      */
-    protected void addX500Principal()
+    protected void addX500Principal(Set<Principal> principals)
     {
-        @SuppressWarnings("unchecked")
-        final Collection<X509Certificate> requestCertificates =
-                (Collection<X509Certificate>) getRequest().getAttributes().get(
-                        "org.restlet.https.clientCertificates");
-
-        if ((requestCertificates != null) && (!requestCertificates.isEmpty()))
-        {
-            final X500PrincipalExtractor x500PrincipalExtractor =
-                    new X500PrincipalExtractor(requestCertificates.toArray(
-                            new X509Certificate[requestCertificates.size()]));
-
-            principals.addAll(x500PrincipalExtractor.getPrincipals());
-        }
+        init();
+        if (chain != null)
+            principals.add(chain.getPrincipal());
     }
 
-    /**
-     * Obtain a Collection of Principals from this extractor.  This should be
-     * immutable.
-     *
-     * @return Collection of Principal instances, or empty Collection.
-     *         Never null.
-     */
-    @Override
-    public Set<Principal> getPrincipals()
-    {
-        return Collections.unmodifiableSet(principals);
-    }
 
     /**
      * Read in the pertinent cookie for this authentication.
@@ -167,8 +160,7 @@ public class RestletPrincipalExtractor implements PrincipalExtractor
     {
         for (final Cookie cookie : getRequest().getCookies())
         {
-            if (cookie.getName().equals(
-                    SSOCookiePrincipalExtractor.COOKIE_NAME))
+            if (SSOCookieManager.DEFAULT_SSO_COOKIE_NAME.equals(cookie.getName()))
             {
                 return cookie;
             }
