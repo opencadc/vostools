@@ -40,6 +40,7 @@ import javax.servlet.http.Cookie;
 import javax.servlet.http.HttpServletRequest;
 import java.security.Principal;
 import java.security.cert.X509Certificate;
+import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashSet;
 import java.util.Set;
@@ -50,9 +51,10 @@ import java.util.Set;
  */
 public class ServletPrincipalExtractor implements PrincipalExtractor
 {
+    public static final String CERT_REQUEST_ATTRIBUTE = "javax.servlet.request.X509Certificate";
     private final HttpServletRequest request;
-    private final Set<Principal> principals;
 
+    private final X509CertificateChain chain;
 
     /**
      * Hidden no-arg constructor.
@@ -60,7 +62,7 @@ public class ServletPrincipalExtractor implements PrincipalExtractor
     ServletPrincipalExtractor()
     {
         this.request = null;
-        this.principals = new HashSet<Principal>();
+        this.chain = null;
     }
 
     /**
@@ -70,71 +72,13 @@ public class ServletPrincipalExtractor implements PrincipalExtractor
      */
     public ServletPrincipalExtractor(final HttpServletRequest req)
     {
-        this.principals = new HashSet<Principal>();
         this.request = req;
-
-        addPrincipals();
-    }
-
-
-    /**
-     * Add known principals.
-     */
-    protected void addPrincipals()
-    {
-        addCookiePrincipal();
-        addHTTPPrincipal();
-        addX500Principal();
-    }
-
-    /**
-     * Add the cookie principal, if it exists.
-     */
-    protected void addCookiePrincipal()
-    {
-        final Cookie cookie = getCookie();
-
-        if (cookie != null)
-        {
-            final SSOCookiePrincipalExtractor ssoCookiePrincipalExtractor =
-                    new SSOCookiePrincipalExtractor(cookie.getValue());
-
-            principals.addAll(ssoCookiePrincipalExtractor.getPrincipals());
-        }
-    }
-
-    /**
-     * Add the HTTP Principal, if it exists.
-     */
-    protected void addHTTPPrincipal()
-    {
-        final String httpUser = getRequest().getRemoteUser();
-
-        if (StringUtil.hasText(httpUser))
-        {
-            final HTTPPrincipalExtractor httpPrincipalExtractor =
-                    new HTTPPrincipalExtractor(httpUser);
-
-            principals.addAll(httpPrincipalExtractor.getPrincipals());
-        }
-    }
-
-    /**
-     * Add the X500 Principal, if it exists.
-     */
-    protected void addX500Principal()
-    {
-        final X509Certificate[] requestCertificates =
-                (X509Certificate[]) getRequest().getAttribute(
-                        "javax.servlet.request.X509Certificate");
-
-        if (!ArrayUtil.isEmpty(requestCertificates))
-        {
-            final X500PrincipalExtractor x500PrincipalExtractor =
-                    new X500PrincipalExtractor(requestCertificates);
-
-            principals.addAll(x500PrincipalExtractor.getPrincipals());
-        }
+        X509Certificate[] ca = (X509Certificate[])
+            request.getAttribute(CERT_REQUEST_ATTRIBUTE);
+        if (!ArrayUtil.isEmpty(ca))
+            chain = new X509CertificateChain(Arrays.asList(ca));
+        else
+            chain = null;
     }
 
     /**
@@ -147,9 +91,62 @@ public class ServletPrincipalExtractor implements PrincipalExtractor
     @Override
     public Set<Principal> getPrincipals()
     {
-        return Collections.unmodifiableSet(principals);
+        Set<Principal> principals = new HashSet<Principal>();
+        addPrincipals(principals);
+        return principals;
     }
 
+    public X509CertificateChain getCertificateChain()
+    {
+        return chain;
+    }
+
+    /**
+     * Add known principals.
+     */
+    protected void addPrincipals(Set<Principal> principals)
+    {
+        addCookiePrincipal(principals);
+        addHTTPPrincipal(principals);
+        addX500Principal(principals);
+    }
+
+    /**
+     * Add the cookie principal, if it exists.
+     */
+    protected void addCookiePrincipal(Set<Principal> principals)
+    {
+        Cookie cookie = getCookie();
+        if (cookie == null)
+            return;
+
+        SSOCookieManager ssoCookieManager = new SSOCookieManager(cookie.getValue());
+        CookiePrincipal cp = new CookiePrincipal(
+            ssoCookieManager.getUsername(), ssoCookieManager.getToken());
+        cp.setSessionID(ssoCookieManager.getSessionID());
+        principals.add(cp);
+    }
+
+    /**
+     * Add the HTTP Principal, if it exists.
+     */
+    protected void addHTTPPrincipal(Set<Principal> principals)
+    {
+        final String httpUser = getRequest().getRemoteUser();
+        if (StringUtil.hasText(httpUser))
+            principals.add(new HttpPrincipal(httpUser));
+    }
+
+    /**
+     * Add the X500 Principal, if it exists.
+     */
+    protected void addX500Principal(Set<Principal> principals)
+    {
+        if (chain != null)
+            principals.add(chain.getPrincipal());
+    }
+
+    
     /**
      * Obtain this Principal Extractor's HTTP Request.
      *
@@ -172,14 +169,12 @@ public class ServletPrincipalExtractor implements PrincipalExtractor
         {
             for (final Cookie cookie : cookies)
             {
-                if (cookie.getName().equals(
-                        SSOCookiePrincipalExtractor.COOKIE_NAME))
+                if (SSOCookieManager.DEFAULT_SSO_COOKIE_NAME.equals(cookie.getName()))
                 {
                     return cookie;
                 }
             }
         }
-
         return null;
     }
 }

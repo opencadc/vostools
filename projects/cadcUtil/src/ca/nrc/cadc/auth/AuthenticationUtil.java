@@ -136,44 +136,14 @@ public class AuthenticationUtil
         log.debug("Authenticator: null");
         return null;
     }
-    
-    /**
-     * Method to extract Principals from a request. Two types of
-     * principals are currently supported: X500Principal and
-     * HttpPrincipal.
-     *
-     * @see #getSubject(String, java.util.Collection <X509Certificate>)
-     * @param request
-     *            request that contains use authentication information
-     * @return Set of Principals extracted from the request. The Set is
-     *         empty if no Principals have been extracted.
-     */
-    /*
-    private static Set<Principal> getPrincipals(HttpServletRequest request)
+
+    private static Subject augmentSubject(Subject s)
     {
-        Set<Principal> principals = new HashSet<Principal>();
-
-        // look for basic authentication
-        String userId = request.getRemoteUser();
-        if (userId != null)
-        {
-            // user logged in. Create corresponding Principal
-            principals.add(new HttpPrincipal(userId));
-        }
-
-        // look for X509 certificates
-        X509Certificate[] certificates = (X509Certificate[]) request.getAttribute("javax.servlet.request.X509Certificate");
-        if (certificates != null)
-        {
-            for (X509Certificate cert : certificates)
-            {
-                principals.add(cert.getSubjectX500Principal());
-            }
-        }
-
-        return principals;
+        final Authenticator auth = getAuthenticator();
+        if (auth != null)
+            return auth.getSubject(s);
+        return s;
     }
-    */
 
     /**
      * Create a Subject from the given X509 Certificate Chain, and the given
@@ -185,63 +155,36 @@ public class AuthenticationUtil
      *                              Principals.
      * @return                      A new Subject.
      */
-    public static Subject getSubject(
-            final X509CertificateChain chain,
-            final PrincipalExtractor principalExtractor)
+    public static Subject getSubject(PrincipalExtractor principalExtractor)
     {
+        if (principalExtractor == null)
+            throw new IllegalArgumentException("principalExtractor cannot be null");
+        
         final Set<Object> publicCred = new HashSet<Object>();
         final Set<Object> privateCred = new HashSet<Object>();
 
+        X509CertificateChain chain = principalExtractor.getCertificateChain();
         if (chain != null)
         {
             publicCred.add(chain);
         }
 
-        return new Subject(false, principalExtractor.getPrincipals(),
+        Subject subject =  new Subject(false, principalExtractor.getPrincipals(),
                            publicCred, privateCred);
+
+       return augmentSubject(subject);
     }
 
     /**
-     * Create a complete Subject with principal(s) and possibly X509 credentials.
-     * This is a convenience method that gets the remote user and/or client
-     * certficate(s) from the request and calls
-     * getSubject(String, Collection<X509Certificate>).
+     * Convenience method that uses a ServletPrincipalExtractor.
      *
-     * @see #getSubject(String, java.util.Collection
+     * @see #getSubject(PrincipalExtractor)
      * @param request       The HTTP Request.
      * @return a Subject with all available request content
      */
     public static Subject getSubject(final HttpServletRequest request)
     {
-        final X509Certificate[] ca =
-                (X509Certificate[]) request.getAttribute(
-                        "javax.servlet.request.X509Certificate");
-        final X509CertificateChain chain;
-
-        if (!ArrayUtil.isEmpty(ca))
-        {
-            chain = new X509CertificateChain(Arrays.asList(ca));
-        }
-        else
-        {
-            chain = null;
-        }
-
-        final Subject subject =
-                getSubject(chain, new ServletPrincipalExtractor(request));
-        final Authenticator auth = getAuthenticator();
-        final Subject ret;
-
-        if (auth != null)
-        {
-            ret = auth.getSubject(subject);
-        }
-        else
-        {
-            ret = subject;
-        }
-
-        return ret;
+       return getSubject(new ServletPrincipalExtractor(request));
     }
     
     /**
@@ -296,36 +239,31 @@ public class AuthenticationUtil
             chain = null;
         }
 
-        Subject ret = getSubject(remoteUser, chain);
-        
-        // try to use an Authenticator
-        try
-        {
-            final Authenticator auth = getAuthenticator();
-            if (auth != null)
-            {
-                ret = auth.getSubject(ret);
-            }
-        }
-        catch(Throwable t)
-        {
-            log.error("failed to invoke Authenticator", t);
-        }
-        return ret;
+        return getSubject(remoteUser, chain);
     }
 
     /**
      * Create a subject with the specified certificate chain and private key.
      * 
      * @param certs a non-null and non-empty certficate chain
-     * @param key optionakl private key
+     * @param key optional private key
      * @return a Subject
      */
     public static Subject getSubject(X509Certificate[] certs, PrivateKey key)
     {
         final X509CertificateChain chain =
                 new X509CertificateChain(certs, key);
-        return getSubject(chain, new X500PrincipalExtractor(certs));
+
+        Set<Principal> principals = new HashSet<Principal>();
+        Set<Object> publicCred = new HashSet<Object>();
+        Set<Object> privateCred = new HashSet<Object>();
+
+        principals.add(chain.getPrincipal());
+        publicCred.add(chain);
+
+        Subject subject =  new Subject(false, principals, publicCred, privateCred);
+        return subject; // this method for client apps only
+        //return augmentSubject(subject);
     }
 
     /**
@@ -362,7 +300,9 @@ public class AuthenticationUtil
             // than extracting and putting it into the privateCred set... TBD
         }
 
-        return new Subject(false, principals, publicCred, privateCred);
+        Subject subject = new Subject(false, principals, publicCred, privateCred);
+
+        return augmentSubject(subject);
     }
 
     // Encode a Subject in the format:

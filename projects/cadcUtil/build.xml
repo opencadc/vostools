@@ -146,13 +146,10 @@
                 <pathelement path="${testingJars}"/>
             </classpath>
             <test name="ca.nrc.cadc.auth.X500IdentityManagerTest"/>
+            <test name="ca.nrc.cadc.auth.SSOCookieManagerTest"/>
             <test name="ca.nrc.cadc.auth.AuthenticationUtilTest"/>
             <test name="ca.nrc.cadc.auth.CertificateUtilTest"/>
             <test name="ca.nrc.cadc.auth.SSLUtilTest"/>
-            <test name="ca.nrc.cadc.auth.SSOCookiePrincipalExtractorTest"/>
-            <test name="ca.nrc.cadc.auth.HttpPrincipalExtractorTest"/>
-            <test name="ca.nrc.cadc.auth.X500PrincipalExtractorTest"/>
-            <test name="ca.nrc.cadc.auth.ServletPrincipalExtractorTest"/>
             <formatter type="plain" usefile="false"/>
         </junit>
     </target>

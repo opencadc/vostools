@@ -115,7 +115,7 @@ public class X509CertificateChain
 
     public X509CertificateChain(Collection<X509Certificate> certs)
     {
-        if (certs == null || certs.size() == 0)
+        if (certs == null || certs.isEmpty())
             throw new IllegalArgumentException("cannot create X509CertificateChain with no certficates");
         this.chain = certs.toArray(new X509Certificate[certs.size()]);
         genExpiryDate();

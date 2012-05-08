@@ -24,7 +24,7 @@
  *
  *
  * @author jenkinsd
- * 4/20/12 - 1:28 PM
+ * 4/17/12 - 11:21 AM
  *
  *
  *
@@ -33,34 +33,41 @@
  */
 package ca.nrc.cadc.auth;
 
+
+
+import java.util.Arrays;
+
 import org.junit.Test;
 import static org.junit.Assert.*;
 
 
-public class HttpPrincipalExtractorTest
-        extends PrincipalExtractorTest<HTTPPrincipalExtractor>
+public class SSOCookieManagerTest
 {
+    private SSOCookieManager testSubject;
+
     @Test
-    public void createNullHTTPPrincipal() throws Exception
+    public void parseCookieValue() throws Exception
     {
-        setTestSubject(new HTTPPrincipalExtractor(""));
+        setTestSubject(new SSOCookieManager(
+                "username=TESTUSER|sessionID=88|token=AAABBB"));
 
-        assertNull("Should be null.", getTestSubject().createHTTPPrincipal());
-
-        setTestSubject(new HTTPPrincipalExtractor(null));
-
-        assertNull("Should be null.", getTestSubject().createHTTPPrincipal());
+        assertEquals("Username should be TESTUSER", "TESTUSER",
+                     getTestSubject().getUsername());
+        assertTrue("Token should be AAABBB",
+                   Arrays.equals("AAABBB".toCharArray(),
+                                 getTestSubject().getToken()));
+        assertEquals("Session ID should be 88.", 88l,
+                     getTestSubject().getSessionID());
     }
 
-    @Test
-    public void createGoodHTTPPrincipal() throws Exception
+
+    public SSOCookieManager getTestSubject()
     {
-        setTestSubject(new HTTPPrincipalExtractor("TESTUSER"));
+        return testSubject;
+    }
 
-        final HttpPrincipal httpPrincipal =
-                getTestSubject().createHTTPPrincipal();
-
-        assertEquals("Principal username should be TESTUSER", "TESTUSER",
-                     httpPrincipal.getName());
+    public void setTestSubject(final SSOCookieManager testSubject)
+    {
+        this.testSubject = testSubject;
     }
 }

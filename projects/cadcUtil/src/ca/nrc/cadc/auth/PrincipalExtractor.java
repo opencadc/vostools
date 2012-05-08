@@ -51,5 +51,12 @@ public interface PrincipalExtractor
      * @return      Collection of Principal instances, or empty Collection.
      *              Never null.
      */
-    Set<? extends Principal> getPrincipals();
+    Set<Principal> getPrincipals();
+
+    /**
+     * Create and return a certficate chain from the request.
+     * 
+     * @return an X509CertficateChain or null if not authenticated via SSL
+     */
+    X509CertificateChain getCertificateChain();
 }

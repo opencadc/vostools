@@ -76,7 +76,6 @@ import java.security.Principal;
 import javax.security.auth.x500.X500Principal;
 import java.security.cert.X509Certificate;
 import java.util.Collection;
-import java.util.Set;
 import javax.security.auth.Subject;
 import javax.servlet.http.Cookie;
 import javax.servlet.http.HttpServletRequest;
@@ -87,6 +86,9 @@ import org.junit.BeforeClass;
 import org.junit.Test;
 
 import ca.nrc.cadc.util.Log4jInit;
+import java.security.PrivateKey;
+import java.util.Calendar;
+import java.util.Date;
 
 
 /**
@@ -355,26 +357,27 @@ public class AuthenticationUtilTest
     }
 
     @Test
-    public void testGetSubjectHttpLogin()
+    public void testGetSubjectFromHttpServletRequest_Anon()
     {
-        log.debug("testGetSubjectHttpLogin - START");
+        log.debug("testGetSubjectFromHttpServletRequest_Anon - START");
         try
         {
-            Collection<X509Certificate> certs = null;
-            X509CertificateChain chain = null;
+            final HttpServletRequest mockRequest =
+                createMock(HttpServletRequest.class);
 
-            Subject s;
-            Set<Principal> prin;
-            Principal p;
+            expect(mockRequest.getRemoteUser()).andReturn(null).atLeastOnce();
+            expect(mockRequest.getCookies()).andReturn(null).atLeastOnce();
+            expect(mockRequest.getAttribute(
+                    "javax.servlet.request.X509Certificate")).andReturn(null).atLeastOnce();
 
-            // http login
-            s = AuthenticationUtil.getSubject("foo", certs);
-            prin = s.getPrincipals();
-            assertNotNull(prin);
-            assertTrue("num principals", (prin.size() == 1));
-            p = prin.iterator().next();
-            assertNotNull(p);
-            assertEquals(p.getName(), "foo");
+            replay(mockRequest);
+            final Subject subject1 = AuthenticationUtil.getSubject(mockRequest);
+
+            assertEquals(0, subject1.getPrincipals().size());
+            assertEquals(0, subject1.getPublicCredentials().size());
+            assertEquals(0, subject1.getPrivateCredentials().size());
+
+            verify(mockRequest);
         }
         catch(Exception unexpected)
         {
@@ -383,41 +386,200 @@ public class AuthenticationUtilTest
         }
         finally
         {
-            log.debug("testGetSubjectHttpLogin - DONE");
+            log.debug("testGetSubjectFromHttpServletRequest_anon - DONE");
         }
     }
-    
-    @Test
-    public void getSubjectFromHTTPCookie() throws Exception
-    {
-        log.debug("getSubjectFromHTTPCookie - START");
 
-        final Cookie[] cookies = new Cookie[]
-                {
-                        new Cookie("SOMECOOKIE", "SOMEVALUE"),
-                        new Cookie(SSOCookiePrincipalExtractor.COOKIE_NAME,
-                                   "username=TESTUSER|sessionID=88|token=AAABBB")
-                };
-        final HttpServletRequest mockRequest =
+    @Test
+    public void testGetSubjectFromHttpServletRequest_HttpPrincipal()
+    {
+        log.debug("testGetSubjectFromHttpServletRequest_HttpPrincipal - START");
+        try
+        {
+            final HttpServletRequest mockRequest =
                 createMock(HttpServletRequest.class);
 
-        expect(mockRequest.getRemoteUser()).andReturn(null).once();
-        expect(mockRequest.getCookies()).andReturn(cookies).once();
-        expect(mockRequest.getAttribute(
-                "javax.servlet.request.X509Certificate")).andReturn(null).
-                times(2);
+            expect(mockRequest.getRemoteUser()).andReturn("foo").atLeastOnce();
+            expect(mockRequest.getCookies()).andReturn(null).atLeastOnce();
+            expect(mockRequest.getAttribute(
+                    "javax.servlet.request.X509Certificate")).andReturn(null).atLeastOnce();
 
-        replay(mockRequest);
-        final Subject subject1 = AuthenticationUtil.getSubject(mockRequest);
+            replay(mockRequest);
+            final Subject subject1 = AuthenticationUtil.getSubject(mockRequest);
 
-        assertEquals("Should only have one principal.", 1,
-                     subject1.getPrincipals().size());
-        assertTrue("Should have a cookie principal",
-                   subject1.getPrincipals().toArray(
-                           new Principal[1])[0] instanceof CookiePrincipal);
+            assertEquals(1, subject1.getPrincipals().size());
+            Principal p = subject1.getPrincipals().iterator().next();
+            assertTrue(p instanceof HttpPrincipal);
+            HttpPrincipal hp = (HttpPrincipal) p;
+            assertEquals("foo", p.getName());
+            assertEquals(0, subject1.getPublicCredentials().size());
+            assertEquals(0, subject1.getPrivateCredentials().size());
 
-        verify(mockRequest);
+            verify(mockRequest);
+        }
+        catch(Exception unexpected)
+        {
+            log.error("unexpected exception", unexpected);
+            fail("unexpected exception: " + unexpected);
+        }
+        finally
+        {
+            log.debug("testGetSubjectFromHttpServletRequest_HttpPrincipal - DONE");
+        }
+    }
 
-        log.debug("getSubjectFromHTTPCookie - DONE");
+    //@Test
+    public void testGetSubjectFromHttpServletRequest_X500Principal()
+    {
+        log.debug("testGetSubjectFromHttpServletRequest_X500Principal - START");
+        try
+        {
+            final HttpServletRequest mockRequest =
+                createMock(HttpServletRequest.class);
+
+            String dn = "";
+
+            Calendar notAfterCal = Calendar.getInstance();
+            notAfterCal.set(1977, Calendar.NOVEMBER, 25, 3, 21, 0);
+            notAfterCal.set(Calendar.MILLISECOND, 0);
+            Date notAfterDate = notAfterCal.getTime();
+
+            X500Principal subjectX500Principal = new X500Principal("CN=CN1,O=O1");
+            X500Principal issuerX500Principal = new X500Principal("CN=CN2,O=O2");
+            X509Certificate mockCertificate = createMock(X509Certificate.class);
+            X509Certificate[] ca = new X509Certificate[] { mockCertificate };
+
+            expect(mockRequest.getRemoteUser()).andReturn(null).atLeastOnce();
+            expect(mockRequest.getCookies()).andReturn(null).atLeastOnce();
+            expect(mockRequest.getAttribute(
+                    "javax.servlet.request.X509Certificate")).andReturn(ca).atLeastOnce();
+            expect(mockCertificate.getNotAfter()).andReturn(notAfterDate).once();
+            expect(mockCertificate.getSubjectX500Principal()).
+                andReturn(subjectX500Principal).once();
+            expect(mockCertificate.getIssuerX500Principal()).andReturn(
+                issuerX500Principal).once();
+
+            replay(mockRequest);
+            final Subject subject1 = AuthenticationUtil.getSubject(mockRequest);
+
+            assertEquals(1, subject1.getPrincipals().size());
+            Principal p = subject1.getPrincipals().iterator().next();
+            assertTrue(p instanceof X500Principal);
+            X500Principal xp = (X500Principal) p;
+            assertEquals(subjectX500Principal, xp);
+            assertEquals(0, subject1.getPublicCredentials().size());
+            assertEquals(0, subject1.getPrivateCredentials().size());
+
+            verify(mockRequest);
+        }
+        catch(Exception unexpected)
+        {
+            log.error("unexpected exception", unexpected);
+            fail("unexpected exception: " + unexpected);
+        }
+        finally
+        {
+            log.debug("testGetSubjectFromHttpServletRequest_X500Principal - DONE");
+        }
+    }
+
+    @Test
+    public void testGetSubjectFromHttpServletRequest_CookiePrincipal() throws Exception
+    {
+        log.debug("testGetSubjectFromHttpServletRequest_CookiePrincipal - START");
+
+        try
+        {
+            final Cookie[] cookies = new Cookie[]
+                    {
+                            new Cookie("SOMECOOKIE", "SOMEVALUE"),
+                            new Cookie(SSOCookieManager.DEFAULT_SSO_COOKIE_NAME,
+                                       "username=TESTUSER|sessionID=88|token=AAABBB")
+                    };
+            final HttpServletRequest mockRequest =
+                    createMock(HttpServletRequest.class);
+
+            expect(mockRequest.getRemoteUser()).andReturn(null).once();
+            expect(mockRequest.getCookies()).andReturn(cookies).once();
+            expect(mockRequest.getAttribute(
+                    "javax.servlet.request.X509Certificate")).andReturn(null).atLeastOnce();
+
+            replay(mockRequest);
+            final Subject subject1 = AuthenticationUtil.getSubject(mockRequest);
+
+            assertEquals(1, subject1.getPrincipals().size());
+            Principal p = subject1.getPrincipals().iterator().next();
+            assertTrue(p instanceof CookiePrincipal);
+            CookiePrincipal cp = (CookiePrincipal) p;
+            assertEquals("TESTUSER", cp.getUsername());
+            assertEquals(88, cp.getSessionID());
+            assertEquals("AAABBB", new String(cp.getToken()));
+            assertEquals(0, subject1.getPublicCredentials().size());
+            assertEquals(0, subject1.getPrivateCredentials().size());
+
+            verify(mockRequest);
+        }
+        catch(Exception unexpected)
+        {
+            log.error("unexpected exception", unexpected);
+            fail("unexpected exception: " + unexpected);
+        }
+        finally
+        {
+            log.debug("testGetSubjectFromHttpServletRequest_CookiePrincipal - DONE");
+        }
+    }
+
+    //@Test
+    public void testGetSubjectCertKey()
+    {
+        try
+        {
+            X509Certificate[] certs = null;
+            PrivateKey pk = null;
+
+            // TODO: add some valid input
+            Subject s;
+
+            s = AuthenticationUtil.getSubject(certs, pk);
+
+             // TODO: verify output
+        }
+        catch(Exception unexpected)
+        {
+            log.error("unexpected exception", unexpected);
+            fail("unexpected exception: " + unexpected);
+        }
+        finally
+        {
+            log.debug("testGetSubjectCertKey - DONE");
+        }
+    }
+
+    // NOTE: for deprecated methods we currently just verify that the methods are still there
+    
+    //@Test
+    public void testGetSubject_Deprecated()
+    {
+        try
+        {
+            String remoteUser = null;
+            Collection<X509Certificate> certs = null;
+            X509CertificateChain chain = null;
+
+            Subject s;
+
+            s = AuthenticationUtil.getSubject(remoteUser, certs);
+            s = AuthenticationUtil.getSubject(remoteUser, chain);
+        }
+        catch(Exception unexpected)
+        {
+            log.error("unexpected exception", unexpected);
+            fail("unexpected exception: " + unexpected);
+        }
+        finally
+        {
+            log.debug("testGetSubject_Deprecated - DONE");
+        }
     }
 }
