@@ -382,6 +382,21 @@ public class SyncServlet extends HttpServlet
             log.info("executing job: " + jobID);
             jobManager.execute(job, new SyncOutputImpl(response));
         }
+        catch(JobPhaseException ex)
+        {
+            if (syncOutput != null && syncOutput.isOpen())
+            {
+                log.error("failure after OutputStream opened, cannot report error to user");
+                return;
+            }
+            // OutputStream not open, write an error response
+            response.setStatus(HttpServletResponse.SC_BAD_REQUEST);
+            response.setContentType("text/plain");
+            PrintWriter w = response.getWriter();
+            w.println(ex.getMessage());
+            w.close();
+            return;
+        }
         catch(JobNotFoundException ex)
         {
             if (syncOutput != null && syncOutput.isOpen())
