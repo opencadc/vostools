@@ -460,28 +460,6 @@ public class SyncServlet extends HttpServlet
             w.close();
             return;
         }
-        catch(Exception pex)
-        {
-            String msg = "";
-            if (jobID == null)
-                msg = "failed to create new job";
-            else
-                msg = "failed to execute job: " + jobID;
-            log.error(msg, pex);
-
-            if (syncOutput != null && syncOutput.isOpen())
-            {
-                log.error("failure after OutputStream opened, cannot report error to user");
-                return;
-            }
-            // OutputStream not open, write an error response
-            response.setStatus(HttpServletResponse.SC_INTERNAL_SERVER_ERROR);
-            response.setContentType("text/plain");
-            PrintWriter w = response.getWriter();
-            w.println(msg);
-            w.close();
-            return;
-        }
         catch(Throwable t)
         {
             if (jobID == null)
@@ -498,7 +476,8 @@ public class SyncServlet extends HttpServlet
             response.setContentType("text/plain");
             PrintWriter w = response.getWriter();
             w.println("job " + jobID + " failed unexpectedly: ");
-            t.printStackTrace(w);
+            // show user the stack trace? no
+            //t.printStackTrace(w);
             w.close();
             return;
         }
