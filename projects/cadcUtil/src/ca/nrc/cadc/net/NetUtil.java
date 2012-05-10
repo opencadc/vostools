@@ -72,9 +72,6 @@
 
 package ca.nrc.cadc.net;
 
-import ca.nrc.cadc.util.StringUtil;
-import sun.security.x509.IPAddressName;
-
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
@@ -196,9 +193,9 @@ public class NetUtil
     
     /**
      * Return the error body of the response in the connection.
-     * @param conn
-     * @return
-     * @throws IOException
+     * @param conn              The HTTP URL Connection.
+     * @return                  String error body text, if any.
+     * @throws IOException      If the stream cannot be obtained or read from.
      */
     public static String getErrorBody(HttpURLConnection conn)
             throws IOException
@@ -215,7 +212,8 @@ public class NetUtil
                 return "";
             }
             byte[] buffer = new byte[ERROR_BUFFER_SIZE];
-            int bytesRead = -1;
+            int bytesRead;
+
             // read until finished
             while ((bytesRead = in.read(buffer)) > 0)
             {
