@@ -708,9 +708,11 @@ class Client:
         
         if sendMD5:
             if checkMD5 != md5.hexdigest():
+		logging.error("MD5s don't match ( %s -> %s ) " % ( src, dest))
                 raise OSError(errno.EIO,"MD5s don't match",src)
             return md5.hexdigest()
         if destSize != srcSize:
+	    logging.error("sizes don't match ( %s -> %s ) " % ( src, dest))
             raise IOError(errno.EIO,"sizes don't match",src)
         return destSize
 
