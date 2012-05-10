@@ -72,22 +72,21 @@
 
 package ca.nrc.cadc.net;
 
+import ca.nrc.cadc.util.StringUtil;
+
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.UnsupportedEncodingException;
-import java.net.HttpURLConnection;
-import java.net.InetAddress;
-import java.net.URLDecoder;
-import java.net.URLEncoder;
-import java.net.UnknownHostException;
+import java.net.*;
+
 
 /**
- * Miscellaneous network utility methods (static).
- *
- * @version $Version$
- * @author pdowler
- */
+* Miscellaneous network utility methods (static).
+*
+* @version $Version$
+* @author pdowler
+*/
 public class NetUtil
 {
     
@@ -122,20 +121,26 @@ public class NetUtil
         {
             String s = System.getProperty(c.getName() + ".serverName");
             if (s != null)
+            {
                 return s;
+            }
         }
         // try package-specific setting
         if (c != null)
         {
             String s = System.getProperty(c.getPackage().getName() + ".serverName");
             if (s != null)
+            {
                 return s;
+            }
         }
         
         // try global serverName (this package)      
         String s = System.getProperty(NetUtil.class.getPackage().getName() + ".serverName");
         if (s != null)
+        {
             return s;
+        }
         
         // try FQHN from network
         try
@@ -158,7 +163,9 @@ public class NetUtil
     public static String encode(String s)
     {
         if (s == null)
+        {
             return null;
+        }
         try
         {
             return URLEncoder.encode(s, "UTF-8");
@@ -173,7 +180,9 @@ public class NetUtil
     public static String decode(String s)
     {
         if (s == null)
+        {
             return null;
+        }
         try
         {
             return URLDecoder.decode(s, "UTF-8");
@@ -188,7 +197,7 @@ public class NetUtil
      * Return the error body of the response in the connection.
      * @param conn
      * @return
-     * @throws IOException 
+     * @throws IOException
      */
     public static String getErrorBody(HttpURLConnection conn)
             throws IOException
@@ -219,7 +228,7 @@ public class NetUtil
         }
         catch (UnsupportedEncodingException e)
         {
-            if (out != null && out.size() > 0)
+            if (out.size() > 0)
             {
                 return out.toString();
             }
@@ -238,4 +247,18 @@ public class NetUtil
         }
     }
 
+    /**
+     * Obtain the Domain Name from the given URL.  An inappropriate URL will
+     * throw an Exception.
+     *
+     * @param stringURL           The URL string to parse from.
+     * @return              String domain name.
+     * @throws IOException  If anything goes awry during URL handling.
+     */
+    public static String getDomainName(final String stringURL)
+            throws IOException
+    {
+        final URL url = new URL(stringURL);
+        return url.getHost();
+    }
 }

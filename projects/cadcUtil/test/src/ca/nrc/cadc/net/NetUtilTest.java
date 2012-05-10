@@ -69,23 +69,16 @@
 
 package ca.nrc.cadc.net;
 
-import ca.nrc.cadc.auth.RunnableAction;
-import ca.nrc.cadc.auth.SSLUtil;
-import ca.nrc.cadc.util.FileUtil;
 import ca.nrc.cadc.util.Log4jInit;
-import java.io.File;
-import java.net.URL;
-import javax.net.ssl.SSLSocketFactory;
-import javax.security.auth.Subject;
 
 import org.apache.log4j.Level;
 import org.apache.log4j.Logger;
-import org.junit.After;
-import org.junit.AfterClass;
 import org.junit.Assert;
-import org.junit.Before;
 import org.junit.BeforeClass;
 import org.junit.Test;
+
+import java.net.MalformedURLException;
+
 
 /**
  *
@@ -193,6 +186,44 @@ public class NetUtilTest
         catch(Exception unexpected)
         {
             Assert.fail("unexpected exception: " + unexpected);
+        }
+    }
+
+    @Test
+    public void getDomainName() throws Exception
+    {
+        final String domainName1 =
+                NetUtil.getDomainName("http://www.myhost.com/my/path");
+        Assert.assertEquals("Domain Name should be myhost.com",
+                            "www.myhost.com", domainName1);
+
+        final String domainName2 = NetUtil.getDomainName("http://cadc.ca");
+        Assert.assertEquals("Domain Name should be cadc.ca", "cadc.ca",
+                            domainName2);
+
+        final String domainName3 =
+                NetUtil.getDomainName("http://user:pass@cadc.ca/path");
+        Assert.assertEquals("Domain Name should be cadc.ca", "cadc.ca",
+                            domainName3);
+
+        try
+        {
+            NetUtil.getDomainName("htt://cadc.ca");
+            Assert.fail("Should throw an exception.");
+        }
+        catch (MalformedURLException e)
+        {
+            // Good!
+        }
+
+        try
+        {
+            NetUtil.getDomainName(null);
+            Assert.fail("Should throw an exception.");
+        }
+        catch (MalformedURLException e)
+        {
+            // Good!
         }
     }
 }
