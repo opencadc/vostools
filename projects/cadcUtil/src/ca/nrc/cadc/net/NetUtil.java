@@ -73,6 +73,7 @@
 package ca.nrc.cadc.net;
 
 import ca.nrc.cadc.util.StringUtil;
+import sun.security.x509.IPAddressName;
 
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
@@ -258,7 +259,25 @@ public class NetUtil
     public static String getDomainName(final String stringURL)
             throws IOException
     {
+        // Test for a valid URL.
         final URL url = new URL(stringURL);
-        return url.getHost();
+
+        final InetAddress address = InetAddress.getByName(url.getHost());
+        final String fqdn = address.getHostName();
+        final String[] splitName = fqdn.split("\\.");
+        final String domainName;
+
+        // If the result ends up being something similar to myhost.com, or
+        // localhost.
+        if (splitName.length < 3)
+        {
+            domainName = fqdn;
+        }
+        else
+        {
+            domainName = fqdn.substring(fqdn.indexOf(".") + 1);
+        }
+
+        return domainName;
     }
 }

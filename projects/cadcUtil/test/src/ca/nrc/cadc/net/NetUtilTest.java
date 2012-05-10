@@ -193,9 +193,9 @@ public class NetUtilTest
     public void getDomainName() throws Exception
     {
         final String domainName1 =
-                NetUtil.getDomainName("http://www.myhost.com/my/path");
-        Assert.assertEquals("Domain Name should be myhost.com",
-                            "www.myhost.com", domainName1);
+                NetUtil.getDomainName("http://www.google.com/my/path");
+        Assert.assertEquals("Domain Name should be google.com",
+                            "google.com", domainName1);
 
         final String domainName2 = NetUtil.getDomainName("http://cadc.ca");
         Assert.assertEquals("Domain Name should be cadc.ca", "cadc.ca",
@@ -205,6 +205,11 @@ public class NetUtilTest
                 NetUtil.getDomainName("http://user:pass@cadc.ca/path");
         Assert.assertEquals("Domain Name should be cadc.ca", "cadc.ca",
                             domainName3);
+
+        final String domainName4 =
+                NetUtil.getDomainName("http://gimli.cadc.dao.nrc.ca");
+        Assert.assertEquals("Domain Name should be cadc.dao.nrc.ca",
+                            "cadc.dao.nrc.ca", domainName4);
 
         try
         {
