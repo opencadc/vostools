@@ -37,6 +37,7 @@ except Exception as e:
     sys.exit(e.errno)
 
 
+client.mkdir(args[0])	
 if not client.access(args[0]):
    client.mkdir(args[0])	
 elif client.isdir(args[0]):
