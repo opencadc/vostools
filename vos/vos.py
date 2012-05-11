@@ -557,8 +557,9 @@ class VOFile:
                 raise IOError(errno.ENOENT,"Node not found",self.url)
             if self.resp.status == 401:
                 raise IOError(errno.EACCES,"Not authorized",self.url)
-            logging.debug(self.resp.read())
-            raise IOError(self.resp.status,"unexpected server response %s (%d)" % ( self.resp.reason, self.resp.status),self.url)
+            msg=self.resp.read()
+            logging.debug(msg)
+            raise IOError(self.resp.status,msg,self.url)
         self.size=self.resp.getheader("Content-Length",0)
         return True
 
@@ -933,7 +934,7 @@ class Client:
     def access(self,uri,mode=os.O_RDONLY):
         """Test for existance"""
 	try:
-            return self.status(uri)
+            return self.status(uri,code=[400,200,303,302])
         except Exception as e:
 	    if e.errno == errno.ENOENT:
 		return False
