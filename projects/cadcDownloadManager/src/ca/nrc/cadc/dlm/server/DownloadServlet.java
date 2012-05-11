@@ -70,16 +70,21 @@
 
 package ca.nrc.cadc.dlm.server;
 
-import ca.nrc.cadc.dlm.DownloadUtil;
-import ca.nrc.cadc.net.NetUtil;
 import java.io.IOException;
 import java.util.Date;
+
 import javax.servlet.RequestDispatcher;
 import javax.servlet.ServletConfig;
 import javax.servlet.ServletException;
+import javax.servlet.http.Cookie;
 import javax.servlet.http.HttpServlet;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
+
+import ca.nrc.cadc.auth.SSOCookieManager;
+import ca.nrc.cadc.dlm.DownloadUtil;
+import ca.nrc.cadc.net.NetUtil;
+import ca.nrc.cadc.util.ArrayUtil;
 
 /**
  * Download pre-processor. This servlet accepts either direct POSTs from clients or
@@ -218,6 +223,26 @@ public class DownloadServlet extends HttpServlet
         String  serverName = NetUtil.getServerName(DownloadServlet.class);
         request.setAttribute("serverName", serverName);
         log.debug("serverName attribute: " + serverName);
+        
+        log.debug("looking for ssocookie attribute...");
+        final Cookie[] cookies = request.getCookies();
+        if (!ArrayUtil.isEmpty(cookies))
+        {
+            for (final Cookie cookie : cookies)
+            {
+                if (cookie.getName().equals(
+                        SSOCookieManager.DEFAULT_SSO_COOKIE_NAME))
+                {
+                    request.setAttribute("ssocookie", cookie.getValue());
+                    log.debug("ssocookie attribute: " + cookie.getValue());
+                    request.setAttribute("ssocookiedomain", 
+                            NetUtil.getDomainName(request.getRequestURL().toString()));
+                    log.debug("ssocookie domain: " + 
+                            NetUtil.getDomainName(request.getRequestURL().toString()));
+                }
+            }
+        }
+        
 
         RequestDispatcher disp = request.getRequestDispatcher(target);
         disp.forward(request, response);

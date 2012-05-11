@@ -80,6 +80,8 @@
     String fragment = (String) request.getAttribute("fragment");
     String codebase = (String) request.getAttribute("codebase");
     String serverName = (String) request.getAttribute("serverName");
+    String ssocookie = (String) request.getAttribute("ssocookie");
+    String ssocookiedomain = (String) request.getAttribute("ssocookiedomain");
 
     // this is XML: need to encode & in the uri and fragment
     uris = uris.replaceAll("&", "&amp;");
@@ -112,6 +114,8 @@
         <argument>--verbose</argument>
         <argument>--uris=<%= uris %></argument>
         <argument>--fragment=<%= fragment %></argument>
+	<argument>--ssocookie=<%= ssocookie %></argument>
+	<argument>--ssocookiedomain=<%= ssocookiedomain %></argument>
     </application-desc>
     
 </jnlp>

@@ -85,9 +85,13 @@
     <!-- developer convenience: place for extra targets and properties -->
     <import file="extras.xml" optional="true" />
 
+    <!-- developer convenience: override properties locally -->
+    <property file="local.build.properties" />
+
 <property name="project" value="cadcDownloadManager" />
 
-<property name="jars" value="${lib}/cadcUtil.jar:${ext.lib}/servlet-api.jar:${ext.lib}/log4j.jar" />
+<property name="lib.cadcUtil" value="${lib}/cadcUtil.jar" />
+<property name="jars" value="${lib.cadcUtil}:${ext.lib}/servlet-api.jar:${ext.lib}/log4j.jar" />
 
 <target name="build" depends="client,servlet,resources" />
 
@@ -131,9 +135,7 @@ note: client jars are not signed
         <fileset dir="${build}/lib">
             <include name="${project}Client.jar" />
         </fileset>
-        <fileset dir="${lib}">
-            <include name="cadcUtil.jar" />
-        </fileset>
+	<lib file="${lib.cadcUtil}" />
         <fileset dir="${ext.lib}">
             <include name="log4j.jar" />
         </fileset>
@@ -142,7 +144,6 @@ note: client jars are not signed
             <include name="cadcDownloadManagerServer.jar" />
         </lib>
         <lib dir="${lib}">
-            <include name="cadcUtil.jar" />
             <include name="cadcLog.jar" />
         </lib>
         

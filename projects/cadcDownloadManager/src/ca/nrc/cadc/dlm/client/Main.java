@@ -70,12 +70,19 @@
 package ca.nrc.cadc.dlm.client;
 
 import java.awt.Component;
+import java.security.PrivilegedAction;
 
+import javax.security.auth.Subject;
+import javax.servlet.http.Cookie;
+
+import org.apache.log4j.Level;
+
+import ca.nrc.cadc.auth.SSOCookieCredential;
+import ca.nrc.cadc.auth.SSOCookieManager;
 import ca.nrc.cadc.thread.ConditionVar;
 import ca.nrc.cadc.util.ArgumentMap;
 import ca.onfire.ak.Application;
 import ca.onfire.ak.ApplicationFrame;
-import org.apache.log4j.Level;
 
 /**
  * TODO
@@ -86,6 +93,7 @@ import org.apache.log4j.Level;
 public class Main
 {
     //private static Logger log = Logger.getLogger(Main.class);
+    private static UserInterface ui;
 
     public static void main(String[] args)
     {
@@ -107,9 +115,10 @@ public class Main
 
             String uriStr = fixNull(am.getValue("uris"));
             String fragment = fixNull(am.getValue("fragment"));
+
             boolean headless = am.isSet("headless");
             
-            UserInterface ui = null;
+            
             ConditionVar downloadCompleteCond = new ConditionVar();
             
             if (headless)
@@ -146,7 +155,40 @@ public class Main
                 ui.add(uris, fragment);
             }
 
-            ui.start();
+            Subject subject = new Subject();
+            // Cookie based authentication?
+            String ssoCookieStr = fixNull(am.getValue("ssocookie"));
+            if (ssoCookieStr != null)
+            {
+                  String ssoCookieDomain = 
+                      fixNull(am.getValue("ssocookiedomain"));
+                  if (ssoCookieDomain == null)
+                  {
+                      System.out.
+                      println("Missing ssocookiedomain argument...");
+                      Main.usage();
+                      System.exit(-1);
+                  }
+                  SSOCookieCredential cred = new SSOCookieCredential(
+                          SSOCookieManager.DEFAULT_SSO_COOKIE_NAME + "=" + 
+                                  ssoCookieStr, ssoCookieDomain);
+                  subject.getPublicCredentials().add(cred);
+            }
+            
+            boolean result = false; 
+              result =  Subject.doAs(subject, new PrivilegedAction<Boolean>()
+            {
+                public Boolean run()
+                {
+                        ui.start();
+                        return true;
+                }
+            });
+            
+            if (!result)
+            {
+                System.err.println("Error occurred during execution..");
+            }
             
             // if running headless, don't exit
             // until the downloads have been completed.
@@ -187,6 +229,7 @@ public class Main
         System.out.println("java -jar cadcDownloadManagerClient.jar [-v|--verbose | -d|--debug | -q|--quiet ]");
         System.out.println("          --uris=<comma-separated list of URIs>");
         System.out.println("         [ --fragment=<common fragment to append to all URIs> ]");
+        System.out.println("         [ --ssocookie=<cookie value to use in sso authentication> ]");
         System.out.println("         [--headless] : run in non-interactive (no GUI) mode");
         System.out.println();
         System.out.println("optional arguments to use with --headless:");
