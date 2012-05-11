@@ -312,6 +312,7 @@ class Node:
                   if value is None:
                       ## this is actually a delete property
                       prop.attrib['xsi:nil']='true'
+                      prop.attrib["xmlns:xsi"]=Node.XSINS
                       prop.text = ""
                       self.props[propName]=None
                   else:
@@ -382,7 +383,6 @@ class Node:
         node=ET.Element("node")
         node.attrib["xmlns"]=Node.VOSNS
         node.attrib["xmlns:vos"]=Node.VOSNS
-        #node.attrib["xmlns:xsi"]=Node.XSINS
         node.attrib[Node.TYPE]=nodeType
         node.attrib["busy"]="false"
         node.attrib["uri"]=uri
@@ -862,7 +862,7 @@ class Client:
     def addProps(self,node):
         """Given a node structure do a POST of the XML to the VOSpace to update the node properties"""
         logging.debug("Updating %s" % ( node.name))
-        logging.debug(node.props)
+        logging.debug(str(node.props))
         ## Get a copy of what's on the server
         storedNode=self.getNode(node.uri)
         for prop in storedNode.props:
@@ -877,6 +877,7 @@ class Client:
             property=ET.SubElement(properties,Node.PROPERTY,attrib={'readOnly': 'false', 'uri': "%s#%s" % (Node.IVOAURL, prop)})
             if node.props[prop] is None:
                 property.attrib['xsi:nil']='true'
+                property.attrib["xmlns:xsi"]=Node.XSINS
                 property.text=""
             else:
                 property.text=node.props[prop]
