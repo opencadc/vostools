@@ -97,6 +97,7 @@ public class X509CertificateChain
     private static Logger log = Logger.getLogger(X509CertificateChain.class);
 
     private X500Principal principal;
+    private X509Certificate endEntity;
     private X509Certificate[] chain;
     private PrivateKey key;
     private boolean isProxy;
@@ -111,6 +112,7 @@ public class X509CertificateChain
         this.key = privateKey;
         this.hashKey = genHashKey(principal);
         this.chain = null;
+        this.endEntity = null;
     }
 
     public X509CertificateChain(Collection<X509Certificate> certs)
@@ -141,6 +143,7 @@ public class X509CertificateChain
     {
         for (X509Certificate c : chain)
         {
+            this.endEntity = c;
             X500Principal sp = c.getSubjectX500Principal();
             String sdn = sp.getName(X500Principal.RFC1779);
             X500Principal ip = c.getIssuerX500Principal();
@@ -329,5 +332,7 @@ public class X509CertificateChain
     public PrivateKey getPrivateKey() { return key; }
 
     public boolean isProxy() { return isProxy; }
+    
+    public X509Certificate getEndEntity() { return endEntity; }
 }
 
