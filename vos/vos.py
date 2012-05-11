@@ -934,12 +934,10 @@ class Client:
     def access(self,uri,mode=os.O_RDONLY):
         """Test for existance"""
 	try:
-            return self.status(uri,code=[400,200,303,302])
+            dum=self.getNode(uri)
+	    return True
         except Exception as e:
-	    if e.errno == errno.ENOENT:
-		return False
-	    else:
-	       raise e
+	    return False
 
     def status(self,uri,code=[200,303,302]):
         """Check to see if this given uri points at a containerNode.
