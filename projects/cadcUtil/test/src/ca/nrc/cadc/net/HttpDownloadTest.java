@@ -71,6 +71,7 @@ package ca.nrc.cadc.net;
 
 import ca.nrc.cadc.auth.RunnableAction;
 import ca.nrc.cadc.auth.SSLUtil;
+import ca.nrc.cadc.auth.SSOCookieCredential;
 import ca.nrc.cadc.util.FileUtil;
 import ca.nrc.cadc.util.Log4jInit;
 import java.io.ByteArrayOutputStream;
@@ -102,6 +103,7 @@ public class HttpDownloadTest
     private static File SSL_KEY;
 
     private URL httpURL;
+    private URL privHttpURL;
     private URL httpsURL;
     private URL notFoundURL;
     private File tmpDir;
@@ -132,6 +134,7 @@ public class HttpDownloadTest
     public void setUp() throws Exception
     {
         this.httpURL = new URL("http://www.cadc-ccda.hia-iha.nrc-cnrc.gc.ca/robots.txt");
+        this.privHttpURL = new URL("http://cadc-ccda.hia-iha.nrc-cnrc.gc.ca/data/pub/vospace/CADCAuthtest1/privateFile");
         this.httpsURL = new URL("https://www.cadc-ccda.hia-iha.nrc-cnrc.gc.ca/robots.txt");
         this.notFoundURL = new URL("http://www.cadc-ccda.hia-iha.nrc-cnrc.gc.ca/does-not-exist-test");
         this.tmpDir = new File(System.getProperty("user.dir"));
@@ -524,6 +527,46 @@ public class HttpDownloadTest
             dl.setOverwrite(false);
 
             Subject s = SSLUtil.createSubject(SSL_CERT, SSL_KEY);
+            Subject.doAs(s, new RunnableAction(dl));
+
+            Assert.assertNull("HttpDownload failed: " + dl.getThrowable(), dl.getThrowable());
+
+            File out = dl.getFile();
+            Assert.assertNotNull("result file", out);
+            Assert.assertTrue("dest file exists after download", out.exists());
+            Assert.assertTrue("dest file size > 0", out.length() > 0);
+        }
+        catch (Exception unexpected)
+        {
+            log.error("unexpected exception", unexpected);
+            Assert.fail("unexpected exception: " + unexpected);
+        }
+        finally
+        {
+            if (dest != null)
+                dest.delete();
+        }
+    }
+    
+    @Test
+    public void testDownloadCookie() throws Exception
+    {
+        log.debug("TEST: testDownloadCookie");
+        URL src = privHttpURL;
+        File dest = new File(tmpDir, "privateFile");
+        try
+        {
+            if (dest.exists())
+                dest.delete();
+            Assert.assertTrue("dest file does not exist before download", !dest.exists());
+            HttpDownload dl = new HttpDownload(src, dest);
+            dl.setOverwrite(false);
+
+            Subject s = new Subject();
+            s.getPublicCredentials().add(
+                    new SSOCookieCredential(
+                            "CADC_SSO=username=cadcauthtest1|sessionID=36|token=test-token--do-not-delete", 
+                            "cadc-ccda.hia-iha.nrc-cnrc.gc.ca"));
             Subject.doAs(s, new RunnableAction(dl));
 
             Assert.assertNull("HttpDownload failed: " + dl.getThrowable(), dl.getThrowable());

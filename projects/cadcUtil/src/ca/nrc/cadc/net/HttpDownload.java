@@ -80,13 +80,18 @@ import java.io.InputStream;
 import java.io.OutputStream;
 import java.net.HttpURLConnection;
 import java.net.URL;
+import java.security.AccessControlContext;
+import java.security.AccessController;
+import java.util.Set;
 import java.util.zip.GZIPInputStream;
 import java.util.zip.ZipInputStream;
 
 import javax.net.ssl.HttpsURLConnection;
+import javax.security.auth.Subject;
 
 import org.apache.log4j.Logger;
 
+import ca.nrc.cadc.auth.SSOCookieCredential;
 import ca.nrc.cadc.net.event.TransferEvent;
 import ca.nrc.cadc.util.FileMetadata;
 import ca.nrc.cadc.util.StringUtil;
@@ -258,6 +263,7 @@ public class HttpDownload extends HttpTransfer
     {
         this.overwrite = overwrite;
     }
+    
 
     /**
      * Get the size of the result file. This may be smaller than the content-length if the
@@ -523,11 +529,16 @@ public class HttpDownload extends HttpTransfer
             HttpsURLConnection sslConn = (HttpsURLConnection) conn;
             initHTTPS(sslConn);
         }
+        else
+        {
+            setRequestSSOCookie(conn);
+        }
 
         conn.setInstanceFollowRedirects(true);
         conn.setRequestMethod("HEAD");
         conn.setRequestProperty("Accept", "*/*");
         conn.setRequestProperty("User-Agent", userAgent);
+        
         
         int code = conn.getResponseCode();
         log.debug("HTTP HEAD status: " + code);
@@ -694,9 +705,15 @@ public class HttpDownload extends HttpTransfer
                 HttpsURLConnection sslConn = (HttpsURLConnection) conn;
                 initHTTPS(sslConn);
             }
+            else
+            {
+                setRequestSSOCookie(conn);
+            }
             conn.setInstanceFollowRedirects(true);
             conn.setRequestProperty("Accept", "*/*");
             conn.setRequestProperty("User-Agent", userAgent);
+            
+            
             for (HttpRequestProperty rp : requestProperties)
                 conn.setRequestProperty(rp.getProperty(), rp.getValue());
 
@@ -740,9 +757,14 @@ public class HttpDownload extends HttpTransfer
                     HttpsURLConnection sslConn = (HttpsURLConnection) rconn;
                     initHTTPS(sslConn);
                 }
+                else
+                {
+                    setRequestSSOCookie(conn);
+                }
                 rconn.setInstanceFollowRedirects(true);
                 rconn.setRequestProperty("Accept", "*/*");
                 rconn.setRequestProperty("User-Agent", userAgent);
+
                 for (HttpRequestProperty rp : requestProperties)
                     rconn.setRequestProperty(rp.getProperty(), rp.getValue());
                 log.debug("trying: " + pkey + " = " + pvalue);
@@ -988,4 +1010,25 @@ public class HttpDownload extends HttpTransfer
         }
         return null;
      }
+    
+    private void setRequestSSOCookie(HttpURLConnection conn)
+    {
+        AccessControlContext acc = AccessController.getContext();
+        Subject subj = Subject.getSubject(acc);
+        if (subj != null)
+        {
+            Set<SSOCookieCredential> cookieCreds = subj
+                    .getPublicCredentials(SSOCookieCredential.class);
+            if ((cookieCreds != null) && (cookieCreds.size() > 0))
+            {
+                // grab the first cookie (it should be only one anyways)
+                SSOCookieCredential cookieCred = cookieCreds.iterator()
+                        .next();
+                if (conn.getURL().getHost().endsWith(
+                        cookieCred.getDomain()))
+                    conn.setRequestProperty("Cookie", cookieCred
+                            .getSsoCookieValue());
+            }
+        }
+    }
 }

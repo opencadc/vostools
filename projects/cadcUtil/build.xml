@@ -150,6 +150,7 @@
             <test name="ca.nrc.cadc.auth.AuthenticationUtilTest"/>
             <test name="ca.nrc.cadc.auth.CertificateUtilTest"/>
             <test name="ca.nrc.cadc.auth.SSLUtilTest"/>
+            <test name="ca.nrc.cadc.auth.CertCmdArgUtilTest"/>
             <formatter type="plain" usefile="false"/>
         </junit>
     </target>
