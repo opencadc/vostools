@@ -54,12 +54,18 @@ class ThreadCopy(threading.Thread):
       if not opt.ignore_checksum:
          srcMD5=self.fileMD5(src)
       if not opt.overwrite:
+       """Check if the file is the same"""
        try:
         node=nodeDict.get(dest,None)
-	if node is None and opt.cache_nodes:
-	   raise IOError(errno.ENFILE,dest)
-	node=self.client.getNode(dest)
-        """Check if the file is the same"""
+        logging.debug("%s %s %s" % ( dest, node, opt.cache_nodes))
+	if node is None: 
+           if opt.cache_nodes:
+	     raise IOError(errno.ENFILE,dest)
+	   else:
+             logging.debug("Getting node info from VOSpace")
+	     logging.debug(str(nodeDict.keys()))
+	     logging.debug(str(dest))
+	     node=self.client.getNode(dest)
         info=node.getInfo()
         destMD5=node.props.get('MD5',None)
         destLength=node.attr['st_size']
@@ -80,7 +86,7 @@ class ThreadCopy(threading.Thread):
         self.filesSent+=1
         self.bytesSent+=stat.st_size
       except IOError as e:
-        logging.error("Error writing %s to server, skipping\n" % ( src))
+        logging.error("Error writing %s to server, skipping" % ( src))
         logging.error(str(e))
         self.filesErrored+=1
         pass
@@ -181,7 +187,7 @@ def buildFileList(basePath,destRoot='',recursive=False,ignore=None):
       mkdirs(thisDirname)
       ## cache the contents of this directory, if any
       if opt.cache_nodes:
-          if nodeDict[thisDirname].props.get('length',0) > 0: 
+          if nodeDict[thisDirname].props.get('length',0) > 0 and recursive: 
            thisNode=c.getNode(thisDirname,limit=1000)
            for node in thisNode.getNodeList():
              thisNode = thisDirname+"/"+node.name
@@ -222,7 +228,7 @@ if __name__=='__main__':
   parser=optparse.OptionParser(usage=usage)
   parser.add_option('--verbose','-v',action="store_true",help='run in verbose mode')
   parser.add_option('--debug','-d',action="store_true",help='run in verbose mode')
-  parser.add_option('--cache_nodes',action="store_false",help='turn off node caching, not safe in running multiple instances of vsync, but safe for multiple streams in one instance')
+  parser.add_option('--cache_nodes',default=True,action="store_false",help='turn off node caching, not safe in running multiple instances of vsync, but safe for multiple streams in one instance')
   parser.add_option('--ignore-checksum',action="store_true",help='dont check MD5 sum, forces transfer')
   parser.add_option('--recursive','-r',help="Do a recursive sync",action="store_true")
   parser.add_option('--nstreams',type=int,help="Number of streams to run (MAX: 10)",default=1)
@@ -237,7 +243,7 @@ if __name__=='__main__':
   elif opt.verbose:
      logging.basicConfig(level=logging.INFO,format="%(message)s")
   else:
-     logging.basicConfig(level=logging.ERROR,fformat="%(asctime)s - %(module)s.%(funcName)s %(lineno)d: %(message)s")
+     logging.basicConfig(level=logging.ERROR,format="%(asctime)s - %(module)s: %(message)s")
 
   if len(args)<2:
     parser.error("requires one or more source files and a single destination directory")
@@ -264,6 +270,18 @@ if __name__=='__main__':
 	 if os.path.basename(filename)!=os.path.basename(dest):
              thisRoot=os.path.join(dest,os.path.basename(filename))
       mkdirs(thisRoot)
+      nodeDict[thisRoot]=c.getNode(thisRoot)
+      logging.debug("Cache: %s" %(opt.cache_nodes))
+      if opt.cache_nodes:
+          logging.debug("%s %s" %(thisRoot, nodeDict[thisRoot].props.get('length',0)))
+          if nodeDict[thisRoot].props.get('length',0) > 0:
+           thisNode=c.getNode(thisRoot,limit=1000)
+           for node in thisNode.getNodeList():
+             thisNode = thisRoot+"/"+node.name
+             logging.debug("adding %s to nodeDict" %(thisNode))
+             nodeDict[thisNode]=node
+             if node.isdir():
+                 goodDirs.append(thisNode)
       filelist.extend(buildFileList(filename,destRoot=thisRoot,recursive=opt.recursive,ignore=opt.exclude))
     elif os.path.isfile(filename):
       if destIsDir:
@@ -291,7 +309,7 @@ if __name__=='__main__':
        continue
     import re
     if re.match('^[A-Za-z0-9\\._\\-\\(\\);:&\\*\\$@!+=\\/]*$',src) is None:
-       logging.error("filename %s contains illegal characters, skipping\n" % ( src))
+       logging.error("filename %s contains illegal characters, skipping" % ( src))
        continue
     copy(src,dest)	
        
