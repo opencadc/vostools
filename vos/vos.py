@@ -761,6 +761,7 @@ class Client:
         # If this is a container node and the nodlist has not already been set, try to load the children.
         # this would be better deferred until the children are actually needed, however that would require
         # access to a connection when the children are accessed, and thats not easy.
+        # IF THE CALLER KNOWS THEY DON'T NEED THE CHILDREN THEY CAN SET LIMIT=0 IN THE CALL
         if node.isdir() and limit>0:
             node._nodeList=[]
             logging.debug("Loading children")
@@ -792,6 +793,8 @@ class Client:
         logging.debug("Node URI: %s" %( uri))
 
         if method in ('PUT'):
+	    ## having a limit is not expected for PUT
+	    limit=None
             logging.debug("PUT structure hardcoded for CADC vospace" )
             ### This part is hard coded for CADC VOSpace...
             return "%s://%s/data/pub/%s/%s" % (protocol, server,self.archive,parts.path.strip('/'))
