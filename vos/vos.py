@@ -12,6 +12,7 @@ import sys
 import os
 import errno
 import xml.etree.ElementTree as ET
+import re
 from __version__ import version
 # set a 1 MB buffer to keep the number of trips
 # around the IO loop small
@@ -557,6 +558,9 @@ class VOFile:
                 raise IOError(errno.ENOENT,"Node not found",self.url)
             if self.resp.status == 401:
                 raise IOError(errno.EACCES,"Not authorized",self.url)
+            if self.resp.status == 409:
+	        if re.search("DuplicateNode",self.resp.read()):
+		    raise OSError(errno.EEXIST,"File Exists",self.url)
             msg=self.resp.read()
             logging.debug(msg)
             raise IOError(self.resp.status,msg,self.url)

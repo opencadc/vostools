@@ -1,9 +1,16 @@
 #!python
 """A script for sending files to VOSpace via multiple connection streams."""
 
+
 import vos, sys
 import threading, Queue
 import datetime, optparse
+import errno
+import logging
+
+
+
+
 
 queue=Queue.Queue()
 goodDirs=[]
@@ -48,15 +55,17 @@ class ThreadCopy(threading.Thread):
          srcMD5=self.fileMD5(src)
       if not opt.overwrite:
        try:
-        node=nodeDict.get(dest,self.client.getNode(dest))
+        node=nodeDict.get(dest,None)
+	if node is None and opt.cache_nodes:
+	   raise IOError(errno.ENFILE,dest)
+	node=self.client.getNode(dest)
         """Check if the file is the same"""
         info=node.getInfo()
         destMD5=node.props.get('MD5',None)
         destLength=node.attr['st_size']
         destTime=node.attr['st_ctime']
-        if (not opt.ignore_checksum and srcMD5==destMD5) or ( opt.ignore_checksum and destTime >= stat.st_ctime and destLength==stat.st_size) :
-          if opt.verbose:
-            sys.stdout.write( "skipping: %s  matches %s\n" % (src,dest) )
+        if (not opt.ignore_checksum and srcMD5==destMD5) or ( opt.ignore_checksum and destTime >= stat.st_mtime and destLength==stat.st_size) :
+          logging.info( "skipping: %s  matches %s" % (src,dest) )
           self.filesSkipped+=1
           self.bytesSkipped+=stat.st_size
           self.queue.task_done()
@@ -64,54 +73,78 @@ class ThreadCopy(threading.Thread):
        except IOError as e:
         """Ignore the erorr"""
         pass
-      if opt.verbose:
-        sys.stdout.write("%s -> %s\n" % (src,dest))
+      logging.info("%s -> %s\n" % (src,dest))
       try:
-        self.client.copy(src,dest)
+        checkMD5 = not opt.ignore_checksum
+        self.client.copy(src,dest,sendMD5=checkMD5)
         self.filesSent+=1
         self.bytesSent+=stat.st_size
       except IOError as e:
-        sys.stderr.write("Error writing %s to server, skipping\n" % ( src))
-        sys.stderr.write(str(e))
+        logging.error("Error writing %s to server, skipping\n" % ( src))
+        logging.error(str(e))
         self.filesErrored+=1
         pass
       self.queue.task_done()
-      if not opt.ignore_checksum:
-        destMD5=None
-        try:
-          destMD5=self.client.getNode(dest).props.get('MD5',None)
-        except IOError as e:
-          sys.stderr.write(str(e))
-          pass
-        if destMD5!=srcMD5:
-          sys.stderr.write("Problem writing to vospace. requeuing: %s" % (src))
-          #self.queue.put((src,dest))
+      # this check is handled in copy now..
+      #if not opt.ignore_checksum:
+      #  destMD5=None
+      #  try:
+      #    destMD5=self.client.getNode(dest).props.get('MD5',None)
+      #  except IOError as e:
+      #    sys.stderr.write(str(e))
+      #    pass
+      #  if destMD5!=srcMD5:
+      #    sys.stderr.write("Problem writing to vospace. requeuing: %s" % (src))
+      #    #self.queue.put((src,dest))
 
 def mkdirs(dirs):
+
+  ## if we've seen this before skip it.
   if dirs in goodDirs:
     return
-  if c.isdir(dirs):
-    goodDirs.append(dirs) 
+
+  ## try and make a new director and return
+  ## failure indicates we should see if subdirs exist
+  try:
+    c.mkdir(dirs)
     if opt.cache_nodes:
-      for node in c.getNode(dirs).getNodeList():
-        nodeDict[os.path.join(dirs,node.name)]=node
+       nodeDict[dirs]=c.getNode(dirs)
+    goodDirs.append(dirs) 
     return
+  except OSError as e:
+    if e.errno != errno.EEXIST:
+      raise e
 
-  (dir,subdir) = os.path.split(dirs)
-
-  if not c.access(dir):
-    mkdirs(dir)
-  if not c.isdir(dir):
-    sys.exit("Part of the path isn't a directy? (%s)" % ( dir))
-  if c.isfile(dirs):
-    sys.exit("Destination location a file when directory expected (%s)" % (subdir))
-  c.mkdir(dirs)
-
-  goodDirs.append(dirs)
-  if opt.cache_nodes:
-    for node in c.getNode(dirs).getNodeList():
-      nodeDict[os.path.join(dirs,node.name)]=node
+  ## OK, must already have existed, add to list
+  goodDirs.append(dirs) 
+  
+  ## build a cache of sibling directories.
+  if opt.cache_nodes and opt.recursive:
+    upperDir = os.path.dirname(dirs)
+    thisNode = c.getNode(upperDir,limit=1000)
+    nodeDict[upperDir]=thisNode
+    for node in thisNode.getNodeList():
+      thisDir = os.path.join(upperDir,node.name)
+      nodeDict[thisDir]=node
+      if node.isdir():
+	goodDirs.append(thisDir)
   return
+
+#  (dir,subdir) = os.path.split(dirs)
+
+#  if not c.access(dir):
+#    mkdirs(dir)
+#  if not c.isdir(dir):
+#    sys.exit("Part of the path isn't a directy? (%s)" % ( dir))
+#  if c.isfile(dirs):
+#    sys.exit("Destination location a file when directory expected (%s)" % (subdir))
+#  c.mkdir(dirs)
+
+#  goodDirs.append(dirs)
+#  if opt.cache_nodes:
+#    for node in c.getNode(dirs).getNodeList():
+#      nodeDict[os.path.join(dirs,node.name)]=node
+#  return
 
 import os
 def copy(source,dest):
@@ -124,8 +157,7 @@ def copy(source,dest):
 def startStreams(nstreams):
   streams=[]
   for i in range(nstreams):
-    if opt.verbose:
-      sys.stdout.write("Launching vospace connection stream %d\n" % ( i ))
+    logging.info("Launching vospace connection stream %d" )
     t=ThreadCopy(queue)
     t.setDaemon(True)
     t.start()
@@ -140,16 +172,31 @@ def buildFileList(basePath,destRoot='',recursive=False,ignore=None):
   filelist=[]
   import re
   for (root,dirs,filenames) in os.walk(basePath):
+    for thisDirname in dirs:
+      if ignore is not None and ignore in thisDirname:
+        continue
+      thisDirname=os.path.join(root,thisDirname)
+      cprefix=os.path.commonprefix((basePath,thisDirname))
+      thisDirname=os.path.normpath(destRoot+"/"+thisDirname[len(cprefix):])
+      mkdirs(thisDirname)
+      ## cache the contents of this directory, if any
+      if opt.cache_nodes:
+          if nodeDict[thisDirname].props.get('length',0) > 0: 
+           thisNode=c.getNode(thisDirname,limit=1000)
+           for node in thisNode.getNodeList():
+             thisNode = thisDirname+"/"+node.name
+	     nodeDict[thisNode]=node
+             if node.isdir():
+	         goodDirs.append(thisNode)
     for thisfilename in filenames:
       if ignore is not None and ignore in thisfilename:
         continue
       srcfilename=os.path.normpath(os.path.join(root,thisfilename))
       cprefix=os.path.commonprefix((basePath,srcfilename))
       destfilename=os.path.normpath(destRoot+"/"+srcfilename[len(cprefix):])
-      mkdirs(os.path.dirname(destfilename))
+      #mkdirs(os.path.dirname(destfilename))
       count += 1
-      if opt.verbose :
-         sys.stderr.write("Building list of files to transfer %s\r" %(spinner[count % len(spinner)]))
+      logging.info("Building list of files to transfer %s\r" %(spinner[count % len(spinner)]))
       filelist.append((srcfilename,destfilename))
     if not recursive:
       return filelist
@@ -158,7 +205,7 @@ def buildFileList(basePath,destRoot='',recursive=False,ignore=None):
 
 
 def signal_handler(signal, frame):
-    sys.stderr.write("Interupt\n")
+    logging.critical("Interupt\n")
     sys.exit(-1)
 
 
@@ -174,7 +221,8 @@ if __name__=='__main__':
   usage = "%prog [options] files vos:Destination/"
   parser=optparse.OptionParser(usage=usage)
   parser.add_option('--verbose','-v',action="store_true",help='run in verbose mode')
-  parser.add_option('--cache_nodes',action="store_true",help='caches the contents of the vospace at the start of transfer, not safe in running multiple instances of vsync, but safe for multiple streams in one instance')
+  parser.add_option('--debug','-d',action="store_true",help='run in verbose mode')
+  parser.add_option('--cache_nodes',action="store_false",help='turn off node caching, not safe in running multiple instances of vsync, but safe for multiple streams in one instance')
   parser.add_option('--ignore-checksum',action="store_true",help='dont check MD5 sum, forces transfer')
   parser.add_option('--recursive','-r',help="Do a recursive sync",action="store_true")
   parser.add_option('--nstreams',type=int,help="Number of streams to run (MAX: 10)",default=1)
@@ -182,8 +230,15 @@ if __name__=='__main__':
   parser.add_option('--overwrite',help="overwrite copy on server regardless of modification/size/md5 checks",action="store_true")
   parser.add_option('--load_test',action="store_true",help="Used to stress test the VOServer, also set --nstreams to a large value")
   parser.add_option("--certfile",help="location of your CADC security certificate file",default=os.path.join(os.getenv("HOME","."),".ssl/cadcproxy.pem"))
-
   (opt,args)=parser.parse_args()
+
+  if opt.debug:
+     logging.basicConfig(level=logging.DEBUG,format="%(asctime)s - %(module)s.%(funcName)s %(lineno)d: %(message)s")
+  elif opt.verbose:
+     logging.basicConfig(level=logging.INFO,format="%(message)s")
+  else:
+     logging.basicConfig(level=logging.ERROR,fformat="%(asctime)s - %(module)s.%(funcName)s %(lineno)d: %(message)s")
+
   if len(args)<2:
     parser.error("requires one or more source files and a single destination directory")
 
@@ -194,31 +249,28 @@ if __name__=='__main__':
   if dest[0:4]!="vos:":
     parser.error("Only allows sync FROM local copy TO VOSpace")
   ## Currently we don't create nodes in sync and we don't sync onto files
-  if opt.verbose:
-    sys.stdout.write("Connecting to VOSpace\n")
+  logging.info("Connecting to VOSpace")
   c=vos.Client(certFile=opt.certfile)
-  if opt.verbose:
-    sys.stdout.write("Confirming Destination is a directory\n")
+  logging.info("Confirming Destination is a directory")
   destIsDir=c.isdir(dest)
 
   ### build a complete file list given all the things on the command line
   filelist=[]
   for filename in args:
-    #if opt.verbose:
-    #  sys.stdout.write("Adding %s to transfer list\n" % (filename))
     filename=os.path.abspath(filename)
     thisRoot=dest
     if os.path.isdir(filename):
       if filename[-1]!="/" :
 	 if os.path.basename(filename)!=os.path.basename(dest):
              thisRoot=os.path.join(dest,os.path.basename(filename))
+      mkdirs(thisRoot)
       filelist.extend(buildFileList(filename,destRoot=thisRoot,recursive=opt.recursive,ignore=opt.exclude))
     elif os.path.isfile(filename):
       if destIsDir:
         thisRoot=os.path.join(dest,os.path.basename(filename))
       filelist.append((filename,thisRoot))
     else:
-      sys.stderr.write("%s: No such file or directory.\n" % ( filename))
+      logging.error("%s: No such file or directory." % ( filename))
 
   if 1==2:
    destIsFile=c.isfile(dest)
@@ -232,21 +284,21 @@ if __name__=='__main__':
 
   for (src,dest) in filelist:
     if os.path.islink(src):
-       sys.stderr.write("%s is a link, skipping\n" % ( src))
+       logging.error("%s is a link, skipping" % ( src))
        continue
     if not os.access(src,os.R_OK):
-       sys.stderr.write("Failed to open file %s, skipping\n" % ( src))
+       logging.error("Failed to open file %s, skipping" % ( src))
        continue
     import re
     if re.match('^[A-Za-z0-9\\._\\-\\(\\);:&\\*\\$@!+=\\/]*$',src) is None:
-       sys.stderr.write("filename %s contains illegal characters, skipping\n" % ( src))
+       logging.error("filename %s contains illegal characters, skipping\n" % ( src))
        continue
     copy(src,dest)	
        
 
   streams=startStreams(opt.nstreams)
   import time
-  sys.stderr.write("\n\nLaunching multistreamed transfer\n CTRL-C disabled \n\n use CTRL-\ to interrupt\n\n")
+  logging.info("\n\nLaunching multistreamed transfer\n CTRL-C disabled \n\n use CTRL-\ to interrupt\n\n")
   time.sleep(5)
   queue.join()
   endTime=time.time()
@@ -262,18 +314,18 @@ if __name__=='__main__':
     filesSkipped+=stream.filesSkipped
     filesErrored+=stream.filesErrored
 
-  sys.stdout.write("\n\n==== TRANSFER REPORT ====\n\n")
+  logging.info("\n\n==== TRANSFER REPORT ====\n\n")
 
   if bytesSent>0:
     rate=bytesSent/(endTime-startTime)/1024.0
-    sys.stdout.write("Sent %d files (%8.1f kbytes @ %8.3f kBytes/s)\n" %(filesSent,bytesSent/1024.0,rate))
+    logging.info("Sent %d files (%8.1f kbytes @ %8.3f kBytes/s)" %(filesSent,bytesSent/1024.0,rate))
     speedUp=(bytesSkipped+bytesSent)/bytesSent
-    sys.stdout.write("Speedup:  %f (skipped %d files)\n" % (speedUp,filesSkipped))
+    logging.info("Speedup:  %f (skipped %d files)" % (speedUp,filesSkipped))
 
   if bytesSent==0:
-    sys.stdout.write("No files needed sending \n")
+    logging.info("No files needed sending ")
 
   if filesErrored > 0:
-    sys.stdout.write("Error transferring %d files, please try again\n" % ( filesErrored))
+    logging.verbose("Error transferring %d files, please try again" % ( filesErrored))
 
 
