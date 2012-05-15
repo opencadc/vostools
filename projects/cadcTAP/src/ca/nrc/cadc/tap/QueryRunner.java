@@ -361,12 +361,15 @@ public class QueryRunner implements JobRunner
 
                 tList.add(System.currentTimeMillis());
                 sList.add("execute query and get ResultSet: ");
-
+                String filename = "result_" + job.getID() + "." + tableWriter.getExtension();
+                
                 if (syncOutput != null)
                 {
                     String contentType = tableWriter.getContentType();
                     log.debug("streaming output: " + contentType);
                     syncOutput.setHeader("Content-Type", contentType);
+                    String disp = "attachment; filename=\""+filename+"\"";
+                    syncOutput.setHeader("Content-Disposition", disp);
                     tableWriter.write(resultSet, syncOutput.getOutputStream());
                     tList.add(System.currentTimeMillis());
                     sList.add("stream Result set as " + contentType + ": ");
@@ -379,7 +382,7 @@ public class QueryRunner implements JobRunner
                         log.debug(job.getID() + ": found phase = ABORTED before writing results - DONE");
                         return;
                     }
-                    String filename = "result_" + job.getID() + "." + tableWriter.getExtension();
+                    
                     log.debug("result filename: " + filename);
                     rs.setJob(job);
                     rs.setFilename(filename);
@@ -458,14 +461,16 @@ public class QueryRunner implements JobRunner
                 log.debug("Error message: " + errorMessage);
                 VOTableWriter ewriter = new VOTableWriter();
                 ewriter.setJob(job);
+                String filename = "error_" + job.getID() + "." + ewriter.getExtension();
                 if (syncOutput != null)
                 {
                     syncOutput.setHeader("Content-Type", ewriter.getContentType());
+                    String disp = "attachment; filename=\""+filename+"\"";
+                    syncOutput.setHeader("Content-Disposition", disp);
                     ewriter.write(t, syncOutput.getOutputStream());
                 }
                 else
                 {
-                    String filename = "error_" + job.getID() + "." + ewriter.getExtension();
                     rs.setJob(job);
                     rs.setFilename(filename);
                     rs.setContentType(ewriter.getContentType());
