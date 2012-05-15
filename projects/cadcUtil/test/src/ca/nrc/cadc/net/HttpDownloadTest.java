@@ -134,7 +134,7 @@ public class HttpDownloadTest
     public void setUp() throws Exception
     {
         this.httpURL = new URL("http://www.cadc-ccda.hia-iha.nrc-cnrc.gc.ca/robots.txt");
-        this.privHttpURL = new URL("http://cadc-ccda.hia-iha.nrc-cnrc.gc.ca/data/pub/vospace/CADCAuthtest1/privateFile");
+        this.privHttpURL = new URL("http://www.cadc-ccda.hia-iha.nrc-cnrc.gc.ca/data/pub/vospace/CADCAuthtest1/privateFile");
         this.httpsURL = new URL("https://www.cadc-ccda.hia-iha.nrc-cnrc.gc.ca/robots.txt");
         this.notFoundURL = new URL("http://www.cadc-ccda.hia-iha.nrc-cnrc.gc.ca/does-not-exist-test");
         this.tmpDir = new File(System.getProperty("user.dir"));

@@ -529,11 +529,8 @@ public class HttpDownload extends HttpTransfer
             HttpsURLConnection sslConn = (HttpsURLConnection) conn;
             initHTTPS(sslConn);
         }
-        else
-        {
-            setRequestSSOCookie(conn);
-        }
 
+        setRequestSSOCookie(conn);
         conn.setInstanceFollowRedirects(true);
         conn.setRequestMethod("HEAD");
         conn.setRequestProperty("Accept", "*/*");
@@ -705,10 +702,8 @@ public class HttpDownload extends HttpTransfer
                 HttpsURLConnection sslConn = (HttpsURLConnection) conn;
                 initHTTPS(sslConn);
             }
-            else
-            {
-                setRequestSSOCookie(conn);
-            }
+
+            setRequestSSOCookie(conn);
             conn.setInstanceFollowRedirects(true);
             conn.setRequestProperty("Accept", "*/*");
             conn.setRequestProperty("User-Agent", userAgent);
@@ -757,10 +752,8 @@ public class HttpDownload extends HttpTransfer
                     HttpsURLConnection sslConn = (HttpsURLConnection) rconn;
                     initHTTPS(sslConn);
                 }
-                else
-                {
-                    setRequestSSOCookie(conn);
-                }
+
+                setRequestSSOCookie(rconn);
                 rconn.setInstanceFollowRedirects(true);
                 rconn.setRequestProperty("Accept", "*/*");
                 rconn.setRequestProperty("User-Agent", userAgent);
