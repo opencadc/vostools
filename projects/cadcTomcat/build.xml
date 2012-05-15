@@ -1,0 +1,47 @@
+<!DOCTYPE project>
+<project default="build" basedir=".">
+
+<!--*+
+************************************************************************
+****  C A N A D I A N   A S T R O N O M Y   D A T A   C E N T R E  *****
+*
+*   System Name:    build.xml
+*
+*   Purpose:
+*   Over-ride default ant behaviour.
+*
+*   Date        : Nov 5, 2009
+*
+****  C A N A D I A N   A S T R O N O M Y   D A T A   C E N T R E  *****
+************************************************************************
+*-->
+
+    <property environment="env"/>
+    <property file="local.build.properties" />
+    <property file="${env.A}/compilers/setup.ant.java.properties" />
+    <import file="${env.A}/compilers/setup.ant.java.targets.xml"/>
+
+    <property name="project" value="cadcTomcat" />
+
+    <property name="cadcUtil" value="${lib}/cadcUtil.jar"/>
+    <property name="log4j" value="${ext.lib}/log4j.jar"/>
+    <property name="tomcat-coyote" value="${env.CATALINA_HOME}/server/lib/tomcat-coyote.jar"/>
+    <property name="tomcat-util" value="${env.CATALINA_HOME}/server/lib/tomcat-util.jar"/>
+    <property name="tomcat-http" value="${env.CATALINA_HOME}/server/lib/tomcat-http.jar"/>
+
+    <!-- JAR files to be included in classpath for compilation -->
+    <property name="jars" value="${cadcUtil}:${log4j}:${tomcat-coyote}:${tomcat-util}:${tomcat-http}" />
+
+    <target name="build" depends="compile">
+        
+        <jar jarfile="${build}/lib/${project}.jar"
+            basedir="${build}/class"
+            update="no">
+            <include name="ca/nrc/cadc/**" />
+            <zipfileset includes="**/*.class" src="${cadcUtil}"/>
+            <exclude name="**Test**" />
+        </jar>
+        
+    </target>
+
+</project>
