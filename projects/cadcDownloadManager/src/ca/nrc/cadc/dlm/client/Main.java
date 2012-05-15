@@ -230,6 +230,7 @@ public class Main
         System.out.println("          --uris=<comma-separated list of URIs>");
         System.out.println("         [ --fragment=<common fragment to append to all URIs> ]");
         System.out.println("         [ --ssocookie=<cookie value to use in sso authentication> ]");
+        System.out.println("         [ --ssocookiedomain=<domain cookie is valid in (required with ssocookie arg)> ]");
         System.out.println("         [--headless] : run in non-interactive (no GUI) mode");
         System.out.println();
         System.out.println("optional arguments to use with --headless:");
