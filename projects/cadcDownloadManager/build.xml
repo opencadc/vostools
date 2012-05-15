@@ -182,4 +182,16 @@ note: client jars are not signed
             <arg value="--uris=http://www.google.com/,ad:HST/U27R9G01B.2,ad:HST/U27R9G01B.3" />
         </java>
     </target>
+
+  <target name="awt-test" depends="build">
+    <java classname="junit.extensions.abbot.ScriptTestSuite">
+      <classpath>
+        <pathelement path="${build}/class"/>
+        <pathelement path="${build}/test/class"/>
+        <pathelement path="${jars}:${testingJars}"/>
+        <pathelement path="${ext.lib}/xerces.jar" />
+      </classpath>
+      <arg value="test/gui/DLM.xml" />
+    </java>
+  </target>
 </project>

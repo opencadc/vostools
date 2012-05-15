@@ -1,0 +1,48 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<AWTTestScript>
+  <component class="javax.swing.Box" id="Box Instance" index="1" parent="JDownloadManager Instance" window="DownloadManager" />
+  <component class="javax.swing.JButton" id="Clear" index="0" parent="JPanel Instance 3" text="Clear" window="DownloadManager" />
+  <component class="ca.onfire.ak.ApplicationFrame" id="DownloadManager" root="true" title="DownloadManager" />
+  <component class="javax.swing.JPanel" id="GTKFileChooser.bottomButtonPanel" index="2" name="GTKFileChooser.bottomButtonPanel" parent="JFileChooser Instance" window="Select" />
+  <component class="javax.swing.JTextField" id="GTKFileChooser.fileNameTextField" index="4" label="Selection:" name="GTKFileChooser.fileNameTextField" parent="GTKFileChooser.interiorPanel" window="Select" />
+  <component class="javax.swing.JPanel" id="GTKFileChooser.interiorPanel" index="1" name="GTKFileChooser.interiorPanel" parent="JFileChooser Instance" window="Select" />
+  <component class="ca.nrc.cadc.dlm.client.GraphicUI" id="GraphicUI Instance" index="0" parent="JPanel Instance 2" window="DownloadManager" />
+  <component class="ca.nrc.cadc.dlm.client.JDownloadManager" id="JDownloadManager Instance" index="0" parent="JTabbedPane Instance" window="DownloadManager" />
+  <component class="javax.swing.JFileChooser" id="JFileChooser Instance" index="0" parent="JPanel Instance" window="Select" />
+  <component class="javax.swing.JLayeredPane" id="JLayeredPane Instance" index="1" parent="JRootPane Instance" window="Select" />
+  <component class="javax.swing.JLayeredPane" id="JLayeredPane Instance 2" index="1" parent="JRootPane Instance 2" window="Select" />
+  <component class="javax.swing.JOptionPane" id="JOptionPane Instance" index="0" parent="JPanel Instance 2" window="Select" />
+  <component class="javax.swing.JPanel" id="JPanel Instance" index="0" parent="JLayeredPane Instance" window="Select" />
+  <component class="javax.swing.JPanel" id="JPanel Instance 2" index="0" parent="JLayeredPane Instance 2" window="Select" />
+  <component class="javax.swing.JPanel" id="JPanel Instance 3" index="2" parent="Box Instance" window="DownloadManager" />
+  <component class="javax.swing.JRootPane" id="JRootPane Instance" index="0" parent="Select" />
+  <component class="javax.swing.JRootPane" id="JRootPane Instance 2" index="0" parent="Select" />
+  <component class="javax.swing.JTabbedPane" id="JTabbedPane Instance" index="0" parent="GraphicUI Instance" window="DownloadManager" />
+  <component class="javax.swing.JButton" id="OptionPane.button" index="1" name="OptionPane.button" parent="OptionPane.buttonArea" text="Yes to All" window="Select" />
+  <component class="javax.swing.JButton" id="OptionPane.button 2" index="0" name="OptionPane.button" parent="OptionPane.buttonArea" text="OK" window="Select" />
+  <component class="javax.swing.JPanel" id="OptionPane.buttonArea" index="3" name="OptionPane.buttonArea" parent="JOptionPane Instance" window="Select" />
+  <component class="javax.swing.JDialog" id="Select" parent="shared frame" title="Select" />
+  <component class="javax.swing.JButton" id="SynthFileChooser.approveButton" index="1" name="SynthFileChooser.approveButton" parent="GTKFileChooser.bottomButtonPanel" text="Select" window="Select" />
+  <component class="javax.swing.SwingUtilities$SharedOwnerFrame" id="shared frame" root="true" title="" />
+  <launch args="[--verbose,--uris=http://at88mph.dyndns.org\,ad:HST/U27R9G01B.2\,ad:HST/U27R9G01B.3]" class="ca.nrc.cadc.dlm.client.Main" classpath="/data/test/cadcroot/lib/cadcUtil.jar:/data/test/cadcroot/lib/cadcDownloadManagerClient.jar:/data/test/cadcroot/lib/ad2.jar:/usr/cadc/external/java/lib/log4j.jar" method="main" threaded="true" />
+  <sequence>
+    <wait args="DownloadManager" class="abbot.tester.ComponentTester" method="assertComponentShowing" />
+    <wait args="Select" class="abbot.tester.ComponentTester" method="assertComponentShowing" />
+    <action args="GTKFileChooser.fileNameTextField,/tmp" method="actionKeyString" />
+    <action args="SynthFileChooser.approveButton" class="javax.swing.AbstractButton" method="actionClick" />
+    <wait args="Select" class="abbot.tester.ComponentTester" invert="true" method="assertComponentShowing" />
+    <wait args="Select" class="abbot.tester.ComponentTester" method="assertComponentShowing" />
+    <action args="OptionPane.button" class="javax.swing.AbstractButton" method="actionClick" />
+    <wait args="Select" class="abbot.tester.ComponentTester" invert="true" method="assertComponentShowing" />
+    <action args="JTabbedPane Instance,&quot;Log Messages&quot;" class="javax.swing.JTabbedPane" method="actionSelectTab" />
+    <action args="JTabbedPane Instance,&quot;Downloads&quot;" class="javax.swing.JTabbedPane" method="actionSelectTab" />
+    <action args="Clear" class="javax.swing.AbstractButton" method="actionClick" />
+    <action args="DownloadManager" class="java.awt.Window" method="actionClose" />
+    <wait args="Select" class="abbot.tester.ComponentTester" method="assertComponentShowing" />
+    <action args="OptionPane.button 2" class="javax.swing.AbstractButton" method="actionClick" />
+    <wait args="Select" class="abbot.tester.ComponentTester" invert="true" method="assertComponentShowing" />
+    <wait args="DownloadManager" class="abbot.tester.ComponentTester" invert="true" method="assertComponentShowing" />
+  </sequence>
+  <terminate />
+</AWTTestScript>
+
