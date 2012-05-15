@@ -69,6 +69,7 @@
 
 package ca.nrc.cadc.vosi;
 
+import ca.nrc.cadc.auth.AuthenticationUtil;
 import java.io.IOException;
 
 import javax.naming.Context;
@@ -86,6 +87,10 @@ import org.jdom.output.XMLOutputter;
 
 import ca.nrc.cadc.tap.schema.TapSchema;
 import ca.nrc.cadc.tap.schema.TapSchemaDAO;
+import java.security.PrivilegedActionException;
+import java.security.PrivilegedExceptionAction;
+import javax.naming.NamingException;
+import javax.security.auth.Subject;
 
 /**
  * Simple servlet that reads metadata using <code>ca.nrc.cadc.tap.schema</code>
@@ -101,31 +106,66 @@ public class TableServlet extends HttpServlet
     private static String queryDataSourceName = "jdbc/tapuser";
 
     @Override
-    protected void doGet(HttpServletRequest request, HttpServletResponse response) throws ServletException, IOException
+    protected void doGet(HttpServletRequest request, HttpServletResponse response)
+        throws ServletException, IOException
     {
-        boolean started = false;
+        Subject subject = AuthenticationUtil.getSubject(request);
+        GetTablesAction action = new GetTablesAction();
+        action.response = response;
         try
         {
-            // find DataSource via JNDI lookup
-            Context initContext = new InitialContext();
-            Context envContext = (Context) initContext.lookup("java:/comp/env");
-            DataSource queryDataSource = (DataSource) envContext.lookup(queryDataSourceName);
-
-            // extract TapSchema
-            TapSchemaDAO dao = new TapSchemaDAO(queryDataSource);
-            TapSchema tapSchema = dao.get();
-
-            TableSet vods = new TableSet(tapSchema);
-            Document doc = vods.getDocument();
-            XMLOutputter out = new XMLOutputter(Format.getPrettyFormat());
-            started = true;
-            response.setContentType("text/xml");
-            out.output(doc, response.getOutputStream());
+            Subject.doAs(subject, action);
         }
-        catch (Throwable t)
+        catch(PrivilegedActionException pex)
         {
-            log.error("BUG", t);
-            if (!started) response.sendError(HttpServletResponse.SC_SERVICE_UNAVAILABLE, t.getMessage());
+            Exception ex = pex.getException();
+            if (ex instanceof IOException)
+                throw (IOException) ex;
+        }
+    }
+
+    private class GetTablesAction implements PrivilegedExceptionAction<Object>
+    {
+        HttpServletResponse response;
+
+        public Object run() throws Exception
+        {
+            boolean started = false;
+            try
+            {
+                // find DataSource via JNDI lookup
+                Context initContext = new InitialContext();
+                Context envContext = (Context) initContext.lookup("java:/comp/env");
+                DataSource queryDataSource = (DataSource) envContext.lookup(queryDataSourceName);
+
+                // extract TapSchema
+                TapSchemaDAO dao = new TapSchemaDAO(queryDataSource, true);
+                TapSchema tapSchema = dao.get();
+
+                TableSet vods = new TableSet(tapSchema);
+                Document doc = vods.getDocument();
+                XMLOutputter out = new XMLOutputter(Format.getPrettyFormat());
+                started = true;
+                response.setContentType("text/xml");
+                out.output(doc, response.getOutputStream());
+            }
+            catch(IOException ex)
+            {
+                throw ex;
+            }
+            catch(NamingException ex)
+            {
+                log.error("CONFIGURATION ERROR: failed to find JNDI DataSource "+queryDataSourceName);
+                if (!started) response.sendError(HttpServletResponse.SC_SERVICE_UNAVAILABLE,
+                        "service unavailable (configuration error)");
+            }
+            catch (Throwable t)
+            {
+                log.error("BUG", t);
+                if (!started) response.sendError(HttpServletResponse.SC_SERVICE_UNAVAILABLE,
+                        t.getMessage());
+            }
+            return null;
         }
     }
 }

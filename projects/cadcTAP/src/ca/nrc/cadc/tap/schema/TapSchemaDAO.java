@@ -69,14 +69,16 @@
 
 package ca.nrc.cadc.tap.schema;
 
+import java.lang.reflect.Constructor;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
+import java.util.TreeMap;
 
 import javax.sql.DataSource;
 
-import org.apache.log4j.Level;
 import org.apache.log4j.Logger;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.jdbc.core.RowMapper;
@@ -88,46 +90,102 @@ import org.springframework.jdbc.core.RowMapper;
 public class TapSchemaDAO
 {
     private static Logger log = Logger.getLogger(TapSchemaDAO.class);
-    
+
+    public static final String SCHEMAS_TAB = "tap_schema.schemas";
+    public static final String TABLES_TAB = "tap_schema.tables";
+    public static final String COLUMNS_TAB = "tap_schema.columns";
+    public static final String KEYS_TAB = "tap_schema.keys";
+    public static final String KEY_COLUMNS_TAB = "tap_schema.key_columns";
+
     // SQL to select all rows from TAP_SCHEMA.schemas.
     private static final String SELECT_SCHEMAS =
             "select schema_name, description, utype " +
-            "from tap_schema.schemas";
+            "from " + SCHEMAS_TAB;
+    private static final String ORDER_SCHEMAS = " ORDER BY schema_name";
 
     // SQL to select all rows from TAP_SCHEMA.tables.
     private static final String SELECT_TABLES = 
             "select schema_name, table_name, description, utype " +
-            " from tap_schema.tables";
+            " from " + TABLES_TAB;
+    private static final String ORDER_TABLES = " ORDER BY schema_name,table_name";
 
     // SQL to select all rows from TAP_SCHEMA.colums.
     private static final String SELECT_COLUMNS = 
             "select table_name, column_name, description, utype, ucd, unit, datatype, size, principal, indexed, std " +
-            "from tap_schema.columns ";
-
+            "from " + COLUMNS_TAB;
+    private static final String ORDER_COLUMNS = " ORDER BY table_name,column_name";
+    
     // SQL to select all rows from TAP_SCHEMA.keys.
     private static final String SELECT_KEYS =
             "select key_id, from_table, target_table,description,utype " +
-            "from tap_schema.keys ";
+            "from " + KEYS_TAB;
+    private static final String ORDER_KEYS = " ORDER BY key_id,from_table,target_table";
 
     // SQL to select all rows from TAP_SCHEMA.key_columns.
     private static final String SELECT_KEY_COLUMNS = 
             "select key_id, from_column, target_column " +
-            "from tap_schema.key_columns ";
+            "from " + KEY_COLUMNS_TAB;
+    private static final String ORDER_KEY_COLUMNS = " ORDER BY key_id, from_column, target_column";
 
     // Database connection.
-    private JdbcTemplate jdbc;
+    protected DataSource dataSource;
+    protected boolean ordered;
+
+    private TapSchemaDAO delegate;
 
     // Indicates function return datatype matches argument datatype.
     public static final String ARGUMENT_DATATYPE = "ARGUMENT_DATATYPE";
 
     /**
-     * Construct a new TapSchemaDAO using the specified DataSource.
+     * Map of TAP_SCHEMA table name (*_TAB constants) to the ID column for hooking to
+     * a custom access control system. This is used in the appendProprietaryWhere method.
+     */
+    protected static final Map<String,String> ASSET_ID_COLUMNS = new TreeMap<String,String>();
+    static
+    {
+        ASSET_ID_COLUMNS.put(SCHEMAS_TAB, "schemaID");
+        ASSET_ID_COLUMNS.put(TABLES_TAB, "tableID");
+        ASSET_ID_COLUMNS.put(COLUMNS_TAB, "columnID");
+        ASSET_ID_COLUMNS.put(KEYS_TAB, "keyID");
+        ASSET_ID_COLUMNS.put(KEY_COLUMNS_TAB, "key_columnID");
+    }
+
+    /**
+     * Construct a new TapSchemaDAO using the specified DataSource. As an extension
+     * mechanism, this class will attempt to load a subclass and delegate to it. The
+     * delegate class muct be named <code>ca.nrc.cadc.tap.schema.TapSchemaDAOImpl</code>
+     * and have a no-arg constructor.
      * 
      * @param dataSource TAP_SCHEMA DataSource.
      */
     public TapSchemaDAO(DataSource dataSource)
     {
-        jdbc = new JdbcTemplate(dataSource);
+        this(dataSource, false);
+    }
+
+    public TapSchemaDAO(DataSource dataSource, boolean ordered)
+    {
+        this.dataSource = dataSource;
+        this.ordered = ordered;
+        String extensionClassName = TapSchemaDAO.class.getName() + "Impl";
+        try
+        {
+            Class c = Class.forName(extensionClassName);
+            this.delegate = (TapSchemaDAO) c.newInstance();
+            log.info("loaded: " + extensionClassName);
+            delegate.dataSource = dataSource;
+            delegate.ordered = ordered;
+        }
+        catch(Throwable t)
+        {
+            log.debug("failed to load: " + extensionClassName + ", using TapSchemaDAO directly", t);
+        }
+    }
+
+    // delegate ctor
+    protected TapSchemaDAO()
+    {
+
     }
 
     /**
@@ -135,31 +193,50 @@ public class TapSchemaDAO
      * 
      * @return TapSchema containing all of the data from TAP_SCHEMA.
      */
-    public TapSchema get()
+    public final TapSchema get()
     {
+        if (delegate != null)
+            return delegate.get();
+
+        JdbcTemplate jdbc = new JdbcTemplate(dataSource);
         TapSchema tapSchema = new TapSchema();
+        String sql;
 
         // List of TAP_SCHEMA.schemas
-        tapSchema.schemaDescs = jdbc.query(SELECT_SCHEMAS, new SchemaMapper());
+        sql = appendProprietaryWhere(SCHEMAS_TAB, SELECT_SCHEMAS);
+        if (ordered) sql += ORDER_SCHEMAS;
+        log.debug(sql);
+        tapSchema.schemaDescs = jdbc.query(sql, new SchemaMapper());
 
         // List of TAP_SCHEMA.tables
-        List<TableDesc> tableDescs = jdbc.query(SELECT_TABLES, new TableMapper());
+        sql = appendProprietaryWhere(TABLES_TAB, SELECT_TABLES);
+        if (ordered) sql += ORDER_TABLES;
+        log.debug(sql);
+        List<TableDesc> tableDescs = jdbc.query(sql, new TableMapper());
 
         // Add the Tables to the Schemas.
         addTablesToSchemas(tapSchema.schemaDescs, tableDescs);
 
         // List of TAP_SCHEMA.columns
-        List<ColumnDesc> columnDescs = jdbc.query(SELECT_COLUMNS, new ColumnMapper());
+        sql = appendProprietaryWhere(COLUMNS_TAB, SELECT_COLUMNS);
+        if (ordered) sql += ORDER_COLUMNS;
+        log.debug(sql);
+        List<ColumnDesc> columnDescs = jdbc.query(sql, new ColumnMapper());
 
         // Add the Columns to the Tables.
         addColumnsToTables(tableDescs, columnDescs);
 
         // List of TAP_SCHEMA.keys
-        //tapSchema.keyDescs = jdbc.query(SELECT_KEYS, new KeyMapper());
-        List<KeyDesc> keyDescs = jdbc.query(SELECT_KEYS, new KeyMapper());
+        sql = appendProprietaryWhere(KEYS_TAB, SELECT_KEYS);
+        if (ordered) sql += ORDER_KEYS;
+        log.debug(sql);
+        List<KeyDesc> keyDescs = jdbc.query(sql, new KeyMapper());
 
         // List of TAP_SCHEMA.key_columns
-        List<KeyColumnDesc> keyColumnDescs = jdbc.query(SELECT_KEY_COLUMNS, new KeyColumnMapper());
+        sql = appendProprietaryWhere(KEY_COLUMNS_TAB, SELECT_KEY_COLUMNS);
+        if (ordered) sql += ORDER_KEY_COLUMNS;
+        log.debug(sql);
+        List<KeyColumnDesc> keyColumnDescs = jdbc.query(sql, new KeyColumnMapper());
 
         // Add the KeyColumns to the Keys.
         addKeyColumnsToKeys(keyDescs, keyColumnDescs);
@@ -179,6 +256,31 @@ public class TapSchemaDAO
         }
 
         return tapSchema;
+    }
+
+    /**
+     * Append a where clause to the query that selects from the specified table (one of
+     * the keys in ASSET_ID_COLUMNS). The default impl gets the asset column and appends
+     * <code>where assetColumn is null</code> (meaning public). If you want a row to be
+     * private, simply set the assetCol to a non-null value; if you want to implement
+     * proprietary access to these rows, then you must:
+     * </p>
+     * <ul>
+     * <li>implement authenticated access to your TAP service (eg https with client cert,
+     * http auth, etc).
+     * <li>override this method and inside it, get the Subject from the current AccessControlContext
+     * and add whatever is appropriate tio the where so the user (Subject) will see rows they are
+     * permitted to see. The modified SQL will typically be to append "OR (...)" to permit access to
+     * proprietary content in addition to public content
+     * </ul>
+     * 
+     * @param sql
+     * @return
+     */
+    protected String appendProprietaryWhere(String tapSchemaTablename, String sql)
+    {
+        String assetCol = ASSET_ID_COLUMNS.get(tapSchemaTablename);
+        return sql + " where " + assetCol + " is null"; // public
     }
 
     /**
@@ -267,7 +369,15 @@ public class TapSchemaDAO
         }
     }
 
-    List<FunctionDesc> getFunctionDescs()
+    /**
+     * Get white-list of supported functions. TAP implementors that want to allow
+     * additiopnal functions to be used in queries to be used should override this
+     * method, call <code>super.getFunctionDescs()</code>, and then add additional
+     * FunctionDesc descriptors to the list before returning it.
+     *
+     * @return white list of allowed functions
+     */
+    protected List<FunctionDesc> getFunctionDescs()
     {
         List<FunctionDesc> functionDescs = new ArrayList<FunctionDesc>();
 
@@ -385,7 +495,7 @@ public class TapSchemaDAO
             schemaDesc.description = rs.getString("description");
             schemaDesc.utype = rs.getString("utype");
             schemaDesc.tableDescs = new ArrayList<TableDesc>();
-            log.debug("found: " + schemaDesc);
+            //log.debug("found: " + schemaDesc);
             return schemaDesc;
         }
     }
@@ -404,7 +514,7 @@ public class TapSchemaDAO
             tableDesc.utype = rs.getString("utype");
             tableDesc.columnDescs = new ArrayList<ColumnDesc>();
             tableDesc.keyDescs = new ArrayList<KeyDesc>();
-            log.debug("found: " + tableDesc);
+            //log.debug("found: " + tableDesc);
             return tableDesc;
         }
     }
@@ -428,7 +538,7 @@ public class TapSchemaDAO
             col.principal = intToBoolean(rs.getInt("principal"));
             col.indexed = intToBoolean(rs.getInt("indexed"));
             col.std = intToBoolean(rs.getInt("std"));
-            log.debug("found: " + col);
+            //log.debug("found: " + col);
             return col;
         }
 
@@ -454,7 +564,7 @@ public class TapSchemaDAO
             keyDesc.description = rs.getString("description");
             keyDesc.utype = rs.getString("utype");
             keyDesc.keyColumnDescs = new ArrayList<KeyColumnDesc>();
-            log.debug("found: " + keyDesc);
+            //log.debug("found: " + keyDesc);
             return keyDesc;
         }
     }
@@ -470,7 +580,7 @@ public class TapSchemaDAO
             keyColumnDesc.keyId = rs.getString("key_id");
             keyColumnDesc.fromColumn = rs.getString("from_column");
             keyColumnDesc.targetColumn = rs.getString("target_column");
-            log.debug("found: " + keyColumnDesc);
+            //log.debug("found: " + keyColumnDesc);
             return keyColumnDesc;
         }
     }
