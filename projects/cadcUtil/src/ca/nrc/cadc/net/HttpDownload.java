@@ -922,6 +922,8 @@ public class HttpDownload extends HttpTransfer
             else
                 ioLoop(istream, ostream, sz, 0);
             ostream.flush();
+
+            this.destFile = decompFile; // ?? 
         }
         finally
         {

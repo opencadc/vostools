@@ -70,6 +70,7 @@
 
 package ca.nrc.cadc.dlm.client;
 
+import ca.nrc.cadc.net.NetrcFile;
 import java.awt.BorderLayout;
 import java.awt.Color;
 import java.awt.Component;
@@ -131,7 +132,7 @@ public class HttpAuthenticator extends Authenticator implements Runnable
     { 
         super(); 
         this.parent = parent;
-        msg("constructor");
+        log.debug("constructor");
     }
 
     @Override
@@ -146,7 +147,7 @@ public class HttpAuthenticator extends Authenticator implements Runnable
             ra.protocol = getRequestingProtocol();
             ra.scheme = getRequestingScheme();
             ra.url = getRequestingURL();
-            log.warn("getPasswordAuthentication: " + ra);
+            log.debug("getPasswordAuthentication: " + ra);
 
             boolean retry = false;
             RequestingApp prev = prevAttempts.get(ra.url);
@@ -169,7 +170,7 @@ public class HttpAuthenticator extends Authenticator implements Runnable
                         Map.Entry<URL,RequestingApp> me = iter.next();
                         if (me.getValue().equals(ra))
                         {
-                            log.warn("getPasswordAuthentication: removing " + me.getKey() + " , " + me.getValue());
+                            log.debug("getPasswordAuthentication: removing " + me.getKey() + " , " + me.getValue());
                             iter.remove();
                         }
                     }
@@ -184,7 +185,7 @@ public class HttpAuthenticator extends Authenticator implements Runnable
             char[] pw = pa.getPassword();
             char[] pwcp = new char[pw.length];
             System.arraycopy(pw, 0, pwcp, 0, pw.length);
-            log.warn("getPasswordAuthentication: ret = " + pa);
+            log.debug("getPasswordAuthentication: ret = " + pa);
             return new PasswordAuthentication(pa.getUserName(), pwcp);
         }
     }
@@ -196,13 +197,13 @@ public class HttpAuthenticator extends Authenticator implements Runnable
         this.doRetry = retry;
         if ( SwingUtilities.isEventDispatchThread() )
         {
-            log.warn("getCredentials runs in the swing event thread");
+            log.debug("getCredentials runs in the swing event thread");
             run();
         }
         else
             try
             {
-                log.warn("getCredentials invokeAndWait in swing event thread");
+                log.debug("getCredentials invokeAndWait in swing event thread");
                 SwingUtilities.invokeAndWait(this);
             }
             catch(InterruptedException killed)
@@ -231,11 +232,6 @@ public class HttpAuthenticator extends Authenticator implements Runnable
         mad.setRetry(false);
     }
 
-    private void msg(String s)
-    {
-        if (debug) System.out.println("[HttpAuthenticator] " + s);
-    }
-    
     private class MyAuthDialog implements ActionListener
     {
         private int CANCEL = 1;
@@ -260,7 +256,7 @@ public class HttpAuthenticator extends Authenticator implements Runnable
         
         MyAuthDialog() 
         {
-            msg("constrcutor: MyAuthDialog");
+            log.debug("constrcutor: MyAuthDialog");
         }
 
         public void setRetry(boolean retry) { this.retry = retry; }
@@ -271,7 +267,7 @@ public class HttpAuthenticator extends Authenticator implements Runnable
             {
                 if ( dialog != null && netrcBox1.isSelected())
                 {
-                    msg("getPasswordAuthentication: calling findCredentials()");
+                    log.debug("getPasswordAuthentication: calling findCredentials()");
                     NetrcFile f = new NetrcFile();
                     // since we are going to use directly, use strict hostname match
                     PasswordAuthentication pa = f.getCredentials(host, true);
@@ -299,7 +295,7 @@ public class HttpAuthenticator extends Authenticator implements Runnable
         {
             if (dialog == null)
             {
-                msg("MyAuthDialog.init: creating JDialog...");
+                log.debug("MyAuthDialog.init: creating JDialog...");
                 this.dialog = new JDialog(Util.findParentFrame(parent), "Authentication required", true);
                 dialog.setDefaultCloseOperation(JDialog.HIDE_ON_CLOSE);
                 
@@ -392,7 +388,7 @@ public class HttpAuthenticator extends Authenticator implements Runnable
                     iconLabel.setBorder(BorderFactory.createEmptyBorder(4,4,4,4));
                 }
             }
-            catch(Throwable t) { msg("failed to load icon: " + t); }
+            catch(Throwable t) { log.debug("failed to load icon: " + t); }
             
             promptLabel.setText(prompt);
             hostLabel.setText("server: " + host);
@@ -429,11 +425,11 @@ public class HttpAuthenticator extends Authenticator implements Runnable
         
         private void checkNetrc()
         {
-            msg("checkNetrc...");
+            log.debug("checkNetrc...");
             if ( !netrcBox1.isSelected() )
                 return;
             
-            msg("creating NetrcFile");
+            log.debug("creating NetrcFile");
             NetrcFile netrc = new NetrcFile();
             // since this is for http only, onyl strict hostname matching makes sense
             PasswordAuthentication pw = netrc.getCredentials(host, true);
@@ -449,7 +445,7 @@ public class HttpAuthenticator extends Authenticator implements Runnable
             }
             else
             {
-                msg("failed to find " + host + " in NetrcFile");
+                log.debug("failed to find " + host + " in NetrcFile");
             }
         }
     }

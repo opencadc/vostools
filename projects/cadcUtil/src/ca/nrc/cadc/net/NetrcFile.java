@@ -68,7 +68,7 @@
 */
 
 
-package ca.nrc.cadc.dlm.client;
+package ca.nrc.cadc.net;
 
 import java.io.File;
 import java.io.FileReader;
@@ -77,6 +77,7 @@ import java.net.PasswordAuthentication;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
+import org.apache.log4j.Logger;
 
 /**
  * TODO.
@@ -85,6 +86,10 @@ import java.util.List;
  */
 public class NetrcFile extends File 
 {
+    private static final long serialVersionUID = 201205161150L;
+    
+    private static final Logger log = Logger.getLogger(NetrcFile.class);
+
     private boolean debug = false;
     private static String DEFAULT_MACHINE = "*";
     private List cache;
@@ -103,16 +108,17 @@ public class NetrcFile extends File
         super(System.getProperty("user.home"), ".netrc");
         this.secureMode = secureMode;
     }
+
+    // unit-test support
+    NetrcFile(String netrcFile)
+    {
+        super(netrcFile);
+    }
     
     /**
      * Crate a new .netrc file. This called NetrcFile(true).
      */
     public NetrcFile() { this(true); }
-    
-    private void msg(String s)
-    {
-        if (debug) System.out.println("[NetrcFile] " + s);
-    }
     
     /**
      * Read the users .netrc file and find credentials for the specified server.
@@ -166,15 +172,15 @@ public class NetrcFile extends File
             initCache();
             if (cache != null)
             {
-                msg("looking for '" + host + "'");
+                log.debug("looking for '" + host + "'");
                 Cred defaultCred = null;
                 for (int i=0; i<cache.size(); i++)
                 {
                     Cred cred = (Cred) cache.get(i);
-                    msg("checking '" + cred + "'");
+                    log.debug("checking '" + cred + "'");
                     if (cred.machine.equals(host))
                         return new PasswordAuthentication(cred.login, cred.pword);
-                    if (cred.machine == DEFAULT_MACHINE)
+                    if (DEFAULT_MACHINE.equals(cred.machine))
                         defaultCred = cred;
                 }
                 if (!strict && defaultCred != null)
@@ -186,17 +192,6 @@ public class NetrcFile extends File
             clearCache();
         }
         return null;
-    }
-    
-    public static void main(String[] args)
-    {
-        NetrcFile netrc = new NetrcFile();
-        netrc.msg("calling initCache for 1st time...");
-        netrc.initCache();
-        netrc.msg("calling clearCache for 1st time...");
-        netrc.clearCache();
-        netrc.msg("calling initCache for 2nd time...");
-        netrc.initCache();
     }
     
     private void clearCache()
@@ -219,7 +214,7 @@ public class NetrcFile extends File
     {
         if (cache != null && timestamp == lastModified())
         {
-            msg("cache is up to date");
+            log.debug("cache is up to date");
             return; // up to date
         }
         
@@ -232,10 +227,10 @@ public class NetrcFile extends File
         char[] c = null;
         try
         {
-            msg("reading entire file...");
+            log.debug("reading entire file...");
             c = readEntireFile();
             
-            msg("looking through char[" + c.length + "] for tokens");
+            log.debug("looking through char[" + c.length + "] for tokens");
 
             // split char buffer into lines
             int start = 0;
@@ -254,7 +249,7 @@ public class NetrcFile extends File
                         while (e > start && Character.isWhitespace(c[e-1]))
                             e--; // backtrack over trailing whitespace
                         Cred cred = new Cred(c, start, e-start);
-                        msg("found: " + cred);
+                        log.debug("found: " + cred);
                         if (cred.valid)
                             cache.add(cred);
                         inToken = false;
@@ -277,6 +272,7 @@ public class NetrcFile extends File
         catch(IOException ex)
         {
             // always clean up fully on failure
+            log.warn("failed to read " + this.getAbsolutePath() + ": " + ex);
             clearCache();
         }
         finally

@@ -130,6 +130,7 @@
 
             <test name="ca.nrc.cadc.net.HttpTransferTest"/>
             <test name="ca.nrc.cadc.net.HttpDownloadTest"/>
+            <test name="ca.nrc.cadc.net.NetrcAuthenticatorTest" />
             <!-- upload test has a lot of pre-conditions
             <test name="ca.nrc.cadc.net.HttpUploadTest"/>
             -->
