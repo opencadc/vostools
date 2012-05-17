@@ -92,7 +92,7 @@ public class NetrcAuthenticatorTest
     
     static
     {
-        Log4jInit.setLevel("ca.nrc.cadc", Level.DEBUG);
+        Log4jInit.setLevel("ca.nrc.cadc", Level.INFO);
     }
 
     @Test
