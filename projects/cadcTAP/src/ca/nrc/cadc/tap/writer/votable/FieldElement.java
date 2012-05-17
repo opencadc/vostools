@@ -241,6 +241,12 @@ public class FieldElement extends Element
             if (length != null)
                 setAttribute("arraysize", length);
         }
+        else if (datatype.equals("votable:boolean"))
+        {
+            setAttribute("datatype", "boolean");
+            if (length != null)
+                setAttribute("arraysize", length);
+        }
     }
 
 }
