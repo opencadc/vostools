@@ -147,6 +147,7 @@ public class NodeDAO
     protected JdbcTemplate jdbc;
     private DataSourceTransactionManager transactionManager;
     private DefaultTransactionDefinition defaultTransactionDef;
+    private DefaultTransactionDefinition dirtyReadTransactionDef;
     private TransactionStatus transactionStatus;
 
     // reusable object for recursive admin methods
@@ -229,6 +230,8 @@ public class NodeDAO
 
         this.defaultTransactionDef = new DefaultTransactionDefinition();
         defaultTransactionDef.setIsolationLevel(DefaultTransactionDefinition.ISOLATION_REPEATABLE_READ);
+        this.dirtyReadTransactionDef = new DefaultTransactionDefinition();
+        dirtyReadTransactionDef.setIsolationLevel(DefaultTransactionDefinition.ISOLATION_READ_UNCOMMITTED);
         this.jdbc = new JdbcTemplate(dataSource);
         this.transactionManager = new DataSourceTransactionManager(dataSource);
 
@@ -324,11 +327,38 @@ public class NodeDAO
         NodePathStatementCreator npsc = new NodePathStatementCreator(
                 path.split("/"), getNodeTableName(), getNodePropertyTableName());
 
-        // execute query with NodePathExtractor
-        Node ret = (Node) jdbc.query(npsc, new NodePathExtractor());
-        loadSubjects(ret);
-
-        return ret;
+        TransactionStatus dirtyRead = null;
+        try
+        {
+            dirtyRead = transactionManager.getTransaction(dirtyReadTransactionDef);
+            // execute query with NodePathExtractor
+            Node ret = (Node) jdbc.query(npsc, new NodePathExtractor());
+            transactionManager.commit(dirtyRead);
+            dirtyRead = null;
+            loadSubjects(ret);
+            return ret;
+        }
+        catch(Throwable t)
+        {
+            log.error("rollback dirtyRead for node: " + path, t);
+            try 
+            {
+                transactionManager.rollback(dirtyRead);
+                dirtyRead = null;
+            }
+            catch(Throwable oops) { log.error("failed to dirtyRead rollback transaction", oops); }
+            throw new RuntimeException("failed to get node: " + path, t);
+        }
+        finally
+        {
+            if (dirtyRead != null)
+                try
+                {
+                    log.warn("put: BUG - dirtyRead transaction still open in finally... calling rollback");
+                    transactionManager.rollback(dirtyRead);
+                }
+                catch(Throwable oops) { log.error("failed to rollback dirtyRead transaction in finally", oops); }
+        }
     }
 
     /**
