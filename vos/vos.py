@@ -305,7 +305,6 @@ class Node:
             for prop in props.findall(Node.PROPERTY):
                   uri=prop.attrib.get('uri',None)
                   propName=urllib.splittag(uri)[1]
-                  logging.debug("got key -->%s<-- looking for -->%s<--  set to ->%s<-" % ( propName, key,str(value)))
                   if propName != key:
                       continue 
                   found=True
@@ -318,7 +317,6 @@ class Node:
                   else:
                       prop.text=value
                       changed=1
-                  logging.debug("After change node XML\n : %s" %( self))
         if found or value is None:
             return changed
         ### must not have had this kind of property already, so set value
@@ -599,7 +597,7 @@ class VOFile:
 
     def read(self,size=None):
         """return size bytes from the connection response"""
-	logging.debug("Starting to read file")
+	logging.debug("Starting to read file by closing http(s) connection")
         if not self.closed:
             self.close()
         bytes=None
@@ -613,7 +611,6 @@ class VOFile:
         # check the most likely response first
         if self.resp.status == 200:
             buff=self.resp.read(size)
-            logging.debug(buff)
             return buff
         if self.resp.status == 206:
             buff=self.resp.read(size)
@@ -822,7 +819,6 @@ class Client:
         ET.SubElement(transfer,"target").text=self.fixURI(srcURI)
         ET.SubElement(transfer,"direction").text=self.fixURI(destURI)
         ET.SubElement(transfer,"keepBytes").text="false"
-        logging.debug(ET.dump(transfer))
 
         con=self.open(srcURI,URL=Client.VOTransfer,mode=os.O_APPEND)
         con.write(ET.tostring(transfer))
