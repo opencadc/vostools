@@ -222,6 +222,7 @@ class VOFS(LoggingMixIn, Operations):
             logging.debug("Writing %d bytes to %s, attempt: %d" % (size, path,loopCount+1))
             md5=hashlib.md5()
             try:
+                self.client.delete(node.uri)
                 w=self.client.open(node.uri,os.O_WRONLY,size=size)
                 os.lseek(fh,0,0)
                 while True:
@@ -236,13 +237,16 @@ class VOFS(LoggingMixIn, Operations):
                 logging.error("Failed during VOSpace copy, retrying")
             finally:                
                 w.close()
-            if md5.hexdigest()==self.getNode(path,force=True).props.get('MD5','d41d8cd98f00b204e9800998ecf8427e'):
+            voMD5=self.getNode(path,force=True).props.get('MD5','d41d8cd98f00b204e9800998ecf8427e')
+            cacheMD5 = md5.hexdigest()
+            logging.debug("%s ==> %s" %( cacheMD5, voMD5))
+            if voMD5 == cacheMD5:
                 success=True
             elif loopCount > 3:
+                logging.error("Failed to write to vospace during nodeflush")
                 raise FuseOSError(EIO)
             else:
                 loopCount += 1
-        ## Now update our information about this VOSpace node...
         return
 
     def flush(self,path,fh):
@@ -406,52 +410,28 @@ class VOFS(LoggingMixIn, Operations):
                 raise e
             os.close(th)
 
-
         ## check that internally stored md5 is recent enough
-        sqlConn=sqlite3.connect(self.cache_db)
-        sqlConn.row_factory = sqlite3.Row
-        cursor=sqlConn.cursor()
-
-        upDateMD5=False
-        cursor.execute("SELECT * FROM md5_cache WHERE fname = ?", (fname, ))
-        md5Row=cursor.fetchone()
+        md5Row = self.get_md5_db(fname)
         if md5Row is None or md5Row['st_mtime'] < os.stat(fname).st_mtime:
-            upDateMD5=True
-
+            self.update_md5_db(fname)
 
         ## Check if the disk cache matches the vospace copy
-        if upDateMD5:
-            import hashlib
-            md5=hashlib.md5()
-            r=open(fname,'r')
-            while True:
-                buf=r.read(READBUF)
-                if len(buf)==0:
-                    break
-                md5.update(buf)
-            r.close()
-            cursor.execute("DELETE FROM md5_cache WHERE fname = ?" , (fname,))
-            cursor.execute("INSERT INTO md5_cache (fname, md5, st_mtime) VALUES( ?, ?, ?)",(fname, md5.hexdigest(),os.stat(fname).st_mtime))
-            sqlConn.commit()
-            
-
-        cursor.execute("SELECT * FROM md5_cache WHERE fname=?", (fname,))
-        md5Row=cursor.fetchone()
-        cursor.close()
-        sqlConn.close()
-
+        md5Row = self.get_md5_db(fname)
         if md5Row['md5']==self.getNode(path).props.get('MD5','d41d8cd98f00b204e9800998ecf8427e'):
             cached=True
         else:
             os.unlink(fname)
 
         ## OK, we've cleared the cache if need be, so now open the file as needed
-        ## we don't pull a copy into the cache here, that's done only if a read or write
-        ## is called.
+        ## Don't pull a copy into the cache here, that's done only if a read or write
+        ## is called on the handle.  
+        ## Cache files are always openned oin RDWR mode with optional create 
+
         fh = os.open(fname,os.O_CREAT | os.O_RDWR )
 	os.lseek(fh,0,os.SEEK_SET)
         self.fh[fh]={'flags': flags, 'cached': cached, 'name':fname}
 	self.setPath(fh,path)
+
         return fh
     
     def read(self, path, size=0, offset=0, fh=None):
@@ -459,7 +439,7 @@ class VOFS(LoggingMixIn, Operations):
         to the desired location.  
 
         """
-        ## Read from the requested filehandle, which the tempfile one sent from open
+        ## Read from the requested filehandle, which was set during 'open'
         if fh is None:
             raise FuseOSError(EIO)
         logging.debug("Using fh %d",fh)
@@ -468,62 +448,97 @@ class VOFS(LoggingMixIn, Operations):
         # cached==0 means not yet cached... and check that the node mtime is not newer than the cache one.
         # this routine needs good time sych between the OS and the VOSpace... 
         logging.debug("cache "+str(self.fh[fh]['cached']))
-        import hashlib
                 
-        if not self.fh[fh]['cached'] or os.stat(self.fh[fh]['name']).st_mtime < self.getattr(path)['st_mtime']:
-            success=False
-            loopCount=0
-            while not success:
-	        logging.debug("getting %s from VOSpace" % ( path))
-                md5=hashlib.md5()
-                os.ftruncate(fh,0)
-		os.fsync(fh)
-                try:
-                    r=self.client.open(path,mode=os.O_RDONLY,view="data")
-                    fpos=0
-                    logging.debug("writing to %s " % ( self.fh[fh]['name']))
-                    while True:
-                        buf=r.read(READBUF)
-                        if not buf:
-                            break
-                        if os.write(fh,buf)!=len(buf):
-                            raise FuseOSError(EIO)
-                        md5.update(buf)
-                        os.fsync(fh)
-                except Exception as e:
-                    logging.debug(str(e))
-                finally :
-                    r.close()
-                if md5.hexdigest()==self.getNode(path).props.get('MD5','d41d8cd98f00b204e9800998ecf8427e'):
-                    success=True
-                elif loopCount > 3 :
-                    raise FuseOSError(EIO)
-                else:
-                    loopCount += 1
-            self.fh[fh]['cached']=True
-            logging.debug("cached %s to %s" % ( path,self.fh[fh]['name']))
-	os.fsync(fh)
-        os.lseek(fh,offset,os.SEEK_SET)
+        ## get a copy from VOSpace if the version we have is not currnet or cached.
+        vosMD5 = self.getNode(path).props.get('MD5','d41d8cd98f00b204e9800998ecf8427e')
+        cacheMD5 = self.get_md5_db(self.fh[fh]['name'])
+        loopCount = 0
+        while ( not self.fh[fh]['cached'] and ( cacheMD5 is None or cacheMD5['md5'] != vosMD5 )):
+            if loopCount > 5 :
+                raise FuseOSError(EIO)
+            else:
+                loopCount += 1
+            logging.debug("getting %s from VOSpace, attempt %s" % (path,loopCount))
+
+            os.ftruncate(fh,0)
+            os.fsync(fh)
+            try:
+                r=self.client.open(path,mode=os.O_RDONLY,view="data")
+                fpos=0
+                logging.debug("writing to %s " % ( self.fh[fh]['name']))
+                while True:
+                    buf=r.read(READBUF)
+                    if not buf:
+                        break
+                    if os.write(fh,buf)!=len(buf):
+                        raise FuseOSError(EIO)
+            except Exception as e:
+                logging.debug(str(e))
+            finally :
+                r.close()
+            os.fsync(fh)
+            self.update_md5_db(self.fh[fh]['name'])
+            cacheMD5 = self.get_md5_db(self.fh[fh]['name'])
+
+        self.fh[fh]['cached']=True
+        logging.debug("cached %s to %s" % ( path,self.fh[fh]['name']))
 	r=open(self.fh[fh]['name'],'r')
 	r.seek(offset,os.SEEK_SET)
 	buff=r.read(size)
 	r.close()
 
+        ## fh is the 'master' reference to the cached version, push the file pointer
+        ## to the correct location in the  cached file
 
-	logging.debug(self.fh[fh]['name'])
+        os.lseek(fh,offset+len(buff),os.SEEK_SET)
         return buff
 
-    def update_md5_db(self,fname,md5):
+    def get_md5_db(self,fname):
+        """Get the MD5 for this fname from the SQL cache"""
+        sqlConn=sqlite3.connect(self.cache_db)
+        sqlConn.row_factory = sqlite3.Row
+        cursor= sqlConn.cursor()
+        cursor.execute("SELECT * FROM md5_cache WHERE fname = ?", (fname,))
+        md5Row=cursor.fetchone()
+        cursor.close()
+        sqlConn.close()
+        return md5Row
+
+    def delete_md5_db(self,fname):
+        """Delete a record from the cache MD5 database"""
+        sqlConn=sqlite3.connect(self.cache_db)
+        sqlConn.row_factory =  sqlite3.Row
+        cursor = sqlConn.cursor()
+        cursor.execute("DELETE from md5_cache WHERE fname = ?", ( fname,))
+        sqlConn.commit()
+        cursor.close()
+        sqlConn.close()
+        return 
+        
+
+    def update_md5_db(self,fname):
+        """Update a record in the cache MD5 database"""
+        import hashlib
+        md5=hashlib.md5()
+        r=open(fname,'r')
+        while True:
+            buf=r.read(READBUF)
+            if len(buf)==0:
+                break
+            md5.update(buf)
+        r.close()
+
         ## UPDATE the MD5 database
         sqlConn=sqlite3.connect(self.cache_db)
         sqlConn.row_factory = sqlite3.Row
         cursor=sqlConn.cursor()
         cursor.execute("DELETE FROM md5_cache WHERE fname = ?", (fname,))
         if md5 is not None:
-            cursor.execute("INSERT INTO md5_cache (fname, md5, st_mtime) VALUES ( ?, ?, ?)", (fname, md5, os.stat(fname).st_mtime))
+            cursor.execute("INSERT INTO md5_cache (fname, md5, st_mtime) VALUES ( ?, ?, ?)", (fname, md5.hexdigest(), os.stat(fname).st_mtime))
         sqlConn.commit()
         cursor.close()
         sqlConn.close()
+        return 
 
 
     def readdir(self, path, fh):
@@ -545,14 +560,27 @@ class VOFS(LoggingMixIn, Operations):
         ## unless the VOSpace is actually newer than this cache file.
         ### copy the staging file to VOSpace if needed
         logging.debug("node %s currently open with mode %s, releasing" % ( path, mode))
-        if mode & ( os.O_RDWR | os.O_WRONLY | os.O_APPEND | os.O_CREAT ) and os.stat(self.fh[fh]['name']).st_mtime > self.getattr(path)['st_mtime']:
-            self.flushnode(path,fh)
-            self.update_md5_db(self.fh[fh]['name'],self.getNode(path,force=True).props.get('MD5','d41d8cd98f00b204e9800998ecf8427e'))
+        if mode & ( os.O_RDWR | os.O_WRONLY | os.O_APPEND | os.O_CREAT ):
+            
+            ## check if the cache MD5 is up-to-date
+            md5Row = self.get_md5_db(self.fh[fh]['name'])
+            if md5Row is None or md5Row['st_mtime'] < os.stat(self.fh[fh]['name']).st_mtime:
+                self.update_md5_db(self.fh[fh]['name'])
+
+            ## now compare the cache MD5 to the VOSpace value
+            md5Row = self.get_md5_db(self.fh[fh]['name'])
+            voMD5 = self.getNode(path,force=True).props.get('MD5','d41d8cd98f00b204e9800998ecf8427e')
+            if md5Row['md5'] != voMD5:
+                logging.debug("cache MD5 %s",md5Row['md5'])
+                logging.debug("VOSpace MD5 %s",voMD5)
+                logging.debug("PUSHING contents of %s to VOSpace location %s " % (self.fh[fh]['name'],path))
+                ## replace VOSpace copy with cache version.
+                self.flushnode(path,fh)
+
         ## remove references to this file handle.
         self.fh.pop(fh,None)
         self.fh.pop(path,None)
         self.delNode(path)
-
         
         ##  now close the fh
         try:
@@ -671,50 +699,60 @@ class VOFS(LoggingMixIn, Operations):
             
     
     def truncate(self, path, length, fh=None):
+        """Perform a file truncation to length bytes"""
         logging.debug("Attempting to truncate %s (%d)" % ( path,length))
+
+        close=False
         ## check if we have an active fildes for this path
         if fh is None:
             fh = self.fh.get(path,None)
-        ## if length is '0' then truncate.
-        if length==0:
-            if fh is not None:
-                os.ftruncate(fh,length)
-            ## DELETE the node and replace vospace node 
-            self.client.delete(path)
-            self.client.open(path,os.O_CREAT).close()
-            return
-        
-        ## do we have a cache file handle? If not then we need to open one
-        if not fh:
-            fh=self.open(path,os.O_RDWR)
 
-        ## length wasn't 0, first check if we have a valid cached version of this file.
-        if not self.fh[fh].get('cached',False) or os.stat(self.fh[fh]['name']).st_mtime < self.getattr(path)['st_mtime']:
-            ## (re)cache file  (really we don't need the entire file, just upto length
-            success=False
-            while not success:
-                os.lseek(fh,0,os.SEEK_SET)
-                try:
-                    r = self.client.open(path,mode=os.O_RDONLY,view='data')
-                    fpos=0
-                    while True:
-                        buf=r.read(READBUF)
-                        if not buf or fpos > length:
-                            success=True
-                            break
-                        chunk=min(length-fpos,READBUF) 
-                        if os.write(fh,buf[:chunk])!=chunk:
-                            raise FuseOSError(EIO)
-                        fpos=fpos+chunk
-                except:
-                    logging.error("Failed during truncate read, try again")
-                finally: 
-                    r.close()
+        ## do we have a cache file handle? If not then we need to open one
+        if fh is None:
+            close=True
+            fh=self.open(path,os.O_RDWR)
+        
+        ## Check if we have a valid cached version of this file.
+        ## but don't use standard read since we only want at most 'length' of this file
+        if length > 0 :
+            voMD5  = self.getNode(path).props.get('MD5','d41d8cd98f00b204e9800998ecf8427e')
+            cacheMD5 = self.get_md5_db(self.fh[fh]['name'])
+            if cacheMD5 is None :
+                self.update_md5_db(self.fh[fh]['name'])
+            cacheMD5 = self.get_md5_db(self.fh[fh]['name'])
+            if not self.fh[fh].get('cached',False) and ( cacheMD5 is None or cacheMD5['md5'] != voMD5) : 
+                ## (re)cache file  (really we don't need the entire file, just upto length
+                success=False
+                while not success:
+                    os.lseek(fh,0,os.SEEK_SET)
+                    try:
+                        r = self.client.open(path,mode=os.O_RDONLY,view='data')
+                        fpos=0
+                        while fpos < length:
+                            buf=r.read(READBUF)
+                            if not buf :
+                                ## stop reading at end of file.
+                                success=True
+                                break
+                            chunk=min(length-fpos,len(READBUF)) 
+                            if os.write(fh,buf[:chunk])!=chunk:
+                                raise FuseOSError(EIO)
+                            fpos=fpos+chunk
+                            if fpos >= length:
+                                success=True
+                                break
+                    except:
+                        logging.error("Failed during truncate read, try again")
+                    finally: 
+                        r.close()
+
         ## now we can truncate the file.
         os.ftruncate(fh,length)
+        if close :
+            ### truncate can be called on file, so perhaps that's what happened.
+            self.release(path,fh)
         ## Update the access/mod times 
         self.utimens(path)
-        logging.debug("cache file has been truncated")
         return
 
     def unlink(self,path):
@@ -753,7 +791,7 @@ class VOFS(LoggingMixIn, Operations):
 
     def write(self, path, data, offset, fh=None):
         logging.debug("%s -> %d" % ( path,fh))
-        if not self.fh[fh].get('cached',False) :
+        if not self.fh[fh].get('cached',False) and offset > 0 :
             ## we are writing but never cached the original file, do that now
             try:
                 logging.debug("Getting data from VOSpace cause the cache is empty")
@@ -762,9 +800,11 @@ class VOFS(LoggingMixIn, Operations):
                 f=FuseOSError(e.errno)
                 f.strerror=e.strerror
                 raise f
-        ## Update the access/mod times 
+
+        ## Update the access/mod times and delete the md5 from the cache db
         ##self.utimens(path)
         logging.debug("%d --> %d" % ( offset, offset+len(data)))
+        self.delete_md5_db(self.fh[fh]['name'])
         os.lseek(fh, offset, os.SEEK_SET)
         return os.write(fh, data)
 
@@ -787,6 +827,8 @@ if __name__ == "__main__":
     parser.add_option("--cache_limit",action="store",type=int,help="upper limit on local diskspace to use for file caching",default=50*2**(10+10+10))
     parser.add_option("--cache_dir",action="store",help="local directory to use for file caching",default=None)
     parser.add_option("--certfile",help="location of your CADC security certificate file",default=os.path.join(os.getenv("HOME","."),".ssl/cadcproxy.pem"))
+    parser.add_option("--readonly",action="store_true",help="mount vofs readonly",default=False)
+
     (opt,args)=parser.parse_args()
     formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
     
@@ -813,12 +855,14 @@ if __name__ == "__main__":
                     volname=root,
                     defer_permissions=True,
                     daemon_timeout=6000,
+                    readonly=opt.readonly,
                     #auto_cache=True,
 		    noapplexattr=True,
 	            noappledouble=True,
                     foreground=opt.foreground)
     else:
         fuse = FUSE(VOFS(root,opt.cache_dir,conn=conn,cache_limit=opt.cache_limit), mount, fsname=root, 
+                    readonly=opt.readonly,
 		    #auto_cache=True,
                     foreground=opt.foreground)
 
