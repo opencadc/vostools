@@ -69,13 +69,10 @@
 
 package ca.nrc.cadc.tap.schema;
 
-import java.lang.reflect.Constructor;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Map;
-import java.util.TreeMap;
 
 import javax.sql.DataSource;
 
@@ -137,20 +134,6 @@ public class TapSchemaDAO
     public static final String ARGUMENT_DATATYPE = "ARGUMENT_DATATYPE";
 
     /**
-     * Map of TAP_SCHEMA table name (*_TAB constants) to the ID column for hooking to
-     * a custom access control system. This is used in the appendProprietaryWhere method.
-     */
-    protected static final Map<String,String> ASSET_ID_COLUMNS = new TreeMap<String,String>();
-    static
-    {
-        ASSET_ID_COLUMNS.put(SCHEMAS_TAB, "schemaID");
-        ASSET_ID_COLUMNS.put(TABLES_TAB, "tableID");
-        ASSET_ID_COLUMNS.put(COLUMNS_TAB, "columnID");
-        ASSET_ID_COLUMNS.put(KEYS_TAB, "keyID");
-        ASSET_ID_COLUMNS.put(KEY_COLUMNS_TAB, "key_columnID");
-    }
-
-    /**
      * Construct a new TapSchemaDAO using the specified DataSource. As an extension
      * mechanism, this class will attempt to load a subclass and delegate to it. The
      * delegate class muct be named <code>ca.nrc.cadc.tap.schema.TapSchemaDAOImpl</code>
@@ -203,13 +186,13 @@ public class TapSchemaDAO
         String sql;
 
         // List of TAP_SCHEMA.schemas
-        sql = appendProprietaryWhere(SCHEMAS_TAB, SELECT_SCHEMAS);
+        sql = appendWhere(SCHEMAS_TAB, SELECT_SCHEMAS);
         if (ordered) sql += ORDER_SCHEMAS;
         log.debug(sql);
         tapSchema.schemaDescs = jdbc.query(sql, new SchemaMapper());
 
         // List of TAP_SCHEMA.tables
-        sql = appendProprietaryWhere(TABLES_TAB, SELECT_TABLES);
+        sql = appendWhere(TABLES_TAB, SELECT_TABLES);
         if (ordered) sql += ORDER_TABLES;
         log.debug(sql);
         List<TableDesc> tableDescs = jdbc.query(sql, new TableMapper());
@@ -218,7 +201,7 @@ public class TapSchemaDAO
         addTablesToSchemas(tapSchema.schemaDescs, tableDescs);
 
         // List of TAP_SCHEMA.columns
-        sql = appendProprietaryWhere(COLUMNS_TAB, SELECT_COLUMNS);
+        sql = appendWhere(COLUMNS_TAB, SELECT_COLUMNS);
         if (ordered) sql += ORDER_COLUMNS;
         log.debug(sql);
         List<ColumnDesc> columnDescs = jdbc.query(sql, new ColumnMapper());
@@ -227,13 +210,13 @@ public class TapSchemaDAO
         addColumnsToTables(tableDescs, columnDescs);
 
         // List of TAP_SCHEMA.keys
-        sql = appendProprietaryWhere(KEYS_TAB, SELECT_KEYS);
+        sql = appendWhere(KEYS_TAB, SELECT_KEYS);
         if (ordered) sql += ORDER_KEYS;
         log.debug(sql);
         List<KeyDesc> keyDescs = jdbc.query(sql, new KeyMapper());
 
         // List of TAP_SCHEMA.key_columns
-        sql = appendProprietaryWhere(KEY_COLUMNS_TAB, SELECT_KEY_COLUMNS);
+        sql = appendWhere(KEY_COLUMNS_TAB, SELECT_KEY_COLUMNS);
         if (ordered) sql += ORDER_KEY_COLUMNS;
         log.debug(sql);
         List<KeyColumnDesc> keyColumnDescs = jdbc.query(sql, new KeyColumnMapper());
@@ -259,28 +242,20 @@ public class TapSchemaDAO
     }
 
     /**
-     * Append a where clause to the query that selects from the specified table (one of
-     * the keys in ASSET_ID_COLUMNS). The default impl gets the asset column and appends
-     * <code>where assetColumn is null</code> (meaning public). If you want a row to be
-     * private, simply set the assetCol to a non-null value; if you want to implement
-     * proprietary access to these rows, then you must:
+     * Append a where clause to the query that selects from the specified table.
+     * The default impl does nothing (returns in the provieed SQL as-is).
      * </p>
-     * <ul>
-     * <li>implement authenticated access to your TAP service (eg https with client cert,
-     * http auth, etc).
-     * <li>override this method and inside it, get the Subject from the current AccessControlContext
-     * and add whatever is appropriate tio the where so the user (Subject) will see rows they are
-     * permitted to see. The modified SQL will typically be to append "OR (...)" to permit access to
-     * proprietary content in addition to public content
-     * </ul>
+     * <p>
+     * If you want to implement some additional conditions, such as having private columns
+     * only visible to certain authenticated and authorized users, you can append some
+     * conditions (or re-write the query as long as the select-list is not altered) here.
      * 
      * @param sql
-     * @return
+     * @return modified SQL
      */
-    protected String appendProprietaryWhere(String tapSchemaTablename, String sql)
+    protected String appendWhere(String tapSchemaTablename, String sql)
     {
-        String assetCol = ASSET_ID_COLUMNS.get(tapSchemaTablename);
-        return sql + " where " + assetCol + " is null"; // public
+        return sql;
     }
 
     /**

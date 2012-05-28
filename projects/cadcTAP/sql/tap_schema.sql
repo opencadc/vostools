@@ -13,8 +13,6 @@ create table TAP_SCHEMA.schemas
 	schema_name   varchar(64),
 	utype         varchar(512) NULL,
 	description   varchar(512) NULL,
--- extension hook for proprietary schema: null value means public
-        schemaID      bigint,
 	
 	primary key (schema_name)
 )
@@ -28,8 +26,6 @@ create table TAP_SCHEMA.tables
         table_type    varchar(8),
 	utype         varchar(512) NULL,
 	description   varchar(512) NULL,
--- extension hook for proprietary table: null value means public
-        tableID       bigint,
 	
 	primary key (table_name),
 	foreign key (schema_name) references TAP_SCHEMA.schemas (schema_name)
@@ -49,8 +45,6 @@ create table TAP_SCHEMA.columns
 	principal     integer      NOT NULL,
 	indexed       integer      NOT NULL,
 	std           integer      NOT NULL,
--- extension hook for proprietary column: null value means public
-        columnID      bigint,
 	
 	primary key (table_name,column_name),
 	foreign key (table_name) references TAP_SCHEMA.tables (table_name)
@@ -66,9 +60,6 @@ create table TAP_SCHEMA.keys
 	utype         varchar(512) NULL,
 	description   varchar(512) NULL,
 
--- extension hook for proprietary key: null value means public
-        keyID         bigint,
-		
 	primary key (key_id),
 	foreign key (from_table) references TAP_SCHEMA.tables (table_name),
 	foreign key (target_table) references TAP_SCHEMA.tables (table_name)
@@ -80,9 +71,7 @@ create table TAP_SCHEMA.key_columns
 	key_id          varchar(64),
 	from_column     varchar(64)   NOT NULL,
 	target_column   varchar(64) NOT NULL,
--- extension hook for proprietary schema: null value means public
-        key_columnID    bigint,
-	
+
 	foreign key (key_id) references TAP_SCHEMA.keys (key_id)
 )
 ;

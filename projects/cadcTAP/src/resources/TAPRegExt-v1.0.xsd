@@ -20,7 +20,6 @@ xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
     </xs:documentation>
   </xs:annotation>
   <xs:import namespace="http://www.ivoa.net/xml/VOResource/v1.0" schemaLocation="http://www.ivoa.net/xml/VOResource/VOResource-v1.0.xsd"/>
-  <xs:import namespace="http://www.ivoa.net/xml/VODataService/v1.1" schemaLocation="http://www.ivoa.net/xml/VODataService/VODataService-v1.1.xsd"/>
   <xs:complexType name="TAPCapRestriction" abstract="true">
     <xs:annotation>
       <xs:documentation>
@@ -250,7 +249,7 @@ xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
     				<xs:documentation>
     					To more formally define a language supported by a service,
     					a resource record for the language can be created, either
-    					centrally on the RofR or by other registry operators.  
+    					centrally on the Registry of Registries or by other registry operators.  
     					When such a record exists, the language element's ivo-id
     					should point to it.
     				</xs:documentation>
@@ -274,11 +273,11 @@ xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
     		are possible.
 
       	All feature in a given list are of the same type.  This type
-      	is declared using the mandatoy <code>type</code> attribute,
+      	is declared using the mandatory type attribute,
       	the value of which will typically be an IVORN.
       	To see values defined in TAPRegExt,
 				retrieve the ivo://ivoa.net/std/TAPRegExt
-      	resource record and look for keys starting with features-.
+      	resource record and look for keys starting with "features-".
     	</xs:documentation>
   	</xs:annotation>
   	<xs:sequence>
@@ -382,8 +381,6 @@ xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
     </xs:sequence>
   
     <xs:attribute name="ivo-id" type="xs:anyURI">
-      <!-- We'd like this to be of type vr:IdentifierURI, but that doesn't
-        allow fragments. -->
       <xs:annotation>
         <xs:documentation>
         An optional IVORN of the output format.
@@ -395,7 +392,7 @@ xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
         	or StandardsRegExt document defining the format more
         	precisely.  To see values defined in TAPRegExt,
 					retrieve the ivo://ivoa.net/std/TAPRegExt
-      		resource record and look for keys starting with output-.
+      		resource record and look for keys starting with "output-".
         </xs:documentation>
       </xs:annotation>
     </xs:attribute>
@@ -412,7 +409,7 @@ xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
       Descriptions can be obtained by dereferencing this
       IVORN.  To see values defined in TAPRegExt,
 			retrieve the ivo://ivoa.net/std/TAPRegExt
-   		resource record and look for keys starting with upload-.
+   		resource record and look for keys starting with "upload-".
 
 
       You can register custom upload methods, but you must use the
@@ -424,8 +421,6 @@ xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
     <xs:complexContent>
       <xs:restriction base="xs:anyType">
         <xs:attribute name="ivo-id" type="xs:anyURI">
-          <!-- We'd like this to be of type vr:IdentifierURI, but that doesn't
-          allow fragments. -->
           <xs:annotation>
             <xs:documentation>
             The IVORN of the upload method.
@@ -436,10 +431,6 @@ xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
     </xs:complexContent>
   </xs:complexType>
 
-
-  <!-- it would be nice if we could build TimeLimits and DataLimits
-  in the fashion of java generics - is there a Schema way of doing
-  this? -->
 
   <xs:complexType name="TimeLimits">
     <xs:annotation>
@@ -512,8 +503,8 @@ xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
           </xs:annotation>
           <xs:simpleType>
             <xs:restriction base="xs:token">
-              <xs:enumeration value="bytes"/>
-              <xs:enumeration value="rows"/>
+              <xs:enumeration value="byte"/>
+              <xs:enumeration value="row"/>
             </xs:restriction>
           </xs:simpleType>
         </xs:attribute>
