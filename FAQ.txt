@@ -1,0 +1,14 @@
+
+1) 
+
+Q: I just got a message like:
+
+mount_osxfusefs: failed to mount /private/tmp/vospace@/dev/osxfuse0:
+Connection refused
+
+What does this mean?
+
+A: Likely you authentication certificat has expired.  Use the
+'getCert' command to pull a new cert and try again.  If the message
+doesn't go away, please contact CADC for help fixxing your
+authentication issue.
