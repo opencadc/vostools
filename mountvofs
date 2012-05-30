@@ -102,10 +102,10 @@ class VOFS(LoggingMixIn, Operations):
         self.node=None
 
     def setPath(self,fh,path):
-        self.path[fh]=path
+        self.path[path]=fh
 
-    def delPath(self,fh):
-        self.path.pop(fh,None)
+    def delPath(self,path):
+        self.path.pop(path,None)
 
     def delNode(self,path):
         """Delete the references associated with this Node"""
@@ -313,9 +313,9 @@ class VOFS(LoggingMixIn, Operations):
                self.attr[subPath]=node.attr
         return self.node[path]
 
-    def getPath(self,fh):
+    def getPath(self,path):
         """Return the path element for a given cached filehandle"""
-        return self.path.get(fh,None)
+        return self.path.get(path,None)
 
     def getattr(self, path, fh=None):
         """Build some attributes for this file, we have to make-up some stuff"""
@@ -330,15 +330,15 @@ class VOFS(LoggingMixIn, Operations):
                 ex.filename=path
                 raise ex
 	    self.attr[path]=node.attr
-            logging.debug("Got %s for %s" % (node, path))
+            #logging.debug("Got %s for %s" % (node, path))
         atime=self.attr[path].get('st_atime',time.time())
         mtime=self.attr[path].get('st_mtime',atime)
         ctime=self.attr[path].get('st_ctime',atime)
-        logging.debug("Got times atime: %d mtime: %d ctime: %d" % ( atime,mtime,ctime))
+        #logging.debug("Got times atime: %d mtime: %d ctime: %d" % ( atime,mtime,ctime))
         if mtime > atime or ctime > atime:
             ### the modification/change times are after the last access
             ### so we should access this VOSpace node again.
-            logging.debug("Getting node details for stale node %s" % ( path))
+            #logging.debug("Getting node details for stale node %s" % ( path))
 	    try:
                node=self.client.getNode(path,limit=0)
 	    except IOError as e:
@@ -705,10 +705,12 @@ class VOFS(LoggingMixIn, Operations):
         close=False
         ## check if we have an active fildes for this path
         if fh is None:
-            fh = self.fh.get(path,None)
+            fh = self.path.get(path,None)
+            logging.debug("truncating %s" %(str(fh)))
 
         ## do we have a cache file handle? If not then we need to open one
         if fh is None:
+            logging.debug("don't have an open file handle, so creating one")
             close=True
             fh=self.open(path,os.O_RDWR)
         
@@ -721,7 +723,7 @@ class VOFS(LoggingMixIn, Operations):
                 self.update_md5_db(self.fh[fh]['name'])
             cacheMD5 = self.get_md5_db(self.fh[fh]['name'])
             if not self.fh[fh].get('cached',False) and ( cacheMD5 is None or cacheMD5['md5'] != voMD5) : 
-                ## (re)cache file  (really we don't need the entire file, just upto length
+                ## cache file  (really we don't need the entire file, just upto length
                 success=False
                 while not success:
                     os.lseek(fh,0,os.SEEK_SET)
@@ -805,6 +807,7 @@ class VOFS(LoggingMixIn, Operations):
         ##self.utimens(path)
         logging.debug("%d --> %d" % ( offset, offset+len(data)))
         self.delete_md5_db(self.fh[fh]['name'])
+        self.fh[fh]['cached']=True
         os.lseek(fh, offset, os.SEEK_SET)
         return os.write(fh, data)
 
