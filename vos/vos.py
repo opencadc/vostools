@@ -88,7 +88,7 @@ class Connection:
         parts=urlparse(url)
         ports={"http": 80, "https": 443}
         certfile=self.certfile
-        logging.debug("Trying to connect to %s://%s using %s" % (parts.scheme,parts.netloc,certfile))
+        #logging.debug("Trying to connect to %s://%s using %s" % (parts.scheme,parts.netloc,certfile))
         
         import httplib, ssl
         try:
@@ -122,7 +122,7 @@ class Connection:
                 raise ex
             break
 
-        logging.debug("Returning connection " )
+        #logging.debug("Returning connection " )
         return connection
 
 
@@ -297,7 +297,7 @@ class Node:
         This function should be split into 'set' and 'delete'
         """
         import urllib
-        logging.debug("Before change node XML\n %s" % ( self))
+        #logging.debug("Before change node XML\n %s" % ( self))
         changed=0
         found=False
         properties = self.node.findall(Node.PROPERTIES)
@@ -320,13 +320,13 @@ class Node:
         if found or value is None:
             return changed
         ### must not have had this kind of property already, so set value
-        logging.debug("Adding a property: %s" %(key))
+        #logging.debug("Adding a property: %s" %(key))
         propertyNode=ET.SubElement(props,Node.PROPERTY)
         propertyNode.attrib['readOnly']="false"
         ### There should be a '#' in there someplace...
         propertyNode.attrib["uri"]="%s#%s" % (Node.IVOAURL,key)
         propertyNode.text=value
-        logging.debug("After change node XML\n %s" %( self))
+        #logging.debug("After change node XML\n %s" %( self))
         return 1
 
 
@@ -347,7 +347,7 @@ class Node:
         from stat import S_IXUSR, S_IXGRP, S_IXOTH
         changed=0
 
-        logging.debug("Changing mode to %d" % ( mode))
+        #logging.debug("Changing mode to %d" % ( mode))
         if  mode & (S_IROTH ) :   
             changed += self.setPublic('true')
         else:
@@ -364,7 +364,7 @@ class Node:
         else:
            changed += self.chwgrp('')  
 
-        logging.debug("%d -> %s" % ( changed, changed>0))
+        #logging.debug("%d -> %s" % ( changed, changed>0))
         return changed>0
 
 
@@ -389,7 +389,7 @@ class Node:
         if not properties.has_key('type'):
             import mimetypes
             properties['type']=mimetypes.guess_type(uri)[0]
-            logging.debug("set type to %s" % (properties['type']))
+            #logging.debug("set type to %s" % (properties['type']))
         propertiesNode=ET.SubElement(node,Node.PROPERTIES)
         for property in properties.keys():
             if not properties[property]==None :
@@ -425,7 +425,7 @@ class Node:
 
     def isdir(self):
         """Check if target is a container Node"""
-        logging.debug(self.type)
+        #logging.debug(self.type)
         if self.type=="vos:ContainerNode":
             return True
         return False
@@ -456,7 +456,7 @@ class Node:
         readGroup = self.props.get('groupread','NONE')
         if readGroup != 'NONE':
             perm[4]='r'
-        logging.debug("%s: %s" %( self.name,self.props))
+        #logging.debug("%s: %s" %( self.name,self.props))
         return {"permisions": string.join(perm,''),
                 "creator": creator,
                 "readGroup": readGroup,
@@ -533,7 +533,7 @@ class VOFile:
         
     def close(self,code=(200, 201, 202, 206, 302, 303, 503)):
         """close the connection"""
-        logging.debug("inside the close")
+        #logging.debug("inside the close")
         if self.closed:
             return
         logging.debug("Closing connection")
@@ -573,7 +573,7 @@ class VOFile:
         self.httpCon = self.connector.getConnection(URL)
         #self.httpCon.set_debuglevel(2)
         self.closed=False
-        logging.debug("putting request")
+        #logging.debug("putting request")
         self.httpCon.putrequest(method,URL)
         userAgent='vos '+version
         if "mountvofs" in sys.argv[0]:
@@ -592,12 +592,12 @@ class VOFile:
         self.httpCon.putheader("Transfer-Encoding",'chunked')
         self.httpCon.putheader("Accept", "*/*")
         self.httpCon.endheaders()
-        logging.debug("Done setting headers")
+        #logging.debug("Done setting headers")
 
 
     def read(self,size=None):
         """return size bytes from the connection response"""
-	logging.debug("Starting to read file by closing http(s) connection")
+	#logging.debug("Starting to read file by closing http(s) connection")
         if not self.closed:
             self.close()
         bytes=None
@@ -722,7 +722,7 @@ class Client:
     def fixURI(self,uri):
         """given a uri check if the server part is there and if it isn't update that"""
         from errno import EINVAL
-        logging.debug("trying to fix URL: %s" % ( uri))
+        #logging.debug("trying to fix URL: %s" % ( uri))
         if uri[0:4] != "vos:":
             uri=self.rootNode+uri
         parts=urlparse(uri)
@@ -731,8 +731,8 @@ class Client:
         import re
         ## Check that path name compiles with the standard
         filename=os.path.basename(parts.path)
-        logging.debug("Checking file name: %s" %( filename))
-        logging.debug("Result: %s" % (re.match("^[\_\-\(\)\=\+\!\,\;\:\@\&\*\$\.\w\~]*$",filename)))
+        #logging.debug("Checking file name: %s" %( filename))
+        #logging.debug("Result: %s" % (re.match("^[\_\-\(\)\=\+\!\,\;\:\@\&\*\$\.\w\~]*$",filename)))
         if not re.match("^[\_\-\(\)\=\+\!\,\;\:\@\&\*\$\.\w\~]*$",filename):
             raise IOError(errno.EINVAL,"Illegal vospace container name",filename)
 
@@ -750,10 +750,10 @@ class Client:
         uri   --- a voSpace node in the format vos:/vospaceName/nodeName
         limit --- load children nodes in batches of limit
         """
-        logging.debug("Getting node %s" % ( uri))
+        #logging.debug("Getting node %s" % ( uri))
         xmlObj=self.open(uri,os.O_RDONLY, limit=0)
         dom=ET.parse(xmlObj)
-        logging.debug("%s" %( str(dom)))
+        #logging.debug("%s" %( str(dom)))
         node = Node(dom.getroot())
         # If this is a container node and the nodlist has not already been set, try to load the children.
         # this would be better deferred until the children are actually needed, however that would require
@@ -761,7 +761,7 @@ class Client:
         # IF THE CALLER KNOWS THEY DON'T NEED THE CHILDREN THEY CAN SET LIMIT=0 IN THE CALL
         if node.isdir() and limit>0:
             node._nodeList=[]
-            logging.debug("Loading children")
+            #logging.debug("Loading children")
             nextURI = None
             again = True
             while again:
@@ -773,7 +773,7 @@ class Client:
                         if child.get('uri') != nextURI:
                             childNode = node.addChild(child)
                             nextURI = childNode.uri
-                            logging.debug("added child %s" % childNode.uri)
+                            #logging.debug("added child %s" % childNode.uri)
                             again = True
         return(node)
                     
@@ -787,12 +787,12 @@ class Client:
         path  = parts.path.strip('/')
         server= Client.VOServers.get(parts.netloc)        
 
-        logging.debug("Node URI: %s" %( uri))
+        #logging.debug("Node URI: %s" %( uri))
 
         if method in ('PUT'):
 	    ## having a limit is not expected for PUT
 	    limit=None
-            logging.debug("PUT structure hardcoded for CADC vospace" )
+            #logging.debug("PUT structure hardcoded for CADC vospace" )
             ### This part is hard coded for CADC VOSpace...
             return "%s://%s/data/pub/%s/%s" % (protocol, server,self.archive,parts.path.strip('/'))
 
@@ -808,7 +808,7 @@ class Client:
         if len(fields) >0 : 
                data="?"+urllib.urlencode(fields)
         URL = "%s://%s/vospace/nodes/%s%s" % ( protocol, server, parts.path.strip('/'), data)
-        logging.debug("Node URL %s (%s)" % (URL, method))
+        #logging.debug("Node URL %s (%s)" % (URL, method))
         return URL
 
     def move(self,srcURI,destURI):
@@ -857,8 +857,8 @@ class Client:
 
     def addProps(self,node):
         """Given a node structure do a POST of the XML to the VOSpace to update the node properties"""
-        logging.debug("Updating %s" % ( node.name))
-        logging.debug(str(node.props))
+        #logging.debug("Updating %s" % ( node.name))
+        #logging.debug(str(node.props))
         ## Get a copy of what's on the server
         storedNode=self.getNode(node.uri)
         for prop in storedNode.props:
@@ -866,9 +866,9 @@ class Client:
                 del(node.props[prop])
         for properties in node.node.findall(Node.PROPERTIES):
             node.node.remove(properties)
-        logging.debug(str(node))
+        #logging.debug(str(node))
         properties=ET.Element(Node.PROPERTIES)
-        logging.debug(node.props)
+        #logging.debug(node.props)
         for prop in node.props:
             property=ET.SubElement(properties,Node.PROPERTY,attrib={'readOnly': 'false', 'uri': "%s#%s" % (Node.IVOAURL, prop)})
             if node.props[prop] is None:
@@ -878,14 +878,14 @@ class Client:
             else:
                 property.text=node.props[prop]
         node.node.insert(0,properties)
-        logging.debug(str(node))
+        #logging.debug(str(node))
         f=self.open(node.uri,mode=os.O_APPEND)
         f.write(str(node))
         f.close()
         return 
 
     def update(self,node):
-        logging.debug(str(node))
+        ##logging.debug(str(node))
         ## Now, remove from the node.node properties those entries that
         ## match the stored values
         if 1==2:
@@ -918,7 +918,7 @@ class Client:
 
     def listdir(self,uri):
         """Walk through the directory structure a al os.walk"""
-        logging.debug("getting a listing of %s " % ( uri))
+        #logging.debug("getting a listing of %s " % ( uri))
         names=[]
         for node in self.getNode(uri,limit=1).getNodeList():
             names.append(node.name)
