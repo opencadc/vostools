@@ -45,7 +45,7 @@ class VOFS(LoggingMixIn, Operations):
     removexattr = None
     setxattr = None
     
-    def __init__(self, root, cache_dir, conn=None, cache_limit=1024*1024*1024):
+    def __init__(self, root, cache_dir, conn=None, cache_limit=1024*1024*1024, cache_nodes=False):
         """Initialize the VOFS.  
 
         The style here is to use dictionaries to contain information
@@ -56,8 +56,10 @@ class VOFS(LoggingMixIn, Operations):
         self.node = {}
         # Standard attribtutes of the Node
         self.attr={}
-        # Where is the file system this Node is currently located
+        # Where in the file system this Node is currently located
 	self.path={}
+        # How old is a given reference
+        self.cache_nodes=cache_nodes
 
         # These next dictionaries keep track of pointers 
 
@@ -107,10 +109,12 @@ class VOFS(LoggingMixIn, Operations):
     def delPath(self,path):
         self.path.pop(path,None)
 
-    def delNode(self,path):
+    def delNode(self,path,force=False):
         """Delete the references associated with this Node"""
-        self.node.pop(path,None)
-        self.attr.pop(path,None)
+        if not self.cache_nodes or force or self.node[path].isdir() :
+            self.node.pop(path,None)
+            self.attr.pop(path,None)
+        
 
     def access(self, path, mode):
         if path in self.node:
@@ -286,7 +290,7 @@ class VOFS(LoggingMixIn, Operations):
         logging.debug("force? -> %s path -> %s" % ( force, path))
 
         if path in self.node and not force:
-            logging.debug("Sending back chached node for %s" % ( path))
+            logging.debug("Sending back chached metadata for %s" % ( path))
             return self.node[path]
 
         ## Pull the node meta data from VOSpace.
@@ -581,13 +585,13 @@ class VOFS(LoggingMixIn, Operations):
         self.fh.pop(fh,None)
         self.fh.pop(path,None)
         self.delNode(path)
-        
+        self.delPath(path)
         ##  now close the fh
         try:
             os.close(fh)
         except Exception as e:
             logging.debug(str(e))
-
+            raise FuseOSError(EIO)
         ## clear up the cache
         self.clear_cache()
         return 
@@ -671,7 +675,7 @@ class VOFS(LoggingMixIn, Operations):
         if os.access(fname,os.F_OK):
 	    os.rmdir(fname)
         self.client.delete(path)
-        self.delNode(path)
+        self.delNode(path,force=True)
 
         
     def statfs(self, path):
@@ -763,7 +767,7 @@ class VOFS(LoggingMixIn, Operations):
             os.unlink(fname)
         if self.getNode(path):
             self.client.delete(path)
-        self.delNode(path)
+        self.delNode(path,force=True)
         ## update the access times on the parrent node
 
 
@@ -831,6 +835,7 @@ if __name__ == "__main__":
     parser.add_option("--cache_dir",action="store",help="local directory to use for file caching",default=None)
     parser.add_option("--certfile",help="location of your CADC security certificate file",default=os.path.join(os.getenv("HOME","."),".ssl/cadcproxy.pem"))
     parser.add_option("--readonly",action="store_true",help="mount vofs readonly",default=False)
+    parser.add_option("--cache_nodes",action="store_true",default=False,help="cache dataNode properties, containerNodes are not cached")
 
     (opt,args)=parser.parse_args()
     formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
@@ -854,7 +859,7 @@ if __name__ == "__main__":
     if not os.access(mount,os.F_OK):
 	os.makedirs(mount)
     if platform=="darwin":
-        fuse = FUSE(VOFS(root,opt.cache_dir,conn=conn,cache_limit=opt.cache_limit), mount, fsname=root,
+        fuse = FUSE(VOFS(root,opt.cache_dir,conn=conn,cache_limit=opt.cache_limit,cache_nodes=opt.cache_nodes), mount, fsname=root,
                     volname=root,
                     defer_permissions=True,
                     daemon_timeout=6000,
@@ -864,7 +869,7 @@ if __name__ == "__main__":
 	            noappledouble=True,
                     foreground=opt.foreground)
     else:
-        fuse = FUSE(VOFS(root,opt.cache_dir,conn=conn,cache_limit=opt.cache_limit), mount, fsname=root, 
+        fuse = FUSE(VOFS(root,opt.cache_dir,conn=conn,cache_limit=opt.cache_limit,cache_nodes=opt.cache_nodes), mount, fsname=root, 
                     readonly=opt.readonly,
 		    #auto_cache=True,
                     foreground=opt.foreground)
