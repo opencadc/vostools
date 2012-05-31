@@ -251,6 +251,7 @@ class VOFS(LoggingMixIn, Operations):
                 raise FuseOSError(EIO)
             else:
                 loopCount += 1
+        self.delNode(path,force=True)
         return
 
     def flush(self,path,fh):
