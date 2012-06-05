@@ -69,28 +69,21 @@
 
 package ca.nrc.cadc.io;
 
-import java.io.IOException;
-
-public class ByteLimitExceededException extends IOException
+/**
+ * Classes that implement this interface can listen for
+ * progress indications from a NoisyStream.
+ *
+ * @version 0.1
+ * @author Patrick Dowler
+ */
+public interface NoisyStreamListener
 {
-    
-    private long limit;
-    
-    public ByteLimitExceededException(long limit)
-    {
-        super();
-        this.limit = limit;
-    }
-    
-    public ByteLimitExceededException(String message, long limit)
-    {
-        super(message);
-        this.limit = limit;
-    }
-    
-    public long getLimit()
-    {
-        return limit;
-    }
-
+	/**
+	 * The update method is called to notify the listener
+	 * that the noisy stream has changed. It is up to the
+	 * listener to find out what changed.
+	 *
+	 * @param ns the stream that changed
+	 */
+	public void update(NoisyStream ns);
 }

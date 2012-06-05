@@ -257,7 +257,7 @@ public class SSLUtil
         try
         {
             X509CertificateChain certKey = readPemCertificateAndKey(certKeyFile);
-            return AuthenticationUtil.getSubject(null, certKey);
+            return AuthenticationUtil.getSubject(certKey);
         }
         catch (InvalidKeySpecException ex)
         {

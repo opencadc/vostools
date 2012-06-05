@@ -105,7 +105,7 @@ public class DBConfig implements Serializable
     // Used to indicate a comment in a line.
     public final static String COMMENT_INDICATOR = "#";
 
-    private List lookup = new ArrayList();
+    private List<ConnectionConfig> lookup = new ArrayList<ConnectionConfig>();
 
 	/**
 	 * Create a DBConfig object from the ${user.home}/.dbrc file.
@@ -310,17 +310,17 @@ public class DBConfig implements Serializable
 
     private ConnectionConfig find(String s, String d)
 	{
-		Iterator i = lookup.iterator();
+		Iterator<ConnectionConfig> i = lookup.iterator();
 		while ( i.hasNext() )
 		{
-			ConnectionConfig cc = (ConnectionConfig) i.next();
+			ConnectionConfig cc = i.next();
 			if ( cc.matches(s, d, false) ) // look for explicit match
 				return cc;
 		}
         i = lookup.iterator();
 		while ( i.hasNext() )
 		{
-			ConnectionConfig cc = (ConnectionConfig) i.next();
+			ConnectionConfig cc = i.next();
 			if ( cc.matches(s, d, true) ) // look for wildcard match
 				return cc;
 		}

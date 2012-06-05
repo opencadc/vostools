@@ -69,28 +69,178 @@
 
 package ca.nrc.cadc.io;
 
+import java.io.BufferedInputStream;
 import java.io.IOException;
+import java.io.InputStream;
+import java.util.ArrayList;
+import java.util.Iterator;
+import java.util.List;
 
-public class ByteLimitExceededException extends IOException
+/**
+ * A NoisyBufferedInputStream adds progress reporting through
+ * listener notification to the BufferedInputStream.
+ *
+ * The buffer size may be different from the reporting
+ * size (number of bytes between notification events).
+ * However, notification will occur at most once per chunk,
+ * so the reporting size can't effectively be smaller than
+ * the buffer size.
+
+ *
+ * @version 0.1
+ * @author  Patrick Dowler
+ */
+public class NoisyBufferedInputStream extends BufferedInputStream implements NoisyStream
 {
-    
-    private long limit;
-    
-    public ByteLimitExceededException(long limit)
-    {
-        super();
-        this.limit = limit;
-    }
-    
-    public ByteLimitExceededException(String message, long limit)
-    {
-        super(message);
-        this.limit = limit;
-    }
-    
-    public long getLimit()
-    {
-        return limit;
-    }
+    private long totalBytes = 0;
+    private long bytes = 0;
+	private int blocks = 0;
+	private int reportSize = 4096; // default 4K report size
+	private List<NoisyStreamListener> listeners = new ArrayList<NoisyStreamListener>();
 
+	/**
+	* Constructor. Uses default buffer size of BufferedInputStream
+	* and default reporting block size (4K).
+	*/
+	public NoisyBufferedInputStream(InputStream in)
+	{
+		super(in);
+	}
+
+	/**
+	* Constructor. Uses specified buffer size for BufferedInputStream
+	* and default reporting block size (4K).
+	*/
+	public NoisyBufferedInputStream(InputStream in, int bufSize)
+	{
+		super(in, bufSize);
+	}
+
+	/**
+	 * @return number of bytes read/written by the stream
+	 */
+	public long getByteCount()
+	{
+		return reportSize*blocks + bytes;
+	}
+
+	/**
+	 * Sets the size increment between reporting events. Listeners
+	 * are notified if more than numbytes have been read from the
+	 * stream so far.
+	 */
+	public void setReportSize(int numbytes)
+	{
+		bytes = getByteCount();
+		blocks = 0;
+		reportSize = numbytes;
+		doit(); // recompute blocks and bytes
+	}
+
+	/**
+	 * Adds a new listener and immediately notifies the new
+	 * listener by calling its update method.
+	 */
+	public void addListener(NoisyStreamListener listener)
+	{
+		listeners.add(listener);
+		listener.update(this);
+	}
+
+	/**
+	 * Remove the specified listener.
+	 */
+	public void removeListener(NoisyStreamListener listener)
+	{
+		listeners.remove(listener);
+	}
+
+	/**
+	 * Remove all listeners.
+	 */
+	public void removeListeners()
+	{
+		listeners.clear();
+	}
+
+	/**
+	 * Notify all listeners that something changed and they
+	 * should check the state of the stream.
+	 */
+	protected void notifyListeners()
+	{
+		Iterator i = listeners.iterator();
+		while ( i.hasNext() )
+		{
+			NoisyStreamListener n = (NoisyStreamListener) i.next();
+			n.update(this);
+		}
+	}
+
+	public int read()
+		throws IOException
+	{
+		int i = super.read();
+		if ( i != -1 )
+		{
+			bytes++;
+			doit();
+		}
+		return i;
+	}
+
+	public int read(byte[] buf, int off, int len)
+		throws IOException
+	{
+		int i = super.read(buf,off,len);
+		if ( i != -1 )
+		{
+			bytes += i;
+			doit();
+		}
+		return i;
+	}
+
+	/**
+	 * Closes the input stream and notifies all listeners.
+	 */
+	public void close()
+		throws IOException
+	{
+		notifyListeners();
+		super.close();
+	}
+
+	/**
+	 * Resets the stream to the position at the last mark.
+	 * Listeners will get notified of the change if enough
+	 * bytes remain "read".
+	 */
+	public void reset()
+		throws IOException
+	{
+		// un-count the bytes if rewinding occurs
+		if (markpos >= 0 && pos > markpos)
+		{
+			int back = pos - markpos;
+			bytes = getByteCount() - back;
+			blocks = 0;
+			doit();
+		}
+		super.reset();
+	}
+
+	private void doit()
+	{
+		boolean changed = false;
+		while ( bytes >= reportSize )
+		{
+			long b = bytes/reportSize;
+			blocks += (int) b;
+			bytes -= b*reportSize;
+			changed = true;
+		}
+		if (changed)
+			notifyListeners();
+	}
 }

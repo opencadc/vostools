@@ -305,6 +305,35 @@ public class AuthenticationUtil
         return augmentSubject(subject);
     }
 
+    /**
+     * Create a subject from the specified certficate chain. This method is
+     * intended for use by applications that load a certificate and key pair
+     * (probably from a file).
+     *
+     * @param chain                 The X509Certificate chain of certificates,
+     *                              if any.
+     * @return                      An augmented Subject.
+     */
+    public static Subject getSubject(X509CertificateChain chain)
+    {
+        Set<Principal> principals = new HashSet<Principal>();
+        Set<Object> publicCred = new HashSet<Object>();
+        Set privateCred = new HashSet();
+
+        // SSL authentication
+        if (chain != null)
+        {
+            principals.add(chain.getX500Principal());
+            publicCred.add(chain);
+            // note: we just leave the PrivateKey in the chain (eg public) rather
+            // than extracting and putting it into the privateCred set... TBD
+        }
+
+        Subject subject = new Subject(false, principals, publicCred, privateCred);
+
+        return augmentSubject(subject);
+    }
+
     // Encode a Subject in the format:
     // Principal Class name[Principal name]
     public static String encodeSubject(Subject subject)

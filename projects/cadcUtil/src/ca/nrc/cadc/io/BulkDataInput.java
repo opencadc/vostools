@@ -70,27 +70,91 @@
 package ca.nrc.cadc.io;
 
 import java.io.IOException;
+import java.io.EOFException;
 
-public class ByteLimitExceededException extends IOException
+/**
+ * Interface for classes which read in arrays of builtin
+ * data types.
+ *
+ * Each integer data type can be read into
+ * an array of the exact type. Unsigned integer types are
+ * read into an array of the next larger type since java
+ * does not have unsigned types per se.
+ *
+ * All the read<type> methods block until they either fill the
+ * supplied buffer or reach end-of-file. Thus, they will return
+ * the buffer size on every call except possibly the last
+ * successful one, where the read count could be less. A return
+ * of 0 means EOF was detected on the first read. This behaviour
+ * is usefully different from DataInputStream.readFully because
+ * the method returns normally when EOF is first reached instead
+ * of throwing an EOFException.
+ *
+ * @version 0.1
+ * @author Patrick Dowler
+ */
+public interface BulkDataInput
 {
-    
-    private long limit;
-    
-    public ByteLimitExceededException(long limit)
-    {
-        super();
-        this.limit = limit;
-    }
-    
-    public ByteLimitExceededException(String message, long limit)
-    {
-        super(message);
-        this.limit = limit;
-    }
-    
-    public long getLimit()
-    {
-        return limit;
-    }
+    // read 8-bit signed -> byte
+    public int readByte( byte[] buf )
+		throws IOException, EOFException;
 
+    public int readByte( byte[] buf, int off, int len)
+		throws IOException, EOFException;
+
+    // read 8-bit unsigned -> short
+    public int readUnsignedByte( short[] buf )
+		throws IOException, EOFException;
+
+    public int readUnsignedByte( short[] buf, int off, int len)
+		throws IOException, EOFException;
+
+    // read characters
+    public int readChar( char[] buf )
+		throws IOException, EOFException;
+
+    public int readChar( char[] buf, int off, int len)
+		throws IOException, EOFException;
+
+    // read 16-bit signed integers
+    public int readShort( short[] buf )
+		throws IOException, EOFException;
+
+    public int readShort( short[] buf, int off, int len)
+		throws IOException, EOFException;
+
+    // read 16-bit unsigned -> int
+    public int readUnsignedShort( int[] buf )
+		throws IOException, EOFException;
+
+    public int readUnsignedShort( int[] buf, int off, int len)
+		throws IOException, EOFException;
+
+    // read 32-bit signed integers
+    public int readInt( int[] buf )
+		throws IOException, EOFException;
+
+    public int readInt( int[] buf, int off, int len)
+		throws IOException, EOFException;
+
+    // read 64-bit signed integers
+    public int readLong( long[] buf )
+		throws IOException, EOFException;
+
+    public int readLong( long[] buf, int off, int len)
+		throws IOException, EOFException;
+
+    // read 32-bit floating point values
+    public int readFloat( float[] buf )
+		throws IOException, EOFException;
+
+    public int readFloat( float[] buf, int off, int len)
+		throws IOException, EOFException;
+
+    // read 64-bit floating point values
+    public int readDouble( double[] buf )
+		throws IOException, EOFException;
+
+    public int readDouble( double[] buf, int off, int len)
+		throws IOException, EOFException;
 }

@@ -69,155 +69,222 @@
 
 package ca.nrc.cadc.io;
 
+import java.io.DataOutputStream;
+import java.io.OutputStream;
 import java.io.IOException;
-import java.io.InputStream;
 
 /**
- * Simple wrapper that keeps track of bytes read from the input stream. 
- * 
- * If a limit is provided, a ByteLimitExceededException will be thrown if that
- * limit is reached.
- * 
- * @version $Version$
- * @author majorb
+ * This class implements a stream filter for writing numeric data to an
+ * underlying output stream (of bytes). As an extension of DataOutputStream,
+ * it adds the ability  to write large chunks of internal types at once in
+ * binary format.
+ *
+ * @see		DataOutputStream
+ * @see		OutputStream
+ * @version 0.1
+ * @author  Patrick Dowler
+ *
  */
-public class ByteCountInputStream extends InputStream implements ByteCounter
+public class BulkDataOutputStream extends DataOutputStream
+    implements BulkDataOutput
 {
-    
-    private InputStream inputStream;
-    private long byteCount = 0L;
-    private Long byteLimit = null;
+    protected boolean eos;
 
     /**
-     * Constructor that takes the target input stream..
-     * 
-     * @param inputStream  The InputStream to wrap.
-     */
-    public ByteCountInputStream(final InputStream inputStream)
-    {
-        this.inputStream = inputStream;
-    }
-    
-    /**
-     * Constructor that takes the target input stream and a byte limit.
-     * 
-     * @param inputStream  The InputStream to wrap.
-     * @param byteLimit    The limit to the number of bytes to read.
-     */
-    public ByteCountInputStream(final InputStream inputStream,
-                                final long byteLimit)
-    {
-        this.inputStream = inputStream;
-        if (byteLimit > 0)
-            this.byteLimit = byteLimit;
-    }
-    
-    /**
-     * Return the number of bytes that were read.
-     */
-    @Override
-    public long getByteCount()
-    {
-        return byteCount;
-    }
-
-    /**
-     * The quota space left to be written to.
+     * Constructor.
      *
-     * @return      Quota space left, in bytes.
+     * @param istream an input stream with readInt() methods.
      */
-    public Long getByteLimit()
+    public BulkDataOutputStream(OutputStream is)
     {
-        return byteLimit;
+		super(is);
+		eos = false;
     }
 
-    @Override
-    public int available() throws IOException
+    // write characters
+    public void writeChar( char[] buf )
+    	throws IOException
     {
-        return inputStream.available();
-    }
-    
-    @Override
-    public void close() throws IOException
-    {
-        inputStream.close();
-    }
-    
-    @Override
-    public void mark(int readlimit)
-    {
-        inputStream.mark(readlimit);
-    }
-    
-    @Override
-    public boolean markSupported()
-    {
-        return inputStream.markSupported();
+		this.writeChar(buf,0,buf.length);
     }
 
-    @Override
-    public int read() throws IOException
+    public void writeChar( char[] buf, int off, int len)
+		throws IOException
     {
-        if (hasReachedLimit())
-            throw new ByteLimitExceededException(byteLimit);
-
-        int value = inputStream.read();
-        byteCount++;
-        return value;
+		int i = 0;
+		while ( i < off+len )
+		{
+		    // use DataOutputStream.writeChar()
+	    	this.writeChar(buf[i+off]);
+		    i++;
+		}
     }
 
-    @Override
-    public int read(byte[] b) throws IOException
+    // write 8-bit signed integers
+    public void writeByte(byte b)
+    	throws IOException
     {
-        if (hasReachedLimit())
-            throw new ByteLimitExceededException(byteLimit);
-
-        int bytesRead = inputStream.read(b);
-        if (bytesRead != -1)
-            byteCount += bytesRead;
-
-        return bytesRead;
-    }
-    
-    @Override
-    public int read(byte[] b, int off, int len) throws IOException
-    {
-        if (hasReachedLimit())
-            throw new ByteLimitExceededException(byteLimit);
-               
-        int bytesRead = inputStream.read(b, off, len);
-        if (bytesRead != -1)
-            byteCount += bytesRead;
-        
-        return bytesRead;
+    	this.write(b);
     }
 
-    /**
-     * Reset this stream, if supported.
-     *
-     * @throws IOException  If not supported, or something went wrong.
-     *
-     */
-    @Override
-    public void reset() throws IOException
+    public void writeByte( byte[] buf )
+    	throws IOException
     {
-        inputStream.reset();
-        byteCount = 0;
-    }
-    
-    @Override
-    public long skip(long n) throws IOException
-    {
-        return inputStream.skip(n);
+		this.writeByte(buf,0,buf.length);
     }
 
-    /**
-     * Obtain whether the byte limit has been reached.
-     */
-    private boolean hasReachedLimit()
+    public void writeByte( byte[] buf, int off, int len)
+		throws IOException
     {
-        if (byteLimit == null)
-            return false;
-        return byteCount >= byteLimit;
+		int i = 0;
+		while ( i < off+len )
+		{
+		    // use DataOutputStream.writeByte()
+	    	this.writeByte(buf[i+off]);
+		    i++;
+		}
+    }
+
+    // write 8-bit unsigned integers
+    public void writeUnsignedByte( short i )
+		throws IOException
+    {
+		this.writeByte( i + Byte.MIN_VALUE );
+    }
+
+    public void writeUnsignedByte( short[] buf )
+    	throws IOException
+    {
+		this.writeUnsignedByte(buf,0,buf.length);
+    }
+
+    public void writeUnsignedByte( short[] buf, int off, int len)
+		throws IOException
+    {
+		int i = 0;
+		while ( i < off+len )
+		{
+		    this.writeUnsignedByte( buf[i+off] );
+		    i++;
+		}
+    }
+
+    // write 16-bit signed integers
+    public void writeShort( short[] buf )
+    	throws IOException
+    {
+		this.writeShort(buf,0,buf.length);
+    }
+
+    public void writeShort( short[] buf, int off, int len)
+		throws IOException
+    {
+		int i = 0;
+		while ( i < len )
+		{
+	    	// use DataOutputStream.writeShort()
+		    this.writeShort(buf[i+off]);
+		    i++;
+		}
+    }
+
+    // write 16-bit unsigned integers
+    public void writeUnsignedShort( int i )
+    	throws IOException
+    {
+		this.writeShort( i + Short.MIN_VALUE );
+    }
+
+    public void writeUnsignedShort( int[] buf )
+    	throws IOException
+    {
+		this.writeUnsignedShort(buf,0,buf.length);
+    }
+
+    public void writeUnsignedShort( int[] buf, int off, int len)
+		throws IOException
+    {
+		int i = 0;
+		while ( i < off+len )
+		{
+		    this.writeUnsignedShort(buf[i+off]);
+		    i++;
+		}
+    }
+
+    // write 32-bit signed integers
+    public void writeInt( int[] buf )
+    	throws IOException
+    {
+		this.writeInt(buf,0,buf.length);
+    }
+
+    public void writeInt( int[] buf, int off, int len)
+		throws IOException
+    {
+		int i = 0;
+		while ( i < off+len )
+		{
+		    // use DataOutputStream.writeInt()
+		    this.writeInt(buf[i+off]);
+	    	i++;
+		}
+    }
+
+    // write 64-bit signed integers
+    public void writeLong( long[] buf )
+    	throws IOException
+    {
+		this.writeLong(buf,0,buf.length);
+    }
+
+    public void writeLong( long[] buf, int off, int len)
+		throws IOException
+    {
+		int i = 0;
+		while ( i < off+len )
+		{
+		    // use DataOutputStream.writeLong()
+		    this.writeLong(buf[i+off]);
+	    	i++;
+		}
+    }
+
+    // write 32-bit floating point values
+    public void writeFloat( float[] buf )
+    	throws IOException
+    {
+		this.writeFloat(buf,0,buf.length);
+    }
+
+    public void writeFloat( float[] buf, int off, int len)
+		throws IOException
+    {
+		int i = 0;
+		while ( i < off+len )
+		{
+		    // use DataOutputStream.writeFloat()
+		    this.writeFloat(buf[i+off]);
+	    	i++;
+		}
+    }
+
+    // write 64-bit floating point values
+    public void writeDouble( double[] buf )
+    	throws IOException
+    {
+		this.writeDouble(buf,0,buf.length);
+    }
+
+    public void writeDouble( double[] buf, int off, int len)
+		throws IOException
+    {
+		int i = 0;
+		while ( i < off+len )
+		{
+		    // use DataOutputStream.writeDouble()
+		    this.writeDouble(buf[i+off]);
+	    	i++;
+		}
     }
 }

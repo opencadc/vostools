@@ -92,7 +92,7 @@ public class NetrcFile extends File
 
     private boolean debug = false;
     private static String DEFAULT_MACHINE = "*";
-    private List cache;
+    private List<Cred> cache;
     private long timestamp;
     
     private boolean secureMode;
@@ -219,7 +219,7 @@ public class NetrcFile extends File
         }
         
         if (cache == null)
-            this.cache = new ArrayList();
+            this.cache = new ArrayList<Cred>();
         else
             cache.clear();
         this.timestamp = lastModified();
