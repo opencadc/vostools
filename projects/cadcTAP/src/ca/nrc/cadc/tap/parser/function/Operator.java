@@ -69,6 +69,7 @@
 
 package ca.nrc.cadc.tap.parser.function;
 
+import ca.nrc.cadc.tap.parser.OperatorVisitor;
 import ca.nrc.cadc.tap.parser.QueryDeParser;
 import ca.nrc.cadc.tap.parser.region.pgsphere.function.Spoint;
 import net.sf.jsqlparser.expression.BinaryExpression;
@@ -149,9 +150,14 @@ public class Operator extends BinaryExpression
      */
     public void accept(ExpressionVisitor expressionVisitor)
     {
-        log.debug("accept(" + expressionVisitor.getClass().getSimpleName() + ")");
-        if (expressionVisitor instanceof QueryDeParser)
-            ((QueryDeParser) expressionVisitor).visit(this);
+        log.debug("accept(" + expressionVisitor.getClass().getSimpleName() + "): " + this);
+        if (expressionVisitor instanceof OperatorVisitor) // visitor pattern extension
+            ((OperatorVisitor) expressionVisitor).visit(this);
+        else
+        {
+            getLeftExpression().accept(expressionVisitor);
+            getRightExpression().accept(expressionVisitor);
+        }
     }
     
 }

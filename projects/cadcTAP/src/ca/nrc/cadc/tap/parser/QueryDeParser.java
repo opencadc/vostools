@@ -71,42 +71,8 @@ package ca.nrc.cadc.tap.parser;
 
 import ca.nrc.cadc.tap.parser.function.Concatenate;
 import ca.nrc.cadc.tap.parser.function.Operator;
-import net.sf.jsqlparser.expression.AllComparisonExpression;
-import net.sf.jsqlparser.expression.AnyComparisonExpression;
-import net.sf.jsqlparser.expression.CaseExpression;
-import net.sf.jsqlparser.expression.DateValue;
-import net.sf.jsqlparser.expression.DoubleValue;
-import net.sf.jsqlparser.expression.Function;
-import net.sf.jsqlparser.expression.InverseExpression;
-import net.sf.jsqlparser.expression.JdbcParameter;
-import net.sf.jsqlparser.expression.LongValue;
-import net.sf.jsqlparser.expression.NullValue;
 import net.sf.jsqlparser.expression.Parenthesis;
-import net.sf.jsqlparser.expression.StringValue;
-import net.sf.jsqlparser.expression.TimeValue;
-import net.sf.jsqlparser.expression.TimestampValue;
-import net.sf.jsqlparser.expression.WhenClause;
-import net.sf.jsqlparser.expression.operators.arithmetic.Addition;
-import net.sf.jsqlparser.expression.operators.arithmetic.Division;
-import net.sf.jsqlparser.expression.operators.arithmetic.Multiplication;
-import net.sf.jsqlparser.expression.operators.arithmetic.Subtraction;
-import net.sf.jsqlparser.expression.operators.conditional.AndExpression;
-import net.sf.jsqlparser.expression.operators.conditional.OrExpression;
-import net.sf.jsqlparser.expression.operators.relational.Between;
-import net.sf.jsqlparser.expression.operators.relational.EqualsTo;
-import net.sf.jsqlparser.expression.operators.relational.ExistsExpression;
-import net.sf.jsqlparser.expression.operators.relational.ExpressionList;
-import net.sf.jsqlparser.expression.operators.relational.GreaterThan;
-import net.sf.jsqlparser.expression.operators.relational.GreaterThanEquals;
-import net.sf.jsqlparser.expression.operators.relational.InExpression;
-import net.sf.jsqlparser.expression.operators.relational.IsNullExpression;
-import net.sf.jsqlparser.expression.operators.relational.LikeExpression;
-import net.sf.jsqlparser.expression.operators.relational.MinorThan;
-import net.sf.jsqlparser.expression.operators.relational.MinorThanEquals;
-import net.sf.jsqlparser.expression.operators.relational.NotEqualsTo;
-import net.sf.jsqlparser.schema.Column;
 import net.sf.jsqlparser.statement.select.SelectVisitor;
-import net.sf.jsqlparser.statement.select.SubSelect;
 import net.sf.jsqlparser.util.deparser.ExpressionDeParser;
 import org.apache.log4j.Logger;
 
@@ -116,7 +82,7 @@ import org.apache.log4j.Logger;
  * 
  * @author jburke
  */
-public class QueryDeParser extends ExpressionDeParser
+public class QueryDeParser extends ExpressionDeParser implements OperatorVisitor
 {
     private static Logger log = Logger.getLogger(QueryDeParser.class);
 
