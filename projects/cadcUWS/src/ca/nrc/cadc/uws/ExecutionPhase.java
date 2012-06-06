@@ -104,6 +104,27 @@ package ca.nrc.cadc.uws;
  */
 public enum ExecutionPhase
 {
-    PENDING, QUEUED, EXECUTING, COMPLETED, ERROR, UNKNOWN, HELD, SUSPENDED,
-    ABORTED
+    PENDING("PENDING"),
+    QUEUED("QUEUED"),
+    EXECUTING("EXECUTING"),
+    COMPLETED("COMPLETED"),
+    ERROR("ERROR"),
+    UNKNOWN("UNKNOWN"),
+    HELD("HELD"),
+    SUSPENDED("SUSPENDED"),
+    ABORTED("ABORTED");
+
+    private String value;
+
+    private ExecutionPhase(String value) { this.value = value; }
+
+    public static ExecutionPhase toValue(String s)
+    {
+        for (ExecutionPhase d : values())
+            if (d.value.equals(s))
+                return d;
+        throw new IllegalArgumentException("invalid value: " + s);
+    }
+
+    public String getValue() { return value; }
 }
