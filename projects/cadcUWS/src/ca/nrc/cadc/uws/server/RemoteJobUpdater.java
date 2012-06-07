@@ -137,7 +137,7 @@ public class RemoteJobUpdater implements JobUpdater
     public void setPhase(String jobID, ExecutionPhase ep)
         throws JobNotFoundException, JobPersistenceException
     {
-        setPhase(jobID, null, ep);
+        throw new UnsupportedOperationException();
     }
 
     /**
@@ -204,6 +204,10 @@ public class RemoteJobUpdater implements JobUpdater
     public ExecutionPhase setPhase(String jobID, ExecutionPhase start, ExecutionPhase end, ErrorSummary error, Date date)
         throws JobNotFoundException, JobPersistenceException
     {
+        if (start == null)
+            throw new IllegalArgumentException("start phase cannot be null");
+        if (end == null)
+            throw new IllegalArgumentException("end phase cannot be null");
         try
         {
             StringBuilder sb = new StringBuilder();
@@ -211,9 +215,9 @@ public class RemoteJobUpdater implements JobUpdater
             sb.append("/");
             sb.append(jobID);
             sb.append("/");
-            sb.append(start.name());
+            sb.append(start.getValue());
             sb.append("/");
-            sb.append(end.name());
+            sb.append(end.getValue());
             if (error != null)
             {
                 String msg = Base64.encodeString(error.getSummaryMessage());

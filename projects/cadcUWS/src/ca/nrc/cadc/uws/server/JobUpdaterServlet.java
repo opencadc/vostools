@@ -246,7 +246,7 @@ public class JobUpdaterServlet extends HttpServlet
                 response.setStatus(HttpServletResponse.SC_OK);
                 response.setContentType("text/plain");
                 PrintWriter w = response.getWriter();
-                w.println(ep.name());
+                w.println(ep.getValue());
                 w.close();
                 return;
             }
