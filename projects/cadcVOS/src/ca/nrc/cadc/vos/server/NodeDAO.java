@@ -335,6 +335,7 @@ public class NodeDAO
             Node ret = (Node) jdbc.query(npsc, new NodePathExtractor());
             transactionManager.commit(dirtyRead);
             dirtyRead = null;
+            
             loadSubjects(ret);
             return ret;
         }
@@ -374,8 +375,37 @@ public class NodeDAO
         log.debug("getProperties: " + node.getUri().getPath() + ", " + node.getClass().getSimpleName());
         String sql = getSelectNodePropertiesByID(node);
         log.debug("getProperties: " + sql);
-        List<NodeProperty> props = jdbc.query(sql, new NodePropertyMapper());
-        node.getProperties().addAll(props);
+
+        TransactionStatus dirtyRead = null;
+        try
+        {
+            dirtyRead = transactionManager.getTransaction(dirtyReadTransactionDef);
+            List<NodeProperty> props = jdbc.query(sql, new NodePropertyMapper());
+            node.getProperties().addAll(props);
+            transactionManager.commit(dirtyRead);
+            dirtyRead = null;
+        }
+        catch(Throwable t)
+        {
+            log.error("rollback dirtyRead for node: " + node.getUri().getPath(), t);
+            try
+            {
+                transactionManager.rollback(dirtyRead);
+                dirtyRead = null;
+            }
+            catch(Throwable oops) { log.error("failed to dirtyRead rollback transaction", oops); }
+            throw new RuntimeException("failed to get node: " + node.getUri().getPath(), t);
+        }
+        finally
+        {
+            if (dirtyRead != null)
+                try
+                {
+                    log.warn("put: BUG - dirtyRead transaction still open in finally... calling rollback");
+                    transactionManager.rollback(dirtyRead);
+                }
+                catch(Throwable oops) { log.error("failed to rollback dirtyRead transaction in finally", oops); }
+        }
     }
 
     /**
@@ -391,13 +421,43 @@ public class NodeDAO
 
         String sql = getSelectChildNodeSQL(parent);
         log.debug("getChild: " + sql);
-        List<Node> nodes = jdbc.query(sql, new Object[] { name }, 
+
+        TransactionStatus dirtyRead = null;
+        try
+        {
+            dirtyRead = transactionManager.getTransaction(dirtyReadTransactionDef);
+            List<Node> nodes = jdbc.query(sql, new Object[] { name },
                 new NodeMapper(authority, parent.getUri().getPath()));
-        if (nodes.size() > 1)
-            throw new IllegalStateException("BUG - found " + nodes.size() + " child nodes named " + name
+            if (nodes.size() > 1)
+                throw new IllegalStateException("BUG - found " + nodes.size() + " child nodes named " + name
                     + " for container " + parent.getUri().getPath());
-        loadSubjects(nodes);
-        addChildNodes(parent, nodes);
+            transactionManager.commit(dirtyRead);
+            dirtyRead = null;
+            
+            loadSubjects(nodes);
+            addChildNodes(parent, nodes);
+        }
+        catch(Throwable t)
+        {
+            log.error("rollback dirtyRead for node: " + parent.getUri().getPath(), t);
+            try
+            {
+                transactionManager.rollback(dirtyRead);
+                dirtyRead = null;
+            }
+            catch(Throwable oops) { log.error("failed to dirtyRead rollback transaction", oops); }
+            throw new RuntimeException("failed to get node: " + parent.getUri().getPath(), t);
+        }
+        finally
+        {
+            if (dirtyRead != null)
+                try
+                {
+                    log.warn("put: BUG - dirtyRead transaction still open in finally... calling rollback");
+                    transactionManager.rollback(dirtyRead);
+                }
+                catch(Throwable oops) { log.error("failed to rollback dirtyRead transaction in finally", oops); }
+        }
     }
 
     /**
@@ -423,7 +483,6 @@ public class NodeDAO
         expectPersistentNode(parent);
 
         Object[] args = null;
-        String startName = null;
         if (start != null)
             args = new Object[] { start.getName() };
         else
@@ -433,10 +492,40 @@ public class NodeDAO
         // was called, e.g. from delete(node) or markForDeletion(node)
         String sql = getSelectNodesByParentSQL(parent, limit, (start!=null));
         log.debug("getChildren: " + sql);
-        List<Node> nodes = jdbc.query(sql,  args,
+
+        TransactionStatus dirtyRead = null;
+        try
+        {
+            dirtyRead = transactionManager.getTransaction(dirtyReadTransactionDef);
+            List<Node> nodes = jdbc.query(sql,  args,
                 new NodeMapper(authority, parent.getUri().getPath()));
-        loadSubjects(nodes);
-        addChildNodes(parent, nodes);
+            transactionManager.commit(dirtyRead);
+            dirtyRead = null;
+
+            loadSubjects(nodes);
+            addChildNodes(parent, nodes);
+        }
+        catch(Throwable t)
+        {
+            log.error("rollback dirtyRead for node: " + parent.getUri().getPath(), t);
+            try
+            {
+                transactionManager.rollback(dirtyRead);
+                dirtyRead = null;
+            }
+            catch(Throwable oops) { log.error("failed to dirtyRead rollback transaction", oops); }
+            throw new RuntimeException("failed to get node: " + parent.getUri().getPath(), t);
+        }
+        finally
+        {
+            if (dirtyRead != null)
+                try
+                {
+                    log.warn("put: BUG - dirtyRead transaction still open in finally... calling rollback");
+                    transactionManager.rollback(dirtyRead);
+                }
+                catch(Throwable oops) { log.error("failed to rollback dirtyRead transaction in finally", oops); }
+        }
     }
 
     /**
