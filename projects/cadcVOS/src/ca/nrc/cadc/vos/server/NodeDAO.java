@@ -428,11 +428,13 @@ public class NodeDAO
             dirtyRead = transactionManager.getTransaction(dirtyReadTransactionDef);
             List<Node> nodes = jdbc.query(sql, new Object[] { name },
                 new NodeMapper(authority, parent.getUri().getPath()));
+            
+            transactionManager.commit(dirtyRead);
+            dirtyRead = null;
+
             if (nodes.size() > 1)
                 throw new IllegalStateException("BUG - found " + nodes.size() + " child nodes named " + name
                     + " for container " + parent.getUri().getPath());
-            transactionManager.commit(dirtyRead);
-            dirtyRead = null;
             
             loadSubjects(nodes);
             addChildNodes(parent, nodes);
