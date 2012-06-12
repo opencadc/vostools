@@ -1646,6 +1646,9 @@ public class NodeDAOTest
             dNode2 = nodeDAO.getPath(dPath2);
             Assert.assertNotNull(dNode2);
 
+            // since this is an admin API delete, it should ignore busy state
+            nodeDAO.setBusyState((DataNode) dNode2, NodeBusyState.notBusy, NodeBusyState.busyWithWrite);
+
             String cPath2 = cPath + "/" + getNodeName("del-test-dir2");
             Node cNode2 = getCommonContainerNode(cPath2);
             cNode2.setParent(cNode);

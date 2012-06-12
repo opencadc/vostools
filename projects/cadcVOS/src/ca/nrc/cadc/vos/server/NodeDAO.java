@@ -777,7 +777,7 @@ public class NodeDAO
         log.debug(sql);
         jdbc.update(sql);
 
-        sql = getDeleteNodeSQL(node);
+        sql = getDeleteNodeSQL(node, true); // only delete if non-busy
         log.debug(sql);
         int count = jdbc.update(sql);
         if (count == 0)
@@ -1336,7 +1336,7 @@ public class NodeDAO
             count += jdbc.update(sql);
 
         // delete the node itself
-        sql = getDeleteNodeSQL(node);
+        sql = getDeleteNodeSQL(node, false); // admin mode: ignore busy state
         log.debug(sql);
         if (!dryrun)
         {
@@ -1365,7 +1365,7 @@ public class NodeDAO
                 count = deleteNode(child, batchSize, count, dryrun);
                 count = commitBatch("delete", batchSize, count, dryrun);
             }
-            sql = getSelectNodesByParentSQL(container,CHILD_BATCH_SIZE, true);
+            sql = getSelectNodesByParentSQL(container, CHILD_BATCH_SIZE, true);
             args[0] = cur.getName();
             children = jdbc.query(sql, args, mapper);
             children.remove(cur); // the query is name >= cur and we already processed cur
@@ -1584,7 +1584,7 @@ public class NodeDAO
      * @param node The node to delete
      * @return The SQL string for deleting the node from the database.
      */
-    protected String getDeleteNodeSQL(Node node)
+    protected String getDeleteNodeSQL(Node node, boolean notBusyOnly)
     {
         StringBuilder sb = new StringBuilder();
         sb.append("DELETE FROM ");
@@ -1593,9 +1593,12 @@ public class NodeDAO
         sb.append(getNodeID(node));
         sb.append(" AND parentID = ");
         sb.append(getNodeID(node.getParent()));
-        sb.append(" AND busyState = '");
-        sb.append(VOS.NodeBusyState.notBusy.getValue());
-        sb.append("'");
+        if (notBusyOnly)
+        {
+            sb.append(" AND busyState = '");
+            sb.append(VOS.NodeBusyState.notBusy.getValue());
+            sb.append("'");
+        }
         return sb.toString();
     }
     
