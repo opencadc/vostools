@@ -81,6 +81,7 @@ import org.restlet.resource.Get;
 import org.restlet.resource.Post;
 import org.restlet.resource.Put;
 
+import ca.nrc.cadc.util.StringUtil;
 import ca.nrc.cadc.vos.NodeFault;
 import ca.nrc.cadc.vos.VOSURI;
 import ca.nrc.cadc.vos.server.auth.VOSpaceAuthorizer;
@@ -178,13 +179,22 @@ public class NodeResource extends BaseResource
         long start = System.currentTimeMillis();
         long end = -1;
         
+        // logging fields
+        String success = "yes";
+        String time = "";
+        String bytes = "";
+        String message = "";
+        
         try
         {
-            LOGGER.info("START " + action.getClass().getSimpleName());
+
+            LOGGER.info("START " + getRequestMethod() + " Path: " + getPath());
             
             if (nodeFault != null)
             {
                 setStatus(nodeFault.getStatus());
+                success = "no";
+                message = getErrorMessage(nodeFault);
                 return new NodeErrorRepresentation(nodeFault);
             }
             
@@ -198,7 +208,7 @@ public class NodeResource extends BaseResource
             action.setRequest(getRequest());
             action.setQueryForm(getQueryForm());
             action.setStylesheetReference(getStylesheetReference());
-
+            
             final NodeActionResult result;
 
             if (getSubject() == null)
@@ -214,9 +224,16 @@ public class NodeResource extends BaseResource
             
             if (result != null)
             {
+                if (result.getNodeFault() != null)
+                {
+                    success = "no";
+                    message = getErrorMessage(result.getNodeFault());
+                }
+                
                 setStatus(result.getStatus());
                 if (result.getRedirectURL() != null)
                 {
+                    message = message + " Redirecting.";
                     getResponse().redirectSeeOther(
                             result.getRedirectURL().toString());
                 }
@@ -232,6 +249,20 @@ public class NodeResource extends BaseResource
         {
             LOGGER.debug(t);
             setStatus(NodeFault.InternalFault.getStatus());
+            success = "no";
+            message = getErrorMessage(NodeFault.InternalFault);
+            if (StringUtil.hasText(t.getMessage()))
+            {
+                message = message
+                    + ": " + t.getClass().getSimpleName()
+                    + ": " + t.getMessage();
+            }
+            else
+            {
+                message = message
+                    + ": "
+                    + t.getClass().getSimpleName();
+            }
             return new NodeErrorRepresentation(NodeFault.InternalFault);
         }
         finally
@@ -240,8 +271,16 @@ public class NodeResource extends BaseResource
             {
                 end = System.currentTimeMillis();
             }
-            LOGGER.info("END " + action.getClass().getSimpleName()
-                    + " elapsed time (ms): " + (end - start));
+            time = Long.toString(end - start);
+            
+            LOGGER.info("END " + getRequestMethod()
+                    + " Path: " + getPath()
+                    + " User: " + getUser()
+                    + " From: " + getRemoteAddr()
+                    + " Success: " + success
+                    + " Time: " + time
+                    + " Bytes: " + bytes
+                    + " Message: " + message);
         }
     }
     

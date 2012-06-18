@@ -116,6 +116,11 @@ public class NodeActionResult
         return redirectURL;
     }
     
+    public NodeFault getNodeFault()
+    {
+        return nodeFault;
+    }
+    
     public Representation getRepresentation()
     {
         if (nodeFault != null)

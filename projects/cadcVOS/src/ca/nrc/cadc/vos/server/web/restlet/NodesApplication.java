@@ -69,18 +69,19 @@
 
 package ca.nrc.cadc.vos.server.web.restlet;
 
+import java.util.Map;
+
 import org.apache.log4j.Logger;
 import org.restlet.Application;
 import org.restlet.Context;
 import org.restlet.Restlet;
+import org.restlet.routing.Router;
+import org.restlet.routing.TemplateRoute;
+import org.restlet.routing.Variable;
 
 import ca.nrc.cadc.vos.InvalidServiceException;
 import ca.nrc.cadc.vos.server.util.BeanUtil;
 import ca.nrc.cadc.vos.server.web.restlet.resource.NodeResource;
-import java.util.Map;
-import org.restlet.routing.Router;
-import org.restlet.routing.TemplateRoute;
-import org.restlet.routing.Variable;
 
 /**
  * Application for handling Node routing and resources.
@@ -100,6 +101,7 @@ public class NodesApplication extends Application
     public NodesApplication(final Context context)
     {
         super(context);
+        
     }
 
     private class NodesRouter extends Router

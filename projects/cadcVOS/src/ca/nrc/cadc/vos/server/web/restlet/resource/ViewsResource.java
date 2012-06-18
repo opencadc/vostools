@@ -73,6 +73,7 @@ import org.apache.log4j.Logger;
 import org.restlet.representation.Representation;
 import org.restlet.resource.Get;
 
+import ca.nrc.cadc.util.StringUtil;
 import ca.nrc.cadc.vos.server.Views;
 import ca.nrc.cadc.vos.server.ViewsWriter;
 import ca.nrc.cadc.vos.server.web.representation.ViewsRepresentation;
@@ -103,8 +104,41 @@ public class ViewsResource extends BaseResource
     @Get("xml")
     public Representation represent()
     {
-        log.debug("Enter ViewsResource.represent()");
-        return new ViewsRepresentation(Views.accepts(), Views.provides(), new ViewsWriter());
+        String success = "yes";
+        String message = "";
+        String bytes = "";
+        long start = System.currentTimeMillis();
+        try
+        {
+            log.debug("Enter ViewsResource.represent()");
+            log.info("START " + getRequestMethod()
+                    + " Path: " + getPath());
+
+            return new ViewsRepresentation(Views.accepts(), Views.provides(), new ViewsWriter());
+        }
+        catch (Throwable t)
+        {
+            log.error(t);
+            success = "no";
+            message = "Unexpected exception: " + t.getClass().getSimpleName();
+            if (StringUtil.hasText(t.getMessage()))
+            {
+                message = message + ": " + t.getMessage();
+            }
+            return null;
+        }
+        finally
+        {
+            long end = System.currentTimeMillis();
+            log.info("END " + getRequestMethod()
+                    + " Path: " + getPath()
+                    + " User: " + getUser()
+                    + " From: " + getRemoteAddr()
+                    + " Success: " + success
+                    + " Time: " + (end - start)
+                    + " Bytes: " + bytes
+                    + " Message: " + message);
+        }
     }
     
 }

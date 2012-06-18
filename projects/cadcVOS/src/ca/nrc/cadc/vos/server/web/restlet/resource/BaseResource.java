@@ -70,8 +70,7 @@
 package ca.nrc.cadc.vos.server.web.restlet.resource;
 
 import java.security.Principal;
-import java.security.cert.X509Certificate;
-import java.util.Collection;
+import java.util.Iterator;
 import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.CopyOnWriteArraySet;
@@ -79,14 +78,15 @@ import java.util.concurrent.CopyOnWriteArraySet;
 import javax.security.auth.Subject;
 
 import org.apache.log4j.Logger;
-import org.restlet.Request;
-import org.restlet.data.ChallengeResponse;
 import org.restlet.data.Form;
 import org.restlet.data.Method;
 import org.restlet.resource.ServerResource;
 
 import ca.nrc.cadc.auth.AuthenticationUtil;
+import ca.nrc.cadc.auth.HttpPrincipal;
+import ca.nrc.cadc.util.StringUtil;
 import ca.nrc.cadc.uws.web.restlet.RestletPrincipalExtractor;
+import ca.nrc.cadc.vos.NodeFault;
 import ca.nrc.cadc.vos.server.NodePersistence;
 import ca.nrc.cadc.vos.server.util.BeanUtil;
 
@@ -132,6 +132,64 @@ public abstract class BaseResource extends ServerResource
         
         this.subject = AuthenticationUtil.getSubject(new RestletPrincipalExtractor(getRequest()));
         log.debug(subject);
+    }
+    
+    protected String getRequestMethod()
+    {
+        return getRequest().getMethod().getName().toUpperCase();
+    }
+    
+    protected String getPath()
+    {
+        return getRequest().getResourceRef().getPath();
+    }
+    
+    protected String getRemoteAddr()
+    {
+        return getRequest().getClientInfo().getAddress();
+    }
+    
+    protected String getErrorMessage(NodeFault nodeFault)
+    {
+        if (nodeFault != null && nodeFault.getStatus() != null)
+        {
+            StringBuilder sb = new StringBuilder();
+            sb.append(nodeFault.getStatus().getName());
+            sb.append(" (");
+            sb.append(nodeFault.getStatus().getCode());
+            sb.append(")");
+            if (StringUtil.hasText(nodeFault.getMessage()))
+            {
+                sb.append(": ");
+                sb.append(nodeFault.getMessage());
+            }
+            return sb.toString();
+        }
+        return "";
+    }
+    
+    protected String getUser()
+    {
+        Subject subject = getSubject();
+        if (subject != null)
+        {
+            final Set<Principal> principals = subject.getPrincipals();
+            if (!principals.isEmpty())
+            {
+                Principal userPrincipal = null;
+                Iterator<Principal> i = principals.iterator();
+                while (i.hasNext())
+                {
+                    Principal nextPrincipal = i.next();
+                    if (!(userPrincipal instanceof HttpPrincipal))
+                    {
+                        userPrincipal = nextPrincipal;
+                    }
+                }
+                return userPrincipal.getName();
+            }
+        }
+        return "anonUser";
     }
     
     public Form getQueryForm()
