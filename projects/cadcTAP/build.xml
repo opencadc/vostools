@@ -131,7 +131,19 @@
     <!-- compile the test classes -->
 
     <!-- Run the test suite -->
-    <target name="test" depends="parser-tests,stc-tests,vosi-tests,writer-tests,upload-tests" />
+    <target name="test" depends="validator-tests,parser-tests,stc-tests,vosi-tests,writer-tests,upload-tests" />
+
+    <target name="validator-tests" depends="compile,compile-test">
+      <junit printsummary="yes" haltonfailure="yes" fork="yes">
+        <classpath>
+          <pathelement path="${build}/class"/>
+          <pathelement path="${build}/test/class"/>
+          <pathelement path="${jars}:${testingJars}"/>
+        </classpath>
+        <formatter type="plain" usefile="false"/>
+        <test name="ca.nrc.cadc.tap.MaxRecValidatorTest"/>
+      </junit>
+    </target>
 
     <target name="writer-tests" depends="compile,compile-test,xsd">
         <junit printsummary="yes" haltonfailure="yes" fork="yes">
