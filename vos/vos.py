@@ -438,7 +438,7 @@ class Node:
         #    dateString=time.strftime('%d %b %H:%S',date)
         #else:
         #    dateString=time.strftime('%d %b  %Y',date)
-        creator=string.lower(re.search('CN=([^,]*)',self.props['creator']).groups()[0].replace(' ','_'))
+        creator=string.lower(re.search('CN=([^,]*)',self.props.get('creator','CN=unknown_000,')).groups()[0].replace(' ','_')) 
         perm=[]
         writeGroup=""
         readGroup=""
