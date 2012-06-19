@@ -233,7 +233,11 @@ public class NodeResource extends BaseResource
                 setStatus(result.getStatus());
                 if (result.getRedirectURL() != null)
                 {
-                    message = message + " Redirecting.";
+                    if (StringUtil.hasLength(message))
+                    {
+                        message = message + " ";
+                    }
+                    message = message + "Redirecting to: " + result.getRedirectURL().toExternalForm();
                     getResponse().redirectSeeOther(
                             result.getRedirectURL().toString());
                 }
