@@ -81,6 +81,7 @@ public class FileMetadata
     private String contentType;
     private String contentEncoding;
     private Long contentLength;
+    private String stream;
     private String md5Sum;
     private String fileName;
     private Date lastModified;
@@ -96,6 +97,7 @@ public class FileMetadata
     {
         return "FileMetadata["+ fileName + "," + contentType + "," + contentEncoding
                 + "," + contentLength
+                + "," + stream
                 + "," + md5Sum
                 + "," + lastModified
                 + "," + uncompressedLength
@@ -123,6 +125,16 @@ public class FileMetadata
     public void setContentLength(Long contentLength)
     {
         this.contentLength = contentLength;
+    }
+
+    public String getStream()
+    {
+        return stream;
+    }
+
+    public void setStream(String stream)
+    {
+        this.stream = stream;
     }
 
     public String getContentType()

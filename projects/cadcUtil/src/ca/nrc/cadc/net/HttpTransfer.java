@@ -106,6 +106,7 @@ public abstract class HttpTransfer implements Runnable
     private static Logger log = Logger.getLogger(HttpTransfer.class);
     public static String DEFAULT_USER_AGENT;
     public static final String CADC_CONTENT_LENGTH_HEADER = "X-CADC-Content-Length";
+    public static final String CADC_STREAM_HEADER = "X-CADC-Stream";
 
     public static final String SERVICE_RETRY = "Retry-After";
 
