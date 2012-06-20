@@ -565,7 +565,7 @@ public class HttpDownloadTest
             Subject s = new Subject();
             s.getPublicCredentials().add(
                     new SSOCookieCredential(
-                            "CADC_SSO=username=cadcauthtest1|sessionID=36|token=test-token--do-not-delete", 
+                            "CADC_SSO=username=cadcauthtest1|sessionID=132|token=test-token--do-not-delete", 
                             "cadc-ccda.hia-iha.nrc-cnrc.gc.ca"));
             Subject.doAs(s, new RunnableAction(dl));
 
@@ -647,7 +647,7 @@ public class HttpDownloadTest
             Subject s = new Subject();
             s.getPublicCredentials().add(
                     new SSOCookieCredential(
-                            "CADC_SSO=username=cadcauthtest1|sessionID=36|token=test-token--do-not-delete", 
+                            "CADC_SSO=username=cadcauthtest1|sessionID=132|token=test-token--do-not-delete", 
                             "somedomain.ca"));
             Subject.doAs(s, new RunnableAction(dl));
 
