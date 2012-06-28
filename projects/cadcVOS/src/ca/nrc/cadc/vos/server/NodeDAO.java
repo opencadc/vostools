@@ -654,8 +654,8 @@ public class NodeDAO
             commitTransaction();
 
             node.getProperties().add(new NodeProperty(VOS.PROPERTY_URI_CREATOR, identManager.toOwnerString(creator)));
-            if (node instanceof ContainerNode)
-                node.getProperties().add(new NodeProperty(VOS.PROPERTY_URI_CONTENTLENGTH, Long.toString(0)));
+            //if (node instanceof ContainerNode)
+            //    node.getProperties().add(new NodeProperty(VOS.PROPERTY_URI_CONTENTLENGTH, Long.toString(0)));
             return node;
         }
         catch(Throwable t)
@@ -703,6 +703,7 @@ public class NodeDAO
             {
                 startTransaction();
 
+                /*
                 // acquire lock to root
                 String[] rlock = getRootUpdateLockSQL(node, null);
                 log.debug(rlock[0]);
@@ -733,6 +734,8 @@ public class NodeDAO
                         }
                     }
                 }
+                */
+
                 // note: the following delete(s) can be large if the node has a large number of
                 // properties, but we don't constraint it because we never want to commit the
                 // above nodeSize update without deleting the DataNode itself
@@ -854,6 +857,7 @@ public class NodeDAO
         {
             startTransaction();
 
+            /*
             // acquire lock to root
             String[] rlock = getRootUpdateLockSQL(node, null);
             log.debug(rlock[0]);
@@ -902,10 +906,11 @@ public class NodeDAO
                     }
                 }
             }
-
+            */
+            
             // update nodeSize, maybe contentLength and md5
             DataNodeUpdateStatementCreator dnup = new DataNodeUpdateStatementCreator(
-                    getNodeID(node), len.longValue(), meta.getMd5Sum());
+                    getNodeID(node), meta.getContentLength(), meta.getMd5Sum());
             jdbc.update(dnup);
 
             // last, update the busy state of the target node
@@ -1140,6 +1145,7 @@ public class NodeDAO
         {    
             startTransaction();
 
+            /*
             // acquire locks to all roots in controlled order
             String[] rlock = getRootUpdateLockSQL(src, dest);
             for (String r : rlock)
@@ -1189,6 +1195,7 @@ public class NodeDAO
             }
             else
                 log.debug("src node " + src.getUri().getPath() + ", delta = 0: skipping path updates");
+            */
 
             // re-parent the node
             src.setParent(dest);
@@ -1477,13 +1484,13 @@ public class NodeDAO
         return null;
     }
 
-    protected long getContentLength(Node node)
-    {
-        String str = node.getPropertyValue(VOS.PROPERTY_URI_CONTENTLENGTH);
-        if (str != null)
-            return Long.parseLong(str);
-        return 0;
-    }
+    //protected long getContentLength(Node node)
+    //{
+    //    String str = node.getPropertyValue(VOS.PROPERTY_URI_CONTENTLENGTH);
+    //    if (str != null)
+    //        return Long.parseLong(str);
+    //    return 0;
+    //}
 
     /**
      * The resulting SQL must use a PreparedStatement with one argument
@@ -1794,27 +1801,35 @@ public class NodeDAO
             StringBuilder sb = new StringBuilder();
             sb.append("UPDATE ");
             sb.append(getNodeTableName());
-            sb.append(" SET nodeSize = ?");
+            sb.append(" SET ");
             if (nodeSchema.fileMetadataWritable)
-            {
-                sb.append(", contentLength = ?");
-                sb.append(", contentMD5 = ?");
-            }
+                sb.append("nodeSize = ?, contentLength = ?, contentMD5 = ?");
+            else // contentLength is a virtual column
+                // simply set the nodeSize column to the same value
+                sb.append(" nodeSize = contentLength");
             sb.append(" WHERE nodeID = ?");
             String sql = sb.toString();
             log.debug(sql);
+
             sb = new StringBuilder("values: ");
             PreparedStatement prep = conn.prepareStatement(sql);
+
             int col = 1;
-            prep.setLong(col++, len);
-            sb.append(len);
-            sb.append(",");
             if (nodeSchema.fileMetadataWritable)
             {
+                
                 if (len == null)
+                {
                     prep.setNull(col++, Types.BIGINT);
+                    prep.setNull(col++, Types.BIGINT);
+                }
                 else
+                {
                     prep.setLong(col++, len);
+                    prep.setLong(col++, len);
+                }
+                sb.append(len);
+                sb.append(",");
                 sb.append(len);
                 sb.append(",");
                 if (md5 == null)
@@ -2401,13 +2416,13 @@ public class NodeDAO
                 else
                     node.getProperties().add(new NodeProperty(VOS.PROPERTY_URI_CONTENTLENGTH, "0"));
             }
-            else if (node instanceof ContainerNode)
-            {
-                if (nodeSize != null)
-                    node.getProperties().add(new NodeProperty(VOS.PROPERTY_URI_CONTENTLENGTH, nodeSize.toString()));
-                else
-                    node.getProperties().add(new NodeProperty(VOS.PROPERTY_URI_CONTENTLENGTH, "0"));
-            }
+            //else if (node instanceof ContainerNode)
+            //{
+            //    if (nodeSize != null)
+            //        node.getProperties().add(new NodeProperty(VOS.PROPERTY_URI_CONTENTLENGTH, nodeSize.toString()));
+            //    else
+            //        node.getProperties().add(new NodeProperty(VOS.PROPERTY_URI_CONTENTLENGTH, "0"));
+            //}
 
             if (contentMD5 != null && contentMD5 instanceof byte[])
             {

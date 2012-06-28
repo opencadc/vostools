@@ -200,13 +200,13 @@ public class NodeMapper implements RowMapper
                 else
                     node.getProperties().add(new NodeProperty(VOS.PROPERTY_URI_CONTENTLENGTH, "0"));
         }
-        else if (node instanceof ContainerNode)
-        {
-            if (nodeSize != null)
-                node.getProperties().add(new NodeProperty(VOS.PROPERTY_URI_CONTENTLENGTH, nodeSize.toString()));
-            else
-                node.getProperties().add(new NodeProperty(VOS.PROPERTY_URI_CONTENTLENGTH, "0"));
-        }
+        //else if (node instanceof ContainerNode)
+        //{
+        //    if (nodeSize != null)
+        //        node.getProperties().add(new NodeProperty(VOS.PROPERTY_URI_CONTENTLENGTH, nodeSize.toString()));
+        //    else
+        //        node.getProperties().add(new NodeProperty(VOS.PROPERTY_URI_CONTENTLENGTH, "0"));
+        //}
 
         if (contentMD5 != null && contentMD5 instanceof byte[])
         {
