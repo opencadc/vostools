@@ -156,11 +156,12 @@ public class UpdateDataNodeTest extends VOSNodeTest
             xml = response.getText();
             log.debug("POST XML:\r\n" + xml);
 
-            // Validate against the VOSPace schema.
+            // Validate against the VOSpace schema.
             DataNode updatedNode = (DataNode) reader.read(xml);
 
-            // Updated node should have 5 properties.
-            assertEquals("Node should have 5 properties", (numDefaultProps+1), updatedNode.getProperties().size());
+            NodeProperty np = updatedNode.findProperty(VOS.PROPERTY_URI_LANGUAGE);
+            Assert.assertNotNull(VOS.PROPERTY_URI_LANGUAGE, np);
+            Assert.assertEquals(VOS.PROPERTY_URI_LANGUAGE, nodeProperty.getPropertyValue(), np.getPropertyValue());
 
             // Delete the node
             response = delete(node);
@@ -218,8 +219,8 @@ public class UpdateDataNodeTest extends VOSNodeTest
             // Validate against the VOSPace schema.
             updatedNode = (DataNode) reader.read(xml);
 
-            // Node properties should be empty.
-            assertEquals("non-deleted properties", expectedNumProps, updatedNode.getProperties().size());
+            np = updatedNode.findProperty(VOS.PROPERTY_URI_DESCRIPTION);
+            Assert.assertNull(VOS.PROPERTY_URI_DESCRIPTION, np);
 
             // Delete the node
             response = delete(updatedNode);
@@ -239,7 +240,7 @@ public class UpdateDataNodeTest extends VOSNodeTest
      * fault in the entity-body if the user does not have permissions to perform the operation
      */
     @Ignore("Currently unable to test")
-    @Test
+    //@Test
     public void permissionDeniedFault()
     {
         try
@@ -283,7 +284,7 @@ public class UpdateDataNodeTest extends VOSNodeTest
      * fault in the entity-body if the request attempts to modify a readonly Property
      */
     @Ignore("Service PermissionDeniedFault not currently implemented")
-    @Test
+    //@Test
     public void updateReadOnlyPermissionDeniedFault()
     {
         try
@@ -368,7 +369,7 @@ public class UpdateDataNodeTest extends VOSNodeTest
      * in the entity-body if a specified property value is invalid.
      */
     @Ignore("Currently not checking for invalid properties")
-    @Test
+    //@Test
     public void invalidArgumentFault() throws Exception
     {
         try
