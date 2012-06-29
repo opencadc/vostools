@@ -95,6 +95,7 @@
     <!-- JAR files to be included in classpath and war file -->
     <property name="log4j"              value="${ext.lib}/log4j.jar" />
     <property name="servlet-api"        value="${ext.lib}/servlet-api.jar" />
+	<property name="cadcLog"            value="${lib}/cadcLog.jar" />
 
     <property name="jars" value="${log4j}:${servlet-api}" />
 
@@ -108,9 +109,10 @@
     </target>
 
     <target name="webapp" depends="cadcTestServlet-jar">
-        <war warfile="${build}/webapps/${project}.war" webxml="src/xml/web.xml" update="no">
+        <war warfile="${build}/webapps/${webapp}.war" webxml="src/xml/web.xml" update="no">
             <lib file="${build}/tmp/${project}.jar" />
             <lib file="${log4j}" />
+        	<lib file="${cadcLog}" />
         </war>
     </target>
 

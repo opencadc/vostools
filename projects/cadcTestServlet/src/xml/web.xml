@@ -95,13 +95,13 @@
     <!-- The test servlet --> 
     <servlet>
         <load-on-startup>2</load-on-startup>
-      <servlet-name>TestServlet</servlet-name>
-      <servlet-class>ca.nrc.cadc.conformance.server.TestServlet</servlet-class>
+        <servlet-name>TestServlet</servlet-name>
+        <servlet-class>ca.nrc.cadc.conformance.server.TestServlet</servlet-class>
     </servlet>
 
     <servlet-mapping>
-            <servlet-name>TestServlet</servlet-name>
-            <url-pattern>*</url-pattern>
+        <servlet-name>TestServlet</servlet-name>
+        <url-pattern>*</url-pattern>
     </servlet-mapping>
 	
     <servlet-mapping>
