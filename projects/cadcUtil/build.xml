@@ -131,9 +131,11 @@
             <test name="ca.nrc.cadc.net.HttpTransferTest"/>
             <test name="ca.nrc.cadc.net.HttpDownloadTest"/>
             <test name="ca.nrc.cadc.net.NetrcAuthenticatorTest" />
-            <!-- upload test has a lot of pre-conditions
+            <!-- TODO: Upload test has a lot of preconditions
             <test name="ca.nrc.cadc.net.HttpUploadTest"/>
             -->
+            <test name="ca.nrc.cadc.net.HttpPostTest"/>
+            
             <formatter type="plain" usefile="false"/>
         </junit>
     </target>
@@ -183,6 +185,20 @@
 
             <test name="ca.nrc.cadc.io.ByteCountInputStreamTest"/>
             <test name="ca.nrc.cadc.io.ByteCountOutputStreamTest"/>
+            <formatter type="plain" usefile="false"/>
+        </junit>
+    </target>
+    
+    <!-- Integration Tests (requires a local cadcTestServlet war file to be deployed) -->
+    <target name="int-test" depends="compile-test">
+        <junit printsummary="yes" haltonfailure="yes" fork="yes">
+            <classpath>
+                <pathelement path="${build}/class"/>
+                <pathelement path="${build}/test/class"/>
+                <pathelement path="${testingJars}"/>
+            </classpath>
+            
+            <test name="ca.nrc.cadc.net.HttpPostIntTest"/>
             <formatter type="plain" usefile="false"/>
         </junit>
     </target>
