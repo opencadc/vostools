@@ -71,7 +71,6 @@ package ca.nrc.cadc.tap;
 
 import ca.nrc.cadc.tap.schema.TableDesc;
 import ca.nrc.cadc.tap.schema.TapSchema;
-import ca.nrc.cadc.util.StringUtil;
 import ca.nrc.cadc.uws.Job;
 import ca.nrc.cadc.uws.Parameter;
 import ca.nrc.cadc.uws.ParameterUtil;
@@ -146,39 +145,24 @@ public class MaxRecValidator
      * the default value of {@link Integer.MAX_VALUE} is returned.
      * <p>
      *
-     * Story 638
-     * For asynchronous queries that include a DEST parameter, ignore the
-     * MAXREC parameter as we allow an unlimited number of records to be
-     * written to a provided destination.
-     * 2012.06.18
-     *
      *
      * @param paramList List of TAP parameters.
      * @return int value of MAXREC.
      */
     public Integer validate(List<Parameter> paramList)
     {
-        String destinationValue =
-                ParameterUtil.findParameterValue("DEST", paramList);
         String value = ParameterUtil.findParameterValue("MAXREC", paramList);
 
-        if ((value == null) || (value.trim().length() == 0)
-            || (!sync && StringUtil.hasText(destinationValue)))
-        {
+        if (value == null || value.trim().length() == 0)
             return defaultValue;
-        }
 
         try
         {
             Integer ret = new Integer(value);
             if (ret < 0)
-            {
                 throw new IllegalArgumentException("Invalid MAXREC: " + value);
-            }
             if (maxValue != null && maxValue < ret)
-            {
                 return maxValue;
-            }
             return ret;
         }
         catch (NumberFormatException nfe)
