@@ -70,10 +70,14 @@
 package ca.nrc.cadc.net;
 
 import java.io.ByteArrayOutputStream;
+import java.io.File;
 import java.net.URL;
+import java.security.PrivilegedExceptionAction;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.Map;
+
+import javax.security.auth.Subject;
 
 import junit.framework.Assert;
 
@@ -81,6 +85,9 @@ import org.apache.log4j.Level;
 import org.apache.log4j.Logger;
 import org.junit.Test;
 
+import ca.nrc.cadc.auth.BasicX509TrustManager;
+import ca.nrc.cadc.auth.SSLUtil;
+import ca.nrc.cadc.util.FileUtil;
 import ca.nrc.cadc.util.Log4jInit;
 
 /**
@@ -93,17 +100,111 @@ import ca.nrc.cadc.util.Log4jInit;
 public class HttpPostIntTest
 {
     private static Logger log = Logger.getLogger(HttpPostIntTest.class);
+    private static String TEST_CERT_FN = "proxy.crt";
+    private static String TEST_KEY_FN = "proxy.key";
+    private static File SSL_CERT;
+    private static File SSL_KEY;
     
-    String baseUrl;
+    String baseHttpUrl;
+    String baseHttpsUrl;
     
     public HttpPostIntTest()
     {
         Log4jInit.setLevel("ca.nrc.cadc.net", Level.DEBUG);
-        baseUrl = "http://localhost/test";
+        String hostname = NetUtil.getServerName(HttpPostIntTest.class);
+        baseHttpUrl = "http://" + hostname + "/test";
+        baseHttpsUrl = "https://" + hostname + "/test";
+        SSL_CERT = FileUtil.getFileFromResource(TEST_CERT_FN, HttpDownloadTest.class);
+        SSL_KEY = FileUtil.getFileFromResource(TEST_KEY_FN, HttpDownloadTest.class);
+        System.setProperty(BasicX509TrustManager.class.getName() + ".trust", "true");
     }
     
     @Test
     public void testMapPostWithOutputStream() throws Exception
+    {
+        Subject s = SSLUtil.createSubject(SSL_CERT, SSL_KEY);
+        PrivilegedExceptionAction<Object> p = new PrivilegedExceptionAction<Object>()
+        {
+            @Override
+            public Object run() throws Exception
+            {
+                testMapPostWithOutputStream(baseHttpUrl);
+                testMapPostWithOutputStream(baseHttpsUrl);
+                return null;
+            }
+        };
+        Subject.doAs(s, p);
+    }
+    
+    @Test
+    public void testNonRedirectingMapPost() throws Exception
+    {
+        Subject s = SSLUtil.createSubject(SSL_CERT, SSL_KEY);
+        PrivilegedExceptionAction<Object> p = new PrivilegedExceptionAction<Object>()
+        {
+            @Override
+            public Object run() throws Exception
+            {
+                testNonRedirectingMapPost(baseHttpUrl);
+                testNonRedirectingMapPost(baseHttpsUrl);
+                return null;
+            }
+        };
+        Subject.doAs(s, p);
+    }
+    
+    @Test
+    public void testRedirectingMapPost() throws Exception
+    {
+        Subject s = SSLUtil.createSubject(SSL_CERT, SSL_KEY);
+        PrivilegedExceptionAction<Object> p = new PrivilegedExceptionAction<Object>()
+        {
+            @Override
+            public Object run() throws Exception
+            {
+                testRedirectingMapPost(baseHttpUrl);
+                testRedirectingMapPost(baseHttpsUrl);
+                return null;
+            }
+        };
+        Subject.doAs(s, p);
+    }
+    
+    @Test
+    public void testNonRedirectingStringPost() throws Exception
+    {
+        Subject s = SSLUtil.createSubject(SSL_CERT, SSL_KEY);
+        PrivilegedExceptionAction<Object> p = new PrivilegedExceptionAction<Object>()
+        {
+            @Override
+            public Object run() throws Exception
+            {
+                testNonRedirectingStringPost(baseHttpUrl);
+                testNonRedirectingStringPost(baseHttpsUrl);
+                return null;
+            }
+        };
+        Subject.doAs(s, p);
+    }
+    
+    @Test
+    public void testRedirectingStringPost() throws Exception
+    {
+        Subject s = SSLUtil.createSubject(SSL_CERT, SSL_KEY);
+        PrivilegedExceptionAction<Object> p = new PrivilegedExceptionAction<Object>()
+        {
+            @Override
+            public Object run() throws Exception
+            {
+                testRedirectingStringPost(baseHttpUrl);
+                testRedirectingStringPost(baseHttpsUrl);
+                return null;
+            }
+        };
+        Subject.doAs(s, p);
+    }
+    
+    private void testMapPostWithOutputStream(String url) throws Exception
     {
         Map<String, Object> params = new HashMap<String, Object>();
         Long longValue = new Long(3);
@@ -112,7 +213,7 @@ public class HttpPostIntTest
         params.put("longObject", longValue);
         params.put("dateObject", dateValue);
         ByteArrayOutputStream outputStream = new ByteArrayOutputStream();
-        HttpPost httpPost = new HttpPost(new URL(baseUrl + "?redirect=false"), params, outputStream);
+        HttpPost httpPost = new HttpPost(new URL(url + "?redirect=false"), params, outputStream);
         httpPost.setMaxRetries(4);
         httpPost.run();
         log.debug("throwable: " + httpPost.getThrowable());
@@ -147,7 +248,7 @@ public class HttpPostIntTest
         
         // same test but with the test servlet redirecting
         outputStream = new ByteArrayOutputStream();
-        httpPost = new HttpPost(new URL(baseUrl + "?redirect=true"), params, outputStream);
+        httpPost = new HttpPost(new URL(url + "?redirect=true"), params, outputStream);
         httpPost.setMaxRetries(4);
         httpPost.run();
         log.debug("throwable: " + httpPost.getThrowable());
@@ -180,8 +281,7 @@ public class HttpPostIntTest
         Assert.assertTrue("wrong date content", dateCorrect);
     }
     
-    @Test
-    public void testNonRedirectingMapPost() throws Exception
+    private void testNonRedirectingMapPost(String url) throws Exception
     {
         Map<String, Object> params = new HashMap<String, Object>();
         Long longValue = new Long(3);
@@ -189,7 +289,7 @@ public class HttpPostIntTest
         params.put("stringObject", "stringValue");
         params.put("longObject", longValue);
         params.put("dateObject", dateValue);
-        HttpPost httpPost = new HttpPost(new URL(baseUrl + "?redirect=false"), params, false);
+        HttpPost httpPost = new HttpPost(new URL(url + "?redirect=false"), params, false);
         httpPost.setMaxRetries(4);
         httpPost.run();
         log.debug("throwable: " + httpPost.getThrowable());
@@ -223,18 +323,17 @@ public class HttpPostIntTest
         
         
         // same test but with the test servlet redirecting
-        httpPost = new HttpPost(new URL(baseUrl + "?redirect=true"), params, false);
+        httpPost = new HttpPost(new URL(url + "?redirect=true"), params, false);
         httpPost.setMaxRetries(4);
         httpPost.run();
         log.debug("throwable: " + httpPost.getThrowable());
         Assert.assertNull("Wrong throwable", httpPost.getThrowable());
-        Assert.assertEquals("Wrong redirect URL", baseUrl + "?post=true", httpPost.getRedirectURL().toString());
+        Assert.assertEquals("Wrong redirect URL", url + "?post=true", httpPost.getRedirectURL().toString());
         Assert.assertEquals("Wrong number of retries.", 2, httpPost.getRetriesPerformed());
         Assert.assertNull("Wrong response", httpPost.getResponseBody());
     }
     
-    @Test
-    public void testRedirectingMapPost() throws Exception
+    private void testRedirectingMapPost(String url) throws Exception
     {
         Map<String, Object> params = new HashMap<String, Object>();
         Long longValue = new Long(3);
@@ -242,7 +341,7 @@ public class HttpPostIntTest
         params.put("stringObject", "stringValue");
         params.put("longObject", longValue);
         params.put("dateObject", dateValue);
-        HttpPost httpPost = new HttpPost(new URL(baseUrl + "?redirect=false"), params, true);
+        HttpPost httpPost = new HttpPost(new URL(url + "?redirect=false"), params, true);
         httpPost.setMaxRetries(4);
         httpPost.run();
         log.debug("throwable: " + httpPost.getThrowable());
@@ -276,7 +375,7 @@ public class HttpPostIntTest
         
         
         // same test but with the test servlet redirecting
-        httpPost = new HttpPost(new URL(baseUrl + "?redirect=true"), params, true);
+        httpPost = new HttpPost(new URL(url + "?redirect=true"), params, true);
         httpPost.setMaxRetries(4);
         httpPost.run();
         log.debug("throwable: " + httpPost.getThrowable());
@@ -309,13 +408,12 @@ public class HttpPostIntTest
         Assert.assertTrue("wrong date content", dateCorrect);
     }
     
-    @Test
-    public void testNonRedirectingStringPost() throws Exception
+    private void testNonRedirectingStringPost(String url) throws Exception
     {
         // test a non-redirecting servlet
         String content = "postContent";
         String contentType = "text/xml";
-        HttpPost httpPost = new HttpPost(new URL(baseUrl + "?redirect=false"), content, contentType, false);
+        HttpPost httpPost = new HttpPost(new URL(url + "?redirect=false"), content, contentType, false);
         httpPost.setMaxRetries(4);
         httpPost.run();
         log.debug("throwable: " + httpPost.getThrowable());
@@ -326,23 +424,22 @@ public class HttpPostIntTest
         Assert.assertEquals("Wrong number of retries.", 2, httpPost.getRetriesPerformed());
         
         // same test but with the test servlet redirecting
-        httpPost = new HttpPost(new URL(baseUrl + "?redirect=true"), content, contentType, false);
+        httpPost = new HttpPost(new URL(url + "?redirect=true"), content, contentType, false);
         httpPost.setMaxRetries(4);
         httpPost.run();
         Assert.assertNull("Wrong content", httpPost.getResponseBody());
-        Assert.assertEquals("Wrong redirect URL size", (baseUrl + "?post=true").length(), httpPost.getRedirectURL().toString().length());
-        Assert.assertEquals("Wrong redirect URL", baseUrl + "?post=true", httpPost.getRedirectURL().toString());
+        Assert.assertEquals("Wrong redirect URL size", (url + "?post=true").length(), httpPost.getRedirectURL().toString().length());
+        Assert.assertEquals("Wrong redirect URL", url + "?post=true", httpPost.getRedirectURL().toString());
         Assert.assertEquals("Wrong number of retries.", 2, httpPost.getRetriesPerformed());
         Assert.assertNull("Wrong throwable", httpPost.getThrowable());
     }
     
-    @Test
-    public void testRedirectingStringPost() throws Exception
+    private void testRedirectingStringPost(String url) throws Exception
     {
         // test a non-redirecting servlet
         String content = "postContent";
         String contentType = "text/xml";
-        HttpPost httpPost = new HttpPost(new URL(baseUrl + "?redirect=false"), content, contentType, true);
+        HttpPost httpPost = new HttpPost(new URL(url + "?redirect=false"), content, contentType, true);
         httpPost.setMaxRetries(4);
         httpPost.run();
         log.debug("throwable: " + httpPost.getThrowable());
@@ -353,7 +450,7 @@ public class HttpPostIntTest
         Assert.assertEquals("Wrong number of retries.", 2, httpPost.getRetriesPerformed());
         
         // same test but with the test servlet redirecting
-        httpPost = new HttpPost(new URL(baseUrl + "?redirect=true"), content, contentType, true);
+        httpPost = new HttpPost(new URL(url + "?redirect=true"), content, contentType, true);
         httpPost.setMaxRetries(4);
         httpPost.run();
         Assert.assertNull("Wrong throwable", httpPost.getThrowable());
