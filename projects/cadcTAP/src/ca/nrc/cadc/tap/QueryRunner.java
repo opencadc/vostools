@@ -69,7 +69,6 @@
 
 package ca.nrc.cadc.tap;
 
-import ca.nrc.cadc.tap.schema.ParamDesc;
 import java.io.File;
 import java.net.URI;
 import java.net.URISyntaxException;
@@ -91,6 +90,7 @@ import javax.sql.DataSource;
 
 import org.apache.log4j.Logger;
 
+import ca.nrc.cadc.tap.schema.ParamDesc;
 import ca.nrc.cadc.tap.schema.SchemaDesc;
 import ca.nrc.cadc.tap.schema.TableDesc;
 import ca.nrc.cadc.tap.schema.TapSchema;
@@ -387,6 +387,7 @@ public class QueryRunner implements JobRunner
                     rs.setJob(job);
                     rs.setFilename(filename);
                     rs.setContentType(tableWriter.getContentType());
+                    rs.setParameterList(paramList);
                     url = rs.put(resultSet, tableWriter);
                     tList.add(System.currentTimeMillis());
                     sList.add("write ResultSet to ResultStore as " + tableWriter.getContentType() + ": ");
