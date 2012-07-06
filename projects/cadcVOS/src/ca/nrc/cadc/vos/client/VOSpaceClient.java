@@ -69,11 +69,9 @@
 
 package ca.nrc.cadc.vos.client;
 
-import java.io.BufferedReader;
+import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.InputStream;
-import java.io.InputStreamReader;
-import java.io.OutputStream;
 import java.io.OutputStreamWriter;
 import java.io.StringWriter;
 import java.io.Writer;
@@ -92,6 +90,7 @@ import javax.security.auth.Subject;
 import org.apache.log4j.Logger;
 
 import ca.nrc.cadc.auth.SSLUtil;
+import ca.nrc.cadc.net.HttpPost;
 import ca.nrc.cadc.net.NetUtil;
 import ca.nrc.cadc.util.StringUtil;
 import ca.nrc.cadc.vos.ContainerNode;
@@ -345,12 +344,12 @@ public class VOSpaceClient
         if (query != null)
             path += "?" + query;
 
-        int responseCode;
+		int responseCode;
         final Node rtnNode;
 
         try
         {
-            
+        
             URL url = new URL(this.baseUrl + "/nodes" + path);
             log.debug("getNode(), URL=" + url);
             HttpURLConnection connection = (HttpURLConnection) url.openConnection();
@@ -417,69 +416,25 @@ public class VOSpaceClient
      */
     public Node setNode(Node node)
     {
-        int responseCode;
         Node rtnNode = null;
         try
         {
             URL url = new URL(this.baseUrl + "/nodes" + node.getUri().getPath());
             log.debug("setNode: " + VOSClientUtil.xmlString(node));
             log.debug("setNode: " + url);
-            HttpURLConnection connection = (HttpURLConnection) url.openConnection();
-            if (connection instanceof HttpsURLConnection)
-            {
-                HttpsURLConnection sslConn = (HttpsURLConnection) connection;
-                initHTTPS(sslConn);
-            }
-            connection.setDoOutput(true);
-            connection.setRequestMethod("POST");
-            //connection.setRequestProperty("Content-Type", "application/x-www-form-urlencoded");
-            //connection.setRequestProperty("Content-Language", "en-US");
-            connection.setUseCaches(false);
-            connection.setDoInput(true);
-            connection.setDoOutput(true);
-
-            OutputStreamWriter out = new OutputStreamWriter(connection.getOutputStream());
+            
             NodeWriter nodeWriter = new NodeWriter();
-            nodeWriter.write(node, out);
-            out.close();
-
-            String responseMessage = connection.getResponseMessage();
-            String errorBody = NetUtil.getErrorBody(connection);
-            if (StringUtil.hasText(errorBody))
-            {
-                responseMessage += ": " + errorBody;
-            }
-            responseCode = connection.getResponseCode();
-
-            switch (responseCode)
-            {
-                case 200: // valid
-                    InputStream in = connection.getInputStream();
-                    NodeReader nodeReader = new NodeReader(schemaValidation);
-                    rtnNode = nodeReader.read(in);
-                    in.close();
-                    break;
-                case 500:
-                    // The service SHALL throw a HTTP 500 status code including an InternalFault fault in the entity-body if the operation fails
-                case 409:
-                case 404:
-                    // The service SHALL throw a HTTP 404 status code including a NodeNotFound fault in the entity-body if the target Node does not exist
-                case 400:
-                    // The service SHALL throw a HTTP 400 status code including an InvalidArgument fault in the entity-body if a specified property value is invalid
-                case 401:
-                    // The service SHALL throw a HTTP 401 status code including a PermissionDenied fault in the entity-body
-                    // if the request attempts to modify a readonly Property
-
-                    // The service SHALL throw a HTTP 401 status code including a PermissionDenied fault in the entity-body
-                    // if the user does not have permissions to perform the operation
-                    String msg = responseMessage;
-                    if (msg == null)
-                        msg = "permission denied";
-                    throw new AccessControlException(msg);
-                default:
-                    log.error(responseMessage + ". HTTP Code: " + responseCode);
-                    throw new IllegalArgumentException("Error returned.  HTTP Response Code: " + responseCode);
-            }
+            StringBuilder nodeXML = new StringBuilder();
+            nodeWriter.write(node, nodeXML);
+            HttpPost httpPost = new HttpPost(url, nodeXML.toString(), null, false);
+            httpPost.run();
+  
+            checkFailureClean(httpPost.getThrowable());
+            
+            String responseBody = httpPost.getResponseBody();
+            NodeReader nodeReader = new NodeReader();
+            rtnNode = nodeReader.read(responseBody);
+            
         }
         catch (IOException e)
         {
@@ -618,10 +573,13 @@ public class VOSpaceClient
             TransferWriter transferWriter = new TransferWriter();
             Writer stringWriter = new StringWriter();
             transferWriter.write(transfer, stringWriter);
+            URL postUrl = new URL(asyncTransUrl);
             
-            // POST the parameters to the Job.
-            String jobUrlStr = postJob(asyncTransUrl, stringWriter.toString());
-            URL jobUrl = new URL(jobUrlStr);
+            HttpPost httpPost = new HttpPost(postUrl, stringWriter.toString(), "text/xml", false);
+            httpPost.run();
+            checkFailureClean(httpPost.getThrowable());
+            
+            URL jobUrl = httpPost.getRedirectURL();
             log.debug("Job URL is: " + jobUrl.toString());
 
             // we have only created the job, not run it
@@ -648,16 +606,21 @@ public class VOSpaceClient
             TransferWriter writer = new TransferWriter();
             StringWriter sw = new StringWriter();
             writer.write(transfer, sw);
-            String redirectLocation = postJob(this.baseUrl + VOSPACE_SYNC_TRANSFER_ENDPOINT, sw.toString());
-            log.debug("POST: transfer jobURL: " + redirectLocation);
-            if (!StringUtil.hasText(redirectLocation))
+            
+            URL postUrl = new URL(this.baseUrl + VOSPACE_SYNC_TRANSFER_ENDPOINT);
+            HttpPost httpPost = new HttpPost(postUrl, sw.toString(), "text/xml", false);
+            httpPost.run();
+            checkFailureClean(httpPost.getThrowable());
+            
+            URL redirectURL = httpPost.getRedirectURL();
+            log.debug("POST: transfer jobURL: " + redirectURL);
+            if (redirectURL == null)
             {
                 throw new RuntimeException("Redirect not received from UWS.");
             }
 
-            log.debug("GET - opening connection: " + redirectLocation);
+            log.debug("GET - opening connection: " + redirectURL.toString());
             // follow the redirect to run the job
-            URL redirectURL = new URL(redirectLocation);
             HttpURLConnection conn = (HttpURLConnection) redirectURL.openConnection();
             if (conn instanceof HttpsURLConnection)
             {
@@ -681,9 +644,9 @@ public class VOSpaceClient
             }
             
             TransferReader txfReader = new TransferReader(schemaValidation);
-            log.debug("GET - reading content: " + redirectLocation);
+            log.debug("GET - reading content: " + redirectURL);
             Transfer trans = txfReader.read(conn.getInputStream());
-            log.debug("GET - done: " + redirectLocation);
+            log.debug("GET - done: " + redirectURL);
             log.debug("negotiated transfer: " + trans);
 
             URL jobURL = extractJobURL(this.baseUrl, redirectURL);
@@ -717,6 +680,40 @@ public class VOSpaceClient
             throw new RuntimeException(e);
         }
     }
+    
+    private void checkFailureClean(Throwable failure)
+    {
+        try
+        {
+            checkFailure(failure);
+        }
+        catch (IOException ioe)
+        {
+            throw new IllegalArgumentException(ioe);
+        }
+        catch (NodeNotFoundException nf)
+        {
+            throw new IllegalArgumentException(nf);
+        }
+    }
+    
+    private void checkFailure(Throwable failure)
+            throws NodeNotFoundException, IOException, RuntimeException
+    {
+        if (failure != null)
+        {
+            failure.printStackTrace();
+            if (failure instanceof RuntimeException)
+            {
+                throw (RuntimeException) failure;
+            }
+            if (failure instanceof FileNotFoundException)
+            {
+                throw new NodeNotFoundException("not found.", failure);
+            }
+            throw new IllegalStateException(failure);
+        }
+    }
 
     // determine the jobURL from the service base URL and the URL to
     // transfer details... makes assumptions about paths structure that
@@ -742,80 +739,6 @@ public class VOSpaceClient
         //log.warn("jobList: " + jobList);
         //log.warn("jobID: " + jobID);
         return new URL(baseURL + "/" + jobList + "/" + jobID);
-    }
-
-    private String postJob(String strUrl, String strParam) throws MalformedURLException, IOException
-    {
-        URL url = new URL(strUrl);
-        log.debug("POST - open connection: " + url);
-        HttpURLConnection connection = (HttpURLConnection) url.openConnection();
-        if (connection instanceof HttpsURLConnection)
-        {
-            HttpsURLConnection sslConn = (HttpsURLConnection) connection;
-            initHTTPS(sslConn);
-        }
-        connection.setRequestMethod("POST");
-        connection.setRequestProperty("Content-Length", "" + Integer.toString(strParam.getBytes("UTF-8").length));
-        connection.setRequestProperty("Content-Type", "text/xml");
-        connection.setInstanceFollowRedirects(false);
-        connection.setUseCaches(false);
-        connection.setDoOutput(true);
-        connection.setDoInput(true);
-
-        // POST the parameters to the tapServer.
-        log.debug("POST - writing content: " + strParam);
-        OutputStream outputStream = connection.getOutputStream();
-        outputStream.write(strParam.getBytes("UTF-8"));
-        outputStream.flush();
-        outputStream.close();
-        log.debug("POST - done: " + url.toString());
-
-        String redirectLocation = getRedirectLocation(connection);
-
-        return redirectLocation;
-    }
-
-    /**
-     * @param connection
-     * @return
-     * @throws IOException 
-     */
-    private String getRedirectLocation(HttpURLConnection connection) throws IOException
-    {
-        // Check response code from server, should be 303.
-        String responseMessage = connection.getResponseMessage();
-        String errorBody = NetUtil.getErrorBody(connection);
-        if (StringUtil.hasText(errorBody))
-        {
-            responseMessage += ": " + errorBody;
-        }
-        int responseCode = connection.getResponseCode();
-        log.debug("responseCode: " + responseCode);
-        if (responseCode != HttpURLConnection.HTTP_SEE_OTHER)
-        {
-            log.error(responseMessage + ". HTTP Code: " + responseCode);
-            InputStream inStrm = connection.getInputStream();
-            BufferedReader br = new BufferedReader(new InputStreamReader(inStrm));
-            String line;
-            while ((line = br.readLine()) != null)
-            {
-                log.debug(line);
-            }
-            inStrm.close();
-
-            String error = "Request returned non 303 response code " + responseCode;
-            throw new IllegalStateException(error);
-        }
-
-        // Get the redirect Location header.
-        String location = connection.getHeaderField("Location");
-        log.debug("Location: " + location);
-        if (location == null || location.length() == 0)
-        {
-            String error = "Response missing Location header";
-            throw new IllegalStateException(error);
-        }
-        return location;
     }
 
     private void initHTTPS(HttpsURLConnection sslConn)
