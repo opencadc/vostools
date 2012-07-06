@@ -70,11 +70,13 @@
 package ca.nrc.cadc.net;
 
 import java.io.ByteArrayOutputStream;
+import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
 import java.net.HttpURLConnection;
 import java.net.URL;
+import java.security.AccessControlException;
 import java.util.Map;
 import java.util.Set;
 
@@ -392,11 +394,11 @@ public class HttpPost extends HttpTransfer
             switch(code)
             {
                 case HttpURLConnection.HTTP_UNAUTHORIZED:
-                    throw new IOException("authentication failed " + msg);
+                    throw new AccessControlException("permission denied: " + msg);
                 case HttpURLConnection.HTTP_FORBIDDEN:
-                    throw new IOException("authorization failed " + msg);
+                    throw new AccessControlException("permission denied: " + msg);
                 case HttpURLConnection.HTTP_NOT_FOUND:
-                    throw new IOException("resource not found " + msg);
+                    throw new FileNotFoundException("resource not found " + msg);
                 default:
                     throw new IOException(msg);
             }
