@@ -231,7 +231,7 @@ if __name__=='__main__':
   parser.add_option('--cache_nodes',default=True,action="store_false",help='turn off node caching, not safe in running multiple instances of vsync, but safe for multiple streams in one instance')
   parser.add_option('--ignore-checksum',action="store_true",help='dont check MD5 sum, forces transfer')
   parser.add_option('--recursive','-r',help="Do a recursive sync",action="store_true")
-  parser.add_option('--nstreams',type=int,help="Number of streams to run (MAX: 10)",default=1)
+  parser.add_option('--nstreams','-n',type=int,help="Number of streams to run (MAX: 10)",default=1)
   parser.add_option('--exclude',help="ignore directories or files containing this pattern",default=None)
   parser.add_option('--overwrite',help="overwrite copy on server regardless of modification/size/md5 checks",action="store_true")
   parser.add_option('--load_test',action="store_true",help="Used to stress test the VOServer, also set --nstreams to a large value")
