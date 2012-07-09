@@ -202,7 +202,8 @@ def buildFileList(basePath,destRoot='',recursive=False,ignore=None):
       destfilename=os.path.normpath(destRoot+"/"+srcfilename[len(cprefix):])
       #mkdirs(os.path.dirname(destfilename))
       count += 1
-      logging.info("Building list of files to transfer %s\r" %(spinner[count % len(spinner)]))
+      if opt.verbose:
+         sys.stderr.write("Building list of files to transfer %s\r" %(spinner[count % len(spinner)]))
       filelist.append((srcfilename,destfilename))
     if not recursive:
       return filelist
@@ -282,7 +283,17 @@ if __name__=='__main__':
              nodeDict[thisNode]=node
              if node.isdir():
                  goodDirs.append(thisNode)
-      filelist.extend(buildFileList(filename,destRoot=thisRoot,recursive=opt.recursive,ignore=opt.exclude))
+      try:
+        f=buildFileList(filename,destRoot=thisRoot,recursive=opt.recursive,ignore=opt.exclude)
+      except Exception as e:
+        logging.error(str(e))
+        logging.error("retrying (once)")
+        try:
+          f=buildFileList(filename,destRoot=thisRoot,recursive=opt.recursive,ignore=opt.exclude)
+        except Exception as e:
+          logging.error(str(e))
+          sys.exit(e.errno)
+      filelist.extend(f)
     elif os.path.isfile(filename):
       if destIsDir:
         thisRoot=os.path.join(dest,os.path.basename(filename))
