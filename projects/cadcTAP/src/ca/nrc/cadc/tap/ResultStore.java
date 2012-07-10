@@ -72,11 +72,9 @@ package ca.nrc.cadc.tap;
 import java.io.IOException;
 import java.net.URL;
 import java.sql.ResultSet;
-import java.util.List;
 
 import ca.nrc.cadc.tap.writer.VOTableWriter;
 import ca.nrc.cadc.uws.Job;
-import ca.nrc.cadc.uws.Parameter;
 
 /**
  * Interface to store a result set or error message.
@@ -129,12 +127,5 @@ public interface ResultStore
      * @param filename name for the stored file.
      */
     void setFilename(String filename);
-    
-    /**
-     * Set the list of parameters.
-     * 
-     * @param paramList list of parameters
-     */
-    void setParameterList(List<Parameter> paramList);
 
 }

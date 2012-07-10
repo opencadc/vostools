@@ -387,7 +387,6 @@ public class QueryRunner implements JobRunner
                     rs.setJob(job);
                     rs.setFilename(filename);
                     rs.setContentType(tableWriter.getContentType());
-                    rs.setParameterList(paramList);
                     url = rs.put(resultSet, tableWriter);
                     tList.add(System.currentTimeMillis());
                     sList.add("write ResultSet to ResultStore as " + tableWriter.getContentType() + ": ");
@@ -450,6 +449,7 @@ public class QueryRunner implements JobRunner
         }
         catch (Throwable t)
         {
+t.printStackTrace();
             String errorMessage = null;
             URL errorURL = null;
             try
