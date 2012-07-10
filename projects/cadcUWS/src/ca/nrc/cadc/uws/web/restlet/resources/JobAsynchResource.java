@@ -71,9 +71,13 @@
 package ca.nrc.cadc.uws.web.restlet.resources;
 
 import java.io.IOException;
+import java.security.PrivilegedAction;
 import java.text.DateFormat;
 import java.text.ParseException;
 import java.util.Date;
+import java.util.List;
+
+import javax.security.auth.Subject;
 
 import org.apache.log4j.Logger;
 import org.jdom.Document;
@@ -86,6 +90,7 @@ import org.restlet.resource.Get;
 import org.restlet.resource.Post;
 
 import ca.nrc.cadc.date.DateUtil;
+import ca.nrc.cadc.uws.Job;
 import ca.nrc.cadc.uws.JobAttribute;
 import ca.nrc.cadc.uws.JobWriter;
 import ca.nrc.cadc.uws.Parameter;
@@ -94,9 +99,6 @@ import ca.nrc.cadc.uws.server.JobPersistenceException;
 import ca.nrc.cadc.uws.server.JobPhaseException;
 import ca.nrc.cadc.uws.web.restlet.InvalidActionException;
 import ca.nrc.cadc.uws.web.restlet.RestletJobCreator;
-import java.security.PrivilegedAction;
-import java.util.List;
-import javax.security.auth.Subject;
 
 
 /**
@@ -256,7 +258,11 @@ public class JobAsynchResource extends BaseJobResource
                     JobAttribute.EXECUTION_PHASE.getAttributeName().toUpperCase());
                 LOGGER.debug("request: PHASE="+phase);
                 if (RUN.equalsIgnoreCase(phase))
-                    getJobManager().execute(jobID);
+                {
+                    Job job = getJobManager().get(jobID);
+                    job.setProtocol(protocol);
+                    getJobManager().execute(job);
+                }
                 else if (ABORT.equalsIgnoreCase(phase))
                     getJobManager().abort(jobID);
                 else

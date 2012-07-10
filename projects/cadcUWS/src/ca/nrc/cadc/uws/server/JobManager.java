@@ -69,11 +69,12 @@
 
 package ca.nrc.cadc.uws.server;
 
-import ca.nrc.cadc.uws.Job;
-import ca.nrc.cadc.uws.Parameter;
 import java.util.Date;
 import java.util.Iterator;
 import java.util.List;
+
+import ca.nrc.cadc.uws.Job;
+import ca.nrc.cadc.uws.Parameter;
 
 /**
  * Service interface between the application and the Universal Worker Service
@@ -168,6 +169,9 @@ public interface JobManager
      * @throws JobPhaseException
      */
     public void execute(String jobID)
+        throws JobNotFoundException, JobPersistenceException, JobPhaseException;
+    
+    public void execute(Job job)
         throws JobNotFoundException, JobPersistenceException, JobPhaseException;
 
     public void execute(String jobID, SyncOutput output)

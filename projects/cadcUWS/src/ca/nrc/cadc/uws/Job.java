@@ -104,6 +104,9 @@ public class Job
 
     // usable for hooking app-specific value here temporarily
     public transient Object appData;
+    
+    // so that protocols are not switched in the result
+    public transient String protocol;
 
     public Job() { }
 
@@ -266,6 +269,26 @@ public class Job
     public void setOwnerID(String ownerID)
     {
         this.ownerID = ownerID;
+    }
+    
+    /**
+     * Get the protocol.
+     * 
+     * @return
+     */
+    public String getProtocol()
+    {
+        return protocol;
+    }
+    
+    /**
+     * Set the protocol.
+     * 
+     * @param protocol
+     */
+    public void setProtocol(String protocol)
+    {
+        this.protocol = protocol;
     }
 
     /**

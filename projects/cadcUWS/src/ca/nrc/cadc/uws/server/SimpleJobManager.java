@@ -69,10 +69,6 @@
 
 package ca.nrc.cadc.uws.server;
 
-import ca.nrc.cadc.auth.AuthenticationUtil;
-import ca.nrc.cadc.uws.ExecutionPhase;
-import ca.nrc.cadc.uws.Job;
-import ca.nrc.cadc.uws.Parameter;
 import java.security.AccessControlContext;
 import java.security.AccessControlException;
 import java.security.AccessController;
@@ -81,8 +77,15 @@ import java.util.Date;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Set;
+
 import javax.security.auth.Subject;
+
 import org.apache.log4j.Logger;
+
+import ca.nrc.cadc.auth.AuthenticationUtil;
+import ca.nrc.cadc.uws.ExecutionPhase;
+import ca.nrc.cadc.uws.Job;
+import ca.nrc.cadc.uws.Parameter;
 
 /**
  * Simple implementation of the JobManager interface.
@@ -174,12 +177,18 @@ public class SimpleJobManager implements JobManager
         doAuthorizationCheck(job);
         jobPersistence.delete(jobID);
     }
-
+    
     public void execute(String jobID) 
+            throws JobNotFoundException, JobPersistenceException, JobPhaseException
+        {
+            Job job = jobPersistence.get(jobID);
+            doAuthorizationCheck(job);
+            execute(job);
+        }
+
+    public void execute(Job job) 
         throws JobNotFoundException, JobPersistenceException, JobPhaseException
     {
-        Job job = jobPersistence.get(jobID);
-        doAuthorizationCheck(job);
         jobPersistence.getDetails(job);
         jobExecutor.execute(job);
     }

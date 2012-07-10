@@ -342,6 +342,9 @@ public class SyncServlet extends HttpServlet
             else
                 // get job from persistence
                 job = jobManager.get(jobID);
+                
+            // set the protocol of the request
+            job.setProtocol(request.getScheme());
 
             log.debug("found: " + jobID);
 
@@ -369,7 +372,8 @@ public class SyncServlet extends HttpServlet
             }
 
             log.info("executing job: " + jobID);
-            jobManager.execute(job, new SyncOutputImpl(response));
+            syncOutput = new SyncOutputImpl(response);
+            jobManager.execute(job, syncOutput);
         }
         catch(JobPhaseException ex)
         {

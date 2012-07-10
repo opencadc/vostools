@@ -70,19 +70,21 @@
 
 package ca.nrc.cadc.uws.web.restlet.resources;
 
-import ca.nrc.cadc.util.StringUtil;
-import ca.nrc.cadc.uws.ExecutionPhase;
-import ca.nrc.cadc.uws.Job;
-import ca.nrc.cadc.uws.JobAttribute;
-import ca.nrc.cadc.uws.server.JobNotFoundException;
-import ca.nrc.cadc.uws.server.JobPersistenceException;
 import java.security.PrivilegedAction;
+
 import javax.security.auth.Subject;
 
 import org.apache.log4j.Logger;
 import org.restlet.data.Form;
 import org.restlet.representation.Representation;
 import org.restlet.resource.Get;
+
+import ca.nrc.cadc.util.StringUtil;
+import ca.nrc.cadc.uws.ExecutionPhase;
+import ca.nrc.cadc.uws.Job;
+import ca.nrc.cadc.uws.JobAttribute;
+import ca.nrc.cadc.uws.server.JobNotFoundException;
+import ca.nrc.cadc.uws.server.JobPersistenceException;
 
 
 /**
@@ -95,6 +97,7 @@ public abstract class BaseJobResource extends UWSResource
     protected String jobID;
     protected String jobList;
     protected Job job;
+    protected String protocol;
 
     @Override
     protected void doInit()
@@ -104,7 +107,8 @@ public abstract class BaseJobResource extends UWSResource
         String path = getRequestPath();
         int i = path.indexOf(jobID);
         this.jobList = path.substring(0,i-1);
-        LOGGER.debug("doInit: jobID=" + jobID + ", jobList="+jobList);
+        this.protocol = getProtocol().getSchemeName();
+        LOGGER.debug("doInit: jobID=" + jobID + ", jobList="+jobList + ", protocol="+protocol);
     }
 
     @Get
@@ -132,7 +136,10 @@ public abstract class BaseJobResource extends UWSResource
         try
         {
             if (job == null)
+            {
                 job = getJobManager().get(jobID);
+                job.setProtocol(protocol);
+            }
             return super.represent();
         }
         catch(JobPersistenceException ex)
