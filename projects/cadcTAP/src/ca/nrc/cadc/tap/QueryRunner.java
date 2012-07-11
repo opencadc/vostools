@@ -449,7 +449,6 @@ public class QueryRunner implements JobRunner
         }
         catch (Throwable t)
         {
-t.printStackTrace();
             String errorMessage = null;
             URL errorURL = null;
             try
