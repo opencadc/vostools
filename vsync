@@ -7,6 +7,7 @@ import threading, Queue
 import datetime, optparse
 import errno
 import logging
+import time
 
 
 
@@ -47,6 +48,8 @@ class ThreadCopy(threading.Thread):
 
   def run(self):
     while True:
+      while self.queue.empty():
+        time.sleep(5)
       (src,dest)=self.queue.get()
       now = datetime.datetime.now()
       srcMD5=None
@@ -79,7 +82,7 @@ class ThreadCopy(threading.Thread):
        except IOError as e:
         """Ignore the erorr"""
         pass
-      logging.info("%s -> %s\n" % (src,dest))
+      logging.info("%s -> %s" % (src,dest))
       try:
         checkMD5 = not opt.ignore_checksum
         self.client.copy(src,dest,sendMD5=checkMD5)
@@ -156,6 +159,17 @@ import os
 def copy(source,dest):
   ## strip down dest until we find a part that exists
   ## and then build up the path.  Dest should include the filename
+  if os.path.islink(source):
+    logging.error("%s is a link, skipping" % ( source))
+    return
+  if not os.access(source,os.R_OK):
+    logging.error("Failed to open file %s, skipping" % ( source))
+    return
+  import re
+  if re.match('^[A-Za-z0-9\\._\\-\\(\\);:&\\*\\$@!+=\\/]*$',source) is None:
+    logging.error("filename %s contains illegal characters, skipping" % ( source))
+    return
+
   dirname=os.path.dirname(dest)
   mkdirs(dirname)
   queue.put((source,dest))
@@ -163,7 +177,7 @@ def copy(source,dest):
 def startStreams(nstreams):
   streams=[]
   for i in range(nstreams):
-    logging.info("Launching vospace connection stream %d" )
+    logging.info("Launching vospace connection stream %d" % ( i) )
     t=ThreadCopy(queue)
     t.setDaemon(True)
     t.start()
@@ -175,7 +189,6 @@ def buildFileList(basePath,destRoot='',recursive=False,ignore=None):
   """Build a list of files that should be copied into VOSpace"""
   spinner=['-','\\','|','/','-','\\','|','/']
   count=0
-  filelist=[]
   import re
   for (root,dirs,filenames) in os.walk(basePath):
     for thisDirname in dirs:
@@ -204,10 +217,10 @@ def buildFileList(basePath,destRoot='',recursive=False,ignore=None):
       count += 1
       if opt.verbose:
          sys.stderr.write("Building list of files to transfer %s\r" %(spinner[count % len(spinner)]))
-      filelist.append((srcfilename,destfilename))
+      copy(srcfilename,destfilename)	
     if not recursive:
-      return filelist
-  return filelist
+      return 
+  return 
 
 
 
@@ -261,8 +274,10 @@ if __name__=='__main__':
   logging.info("Confirming Destination is a directory")
   destIsDir=c.isdir(dest)
 
+  streams=startStreams(opt.nstreams)
+
+
   ### build a complete file list given all the things on the command line
-  filelist=[]
   for filename in args:
     filename=os.path.abspath(filename)
     thisRoot=dest
@@ -284,51 +299,20 @@ if __name__=='__main__':
              if node.isdir():
                  goodDirs.append(thisNode)
       try:
-        f=buildFileList(filename,destRoot=thisRoot,recursive=opt.recursive,ignore=opt.exclude)
+        buildFileList(filename,destRoot=thisRoot,recursive=opt.recursive,ignore=opt.exclude)
       except Exception as e:
         logging.error(str(e))
-        logging.error("retrying (once)")
-        try:
-          f=buildFileList(filename,destRoot=thisRoot,recursive=opt.recursive,ignore=opt.exclude)
-        except Exception as e:
-          logging.error(str(e))
-          sys.exit(e.errno)
-      filelist.extend(f)
+        logging.error("ignoring error")
     elif os.path.isfile(filename):
       if destIsDir:
         thisRoot=os.path.join(dest,os.path.basename(filename))
-      filelist.append((filename,thisRoot))
+      copy(filename,thisRoot)
     else:
       logging.error("%s: No such file or directory." % ( filename))
 
-  if 1==2:
-   destIsFile=c.isfile(dest)
-   destIsDir=c.isdir(dest)
-
-   if len(filelist)>1 :
-    if destIsFile:
-      parser.error("Desitnation for multiple files must be a direcotry")
-    if not destIsDir:
-      parser.error("Destination directory must already exist in VOSpace")
-
-  for (src,dest) in filelist:
-    if os.path.islink(src):
-       logging.error("%s is a link, skipping" % ( src))
-       continue
-    if not os.access(src,os.R_OK):
-       logging.error("Failed to open file %s, skipping" % ( src))
-       continue
-    import re
-    if re.match('^[A-Za-z0-9\\._\\-\\(\\);:&\\*\\$@!+=\\/]*$',src) is None:
-       logging.error("filename %s contains illegal characters, skipping" % ( src))
-       continue
-    copy(src,dest)	
        
+  logging.info("\nWaiting for transfers to complete.\nCTRL-\ to interrupt\n")
 
-  streams=startStreams(opt.nstreams)
-  import time
-  logging.info("\n\nLaunching multistreamed transfer\n CTRL-C disabled \n\n use CTRL-\ to interrupt\n\n")
-  time.sleep(5)
   queue.join()
   endTime=time.time()
   bytesSent=0
