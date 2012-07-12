@@ -13,9 +13,6 @@ import time
 
 
 
-queue=Queue.Queue(maxsize=1000)
-goodDirs=[]
-nodeDict={}
         
 
 class ThreadCopy(threading.Thread):
@@ -273,6 +270,10 @@ if __name__=='__main__':
   c=vos.Client(certFile=opt.certfile)
   logging.info("Confirming Destination is a directory")
   destIsDir=c.isdir(dest)
+
+  queue=Queue.Queue(maxsize=nstreams)
+  goodDirs=[]
+  nodeDict={}
 
   streams=startStreams(opt.nstreams)
 
