@@ -13,7 +13,7 @@ import time
 
 
 
-queue=Queue.Queue()
+queue=Queue.Queue(maxsize=1000)
 goodDirs=[]
 nodeDict={}
         
@@ -172,7 +172,7 @@ def copy(source,dest):
 
   dirname=os.path.dirname(dest)
   mkdirs(dirname)
-  queue.put((source,dest))
+  queue.put((source,dest),timeout=3600)
                               
 def startStreams(nstreams):
   streams=[]
