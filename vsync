@@ -45,8 +45,6 @@ class ThreadCopy(threading.Thread):
 
   def run(self):
     while True:
-      while self.queue.empty():
-        time.sleep(5)
       (src,dest)=self.queue.get()
       now = datetime.datetime.now()
       srcMD5=None
@@ -271,7 +269,7 @@ if __name__=='__main__':
   logging.info("Confirming Destination is a directory")
   destIsDir=c.isdir(dest)
 
-  queue=Queue.Queue(maxsize=nstreams)
+  queue=Queue.Queue(maxsize=10*opt.nstreams)
   goodDirs=[]
   nodeDict={}
 
