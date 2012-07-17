@@ -63,11 +63,11 @@ if opt.Size:
     sortKey="size"
 
 if opt.verbose:
-    logging.basicConfig(level=logging.INFO,format="%(module)s.%(funcName)s %(message)s")
+    logging.basicConfig(level=logging.INFO,format="%(module)s: %(message)s")
 elif opt.debug:
     logging.basicConfig(level=logging.DEBUG,format="%(module)s.%(funcName)s %(message)s")
 else:
-    logging.basicConfig(level=logging.ERROR,format="%(module)s.%(funcName)s %(message)s")
+    logging.basicConfig(level=logging.ERROR,format="%(module)s: %(message)s")
 
 if len(args) < 1:
     parser.error("You must specifiy a VOSpace to list")
@@ -125,9 +125,12 @@ for node in args:
         parser.error("Improper vospace spefication: %s " % ( node))
     try:
         infoList= vos.getNode(node,limit=500).getInfoList()
+    except IOError as e:
+        logging.error("Error getting listing of %s ( %s )" % (node,e.strerror))
+        sys.exit(e.errno)
     except Exception as e:
-        logging.error("Error getting listing of %s: %s " % (node,str(e)))
-        sys.exit(e)
+        logging.error("Error getting listing of %s ( %s )" % (node,str(e)))
+        sys.exit(-1)
         
     if not len(infoList)>0:
         #logging.critical("Failed to get listing for %s " % ( node ))
