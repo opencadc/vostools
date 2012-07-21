@@ -1,4 +1,4 @@
-#!python
+#!/home/nis/cadc/bin/python
 """A script for sending files to VOSpace via multiple connection streams."""
 
 
@@ -11,7 +11,6 @@ import time
 import md5_cache
 
 
-        
 
 class ThreadCopy(threading.Thread):
   def __init__(self,queue):
@@ -182,9 +181,10 @@ def buildFileList(basePath,destRoot='',recursive=False,ignore=None):
   import re
   for (root,dirs,filenames) in os.walk(basePath):
     for thisDirname in dirs:
-      if ignore is not None and ignore in thisDirname:
-        continue
       thisDirname=os.path.join(root,thisDirname)
+      if ignore is not None and ignore in thisDirname:
+        logging.info ("excluding: %s " % ( thisDirname))
+        continue
       cprefix=os.path.commonprefix((basePath,thisDirname))
       thisDirname=os.path.normpath(destRoot+"/"+thisDirname[len(cprefix):])
       mkdirs(thisDirname)
@@ -198,9 +198,10 @@ def buildFileList(basePath,destRoot='',recursive=False,ignore=None):
              if node.isdir():
 	         goodDirs.append(thisNode)
     for thisfilename in filenames:
-      if ignore is not None and ignore in thisfilename:
-        continue
       srcfilename=os.path.normpath(os.path.join(root,thisfilename))
+      if ignore is not None and ignore in srcfilename:
+        logging.info ("excluding: %s" % ( srcfilename))
+        continue
       cprefix=os.path.commonprefix((basePath,srcfilename))
       destfilename=os.path.normpath(destRoot+"/"+srcfilename[len(cprefix):])
       #mkdirs(os.path.dirname(destfilename))
