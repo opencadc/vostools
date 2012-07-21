@@ -49,7 +49,11 @@ class ThreadCopy(threading.Thread):
        """Check if the file is the same"""
        try:
         node=nodeDict.get(dest,None)
-        logging.debug("%s %s %s" % ( dest, node, opt.cache_nodes))
+        if node:
+          name=node.name
+        else:
+          name="None"
+        logging.debug("%s %s %s" % ( dest, name, opt.cache_nodes))
 	if node is None: 
            if opt.cache_nodes:
 	     raise IOError(errno.ENFILE,dest)
@@ -70,6 +74,7 @@ class ThreadCopy(threading.Thread):
           continue
        except IOError as e:
         """Ignore the erorr"""
+        logging.error(str(e))
         pass
       logging.info("%s -> %s" % (src,dest))
       try:
@@ -97,6 +102,8 @@ class ThreadCopy(threading.Thread):
 
 def mkdirs(dirs):
 
+
+  logging.debug("%s %s" % (dirs, str(goodDirs)))
   ## if we've seen this before skip it.
   if dirs in goodDirs:
     return
@@ -181,6 +188,8 @@ def buildFileList(basePath,destRoot='',recursive=False,ignore=None):
   import re
   for (root,dirs,filenames) in os.walk(basePath):
     for thisDirname in dirs:
+      if not recursive:
+        continue
       thisDirname=os.path.join(root,thisDirname)
       if ignore is not None and ignore in thisDirname:
         logging.info ("excluding: %s " % ( thisDirname))
@@ -204,7 +213,19 @@ def buildFileList(basePath,destRoot='',recursive=False,ignore=None):
         continue
       cprefix=os.path.commonprefix((basePath,srcfilename))
       destfilename=os.path.normpath(destRoot+"/"+srcfilename[len(cprefix):])
-      #mkdirs(os.path.dirname(destfilename))
+      thisDirname = os.path.dirname(destfilename)
+      mkdirs( thisDirname )
+      ## cache the contents of this directory, if any
+      #logging.debug("checking if %s is in nodeDict: %s" % ( destfilename, str(nodeDict)))
+      #if opt.cache_nodes and nodeDict.get(destfilename,None) is None:
+      #  thisNode=c.getNode(thisDirname,limit=1000)
+      #  logging.debug("%s: %s " % ( thisDirname, str(thisNode.getNodeList()) ) )
+      #  for node in thisNode.getNodeList():
+      #    nodePath = thisDirname+"/"+node.name
+      #    nodeDict[nodePath]=node
+      #    if node.isdir():
+      #      goodDirs.append(nodePath)
+
       count += 1
       if opt.verbose:
          sys.stderr.write("Building list of files to transfer %s\r" %(spinner[count % len(spinner)]))
@@ -233,7 +254,7 @@ if __name__=='__main__':
   parser=optparse.OptionParser(usage=usage)
   parser.add_option('--verbose','-v',action="store_true",help='run in verbose mode')
   parser.add_option('--debug','-d',action="store_true",help='run in verbose mode')
-  parser.add_option('--cache_nodes',default=True,action="store_false",help='turn off node caching, not safe in running multiple instances of vsync, but safe for multiple streams in one instance')
+  parser.add_option('--cache_nodes',default=False,action="store_true",help='turn off node caching, not safe in running multiple instances of vsync, but safe for multiple streams in one instance')
   parser.add_option('--ignore-checksum',action="store_true",help='dont check MD5 sum, forces transfer')
   parser.add_option('--recursive','-r',help="Do a recursive sync",action="store_true")
   parser.add_option('--nstreams','-n',type=int,help="Number of streams to run (MAX: 10)",default=1)
