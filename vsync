@@ -1,4 +1,4 @@
-#!python
+#!/home/nis/cadc/bin/python
 """A script for sending files to VOSpace via multiple connection streams."""
 
 
@@ -13,9 +13,6 @@ import time
 
 
 
-queue=Queue.Queue()
-goodDirs=[]
-nodeDict={}
         
 
 class ThreadCopy(threading.Thread):
@@ -48,8 +45,6 @@ class ThreadCopy(threading.Thread):
 
   def run(self):
     while True:
-      while self.queue.empty():
-        time.sleep(5)
       (src,dest)=self.queue.get()
       now = datetime.datetime.now()
       srcMD5=None
@@ -172,7 +167,7 @@ def copy(source,dest):
 
   dirname=os.path.dirname(dest)
   mkdirs(dirname)
-  queue.put((source,dest))
+  queue.put((source,dest),timeout=3600)
                               
 def startStreams(nstreams):
   streams=[]
@@ -192,9 +187,10 @@ def buildFileList(basePath,destRoot='',recursive=False,ignore=None):
   import re
   for (root,dirs,filenames) in os.walk(basePath):
     for thisDirname in dirs:
-      if ignore is not None and ignore in thisDirname:
-        continue
       thisDirname=os.path.join(root,thisDirname)
+      if ignore is not None and ignore in thisDirname:
+        logging.info ("excluding: %s " % ( thisDirname))
+        continue
       cprefix=os.path.commonprefix((basePath,thisDirname))
       thisDirname=os.path.normpath(destRoot+"/"+thisDirname[len(cprefix):])
       mkdirs(thisDirname)
@@ -208,9 +204,10 @@ def buildFileList(basePath,destRoot='',recursive=False,ignore=None):
              if node.isdir():
 	         goodDirs.append(thisNode)
     for thisfilename in filenames:
-      if ignore is not None and ignore in thisfilename:
-        continue
       srcfilename=os.path.normpath(os.path.join(root,thisfilename))
+      if ignore is not None and ignore in srcfilename:
+        logging.info ("excluding: %s" % ( srcfilename))
+        continue
       cprefix=os.path.commonprefix((basePath,srcfilename))
       destfilename=os.path.normpath(destRoot+"/"+srcfilename[len(cprefix):])
       #mkdirs(os.path.dirname(destfilename))
@@ -273,6 +270,10 @@ if __name__=='__main__':
   c=vos.Client(certFile=opt.certfile)
   logging.info("Confirming Destination is a directory")
   destIsDir=c.isdir(dest)
+
+  queue=Queue.Queue(maxsize=10*opt.nstreams)
+  goodDirs=[]
+  nodeDict={}
 
   streams=startStreams(opt.nstreams)
 
