@@ -89,8 +89,11 @@ CREATE TABLE Node (
    
    contentType       VARCHAR(100)      NULL,
    contentEncoding   VARCHAR(50)       NULL,
-   nodeSize          BIGINT            NULL,
-   contentLength     BIGINT            NULL,
+   nodeSize          BIGINT            DEFAULT 0 NOT NULL,
+   contentLength     BIGINT            DEFAULT 0 NULL,
+   
+-- delta: internal column used when managing own metadata
+   delta             BIGINT            DEFAULT 0 NOT NULL,
    contentMD5        BINARY(16)        NULL,
 
 -- createdOn: internal column not referenced in NodeDAO

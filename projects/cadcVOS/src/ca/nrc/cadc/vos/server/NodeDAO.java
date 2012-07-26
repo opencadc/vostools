@@ -84,7 +84,6 @@ import java.util.Calendar;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.Iterator;
-import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -114,8 +113,8 @@ import ca.nrc.cadc.vos.DataNode;
 import ca.nrc.cadc.vos.Node;
 import ca.nrc.cadc.vos.NodeProperty;
 import ca.nrc.cadc.vos.VOS;
-import ca.nrc.cadc.vos.VOSURI;
 import ca.nrc.cadc.vos.VOS.NodeBusyState;
+import ca.nrc.cadc.vos.VOSURI;
 
 /**
  * Helper class for implementing NodePersistence with a
@@ -735,6 +734,15 @@ public class NodeDAO
                     }
                 }
                 */
+                
+                // if manually managing metadata
+                if (!nodeSchema.fileMetadataWritable)
+                {
+                    // apply the negative delta to the parent
+                    String sql = this.getApplyDeltaToParentSQL(node.getParent(), node, false);
+                    log.debug(sql);
+                    jdbc.update(sql);
+                }
 
                 // note: the following delete(s) can be large if the node has a large number of
                 // properties, but we don't constraint it because we never want to commit the
@@ -779,7 +787,8 @@ public class NodeDAO
         String sql = getDeleteNodePropertiesSQL(node);
         log.debug(sql);
         jdbc.update(sql);
-
+        
+        // delete the node
         sql = getDeleteNodeSQL(node, true); // only delete if non-busy
         log.debug(sql);
         int count = jdbc.update(sql);
@@ -1197,6 +1206,28 @@ public class NodeDAO
                 log.debug("src node " + src.getUri().getPath() + ", delta = 0: skipping path updates");
             */
 
+            // if manually managing metadata, apply the content
+            // length deltas
+            if (!nodeSchema.fileMetadataWritable)
+            {
+                // these operations should happen in nodeID order to
+                // avoid deadlocks
+                
+                String sql1 = this.getApplyDeltaToParentSQL(src.getParent(), src, false);
+                String sql2 = this.getApplyDeltaToParentSQL(dest, src, true);
+                
+                if (getNodeID(src) > getNodeID(dest))
+                {
+                    sql1 = this.getApplyDeltaToParentSQL(dest, src, true);
+                    sql2 = this.getApplyDeltaToParentSQL(src.getParent(), src, false);
+                }
+                
+                log.debug(sql1);
+                jdbc.update(sql1);
+                log.debug(sql2);
+                jdbc.update(sql2);
+            }
+            
             // re-parent the node
             src.setParent(dest);
 
@@ -1644,6 +1675,30 @@ public class NodeDAO
         sb.append("'");
         return sb.toString();
     }
+    
+    /**
+     * @param node The node to delete
+     * @return The SQL string for applying a negative or positive
+     * delta to the parent of the target node.
+     */
+    protected String getApplyDeltaToParentSQL(ContainerNode parent, Node node, boolean increment)
+    {
+        StringBuilder sb = new StringBuilder();
+        sb.append("UPDATE ");
+        sb.append(getNodeTableName());
+        sb.append(" SET delta = delta ");
+        if (increment)
+            sb.append("+");
+        else
+            sb.append("-");
+        sb.append(" (SELECT nodeSize from ");
+        sb.append(getNodeTableName());
+        sb.append(" WHERE nodeID = ");
+        sb.append(getNodeID(node));
+        sb.append(") WHERE nodeID = ");
+        sb.append(getNodeID(parent));
+        return sb.toString();
+    }
 
     protected String[] getRootUpdateLockSQL(Node n1, Node n2)
     {
@@ -1802,11 +1857,17 @@ public class NodeDAO
             sb.append("UPDATE ");
             sb.append(getNodeTableName());
             sb.append(" SET ");
+            
             if (nodeSchema.fileMetadataWritable)
+            {
                 sb.append("nodeSize = ?, contentLength = ?, contentMD5 = ?");
-            else // contentLength is a virtual column
-                // simply set the nodeSize column to the same value
-                sb.append(" nodeSize = contentLength");
+            }
+            else
+            {
+                // - contentLength is a virtual column
+                // - set the delta to be the difference between the new and old sizes
+                sb.append(" delta = (contentLength - nodeSize)");
+            }
             sb.append(" WHERE nodeID = ?");
             String sql = sb.toString();
             log.debug(sql);

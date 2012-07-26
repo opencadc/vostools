@@ -86,7 +86,9 @@ import javax.sql.DataSource;
 import org.apache.log4j.Level;
 import org.apache.log4j.Logger;
 import org.junit.Assert;
+import org.junit.Before;
 import org.junit.Test;
+import org.springframework.jdbc.core.JdbcTemplate;
 
 import ca.nrc.cadc.auth.AuthenticationUtil;
 import ca.nrc.cadc.auth.X500IdentityManager;
@@ -101,11 +103,9 @@ import ca.nrc.cadc.vos.DataNode;
 import ca.nrc.cadc.vos.Node;
 import ca.nrc.cadc.vos.NodeProperty;
 import ca.nrc.cadc.vos.VOS;
-import ca.nrc.cadc.vos.VOSURI;
 import ca.nrc.cadc.vos.VOS.NodeBusyState;
+import ca.nrc.cadc.vos.VOSURI;
 import ca.nrc.cadc.vos.server.NodeDAO.NodeSchema;
-import org.junit.Before;
-import org.springframework.jdbc.core.JdbcTemplate;
 
 
 /**
@@ -1751,7 +1751,185 @@ public class NodeDAOTest
             log.debug("testBatchDeleteDryrun - DONE");
         }
     }
+    
+    @Test
+    public void testUpdateMetadataDelta()
+    {
+        
+        log.debug("testUpdateMetadataDelta - START");
+        try
+        {
+            DBConfig dbConfig = new DBConfig();
+            ConnectionConfig connConfig = dbConfig.getConnectionConfig(SERVER, DATABASE);
+            this.dataSource = DBUtil.getDataSource(connConfig);
+            NodeSchema ns = new NodeSchema("Node", "NodeProperty", true, false); // TOP, read-only
+            this.nodeDAO = new NodeDAO(dataSource, ns, VOS_AUTHORITY, new X500IdentityManager(), DELETED_NODES);
 
+            ContainerNode rootContainer = (ContainerNode) nodeDAO.getPath(HOME_CONTAINER);
+            log.debug("ROOT: " + rootContainer);
+            Assert.assertNotNull(rootContainer);
+
+            String basePath = "/" + HOME_CONTAINER + "/";
+            
+            // Create a container node
+            String containerPath = basePath + getNodeName("delta-test");
+            ContainerNode containerNode = this.getCommonContainerNode(containerPath);
+            containerNode.setParent(rootContainer);
+            containerNode = (ContainerNode) nodeDAO.put(containerNode, owner);
+            
+            // Create a data node
+            String dataPath = containerNode.getUri().getPath() + "/" + "dataNode" + System.currentTimeMillis();
+            DataNode dataNode = getCommonDataNode(dataPath);
+            dataNode.setParent(containerNode);
+            nodeDAO.put(dataNode, owner);
+            
+            // manually set the content length & nodeSize
+            JdbcTemplate jdbc = new JdbcTemplate(dataSource);
+            String sql = "update Node set contentLength=10, nodeSize=4, busyState='W' where name='" + dataNode.getName() + "'";
+            jdbc.update(sql);
+            
+            FileMetadata meta = new FileMetadata();
+            
+            // perform the metadata update
+            nodeDAO.updateNodeMetadata(dataNode, meta);
+            
+            int delta = jdbc.queryForInt("select delta from Node where name='" + dataNode.getName() + "'");
+            Assert.assertEquals("Wrong delta", 6, delta);
+        }
+        catch(Exception unexpected)
+        {
+            log.error("unexpected exception", unexpected);
+            Assert.fail("unexpected exception: " + unexpected);
+        }
+        finally
+        {
+            log.debug("testUpdateMetadataDelta - DONE");
+        }
+    }
+    
+    @Test
+    public void testDeleteDelta()
+    {
+        
+        log.debug("testDeleteDelta - START");
+        try
+        {
+            DBConfig dbConfig = new DBConfig();
+            ConnectionConfig connConfig = dbConfig.getConnectionConfig(SERVER, DATABASE);
+            this.dataSource = DBUtil.getDataSource(connConfig);
+            NodeSchema ns = new NodeSchema("Node", "NodeProperty", true, false); // TOP, read-only
+            this.nodeDAO = new NodeDAO(dataSource, ns, VOS_AUTHORITY, new X500IdentityManager(), DELETED_NODES);
+
+            ContainerNode rootContainer = (ContainerNode) nodeDAO.getPath(HOME_CONTAINER);
+            log.debug("ROOT: " + rootContainer);
+            Assert.assertNotNull(rootContainer);
+
+            String basePath = "/" + HOME_CONTAINER + "/";
+            
+            // Create a container node
+            String containerPath = basePath + getNodeName("delta-test2");
+            ContainerNode containerNode = this.getCommonContainerNode(containerPath);
+            containerNode.setParent(rootContainer);
+            containerNode = (ContainerNode) nodeDAO.put(containerNode, owner);
+            
+            // Create a data node
+            String dataPath = containerNode.getUri().getPath() + "/" + "dataNode" + System.currentTimeMillis();
+            DataNode dataNode = getCommonDataNode(dataPath);
+            dataNode.setParent(containerNode);
+            nodeDAO.put(dataNode, owner);
+            
+            // manually set the nodeSize
+            JdbcTemplate jdbc = new JdbcTemplate(dataSource);
+            String sql = "update Node set nodeSize=2 where name='" + dataNode.getName() + "'";
+            jdbc.update(sql);
+            
+            // manually set the delta
+            sql = "update Node set delta=7 where name='" + containerNode.getName() + "'";
+            jdbc.update(sql);
+            
+            nodeDAO.delete(dataNode);
+            
+            int delta = jdbc.queryForInt("select delta from Node where name='" + containerNode.getName() + "'");
+            // delta should now be 7-2
+            Assert.assertEquals("Wrong delta", 5, delta);
+        }
+        catch(Exception unexpected)
+        {
+            log.error("unexpected exception", unexpected);
+            Assert.fail("unexpected exception: " + unexpected);
+        }
+        finally
+        {
+            log.debug("testDeleteDelta - DONE");
+        }
+    }
+
+    @Test
+    public void testMoveDelta()
+    {
+        
+        log.debug("testMoveDelta - START");
+        try
+        {
+            DBConfig dbConfig = new DBConfig();
+            ConnectionConfig connConfig = dbConfig.getConnectionConfig(SERVER, DATABASE);
+            this.dataSource = DBUtil.getDataSource(connConfig);
+            NodeSchema ns = new NodeSchema("Node", "NodeProperty", true, false); // TOP, read-only
+            this.nodeDAO = new NodeDAO(dataSource, ns, VOS_AUTHORITY, new X500IdentityManager(), DELETED_NODES);
+
+            ContainerNode rootContainer = (ContainerNode) nodeDAO.getPath(HOME_CONTAINER);
+            log.debug("ROOT: " + rootContainer);
+            Assert.assertNotNull(rootContainer);
+
+            String basePath = "/" + HOME_CONTAINER + "/";
+            
+            // Create a container node
+            String containerPath = basePath + getNodeName("delta-test3");
+            ContainerNode containerNode = this.getCommonContainerNode(containerPath);
+            containerNode.setParent(rootContainer);
+            containerNode = (ContainerNode) nodeDAO.put(containerNode, owner);
+            
+            // Create another container node
+            String containerPath2 = basePath + getNodeName("delta-test4");
+            ContainerNode containerNode2 = this.getCommonContainerNode(containerPath2);
+            containerNode2.setParent(rootContainer);
+            containerNode2 = (ContainerNode) nodeDAO.put(containerNode2, owner);
+            
+            // Create a data node
+            String dataPath = containerNode.getUri().getPath() + "/" + "dataNode" + System.currentTimeMillis();
+            DataNode dataNode = getCommonDataNode(dataPath);
+            dataNode.setParent(containerNode);
+            nodeDAO.put(dataNode, owner);
+            
+            // manually set the nodeSize
+            JdbcTemplate jdbc = new JdbcTemplate(dataSource);
+            String sql = "update Node set nodeSize=9 where name='" + dataNode.getName() + "'";
+            jdbc.update(sql);
+            
+            // manually set the deltas
+            sql = "update Node set delta=11 where name='" + containerNode.getName() + "'";
+            jdbc.update(sql);
+            sql = "update Node set delta=13 where name='" + containerNode2.getName() + "'";
+            jdbc.update(sql);
+            
+            nodeDAO.move(dataNode, containerNode2);
+            
+            int delta = jdbc.queryForInt("select delta from Node where name='" + containerNode.getName() + "'");
+            Assert.assertEquals("Wrong delta", 2, delta);
+            
+            delta = jdbc.queryForInt("select delta from Node where name='" + containerNode2.getName() + "'");
+            Assert.assertEquals("Wrong delta", 22, delta);
+        }
+        catch(Exception unexpected)
+        {
+            log.error("unexpected exception", unexpected);
+            Assert.fail("unexpected exception: " + unexpected);
+        }
+        finally
+        {
+            log.debug("testMoveDelta - DONE");
+        }
+    }
 
     private long getContentLength(Node node)
     {
