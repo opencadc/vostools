@@ -1,9 +1,9 @@
-/**
+/*
  ************************************************************************
  *******************  CANADIAN ASTRONOMY DATA CENTRE  *******************
  **************  CENTRE CANADIEN DE DONNÉES ASTRONOMIQUES  **************
  *
- *  (c) 2010.                            (c) 2010.
+ *  (c) 2009.                            (c) 2009.
  *  Government of Canada                 Gouvernement du Canada
  *  National Research Council            Conseil national de recherches
  *  Ottawa, Canada, K1A 0R6              Ottawa, Canada, K1A 0R6
@@ -62,45 +62,105 @@
  *  <http://www.gnu.org/licenses/>.      pas le cas, consultez :
  *                                       <http://www.gnu.org/licenses/>.
  *
+ *  $Revision: 4 $
+ *
  ************************************************************************
  */
+
 package ca.nrc.cadc.vos;
 
-import org.junit.runner.RunWith;
-import org.junit.runners.Suite;
+import java.net.URI;
+import java.util.ArrayList;
+import java.util.List;
 
-import ca.nrc.cadc.vos.auth.VOSpaceAuthorizerTest;
-import ca.nrc.cadc.vos.client.FileSizeTypeTest;
-import ca.nrc.cadc.vos.server.DatabaseNodePersistenceTest;
-import ca.nrc.cadc.vos.server.NodeDAOTest;
-import ca.nrc.cadc.vos.server.RssFeedTest;
-import ca.nrc.cadc.vos.server.RssViewTest;
-import ca.nrc.cadc.vos.server.TransferInlineContentHandlerTest;
-import ca.nrc.cadc.vos.server.ViewsTest;
-import ca.nrc.cadc.vos.server.web.restlet.action.DeleteNodeActionTest;
-import ca.nrc.cadc.vos.server.web.restlet.action.GetNodeActionTest;
-import ca.nrc.cadc.vos.server.web.restlet.resource.NodeResourceTest;
+import org.apache.log4j.Level;
+import org.apache.log4j.Logger;
+import org.junit.Assert;
+import org.junit.BeforeClass;
+import org.junit.Test;
 
+import ca.nrc.cadc.util.Log4jInit;
+import ca.nrc.cadc.vos.client.VOSpaceClient;
 
-@RunWith(Suite.class)
-@Suite.SuiteClasses(
+/**
+ *
+ * @author yeunga
+ */
+public class LinkNodeTest 
 {
-    LinkNodeTest.class,
-    NodeReaderWriterTest.class,
-    TransferReaderWriterTest.class,
-    NodeResourceTest.class,
-    VOSpaceAuthorizerTest.class,
-    FileSizeTypeTest.class,
-    ViewsTest.class,
-    GetNodeActionTest.class,
-    DeleteNodeActionTest.class,
-    VOSURITest.class,
-    NodeDAOTest.class,
-    DatabaseNodePersistenceTest.class,
-    RssViewTest.class,
-    RssFeedTest.class,
-    TransferInlineContentHandlerTest.class
-})
-public class CADCVOSTestSuite
-{
+    private static Logger log = Logger.getLogger(LinkNodeTest.class);
+    private static String ROOT_NODE;
+    private static String VOS_URI =  "vos://cadc.nrc.ca!vospace";
+
+    String endpoint;
+    VOSpaceClient client;
+
+    /**
+     * @throws java.lang.Exception
+     */
+    @BeforeClass
+    public static void setUpBeforeClass() throws Exception
+    {
+        Log4jInit.setLevel("ca.nrc.cadc.vos", Level.INFO);
+        ROOT_NODE = System.getProperty("user.name") + "/";
+    }
+
+    @Test
+    public void testInstantiationsWithoutProperties() throws Exception
+    {
+        final String slashPath1 = "/" + ROOT_NODE
+                + TestUtil.uniqueStringOnTime();
+        final String slashPath2 = "/" + ROOT_NODE
+                + TestUtil.uniqueStringOnTime();
+        VOSURI uri = new VOSURI(VOS_URI + slashPath1);
+        URI target = new URI(VOS_URI + slashPath2);
+        LinkNode node = new LinkNode(uri, target);
+        Assert.assertEquals(uri, node.getUri());
+        Assert.assertEquals(target, node.getTarget());
+    }
+    
+    @Test
+    public void testInstantiationsWithProperties() throws Exception
+    {
+        final String slashPath1 = "/" + ROOT_NODE
+                + TestUtil.uniqueStringOnTime();
+        final String slashPath2 = "/" + ROOT_NODE
+                + TestUtil.uniqueStringOnTime();
+        VOSURI uri = new VOSURI(VOS_URI + slashPath1);
+        URI target = new URI(VOS_URI + slashPath2);
+
+        List<NodeProperty> properties = new ArrayList<NodeProperty>();
+        properties.add(new NodeProperty(VOS.PROPERTY_URI_TITLE, "sz_title")); 
+        properties.add(new NodeProperty(VOS.PROPERTY_URI_CREATOR, "sz_creator"));
+        
+        LinkNode node = new LinkNode(uri, properties, target);
+        Assert.assertEquals(uri, node.getUri());
+        Assert.assertEquals(target, node.getTarget());
+        List<NodeProperty> actualProperties = node.getProperties();
+        Assert.assertEquals(properties.size(), actualProperties.size());
+        for (NodeProperty property : properties)
+        {
+        	Assert.assertTrue(actualProperties.contains(property));
+        }
+    }
+    
+    @Test
+    public void testSetTarget() throws Exception
+    {
+        final String slashPath1 = "/" + ROOT_NODE
+                + TestUtil.uniqueStringOnTime();
+        final String slashPath2 = "/" + ROOT_NODE
+                + TestUtil.uniqueStringOnTime();
+        final String slashPath3 = "/" + ROOT_NODE
+                + TestUtil.uniqueStringOnTime();
+        VOSURI uri = new VOSURI(VOS_URI + slashPath1);
+        URI target = new URI(VOS_URI + slashPath2);
+        URI newTarget = new URI(VOS_URI + slashPath3);
+        LinkNode node = new LinkNode(uri, target);
+        Assert.assertEquals(target, node.getTarget());
+        
+        node.setTarget(newTarget);
+        Assert.assertEquals(newTarget, node.getTarget());
+    }
+        	
 }
