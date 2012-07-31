@@ -255,6 +255,18 @@ public class NodeReader
                 return buildContainerNode(root, namespace, uri);
             else if (type.equals(DataNode.class.getSimpleName()))
                 return buildDataNode(root, namespace, uri);
+            else if (type.equals(LinkNode.class.getSimpleName()))
+            {
+                // target element in the node element
+                Element target = root.getChild("target", namespace);
+                if (target == null)
+                {
+                    String error = "target element not found in node element";
+                    throw new NodeParsingException(error);
+                }
+                log.debug("node target: " + target.getText());
+                return buildLinkNode(root, namespace, uri, target.getText());
+            }
             else
                 throw new NodeParsingException("unsupported node type " + type);
         }
@@ -275,6 +287,51 @@ public class NodeReader
 //        return vospaceSchemaUrl;
 //    }
 
+    /**
+     * Constructs a LinkNode from the given root Element of the
+     * Document, Document Namespace, and Node path.
+     *
+     * @param el a node Element in the Document.
+     * @param namespace Document Namespace.
+     * @param uri Node uri attribute.
+     * @param target Target resource pointed to by the LinkNode
+     * @return LinkNode.
+     * @throws NodeParsingException if there is an error parsing the XML.
+     * @throws URISyntaxException 
+     */
+    protected Node buildLinkNode(Element el, Namespace namespace, String uri,
+    		String target)
+        throws NodeParsingException, URISyntaxException
+    {
+        // Instantiate a DataNode class
+        LinkNode node;
+        VOSURI vosuri;
+        try
+        {
+        	vosuri = new VOSURI(uri);
+        }
+        catch (URISyntaxException e)
+        {
+        	String error = "invalid node uri " + uri;
+            throw new NodeParsingException(error, e);
+        }
+        
+        try
+        {
+            node = new LinkNode(vosuri, new URI(target));
+        }
+        catch (URISyntaxException e)
+        {
+            String error = "invalid node target " + target;
+            throw new NodeParsingException(error, e);
+        }
+
+        // properties element
+        node.setProperties(getProperties(el, namespace));
+
+        return node;
+    }
+    
     /**
      * Constructs a ContainerNode from the given Element of the
      * Document, Document Namespace, and Node path.

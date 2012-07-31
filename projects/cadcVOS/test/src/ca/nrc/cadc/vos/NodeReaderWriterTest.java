@@ -106,9 +106,10 @@ public class NodeReaderWriterTest
         Log4jInit.setLevel("ca.nrc.cadc.vos", Level.INFO);
     }
 
-    // TODO: make liosts of nodes for a variety of test scenarios
+    // TODO: make lists of nodes for a variety of test scenarios
     ContainerNode containerNode;
     DataNode dataNode;
+    LinkNode linkNode;
 
     public NodeReaderWriterTest()
     {
@@ -146,6 +147,11 @@ public class NodeReaderWriterTest
         containerNode.setProperties(properties);
         containerNode.setNodes(nodes);
 
+        // LinkNode
+        linkNode = new LinkNode(new VOSURI("vos://cadc.nrc.ca!vospace/dir/somefile"),
+        		new URI("vos://cadc.nrc.ca!vospace/dir/sometarget"));
+        linkNode.setProperties(properties);
+        
         // DataNode
         dataNode = new DataNode(new VOSURI("vos://cadc.nrc.ca!vospace/dir/somefile"));
         dataNode.setProperties(properties);
@@ -193,6 +199,11 @@ public class NodeReaderWriterTest
     {
         Assert.assertEquals("busy", n1.getBusy(), n2.getBusy());
     }
+
+    private void compareLinkNodes(LinkNode n1, LinkNode n2)
+    {
+        Assert.assertEquals("target", n1.getTarget(), n2.getTarget());
+    }
     
     private void compareURIList(List<URI> l1, List<URI> l2)
     {
@@ -213,6 +224,8 @@ public class NodeReaderWriterTest
             compareContainerNodes((ContainerNode) n1, (ContainerNode) n2);
         else if (n1 instanceof DataNode)
             compareDataNodes((DataNode) n1, (DataNode) n2);
+        else if (n1 instanceof LinkNode)
+            compareLinkNodes((LinkNode) n1, (LinkNode) n2);
         else
             throw new UnsupportedOperationException("no test comparison for node type "
                     + n1.getClass().getName());
@@ -262,6 +275,30 @@ public class NodeReaderWriterTest
             Node n2 = reader.read(sb.toString());
 
             compareNodes(dataNode, n2);
+        }
+        catch (Throwable t)
+        {
+            log.error(t);
+            fail(t.getMessage());
+        }
+    }
+    
+    @Test
+    public void writeValidLinkNode()
+    {
+        try
+        {
+            log.debug("writeValidLinkNode");
+            StringBuilder sb = new StringBuilder();
+            NodeWriter instance = new NodeWriter();
+            instance.write(linkNode, sb);
+            log.debug(sb.toString());
+
+            // validate the XML
+            NodeReader reader = new NodeReader();
+            Node n2 = reader.read(sb.toString());
+
+            compareNodes(linkNode, n2);
         }
         catch (Throwable t)
         {
@@ -398,7 +435,7 @@ public class NodeReaderWriterTest
         }
     }
 
-    // samle node with lots of detail in it
+    // sample node with lots of detail in it
     private ContainerNode createDetailedNode() throws URISyntaxException
     {
         // ContainerNode
