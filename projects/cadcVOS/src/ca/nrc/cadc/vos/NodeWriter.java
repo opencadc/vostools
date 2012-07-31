@@ -202,9 +202,6 @@ public class NodeWriter
         Element props = getPropertiesElement(node);
         ret.addContent(props);
 
-        ret.addContent(getAcceptsElement(node));
-        ret.addContent(getProvidesElement(node));
-
         if (node instanceof ContainerNode)
         {
             ContainerNode cn = (ContainerNode) node;
@@ -212,12 +209,21 @@ public class NodeWriter
         }
         else if (node instanceof DataNode)
         {
+            ret.addContent(getAcceptsElement(node));
+            ret.addContent(getProvidesElement(node));
             DataNode dn = (DataNode) node;
             ret.setAttribute("busy", (dn.getBusy().equals(NodeBusyState.notBusy) ? "false" : "true"));
         }
+        else if (node instanceof LinkNode)
+        {
+            LinkNode ln = (LinkNode) node;
+            Element targetEl = new Element("target", defaultNamespace);
+            targetEl.setText(ln.getTarget().toString());
+            ret.addContent(targetEl);
+        }
         return ret;
     }
-
+    
     /**
      * Build the properties Element of a Node.
      *
