@@ -69,7 +69,6 @@
 
 package ca.nrc.cadc.vos.server;
 
-import ca.nrc.cadc.util.FileMetadata;
 import java.net.URI;
 import java.net.URISyntaxException;
 import java.security.AccessControlContext;
@@ -84,6 +83,7 @@ import org.apache.log4j.Logger;
 
 import ca.nrc.cadc.auth.IdentityManager;
 import ca.nrc.cadc.auth.X500IdentityManager;
+import ca.nrc.cadc.util.FileMetadata;
 import ca.nrc.cadc.util.StringUtil;
 import ca.nrc.cadc.vos.ContainerNode;
 import ca.nrc.cadc.vos.DataNode;
@@ -91,8 +91,8 @@ import ca.nrc.cadc.vos.Node;
 import ca.nrc.cadc.vos.NodeNotFoundException;
 import ca.nrc.cadc.vos.NodeProperty;
 import ca.nrc.cadc.vos.VOS;
-import ca.nrc.cadc.vos.VOSURI;
 import ca.nrc.cadc.vos.VOS.NodeBusyState;
+import ca.nrc.cadc.vos.VOSURI;
 
 /**
  * Simple implementation of the NodePersistence interface that uses the NodeDAO
@@ -398,5 +398,29 @@ public abstract class DatabaseNodePersistence implements NodePersistence
     {
         NodeDAO dao = getDAO( node.getUri().getAuthority() );
         dao.delete(node, batchSize, dryrun);
+    }
+    
+    /**
+     * Admin method: Get the list of child-parent pairs whos size deltas
+     * need to be pushed upwards.
+     * @param limit The maximum number to return.
+     * @return The list of NodeSizePropagations sorted with data nodes first,
+     * then last to most recently modified.
+     */
+    public List<NodeSizePropagation> getOutstandingPropagations(int limit)
+    {
+    	NodeDAO dao = getDAO(null);
+        return dao.getOutstandingPropagations(limit);
+    }
+    
+    /**
+     * Admin method: Apply the delta value for this propagation object from
+     * child to parent.  Reset the child delta to zero.
+     * @param propagation
+     */
+    public void applyPropagation(final NodeSizePropagation propagation)
+    {
+        NodeDAO dao = getDAO(null);
+        dao.applyPropagation(propagation);
     }
 }

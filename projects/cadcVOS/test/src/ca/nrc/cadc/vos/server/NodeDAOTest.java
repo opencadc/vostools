@@ -1930,6 +1930,134 @@ public class NodeDAOTest
             log.debug("testMoveDelta - DONE");
         }
     }
+    
+    @Test
+    public void testGetOutstandingSizePropagations()
+    {
+        log.debug("testGetOutstandingSizePropagations - START");
+        try
+        {
+            DBConfig dbConfig = new DBConfig();
+            ConnectionConfig connConfig = dbConfig.getConnectionConfig(SERVER, DATABASE);
+            this.dataSource = DBUtil.getDataSource(connConfig);
+            NodeSchema ns = new NodeSchema("Node", "NodeProperty", true, false); // TOP, read-only
+            this.nodeDAO = new NodeDAO(dataSource, ns, VOS_AUTHORITY, new X500IdentityManager(), DELETED_NODES);
+
+            ContainerNode rootContainer = (ContainerNode) nodeDAO.getPath(HOME_CONTAINER);
+            log.debug("ROOT: " + rootContainer);
+            Assert.assertNotNull(rootContainer);
+
+            String basePath = "/" + HOME_CONTAINER + "/";
+            
+            // Create a container node
+            String containerPath = basePath + getNodeName("trickle-test1");
+            ContainerNode containerNode = this.getCommonContainerNode(containerPath);
+            containerNode.setParent(rootContainer);
+            containerNode = (ContainerNode) nodeDAO.put(containerNode, owner);
+            
+            // Create a data node
+            String dataPath = containerNode.getUri().getPath() + "/" + "dataNode" + System.currentTimeMillis();
+            DataNode dataNode = getCommonDataNode(dataPath);
+            dataNode.setParent(containerNode);
+            nodeDAO.put(dataNode, owner);
+            
+            // manually set the deltas
+            JdbcTemplate jdbc = new JdbcTemplate(dataSource);
+            String sql = "update Node set delta=11 where name='" + dataNode.getName() + "'";
+            jdbc.update(sql);
+            sql = "update Node set delta=3 where name='" + containerNode.getName() + "'";
+            jdbc.update(sql);
+            
+            // grab the nodeIDs for assertion
+            sql = "select nodeID from Node where name='" + dataNode.getName() + "'";
+            Long dataNodeID = jdbc.queryForLong(sql);
+            sql = "select nodeID from Node where name='" + containerNode.getName() + "'";
+            Long containerNodeID = jdbc.queryForLong(sql);
+            sql = "select nodeID from Node where name='" + rootContainer.getName() + "'";
+            Long rootNodeID = jdbc.queryForLong(sql);
+            
+            List<NodeSizePropagation> propagations = nodeDAO.getOutstandingPropagations(100);
+            Assert.assertTrue("Wrong number of oustanding propagations", propagations.size() == 2);
+            // order is by type (data first), then last modified
+            Assert.assertEquals("Wrong data node ID", dataNodeID, (Long) propagations.get(0).getChildID());
+            Assert.assertEquals("Wrong data node ID", containerNodeID, (Long) propagations.get(0).getParentID());
+            Assert.assertEquals("Wrong data node ID", containerNodeID, (Long) propagations.get(1).getChildID());
+            Assert.assertEquals("Wrong data node ID", rootNodeID, (Long) propagations.get(1).getParentID());
+
+        }
+        catch(Exception unexpected)
+        {
+            log.error("unexpected exception", unexpected);
+            Assert.fail("unexpected exception: " + unexpected);
+        }
+        finally
+        {
+            log.debug("testGetOutstandingSizePropagations - DONE");
+        }
+    }
+    
+    @Test
+    public void testApplyNodeSizePropagation()
+    {
+        log.debug("testApplyNodeSizePropagation - START");
+        try
+        {
+            DBConfig dbConfig = new DBConfig();
+            ConnectionConfig connConfig = dbConfig.getConnectionConfig(SERVER, DATABASE);
+            this.dataSource = DBUtil.getDataSource(connConfig);
+            NodeSchema ns = new NodeSchema("Node", "NodeProperty", true, false); // TOP, read-only
+            this.nodeDAO = new NodeDAO(dataSource, ns, VOS_AUTHORITY, new X500IdentityManager(), DELETED_NODES);
+
+            ContainerNode rootContainer = (ContainerNode) nodeDAO.getPath(HOME_CONTAINER);
+            log.debug("ROOT: " + rootContainer);
+            Assert.assertNotNull(rootContainer);
+
+            String basePath = "/" + HOME_CONTAINER + "/";
+            
+            // Create a container node
+            String containerPath = basePath + getNodeName("trickle-test2");
+            ContainerNode containerNode = this.getCommonContainerNode(containerPath);
+            containerNode.setParent(rootContainer);
+            containerNode = (ContainerNode) nodeDAO.put(containerNode, owner);
+            
+            // Create a data node
+            String dataPath = containerNode.getUri().getPath() + "/" + "dataNode" + System.currentTimeMillis();
+            DataNode dataNode = getCommonDataNode(dataPath);
+            dataNode.setParent(containerNode);
+            nodeDAO.put(dataNode, owner);
+            
+            // manually set the deltas
+            JdbcTemplate jdbc = new JdbcTemplate(dataSource);
+            String sql = "update Node set delta=11 where name='" + dataNode.getName() + "'";
+            jdbc.update(sql);
+            sql = "update Node set delta=3 where name='" + containerNode.getName() + "'";
+            jdbc.update(sql);
+            
+            List<NodeSizePropagation> propagations = nodeDAO.getOutstandingPropagations(100);
+            Assert.assertTrue("Wrong number of outstanding propagations", propagations.size() == 2);
+            nodeDAO.applyPropagation(propagations.get(0));
+            
+            propagations = nodeDAO.getOutstandingPropagations(100);
+            Assert.assertTrue("Wrong number of outstanding propagations", propagations.size() == 1);
+            nodeDAO.applyPropagation(propagations.get(0));
+            
+            propagations = nodeDAO.getOutstandingPropagations(100);
+            Assert.assertTrue("Wrong number of outstanding propagations", propagations.size() == 1);
+            nodeDAO.applyPropagation(propagations.get(0));
+            
+            propagations = nodeDAO.getOutstandingPropagations(100);
+            Assert.assertTrue("Wrong number of outstanding propagations", propagations.size() == 0);
+        }
+        catch(Exception unexpected)
+        {
+            log.error("unexpected exception", unexpected);
+            Assert.fail("unexpected exception: " + unexpected);
+        }
+        finally
+        {
+            log.debug("testApplyNodeSizePropagation - DONE");
+        }
+    }
 
     private long getContentLength(Node node)
     {

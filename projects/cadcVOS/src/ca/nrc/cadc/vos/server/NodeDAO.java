@@ -134,7 +134,6 @@ public class NodeDAO
     static final String NODE_TYPE_CONTAINER = "C";
     
     private static final int NODE_NAME_COLUMN_SIZE = 256;
-    private static final int MAX_TIMESTAMP_LENGTH = 30;
 
     // Database connection.
     protected DataSource dataSource;
@@ -734,20 +733,22 @@ public class NodeDAO
                     }
                 }
                 */
-                
-                // if manually managing metadata
-                if (!nodeSchema.fileMetadataWritable)
-                {
-                    // apply the negative delta to the parent
-                    String sql = this.getApplyDeltaToParentSQL(node.getParent(), node, false);
-                    log.debug(sql);
-                    jdbc.update(sql);
-                }
 
-                // note: the following delete(s) can be large if the node has a large number of
-                // properties, but we don't constraint it because we never want to commit the
-                // above nodeSize update without deleting the DataNode itself
+                // lock the child
+                String sql = getUpdateLockSQL(node);
+                jdbc.update(sql);
+                
+                // get the nodeSize value
+                sql = getSelectNodeSizeSQL(node);
+                Long nodeSize = jdbc.queryForLong(sql);
+                    
+                // delete the node
                 deleteNode((DataNode) node);
+
+                // apply the negative nodeSize to the parent
+                sql = this.getApplyNodeSizeSQL(node.getParent(), nodeSize, false);
+                log.debug(sql);
+                jdbc.update(sql);
 
                 commitTransaction();
             }
@@ -1196,7 +1197,7 @@ public class NodeDAO
                     log.debug(sql);
                     int count = jdbc.update(sql);
                     if (count == 0)
-                    {
+                    {srcParent
                         // node in the path was moved or deleted
                         throw new IllegalStateException("destination path changed during update: "+n.getUri());
                     }
@@ -1206,29 +1207,16 @@ public class NodeDAO
                 log.debug("src node " + src.getUri().getPath() + ", delta = 0: skipping path updates");
             */
 
-            // if manually managing metadata, apply the content
-            // length deltas
-            if (!nodeSchema.fileMetadataWritable)
-            {
-                // these operations should happen in nodeID order to
-                // avoid deadlocks
-                
-                String sql1 = this.getApplyDeltaToParentSQL(src.getParent(), src, false);
-                String sql2 = this.getApplyDeltaToParentSQL(dest, src, true);
-                
-                if (getNodeID(src) > getNodeID(dest))
-                {
-                    sql1 = this.getApplyDeltaToParentSQL(dest, src, true);
-                    sql2 = this.getApplyDeltaToParentSQL(src.getParent(), src, false);
-                }
-                
-                log.debug(sql1);
-                jdbc.update(sql1);
-                log.debug(sql2);
-                jdbc.update(sql2);
-            }
+            // get the lock
+            String sql = this.getUpdateLockSQL(src);
+            jdbc.update(sql);
+            
+            // get the nodeSize
+            sql = this.getSelectNodeSizeSQL(src);
+            Long nodeSize = jdbc.queryForLong(sql);
             
             // re-parent the node
+            ContainerNode srcParent = src.getParent();
             src.setParent(dest);
 
             // update the node with the new parent and potentially new name
@@ -1240,6 +1228,24 @@ public class NodeDAO
                 // tried to move a busy data node
                 throw new IllegalStateException("src node busy: "+src.getUri());
             }
+            
+            // apply the nodeSize
+            String sql1 = getApplyNodeSizeSQL(srcParent, nodeSize, false);
+            String sql2 = getApplyNodeSizeSQL(dest, nodeSize, true);
+            
+            // these operations should happen in nodeID order for consitency
+            // to avoid deadlocks
+            if (getNodeID(src) > getNodeID(dest))
+            {
+                String swap = sql1;
+                sql1 = sql2;
+                sql2 = swap;
+            }
+            
+            log.debug(sql1);
+            jdbc.update(sql1);
+            log.debug(sql2);
+            jdbc.update(sql2);
             
             // recursive chown removed since it is costly and nominally incorrect
             
@@ -1435,7 +1441,7 @@ public class NodeDAO
             int count = chownNode(node, newOwnerObj, recursive, batchSize, 0, dryrun);
             if (!dryrun)
                 commitTransaction();
-            log.info("chown batch committed: " + count);
+            log.debug("chown batch committed: " + count);
         }
         catch (Throwable t)
         {
@@ -1495,7 +1501,73 @@ public class NodeDAO
         }
         return count;
     }
+    
+    /**
+     * Admin function.
+     * @param limit The maximum to return
+     * @return A list of outstanding node size propagations
+     */
+    List<NodeSizePropagation> getOutstandingPropagations(int limit)
+    {
+        log.debug("getOutstandingPropagations (limit " + limit + ")");
+        try
+        {
+            String sql = this.getFindOutstandingPropagationsSQL(limit);
+            NodeSizePropagationExtractor propagationExtractor = new NodeSizePropagationExtractor();
+            List<NodeSizePropagation> propagations = (List<NodeSizePropagation>) jdbc.query(sql, propagationExtractor);
+            return propagations;
+        }
+        catch (Throwable t)
+        {
+            String message = "getOutstandingPropagations failed: " + t.getMessage();
+            log.error(message, t);
+            throw new RuntimeException(message, t);
+        }
+    }
+    
+    /**
+     * Admin function.
+     * @param propagation
+     */
+    void applyPropagation(NodeSizePropagation propagation)
+    {
+        log.debug("applyPropagation: " + propagation);
+        try
+        {
+            startTransaction();
+            
+            // apply progagation updates
+            String[] propagationSQL = getApplyDeltaSQL(propagation);
+            for (String sql : propagationSQL)
+            {
+                log.debug(sql);
+                jdbc.update(sql);
+            }
 
+            commitTransaction();
+            log.debug("applyPropagation committed.");
+        }
+        catch (Throwable t)
+        {
+            log.error("applyPropagation rollback", t);
+            if (transactionStatus != null)
+                try { rollbackTransaction(); }
+                catch(Throwable oops) { log.error("failed to rollback transaction", oops); }
+            throw new RuntimeException("failed to apply propagation.", t);
+        }
+        finally
+        {
+            if (transactionStatus != null)
+            {
+                try
+                {
+                    log.warn("applyPropagation - BUG - transaction still open in finally... calling rollback");
+                    rollbackTransaction();
+                }
+                catch(Throwable oops) { log.error("failed to rollback transaction in finally", oops); }
+            }
+        }
+    }
 
     /**
      * Extract the internal nodeID of the provided node from the appData field.
@@ -1681,7 +1753,7 @@ public class NodeDAO
      * @return The SQL string for applying a negative or positive
      * delta to the parent of the target node.
      */
-    protected String getApplyDeltaToParentSQL(ContainerNode parent, Node node, boolean increment)
+    protected String getApplyNodeSizeSQL(ContainerNode dest, long nodeSize, boolean increment)
     {
         StringBuilder sb = new StringBuilder();
         sb.append("UPDATE ");
@@ -1691,50 +1763,117 @@ public class NodeDAO
             sb.append("+");
         else
             sb.append("-");
-        sb.append(" (SELECT nodeSize from ");
-        sb.append(getNodeTableName());
+        sb.append(nodeSize);
         sb.append(" WHERE nodeID = ");
-        sb.append(getNodeID(node));
-        sb.append(") WHERE nodeID = ");
-        sb.append(getNodeID(parent));
+        sb.append(getNodeID(dest));
         return sb.toString();
+    }
+    
+    protected String[] getApplyDeltaSQL(NodeSizePropagation propagation)
+    {
+        List<String> sql = new ArrayList<String>();
+        Date now = new Date();
+        
+        // update 1 adjusts the child node size and resets
+        // the delta to zero
+        StringBuilder sb = new StringBuilder();
+        sb.append("UPDATE ");
+        sb.append(getNodeTableName());
+        sb.append(" SET nodeSize = nodeSize + delta");
+        if (NODE_TYPE_CONTAINER.equals(propagation.getChildType()))
+        {
+            // tweak the date if a container node
+            sb.append(", lastModified = '");
+            sb.append(dateFormat.format(now));
+            sb.append("'");
+        }
+        sb.append(" WHERE nodeID = ");
+        sb.append(propagation.getChildID());
+        sql.add(sb.toString());
+        
+        // update 2 adjusts the parent delta
+        if (propagation.getParentID() != null)
+        {
+            sb = new StringBuilder();
+            sb.append("UPDATE ");
+            sb.append(getNodeTableName());
+            sb.append(" SET delta = delta + ");
+            sb.append("(SELECT delta FROM ");
+            sb.append(getNodeTableName());
+            sb.append(" WHERE nodeID = ");
+            sb.append(propagation.getChildID());
+            sb.append("), lastModified = '");
+            sb.append(dateFormat.format(now));
+            sb.append("'");
+            sb.append(" WHERE nodeID = ");
+            sb.append(propagation.getParentID());
+            sql.add(sb.toString());
+        }
+        
+        // update 3 resets the child delta
+        sb = new StringBuilder();
+        sb.append("UPDATE ");
+        sb.append(getNodeTableName());
+        sb.append(" SET delta = 0");
+        sb.append(" WHERE nodeID = ");
+        sb.append(propagation.getChildID());
+        sql.add(sb.toString());
+        
+        return sql.toArray(new String[0]);
     }
 
     protected String[] getRootUpdateLockSQL(Node n1, Node n2)
     {
-        Long id1 = null;
-        Long id2 = null;
         Node root1 = n1;
+        Node root2 = null;
         while (root1.getParent() != null)
             root1 = root1.getParent();
-        id1 = getNodeID(root1);
         if (n2 != null)
         {
-            Node root2 = n2;
+            root2 = n2;
             while (root2.getParent() != null)
                 root2 = root2.getParent();
-            id2 = getNodeID(root2);
         }
         
-        Long[] ids = null;
-        if ( id2 == null || id1.compareTo(id2) == 0 ) // same root
-            ids = new Long[] { id1 };
+        return getUpdateLockSQL(root1, root2);
+    }
+    
+    protected String[] getUpdateLockSQL(Node n1, Node n2)
+    {
+        Node[] nodes = null;
+        Long id1 = getNodeID(n1);
+        Long id2 = null;
+        if (n2 != null)
+            id2 = getNodeID(n2);
+        
+        if ( n2 == null || id1.compareTo(id2) == 0 ) // same node
+            nodes = new Node[] { n1 };
         else if (id1.compareTo(id2) < 0)
-            ids = new Long[] { id1, id2 };
+            nodes = new Node[] { n1, n2 };
         else
-            ids = new Long[] { id2, id1 };
-
-        String[] ret = new String[ids.length];
-        for (int i=0; i<ids.length; i++)
+            nodes = new Node[] { n2, n1 };
+        
+        String[] ret = new String[nodes.length];
+        for (int i=0; i<nodes.length; i++)
         {
-            StringBuilder sb = new StringBuilder();
-            sb.append("UPDATE ");
-            sb.append(getNodeTableName());
-            sb.append(" SET type='C' WHERE nodeID = ");
-            sb.append(ids[i]);
-            ret[i] = sb.toString();
+            ret[i] = getUpdateLockSQL(nodes[i]);
         }
         return ret;
+    }
+    
+    protected String getUpdateLockSQL(Node node)
+    {
+        Long id = getNodeID(node);
+        String type = getNodeType(node);
+
+        StringBuilder sb = new StringBuilder();
+        sb.append("UPDATE ");
+        sb.append(getNodeTableName());
+        sb.append(" SET type='");
+        sb.append(type);
+        sb.append("' WHERE nodeID = ");
+        sb.append(id);
+        return sb.toString();
     }
     
     // apply delta to Node.nodeSize (set if NULL)
@@ -1775,6 +1914,40 @@ public class NodeDAO
         sb.append(name);
         sb.append("' WHERE nodeID = ");
         sb.append(getNodeID(src));
+        return sb.toString();
+    }
+    
+    protected String getFindOutstandingPropagationsSQL(int limit)
+    {
+        StringBuilder sb = new StringBuilder();
+        sb.append("SELECT");
+        sb.append(" nodeID, type, parentID FROM ");
+        sb.append(getNodeTableName());
+        sb.append(" WHERE delta != 0");
+        sb.append(" AND type IN ('");
+        sb.append(NODE_TYPE_DATA);
+        sb.append("', '");
+        sb.append(NODE_TYPE_CONTAINER);
+        sb.append("') ORDER BY type DESC, lastModified ASC");
+        
+        if (nodeSchema.limitWithTop) // TOP, eg sybase
+            sb.replace(0, 6, "SELECT TOP " + limit);
+        else // LIMIT, eg postgresql
+        {
+            sb.append(" LIMIT ");
+            sb.append(limit);
+        }
+        
+        return sb.toString();
+    }
+    
+    protected String getSelectNodeSizeSQL(Node node)
+    {
+        StringBuilder sb = new StringBuilder();
+        sb.append("SELECT nodeSize FROM ");
+        sb.append(getNodeTableName());
+        sb.append(" WHERE nodeID = ");
+        sb.append(getNodeID(node));
         return sb.toString();
     }
 
@@ -1858,14 +2031,15 @@ public class NodeDAO
             sb.append(getNodeTableName());
             sb.append(" SET ");
             
+            sb.append("lastModified = ?, ");
+            
             if (nodeSchema.fileMetadataWritable)
             {
-                sb.append("nodeSize = ?, contentLength = ?, contentMD5 = ?");
+                sb.append("delta = (? - nodeSize), contentLength = ?, contentMD5 = ?");
             }
             else
             {
-                // - contentLength is a virtual column
-                // - set the delta to be the difference between the new and old sizes
+                // contentLength and md5 are virtual columns
                 sb.append(" delta = (contentLength - nodeSize)");
             }
             sb.append(" WHERE nodeID = ?");
@@ -1876,12 +2050,17 @@ public class NodeDAO
             PreparedStatement prep = conn.prepareStatement(sql);
 
             int col = 1;
+            
+            Date now = new Date();
+            Timestamp ts = new Timestamp(now.getTime());
+            prep.setTimestamp(col++, ts, cal);
+            
             if (nodeSchema.fileMetadataWritable)
             {
                 
                 if (len == null)
                 {
-                    prep.setNull(col++, Types.BIGINT);
+                    prep.setLong(col++, 0);
                     prep.setNull(col++, Types.BIGINT);
                 }
                 else
@@ -2541,5 +2720,31 @@ public class NodeDAO
             }
             return ret;
         }
+    }
+    
+    private class NodeSizePropagationExtractor implements ResultSetExtractor
+    {
+        @Override
+        public Object extractData(ResultSet rs) throws SQLException,
+                DataAccessException
+        {
+            List<NodeSizePropagation> propagations = new ArrayList<NodeSizePropagation>(rs.getFetchSize());
+            long childID;
+            String childType;
+            Long parentID;
+            NodeSizePropagation propagation = null;
+            int col;
+            while (rs.next())
+            {
+                col = 1;
+                childID = rs.getLong(col++);
+                childType = rs.getString(col++);
+                parentID = rs.getLong(col++);
+                propagation = new NodeSizePropagation(childID, childType, parentID);
+                propagations.add(propagation);
+            }
+            return propagations;
+        }
+        
     }
 }
