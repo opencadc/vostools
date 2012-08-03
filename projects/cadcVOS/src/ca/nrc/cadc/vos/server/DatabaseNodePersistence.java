@@ -87,8 +87,10 @@ import ca.nrc.cadc.util.FileMetadata;
 import ca.nrc.cadc.util.StringUtil;
 import ca.nrc.cadc.vos.ContainerNode;
 import ca.nrc.cadc.vos.DataNode;
+import ca.nrc.cadc.vos.LinkNode;
 import ca.nrc.cadc.vos.Node;
 import ca.nrc.cadc.vos.NodeNotFoundException;
+import ca.nrc.cadc.vos.NodeNotSupportedException;
 import ca.nrc.cadc.vos.NodeProperty;
 import ca.nrc.cadc.vos.VOS;
 import ca.nrc.cadc.vos.VOS.NodeBusyState;
@@ -226,8 +228,13 @@ public abstract class DatabaseNodePersistence implements NodePersistence
     }
 
     @Override
-    public Node put(Node node)
+    public Node put(Node node) throws NodeNotSupportedException
     {
+    	if (node.isStructured())
+    		throw new NodeNotSupportedException("StructuredDataNode is not supported.");
+    	else if (node instanceof LinkNode)
+    		// TODO: to be removed when we support LinkNode 
+    		throw new NodeNotSupportedException("LinkNode is not supported.");
         AccessControlContext acContext = AccessController.getContext();
         Subject caller = Subject.getSubject(acContext);
         NodeDAO dao = getDAO( node.getUri().getAuthority() );

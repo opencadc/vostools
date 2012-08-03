@@ -69,79 +69,36 @@
 
 package ca.nrc.cadc.vos;
 
-import java.net.URISyntaxException;
-import java.util.List;
-
-import org.apache.log4j.Logger;
-
-import ca.nrc.cadc.vos.VOS.NodeBusyState;
-
 /**
- * A VOSpace node that describes a data item.
+ * Exception indicating that a node type is not supported.
  * 
- * @author majorb
+ * @author yeunga
+ *
  */
-public class DataNode extends Node
+public class NodeNotSupportedException extends VOSException
 {
-    
-    private static Logger log = Logger.getLogger(DataNode.class);
-    
-    // Indicates if the node can be accessed.
-    private NodeBusyState busy;
-    
-    // Indicates if the VOSpace understands the data format.
-    private boolean structured;
-    
-    /**
-     * Data node constructor.
-     * @param uri
-     * @throws URISyntaxException 
+	
+	private static final long serialVersionUID = -250610256758602414L;
+
+	/**
+     * Constructor with message and cause.
+     * 
+     * @param message
+     * @param cause
      */
-    public DataNode(VOSURI uri)
+    public NodeNotSupportedException(String message, Throwable cause)
     {
-        super(uri);
-        this.structured = false;
-        this.busy = NodeBusyState.notBusy;
-    }
-    
-    /**
-     * DataNode constructor.
-     * @throws URISyntaxException 
-     */
-    public DataNode(VOSURI uri, List<NodeProperty> properties) throws URISyntaxException
-    {
-        super(uri, properties);
-        this.structured = false;
-        this.busy = NodeBusyState.notBusy;
+        super(message, cause);
     }
 
     /**
-     * @return true if the VOSpace understands the format of
-     * the data.
+     * Constructor with message.
+     * 
+     * @param message
      */
-    public boolean isStructured()
+    public NodeNotSupportedException(String message)
     {
-        return structured;
-    }
-
-    public void setStructured(boolean isStructured)
-    {
-        this.structured = isStructured;
-    }
-    
-    public NodeBusyState getBusy()
-    {
-        return busy;
-    }
-
-    public void setBusy(NodeBusyState busy)
-    {
-        this.busy = busy;
-    }
-    
-    public boolean isBusy()
-    {
-        return !NodeBusyState.notBusy.equals(busy);
+        super(message);
     }
 
 }

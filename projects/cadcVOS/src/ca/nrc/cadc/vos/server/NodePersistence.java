@@ -76,6 +76,7 @@ import ca.nrc.cadc.vos.ContainerNode;
 import ca.nrc.cadc.vos.DataNode;
 import ca.nrc.cadc.vos.Node;
 import ca.nrc.cadc.vos.NodeNotFoundException;
+import ca.nrc.cadc.vos.NodeNotSupportedException;
 import ca.nrc.cadc.vos.NodeProperty;
 import ca.nrc.cadc.vos.VOSURI;
 import ca.nrc.cadc.vos.VOS.NodeBusyState;
@@ -142,8 +143,9 @@ public interface NodePersistence
      *
      * @param node
      * @return the persisted node
+     * @throws NodeNotSupportedException
      */
-    public Node put(Node node);
+    public Node put(Node node) throws NodeNotSupportedException;
 
     /**
      * Update the properties of the specified node.  The node must have

@@ -74,74 +74,36 @@ import java.util.List;
 
 import org.apache.log4j.Logger;
 
-import ca.nrc.cadc.vos.VOS.NodeBusyState;
-
 /**
- * A VOSpace node that describes a data item.
+ * A VOSpace node that describes a structured data item.
  * 
- * @author majorb
+ * @author yeunga
  */
-public class DataNode extends Node
+public class StructuredDataNode extends DataNode
 {
     
-    private static Logger log = Logger.getLogger(DataNode.class);
-    
-    // Indicates if the node can be accessed.
-    private NodeBusyState busy;
-    
-    // Indicates if the VOSpace understands the data format.
-    private boolean structured;
+    private static Logger log = Logger.getLogger(StructuredDataNode.class);
     
     /**
-     * Data node constructor.
+     * StructuredDataNode constructor.
      * @param uri
      * @throws URISyntaxException 
      */
-    public DataNode(VOSURI uri)
+    public StructuredDataNode(VOSURI uri)
     {
         super(uri);
-        this.structured = false;
-        this.busy = NodeBusyState.notBusy;
+        this.setStructured(true);
     }
     
     /**
-     * DataNode constructor.
+     * StructuredDataNode constructor.
      * @throws URISyntaxException 
      */
-    public DataNode(VOSURI uri, List<NodeProperty> properties) throws URISyntaxException
+    public StructuredDataNode(VOSURI uri, List<NodeProperty> properties) 
+    		throws URISyntaxException
     {
         super(uri, properties);
-        this.structured = false;
-        this.busy = NodeBusyState.notBusy;
-    }
-
-    /**
-     * @return true if the VOSpace understands the format of
-     * the data.
-     */
-    public boolean isStructured()
-    {
-        return structured;
-    }
-
-    public void setStructured(boolean isStructured)
-    {
-        this.structured = isStructured;
-    }
-    
-    public NodeBusyState getBusy()
-    {
-        return busy;
-    }
-
-    public void setBusy(NodeBusyState busy)
-    {
-        this.busy = busy;
-    }
-    
-    public boolean isBusy()
-    {
-        return !NodeBusyState.notBusy.equals(busy);
+        this.setStructured(true);
     }
 
 }

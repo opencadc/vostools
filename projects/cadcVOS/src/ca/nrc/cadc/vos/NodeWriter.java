@@ -207,7 +207,9 @@ public class NodeWriter
             ContainerNode cn = (ContainerNode) node;
             ret.addContent(getNodesElement(cn));
         }
-        else if (node instanceof DataNode)
+        else if ((node instanceof DataNode) || 
+        		(node instanceof UnstructuredDataNode) ||
+        		(node instanceof StructuredDataNode))
         {
             ret.addContent(getAcceptsElement(node));
             ret.addContent(getProvidesElement(node));

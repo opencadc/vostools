@@ -110,14 +110,15 @@ public class ContainerNode extends Node
 
     /**
      * A container node is structured if all its
-     * nodes within are structured.
+     * nodes within are structured. A container node is unstructured 
+     * if it is empty.
      * 
      * @return True if the node is considered structured.
      */
     public boolean isStructured()
     {
-        boolean structured = true;
         Iterator<Node> i = nodes.iterator();
+        boolean structured = i.hasNext();
         while (i.hasNext() && structured == true)
         {
             if (!i.next().isStructured())

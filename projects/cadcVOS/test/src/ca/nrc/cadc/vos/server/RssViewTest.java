@@ -76,9 +76,12 @@ import ca.nrc.cadc.db.DBUtil;
 import ca.nrc.cadc.util.Log4jInit;
 import ca.nrc.cadc.vos.ContainerNode;
 import ca.nrc.cadc.vos.DataNode;
+import ca.nrc.cadc.vos.LinkNode;
 import ca.nrc.cadc.vos.Node;
 import ca.nrc.cadc.vos.NodeNotFoundException;
+import ca.nrc.cadc.vos.NodeNotSupportedException;
 import ca.nrc.cadc.vos.NodeProperty;
+import ca.nrc.cadc.vos.StructuredDataNode;
 import ca.nrc.cadc.vos.VOS;
 import ca.nrc.cadc.vos.VOSURI;
 import ca.nrc.cadc.vos.server.auth.VOSpaceAuthorizer;
@@ -353,6 +356,60 @@ public class RssViewTest
         }
     }
 
+    @Test
+    public void testSetStructuredDataNode()
+    {
+        try
+        {
+            Subject subject = new Subject();
+            subject.getPrincipals().add(new X500Principal(REGTEST_NODE_OWNER));
+
+            // Get the root container node for the test.
+            GetRootNodeActionOnStructuredDataNode getRootNodeAction = 
+            		new GetRootNodeActionOnStructuredDataNode(nodePersistence);
+            ContainerNode root = (ContainerNode) Subject.doAs(subject, getRootNodeAction);
+            log.debug("root node: " + root);
+            Assert.fail("Expected NodeNotSupportedException from StructuredDataNode, but was not thrown.");
+        }
+        catch(Exception ex)
+        {
+        	if (ex.getCause() instanceof NodeNotSupportedException)
+        		log.info("testSetStructuredDataNode passed");
+        	else
+        	{
+	            log.error("unexpected exception", ex);
+	            Assert.fail("unexpected exception: " + ex);
+        	}
+        }
+    }
+
+    @Test
+    public void testSetLinkNode()
+    {
+        try
+        {
+            Subject subject = new Subject();
+            subject.getPrincipals().add(new X500Principal(REGTEST_NODE_OWNER));
+
+            // Get the root container node for the test.
+            GetRootNodeActionOnLinkNode getRootNodeAction = 
+            		new GetRootNodeActionOnLinkNode(nodePersistence);
+            ContainerNode root = (ContainerNode) Subject.doAs(subject, getRootNodeAction);
+            log.debug("root node: " + root);
+            Assert.fail("Expected NodeNotSupportedException from LinkNode, but was not thrown.");
+        }
+        catch(Exception ex)
+        {
+        	if (ex.getCause() instanceof NodeNotSupportedException)
+        		log.info("testSetLinkNode passed");
+        	else
+        	{
+	            log.error("unexpected exception", ex);
+	            Assert.fail("unexpected exception: " + ex);
+        	}
+        }
+    }
+
     class TestNodePersistence extends DatabaseNodePersistence
     {
         private String server;
@@ -487,7 +544,7 @@ public class RssViewTest
             return root;
         }
 
-        private Node getNode(VOSURI vos, Node node)
+        private Node getNode(VOSURI vos, Node node) throws NodeNotSupportedException
         {
             try
             {
@@ -504,6 +561,115 @@ public class RssViewTest
 
     }
 
+    private class GetRootNodeActionOnStructuredDataNode implements PrivilegedExceptionAction<Object>
+    {
+        private NodePersistence nodePersistence;
+
+        GetRootNodeActionOnStructuredDataNode(NodePersistence nodePersistence)
+        {
+            this.nodePersistence = nodePersistence;
+        }
+
+        public Object run() throws Exception
+        {
+            // Root container.
+            VOSURI vos = new VOSURI(new URI("vos", VOS_AUTHORITY, "/" + ROOT_CONTAINER, null, null));
+            ContainerNode root = new ContainerNode(vos);
+            root.getProperties().add(new NodeProperty(VOS.PROPERTY_URI_CREATOR, REGTEST_NODE_OWNER));
+            root.getProperties().add(new NodeProperty(VOS.PROPERTY_URI_ISPUBLIC, Boolean.TRUE.toString()));
+            root = (ContainerNode) getNode(vos, root);
+
+            // Child container node of root.
+            VOSURI child1Uri = new VOSURI(new URI("vos", VOS_AUTHORITY, "/" + ROOT_CONTAINER + "/child1", null, null));
+            ContainerNode child1 = new ContainerNode(child1Uri);
+            child1.setParent(root);
+            child1.getProperties().add(new NodeProperty(VOS.PROPERTY_URI_CREATOR, REGTEST_NODE_OWNER));
+            child1.getProperties().add(new NodeProperty(VOS.PROPERTY_URI_ISPUBLIC, Boolean.TRUE.toString()));
+            child1 = (ContainerNode) getNode(child1Uri, child1);
+
+            // Child data node of root.
+            VOSURI child2Uri = new VOSURI(new URI("vos", VOS_AUTHORITY, "/" + ROOT_CONTAINER + "/child2StructuredDataNode", null, null));
+            StructuredDataNode child2 = new StructuredDataNode(child2Uri);
+            child2.setParent(root);
+            child2.getProperties().add(new NodeProperty(VOS.PROPERTY_URI_CREATOR, REGTEST_NODE_OWNER));
+            child2.getProperties().add(new NodeProperty(VOS.PROPERTY_URI_ISPUBLIC, Boolean.TRUE.toString()));
+            child2 = (StructuredDataNode) getNode(child2Uri, child2);
+
+            return root;
+        }
+
+        private Node getNode(VOSURI vos, Node node) throws NodeNotSupportedException
+        {
+            try
+            {
+                node = nodePersistence.get(vos);
+                log.debug("found root node: " + node.getName());
+            }
+            catch (NodeNotFoundException e)
+            {
+                node = nodePersistence.put(node);
+                log.debug("put root node: " + node.getName());
+            }
+            return node;
+        }
+
+    }
+
+    private class GetRootNodeActionOnLinkNode implements PrivilegedExceptionAction<Object>
+    {
+        private NodePersistence nodePersistence;
+
+        GetRootNodeActionOnLinkNode(NodePersistence nodePersistence)
+        {
+            this.nodePersistence = nodePersistence;
+        }
+
+        public Object run() throws Exception
+        {
+            // Root container.
+            VOSURI vos = new VOSURI(new URI("vos", VOS_AUTHORITY, "/" + ROOT_CONTAINER, null, null));
+            ContainerNode root = new ContainerNode(vos);
+            root.getProperties().add(new NodeProperty(VOS.PROPERTY_URI_CREATOR, REGTEST_NODE_OWNER));
+            root.getProperties().add(new NodeProperty(VOS.PROPERTY_URI_ISPUBLIC, Boolean.TRUE.toString()));
+            root = (ContainerNode) getNode(vos, root);
+
+            // Child container node of root.
+            VOSURI child1Uri = new VOSURI(new URI("vos", VOS_AUTHORITY, "/" + ROOT_CONTAINER + "/child1", null, null));
+            ContainerNode child1 = new ContainerNode(child1Uri);
+            child1.setParent(root);
+            child1.getProperties().add(new NodeProperty(VOS.PROPERTY_URI_CREATOR, REGTEST_NODE_OWNER));
+            child1.getProperties().add(new NodeProperty(VOS.PROPERTY_URI_ISPUBLIC, Boolean.TRUE.toString()));
+            child1 = (ContainerNode) getNode(child1Uri, child1);
+
+            // Child data node of root.
+            VOSURI child2Uri = new VOSURI(new URI("vos", VOS_AUTHORITY, "/" + ROOT_CONTAINER + "/child2LinkNode", null, null));
+            URI child2Target = new URI("vos", VOS_AUTHORITY, "/" + ROOT_CONTAINER + "/child2Target", null, null);
+            LinkNode child2 = new LinkNode(child2Uri, child2Target);
+            child2.setParent(root);
+            child2.getProperties().add(new NodeProperty(VOS.PROPERTY_URI_CREATOR, REGTEST_NODE_OWNER));
+            child2.getProperties().add(new NodeProperty(VOS.PROPERTY_URI_ISPUBLIC, Boolean.TRUE.toString()));
+            child2 = (LinkNode) getNode(child2Uri, child2);
+
+            return root;
+        }
+
+        private Node getNode(VOSURI vos, Node node) throws NodeNotSupportedException
+        {
+            try
+            {
+                node = nodePersistence.get(vos);
+                log.debug("found root node: " + node.getName());
+            }
+            catch (NodeNotFoundException e)
+            {
+                node = nodePersistence.put(node);
+                log.debug("put root node: " + node.getName());
+            }
+            return node;
+        }
+
+    }
+    
     private class GetChildNodeAction implements PrivilegedExceptionAction<Object>
     {
         private NodePersistence nodePersistence;
@@ -526,7 +692,7 @@ public class RssViewTest
             return "http://" + VOS_AUTHORITY + "/" + ROOT_CONTAINER + "/child5/child9";
         }
 
-        private Node getNode(VOSURI vos, Node node)
+        private Node getNode(VOSURI vos, Node node) throws NodeNotSupportedException
         {
             try
             {

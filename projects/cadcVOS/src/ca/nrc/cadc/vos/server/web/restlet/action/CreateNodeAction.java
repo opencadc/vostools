@@ -80,6 +80,7 @@ import ca.nrc.cadc.vos.Node;
 import ca.nrc.cadc.vos.NodeAlreadyExistsException;
 import ca.nrc.cadc.vos.NodeFault;
 import ca.nrc.cadc.vos.NodeNotFoundException;
+import ca.nrc.cadc.vos.NodeNotSupportedException;
 import ca.nrc.cadc.vos.NodeParsingException;
 import ca.nrc.cadc.vos.NodeWriter;
 import ca.nrc.cadc.vos.VOSURI;
@@ -157,6 +158,13 @@ public class CreateNodeAction extends NodeAction
         {
             log.debug("Node already exists: " + clientNode.getUri().getPath(), e);
             NodeFault nodeFault = NodeFault.DuplicateNode;
+            nodeFault.setMessage(clientNode.getUri().toString());
+            return new NodeActionResult(nodeFault);
+        }
+        catch (NodeNotSupportedException e)
+        {
+            log.debug("Node type not supported: " + clientNode.getUri().getPath(), e);
+            NodeFault nodeFault = NodeFault.TypeNotSupported;
             nodeFault.setMessage(clientNode.getUri().toString());
             return new NodeActionResult(nodeFault);
         }

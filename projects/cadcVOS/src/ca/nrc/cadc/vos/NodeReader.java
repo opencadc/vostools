@@ -155,8 +155,7 @@ public class NodeReader
      * @return Node Node.
      * @throws NodeParsingException if there is an error parsing the XML.
      */
-    public Node read(String xml)
-        throws NodeParsingException
+    public Node read(String xml) throws NodeParsingException
     {
         if (xml == null)
             throw new IllegalArgumentException("XML must not be null");
@@ -178,8 +177,7 @@ public class NodeReader
      * @return Node Node.
      * @throws NodeParsingException if there is an error parsing the XML.
      */
-    public Node read(InputStream in)
-        throws IOException, NodeParsingException
+    public Node read(InputStream in) throws IOException, NodeParsingException
     {
         if (in == null)
             throw new IOException("stream closed");
@@ -200,8 +198,8 @@ public class NodeReader
      * @return Node Node.
      * @throws NodeParsingException if there is an error parsing the XML.
      */
-    public Node read(Reader reader)
-        throws NodeParsingException, IOException
+    public Node read(Reader reader) 
+    		throws NodeParsingException, IOException
     {
         if (reader == null)
             throw new IllegalArgumentException("reader must not be null");
@@ -255,6 +253,8 @@ public class NodeReader
                 return buildContainerNode(root, namespace, uri);
             else if (type.equals(DataNode.class.getSimpleName()))
                 return buildDataNode(root, namespace, uri);
+            else if (type.equals(UnstructuredDataNode.class.getSimpleName()))
+            	return buildUnstructuredDataNode(root, namespace, uri);
             else if (type.equals(LinkNode.class.getSimpleName()))
             {
                 // target element in the node element
@@ -267,6 +267,8 @@ public class NodeReader
                 log.debug("node target: " + target.getText());
                 return buildLinkNode(root, namespace, uri, target.getText());
             }
+            else if (type.equals(StructuredDataNode.class.getSimpleName()))
+            	return buildStructuredDataNode(root, namespace, uri);
             else
                 throw new NodeParsingException("unsupported node type " + type);
         }
@@ -299,8 +301,7 @@ public class NodeReader
      * @throws NodeParsingException if there is an error parsing the XML.
      * @throws URISyntaxException 
      */
-    protected Node buildLinkNode(Element el, Namespace namespace, String uri,
-    		String target)
+    protected Node buildLinkNode(Element el, Namespace namespace, String uri, String target)
         throws NodeParsingException, URISyntaxException
     {
         // Instantiate a DataNode class
@@ -404,33 +405,20 @@ public class NodeReader
 
         return node;
     }
-
+    
     /**
-     * Constructs a DataNode from the given root Element of the
-     * Document, Document Namespace, and Node path.
+     * Sets the attributes of a DataNode from the given DataNode, Element 
+     * of the Document and Document Namespace.
      *
+     * @parm node a DataNode
      * @param el a node Element in the Document.
      * @param namespace Document Namespace.
-     * @param uri Node uri attribute.
-     * @return DataNode.
      * @throws NodeParsingException if there is an error parsing the XML.
      * @throws URISyntaxException 
      */
-    protected Node buildDataNode(Element el, Namespace namespace, String uri)
-        throws NodeParsingException, URISyntaxException
+    protected void setDataNodeAttributes(DataNode node, Element el, Namespace namespace) 
+    		throws NodeParsingException, URISyntaxException
     {
-        // Instantiate a DataNode class
-        DataNode node;
-        try
-        {
-            node = new DataNode(new VOSURI(uri));
-        }
-        catch (URISyntaxException e)
-        {
-            String error = "invalid node uri " + uri;
-            throw new NodeParsingException(error, e);
-        }
-
         // busy attribute
         String busy = el.getAttributeValue("busy");
         if (busy == null)
@@ -463,9 +451,101 @@ public class NodeReader
         // provides element
         node.provides().addAll(getViewURIs(el, namespace, "provides"));
 
+    }
+    
+    /**
+     * Constructs a DataNode from the given root Element of the
+     * Document, Document Namespace, and Node path.
+     *
+     * @param el a node Element in the Document.
+     * @param namespace Document Namespace.
+     * @param uri Node uri attribute.
+     * @return DataNode.
+     * @throws NodeParsingException if there is an error parsing the XML.
+     * @throws URISyntaxException 
+     */
+    protected Node buildDataNode(Element el, Namespace namespace, String uri)
+        throws NodeParsingException, URISyntaxException
+    {
+        // Instantiate a DataNode class
+        DataNode node;
+        try
+        {
+            node = new DataNode(new VOSURI(uri));
+        }
+        catch (URISyntaxException e)
+        {
+            String error = "invalid node uri " + uri;
+            throw new NodeParsingException(error, e);
+        }
+
+        setDataNodeAttributes(node, el, namespace);
+
         return node;
     }
 
+    /**
+     * Constructs an UnstructuredDataNode from the given root Element of the
+     * Document, Document Namespace, and Node path.
+     *
+     * @param el a node Element in the Document.
+     * @param namespace Document Namespace.
+     * @param uri Node uri attribute.
+     * @return UnstructuredDataNode.
+     * @throws NodeParsingException if there is an error parsing the XML.
+     * @throws URISyntaxException 
+     */
+    protected Node buildUnstructuredDataNode(Element el, Namespace namespace, String uri) 
+    		throws NodeParsingException, URISyntaxException
+    {
+        // Instantiate an UnstructuredDataNode class
+        UnstructuredDataNode node;
+        try
+        {
+            node = new UnstructuredDataNode(new VOSURI(uri));
+        }
+        catch (URISyntaxException e)
+        {
+            String error = "invalid node uri " + uri;
+            throw new NodeParsingException(error, e);
+        }
+
+        setDataNodeAttributes(node, el, namespace);
+
+        return node;
+    }
+
+    /**
+     * Constructs an StructuredDataNode from the given root Element of the
+     * Document, Document Namespace, and Node path.
+     *
+     * @param el a node Element in the Document.
+     * @param namespace Document Namespace.
+     * @param uri Node uri attribute.
+     * @return StructuredDataNode.
+     * @throws NodeParsingException if there is an error parsing the XML.
+     * @throws URISyntaxException 
+     */
+    protected Node buildStructuredDataNode(Element el, Namespace namespace, 
+    		String uri) throws NodeParsingException, URISyntaxException
+    {
+        // Instantiate an UnstructuredDataNode class
+        StructuredDataNode node;
+        try
+        {
+            node = new StructuredDataNode(new VOSURI(uri));
+        }
+        catch (URISyntaxException e)
+        {
+            String error = "invalid node uri " + uri;
+            throw new NodeParsingException(error, e);
+        }
+
+        setDataNodeAttributes(node, el, namespace);
+        
+        return node;
+    }
+    
     /**
      * Builds a List of NodeProperty objects from the Document property Elements.
      *

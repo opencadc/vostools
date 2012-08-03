@@ -110,6 +110,8 @@ public class NodeReaderWriterTest
     ContainerNode containerNode;
     DataNode dataNode;
     LinkNode linkNode;
+    UnstructuredDataNode unstructuredDataNode;
+    StructuredDataNode structuredDataNode;
 
     public NodeReaderWriterTest()
     {
@@ -151,6 +153,18 @@ public class NodeReaderWriterTest
         linkNode = new LinkNode(new VOSURI("vos://cadc.nrc.ca!vospace/dir/somefile"),
         		new URI("vos://cadc.nrc.ca!vospace/dir/sometarget"));
         linkNode.setProperties(properties);
+        
+        // UnstructuredDataNode
+        unstructuredDataNode = new UnstructuredDataNode(new VOSURI("vos://cadc.nrc.ca!vospace/dir/somefile"));
+        unstructuredDataNode.setProperties(properties);
+        unstructuredDataNode.setBusy(NodeBusyState.busyWithWrite);
+        // TODO: add some standard props here
+        
+        // StructuredDataNode
+        structuredDataNode = new StructuredDataNode(new VOSURI("vos://cadc.nrc.ca!vospace/dir/somefile"));
+        structuredDataNode.setProperties(properties);
+        structuredDataNode.setBusy(NodeBusyState.busyWithWrite);
+        // TODO: add some standard props here
         
         // DataNode
         dataNode = new DataNode(new VOSURI("vos://cadc.nrc.ca!vospace/dir/somefile"));
@@ -198,6 +212,7 @@ public class NodeReaderWriterTest
     private void compareDataNodes(DataNode n1, DataNode n2)
     {
         Assert.assertEquals("busy", n1.getBusy(), n2.getBusy());
+        Assert.assertEquals("structured", n1.isStructured(), n2.isStructured());
     }
 
     private void compareLinkNodes(LinkNode n1, LinkNode n2)
@@ -222,7 +237,7 @@ public class NodeReaderWriterTest
         compareURIList(n1.provides, n2.provides);
         if (n1 instanceof ContainerNode)
             compareContainerNodes((ContainerNode) n1, (ContainerNode) n2);
-        else if (n1 instanceof DataNode)
+        else if ((n1 instanceof DataNode) || (n1 instanceof UnstructuredDataNode) || (n1 instanceof StructuredDataNode))
             compareDataNodes((DataNode) n1, (DataNode) n2);
         else if (n1 instanceof LinkNode)
             compareLinkNodes((LinkNode) n1, (LinkNode) n2);
@@ -275,6 +290,54 @@ public class NodeReaderWriterTest
             Node n2 = reader.read(sb.toString());
 
             compareNodes(dataNode, n2);
+        }
+        catch (Throwable t)
+        {
+            log.error(t);
+            fail(t.getMessage());
+        }
+    }
+
+    @Test
+    public void writeValidUnstructuredDataNode()
+    {
+        try
+        {
+            log.debug("writeValidUnstructuredDataNode");
+            StringBuilder sb = new StringBuilder();
+            NodeWriter instance = new NodeWriter();
+            instance.write(unstructuredDataNode, sb);
+            log.debug(sb.toString());
+
+            // validate the XML
+            NodeReader reader = new NodeReader();
+            Node n2 = reader.read(sb.toString());
+
+            compareNodes(unstructuredDataNode, n2);
+        }
+        catch (Throwable t)
+        {
+            log.error(t);
+            fail(t.getMessage());
+        }
+    }
+
+    @Test
+    public void writeValidStructuredDataNode()
+    {
+        try
+        {
+            log.debug("writeValidStructuredDataNode");
+            StringBuilder sb = new StringBuilder();
+            NodeWriter instance = new NodeWriter();
+            instance.write(structuredDataNode, sb);
+            log.debug(sb.toString());
+
+            // validate the XML
+            NodeReader reader = new NodeReader();
+            Node n2 = reader.read(sb.toString());
+
+            compareNodes(structuredDataNode, n2);
         }
         catch (Throwable t)
         {
