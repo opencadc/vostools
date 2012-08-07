@@ -383,33 +383,6 @@ public class RssViewTest
         }
     }
 
-    @Test
-    public void testSetLinkNode()
-    {
-        try
-        {
-            Subject subject = new Subject();
-            subject.getPrincipals().add(new X500Principal(REGTEST_NODE_OWNER));
-
-            // Get the root container node for the test.
-            GetRootNodeActionOnLinkNode getRootNodeAction = 
-            		new GetRootNodeActionOnLinkNode(nodePersistence);
-            ContainerNode root = (ContainerNode) Subject.doAs(subject, getRootNodeAction);
-            log.debug("root node: " + root);
-            Assert.fail("Expected NodeNotSupportedException from LinkNode, but was not thrown.");
-        }
-        catch(Exception ex)
-        {
-        	if (ex.getCause() instanceof NodeNotSupportedException)
-        		log.info("testSetLinkNode passed");
-        	else
-        	{
-	            log.error("unexpected exception", ex);
-	            Assert.fail("unexpected exception: " + ex);
-        	}
-        }
-    }
-
     class TestNodePersistence extends DatabaseNodePersistence
     {
         private String server;

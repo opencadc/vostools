@@ -106,11 +106,14 @@ import ca.nrc.cadc.uws.ExecutionPhase;
 import ca.nrc.cadc.vos.ContainerNode;
 import ca.nrc.cadc.vos.DataNode;
 import ca.nrc.cadc.vos.Direction;
+import ca.nrc.cadc.vos.LinkNode;
 import ca.nrc.cadc.vos.Node;
 import ca.nrc.cadc.vos.NodeNotFoundException;
 import ca.nrc.cadc.vos.NodeProperty;
 import ca.nrc.cadc.vos.Protocol;
+import ca.nrc.cadc.vos.StructuredDataNode;
 import ca.nrc.cadc.vos.Transfer;
+import ca.nrc.cadc.vos.UnstructuredDataNode;
 import ca.nrc.cadc.vos.VOS;
 import ca.nrc.cadc.vos.VOSURI;
 import ca.nrc.cadc.vos.View;
@@ -143,6 +146,7 @@ public class Main implements Runnable
     public static final String ARG_GROUP_WRITE = "group-write";
     public static final String ARG_PROP = "prop";
     public static final String ARG_SRC = "src";
+    public static final String ARG_URI = "uri";
     public static final String ARG_DEST = "dest";
     public static final String ARG_CONTENT_TYPE = "content-type";
     public static final String ARG_CONTENT_ENCODING = "content-encoding";
@@ -157,6 +161,13 @@ public class Main implements Runnable
     private static final int MAX_CHILD_SIZE = 1000;
     
     /**
+     * Supported node type
+     */
+    public enum NodeType
+    {
+    	CONTAINER_NODE, LINK_NODE, STRUCTURED_DATA_NODE, UNSTRUCTURED_DATA_NODE
+    }
+    /**
      * Operations of VoSpace Client.
      */
     public enum Operation
@@ -164,6 +175,7 @@ public class Main implements Runnable
         VIEW, CREATE, DELETE, SET, COPY, MOVE
     }
 
+    private NodeType nodeType;
     private Operation operation;
     private VOSURI target;
     private List<NodeProperty> properties;
@@ -177,6 +189,9 @@ public class Main implements Runnable
     private VOSpaceClient client = null;
     private Subject subject;
     private boolean retryEnabled = false;
+    
+    // target of a LinkNode
+    private URI linkedTarget;
 
     /**
      * @param args  The arguments passed into this command.
@@ -445,8 +460,26 @@ public class Main implements Runnable
     {
         try
         {
-            ContainerNode cnode = new ContainerNode(target, properties);
-            Node nodeRtn = client.createNode(cnode);
+            Node node;
+            switch (this.nodeType)
+            {
+                case CONTAINER_NODE:
+                    node = new ContainerNode(this.target, this.properties);
+                    break;
+                case LINK_NODE:
+                    node = new LinkNode(this.target, this.properties, this.linkedTarget);
+                    break;
+                case STRUCTURED_DATA_NODE:
+                    node = new StructuredDataNode(this.target, this.properties);
+                    break;
+                case UNSTRUCTURED_DATA_NODE:
+                    node = new UnstructuredDataNode(this.target, this.properties);
+                    break;
+                default:
+                    throw new RuntimeException("BUG. Unsupported node type " + this.nodeType);
+            }
+        	
+            Node nodeRtn = client.createNode(node);
             log.info("created: " + nodeRtn.getUri());
         }
         catch(Throwable t)
@@ -1292,6 +1325,35 @@ public class Main implements Runnable
         {
             String strTarget = argMap.getValue(ARG_TARGET);
             if (strTarget == null) throw new IllegalArgumentException("Argument target is required for " + this.operation);
+            
+            if (this.operation.equals(Operation.CREATE))
+            {
+                String strNodeType = argMap.getValue(ARG_CREATE);
+                if (("true".equalsIgnoreCase(strNodeType)) || ("ContainerNode".equalsIgnoreCase(strNodeType)))
+                    this.nodeType = NodeType.CONTAINER_NODE;
+                else if (("DataNode".equalsIgnoreCase(strNodeType)) || ("UnstructuredDataNode".equalsIgnoreCase(strNodeType)))
+                    this.nodeType = NodeType.UNSTRUCTURED_DATA_NODE;
+                else if ("LinkNode".equalsIgnoreCase(strNodeType))
+                {
+                    String strUri = argMap.getValue(ARG_URI);
+                    if (strUri == null) throw new IllegalArgumentException("Argument uri is required for node type " + strNodeType);
+                    
+                    try
+                    {
+                        this.linkedTarget = new URI(strUri);
+                    }
+                    catch (URISyntaxException e)
+                    {
+                        throw new IllegalArgumentException("Invalid URI: " + strUri);
+                    }  
+                    
+                    this.nodeType = NodeType.LINK_NODE;
+                }
+                else if ("StructuredDataNode".equalsIgnoreCase(strNodeType))
+                    this.nodeType = NodeType.STRUCTURED_DATA_NODE;
+                else 
+                    throw new IllegalArgumentException("Unsupported node type: " + strNodeType);
+            }
         }
 
         // optional properties
@@ -1399,7 +1461,8 @@ public class Main implements Runnable
             "Create node:                                                                                      ",
             "java -jar VOSpaceClient.jar  [-v|--verbose|-d|--debug]                                            ",
             CertCmdArgUtil.getCertArgUsage(),
-            "   --create --target=<target URI>                                                                 ",
+            "   --create[=<ContainerNode|DataNode|LinkNode|StructuredDataNode|UnstructuredDataNode>]           ",
+            "   --target=<target URI>                                                                          ",
             "   [--prop=<properties file>]                                                                     ",
             "                                                                                                  ",
             "Note: --create defaults to creating a ContainerNode (directory).  Creating                        ",

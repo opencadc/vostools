@@ -71,6 +71,7 @@ import org.junit.runners.Suite;
 
 import ca.nrc.cadc.vos.auth.VOSpaceAuthorizerTest;
 import ca.nrc.cadc.vos.client.FileSizeTypeTest;
+import ca.nrc.cadc.vos.client.MainTest;
 import ca.nrc.cadc.vos.server.DatabaseNodePersistenceTest;
 import ca.nrc.cadc.vos.server.NodeDAOTest;
 import ca.nrc.cadc.vos.server.RssFeedTest;
@@ -86,6 +87,7 @@ import ca.nrc.cadc.vos.server.web.restlet.resource.NodeResourceTest;
 @Suite.SuiteClasses(
 {
     LinkNodeTest.class,
+    MainTest.class,
     NodeReaderWriterTest.class,
     TransferReaderWriterTest.class,
     NodeResourceTest.class,

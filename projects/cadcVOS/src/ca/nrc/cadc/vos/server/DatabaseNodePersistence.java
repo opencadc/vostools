@@ -232,9 +232,6 @@ public abstract class DatabaseNodePersistence implements NodePersistence
     {
     	if (node.isStructured())
     		throw new NodeNotSupportedException("StructuredDataNode is not supported.");
-    	else if (node instanceof LinkNode)
-    		// TODO: to be removed when we support LinkNode 
-    		throw new NodeNotSupportedException("LinkNode is not supported.");
         AccessControlContext acContext = AccessController.getContext();
         Subject caller = Subject.getSubject(acContext);
         NodeDAO dao = getDAO( node.getUri().getAuthority() );
