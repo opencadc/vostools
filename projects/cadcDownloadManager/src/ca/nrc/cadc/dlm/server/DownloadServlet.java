@@ -71,7 +71,6 @@
 package ca.nrc.cadc.dlm.server;
 
 import java.io.IOException;
-import java.util.Date;
 
 import javax.servlet.RequestDispatcher;
 import javax.servlet.ServletConfig;
@@ -85,6 +84,7 @@ import ca.nrc.cadc.auth.SSOCookieManager;
 import ca.nrc.cadc.dlm.DownloadUtil;
 import ca.nrc.cadc.net.NetUtil;
 import ca.nrc.cadc.util.ArrayUtil;
+import org.apache.log4j.Logger;
 
 /**
  * Download pre-processor. This servlet accepts either direct POSTs from clients or
@@ -101,41 +101,10 @@ import ca.nrc.cadc.util.ArrayUtil;
  */
 public class DownloadServlet extends HttpServlet
 {
-    private static HackLogger log;
-    private static class HackLogger
-    {
-        boolean dbg = true;
-        Class c;
-        String prefix;
-        HackLogger(Class c) 
-        { 
-            this.c = c; 
-            this.prefix = " " + c.getSimpleName() + " ";
-        }
-        
-        void error(String s)
-        {
-            System.out.println(new Date() + " [ERROR]" + prefix + s);
-        }
-        void warn(String s)
-        {
-            System.out.println(new Date() + " [WARN]" + prefix + s);
-        }
-        void info(String s)
-        {
-            System.out.println(new Date() + " [INFO]" + prefix + s);
-        }
-        void debug(String s)
-        {
-            if (dbg) System.out.println(new Date() + " [DEBUG]" + prefix + s);
-        }
-    }
-    static
-    {
-        // TODO: pick a logging system and configure it properly
-        log = new HackLogger(DownloadServlet.class);
-    }
+    private static final long serialVersionUID = 201208071730L;
     
+    private static final Logger log = Logger.getLogger(DownloadServlet.class);
+
     /**
      * 
      * @param config

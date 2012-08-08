@@ -108,19 +108,16 @@ public class GraphicUI extends AbstractApplication implements ChangeListener, Us
 
     private LogWriter writer = new LogWriter();
     private JDownloadManager downloadManager;
-    private TransferListener downloadListener;
     
     private ConditionVar uiInitCond;
     private ConditionVar engineInitCond;
     private Queue inputQueue = new Queue();
-    private String fragment;
     
     public GraphicUI(Level logLevel)
     {
         super(new BorderLayout());
         Log4jInit.setLevel("ca.nrc.cadc", logLevel, writer);
         
-        this.downloadListener = initTransferLister();
         this.uiInitCond = new ConditionVar();
         uiInitCond.set(false);
         this.engineInitCond = new ConditionVar();
@@ -131,7 +128,6 @@ public class GraphicUI extends AbstractApplication implements ChangeListener, Us
     {
         Iterator<DownloadDescriptor> iter = DownloadUtil.iterateURLs(strs, fragment);
         this.inputQueue.push(iter);
-        this.fragment = fragment;
     }
 
     @Override
@@ -199,8 +195,6 @@ public class GraphicUI extends AbstractApplication implements ChangeListener, Us
 
         this.downloadManager = new JDownloadManager(initialThreads, initialRetryEnabled, downloadDir);
         downloadManager.addChangeListener(this);
-        downloadManager.addDownloadListener(downloadListener);
-        //this.add(downloadManager, BorderLayout.CENTER);
         JTabbedPane tabs = new JTabbedPane();
         this.add(tabs, BorderLayout.CENTER);
         tabs.addTab("Downloads", downloadManager);
@@ -272,7 +266,6 @@ public class GraphicUI extends AbstractApplication implements ChangeListener, Us
                 
                 engineInitCond.waitForTrue();
 
-                log.info("destination dir: " + downloadManager.getDestinationDir());
                 if (downloadManager.getDestinationDir() == null)
                     return; // cancelled
 
@@ -331,28 +324,4 @@ public class GraphicUI extends AbstractApplication implements ChangeListener, Us
             log.debug("updating configuration... failed: " + ioex.getMessage());
         }
     }
-    
-    private static TransferListener initTransferLister()
-    {
-        // TODO: read a class name from a config file and try to instantiate it 
-        String cname = "ca.nrc.cadc.logserver.HttpDownloadLogger";
-        
-        try
-        {
-            log.debug("[GraphicUI] loading: " + cname);
-            Class c = Class.forName(cname);
-            log.debug("[GraphicUI] instantiating: " + c);
-            TransferListener ret = (TransferListener) c.newInstance();
-            log.debug("[GraphicUI] success: " + ret);
-            return ret;
-        }
-        catch(Throwable oops)
-        {
-            log.warn("[GraphicUI] failed to create DownloadListener: " + cname + ", " + oops);
-        }
-        return null;
-    }
-    
-    
-    
 }

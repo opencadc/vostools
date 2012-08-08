@@ -67,7 +67,6 @@
 ************************************************************************
 */
 
-
 package ca.nrc.cadc.dlm;
 
 import java.net.MalformedURLException;
@@ -79,7 +78,6 @@ import java.util.Iterator;
 import java.util.List;
 
 import ca.nrc.cadc.net.MultiSchemeHandler;
-import ca.nrc.cadc.net.SchemeHandler;
 import java.util.HashSet;
 import java.util.NoSuchElementException;
 import java.util.Set;
@@ -116,36 +114,9 @@ public class DownloadUtil
     public static synchronized MultiSchemeHandler getSchemeHandler()
     {
         if (schemeHandler == null)
-        {        
+        {
+            // MultiSchemeHandler finds and reads a config file
             schemeHandler = new MultiSchemeHandler();
-            // TODO: read class name(s) from somewhere
-            String[] uris = new String[] 
-            {
-                "ad:ca.nrc.cadc.ad.AdSchemeHandler",
-                "plane:ca.nrc.cadc.caom.util.PlaneSchemeHandler"
-            };
-
-            for (int i=0; i<uris.length; i++)
-            {
-                try
-                {
-                    log.debug("configuring: " + uris[i]);
-                    URI u = new URI(uris[i]);
-                    String scheme = u.getScheme();
-                    String cname = u.getSchemeSpecificPart();
-                    log.debug("loading: " + cname);
-                    Class c = Class.forName(cname);
-                    log.debug("instantiating: " + c);
-                    SchemeHandler handler = (SchemeHandler) c.newInstance();
-                    log.debug("adding: " + scheme + "," + handler);
-                    schemeHandler.addSchemeHandler(scheme, handler);
-                    log.debug("success: " + scheme + " is supported");
-                }
-                catch(Throwable oops)
-                {
-                    log.warn("failed to create SchemeHandler: " + oops);
-                }
-            }
         }
         return schemeHandler;
     }
@@ -252,7 +223,7 @@ public class DownloadUtil
 
             public DownloadDescriptor next()
             {
-                if (done || parsed.size() == 0)
+                if (done || parsed.isEmpty())
                     throw new NoSuchElementException();
                 if (inner != null)
                 {
@@ -326,14 +297,14 @@ public class DownloadUtil
         String ret = null;
         if (uris != null && uris.length > 0)
         {
-            StringBuffer sb = new StringBuffer();
+            StringBuilder sb = new StringBuilder();
             for (int i=0; i<uris.length; i++)
             {
                 if (uris[i] != null)
                 {
                     String ss = uris[i].trim();
                     if (ss.length() > 0)
-                        sb.append(ss + ",");
+                        sb.append(ss).append(",");
                 }
             }
             if (sb.length() > 0)
@@ -393,7 +364,9 @@ public class DownloadUtil
     private static URI appendFragment(URI uri, String fragment)
         throws URISyntaxException
     {
-        if (fragment == null)
+        if (fragment == null || fragment.trim().length() == 0)
+            return uri;
+        if ( "null".equals(fragment) )
             return uri;
         
         String orig = uri.getFragment(); // fragment was encoded in string
