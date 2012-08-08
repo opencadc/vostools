@@ -1928,7 +1928,7 @@ public class NodeDAO
         sb.append(NODE_TYPE_DATA);
         sb.append("', '");
         sb.append(NODE_TYPE_CONTAINER);
-        sb.append("') ORDER BY type DESC, lastModified ASC");
+        sb.append("')");
         
         if (nodeSchema.limitWithTop) // TOP, eg sybase
             sb.replace(0, 6, "SELECT TOP " + limit);

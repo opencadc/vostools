@@ -74,6 +74,8 @@ import static org.junit.Assert.assertEquals;
 import java.net.URI;
 import java.security.Principal;
 import java.util.ArrayList;
+import java.util.Collections;
+import java.util.Comparator;
 import java.util.Date;
 import java.util.HashSet;
 import java.util.List;
@@ -1978,7 +1980,15 @@ public class NodeDAOTest
             
             List<NodeSizePropagation> propagations = nodeDAO.getOutstandingPropagations(100);
             Assert.assertTrue("Wrong number of oustanding propagations", propagations.size() == 2);
-            // order is by type (data first), then last modified
+            
+            // sort them for assertion
+            Collections.sort(propagations, new Comparator<NodeSizePropagation>() {
+                public int compare(NodeSizePropagation n1, NodeSizePropagation n2)
+                {
+                    return -1 * n1.getChildType().compareTo(n2.getChildType());
+                }
+            });
+            
             Assert.assertEquals("Wrong data node ID", dataNodeID, (Long) propagations.get(0).getChildID());
             Assert.assertEquals("Wrong data node ID", containerNodeID, (Long) propagations.get(0).getParentID());
             Assert.assertEquals("Wrong data node ID", containerNodeID, (Long) propagations.get(1).getChildID());
@@ -2034,6 +2044,14 @@ public class NodeDAOTest
             jdbc.update(sql);
             
             List<NodeSizePropagation> propagations = nodeDAO.getOutstandingPropagations(100);
+            
+            // sort them
+            Collections.sort(propagations, new Comparator<NodeSizePropagation>() {
+                public int compare(NodeSizePropagation n1, NodeSizePropagation n2)
+                {
+                    return -1 * n1.getChildType().compareTo(n2.getChildType());
+                }
+            });
             Assert.assertTrue("Wrong number of outstanding propagations", propagations.size() == 2);
             nodeDAO.applyPropagation(propagations.get(0));
             
