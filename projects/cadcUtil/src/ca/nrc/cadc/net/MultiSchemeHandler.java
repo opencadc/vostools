@@ -70,6 +70,8 @@
 
 package ca.nrc.cadc.net;
 
+import java.io.BufferedReader;
+import java.io.InputStreamReader;
 import java.net.MalformedURLException;
 import java.net.URI;
 import java.net.URL;
@@ -77,6 +79,7 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import org.apache.log4j.Logger;
 
 /**
  * Utility class to invoke the appropriate SchemeHandler to convert a URI to URL(s). 
@@ -86,9 +89,87 @@ import java.util.Map;
  */
 public class MultiSchemeHandler implements SchemeHandler
 {
-    private Map<String,SchemeHandler> handlers = new HashMap<String,SchemeHandler>();
-    
-    public MultiSchemeHandler() { } 
+    private static final Logger log = Logger.getLogger(MultiSchemeHandler.class);
+
+    private static final String CACHE_FILENAME = MultiSchemeHandler.class.getSimpleName() + ".properties";
+
+    private final Map<String,SchemeHandler> handlers = new HashMap<String,SchemeHandler>();
+
+    /**
+     * Create a MultiSchemeHandler from the default config. By default, a resource named
+     * MultiSchemeHandler.properties is found via the class loader that loaded this class.
+     */
+    public MultiSchemeHandler()
+    {
+        this(MultiSchemeHandler.class.getClassLoader().getResource(CACHE_FILENAME));
+    }
+
+    /**
+     * Create a MultiSchemeHandler with configuration loaded from the specified URL.
+     *
+     * The config resource has contains URIs (one per line, comments start line with #, blank lines
+     * are ignored) with a scheme and a class name of a class that implements the SchemeHandler
+     * interface for that particular scheme.
+     *
+     * @param url
+     */
+    public MultiSchemeHandler(URL url)
+    {
+        if (url == null)
+        {
+            log.debug("config URL is null: no custom scheme support");
+            return;
+        }
+        
+        BufferedReader br = null;
+        try
+        {
+            br = new BufferedReader(new InputStreamReader(url.openStream()));
+            //Read File Line By Line
+            String strLine;
+            while ((strLine = br.readLine()) != null)
+            {
+                strLine = strLine.trim();
+                if (strLine.length() == 0)
+                    continue;
+
+                char firstChar = strLine.charAt(0);
+                if (firstChar == '#' || firstChar == '!') //comment line
+                    continue;
+
+                log.debug("configuring: " + strLine);
+                try
+                {
+                    URI u = new URI(strLine);
+                    String scheme = u.getScheme();
+                    String cname = u.getSchemeSpecificPart();
+                    log.debug("loading: " + cname);
+                    Class c = Class.forName(cname);
+                    log.debug("instantiating: " + c);
+                    SchemeHandler handler = (SchemeHandler) c.newInstance();
+                    log.debug("adding: " + scheme + "," + handler);
+                    handlers.put(scheme, handler);
+                    log.debug("success: " + scheme + " is supported");
+                }
+                catch(Exception fail)
+                {
+                    log.warn("failed to load " + strLine + ", reason: " + fail);
+                }
+            }
+            //Close the buffered reader
+            br.close();
+        }
+        catch(Exception ex)
+        {
+            log.error("failed to read config from " + url, ex);
+        }
+        finally
+        {
+            if (br != null)
+                try { br.close(); }
+                catch(Exception ignore) { }
+        }
+    }
     
     /**
      * Find and call a suitable SchemeHandler. This method gets the scheme from the 

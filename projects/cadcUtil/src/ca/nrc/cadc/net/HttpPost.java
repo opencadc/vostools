@@ -85,6 +85,7 @@ import javax.net.ssl.HttpsURLConnection;
 import org.apache.log4j.Logger;
 
 import ca.nrc.cadc.util.StringUtil;
+import java.net.URLEncoder;
 
 /**
  * Perform an HTTP Post.
@@ -109,6 +110,8 @@ public class HttpPost extends HttpTransfer
 
     // result information
     private URL redirectURL;
+    private String responseContentType;
+    private String responseContentEncoding;
     private String responseBody;
     
     /**
@@ -183,6 +186,16 @@ public class HttpPost extends HttpTransfer
     public URL getRedirectURL()
     {
         return redirectURL;
+    }
+
+    public String getResponseContentEncoding()
+    {
+        return responseContentEncoding;
+    }
+
+    public String getResponseContentType()
+    {
+        return responseContentType;
     }
 
     /**
@@ -295,12 +308,12 @@ public class HttpPost extends HttpTransfer
             value = parameters.get(key);
             content.append(key);
             content.append("=");
-            content.append(value.toString());
+            content.append( URLEncoder.encode(value.toString(), "UTF-8") );
             content.append("&");
         }
         // trim off the last ampersand
         content.setLength(content.length() - 1);
-        doPost(conn, content.toString(), null);
+        doPost(conn, content.toString(), "application/x-www-form-urlencoded");
     }
     
     private void doPost(HttpURLConnection conn, String content, String contentType)
@@ -339,6 +352,8 @@ public class HttpPost extends HttpTransfer
         }
         else
         {
+            this.responseContentType = conn.getContentType();
+            this.responseContentEncoding = conn.getContentEncoding();
             // otherwise get the response content
             InputStream istream = conn.getInputStream();
             if (outputStream != null)

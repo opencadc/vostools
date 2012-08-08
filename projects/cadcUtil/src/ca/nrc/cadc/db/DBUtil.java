@@ -90,7 +90,7 @@ import org.springframework.jdbc.datasource.SingleConnectionDataSource;
  */
 public class DBUtil
 {
-    private static Logger log = Logger.getLogger(DBUtil.class);
+    private static final Logger log = Logger.getLogger(DBUtil.class);
 
     /**
      * Create a DataSource with a single connection to the server. The DataSource
