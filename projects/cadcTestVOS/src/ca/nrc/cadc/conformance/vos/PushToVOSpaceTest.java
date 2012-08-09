@@ -178,9 +178,18 @@ public class PushToVOSpaceTest extends VOSTransferTest
             // Get the header Location.
             String location = response.getHeaderField("Location");
             assertNotNull("Location header not set", location);
+            assertTrue("../results/transferDetails location expected: ", 
+                    location.endsWith("/results/transferDetails"));
 
-            // Follow the redirect.
+            // Follow all the redirects.
             response = get(location);
+            while (303 == response.getResponseCode())
+            {
+                location = response.getHeaderField("Location");
+                assertNotNull("Location header not set", location);
+                log.debug("New location: " + location);
+                response = get(location);
+            }
             assertEquals("POST response code should be 200", 200, response.getResponseCode());
 
             
