@@ -132,6 +132,7 @@ public class VOSpaceAuthorizer implements Authorizer
     public static final String READ_WRITE = "ReadWrite";
     private boolean readable = true;
     private boolean writable  = true;
+    private boolean allowPartialPaths = false;
 
     private SSLSocketFactory socketFactory;
     private int subjectHashCode;
@@ -143,8 +144,14 @@ public class VOSpaceAuthorizer implements Authorizer
 
     public VOSpaceAuthorizer()
     {
+        this(false);
+    }
+    
+    public VOSpaceAuthorizer(boolean allowPartialPaths)
+    {
         groupMembershipCache = new HashMap<String, Boolean>();
         initState();
+        this.allowPartialPaths = allowPartialPaths;
     }
 
     // this method will only downgrade the state to !readbler and !writable
@@ -186,7 +193,7 @@ public class VOSpaceAuthorizer implements Authorizer
         try
         {
             VOSURI vos = new VOSURI(uri);
-            Node node = nodePersistence.get(vos);
+            Node node = nodePersistence.get(vos, allowPartialPaths);
             return getReadPermission(node);
         } 
         catch(NodeNotFoundException ex)
@@ -260,7 +267,7 @@ public class VOSpaceAuthorizer implements Authorizer
         try
         {
             VOSURI vos = new VOSURI(uri);
-            Node node = nodePersistence.get(vos);
+            Node node = nodePersistence.get(vos, allowPartialPaths);
             return getWritePermission(node);
         }
         catch(NodeNotFoundException ex)

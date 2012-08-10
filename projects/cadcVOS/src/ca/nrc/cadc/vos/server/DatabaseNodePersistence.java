@@ -87,7 +87,6 @@ import ca.nrc.cadc.util.FileMetadata;
 import ca.nrc.cadc.util.StringUtil;
 import ca.nrc.cadc.vos.ContainerNode;
 import ca.nrc.cadc.vos.DataNode;
-import ca.nrc.cadc.vos.LinkNode;
 import ca.nrc.cadc.vos.Node;
 import ca.nrc.cadc.vos.NodeNotFoundException;
 import ca.nrc.cadc.vos.NodeNotSupportedException;
@@ -176,6 +175,12 @@ public abstract class DatabaseNodePersistence implements NodePersistence
         if (ret == null)
             throw new NodeNotFoundException("not found: " + vos.getURIObject().toASCIIString());
         return ret;
+    }
+    
+    public Node get(VOSURI vos, boolean allowPartialPath) throws NodeNotFoundException
+    {
+        // TODO: Implement
+        return null;
     }
 
     private ContainerNode createRoot(String authority)

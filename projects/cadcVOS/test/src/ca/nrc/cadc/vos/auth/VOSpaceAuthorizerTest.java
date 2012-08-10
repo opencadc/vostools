@@ -109,7 +109,7 @@ public class VOSpaceAuthorizerTest
         node.getProperties().add(new NodeProperty(VOS.PROPERTY_URI_ISPUBLIC, Boolean.TRUE.toString()));
 
         NodePersistence np = createMock(NodePersistence.class);
-        expect(np.get(vos)).andReturn(node).once();
+        expect(np.get(vos, false)).andReturn(node).once();
         replay(np);
         
         VOSpaceAuthorizer voSpaceAuthorizer = new VOSpaceAuthorizer();

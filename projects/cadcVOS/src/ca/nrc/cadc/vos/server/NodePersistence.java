@@ -69,17 +69,17 @@
 
 package ca.nrc.cadc.vos.server;
 
-import ca.nrc.cadc.util.FileMetadata;
 import java.util.List;
 
+import ca.nrc.cadc.util.FileMetadata;
 import ca.nrc.cadc.vos.ContainerNode;
 import ca.nrc.cadc.vos.DataNode;
 import ca.nrc.cadc.vos.Node;
 import ca.nrc.cadc.vos.NodeNotFoundException;
 import ca.nrc.cadc.vos.NodeNotSupportedException;
 import ca.nrc.cadc.vos.NodeProperty;
-import ca.nrc.cadc.vos.VOSURI;
 import ca.nrc.cadc.vos.VOS.NodeBusyState;
+import ca.nrc.cadc.vos.VOSURI;
 
 /**
  * An interface defining the methods available for working with VOSpace
@@ -103,6 +103,9 @@ public interface NodePersistence
      * @throws NodeNotFoundException
      */
     Node get(VOSURI vos)
+        throws NodeNotFoundException;
+    
+    Node get(VOSURI vos, boolean allowPartialPaths)
         throws NodeNotFoundException;
 
     /**
