@@ -158,9 +158,14 @@ note: client jars are not signed
     </war>
 </target>
 
-    <property name="testingJars" value="${jars}:${lib}/ad2.jar:${ext.dev}/junit.jar" />
+    <property name="testingJars" value="${jars}:${ext.dev}/junit.jar" />
     
     <target name="test" depends="compile-test">
+        <copy todir="${build}/test/class">
+            <fileset dir="test/src/resources">
+                <include name="**.properties" />
+            </fileset>
+        </copy>
         <junit printsummary="yes" haltonfailure="yes" fork="yes">
           <classpath>
               <pathelement path="${build}/class"/>
@@ -174,24 +179,15 @@ note: client jars are not signed
 
     </target>
 
-    <target name="ui-test" depends="build">
-        <java classname="ca.nrc.cadc.dlm.client.Main"
-            classpath="${build}/class:${testingJars}"
-            fork="yes">
-            <arg value="-v" />
-            <arg value="--uris=http://www.google.com/,ad:HST/U27R9G01B.2,ad:HST/U27R9G01B.3" />
+    <target name="awt-test" depends="build">
+        <java classname="junit.extensions.abbot.ScriptTestSuite">
+            <classpath>
+                <pathelement path="${build}/class"/>
+                <pathelement path="${build}/test/class"/>
+                <pathelement path="${jars}:${testingJars}"/>
+                <pathelement path="${ext.lib}/xerces.jar" />
+            </classpath>
+            <arg value="test/gui/DLM.xml" />
         </java>
     </target>
-
-  <target name="awt-test" depends="build">
-    <java classname="junit.extensions.abbot.ScriptTestSuite">
-      <classpath>
-        <pathelement path="${build}/class"/>
-        <pathelement path="${build}/test/class"/>
-        <pathelement path="${jars}:${testingJars}"/>
-        <pathelement path="${ext.lib}/xerces.jar" />
-      </classpath>
-      <arg value="test/gui/DLM.xml" />
-    </java>
-  </target>
 </project>

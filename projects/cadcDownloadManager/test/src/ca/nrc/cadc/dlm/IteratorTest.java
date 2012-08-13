@@ -19,6 +19,7 @@ public class IteratorTest
     static
     {
         Log4jInit.setLevel("ca.nrc.cadc.dlm", Level.DEBUG);
+        Log4jInit.setLevel("ca.nrc.cadc.util", Level.DEBUG);
     }
 
     @Test
@@ -30,7 +31,7 @@ public class IteratorTest
             String[] uris = new String[]
             {
                 "http://www.google.com",
-                "ad:foo/bar"
+                "test://www.example.com/test"
             };
 
             Iterator<DownloadDescriptor> iter = DownloadUtil.iterateURLs(uris, null);
@@ -136,8 +137,7 @@ public class IteratorTest
         {
             String[] uris = new String[]
             {
-                "ad:foo/bar",
-                "ad:foo/baz"
+                "test://www.example.com/test"
             };
             String frag = "runid=123";
             Iterator<DownloadDescriptor> iter = DownloadUtil.iterateURLs(uris, frag);
@@ -151,6 +151,8 @@ public class IteratorTest
                 Assert.assertEquals("http", dd.url.getProtocol());
                 URI uri = new URI(dd.uri);
                 Assert.assertEquals(frag, uri.getFragment());
+                Assert.assertNotNull(dd.url);
+                Assert.assertNotNull(dd.url.getQuery());
                 Assert.assertTrue(frag, dd.url.getQuery().contains(frag));
             }
             Assert.assertEquals(uris.length, num);
