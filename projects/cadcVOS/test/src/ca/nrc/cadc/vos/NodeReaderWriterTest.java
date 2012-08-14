@@ -237,7 +237,7 @@ public class NodeReaderWriterTest
         compareURIList(n1.provides, n2.provides);
         if (n1 instanceof ContainerNode)
             compareContainerNodes((ContainerNode) n1, (ContainerNode) n2);
-        else if ((n1 instanceof DataNode) || (n1 instanceof UnstructuredDataNode) || (n1 instanceof StructuredDataNode))
+        else if (n1 instanceof DataNode)
             compareDataNodes((DataNode) n1, (DataNode) n2);
         else if (n1 instanceof LinkNode)
             compareLinkNodes((LinkNode) n1, (LinkNode) n2);

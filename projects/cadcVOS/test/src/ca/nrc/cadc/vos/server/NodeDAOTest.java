@@ -102,6 +102,7 @@ import ca.nrc.cadc.util.HexUtil;
 import ca.nrc.cadc.util.Log4jInit;
 import ca.nrc.cadc.vos.ContainerNode;
 import ca.nrc.cadc.vos.DataNode;
+import ca.nrc.cadc.vos.LinkNode;
 import ca.nrc.cadc.vos.Node;
 import ca.nrc.cadc.vos.NodeProperty;
 import ca.nrc.cadc.vos.VOS;
@@ -242,6 +243,139 @@ public class NodeDAOTest
     }
 
     @Test
+    public void testGetPath()
+    {
+        log.debug("testGetPath - START");
+        try
+        {
+            ContainerNode cNode1 = null;
+            ContainerNode cNode2 = null;
+            ContainerNode cNode3 = null;
+            LinkNode linkNode = null;
+            DataNode dataNode = null;
+            Node putNodeL = null;
+            Node putNode1 = null;
+            Node putNode2 = null;
+            Node putNode3 = null;
+            Node putNode4 = null;
+
+            // create root container: /
+            ContainerNode rootContainer = (ContainerNode) nodeDAO.getPath(HOME_CONTAINER);
+            log.debug("ROOT: " + rootContainer);
+            Assert.assertNotNull(rootContainer);
+            String basePath = "/" + HOME_CONTAINER + "/";
+
+            // create 1st container under root container: /adir1
+            String nodePath1 = basePath + getNodeName("adir1");
+            cNode1 = getCommonContainerNode(nodePath1, getCommonProperties());
+            cNode1.setParent(rootContainer); // back link to persistent parent required
+            putNode1 = nodeDAO.put(cNode1, owner);
+            ContainerNode adir1 = (ContainerNode) nodeDAO.getPath(nodePath1);
+            Assert.assertNotNull(adir1);
+            nodeDAO.getProperties(adir1);
+            log.debug("PutNode: " + putNode1);
+            log.debug("GetNode: " + adir1);
+            compareNodes("assertNode1", putNode1, adir1);
+            compareProperties("assertProp1", putNode1.getProperties(), adir1.getProperties());
+
+            // create 2nd container under 1st container: /adir1/adir2
+            String nodePath2 = nodePath1 + "/" + getNodeName("adir2");
+            cNode2 = getCommonContainerNode(nodePath2, getCommonProperties());
+            cNode2.setParent(cNode1); // back link to persistent parent required
+            putNode2 = nodeDAO.put(cNode2, owner);
+            ContainerNode adir2 = (ContainerNode) nodeDAO.getPath(nodePath2);
+            Assert.assertNotNull(adir2);
+            nodeDAO.getProperties(adir2);
+            log.debug("PutNode: " + putNode2);
+            log.debug("GetNode: " + adir2);
+            compareNodes("assertNode2", putNode2, adir2);
+            compareProperties("assertProp2", putNode2.getProperties(), adir2.getProperties());
+
+            // create 3rd container under 1st container: /adir1/adir3
+            String nodePath3 = nodePath1 + "/" + getNodeName("adir3");
+            cNode3 = getCommonContainerNode(nodePath3, getCommonProperties());
+            cNode3.setParent(cNode1); // back link to persistent parent required
+            putNode3 = nodeDAO.put(cNode3, owner);
+            ContainerNode adir3 = (ContainerNode) nodeDAO.getPath(nodePath3);
+            Assert.assertNotNull(adir3);
+            nodeDAO.getProperties(adir3);
+            log.debug("PutNode: " + putNode3);
+            log.debug("GetNode: " + adir3);
+            compareNodes("assertNode3", putNode3, adir3);
+            compareProperties("assertProp4", putNode3.getProperties(), adir3.getProperties());
+
+            // create a file: /adir1/adir3/afile
+            String nodePath4 = nodePath3 + "/" + getNodeName("afile");
+            dataNode = getCommonDataNode(nodePath4, getDataNodeProperties());
+            dataNode.setParent(adir3); // back link to persistent parent required
+            putNode4 = nodeDAO.put(dataNode, owner);
+            Node afile = nodeDAO.getPath(nodePath4);
+            Assert.assertNotNull(afile);
+            nodeDAO.getProperties(afile);
+            Assert.assertNotNull(afile.findProperty(VOS.PROPERTY_URI_CONTENTLENGTH));
+            Assert.assertEquals("0", afile.getPropertyValue(VOS.PROPERTY_URI_CONTENTLENGTH));
+            Assert.assertNull(afile.findProperty(VOS.PROPERTY_URI_CONTENTMD5));
+            compareNodes("assert4", putNode4, afile);
+            compareProperties("assert4", putNode4.getProperties(), afile.getProperties());
+			            
+            // create a link node: /adir1/adir2/alink
+            String nodePathL = nodePath2 + "/" + getNodeName("alink");
+            String linkStr = nodePath3;
+            URI link = new URI(linkStr);
+            linkNode = getCommonLinkNode(nodePathL, getLinkNodeProperties());
+            linkNode.setParent(adir2); // back link to persistent parent required
+            linkNode.setTarget(link);
+            putNodeL = nodeDAO.put(linkNode, owner);
+            Node alink = nodeDAO.getPath(nodePathL);
+            Assert.assertNotNull(alink);
+            nodeDAO.getProperties(alink);
+            Assert.assertNotNull(alink.findProperty(VOS.PROPERTY_URI_DESCRIPTION));
+            Assert.assertEquals("Linked resource", alink.getPropertyValue(VOS.PROPERTY_URI_DESCRIPTION));
+            Assert.assertNull(alink.findProperty(VOS.PROPERTY_URI_CONTENTMD5));
+            compareNodes("assertNodeL", putNodeL, alink);
+            compareProperties("assertPropL", putNodeL.getProperties(), alink.getProperties());
+            
+            // test path to LinkNode
+            String linkNodePath = nodePath2 + "/" + linkNode.getName();
+            Node actualLinkNode = nodeDAO.getPath(linkNodePath, true);
+            String nodePathStr = actualLinkNode.getUri().getPath();
+            Assert.assertEquals("failed to get the complete path", linkNodePath, nodePathStr);
+
+            // test path to linked resource
+            String dataNodePath = nodePath2 + "/" + linkNode.getName() + "/" + 
+                                  cNode3.getName() + "/" + dataNode.getName();
+            String expectedNodePath = nodePath2 + "/" + linkNode.getName();
+            Node actualDataNode = nodeDAO.getPath(dataNodePath, true);
+            Assert.assertNotNull(actualDataNode);
+            nodePathStr = actualDataNode.getUri().getPath();
+            Assert.assertEquals("failed to get the complete path", expectedNodePath, nodePathStr);
+
+            // test path to invalid DataNode
+            dataNodePath = nodePath4 + "/noSuchNode";
+            actualDataNode = nodeDAO.getPath(dataNodePath, false);
+            Assert.assertNull("expected a null node", actualDataNode);            
+            expectedNodePath = nodePath4;
+            actualDataNode = nodeDAO.getPath(dataNodePath, true);
+            Assert.assertNull("expected a null node", actualDataNode);
+
+            log.debug("testPutGetDeleteNodes - CLEANUP");
+
+            // delete the three roots
+            nodeDAO.delete(adir1, 10, false); // cleanup
+            assertRecursiveDelete();
+        }
+        catch(Exception unexpected)
+        {
+            log.error("unexpected exception", unexpected);
+            Assert.fail("unexpected exception: " + unexpected);
+        }
+        finally
+        {
+            log.debug("testGetPath - DONE");
+        }    
+    }
+
+    @Test
     public void testGetHome()
     {
         log.debug("testGetHome - START");
@@ -271,6 +405,7 @@ public class NodeDAOTest
         {
             DataNode dataNode = null;
             ContainerNode containerNode = null;
+            LinkNode linkNode = null;
             Node putNode = null;
 
             ContainerNode rootContainer = (ContainerNode) nodeDAO.getPath(HOME_CONTAINER);
@@ -303,6 +438,20 @@ public class NodeDAOTest
             Assert.assertNull(afile.findProperty(VOS.PROPERTY_URI_CONTENTMD5));
             compareNodes("assert7", putNode, afile);
             compareProperties("assert8", putNode.getProperties(), afile.getProperties());
+            
+            // /adir/alink
+            String nodePath5 = basePath + getNodeName("adir") + "/" + getNodeName("alink");
+            linkNode = getCommonLinkNode(nodePath5, getLinkNodeProperties());
+            linkNode.setParent(adir); // back link to persistent parent required
+            putNode = nodeDAO.put(linkNode, owner);
+            Node alink = nodeDAO.getPath(nodePath5);
+            Assert.assertNotNull(alink);
+            nodeDAO.getProperties(alink);
+            Assert.assertNotNull(alink.findProperty(VOS.PROPERTY_URI_DESCRIPTION));
+            Assert.assertEquals("Linked resource", alink.getPropertyValue(VOS.PROPERTY_URI_DESCRIPTION));
+            Assert.assertNull(alink.findProperty(VOS.PROPERTY_URI_CONTENTMD5));
+            compareNodes("assert9", putNode, alink);
+            compareProperties("assert10", putNode.getProperties(), alink.getProperties());
 
             log.debug("testPutGetDeleteNodes - CLEANUP");
 
@@ -1009,6 +1158,7 @@ public class NodeDAOTest
             String moveCont3Path = moveCont1Path + "/" + getNodeName("movecont3");
             String moveData2Path = moveCont1Path + "/" + getNodeName("movedata2");
             String moveData3Path = moveCont2Path + "/" + getNodeName("movedata3");
+            String moveLink1Path = moveCont2Path + "/" + getNodeName("movelink1");
             String moveData4Path = moveCont3Path + "/" + getNodeName("movedata4");
             
             ContainerNode moveRoot = getCommonContainerNode(moveRootPath);
@@ -1018,6 +1168,7 @@ public class NodeDAOTest
             ContainerNode moveCont3 = getCommonContainerNode(moveCont3Path);
             DataNode moveData2 = getCommonDataNode(moveData2Path);
             DataNode moveData3 = getCommonDataNode(moveData3Path);
+            LinkNode moveLink1 = getCommonLinkNode(moveLink1Path);
             DataNode moveData4 = getCommonDataNode(moveData4Path);
             
             moveRoot.setParent(rootContainer);
@@ -1034,6 +1185,8 @@ public class NodeDAOTest
             moveData2 = (DataNode) nodeDAO.put(moveData2, owner);
             moveData3.setParent(moveCont2);
             moveData3 = (DataNode) nodeDAO.put(moveData3, owner);
+            moveLink1.setParent(moveCont2);
+            moveLink1 = (LinkNode) nodeDAO.put(moveLink1, owner);
             moveData4.setParent(moveCont3);
             moveData4 = (DataNode) nodeDAO.put(moveData4, owner);
             
@@ -1076,6 +1229,7 @@ public class NodeDAOTest
             assertEquals("Cont2 has wrong parent.", moveCont3.getName(), moveCont2.getParent().getName());
             assertEquals("Cont2 has wrong parent.", ((NodeID) moveCont3.appData).getID(), ((NodeID) moveCont2.getParent().appData).getID());
             found = false;
+            boolean foundLink = false;
             for (Node child : moveCont2.getNodes())
             {
                 if (child.getName().equals(moveData3.getName()) &&
@@ -1083,10 +1237,18 @@ public class NodeDAOTest
                 {
                     found = true;
                 }
+                else if (child.getName().equals(moveLink1.getName()) &&
+                        ((NodeID) child.appData).getID().equals(((NodeID) moveLink1.appData).getID()))
+                {
+                    foundLink = true;
+                }            
             }
             if (!found)
-                Assert.fail("Lost child movedata4 on move.");
+                Assert.fail("Lost child movedata3 on move.");
             
+            if (!foundLink)
+                Assert.fail("Lost child moveLink1 on move.");
+
             // move to a container underneath own tree (not allowed)
             moveCont1 = (ContainerNode) nodeDAO.getPath(moveCont1Path);
             Assert.assertNotNull(moveCont1);
@@ -2085,6 +2247,21 @@ public class NodeDAOTest
         return 0;
     }
     
+    private LinkNode getCommonLinkNode(String path, List<NodeProperty> properties) throws Exception
+    {
+        LinkNode linkNode = getCommonLinkNode(path);
+        linkNode.getProperties().addAll(properties);
+        return linkNode;
+    }
+				        
+    private LinkNode getCommonLinkNode(String path) throws Exception
+    {
+        VOSURI vosuri = new VOSURI(new URI("vos", VOS_AUTHORITY, path, null, null));
+        URI link = new URI("/" + HOME_CONTAINER + "/linkResource");
+        LinkNode linkNode = new LinkNode(vosuri, link);
+        return linkNode;
+    }										              
+									
     private DataNode getCommonDataNode(String path, List<NodeProperty> properties) throws Exception
     {
         DataNode dataNode = getCommonDataNode(path);
@@ -2129,6 +2306,18 @@ public class NodeDAOTest
     {
         List<NodeProperty> properties = getCommonProperties();
         NodeProperty prop1 = new NodeProperty(VOS.PROPERTY_URI_TYPE, "text/plain");
+        NodeProperty prop2 = new NodeProperty(VOS.PROPERTY_URI_CONTENTENCODING, "gzip");
+
+        properties.add(prop1);
+        properties.add(prop2);
+
+        return properties;
+    }
+
+    private List<NodeProperty> getLinkNodeProperties()
+    {
+        List<NodeProperty> properties = getCommonProperties();
+        NodeProperty prop1 = new NodeProperty(VOS.PROPERTY_URI_DESCRIPTION, "Linked resource");
         NodeProperty prop2 = new NodeProperty(VOS.PROPERTY_URI_CONTENTENCODING, "gzip");
 
         properties.add(prop1);

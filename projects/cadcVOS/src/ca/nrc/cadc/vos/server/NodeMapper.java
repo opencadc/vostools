@@ -85,6 +85,7 @@ import ca.nrc.cadc.date.DateUtil;
 import ca.nrc.cadc.util.HexUtil;
 import ca.nrc.cadc.vos.ContainerNode;
 import ca.nrc.cadc.vos.DataNode;
+import ca.nrc.cadc.vos.LinkNode;
 import ca.nrc.cadc.vos.Node;
 import ca.nrc.cadc.vos.NodeProperty;
 import ca.nrc.cadc.vos.VOS;
@@ -134,6 +135,7 @@ public class NodeMapper implements RowMapper
         Object ownerObject = rs.getObject("ownerID");
         String contentType = rs.getString("contentType");
         String contentEncoding = rs.getString("contentEncoding");
+        String link = null;
 
         Long nodeSize = null;
         Object o = rs.getObject("nodeSize");
@@ -172,6 +174,15 @@ public class NodeMapper implements RowMapper
             node = new DataNode(vos);
             ((DataNode) node).setBusy(NodeBusyState.getStateFromValue(busyString));
         }
+        else if (NodeDAO.NODE_TYPE_LINK.equals(type))
+        {
+            link = rs.getString("link");
+            try { node = new LinkNode(vos, new URI(link)); }
+            catch(URISyntaxException bug)
+            {
+                throw new RuntimeException("BUG - failed to create link URI", bug);
+            }
+        }
         else
         {
             throw new IllegalStateException("Unknown node database type: "
@@ -200,13 +211,13 @@ public class NodeMapper implements RowMapper
                 else
                     node.getProperties().add(new NodeProperty(VOS.PROPERTY_URI_CONTENTLENGTH, "0"));
         }
-        //else if (node instanceof ContainerNode)
-        //{
-        //    if (nodeSize != null)
-        //        node.getProperties().add(new NodeProperty(VOS.PROPERTY_URI_CONTENTLENGTH, nodeSize.toString()));
-        //    else
-        //        node.getProperties().add(new NodeProperty(VOS.PROPERTY_URI_CONTENTLENGTH, "0"));
-        //}
+        else if (node instanceof ContainerNode)
+        {
+            if (nodeSize != null)
+                node.getProperties().add(new NodeProperty(VOS.PROPERTY_URI_CONTENTLENGTH, nodeSize.toString()));
+            else
+                node.getProperties().add(new NodeProperty(VOS.PROPERTY_URI_CONTENTLENGTH, "0"));
+        }
 
         if (contentMD5 != null && contentMD5 instanceof byte[])
         {

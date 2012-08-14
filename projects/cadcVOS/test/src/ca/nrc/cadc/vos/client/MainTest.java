@@ -142,7 +142,7 @@ public class MainTest
     	
     	// test --create=LinkNode --target=vos://cadc.nrc.ca~vospace/foo/bar --uri=http://www.google.com
     	String[] args6 = {"--create=LinkNode", "--target=vos://cadc.nrc.ca~vospace/foo/bar",
-    			"--uri=http://www.google.com"};
+    			"--link=http://www.google.com"};
     	ArgumentMap argMap6 = new ArgumentMap(args6);
     	validateCommand.invoke(command, argMap6);
     	validateCommandArguments.invoke(command, argMap6);

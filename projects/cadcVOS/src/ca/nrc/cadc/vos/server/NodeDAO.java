@@ -110,6 +110,7 @@ import ca.nrc.cadc.util.FileMetadata;
 import ca.nrc.cadc.util.HexUtil;
 import ca.nrc.cadc.vos.ContainerNode;
 import ca.nrc.cadc.vos.DataNode;
+import ca.nrc.cadc.vos.LinkNode;
 import ca.nrc.cadc.vos.Node;
 import ca.nrc.cadc.vos.NodeProperty;
 import ca.nrc.cadc.vos.VOS;
@@ -119,7 +120,7 @@ import ca.nrc.cadc.vos.VOSURI;
 /**
  * Helper class for implementing NodePersistence with a
  * relational database back end for metadata. This class is
- * NOT thread-safe and ten caller must instantiate a new one
+ * NOT thread-safe and the caller must instantiate a new one
  * in each thread (e.g. app-server request thread).
  *
  * @author majorb
@@ -132,6 +133,7 @@ public class NodeDAO
     // temporarily needed by NodeMapper
     static final String NODE_TYPE_DATA = "D";
     static final String NODE_TYPE_CONTAINER = "C";
+    static final String NODE_TYPE_LINK = "L";
     
     private static final int NODE_NAME_COLUMN_SIZE = 256;
 
@@ -202,6 +204,8 @@ public class NodeDAO
         // semantic file metadata
         "contentType",
         "contentEncoding",
+        // LinkNode uri
+        "link",
         // physical file metadata
         "nodeSize",
         "contentLength",
@@ -318,12 +322,32 @@ public class NodeDAO
      */
     public Node getPath(String path)
     {
+    	return this.getPath(path, false);
+    }
+    
+    /**
+     * Get a complete path from the root container. For the container nodes in
+     * the returned node, only child nodes on the path will be included in the
+     * list of children; other children are not included. Nodes returned from
+     * this method will have some but not all properties set. Specifically, any
+     * properties that are inherently single-valued and stored in the Node table
+     * are included, as are the access-control properties (isPublic, group-read, 
+     * and group-write). The remaining properties for a node can be obtained by
+     * calling getProperties(Node).
+     *
+     * @see getProperties(Node)
+     * @param path
+     * @param allowPartialPath
+     * @return the last node in the path, with all parents or null if not found
+     */
+    public Node getPath(String path, boolean allowPartialPath)
+    {
         log.debug("getPath: " + path);
         if (path.length() > 0 && path.charAt(0) == '/')
             path = path.substring(1);
         // generate single join query to extract path
         NodePathStatementCreator npsc = new NodePathStatementCreator(
-                path.split("/"), getNodeTableName(), getNodePropertyTableName());
+                path.split("/"), getNodeTableName(), getNodePropertyTableName(), allowPartialPath);
 
         TransactionStatus dirtyRead = null;
         try
@@ -333,6 +357,13 @@ public class NodeDAO
             Node ret = (Node) jdbc.query(npsc, new NodePathExtractor());
             transactionManager.commit(dirtyRead);
             dirtyRead = null;
+            
+            // for non-LinkNode, 
+            if ((ret != null) && !(ret.getUri().getPath().equals("/" + path)))
+            {
+            	if (!(ret instanceof LinkNode))
+            		ret = null;
+            }
             
             loadSubjects(ret);
             return ret;
@@ -472,7 +503,7 @@ public class NodeDAO
     }
     
     /**
-     * Loads some of thre child nodes of the specified container.
+     * Loads some of the child nodes of the specified container.
      * @param parent
      * @param start
      * @param limit
@@ -738,17 +769,27 @@ public class NodeDAO
                 String sql = getUpdateLockSQL(node);
                 jdbc.update(sql);
                 
-                // get the nodeSize value
-                sql = getSelectNodeSizeSQL(node);
-                Long nodeSize = jdbc.queryForLong(sql);
-                    
-                // delete the node
-                deleteNode((DataNode) node);
-
-                // apply the negative nodeSize to the parent
-                sql = this.getApplyNodeSizeSQL(node.getParent(), nodeSize, false);
-                log.debug(sql);
-                jdbc.update(sql);
+                if (node instanceof DataNode)
+                {
+                    // get the nodeSize value
+                    sql = getSelectNodeSizeSQL(node);
+                    Long nodeSize = jdbc.queryForLong(sql);
+	                    
+                    // delete the node only if it is not busy
+                    deleteNode(node, true); 
+	
+                    // apply the negative nodeSize to the parent
+                    sql = this.getApplyNodeSizeSQL(node.getParent(), nodeSize, false);
+                    log.debug(sql);
+                    jdbc.update(sql);
+                }
+                else if (node instanceof LinkNode)
+                {
+                    // delete the node
+                    deleteNode(node, false);
+                }
+                else
+                	throw new RuntimeException("BUG - unsupported node type: " + node.getClass());
 
                 commitTransaction();
             }
@@ -782,7 +823,7 @@ public class NodeDAO
         }
     }
 
-    private void deleteNode(DataNode node)
+    private void deleteNode(Node node, boolean notBusyOnly)
     {
         // delete properties: FK constraint -> node
         String sql = getDeleteNodePropertiesSQL(node);
@@ -790,7 +831,7 @@ public class NodeDAO
         jdbc.update(sql);
         
         // delete the node
-        sql = getDeleteNodeSQL(node, true); // only delete if non-busy
+        sql = getDeleteNodeSQL(node, notBusyOnly); // only delete if non-busy
         log.debug(sql);
         int count = jdbc.update(sql);
         if (count == 0)
@@ -1211,9 +1252,13 @@ public class NodeDAO
             String sql = this.getUpdateLockSQL(src);
             jdbc.update(sql);
             
-            // get the nodeSize
-            sql = this.getSelectNodeSizeSQL(src);
-            Long nodeSize = jdbc.queryForLong(sql);
+            Long nodeSize = new Long(0);
+            if (!(src instanceof LinkNode))
+            {
+                // get the nodeSize
+                sql = this.getSelectNodeSizeSQL(src);
+                nodeSize = jdbc.queryForLong(sql);
+            }
             
             // re-parent the node
             ContainerNode srcParent = src.getParent();
@@ -1229,23 +1274,26 @@ public class NodeDAO
                 throw new IllegalStateException("src node busy: "+src.getUri());
             }
             
-            // apply the nodeSize
-            String sql1 = getApplyNodeSizeSQL(srcParent, nodeSize, false);
-            String sql2 = getApplyNodeSizeSQL(dest, nodeSize, true);
-            
-            // these operations should happen in nodeID order for consitency
-            // to avoid deadlocks
-            if (getNodeID(src) > getNodeID(dest))
+            if (!(src instanceof LinkNode))
             {
-                String swap = sql1;
-                sql1 = sql2;
-                sql2 = swap;
+                // apply the nodeSize
+                String sql1 = getApplyNodeSizeSQL(srcParent, nodeSize, false);
+                String sql2 = getApplyNodeSizeSQL(dest, nodeSize, true);
+	            
+                // these operations should happen in nodeID order for consistency
+                // to avoid deadlocks
+                if (getNodeID(src) > getNodeID(dest))
+                {
+                    String swap = sql1;
+                    sql1 = sql2;
+                    sql2 = swap;
+                }
+	            
+                log.debug(sql1);
+                jdbc.update(sql1);
+                log.debug(sql2);
+                jdbc.update(sql2);
             }
-            
-            log.debug(sql1);
-            jdbc.update(sql1);
-            log.debug(sql2);
-            jdbc.update(sql2);
             
             // recursive chown removed since it is costly and nominally incorrect
             
@@ -1957,6 +2005,8 @@ public class NodeDAO
             return NODE_TYPE_DATA;
         if (node instanceof ContainerNode)
             return NODE_TYPE_CONTAINER;
+        if (node instanceof LinkNode)
+            return NODE_TYPE_LINK;
         throw new UnsupportedOperationException("unable to persist node type: " + node.getClass().getName());
 
     }
@@ -2353,6 +2403,18 @@ public class NodeDAO
             col++;
             sb.append(pval);
             sb.append(",");
+	    
+            pval = null;
+            if (node instanceof LinkNode)
+            {
+                pval = ((LinkNode)node).getTarget().toString();
+                ps.setString(col, pval);
+            }
+            else
+                ps.setNull(col, Types.LONGVARCHAR);
+            col++;
+            sb.append(pval);
+            sb.append(",");
 
             if (update)
             {
@@ -2420,14 +2482,16 @@ public class NodeDAO
         private String[] path;
         private String nodeTablename;
         private String propTableName;
+        private boolean allowPartialPath;
 
-        public NodePathStatementCreator(String[] path, String nodeTablename, String propTableName)
+        public NodePathStatementCreator(String[] path, String nodeTablename, String propTableName, boolean allowPartialPath)
         {
             this.path = path;
             this.nodeTablename = nodeTablename;
             this.propTableName = propTableName;
+            this.allowPartialPath = allowPartialPath;
         }
-
+        
         public PreparedStatement createPreparedStatement(Connection conn) throws SQLException
         {
             String sql = getSQL();
@@ -2469,33 +2533,45 @@ public class NodeDAO
                 aprev = acur;
                 acur = "a"+i;
                 if (i > 0)
+                {
+                    if (this.allowPartialPath)
+                        sb.append(" LEFT");
                     sb.append(" JOIN ");
+                }
                 sb.append(nodeTablename);
                 sb.append(" AS ");
                 sb.append(acur);
-                if (i > 0)
+                if (i == 0)
                 {
-                    sb.append(" ON ");
+                    sb.append(" JOIN ");
+                    sb.append(nodeTablename);
+                    sb.append(" AS ");
+                    sb.append(acur+0);
+                    sb.append(" ON (");
+                    sb.append(acur);
+                    sb.append(".parentID IS NULL");
+                    sb.append(" AND ");
+                    sb.append(acur);
+                    sb.append(".nodeID=");
+                    sb.append(acur+0);
+                    sb.append(".nodeID");
+                    sb.append(" AND ");
+                    sb.append(acur);
+                    sb.append(".name = ? )");
+                }
+                else
+                {
+                    sb.append(" ON (");
                     sb.append(aprev);
                     sb.append(".nodeID=");
                     sb.append(acur);
                     sb.append(".parentID");
+                    sb.append(" AND ");
+                    sb.append(acur);
+                    sb.append(".name = ? )");
                 }
             }
 
-            sb.append(" WHERE ");
-            for (int i=0; i<path.length; i++)
-            {
-                acur = "a"+i;
-                if (i == 0) // root
-                {
-                    sb.append(acur);
-                    sb.append(".parentID IS NULL");
-                }
-                sb.append(" AND ");
-                sb.append(acur);
-                sb.append(".name = ?");
-            }
             return sb.toString();
         }
     }
@@ -2512,19 +2588,20 @@ public class NodeDAO
         public Object extractData(ResultSet rs)
             throws SQLException, DataAccessException
         {
+            boolean done = false;
             Node ret = null;
-            ContainerNode root = null;
+            Node root = null;
             String curPath = "";
             int numColumns = rs.getMetaData().getColumnCount();
 
-            while ( rs.next() )
+            while ( !done && rs.next() )
             {
                 if (root == null) // reading first row completely
                 {
                     log.debug("reading path from row 1");
                     int col = 1;
-                    ContainerNode cur = null;
-                    while (col < numColumns)
+                    Node cur = null;
+                    while (!done && (col < numColumns))
                     {
                         log.debug("readNode at " + col + ", path="+curPath);
                         Node n = readNode(rs, col, curPath);
@@ -2532,22 +2609,19 @@ public class NodeDAO
                         curPath = n.getUri().getPath();
                         col += columnsPerNode;
                         ret = n; // always return the last node
+                        if ((n instanceof LinkNode) || (n instanceof DataNode))
+                            done = true; // exit while loop
+                        
                         if (root == null) // root container
                         {
-                            cur = (ContainerNode) n;
+                            cur = n;
                             root = cur;
                         }
-                        else if (col < numColumns) // container in the path
+                        else 
                         {
-                            ContainerNode cn = (ContainerNode) n;
-                            cur.getNodes().add(cn);
-                            cn.setParent(cur);
-                            cur = cn;
-                        }
-                        else // last data node
-                        {
-                            cur.getNodes().add(n);
-                            n.setParent(cur);
+                            ((ContainerNode) cur).getNodes().add(n);
+                            n.setParent((ContainerNode) cur);
+                            cur = n;
                         }
                     }
                 }
@@ -2584,6 +2658,7 @@ public class NodeDAO
 
             String contentType = getString(rs, col++);
             String contentEncoding = getString(rs, col++);
+            String linkStr = getString(rs, col++);
 
             Long nodeSize = null;
             o = rs.getObject(col++);
@@ -2628,6 +2703,18 @@ public class NodeDAO
             {
                 node = new DataNode(vos);
                 ((DataNode) node).setBusy(NodeBusyState.getStateFromValue(busyString));
+            }
+            else if (NODE_TYPE_LINK.equals(type))
+            {
+                URI link;
+               
+                try { link = new URI(linkStr); }
+                catch(URISyntaxException bug)
+                {
+                    throw new RuntimeException("BUG - failed to create link URI", bug);
+                }
+                 
+                node = new LinkNode(vos, link);
             }
             else
             {

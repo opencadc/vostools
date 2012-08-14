@@ -146,7 +146,7 @@ public class Main implements Runnable
     public static final String ARG_GROUP_WRITE = "group-write";
     public static final String ARG_PROP = "prop";
     public static final String ARG_SRC = "src";
-    public static final String ARG_URI = "uri";
+    public static final String ARG_LINK = "link";
     public static final String ARG_DEST = "dest";
     public static final String ARG_CONTENT_TYPE = "content-type";
     public static final String ARG_CONTENT_ENCODING = "content-encoding";
@@ -191,7 +191,7 @@ public class Main implements Runnable
     private boolean retryEnabled = false;
     
     // target of a LinkNode
-    private URI linkedTarget;
+    private URI link;
 
     /**
      * @param args  The arguments passed into this command.
@@ -467,7 +467,7 @@ public class Main implements Runnable
                     node = new ContainerNode(this.target, this.properties);
                     break;
                 case LINK_NODE:
-                    node = new LinkNode(this.target, this.properties, this.linkedTarget);
+                    node = new LinkNode(this.target, this.properties, this.link);
                     break;
                 case STRUCTURED_DATA_NODE:
                     node = new StructuredDataNode(this.target, this.properties);
@@ -1335,16 +1335,16 @@ public class Main implements Runnable
                     this.nodeType = NodeType.UNSTRUCTURED_DATA_NODE;
                 else if ("LinkNode".equalsIgnoreCase(strNodeType))
                 {
-                    String strUri = argMap.getValue(ARG_URI);
-                    if (strUri == null) throw new IllegalArgumentException("Argument uri is required for node type " + strNodeType);
+                    String strLink = argMap.getValue(ARG_LINK);
+                    if (strLink == null) throw new IllegalArgumentException("Argument link is required for node type " + strNodeType);
                     
                     try
                     {
-                        this.linkedTarget = new URI(strUri);
+                        this.link = new URI(strLink);
                     }
                     catch (URISyntaxException e)
                     {
-                        throw new IllegalArgumentException("Invalid URI: " + strUri);
+                        throw new IllegalArgumentException("Invalid URI: " + strLink);
                     }  
                     
                     this.nodeType = NodeType.LINK_NODE;
@@ -1461,12 +1461,13 @@ public class Main implements Runnable
             "Create node:                                                                                      ",
             "java -jar VOSpaceClient.jar  [-v|--verbose|-d|--debug]                                            ",
             CertCmdArgUtil.getCertArgUsage(),
-            "   --create[=<ContainerNode|DataNode|LinkNode|StructuredDataNode|UnstructuredDataNode>]           ",
+            "   --create[=<ContainerNode|LinkNode|StructuredDataNode|UnstructuredDataNode>]                    ",
             "   --target=<target URI>                                                                          ",
+            "   [--uri=<target URI>]                                                                           ",
             "   [--prop=<properties file>]                                                                     ",
             "                                                                                                  ",
-            "Note: --create defaults to creating a ContainerNode (directory).  Creating                        ",
-            "other types of nodes specifically is not supported at this time.                                  ",
+            "Note: --create defaults to creating a ContainerNode (directory).                                  ",
+            "      --uri is required when creating a LinkNode.                                                 ",
             "                                                                                                  ",
             "Copy file:                                                                                        ",
             "java -jar VOSpaceClient.jar  [-v|--verbose|-d|--debug]                                            ",

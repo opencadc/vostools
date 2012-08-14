@@ -167,20 +167,20 @@ public abstract class DatabaseNodePersistence implements NodePersistence
     public Node get(VOSURI vos)
         throws NodeNotFoundException
     {
+        return this.get(vos, false);
+    }
+
+    @Override
+    public Node get(VOSURI vos, boolean allowPartialPath) throws NodeNotFoundException
+    {
         log.debug("get: " + vos + " -- " + vos.getName());
         if ( vos.isRoot() )
             return createRoot(vos.getAuthority());
         NodeDAO dao = getDAO( vos.getAuthority() );
-        Node ret = dao.getPath(vos.getPath());
+        Node ret = dao.getPath(vos.getPath(), allowPartialPath);
         if (ret == null)
             throw new NodeNotFoundException("not found: " + vos.getURIObject().toASCIIString());
         return ret;
-    }
-    
-    public Node get(VOSURI vos, boolean allowPartialPath) throws NodeNotFoundException
-    {
-        // TODO: Implement
-        return null;
     }
 
     private ContainerNode createRoot(String authority)

@@ -104,7 +104,23 @@ public interface NodePersistence
      */
     Node get(VOSURI vos)
         throws NodeNotFoundException;
-    
+
+    /**
+     * Find the node with the specified path. The returned node(s) will include
+     * some properties (typically inherently single-valued properties like owner,
+     * content-length, content-type, content-encoding, content-MD5) plus all
+     * properties needed to make authorization checks (isPublic, group-read, and
+     * group-write). Remaining properties and child nodes can be filled in as
+     * needed with getProperties(Node) and getChildren(ContainerNode). When partial 
+     * path is allowed (only allowed for a LinkNode) and the path of the identified 
+     * node cannot be resolved to a leaf node, and the last resolved node in the 
+     * partial path must be a LinkNode, and is returned. 
+     *
+     * @param vos a node identifier
+     * @param allowPartialPaths true if partial path is allowed, false otherwise
+     * @return the specified node
+     * @throws NodeNotFoundException
+     */
     Node get(VOSURI vos, boolean allowPartialPaths)
         throws NodeNotFoundException;
 
