@@ -71,6 +71,7 @@ package ca.nrc.cadc.vos.server;
 
 import java.net.URI;
 import java.net.URISyntaxException;
+import java.util.ArrayList;
 import java.util.List;
 
 import ca.nrc.cadc.vos.LinkNode;
@@ -91,6 +92,12 @@ import ca.nrc.cadc.vos.server.auth.VOSpaceAuthorizer;
  */
 public class PathResolver
 {
+    
+    public static enum PermissionType
+    {
+        READ_PERMISSION,
+        WRITE_PERMISSION
+    };
     
     private NodePersistence nodePersistence;
     private List<VOSURI> visitedURIs;
@@ -119,9 +126,9 @@ public class PathResolver
      * @throws NodeNotFoundException
      * @throws LinkingException
      */
-    public Node resolve(URI uri) throws NodeNotFoundException, LinkingException
+    public Node resolve(VOSURI uri) throws NodeNotFoundException, LinkingException
     {
-        return resolveWithReadPermission(uri, null);
+        return resolveWithPermissionCheck(uri, null, null);
     }
     
     /**
@@ -134,10 +141,12 @@ public class PathResolver
      * @throws NodeNotFoundException
      * @throws LinkingException
      */
-    public Node resolveWithReadPermission(URI uri, VOSpaceAuthorizer readAuthorizer) throws NodeNotFoundException, LinkingException
+    public Node resolveWithPermissionCheck(VOSURI uri, VOSpaceAuthorizer readAuthorizer, PermissionType permissionType)
+            throws NodeNotFoundException, LinkingException
     {
         visitCount = 0;
-        return doResolve(uri, readAuthorizer);
+        visitedURIs = new ArrayList<VOSURI>();
+        return doResolve(uri, readAuthorizer, null);
     }
     
     /**
@@ -150,7 +159,8 @@ public class PathResolver
      * @throws NodeNotFoundException
      * @throws LinkingException
      */
-    private Node doResolve(URI uri, VOSpaceAuthorizer readAuthorizer) throws NodeNotFoundException, LinkingException
+    private Node doResolve(VOSURI vosuri, VOSpaceAuthorizer readAuthorizer, PermissionType permissionType)
+            throws NodeNotFoundException, LinkingException
     {
         if (visitCount > visitLimit)
         {
@@ -158,11 +168,23 @@ public class PathResolver
         }
         visitCount++;
         
-        VOSURI vosuri = new VOSURI(uri);
+        if (visitedURIs.contains(vosuri))
+        {
+            throw new LinkingException("Circular link reference");
+        }
+        visitedURIs.add(vosuri);
+        
         Node node = nodePersistence.get(vosuri, true);
         if (readAuthorizer != null)
         {
-            readAuthorizer.getReadPermission(node);
+            if ((PermissionType.READ_PERMISSION.equals(permissionType)))
+            {
+                readAuthorizer.getReadPermission(node);
+            }
+            else if ((PermissionType.WRITE_PERMISSION.equals(permissionType)))
+            {
+                readAuthorizer.getWritePermission(node);
+            }
         }
         
         // check for full path
@@ -171,21 +193,18 @@ public class PathResolver
         
         if (!requestedPath.equals(nodePath))
         {
-            // can assume this is a link node since the paths differ
+            if (!(node instanceof LinkNode))
+            {
+                throw new NodeNotFoundException(vosuri.toString());
+            }
             LinkNode linkNode = (LinkNode) node;
             String remainingPath = requestedPath.substring(nodePath.length() - 1);
             
             VOSURI linkURI = validateTargetURI(linkNode);
-            if (visitedURIs.contains(linkURI))
-            {
-                throw new LinkingException("Circular link reference");
-            }
-            visitedURIs.add(linkURI);
-
             try
             {
-                URI resolvedURI = new URI(linkURI.toString() + remainingPath);
-                this.resolveWithReadPermission(resolvedURI, readAuthorizer);
+                VOSURI resolvedURI = new VOSURI(linkURI.toString() + remainingPath);
+                this.resolveWithPermissionCheck(resolvedURI, readAuthorizer, permissionType);
             }
             catch (URISyntaxException e)
             {
@@ -234,6 +253,16 @@ public class PathResolver
         {
             throw new LinkingException("Invalid target URI", e);
         }
+    }
+    
+    /**
+     * Set the limit for number of link reference resolutions.
+     * Default The value is 20.
+     * @param visitLimit
+     */
+    public void setVisitLimit(int visitLimit)
+    {
+        this.visitLimit = visitLimit;
     }
 
 }
