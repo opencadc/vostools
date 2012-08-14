@@ -74,6 +74,8 @@ import java.net.URISyntaxException;
 import java.util.ArrayList;
 import java.util.List;
 
+import org.apache.log4j.Logger;
+
 import ca.nrc.cadc.vos.LinkNode;
 import ca.nrc.cadc.vos.LinkingException;
 import ca.nrc.cadc.vos.Node;
@@ -93,14 +95,14 @@ import ca.nrc.cadc.vos.server.auth.VOSpaceAuthorizer;
 public class PathResolver
 {
     
-    public static enum PermissionType
-    {
-        READ_PERMISSION,
-        WRITE_PERMISSION
-    };
+    protected static final Logger LOG = Logger.getLogger(PathResolver.class);
     
     private NodePersistence nodePersistence;
-    private List<VOSURI> visitedURIs;
+    private List<String> visitedPaths;
+    
+    // enforce a maximum visit limit to prevent stack overflows on
+    // the recursive method
+    private static final int VISIT_LIMIT_MAX = 40;
     private int visitLimit = 20;
     private int visitCount = 0;
     
@@ -128,7 +130,7 @@ public class PathResolver
      */
     public Node resolve(VOSURI uri) throws NodeNotFoundException, LinkingException
     {
-        return resolveWithPermissionCheck(uri, null, null);
+        return resolveWithReadPermissionCheck(uri, null);
     }
     
     /**
@@ -141,12 +143,12 @@ public class PathResolver
      * @throws NodeNotFoundException
      * @throws LinkingException
      */
-    public Node resolveWithPermissionCheck(VOSURI uri, VOSpaceAuthorizer readAuthorizer, PermissionType permissionType)
+    public Node resolveWithReadPermissionCheck(VOSURI uri, VOSpaceAuthorizer readAuthorizer)
             throws NodeNotFoundException, LinkingException
     {
         visitCount = 0;
-        visitedURIs = new ArrayList<VOSURI>();
-        return doResolve(uri, readAuthorizer, null);
+        visitedPaths = new ArrayList<String>();
+        return doResolve(uri, readAuthorizer);
     }
     
     /**
@@ -159,7 +161,7 @@ public class PathResolver
      * @throws NodeNotFoundException
      * @throws LinkingException
      */
-    private Node doResolve(VOSURI vosuri, VOSpaceAuthorizer readAuthorizer, PermissionType permissionType)
+    private Node doResolve(VOSURI vosuri, VOSpaceAuthorizer readAuthorizer)
             throws NodeNotFoundException, LinkingException
     {
         if (visitCount > visitLimit)
@@ -167,29 +169,28 @@ public class PathResolver
             throw new LinkingException("Exceeded link limit.");
         }
         visitCount++;
-        
-        if (visitedURIs.contains(vosuri))
-        {
-            throw new LinkingException("Circular link reference");
-        }
-        visitedURIs.add(vosuri);
+        LOG.debug("visit number " + visitCount);
         
         Node node = nodePersistence.get(vosuri, true);
         if (readAuthorizer != null)
         {
-            if ((PermissionType.READ_PERMISSION.equals(permissionType)))
-            {
-                readAuthorizer.getReadPermission(node);
-            }
-            else if ((PermissionType.WRITE_PERMISSION.equals(permissionType)))
-            {
-                readAuthorizer.getWritePermission(node);
-            }
+            LOG.debug("doing read permission check.");
+            readAuthorizer.getReadPermission(node);
         }
         
-        // check for full path
+        // extract the paths
         String requestedPath = vosuri.getPath();
         String nodePath = node.getUri().getPath();
+        LOG.debug("[requested][resulting] path: [" + requestedPath + "][" + nodePath + "]");
+        
+        // check circular reference
+        if (visitedPaths.contains(nodePath))
+        {
+            LOG.debug("Found circular link: " + nodePath);
+            throw new LinkingException("Circular link reference: " + nodePath);
+        }
+        visitedPaths.add(nodePath);
+        LOG.debug("Added " + nodePath + " to visited list.");
         
         if (!requestedPath.equals(nodePath))
         {
@@ -198,13 +199,13 @@ public class PathResolver
                 throw new NodeNotFoundException(vosuri.toString());
             }
             LinkNode linkNode = (LinkNode) node;
-            String remainingPath = requestedPath.substring(nodePath.length() - 1);
+            String remainingPath = requestedPath.substring(nodePath.length());
             
             VOSURI linkURI = validateTargetURI(linkNode);
             try
             {
                 VOSURI resolvedURI = new VOSURI(linkURI.toString() + remainingPath);
-                this.resolveWithPermissionCheck(resolvedURI, readAuthorizer, permissionType);
+                return doResolve(resolvedURI, readAuthorizer);
             }
             catch (URISyntaxException e)
             {
@@ -213,7 +214,6 @@ public class PathResolver
         }
         
         return node;
-
     }
 
     /**
@@ -262,6 +262,11 @@ public class PathResolver
      */
     public void setVisitLimit(int visitLimit)
     {
+        if (visitLimit > VISIT_LIMIT_MAX)
+        {
+            throw new IllegalArgumentException(
+                    "Too high a visit limit.  Must be below " + VISIT_LIMIT_MAX);
+        }
         this.visitLimit = visitLimit;
     }
 
