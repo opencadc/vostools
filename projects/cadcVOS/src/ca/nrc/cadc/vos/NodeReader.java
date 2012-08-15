@@ -397,6 +397,18 @@ public class NodeReader
                 node.getNodes().add( buildContainerNode(childNode, namespace, childNodeUri) );
             else if (type.equals(DataNode.class.getSimpleName()))
                 node.getNodes().add( buildDataNode(childNode, namespace, childNodeUri) );
+            else if (type.equals(LinkNode.class.getSimpleName()))
+            {
+                // target element in the node element
+                Element target = childNode.getChild("target", namespace);
+                if (target == null)
+                {
+                    String error = "target element not found in node element";
+                    throw new NodeParsingException(error);
+                }
+                log.debug("node target: " + target.getText());
+                node.getNodes().add( buildLinkNode(childNode, namespace, childNodeUri, target.getText()) );
+            }
             else
                 throw new NodeParsingException("unsupported node type " + type);
             

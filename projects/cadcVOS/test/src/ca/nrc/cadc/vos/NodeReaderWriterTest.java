@@ -532,6 +532,16 @@ public class NodeReaderWriterTest
                 "ivo://cadc.nrc.ca/gms/groups#bar"));
         cn2.setProperties(properties);
         cn.getNodes().add(cn2);
+        
+        // add a LinkNode with some props
+        LinkNode ln = new LinkNode (new VOSURI(
+        		"vos://cadc.nrc.ca!vospace/testContainer/aLink"), 
+        		new URI("vos://cadc.nrc.ca!vospace/testContainer/baz"));
+        properties = new ArrayList<NodeProperty>();
+        properties.add(new NodeProperty("ivo://ivoa.net/vospace/core#read-group",
+                "ivo://cadc.nrc.ca/gms/groups#bar"));
+        ln.setProperties(properties);
+        cn2.getNodes().add(ln);
 
         // add another DataNode below
         n = new DataNode(new VOSURI("vos://cadc.nrc.ca!vospace/testContainer/baz"));
