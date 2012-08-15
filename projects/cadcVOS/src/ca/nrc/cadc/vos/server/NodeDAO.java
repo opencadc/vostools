@@ -2605,23 +2605,30 @@ public class NodeDAO
                     {
                         log.debug("readNode at " + col + ", path="+curPath);
                         Node n = readNode(rs, col, curPath);
-                        log.debug("readNode: " + n.getUri());
-                        curPath = n.getUri().getPath();
-                        col += columnsPerNode;
                         ret = n; // always return the last node
-                        if ((n instanceof LinkNode) || (n instanceof DataNode))
-                            done = true; // exit while loop
-                        
-                        if (root == null) // root container
+                        if (n == null)
                         {
-                            cur = n;
-                            root = cur;
+                        	done = true;
                         }
-                        else 
+                        else
                         {
-                            ((ContainerNode) cur).getNodes().add(n);
-                            n.setParent((ContainerNode) cur);
-                            cur = n;
+	                        log.debug("readNode: " + n.getUri());
+	                        curPath = n.getUri().getPath();
+	                        col += columnsPerNode;
+	                        if ((n instanceof LinkNode) || (n instanceof DataNode))
+	                            done = true; // exit while loop
+	                        
+	                        if (root == null) // root container
+	                        {
+	                            cur = n;
+	                            root = cur;
+	                        }
+	                        else 
+	                        {
+	                            ((ContainerNode) cur).getNodes().add(n);
+	                            n.setParent((ContainerNode) cur);
+	                            cur = n;
+	                        }
                         }
                     }
                 }
@@ -2694,102 +2701,109 @@ public class NodeDAO
                 throw new RuntimeException("BUG - failed to create vos URI", bug);
             }
 
-            Node node;
-            if (NODE_TYPE_CONTAINER.equals(type))
+            Node node = null;            
+            // Since we support partial paths, a node not in the Node table is 
+            // returned with all columns having null values. Instead of 
+            // checking all columns, if we do not have the following condition,
+            // return a null node.
+            if (!((parentID == null) && (nodeID == null) && (name == null) && (type == null)))
             {
-                node = new ContainerNode(vos);
-            }
-            else if (NODE_TYPE_DATA.equals(type))
-            {
-                node = new DataNode(vos);
-                ((DataNode) node).setBusy(NodeBusyState.getStateFromValue(busyString));
-            }
-            else if (NODE_TYPE_LINK.equals(type))
-            {
-                URI link;
-               
-                try { link = new URI(linkStr); }
-                catch(URISyntaxException bug)
-                {
-                    throw new RuntimeException("BUG - failed to create link URI", bug);
-                }
-                 
-                node = new LinkNode(vos, link);
-            }
-            else
-            {
-                throw new IllegalStateException("Unknown node database type: " + type);
-            }
-
-            NodeID nid = new NodeID();
-            nid.id = nodeID;
-            nid.ownerObject = ownerObject;
-            node.appData = nid;
-
-            if (contentType != null)
-            {
-                node.getProperties().add(new NodeProperty(VOS.PROPERTY_URI_TYPE, contentType));
-            }
-
-            if (contentEncoding != null)
-            {
-                node.getProperties().add(new NodeProperty(VOS.PROPERTY_URI_CONTENTENCODING, contentEncoding));
-            }
-            
-            if (node instanceof DataNode)
-            {
-                if (contentLength != null)
-                    node.getProperties().add(new NodeProperty(VOS.PROPERTY_URI_CONTENTLENGTH, contentLength.toString()));
-                else
-                    node.getProperties().add(new NodeProperty(VOS.PROPERTY_URI_CONTENTLENGTH, "0"));
-            }
-            else if (node instanceof ContainerNode)
-            {
-                if (nodeSize != null)
-                    node.getProperties().add(new NodeProperty(VOS.PROPERTY_URI_CONTENTLENGTH, nodeSize.toString()));
-                else
-                    node.getProperties().add(new NodeProperty(VOS.PROPERTY_URI_CONTENTLENGTH, "0"));
-            }
-
-            if (contentMD5 != null && contentMD5 instanceof byte[])
-            {
-                byte[] md5 = (byte[]) contentMD5;
-                if (md5.length < 16)
-                {
-                    byte[] tmp = md5;
-                    md5 = new byte[16];
-                    System.arraycopy(tmp, 0, md5, 0, tmp.length);
-                    // extra space is init with 0
-                }
-                String contentMD5String = HexUtil.toHex(md5);
-                node.getProperties().add(new NodeProperty(VOS.PROPERTY_URI_CONTENTMD5, contentMD5String));
-            }
-            if (lastModified != null)
-            {
-                node.getProperties().add(new NodeProperty(VOS.PROPERTY_URI_DATE, dateFormat.format(lastModified)));
-            }
-            if (groupRead != null)
-            {
-                node.getProperties().add(new NodeProperty(VOS.PROPERTY_URI_GROUPREAD, groupRead));
-            }
-            if (groupWrite != null)
-            {
-                node.getProperties().add(new NodeProperty(VOS.PROPERTY_URI_GROUPWRITE, groupWrite));
-            }
-            if (owner != null)
-            {
-                node.getProperties().add(new NodeProperty(VOS.PROPERTY_URI_CREATOR, owner));
-            }
-            node.getProperties().add(new NodeProperty(VOS.PROPERTY_URI_ISPUBLIC, Boolean.toString(isPublic)));
-
-            // set the read-only flag on the properties
-            for (String propertyURI : VOS.READ_ONLY_PROPERTIES)
-            {
-                int propertyIndex = node.getProperties().indexOf(new NodeProperty(propertyURI, null));
-                if (propertyIndex != -1)
-                {
-                    node.getProperties().get(propertyIndex).setReadOnly(true);
-                }
+	            if (NODE_TYPE_CONTAINER.equals(type))
+	            {
+	                node = new ContainerNode(vos);
+	            }
+	            else if (NODE_TYPE_DATA.equals(type))
+	            {
+	                node = new DataNode(vos);
+	                ((DataNode) node).setBusy(NodeBusyState.getStateFromValue(busyString));
+	            }
+	            else if (NODE_TYPE_LINK.equals(type))
+	            {
+	                URI link;
+	               
+	                try { link = new URI(linkStr); }
+	                catch(URISyntaxException bug)
+	                {
+	                    throw new RuntimeException("BUG - failed to create link URI", bug);
+	                }
+	                 
+	                node = new LinkNode(vos, link);
+	            }
+	            else
+	            {
+	                throw new IllegalStateException("Unknown node database type: " + type);
+	            }
+	
+	            NodeID nid = new NodeID();
+	            nid.id = nodeID;
+	            nid.ownerObject = ownerObject;
+	            node.appData = nid;
+	
+	            if (contentType != null)
+	            {
+	                node.getProperties().add(new NodeProperty(VOS.PROPERTY_URI_TYPE, contentType));
+	            }
+	
+	            if (contentEncoding != null)
+	            {
+	                node.getProperties().add(new NodeProperty(VOS.PROPERTY_URI_CONTENTENCODING, contentEncoding));
+	            }
+	            
+	            if (node instanceof DataNode)
+	            {
+	                if (contentLength != null)
+	                    node.getProperties().add(new NodeProperty(VOS.PROPERTY_URI_CONTENTLENGTH, contentLength.toString()));
+	                else
+	                    node.getProperties().add(new NodeProperty(VOS.PROPERTY_URI_CONTENTLENGTH, "0"));
+	            }
+	            else if (node instanceof ContainerNode)
+	            {
+	                if (nodeSize != null)
+	                    node.getProperties().add(new NodeProperty(VOS.PROPERTY_URI_CONTENTLENGTH, nodeSize.toString()));
+	                else
+	                    node.getProperties().add(new NodeProperty(VOS.PROPERTY_URI_CONTENTLENGTH, "0"));
+	            }
+	
+	            if (contentMD5 != null && contentMD5 instanceof byte[])
+	            {
+	                byte[] md5 = (byte[]) contentMD5;
+	                if (md5.length < 16)
+	                {
+	                    byte[] tmp = md5;
+	                    md5 = new byte[16];
+	                    System.arraycopy(tmp, 0, md5, 0, tmp.length);
+	                    // extra space is init with 0
+	                }
+	                String contentMD5String = HexUtil.toHex(md5);
+	                node.getProperties().add(new NodeProperty(VOS.PROPERTY_URI_CONTENTMD5, contentMD5String));
+	            }
+	            if (lastModified != null)
+	            {
+	                node.getProperties().add(new NodeProperty(VOS.PROPERTY_URI_DATE, dateFormat.format(lastModified)));
+	            }
+	            if (groupRead != null)
+	            {
+	                node.getProperties().add(new NodeProperty(VOS.PROPERTY_URI_GROUPREAD, groupRead));
+	            }
+	            if (groupWrite != null)
+	            {
+	                node.getProperties().add(new NodeProperty(VOS.PROPERTY_URI_GROUPWRITE, groupWrite));
+	            }
+	            if (owner != null)
+	            {
+	                node.getProperties().add(new NodeProperty(VOS.PROPERTY_URI_CREATOR, owner));
+	            }
+	            node.getProperties().add(new NodeProperty(VOS.PROPERTY_URI_ISPUBLIC, Boolean.toString(isPublic)));
+	
+	            // set the read-only flag on the properties
+	            for (String propertyURI : VOS.READ_ONLY_PROPERTIES)
+	            {
+	                int propertyIndex = node.getProperties().indexOf(new NodeProperty(propertyURI, null));
+	                if (propertyIndex != -1)
+	                {
+	                    node.getProperties().get(propertyIndex).setReadOnly(true);
+	                }
+	            }
             }
 
             return node;
