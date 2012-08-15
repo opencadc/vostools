@@ -67,7 +67,7 @@ public abstract class NodeActionTest<N extends NodeAction>
     private URL fakeURL;
 
     protected String nodeName = "child";
-    protected String vosURI = "vos://example.com!vopsace/parent/" + nodeName;
+    protected String vosURI = "vos://example.com!vopspace/parent/" + nodeName;
 
     @Test
     public void performNodeAction() throws Exception
@@ -85,7 +85,6 @@ public abstract class NodeActionTest<N extends NodeAction>
                 getTestSubject().performNodeAction(cnode, getMockNodeS());
         postPerformNodeAction(result);
     }
-
 
     /**
      * Any necessary preface action before the performNodeAction method is

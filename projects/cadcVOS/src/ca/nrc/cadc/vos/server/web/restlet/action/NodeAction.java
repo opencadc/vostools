@@ -80,6 +80,7 @@ import org.restlet.representation.Representation;
 
 import ca.nrc.cadc.io.ByteLimitExceededException;
 import ca.nrc.cadc.util.StringUtil;
+import ca.nrc.cadc.vos.LinkingException;
 import ca.nrc.cadc.vos.Node;
 import ca.nrc.cadc.vos.NodeFault;
 import ca.nrc.cadc.vos.NodeParsingException;
@@ -252,9 +253,10 @@ public abstract class NodeAction implements PrivilegedAction<Object>
      * @return the applicable persistent (server) Node
      * @throws AccessControlException if permission is denied
      * @throws FileNotFoundException if the target node does not exist
+     * @throws LinkingException if a container link in the path could not be resolved
      */
     protected abstract Node doAuthorizationCheck()
-        throws AccessControlException, FileNotFoundException;
+        throws AccessControlException, FileNotFoundException, LinkingException;
     
     /**
      * Entry point in performing the steps of a Node Action.  This includes:
@@ -338,6 +340,12 @@ public abstract class NodeAction implements PrivilegedAction<Object>
             String faultMessage = "Bad input: " + e.getMessage();
             log.debug(faultMessage);
             return handleException(NodeFault.InvalidArgument, faultMessage);
+        }
+        catch (LinkingException e)
+        {
+            String faultMessage = "Linking exception: " + e.getMessage();
+            log.debug(faultMessage);
+            return handleException(NodeFault.UnreadableLinkTarget, faultMessage);
         }
         catch (Throwable t)
         {

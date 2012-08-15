@@ -79,12 +79,15 @@ import org.restlet.data.Reference;
 
 import ca.nrc.cadc.util.StringUtil;
 import ca.nrc.cadc.vos.ContainerNode;
+import ca.nrc.cadc.vos.LinkingException;
 import ca.nrc.cadc.vos.Node;
+import ca.nrc.cadc.vos.NodeNotFoundException;
 import ca.nrc.cadc.vos.NodeParsingException;
 import ca.nrc.cadc.vos.NodeWriter;
 import ca.nrc.cadc.vos.VOS;
 import ca.nrc.cadc.vos.VOSURI;
 import ca.nrc.cadc.vos.server.AbstractView;
+import ca.nrc.cadc.vos.server.PathResolver;
 import ca.nrc.cadc.vos.server.web.representation.NodeOutputRepresentation;
 import ca.nrc.cadc.vos.server.web.representation.ViewRepresentation;
 
@@ -115,9 +118,18 @@ public class GetNodeAction extends NodeAction
 
     @Override
     public Node doAuthorizationCheck()
-        throws AccessControlException, FileNotFoundException
+        throws AccessControlException, FileNotFoundException, LinkingException
     {
-        return (Node) voSpaceAuthorizer.getReadPermission(vosURI.getURIObject());
+        // resolve any container links
+        PathResolver pathResolver = new PathResolver(nodePersistence);
+        try
+        {
+            return pathResolver.resolveWithReadPermissionCheck(vosURI, voSpaceAuthorizer);
+        }
+        catch (NodeNotFoundException e)
+        {
+            throw new FileNotFoundException(e.getMessage());
+        }
     }
     
     @Override

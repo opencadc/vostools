@@ -103,11 +103,22 @@ public class GetNodeActionTest extends NodeActionTest<GetNodeAction>
         expect(getMockAbstractView().getRedirectURL()).andReturn(null).once();
         expect(getMockAbstractView().getMediaType()).andReturn(MediaType.TEXT_XML).
                 once();
+        
+        expect(getMockNodePersistence().get(getTestSubject().vosURI, true)).andReturn(getMockNodeS()).once();
+        getMockNodePersistence().getProperties(getMockNodeS());
+        expectLastCall().once();
+        
+        expect(getMockNodeS().getUri()).andReturn(getTestSubject().vosURI).once();
+        
+        expect(getTestSubject().vosURI.getPath()).andReturn("/parent/" + nodeName).times(2);
 
         replay(queryForm);
         replay(getMockRef());
         replay(getMockRequest());
         replay(getMockAbstractView());
+        replay(getMockNodePersistence());
+        replay(getMockNodeS());
+        replay(getTestSubject().vosURI);
     }
    
     /**
@@ -124,6 +135,9 @@ public class GetNodeActionTest extends NodeActionTest<GetNodeAction>
         verify(getMockRef());
         verify(getMockRequest());
         verify(getMockAbstractView());
+        verify(getMockNodePersistence());
+        verify(getMockNodeS());
+        verify(getTestSubject().vosURI);
     }
 
 

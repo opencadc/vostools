@@ -150,6 +150,13 @@ public enum NodeFault
                    "InvalidArgument",
                    "A HTTP 413 status code with a InvalidArgument fault in the body is thrown if the XML document on the input stream is too large.",
                    "http://www.ivoa.net/Documents/latest/VOSpace.html")
+    ),
+    UnreadableLinkTarget
+    (
+        new Status(404,
+                   "NodeNotFound",
+                   "A HTTP 404 status code with a NodeNotFound fault in the body is thrown if the target of a link node could not be resolved by this service.",
+                   "http://www.ivoa.net/Documents/latest/VOSpace.html")
     );
 //    NotSupported ( Status.SERVER_ERROR_NOT_IMPLEMENTED ),
 //    BadRequest ( Status.CLIENT_ERROR_BAD_REQUEST ),
