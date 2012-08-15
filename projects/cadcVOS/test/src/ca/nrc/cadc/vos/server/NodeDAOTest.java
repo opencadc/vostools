@@ -357,6 +357,13 @@ public class NodeDAOTest
             expectedNodePath = nodePath4;
             actualDataNode = nodeDAO.getPath(dataNodePath, true);
             Assert.assertNull("expected a null node", actualDataNode);
+            
+            // test path not found
+            dataNodePath = "/" + HOME_CONTAINER + "/nonsense";
+            Node ret = nodeDAO.getPath(dataNodePath, true);
+            Assert.assertNull(ret);
+            ret = nodeDAO.getPath(dataNodePath, false);
+            Assert.assertNull(ret);
 
             log.debug("testPutGetDeleteNodes - CLEANUP");
 
