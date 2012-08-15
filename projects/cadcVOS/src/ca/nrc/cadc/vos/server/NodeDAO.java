@@ -683,8 +683,8 @@ public class NodeDAO
             commitTransaction();
 
             node.getProperties().add(new NodeProperty(VOS.PROPERTY_URI_CREATOR, identManager.toOwnerString(creator)));
-            //if (node instanceof ContainerNode)
-            //    node.getProperties().add(new NodeProperty(VOS.PROPERTY_URI_CONTENTLENGTH, Long.toString(0)));
+            if (node instanceof ContainerNode)
+                node.getProperties().add(new NodeProperty(VOS.PROPERTY_URI_CONTENTLENGTH, Long.toString(0)));
             return node;
         }
         catch(Throwable t)
