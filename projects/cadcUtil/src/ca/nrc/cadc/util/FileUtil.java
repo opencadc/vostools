@@ -85,6 +85,24 @@ import java.util.zip.CheckedInputStream;
  */
 public class FileUtil
 {
+    public static boolean delete(File f, boolean recursive)
+        throws IOException
+    {
+        if ( !f.exists() )
+            return false;
+        
+        if (recursive && f.isDirectory())
+        {
+            File[] children = f.listFiles();
+            for (File c : children)
+            {
+                if ( ! delete(c, true) )
+                    return false; // return immediately if we fail to delete something
+            }
+        }
+        return f.delete();
+    }
+
     /**
      * Compare the contents of two files.
      *  

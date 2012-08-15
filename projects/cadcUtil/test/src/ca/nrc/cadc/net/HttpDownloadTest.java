@@ -78,6 +78,8 @@ import java.io.ByteArrayOutputStream;
 import java.io.File;
 import java.io.FileOutputStream;
 import java.io.IOException;
+import java.io.InputStream;
+import java.io.OutputStream;
 import java.net.URL;
 import javax.security.auth.Subject;
 
@@ -312,18 +314,11 @@ public class HttpDownloadTest
     {
         log.debug("TEST: testDownloadFileWithCreateDir");
         URL src = httpURL;
-        File base = new File("/tmp/"+HttpDownloadTest.class.getSimpleName());
+        File base = new File(tmpDir, HttpDownloadTest.class.getSimpleName());
         File dest = new File(base, "bar/baz/robots.txt");
         try
         {
-            File tmp = dest;
-            for (int i=0; i<4; i++)
-            {
-                File par = tmp.getParentFile();
-                if (tmp.exists())
-                    tmp.delete();
-                tmp = par;
-            }
+            FileUtil.delete(base, true);
             Assert.assertTrue("base dir does not exist before download", !base.exists());
             HttpDownload dl = new HttpDownload(src, dest);
             dl.setOverwrite(true);
@@ -340,8 +335,8 @@ public class HttpDownloadTest
         }
         finally
         {
-            if (dest != null)
-                dest.delete();
+            if (base != null)
+                FileUtil.delete(base, true);
         }
     }
 
@@ -421,12 +416,63 @@ public class HttpDownloadTest
             Assert.assertNull(dl.getFile());
             Assert.assertNotNull("dest stream after download", out);
             Assert.assertTrue("size > 0", out.length > 0);
+            Assert.assertNotNull(dl.getContentType());
+            Assert.assertTrue("content-length > 0", dl.getContentLength() > 0);
+            Assert.assertEquals("size == content-length", out.length, dl.getContentLength());
         }
         catch (Exception unexpected)
         {
             log.error("unexpected exception", unexpected);
             Assert.fail("unexpected exception: " + unexpected);
         }
+    }
+
+    @Test
+    public void testDownloadToInputStreamWrapper() throws Exception
+    {
+        log.debug("TEST: testDownloadToInputStreamWrapper");
+
+        try
+        {
+            URL src = httpURL;
+            ByteArrayOutputStream dest = new ByteArrayOutputStream(8192);
+            TestWrapper tw = new TestWrapper(dest);
+            HttpDownload dl = new HttpDownload(src, tw);
+            dl.run();
+            dest.close();
+            byte[] out = dest.toByteArray();
+            Assert.assertNull(dl.getFile());
+            Assert.assertNotNull("dest stream after download", out);
+            Assert.assertTrue("size > 0", out.length > 0);
+            Assert.assertNotNull(dl.getContentType());
+            Assert.assertTrue("content-length > 0", dl.getContentLength() > 0);
+            Assert.assertEquals("size == content-length", out.length, dl.getContentLength());
+        }
+        catch (Exception unexpected)
+        {
+            log.error("unexpected exception", unexpected);
+            Assert.fail("unexpected exception: " + unexpected);
+        }
+    }
+    private class TestWrapper implements InputStreamWrapper
+    {
+        OutputStream dest;
+        TestWrapper(OutputStream dest)
+        {
+            this.dest = dest;
+        }
+        public void read(InputStream in)
+            throws IOException
+        {
+            byte[] buf = new byte[2048];
+            int n = in.read(buf);
+            while(n != -1)
+            {
+                dest.write(buf, 0, n);
+                n = in.read(buf);
+            }
+        }
+
     }
 
     @Test

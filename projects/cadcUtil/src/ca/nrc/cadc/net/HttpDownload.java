@@ -95,6 +95,7 @@ import ca.nrc.cadc.auth.SSOCookieCredential;
 import ca.nrc.cadc.net.event.TransferEvent;
 import ca.nrc.cadc.util.FileMetadata;
 import ca.nrc.cadc.util.StringUtil;
+import java.util.Date;
 
 /**
  * Simple task to encapsulate a single download (GET). This class supports http and https
@@ -126,9 +127,12 @@ public class HttpDownload extends HttpTransfer
     private OutputStream destStream;
     
     private File destFile;
+    private InputStreamWrapper wrapper;
+    
     //private boolean skipped = false;
     private String contentType;
     private String contentEncoding;
+    private String contentMD5;
     private long contentLength = -1;
     private long decompSize = -1;
     private long size = -1;
@@ -155,6 +159,11 @@ public class HttpDownload extends HttpTransfer
     public HttpDownload(URL src, OutputStream dest)
     {
         this(null,src,dest);
+    }
+
+    public HttpDownload(URL src, InputStreamWrapper dest)
+    {
+        this(null, src, dest);
     }
 
     /**
@@ -232,6 +241,18 @@ public class HttpDownload extends HttpTransfer
             throw new IllegalArgumentException("destination stream cannot be null");
         this.remoteURL = src;
         this.destStream = dest;
+    }
+
+    public HttpDownload(String userAgent, URL src, InputStreamWrapper dest)
+    {
+        super();
+        setUserAgent(userAgent);
+        if (src == null)
+            throw new IllegalArgumentException("source URL cannot be null");
+        if (dest == null)
+            throw new IllegalArgumentException("destination wrapper cannot be null");
+        this.remoteURL = src;
+        this.wrapper = dest;
     }
 
     // unused
@@ -422,7 +443,8 @@ public class HttpDownload extends HttpTransfer
                 meta.setContentType(contentType);
                 meta.setContentEncoding(contentEncoding);
                 meta.setContentLength(contentLength);
-                // TODO: add last-modified and md5sum
+                meta.setMd5Sum(contentMD5);
+                meta.setLastModified(new Date(lastModified));
                 fireEvent(destFile, TransferEvent.COMPLETED, meta);
             }
         }
@@ -562,86 +584,89 @@ public class HttpDownload extends HttpTransfer
     private void processHeader(HttpURLConnection conn)
         throws IOException, InterruptedException
     {
-        // determine filename and use destDir
-        String origFilename = null;
-
-        // first option: use what the caller suggested
-        if (localFile != destDir)
-            this.origFile = localFile;
-        
-        if (origFile == null)
-        {
-            // second option: use supplied filename if present in http header
-            String cdisp = conn.getHeaderField("Content-Disposition");
-            log.debug("HTTP HEAD: Content-Disposition = " + cdisp);
-            if ( cdisp != null )
-                origFilename = parseContentDisposition(cdisp);
-
-            // last resort: pull something from the end of the URL
-            if (origFilename == null)
-            {
-                String s = remoteURL.getPath();
-                String query = remoteURL.getQuery();
-                int i = s.lastIndexOf('/');
-                if (i != -1 && i < s.length() - 1)
-                    origFilename = s.substring(i + 1, s.length());
-                if (query != null)
-                    origFilename += "?" + query;
-            }
-            // very last resort for no path: use hostname
-            if (origFilename == null)
-            {
-                origFilename = remoteURL.getHost();
-            }
-            this.origFile = new File(destDir, origFilename);
-        }
-        origFilename = origFile.getName();
-
-        // check if incoming data is compressed, determine decompressed filename
         this.contentEncoding = conn.getHeaderField(("Content-Encoding"));
-        if ("gzip".equals(contentEncoding) || origFilename.endsWith(".gz"))
-        {
-            if (origFilename.endsWith(".gz"))
-                this.decompFile = new File(destDir, origFilename.substring(0, origFilename.length() - 3));
-            else
-            {
-                this.decompFile = origFile;
-                this.origFile = new File(destDir, origFilename + ".gz");
-            }
-            this.decompressor = GZIP;
-        }    
-        else if ("zip".equals(contentEncoding) || origFilename.endsWith(".zip"))
-        {
-            if (origFilename.endsWith(".zip"))
-                this.decompFile = new File(destDir, origFilename.substring(0, origFilename.length() - 4));
-            else
-            {
-                this.decompFile = origFile;
-                this.origFile = new File(destDir, origFilename + ".zip");
-            }
-            this.decompressor = ZIP;
-        }
-
         this.contentType = conn.getContentType();
-        
-        // get content-length
-        //this.contentLength = conn.getContentLength();
-        String s = conn.getHeaderField("Content-Length");
-        if (s != null)
+        this.contentMD5 = conn.getHeaderField("Content-MD5");
+
+        // parse this ourselves to get 64-bit sizes: conn.getContentLength returns int
+        String cl = conn.getHeaderField("Content-Length");
+        if (cl != null)
         {
-            try { this.contentLength = Long.parseLong(s); }
+            try { this.contentLength = Long.parseLong(cl); }
             catch(NumberFormatException ignore) { }
         }
 
-        // get uncompressed content length
-        s = conn.getHeaderField("X-Uncompressed-Length");
-        if (s != null)
+        // custom CADC header
+        String ucl = conn.getHeaderField("X-Uncompressed-Length");
+        if (ucl != null)
         {
-            try { this.decompSize = Long.parseLong(s); }
+            try { this.decompSize = Long.parseLong(ucl); }
             catch(NumberFormatException ignore) { }
         }
-        
+
         this.lastModified = conn.getLastModified();
+        
+        if (destStream == null && wrapper == null) // download to file: extra metadata
+        {
+            // determine filename and use destDir
+            String origFilename = null;
+
+            // first option: use what the caller suggested
+            if (localFile != destDir)
+                this.origFile = localFile;
+
+            if (origFile == null)
+            {
+                // second option: use supplied filename if present in http header
+                String cdisp = conn.getHeaderField("Content-Disposition");
+                log.debug("HTTP HEAD: Content-Disposition = " + cdisp);
+                if ( cdisp != null )
+                    origFilename = parseContentDisposition(cdisp);
+
+                // last resort: pull something from the end of the URL
+                if (origFilename == null)
+                {
+                    String s = remoteURL.getPath();
+                    String query = remoteURL.getQuery();
+                    int i = s.lastIndexOf('/');
+                    if (i != -1 && i < s.length() - 1)
+                        origFilename = s.substring(i + 1, s.length());
+                    if (query != null)
+                        origFilename += "?" + query;
+                }
+                // very last resort for no path: use hostname
+                if (origFilename == null)
+                {
+                    origFilename = remoteURL.getHost();
+                }
+                this.origFile = new File(destDir, origFilename);
+            }
+            origFilename = origFile.getName();
+
+            // encoding mucks with filename
+            if ("gzip".equals(contentEncoding) || origFilename.endsWith(".gz"))
+            {
+                if (origFilename.endsWith(".gz"))
+                    this.decompFile = new File(destDir, origFilename.substring(0, origFilename.length() - 3));
+                else
+                {
+                    this.decompFile = origFile;
+                    this.origFile = new File(destDir, origFilename + ".gz");
+                }
+                this.decompressor = GZIP;
+            }
+            else if ("zip".equals(contentEncoding) || origFilename.endsWith(".zip"))
+            {
+                if (origFilename.endsWith(".zip"))
+                    this.decompFile = new File(destDir, origFilename.substring(0, origFilename.length() - 4));
+                else
+                {
+                    this.decompFile = origFile;
+                    this.origFile = new File(destDir, origFilename + ".zip");
+                }
+                this.decompressor = ZIP;
+            }
+        }
 
         log.debug("   original file: " + origFile);
         log.debug("     decomp file: " + decompFile);
@@ -707,20 +732,17 @@ public class HttpDownload extends HttpTransfer
             conn.setInstanceFollowRedirects(true);
             conn.setRequestProperty("Accept", "*/*");
             conn.setRequestProperty("User-Agent", userAgent);
-            
-            
             for (HttpRequestProperty rp : requestProperties)
                 conn.setRequestProperty(rp.getProperty(), rp.getValue());
 
             conn.setRequestMethod("GET");
             int code = checkStatusCode(conn);
 
-            if (destStream == null) // downloading to a file
-                processHeader(conn); // TODO: we may want some of this in streaming mode
+            processHeader(conn);
 
             // evaulate overwrite of complete file
             boolean doDownload = true;
-            if (destStream == null)
+            if (destStream == null && wrapper == null)
                 doDownload = doCheckDestination();
 
             // go=false means cancelled, doDownload==false means skipped
@@ -730,17 +752,21 @@ public class HttpDownload extends HttpTransfer
 
             // evaluate possible resume?
             File tmp = origFile;
-            if (destStream == null) // downloading to file
-                origFile = new File(origFile.getAbsolutePath() + ".part");
+            
             this.size = contentLength;
             String pkey = null;
             String pvalue = null;
             boolean append = false;
             long startingPos = 0;
-            if (destStream == null && origFile.exists() && origFile.length() < contentLength) // partial file from previous download
+            if (destStream == null && wrapper == null) // downloading to file
             {
-                pkey = "Range";
-                pvalue = "bytes=" + origFile.length() + "-"; // open ended
+                // temporary destination
+                origFile = new File(origFile.getAbsolutePath() + ".part");
+                if (origFile.exists() && origFile.length() < contentLength) // partial file from previous download
+                {
+                    pkey = "Range";
+                    pvalue = "bytes=" + origFile.length() + "-"; // open ended
+                }
             }
 
             if (pkey != null) // open 2nd connection with a range request
@@ -842,7 +868,7 @@ public class HttpDownload extends HttpTransfer
                 log.debug("using BufferedOutputStream");
                 ostream = new BufferedOutputStream(ostream, bufferSize);
             }
-            else
+            else if (wrapper == null)
             {
                 // prepare to write to origFile
                 File parent = origFile.getParentFile();
@@ -856,14 +882,21 @@ public class HttpDownload extends HttpTransfer
                 ostream = new BufferedOutputStream(ostream, bufferSize);
             }
 
-            if (use_nio)
-                nioLoop(istream, ostream, 2*bufferSize, startingPos);
+            if (wrapper != null)
+                wrapper.read(istream);
             else
-                ioLoop(istream, ostream, 2*bufferSize, startingPos);
-            ostream.flush();
+            {
+                if (use_nio)
+                    nioLoop(istream, ostream, 2*bufferSize, startingPos);
+                else
+                    ioLoop(istream, ostream, 2*bufferSize, startingPos);
+            }
+
+            if (ostream != null)
+                ostream.flush();
 
             log.debug("download completed");
-            if (destStream == null) // downloading to file
+            if (destStream == null && wrapper == null) // downloading to file
             {
                 log.debug("renaming " + origFile +" to " + tmp);
                 origFile.renameTo(tmp);
