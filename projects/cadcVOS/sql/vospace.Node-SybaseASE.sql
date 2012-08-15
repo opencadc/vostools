@@ -98,7 +98,10 @@ CREATE TABLE Node (
 
 -- createdOn: internal column not referenced in NodeDAO
    createdOn         DATETIME          DEFAULT getDate(),
-   lastModified      DATETIME          NOT NULL
+   lastModified      DATETIME          NOT NULL,
+
+-- uri of the target of a LinkNode
+   link              TEXT              DEFAULT NULL
 )
 lock datarows
 with identity_gap = 512
