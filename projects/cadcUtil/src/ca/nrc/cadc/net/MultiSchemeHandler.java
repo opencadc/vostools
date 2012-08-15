@@ -196,7 +196,22 @@ public class MultiSchemeHandler implements SchemeHandler
         // fallback: hope for the best
         try 
         {
-            URL url = uri.toURL(); 
+            URL url = uri.toURL();
+            String frag = uri.getFragment();
+            if (frag != null) // convert fragment to query string: this is horrendous :-(
+            {
+                String s = uri.toString().replace('#', '?');
+                url = new URL(s);
+                /*
+                int i = s.indexOf('#');
+                String suri = s.substring(0,i);
+                String sfrag = s.substring(i+1);
+                if (frag.equals(sfrag)) // check
+                {
+                    url = new URL(suri + "?" + frag);
+                }
+                */
+            }
             List<URL> ret = new ArrayList<URL>();
             ret.add(url);
             return ret;
