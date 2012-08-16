@@ -256,17 +256,7 @@ public class NodeReader
             else if (type.equals(UnstructuredDataNode.class.getSimpleName()))
             	return buildUnstructuredDataNode(root, namespace, uri);
             else if (type.equals(LinkNode.class.getSimpleName()))
-            {
-                // target element in the node element
-                Element target = root.getChild("target", namespace);
-                if (target == null)
-                {
-                    String error = "target element not found in node element";
-                    throw new NodeParsingException(error);
-                }
-                log.debug("node target: " + target.getText());
-                return buildLinkNode(root, namespace, uri, target.getText());
-            }
+                return buildLinkNode(root, namespace, uri);
             else if (type.equals(StructuredDataNode.class.getSimpleName()))
             	return buildStructuredDataNode(root, namespace, uri);
             else
@@ -301,12 +291,22 @@ public class NodeReader
      * @throws NodeParsingException if there is an error parsing the XML.
      * @throws URISyntaxException 
      */
-    protected Node buildLinkNode(Element el, Namespace namespace, String uri, String target)
+    protected Node buildLinkNode(Element el, Namespace namespace, String uri)
         throws NodeParsingException, URISyntaxException
     {
-        // Instantiate a DataNode class
+        // Instantiate a LinkNode class
         LinkNode node;
         VOSURI vosuri;
+        
+        // target element in the node element
+        Element target = el.getChild("target", namespace);
+        if (target == null)
+        {
+            String error = "target element not found in node element";
+            throw new NodeParsingException(error);
+        }
+        log.debug("node target: " + target.getText());
+
         try
         {
         	vosuri = new VOSURI(uri);
@@ -319,11 +319,11 @@ public class NodeReader
         
         try
         {
-            node = new LinkNode(vosuri, new URI(target));
+            node = new LinkNode(vosuri, new URI(target.getText()));
         }
         catch (URISyntaxException e)
         {
-            String error = "invalid node target " + target;
+            String error = "invalid node target " + target.getText();
             throw new NodeParsingException(error, e);
         }
 
@@ -398,17 +398,7 @@ public class NodeReader
             else if (type.equals(DataNode.class.getSimpleName()))
                 node.getNodes().add( buildDataNode(childNode, namespace, childNodeUri) );
             else if (type.equals(LinkNode.class.getSimpleName()))
-            {
-                // target element in the node element
-                Element target = childNode.getChild("target", namespace);
-                if (target == null)
-                {
-                    String error = "target element not found in node element";
-                    throw new NodeParsingException(error);
-                }
-                log.debug("node target: " + target.getText());
-                node.getNodes().add( buildLinkNode(childNode, namespace, childNodeUri, target.getText()) );
-            }
+                node.getNodes().add( buildLinkNode(childNode, namespace, childNodeUri) );            	
             else
                 throw new NodeParsingException("unsupported node type " + type);
             
