@@ -2090,7 +2090,7 @@ public class NodeDAO
             else
             {
                 // contentLength and md5 are virtual columns
-                sb.append(" delta = (contentLength - nodeSize)");
+                sb.append(" delta = (coalesce(contentLength, 0) - nodeSize)");
             }
             sb.append(" WHERE nodeID = ?");
             String sql = sb.toString();
