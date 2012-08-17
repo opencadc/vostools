@@ -224,7 +224,7 @@ public class PathResolver
      * @throws LinkingException If the target is non vospace, not local, or
      * an invalid URI.
      */
-    private VOSURI validateTargetURI(LinkNode linkNode) throws LinkingException
+    public static VOSURI validateTargetURI(LinkNode linkNode) throws LinkingException
     {
         VOSURI nodeURI = linkNode.getUri();
         URI targetURI = linkNode.getTarget();
