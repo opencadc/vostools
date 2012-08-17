@@ -89,14 +89,19 @@ import org.junit.runners.Suite;
 ({
     CreateContainerNodeTest.class,
     CreateDataNodeTest.class,
+    CreateLinkNodeTest.class,
     GetContainerNodeTest.class,
     GetDataNodeTest.class,
+    GetLinkNodeTest.class,
     UpdateContainerNodeTest.class,
     UpdateDataNodeTest.class,
+    UpdateLinkNodeTest.class,
     DeleteContainerNodeTest.class,
     DeleteDataNodeTest.class,
+    DeleteLinkNodeTest.class,
     PullFromVOSpaceTest.class,
-    PushToVOSpaceTest.class
+    PushToVOSpaceTest.class,
+    MoveVOSpaceInternalTest.class
 })
 
 public class VOSTestSuite

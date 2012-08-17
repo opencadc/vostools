@@ -69,27 +69,13 @@
 
 package ca.nrc.cadc.conformance.vos;
 
-import ca.nrc.cadc.date.DateUtil;
-import ca.nrc.cadc.reg.client.RegistryClient;
-import ca.nrc.cadc.vos.ContainerNode;
-import ca.nrc.cadc.vos.DataNode;
-import ca.nrc.cadc.vos.Node;
-import ca.nrc.cadc.vos.NodeProperty;
-import ca.nrc.cadc.vos.NodeWriter;
-import ca.nrc.cadc.vos.VOS;
-import ca.nrc.cadc.vos.VOS.NodeBusyState;
-import ca.nrc.cadc.vos.VOSException;
-import ca.nrc.cadc.vos.VOSURI;
-import com.meterware.httpunit.GetMethodWebRequest;
-import com.meterware.httpunit.PostMethodWebRequest;
-import com.meterware.httpunit.PutMethodWebRequest;
-import com.meterware.httpunit.WebConversation;
-import com.meterware.httpunit.WebRequest;
-import com.meterware.httpunit.WebResponse;
+import static org.junit.Assert.assertNotNull;
+
 import java.io.ByteArrayInputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.net.MalformedURLException;
+import java.net.URI;
 import java.net.URISyntaxException;
 import java.net.URL;
 import java.text.DateFormat;
@@ -97,9 +83,29 @@ import java.util.ArrayList;
 import java.util.Calendar;
 import java.util.List;
 import java.util.Map;
+
+import org.apache.log4j.Level;
 import org.apache.log4j.Logger;
-import static org.junit.Assert.*;
 import org.xml.sax.SAXException;
+
+import ca.nrc.cadc.date.DateUtil;
+import ca.nrc.cadc.reg.client.RegistryClient;
+import ca.nrc.cadc.vos.ContainerNode;
+import ca.nrc.cadc.vos.DataNode;
+import ca.nrc.cadc.vos.LinkNode;
+import ca.nrc.cadc.vos.Node;
+import ca.nrc.cadc.vos.NodeProperty;
+import ca.nrc.cadc.vos.NodeWriter;
+import ca.nrc.cadc.vos.VOS.NodeBusyState;
+import ca.nrc.cadc.vos.VOSException;
+import ca.nrc.cadc.vos.VOSURI;
+
+import com.meterware.httpunit.GetMethodWebRequest;
+import com.meterware.httpunit.PostMethodWebRequest;
+import com.meterware.httpunit.PutMethodWebRequest;
+import com.meterware.httpunit.WebConversation;
+import com.meterware.httpunit.WebRequest;
+import com.meterware.httpunit.WebResponse;
 
 /**
  * Base class for all VOSpace conformance tests. Contains methods to PUT, GET,
@@ -281,6 +287,33 @@ public abstract class VOSBaseTest
     {
         return getSampleDataNode("");
     }
+    
+    /**
+     * Builds and returns a sample LinkNode for use in test cases.
+     *
+     *@param target - target Node
+     * @return a LinkNode.
+     * @throws URISyntaxException if a Node URI is malformed.
+     */
+    protected LinkNode getSampleLinkNode(Node target)
+        throws URISyntaxException
+    {
+        return getSampleLinkNode("", target.getUri().getURIObject());
+    }
+    
+    
+    /**
+     * Builds and returns a sample LinkNode for use in test cases.
+     *
+     *@param target - target URI
+     * @return a LinkNode.
+     * @throws URISyntaxException if a Node URI is malformed.
+     */
+    protected LinkNode getSampleLinkNode(URI target)
+        throws URISyntaxException
+    {
+        return getSampleLinkNode("", target);
+    }
 
     /**
      * Builds and returns a sample DataNode for use in test cases.
@@ -303,6 +336,31 @@ public abstract class VOSBaseTest
         DataNode node = new DataNode(new VOSURI(nodeName));
         node.getProperties().add(nodeProperty);
         node.setBusy(NodeBusyState.notBusy);
+        return node;
+    }
+    
+    /**
+     * Builds and returns a sample LinkNode for use in test cases.
+     *
+     * @param name
+     * @param target node to point to
+     * @return a LinkNode.
+     * @throws URISyntaxException if a Node URI is malformed.
+     */
+    protected LinkNode getSampleLinkNode(String name, URI target)
+        throws URISyntaxException
+    {
+        // List of NodeProperty
+        NodeProperty nodeProperty = new NodeProperty("ivo://ivoa.net/vospace/core#description", 
+                "Link to " + target.getPath());
+        nodeProperty.setReadOnly(true);
+
+        // LinkNode
+        String date = dateFormat.format(Calendar.getInstance().getTime());
+        String nodeName = getTestSuiteNode(NODE_ENDPOINT).getUri() + "/" + VOSTestSuite.userName + "_sample_" + date + name;
+        log.debug("link node name: " + nodeName);
+        LinkNode node = new LinkNode(new VOSURI(nodeName), target);
+        node.getProperties().add(nodeProperty);
         return node;
     }
 
@@ -368,6 +426,21 @@ public abstract class VOSBaseTest
     {
         return get(node, null);
     }
+    
+    /**
+    * Gets a Node from the VOSpace.
+    *
+    * @param service endpoint.
+    * @param node to get.
+    * @return a HttpUnit WebResponse.
+    * @throws IOException
+    * @throws SAXException if there is an error parsing the retrieved page.
+    */
+   protected WebResponse get(String endPoint, Node node)
+       throws IOException, SAXException
+   {
+       return get(endPoint, node, null);
+   }
 
     /**
      * Gets a Node from the VOSpace, appending the parameters to the GET
@@ -382,7 +455,28 @@ public abstract class VOSBaseTest
     protected WebResponse get(Node node, Map<String, String> parameters)
         throws IOException, SAXException
     {
-        String resourceUrl = resourceURL + node.getUri().getPath();
+        return get(null, node, parameters);
+    }
+
+    /**
+     * Gets a Node from the VOSpace, appending the parameters to the GET
+     * request of the Node URI.
+     *
+     * @param service endpoint.
+     * @param node to get.
+     * @param parameters Map of HTTP request parameters.
+     * @return a HttpUnit WebResponse.
+     * @throws IOException
+     * @throws SAXException if there is an error parsing the retrieved page.
+     */
+    protected WebResponse get(String endpoint, Node node, Map<String, String> parameters)
+        throws IOException, SAXException
+    {
+        String resourceUrl;
+        if (endpoint == null)
+            resourceUrl = resourceURL + "/" + node.getUri().getPath();
+        else
+            resourceUrl = getResourceUrl(endpoint) + node.getUri().getPath();
         log.debug("**************************************************");
         log.debug("HTTP GET: " + resourceUrl);
         WebRequest request = new GetMethodWebRequest(resourceUrl);
@@ -411,14 +505,14 @@ public abstract class VOSBaseTest
     }
 
     /**
-     * Post a ContainerNode to the VOSpace.
+     * Post a Node to the VOSpace.
      *
      * @param node to post.
      * @return a HttpUnit WebResponse.
      * @throws IOException
      * @throws SAXException if there is an error parsing the retrieved page.
      */
-    protected WebResponse post(ContainerNode node)
+    protected WebResponse post(Node node)
         throws IOException, SAXException
     {
         String resourceUrl = resourceURL + node.getUri().getPath();
@@ -429,42 +523,6 @@ public abstract class VOSBaseTest
         NodeWriter nodeWriter = new NodeWriter();
         nodeWriter.write(node, sb);
         
-        ByteArrayInputStream in = new ByteArrayInputStream(sb.toString().getBytes("UTF-8"));
-
-        WebRequest request = new PostMethodWebRequest(resourceUrl, in, "text/xml");
-
-        log.debug(getRequestParameters(request));
-
-        WebConversation conversation = new WebConversation();
-        conversation.setExceptionsThrownOnErrorStatus(false);
-        WebResponse response = conversation.sendRequest(request);
-        assertNotNull("POST response to " + resourceUrl + " is null", response);
-
-        log.debug(getResponseHeaders(response));
-        log.debug("Response code: " + response.getResponseCode());
-
-        return response;
-    }
-
-    /**
-     * Post a DataNode to the VOSpace.
-     *
-     * @param node to post.
-     * @return a HttpUnit WebResponse.
-     * @throws IOException
-     * @throws SAXException if there is an error parsing the retrieved page.
-     */
-    protected WebResponse post(DataNode node)
-        throws IOException, SAXException
-    {
-        String resourceUrl = resourceURL + node.getUri().getPath();
-        log.debug("**************************************************");
-        log.debug("HTTP POST: " + resourceUrl);
-        
-        StringBuilder sb = new StringBuilder();
-        NodeWriter nodeWriter = new NodeWriter();
-        nodeWriter.write(node, sb);
-
         ByteArrayInputStream in = new ByteArrayInputStream(sb.toString().getBytes("UTF-8"));
 
         WebRequest request = new PostMethodWebRequest(resourceUrl, in, "text/xml");
@@ -532,21 +590,21 @@ public abstract class VOSBaseTest
     }
     
     /**
-     * Put a DataNode to the VOSpace.
+     * Put a DataNode or LinkNode to the VOSpace.
      *
      * @param node to put.
      * @return a HttpUnit WebResponse.
      * @throws IOException
      * @throws SAXException if there is an error parsing the retrieved page.
      */
-    protected WebResponse put(DataNode node)
+    protected WebResponse put(Node node)
         throws IOException, SAXException
     {
         return put(null, node, new NodeWriter());
     }
 
     /**
-     * Put a DataNode to the VOSpace. Also takes a NodeWriter which
+     * Put a DataNode or LinkNode to the VOSpace. Also takes a NodeWriter which
      * allows customization of the XML output to testing purposes.
      *
      * @param node to put.
@@ -555,14 +613,14 @@ public abstract class VOSBaseTest
      * @throws IOException
      * @throws SAXException if there is an error parsing the retrieved page.
      */
-    protected WebResponse put(DataNode node, NodeWriter writer)
+    protected WebResponse put(Node node, NodeWriter writer)
         throws IOException, SAXException
     {
         return put(null, node, writer);
     }
 
     /**
-     * Put a DataNode to the VOSpace. Also takes a NodeWriter which
+     * Put a DataNode or LinkNode to the VOSpace. Also takes a NodeWriter which
      * allows customization of the XML output to testing purposes.
      *
      * @param service endpoint.
@@ -572,7 +630,7 @@ public abstract class VOSBaseTest
      * @throws IOException
      * @throws SAXException if there is an error parsing the retrieved page.
      */
-    protected WebResponse put(String endpoint, DataNode node, NodeWriter writer)
+    protected WebResponse put(String endpoint, Node node, NodeWriter writer)
         throws IOException, SAXException
     {
         String resourceUrl;

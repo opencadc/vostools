@@ -74,6 +74,7 @@ import org.junit.Ignore;
 import ca.nrc.cadc.vos.TransferReader;
 import java.net.URL;
 import ca.nrc.cadc.vos.DataNode;
+import ca.nrc.cadc.vos.LinkNode;
 import ca.nrc.cadc.vos.NodeProperty;
 import ca.nrc.cadc.vos.NodeWriter;
 import ca.nrc.cadc.vos.Protocol;
@@ -216,6 +217,98 @@ public class PushToVOSpaceTest extends VOSTransferTest
             }
 
             // Delete the node
+            response = delete(VOSBaseTest.NODE_ENDPOINT, dataNode);
+            assertEquals("DELETE response code should be 200", 200, response.getResponseCode());
+        }
+        catch (Exception unexpected)
+        {
+            log.error("unexpected exception", unexpected);
+            Assert.fail("unexpected exception: " + unexpected);
+        }
+    }
+    
+    @Test
+    public void testSyncPushWithLinkNode()
+    {
+        try
+        {
+            log.debug("testSyncPush");
+
+            // Get a DataNode.
+            DataNode dataNode = getSampleDataNode();
+            dataNode.getProperties().add(new NodeProperty(VOS.PROPERTY_URI_CONTENTLENGTH, new Long(1024).toString()));
+            WebResponse response = put(VOSBaseTest.NODE_ENDPOINT,dataNode, new NodeWriter());
+            assertEquals("PUT response code should be 200", 200, response.getResponseCode());
+            
+            // Create a LinkNode to the DataNode
+            LinkNode linkNode = getSampleLinkNode(dataNode);
+            response = put(VOSBaseTest.NODE_ENDPOINT, linkNode, new NodeWriter());
+            assertEquals("PUT response code should be 200", 200, response.getResponseCode());
+
+            // Create a Transfer.
+            List<Protocol> protocols = new ArrayList<Protocol>();
+            protocols.add(new Protocol(VOS.PROTOCOL_HTTP_PUT));
+            protocols.add(new Protocol(VOS.PROTOCOL_HTTPS_PUT));
+            protocols.add(new Protocol("some:unknown:proto"));
+            Transfer transfer = new Transfer(linkNode.getUri(), Direction.pushToVoSpace,protocols);
+            
+
+            // Get the transfer XML.
+            TransferWriter writer = new TransferWriter();
+            StringWriter sw = new StringWriter();
+            writer.write(transfer, sw);
+
+            // POST the XML to the transfer endpoint.
+            response = post(sw.toString());
+            assertEquals("POST response code should be 303", 303, response.getResponseCode());
+
+            // Get the header Location.
+            String location = response.getHeaderField("Location");
+            assertNotNull("Location header not set", location);
+            assertTrue("../results/transferDetails location expected: ", 
+                    location.endsWith("/results/transferDetails"));
+
+            // Follow all the redirects.
+            response = get(location);
+            while (303 == response.getResponseCode())
+            {
+                location = response.getHeaderField("Location");
+                assertNotNull("Location header not set", location);
+                log.debug("New location: " + location);
+                response = get(location);
+            }
+            assertEquals("POST response code should be 200", 200, response.getResponseCode());
+
+            
+            // Get the Transfer XML.
+            String xml = response.getText();
+            log.debug("GET XML:\r\n" + xml);
+
+            // Create a Transfer from Transfer XML.
+            TransferReader reader = new TransferReader();
+            transfer = reader.read(xml);
+
+            assertEquals("direction", Direction.pushToVoSpace, transfer.getDirection());
+            
+            // that bogus one should not be here, so only 0 to 2 protocols
+            assertTrue(transfer.getProtocols().size() < 3);
+            for (Protocol p : transfer.getProtocols())
+            {
+                try { 
+                        URL actualURL = new URL(p.getEndpoint());
+                        assertTrue("URL not resolved" , 
+                                actualURL.getPath().endsWith(dataNode.getName()));
+                    }
+                catch(Exception unexpected)
+                {
+                    log.error("unexpected exception", unexpected);
+                    fail("unexpected exception creating endpoint URL: " + unexpected);
+                }
+            }
+
+            // Delete the nodes
+            response = delete(VOSBaseTest.NODE_ENDPOINT, linkNode);
+            assertEquals("DELETE response code should be 200", 200, response.getResponseCode());
             response = delete(VOSBaseTest.NODE_ENDPOINT, dataNode);
             assertEquals("DELETE response code should be 200", 200, response.getResponseCode());
         }

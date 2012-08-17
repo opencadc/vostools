@@ -69,27 +69,21 @@
 
 package ca.nrc.cadc.conformance.vos;
 
-import java.net.MalformedURLException;
-import ca.nrc.cadc.util.Log4jInit;
-import java.net.URL;
-import ca.nrc.cadc.vos.TransferReader;
-import ca.nrc.cadc.vos.NodeProperty;
-import ca.nrc.cadc.vos.NodeWriter;
-import java.util.HashMap;
-import java.util.Map;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertNotNull;
+import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.fail;
+
+import java.io.ByteArrayInputStream;
 import java.io.StringWriter;
-import ca.nrc.cadc.vos.TransferWriter;
-import ca.nrc.cadc.vos.Protocol;
+import java.net.MalformedURLException;
+import java.net.URI;
+import java.net.URL;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
-import ca.nrc.cadc.vos.DataNode;
-import ca.nrc.cadc.vos.Direction;
-import org.junit.Ignore;
-import org.junit.Assert;
-import ca.nrc.cadc.vos.Transfer;
-import ca.nrc.cadc.vos.VOS;
-import ca.nrc.cadc.xml.XmlUtil;
-import com.meterware.httpunit.WebResponse;
+import java.util.Map;
+
 import org.apache.log4j.Level;
 import org.apache.log4j.Logger;
 import org.jdom.Document;
@@ -97,11 +91,30 @@ import org.jdom.Element;
 import org.jdom.Namespace;
 import org.junit.After;
 import org.junit.AfterClass;
+import org.junit.Assert;
 import org.junit.Before;
 import org.junit.BeforeClass;
+import org.junit.Ignore;
 import org.junit.Test;
 
-import static org.junit.Assert.*;
+import ca.nrc.cadc.util.Log4jInit;
+import ca.nrc.cadc.uws.ExecutionPhase;
+import ca.nrc.cadc.uws.Job;
+import ca.nrc.cadc.uws.JobReader;
+import ca.nrc.cadc.vos.DataNode;
+import ca.nrc.cadc.vos.Direction;
+import ca.nrc.cadc.vos.LinkNode;
+import ca.nrc.cadc.vos.NodeProperty;
+import ca.nrc.cadc.vos.NodeWriter;
+import ca.nrc.cadc.vos.Protocol;
+import ca.nrc.cadc.vos.Transfer;
+import ca.nrc.cadc.vos.TransferReader;
+import ca.nrc.cadc.vos.TransferWriter;
+import ca.nrc.cadc.vos.VOS;
+import ca.nrc.cadc.xml.XmlUtil;
+
+import com.meterware.httpunit.HttpNotFoundException;
+import com.meterware.httpunit.WebResponse;
 
 /**
  * Test case for reading data from a service (pullFromVoSpace).
@@ -225,7 +238,285 @@ public class PullFromVOSpaceTest extends VOSTransferTest
             Assert.fail("unexpected exception: " + unexpected);
         }
     }
+    
+    @Test
+    public void testSyncPullWithLinkNode()
+    {
+        try
+        {
+            log.debug("testSyncPullWithLinkNode");
 
+            // Get a DataNode.
+            DataNode dataNode = getSampleDataNode();
+            dataNode.getProperties().add(new NodeProperty(VOS.PROPERTY_URI_CONTENTLENGTH, new Long(1024).toString()));
+            WebResponse response = put(VOSBaseTest.NODE_ENDPOINT,dataNode, new NodeWriter());
+            assertEquals("PUT response code should be 200", 200, response.getResponseCode());
+
+            // Create a LinkNode to the DataNode
+            LinkNode linkNode = getSampleLinkNode(dataNode);
+            response = put(VOSBaseTest.NODE_ENDPOINT, linkNode, new NodeWriter());
+            assertEquals("PUT response code should be 200", 200, response.getResponseCode());
+                        
+            // Create a Transfer.
+            List<Protocol> protocols = new ArrayList<Protocol>();
+            protocols.add(new Protocol(VOS.PROTOCOL_HTTP_GET));
+            protocols.add(new Protocol(VOS.PROTOCOL_HTTPS_GET));
+            protocols.add(new Protocol("some:unknown:proto"));
+            Transfer transfer = new Transfer(linkNode.getUri(), Direction.pullFromVoSpace,protocols);
+
+            // Get the transfer XML.
+            TransferWriter writer = new TransferWriter();
+            StringWriter sw = new StringWriter();
+            writer.write(transfer, sw);
+
+            // POST the XML to the transfer endpoint.
+            response = post(sw.toString());
+            assertEquals("POST response code should be 303", 303, response.getResponseCode());
+
+            // Get the header Location.
+            String location = response.getHeaderField("Location");
+            assertNotNull("Location header not set", location);
+            assertTrue("../results/transferDetails location expected: ", 
+                    location.endsWith("/results/transferDetails"));
+
+            // Follow all the redirects.
+            response = get(location);
+            while (303 == response.getResponseCode())
+            {
+                location = response.getHeaderField("Location");
+                assertNotNull("Location header not set", location);
+                log.debug("New location: " + location);
+                response = get(location);
+            }
+            assertEquals("GET response code should be 200", 200, response.getResponseCode());
+
+            // read the response transfer doc
+            String xml = response.getText();
+            log.debug("testSyncPullWithLinkNode response from POST: \n\n" + xml);
+
+            // Create a Transfer from Transfer XML.
+            TransferReader reader = new TransferReader();
+            transfer = reader.read(xml);
+
+            assertEquals("direction", Direction.pullFromVoSpace, transfer.getDirection());
+            assertNotNull("protocols", transfer.getProtocols());
+            // that bogus one should not be here, so only 0 to 2 protocols
+            assertTrue("has some protocols", !transfer.getProtocols().isEmpty());
+            for (Protocol p : transfer.getProtocols())
+            {
+                try 
+                {
+                    URL actualURL = new URL(p.getEndpoint());
+                    log.debug("endpoint url: " + actualURL);
+                    assertTrue("URL not resolved: " +  actualURL, 
+                            actualURL.getPath().contains(dataNode.getName()));
+                }
+                catch(MalformedURLException mex)
+                {
+                    fail("malformed endpoint URL: " + p.getEndpoint() + ", " + mex);
+                }
+            }
+
+            // Delete the nodes
+            response = delete(VOSBaseTest.NODE_ENDPOINT, linkNode);
+            assertEquals("DELETE response code should be 200", 200, response.getResponseCode());
+            response = delete(VOSBaseTest.NODE_ENDPOINT, dataNode);
+            assertEquals("DELETE response code should be 200", 200, response.getResponseCode());
+
+            log.info("pullJob passed.");
+        }
+        catch (Exception unexpected)
+        {
+            log.error("unexpected exception", unexpected);
+            Assert.fail("unexpected exception: " + unexpected);
+        }
+    }
+
+    @Test
+    public void testSyncPullWithLinkNodeExtTarget()
+    {
+        try
+        {
+            log.debug("testSyncPullWithLinkNodeExtTarget");
+
+            // Create a LinkNode to the DataNode
+            LinkNode linkNode = getSampleLinkNode(new URI("www.google.com"));
+            WebResponse response = put(VOSBaseTest.NODE_ENDPOINT, linkNode, new NodeWriter());
+            assertEquals("PUT response code should be 200", 200, response.getResponseCode());
+                        
+            // Create a Transfer.
+            List<Protocol> protocols = new ArrayList<Protocol>();
+            protocols.add(new Protocol(VOS.PROTOCOL_HTTP_GET));
+            protocols.add(new Protocol(VOS.PROTOCOL_HTTPS_GET));
+            protocols.add(new Protocol("some:unknown:proto"));
+            Transfer transfer = new Transfer(linkNode.getUri(), Direction.pullFromVoSpace,protocols);
+
+            // Get the transfer XML.
+            TransferWriter writer = new TransferWriter();
+            StringWriter sw = new StringWriter();
+            writer.write(transfer, sw);
+
+            // POST the XML to the transfer endpoint.
+            log.debug("POST to transfer end point");
+            response = post(sw.toString());
+            assertEquals("POST response code should be 303", 303, response.getResponseCode());
+
+            // Get the header Location.
+            String location = response.getHeaderField("Location");
+            assertNotNull("Location header not set", location);
+            assertTrue("../results/transferDetails location expected: ", 
+                    location.endsWith("/results/transferDetails"));
+
+            String jobLocation = location.substring(0, location.indexOf("/results/transferDetails"));
+            // Transfer failed so transferDetails should not be found
+            // Follow all the redirects.
+            response = get(location);
+            while (303 == response.getResponseCode())
+            {
+                location = response.getHeaderField("Location");
+                assertNotNull("Location header not set", location);
+                log.debug("New location: " + location);
+                response = get(location);
+            }
+            assertEquals("GET response code should be 200", 200, response.getResponseCode());
+
+            // read the response transfer doc
+            String xml = response.getText();
+            log.debug("testSyncPullWithLinkNodeExtTarget response from POST: \n\n" + xml);
+
+            // Create a Transfer from Transfer XML.
+            TransferReader reader = new TransferReader();
+            transfer = reader.read(xml);
+
+            assertEquals("direction", Direction.pullFromVoSpace, transfer.getDirection());
+            assertTrue("no protocols", transfer.getProtocols() == null);
+            
+            // get job details
+            log.debug("Check job details at: " + jobLocation);
+            response = get(jobLocation);
+            assertEquals("GET response code should be 200", 200, response.getResponseCode());
+
+            // read the response transfer doc
+            xml = response.getText();
+            log.debug("testSyncTransfer response from POST: \n\n" + xml);
+
+            // Create a Job from Job XML.
+            JobReader jobReader = new JobReader();
+            Job job = jobReader.read(new ByteArrayInputStream(xml.getBytes()));
+
+            assertEquals("Job error", ExecutionPhase.ERROR, job.getExecutionPhase());
+            log.debug("Job Error message: " + job.getErrorSummary().getSummaryMessage());
+            assertTrue("Path contains invalid links", 
+                    job.getErrorSummary().getSummaryMessage().
+                    contains("Path contains invalid links"));
+
+
+            // Delete the node
+            response = delete(VOSBaseTest.NODE_ENDPOINT, linkNode);
+            assertEquals("DELETE response code should be 200", 200, response.getResponseCode());
+
+            log.info("pullJob passed.");
+        }
+        catch (Exception unexpected)
+        {
+            log.error("unexpected exception", unexpected);
+            Assert.fail("unexpected exception: " + unexpected);
+        }
+    }
+    
+    @Test
+    public void testSyncPullWithLinkNodeExtVOSTarget()
+    {
+        try
+        {
+            // this is similar to the previous test except that the 
+            // target link of the LinkNode points to an external vos 
+            log.debug("testSyncPullWithLinkNodeExtVOSTarget");
+
+            // Create a LinkNode to the DataNode
+            LinkNode linkNode = getSampleLinkNode(new URI("vos://some.other.vos!vospace/"));
+            WebResponse response = put(VOSBaseTest.NODE_ENDPOINT, linkNode, new NodeWriter());
+            assertEquals("PUT response code should be 200", 200, response.getResponseCode());
+                        
+            // Create a Transfer.
+            List<Protocol> protocols = new ArrayList<Protocol>();
+            protocols.add(new Protocol(VOS.PROTOCOL_HTTP_GET));
+            protocols.add(new Protocol(VOS.PROTOCOL_HTTPS_GET));
+            protocols.add(new Protocol("some:unknown:proto"));
+            Transfer transfer = new Transfer(linkNode.getUri(), Direction.pullFromVoSpace,protocols);
+
+            // Get the transfer XML.
+            TransferWriter writer = new TransferWriter();
+            StringWriter sw = new StringWriter();
+            writer.write(transfer, sw);
+
+            // POST the XML to the transfer endpoint.
+            log.debug("POST to transfer end point");
+            response = post(sw.toString());
+            assertEquals("POST response code should be 303", 303, response.getResponseCode());
+
+            // Get the header Location.
+            String location = response.getHeaderField("Location");
+            assertNotNull("Location header not set", location);
+            assertTrue("../results/transferDetails location expected: ", 
+                    location.endsWith("/results/transferDetails"));
+
+            String jobLocation = location.substring(0, location.indexOf("/results/transferDetails"));
+            // Transfer failed so transferDetails should not be found
+            // Follow all the redirects.
+            response = get(location);
+            while (303 == response.getResponseCode())
+            {
+                location = response.getHeaderField("Location");
+                assertNotNull("Location header not set", location);
+                log.debug("New location: " + location);
+                response = get(location);
+            }
+            assertEquals("GET response code should be 200", 200, response.getResponseCode());
+
+            // read the response transfer doc
+            String xml = response.getText();
+            log.debug("testSyncPullWithLinkNodeExtVOSTarget response from POST: \n\n" + xml);
+
+            // Create a Transfer from Transfer XML.
+            TransferReader reader = new TransferReader();
+            transfer = reader.read(xml);
+
+            assertEquals("direction", Direction.pullFromVoSpace, transfer.getDirection());
+            assertTrue("no protocols", transfer.getProtocols() == null);
+            
+            // get job details
+            log.debug("Check job details at: " + jobLocation);
+            response = get(jobLocation);
+            assertEquals("GET response code should be 200", 200, response.getResponseCode());
+
+            // read the response transfer doc
+            xml = response.getText();
+            log.debug("testSyncTransfer response from POST: \n\n" + xml);
+
+            // Create a Job from Job XML.
+            JobReader jobReader = new JobReader();
+            Job job = jobReader.read(new ByteArrayInputStream(xml.getBytes()));
+
+            assertEquals("Job error", ExecutionPhase.ERROR, job.getExecutionPhase());
+            log.debug("Job Error message: " + job.getErrorSummary().getSummaryMessage());
+            assertTrue("Path contains invalid links", 
+                    job.getErrorSummary().getSummaryMessage().
+                    contains("Path contains invalid links"));
+
+
+            // Delete the node
+            response = delete(VOSBaseTest.NODE_ENDPOINT, linkNode);
+            assertEquals("DELETE response code should be 200", 200, response.getResponseCode());
+
+            log.info("pullJob passed.");
+        }
+        catch (Exception unexpected)
+        {
+            log.error("unexpected exception", unexpected);
+            Assert.fail("unexpected exception: " + unexpected);
+        }
+    }
 
     //@Test -- needs to be refactored since web resource comes from base class/super call
     public void testAsyncPull()

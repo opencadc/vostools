@@ -85,7 +85,15 @@
 
     <property name="project" value="cadcTestVOS" />
 
-    <property name="cadc" value="${lib}/cadcUtil.jar:${lib}/cadcUWS.jar:${lib}/cadcVOS.jar:${lib}/cadcRegistryClient.jar" />
+    <property file="local.build.properties" />
+
+    <property name="cadcUtil" value="${lib}/cadcUtil.jar" />
+    <property name="cadcRegistryClient" value="${lib}/cadcRegistryClient.jar" />
+    <property name="cadcUWS" value="${lib}/cadcUWS.jar" />
+    <property name="cadcVOS" value="${lib}/cadcVOS.jar" />
+
+
+    <property name="cadc" value="${cadcUtil}:${cadcUWS}:${cadcVOS}:${cadcRegistryClient}" />
     <property name="external" value="${ext.lib}/httpunit.jar:${ext.lib}/jdom.jar:${ext.lib}/junit.jar:${ext.lib}/log4j.jar:${ext.lib}/xmlunit.jar" />
 
     <property name="jars" value="${cadc}:${external}" />
