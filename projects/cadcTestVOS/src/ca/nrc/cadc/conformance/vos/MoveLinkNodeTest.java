@@ -82,6 +82,7 @@ import ca.nrc.cadc.vos.TransferWriter;
 import com.meterware.httpunit.WebResponse;
 import java.io.StringReader;
 import java.io.StringWriter;
+import java.net.URI;
 import java.util.HashMap;
 import java.util.Map;
 import org.apache.log4j.Level;
@@ -403,14 +404,14 @@ public class MoveLinkNodeTest extends VOSTransferTest
             log.debug("duplicateNodeFault");
         
             // Target LinkNode.
-            LinkNode targetNode = getSampleLinkNode();
+            LinkNode targetNode = getSampleLinkNode(new URI("http://www.google.com"));
 
             // Add DataNode to the VOSpace.
             WebResponse response = put(VOSBaseTest.NODE_ENDPOINT, targetNode, new NodeWriter());
             assertEquals("PUT response code should be 200", 200, response.getResponseCode());
 
             // Get a destination DataNode.
-            DataNode destinationNode = getSampleDataNode("Z");
+            LinkNode destinationNode = getSampleLinkNode(new URI("http://www.yahoo.com"));
             response = put(VOSBaseTest.NODE_ENDPOINT, destinationNode, new NodeWriter());
             assertEquals("PUT response code should be 200", 200, response.getResponseCode());
             
