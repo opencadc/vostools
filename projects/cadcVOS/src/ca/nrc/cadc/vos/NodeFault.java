@@ -137,7 +137,7 @@ public enum NodeFault
     ),
     ContainerNotFound
     ( 
-        new Status(500,
+        new Status(404,
                    "ContainerNotFound",
                    "A HTTP 500 status code with a ContainerNotFound fault in the body is thrown if a container is not found",
                    "http://www.ivoa.net/Documents/latest/VOSpace.html")
