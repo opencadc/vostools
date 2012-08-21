@@ -183,6 +183,7 @@ def startStreams(nstreams):
 
 def buildFileList(basePath,destRoot='',recursive=False,ignore=None):
   """Build a list of files that should be copied into VOSpace"""
+  import string
   spinner=['-','\\','|','/','-','\\','|','/']
   count=0
   import re
@@ -191,9 +192,15 @@ def buildFileList(basePath,destRoot='',recursive=False,ignore=None):
       if not recursive:
         continue
       thisDirname=os.path.join(root,thisDirname)
-      if ignore is not None and ignore in thisDirname:
-        logging.info ("excluding: %s " % ( thisDirname))
-        continue
+      skip=False
+      if ignore is not None:
+       for thisIgnore in ignore.split(','):
+        if not thisDirname.find(thisIgnore) < 0:
+         logging.info ("excluding: %s " % ( thisDirname))
+         skip=True
+         continue
+      if skip:
+         continue
       cprefix=os.path.commonprefix((basePath,thisDirname))
       thisDirname=os.path.normpath(destRoot+"/"+thisDirname[len(cprefix):])
       mkdirs(thisDirname)
@@ -208,9 +215,15 @@ def buildFileList(basePath,destRoot='',recursive=False,ignore=None):
 	         goodDirs.append(thisNode)
     for thisfilename in filenames:
       srcfilename=os.path.normpath(os.path.join(root,thisfilename))
-      if ignore is not None and ignore in srcfilename:
-        logging.info ("excluding: %s" % ( srcfilename))
-        continue
+      skip=False
+      if ignore is not None:
+       for thisIgnore in ignore.split(','):
+        if not srcfilename.find(thisIgnore) < 0:
+         logging.info ("excluding: %s " % ( srcfilename))
+         skip=True
+         continue
+      if skip:
+         continue
       cprefix=os.path.commonprefix((basePath,srcfilename))
       destfilename=os.path.normpath(destRoot+"/"+srcfilename[len(cprefix):])
       thisDirname = os.path.dirname(destfilename)
