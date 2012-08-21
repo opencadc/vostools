@@ -69,21 +69,20 @@
 
 package ca.nrc.cadc.conformance.vos;
 
-import org.junit.matchers.JUnitMatchers;
-import org.junit.Ignore;
-import org.junit.Assert;
+import ca.nrc.cadc.util.Log4jInit;
+import ca.nrc.cadc.vos.ContainerNode;
 import ca.nrc.cadc.vos.DataNode;
 import ca.nrc.cadc.vos.NodeReader;
 import com.meterware.httpunit.WebResponse;
 import java.util.HashMap;
 import java.util.Map;
+import org.apache.log4j.Level;
 import org.apache.log4j.Logger;
-import org.junit.After;
-import org.junit.AfterClass;
-import org.junit.Before;
-import org.junit.BeforeClass;
-import org.junit.Test;
+import org.junit.Assert;
 import static org.junit.Assert.*;
+import org.junit.Ignore;
+import org.junit.Test;
+import org.junit.matchers.JUnitMatchers;
 
 /**
  * Test case for creating DataNodes.
@@ -94,27 +93,14 @@ public class GetDataNodeTest extends VOSNodeTest
 {
     private static Logger log = Logger.getLogger(GetDataNodeTest.class);
 
+    static
+    {
+        Log4jInit.setLevel("ca.nrc.cadc.conformance.vos", Level.INFO);
+    }
+    
     public GetDataNodeTest()
     {
         super();
-    }
-
-    @BeforeClass
-    public static void setUpClass() throws Exception
-    {
-    }
-
-    @AfterClass
-    public static void tearDownClass() throws Exception
-    {
-    }
-
-    @Before
-    public void setUp() {
-    }
-
-    @After
-    public void tearDown() {
     }
 
     @Test
@@ -259,6 +245,62 @@ public class GetDataNodeTest extends VOSNodeTest
         }
     }
 
+    /*
+     * properties: the returned record for the node contains the basic node 
+     * element with a list of properties but no xsi:type specific extensions
+     * 
+     * Detail parameter not currently supported.
+     */
+    @Ignore("properties detail parameter not currently implemented")
+    @Test
+    public void getPropertiesContainerNode()
+    {
+        try
+        {
+            log.debug("getPropertiesContainerNode");
+
+            // Get a DataNode.
+            DataNode node = getSampleDataNode();
+
+            // Add DataNode to the VOSpace.
+            WebResponse response = put(node);
+            assertEquals("PUT response code should be 200", 200, response.getResponseCode());
+
+            // Request Parameters
+            Map<String, String> parameters = new HashMap<String, String>();
+            parameters.put("detail", "properties");
+
+            // Get the node from vospace
+            response = get(node, parameters);
+            assertEquals("GET response code should be 200", 200, response.getResponseCode());
+
+            // Get the response (an XML document)
+            String xml = response.getText();
+            log.debug("GET XML:\r\n" + xml);
+
+            // Validate against the VOSPace schema.
+            NodeReader reader = new NodeReader();
+            ContainerNode validatedNode = (ContainerNode) reader.read(xml);
+
+            // Node properties should be empty.
+            assertEquals("Node properties should have a single property", 1, validatedNode.getProperties().size());
+
+            // Node child nodes should be empty.
+            assertEquals("Node child list should have 3 child nodes", 3, validatedNode.getNodes().size());
+
+            // Delete the node
+            response = delete(node);
+            assertEquals("DELETE response code should be 200", 200, response.getResponseCode());
+
+            log.info("getPropertiesContainerNode passed.");
+        }
+        catch (Exception unexpected)
+        {
+            log.error("unexpected exception: " + unexpected);
+            Assert.fail("unexpected exception: " + unexpected);
+        }
+    }
+    
     /**
      * If a "uri" and "offset" are specified in the request then the returned list
      * will consist of the subset of children which begins at the node matching
@@ -312,7 +354,7 @@ public class GetDataNodeTest extends VOSNodeTest
             Assert.fail("unexpected exception: " + unexpected);
         }
     }
-
+    
     /**
      * The service SHALL throw a HTTP 401 status code including a PermissionDenied
      * fault in the entity-body if the user does not have permissions to perform the operation

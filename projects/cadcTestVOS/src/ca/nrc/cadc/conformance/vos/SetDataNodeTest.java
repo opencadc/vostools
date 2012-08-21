@@ -69,111 +69,83 @@
 
 package ca.nrc.cadc.conformance.vos;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertThat;
-import static org.junit.Assert.fail;
-
-import java.net.URI;
-import java.util.ArrayList;
-import java.util.List;
-
-import org.apache.log4j.Level;
-import org.apache.log4j.Logger;
-import org.junit.After;
-import org.junit.AfterClass;
-import org.junit.Assert;
-import org.junit.Before;
-import org.junit.BeforeClass;
-import org.junit.Ignore;
-import org.junit.Test;
-import org.junit.matchers.JUnitMatchers;
-
 import ca.nrc.cadc.util.Log4jInit;
-import ca.nrc.cadc.vos.LinkNode;
+import org.junit.matchers.JUnitMatchers;
+import org.junit.Ignore;
+import org.junit.Assert;
+import java.util.List;
+import ca.nrc.cadc.vos.DataNode;
 import ca.nrc.cadc.vos.NodeProperty;
 import ca.nrc.cadc.vos.NodeReader;
 import ca.nrc.cadc.vos.VOS;
-
 import com.meterware.httpunit.WebResponse;
+import java.util.ArrayList;
+import org.apache.log4j.Level;
+import org.apache.log4j.Logger;
+import org.junit.Test;
+import static org.junit.Assert.*;
 
 /**
- * Test case for updating LinkNodes.
+ * Test case for updating DataNodes.
  *
  * @author jburke
  */
-public class UpdateLinkNodeTest extends VOSNodeTest
+public class SetDataNodeTest extends VOSNodeTest
 {
-    private static Logger log = Logger.getLogger(UpdateLinkNodeTest.class);
+    private static Logger log = Logger.getLogger(SetDataNodeTest.class);
 
     static
     {
         Log4jInit.setLevel("ca.nrc.cadc.conformance.vos", Level.INFO);
     }
     
-    public UpdateLinkNodeTest()
+    public SetDataNodeTest()
     {
         super();
     }
 
-    @BeforeClass
-    public static void setUpClass() throws Exception
-    {
-    }
-
-    @AfterClass
-    public static void tearDownClass() throws Exception
-    {
-    }
-
-    @Before
-    public void setUp() {
-    }
-
-    @After
-    public void tearDown() {
-    }
-
     @Test
-    public void updateLinkNode()
+    public void updateDataNode()
     {
         try
         {
-            log.debug("updateLinkNode");
+            log.debug("updateDataNode");
 
-            // Get a LinkNode.
-            LinkNode node = getSampleLinkNode(new URI("www.google.com"));
+            // Get a DataNode.
+            DataNode node = getSampleDataNode();
             
-             // Add LinkNode to the VOSpace.
+             // Add DataNode to the VOSpace.
             WebResponse response = put(node);
             assertEquals("PUT response code should be 200", 200, response.getResponseCode());
+            
             // Get the response (an XML document)
             String xml = response.getText();
-            log.debug("updateContainerNode: response from PUT:\r\n" + xml);
+            log.debug("updateDataNode: response from PUT:\r\n" + xml);
             NodeReader reader = new NodeReader();
-            LinkNode persistedNode = (LinkNode) reader.read(xml);
+            DataNode persistedNode = (DataNode) reader.read(xml);
+            int numDefaultProps = persistedNode.getProperties().size();
 
             // Update the node by adding new Property.
             NodeProperty nodeProperty = new NodeProperty(VOS.PROPERTY_URI_LANGUAGE, "English");
             node.getProperties().add(nodeProperty);
             response = post(node);
-            assertEquals("updateContainerNode: POST response code should be 200", 200, response.getResponseCode());
+            assertEquals("updateDataNode: POST response code should be 200", 200, response.getResponseCode());
 
             // Get the response (an XML document)
             xml = response.getText();
-            log.debug("POST XML:\r\n" + xml);
+            log.debug("updateDataNode: response from POST:\r\n" + xml);
 
             // Validate against the VOSpace schema.
-            LinkNode updatedNode = (LinkNode) reader.read(xml);
+            DataNode updatedNode = (DataNode) reader.read(xml);
 
-            NodeProperty np = updatedNode.findProperty(VOS.PROPERTY_URI_LANGUAGE);
-            Assert.assertNotNull(VOS.PROPERTY_URI_LANGUAGE, np);
-            Assert.assertEquals(VOS.PROPERTY_URI_LANGUAGE, nodeProperty.getPropertyValue(), np.getPropertyValue());
+            // Updated node should have X + 1 properties.
+            assertEquals("", (numDefaultProps + 1), updatedNode.getProperties().size());
 
             // Delete the node
             response = delete(node);
             assertEquals("DELETE response code should be 200", 200, response.getResponseCode());
 
-            log.info("updateLinkNode passed.");
+            log.info("updateDataNode passed.");
         }
         catch (Exception unexpected)
         {
@@ -185,27 +157,27 @@ public class UpdateLinkNodeTest extends VOSNodeTest
     /**
      * To delete a Property, set the xsi:nil attribute to true
      */
-    @Test
-    public void updateLinkNodeDeleteProperty()
+//    @Test
+    public void updateDataNodeDeleteProperty()
     {
         try
         {
-            log.debug("updateLinkNodeDeleteProperty");
+            log.debug("updateDataNodeDeleteProperty");
 
-            // Create a LinkNode.
-            LinkNode node = getSampleLinkNode(new URI("www.google.com"));
+            // Create a DataNode.
+            DataNode node = getSampleDataNode();
 
-            // Add LinkNode to the VOSpace.
+            // Add DataNode to the VOSpace.
             WebResponse response = put(node);
             assertEquals("PUT response code should be 200", 200, response.getResponseCode());
 
             // Get the response (an XML document)
             String xml = response.getText();
-            log.debug("Node XML:\r\n" + xml);
+            log.debug("updateDataNodeDeleteProperty: response from PUT:\r\n" + xml);
 
             // Validate against the VOSpace schema.
             NodeReader reader = new NodeReader();
-            LinkNode updatedNode = (LinkNode) reader.read(xml);
+            DataNode updatedNode = (DataNode) reader.read(xml);
 
             // Mark the property as deleted.
             int expectedNumProps = updatedNode.getProperties().size() - 1;
@@ -216,14 +188,14 @@ public class UpdateLinkNodeTest extends VOSNodeTest
             node.setProperties(del);
 
             response = post(node);
-            assertEquals("updateContainerNodeDeleteProperty: POST response code should be 200", 200, response.getResponseCode());
+            assertEquals("updateDataNodeDeleteProperty: POST response code should be 200", 200, response.getResponseCode());
 
             // Get the response (an XML document)
             xml = response.getText();
-            log.debug("updateContainerNodeDeleteProperty: response from POST:\r\n" + xml);
+            log.debug("updateDataNodeDeleteProperty: response from POST:\r\n" + xml);
 
             // Validate against the VOSPace schema.
-            updatedNode = (LinkNode) reader.read(xml);
+            updatedNode = (DataNode) reader.read(xml);
 
             np = updatedNode.findProperty(VOS.PROPERTY_URI_DESCRIPTION);
             Assert.assertNull(VOS.PROPERTY_URI_DESCRIPTION, np);
@@ -232,7 +204,7 @@ public class UpdateLinkNodeTest extends VOSNodeTest
             response = delete(updatedNode);
             assertEquals("DELETE response code should be 200", 200, response.getResponseCode());
 
-            log.info("updateLinkNodeDeleteProperty passed.");
+            log.info("updateDataNodeDeleteProperty passed.");
         }
         catch (Exception unexpected)
         {
@@ -246,17 +218,17 @@ public class UpdateLinkNodeTest extends VOSNodeTest
      * fault in the entity-body if the user does not have permissions to perform the operation
      */
     @Ignore("Currently unable to test")
-    //@Test
+    @Test
     public void permissionDeniedFault()
     {
         try
         {
             log.debug("permissionDeniedFault");
 
-            // Get a ContainerNode.
-            LinkNode node = getSampleLinkNode(new URI("www.google.com"));
+            // Get a DataNode.
+            DataNode node = getSampleDataNode();
 
-            // Add ContainerNode to the VOSpace.
+            // Add DataNode to the VOSpace.
             WebResponse response = put(node);
             assertEquals("PUT response code should be 200", 200, response.getResponseCode());
 
@@ -290,7 +262,7 @@ public class UpdateLinkNodeTest extends VOSNodeTest
      * fault in the entity-body if the request attempts to modify a readonly Property
      */
     @Ignore("Service PermissionDeniedFault not currently implemented")
-    //@Test
+    @Test
     public void updateReadOnlyPermissionDeniedFault()
     {
         try
@@ -298,7 +270,7 @@ public class UpdateLinkNodeTest extends VOSNodeTest
             log.debug("updateReadOnlyPermissionDeniedFault");
 
             // Create a ContainerNode.
-            LinkNode node = getSampleLinkNode(new URI("www.google.com"));
+            DataNode node = getSampleDataNode();
 
             // Add ContainerNode to the VOSpace.
             WebResponse response = put(node);
@@ -310,7 +282,7 @@ public class UpdateLinkNodeTest extends VOSNodeTest
 
             // Validate against the VOSPace schema.
             NodeReader reader = new NodeReader();
-            LinkNode updatedNode = (LinkNode) reader.read(xml);
+            DataNode updatedNode = (DataNode) reader.read(xml);
 
             // Update the node by updating the read only property.
             List<NodeProperty> properties = updatedNode.getProperties();
@@ -344,7 +316,7 @@ public class UpdateLinkNodeTest extends VOSNodeTest
      * The service SHALL throw a HTTP 404 status code including a NodeNotFound fault
      * in the entity-body if the target Node does not exist
      */
-    @Test
+//    @Test
     public void nodeNotFoundFault()
     {
         try
@@ -352,7 +324,7 @@ public class UpdateLinkNodeTest extends VOSNodeTest
             log.debug("nodeNotFoundFault");
 
             // Create a Node with a nonexistent parent node
-            LinkNode node = getSampleLinkNode("/A/B", new URI("www.google.com"));
+            DataNode node = getSampleDataNode("/A/B");
 
             // Try and get the Node from the VOSpace.
             WebResponse response = post(node);
@@ -375,22 +347,22 @@ public class UpdateLinkNodeTest extends VOSNodeTest
      * in the entity-body if a specified property value is invalid.
      */
     @Ignore("Currently not checking for invalid properties")
-    //@Test
+    @Test
     public void invalidArgumentFault() throws Exception
     {
         try
         {
             log.debug("invalidArgumentFault");
 
-            // Get a LinkNode.
-            LinkNode node = getSampleLinkNode(new URI("www.google.com"));
+            // Get a DataNode.
+            DataNode node = getSampleDataNode();
 
             // Add an invalid Property
             NodeProperty nodeProperty = new NodeProperty("ivo://ivoa.net/vo space/core#length", "My invalid property");
             nodeProperty.setReadOnly(false);
             node.getProperties().add(nodeProperty);
 
-            // Add LinkNode to the VOSpace.
+            // Add DataNode to the VOSpace.
             WebResponse response = put(node);
             assertEquals("PUT response code should be 400 for a node with an invalid property", 400, response.getResponseCode());
 

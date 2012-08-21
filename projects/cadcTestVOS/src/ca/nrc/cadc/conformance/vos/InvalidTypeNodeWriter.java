@@ -85,7 +85,7 @@ public class InvalidTypeNodeWriter extends NodeWriter
     {
         super();
     }
-
+    
     /**
      * Returns the root JDOM Element of the node, with an invalid xsi:type
      * attribute.

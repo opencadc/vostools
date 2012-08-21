@@ -69,25 +69,19 @@
 
 package ca.nrc.cadc.conformance.vos;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertThat;
-
+import ca.nrc.cadc.util.Log4jInit;
+import ca.nrc.cadc.vos.LinkNode;
+import ca.nrc.cadc.vos.NodeReader;
+import com.meterware.httpunit.WebResponse;
 import java.net.URI;
-
+import java.util.List;
+import org.apache.log4j.Level;
 import org.apache.log4j.Logger;
-import org.junit.After;
-import org.junit.AfterClass;
 import org.junit.Assert;
-import org.junit.Before;
-import org.junit.BeforeClass;
+import static org.junit.Assert.*;
 import org.junit.Ignore;
 import org.junit.Test;
 import org.junit.matchers.JUnitMatchers;
-
-import ca.nrc.cadc.vos.LinkNode;
-import ca.nrc.cadc.vos.NodeReader;
-
-import com.meterware.httpunit.WebResponse;
 
 /**
  * Test case for creating LinkNodes.
@@ -98,27 +92,14 @@ public class CreateLinkNodeTest extends VOSNodeTest
 {
     private static Logger log = Logger.getLogger(CreateLinkNodeTest.class);
 
+    static
+    {
+        Log4jInit.setLevel("ca.nrc.cadc.conformance.vos", Level.INFO);
+    }
+    
     public CreateLinkNodeTest()
     {
         super();
-    }
-
-    @BeforeClass
-    public static void setUpClass() throws Exception
-    {
-    }
-
-    @AfterClass
-    public static void tearDownClass() throws Exception
-    {
-    }
-
-    @Before
-    public void setUp() {
-    }
-
-    @After
-    public void tearDown() {
     }
 
     @Test
@@ -129,9 +110,9 @@ public class CreateLinkNodeTest extends VOSNodeTest
             log.debug("createLinkNode");
 
             // Get a LinkNode.
-            LinkNode node = getSampleLinkNode(new URI("www.google.ca"));
+            LinkNode node = getSampleLinkNode();
 
-            // Add ContainerNode to the VOSpace.
+            // Add Node to the VOSpace.
             WebResponse response = put(node);
             assertEquals("PUT response code should be 200", 200, response.getResponseCode());
 
@@ -147,6 +128,10 @@ public class CreateLinkNodeTest extends VOSNodeTest
             response = get(node);
             assertEquals("GET response code should be 200", 200, response.getResponseCode());
 
+            // Check accepts
+            List<URI> accepts = node.accepts();
+            assertNotNull("accepts should not be null", accepts);
+            
             // Delete the node
             response = delete(node);
             assertEquals("DELETE response code should be 200", 200, response.getResponseCode());
@@ -159,7 +144,7 @@ public class CreateLinkNodeTest extends VOSNodeTest
             Assert.fail("unexpected exception: " + unexpected);
         }
     }
-
+    
     /**
      * The service SHALL throw a HTTP 409 status code including a DuplicateNode
      * fault in the entity body if a Node already exists with the same URI
@@ -172,9 +157,9 @@ public class CreateLinkNodeTest extends VOSNodeTest
             log.debug("duplicateNodeFault");
 
             // Get a LinkNode.
-            LinkNode node = getSampleLinkNode(new URI("www.google.com"));
+            LinkNode node = getSampleLinkNode();
 
-            // Add LinkNode to the VOSpace.
+            // Add Node to the VOSpace.
             WebResponse response = put(node);
             assertEquals("PUT response code should be 200", 200, response.getResponseCode());
 
@@ -190,7 +175,7 @@ public class CreateLinkNodeTest extends VOSNodeTest
             response = get(node);
             assertEquals("GET response code should be 200", 200, response.getResponseCode());
 
-            // Try and add the same LinkNode to the VOSpace
+            // Try and add the same Node to the VOSpace
             response = put(node);
 
             // Should get back a 409 status code.
@@ -211,37 +196,34 @@ public class CreateLinkNodeTest extends VOSNodeTest
             Assert.fail("unexpected exception: " + unexpected);
         }
     }
-
+    
     /**
      * The service SHALL throw a HTTP 400 status code including an InvalidURI
-     * fault in the entity body if the requested URI is invalid
-     * 
-     * Disabled because VOSURI will throw an InvalidURIException, 
-     * so how to create an invalid URI for this test?
+     * fault in the entity body if the requested URI is invalid.
      */
     @Ignore("Currently unable to test")
     @Test
-    public void invalidURIPathFault()
+    public void invalidURI()
     {
         try
         {
-            log.debug("invalidURIPathFault");
+            log.debug("invalidURI");
 
-            // Create node with an invalid URI, node A doesn't exist.
-            LinkNode nodeAB = getSampleLinkNode("/A/B", new URI("www.google.com"));
+            // Create a node.
+            LinkNode node = getSampleLinkNode();
 
-            // Add LinkNode to the VOSpace.
-            WebResponse response = put(nodeAB);
-            assertEquals("PUT response code should be 400 for an invalid URI", 400, response.getResponseCode());
+            // Add ContainerNode to the VOSpace.
+            WebResponse response = put(node);
+            assertEquals("PUT response code should be 400 for a InvalidURI", 400, response.getResponseCode());
 
-            // Response message body should be 'InvalidURI'
-            assertEquals("Response message body should be 'InvalidURI'", "InvalidURI", response.getResponseMessage());
-
+            // Response entity body should contain 'InvalidURI'
+            assertThat(response.getText().trim(), JUnitMatchers.containsString("InvalidURI"));
+            
             // Check that the node wasn't created
-            response = get(nodeAB);
+            response = get(node);
             assertEquals("GET response code should be 404", 404, response.getResponseCode());
 
-            log.info("invalidURIPathFault passed.");
+            log.info("invalidURI passed.");
         }
         catch (Exception unexpected)
         {
@@ -249,7 +231,7 @@ public class CreateLinkNodeTest extends VOSNodeTest
             Assert.fail("unexpected exception: " + unexpected);
         }
     }
-    
+        
     /**
      * The service SHALL throw a HTTP 400 status code including a TypeNotSupported
      * fault in the entity body if the type specified in xsi:type is not supported
@@ -262,9 +244,9 @@ public class CreateLinkNodeTest extends VOSNodeTest
             log.debug("typeNotSupportedFault");
 
             // Get a LinkNode.
-            LinkNode node = getSampleLinkNode(new URI("www.google.com"));
+            LinkNode node = getSampleLinkNode();
 
-            // Add ContainerNode to the VOSpace.
+            // Add Node to the VOSpace.
             WebResponse response = put(node, new InvalidTypeNodeWriter());
             assertEquals("PUT response code should be 400 for an invalid Node xsi:type", 400, response.getResponseCode());
 
@@ -283,7 +265,7 @@ public class CreateLinkNodeTest extends VOSNodeTest
             Assert.fail("unexpected exception: " + unexpected);
         }
     }
-
+    
     /**
      * The service SHALL throw a HTTP 401 status code including PermissionDenied
      * fault in the entity body if the user does not have permissions to perform the operation
@@ -297,9 +279,9 @@ public class CreateLinkNodeTest extends VOSNodeTest
             log.debug("permissionDeniedFault");
 
             // Get a LinkNode.
-            LinkNode node = getSampleLinkNode(new URI("www.google.com"));
+            LinkNode node = getSampleLinkNode();
             
-            // Add ContainerNode to the VOSpace.
+            // Add Node to the VOSpace.
             WebResponse response = put(node);
             assertEquals("PUT response code should be 401", 401, response.getResponseCode());
 
@@ -334,7 +316,7 @@ public class CreateLinkNodeTest extends VOSNodeTest
             log.debug("containerNotFoundFault");
 
             // Create a Node path /A/B
-            LinkNode nodeAB = getSampleLinkNode("/A/B", new URI("www.google.com"));
+            LinkNode nodeAB = getSampleLinkNode("/A/B", new URI("http://www.google.com"));
 
             // Try and add the Node to the VOSpace.
             WebResponse response = put(nodeAB);
@@ -355,5 +337,27 @@ public class CreateLinkNodeTest extends VOSNodeTest
             Assert.fail("unexpected exception: " + unexpected);
         }
     }
+    
+    /**
+     * If a parent node in the URI path is a LinkNode, the service 
+     * MUST throw a HTTP 400 status code including 
+     * a LinkFound fault in the entity body.
+     */
+    @Ignore("Currently not supported")
+    @Test
+    public void linkFoundFault()
+    {
+        try
+        {
+            log.debug("linkFoundFault");
 
+            log.info("linkFoundFault passed.");
+        }
+        catch (Exception unexpected)
+        {
+            log.error("unexpected exception: " + unexpected);
+            Assert.fail("unexpected exception: " + unexpected);
+        }
+    }
+    
 }

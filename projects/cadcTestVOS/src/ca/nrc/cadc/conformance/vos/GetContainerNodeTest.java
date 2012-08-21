@@ -69,23 +69,21 @@
 
 package ca.nrc.cadc.conformance.vos;
 
-import org.junit.matchers.JUnitMatchers;
-import ca.nrc.cadc.vos.Node;
-import ca.nrc.cadc.vos.VOSURI;
-import org.junit.Ignore;
-import org.junit.Assert;
+import ca.nrc.cadc.util.Log4jInit;
 import ca.nrc.cadc.vos.ContainerNode;
+import ca.nrc.cadc.vos.Node;
 import ca.nrc.cadc.vos.NodeReader;
+import ca.nrc.cadc.vos.VOSURI;
 import com.meterware.httpunit.WebResponse;
 import java.util.HashMap;
 import java.util.Map;
+import org.apache.log4j.Level;
 import org.apache.log4j.Logger;
-import org.junit.After;
-import org.junit.AfterClass;
-import org.junit.Before;
-import org.junit.BeforeClass;
-import org.junit.Test;
+import org.junit.Assert;
 import static org.junit.Assert.*;
+import org.junit.Ignore;
+import org.junit.Test;
+import org.junit.matchers.JUnitMatchers;
 
 /**
  * Test case for creating ContainerNodes.
@@ -96,27 +94,14 @@ public class GetContainerNodeTest extends VOSNodeTest
 {
     private static Logger log = Logger.getLogger(GetContainerNodeTest.class);
 
+    static
+    {
+        Log4jInit.setLevel("ca.nrc.cadc.conformance.vos", Level.INFO);
+    }
+    
     public GetContainerNodeTest()
     {
         super();
-    }
-
-    @BeforeClass
-    public static void setUpClass() throws Exception
-    {
-    }
-
-    @AfterClass
-    public static void tearDownClass() throws Exception
-    {
-    }
-
-    @Before
-    public void setUp() {
-    }
-
-    @After
-    public void tearDown() {
     }
 
     @Test
@@ -270,6 +255,62 @@ public class GetContainerNodeTest extends VOSNodeTest
             Assert.fail("unexpected exception: " + unexpected);
         }
     }
+    
+    /*
+     * properties: the returned record for the node contains the basic node 
+     * element with a list of properties but no xsi:type specific extensions
+     * 
+     * Detail parameter not currently supported.
+     */
+    @Ignore("properties detail parameter not currently implemented")
+    @Test
+    public void getPropertiesContainerNode()
+    {
+        try
+        {
+            log.debug("getPropertiesContainerNode");
+
+            // Get a ContainerNode.
+            ContainerNode node = getSampleContainerNode();
+
+            // Add ContainerNode to the VOSpace.
+            WebResponse response = put(node);
+            assertEquals("PUT response code should be 200", 200, response.getResponseCode());
+
+            // Request Parameters
+            Map<String, String> parameters = new HashMap<String, String>();
+            parameters.put("detail", "properties");
+
+            // Get the node from vospace
+            response = get(node, parameters);
+            assertEquals("GET response code should be 200", 200, response.getResponseCode());
+
+            // Get the response (an XML document)
+            String xml = response.getText();
+            log.debug("GET XML:\r\n" + xml);
+
+            // Validate against the VOSPace schema.
+            NodeReader reader = new NodeReader();
+            ContainerNode validatedNode = (ContainerNode) reader.read(xml);
+
+            // Node properties should be empty.
+            assertEquals("Node properties should have a single property", 1, validatedNode.getProperties().size());
+
+            // Node child nodes should be empty.
+            assertEquals("Node child list should have 3 child nodes", 3, validatedNode.getNodes().size());
+
+            // Delete the node
+            response = delete(node);
+            assertEquals("DELETE response code should be 200", 200, response.getResponseCode());
+
+            log.info("getPropertiesContainerNode passed.");
+        }
+        catch (Exception unexpected)
+        {
+            log.error("unexpected exception: " + unexpected);
+            Assert.fail("unexpected exception: " + unexpected);
+        }
+    }
 
     /**
      * If a "uri" and "offset" are specified in the request then the returned list 
@@ -280,7 +321,7 @@ public class GetContainerNodeTest extends VOSNodeTest
      * 
      * Not currently supported.
      */
-    @Ignore("uri detail parameter not currently implemented")
+    @Ignore("uri parameter not currently implemented")
     @Test
     public void getUriOffsetNode()
     {
@@ -353,6 +394,67 @@ public class GetContainerNodeTest extends VOSNodeTest
         }
     }
 
+    /*
+     * limit with an integer value indicating the maximum number of results in the response.
+     * 
+     * No limit indicates a request for an unpaged list. However the server 
+     * MAY still impose its own limit on the size of an individual response, 
+     * splitting the results into more than one page if required.
+     * 
+     * limit parameter not currently supported.
+     */
+    @Ignore("limit parameter not currently implemented")
+    @Test
+    public void getLimitContainerNode()
+    {
+        try
+        {
+            log.debug("getLimitContainerNode");
+
+            // Get a ContainerNode.
+            ContainerNode node = getSampleContainerNode();
+
+            // Add ContainerNode to the VOSpace.
+            WebResponse response = put(node);
+            assertEquals("PUT response code should be 200", 200, response.getResponseCode());
+
+            // Request Parameters
+            Map<String, String> parameters = new HashMap<String, String>();
+            parameters.put("limit", "9");
+
+            // Get the node from vospace
+            response = get(node, parameters);
+            assertEquals("GET response code should be 200", 200, response.getResponseCode());
+
+            // Get the response (an XML document)
+            String xml = response.getText();
+            log.debug("GET XML:\r\n" + xml);
+
+            // Validate against the VOSpace schema.
+            NodeReader reader = new NodeReader();
+            ContainerNode validatedNode = (ContainerNode) reader.read(xml);
+
+            // Node properties should be empty.
+            assertEquals("Node properties should have a single property", 1, validatedNode.getProperties().size());
+
+            // Node child nodes should be empty.
+            assertEquals("Node child list should have 3 child nodes", 3, validatedNode.getNodes().size());
+
+            // TODO validate that there are X number of child nodes.
+            
+            // Delete the node
+            response = delete(node);
+            assertEquals("DELETE response code should be 200", 200, response.getResponseCode());
+
+            log.info("getLimitContainerNode passed.");
+        }
+        catch (Exception unexpected)
+        {
+            log.error("unexpected exception: " + unexpected);
+            Assert.fail("unexpected exception: " + unexpected);
+        }
+    }
+    
     /**
      * The service SHALL throw a HTTP 401 status code including a PermissionDenied 
      * fault in the entity-body if the user does not have permissions to perform the operation

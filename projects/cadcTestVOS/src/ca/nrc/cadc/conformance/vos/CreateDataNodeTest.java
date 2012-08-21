@@ -69,19 +69,19 @@
 
 package ca.nrc.cadc.conformance.vos;
 
-import org.junit.Ignore;
-import org.junit.matchers.JUnitMatchers;
-import org.junit.Assert;
+import ca.nrc.cadc.util.Log4jInit;
 import ca.nrc.cadc.vos.DataNode;
 import ca.nrc.cadc.vos.NodeReader;
 import com.meterware.httpunit.WebResponse;
+import java.net.URI;
+import java.util.List;
+import org.apache.log4j.Level;
 import org.apache.log4j.Logger;
-import org.junit.After;
-import org.junit.AfterClass;
-import org.junit.Before;
-import org.junit.BeforeClass;
-import org.junit.Test;
+import org.junit.Assert;
 import static org.junit.Assert.*;
+import org.junit.Ignore;
+import org.junit.Test;
+import org.junit.matchers.JUnitMatchers;
 
 /**
  * Test case for creating DataNodes.
@@ -92,27 +92,14 @@ public class CreateDataNodeTest extends VOSNodeTest
 {
     private static Logger log = Logger.getLogger(CreateDataNodeTest.class);
 
+    static
+    {
+        Log4jInit.setLevel("ca.nrc.cadc.conformance.vos", Level.INFO);
+    }
+    
     public CreateDataNodeTest()
     {
         super();
-    }
-
-    @BeforeClass
-    public static void setUpClass() throws Exception
-    {
-    }
-
-    @AfterClass
-    public static void tearDownClass() throws Exception
-    {
-    }
-
-    @Before
-    public void setUp() {
-    }
-
-    @After
-    public void tearDown() {
     }
 
     @Test
@@ -141,6 +128,10 @@ public class CreateDataNodeTest extends VOSNodeTest
             response = get(node);
             assertEquals("GET response code should be 200", 200, response.getResponseCode());
 
+            // Check accepts
+            List<URI> accepts = node.accepts();
+            assertNotNull("accepts should not be null", accepts);
+            
             // Delete the node
             response = delete(node);
             assertEquals("DELETE response code should be 200", 200, response.getResponseCode());
@@ -208,34 +199,31 @@ public class CreateDataNodeTest extends VOSNodeTest
 
     /**
      * The service SHALL throw a HTTP 400 status code including an InvalidURI
-     * fault in the entity body if the requested URI is invalid
-     * 
-     * Disabled because VOSURI will throw an InvalidURIException, 
-     * so how to create an invalid URI for this test?
+     * fault in the entity body if the requested URI is invalid.
      */
     @Ignore("Currently unable to test")
     @Test
-    public void invalidURIPathFault()
+    public void invalidURI()
     {
         try
         {
-            log.debug("invalidURIPathFault");
+            log.debug("invalidURI");
 
-            // Create node with an invalid URI, node A doesn't exist.
-            DataNode nodeAB = getSampleDataNode("/A/B");
+            // Create a node.
+            DataNode node = getSampleDataNode();
 
             // Add DataNode to the VOSpace.
-            WebResponse response = put(nodeAB);
-            assertEquals("PUT response code should be 400 for an invalid URI", 400, response.getResponseCode());
+            WebResponse response = put(node);
+            assertEquals("PUT response code should be 400 for a InvalidURI", 400, response.getResponseCode());
 
-            // Response message body should be 'InvalidURI'
-            assertEquals("Response message body should be 'InvalidURI'", "InvalidURI", response.getResponseMessage());
-
+            // Response entity body should contain 'InvalidURI'
+            assertThat(response.getText().trim(), JUnitMatchers.containsString("InvalidURI"));
+            
             // Check that the node wasn't created
-            response = get(nodeAB);
+            response = get(node);
             assertEquals("GET response code should be 404", 404, response.getResponseCode());
 
-            log.info("invalidURIPathFault passed.");
+            log.info("invalidURI passed.");
         }
         catch (Exception unexpected)
         {
@@ -258,7 +246,7 @@ public class CreateDataNodeTest extends VOSNodeTest
             // Get a DataNode.
             DataNode node = getSampleDataNode();
 
-            // Add ContainerNode to the VOSpace.
+            // Add Node to the VOSpace.
             WebResponse response = put(node, new InvalidTypeNodeWriter());
             assertEquals("PUT response code should be 400 for an invalid Node xsi:type", 400, response.getResponseCode());
 
@@ -350,4 +338,26 @@ public class CreateDataNodeTest extends VOSNodeTest
         }
     }
 
+    /**
+     * If a parent node in the URI path is a LinkNode, the service 
+     * MUST throw a HTTP 400 status code including 
+     * a LinkFound fault in the entity body.
+     */
+    @Ignore("Currently not supported")
+    @Test
+    public void linkFoundFault()
+    {
+        try
+        {
+            log.debug("linkFoundFault");
+
+            log.info("linkFoundFault passed.");
+        }
+        catch (Exception unexpected)
+        {
+            log.error("unexpected exception: " + unexpected);
+            Assert.fail("unexpected exception: " + unexpected);
+        }
+    }
+    
 }

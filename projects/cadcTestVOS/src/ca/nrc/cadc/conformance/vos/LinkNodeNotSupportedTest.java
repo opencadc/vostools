@@ -66,87 +66,68 @@
 *
 ************************************************************************
 */
-
 package ca.nrc.cadc.conformance.vos;
 
-import ca.nrc.cadc.auth.SSLUtil;
-import ca.nrc.cadc.date.DateUtil;
-import ca.nrc.cadc.util.FileUtil;
 import ca.nrc.cadc.util.Log4jInit;
-import java.io.File;
-import java.text.DateFormat;
-import java.util.Calendar;
-import java.util.UUID;
+import ca.nrc.cadc.vos.LinkNode;
+import com.meterware.httpunit.WebResponse;
 import org.apache.log4j.Level;
 import org.apache.log4j.Logger;
-import org.junit.runner.RunWith;
-import org.junit.runners.Suite;
+import org.junit.Assert;
+import static org.junit.Assert.*;
+import org.junit.Test;
+import org.junit.matchers.JUnitMatchers;
 
-@RunWith(Suite.class)
-@Suite.SuiteClasses
-({
-    CreateContainerNodeTest.class,
-    CreateDataNodeTest.class,
-    CreateLinkNodeTest.class,
-    GetContainerNodeTest.class,
-    GetDataNodeTest.class,
-    GetLinkNodeTest.class,
-    SetContainerNodeTest.class,
-    SetDataNodeTest.class,
-    SetLinkNodeTest.class,
-    MoveContainerNodeTest.class,
-    MoveDataNodeTest.class,
-    MoveLinkNodeTest.class,
-    DeleteContainerNodeTest.class,
-    DeleteDataNodeTest.class,
-    DeleteLinkNodeTest.class,
-    SyncPullFromVOSpaceTest.class,
-    SyncPushToVOSpaceTest.class,
-    AsyncPullFromVOSpaceTest.class,
-    AsyncPushToVOSpaceTest.class
-})
-
-public class VOSTestSuite
+/**
+ *
+ * @author jburke
+ */
+public class LinkNodeNotSupportedTest extends VOSNodeTest
 {
-    private static Logger log = Logger.getLogger(VOSTestSuite.class);
-    
-    public static final String baseTestNodeName;
-    public static String testSuiteNodeName;
-    public static String userName;
-
+    private static Logger log = Logger.getLogger(LinkNodeNotSupportedTest.class);
 
     static
     {
-        try
-        {
-            Log4jInit.setLevel("ca.nrc.cadc.vos", Level.INFO);
-
-            File crt = FileUtil.getFileFromResource("proxy.crt", VOSTestSuite.class);
-            File key = FileUtil.getFileFromResource("proxy.key", VOSTestSuite.class);
-            SSLUtil.initSSL(crt, key);
-            log.debug("initSSL: " + crt + "," + key);
-        }
-        catch(Throwable t)
-        {
-            throw new RuntimeException("failed to init SSL", t);
-        }
-
-        DateFormat dateFormat = DateUtil.getDateFormat("yyyy-MM-dd.HH:mm:ss.SSS", DateUtil.LOCAL);
-        userName = "CADCRegtest1";
-        testSuiteNodeName = userName + "_int-test_" + dateFormat.format(Calendar.getInstance().getTime());
-        log.debug("VOSTestSuite Node name: " + testSuiteNodeName);
-
-        baseTestNodeName = generateAlphaNumeric();
+        Log4jInit.setLevel("ca.nrc.cadc.conformance.vos", Level.INFO);
+    }
+    
+    public LinkNodeNotSupportedTest()
+    {
+        super();
     }
 
     /**
-     * Generate an ASCII string, replacing the '\' and '+' characters with
-     * underscores to keep them URL friendly.
-     *
-     * @return              An ASCII string of the given length.
+     * The service SHALL throw a HTTP 400 status code including a TypeNotSupported
+     * fault in the entity body if the type specified in xsi:type is not supported
      */
-    public static String generateAlphaNumeric()
+    @Test
+    public void typeNotSupportedFault()
     {
-        return UUID.randomUUID().toString().replaceAll("-", "");
+        try
+        {
+            log.debug("typeNotSupportedFault");
+
+            // Get a LinkNode.
+            LinkNode node = getSampleLinkNode();
+
+            // Add Node to the VOSpace.
+            WebResponse response = put(node);
+            assertEquals("PUT response code should be 400 for an invalid Node xsi:type", 400, response.getResponseCode());
+
+            // Response entity body should contain 'TypeNotSupported'
+            assertThat(response.getText().trim(), JUnitMatchers.containsString("TypeNotSupported"));
+
+            // Check that the node wasn't created
+            response = get(node);
+            assertEquals("GET response code should be 404", 404, response.getResponseCode());
+
+            log.info("typeNotSupportedFault passed.");
+        }
+        catch (Exception unexpected)
+        {
+            log.error("unexpected exception: " + unexpected);
+            Assert.fail("unexpected exception: " + unexpected);
+        }
     }
+    
 }

@@ -90,16 +90,16 @@ import static org.junit.Assert.*;
  *
  * @author jburke
  */
-public class UpdateContainerNodeTest extends VOSNodeTest
+public class SetContainerNodeTest extends VOSNodeTest
 {
-    private static Logger log = Logger.getLogger(UpdateContainerNodeTest.class);
+    private static Logger log = Logger.getLogger(SetContainerNodeTest.class);
 
     static
     {
         Log4jInit.setLevel("ca.nrc.cadc.conformance.vos", Level.INFO);
     }
     
-    public UpdateContainerNodeTest()
+    public SetContainerNodeTest()
     {
         super();
     }
@@ -134,6 +134,8 @@ public class UpdateContainerNodeTest extends VOSNodeTest
             // Get the response (an XML document)
             xml = response.getText();
             log.debug("updateContainerNode: response from POST:\r\n" + xml);
+            
+            // Validate against the VOSpace schema.
             ContainerNode updatedNode = (ContainerNode) reader.read(xml);
 
             // Updated node should have 5 properties.
@@ -142,6 +144,8 @@ public class UpdateContainerNodeTest extends VOSNodeTest
             // Delete the node
             response = delete(node);
             assertEquals("updateContainerNode: DELETE response code should be 200", 200, response.getResponseCode());
+            
+            log.info("updateContainerNode passed.");
         }
         catch (Exception unexpected)
         {
@@ -171,7 +175,7 @@ public class UpdateContainerNodeTest extends VOSNodeTest
             String xml = response.getText();
             log.debug("updateContainerNodeDeleteProperty: response from PUT:\r\n" + xml);
 
-            // Validate against the VOSPace schema.
+            // Validate against the VOSpace schema.
             NodeReader reader = new NodeReader();
             ContainerNode updatedNode = (ContainerNode) reader.read(xml);
 
@@ -318,7 +322,7 @@ public class UpdateContainerNodeTest extends VOSNodeTest
             log.debug("nodeNotFoundFault");
 
             // Create a Node with a nonexistent parent node
-            ContainerNode node = getSampleContainerNode();
+            ContainerNode node = getSampleContainerNode("/A/B");
 
             // Try and get the Node from the VOSpace.
             WebResponse response = post(node);

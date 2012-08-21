@@ -69,18 +69,17 @@
 
 package ca.nrc.cadc.conformance.vos;
 
-import org.junit.matchers.JUnitMatchers;
-import org.junit.Ignore;
-import org.junit.Assert;
+import ca.nrc.cadc.util.Log4jInit;
 import ca.nrc.cadc.vos.ContainerNode;
+import ca.nrc.cadc.vos.LinkNode;
 import com.meterware.httpunit.WebResponse;
+import org.apache.log4j.Level;
 import org.apache.log4j.Logger;
-import org.junit.After;
-import org.junit.AfterClass;
-import org.junit.Before;
-import org.junit.BeforeClass;
-import org.junit.Test;
+import org.junit.Assert;
 import static org.junit.Assert.*;
+import org.junit.Ignore;
+import org.junit.Test;
+import org.junit.matchers.JUnitMatchers;
 
 /**
  * Test case for deleting ContainerNodes.
@@ -91,27 +90,14 @@ public class DeleteContainerNodeTest extends VOSNodeTest
 {
     private static Logger log = Logger.getLogger(DeleteContainerNodeTest.class);
 
+    static
+    {
+        Log4jInit.setLevel("ca.nrc.cadc.conformance.vos", Level.INFO);
+    }
+    
     public DeleteContainerNodeTest()
     {
         super();
-    }
-
-    @BeforeClass
-    public static void setUpClass() throws Exception
-    {
-    }
-
-    @AfterClass
-    public static void tearDownClass() throws Exception
-    {
-    }
-
-    @Before
-    public void setUp() {
-    }
-
-    @After
-    public void tearDown() {
     }
 
     @Test
@@ -196,10 +182,10 @@ public class DeleteContainerNodeTest extends VOSNodeTest
             log.debug("nodeNotFoundFault");
 
             // Create a Node that should not exist.
-            ContainerNode nodeA = getSampleContainerNode();
+            ContainerNode node = getSampleContainerNode();
 
             // Try and delete the Node from the VOSpace.
-            WebResponse response = delete(nodeA);
+            WebResponse response = delete(node);
             assertEquals("DELETE response code should be 404 for a node that doesn't exist", 404, response.getResponseCode());
 
             // Response entity body should contain 'NodeNotFound'
@@ -213,13 +199,11 @@ public class DeleteContainerNodeTest extends VOSNodeTest
             Assert.fail("unexpected exception: " + unexpected);
         }
     }
-
+    
     /**
-     * If a parent node in the URI path does not exist then the service MUST
-     * throw a HTTP 500 status code including a ContainerNotFound fault in the entity body.
-     * For example, given the URI path /a/b/c, the service must throw a HTTP 500
-     * status code including a ContainerNotFound fault in the entity body if
-     * either /a or /a/b do not exist.
+     * If a parent node in the URI path does not exist then the service 
+     * MUST throw a HTTP 404 status code including a ContainerNotFound 
+     * fault in the entity-body
      */
     @Test
     public void containerNotFoundFault()
@@ -229,14 +213,11 @@ public class DeleteContainerNodeTest extends VOSNodeTest
             log.debug("containerNotFoundFault");
 
             // Create a Node path /A/B
-            ContainerNode nodeAB = getSampleContainerNode("/A/B");
+            ContainerNode node = getSampleContainerNode("/A/B");
 
             // Try and delete the Node from the VOSpace.
-            WebResponse response = delete(nodeAB);
-            // current draft spec says 500:
-            assertEquals("DELETE response code should be 500 for a invalid Node path", 500, response.getResponseCode());
-            // arguably correct is 404:
-            //assertEquals("DELETE response code should be 404 for a invalid Node path", 404, response.getResponseCode());
+            WebResponse response = delete(node);
+            assertEquals("DELETE response code should be 404 for a invalid Node path", 404, response.getResponseCode());
 
             // Response entity body should contain 'ContainerNotFound'
             assertThat(response.getText().trim(), JUnitMatchers.containsString("ContainerNotFound"));
@@ -250,4 +231,38 @@ public class DeleteContainerNodeTest extends VOSNodeTest
         }
     }
 
+    /**
+     * If a parent node in the URI path is a LinkNode, the service MUST 
+     * throw a HTTP 400 status code including a LinkFound fault in the entity-body.
+     */
+    @Ignore("Currently not supported")
+    @Test
+    public void linkFoundFault()
+    {
+        try
+        {
+            log.debug("linkFoundFault");
+
+            // Get a ContainerNode.
+            ContainerNode node = getSampleContainerNode();
+            
+            // Add ContainerNode as target to a LinkNode.
+            LinkNode linkNode = getSampleLinkNode("", node.getUri().getURIObject());
+
+            // Try and delete the Node from the VOSpace.
+            WebResponse response = delete(node);
+            assertEquals("DELETE response code should be 400 for a LinkNode in the target node path", 400, response.getResponseCode());
+
+            // Response entity body should contain 'LinkFound'
+            assertThat(response.getText().trim(), JUnitMatchers.containsString("LinkFound"));
+            
+            log.info("linkFoundFault passed.");
+        }
+        catch (Exception unexpected)
+        {
+            log.error("unexpected exception: " + unexpected);
+            Assert.fail("unexpected exception: " + unexpected);
+        }
+    }
+    
 }

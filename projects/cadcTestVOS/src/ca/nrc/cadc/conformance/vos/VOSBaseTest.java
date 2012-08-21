@@ -69,8 +69,23 @@
 
 package ca.nrc.cadc.conformance.vos;
 
-import static org.junit.Assert.assertNotNull;
-
+import ca.nrc.cadc.date.DateUtil;
+import ca.nrc.cadc.reg.client.RegistryClient;
+import ca.nrc.cadc.vos.ContainerNode;
+import ca.nrc.cadc.vos.DataNode;
+import ca.nrc.cadc.vos.LinkNode;
+import ca.nrc.cadc.vos.Node;
+import ca.nrc.cadc.vos.NodeProperty;
+import ca.nrc.cadc.vos.NodeWriter;
+import ca.nrc.cadc.vos.VOS.NodeBusyState;
+import ca.nrc.cadc.vos.VOSException;
+import ca.nrc.cadc.vos.VOSURI;
+import com.meterware.httpunit.GetMethodWebRequest;
+import com.meterware.httpunit.PostMethodWebRequest;
+import com.meterware.httpunit.PutMethodWebRequest;
+import com.meterware.httpunit.WebConversation;
+import com.meterware.httpunit.WebRequest;
+import com.meterware.httpunit.WebResponse;
 import java.io.ByteArrayInputStream;
 import java.io.IOException;
 import java.io.InputStream;
@@ -83,29 +98,9 @@ import java.util.ArrayList;
 import java.util.Calendar;
 import java.util.List;
 import java.util.Map;
-
-import org.apache.log4j.Level;
 import org.apache.log4j.Logger;
+import static org.junit.Assert.assertNotNull;
 import org.xml.sax.SAXException;
-
-import ca.nrc.cadc.date.DateUtil;
-import ca.nrc.cadc.reg.client.RegistryClient;
-import ca.nrc.cadc.vos.ContainerNode;
-import ca.nrc.cadc.vos.DataNode;
-import ca.nrc.cadc.vos.LinkNode;
-import ca.nrc.cadc.vos.Node;
-import ca.nrc.cadc.vos.NodeProperty;
-import ca.nrc.cadc.vos.NodeWriter;
-import ca.nrc.cadc.vos.VOS.NodeBusyState;
-import ca.nrc.cadc.vos.VOSException;
-import ca.nrc.cadc.vos.VOSURI;
-
-import com.meterware.httpunit.GetMethodWebRequest;
-import com.meterware.httpunit.PostMethodWebRequest;
-import com.meterware.httpunit.PutMethodWebRequest;
-import com.meterware.httpunit.WebConversation;
-import com.meterware.httpunit.WebRequest;
-import com.meterware.httpunit.WebResponse;
 
 /**
  * Base class for all VOSpace conformance tests. Contains methods to PUT, GET,
@@ -128,7 +123,6 @@ public abstract class VOSBaseTest
     
     public static final String NODE_ENDPOINT = "/nodes";
     
-
     /**
      * Constructor takes a path argument, which is the path to the resource
      * being tested, i.e. /nodes or /transfers. A System property service.url
@@ -152,7 +146,9 @@ public abstract class VOSBaseTest
                 this.resourceURL = new URL(serviceURL.getProtocol(), serviceURL.getHost(), serviceURL.getPath() + path);
             }
             else
+            {
                 throw new IllegalStateException("system property " + prop + " not set to valid VOSpace URI");
+            }
         }
         catch(Throwable t)
         {
@@ -163,7 +159,7 @@ public abstract class VOSBaseTest
         log.debug("serviceURL: " + serviceURL);
         log.debug("resourceURL: " + resourceURL);
     }
-
+    
     
     /**
      * 
@@ -201,7 +197,9 @@ public abstract class VOSBaseTest
                 log.debug(getResponseHeaders(response));
                 log.debug("Response code: " + response.getResponseCode());
                 if (response.getResponseCode() != 200 && response.getResponseCode() != 409)
+                {
                     throw new VOSException(response.getResponseMessage());
+                }
             }
             catch (Throwable t)
             {
@@ -239,7 +237,9 @@ public abstract class VOSBaseTest
                 log.debug(getResponseHeaders(response));
                 log.debug("Response code: " + response.getResponseCode());
                 if (response.getResponseCode() != 200 && response.getResponseCode() != 409)
+                {
                     throw new VOSException(response.getResponseMessage());
+                }
             }
             catch (Throwable t)
             {
@@ -289,33 +289,6 @@ public abstract class VOSBaseTest
     }
     
     /**
-     * Builds and returns a sample LinkNode for use in test cases.
-     *
-     *@param target - target Node
-     * @return a LinkNode.
-     * @throws URISyntaxException if a Node URI is malformed.
-     */
-    protected LinkNode getSampleLinkNode(Node target)
-        throws URISyntaxException
-    {
-        return getSampleLinkNode("", target.getUri().getURIObject());
-    }
-    
-    
-    /**
-     * Builds and returns a sample LinkNode for use in test cases.
-     *
-     *@param target - target URI
-     * @return a LinkNode.
-     * @throws URISyntaxException if a Node URI is malformed.
-     */
-    protected LinkNode getSampleLinkNode(URI target)
-        throws URISyntaxException
-    {
-        return getSampleLinkNode("", target);
-    }
-
-    /**
      * Builds and returns a sample DataNode for use in test cases.
      *
      * @param name
@@ -342,6 +315,46 @@ public abstract class VOSBaseTest
     /**
      * Builds and returns a sample LinkNode for use in test cases.
      *
+     * @return a LinkNode.
+     * @throws URISyntaxException if a Node URI is malformed.
+     */
+    protected LinkNode getSampleLinkNode()
+        throws URISyntaxException
+    {
+        return getSampleLinkNode(new URI("http://www.google.com"));
+    }
+    
+    /**
+     * Builds and returns a sample LinkNode for use in test cases.
+     *
+     * @param target - target Node
+     * @return a LinkNode.
+     * @throws URISyntaxException if a Node URI is malformed.
+     */
+    protected LinkNode getSampleLinkNode(Node target)
+        throws URISyntaxException
+    {
+        return getSampleLinkNode("", target.getUri().getURIObject());
+    }
+    
+    
+    /**
+     * Builds and returns a sample LinkNode for use in test cases.
+     *
+     *@param target - target URI
+     * @return a LinkNode.
+     * @throws URISyntaxException if a Node URI is malformed.
+     */
+    protected LinkNode getSampleLinkNode(URI target)
+        throws URISyntaxException
+    {
+        return getSampleLinkNode("", target);
+    }
+
+    
+    /**
+     * Builds and returns a sample LinkNode for use in test cases.
+     *
      * @param name
      * @param target node to point to
      * @return a LinkNode.
@@ -363,7 +376,7 @@ public abstract class VOSBaseTest
         node.getProperties().add(nodeProperty);
         return node;
     }
-
+    
     /**
      * Delete a Node from the VOSpace.
      *
@@ -392,9 +405,13 @@ public abstract class VOSBaseTest
     {
         String resourceUrl;
         if (endpoint == null)
+        {
             resourceUrl = resourceURL + "/" + node.getUri().getPath();
+        }
         else
+        {
             resourceUrl = getResourceUrl(endpoint) + node.getUri().getPath();
+        }
         log.debug("**************************************************");
         log.debug("HTTP DELETE: " + resourceUrl);
         WebRequest request = new DeleteMethodWebRequest(resourceUrl);
@@ -635,9 +652,13 @@ public abstract class VOSBaseTest
     {
         String resourceUrl;
         if (endpoint == null)
+        {
             resourceUrl = resourceURL + node.getUri().getPath();
+        }
         else
+        {
             resourceUrl = getResourceUrl(endpoint)  + node.getUri().getPath();
+        }
         log.debug("**************************************************");
         log.debug("HTTP PUT: " + resourceUrl);
         
@@ -658,7 +679,7 @@ public abstract class VOSBaseTest
 
         return response;
     }
-    
+
     /**
      * Get an URL.
      *

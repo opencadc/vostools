@@ -69,24 +69,17 @@
 
 package ca.nrc.cadc.conformance.vos;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertThat;
-
+import ca.nrc.cadc.util.Log4jInit;
+import ca.nrc.cadc.vos.LinkNode;
+import com.meterware.httpunit.WebResponse;
 import java.net.URI;
-
+import org.apache.log4j.Level;
 import org.apache.log4j.Logger;
-import org.junit.After;
-import org.junit.AfterClass;
 import org.junit.Assert;
-import org.junit.Before;
-import org.junit.BeforeClass;
+import static org.junit.Assert.*;
 import org.junit.Ignore;
 import org.junit.Test;
 import org.junit.matchers.JUnitMatchers;
-
-import ca.nrc.cadc.vos.LinkNode;
-
-import com.meterware.httpunit.WebResponse;
 
 /**
  * Test case for deleting LinkNodes.
@@ -97,27 +90,14 @@ public class DeleteLinkNodeTest extends VOSNodeTest
 {
     private static Logger log = Logger.getLogger(DeleteLinkNodeTest.class);
 
+    static
+    {
+        Log4jInit.setLevel("ca.nrc.cadc.conformance.vos", Level.INFO);
+    }
+    
     public DeleteLinkNodeTest()
     {
         super();
-    }
-
-    @BeforeClass
-    public static void setUpClass() throws Exception
-    {
-    }
-
-    @AfterClass
-    public static void tearDownClass() throws Exception
-    {
-    }
-
-    @Before
-    public void setUp() {
-    }
-
-    @After
-    public void tearDown() {
     }
 
     @Test
@@ -127,10 +107,10 @@ public class DeleteLinkNodeTest extends VOSNodeTest
         {
             log.debug("deleteLinkNode");
 
-            // Get a LinkNode.
-            LinkNode node = getSampleLinkNode(new URI("www.google.com"));
+            // Get a DataNode.
+            LinkNode node = getSampleLinkNode();
 
-            // Add LinkNode to the VOSpace.
+            // Add Node to the VOSpace.
             WebResponse response = put(node);
             assertEquals("PUT response code should be 200", 200, response.getResponseCode());
 
@@ -163,10 +143,10 @@ public class DeleteLinkNodeTest extends VOSNodeTest
         {
             log.debug("permissionDeniedFault");
 
-            // Get a LinkNode.
-            LinkNode node = getSampleLinkNode(new URI("www.google.com"));
+            // Get a DataNode.
+            LinkNode node = getSampleLinkNode();
             
-            // Add LinkNode to the VOSpace.
+            // Add Node to the VOSpace.
             WebResponse response = put(node);
             assertEquals("PUT response code should be 200", 200, response.getResponseCode());
 
@@ -202,10 +182,10 @@ public class DeleteLinkNodeTest extends VOSNodeTest
             log.debug("nodeNotFoundFault");
 
             // Create a Node that should not exist.
-            LinkNode nodeA = getSampleLinkNode(new URI("www.google.com"));
+            LinkNode node = getSampleLinkNode();
 
             // Try and delete the Node from the VOSpace.
-            WebResponse response = delete(nodeA);
+            WebResponse response = delete(node);
             assertEquals("DELETE response code should be 404 for a node that doesn't exist", 404, response.getResponseCode());
 
             // Response entity body should contain 'NodeNotFound'
@@ -221,11 +201,9 @@ public class DeleteLinkNodeTest extends VOSNodeTest
     }
 
     /**
-     * If a parent node in the URI path does not exist then the service MUST
-     * throw a HTTP 500 status code including a ContainerNotFound fault in the entity body.
-     * For example, given the URI path /a/b/c, the service must throw a HTTP 500
-     * status code including a ContainerNotFound fault in the entity body if
-     * either /a or /a/b do not exist.
+     * If a parent node in the URI path does not exist then the service 
+     * MUST throw a HTTP 404 status code including a ContainerNotFound 
+     * fault in the entity-body
      */
     @Test
     public void containerNotFoundFault()
@@ -235,14 +213,11 @@ public class DeleteLinkNodeTest extends VOSNodeTest
             log.debug("containerNotFoundFault");
 
             // Create a Node path /A/B
-            LinkNode nodeAB = getSampleLinkNode("/A/B", new URI("www.google.com"));
+            LinkNode node = getSampleLinkNode("/A/B", new URI("http://www.google.com"));
 
             // Try and delete the Node from the VOSpace.
-            WebResponse response = delete(nodeAB);
-            // current draft spec says 500:
-            assertEquals("DELETE response code should be 500 for a invalid Node path", 500, response.getResponseCode());
-            // arguably correct is 404:
-            //assertEquals("DELETE response code should be 404 for a invalid Node path", 404, response.getResponseCode());
+            WebResponse response = delete(node);
+            assertEquals("DELETE response code should be 404 for a invalid Node path", 404, response.getResponseCode());
 
             // Response entity body should contain 'ContainerNotFound'
             assertThat(response.getText().trim(), JUnitMatchers.containsString("ContainerNotFound"));
@@ -256,4 +231,38 @@ public class DeleteLinkNodeTest extends VOSNodeTest
         }
     }
 
+    /**
+     * If a parent node in the URI path is a LinkNode, the service MUST 
+     * throw a HTTP 400 status code including a LinkFound fault in the entity-body.
+     */
+    @Ignore("Currently not supported")
+    @Test
+    public void linkFoundFault()
+    {
+        try
+        {
+            log.debug("linkFoundFault");
+
+            // Get a LinkNode.
+            LinkNode node = getSampleLinkNode();
+            
+            // Add LinkNode as target to a LinkNode.
+            LinkNode linkNode = getSampleLinkNode("", node.getUri().getURIObject());
+
+            // Try and delete the Node from the VOSpace.
+            WebResponse response = delete(node);
+            assertEquals("DELETE response code should be 400 for a LinkNode in the target node path", 400, response.getResponseCode());
+
+            // Response entity body should contain 'LinkFound'
+            assertThat(response.getText().trim(), JUnitMatchers.containsString("LinkFound"));
+            
+            log.info("linkFoundFault passed.");
+        }
+        catch (Exception unexpected)
+        {
+            log.error("unexpected exception: " + unexpected);
+            Assert.fail("unexpected exception: " + unexpected);
+        }
+    }
+    
 }
