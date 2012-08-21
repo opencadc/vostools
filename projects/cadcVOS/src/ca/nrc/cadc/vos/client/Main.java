@@ -304,6 +304,11 @@ public class Main implements Runnable
                 up = new ContainerNode(target, properties);
             else if (n instanceof DataNode)
                 up = new DataNode(target, properties);
+            else if (n instanceof LinkNode)
+            {
+                URI link = ((LinkNode) n).getTarget();
+                up = new LinkNode(target, properties, link);
+            }
             else
                 throw new UnsupportedOperationException("unexpected node type: " + n.getClass().getName());
             this.client.setNode(up);
@@ -591,6 +596,10 @@ public class Main implements Runnable
                 msg("type: " + safePropertyRef(n, VOS.PROPERTY_URI_TYPE));
                 msg("encoding: " + safePropertyRef(n, VOS.PROPERTY_URI_CONTENTENCODING));
                 msg("md5sum: " + safePropertyRef(n, VOS.PROPERTY_URI_CONTENTMD5));
+            }
+            else if (n instanceof LinkNode)
+            {
+                msg("link uri: " + ((LinkNode) n).getTarget());
             }
             else
             {
@@ -1021,6 +1030,8 @@ public class Main implements Runnable
             return "container";
         if (n instanceof DataNode)
             return "data";
+        if (n instanceof LinkNode)
+            return "link";
         return ZERO_LENGTH;
     }
 
