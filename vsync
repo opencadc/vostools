@@ -8,7 +8,7 @@ import datetime, optparse
 import errno
 import logging
 import time
-import md5_cache
+import vos.md5_cache as md5_cache
 
 
 
