@@ -21,7 +21,7 @@ BUFSIZE=8388608
 #BUFSIZE=8192
 
 SERVER="www.cadc.hia.nrc.gc.ca"
-##SERVER="rcdev.cadc-ccda.hia-iha.nrc-cnrc.gc.ca"
+### SERVER="rcdev.cadc-ccda.hia-iha.nrc-cnrc.gc.ca"
 ### SERVER="scapa.cadc.dao.nrc.ca"
 
 class urlparse:
@@ -550,18 +550,20 @@ class VOFile:
 
     def checkstatus(self, codes=(200, 201, 202, 206, 302, 303, 503, 416)):
         """check the response status"""
+        msgs = { 404: "Node Not Found",
+                 401: "Not Authorized",
+                 409: "Conflict"}
+        errnos = { 404: errno.ENOENT,
+                   401: errno.EACCES,
+                   409: errno.EEXIST }
         logging.debug("status %d for URL %s" % ( self.resp.status,self.url))
         if self.resp.status not in codes:
-            if self.resp.status == 404:
-                ### file not found
-                raise IOError(errno.ENOENT,"Node not found",self.url)
-            if self.resp.status == 401:
-                raise IOError(errno.EACCES,"Not authorized",self.url)
-            if self.resp.status == 409:
-	        if re.search("DuplicateNode",self.resp.read()):
-		    raise OSError(errno.EEXIST,"File Exists",self.url)
             msg=self.resp.read()
-            logging.debug(msg)
+            logging.debug("Error message: %s" % (msg))
+            if self.resp.status in [404, 401, 409]:
+                if msg is None or len(msg) == 0:
+                    msg = msgs[self.resp.status]
+                raise IOError(errnos[self.resp.status],msg,self.url)
             raise IOError(self.resp.status,msg,self.url)
         self.size=self.resp.getheader("Content-Length",0)
         return True
@@ -619,7 +621,7 @@ class VOFile:
             logging.debug("left file pointer at: %d" %(self._fpos))
             return buff
         elif self.resp.status == 404:
-            raise IOError(errno.ENFILE)
+            raise IOError(errno.ENFILE,self.resp.read())
         elif self.resp.status == 303 or self.resp.status == 302:
             URL = self.resp.getheader('Location',None)
             if not URL:
@@ -629,6 +631,7 @@ class VOFile:
         elif self.resp.status == 503:
             ## try again in Retry-After seconds or fail
             logging.error("Got 503: server busy on %s" % (self.url))
+            logging.error("Message:  %s" % ( self.resp.read()))
             try:
               ras=int(self.resp.getheader("Retry-After",5))
 	    except:
