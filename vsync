@@ -10,7 +10,28 @@ import logging
 import time
 import vos.md5_cache as md5_cache
 
+def computeMD5(filename,block_size=8192):
+  import hashlib
+  md5=hashlib.md5()
+  r=open(filename,'r')
+  while True:
+     buf=r.read(block_size)
+     if len(buf)==0:
+        break
+     md5.update(buf)
+  r.close()
+  return md5.hexdigest()
 
+def fileMD5(filename):
+    import os
+    stat=os.stat(filename)
+    md5 = checksum_cache.get(filename)
+    if md5 is None or md5[1] < stat.st_mtime:
+      checksum_cache.update(filename,md5=computeMD5(filename))
+    md5 = checksum_cache.get(filename)
+    if md5 is None:
+       return None
+    return md5[0]
 
 class ThreadCopy(threading.Thread):
   def __init__(self,queue):
@@ -28,15 +49,6 @@ class ThreadCopy(threading.Thread):
     self.filesErrored=0
 
 
-  def fileMD5(self,filename,block_size=8192):
-    import os
-    stat=os.stat(filename)
-    md5 = checksum_cache.get(filename)
-    if not md5 or md5[2] < stat.st_mtime:
-      checksum_cache.update(filename)
-    md5 = checksum_cache.get(filename)
-    return md5[1]
-
   def run(self):
     while True:
       (src,dest)=self.queue.get()
@@ -44,7 +56,7 @@ class ThreadCopy(threading.Thread):
       srcMD5=None
       stat=os.stat(src)
       if not opt.ignore_checksum:
-         srcMD5=self.fileMD5(src)
+         srcMD5=fileMD5(src)
       if not opt.overwrite:
        """Check if the file is the same"""
        try:
@@ -108,7 +120,7 @@ def mkdirs(dirs):
   if dirs in goodDirs:
     return
 
-  ## try and make a new director and return
+  ## try and make a new directory and return
   ## failure indicates we should see if subdirs exist
   try:
     c.mkdir(dirs)
@@ -135,21 +147,6 @@ def mkdirs(dirs):
 	goodDirs.append(thisDir)
   return
 
-#  (dir,subdir) = os.path.split(dirs)
-
-#  if not c.access(dir):
-#    mkdirs(dir)
-#  if not c.isdir(dir):
-#    sys.exit("Part of the path isn't a directy? (%s)" % ( dir))
-#  if c.isfile(dirs):
-#    sys.exit("Destination location a file when directory expected (%s)" % (subdir))
-#  c.mkdir(dirs)
-
-#  goodDirs.append(dirs)
-#  if opt.cache_nodes:
-#    for node in c.getNode(dirs).getNodeList():
-#      nodeDict[os.path.join(dirs,node.name)]=node
-#  return
 
 import os
 def copy(source,dest):
