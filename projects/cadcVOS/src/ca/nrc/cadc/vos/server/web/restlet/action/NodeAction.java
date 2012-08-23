@@ -347,6 +347,12 @@ public abstract class NodeAction implements PrivilegedAction<Object>
             log.debug(faultMessage);
             return handleException(NodeFault.UnreadableLinkTarget, faultMessage);
         }
+        catch(IllegalStateException e)
+        {
+            String faultMessage = e.getMessage();
+            log.debug(faultMessage);
+            return handleException(NodeFault.InternalFault, faultMessage);
+        }
         catch (Throwable t)
         {
             String faultMessage = "Internal Error:" + t.getMessage();

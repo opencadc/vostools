@@ -74,6 +74,8 @@ import org.restlet.data.MediaType;
 import org.restlet.representation.OutputRepresentation;
 
 import ca.nrc.cadc.vos.NodeFault;
+import java.io.OutputStreamWriter;
+import java.io.PrintWriter;
 
 /**
  * Plain text representation of a NodeFault.
@@ -99,7 +101,9 @@ public class NodeErrorRepresentation extends OutputRepresentation
     @Override
     public void write(OutputStream arg0) throws IOException
     {
-        arg0.write(message.getBytes());
+        PrintWriter pw = new PrintWriter(new OutputStreamWriter(arg0));
+        pw.println(message);
+        pw.flush();
     }
 
 }

@@ -187,8 +187,8 @@ public class VOSpaceAuthorizer implements Authorizer
         if (!readable)
         {
             if (!writable)
-                throw new AccessControlException(OFFLINE_MSG);
-            throw new AccessControlException(READ_ONLY_MSG);
+                throw new IllegalStateException(OFFLINE_MSG);
+            throw new IllegalStateException(READ_ONLY_MSG);
         }
         try
         {
@@ -217,8 +217,8 @@ public class VOSpaceAuthorizer implements Authorizer
         if (!readable)
         {
             if (!writable)
-                throw new AccessControlException(OFFLINE_MSG);
-            throw new AccessControlException(READ_ONLY_MSG);
+                throw new IllegalStateException(OFFLINE_MSG);
+            throw new IllegalStateException(READ_ONLY_MSG);
         }
 
         AccessControlContext acContext = AccessController.getContext();
@@ -260,8 +260,8 @@ public class VOSpaceAuthorizer implements Authorizer
         if (!writable)
         {
             if (readable)
-                throw new AccessControlException(READ_ONLY_MSG);
-            throw new AccessControlException(OFFLINE_MSG);
+                throw new IllegalStateException(READ_ONLY_MSG);
+            throw new IllegalStateException(OFFLINE_MSG);
         }
             
         try
@@ -290,8 +290,8 @@ public class VOSpaceAuthorizer implements Authorizer
         if (!writable)
         {
             if (readable)
-                throw new AccessControlException(READ_ONLY_MSG);
-            throw new AccessControlException(OFFLINE_MSG);
+                throw new IllegalStateException(READ_ONLY_MSG);
+            throw new IllegalStateException(OFFLINE_MSG);
         }
         
         AccessControlContext acContext = AccessController.getContext();
