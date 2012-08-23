@@ -71,14 +71,15 @@
 package ca.nrc.cadc.net;
 
 import java.io.BufferedReader;
-import java.io.InputStreamReader;
 import java.net.MalformedURLException;
 import java.net.URI;
 import java.net.URL;
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
+import java.util.Properties;
 import org.apache.log4j.Logger;
 
 /**
@@ -121,28 +122,17 @@ public class MultiSchemeHandler implements SchemeHandler
             return;
         }
         
-        BufferedReader br = null;
         try
         {
-            br = new BufferedReader(new InputStreamReader(url.openStream()));
-            //Read File Line By Line
-            String strLine;
-            while ((strLine = br.readLine()) != null)
+            Properties props = new Properties();
+            props.load(url.openStream());
+            Iterator<String> i = props.stringPropertyNames().iterator();
+            while ( i.hasNext() )
             {
-                strLine = strLine.trim();
-                if (strLine.length() == 0)
-                    continue;
-
-                char firstChar = strLine.charAt(0);
-                if (firstChar == '#' || firstChar == '!') //comment line
-                    continue;
-
-                log.debug("configuring: " + strLine);
+                String scheme = i.next();
+                String cname = props.getProperty(scheme);
                 try
                 {
-                    URI u = new URI(strLine);
-                    String scheme = u.getScheme();
-                    String cname = u.getSchemeSpecificPart();
                     log.debug("loading: " + cname);
                     Class c = Class.forName(cname);
                     log.debug("instantiating: " + c);
@@ -153,11 +143,9 @@ public class MultiSchemeHandler implements SchemeHandler
                 }
                 catch(Exception fail)
                 {
-                    log.warn("failed to load " + strLine + ", reason: " + fail);
+                    log.warn("failed to load " + cname + ", reason: " + fail);
                 }
             }
-            //Close the buffered reader
-            br.close();
         }
         catch(Exception ex)
         {
@@ -165,9 +153,7 @@ public class MultiSchemeHandler implements SchemeHandler
         }
         finally
         {
-            if (br != null)
-                try { br.close(); }
-                catch(Exception ignore) { }
+            
         }
     }
     

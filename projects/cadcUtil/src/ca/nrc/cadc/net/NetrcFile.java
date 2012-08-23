@@ -371,7 +371,7 @@ public class NetrcFile extends File
         
         public String toString()
         {
-            return "Cred[" + machine + "," + login + "," + new String(pword) + "]";
+            return "Cred[" + machine + "," + login + ",********]";
         }
     }
 }
