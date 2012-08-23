@@ -237,17 +237,28 @@ public class PathResolver
             throw new LinkingException("Unsupported link target");
         }
         
-        // check the authority
-        if (nodeURI.getAuthority() == null ||
-                targetURI.getAuthority() == null ||
-                !nodeURI.getAuthority().equals(targetURI.getAuthority()))
-        {
-            throw new LinkingException("Non-local VOSpace target");
-        }
-        
         try
         {
-            return new VOSURI(targetURI);
+            VOSURI returnURI = new VOSURI(targetURI);
+            
+            String nodeAuth = nodeURI.getAuthority();
+            String targetAuth = returnURI.getAuthority();
+            
+            if (nodeAuth == null || targetAuth == null)
+            {
+                throw new LinkingException("Non-local VOSpace target.");
+            }
+            
+            nodeAuth = nodeAuth.replace('~', '!');
+            targetAuth = targetAuth.replace('~', '!');
+            
+            // authorities must match
+            if (!nodeAuth.equals(targetAuth))
+            {                
+                throw new LinkingException("Non-local VOSpace target.");
+            }
+            
+            return returnURI;
         }
         catch (Exception e)
         {
