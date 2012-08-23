@@ -195,6 +195,40 @@ public class HttpDownloadTest
     }
 
     @Test
+    public void testDownloadFileHeadOnly() throws Exception
+    {
+        log.debug("TEST: testDownloadFileHeadOnly");
+        URL src = httpURL;
+        File dest = new File(tmpDir, "robots.txt");
+        try
+        {
+            if (dest.exists())
+                dest.delete();
+            Assert.assertTrue("dest file does not exist before download", !dest.exists());
+            HttpDownload dl = new HttpDownload(src, dest);
+            dl.setOverwrite(true);
+            dl.setHeadOnly(true);
+            dl.run();
+            File out = dl.getFile();
+            Assert.assertNull("result file", out);
+            Assert.assertFalse("dest file does not exist after download", dest.exists());
+            Assert.assertTrue("content-length > 0", dl.getContentLength() > 0);
+            Assert.assertNotNull("content-type", dl.getContentType());
+        }
+        catch (Exception unexpected)
+        {
+            log.error("unexpected exception", unexpected);
+            Assert.fail("unexpected exception: " + unexpected);
+        }
+        finally
+        {
+            if (dest != null)
+                dest.delete();
+        }
+
+    }
+
+    @Test
     public void testDownloadFileToFile() throws Exception
     {
         log.debug("TEST: testDownloadFileToFile");

@@ -115,6 +115,7 @@ public class HttpDownload extends HttpTransfer
     private static int GZIP = 1;
     private static int ZIP = 2;
 
+    private boolean headOnly = false;
     private boolean decompress = false;
     private boolean overwrite = false;
     
@@ -265,6 +266,19 @@ public class HttpDownload extends HttpTransfer
             return "HttpDownload[" + remoteURL + "]";
         return "HttpDownload[" + remoteURL + "," + localFile + "]";
     }
+
+    /** 
+     * Set mode so only an HTTP HEAD will be performed. After the download is run(),
+     * the http header parameters from the response can be checked via various
+     * get methods.
+     * 
+     * @param headOnly
+     */
+    public void setHeadOnly(boolean headOnly)
+    {
+        this.headOnly = headOnly;
+    }
+
 
     /**
      * Enable optional decompression of the data after download. GZIP and ZIP are supported.
@@ -735,10 +749,16 @@ public class HttpDownload extends HttpTransfer
             for (HttpRequestProperty rp : requestProperties)
                 conn.setRequestProperty(rp.getProperty(), rp.getValue());
 
-            conn.setRequestMethod("GET");
-            int code = checkStatusCode(conn);
+            if (headOnly)
+                conn.setRequestMethod("HEAD");
+            else
+                conn.setRequestMethod("GET");
 
+            int code = checkStatusCode(conn);
             processHeader(conn);
+
+            if (headOnly)
+                return;
 
             // evaulate overwrite of complete file
             boolean doDownload = true;
