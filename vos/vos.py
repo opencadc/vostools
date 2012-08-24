@@ -20,8 +20,8 @@ from __version__ import version
 BUFSIZE=8388608
 #BUFSIZE=8192
 
-SERVER="www.cadc.hia.nrc.gc.ca"
-### SERVER="rcdev.cadc-ccda.hia-iha.nrc-cnrc.gc.ca"
+### SERVER="www.cadc.hia.nrc.gc.ca"
+SERVER="rcdev.cadc-ccda.hia-iha.nrc-cnrc.gc.ca"
 ### SERVER="scapa.cadc.dao.nrc.ca"
 
 class urlparse:
@@ -139,11 +139,14 @@ class Node:
     TYPE  ='{%s}type' % XSINS
     NODES ='{%s}nodes' % VOSNS
     NODE  ='{%s}node' % VOSNS
+    PROTOCOL = '{%s}protocol' % VOSNS
     PROPERTIES='{%s}properties' % VOSNS 
     PROPERTY='{%s}property' % VOSNS
     ACCEPTS='{%s}accepts' % VOSNS
     PROVIDES='{%s}provides' % VOSNS
-    
+    ENDPOINT = '{%s}endpoint' % VOSNS
+    TARGET = '{%s}target' % VOSNS
+
     def __init__(self,node,nodeType="vos:DataNode",properties={},xml=None,subnodes=[]):
         """Create a Node object based on the DOM passed to the init method
 
@@ -157,6 +160,7 @@ class Node:
             raise LookupError("no node found or created?")
 
         self.node=node
+        self.target = None
         self.node.set('xmlns:vos',self.VOSNS)
         self.type=None
         self.props={}
@@ -174,6 +178,8 @@ class Node:
             import xml.etree.ElementTree as ET
             logging.debug(ET.dump(self.node))
             return None
+        if self.type == "vos:LinkNode":
+            self.target = self.node.findtext(Node.TARGET)
 
         self.uri=self.node.get('uri')
         self.name=os.path.basename(self.uri)
@@ -383,7 +389,6 @@ class Node:
         node.attrib["xmlns"]=Node.VOSNS
         node.attrib["xmlns:vos"]=Node.VOSNS
         node.attrib[Node.TYPE]=nodeType
-        node.attrib["busy"]="false"
         node.attrib["uri"]=uri
 
         ### create a properties section
@@ -401,6 +406,10 @@ class Node:
                 if len(properties[property])>0:
                     propertyNode.text=properties[property]
         
+        ## That's it for link nodes...
+        if nodeType == "vos:LinkNode":
+            return node
+
         ### create accepts
         accepts=ET.SubElement(node,Node.ACCEPTS)
 
@@ -449,6 +458,8 @@ class Node:
         perm[2]='w'
         if self.type=="vos:ContainerNode":
             perm[0]='d'
+        if self.type=="vos:LinkNode":
+            perm[0]='l'
         if self.props.get('ispublic',"false")=="true":
             perm[-3]='r'
         writeGroup = self.props.get('groupwrite','NONE')
@@ -463,7 +474,8 @@ class Node:
                 "readGroup": readGroup,
                 "writeGroup": writeGroup,
                 "size": float(self.props.get('length',0)),
-                "date": date}
+                "date": date,
+                "target": self.target}
 
     def getNodeList(self):
         """Get a list of all the nodes held to by a ContainerNode return a list of Node objects"""
@@ -479,7 +491,7 @@ class Node:
         self._nodeList.append(childNode)
         return(childNode)
 
-    def getInfoList(self,longList=True):
+    def getInfoList(self):
         """Retrieve a list of tupples of (NodeName, Info dict)"""
         infoList={}
         for node in self.getNodeList():
@@ -684,10 +696,12 @@ class Client:
     
         checkSource=False
         if src[0:4]=="vos:":
-            srcSize=self.getNode(src).attr['st_size']
+            srcNode = self.getNode(src)
+            srcSize = srcNode.attr['st_size']
+            srcMD5 = srcNode.props.get('MD5','d41d8cd98f00b204e9800998ecf8427e')
             fin=self.open(src,os.O_RDONLY,view='data')
             fout=open(dest,'w')
-            checkSource=True
+            checkSource = True
         else:
             srcSize=os.lstat(src).st_size
             fin=open(src,'r')
@@ -698,7 +712,7 @@ class Client:
         while True:
             buf=fin.read(BUFSIZE)
             # In this tight loop I don't think you want logging
-            #logging.debug("Read %d bytes from %s" % ( len(buf),src))
+            # logging.debug("Read %d bytes from %s" % ( len(buf),src))
             if len(buf)==0:
                 break
             fout.write(buf)
@@ -707,17 +721,21 @@ class Client:
         fout.close()
         fin.close()
 
-        if checkSource:
-            checkMD5=self.getNode(src).props.get('MD5','d41d8cd98f00b204e9800998ecf8427e')
+        if checkSource: 
+            if srcNode.type != "vos:LinkNode" :
+                checkMD5 = srcMD5
+            else:
+                ### this is a hack .. we should check the data integraty of links too... just not sure how
+                checkMD5 = md5.hexdigest()
         else:
-            checkMD5=self.getNode(dest).props.get('MD5','d41d8cd98f00b204e9800998ecf8427e')
+            checkMD5 = self.getNode(dest).props.get('MD5','d41d8cd98f00b204e9800998ecf8427e')
         
         if sendMD5:
             if checkMD5 != md5.hexdigest():
 		logging.error("MD5s don't match ( %s -> %s ) " % ( src, dest))
                 raise OSError(errno.EIO,"MD5s don't match",src)
             return md5.hexdigest()
-        if destSize != srcSize:
+        if destSize != srcSize and not srcNode.type == 'vos:LinkNode'  :
 	    logging.error("sizes don't match ( %s -> %s ) " % ( src, dest))
             raise IOError(errno.EIO,"sizes don't match",src)
         return destSize
@@ -787,6 +805,9 @@ class Client:
         import urllib
 
         uri   = self.fixURI(uri)
+        if method == 'GET' and view == 'data':
+            return self._get(uri)
+
         parts = urlparse(uri)
         path  = parts.path.strip('/')
         server= Client.VOServers.get(parts.netloc)        
@@ -815,6 +836,16 @@ class Client:
         #logging.debug("Node URL %s (%s)" % (URL, method))
         return URL
 
+    def link(self,srcURI,linkURI):
+        """Make linkURI point to srcURI"""
+        linkNode=Node(self.fixURI(linkURI),nodeType="vos:LinkNode")
+        ET.SubElement(linkNode.node,"target").text=self.fixURI(srcURI)
+        URL=self.getNodeURL(linkURI)
+        f=VOFile(URL,self.conn,method="PUT")
+        f.write(str(linkNode))
+        return f.close()
+        
+
     def move(self,srcURI,destURI):
         """Move srcUri to targetUri"""
         transfer=ET.Element("transfer")
@@ -831,11 +862,28 @@ class Client:
            return True
         return  False
 
+    def _get(self,uri):
+        transfer = ET.Element("transfer")
+        transfer.attrib['xmlns'] = Node.VOSNS
+        transfer.attrib['xmlns:vos'] = Node.VOSNS
+        ET.SubElement(transfer,"target").text=uri
+        ET.SubElement(transfer,"direction").text = "pullFromVoSpace"
+        ET.SubElement(transfer,"view").attrib['uri']="%s#%s" % ( Node.IVOAURL, "defaultview")
+        ET.SubElement(transfer,"protocol").attrib['uri']="%s#%s" % ( Node.IVOAURL, "httpsget")
+        con = VOFile(Client.VOTransfer, self.conn, method="POST")
+        con.write(ET.tostring(transfer))
+        F = ET.parse(con)
+        P = F.find(Node.PROTOCOL)
+        if P is None:
+            return None
+        return P.findtext(Node.ENDPOINT)
+
                     
     def open(self, uri, mode=os.O_RDONLY, view=None, head=False, URL=None, limit=None, nextURI=None,size=None):
         """Connect to the uri as a VOFile object"""
 	
 	### sometimes this is called with mode from ['w', 'r']
+        ### really that's an error, but I thought I'd just accept those are os.O_RDONLY
 	if type(mode)==str:
 	   mode=os.O_RDONLY
 
@@ -856,6 +904,20 @@ class Client:
         if URL is None:
             URL=self.getNodeURL(uri, method=method, view=view,limit=limit,nextURI=nextURI)
         logging.debug(URL)
+        if URL is None:
+            ## if this is a LinkNode then maybe there is a Node.TARGET I could try instead...
+            node = self.getNode(uri)
+            target = node.node.findtext(Node.TARGET)
+            logging.debug(target)
+            if target is None:
+                return None
+            if not target.find("//cadc.nrc.ca") < 0 :
+                ### try opening this target
+                return self.open(target,mode,view,head,URL,limit,nextURI,size)
+            ### hmm. just try and open the target, maybe python will understand it.
+            logging.debug(target)
+            import urllib2
+            return urllib2.urlopen(target)
         return VOFile(URL,self.conn,method=method,size=size)
 
 
@@ -887,6 +949,11 @@ class Client:
         f.write(str(node))
         f.close()
         return 
+
+    def create(self,node):
+        f = self.open(node.uri,mode=os.O_CREAT)
+        f.write(str(node))
+        return f.close()
 
     def update(self,node):
         ##logging.debug(str(node))
@@ -920,20 +987,55 @@ class Client:
         logging.debug("%s" % (uri))
         return self.open(uri,mode=os.O_TRUNC).close()
 
+    def getInfoList(self,uri):
+        """Retrieve a list of tupples of (NodeName, Info dict)"""
+        infoList={}
+        node = self.getNode(uri,limit=1)
+        logging.debug(str(node))
+        while node.type == "vos:LinkNode":
+            uri = node.target
+            node = self.getNode(uri, limit=1)
+            logging.debug(uri)
+        logging.debug(str(node.getNodeList()))
+        for thisNode in node.getNodeList():
+            logging.debug(str(thisNode.name))
+            infoList[thisNode.name]=thisNode.getInfo()
+        if node.type=="vos:DataNode":
+            infoList[node.name]=node.getInfo()
+        return infoList.items()
+
+
     def listdir(self,uri):
         """Walk through the directory structure a al os.walk"""
         #logging.debug("getting a listing of %s " % ( uri))
         names=[]
-        for node in self.getNode(uri,limit=1).getNodeList():
-            names.append(node.name)
+        node = self.getNode(uri,limit=500)
+        logging.debug(str(node))
+        while node.type == "vos:LinkNode":
+            uri = node.target
+            logging.debug(uri)
+            node = self.getNode(uri,limit=500)
+        for thisNode in node.getNodeList():
+            names.append(thisNode.name)
         return names
 
     def isdir(self,uri):
         """Check to see if this given uri points at a containerNode."""
 	try:
-	    return self.getNode(uri,limit=0).isdir()
-	except:
-	    return False
+	    node=self.getNode(uri,limit=0)
+            logging.debug(node.type)
+            while node.type == "vos:LinkNode":
+                uri=node.target
+                logging.debug(uri)
+                if uri[0:4]=="vos:":
+                    logging.debug(uri)
+                    node=self.getNode(uri,limit=0)
+                return False
+            if node.type == "vos:ContainerNode":
+                return True
+	except Exception as e:
+            logging.debug(str(e))
+        return False
 
     def isfile(self,uri):
         try:

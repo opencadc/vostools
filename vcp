@@ -19,7 +19,9 @@ def access(filename,mode):
 def listdir(filename):
     logging.debug("getting a dirlist %s " %(filename))
     if filename[0:4]=="vos:":
-        return client.listdir(filename)
+        dirlist = client.listdir(filename)
+        logging.debug(str(dirlist))
+        return dirlist
     else:
         return os.listdir(filename)
 

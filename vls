@@ -121,10 +121,11 @@ formats={'permisions': lambda value: "%-11s" % (value),
          'date': dateFormat}
 
 for node in args:
+
     if node[0:4]!="vos:":
         parser.error("Improper vospace spefication: %s " % ( node))
     try:
-        infoList= vos.getNode(node,limit=500).getInfoList()
+        infoList= vos.getInfoList(node)
     except IOError as e:
         logging.error("Error getting listing of %s ( %s )" % (node,e.strerror))
         sys.exit(e.errno)
@@ -141,10 +142,13 @@ for node in args:
 
 
     for item in infoList:
+        name_string = item[0]
         if opt.long:
             for col in columns:
                 sys.stdout.write(formats[col](item[1][col]))
-        sys.stdout.write("%s " % (item[0]))
+            if item[1]["permisions"][0] == 'l':
+                name_string = "%s -> %s" % ( name_string, item[1]['target'] )
+        sys.stdout.write("%s " % (name_string))
         sys.stdout.write("\n")
 
 sys.exit(0)
