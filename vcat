@@ -1,0 +1,64 @@
+#!python
+"""cat files from vospace directly """
+
+
+if __name__=='__main__':
+
+    from optparse import OptionParser
+    import logging, sys
+    import vos, errno, os
+    ## handle interupts nicely
+    
+    parser=OptionParser()
+    parser.add_option("-v","--verbose",action="store_true")
+    parser.add_option("-d","--debug",action="store_true",help="set this option to get help solving connection issues")
+    parser.add_option("--certfile",help="location of your CADC security certificate file",default=os.path.join(os.getenv("HOME","."),".ssl/cadcproxy.pem"))
+
+    name=sys.argv[0]
+
+    (opt,args)=parser.parse_args()
+
+    if opt.verbose:
+        logLevel=logging.INFO
+    elif opt.debug:
+        logLevel=logging.DEBUG
+    else:
+        logLevel=logging.ERROR
+        
+    logging.basicConfig(level=logLevel,format="%(asctime)s - %(module)s.%(funcName)s %(lineno)d: %(message)s")
+
+    
+    try:
+        client=vos.Client(certFile=opt.certfile)
+    except Exception as e:
+        logging.error("Conneciton failed:  %s" %  (str(e)))
+        sys.exit(e.errno)
+
+    import ssl
+    buffsize = 8192
+    try: 
+
+      for source in args:
+          ### the source must exist, of course...
+          if source[0:4] == "vos:" :
+              f = client.open(source, view='data')
+          else:
+              f = open(source,'r')
+          while True:
+              buff = f.read(buffsize)
+              if len(buff) == 0:
+                  break              
+              sys.stdout.write(buff)
+          f.close()
+
+    except ssl.SSLError as e:
+        logging.error("SSL Access error, key %s rejected" % ( opt.certfile))
+        sys.exit(-2)
+    except Exception as e:
+        logging.error(str(type(e)))
+        logging.error(str(e))
+        logging.error("Failed while copying %s" %(source))
+        sys.exit(-1)
+
+
+    sys.exit(0)
