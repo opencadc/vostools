@@ -20,8 +20,8 @@ from __version__ import version
 BUFSIZE=8388608
 #BUFSIZE=8192
 
-### SERVER="www.cadc.hia.nrc.gc.ca"
-SERVER="rcdev.cadc-ccda.hia-iha.nrc-cnrc.gc.ca"
+SERVER="www.cadc.hia.nrc.gc.ca"
+### SERVER="rcdev.cadc-ccda.hia-iha.nrc-cnrc.gc.ca"
 ### SERVER="scapa.cadc.dao.nrc.ca"
 
 class urlparse:
@@ -607,7 +607,7 @@ class VOFile:
         self.httpCon.putheader("Transfer-Encoding",'chunked')
         self.httpCon.putheader("Accept", "*/*")
         self.httpCon.endheaders()
-        #logging.debug("Done setting headers")
+        logging.debug("Done setting headers")
 
 
     def read(self,size=None):
@@ -626,6 +626,7 @@ class VOFile:
         # check the most likely response first
         if self.resp.status == 200:
             buff=self.resp.read(size)
+            #logging.debug(buff)
             return buff
         if self.resp.status == 206:
             buff=self.resp.read(size)
@@ -639,6 +640,7 @@ class VOFile:
             if not URL:
                 raise IOError(errno.ENOENT,"No Location on redirect",self.url)
             self.open(URL,"GET")
+            logging.debug("doing a read on the redirected URL:  %s" % (URL))
             return self.read(size)
         elif self.resp.status == 503:
             ## try again in Retry-After seconds or fail
@@ -806,20 +808,19 @@ class Client:
 
         uri   = self.fixURI(uri)
         if method == 'GET' and view == 'data':
+            logging.debug("Using _get ")
             return self._get(uri)
+
+
+        if method in ('PUT'):
+            logging.debug("Using _put")
+            return self._put(uri)
 
         parts = urlparse(uri)
         path  = parts.path.strip('/')
         server= Client.VOServers.get(parts.netloc)        
-
         #logging.debug("Node URI: %s" %( uri))
 
-        if method in ('PUT'):
-	    ## having a limit is not expected for PUT
-	    limit=None
-            #logging.debug("PUT structure hardcoded for CADC vospace" )
-            ### This part is hard coded for CADC VOSpace...
-            return "%s://%s/data/pub/%s/%s" % (protocol, server,self.archive,parts.path.strip('/'))
 
         ### this is a GET so we might have to stick some data onto the URL...
         fields={}
@@ -863,17 +864,29 @@ class Client:
         return  False
 
     def _get(self,uri):
-        transfer = ET.Element("transfer")
-        transfer.attrib['xmlns'] = Node.VOSNS
-        transfer.attrib['xmlns:vos'] = Node.VOSNS
-        ET.SubElement(transfer,"target").text=uri
-        ET.SubElement(transfer,"direction").text = "pullFromVoSpace"
-        ET.SubElement(transfer,"view").attrib['uri']="%s#%s" % ( Node.IVOAURL, "defaultview")
-        ET.SubElement(transfer,"protocol").attrib['uri']="%s#%s" % ( Node.IVOAURL, "httpsget")
-        con = VOFile(Client.VOTransfer, self.conn, method="POST")
-        con.write(ET.tostring(transfer))
+        return self.transfer(uri,"pullFromVoSpace")
+    
+    def _put(self,uri):
+        return self.transfer(uri,"pushToVoSpace")
+
+    def transfer(self,uri,direction):
+        """Build the transfer XML document"""
+        protocol = {"pullFromVoSpace": "httpsget",
+                    "pushToVoSpace": "httpsput"}
+        transferXML = ET.Element("transfer")
+        transferXML.attrib['xmlns'] = Node.VOSNS
+        transferXML.attrib['xmlns:vos'] = Node.VOSNS
+        ET.SubElement(transferXML,"target").text=uri
+        ET.SubElement(transferXML,"direction").text = direction
+        ET.SubElement(transferXML,"view").attrib['uri']="%s#%s" % ( Node.IVOAURL, "defaultview")
+        ET.SubElement(transferXML,"protocol").attrib['uri']="%s#%s" % ( Node.IVOAURL, protocol[direction] )
+        logging.debug(ET.tostring(transferXML))
+        con = VOFile(Client.VOTransfer, self.conn, method = "POST")
+        logging.debug(str(con))
+        con.write(ET.tostring(transferXML)) 
         F = ET.parse(con)
         P = F.find(Node.PROTOCOL)
+        logging.debug(str(P))
         if P is None:
             return None
         return P.findtext(Node.ENDPOINT)
