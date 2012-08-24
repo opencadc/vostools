@@ -20,8 +20,8 @@ from __version__ import version
 BUFSIZE=8388608
 #BUFSIZE=8192
 
-SERVER="www.cadc.hia.nrc.gc.ca"
-### SERVER="rcdev.cadc-ccda.hia-iha.nrc-cnrc.gc.ca"
+### SERVER="www.cadc.hia.nrc.gc.ca"
+SERVER="rcdev.cadc-ccda.hia-iha.nrc-cnrc.gc.ca"
 ### SERVER="scapa.cadc.dao.nrc.ca"
 
 class urlparse:
@@ -744,14 +744,16 @@ class Client:
 
 
     def fixURI(self,uri):
-        """given a uri check if the server part is there and if it isn't update that"""
+        """given a uri check if the authority part is there and if it isn't then add the CADC vospace authority"""
         from errno import EINVAL
-        #logging.debug("trying to fix URL: %s" % ( uri))
-        if uri[0:4] != "vos:":
+        parts=urlparse(uri)
+	if parts.scheme is None:
             uri=self.rootNode+uri
         parts=urlparse(uri)
         if parts.scheme!="vos":
-            raise IOError(errno.EINVAL,"Invalid vospace URI",uri)
+	    # Just past this back, I don't know how to fix...
+	    return uri
+            #raise IOError(errno.EINVAL,"Invalid vospace URI",uri)
         import re
         ## Check that path name compiles with the standard
         filename=os.path.basename(parts.path)
@@ -915,23 +917,32 @@ class Client:
         if not method:
             raise IOError(errno.EOPNOTSUPP,"Invalid access mode", mode)
         if URL is None:
+            ### we where given one, see if getNodeURL can figure this out.
             URL=self.getNodeURL(uri, method=method, view=view,limit=limit,nextURI=nextURI)
         logging.debug(URL)
         if URL is None:
+            ## Dang... getNodeURL failed... maybe this is a LinkNode?
             ## if this is a LinkNode then maybe there is a Node.TARGET I could try instead...
             node = self.getNode(uri)
-            target = node.node.findtext(Node.TARGET)
-            logging.debug(target)
-            if target is None:
-                return None
-            if not target.find("//cadc.nrc.ca") < 0 :
-                ### try opening this target
-                return self.open(target,mode,view,head,URL,limit,nextURI,size)
-            ### hmm. just try and open the target, maybe python will understand it.
-            logging.debug(target)
-            import urllib2
-            return urllib2.urlopen(target)
-        return VOFile(URL,self.conn,method=method,size=size)
+            if node.type == "vos:LinkNode":
+                ## yeah...
+                target = node.node.findtext(Node.TARGET)
+                logging.debug(target)
+                if target is None:
+                    ### hmm. well, that shouldn't have happened.
+                    return None
+                import re
+                if re.search("^vos\://cadc\.nrc\.ca[!~]vospace",target) is not None:
+                    ### try opening this target directly, cross your fingers.
+                    return self.open(target,mode,view,head,URL,limit,nextURI,size)
+                else: 
+                    ### hmm. just try and open the target, maybe python will understand it.
+                    logging.debug("Opening %s with urllib2" % ( target))
+                    import urllib2
+                    return urllib2.urlopen(target)
+        else:
+            return VOFile(URL,self.conn,method=method,size=size)
+        return None
 
 
     def addProps(self,node):
@@ -1033,17 +1044,18 @@ class Client:
         return names
 
     def isdir(self,uri):
-        """Check to see if this given uri points at a containerNode."""
+        """Check to see if this given uri points at a containerNode or is a link to one."""
 	try:
 	    node=self.getNode(uri,limit=0)
             logging.debug(node.type)
             while node.type == "vos:LinkNode":
                 uri=node.target
                 logging.debug(uri)
-                if uri[0:4]=="vos:":
+                if uri[0:4] == "vos:":
                     logging.debug(uri)
                     node=self.getNode(uri,limit=0)
-                return False
+                else:
+                    return False
             if node.type == "vos:ContainerNode":
                 return True
 	except Exception as e:
