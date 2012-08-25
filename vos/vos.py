@@ -20,8 +20,8 @@ from __version__ import version
 BUFSIZE=8388608
 #BUFSIZE=8192
 
-### SERVER="www.cadc.hia.nrc.gc.ca"
-SERVER="rcdev.cadc-ccda.hia-iha.nrc-cnrc.gc.ca"
+SERVER="www.cadc.hia.nrc.gc.ca"
+### SERVER="rcdev.cadc-ccda.hia-iha.nrc-cnrc.gc.ca"
 ### SERVER="scapa.cadc.dao.nrc.ca"
 
 class urlparse:
