@@ -124,7 +124,8 @@ public class GetNodeAction extends NodeAction
         PathResolver pathResolver = new PathResolver(nodePersistence);
         try
         {
-            return pathResolver.resolveWithReadPermissionCheck(vosURI, voSpaceAuthorizer);
+            return pathResolver.resolveWithReadPermissionCheck(vosURI, 
+                    voSpaceAuthorizer, false);
         }
         catch (NodeNotFoundException e)
         {

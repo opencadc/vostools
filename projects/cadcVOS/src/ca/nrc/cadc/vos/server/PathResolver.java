@@ -121,7 +121,7 @@ public class PathResolver
     }
     
     /**
-     * Resolve the node identified by parameter uri.
+     * Resolve the path of the node identified by parameter uri.
      * 
      * @param uri
      * @return
@@ -130,25 +130,41 @@ public class PathResolver
      */
     public Node resolve(VOSURI uri) throws NodeNotFoundException, LinkingException
     {
-        return resolveWithReadPermissionCheck(uri, null);
+        return resolveWithReadPermissionCheck(uri, null, false);
     }
     
     /**
-     * Resolve the node identified by parameter uri.  Check read permission on
+     * Resolve the path/node identified by parameter uri.  Check read permission on
      * each link node resolution.
      * 
      * @param uri
      * @param readAuthorizer
+     * @param resolveLeafNodes true if leaf nodes resolved, false otherwise
      * @return
      * @throws NodeNotFoundException
      * @throws LinkingException
      */
-    public Node resolveWithReadPermissionCheck(VOSURI uri, VOSpaceAuthorizer readAuthorizer)
+    public Node resolveWithReadPermissionCheck(VOSURI uri, 
+            VOSpaceAuthorizer readAuthorizer,
+            boolean resolveLeafNodes)
             throws NodeNotFoundException, LinkingException
     {
         visitCount = 0;
         visitedPaths = new ArrayList<String>();
-        return doResolve(uri, readAuthorizer);
+        Node result = doResolve(uri, readAuthorizer);
+        if (resolveLeafNodes)
+        {
+            // resolve the leaf linknodes
+            while (result instanceof LinkNode)
+            {
+                LinkNode linkNode = (LinkNode)result;
+                PathResolver.validateTargetURI(linkNode);
+                // follow the link           
+                result = doResolve(
+                        new VOSURI(linkNode.getTarget()), readAuthorizer);
+            }
+        }
+        return result;
     }
     
     /**
@@ -161,7 +177,8 @@ public class PathResolver
      * @throws NodeNotFoundException
      * @throws LinkingException
      */
-    private Node doResolve(VOSURI vosuri, VOSpaceAuthorizer readAuthorizer)
+    private Node doResolve(VOSURI vosuri, 
+            VOSpaceAuthorizer readAuthorizer)
             throws NodeNotFoundException, LinkingException
     {
         if (visitCount > visitLimit)
