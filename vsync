@@ -8,7 +8,6 @@ import datetime, optparse
 import errno
 import logging
 import time
-import vos.md5_cache as md5_cache
 
 def computeMD5(filename,block_size=8192):
   import hashlib
@@ -25,13 +24,8 @@ def computeMD5(filename,block_size=8192):
 def fileMD5(filename):
     import os
     stat=os.stat(filename)
-    md5 = checksum_cache.get(filename)
-    if md5 is None or md5[1] < stat.st_mtime:
-      checksum_cache.update(filename,md5=computeMD5(filename))
-    md5 = checksum_cache.get(filename)
-    if md5 is None:
-       return None
-    return md5[0]
+    md5 = computeMD5(filename)
+    return md5
 
 class ThreadCopy(threading.Thread):
   def __init__(self,queue):
@@ -60,22 +54,18 @@ class ThreadCopy(threading.Thread):
       if not opt.overwrite:
        """Check if the file is the same"""
        try:
-        node=nodeDict.get(dest,None)
+        node=nodeDict.get(dest,'d41d8cd98f00b204e9800998ecf8427e')
         if node:
           name=node.name
         else:
           name="None"
-        logging.debug("%s %s %s" % ( dest, name, opt.cache_nodes))
 	if node is None: 
-           if opt.cache_nodes:
-	     raise IOError(errno.ENFILE,dest)
-	   else:
-             logging.debug("Getting node info from VOSpace")
-	     logging.debug(str(nodeDict.keys()))
-	     logging.debug(str(dest))
-	     node=self.client.getNode(dest)
+           logging.debug("Getting node info from VOSpace")
+	   logging.debug(str(nodeDict.keys()))
+	   logging.debug(str(dest))
+	   node=self.client.getNode(dest)
         info=node.getInfo()
-        destMD5=node.props.get('MD5',None)
+        destMD5=node.props.get('MD5','d41d8cd98f00b204e9800998ecf8427e')
         destLength=node.attr['st_size']
         destTime=node.attr['st_ctime']
         if (not opt.ignore_checksum and srcMD5==destMD5) or ( opt.ignore_checksum and destTime >= stat.st_mtime and destLength==stat.st_size) :
@@ -84,9 +74,9 @@ class ThreadCopy(threading.Thread):
           self.bytesSkipped+=stat.st_size
           self.queue.task_done()
           continue
-       except IOError as e:
+       except (IOError, OSError) as e:
         """Ignore the erorr"""
-        logging.error(str(e))
+        logging.debug(str(e))
         pass
       logging.info("%s -> %s" % (src,dest))
       try:
@@ -94,23 +84,13 @@ class ThreadCopy(threading.Thread):
         self.client.copy(src,dest,sendMD5=checkMD5)
         self.filesSent+=1
         self.bytesSent+=stat.st_size
-      except IOError as e:
+      except (IOError, OSError) as e:
         logging.error("Error writing %s to server, skipping" % ( src))
         logging.error(str(e))
         self.filesErrored+=1
         pass
       self.queue.task_done()
-      # this check is handled in copy now..
-      #if not opt.ignore_checksum:
-      #  destMD5=None
-      #  try:
-      #    destMD5=self.client.getNode(dest).props.get('MD5',None)
-      #  except IOError as e:
-      #    sys.stderr.write(str(e))
-      #    pass
-      #  if destMD5!=srcMD5:
-      #    sys.stderr.write("Problem writing to vospace. requeuing: %s" % (src))
-      #    #self.queue.put((src,dest))
+
 
 def mkdirs(dirs):
 
@@ -124,27 +104,15 @@ def mkdirs(dirs):
   ## failure indicates we should see if subdirs exist
   try:
     c.mkdir(dirs)
-    if opt.cache_nodes:
-       nodeDict[dirs]=c.getNode(dirs)
     goodDirs.append(dirs) 
     return
-  except OSError as e:
+  except IOError as e:
     if e.errno != errno.EEXIST:
       raise e
 
   ## OK, must already have existed, add to list
   goodDirs.append(dirs) 
   
-  ## build a cache of sibling directories.
-  if opt.cache_nodes and opt.recursive:
-    upperDir = os.path.dirname(dirs)
-    thisNode = c.getNode(upperDir,limit=1000)
-    nodeDict[upperDir]=thisNode
-    for node in thisNode.getNodeList():
-      thisDir = os.path.join(upperDir,node.name)
-      nodeDict[thisDir]=node
-      if node.isdir():
-	goodDirs.append(thisDir)
   return
 
 
@@ -201,15 +169,6 @@ def buildFileList(basePath,destRoot='',recursive=False,ignore=None):
       cprefix=os.path.commonprefix((basePath,thisDirname))
       thisDirname=os.path.normpath(destRoot+"/"+thisDirname[len(cprefix):])
       mkdirs(thisDirname)
-      ## cache the contents of this directory, if any
-      if opt.cache_nodes:
-          if nodeDict[thisDirname].props.get('length',0) > 0 and recursive: 
-           thisNode=c.getNode(thisDirname,limit=1000)
-           for node in thisNode.getNodeList():
-             thisNode = thisDirname+"/"+node.name
-	     nodeDict[thisNode]=node
-             if node.isdir():
-	         goodDirs.append(thisNode)
     for thisfilename in filenames:
       srcfilename=os.path.normpath(os.path.join(root,thisfilename))
       skip=False
@@ -225,16 +184,6 @@ def buildFileList(basePath,destRoot='',recursive=False,ignore=None):
       destfilename=os.path.normpath(destRoot+"/"+srcfilename[len(cprefix):])
       thisDirname = os.path.dirname(destfilename)
       mkdirs( thisDirname )
-      ## cache the contents of this directory, if any
-      #logging.debug("checking if %s is in nodeDict: %s" % ( destfilename, str(nodeDict)))
-      #if opt.cache_nodes and nodeDict.get(destfilename,None) is None:
-      #  thisNode=c.getNode(thisDirname,limit=1000)
-      #  logging.debug("%s: %s " % ( thisDirname, str(thisNode.getNodeList()) ) )
-      #  for node in thisNode.getNodeList():
-      #    nodePath = thisDirname+"/"+node.name
-      #    nodeDict[nodePath]=node
-      #    if node.isdir():
-      #      goodDirs.append(nodePath)
 
       count += 1
       if opt.verbose:
@@ -264,7 +213,6 @@ if __name__=='__main__':
   parser=optparse.OptionParser(usage=usage)
   parser.add_option('--verbose','-v',action="store_true",help='run in verbose mode')
   parser.add_option('--debug','-d',action="store_true",help='run in verbose mode')
-  parser.add_option('--cache_nodes',default=False,action="store_true",help='turn off node caching, not safe in running multiple instances of vsync, but safe for multiple streams in one instance')
   parser.add_option('--ignore-checksum',action="store_true",help='dont check MD5 sum, forces transfer')
   parser.add_option('--recursive','-r',help="Do a recursive sync",action="store_true")
   parser.add_option('--nstreams','-n',type=int,help="Number of streams to run (MAX: 10)",default=1)
@@ -302,7 +250,6 @@ if __name__=='__main__':
 
   streams=startStreams(opt.nstreams)
 
-  checksum_cache=md5_cache.MD5_Cache()
 
   ### build a complete file list given all the things on the command line
   for filename in args:
@@ -314,17 +261,6 @@ if __name__=='__main__':
              thisRoot=os.path.join(dest,os.path.basename(filename))
       mkdirs(thisRoot)
       nodeDict[thisRoot]=c.getNode(thisRoot)
-      logging.debug("Cache: %s" %(opt.cache_nodes))
-      if opt.cache_nodes:
-          logging.debug("%s %s" %(thisRoot, nodeDict[thisRoot].props.get('length',0)))
-          if nodeDict[thisRoot].props.get('length',0) > 0:
-           thisNode=c.getNode(thisRoot,limit=1000)
-           for node in thisNode.getNodeList():
-             thisNode = thisRoot+"/"+node.name
-             logging.debug("adding %s to nodeDict" %(thisNode))
-             nodeDict[thisNode]=node
-             if node.isdir():
-                 goodDirs.append(thisNode)
       try:
         buildFileList(filename,destRoot=thisRoot,recursive=opt.recursive,ignore=opt.exclude)
       except Exception as e:
