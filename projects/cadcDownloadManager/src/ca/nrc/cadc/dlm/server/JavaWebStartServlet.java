@@ -1,4 +1,4 @@
-<!--
+/*
 ************************************************************************
 *******************  CANADIAN ASTRONOMY DATA CENTRE  *******************
 **************  CENTRE CANADIEN DE DONNÉES ASTRONOMIQUES  **************
@@ -65,63 +65,101 @@
 *  $Revision: 4 $
 *
 ************************************************************************
--->
+*/
 
 
-<%@ taglib uri="WEB-INF/c.tld" prefix="c"%>
-<%@ page import="ca.nrc.cadc.dlm.DownloadUtil" %>
-<%
-    String uris = (String) request.getAttribute("uris");
-    String fragment = (String) request.getAttribute("fragment");
-%>
+package ca.nrc.cadc.dlm.server;
 
-<%
-String skin = (String) request.getParameter("skin");
-if (skin == null)
-    skin = "http://localhost/cadc/skin/";
-if (!skin.endsWith("/"))
-    skin += "/";
-String htmlHead = skin + "htmlHead";
-String bodyHeader = skin + "bodyHeader";
-String bodyFooter = skin + "bodyFooter";
-%>
+import java.io.IOException;
 
-<html>
-<head>
-    <c:catch><c:import url="<%= htmlHead %>" /></c:catch>
-    <script type="text/javascript">
-	function closemyself()
-	{
-		window.opener = self;
-		self.close();
-	}
-</script>
-</head>
+import javax.servlet.RequestDispatcher;
+import javax.servlet.ServletConfig;
+import javax.servlet.ServletException;
+import javax.servlet.http.Cookie;
+import javax.servlet.http.HttpServlet;
+import javax.servlet.http.HttpServletRequest;
+import javax.servlet.http.HttpServletResponse;
 
-<body>
-<c:catch><c:import url="<%= bodyHeader %>" /></c:catch>
+import ca.nrc.cadc.auth.SSOCookieManager;
+import ca.nrc.cadc.dlm.DownloadUtil;
+import ca.nrc.cadc.net.NetUtil;
+import ca.nrc.cadc.util.ArrayUtil;
 
-<p>
-    You can download individual files by clicking on their filenames 
-    in the list below.
-</p>
+import org.apache.log4j.Level;
+import org.apache.log4j.Logger;
 
-<br>
+/**
+ * Download pre-processor for Java WebStart download method.
+ * @author adriand
+ */
+public class JavaWebStartServlet extends HttpServlet
+{
+    private static final long serialVersionUID = 201208071730L;
+    
+    private static final Logger log = Logger.getLogger(JavaWebStartServlet.class);
+    
+    public static final String DESCRIPTION = 
+            "The Java DownloadManager is launched as a desktop application via " +
+            "Java Webstart; the software is automatically cached on your computer, " +
+            "so application startup is generally fast after the first time. " +
+            "The browser window can be used for additional work.";
 
-  
-<p>
-    <jsp:include page="urlList.jsp" flush="true" />
-    <%-- c:import url="urlList.jsp" --%>
-</p>
-<div style="padding-left: 2em; padding-right: 2em">
-    <form action="/downloadManager/download" method="POST">
-        <input type="hidden" name="uris" value="<%= uris %>" />
-        <input type="hidden" name="fragment" value="<%= fragment %>" />
-        <input type="hidden" name="skin" value="<%= skin %>" /> 
-        <input type="submit" name="clearCookie" value="Chose one of the other download methods" />
-        <input type="submit" OnClick="closemyself()" value="Close window" />
-    </form>
-</div>    
-<c:catch><c:import url="<%= bodyFooter%>" /></c:catch>
-</body>
-</html>
+    /**
+     * 
+     * @param config
+     * @throws javax.servlet.ServletException
+     */
+    public void init(ServletConfig config)
+        throws ServletException
+    {
+        super.init(config);
+        log.setLevel(Level.DEBUG);
+    }
+    
+    /**
+     * Handle POSTed download request directed to the Java WebStart download method.
+     * 
+     * @param request
+     * @param response
+     * @throws javax.servlet.ServletException
+     * @throws java.io.IOException
+     */
+    protected void doPost(HttpServletRequest request, HttpServletResponse response)
+        throws ServletException, IOException
+    {
+                    
+        // codebase for applet and webstart deployments
+        String codebase = ServerUtil.getCodebase(request);
+        request.setAttribute("codebase", codebase);
+        log.debug("codebase attribute: " + codebase);
+        
+        // origin serverName for applet and jnlp deployment
+        String  serverName = NetUtil.getServerName(JavaWebStartServlet.class);
+        request.setAttribute("serverName", serverName);
+        log.debug("serverName attribute: " + serverName);
+        
+        log.debug("looking for ssocookie attribute...");
+        final Cookie[] cookies = request.getCookies();
+        if (!ArrayUtil.isEmpty(cookies))
+        {
+            for (final Cookie cookie : cookies)
+            {
+                if (cookie.getName().equals(
+                        SSOCookieManager.DEFAULT_SSO_COOKIE_NAME))
+                {
+                    request.setAttribute("ssocookie", cookie.getValue());
+                    log.debug("ssocookie attribute: " + cookie.getValue());
+                    request.setAttribute("ssocookiedomain", 
+                            NetUtil.getDomainName(request.getRequestURL().toString()));
+                    log.debug("ssocookie domain: " + 
+                            NetUtil.getDomainName(request.getRequestURL().toString()));
+                }
+            }
+        }
+        
+
+        RequestDispatcher disp = request.getRequestDispatcher("DownloadManager.jsp");
+        disp.forward(request, response);
+    }
+    
+}

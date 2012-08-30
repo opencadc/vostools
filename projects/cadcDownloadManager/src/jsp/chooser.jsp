@@ -73,8 +73,9 @@
 
 <%@ taglib uri="WEB-INF/c.tld" prefix="c"%>
 
-<%@ page import="ca.nrc.cadc.dlm.DownloadUtil" %>
 <%@ page import="ca.nrc.cadc.dlm.server.ServerUtil" %>
+<%@ page import="ca.nrc.cadc.dlm.server.DispatcherServlet" %>
+<%@ page import="ca.nrc.cadc.dlm.server.UrlListServlet" %>
 <%
     String uris = (String) request.getAttribute("uris");
     String fragment = (String) request.getAttribute("fragment");
@@ -119,16 +120,27 @@ String bodyFooter = skin + "bodyFooter";
         <table width="66%">
             <tbody>
                 <tr>
-                    <td valign="top"><input type="submit" name="method" value="<%= ServerUtil.WEBSTART %>" /></td>
-                    <td valign="top">The Java DownloadManager is launched as a desktop application via Java Webstart; the software is
-                        automatically cached on your computer, so application startup is generally fast after the first time.
-                    The browser window can be used for additional work.</td>
+                    <td valign="top"><input type="submit" name="method" value="<%= DispatcherServlet.WEBSTART %>" /></td>
+                    <td valign="top">
+                    
+                    <jsp:include page='javaWebStartDescription.html' flush='true' />
+                    
+                    </td>
                 </tr>
                 <tr><td><br/></td></tr>
                 <tr>
-                    <td valign="top"><input type="submit" name="method" value="<%= ServerUtil.URLS %>" /></td>
-                    <td valign="top">The URL list is included in a simple web page and can be downloaded with 
-                    command-line tools such as wget.</td>
+                    <td valign="top"><input type="submit" name="method" value="<%= DispatcherServlet.URLS %>" /></td>
+                    <td valigh="top">
+                    
+                    <jsp:include page='urlListDescription.html' flush='true' />
+
+				    </td>
+                </tr>
+                <tr><td><br/></td></tr>
+                <tr>
+                    <td valign="top"><input type="submit" name="method" value="<%= DispatcherServlet.HTMLLIST %>" /></td>
+                    <td valigh="top"> View the list of files in a Web page and click on individual files to download.
+				</td>
                 </tr>
             </tbody>
         </table>
@@ -168,6 +180,22 @@ String bodyFooter = skin + "bodyFooter";
         For general help on getting applets or webstart working, we 
         have a <a href="/JavaTest"">Java Test Page</a> with instructions.
     </p>
+    <h3>
+        wget is not working
+    </h3>
+    <p>
+    	Please note that there are many versions of <i>wget</i> with a variety of 
+		options and syntax.  Please consult your local help pages before contacting 
+		us.&nbsp;   <code>wget --help</code> should reveal the arguments supported by 
+		your version of <i>wget</i>.  
+	</p>
+				
+	<p> 
+	    The <i>wget</i> command should be available on 
+	    most systems. If not, <i>wget</i> can be downloaded from gnu.org.
+	    Alternately, you can try one of the several other web download utilities
+	    such as: curl, HTTrack, leech (mozilla add-on), pavuk, lftp, etc.
+	</p>    
     
 <c:catch><c:import url="<%= bodyFooter%>" /></c:catch>
 </body>

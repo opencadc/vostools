@@ -84,6 +84,8 @@ import ca.nrc.cadc.auth.SSOCookieManager;
 import ca.nrc.cadc.dlm.DownloadUtil;
 import ca.nrc.cadc.net.NetUtil;
 import ca.nrc.cadc.util.ArrayUtil;
+
+import org.apache.log4j.Level;
 import org.apache.log4j.Logger;
 
 /**
@@ -99,11 +101,18 @@ import org.apache.log4j.Logger;
  * When forwarding from another servlet
  * @author pdowler
  */
-public class DownloadServlet extends HttpServlet
+public class DispatcherServlet extends HttpServlet
 {
     private static final long serialVersionUID = 201208071730L;
     
-    private static final Logger log = Logger.getLogger(DownloadServlet.class);
+    private static final Logger log = Logger.getLogger(DispatcherServlet.class);
+    
+    public static String APPLET = "Java Applet";
+    public static String URLS = "URL List";
+    public static String HTMLLIST = "HTML List";
+    public static String WEBSTART = "Java Webstart";
+    
+    private static int ONE_YEAR = 365*24*3600;
 
     /**
      * 
@@ -114,6 +123,7 @@ public class DownloadServlet extends HttpServlet
         throws ServletException
     {
         super.init(config);
+        log.setLevel(Level.DEBUG);
     }
     
     /**
@@ -134,6 +144,7 @@ public class DownloadServlet extends HttpServlet
         String uris = (String) request.getAttribute("uris");
         log.debug("fragment attribute: " + fragment);
         log.debug("uris attribute: " + uris);
+        log.debug("Method: " + (String) request.getAttribute("method"));
         
         // check for direct POST
         if (uris == null)
@@ -179,42 +190,135 @@ public class DownloadServlet extends HttpServlet
         }
         
         // check for preferred/selected download method
-        String target = ServerUtil.getDownloadMethod(request, response);
+        String target = getDownloadMethod(request, response);
+        log.debug("Target: " + target);
         if (target == null)
             target = "/chooser.jsp";
-                    
-        // codebase for applet and webstart deployments
-        String codebase = ServerUtil.getCodebase(request);
-        request.setAttribute("codebase", codebase);
-        log.debug("codebase attribute: " + codebase);
         
-        // origin serverName for applet and jnlp deployment
-        String  serverName = NetUtil.getServerName(DownloadServlet.class);
-        request.setAttribute("serverName", serverName);
-        log.debug("serverName attribute: " + serverName);
-        
-        log.debug("looking for ssocookie attribute...");
-        final Cookie[] cookies = request.getCookies();
-        if (!ArrayUtil.isEmpty(cookies))
+        if (!"/DownloadManager.jnlp".equals(target))
         {
-            for (final Cookie cookie : cookies)
-            {
-                if (cookie.getName().equals(
-                        SSOCookieManager.DEFAULT_SSO_COOKIE_NAME))
-                {
-                    request.setAttribute("ssocookie", cookie.getValue());
-                    log.debug("ssocookie attribute: " + cookie.getValue());
-                    request.setAttribute("ssocookiedomain", 
-                            NetUtil.getDomainName(request.getRequestURL().toString()));
-                    log.debug("ssocookie domain: " + 
-                            NetUtil.getDomainName(request.getRequestURL().toString()));
-                }
-            }
+            RequestDispatcher disp = request.getRequestDispatcher(target);
+            disp.forward(request, response);
+            return;
         }
         
 
         RequestDispatcher disp = request.getRequestDispatcher(target);
         disp.forward(request, response);
+    }
+    
+    
+    /**
+     * Checks cookie and request param for download method preference; tries to set a cookie
+     * to save setting for future use.
+     *
+     * @return name of page to forward to, null if caller should offer choices to user
+     */
+    public static String getDownloadMethod(HttpServletRequest request, HttpServletResponse response)
+        throws IOException, ServletException
+    {
+        String method = request.getParameter("method");
+        Cookie ck = null;
+        
+        // get cookie
+        Cookie[] cookies = request.getCookies();
+        if (cookies != null)
+        {
+            for (int i=0; i<cookies.length; i++)
+            {
+                if ( cookies[i].getName().equals("DownloadMethod") )
+                    ck = cookies[i];
+            }
+        }
+        log.setLevel(Level.DEBUG);
+        
+        
+        String target = null;
+        if ((method == null) && (ck != null) && (ck.getValue() != null))
+        {
+            method = ck.getValue();
+            if( (URLS.equals(method) || WEBSTART.equals(method)) 
+                    && (request.getParameter("execute") == null))
+            {
+                target = "/clearChoice.jsp";
+                if(URLS.equals(method))
+                {
+                    request.setAttribute("Description", 
+                            "urlListDescription.html");
+                }
+                else
+                {
+                    request.setAttribute("Description", 
+                            "javaWebStartDescription.html");
+                }
+            }
+            else if (HTMLLIST.equals(method))
+                target = "/wget.jsp";
+        }
+        
+        if (target == null)
+        {
+        //if (APPLET.equals(method))
+        //    target = "/applet.jsp";
+        //else
+            if (method != null)
+            {
+                if (URLS.equals(method))
+                    target = UrlListServlet.FILE_LIST_TARGET;
+                else if (WEBSTART.equals(method))
+                    target = "/javaWebstart";
+                else if (HTMLLIST.equals(method))
+                    target = "/wget.jsp";
+                else
+                    return null;
+            }
+            else
+            {
+                // invalid method, tell page we did not forward
+                if (ck != null)
+                {
+                    // delete cookie on client
+                    ck.setValue(null);
+                    ck.setMaxAge(0); // delete
+                    response.addCookie(ck);
+                }
+                return null;
+            }
+        }
+        log.debug("Determined method: " + method);
+        
+        
+        if (request.getParameter("remember") != null)
+        {
+            // set/edit cookie
+            if (ck == null) // new
+            {
+                ck = new Cookie("DownloadMethod", method);
+                ck.setPath(request.getContextPath());
+                ck.setMaxAge(ONE_YEAR);
+                response.addCookie(ck);
+            }
+            else if (!method.equals(ck.getValue())) // changed
+            {
+                ck.setValue(method);
+                ck.setPath(request.getContextPath());
+                ck.setMaxAge(ONE_YEAR);
+                response.addCookie(ck);
+            }
+        }
+        else
+        {
+            if ((request.getParameter("clearCookie") != null) &&
+                 (ck != null))
+            {
+                // remove cookie
+                log.debug("Delete cookie!!!");
+                ck.setPath(request.getContextPath());
+                ck.setMaxAge(0);
+                response.addCookie(ck);
+            }
+        }
+        return target;
     }
     
 }

@@ -119,6 +119,9 @@
         <fileset dir="src/jsp">
             <include name="**.jsp" />
         </fileset>
+        <fileset dir="src/resources">
+            <include name="**" />
+        </fileset>
     </copy>
 </target>
 

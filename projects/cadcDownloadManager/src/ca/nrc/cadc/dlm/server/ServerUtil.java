@@ -77,6 +77,9 @@ import javax.servlet.http.Cookie;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 
+import org.apache.log4j.Level;
+import org.apache.log4j.Logger;
+
 /**
  * TODO.
  *
@@ -85,12 +88,9 @@ import javax.servlet.http.HttpServletResponse;
 public class ServerUtil
 {
     private ServerUtil() { }
- 
-    public static String APPLET = "Java Applet";
-    public static String URLS = "URL List";
-    public static String WEBSTART = "Java Webstart";
+
     
-    private static int ONE_YEAR = 365*24*3600;
+    private static final Logger log = Logger.getLogger(ServerUtil.class);
     
     public static String getCodebase(HttpServletRequest request)
     {
@@ -108,71 +108,5 @@ public class ServerUtil
         return null;
     }
     
-    /**
-     * Checks cookie and request param for download method preference; tries to set a cookie
-     * to save setting for future use.
-     *
-     * @return name of page to forward to, null if caller should offer choices to user
-     */
-    public static String getDownloadMethod(HttpServletRequest request, HttpServletResponse response)
-        throws IOException, ServletException
-    {
-        String method = request.getParameter("method");
-        Cookie ck = null;
-        
-        // get cookie
-        Cookie[] cookies = request.getCookies();
-        if (cookies != null)
-        {
-            for (int i=0; i<cookies.length; i++)
-            {
-                if ( cookies[i].getName().equals("DownloadMethod") )
-                    ck = cookies[i];
-            }
-        }
-        
-        if (method == null && ck != null)
-            method = ck.getValue();
-        
-        String target = null;
-        //if (APPLET.equals(method))
-        //    target = "/applet.jsp";
-        //else
-        if (URLS.equals(method))
-            target = "/wget.jsp";
-        else if (WEBSTART.equals(method))
-            target = "/DownloadManager.jnlp";
-        else
-        {
-            // invalid method, tell page we did not forward
-            if (ck != null)
-            {
-                // delete cookie on client
-                ck.setValue(null);
-                ck.setMaxAge(0); // delete
-                response.addCookie(ck);
-            }
-            return null;
-        }
-        
-        // set/edit cookie
-        if (ck == null) // new
-        {
-            if ( request.getParameter("remember") != null )
-            {
-                ck = new Cookie("DownloadMethod", method);
-                ck.setPath(request.getContextPath());
-                ck.setMaxAge(ONE_YEAR);
-                response.addCookie(ck);
-            }
-        }
-        else if ( !method.equals(ck.getValue()) ) // changed
-        {
-            ck.setValue(method);
-            ck.setPath(request.getContextPath());
-            ck.setMaxAge(ONE_YEAR);
-            response.addCookie(ck);
-        }
-        return target;
-    }
+
 }

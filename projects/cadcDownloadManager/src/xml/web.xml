@@ -74,7 +74,7 @@
 
     <servlet>
         <servlet-name>download</servlet-name>
-        <servlet-class>ca.nrc.cadc.dlm.server.DownloadServlet</servlet-class>
+        <servlet-class>ca.nrc.cadc.dlm.server.DispatcherServlet</servlet-class>
     </servlet>
     
     <servlet-mapping>
@@ -84,12 +84,25 @@
 
     
     <servlet>
-        <servlet-name>DownloadManager.jnlp</servlet-name>
-        <jsp-file>DownloadManager.jsp</jsp-file>
+        <servlet-name>JavaWebstart</servlet-name>
+        <servlet-class>ca.nrc.cadc.dlm.server.JavaWebStartServlet</servlet-class>
     </servlet>
     
     <servlet-mapping>
-        <servlet-name>DownloadManager.jnlp</servlet-name>
-        <url-pattern>/DownloadManager.jnlp</url-pattern>
+        <servlet-name>JavaWebstart</servlet-name>
+        <url-pattern>/javaWebstart</url-pattern>
+    </servlet-mapping>
+    <servlet-mapping>
+        <servlet-name>JavaWebstart</servlet-name>
+    <url-pattern>/DownloadManager.jnlp</url-pattern>
+    </servlet-mapping>
+    <servlet>
+        <servlet-name>fileList</servlet-name>
+	<servlet-class>ca.nrc.cadc.dlm.server.FileListServlet</servlet-class>
+    </servlet>
+    
+    <servlet-mapping>
+        <servlet-name>fileList</servlet-name>
+        <url-pattern>/fileList</url-pattern>
     </servlet-mapping>
 </web-app>

@@ -89,7 +89,7 @@ String bodyFooter = skin + "bodyFooter";
 <html>
 <head>
     <c:catch><c:import url="<%= htmlHead %>" /></c:catch>
-    <script type="text/javascript">
+<script type="text/javascript">
 	function closemyself()
 	{
 		window.opener = self;
@@ -98,30 +98,46 @@ String bodyFooter = skin + "bodyFooter";
 </script>
 </head>
 
-<body>
+<body onLoad="setTimeout('closemyself()', 10000);self.focus()" >
 <c:catch><c:import url="<%= bodyHeader %>" /></c:catch>
 
-<p>
-    You can download individual files by clicking on their filenames 
-    in the list below.
-</p>
-
 <br>
-
-  
-<p>
-    <jsp:include page="urlList.jsp" flush="true" />
-    <%-- c:import url="urlList.jsp" --%>
-</p>
+<br>
+ <div style="padding-left: 2em; padding-right: 2em">
+        <table width="95%">
+            <tbody>
+                <tr>
+                    <td valign="top">
+                    <jsp:include page='<%= (String)request.getAttribute("Description") %>' flush='true' />
+                    
+                    </td>
+                </tr>
+<tr>
+<td>
+<br>
+<br>
 <div style="padding-left: 2em; padding-right: 2em">
-    <form action="/downloadManager/download" method="POST">
+    <form name="dmsubmitform" action="/downloadManager/download" method="POST">
+        <input type="hidden" name="uris" value="<%= uris %>" />
+        <input type="hidden" name="fragment" value="<%= fragment %>" />
+        <input type="hidden" name="execute" value="Submit" />
+        <input type="hidden" name="skin" value="<%= skin %>" />
+    </form>
+    
+    <form name="clear" action="/downloadManager/download" method="POST">
         <input type="hidden" name="uris" value="<%= uris %>" />
         <input type="hidden" name="fragment" value="<%= fragment %>" />
         <input type="hidden" name="skin" value="<%= skin %>" /> 
         <input type="submit" name="clearCookie" value="Chose one of the other download methods" />
         <input type="submit" OnClick="closemyself()" value="Close window" />
     </form>
-</div>    
+</div>
+</td>
+</tr>    
+</table>
 <c:catch><c:import url="<%= bodyFooter%>" /></c:catch>
+<script type="text/javascript">
+	setTimeout(document.dmsubmitform.submit(),10000);
+</script>
 </body>
 </html>
