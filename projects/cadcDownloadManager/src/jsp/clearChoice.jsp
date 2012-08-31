@@ -137,7 +137,7 @@ String bodyFooter = skin + "bodyFooter";
 </table>
 <c:catch><c:import url="<%= bodyFooter%>" /></c:catch>
 <script type="text/javascript">
-	setTimeout(document.dmsubmitform.submit(),10000);
+	document.dmsubmitform.submit();
 </script>
 </body>
 </html>

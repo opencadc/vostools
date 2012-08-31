@@ -135,12 +135,12 @@ public class UrlListServlet extends HttpServlet
             DownloadDescriptor dd = iter.next();
             if (dd.url != null)
             {
-                response.getOutputStream().println("OK " + dd.url.toString());
+                response.getOutputStream().println("OK\t" + dd.url.toString());
                 countUrls++;
             }
             else
             {
-                response.getOutputStream().println("ERROR" + dd.error);
+                response.getOutputStream().println("ERROR\t" + dd.error);
                 countErrors++;
             }
         }

@@ -97,12 +97,6 @@ public class JavaWebStartServlet extends HttpServlet
     private static final long serialVersionUID = 201208071730L;
     
     private static final Logger log = Logger.getLogger(JavaWebStartServlet.class);
-    
-    public static final String DESCRIPTION = 
-            "The Java DownloadManager is launched as a desktop application via " +
-            "Java Webstart; the software is automatically cached on your computer, " +
-            "so application startup is generally fast after the first time. " +
-            "The browser window can be used for additional work.";
 
     /**
      * 
@@ -149,10 +143,12 @@ public class JavaWebStartServlet extends HttpServlet
                 {
                     request.setAttribute("ssocookie", cookie.getValue());
                     log.debug("ssocookie attribute: " + cookie.getValue());
-                    request.setAttribute("ssocookiedomain", 
-                            NetUtil.getDomainName(request.getRequestURL().toString()));
-                    log.debug("ssocookie domain: " + 
-                            NetUtil.getDomainName(request.getRequestURL().toString()));
+                    request.setAttribute("ssocookiedomain", NetUtil
+                            .getDomainName(request.getRequestURL()
+                                    .toString()));
+                    log.debug("ssocookie domain: "
+                            + NetUtil.getDomainName(request
+                                    .getRequestURL().toString()));
                 }
             }
         }

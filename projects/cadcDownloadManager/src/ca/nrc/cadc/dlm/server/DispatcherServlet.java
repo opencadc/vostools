@@ -258,9 +258,6 @@ public class DispatcherServlet extends HttpServlet
         
         if (target == null)
         {
-        //if (APPLET.equals(method))
-        //    target = "/applet.jsp";
-        //else
             if (method != null)
             {
                 if (URLS.equals(method))
