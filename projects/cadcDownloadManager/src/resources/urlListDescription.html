@@ -1,5 +1,15 @@
-Download a text file containing a list of URLs that can be downloaded with <i>wget</i> with the following command:
+Download a manifest text file containing a list of URLs that can be consumed with a script or directly with the wget command. There are two formats for a row in this file:
+<br> <br>
+<code>
+	OK\t&#60URL&#62
+</code>
+<br>
+<code>
+	ERROR\t&#60Error message&#62
+</code>
 <br><br>
+The following <i>wget</i> command downloads all the URLs in the manifest file:
+<br>
 <code> 
    % wget --http-user=CADC_USER --http-password=CADC_PASSWORD -i FILE_NAME 
 </code>

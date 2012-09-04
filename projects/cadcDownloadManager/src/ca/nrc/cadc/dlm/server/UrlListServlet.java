@@ -144,9 +144,12 @@ public class UrlListServlet extends HttpServlet
                 countErrors++;
             }
         }
+        
+        /* Activate when format of the manifest file is defined 
         response.getOutputStream().println(
                 "Summary URLs(" + countUrls + "), Errors(" + countErrors
                         + "), Total(" + countUrls + countErrors + ")");
+         */
         response.getOutputStream().flush();
     }
 
