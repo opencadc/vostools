@@ -21,6 +21,7 @@ BUFSIZE=8388608
 #BUFSIZE=8192
 
 SERVER="www.cadc.hia.nrc.gc.ca"
+### SERVER="test.cadc.hia.nrc.gc.ca"
 ### SERVER="rcdev.cadc-ccda.hia-iha.nrc-cnrc.gc.ca"
 ### SERVER="scapa.cadc.dao.nrc.ca"
 
@@ -102,6 +103,8 @@ class Connection:
             logging.error("%s \n" % ( str(e)))
             raise OSError(errno.ENTCONN,"VOSpace connection failed",parts.netloc)
 
+        if logging.getLogger('root').getEffectiveLevel() == logging.DEBUG :
+            connection.set_debuglevel(1)
 
         ## Try to open this connection. 
         timestart = time.time() 
@@ -531,6 +534,7 @@ class VOFile:
 	self.name=os.path.basename(URL)
         self._fpos=0
         self.open(URL,method)
+	logging.debug("Sending back VOFile object")
         
     def tell(self):
 	return self._fpos
@@ -551,7 +555,8 @@ class VOFile:
             return
         logging.debug("Closing connection")
         try:
-            self.httpCon.send('0\r\n\r\n')
+            if self.transEncode is not None:
+                self.httpCon.send('0\r\n\r\n')
             self.resp=self.httpCon.getresponse()
             self.httpCon.close()
         except Exception as e:
@@ -594,18 +599,25 @@ class VOFile:
         if "mountvofs" in sys.argv[0]:
             userAgent='vofs '+version
         self.httpCon.putheader("User-Agent", userAgent)
+        self.transEncode = None
         if method in ["PUT", "POST", "DELETE"]:
             if self.size is not None and type(self.size)==int:
-                self.httpCon.putheader("Content-Length",self.size)
+                self.httpCon.putheader("Content-Length",str(self.size))
+            else:
+                self.httpCon.putheader("Transfer-Encoding",'chunked')
+                self.transEncode = "chunked"
             contentType="text/xml"
             if method=="PUT":
                 contentType=mimetypes.guess_type(URL)[0]
+	        logging.debug("Guessed content type: %s" % (contentType))
+            if contentType is None:
+	        contentType="text/xml"
             self.httpCon.putheader("Content-Type",contentType)
         if bytes is not None and method=="GET" :
             logging.debug("Range: %s" %(bytes))
             self.httpCon.putheader("Range",bytes)
-        self.httpCon.putheader("Transfer-Encoding",'chunked')
         self.httpCon.putheader("Accept", "*/*")
+        self.httpCon.putheader("Expect", "100-continue")
         self.httpCon.endheaders()
         logging.debug("Done setting headers")
 
@@ -663,8 +675,12 @@ class VOFile:
         """write buffer to the connection"""
         if not self.httpCon or self.closed:
             raise OSError(errno.ENOTCONN,"no connection for write",self.url)
-        self.httpCon.send('%X\r\n' % len(buf))
-        self.httpCon.send(buf+'\r\n')
+        ### If we are sending chunked then we need to frame the transfer
+        if self.transEncode is not None:
+            self.httpCon.send('%X\r\n' % len(buf))
+            self.httpCon.send(buf+'\r\n')
+        else:
+            self.httpCon.send(buf)
         return len(buf)
 
 
@@ -844,7 +860,7 @@ class Client:
         linkNode=Node(self.fixURI(linkURI),nodeType="vos:LinkNode")
         ET.SubElement(linkNode.node,"target").text=self.fixURI(srcURI)
         URL=self.getNodeURL(linkURI)
-        f=VOFile(URL,self.conn,method="PUT")
+        f=VOFile(URL,self.conn,method="PUT",size=len(str(linkNode)))
         f.write(str(linkNode))
         return f.close()
         
@@ -858,7 +874,7 @@ class Client:
         ET.SubElement(transfer,"direction").text=self.fixURI(destURI)
         ET.SubElement(transfer,"keepBytes").text="false"
 
-        con=self.open(srcURI,URL=Client.VOTransfer,mode=os.O_APPEND)
+        con=self.open(srcURI,URL=Client.VOTransfer,mode=os.O_APPEND,size=len(ET.tostring(transfer)))
         con.write(ET.tostring(transfer))
         con.read()
         if  con.resp.status==200:
@@ -883,10 +899,11 @@ class Client:
         ET.SubElement(transferXML,"view").attrib['uri']="%s#%s" % ( Node.IVOAURL, "defaultview")
         ET.SubElement(transferXML,"protocol").attrib['uri']="%s#%s" % ( Node.IVOAURL, protocol[direction] )
         logging.debug(ET.tostring(transferXML))
-        con = VOFile(Client.VOTransfer, self.conn, method = "POST")
-        logging.debug(str(con))
+        con = VOFile(Client.VOTransfer, self.conn, method = "POST", size=len(ET.tostring(transferXML)))
         con.write(ET.tostring(transferXML)) 
+        #logging.debug(str(con))
         F = ET.parse(con)
+	logging.debug(str(F))
         P = F.find(Node.PROTOCOL)
         logging.debug(str(P))
         if P is None:
@@ -969,13 +986,13 @@ class Client:
                 property.text=node.props[prop]
         node.node.insert(0,properties)
         #logging.debug(str(node))
-        f=self.open(node.uri,mode=os.O_APPEND)
+        f=self.open(node.uri,mode=os.O_APPEND, size=len(str(node)))
         f.write(str(node))
         f.close()
         return 
 
     def create(self,node):
-        f = self.open(node.uri,mode=os.O_CREAT)
+        f = self.open(node.uri,mode=os.O_CREAT, size=len(str(node)))
         f.write(str(node))
         return f.close()
 
@@ -995,14 +1012,14 @@ class Client:
                                 if prop2.text==prop.text:
                                     properties2.remove(prop2)
         #logging.debug(str(node))
-        f=self.open(node.uri,mode=os.O_APPEND)
+        f=self.open(node.uri,mode=os.O_APPEND,size=len(str(node)))
         f.write(str(node))
         f.close()
 
     def mkdir(self,uri):
         node = Node(self.fixURI(uri),nodeType="vos:ContainerNode")
         URL=self.getNodeURL(uri)
-        f=VOFile(URL,self.conn,method="PUT")
+        f=VOFile(URL,self.conn,method="PUT",size=len(str(node)))
         f.write(str(node))
         return f.close()
     
