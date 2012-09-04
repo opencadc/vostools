@@ -58,27 +58,26 @@ class Connection:
         The user must supply a valid certificate. 
         """
 
-        ## figure out a filename and open that file for writing
-        if not certfile:
-            ## No filename see if we can find a  HOME directory
-            dirName=os.getenv('HOME')
-            logging.debug("looking for certificate in %s" % ( dirName))
-            if not dirName:
-                raise IOError(errno.EEXIST,"HOME is not defined for your environment")
-            certDir=os.path.join(dirName,'.ssl')
-            logging.debug("looking for certificate in %s" % ( certDir))
-            if not os.access(certDir,os.F_OK):
-                os.mkdir(certDir)
-            certfile = os.path.join(certDir,"cadcproxy.pem")
-            logging.debug("looking for certificate in %s" % ( certfile))
-        if not os.access(certfile,os.F_OK):
-            raise EnvironmentError(errno.EACCES,"No certifacte file found at %s\n (Perhaps use getCert to pull one)" %(certfile))
 
-        logging.debug("requesting password")
+        #if not certfile:
+        #    ## No filename see if we can find a  HOME directory
+        #    dirName=os.getenv('HOME')
+        #    logging.debug("looking for certificate in %s" % ( dirName))
+        #    if not dirName:
+        #        raise IOError(errno.EEXIST,"HOME is not defined for your environment")
+        #    certDir=os.path.join(dirName,'.ssl')
+        #    logging.debug("looking for certificate in %s" % ( certDir))
+        #    if not os.access(certDir,os.F_OK):
+        #        os.mkdir(certDir)
+        #    certfile = os.path.join(certDir,"cadcproxy.pem")
+        #    logging.debug("looking for certificate in %s" % ( certfile))
+        ## allow anonymous access if no certfile is specified...
+        if certfile is not None and not os.access(certfile,os.F_OK):
+            raise EnvironmentError(errno.EACCES,"No certifacte file found at %s\n (Perhaps use getCert to pull one)" %(certfile))
 
         self.certfile=certfile
 
-        logging.debug("Using certificate file %s" % (self.certfile))
+        logging.debug("Using certificate file %s" % (str(self.certfile)))
 
 
     def getConnection(self,url):
@@ -580,6 +579,8 @@ class VOFile:
             if self.resp.status in [404, 401, 409]:
                 if msg is None or len(msg) == 0:
                     msg = msgs[self.resp.status]
+                if self.resp.status == 401 and self.connector.certilfe is None:
+                    msg += " using anonymous access "
                 raise IOError(errnos[self.resp.status],msg,self.url)
             raise IOError(self.resp.status,msg,self.url)
         self.size=self.resp.getheader("Content-Length",0)
@@ -690,7 +691,7 @@ class Client:
     VOServers={'cadc.nrc.ca!vospace': SERVER,
                'cadc.nrc.ca~vospace': SERVER}
 
-    VOTransfer='https://%s/vospace/synctrans' % ( SERVER)
+    VOTransfer='/vospace/synctrans' 
 
     ### reservered vospace properties, not to be used for extended property setting
     vosProperties=["description", "type", "encoding", "MD5", "length", "creator","date",
@@ -700,6 +701,15 @@ class Client:
     def __init__(self,certFile=os.path.join(os.getenv('HOME'),'.ssl/cadcproxy.pem'),
                  rootNode=None,conn=None,archive='vospace'):
         """This could/should be expanded to set various defaults"""
+        if certFile is not None and not os.access(certFile,os.F_OK):
+            ### can't get this certfile
+            logging.debug("Failed to access certfile %s " % ( certFile))
+            logging.debug("Using anonymous mode, try getCert if you want to use authenitcation")
+            certFile = None
+        if certFile is None:
+            self.protocol="http"
+        else:
+            self.protocol="https"
         if not conn:
             conn=Connection(certfile=certFile)
         self.conn=conn
@@ -820,7 +830,7 @@ class Client:
         return(node)
                     
 
-    def getNodeURL(self,uri,protocol="https", method='GET', view=None, limit=0, nextURI=None):            
+    def getNodeURL(self,uri, method='GET', view=None, limit=0, nextURI=None):            
         """Split apart the node string into parts and return the correct URL for this node"""
         import urllib
 
@@ -851,7 +861,7 @@ class Client:
         data=""
         if len(fields) >0 : 
                data="?"+urllib.urlencode(fields)
-        URL = "%s://%s/vospace/nodes/%s%s" % ( protocol, server, parts.path.strip('/'), data)
+        URL = "%s://%s/vospace/nodes/%s%s" % ( self.protocol, server, parts.path.strip('/'), data)
         #logging.debug("Node URL %s (%s)" % (URL, method))
         return URL
 
@@ -874,7 +884,8 @@ class Client:
         ET.SubElement(transfer,"direction").text=self.fixURI(destURI)
         ET.SubElement(transfer,"keepBytes").text="false"
 
-        con=self.open(srcURI,URL=Client.VOTransfer,mode=os.O_APPEND,size=len(ET.tostring(transfer)))
+        url = "%s://%s/%s" % ( self.protocol, SERVER, Client.VOTransfer)
+        con=self.open(srcURI,URL=url,mode=os.O_APPEND,size=len(ET.tostring(transfer)))
         con.write(ET.tostring(transfer))
         con.read()
         if  con.resp.status==200:
@@ -889,8 +900,8 @@ class Client:
 
     def transfer(self,uri,direction):
         """Build the transfer XML document"""
-        protocol = {"pullFromVoSpace": "httpsget",
-                    "pushToVoSpace": "httpsput"}
+        protocol = {"pullFromVoSpace": "%sget" % ( self.protocol ) ,
+                    "pushToVoSpace": "%sput" % (self.protocol ) }
         transferXML = ET.Element("transfer")
         transferXML.attrib['xmlns'] = Node.VOSNS
         transferXML.attrib['xmlns:vos'] = Node.VOSNS
@@ -899,7 +910,8 @@ class Client:
         ET.SubElement(transferXML,"view").attrib['uri']="%s#%s" % ( Node.IVOAURL, "defaultview")
         ET.SubElement(transferXML,"protocol").attrib['uri']="%s#%s" % ( Node.IVOAURL, protocol[direction] )
         logging.debug(ET.tostring(transferXML))
-        con = VOFile(Client.VOTransfer, self.conn, method = "POST", size=len(ET.tostring(transferXML)))
+        url = "%s://%s/%s" % ( self.protocol, SERVER, Client.VOTransfer)
+        con = VOFile(url, self.conn, method = "POST", size=len(ET.tostring(transferXML)))
         con.write(ET.tostring(transferXML)) 
         #logging.debug(str(con))
         F = ET.parse(con)
@@ -1091,6 +1103,7 @@ class Client:
             dum=self.getNode(uri)
 	    return True
         except Exception as e:
+            logging.error(str(e))
 	    return False
 
     def status(self,uri,code=[200,303,302]):
