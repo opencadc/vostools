@@ -574,12 +574,15 @@ class VOFile:
                    409: errno.EEXIST }
         logging.debug("status %d for URL %s" % ( self.resp.status,self.url))
         if self.resp.status not in codes:
-            msg=self.resp.read()
+            from html2text import html2text
+            msg = self.resp.read()
+            if msg is not None:
+                msg = html2text(msg,self.url).strip()
             logging.debug("Error message: %s" % (msg))
             if self.resp.status in [404, 401, 409]:
                 if msg is None or len(msg) == 0:
                     msg = msgs[self.resp.status]
-                if self.resp.status == 401 and self.connector.certilfe is None:
+                if self.resp.status == 401 and self.connector.certfile is None:
                     msg += " using anonymous access "
                 raise IOError(errnos[self.resp.status],msg,self.url)
             raise IOError(self.resp.status,msg,self.url)

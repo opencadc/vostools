@@ -69,11 +69,11 @@ if opt.Size:
     sortKey="size"
 
 if opt.verbose:
-    logging.basicConfig(level=logging.INFO,format="%(module)s: %(message)s")
+    logging.basicConfig(level=logging.INFO,format="%(message)s")
 elif opt.debug:
     logging.basicConfig(level=logging.DEBUG,format="%(module)s.%(funcName)s %(message)s")
 else:
-    logging.basicConfig(level=logging.ERROR,format="%(module)s: %(message)s")
+    logging.basicConfig(level=logging.ERROR,format="%(message)s")
 
 if len(args) < 1:
     parser.error("You must specifiy a VOSpace to list")

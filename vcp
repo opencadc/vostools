@@ -133,14 +133,18 @@ if __name__=='__main__':
 
     (opt,args)=parser.parse_args()
 
+    format = "%(message)s"
+
     if opt.verbose:
         logLevel=logging.INFO
     elif opt.debug:
+        format="%(asctime)s - %(module)s.%(funcName)s %(lineno)d: %(message)s"
         logLevel=logging.DEBUG
     else:
         logLevel=logging.ERROR
         
-    logging.basicConfig(level=logLevel,format="%(asctime)s - %(module)s.%(funcName)s %(lineno)d: %(message)s")
+    logging.basicConfig(level=logLevel,format=format)
+
 
     
     try:
