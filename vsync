@@ -141,6 +141,8 @@ def copy(source,dest):
 
   dirname=os.path.dirname(dest)
   mkdirs(dirname)
+  if opt.include is not None and not re.search(opt.include,source):
+	return
   queue.put((source,dest),timeout=3600)
                               
 def startStreams(nstreams):
@@ -225,6 +227,7 @@ if __name__=='__main__':
   parser.add_option('--recursive','-r',help="Do a recursive sync",action="store_true")
   parser.add_option('--nstreams','-n',type=int,help="Number of streams to run (MAX: 30)",default=1)
   parser.add_option('--exclude',help="ignore directories or files containing this pattern",default=None)
+  parser.add_option('--include',help="only include files matching this pattern",default=None)
   parser.add_option('--overwrite',help="overwrite copy on server regardless of modification/size/md5 checks",action="store_true")
   parser.add_option('--load_test',action="store_true",help="Used to stress test the VOServer, also set --nstreams to a large value")
   parser.add_option("--certfile",help="location of your CADC security certificate file",default=os.path.join(os.getenv("HOME","."),".ssl/cadcproxy.pem"))
