@@ -557,6 +557,8 @@ class VOFile:
             if self.transEncode is not None:
                 self.httpCon.send('0\r\n\r\n')
             self.resp=self.httpCon.getresponse()
+	    import time
+	    time.sleep(0.1)
             self.httpCon.close()
         except Exception as e:
 	    raise IOError(errno.ENOTCONN,str(e))

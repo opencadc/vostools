@@ -8,6 +8,8 @@ import datetime, optparse
 import errno
 import logging
 import time
+from vos import md5_cache
+
 
 def computeMD5(filename,block_size=8192):
   import hashlib
@@ -22,10 +24,17 @@ def computeMD5(filename,block_size=8192):
   return md5.hexdigest()
 
 def fileMD5(filename):
-    import os
-    stat=os.stat(filename)
+  import os
+  md5 = None
+  if opt.cache_nodes:
+     md5 = md5Cache.get(filename)
+  if md5 is None or md5[2] < os.stat(filename).st_mtime:
     md5 = computeMD5(filename)
-    return md5
+    if opt.cache_nodes:
+      stat = os.stat(filename)
+      md5Cache.update(filename, md5, stat.st_size, stat.st_mtime)
+  md5 = md5[0]
+  return md5
 
 class ThreadCopy(threading.Thread):
   def __init__(self,queue):
@@ -50,39 +59,44 @@ class ThreadCopy(threading.Thread):
       now = datetime.datetime.now()
       srcMD5=None
       stat=os.stat(src)
-      if not opt.ignore_checksum:
-         srcMD5=fileMD5(src)
+      if not opt.ignore_checksum and not opt.overwrite :
+        srcMD5=fileMD5(src)
       if not opt.overwrite:
-       """Check if the file is the same"""
-       try:
-        node=nodeDict.get(dest,'d41d8cd98f00b204e9800998ecf8427e')
-        if node:
-          name=node.name
-        else:
-          name="None"
-	if node is None: 
-           logging.debug("Getting node info from VOSpace")
-	   logging.debug(str(nodeDict.keys()))
-	   logging.debug(str(dest))
-	   node=self.client.getNode(dest)
-        info=node.getInfo()
+        """Check if the file is the same"""
+        try:
+          if opt.cache_nodes:
+            nodeInfo = md5Cache.get(dest)
+          if nodeInfo is None:
+            logging.debug("Getting node info from VOSpace")
+            logging.debug(str(nodeDict.keys()))
+            logging.debug(str(dest))
+            node=self.client.getNode(dest)
+            destMD5=node.props.get('MD5','d41d8cd98f00b204e9800998ecf8427e')
+            destLength=node.attr['st_size']
+            destTime=node.attr['st_ctime']
+            md5Cache.update(dest,destMD5, destLength, destTime)
+          else:
+            destMD5 = nodeInfo[0]
+            destLength = nodeInfo[1]
+            destTime = nodeInfo[2]
+          if (not opt.ignore_checksum and srcMD5==destMD5) or ( opt.ignore_checksum and destTime >= stat.st_mtime and destLength==stat.st_size) :
+            logging.info( "skipping: %s  matches %s" % (src,dest) )
+            self.filesSkipped+=1
+            self.bytesSkipped+=destLength
+            self.queue.task_done()
+            continue
+        except (IOError, OSError) as e:
+          """Ignore the erorr"""
+          logging.debug(str(e))
+          pass
+      logging.info("%s -> %s" % (src,dest))
+      try:
+        self.client.copy(src,dest,sendMD5=True)
+        node = self.client.getNode(dest)
         destMD5=node.props.get('MD5','d41d8cd98f00b204e9800998ecf8427e')
         destLength=node.attr['st_size']
         destTime=node.attr['st_ctime']
-        if (not opt.ignore_checksum and srcMD5==destMD5) or ( opt.ignore_checksum and destTime >= stat.st_mtime and destLength==stat.st_size) :
-          logging.info( "skipping: %s  matches %s" % (src,dest) )
-          self.filesSkipped+=1
-          self.bytesSkipped+=stat.st_size
-          self.queue.task_done()
-          continue
-       except (IOError, OSError) as e:
-        """Ignore the erorr"""
-        logging.debug(str(e))
-        pass
-      logging.info("%s -> %s" % (src,dest))
-      try:
-        checkMD5 = not opt.ignore_checksum
-        self.client.copy(src,dest,sendMD5=checkMD5)
+        md5Cache.update(dest,destMD5, destLength, destTime)
         self.filesSent+=1
         self.bytesSent+=stat.st_size
       except (IOError, OSError) as e:
@@ -140,6 +154,7 @@ def copy(source,dest):
     return
 
   dirname=os.path.dirname(dest)
+  logging.info("Making directory %s " % ( dest))
   mkdirs(dirname)
   if opt.include is not None and not re.search(opt.include,source):
 	return
@@ -223,7 +238,8 @@ if __name__=='__main__':
   parser=optparse.OptionParser(usage=usage)
   parser.add_option('--verbose','-v',action="store_true",help='run in verbose mode')
   parser.add_option('--debug','-d',action="store_true",help='run in verbose mode')
-  parser.add_option('--ignore-checksum',action="store_true",help='dont check MD5 sum, forces transfer')
+  parser.add_option('--ignore-checksum',action="store_true",help='dont check MD5 sum, use size and time instead')
+  parser.add_option('--cache_nodes',action='store_true',help='cache node MD5 sum in an sqllite db')
   parser.add_option('--recursive','-r',help="Do a recursive sync",action="store_true")
   parser.add_option('--nstreams','-n',type=int,help="Number of streams to run (MAX: 30)",default=1)
   parser.add_option('--exclude',help="ignore directories or files containing this pattern",default=None)
@@ -245,6 +261,10 @@ if __name__=='__main__':
 
   if opt.nstreams>30 and not opt.load_test:
     parser.error("Maximum of 30 streams exceeded")
+
+  if opt.cache_nodes:
+    md5Cache = md5_cache.MD5_Cache()
+
 
   dest=args.pop()
   if dest[0:4]!="vos:":
