@@ -32,7 +32,7 @@ setup(name="vos",
       author="JJ Kavelaars",
       author_email="jj.kavelaars@nrc.gc.ca",
       packages=['vos'],
-      scripts=['getCert','vsync','vcp','vrm','vls','vmkdir','mountvofs','vrmdir'],
+      scripts=['getCert','vsync','vmv','vcp','vrm','vls','vmkdir','mountvofs','vrmdir', 'vln', 'vcat' ],
       classifiers=[
         'Development Status :: 4 - Beta',
         'Environment :: Console',
