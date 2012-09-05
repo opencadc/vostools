@@ -559,7 +559,7 @@ class VOFile:
             self.resp=self.httpCon.getresponse()
             self.httpCon.close()
         except Exception as e:
-            logging.error("%s \n" %  str(e))
+	    raise IOError(errno.ENOTCONN,str(e))
         self.closed=True
         logging.debug("Connection closed")
         return self.checkstatus(codes=code)

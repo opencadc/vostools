@@ -55,7 +55,7 @@ class ThreadCopy(threading.Thread):
       if not opt.overwrite:
        """Check if the file is the same"""
        try:
-        node=nodeDict.get(dest,None)
+        node=nodeDict.get(dest,'d41d8cd98f00b204e9800998ecf8427e')
         if node:
           name=node.name
         else:
@@ -75,7 +75,7 @@ class ThreadCopy(threading.Thread):
           self.bytesSkipped+=stat.st_size
           self.queue.task_done()
           continue
-       except IOError as e:
+       except (IOError, OSError) as e:
         """Ignore the erorr"""
         logging.debug(str(e))
         pass
