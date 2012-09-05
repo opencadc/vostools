@@ -1,17 +1,11 @@
-Download a manifest text file containing a list of URLs that can be consumed with a script or directly with the wget command. There are two formats for a row in this file:
-<br> <br>
-<code>
-	OK\t&#60URL&#62
-</code>
-<br>
-<code>
+Download a text file containing a list of URLs that can be consumed with a script or directly with the <i>wget</i> command. Each line contains an URL or, when URL generation fails, an error message of the form: <code>
 	ERROR\t&#60Error message&#62
 </code>
 <br><br>
-The following <i>wget</i> command downloads all the URLs in the manifest file:
+<i>wget</i> command to download all the URLs in the above text file:
 <br>
 <code> 
    % wget --http-user=CADC_USER --http-password=CADC_PASSWORD -i FILE_NAME 
 </code>
 <br><br>
-Be certain to fill in your own CADC_USERNAME, CADC_PASSWORD and the used FILE_NAME (default: cadcUrlList.txt) in the appropriate places in that command, or you will get an error from <i>wget</i>.
+Be certain to fill in your own CADC_USERNAME, CADC_PASSWORD and the used FILE_NAME (default: cadcUrlList.txt) in the appropriate places in that command or you will get an error from <i>wget</i>.

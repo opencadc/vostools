@@ -135,7 +135,7 @@ public class UrlListServlet extends HttpServlet
             DownloadDescriptor dd = iter.next();
             if (dd.url != null)
             {
-                response.getOutputStream().println("OK\t" + dd.url.toString());
+                response.getOutputStream().println(dd.url.toString());
                 countUrls++;
             }
             else
