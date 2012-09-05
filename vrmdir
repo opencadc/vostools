@@ -31,7 +31,8 @@ except Exception as e:
     sys.exit(e.errno)
 
 
-for arg in args:
+try:
+ for arg in args:
     if arg[0:4]!="vos:":
        logging.error("%s is not a valid VOSpace handle" % (arg))
     if client.isdir(arg):
@@ -41,3 +42,6 @@ for arg in args:
        logging.error("%s is a file" % (arg))
     else:
        logging.error("%s file not found" % (arg))
+except Exception as e:
+    logging.error("Conneciton failed:  %s" %  (str(e)))
+
