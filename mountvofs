@@ -850,7 +850,11 @@ if __name__ == "__main__":
         logging.basicConfig(level=logging.ERROR,format="vos:%(module)s.%(funcName)s %(message)s",filename=opt.log)
 
     logging.debug("Checking connetion to VOSpace ")
-    conn=vos.Connection(certfile=opt.certfile)
+    if not os.access(opt.certfile,os.F_OK):
+        certfile=None
+    else:
+        certfile=opt.certfile
+    conn=vos.Connection(certfile=certfile)
     logging.debug("Got a certificate, connections should work")
 
     root = opt.vospace

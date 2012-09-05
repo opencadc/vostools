@@ -39,13 +39,8 @@ except Exception as e:
     sys.exit(e.errno)
 
 
-client.mkdir(args[0])	
-if not client.access(args[0]):
-   try:
-      client.mkdir(args[0])	
-   except Exception as e:
+try:
+    client.mkdir(args[0])	
+except Exception as e:
       logging.error(str(e))
-elif client.isdir(args[0]):
-   logging.error("(%s) directory exists." % ( args[0]))
-else:
-   logging.error("(%s) File exists." % ( args[0]))
+

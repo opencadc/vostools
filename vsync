@@ -46,6 +46,7 @@ class ThreadCopy(threading.Thread):
   def run(self):
     while True:
       (src,dest)=self.queue.get()
+      requeue = (src,dest)
       now = datetime.datetime.now()
       srcMD5=None
       stat=os.stat(src)
@@ -87,6 +88,13 @@ class ThreadCopy(threading.Thread):
       except (IOError, OSError) as e:
         logging.error("Error writing %s to server, skipping" % ( src))
         logging.error(str(e))
+	try:
+	   if e.errno == 104:
+	      self.queue.put(requeue)
+        except Exception as e2:
+	   logging.error("Error during requeue")
+ 	   logging.error(str(e2))
+	   pass
         self.filesErrored+=1
         pass
       self.queue.task_done()

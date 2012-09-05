@@ -10,8 +10,10 @@ usage="""
   vls vos:voSpaceTarget
   lists information about the voSpaceTarget, a data or container node.   You must have read permission on the vosSpaceTarget
 
-eg:  vls vos:jkavelaars
-If no 'host' information is given, then vos: implies the CADC voSpace server."""
+eg:  vls vos/jkavelaars
+
+  Currently only work on CADC vospace server
+"""
 
 
 def getTerminalSize():
@@ -42,7 +44,7 @@ def getTerminalSize():
 
 
 parser=optparse.OptionParser(usage,add_help_option=False)
-
+parser.add_option("--help",action="store_true")
 parser.add_option("-l","--long",action="store_true",help="verbose listing sorted by name")
 parser.add_option("-g","--group",action="store_true",help="display group read/write information")
 parser.add_option("-h","--human",action="store_true",help="make sizes human readable",default=False)
@@ -55,6 +57,10 @@ parser.add_option("--certfile",help="location of your CADC security certificate 
 parser.add_option("--overwrite",help="Overwrite the existing certificate with a new one?",action="store_true")
 
 (opt,args)=parser.parse_args()
+
+if opt.help:
+    parser.print_help()
+    sys.exit(0)
 
 sortKey=False
 if opt.time:
@@ -93,11 +99,11 @@ def sizeFormat(size):
         try:
             length=float(size)
             scale=int(math.log(length)/math.log(1024))
-            length = "%.1f%s" % (length/(1024.0**scale),sizeUnit[scale])
+            length = "%.0f%s" % (length/(1024.0**scale),sizeUnit[scale])
         except:
             length=str(size)
     else:
-        length=str(size)
+        length=str(int(size))
     return "%12s " % ( length)
 
 def dateFormat(Epoch):
@@ -121,10 +127,11 @@ formats={'permisions': lambda value: "%-11s" % (value),
          'date': dateFormat}
 
 for node in args:
+
     if node[0:4]!="vos:":
         parser.error("Improper vospace spefication: %s " % ( node))
     try:
-        infoList= vos.getNode(node,limit=500).getInfoList()
+        infoList= vos.getInfoList(node)
     except IOError as e:
         logging.error("Error getting listing of %s ( %s )" % (node,e.strerror))
         sys.exit(e.errno)
@@ -141,10 +148,13 @@ for node in args:
 
 
     for item in infoList:
+        name_string = item[0]
         if opt.long:
             for col in columns:
                 sys.stdout.write(formats[col](item[1][col]))
-        sys.stdout.write("%s " % (item[0]))
+            if item[1]["permisions"][0] == 'l':
+                name_string = "%s -> %s" % ( name_string, item[1]['target'] )
+        sys.stdout.write("%s " % (name_string))
         sys.stdout.write("\n")
 
 sys.exit(0)

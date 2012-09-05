@@ -19,7 +19,9 @@ def access(filename,mode):
 def listdir(filename):
     logging.debug("getting a dirlist %s " %(filename))
     if filename[0:4]=="vos:":
-        return client.listdir(filename)
+        dirlist = client.listdir(filename)
+        logging.debug(str(dirlist))
+        return dirlist
     else:
         return os.listdir(filename)
 
@@ -157,16 +159,17 @@ if __name__=='__main__':
 
         ### the source must exist, of course...
         if not access(source,os.R_OK):
-            logging.error("Can't open file %s for read" % ( source))
+            logging.error("Can't access %s " % ( source))
             sys.exit(-1)
 
         ## copying inside VOSpace not yet implemented
         if source[0:4]=='vos:' and dest[0:4]=='vos:' :
-            logging.error("Can't copy from VOSpace to VOSpace")
+            logging.error("Can not (yet) copy from VOSpace to VOSpace")
             sys.exit(-1)
 
 	thisDest=dest
         if isdir(source):
+            logging.debug("%s is a directory or link to one" % (source))
             ## To mimic unix fs behaviours if copying a directory and
             ## the destination directory exists then the actual
             ## destination in a recursive copy is the destination +
@@ -175,10 +178,10 @@ if __name__=='__main__':
                 if not isdir(dest):
                     logging.error("Can't write a directory (%s) to a file (%s)" % (source,dest))
                     sys.exit(-1)
-                else:
-                    dest=os.path.normpath(os.path.join(dest,os.path.basename(source)))
+                # directory exists so we append the end of source to that (UNIX behaviour)
+                thisDest=os.path.normpath(os.path.join(dest,os.path.basename(source)))
             elif len(args) > 1:
-                logging.error("I don't now how to copy multiple things into a non-existant location (%s)" % (dest))
+                logging.error("vcp can not copy multiple things into a non-existant location (%s)" % (dest))
                 sys.exit(-1)
         elif access(dest,os.F_OK) and isdir(dest):
             ### we're copying into a directory
