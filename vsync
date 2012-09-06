@@ -32,7 +32,8 @@ def fileMD5(filename):
     if opt.cache_nodes:
       stat = os.stat(filename)
       md5Cache.update(filename, md5, stat.st_size, stat.st_mtime)
-  md5 = md5[0]
+  else:
+    md5 = md5[0]
   return md5
 
 class ThreadCopy(threading.Thread):
@@ -60,6 +61,7 @@ class ThreadCopy(threading.Thread):
       stat=os.stat(src)
       if not opt.ignore_checksum and not opt.overwrite :
         srcMD5=fileMD5(src)
+      logging.debug("Source MD5: %s " %( srcMD5))
       if not opt.overwrite:
         """Check if the file is the same"""
         try:
@@ -80,6 +82,7 @@ class ThreadCopy(threading.Thread):
             destMD5 = nodeInfo[0]
             destLength = nodeInfo[1]
             destTime = nodeInfo[2]
+          logging.debug("Dest MD5: %s " %( destMD5 ))
           if (not opt.ignore_checksum and srcMD5==destMD5) or ( opt.ignore_checksum and destTime >= stat.st_mtime and destLength==stat.st_size) :
             logging.info( "skipping: %s  matches %s" % (src,dest) )
             self.filesSkipped+=1
@@ -127,6 +130,7 @@ def mkdirs(dirs):
   ## try and make a new directory and return
   ## failure indicates we should see if subdirs exist
   try:
+    logging.info("Making directory %s " % ( dirs))
     c.mkdir(dirs)
     goodDirs.append(dirs) 
     return
@@ -156,7 +160,6 @@ def copy(source,dest):
     return
 
   dirname=os.path.dirname(dest)
-  logging.info("Making directory %s " % ( dest))
   mkdirs(dirname)
   if opt.include is not None and not re.search(opt.include,source):
 	return
