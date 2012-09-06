@@ -63,6 +63,7 @@ class ThreadCopy(threading.Thread):
       if not opt.overwrite:
         """Check if the file is the same"""
         try:
+	  nodeInfo = None
           if opt.cache_nodes:
             nodeInfo = md5Cache.get(dest)
           if nodeInfo is None:
@@ -73,7 +74,8 @@ class ThreadCopy(threading.Thread):
             destMD5=node.props.get('MD5','d41d8cd98f00b204e9800998ecf8427e')
             destLength=node.attr['st_size']
             destTime=node.attr['st_ctime']
-            md5Cache.update(dest,destMD5, destLength, destTime)
+            if opt.cache_nodes:
+               md5Cache.update(dest,destMD5, destLength, destTime)
           else:
             destMD5 = nodeInfo[0]
             destLength = nodeInfo[1]
@@ -95,7 +97,8 @@ class ThreadCopy(threading.Thread):
         destMD5=node.props.get('MD5','d41d8cd98f00b204e9800998ecf8427e')
         destLength=node.attr['st_size']
         destTime=node.attr['st_ctime']
-        md5Cache.update(dest,destMD5, destLength, destTime)
+        if opt.cache_nodes:
+           md5Cache.update(dest,destMD5, destLength, destTime)
         self.filesSent+=1
         self.bytesSent+=stat.st_size
       except (IOError, OSError) as e:
