@@ -130,8 +130,8 @@ def mkdirs(dirs):
   ## try and make a new directory and return
   ## failure indicates we should see if subdirs exist
   try:
-    logging.info("Making directory %s " % ( dirs))
     c.mkdir(dirs)
+    logging.info("Made directory %s " % ( dirs))
     goodDirs.append(dirs) 
     return
   except IOError as e:
