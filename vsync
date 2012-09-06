@@ -8,7 +8,6 @@ import datetime, optparse
 import errno
 import logging
 import time
-from vos import md5_cache
 
 
 def computeMD5(filename,block_size=8192):
@@ -237,6 +236,7 @@ if __name__=='__main__':
   usage = "%prog [options] files vos:Destination/"
   parser=optparse.OptionParser(usage=usage)
   parser.add_option('--verbose','-v',action="store_true",help='run in verbose mode')
+  parser.add_option('--version',action="store_true",help='print out the version (%s)' %( vos.__version__.version))
   parser.add_option('--debug','-d',action="store_true",help='run in verbose mode')
   parser.add_option('--ignore-checksum',action="store_true",help='dont check MD5 sum, use size and time instead')
   parser.add_option('--cache_nodes',action='store_true',help='cache node MD5 sum in an sqllite db')
@@ -248,6 +248,10 @@ if __name__=='__main__':
   parser.add_option('--load_test',action="store_true",help="Used to stress test the VOServer, also set --nstreams to a large value")
   parser.add_option("--certfile",help="location of your CADC security certificate file",default=os.path.join(os.getenv("HOME","."),".ssl/cadcproxy.pem"))
   (opt,args)=parser.parse_args()
+
+  if opt.version:
+    print vos.__version__.version
+    sys.exit(0)
 
   if opt.debug:
      logging.basicConfig(level=logging.DEBUG,format="%(asctime)s - %(module)s.%(funcName)s %(lineno)d: %(message)s")
@@ -263,6 +267,7 @@ if __name__=='__main__':
     parser.error("Maximum of 30 streams exceeded")
 
   if opt.cache_nodes:
+    from vos import md5_cache
     md5Cache = md5_cache.MD5_Cache()
 
 
