@@ -623,7 +623,7 @@ class VOFile:
             contentType = "text/xml"
             if method == "PUT":
 	        import os
-	        ext=os.path.splitext(URI)[1]
+	        ext=os.path.splitext(URL)[1]
 	        if ext in [ '.fz', '.fits', 'fit']:
 	           contentType = 'application/fits'
 	        else:
