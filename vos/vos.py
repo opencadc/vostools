@@ -622,8 +622,9 @@ class VOFile:
 	if method in ["PUT", "POST", "DELETE"]:
             contentType = "text/xml"
             if method == "PUT":
-	        import os
-	        ext=os.path.splitext(URL)[1]
+	        import urllib, os
+	        ext = os.path.splitext(urllib.splitquery(URL)[0])[1]
+	        logging.debug("Got extension %s" %( ext))
 	        if ext in [ '.fz', '.fits', 'fit']:
 	           contentType = 'application/fits'
 	        else:
