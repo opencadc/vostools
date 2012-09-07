@@ -1,6 +1,6 @@
 #!/usr/bin/env python
-
 """vls:  list the contents of a voSpace"""
+#""DD"""
 import vos
 import optparse
 import logging
