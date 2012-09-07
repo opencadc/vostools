@@ -239,6 +239,17 @@ public class ClientTransfer implements Runnable
         }
         throw new IllegalStateException("cannot specify a local File for transfer direction " + transfer.getDirection());
     }
+
+    /**
+     * After a download, this will be the actual file downloaded.
+     * 
+     * @return
+     */
+    public File getLocalFile()
+    {
+        return localFile;
+    }
+    
     public void setOutputStreamWrapper(OutputStreamWrapper wrapper)
     {
         if (Direction.pushToVoSpace.equals(transfer.getDirection()))
@@ -467,6 +478,8 @@ public class ClientTransfer implements Runnable
         {
             throw new IOException("failed to download file", download.getThrowable());
         }
+        // the actual resulting file
+        this.localFile = download.getFile();
     }
 
     // run and monitor an async server side transfer
