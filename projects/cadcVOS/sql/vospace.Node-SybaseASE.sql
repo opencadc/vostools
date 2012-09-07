@@ -101,7 +101,7 @@ CREATE TABLE Node (
    lastModified      DATETIME          NOT NULL,
 
 -- uri of the target of a LinkNode
-   link              TEXT              DEFAULT NULL
+   link              TEXT              NULL
 )
 lock datarows
 with identity_gap = 512
