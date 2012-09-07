@@ -533,7 +533,7 @@ class VOFile:
 	self.name=os.path.basename(URL)
         self._fpos=0
         self.open(URL,method)
-	logging.debug("Sending back VOFile object")
+	logging.debug("Sending back VOFile object for file of size %s" %(str(self.size)))
         
     def tell(self):
 	return self._fpos
@@ -606,19 +606,31 @@ class VOFile:
             userAgent='vofs '+version
         self.httpCon.putheader("User-Agent", userAgent)
         self.transEncode = None
-        if method in ["PUT", "POST", "DELETE"]:
-            if self.size is not None and type(self.size)==int:
-                self.httpCon.putheader("Content-Length",str(self.size))
-            else:
-                self.httpCon.putheader("Transfer-Encoding",'chunked')
+	logging.debug("sending headers for file of size %s: " % ( str(self.size)))
+        if method in ["PUT"]:
+            try:
+	       self.size = int(self.size)
+               self.httpCon.putheader("Content-Length",self.size)
+            except TypeError as e:
+	        self.size = None
                 self.transEncode = "chunked"
-            contentType="text/xml"
-            if method=="PUT":
-                contentType=mimetypes.guess_type(URL)[0]
+                self.httpCon.putheader("Transfer-Encoding",'chunked')
+	elif method in ["POST", "DELETE"]:
+	    self.size = None
+            self.httpCon.putheader("Transfer-Encoding",'chunked')
+            self.transEncode = "chunked"
+	if method in ["PUT", "POST", "DELETE"]:
+            contentType = "text/xml"
+            if method == "PUT":
+	        import os
+	        ext=os.path.splitext(URI)[1]
+	        if ext in [ '.fz', '.fits', 'fit']:
+	           contentType = 'application/fits'
+	        else:
+                   contentType = mimetypes.guess_type(URL)[0]
 	        logging.debug("Guessed content type: %s" % (contentType))
-            if contentType is None:
-	        contentType="text/xml"
-            self.httpCon.putheader("Content-Type",contentType)
+	    if contentType is not None:
+                self.httpCon.putheader("Content-Type",contentType)
         if bytes is not None and method=="GET" :
             logging.debug("Range: %s" %(bytes))
             self.httpCon.putheader("Range",bytes)
@@ -916,7 +928,7 @@ class Client:
         ET.SubElement(transferXML,"protocol").attrib['uri']="%s#%s" % ( Node.IVOAURL, protocol[direction] )
         logging.debug(ET.tostring(transferXML))
         url = "%s://%s/%s" % ( self.protocol, SERVER, Client.VOTransfer)
-        con = VOFile(url, self.conn, method = "POST", size=len(ET.tostring(transferXML)))
+        con = VOFile(url, self.conn, method = "POST", size=None)
         con.write(ET.tostring(transferXML)) 
         #logging.debug(str(con))
         F = ET.parse(con)
@@ -1108,7 +1120,7 @@ class Client:
             dum=self.getNode(uri)
 	    return True
         except Exception as e:
-            logging.debug(str(e))
+            logging.error(str(e))
 	    return False
 
     def status(self,uri,code=[200,303,302]):
