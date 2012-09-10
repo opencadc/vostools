@@ -132,7 +132,8 @@ public class PathResolver
     {
         return resolveWithReadPermissionCheck(uri, null, false);
     }
-    
+
+
     /**
      * Resolve the path/node identified by parameter uri.  Check read permission on
      * each link node resolution.
@@ -166,7 +167,30 @@ public class PathResolver
         }
         return result;
     }
-    
+
+    public Node resolveWithReadPermissionCheck(VOSURI uri, Node node,
+            VOSpaceAuthorizer readAuthorizer,
+            boolean resolveLeafNodes)
+            throws NodeNotFoundException, LinkingException
+    {
+        visitCount = 0;
+        visitedPaths = new ArrayList<String>();
+        Node result = doResolve(uri, node, readAuthorizer);
+        if (resolveLeafNodes)
+        {
+            // resolve the leaf linknodes
+            while (result instanceof LinkNode)
+            {
+                LinkNode linkNode = (LinkNode)result;
+                PathResolver.validateTargetURI(linkNode);
+                // follow the link
+                result = doResolve(
+                        new VOSURI(linkNode.getTarget()), readAuthorizer);
+            }
+        }
+        return result;
+    }
+
     /**
      * Used recursively to following the path of a node, resolving link targets
      * on the way.
@@ -181,14 +205,30 @@ public class PathResolver
             VOSpaceAuthorizer readAuthorizer)
             throws NodeNotFoundException, LinkingException
     {
+        Node node = nodePersistence.get(vosuri, true);
+        return doResolve(vosuri, node, readAuthorizer);
+    }
+
+    /**
+     *
+     * @param vosuri requested path
+     * @param node actual node found (possibly partial path)
+     * @param readAuthorizer
+     * @return
+     * @throws NodeNotFoundException
+     * @throws LinkingException
+     */
+    private Node doResolve(VOSURI vosuri, Node node,
+            VOSpaceAuthorizer readAuthorizer)
+            throws NodeNotFoundException, LinkingException
+    {
         if (visitCount > visitLimit)
         {
             throw new LinkingException("Exceeded link limit.");
         }
         visitCount++;
         LOG.debug("visit number " + visitCount);
-        
-        Node node = nodePersistence.get(vosuri, true);
+
         if (readAuthorizer != null)
         {
             LOG.debug("doing read permission check.");
