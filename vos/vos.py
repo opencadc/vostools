@@ -1121,7 +1121,7 @@ class Client:
             dum=self.getNode(uri)
 	    return True
         except Exception as e:
-            logging.error(str(e))
+            logging.debug(str(e))
 	    return False
 
     def status(self,uri,code=[200,303,302]):
