@@ -1,5 +1,5 @@
 
-import sqlite3
+import sqlite3,logging
 READBUF = 8192
 
 class MD5_Cache:
@@ -12,7 +12,6 @@ class MD5_Cache:
       sqlConn = sqlite3.connect(self.cache_db)
       with sqlConn:
          sqlConn.execute("create table if not exists md5_cache (fname text PRIMARY KEY NOT NULL , md5 text, st_size int, st_mtime int)")
-      sqlConn.close()
       ## build cache lookup if doesn't already exists
 
    def computeMD5(self,filename,block_size=READBUF):
@@ -34,7 +33,6 @@ class MD5_Cache:
       with sqlConn:
          cursor = sqlConn.execute("SELECT md5, st_size, st_mtime FROM md5_cache WHERE fname = ? ", (fname, ))
          md5Row = cursor.fetchone()
-      sqlConn.close()
       if md5Row is not None: 
          return md5Row
       else:	
@@ -45,16 +43,17 @@ class MD5_Cache:
       sqlConn=sqlite3.connect(self.cache_db)
       with sqlConn:
            sqlConn.execute("DELETE from md5_cache WHERE fname = ?", ( fname,))
-      sqlConn.close()
    
    
    def update(self, fname, md5, st_size, st_mtime):
       """Update a record in the cache MD5 database"""
       ## UPDATE the MD5 database
       sqlConn=sqlite3.connect(self.cache_db)
-      with sqlConn:
-         sqlConn.execute("DELETE from md5_cache WHERE fname = ?", ( fname,))
-         sqlConn.execute("INSERT INTO md5_cache (fname, md5, st_size, st_mtime) VALUES ( ?, ?, ?, ?)", (fname, md5, st_size, st_mtime ))
-      sqlConn.close()
+      try:
+         with sqlConn:
+            sqlConn.execute("DELETE from md5_cache WHERE fname = ?", ( fname,))
+            sqlConn.execute("INSERT INTO md5_cache (fname, md5, st_size, st_mtime) VALUES ( ?, ?, ?, ?)", (fname, md5, st_size, st_mtime ))
+      except Exception as e:
+	 logging.error(e)
       return md5
 
