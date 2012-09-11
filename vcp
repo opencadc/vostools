@@ -1,0 +1,204 @@
+#!python
+"""copy files from / to vospace directly without using the FUSE layer"""
+import time
+import errno
+def isdir(filename):
+    logging.debug("Doing an isdir on %s" %(filename))
+    if filename[0:4]=="vos:":
+        return client.isdir(filename)
+    else:
+        return os.path.isdir(filename)
+
+def access(filename,mode):
+    logging.debug("checking for access %s " %(filename))
+    if filename[0:4]=="vos:":
+        return client.access(filename,mode)
+    else:
+        return os.access(filename,mode)
+
+def listdir(filename):
+    logging.debug("getting a dirlist %s " %(filename))
+    if filename[0:4]=="vos:":
+        dirlist = client.listdir(filename)
+        logging.debug(str(dirlist))
+        return dirlist
+    else:
+        return os.listdir(filename)
+
+def mkdir(filename):
+    logging.debug("Making directory %s " % ( filename))
+    if filename[0:4]=='vos:':
+        logging.debug("In VOSpace")
+        return client.mkdir(filename)
+    else:
+        logging.debug("On the filesystem")
+        return os.mkdir(filename)
+
+def getMD5(filename):
+    logging.debug("getting the MD5")
+    if filename[0:4]=='vos:':
+        md5=client.getNode(filename).props.get('MD5','d41d8cd98f00b204e9800998ecf8427e')
+    else:
+        import hashlib
+        md5=hashlib.md5()
+        fin = file(filename,'r')
+        while True:
+            buff=fin.read()
+            if len(buff)==0:
+                break
+            md5.update(buff)
+        md5=md5.hexdigest()
+    logging.debug("%s md5: %s" % (filename, md5))
+    return md5
+
+
+def copy(source,dest):    
+    
+    ## determine if this is a directory we are copying so need to be recursive
+    try:
+      if isdir(source):
+        ## make sure the destination exists...
+        if not access(dest,os.F_OK):
+            mkdir(dest)
+        ## for all files in the current source directory copy them to the destination directory
+        for filename in listdir(source):
+            copy(os.path.join(source,filename),os.path.join(dest,filename))
+      else:
+        if opt.interrogate:
+            if access(dest,os.F_OK):
+                sys.stderr.write("File %s exists.  Overwrite? (y/n): " % (dest))
+                ans=sys.stdin.readline().strip()
+                if ans!='y':
+                    sys.exit(errno.EEXIST)
+        if access(dest,os.F_OK) and not opt.overwrite:
+            ### check if the MD5 of dest and source mathc, if they do then skip
+            if getMD5(dest)==getMD5(source):
+                logging.info("%s matches %s, skipping" % ( source, dest))
+                return 
+        logging.info("%s -> %s " % ( source, dest))
+        loopCount=0
+	waitTime=1
+        while True:
+            try:
+                client.copy(source,dest,sendMD5=True)
+	        break
+            except OSError as e:
+		logging.critical("ERROR: %s while copying %s -> %s (attempt %d)" % (str(e), source, dest, loopCount+1))
+                if loopCount > 10 :
+                    raise e
+	        logging.critical("Retrying in %d seconds\n" %(waitTime))
+                loopCount+=1
+                time.sleep(waitTime)
+                waitTime=1.5*waitTime
+            except Exception as e:
+	        if hasattr(e,'errno'):
+		   if e.errno==104:
+                       logging.critical(str(e))
+	               continue
+	        raise e
+			 
+            
+                
+    except IOError as e:
+        if e.errno==errno.EINVAL:
+            logging.error("%s: Skipping" % ( str(e)))
+        else:
+            raise e
+
+
+
+def signal_handler(signal, frame):
+    sys.stderr.write("Interupt\n")
+    sys.exit(-1)
+
+
+
+if __name__=='__main__':
+
+    from optparse import OptionParser
+    import logging, sys
+    import vos, errno, os
+    ## handle interupts nicely
+    import signal
+    signal.signal(signal.SIGINT, signal_handler)
+    
+    parser=OptionParser()
+    parser.add_option("-i","--interrogate",action="store_true",help="Ask before overwriting files")
+    parser.add_option("--overwrite",action="store_true",help="don't check dest MD5, just overwrite even if source matches destination")
+    parser.add_option("-v","--verbose",action="store_true",help="Verbose output")
+    parser.add_option("-d","--debug",action="store_true",help="set this option to get help solving connection issues")
+    parser.add_option("--certfile",help="location of your CADC security certificate file",default=os.path.join(os.getenv("HOME","."),".ssl/cadcproxy.pem"))
+
+    name=sys.argv[0]
+
+    (opt,args)=parser.parse_args()
+
+    format = "%(message)s"
+
+    if opt.verbose:
+        logLevel=logging.INFO
+    elif opt.debug:
+        format="%(asctime)s - %(module)s.%(funcName)s %(lineno)d: %(message)s"
+        logLevel=logging.DEBUG
+    else:
+        logLevel=logging.ERROR
+        
+    logging.basicConfig(level=logLevel,format=format)
+
+
+    
+    try:
+        client=vos.Client(certFile=opt.certfile)
+    except Exception as e:
+        logging.error("Conneciton failed:  %s" %  (str(e)))
+        sys.exit(e.errno)
+
+    dest=args.pop()
+
+
+    import ssl
+    try: 
+
+      for source in args:
+
+        ### the source must exist, of course...
+        if not access(source,os.R_OK):
+            logging.error("Can't access %s " % ( source))
+            sys.exit(-1)
+
+        ## copying inside VOSpace not yet implemented
+        if source[0:4]=='vos:' and dest[0:4]=='vos:' :
+            logging.error("Can not (yet) copy from VOSpace to VOSpace")
+            sys.exit(-1)
+
+	thisDest=dest
+        if isdir(source):
+            logging.debug("%s is a directory or link to one" % (source))
+            ## To mimic unix fs behaviours if copying a directory and
+            ## the destination directory exists then the actual
+            ## destination in a recursive copy is the destination +
+            ## source basename.  This has an odd behaviour if more than one directory is given as a source and the copy is recursive.
+            if access(dest,os.F_OK):
+                if not isdir(dest):
+                    logging.error("Can't write a directory (%s) to a file (%s)" % (source,dest))
+                    sys.exit(-1)
+                # directory exists so we append the end of source to that (UNIX behaviour)
+                thisDest=os.path.normpath(os.path.join(dest,os.path.basename(source)))
+            elif len(args) > 1:
+                logging.error("vcp can not copy multiple things into a non-existant location (%s)" % (dest))
+                sys.exit(-1)
+        elif access(dest,os.F_OK) and isdir(dest):
+            ### we're copying into a directory
+            thisDest=os.path.join(dest,os.path.basename(source))
+
+        copy(source,thisDest)
+
+    except ssl.SSLError as e:
+        logging.error("SSL Access error, key %s rejected" % ( opt.certfile))
+        sys.exit(-2)
+    except Exception as e:
+        logging.error(str(type(e)))
+        logging.error(str(e))
+        logging.error("Failed while copying %s" %(source))
+        sys.exit(-1)
+    sys.exit(0)
